@@ -676,7 +676,7 @@
     {
       "id": 51,
       "type": "table",
-      "title": "Irrigation Event Log (24h)",
+      "title": "Irrigation Relay Event Log (24h)",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -685,7 +685,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT ts AT TIME ZONE 'America/Denver' AS \"Time\", equipment AS \"Zone\", CASE WHEN state THEN 'ON' ELSE 'OFF' END AS \"State\" FROM equipment_state WHERE equipment IN ('drip_wall', 'drip_center', 'drip_wall_fert', 'drip_center_fert', 'mister_south', 'mister_west', 'mister_center') AND ts > now() - interval '24 hours' ORDER BY ts DESC LIMIT 50",
+          "rawSql": "SELECT ts AT TIME ZONE 'America/Denver' AS \"Time\", equipment AS \"Zone\", CASE WHEN state THEN 'ON' ELSE 'OFF' END AS \"State\" FROM equipment_state WHERE equipment IN ('drip_wall', 'drip_center', 'drip_wall_fert', 'drip_center_fert', 'mister_south', 'mister_south_fert', 'mister_west', 'mister_west_fert', 'mister_center', 'fert_master_valve', 'water_flowing') AND ts > now() - interval '24 hours' ORDER BY ts DESC LIMIT 80",
           "refId": "A",
           "format": "table"
         }

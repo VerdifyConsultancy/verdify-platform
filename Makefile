@@ -8,6 +8,25 @@ RUFF := $(VENV)/bin/ruff
 ESPHOME := $(VENV)/bin/esphome
 ESP32_DEVICE ?= 192.168.10.111
 QUIET_MINUTES ?= 30
+IRRIGATION_FEEDBACK_TIMEOUT ?= 1800
+IRRIGATION_FEEDBACK_INTERVAL ?= 60
+IRRIGATION_MQTT_LIVE_TIMEOUT ?= 75
+IRRIGATION_FIELD_WATCH_MQTT_TIMEOUT ?= 5
+IRRIGATION_FEEDBACK_PROOF ?= /srv/verdify/state/irrigation-feedback-proof.json
+IRRIGATION_FIELD_WATCH_PROOF ?= /srv/verdify/state/irrigation-field-watch-proof.txt
+IRRIGATION_DISCOVERY_PROOF ?= /srv/verdify/state/irrigation-discovery-proof.txt
+IRRIGATION_FINALIZER_PROOF ?= /srv/verdify/state/irrigation-finalizer-proof.txt
+IRRIGATION_FINALIZER_DRY_RUN_PROOF ?= /srv/verdify/state/irrigation-finalizer-dry-run-proof.txt
+IRRIGATION_WORK_ORDER_PROOF ?= /srv/verdify/state/irrigation-work-order.txt
+IRRIGATION_FIELD_SENSOR_HEALTH_PROOF ?= /srv/verdify/state/irrigation-field-sensor-health-proof.txt
+IRRIGATION_SENSOR_HEALTH_PROOF ?= /srv/verdify/state/irrigation-sensor-health-proof.txt
+IRRIGATION_STACK_PROOF ?= /srv/verdify/state/irrigation-stack-proof.txt
+IRRIGATION_MIGRATION_PROOF ?= /srv/verdify/state/irrigation-migration-proof.txt
+IRRIGATION_COMPLETION_AUDIT_PROOF ?= /srv/verdify/state/irrigation-completion-audit.json
+IRRIGATION_MQTT_HOST ?= 192.168.30.107
+IRRIGATION_MQTT_PORT ?= 1883
+IRRIGATION_STALE_RETAINED_TOPICS := greenhouse/sensor/south_1_soil_moisture____/state greenhouse/sensor/south_1_soil_ec____s___cm_/state greenhouse/sensor/south_1_soil_temp____f_/state greenhouse/sensor/south_soil_moisture____/state greenhouse/sensor/south_soil_ec____s___cm_/state greenhouse/sensor/south_soil_temp____f_/state
+IRRIGATION_STALE_NEAR_MISS_TOPICS := greenhouse/sensor/east_soil_moisture____/state greenhouse/sensor/south_2_soil_moisture____/state greenhouse/sensor/west_soil_moisture____/state
 FIRMWARE_ESPHOME := scripts/firmware-esphome-worktree.sh
 FIRMWARE_OTA_BIN := firmware/.esphome/build/greenhouse/.pioenvs/greenhouse/firmware.ota.bin
 REPLAY_CORPUS_GZ := firmware/test/data/replay_overrides.csv.gz
@@ -15,7 +34,7 @@ REPLAY_CORPUS_TMP ?= /tmp/verdify-replay-overrides.csv
 HERMES_IRIS_RUNTIME_DIR ?= /var/lib/verdify/hermes/iris
 HERMES_IRIS_ENV_FILE ?= /etc/verdify/hermes-iris.env
 
-.PHONY: help test lint format check lighting-audit-static lighting-audit-current lighting-audit-live lighting-audit-complete firmware-check firmware-check-worktree firmware-check-all firmware-invariants firmware-replay firmware-replay-worktree firmware-dwell-preview firmware-deploy firmware-archive-artifacts firmware-promote-last-good smoke hermes-deploy-config hermes-restart hermes-smoke clean
+.PHONY: help test lint format check lighting-audit-static lighting-audit-current lighting-audit-live lighting-audit-complete firmware-check firmware-check-worktree firmware-check-all firmware-invariants firmware-replay firmware-replay-worktree firmware-dwell-preview firmware-deploy firmware-archive-artifacts firmware-promote-last-good smoke hermes-deploy-config hermes-restart hermes-smoke clean irrigation-migration-check irrigation-migration-proof irrigation-field-diagnostics irrigation-field-sensor-health-proof irrigation-stack-software-check irrigation-stack-check irrigation-feedback-check irrigation-feedback-discover irrigation-feedback-discovery-proof irrigation-feedback-work-order irrigation-feedback-work-order-proof irrigation-feedback-clear-stale-retained irrigation-feedback-clear-stale-near-misses irrigation-feedback-watch irrigation-feedback-watch-field irrigation-feedback-watch-field-proof irrigation-feedback-finalize-dry-run irrigation-feedback-finalize-dry-run-proof irrigation-feedback-finalize irrigation-feedback-finalize-proof irrigation-feedback-proof-json irrigation-sensor-health-proof irrigation-stack-proof irrigation-completion-audit irrigation-completion-audit-proof irrigation-acceptance irrigation-full-acceptance irrigation-post-deploy-acceptance-plan irrigation-post-deploy-acceptance
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -167,6 +186,141 @@ grafana-brand-check-live: ## Verify live embedded Grafana panels use Verdify Lab
 
 site-lint: ## Run cheap lint for public-site content and routes
 	$(PYTHON) scripts/lint_public_site.py
+
+irrigation-migration-check: ## Replay irrigation migration 134 inside a rollback transaction
+	@set -o pipefail; { printf 'BEGIN;\n'; cat db/migrations/134-irrigation-fertigation-canonical.sql; printf '\nROLLBACK;\n'; } | docker exec -i verdify-timescaledb psql -U verdify -d verdify -v ON_ERROR_STOP=1 -q
+	@echo "OK: migration 134 replays cleanly in rollback transaction"
+
+irrigation-migration-proof: ## Replay and persist irrigation migration rollback proof
+	@mkdir -p "$(dir $(IRRIGATION_MIGRATION_PROOF))"
+	@set -o pipefail; { { printf 'BEGIN;\n'; cat db/migrations/134-irrigation-fertigation-canonical.sql; printf '\nROLLBACK;\n'; } | docker exec -i verdify-timescaledb psql -U verdify -d verdify -v ON_ERROR_STOP=1 -q && echo "OK: migration 134 replays cleanly in rollback transaction"; } 2>&1 | tee "$(IRRIGATION_MIGRATION_PROOF)"
+
+irrigation-field-diagnostics: ## Run non-gating field diagnostics for physical feedback blockers
+	$(MAKE) irrigation-field-sensor-health-proof
+	$(MAKE) irrigation-feedback-work-order-proof
+	$(MAKE) irrigation-completion-audit-proof
+	$(MAKE) irrigation-feedback-discovery-proof
+	$(MAKE) irrigation-feedback-finalize-dry-run-proof
+
+irrigation-field-sensor-health-proof: ## Persist short-window sensor-health proof for field diagnostics
+	@mkdir -p "$(dir $(IRRIGATION_FIELD_SENSOR_HEALTH_PROOF))"
+	@set -o pipefail; $(MAKE) sensor-health SINCE='2 minutes' 2>&1 | tee "$(IRRIGATION_FIELD_SENSOR_HEALTH_PROOF)"
+
+irrigation-stack-software-check: ## Audit irrigation software/dashboard requirements while hardware feedback is pending
+	$(PYTHON) scripts/validate-irrigation-stack.py --software-only
+
+irrigation-stack-check: ## Audit full irrigation requirements, including physical feedback gate
+	$(MAKE) site-doctor
+	$(PYTHON) scripts/validate-irrigation-stack.py --live-site
+
+irrigation-feedback-check: ## Validate south probe + center root-zone/runoff feedback bring-up
+	$(PYTHON) scripts/validate-irrigation-feedback.py --include-db-history
+
+irrigation-feedback-discover: ## List HA/MQTT feedback-like sensor entities; tolerate known missing hardware
+	@$(PYTHON) scripts/validate-irrigation-feedback.py --discover-ha --discover-mqtt --discover-mqtt-all --discover-esphome --include-db-history --mqtt-live-timeout-s $(IRRIGATION_MQTT_LIVE_TIMEOUT); rc=$$?; \
+	if [ $$rc -eq 1 ]; then exit 0; fi; \
+	exit $$rc
+
+irrigation-feedback-discovery-proof: ## Persist HA/MQTT/ESPHome feedback discovery evidence for field diagnostics
+	@mkdir -p "$(dir $(IRRIGATION_DISCOVERY_PROOF))"
+	@set -o pipefail; { $(PYTHON) scripts/validate-irrigation-feedback.py --discover-ha --discover-mqtt --discover-mqtt-all --discover-esphome --include-db-history --mqtt-live-timeout-s $(IRRIGATION_MQTT_LIVE_TIMEOUT); rc=$$?; if [ $$rc -eq 1 ]; then exit 0; fi; exit $$rc; } 2>&1 | tee "$(IRRIGATION_DISCOVERY_PROOF)"
+
+irrigation-feedback-work-order: irrigation-feedback-work-order-proof ## Print and persist field checklist for remaining irrigation feedback work
+
+irrigation-feedback-work-order-proof: ## Print and persist field checklist for remaining irrigation feedback work
+	@mkdir -p "$(dir $(IRRIGATION_WORK_ORDER_PROOF))"
+	@set -o pipefail; $(PYTHON) scripts/validate-irrigation-feedback.py --work-order --mqtt-live-timeout-s $(IRRIGATION_FIELD_WATCH_MQTT_TIMEOUT) 2>&1 | tee "$(IRRIGATION_WORK_ORDER_PROOF)"
+
+irrigation-feedback-clear-stale-retained: ## Clear known stale retained MQTT feedback values after discovery confirms no live MQTT updates
+	@if [ "$(CONFIRM_CLEAR_RETAINED)" != "1" ]; then \
+		echo "Refusing to clear retained MQTT values without CONFIRM_CLEAR_RETAINED=1"; \
+		echo "First run: make irrigation-feedback-discover IRRIGATION_MQTT_LIVE_TIMEOUT=75"; \
+		exit 2; \
+	fi
+	$(PYTHON) scripts/clear-irrigation-stale-retained.py --confirm
+
+irrigation-feedback-clear-stale-near-misses: ## Clear known retained near-match soil topics that are not accepted feedback inputs
+	@if [ "$(CONFIRM_CLEAR_RETAINED)" != "1" ]; then \
+		echo "Refusing to clear retained MQTT near-miss values without CONFIRM_CLEAR_RETAINED=1"; \
+		echo "First run: make irrigation-feedback-discover IRRIGATION_MQTT_LIVE_TIMEOUT=75"; \
+		exit 2; \
+	fi
+	$(PYTHON) scripts/clear-irrigation-stale-retained.py --confirm --near-miss
+
+irrigation-feedback-watch: ## Poll until physical feedback rows are healthy; alert resolution is finalized separately
+	$(PYTHON) scripts/validate-irrigation-feedback.py --watch --status-only --timeout-s $(IRRIGATION_FEEDBACK_TIMEOUT) --interval-s $(IRRIGATION_FEEDBACK_INTERVAL)
+
+irrigation-feedback-watch-field: irrigation-feedback-watch-field-proof ## Field watch with DB, HA, MQTT, and ESPHome feedback evidence during repair/install
+
+irrigation-feedback-watch-field-proof: ## Persist field watch evidence during repair/install
+	@mkdir -p "$(dir $(IRRIGATION_FIELD_WATCH_PROOF))"
+	@set -o pipefail; $(PYTHON) scripts/validate-irrigation-feedback.py --watch --status-only --discover-ha --discover-mqtt --discover-mqtt-all --discover-esphome --include-db-history --mqtt-live-timeout-s $(IRRIGATION_FIELD_WATCH_MQTT_TIMEOUT) --timeout-s $(IRRIGATION_FEEDBACK_TIMEOUT) --interval-s $(IRRIGATION_FEEDBACK_INTERVAL) 2>&1 | tee "$(IRRIGATION_FIELD_WATCH_PROOF)"
+
+irrigation-feedback-finalize-dry-run: ## Check planned irrigation feedback closure without mutating DB rows
+	$(PYTHON) scripts/finalize-irrigation-feedback.py --dry-run
+
+irrigation-feedback-finalize-dry-run-proof: ## Persist non-mutating finalizer dry-run proof; tolerate known physical blockers
+	@mkdir -p "$(dir $(IRRIGATION_FINALIZER_DRY_RUN_PROOF))"
+	@set -o pipefail; $(PYTHON) scripts/finalize-irrigation-feedback.py --dry-run 2>&1 | tee "$(IRRIGATION_FINALIZER_DRY_RUN_PROOF)"; rc=$${PIPESTATUS[0]}; if [ $$rc -eq 1 ] && grep -q '^Irrigation feedback still blocked: .*not_ok=' "$(IRRIGATION_FINALIZER_DRY_RUN_PROOF)"; then exit 0; fi; exit $$rc
+
+irrigation-feedback-finalize: irrigation-feedback-finalize-proof ## Resolve irrigation feedback alerts after physical feedback validates
+
+irrigation-feedback-finalize-proof: ## Resolve irrigation feedback alerts and persist finalizer closure proof
+	@mkdir -p "$(dir $(IRRIGATION_FINALIZER_PROOF))"
+	@set -o pipefail; { $(PYTHON) scripts/validate-irrigation-feedback.py --status-only --discover-ha --discover-mqtt --discover-mqtt-all --discover-esphome --include-db-history --mqtt-live-timeout-s $(IRRIGATION_FIELD_WATCH_MQTT_TIMEOUT) && $(PYTHON) scripts/finalize-irrigation-feedback.py --dry-run && $(PYTHON) scripts/finalize-irrigation-feedback.py && $(PYTHON) scripts/validate-irrigation-feedback.py --include-db-history; } 2>&1 | tee "$(IRRIGATION_FINALIZER_PROOF)"
+
+irrigation-feedback-proof-json: ## Emit machine-readable final irrigation feedback proof
+	@mkdir -p "$(dir $(IRRIGATION_FEEDBACK_PROOF))"
+	@set -o pipefail; $(PYTHON) scripts/validate-irrigation-feedback.py --json --discover-ha --discover-mqtt --discover-mqtt-all --discover-esphome --include-db-history --mqtt-live-timeout-s $(IRRIGATION_FIELD_WATCH_MQTT_TIMEOUT) | tee "$(IRRIGATION_FEEDBACK_PROOF)"
+
+irrigation-sensor-health-proof: ## Run and persist final sensor-health proof for irrigation acceptance
+	@mkdir -p "$(dir $(IRRIGATION_SENSOR_HEALTH_PROOF))"
+	@set -o pipefail; $(MAKE) sensor-health SINCE='5 minutes' 2>&1 | tee "$(IRRIGATION_SENSOR_HEALTH_PROOF)"
+
+irrigation-stack-proof: ## Run and persist strict live irrigation stack proof
+	@mkdir -p "$(dir $(IRRIGATION_STACK_PROOF))"
+	@set -o pipefail; { $(MAKE) site-doctor && $(PYTHON) scripts/validate-irrigation-stack.py --live-site; } 2>&1 | tee "$(IRRIGATION_STACK_PROOF)"
+
+irrigation-completion-audit: ## Strict objective-level audit for final irrigation completion
+	$(PYTHON) scripts/irrigation-completion-audit.py --live-site
+
+irrigation-completion-audit-proof: ## Persist current objective-level audit; tolerate known physical blockers
+	@mkdir -p "$(dir $(IRRIGATION_COMPLETION_AUDIT_PROOF))"
+	@set -o pipefail; $(PYTHON) scripts/irrigation-completion-audit.py --json --live-site --allow-physical-blocker --mqtt-live-timeout-s $(IRRIGATION_FIELD_WATCH_MQTT_TIMEOUT) | tee "$(IRRIGATION_COMPLETION_AUDIT_PROOF)"
+
+irrigation-acceptance: ## Wait for physical feedback, resolve alerts, then run strict irrigation audit
+	$(MAKE) irrigation-feedback-watch-field-proof
+	$(MAKE) irrigation-feedback-discovery-proof
+	$(MAKE) irrigation-sensor-health-proof
+	$(MAKE) irrigation-feedback-finalize
+	$(MAKE) irrigation-feedback-proof-json
+	$(MAKE) irrigation-stack-proof
+	$(MAKE) irrigation-completion-audit-proof
+	$(MAKE) irrigation-completion-audit
+
+irrigation-full-acceptance: ## Full final proof: lint, tests, migration replay, and strict live irrigation audit
+	$(MAKE) lint
+	$(MAKE) test
+	$(MAKE) irrigation-migration-proof
+	$(MAKE) irrigation-acceptance
+
+irrigation-post-deploy-acceptance-plan: ## Print non-mutating post-deploy acceptance sequence
+	@printf '%s\n' \
+		'Post-deploy irrigation acceptance plan (prints only; does not run checks):' \
+		'1. make lint' \
+		'2. make test' \
+		'3. make irrigation-migration-proof' \
+		'4. make irrigation-feedback-watch-field-proof' \
+		'5. make irrigation-feedback-discovery-proof' \
+		'6. make irrigation-sensor-health-proof' \
+		'7. make irrigation-feedback-finalize' \
+		'8. make irrigation-feedback-proof-json' \
+		'9. make irrigation-stack-proof' \
+		'10. make irrigation-completion-audit-proof' \
+		'11. make irrigation-completion-audit' \
+		'Run make irrigation-post-deploy-acceptance only after reviewed merge, service restart, and live site/dashboard publication.'
+
+irrigation-post-deploy-acceptance: irrigation-full-acceptance ## Post-deploy production proof after merge/restart/site publish
 
 firmware-deploy: ## Compile + OTA deploy to ESP32 + post-deploy sensor-health sweep + auto-rollback on failure
 	bash scripts/firmware-deploy-preflight.sh

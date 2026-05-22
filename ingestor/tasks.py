@@ -30,6 +30,7 @@ if str(REPO_ROOT) not in sys.path:
 
 import asyncpg
 import shared
+from entity_map import FEEDBACK_VALUE_RANGES, normalize_feedback_value
 from esp32_push import push_to_esp32
 from occupancy import expire_occupancy_latch, sync_occupancy_state
 from pydantic import ValidationError
@@ -861,12 +862,7 @@ async def tempest_sync(pool: asyncpg.Pool) -> None:
                 await conn.execute(f"UPDATE climate SET {', '.join(parts)} WHERE ts = ${len(vals)}", *vals)
                 log.debug("Tempest: %d outdoor cols refreshed on latest row", len(outdoor_cols))
             else:
-                outdoor_cols["ts"] = now
-                cols = list(outdoor_cols.keys())
-                ins_vals = [outdoor_cols[c] for c in cols]
-                ph = ", ".join(f"${i + 1}" for i in range(len(ins_vals)))
-                await conn.execute(f"INSERT INTO climate ({', '.join(cols)}) VALUES ({ph})", *ins_vals)
-                log.debug("Tempest: inserted new outdoor-only row")
+                log.warning("Tempest: skipped climate overlay; no recent indoor climate row")
 
 
 # ═════════════════════════════════════════════════════════════════
@@ -885,6 +881,49 @@ _HYDRO_MAP = {
     "sensor.greenhouse_hydroponic_tds_corrected": ("hydro_tds_ppm", None),
     "sensor.greenhouse_hydroponic_water_temp": ("hydro_water_temp_f", lambda v: v * 9.0 / 5.0 + 32.0),
     "sensor.greenhouse_hydroponic_yinmik_battery": ("hydro_battery_pct", None),
+}
+_CENTER_FEEDBACK_MAP = {
+    # Pending physical center feedback. Keep HA entity aliases broad so a
+    # sensor added outside the ESP32 path can begin populating climate rows
+    # without another deploy.
+    "sensor.greenhouse_center_soil_moisture": ("moisture_center", None),
+    "sensor.greenhouse_center_root_zone_moisture": ("moisture_center", None),
+    "sensor.greenhouse_center_root_zone_soil_moisture": ("moisture_center", None),
+    "sensor.greenhouse_center_rootzone_moisture": ("moisture_center", None),
+    "sensor.greenhouse_center_moisture": ("moisture_center", None),
+    "sensor.greenhouse_center_vwc": ("moisture_center", None),
+    "sensor.greenhouse_center_substrate_vwc": ("moisture_center", None),
+    "sensor.greenhouse_center_substrate_moisture": ("moisture_center", None),
+    "sensor.greenhouse_center_root_zone_vwc": ("moisture_center", None),
+    "sensor.greenhouse_middle_substrate_vwc": ("moisture_center", None),
+    "sensor.greenhouse_middle_substrate_moisture": ("moisture_center", None),
+    "sensor.greenhouse_center_runoff_ph": ("ph_runoff_center", None),
+    "sensor.greenhouse_center_runoff_p_h": ("ph_runoff_center", None),
+    "sensor.greenhouse_center_run_off_ph": ("ph_runoff_center", None),
+    "sensor.greenhouse_center_run_off_p_h": ("ph_runoff_center", None),
+    "sensor.greenhouse_center_drain_ph": ("ph_runoff_center", None),
+    "sensor.greenhouse_center_drain_p_h": ("ph_runoff_center", None),
+    "sensor.greenhouse_center_drainage_ph": ("ph_runoff_center", None),
+    "sensor.greenhouse_center_leachate_ph": ("ph_runoff_center", None),
+    "sensor.greenhouse_center_effluent_ph": ("ph_runoff_center", None),
+    "sensor.greenhouse_center_tray_ph": ("ph_runoff_center", None),
+    "sensor.greenhouse_center_runoff_ec": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_runoff_ec_ms_cm": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_runoff_ec_us_cm": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_runoff_ec_u_s_cm": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_run_off_ec": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_run_off_ec_ms_cm": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_run_off_ec_us_cm": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_runoff_conductivity": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_runoff_electrical_conductivity": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_drain_ec": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_drain_ec_ms_cm": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_drain_ec_us_cm": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_drain_ec_u_s_cm": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_drainage_ec": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_leachate_ec": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_effluent_ec": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_tray_ec": ("ec_runoff_center", None),
 }
 _LIGHT_ENTITIES = {
     "switch.greenhouse_main": "grow_light_main",
@@ -908,7 +947,8 @@ _HA_STATE_FILE = STATE_DIR / "ha-sensor-sync-state.json"
 async def ha_sensor_sync(pool: asyncpg.Pool) -> None:
     global _ha_prev_state
     token = _load_token(HA_TOKEN_FILE)
-    all_eids = list(_LIGHT_ENTITIES) + list(_HYDRO_MAP) + list(_HA_SWITCHES) + list(_OCCUPANCY_ENTITIES)
+    climate_sensor_map = {**_HYDRO_MAP, **_CENTER_FEEDBACK_MAP}
+    all_eids = list(_LIGHT_ENTITIES) + list(climate_sensor_map) + list(_HA_SWITCHES) + list(_OCCUPANCY_ENTITIES)
     loop = asyncio.get_event_loop()
     states = await loop.run_in_executor(None, _fetch_ha_batch, token, all_eids)
     if not states:
@@ -924,28 +964,35 @@ async def ha_sensor_sync(pool: asyncpg.Pool) -> None:
     occupancy_observations: list[tuple[bool, datetime | None]] = []
 
     async with pool.acquire() as conn:
-        # Hydro → climate
-        hydro_cols = {}
-        for eid, (col, conv) in _HYDRO_MAP.items():
+        # HA climate overlays → climate. Hydro values and optional center
+        # feedback are merged into the latest ESP32 climate row.
+        climate_cols = {}
+        for eid, (col, conv) in climate_sensor_map.items():
             ha = _ha_state(states, eid)
             if ha is None:
                 continue
             val = ha.as_float()
             if val is not None:
-                hydro_cols[col] = conv(val) if conv else val
-        if hydro_cols:
+                normalized = conv(val) if conv else val
+                if col in FEEDBACK_VALUE_RANGES:
+                    normalized = normalize_feedback_value(col, normalized)
+                    if normalized is None:
+                        log.warning("HA feedback rejected invalid value: %s column=%s value=%r", eid, col, val)
+                        continue
+                climate_cols[col] = normalized
+        if climate_cols:
             try:
-                ClimateRow.model_validate({"ts": now, **hydro_cols})
+                ClimateRow.model_validate({"ts": now, **climate_cols})
             except ValidationError as e:
-                log.error("Hydro cols failed schema validation: %s", e)
-                hydro_cols = {}
-        if hydro_cols:
+                log.error("HA climate overlay failed schema validation: %s", e)
+                climate_cols = {}
+        if climate_cols:
             latest = await conn.fetchval(
                 "SELECT ts FROM climate WHERE ts > now() - interval '5 minutes' AND temp_avg IS NOT NULL ORDER BY ts DESC LIMIT 1"
             )
             if latest:
                 parts, vals = [], []
-                for i, (c, v) in enumerate(hydro_cols.items()):
+                for i, (c, v) in enumerate(climate_cols.items()):
                     parts.append(f"{c} = ${i + 1}")
                     vals.append(v)
                 vals.append(latest)
@@ -1925,6 +1972,55 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                             "threshold_value": 30.0,
                         }
                     )
+
+        # 9b. Irrigation feedback gaps: south probe stuck-zero and center
+        # root-zone/runoff feedback missing/stale. The status view owns the
+        # physical sensor semantics; alert lifecycle follows status != ok.
+        for r in await conn.fetch(
+            """
+            SELECT feedback_key,
+                   zone,
+                   signal,
+                   status,
+                   latest_value,
+                   last_sample_ts,
+                   required_action,
+                   details
+              FROM v_irrigation_sensor_feedback_status
+             WHERE status <> 'ok'
+             ORDER BY zone, signal
+            """
+        ):
+            latest_value = r["latest_value"]
+            view_details = r["details"] or {}
+            if isinstance(view_details, str):
+                try:
+                    view_details = json.loads(view_details)
+                except json.JSONDecodeError:
+                    view_details = {"raw": view_details}
+            elif not isinstance(view_details, dict):
+                view_details = {"raw": str(view_details)}
+            alerts.append(
+                {
+                    "alert_type": "irrigation_feedback_gap",
+                    "severity": "warning",
+                    "category": "sensor",
+                    "sensor_id": f"irrigation.feedback.{r['feedback_key']}",
+                    "zone": r["zone"],
+                    "message": (f"Irrigation feedback `{r['signal']}` is {r['status']}: {r['required_action']}"),
+                    "details": {
+                        "feedback_key": r["feedback_key"],
+                        "signal": r["signal"],
+                        "status": r["status"],
+                        "latest_value": float(latest_value) if latest_value is not None else None,
+                        "last_sample_ts": r["last_sample_ts"].isoformat() if r["last_sample_ts"] else None,
+                        "required_action": r["required_action"],
+                        "view_details": view_details,
+                    },
+                    "metric_value": float(latest_value) if latest_value is not None else None,
+                    "threshold_value": None,
+                }
+            )
 
         # 10. Heating staging inversion (heat2 ON without heat1)
         staging_row = await conn.fetchrow("SELECT * FROM fn_heat_staging_inversion()")
@@ -4370,6 +4466,11 @@ async def _refresh_daily_summary_for_date(conn: asyncpg.Connection, target_day) 
         "mister_center",
         "drip_wall",
         "drip_center",
+        "drip_wall_fert",
+        "drip_center_fert",
+        "mister_south_fert",
+        "mister_west_fert",
+        "fert_master_valve",
     )
     rt_rows = await conn.fetch(
         """
@@ -4377,13 +4478,44 @@ async def _refresh_daily_summary_for_date(conn: asyncpg.Connection, target_day) 
             SELECT $1::date::timestamp AT TIME ZONE 'America/Denver' AS day_start,
                    ($1::date + 1)::timestamp AT TIME ZONE 'America/Denver' AS day_end
         ),
+        seeded AS (
+            SELECT DISTINCT ON (e.equipment)
+                   e.equipment,
+                   day_bounds.day_start AS ts,
+                   e.state,
+                   true AS is_seed
+              FROM equipment_state e
+              CROSS JOIN day_bounds
+             WHERE e.ts < day_bounds.day_start
+               AND e.equipment = ANY($2::text[])
+             ORDER BY e.equipment, e.ts DESC
+        ),
+        day_events AS (
+            SELECT e.equipment, e.ts, e.state, false AS is_seed
+              FROM equipment_state e
+              CROSS JOIN day_bounds
+             WHERE e.ts >= day_bounds.day_start
+               AND e.ts < day_bounds.day_end
+               AND e.equipment = ANY($2::text[])
+        ),
+        raw AS (
+            SELECT * FROM seeded
+            UNION ALL
+            SELECT * FROM day_events
+        ),
+        changes AS (
+            SELECT equipment, ts, state, is_seed
+              FROM (
+                  SELECT equipment, ts, state, is_seed,
+                         lag(state) OVER (PARTITION BY equipment ORDER BY ts, is_seed DESC) AS prev_state
+                    FROM raw
+              ) ordered
+             WHERE prev_state IS NULL OR prev_state IS DISTINCT FROM state
+        ),
         transitions AS (
-            SELECT equipment, ts, state,
-                   lag(state) OVER (PARTITION BY equipment ORDER BY ts) AS prev_state,
-                   lead(ts) OVER (PARTITION BY equipment ORDER BY ts) AS next_ts
-            FROM equipment_state, day_bounds
-            WHERE ts >= day_bounds.day_start AND ts < day_bounds.day_end
-              AND equipment = ANY($2::text[])
+            SELECT equipment, ts, state, is_seed,
+                   lead(ts) OVER (PARTITION BY equipment ORDER BY ts, is_seed DESC) AS next_ts
+              FROM changes
         )
         SELECT equipment,
                round(sum(extract(epoch FROM
@@ -4391,7 +4523,7 @@ async def _refresh_daily_summary_for_date(conn: asyncpg.Connection, target_day) 
                ) / 60.0) FILTER (WHERE state = true), 1) AS on_minutes,
                count(*) FILTER (
                    WHERE state IS TRUE
-                     AND COALESCE(prev_state, FALSE) IS FALSE
+                     AND is_seed IS FALSE
                ) AS cycles
         FROM transitions
         GROUP BY equipment
@@ -4432,6 +4564,28 @@ async def _refresh_daily_summary_for_date(conn: asyncpg.Connection, target_day) 
     ct = round(ce + cg + cw, 2)
 
     gl_min = rt.get("grow_light_main", 0) + rt.get("grow_light_grow", 0)
+    irrigation_meter = await conn.fetchrow(
+        """
+        SELECT COALESCE(sum(COALESCE(meter_delta_gal, 0)), 0)::double precision AS meter_delta_gal
+          FROM v_irrigation_fertigation_runs
+         WHERE day = $1
+        """,
+        target_day,
+    )
+    fert_runtime_h = (
+        rt.get("drip_wall_fert", 0)
+        + rt.get("drip_center_fert", 0)
+        + rt.get("mister_south_fert", 0)
+        + rt.get("mister_west_fert", 0)
+    ) / 60.0
+    clean_irrigation_runtime_h = (
+        rt.get("drip_wall", 0)
+        + rt.get("drip_center", 0)
+        + rt.get("mister_south", 0)
+        + rt.get("mister_west", 0)
+        + rt.get("mister_center", 0)
+    ) / 60.0
+    irrigation_water_gal = float(irrigation_meter["meter_delta_gal"] or 0) if irrigation_meter else 0.0
 
     await conn.execute(
         """
@@ -4512,6 +4666,44 @@ async def _refresh_daily_summary_for_date(conn: asyncpg.Connection, target_day) 
         cycles.get("mister_center", 0),
         cycles.get("drip_wall", 0),
         cycles.get("drip_center", 0),
+    )
+    await conn.execute(
+        """
+        UPDATE daily_summary SET
+            runtime_drip_wall_fert_h=$2,
+            runtime_drip_center_fert_h=$3,
+            runtime_mister_south_fert_h=$4,
+            runtime_mister_west_fert_h=$5,
+            runtime_fert_master_h=$6,
+            runtime_irrigation_clean_h=$7,
+            runtime_irrigation_fert_h=$8,
+            runtime_irrigation_total_h=$9,
+            cycles_drip_wall_fert=$10,
+            cycles_drip_center_fert=$11,
+            cycles_mister_south_fert=$12,
+            cycles_mister_west_fert=$13,
+            cycles_fert_master=$14,
+            irrigation_water_gal=$15,
+            fertigation_water_gal=$16,
+            captured_at=now()
+        WHERE date = $1
+        """,
+        target_day,
+        rt.get("drip_wall_fert", 0) / 60.0,
+        rt.get("drip_center_fert", 0) / 60.0,
+        rt.get("mister_south_fert", 0) / 60.0,
+        rt.get("mister_west_fert", 0) / 60.0,
+        rt.get("fert_master_valve", 0) / 60.0,
+        clean_irrigation_runtime_h,
+        fert_runtime_h,
+        clean_irrigation_runtime_h + fert_runtime_h,
+        cycles.get("drip_wall_fert", 0),
+        cycles.get("drip_center_fert", 0),
+        cycles.get("mister_south_fert", 0),
+        cycles.get("mister_west_fert", 0),
+        cycles.get("fert_master_valve", 0),
+        irrigation_water_gal,
+        irrigation_water_gal,
     )
     await conn.execute(
         """
@@ -5189,7 +5381,6 @@ async def planner_memory_ingest_sync(pool: asyncpg.Pool) -> None:
             latest_validated_at = datetime.fromisoformat(latest_validated_at_raw)
         except ValueError:
             log.warning("planner memory ingest ignored invalid watermark: %r", latest_validated_at_raw)
-
     if max_journal_rows > 0 and (
         planner_memory_ingest_outcomes_enabled() or planner_memory_ingest_prior_plans_enabled()
     ):

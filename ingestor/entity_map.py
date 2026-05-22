@@ -7,6 +7,7 @@ These were verified against live ESP32 entity enumeration 2026-03-22.
 
 Structure:
   CLIMATE_MAP:        object_id → column name in `climate` table
+  ESPHOME_FEEDBACK_MAP: optional feedback object_id → `climate` column
   EQUIPMENT_BINARY_MAP: object_id → equipment name in `equipment_state` (BinarySensor)
   EQUIPMENT_SWITCH_MAP: object_id → equipment name in `equipment_state` (Switch)
   STATE_MAP:          object_id → entity name in `system_state` table (TextSensor)
@@ -17,6 +18,7 @@ Structure:
 
 from __future__ import annotations
 
+import math
 import sys
 from pathlib import Path
 
@@ -102,6 +104,210 @@ CLIMATE_MAP: dict[str, str] = {
     "tempest_lightning_count": "lightning_count",
     "tempest_lightning_distance": "lightning_avg_dist_mi",  # NOTE: arrives as km, DB expects mi
 }
+
+# Optional ESPHome feedback aliases for center root-zone/runoff instrumentation.
+# These are intentionally outside CLIMATE_MAP until the current firmware emits
+# them; the firmware drift guard treats CLIMATE_MAP as current ESP32 reality.
+ESPHOME_FEEDBACK_MAP: dict[str, str] = {
+    "center_soil_moisture____": "moisture_center",
+    "center_root_zone_moisture____": "moisture_center",
+    "center_root_zone_soil_moisture____": "moisture_center",
+    "center_rootzone_moisture____": "moisture_center",
+    "center_moisture____": "moisture_center",
+    "center_vwc": "moisture_center",
+    "center_substrate_vwc": "moisture_center",
+    "center_substrate_moisture": "moisture_center",
+    "center_substrate_moisture____": "moisture_center",
+    "center_root_zone_vwc": "moisture_center",
+    "middle_substrate_vwc": "moisture_center",
+    "middle_substrate_moisture": "moisture_center",
+    "middle_substrate_moisture____": "moisture_center",
+    "center_runoff_ph": "ph_runoff_center",
+    "center_runoff_p_h": "ph_runoff_center",
+    "center_run_off_ph": "ph_runoff_center",
+    "center_run_off_p_h": "ph_runoff_center",
+    "center_drain_ph": "ph_runoff_center",
+    "center_drain_p_h": "ph_runoff_center",
+    "center_drainage_ph": "ph_runoff_center",
+    "center_leachate_ph": "ph_runoff_center",
+    "center_effluent_ph": "ph_runoff_center",
+    "center_tray_ph": "ph_runoff_center",
+    "center_runoff_ec": "ec_runoff_center",
+    "center_runoff_ec_ms_cm": "ec_runoff_center",
+    "center_runoff_ec_us_cm": "ec_runoff_center",
+    "center_runoff_ec_u_s_cm": "ec_runoff_center",
+    "center_runoff_ec___s_cm_": "ec_runoff_center",
+    "center_runoff_ec____s___cm_": "ec_runoff_center",
+    "center_run_off_ec": "ec_runoff_center",
+    "center_run_off_ec_ms_cm": "ec_runoff_center",
+    "center_run_off_ec_us_cm": "ec_runoff_center",
+    "center_run_off_ec_u_s_cm": "ec_runoff_center",
+    "center_run_off_ec___s_cm_": "ec_runoff_center",
+    "center_run_off_ec____s___cm_": "ec_runoff_center",
+    "center_runoff_conductivity": "ec_runoff_center",
+    "center_runoff_electrical_conductivity": "ec_runoff_center",
+    "center_drain_ec": "ec_runoff_center",
+    "center_drain_ec_ms_cm": "ec_runoff_center",
+    "center_drain_ec_us_cm": "ec_runoff_center",
+    "center_drain_ec_u_s_cm": "ec_runoff_center",
+    "center_drain_ec___s_cm_": "ec_runoff_center",
+    "center_drain_ec____s___cm_": "ec_runoff_center",
+    "center_drainage_ec": "ec_runoff_center",
+    "center_leachate_ec": "ec_runoff_center",
+    "center_effluent_ec": "ec_runoff_center",
+    "center_tray_ec": "ec_runoff_center",
+}
+
+# Optional physical irrigation feedback sensors published directly to MQTT.
+# Retained broker state is ignored by the ingestor; only live messages should
+# populate climate. Legacy south topics are listed only in
+# MQTT_FEEDBACK_CANDIDATES for diagnostics and are intentionally not accepted
+# by MQTT_FEEDBACK_MAP.
+MQTT_FEEDBACK_MAP: dict[str, str] = {
+    "greenhouse/sensor/south_1_soil_moisture____/state": "soil_moisture_south_1",
+    "greenhouse/sensor/south_1_soil_ec____s___cm_/state": "soil_ec_south_1",
+    "greenhouse/sensor/south_1_soil_temp____f_/state": "soil_temp_south_1",
+    "greenhouse/sensor/center_soil_moisture____/state": "moisture_center",
+    "greenhouse/sensor/center_root_zone_moisture____/state": "moisture_center",
+    "greenhouse/sensor/center_root_zone_soil_moisture____/state": "moisture_center",
+    "greenhouse/sensor/center_rootzone_moisture____/state": "moisture_center",
+    "greenhouse/sensor/center_moisture____/state": "moisture_center",
+    "greenhouse/sensor/center_vwc/state": "moisture_center",
+    "greenhouse/sensor/center_substrate_vwc/state": "moisture_center",
+    "greenhouse/sensor/center_substrate_moisture/state": "moisture_center",
+    "greenhouse/sensor/center_substrate_moisture____/state": "moisture_center",
+    "greenhouse/sensor/center_root_zone_vwc/state": "moisture_center",
+    "greenhouse/sensor/middle_substrate_vwc/state": "moisture_center",
+    "greenhouse/sensor/middle_substrate_moisture/state": "moisture_center",
+    "greenhouse/sensor/middle_substrate_moisture____/state": "moisture_center",
+    "greenhouse/sensor/center_runoff_ph/state": "ph_runoff_center",
+    "greenhouse/sensor/center_runoff_p_h/state": "ph_runoff_center",
+    "greenhouse/sensor/center_run_off_ph/state": "ph_runoff_center",
+    "greenhouse/sensor/center_run_off_p_h/state": "ph_runoff_center",
+    "greenhouse/sensor/center_drain_ph/state": "ph_runoff_center",
+    "greenhouse/sensor/center_drain_p_h/state": "ph_runoff_center",
+    "greenhouse/sensor/center_drainage_ph/state": "ph_runoff_center",
+    "greenhouse/sensor/center_leachate_ph/state": "ph_runoff_center",
+    "greenhouse/sensor/center_effluent_ph/state": "ph_runoff_center",
+    "greenhouse/sensor/center_tray_ph/state": "ph_runoff_center",
+    "greenhouse/sensor/center_runoff_ec/state": "ec_runoff_center",
+    "greenhouse/sensor/center_runoff_ec_ms_cm/state": "ec_runoff_center",
+    "greenhouse/sensor/center_runoff_ec_us_cm/state": "ec_runoff_center",
+    "greenhouse/sensor/center_runoff_ec_u_s_cm/state": "ec_runoff_center",
+    "greenhouse/sensor/center_runoff_ec___s_cm_/state": "ec_runoff_center",
+    "greenhouse/sensor/center_runoff_ec____s___cm_/state": "ec_runoff_center",
+    "greenhouse/sensor/center_run_off_ec/state": "ec_runoff_center",
+    "greenhouse/sensor/center_run_off_ec_ms_cm/state": "ec_runoff_center",
+    "greenhouse/sensor/center_run_off_ec_us_cm/state": "ec_runoff_center",
+    "greenhouse/sensor/center_run_off_ec_u_s_cm/state": "ec_runoff_center",
+    "greenhouse/sensor/center_run_off_ec___s_cm_/state": "ec_runoff_center",
+    "greenhouse/sensor/center_run_off_ec____s___cm_/state": "ec_runoff_center",
+    "greenhouse/sensor/center_runoff_conductivity/state": "ec_runoff_center",
+    "greenhouse/sensor/center_runoff_electrical_conductivity/state": "ec_runoff_center",
+    "greenhouse/sensor/center_drain_ec/state": "ec_runoff_center",
+    "greenhouse/sensor/center_drain_ec_ms_cm/state": "ec_runoff_center",
+    "greenhouse/sensor/center_drain_ec_us_cm/state": "ec_runoff_center",
+    "greenhouse/sensor/center_drain_ec_u_s_cm/state": "ec_runoff_center",
+    "greenhouse/sensor/center_drain_ec___s_cm_/state": "ec_runoff_center",
+    "greenhouse/sensor/center_drain_ec____s___cm_/state": "ec_runoff_center",
+    "greenhouse/sensor/center_drainage_ec/state": "ec_runoff_center",
+    "greenhouse/sensor/center_leachate_ec/state": "ec_runoff_center",
+    "greenhouse/sensor/center_effluent_ec/state": "ec_runoff_center",
+    "greenhouse/sensor/center_tray_ec/state": "ec_runoff_center",
+}
+
+MQTT_FEEDBACK_CANDIDATES: dict[str, tuple[str, ...]] = {
+    "south_soil_probe_1": (
+        "greenhouse/sensor/south_1_soil_moisture____/state",
+        "greenhouse/sensor/south_1_soil_ec____s___cm_/state",
+        "greenhouse/sensor/south_1_soil_temp____f_/state",
+        "greenhouse/sensor/south_soil_moisture____/state",
+        "greenhouse/sensor/south_soil_ec____s___cm_/state",
+        "greenhouse/sensor/south_soil_temp____f_/state",
+    ),
+    "center_root_zone_moisture": (
+        "greenhouse/sensor/center_soil_moisture____/state",
+        "greenhouse/sensor/center_root_zone_moisture____/state",
+        "greenhouse/sensor/center_root_zone_soil_moisture____/state",
+        "greenhouse/sensor/center_rootzone_moisture____/state",
+        "greenhouse/sensor/center_moisture____/state",
+        "greenhouse/sensor/center_vwc/state",
+        "greenhouse/sensor/center_substrate_vwc/state",
+        "greenhouse/sensor/center_substrate_moisture/state",
+        "greenhouse/sensor/center_substrate_moisture____/state",
+        "greenhouse/sensor/center_root_zone_vwc/state",
+        "greenhouse/sensor/middle_substrate_vwc/state",
+        "greenhouse/sensor/middle_substrate_moisture/state",
+        "greenhouse/sensor/middle_substrate_moisture____/state",
+    ),
+    "center_runoff_ph": (
+        "greenhouse/sensor/center_runoff_ph/state",
+        "greenhouse/sensor/center_runoff_p_h/state",
+        "greenhouse/sensor/center_run_off_ph/state",
+        "greenhouse/sensor/center_run_off_p_h/state",
+        "greenhouse/sensor/center_drain_ph/state",
+        "greenhouse/sensor/center_drain_p_h/state",
+        "greenhouse/sensor/center_drainage_ph/state",
+        "greenhouse/sensor/center_leachate_ph/state",
+        "greenhouse/sensor/center_effluent_ph/state",
+        "greenhouse/sensor/center_tray_ph/state",
+    ),
+    "center_runoff_ec": (
+        "greenhouse/sensor/center_runoff_ec/state",
+        "greenhouse/sensor/center_runoff_ec_ms_cm/state",
+        "greenhouse/sensor/center_runoff_ec_us_cm/state",
+        "greenhouse/sensor/center_runoff_ec_u_s_cm/state",
+        "greenhouse/sensor/center_runoff_ec___s_cm_/state",
+        "greenhouse/sensor/center_runoff_ec____s___cm_/state",
+        "greenhouse/sensor/center_run_off_ec/state",
+        "greenhouse/sensor/center_run_off_ec_ms_cm/state",
+        "greenhouse/sensor/center_run_off_ec_us_cm/state",
+        "greenhouse/sensor/center_run_off_ec_u_s_cm/state",
+        "greenhouse/sensor/center_run_off_ec___s_cm_/state",
+        "greenhouse/sensor/center_run_off_ec____s___cm_/state",
+        "greenhouse/sensor/center_runoff_conductivity/state",
+        "greenhouse/sensor/center_runoff_electrical_conductivity/state",
+        "greenhouse/sensor/center_drain_ec/state",
+        "greenhouse/sensor/center_drain_ec_ms_cm/state",
+        "greenhouse/sensor/center_drain_ec_us_cm/state",
+        "greenhouse/sensor/center_drain_ec_u_s_cm/state",
+        "greenhouse/sensor/center_drain_ec___s_cm_/state",
+        "greenhouse/sensor/center_drain_ec____s___cm_/state",
+        "greenhouse/sensor/center_drainage_ec/state",
+        "greenhouse/sensor/center_leachate_ec/state",
+        "greenhouse/sensor/center_effluent_ec/state",
+        "greenhouse/sensor/center_tray_ec/state",
+    ),
+}
+
+FEEDBACK_VALUE_RANGES: dict[str, tuple[float | None, float | None]] = {
+    "soil_moisture_south_1": (0.0, 100.0),
+    "soil_ec_south_1": (0.0, None),
+    "soil_temp_south_1": (-40.0, 180.0),
+    "moisture_center": (0.0, 100.0),
+    "ph_runoff_center": (0.0, 14.0),
+    "ec_runoff_center": (0.0, None),
+}
+
+
+def normalize_feedback_value(column: str, value: object) -> float | None:
+    """Return a finite in-range feedback value, or None when it must be ignored."""
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(numeric):
+        return None
+    limits = FEEDBACK_VALUE_RANGES.get(column)
+    if not limits:
+        return numeric
+    low, high = limits
+    if low is not None and numeric < low:
+        return None
+    if high is not None and numeric > high:
+        return None
+    return numeric
+
 
 # ──────────────────────────────────────────────────────────────
 # Equipment relay states — BinarySensor entities

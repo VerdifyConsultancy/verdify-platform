@@ -22,6 +22,7 @@ from verdify_schemas.alerts import (
     HeapPressureWarningAlert,
     HeatManualOverrideAlert,
     HeatStagingInversionAlert,
+    IrrigationFeedbackGapAlert,
     LeakDetectedAlert,
     PlanContextFailedAlert,
     PlannerBandOwnershipDriftAlert,
@@ -124,6 +125,18 @@ CASES = {
             "temp_avg": 61.2,
             "temp_low": 62.0,
             "d_heat_stage_2": 3.0,
+        },
+    ),
+    "irrigation_feedback_gap": (
+        IrrigationFeedbackGapAlert,
+        {
+            "feedback_key": "south_soil_probe_1",
+            "signal": "soil_moisture_south_1",
+            "status": "stuck_zero",
+            "latest_value": 0.0,
+            "last_sample_ts": NOW,
+            "required_action": "Repair or replace south soil probe 1.",
+            "view_details": {"samples_24h": 1434, "positive_samples_24h": 0},
         },
     ),
     "leak_detected": (

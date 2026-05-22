@@ -49,7 +49,7 @@ erDiagram
     greenhouses ||--o{ weather_forecast : "greenhouse_id"
     greenhouses ||--o{ zones : "greenhouse_id"
     image_observations ||--o{ observations : "image_observation_id"
-    irrigation_schedule ||--o{ irrigation_log : "schedule_id"
+    irrigation_schedule ||--o{ irrigation_log : "schedule_id (retired compatibility)"
     observations ||--o{ treatments : "observation_id"
     planner_lessons }o--|| planner_lessons : "superseded_by (self-ref)"
     positions ||--o{ crop_events : "position_id"
@@ -116,7 +116,7 @@ erDiagram
 | `greenhouses` | `id` | `weather_forecast` | `greenhouse_id` |
 | `greenhouses` | `id` | `zones` | `greenhouse_id` |
 | `image_observations` | `id` | `observations` | `image_observation_id` |
-| `irrigation_schedule` | `id` | `irrigation_log` | `schedule_id` |
+| `irrigation_schedule` | `id` | `irrigation_log` | `schedule_id` (retired compatibility; canonical schedule is `v_irrigation_schedule_current`, events are `v_irrigation_fertigation_runs`) |
 | `observations` | `id` | `treatments` | `observation_id` |
 | `planner_lessons` | `id` | `planner_lessons` | `superseded_by` |
 | `positions` | `id` | `crop_events` | `position_id` |
@@ -200,7 +200,7 @@ Hard constraints (DB-enforced `REFERENCES` clauses):
 | `greenhouses.id` | everywhere | `greenhouse_id` | no |
 | `planner_lessons.id` | `planner_lessons.superseded_by` | self-ref | no |
 | `forecast_action_rules.id` | `forecast_action_log.rule_id` | `rule_id` | no |
-| `irrigation_schedule.id` | `irrigation_log.schedule_id` | `schedule_id` | no |
+| `irrigation_schedule.id` | `irrigation_log.schedule_id` | `schedule_id` | no; retired compatibility only |
 
 Soft relationships (no FK; joins happen by well-known column matching):
 
@@ -232,7 +232,7 @@ Each view in `verdify_schemas/views.py` is a projection of one or more tables:
 | `v_plan_compliance` | `setpoint_plan`, `climate` | `planned_ts`, `parameter` |
 | `v_plan_accuracy` | `v_plan_compliance` | `plan_id` |
 | `v_dew_point_risk` | `climate` | `date` (24h aggregate of margin) |
-| `v_water_budget` | `irrigation_log`, `equipment_state` (mister runtime) | `date` |
+| `v_water_budget` | `v_irrigation_fertigation_runs`, `daily_summary`, `equipment_state` fallback runtime | `date` |
 | `v_daily_oscillation` | `equipment_state` | `date`, `equipment` |
 | `v_override_activity_24h` | `override_events` | 24h window |
 | `v_clamp_activity_24h` | `setpoint_clamps` | 24h window |
