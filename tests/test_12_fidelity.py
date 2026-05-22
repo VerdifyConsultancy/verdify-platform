@@ -29,6 +29,7 @@ import os
 import re
 import runpy
 import sys
+from datetime import date
 from datetime import datetime as _dt
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -942,15 +943,14 @@ def test_lighting_automation_audit_checks_state_graph_labels():
 
     assert "lighting state graph labels and fills" in src
     for token in (
-        "Solar / Tempest Exterior Lux (10m avg)",
+        "Solar Forecast",
         "Tempest/Forecast Lux",
-        "Main/Grow ON Threshold",
-        "Main/Grow OFF Threshold",
-        "switch.greenhouse_main ON",
-        "switch.greenhouse_grow ON",
+        "Grow Light Threshold",
+        "Grow Light On",
         "fn_lighting_minutes_policy",
         "equipment_state",
-        "custom.axisPlacement",
+        "weather_forecast",
+        "axisPlacement",
         "custom.fillBelowTo",
     ):
         assert token in src
@@ -986,6 +986,50 @@ def test_lighting_automation_audit_checks_tunable_and_lutron_contracts():
     assert '"switch.greenhouse_grow": "grow_light_grow"' in src
     assert '"light.greenhouse_main"' in src
     assert '"light.greenhouse_grow"' in src
+
+
+def test_plans_index_includes_in_progress_plan_pages(tmp_path):
+    module = runpy.run_path(
+        str(REPO_ROOT / "scripts" / "generate-plans-index.py"), run_name="_test_generate_plans_index"
+    )
+    content_root = tmp_path / "content"
+    plans_dir = content_root / "plans"
+    plans_dir.mkdir(parents=True)
+    (plans_dir / "2026-05-22.md").write_text("---\ntitle: May 22, 2026\n---\n", encoding="utf-8")
+    (plans_dir / "index.md").write_text("ignore aliases\n", encoding="utf-8")
+    module["merge_plan_page_dates"].__globals__["CONTENT_ROOT"] = content_root
+
+    rows = module["merge_plan_page_dates"]([["2026-05-21", "3", "62-80", "2.1", "6.19", "Experiment", "7"]])
+    rendered = module["render"](rows, date(2026, 5, 22))
+
+    assert rows[0][0] == "2026-05-22"
+    assert "| [2026-05-22](/plans/2026-05-22) | 0 | - | 0.0h | - | In progress | - |" in rendered
+    assert "| [2026-05-21](/plans/2026-05-21) | 3 | 62-80°F | 2.1h | $6.19 | Experiment | 7 |" in rendered
+
+
+def test_grafana_dashboard_provider_poll_interval_avoids_sqlite_lock_churn():
+    provider = Path("grafana/provisioning/dashboards/provider.yml").read_text()
+
+    match = re.search(r"updateIntervalSeconds:\s*(\d+)", provider)
+    assert match is not None
+    assert int(match.group(1)) >= 300
+    assert "path: /etc/grafana/provisioning/dashboards/json" in provider
+    assert "allowUiUpdates: true" in provider
+
+
+def test_grafana_render_cache_warmer_handles_transient_renderer_failures():
+    script = Path("scripts/warm-grafana-render-cache.py").read_text()
+    service = Path("systemd/verdify-grafana-render-cache-warm.service").read_text()
+    timer = Path("systemd/verdify-grafana-render-cache-warm.timer").read_text()
+
+    assert "TRANSIENT_HTTP_STATUS = {429, 500, 502, 503, 504}" in script
+    assert 'parser.add_argument("--retries"' in script
+    assert '"--failure-threshold-pct"' in script
+    assert "failure_pct <= max(0.0, args.failure_threshold_pct)" in script
+    assert "--workers 1" in service
+    assert "--retries 2" in service
+    assert "--failure-threshold-pct 5" in service
+    assert "OnUnitActiveSec=30min" in timer
 
 
 def test_lighting_automation_audit_checks_live_planner_context():

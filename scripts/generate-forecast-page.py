@@ -43,6 +43,50 @@ def _data_table(rows: list[tuple[str, str, str]]) -> str:
     return "\n".join(lines)
 
 
+def _class_attr(classes: list[str]) -> str:
+    return f' class="{" ".join(classes)}"' if classes else ""
+
+
+def _lab_table(
+    headers: list[str],
+    rows: list[tuple[object, ...]],
+    *,
+    numeric_cols: set[int] | None = None,
+    nowrap_cols: set[int] | None = None,
+) -> str:
+    if not rows:
+        return '<div class="metric-grid">\n  <div class="metric-card"><strong>No data</strong><p>No rows available.</p></div>\n</div>'
+    numeric_cols = numeric_cols or set()
+    nowrap_cols = nowrap_cols or set()
+    lines = ['<div class="lab-table-wrap">', '  <table class="lab-table">', "    <thead>", "      <tr>"]
+    for idx, header in enumerate(headers):
+        classes: list[str] = []
+        if idx in numeric_cols:
+            classes.append("is-num")
+        if idx in nowrap_cols:
+            classes.append("is-nowrap")
+        lines.append(f"        <th{_class_attr(classes)}>{escape(str(header))}</th>")
+    lines.extend(["      </tr>", "    </thead>", "    <tbody>"])
+    for row in rows:
+        lines.append("      <tr>")
+        for idx, cell in enumerate(row):
+            classes = []
+            if idx in numeric_cols:
+                classes.append("is-num")
+            if idx in nowrap_cols:
+                classes.append("is-nowrap")
+            lines.append(f"        <td{_class_attr(classes)}>{escape(str(cell))}</td>")
+        lines.append("      </tr>")
+    lines.extend(["    </tbody>", "  </table>", "</div>"])
+    return "\n".join(lines)
+
+
+def _fmt(value: object, suffix: str = "") -> str:
+    if value is None or value == "":
+        return "—"
+    return f"{value}{suffix}"
+
+
 def psql(sql: str, timeout: int = 45) -> list[list[str]]:
     result = subprocess.run(
         [
@@ -254,8 +298,15 @@ def _render(hours: list[ForecastHour], daily: list[dict], bias: dict, deviations
         }
         rows = []
         for p, (err, n) in bias.items():
-            rows.append((p, f"avg error {err}; {n} samples", interp.get(p, "")))
-        lines.append(_data_table(rows))
+            rows.append((p, err, n, interp.get(p, "")))
+        lines.append(
+            _lab_table(
+                ["Metric", "Avg error", "Samples", "Interpretation"],
+                rows,
+                numeric_cols={1, 2},
+                nowrap_cols={0, 1, 2},
+            )
+        )
     else:
         lines.append("*No bias correction available — not enough observation/forecast overlap yet.*")
 
@@ -272,11 +323,22 @@ def _render(hours: list[ForecastHour], daily: list[dict], bias: dict, deviations
         hourly_rows.append(
             (
                 ts_local,
-                f"{h.temp_f or '—'}°F; RH {h.rh_pct or '—'}%; VPD {h.vpd_kpa or '—'} kPa",
-                f"Solar {h.solar_w_m2 or '—'} W/m²; cloud {h.cloud_cover_pct or '—'}%; wind {h.wind_speed_mph or '—'} mph; precip {h.precip_prob_pct or '—'}%.",
+                _fmt(h.temp_f, "°F"),
+                _fmt(h.rh_pct, "%"),
+                _fmt(h.vpd_kpa, " kPa"),
+                _fmt(h.solar_w_m2, " W/m²"),
+                _fmt(h.cloud_cover_pct, "%"),
+                _fmt(h.wind_speed_mph, " mph"),
+                _fmt(h.precip_prob_pct, "%"),
             )
         )
-    lines.append(_data_table(hourly_rows))
+    lines.append(
+        _lab_table(
+            ["Time", "Temp", "RH", "VPD", "Solar", "Cloud", "Wind", "Precip"],
+            hourly_rows,
+            nowrap_cols={0, 1, 2, 3, 4, 5, 6, 7},
+        )
+    )
 
     lines.extend(
         [
@@ -290,11 +352,21 @@ def _render(hours: list[ForecastHour], daily: list[dict], bias: dict, deviations
         daily_rows.append(
             (
                 d["day"],
-                f"{d['low']}–{d['high']}°F; RH min {d['rh_min']}%",
-                f"Precip max {d['precip_max']}%; VPD avg {d['vpd_avg']} kPa; cloud avg {d['cloud_avg']}%.",
+                f"{d['low']}°F",
+                f"{d['high']}°F",
+                f"{d['rh_min']}%",
+                f"{d['precip_max']}%",
+                f"{d['vpd_avg']} kPa",
+                f"{d['cloud_avg']}%",
             )
         )
-    lines.append(_data_table(daily_rows))
+    lines.append(
+        _lab_table(
+            ["Day", "Low", "High", "RH min", "Precip max", "VPD avg", "Cloud avg"],
+            daily_rows,
+            nowrap_cols={0, 1, 2, 3, 4, 5, 6},
+        )
+    )
 
     lines.extend(
         [
@@ -309,8 +381,15 @@ def _render(hours: list[ForecastHour], daily: list[dict], bias: dict, deviations
     if deviations:
         rows = []
         for d in deviations:
-            rows.append((d[0], d[1], f"Observed {d[2]}; forecast {d[3]}; delta {d[4]}."))
-        lines.append(_data_table(rows))
+            rows.append((d[0], d[1], d[2], d[3], d[4]))
+        lines.append(
+            _lab_table(
+                ["Time", "Metric", "Observed", "Forecast", "Delta"],
+                rows,
+                numeric_cols={2, 3, 4},
+                nowrap_cols={0, 1, 2, 3, 4},
+            )
+        )
     else:
         lines.append(
             '<div class="metric-grid">\n  <div class="metric-card"><strong>No recent deviations</strong><p>No triggered deviations in the recent log.</p></div>\n</div>'

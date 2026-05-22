@@ -8,6 +8,7 @@ import csv
 import subprocess
 import sys
 from dataclasses import dataclass
+from html import escape
 from pathlib import Path
 
 DATA_OUT_PATH = Path("/mnt/iris/verdify-vault/website/data/baseline-vs-iris.md")
@@ -219,6 +220,44 @@ def fmt_reduction_usd(current: str, baseline: str) -> str:
     return f"USD {abs(delta):.2f} higher"
 
 
+def _class_attr(classes: list[str]) -> str:
+    return f' class="{" ".join(classes)}"' if classes else ""
+
+
+def _lab_table(
+    headers: list[str],
+    rows: list[tuple[object, ...]],
+    *,
+    numeric_cols: set[int] | None = None,
+    nowrap_cols: set[int] | None = None,
+) -> str:
+    if not rows:
+        return '<div class="metric-grid">\n  <div class="metric-card"><strong>No data</strong><p>No rows available.</p></div>\n</div>'
+    numeric_cols = numeric_cols or set()
+    nowrap_cols = nowrap_cols or set()
+    lines = ['<div class="lab-table-wrap">', '  <table class="lab-table">', "    <thead>", "      <tr>"]
+    for idx, header in enumerate(headers):
+        classes: list[str] = []
+        if idx in numeric_cols:
+            classes.append("is-num")
+        if idx in nowrap_cols:
+            classes.append("is-nowrap")
+        lines.append(f"        <th{_class_attr(classes)}>{escape(str(header))}</th>")
+    lines.extend(["      </tr>", "    </thead>", "    <tbody>"])
+    for row in rows:
+        lines.append("      <tr>")
+        for idx, cell in enumerate(row):
+            classes = []
+            if idx in numeric_cols:
+                classes.append("is-num")
+            if idx in nowrap_cols:
+                classes.append("is-nowrap")
+            lines.append(f"        <td{_class_attr(classes)}>{escape(str(cell))}</td>")
+        lines.append("      </tr>")
+    lines.extend(["    </tbody>", "  </table>", "</div>"])
+    return "\n".join(lines)
+
+
 def render(periods: list[Period], confounders: list[Confounders], daily: list[Daily]) -> str:
     baseline, current = periods
     base_conf, current_conf = confounders
@@ -273,13 +312,70 @@ def render(periods: list[Period], confounders: list[Confounders], daily: list[Da
         ),
         ("Planner score", baseline.score, current.score, fmt_delta(current.score, baseline.score)),
     ]
-    metric_rows = "\n".join(
-        f'  <div class="data-row"><strong>{metric}</strong><span>{base} -> {cur}</span><p>{delta}</p></div>'
-        for metric, base, cur, delta in rows
+    summary_table = _lab_table(
+        ["Metric", "Planner offline", "Planner online", "Change"],
+        rows,
+        nowrap_cols={1, 2, 3},
     )
-    daily_rows = "\n".join(
-        f'  <div class="data-row"><strong>{d.date}</strong><span>{d.plans} plans - {d.both_axis}% both-axis - {d.score} score</span><p>{d.stress_h}h stress, {d.vpd_high_h}h VPD-high, {d.heat_h}h heat, USD {d.cost_usd}</p></div>'
-        for d in daily
+    confounder_table = _lab_table(
+        ["Factor", "Planner offline", "Planner online", "Reading"],
+        [
+            (
+                "Outdoor temperature",
+                f"{base_conf.outdoor_temp_avg_f}°F avg / {base_conf.outdoor_temp_max_f}°F max",
+                f"{current_conf.outdoor_temp_avg_f}°F avg / {current_conf.outdoor_temp_max_f}°F max",
+                "The planner-online window was cooler, reducing heat-load pressure.",
+            ),
+            (
+                "Outdoor VPD / humidity",
+                f"{base_conf.outdoor_vpd_avg_kpa} kPa avg",
+                f"{current_conf.outdoor_vpd_avg_kpa} kPa avg",
+                "The planner-online window had less dry-air pressure, so VPD compliance was easier to recover.",
+            ),
+            (
+                "Solar irradiance",
+                f"{base_conf.solar_avg_w_m2} W/m² avg",
+                f"{current_conf.solar_avg_w_m2} W/m² avg",
+                "Lower solar load reduces overheating and evaporative demand.",
+            ),
+            (
+                "Manual interventions",
+                f"{base_conf.crop_events} logged crop events",
+                f"{current_conf.crop_events} logged crop events",
+                "Logged event counts are shown explicitly, but operator activity is not controlled like a lab experiment.",
+            ),
+            (
+                "Hardware changes",
+                "No major hardware change is asserted here",
+                "No major hardware change is asserted here",
+                "The comparison uses the same greenhouse and controller boundary, but it is not a locked hardware trial.",
+            ),
+            (
+                "Crop mix / active bands",
+                "Same public crop-control model",
+                "Same public crop-control model, plants still aging",
+                "Crop targets are comparable enough for an operational receipt, not for yield attribution or agronomic proof.",
+            ),
+        ],
+        nowrap_cols={1, 2},
+    )
+    daily_table = _lab_table(
+        ["Date", "Plans", "Both-axis", "Score", "Stress", "VPD-high", "Heat", "Cost"],
+        [
+            (
+                d.date,
+                d.plans,
+                f"{d.both_axis}%",
+                d.score,
+                f"{d.stress_h}h",
+                f"{d.vpd_high_h}h",
+                f"{d.heat_h}h",
+                f"USD {d.cost_usd}",
+            )
+            for d in daily
+        ],
+        numeric_cols={1, 2, 3, 4, 5, 6, 7},
+        nowrap_cols={0, 1, 2, 3, 4, 5, 6, 7},
     )
     return f"""---
 title: "AI Greenhouse Baseline vs AI Planning Agent"
@@ -301,7 +397,7 @@ The comparison is still useful because it answers the skeptical reader's first q
 
 For the exact parameters the AI planning agent can change when it is online, see [AI Tunables Traceability](/reference/ai-tunables/).
 
-For the broader caveat language, see the [AI Greenhouse FAQ](/start/ai-greenhouse/#does-verdify-claim-better-yield-or-profit). For the live receipts behind this page, use [Planning Quality](/data/planning-quality/), [Operations](/data/operations/), and the [planning archive](/data/plans/).
+For the broader caveat language, see the [AI Greenhouse FAQ](/start/ai-greenhouse/#does-verdify-claim-better-yield-or-profit). For the live receipts behind this page, use the [Scorecard](/data/planning-quality/), [Operations](/data/operations/), and the [planning archive](/data/plans/).
 
 ## Periods Compared
 
@@ -312,28 +408,19 @@ For the broader caveat language, see the [AI Greenhouse FAQ](/start/ai-greenhous
 
 ## Summary Table
 
-<div class="data-table">
-{metric_rows}
-</div>
+{summary_table}
 
 ## Confounders To Keep In View
 
 This comparison is useful, but it is not weather-normalized proof that the AI planning agent caused every improvement. The planner-online window was cooler, more humid, and lower-solar on average, which likely made VPD and heat stress easier. The table below makes those confounders explicit instead of burying them in caveats.
 
-<div class="data-table">
-  <div class="data-row"><strong>Outdoor temperature</strong><span>{base_conf.outdoor_temp_avg_f}°F avg / {base_conf.outdoor_temp_max_f}°F max -> {current_conf.outdoor_temp_avg_f}°F avg / {current_conf.outdoor_temp_max_f}°F max</span><p>The planner-online window was cooler, reducing heat-load pressure.</p></div>
-  <div class="data-row"><strong>Outdoor VPD / humidity</strong><span>{base_conf.outdoor_vpd_avg_kpa} kPa avg -> {current_conf.outdoor_vpd_avg_kpa} kPa avg</span><p>The planner-online window had less dry-air pressure, so VPD compliance was easier to recover.</p></div>
-  <div class="data-row"><strong>Solar irradiance</strong><span>{base_conf.solar_avg_w_m2} W/m² avg -> {current_conf.solar_avg_w_m2} W/m² avg</span><p>Lower solar load reduces overheating and evaporative demand.</p></div>
-  <div class="data-row"><strong>Manual interventions</strong><span>{base_conf.crop_events} logged crop events -> {current_conf.crop_events} logged crop events</span><p>Logged event counts are shown explicitly, but operator activity is not controlled like a lab experiment.</p></div>
-  <div class="data-row"><strong>Hardware changes</strong><span>No major hardware change is asserted here</span><p>The comparison uses the same greenhouse and controller boundary, but it is not a locked hardware trial.</p></div>
-  <div class="data-row"><strong>Crop mix / active bands</strong><span>Same public crop-control model, plants still aging</span><p>Crop targets are comparable enough for an operational receipt, not for yield attribution or agronomic proof.</p></div>
-</div>
+{confounder_table}
 
 ## How To Read The Receipt
 
-This page uses generated tables instead of re-embedding the Planning Quality dashboard. The comparison window is fixed, the metrics are pulled from the same tables behind the public scorecard, and the caveats stay on the page with the numbers.
+This page uses generated tables instead of re-embedding the Scorecard dashboard. The comparison window is fixed, the metrics are pulled from the same tables behind the public scorecard, and the caveats stay on the page with the numbers.
 
-For the live rolling charts, use [Planning Quality](/data/planning-quality/).
+For the live rolling charts, use the [Scorecard](/data/planning-quality/).
 
 ## Resource Tradeoffs
 
@@ -341,9 +428,7 @@ The comparison is more useful when stress is shown beside what the greenhouse sp
 
 ## Daily Rows
 
-<div class="data-table">
-{daily_rows}
-</div>
+{daily_table}
 
 ## Definitions
 
@@ -374,7 +459,7 @@ For raw public-safe data, use the [7-day climate CSV](/static/data/verdify-sampl
 - [Why the AI Does Not Control Relays](/reference/safety/) explains the safety split behind the outage window.
 - [Planning Loop](/reference/planning-loop/) shows how the AI planning agent writes hypotheses and waypoints.
 - [AI Tunables Traceability](/reference/ai-tunables/) lists the bounded control surface behind those waypoints.
-- [Planning Quality](/data/planning-quality/) shows the live scorecard and forecast-plan-outcome panels.
+- [Scorecard](/data/planning-quality/) shows the live scorecard and forecast-plan-outcome panels.
 - [Generated Lessons](/reference/lessons/) shows what the planner reads before future plans.
 - [Data Model](/reference/data-model/) explains the tables, views, and sample exports behind this comparison.
 """

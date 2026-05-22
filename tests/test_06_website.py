@@ -73,10 +73,9 @@ class TestWebsite:
         assert status in (301, 302, 307, 308), f"www.verdify.ai returned {status}"
         assert location == "https://lab.verdify.ai/data/plans/"
 
-    def test_labs_redirects_to_lab(self):
-        status, location = curl_head("https://127.0.0.1/reference/planner-contract", "labs.verdify.ai")
-        assert status in (301, 302, 307, 308), f"labs.verdify.ai returned {status}"
-        assert location == "https://lab.verdify.ai/reference/planner-contract"
+    def test_labs_alias_serves_lab_site(self):
+        status = curl_get("https://127.0.0.1/reference/planner-contract", "labs.verdify.ai")
+        assert status == 200, f"labs.verdify.ai returned {status}"
 
 
 class TestGrafana:

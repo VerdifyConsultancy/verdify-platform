@@ -410,9 +410,15 @@ def check_homepage_panel_cards(vault_root: Path) -> list[Finding]:
             findings.append(
                 Finding("error", "homepage-panel-iframe-missing", f"index.md:{line_no} panel card has no iframe")
             )
-        if 'class="home-panel-card__callout"' not in block:
+        if 'class="home-panel-card__intro"' not in block:
             findings.append(
-                Finding("error", "homepage-panel-callout-missing", f"index.md:{line_no} panel card has no text callout")
+                Finding(
+                    "error", "homepage-panel-intro-missing", f"index.md:{line_no} panel card has no intro narrative"
+                )
+            )
+        if not re.search(r"<h3(?:\s[^>]*)?>", block):
+            findings.append(
+                Finding("error", "homepage-panel-title-missing", f"index.md:{line_no} panel card has no section title")
             )
 
     return findings

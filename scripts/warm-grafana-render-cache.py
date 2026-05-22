@@ -26,6 +26,10 @@ DEFAULT_PUBLIC_ROOT = Path("/srv/verdify/verdify-site/public")
 DEFAULT_TIMEOUT_S = 75
 DEFAULT_WORKERS = 1
 DEFAULT_BUCKETS = (800,)
+DEFAULT_RETRIES = 1
+DEFAULT_RETRY_DELAY_S = 5.0
+DEFAULT_FAILURE_THRESHOLD_PCT = 0.0
+TRANSIENT_HTTP_STATUS = {429, 500, 502, 503, 504}
 ASSUMED_CSS_WIDTH_BY_BUCKET = {
     800: 390,
     1000: 540,
@@ -48,6 +52,7 @@ class WarmResult:
     status: int | None
     cache_status: str
     elapsed_s: float
+    attempts: int = 1
     error: str | None = None
 
 
@@ -90,7 +95,7 @@ def collect_urls(public_root: Path, buckets: tuple[int, ...]) -> list[str]:
     return sorted(urls)
 
 
-def warm_url(url: str, timeout_s: int) -> WarmResult:
+def warm_once(url: str, timeout_s: int, attempt: int) -> WarmResult:
     start = time.monotonic()
     req = Request(url, method="HEAD", headers={"User-Agent": MOBILE_UA})
     try:
@@ -101,16 +106,33 @@ def warm_url(url: str, timeout_s: int) -> WarmResult:
                 status=resp.status,
                 cache_status=resp.headers.get("X-Cache-Status", ""),
                 elapsed_s=elapsed_s,
+                attempts=attempt,
             )
     except HTTPError as exc:
         elapsed_s = time.monotonic() - start
-        return WarmResult(url=url, status=exc.code, cache_status="", elapsed_s=elapsed_s, error=str(exc))
+        return WarmResult(
+            url=url, status=exc.code, cache_status="", elapsed_s=elapsed_s, attempts=attempt, error=str(exc)
+        )
     except URLError as exc:
         elapsed_s = time.monotonic() - start
-        return WarmResult(url=url, status=None, cache_status="", elapsed_s=elapsed_s, error=str(exc.reason))
+        return WarmResult(
+            url=url, status=None, cache_status="", elapsed_s=elapsed_s, attempts=attempt, error=str(exc.reason)
+        )
     except TimeoutError as exc:
         elapsed_s = time.monotonic() - start
-        return WarmResult(url=url, status=None, cache_status="", elapsed_s=elapsed_s, error=str(exc))
+        return WarmResult(url=url, status=None, cache_status="", elapsed_s=elapsed_s, attempts=attempt, error=str(exc))
+
+
+def warm_url(url: str, timeout_s: int, retries: int, retry_delay_s: float) -> WarmResult:
+    attempts = max(1, retries + 1)
+    result = warm_once(url, timeout_s, attempt=1)
+    for attempt in range(2, attempts + 1):
+        retryable = result.status in TRANSIENT_HTTP_STATUS or result.status is None
+        if result.error is None or not retryable:
+            return result
+        time.sleep(max(0.0, retry_delay_s) * (attempt - 1))
+        result = warm_once(url, timeout_s, attempt=attempt)
+    return result
 
 
 def parse_buckets(raw: str) -> tuple[int, ...]:
@@ -131,6 +153,14 @@ def main() -> int:
     parser.add_argument("--buckets", type=parse_buckets, default=DEFAULT_BUCKETS)
     parser.add_argument("--workers", type=int, default=DEFAULT_WORKERS)
     parser.add_argument("--timeout", type=int, default=DEFAULT_TIMEOUT_S)
+    parser.add_argument("--retries", type=int, default=DEFAULT_RETRIES)
+    parser.add_argument("--retry-delay", type=float, default=DEFAULT_RETRY_DELAY_S)
+    parser.add_argument(
+        "--failure-threshold-pct",
+        type=float,
+        default=DEFAULT_FAILURE_THRESHOLD_PCT,
+        help="allow this percentage of transient render failures before exiting non-zero",
+    )
     parser.add_argument("--limit", type=int, default=0, help="limit URLs for smoke tests")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
@@ -148,7 +178,7 @@ def main() -> int:
     failures = 0
     cache_counts: dict[str, int] = {}
     with ThreadPoolExecutor(max_workers=max(1, args.workers)) as executor:
-        futures = [executor.submit(warm_url, url, args.timeout) for url in urls]
+        futures = [executor.submit(warm_url, url, args.timeout, args.retries, args.retry_delay) for url in urls]
         for idx, future in enumerate(as_completed(futures), start=1):
             result = future.result()
             cache_key = result.cache_status or "NONE"
@@ -158,13 +188,17 @@ def main() -> int:
                 failures += 1
             print(
                 f"[{idx}/{len(urls)}] status={result.status or '-'} "
-                f"cache={cache_key} elapsed={result.elapsed_s:.1f}s {result.url}"
+                f"cache={cache_key} attempts={result.attempts} elapsed={result.elapsed_s:.1f}s {result.url}"
             )
             if result.error:
                 print(f"  error: {result.error}", file=sys.stderr)
 
     summary = ", ".join(f"{key}={value}" for key, value in sorted(cache_counts.items()))
     print(f"Grafana render cache warmer complete: failures={failures}; {summary}")
+    failure_pct = (failures / len(urls) * 100.0) if urls else 0.0
+    if failures and failure_pct <= max(0.0, args.failure_threshold_pct):
+        print(f"Grafana render cache warmer tolerated {failures}/{len(urls)} failures ({failure_pct:.1f}%)")
+        return 0
     return 1 if failures else 0
 
 

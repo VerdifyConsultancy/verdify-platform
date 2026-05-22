@@ -1,0 +1,1059 @@
+{
+  "uid": "site-irrigation",
+  "title": "Site: Irrigation",
+  "editable": false,
+  "panels": [
+    {
+      "id": 1,
+      "type": "table",
+      "title": "Canonical Schedule",
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "uid": "verdify-tsdb",
+        "type": "grafana-postgresql-datasource"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "uid": "verdify-tsdb",
+            "type": "grafana-postgresql-datasource"
+          },
+          "rawSql": "SELECT zone_path, enabled, start_time, clean_duration_min, fert_duration_min, flush_min, days_mask, fert_days_mask, schedule_source, stale_readback_count, readback_drift_count, notes FROM v_irrigation_schedule_current ORDER BY schedule_id",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        }
+      },
+      "transparent": true
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Last Run Age",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 7
+      },
+      "datasource": {
+        "uid": "verdify-tsdb",
+        "type": "grafana-postgresql-datasource"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "uid": "verdify-tsdb",
+            "type": "grafana-postgresql-datasource"
+          },
+          "rawSql": "SELECT now() AS time, round((extract(epoch FROM (now() - max(run_end))) / 3600.0)::numeric, 1) AS value FROM v_irrigation_fertigation_runs",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "h",
+          "thresholds": {
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              },
+              {
+                "color": "#FDD835",
+                "value": 30
+              },
+              {
+                "color": "#EF5350",
+                "value": 54
+              }
+            ]
+          },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#26A69A"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "transparent": true
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Master Overlap",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 7
+      },
+      "datasource": {
+        "uid": "verdify-tsdb",
+        "type": "grafana-postgresql-datasource"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "uid": "verdify-tsdb",
+            "type": "grafana-postgresql-datasource"
+          },
+          "rawSql": "SELECT now() AS time, round(avg(CASE WHEN fert_duration_min > 0 THEN fert_master_overlap_min / fert_duration_min * 100 END)::numeric, 1) AS value FROM v_irrigation_fertigation_runs WHERE run_start >= now() - interval '7 days'",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "steps": [
+              {
+                "color": "#EF5350",
+                "value": null
+              },
+              {
+                "color": "#FDD835",
+                "value": 95
+              },
+              {
+                "color": "#73BF69",
+                "value": 99
+              }
+            ]
+          },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#26A69A"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "transparent": true
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Fertigation Water Today",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 7
+      },
+      "datasource": {
+        "uid": "verdify-tsdb",
+        "type": "grafana-postgresql-datasource"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "uid": "verdify-tsdb",
+            "type": "grafana-postgresql-datasource"
+          },
+          "rawSql": "SELECT now() AS time, COALESCE(sum(meter_delta_gal), 0) AS value FROM v_irrigation_fertigation_runs WHERE day = (now() AT TIME ZONE 'America/Denver')::date",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "gal",
+          "decimals": 1,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#2196F3"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "transparent": true
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Flagged Runs",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 7
+      },
+      "datasource": {
+        "uid": "verdify-tsdb",
+        "type": "grafana-postgresql-datasource"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "uid": "verdify-tsdb",
+            "type": "grafana-postgresql-datasource"
+          },
+          "rawSql": "SELECT now() AS time, count(*) AS value FROM v_irrigation_fertigation_runs WHERE run_start >= now() - interval '7 days' AND quality_flag <> 'ok'",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              },
+              {
+                "color": "#FDD835",
+                "value": 1
+              },
+              {
+                "color": "#EF5350",
+                "value": 3
+              }
+            ]
+          },
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#26A69A"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": ""
+        },
+        "colorMode": "value",
+        "graphMode": "none"
+      },
+      "transparent": true
+    },
+    {
+      "id": 6,
+      "type": "table",
+      "title": "Latest Fertigation Runs",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 11
+      },
+      "datasource": {
+        "uid": "verdify-tsdb",
+        "type": "grafana-postgresql-datasource"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "uid": "verdify-tsdb",
+            "type": "grafana-postgresql-datasource"
+          },
+          "rawSql": "SELECT to_char(run_start AT TIME ZONE 'America/Denver', 'YYYY-MM-DD HH24:MI') AS local_start, zone_path, fert_relay, flush_relay, fert_duration_min, flush_duration_min, fert_master_overlap_min, meter_delta_gal, quality_flag FROM v_irrigation_fertigation_runs ORDER BY run_start DESC LIMIT 24",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        }
+      },
+      "transparent": true
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Daily Irrigation Water",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 20
+      },
+      "datasource": {
+        "uid": "verdify-tsdb",
+        "type": "grafana-postgresql-datasource"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "uid": "verdify-tsdb",
+            "type": "grafana-postgresql-datasource"
+          },
+          "rawSql": "SELECT (date + time '12:00')::timestamptz AS time, meter_delta_gal AS \"fertigation gallons\", fertigation_events AS \"events\", flagged_events AS \"flagged\" FROM v_irrigation_program_daily WHERE $__timeFilter((date + time '12:00')::timestamptz) ORDER BY 1",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "axisColorMode": "text",
+            "axisPlacement": "auto",
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "fertigation gallons"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#2196F3",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "events"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#FDD835",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "flagged"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#EF5350",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "transparent": true
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Daily Irrigation Runtime",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 20
+      },
+      "datasource": {
+        "uid": "verdify-tsdb",
+        "type": "grafana-postgresql-datasource"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "uid": "verdify-tsdb",
+            "type": "grafana-postgresql-datasource"
+          },
+          "rawSql": "SELECT (date + time '12:00')::timestamptz AS time, runtime_irrigation_clean_h AS \"clean h\", runtime_irrigation_fert_h AS \"fert h\", runtime_fert_master_h AS \"master h\" FROM daily_summary WHERE $__timeFilter((date + time '12:00')::timestamptz) ORDER BY 1",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "h",
+          "custom": {
+            "axisColorMode": "text",
+            "axisPlacement": "auto",
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "clean h"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#42A5F5",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "fert h"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#AB47BC",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "master h"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#26A69A",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "transparent": true
+    },
+    {
+      "id": 9,
+      "type": "state-timeline",
+      "title": "Relay State",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 28
+      },
+      "datasource": {
+        "uid": "verdify-tsdb",
+        "type": "grafana-postgresql-datasource"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "uid": "verdify-tsdb",
+            "type": "grafana-postgresql-datasource"
+          },
+          "rawSql": "WITH bounds AS MATERIALIZED (SELECT $__timeFrom()::timestamptz AS from_ts, LEAST($__timeTo()::timestamptz, now()) AS to_ts, interval '2 minutes' AS step, date_trunc('hour', $__timeFrom()::timestamptz) AS seed_start_ts), buckets AS MATERIALIZED (SELECT generate_series(time_bucket(b.step, b.seed_start_ts), b.to_ts, b.step) AS time FROM bounds b), tracked(equipment, metric) AS MATERIALIZED (SELECT * FROM (VALUES ('drip_wall'::text, 'Drip Wall'::text), ('drip_wall_fert'::text, 'Drip Wall Fert'::text), ('mister_south'::text, 'Mister South'::text), ('mister_south_fert'::text, 'Mister South Fert'::text), ('mister_west'::text, 'Mister West'::text), ('mister_west_fert'::text, 'Mister West Fert'::text), ('drip_center'::text, 'Drip Center'::text), ('drip_center_fert'::text, 'Drip Center Fert'::text), ('fert_master_valve'::text, 'Fert Master Valve'::text), ('water_flowing'::text, 'Water Flowing'::text)) AS t(equipment, metric)), state_seed AS MATERIALIZED (SELECT bd.seed_start_ts AS time, t.equipment, COALESCE(seed.state, false) AS state FROM bounds bd CROSS JOIN tracked t LEFT JOIN LATERAL (SELECT e.state FROM equipment_state e WHERE e.greenhouse_id = 'vallery' AND e.equipment = t.equipment AND e.ts <= bd.seed_start_ts ORDER BY e.ts DESC LIMIT 1) seed ON true), state_events AS MATERIALIZED (SELECT e.ts AS time, e.equipment, e.state FROM equipment_state e, bounds bd WHERE e.greenhouse_id = 'vallery' AND e.equipment IN ('drip_wall','drip_wall_fert','mister_south','mister_south_fert','mister_west','mister_west_fert','drip_center','drip_center_fert','fert_master_valve','water_flowing') AND e.ts > bd.seed_start_ts AND e.ts <= bd.to_ts), state_timeline AS MATERIALIZED (SELECT e.time, e.equipment, e.state, lead(e.time, 1, (SELECT to_ts FROM bounds)) OVER (PARTITION BY e.equipment ORDER BY e.time) AS next_time FROM (SELECT time, equipment, state FROM state_seed UNION ALL SELECT time, equipment, state FROM state_events) e), state_segments AS MATERIALIZED (SELECT greatest(st.time, bd.seed_start_ts) AS start_time, least(st.next_time, bd.to_ts) AS end_time, st.equipment, st.state FROM state_timeline st CROSS JOIN bounds bd WHERE st.time < bd.to_ts AND st.next_time > bd.seed_start_ts), lanes AS (SELECT b.time, t.metric, CASE WHEN EXISTS (SELECT 1 FROM state_segments s WHERE s.equipment = t.equipment AND s.state AND s.start_time < b.time + bd.step AND s.end_time > b.time) THEN 1 ELSE 0 END::double precision AS value FROM buckets b CROSS JOIN bounds bd CROSS JOIN tracked t WHERE b.time >= bd.from_ts AND b.time <= bd.to_ts) SELECT time, metric, value FROM lanes ORDER BY time, metric",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "fillOpacity": 88,
+            "lineWidth": 0
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "",
+                  "color": "rgba(38,166,154,0.30)",
+                  "index": 0
+                },
+                "1": {
+                  "text": "",
+                  "color": "#2196F3",
+                  "index": 1
+                }
+              }
+            }
+          ],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "rgba(140,140,140,0.30)",
+                "value": null
+              },
+              {
+                "color": "#2196F3",
+                "value": 1
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "mergeValues": true,
+        "showValue": "never",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "maxDataPoints": 60000,
+      "transparent": true
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Root-Zone Response",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 36
+      },
+      "datasource": {
+        "uid": "verdify-tsdb",
+        "type": "grafana-postgresql-datasource"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "uid": "verdify-tsdb",
+            "type": "grafana-postgresql-datasource"
+          },
+          "rawSql": "SELECT ts AS time, soil_moisture_south_1 AS \"south 1\", soil_moisture_south_2 AS \"south 2\", soil_moisture_west AS \"west\", moisture_center AS \"center\" FROM climate WHERE $__timeFilter(ts) ORDER BY ts",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "axisColorMode": "text",
+            "axisPlacement": "auto",
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "south 1"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#73BF69",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "south 2"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#FDD835",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "west"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#F48FB1",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "center"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#AB47BC",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "transparent": true
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Flow And Meter",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 36
+      },
+      "datasource": {
+        "uid": "verdify-tsdb",
+        "type": "grafana-postgresql-datasource"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "uid": "verdify-tsdb",
+            "type": "grafana-postgresql-datasource"
+          },
+          "rawSql": "SELECT ts AS time, flow_gpm AS \"flow gpm\", water_total_gal AS \"meter total gal\" FROM climate WHERE $__timeFilter(ts) AND (flow_gpm IS NOT NULL OR water_total_gal IS NOT NULL) ORDER BY ts",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "axisColorMode": "text",
+            "axisPlacement": "auto",
+            "thresholdsStyle": {
+              "mode": "off"
+            },
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "flow gpm"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#2196F3",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "meter total gal"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#26A69A",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true,
+          "calcs": []
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "transparent": true
+    },
+    {
+      "id": 12,
+      "type": "table",
+      "title": "Feedback Sensor Gaps",
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 44
+      },
+      "datasource": {
+        "uid": "verdify-tsdb",
+        "type": "grafana-postgresql-datasource"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "uid": "verdify-tsdb",
+            "type": "grafana-postgresql-datasource"
+          },
+          "rawSql": "SELECT feedback_key, zone, signal, status, latest_value, last_sample_ts AT TIME ZONE 'America/Denver' AS local_last_sample, required_action FROM v_irrigation_sensor_feedback_status ORDER BY zone, signal",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        }
+      },
+      "transparent": true
+    },
+    {
+      "id": 13,
+      "type": "table",
+      "title": "Feedback Field Work",
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 51
+      },
+      "datasource": {
+        "uid": "verdify-tsdb",
+        "type": "grafana-postgresql-datasource"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "uid": "verdify-tsdb",
+            "type": "grafana-postgresql-datasource"
+          },
+          "rawSql": "WITH wanted(requirement_id, equipment) AS (VALUES ('south_soil_probe_1_repair', 'south_soil_probe_1'), ('center_root_zone_runoff_feedback', 'center_root_zone_runoff_feedback')) SELECT wanted.requirement_id, wanted.equipment, COALESCE(ir.current_status, 'missing') AS status, COALESCE(ml.service_type, '-') AS service_type, ml.next_due, COALESCE(ml.description, ir.recommended_source) AS field_work, COALESCE(ml.notes, ir.blocks_story) AS evidence FROM wanted LEFT JOIN instrumentation_requirements ir USING (requirement_id) LEFT JOIN LATERAL (SELECT service_type, description, next_due, notes FROM maintenance_log WHERE maintenance_log.equipment = wanted.equipment AND maintenance_log.greenhouse_id = 'vallery' ORDER BY ts DESC, id DESC LIMIT 1) ml ON true ORDER BY wanted.requirement_id",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        }
+      },
+      "transparent": true
+    },
+    {
+      "id": 14,
+      "type": "table",
+      "title": "Feedback Registry Targets",
+      "gridPos": {
+        "h": 7,
+        "w": 24,
+        "x": 0,
+        "y": 58
+      },
+      "datasource": {
+        "uid": "verdify-tsdb",
+        "type": "grafana-postgresql-datasource"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "uid": "verdify-tsdb",
+            "type": "grafana-postgresql-datasource"
+          },
+          "rawSql": "SELECT source_column, sensor_id, COALESCE(zone, '-') AS zone, active, COALESCE(entity_id, '-') AS entity_id, expected_interval_s, COALESCE(notes, '') AS notes FROM sensor_registry WHERE source_table = 'climate' AND source_column IN ('soil_moisture_south_1', 'soil_ec_south_1', 'soil_temp_south_1', 'moisture_center', 'ph_runoff_center', 'ec_runoff_center') ORDER BY active, zone, source_column",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        }
+      },
+      "transparent": true
+    },
+    {
+      "id": 15,
+      "type": "table",
+      "title": "Feedback Acceptance Closure",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 65
+      },
+      "datasource": {
+        "uid": "verdify-tsdb",
+        "type": "grafana-postgresql-datasource"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "uid": "verdify-tsdb",
+            "type": "grafana-postgresql-datasource"
+          },
+          "rawSql": "WITH feedback AS (SELECT 1 AS sort_group, 'feedback_status'::text AS category, feedback_key AS item, status, concat('value=', COALESCE(latest_value::text, '-'), ' last=', COALESCE(last_sample_ts::text, '-')) AS evidence, required_action AS detail FROM v_irrigation_sensor_feedback_status), alerts AS (SELECT 2 AS sort_group, 'open_alert'::text AS category, sensor_id AS item, disposition AS status, severity AS evidence, message AS detail FROM alert_log WHERE alert_type = 'irrigation_feedback_gap' AND resolved_at IS NULL), field_requirements AS (SELECT 3 AS sort_group, 'field_requirement'::text AS category, requirement_id AS item, current_status AS status, COALESCE(updated_at::text, '-') AS evidence, recommended_source AS detail FROM instrumentation_requirements WHERE requirement_id IN ('south_soil_probe_1_repair', 'center_root_zone_runoff_feedback')), registry AS (WITH expected(source_column) AS (VALUES ('soil_moisture_south_1'::text), ('soil_ec_south_1'::text), ('soil_temp_south_1'::text), ('moisture_center'::text), ('ph_runoff_center'::text), ('ec_runoff_center'::text)) SELECT 4 AS sort_group, 'registry_target'::text AS category, e.source_column AS item, CASE WHEN sr.sensor_id IS NULL THEN 'missing' WHEN sr.active IS TRUE AND sr.installed_date IS NOT NULL THEN 'validated' WHEN sr.active IS TRUE THEN 'active_uninstalled' ELSE 'inactive' END AS status, concat('sensor=', COALESCE(sr.sensor_id, '-'), ' installed=', COALESCE(sr.installed_date::text, '-')) AS evidence, COALESCE(sr.notes, '') AS detail FROM expected e LEFT JOIN sensor_registry sr ON sr.source_table = 'climate' AND sr.source_column = e.source_column), validation_logs AS (WITH expected(equipment, description) AS (VALUES ('south_soil_probe_1'::text, 'South soil probe 1 irrigation feedback validation passed.'::text), ('center_root_zone_runoff_feedback'::text, 'Center root-zone and runoff feedback validation passed.'::text)) SELECT 5 AS sort_group, 'validation_log'::text AS category, e.equipment AS item, CASE WHEN ml.id IS NULL THEN 'missing' ELSE 'present' END AS status, COALESCE(ml.ts::text, '-') AS evidence, e.description AS detail FROM expected e LEFT JOIN LATERAL (SELECT id, ts FROM maintenance_log WHERE equipment = e.equipment AND service_type = 'validation' AND description = e.description ORDER BY ts DESC, id DESC LIMIT 1) ml ON true) SELECT category, item, status, evidence, detail FROM (SELECT * FROM feedback UNION ALL SELECT * FROM alerts UNION ALL SELECT * FROM field_requirements UNION ALL SELECT * FROM registry UNION ALL SELECT * FROM validation_logs) rows ORDER BY sort_group, item",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        }
+      },
+      "transparent": true
+    }
+  ],
+  "annotations": {
+    "list": []
+  },
+  "links": [],
+  "schemaVersion": 39,
+  "timezone": "America/Denver",
+  "version": 1,
+  "style": "light",
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "refresh": "1m",
+  "tags": [
+    "site",
+    "irrigation",
+    "fertigation"
+  ]
+}
