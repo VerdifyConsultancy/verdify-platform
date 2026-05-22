@@ -625,7 +625,7 @@ def generate_page() -> str:
     parts.append("")
     parts.append('<div class="data-table">')
     parts.append(
-        '  <div class="data-row"><strong>Related evidence</strong><span><a href="/data/planning-quality/">Planning Quality</a> · <a href="/reference/planning-loop/">Planning Loop</a> · <a href="/reference/ai-tunables/">AI Tunables Traceability</a></span><p>This generated page owns durable lesson wording. Scorecards, plan mechanics, and per-parameter evidence stay on their canonical pages.</p></div>'
+        '  <div class="data-row"><strong>Related evidence</strong><span><a href="/data/planning-quality/">Scorecard</a> · <a href="/reference/planning-loop/">Planning Loop</a> · <a href="/reference/ai-tunables/">AI Tunables Traceability</a></span><p>This generated page owns durable lesson wording. Scorecards, plan mechanics, and per-parameter evidence stay on their canonical pages.</p></div>'
     )
     parts.append("</div>")
     parts.append("")

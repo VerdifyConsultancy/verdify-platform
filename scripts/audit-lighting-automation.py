@@ -542,11 +542,13 @@ def static_checks(audit: Audit) -> None:
         and home_panel.get("title") == "Lighting: Lux, Thresholds & Switch State"
         and "setpoint_snapshot" in panel_sql(home_panel)
         and "setpoint_changes" in panel_sql(home_panel)
-        and "Solar / Tempest Exterior Lux (10m avg)" in panel_sql(home_panel)
+        and "'Solar'::text AS metric" in panel_sql(home_panel)
+        and "'Solar Forecast'::text AS metric" in panel_sql(home_panel)
+        and "weather_forecast" in panel_sql(home_panel)
         and "equipment_state" in panel_sql(home_panel)
         and "fn_lighting_timeline" not in panel_sql(home_panel),
         "home lighting state graph",
-        "site-home panel 36 renders Tempest exterior lux, direct readback thresholds, and actual switch ON windows without fn_lighting_timeline",
+        "site-home panel 36 renders observed/forecast solar lux, direct readback threshold band, and actual switch ON windows without fn_lighting_timeline",
         "site-home panel 36 is missing, stale, or still bound to heavy lighting timeline/function calls",
     )
     audit.check(
@@ -567,15 +569,15 @@ def static_checks(audit: Audit) -> None:
     home_panel_contract = json.dumps(home_panel)
     forecast_panel_contract = json.dumps(forecast_panel)
     home_state_tokens = (
-        "Solar / Tempest Exterior Lux (10m avg)",
-        "Main/Grow ON Threshold",
-        "Main/Grow OFF Threshold",
-        "switch.greenhouse_main ON",
-        "switch.greenhouse_grow ON",
+        "Solar",
+        "Solar Forecast",
+        "Grow Light Threshold",
+        "Grow Light On",
         "setpoint_snapshot",
         "setpoint_changes",
         "equipment_state",
-        "custom.axisPlacement",
+        "weather_forecast",
+        "axisPlacement",
         "custom.fillBelowTo",
     )
     forecast_label_tokens = (
@@ -594,7 +596,7 @@ def static_checks(audit: Audit) -> None:
         and all(token in home_panel_contract for token in home_state_tokens)
         and all(token in forecast_panel_contract for token in forecast_label_tokens),
         "lighting state graph labels and fills",
-        "home graph labels exterior lux, ON/OFF bands, actual switch ON windows, solar context, and shaded hysteresis/state fills",
+        "home graph labels observed/forecast solar lux, threshold band, actual switch ON windows, and shaded hysteresis/state fills",
         "lighting state or forecast graphs are missing user-facing labels or shaded band fill configuration",
     )
 
@@ -873,11 +875,13 @@ def live_checks(audit: Audit, require_ota: bool) -> None:
             and home_live_panel.get("title") == "Lighting: Lux, Thresholds & Switch State"
             and "setpoint_snapshot" in home_live_sql
             and "setpoint_changes" in home_live_sql
-            and "Natural Lux (10m avg)" in home_live_sql
+            and "'Solar'::text AS metric" in home_live_sql
+            and "'Solar Forecast'::text AS metric" in home_live_sql
+            and "weather_forecast" in home_live_sql
             and "equipment_state" in home_live_sql
             and "fn_lighting_timeline" not in home_live_sql,
             "live home Grafana panel",
-            "site-home panel 36 is live and bound to natural lux, direct readback thresholds, and actual switch state",
+            "site-home panel 36 is live and bound to observed/forecast solar lux, direct readback threshold band, and actual switch state",
             "site-home panel 36 missing or stale in live Grafana",
         )
         audit.check(

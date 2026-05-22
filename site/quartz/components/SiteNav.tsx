@@ -78,20 +78,22 @@ function buildNav(allFiles: QuartzComponentProps["allFiles"]): SiteNavModel {
                 title: "Overview",
                 links: [
                     pageLink("Home", "index", { exact: true }),
-                    latestPlanLink(allFiles),
                     pageLink("AI Greenhouse", "start/ai-greenhouse"),
-                    pageLink("Evidence", "start/evidence"),
-                    pageLink("Architecture", "reference/architecture"),
+                    latestPlanLink(allFiles),
+                    pageLink("Scorecard", "data/planning-quality"),
                     pageLink("Resource Use", "start/resource-use"),
                     pageLink("Lighting", "greenhouse/lighting"),
                     pageLink("Hydroponics", "greenhouse/hydroponics"),
+                    pageLink("Irrigation", "greenhouse/irrigation"),
                     pageLink("Soil Sensors", "greenhouse/soil"),
-                    pageLink("About", "start/about", { exact: true }),
+                    pageLink("Evidence", "start/evidence"),
+                    pageLink("Architecture", "reference/architecture"),
                     pageLink("Contact", "start/contact", { exact: true }),
                     {
-                        label: "Verdify Consulting",
+                        label: "Consulting",
                         href: "https://www.verdify.ai/",
                     },
+                    pageLink("About", "start/about", { exact: true }),
                 ],
             },
             {
@@ -99,34 +101,18 @@ function buildNav(allFiles: QuartzComponentProps["allFiles"]): SiteNavModel {
                 links: [
                     pageLink("Operations", "data/operations"),
                     pageLink("Climate", "start/climate"),
-                    pageLink("Planning Quality", "data/planning-quality"),
-                    pageLink(
-                        "Baseline vs AI Planning Agent",
-                        "data/baseline-vs-iris",
-                    ),
                     pageLink("Forecast", "data/forecast", { exact: true }),
-                ],
-            },
-            {
-                title: "Planner",
-                links: [
                     pageLink("Planning Archive", "data/plans", {
                         aliases: ["plans"],
                         exact: true,
                     }),
-                    pageLink("Planning Loop", "reference/planning-loop"),
-                    pageLink(
-                        "Planner Contract and AI Tunables",
-                        "reference/ai-tunables",
-                        { aliases: ["reference/planner-contract"] },
-                    ),
-                    pageLink("Lessons", "reference/lessons"),
                 ],
             },
             {
                 title: "Greenhouse",
                 links: [
                     pageLink("Greenhouse Tour", "greenhouse", { exact: true }),
+                    pageLink("Irrigation", "greenhouse/irrigation"),
                     pageLink("Equipment", "greenhouse/equipment"),
                     pageLink("Structure", "greenhouse/structure"),
                     pageLink("Crops", "greenhouse/crops"),
@@ -136,9 +122,24 @@ function buildNav(allFiles: QuartzComponentProps["allFiles"]): SiteNavModel {
             {
                 title: "Reference",
                 links: [
+                    pageLink(
+                        "Baseline vs AI Planning Agent",
+                        "data/baseline-vs-iris",
+                    ),
+                    pageLink("Planning Loop", "reference/planning-loop"),
+                    pageLink(
+                        "Planner Contract and AI Tunables",
+                        "reference/ai-tunables",
+                        { aliases: ["reference/planner-contract"] },
+                    ),
+                    pageLink("Lessons", "reference/lessons"),
                     pageLink("Safety", "reference/safety"),
                     pageLink("Data Model", "reference/data-model"),
                     pageLink("Related Work", "reference/related-work"),
+                    {
+                        label: "Case Study",
+                        href: "https://www.verdify.ai/proof/public-ai-greenhouse/",
+                    },
                     {
                         label: "GitHub",
                         href: "https://github.com/jrvallery/verdify",

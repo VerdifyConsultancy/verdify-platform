@@ -12,6 +12,7 @@ CONTENT_ROOT = Path("/srv/verdify/verdify-site/content")
 INDEX_ALIAS = CONTENT_ROOT / "plans" / "index.md"
 DATA_INDEX = CONTENT_ROOT / "data" / "plans" / "index.md"
 DB_CMD = ["docker", "exec", "verdify-timescaledb", "psql", "-U", "verdify", "-d", "verdify", "-t", "-A", "-F", "|"]
+PLAN_PAGE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}\.md$")
 
 
 def public_text(value: object) -> str:
@@ -31,6 +32,19 @@ def public_text(value: object) -> str:
 def db_rows(sql: str) -> list[list[str]]:
     result = subprocess.run([*DB_CMD, "-c", sql], capture_output=True, text=True, timeout=15, check=True)
     return [row.split("|") for row in result.stdout.strip().splitlines() if row.strip()]
+
+
+def merge_plan_page_dates(rows: list[list[str]]) -> list[list[str]]:
+    """Keep in-progress generated plan pages visible before daily_summary lands."""
+    by_date = {row[0].strip(): row for row in rows if row}
+    plans_dir = CONTENT_ROOT / "plans"
+    if plans_dir.exists():
+        for page in plans_dir.glob("*.md"):
+            if not PLAN_PAGE_RE.match(page.name):
+                continue
+            plan_date = page.stem
+            by_date.setdefault(plan_date, [plan_date, "0", "-", "0.0", "-", "In progress", "-"])
+    return [by_date[plan_date] for plan_date in sorted(by_date, reverse=True)]
 
 
 def default_header(today: date) -> str:
@@ -124,8 +138,11 @@ def render(rows: list[list[str]], today: date) -> str:
             continue
         d, plans, temp_range, vpd, cost, experiment, score = [item.strip() for item in row[:7]]
         experiment_public = public_text(experiment)
+        temp_display = f"{temp_range}°F" if temp_range and temp_range != "-" else "-"
+        cost_display = f"${cost}" if cost and cost != "-" else "-"
         lines.append(
-            f"| [{d}](/plans/{d}) | {plans} | {temp_range}°F | {vpd}h | ${cost} | {experiment_public[:40]} | {score} |"
+            f"| [{d}](/plans/{d}) | {plans} | {temp_display} | {vpd}h | {cost_display} | "
+            f"{experiment_public[:40]} | {score} |"
         )
     lines.extend(
         [
@@ -180,6 +197,7 @@ def main() -> None:
         ORDER BY ds.date DESC
         """
     )
+    rows = merge_plan_page_dates(rows)
     output = render(rows, date.today())
     DATA_INDEX.parent.mkdir(parents=True, exist_ok=True)
     DATA_INDEX.write_text(output, encoding="utf-8")

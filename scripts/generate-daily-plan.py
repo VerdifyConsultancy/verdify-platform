@@ -450,6 +450,23 @@ def compact_time(local_timestamp: object) -> str:
     return text or "unknown"
 
 
+def event_display_label(event: dict) -> str:
+    label = str(event.get("event_label") or "").strip()
+    if label and not label.lstrip().startswith(("{", "[")):
+        return label
+    event_type = str(event.get("event_type") or "").strip()
+    fallback = {
+        "MIDNIGHT": "End-of-day review and reset",
+        "SUNRISE": "Morning planning cycle",
+        "SOLAR_MAX": "Solar peak planning checkpoint",
+        "TRANSITION": "Stress transition checkpoint",
+        "SUNSET": "Evening planning cycle",
+        "FORECAST_DEVIATION": "Forecast deviation",
+        "MANUAL": "Manual planner request",
+    }
+    return fallback.get(event_type, event_type or "Planner event")
+
+
 def delivery_public_note(event: dict, max_chars: int = 520) -> str:
     """Extract public prose from a plan_delivery_log gateway body."""
     body = str(event.get("gateway_body") or "").strip()
@@ -480,6 +497,44 @@ def data_table(rows: list[tuple[str, str, str]]) -> str:
             f"<span>{escape(str(meta))}</span><p>{escape(str(body))}</p></div>"
         )
     lines.append("</div>")
+    return "\n".join(lines)
+
+
+def _class_attr(classes: list[str]) -> str:
+    return f' class="{" ".join(classes)}"' if classes else ""
+
+
+def lab_table(
+    headers: list[str],
+    rows: list[tuple[object, ...]],
+    *,
+    numeric_cols: set[int] | None = None,
+    nowrap_cols: set[int] | None = None,
+) -> str:
+    if not rows:
+        return '<div class="metric-grid">\n  <div class="metric-card"><strong>No data</strong><p>No rows available.</p></div>\n</div>'
+    numeric_cols = numeric_cols or set()
+    nowrap_cols = nowrap_cols or set()
+    lines = ['<div class="lab-table-wrap">', '  <table class="lab-table">', "    <thead>", "      <tr>"]
+    for idx, header in enumerate(headers):
+        classes: list[str] = []
+        if idx in numeric_cols:
+            classes.append("is-num")
+        if idx in nowrap_cols:
+            classes.append("is-nowrap")
+        lines.append(f"        <th{_class_attr(classes)}>{escape(str(header))}</th>")
+    lines.extend(["      </tr>", "    </thead>", "    <tbody>"])
+    for row in rows:
+        lines.append("      <tr>")
+        for idx, cell in enumerate(row):
+            classes = []
+            if idx in numeric_cols:
+                classes.append("is-num")
+            if idx in nowrap_cols:
+                classes.append("is-nowrap")
+            lines.append(f"        <td{_class_attr(classes)}>{escape(str(cell))}</td>")
+        lines.append("      </tr>")
+    lines.extend(["    </tbody>", "  </table>", "</div>"])
     return "\n".join(lines)
 
 
@@ -569,8 +624,8 @@ def _waypoint_rows(
     notes_by_time: dict,
     params: list[str],
     fallback_note: str,
-) -> list[str]:
-    rows: list[str] = []
+) -> list[tuple[str, str, str]]:
+    rows: list[tuple[str, str, str]] = []
     for t in times:
         vals = by_time[t]
         meta = _format_param_values(vals, params)
@@ -579,10 +634,7 @@ def _waypoint_rows(
         time_str = t[11:16] if len(t) > 11 else t
         note = public_text(notes_by_time.get(t, ""))
         note = note.replace("|", "—")[:80]
-        rows.append(
-            f'  <div class="data-row"><strong>{escape(time_str)}</strong>'
-            f"<span>{escape(meta)}</span><p>{escape(note or fallback_note)}</p></div>"
-        )
+        rows.append((time_str, meta, note or fallback_note))
     return rows
 
 
@@ -637,13 +689,23 @@ def format_waypoints_table(waypoints: list[dict]) -> str:
             "Tactical tunable transition.",
         )
         if primary_rows:
-            lines.extend(["**Primary crop-band changes:**", "", '<div class="data-table">'])
-            lines.extend(primary_rows)
-            lines.extend(["</div>", ""])
+            lines.extend(
+                [
+                    "**Primary crop-band changes:**",
+                    "",
+                    lab_table(["Time", "Values", "Note"], primary_rows, nowrap_cols={0}),
+                    "",
+                ]
+            )
         if tactical_rows:
-            lines.extend(["**Tactical tunable changes:**", "", '<div class="data-table">'])
-            lines.extend(tactical_rows)
-            lines.extend(["</div>", ""])
+            lines.extend(
+                [
+                    "**Tactical tunable changes:**",
+                    "",
+                    lab_table(["Time", "Values", "Note"], tactical_rows, nowrap_cols={0}),
+                    "",
+                ]
+            )
 
     # Secondary parameters are noisy when every waypoint repeats the full
     # controller state. Public pages keep deltas and omit unchanged raw rows.
@@ -663,7 +725,14 @@ def format_waypoints_table(waypoints: list[dict]) -> str:
             last_seen[param] = value
 
     if changed_non_core_rows:
-        lines.extend(["", "**Changed secondary parameters:**", "", data_table(changed_non_core_rows)])
+        lines.extend(
+            [
+                "",
+                "**Changed secondary parameters:**",
+                "",
+                lab_table(["Time", "Parameter", "Change"], changed_non_core_rows, nowrap_cols={0, 1}),
+            ]
+        )
 
     return "\n".join(lines) + "\n"
 
@@ -1067,13 +1136,26 @@ def generate_no_plan_section(d: date, delivery_events: list[dict]) -> str:
     rows = []
     for event in delivery_events:
         plan_id = event.get("resulting_plan_id") or "-"
-        meta = f"{event.get('event_type', '?')} · {event.get('status', '?')}"
         note = delivery_public_note(event, max_chars=320)
         body = f"Delivered {event.get('delivered', '?')}; resulting plan {plan_id}."
         if note:
             body = f"{body} {note}"
-        rows.append((event.get("event_label") or event.get("event_type") or "Planner event", meta, body))
-    lines.append(data_table(rows))
+        rows.append(
+            (
+                event_display_label(event),
+                event.get("event_type", "?"),
+                event.get("status", "?"),
+                event.get("delivered", "?"),
+                body,
+            )
+        )
+    lines.append(
+        lab_table(
+            ["Event", "Type", "Status", "Delivered", "Note"],
+            rows,
+            nowrap_cols={1, 2, 3},
+        )
+    )
     lines.append("")
     return "\n".join(lines)
 
@@ -1113,8 +1195,6 @@ def generate_delivery_events_section(d: date, delivery_events: list[dict], publi
         plan_id = event.get("resulting_plan_id", "")
         delivered = compact_time(event.get("delivered"))
         resolved = compact_time(event.get("acked") or event.get("plan_written"))
-        title = f"{event.get('event_label') or event_type} ({delivered})"
-        meta = f"{event_type} · {status}"
 
         if status == "plan_written" and plan_id:
             body = f"Wrote public plan {plan_id}."
@@ -1129,9 +1209,15 @@ def generate_delivery_events_section(d: date, delivery_events: list[dict], publi
 
         if resolved != "unknown":
             body = f"{body} Resolved {resolved} MDT."
-        rows.append((title, meta, body))
+        rows.append((event_display_label(event), delivered, event_type, status, body))
 
-    lines.append(data_table(rows))
+    lines.append(
+        lab_table(
+            ["Event", "Delivered", "Type", "Status", "Note"],
+            rows,
+            nowrap_cols={1, 2, 3},
+        )
+    )
     lines.append("")
     return "\n".join(lines)
 
@@ -1205,7 +1291,8 @@ def generate_daily_summary_section(
         [
             "### Equipment Runtimes",
             "",
-            data_table(
+            lab_table(
+                ["Equipment", "Runtime", "Reading"],
                 [
                     ("Fan 1", f"{r(summary.get('runtime_fan1_min'), 0)} min", "Primary exhaust runtime."),
                     ("Fan 2", f"{r(summary.get('runtime_fan2_min'), 0)} min", "Secondary exhaust runtime."),
@@ -1221,7 +1308,8 @@ def generate_daily_summary_section(
                     ("Mister south", f"{r(summary.get('runtime_mister_south_h'), 2)}h", "South mister runtime."),
                     ("Mister west", f"{r(summary.get('runtime_mister_west_h'), 2)}h", "West mister runtime."),
                     ("Mister center", f"{r(summary.get('runtime_mister_center_h'), 2)}h", "Center mister runtime."),
-                ]
+                ],
+                nowrap_cols={1},
             ),
             "",
         ]
@@ -1267,13 +1355,22 @@ def generate_daily_summary_section(
                 rows.append(
                     (
                         crop,
-                        f"{row[1].strip()} · health {health_pct} · {row[3].strip()} obs",
+                        row[1].strip(),
+                        health_pct,
+                        row[3].strip(),
                         "Observation notes are collapsed below to avoid publishing partial vision snippets.",
                     )
                 )
                 if notes:
                     detail_rows.append((crop, "Gemini Vision notes", public_text(notes[:1000])))
-        lines.append(data_table(rows))
+        lines.append(
+            lab_table(
+                ["Crop", "Zone", "Health", "Observations", "Note"],
+                rows,
+                numeric_cols={3},
+                nowrap_cols={1, 2, 3},
+            )
+        )
         if detail_rows:
             lines.extend(
                 [
@@ -1293,8 +1390,14 @@ def generate_daily_summary_section(
         lines.extend(["### Hourly Pattern", ""])
         rows = []
         for h in hourly:
-            rows.append((h["hour"], f"{h['temp']}°F; VPD {h['vpd']} kPa", f"RH {h['rh']}%."))
-        lines.append(data_table(rows))
+            rows.append((h["hour"], f"{h['temp']}°F", f"{h['vpd']} kPa", f"{h['rh']}%"))
+        lines.append(
+            lab_table(
+                ["Hour", "Temperature", "VPD", "RH"],
+                rows,
+                nowrap_cols={0, 1, 2, 3},
+            )
+        )
         lines.append("")
 
     return "\n".join(lines)
@@ -1378,8 +1481,14 @@ def generate_day(d: date) -> str:
         )
         rows = []
         for s in stress_ctx:
-            rows.append((s["date"], f"Heat {s['heat']}h; VPD high {s['vpd_high']}h", f"Cold stress {s['cold']}h."))
-        body.append(data_table(rows))
+            rows.append((s["date"], f"{s['heat']}h", f"{s['vpd_high']}h", f"{s['cold']}h"))
+        body.append(
+            lab_table(
+                ["Date", "Heat", "VPD high", "Cold"],
+                rows,
+                nowrap_cols={0, 1, 2, 3},
+            )
+        )
         body.append("")
 
     return frontmatter + "\n\n" + "\n".join(body)

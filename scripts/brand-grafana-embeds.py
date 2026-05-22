@@ -66,12 +66,17 @@ DAYLIGHT_FILL_OPACITY = 85
 DAYLIGHT_FORECAST_FILL_OPACITY = 85
 DAYLIGHT_LUX_FILL_OPACITY = 85
 DAYLIGHT_GRADIENT_MODE = "opacity"
+HOMEPAGE_SOLAR_FILL_OPACITY = 100
+HOMEPAGE_SOLAR_GRADIENT_MODE = "opacity"
+HOMEPAGE_SOLAR_PANEL_IDS = {30, 31, 36}
 COMPLIANCE_BAND_COLOR = BRAND["leaf"]
 COMPLIANCE_BAND_FILL_OPACITY = 22
 LIGHTING_THRESHOLD_BAND_FILL_OPACITY = 22
 RELAY_STATE_FILL_OPACITY = 38
+HOMEPAGE_RELAY_STATE_FILL_OPACITY = 100
 RELAY_STATE_LINE_WIDTH = 0
 LIGHTING_THRESHOLD_BANDS = (
+    ("Grow Light Threshold Base", "Grow Light Threshold", BRAND["leaf"]),
     ("Main/Grow ON Threshold", "Main/Grow OFF Threshold", BRAND["leaf"]),
     ("Main ON Threshold", "Main OFF Threshold", BRAND["leaf"]),
     ("Grow ON Threshold", "Grow OFF Threshold", "#5794F2"),
@@ -140,7 +145,19 @@ EXPECTED_SERIES_COLORS = {
     "South 2 (Canna)": BRAND["gold"],
     "South 1": BRAND["leaf"],
     "South 2": BRAND["gold"],
+    "south 1": BRAND["leaf"],
+    "south 2": BRAND["gold"],
+    "west": BRAND["rose"],
+    "center": BRAND["violet"],
     "EC (µS/cm)": BRAND["teal"],
+    "fertigation gallons": BRAND["water"],
+    "events": BRAND["gold"],
+    "flagged": BRAND["fault"],
+    "clean h": BRAND["sky"],
+    "fert h": BRAND["violet"],
+    "master h": BRAND["teal"],
+    "flow gpm": BRAND["water"],
+    "meter total gal": BRAND["teal"],
     "Task WDT": BRAND["fault"],
     "Guru/Panic": BRAND["gas"],
     "Forecast Outdoor Temp": BRAND["gray"],
@@ -563,6 +580,8 @@ def semantic_color(label: str, current: Any = None, context: str = "") -> str:
         return maybe_alpha("#F4511E")
     if "heat 1" in label_text:
         return maybe_alpha("#FF9800")
+    if label_text == "grow light on":
+        return maybe_alpha("#5794F2")
     if "grow light grow" in label_text:
         return maybe_alpha(BRAND["water"])
     if "grow light main" in label_text:
@@ -643,6 +662,15 @@ def semantic_color(label: str, current: Any = None, context: str = "") -> str:
         return maybe_alpha(BRAND["gold"])
     if "compliant high" in label_text or "compliant low" in label_text:
         return maybe_alpha("#2E7D32")
+
+    if label_text in {"target band", "target band base"}:
+        return maybe_alpha(BRAND["leaf"])
+    if label_text == "greenhouse" and "vpd" in context_text:
+        return maybe_alpha(BRAND["violet"])
+    if label_text == "greenhouse" and "temperature" in context_text:
+        return maybe_alpha(BRAND["leaf"])
+    if label_text in {"outdoor", "outdoor forecast"} and any(k in context_text for k in ("vpd", "temperature")):
+        return maybe_alpha(BRAND["gray"])
 
     if "threshold" in label_text:
         if "main/grow" in label_text:
@@ -747,7 +775,19 @@ def is_daylight_forecast(label: str) -> bool:
     return "forecast" in normalize_key(label)
 
 
-def daylight_fill_opacity(label: str) -> int:
+def is_homepage_solar_backdrop(label: str, panel: dict[str, Any] | None = None, dashboard_uid: str = "") -> bool:
+    if dashboard_uid != "site-home" or panel is None:
+        return False
+    try:
+        panel_id = int(panel.get("id"))
+    except (TypeError, ValueError):
+        return False
+    return panel_id in HOMEPAGE_SOLAR_PANEL_IDS and is_daylight_series(label, str(panel.get("title") or ""))
+
+
+def daylight_fill_opacity(label: str, panel: dict[str, Any] | None = None, dashboard_uid: str = "") -> int:
+    if is_homepage_solar_backdrop(label, panel, dashboard_uid):
+        return HOMEPAGE_SOLAR_FILL_OPACITY
     label_text = normalize_key(label)
     if "indoor lux" in label_text:
         return INDOOR_LUX_FILL_OPACITY
@@ -760,7 +800,15 @@ def daylight_fill_opacity(label: str) -> int:
     return DAYLIGHT_FILL_OPACITY
 
 
-def daylight_color(label: str) -> str:
+def daylight_gradient_mode(label: str, panel: dict[str, Any] | None = None, dashboard_uid: str = "") -> str:
+    if is_homepage_solar_backdrop(label, panel, dashboard_uid):
+        return HOMEPAGE_SOLAR_GRADIENT_MODE
+    return DAYLIGHT_GRADIENT_MODE
+
+
+def daylight_color(label: str, panel: dict[str, Any] | None = None, dashboard_uid: str = "") -> str:
+    if is_homepage_solar_backdrop(label, panel, dashboard_uid):
+        return BRAND["gold"]
     label_text = normalize_key(label)
     if any(term in label_text for term in ("lux", "illuminance", "tempest")):
         return BRAND["gold"]
@@ -839,10 +887,19 @@ def relay_state_lane_pairs(panel: dict[str, Any]) -> list[tuple[str, str]]:
         if not isinstance(label, str) or not is_relay_state_label(label):
             continue
         props = {prop.get("id"): prop.get("value") for prop in override.get("properties", []) or []}
+        hide_from = props.get("custom.hideFrom")
+        if isinstance(hide_from, dict) and hide_from.get("viz") is True:
+            continue
         base_label = props.get("custom.fillBelowTo")
         if isinstance(base_label, str) and normalize_key(base_label).endswith(" base"):
             pairs.append((label, base_label))
     return sorted(set(pairs))
+
+
+def relay_state_fill_opacity(dashboard_uid: str) -> int:
+    if dashboard_uid == "site-home":
+        return HOMEPAGE_RELAY_STATE_FILL_OPACITY
+    return RELAY_STATE_FILL_OPACITY
 
 
 def normalize_color_literal(value: Any, label: str, context: str = "") -> Any:
@@ -927,6 +984,7 @@ def check_site_embed_contract(vault_root: Path) -> list[str]:
                 "background: transparent;",
                 "box-shadow: none;",
                 ".home-panel-card {",
+                ".home-panel-card__visual {",
             ]
         else:
             required = [".pg iframe {", "border: 0;", "border-radius: 0;", "background: transparent;"]
@@ -936,16 +994,18 @@ def check_site_embed_contract(vault_root: Path) -> list[str]:
             if snippet not in text:
                 findings.append(f"{path}: missing site-chrome contract snippet {snippet!r}")
         if path.name == "custom.scss":
-            home_card = re.search(r"\.home-panel-card\s*\{(?P<body>.*?)^\s*\}", text, flags=re.MULTILINE | re.DOTALL)
-            if not home_card:
-                findings.append(f"{path}: missing homepage Grafana panel wrapper style")
+            home_visual = re.search(
+                r"\.home-panel-card__visual\s*\{(?P<body>.*?)^\s*\}", text, flags=re.MULTILINE | re.DOTALL
+            )
+            if not home_visual:
+                findings.append(f"{path}: missing homepage Grafana visual wrapper style")
             else:
-                body = home_card.group("body")
+                body = home_visual.group("body")
                 for snippet in ("padding: 0;", "border: 0;", "background: transparent;", "box-shadow: none;"):
                     if snippet not in body:
-                        findings.append(f"{path}: homepage Grafana panel wrapper missing {snippet!r}")
+                        findings.append(f"{path}: homepage Grafana visual wrapper missing {snippet!r}")
                 if "border: 1px solid" in body or "box-shadow: 0 " in body:
-                    findings.append(f"{path}: homepage Grafana panel wrapper still adds site chrome")
+                    findings.append(f"{path}: homepage Grafana visual wrapper still adds site chrome")
     return findings
 
 
@@ -1370,48 +1430,76 @@ def normalize_public_panel_schema(panel: dict[str, Any]) -> None:
             ensure_relay_state_lane_overrides(panel, VPD_RELAY_STATE_LANES)
 
     if title == "Lighting: Lux, Thresholds & Switch State" and panel.get("type") == "timeseries":
-        lux_label = "Solar / Tempest Exterior Lux (10m avg)"
+        lux_label = "Solar"
         rename_override_label(panel, "Natural Lux (10m avg)", lux_label)
+        rename_override_label(panel, "Solar / Tempest Exterior Lux (10m avg)", lux_label)
         for target in panel.get("targets", []) or []:
             raw_sql = target.get("rawSql")
             if not isinstance(raw_sql, str):
                 continue
-            target["rawSql"] = raw_sql.replace(
+            for old_metric in (
                 "'Natural Lux (10m avg)'::text AS metric",
-                f"'{lux_label}'::text AS metric",
-            )
+                "'Solar / Tempest Exterior Lux (10m avg)'::text AS metric",
+            ):
+                raw_sql = raw_sql.replace(old_metric, f"'{lux_label}'::text AS metric")
+            target["rawSql"] = raw_sql
         panel["targets"] = [
             target
             for target in panel.get("targets", []) or []
             if not (isinstance(target, dict) and target.get("refId") in {"J", "K"})
         ]
-        remove_override_labels(panel, {"Solar", "Solar Forecast", "Natural Lux (10m avg)"})
+        remove_override_labels(
+            panel,
+            {
+                "Natural Lux (10m avg)",
+                "Solar / Tempest Exterior Lux (10m avg)",
+                "Main/Grow OFF Threshold",
+                "Main/Grow ON Threshold",
+                "Main OFF Threshold",
+                "Main ON Threshold",
+                "Grow OFF Threshold",
+                "Grow ON Threshold",
+            },
+        )
 
         lux_override = override_for_label(panel, lux_label)
         upsert_override_property(lux_override, "color", {"fixedColor": BRAND["gold"], "mode": "fixed"})
         upsert_override_property(lux_override, "custom.lineWidth", 0)
-        upsert_override_property(lux_override, "custom.fillOpacity", DAYLIGHT_LUX_FILL_OPACITY)
-        upsert_override_property(lux_override, "custom.gradientMode", DAYLIGHT_GRADIENT_MODE)
+        upsert_override_property(lux_override, "custom.fillOpacity", HOMEPAGE_SOLAR_FILL_OPACITY)
+        upsert_override_property(lux_override, "custom.gradientMode", HOMEPAGE_SOLAR_GRADIENT_MODE)
         upsert_override_property(lux_override, "custom.hideFrom", {"legend": False, "tooltip": False, "viz": False})
         upsert_override_property(lux_override, "unit", "lux")
 
-        for label in (
-            "Main/Grow OFF Threshold",
-            "Main/Grow ON Threshold",
-            "Main OFF Threshold",
-            "Main ON Threshold",
-            "Grow OFF Threshold",
-            "Grow ON Threshold",
-        ):
-            threshold_override = override_for_label(panel, label)
-            upsert_override_property(threshold_override, "custom.lineWidth", 0)
-            if "OFF Threshold" in label:
-                upsert_override_property(threshold_override, "custom.fillOpacity", 22)
+        forecast_override = override_for_label(panel, "Solar Forecast")
+        upsert_override_property(forecast_override, "color", {"fixedColor": BRAND["gold"], "mode": "fixed"})
+        upsert_override_property(forecast_override, "custom.lineWidth", 0)
+        upsert_override_property(forecast_override, "custom.fillOpacity", HOMEPAGE_SOLAR_FILL_OPACITY)
+        upsert_override_property(forecast_override, "custom.gradientMode", HOMEPAGE_SOLAR_GRADIENT_MODE)
+        upsert_override_property(forecast_override, "custom.hideFrom", {"legend": True, "tooltip": False, "viz": False})
+        upsert_override_property(forecast_override, "unit", "lux")
 
-        for label in ("switch.greenhouse_main ON", "switch.greenhouse_grow ON"):
-            switch_override = override_for_label(panel, label)
-            upsert_override_property(switch_override, "custom.lineWidth", 0)
-            upsert_override_property(switch_override, "custom.fillOpacity", 38)
+        threshold_base_override = override_for_label(panel, "Grow Light Threshold Base")
+        upsert_override_property(threshold_base_override, "color", {"fixedColor": BRAND["leaf"], "mode": "fixed"})
+        upsert_override_property(threshold_base_override, "custom.lineWidth", 0)
+        upsert_override_property(threshold_base_override, "custom.fillOpacity", 0)
+        upsert_override_property(threshold_base_override, "custom.gradientMode", "none")
+        upsert_override_property(
+            threshold_base_override,
+            "custom.hideFrom",
+            {"legend": True, "tooltip": True, "viz": False},
+        )
+
+        threshold_override = override_for_label(panel, "Grow Light Threshold")
+        upsert_override_property(threshold_override, "color", {"fixedColor": BRAND["leaf"], "mode": "fixed"})
+        upsert_override_property(threshold_override, "custom.lineWidth", 0)
+        upsert_override_property(threshold_override, "custom.fillBelowTo", "Grow Light Threshold Base")
+        upsert_override_property(threshold_override, "custom.fillOpacity", LIGHTING_THRESHOLD_BAND_FILL_OPACITY)
+        upsert_override_property(threshold_override, "custom.gradientMode", "none")
+        upsert_override_property(
+            threshold_override,
+            "custom.hideFrom",
+            {"legend": False, "tooltip": True, "viz": False},
+        )
 
     if title == "Per-Circuit Lighting Forecast Bands" and panel.get("type") == "timeseries":
         lux_override = override_for_label(panel, "Tempest/Forecast Lux")
@@ -1764,7 +1852,7 @@ def daylight_labels(panel: dict[str, Any]) -> set[str]:
     return {label for label in labels if is_daylight_series(label, title)}
 
 
-def strengthen_daylight_backdrops(panel: dict[str, Any]) -> None:
+def strengthen_daylight_backdrops(panel: dict[str, Any], dashboard_uid: str = "") -> None:
     if panel.get("type") != "timeseries":
         return
     for label in sorted(daylight_labels(panel)):
@@ -1772,11 +1860,11 @@ def strengthen_daylight_backdrops(panel: dict[str, Any]) -> None:
         upsert_override_property(
             override,
             "color",
-            {"fixedColor": daylight_color(label), "mode": "fixed"},
+            {"fixedColor": daylight_color(label, panel, dashboard_uid), "mode": "fixed"},
         )
         upsert_override_property(override, "custom.lineWidth", 0)
-        upsert_override_property(override, "custom.fillOpacity", daylight_fill_opacity(label))
-        upsert_override_property(override, "custom.gradientMode", DAYLIGHT_GRADIENT_MODE)
+        upsert_override_property(override, "custom.fillOpacity", daylight_fill_opacity(label, panel, dashboard_uid))
+        upsert_override_property(override, "custom.gradientMode", daylight_gradient_mode(label, panel, dashboard_uid))
 
 
 def strengthen_vpd_context_series(panel: dict[str, Any]) -> None:
@@ -1856,16 +1944,17 @@ def strengthen_lighting_threshold_bands(panel: dict[str, Any]) -> None:
         remove_override_property(low_override, "custom.lineStyle")
 
 
-def strengthen_relay_state_lanes(panel: dict[str, Any]) -> None:
+def strengthen_relay_state_lanes(panel: dict[str, Any], dashboard_uid: str = "") -> None:
     if panel.get("type") != "timeseries":
         return
+    fill_opacity = relay_state_fill_opacity(dashboard_uid)
     for label, base_label in relay_state_lane_pairs(panel):
         state_override = override_for_label(panel, label)
         upsert_override_property(state_override, "custom.drawStyle", "line")
         upsert_override_property(state_override, "custom.lineInterpolation", "stepAfter")
         upsert_override_property(state_override, "custom.lineWidth", RELAY_STATE_LINE_WIDTH)
         upsert_override_property(state_override, "custom.fillBelowTo", base_label)
-        upsert_override_property(state_override, "custom.fillOpacity", RELAY_STATE_FILL_OPACITY)
+        upsert_override_property(state_override, "custom.fillOpacity", fill_opacity)
         upsert_override_property(state_override, "custom.spanNulls", False)
         upsert_override_property(state_override, "custom.hideFrom", {"legend": False, "tooltip": True, "viz": False})
         remove_override_property(state_override, "custom.gradientMode")
@@ -1936,7 +2025,7 @@ def lighting_sun_mapping() -> list[dict[str, Any]]:
     ]
 
 
-def brand_field_config(panel: dict[str, Any]) -> None:
+def brand_field_config(panel: dict[str, Any], dashboard_uid: str = "") -> None:
     title = str(panel.get("title") or "")
     field_config = panel.setdefault("fieldConfig", {})
     defaults = field_config.setdefault("defaults", {})
@@ -1962,13 +2051,13 @@ def brand_field_config(panel: dict[str, Any]) -> None:
                 prop["value"] = brand_thresholds(prop.get("value"), label, title)
             elif prop.get("id") == "mappings":
                 prop["value"] = brand_mappings(prop.get("value"), label, title)
-    strengthen_daylight_backdrops(panel)
+    strengthen_daylight_backdrops(panel, dashboard_uid)
     strengthen_vpd_context_series(panel)
     strengthen_lighting_lux_altitude(panel)
     strengthen_expected_series_colors(panel)
     strengthen_compliance_band(panel)
     strengthen_lighting_threshold_bands(panel)
-    strengthen_relay_state_lanes(panel)
+    strengthen_relay_state_lanes(panel, dashboard_uid)
     if panel.get("type") == "state-timeline" and title in {
         "Lighting Circuit State",
         "Lighting Decision Context",
@@ -1985,22 +2074,23 @@ def brand_field_config(panel: dict[str, Any]) -> None:
 
 def brand_dashboard(path: Path, embedded_ids: set[int]) -> tuple[bool, int]:
     dashboard = load_json(path)
+    dashboard_uid = str(dashboard.get("uid") or "")
     before = json.dumps(dashboard, sort_keys=True)
     dashboard["style"] = "light"
     changed_panels = 0
     for panel in iter_panels(dashboard.get("panels", [])):
-        strengthen_daylight_backdrops(panel)
+        strengthen_daylight_backdrops(panel, dashboard_uid)
         strengthen_lighting_lux_altitude(panel)
         strengthen_compliance_band(panel)
         strengthen_lighting_threshold_bands(panel)
-        strengthen_relay_state_lanes(panel)
+        strengthen_relay_state_lanes(panel, dashboard_uid)
         normalize_runtime_electric_sources(panel)
         if panel.get("id") not in embedded_ids:
             continue
         normalize_public_panel_schema(panel)
         ensure_panel_chrome(panel)
         ensure_legend_and_tooltip(panel)
-        brand_field_config(panel)
+        brand_field_config(panel, dashboard_uid)
         changed_panels += 1
     after = json.dumps(dashboard, sort_keys=True)
     if after != before:
@@ -2055,6 +2145,7 @@ def mapped_value_color(panel: dict[str, Any], label: str, value: str) -> str | N
 
 def check_daylight_dashboard_data(label: str, dashboard: dict[str, Any]) -> list[str]:
     findings: list[str] = []
+    dashboard_uid = str(dashboard.get("uid") or "")
     for panel in iter_panels(dashboard.get("panels", [])):
         if panel.get("type") != "timeseries":
             continue
@@ -2062,8 +2153,9 @@ def check_daylight_dashboard_data(label: str, dashboard: dict[str, Any]) -> list
             props = override_props(panel, series)
             color = props.get("color")
             fixed_color = color.get("fixedColor") if isinstance(color, dict) else None
-            expected_color = daylight_color(series)
-            expected_fill = daylight_fill_opacity(series)
+            expected_color = daylight_color(series, panel, dashboard_uid)
+            expected_fill = daylight_fill_opacity(series, panel, dashboard_uid)
+            expected_gradient = daylight_gradient_mode(series, panel, dashboard_uid)
             if fixed_color != expected_color:
                 findings.append(
                     f"{label}: panel {panel.get('id')} {panel.get('title')!r} daylight series "
@@ -2080,11 +2172,11 @@ def check_daylight_dashboard_data(label: str, dashboard: dict[str, Any]) -> list
                     f"{label}: panel {panel.get('id')} {panel.get('title')!r} daylight series "
                     f"{series!r} fillOpacity is {fill_opacity}, expected >= {expected_fill}"
                 )
-            if props.get("custom.gradientMode") != DAYLIGHT_GRADIENT_MODE:
+            if props.get("custom.gradientMode") != expected_gradient:
                 findings.append(
                     f"{label}: panel {panel.get('id')} {panel.get('title')!r} daylight series "
                     f"{series!r} gradientMode is {props.get('custom.gradientMode')}, expected "
-                    f"{DAYLIGHT_GRADIENT_MODE}"
+                    f"{expected_gradient}"
                 )
     return findings
 
@@ -2179,11 +2271,12 @@ def check_lighting_threshold_dashboard_data(label: str, dashboard: dict[str, Any
 
 def check_relay_state_lane_dashboard_data(label: str, dashboard: dict[str, Any]) -> list[str]:
     findings: list[str] = []
+    fill_opacity = relay_state_fill_opacity(str(dashboard.get("uid") or ""))
     expected_state_props = {
         "custom.drawStyle": "line",
         "custom.lineInterpolation": "stepAfter",
         "custom.lineWidth": RELAY_STATE_LINE_WIDTH,
-        "custom.fillOpacity": RELAY_STATE_FILL_OPACITY,
+        "custom.fillOpacity": fill_opacity,
         "custom.spanNulls": False,
         "custom.hideFrom": {"legend": False, "tooltip": True, "viz": False},
     }
