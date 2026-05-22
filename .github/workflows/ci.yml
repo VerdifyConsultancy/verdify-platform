@@ -34,14 +34,14 @@ jobs:
         run: |
           set -euo pipefail
           VAULT="$(mktemp -d)"
-          mkdir -p "$VAULT/forecast" "$VAULT/data/forecast" "$VAULT/plans" "$VAULT/data/plans" "$VAULT/evidence" "$VAULT/data"
+          mkdir -p "$VAULT/data/forecast" "$VAULT/plans" "$VAULT/data/plans" "$VAULT/evidence" "$VAULT/data"
           NOW="$(python - <<'PY'
           from datetime import datetime
           from zoneinfo import ZoneInfo
           print(datetime.now(ZoneInfo("America/Denver")).isoformat(timespec="seconds"))
           PY
           )"
-          cat > "$VAULT/forecast/index.md" <<EOF
+          cat > "$VAULT/data/forecast/index.md" <<EOF
           ---
           title: Greenhouse Weather Forecast
           tags: [forecast, auto-generated]
@@ -52,7 +52,6 @@ jobs:
 
           *Auto-generated fixture.*
           EOF
-          cp "$VAULT/forecast/index.md" "$VAULT/data/forecast/index.md"
           cat > "$VAULT/plans/2026-05-10.md" <<'EOF'
           ---
           title: May 10, 2026
@@ -64,6 +63,18 @@ jobs:
           *Auto-generated fixture.*
           EOF
           cat > "$VAULT/plans/index.md" <<'EOF'
+          ---
+          title: Planning Archive Alias
+          tags: [plans, auto-generated]
+          ---
+
+          # Planning Archive Alias
+
+          *Auto-generated fixture.*
+
+          Canonical generated archive: [/data/plans/](/data/plans/).
+          EOF
+          cat > "$VAULT/data/plans/index.md" <<'EOF'
           ---
           title: AI Greenhouse Planning Archive
           tags: [plans, auto-generated]
@@ -77,7 +88,6 @@ jobs:
           |------|-------|
           | [2026-05-10](/plans/2026-05-10) | 1 |
           EOF
-          cp "$VAULT/plans/index.md" "$VAULT/data/plans/index.md"
           cat > "$VAULT/evidence/baseline-vs-iris.md" <<'EOF'
           ---
           title: Baseline vs Iris
@@ -97,7 +107,12 @@ jobs:
             --skip-site-container \
             --skip-launch-lint
 
-          printf '\nroute drift\n' >> "$VAULT/data/forecast/index.md"
+          cat >> "$VAULT/plans/index.md" <<'EOF'
+
+          | Date | Plans |
+          |------|-------|
+          | [2026-05-10](/plans/2026-05-10) | 1 |
+          EOF
           if python scripts/site-doctor.py \
             --vault-root "$VAULT" \
             --skip-grafana \
@@ -105,6 +120,44 @@ jobs:
             --skip-site-container \
             --skip-launch-lint; then
             echo "::error::site-doctor failed to catch generated route drift"
+            exit 1
+          fi
+
+          cat > "$VAULT/plans/index.md" <<'EOF'
+          ---
+          title: Planning Archive Alias
+          tags: [plans, auto-generated]
+          ---
+
+          # Planning Archive Alias
+
+          *Auto-generated fixture.*
+
+          Canonical generated archive: [/data/plans/](/data/plans/).
+          EOF
+          python - <<'PY' "$VAULT/data/forecast/index.md"
+          from pathlib import Path
+          import sys
+
+          path = Path(sys.argv[1])
+          text = path.read_text()
+          path.write_text(
+              "\n".join(
+                  "last_updated: '2026-01-01T00:00:00-07:00'"
+                  if line.startswith("last_updated: ")
+                  else line
+                  for line in text.splitlines()
+              )
+              + "\n"
+          )
+          PY
+          if python scripts/site-doctor.py \
+            --vault-root "$VAULT" \
+            --skip-grafana \
+            --skip-public \
+            --skip-site-container \
+            --skip-launch-lint; then
+            echo "::error::site-doctor failed to catch generated forecast freshness drift"
             exit 1
           fi
 
