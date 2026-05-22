@@ -559,20 +559,20 @@ def _effectiveness_status(name: str, spec: TunableDef, ev: Evidence) -> str:
 
 def _planner_status(name: str, spec: TunableDef, plan_required: set[str]) -> str:
     if name in RESERVED_NO_EFFECT:
-        return "reserved/no-op; do not push"
+        return "MCP rejects planner writes; reserved/no-op"
     if name in plan_required:
         return "routine set_plan required"
     if name in PLANNER_PUSHABLE_REG:
-        return "planner may write with a hypothesis"
+        return "set_tunable allowed; planner may write with a hypothesis"
     if spec.control_class == "crop_band":
-        return "dispatcher/crop-band owned"
+        return "MCP rejects planner writes; dispatcher/crop-band owned"
     if spec.control_class == "readback_context":
-        return "readback context only"
+        return "MCP rejects planner writes; readback context only"
     if spec.control_class == "controller_safety":
-        return "controller safety context"
+        return "MCP rejects planner writes; controller safety context"
     if spec.control_class == "retired":
-        return "retired; do not use"
-    return spec.control_class.replace("_", " ")
+        return "MCP rejects planner writes; retired"
+    return f"MCP rejects planner writes; {spec.control_class.replace('_', ' ')}"
 
 
 def _route_summary(name: str, spec: TunableDef, ev: Evidence) -> str:

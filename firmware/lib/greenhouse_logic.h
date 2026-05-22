@@ -213,6 +213,8 @@ inline LightingDecision evaluate_lighting(
     }
 
     const float natural_lux = std::isfinite(in.natural_lux) ? std::max(0.0f, in.natural_lux) : 0.0f;
+    const float exterior_lux = std::isfinite(in.exterior_lux) ? std::max(0.0f, in.exterior_lux) : 0.0f;
+    const bool exterior_lux_available = in.exterior_lux_fresh && std::isfinite(in.exterior_lux);
     const float lux_off_threshold = sp.lux_on_threshold + sp.lux_hysteresis;
     const bool in_window = sp.auto_enabled && lighting_hour_in_window(in.local_hour, sp.start_hour, sp.cutoff_hour);
     const bool crossed_midnight = state.last_count_hour >= 0 && in.local_hour < state.last_count_hour;
@@ -246,27 +248,40 @@ inline LightingDecision evaluate_lighting(
     const bool minutes_below_target = state.qualified_light_s < target_light_s;
     const bool lux_below_on = natural_lux < sp.lux_on_threshold;
     const bool lux_below_off = natural_lux < lux_off_threshold;
+    const bool exterior_lux_below_on = exterior_lux_available && exterior_lux < sp.lux_on_threshold;
+    const bool exterior_lux_below_off = exterior_lux_available && exterior_lux < lux_off_threshold;
+    const bool plant_supplement_demand = sp.auto_enabled
+        && in_window
+        && minutes_below_target
+        && ((!current_on && lux_below_on) || (current_on && lux_below_off));
+    const bool occupancy_task_light_demand = sp.auto_enabled
+        && in.occupied
+        && exterior_lux_available
+        && ((!current_on && exterior_lux_below_on) || (current_on && exterior_lux_below_off));
 
     bool want_on = false;
     const char* reason = "auto_disabled";
     if (!sp.auto_enabled) {
         want_on = false;
         reason = "auto_disabled";
+    } else if (occupancy_task_light_demand) {
+        want_on = true;
+        reason = (!current_on && exterior_lux_below_on) ? "occupancy_lux_low" : "occupancy_hysteresis_hold";
+    } else if (plant_supplement_demand) {
+        want_on = true;
+        reason = (!current_on && lux_below_on) ? "plant_lux_low" : "plant_hysteresis_hold";
+    } else if (in.occupied && !exterior_lux_available) {
+        want_on = false;
+        reason = "occupancy_lux_unavailable";
+    } else if (in.occupied && exterior_lux_available) {
+        want_on = false;
+        reason = "lux_sufficient";
     } else if (!in_window) {
         want_on = false;
         reason = "outside_window";
-    } else if (in.occupied) {
-        want_on = true;
-        reason = "occupied";
     } else if (!minutes_below_target) {
         want_on = false;
         reason = "minutes_met";
-    } else if (!current_on && lux_below_on) {
-        want_on = true;
-        reason = "lux_low";
-    } else if (current_on && lux_below_off) {
-        want_on = true;
-        reason = "hysteresis_hold";
     } else {
         want_on = false;
         reason = "lux_sufficient";
@@ -296,6 +311,9 @@ inline LightingDecision evaluate_lighting(
         .natural_qualified = natural_qualified,
         .lux_below_on_threshold = lux_below_on,
         .lux_below_off_threshold = lux_below_off,
+        .exterior_lux_available = exterior_lux_available,
+        .occupancy_task_light_demand = occupancy_task_light_demand,
+        .plant_supplement_demand = plant_supplement_demand,
         .lux_off_threshold = lux_off_threshold,
         .qualified_light_minutes = state.qualified_light_s / 60.0f,
         .target_light_minutes = float(sp.target_light_minutes),

@@ -305,6 +305,39 @@ def static_checks(audit: Audit) -> None:
     )
     audit.check(
         all(
+            token in (logic + types)
+            for token in (
+                "exterior_lux_fresh",
+                "exterior_lux_available",
+                "occupancy_task_light_demand",
+                "plant_supplement_demand",
+                "occupancy_lux_low",
+                "occupancy_hysteresis_hold",
+                "occupancy_lux_unavailable",
+                "plant_lux_low",
+                "plant_hysteresis_hold",
+            )
+        )
+        and "&& in.occupied" in logic
+        and "&& exterior_lux_available" in logic
+        and "&& in_window" in logic,
+        "firmware occupancy task-light contract",
+        "occupancy is a fresh-exterior-lux-gated demand split from plant supplementation",
+        "firmware still lacks explicit lux-gated occupancy and plant demand separation",
+    )
+    audit.check(
+        "evaluate 5s; publish 60s/change" in controls
+        and "lighting_dt_s" in controls
+        and ">= 60000" in controls
+        and "main_changed" in controls
+        and "grow_changed" in controls
+        and "tempest_age_s <= (uint32_t)id(outdoor_staleness_max_s)" in controls,
+        "firmware lighting latency contract",
+        "lighting evaluates every 5s while telemetry publishes on change or 60s heartbeat",
+        "controls.yaml still appears to gate lighting decisions on a 60s-only loop or lacks exterior lux freshness",
+    )
+    audit.check(
+        all(
             param.replace("sw_", "").replace("_mode", "") in tunables or param in tunables
             for param in PER_CIRCUIT_PARAMS
         ),
@@ -433,9 +466,10 @@ def static_checks(audit: Audit) -> None:
     traceability_migration = read(REPO_ROOT / "db" / "migrations" / "128-lighting-traceability-confirmed-state.sql")
     live_fixes_migration = read(REPO_ROOT / "db" / "migrations" / "125-lighting-live-fixes.sql")
     timeline_migration = read(REPO_ROOT / "db" / "migrations" / "127-lighting-timeline-qualified-minutes.sql")
+    occupancy_migration = read(REPO_ROOT / "db" / "migrations" / "135-lighting-occupancy-task-demand.sql")
     audit.check(
         all(
-            token in (minutes_migration + traceability_migration)
+            token in (minutes_migration + traceability_migration + occupancy_migration)
             for token in (
                 "fn_lighting_minutes_policy",
                 "v_lighting_minutes_status_now",
@@ -458,9 +492,14 @@ def static_checks(audit: Audit) -> None:
     )
     audit.check(
         "qualified minute = exterior/natural lux" in minutes_migration
-        and "COALESCE(t.qualified_light_minutes, 0) < p.target_light_minutes" in minutes_migration
-        and "natural_qualified OR switch_on" in minutes_migration
-        and "p.lux_off_threshold" in minutes_migration
+        and "COALESCE(t.qualified_light_minutes, 0) < p.target_light_minutes" in occupancy_migration
+        and "me.natural_qualified OR me.switch_on" in occupancy_migration
+        and "plant_supplement_demand" in occupancy_migration
+        and "occupancy_lux_demand" in occupancy_migration
+        and "exterior_lux_fresh" in occupancy_migration
+        and "expected_on" in occupancy_migration
+        and "j.in_light_window" in occupancy_migration
+        and "j.occupancy_active" in occupancy_migration
         and "CREATE OR REPLACE FUNCTION fn_lighting_timeline" in timeline_migration
         and "fn_lighting_minutes_policy((SELECT now_ts FROM bounds), p_greenhouse_id)" in timeline_migration
         and "main_pre_minutes < r.row_main_target_light_minutes" in timeline_migration
@@ -470,7 +509,7 @@ def static_checks(audit: Audit) -> None:
         and "legacy DLI target columns remain compatibility-only" in timeline_migration
         and "dli_today <" not in timeline_migration,
         "lighting graph hysteresis contract",
-        "status values follow firmware window, qualified-minute, auto, and ON/OFF hysteresis gates",
+        "status values expose plant demand, lux-gated occupancy demand, qualified minutes, and ON/OFF hysteresis gates",
         "status/timeline expected-on values do not match firmware hysteresis semantics",
     )
     audit.check(
@@ -511,9 +550,12 @@ def static_checks(audit: Audit) -> None:
         "site-home panel 36 is missing, stale, or still bound to heavy lighting timeline/function calls",
     )
     audit.check(
-        policy_panel and "v_lighting_traceability_now" in panel_sql(policy_panel),
+        policy_panel
+        and "v_lighting_traceability_now" in panel_sql(policy_panel)
+        and "occupancy_lux_demand" in panel_sql(policy_panel)
+        and "plant_supplement_demand" in panel_sql(policy_panel),
         "lighting policy table graph",
-        "site-climate-lighting panel 16 queries v_lighting_traceability_now",
+        "site-climate-lighting panel 16 queries split plant/occupancy demand from v_lighting_traceability_now",
         "site-climate-lighting panel 16 is missing the per-circuit status view",
     )
     audit.check(
@@ -561,7 +603,7 @@ def static_checks(audit: Audit) -> None:
     )
     titles = {panel.get("title") for panel in greenhouse_lighting.get("panels", [])}
     audit.check(
-        {"Main Light Circuit", "Lighting Circuit State", "Lighting Decision Context", "Daily Lighting Circuit Runtime"}
+        {"Main Light Circuit", "Lutron Circuit State", "Lighting Decision Context", "Daily Lutron Circuit Runtime"}
         <= titles,
         "legacy lighting dashboard labels",
         "greenhouse-lighting dashboard labels are circuit-aware",
@@ -669,6 +711,8 @@ def live_checks(audit: Audit, require_ota: bool) -> None:
     status = psql_json(
         """
         SELECT light_key, expected_on, actual_on, natural_lux,
+               occupancy_active, exterior_lux, exterior_lux_fresh,
+               occupancy_lux_demand, plant_supplement_demand,
                qualified_light_minutes, remaining_light_minutes,
                lux_on_threshold, lux_off_threshold,
                COALESCE(firmware_state, '') AS firmware_state,
@@ -684,6 +728,19 @@ def live_checks(audit: Audit, require_ota: bool) -> None:
         "live per-circuit status view",
         "v_lighting_traceability_now returns main and grow rows",
         f"unexpected status rows: {status}",
+    )
+    audit.check(
+        all(
+            row.get("occupancy_active") is not None
+            and "exterior_lux" in row
+            and row.get("exterior_lux_fresh") is not None
+            and row.get("occupancy_lux_demand") is not None
+            and row.get("plant_supplement_demand") is not None
+            for row in status
+        ),
+        "live occupancy lighting demand fields",
+        "traceability exposes occupancy, exterior lux freshness, and split demand booleans",
+        f"missing split demand fields in status rows: {status}",
     )
     telemetry_live = all(
         row.get("firmware_telemetry_fresh") and row.get("firmware_state") and row.get("firmware_reason")

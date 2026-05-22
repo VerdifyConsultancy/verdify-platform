@@ -727,7 +727,7 @@
                   {
                     "options": {
                       "ON": {
-                        "color": "#9CCC65",
+                        "color": "#5794F2",
                         "index": 0,
                         "text": "ON"
                       }
@@ -1367,11 +1367,11 @@
             "uid": "verdify-tsdb"
           },
           "format": "table",
-          "rawSql": "SELECT\n  light_key AS \"Circuit\",\n  equipment AS \"Equip\",\n  target_light_minutes AS \"Target\",\n  qualified_light_minutes AS \"Qual\",\n  remaining_light_minutes AS \"Remain\",\n  CASE WHEN actual_on THEN 'ON' ELSE 'OFF' END AS \"Switch\",\n  CASE WHEN policy_matches_cfg THEN 'MATCH' ELSE 'DRIFT' END AS \"Cfg\",\n  CASE WHEN firmware_decision_fresh THEN 'FRESH' ELSE 'STALE' END AS \"FW\"\nFROM v_lighting_traceability_now\nORDER BY light_key",
+          "rawSql": "SELECT\n  light_key AS \"Circuit\",\n  target_light_minutes AS \"Target\",\n  qualified_light_minutes AS \"Qual\",\n  remaining_light_minutes AS \"Remain\",\n  round(exterior_lux)::int AS \"Ext lux\",\n  CASE WHEN occupancy_active THEN 'YES' ELSE 'NO' END AS \"Occ\",\n  CASE\n    WHEN occupancy_lux_demand THEN 'TASK'\n    WHEN plant_supplement_demand THEN 'PLANT'\n    ELSE 'OFF'\n  END AS \"Demand\",\n  CASE WHEN actual_on THEN 'ON' ELSE 'OFF' END AS \"Switch\",\n  firmware_reason AS \"Reason\",\n  CASE WHEN policy_matches_cfg THEN 'MATCH' ELSE 'DRIFT' END AS \"Cfg\",\n  CASE WHEN firmware_decision_fresh THEN 'FRESH' ELSE 'STALE' END AS \"FW\"\nFROM v_lighting_traceability_now\nORDER BY light_key",
           "refId": "A"
         }
       ],
-      "title": "Qualified Light Minutes Now",
+      "title": "Lighting Demand Now",
       "type": "table",
       "transparent": true
     },

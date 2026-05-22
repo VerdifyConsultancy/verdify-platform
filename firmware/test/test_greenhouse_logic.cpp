@@ -2245,9 +2245,20 @@ static LightingSetpoints lighting_setpoints() {
     };
 }
 
-static LightingInputs lighting_inputs(float lux, int hour = 10, bool occupied = false) {
+static LightingInputs lighting_inputs(
+    float lux,
+    int hour = 10,
+    bool occupied = false,
+    float exterior_lux = NAN,
+    bool exterior_lux_fresh = true
+) {
+    if (std::isnan(exterior_lux)) {
+        exterior_lux = lux;
+    }
     return {
         .natural_lux = lux,
+        .exterior_lux = exterior_lux,
+        .exterior_lux_fresh = exterior_lux_fresh,
         .local_hour = hour,
         .occupied = occupied
     };
@@ -2261,7 +2272,9 @@ TEST(lighting_state_machine_turns_on_below_lux_band) {
     ASSERT_TRUE(d.in_window);
     ASSERT_TRUE(d.minutes_below_target);
     ASSERT_TRUE(d.lux_below_on_threshold);
-    ASSERT_TRUE(std::string(d.reason) == "lux_low");
+    ASSERT_TRUE(d.plant_supplement_demand);
+    ASSERT_FALSE(d.occupancy_task_light_demand);
+    ASSERT_TRUE(std::string(d.reason) == "plant_lux_low");
     PASS();
 }
 
@@ -2271,7 +2284,8 @@ TEST(lighting_state_machine_holds_until_off_threshold) {
     auto d = evaluate_lighting(lighting_inputs(45000.0f), sp, s, true, 180000);
     ASSERT_TRUE(d.want_on);
     ASSERT_TRUE(d.lux_below_off_threshold);
-    ASSERT_TRUE(std::string(d.reason) == "hysteresis_hold");
+    ASSERT_TRUE(d.plant_supplement_demand);
+    ASSERT_TRUE(std::string(d.reason) == "plant_hysteresis_hold");
     PASS();
 }
 
@@ -2297,6 +2311,86 @@ TEST(lighting_state_machine_respects_per_light_window_and_minutes_goal) {
     auto met = evaluate_lighting(lighting_inputs(1000.0f, 10), sp, s, false, 240000, 60.0f);
     ASSERT_FALSE(met.want_on);
     ASSERT_TRUE(std::string(met.reason) == "minutes_met");
+    PASS();
+}
+
+TEST(lighting_occupancy_task_demand_turns_on_when_exterior_lux_low) {
+    auto sp = lighting_setpoints();
+    auto s = initial_lighting_state();
+    auto d = evaluate_lighting(lighting_inputs(1000.0f, 23, true, 1000.0f, true), sp, s, false, 120000);
+    ASSERT_TRUE(d.want_on);
+    ASSERT_FALSE(d.in_window);
+    ASSERT_TRUE(d.exterior_lux_available);
+    ASSERT_TRUE(d.occupancy_task_light_demand);
+    ASSERT_FALSE(d.plant_supplement_demand);
+    ASSERT_TRUE(std::string(d.reason) == "occupancy_lux_low");
+    PASS();
+}
+
+TEST(lighting_occupancy_task_demand_stays_off_when_exterior_lux_high) {
+    auto sp = lighting_setpoints();
+    auto s = initial_lighting_state();
+    auto d = evaluate_lighting(lighting_inputs(90000.0f, 12, true, 90000.0f, true), sp, s, false, 120000);
+    ASSERT_FALSE(d.want_on);
+    ASSERT_TRUE(d.exterior_lux_available);
+    ASSERT_FALSE(d.occupancy_task_light_demand);
+    ASSERT_TRUE(std::string(d.reason) == "lux_sufficient");
+    PASS();
+}
+
+TEST(lighting_occupancy_task_demand_requires_fresh_exterior_lux) {
+    auto sp = lighting_setpoints();
+    auto s = initial_lighting_state();
+    auto d = evaluate_lighting(lighting_inputs(1000.0f, 23, true, 1000.0f, false), sp, s, false, 120000);
+    ASSERT_FALSE(d.want_on);
+    ASSERT_FALSE(d.exterior_lux_available);
+    ASSERT_FALSE(d.occupancy_task_light_demand);
+    ASSERT_TRUE(std::string(d.reason) == "occupancy_lux_unavailable");
+    PASS();
+}
+
+TEST(lighting_occupancy_holds_until_exterior_off_threshold) {
+    auto sp = lighting_setpoints();
+    auto s = initial_lighting_state();
+    auto d = evaluate_lighting(lighting_inputs(1000.0f, 23, true, 45000.0f, true), sp, s, true, 180000);
+    ASSERT_TRUE(d.want_on);
+    ASSERT_TRUE(d.occupancy_task_light_demand);
+    ASSERT_TRUE(std::string(d.reason) == "occupancy_hysteresis_hold");
+    PASS();
+}
+
+TEST(lighting_occupancy_clear_turns_off_without_plant_demand) {
+    auto sp = lighting_setpoints();
+    auto s = initial_lighting_state();
+    evaluate_lighting(lighting_inputs(1000.0f, 23, true, 1000.0f, true), sp, s, false, 120000);
+    auto d = evaluate_lighting(lighting_inputs(1000.0f, 23, false, 1000.0f, true), sp, s, true, 240000);
+    ASSERT_FALSE(d.want_on);
+    ASSERT_FALSE(d.occupancy_task_light_demand);
+    ASSERT_FALSE(d.plant_supplement_demand);
+    ASSERT_TRUE(std::string(d.reason) == "outside_window");
+    PASS();
+}
+
+TEST(lighting_occupancy_clear_keeps_on_when_plant_demand_remains) {
+    auto sp = lighting_setpoints();
+    auto s = initial_lighting_state();
+    evaluate_lighting(lighting_inputs(1000.0f, 10, true, 1000.0f, true), sp, s, false, 120000);
+    auto d = evaluate_lighting(lighting_inputs(1000.0f, 10, false, 1000.0f, true), sp, s, true, 240000);
+    ASSERT_TRUE(d.want_on);
+    ASSERT_FALSE(d.occupancy_task_light_demand);
+    ASSERT_TRUE(d.plant_supplement_demand);
+    ASSERT_TRUE(std::string(d.reason) == "plant_hysteresis_hold");
+    PASS();
+}
+
+TEST(lighting_occupancy_task_demand_respects_min_off_dwell) {
+    auto sp = lighting_setpoints();
+    auto s = initial_lighting_state();
+    s.last_transition_tick_ms = 100000;
+    auto d = evaluate_lighting(lighting_inputs(1000.0f, 23, true, 1000.0f, true), sp, s, false, 120000);
+    ASSERT_FALSE(d.want_on);
+    ASSERT_TRUE(d.occupancy_task_light_demand);
+    ASSERT_TRUE(std::string(d.reason) == "min_off_hold");
     PASS();
 }
 
