@@ -7,6 +7,23 @@ Owned by the [`firmware`](../agents/firmware.md) agent. Sprint counter is agent-
 - [ ] **48-hour v2 bake + reboot forensics follow-through.** Behavior-changing OTA for `2026.4.27.2009.2b5f2a5` began at `2026-04-28 02:12:25 UTC`; a wrapper-only main redeploy later put `2026.4.27.2040.c1a6403` live at `2026-04-28 02:41:54 UTC`. Sensor-health is `PASS 27 / FAIL 0 / WARN 0`, open critical/high alerts are `0`, and there are no post-OTA `Guru/Panic` / `Task WDT` resets in the sampled window. Keep OTA freeze intact during the bake. Current evidence reframes the old "midday crash-loop" as broader JSON/API/crash-forensics work; see [`docs/firmware-v2-postdeploy-forensics-2026-04-27.md`](../firmware-v2-postdeploy-forensics-2026-04-27.md).
 - [ ] **Contract + alert drift guard PR.** `firmware/contracts-alert-drift` makes `vpd_low` explicitly dispatcher/band-owned, adds expected-firmware-version mismatch alerting, and adds static drift guards for firmware override tags, `sw_mister_closes_vent` routing, and MCP Tier 1 validation.
 
+**Project recovery intake from `PROJECT_STATE.md`** (2026-05-22; coordinated
+through [`project-recovery-2026-05-22.md`](project-recovery-2026-05-22.md)).
+
+- [ ] **F-RM0 PR #80 bake and last-good promotion gate.** PR #80 firmware
+  `2026.5.22.1331.19886ea` is already deployed; recovery must not treat this as
+  permission for another OTA. After PR #80 merge, keep firmware freeze checks in
+  force, verify zero critical/high alerts, complete the required bake window,
+  and only then decide whether to promote the artifact to
+  `firmware/artifacts/last-good.ota.bin`.
+- [x] **F-RM7 May 10 firmware/ingestor stash review.** The May 10 stash touches
+  firmware-freeze territory. Review it only in a clean temporary worktree,
+  compare against current firmware behavior and invariants, then apply through a
+  PR, archive as obsolete context, or drop it. Do not apply it directly to the
+  production-linked root checkout. Archived without applying at
+  `/mnt/verdify/docs/recovery-2026-05-22/rm7-archives/stashes/2026-05-10-firmware-agent-changes.patch`
+  and dropped from the stash stack during RM-7.
+
 **Launch support** (coordinated through [`docs/backlog/launch.md`](launch.md)).
 
 - [x] **F-L1.1 Architecture fact review.** Public safety copy now uses the defensible wording: 8-state firmware controller evaluated every 5 seconds; Iris writes tactics and does not flip relays.

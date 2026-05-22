@@ -2,6 +2,80 @@
 
 Coordinator-owned queue. Items that span 2+ agent scopes, touch shared territory, or are high-stakes enough to warrant single-driver execution.
 
+## Project recovery train - 2026-05-22
+
+Canonical plan: [`project-recovery-2026-05-22.md`](project-recovery-2026-05-22.md).
+This is the active coordinator queue for turning the `PROJECT_STATE.md` audit
+into a clean, integrated repo. PR #80 stays intact and is RM-0's baseline.
+
+- [x] **C-RM0 Preserve PR #80.** PR #80 was merged as-is on 2026-05-22 with
+  merge commit `66f0836b9cb2bec133f90586380d196cccee5d78`. Main CI run
+  `26311770932` passed, including route guards, schema/drift guards, firmware
+  compile, firmware replay/invariants, and restart hygiene. Firmware bake and
+  last-good promotion remain tracked as `F-RM0`.
+- [x] **C-RM1 Dirty-state quarantine.** Freeze broad root-worktree edits,
+  create per-theme patch bundles or clean integration branches, and assign
+  every dirty path from `PROJECT_STATE.md` to exactly one milestone before code
+  cleanup starts. Patch bundles and the path-disposition manifest are captured
+  under `/mnt/verdify/docs/recovery-2026-05-22/rm1-patch-bundles/`; clean RM-2
+  and RM-5 integration worktrees exist, RM-4 and RM-6 have been integrated, and
+  RM-7 disposed of stashes/temp worktrees by archive or removal.
+- [x] **C-RM2 Irrigation/fertigation coordinator slice.** Own migration 134,
+  schema changes, restart documentation, DB/view validation, and cross-agent
+  review for the canonical irrigation/fertigation software stack. Finalizer is
+  explicitly out of scope until RM-3. PR #83 merged at
+  `a8f8ffaf7aa7834e393746e8d6b37d1549aecede`; main CI run `26314849773`
+  passed. Deployment applied migration 134 transactionally, synced the tracked
+  RM-2 files to `/srv/verdify`, restarted `verdify-ingestor` and
+  `verdify-mcp`, restarted Grafana, and passed live
+  `make irrigation-stack-software-check`; the post-restart ingestor journal
+  window stayed clean. Physical feedback gaps remain RM-3.
+- [ ] **C-RM3 Physical feedback and finalizer gate.** Coordinate operator
+  repair/mapping for south probe and center moisture/runoff feedback, then run
+  finalizer dry-run and finalizer only after all feedback rows are `ok`.
+- [x] **C-RM4 Planner graph reconciliation.** Decide whether the root dirty
+  planner-graph shadow implementation or stale `genai` worktree variant is
+  canonical, then route the reviewed runtime/docs/tests through genai or a
+  coordinator-owned shared PR. Root was chosen as canonical; PR #84 merged at
+  `3a2eb87426a355a5e71c036bc3460686b68b5b56`; main CI run `26315767545`
+  passed; deployment synced the merged files, restarted only
+  `verdify-ingestor`, validated accepted shadow row `4`, confirmed no duplicate
+  shadow rows per trigger, and ran deployed backfill dry-runs.
+- [x] **C-RM5 Site/Grafana integration gate.** Coordinate the site/Grafana
+  pieces that cross `docker-compose.yml`, Grafana provisioning, generated site
+  output, and live service reloads; include
+  `verdify-grafana-render-cache-warm.service` triage. PR #81 merged at
+  `f08e09490c1d1075b705eebd66b0f06a81812f43`; main CI run `26313275460`
+  passed. Deployment rebuilt the site from tracked source, restarted Grafana,
+  installed/enabled the cache-warmer unit/timer, and completed one warmer run
+  with `133/133` HTTP 200 renders and zero failures. RM-8 validation confirmed
+  public `lab.verdify.ai` and `labs.verdify.ai` both resolve to
+  `gateway.verdify.ai` / `8.44.158.103` and return HTTP 200; issue #82 is
+  closed.
+- [x] **C-RM6 Climate overlay semantics.** Isolate Tempest/HA overlay behavior
+  from broader recovery branches and drop unjustified loose planner tests. PR
+  #85 merged at `45758b66c08e8c40ec1eb48cd735db48b8ced0f5`; main CI run
+  `26316119564` passed. Deployment synced the merged files, restarted
+  `verdify-ingestor`, verified the deployed Tempest tests, ran the standalone
+  Tempest script once, confirmed current `climate` and `weather_station` rows,
+  and confirmed zero orphan outdoor-only `climate` rows in the last hour.
+- [x] **C-RM7 Worktree/stash cleanup.** Remove temp lighting worktrees after
+  proving no unique work remains, reconcile or recreate the stale `genai`
+  worktree, and review/drop/archive both stashes without applying them to the
+  production-linked root. Unique leftovers were archived under
+  `/mnt/verdify/docs/recovery-2026-05-22/rm7-archives/`; temp/recovery
+  worktrees were removed; the stale `genai` worktree was reset to current
+  `origin/main`; the Apr 27 and May 10 stashes were dropped after archive;
+  `.git/.DS_Store` was removed by exact path; persistent agent worktrees were
+  fast-forwarded to `45758b6`.
+- [x] **C-RM8 Final health gate.** Run the full repo/runtime validation gate,
+  prove no critical/high alerts, update backlog disposition, and close or
+  schedule GitHub issues #18/#19 based on exact readback-parity evidence. Local
+  closure gates passed: `make lint`, `make test`, `make site-doctor`,
+  firmware/tunable drift tests, live service checks, Grafana render sample,
+  public lab route checks, and zero open critical/high alerts. Issues #18, #19,
+  and #82 are closed with verification comments.
+
 ## Launch coordination
 
 Launch work is tracked in [`docs/backlog/launch.md`](launch.md) with the command center in [`docs/launch/README.md`](../launch/README.md). Coordinator owns:

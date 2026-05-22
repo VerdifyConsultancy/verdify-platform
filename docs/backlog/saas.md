@@ -8,6 +8,24 @@ Owned by the [`saas`](../agents/saas.md) agent. Cloud migration, multi-tenancy, 
 
 **Track A** (operational reliability, planner quality, crop outcomes) lives across the other agents' backlogs. This doc is Track B.
 
+## Project recovery posture - 2026-05-22
+
+Canonical recovery plan:
+[`project-recovery-2026-05-22.md`](project-recovery-2026-05-22.md).
+
+SaaS/product work is intentionally parked behind the recovery train unless it
+directly supports Track A reliability, public-site availability, or a required
+deployment/secret boundary. The active recovery plan keeps PR #80 as the
+baseline, then cleans the production-linked dirty worktree, stale worktrees,
+stashes, and partially deployed site/Grafana/ingestor work before resuming
+multi-tenant cloud milestones.
+
+- [x] **S-RM8 Recovery handoff review.** After RM-8, re-evaluate this backlog
+  against the refocus strategy and decide which Sprint 10 cloud-hardening items
+  remain active versus product-later. Decision for recovery closure: SaaS work
+  remains product-later unless it directly supports Track A reliability,
+  public-site availability, or a required deployment/secret boundary.
+
 ---
 
 ## Launch Support — Public Proof + Capture

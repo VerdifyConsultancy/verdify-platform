@@ -53,6 +53,41 @@ trigger resolves to exactly one of `plan_written`, `acked`,
 - [ ] **I-P0.8 Active/future plan range guard.** Scan active and future `setpoint_plan` rows against `tunable_registry` after every full plan and before every dispatch. Alert on future violations before the bad waypoint becomes current.
 - [ ] **I-P1.1 Planner health status surface.** Publish last expected trigger, last delivered trigger, last resolved trigger, pending count by SLA age, current planner session key/model label, and active-plan range-violation count for API/web health consumers.
 
+**Project recovery intake from `PROJECT_STATE.md`** (2026-05-22; coordinated
+through [`project-recovery-2026-05-22.md`](project-recovery-2026-05-22.md)).
+
+- [x] **I-RM2 Irrigation/fertigation canonicalization support.** Review and
+  integrate the ingestor portions of the dirty canonical irrigation stack:
+  `entity_map.py`, `ingestor.py`, `tasks.py`, feedback normalization/range
+  rejection, `irrigation_feedback_gap` alert emission, and software-only
+  acceptance scripts. Required gates: `make lint`, drift guards, targeted
+  irrigation DB/view tests, `validate-irrigation-stack.py` dry-run, full
+  `make test`, `verdify-ingestor` restart documentation, and a five-minute
+  clean journal tail after deploy. PR #83 merged at `a8f8ffa`; main CI run
+  `26314849773` passed. Live deploy applied migration 134, restarted
+  `verdify-ingestor`/`verdify-mcp`, and passed deployed
+  `make irrigation-stack-software-check`; the 16:26:31-16:32:11 MDT ingestor
+  journal window had no error/validation lines. The expected four warning-level
+  physical feedback gaps remain for I-RM3.
+- [ ] **I-RM3 Physical irrigation feedback acceptance.** Do not run or bless
+  the irrigation finalizer until `v_irrigation_sensor_feedback_status` reports
+  `ok` for `south_soil_probe_1`, `center_root_zone_moisture`,
+  `center_runoff_ec`, and `center_runoff_ph`. Ingestor owns validating that the
+  rows and alerts transition correctly after hardware/mapping repair.
+- [x] **I-RM6 Climate overlay semantics.** Isolate the dirty Tempest/HA overlay
+  behavior that skips standalone climate inserts when no recent ESP32 indoor row
+  exists. Add focused tests for fresh-vs-stale indoor baselines, then deploy
+  with an ingestor restart and live-tail validation before calling it healthy.
+  Completed via PR #85 / merge `45758b6`: `scripts/tempest-sync.py` now skips
+  orphan `climate` inserts while retaining `weather_station` writes, deployed
+  tests passed, ingestor restart was clean, and live validation showed zero
+  orphan outdoor-only `climate` rows in the last hour.
+- [x] **I-RM6 Loose guard/test adjustments.** Keep planner milestone timeout or
+  optional-`MIDNIGHT` test changes only if current runtime evidence still
+  requires them; otherwise drop them during recovery instead of carrying
+  broad test loosening forward. Dropped: current `main` passed targeted planner
+  tests and full `make test` without the loose timeout/MIDNIGHT changes.
+
 ## Findings from 2026-04-18 scope review
 
 Seven concrete gaps from the initial scope review; one (F9) surfaced when topology commits landed mid-review; four more (F10–F13) surfaced during or after the live gates.

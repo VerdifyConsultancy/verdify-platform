@@ -15,12 +15,38 @@ items: Grafana panel chrome/colors/bands/relay states, lighting/lux review,
 Resource Use monthly cost and solar-aligned panels, GPU power evidence,
 Architecture cleanup, and electric-cost math.
 
+Canonical 2026-05-22 repo recovery backlog:
+[`docs/backlog/project-recovery-2026-05-22.md`](backlog/project-recovery-2026-05-22.md).
+This plan was created from `PROJECT_STATE.md` and is the active cleanup train
+for PR #80, the production-linked dirty root worktree, stale worktrees, temp
+worktrees, stashes, partially deployed irrigation/planner/site work, and final
+health gates.
+
 Current posture:
 
 - Track A greenhouse operations still outrank all business/site/repo work.
 - `lab.verdify.ai` is the greenhouse lab + evidence site; `verdify.ai` / `www.verdify.ai` redirect there until the separate consulting CMS is ready.
 - Broad SaaS/multi-tenant work moves behind consulting validation unless needed for Track A or public-site reliability.
 - Repo, GitHub, project-board, and agent-scope splits are coordinator-owned until boundaries are decided.
+- PR #80 stays intact as the first recovery baseline; unrelated dirty work must
+  not be mixed into it.
+
+## Active recovery cycle (2026-05-22)
+
+This section supersedes the older 2026-04-20 "current cycle" status below for
+day-to-day coordination. The older section remains as historical context.
+
+| Order | Owner | Recovery focus | Gate |
+|---|---|---|---|
+| RM-0 | `coordinator` | Keep PR #80 intact as the lighting occupancy baseline | **Merge/CI complete:** PR #80 merged as-is to `main` at `66f0836`; firmware bake remains tracked in `F-RM0` |
+| RM-1 | `coordinator` | Quarantine dirty state and split independent PR branches/worktrees | **Complete:** dirty themes split into reviewed PRs or archived RM7 patches; temp worktrees/stashes disposed |
+| RM-2 | `coordinator` + `ingestor` + `web` | Integrate irrigation/fertigation canonicalization software without running the finalizer | **Merge/deploy complete:** PR #83 merged at `a8f8ffa`; main CI run `26314849773` passed; migration 134, ingestor/MCP restart, Grafana restart, and software-only live validation completed |
+| RM-3 | `coordinator` + operator | Repair physical irrigation feedback and only then run the finalizer | Four feedback rows `ok`; no critical/high alerts |
+| RM-4 | `genai` + `coordinator` | Reconcile planner-graph shadow and memory-backfill work, including stale `genai` worktree files | **Merge/deploy complete:** PR #84 merged at `3a2eb87`; main CI run `26315767545` passed; ingestor-only restart completed; live shadow smoke wrote accepted non-authoritative row `4`; deployed backfill dry-runs passed |
+| RM-5 | `web` + `coordinator` | Integrate public lab/Grafana refinements and cache-warm fix | **Complete:** PR #81 source/deploy/cache-warmer done; `lab.verdify.ai` and `labs.verdify.ai` both resolve to gateway and serve HTTP 200; issue #82 closed |
+| RM-6 | `ingestor` + `coordinator` | Integrate climate overlay semantics and loose guard changes | **Merge/deploy complete:** PR #85 merged at `45758b6`; main CI run `26316119564` passed; ingestor restart/live-tail clean; deployed Tempest script wrote `weather_station` without orphan `climate` rows |
+| RM-7 | `coordinator` | Clean temp worktrees, stashes, and generated-state risks | **Complete:** temp/recovery worktrees removed, stale genai worktree reset, stashes archived+dropped, `.git/.DS_Store` removed, persistent agent worktrees fast-forwarded to `45758b6` |
+| RM-8 | `coordinator` | Final repository health closure | **Closure branch:** local gates green, runtime/site/Grafana healthy, issues #18/#19/#82 closed; final main CI pending this docs PR |
 
 ## Launch command (2026-05-02)
 
@@ -112,7 +138,19 @@ In chronological order:
 
 Per-agent counters. Past global sprints (17–22) map into individual agents' histories; see each agent's scope doc for the relevant prior work.
 
-## Known open PRs (as of 2026-04-20 ~08:50 MDT)
+## Known open PRs
+
+Current recovery source of truth is
+[`docs/backlog/project-recovery-2026-05-22.md`](backlog/project-recovery-2026-05-22.md).
+As of 2026-05-22, PR #80
+`[codex] Refactor lighting occupancy task demand` was merged as-is at
+`66f0836`; the post-merge main CI run passed. PR #81
+`[codex] Integrate lab site and Grafana recovery` was merged at `f08e094` and
+post-merge main CI run `26313275460` passed. Firmware bake/last-good promotion
+remains tracked by the firmware backlog; canonical `lab.verdify.ai` DNS now
+resolves to the gateway and GitHub issue #82 is closed.
+
+Historical snapshot from 2026-04-20:
 
 - **#6** DRAFT — `copilot/fix-8a7fddcf-*` (voice-note ingestion; dormant Aug 2025, no recent activity)
 - All contract-v1.4-era PRs (#15, #16) merged this morning. No agent PRs outstanding.

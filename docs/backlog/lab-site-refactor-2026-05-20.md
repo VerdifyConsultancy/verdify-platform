@@ -11,6 +11,12 @@ This backlog is split into two workstreams:
 
 Updated 2026-05-20 after the site/content refactor, Planning Quality dashboard repair, Resource Use water-cost data fix, and the later live visual/calculation feedback pass.
 
+Recovery note, 2026-05-22: item-level `Complete` below means the implementation
+work was completed in the current lab-site effort. RM-5/RM-8 later proved the
+corresponding source changes were committed through PR #81, rebuilt, reloaded,
+and live-validated from tracked source; `lab.verdify.ai` DNS now resolves to the
+Verdify gateway and issue #82 is closed.
+
 | ID | Status | Evidence |
 |---|---|---|
 | CODEX-001 | Complete | `site/quartz/components/SiteNav.tsx` now puts `Latest Plan`, `AI Greenhouse`, `Evidence`, `Architecture`, `Resource Use`, `About`, `Contact`, and `Verdify Consulting` in Overview; `Known Limits` is removed from visible nav; `/plans/latest` aliases the newest generated daily plan; `/reference/known-limits` aliases Climate. `make site-doctor` reports 0 findings. |

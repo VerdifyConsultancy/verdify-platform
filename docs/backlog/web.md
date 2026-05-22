@@ -19,6 +19,33 @@ Owned by the [`web`](../agents/web.md) agent.
 
 ## Next up (candidates)
 
+**Project recovery intake from `PROJECT_STATE.md`** (2026-05-22; coordinated
+through [`project-recovery-2026-05-22.md`](project-recovery-2026-05-22.md)).
+
+- [x] **W-RM5 Lab/Grafana recovery integration.** Turn the dirty public
+  lab/Grafana refinements into tracked, reviewable source changes. Scope
+  includes site navigation/style/generator updates, irrigation nav/pages if not
+  bundled with RM-2, Grafana dashboard/provisioning changes, public route
+  labels for `lab.verdify.ai` / `labs.verdify.ai`, and the
+  `verdify-grafana-render-cache-warm.service` failure. Required gates:
+  `make lint`, `make site-doctor`, public-site lint, targeted website/fidelity
+  tests, representative desktop/mobile render checks, Grafana reload proof, and
+  live panel/page validation. Clean-worktree progress: lint, `site-doctor`,
+  targeted website/fidelity tests, full `make test`, and a temporary Quartz
+  build pass on `web/lab-grafana-recovery`; commit/PR, source deployment,
+  Grafana reload proof, desktop/mobile render checks, and live route/panel
+  validation remain open. PR #81 merged at `f08e094` and deployed from tracked
+  source: site rebuild emitted 277 pages, Grafana restarted, `make site-doctor`
+  reported zero findings, source/live Grafana brand checks passed, and the
+  cache-warmer completed 133/133 render URLs with zero failures. RM-8 confirmed
+  public `lab.verdify.ai` and `labs.verdify.ai` both resolve to the Verdify
+  gateway and return HTTP 200; issue #82 is closed.
+- [x] **W-RM5 Source-of-truth check for completed lab-site tasks.** Items
+  marked complete in `lab-site-refactor-2026-05-20.md` are not recovery-done
+  until the corresponding source changes are committed, deployed from source,
+  and validated against live Grafana/site output. Source/deploy validation
+  completed through PR #81 and RM-8 live site/Grafana checks.
+
 - [ ] **W-M20 Site IA/content refactor.** Canonical task set: [`lab-site-refactor-2026-05-20.md`](lab-site-refactor-2026-05-20.md), `CODEX-001` through `CODEX-012`. Covers nav relabeling/reordering, sitewide AI planning agent terminology, homepage cleanup/camera move, AI Greenhouse rewrite, Contact cleanup, Operations/Climate/Resource Use refocus, Planner Contract + AI Tunables merge, Known Limits removal, responsive table QA, and final generated-site QA.
 - [ ] **W-M21 Live visual/data follow-up from 2026-05-20 review.** Canonical follow-up tasks are in [`lab-site-refactor-2026-05-20.md`](lab-site-refactor-2026-05-20.md): `CODEX-013` lighting graph differentiation + Overview nav promotion; `CODEX-014` individual solar-aligned Resource Use panels; `CODEX-015` architecture SVG connector z-order; `CODEX-016` sitewide Grafana chrome/color/band/relay visual standards; `CODEX-017` Resource Use monthly stacked cost chart + GPU power cleanup; `CODEX-018` Architecture content simplification; `RP-006` electric-cost math mismatch; `RP-007` lux target and exterior-lux alignment review; `RP-008` electric meter coverage and canonical cost truth.
 - [x] **W-L1.1 Architecture SVG.** Shareable diagram added at `/static/verdify-architecture.svg` and embedded on `/intelligence/architecture`.
