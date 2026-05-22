@@ -59,6 +59,7 @@ log = logging.getLogger("tasks")
 from config import (
     EXPECTED_FIRMWARE_VERSION,
     EXPECTED_FIRMWARE_VERSION_FILE,
+    GREENHOUSE_ID,
     HA_TOKEN_FILE,
     HA_URL,
     SLACK_CHANNEL,
@@ -5127,6 +5128,129 @@ async def _resolve_delivery_log(pool: asyncpg.Pool) -> None:
                )
             """,
         )
+
+
+async def planner_memory_ingest_sync(pool: asyncpg.Pool) -> None:
+    """Best-effort planner memory ingestion outside the planner run loop.
+
+    First rollout intentionally keeps scope narrow:
+    - observed_outcome from validated plan_journal rows
+    - optional prior_plan summaries from the same rows
+    - optional support_doc seeding from a local JSON file
+
+    Failures are logged and skipped; this path must never block greenhouse ops.
+    """
+
+    from planner_graph_shadow import (
+        PlannerGraphShadowError,
+        PlannerMemoryItem,
+        build_outcome_memory_item,
+        build_prior_plan_memory_item,
+        ingest_planner_memory_batch,
+        load_memory_ingest_state,
+        load_support_doc_items,
+        planner_memory_ingest_enabled,
+        planner_memory_ingest_max_batch_items,
+        planner_memory_ingest_outcomes_enabled,
+        planner_memory_ingest_prior_plans_enabled,
+        planner_memory_ingest_support_docs_enabled,
+        planner_memory_support_docs_file,
+        save_memory_ingest_state,
+    )
+
+    if not planner_memory_ingest_enabled():
+        return
+
+    state = load_memory_ingest_state()
+    seeded_support_doc_ids = {
+        str(item_id)
+        for item_id in state.get("seeded_support_doc_ids", [])
+        if isinstance(item_id, str) and item_id.strip()
+    }
+    max_items = planner_memory_ingest_max_batch_items()
+    support_items: list[PlannerMemoryItem] = []
+    if planner_memory_ingest_support_docs_enabled():
+        support_file = planner_memory_support_docs_file()
+        if support_file and support_file.exists():
+            try:
+                all_support_items = load_support_doc_items(support_file, greenhouse_id=GREENHOUSE_ID)
+                support_items = [item for item in all_support_items if item.source_id not in seeded_support_doc_ids][
+                    :max_items
+                ]
+            except (OSError, ValueError, TypeError, PlannerGraphShadowError) as exc:
+                log.warning("planner memory support-doc load failed: %s", exc)
+
+    journal_items: list[PlannerMemoryItem] = []
+    max_journal_rows = max(1, max_items - len(support_items))
+    latest_validated_at: str | None = (
+        state.get("last_validated_at") if isinstance(state.get("last_validated_at"), str) else None
+    )
+    if max_journal_rows > 0 and (
+        planner_memory_ingest_outcomes_enabled() or planner_memory_ingest_prior_plans_enabled()
+    ):
+        async with pool.acquire() as conn:
+            rows = await conn.fetch(
+                """
+                SELECT pj.plan_id,
+                       pj.trigger_id,
+                       pj.created_at,
+                       pj.validated_at,
+                       pj.expected_outcome,
+                       pj.actual_outcome,
+                       pj.outcome_score,
+                       pj.anchor_score,
+                       pj.lesson_extracted,
+                       pdl.event_type,
+                       pdl.instance AS planner_instance,
+                       pj.hypothesis
+                  FROM plan_journal pj
+             LEFT JOIN plan_delivery_log pdl
+                    ON pdl.trigger_id = pj.trigger_id
+                 WHERE pj.validated_at IS NOT NULL
+                   AND ($1::timestamptz IS NULL OR pj.validated_at > $1::timestamptz)
+                   AND pj.plan_id NOT LIKE 'iris-reactive%'
+              ORDER BY pj.validated_at ASC
+                 LIMIT $2
+                """,
+                latest_validated_at,
+                max_journal_rows,
+            )
+        for row in rows:
+            row_dict = dict(row)
+            if planner_memory_ingest_outcomes_enabled():
+                journal_items.append(build_outcome_memory_item(row_dict))
+            if planner_memory_ingest_prior_plans_enabled() and len(journal_items) < max_items:
+                journal_items.append(build_prior_plan_memory_item(row_dict))
+
+    items = [*support_items, *journal_items][:max_items]
+    if not items:
+        return
+
+    batch_id = f"verdify-memory-{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}"
+    result = ingest_planner_memory_batch(items=items, batch_id=batch_id)
+    if result.status >= 400:
+        raise PlannerGraphShadowError(f"memory ingest failed: HTTP {result.status}: {result.body}")
+    body = result.body if isinstance(result.body, dict) else {}
+    log.info(
+        "planner memory ingest batch=%s items=%d accepted=%s duplicates=%s rejected=%s",
+        batch_id,
+        len(items),
+        body.get("accepted_count"),
+        body.get("duplicate_count"),
+        body.get("rejected_count"),
+    )
+
+    new_support_ids = [item.source_id for item in support_items]
+    seeded_support_doc_ids.update(new_support_ids)
+    validated_rows = [
+        item
+        for item in journal_items
+        if item.memory_type == "observed_outcome" and item.payload and item.payload.get("validated_at")
+    ]
+    if validated_rows:
+        state["last_validated_at"] = max(str(item.payload["validated_at"]) for item in validated_rows)
+    state["seeded_support_doc_ids"] = sorted(seeded_support_doc_ids)
+    save_memory_ingest_state(state)
 
 
 async def planning_heartbeat(pool: asyncpg.Pool) -> None:

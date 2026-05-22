@@ -65,6 +65,7 @@ from tasks import (
     infra_cpu_sync,
     matview_refresh,
     midnight_watch,
+    planner_memory_ingest_sync,
     planning_heartbeat,
     setpoint_confirmation_monitor,
     setpoint_dispatcher,
@@ -1296,6 +1297,7 @@ async def task_loop(pool: asyncpg.Pool) -> None:
         ("tempest_sync", 300, tempest_sync),
         ("ha_sensor_sync", 300, ha_sensor_sync),
         ("alert_monitor", 300, alert_monitor),
+        ("planner_memory_ingest", 300, planner_memory_ingest_sync),
         # reactive_planner removed in Sprint 5 P6 — replaced by forecast deviation monitor
         ("setpoint_dispatch", 300, setpoint_dispatcher),
         ("setpoint_confirmation", 300, setpoint_confirmation_monitor),
