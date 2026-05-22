@@ -11,8 +11,9 @@ from __future__ import annotations
 from typing import Literal
 from uuid import UUID
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
+from .tunable_registry import registry_value_error
 from .tunables import TunableParameter
 
 SetpointSource = Literal["plan", "band", "manual", "esp32", "iris"]
@@ -37,6 +38,12 @@ class SetpointChange(BaseModel):
     expired_at: AwareDatetime | None = None
     superseded_by_ts: AwareDatetime | None = None
 
+    @model_validator(mode="after")
+    def _validate_registry_bounds(self) -> SetpointChange:
+        if error := registry_value_error(self.parameter, self.value):
+            raise ValueError(f"Registry bounds violation: {error}")
+        return self
+
 
 class SetpointPlanRow(BaseModel):
     """setpoint_plan hypertable row — one waypoint × parameter × plan_id.
@@ -59,6 +66,12 @@ class SetpointPlanRow(BaseModel):
     greenhouse_id: str = "vallery"
     planner_instance: str | None = None
     trigger_id: UUID | None = None
+
+    @model_validator(mode="after")
+    def _validate_registry_bounds(self) -> SetpointPlanRow:
+        if error := registry_value_error(self.parameter, self.value):
+            raise ValueError(f"Registry bounds violation: {error}")
+        return self
 
 
 class SetpointSnapshot(BaseModel):

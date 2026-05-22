@@ -47,6 +47,24 @@ class TestSetpointPlanRow:
                 plan_id="",
             )
 
+    def test_rejects_value_outside_registry_bounds(self):
+        with pytest.raises(ValidationError, match="vpd_hysteresis=0.55 outside registry bounds"):
+            SetpointPlanRow(
+                ts=NOW,
+                parameter="vpd_hysteresis",
+                value=0.55,
+                plan_id="iris-20260418-0618",
+            )
+
+    def test_rejects_non_binary_switch_value(self):
+        with pytest.raises(ValidationError, match="sw_economiser_enabled=0.5 outside registry switch values"):
+            SetpointPlanRow(
+                ts=NOW,
+                parameter="sw_economiser_enabled",
+                value=0.5,
+                plan_id="iris-20260418-0618",
+            )
+
 
 class TestSetpointSnapshot:
     def test_valid(self):
@@ -104,6 +122,24 @@ class TestSetpointChangeExtended:
         # Sprint 21: 'iris' is now a valid source (was stripped in Sprint 20)
         sc = SetpointChange(ts=NOW, parameter="temp_low", value=58.0, source="iris")
         assert sc.source == "iris"
+
+    def test_rejects_value_outside_registry_bounds(self):
+        with pytest.raises(ValidationError, match="mister_all_delay_s=10 outside registry bounds"):
+            SetpointChange(
+                ts=NOW,
+                parameter="mister_all_delay_s",
+                value=10,
+                source="plan",
+            )
+
+    def test_rejects_non_binary_switch_value(self):
+        with pytest.raises(ValidationError, match="sw_economiser_enabled=0.5 outside registry switch values"):
+            SetpointChange(
+                ts=NOW,
+                parameter="sw_economiser_enabled",
+                value=0.5,
+                source="plan",
+            )
 
 
 class TestPlanJournalRow:
