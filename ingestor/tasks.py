@@ -5182,9 +5182,14 @@ async def planner_memory_ingest_sync(pool: asyncpg.Pool) -> None:
 
     journal_items: list[PlannerMemoryItem] = []
     max_journal_rows = max(1, max_items - len(support_items))
-    latest_validated_at: str | None = (
-        state.get("last_validated_at") if isinstance(state.get("last_validated_at"), str) else None
-    )
+    latest_validated_at_raw = state.get("last_validated_at")
+    latest_validated_at: datetime | None = None
+    if isinstance(latest_validated_at_raw, str) and latest_validated_at_raw.strip():
+        try:
+            latest_validated_at = datetime.fromisoformat(latest_validated_at_raw)
+        except ValueError:
+            log.warning("planner memory ingest ignored invalid watermark: %r", latest_validated_at_raw)
+
     if max_journal_rows > 0 and (
         planner_memory_ingest_outcomes_enabled() or planner_memory_ingest_prior_plans_enabled()
     ):

@@ -67,8 +67,9 @@ def test_build_memory_ingest_request_wraps_items() -> None:
 
 
 class _FakeAcquire:
-    def __init__(self, rows):
-        self._rows = rows
+    def __init__(self, pool):
+        self._pool = pool
+        self._rows = pool._rows
 
     async def __aenter__(self):
         return self
@@ -77,15 +78,19 @@ class _FakeAcquire:
         return None
 
     async def fetch(self, *args, **kwargs):  # noqa: ANN001, D401
+        self._pool.last_fetch_args = args
+        self._pool.last_fetch_kwargs = kwargs
         return self._rows
 
 
 class _FakePool:
     def __init__(self, rows):
         self._rows = rows
+        self.last_fetch_args = None
+        self.last_fetch_kwargs = None
 
     def acquire(self):
-        return _FakeAcquire(self._rows)
+        return _FakeAcquire(self)
 
 
 @pytest.mark.asyncio
@@ -136,6 +141,31 @@ async def test_planner_memory_ingest_sync_advances_validated_watermark(monkeypat
     await tasks.planner_memory_ingest_sync(_FakePool(rows))
 
     assert saved_state["last_validated_at"] == "2026-05-22T14:00:00+00:00"
+
+
+@pytest.mark.asyncio
+async def test_planner_memory_ingest_sync_parses_saved_watermark(monkeypatch) -> None:
+    pool = _FakePool([])
+
+    monkeypatch.setattr(planner_graph_shadow, "planner_memory_ingest_enabled", lambda: True)
+    monkeypatch.setattr(planner_graph_shadow, "planner_memory_ingest_outcomes_enabled", lambda: True)
+    monkeypatch.setattr(planner_graph_shadow, "planner_memory_ingest_prior_plans_enabled", lambda: False)
+    monkeypatch.setattr(planner_graph_shadow, "planner_memory_ingest_support_docs_enabled", lambda: False)
+    monkeypatch.setattr(planner_graph_shadow, "planner_memory_ingest_max_batch_items", lambda: 10)
+    monkeypatch.setattr(
+        planner_graph_shadow,
+        "load_memory_ingest_state",
+        lambda: {
+            "last_validated_at": "2026-05-22T14:00:00+00:00",
+            "seeded_support_doc_ids": [],
+        },
+    )
+    monkeypatch.setattr(planner_graph_shadow, "save_memory_ingest_state", lambda state: None)
+
+    await tasks.planner_memory_ingest_sync(pool)
+
+    assert isinstance(pool.last_fetch_args[1], datetime)
+    assert pool.last_fetch_args[1] == datetime(2026, 5, 22, 14, 0, tzinfo=UTC)
 
 
 def test_task_loop_registers_planner_memory_ingest() -> None:
