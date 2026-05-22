@@ -4,7 +4,7 @@ tempest-sync.py — Sync Tempest/Panorama weather station data into Verdify.
 
 Fetches current outdoor conditions from the Tempest weather station via HA REST API.
 Writes to:
-  - climate table (merged into ESP32 row, or standalone if no recent row)
+  - climate table (merged into ESP32 row when a recent indoor row exists)
   - weather_station table (dedicated outdoor weather history)
 
 Forecast is handled separately by forecast-sync.py (hourly cron, 16-day, Open-Meteo).
@@ -148,13 +148,7 @@ async def sync_tempest(conn) -> None:
                     latest_esp32.strftime("%H:%M:%S"),
                 )
         else:
-            # No recent ESP32 row — insert standalone (ESP32 down or overnight gap)
-            cols = list(climate_cols.keys())
-            vals = [climate_cols[c] for c in cols]
-            ph = ", ".join(f"${i + 1}" for i in range(len(vals)))
-            cn = ", ".join(cols)
-            await conn.execute(f"INSERT INTO climate ({cn}) VALUES ({ph})", *vals)
-            log.info("Tempest: standalone INSERT (no recent ESP32 row)")
+            log.warning("Tempest: skipped climate overlay; no recent indoor climate row")
 
         # Also write to dedicated weather_station table
         WS_COL_MAP = {
