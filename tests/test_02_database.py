@@ -48,6 +48,10 @@ class TestSchemaIntegrity:
         "v_plan_tactical_outcome_daily",
         "v_water_meter_daily",
         "v_irrigation_accountability",
+        "v_irrigation_schedule_current",
+        "v_irrigation_fertigation_runs",
+        "v_irrigation_program_daily",
+        "v_irrigation_sensor_feedback_status",
         "v_alert_lifecycle_quality",
         "v_forecast_action_outcomes",
         "v_setpoint_change_delivery",
@@ -599,6 +603,10 @@ class TestViewsCompute:
 
     def test_backlog_story_views_compute(self):
         checks = [
+            "SELECT * FROM v_irrigation_schedule_current LIMIT 1",
+            "SELECT * FROM v_irrigation_fertigation_runs LIMIT 1",
+            "SELECT * FROM v_irrigation_program_daily LIMIT 1",
+            "SELECT * FROM v_irrigation_sensor_feedback_status LIMIT 1",
             "SELECT * FROM v_irrigation_accountability LIMIT 1",
             "SELECT * FROM v_forecast_action_outcomes LIMIT 1",
             "SELECT * FROM v_crop_lifecycle_completeness LIMIT 1",
@@ -607,6 +615,39 @@ class TestViewsCompute:
         ]
         for sql in checks:
             db_query(sql)
+
+    def test_irrigation_schedule_current_has_canonical_paths(self):
+        count = db_query(
+            """
+            SELECT count(*)
+            FROM v_irrigation_schedule_current
+            WHERE schedule_id IN ('wall_shared', 'center')
+              AND start_time IS NOT NULL
+            """
+        )
+        assert int(count) == 2, "canonical irrigation schedule paths are missing"
+
+    def test_irrigation_sensor_feedback_status_has_expected_rows(self):
+        rows = db_query_rows(
+            """
+            SELECT feedback_key, status, required_action
+            FROM v_irrigation_sensor_feedback_status
+            ORDER BY feedback_key
+            """
+        )
+        parsed = [row.split("|", 2) for row in rows]
+        statuses = {feedback_key: status for feedback_key, status, _ in parsed}
+        actions = {feedback_key: required_action for feedback_key, _, required_action in parsed}
+        expected_keys = {
+            "center_root_zone_moisture",
+            "center_runoff_ec",
+            "center_runoff_ph",
+            "south_soil_probe_1",
+        }
+
+        assert set(statuses) == expected_keys, "irrigation feedback status rows are missing expected keys"
+        assert set(statuses.values()) <= {"missing", "stuck_zero", "stale", "ok"}
+        assert all(actions.values()), "irrigation feedback status rows must include required actions"
 
     def test_daily_summary_backfill_fields_present(self):
         rows = db_query_rows(

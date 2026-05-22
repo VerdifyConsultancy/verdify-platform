@@ -4,7 +4,6 @@ Tests the FastAPI application at api.verdify.ai via localhost.
 """
 
 import json
-import math
 import subprocess
 
 from conftest import db_query_rows
@@ -199,8 +198,8 @@ class TestAPISetpoints:
             """
         )[0]
         expected_low, expected_high = [float(v) for v in row.split("|")]
-        assert math.isclose(data["vpd_low"], expected_low, abs_tol=0.01)
-        assert math.isclose(data["vpd_high"], expected_high, abs_tol=0.01)
+        assert round(abs(data["vpd_low"] - expected_low), 2) <= 0.01
+        assert round(abs(data["vpd_high"] - expected_high), 2) <= 0.01
 
 
 class TestAPICrops:

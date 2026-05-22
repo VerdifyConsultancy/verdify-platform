@@ -3,7 +3,9 @@
 Every grower/operator action lands in one of these:
 - Treatment: pesticide / fungicide / fertigation application with rate + PHI/REI
 - Harvest: yield event with weight, count, revenue
-- IrrigationLog / IrrigationSchedule: water events + recurring rules
+- IrrigationLog / IrrigationSchedule: retired compatibility rows. Canonical
+  irrigation state is v_irrigation_schedule_current plus
+  v_irrigation_fertigation_runs.
 - LabResult: full nutrient panel from external lab
 - MaintenanceLog: equipment service, cost, next-due
 - ConsumablesLog: inventory (fertilizer, growing media, pest control)
@@ -128,7 +130,11 @@ class TreatmentCreate(BaseModel):
 
 
 class IrrigationLog(BaseModel):
-    """irrigation_log table row — one row per irrigation event."""
+    """Retired compatibility row.
+
+    Canonical irrigation/fertigation events are reconstructed from
+    equipment_state in v_irrigation_fertigation_runs.
+    """
 
     model_config = ConfigDict(extra="ignore")
 
@@ -150,7 +156,11 @@ class IrrigationLog(BaseModel):
 
 
 class IrrigationSchedule(BaseModel):
-    """irrigation_schedule table row — recurring weekly rule."""
+    """Retired compatibility row.
+
+    Canonical current schedule state is v_irrigation_schedule_current, sourced
+    from active-plan values and ESP32 observed/readback state.
+    """
 
     model_config = ConfigDict(extra="ignore")
 

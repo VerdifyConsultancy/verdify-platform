@@ -264,12 +264,38 @@ echo ""
 
 # ── 11. IRRIGATION ────────────────────────────────────────────────
 echo "--- IRRIGATION SCHEDULE ---"
-$DB -c "SELECT zone, start_time, duration_s, days_of_week, enabled FROM irrigation_schedule ORDER BY zone;"
-echo ""
-echo "--- IRRIGATION HISTORY (7 days) ---"
 $DB -c "
-SELECT to_char(ts AT TIME ZONE 'America/Denver', 'MM-DD HH:MI') as mdt, zone, source
-FROM irrigation_log WHERE ts > now() - interval '7 days' ORDER BY ts DESC LIMIT 10;
+SELECT zone_path,
+       array_to_string(serves_zones, ',') AS serves_zones,
+       enabled,
+       start_time,
+       clean_duration_min,
+       fert_duration_min,
+       flush_min,
+       days_mask,
+       fert_days_mask,
+       schedule_source,
+       stale_readback_count,
+       readback_drift_count
+  FROM v_irrigation_schedule_current
+ ORDER BY schedule_id;
+"
+echo ""
+echo "--- IRRIGATION / FERTIGATION RUNS (7 days) ---"
+$DB -c "
+SELECT to_char(run_start AT TIME ZONE 'America/Denver', 'MM-DD HH24:MI') AS mdt,
+       zone_path,
+       fert_relay,
+       flush_relay,
+       round(fert_duration_min::numeric, 1) AS fert_min,
+       round(flush_duration_min::numeric, 1) AS flush_min,
+       round(fert_master_overlap_min::numeric, 1) AS master_overlap_min,
+       round(COALESCE(meter_delta_gal, 0)::numeric, 1) AS meter_delta_gal,
+       quality_flag
+  FROM v_irrigation_fertigation_runs
+ WHERE run_start > now() - interval '7 days'
+ ORDER BY run_start DESC
+ LIMIT 10;
 " 2>/dev/null || echo "(none)"
 echo ""
 

@@ -25,10 +25,12 @@ from __future__ import annotations
 import ast
 import asyncio
 import importlib.util
+import json
 import os
 import re
 import runpy
 import sys
+import zlib
 from datetime import date
 from datetime import datetime as _dt
 from pathlib import Path
@@ -1736,6 +1738,2637 @@ def test_irrigation_schedule_is_heap_recovery_priority():
     }
     assert required <= tasks.IRRIGATION_SCHEDULE_PARAMS
     assert required <= tasks.HEAP_RECOVERY_PRIORITY_PARAMS
+
+
+def test_center_root_zone_runoff_mapping_is_ready_for_instrumentation():
+    import entity_map
+    import tasks
+
+    assert entity_map.ESPHOME_FEEDBACK_MAP["center_soil_moisture____"] == "moisture_center"
+    assert entity_map.ESPHOME_FEEDBACK_MAP["center_root_zone_moisture____"] == "moisture_center"
+    assert entity_map.ESPHOME_FEEDBACK_MAP["center_root_zone_soil_moisture____"] == "moisture_center"
+    assert entity_map.ESPHOME_FEEDBACK_MAP["middle_substrate_vwc"] == "moisture_center"
+    assert entity_map.ESPHOME_FEEDBACK_MAP["middle_substrate_moisture"] == "moisture_center"
+    assert entity_map.ESPHOME_FEEDBACK_MAP["middle_substrate_moisture____"] == "moisture_center"
+    assert entity_map.ESPHOME_FEEDBACK_MAP["center_runoff_ph"] == "ph_runoff_center"
+    assert entity_map.ESPHOME_FEEDBACK_MAP["center_drain_ph"] == "ph_runoff_center"
+    assert entity_map.ESPHOME_FEEDBACK_MAP["center_leachate_ph"] == "ph_runoff_center"
+    assert entity_map.ESPHOME_FEEDBACK_MAP["center_runoff_ec"] == "ec_runoff_center"
+    assert entity_map.ESPHOME_FEEDBACK_MAP["center_runoff_ec_ms_cm"] == "ec_runoff_center"
+    assert entity_map.ESPHOME_FEEDBACK_MAP["center_runoff_ec_u_s_cm"] == "ec_runoff_center"
+    assert entity_map.ESPHOME_FEEDBACK_MAP["center_runoff_ec___s_cm_"] == "ec_runoff_center"
+    assert entity_map.ESPHOME_FEEDBACK_MAP["center_runoff_ec____s___cm_"] == "ec_runoff_center"
+    assert entity_map.ESPHOME_FEEDBACK_MAP["center_drain_ec_us_cm"] == "ec_runoff_center"
+    assert entity_map.ESPHOME_FEEDBACK_MAP["center_drain_ec___s_cm_"] == "ec_runoff_center"
+    assert entity_map.ESPHOME_FEEDBACK_MAP["center_runoff_conductivity"] == "ec_runoff_center"
+    assert "center_root_zone_moisture____" not in entity_map.CLIMATE_MAP
+    assert "drain_tds" not in entity_map.ESPHOME_FEEDBACK_MAP
+    assert entity_map.FEEDBACK_VALUE_RANGES["moisture_center"] == (0.0, 100.0)
+    assert entity_map.FEEDBACK_VALUE_RANGES["ph_runoff_center"] == (0.0, 14.0)
+    assert entity_map.FEEDBACK_VALUE_RANGES["ec_runoff_center"] == (0.0, None)
+    assert entity_map.normalize_feedback_value("moisture_center", "100.0") == 100.0
+    assert entity_map.normalize_feedback_value("moisture_center", "100.1") is None
+    assert entity_map.normalize_feedback_value("ph_runoff_center", "14.1") is None
+    assert entity_map.normalize_feedback_value("ec_runoff_center", "-1") is None
+    assert tasks._CENTER_FEEDBACK_MAP["sensor.greenhouse_center_root_zone_moisture"][0] == "moisture_center"
+    assert tasks._CENTER_FEEDBACK_MAP["sensor.greenhouse_center_runoff_ph"][0] == "ph_runoff_center"
+    assert tasks._CENTER_FEEDBACK_MAP["sensor.greenhouse_center_runoff_ec"][0] == "ec_runoff_center"
+    assert tasks._CENTER_FEEDBACK_MAP["sensor.greenhouse_center_runoff_ec_ms_cm"][0] == "ec_runoff_center"
+    assert tasks._CENTER_FEEDBACK_MAP["sensor.greenhouse_middle_substrate_vwc"][0] == "moisture_center"
+    assert tasks._CENTER_FEEDBACK_MAP["sensor.greenhouse_middle_substrate_moisture"][0] == "moisture_center"
+    assert tasks._CENTER_FEEDBACK_MAP["sensor.greenhouse_center_drain_ph"][0] == "ph_runoff_center"
+    assert tasks._CENTER_FEEDBACK_MAP["sensor.greenhouse_center_effluent_ec"][0] == "ec_runoff_center"
+    assert "sensor.greenhouse_drain_tds" not in tasks._CENTER_FEEDBACK_MAP
+
+    legacy_sync_src = Path("scripts/ha-sensor-sync.py").read_text()
+    assert "CENTER_FEEDBACK_MAP" in legacy_sync_src
+    assert "normalize_feedback_value" in legacy_sync_src
+    assert "sensor.greenhouse_center_root_zone_moisture" in legacy_sync_src
+    assert "sensor.greenhouse_middle_substrate_vwc" in legacy_sync_src
+    assert "sensor.greenhouse_middle_substrate_moisture" in legacy_sync_src
+    assert "sensor.greenhouse_center_runoff_ph" in legacy_sync_src
+    assert "sensor.greenhouse_center_drain_ph" in legacy_sync_src
+    assert "sensor.greenhouse_center_runoff_ec" in legacy_sync_src
+    assert "sensor.greenhouse_center_effluent_ec" in legacy_sync_src
+    assert "sensor.greenhouse_drain_tds" not in legacy_sync_src
+
+
+def test_irrigation_feedback_alias_sets_stay_aligned():
+    import entity_map
+    import tasks
+
+    validator = runpy.run_path(
+        str(REPO_ROOT / "scripts" / "validate-irrigation-feedback.py"),
+        run_name="_test_irrigation_feedback_validator",
+    )
+    legacy_sync = runpy.run_path(
+        str(REPO_ROOT / "scripts" / "ha-sensor-sync.py"),
+        run_name="_test_ha_sensor_sync",
+    )
+
+    key_to_column = {
+        "center_root_zone_moisture": "moisture_center",
+        "center_runoff_ph": "ph_runoff_center",
+        "center_runoff_ec": "ec_runoff_center",
+    }
+
+    for feedback_key, column in key_to_column.items():
+        ha_candidates = set(validator["HA_CANDIDATES"][feedback_key])
+        task_entities = {
+            entity_id
+            for entity_id, (mapped_column, _converter) in tasks._CENTER_FEEDBACK_MAP.items()
+            if mapped_column == column
+        }
+        legacy_entities = {
+            entity_id
+            for entity_id, (mapped_column, _converter) in legacy_sync["CENTER_FEEDBACK_MAP"].items()
+            if mapped_column == column
+        }
+        assert ha_candidates == task_entities == legacy_entities
+
+        mqtt_candidates = set(validator["MQTT_FEEDBACK_CANDIDATES"][feedback_key])
+        entity_map_candidates = set(entity_map.MQTT_FEEDBACK_CANDIDATES[feedback_key])
+        accepted_mqtt_topics = {
+            topic for topic, mapped_column in entity_map.MQTT_FEEDBACK_MAP.items() if mapped_column == column
+        }
+        assert mqtt_candidates == entity_map_candidates == accepted_mqtt_topics
+
+        esphome_candidates = set(validator["ESPHOME_CANDIDATES"][feedback_key])
+        accepted_esphome_ids = {
+            object_id for object_id, mapped_column in entity_map.ESPHOME_FEEDBACK_MAP.items() if mapped_column == column
+        }
+        assert esphome_candidates == accepted_esphome_ids
+
+    for container in (
+        entity_map.ESPHOME_FEEDBACK_MAP,
+        entity_map.MQTT_FEEDBACK_MAP,
+        tasks._CENTER_FEEDBACK_MAP,
+        legacy_sync["CENTER_FEEDBACK_MAP"],
+    ):
+        assert not any("tds" in key for key in container)
+
+
+def test_irrigation_number_states_refresh_cfg_snapshot_path():
+    ingestor_src = Path("ingestor/ingestor.py").read_text()
+
+    assert "def _mirror_irrigation_number_readback" in ingestor_src
+    assert "param not in IRRIGATION_SCHEDULE_PARAMS" in ingestor_src
+    assert "state.cfg_readback[param] = val" in ingestor_src
+    assert "shared.cfg_readback[param] = val" in ingestor_src
+    assert ingestor_src.count("_mirror_irrigation_number_readback(param, val)") >= 2
+
+
+def test_ingestor_accepts_live_mqtt_feedback_without_retained_state():
+    import entity_map
+
+    ingestor_src = Path("ingestor/ingestor.py").read_text()
+
+    assert "MQTT_FEEDBACK_MAP" in ingestor_src
+    assert "from entity_map import (" in ingestor_src
+    assert entity_map.MQTT_FEEDBACK_MAP["greenhouse/sensor/south_1_soil_moisture____/state"] == "soil_moisture_south_1"
+    assert entity_map.MQTT_FEEDBACK_MAP["greenhouse/sensor/south_1_soil_ec____s___cm_/state"] == "soil_ec_south_1"
+    assert entity_map.MQTT_FEEDBACK_MAP["greenhouse/sensor/center_root_zone_moisture____/state"] == "moisture_center"
+    assert entity_map.MQTT_FEEDBACK_MAP["greenhouse/sensor/middle_substrate_vwc/state"] == "moisture_center"
+    assert entity_map.MQTT_FEEDBACK_MAP["greenhouse/sensor/middle_substrate_moisture/state"] == "moisture_center"
+    assert entity_map.MQTT_FEEDBACK_MAP["greenhouse/sensor/middle_substrate_moisture____/state"] == "moisture_center"
+    assert entity_map.MQTT_FEEDBACK_MAP["greenhouse/sensor/center_runoff_ph/state"] == "ph_runoff_center"
+    assert entity_map.MQTT_FEEDBACK_MAP["greenhouse/sensor/center_drain_ph/state"] == "ph_runoff_center"
+    assert entity_map.MQTT_FEEDBACK_MAP["greenhouse/sensor/center_runoff_ec_ms_cm/state"] == "ec_runoff_center"
+    assert entity_map.MQTT_FEEDBACK_MAP["greenhouse/sensor/center_runoff_ec___s_cm_/state"] == "ec_runoff_center"
+    assert entity_map.MQTT_FEEDBACK_MAP["greenhouse/sensor/center_runoff_ec____s___cm_/state"] == "ec_runoff_center"
+    assert entity_map.MQTT_FEEDBACK_MAP["greenhouse/sensor/center_drain_ec_us_cm/state"] == "ec_runoff_center"
+    assert entity_map.MQTT_FEEDBACK_MAP["greenhouse/sensor/center_drain_ec___s_cm_/state"] == "ec_runoff_center"
+    assert entity_map.MQTT_FEEDBACK_MAP["greenhouse/sensor/center_runoff_conductivity/state"] == "ec_runoff_center"
+    assert "greenhouse/sensor/drain_tds/state" not in entity_map.MQTT_FEEDBACK_MAP
+    assert "greenhouse/sensor/south_soil_moisture____/state" not in entity_map.MQTT_FEEDBACK_MAP
+    assert (
+        "greenhouse/sensor/south_soil_moisture____/state" in entity_map.MQTT_FEEDBACK_CANDIDATES["south_soil_probe_1"]
+    )
+    assert "if msg.retain:" in ingestor_src
+    assert "MQTT feedback retained message ignored" in ingestor_src
+    assert "event_loop.call_soon_threadsafe(_record_mqtt_feedback, topic, payload)" in ingestor_src
+    assert "def _record_climate_sensor" in ingestor_src
+    assert "ESPHome feedback rejected invalid value" in ingestor_src
+    assert "state.climate[col] = val" in ingestor_src
+
+
+def test_ingestor_records_mqtt_feedback_into_climate_buffer():
+    topic = "greenhouse/sensor/center_runoff_ec___s_cm_/state"
+    original_climate = ingestor.state.climate.copy()
+    try:
+        ingestor.state.climate.clear()
+
+        assert ingestor._record_mqtt_feedback(topic, "912.5") is True
+        assert ingestor.state.climate["ec_runoff_center"] == 912.5
+
+        assert ingestor._record_mqtt_feedback("greenhouse/sensor/unmapped/state", "1") is False
+        assert "unmapped" not in ingestor.state.climate
+
+        assert ingestor._record_mqtt_feedback(topic, "nan") is False
+        assert ingestor.state.climate["ec_runoff_center"] == 912.5
+
+        assert ingestor._record_mqtt_feedback(topic, "inf") is False
+        assert ingestor.state.climate["ec_runoff_center"] == 912.5
+
+        assert ingestor._record_mqtt_feedback(topic, "-1") is False
+        assert ingestor.state.climate["ec_runoff_center"] == 912.5
+
+        moisture_topic = "greenhouse/sensor/center_root_zone_moisture____/state"
+        assert ingestor._record_mqtt_feedback(moisture_topic, "101") is False
+        assert "moisture_center" not in ingestor.state.climate
+
+        assert ingestor._record_mqtt_feedback(topic, "not-a-number") is False
+        assert ingestor.state.climate["ec_runoff_center"] == 912.5
+    finally:
+        ingestor.state.climate.clear()
+        ingestor.state.climate.update(original_climate)
+
+
+def test_ingestor_records_esphome_feedback_with_value_ranges():
+    original_climate = ingestor.state.climate.copy()
+    try:
+        ingestor.state.climate.clear()
+
+        assert ingestor._record_climate_sensor("center_root_zone_moisture____", 42.0) is True
+        assert ingestor.state.climate["moisture_center"] == 42.0
+
+        assert ingestor._record_climate_sensor("center_root_zone_moisture____", 101.0) is True
+        assert ingestor.state.climate["moisture_center"] == 42.0
+
+        assert ingestor._record_climate_sensor("center_runoff_ph", 14.1) is True
+        assert "ph_runoff_center" not in ingestor.state.climate
+
+        assert ingestor._record_climate_sensor("avg_temp___f_", 65.5) is True
+        assert ingestor.state.climate["temp_avg"] == 65.5
+
+        assert ingestor._record_climate_sensor("unmapped_feedback", 1.0) is False
+    finally:
+        ingestor.state.climate.clear()
+        ingestor.state.climate.update(original_climate)
+
+
+def test_planner_context_uses_canonical_irrigation_sources():
+    script = Path("scripts/gather-plan-context.sh").read_text()
+
+    assert "v_irrigation_schedule_current" in script
+    assert "v_irrigation_fertigation_runs" in script
+    assert "IRRIGATION / FERTIGATION RUNS" in script
+    assert "fert_master_overlap_min" in script
+    assert "meter_delta_gal" in script
+    assert "FROM irrigation_schedule" not in script
+    assert "FROM irrigation_log" not in script
+    assert "SELECT zone, start_time, duration_s" not in script
+
+
+def test_schema_contract_marks_legacy_irrigation_as_retired():
+    operations = Path("verdify_schemas/operations.py").read_text()
+    relationships = Path("verdify_schemas/RELATIONSHIPS.md").read_text()
+    migration = Path("db/migrations/134-irrigation-fertigation-canonical.sql").read_text()
+    schema = Path("db/schema.sql").read_text()
+
+    assert "Retired compatibility row." in operations
+    assert "v_irrigation_schedule_current" in operations
+    assert "v_irrigation_fertigation_runs" in operations
+    assert "IrrigationLog / IrrigationSchedule: water events + recurring rules" not in operations
+    assert "retired compatibility; canonical schedule is" in relationships
+    assert "v_irrigation_fertigation_runs" in relationships
+    assert "| `v_water_budget` | `irrigation_log`, `equipment_state`" not in relationships
+    assert "Retired compatibility table. Canonical irrigation/fertigation events" in schema
+    assert "Retired compatibility table. Canonical current schedule is v_irrigation_schedule_current" in schema
+    assert "Retired compatibility view reconstructed from v_irrigation_fertigation_runs" in schema
+    assert "Retired compatibility view reconstructed from v_irrigation_fertigation_runs" in migration
+    assert "DROP VIEW IF EXISTS v_irrigation_log" in migration
+    assert "FROM v_irrigation_fertigation_runs" in migration
+    assert "CREATE OR REPLACE VIEW v_data_trust_ledger AS" in migration
+    assert "fertigation starts in equipment_state without canonical run rows" in migration
+    assert (
+        "FROM v_irrigation_fertigation_runs"
+        in migration[migration.index("CREATE OR REPLACE VIEW v_data_trust_ledger AS") :]
+    )
+    assert "CREATE OR REPLACE FUNCTION prevent_retired_irrigation_compat_write()" in migration
+    assert "verdify.allow_retired_irrigation_compat_write" in migration
+    assert "CREATE TRIGGER block_retired_irrigation_schedule_write" in migration
+    assert "CREATE TRIGGER block_retired_irrigation_log_write" in migration
+    assert "retired irrigation compatibility table % is read-only" in migration
+    assert "CREATE FUNCTION public.prevent_retired_irrigation_compat_write() RETURNS trigger" in schema
+    assert "CREATE TRIGGER block_retired_irrigation_schedule_write" in schema
+    assert "CREATE TRIGGER block_retired_irrigation_log_write" in schema
+    irrigation_log_view = schema[
+        schema.index("CREATE VIEW public.v_irrigation_log AS") : schema.index(
+            "ALTER VIEW public.v_irrigation_log OWNER TO",
+            schema.index("CREATE VIEW public.v_irrigation_log AS"),
+        )
+    ]
+    assert "FROM public.v_irrigation_fertigation_runs" in irrigation_log_view
+    assert "FROM public.irrigation_log" not in irrigation_log_view
+    assert "runtime_drip_wall_fert_h double precision" in schema
+    assert "runtime_fert_master_h double precision" in schema
+    assert "runtime_irrigation_clean_h double precision" in schema
+    assert "fertigation_water_gal double precision" in schema
+    assert "COMMENT ON COLUMN public.daily_summary.fertigation_water_gal" in schema
+    assert "CREATE VIEW public.v_irrigation_schedule_current AS" in schema
+    assert "CREATE VIEW public.v_irrigation_fertigation_runs AS" in schema
+    assert "CREATE VIEW public.v_irrigation_program_daily AS" in schema
+    assert "CREATE VIEW public.v_irrigation_accountability AS" in schema
+    assert "CREATE VIEW public.v_irrigation_sensor_feedback_status AS" in schema
+    assert "south_1_moisture_last_positive_ts" in schema
+    assert "soil_ec_south_1_last_positive_ts" in schema
+    assert "south_2_reference_last_positive_ts" in schema
+    assert "CREATE VIEW public.v_water_budget AS" in schema
+    assert "Daily water decomposition including equipment-derived fertigation gallons" in schema
+    assert "After repair, run make irrigation-feedback-discover and make irrigation-feedback-check" in migration
+    assert "sensor_registry targets are ready" in migration
+    assert "Actual irrigation events. Linked to schedule" not in schema
+    assert "Programmed irrigation schedules per zone" not in schema
+    assert "Daily water decomposition: mister vs drip vs unaccounted." not in schema
+
+
+def test_daily_summary_runtime_includes_fertigation_relays():
+    import tasks
+
+    src = Path(tasks.__file__).read_text()
+    runtime_block = src[
+        src.index("_RT_EQUIP = (") : src.index("rt_rows = await conn.fetch", src.index("_RT_EQUIP = ("))
+    ]
+    for relay in (
+        "drip_wall_fert",
+        "drip_center_fert",
+        "mister_south_fert",
+        "mister_west_fert",
+        "fert_master_valve",
+    ):
+        assert relay in runtime_block
+
+    summary_update = src[
+        src.index("runtime_drip_wall_fert_h") : src.index(
+            "UPDATE daily_summary ds", src.index("runtime_drip_wall_fert_h")
+        )
+    ]
+    for column in (
+        "runtime_irrigation_clean_h",
+        "runtime_irrigation_fert_h",
+        "runtime_irrigation_total_h",
+        "irrigation_water_gal",
+        "fertigation_water_gal",
+    ):
+        assert column in summary_update
+
+    assert "changes AS" in src
+    assert "lead(ts) OVER" in src
+    assert "prev_state IS NULL OR prev_state IS DISTINCT FROM state" in src
+
+
+def test_alert_monitor_tracks_irrigation_feedback_gaps():
+    import tasks
+
+    src = Path(tasks.__file__).read_text()
+
+    assert "v_irrigation_sensor_feedback_status" in src
+    assert '"alert_type": "irrigation_feedback_gap"' in src
+    assert "status <> 'ok'" in src
+    assert "irrigation.feedback." in src
+    assert "last_sample_ts" in src
+
+
+def test_irrigation_feedback_validator_covers_physical_acceptance_paths():
+    src = Path("scripts/validate-irrigation-feedback.py").read_text()
+
+    for key in (
+        "south_soil_probe_1",
+        "center_root_zone_moisture",
+        "center_runoff_ph",
+        "center_runoff_ec",
+    ):
+        assert key in src
+
+    for entity_id in (
+        "sensor.greenhouse_south_1_soil_moisture",
+        "sensor.greenhouse_south_1_soil_ec_ms_cm",
+        "sensor.greenhouse_center_root_zone_moisture",
+        "sensor.greenhouse_center_root_zone_soil_moisture",
+        "sensor.greenhouse_center_runoff_ph",
+        "sensor.greenhouse_center_runoff_ec",
+        "sensor.greenhouse_center_runoff_ec_ms_cm",
+    ):
+        assert entity_id in src
+
+    assert "v_irrigation_sensor_feedback_status" in src
+    assert "irrigation_feedback_gap" in src
+    assert "COALESCE(details::text, '{}')" in src
+    assert "field_work_items" in src
+    assert "sensor_registry_feedback_targets" in src
+    assert "db_source_history" in src
+    assert "FEEDBACK_HISTORY_COLUMNS" in src
+    assert "_db_source_history" in src
+    assert "_source_history_line" in src
+    assert '"--include-db-history"' in src
+    assert "instrumentation_requirements" in src
+    assert "maintenance_log" in src
+    assert "positive_samples_24h" in src or "_format_details" in src
+    assert 'return 0 if report["ready"] else 1' in src
+    assert '"--watch"' in src
+    assert '"--timeout-s"' in src
+    assert '"--interval-s"' in src
+    assert '"--discover-ha"' in src
+    assert '"--discover-mqtt"' in src
+    assert '"--discover-mqtt-all"' in src
+    assert '"--discover-esphome"' in src
+    assert '"--mqtt-live-timeout-s"' in src
+    assert '"--work-order"' in src
+    assert "print_work_order" in src
+    assert "Irrigation Feedback Field Work Order" in src
+    assert "FEEDBACK_VALUE_RULES" in src
+    assert "Valid-value gate:" in src
+    assert "moisture_center must be 0-100%" in src
+    assert "ph_runoff_center must be 0-14" in src
+    assert "ec_runoff_center must be nonnegative" in src
+    assert "_south_probe_evidence_line" in src
+    assert "_print_accepted_sources" in src
+    assert "_print_tracking_records" in src
+    assert "_print_discovery_sweep" in src
+    assert "Tracking records that must close" in src
+    assert "Discovery sweep to catch newly installed or misnamed sources" in src
+    assert "HA feedback-like entities" in src
+    assert "MQTT feedback-like topics" in src
+    assert "ESPHome feedback-like entities" in src
+    assert "Accepted HA IDs" in src
+    assert "Accepted MQTT topics" in src
+    assert "Accepted ESPHome object IDs" in src
+    assert "soil_ec_south_1_last_positive_ts" in src
+    assert "south_2_reference_positive_samples_24h" in src
+    assert "Pass criteria: south_soil_probe_1 becomes ok" in src
+    assert "make irrigation-feedback-watch-field-proof" in src
+    assert "make irrigation-feedback-finalize-dry-run" in src
+    assert "make irrigation-feedback-finalize" in src
+    assert "make irrigation-feedback-proof-json" in src
+    assert "make irrigation-sensor-health-proof" in src
+    assert "make irrigation-stack-proof" in src
+    assert "make irrigation-completion-audit-proof" in src
+    assert "make irrigation-completion-audit" in src
+    assert "make irrigation-full-acceptance" in src
+    assert "make irrigation-post-deploy-acceptance-plan" in src
+    assert "make irrigation-post-deploy-acceptance" in src
+    assert "Finalize target runs dry-run before mutation" in src
+    assert "persisted field watch" in src
+    assert "completion audit proof, and strict completion audit" in src
+    assert "Full/post-deploy acceptance adds lint, tests, and migration replay before the same final gate." in src
+    assert "Plan target is print-only; it does not run checks, wait on sensors, or invoke the finalizer." in src
+    assert "expected_open_feedback_alerts_after_finalize=0" in src
+    assert "Expected final state: no open irrigation_feedback_gap alerts" in src
+    assert "ESPHOME_CANDIDATES" in src
+    assert "ACCEPTED_ESPHOME_OBJECT_IDS" in src
+    assert "aioesphomeapi" in src
+    assert "esphome_discovered_feedback_entities" in src
+    assert "ESPHOME_STATE_TIMEOUT_S" in src
+    assert "subscribe_states" in src
+    assert "missing_state" in src
+    assert "MQTT_FEEDBACK_CANDIDATES" in src
+    assert "MQTT_FEEDBACK_MAP" in src
+    assert "MQTT_DISCOVERY_TOPIC" in src
+    assert "greenhouse/sensor/#" in src
+    assert "mqtt_discovered_feedback_candidates" in src
+    assert "from entity_map import MQTT_FEEDBACK_CANDIDATES, MQTT_FEEDBACK_MAP" in src
+    assert "stale_retained_only" in src
+    assert "mosquitto_sub" in src
+    assert '"--status-only"' in src
+    assert "physical_ready" in src
+    assert "ha_discovered_feedback_candidates" in src
+    assert "DISCOVERY_LOCATION_TERMS" in src
+
+    makefile = Path("Makefile").read_text()
+    assert "irrigation-field-diagnostics" in makefile
+    assert "irrigation-field-sensor-health-proof" in makefile
+    assert (
+        "IRRIGATION_FIELD_SENSOR_HEALTH_PROOF ?= /srv/verdify/state/irrigation-field-sensor-health-proof.txt"
+        in makefile
+    )
+    assert "$(MAKE) irrigation-completion-audit-proof" in makefile
+    assert "$(MAKE) irrigation-feedback-discovery-proof" in makefile
+    assert "$(MAKE) irrigation-feedback-finalize-dry-run-proof" in makefile
+    field_diagnostics_block = makefile[
+        makefile.index("irrigation-field-diagnostics:") : makefile.index(
+            "irrigation-field-sensor-health-proof:", makefile.index("irrigation-field-diagnostics:")
+        )
+    ]
+    assert (
+        field_diagnostics_block.index("$(MAKE) irrigation-field-sensor-health-proof")
+        < field_diagnostics_block.index("$(MAKE) irrigation-feedback-work-order-proof")
+        < field_diagnostics_block.index("$(MAKE) irrigation-completion-audit-proof")
+        < field_diagnostics_block.index("$(MAKE) irrigation-feedback-discovery-proof")
+        < field_diagnostics_block.index("$(MAKE) irrigation-feedback-finalize-dry-run-proof")
+    )
+    field_sensor_health_proof_block = makefile[
+        makefile.index("irrigation-field-sensor-health-proof:") : makefile.index(
+            "irrigation-stack-software-check:", makefile.index("irrigation-field-sensor-health-proof:")
+        )
+    ]
+    assert "$(MAKE) sensor-health SINCE='2 minutes'" in field_sensor_health_proof_block
+    assert 'tee "$(IRRIGATION_FIELD_SENSOR_HEALTH_PROOF)"' in field_sensor_health_proof_block
+    assert "irrigation-feedback-check" in makefile
+    assert (
+        "irrigation-feedback-check: ## Validate south probe + center root-zone/runoff feedback bring-up\n\t$(PYTHON) scripts/validate-irrigation-feedback.py --include-db-history"
+        in makefile
+    )
+    assert "irrigation-feedback-discover" in makefile
+    assert "irrigation-feedback-work-order" in makefile
+    assert "scripts/validate-irrigation-feedback.py --work-order" in makefile
+    work_order_proof_block = makefile[
+        makefile.index("irrigation-feedback-work-order-proof:") : makefile.index(
+            "irrigation-feedback-clear-stale-retained:", makefile.index("irrigation-feedback-work-order-proof:")
+        )
+    ]
+    assert "set -o pipefail" in work_order_proof_block
+    assert "2>&1" in work_order_proof_block
+    assert 'tee "$(IRRIGATION_WORK_ORDER_PROOF)"' in work_order_proof_block
+    assert "IRRIGATION_MQTT_LIVE_TIMEOUT" in makefile
+    assert "IRRIGATION_DISCOVERY_PROOF ?= /srv/verdify/state/irrigation-discovery-proof.txt" in makefile
+    assert "IRRIGATION_STALE_RETAINED_TOPICS" in makefile
+    assert "IRRIGATION_STALE_NEAR_MISS_TOPICS" in makefile
+    assert (
+        "scripts/validate-irrigation-feedback.py --discover-ha --discover-mqtt --discover-mqtt-all --discover-esphome --include-db-history"
+        in makefile
+    )
+    assert "if [ $$rc -eq 1 ]; then exit 0; fi" in makefile
+    assert "irrigation-feedback-clear-stale-retained" in makefile
+    assert "CONFIRM_CLEAR_RETAINED=1" in makefile
+    assert "scripts/clear-irrigation-stale-retained.py --confirm" in makefile
+    assert "irrigation-feedback-clear-stale-near-misses" in makefile
+    assert "scripts/clear-irrigation-stale-retained.py --confirm --near-miss" in makefile
+    discovery_proof_block = makefile[
+        makefile.index("irrigation-feedback-discovery-proof:") : makefile.index(
+            "irrigation-feedback-work-order:", makefile.index("irrigation-feedback-discovery-proof:")
+        )
+    ]
+    assert "set -o pipefail" in discovery_proof_block
+    assert "--include-db-history" in discovery_proof_block
+    assert "--mqtt-live-timeout-s $(IRRIGATION_MQTT_LIVE_TIMEOUT)" in discovery_proof_block
+    assert "if [ $$rc -eq 1 ]; then exit 0; fi" in discovery_proof_block
+    assert "2>&1" in discovery_proof_block
+    assert 'tee "$(IRRIGATION_DISCOVERY_PROOF)"' in discovery_proof_block
+    assert "irrigation-feedback-watch" in makefile
+    assert "irrigation-feedback-watch: ## Poll until physical feedback rows are healthy" in makefile
+    assert "irrigation-feedback-watch-field" in makefile
+    assert "irrigation-feedback-watch-field-proof" in makefile
+    assert "IRRIGATION_FIELD_WATCH_MQTT_TIMEOUT" in makefile
+    assert "IRRIGATION_FIELD_WATCH_PROOF ?= /srv/verdify/state/irrigation-field-watch-proof.txt" in makefile
+    assert (
+        "scripts/validate-irrigation-feedback.py --watch --status-only --discover-ha --discover-mqtt --discover-mqtt-all --discover-esphome"
+        in makefile
+    )
+    assert (
+        "scripts/validate-irrigation-feedback.py --watch --status-only --discover-ha --discover-mqtt --discover-mqtt-all --discover-esphome --include-db-history"
+        in makefile
+    )
+    assert "scripts/validate-irrigation-feedback.py --watch --status-only" in makefile
+    assert "IRRIGATION_FEEDBACK_TIMEOUT" in makefile
+    assert "irrigation-feedback-finalize" in makefile
+    assert "irrigation-feedback-finalize-proof" in makefile
+    assert "IRRIGATION_FINALIZER_PROOF ?= /srv/verdify/state/irrigation-finalizer-proof.txt" in makefile
+    assert "IRRIGATION_FINALIZER_DRY_RUN_PROOF ?= /srv/verdify/state/irrigation-finalizer-dry-run-proof.txt" in makefile
+    assert "scripts/finalize-irrigation-feedback.py" in makefile
+    assert "irrigation-feedback-finalize-dry-run" in makefile
+    assert "irrigation-feedback-finalize-dry-run-proof" in makefile
+    assert "scripts/finalize-irrigation-feedback.py --dry-run" in makefile
+    finalizer_dry_run_proof_block = makefile[
+        makefile.index("irrigation-feedback-finalize-dry-run-proof:") : makefile.index(
+            "irrigation-feedback-finalize:", makefile.index("irrigation-feedback-finalize-dry-run-proof:")
+        )
+    ]
+    assert "set -o pipefail" in finalizer_dry_run_proof_block
+    assert "scripts/finalize-irrigation-feedback.py --dry-run" in finalizer_dry_run_proof_block
+    assert "PIPESTATUS[0]" in finalizer_dry_run_proof_block
+    assert "Irrigation feedback still blocked: .*not_ok=" in finalizer_dry_run_proof_block
+    assert 'tee "$(IRRIGATION_FINALIZER_DRY_RUN_PROOF)"' in finalizer_dry_run_proof_block
+    finalize_block = makefile[
+        makefile.index("irrigation-feedback-finalize:") : makefile.index(
+            "irrigation-acceptance:", makefile.index("irrigation-feedback-finalize:")
+        )
+    ]
+    finalizer_proof_block = makefile[
+        makefile.index("irrigation-feedback-finalize-proof:") : makefile.index(
+            "irrigation-feedback-proof-json:", makefile.index("irrigation-feedback-finalize-proof:")
+        )
+    ]
+    assert finalize_block.index("irrigation-feedback-finalize-proof") < finalize_block.index(
+        "irrigation-feedback-finalize-proof:"
+    )
+    preflight_idx = finalizer_proof_block.index("scripts/validate-irrigation-feedback.py --status-only")
+    dry_run_idx = finalizer_proof_block.index("scripts/finalize-irrigation-feedback.py --dry-run")
+    mutate_idx = finalizer_proof_block.index("scripts/finalize-irrigation-feedback.py &&")
+    post_check_idx = finalizer_proof_block.rindex("scripts/validate-irrigation-feedback.py")
+    assert preflight_idx < dry_run_idx < mutate_idx < post_check_idx
+    assert "--discover-ha --discover-mqtt --discover-mqtt-all --discover-esphome" in finalizer_proof_block
+    assert "IRRIGATION_FIELD_WATCH_MQTT_TIMEOUT" in finalizer_proof_block
+    assert dry_run_idx < finalizer_proof_block.index("scripts/finalize-irrigation-feedback.py &&")
+    assert "set -o pipefail" in finalizer_proof_block
+    assert "2>&1" in finalizer_proof_block
+    assert 'tee "$(IRRIGATION_FINALIZER_PROOF)"' in finalizer_proof_block
+    assert "irrigation-feedback-proof-json" in makefile
+    assert "IRRIGATION_FEEDBACK_PROOF ?= /srv/verdify/state/irrigation-feedback-proof.json" in makefile
+    assert (
+        "scripts/validate-irrigation-feedback.py --json --discover-ha --discover-mqtt --discover-mqtt-all --discover-esphome"
+        in makefile
+    )
+    proof_block = makefile[
+        makefile.index("irrigation-feedback-proof-json:") : makefile.index(
+            "irrigation-acceptance:", makefile.index("irrigation-feedback-proof-json:")
+        )
+    ]
+    assert "set -o pipefail" in proof_block
+    assert 'tee "$(IRRIGATION_FEEDBACK_PROOF)"' in proof_block
+    field_watch_proof_block = makefile[
+        makefile.index("irrigation-feedback-watch-field-proof:") : makefile.index(
+            "irrigation-feedback-finalize-dry-run:", makefile.index("irrigation-feedback-watch-field-proof:")
+        )
+    ]
+    assert "set -o pipefail" in field_watch_proof_block
+    assert 'tee "$(IRRIGATION_FIELD_WATCH_PROOF)"' in field_watch_proof_block
+    assert "irrigation-sensor-health-proof" in makefile
+    assert "IRRIGATION_SENSOR_HEALTH_PROOF ?= /srv/verdify/state/irrigation-sensor-health-proof.txt" in makefile
+    sensor_health_proof_block = makefile[
+        makefile.index("irrigation-sensor-health-proof:") : makefile.index(
+            "irrigation-acceptance:", makefile.index("irrigation-sensor-health-proof:")
+        )
+    ]
+    assert "set -o pipefail" in sensor_health_proof_block
+    assert "$(MAKE) sensor-health SINCE='5 minutes'" in sensor_health_proof_block
+    assert "2>&1" in sensor_health_proof_block
+    assert 'tee "$(IRRIGATION_SENSOR_HEALTH_PROOF)"' in sensor_health_proof_block
+    assert "irrigation-stack-proof" in makefile
+    assert "IRRIGATION_STACK_PROOF ?= /srv/verdify/state/irrigation-stack-proof.txt" in makefile
+    stack_proof_block = makefile[
+        makefile.index("irrigation-stack-proof:") : makefile.index(
+            "irrigation-acceptance:", makefile.index("irrigation-stack-proof:")
+        )
+    ]
+    assert "set -o pipefail" in stack_proof_block
+    assert "$(MAKE) site-doctor" in stack_proof_block
+    assert "scripts/validate-irrigation-stack.py --live-site" in stack_proof_block
+    assert 'tee "$(IRRIGATION_STACK_PROOF)"' in stack_proof_block
+    assert stack_proof_block.index("$(MAKE) site-doctor") < stack_proof_block.index(
+        "scripts/validate-irrigation-stack.py --live-site"
+    )
+    assert "irrigation-migration-proof" in makefile
+    assert "IRRIGATION_MIGRATION_PROOF ?= /srv/verdify/state/irrigation-migration-proof.txt" in makefile
+    migration_proof_block = makefile[
+        makefile.index("irrigation-migration-proof:") : makefile.index(
+            "irrigation-field-diagnostics:", makefile.index("irrigation-migration-proof:")
+        )
+    ]
+    assert "set -o pipefail" in migration_proof_block
+    assert "db/migrations/134-irrigation-fertigation-canonical.sql" in migration_proof_block
+    assert "ROLLBACK" in migration_proof_block
+    assert 'tee "$(IRRIGATION_MIGRATION_PROOF)"' in migration_proof_block
+    assert "irrigation-acceptance" in makefile
+    assert "$(MAKE) irrigation-feedback-watch-field" in makefile
+    acceptance_block = makefile[
+        makefile.index("irrigation-acceptance:") : makefile.index(
+            "irrigation-full-acceptance:", makefile.index("irrigation-acceptance:")
+        )
+    ]
+    assert "$(MAKE) irrigation-feedback-finalize" in acceptance_block
+    assert "$(MAKE) irrigation-feedback-watch-field-proof" in acceptance_block
+    assert "$(MAKE) irrigation-feedback-discovery-proof" in acceptance_block
+    assert "$(MAKE) irrigation-sensor-health-proof" in acceptance_block
+    assert "$(MAKE) irrigation-feedback-proof-json" in acceptance_block
+    assert "$(MAKE) irrigation-stack-proof" in acceptance_block
+    assert "scripts/validate-irrigation-stack.py --live-site" in makefile
+    assert acceptance_block.index("$(MAKE) irrigation-feedback-watch-field-proof") < acceptance_block.index(
+        "$(MAKE) irrigation-feedback-discovery-proof"
+    )
+    assert acceptance_block.index("$(MAKE) irrigation-feedback-discovery-proof") < acceptance_block.index(
+        "$(MAKE) irrigation-sensor-health-proof"
+    )
+    assert acceptance_block.index("$(MAKE) irrigation-sensor-health-proof") < acceptance_block.index(
+        "$(MAKE) irrigation-feedback-finalize"
+    )
+    assert acceptance_block.index("$(MAKE) irrigation-feedback-finalize") < acceptance_block.index(
+        "$(MAKE) irrigation-feedback-proof-json"
+    )
+    assert acceptance_block.index("$(MAKE) irrigation-feedback-proof-json") < acceptance_block.index(
+        "$(MAKE) irrigation-stack-proof"
+    )
+    assert "irrigation-full-acceptance" in makefile
+    full_acceptance_block = makefile[
+        makefile.index("irrigation-full-acceptance:") : makefile.index(
+            "firmware-deploy:", makefile.index("irrigation-full-acceptance:")
+        )
+    ]
+    for target in (
+        "$(MAKE) lint",
+        "$(MAKE) test",
+        "$(MAKE) irrigation-migration-proof",
+        "$(MAKE) irrigation-acceptance",
+    ):
+        assert target in full_acceptance_block
+    assert "irrigation-post-deploy-acceptance" in makefile
+    assert "irrigation-post-deploy-acceptance-plan" in makefile
+    assert "irrigation-post-deploy-acceptance-plan: ## Print non-mutating post-deploy acceptance sequence" in makefile
+    assert "Post-deploy irrigation acceptance plan (prints only; does not run checks)" in makefile
+    assert "irrigation-post-deploy-acceptance: irrigation-full-acceptance" in makefile
+    assert "Post-deploy production proof after merge/restart/site publish" in makefile
+
+    runbook = Path("docs/runbooks/irrigation-feedback-bringup.md").read_text()
+    for entity_id in (
+        "sensor.greenhouse_south_1_soil_moisture",
+        "sensor.greenhouse_center_root_zone_moisture",
+        "sensor.greenhouse_center_root_zone_soil_moisture",
+        "sensor.greenhouse_middle_substrate_moisture",
+        "sensor.greenhouse_center_runoff_ph",
+        "sensor.greenhouse_center_drain_ph",
+        "sensor.greenhouse_center_runoff_ec",
+        "sensor.greenhouse_center_runoff_ec_ms_cm",
+        "sensor.greenhouse_center_effluent_ec",
+    ):
+        assert entity_id in runbook
+    assert "v_irrigation_sensor_feedback_status" in runbook
+    assert "irrigation_feedback_gap" in runbook
+    assert "## Acceptance Gate and Live Proofs" in runbook
+    assert "Current proof artifacts are authoritative" in runbook
+    assert "do not treat the static snapshot below as fresher than those files" in runbook
+    assert "/srv/verdify/state/irrigation-completion-audit.json" in runbook
+    assert "/srv/verdify/state/irrigation-work-order.txt" in runbook
+    assert re.search(r"Representative point-in-time snapshot, 20\d{2}-\d{2}-\d{2} \d{2}:\d{2} UTC", runbook)
+    assert "Do not run `make irrigation-feedback-finalize` until `make irrigation-feedback-check` exits 0" in runbook
+    assert "zero lifetime DB samples" in runbook
+    assert "firmware freeze gates" in runbook
+    assert "make sensor-health SINCE='2 minutes'" in runbook
+    assert "make irrigation-feedback-watch-field" in runbook
+    assert "make irrigation-sensor-health-proof" in runbook
+    assert "make irrigation-stack-proof" in runbook
+    assert "make irrigation-feedback-work-order" in runbook
+    assert "make irrigation-feedback-discovery-proof" in runbook
+    assert "field actions and pass criteria" in runbook
+    assert "final acceptance captures DB status plus HA, MQTT, ESPHome, and site/Grafana evidence" in runbook
+    assert "make sensor-health SINCE='5 minutes'" in runbook
+    assert "ESP32/Modbus health" in runbook
+    assert "/srv/verdify/state/irrigation-sensor-health-proof.txt" in runbook
+    assert "IRRIGATION_SENSOR_HEALTH_PROOF=/path/to/sensor-health.txt" in runbook
+    assert "/srv/verdify/state/irrigation-field-sensor-health-proof.txt" in runbook
+    assert "IRRIGATION_FIELD_SENSOR_HEALTH_PROOF=/path/to/field-sensor-health.txt" in runbook
+    assert "/srv/verdify/state/irrigation-stack-proof.txt" in runbook
+    assert "IRRIGATION_STACK_PROOF=/path/to/stack-proof.txt" in runbook
+    assert "/srv/verdify/state/irrigation-discovery-proof.txt" in runbook
+    assert "IRRIGATION_DISCOVERY_PROOF=/path/to/discovery-proof.txt" in runbook
+    assert "ESPHome/HA/DB" in runbook
+    assert "greenhouse/sensor/#" in runbook
+    assert "make irrigation-feedback-clear-stale-near-misses" in runbook
+    assert "soil_temp_south_1" in runbook
+    assert "soil_moisture_south_2" in runbook
+    assert "shared ingestion and the Modbus bus as healthy" in runbook
+    assert "stale_retained_only=true" in runbook
+    assert "retained broker values" in runbook
+    assert "moisture must be 0-100%" in runbook
+    assert "pH must be 0-14" in runbook
+    assert "EC must be nonnegative" in runbook
+    assert "make irrigation-feedback-clear-stale-retained CONFIRM_CLEAR_RETAINED=1" in runbook
+    assert "does not replace the physical repair requirement" in runbook
+    assert "ESPHome discovery lists native controller entities by `object_id`" in runbook
+    assert "`instrumentation_requirements`, `maintenance_log`, and `sensor_registry`" in runbook
+    assert "center_root_zone_moisture____" in runbook
+    assert "middle_substrate_moisture____" in runbook
+    assert "center_runoff_ec___s_cm_" in runbook
+    assert "center_drain_ec_us_cm" in runbook
+    assert "center_drain_ec___s_cm_" in runbook
+    assert "make irrigation-field-diagnostics" in runbook
+    assert "make irrigation-stack-check" in runbook
+    assert "make irrigation-stack-software-check" in runbook
+    assert "make irrigation-migration-proof" in runbook
+    assert "/srv/verdify/state/irrigation-migration-proof.txt" in runbook
+    assert "IRRIGATION_MIGRATION_PROOF=/path/to/migration-proof.txt" in runbook
+    assert "That target runs `make site-doctor` before the software audit" in runbook
+    assert "make irrigation-feedback-finalize" in runbook
+    assert "make irrigation-feedback-finalize-dry-run" in runbook
+    assert "make irrigation-feedback-proof-json" in runbook
+    assert "machine-readable JSON" in runbook
+    assert "/srv/verdify/state/irrigation-feedback-proof.json" in runbook
+    assert "IRRIGATION_FEEDBACK_PROOF=/path/to/proof.json" in runbook
+    assert "/srv/verdify/state/irrigation-finalizer-proof.txt" in runbook
+    assert "IRRIGATION_FINALIZER_PROOF=/path/to/finalizer-proof.txt" in runbook
+    assert "/srv/verdify/state/irrigation-finalizer-dry-run-proof.txt" in runbook
+    assert "IRRIGATION_FINALIZER_DRY_RUN_PROOF=/path/to/finalizer-dry-run-proof.txt" in runbook
+    assert "reports the planned closure counts without mutating rows" in runbook
+    assert "A successful dry run must include `expected_open_feedback_alerts_after_finalize=0`" in runbook
+    assert "first records DB, HA, MQTT, and ESPHome feedback source evidence" in runbook
+    assert "then runs the dry run before the mutating finalizer" in runbook
+    assert "source-evidence, dry-run, mutation, and feedback-check transcript" in runbook
+    assert "marks the two irrigation `instrumentation_requirements` rows `complete`" in runbook
+    assert "activates the validated `sensor_registry` targets" in runbook
+    assert "idempotent `maintenance_log` validation row" in runbook
+    assert "make irrigation-acceptance" in runbook
+    assert "make irrigation-full-acceptance" in runbook
+    assert "make irrigation-post-deploy-acceptance-plan" in runbook
+    assert "make irrigation-post-deploy-acceptance" in runbook
+    assert "print-only preview and does not run checks, wait on sensors, or invoke the finalizer" in runbook
+    assert "explicit post-deploy alias for `make irrigation-full-acceptance`" in runbook
+    assert "make lint`, `make test`, and `make irrigation-migration-proof`" in runbook
+    assert "then calls `make irrigation-feedback-finalize`" in runbook
+    assert "runs `make site-doctor` before the strict live stack audit" in runbook
+    assert "watches only the physical feedback status rows" in runbook
+    assert "sudo systemctl restart verdify-ingestor" in runbook
+    assert "Alias-only irrigation feedback changes do not require `verdify-mcp`" in runbook
+    assert "Do not run this restart from a dirty shared worktree" in runbook
+    assert "Final acceptance is a post-deploy proof, not a deploy target" in runbook
+    assert "Run it only after the reviewed branch is merged" in runbook
+    assert "the generated public site is live" in runbook
+    assert "Run this after merge/deploy on the production host" in runbook
+    assert "it proves the deployed state, it does not deploy the state" in runbook
+    assert "Drain/runoff TDS remains discovery-only" in runbook
+
+
+def test_irrigation_feedback_validator_discovers_esphome_entities():
+    module = runpy.run_path(
+        str(REPO_ROOT / "scripts" / "validate-irrigation-feedback.py"),
+        run_name="_test_irrigation_feedback_validator",
+    )
+    candidates = module["_esphome_candidate_entities"]
+    discover = module["_discover_esphome_feedback_entities"]
+
+    entities = [
+        {
+            "type": "SensorInfo",
+            "object_id": "south_1_soil_moisture____",
+            "name": "South 1 Soil Moisture (%)",
+        },
+        {
+            "type": "SensorInfo",
+            "object_id": "center_root_zone_moisture____",
+            "name": "Center Root Zone Moisture (%)",
+        },
+        {
+            "type": "SensorInfo",
+            "object_id": "center_runoff_p_h",
+            "name": "Center Runoff pH",
+        },
+        {
+            "type": "SensorInfo",
+            "object_id": "center_runoff_ec_us_cm",
+            "name": "Center Runoff EC uS/cm",
+        },
+        {
+            "type": "SensorInfo",
+            "object_id": "center_unknown_metric",
+            "name": "Center Unknown Metric",
+        },
+        {
+            "type": "SensorInfo",
+            "object_id": "middle_substrate_vwc",
+            "name": "Middle Substrate VWC",
+        },
+        {
+            "type": "SensorInfo",
+            "object_id": "middle_substrate_moisture____",
+            "name": "Middle Substrate Moisture (%)",
+        },
+        {
+            "type": "SensorInfo",
+            "object_id": "middle_substrate_moisture",
+            "name": "Middle Substrate Moisture",
+        },
+        {
+            "type": "SensorInfo",
+            "object_id": "center_drain_ph",
+            "name": "Center Drain pH",
+        },
+        {
+            "type": "SensorInfo",
+            "object_id": "center_drain_ec_us_cm",
+            "name": "Center Drain EC uS/cm",
+        },
+        {
+            "type": "SensorInfo",
+            "object_id": "center_drain_ec___s_cm_",
+            "name": "Center Drain EC (µS/cm)",
+        },
+        {
+            "type": "SensorInfo",
+            "object_id": "center_runoff_conductivity",
+            "name": "Center Runoff Conductivity",
+        },
+    ]
+
+    by_key = candidates(entities)
+    assert by_key["south_soil_probe_1"][0]["present"] is True
+    assert by_key["center_root_zone_moisture"][1]["present"] is True
+    assert by_key["center_runoff_ph"][1]["present"] is True
+    assert by_key["center_runoff_ec"][2]["present"] is True
+
+    discovered = {item["object_id"]: item for item in discover(entities)}
+    assert discovered["south_1_soil_moisture____"]["accepted_for"] == ["south_soil_probe_1"]
+    assert discovered["center_root_zone_moisture____"]["accepted_for"] == ["center_root_zone_moisture"]
+    assert discovered["center_runoff_p_h"]["accepted_for"] == ["center_runoff_ph"]
+    assert discovered["center_runoff_ec_us_cm"]["accepted_for"] == ["center_runoff_ec"]
+    assert discovered["middle_substrate_vwc"]["accepted_for"] == ["center_root_zone_moisture"]
+    assert discovered["middle_substrate_moisture"]["accepted_for"] == ["center_root_zone_moisture"]
+    assert discovered["middle_substrate_moisture____"]["accepted_for"] == ["center_root_zone_moisture"]
+    assert discovered["center_drain_ph"]["accepted_for"] == ["center_runoff_ph"]
+    assert discovered["center_drain_ec_us_cm"]["accepted_for"] == ["center_runoff_ec"]
+    assert discovered["center_drain_ec___s_cm_"]["accepted_for"] == ["center_runoff_ec"]
+    assert discovered["center_runoff_conductivity"]["accepted_for"] == ["center_runoff_ec"]
+    assert "center_unknown_metric" not in discovered
+
+
+def test_irrigation_feedback_validator_discovers_near_miss_ha_entities():
+    module = runpy.run_path(
+        str(REPO_ROOT / "scripts" / "validate-irrigation-feedback.py"),
+        run_name="_test_irrigation_feedback_validator",
+    )
+    discover = module["_discover_ha_feedback_candidates"]
+
+    states = {
+        "sensor.greenhouse_center_root_zone_moisture_raw": {
+            "entity_id": "sensor.greenhouse_center_root_zone_moisture_raw",
+            "state": "42.1",
+            "attributes": {"friendly_name": "Greenhouse Center Root Zone Moisture Raw", "unit_of_measurement": "%"},
+        },
+        "sensor.greenhouse_center_runoff_p_h": {
+            "entity_id": "sensor.greenhouse_center_runoff_p_h",
+            "state": "6.2",
+            "attributes": {"friendly_name": "Greenhouse Center Runoff pH"},
+        },
+        "sensor.greenhouse_air_temperature": {
+            "entity_id": "sensor.greenhouse_air_temperature",
+            "state": "72.0",
+            "attributes": {"friendly_name": "Greenhouse Air Temperature", "unit_of_measurement": "°F"},
+        },
+        "sensor.greenhouse_cfg_direct_wet_center_start_offset_min": {
+            "entity_id": "sensor.greenhouse_cfg_direct_wet_center_start_offset_min",
+            "state": "120",
+            "attributes": {"friendly_name": "Greenhouse Cfg Direct Wet Center Start Offset Min"},
+        },
+        "sensor.center_runoff_ec": {
+            "entity_id": "sensor.center_runoff_ec",
+            "state": "810",
+            "attributes": {"friendly_name": "Center Runoff EC", "unit_of_measurement": "uS/cm"},
+        },
+        "sensor.greenhouse_middle_substrate_vwc": {
+            "entity_id": "sensor.greenhouse_middle_substrate_vwc",
+            "state": "31.2",
+            "attributes": {"friendly_name": "Greenhouse Middle Substrate VWC", "unit_of_measurement": "%"},
+        },
+        "sensor.greenhouse_middle_substrate_moisture": {
+            "entity_id": "sensor.greenhouse_middle_substrate_moisture",
+            "state": "32.8",
+            "attributes": {"friendly_name": "Greenhouse Middle Substrate Moisture", "unit_of_measurement": "%"},
+        },
+        "sensor.greenhouse_center_drain_ph": {
+            "entity_id": "sensor.greenhouse_center_drain_ph",
+            "state": "6.3",
+            "attributes": {"friendly_name": "Greenhouse Center Drain pH"},
+        },
+        "sensor.greenhouse_center_effluent_ec": {
+            "entity_id": "sensor.greenhouse_center_effluent_ec",
+            "state": "840",
+            "attributes": {"friendly_name": "Greenhouse Center Effluent EC", "unit_of_measurement": "uS/cm"},
+        },
+        "sensor.greenhouse_drain_tds": {
+            "entity_id": "sensor.greenhouse_drain_tds",
+            "state": "920",
+            "attributes": {"friendly_name": "Greenhouse Drain TDS", "unit_of_measurement": "ppm"},
+        },
+        "sensor.greenhouse_hydroponic_ec_corrected": {
+            "entity_id": "sensor.greenhouse_hydroponic_ec_corrected",
+            "state": "2478",
+            "attributes": {"friendly_name": "Greenhouse Hydroponic EC (corrected)", "unit_of_measurement": "uS/cm"},
+        },
+        "sensor.greenhouse_hydroponic_ph_corrected": {
+            "entity_id": "sensor.greenhouse_hydroponic_ph_corrected",
+            "state": "5.44",
+            "attributes": {"friendly_name": "Greenhouse Hydroponic pH (corrected)"},
+        },
+        "sensor.greenhouse_reservoir_tds": {
+            "entity_id": "sensor.greenhouse_reservoir_tds",
+            "state": "1148",
+            "attributes": {"friendly_name": "Greenhouse Reservoir TDS", "unit_of_measurement": "ppm"},
+        },
+    }
+
+    discovered = {item["entity_id"]: item for item in discover(states)}
+
+    assert "sensor.greenhouse_center_root_zone_moisture_raw" in discovered
+    assert discovered["sensor.greenhouse_center_root_zone_moisture_raw"]["accepted_for"] == []
+    assert discovered["sensor.greenhouse_center_runoff_p_h"]["accepted_for"] == ["center_runoff_ph"]
+    assert discovered["sensor.center_runoff_ec"]["accepted_for"] == []
+    assert discovered["sensor.greenhouse_middle_substrate_vwc"]["accepted_for"] == ["center_root_zone_moisture"]
+    assert discovered["sensor.greenhouse_middle_substrate_moisture"]["accepted_for"] == ["center_root_zone_moisture"]
+    assert discovered["sensor.greenhouse_center_drain_ph"]["accepted_for"] == ["center_runoff_ph"]
+    assert discovered["sensor.greenhouse_center_effluent_ec"]["accepted_for"] == ["center_runoff_ec"]
+    assert discovered["sensor.greenhouse_drain_tds"]["accepted_for"] == []
+    assert discovered["sensor.greenhouse_hydroponic_ec_corrected"]["accepted_for"] == []
+    assert discovered["sensor.greenhouse_hydroponic_ph_corrected"]["accepted_for"] == []
+    assert discovered["sensor.greenhouse_reservoir_tds"]["accepted_for"] == []
+    assert "sensor.greenhouse_air_temperature" not in discovered
+    assert "sensor.greenhouse_cfg_direct_wet_center_start_offset_min" not in discovered
+
+
+def test_irrigation_feedback_validator_discovers_near_miss_mqtt_topics():
+    module = runpy.run_path(
+        str(REPO_ROOT / "scripts" / "validate-irrigation-feedback.py"),
+        run_name="_test_irrigation_feedback_validator",
+    )
+
+    def fake_subscribe_filter(topic_filter, *, include_retained, timeout_s):
+        assert topic_filter == "greenhouse/sensor/#"
+        assert timeout_s >= 1
+        if include_retained:
+            return {
+                "greenhouse/sensor/middle_substrate_vwc/state": "31.2",
+                "greenhouse/sensor/middle_substrate_moisture/state": "32.0",
+                "greenhouse/sensor/middle_substrate_moisture____/state": "32.8",
+                "greenhouse/sensor/center_drain_ph/state": "6.3",
+                "greenhouse/sensor/center_drain_ec_us_cm/state": "840",
+                "greenhouse/sensor/center_drain_ec___s_cm_/state": "842",
+                "greenhouse/sensor/hydroponic_ec/state": "2478",
+                "greenhouse/sensor/center_unknown/state": "1",
+            }, None
+        return {
+            "greenhouse/sensor/drain_tds/state": "920",
+            "greenhouse/sensor/reservoir_ph/state": "5.44",
+        }, None
+
+    original_subscribe = module["_mqtt_subscribe_filter"]
+    module["_discover_mqtt_feedback_candidates"].__globals__["_mqtt_subscribe_filter"] = fake_subscribe_filter
+    try:
+        discovered, error = module["_discover_mqtt_feedback_candidates"](5)
+    finally:
+        module["_discover_mqtt_feedback_candidates"].__globals__["_mqtt_subscribe_filter"] = original_subscribe
+
+    assert error is None
+    by_topic = {item["topic"]: item for item in discovered}
+    assert by_topic["greenhouse/sensor/middle_substrate_vwc/state"]["accepted_for"] == ["center_root_zone_moisture"]
+    assert by_topic["greenhouse/sensor/middle_substrate_moisture/state"]["accepted_for"] == [
+        "center_root_zone_moisture"
+    ]
+    assert by_topic["greenhouse/sensor/middle_substrate_moisture____/state"]["accepted_for"] == [
+        "center_root_zone_moisture"
+    ]
+    assert by_topic["greenhouse/sensor/center_drain_ph/state"]["accepted_for"] == ["center_runoff_ph"]
+    assert by_topic["greenhouse/sensor/center_drain_ec_us_cm/state"]["accepted_for"] == ["center_runoff_ec"]
+    assert by_topic["greenhouse/sensor/center_drain_ec___s_cm_/state"]["accepted_for"] == ["center_runoff_ec"]
+    assert by_topic["greenhouse/sensor/drain_tds/state"]["accepted_for"] == []
+    assert by_topic["greenhouse/sensor/hydroponic_ec/state"]["accepted_for"] == []
+    assert by_topic["greenhouse/sensor/reservoir_ph/state"]["accepted_for"] == []
+    assert "greenhouse/sensor/center_unknown/state" not in by_topic
+
+
+def test_irrigation_feedback_validator_flags_mqtt_stale_retained_values():
+    module = runpy.run_path(
+        str(REPO_ROOT / "scripts" / "validate-irrigation-feedback.py"),
+        run_name="_test_irrigation_feedback_validator",
+    )
+
+    def fake_subscribe(topics, *, include_retained, timeout_s):
+        assert timeout_s >= 1
+        if include_retained:
+            return {"greenhouse/sensor/south_1_soil_moisture____/state": "64.0"}, None
+        return {}, None
+
+    original_subscribe = module["_mqtt_subscribe"]
+    module["_mqtt_subscribe"].__globals__["_mqtt_subscribe"] = fake_subscribe
+    try:
+        candidates, error = module["_mqtt_candidate_states"](75)
+    finally:
+        module["_mqtt_subscribe"].__globals__["_mqtt_subscribe"] = original_subscribe
+
+    assert error is None
+    south = {item["topic"]: item for item in candidates["south_soil_probe_1"]}
+    assert south["greenhouse/sensor/south_1_soil_moisture____/state"]["retained_value"] == "64.0"
+    assert south["greenhouse/sensor/south_1_soil_moisture____/state"]["live_value"] is None
+    assert south["greenhouse/sensor/south_1_soil_moisture____/state"]["stale_retained_only"] is True
+
+
+def test_irrigation_feedback_validator_formats_view_diagnostics():
+    module = runpy.run_path(
+        str(REPO_ROOT / "scripts" / "validate-irrigation-feedback.py"),
+        run_name="_test_irrigation_feedback_validator",
+    )
+
+    details = module["_parse_details"](
+        '{"samples_24h":1436,"positive_samples_24h":0,"soil_ec_south_1":0,'
+        '"soil_temp_south_1":70.16,"last_positive_ts":"2026-05-16 17:31:03+00"}'
+    )
+    formatted = module["_format_details"](details)
+
+    assert details["samples_24h"] == 1436
+    assert details["last_positive_ts"] == "2026-05-16 17:31:03+00"
+    assert "last_positive_ts=2026-05-16 17:31:03+00" in formatted
+    assert "positive_samples_24h=0" in formatted
+    assert "soil_ec_south_1=0" in formatted
+    assert "soil_temp_south_1=70.16" in formatted
+
+
+def test_irrigation_feedback_work_order_prints_south_probe_failure_evidence(capsys):
+    module = runpy.run_path(
+        str(REPO_ROOT / "scripts" / "validate-irrigation-feedback.py"),
+        run_name="_test_irrigation_feedback_validator",
+    )
+    report = {
+        "physical_ready": False,
+        "ready": False,
+        "db_status": {
+            "south_soil_probe_1": {
+                "status": "stuck_zero",
+                "latest_value": "0",
+                "last_sample_ts": "2026-05-22 08:08:20+00",
+                "details": {
+                    "positive_samples_24h": 0,
+                    "last_positive_ts": "2026-05-16T17:31:03+00:00",
+                    "soil_ec_south_1_last_positive_ts": "2026-05-16T16:00:49+00:00",
+                    "soil_temp_south_1": 62.1,
+                    "soil_ec_south_1": 0,
+                    "south_2_reference_positive_samples_24h": 893,
+                    "south_2_reference_last_positive_ts": "2026-05-22T07:34:13+00:00",
+                    "soil_moisture_south_2_reference": 0,
+                },
+            },
+            "center_root_zone_moisture": {"status": "missing", "latest_value": None, "last_sample_ts": None},
+            "center_runoff_ph": {"status": "missing", "latest_value": None, "last_sample_ts": None},
+            "center_runoff_ec": {"status": "missing", "latest_value": None, "last_sample_ts": None},
+        },
+        "esphome_candidates": {},
+        "ha_candidates": {},
+        "mqtt_candidates": {},
+        "ha_discovered_feedback_candidates": [
+            {
+                "entity_id": "sensor.greenhouse_center_probe_candidate",
+                "accepted_for": [],
+                "state": "42.0",
+                "unit": "%",
+            }
+        ],
+        "mqtt_discovered_feedback_candidates": [
+            {
+                "topic": "greenhouse/sensor/center_probe_candidate/state",
+                "accepted_for": [],
+                "retained_value": "41",
+                "live_value": None,
+            }
+        ],
+        "esphome_discovered_feedback_entities": [
+            {
+                "type": "SensorInfo",
+                "object_id": "center_probe_candidate",
+                "accepted_for": [],
+                "state": 42.0,
+                "missing_state": False,
+                "name": "Center Probe Candidate",
+            }
+        ],
+        "field_work_items": [
+            {
+                "requirement_id": "south_soil_probe_1_repair",
+                "current_status": "needed",
+                "equipment": "south_soil_probe_1",
+                "service_type": "repair",
+                "next_due": "2026-05-21",
+            }
+        ],
+        "sensor_registry_feedback_targets": [
+            {
+                "source_column": "moisture_center",
+                "sensor_id": "climate.moisture_center",
+                "active": False,
+                "zone": "center",
+                "entity_id": None,
+            }
+        ],
+        "db_source_history": {
+            "soil_moisture_south_1": {
+                "last_sample_ts": "2026-05-22 08:08:20+00",
+                "last_valid_ts": "2026-05-16 17:31:03+00",
+                "lifetime_samples": 1200,
+                "samples_24h": 144,
+                "valid_samples_24h": 0,
+            },
+            "soil_ec_south_1": {
+                "last_sample_ts": "2026-05-22 08:08:20+00",
+                "last_valid_ts": "2026-05-16 16:00:49+00",
+                "lifetime_samples": 1200,
+                "samples_24h": 144,
+                "valid_samples_24h": 0,
+            },
+            "soil_temp_south_1": {
+                "last_sample_ts": "2026-05-22 08:08:20+00",
+                "last_valid_ts": "2026-05-22 08:08:20+00",
+                "lifetime_samples": 1200,
+                "samples_24h": 144,
+                "valid_samples_24h": 144,
+            },
+            "moisture_center": {
+                "last_sample_ts": None,
+                "last_valid_ts": None,
+                "lifetime_samples": 0,
+                "samples_24h": 0,
+                "valid_samples_24h": 0,
+            },
+            "ph_runoff_center": {
+                "last_sample_ts": None,
+                "last_valid_ts": None,
+                "lifetime_samples": 0,
+                "samples_24h": 0,
+                "valid_samples_24h": 0,
+            },
+            "ec_runoff_center": {
+                "last_sample_ts": None,
+                "last_valid_ts": None,
+                "lifetime_samples": 0,
+                "samples_24h": 0,
+                "valid_samples_24h": 0,
+            },
+        },
+    }
+
+    assert "soil_ec_south_1_last_positive_ts=2026-05-16T16:00:49+00:00" in module["_south_probe_evidence_line"](report)
+
+    module["print_work_order"](report)
+    output = capsys.readouterr().out
+
+    assert "Evidence: positive_samples_24h=0" in output
+    assert "last_positive_ts=2026-05-16T17:31:03+00:00" in output
+    assert "south_2_reference_positive_samples_24h=893" in output
+    assert "DB source history:" in output
+    assert "soil_moisture_south_1: lifetime_samples=1200 samples_24h=144 valid_samples_24h=0" in output
+    assert "moisture_center: lifetime_samples=0 samples_24h=0 valid_samples_24h=0 last_sample=- last_valid=-" in output
+    assert "Accepted HA IDs: sensor.greenhouse_south_1_soil_moisture" in output
+    assert "Accepted MQTT topics: greenhouse/sensor/south_1_soil_moisture____/state" in output
+    assert "Accepted ESPHome object IDs: south_1_soil_moisture____" in output
+    assert "Accepted HA IDs: sensor.greenhouse_center_soil_moisture" in output
+    assert "Accepted HA IDs: sensor.greenhouse_center_runoff_ph" in output
+    assert "Accepted HA IDs: sensor.greenhouse_center_runoff_ec" in output
+    assert "Field action: reseat wiring/media contact" in output
+    assert "Valid-value gate:" in output
+    assert "south_soil_probe_1: moisture must be >0-100%" in output
+    assert "center_runoff_ph: ph_runoff_center must be 0-14" in output
+    assert "Deploy boundary for accepted aliases" in output
+    assert "ingestor/entity_map.py and ingestor/tasks.py" in output
+    assert "sudo systemctl restart verdify-ingestor" in output
+    assert "Alias-only feedback changes do not require verdify-mcp" in output
+    assert "Do not restart from a dirty shared worktree" in output
+    assert "Final acceptance is a post-deploy proof, not a deploy target" in output
+    assert "required services are restarted" in output
+    assert "public site/dashboard artifacts are live" in output
+    assert "Tracking records that must close" in output
+    assert "south_soil_probe_1_repair: status=needed" in output
+    assert "moisture_center: sensor_id=climate.moisture_center active=false" in output
+    assert "Discovery sweep to catch newly installed or misnamed sources" in output
+    assert "HA feedback-like entities:" in output
+    assert "sensor.greenhouse_center_probe_candidate accepted_for=near_miss state=42.0 %" in output
+    assert "MQTT feedback-like topics:" in output
+    assert "greenhouse/sensor/center_probe_candidate/state accepted_for=near_miss retained=41 live=-" in output
+    assert "ESPHome feedback-like entities:" in output
+    assert "SensorInfo center_probe_candidate accepted_for=near_miss state=42.0 missing_state=false" in output
+    assert "make irrigation-feedback-watch-field-proof" in output
+    assert "make irrigation-feedback-proof-json" in output
+    assert "make irrigation-sensor-health-proof" in output
+    assert "make irrigation-stack-proof" in output
+    assert "make irrigation-completion-audit-proof" in output
+    assert "make irrigation-completion-audit" in output
+    assert "make irrigation-post-deploy-acceptance-plan" in output
+    assert "make irrigation-post-deploy-acceptance" in output
+    assert "completion audit proof, and strict completion audit" in output
+    assert "Plan target is print-only" in output
+
+
+def test_irrigation_completion_audit_maps_objective_and_physical_blocker():
+    module = runpy.run_path(
+        str(REPO_ROOT / "scripts" / "irrigation-completion-audit.py"),
+        run_name="_test_irrigation_completion_audit",
+    )
+    src = Path("scripts/irrigation-completion-audit.py").read_text()
+    makefile = Path("Makefile").read_text()
+
+    assert "evaluate_objectives" in src
+    assert "Make one canonical irrigation schedule/log source" in src
+    assert "feedback rows not ok" in src
+    assert "wall_serves=south,west" in src
+    assert "live public irrigation page" in src
+    assert "live public irrigation discoverability" in src
+    assert "live graphs DNS routing" in src
+    assert "live irrigation dashboard render" in src
+    assert "discover_ha=True" in src
+    assert "discover_mqtt=True" in src
+    assert "discover_mqtt_all=True" in src
+    assert "discover_esphome=True" in src
+    assert "--mqtt-live-timeout-s" in src
+    assert "--allow-physical-blocker" in src
+    assert "only_physical_feedback_blocked" in src
+    assert '"physical_blocker_only": physical_blocker_only' in src
+    assert "FEEDBACK_DIAGNOSTIC_DETAIL_KEYS" in src
+    assert "FEEDBACK_HISTORY_COLUMNS" in src
+    assert "include_db_history=True" in src
+    assert "_feedback_source_history_evidence" in src
+    assert "db history {column}" in src
+    assert "_feedback_detail_evidence" in src
+    assert "south_2_reference_positive_samples_24h" in src
+    assert "soil_ec_south_1_last_positive_ts" in src
+    assert "_feedback_source_evidence" in src
+    assert "ha {key}" in src
+    assert "mqtt {key}" in src
+    assert "esphome {key}" in src
+    assert "_feedback_discovery_evidence" in src
+    assert "ha_discovered_feedback_candidates" in src
+    assert "mqtt_discovered_feedback_candidates" in src
+    assert "esphome_discovered_feedback_entities" in src
+    assert "discovered near_miss" in src
+    assert (
+        "scripts/irrigation-completion-audit.py --json --live-site --allow-physical-blocker --mqtt-live-timeout-s"
+        in makefile
+    )
+    assert (
+        "scripts/validate-irrigation-feedback.py --json --discover-ha --discover-mqtt --discover-mqtt-all --discover-esphome --include-db-history"
+        in makefile
+    )
+    assert "IRRIGATION_COMPLETION_AUDIT_PROOF" in makefile
+    assert "$(MAKE) irrigation-completion-audit" in makefile
+
+    class Check:
+        def __init__(self, name: str, status: str = "pass", detail: str = "ok"):
+            self.name = name
+            self.status = status
+            self.detail = detail
+
+    checks = [
+        Check("legacy schedule/log retired"),
+        Check("data trust ledger canonical irrigation logging"),
+        Check("current schedule view", detail="rows=2 wall_serves=south,west"),
+        Check("planner context canonical irrigation source"),
+        Check("schema contract legacy irrigation retired"),
+        Check("schema snapshot irrigation contract"),
+        Check("equipment-derived fertigation runs"),
+        Check("fertigation run reconstruction coherence"),
+        Check("irrigation cfg readbacks"),
+        Check("irrigation setpoint confirmations"),
+        Check("daily runtime/water accounting"),
+        Check("irrigation dashboard/site artifacts"),
+        Check("irrigation page discoverability"),
+        Check("live public irrigation page"),
+        Check("live public irrigation discoverability"),
+        Check("live graphs DNS routing"),
+        Check("live irrigation dashboard render"),
+        Check("irrigation acceptance tooling"),
+    ]
+    report = {
+        "db_status": {
+            "south_soil_probe_1": {
+                "status": "stuck_zero",
+                "latest_value": "0",
+                "last_sample_ts": "2026-05-22 10:21:57+00",
+                "required_action": "Repair or replace south SEN0601/address-7 probe.",
+                "details": {
+                    "positive_samples_24h": 0,
+                    "last_positive_ts": "2026-05-16T17:31:03+00:00",
+                    "soil_ec_south_1_last_positive_ts": "2026-05-16T16:00:49+00:00",
+                    "soil_temp_south_1": 62.1,
+                    "soil_ec_south_1": 0,
+                    "south_2_reference_positive_samples_24h": 893,
+                    "south_2_reference_last_positive_ts": "2026-05-22T07:34:13+00:00",
+                    "soil_moisture_south_2_reference": 0,
+                },
+            },
+            "center_root_zone_moisture": {"status": "missing", "latest_value": None, "last_sample_ts": None},
+            "center_runoff_ph": {"status": "missing", "latest_value": None, "last_sample_ts": None},
+            "center_runoff_ec": {"status": "missing", "latest_value": None, "last_sample_ts": None},
+        },
+        "open_feedback_alerts": [{"sensor_id": "irrigation.feedback.south_soil_probe_1"}],
+        "field_work_items": [
+            {"requirement_id": "south_soil_probe_1_repair", "current_status": "needed", "service_type": "repair"},
+            {
+                "requirement_id": "center_root_zone_runoff_feedback",
+                "current_status": "needed",
+                "service_type": "install",
+            },
+        ],
+        "sensor_registry_feedback_targets": [
+            {"source_column": "moisture_center", "active": False, "sensor_id": "climate.moisture_center"},
+            {"source_column": "soil_moisture_south_1", "active": True, "sensor_id": "climate.soil_moisture_south_1"},
+        ],
+        "db_source_history": {
+            "soil_moisture_south_1": {
+                "last_sample_ts": "2026-05-22 10:21:57+00",
+                "last_valid_ts": "2026-05-16 17:31:03+00",
+                "lifetime_samples": 77480,
+                "samples_24h": 1422,
+                "valid_samples_24h": 0,
+            },
+            "soil_ec_south_1": {
+                "last_sample_ts": "2026-05-22 10:21:57+00",
+                "last_valid_ts": "2026-05-16 16:00:49+00",
+                "lifetime_samples": 77480,
+                "samples_24h": 1422,
+                "valid_samples_24h": 0,
+            },
+            "soil_temp_south_1": {
+                "last_sample_ts": "2026-05-22 10:21:57+00",
+                "last_valid_ts": "2026-05-22 10:21:57+00",
+                "lifetime_samples": 77480,
+                "samples_24h": 1422,
+                "valid_samples_24h": 1422,
+            },
+            "moisture_center": {
+                "last_sample_ts": None,
+                "last_valid_ts": None,
+                "lifetime_samples": 0,
+                "samples_24h": 0,
+                "valid_samples_24h": 0,
+            },
+        },
+        "ha_candidates": {
+            "south_soil_probe_1": [
+                {
+                    "entity_id": "sensor.greenhouse_south_1_soil_moisture",
+                    "present": "true",
+                    "state": "0.0",
+                    "unit": "%",
+                }
+            ],
+            "center_root_zone_moisture": [
+                {
+                    "entity_id": "sensor.greenhouse_center_root_zone_moisture",
+                    "present": "false",
+                    "state": None,
+                    "unit": None,
+                }
+            ],
+        },
+        "mqtt_candidates": {
+            "south_soil_probe_1": [
+                {
+                    "topic": "greenhouse/sensor/south_1_soil_moisture____/state",
+                    "live_value": None,
+                    "retained_value": None,
+                }
+            ]
+        },
+        "esphome_candidates": {
+            "south_soil_probe_1": [
+                {
+                    "object_id": "south_1_soil_moisture____",
+                    "present": True,
+                    "state": 0.0,
+                    "missing_state": False,
+                }
+            ],
+            "center_root_zone_moisture": [
+                {
+                    "object_id": "center_root_zone_moisture____",
+                    "present": False,
+                    "state": None,
+                    "missing_state": None,
+                }
+            ],
+        },
+        "ha_discovered_feedback_candidates": [
+            {
+                "entity_id": "sensor.greenhouse_hydroponic_ec_corrected",
+                "accepted_for": [],
+            },
+            {
+                "entity_id": "sensor.greenhouse_south_1_soil_moisture",
+                "accepted_for": ["south_soil_probe_1"],
+            },
+        ],
+        "mqtt_discovered_feedback_candidates": [
+            {
+                "topic": "greenhouse/sensor/hydroponic_ec/state",
+                "accepted_for": [],
+            },
+            {
+                "topic": "greenhouse/sensor/south_1_soil_moisture____/state",
+                "accepted_for": ["south_soil_probe_1"],
+            },
+        ],
+        "esphome_discovered_feedback_entities": [
+            {
+                "object_id": "west_soil_moisture____",
+                "accepted_for": [],
+            },
+            {
+                "object_id": "south_1_soil_moisture____",
+                "accepted_for": ["south_soil_probe_1"],
+            },
+        ],
+    }
+
+    results = module["evaluate_objectives"](checks, report)
+    by_id = {result.id: result for result in results}
+
+    assert by_id[1].status == "pass"
+    assert by_id[2].status == "pass"
+    assert by_id[3].status == "pass"
+    assert by_id[4].status == "pass"
+    assert by_id[5].status == "blocked"
+    assert by_id[6].status == "pass"
+    assert by_id[7].status == "pass"
+    assert module["only_physical_feedback_blocked"](results) is True
+    assert any("live irrigation dashboard render" in line for line in by_id[7].evidence)
+    assert any("feedback rows not ok" in blocker for blocker in by_id[5].blockers)
+    assert any("open irrigation_feedback_gap alerts" in blocker for blocker in by_id[5].blockers)
+    assert any("registry targets not active: moisture_center" in blocker for blocker in by_id[5].blockers)
+    assert any("south_soil_probe_1 action: Repair or replace south SEN0601" in line for line in by_id[5].evidence)
+    assert any("south_2_reference_positive_samples_24h=893" in line for line in by_id[5].evidence)
+    assert any("soil_ec_south_1_last_positive_ts=2026-05-16T16:00:49+00:00" in line for line in by_id[5].evidence)
+    assert any("db history soil_moisture_south_1: lifetime_samples=77480" in line for line in by_id[5].evidence)
+    assert any("db history moisture_center: lifetime_samples=0" in line for line in by_id[5].evidence)
+    assert any("ha south_soil_probe_1" in line for line in by_id[5].evidence)
+    assert any("mqtt south_soil_probe_1: accepted topics absent" in line for line in by_id[5].evidence)
+    assert any("esphome south_soil_probe_1" in line for line in by_id[5].evidence)
+    assert any("ha discovered near_miss" in line for line in by_id[5].evidence)
+    assert any("sensor.greenhouse_hydroponic_ec_corrected" in line for line in by_id[5].evidence)
+    assert any("mqtt discovered near_miss" in line for line in by_id[5].evidence)
+    assert any("greenhouse/sensor/hydroponic_ec/state" in line for line in by_id[5].evidence)
+    assert any("esphome discovered near_miss" in line for line in by_id[5].evidence)
+
+    regressed = list(results)
+    regressed[0] = module["ObjectiveResult"](1, by_id[1].requirement, "fail", [], ["software regression"])
+    assert module["only_physical_feedback_blocked"](regressed) is False
+
+
+_VALID_IRRIGATION_FEEDBACK_VIEWDEF = """
+SELECT
+  max(climate.sample_ts) FILTER (
+    WHERE climate.soil_moisture_south_1 > 0::double precision
+      AND climate.soil_moisture_south_1 <= 100::double precision
+  ) AS south_1_moisture_last_positive_ts,
+  max(climate.sample_ts) FILTER (
+    WHERE climate.soil_moisture_south_2 > 0::double precision
+      AND climate.soil_moisture_south_2 <= 100::double precision
+  ) AS south_2_reference_last_positive_ts,
+  max(climate.sample_ts) FILTER (
+    WHERE climate.moisture_center >= 0::double precision
+      AND climate.moisture_center <= 100::double precision
+  ) AS center_moisture_last_valid_ts,
+  max(climate.sample_ts) FILTER (
+    WHERE climate.ph_runoff_center >= 0::double precision
+      AND climate.ph_runoff_center <= 14::double precision
+  ) AS center_ph_last_valid_ts,
+  max(climate.sample_ts) FILTER (
+    WHERE climate.ec_runoff_center >= 0::double precision
+  ) AS center_ec_last_valid_ts,
+  'invalid'::text AS status,
+  jsonb_build_object('latest_raw_value', climate.moisture_center) AS details
+FROM climate;
+"""
+
+
+def test_irrigation_feedback_finalizer_is_scoped_to_feedback_alerts():
+    src = Path("scripts/finalize-irrigation-feedback.py").read_text()
+
+    assert "asyncpg.create_pool" in src
+    assert "v_irrigation_sensor_feedback_status" in src
+    assert "pg_get_viewdef('v_irrigation_sensor_feedback_status'::regclass, true)" in src
+    assert "FEEDBACK_VIEW_RANGE_PATTERNS" in src
+    assert "center_moisture_last_valid_ts" in src
+    assert "center_ph_last_valid_ts" in src
+    assert "center_ec_last_valid_ts" in src
+    assert "latest_raw_value" in src
+    assert "'invalid'::text" in src
+    assert "irrigation feedback view missing valid-range guard" in src
+    assert "REQUIRED_FEEDBACK_KEYS" in src
+    assert "missing = [key for key in REQUIRED_FEEDBACK_KEYS if key not in feedback_by_key]" in src
+    assert "if missing or not_ok:" in src
+    assert "manual_alerts = await conn.fetch" in src
+    assert '"--dry-run"' in src
+    assert "dry_run=true" in src
+    assert "would_complete_requirements" in src
+    assert "would_resolve_feedback_alerts" in src
+    assert "expected_open_feedback_alerts_after_finalize" in src
+    assert "source IS DISTINCT FROM 'system'" in src
+    assert "Irrigation feedback alerts require manual closure before finalizing" in src
+    assert "missing_requirements" in src
+    assert "missing_registry_targets" in src
+    assert "Irrigation feedback finalizer metadata missing" in src
+    assert "async with conn.transaction():" in src
+    assert "FinalizerBlocked" in src
+    assert "rolled back" in src
+    assert "alert_type = 'irrigation_feedback_gap'" in src
+    assert "source = 'system'" in src
+    assert "auto-resolved: irrigation feedback recovered" in src
+    assert "FIELD_REQUIREMENTS" in src
+    assert "FEEDBACK_SOURCE_COLUMNS" in src
+    assert "instrumentation_requirements" in src
+    assert "current_status = 'complete'" in src
+    assert "sensor_registry" in src
+    assert "validated by irrigation feedback finalizer" in src
+    assert "maintenance_log" in src
+    assert "'validation'::text" in src
+    assert "completed_requirements" in src
+    assert "activated_registry_targets" in src
+    assert "validation_log_rows" in src
+    assert "await pool.close()" in src
+    assert "SLACK" not in src
+
+
+def test_irrigation_feedback_finalizer_rejects_weakened_feedback_view(monkeypatch):
+    module = runpy.run_path(
+        str(REPO_ROOT / "scripts" / "finalize-irrigation-feedback.py"),
+        run_name="_test_finalize_irrigation_feedback",
+    )
+
+    assert module["_missing_feedback_view_range_guards"](_VALID_IRRIGATION_FEEDBACK_VIEWDEF) == []
+
+    class FakeConn:
+        def __init__(self):
+            self.fetch_calls = 0
+            self.fetchval_labels: list[str] = []
+            self.transaction_called = False
+
+        async def fetch(self, sql, *args):
+            self.fetch_calls += 1
+            raise AssertionError(f"weakened-view blocker should not read feedback rows: {sql}")
+
+        async def fetchval(self, sql, *args):
+            if "pg_get_viewdef('v_irrigation_sensor_feedback_status'" in sql:
+                self.fetchval_labels.append("viewdef")
+                return "SELECT 'ok'::text AS status FROM climate"
+            raise AssertionError(f"weakened-view blocker should not query counts: {sql}")
+
+        def transaction(self):
+            self.transaction_called = True
+            raise AssertionError("weakened-view blocker should not start a transaction")
+
+    class FakeAcquire:
+        def __init__(self, conn):
+            self.conn = conn
+
+        async def __aenter__(self):
+            return self.conn
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+    class FakePool:
+        def __init__(self):
+            self.conn = FakeConn()
+            self.closed = False
+
+        def acquire(self):
+            return FakeAcquire(self.conn)
+
+        async def close(self):
+            self.closed = True
+
+    pool = FakePool()
+
+    async def fake_create_pool(*args, **kwargs):
+        return pool
+
+    monkeypatch.setattr(module["asyncpg"], "create_pool", fake_create_pool)
+
+    with pytest.raises(module["FinalizerBlocked"], match="missing valid-range guard"):
+        asyncio.run(module["_run"]())
+
+    assert pool.closed is True
+    assert pool.conn.fetchval_labels == ["viewdef"]
+    assert pool.conn.fetch_calls == 0
+    assert pool.conn.transaction_called is False
+
+
+def test_irrigation_feedback_finalizer_returns_before_mutation_when_blocked(monkeypatch, capsys):
+    module = runpy.run_path(
+        str(REPO_ROOT / "scripts" / "finalize-irrigation-feedback.py"),
+        run_name="_test_finalize_irrigation_feedback",
+    )
+
+    class FakeConn:
+        def __init__(self):
+            self.fetch_calls: list[str] = []
+            self.fetchval_calls = 0
+            self.transaction_called = False
+
+        async def fetch(self, sql, *args):
+            self.fetch_calls.append(sql)
+            if "FROM v_irrigation_sensor_feedback_status" in sql:
+                return [
+                    {"feedback_key": "south_soil_probe_1", "status": "stuck_zero", "latest_value": "0"},
+                    {"feedback_key": "center_root_zone_moisture", "status": "missing", "latest_value": "-"},
+                    {"feedback_key": "center_runoff_ph", "status": "missing", "latest_value": "-"},
+                    {"feedback_key": "center_runoff_ec", "status": "missing", "latest_value": "-"},
+                ]
+            raise AssertionError(f"blocked finalizer should not run mutation query: {sql}")
+
+        async def fetchval(self, sql, *args):
+            if "pg_get_viewdef('v_irrigation_sensor_feedback_status'" in sql:
+                return _VALID_IRRIGATION_FEEDBACK_VIEWDEF
+            self.fetchval_calls += 1
+            raise AssertionError(f"blocked finalizer should not query open alert count: {sql}")
+
+        def transaction(self):
+            self.transaction_called = True
+            raise AssertionError("blocked finalizer should not start a transaction")
+
+    class FakeAcquire:
+        def __init__(self, conn):
+            self.conn = conn
+
+        async def __aenter__(self):
+            return self.conn
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+    class FakePool:
+        def __init__(self):
+            self.conn = FakeConn()
+            self.closed = False
+
+        def acquire(self):
+            return FakeAcquire(self.conn)
+
+        async def close(self):
+            self.closed = True
+
+    pool = FakePool()
+
+    async def fake_create_pool(*args, **kwargs):
+        return pool
+
+    monkeypatch.setattr(module["asyncpg"], "create_pool", fake_create_pool)
+
+    rc = asyncio.run(module["_run"]())
+    output = capsys.readouterr().out
+
+    assert rc == 1
+    assert pool.closed is True
+    assert len(pool.conn.fetch_calls) == 1
+    assert pool.conn.fetchval_calls == 0
+    assert pool.conn.transaction_called is False
+    assert "Irrigation feedback still blocked" in output
+    assert "south_soil_probe_1:stuck_zero" in output
+    assert "center_runoff_ec:missing" in output
+    assert "make irrigation-feedback-work-order" in output
+    assert "make irrigation-feedback-watch-field-proof" in output
+
+
+def test_irrigation_feedback_finalizer_success_path_is_transactional(monkeypatch, capsys):
+    module = runpy.run_path(
+        str(REPO_ROOT / "scripts" / "finalize-irrigation-feedback.py"),
+        run_name="_test_finalize_irrigation_feedback",
+    )
+
+    class FakeTransaction:
+        def __init__(self, conn):
+            self.conn = conn
+
+        async def __aenter__(self):
+            self.conn.transaction_enters += 1
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            self.conn.transaction_exits += 1
+            return False
+
+    class FakeConn:
+        def __init__(self):
+            self.fetch_labels: list[str] = []
+            self.fetchval_calls = 0
+            self.transaction_enters = 0
+            self.transaction_exits = 0
+
+        async def fetch(self, sql, *args):
+            if "FROM v_irrigation_sensor_feedback_status" in sql:
+                self.fetch_labels.append("status")
+                return [
+                    {"feedback_key": "south_soil_probe_1", "status": "ok", "latest_value": "24.0"},
+                    {"feedback_key": "center_root_zone_moisture", "status": "ok", "latest_value": "42.0"},
+                    {"feedback_key": "center_runoff_ph", "status": "ok", "latest_value": "6.2"},
+                    {"feedback_key": "center_runoff_ec", "status": "ok", "latest_value": "910"},
+                ]
+            if "SELECT sensor_id, source, disposition" in sql:
+                self.fetch_labels.append("manual_alerts")
+                return []
+            if "SELECT requirement_id" in sql and "FROM instrumentation_requirements" in sql:
+                self.fetch_labels.append("requirement_precheck")
+                return [
+                    {"requirement_id": "south_soil_probe_1_repair"},
+                    {"requirement_id": "center_root_zone_runoff_feedback"},
+                ]
+            if "SELECT source_column" in sql and "FROM sensor_registry" in sql:
+                self.fetch_labels.append("registry_precheck")
+                return [
+                    {"source_column": "soil_moisture_south_1"},
+                    {"source_column": "soil_ec_south_1"},
+                    {"source_column": "soil_temp_south_1"},
+                    {"source_column": "moisture_center"},
+                    {"source_column": "ph_runoff_center"},
+                    {"source_column": "ec_runoff_center"},
+                ]
+            if "UPDATE instrumentation_requirements" in sql:
+                self.fetch_labels.append("requirements")
+                return [{"requirement_id": "south_soil_probe_1_repair"}]
+            if "UPDATE sensor_registry" in sql:
+                self.fetch_labels.append("registry")
+                return [{"sensor_id": "climate.moisture_center"}]
+            if "INSERT INTO maintenance_log" in sql:
+                self.fetch_labels.append("maintenance_log")
+                return [{"equipment": "south_soil_probe_1"}]
+            if "UPDATE alert_log" in sql:
+                self.fetch_labels.append("alerts")
+                return [{"sensor_id": "irrigation.feedback.south_soil_probe_1"}]
+            raise AssertionError(f"unexpected finalizer query: {sql}")
+
+        async def fetchval(self, sql, *args):
+            if "pg_get_viewdef('v_irrigation_sensor_feedback_status'" in sql:
+                return _VALID_IRRIGATION_FEEDBACK_VIEWDEF
+            assert "FROM alert_log" in sql
+            self.fetchval_calls += 1
+            return 0
+
+        def transaction(self):
+            return FakeTransaction(self)
+
+    class FakeAcquire:
+        def __init__(self, conn):
+            self.conn = conn
+
+        async def __aenter__(self):
+            return self.conn
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+    class FakePool:
+        def __init__(self):
+            self.conn = FakeConn()
+            self.closed = False
+
+        def acquire(self):
+            return FakeAcquire(self.conn)
+
+        async def close(self):
+            self.closed = True
+
+    pool = FakePool()
+
+    async def fake_create_pool(*args, **kwargs):
+        return pool
+
+    monkeypatch.setattr(module["asyncpg"], "create_pool", fake_create_pool)
+
+    rc = asyncio.run(module["_run"]())
+    output = capsys.readouterr().out
+
+    assert rc == 0
+    assert pool.closed is True
+    assert pool.conn.fetch_labels == [
+        "status",
+        "manual_alerts",
+        "requirement_precheck",
+        "registry_precheck",
+        "requirements",
+        "registry",
+        "maintenance_log",
+        "alerts",
+    ]
+    assert pool.conn.fetchval_calls == 1
+    assert pool.conn.transaction_enters == 1
+    assert pool.conn.transaction_exits == 1
+    assert "Irrigation feedback ok" in output
+    assert "open_feedback_alerts=0" in output
+
+
+def test_irrigation_feedback_finalizer_dry_run_does_not_mutate(monkeypatch, capsys):
+    module = runpy.run_path(
+        str(REPO_ROOT / "scripts" / "finalize-irrigation-feedback.py"),
+        run_name="_test_finalize_irrigation_feedback",
+    )
+
+    class FakeConn:
+        def __init__(self):
+            self.fetch_labels: list[str] = []
+            self.fetchval_labels: list[str] = []
+            self.transaction_called = False
+
+        async def fetch(self, sql, *args):
+            if "FROM v_irrigation_sensor_feedback_status" in sql:
+                self.fetch_labels.append("status")
+                return [
+                    {"feedback_key": "south_soil_probe_1", "status": "ok", "latest_value": "24.0"},
+                    {"feedback_key": "center_root_zone_moisture", "status": "ok", "latest_value": "42.0"},
+                    {"feedback_key": "center_runoff_ph", "status": "ok", "latest_value": "6.2"},
+                    {"feedback_key": "center_runoff_ec", "status": "ok", "latest_value": "910"},
+                ]
+            if "SELECT sensor_id, source, disposition" in sql:
+                self.fetch_labels.append("manual_alerts")
+                return []
+            if "SELECT requirement_id" in sql and "FROM instrumentation_requirements" in sql:
+                self.fetch_labels.append("requirement_precheck")
+                return [
+                    {"requirement_id": "south_soil_probe_1_repair"},
+                    {"requirement_id": "center_root_zone_runoff_feedback"},
+                ]
+            if "SELECT source_column" in sql and "FROM sensor_registry" in sql:
+                self.fetch_labels.append("registry_precheck")
+                return [
+                    {"source_column": "soil_moisture_south_1"},
+                    {"source_column": "soil_ec_south_1"},
+                    {"source_column": "soil_temp_south_1"},
+                    {"source_column": "moisture_center"},
+                    {"source_column": "ph_runoff_center"},
+                    {"source_column": "ec_runoff_center"},
+                ]
+            raise AssertionError(f"dry-run finalizer should not run mutation query: {sql}")
+
+        async def fetchval(self, sql, *args):
+            if "pg_get_viewdef('v_irrigation_sensor_feedback_status'" in sql:
+                return _VALID_IRRIGATION_FEEDBACK_VIEWDEF
+            if "FROM instrumentation_requirements" in sql:
+                self.fetchval_labels.append("requirements")
+                return 2
+            if "FROM sensor_registry" in sql:
+                self.fetchval_labels.append("registry")
+                return 3
+            if "FROM rows r" in sql:
+                self.fetchval_labels.append("maintenance_log")
+                return 2
+            if "FROM alert_log" in sql and "disposition IN" in sql:
+                self.fetchval_labels.append("resolvable_alerts")
+                return 4
+            if "FROM alert_log" in sql:
+                self.fetchval_labels.append("current_alerts")
+                return 4
+            raise AssertionError(f"unexpected dry-run count query: {sql}")
+
+        def transaction(self):
+            self.transaction_called = True
+            raise AssertionError("dry-run finalizer should not start a transaction")
+
+    class FakeAcquire:
+        def __init__(self, conn):
+            self.conn = conn
+
+        async def __aenter__(self):
+            return self.conn
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+    class FakePool:
+        def __init__(self):
+            self.conn = FakeConn()
+            self.closed = False
+
+        def acquire(self):
+            return FakeAcquire(self.conn)
+
+        async def close(self):
+            self.closed = True
+
+    pool = FakePool()
+
+    async def fake_create_pool(*args, **kwargs):
+        return pool
+
+    monkeypatch.setattr(module["asyncpg"], "create_pool", fake_create_pool)
+
+    rc = asyncio.run(module["_run"](dry_run=True))
+    output = capsys.readouterr().out
+
+    assert rc == 0
+    assert pool.closed is True
+    assert pool.conn.fetch_labels == ["status", "manual_alerts", "requirement_precheck", "registry_precheck"]
+    assert pool.conn.fetchval_labels == [
+        "requirements",
+        "registry",
+        "maintenance_log",
+        "resolvable_alerts",
+        "current_alerts",
+    ]
+    assert pool.conn.transaction_called is False
+    assert "dry_run=true" in output
+    assert "would_complete_requirements=2" in output
+    assert "would_activate_registry_targets=3" in output
+    assert "would_insert_validation_log_rows=2" in output
+    assert "would_resolve_feedback_alerts=4" in output
+    assert "expected_open_feedback_alerts_after_finalize=0" in output
+    assert output.count("expected_open_feedback_alerts_after_finalize=0") == 1
+
+
+def test_irrigation_feedback_finalizer_manual_alerts_block_completion(monkeypatch, capsys):
+    module = runpy.run_path(
+        str(REPO_ROOT / "scripts" / "finalize-irrigation-feedback.py"),
+        run_name="_test_finalize_irrigation_feedback",
+    )
+
+    class FakeConn:
+        def __init__(self):
+            self.fetch_labels: list[str] = []
+            self.fetchval_calls = 0
+            self.transaction_called = False
+
+        async def fetch(self, sql, *args):
+            if "FROM v_irrigation_sensor_feedback_status" in sql:
+                self.fetch_labels.append("status")
+                return [
+                    {"feedback_key": "south_soil_probe_1", "status": "ok", "latest_value": "24.0"},
+                    {"feedback_key": "center_root_zone_moisture", "status": "ok", "latest_value": "42.0"},
+                    {"feedback_key": "center_runoff_ph", "status": "ok", "latest_value": "6.2"},
+                    {"feedback_key": "center_runoff_ec", "status": "ok", "latest_value": "910"},
+                ]
+            if "SELECT sensor_id, source, disposition" in sql:
+                self.fetch_labels.append("manual_alerts")
+                return [
+                    {
+                        "sensor_id": "irrigation.feedback.center_runoff_ec",
+                        "source": "operator",
+                        "disposition": "open",
+                    }
+                ]
+            raise AssertionError(f"manual-alert blocker should not run mutation query: {sql}")
+
+        async def fetchval(self, sql, *args):
+            if "pg_get_viewdef('v_irrigation_sensor_feedback_status'" in sql:
+                return _VALID_IRRIGATION_FEEDBACK_VIEWDEF
+            self.fetchval_calls += 1
+            raise AssertionError(f"manual-alert blocker should not query open alert count: {sql}")
+
+        def transaction(self):
+            self.transaction_called = True
+            raise AssertionError("manual-alert blocker should not start a transaction")
+
+    class FakeAcquire:
+        def __init__(self, conn):
+            self.conn = conn
+
+        async def __aenter__(self):
+            return self.conn
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+    class FakePool:
+        def __init__(self):
+            self.conn = FakeConn()
+            self.closed = False
+
+        def acquire(self):
+            return FakeAcquire(self.conn)
+
+        async def close(self):
+            self.closed = True
+
+    pool = FakePool()
+
+    async def fake_create_pool(*args, **kwargs):
+        return pool
+
+    monkeypatch.setattr(module["asyncpg"], "create_pool", fake_create_pool)
+
+    rc = asyncio.run(module["_run"]())
+    output = capsys.readouterr().out
+
+    assert rc == 1
+    assert pool.closed is True
+    assert pool.conn.fetch_labels == ["status", "manual_alerts"]
+    assert pool.conn.fetchval_calls == 0
+    assert pool.conn.transaction_called is False
+    assert "Irrigation feedback alerts require manual closure before finalizing" in output
+    assert "irrigation.feedback.center_runoff_ec:operator:open" in output
+
+
+def test_irrigation_feedback_finalizer_blocks_missing_metadata(monkeypatch, capsys):
+    module = runpy.run_path(
+        str(REPO_ROOT / "scripts" / "finalize-irrigation-feedback.py"),
+        run_name="_test_finalize_irrigation_feedback",
+    )
+
+    class FakeConn:
+        def __init__(self):
+            self.fetch_labels: list[str] = []
+            self.fetchval_calls = 0
+            self.transaction_called = False
+
+        async def fetch(self, sql, *args):
+            if "FROM v_irrigation_sensor_feedback_status" in sql:
+                self.fetch_labels.append("status")
+                return [
+                    {"feedback_key": "south_soil_probe_1", "status": "ok", "latest_value": "24.0"},
+                    {"feedback_key": "center_root_zone_moisture", "status": "ok", "latest_value": "42.0"},
+                    {"feedback_key": "center_runoff_ph", "status": "ok", "latest_value": "6.2"},
+                    {"feedback_key": "center_runoff_ec", "status": "ok", "latest_value": "910"},
+                ]
+            if "SELECT sensor_id, source, disposition" in sql:
+                self.fetch_labels.append("manual_alerts")
+                return []
+            if "SELECT requirement_id" in sql and "FROM instrumentation_requirements" in sql:
+                self.fetch_labels.append("requirement_precheck")
+                return [{"requirement_id": "south_soil_probe_1_repair"}]
+            if "SELECT source_column" in sql and "FROM sensor_registry" in sql:
+                self.fetch_labels.append("registry_precheck")
+                return [
+                    {"source_column": "soil_moisture_south_1"},
+                    {"source_column": "soil_ec_south_1"},
+                    {"source_column": "soil_temp_south_1"},
+                ]
+            raise AssertionError(f"metadata blocker should not run mutation query: {sql}")
+
+        async def fetchval(self, sql, *args):
+            if "pg_get_viewdef('v_irrigation_sensor_feedback_status'" in sql:
+                return _VALID_IRRIGATION_FEEDBACK_VIEWDEF
+            self.fetchval_calls += 1
+            raise AssertionError(f"metadata blocker should not query counts: {sql}")
+
+        def transaction(self):
+            self.transaction_called = True
+            raise AssertionError("metadata blocker should not start a transaction")
+
+    class FakeAcquire:
+        def __init__(self, conn):
+            self.conn = conn
+
+        async def __aenter__(self):
+            return self.conn
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+    class FakePool:
+        def __init__(self):
+            self.conn = FakeConn()
+            self.closed = False
+
+        def acquire(self):
+            return FakeAcquire(self.conn)
+
+        async def close(self):
+            self.closed = True
+
+    pool = FakePool()
+
+    async def fake_create_pool(*args, **kwargs):
+        return pool
+
+    monkeypatch.setattr(module["asyncpg"], "create_pool", fake_create_pool)
+
+    rc = asyncio.run(module["_run"]())
+    output = capsys.readouterr().out
+
+    assert rc == 1
+    assert pool.closed is True
+    assert pool.conn.fetch_labels == ["status", "manual_alerts", "requirement_precheck", "registry_precheck"]
+    assert pool.conn.fetchval_calls == 0
+    assert pool.conn.transaction_called is False
+    assert "Irrigation feedback finalizer metadata missing" in output
+    assert "missing_requirements=center_root_zone_runoff_feedback" in output
+    assert "missing_registry_targets=moisture_center,ph_runoff_center,ec_runoff_center" in output
+
+
+def test_irrigation_feedback_finalizer_rolls_back_if_alerts_remain(monkeypatch):
+    module = runpy.run_path(
+        str(REPO_ROOT / "scripts" / "finalize-irrigation-feedback.py"),
+        run_name="_test_finalize_irrigation_feedback",
+    )
+
+    class FakeTransaction:
+        def __init__(self, conn):
+            self.conn = conn
+
+        async def __aenter__(self):
+            self.conn.transaction_enters += 1
+            return self
+
+        async def __aexit__(self, exc_type, exc, tb):
+            self.conn.transaction_exits += 1
+            self.conn.rolled_back = exc_type is module["FinalizerBlocked"]
+            return False
+
+    class FakeConn:
+        def __init__(self):
+            self.fetch_labels: list[str] = []
+            self.fetchval_calls = 0
+            self.transaction_enters = 0
+            self.transaction_exits = 0
+            self.rolled_back = False
+
+        async def fetch(self, sql, *args):
+            if "FROM v_irrigation_sensor_feedback_status" in sql:
+                self.fetch_labels.append("status")
+                return [
+                    {"feedback_key": "south_soil_probe_1", "status": "ok", "latest_value": "24.0"},
+                    {"feedback_key": "center_root_zone_moisture", "status": "ok", "latest_value": "42.0"},
+                    {"feedback_key": "center_runoff_ph", "status": "ok", "latest_value": "6.2"},
+                    {"feedback_key": "center_runoff_ec", "status": "ok", "latest_value": "910"},
+                ]
+            if "SELECT sensor_id, source, disposition" in sql:
+                self.fetch_labels.append("manual_alerts")
+                return []
+            if "SELECT requirement_id" in sql and "FROM instrumentation_requirements" in sql:
+                self.fetch_labels.append("requirement_precheck")
+                return [
+                    {"requirement_id": "south_soil_probe_1_repair"},
+                    {"requirement_id": "center_root_zone_runoff_feedback"},
+                ]
+            if "SELECT source_column" in sql and "FROM sensor_registry" in sql:
+                self.fetch_labels.append("registry_precheck")
+                return [
+                    {"source_column": "soil_moisture_south_1"},
+                    {"source_column": "soil_ec_south_1"},
+                    {"source_column": "soil_temp_south_1"},
+                    {"source_column": "moisture_center"},
+                    {"source_column": "ph_runoff_center"},
+                    {"source_column": "ec_runoff_center"},
+                ]
+            if "UPDATE instrumentation_requirements" in sql:
+                self.fetch_labels.append("requirements")
+                return [{"requirement_id": "south_soil_probe_1_repair"}]
+            if "UPDATE sensor_registry" in sql:
+                self.fetch_labels.append("registry")
+                return [{"sensor_id": "climate.moisture_center"}]
+            if "INSERT INTO maintenance_log" in sql:
+                self.fetch_labels.append("maintenance_log")
+                return [{"equipment": "south_soil_probe_1"}]
+            if "UPDATE alert_log" in sql:
+                self.fetch_labels.append("alerts")
+                return [{"sensor_id": "irrigation.feedback.south_soil_probe_1"}]
+            raise AssertionError(f"unexpected finalizer query: {sql}")
+
+        async def fetchval(self, sql, *args):
+            if "pg_get_viewdef('v_irrigation_sensor_feedback_status'" in sql:
+                return _VALID_IRRIGATION_FEEDBACK_VIEWDEF
+            assert "FROM alert_log" in sql
+            self.fetchval_calls += 1
+            return 1
+
+        def transaction(self):
+            return FakeTransaction(self)
+
+    class FakeAcquire:
+        def __init__(self, conn):
+            self.conn = conn
+
+        async def __aenter__(self):
+            return self.conn
+
+        async def __aexit__(self, exc_type, exc, tb):
+            return False
+
+    class FakePool:
+        def __init__(self):
+            self.conn = FakeConn()
+            self.closed = False
+
+        def acquire(self):
+            return FakeAcquire(self.conn)
+
+        async def close(self):
+            self.closed = True
+
+    pool = FakePool()
+
+    async def fake_create_pool(*args, **kwargs):
+        return pool
+
+    monkeypatch.setattr(module["asyncpg"], "create_pool", fake_create_pool)
+
+    with pytest.raises(module["FinalizerBlocked"], match="open_feedback_alerts=1"):
+        asyncio.run(module["_run"]())
+
+    assert pool.closed is True
+    assert pool.conn.fetch_labels == [
+        "status",
+        "manual_alerts",
+        "requirement_precheck",
+        "registry_precheck",
+        "requirements",
+        "registry",
+        "maintenance_log",
+        "alerts",
+    ]
+    assert pool.conn.fetchval_calls == 1
+    assert pool.conn.transaction_enters == 1
+    assert pool.conn.transaction_exits == 1
+    assert pool.conn.rolled_back is True
+
+
+def test_irrigation_feedback_stale_retained_clear_uses_configured_mqtt_auth():
+    makefile = Path("Makefile").read_text()
+    src = Path("scripts/clear-irrigation-stale-retained.py").read_text()
+
+    assert "scripts/clear-irrigation-stale-retained.py --confirm" in makefile
+    assert "CONFIRM_CLEAR_RETAINED=1" in makefile
+    assert "MQTT_FEEDBACK_CANDIDATES" in src
+    assert "south_soil_probe_1" in src
+    assert "MQTT_HOST" in src
+    assert "MQTT_PORT" in src
+    assert "MQTT_USER" in src
+    assert "MQTT_PASS" in src
+    assert "STALE_NEAR_MISS_TOPICS" in src
+    assert '"--near-miss"' in src
+    assert "east_soil_moisture" in src
+    assert "south_2_soil_moisture" in src
+    assert "west_soil_moisture" in src
+    assert 'cmd.extend(["-P", MQTT_PASS])' in src
+    assert "Refusing to clear retained MQTT values without --confirm" in src
+
+
+def test_irrigation_stack_validator_audits_full_objective_surface():
+    src = Path("scripts/validate-irrigation-stack.py").read_text()
+
+    for token in (
+        "v_irrigation_schedule_current",
+        "v_irrigation_fertigation_runs",
+        "fertigation run reconstruction coherence",
+        "planner context canonical irrigation source",
+        "schema contract legacy irrigation retired",
+        "schema snapshot irrigation contract",
+        "canonical_log_view_ok",
+        "retired_view_deps",
+        "pg_depend",
+        "pg_rewrite",
+        "data trust ledger canonical irrigation logging",
+        "v_data_trust_ledger",
+        "irrigation_logging_14d",
+        "canonical run rows",
+        "fertigation starts in equipment_state without canonical run rows",
+        "LEGACY_IRRIGATION_RETIREMENT_TS",
+        "legacy_log_rows_since_retirement",
+        "_psql_exec",
+        "write_guard_triggers",
+        "write_guard_behavior_ok",
+        "guard_function_ok",
+        "block_retired_irrigation_schedule_write",
+        "block_retired_irrigation_log_write",
+        "prevent_retired_irrigation_compat_write",
+        "replace(pg_get_viewdef('v_irrigation_log'::regclass, true), E'\\\\n', ' ')",
+        "pg_get_viewdef('v_irrigation_log'::regclass, true)",
+        "runtime_drip_wall_fert_h double precision",
+        "COMMENT ON COLUMN public.daily_summary.fertigation_water_gal",
+        "CREATE VIEW public.v_irrigation_schedule_current AS",
+        "CREATE VIEW public.v_irrigation_fertigation_runs AS",
+        "CREATE VIEW public.v_water_budget AS",
+        "Daily water decomposition including equipment-derived fertigation gallons",
+        "v_irrigation_schedule_current",
+        "v_irrigation_fertigation_runs",
+        "FROM irrigation_schedule",
+        "count(DISTINCT run_id)",
+        "missing_pairs",
+        "bad_sequence",
+        "bad_master_overlap",
+        "bad_meter_delta",
+        "irrigation_log",
+        "Retired compatibility",
+        "IRRIGATION_SCHEDULE_PARAMS",
+        "setpoint_snapshot",
+        "fresh_15m",
+        "irrigation setpoint confirmations",
+        "active_unconfirmed",
+        "should_be_confirmed",
+        "open_unconfirmed_alerts",
+        "setpoint_unconfirmed",
+        "open_alert_sensors",
+        "older_than_5m",
+        "delivery_status",
+        "runtime_irrigation_fert_h",
+        "runtime_fert_master_h",
+        "reconciled_rows",
+        "fert_runtime_mismatch",
+        "master_runtime_mismatch",
+        "irrigation_water_mismatch",
+        "fertigation_water_mismatch",
+        "irrigation feedback valid-range gate",
+        "irrigation feedback alias alignment",
+        "_literal_assignment",
+        "_check_feedback_alias_alignment",
+        "HA_CANDIDATES",
+        "ESPHOME_CANDIDATES",
+        "MQTT_FEEDBACK_CANDIDATES",
+        "CENTER_FEEDBACK_MAP",
+        "_CENTER_FEEDBACK_MAP",
+        "tds_accepted",
+        "mismatches",
+        "center_moisture_last_valid_ts",
+        "center_ph_last_valid_ts",
+        "center_ec_last_valid_ts",
+        "latest_raw_value",
+        "'invalid'::text",
+        "v_irrigation_sensor_feedback_status",
+        "FEEDBACK_FIELD_REQUIREMENTS",
+        "FEEDBACK_REGISTRY_COLUMNS",
+        "FEEDBACK_VALIDATION_EQUIPMENT",
+        "current_status <> 'complete'",
+        "installed_date IS NULL",
+        "service_type = 'validation'",
+        "open_field_requirements",
+        "registry_not_validated",
+        "missing_validation_logs",
+        "REQUIRED_DASHBOARD_PANELS",
+        "generate_series",
+        "state_seed",
+        "state_timeline",
+        "state_segments",
+        "COALESCE(seed.state, false)",
+        "relay_mapping_labels_blank",
+        "Canonical Schedule",
+        "Master Overlap",
+        "Latest Fertigation Runs",
+        "Daily Irrigation Runtime",
+        "Relay State",
+        "Root-Zone Response",
+        "Flow And Meter",
+        "Feedback Sensor Gaps",
+        "Feedback Field Work",
+        "Feedback Registry Targets",
+        "Feedback Acceptance Closure",
+        "irrigation acceptance tooling",
+        "irrigation-feedback-finalize-dry-run",
+        "irrigation-feedback-finalize-dry-run-proof",
+        "irrigation-feedback-finalize-proof",
+        "irrigation-feedback-proof-json",
+        "irrigation-feedback-watch-field-proof",
+        "irrigation-feedback-work-order-proof",
+        "irrigation-feedback-discovery-proof",
+        "irrigation-completion-audit",
+        "irrigation-completion-audit-proof",
+        "irrigation-full-acceptance",
+        "irrigation-post-deploy-acceptance-plan",
+        "irrigation-post-deploy-acceptance",
+        "dry_run_before_finalize",
+        "acceptance_calls_finalize",
+        "acceptance_persists_field_watch",
+        "acceptance_persists_discovery",
+        "acceptance_runs_sensor_health",
+        "acceptance_emits_feedback_json",
+        "acceptance_runs_stack_proof",
+        "acceptance_emits_completion_audit_json",
+        "acceptance_runs_completion_audit",
+        "acceptance_site_before_live",
+        "stack_check_site_before_live",
+        "software_check_runs_direct_audit",
+        "feedback_proof_persisted",
+        "field_watch_proof_persisted",
+        "finalizer_dry_run_proof_persisted",
+        "finalizer_proof_persisted",
+        "work_order_proof_persisted",
+        "field_sensor_health_proof_persisted",
+        "diagnostics_persists_sensor_health",
+        "diagnostics_persists_work_order",
+        "diagnostics_persists_completion_audit",
+        "diagnostics_persists_discovery",
+        "diagnostics_persists_finalizer_dry_run",
+        "discovery_proof_persisted",
+        "sensor_health_proof_persisted",
+        "stack_proof_persisted",
+        "completion_audit_proof_persisted",
+        "--allow-physical-blocker",
+        "migration_proof_persisted",
+        "full_acceptance_includes_tests",
+        "post_deploy_acceptance_plan_prints_only",
+        "post_deploy_acceptance_aliases_full",
+        "runbook_ingestor_restart_doc",
+        "runbook_post_deploy_acceptance_doc",
+        "runbook_post_deploy_plan_doc",
+        "runbook_static_snapshot_boundary_doc",
+        "expected_open_feedback_alerts_after_finalize",
+        "--include-db-history",
+        "source IS DISTINCT FROM 'system'",
+        "transaction rollback guard",
+        "instrumentation_requirements",
+        "maintenance_log",
+        "sensor_registry",
+        "provisioned_matches",
+        "fert_master_valve",
+        "relay_style_ok",
+        "site-irrigation.json",
+        "irrigation page discoverability",
+        "sitemap.xml",
+        'href="/greenhouse/irrigation">Irrigation',
+        "climate/irrigation",
+        "water/irrigation",
+        "url=../greenhouse/irrigation",
+        "panelId=9",
+        "panelId=12",
+        "panelId=13",
+        "panelId=14",
+        "panelId=15",
+        "PUBLIC_SITE_BASES",
+        "PUBLIC_DNS_RESOLVERS",
+        "https://lab.verdify.ai/greenhouse/irrigation",
+        "https://labs.verdify.ai",
+        "live public irrigation page",
+        "live public irrigation discoverability",
+        "live graphs DNS routing",
+        "gateway.verdify.ai.",
+        "data-image-src",
+        "html.unescape",
+        "min_png_bytes",
+        "_relay_state_png_visual_check",
+        "_decode_png_rgb_rows",
+        "zlib.decompress",
+        "relay_visual_gray_pct",
+        "relay_visual_white_pct",
+        "dig",
+        "irrigation_feedback_gap",
+        "--software-only",
+        "--live-site",
+        "--retry",
+        "--retry-all-errors",
+        "--resolve",
+        "curl_rc",
+    ):
+        assert token in src
+
+    makefile = Path("Makefile").read_text()
+    assert "irrigation-migration-check" in makefile
+    assert "db/migrations/134-irrigation-fertigation-canonical.sql" in makefile
+    assert "ROLLBACK;" in makefile
+    assert "ON_ERROR_STOP=1" in makefile
+    assert "irrigation-migration-proof" in makefile
+    assert "IRRIGATION_MIGRATION_PROOF" in makefile
+    assert "irrigation-feedback-work-order-proof" in makefile
+    assert "IRRIGATION_WORK_ORDER_PROOF" in makefile
+    assert '2>&1 | tee "$(IRRIGATION_WORK_ORDER_PROOF)"' in makefile
+    assert 'tee "$(IRRIGATION_WORK_ORDER_PROOF)"' in makefile
+    assert "irrigation-feedback-watch-field-proof" in makefile
+    assert "IRRIGATION_FIELD_WATCH_PROOF" in makefile
+    assert 'tee "$(IRRIGATION_FIELD_WATCH_PROOF)"' in makefile
+    assert "irrigation-feedback-discovery-proof" in makefile
+    assert "IRRIGATION_DISCOVERY_PROOF" in makefile
+    assert 'tee "$(IRRIGATION_DISCOVERY_PROOF)"' in makefile
+    assert "irrigation-feedback-finalize-proof" in makefile
+    assert "IRRIGATION_FINALIZER_PROOF" in makefile
+    assert 'tee "$(IRRIGATION_FINALIZER_PROOF)"' in makefile
+    assert (
+        "scripts/validate-irrigation-feedback.py --status-only --discover-ha --discover-mqtt --discover-mqtt-all --discover-esphome --include-db-history"
+        in makefile
+    )
+    assert "IRRIGATION_COMPLETION_AUDIT_PROOF" in makefile
+    assert (
+        "scripts/irrigation-completion-audit.py --json --live-site --allow-physical-blocker --mqtt-live-timeout-s"
+        in makefile
+    )
+    assert "\t$(MAKE) irrigation-completion-audit\n" in makefile
+    assert "irrigation-post-deploy-acceptance-plan:" in makefile
+    assert "prints only; does not run checks" in makefile
+    assert "irrigation-post-deploy-acceptance: irrigation-full-acceptance" in makefile
+    acceptance_block = makefile[
+        makefile.index("irrigation-acceptance:") : makefile.index(
+            "irrigation-full-acceptance:", makefile.index("irrigation-acceptance:")
+        )
+    ]
+    assert (
+        acceptance_block.index("$(MAKE) irrigation-stack-proof")
+        < acceptance_block.index("$(MAKE) irrigation-completion-audit-proof")
+        < acceptance_block.index("\t$(MAKE) irrigation-completion-audit\n")
+    )
+    assert (
+        acceptance_block.index("$(MAKE) irrigation-feedback-watch-field-proof")
+        < acceptance_block.index("$(MAKE) irrigation-feedback-discovery-proof")
+        < acceptance_block.index("$(MAKE) irrigation-sensor-health-proof")
+    )
+    migration = Path("db/migrations/134-irrigation-fertigation-canonical.sql").read_text()
+    assert "south_2_reference_positive_samples_24h" in migration
+    assert "soil_moisture_south_2_reference" in migration
+    assert "center_moisture_last_valid_ts" in migration
+    assert "center_ph_last_valid_ts" in migration
+    assert "center_ec_last_valid_ts" in migration
+    assert "latest_raw_value" in migration
+    assert "moisture_center >= 0 AND moisture_center <= 100" in migration
+    assert "ph_runoff_center >= 0 AND ph_runoff_center <= 14" in migration
+    assert "ec_runoff_center >= 0" in migration
+    assert "prioritize probe/media contact or channel failure" in migration
+    assert "irrigation-stack-software-check" in makefile
+    assert "scripts/validate-irrigation-stack.py --software-only" in makefile
+    software_check_block = makefile[
+        makefile.index("irrigation-stack-software-check:") : makefile.index(
+            "irrigation-stack-check:",
+            makefile.index("irrigation-stack-software-check:"),
+        )
+    ]
+    assert "$(MAKE) site-doctor" not in software_check_block
+    assert "irrigation-stack-check" in makefile
+    assert "scripts/validate-irrigation-stack.py --live-site" in makefile
+    assert "$(MAKE) site-doctor" in makefile
+    stack_check_block = makefile[
+        makefile.index("irrigation-stack-check:") : makefile.index(
+            "irrigation-feedback-check:",
+            makefile.index("irrigation-stack-check:"),
+        )
+    ]
+    assert stack_check_block.index("$(MAKE) site-doctor") < stack_check_block.index(
+        "scripts/validate-irrigation-stack.py --live-site"
+    )
+
+
+def test_irrigation_relay_visual_check_reads_png_without_external_image_dependency():
+    module = runpy.run_path(
+        str(REPO_ROOT / "scripts" / "validate-irrigation-stack.py"),
+        run_name="_test_validate_irrigation_stack",
+    )
+
+    def png_from_pixels(pixels: list[tuple[int, int, int]]) -> bytes:
+        width = len(pixels)
+        ihdr = width.to_bytes(4, "big") + (1).to_bytes(4, "big") + bytes([8, 2, 0, 0, 0])
+        raw = b"\x00" + b"".join(bytes(pixel) for pixel in pixels)
+        return (
+            b"\x89PNG\r\n\x1a\n"
+            + len(ihdr).to_bytes(4, "big")
+            + b"IHDR"
+            + ihdr
+            + b"\x00\x00\x00\x00"
+            + len(zlib.compress(raw)).to_bytes(4, "big")
+            + b"IDAT"
+            + zlib.compress(raw)
+            + b"\x00\x00\x00\x00"
+            + (0).to_bytes(4, "big")
+            + b"IEND"
+            + b"\x00\x00\x00\x00"
+        )
+
+    good_png = png_from_pixels([(130, 130, 130), (140, 140, 140), (40, 150, 240), (255, 255, 255)])
+    white_png = png_from_pixels([(255, 255, 255)] * 4)
+
+    ok, detail = module["_relay_state_png_visual_check"](good_png)
+    assert ok is True
+    assert "relay_visual_gray_pct=0.500" in detail
+    assert "relay_visual_white_pct=0.250" in detail
+
+    ok, detail = module["_relay_state_png_visual_check"](white_png)
+    assert ok is False
+    assert "relay_visual_white_pct=1.000" in detail
+
+
+def test_irrigation_relay_state_panel_uses_dense_timeline():
+    dashboard_path = Path("grafana/dashboards/site-irrigation.json")
+    provisioned_path = Path("grafana/provisioning/dashboards/json/site-irrigation.json")
+    dashboard = json.loads(dashboard_path.read_text())
+    provisioned = json.loads(provisioned_path.read_text())
+
+    assert dashboard == provisioned
+    relay_panel = next(panel for panel in dashboard["panels"] if panel["title"] == "Relay State")
+    relay_panel_json = json.dumps(relay_panel)
+    raw_sql = relay_panel["targets"][0]["rawSql"]
+
+    assert relay_panel["type"] == "state-timeline"
+    assert relay_panel["fieldConfig"]["defaults"]["unit"] == "none"
+    assert relay_panel["options"]["showValue"] == "never"
+    assert relay_panel["options"]["mergeValues"] is True
+    mapping_options = relay_panel["fieldConfig"]["defaults"]["mappings"][0]["options"]
+    assert mapping_options["0"]["text"] == ""
+    assert mapping_options["1"]["text"] == ""
+    assert "bool_on_off" not in relay_panel_json
+    assert "CASE WHEN state THEN 'ON'" not in raw_sql
+    assert "CASE WHEN state THEN 'OFF'" not in raw_sql
+    assert "CASE WHEN state THEN 1 ELSE 0 END AS value FROM equipment_state" not in raw_sql
+
+    for token in (
+        "generate_series",
+        "time_bucket",
+        "state_seed",
+        "state_events",
+        "state_timeline",
+        "state_segments",
+        "COALESCE(seed.state, false)",
+        "drip_wall",
+        "drip_wall_fert",
+        "mister_south",
+        "mister_south_fert",
+        "mister_west",
+        "mister_west_fert",
+        "drip_center",
+        "drip_center_fert",
+        "fert_master_valve",
+        "water_flowing",
+    ):
+        assert token in raw_sql
 
 
 # ── S24.9.7 — _deliver_and_log sentinel skip (integration-shape) ───

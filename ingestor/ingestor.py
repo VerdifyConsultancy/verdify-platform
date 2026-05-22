@@ -45,15 +45,20 @@ from entity_map import (
     DIAGNOSTIC_MAP,
     EQUIPMENT_BINARY_MAP,
     EQUIPMENT_SWITCH_MAP,
+    ESPHOME_FEEDBACK_MAP,
+    FEEDBACK_VALUE_RANGES,
+    MQTT_FEEDBACK_MAP,
     SETPOINT_MAP,
     STATE_MAP,
     SWITCH_TO_ENTITY,
+    normalize_feedback_value,
 )
 from esp32_push import push_to_esp32
 from occupancy import refresh_latest_occupancy_state, sync_occupancy_state
 from pydantic import ValidationError
 from tasks import (
     BAND_DRIVEN_PARAMS,
+    IRRIGATION_SCHEDULE_PARAMS,
     alert_monitor,
     daily_summary_live,
     forecast_action_engine,
@@ -193,6 +198,35 @@ class State:
 
 
 state = State()
+
+
+def _record_mqtt_feedback(topic: str, payload: str) -> bool:
+    """Record a live MQTT feedback payload into the next climate flush."""
+    col = MQTT_FEEDBACK_MAP.get(topic)
+    if not col:
+        return False
+    val = normalize_feedback_value(col, payload)
+    if val is None:
+        log.warning("MQTT feedback rejected invalid value: %s column=%s payload=%r", topic, col, payload)
+        return False
+    state.climate[col] = val
+    return True
+
+
+def _record_climate_sensor(obj_id: str, value: Any) -> bool:
+    """Record an ESPHome climate sensor, applying feedback range guards."""
+    col = CLIMATE_MAP.get(obj_id) or ESPHOME_FEEDBACK_MAP.get(obj_id)
+    if not col:
+        return False
+    if col in FEEDBACK_VALUE_RANGES:
+        normalized = normalize_feedback_value(col, value)
+        if normalized is None:
+            log.warning("ESPHome feedback rejected invalid value: %s column=%s value=%r", obj_id, col, value)
+            return True
+        state.climate[col] = normalized
+        return True
+    state.climate[col] = value
+    return True
 
 
 def _parse_override_set(val: str) -> set[str]:
@@ -843,6 +877,30 @@ def _record_cfg_readback(obj_id: str, value: Any) -> bool:
     return True
 
 
+def _mirror_irrigation_number_readback(param: str, value: Any) -> None:
+    """Treat ESP32 irrigation number-state reports as cfg readbacks.
+
+    The irrigation schedule knobs are persisted firmware globals exposed both
+    as writable Number entities and cfg_* diagnostic template sensors. Mirroring
+    the ESP32 Number state keeps setpoint_snapshot fresh when a cfg_* template
+    sensor fails to republish after a reconnect.
+    """
+    if param not in IRRIGATION_SCHEDULE_PARAMS:
+        return
+    try:
+        val = float(value)
+    except (TypeError, ValueError):
+        log.warning("irrigation number readback rejected non-numeric: %s=%r", param, value)
+        return
+    if math.isnan(val):
+        return
+    prev = shared.cfg_readback.get(param)
+    state.cfg_readback[param] = val
+    shared.cfg_readback[param] = val
+    if prev is not None and not math.isclose(prev, val, rel_tol=0.01, abs_tol=0.001):
+        shared.force_setpoint_push.set()
+
+
 # ──────────────────────────────────────────────────────────────
 # ESP32 callbacks
 # ──────────────────────────────────────────────────────────────
@@ -862,9 +920,7 @@ def on_state_change(entity_state) -> None:
         if _record_cfg_readback(obj_id, val):
             return
 
-        col = CLIMATE_MAP.get(obj_id)
-        if col:
-            state.climate[col] = val
+        if _record_climate_sensor(obj_id, val):
             return
 
         if _record_diagnostic(obj_id, val):
@@ -879,6 +935,7 @@ def on_state_change(entity_state) -> None:
         if param:
             if not _accept_setpoint(param, val):
                 return
+            _mirror_irrigation_number_readback(param, val)
             old = state.setpoints.get(param)
             state.setpoints[param] = val
             if old != val:
@@ -962,6 +1019,7 @@ def on_state_change(entity_state) -> None:
         if param:
             if not _accept_setpoint(param, val):
                 return
+            _mirror_irrigation_number_readback(param, val)
             old = state.setpoints.get(param)
             state.setpoints[param] = val
             if old != val:
@@ -1201,6 +1259,7 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
                 1
                 for obj_id in state.key_to_object_id.values()
                 if obj_id in CLIMATE_MAP
+                or obj_id in ESPHOME_FEEDBACK_MAP
                 or obj_id in EQUIPMENT_BINARY_MAP
                 or obj_id in EQUIPMENT_SWITCH_MAP
                 or obj_id in STATE_MAP
@@ -1348,13 +1407,13 @@ async def task_loop(pool: asyncpg.Pool) -> None:
 
 
 # ──────────────────────────────────────────────────────────────
-# MQTT loop — occupancy from Frigate/Sentinel (replaces occupancy-bridge)
+# MQTT loop — occupancy from Frigate/Sentinel + optional feedback sensors
 # ──────────────────────────────────────────────────────────────
 async def mqtt_loop(pool: asyncpg.Pool) -> None:
-    """Subscribe to Frigate/Sentinel MQTT for greenhouse occupancy."""
+    """Subscribe to MQTT for occupancy and optional irrigation feedback."""
     from config import MQTT_HOST, MQTT_PASS, MQTT_PORT, MQTT_USER
 
-    TOPIC = "sentinel/occupancy/greenhouse_zone"
+    OCCUPANCY_TOPIC = "sentinel/occupancy/greenhouse_zone"
 
     event_loop = asyncio.get_event_loop()
 
@@ -1363,12 +1422,22 @@ async def mqtt_loop(pool: asyncpg.Pool) -> None:
 
     def on_connect(client, userdata, flags, rc):
         if rc == 0:
-            client.subscribe(TOPIC)
-            log.info("MQTT: subscribed to %s", TOPIC)
+            topics = [(OCCUPANCY_TOPIC, 0), *((topic, 0) for topic in MQTT_FEEDBACK_MAP)]
+            client.subscribe(topics)
+            log.info("MQTT: subscribed to %s + %d feedback topic(s)", OCCUPANCY_TOPIC, len(MQTT_FEEDBACK_MAP))
         else:
             log.error("MQTT: connect failed rc=%d", rc)
 
     def on_message(client, userdata, msg):
+        topic = msg.topic
+        if topic in MQTT_FEEDBACK_MAP:
+            if msg.retain:
+                log.debug("MQTT feedback retained message ignored: %s", topic)
+                return
+            payload = msg.payload.decode(errors="replace").strip()
+            event_loop.call_soon_threadsafe(_record_mqtt_feedback, topic, payload)
+            return
+
         payload = msg.payload.decode().strip().upper()
         occupied = payload == "ON"
         val = "occupied" if occupied else "empty"

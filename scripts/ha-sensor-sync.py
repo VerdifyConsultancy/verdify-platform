@@ -23,8 +23,16 @@ import sys
 import urllib.error
 import urllib.request
 from datetime import UTC, datetime
+from pathlib import Path
 
 import asyncpg
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+INGESTOR_DIR = REPO_ROOT / "ingestor"
+if str(INGESTOR_DIR) not in sys.path:
+    sys.path.insert(0, str(INGESTOR_DIR))
+
+from entity_map import FEEDBACK_VALUE_RANGES, normalize_feedback_value  # noqa: E402
 
 # --- Configuration ---
 HA_URL = "http://192.168.30.107:8123"
@@ -63,6 +71,49 @@ HYDRO_MAP = {
     "sensor.greenhouse_hydroponic_water_temp": ("hydro_water_temp_f", lambda v: v * 9.0 / 5.0 + 32.0),  # °C → °F
     # Battery
     "sensor.greenhouse_hydroponic_yinmik_battery": ("hydro_battery_pct", None),
+}
+
+# Optional center root-zone/runoff feedback. The in-process ingestor owns the
+# active service path; keep this legacy script aligned for manual recovery.
+CENTER_FEEDBACK_MAP = {
+    "sensor.greenhouse_center_soil_moisture": ("moisture_center", None),
+    "sensor.greenhouse_center_root_zone_moisture": ("moisture_center", None),
+    "sensor.greenhouse_center_root_zone_soil_moisture": ("moisture_center", None),
+    "sensor.greenhouse_center_rootzone_moisture": ("moisture_center", None),
+    "sensor.greenhouse_center_moisture": ("moisture_center", None),
+    "sensor.greenhouse_center_vwc": ("moisture_center", None),
+    "sensor.greenhouse_center_substrate_vwc": ("moisture_center", None),
+    "sensor.greenhouse_center_substrate_moisture": ("moisture_center", None),
+    "sensor.greenhouse_center_root_zone_vwc": ("moisture_center", None),
+    "sensor.greenhouse_middle_substrate_vwc": ("moisture_center", None),
+    "sensor.greenhouse_middle_substrate_moisture": ("moisture_center", None),
+    "sensor.greenhouse_center_runoff_ph": ("ph_runoff_center", None),
+    "sensor.greenhouse_center_runoff_p_h": ("ph_runoff_center", None),
+    "sensor.greenhouse_center_run_off_ph": ("ph_runoff_center", None),
+    "sensor.greenhouse_center_run_off_p_h": ("ph_runoff_center", None),
+    "sensor.greenhouse_center_drain_ph": ("ph_runoff_center", None),
+    "sensor.greenhouse_center_drain_p_h": ("ph_runoff_center", None),
+    "sensor.greenhouse_center_drainage_ph": ("ph_runoff_center", None),
+    "sensor.greenhouse_center_leachate_ph": ("ph_runoff_center", None),
+    "sensor.greenhouse_center_effluent_ph": ("ph_runoff_center", None),
+    "sensor.greenhouse_center_tray_ph": ("ph_runoff_center", None),
+    "sensor.greenhouse_center_runoff_ec": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_runoff_ec_ms_cm": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_runoff_ec_us_cm": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_runoff_ec_u_s_cm": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_run_off_ec": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_run_off_ec_ms_cm": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_run_off_ec_us_cm": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_runoff_conductivity": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_runoff_electrical_conductivity": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_drain_ec": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_drain_ec_ms_cm": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_drain_ec_us_cm": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_drain_ec_u_s_cm": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_drainage_ec": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_leachate_ec": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_effluent_ec": ("ec_runoff_center", None),
+    "sensor.greenhouse_center_tray_ec": ("ec_runoff_center", None),
 }
 
 # --- HA-computed sensors and input_* entities ---
@@ -154,6 +205,7 @@ async def sync_once(db_url: str) -> None:
     all_entities = (
         list(LIGHT_ENTITIES.keys())
         + list(HYDRO_MAP.keys())
+        + list(CENTER_FEEDBACK_MAP.keys())
         + list(HA_CONFIG_SWITCHES.keys())
         + list(OCCUPANCY_ENTITIES.keys())
     )
@@ -165,17 +217,24 @@ async def sync_once(db_url: str) -> None:
 
     conn = await asyncpg.connect(db_url)
     try:
-        # --- 1. Hydro water tester → climate row ---
+        # --- 1. HA climate overlays → climate row ---
         climate_cols = {"ts": now}
-        for eid, (col, converter) in HYDRO_MAP.items():
+        climate_sensor_map = {**HYDRO_MAP, **CENTER_FEEDBACK_MAP}
+        for eid, (col, converter) in climate_sensor_map.items():
             if col is None:
                 continue
             if eid in states:
                 val = parse_float(states[eid].get("state", ""))
                 if val is not None:
-                    climate_cols[col] = converter(val) if converter else val
+                    normalized = converter(val) if converter else val
+                    if col in FEEDBACK_VALUE_RANGES:
+                        normalized = normalize_feedback_value(col, normalized)
+                        if normalized is None:
+                            log.warning("HA feedback rejected invalid value: %s column=%s value=%r", eid, col, val)
+                            continue
+                    climate_cols[col] = normalized
 
-        # Merge hydro data into the most recent ESP32 row (within 5 min)
+        # Merge HA climate data into the most recent ESP32 row (within 5 min)
         if len(climate_cols) > 1:  # more than just ts
             latest_esp32 = await conn.fetchval(
                 "SELECT ts FROM climate WHERE ts > now() - interval '5 minutes' "
@@ -193,14 +252,12 @@ async def sync_once(db_url: str) -> None:
                     await conn.execute(
                         f"UPDATE climate SET {', '.join(set_parts)} WHERE ts = ${len(set_vals)}", *set_vals
                     )
-                    log.info("Merged hydro into ESP32 row: %s", ", ".join(f"{k}={v}" for k, v in hydro_cols.items()))
+                    log.info(
+                        "Merged HA climate overlay into ESP32 row: %s",
+                        ", ".join(f"{k}={v}" for k, v in hydro_cols.items()),
+                    )
             else:
-                cols = list(climate_cols.keys())
-                vals = [climate_cols[c] for c in cols]
-                placeholders = ", ".join(f"${i + 1}" for i in range(len(vals)))
-                col_names = ", ".join(cols)
-                await conn.execute(f"INSERT INTO climate ({col_names}) VALUES ({placeholders})", *vals)
-                log.info("Hydro standalone INSERT (no recent ESP32 row)")
+                log.warning("HA climate overlay skipped; no recent indoor climate row")
 
         # --- 3. Grow lights → equipment_state (every poll for traceability) ---
         prev_state = load_state()

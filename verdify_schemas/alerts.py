@@ -28,6 +28,7 @@ AlertType = Literal[
     "heap_pressure_warning",
     "heat_manual_override",
     "heat_staging_inversion",
+    "irrigation_feedback_gap",
     "leak_detected",
     "plan_context_failed",
     "planner_band_ownership_drift",
@@ -61,6 +62,7 @@ ALERT_TYPES: tuple[str, ...] = (
     "heap_pressure_warning",
     "heat_manual_override",
     "heat_staging_inversion",
+    "irrigation_feedback_gap",
     "leak_detected",
     "plan_context_failed",
     "planner_band_ownership_drift",
@@ -91,6 +93,16 @@ class _DetailsBase(BaseModel):
 class SensorOfflineDetails(_DetailsBase):
     type: str
     staleness_ratio: float | None = None
+
+
+class IrrigationFeedbackGapDetails(_DetailsBase):
+    feedback_key: str
+    signal: str
+    status: Literal["missing", "stuck_zero", "stale"]
+    latest_value: float | None = None
+    last_sample_ts: AwareDatetime | None = None
+    required_action: str
+    view_details: dict[str, Any] = Field(default_factory=dict)
 
 
 class RelayStuckDetails(_DetailsBase):
@@ -446,6 +458,11 @@ class HeatStagingInversionAlert(_AlertBase):
     details: HeatStagingInversionDetails
 
 
+class IrrigationFeedbackGapAlert(_AlertBase):
+    alert_type: Literal["irrigation_feedback_gap"]
+    details: IrrigationFeedbackGapDetails
+
+
 class FirmwareReliefCeilingAlert(_AlertBase):
     alert_type: Literal["firmware_relief_ceiling"]
     details: FirmwareReliefCeilingDetails
@@ -507,6 +524,7 @@ AlertEnvelopeUnion = Annotated[
     | HeapPressureWarningAlert
     | HeatManualOverrideAlert
     | HeatStagingInversionAlert
+    | IrrigationFeedbackGapAlert
     | LeakDetectedAlert
     | PlanContextFailedAlert
     | PlannerBandOwnershipDriftAlert
