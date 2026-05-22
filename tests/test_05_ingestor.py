@@ -2,9 +2,58 @@
 Test 05: Ingestor — Service health, task execution, data pipeline.
 """
 
+import asyncio
+import os
 import subprocess
+import sys
+from datetime import UTC, datetime
+from pathlib import Path
+from types import SimpleNamespace
 
 from conftest import db_query
+
+INGESTOR_PATH = str(Path(__file__).resolve().parent.parent / "ingestor")
+if INGESTOR_PATH not in sys.path:
+    sys.path.insert(0, INGESTOR_PATH)
+
+os.environ.setdefault("DB_USER", "test")
+os.environ.setdefault("DB_PASSWORD", "test")
+os.environ.setdefault("DB_HOST", "127.0.0.1")
+os.environ.setdefault("DB_PORT", "5432")
+os.environ.setdefault("DB_NAME", "test")
+
+import ingestor  # noqa: E402
+
+
+class _FakeConn:
+    def __init__(self):
+        self.executemany_calls = []
+
+    async def executemany(self, query, rows):
+        self.executemany_calls.append((query, rows))
+
+
+class _FakeAcquire:
+    def __init__(self, conn):
+        self.conn = conn
+
+    async def __aenter__(self):
+        return self.conn
+
+    async def __aexit__(self, exc_type, exc, tb):
+        return False
+
+
+class _FakePool:
+    def __init__(self):
+        self.conn = _FakeConn()
+
+    def acquire(self):
+        return _FakeAcquire(self.conn)
+
+
+def _entity_state(key: int, value):
+    return SimpleNamespace(key=key, state=value)
 
 
 class TestIngestorService:
@@ -52,6 +101,47 @@ class TestESP32Connection:
 
 class TestIngestorTasks:
     """Periodic tasks must be running on schedule."""
+
+    def test_override_events_written(self):
+        """active_overrides diffs should write one override_events row per new flag."""
+        ingestor.state.key_to_object_id = {
+            1: "greenhouse_state",
+            2: "active_overrides",
+        }
+        ingestor.state.key_to_type = {
+            1: "text",
+            2: "text",
+        }
+        ingestor.state.system.clear()
+        ingestor.state.pending_states.clear()
+        ingestor.state.pending_override_events.clear()
+        ingestor.state.last_override_set.clear()
+
+        ingestor.on_state_change(_entity_state(1, "VENTILATE"))
+        ingestor.on_state_change(_entity_state(2, "none"))
+        assert ingestor.state.pending_override_events == []
+
+        ingestor.on_state_change(_entity_state(2, "occupancy_blocks_equipment,fog_gate_rh"))
+        assert ingestor.state.pending_override_events == [
+            ("fog_gate_rh", "VENTILATE"),
+            ("occupancy_blocks_equipment", "VENTILATE"),
+        ]
+
+        pool = _FakePool()
+        ts = datetime(2026, 5, 22, 17, 40, tzinfo=UTC)
+        asyncio.run(ingestor.write_override_events(pool, ts))
+
+        assert ingestor.state.pending_override_events == []
+        assert len(pool.conn.executemany_calls) == 1
+        query, rows = pool.conn.executemany_calls[0]
+        assert "INSERT INTO override_events" in query
+        assert rows == [
+            (ts, "fog_gate_rh", "VENTILATE"),
+            (ts, "occupancy_blocks_equipment", "VENTILATE"),
+        ]
+
+        ingestor.on_state_change(_entity_state(2, "occupancy_blocks_equipment,fog_gate_rh"))
+        assert ingestor.state.pending_override_events == []
 
     def test_setpoint_dispatcher_recent(self):
         """Setpoint dispatcher must have produced recent write-side evidence."""

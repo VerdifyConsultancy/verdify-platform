@@ -56,7 +56,10 @@ Findings from the 2026-04-18 audit that live outside firmware scope. Each is a f
 - [x] **Coordinator — override flag enum guard.** ✅ In `firmware/contracts-alert-drift`: `OVERRIDE_EVENT_TYPES` validates `OverrideEvent.override_type`; a firmware drift guard compares `OverrideFlags` fields, controls.yaml published tags, and schema-accepted tags.
 - [x] **Coordinator + genai — `sw_mister_closes_vent` routing.** ✅ Routed through `entity_map.SETPOINT_MAP`, `CFG_READBACK_MAP`, `SWITCH_TO_ENTITY`, `verdify_schemas.tunables`, firmware `controls.yaml`, and MCP `TIER1_TUNABLES`; static tests now pin the route.
 - [x] **Ingestor — alert monitor coverage for OBS-3.** ✅ `alert_monitor` watches `diagnostics.relief_cycle_count` and `diagnostics.vent_latch_timer_s`; the same PR adds expected firmware-version mismatch alerting from `/srv/verdify/state/expected-firmware-version`.
-- [ ] **Ingestor — override events smoke test.** Add `test_override_events_written` to `tests/test_05_ingestor.py` to verify `gh_overrides` diff → `override_events` write.
+- [x] **Ingestor — override events smoke test.** Added
+  `test_override_events_written` to `tests/test_05_ingestor.py` to verify
+  `gh_overrides`/`active_overrides` diffs enqueue one row per new flag and
+  flush valid rows to `override_events`.
 - [ ] **Ingestor — `setpoint_unconfirmed` lifecycle fix.** alert_monitor tracks specific (param, value, push_ts) tuples; stale alerts persist indefinitely when a later push supersedes an older one before readback can confirm the older value. Net effect: 20+ critical alerts per 5 hours of active dispatch. Should resolve by latest-readback-for-parameter rather than require exact-push-match.
 - [x] **Coordinator — `daily_summary.cycles_{mister_south,mister_west,mister_center,drip_wall,drip_center}` columns (sprint-7 follow-up).** Migration 097 adds the columns.
 - [x] **Ingestor — DAILY_ACCUM_MAP entries for the sprint-7 cycle sensors.** Slug keys route to the new `daily_summary` columns; daily snapshot validation/writes include them.
