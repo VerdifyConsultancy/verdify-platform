@@ -68,7 +68,7 @@ Recommendation: schedule one branch-pruning pass. Keep only `main`, intentionall
 ### Code And Script Loose Ends
 
 - `scripts/generate-baseline-vs-iris-page.py` is now restored; this was the most concrete broken generated-page contract.
-- `scripts/smoke-sprint20.py` is still named after an old sprint. `docs/backlog/genai.md` already calls for renaming it to `smoke-feedback-loop.py`.
+- `scripts/smoke-feedback-loop.py` now uses a purpose-named feedback-loop smoke path instead of the old sprint-specific filename.
 - Zero-reference scripts from the repo text scan: `backfill-plan-evaluations.py`, `transcode-launch-video.sh`, `update-evidence-snapshots.py`, `vault-harvest-writer.py`, `vault-treatment-writer.py`, `warm-grafana-render-cache.py`. These may be operational/manual tools; each needs either a README/backlog reference or deletion.
 - `docs/tunable-cascade.md` still has a “Remaining tunables — TBD” section. For showcase quality, either complete those rows from the registry or mark the doc historical and point readers to `verdify_schemas/tunable_registry.py`.
 - `config/zones.yaml` still says “Species TBD — needs Emily inventory” for one zone note. That is acceptable operationally, but not showcase-polished.
@@ -80,7 +80,7 @@ Recommendation: schedule one branch-pruning pass. Keep only `main`, intentionall
 1. Retire/reset stale persistent worktrees whose branches have zero unique commits.
 2. Delete or archive-with-explicit-owner the remaining old remote branches.
 3. Decide the GreenByte direction: curated research package vs delete.
-4. Resolve the small showcase polish items: analytics decision, `smoke-sprint20.py` rename, tunable-cascade TBDs, zone species note.
+4. Resolve the small showcase polish items: analytics decision, tunable-cascade TBDs, zone species note.
 5. Add a scheduled or documented generated-page check for Baseline vs Iris now that the generator exists.
 
 ## GA Definition Going Forward

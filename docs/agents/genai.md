@@ -35,7 +35,7 @@ Iris the planner agent, the MCP tool surface, prompt templates, plan scoring and
 ## Gates
 
 - Planner dry-run must succeed (`make planner-dry`) before a prompt change ships.
-- Plan feedback loop smoke (`scripts/smoke-sprint20.py` + its successors) must pass end-to-end against the live stack.
+- Plan feedback loop smoke (`scripts/smoke-feedback-loop.py`) must pass end-to-end against the live stack.
 - Token/cost sanity check: if a prompt change inflates average plan-cycle cost by >20%, coordinator reviews.
 
 ## Ask coordinator before

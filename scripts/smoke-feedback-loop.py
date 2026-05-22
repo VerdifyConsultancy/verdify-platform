@@ -1,5 +1,5 @@
 #!/usr/bin/env /srv/greenhouse/.venv/bin/python3
-"""Sprint 20 end-to-end smoke test.
+"""Planner feedback loop end-to-end smoke test.
 
 Exercises the unified plan schema + feedback loop + manifestation surface
 against the live production stack without polluting real plan state.
@@ -15,7 +15,7 @@ Strategy:
     writes a setpoint_unconfirmed alert. We clean that up too.
   - Website surface: three curl checks with Host: lab.verdify.ai.
 
-Run: python3 scripts/smoke-sprint20.py
+Run: python3 scripts/smoke-feedback-loop.py
 Exit code: 0 on all pass, 1 on any fail.
 """
 
@@ -46,7 +46,7 @@ from verdify_schemas import (  # noqa: E402
 TEST_PARAM = "bias_heat"
 
 # Sentinel source tag so we can clean up without touching production rows.
-SMOKE_SOURCE = "smoke_sprint20"
+SMOKE_SOURCE = "smoke_feedback_loop"
 
 # ── Helpers ─────────────────────────────────────────────────────────
 
@@ -354,7 +354,7 @@ def test_website_surface() -> None:
     for path, label in [
         ("/plans/", "plans index"),
         (f"/plans/{today}", f"today's plan ({today})"),
-        ("/forecast/", "forecast page"),
+        ("/forecast", "forecast page"),
     ]:
         status = curl(f"https://127.0.0.1{path}", "lab.verdify.ai")
         step(f"GET {path} — {label} returns 200", status == 200, f"got {status}")
@@ -364,7 +364,7 @@ def test_website_surface() -> None:
 
 
 async def main() -> int:
-    print("Sprint 20 end-to-end smoke test")
+    print("Planner feedback loop end-to-end smoke test")
     print("================================")
     start = time.time()
 

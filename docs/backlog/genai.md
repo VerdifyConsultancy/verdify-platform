@@ -96,7 +96,7 @@ through [`project-recovery-2026-05-22.md`](project-recovery-2026-05-22.md)).
 | G8 | Lessons state machine: `LessonState` literal (`proposed`/`validated`/`superseded`/`retired`), transition guards, `lessons_manage` `supersede(old_id, new_id)` action | Schema + MCP | — | M | pending |
 | G9 | Multi-model eval: shadow Gemini 2.5 Pro call on N% of cycles; store both plans + outcome; publish weekly comparison page | Infra + prompt | coordinator sign-off | L | pending |
 | G10 | Harden `scripts/gather-plan-context.sh`: aggregate per-section exit codes, emit a "context completeness" header Iris can read and flag | Script | — | M | **done** (58ade59) |
-| G11 | Rename `scripts/smoke-sprint20.py` → `smoke-feedback-loop.py`; adopt purpose-named smoke scripts going forward | Cleanup | — | XS | pending |
+| G11 | Purpose-name the feedback-loop smoke script as `scripts/smoke-feedback-loop.py`; adopt purpose-named smoke scripts going forward | Cleanup | — | XS | **done** |
 | G12 | Either populate or drop `plan_journal.conditions_summary` (propose migration to coordinator) | Coordinator handshake | — | S | pending |
 | G13 | Scorecard "why did we fail": when `planner_score < 80`, compute top-2 contributing stress windows + include in next plan context | Prompt + MCP | unblocked by G3 | M | pending |
 | G14 | One-line clarification in `docs/agents/genai.md`: vault-writer scripts (`generate-*`) are `web` scope; genai owns the data models they consume | Doc | — | XS | **done** (600b7b9) |
@@ -121,7 +121,7 @@ through [`project-recovery-2026-05-22.md`](project-recovery-2026-05-22.md)).
 
 - `make lint` (ruff), `make test` — required, no exceptions.
 - `make planner-dry` — before prompt ships.
-- `scripts/smoke-sprint20.py` (post-G11: `smoke-feedback-loop.py`) —
+- `scripts/smoke-feedback-loop.py` —
   end-to-end against live stack.
 - Cost sanity — coordinator reviews if avg plan-cycle cost inflates >20%.
 - Model swaps or routing-policy changes (local ↔ cloud, Gemma/version bumps, or behavior-impacting model changes) — require coordinator sign-off.
