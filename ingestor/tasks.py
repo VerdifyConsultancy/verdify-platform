@@ -1643,6 +1643,60 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                 }
             )
 
+        # 7a.1. Per-trigger SLA timeouts. Gateway delivery may succeed but
+        # never resolve to ack/plan_written; surface those rows with their
+        # trigger id and gateway context instead of relying on flat
+        # planner_stale.
+        timed_out_deliveries = await conn.fetch(
+            """
+            SELECT id, event_type, event_label, instance, gateway_status, delivered_at,
+                   gateway_body, trigger_id, hermes_run_id,
+                   EXTRACT(EPOCH FROM (now() - delivered_at))::int AS elapsed_seconds
+              FROM plan_delivery_log
+             WHERE status = 'timed_out'
+               AND delivered_at > now() - interval '6 hours'
+             ORDER BY delivered_at DESC
+             LIMIT 10
+            """
+        )
+        if timed_out_deliveries:
+            timeouts = [
+                {
+                    "id": int(r["id"]),
+                    "event_type": r["event_type"],
+                    "event_label": r["event_label"],
+                    "instance": r["instance"],
+                    "gateway_status": int(r["gateway_status"]) if r["gateway_status"] is not None else None,
+                    "delivered_at": r["delivered_at"].isoformat() if r["delivered_at"] else None,
+                    "gateway_body": (r["gateway_body"] or "")[:300],
+                    "trigger_id": str(r["trigger_id"]) if r["trigger_id"] else None,
+                    "elapsed_seconds": int(r["elapsed_seconds"] or 0),
+                    "hermes_run_id": r["hermes_run_id"],
+                }
+                for r in timed_out_deliveries
+            ]
+            required_timed_out = any(t["event_type"] in ("SUNRISE", "SUNSET", "MIDNIGHT") for t in timeouts)
+            severity = "critical" if required_timed_out else "warning"
+            latest = timeouts[0]
+            alerts.append(
+                {
+                    "alert_type": "planner_trigger_sla_timeout",
+                    "severity": severity,
+                    "category": "system",
+                    "sensor_id": "system.planner_trigger_sla",
+                    "zone": None,
+                    "message": (
+                        f"{len(timeouts)} planner trigger SLA timeout(s) in 6h; "
+                        f"latest {latest['event_type']}/{latest['event_label']} "
+                        f"trigger_id={latest['trigger_id']} elapsed={latest['elapsed_seconds']}s "
+                        f"gateway_status={latest['gateway_status']}"
+                    ),
+                    "details": {"timeouts": timeouts},
+                    "metric_value": float(len(timeouts)),
+                    "threshold_value": 0.0,
+                }
+            )
+
         # 7b. Required SUNRISE/SUNSET/MIDNIGHT plans. planner_trigger_ledger is
         # materialized before delivery, so this catches both failure modes:
         # delivered-but-no-plan and no delivery row at all.

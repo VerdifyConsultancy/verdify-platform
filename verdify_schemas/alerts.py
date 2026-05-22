@@ -37,6 +37,7 @@ AlertType = Literal[
     "planner_plan_horizon_missing",
     "planner_required_plan_missed",
     "planner_stale",
+    "planner_trigger_sla_timeout",
     "planner_tunable_range_drift",
     "relay_stuck",
     "safety_invalid",
@@ -71,6 +72,7 @@ ALERT_TYPES: tuple[str, ...] = (
     "planner_plan_horizon_missing",
     "planner_required_plan_missed",
     "planner_stale",
+    "planner_trigger_sla_timeout",
     "planner_tunable_range_drift",
     "relay_stuck",
     "safety_invalid",
@@ -198,6 +200,16 @@ class PlanDeliveryFailureDetails(_DetailsBase):
 
 class PlannerGatewayDeliveryFailedDetails(_DetailsBase):
     failures: list[PlanDeliveryFailureDetails]
+
+
+class PlanDeliveryTimeoutDetails(PlanDeliveryFailureDetails):
+    trigger_id: str | None = None
+    elapsed_seconds: int = Field(..., ge=0)
+    hermes_run_id: str | None = None
+
+
+class PlannerTriggerSlaTimeoutDetails(_DetailsBase):
+    timeouts: list[PlanDeliveryTimeoutDetails]
 
 
 class PlannerPlanHorizonMissingDetails(_DetailsBase):
@@ -418,6 +430,11 @@ class PlannerGatewayDeliveryFailedAlert(_AlertBase):
     details: PlannerGatewayDeliveryFailedDetails
 
 
+class PlannerTriggerSlaTimeoutAlert(_AlertBase):
+    alert_type: Literal["planner_trigger_sla_timeout"]
+    details: PlannerTriggerSlaTimeoutDetails
+
+
 class PlannerPlanHorizonMissingAlert(_AlertBase):
     alert_type: Literal["planner_plan_horizon_missing"]
     details: PlannerPlanHorizonMissingDetails
@@ -530,6 +547,7 @@ AlertEnvelopeUnion = Annotated[
     | PlannerBandOwnershipDriftAlert
     | PlannerEvaluationMissedAlert
     | PlannerGatewayDeliveryFailedAlert
+    | PlannerTriggerSlaTimeoutAlert
     | PlannerPlanHorizonMissingAlert
     | PlannerRequiredPlanMissedAlert
     | PlannerStaleAlert

@@ -1087,6 +1087,11 @@ def test_alert_monitor_detects_planner_delivery_outages():
     assert "system.hermes" in src
     assert "WITH last_success AS" in src
     assert "gateway_status = 0" in src
+    assert "planner_trigger_sla_timeout" in src
+    assert "system.planner_trigger_sla" in src
+    assert "status = 'timed_out'" in src
+    assert "elapsed_seconds" in src
+    assert "hermes_run_id" in src
     assert "planner_required_plan_missed" in src
     assert "system.planner_required_plan" in src
     assert "planner_trigger_ledger" in src

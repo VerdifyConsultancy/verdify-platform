@@ -31,6 +31,7 @@ from verdify_schemas.alerts import (
     PlannerPlanHorizonMissingAlert,
     PlannerRequiredPlanMissedAlert,
     PlannerStaleAlert,
+    PlannerTriggerSlaTimeoutAlert,
     PlannerTunableRangeDriftAlert,
     RelayStuckAlert,
     SafetyInvalidAlert,
@@ -166,6 +167,25 @@ CASES = {
                     "gateway_status": 500,
                     "delivered_at": NOW,
                     "gateway_body": "bad gateway",
+                }
+            ]
+        },
+    ),
+    "planner_trigger_sla_timeout": (
+        PlannerTriggerSlaTimeoutAlert,
+        {
+            "timeouts": [
+                {
+                    "id": 43,
+                    "event_type": "SUNSET",
+                    "event_label": "sunset",
+                    "instance": "opus",
+                    "gateway_status": 200,
+                    "delivered_at": NOW,
+                    "gateway_body": "accepted",
+                    "trigger_id": "00000000-0000-0000-0000-000000000043",
+                    "elapsed_seconds": 1800,
+                    "hermes_run_id": "run_123",
                 }
             ]
         },

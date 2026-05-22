@@ -46,7 +46,14 @@ trigger resolves to exactly one of `plan_written`, `acked`,
   Each entry defines due time, catch-up behavior, expected planner action (`set_plan` vs `set_tunable` vs `acknowledge_trigger`), SLA, and Hermes routing.
 - [ ] **I-P0.2 No missed-sunrise blind spot.** Persist expected trigger times separately from "fired" state. If ingestor starts after the current 2h catch-up window, either deliver a late catch-up trigger with an explicit label or raise `planner_required_trigger_missed`; do not wait for `planner_stale`.
 - [x] **I-P0.3 Hermes routing.** Production routing now defaults to Hermes `hermes-iris` with OpenAI GPT-5.5 high-reasoning. Legacy `local`/`opus` values are audit labels only and no longer select a different gateway.
-- [ ] **I-P0.4 Per-trigger SLA lifecycle.** Implement the v1.4 SLA rule that marks old `pending` rows `timed_out` and alerts with `trigger_id`, event type, instance, delivered time, elapsed seconds, and gateway status. This replaces reliance on flat `planner_stale`.
+- [x] **I-P0.4 Per-trigger SLA lifecycle.** Pending delivery rows are expired
+  through `_expire_planner_trigger_slas()` using the configured
+  event-type/instance timeout, `planner_trigger_ledger` is synchronized to
+  terminal states, and `alert_monitor` now emits
+  `planner_trigger_sla_timeout` with `trigger_id`, event type, instance,
+  delivered time, elapsed seconds, gateway status, gateway body, and
+  `hermes_run_id` context. This replaces reliance on flat `planner_stale` for
+  per-trigger lifecycle failures.
 - [x] **I-P0.5 Correct delivery correlation.** Removed the unsafe 2h fallback for rows that have UUIDs. Exact `trigger_id` match is authoritative; fallback now runs only when both sides are legacy/null. MCP `set_plan` and `set_tunable` now reject planner-owned writes that omit `trigger_id`, verify the referenced delivery row, and mark the row `plan_written` immediately on success.
 - [ ] **I-P0.6 Deviation trigger completeness.** Ensure `forecast_deviation_check` logs and delivers every forecast deviation class the planner needs: temp, RH/VPD, solar irradiance, wind, precipitation/cloud-cover regime shift, and prolonged missed forecast. Dedupe repeated same-axis noise, but do not collapse distinct deviations into silence.
 - [x] **I-P0.7 Fixed-boundary planning.** Added fixed local-time `TRANSITION` triggers at 00:00, 06:00/pre-dawn, 12:00/midday, 16:00/afternoon, and 20:00/evening, alongside sunrise/sunset and existing solar-derived transition milestones. All normal boundaries route local-first.
