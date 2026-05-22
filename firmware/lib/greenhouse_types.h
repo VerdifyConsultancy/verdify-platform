@@ -198,9 +198,11 @@ struct RelayOutputs {
 // qualified light minutes: natural lux above the circuit threshold OR actual
 // switch-on time. Natural and switch light are counted once via OR semantics.
 struct LightingInputs {
-    float natural_lux;      // Tempest outdoor lux, indoor fallback handled by caller
+    float natural_lux;      // Plant-control lux; caller may use Tempest or indoor fallback.
+    float exterior_lux;     // Tempest outdoor lux, only valid for occupancy when fresh.
+    bool exterior_lux_fresh;
     int local_hour;         // 0-23, from SNTP
-    bool occupied;          // occupancy forces light on inside the eligible window
+    bool occupied;          // Occupancy enables lux-gated task-light demand.
 };
 
 struct LightingSetpoints {
@@ -235,6 +237,9 @@ struct LightingDecision {
     bool natural_qualified;
     bool lux_below_on_threshold;
     bool lux_below_off_threshold;
+    bool exterior_lux_available;
+    bool occupancy_task_light_demand;
+    bool plant_supplement_demand;
     float lux_off_threshold;
     float qualified_light_minutes;
     float target_light_minutes;

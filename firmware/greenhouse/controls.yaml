@@ -1153,92 +1153,127 @@ interval:
               5.0f);
           }
 
-          /*** B6 — Per-circuit lighting state machines (every 60s) ***/
+          /*** B6 — Per-circuit lighting state machines (evaluate 5s; publish 60s/change) ***/
           {
             static LightingState gl_main_state = initial_lighting_state();
             static LightingState gl_grow_state = initial_lighting_state();
+            static bool prev_main_want_on = false;
+            static bool prev_grow_want_on = false;
+            static const char* prev_main_reason = "init";
+            static const char* prev_grow_reason = "init";
             auto publish_lighting_epoch = [](auto *sensor, time_t epoch){
               char buf[24];
               snprintf(buf, sizeof(buf), "%lld", (long long)epoch);
               sensor->publish_state(buf);
             };
 
-            if((now_ms - id(gl_last_check_ms)) >= 60000){
-              id(gl_last_check_ms) = now_ms;
-
-              auto time = id(sntp_time).now();
-              if(!time.is_valid()){
-                if(id(grow_light_main).state){
-                  id(grow_light_main).turn_off();
-                  ESP_LOGW("grow_light","main OFF: time_invalid");
-                }
-                if(id(grow_light_grow).state){
-                  id(grow_light_grow).turn_off();
-                  ESP_LOGW("grow_light","grow OFF: time_invalid");
-                }
+            const bool lighting_heartbeat_due = (now_ms - id(gl_last_check_ms)) >= 60000;
+            auto time = id(sntp_time).now();
+            if(!time.is_valid()){
+              if(id(grow_light_main).state){
+                id(grow_light_main).turn_off();
+                ESP_LOGW("grow_light","main OFF: time_invalid");
+              }
+              if(id(grow_light_grow).state){
+                id(grow_light_grow).turn_off();
+                ESP_LOGW("grow_light","grow OFF: time_invalid");
+              }
+              const bool changed = prev_main_want_on || prev_grow_want_on
+                || strcmp(prev_main_reason, "time_invalid") != 0
+                || strcmp(prev_grow_reason, "time_invalid") != 0;
+              if(lighting_heartbeat_due || changed){
                 id(gl_main_state_text).publish_state("OFF");
                 id(gl_main_reason).publish_state("time_invalid");
                 id(gl_grow_state_text).publish_state("OFF");
                 id(gl_grow_reason).publish_state("time_invalid");
                 id(gl_main_decision_epoch).publish_state("invalid");
                 id(gl_grow_decision_epoch).publish_state("invalid");
-              } else {
-                float cur_lux = id(tempest_lux);
-                if(isnan(cur_lux)) cur_lux = id(greenhouse_light_lux).state;
-                if(isnan(cur_lux)) cur_lux = 0.0f;
+                id(gl_last_check_ms) = now_ms;
+              }
+              prev_main_want_on = false;
+              prev_grow_want_on = false;
+              prev_main_reason = "time_invalid";
+              prev_grow_reason = "time_invalid";
+            } else {
+              float exterior_lux = id(tempest_lux);
+              uint32_t tempest_age_s = 99999UL;
+              if(id(tempest_last_obs_ms) != 0){
+                tempest_age_s = (now_ms - id(tempest_last_obs_ms)) / 1000UL;
+              }
+              const bool exterior_lux_fresh = !isnan(exterior_lux)
+                && tempest_age_s <= (uint32_t)id(outdoor_staleness_max_s);
 
-                LightingInputs light_in = {
-                  .natural_lux = cur_lux,
-                  .local_hour = time.hour,
-                  .occupied = id(greenhouse_occupied)
-                };
-                LightingSetpoints main_sp = {
-                  .target_light_minutes = (uint32_t)id(gl_main_target_light_minutes),
-                  .lux_on_threshold = id(gl_main_lux_threshold),
-                  .lux_hysteresis = id(gl_main_lux_hysteresis),
-                  .start_hour = id(gl_main_sunrise_hour),
-                  .cutoff_hour = id(gl_main_sunset_hour),
-                  .min_on_ms = (uint32_t)id(gl_main_min_on_s) * 1000UL,
-                  .min_off_ms = (uint32_t)id(gl_main_min_off_s) * 1000UL,
-                  .auto_enabled = id(gl_main_auto_enabled)
-                };
-                LightingSetpoints grow_sp = {
-                  .target_light_minutes = (uint32_t)id(gl_grow_target_light_minutes),
-                  .lux_on_threshold = id(gl_grow_lux_threshold),
-                  .lux_hysteresis = id(gl_grow_lux_hysteresis),
-                  .start_hour = id(gl_grow_sunrise_hour),
-                  .cutoff_hour = id(gl_grow_sunset_hour),
-                  .min_on_ms = (uint32_t)id(gl_grow_min_on_s) * 1000UL,
-                  .min_off_ms = (uint32_t)id(gl_grow_min_off_s) * 1000UL,
-                  .auto_enabled = id(gl_grow_auto_enabled)
-                };
+              float cur_lux = exterior_lux;
+              if(isnan(cur_lux)) cur_lux = id(greenhouse_light_lux).state;
+              if(isnan(cur_lux)) cur_lux = 0.0f;
+              const float lighting_dt_s = dt_ms > 0 ? ((float)dt_ms / 1000.0f) : 0.0f;
 
-                LightingDecision main_dec = evaluate_lighting(
-                  light_in, main_sp, gl_main_state, id(grow_light_main).state, now_ms);
-                LightingDecision grow_dec = evaluate_lighting(
-                  light_in, grow_sp, gl_grow_state, id(grow_light_grow).state, now_ms);
+              LightingInputs light_in = {
+                .natural_lux = cur_lux,
+                .exterior_lux = exterior_lux,
+                .exterior_lux_fresh = exterior_lux_fresh,
+                .local_hour = time.hour,
+                .occupied = id(greenhouse_occupied)
+              };
+              LightingSetpoints main_sp = {
+                .target_light_minutes = (uint32_t)id(gl_main_target_light_minutes),
+                .lux_on_threshold = id(gl_main_lux_threshold),
+                .lux_hysteresis = id(gl_main_lux_hysteresis),
+                .start_hour = id(gl_main_sunrise_hour),
+                .cutoff_hour = id(gl_main_sunset_hour),
+                .min_on_ms = (uint32_t)id(gl_main_min_on_s) * 1000UL,
+                .min_off_ms = (uint32_t)id(gl_main_min_off_s) * 1000UL,
+                .auto_enabled = id(gl_main_auto_enabled)
+              };
+              LightingSetpoints grow_sp = {
+                .target_light_minutes = (uint32_t)id(gl_grow_target_light_minutes),
+                .lux_on_threshold = id(gl_grow_lux_threshold),
+                .lux_hysteresis = id(gl_grow_lux_hysteresis),
+                .start_hour = id(gl_grow_sunrise_hour),
+                .cutoff_hour = id(gl_grow_sunset_hour),
+                .min_on_ms = (uint32_t)id(gl_grow_min_on_s) * 1000UL,
+                .min_off_ms = (uint32_t)id(gl_grow_min_off_s) * 1000UL,
+                .auto_enabled = id(gl_grow_auto_enabled)
+              };
 
-                auto apply_light = [&](const char* label, esphome::switch_::Switch* sw, LightingDecision dec){
-                  if(dec.want_on && !sw->state){
-                    sw->turn_on();
-                    ESP_LOGI("grow_light","%s ON: %s | lux=%.0f | light=%.0f/%.0f min | h=%d",
-                             label, dec.reason, cur_lux, dec.qualified_light_minutes, dec.target_light_minutes, time.hour);
-                  } else if(!dec.want_on && sw->state){
-                    sw->turn_off();
-                    ESP_LOGI("grow_light","%s OFF: %s | lux=%.0f | light=%.0f/%.0f min | h=%d",
-                             label, dec.reason, cur_lux, dec.qualified_light_minutes, dec.target_light_minutes, time.hour);
-                  }
-                };
-                apply_light("main", id(grow_light_main), main_dec);
-                apply_light("grow", id(grow_light_grow), grow_dec);
+              LightingDecision main_dec = evaluate_lighting(
+                light_in, main_sp, gl_main_state, id(grow_light_main).state, now_ms, lighting_dt_s);
+              LightingDecision grow_dec = evaluate_lighting(
+                light_in, grow_sp, gl_grow_state, id(grow_light_grow).state, now_ms, lighting_dt_s);
 
+              auto apply_light = [&](const char* label, esphome::switch_::Switch* sw, LightingDecision dec){
+                if(dec.want_on && !sw->state){
+                  sw->turn_on();
+                  ESP_LOGI("grow_light","%s ON: %s | lux=%.0f | exterior=%.0f fresh=%d | light=%.0f/%.0f min | h=%d",
+                           label, dec.reason, cur_lux, exterior_lux, exterior_lux_fresh,
+                           dec.qualified_light_minutes, dec.target_light_minutes, time.hour);
+                } else if(!dec.want_on && sw->state){
+                  sw->turn_off();
+                  ESP_LOGI("grow_light","%s OFF: %s | lux=%.0f | exterior=%.0f fresh=%d | light=%.0f/%.0f min | h=%d",
+                           label, dec.reason, cur_lux, exterior_lux, exterior_lux_fresh,
+                           dec.qualified_light_minutes, dec.target_light_minutes, time.hour);
+                }
+              };
+              apply_light("main", id(grow_light_main), main_dec);
+              apply_light("grow", id(grow_light_grow), grow_dec);
+
+              const bool main_changed = main_dec.want_on != prev_main_want_on
+                || strcmp(prev_main_reason, main_dec.reason) != 0;
+              const bool grow_changed = grow_dec.want_on != prev_grow_want_on
+                || strcmp(prev_grow_reason, grow_dec.reason) != 0;
+              if(lighting_heartbeat_due || main_changed || grow_changed){
                 id(gl_main_state_text).publish_state(main_dec.want_on ? "ON" : "OFF");
                 id(gl_main_reason).publish_state(main_dec.reason);
                 id(gl_grow_state_text).publish_state(grow_dec.want_on ? "ON" : "OFF");
                 id(gl_grow_reason).publish_state(grow_dec.reason);
                 publish_lighting_epoch(id(gl_main_decision_epoch), time.timestamp);
                 publish_lighting_epoch(id(gl_grow_decision_epoch), time.timestamp);
-                }
+                id(gl_last_check_ms) = now_ms;
+              }
+              prev_main_want_on = main_dec.want_on;
+              prev_grow_want_on = grow_dec.want_on;
+              prev_main_reason = main_dec.reason;
+              prev_grow_reason = grow_dec.reason;
             }
           }
 

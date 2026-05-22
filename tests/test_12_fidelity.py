@@ -518,13 +518,18 @@ def test_lighting_policy_sql_excludes_esp32_readbacks_from_source_of_truth():
 def test_lighting_status_and_timeline_follow_firmware_hysteresis():
     """Graphs must show the same ON/OFF band behavior that firmware enforces."""
     status = Path("db/migrations/126-lighting-qualified-minutes.sql").read_text()
+    occupancy_status = Path("db/migrations/135-lighting-occupancy-task-demand.sql").read_text()
     timeline = Path("db/migrations/127-lighting-timeline-qualified-minutes.sql").read_text()
 
     assert "v_lighting_minutes_status_now" in status
     assert "qualified minute = exterior/natural lux" in status
-    assert "natural_qualified OR switch_on" in status
+    assert "me.natural_qualified OR me.switch_on" in occupancy_status
     assert "target_light_minutes" in status
-    assert "p.lux_off_threshold" in status
+    assert "plant_supplement_demand" in occupancy_status
+    assert "occupancy_lux_demand" in occupancy_status
+    assert "exterior_lux_fresh" in occupancy_status
+    assert "j.in_light_window" in occupancy_status
+    assert "j.occupancy_active" in occupancy_status
     assert "CREATE OR REPLACE FUNCTION fn_lighting_timeline" in timeline
     assert "fn_lighting_minutes_policy((SELECT now_ts FROM bounds), p_greenhouse_id)" in timeline
     assert "main_pre_minutes < r.row_main_target_light_minutes" in timeline
@@ -533,7 +538,7 @@ def test_lighting_status_and_timeline_follow_firmware_hysteresis():
     assert "grow_natural_qualified OR grow_on" in timeline
     assert "legacy DLI target columns remain compatibility-only" in timeline
     assert "dli_today <" not in timeline
-    assert "COALESCE(t.qualified_light_minutes, 0) < p.target_light_minutes" in status
+    assert "COALESCE(t.qualified_light_minutes, 0) < p.target_light_minutes" in occupancy_status
 
 
 def test_house_vpd_control_band_uses_zone_median_not_strictest_crop():

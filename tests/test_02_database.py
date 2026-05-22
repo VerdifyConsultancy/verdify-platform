@@ -332,19 +332,36 @@ class TestViewsCompute:
                    remaining_light_minutes,
                    actual_on IS NOT NULL AS has_actual,
                    expected_on IS NOT NULL AS has_expected,
-                   minutes_below_target IS NOT NULL AS has_minutes_gate
+                   minutes_below_target IS NOT NULL AS has_minutes_gate,
+                   occupancy_active IS NOT NULL AS has_occupancy,
+                   exterior_lux_fresh IS NOT NULL AS has_exterior_fresh,
+                   occupancy_lux_demand IS NOT NULL AS has_occupancy_demand,
+                   plant_supplement_demand IS NOT NULL AS has_plant_demand
             FROM v_lighting_minutes_status_now
             ORDER BY light_key
             """
         )
         assert len(rows) == 2
         for row in rows:
-            key, target, qualified, remaining, has_actual, has_expected, has_minutes_gate = row.split("|")
+            (
+                key,
+                target,
+                qualified,
+                remaining,
+                has_actual,
+                has_expected,
+                has_minutes_gate,
+                has_occupancy,
+                has_exterior_fresh,
+                has_occupancy_demand,
+                has_plant_demand,
+            ) = row.split("|")
             assert key in {"grow", "main"}
             assert 0 <= int(target) <= 1080
             assert int(qualified) >= 0
             assert int(remaining) >= 0
             assert (has_actual, has_expected, has_minutes_gate) == ("t", "t", "t")
+            assert (has_occupancy, has_exterior_fresh, has_occupancy_demand, has_plant_demand) == ("t", "t", "t", "t")
 
     def test_band_trace_latest_computes(self):
         rows = db_query_rows(

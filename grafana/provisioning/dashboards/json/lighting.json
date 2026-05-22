@@ -1526,7 +1526,7 @@
     {
       "id": 15,
       "type": "state-timeline",
-      "title": "Lighting Circuit State",
+      "title": "Lutron Circuit State",
       "datasource": {
         "uid": "verdify-tsdb",
         "type": "grafana-postgresql-datasource"
@@ -2172,7 +2172,7 @@
     {
       "id": 18,
       "type": "timeseries",
-      "title": "Daily Lighting Circuit Runtime",
+      "title": "Daily Lutron Circuit Runtime",
       "description": "Hours of grow light operation per day from daily_summary",
       "datasource": {
         "uid": "verdify-tsdb",
