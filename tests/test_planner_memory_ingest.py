@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import runpy
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -64,6 +65,46 @@ def test_build_memory_ingest_request_wraps_items() -> None:
     assert payload["batch_id"] == "batch-1"
     assert payload["items"][0]["source_id"] == "doc-001"
     assert payload["items"][0]["tags"] == ["reference"]
+
+
+def test_support_docs_example_loads() -> None:
+    items = planner_graph_shadow.load_support_doc_items(
+        REPO_ROOT / "docs" / "planner" / "support_docs.example.json",
+        greenhouse_id="vallery",
+    )
+
+    assert {item.memory_type for item in items} == {"support_doc"}
+    assert {item.source_id for item in items} >= {
+        "support-doc:venting-hot-dry-afternoon",
+        "support-doc:irrigation-feedback-finalizer-gate",
+    }
+
+
+def test_backfill_script_dry_run_summary_uses_stable_source_ids() -> None:
+    module = runpy.run_path(
+        str(REPO_ROOT / "scripts" / "backfill-planner-memory.py"),
+        run_name="_test_backfill_planner_memory",
+    )
+    item = planner_graph_shadow.PlannerMemoryItem(
+        memory_type="observed_outcome",
+        source_type="verdify_outcome",
+        source_id="plan-eval:iris-2026-05-22-001",
+        title="Observed outcome",
+        summary="Validated plan outcome.",
+        body="Body",
+        trust_level="observed_outcome",
+    )
+
+    summary = module["_dry_run_summary"](
+        mode="outcomes",
+        items=[item],
+        batch_size=10,
+        greenhouse_id="vallery",
+    )
+
+    assert summary["dry_run"] is True
+    assert summary["source_ids"] == ["plan-eval:iris-2026-05-22-001"]
+    assert summary["sample_payload"]["items"][0]["source_id"] == "plan-eval:iris-2026-05-22-001"
 
 
 class _FakeAcquire:

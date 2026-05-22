@@ -1100,4 +1100,16 @@ def send_to_iris(
         result["gateway_status"] = 0
         result["gateway_body"] = f"exception: {type(e).__name__}: {e}"[:2000]
 
+    try:
+        from planner_graph_shadow import maybe_start_planner_graph_shadow
+
+        maybe_start_planner_graph_shadow(
+            event_type=event_type,
+            event_label=label,
+            context=context,
+            delivery_result=result,
+        )
+    except Exception:
+        log.exception("planner_graph shadow hook failed for trigger_id=%s", trigger_id)
+
     return result

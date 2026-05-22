@@ -1,0 +1,30 @@
+[
+  {
+    "source_id": "support-doc:venting-hot-dry-afternoon",
+    "title": "Hot dry afternoon venting posture",
+    "summary": "Use outdoor heat, VPD, wind, and solar context before escalating ventilation and mist assist.",
+    "body": "When outdoor heat and solar load climb together, prefer staged ventilation with mist assist only when indoor VPD or temperature stress requires it. Keep relay authority with the ESP32 firmware and bounded setpoints; planner proposals should explain the expected stress reduction and watch for dew point margin.",
+    "event_type": "TRANSITION",
+    "tags": ["ventilation", "vpd", "heat", "operator-reference"],
+    "importance": 4,
+    "confidence": 0.85,
+    "payload": {
+      "greenhouse_id": "vallery",
+      "scope": "planner-memory-seed-example"
+    }
+  },
+  {
+    "source_id": "support-doc:irrigation-feedback-finalizer-gate",
+    "title": "Irrigation feedback finalizer gate",
+    "summary": "Do not finalize irrigation feedback until all required physical feedback rows are healthy.",
+    "body": "The irrigation finalizer remains blocked while south_soil_probe_1 is stuck_zero or center_root_zone_moisture, center_runoff_ph, and center_runoff_ec are missing. Planner memory may use this as durable context, but production control must keep treating these as physical validation gaps until v_irrigation_sensor_feedback_status reports ok for all required rows.",
+    "event_type": "MANUAL",
+    "tags": ["irrigation", "fertigation", "feedback", "safety"],
+    "importance": 5,
+    "confidence": 0.95,
+    "payload": {
+      "greenhouse_id": "vallery",
+      "gate": "v_irrigation_sensor_feedback_status"
+    }
+  }
+]
