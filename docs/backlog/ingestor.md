@@ -27,7 +27,7 @@ Deploy path remains `main → /mnt/iris/verdify → systemd restart`, followed b
 - [x] **I-L0.7 Proof freshness gates.** Public metrics include latest climate/plan ages so web can label stale proof instead of silently showing old values.
 - [x] **I-L1.8 Lesson duplicate support.** Implemented in the web generator as normalized lesson signatures; no ingestor DB change required for launch.
 - [x] **I-L1.11 Baseline vs Iris metrics.** Added `scripts/generate-baseline-vs-iris-page.py`, which queries `daily_summary`, `plan_journal`, and `v_planner_performance` for temp compliance, VPD compliance, stress hours/day, water/day, energy/day, cost/day, and planner score. Default baseline is the 2026-04-22..25 planner-offline window.
-- [ ] **I-L2.7 Daily lifecycle artifact data.** Export one representative lifecycle bundle: forecast rows, plan JSON/tunables, telemetry window, scorecard row, and lessons generated from the outcome.
+- [x] **I-L2.7 Daily lifecycle artifact data.** Added `scripts/export-daily-lifecycle-artifact.py`, which exports one public-safe representative lifecycle bundle under `/static/data/daily-lifecycle/`: forecast rows available at planning time, plan JSON, emitted tunables, 15-minute telemetry over the governed window, daily/window scorecards, and lessons generated from the outcome. The exporter omits trigger UUIDs, Hermes session keys, local IPs, alert routing, hostnames, and raw device identifiers.
 - [ ] **I-L2.8 Crop-steering roadmap data gaps.** Track missing substrate, pH/EC/DO, DLI correction, and shade-cloth automation signals as explicit data-readiness gaps rather than implied capabilities.
 
 **Planner trigger coverage + Hermes delivery** (2026-05-03 trace, superseded by 2026-05-11 Hermes cutover; coordinator-requested).

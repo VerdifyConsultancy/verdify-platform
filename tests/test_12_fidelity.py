@@ -225,6 +225,36 @@ def test_public_health_forecast_outcomes_ignore_evaluated_ok_noops():
     assert "action_taken <> 'evaluated_ok'" in block
 
 
+def test_daily_lifecycle_artifact_export_covers_public_safe_receipts():
+    script = Path("scripts/export-daily-lifecycle-artifact.py").read_text()
+
+    for table in (
+        "weather_forecast",
+        "plan_journal",
+        "setpoint_plan",
+        "climate",
+        "v_forecast_plan_outcome_mart",
+        "v_plan_window_scorecard",
+        "planner_lessons",
+    ):
+        assert table in script
+
+    for output in (
+        "manifest.json",
+        "plan.json",
+        "forecast.csv",
+        "tunables.csv",
+        "telemetry-15m.csv",
+        "scorecard.json",
+        "lessons.csv",
+    ):
+        assert output in script
+
+    assert "trigger_id" not in script
+    assert "session_key" not in script
+    assert "source_plan_ids" in script
+
+
 def test_daily_summary_live_total_water_floors_known_mister_subset():
     src = Path("ingestor/tasks.py").read_text()
     start = src.index("async def _refresh_daily_summary_for_date")
