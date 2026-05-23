@@ -97,6 +97,14 @@ class PublicPlannerHealthResponse(BaseModel):
     recent_expected_count: int = Field(..., ge=0)
     resolved_count: int = Field(..., ge=0)
     latest_required: list[dict] = Field(default_factory=list)
+    last_expected_trigger: PublicPlannerTrigger | None = None
+    last_delivered_trigger: PublicPlannerTrigger | None = None
+    last_resolved_trigger: PublicPlannerTrigger | None = None
+    pending_by_sla_age: dict[str, int] = Field(default_factory=dict)
+    current_session_key: str | None = None
+    current_model_label: str | None = None
+    current_hermes_run_id: str | None = None
+    active_plan_range_violation_count: int = Field(default=0, ge=0)
     recent_triggers: list[PublicPlannerTrigger] = Field(default_factory=list)
 
 

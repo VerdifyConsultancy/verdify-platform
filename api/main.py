@@ -25,6 +25,7 @@ from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
 from email.message import EmailMessage
 from email.utils import formataddr, make_msgid
+from pathlib import Path
 from typing import Annotated
 
 import asyncpg
@@ -52,9 +53,10 @@ def _round_half_up(value: float, precision: int) -> float:
 
 
 # verdify_schemas is mounted at /app/verdify_schemas inside the container
-# (see docker-compose.yml api.volumes). For host-side dev runs, /mnt/iris/verdify
-# contains the package; Python auto-discovers either path.
-for _p in ("/app", "/mnt/iris/verdify"):
+# (see docker-compose.yml api.volumes). Host-side dev runs should prefer the
+# current worktree before the deployed /mnt/iris/verdify checkout.
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+for _p in reversed(("/app", str(_REPO_ROOT), "/mnt/iris/verdify")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 from verdify_schemas import (  # noqa: E402
@@ -94,6 +96,7 @@ from verdify_schemas.tunable_registry import (  # noqa: E402
     CROP_BAND_REG,
     LEGACY_SHARED_LIGHTING_REG,
     SETPOINT_MAP_REG,
+    registry_value_error,
 )
 
 FIRMWARE_SETPOINT_PARAMS = frozenset(SETPOINT_MAP_REG.values())
@@ -257,6 +260,7 @@ async def noindex_api_responses(request: Request, call_next):
 # (API, MCP crops tool, vault-crop-writer, planner) shares the same shape.
 
 DEFAULT_GREENHOUSE = "vallery"
+PLANNER_MODEL_LABEL = os.environ.get("VERDIFY_PLANNER_MODEL_LABEL", "hermes-iris/openai:gpt-5.5/high")
 WRITE_API_KEY_ENV = "VERDIFY_WRITE_API_KEY"
 ALLOW_UNAUTHENTICATED_WRITES_ENV = "VERDIFY_ALLOW_UNAUTHENTICATED_WRITES"
 PUBLIC_HOME_METRICS_CACHE_TTL_S = 30.0
@@ -268,6 +272,7 @@ _PUBLIC_GPU_POWER_CACHE: dict[str, tuple[float, dict]] = {}
 CONTACT_ALLOWED_TOPICS = {"build", "control", "data", "press", "collaboration", "correction", "other"}
 CONTACT_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 CONTACT_URL_RE = re.compile(r"(https?://|www\.)", re.IGNORECASE)
+FORCED_ON_SWITCH_PARAMS = frozenset({"sw_fsm_controller_enabled"})
 CONTACT_NOTIFY_SUBJECT_PREFIX = "Verdify contact"
 PUBLIC_CAMERA_IDS = {"greenhouse_1", "greenhouse_2"}
 FRIGATE_BASE_URL_ENV = "VERDIFY_FRIGATE_PUBLIC_BASE_URL"
@@ -1691,21 +1696,146 @@ async def public_gpu_power(
     return payload
 
 
+def _public_planner_trigger(row) -> PublicPlannerTrigger | None:
+    if row is None:
+        return None
+    return PublicPlannerTrigger(
+        id=int(row["id"]),
+        event_type=row["event_type"],
+        event_label=row["event_label"],
+        instance=row["instance"],
+        expected_at=row["expected_at"],
+        due_at=row["due_at"],
+        delivered_at=row["delivered_at"],
+        resolved_at=row["resolved_at"],
+        status=row["status"],
+        expected_action=row["expected_action"],
+        trigger_id=str(row["trigger_id"]) if row["trigger_id"] else None,
+        resulting_plan_id=row["resulting_plan_id"],
+    )
+
+
+def _pending_sla_age_buckets(row) -> dict[str, int]:
+    if row is None:
+        return {
+            "within_sla": 0,
+            "overdue_lt_15m": 0,
+            "overdue_15m_1h": 0,
+            "overdue_gt_1h": 0,
+        }
+    return {
+        "within_sla": int(row["within_sla"] or 0),
+        "overdue_lt_15m": int(row["overdue_lt_15m"] or 0),
+        "overdue_15m_1h": int(row["overdue_15m_1h"] or 0),
+        "overdue_gt_1h": int(row["overdue_gt_1h"] or 0),
+    }
+
+
+def _active_plan_range_violation_count(rows) -> int:
+    violations = 0
+    for row in rows:
+        parameter = row["parameter"]
+        try:
+            value = float(row["value"])
+        except (TypeError, ValueError):
+            violations += 1
+            continue
+        error = registry_value_error(parameter, value)
+        if parameter in FORCED_ON_SWITCH_PARAMS and value < 0.5:
+            error = "controller_locked_on"
+        if error:
+            violations += 1
+    return violations
+
+
 @app.get("/api/v1/public/planner-health", response_model=PublicPlannerHealthResponse)
 async def public_planner_health():
     """Public-safe expected-trigger SLA surface for planner reliability."""
     async with pool.acquire() as conn:
         summary = await conn.fetchrow("SELECT * FROM v_planner_trigger_health")
-        trigger_rows = await conn.fetch(
-            """
+        trigger_projection = """
             SELECT id, event_type, event_label, instance, expected_at, due_at,
                    delivered_at, resolved_at, status, expected_action, trigger_id,
                    resulting_plan_id
               FROM planner_trigger_ledger
+        """
+        trigger_rows = await conn.fetch(
+            trigger_projection
+            + """
              WHERE expected_at >= now() - interval '36 hours'
              ORDER BY expected_at DESC
              LIMIT 40
             """
+        )
+        last_expected = await conn.fetchrow(
+            trigger_projection
+            + """
+             WHERE expected_at >= now() - interval '36 hours'
+             ORDER BY expected_at DESC
+             LIMIT 1
+            """
+        )
+        last_delivered = await conn.fetchrow(
+            trigger_projection
+            + """
+             WHERE expected_at >= now() - interval '36 hours'
+               AND delivered_at IS NOT NULL
+             ORDER BY delivered_at DESC
+             LIMIT 1
+            """
+        )
+        last_resolved = await conn.fetchrow(
+            trigger_projection
+            + """
+             WHERE expected_at >= now() - interval '36 hours'
+               AND resolved_at IS NOT NULL
+             ORDER BY resolved_at DESC
+             LIMIT 1
+            """
+        )
+        pending_by_sla_age = await conn.fetchrow(
+            """
+            SELECT
+              count(*) FILTER (WHERE due_at >= now())::int AS within_sla,
+              count(*) FILTER (
+                WHERE due_at < now()
+                  AND now() - due_at < interval '15 minutes'
+              )::int AS overdue_lt_15m,
+              count(*) FILTER (
+                WHERE due_at < now()
+                  AND now() - due_at >= interval '15 minutes'
+                  AND now() - due_at < interval '1 hour'
+              )::int AS overdue_15m_1h,
+              count(*) FILTER (
+                WHERE due_at < now()
+                  AND now() - due_at >= interval '1 hour'
+              )::int AS overdue_gt_1h
+              FROM planner_trigger_ledger
+             WHERE expected_at >= now() - interval '36 hours'
+               AND status IN ('expected', 'delivered')
+            """
+        )
+        current_delivery = await conn.fetchrow(
+            """
+            SELECT session_key, hermes_run_id
+              FROM plan_delivery_log
+             WHERE greenhouse_id = $1
+             ORDER BY delivered_at DESC
+             LIMIT 1
+            """,
+            DEFAULT_GREENHOUSE,
+        )
+        active_plan_candidates = await conn.fetch(
+            """
+            SELECT parameter, value
+              FROM setpoint_plan
+             WHERE greenhouse_id = $1
+               AND is_active = true
+               AND source IN ('iris', 'plan')
+             ORDER BY ts, parameter
+             LIMIT 10000
+            """,
+            DEFAULT_GREENHOUSE,
         )
 
     if summary is None:
@@ -1734,23 +1864,15 @@ async def public_planner_health():
         recent_expected_count=int(summary["recent_expected_count"] or 0),
         resolved_count=int(summary["resolved_count"] or 0),
         latest_required=latest_required,
-        recent_triggers=[
-            PublicPlannerTrigger(
-                id=int(r["id"]),
-                event_type=r["event_type"],
-                event_label=r["event_label"],
-                instance=r["instance"],
-                expected_at=r["expected_at"],
-                due_at=r["due_at"],
-                delivered_at=r["delivered_at"],
-                resolved_at=r["resolved_at"],
-                status=r["status"],
-                expected_action=r["expected_action"],
-                trigger_id=str(r["trigger_id"]) if r["trigger_id"] else None,
-                resulting_plan_id=r["resulting_plan_id"],
-            )
-            for r in trigger_rows
-        ],
+        last_expected_trigger=_public_planner_trigger(last_expected),
+        last_delivered_trigger=_public_planner_trigger(last_delivered),
+        last_resolved_trigger=_public_planner_trigger(last_resolved),
+        pending_by_sla_age=_pending_sla_age_buckets(pending_by_sla_age),
+        current_session_key=current_delivery["session_key"] if current_delivery else None,
+        current_model_label=PLANNER_MODEL_LABEL,
+        current_hermes_run_id=current_delivery["hermes_run_id"] if current_delivery else None,
+        active_plan_range_violation_count=_active_plan_range_violation_count(active_plan_candidates),
+        recent_triggers=[trigger for r in trigger_rows if (trigger := _public_planner_trigger(r)) is not None],
     )
 
 
