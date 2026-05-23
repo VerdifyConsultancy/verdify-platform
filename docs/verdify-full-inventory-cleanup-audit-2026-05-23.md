@@ -22,6 +22,7 @@ The cleanup problem is not the controller. It is repo/process sprawl:
 - `/mnt/iris/verdify/verdify-site` is a nested Quartz fork repo with significant uncommitted code/theme changes.
 - `/mnt/iris/planner` is clean but has one unpushed commit on `main`.
 - `verdify-plan-publish.service` is failed from a `generate-daily-plan.py` DB timeout.
+- Host `logrotate.service` is also failed; no journal details were visible to the audit user.
 - The platform GitHub repo has branch protection but no required checks, and GitHub Actions reports `0` workflow runs even though `.github/workflows/ci.yml` has `push` and `pull_request` triggers.
 - The root disk is tight: `/` is `88%` used, memory pressure is high, swap is effectively full, Docker has 113 dangling volumes and 57 dangling images, and old local archives consume multiple GB.
 - Runtime docs are stale: `docs/SYSTEM-ARCHITECTURE.md` says 7 containers and 2 systemd services; production currently has 14 containers, 13 running, plus multiple active systemd Verdify services and timers.
@@ -267,6 +268,10 @@ Recommended systemd cleanup:
 2. Decide whether `verdify-forecast.*` is retired; if retired, remove the installed units.
 3. Track or document systemd drop-ins.
 4. Update `docs/SYSTEM-ARCHITECTURE.md` and `docs/RUNBOOK.md` to match actual containers and units.
+
+Host failed-unit note:
+
+- `logrotate.service` is also failed from 2026-05-23 00:06 MDT. `systemctl status` shows exit status 1; `journalctl -u logrotate.service` returned no visible entries for the audit user. This is not Verdify-specific, but it matters because Traefik and service logs are already part of the storage-pressure picture.
 
 ## Ports And Public Routes
 
