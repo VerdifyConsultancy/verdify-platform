@@ -1,0 +1,41 @@
+project:
+  id: iris-verdify
+  canonical_owner: VerdifyConsultancy
+  repo_id: verdify-platform
+  repo_class: source
+  repo_status: active
+  visibility: public
+  control_plane_manifest: /Volumes/agents/agents.json
+
+canonical_repos:
+  platform: https://github.com/VerdifyConsultancy/verdify-platform
+  planner: https://github.com/VerdifyConsultancy/verdify-planner
+  agent_context: https://github.com/VerdifyConsultancy/verdify-agent-context
+  web: https://github.com/VerdifyConsultancy/verdify-www
+  vault: https://github.com/VerdifyConsultancy/verdify-vault
+
+source_scopes:
+  - verdify-dev
+  - verdify-firmware
+  - verdify-ingestor
+  - verdify-genai
+  - verdify-web
+  - verdify-saas
+  - verdify-consulting-dev
+
+tracking_policy:
+  summary: Public canonical Verdify platform source. Keep private agent context and operational notes out of this repo.
+  notes:
+    - Repo renamed from VerdifyConsultancy/verdify to VerdifyConsultancy/verdify-platform to match the project taxonomy.
+    - Private runbooks and agent memory belong in VerdifyConsultancy/verdify-agent-context.
+    - Treat credentials, internal topology, and personal operational data as excluded even when referenced by source code.
+
+excluded_by_default:
+  - ".env*"
+  - ".credentials/**"
+  - "secrets/**"
+  - "**/*secret*"
+  - "**/*token*"
+  - "**/*.pem"
+  - "**/*.key"
+  - "**/.DS_Store"
