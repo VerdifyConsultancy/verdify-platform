@@ -14,11 +14,11 @@ the same horizon. Crop-band rows are not part of this contract.
 
 - Crop bands: `temp_low`, `temp_high`, `vpd_low`, and `vpd_high` are
   dispatcher-owned from crop profiles. The planner must not write them.
-- Planner policy: tactical controls such as hysteresis, staging, mist timing,
-  fog thresholds, vent gates, dwell gates, and bias values are writable through
+- Planner policy: tactical controls such as hysteresis, cooling staging, mist timing,
+  fog thresholds, vent gates, and dwell gates are writable through
   MCP after registry validation.
-- Controller gate: `sw_fsm_controller_enabled` must be emitted as `1`; MCP,
-  dispatcher, outbound-listener, and ESPHome guardrails reject or correct OFF.
+- Controller gate: `sw_fsm_controller_enabled` is readback/context only; ESPHome
+  keeps the unified band-first path ON.
 - Reserved/no-op rows are context only and must stay out of plans until firmware
   consumes them.
 
@@ -36,8 +36,8 @@ the same horizon. Crop-band rows are not part of this contract.
   would let dry-air `VENTILATE` hold temperature while leaving VPD above band.
   Do not unwind this posture until observed VPD has stayed below the high band;
   forecasted solar decline alone is not recovery evidence.
-- `d_heat_stage_2` and `d_cool_stage_2` are bounded by registry and firmware
-  clamps at `2..15` degrees F.
+- `d_heat_stage_2` is retired from live band-first control. `d_cool_stage_2`
+  remains bounded by registry and firmware clamps at `2..15` degrees F.
 - `DEHUM_VENT` exits immediately if it overshoots dry-side VPD above
   `vpd_high`; do not use dwell gates to hold dehumidification through dry
   stress.

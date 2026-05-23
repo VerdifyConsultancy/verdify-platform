@@ -1199,6 +1199,76 @@ sensor:
       if (!id(cfg_first_pull_ok)) return NAN;
       return id(heat_hysteresis_f);
 
+  - platform: template
+    id: ctl_effective_heat_target_f
+    name: "Effective Heat Target (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      Setpoints sp = default_setpoints();
+      sp.temp_low = id(target_temp_low_f);
+      sp.temp_high = id(target_temp_high_f);
+      validate_setpoints(sp);
+      return band_heat_target_f(sp);
+
+  - platform: template
+    id: ctl_effective_cool_stage2_delta_f
+    name: "Effective Cool Stage 2 Delta (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      Setpoints sp = default_setpoints();
+      sp.temp_low = id(target_temp_low_f);
+      sp.temp_high = id(target_temp_high_f);
+      sp.dC2 = id(stage2_cool_delta_f);
+      sp.safety_max = id(safety_max_f);
+      validate_setpoints(sp);
+      return band_cool_stage2_delta_f(sp);
+
+  - platform: template
+    id: ctl_effective_vpd_hysteresis_kpa
+    name: "Effective VPD Hysteresis (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      Setpoints sp = default_setpoints();
+      sp.vpd_low = id(target_vpd_low_kpa);
+      sp.vpd_high = id(target_vpd_high_kpa);
+      sp.vpd_hysteresis = id(hyst_vpd_kpa);
+      validate_setpoints(sp);
+      return band_vpd_hysteresis(sp);
+
+  - platform: template
+    id: ctl_effective_dehum_aggressive_kpa
+    name: "Effective Dehum Aggressive (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      Setpoints sp = default_setpoints();
+      sp.vpd_low = id(target_vpd_low_kpa);
+      sp.vpd_high = id(target_vpd_high_kpa);
+      sp.dehum_aggressive_kpa = id(dehum_aggressive_kpa);
+      validate_setpoints(sp);
+      return effective_dehum_aggressive_kpa(sp);
+
   # ─── Feed‑forward biases (°F) ─────────────────────────────────────────-
   - platform: template
     id: cfg_bias_heat_f

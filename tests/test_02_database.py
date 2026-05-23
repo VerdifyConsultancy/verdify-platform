@@ -106,6 +106,13 @@ class TestSchemaIntegrity:
         for view in self.REQUIRED_VIEWS:
             assert view in all_views, f"View {view} missing"
 
+    def test_plan_tactical_outcome_excludes_retired_firmware_knobs(self):
+        rows = db_query_rows(
+            "SELECT DISTINCT parameter FROM v_plan_tactical_outcome_daily "
+            "WHERE parameter IN ('bias_heat','bias_cool','d_heat_stage_2','sw_fsm_controller_enabled')"
+        )
+        assert rows == []
+
     def test_functions_exist(self):
         rows = db_query_rows("SELECT routine_name FROM information_schema.routines WHERE routine_schema = 'public'")
         for fn in self.REQUIRED_FUNCTIONS:
@@ -457,7 +464,7 @@ class TestViewsCompute:
                 OR abs(vpd_width_kpa - greatest(0.2, firmware_vpd_high - firmware_vpd_low)) > 0.001
                 OR abs(temp_heat_target_f - CASE
                     WHEN sw_fsm_controller_enabled
-                        THEN (firmware_temp_low + firmware_temp_high) * 0.5
+                        THEN firmware_temp_low + temp_width_f * 0.25
                     ELSE firmware_temp_low + temp_width_f * 0.25 + bias_heat_f
                 END) > 0.001
                 OR abs(temp_heat_on_below_f - (temp_heat_target_f + heat_hysteresis_f)) > 0.001
@@ -556,6 +563,65 @@ class TestViewsCompute:
     def test_required_sensor_coverage_returns(self):
         rows = db_query_rows("SELECT * FROM v_required_sensor_coverage LIMIT 1")
         assert len(rows) >= 1, "v_required_sensor_coverage returned no rows"
+
+    def test_firmware_audit_views_compute(self):
+        expected_views = {
+            "v_fan_balance_7d",
+            "v_heat_in_band_7d",
+            "v_setpoint_effective_drift_7d",
+            "v_vent_mist_assist_7d",
+            "v_mister_fairness_7d",
+        }
+        rows = db_query_rows(
+            """
+            SELECT table_name
+              FROM information_schema.views
+             WHERE table_schema = 'public'
+               AND table_name IN (
+                   'v_fan_balance_7d',
+                   'v_heat_in_band_7d',
+                   'v_setpoint_effective_drift_7d',
+                   'v_vent_mist_assist_7d',
+                   'v_mister_fairness_7d'
+               )
+            """
+        )
+        assert set(rows) == expected_views
+
+        bad_rows = db_query(
+            """
+            WITH checks AS (
+                SELECT fan1_minutes < 0 OR fan2_minutes < 0 OR imbalance_minutes < 0 AS bad
+                  FROM v_fan_balance_7d
+                UNION ALL
+                SELECT COALESCE(heat1_minutes, 0) < 0
+                    OR COALESCE(heat2_minutes, 0) < 0
+                    OR COALESCE(heat_runtime_in_band_pct, 0) < 0
+                  FROM v_heat_in_band_7d
+                UNION ALL
+                SELECT avg_abs_delta < 0 OR max_abs_delta < 0
+                  FROM v_setpoint_effective_drift_7d
+                UNION ALL
+                SELECT assist_minutes < 0
+                    OR COALESCE(vent_open_minutes, 0) < 0
+                    OR COALESCE(fog_minutes, 0) < 0
+                    OR COALESCE(mister_minutes, 0) < 0
+                  FROM v_vent_mist_assist_7d
+                UNION ALL
+                SELECT runtime_minutes < 0 OR cycles < 0
+                  FROM v_mister_fairness_7d
+            )
+            SELECT count(*) FROM checks WHERE bad
+            """
+        )
+        assert int(bad_rows) == 0, "firmware audit view returned impossible negative rollups"
+
+        fan_rows = db_query("SELECT count(*) FROM v_fan_balance_7d WHERE greenhouse_id = 'vallery'")
+        heat_rows = db_query("SELECT count(*) FROM v_heat_in_band_7d WHERE greenhouse_id = 'vallery'")
+        mister_rows = db_query("SELECT count(*) FROM v_mister_fairness_7d WHERE greenhouse_id = 'vallery'")
+        assert int(fan_rows) >= 1
+        assert int(heat_rows) >= 1
+        assert int(mister_rows) >= 3
 
     def test_forecast_accuracy_lead_buckets_compute(self):
         rows = db_query_rows("SELECT * FROM v_forecast_accuracy_lead_buckets LIMIT 1")

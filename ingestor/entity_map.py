@@ -426,6 +426,10 @@ DIAGNOSTIC_MAP: dict[str, str] = {
     "vpd_watch_timer_s": "vpd_watch_timer_s",
     "mist_backoff_timer_s": "mist_backoff_timer_s",
     "vent_mist_assist_active": "vent_mist_assist_active",
+    "effective_heat_target___f_": "effective_heat_target_f",
+    "effective_cool_stage_2_delta___f_": "effective_cool_stage2_delta_f",
+    "effective_vpd_hysteresis__kpa_": "effective_vpd_hysteresis_kpa",
+    "effective_dehum_aggressive__kpa_": "effective_dehum_aggressive_kpa",
     "controller_time_epoch": "controller_time_epoch",  # TextSensorInfo exact epoch string
     "controller_local_hour": "controller_local_hour",
     "sntp_valid": "sntp_valid",

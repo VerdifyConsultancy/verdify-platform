@@ -411,6 +411,43 @@ class TestBandFirstControlDiagnostics:
             assert f'"{col}": "{col}"' in entity_map
             assert col in ingestor
 
+    def test_effective_control_diagnostics_are_persisted(self):
+        cols = db_query(
+            "SELECT string_agg(column_name, ',' ORDER BY column_name) "
+            "FROM information_schema.columns "
+            "WHERE table_name='diagnostics' AND column_name IN ("
+            "'effective_heat_target_f','effective_cool_stage2_delta_f',"
+            "'effective_vpd_hysteresis_kpa','effective_dehum_aggressive_kpa')"
+        )
+        assert (
+            cols == "effective_cool_stage2_delta_f,effective_dehum_aggressive_kpa,"
+            "effective_heat_target_f,effective_vpd_hysteresis_kpa"
+        )
+
+    def test_effective_control_diagnostic_sensor_routes(self):
+        body = (REPO_ROOT / "firmware/greenhouse/sensors.yaml").read_text()
+        entity_map = _repo_entity_map()
+        ingestor = (REPO_ROOT / "ingestor/ingestor.py").read_text()
+        expected = {
+            "ctl_effective_heat_target_f": ("effective_heat_target___f_", "effective_heat_target_f"),
+            "ctl_effective_cool_stage2_delta_f": (
+                "effective_cool_stage_2_delta___f_",
+                "effective_cool_stage2_delta_f",
+            ),
+            "ctl_effective_vpd_hysteresis_kpa": (
+                "effective_vpd_hysteresis__kpa_",
+                "effective_vpd_hysteresis_kpa",
+            ),
+            "ctl_effective_dehum_aggressive_kpa": (
+                "effective_dehum_aggressive__kpa_",
+                "effective_dehum_aggressive_kpa",
+            ),
+        }
+        for sensor_id, (object_id, column) in expected.items():
+            assert f"id: {sensor_id}" in body
+            assert entity_map.DIAGNOSTIC_MAP[object_id] == column
+            assert column in ingestor
+
 
 class TestContractDriftGuardrails:
     """Static checks for firmware/planner contracts that have drifted before."""
@@ -1050,7 +1087,7 @@ class TestPlannerToDispatcherE2E:
     TEST_VALUE = 0.73  # Arbitrary in-registry value, unlikely to match the live planner value
     TEST_PLAN_ID = "te2-smoke-test"
     DRIFT_PARAM = "mister_water_budget_gal"
-    DRIFT_VALUE = 321.0
+    DRIFT_VALUE = 250.0
     DRIFT_READBACK = 123.0
     DRIFT_PLAN_ID = "te2-readback-drift-test"
 

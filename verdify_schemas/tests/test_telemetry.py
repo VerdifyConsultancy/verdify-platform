@@ -80,6 +80,10 @@ class TestDiagnostics:
             vpd_watch_timer_s=60,
             mist_backoff_timer_s=0,
             vent_mist_assist_active=0,
+            effective_heat_target_f=68.1,
+            effective_cool_stage2_delta_f=3.0,
+            effective_vpd_hysteresis_kpa=0.3,
+            effective_dehum_aggressive_kpa=0.5,
         )
         assert d.active_probe_count == 4
 
@@ -102,6 +106,10 @@ class TestDiagnostics:
     def test_rejects_vent_mist_assist_above_one(self):
         with pytest.raises(ValidationError):
             Diagnostics(ts=NOW, vent_mist_assist_active=2)
+
+    def test_rejects_negative_effective_control_value(self):
+        with pytest.raises(ValidationError):
+            Diagnostics(ts=NOW, effective_heat_target_f=-1.0)
 
 
 class TestEquipmentStateEvent:

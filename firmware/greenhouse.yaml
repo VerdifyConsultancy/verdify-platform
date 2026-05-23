@@ -100,7 +100,7 @@ esphome:
           if(id(vpd_watch_dwell_s) < 15 || id(vpd_watch_dwell_s) > 120){ id(vpd_watch_dwell_s) = 60; fixes++; }
           if(id(mist_max_closed_vent_s) < 60){ id(mist_max_closed_vent_s) = 600; fixes++; }
           if(id(mist_thermal_relief_s) < 15){ id(mist_thermal_relief_s) = 90; fixes++; }
-          if(id(fog_escalation_kpa) < 0.1 || id(fog_escalation_kpa) > 1.0){ id(fog_escalation_kpa) = 0.4; fixes++; }
+          if(id(fog_escalation_kpa) < 0.1 || id(fog_escalation_kpa) > 0.5){ id(fog_escalation_kpa) = 0.4; fixes++; }
           if(id(mister_pulse_on_s) < 15){ id(mister_pulse_on_s) = 60; fixes++; }
           if(id(mister_pulse_gap_s) < 5){ id(mister_pulse_gap_s) = 45; fixes++; }
           if(id(mister_engage_kpa) < 0.5 || id(mister_engage_kpa) > 2.5){ id(mister_engage_kpa) = 1.6; fixes++; }
@@ -111,14 +111,14 @@ esphome:
           // Additional VPD-primary globals
           if(id(hyst_vpd_kpa) < 0.1 || id(hyst_vpd_kpa) > 0.5){ id(hyst_vpd_kpa) = 0.3; fixes++; }
           if(id(mister_all_kpa) < 1.0 || id(mister_all_kpa) > 2.5){ id(mister_all_kpa) = 1.9; fixes++; }
-          if(id(mister_vpd_weight) < 0.5 || id(mister_vpd_weight) > 5){ id(mister_vpd_weight) = 1.5; fixes++; }
+          if(id(mister_vpd_weight) < 0.5 || id(mister_vpd_weight) > 3){ id(mister_vpd_weight) = 1.5; fixes++; }
           if(id(mist_vent_close_lead_s) < 0 || id(mist_vent_close_lead_s) > 60){ id(mist_vent_close_lead_s) = 15; fixes++; }
           if(id(mist_vent_reopen_delay_s) < 0 || id(mist_vent_reopen_delay_s) > 120){ id(mist_vent_reopen_delay_s) = 45; fixes++; }
           if(id(enthalpy_open_kjkg) < -5 || id(enthalpy_open_kjkg) > 0){ id(enthalpy_open_kjkg) = -2; fixes++; }
           if(id(enthalpy_close_kjkg) < -5 || id(enthalpy_close_kjkg) > 20){ id(enthalpy_close_kjkg) = 1; fixes++; }
           if(id(stage2_heat_delta_f) < 2 || id(stage2_heat_delta_f) > 15){ id(stage2_heat_delta_f) = 5; fixes++; }
           if(id(stage2_cool_delta_f) < 2 || id(stage2_cool_delta_f) > 15){ id(stage2_cool_delta_f) = 3; fixes++; }
-          if(id(mister_water_budget_gal) < 100 || id(mister_water_budget_gal) > 600){ id(mister_water_budget_gal) = 500; fixes++; }
+          if(id(mister_water_budget_gal) < 100 || id(mister_water_budget_gal) > 300){ id(mister_water_budget_gal) = 300; fixes++; }
           if(id(bias_heat_f) < -10 || id(bias_heat_f) > 10){ id(bias_heat_f) = 0; fixes++; }
           if(id(bias_cool_f) < -10 || id(bias_cool_f) > 10){ id(bias_cool_f) = 0; fixes++; }
           // State machine corruption protection

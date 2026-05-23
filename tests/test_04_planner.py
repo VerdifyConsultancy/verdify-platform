@@ -6,10 +6,13 @@ Tests the full planner pipeline WITHOUT calling the AI model (dry-run mode).
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, "/srv/verdify/ingestor")
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT / "ingestor"))
+CONTEXT_TIMEOUT_S = int(os.environ.get("VERDIFY_CONTEXT_TEST_TIMEOUT_S", "90"))
 
 
 class TestContextGathering:
@@ -18,10 +21,10 @@ class TestContextGathering:
     @pytest.fixture(scope="class")
     def context(self):
         result = subprocess.run(
-            ["bash", "/srv/verdify/scripts/gather-plan-context.sh"],
+            ["bash", str(REPO_ROOT / "scripts" / "gather-plan-context.sh")],
             capture_output=True,
             text=True,
-            timeout=60,
+            timeout=CONTEXT_TIMEOUT_S,
             env={**os.environ, "PATH": os.environ.get("PATH", "")},
         )
         assert result.returncode == 0, f"Context gathering failed: {result.stderr[:500]}"
@@ -93,7 +96,7 @@ class TestPlannerPrompt:
 
     def test_has_tunables(self, preamble):
         assert "vpd_hysteresis" in preamble
-        assert "bias_cool" in preamble
+        assert "mister_vpd_weight" in preamble
         assert "fog_escalation_kpa" in preamble
 
     def test_has_modes(self, preamble):

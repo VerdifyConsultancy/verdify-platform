@@ -50,6 +50,7 @@ from verdify_schemas.tunable_registry import (
     CROP_BAND_REG,
     LEGACY_SHARED_LIGHTING_REG,
     LIGHTING_CIRCUIT_DEFAULT_REG,
+    PLANNER_PUSHABLE_REG,
     REGISTRY,
     registry_value_error,
 )
@@ -3363,6 +3364,17 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
 
         planner_params: dict[str, float] = {}
         for param, raw_val in raw_planner_params.items():
+            if param not in PLANNER_PUSHABLE_REG:
+                add_clamp_audit(
+                    param,
+                    float(raw_val),
+                    float(raw_val),
+                    0.0,
+                    0.0,
+                    "planner_param_not_pushable",
+                )
+                log.warning("Dispatcher: ignoring non-planner-pushable active plan param %s", param)
+                continue
             clean_val, violation = _validate_physics(param, float(raw_val))
             if violation is not None:
                 add_clamp_audit(param, float(raw_val), clean_val, 0.0, 0.0, violation)
@@ -3502,7 +3514,8 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                     continue
                 changes.append((param, val))
 
-        # Safety limits: always dispatched, planner can override within range
+        # Safety limits: always dispatched from firmware/operator defaults.
+        # Planner safety-rail rows are filtered above by PLANNER_PUSHABLE_REG.
         safety_defaults = {
             "safety_max": 100.0,
             "safety_min": 40.0,
@@ -3520,8 +3533,8 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         if band_row and control_band:
             vpd_hi = float(control_band["vpd_high"])
             mister_defaults = {
-                "mister_engage_kpa": round(vpd_hi, 2),
-                "mister_all_kpa": round(vpd_hi + 0.3, 2),
+                "mister_engage_kpa": round(vpd_hi + 0.05, 2),
+                "mister_all_kpa": round(vpd_hi + 0.25, 2),
                 "mister_engage_delay_s": 30,
                 "mister_all_delay_s": 60,
                 "mister_center_penalty": 0.5,

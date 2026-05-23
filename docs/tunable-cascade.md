@@ -17,23 +17,26 @@ registry against firmware, schemas, entity_map, cfg readbacks, and MCP.
 
 ## Known open issues
 
-### Resolved 2026-04-28 — band-first heating edge-targeting bug
+### Resolved 2026-05-23 — band-first heating target and resource audit
 
-Pre-fix, heating demand used the lower edge/interior-lower edge of the band
-instead of the band midpoint:
+The original band-first fix corrected a live edge-targeting bug where heating
+demand used the lower edge/interior-lower edge of the band instead of an
+interior target:
 ```c
 bool needs_heating_s1 = in.temp_f < (Tlow + sp.heat_hysteresis);
 ```
 and gas-stage latch used `Tlow - d_heat_stage_2`.
 
-This let the band-first controller sit below `temp_low` until the `d_heat_stage_2` margin was
-exceeded. With the 2026-04-28 live morning band (`temp_low=65.5`,
-`temp_high=72.7`, `d_heat_stage_2=5`), heat2 waited until roughly `62F`,
-which directly explained poor lower-band compliance.
+That let the band-first controller sit below `temp_low` until the legacy
+`d_heat_stage_2` margin was exceeded. With the 2026-04-28 live morning band
+(`temp_low=65.5`, `temp_high=72.7`, `d_heat_stage_2=5`), heat2 waited until
+roughly `62F`, which directly explained poor lower-band compliance.
 
-Fix: the band-first controller now targets `(temp_low + temp_high) / 2` for heat1 and
-latches heat2 immediately when `temp_f < temp_low`; heat2 clears once the
-midpoint is recovered. The older cascade remains only as rollback/test code;
+Current fix: the unified band-first controller targets the crop-band lower
+quartile for heat1:
+`temp_low + max(2°F, temp_high - temp_low) * 0.25`. Heat2 still latches
+immediately when `temp_f < temp_low`, and heat2 clears once the lower-quartile
+heat target is recovered. The older cascade remains only as rollback/test code;
 production ESPHome control-loop and dispatcher guardrails force the unified
 band-first controller ON.
 
@@ -100,16 +103,16 @@ Number/switch entity → firmware global or `Setpoints` field → cfg readback p
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | `temp_low` | num | `PlanTransition.params`, `SetpointChange` | `setpoint_plan`, `setpoint_changes` | `target_temp_low_f` | `Setpoints.temp_low` | `greenhouse_logic.h:439` Tlow calc; band-compliance; mode transitions | `cfg_temp_low_f` | 58°F | [30, 80] | crop (band) + planner (override, clamped to band) | immediate (5 min) |
 | `temp_high` | num | `PlanTransition.params`, `SetpointChange` | `setpoint_plan`, `setpoint_changes` | `target_temp_high_f` | `Setpoints.temp_high` | `greenhouse_logic.h:119` VENTILATE trigger; band-compliance | `cfg_temp_high_f` | 82°F | [40, 100] | crop (band) + planner (override, clamped) | immediate |
-| `d_heat_stage_2` | num | `PlanTransition.params`, `SetpointChange` | `setpoint_changes` | `target_d_heat_stage_2_f` | `Setpoints.d_heat_stage_2` | Legacy cascade S2 latch threshold (`Tlow - d_heat_stage_2`); the band-first controller latches heat2 at raw `temp_low` | `cfg_d_heat_stage_2_f` | 2.0°F | [0, 5] | operator / fw-default | immediate |
-| `d_cool_stage_2` | num | `PlanTransition.params`, `SetpointChange` | `setpoint_changes` | `target_d_cool_stage_2_f` | `Setpoints.d_cool_stage_2` | `greenhouse_logic.h:494` 2nd-fan threshold (fan2 engages at `Thigh + d_cool_stage_2`) | ⚠️ **NONE** (readback gap) | 2.0°F | [0, 5] | operator / fw-default | immediate but unverified |
+| `d_heat_stage_2` | num | `SetpointChange`; MCP rejects planner writes | `setpoint_changes` | `target_d_heat_stage_2_f` | `Setpoints.d_heat_stage_2` | Retired from live band-first control. Legacy cascade S2 latch threshold (`Tlow - d_heat_stage_2`) only; unified controller latches heat2 at raw `temp_low` | `cfg_d_heat_stage_2_f` | 5.0°F | [2, 15] | operator / legacy fallback | immediate |
+| `d_cool_stage_2` | num | `PlanTransition.params`, `SetpointChange` | `setpoint_changes` | `target_d_cool_stage_2_f` | `Setpoints.d_cool_stage_2` | 2nd-fan threshold uses `min(d_cool_stage_2, max(1°F, 25% band width))`; cold-outdoor vent entry uses the same derived margin | `cfg_d_cool_stage_2_f`; `ctl_effective_cool_stage2_delta_f` | 3.0°F | [2, 15] | planner | immediate |
 | `temp_hysteresis` | num | `PlanTransition.params`, `SetpointChange` | `setpoint_changes` | `target_hyst_temp_f` | `Setpoints.temp_hysteresis` | `greenhouse_logic.h:120,136,262` mode transition hysteresis (prevents churn near boundary) | `cfg_hyst_temp_f` | 1.5°F | [0.5, 3.0] | operator / fw-default | immediate |
 
-## Bias / offsets (2 tunables, edge-targeting-bug-related) — FULLY SPEC'D
+## Bias / offsets (2 retired legacy tunables) — FULLY SPEC'D
 
 | Param | Type | Pydantic | DB | Dispatcher route | FW struct | FW use | cfg_* readback | Default | Valid range | Owner | Cascade |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `bias_heat` | num | `PlanTransition.params`, `SetpointChange` | `setpoint_changes` | `target_bias_heat_f` | `Setpoints.bias_heat` | Legacy cascade heating offset; the band-first controller derives heat1 target from the raw temp-band midpoint and heat2 entry from raw `temp_low` | `cfg_bias_heat_f` | 0°F | [0, 10] | operator (sets once) | immediate |
-| `bias_cool` | num | `PlanTransition.params`, `SetpointChange` | `setpoint_changes` | `target_bias_cool_f` | `Setpoints.bias_cool` | `greenhouse_logic.h` subtracts from `temp_high` for internal Thigh (symmetric counterpart to bias_heat) | `cfg_bias_cool_f` | 0°F | [0, 10] | operator | immediate |
+| `bias_heat` | num | `SetpointChange`; MCP rejects planner writes | `setpoint_changes` | `target_bias_heat_f` | `Setpoints.bias_heat` | Retired from live band-first control. Unified heating uses the lower-quartile crop-band target; bias remains for legacy fallback/readback only | `cfg_bias_heat_f` | 0°F | [-10, 10] | operator / legacy fallback | immediate, no live control impact |
+| `bias_cool` | num | `SetpointChange`; MCP rejects planner writes | `setpoint_changes` | `target_bias_cool_f` | `Setpoints.bias_cool` | Retired from live band-first control. Unified cooling enters at the raw crop-band high edge except cold-outdoor vent margin; bias remains for legacy fallback/readback only | `cfg_bias_cool_f` | 0°F | [-10, 10] | operator / legacy fallback | immediate, no live control impact |
 
 ## VPD band (3 tunables) — FULLY SPEC'D
 
@@ -149,12 +152,12 @@ margin, these thresholds must stay coupled to the active house band. The
 dispatcher caps conservative planner values near
 `mister_engage_kpa <= vpd_high + 0.05` and
 `mister_all_kpa <= max(1.0, vpd_high + 0.25)`, plus shorter mist delays/gaps and
-`fog_escalation_kpa <= 0.30`. This preserves the end-to-end contract: crop
+`fog_escalation_kpa <= 0.20` or `0.15` in hot/dry venting. This preserves the end-to-end contract: crop
 profiles set the band, dispatcher derives the house band, planner tunes
 intensity, and firmware executes `VENTILATE` plus moisture assist without letting
 dry outside air hold temperature at the cost of VPD compliance.
-| `mister_engage_delay_s` | num | `PlanTransition.params`, `SetpointChange` | `setpoint_changes` | `target_mister_engage_delay_s` | ESPHome global `mister_engage_delay_s` | S1 dwell before first mister pulse | `cfg_mister_engage_delay_s` | 30s | [30, 900] | planner | immediate |
-| `mister_all_delay_s` | num | `PlanTransition.params`, `SetpointChange` | `setpoint_changes` | `target_mister_all_delay_s` | `Setpoints.mist_s2_delay_ms` + ESPHome global | S2/all-zone dwell before escalation | `cfg_mister_all_delay_s` | 60s | [60, 900] | planner | immediate |
+| `mister_engage_delay_s` | num | `PlanTransition.params`, `SetpointChange` | `setpoint_changes` | `target_mister_engage_delay_s` | ESPHome global `mister_engage_delay_s` | S1 dwell before first mister pulse | `cfg_mister_engage_delay_s` | 45s | [30, 300] | planner | immediate |
+| `mister_all_delay_s` | num | `PlanTransition.params`, `SetpointChange` | `setpoint_changes` | `target_mister_all_delay_s` | `Setpoints.mist_s2_delay_ms` + ESPHome global | S2/all-zone dwell before escalation | `cfg_mister_all_delay_s` | 300s | [60, 600] | planner | immediate |
 | `mister_pulse_on_s` | num | `PlanTransition.params`, `SetpointChange` | `setpoint_changes` | `target_mister_pulse_on_s` | ESPHome global `mister_pulse_on_s` | per-zone pulse duration | `cfg_mister_pulse_on_s` | 45s | [10, 120] | planner | immediate |
 | `mister_pulse_gap_s` | num | `PlanTransition.params`, `SetpointChange` | `setpoint_changes` | `target_mister_pulse_gap_s` | ESPHome global `mister_pulse_gap_s` | gap between mister pulses | `cfg_mister_pulse_gap_s` | 60s | [10, 300] | planner | immediate |
 

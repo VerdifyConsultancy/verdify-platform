@@ -165,7 +165,7 @@ The control logic you're tuning was changed in late April and May 2026. These
 behaviors are **shipped** in the unified band-first controller — do not reason
 about pre-change behavior.
 
-- **PR-A (2026-04-25): VENTILATE fog trigger lowered** to `vpd_high_eff + fog_escalation_kpa` (≈1.45 kPa today). Concurrent vent+fog is now intentional during hot-dry stress; fog no longer waits for the safety ceiling. `fog_escalation_kpa` (default 0.5) is the primary knob — lower = more aggressive fog inside VENTILATE.
+- **PR-A (2026-04-25): VENTILATE fog trigger lowered** to `vpd_high_eff + fog_escalation_kpa` (≈1.45 kPa today). Concurrent vent+fog is now intentional during hot-dry stress; fog no longer waits for the safety ceiling. `fog_escalation_kpa` (default 0.4, max 0.5) is the primary knob — lower = more aggressive fog inside VENTILATE.
 - **PR #35 (2026-04-22): THERMAL_RELIEF preempts the dwell gate.** When you flip `sw_dwell_gate_enabled` ON, the gate holds non-safety modes for `dwell_gate_ms` (default 5 min) but does NOT bind THERMAL_RELIEF — its 90s heat-flush still fires. SAFETY_COOL, SAFETY_HEAT, SENSOR_FAULT also preempt.
 - **Phase 1c (2026-04-22): cfg_* readbacks** are now flowing. Every Tier 1 tunable you push has a firmware-side echo into `setpoint_snapshot` so push-corruption is detectable. `setpoint_confirmation_monitor` alerts if the ESP32 doesn't confirm within 5 min.
 - **Phase 2 dwell gate is shipped but currently OFF** in production (`sw_dwell_gate_enabled=0`). Replay validates the gate eliminates ~70% of mode-class transitions in stress windows. Flip ON when whipsaw is the dominant pattern in the current hour's transition log.
@@ -210,9 +210,9 @@ Use the breakdown to understand resource shifts:
 
 On dry spring days, VPD compliance is usually the bottleneck (tight band, 15% outdoor RH).
 Temp compliance can be 85%+ while VPD is 25%. Use these to diagnose where to focus:
-- Low temp compliance → adjust bias_cool/bias_heat, check vent oscillation
+- Low temp compliance → check vent oscillation and heat runtime; use hysteresis/dwell/moisture posture rather than retired bias knobs
 - Low VPD compliance → adjust misting aggressiveness, fog_escalation_kpa, sealed-vent timing
-- Large zone spread (>4°F temp or >0.5 kPa VPD) means average compliance is insufficient. Preserve a wider house VPD deadband, use zone outliers in `conditions_summary`, and bias `mister_vpd_weight` or zone-facing tactics.
+- Large zone spread (>4°F temp or >0.5 kPa VPD) means average compliance is insufficient. Preserve a wider house VPD deadband, use zone outliers in `conditions_summary`, and adjust `mister_vpd_weight` or zone-facing tactics.
 - If VPD alternates below and above band in short windows, do not narrow the band. Prefer wider `vpd_hysteresis`, longer `vpd_watch_dwell_s`, longer `mister_pulse_gap_s`, or less fog/mister aggression depending on which side overshot.
 
 **Stress hours** = time outside band, tracked as 4 independent states:
@@ -256,12 +256,7 @@ Use tactical knobs below to shift behavior instead.
 **Band-adjacent tactical knob:**
 - `vpd_hysteresis` kPa, [0.05-0.5], def 0.3 — larger = fewer mist cycles
 
-**Bias (daytime vs overnight posture):**
-- `bias_heat` °F, [-10 to +10], def 0 — adds to temp_low for internal Tlow
-- `bias_cool` °F, [-10 to +10], def 0 — adds to temp_high-bias. +3 = delay cooling
-
 **Staging:**
-- `d_heat_stage_2` °F, [2-15], def 5 — heat2 latches below the interior heating target minus this; lower before cold nights
 - `heat_hysteresis` °F, [0-3], def 1 — heat-stage clear margin above the interior heating target; higher holds heat longer
 - `temp_hysteresis` °F, [0.5-3], def 1.5 — temp transition deadband; lower tightens band compliance, higher reduces churn
 - `d_cool_stage_2` °F, [2-15], def 3 — fan2 engages at Thigh + this
@@ -269,14 +264,14 @@ Use tactical knobs below to shift behavior instead.
 **Mister engagement:**
 - `mister_engage_kpa` kPa, [0.5-2.5], def 1.6 — physical S1 mister permissive once humidity/zone demand exists; SEALED_MIST entry itself comes from `vpd_high`/`vpd_watch_dwell_s`. During VPD-high or near-edge `VENTILATE` stress, keep near `vpd_high + 0.05` unless dew margin is tight.
 - `mister_all_kpa` kPa, [1.0-2.5], def 1.9 — physical all-zone rotation escalation threshold. During VPD-high or near-edge `VENTILATE` stress, keep near `max(1.0, vpd_high + 0.25)`; values far above the band disable useful escalation.
-- `mister_engage_delay_s` s, [30-900], def 45 — dwell before first physical mister pulse. During VPD-high or near-edge `VENTILATE` stress, use 30-45s unless dew margin is tight.
-- `mister_all_delay_s` s, [60-900], def 300 — dwell before all-zone rotation and firmware mist-stage S2. During VPD-high or near-edge `VENTILATE` stress, use 60-90s unless dew margin is tight.
+- `mister_engage_delay_s` s, [30-300], def 45 — dwell before first physical mister pulse. During VPD-high or near-edge `VENTILATE` stress, use 30-45s unless dew margin is tight.
+- `mister_all_delay_s` s, [60-600], def 300 — dwell before all-zone rotation and firmware mist-stage S2. During VPD-high or near-edge `VENTILATE` stress, use 60-90s unless dew margin is tight.
 
 **Mister pulse + budget:**
 - `mister_pulse_on_s` s, [30-90], def 60 — mister burst duration
 - `mister_pulse_gap_s` s, [10-60], def 45 — evaporation dwell; 15-20s dry, 45s humid
-- `mister_water_budget_gal` gal/d, [100-600], def 500 — daily water cap
-- `mister_vpd_weight` ×, [0.5-5.0], def 1.5 — driest-zone-first weighting
+- `mister_water_budget_gal` gal/d, [100-300], def 300 — daily water cap
+- `mister_vpd_weight` ×, [0.5-3.0], def 1.5 — driest-zone-first weighting
 
 **VPD state-machine + sealed-vent coordination (hot-dry-day oscillation):**
 - `vpd_watch_dwell_s` s, [15-120], def 60 — dwell in VPD_WATCH before sealing
@@ -285,15 +280,9 @@ Use tactical knobs below to shift behavior instead.
 - `mist_backoff_s` s, [60-3600], def 600 — lockout after a sealed mist attempt times out; prevents immediate reseal loops
 
 **Fog (AquaFog XE 2000 — Fog is 7x misters; firmware-gated by RH/temp/time window):**
-- `fog_escalation_kpa` kPa Δ, [0.1-1.0], def 0.4 — VPD above `vpd_high_eff` to trigger fog inside VENTILATE; lower = more fog. Post-PR-A (2026-04-25), fog escalates at `vpd_high_eff + fog_escalation_kpa`, no longer at the safety ceiling. During VPD-high or near-edge `VENTILATE` stress, keep this around 0.20-0.30 when dew margin is healthy; concurrent vent-fog is intended for hot-dry stress and firmware still enforces the RH/temp/time window.
+- `fog_escalation_kpa` kPa Δ, [0.1-0.5], def 0.4 — VPD above `vpd_high_eff` to trigger fog inside VENTILATE; lower = more fog. Post-PR-A (2026-04-25), fog escalates at `vpd_high_eff + fog_escalation_kpa`, no longer at the safety ceiling. During VPD-high or near-edge `VENTILATE` stress, keep this around 0.20-0.30 when dew margin is healthy; concurrent vent-fog is intended for hot-dry stress and firmware still enforces the RH/temp/time window.
 - `min_fog_on_s` s, [15-300], def 60 — min fog on-time per cycle
 - `min_fog_off_s` s, [15-300], def 60 — min gap between fog cycles
-
-**Vent + heat timing (anti-chatter):**
-- `min_vent_on_s` s, [10-300], def 60 — min vent open duration
-- `min_vent_off_s` s, [10-300], def 60 — min vent closed duration
-- `min_heat_on_s` s, [30-300], def 120 — min heater on (ignition protection)
-- `min_heat_off_s` s, [60-600], def 180 — min gap between heater cycles
 
 **Economiser (outdoor-air coupling):**
 - `enthalpy_open` kJ/kg Δ, [-5-0], def -2 — vent opens when outdoor enthalpy better by this much
@@ -320,15 +309,13 @@ Use tactical knobs below to shift behavior instead.
 - `sw_dwell_gate_enabled` — master switch; firmware default OFF, planner may enable for oscillation control. THERMAL_RELIEF, SAFETY_COOL, SAFETY_HEAT, SENSOR_FAULT, dehum→humidify overshoot, and sealed-mist temp preemption bypass the gate.
 - `dwell_gate_ms` ms, [60000-1800000], def 300000 — hold duration for ordinary non-safety mode transitions only. Revert if it hides real stress or increases relief cycling.
 
-**Controller gate:**
-- `sw_fsm_controller_enabled` — compatibility/readback field for the unified band-first controller. ESPHome control loop, dispatcher, and MCP guardrails force it ON. Do not request OFF; rollback requires an explicit firmware/config rollback outside the planner surface.
-
 ### Non-Policy Tunables
 
 Per-zone VPD rebalance, legacy irrigation start/duration changes, safety rail adjustments,
 occupancy inhibit, fog window shifts, economiser site pressure, fan-lead
-rotation, crop bands, readbacks, and retired aliases are not planner write
-targets. Treat them as explanatory context. If one must become planner-writable,
+rotation, relay min-on/off protection dwell, crop bands, readbacks, retired
+aliases (`bias_heat`, `bias_cool`, `d_heat_stage_2`, `sw_fsm_controller_enabled`),
+and compatibility switches are not planner write targets. Treat them as explanatory context. If one must become planner-writable,
 request a platform/firmware contract promotion backed by replay evidence.
 
 ### Data Quality
@@ -387,7 +374,7 @@ planner profile on top of CORE.
 
 - **cold_stress** is usually caused by heater/vent oscillation, NOT insufficient heating.
   Heaters overshoot temp_high by 1-2F → VENTILATE opens vent → dumps heat → temp drops below
-  temp_low. Fix: `bias_cool` +2 to +4 (raise the cooling threshold). NOT `bias_heat`.
+  temp_low. Fix the oscillation pattern with `temp_hysteresis`, `dwell_gate_ms`, and moisture/vent posture; do not use retired bias knobs.
 - **heat_stress** on hot days (>85F) is engineering-limited by undersized intake vent (4 sqft
   for 4,900 CFM). Accept it on extreme days. Only shade cloth fixes this.
 - **vpd_high_stress** means misting started too late or vent was open during dry air.
@@ -457,15 +444,15 @@ Gas heating is 3.9x cheaper per BTU than electric.
 ### Validated Lessons
 
 1. **Misting (dry <20% RH):** engage 1.3, gap 15-25s, pulse 60s. Revert to 45s gap evening.
-2. **Gas heating:** 3.9x cheaper. Use bias_heat to pre-heat, don't fight reactively.
+2. **Gas heating:** 3.9x cheaper. Preserve the lower-quartile heat target; do not fight cold stress reactively with retired bias knobs.
 3. **Cooling (>85F):** Engineering-limited. Pre-cool mornings, aggressive sealed-vent misting.
 4. **Hysteresis:** 0.3 standard, 0.2 mild, 0.4 extreme days.
-5. **bias_cool +2 to +4 on cold nights:** Prevents heater→vent oscillation cycle (25-35 min period).
+5. **Cold-night oscillation:** Prevent heater->vent cycling with hysteresis/dwell and conservative vent/moisture posture.
 6. **Fog is 7x misters:** When VPD is stubborn, lower fog_escalation_kpa, don't increase mist frequency.
 7. **South misters most effective:** 6 heads, 0.23 kPa/pulse. West is secondary (3 heads, 0.15 kPa).
-8. **Water budget 500 gal:** Must never be the bottleneck.
+8. **Water budget 300 gal:** Treat it as a practical daily cap, not a stress-response bottleneck.
 9. **Vent during misting:** Allowed only for the explicit VENTILATE assist path (`vent_mist_assist_active`). Normal SEALED_MIST closes the vent.
-10. **Dew point:** Keep margin >5F. bias warmer on cold clear nights (radiative cooling risk).
+10. **Dew point:** Keep margin >5F. Reduce sealed/fog intensity on cold clear nights with radiative cooling risk.
 """
 
 
@@ -556,13 +543,13 @@ and set the overnight posture.
 6. **Write overnight plan** — use `set_plan(plan_id=..., hypothesis=..., transitions=..., trigger_id=..., planner_instance=...)` with 3-5 waypoints
    anchored to evening/overnight milestones (evening_settle, midnight_posture, pre_dawn).
    Each transition includes all tactical Tier 1 params. Do not include crop-band params
-   (`temp_low`, `temp_high`, `vpd_low`, `vpd_high`); use bias, mist, fog,
+   (`temp_low`, `temp_high`, `vpd_low`, `vpd_high`); use mist, fog,
    dwell, and hysteresis knobs to shift behavior. Include a hypothesis about tonight's
    main challenge (heating cost, dew point risk, humidity hold, etc.).
    Key overnight tuning:
-   - `bias_cool` +2 to +4 if heaters expected (prevents vent oscillation)
-   - `bias_heat` +1 to +2 for cold nights (<45°F forecast)
-   - Dew point margin <5°F? Bias warmer, reduce sealed-vent time
+   - Heater/vent oscillation expected? Use wider temp hysteresis or dwell, not retired bias knobs
+   - Cold night (<45°F forecast)? Preserve heat with conservative vent/moisture posture
+   - Dew point margin <5°F? Reduce sealed-vent time and fog intensity
    - Widen `mister_pulse_gap_s` overnight (humidity holds better when sealed)
    OR use `set_tunable` for individual adjustments if only a few params need changing.
 7. **Post evening brief to #greenhouse** — include:

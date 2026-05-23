@@ -586,7 +586,7 @@ derived_base AS (
         END AS vpd_hysteresis_effective_kpa,
         CASE
             WHEN t.sw_fsm_controller_enabled THEN
-                (t.firmware_temp_low + t.firmware_temp_high) * 0.5
+                t.firmware_temp_low + t.temp_width_f * 0.25
             ELSE
                 t.firmware_temp_low + t.temp_width_f * 0.25 + t.bias_heat_f
         END AS temp_heat_target_f,
@@ -753,7 +753,7 @@ ALTER FUNCTION public.fn_band_timeline(p_start timestamp with time zone, p_end t
 -- Name: FUNCTION fn_band_timeline(p_start timestamp with time zone, p_end timestamp with time zone, p_step interval, p_greenhouse_id text); Type: COMMENT; Schema: public; Owner: verdify
 --
 
-COMMENT ON FUNCTION public.fn_band_timeline(p_start timestamp with time zone, p_end timestamp with time zone, p_step interval, p_greenhouse_id text) IS 'Actual-to-forecast band timeline for dashboards: historical firmware-pushed setpoints through now, dispatcher-projected band after now, crop provenance, and firmware-derived trigger/padding thresholds.';
+COMMENT ON FUNCTION public.fn_band_timeline(p_start timestamp with time zone, p_end timestamp with time zone, p_step interval, p_greenhouse_id text) IS 'Actual-to-forecast band timeline for dashboards: historical firmware-pushed setpoints through now, dispatcher-projected band after now, crop provenance, and firmware-derived trigger/padding thresholds. Heat target mirrors firmware lower-quartile band-first policy.';
 
 
 --
@@ -7562,6 +7562,10 @@ CREATE TABLE public.diagnostics (
     vpd_watch_timer_s integer,
     mist_backoff_timer_s integer,
     vent_mist_assist_active integer,
+    effective_heat_target_f double precision,
+    effective_cool_stage2_delta_f double precision,
+    effective_vpd_hysteresis_kpa double precision,
+    effective_dehum_aggressive_kpa double precision,
     heap_min_free_kb double precision,
     heap_largest_free_block_kb double precision,
     controller_time_epoch bigint,
@@ -7621,6 +7625,34 @@ COMMENT ON COLUMN public.diagnostics.mist_backoff_timer_s IS 'Controller v2: sec
 --
 
 COMMENT ON COLUMN public.diagnostics.vent_mist_assist_active IS 'Controller v2: 1 when VENTILATE is also carrying mister demand for high VPD.';
+
+
+--
+-- Name: COLUMN diagnostics.effective_heat_target_f; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.diagnostics.effective_heat_target_f IS 'Controller diagnostic: validated effective heat target in deg F after crop-band width clamp and lower-quartile policy.';
+
+
+--
+-- Name: COLUMN diagnostics.effective_cool_stage2_delta_f; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.diagnostics.effective_cool_stage2_delta_f IS 'Controller diagnostic: validated effective stage-2 cooling delta in deg F after band/safety clamps.';
+
+
+--
+-- Name: COLUMN diagnostics.effective_vpd_hysteresis_kpa; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.diagnostics.effective_vpd_hysteresis_kpa IS 'Controller diagnostic: validated effective VPD hysteresis in kPa after house-band width clamps.';
+
+
+--
+-- Name: COLUMN diagnostics.effective_dehum_aggressive_kpa; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.diagnostics.effective_dehum_aggressive_kpa IS 'Controller diagnostic: validated dehumidification aggressive margin in kPa after house-band clamps.';
 
 
 --
@@ -22718,6 +22750,392 @@ COMMENT ON VIEW public.v_equipment_runtime_daily IS 'Daily equipment runtime fro
 
 
 --
+-- Name: v_fan_balance_7d; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_fan_balance_7d AS
+ WITH bounds AS (
+         SELECT (now() - '7 days'::interval) AS start_ts,
+            now() AS end_ts
+        ), fan_set AS (
+         SELECT DISTINCT equipment_state.greenhouse_id,
+            equipment_state.equipment
+           FROM public.equipment_state
+          WHERE (equipment_state.equipment = ANY (ARRAY['fan1'::text, 'fan2'::text]))
+        ), seed AS (
+         SELECT DISTINCT ON (fs.greenhouse_id, fs.equipment) fs.greenhouse_id,
+            fs.equipment,
+            b.start_ts AS ts,
+            COALESCE(es.state, false) AS state
+           FROM ((fan_set fs
+             CROSS JOIN bounds b)
+             LEFT JOIN public.equipment_state es ON (((es.greenhouse_id = fs.greenhouse_id) AND (es.equipment = fs.equipment) AND (es.ts <= b.start_ts))))
+          ORDER BY fs.greenhouse_id, fs.equipment, es.ts DESC NULLS LAST
+        ), events AS (
+         SELECT seed.greenhouse_id,
+            seed.equipment,
+            seed.ts,
+            seed.state
+           FROM seed
+        UNION ALL
+         SELECT es.greenhouse_id,
+            es.equipment,
+            es.ts,
+            es.state
+           FROM (public.equipment_state es
+             CROSS JOIN bounds b)
+          WHERE ((es.equipment = ANY (ARRAY['fan1'::text, 'fan2'::text])) AND (es.ts > b.start_ts) AND (es.ts <= b.end_ts))
+        ), ordered AS (
+         SELECT e.greenhouse_id,
+            e.equipment,
+            e.ts,
+            e.state,
+            lag(e.state) OVER (PARTITION BY e.greenhouse_id, e.equipment ORDER BY e.ts) AS prev_state,
+            lead(e.ts) OVER (PARTITION BY e.greenhouse_id, e.equipment ORDER BY e.ts) AS next_ts
+           FROM events e
+        ), rollup AS (
+         SELECT o.greenhouse_id,
+            o.equipment,
+            sum((EXTRACT(epoch FROM (LEAST(COALESCE(o.next_ts, b.end_ts), b.end_ts) - GREATEST(o.ts, b.start_ts))) / 60.0)) FILTER (WHERE (o.state IS TRUE)) AS on_minutes,
+            count(*) FILTER (WHERE ((o.state IS TRUE) AND (COALESCE(o.prev_state, false) IS FALSE) AND (o.ts > b.start_ts))) AS cycles
+           FROM (ordered o
+             CROSS JOIN bounds b)
+          WHERE ((o.ts < b.end_ts) AND (COALESCE(o.next_ts, b.end_ts) > b.start_ts))
+          GROUP BY o.greenhouse_id, o.equipment
+        )
+ SELECT COALESCE(f1.greenhouse_id, f2.greenhouse_id) AS greenhouse_id,
+    b.start_ts AS window_start,
+    b.end_ts AS window_end,
+    round((COALESCE(f1.on_minutes, (0)::numeric))::numeric, 1) AS fan1_minutes,
+    round((COALESCE(f2.on_minutes, (0)::numeric))::numeric, 1) AS fan2_minutes,
+    COALESCE(f1.cycles, (0)::bigint) AS fan1_cycles,
+    COALESCE(f2.cycles, (0)::bigint) AS fan2_cycles,
+    round((abs((COALESCE(f1.on_minutes, (0)::numeric) - COALESCE(f2.on_minutes, (0)::numeric))))::numeric, 1) AS imbalance_minutes,
+    round(((100.0 * abs((COALESCE(f1.on_minutes, (0)::numeric) - COALESCE(f2.on_minutes, (0)::numeric)))) / NULLIF(GREATEST(COALESCE(f1.on_minutes, (0)::numeric), COALESCE(f2.on_minutes, (0)::numeric)), (0)::numeric)), 1) AS imbalance_pct,
+        CASE
+            WHEN (COALESCE(f1.on_minutes, (0)::numeric) <= COALESCE(f2.on_minutes, (0)::numeric)) THEN 'fan1'::text
+            ELSE 'fan2'::text
+        END AS lower_runtime_fan,
+    (abs((COALESCE(f1.on_minutes, (0)::numeric) - COALESCE(f2.on_minutes, (0)::numeric))) > 10.0) AS rebalance_needed
+   FROM ((bounds b
+     LEFT JOIN rollup f1 ON ((f1.equipment = 'fan1'::text)))
+     LEFT JOIN rollup f2 ON (((f2.equipment = 'fan2'::text) AND (f2.greenhouse_id = f1.greenhouse_id))));
+
+
+ALTER VIEW public.v_fan_balance_7d OWNER TO verdify;
+
+--
+-- Name: VIEW v_fan_balance_7d; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_fan_balance_7d IS 'Rolling seven-day fan runtime/cycle balance from equipment_state, clipped at the exact window bounds. Used to audit runtime-aware lead selection.';
+
+
+--
+-- Name: v_heat_in_band_7d; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_heat_in_band_7d AS
+ WITH samples AS (
+         SELECT bt.ts,
+            bt.greenhouse_id,
+            bt.timeline_phase,
+            bt.firmware_temp_low,
+            bt.firmware_temp_high,
+            bt.indoor_temp_f,
+            lead(bt.ts) OVER (PARTITION BY bt.greenhouse_id ORDER BY bt.ts) AS next_ts,
+            public.fn_equip_at('heat1'::text, bt.ts) AS heat1_on,
+            public.fn_equip_at('heat2'::text, bt.ts) AS heat2_on
+           FROM public.fn_band_timeline((now() - '7 days'::interval), now(), '00:05:00'::interval, 'vallery'::text) bt
+          WHERE (bt.timeline_phase = 'actual'::text)
+        ), classified AS (
+         SELECT s.ts,
+            s.greenhouse_id,
+            s.firmware_temp_low,
+            s.firmware_temp_high,
+            s.indoor_temp_f,
+            s.next_ts,
+            s.heat1_on,
+            s.heat2_on,
+            (GREATEST(0.0, LEAST(EXTRACT(epoch FROM (COALESCE(s.next_ts, now()) - s.ts)), 300.0)) / 60.0) AS sample_minutes,
+            ((s.indoor_temp_f >= s.firmware_temp_low) AND (s.indoor_temp_f <= s.firmware_temp_high)) AS temp_in_band,
+            (s.indoor_temp_f < s.firmware_temp_low) AS temp_below_band,
+            (s.indoor_temp_f > s.firmware_temp_high) AS temp_above_band
+           FROM samples s
+          WHERE ((s.indoor_temp_f IS NOT NULL) AND (s.firmware_temp_low IS NOT NULL) AND (s.firmware_temp_high IS NOT NULL))
+        )
+ SELECT greenhouse_id,
+    min(ts) AS window_start,
+    max(ts) AS window_end,
+    count(*) AS samples,
+    round((sum(sample_minutes) FILTER (WHERE heat1_on))::numeric, 1) AS heat1_minutes,
+    round((sum(sample_minutes) FILTER (WHERE heat2_on))::numeric, 1) AS heat2_minutes,
+    round((sum(sample_minutes) FILTER (WHERE (heat1_on AND temp_in_band)))::numeric, 1) AS heat1_in_band_minutes,
+    round((sum(sample_minutes) FILTER (WHERE (heat2_on AND temp_in_band)))::numeric, 1) AS heat2_in_band_minutes,
+    round((sum(sample_minutes) FILTER (WHERE (heat1_on AND temp_below_band)))::numeric, 1) AS heat1_below_band_minutes,
+    round((sum(sample_minutes) FILTER (WHERE (heat2_on AND temp_below_band)))::numeric, 1) AS heat2_below_band_minutes,
+    round((sum(sample_minutes) FILTER (WHERE ((heat1_on OR heat2_on) AND temp_above_band)))::numeric, 1) AS heat_above_band_minutes,
+    round(((100.0 * sum(sample_minutes) FILTER (WHERE ((heat1_on OR heat2_on) AND temp_in_band))) / NULLIF(sum(sample_minutes) FILTER (WHERE (heat1_on OR heat2_on)), (0)::numeric)), 1) AS heat_runtime_in_band_pct
+   FROM classified
+  GROUP BY greenhouse_id;
+
+
+ALTER VIEW public.v_heat_in_band_7d OWNER TO verdify;
+
+--
+-- Name: VIEW v_heat_in_band_7d; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_heat_in_band_7d IS 'Rolling seven-day sampled heat runtime classified against fn_band_timeline crop-band thresholds. Highlights resource use while already inside band.';
+
+
+--
+-- Name: v_setpoint_effective_drift_7d; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_setpoint_effective_drift_7d AS
+ WITH ranked AS (
+         SELECT c.ts,
+            c.parameter,
+            c.requested,
+            c.applied,
+            c.band_lo,
+            c.band_hi,
+            c.reason,
+            c.greenhouse_id,
+            c.status,
+            c.plan_id,
+            c.plan_ts,
+            c.trigger_id,
+            c.planner_instance,
+            row_number() OVER (PARTITION BY c.greenhouse_id, c.parameter ORDER BY c.ts DESC) AS rn
+           FROM public.setpoint_clamps c
+          WHERE (c.ts > (now() - '7 days'::interval))
+        )
+ SELECT greenhouse_id,
+    parameter,
+    count(*) AS drift_events,
+    count(*) FILTER (WHERE (status = 'guardrailed'::text)) AS guardrailed_events,
+    count(*) FILTER (WHERE (status = 'held_by_guardrail'::text)) AS held_events,
+    count(*) FILTER (WHERE (status = 'rejected'::text)) AS rejected_events,
+    round(avg(abs((requested - applied)))::numeric, 3) AS avg_abs_delta,
+    round(max(abs((requested - applied)))::numeric, 3) AS max_abs_delta,
+    min(ts) AS first_seen,
+    max(ts) AS last_seen,
+    max(requested) FILTER (WHERE (rn = 1)) AS latest_requested,
+    max(applied) FILTER (WHERE (rn = 1)) AS latest_effective,
+    max(reason) FILTER (WHERE (rn = 1)) AS latest_reason,
+    max(status) FILTER (WHERE (rn = 1)) AS latest_status,
+    max(plan_id) FILTER (WHERE (rn = 1)) AS latest_plan_id
+   FROM ranked
+  GROUP BY greenhouse_id, parameter
+  ORDER BY (count(*)) DESC, parameter;
+
+
+ALTER VIEW public.v_setpoint_effective_drift_7d OWNER TO verdify;
+
+--
+-- Name: VIEW v_setpoint_effective_drift_7d; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_setpoint_effective_drift_7d IS 'Rolling seven-day planner requested vs dispatcher effective/applied drift from setpoint_clamps. Used to find hidden clamp or retired-param pressure.';
+
+
+--
+-- Name: v_vent_mist_assist_7d; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_vent_mist_assist_7d AS
+ WITH bounds AS (
+         SELECT (now() - '7 days'::interval) AS start_ts,
+            now() AS end_ts
+        ), diag AS (
+         SELECT d.greenhouse_id,
+            d.ts,
+            d.vent_mist_assist_active,
+            lead(d.ts) OVER (PARTITION BY d.greenhouse_id ORDER BY d.ts) AS next_ts
+           FROM (public.diagnostics d
+             CROSS JOIN bounds b)
+          WHERE ((d.ts > (b.start_ts - '00:10:00'::interval)) AND (d.ts <= b.end_ts))
+        ), assist AS (
+         SELECT d.greenhouse_id,
+            GREATEST(d.ts, b.start_ts) AS ts,
+            LEAST(COALESCE(d.next_ts, b.end_ts), b.end_ts) AS next_ts
+           FROM (diag d
+             CROSS JOIN bounds b)
+          WHERE ((d.vent_mist_assist_active = 1) AND (d.ts < b.end_ts) AND (COALESCE(d.next_ts, b.end_ts) > b.start_ts))
+        ), enriched AS (
+         SELECT a.greenhouse_id,
+            a.ts,
+            (EXTRACT(epoch FROM (a.next_ts - a.ts)) / 60.0) AS minutes,
+            COALESCE(state.value, 'unknown'::text) AS greenhouse_state,
+            COALESCE(reason.value, 'vent_mist_assist_active'::text) AS mode_reason,
+            public.fn_equip_at('vent'::text, a.ts) AS vent_on,
+            public.fn_equip_at('fog'::text, a.ts) AS fog_on,
+            ((public.fn_equip_at('mister_south'::text, a.ts) OR public.fn_equip_at('mister_west'::text, a.ts)) OR public.fn_equip_at('mister_center'::text, a.ts)) AS any_mister_on,
+            c.temp_avg,
+            c.vpd_avg,
+            c.outdoor_temp_f,
+            c.outdoor_rh_pct
+           FROM (((assist a
+             LEFT JOIN LATERAL ( SELECT ss.value
+                   FROM public.system_state ss
+                  WHERE ((ss.greenhouse_id = a.greenhouse_id) AND (ss.entity = 'greenhouse_state'::text) AND (ss.ts <= a.ts))
+                  ORDER BY ss.ts DESC
+                 LIMIT 1) state ON (true))
+             LEFT JOIN LATERAL ( SELECT ss.value
+                   FROM public.system_state ss
+                  WHERE ((ss.greenhouse_id = a.greenhouse_id) AND (ss.entity = 'mode_reason'::text) AND (ss.ts <= a.ts))
+                  ORDER BY ss.ts DESC
+                 LIMIT 1) reason ON (true))
+             LEFT JOIN LATERAL ( SELECT c_1.temp_avg,
+                    c_1.vpd_avg,
+                    c_1.outdoor_temp_f,
+                    c_1.outdoor_rh_pct
+                   FROM public.climate c_1
+                  WHERE ((c_1.greenhouse_id = a.greenhouse_id) AND (c_1.ts <= a.ts))
+                  ORDER BY c_1.ts DESC
+                 LIMIT 1) c ON (true))
+          WHERE (a.next_ts > a.ts)
+        )
+ SELECT greenhouse_id,
+    greenhouse_state,
+    mode_reason,
+    count(*) AS samples,
+    round(sum(minutes)::numeric, 1) AS assist_minutes,
+    round((sum(minutes) FILTER (WHERE vent_on))::numeric, 1) AS vent_open_minutes,
+    round((sum(minutes) FILTER (WHERE fog_on))::numeric, 1) AS fog_minutes,
+    round((sum(minutes) FILTER (WHERE any_mister_on))::numeric, 1) AS mister_minutes,
+    round(avg(temp_avg)::numeric, 1) AS avg_temp_f,
+    round(avg(vpd_avg)::numeric, 2) AS avg_vpd_kpa,
+    round(avg(outdoor_temp_f)::numeric, 1) AS avg_outdoor_temp_f,
+    round(avg(outdoor_rh_pct)::numeric, 1) AS avg_outdoor_rh_pct
+   FROM enriched
+  GROUP BY greenhouse_id, greenhouse_state, mode_reason
+  ORDER BY (round(sum(minutes)::numeric, 1)) DESC;
+
+
+ALTER VIEW public.v_vent_mist_assist_7d OWNER TO verdify;
+
+--
+-- Name: VIEW v_vent_mist_assist_7d; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_vent_mist_assist_7d IS 'Rolling seven-day open-vent moisture assist runtime by controller state/reason, using diagnostics.vent_mist_assist_active and equipment_state.';
+
+
+--
+-- Name: v_mister_fairness_7d; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_mister_fairness_7d AS
+ WITH bounds AS (
+         SELECT (now() - '7 days'::interval) AS start_ts,
+            now() AS end_ts
+        ), zone_map AS (
+         SELECT z.equipment,
+            z.zone
+           FROM ( VALUES ('mister_south'::text,'south'::text), ('mister_west'::text,'west'::text), ('mister_center'::text,'center'::text)) z(equipment, zone)
+        ), mister_set AS (
+         SELECT DISTINCT es.greenhouse_id,
+            z.equipment,
+            z.zone
+           FROM (public.equipment_state es
+             JOIN zone_map z ON ((z.equipment = es.equipment)))
+        ), seed AS (
+         SELECT DISTINCT ON (ms.greenhouse_id, ms.equipment) ms.greenhouse_id,
+            ms.equipment,
+            ms.zone,
+            b.start_ts AS ts,
+            COALESCE(es.state, false) AS state
+           FROM ((mister_set ms
+             CROSS JOIN bounds b)
+             LEFT JOIN public.equipment_state es ON (((es.greenhouse_id = ms.greenhouse_id) AND (es.equipment = ms.equipment) AND (es.ts <= b.start_ts))))
+          ORDER BY ms.greenhouse_id, ms.equipment, es.ts DESC NULLS LAST
+        ), events AS (
+         SELECT seed.greenhouse_id,
+            seed.equipment,
+            seed.zone,
+            seed.ts,
+            seed.state
+           FROM seed
+        UNION ALL
+         SELECT es.greenhouse_id,
+            es.equipment,
+            z.zone,
+            es.ts,
+            es.state
+           FROM ((public.equipment_state es
+             JOIN zone_map z ON ((z.equipment = es.equipment)))
+             CROSS JOIN bounds b)
+          WHERE ((es.ts > b.start_ts) AND (es.ts <= b.end_ts))
+        ), ordered AS (
+         SELECT e.greenhouse_id,
+            e.equipment,
+            e.zone,
+            e.ts,
+            e.state,
+            lag(e.state) OVER (PARTITION BY e.greenhouse_id, e.equipment ORDER BY e.ts) AS prev_state,
+            lead(e.ts) OVER (PARTITION BY e.greenhouse_id, e.equipment ORDER BY e.ts) AS next_ts
+           FROM events e
+        ), rollup AS (
+         SELECT o.greenhouse_id,
+            o.equipment,
+            o.zone,
+            sum((EXTRACT(epoch FROM (LEAST(COALESCE(o.next_ts, b.end_ts), b.end_ts) - GREATEST(o.ts, b.start_ts))) / 60.0)) FILTER (WHERE (o.state IS TRUE)) AS runtime_min,
+            count(*) FILTER (WHERE ((o.state IS TRUE) AND (COALESCE(o.prev_state, false) IS FALSE) AND (o.ts > b.start_ts))) AS cycles
+           FROM (ordered o
+             CROSS JOIN bounds b)
+          WHERE ((o.ts < b.end_ts) AND (COALESCE(o.next_ts, b.end_ts) > b.start_ts))
+          GROUP BY o.greenhouse_id, o.equipment, o.zone
+        ), totals AS (
+         SELECT rollup.greenhouse_id,
+            sum(COALESCE(rollup.runtime_min, (0)::numeric)) AS total_runtime_min,
+            sum(COALESCE(rollup.cycles, (0)::bigint)) AS total_cycles
+           FROM rollup
+          GROUP BY rollup.greenhouse_id
+        ), effect AS (
+         SELECT 'vallery'::text AS greenhouse_id,
+            v_mister_zone_effectiveness.zone,
+            count(*) AS effect_samples,
+            round(avg(v_mister_zone_effectiveness.zone_vpd_delta), 3) AS avg_vpd_delta_kpa
+           FROM public.v_mister_zone_effectiveness
+          WHERE (v_mister_zone_effectiveness.on_ts > (now() - '7 days'::interval))
+          GROUP BY v_mister_zone_effectiveness.zone
+        ), fairness AS (
+         SELECT daily_summary.greenhouse_id,
+            COALESCE(sum(daily_summary.mister_fairness_overrides_today), (0)::bigint) AS fairness_overrides
+           FROM public.daily_summary
+          WHERE (daily_summary.date >= (((now() AT TIME ZONE 'America/Denver'::text))::date - 6))
+          GROUP BY daily_summary.greenhouse_id
+        )
+ SELECT r.greenhouse_id,
+    r.zone,
+    r.equipment,
+    round((COALESCE(r.runtime_min, (0)::numeric))::numeric, 1) AS runtime_minutes,
+    COALESCE(r.cycles, (0)::bigint) AS cycles,
+    round(((100.0 * COALESCE(r.runtime_min, (0)::numeric)) / NULLIF(t.total_runtime_min, (0)::numeric)), 1) AS runtime_share_pct,
+    round(((100.0 * (COALESCE(r.cycles, (0)::bigint))::numeric) / NULLIF((t.total_cycles)::numeric, (0)::numeric)), 1) AS cycle_share_pct,
+    e.effect_samples,
+    e.avg_vpd_delta_kpa,
+    COALESCE(f.fairness_overrides, (0)::bigint) AS fairness_overrides_7d
+   FROM (((rollup r
+     JOIN totals t ON ((t.greenhouse_id = r.greenhouse_id)))
+     LEFT JOIN effect e ON (((e.greenhouse_id = r.greenhouse_id) AND (e.zone = r.zone))))
+     LEFT JOIN fairness f ON ((f.greenhouse_id = r.greenhouse_id)))
+  ORDER BY r.greenhouse_id, r.zone;
+
+
+ALTER VIEW public.v_mister_fairness_7d OWNER TO verdify;
+
+--
+-- Name: VIEW v_mister_fairness_7d; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_mister_fairness_7d IS 'Rolling seven-day mister zone runtime, cycle share, effectiveness, and firmware fairness override count for resource-balance audits.';
+
+
+--
 -- Name: v_equipment_runtime_today; Type: VIEW; Schema: public; Owner: verdify
 --
 
@@ -23127,7 +23545,7 @@ CREATE VIEW public.v_plan_tactical_outcome_daily AS
     ds.cost_total
    FROM (public.setpoint_plan sp
      LEFT JOIN public.daily_summary ds ON ((ds.date = ((sp.ts AT TIME ZONE 'America/Denver'::text))::date)))
-  WHERE (sp.parameter = ANY (ARRAY['mister_engage_kpa'::text, 'mister_all_kpa'::text, 'mister_pulse_on_s'::text, 'mister_pulse_gap_s'::text, 'mister_vpd_weight'::text, 'bias_heat'::text, 'bias_cool'::text, 'd_cool_stage_2'::text, 'd_heat_stage_2'::text, 'vpd_hysteresis'::text, 'fog_escalation_kpa'::text, 'mist_backoff_s'::text]))
+  WHERE (sp.parameter = ANY (ARRAY['d_cool_stage_2'::text, 'dwell_gate_ms'::text, 'enthalpy_close'::text, 'enthalpy_open'::text, 'fog_escalation_kpa'::text, 'heat_hysteresis'::text, 'min_fog_off_s'::text, 'min_fog_on_s'::text, 'mist_backoff_s'::text, 'mist_max_closed_vent_s'::text, 'mist_thermal_relief_s'::text, 'mister_all_delay_s'::text, 'mister_all_kpa'::text, 'mister_engage_delay_s'::text, 'mister_engage_kpa'::text, 'mister_pulse_gap_s'::text, 'mister_pulse_on_s'::text, 'mister_vpd_weight'::text, 'mister_water_budget_gal'::text, 'outdoor_staleness_max_s'::text, 'sw_dwell_gate_enabled'::text, 'sw_fog_closes_vent'::text, 'sw_mister_closes_vent'::text, 'sw_summer_vent_enabled'::text, 'temp_hysteresis'::text, 'vent_prefer_dp_delta_f'::text, 'vent_prefer_temp_delta_f'::text, 'vpd_hysteresis'::text, 'vpd_watch_dwell_s'::text]))
   GROUP BY sp.plan_id, sp.parameter, ds.date, ds.compliance_pct, ds.temp_compliance_pct, ds.vpd_compliance_pct, ds.stress_hours_heat, ds.stress_hours_vpd_high, ds.stress_hours_cold, ds.stress_hours_vpd_low, ds.water_used_gal, ds.mister_water_gal, ds.cost_total;
 
 
@@ -23137,7 +23555,7 @@ ALTER VIEW public.v_plan_tactical_outcome_daily OWNER TO verdify;
 -- Name: VIEW v_plan_tactical_outcome_daily; Type: COMMENT; Schema: public; Owner: verdify
 --
 
-COMMENT ON VIEW public.v_plan_tactical_outcome_daily IS 'Planner tactical parameter posture joined to same-day compliance, stress, water, and cost outcomes. Directional, not causal.';
+COMMENT ON VIEW public.v_plan_tactical_outcome_daily IS 'Planner Tier 1 tactical parameter posture joined to same-day compliance, stress, water, and cost outcomes. Directional, not causal.';
 
 
 --

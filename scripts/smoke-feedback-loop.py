@@ -41,9 +41,8 @@ from verdify_schemas import (  # noqa: E402
     PlanHypothesisStructured,
 )
 
-# Pick a readbackable param unlikely to churn under real dispatch.
-# bias_heat is in CFG_READBACK_MAP and the planner rarely moves it mid-day.
-TEST_PARAM = "bias_heat"
+# Pick a readbackable planner-policy param unlikely to churn under real dispatch.
+TEST_PARAM = "mister_vpd_weight"
 
 # Sentinel source tag so we can clean up without touching production rows.
 SMOKE_SOURCE = "smoke_feedback_loop"

@@ -490,7 +490,7 @@ def test_planner_context_surfaces_band_source_trace():
 
     assert "BAND SETPOINT PROVENANCE" in script
     assert "fn_band_setpoint_provenance(now(), '${GREENHOUSE_ID}')" in script
-    assert "Do not set band-driven or lighting-policy params in your plan" in script
+    assert "Do not set band-driven, retired bias, or lighting-policy params in your plan" in script
     assert "LIGHTING POLICY (read-only; dispatcher pushes these to ESP32)" in script
     assert "fn_lighting_policy(now(), '${GREENHOUSE_ID}')" in script
     assert "Do not set gl_dli_target, gl_sunrise_hour, gl_sunset_hour, or sw_gl_auto_mode" in script

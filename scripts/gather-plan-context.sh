@@ -62,7 +62,7 @@ echo ""
 # Active plan: compact transition summary (grouped by timestamp, Tier 1 only)
 echo "--- ACTIVE PLAN (future transitions only — your new plan will replace this entirely) ---"
 echo "Key variables shown per transition. Vent/fog timing params at defaults unless noted."
-echo "ts_mdt|raw_params|engage|all|gap|wt|hyst|vent_max|fog_esc|b_heat|b_cool"
+echo "ts_mdt|raw_params|engage|all|gap|wt|hyst|vent_max|fog_esc"
 $DB -c "
 WITH deduped AS (
   SELECT DISTINCT ON (ts, parameter) ts, parameter, value
@@ -77,9 +77,7 @@ SELECT to_char(ts AT TIME ZONE 'America/Denver', 'Dy MM-DD HH24:MI'),
   COALESCE(max(CASE WHEN parameter='mister_vpd_weight' THEN round(value::numeric,1) END), 1.5),
   COALESCE(max(CASE WHEN parameter='vpd_hysteresis' THEN round(value::numeric,1) END), 0.3),
   COALESCE(max(CASE WHEN parameter='mist_max_closed_vent_s' THEN value::int END), 600),
-  COALESCE(max(CASE WHEN parameter='fog_escalation_kpa' THEN round(value::numeric,1) END), 0.4),
-  COALESCE(max(CASE WHEN parameter='bias_heat' THEN round(value::numeric,1) END), 0),
-  COALESCE(max(CASE WHEN parameter='bias_cool' THEN round(value::numeric,1) END), 0)
+  COALESCE(max(CASE WHEN parameter='fog_escalation_kpa' THEN round(value::numeric,1) END), 0.4)
 FROM deduped
 GROUP BY ts
 ORDER BY ts;
@@ -442,6 +440,10 @@ EVAL_BACKLOG=$($DB -c "
 # score vs Iris's self-grade. plan_evaluate() each plan with anchor_score
 # deviation in mind.
 echo "--- PLANS THAT GOVERNED THE LAST 24 HOURS (causal attribution; Phase 1) ---"
+echo "Historical hypotheses may mention retired knobs such as bias_heat, bias_cool,"
+echo "d_heat_stage_2, or sw_fsm_controller_enabled. Treat those as obsolete"
+echo "history only; validate outcomes, but use the AI Tunables Routine Plan"
+echo "Contract and current Tier 1 surface for any new plan."
 if [ -n "${EVAL_BACKLOG}" ] && [ "${EVAL_BACKLOG}" -gt 0 ]; then
   echo "EVALUATION BACKLOG: ${EVAL_BACKLOG} completed Iris plans still unevaluated — CALL plan_evaluate ON EACH BEFORE WRITING A NEW PLAN."
   $DB -c "
@@ -705,7 +707,7 @@ ORDER BY parameter;
 " 2>/dev/null
 echo "Band-driven values above reflect current diurnal crop profiles and shift throughout the day."
 echo "Nighttime values are typically lower (temp_high ~62-65°F, vpd_high ~0.6-0.8 kPa). These are normal, not corruption."
-echo "Do not set band-driven or lighting-policy params in your plan — use bias_heat/bias_cool to shift climate bands."
+echo "Do not set band-driven, retired bias, or lighting-policy params in your plan; use tactical mist, fog, hysteresis, and dwell knobs instead."
 echo "Per-circuit gl_main_target_light_minutes/gl_grow_target_light_minutes and lux threshold/hysteresis params are planner-managed; legacy gl_*_dli_target values are telemetry compatibility, not the primary control goal."
 echo ""
 
@@ -772,7 +774,7 @@ alerts AS (
   -- HEAT WARNING
   SELECT 1 AS ord, 'HEAT WARNING: forecast high ' || round(max_t::numeric,0) || '°F at '
     || to_char(peak_ts AT TIME ZONE 'America/Denver', 'HH:MI AM')
-    || '. Consider stronger cooling posture via bias_cool, fog_escalation_kpa, and mist timing.' AS alert
+    || '. Consider stronger cooling posture via fog_escalation_kpa, mist timing, and VPD dwell.' AS alert
   FROM (SELECT max(temp_f) AS max_t, (array_agg(ts ORDER BY temp_f DESC))[1] AS peak_ts FROM fc WHERE temp_f > 90) h
   WHERE h.max_t IS NOT NULL
   UNION ALL
@@ -785,7 +787,7 @@ alerts AS (
   -- FROST RISK
   SELECT 3, 'FROST RISK: forecast low ' || round(min_t::numeric,0) || '°F at '
     || to_char(low_ts AT TIME ZONE 'America/Denver', 'HH:MI AM')
-    || '. Verify heaters operational; consider bias_heat and bias_cool to prevent oscillation.'
+    || '. Verify heaters operational; use hysteresis/dwell and conservative vent/moisture posture to prevent oscillation.'
   FROM (SELECT min(temp_f) AS min_t, (array_agg(ts ORDER BY temp_f ASC))[1] AS low_ts FROM fc WHERE temp_f < 35) c
   WHERE c.min_t IS NOT NULL
   UNION ALL
@@ -894,7 +896,7 @@ echo ""
 # ran. Trailing `|| true` keeps the coverage report visible without
 # killing downstream sections.
 echo "--- PLAN COVERAGE VALIDATION ---"
-bash /srv/verdify/scripts/validate-plan-coverage.sh 2>/dev/null || true
+bash "$SCRIPT_ROOT/validate-plan-coverage.sh" 2>/dev/null || true
 echo ""
 
 # ── 28. FORECAST ACCURACY ─────────────────────────────────────────
@@ -1148,7 +1150,7 @@ else
 fi
 
 # Validate-plan-coverage helper (section 28)
-if [ -x /srv/verdify/scripts/validate-plan-coverage.sh ]; then
+if [ -x "$SCRIPT_ROOT/validate-plan-coverage.sh" ]; then
   _check "validate-plan-coverage.sh present" ok "section 28 coverage report is reliable"
 else
   _check "validate-plan-coverage.sh present" fail "plan-coverage section above silently skipped"

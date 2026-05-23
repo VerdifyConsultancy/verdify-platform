@@ -86,7 +86,7 @@ They are not Tier 1 planner knobs until a firmware PR implements the semantics.
 | 5 | mister_pulse_on_s | 30-90s | 60 |
 | 6 | mister_pulse_gap_s | 10-60s | 45 |
 | 7 | mister_vpd_weight | 1.0-3.0 | 1.5 |
-| 8 | mister_water_budget_gal | 200-500 | 500 |
+| 8 | mister_water_budget_gal | 100-300 | 300 |
 
 ### Vent coordination (binary)
 | # | Parameter | Range | Default |
@@ -102,16 +102,20 @@ They are not Tier 1 planner knobs until a firmware PR implements the semantics.
 |---|-----------|-------|---------|
 | 15 | fog_pulse_on_s | 15-90s | 30 |
 | 16 | fog_pulse_gap_s | 30-300s | 120 |
-| 17 | fog_escalation_kpa | 0.2-0.8 | 0.4 |
+| 17 | fog_escalation_kpa | 0.1-0.5 | 0.4 |
 
 ### Thermal
 | # | Parameter | Range | Default |
 |---|-----------|-------|---------|
 | 18 | d_cool_stage_2 | 2-5°F | 3 |
-| 19 | bias_heat_f | -5 to +5°F | 0 |
-| 20 | bias_cool_f | -5 to +5°F | 0 |
+| 19 | bias_heat | retired/context only | 0 |
+| 20 | bias_cool | retired/context only | 0 |
 | 21 | min_heat_on_s | 60-300s | 120 |
 | 22 | min_heat_off_s | 120-600s | 300 |
+
+`bias_heat`, `bias_cool`, and `d_heat_stage_2` are retained for legacy
+readback/fallback visibility only. Routine plans must use the current Tier 1
+surface from the generated AI Tunables reference.
 
 ### Switches
 | # | Parameter | Values | Default |

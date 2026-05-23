@@ -62,9 +62,9 @@ Check `temp_compliance_pct` vs `vpd_compliance_pct` from the scorecard. The lowe
 
 **If temp compliance is low:**
 - Check `heat_stress_h` vs `cold_stress_h`
-- Cold stress usually = heater/vent oscillation → increase `bias_cool` (+2 to +4)
+- Cold stress usually = outdoor load, heat capacity, or heater/vent oscillation. Check `equipment_state()`, mode reason, and the effective heat target before changing tunables.
 - Heat stress on hot days = engineering-limited (undersized vent) → accept, pre-cool mornings
-- Heat stress on mild days = controller not venting early enough → decrease `bias_cool`
+- Heat stress on mild days = controller not venting early enough or stage-2 cooling arriving late → tune `d_cool_stage_2`, `temp_hysteresis`, and vent posture.
 
 **If VPD compliance is low:**
 - Check `vpd_high_stress_h` vs `vpd_low_stress_h`
@@ -76,7 +76,7 @@ Check `temp_compliance_pct` vs `vpd_compliance_pct` from the scorecard. The lowe
 **Check utility trends:**
 - Compare today's `kwh`, `therms`, `water_gal` to `7d_avg_*`
 - Rising water trend with flat VPD compliance = misting getting less effective → consider fog
-- High gas + low compliance = overnight oscillation → increase `bias_cool`
+- High gas + low compliance = check heat runtime inside band, vent/fan conflicts, and whether `heat_hysteresis` is too wide for the active crop band.
 - Cost > $5/day = review whether the spend improved compliance vs yesterday
 
 ### DECIDE: Choose tunables
@@ -108,9 +108,11 @@ Structure transitions around solar milestones:
 ```
 
 Each transition MUST include all tactical Tier 1 params. Do not include
-crop-band params (`temp_low`, `temp_high`, `vpd_low`, `vpd_high`); crop profiles
-and the dispatcher own them. Use `bias_heat`, `bias_cool`, mist, fog, dwell,
-and hysteresis knobs to shift behavior. The dispatcher executes the persisted
+crop-band params (`temp_low`, `temp_high`, `vpd_low`, `vpd_high`) or retired
+legacy knobs (`bias_heat`, `bias_cool`, `d_heat_stage_2`,
+`sw_fsm_controller_enabled`); crop profiles, firmware defaults, and the
+dispatcher own them. Use mist, fog, dwell, hysteresis, vent posture, and
+stage-2 cooling knobs to shift behavior. The dispatcher executes the persisted
 tactical waypoints even if the planner is offline.
 
 ### REPORT: Post to Slack
@@ -143,12 +145,12 @@ Every event ends with a post to #greenhouse.
 HIGH STRESS DETECTED
 ├── heat_stress_h > 2
 │   ├── Forecast high > 85°F? → Engineering-limited. Accept. Pre-cool morning.
-│   ├── Forecast high < 80°F? → bias_cool may be wrong. Check value.
-│   └── Cold stress also high? → Oscillation. Increase bias_cool +2 to +4.
+│   ├── Forecast high < 80°F? → Check temp_hysteresis, d_cool_stage_2, and vent posture.
+│   └── Cold stress also high? → Oscillation. Widen hysteresis or make vent entry less eager.
 │
 ├── cold_stress_h > 2
-│   ├── Overnight low < 45°F? → Expected. Increase bias_heat.
-│   ├── Overnight low > 55°F? → Oscillation. Increase bias_cool (not bias_heat!).
+│   ├── Overnight low < 45°F? → Expected load. Verify heat relays and lower-quartile heat target.
+│   ├── Overnight low > 55°F? → Oscillation. Check vent/fan runtime, temp_hysteresis, and mode_reason.
 │   └── Heat1/Heat2 running? → Check equipment_state. If off, heater may have failed.
 │
 ├── vpd_high_stress_h > 4
@@ -275,8 +277,8 @@ The context is better for full-horizon scanning.
 ## Anti-Patterns (What NOT to Do)
 
 1. **Never increase mist frequency to fight heat.** Misters add humidity, not cooling. Use fog or accept heat stress.
-2. **Never set bias_heat to fight cold_stress caused by oscillation.** The fix is bias_cool (widen the gap between heating and cooling thresholds).
-3. **Never set fog_escalation_kpa below 0.15.** Fog is powerful — too aggressive creates VPD-low stress and condensation risk.
+2. **Never set retired knobs to fight live stress.** `bias_heat`, `bias_cool`, `d_heat_stage_2`, and `sw_fsm_controller_enabled` are not routine planner controls in the unified band-first path.
+3. **Never set fog_escalation_kpa below 0.10, and treat values below 0.15 as exceptional.** Fog is powerful — too aggressive creates VPD-low stress and condensation risk.
 4. **Never set mist_max_closed_vent_s above 900.** Heat builds during sealed misting. >15 min sealed = thermal relief cycles too frequently.
 5. **Never set min_heat_off_s below 300.** Gas heater ignition cycling damages the unit.
 6. **Never emit crop-band params in plans.** `temp_low`, `temp_high`, `vpd_low`, and `vpd_high` are dispatcher-owned read-only context; use bias, mist, fog, dwell, and hysteresis knobs instead.

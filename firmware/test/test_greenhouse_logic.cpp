@@ -1887,8 +1887,8 @@ static Setpoints band_first_setpoints() {
     return sp;
 }
 
-TEST(band_first_heat1_targets_temp_band_midpoint) {
-    auto sp = band_first_setpoints();  // midpoint = 75°F
+TEST(band_first_heat1_targets_temp_band_lower_quartile) {
+    auto sp = band_first_setpoints();  // lower-quartile target = 73.5°F
     sp.heat_hysteresis = 1.0f;
     auto s = initial_state();
 
@@ -1896,7 +1896,7 @@ TEST(band_first_heat1_targets_temp_band_midpoint) {
     ASSERT_TRUE(out_low.heat1);
     ASSERT_FALSE(out_low.heat2);
 
-    auto out_high = resolve_equipment(IDLE, make_inputs(76.5f, 0.9f), sp, s, true);
+    auto out_high = resolve_equipment(IDLE, make_inputs(75.0f, 0.9f), sp, s, true);
     ASSERT_FALSE(out_high.heat1);
     ASSERT_FALSE(out_high.heat2);
     PASS();
@@ -1912,7 +1912,7 @@ TEST(band_first_controller_flag_is_explicit_test_setup) {
 }
 
 TEST(band_first_heat2_latches_at_temp_low_not_stage2_margin) {
-    auto sp = band_first_setpoints();  // band 72-78°F, midpoint = 75°F
+    auto sp = band_first_setpoints();  // band 72-78°F, heat target = 73.5°F
     sp.dH2 = 5.0f;                 // legacy margin must not delay band-first controller gas heat
     auto s = initial_state();
 
@@ -1929,19 +1929,74 @@ TEST(band_first_heat2_latches_at_temp_low_not_stage2_margin) {
     PASS();
 }
 
-TEST(band_first_heat2_clears_after_midpoint_recovery) {
-    auto sp = band_first_setpoints();  // band 72-78°F, midpoint = 75°F
+TEST(band_first_heat2_clears_after_lower_target_recovery) {
+    auto sp = band_first_setpoints();  // band 72-78°F, heat target = 73.5°F
     auto s = initial_state();
 
     determine_mode(make_inputs(71.5f, 0.9f), sp, s, 5000);
     ASSERT_TRUE(s.heat2_latched);
 
-    determine_mode(make_inputs(74.5f, 0.9f), sp, s, 5000);
+    determine_mode(make_inputs(73.0f, 0.9f), sp, s, 5000);
     ASSERT_TRUE(s.heat2_latched);
 
-    determine_mode(make_inputs(75.0f, 0.9f), sp, s, 5000);
+    determine_mode(make_inputs(73.5f, 0.9f), sp, s, 5000);
     ASSERT_FALSE(s.heat2_latched);
     ASSERT_TRUE(std::string(s.last_mode_reason) == "heat_stage1");
+    PASS();
+}
+
+TEST(runtime_fan_lead_prefers_lower_runtime_outside_deadband) {
+    ASSERT_FALSE(choose_runtime_balanced_fan_lead(
+        true,
+        60U * 60U * 1000U,
+        45U * 60U * 1000U,
+        true,
+        false));
+    ASSERT_TRUE(choose_runtime_balanced_fan_lead(
+        false,
+        45U * 60U * 1000U,
+        60U * 60U * 1000U,
+        true,
+        false));
+    PASS();
+}
+
+TEST(runtime_fan_lead_holds_inside_deadband_while_running) {
+    ASSERT_TRUE(choose_runtime_balanced_fan_lead(
+        true,
+        60U * 60U * 1000U,
+        55U * 60U * 1000U,
+        true,
+        true));
+    ASSERT_FALSE(choose_runtime_balanced_fan_lead(
+        false,
+        55U * 60U * 1000U,
+        60U * 60U * 1000U,
+        true,
+        true));
+    PASS();
+}
+
+TEST(runtime_fan_lead_uses_wall_clock_tiebreak_only_when_idle) {
+    ASSERT_FALSE(choose_runtime_balanced_fan_lead(
+        true,
+        60U * 60U * 1000U,
+        55U * 60U * 1000U,
+        false,
+        true));
+    ASSERT_TRUE(choose_runtime_balanced_fan_lead(
+        true,
+        60U * 60U * 1000U,
+        55U * 60U * 1000U,
+        false,
+        false));
+    PASS();
+}
+
+TEST(relay_runtime_with_active_includes_current_on_interval) {
+    ASSERT_EQ(relay_runtime_with_active_ms(1000U, true, 5000U, 8000U), 4000U);
+    ASSERT_EQ(relay_runtime_with_active_ms(1000U, false, 5000U, 8000U), 1000U);
+    ASSERT_EQ(relay_runtime_with_active_ms(UINT32_MAX - 10U, true, 5000U, 8000U), UINT32_MAX);
     PASS();
 }
 

@@ -92,7 +92,7 @@ class TestSetpointClamp:
         c = SetpointClamp(
             parameter="mister_water_budget_gal",
             requested=10000.0,
-            applied=500.0,
+            applied=300.0,
             reason="invariant_violation",
         )
         assert c.band_lo is None

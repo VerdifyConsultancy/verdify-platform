@@ -51,7 +51,8 @@ SENSOR_FAULT → SAFETY_COOL → SAFETY_HEAT → SEALED_MIST → THERMAL_RELIEF 
 Key thresholds:
 - SAFETY_HEAT at 35°F, SAFETY_COOL at 100°F
 - SEALED_MIST when VPD > vpd_high (after vpd_watch_dwell_s observation)
-- VENTILATE when temp > temp_high + bias_cool
+- VENTILATE when temp > `temp_high`; if outdoor air is deeply cold, entry waits
+  for the effective stage-2 cooling margin to avoid cold-air oscillation
 - THERMAL_RELIEF after mist_max_closed_vent_s sealed
 - Mist stages within SEALED_MIST: WATCH → S1 → S2 → FOG
 

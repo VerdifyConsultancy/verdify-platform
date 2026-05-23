@@ -136,11 +136,13 @@ inline float band_vpd_hysteresis(const Setpoints& sp) noexcept {
 }
 
 // Unified band-first controller uses the crop/planner band itself as the temperature contract.
-// Heat1 protects the midpoint; heat2 protects the lower edge. The older
+// Heat1 protects the lower quartile; heat2 protects the lower edge. The older
 // d_heat_stage_2 margin is left to the legacy cascade and should not allow this path
 // to sit several degrees below band before gas heat joins.
+static constexpr float BAND_HEAT_TARGET_FRACTION = 0.25f;
 inline float band_heat_target_f(const Setpoints& sp) noexcept {
-    return (sp.temp_low + sp.temp_high) * 0.5f;
+    const float band_width = std::max(2.0f, sp.temp_high - sp.temp_low);
+    return sp.temp_low + band_width * BAND_HEAT_TARGET_FRACTION;
 }
 
 // Unified band-first controller normally cools at the raw upper band edge. Stage-2 fan
@@ -150,6 +152,46 @@ inline float band_heat_target_f(const Setpoints& sp) noexcept {
 inline float band_cool_stage2_delta_f(const Setpoints& sp) noexcept {
     const float band_width = std::max(2.0f, sp.temp_high - sp.temp_low);
     return std::min(sp.dC2, std::max(1.0f, band_width * 0.25f));
+}
+
+inline float effective_dehum_aggressive_kpa(const Setpoints& sp) noexcept {
+    return std::max(0.05f, std::min(sp.vpd_low - 0.05f, sp.dehum_aggressive_kpa));
+}
+
+static constexpr uint32_t FAN_LEAD_RUNTIME_DEADBAND_MS = 600000U;
+
+inline uint32_t relay_runtime_with_active_ms(
+    uint32_t recorded_runtime_ms,
+    bool relay_on,
+    uint32_t on_stamp_ms,
+    uint32_t now_ms
+) noexcept {
+    if (!relay_on || on_stamp_ms == 0) return recorded_runtime_ms;
+    const uint32_t active_ms = now_ms >= on_stamp_ms ? now_ms - on_stamp_ms : 0;
+    if (UINT32_MAX - recorded_runtime_ms < active_ms) return UINT32_MAX;
+    return recorded_runtime_ms + active_ms;
+}
+
+inline bool choose_runtime_balanced_fan_lead(
+    bool current_lead_is_fan1,
+    uint32_t fan1_runtime_ms,
+    uint32_t fan2_runtime_ms,
+    bool any_fan_running,
+    bool wall_clock_rotate_due,
+    uint32_t deadband_ms = FAN_LEAD_RUNTIME_DEADBAND_MS
+) noexcept {
+    if (deadband_ms == 0) deadband_ms = 1;
+
+    if (fan1_runtime_ms > fan2_runtime_ms && fan1_runtime_ms - fan2_runtime_ms > deadband_ms) {
+        return false;
+    }
+    if (fan2_runtime_ms > fan1_runtime_ms && fan2_runtime_ms - fan1_runtime_ms > deadband_ms) {
+        return true;
+    }
+    if (!any_fan_running && wall_clock_rotate_due) {
+        return !current_lead_is_fan1;
+    }
+    return current_lead_is_fan1;
 }
 
 inline bool lighting_hour_in_window(int hour, int start, int end) noexcept {
@@ -1163,8 +1205,8 @@ inline RelayOutputs resolve_equipment(
     bool lead_is_fan1
 ) {
     // Sprint-12 legacy: interior targets (25% inside band). band-first controller
-    // tightens heating to the band midpoint while keeping cooling's legacy
-    // interior target until the cooling side is redesigned separately.
+    // uses the same lower-quartile heat target while cooling at the raw high
+    // edge; heat2 still protects the lower edge.
     const float band_width = std::max(2.0f, sp.temp_high - sp.temp_low);
     const float Tlow  = sp.sw_fsm_controller_enabled
         ? band_heat_target_f(sp)

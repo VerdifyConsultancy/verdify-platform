@@ -49,6 +49,9 @@ from verdify_schemas.tunable_registry import (  # noqa: E402
 from verdify_schemas.tunables import ALL_TUNABLES  # noqa: E402
 
 RESERVED_NO_EFFECT = {
+    "bias_cool",
+    "bias_heat",
+    "d_heat_stage_2",
     "fan_burst_min",
     "fog_burst_min",
     "mist_vent_close_lead_s",
@@ -58,6 +61,7 @@ RESERVED_NO_EFFECT = {
     "mister_max_runtime_min",
     "mister_off_s",
     "mister_on_s",
+    "sw_fsm_controller_enabled",
     "summer_vent_min_runtime_s",
     "vent_bypass_min",
 }
@@ -267,7 +271,7 @@ def _why_it_matters(name: str, category: str) -> str:
 def _planner_guidance(name: str, spec: TunableDef, plan_required: set[str]) -> str:
     control_class = spec.control_class
     if name == "sw_fsm_controller_enabled":
-        return "Always include this as `1`. It is a compatibility/readback field for the unified band-first controller, and MCP/dispatcher/ESPHome guardrails reject or correct OFF."
+        return "Do not plan with this value. It is a compatibility/readback field for the unified band-first controller, and ESPHome keeps the live controller path ON."
     if name == "mister_engage_kpa":
         return "Planner-policy tunable. During VPD-high or near-edge `VENTILATE` stress with healthy dew margin, keep near active `vpd_high + 0.05`; dispatcher clamps overly conservative values."
     if name == "mister_all_kpa":

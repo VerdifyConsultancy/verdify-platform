@@ -324,15 +324,30 @@ interval:
             }
           }
 
-                    /**************** 7 — lead/lag rotation *******************************/
-          bool leadIs1 = id(fan_lead_is_fan1);
-          auto &meta_lead = leadIs1 ? R[2] : R[3];
-          auto &meta_lag  = leadIs1 ? R[3] : R[2];
+                    /**************** 7 — runtime-aware lead/lag selection ****************/
+          bool currentLeadIs1 = id(fan_lead_is_fan1);
           static uint32_t last_rotate_ms = millis();
-          if(now_ms - last_rotate_ms >= LEAD_ROTATE_TIMEOUT_MS){
+          const bool wall_clock_rotate_due = now_ms - last_rotate_ms >= LEAD_ROTATE_TIMEOUT_MS;
+          const bool any_fan_running = id(fan1_rly)->state || id(fan2_rly)->state;
+          uint32_t fan1_runtime_with_active_ms = relay_runtime_with_active_ms(
+            R[2].runtime_ms, id(fan1_rly)->state, R[2].on_stamp_ms, now_ms);
+          uint32_t fan2_runtime_with_active_ms = relay_runtime_with_active_ms(
+            R[3].runtime_ms, id(fan2_rly)->state, R[3].on_stamp_ms, now_ms);
+          bool leadIs1 = choose_runtime_balanced_fan_lead(
+            currentLeadIs1,
+            fan1_runtime_with_active_ms,
+            fan2_runtime_with_active_ms,
+            any_fan_running,
+            wall_clock_rotate_due);
+          if(leadIs1 != currentLeadIs1){
+            id(fan_lead_is_fan1) = leadIs1;
             last_rotate_ms = now_ms;
-            id(fan_lead_is_fan1) = !leadIs1;
-            ESP_LOGI("lead","Lead fan rotated → %s", id(fan_lead_is_fan1) ? "Fan 1" : "Fan 2");
+            ESP_LOGI("lead","Lead fan selected -> %s (fan1=%lus fan2=%lus)",
+                     leadIs1 ? "Fan 1" : "Fan 2",
+                     static_cast<unsigned long>(fan1_runtime_with_active_ms / 1000UL),
+                     static_cast<unsigned long>(fan2_runtime_with_active_ms / 1000UL));
+          }else if(wall_clock_rotate_due && !any_fan_running){
+            last_rotate_ms = now_ms;
           }
 
           /**************** 8+9 — MODE + EQUIPMENT (via greenhouse_logic.h) *******/

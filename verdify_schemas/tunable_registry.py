@@ -142,11 +142,11 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=15.0,
         esp_object_id="__heat_stage_2__f",
         cfg_readback_object_id="cfg___d_heat_stage_2___f_",
-        push_owner="band",
-        planner_pushable=True,
-        tier=1,
-        notes="Forecast-tuned heating aggressiveness. °F below the interior heating target "
-        "(temp_low + 25% band + bias_heat) where heat stage 2 latches.",
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        notes="Retired from live band-first control. Heat2 now latches at the lower crop-band edge; "
+        "this value is retained only for legacy fallback/readback visibility.",
     ),
     "d_cool_stage_2": TunableDef(
         name="d_cool_stage_2",
@@ -364,31 +364,33 @@ REGISTRY: dict[str, TunableDef] = {
         name="mister_engage_delay_s",
         kind="numeric",
         min=30,
-        max=900,
+        max=300,
         default=45,
         fw_clamp_lo=30,
-        fw_clamp_hi=900,
+        fw_clamp_hi=300,
         esp_object_id="mister_engage_delay__s_",
         cfg_readback_object_id="cfg___mister_engage_delay__s_",
         push_owner="planner",
         planner_pushable=True,
         tier=1,
-        notes="Delay before first physical mister pulse during a sealed or vent-assist moisture cycle.",
+        notes="Delay before first physical mister pulse during a sealed or vent-assist moisture cycle. "
+        "Tightened to 30-300s so plans cannot postpone humidity response through an entire stress window.",
     ),
     "mister_all_delay_s": TunableDef(
         name="mister_all_delay_s",
         kind="numeric",
         min=60,
-        max=900,
+        max=600,
         default=300,
         fw_clamp_lo=60,
-        fw_clamp_hi=900,
+        fw_clamp_hi=600,
         esp_object_id="mister_all_delay__s_",
         cfg_readback_object_id="cfg___mister_all_delay__s_",
         push_owner="planner",
         planner_pushable=True,
         tier=1,
-        notes="Dwell before physical all-zone rotation. Also feeds the header mist-stage delay.",
+        notes="Dwell before physical all-zone rotation. Also feeds the header mist-stage delay; "
+        "stress defaults stay near 60-90s.",
     ),
     "mister_on_s": TunableDef(
         name="mister_on_s",
@@ -454,16 +456,16 @@ REGISTRY: dict[str, TunableDef] = {
         name="mister_water_budget_gal",
         kind="numeric",
         min=100,
-        max=600,
-        default=500.0,
+        max=300,
+        default=300.0,
         fw_clamp_lo=100,
-        fw_clamp_hi=600,
+        fw_clamp_hi=300,
         esp_object_id="mister_water_budget__gal_",
         cfg_readback_object_id="cfg___mister_water_budget__gal_",
         push_owner="planner",
         planner_pushable=True,
         tier=1,
-        notes="Daily mister water cap. In MCP TIER1 — planner trims on drought regimes.",
+        notes="Daily mister water cap. In MCP TIER1. Practical operating range tightened to 100-300 gal/day.",
     ),
     "mister_max_runtime_min": TunableDef(
         name="mister_max_runtime_min",
@@ -517,16 +519,16 @@ REGISTRY: dict[str, TunableDef] = {
         name="mister_vpd_weight",
         kind="numeric",
         min=0.5,
-        max=5.0,
+        max=3.0,
         default=1.5,
         fw_clamp_lo=0.5,
-        fw_clamp_hi=5.0,
+        fw_clamp_hi=3.0,
         esp_object_id="mister_vpd_weight",
         cfg_readback_object_id="cfg___mister_vpd_weight",
         push_owner="planner",
         planner_pushable=True,
         tier=1,
-        notes="Weight on VPD gap in zone-selection scoring formula.",
+        notes="Weight on VPD gap in zone-selection scoring formula. Capped at 3.0 until replay proves higher values help.",
     ),
     # ─────────────────────────────────────────────────────────────────────
     # Per-zone VPD targets (push_owner="band" — dispatcher pushes from crop
@@ -664,10 +666,10 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=300,
         esp_object_id="min_heat_on__s_",
         cfg_readback_object_id="cfg___min_heat_on__s_",
-        push_owner="planner",
-        planner_pushable=True,
-        tier=1,
-        notes="Heater min-on dwell. In MCP TIER1.",
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        notes="Heater relay protection dwell. Operator/firmware policy, not routine planner policy.",
     ),
     "min_fan_on_s": TunableDef(
         name="min_fan_on_s",
@@ -679,10 +681,10 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=300,
         esp_object_id="min_fan_on__s_",
         cfg_readback_object_id="cfg___min_fan_on__s_",
-        push_owner="planner",
+        push_owner="operator",
         planner_pushable=False,
         tier=2,
-        notes="Fan min-on dwell. Rarely tuned by planner.",
+        notes="Fan relay protection dwell. Operator/firmware policy.",
     ),
     "min_fan_off_s": TunableDef(
         name="min_fan_off_s",
@@ -694,9 +696,10 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=300,
         esp_object_id="min_fan_off__s_",
         cfg_readback_object_id="cfg___min_fan_off__s_",
-        push_owner="planner",
+        push_owner="operator",
         planner_pushable=False,
         tier=2,
+        notes="Fan relay protection dwell. Operator/firmware policy.",
     ),
     "min_vent_on_s": TunableDef(
         name="min_vent_on_s",
@@ -708,10 +711,10 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=300,
         esp_object_id="min_vent_on__s_",
         cfg_readback_object_id="cfg___min_vent_on__s_",
-        push_owner="planner",
-        planner_pushable=True,
-        tier=1,
-        notes="Vent min-on dwell. In MCP TIER1.",
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        notes="Vent actuator protection dwell. Operator/firmware policy, not routine planner policy.",
     ),
     "min_vent_off_s": TunableDef(
         name="min_vent_off_s",
@@ -723,10 +726,10 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=300,
         esp_object_id="min_vent_off__s_",
         cfg_readback_object_id="cfg___min_vent_off__s_",
-        push_owner="planner",
-        planner_pushable=True,
-        tier=1,
-        notes="Vent min-off dwell. In MCP TIER1.",
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        notes="Vent actuator protection dwell. Operator/firmware policy, not routine planner policy.",
     ),
     "lead_rotate_s": TunableDef(
         name="lead_rotate_s",
@@ -2046,7 +2049,7 @@ REGISTRY: dict[str, TunableDef] = {
         notes="Enables global biological activity and per-zone direct-wet gates for clean/fert misters and irrigation paths.",
     ),
     # ─────────────────────────────────────────────────────────────────────
-    # Representative Tier 1 planner knobs — proof of pattern.
+    # Legacy compatibility/readback knobs.
     # ─────────────────────────────────────────────────────────────────────
     "bias_heat": TunableDef(
         name="bias_heat",
@@ -2058,11 +2061,11 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=10.0,  # controls.yaml clamp
         esp_object_id="bias_heat__f",  # entity_map.SETPOINT_MAP
         cfg_readback_object_id="cfg___bias_heat___f_",
-        push_owner="planner",
-        planner_pushable=True,
-        tier=1,
-        notes="Note: validate_setpoints tightens this to [-5, +5] at ingest; "
-        "controls.yaml accepts [-10, +10]. Registry uses the wider value.",
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        notes="Retired from live band-first control. Heating uses the crop-band lower quartile target; "
+        "this value is retained for legacy fallback/readback visibility.",
     ),
     "bias_cool": TunableDef(
         name="bias_cool",
@@ -2074,9 +2077,11 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=10.0,
         esp_object_id="bias_cool__f",
         cfg_readback_object_id="cfg___bias_cool___f_",
-        push_owner="planner",
-        planner_pushable=True,
-        tier=1,
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        notes="Retired from live band-first control. Cooling enters at the crop-band high edge; "
+        "this value is retained for legacy fallback/readback visibility.",
     ),
     "min_heat_off_s": TunableDef(
         name="min_heat_off_s",
@@ -2088,10 +2093,10 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=600,
         esp_object_id="min_heat_off__s_",
         cfg_readback_object_id="cfg___min_heat_off__s_",
-        push_owner="planner",
-        planner_pushable=True,
-        tier=1,
-        notes="Sprint-15.1 fix 6: default 300→180. Clamp ceiling tightened 60→600 so planner can't walk past 10 min.",
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        notes="Heater relay protection dwell. Default 180s from Sprint-15.1; operator/firmware policy.",
     ),
     # ─────────────────────────────────────────────────────────────────────
     # Phase-2 dwell gate.
@@ -2131,8 +2136,8 @@ REGISTRY: dict[str, TunableDef] = {
         esp_object_id="fsm_controller_enabled",
         cfg_readback_object_id="cfg_fsm_controller_enabled",
         push_owner="operator",
-        planner_pushable=True,
-        tier=1,
+        planner_pushable=False,
+        tier=2,
         notes="Unified band-first controller is the live controller path. "
         "ESPHome control loop, dispatcher, MCP, and outbound-listener guardrails force this ON; "
         "rollback requires an explicit firmware/config rollback outside the planner surface.",
@@ -2157,10 +2162,10 @@ REGISTRY: dict[str, TunableDef] = {
         name="fog_escalation_kpa",
         kind="numeric",
         min=0.1,
-        max=1.0,
+        max=0.5,
         default=0.4,
         fw_clamp_lo=0.1,
-        fw_clamp_hi=1.0,  # controls.yaml clamp
+        fw_clamp_hi=0.5,
         esp_object_id="fog_escalation__kpa_",
         cfg_readback_object_id="cfg___fog_escalation__kpa_",  # Phase 1c added readback
         push_owner="planner",
@@ -2170,7 +2175,7 @@ REGISTRY: dict[str, TunableDef] = {
             "VPD delta above active vpd_high that escalates from mist to fog. "
             "Lower values mean earlier fog inside VENTILATE mist assist; dispatcher "
             "caps overly conservative deltas during live VPD-high or near-edge VENTILATE stress when dew "
-            "margin is healthy."
+            "margin is healthy. Tightened to 0.5 kPa max so plans stay band-relative."
         ),
     ),
     # ─────────────────────────────────────────────────────────────────────
@@ -2238,6 +2243,9 @@ REGISTRY: dict[str, TunableDef] = {
 
 RETIRED_TUNABLES_REG: frozenset[str] = frozenset(
     {
+        "bias_cool",
+        "bias_heat",
+        "d_heat_stage_2",
         "fan_burst_min",
         "fog_burst_min",
         "mist_vent_close_lead_s",
@@ -2247,6 +2255,7 @@ RETIRED_TUNABLES_REG: frozenset[str] = frozenset(
         "mister_max_runtime_min",
         "mister_off_s",
         "mister_on_s",
+        "sw_fsm_controller_enabled",
         "summer_vent_min_runtime_s",
         "vent_bypass_min",
     }

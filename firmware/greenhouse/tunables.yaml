@@ -428,14 +428,14 @@ number:
     id: num_mister_engage_delay
     name: "Mister Engage Delay (s)"
     min_value: 30
-    max_value: 900
+    max_value: 300
     step: 30
     lambda: "return id(mister_engage_delay_s);"
     set_action:
       - lambda: |
           int val = int(roundf(x));
           if(val < 30) val = 30;
-          if(val > 900) val = 900;
+          if(val > 300) val = 300;
           id(mister_engage_delay_s) = val;
           id(num_mister_engage_delay).publish_state(val);
 
@@ -468,7 +468,7 @@ number:
     id: num_mister_vpd_weight
     name: "Mister VPD Weight"
     min_value: 0.5
-    max_value: 5.0
+    max_value: 3.0
     step: 0.5
     lambda: "return id(mister_vpd_weight);"
     set_action:
@@ -612,7 +612,7 @@ number:
     id: num_fog_escalation_kpa
     name: "Fog Escalation (kPa)"
     min_value: 0.1
-    max_value: 1.0
+    max_value: 0.5
     step: 0.1
     lambda: "return id(fog_escalation_kpa);"
     set_action:
@@ -817,14 +817,14 @@ number:
     id: num_mister_all_delay
     name: "Mister All Delay (s)"
     min_value: 60
-    max_value: 900
+    max_value: 600
     step: 30
     lambda: "return id(mister_all_delay_s);"
     set_action:
       - lambda: |
           int val = int(roundf(x));
           if(val < 60) val = 60;
-          if(val > 900) val = 900;
+          if(val > 600) val = 600;
           id(mister_all_delay_s) = val;
           id(num_mister_all_delay).publish_state(val);
 
@@ -893,7 +893,7 @@ number:
     id: num_mister_water_budget
     name: "Mister Water Budget (gal)"
     min_value: 100
-    max_value: 600
+    max_value: 300
     step: 10
     lambda: "return id(mister_water_budget_gal);"
     set_action:

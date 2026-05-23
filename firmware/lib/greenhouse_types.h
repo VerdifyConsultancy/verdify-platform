@@ -405,7 +405,7 @@ inline void validate_setpoints(Setpoints& sp) {
     sp.mist_s2_delay_ms   = std::max(uint32_t(1000), std::min(uint32_t(1800000), sp.mist_s2_delay_ms));
 
     // Fog-specific clamps
-    sp.fog_escalation_kpa = std::max(0.05f, std::min(2.0f, sp.fog_escalation_kpa));
+    sp.fog_escalation_kpa = std::max(0.1f, std::min(0.5f, sp.fog_escalation_kpa));
     sp.fog_rh_ceiling     = std::max(30.0f, std::min(100.0f, sp.fog_rh_ceiling));
     sp.fog_min_temp       = std::max(30.0f, std::min(100.0f, sp.fog_min_temp));
 

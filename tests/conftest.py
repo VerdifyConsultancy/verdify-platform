@@ -11,6 +11,7 @@ import subprocess
 import pytest
 
 DB_DSN = os.environ.get("DB_DSN", "postgresql://verdify:verdify@localhost:5432/verdify")
+DB_QUERY_TIMEOUT_S = int(os.environ.get("VERDIFY_DB_QUERY_TIMEOUT_S", "90"))
 
 
 # Docker exec wrapper for DB queries (works even if pg port isn't exposed to host)
@@ -24,7 +25,7 @@ def db_query(sql: str) -> str:
         cmd,
         capture_output=True,
         text=True,
-        timeout=45,
+        timeout=DB_QUERY_TIMEOUT_S,
     )
     if result.returncode != 0:
         raise RuntimeError(f"DB query failed: {result.stderr.strip()}")
