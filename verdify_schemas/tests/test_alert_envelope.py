@@ -18,6 +18,7 @@ from verdify_schemas.alerts import (
     FirmwareReliefCeilingAlert,
     FirmwareVentLatchedAlert,
     FirmwareVersionMismatchAlert,
+    ForecastDeviationAlert,
     HeapPressureCriticalAlert,
     HeapPressureWarningAlert,
     HeatManualOverrideAlert,
@@ -76,6 +77,30 @@ CASES = {
             "live_firmware_version": "2026.4.27.2009.2b5f2a5",
             "diagnostics_ts": NOW,
             "pin_source": "state/expected-firmware-version",
+        },
+    ),
+    "forecast_deviation": (
+        ForecastDeviationAlert,
+        {
+            "deviations": [
+                {
+                    "parameter": "solar_w_m2",
+                    "observed": 190.0,
+                    "forecasted": 720.0,
+                    "delta": 530.0,
+                    "threshold": 180.0,
+                    "unit": "W/m2",
+                    "cooldown_min": 45,
+                    "triggered": True,
+                    "normalized_excess": 1.944,
+                    "recent_cycles": 2,
+                }
+            ],
+            "reason": "Forecast deviation: solar_w_m2",
+            "max_abs_deviation": 1.944,
+            "consecutive_cycles": 2,
+            "planner_event_type": "FORECAST_DEVIATION",
+            "source": "forecast_deviation_check",
         },
     ),
     "heap_pressure_critical": (

@@ -186,10 +186,10 @@ Closed F1/F2/F3/F4/F6/F7. Hotfix `4a89844` closed surface bugs in topology's `Eq
 
 Scope reduced from the original plan: `EquipmentStateEvent.equipment: EquipmentId` was delivered by topology Sprint 22 upstream. Sprint 25 now covers the alert union only.
 
-- [x] **Schema PR (coordinator, blocking)** Split `AlertEnvelope` into discriminated union keyed by `alert_type`. Delivered as a backward-compatible schema wrapper over a tagged per-alert registry; current coverage is 25 alert types, including later planner/heap/firmware additions beyond the original 13-type spec. Each `*Details` subtype uses `extra="forbid"` and drift tests scan current write paths for unregistered alert types.
+- [x] **Schema PR (coordinator, blocking)** Split `AlertEnvelope` into discriminated union keyed by `alert_type`. Delivered as a backward-compatible schema wrapper over a tagged per-alert registry; current coverage is 33 alert types, including later planner/heap/firmware/forecast-deviation additions beyond the original 13-type spec. Each `*Details` subtype uses `extra="forbid"` and drift tests scan current write paths for unregistered alert types.
 - [x] **S25.1** Migrate `alert_monitor` (`tasks.py::alert_monitor`) to per-type typed builders. The monitor's existing envelope validation now dispatches through the typed registry, so every active alert detail payload is validated before insert/update without changing runtime behavior.
 - [x] **S25.2** Migrate `setpoint_confirmation_monitor` alert build. Creation and escalation now validate through `AlertEnvelope` before writing `setpoint_unconfirmed` details.
-- [ ] **S25.3** Migrate `forecast_deviation_check` trigger write into unified `AlertEnvelope` path (supersedes the cross-cutting "deviation → structured alerts" item)
+- [x] **S25.3** Migrate `forecast_deviation_check` trigger write into unified `AlertEnvelope` path. The deviation checker now validates a typed `forecast_deviation` payload before inserting a one-shot `alert_log` row; `planning_heartbeat` consumes and resolves that row after planner delivery while keeping `replan-needed.json` as a deploy-time legacy fallback. This supersedes the cross-cutting "deviation → structured alerts" item.
 
 **Milestone M2:** alerts are type-checked at build time. Deviation monitor uses the unified alert path.
 

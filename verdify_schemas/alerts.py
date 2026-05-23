@@ -24,6 +24,7 @@ AlertType = Literal[
     "firmware_relief_ceiling",
     "firmware_vent_latched",
     "firmware_version_mismatch",
+    "forecast_deviation",
     "heap_pressure_critical",
     "heap_pressure_warning",
     "heat_manual_override",
@@ -59,6 +60,7 @@ ALERT_TYPES: tuple[str, ...] = (
     "firmware_relief_ceiling",
     "firmware_vent_latched",
     "firmware_version_mismatch",
+    "forecast_deviation",
     "heap_pressure_critical",
     "heap_pressure_warning",
     "heat_manual_override",
@@ -298,6 +300,28 @@ class FirmwareVersionMismatchDetails(_DetailsBase):
     pin_source: str
 
 
+class ForecastDeviationItem(_DetailsBase):
+    parameter: str
+    observed: float
+    forecasted: float
+    delta: float = Field(..., ge=0)
+    threshold: float = Field(..., ge=0)
+    unit: str
+    cooldown_min: int = Field(..., ge=0)
+    triggered: Literal[True] = True
+    normalized_excess: float = Field(..., ge=0)
+    recent_cycles: int = Field(..., ge=1)
+
+
+class ForecastDeviationDetails(_DetailsBase):
+    deviations: list[ForecastDeviationItem]
+    reason: str
+    max_abs_deviation: float = Field(..., ge=0)
+    consecutive_cycles: int = Field(..., ge=1)
+    planner_event_type: Literal["FORECAST_DEVIATION"] = "FORECAST_DEVIATION"
+    source: Literal["forecast_deviation_check"] = "forecast_deviation_check"
+
+
 class HeapPressureDetails(_DetailsBase):
     equipment: Literal["heap_pressure_critical", "heap_pressure_warning"]
     equipment_ts: AwareDatetime | None = None
@@ -495,6 +519,11 @@ class FirmwareVersionMismatchAlert(_AlertBase):
     details: FirmwareVersionMismatchDetails
 
 
+class ForecastDeviationAlert(_AlertBase):
+    alert_type: Literal["forecast_deviation"]
+    details: ForecastDeviationDetails
+
+
 class HeapPressureCriticalAlert(_AlertBase):
     alert_type: Literal["heap_pressure_critical"]
     details: HeapPressureCriticalDetails
@@ -537,6 +566,7 @@ AlertEnvelopeUnion = Annotated[
     | FirmwareReliefCeilingAlert
     | FirmwareVentLatchedAlert
     | FirmwareVersionMismatchAlert
+    | ForecastDeviationAlert
     | HeapPressureCriticalAlert
     | HeapPressureWarningAlert
     | HeatManualOverrideAlert
