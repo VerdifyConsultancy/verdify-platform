@@ -4310,16 +4310,119 @@ def _cloud_cover_proxy_pct(
     return max(0.0, min(100.0, forecast_cloud_pct + (1.0 - solar_ratio) * 100.0))
 
 
+def _jsonb_dict(value: object) -> dict[str, object]:
+    if value is None:
+        return {}
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str):
+        parsed = json.loads(value)
+        if not isinstance(parsed, dict):
+            raise ValueError("expected JSON object")
+        return parsed
+    return dict(value)  # type: ignore[arg-type]
+
+
+def _forecast_deviation_alert_payload(trigger: dict[str, object]) -> dict[str, object]:
+    details = {
+        "deviations": trigger["deviations"],
+        "reason": trigger["reason"],
+        "max_abs_deviation": trigger["max_abs_deviation"],
+        "consecutive_cycles": trigger["consecutive_cycles"],
+        "planner_event_type": "FORECAST_DEVIATION",
+        "source": "forecast_deviation_check",
+    }
+    return {
+        "alert_type": "forecast_deviation",
+        "severity": "warning",
+        "category": "climate",
+        "sensor_id": "forecast.deviation",
+        "zone": None,
+        "message": trigger["reason"],
+        "details": details,
+        "metric_value": trigger["max_abs_deviation"],
+        "threshold_value": 0.0,
+    }
+
+
+async def _insert_forecast_deviation_alert(conn: asyncpg.Connection, trigger: dict[str, object]) -> int:
+    alert = AlertEnvelope.model_validate(_forecast_deviation_alert_payload(trigger))
+    alert_id = await conn.fetchval(
+        """
+        INSERT INTO alert_log
+          (alert_type, severity, category, sensor_id, zone, message, details,
+           source, metric_value, threshold_value, greenhouse_id)
+        VALUES ($1,$2,$3,$4,$5,$6,$7::jsonb,'ingestor',$8,$9,$10)
+        RETURNING id
+        """,
+        alert.alert_type,
+        alert.severity,
+        alert.category,
+        alert.sensor_id,
+        alert.zone,
+        alert.message,
+        json.dumps(alert.details),
+        alert.metric_value,
+        alert.threshold_value,
+        GREENHOUSE_ID,
+    )
+    return int(alert_id)
+
+
+def _forecast_deviation_trigger_from_alert(row) -> tuple[int, dict[str, object]]:
+    details = _jsonb_dict(row["details"])
+    trigger = {
+        "ts": row["created_at"].isoformat() if row["created_at"] else datetime.now(UTC).isoformat(),
+        "deviations": details.get("deviations", []),
+        "reason": details.get("reason") or row["message"] or "Forecast deviation",
+        "max_abs_deviation": details.get("max_abs_deviation", 0.0),
+        "consecutive_cycles": details.get("consecutive_cycles", 1),
+    }
+    return int(row["id"]), trigger
+
+
+async def _pending_forecast_deviation_alert(conn: asyncpg.Connection) -> tuple[int, dict[str, object]] | None:
+    row = await conn.fetchrow(
+        """
+        SELECT id, details, message, created_at
+          FROM alert_log
+         WHERE alert_type = 'forecast_deviation'
+           AND disposition IN ('open', 'acknowledged')
+           AND resolved_at IS NULL
+           AND created_at > now() - interval '5 minutes'
+         ORDER BY created_at ASC
+         LIMIT 1
+        """
+    )
+    if row is None:
+        return None
+    return _forecast_deviation_trigger_from_alert(row)
+
+
+async def _resolve_forecast_deviation_alert(conn: asyncpg.Connection, alert_id: int) -> None:
+    await conn.execute(
+        """
+        UPDATE alert_log
+           SET disposition = 'resolved',
+               resolved_at = now(),
+               resolved_by = 'planning_heartbeat',
+               resolution = 'delivered to planner'
+         WHERE id = $1
+           AND disposition IN ('open', 'acknowledged')
+           AND resolved_at IS NULL
+        """,
+        alert_id,
+    )
+
+
 async def forecast_deviation_check(pool: asyncpg.Pool) -> None:
-    """Compare outdoor observed conditions to outdoor forecast. Write trigger file if deviation exceeds threshold.
+    """Compare outdoor observed conditions to outdoor forecast. Queue planner alert if deviation exceeds threshold.
 
     Guards against false triggers:
     - Outdoor comparisons run during daytime through sunset+2h — nighttime RH divergence is normal
     - Cooldown is per parameter, so a wind miss cannot suppress a solar/precip miss
     - Logs every threshold-exceeding deviation; `triggered=false` rows feed the sigma baseline
     """
-    trigger_file = STATE_DIR / "replan-needed.json"
-
     async with pool.acquire() as conn:
         threshold_rows = await conn.fetch("SELECT * FROM forecast_deviation_thresholds")
         thresholds = _forecast_deviation_threshold_map(threshold_rows)
@@ -4529,8 +4632,9 @@ async def forecast_deviation_check(pool: asyncpg.Pool) -> None:
         "max_abs_deviation": round(max_abs_deviation, 3),
         "consecutive_cycles": consecutive_cycles,
     }
-    trigger_file.write_text(json.dumps(trigger, indent=2))
-    log.warning("Replan triggered: %s", trigger["reason"])
+    async with pool.acquire() as conn:
+        alert_id = await _insert_forecast_deviation_alert(conn, trigger)
+    log.warning("Replan alert queued: %s (alert_id=%s)", trigger["reason"], alert_id)
 
 
 # ═════════════════════════════════════════════════════════════════
@@ -5874,50 +5978,65 @@ async def planning_heartbeat(pool: asyncpg.Pool) -> None:
         if latest_fetch:
             _last_forecast_fetch = latest_fetch
 
-    # ── 4. Check for FORECAST_DEVIATION (route to Iris instead of trigger file) ──
+    # ── 4. Check for FORECAST_DEVIATION (route to Iris through alert_log) ──
     # Was 'DEVIATION'; renamed in Phase 4 so the event_type vocabulary matches
     # the new closed set {SUNRISE, SUNSET, SOLAR_MAX, TRANSITION, FORECAST_DEVIATION, MANUAL}.
-    trigger_file = STATE_DIR / "replan-needed.json"
-    if trigger_file.exists():
+    forecast_alert_id: int | None = None
+    forecast_trigger_data: dict[str, object] | None = None
+    legacy_trigger_file = False
+    async with pool.acquire() as conn:
+        pending_forecast_alert = await _pending_forecast_deviation_alert(conn)
+    if pending_forecast_alert is not None:
+        forecast_alert_id, forecast_trigger_data = pending_forecast_alert
+    else:
+        trigger_file = STATE_DIR / "replan-needed.json"
         import time as _t
 
-        age_s = _t.time() - trigger_file.stat().st_mtime
-        if age_s < 300:
-            try:
-                trigger_data = json.loads(trigger_file.read_text())
-                deviations_str = json.dumps(trigger_data.get("deviations", []), indent=2)
-                reason = trigger_data.get("reason", "Unknown deviation")
+        if trigger_file.exists():
+            age_s = _t.time() - trigger_file.stat().st_mtime
+            if age_s < 300:
+                forecast_trigger_data = json.loads(trigger_file.read_text())
+                legacy_trigger_file = True
 
-                log.info("FORECAST_DEVIATION trigger found, routing to Iris: %s", reason)
-                loop = asyncio.get_event_loop()
-                context = await loop.run_in_executor(None, gather_context)
-                # Pull severity hints from the trigger payload if present.
-                # max_abs_deviation is stamped by alert_monitor's deviation
-                # writer when the band excursion exceeds 0.15 normalized.
-                # Both severities route local unless explicitly escalated.
-                severity_ctx = SeverityContext(
-                    max_abs_deviation=trigger_data.get("max_abs_deviation"),
-                    consecutive_deviation_cycles=trigger_data.get("consecutive_cycles"),
-                )
-                # planner_routing still uses "DEVIATION" internally for the
-                # severity/SLA table key; the event_type emitted to Iris
-                # and stored in plan_delivery_log / planner_trigger_ledger
-                # is "FORECAST_DEVIATION".
-                spec = PLANNER_TRIGGER_MATRIX["FORECAST_DEVIATION"]
-                severity_event_type = spec.severity_event_type or spec.event_type
-                severity = classify_severity(severity_event_type, severity_ctx)
-                instance = pick_instance(severity_event_type, severity)
-                await _deliver_and_log(
-                    pool,
-                    spec.event_type,
-                    deviations_str,
-                    context,
-                    instance=instance,
-                )
+    if forecast_trigger_data is not None:
+        try:
+            deviations_str = json.dumps(forecast_trigger_data.get("deviations", []), indent=2)
+            reason = forecast_trigger_data.get("reason", "Unknown deviation")
 
+            log.info("FORECAST_DEVIATION trigger found, routing to Iris: %s", reason)
+            loop = asyncio.get_event_loop()
+            context = await loop.run_in_executor(None, gather_context)
+            # Pull severity hints from the trigger payload if present.
+            # max_abs_deviation is stamped by forecast_deviation_check's
+            # AlertEnvelope row when a material miss exceeds its threshold.
+            # Both severities route local unless explicitly escalated.
+            severity_ctx = SeverityContext(
+                max_abs_deviation=forecast_trigger_data.get("max_abs_deviation"),
+                consecutive_deviation_cycles=forecast_trigger_data.get("consecutive_cycles"),
+            )
+            # planner_routing still uses "DEVIATION" internally for the
+            # severity/SLA table key; the event_type emitted to Iris
+            # and stored in plan_delivery_log / planner_trigger_ledger
+            # is "FORECAST_DEVIATION".
+            spec = PLANNER_TRIGGER_MATRIX["FORECAST_DEVIATION"]
+            severity_event_type = spec.severity_event_type or spec.event_type
+            severity = classify_severity(severity_event_type, severity_ctx)
+            instance = pick_instance(severity_event_type, severity)
+            await _deliver_and_log(
+                pool,
+                spec.event_type,
+                deviations_str,
+                context,
+                instance=instance,
+            )
+            if forecast_alert_id is not None:
+                async with pool.acquire() as conn:
+                    await _resolve_forecast_deviation_alert(conn, forecast_alert_id)
+            if legacy_trigger_file:
+                trigger_file = STATE_DIR / "replan-needed.json"
                 trigger_file.unlink(missing_ok=True)
-            except Exception as e:
-                log.error("Failed to process FORECAST_DEVIATION trigger: %s", e)
+        except Exception as e:
+            log.error("Failed to process FORECAST_DEVIATION trigger: %s", e)
 
     # ── 4b. Resolve plan_delivery_log entries (F14): update any unresolved
     # rows where a plan landed within 2h of delivery. Runs every heartbeat

@@ -1162,6 +1162,23 @@ def test_forecast_deviation_check_covers_distinct_axes_without_global_cooldown()
     assert "precip_intensity_in_h" in body
     assert "normalized_excess" in body
     assert "consecutive_cycles" in body
+    assert "_insert_forecast_deviation_alert" in body
+    assert "write_text" not in body
+
+
+def test_forecast_deviation_uses_alert_envelope_with_legacy_file_fallback():
+    import tasks
+
+    src = Path(tasks.__file__).read_text()
+    assert "forecast_deviation" in src
+    assert "AlertEnvelope.model_validate(_forecast_deviation_alert_payload(trigger))" in src
+    assert "INSERT INTO alert_log" in src
+    assert "source, metric_value, threshold_value, greenhouse_id" in src
+
+    heartbeat = src[src.index("async def planning_heartbeat") :]
+    assert "_pending_forecast_deviation_alert" in heartbeat
+    assert 'STATE_DIR / "replan-needed.json"' in heartbeat
+    assert "_resolve_forecast_deviation_alert" in heartbeat
 
 
 def test_planning_milestones_use_phase4_trigger_set():

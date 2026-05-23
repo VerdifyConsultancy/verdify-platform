@@ -91,7 +91,7 @@ Launch work is tracked in [`docs/backlog/launch.md`](launch.md) with the command
 
 ## Schemas / contracts
 
-- [x] **Per-alert-type discriminated union for `AlertEnvelope`.** Requested by `ingestor`. `AlertEnvelope` now preserves the existing model API while validating through a tagged per-alert registry covering every current alert writer, including planner, API, dispatcher, heap, firmware, and setpoint-confirmation alerts.
+- [x] **Per-alert-type discriminated union for `AlertEnvelope`.** Requested by `ingestor`. `AlertEnvelope` now preserves the existing model API while validating through a tagged per-alert registry covering every current alert writer, including planner, API, dispatcher, heap, firmware, setpoint-confirmation, and forecast-deviation alerts.
 - [x] **Migrate `verdify_schemas.crops.ObservationAction.data` union to also accept `HarvestCreate` / `TreatmentCreate`.** Verified with regression coverage.
 - [x] **Scorecard typed projection** (requested by `genai` + `web`). `ScorecardResponse` is the shared typed shape; migration 096 and `db/schema.sql` now match the live 25-metric numeric `fn_planner_scorecard()`, and `/api/v1/scorecard` returns that schema.
 
