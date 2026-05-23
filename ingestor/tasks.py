@@ -19,6 +19,7 @@ import time
 import urllib.error
 import urllib.request
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from datetime import timedelta as _td
 from pathlib import Path
@@ -4981,6 +4982,133 @@ _last_forecast_fetch: str = ""
 _MILESTONE_STATE_FILE = STATE_DIR / "milestones-fired.json"
 
 
+@dataclass(frozen=True)
+class PlannerTriggerSpec:
+    """Canonical contract for planner trigger emission and resolution."""
+
+    event_type: str
+    event_label: str
+    due_source: str
+    expected_action: str
+    required_plan: bool
+    normal_window_seconds: int | None
+    catchup_seconds: int | None
+    hermes_route: str = "hermes-iris"
+    severity_event_type: str | None = None
+    materialize_expected: bool = False
+
+
+PLANNER_TRIGGER_MATRIX: dict[str, PlannerTriggerSpec] = {
+    "MIDNIGHT": PlannerTriggerSpec(
+        event_type="MIDNIGHT",
+        event_label="End-of-day review and reset",
+        due_source="local.midnight_review",
+        expected_action="set_plan",
+        required_plan=True,
+        normal_window_seconds=300,
+        catchup_seconds=7200,
+        materialize_expected=True,
+    ),
+    "SUNRISE": PlannerTriggerSpec(
+        event_type="SUNRISE",
+        event_label="Morning planning cycle",
+        due_source="solar.sunrise",
+        expected_action="set_plan",
+        required_plan=True,
+        normal_window_seconds=300,
+        catchup_seconds=7200,
+        materialize_expected=True,
+    ),
+    "SOLAR_MAX": PlannerTriggerSpec(
+        event_type="SOLAR_MAX",
+        event_label="Solar peak planning checkpoint",
+        due_source="solar.noon",
+        expected_action="any",
+        required_plan=False,
+        normal_window_seconds=300,
+        catchup_seconds=7200,
+        materialize_expected=True,
+    ),
+    "TRANSITION:peak_stress": PlannerTriggerSpec(
+        event_type="TRANSITION",
+        event_label="Peak Stress",
+        due_source="solar.noon+2h",
+        expected_action="any",
+        required_plan=False,
+        normal_window_seconds=300,
+        catchup_seconds=7200,
+        materialize_expected=True,
+    ),
+    "TRANSITION:decline": PlannerTriggerSpec(
+        event_type="TRANSITION",
+        event_label="Decline",
+        due_source="solar.sunset-1h",
+        expected_action="any",
+        required_plan=False,
+        normal_window_seconds=300,
+        catchup_seconds=7200,
+        materialize_expected=True,
+    ),
+    "SUNSET": PlannerTriggerSpec(
+        event_type="SUNSET",
+        event_label="Evening planning cycle",
+        due_source="solar.sunset",
+        expected_action="set_plan",
+        required_plan=True,
+        normal_window_seconds=300,
+        catchup_seconds=7200,
+        materialize_expected=True,
+    ),
+    "FORECAST_DEVIATION": PlannerTriggerSpec(
+        event_type="FORECAST_DEVIATION",
+        event_label="Observed-vs-forecast breach",
+        due_source="forecast_deviation_check",
+        expected_action="any",
+        required_plan=False,
+        normal_window_seconds=None,
+        catchup_seconds=300,
+        severity_event_type="DEVIATION",
+    ),
+    "MANUAL": PlannerTriggerSpec(
+        event_type="MANUAL",
+        event_label="Ad-hoc planning cycle via MCP plan_run",
+        due_source="mcp.plan_run",
+        expected_action="any",
+        required_plan=False,
+        normal_window_seconds=None,
+        catchup_seconds=None,
+    ),
+}
+
+
+def _trigger_spec_for_event(event_type: str, label: str | None = None) -> PlannerTriggerSpec | None:
+    normalized_label = (label or "").lower()
+    matches = [spec for spec in PLANNER_TRIGGER_MATRIX.values() if spec.event_type == event_type]
+    if len(matches) <= 1 or not normalized_label:
+        return matches[0] if matches else None
+    for spec in matches:
+        if normalized_label.startswith(spec.event_label.lower()):
+            return spec
+    return matches[0] if matches else None
+
+
+def _milestone_due_at(key: str, solar: dict[str, datetime], today) -> datetime:
+    spec = PLANNER_TRIGGER_MATRIX[key]
+    if spec.due_source == "local.midnight_review":
+        return datetime(today.year, today.month, today.day, 0, 15, tzinfo=_DENVER)
+    if spec.due_source == "solar.sunrise":
+        return solar["sunrise"]
+    if spec.due_source == "solar.noon":
+        return solar["noon"]
+    if spec.due_source == "solar.noon+2h":
+        return solar["noon"] + _td(hours=2)
+    if spec.due_source == "solar.sunset-1h":
+        return solar["sunset"] - _td(hours=1)
+    if spec.due_source == "solar.sunset":
+        return solar["sunset"]
+    raise ValueError(f"planner trigger {key!r} has no scheduled due time")
+
+
 def _load_milestone_state():
     """Load fired milestones from disk (survives restarts)."""
     global _milestones_fired, _milestones_date
@@ -5018,28 +5146,24 @@ def _compute_milestones() -> dict[str, datetime]:
 
     today = datetime.now(_DENVER).date()
     s = _sun(_LOCATION.observer, date=today, tzinfo=_DENVER)
-    noon = s["noon"]
 
-    # Phase 4 (Iris loop overhaul, 2026-05-10): reshape from 12 trigger keys
-    # to 5. Retired keys (fixed_midnight, fixed_pre_dawn, fixed_midday,
-    # fixed_afternoon, fixed_evening, tree_shade, evening_settle, plus the
-    # FORECAST poll in planning_heartbeat) produced low-signal cycles that
-    # blew through Iris's planner context budget without changing the
-    # plan. SOLAR_MAX is new: a deterministic solar-noon checkpoint that
-    # replaces the implicit "peak stress is noon + 2h" guess. See plan
-    # /home/jason/.claude-agents/iris-dev/plans/i-d-like-you-to-cozy-frost.md.
+    # The scheduled subset is derived from PLANNER_TRIGGER_MATRIX so the
+    # trigger contract, ledger expectations, labels, and catch-up behavior do
+    # not drift apart. Phase 4 retired PRE_DAWN/MORNING/MIDDAY/AFTERNOON/
+    # EVENING fixed boundaries and the raw FORECAST poll because they produced
+    # low-signal cycles. MIDNIGHT remains as a short-window required review.
     now_local = datetime.now(_DENVER)
-    midnight_review = datetime(today.year, today.month, today.day, 0, 15, tzinfo=_DENVER)
-    _milestones_cache = {
-        "SUNRISE": s["sunrise"],
-        "TRANSITION:peak_stress": noon + _td(hours=2),
-        "SOLAR_MAX": noon,
-        "TRANSITION:decline": s["sunset"] - _td(hours=1),
-        "SUNSET": s["sunset"],
-    }
+    _milestones_cache = {}
+    for key, spec in PLANNER_TRIGGER_MATRIX.items():
+        if not spec.materialize_expected or key == "MIDNIGHT":
+            continue
+        _milestones_cache[key] = _milestone_due_at(key, s, today)
+
     # Include the midnight review only during its catch-up window so a midday
     # process restart does not create a stale missed trigger for 00:15.
-    if now_local <= midnight_review + _td(hours=2):
+    midnight_review = _milestone_due_at("MIDNIGHT", s, today)
+    midnight_catchup_s = PLANNER_TRIGGER_MATRIX["MIDNIGHT"].catchup_seconds or 0
+    if now_local <= midnight_review + _td(seconds=midnight_catchup_s):
         _milestones_cache = {"MIDNIGHT": midnight_review, **_milestones_cache}
 
     # Load any previously fired milestones from disk (in case of restart)
@@ -5050,16 +5174,9 @@ def _compute_milestones() -> dict[str, datetime]:
 
 def _milestone_event(key: str, *, catchup: bool = False) -> tuple[str, str]:
     """Return the planner event_type/label for a scheduled milestone key."""
+    spec = PLANNER_TRIGGER_MATRIX[key]
     catchup_tag = " (catch-up)" if catchup else ""
-    if key == "SUNRISE":
-        return "SUNRISE", f"Morning planning cycle{catchup_tag}"
-    if key == "SUNSET":
-        return "SUNSET", f"Evening planning cycle{catchup_tag}"
-    if key == "MIDNIGHT":
-        return "MIDNIGHT", f"End-of-day review and reset{catchup_tag}"
-    if key == "SOLAR_MAX":
-        return "SOLAR_MAX", f"Solar peak planning checkpoint{catchup_tag}"
-    return "TRANSITION", key.split(":", 1)[1].replace("_", " ").title() + catchup_tag
+    return spec.event_type, f"{spec.event_label}{catchup_tag}"
 
 
 def _expected_action_for_event(event_type: str, label: str | None = None) -> str:
@@ -5067,9 +5184,8 @@ def _expected_action_for_event(event_type: str, label: str | None = None) -> str
     normalized = (label or "").lower()
     if normalized.startswith("validation") and "ack-only" in normalized:
         return "acknowledge_trigger"
-    if event_type in {"SUNRISE", "SUNSET", "MIDNIGHT"}:
-        return "set_plan"
-    return "any"
+    spec = _trigger_spec_for_event(event_type, label)
+    return spec.expected_action if spec else "any"
 
 
 def _sla_seconds(event_type: str, instance: str | None) -> int | None:
@@ -5671,12 +5787,15 @@ async def planning_heartbeat(pool: asyncpg.Pool) -> None:
     for key, milestone_time in all_milestones.items():
         if key in _milestones_fired:
             continue
+        spec = PLANNER_TRIGGER_MATRIX[key]
 
         # Fire if we're within the window after the milestone
-        # Normal: 0-5 min. Catch-up: 5 min - 2 hours (handles ingestor restarts)
+        # Normal and catch-up windows are defined by PLANNER_TRIGGER_MATRIX.
         delta = (now - milestone_time).total_seconds()
-        is_catchup = 300 <= delta < 7200
-        if 0 <= delta < 300 or is_catchup:
+        normal_window_s = spec.normal_window_seconds or 0
+        catchup_window_s = spec.catchup_seconds or 0
+        is_catchup = normal_window_s <= delta < catchup_window_s
+        if 0 <= delta < normal_window_s or is_catchup:
             event_type, label = _milestone_event(key, catchup=is_catchup)
 
             # Phase 4 cadence ceiling: if a SUNRISE plan was already written
@@ -5722,8 +5841,9 @@ async def planning_heartbeat(pool: asyncpg.Pool) -> None:
             # audit metadata only.
             loop = asyncio.get_event_loop()
             context = await loop.run_in_executor(None, gather_context)
-            severity = classify_severity(event_type, SeverityContext())
-            instance = pick_instance(event_type, severity)
+            severity_event_type = spec.severity_event_type or event_type
+            severity = classify_severity(severity_event_type, SeverityContext())
+            instance = pick_instance(severity_event_type, severity)
             await _deliver_and_log(
                 pool,
                 event_type,
@@ -5783,11 +5903,13 @@ async def planning_heartbeat(pool: asyncpg.Pool) -> None:
                 # severity/SLA table key; the event_type emitted to Iris
                 # and stored in plan_delivery_log / planner_trigger_ledger
                 # is "FORECAST_DEVIATION".
-                severity = classify_severity("DEVIATION", severity_ctx)
-                instance = pick_instance("DEVIATION", severity)
+                spec = PLANNER_TRIGGER_MATRIX["FORECAST_DEVIATION"]
+                severity_event_type = spec.severity_event_type or spec.event_type
+                severity = classify_severity(severity_event_type, severity_ctx)
+                instance = pick_instance(severity_event_type, severity)
                 await _deliver_and_log(
                     pool,
-                    "FORECAST_DEVIATION",
+                    spec.event_type,
                     deviations_str,
                     context,
                     instance=instance,

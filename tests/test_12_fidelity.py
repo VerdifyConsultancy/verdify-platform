@@ -1167,17 +1167,90 @@ def test_forecast_deviation_check_covers_distinct_axes_without_global_cooldown()
 def test_planning_milestones_use_phase4_trigger_set():
     import tasks
 
-    src = Path(tasks.__file__).read_text()
-    start = src.index("def _compute_milestones")
-    end = src.index("async def _log_plan_delivery", start)
-    body = src[start:end]
-    cache_start = body.index("_milestones_cache = {")
-    cache_end = body.index("}", cache_start)
-    milestone_table = body[cache_start:cache_end]
-    for key in ("SUNRISE", "SOLAR_MAX", "TRANSITION:peak_stress", "TRANSITION:decline", "SUNSET"):
-        assert key in milestone_table
-    for retired in ("fixed_midnight", "fixed_pre_dawn", "fixed_midday", "fixed_afternoon", "fixed_evening"):
-        assert retired not in milestone_table
+    matrix = tasks.PLANNER_TRIGGER_MATRIX
+    scheduled = {key for key, spec in matrix.items() if spec.materialize_expected}
+    assert scheduled == {
+        "MIDNIGHT",
+        "SUNRISE",
+        "SOLAR_MAX",
+        "TRANSITION:peak_stress",
+        "TRANSITION:decline",
+        "SUNSET",
+    }
+    assert matrix["FORECAST_DEVIATION"].due_source == "forecast_deviation_check"
+    assert matrix["FORECAST_DEVIATION"].severity_event_type == "DEVIATION"
+    assert matrix["MANUAL"].due_source == "mcp.plan_run"
+    assert {matrix[key].hermes_route for key in matrix} == {"hermes-iris"}
+    for key in ("SUNRISE", "SUNSET", "MIDNIGHT"):
+        assert matrix[key].required_plan is True
+        assert matrix[key].expected_action == "set_plan"
+    for key in ("SOLAR_MAX", "TRANSITION:peak_stress", "TRANSITION:decline", "FORECAST_DEVIATION", "MANUAL"):
+        assert matrix[key].expected_action == "any"
+        assert matrix[key].required_plan is False
+    for retired in (
+        "PRE_DAWN",
+        "MORNING_BOUNDARY",
+        "MIDDAY_BOUNDARY",
+        "AFTERNOON_BOUNDARY",
+        "EVENING_BOUNDARY",
+        "fixed_pre_dawn",
+        "fixed_midday",
+        "fixed_afternoon",
+        "fixed_evening",
+        "FORECAST",
+    ):
+        assert retired not in matrix
+
+
+def test_planning_milestones_are_derived_from_trigger_matrix(monkeypatch):
+    import tasks
+
+    class EarlyDatetime(_dt):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(2026, 5, 19, 0, 20, tzinfo=tz)
+
+    def fake_sun(_observer, *, date, tzinfo):
+        return {
+            "sunrise": _dt(date.year, date.month, date.day, 5, 40, tzinfo=tzinfo),
+            "noon": _dt(date.year, date.month, date.day, 12, 55, tzinfo=tzinfo),
+            "sunset": _dt(date.year, date.month, date.day, 20, 10, tzinfo=tzinfo),
+        }
+
+    monkeypatch.setattr(tasks, "_sun", fake_sun)
+    monkeypatch.setattr(tasks, "_load_milestone_state", lambda: None)
+    monkeypatch.setattr(tasks, "datetime", EarlyDatetime)
+    tasks._milestones_date = None
+    tasks._milestones_cache = {}
+    tasks._milestones_fired = {}
+
+    milestones = tasks._compute_milestones()
+    assert list(milestones) == [key for key, spec in tasks.PLANNER_TRIGGER_MATRIX.items() if spec.materialize_expected]
+    assert milestones["MIDNIGHT"].hour == 0
+    assert milestones["MIDNIGHT"].minute == 15
+    assert milestones["SUNRISE"].hour == 5
+    assert milestones["SOLAR_MAX"].hour == 12
+    assert milestones["TRANSITION:peak_stress"].hour == 14
+    assert milestones["TRANSITION:decline"].hour == 19
+    assert milestones["SUNSET"].hour == 20
+
+
+def test_planner_trigger_matrix_drives_labels_and_expected_actions():
+    import tasks
+
+    assert tasks._milestone_event("SUNRISE") == ("SUNRISE", "Morning planning cycle")
+    assert tasks._milestone_event("SUNSET", catchup=True) == (
+        "SUNSET",
+        "Evening planning cycle (catch-up)",
+    )
+    assert tasks._milestone_event("TRANSITION:peak_stress") == ("TRANSITION", "Peak Stress")
+    assert tasks._expected_action_for_event("SUNRISE", "Morning planning cycle") == "set_plan"
+    assert tasks._expected_action_for_event("MIDNIGHT", "End-of-day review and reset") == "set_plan"
+    assert tasks._expected_action_for_event("FORECAST_DEVIATION", "weather miss") == "any"
+    assert (
+        tasks._expected_action_for_event("MANUAL", "validation ack-only: Ad-hoc planning cycle via MCP plan_run")
+        == "acknowledge_trigger"
+    )
 
 
 def test_prompt_builder_events_validate_delivery_log_schema():
