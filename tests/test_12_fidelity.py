@@ -1100,6 +1100,70 @@ def test_alert_monitor_detects_planner_delivery_outages():
     assert "status <> 'plan_written'" in src
 
 
+def test_forecast_deviation_defaults_cover_material_axes():
+    import tasks
+
+    thresholds = tasks._forecast_deviation_threshold_map([])
+    assert {
+        "temp_f",
+        "rh_pct",
+        "vpd_kpa",
+        "solar_w_m2",
+        "wind_speed_mph",
+        "wind_gust_mph",
+        "precip_in",
+        "cloud_cover_pct",
+        "forecast_missing_min",
+    } <= set(thresholds)
+
+    disabled = tasks._forecast_deviation_threshold_map(
+        [{"parameter": "wind_speed_mph", "enabled": False, "threshold": 99.0, "unit": "mph", "cooldown_min": 1}]
+    )
+    assert "wind_speed_mph" not in disabled
+
+
+def test_forecast_deviation_helpers_compute_vpd_and_cloud_proxy():
+    import tasks
+
+    vpd = tasks._outdoor_vpd_kpa(65.8, 25.0)
+    assert vpd is not None
+    assert 1.5 < vpd < 1.8
+    assert tasks._outdoor_vpd_kpa(65.8, 120.0) is None
+
+    inferred_cloud = tasks._cloud_cover_proxy_pct(100.0, 500.0, 20.0)
+    assert inferred_cloud is not None
+    assert inferred_cloud > 80.0
+    assert tasks._cloud_cover_proxy_pct(100.0, 50.0, 20.0) is None
+
+
+def test_forecast_deviation_check_covers_distinct_axes_without_global_cooldown():
+    import tasks
+
+    src = Path(tasks.__file__).read_text()
+    start = src.index("async def forecast_deviation_check")
+    end = src.index("async def _refresh_daily_summary_for_date", start)
+    body = src[start:end]
+
+    for parameter in (
+        "temp_f",
+        "rh_pct",
+        "vpd_kpa",
+        "solar_w_m2",
+        "wind_speed_mph",
+        "wind_gust_mph",
+        "precip_in",
+        "cloud_cover_pct",
+        "forecast_missing_min",
+    ):
+        assert parameter in body
+    assert "_last_deviation_trigger_ts" not in body
+    assert "triggered = true" in body
+    assert "cooldown_min" in body
+    assert "precip_intensity_in_h" in body
+    assert "normalized_excess" in body
+    assert "consecutive_cycles" in body
+
+
 def test_planning_milestones_use_phase4_trigger_set():
     import tasks
 
