@@ -37,13 +37,20 @@ trigger routes to Hermes `hermes-iris` with a recorded `hermes_run_id`, and ever
 trigger resolves to exactly one of `plan_written`, `acked`,
 `delivery_failed`, or `timed_out`.
 
-- [ ] **I-P0.1 Canonical trigger matrix.** Replace implicit milestone handling with a single trigger matrix covering:
-  - solar transitions: `SUNRISE`, `SUNSET`
-  - fixed boundaries: `MIDNIGHT`, `PRE_DAWN`, `MORNING_BOUNDARY`, `MIDDAY_BOUNDARY`, `AFTERNOON_BOUNDARY`, `EVENING_BOUNDARY`
-  - forecast deviations: any observed-vs-forecast breach emitted by `forecast_deviation_check`
-  - forecast refreshes: new forecast fetches after startup baseline
-  - manual/ad-hoc runs from MCP
-  Each entry defines due time, catch-up behavior, expected planner action (`set_plan` vs `set_tunable` vs `acknowledge_trigger`), SLA, and Hermes routing.
+- [x] **I-P0.1 Canonical trigger matrix.** `ingestor/tasks.py` now
+  carries `PLANNER_TRIGGER_MATRIX`, the single contract for emitted planner
+  triggers, labels, due-time source, catch-up window, expected ledger action,
+  required-plan status, and Hermes route. The active Phase 4 matrix covers the
+  required `SUNRISE`, `SUNSET`, and short-window `MIDNIGHT` full-plan cycles,
+  the solar-derived `SOLAR_MAX` / `TRANSITION:peak_stress` /
+  `TRANSITION:decline` checkpoints, `FORECAST_DEVIATION` events emitted by
+  `forecast_deviation_check`, and MCP `MANUAL` plan runs. Regression coverage
+  verifies `_compute_milestones()`, `_milestone_event()`, and
+  `_expected_action_for_event()` derive from the matrix. Raw forecast refresh
+  triggers and the noisy `PRE_DAWN` / `MORNING_BOUNDARY` /
+  `MIDDAY_BOUNDARY` / `AFTERNOON_BOUNDARY` / `EVENING_BOUNDARY` fixed
+  boundaries remain intentionally retired under the Phase 4 context-budget
+  contract rather than being reintroduced.
 - [x] **I-P0.2 No missed-sunrise blind spot.**
   `planning_heartbeat` now materializes expected SUNRISE/SUNSET/MIDNIGHT
   triggers in `planner_trigger_ledger` before planner delivery, marks normal
@@ -73,7 +80,12 @@ trigger resolves to exactly one of `plan_written`, `acked`,
   threshold-exceeding deviation with `triggered=true|false`, and applies
   cooldown per parameter so repeated same-axis noise is suppressed without
   silencing a distinct weather-axis miss.
-- [x] **I-P0.7 Fixed-boundary planning.** Added fixed local-time `TRANSITION` triggers at 00:00, 06:00/pre-dawn, 12:00/midday, 16:00/afternoon, and 20:00/evening, alongside sunrise/sunset and existing solar-derived transition milestones. All normal boundaries route local-first.
+- [x] **I-P0.7 Fixed-boundary planning.** The fixed-boundary experiment
+  landed earlier, then Phase 4 narrowed the active scheduler to the canonical
+  matrix above after the extra 06:00/12:00/16:00/20:00 transitions proved
+  low-signal. Only the short-window `MIDNIGHT` review remains active as a
+  fixed local-time required cycle; other fixed boundaries stay documented here
+  as superseded deployment history.
 - [x] **I-P0.8 Active/future plan range guard.**
   `alert_monitor` scans active/future `setpoint_plan` rows through
   `registry_value_error()` and emits `planner_tunable_range_drift` before
