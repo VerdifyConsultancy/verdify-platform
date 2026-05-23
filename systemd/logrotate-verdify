@@ -1,0 +1,10 @@
+/var/local/verdify/state/*.log {
+    daily
+    rotate 7
+    compress
+    missingok
+    notifempty
+    su root users
+    copytruncate
+    size 1M
+}

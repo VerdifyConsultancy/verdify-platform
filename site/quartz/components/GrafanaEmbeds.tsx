@@ -1,4 +1,4 @@
-import { QuartzComponentConstructor } from "./types";
+import { QuartzComponentConstructor } from "./types"
 
 // GrafanaEmbeds — progressive-enhancement upgrader for placeholder
 // <div class="grafana-embed"> nodes emitted by the GrafanaDefer
@@ -18,11 +18,11 @@ import { QuartzComponentConstructor } from "./types";
 // window.addCleanup so they don't leak across navigations.
 
 export default (() => {
-    function GrafanaEmbeds() {
-        return null;
-    }
+  function GrafanaEmbeds() {
+    return null
+  }
 
-    GrafanaEmbeds.css = `
+  GrafanaEmbeds.css = `
 .grafana-embed {
   width: 100%;
   margin: 0.5rem 0;
@@ -71,9 +71,9 @@ export default (() => {
   text-decoration: underline;
   cursor: pointer;
 }
-`;
+`
 
-    GrafanaEmbeds.afterDOMLoaded = `
+  GrafanaEmbeds.afterDOMLoaded = `
 (function () {
   function shouldUseStaticImages() {
     if (typeof navigator === 'undefined') return false;
@@ -329,7 +329,7 @@ export default (() => {
   document.addEventListener('nav', setup);
   if (document.readyState !== 'loading') setup();
 })();
-`;
+`
 
-    return GrafanaEmbeds;
-}) satisfies QuartzComponentConstructor;
+  return GrafanaEmbeds
+}) satisfies QuartzComponentConstructor

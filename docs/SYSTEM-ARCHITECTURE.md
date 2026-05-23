@@ -1,6 +1,6 @@
 # Verdify System Architecture
 
-**Last Updated:** 2026-05-11
+**Last Updated:** 2026-05-23
 **Host:** vm-docker-iris (192.168.30.150)
 **Platform:** Debian 13, Docker 28, Python 3.13
 
@@ -86,7 +86,7 @@ diagnostics/recovery, but current production firmware does not run an HTTP
 setpoint poller.
 ```
 
-## Docker Services (7 containers)
+## Docker Services (14 running containers)
 
 All managed via `/srv/verdify/docker-compose.yml`:
 
@@ -95,10 +95,19 @@ All managed via `/srv/verdify/docker-compose.yml`:
 | verdify-traefik | traefik:v3.6.7 | 0.0.0.0:443 | proxy | Reverse proxy, Docker label routing |
 | verdify-timescaledb | timescaledb:latest-pg16 | 127.0.0.1:5432 | internal | Primary database (PG16 + hypertables) |
 | verdify-grafana | grafana-oss:latest | 3000 (internal) | proxy + internal | 54 dashboards, anonymous Viewer access |
+| verdify-grafana-renderer | grafana-image-renderer:latest | 8081 (internal) | internal | Static PNG renderer for mobile Grafana panels |
 | verdify-grafana-proxy | nginx:alpine | 80 (internal) | proxy + internal | CSS injection to hide Grafana branding |
 | verdify-api | verdify-api (local build) | 8080 (internal) | proxy + internal | Crop API + compatibility /setpoints |
 | verdify-mqtt | eclipse-mosquitto:2 | 0.0.0.0:1883 | internal | MQTT broker for ESP32 + Sentinel |
 | verdify-site | nginx:alpine | 80 (internal) | proxy | Quartz static lab site (lab.verdify.ai) |
+| verdify-umami-db | postgres:16-alpine | 5432 (internal) | internal | Umami analytics database |
+| verdify-umami | umami:postgresql-latest | 3000 (internal) | proxy + internal | Public website analytics |
+| verdify-goaccess | allinurl/goaccess:latest | — | default | Traefik access-log HTML generator |
+| verdify-goaccess-site | nginx:alpine | 80 (internal) | proxy | `logs.verdify.ai` static GoAccess report |
+| verdify-promtail | grafana/promtail:latest | host network | host | Docker/journald/state log shipper to Loki |
+| hermes-iris | nousresearch/hermes-agent | 127.0.0.1:8642 | internal | Iris planner gateway; profile-gated but kept running in production |
+
+`hermes-iris-shadow` is defined for shadow testing but is not part of the normal running set.
 
 ### Docker Networks
 
@@ -106,6 +115,7 @@ All managed via `/srv/verdify/docker-compose.yml`:
 |---------|--------|---------|
 | verdify-proxy | 172.28.0.0/16 | Public-facing services (Traefik routes here) |
 | verdify-internal | 172.27.0.0/16 | Backend services (DB, MQTT — no external access) |
+| verdify_default | Docker-assigned | Default-network holdout for the GoAccess generator container |
 
 ### Docker Volumes
 
@@ -114,13 +124,28 @@ All managed via `/srv/verdify/docker-compose.yml`:
 | verdify_tsdb_data | TimescaleDB persistent data |
 | verdify_grafana_data | Grafana state (users, preferences, annotations) |
 | verdify_mqtt_data | Mosquitto message persistence |
+| verdify_promtail_positions | Promtail read cursors |
+| verdify_umami_db_data | Umami analytics database |
 
-## Systemd Services (2 active)
+## Systemd Units
 
-| Service | Purpose | Port | Restart |
-|---------|---------|------|---------|
-| verdify-ingestor | ESP32 data ingestor + 12 periodic tasks | — | always (30s delay) |
-| verdify-setpoint-server | Compatibility `/setpoints` export + Lutron light helper | 8200 | always (10s delay) |
+Tracked source copies live in `/srv/verdify/systemd/`; install details are in `systemd/README.md`.
+
+| Unit | Type | Purpose | Enablement |
+|------|------|---------|------------|
+| verdify-ingestor.service | always-on service | ESP32 data ingestor + 12 periodic tasks | enabled |
+| verdify-mcp.service | always-on service | MCP server for Iris planner tools | enabled |
+| verdify-api.service | always-on service | Host-managed crop/catalog API path | enabled |
+| verdify-setpoint-server.service | always-on service | Compatibility `/setpoints` export + Lutron light helper | enabled |
+| verdify-plan-publish.path | path unit | Watches planner output and publishes public plan archive | enabled |
+| verdify-forecast-page.timer | timer | Runs generated-site publisher on forecast cadence | enabled |
+| verdify-grafana-render-cache-warm.timer | timer | Warms mobile Grafana render cache every 30 minutes | enabled |
+| verdify-site-poll.timer | timer | Polls vault content every 10 seconds and rebuilds site when needed | enabled |
+| verdify-forecast-page.service | oneshot | Generated-site publisher | timer-triggered |
+| verdify-grafana-render-cache-warm.service | oneshot | Render-cache warmer | timer-triggered |
+| verdify-site-poll.service | oneshot | Site poller | timer-triggered |
+| verdify-site-build.service | oneshot | Quartz rebuild and nginx restart | poller-triggered |
+| verdify-plan-publish.service | oneshot | Plan archive generation/publishing | path-triggered |
 
 ## Ingestor Architecture
 

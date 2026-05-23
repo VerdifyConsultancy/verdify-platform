@@ -2,7 +2,7 @@
 
 > Where the stack is safe, where it isn't, and what to do about it.
 
-Last updated: 2026-04-18
+Last updated: 2026-05-23
 
 This document is prescriptive: "here's what could go wrong and what's in place (or missing) to handle it." It's a companion to `FOLDER-HIERARCHY.md` (where things live) and `IRIS-PROVISIONING-RUNBOOK.md` (how to build a new VM from scratch — in `/mnt/agents/iris/docs/`).
 
@@ -20,22 +20,18 @@ This document is prescriptive: "here's what could go wrong and what's in place (
 
 ## 2. What is NOT protected (the real gaps)
 
-### 2a. Untracked systemd units
+### 2a. Host service definitions must stay source-controlled
 
-**Risk:** VM rebuild loses the five core services' configuration.
+**Risk:** VM rebuild loses service configuration if `/etc/systemd/system/`, logrotate, or the user crontab drift from git.
 
-Currently tracked in `/mnt/iris/verdify/systemd/` (as of Sprint 16.5):
-- `verdify-site-poll.timer` + `.service`
-- `verdify-site-build.service`
+Current status after the 2026-05-23 cleanup:
+- All live `verdify-*` unit files under `/etc/systemd/system/` are represented in `/mnt/iris/verdify/systemd/`.
+- Active drop-ins for `verdify-ingestor`, `verdify-mcp`, and `verdify-setpoint-server` are tracked under `systemd/*.service.d/`.
+- Verdify logrotate policy is tracked as `systemd/logrotate-verdify`.
+- Jason's Verdify crontab is tracked as `systemd/jason.crontab`.
+- Disabled legacy `verdify-forecast.service` and `verdify-forecast.timer` were moved to `/mnt/iris/backups/verdify-host-cleanup-20260523/systemd-legacy/`; live forecast sync is owned by ingestor.
 
-NOT tracked — live only at `/etc/systemd/system/`:
-- `verdify-ingestor.service`
-- `verdify-mcp.service`
-- `verdify-api.service`
-- `verdify-forecast.service`
-- `verdify-setpoint-server.service`
-
-**Mitigation:** Copy these to `/mnt/iris/verdify/systemd/` and git-commit. One-shot, 5 minutes. Tracked as follow-up item in `IN-13`.
+**Mitigation:** After host service edits, copy the changed unit/drop-in/logrotate/crontab artifact back into `/mnt/iris/verdify/systemd/`, commit it, and run `systemctl daemon-reload` where needed.
 
 ### 2b. DB restore has never been practiced
 
@@ -125,7 +121,7 @@ Tracked as `OB-11`. Est. 2 hours for #1 + #4 verification. #3 is deferred.
 |---|---|---|---|---|
 | Secrets recovery undocumented (VM rebuild) | Medium (once a year-ish) | **High** (days of figuring out) | **P0** | OB-10 |
 | ESP32 wedge after bad OTA | Low | **High** (no climate control) | **P0** | FW-15 |
-| Untracked systemd units lose config | Medium (VM rebuild) | Medium | **P1** | IN-13 |
+| Host service config drifts from git | Medium (VM rebuild) | Medium | **P1** | `systemd/README.md` |
 | DB restore untested | Low-medium | High | **P1** | OB-7 |
 | Site-poll silently stops | Low | Low-medium | **P2** | OB-12 |
 | 24 h data loss from missing WAL | Low | Medium | **P2** | OB-8 |
@@ -201,7 +197,7 @@ Current procedure (until FW-15 automates rollback):
 |---|---|---|---|
 | OB-10 | P0 | 1 h | Secrets recovery doc |
 | FW-15 | P0 | 3 h | ESP32 OTA auto-rollback on sensor-health failure |
-| IN-13 | P1 | 5 min | Track remaining 5 systemd units in verdify/systemd/ |
+| IN-13 | P1 | done 2026-05-23 | Track live Verdify systemd units/drop-ins/logrotate/crontab in `systemd/` |
 | OB-7 | P1 | 2 h | Quarterly DB restore-test script |
 | OB-11 | P2 | 2 h | Verify NAS snapshot health + Prometheus NFS-stall alert |
 | OB-12 | P2 | 20 min | Extend sensor-health with site-poll marker age check |

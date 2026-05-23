@@ -18,7 +18,9 @@ Output: /srv/verdify/verdify-site/content/plans/YYYY-MM-DD.md
 import argparse
 import hashlib
 import json
+import os
 import re
+import shlex
 import subprocess
 import sys
 from datetime import date, datetime, timedelta
@@ -32,6 +34,7 @@ from verdify_schemas import DailyPlanVaultFrontmatter  # noqa: E402
 
 CONTENT_DIR = Path("/srv/verdify/verdify-site/content/plans")
 DB_CMD = "docker exec verdify-timescaledb psql -U verdify -d verdify -t -A"
+DB_TIMEOUT_S = int(os.environ.get("VERDIFY_DAILY_PLAN_DB_TIMEOUT_S", "60"))
 
 
 def _yaml_escape(val: str) -> str:
@@ -43,7 +46,22 @@ def _yaml_escape(val: str) -> str:
 
 def db_query(sql: str) -> str:
     """Run a psql query and return stripped output."""
-    result = subprocess.run(f'{DB_CMD} -c "{sql}"', shell=True, capture_output=True, text=True, timeout=15)
+    cmd = [*shlex.split(os.environ.get("VERDIFY_DAILY_PLAN_DB_CMD", DB_CMD)), "-v", "ON_ERROR_STOP=1"]
+    try:
+        result = subprocess.run(
+            cmd,
+            input=sql,
+            capture_output=True,
+            text=True,
+            timeout=DB_TIMEOUT_S,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(f"daily-plan DB query timed out after {DB_TIMEOUT_S}s") from exc
+
+    if result.returncode != 0:
+        stderr = result.stderr.strip() or "no stderr"
+        raise RuntimeError(f"daily-plan DB query failed with exit {result.returncode}: {stderr}")
     return result.stdout.strip()
 
 

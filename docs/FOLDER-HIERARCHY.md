@@ -2,7 +2,7 @@
 
 > Authoritative map of where every file lives across the stack. When something moves, update this doc.
 
-Last updated: 2026-05-11
+Last updated: 2026-05-23
 
 ## The three git-tracked trees
 
@@ -18,7 +18,7 @@ All source-of-truth content lives on NFS (`/mnt/iris/` or `/mnt/jason/`). Three 
 
 ```
 /mnt/iris/verdify/
-├── docker-compose.yml          orchestrates 8 containers
+├── docker-compose.yml          orchestrates 14 running containers (+ profile-gated shadow services)
 ├── Makefile                    entry point for every developer action
 ├── pyproject.toml              ruff + pytest config; project deps
 ├── README.md
@@ -77,8 +77,12 @@ All source-of-truth content lives on NFS (`/mnt/iris/` or `/mnt/jason/`). Three 
 ├── mqtt/                       Mosquitto broker config
 ├── promtail/                   log shipper → nexus Loki
 │
-├── systemd/                    tracked copies of unit files (installed at /etc/systemd/system/)
+├── systemd/                    tracked copies of host service artifacts
 │   ├── README.md
+│   ├── jason.crontab                  host crontab snapshot
+│   ├── logrotate-verdify              /etc/logrotate.d/verdify
+│   ├── verdify-*.service / *.timer / *.path
+│   ├── verdify-*.service.d/           production drop-ins
 │   ├── verdify-site-poll.timer         fires every 10s
 │   ├── verdify-site-poll.service       runs site-poll-and-rebuild.sh
 │   └── verdify-site-build.service      runs rebuild-site.sh

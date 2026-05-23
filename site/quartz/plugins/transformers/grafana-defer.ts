@@ -111,8 +111,7 @@ export const GrafanaDefer: QuartzTransformerPlugin<Partial<Options>> = (userOpts
 
               // Title: prefer existing iframe title attr; otherwise empty
               // (component falls back to a generic label).
-              const title =
-                typeof node.properties.title === "string" ? node.properties.title : ""
+              const title = typeof node.properties.title === "string" ? node.properties.title : ""
 
               const renderSrc = toRenderUrl(src, heightNum, opts.widthMultiplier)
               const liveSrc = toLiveDashboardUrl(src)
