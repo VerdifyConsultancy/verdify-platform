@@ -263,7 +263,9 @@ class CropAction(BaseModel):
 
 
 ObservationActionKind = Literal[
+    "list_observations",
     "record_observation",
+    "list_events",
     "record_event",
     "record_harvest",
     "list_harvests",

@@ -278,6 +278,7 @@ int main(int argc, char** argv) {
             r.greenhouse_state = MODE_NAMES[(int)mode];
         }
         r.mode_reason = state.last_mode_reason ? state.last_mode_reason : "";
+        r.summer_vent_active = state.override_summer_vent;
         r.vent_mist_assist_active = state.vent_mist_assist_active;
 
         r.eq_fog = out.fog ? 1 : 0;

@@ -86,6 +86,7 @@ class ClimateRow(BaseModel):
 
     # Light
     lux: float | None = None
+    solar_irradiance_w_m2: float | None = Field(default=None, ge=0)
     dli_today: float | None = None
     ppfd: float | None = None
     dli_par_today: float | None = None
@@ -101,6 +102,7 @@ class ClimateRow(BaseModel):
     outdoor_lux: float | None = None
     outdoor_illuminance: float | None = None
     pressure_hpa: float | None = None
+    air_density_kg_m3: float | None = Field(default=None, ge=0)
     precip_in: float | None = Field(default=None, ge=0)
     precip_intensity_in_h: float | None = Field(default=None, ge=0)
     uv_index: float | None = Field(default=None, ge=0, le=20)
@@ -119,6 +121,7 @@ class ClimateRow(BaseModel):
     solar_azimuth_deg: float | None = None
 
     # Hydroponics (YINMIK)
+    co2_ppm: float | None = Field(default=None, ge=0)
     hydro_ph: float | None = Field(default=None, ge=0, le=14)
     hydro_ec_us_cm: float | None = Field(default=None, ge=0)
     hydro_tds_ppm: float | None = Field(default=None, ge=0)
@@ -138,6 +141,11 @@ class ClimateRow(BaseModel):
     moisture_north: float | None = None
     moisture_south: float | None = None
     moisture_center: float | None = None
+    soil_moisture_south_1: float | None = Field(default=None, ge=0, le=100)
+    soil_temp_south_1: float | None = Field(default=None, ge=-40, le=160)
+    soil_ec_south_1: float | None = Field(default=None, ge=0)
+    soil_moisture_south_2: float | None = Field(default=None, ge=0, le=100)
+    soil_temp_south_2: float | None = Field(default=None, ge=-40, le=160)
     soil_moisture_west: float | None = None
     soil_temp_west: float | None = None
 
@@ -232,6 +240,9 @@ EquipmentId = Literal[
     "fog_burst_active",
     "vent_bypass_active",
     "occupancy_quiet_override_active",
+    # Legacy firmware time-validity equipment stream retained in live history
+    # and sensor_registry; current firmware uses diagnostics.sntp_valid.
+    "sntp_status",
     # Firmware gates / health (ESP32 BinarySensor)
     "mister_budget_exceeded",
     "economiser_blocked",

@@ -18,6 +18,8 @@ from __future__ import annotations
 
 import os
 import subprocess
+import sys
+from pathlib import Path
 
 import pytest
 
@@ -164,6 +166,12 @@ def test_schema_fields_subset_of_db_columns(model_class, table_name):
 # must know about it. Without this guard, renderers and queries silently miss
 # the greenhouse_id filter and data bleeds across tenants.
 TENANCY_CRITICAL_COLUMNS = ("greenhouse_id",)
+LINKAGE_CRITICAL_COLUMNS = {
+    "crop_events": ("crop_id", "position_id"),
+    "harvests": ("crop_id", "position_id"),
+    "observations": ("crop_id", "position_id", "zone_id"),
+    "treatments": ("crop_id", "position_id", "observation_id"),
+}
 
 
 @pytest.mark.parametrize("model_class,table_name", DB_BACKED)
@@ -184,3 +192,55 @@ def test_tenancy_critical_columns_declared_by_schema(model_class, table_name):
         f"on the {table_name!r} table: {missing_in_schema}. Declare them on the "
         f"model so renderers and queries can filter by tenant."
     )
+
+
+@pytest.mark.parametrize("model_class,table_name", DB_BACKED)
+def test_operation_linkage_columns_declared_by_schema(model_class, table_name):
+    """Hands-on crop work rows must preserve crop/position lineage in schemas."""
+
+    critical = LINKAGE_CRITICAL_COLUMNS.get(table_name)
+    if not critical:
+        return
+    db_cols = _table_columns(table_name)
+    if not db_cols:
+        pytest.skip(f"table {table_name!r} not found (migration pending?)")
+    schema_fields = set(model_class.model_fields.keys())
+    missing_in_schema = [c for c in critical if c in db_cols and c not in schema_fields]
+    assert not missing_in_schema, (
+        f"{model_class.__name__} is missing crop linkage field(s) that exist "
+        f"on the {table_name!r} table: {missing_in_schema}. Declare them so "
+        f"harvest/treatment records stay traceable to crop positions."
+    )
+
+
+def test_ingestor_climate_route_targets_declared_by_schema_and_db():
+    """Every climate column written by ingestor maps must be modeled and present.
+
+    ClimateRow keeps extra='ignore' so older readers survive additive DB
+    columns. That means the write-path maps need a reverse guard; otherwise a
+    mapped/live column can bypass Pydantic range validation indefinitely.
+    """
+
+    repo_root = Path(__file__).resolve().parents[2]
+    ingestor_path = repo_root / "ingestor"
+    for path in (str(repo_root), str(ingestor_path)):
+        if path not in sys.path:
+            sys.path.insert(0, path)
+
+    import entity_map  # noqa: PLC0415
+    import tasks  # noqa: PLC0415
+
+    mapped_columns = set(entity_map.CLIMATE_MAP.values())
+    mapped_columns.update(entity_map.ESPHOME_FEEDBACK_MAP.values())
+    mapped_columns.update(entity_map.MQTT_FEEDBACK_MAP.values())
+    mapped_columns.update(col for col, _conv in tasks._TEMPEST_MAP.values())
+    mapped_columns.update(col for col, _conv in tasks._HYDRO_MAP.values())
+    mapped_columns.update(col for col, _conv in tasks._CENTER_FEEDBACK_MAP.values())
+
+    schema_fields = set(ClimateRow.model_fields)
+    db_cols = _table_columns("climate")
+    missing_schema = sorted(mapped_columns - schema_fields)
+    missing_db = sorted(mapped_columns - db_cols)
+
+    assert missing_schema == []
+    assert missing_db == []

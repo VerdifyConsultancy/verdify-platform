@@ -15,7 +15,7 @@ import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from verdify_schemas.tunable_registry import CROP_BAND_REG
+from verdify_schemas.tunable_registry import CROP_BAND_REG, PLANNER_PUSHABLE_REG
 
 INGESTOR_PATH = str(Path(__file__).resolve().parent.parent / "ingestor")
 if INGESTOR_PATH not in sys.path:
@@ -154,9 +154,8 @@ def test_manual_overlay_source_classification_still_precedes_band_source():
 
 def test_live_active_plan_params_are_pushable():
     """The current planner surface should not contain params the dispatcher
-    cannot route to ESP32. This catches schema/firmware/entity-map drift using
-    the same live DB-backed style as the rest of the smoke suite."""
-    from entity_map import PARAM_TO_ENTITY, SWITCH_TO_ENTITY
+    refuses to apply. This catches stale setpoint_plan rows that still have
+    ESPHome routes but are not part of the planner-pushable contract."""
 
     result = subprocess.run(
         [
@@ -180,9 +179,8 @@ def test_live_active_plan_params_are_pushable():
         check=True,
     )
     active = {line.strip() for line in result.stdout.splitlines() if line.strip()}
-    pushable = set(PARAM_TO_ENTITY) | set(SWITCH_TO_ENTITY)
 
-    assert sorted(active - pushable) == []
+    assert sorted(active - set(PLANNER_PUSHABLE_REG)) == []
 
 
 def test_live_active_plan_has_no_band_owned_rows():

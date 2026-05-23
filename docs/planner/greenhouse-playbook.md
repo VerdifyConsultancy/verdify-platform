@@ -281,6 +281,6 @@ The context is better for full-horizon scanning.
 3. **Never set fog_escalation_kpa below 0.10, and treat values below 0.15 as exceptional.** Fog is powerful — too aggressive creates VPD-low stress and condensation risk.
 4. **Never set mist_max_closed_vent_s above 900.** Heat builds during sealed misting. >15 min sealed = thermal relief cycles too frequently.
 5. **Never set min_heat_off_s below 300.** Gas heater ignition cycling damages the unit.
-6. **Never emit crop-band params in plans.** `temp_low`, `temp_high`, `vpd_low`, and `vpd_high` are dispatcher-owned read-only context; use bias, mist, fog, dwell, and hysteresis knobs instead.
+6. **Never emit crop-band params in plans.** `temp_low`, `temp_high`, `vpd_low`, and `vpd_high` are dispatcher-owned read-only context; use mist, fog, dwell, hysteresis, vent posture, and stage-2 cooling knobs instead.
 7. **Never decouple moisture thresholds from the VPD band during active VPD-high stress.** The dispatcher will clamp conservative moisture values when live VPD is above band and dew margin is healthy; the planner should proactively choose band-coupled values instead of relying on that correction.
-7. **Never call docker exec, psql, or shell commands.** Use MCP tools only. Post a feature request if a tool is missing.
+8. **Never call docker exec, psql, or shell commands.** Use MCP tools only. Post a feature request if a tool is missing.

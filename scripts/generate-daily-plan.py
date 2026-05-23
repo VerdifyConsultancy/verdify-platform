@@ -476,7 +476,7 @@ def compact_time(local_timestamp: object) -> str:
 def event_display_label(event: dict) -> str:
     label = str(event.get("event_label") or "").strip()
     if label and not label.lstrip().startswith(("{", "[")):
-        return label
+        return public_text(label)
     event_type = str(event.get("event_type") or "").strip()
     fallback = {
         "MIDNIGHT": "End-of-day review and reset",

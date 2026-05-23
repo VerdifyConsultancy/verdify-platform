@@ -71,6 +71,7 @@ struct TraceRow {
     // State (observed from telemetry)
     std::string greenhouse_state;  // "SEALED_MIST_S1"/"VENTILATE"/...
     std::string mode_reason;       // sprint-15.1 diagnostic
+    bool summer_vent_active;        // determine_mode() set override_summer_vent
     bool vent_mist_assist_active;   // band-first controller humidification assist while ventilating
 
     // Equipment (0/1)
@@ -162,11 +163,11 @@ inline bool check_7_safety_cool_engaged(const TraceRow& r, ReportFn report = def
 
 // #9: override_summer_vent never fires when outdoor_data_age_s >= outdoor_staleness_max_s
 inline bool check_9_summer_vent_requires_fresh_outdoor(const TraceRow& r, ReportFn report = default_report) {
-    if (r.mode_reason == "summer_vent_preempt"
+    if (r.summer_vent_active
         && r.outdoor_data_age_s >= 0
         && (uint32_t)r.outdoor_data_age_s >= r.outdoor_staleness_max_s) {
         report(9, "summer_vent_stale_outdoor", r,
-               "summer_vent_preempt fired with stale outdoor data");
+               "override_summer_vent true with stale outdoor data");
         return false;
     }
     return true;
@@ -330,35 +331,68 @@ inline bool check_8_thermal_relief_duration(Ctx8& c, const TraceRow& r, ReportFn
     return true;
 }
 
-// #10: any equipment toggle preceded by mode_reason change in same tick
-//      OR reason in {dwell_expired, summer_vent_preempt, dry_override}
+// #10: any equipment toggle is attributable to a changed state/reason or to
+//      a known actuator-context reason from determine_mode().
 struct Ctx10 {
+    bool initialized = false;
     int prev_eq_bitmask = 0;
+    std::string prev_mode;
     std::string prev_reason;
 };
 inline bool check_10_equipment_toggle_auditable(Ctx10& c, const TraceRow& r, ReportFn report = default_report) {
     const int cur_eq = (r.eq_fog << 0) | (r.eq_vent << 1) | (r.eq_fan1 << 2)
                      | (r.eq_fan2 << 3) | (r.eq_heat1 << 4) | (r.eq_heat2 << 5)
                      | (r.eq_mister_south << 6) | (r.eq_mister_west << 7) | (r.eq_mister_center << 8);
+    if (!c.initialized) {
+        c.initialized = true;
+        c.prev_eq_bitmask = cur_eq;
+        c.prev_mode = r.greenhouse_state;
+        c.prev_reason = r.mode_reason;
+        return true;
+    }
     if (cur_eq != c.prev_eq_bitmask) {
-        // equipment changed; reason must have changed OR be one of the auditable ones
+        // Equipment changed; mode/state or reason must have changed, OR the
+        // reason must identify a known dwell/override path that can legally
+        // change relay output without changing the top-level state label.
+        const bool mode_changed = r.greenhouse_state != c.prev_mode;
         const bool reason_changed = r.mode_reason != c.prev_reason;
-        const bool reason_auditable = r.mode_reason == "dwell_expired"
-                                   || r.mode_reason == "summer_vent_preempt"
+        const bool reason_auditable = r.mode_reason == "dehum_continue"
                                    || r.mode_reason == "dry_override"
+                                   || r.mode_reason == "dwell_expired"
+                                   || r.mode_reason == "dwell_hold"
+                                   || r.mode_reason == "heat_stage1"
+                                   || r.mode_reason == "heat_stage2"
+                                   || r.mode_reason == "humidify_continue"
+                                   || r.mode_reason == "humidify_enter"
+                                   || r.mode_reason == "humidify_resolved"
+                                   || r.mode_reason == "idle"
+                                   || r.mode_reason == "idle_default"
+                                   || r.mode_reason == "mist_backoff"
+                                   || r.mode_reason == "moisture_blocked"
+                                   || r.mode_reason == "relief_cycle_breaker"
+                                   || r.mode_reason == "safety_cool"
+                                   || r.mode_reason == "safety_heat"
+                                   || r.mode_reason == "seal_continue"
                                    || r.mode_reason == "seal_enter"
                                    || r.mode_reason == "seal_exit"
+                                   || r.mode_reason == "sensor_fault"
+                                   || r.mode_reason == "summer_vent"
+                                   || r.mode_reason == "summer_vent_preempt"
+                                   || r.mode_reason == "temp_high"
+                                   || r.mode_reason == "temp_preempts_humidify"
                                    || r.mode_reason == "thermal_relief"
-                                   || r.mode_reason == "thermal_relief_forced";
-        if (!reason_changed && !reason_auditable) {
-            // Don't hard-fail — emit warning and continue. This invariant is
-            // diagnostic, not safety-critical. Hard-fail would need mode_reason
-            // to be published on every tick, which pre-sprint-15.1 data lacks.
-            // Return true without reporting so the invariant suite remains a
-            // hard safety gate instead of an instrumentation completeness gate.
+                                   || r.mode_reason == "thermal_relief_forced"
+                                   || r.mode_reason == "vpd_low"
+                                   || r.mode_reason == "vpd_min_safe_rescue"
+                                   || r.mode_reason == "vpd_too_low";
+        if (!mode_changed && !reason_changed && !reason_auditable) {
+            report(10, "equipment_toggle_without_reason", r,
+                   "relay bitmask changed without a changed state, changed reason, or auditable mode_reason");
+            return false;
         }
     }
     c.prev_eq_bitmask = cur_eq;
+    c.prev_mode = r.greenhouse_state;
     c.prev_reason = r.mode_reason;
     return true;
 }

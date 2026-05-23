@@ -503,8 +503,10 @@ today's forecast, and set the daytime posture.
 7. **Write today's plan** — use `set_plan(plan_id=..., hypothesis=..., transitions=..., trigger_id=..., planner_instance=...)` with 5-8 waypoints
    anchored to solar milestones (dawn, morning ramp, peak stress, decline, evening).
    Each transition includes all tactical Tier 1 params. Do not include crop-band params
-   (`temp_low`, `temp_high`, `vpd_low`, `vpd_high`); use bias, mist, fog,
-   dwell, and hysteresis knobs to shift behavior. Include a hypothesis and experiment.
+   (`temp_low`, `temp_high`, `vpd_low`, `vpd_high`) or retired knobs
+   (`bias_heat`, `bias_cool`, `d_heat_stage_2`, `sw_fsm_controller_enabled`);
+   use mist, fog, dwell, hysteresis, vent posture, and stage-2 cooling knobs to
+   shift behavior. Include a hypothesis and experiment.
    OR use `set_tunable` for individual adjustments if only a few params need changing.
 7. **Post morning brief to #greenhouse** — include:
    - Yesterday's scorecard: score, temp vs VPD compliance, stress breakdown, utility cost + trend
@@ -543,8 +545,10 @@ and set the overnight posture.
 6. **Write overnight plan** — use `set_plan(plan_id=..., hypothesis=..., transitions=..., trigger_id=..., planner_instance=...)` with 3-5 waypoints
    anchored to evening/overnight milestones (evening_settle, midnight_posture, pre_dawn).
    Each transition includes all tactical Tier 1 params. Do not include crop-band params
-   (`temp_low`, `temp_high`, `vpd_low`, `vpd_high`); use mist, fog,
-   dwell, and hysteresis knobs to shift behavior. Include a hypothesis about tonight's
+   (`temp_low`, `temp_high`, `vpd_low`, `vpd_high`) or retired knobs
+   (`bias_heat`, `bias_cool`, `d_heat_stage_2`, `sw_fsm_controller_enabled`);
+   use mist, fog, dwell, hysteresis, vent posture, and stage-2 cooling knobs to
+   shift behavior. Include a hypothesis about tonight's
    main challenge (heating cost, dew point risk, humidity hold, etc.).
    Key overnight tuning:
    - Heater/vent oscillation expected? Use wider temp hysteresis or dwell, not retired bias knobs
@@ -657,7 +661,7 @@ roughly 2 hours; what you do here shapes how the next 2-4 hours unfold.
 
 ### Your tasks:
 1. **Check live solar + indoor signals** — call `climate` and `forecast`.
-   Compare actual `solar_w_m2` to the forecast peak. Apply the FORECAST
+   Compare actual `solar_w` / `solar_w_m2` to the forecast peak. Apply the FORECAST
    CALIBRATION bias from the assembled context (Open-Meteo overshoots solar
    by ~+47 W/m² at 0-24h leads).
 2. **Compare indoor VPD to plan** — call `plan_status` and `get_setpoints`.
@@ -704,9 +708,10 @@ threshold tripped):
 4. **Adjust tunables** — use `set_tunable` to adapt to actual conditions:
    - If hotter than expected: increase misting, consider lowering
      `fog_escalation_kpa`.
-   - If cooler than expected: reduce misting aggressiveness, check
-     heating bias.
-   - If more humid: watch dew point margin, consider dehum vent bias.
+   - If cooler than expected: reduce misting aggressiveness and check heat
+     hysteresis/dwell posture.
+   - If more humid: watch dew point margin and use VPD hysteresis, vent posture,
+     and fog/mister thresholds instead of retired bias knobs.
 5. **Post what changed** — explain the deviation, your diagnosis, and your
    response.
 

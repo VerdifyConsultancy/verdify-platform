@@ -25,14 +25,14 @@ from pathlib import Path
 repo = Path(sys.argv[1]).resolve()
 sys.path.insert(0, str(repo))
 
-from verdify_schemas.tunable_registry import BAND_OWNED_REG, LIGHTING_CIRCUIT_DEFAULT_REG, TIER1_REG  # noqa: E402
+from verdify_schemas.tunable_registry import BAND_OWNED_REG, PLANNER_PUSHABLE_REG  # noqa: E402
 
 
 def sql_list(values: set[str] | frozenset[str]) -> str:
     return ",".join("'" + value.replace("'", "''") + "'" for value in sorted(values))
 
 
-active_context = TIER1_REG | BAND_OWNED_REG | LIGHTING_CIRCUIT_DEFAULT_REG
+active_context = PLANNER_PUSHABLE_REG | BAND_OWNED_REG
 plan_compare_excluded = BAND_OWNED_REG | frozenset(
     {"mister_engage_delay_s", "mister_all_delay_s", "mister_center_penalty"}
 )

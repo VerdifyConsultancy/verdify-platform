@@ -36,6 +36,7 @@ class Treatment(BaseModel):
     method: str | None = None
     zone: str | None = None
     crop_id: int | None = None
+    position_id: int | None = None
     target_pest: str | None = None
     phi_days: int | None = Field(default=None, ge=0)  # pre-harvest interval
     rei_hours: int | None = Field(default=None, ge=0)  # restricted-entry interval
@@ -56,6 +57,7 @@ class Harvest(BaseModel):
     ts: AwareDatetime | None = None
     greenhouse_id: str = "vallery"
     crop_id: int | None = None
+    position_id: int | None = None
     weight_kg: float | None = Field(default=None, ge=0)
     unit_count: int | None = Field(default=None, ge=0)
     quality_grade: str | None = None

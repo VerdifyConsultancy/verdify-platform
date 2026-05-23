@@ -72,6 +72,7 @@ run_step() {
   run_step "$PYTHON" "$SCRIPT_ROOT/render-equipment-page.py"
   run_step "$PYTHON" "$SCRIPT_ROOT/render-zone-pages.py"
   run_step "$PYTHON" "$SCRIPT_ROOT/render-crop-profiles.py"
+  run_step "$PYTHON" "$SCRIPT_ROOT/export-hourly-performance-dataset.py"
   run_step bash "$SCRIPT_ROOT/export-public-sample-dataset.sh"
   run_step bash "$SCRIPT_ROOT/gather-static-context.sh"
 

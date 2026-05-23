@@ -243,9 +243,7 @@ def main() -> int:
 
     updates = [
         (args.vault_root / "data" / "planning-quality.md", "planning-quality", planning_block(data)),
-        (args.vault_root / "evidence" / "planning-quality.md", "planning-quality", planning_block(data)),
         (args.vault_root / "data" / "operations.md", "operations", operations_block(data)),
-        (args.vault_root / "evidence" / "operations.md", "operations", operations_block(data)),
     ]
 
     changed: list[Path] = []

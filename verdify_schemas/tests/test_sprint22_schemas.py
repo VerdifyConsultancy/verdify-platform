@@ -38,8 +38,17 @@ NOW = datetime(2026, 4, 19, 1, 0, tzinfo=UTC)
 
 class TestTreatment:
     def test_valid(self):
-        t = Treatment(product="Neem oil", rate=2.0, rate_unit="oz/gal", method="foliar spray", phi_days=0)
+        t = Treatment(
+            product="Neem oil",
+            rate=2.0,
+            rate_unit="oz/gal",
+            method="foliar spray",
+            phi_days=0,
+            position_id=4,
+            outcome="aphids reduced on follow-up",
+        )
         assert t.phi_days == 0
+        assert t.position_id == 4
 
     def test_rejects_empty_product(self):
         with pytest.raises(ValidationError):
@@ -52,8 +61,18 @@ class TestTreatment:
 
 class TestHarvest:
     def test_valid(self):
-        h = Harvest(ts=NOW, crop_id=3, weight_kg=2.4, unit_count=20, quality_grade="A", unit_price=3.5, revenue=70.0)
+        h = Harvest(
+            ts=NOW,
+            crop_id=3,
+            position_id=4,
+            weight_kg=2.4,
+            unit_count=20,
+            quality_grade="A",
+            unit_price=3.5,
+            revenue=70.0,
+        )
         assert h.revenue == 70.0
+        assert h.position_id == 4
 
     def test_rejects_negative_weight(self):
         with pytest.raises(ValidationError):

@@ -14,8 +14,10 @@ LIVE_SOURCE_ROOT="${LIVE_SOURCE_ROOT:-/srv/verdify}"
 ALLOW_LIVE_SOURCE_DRIFT="${FIRMWARE_AUDIT_ALLOW_LIVE_SOURCE_DRIFT:-0}"
 
 LIVE_SOURCE_PARITY_FILES=(
+  Makefile
   api/main.py
   db/schema.sql
+  docs/planner/greenhouse-playbook.md
   firmware/greenhouse.yaml
   firmware/greenhouse/controls.yaml
   firmware/greenhouse/globals.yaml
@@ -23,15 +25,28 @@ LIVE_SOURCE_PARITY_FILES=(
   firmware/greenhouse/tunables.yaml
   firmware/lib/greenhouse_logic.h
   firmware/lib/greenhouse_types.h
+  firmware/test/invariants.h
+  firmware/test/replay_invariants.cpp
+  firmware/test/replay_overrides.cpp
   ingestor/entity_map.py
   ingestor/ingestor.py
   ingestor/iris_planner.py
   ingestor/tasks.py
+  mcp/server.py
   scripts/audit-tunable-traceability.py
+  scripts/export-hourly-performance-dataset.py
   scripts/gather-plan-context.sh
   scripts/generate-ai-tunables-page.py
+  scripts/generate-daily-plan.py
   scripts/planner-core-params.md
+  scripts/publish-site-content.sh
+  scripts/site-doctor.py
   scripts/smoke-feedback-loop.py
+  scripts/update-evidence-snapshots.py
+  scripts/validate-plan-coverage.sh
+  verdify_schemas/crops.py
+  verdify_schemas/mcp_responses.py
+  verdify_schemas/operations.py
   verdify_schemas/telemetry.py
   verdify_schemas/tunable_registry.py
 )
@@ -55,6 +70,26 @@ section "active plan coverage"
 bash scripts/validate-plan-coverage.sh
 
 section "live DB traceability"
+planner_pushable_sql="$("$PYTHON_BIN" - <<'PY'
+from verdify_schemas.tunable_registry import PLANNER_PUSHABLE_REG
+
+def quote_sql(value: str) -> str:
+    return "'" + value.replace("'", "''") + "'"
+
+print(", ".join(quote_sql(param) for param in sorted(PLANNER_PUSHABLE_REG)))
+PY
+)"
+active_nonpushable_rows="$("${DB_CMD[@]}" <<SQL
+SELECT parameter, plan_id, value
+FROM v_active_plan
+WHERE parameter NOT IN (${planner_pushable_sql})
+ORDER BY parameter;
+SQL
+)"
+if [ -n "$active_nonpushable_rows" ]; then
+  echo "$active_nonpushable_rows"
+  fail "v_active_plan contains non-planner-pushable row(s); retire stale setpoint_plan rows or update the registry contract"
+fi
 db_checks="$("${DB_CMD[@]}" <<'SQL'
 WITH checks AS (
   SELECT 'diagnostics_cols' AS check_name,
@@ -81,7 +116,61 @@ WITH checks AS (
                'effective_vpd_hysteresis_kpa',
                'effective_dehum_aggressive_kpa'
              )
-         ) AS detail
+        ) AS detail
+  UNION ALL
+  SELECT 'active_crop_work_missing_position',
+         count(*) = 0,
+         count(*)::text
+  FROM (
+    SELECT o.id
+    FROM observations o
+    JOIN crops c ON c.id = o.crop_id
+    WHERE c.is_active = true
+      AND o.position_id IS NULL
+    UNION ALL
+    SELECT e.id
+    FROM crop_events e
+    JOIN crops c ON c.id = e.crop_id
+    WHERE c.is_active = true
+      AND e.position_id IS NULL
+    UNION ALL
+    SELECT h.id
+    FROM harvests h
+    JOIN crops c ON c.id = h.crop_id
+    WHERE c.is_active = true
+      AND h.position_id IS NULL
+    UNION ALL
+    SELECT t.id
+    FROM treatments t
+    JOIN crops c ON c.id = t.crop_id
+    WHERE c.is_active = true
+      AND t.position_id IS NULL
+  ) missing
+  UNION ALL
+  SELECT 'crop_work_tenant_mismatch',
+         count(*) = 0,
+         count(*)::text
+  FROM (
+    SELECT o.id
+    FROM observations o
+    JOIN crops c ON c.id = o.crop_id
+    WHERE o.greenhouse_id IS DISTINCT FROM c.greenhouse_id
+    UNION ALL
+    SELECT e.id
+    FROM crop_events e
+    JOIN crops c ON c.id = e.crop_id
+    WHERE e.greenhouse_id IS DISTINCT FROM c.greenhouse_id
+    UNION ALL
+    SELECT h.id
+    FROM harvests h
+    JOIN crops c ON c.id = h.crop_id
+    WHERE h.greenhouse_id IS DISTINCT FROM c.greenhouse_id
+    UNION ALL
+    SELECT t.id
+    FROM treatments t
+    JOIN crops c ON c.id = t.crop_id
+    WHERE t.greenhouse_id IS DISTINCT FROM c.greenhouse_id
+  ) mismatch
   UNION ALL
   SELECT 'tactical_view_retired_rows',
          count(*) = 0,
@@ -127,6 +216,42 @@ WITH checks AS (
      OR (parameter = 'mister_vpd_weight' AND value > 3.0)
      OR (parameter = 'mister_engage_delay_s' AND value > 300)
      OR (parameter = 'mister_all_delay_s' AND value > 600)
+  UNION ALL
+  SELECT 'active_lessons_without_embedding',
+         count(*) = 0,
+         count(*)::text
+  FROM planner_lessons l
+  WHERE l.is_active = true
+    AND l.superseded_by IS NULL
+    AND NOT EXISTS (
+      SELECT 1
+      FROM verdify_embeddings e
+      WHERE e.source_type = 'lesson'
+        AND e.source_id = l.id::text
+    )
+  UNION ALL
+  SELECT 'site_docs_without_embedding',
+         count(*) = 0,
+         count(*)::text
+  FROM site_content s
+  WHERE NOT EXISTS (
+    SELECT 1
+    FROM verdify_embeddings e
+    WHERE e.source_type = 'site_doc'
+      AND e.source_id = s.page_path
+  )
+  UNION ALL
+  SELECT 'playbook_chunks_without_embedding',
+         count(*) = 0,
+         count(*)::text
+  FROM playbook_content p
+  WHERE NOT EXISTS (
+    SELECT 1
+    FROM verdify_embeddings e
+    WHERE e.source_type = 'playbook'
+      AND e.source_id = p.source_path
+      AND e.chunk_idx = p.chunk_idx
+  )
 )
 SELECT check_name, ok, detail FROM checks ORDER BY check_name;
 SQL

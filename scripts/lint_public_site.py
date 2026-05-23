@@ -32,6 +32,7 @@ STALE_SNAPSHOT_RE = re.compile(
     re.IGNORECASE,
 )
 BLANK_DAILY_LABEL_RE = re.compile(r"\b(?:high|low|vpd_h|hyst|d_cool|engage|all|pulse|gap|wt)\s+·(?=;|,|<|$)")
+PLAN_INTERNAL_NAME_RE = re.compile(r"\b(?:Hermes|OpenClaw|local Gemma)\b", re.IGNORECASE)
 STALE_CROP_STATUS_RE = re.compile(
     r"\bLaunch Taxonomy\b|For launch,\s+Verdify separates crop pages|No explicit launch taxonomy",
     re.IGNORECASE,
@@ -344,6 +345,14 @@ def check_content(vault_root: Path) -> list[Finding]:
             )
 
         if rel.startswith("plans/") and rel != "plans/index.md":
+            for match in PLAN_INTERNAL_NAME_RE.finditer(text):
+                findings.append(
+                    Finding(
+                        "error",
+                        "daily-plan-internal-name",
+                        f"{rel}:{line_number(text, match.start())} exposes internal planner implementation name '{match.group(0)}'",
+                    )
+                )
             for match in BLANK_DAILY_LABEL_RE.finditer(text):
                 findings.append(
                     Finding(
