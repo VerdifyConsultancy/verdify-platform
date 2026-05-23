@@ -84,6 +84,28 @@ class PublicPlannerTrigger(BaseModel):
     resulting_plan_id: str | None = None
 
 
+class PublicPlannerDelivery(BaseModel):
+    """One delivered planner trigger with gateway/model/session observability."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    id: int = Field(..., ge=1)
+    event_type: str
+    event_label: str | None = None
+    delivered_at: AwareDatetime
+    status: str | None = None
+    instance: str | None = None
+    session_key: str | None = None
+    wake_mode: str | None = None
+    gateway_status: int | None = None
+    hermes_run_id: str | None = None
+    trigger_id: str | None = None
+    resulting_plan_id: str | None = None
+    plan_written_at: AwareDatetime | None = None
+    planner_gateway: str | None = None
+    planner_model_label: str | None = None
+
+
 class PublicPlannerHealthResponse(BaseModel):
     """GET /api/v1/public/planner-health."""
 
@@ -105,6 +127,7 @@ class PublicPlannerHealthResponse(BaseModel):
     current_model_label: str | None = None
     current_hermes_run_id: str | None = None
     active_plan_range_violation_count: int = Field(default=0, ge=0)
+    recent_deliveries: list[PublicPlannerDelivery] = Field(default_factory=list)
     recent_triggers: list[PublicPlannerTrigger] = Field(default_factory=list)
 
 

@@ -110,7 +110,12 @@ shared contract and schema pieces; genai and ingestor own their code slices.
   invalid waypoint/change. Schema regression tests now fail if these Pydantic
   boundaries accept a value the dispatcher or firmware registry will reject.
 - [x] **C-P0.4 Reconcile historical planner delivery rows.** Live prod `plan_delivery_log` pending rows older than 30 minutes from the pre-v1.5/local-first cutover were marked `timed_out` with a reconciliation note, so operational dashboards distinguish historical silent drops from current live work.
-- [ ] **C-P0.5 Planner model observability.** Add a durable status surface showing the planner gateway/model/session used for each trigger. Success: a dashboard/API query can prove "this plan was accepted by Hermes/GPT-5.5" without scraping gateway logs.
+- [x] **C-P0.5 Planner model observability.** `/api/v1/public/planner-health`
+  now publishes recent `plan_delivery_log` rows with `session_key`,
+  `hermes_run_id`, `planner_gateway`, and `planner_model_label` alongside the
+  trigger lifecycle summary. API/dashboard consumers can prove a recent trigger
+  was accepted by Hermes/GPT-5.5 without scraping gateway logs, while the DB
+  audit table remains the durable full-history source.
 - [ ] **C-P1.1 Planner context digest view.** If genai's distilled site/lesson memory needs DB support, publish a coordinator-owned view or table that versions planner context digests and records which digest version was used by each trigger.
 
 ## Migrations

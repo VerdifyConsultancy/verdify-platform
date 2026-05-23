@@ -8,7 +8,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from verdify_schemas import PublicPlannerHealthResponse
+from verdify_schemas import PublicPlannerDelivery, PublicPlannerHealthResponse
 
 
 def _trigger_payload() -> dict:
@@ -32,6 +32,23 @@ def _trigger_payload() -> dict:
 def test_public_planner_health_schema_includes_status_surface_fields():
     now = datetime.now(UTC)
     trigger = _trigger_payload()
+    delivery = {
+        "id": 1,
+        "event_type": "FORECAST_DEVIATION",
+        "event_label": "weather miss",
+        "delivered_at": now,
+        "status": "acked",
+        "instance": "local",
+        "session_key": "hermes:iris:main:trigger:00000000-0000-0000-0000-000000000000",
+        "wake_mode": "now",
+        "gateway_status": 202,
+        "hermes_run_id": "run_test",
+        "trigger_id": "00000000-0000-0000-0000-000000000000",
+        "resulting_plan_id": None,
+        "plan_written_at": None,
+        "planner_gateway": "hermes-iris",
+        "planner_model_label": "hermes-iris/openai:gpt-5.5/high",
+    }
 
     response = PublicPlannerHealthResponse.model_validate(
         {
@@ -56,6 +73,7 @@ def test_public_planner_health_schema_includes_status_surface_fields():
             "current_model_label": "hermes-iris/openai:gpt-5.5/high",
             "current_hermes_run_id": "run_test",
             "active_plan_range_violation_count": 0,
+            "recent_deliveries": [delivery],
             "recent_triggers": [trigger],
         }
     )
@@ -65,7 +83,27 @@ def test_public_planner_health_schema_includes_status_surface_fields():
     assert response.last_resolved_trigger is not None
     assert response.pending_by_sla_age["within_sla"] == 2
     assert response.current_model_label == "hermes-iris/openai:gpt-5.5/high"
+    assert response.recent_deliveries[0].planner_gateway == "hermes-iris"
     assert response.active_plan_range_violation_count == 0
+
+
+def test_public_planner_delivery_schema_proves_gateway_model_session():
+    delivery = PublicPlannerDelivery.model_validate(
+        {
+            "id": 1,
+            "event_type": "MANUAL",
+            "delivered_at": datetime.now(UTC),
+            "status": "acked",
+            "session_key": "hermes:iris:main:trigger:00000000-0000-0000-0000-000000000000",
+            "hermes_run_id": "run_test",
+            "planner_gateway": "hermes-iris",
+            "planner_model_label": "hermes-iris/openai:gpt-5.5/high",
+        }
+    )
+
+    assert delivery.session_key is not None
+    assert delivery.hermes_run_id == "run_test"
+    assert delivery.planner_model_label == "hermes-iris/openai:gpt-5.5/high"
 
 
 def test_public_planner_health_endpoint_queries_i_p1_1_sources():
@@ -81,8 +119,11 @@ def test_public_planner_health_endpoint_queries_i_p1_1_sources():
         "current_model_label",
         "current_hermes_run_id",
         "active_plan_range_violation_count",
+        "recent_deliveries",
         "plan_delivery_log",
         "session_key",
     ):
         assert expected in endpoint
     assert "registry_value_error" in api_source
+    assert "planner_gateway" in api_source
+    assert "planner_model_label" in api_source

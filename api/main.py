@@ -86,6 +86,7 @@ from verdify_schemas import (  # noqa: E402
     PublicInfraCpuLatest,
     PublicInfraCpuPoint,
     PublicPipelineHealthSource,
+    PublicPlannerDelivery,
     PublicPlannerHealthResponse,
     PublicPlannerTrigger,
     ZoneDetail,
@@ -260,6 +261,7 @@ async def noindex_api_responses(request: Request, call_next):
 # (API, MCP crops tool, vault-crop-writer, planner) shares the same shape.
 
 DEFAULT_GREENHOUSE = "vallery"
+PLANNER_GATEWAY_LABEL = os.environ.get("VERDIFY_PLANNER_GATEWAY_LABEL", "hermes-iris")
 PLANNER_MODEL_LABEL = os.environ.get("VERDIFY_PLANNER_MODEL_LABEL", "hermes-iris/openai:gpt-5.5/high")
 WRITE_API_KEY_ENV = "VERDIFY_WRITE_API_KEY"
 ALLOW_UNAUTHENTICATED_WRITES_ENV = "VERDIFY_ALLOW_UNAUTHENTICATED_WRITES"
@@ -1715,6 +1717,29 @@ def _public_planner_trigger(row) -> PublicPlannerTrigger | None:
     )
 
 
+def _public_planner_delivery(row) -> PublicPlannerDelivery | None:
+    if row is None:
+        return None
+    hermes_run_id = row["hermes_run_id"]
+    return PublicPlannerDelivery(
+        id=int(row["id"]),
+        event_type=row["event_type"],
+        event_label=row["event_label"],
+        delivered_at=row["delivered_at"],
+        status=row["status"],
+        instance=row["instance"],
+        session_key=row["session_key"],
+        wake_mode=row["wake_mode"],
+        gateway_status=row["gateway_status"],
+        hermes_run_id=hermes_run_id,
+        trigger_id=str(row["trigger_id"]) if row["trigger_id"] else None,
+        resulting_plan_id=row["resulting_plan_id"],
+        plan_written_at=row["plan_written_at"],
+        planner_gateway=PLANNER_GATEWAY_LABEL if hermes_run_id else "legacy",
+        planner_model_label=PLANNER_MODEL_LABEL if hermes_run_id else None,
+    )
+
+
 def _pending_sla_age_buckets(row) -> dict[str, int]:
     if row is None:
         return {
@@ -1825,6 +1850,19 @@ async def public_planner_health():
             """,
             DEFAULT_GREENHOUSE,
         )
+        recent_deliveries = await conn.fetch(
+            """
+            SELECT id, event_type, event_label, delivered_at, status, instance,
+                   session_key, wake_mode, gateway_status, hermes_run_id,
+                   trigger_id, resulting_plan_id, plan_written_at
+              FROM plan_delivery_log
+             WHERE greenhouse_id = $1
+               AND delivered_at >= now() - interval '36 hours'
+             ORDER BY delivered_at DESC
+             LIMIT 40
+            """,
+            DEFAULT_GREENHOUSE,
+        )
         active_plan_candidates = await conn.fetch(
             """
             SELECT parameter, value
@@ -1872,6 +1910,9 @@ async def public_planner_health():
         current_model_label=PLANNER_MODEL_LABEL,
         current_hermes_run_id=current_delivery["hermes_run_id"] if current_delivery else None,
         active_plan_range_violation_count=_active_plan_range_violation_count(active_plan_candidates),
+        recent_deliveries=[
+            delivery for row in recent_deliveries if (delivery := _public_planner_delivery(row)) is not None
+        ],
         recent_triggers=[trigger for r in trigger_rows if (trigger := _public_planner_trigger(r)) is not None],
     )
 
