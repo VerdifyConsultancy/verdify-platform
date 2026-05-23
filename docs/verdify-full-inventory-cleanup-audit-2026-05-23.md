@@ -358,12 +358,20 @@ Recommended path cleanup:
 
 ## Active Agent And Planner Processes
 
+Host process inventory at audit time:
+
+- Total `ps` rows including header: 394.
+- User distribution: root 214, `jason` 82, Postgres UID `70` 30, `_rpc` 26, `james` 18, container UIDs `65532` 12 and `1001` 5, plus single-service users.
+- Largest command families: `sshd-session` 30, `postgres` 30, `nginx` 28, `node` 21, `tmux: client` 14, `containerd-shim` 13, `codex` 9, `chromium` 8, `docker-proxy` 6, `claude` 6, `bash` 6.
+- Non-Verdify system families observed: systemd, dbus, rpcbind, qemu guest agent, kernel workers, sshd, unattended-upgrades, node exporter support tasks, NFS/RPC workers.
+
 Relevant host processes:
 
 - `verdify-ingestor`: `/srv/greenhouse/.venv/bin/python ingestor.py`
 - `verdify-mcp`: `/srv/greenhouse/.venv/bin/python mcp/server.py`
 - host `verdify-api`: `/srv/greenhouse/.venv/bin/uvicorn main:app --port 8300`
 - `verdify-setpoint-server`: `/srv/greenhouse/.venv/bin/python3 /srv/verdify/scripts/setpoint-server.py`
+- `verdify-grafana-render-cache-warm`: `/srv/greenhouse/.venv/bin/python /srv/verdify/scripts/warm-grafana-render-cache.py ...` when the timer is running.
 - Dockerized Hermes gateway, Grafana, TimescaleDB, Mosquitto, Promtail, etc.
 - Multiple tmux agent sessions are live: Claude and Codex variants for firmware/genai/ingestor/web/saas, plus `iris`, `iris-planner`, `iris-planner-local`, `iris-dev`, and `verdify-labs-planner`.
 
