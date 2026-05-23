@@ -4240,145 +4240,293 @@ async def forecast_action_engine(pool: asyncpg.Pool) -> None:
 # ═════════════════════════════════════════════════════════════════
 # 12. FORECAST DEVIATION CHECK (every 900s = 15 min)
 # ═════════════════════════════════════════════════════════════════
-_last_deviation_trigger_ts: float = 0.0
+_FORECAST_DEVIATION_DEFAULTS: dict[str, dict[str, float | int | str | bool]] = {
+    "temp_f": {"threshold": 8.0, "unit": "F", "cooldown_min": 60, "enabled": True},
+    "rh_pct": {"threshold": 25.0, "unit": "%", "cooldown_min": 60, "enabled": True},
+    "vpd_kpa": {"threshold": 0.35, "unit": "kPa", "cooldown_min": 60, "enabled": True},
+    "solar_w_m2": {"threshold": 300.0, "unit": "W/m2", "cooldown_min": 120, "enabled": True},
+    "wind_speed_mph": {"threshold": 12.0, "unit": "mph", "cooldown_min": 60, "enabled": True},
+    "wind_gust_mph": {"threshold": 18.0, "unit": "mph", "cooldown_min": 60, "enabled": True},
+    "precip_in": {"threshold": 0.03, "unit": "in/h", "cooldown_min": 60, "enabled": True},
+    "cloud_cover_pct": {"threshold": 40.0, "unit": "%", "cooldown_min": 60, "enabled": True},
+    "forecast_missing_min": {"threshold": 90.0, "unit": "min", "cooldown_min": 60, "enabled": True},
+}
+_FORECAST_DEVIATION_SIGMA_MULTIPLIER = 1.5
+_FORECAST_DEVIATION_SIGMA_HISTORY_DAYS = 7
+
+
+def _forecast_deviation_threshold_map(rows) -> dict[str, dict[str, float | int | str]]:
+    """Merge DB overrides with built-in coverage for every planner-critical axis."""
+    thresholds = {name: dict(spec) for name, spec in _FORECAST_DEVIATION_DEFAULTS.items() if spec.get("enabled", True)}
+    for row in rows or []:
+        parameter = row["parameter"]
+        if not row["enabled"]:
+            thresholds.pop(parameter, None)
+            continue
+        thresholds[parameter] = {
+            "threshold": float(row["threshold"]),
+            "unit": row["unit"],
+            "cooldown_min": int(row["cooldown_min"]),
+        }
+    return thresholds
+
+
+def _outdoor_vpd_kpa(temp_f: float | None, rh_pct: float | None) -> float | None:
+    """Compute VPD from outdoor temperature/RH using the Magnus approximation."""
+    if temp_f is None or rh_pct is None:
+        return None
+    if rh_pct < 0 or rh_pct > 100:
+        return None
+    temp_c = (float(temp_f) - 32.0) * 5.0 / 9.0
+    saturation_kpa = 0.6108 * math.exp((17.27 * temp_c) / (temp_c + 237.3))
+    return max(0.0, saturation_kpa * (1.0 - float(rh_pct) / 100.0))
+
+
+def _first_float(*values) -> float | None:
+    for value in values:
+        if value is None:
+            continue
+        try:
+            result = float(value)
+        except (TypeError, ValueError):
+            continue
+        if math.isfinite(result):
+            return result
+    return None
+
+
+def _cloud_cover_proxy_pct(
+    observed_solar_w_m2: float | None,
+    forecast_solar_w_m2: float | None,
+    forecast_cloud_pct: float | None,
+) -> float | None:
+    """Infer a cloud-cover regime from solar miss when no observed cloud sensor exists."""
+    if observed_solar_w_m2 is None or forecast_solar_w_m2 is None or forecast_cloud_pct is None:
+        return None
+    if forecast_solar_w_m2 < 120:
+        return None
+    solar_ratio = max(0.0, min(2.0, observed_solar_w_m2 / forecast_solar_w_m2))
+    return max(0.0, min(100.0, forecast_cloud_pct + (1.0 - solar_ratio) * 100.0))
 
 
 async def forecast_deviation_check(pool: asyncpg.Pool) -> None:
     """Compare outdoor observed conditions to outdoor forecast. Write trigger file if deviation exceeds threshold.
 
     Guards against false triggers:
-    - Only runs during daytime (sunrise to sunset+1h) — nighttime RH divergence is normal
-    - Cooldown tracked in-memory (not via trigger file which gets consumed by heartbeat)
-    - Only logs to deviation_log when outside cooldown (prevents log pollution)
+    - Outdoor comparisons run during daytime through sunset+2h — nighttime RH divergence is normal
+    - Cooldown is per parameter, so a wind miss cannot suppress a solar/precip miss
+    - Logs every threshold-exceeding deviation; `triggered=false` rows feed the sigma baseline
     """
-    global _last_deviation_trigger_ts
     trigger_file = STATE_DIR / "replan-needed.json"
 
-    # Time-of-day gate: only check during daytime + 1h buffer after sunset
-    # Nighttime RH/temp deviations are climatologically normal and not actionable
-    from astral import LocationInfo
-    from astral.sun import sun as _astral_sun
-
-    now = datetime.now(ZoneInfo("America/Denver"))
-    loc = LocationInfo("Longmont", "USA", "America/Denver", 40.1672, -105.1019)
-    s = _astral_sun(loc.observer, date=now.date(), tzinfo=ZoneInfo("America/Denver"))
-    sunrise = s["sunrise"]
-    sunset_buffer = s["sunset"] + _td(hours=2)  # Extended to cover evening VPD cycling
-
-    if now < sunrise or now > sunset_buffer:
-        return  # Night — skip deviation check entirely
-
-    # In-memory cooldown (survives trigger file consumption by heartbeat)
-    import time as _t
-
-    cooldown_s = 3600  # 1 hour minimum between triggers
-    if _t.time() - _last_deviation_trigger_ts < cooldown_s:
-        return
-
     async with pool.acquire() as conn:
-        current = await conn.fetchrow("""
-            SELECT outdoor_temp_f, outdoor_rh_pct,
-                   COALESCE(solar_irradiance_w_m2, 0) as solar_w_m2
-            FROM climate WHERE outdoor_temp_f IS NOT NULL ORDER BY ts DESC LIMIT 1
-        """)
-        if not current:
-            return
+        threshold_rows = await conn.fetch("SELECT * FROM forecast_deviation_thresholds")
+        thresholds = _forecast_deviation_threshold_map(threshold_rows)
 
-        forecast = await conn.fetchrow("""
-            SELECT temp_f, rh_pct,
-                   COALESCE(direct_radiation_w_m2 + diffuse_radiation_w_m2, 0) as solar_w_m2
-            FROM (SELECT DISTINCT ON (ts) * FROM weather_forecast
-                  WHERE ts >= date_trunc('hour', now()) AND ts < date_trunc('hour', now()) + interval '1 hour'
-                  ORDER BY ts, fetched_at DESC) sub
-        """)
-        if not forecast:
-            return
+        logged: list[dict[str, float | str | bool | int]] = []
+        triggering: list[dict[str, float | str | bool | int]] = []
 
-        thresholds = await conn.fetch("SELECT * FROM forecast_deviation_thresholds WHERE enabled")
-
-        param_map = {
-            "temp_f": ("outdoor_temp_f", "temp_f"),
-            "rh_pct": ("outdoor_rh_pct", "rh_pct"),
-            "solar_w_m2": ("solar_w_m2", "solar_w_m2"),
-        }
-
-        # PL-5 (Sprint 18): σ-gate. Log every threshold-exceeding deviation
-        # so history remains complete, but only trigger a replan when the
-        # deviation magnitude is at least 1.5σ above typical recent history.
-        # Benign oscillations around typical values no longer thrash the
-        # planner. The 96h review showed 23 replans / 96 h — most were
-        # single-σ wobbles the planner couldn't actually respond to faster
-        # than the env was changing.
-        SIGMA_MULTIPLIER = 1.5
-        SIGMA_HISTORY_DAYS = 7
-
-        logged = []
-        triggering = []
-        for t in thresholds:
-            obs_col, fc_col = param_map.get(t["parameter"], (None, None))
-            if not obs_col:
-                continue
-            observed = current[obs_col]
-            forecasted = forecast[fc_col]
-            if observed is None or forecasted is None:
-                continue
+        async def consider_deviation(parameter: str, observed: float | None, forecasted: float | None) -> None:
+            spec = thresholds.get(parameter)
+            if spec is None or observed is None or forecasted is None:
+                return
             delta = abs(float(observed) - float(forecasted))
-            if delta <= t["threshold"]:
-                continue
-            dev = {
-                "parameter": t["parameter"],
-                "observed": round(float(observed), 1),
-                "forecasted": round(float(forecasted), 1),
-                "delta": round(delta, 1),
-                "threshold": t["threshold"],
+            threshold = float(spec["threshold"])
+            if delta <= threshold:
+                return
+            dev: dict[str, float | str | bool | int] = {
+                "parameter": parameter,
+                "observed": round(float(observed), 2),
+                "forecasted": round(float(forecasted), 2),
+                "delta": round(delta, 2),
+                "threshold": threshold,
+                "unit": str(spec["unit"]),
+                "cooldown_min": int(spec["cooldown_min"]),
+                "triggered": False,
             }
             logged.append(dev)
 
             stats = await conn.fetchrow(
-                f"""
+                """
                 SELECT AVG(delta) AS mean, COALESCE(STDDEV(delta), 0.0) AS stddev
                 FROM forecast_deviation_log
-                WHERE parameter = $1 AND ts > now() - interval '{SIGMA_HISTORY_DAYS} days'
+                WHERE parameter = $1 AND ts > now() - ($2::int * interval '1 day')
                 """,
-                t["parameter"],
+                parameter,
+                _FORECAST_DEVIATION_SIGMA_HISTORY_DAYS,
             )
             if stats and stats["mean"] is not None:
-                sigma_gate = float(stats["mean"]) + SIGMA_MULTIPLIER * float(stats["stddev"])
+                sigma_gate = float(stats["mean"]) + _FORECAST_DEVIATION_SIGMA_MULTIPLIER * float(stats["stddev"])
                 if delta < sigma_gate:
                     log.info(
-                        "PL-5 σ-gate: %s delta=%.1f below %.1f (mean + %sσ of 7d history) — logging but not triggering replan",
-                        t["parameter"],
+                        "PL-5 sigma gate: %s delta=%.2f below %.2f (mean + %s sigma of %dd history) - logging only",
+                        parameter,
                         delta,
                         sigma_gate,
-                        SIGMA_MULTIPLIER,
+                        _FORECAST_DEVIATION_SIGMA_MULTIPLIER,
+                        _FORECAST_DEVIATION_SIGMA_HISTORY_DAYS,
                     )
-                    continue
+                    return
+
+            recent_same_axis = await conn.fetchval(
+                """
+                SELECT 1
+                  FROM forecast_deviation_log
+                 WHERE parameter = $1
+                   AND triggered = true
+                   AND ts > now() - ($2::int * interval '1 minute')
+                 LIMIT 1
+                """,
+                parameter,
+                int(spec["cooldown_min"]),
+            )
+            if recent_same_axis:
+                log.info(
+                    "Forecast deviation cooldown: %s delta=%.2f within %d min same-axis cooldown - logging only",
+                    parameter,
+                    delta,
+                    int(spec["cooldown_min"]),
+                )
+                return
+
+            recent_cycles = await conn.fetchval(
+                """
+                SELECT COUNT(*)::int
+                  FROM forecast_deviation_log
+                 WHERE parameter = $1
+                   AND ts > now() - interval '3 hours'
+                """,
+                parameter,
+            )
+            dev["triggered"] = True
+            dev["normalized_excess"] = round((delta - threshold) / max(threshold, 1e-6), 3)
+            dev["recent_cycles"] = int(recent_cycles or 0) + 1
             triggering.append(dev)
 
-        if not logged:
-            return
+        # Prolonged missing forecast is a planner input gap, not a daylight-only
+        # outdoor deviation, so evaluate it before the daytime gate.
+        latest_forecast = await conn.fetchrow(
+            """
+            SELECT max(fetched_at) AS latest_fetched_at,
+                   count(*) FILTER (
+                       WHERE ts >= date_trunc('hour', now())
+                         AND ts < date_trunc('hour', now()) + interval '2 hours'
+                   )::int AS current_horizon_rows
+              FROM weather_forecast
+            """
+        )
+        missing_spec = thresholds.get("forecast_missing_min")
+        if missing_spec is not None:
+            if latest_forecast is None or latest_forecast["latest_fetched_at"] is None:
+                await consider_deviation("forecast_missing_min", float(missing_spec["threshold"]) + 1.0, 0.0)
+            else:
+                age_min = (datetime.now(UTC) - latest_forecast["latest_fetched_at"]).total_seconds() / 60.0
+                horizon_rows = int(latest_forecast["current_horizon_rows"] or 0)
+                if age_min > float(missing_spec["threshold"]) or horizon_rows == 0:
+                    observed_gap = max(age_min, float(missing_spec["threshold"]) + 1.0 if horizon_rows == 0 else 0.0)
+                    await consider_deviation("forecast_missing_min", observed_gap, 0.0)
+
+        # Time-of-day gate: only check during daytime + 1h buffer after sunset
+        # Nighttime RH/temp deviations are climatologically normal and not actionable
+        from astral import LocationInfo
+        from astral.sun import sun as _astral_sun
+
+        now = datetime.now(ZoneInfo("America/Denver"))
+        loc = LocationInfo("Longmont", "USA", "America/Denver", 40.1672, -105.1019)
+        s = _astral_sun(loc.observer, date=now.date(), tzinfo=ZoneInfo("America/Denver"))
+        sunrise = s["sunrise"]
+        sunset_buffer = s["sunset"] + _td(hours=2)  # Extended to cover evening VPD cycling
+
+        if sunrise <= now <= sunset_buffer:
+            current = await conn.fetchrow("""
+                SELECT outdoor_temp_f, outdoor_rh_pct,
+                       COALESCE(solar_irradiance_w_m2, 0) AS solar_w_m2,
+                       COALESCE(wind_speed_avg_mph, wind_speed_mph) AS wind_speed_mph,
+                       wind_gust_mph,
+                       COALESCE(precip_intensity_in_h, precip_in, 0) AS precip_in
+                FROM climate
+                WHERE outdoor_temp_f IS NOT NULL
+                ORDER BY ts DESC
+                LIMIT 1
+            """)
+
+            forecast = await conn.fetchrow("""
+                SELECT temp_f, rh_pct, vpd_kpa, wind_speed_mph, wind_gust_mph,
+                       cloud_cover_pct, precip_in, precip_prob_pct,
+                       COALESCE(solar_w_m2, direct_radiation_w_m2 + diffuse_radiation_w_m2, 0) AS solar_w_m2
+                FROM (
+                    SELECT DISTINCT ON (ts) *
+                    FROM weather_forecast
+                    WHERE ts >= date_trunc('hour', now())
+                      AND ts < date_trunc('hour', now()) + interval '1 hour'
+                    ORDER BY ts, fetched_at DESC
+                ) sub
+            """)
+
+            if current and forecast:
+                observed_temp = _first_float(current["outdoor_temp_f"])
+                observed_rh = _first_float(current["outdoor_rh_pct"])
+                forecast_temp = _first_float(forecast["temp_f"])
+                forecast_rh = _first_float(forecast["rh_pct"])
+                observed_solar = _first_float(current["solar_w_m2"])
+                forecast_solar = _first_float(forecast["solar_w_m2"])
+                forecast_cloud = _first_float(forecast["cloud_cover_pct"])
+                forecast_vpd = _first_float(forecast["vpd_kpa"])
+                if forecast_vpd is None:
+                    forecast_vpd = _outdoor_vpd_kpa(forecast_temp, forecast_rh)
+
+                pairs = {
+                    "temp_f": (observed_temp, forecast_temp),
+                    "rh_pct": (observed_rh, forecast_rh),
+                    "vpd_kpa": (
+                        _outdoor_vpd_kpa(observed_temp, observed_rh),
+                        forecast_vpd,
+                    ),
+                    "solar_w_m2": (observed_solar, forecast_solar),
+                    "wind_speed_mph": (
+                        _first_float(current["wind_speed_mph"]),
+                        _first_float(forecast["wind_speed_mph"]),
+                    ),
+                    "wind_gust_mph": (_first_float(current["wind_gust_mph"]), _first_float(forecast["wind_gust_mph"])),
+                    "precip_in": (_first_float(current["precip_in"]), _first_float(forecast["precip_in"])),
+                    "cloud_cover_pct": (
+                        _cloud_cover_proxy_pct(observed_solar, forecast_solar, forecast_cloud),
+                        forecast_cloud,
+                    ),
+                }
+                for parameter, (observed, forecasted) in pairs.items():
+                    await consider_deviation(parameter, observed, forecasted)
 
         # Always persist every threshold-exceeding deviation so historical
         # stats stay representative.
         for d in logged:
             await conn.execute(
-                "INSERT INTO forecast_deviation_log (parameter, observed, forecasted, delta, threshold) VALUES ($1,$2,$3,$4,$5)",
+                """
+                INSERT INTO forecast_deviation_log
+                  (parameter, observed, forecasted, delta, threshold, triggered)
+                VALUES ($1,$2,$3,$4,$5,$6)
+                """,
                 d["parameter"],
                 d["observed"],
                 d["forecasted"],
                 d["delta"],
                 d["threshold"],
+                bool(d["triggered"]),
             )
 
         if not triggering:
             return
 
-    # Write trigger file and update cooldown
-    _last_deviation_trigger_ts = _t.time()
+    max_abs_deviation = max(float(d.get("normalized_excess", 0.0)) for d in triggering)
+    consecutive_cycles = max(int(d.get("recent_cycles", 1)) for d in triggering)
+
+    # Write trigger file for the heartbeat to deliver.
     trigger = {
         "ts": datetime.now(UTC).isoformat(),
         "deviations": triggering,
         "reason": f"Forecast deviation: {', '.join(d['parameter'] for d in triggering)}",
+        "max_abs_deviation": round(max_abs_deviation, 3),
+        "consecutive_cycles": consecutive_cycles,
     }
     trigger_file.write_text(json.dumps(trigger, indent=2))
     log.warning("Replan triggered: %s", trigger["reason"])

@@ -65,7 +65,14 @@ trigger resolves to exactly one of `plan_written`, `acked`,
   `hermes_run_id` context. This replaces reliance on flat `planner_stale` for
   per-trigger lifecycle failures.
 - [x] **I-P0.5 Correct delivery correlation.** Removed the unsafe 2h fallback for rows that have UUIDs. Exact `trigger_id` match is authoritative; fallback now runs only when both sides are legacy/null. MCP `set_plan` and `set_tunable` now reject planner-owned writes that omit `trigger_id`, verify the referenced delivery row, and mark the row `plan_written` immediately on success.
-- [ ] **I-P0.6 Deviation trigger completeness.** Ensure `forecast_deviation_check` logs and delivers every forecast deviation class the planner needs: temp, RH/VPD, solar irradiance, wind, precipitation/cloud-cover regime shift, and prolonged missed forecast. Dedupe repeated same-axis noise, but do not collapse distinct deviations into silence.
+- [x] **I-P0.6 Deviation trigger completeness.**
+  `forecast_deviation_check` now covers temp, RH, computed outdoor VPD, solar
+  irradiance, wind speed/gust, precipitation intensity, inferred cloud-cover
+  regime shifts, and prolonged missing forecast data. It merges DB threshold
+  overrides with built-in coverage for all planner-critical axes, logs every
+  threshold-exceeding deviation with `triggered=true|false`, and applies
+  cooldown per parameter so repeated same-axis noise is suppressed without
+  silencing a distinct weather-axis miss.
 - [x] **I-P0.7 Fixed-boundary planning.** Added fixed local-time `TRANSITION` triggers at 00:00, 06:00/pre-dawn, 12:00/midday, 16:00/afternoon, and 20:00/evening, alongside sunrise/sunset and existing solar-derived transition milestones. All normal boundaries route local-first.
 - [x] **I-P0.8 Active/future plan range guard.**
   `alert_monitor` scans active/future `setpoint_plan` rows through
