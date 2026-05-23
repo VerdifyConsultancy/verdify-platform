@@ -94,7 +94,14 @@ trigger resolves to exactly one of `plan_written`, `acked`,
   regression coverage verifies the guard uses the shared tunable registry, and
   the 2026-05-22 live scan found `2,158` active/future planner rows with zero
   registry violations.
-- [ ] **I-P1.1 Planner health status surface.** Publish last expected trigger, last delivered trigger, last resolved trigger, pending count by SLA age, current planner session key/model label, and active-plan range-violation count for API/web health consumers.
+- [x] **I-P1.1 Planner health status surface.** `/api/v1/public/planner-health`
+  now publishes explicit `last_expected_trigger`, `last_delivered_trigger`,
+  `last_resolved_trigger`, `pending_by_sla_age`, current planner
+  `session_key`/Hermes run/model label, and
+  `active_plan_range_violation_count` alongside the existing
+  required-trigger and recent-trigger summaries. The range count uses the same
+  tunable registry validator as the ingestor guard so API/web consumers can
+  tell whether the active planner schedule is clean without scraping alerts.
 
 **Project recovery intake from `PROJECT_STATE.md`** (2026-05-22; coordinated
 through [`project-recovery-2026-05-22.md`](project-recovery-2026-05-22.md)).
