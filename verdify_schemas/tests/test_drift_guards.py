@@ -16,6 +16,7 @@ Runs against live Docker Postgres. If `docker` isn't available, these skip
 
 from __future__ import annotations
 
+import ast
 import os
 import subprocess
 import sys
@@ -103,6 +104,36 @@ def _table_columns(table: str) -> set[str]:
             check=True,
         )
     return {ln.strip() for ln in r.stdout.splitlines() if ln.strip()}
+
+
+def _tasks_route_target_columns(repo_root: Path, *mapping_names: str) -> set[str]:
+    """Read literal HA/weather route-map target columns without importing tasks.py.
+
+    The ingestor service module imports async runtime dependencies at module
+    scope. This guard only needs the first element of each route tuple, so keep
+    schema CI independent from the full service dependency tree.
+    """
+    tree = ast.parse((repo_root / "ingestor" / "tasks.py").read_text())
+    wanted = set(mapping_names)
+    columns: set[str] = set()
+    for node in tree.body:
+        if not isinstance(node, ast.Assign):
+            continue
+        target_names = {target.id for target in node.targets if isinstance(target, ast.Name)}
+        matched = wanted & target_names
+        if not matched:
+            continue
+        assert isinstance(node.value, ast.Dict), f"{', '.join(sorted(matched))} must be a literal dict"
+        for value in node.value.values:
+            assert isinstance(value, ast.Tuple) and value.elts, "route-map values must be tuples"
+            column_node = value.elts[0]
+            assert isinstance(column_node, ast.Constant) and isinstance(column_node.value, str), (
+                "route-map tuple first element must be a column name string"
+            )
+            columns.add(column_node.value)
+        wanted -= matched
+    assert wanted == set(), f"missing route map(s) in ingestor/tasks.py: {sorted(wanted)}"
+    return columns
 
 
 # (schema class, DB table name)
@@ -228,14 +259,11 @@ def test_ingestor_climate_route_targets_declared_by_schema_and_db():
             sys.path.insert(0, path)
 
     import entity_map  # noqa: PLC0415
-    import tasks  # noqa: PLC0415
 
     mapped_columns = set(entity_map.CLIMATE_MAP.values())
     mapped_columns.update(entity_map.ESPHOME_FEEDBACK_MAP.values())
     mapped_columns.update(entity_map.MQTT_FEEDBACK_MAP.values())
-    mapped_columns.update(col for col, _conv in tasks._TEMPEST_MAP.values())
-    mapped_columns.update(col for col, _conv in tasks._HYDRO_MAP.values())
-    mapped_columns.update(col for col, _conv in tasks._CENTER_FEEDBACK_MAP.values())
+    mapped_columns.update(_tasks_route_target_columns(repo_root, "_TEMPEST_MAP", "_HYDRO_MAP", "_CENTER_FEEDBACK_MAP"))
 
     schema_fields = set(ClimateRow.model_fields)
     db_cols = _table_columns("climate")
