@@ -57,7 +57,14 @@ trigger resolves to exactly one of `plan_written`, `acked`,
 - [x] **I-P0.5 Correct delivery correlation.** Removed the unsafe 2h fallback for rows that have UUIDs. Exact `trigger_id` match is authoritative; fallback now runs only when both sides are legacy/null. MCP `set_plan` and `set_tunable` now reject planner-owned writes that omit `trigger_id`, verify the referenced delivery row, and mark the row `plan_written` immediately on success.
 - [ ] **I-P0.6 Deviation trigger completeness.** Ensure `forecast_deviation_check` logs and delivers every forecast deviation class the planner needs: temp, RH/VPD, solar irradiance, wind, precipitation/cloud-cover regime shift, and prolonged missed forecast. Dedupe repeated same-axis noise, but do not collapse distinct deviations into silence.
 - [x] **I-P0.7 Fixed-boundary planning.** Added fixed local-time `TRANSITION` triggers at 00:00, 06:00/pre-dawn, 12:00/midday, 16:00/afternoon, and 20:00/evening, alongside sunrise/sunset and existing solar-derived transition milestones. All normal boundaries route local-first.
-- [ ] **I-P0.8 Active/future plan range guard.** Scan active and future `setpoint_plan` rows against `tunable_registry` after every full plan and before every dispatch. Alert on future violations before the bad waypoint becomes current.
+- [x] **I-P0.8 Active/future plan range guard.**
+  `alert_monitor` scans active/future `setpoint_plan` rows through
+  `registry_value_error()` and emits `planner_tunable_range_drift` before
+  violating waypoints reach dispatch; `setpoint_dispatcher` also coerces or
+  rejects registry drift before writing/pushing `setpoint_changes`. Static
+  regression coverage verifies the guard uses the shared tunable registry, and
+  the 2026-05-22 live scan found `2,158` active/future planner rows with zero
+  registry violations.
 - [ ] **I-P1.1 Planner health status surface.** Publish last expected trigger, last delivered trigger, last resolved trigger, pending count by SLA age, current planner session key/model label, and active-plan range-violation count for API/web health consumers.
 
 **Project recovery intake from `PROJECT_STATE.md`** (2026-05-22; coordinated

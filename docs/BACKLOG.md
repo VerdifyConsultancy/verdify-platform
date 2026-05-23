@@ -83,7 +83,7 @@ shipping context.
 | Agent | Sprint | Status | Detail |
 |---|---|---|---|
 | `coordinator` | v1.5 landed | **Cross-cutting landed this cycle**: local-first planner contract v1.5, strict audited `set_plan`/`set_tunable` trigger correlation, manual `plan_run` ledger parity, and schema response fields for planner audit metadata | `docs/backlog/cross-cutting.md` |
-| `ingestor` | planner hardening in progress | Hermes delivery is active, trigger ledger rows carry Hermes run IDs, and fixed 00:00/06:00/12:00/16:00/20:00 boundary triggers supplement sunrise/sunset, forecast, deviation, and solar-derived transition triggers. Remaining: no-missed-sunrise ledger and SLA timeout lifecycle | `docs/backlog/ingestor.md` |
+| `ingestor` | planner hardening in progress | Hermes delivery is active, trigger ledger rows carry Hermes run IDs, fixed 00:00/06:00/12:00/16:00/20:00 boundary triggers supplement sunrise/sunset, forecast, deviation, and solar-derived transition triggers, per-trigger SLA timeouts alert through `planner_trigger_sla_timeout`, and active/future plan range drift is guarded through `planner_tunable_range_drift`. Remaining: canonical trigger matrix, no-missed-sunrise ledger, deviation trigger completeness, and planner health status surface | `docs/backlog/ingestor.md` |
 | `genai` | planner hardening in progress | Hermes/GPT-5.5 prompt path is live with strict MCP tool allowlist, validation-mode handling, full context guidance, and MANUAL `plan_run` parity. Remaining: distilled site/lesson digest and context-pack versioning | `docs/backlog/genai.md` |
 | `web` | — | Sprint-4 Grafana panels shipped via PR #16 (`9a9a05e`) this morning. No active sprint | `docs/backlog/web.md` |
 | `firmware` | phase-1+ | Phase-0 shipped as sprint-10 (`8d2656d`) + sprints 7-9 overnight (`8c64030`, `dda9057`, and the 212b1c5 fog-window fix). No active sprint queued | `docs/backlog/firmware.md` |
@@ -128,7 +128,7 @@ In chronological order:
 
 ## Current findings to schedule
 
-- **Planner:** Hermes hardening is now the top planning backlog. Genai owns the GPT-5.5 context pack, tuning rubric, site/lesson digest, MCP `plan_run` audit parity, and registry validation at the planner boundary. Ingestor owns the trigger matrix, no-missed-sunrise behavior, per-trigger SLA lifecycle, exact trigger correlation, deviation coverage, fixed-boundary triggers, and active/future plan range guard. Coordinator owns shared contracts, trigger-ledger schema, and model observability.
+- **Planner:** Hermes hardening is now the top planning backlog. Genai owns the GPT-5.5 context pack, tuning rubric, site/lesson digest, MCP `plan_run` audit parity, and registry validation at the planner boundary. Ingestor owns the remaining trigger matrix, no-missed-sunrise behavior, deviation coverage, and planner health status surface; per-trigger SLA lifecycle, exact trigger correlation, fixed-boundary triggers, and active/future plan range guard are deployed. Coordinator owns shared contracts, trigger-ledger schema, and model observability.
 - **Web:** Site simplification pass reduced the public entry path and fixed corrupted text. Remaining editorial cleanup: fold detailed Climate subpages into `/climate`, finish hiding or archiving redundant reference routes, and remove drafting scaffolds from hidden reference pages.
 - **Web/Data:** The 2026-05-20 lab-site feedback is tracked in `docs/backlog/lab-site-refactor-2026-05-20.md`: initial site/content refactor tasks (`CODEX-001` through `CODEX-012`), later visual/resource/architecture follow-ups (`CODEX-013` through `CODEX-018`), and Grafana/time-series research tasks (`RP-001` through `RP-007`).
 - **Web:** Image cleanup removed broken/public backup assets and documented current photo fit. The manual image catalog now has a machine-readable manifest checked by `site-doctor`; crop-specific photos for basil/cucumbers/tomatoes remain a content acquisition issue, not a rendering blocker.
@@ -171,7 +171,9 @@ Historical snapshot from 2026-04-20:
 **Phase 3 (ingestor consumption) 🟡 in progress** (ingestor):
 - Local-first routing and trigger-scoped sessions live
 - Fixed-boundary triggers added
-- Remaining: expected-trigger ledger for missed startup windows and per-trigger timeout lifecycle
+- Per-trigger timeout lifecycle alerts through `planner_trigger_sla_timeout`
+- Active/future plan range drift alerts through `planner_tunable_range_drift`
+- Remaining: expected-trigger ledger for missed startup windows, canonical trigger matrix, deviation trigger completeness, and planner health status surface
 
 **Phase 4 (session boot + smoke test) ✅ complete** (iris-dev/coordinator):
 - Local smoke covered MANUAL, FORECAST, DEVIATION, TRANSITION, SUNRISE, and SUNSET validation rows
@@ -182,7 +184,7 @@ Historical snapshot from 2026-04-20:
 - Routine SUNRISE/SUNSET/MIDNIGHT/TRANSITION/FORECAST/DEVIATION/HEARTBEAT/MANUAL now route local by default
 - Cloud/opus is explicit escalation only
 
-Remaining high-leverage work: expected-trigger ledger, timeout lifecycle, model/status surface, and distilled site/lesson context digest.
+Remaining high-leverage work: expected-trigger ledger, canonical trigger matrix, deviation trigger completeness, model/status surface, and distilled site/lesson context digest.
 
 ---
 
