@@ -23,6 +23,15 @@ source_scopes:
   - verdify-saas
   - verdify-consulting-dev
 
+asset_paths:
+  - id: verdify-platform-source
+    source_path: /mnt/iris/verdify
+    target_path: .
+    class: source
+    component_id: verdify-dev
+    sync_mode: copy
+    privacy: public-source
+
 tracking_policy:
   summary: Public canonical Verdify platform source. Keep private agent context and operational notes out of this repo.
   notes:
