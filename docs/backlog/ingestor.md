@@ -44,7 +44,17 @@ trigger resolves to exactly one of `plan_written`, `acked`,
   - forecast refreshes: new forecast fetches after startup baseline
   - manual/ad-hoc runs from MCP
   Each entry defines due time, catch-up behavior, expected planner action (`set_plan` vs `set_tunable` vs `acknowledge_trigger`), SLA, and Hermes routing.
-- [ ] **I-P0.2 No missed-sunrise blind spot.** Persist expected trigger times separately from "fired" state. If ingestor starts after the current 2h catch-up window, either deliver a late catch-up trigger with an explicit label or raise `planner_required_trigger_missed`; do not wait for `planner_stale`.
+- [x] **I-P0.2 No missed-sunrise blind spot.**
+  `planning_heartbeat` now materializes expected SUNRISE/SUNSET/MIDNIGHT
+  triggers in `planner_trigger_ledger` before planner delivery, marks normal
+  5-minute-to-2-hour restarts with explicit `(catch-up)` labels, and lets
+  `_expire_planner_trigger_slas()` mark late non-delivered required triggers
+  `missed` from their own `due_at` instead of waiting for flat
+  `planner_stale`. `alert_monitor` raises the deployed alert type
+  `planner_required_plan_missed` for the latest required trigger whose ledger
+  row did not close with `plan_written`; the 2026-05-22 live check showed the
+  latest MIDNIGHT and SUNRISE rows closed with plans, the next SUNSET row was
+  still future/expected, and zero open required-plan-missed alerts.
 - [x] **I-P0.3 Hermes routing.** Production routing now defaults to Hermes `hermes-iris` with OpenAI GPT-5.5 high-reasoning. Legacy `local`/`opus` values are audit labels only and no longer select a different gateway.
 - [x] **I-P0.4 Per-trigger SLA lifecycle.** Pending delivery rows are expired
   through `_expire_planner_trigger_slas()` using the configured
