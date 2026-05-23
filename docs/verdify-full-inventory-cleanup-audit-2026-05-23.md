@@ -384,6 +384,9 @@ Agent config/path findings:
 
 - `/mnt/agents/_archived/stale-launchers-20260522` exists and is appropriately archived.
 - `/mnt/agents/bin/@eaDir/*@SynoEAStream` exists and should be cleaned with the rest of Synology metadata.
+- `/mnt/agents/config-repos/verdify-agent-context`, `/mnt/agents/config-repos/verdify-planner`, `/mnt/agents/config-repos/verdify-platform`, and `/mnt/agents/config-repos/verdify-vault` are small git checkouts owned by UID `1026`; `git status` as `jason` fails with Git's dubious-ownership guard until `safe.directory` is configured or ownership is normalized.
+- `/mnt/agents/verdify-web-dev` is 154 MB and appears to be an agent-side Verdify web workspace/artifact path.
+- `/mnt/agents/verdify-genai-codex`, `/mnt/agents/iris-dev/verdify-requirements`, `/mnt/agents/projects/iris-verdify`, and `/mnt/agents/pool-greenhouse` are small Verdify/greenhouse agent support paths.
 - `/home/jason/.claude-agents/iris-dev-slot-*` memories remain from the old slot model.
 - Current Claude/Codex agent directories exist for all Verdify lanes.
 
