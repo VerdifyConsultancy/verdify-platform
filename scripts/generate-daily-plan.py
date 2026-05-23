@@ -46,11 +46,16 @@ def _yaml_escape(val: str) -> str:
 
 def db_query(sql: str) -> str:
     """Run a psql query and return stripped output."""
-    cmd = [*shlex.split(os.environ.get("VERDIFY_DAILY_PLAN_DB_CMD", DB_CMD)), "-v", "ON_ERROR_STOP=1"]
+    cmd = [
+        *shlex.split(os.environ.get("VERDIFY_DAILY_PLAN_DB_CMD", DB_CMD)),
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-c",
+        sql,
+    ]
     try:
         result = subprocess.run(
             cmd,
-            input=sql,
             capture_output=True,
             text=True,
             timeout=DB_TIMEOUT_S,
