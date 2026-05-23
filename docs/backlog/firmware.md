@@ -60,7 +60,14 @@ Findings from the 2026-04-18 audit that live outside firmware scope. Each is a f
   `test_override_events_written` to `tests/test_05_ingestor.py` to verify
   `gh_overrides`/`active_overrides` diffs enqueue one row per new flag and
   flush valid rows to `override_events`.
-- [ ] **Ingestor — `setpoint_unconfirmed` lifecycle fix.** alert_monitor tracks specific (param, value, push_ts) tuples; stale alerts persist indefinitely when a later push supersedes an older one before readback can confirm the older value. Net effect: 20+ critical alerts per 5 hours of active dispatch. Should resolve by latest-readback-for-parameter rather than require exact-push-match.
+- [x] **Ingestor — `setpoint_unconfirmed` lifecycle fix.**
+  `setpoint_confirmation_monitor` owns the full alert lifecycle now: it
+  resolves confirmed rows, resolves alerts superseded by newer non-ESP32
+  setpoint pushes, marks stale pending rows `delivery_status='superseded'`
+  with `superseded_by_ts`, ignores superseded rows when opening new alerts,
+  and confirms switch-only rows from `equipment_state`. Static tests cover the
+  superseded-row path, and the 2026-05-22 live check found zero open
+  `setpoint_unconfirmed` alerts and zero non-terminal recent pending rows.
 - [x] **Coordinator — `daily_summary.cycles_{mister_south,mister_west,mister_center,drip_wall,drip_center}` columns (sprint-7 follow-up).** Migration 097 adds the columns.
 - [x] **Ingestor — DAILY_ACCUM_MAP entries for the sprint-7 cycle sensors.** Slug keys route to the new `daily_summary` columns; daily snapshot validation/writes include them.
 - [x] **Coordinator — `v_cycle_count_audit` view (sprint-7 follow-up).** Migration 097 adds the audit view and flags >5% divergence as `warn`.
