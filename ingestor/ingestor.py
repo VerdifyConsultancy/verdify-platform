@@ -288,9 +288,9 @@ async def write_climate(pool: asyncpg.Pool, ts: datetime) -> None:
         return
 
     # Sprint 23 Phase 4b: Pydantic validation at the asyncpg boundary.
-    # Validates numeric ranges (rh 0-100, vpd 0-20, ts tz-aware, etc.) and
-    # flags unknown column names that aren't in the ClimateRow schema. Fails
-    # loud instead of silent-null on schema drift.
+    # Validates numeric ranges (rh 0-100, vpd 0-20, ts tz-aware, etc.).
+    # Column-name drift is guarded separately by map/schema tests because
+    # ClimateRow intentionally tolerates additive DB columns for older readers.
     if ClimateRow is not None:
         try:
             ClimateRow.model_validate({"ts": ts, **merged})

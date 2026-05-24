@@ -13,10 +13,9 @@
  * Compile: g++ -std=c++17 -I../lib -o replay_overrides replay_overrides.cpp
  * Run:     ./replay_overrides data/replay_overrides.csv
  *
- * CSV columns (tab-separated, header row required):
- *   ts temp_avg vpd_avg rh_avg outdoor_rh_pct enthalpy_delta
- *   sp_temp_high sp_temp_low sp_vpd_high sp_vpd_low sp_bias_cool
- *   sp_vpd_hysteresis sp_watch_dwell_s occupied
+ * CSV columns are tab-separated with a header row. The replay accepts the
+ * Phase-0 extended corpus produced by scripts/export-replay-overrides.sh;
+ * legacy sp_* columns remain optional for historical corpora.
  */
 
 #include "greenhouse_logic.h"
@@ -70,6 +69,8 @@ enum OverrideIdx {
     OF_RELIEF_BREAKER,
     OF_SEAL_BLOCKED_TEMP,
     OF_VPD_DRY_OVERRIDE,
+    OF_SUMMER_VENT,
+    OF_VENT_MIST_ASSIST,
     OF_FOG_HEAT_ASSIST,
     OF_COUNT
 };
@@ -82,6 +83,8 @@ static const char* OVERRIDE_NAMES[OF_COUNT] = {
     "relief_cycle_breaker",
     "seal_blocked_temp",
     "vpd_dry_override",
+    "summer_vent",
+    "vent_mist_assist",
     "fog_heat_assist",
 };
 
@@ -93,6 +96,8 @@ static const char* OVERRIDE_SHORT_NAMES[OF_COUNT] = {
     "rlf",
     "sBT",
     "VdO",
+    "SumV",
+    "VMst",
     "FgHt",
 };
 
@@ -226,6 +231,13 @@ int main(int argc, char* argv[]) {
             get("sp_sw_fsm_controller_enabled"),
             sp.sw_fsm_controller_enabled
         );
+        // Production ESPHome hard-forces the unified band-first controller ON
+        // before each control tick. Keep override replay aligned by default;
+        // set REPLAY_OVERRIDES_FORCE_FSM=0 only for explicit legacy forensics.
+        const char* force_fsm = std::getenv("REPLAY_OVERRIDES_FORCE_FSM");
+        if (!force_fsm || !*force_fsm || *force_fsm != '0') {
+            sp.sw_fsm_controller_enabled = true;
+        }
         validate_setpoints(sp);
 
         uint64_t ts_unix = parse_ts_unix(ts);
@@ -248,7 +260,8 @@ int main(int argc, char* argv[]) {
         bool flags[OF_COUNT] = {
             f.occupancy_blocks_equipment, f.fog_gate_rh, f.fog_gate_temp,
             f.fog_gate_window, f.relief_cycle_breaker, f.seal_blocked_temp,
-            f.vpd_dry_override, f.fog_heat_assist,
+            f.vpd_dry_override, f.summer_vent_active, f.vent_mist_assist,
+            f.fog_heat_assist,
         };
 
         // Bookkeeping
@@ -473,6 +486,47 @@ int main(int argc, char* argv[]) {
                f.vpd_dry_override ? "✓" : "✗ BUG",
                MODE_NAMES[m], p.st.dry_override_active ? "yes" : "no");
         if (!f.vpd_dry_override) self_test_failures++;
+    }
+    // summer_vent — must exercise determine_mode so the outdoor preference
+    // gate sets ControlState.override_summer_vent.
+    {
+        auto p = mk();
+        p.sp.sw_fsm_controller_enabled = true;
+        p.st.vpd_watch_timer_ms = p.sp.vpd_watch_dwell_ms;
+        p.in.temp_f = p.sp.temp_high + 3.0f;
+        p.in.vpd_kpa = p.sp.vpd_high + 0.2f;
+        p.in.dew_point_f = 72.0f;
+        p.in.outdoor_temp_f = p.in.temp_f - p.sp.vent_prefer_temp_delta_f - 2.0f;
+        p.in.outdoor_dewpoint_f = p.in.dew_point_f - p.sp.vent_prefer_dp_delta_f - 2.0f;
+        p.in.outdoor_data_age_s = 30u;
+        Mode m = determine_mode(p.in, p.sp, p.st, 5000);
+        auto f = evaluate_overrides(p.in, p.sp, p.st, m);
+        printf("  %-28s %s (mode=%s, reason=%s)\n",
+               "summer_vent",
+               f.summer_vent_active ? "✓" : "✗ BUG",
+               MODE_NAMES[m],
+               p.st.last_mode_reason ? p.st.last_mode_reason : "");
+        if (!f.summer_vent_active) self_test_failures++;
+    }
+    // vent_mist_assist — band-first controller may ventilate for cooling while
+    // carrying concurrent humidification demand.
+    {
+        auto p = mk();
+        p.sp.sw_fsm_controller_enabled = true;
+        p.st.vpd_watch_timer_ms = p.sp.vpd_watch_dwell_ms;
+        p.in.temp_f = p.sp.temp_high + 2.0f;
+        p.in.vpd_kpa = p.sp.vpd_high + 0.2f;
+        p.in.outdoor_temp_f = p.in.temp_f;
+        p.in.outdoor_dewpoint_f = p.in.dew_point_f;
+        p.in.outdoor_data_age_s = 99999u;
+        Mode m = determine_mode(p.in, p.sp, p.st, 5000);
+        auto f = evaluate_overrides(p.in, p.sp, p.st, m);
+        printf("  %-28s %s (mode=%s, assist_active=%s)\n",
+               "vent_mist_assist",
+               f.vent_mist_assist ? "✓" : "✗ BUG",
+               MODE_NAMES[m],
+               p.st.vent_mist_assist_active ? "yes" : "no");
+        if (!f.vent_mist_assist) self_test_failures++;
     }
     // fog_heat_assist
     {

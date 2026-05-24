@@ -5,7 +5,7 @@ The FastAPI crop catalog, every vault markdown writer, every page generator, and
 ## Owns
 
 - `api/main.py` + sibling modules — FastAPI endpoints (crop catalog, health, observations, zones, setpoint echo)
-- `scripts/generate-*.py` — `generate-daily-plan.py`, `generate-forecast-page.py`, `generate-lessons-page.py`, etc.
+- `scripts/generate-*.py` and public export generators — `generate-daily-plan.py`, `generate-forecast-page.py`, `generate-lessons-page.py`, `export-hourly-performance-dataset.py`, etc.
 - `scripts/vault-*.py` — `vault-daily-writer.py`, `vault-crop-writer.py`
 - `site/` — full Quartz source tree, docs, package lock, build config, and nginx config
 - `/mnt/iris/verdify-vault/` — Obsidian vault (source of site content; NOT in this git repo but owned by this agent's deploy pipeline)
@@ -57,7 +57,7 @@ Build/publish units:
 - `verdify-site-poll.timer` fires every 10 seconds because inotify is unreliable on the NFS/Syncthing vault.
 - `verdify-site-poll.service` runs `scripts/site-poll-and-rebuild.sh`. The poller compares a metadata signature for the website tree instead of using `find -newer`, because Syncthing can preserve Mac/Obsidian mtimes and otherwise hide real edits from an mtime-threshold check.
 - `verdify-site-build.service` runs `scripts/rebuild-site.sh`.
-- `verdify-forecast-page.timer` regenerates `/forecast/` every 30 minutes.
+- `verdify-forecast-page.timer` regenerates `/data/forecast/` every 30 minutes; `/forecast` is a compatibility alias.
 - `verdify-plan-publish.path` watches `/var/local/verdify/state/plan-publish-trigger`.
 - `verdify-plan-publish.service` writes today's plan markdown.
 
@@ -71,7 +71,8 @@ Treat these as generated or partially generated, not ordinary prose pages:
 
 | Page(s) | Generator | Primary source data |
 |---|---|---|
-| `forecast/index.md` | `scripts/generate-forecast-page.py` | `weather_forecast`, `fn_forecast_correction`, `forecast_deviation_log` |
+| `data/forecast/index.md` | `scripts/generate-forecast-page.py` | `weather_forecast`, `fn_forecast_correction`, `forecast_deviation_log` |
+| `data/hourly-performance.md` | `scripts/export-hourly-performance-dataset.py` | Trailing 30-day hourly climate and equipment runtime exports |
 | `plans/YYYY-MM-DD.md` | `scripts/generate-daily-plan.py` | `daily_summary`, `plan_journal`, setpoint/scorecard context |
 | `plans/index.md` | `scripts/generate-plans-index.py` | `daily_summary`, `plan_journal` |
 | `reference/ai-tunables.md` | `scripts/generate-ai-tunables-page.py` | `tunable_registry`, MCP contracts, `entity_map`, firmware source, `setpoint_plan`, `setpoint_changes`, `setpoint_snapshot`, `plan_journal` |

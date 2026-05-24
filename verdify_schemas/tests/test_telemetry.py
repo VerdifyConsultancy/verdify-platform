@@ -34,11 +34,20 @@ class TestClimateRow:
             vpd_avg=0.8,
             dew_point=55.2,
             lux=820.0,
+            solar_irradiance_w_m2=510.0,
             dli_today=7.2,
+            air_density_kg_m3=1.02,
+            co2_ppm=515.0,
             hydro_ph=6.22,
             hydro_ec_us_cm=2480.0,
+            soil_moisture_south_1=38.0,
+            soil_temp_south_1=69.5,
+            soil_ec_south_1=0.7,
+            soil_moisture_south_2=41.0,
+            soil_temp_south_2=70.0,
         )
         assert row.hydro_ph == 6.22
+        assert row.soil_moisture_south_1 == 38.0
 
     def test_rejects_out_of_range_rh(self):
         with pytest.raises(ValidationError):
@@ -55,6 +64,16 @@ class TestClimateRow:
     def test_hydroponics_ph_out_of_range(self):
         with pytest.raises(ValidationError):
             ClimateRow(ts=NOW, hydro_ph=15.0)
+
+    def test_rejects_out_of_range_soil_and_air_quality(self):
+        with pytest.raises(ValidationError):
+            ClimateRow(ts=NOW, soil_moisture_south_1=120.0)
+        with pytest.raises(ValidationError):
+            ClimateRow(ts=NOW, soil_ec_south_1=-0.1)
+        with pytest.raises(ValidationError):
+            ClimateRow(ts=NOW, co2_ppm=-1.0)
+        with pytest.raises(ValidationError):
+            ClimateRow(ts=NOW, air_density_kg_m3=-0.1)
 
     def test_tolerates_unknown_columns(self):
         row = ClimateRow.model_validate({"ts": NOW, "some_new_column_added_next_month": 123})

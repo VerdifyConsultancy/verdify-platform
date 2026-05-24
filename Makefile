@@ -80,13 +80,13 @@ test-firmware: ## Run native C++ logic tests + replay against golden CSV (same c
 	# vpd_dry_override dead code in commit 82b18ad → patched in caa2cea).
 	gzip -cd $(REPLAY_CORPUS_GZ) > $(REPLAY_CORPUS_TMP)
 	cd firmware && g++ -std=c++17 -O2 -I lib -o test/replay_overrides test/replay_overrides.cpp
-	./firmware/test/replay_overrides $(REPLAY_CORPUS_TMP) | tail -30
+	set -o pipefail; ./firmware/test/replay_overrides $(REPLAY_CORPUS_TMP) | tail -30
 
 test-replay-overrides: ## Validate evaluate_overrides() against full history + synthetic self-test (OBS-1e)
 	bash scripts/export-replay-overrides.sh
 	cd firmware && g++ -std=c++17 -O2 -I lib -o test/replay_overrides test/replay_overrides.cpp && ./test/replay_overrides test/data/replay_overrides.csv
 
-firmware-invariants: ## Phase-0: run 15 invariants from invariants.h against the replay corpus (pass = bulletproof gate green)
+firmware-invariants: ## Phase-0: run 16 invariants from invariants.h against the replay corpus (pass = bulletproof gate green)
 	gzip -cd $(REPLAY_CORPUS_GZ) > $(REPLAY_CORPUS_TMP)
 	cd firmware && g++ -std=c++17 -O2 -I lib -o test/replay_invariants test/replay_invariants.cpp
 	./firmware/test/replay_invariants $(REPLAY_CORPUS_TMP)

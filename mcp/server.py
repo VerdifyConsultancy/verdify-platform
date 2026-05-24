@@ -21,8 +21,9 @@ import asyncpg
 from mcp.server.fastmcp import FastMCP
 from pydantic import ValidationError
 
-# verdify_schemas lives one level up at /mnt/iris/verdify/verdify_schemas
-sys.path.insert(0, "/mnt/iris/verdify")
+# verdify_schemas lives one level up from this server file in every worktree.
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
 from verdify_schemas import (  # noqa: E402
     ALL_TUNABLES,
     AlertAckPayload,
@@ -194,6 +195,7 @@ async def climate() -> str:
                    round(outdoor_rh_pct::numeric,0) as outdoor_rh,
                    round(lux::numeric,0) as lux,
                    round(solar_irradiance_w_m2::numeric,0) as solar_w,
+                   round(solar_irradiance_w_m2::numeric,0) as solar_w_m2,
                    extract(epoch FROM now() - ts)::int as age_seconds
             FROM climate ORDER BY ts DESC LIMIT 1
         """)
@@ -1462,22 +1464,31 @@ async def observations(action: str, crop_id: int = 0, data: str = "") -> str:
       record_treatment   -> TreatmentCreate (product, active_ingredient,
                             concentration, rate, rate_unit, method, zone,
                             target_pest, phi_days, rei_hours, applicator,
-                            observation_id, notes)"""
+                            observation_id, followup_due_at,
+                            followup_completed_at, outcome, notes)"""
     d = json.loads(data) if data else {}
     conn = await _db()
     try:
         if action == "list_observations":
             rows = await conn.fetch(
                 """
-                SELECT o.id, o.ts, o.crop_id, c.name, o.zone, o.obs_type, o.notes, o.health_score, o.severity, o.observer
-                FROM observations o JOIN crops c ON o.crop_id = c.id
-                WHERE ($1::int = 0 OR o.crop_id = $1) ORDER BY o.ts DESC LIMIT 50""",
+                SELECT o.id, o.ts, o.greenhouse_id, o.crop_id, c.name,
+                       o.position_id, o.zone_id, o.zone, o.position, o.obs_type,
+                       o.notes, o.health_score, o.severity, o.observer
+                FROM observations o
+                JOIN crops c ON o.crop_id = c.id AND c.greenhouse_id = 'vallery'
+                WHERE o.greenhouse_id = 'vallery'
+                  AND ($1::int = 0 OR o.crop_id = $1)
+                ORDER BY o.ts DESC LIMIT 50""",
                 crop_id,
             )
             return _json([dict(r) for r in rows])
 
         elif action == "record_observation" and crop_id:
-            crop = await conn.fetchrow("SELECT zone, position, zone_id, position_id FROM crops WHERE id = $1", crop_id)
+            crop = await conn.fetchrow(
+                "SELECT zone, position, zone_id, position_id FROM crops WHERE id = $1 AND greenhouse_id = 'vallery'",
+                crop_id,
+            )
             if not crop:
                 return json.dumps({"error": f"Crop {crop_id} not found"})
             try:
@@ -1487,13 +1498,13 @@ async def observations(action: str, crop_id: int = 0, data: str = "") -> str:
             row = await conn.fetchrow(
                 """
                 INSERT INTO observations (
-                    crop_id, zone, position, zone_id, position_id, obs_type, notes, severity,
+                    crop_id, greenhouse_id, zone, position, zone_id, position_id, obs_type, notes, severity,
                     observer, health_score, species, count, affected_pct, photo_path,
                     plant_height_cm, leaf_count, canopy_cover_pct, flowering_count,
                     fruit_count, root_condition, mortality_count, stress_tags, source
                 )
                 VALUES (
-                    $1, $2, $3, $4, $5, $6, $7, $8,
+                    $1, 'vallery', $2, $3, $4, $5, $6, $7, $8,
                     $9, $10, $11, $12, $13, $14,
                     $15, $16, $17, $18, $19, $20, $21, $22, 'iris'
                 ) RETURNING *""",
@@ -1525,23 +1536,38 @@ async def observations(action: str, crop_id: int = 0, data: str = "") -> str:
         elif action == "list_events":
             rows = await conn.fetch(
                 """
-                SELECT e.id, e.ts, e.crop_id, c.name, e.event_type, e.old_stage, e.new_stage, e.count, e.notes
-                FROM crop_events e JOIN crops c ON e.crop_id = c.id
-                WHERE ($1::int = 0 OR e.crop_id = $1) ORDER BY e.ts DESC LIMIT 50""",
+                SELECT e.id, e.ts, e.greenhouse_id, e.crop_id, c.name,
+                       e.position_id, e.event_type, e.old_stage, e.new_stage,
+                       e.count, e.operator, e.source, e.notes
+                FROM crop_events e
+                JOIN crops c ON e.crop_id = c.id AND c.greenhouse_id = 'vallery'
+                WHERE e.greenhouse_id = 'vallery'
+                  AND ($1::int = 0 OR e.crop_id = $1)
+                ORDER BY e.ts DESC LIMIT 50""",
                 crop_id,
             )
             return _json([dict(r) for r in rows])
 
         elif action == "record_event" and crop_id:
+            crop = await conn.fetchrow(
+                "SELECT position_id FROM crops WHERE id = $1 AND greenhouse_id = 'vallery'",
+                crop_id,
+            )
+            if not crop:
+                return json.dumps({"error": f"Crop {crop_id} not found"})
             try:
                 ev = EventCreate.model_validate({**d, "operator": d.get("operator") or "Iris"})
             except ValidationError as e:
                 return json.dumps({"error": "EventCreate validation failed", "details": json.loads(e.json())})
             row = await conn.fetchrow(
                 """
-                INSERT INTO crop_events (crop_id, event_type, old_stage, new_stage, count, operator, source, notes)
-                VALUES ($1, $2, $3, $4, $5, $6, 'iris', $7) RETURNING *""",
+                INSERT INTO crop_events (
+                    crop_id, greenhouse_id, position_id, event_type, old_stage,
+                    new_stage, count, operator, source, notes
+                )
+                VALUES ($1, 'vallery', $2, $3, $4, $5, $6, $7, 'iris', $8) RETURNING *""",
                 crop_id,
+                crop["position_id"],
                 ev.event_type,
                 ev.old_stage,
                 ev.new_stage,
@@ -1552,6 +1578,12 @@ async def observations(action: str, crop_id: int = 0, data: str = "") -> str:
             return _json(dict(row))
 
         elif action == "record_harvest" and crop_id:
+            crop = await conn.fetchrow(
+                "SELECT zone, position_id FROM crops WHERE id = $1 AND greenhouse_id = 'vallery'",
+                crop_id,
+            )
+            if not crop:
+                return json.dumps({"error": f"Crop {crop_id} not found"})
             try:
                 hv = HarvestCreate.model_validate({**d, "operator": d.get("operator") or "Iris"})
             except ValidationError as e:
@@ -1561,9 +1593,10 @@ async def observations(action: str, crop_id: int = 0, data: str = "") -> str:
                 INSERT INTO harvests (
                     crop_id, weight_kg, unit_count, quality_grade,
                     salable_weight_kg, cull_weight_kg, cull_reason, quality_reason,
-                    zone, destination, unit_price, revenue, labor_minutes, operator, notes
+                    zone, destination, unit_price, revenue, labor_minutes, operator,
+                    position_id, greenhouse_id, notes
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 'vallery', $16)
                 RETURNING *""",
                 crop_id,
                 hv.weight_kg,
@@ -1573,12 +1606,13 @@ async def observations(action: str, crop_id: int = 0, data: str = "") -> str:
                 hv.cull_weight_kg,
                 hv.cull_reason,
                 hv.quality_reason,
-                hv.zone,
+                hv.zone or crop["zone"],
                 hv.destination,
                 hv.unit_price,
                 hv.revenue,
                 hv.labor_minutes,
                 hv.operator,
+                crop["position_id"],
                 hv.notes,
             )
             return _json(dict(row))
@@ -1586,14 +1620,27 @@ async def observations(action: str, crop_id: int = 0, data: str = "") -> str:
         elif action == "list_harvests":
             rows = await conn.fetch(
                 """
-                SELECT h.id, h.ts, h.crop_id, c.name, h.weight_kg, h.unit_count, h.quality_grade, h.notes
+                SELECT h.id, h.ts, h.greenhouse_id, h.crop_id, c.name, h.position_id,
+                       h.weight_kg, h.unit_count, h.quality_grade,
+                       h.salable_weight_kg, h.cull_weight_kg, h.cull_reason,
+                       h.quality_reason, h.zone, h.destination, h.unit_price,
+                       h.revenue, h.labor_minutes, h.operator, h.notes
                 FROM harvests h JOIN crops c ON h.crop_id = c.id
-                WHERE ($1::int = 0 OR h.crop_id = $1) ORDER BY h.ts DESC LIMIT 50""",
+                WHERE h.greenhouse_id = 'vallery'
+                  AND c.greenhouse_id = 'vallery'
+                  AND ($1::int = 0 OR h.crop_id = $1)
+                ORDER BY h.ts DESC LIMIT 50""",
                 crop_id,
             )
             return _json([dict(r) for r in rows])
 
         elif action == "record_treatment" and crop_id:
+            crop = await conn.fetchrow(
+                "SELECT zone, position_id FROM crops WHERE id = $1 AND greenhouse_id = 'vallery'",
+                crop_id,
+            )
+            if not crop:
+                return json.dumps({"error": f"Crop {crop_id} not found"})
             try:
                 tr = TreatmentCreate.model_validate({**d, "applicator": d.get("applicator") or "Iris"})
             except ValidationError as e:
@@ -1603,9 +1650,10 @@ async def observations(action: str, crop_id: int = 0, data: str = "") -> str:
                 INSERT INTO treatments (
                     crop_id, product, active_ingredient, concentration, rate, rate_unit,
                     method, zone, target_pest, phi_days, rei_hours, applicator,
-                    observation_id, followup_due_at, followup_completed_at, outcome, notes
+                    observation_id, position_id, greenhouse_id, followup_due_at,
+                    followup_completed_at, outcome, notes
                 )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 'vallery', $15, $16, $17, $18)
                 RETURNING *""",
                 crop_id,
                 tr.product,
@@ -1614,12 +1662,13 @@ async def observations(action: str, crop_id: int = 0, data: str = "") -> str:
                 tr.rate,
                 tr.rate_unit,
                 tr.method,
-                tr.zone,
+                tr.zone or crop["zone"],
                 tr.target_pest,
                 tr.phi_days,
                 tr.rei_hours,
                 tr.applicator,
                 tr.observation_id,
+                crop["position_id"],
                 tr.followup_due_at,
                 tr.followup_completed_at,
                 tr.outcome,
@@ -1630,9 +1679,17 @@ async def observations(action: str, crop_id: int = 0, data: str = "") -> str:
         elif action == "list_treatments":
             rows = await conn.fetch(
                 """
-                SELECT t.id, t.ts, t.crop_id, c.name, t.product, t.method, t.zone, t.target_pest, t.phi_days, t.notes
+                SELECT t.id, t.ts, t.greenhouse_id, t.crop_id, c.name, t.position_id,
+                       t.product, t.active_ingredient, t.concentration, t.rate,
+                       t.rate_unit, t.method, t.zone, t.target_pest, t.phi_days,
+                       t.rei_hours, t.applicator, t.observation_id,
+                       t.followup_due_at, t.followup_completed_at, t.outcome,
+                       t.notes
                 FROM treatments t JOIN crops c ON t.crop_id = c.id
-                WHERE ($1::int = 0 OR t.crop_id = $1) ORDER BY t.ts DESC LIMIT 50""",
+                WHERE t.greenhouse_id = 'vallery'
+                  AND c.greenhouse_id = 'vallery'
+                  AND ($1::int = 0 OR t.crop_id = $1)
+                ORDER BY t.ts DESC LIMIT 50""",
                 crop_id,
             )
             return _json([dict(r) for r in rows])

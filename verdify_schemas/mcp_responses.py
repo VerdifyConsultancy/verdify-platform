@@ -43,6 +43,7 @@ class ClimateSnapshot(BaseModel):
     outdoor_rh: Decimal | None = None
     lux: Decimal | None = None
     solar_w: Decimal | None = None
+    solar_w_m2: Decimal | None = None
     age_seconds: int | None = None
     mode: str | None = None
 

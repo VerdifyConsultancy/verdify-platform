@@ -34,6 +34,7 @@ REBUILD_RETRY_SLEEP_SEC = 2
 BOX_DRAWING_RE = re.compile(r"[│┌└├─═╔]")
 DENVER_TZ = ZoneInfo("America/Denver")
 FORECAST_MAX_AGE_SECONDS = 2 * 60 * 60
+HOURLY_PERFORMANCE_MAX_AGE_SECONDS = 36 * 60 * 60
 STATIC_SNAPSHOT_MAX_AGE_SECONDS = 7 * 24 * 60 * 60
 PLAN_INDEX_ROW_RE = re.compile(r"^\| \[(\d{4}-\d{2}-\d{2})\]\(/plans/\1\)")
 PLAN_PREVIOUS_HYPOTHESIS_RE = re.compile(r"^\*\*Previous hypothesis:\*\*\s*(.+)$", re.MULTILINE)
@@ -70,6 +71,7 @@ CANONICAL_FACT_OWNERS: tuple[tuple[str, re.Pattern[str], set[str]], ...] = (
 GENERATED_PAGES = {
     "data/baseline-vs-iris.md": "scripts/generate-baseline-vs-iris-page.py",
     "data/forecast/index.md": "scripts/generate-forecast-page.py",
+    "data/hourly-performance.md": "scripts/export-hourly-performance-dataset.py",
     "data/plans/index.md": "scripts/generate-plans-index.py",
     "reference/ai-tunables.md": "scripts/generate-ai-tunables-page.py",
     "plans/index.md": "scripts/generate-plans-index.py",
@@ -481,6 +483,68 @@ def check_forecast_freshness(vault_root: Path) -> list[Finding]:
                     f"{rel} last_updated is {int(age_seconds)}s old; verdify-forecast-page.timer should refresh every 30min",
                 )
             )
+    return findings
+
+
+def check_hourly_performance_freshness(vault_root: Path) -> list[Finding]:
+    findings: list[Finding] = []
+    manifest_path = vault_root / "static" / "data" / "hourly-performance" / "manifest.json"
+    page_path = vault_root / "data" / "hourly-performance.md"
+    if not page_path.exists():
+        findings.append(Finding("error", "hourly-performance-page-missing", "data/hourly-performance.md is missing"))
+    if not manifest_path.exists():
+        findings.append(
+            Finding(
+                "error",
+                "hourly-performance-manifest-missing",
+                "static/data/hourly-performance/manifest.json is missing",
+            )
+        )
+        return findings
+    try:
+        manifest = json.loads(read_text(manifest_path))
+    except json.JSONDecodeError as exc:
+        findings.append(Finding("error", "hourly-performance-manifest-invalid", f"{manifest_path}: {exc}"))
+        return findings
+    raw = str(manifest.get("generated_at") or "")
+    try:
+        generated_at = datetime.fromisoformat(raw)
+    except ValueError:
+        findings.append(
+            Finding("error", "hourly-performance-freshness-invalid", f"manifest generated_at is invalid: {raw}")
+        )
+        return findings
+    if generated_at.tzinfo is None:
+        generated_at = generated_at.replace(tzinfo=DENVER_TZ)
+    age_seconds = (datetime.now(generated_at.tzinfo) - generated_at).total_seconds()
+    if age_seconds > HOURLY_PERFORMANCE_MAX_AGE_SECONDS:
+        findings.append(
+            Finding(
+                "error",
+                "hourly-performance-stale",
+                f"hourly-performance export is {int(age_seconds // 3600)}h old; run scripts/export-hourly-performance-dataset.py",
+            )
+        )
+    current = manifest.get("current_archive") or {}
+    for rel_url in (current.get("url"), (manifest.get("latest") or {}).get("url")):
+        if not rel_url:
+            findings.append(
+                Finding("error", "hourly-performance-url-missing", "manifest is missing current/latest URLs")
+            )
+            continue
+        rel_path = str(rel_url).removeprefix("/")
+        if not (vault_root / rel_path).exists():
+            findings.append(
+                Finding("error", "hourly-performance-file-missing", f"{rel_path} referenced by manifest is missing")
+            )
+    if int(current.get("rows") or 0) < 24:
+        findings.append(
+            Finding(
+                "error",
+                "hourly-performance-row-count-low",
+                f"manifest current_archive rows is too low: {current.get('rows')}",
+            )
+        )
     return findings
 
 
@@ -1412,6 +1476,7 @@ def main() -> int:
     findings.extend(check_generation_entrypoint())
     findings.extend(check_generated_route_aliases(args.vault_root))
     findings.extend(check_forecast_freshness(args.vault_root))
+    findings.extend(check_hourly_performance_freshness(args.vault_root))
     findings.extend(check_static_snapshot_freshness(args.vault_root))
     findings.extend(check_plan_archive_freshness(args.vault_root))
     findings.extend(check_plan_archive_content(args.vault_root))

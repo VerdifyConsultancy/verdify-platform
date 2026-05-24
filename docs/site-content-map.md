@@ -2,7 +2,7 @@
 
 This is the working contract for `lab.verdify.ai` content. The content source tree is `/mnt/iris/verdify-vault/website`; the repo-owned Quartz source tree is `site/`; Quartz builds into `/srv/verdify/verdify-site/public`.
 
-Current active source size after the 2026-05-20 resource-use pass: 102 Markdown pages. Legacy `/greenhouse/lessons` and `/intelligence/lessons` are aliases for the generated `/reference/lessons` page. Legacy `/data/economics`, `/evidence/economics`, and `/economics` resolve to `/start/resource-use` after the resource/cost merge. Legacy `/evidence/baseline-vs-iris` resolves to `/data/baseline-vs-iris`. Legacy `/reference/context-window`, `/intelligence/context-window`, `/reference/intelligence`, and `/intelligence` resolve to `/reference/planning-loop` after the AI reference merge. Legacy `/greenhouse/growing`, `/crops`, and `/growing` resolve to `/greenhouse/crops` after the crop/growing merge. Legacy `/reference/build-notes` and `/intelligence/build-notes` resolve to `/reference/architecture` after the architecture/build-notes merge. Legacy `/reference/faq`, `/intelligence/faq`, and `/faq` resolve to `/start/ai-greenhouse` after the FAQ merge. Legacy `/greenhouse/cameras` and `/cameras` resolve to `/greenhouse` after the camera-context merge. Legacy `/reference/firmware-change-protocol`, `/intelligence/firmware-change-protocol`, `/firmware-change-protocol`, and `/fcp` resolve to `/reference/safety` after the firmware-protocol merge. Legacy `/greenhouse/operations`, `/greenhouse/how-the-greenhouse-operates`, `/greenhouse/how-it-works`, `/start/slack-ops`, `/slack`, and `/data/slack-ops` resolve to `/data/operations` after the operations merge. Legacy `/forecast` resolves to `/data/forecast`; `/plans` and `/plans/` remain a noindex compatibility stub, and daily plan records remain at `/plans/YYYY-MM-DD`.
+Current active source size after the 2026-05-23 audit: 106 Markdown pages. Legacy `/greenhouse/lessons` and `/intelligence/lessons` are aliases for the generated `/reference/lessons` page. Legacy `/data/economics`, `/evidence/economics`, and `/economics` resolve to `/start/resource-use` after the resource/cost merge. Legacy `/evidence/baseline-vs-iris` resolves to `/data/baseline-vs-iris`. Legacy `/reference/context-window`, `/intelligence/context-window`, `/reference/intelligence`, and `/intelligence` resolve to `/reference/planning-loop` after the AI reference merge. Legacy `/greenhouse/growing`, `/crops`, and `/growing` resolve to `/greenhouse/crops` after the crop/growing merge. Legacy `/reference/build-notes` and `/intelligence/build-notes` resolve to `/reference/architecture` after the architecture/build-notes merge. Legacy `/reference/faq`, `/intelligence/faq`, and `/faq` resolve to `/start/ai-greenhouse` after the FAQ merge. Legacy `/greenhouse/cameras` and `/cameras` resolve to `/greenhouse` after the camera-context merge. Legacy `/reference/firmware-change-protocol`, `/intelligence/firmware-change-protocol`, `/firmware-change-protocol`, and `/fcp` resolve to `/reference/safety` after the firmware-protocol merge. Legacy `/greenhouse/operations`, `/greenhouse/how-the-greenhouse-operates`, `/greenhouse/how-it-works`, `/start/slack-ops`, `/slack`, and `/data/slack-ops` resolve to `/data/operations` after the operations merge. Legacy `/reference/known-limits`, `/forecast`, and `/plans` resolve to `/start/climate`, `/data/forecast`, and the noindex plan compatibility stub respectively; daily plan records remain at `/plans/YYYY-MM-DD`.
 
 ## Editorial Principle
 
@@ -41,12 +41,12 @@ The site story is: Verdify is a public AI-assisted greenhouse control loop in Lo
 | `/reference/data-model` | Data model reference | Hand-authored | Tables, views, functions, compression, retention, and evidence exports | None | Manual |
 | `/reference/architecture` | System architecture and public-safe reference implementation | Hand-authored | Component map, data flow, reference hardware/runtime shape, database overview, example plan/scorecard JSON, and facts owned elsewhere | None | Manual copy |
 | `/reference/safety` | Safety architecture and firmware change protocol | Hand-authored | ESP32/dispatcher/LLM control split, firmware review gates, OTA preflight, rollback, and command surface | None | Manual |
-| `/reference/known-limits` | Known issues | Hand-authored | Operational limitations and gaps | None | Manual |
+| `/reference/known-limits` | Known issues | Alias | Alias on `/start/climate` after the known-limits merge | None | Manual |
 | `/reference/related-work` | Related work comparison | Hand-authored | Maker, research, and commercial greenhouse-control context | None | Manual |
 
 ## Current Source Inventory
 
-This inventory makes the active source set explicit. At the 2026-05-19 audit, the site has 45 non-daily Markdown sources plus 57 generated daily plan records, for 102 active Markdown sources total.
+This inventory makes the active source set explicit. At the 2026-05-23 audit, `make site-doctor` reports 106 Markdown sources; daily plan records run from 2026-03-24 through 2026-05-23.
 
 | Source group | Active sources | Content owner |
 |---|---|---|
@@ -58,7 +58,7 @@ This inventory makes the active source set explicit. At the 2026-05-19 audit, th
 | Zone profiles | `greenhouse/zones/index.md`, `greenhouse/zones/center.md`, `greenhouse/zones/east.md`, `greenhouse/zones/north.md`, `greenhouse/zones/south.md`, `greenhouse/zones/west.md` | Zone overview plus generated microclimate, equipment, water, sensor, and planting references |
 | Reference | `reference/ai-tunables.md`, `reference/architecture.md`, `reference/data-model.md`, `reference/lessons.md`, `reference/planner-contract.md`, `reference/planning-loop.md`, `reference/related-work.md`, `reference/safety.md` | Tunable registry, implementation architecture, schema map, lessons, planner contract, planning loop, related work, and safety protocol |
 | Compatibility generated index | `plans/index.md` | Noindex alias stub for `/plans` while dated child records remain under `plans/` |
-| Daily plan records | `plans/2026-03-24.md` through `plans/2026-05-19.md` at audit time | Generated daily plan records and outcomes linked from `/data/plans` |
+| Daily plan records | `plans/2026-03-24.md` through `plans/2026-05-23.md` at audit time | Generated daily plan records and outcomes linked from `/data/plans` |
 
 ## Navigation Contract
 
