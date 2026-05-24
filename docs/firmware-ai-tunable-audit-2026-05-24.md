@@ -78,6 +78,12 @@ The executable contract is registry-first:
   planner. Fixed the backfill script to derive values from
   `verdify_schemas.tunable_registry.REGISTRY` and print candidate defaults in
   dry-run output.
+- Pre-OTA proof caught six active visual-health observations without
+  `position_id`/`zone_id`, created by the Gemini snapshot analyzer. Fixed
+  `scripts/analyze-greenhouse-snapshot.py` to carry crop topology IDs into
+  observations and to link rows to the `image_observations` id returned by the
+  insert instead of `SELECT MAX(id)`. Repaired the six live rows
+  (`919`-`924`) from their crop records.
 
 ## Current PR3 behavior
 
@@ -96,12 +102,14 @@ The executable contract is registry-first:
 Platform candidate before this follow-up:
 
 - `make lint` passed.
-- `make test` passed: 510 passed, 2 skipped, 1 xfailed.
+- `make test` passed: 513 passed, 2 skipped, 1 xfailed.
 - `make test-firmware` passed: 162 passed, replay override self-test passed.
 - `make firmware-check` passed; ESPHome compiled.
 - `make firmware-invariants` passed: 193,525 rows, all 16 invariants.
-- `make firmware-replay-worktree OLD=origin/codex/firmware-ai-tunable-design-doc`
-  passed: 0 divergent rows over 193,525 rows.
+- `make firmware-replay-worktree OLD=e349e5e` passed: 0 divergent rows over
+  193,525 rows.
+- `make firmware-audit-traceability-proof` passed after the live observation
+  topology repair.
 - `scripts/audit-tunable-traceability.py` passed: 152 registry/schema tunables,
   39 Tier 1 required params, 149 setpoint routes, 134 cfg readback routes, and
   12 cfg readback aliases.
@@ -113,6 +121,23 @@ Planner companion branch:
 - Cross-repo comparison passed: platform and standalone planner both have
   exactly 39 Tier 1 defaults, no missing or extra keys, and no value mismatch.
 
+Live service/backfill follow-up:
+
+- PR3 platform services were deployed from `/srv/verdify` at candidate commit
+  `3f34f07` and `verdify-ingestor`, `verdify-mcp`,
+  `verdify-setpoint-server`, and `verdify-api` were restarted.
+- `APPLY=1 scripts/backfill-ai-moisture-stress-defaults.sh` inserted the 35
+  missing default cells: seven PR3 params across five routine-plan
+  transitions.
+- `scripts/validate-plan-coverage.sh` now reports plan
+  `iris-20260524-1347` with five complete transitions and full 39-param
+  tactical Tier 1 coverage.
+- A follow-up dry run of `scripts/backfill-ai-moisture-stress-defaults.sh`
+  reports zero candidate rows, plans, or transitions.
+- `scripts/generate-ai-tunables-page.py --planner-context` now reports
+  `future_active_rows=156`, `future_active_params=39`, and
+  `reserved_active_rows=0`.
+
 ## OTA readiness notes
 
 - Live severe-alert gate is clear: only warning `irrigation_feedback_gap`
@@ -122,9 +147,9 @@ Planner companion branch:
 - Weekly OTA limit is currently blocking because firmware
   `2026.5.24.1341.e349e5e` first appeared today. OTA requires an explicit
   operator-approved `FIRMWARE_OTA_FREEZE_OVERRIDE_REASON`.
-- Active future plan rows currently have 32 Tier 1 params. Under this PR3
-  contract they are missing the seven new PR3 defaults at each future
-  transition:
+- Active future routine-plan rows now have all 39 Tier 1 params after the PR3
+  service deploy and default backfill. The seven PR3 defaults added to each
+  transition are:
   `sw_direct_wet_stress_override_enabled`,
   `direct_wet_stress_vpd_margin_kpa`,
   `direct_wet_stress_min_dew_margin_f`,
@@ -133,12 +158,11 @@ Planner companion branch:
   `fog_stress_window_latest_hour`, and
   `fog_stress_min_dew_margin_f`.
 
-Do not declare service/firmware alignment until a new routine plan or explicit
-default backfill creates 39-param active/future coverage. The backfill should be
-run after PR3 service deploy and before OTA validation:
+Do not run OTA until the weekly freeze override is supplied by the operator and
+the preflight plus firmware validation suite still pass from `/srv/verdify`.
+The backfill should remain dry-run clean immediately before OTA:
 
 ```bash
 scripts/backfill-ai-moisture-stress-defaults.sh
-APPLY=1 scripts/backfill-ai-moisture-stress-defaults.sh
 scripts/validate-plan-coverage.sh
 ```

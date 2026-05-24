@@ -242,10 +242,10 @@ Proposed diagnostics:
 
 | Diagnostic | Purpose |
 |---|---|
-| `moisture_block_reason` | CSV/enum: direct_wet_window, direct_wet_temp, occupancy, irrigation, budget, vent_interlock, fog_window, fog_rh, fog_temp. |
+| `moisture_block_reason` | Enum such as `served`, `water_budget`, `no_humidity_demand`, `vent_interlock`, `direct_wet_window`, `direct_wet_temp`, `direct_wet_dew_margin`, `direct_wet_latest_hour`, `irrigation`, `occupancy`, `no_vpd_demand`, `engage_delay`, or `pulse_gap`. |
 | `vent_mist_assist_status` | AI-readable status: inactive, served, or blocked with the moisture block reason. |
-| `direct_wet_zone_mask` | Bitmask of south/west/center wet eligibility. |
-| `fog_permitted_reason` | Reason fog was permitted or blocked. |
+| `direct_wet_zone_mask` | Comma-separated south/west/center wet eligibility, or `none`. |
+| `fog_block_reason` | Reason fog was served, available, or blocked. |
 
 Proposed tunables:
 
