@@ -55,6 +55,47 @@ number:
           id(stage2_cool_delta_f) = x;
           id(num_stage2_cool).publish_state(x);
 
+  # Firmware-side prototype: planner registry promotion is a coordinator
+  # handoff. Until then these are local/HA knobs with cfg_* readbacks.
+  - platform: template
+    id: num_cool_stage2_over_high
+    name: "Cool Stage 2 Over High °F"
+    min_value: 0
+    max_value: 3
+    step: 0.1
+    lambda: "return id(cool_stage2_over_high_f);"
+    set_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(cool_stage2_over_high_f) = x;
+          id(num_cool_stage2_over_high).publish_state(x);
+
+  - platform: template
+    id: num_cool_exit_hysteresis
+    name: "Cool Exit Hysteresis °F"
+    min_value: 0.3
+    max_value: 3
+    step: 0.1
+    lambda: "return id(cool_exit_hysteresis_f);"
+    set_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(cool_exit_hysteresis_f) = x;
+          id(num_cool_exit_hysteresis).publish_state(x);
+
+  - platform: template
+    id: num_cold_vent_guard_delta
+    name: "Cold Vent Guard Delta °F"
+    min_value: 0
+    max_value: 15
+    step: 0.5
+    lambda: "return id(cold_vent_guard_delta_f);"
+    set_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(cold_vent_guard_delta_f) = x;
+          id(num_cold_vent_guard_delta).publish_state(x);
+
   # --- Temperature hysteresis (°F) -----------------------------------
   - platform: template
     id: num_hyst_temp
@@ -1664,6 +1705,23 @@ number:
 # Users can toggle these switches in the UI, which updates the corresponding
 # global variables.  Each switch publishes its new state so HA stays in sync.
 switch:
+  - platform: template
+    id: sw_cool_all_fans_at_high
+    name: "Cool All Fans At High"
+    optimistic: false
+    restore_mode: RESTORE_DEFAULT_OFF
+    lambda: "return id(cool_all_fans_at_high_enabled);"
+    turn_on_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(cool_all_fans_at_high_enabled) = true;
+          id(sw_cool_all_fans_at_high).publish_state(true);
+    turn_off_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(cool_all_fans_at_high_enabled) = false;
+          id(sw_cool_all_fans_at_high).publish_state(false);
+
   - platform: template
     id: sw_direct_wet_gate_enabled
     name: "Direct Wet Gate Enabled"

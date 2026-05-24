@@ -313,6 +313,16 @@ class TestDriftGuard:
         assert REGISTRY["safety_min"].control_class == "controller_safety"
         assert REGISTRY["fallback_window_s"].control_class == "readback_context"
         assert REGISTRY["mister_on_s"].control_class == "retired"
+        assert REGISTRY["d_cool_stage_2"].control_class == "retired"
+        for param in (
+            "cool_stage2_over_high_f",
+            "cool_exit_hysteresis_f",
+            "cold_vent_guard_delta_f",
+            "sw_cool_all_fans_at_high_enabled",
+        ):
+            assert param in TIER1_REG
+            assert param in PLANNER_PUSHABLE_REG
+            assert REGISTRY[param].cfg_readback_object_id
 
     def test_registry_value_error_reports_bounds_and_nearest_safe(self) -> None:
         err = registry_value_error("mister_all_kpa", 2.8)

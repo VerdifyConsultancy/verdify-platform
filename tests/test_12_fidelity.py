@@ -1909,7 +1909,8 @@ def test_irrigation_scheduler_serializes_same_minute_zone_starts():
     ):
         assert needle in controls
     assert controls.index("id(center_mister).turn_off();") < controls.index("switch(job){")
-    assert "|| id(irrig_state) > 0" in controls
+    assert "bool irrigation_block = id(irrig_state) > 0;" in controls
+    assert "|| irrigation_block" in controls
 
 
 def test_irrigation_schedule_is_heap_recovery_priority():

@@ -181,8 +181,8 @@ Proposed tunables:
 | Tunable | Range | Default | Meaning |
 |---|---:|---:|---|
 | `cool_stage2_over_high_f` | 0.0-3.0 F | 1.0 | Fan2 engages this far above `temp_high`. |
-| `cool_all_fans_at_high_enabled` | bool | off | If on, both fans run as soon as temp is above high edge during AI-declared stress windows. |
-| `cool_exit_hysteresis_f` | 0.3-3.0 F | current temp hysteresis | Cooling clears at `temp_high - cool_exit_hysteresis_f`. |
+| `sw_cool_all_fans_at_high_enabled` | bool | off | If on, both fans run as soon as temp is above high edge during AI-declared stress windows. |
+| `cool_exit_hysteresis_f` | 0.3-3.0 F | current temp hysteresis (1.5 F default) | Cooling clears at `temp_high - cool_exit_hysteresis_f`. |
 | `cold_vent_guard_delta_f` | 0-10 F | current hardcoded 10 F behavior | Extra guard when outdoor air is cold enough to slug the house. |
 
 Expected outcome:
@@ -711,7 +711,7 @@ complete AI policy surface:
 | `temp_rate_rise_trigger_f_per_hr` | pre-cool when temp slope exceeds this under solar | positive finite, ignored with stale sensors |
 | `vpd_rate_rise_trigger_kpa_per_hr` | pre-humidify before VPD breaches | bounded; blocked by dew/leaf wetness |
 | `solar_preventive_cooling_enabled` | allow cooling before high edge under solar load | cold-outdoor and occupancy guards |
-| `cool_all_fans_at_high_enabled` | run both fans at high edge in stress windows | no effect outside `VENTILATE` |
+| `sw_cool_all_fans_at_high_enabled` | run both fans at high edge in stress windows | no effect outside `VENTILATE` |
 | `vent_mist_assist_min_dew_margin_f` | moisture while venting only when biologically safe | never below disease-risk floor |
 | `direct_wet_stress_latest_hour` | bounded evening dry recovery | local-time and leaf-wetness gates |
 | `dew_risk_moisture_lockout_margin_f` | suppress wetting as dew margin narrows | cannot be disabled by AI |
@@ -747,7 +747,7 @@ Trigger:
 Actions:
 
 - set `cool_stage2_over_high_f` to 0.5-1.0 F;
-- enable `cool_all_fans_at_high_enabled` during the stress window if hot time
+- enable `sw_cool_all_fans_at_high_enabled` during the stress window if hot time
   has included more than 30-60 min with one fan;
 - keep `cool_exit_hysteresis_f` aggressive enough to cool below the high edge,
   but preserve the cold-outdoor guard;
@@ -845,11 +845,11 @@ band, then VPD band, then resource cost.
 The runtime planner surfaces are not yet fully aligned with this design. This
 is genai/coordinator territory, so the firmware-side handoff is explicit:
 
-- `ingestor/iris_planner.py` and `docs/planner/greenhouse-playbook.md` still
-  describe `d_cool_stage_2` as "fan2 engages at Thigh + this." In current
-  band-first firmware, the active path derives or now prototypes fan2 staging
-  through `cool_stage2_over_high_f`; `d_cool_stage_2` is a legacy/compatibility
-  field and should not be taught as the primary AI cooling knob.
+- `ingestor/iris_planner.py` and `docs/planner/greenhouse-playbook.md` now
+  teach `cool_stage2_over_high_f`, `cool_exit_hysteresis_f`,
+  `cold_vent_guard_delta_f`, and `sw_cool_all_fans_at_high_enabled` as the
+  live cooling posture. `d_cool_stage_2` is retained as a legacy/readback
+  compatibility field and should not be taught as the primary AI cooling knob.
 - The prompt should add the diagnostics `vent_mist_assist_status`,
   `moisture_block_reason`, `direct_wet_zone_mask`, and `fog_block_reason` to
   the VPD-high diagnostic flow once they are deployed and visible through MCP.
@@ -860,7 +860,7 @@ is genai/coordinator territory, so the firmware-side handoff is explicit:
   firmware PR wires or retires them.
 - When future registry promotion lands, the Tier 1 cooling dictionary should
   prefer `cool_stage2_over_high_f`, `cool_exit_hysteresis_f`, and
-  `cool_all_fans_at_high_enabled` over indirect `temp_hysteresis` or
+  `sw_cool_all_fans_at_high_enabled` over indirect `temp_hysteresis` or
   `d_cool_stage_2` changes.
 
 ## Historical Model Implications
@@ -1011,7 +1011,7 @@ Add:
 
 - `cool_stage2_over_high_f`
 - `cool_exit_hysteresis_f`
-- optional `cool_all_fans_at_high_enabled`
+- optional `sw_cool_all_fans_at_high_enabled`
 - `cold_vent_guard_delta_f`
 
 Replay diff expected and should be reviewed against hot-day corpus. This is the
@@ -1022,7 +1022,7 @@ Current firmware-side prototype status on 2026-05-24:
 
 - `firmware/lib/greenhouse_types.h` adds explicit cooling policy fields:
   `cool_stage2_over_high_f`, `cool_exit_hysteresis_f`,
-  `cold_vent_guard_delta_f`, and `cool_all_fans_at_high_enabled`.
+  `cold_vent_guard_delta_f`, and `sw_cool_all_fans_at_high_enabled`.
 - `firmware/lib/greenhouse_logic.h` uses `cool_stage2_over_high_f` for fan2
   staging and `cool_exit_hysteresis_f` for cooling hold exit. Cold-outdoor
   cooling entry preserves the prior band-scaled margin so aggressive fan
@@ -1040,16 +1040,17 @@ Current firmware-side prototype status on 2026-05-24:
   2131 rows where old firmware had one fan and new firmware runs both fans in
   `VENTILATE`.
 
-Planner contract handoff before this can be a real AI knob:
+Planner contract handoff status:
 
-- Add schema names and registry rows in `verdify_schemas/tunable_registry.py`.
-- Add dispatcher object-id routes and cfg readback mappings through the
-  coordinator-owned registry path.
-- Add MCP/planner Tier classification and generated `/reference/ai-tunables/`
-  output.
-- Document required service bounces for `verdify-ingestor` and `verdify-mcp`.
-- Re-run replay diff as a PR artifact with an intentional divergence threshold
-  and coordinator approval.
+- `verdify_schemas/tunable_registry.py` now registers the four cooling policy
+  knobs with dispatcher object-id routes and cfg readback mappings.
+- MCP and planner required-param surfaces derive the new Tier 1 cooling rows
+  from the registry; `d_cool_stage_2` is retired from planner policy.
+- Planner prompt/playbook guidance and the AI tunables site generator now teach
+  the new cooling posture instead of the legacy indirect knob.
+- Deployment still requires service bounces for `verdify-ingestor` and
+  `verdify-mcp`, replay diff as a PR artifact with intentional divergence
+  threshold, and coordinator approval before OTA.
 
 ### PR 3 - Direct-Wet And Fog Stress Override
 

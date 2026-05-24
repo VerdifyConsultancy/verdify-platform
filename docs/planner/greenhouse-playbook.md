@@ -64,7 +64,7 @@ Check `temp_compliance_pct` vs `vpd_compliance_pct` from the scorecard. The lowe
 - Check `heat_stress_h` vs `cold_stress_h`
 - Cold stress usually = outdoor load, heat capacity, or heater/vent oscillation. Check `equipment_state()`, mode reason, and the effective heat target before changing tunables.
 - Heat stress on hot days = engineering-limited (undersized vent) → accept, pre-cool mornings
-- Heat stress on mild days = controller not venting early enough or stage-2 cooling arriving late → tune `d_cool_stage_2`, `temp_hysteresis`, and vent posture.
+- Heat stress on mild days = controller not venting early enough or stage-2 cooling arriving late → tune `cool_stage2_over_high_f`, `cool_exit_hysteresis_f`, `temp_hysteresis`, and vent posture.
 
 **If VPD compliance is low:**
 - Check `vpd_high_stress_h` vs `vpd_low_stress_h`
@@ -110,7 +110,7 @@ Structure transitions around solar milestones:
 Each transition MUST include all tactical Tier 1 params. Do not include
 crop-band params (`temp_low`, `temp_high`, `vpd_low`, `vpd_high`) or retired
 legacy knobs (`bias_heat`, `bias_cool`, `d_heat_stage_2`,
-`sw_fsm_controller_enabled`); crop profiles, firmware defaults, and the
+`d_cool_stage_2`, `sw_fsm_controller_enabled`); crop profiles, firmware defaults, and the
 dispatcher own them. Use mist, fog, dwell, hysteresis, vent posture, and
 stage-2 cooling knobs to shift behavior. The dispatcher executes the persisted
 tactical waypoints even if the planner is offline.
@@ -145,7 +145,7 @@ Every event ends with a post to #greenhouse.
 HIGH STRESS DETECTED
 ├── heat_stress_h > 2
 │   ├── Forecast high > 85°F? → Engineering-limited. Accept. Pre-cool morning.
-│   ├── Forecast high < 80°F? → Check temp_hysteresis, d_cool_stage_2, and vent posture.
+│   ├── Forecast high < 80°F? → Check temp_hysteresis, cool_stage2_over_high_f, cool_exit_hysteresis_f, and vent posture.
 │   └── Cold stress also high? → Oscillation. Widen hysteresis or make vent entry less eager.
 │
 ├── cold_stress_h > 2
@@ -277,10 +277,10 @@ The context is better for full-horizon scanning.
 ## Anti-Patterns (What NOT to Do)
 
 1. **Never increase mist frequency to fight heat.** Misters add humidity, not cooling. Use fog or accept heat stress.
-2. **Never set retired knobs to fight live stress.** `bias_heat`, `bias_cool`, `d_heat_stage_2`, and `sw_fsm_controller_enabled` are not routine planner controls in the unified band-first path.
+2. **Never set retired knobs to fight live stress.** `bias_heat`, `bias_cool`, `d_heat_stage_2`, `d_cool_stage_2`, and `sw_fsm_controller_enabled` are not routine planner controls in the unified band-first path.
 3. **Never set fog_escalation_kpa below 0.10, and treat values below 0.15 as exceptional.** Fog is powerful — too aggressive creates VPD-low stress and condensation risk.
 4. **Never set mist_max_closed_vent_s above 900.** Heat builds during sealed misting. >15 min sealed = thermal relief cycles too frequently.
 5. **Never set min_heat_off_s below 300.** Gas heater ignition cycling damages the unit.
-6. **Never emit crop-band params in plans.** `temp_low`, `temp_high`, `vpd_low`, and `vpd_high` are dispatcher-owned read-only context; use bias, mist, fog, dwell, and hysteresis knobs instead.
+6. **Never emit crop-band params in plans.** `temp_low`, `temp_high`, `vpd_low`, and `vpd_high` are dispatcher-owned read-only context; use mist, fog, dwell, hysteresis, vent posture, and stage-2 cooling knobs instead.
 7. **Never decouple moisture thresholds from the VPD band during active VPD-high stress.** The dispatcher will clamp conservative moisture values when live VPD is above band and dew margin is healthy; the planner should proactively choose band-coupled values instead of relying on that correction.
-7. **Never call docker exec, psql, or shell commands.** Use MCP tools only. Post a feature request if a tool is missing.
+8. **Never call docker exec, psql, or shell commands.** Use MCP tools only. Post a feature request if a tool is missing.

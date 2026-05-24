@@ -51,6 +51,7 @@ from verdify_schemas.tunables import ALL_TUNABLES  # noqa: E402
 RESERVED_NO_EFFECT = {
     "bias_cool",
     "bias_heat",
+    "d_cool_stage_2",
     "d_heat_stage_2",
     "fan_burst_min",
     "fog_burst_min",
@@ -197,7 +198,18 @@ def _frontmatter() -> str:
 def _category(name: str, spec: TunableDef) -> str:
     if name in {"fallback_window_s", "outdoor_temp_f", "outdoor_dewpoint_f"}:
         return "Readback-only firmware inputs"
-    if name.startswith("temp_") or name in {"d_heat_stage_2", "d_cool_stage_2", "heat_hysteresis"}:
+    if (
+        name.startswith("temp_")
+        or name.startswith("cool_")
+        or name
+        in {
+            "d_heat_stage_2",
+            "d_cool_stage_2",
+            "heat_hysteresis",
+            "cold_vent_guard_delta_f",
+            "sw_cool_all_fans_at_high_enabled",
+        }
+    ):
         return "Temperature band and staging"
     if name.startswith("vpd_") and "target" not in name:
         return "VPD band"
@@ -272,6 +284,14 @@ def _planner_guidance(name: str, spec: TunableDef, plan_required: set[str]) -> s
     control_class = spec.control_class
     if name == "sw_fsm_controller_enabled":
         return "Do not plan with this value. It is a compatibility/readback field for the unified band-first controller, and ESPHome keeps the live controller path ON."
+    if name == "cool_stage2_over_high_f":
+        return "Planner-policy tunable. On hot or high-solar days, use 0.5-1.0 F so fan2 helps near the high edge; relax after recovery to reduce fan wear."
+    if name == "cool_exit_hysteresis_f":
+        return "Planner-policy tunable. Lower values clear VENTILATE sooner; higher values hold cooling longer after hot stress. Keep dew/VPD effects in the hypothesis."
+    if name == "cold_vent_guard_delta_f":
+        return "Planner-policy tunable. Raise for cold-slug risk, lower when outdoor exchange is useful and temperature headroom is healthy."
+    if name == "sw_cool_all_fans_at_high_enabled":
+        return "Planner-policy switch. Enable only for forecast-backed heat stress windows where one-fan ventilation has been insufficient; disable after the window."
     if name == "mister_engage_kpa":
         return "Planner-policy tunable. During VPD-high or near-edge `VENTILATE` stress with healthy dew margin, keep near active `vpd_high + 0.05`; dispatcher clamps overly conservative values."
     if name == "mister_all_kpa":

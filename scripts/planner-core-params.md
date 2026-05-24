@@ -36,8 +36,10 @@ the same horizon. Crop-band rows are not part of this contract.
   would let dry-air `VENTILATE` hold temperature while leaving VPD above band.
   Do not unwind this posture until observed VPD has stayed below the high band;
   forecasted solar decline alone is not recovery evidence.
-- `d_heat_stage_2` is retired from live band-first control. `d_cool_stage_2`
-  remains bounded by registry and firmware clamps at `2..15` degrees F.
+- `d_heat_stage_2` and `d_cool_stage_2` are retired from live band-first
+  planner policy. Use `cool_stage2_over_high_f`,
+  `cool_exit_hysteresis_f`, `cold_vent_guard_delta_f`, and
+  `sw_cool_all_fans_at_high_enabled` for cooling posture.
 - `DEHUM_VENT` exits immediately if it overshoots dry-side VPD above
   `vpd_high`; do not use dwell gates to hold dehumidification through dry
   stress.

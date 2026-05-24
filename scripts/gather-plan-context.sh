@@ -25,14 +25,14 @@ from pathlib import Path
 repo = Path(sys.argv[1]).resolve()
 sys.path.insert(0, str(repo))
 
-from verdify_schemas.tunable_registry import BAND_OWNED_REG, LIGHTING_CIRCUIT_DEFAULT_REG, TIER1_REG  # noqa: E402
+from verdify_schemas.tunable_registry import BAND_OWNED_REG, PLANNER_PUSHABLE_REG  # noqa: E402
 
 
 def sql_list(values: set[str] | frozenset[str]) -> str:
     return ",".join("'" + value.replace("'", "''") + "'" for value in sorted(values))
 
 
-active_context = TIER1_REG | BAND_OWNED_REG | LIGHTING_CIRCUIT_DEFAULT_REG
+active_context = PLANNER_PUSHABLE_REG | BAND_OWNED_REG
 plan_compare_excluded = BAND_OWNED_REG | frozenset(
     {"mister_engage_delay_s", "mister_all_delay_s", "mister_center_penalty"}
 )
@@ -62,7 +62,7 @@ echo ""
 # Active plan: compact transition summary (grouped by timestamp, Tier 1 only)
 echo "--- ACTIVE PLAN (future transitions only — your new plan will replace this entirely) ---"
 echo "Key variables shown per transition. Vent/fog timing params at defaults unless noted."
-echo "ts_mdt|raw_params|engage|all|gap|wt|hyst|vent_max|fog_esc"
+echo "ts_mdt|raw_params|cool_s2|cool_exit|all_fans|engage|all|gap|wt|hyst|vent_max|fog_esc"
 $DB -c "
 WITH deduped AS (
   SELECT DISTINCT ON (ts, parameter) ts, parameter, value
@@ -71,6 +71,9 @@ WITH deduped AS (
 )
 SELECT to_char(ts AT TIME ZONE 'America/Denver', 'Dy MM-DD HH24:MI'),
   count(*),
+  COALESCE(max(CASE WHEN parameter='cool_stage2_over_high_f' THEN round(value::numeric,1) END), 1.0),
+  COALESCE(max(CASE WHEN parameter='cool_exit_hysteresis_f' THEN round(value::numeric,1) END), 1.5),
+  COALESCE(max(CASE WHEN parameter='sw_cool_all_fans_at_high_enabled' THEN value::int END), 0),
   COALESCE(max(CASE WHEN parameter='mister_engage_kpa' THEN round(value::numeric,1) END), 1.6),
   COALESCE(max(CASE WHEN parameter='mister_all_kpa' THEN round(value::numeric,1) END), 1.9),
   COALESCE(max(CASE WHEN parameter='mister_pulse_gap_s' THEN value::int END), 45),
@@ -441,7 +444,7 @@ EVAL_BACKLOG=$($DB -c "
 # deviation in mind.
 echo "--- PLANS THAT GOVERNED THE LAST 24 HOURS (causal attribution; Phase 1) ---"
 echo "Historical hypotheses may mention retired knobs such as bias_heat, bias_cool,"
-echo "d_heat_stage_2, or sw_fsm_controller_enabled. Treat those as obsolete"
+echo "d_heat_stage_2, d_cool_stage_2, or sw_fsm_controller_enabled. Treat those as obsolete"
 echo "history only; validate outcomes, but use the AI Tunables Routine Plan"
 echo "Contract and current Tier 1 surface for any new plan."
 if [ -n "${EVAL_BACKLOG}" ] && [ "${EVAL_BACKLOG}" -gt 0 ]; then

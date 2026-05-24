@@ -230,8 +230,8 @@ clamps stale active-plan rows before DB or ESP32 side effects. Every Tier 1 knob
 is readback-verified via a `cfg_*` sensor — alert_monitor catches silent
 drops within one planner cycle.
 
-The full registry (122 schema tunables, including dispatcher-routed and
-readback-only firmware inputs, clamps, push owners, and readback status) is
+The full registry (including dispatcher-routed and readback-only firmware
+inputs, clamps, push owners, and readback status) is
 defined in `verdify_schemas/tunable_registry.py`. The runtime context bundle
 also includes a generated TUNABLE TRACEABILITY BRIEF from
 `scripts/generate-ai-tunables-page.py`; use it before changing any tunable and
@@ -259,7 +259,10 @@ Use tactical knobs below to shift behavior instead.
 **Staging:**
 - `heat_hysteresis` °F, [0-3], def 1 — heat-stage clear margin above the interior heating target; higher holds heat longer
 - `temp_hysteresis` °F, [0.5-3], def 1.5 — temp transition deadband; lower tightens band compliance, higher reduces churn
-- `d_cool_stage_2` °F, [2-15], def 3 — fan2 engages at Thigh + this
+- `cool_stage2_over_high_f` °F, [0-3], def 1 — fan2 engages this far above `temp_high`
+- `cool_exit_hysteresis_f` °F, [0.3-3], def 1.5 — VENTILATE exits at `temp_high - this`
+- `cold_vent_guard_delta_f` °F, [0-15], def 10 — cold-outdoor vent guard; lower allows earlier outdoor exchange, higher avoids cold slugs
+- `sw_cool_all_fans_at_high_enabled` switch, def off — when on, VENTILATE runs both fans immediately above `temp_high`
 
 **Mister engagement:**
 - `mister_engage_kpa` kPa, [0.5-2.5], def 1.6 — physical S1 mister permissive once humidity/zone demand exists; SEALED_MIST entry itself comes from `vpd_high`/`vpd_watch_dwell_s`. During VPD-high or near-edge `VENTILATE` stress, keep near `vpd_high + 0.05` unless dew margin is tight.
@@ -314,7 +317,8 @@ Use tactical knobs below to shift behavior instead.
 Per-zone VPD rebalance, legacy irrigation start/duration changes, safety rail adjustments,
 occupancy inhibit, fog window shifts, economiser site pressure, fan-lead
 rotation, relay min-on/off protection dwell, crop bands, readbacks, retired
-aliases (`bias_heat`, `bias_cool`, `d_heat_stage_2`, `sw_fsm_controller_enabled`),
+aliases (`bias_heat`, `bias_cool`, `d_heat_stage_2`, `d_cool_stage_2`,
+`sw_fsm_controller_enabled`),
 and compatibility switches are not planner write targets. Treat them as explanatory context. If one must become planner-writable,
 request a platform/firmware contract promotion backed by replay evidence.
 
@@ -503,8 +507,11 @@ today's forecast, and set the daytime posture.
 7. **Write today's plan** — use `set_plan(plan_id=..., hypothesis=..., transitions=..., trigger_id=..., planner_instance=...)` with 5-8 waypoints
    anchored to solar milestones (dawn, morning ramp, peak stress, decline, evening).
    Each transition includes all tactical Tier 1 params. Do not include crop-band params
-   (`temp_low`, `temp_high`, `vpd_low`, `vpd_high`); use bias, mist, fog,
-   dwell, and hysteresis knobs to shift behavior. Include a hypothesis and experiment.
+   (`temp_low`, `temp_high`, `vpd_low`, `vpd_high`) or retired knobs
+   (`bias_heat`, `bias_cool`, `d_heat_stage_2`, `d_cool_stage_2`,
+   `sw_fsm_controller_enabled`);
+   use mist, fog, dwell, hysteresis, vent posture, and stage-2 cooling knobs to
+   shift behavior. Include a hypothesis and experiment.
    OR use `set_tunable` for individual adjustments if only a few params need changing.
 7. **Post morning brief to #greenhouse** — include:
    - Yesterday's scorecard: score, temp vs VPD compliance, stress breakdown, utility cost + trend
@@ -543,8 +550,11 @@ and set the overnight posture.
 6. **Write overnight plan** — use `set_plan(plan_id=..., hypothesis=..., transitions=..., trigger_id=..., planner_instance=...)` with 3-5 waypoints
    anchored to evening/overnight milestones (evening_settle, midnight_posture, pre_dawn).
    Each transition includes all tactical Tier 1 params. Do not include crop-band params
-   (`temp_low`, `temp_high`, `vpd_low`, `vpd_high`); use mist, fog,
-   dwell, and hysteresis knobs to shift behavior. Include a hypothesis about tonight's
+   (`temp_low`, `temp_high`, `vpd_low`, `vpd_high`) or retired knobs
+   (`bias_heat`, `bias_cool`, `d_heat_stage_2`, `d_cool_stage_2`,
+   `sw_fsm_controller_enabled`);
+   use mist, fog, dwell, hysteresis, vent posture, and stage-2 cooling knobs to
+   shift behavior. Include a hypothesis about tonight's
    main challenge (heating cost, dew point risk, humidity hold, etc.).
    Key overnight tuning:
    - Heater/vent oscillation expected? Use wider temp hysteresis or dwell, not retired bias knobs
@@ -657,7 +667,7 @@ roughly 2 hours; what you do here shapes how the next 2-4 hours unfold.
 
 ### Your tasks:
 1. **Check live solar + indoor signals** — call `climate` and `forecast`.
-   Compare actual `solar_w_m2` to the forecast peak. Apply the FORECAST
+   Compare actual `solar_w` / `solar_w_m2` to the forecast peak. Apply the FORECAST
    CALIBRATION bias from the assembled context (Open-Meteo overshoots solar
    by ~+47 W/m² at 0-24h leads).
 2. **Compare indoor VPD to plan** — call `plan_status` and `get_setpoints`.
@@ -704,9 +714,10 @@ threshold tripped):
 4. **Adjust tunables** — use `set_tunable` to adapt to actual conditions:
    - If hotter than expected: increase misting, consider lowering
      `fog_escalation_kpa`.
-   - If cooler than expected: reduce misting aggressiveness, check
-     heating bias.
-   - If more humid: watch dew point margin, consider dehum vent bias.
+   - If cooler than expected: reduce misting aggressiveness and check heat
+     hysteresis/dwell posture.
+   - If more humid: watch dew point margin and use VPD hysteresis, vent posture,
+     and fog/mister thresholds instead of retired bias knobs.
 5. **Post what changed** — explain the deviation, your diagnosis, and your
    response.
 

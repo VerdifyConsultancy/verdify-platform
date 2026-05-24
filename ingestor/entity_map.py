@@ -384,6 +384,12 @@ STATE_MAP: dict[str, str] = {
     # `seal_enter` etc. Populated by controls.yaml from
     # ctl_state.last_mode_reason on every cycle.
     "mode_reason": "mode_reason",
+    # AI-control diagnostics: whether requested moisture assistance had an
+    # actuator route available, and which gate blocked it when it did not.
+    "moisture_block_reason": "moisture_block_reason",
+    "vent_mist_assist_status": "vent_mist_assist_status",
+    "direct_wet_zone_mask": "direct_wet_zone_mask",
+    "fog_block_reason": "fog_block_reason",
     "gl_main_state": "gl_main_state",
     "gl_main_reason": "gl_main_reason",
     "gl_main_decision_epoch": "gl_main_decision_epoch",  # TextSensorInfo exact epoch string

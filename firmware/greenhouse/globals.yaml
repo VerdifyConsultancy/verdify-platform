@@ -28,6 +28,22 @@ globals:
     type: float
     restore_value: no
     initial_value: '3.0'
+  - id: cool_stage2_over_high_f
+    type: float
+    restore_value: no
+    initial_value: '1.0'
+  - id: cool_exit_hysteresis_f
+    type: float
+    restore_value: no
+    initial_value: '1.5'
+  - id: cold_vent_guard_delta_f
+    type: float
+    restore_value: no
+    initial_value: '10.0'
+  - id: cool_all_fans_at_high_enabled
+    type: bool
+    restore_value: no
+    initial_value: 'false'
   - id: hyst_temp_f
     type: float
     restore_value: no

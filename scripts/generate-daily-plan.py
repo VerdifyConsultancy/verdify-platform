@@ -420,7 +420,9 @@ CORE_PARAMS = [
     "temp_low",
     "vpd_high",
     "vpd_hysteresis",
-    "d_cool_stage_2",
+    "cool_stage2_over_high_f",
+    "cool_exit_hysteresis_f",
+    "sw_cool_all_fans_at_high_enabled",
     "mister_engage_kpa",
     "mister_all_kpa",
     "mister_pulse_on_s",
@@ -434,7 +436,9 @@ PRIMARY_BAND_PARAMS = [
     "vpd_hysteresis",
 ]
 TACTICAL_TUNABLE_PARAMS = [
-    "d_cool_stage_2",
+    "cool_stage2_over_high_f",
+    "cool_exit_hysteresis_f",
+    "sw_cool_all_fans_at_high_enabled",
     "mister_engage_kpa",
     "mister_all_kpa",
     "mister_pulse_on_s",
@@ -446,7 +450,9 @@ PARAM_SHORT = {
     "temp_low": "low",
     "vpd_high": "vpd_h",
     "vpd_hysteresis": "hyst",
-    "d_cool_stage_2": "d_cool",
+    "cool_stage2_over_high_f": "s2",
+    "cool_exit_hysteresis_f": "cool_exit",
+    "sw_cool_all_fans_at_high_enabled": "all_fans",
     "mister_engage_kpa": "engage",
     "mister_all_kpa": "all",
     "mister_pulse_on_s": "pulse",
@@ -476,7 +482,7 @@ def compact_time(local_timestamp: object) -> str:
 def event_display_label(event: dict) -> str:
     label = str(event.get("event_label") or "").strip()
     if label and not label.lstrip().startswith(("{", "[")):
-        return label
+        return public_text(label)
     event_type = str(event.get("event_type") or "").strip()
     fallback = {
         "MIDNIGHT": "End-of-day review and reset",
@@ -810,7 +816,9 @@ def generate_frontmatter(d: date, plans: list[dict], summary: dict, setpoints: d
         "temp_low",
         "vpd_high",
         "vpd_hysteresis",
-        "d_cool_stage_2",
+        "cool_stage2_over_high_f",
+        "cool_exit_hysteresis_f",
+        "sw_cool_all_fans_at_high_enabled",
         "mister_engage_kpa",
         "mister_all_kpa",
         "mister_pulse_on_s",

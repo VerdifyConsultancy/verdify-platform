@@ -97,14 +97,18 @@ Number/switch entity → firmware global or `Setpoints` field → cfg readback p
 
 ---
 
-## Temperature band (5 tunables, all critical) — FULLY SPEC'D
+## Temperature band and cooling posture — FULLY SPEC'D
 
 | Param | Type | Pydantic | DB | Dispatcher route | FW struct | FW use | cfg_* readback | Default | Valid range | Owner | Cascade |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | `temp_low` | num | `PlanTransition.params`, `SetpointChange` | `setpoint_plan`, `setpoint_changes` | `target_temp_low_f` | `Setpoints.temp_low` | `greenhouse_logic.h:439` Tlow calc; band-compliance; mode transitions | `cfg_temp_low_f` | 58°F | [30, 80] | crop (band) + planner (override, clamped to band) | immediate (5 min) |
 | `temp_high` | num | `PlanTransition.params`, `SetpointChange` | `setpoint_plan`, `setpoint_changes` | `target_temp_high_f` | `Setpoints.temp_high` | `greenhouse_logic.h:119` VENTILATE trigger; band-compliance | `cfg_temp_high_f` | 82°F | [40, 100] | crop (band) + planner (override, clamped) | immediate |
 | `d_heat_stage_2` | num | `SetpointChange`; MCP rejects planner writes | `setpoint_changes` | `target_d_heat_stage_2_f` | `Setpoints.d_heat_stage_2` | Retired from live band-first control. Legacy cascade S2 latch threshold (`Tlow - d_heat_stage_2`) only; unified controller latches heat2 at raw `temp_low` | `cfg_d_heat_stage_2_f` | 5.0°F | [2, 15] | operator / legacy fallback | immediate |
-| `d_cool_stage_2` | num | `PlanTransition.params`, `SetpointChange` | `setpoint_changes` | `target_d_cool_stage_2_f` | `Setpoints.d_cool_stage_2` | 2nd-fan threshold uses `min(d_cool_stage_2, max(1°F, 25% band width))`; cold-outdoor vent entry uses the same derived margin | `cfg_d_cool_stage_2_f`; `ctl_effective_cool_stage2_delta_f` | 3.0°F | [2, 15] | planner | immediate |
+| `d_cool_stage_2` | num | `SetpointChange`; MCP rejects planner writes | `setpoint_changes` | `target_d_cool_stage_2_f` | `Setpoints.d_cool_stage_2` | Legacy compatibility only in the live band-first path; use `cool_stage2_over_high_f` for fan2 staging | `cfg_d_cool_stage_2_f`; `ctl_effective_cool_stage2_delta_f` | 3.0°F | [2, 15] | operator / legacy fallback | immediate |
+| `cool_stage2_over_high_f` | num | `PlanTransition.params`, `SetpointChange` | `setpoint_plan`, `setpoint_changes` | `cool_stage2_over_high_f` | `Setpoints.cool_stage2_over_high_f` | Fan2 engages this far above `temp_high` in `VENTILATE` | `cfg_cool_stage2_over_high_f` | 1.0°F | [0, 3] | planner | immediate |
+| `cool_exit_hysteresis_f` | num | `PlanTransition.params`, `SetpointChange` | `setpoint_plan`, `setpoint_changes` | `cool_exit_hysteresis_f` | `Setpoints.cool_exit_hysteresis_f` | Cooling hold exits at `temp_high - cool_exit_hysteresis_f` | `cfg_cool_exit_hysteresis_f` | 1.5°F | [0.3, 3] | planner | immediate |
+| `cold_vent_guard_delta_f` | num | `PlanTransition.params`, `SetpointChange` | `setpoint_plan`, `setpoint_changes` | `cold_vent_guard_delta_f` | `Setpoints.cold_vent_guard_delta_f` | Outdoor air below `temp_low - cold_vent_guard_delta_f` requires extra margin before opening the vent | `cfg_cold_vent_guard_delta_f` | 10.0°F | [0, 15] | planner | immediate |
+| `sw_cool_all_fans_at_high_enabled` | switch | `PlanTransition.params`, `SetpointChange` | `setpoint_plan`, `setpoint_changes` | `cool_all_fans_at_high` | `Setpoints.cool_all_fans_at_high_enabled` | Runs both fans immediately above `temp_high` during `VENTILATE` | `cfg_cool_all_fans_at_high_enabled` | off | {0, 1} | planner | immediate |
 | `temp_hysteresis` | num | `PlanTransition.params`, `SetpointChange` | `setpoint_changes` | `target_hyst_temp_f` | `Setpoints.temp_hysteresis` | `greenhouse_logic.h:120,136,262` mode transition hysteresis (prevents churn near boundary) | `cfg_hyst_temp_f` | 1.5°F | [0.5, 3.0] | operator / fw-default | immediate |
 
 ## Bias / offsets (2 retired legacy tunables) — FULLY SPEC'D
@@ -193,7 +197,7 @@ data.
 
 ### Controller dwell gate
 - Readback-covered: `sw_dwell_gate_enabled` (`cfg_dwell_gate_enabled`), `dwell_gate_ms` (`cfg_dwell_gate_ms`)
-- The band-first controller cooling path now enters at raw `temp_high` under normal outdoor conditions. If outdoor air is deeply cold relative to the crop band, it waits for the same band-scaled delta used by stage-2 fan escalation (`min(d_cool_stage_2, max(1°F, 25% of temp band width))`) before opening the vent, protecting temp-band compliance without cold-day vent thrash.
+- The band-first controller cooling path now enters at raw `temp_high` under normal outdoor conditions. If outdoor air is deeply cold relative to the crop band, it waits for the larger of `cool_stage2_over_high_f` and the legacy band-scaled cold-entry margin before opening the vent, protecting temp-band compliance without cold-day vent thrash.
 
 ### Firmware internal (1 tunable)
 - `fallback_window_s` — sensor staleness → firmware reboot threshold

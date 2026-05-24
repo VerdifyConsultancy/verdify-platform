@@ -1137,6 +1137,56 @@ sensor:
       return id(stage2_cool_delta_f);
 
   - platform: template
+    id: cfg_cool_stage2_over_high_f
+    name: "Cfg • Cool S2 Over High (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(cool_stage2_over_high_f);
+
+  - platform: template
+    id: cfg_cool_exit_hysteresis_f
+    name: "Cfg • Cool Exit Hyst (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(cool_exit_hysteresis_f);
+
+  - platform: template
+    id: cfg_cold_vent_guard_delta_f
+    name: "Cfg • Cold Vent Guard Delta (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(cold_vent_guard_delta_f);
+
+  - platform: template
+    id: cfg_cool_all_fans_at_high_enabled
+    name: "Cfg • Cool All Fans At High"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(cool_all_fans_at_high_enabled) ? 1.0f : 0.0f;
+
+  - platform: template
     id: cfg_hyst_temp_f
     name: "Cfg • Temp Hyst (°F)"
     device_class: temperature
@@ -1231,6 +1281,7 @@ sensor:
       sp.temp_low = id(target_temp_low_f);
       sp.temp_high = id(target_temp_high_f);
       sp.dC2 = id(stage2_cool_delta_f);
+      sp.cool_stage2_over_high_f = id(cool_stage2_over_high_f);
       sp.safety_max = id(safety_max_f);
       validate_setpoints(sp);
       return band_cool_stage2_delta_f(sp);

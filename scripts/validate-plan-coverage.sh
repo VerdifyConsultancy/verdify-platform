@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # validate-plan-coverage.sh — Verify tactical Tier 1 params present at every transition
-set -uo pipefail
+set -euo pipefail
 
 DB="docker exec verdify-timescaledb psql -U verdify -d verdify -t -A -c"
 PYTHON_BIN="${PYTHON:-/srv/greenhouse/.venv/bin/python}"
@@ -31,8 +31,26 @@ BAND_OWNED="${REGISTRY_LINES[1]}"
 CORE_COUNT="${REGISTRY_LINES[2]}"
 LEGACY_BIAS_PARAMS="'bias_heat_f','bias_cool_f'"
 
-# 1. Get latest plan_id
-LATEST=$($DB "SELECT plan_id FROM setpoint_plan WHERE is_active = true ORDER BY created_at DESC LIMIT 1;" 2>/dev/null | tr -d ' ')
+# 1. Get latest active routine plan_id with the full tactical Tier 1 surface.
+# Tactical one-shot writes can supersede one parameter after a routine plan; they
+# remain guarded by planner-pushable checks but must not be treated as full-plan
+# coverage candidates.
+LATEST=$($DB "
+WITH candidate AS (
+  SELECT plan_id,
+         max(created_at) AS latest_created,
+         count(DISTINCT parameter) FILTER (WHERE parameter = ANY(string_to_array('$CORE', ','))) AS core_params
+    FROM setpoint_plan
+   WHERE is_active = true
+     AND plan_id IS NOT NULL
+   GROUP BY plan_id
+)
+SELECT plan_id
+  FROM candidate
+ WHERE core_params = $CORE_COUNT
+ ORDER BY latest_created DESC
+ LIMIT 1;
+" | tr -d ' ')
 
 if [ -z "$LATEST" ]; then
     echo "WARN: No active plans found"
@@ -63,13 +81,13 @@ SELECT
   (SELECT count(DISTINCT ts) FROM plan_ts),
   (SELECT count(DISTINCT ts) FROM plan_ts) - (SELECT count(DISTINCT ts) FROM missing),
   coalesce((SELECT string_agg(param || ' @ ' || to_char(ts AT TIME ZONE 'America/Denver', 'MM-DD HH:MI AM'), '; ' ORDER BY ts, param) FROM missing), '');
-" 2>/dev/null)
+")
 
 TRANSITIONS=$(echo "$RESULT" | cut -d'|' -f1 | tr -d ' ')
 COMPLETE=$(echo "$RESULT" | cut -d'|' -f2 | tr -d ' ')
 MISSING_LIST=$(echo "$RESULT" | cut -d'|' -f3)
 
-echo "plan_id: $LATEST"
+echo "routine_plan_id: $LATEST"
 echo "transitions: ${TRANSITIONS:-0}"
 echo "complete: ${COMPLETE:-0}"
 
@@ -78,7 +96,7 @@ SELECT coalesce(string_agg(DISTINCT parameter || ':' || coalesce(plan_id, '<null
 FROM setpoint_plan
 WHERE is_active = true
   AND parameter IN ($BAND_OWNED);
-" 2>/dev/null | tr -d ' ')
+" | tr -d ' ')
 if [ -n "$BAND_PRESENT" ]; then
     echo "BAND_OWNED_PRESENT: $BAND_PRESENT"
     echo "Dispatcher-owned band/lighting params are read-only context and must not be in active planner waypoints."
@@ -86,7 +104,7 @@ if [ -n "$BAND_PRESENT" ]; then
 fi
 
 # Check if plan uses old param names (bias_heat_f vs bias_heat)
-HAS_OLD=$($DB "SELECT count(*) FROM setpoint_plan WHERE plan_id = '$LATEST' AND parameter IN ($LEGACY_BIAS_PARAMS);" 2>/dev/null | tr -d ' ')
+HAS_OLD=$($DB "SELECT count(*) FROM setpoint_plan WHERE plan_id = '$LATEST' AND parameter IN ($LEGACY_BIAS_PARAMS);" | tr -d ' ')
 if [ "${HAS_OLD:-0}" -gt 0 ] && [ -n "$MISSING_LIST" ]; then
     echo "Plan uses pre-Tier-1 naming (bias_heat_f). Coverage validation applies to new schema plans only."
     exit 0

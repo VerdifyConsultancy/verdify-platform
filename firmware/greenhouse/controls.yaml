@@ -441,6 +441,10 @@ interval:
               // ESPHome control loop forces this ON so planner, dispatcher,
               // and ESP32 share one live control path.
               .sw_fsm_controller_enabled = id(sw_fsm_controller_enabled),
+              .cool_stage2_over_high_f = id(cool_stage2_over_high_f),
+              .cool_exit_hysteresis_f = id(cool_exit_hysteresis_f),
+              .cold_vent_guard_delta_f = id(cold_vent_guard_delta_f),
+              .cool_all_fans_at_high_enabled = id(cool_all_fans_at_high_enabled),
               .mist_backoff_ms = (uint32_t)id(mist_backoff_s) * 1000UL
           };
 
@@ -584,6 +588,8 @@ interval:
           // Runs only for SEALED_MIST or explicit VENTILATE assist. Zone stress
           // chooses the pulse target; it does not create a standalone mister mode.
           // Stages: S1 (single zone) → S2 (all zones rotating) → FOG (escalation)
+          char moisture_block_reason[96] = "none";
+          char direct_wet_zone_mask[48] = "unknown";
           {
             const uint32_t MISTER_ENGAGE_DELAY_MS = uint32_t(id(mister_engage_delay_s)) * 1000UL;
             const uint32_t MISTER_ALL_DELAY_MS    = uint32_t(id(mister_all_delay_s))    * 1000UL;
@@ -658,6 +664,25 @@ interval:
             const bool center_wet_allowed = direct_wet_allowed(3);
             const bool wall_wet_allowed = direct_wet_allowed(4);
             const bool any_mister_wet_allowed = south_wet_allowed || west_wet_allowed || center_wet_allowed;
+            {
+              direct_wet_zone_mask[0] = '\0';
+              size_t mask_n = 0;
+              auto add_zone = [&](const char* tag){
+                if(mask_n > 0 && mask_n + 1 < sizeof(direct_wet_zone_mask)) {
+                  direct_wet_zone_mask[mask_n++] = ',';
+                }
+                size_t len = strlen(tag);
+                if(mask_n + len < sizeof(direct_wet_zone_mask)) {
+                  memcpy(direct_wet_zone_mask + mask_n, tag, len);
+                  mask_n += len;
+                }
+              };
+              if(south_wet_allowed) add_zone("south");
+              if(west_wet_allowed) add_zone("west");
+              if(center_wet_allowed) add_zone("center");
+              direct_wet_zone_mask[mask_n] = '\0';
+              if(mask_n == 0) snprintf(direct_wet_zone_mask, sizeof(direct_wet_zone_mask), "none");
+            }
             auto direct_wet_relay_watchdog = [&]() {
               if(!id(direct_wet_gate_enabled)) return;
               if(!south_wet_allowed) {
@@ -735,16 +760,50 @@ interval:
               if(west_wet_allowed && !isnan(west_vpd) && id(vpd_target_west) > 0 && west_vpd > id(vpd_target_west)) any_zone_stressed = true;
               if(!isnan(east_vpd) && id(vpd_target_east) > 0 && east_vpd > id(vpd_target_east)) any_zone_stressed = true;
               if(center_wet_allowed && id(vpd_target_center) > 0 && avg_vpd > id(vpd_target_center)) any_zone_stressed = true;
-              bool zone_mister_demand = humidity_demand && mister_vent_ok;
               // FW-9: VPD emergency override — allow misting even if budget exhausted
               float vpd_max_zone = fmax(south_vpd, fmax(west_vpd, east_vpd));
               bool vpd_emergency = !isnan(vpd_max_zone) && (vpd_max_zone > id(safety_vpd_max_kpa));
+              bool global_stressed = (avg_vpd > id(mister_engage_kpa));
+              bool budget_block =
+                  id(mister_water_today) >= id(mister_water_budget_gal) && !vpd_emergency;
+              bool irrigation_block = id(irrig_state) > 0;
+              bool zone_mister_demand = humidity_demand && mister_vent_ok;
               bool mister_blocked =
-                  (id(mister_water_today) >= id(mister_water_budget_gal) && !vpd_emergency)
+                  budget_block
                   || !zone_mister_demand
                   || !any_mister_wet_allowed
-                  || id(irrig_state) > 0
+                  || irrigation_block
                   || occupancy_blocks;
+              if(mister_blocked) {
+                if(budget_block) {
+                  snprintf(moisture_block_reason, sizeof(moisture_block_reason), "water_budget");
+                } else if(!zone_mister_demand) {
+                  snprintf(
+                    moisture_block_reason,
+                    sizeof(moisture_block_reason),
+                    ((mode == SEALED_MIST) || ctl_state.vent_mist_assist_active) && !mister_vent_ok
+                      ? "vent_interlock"
+                      : "no_humidity_demand");
+                } else if(!any_mister_wet_allowed) {
+                  if(!id(direct_wet_gate_enabled)) {
+                    snprintf(moisture_block_reason, sizeof(moisture_block_reason), "no_zone_available");
+                  } else if(!wet_time_valid) {
+                    snprintf(moisture_block_reason, sizeof(moisture_block_reason), "direct_wet_time_invalid");
+                  } else if(id(direct_wet_min_temp_f) > 0.0f && (isnan(Tin) || Tin < id(direct_wet_min_temp_f))) {
+                    snprintf(moisture_block_reason, sizeof(moisture_block_reason), "direct_wet_temp");
+                  } else {
+                    snprintf(moisture_block_reason, sizeof(moisture_block_reason), "direct_wet_window");
+                  }
+                } else if(irrigation_block) {
+                  snprintf(moisture_block_reason, sizeof(moisture_block_reason), "irrigation");
+                } else if(occupancy_blocks) {
+                  snprintf(moisture_block_reason, sizeof(moisture_block_reason), "occupancy");
+                }
+              } else if(!any_zone_stressed && !global_stressed) {
+                snprintf(moisture_block_reason, sizeof(moisture_block_reason), "no_vpd_demand");
+              } else if(id(mister_state) == 0 && humidity_demand && id(humid_s1_duration_ms) < MISTER_ENGAGE_DELAY_MS) {
+                snprintf(moisture_block_reason, sizeof(moisture_block_reason), "engage_delay");
+              }
 
             if(mister_blocked && id(mister_state) > 0){
               ESP_LOGI("mister","BLOCKED (budget=%.0f/%.0f humid=%d zone=%d occ=%d)",
@@ -921,8 +980,6 @@ interval:
 
               // --- S1 ENGAGE: misters start only under humidity demand; zone/global
               // stress decide whether a pulse is warranted and which zone gets it.
-              bool global_stressed = (avg_vpd > id(mister_engage_kpa));
-
               if(id(mister_state) == 0
                  && humidity_demand
                  && id(humid_s1_duration_ms) >= MISTER_ENGAGE_DELAY_MS
@@ -1053,6 +1110,11 @@ interval:
               if(id(south_wall_mister).state) id(runtime_mister_south_ms) += dt_ms;
               if(id(west_wall_mister).state)  id(runtime_mister_west_ms) += dt_ms;
               if(id(center_mister).state)     id(runtime_mister_center_ms) += dt_ms;
+              if(id(south_wall_mister).state || id(west_wall_mister).state || id(center_mister).state) {
+                snprintf(moisture_block_reason, sizeof(moisture_block_reason), "served");
+              } else if(humidity_demand && id(mister_state) > 0 && id(mister_pulse_zone) == 0) {
+                snprintf(moisture_block_reason, sizeof(moisture_block_reason), "pulse_gap");
+              }
 
               // Water tracking (flow meter during mister pulse)
               if(id(mister_pulse_zone) > 0 && id(mister_state) > 0){
@@ -1109,6 +1171,29 @@ interval:
               id(gh_overrides).publish_state(overrides);
               snprintf(last_overrides, sizeof(last_overrides), "%s", overrides);
             }
+
+            char fog_block_reason[64];
+            if(id(fog_rly)->state) {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "served");
+            } else if(of.fog_gate_window) {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "time_window");
+            } else if(of.fog_gate_rh) {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "rh_ceiling");
+            } else if(of.fog_gate_temp) {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "temp_low");
+            } else if(relay_out.fog && id(fog_closes_vent) && vent_is_open && !open_vent_fog_assist) {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "vent_interlock");
+            } else if(willFog && !id(fog_rly)->state) {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "relay_min_off");
+            } else {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "none");
+            }
+
+            static char last_fog_block_reason[64] = "";
+            if(strcmp(last_fog_block_reason, fog_block_reason) != 0){
+              id(gh_fog_block_reason).publish_state(fog_block_reason);
+              snprintf(last_fog_block_reason, sizeof(last_fog_block_reason), "%s", fog_block_reason);
+            }
           }
 
           // Sprint-15.1 fix 8: publish mode_reason. The literal is owned
@@ -1121,6 +1206,42 @@ interval:
             if(strcmp(last_mode_reason, safe_reason) != 0){
               id(gh_mode_reason).publish_state(safe_reason);
               snprintf(last_mode_reason, sizeof(last_mode_reason), "%s", safe_reason);
+            }
+          }
+
+          /*** AI-control diagnostics — requested vs served actuator paths ***/
+          {
+            const bool vent_mist_served =
+                ctl_state.vent_mist_assist_active
+                && (id(fog_rly)->state
+                    || id(south_wall_mister).state
+                    || id(west_wall_mister).state
+                    || id(center_mister).state);
+            char vent_status[128];
+            if(!ctl_state.vent_mist_assist_active) {
+              snprintf(vent_status, sizeof(vent_status), "inactive");
+            } else if(vent_mist_served) {
+              snprintf(vent_status, sizeof(vent_status), "served");
+            } else {
+              snprintf(vent_status, sizeof(vent_status), "blocked:%s", moisture_block_reason);
+            }
+
+            static char last_moisture_block_reason[96] = "";
+            if(strcmp(last_moisture_block_reason, moisture_block_reason) != 0){
+              id(gh_moisture_block_reason).publish_state(moisture_block_reason);
+              snprintf(last_moisture_block_reason, sizeof(last_moisture_block_reason), "%s", moisture_block_reason);
+            }
+
+            static char last_direct_wet_zone_mask[48] = "";
+            if(strcmp(last_direct_wet_zone_mask, direct_wet_zone_mask) != 0){
+              id(gh_direct_wet_zone_mask).publish_state(direct_wet_zone_mask);
+              snprintf(last_direct_wet_zone_mask, sizeof(last_direct_wet_zone_mask), "%s", direct_wet_zone_mask);
+            }
+
+            static char last_vent_status[128] = "";
+            if(strcmp(last_vent_status, vent_status) != 0){
+              id(gh_vent_mist_assist_status).publish_state(vent_status);
+              snprintf(last_vent_status, sizeof(last_vent_status), "%s", vent_status);
             }
           }
 

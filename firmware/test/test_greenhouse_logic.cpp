@@ -1144,6 +1144,18 @@ TEST(s9_validate_preserves_valid_input) {
     PASS();
 }
 
+TEST(validate_clamps_cooling_ai_policy_knobs) {
+    Setpoints sp = default_setpoints();
+    sp.cool_stage2_over_high_f = 99.0f;
+    sp.cool_exit_hysteresis_f = 0.01f;
+    sp.cold_vent_guard_delta_f = -4.0f;
+    validate_setpoints(sp);
+    ASSERT_EQ(sp.cool_stage2_over_high_f, 3.0f);
+    ASSERT_EQ(sp.cool_exit_hysteresis_f, 0.3f);
+    ASSERT_EQ(sp.cold_vent_guard_delta_f, 0.0f);
+    PASS();
+}
+
 // ═══════════════════════════════════════════════════════════════════
 // Sprint-14 — clamp bias_heat / bias_cool to ±5°F in validate_setpoints
 // ═══════════════════════════════════════════════════════════════════
@@ -2064,7 +2076,7 @@ TEST(band_first_cold_outdoor_cooling_entry_uses_band_margin) {
     moderate.outdoor_temp_f = sp.temp_low - 11.0f;
     ASSERT_EQ(determine_mode(moderate, sp, s, 5000), IDLE);
 
-    auto hot = make_inputs(sp.temp_high + band_cool_stage2_delta_f(sp) + 0.1f, 0.9f);
+    auto hot = make_inputs(sp.temp_high + cold_vent_cooling_entry_margin_f(sp) + 0.1f, 0.9f);
     hot.outdoor_temp_f = sp.temp_low - 11.0f;
     ASSERT_EQ(determine_mode(hot, sp, s, 5000), VENTILATE);
     PASS();
@@ -2097,15 +2109,49 @@ TEST(band_first_solar_preventive_cooling_respects_cold_outdoor_guard) {
     PASS();
 }
 
-TEST(band_first_cooling_stage2_is_band_scaled) {
-    auto sp = band_first_setpoints();  // 6°F band => band-first controller S2 fan delta = 1.5°F
-    sp.dC2 = 3.0f;                 // legacy margin would wait until 81°F
+TEST(band_first_cooling_stage2_uses_explicit_ai_delta) {
+    auto sp = band_first_setpoints();
+    sp.dC2 = 3.0f;  // ignored by the band-first path once explicit AI delta is set
+    sp.cool_stage2_over_high_f = 1.0f;
     auto s = initial_state();
 
-    auto out = resolve_equipment(VENTILATE, make_inputs(sp.temp_high + 1.6f, 1.4f), sp, s, true);
+    auto one = resolve_equipment(VENTILATE, make_inputs(sp.temp_high + 0.9f, 1.4f), sp, s, true);
+    ASSERT_TRUE(one.vent);
+    ASSERT_TRUE(one.fan1);
+    ASSERT_FALSE(one.fan2);
+
+    auto out = resolve_equipment(VENTILATE, make_inputs(sp.temp_high + 1.1f, 1.4f), sp, s, true);
     ASSERT_TRUE(out.vent);
     ASSERT_TRUE(out.fan1);
     ASSERT_TRUE(out.fan2);
+    PASS();
+}
+
+TEST(band_first_all_fans_at_high_enabled_runs_both_at_high_edge) {
+    auto sp = band_first_setpoints();
+    sp.cool_stage2_over_high_f = 3.0f;
+    sp.cool_all_fans_at_high_enabled = true;
+    auto s = initial_state();
+
+    auto out = resolve_equipment(VENTILATE, make_inputs(sp.temp_high + 0.1f, 1.4f), sp, s, true);
+    ASSERT_TRUE(out.vent);
+    ASSERT_TRUE(out.fan1);
+    ASSERT_TRUE(out.fan2);
+    PASS();
+}
+
+TEST(band_first_cooling_exit_uses_explicit_ai_hysteresis) {
+    auto sp = band_first_setpoints();
+    sp.cool_exit_hysteresis_f = 0.5f;
+    auto s = initial_state();
+    s.mode = VENTILATE;
+    s.mode_prev = VENTILATE;
+
+    Mode hold = determine_mode(make_inputs(sp.temp_high - 0.4f, 0.9f), sp, s, 5000);
+    ASSERT_EQ(hold, VENTILATE);
+
+    Mode clear = determine_mode(make_inputs(sp.temp_high - 0.6f, 0.9f), sp, s, 5000);
+    ASSERT_EQ(clear, IDLE);
     PASS();
 }
 
