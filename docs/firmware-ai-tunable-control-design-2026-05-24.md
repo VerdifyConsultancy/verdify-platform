@@ -454,6 +454,281 @@ The next design step is to make dew margin, leaf wetness, and actuator
 availability explicit in replay fixtures so stress overrides can be proven
 against historical windows instead of inferred from daily summaries.
 
+## All-Data Stress Inventory
+
+The all-history daily-summary table spans 2025-08-05 through the partial
+current day, 2026-05-24. The completed-day inventory below excludes the partial
+2026-05-24 row, leaving `292` complete daily rows through 2026-05-23. This is
+a mixed controller-era dataset, so it should not be used as a direct replay
+promise. It is still valuable for stress taxonomy: Verdify has seen every
+primary quadrant of the greenhouse problem.
+
+All-history totals:
+
+| Metric | Value |
+|---|---:|
+| Days analyzed | 292 |
+| Average both-axis compliance | 9.1% |
+| Hot stress | 790.2 h |
+| Cold stress | 1551.8 h |
+| VPD-high stress | 2506.5 h |
+| VPD-low stress | 138.2 h |
+| Dew-point risk | 17.7 h |
+| Fan runtime | 741.0 h fan1 / 573.7 h fan2 |
+| Vent runtime | 880.3 h |
+| Heat runtime | 1990.3 h heat1 / 977.6 h heat2 |
+| Fog runtime | 213.7 h |
+| Zone mister runtime | 128.3 h |
+| Mister water | 9628.3 gal |
+| Total water | 25778.6 gal |
+| Energy/cost | 893.6 kWh, 733.18 estimated therms, $1156.63 |
+
+All-history stress-day counts, using `>= 2 h/day` as a meaningful day-level
+threshold:
+
+| Stress class | Days |
+|---|---:|
+| Hot days | 109 |
+| Cold days | 221 |
+| VPD-high days | 270 |
+| VPD-low days | 20 |
+| Dew-risk days (`dp_risk_hours >= 1`) | 7 |
+| Hot + VPD-high days | 108 |
+| Hot + VPD-low days | 16 |
+| Cold + VPD-high days | 217 |
+| Cold + VPD-low days | 13 |
+
+Seasonal interpretation:
+
+| Month | Days | Both ok % | Hot h | Cold h | VPD-high h | VPD-low h | Dew-risk h |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| 2025-08 | 27 | 4.4 | 153.6 | 7.8 | 171.2 | 0.2 | 0.0 |
+| 2025-09 | 30 | 5.4 | 135.3 | 80.2 | 202.6 | 17.7 | 0.0 |
+| 2025-10 | 31 | 1.3 | 22.2 | 213.5 | 224.3 | 12.1 | 0.0 |
+| 2025-11 | 30 | 0.8 | 0.9 | 178.1 | 270.8 | 0.0 | 0.0 |
+| 2025-12 | 31 | 0.8 | 0.0 | 195.5 | 296.0 | 0.0 | 0.0 |
+| 2026-01 | 31 | 0.9 | 10.1 | 154.3 | 303.3 | 1.1 | 0.0 |
+| 2026-02 | 28 | 0.4 | 17.4 | 206.2 | 290.9 | 0.0 | 0.0 |
+| 2026-03 | 31 | 4.5 | 167.5 | 215.7 | 350.9 | 31.7 | 0.5 |
+| 2026-04 | 30 | 23.6 | 169.2 | 264.2 | 275.6 | 40.8 | 6.8 |
+| 2026-05 | 23 | 60.8 | 114.1 | 36.4 | 121.0 | 34.5 | 10.4 |
+
+Worst completed-day examples:
+
+| Pattern | Historical examples |
+|---|---|
+| Total stress | 2026-03-22 (48.52 category-hours), 2026-04-24 (40.30), 2026-03-28 (38.99), 2026-04-05 (38.89), 2026-03-29 (38.80) |
+| Hot extreme | 2025-08-05 reached 100.0 F; other high-temp examples include 2025-08-21, 2026-04-21, 2025-08-20, and 2026-03-25 |
+| Cold extreme | 2026-04-05 reached 44.0 F; 2026-03-27 had the most cold stress at 20.65 h |
+| VPD-high extreme | 2026-04-21 reached 5.218 kPa; 2026-03-22 had the most dry stress at 26.32 h |
+| VPD-low extreme | 2026-04-05 reached 0.187 kPa; 2026-03-27 had the most wet stress at 9.82 h |
+| Dew-risk examples | 2026-05-10 (2.8 h), 2026-05-09 (2.6 h), 2026-05-07 (1.7 h), 2026-05-08 (1.6 h), 2026-04-26 (1.3 h) |
+
+The year-round lesson is different from the May-only lesson:
+
+- Hot/dry is a major spring/summer problem and motivates solar feed-forward,
+  all-fans-at-high, and moisture-path availability.
+- Cold/dry is the dominant cold-season problem. Heating protects temperature
+  but can worsen VPD-high by raising air temperature without adding moisture.
+- Cold/wet and hot/wet both exist. Any "more mist/fog" strategy must be gated
+  by VPD-low, dew margin, and leaf wetness.
+- Dehumidification and cold-dehum policy deserve first-class design even if
+  May 2026 did not show dehum cycles, because cold/wet and dew-risk states
+  appear in the long record.
+- Relay churn is not incidental. The historical audit found 3032 fog cycles,
+  3183 vent cycles, and a worst climate relay-whipsaw day on 2026-03-30 with
+  1572 climate relay cycles. Dwell and hysteresis policy should be an AI-tuned
+  objective alongside band compliance, not just a safety afterthought.
+- Zone equity is part of moisture control. All-history center mister runtime
+  materially exceeds south and west runtime; west especially under-runs. The
+  AI policy surface should preserve zone fairness, driest-zone weighting, and
+  stress-based pulse allocation.
+
+## Stress And Weather State Matrix
+
+The controller should reason from the current stress vector plus the outdoor
+state vector, not from a single mode name.
+
+Stress vector:
+
+- `temp_error_f = temp - temp_high` when hot, or `temp_low - temp` when cold;
+- `vpd_error_kpa = vpd - vpd_high` when dry, or `vpd_low - vpd` when wet;
+- `dew_margin_f = temp - dew_point`;
+- `leaf_wetness`;
+- `solar_load_w_m2` and forecast solar ramp;
+- recent temp/VPD slopes and actuator response.
+
+Outdoor vector:
+
+- `outdoor_temp_delta_f = outdoor_temp - indoor_temp`;
+- `outdoor_dewpoint_delta_f = outdoor_dewpoint - indoor_dewpoint`;
+- `outdoor_vpd_delta_kpa = outdoor_vpd - indoor_vpd`;
+- wind/storm risk and outdoor-data freshness;
+- forecast change over the next 30, 60, and 120 minutes.
+
+Mechanical effects from first principles:
+
+| Equipment action | Temp effect | VPD/RH effect | Best use | Main risk |
+|---|---|---|---|---|
+| Vent + fans with outdoor cooler | cools toward outdoor temp | dries if outdoor dewpoint lower, humidifies if outdoor dewpoint higher | hot, hot/wet, low-VPD dehum with drier air | cold shock, over-drying, exhausting mist |
+| Vent + fans with outdoor hotter | may warm or slow cooling only by air exchange | usually dries in Longmont afternoons | safety cooling, CO2/air exchange, thermal relief | can worsen hot/dry stress |
+| One fan | mild air exchange | same direction as vent | gentle correction, occupied/noise-limited periods | under-capacity during fast heat rise |
+| Both fans | maximum air exchange | same direction as vent | high temp, high solar, safety margin protection | energy, drying, noise |
+| Heat1/heat2 | warms; heat2 faster | lowers RH and raises VPD unless moisture added | cold and cold/wet | worsens cold/dry VPD-high, gas cycling |
+| Sealed misters | evaporative cooling | lowers VPD, raises RH, wets foliage locally | VPD-high with temp headroom | heat buildup, leaf wetness, water use |
+| Fog | stronger evaporative cooling and humidification | lowers VPD quickly | hot/dry or severe VPD-high with safe dew margin | VPD-low, condensation, high electrical load |
+| Vent-mist assist | cools/humidifies while venting | offsets dry ventilation | hot/dry when temp cannot seal | wasted water if exhaust dominates, wetting during occupancy |
+| No action / hold | preserves state | preserves state | stable in-band, relay dwell | misses fast forecast transitions |
+
+Outdoor-state interpretation:
+
+| Outdoor state | Cooling value | VPD value | AI posture |
+|---|---|---|---|
+| Cooler + drier | excellent for hot/wet and dehum; risky for dry plants | lowers RH / raises VPD | vent for heat or low VPD; pair with moisture if VPD-high |
+| Cooler + wetter | excellent for hot/dry if not too wet | can lower VPD without water | vent early; avoid over-fogging |
+| Hotter + drier | poor cooling, strong drying | worsens VPD-high | pre-cool before arrival; use moisture and both fans only when temp requires exchange |
+| Hotter + wetter | poor cooling, poor dehum | can cause hot/wet/disease risk | avoid routine vent unless safety; use shade/thermal capacity if available later |
+| Cold + drier | useful dehum only with heat headroom | raises VPD | cold-dehum gated by headroom; heat recovery plan required |
+| Cold + wetter | little value except emergency exchange | worsens low temp and wetness | keep sealed, heat, avoid moisture |
+
+## Stress Transition Playbook
+
+This is the deeper control-loop framing Iris should use. Each row is a state
+or transition the controller can encounter, including states that are rare in
+the recent data but plausible for a greenhouse in Longmont.
+
+| State | Firmware today | Mechanical recovery | AI opportunities |
+|---|---|---|---|
+| In band, forecast high solar | waits for band edge except existing planner posture | pre-cool and pre-humidify while there is headroom | `solar_preventive_cooling_enabled`, lower fan2 threshold, moisture availability pre-check |
+| Hot only | `VENTILATE`; one fan until stage2 | vent/fans; fog only if VPD also high enough | all-fans-at-high during fast rise; cooling exit hysteresis; cold-vent guard |
+| VPD-high only | `SEALED_MIST` after dwell if safe | seal, misters, fog escalation | shorten dwell/pulse gaps; direct-wet availability; fog stress window |
+| Hot + VPD-high | temp wins: `VENTILATE` with vent-mist assist possible | both fans plus bounded water while venting | make vent-mist assist first-class; detect served vs blocked; VPD-preempts-cooling once temp near edge |
+| Hot + VPD-low | cooling/dehum compatible if outdoor drier | vent/fans, no moisture | use outdoor dewpoint comparator; block fog/mist; anticipate condensation after sunset |
+| Cold only | heat in `IDLE` or `SAFETY_HEAT` | heat1/heat2, circulation in safety | `heat_target_fraction`, heat2 latch margin, forecast preheat before cold front |
+| Cold + VPD-high | heat protects temp but worsens dryness | heat plus safe humidity if dew margin allows | fog/heat assist, direct wet min temp, VPD target relaxation while cold edge is critical |
+| Cold + VPD-low | heat and possibly dehum if outdoor drier | heat raises VPD; cautious dehum vent only with headroom | `cold_dehum_headroom_f`, dew-risk predictor, heat-first priority |
+| Dew risk / leaf wetness | fog gates block some paths; no broad disease-risk state | dehum, heat, ventilation with drier air | make dew/leaf wetness first-class stress; suppress moisture overrides automatically |
+| Occupied stress | occupancy blocks routine wetting/fans except safety | safety still runs; routine correction may wait | split occupancy policy: allow bounded cooling fans, keep wetting operator-controlled |
+| Equipment path blocked | current planner often sees demand but not cause | choose alternate actuator path | publish block reasons and teach Iris to change the gate, not the symptom threshold |
+
+## Current Firmware Transition Map
+
+The active production loop forces the unified band-first controller on in
+`controls.yaml`, so the important transition order is the band-first path in
+`greenhouse_logic.h`.
+
+Mode priority today:
+
+1. `SENSOR_FAULT`: invalid temp/RH/VPD/local-hour input; all relays off.
+2. `SAFETY_COOL`: `temp >= safety_max`; vent, both fans, fog only if fog gates
+   pass and VPD is above the interior high target.
+3. `SAFETY_HEAT`: `temp <= safety_min`; heat1, heat2, lead fan circulation,
+   vent closed.
+4. Existing `SEALED_MIST` continuation/exit: VPD recovery holds until resolved,
+   blocked, too hot, or sealed timeout. A sealed timeout enters mist backoff
+   rather than immediately forcing another seal.
+5. Cooling: `VENTILATE` when temp is above the high edge, with cold-outdoor
+   entry and exit margins.
+6. Low-VPD dehum: `DEHUM_VENT` when VPD is below low edge, economizer is not
+   blocking, and cold headroom allows it.
+7. Sticky dehum continuation until VPD resolves or cold headroom disappears.
+8. Mist backoff hold.
+9. VPD-high humidification: `SEALED_MIST` after dwell when not occupied, not
+   below the temp band, and not too near `safety_max`.
+10. `IDLE`, with heat relays still allowed by the output resolver when the house
+   is below the heat target.
+
+Current output map:
+
+| Mode | Equipment | AI influence today | Rigid gap |
+|---|---|---|---|
+| `SAFETY_COOL` | vent + both fans; fog if allowed and VPD-high | safety rails, fog gates | should remain deterministic |
+| `SAFETY_HEAT` | heat1 + heat2 + lead fan, vent closed | safety rails only | should remain deterministic |
+| `VENTILATE` | vent + lead fan; fan2 above explicit/prototype stage2 threshold; fog if VPD high and fog gates pass | cooling thresholds, fog escalation, vent-mist assist, summer vent gate | no solar pre-entry yet; VPD cannot preempt cooling hold until mode clears |
+| `SEALED_MIST` | vent closed; misters in controls; fog at mist stage; heat may assist if cold | VPD dwell, mist timings, fog escalation/window/RH/temp, direct-wet gates | direct-wet/fog time gates are too clock-rigid during safe dry recovery |
+| `DEHUM_VENT` | vent + one/both fans depending on VPD-low depth | dehum aggressiveness, outdoor/cold guard indirectly | cold-dehum headroom fixed; dehum can be under-observable |
+| `IDLE` | no air exchange; heat may run below target | heat hysteresis and future heat target fraction | heat target fixed at lower quartile |
+
+Important live-path notes:
+
+- Normal low-temp correction is not a distinct mode; it is heat output from
+  `IDLE` or `SEALED_MIST`. Only hard low temp enters `SAFETY_HEAT`.
+- `THERMAL_RELIEF` remains in the enum and resolver, but the current
+  band-first sealed-timeout path exits to `IDLE + mist_backoff` rather than
+  entering thermal relief. Future docs and prompts should not assume
+  `THERMAL_RELIEF` explains every post-mist vent/idle recovery.
+- `vpd_min_safe` and `vpd_max_safe` are still validated fields, but the live
+  band-first transition path does not use them as primary mode rails. The
+  older VPD-min rescue and dry override live in the legacy fallback path.
+- Planner success should be evaluated against `mode_reason`, `gh_overrides`,
+  `vent_mist_assist`, dwell/backoff timers, relay state, and the new block
+  reasons, not just the top-level mode.
+
+This map justifies the firmware proposal: keep the first three safety layers
+hard, but expose richer policy around cooling lead time, VPD/cooling priority,
+direct-wet/fog availability, dehum headroom, heat target, and whipsaw control.
+
+## Anticipatory Control Loop
+
+The recommended AI control loop is a forecast-informed model-predictive
+supervisor over a deterministic firmware executor:
+
+1. **Observe** current state, actuator state, cfg readbacks, block reasons, dew
+   margin, leaf wetness, outdoor deltas, forecast deltas, and recent slopes.
+2. **Classify** current and forecast stress vectors for now, +30 min, +60 min,
+   and +120 min.
+3. **Score actuator options** by expected movement toward band, safety margin,
+   disease risk, cycle cost, resource use, and whether the actuator path is
+   available.
+4. **Select a posture profile** such as `hot_solar_preload`,
+   `hot_dry_venting`, `evening_dry_recovery`, `cold_dehum_guarded`, or
+   `cold_night_economy`.
+5. **Push bounded tunables** rather than relay commands.
+6. **Verify served vs requested** after one dispatcher cycle. If a path is
+   blocked, change the availability gate or choose another path.
+7. **Measure response**: did temp/VPD slope move toward band without VPD-low,
+   dew-risk, or relay-churn penalties?
+8. **Back out** when the forecast/stress vector clears, avoiding resource-heavy
+   posture becoming the new baseline.
+
+The AI should optimize in this order:
+
+1. hard safety: `SAFETY_COOL`, `SAFETY_HEAT`, sensor fault, relay interlocks;
+2. temperature band when temp is outside band or near safety;
+3. VPD band when temp is safe enough to allow humidity/dehum correction;
+4. disease and condensation risk;
+5. cycle churn / equipment wear;
+6. resource use and noise.
+
+## Additional Tunables From The Deeper Matrix
+
+The earlier PR list remains valid, but the deeper stress matrix suggests a more
+complete AI policy surface:
+
+| Tunable | Purpose | Deterministic clamp |
+|---|---|---|
+| `stress_forecast_horizon_min` | how far ahead AI may pre-position posture | 30-180 min |
+| `temp_rate_rise_trigger_f_per_hr` | pre-cool when temp slope exceeds this under solar | positive finite, ignored with stale sensors |
+| `vpd_rate_rise_trigger_kpa_per_hr` | pre-humidify before VPD breaches | bounded; blocked by dew/leaf wetness |
+| `solar_preventive_cooling_enabled` | allow cooling before high edge under solar load | cold-outdoor and occupancy guards |
+| `cool_all_fans_at_high_enabled` | run both fans at high edge in stress windows | no effect outside `VENTILATE` |
+| `vent_mist_assist_min_dew_margin_f` | moisture while venting only when biologically safe | never below disease-risk floor |
+| `direct_wet_stress_latest_hour` | bounded evening dry recovery | local-time and leaf-wetness gates |
+| `dew_risk_moisture_lockout_margin_f` | suppress wetting as dew margin narrows | cannot be disabled by AI |
+| `leaf_wetness_lockout_threshold` | suppress fog/direct wet when leaves are wet | sensor-staleness fallback conservative |
+| `cold_dehum_headroom_f` | minimum temp headroom for low-VPD venting | safety heat and cold shock guard |
+| `heat_target_fraction` | choose lower-edge vs interior heating posture | 0.1-0.6 of band width |
+| `outdoor_humidify_dp_delta_f` | use wetter outdoor air as a humidity source when safe | requires fresh outdoor data |
+| `outdoor_dehum_dp_delta_f` | use drier outdoor air for VPD-low/dew recovery | requires heat headroom |
+| `occupancy_allow_cooling_fans` | allow non-wetting cooling while occupied | safety and max-stage limits |
+| `actuator_response_timeout_min` | when to declare a requested path ineffective | diagnostic only, no relay override |
+| `mode_churn_penalty_weight` | tells Iris to prefer less oscillatory posture when compliance options are similar | diagnostic/scoring only |
+| `max_relay_cycles_per_hour` | alert/penalize whipsaw before mechanical wear dominates | never blocks safety |
+| `mister_zone_fairness_window_s` | prevent west/south/center starvation under persistent zone stress | zone gates and leaf-wetness lockouts |
+
+Each of these should be introduced with replay questions, not as a single large
+OTA. The target is a richer policy surface, not an unbounded controller.
+
 ## Planner Operating Recipes
 
 These are the lessons Iris should apply once the corresponding knobs exist.
