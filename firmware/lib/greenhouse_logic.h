@@ -70,6 +70,38 @@ inline bool fog_hour_in_window(int hour, int start, int end) noexcept {
                           : (hour >= start || hour < end);
 }
 
+inline float dew_margin_f(const SensorInputs& in) noexcept {
+    if (!std::isfinite(in.temp_f) || !std::isfinite(in.dew_point_f)) return -999.0f;
+    return in.temp_f - in.dew_point_f;
+}
+
+inline bool fog_stress_hour_in_extension(int hour, int normal_end, int latest_hour) noexcept {
+    hour = std::max(0, std::min(23, hour));
+    normal_end = std::max(0, std::min(23, normal_end));
+    latest_hour = std::max(17, std::min(24, latest_hour));
+    if (latest_hour <= normal_end) return false;
+    return hour >= normal_end && hour < latest_hour;
+}
+
+inline bool direct_wet_stress_override_permitted(const SensorInputs& in, const Setpoints& sp) noexcept {
+    return sp.direct_wet_stress_override_enabled
+        && in.local_hour < sp.direct_wet_stress_latest_hour
+        && in.vpd_kpa > (sp.vpd_high + sp.direct_wet_stress_vpd_margin_kpa)
+        && dew_margin_f(in) >= sp.direct_wet_stress_min_dew_margin_f;
+}
+
+inline bool fog_stress_window_permitted(const SensorInputs& in, const Setpoints& sp) noexcept {
+    return sp.fog_stress_window_extend_enabled
+        && fog_stress_hour_in_extension(in.local_hour, sp.fog_window_end, sp.fog_stress_window_latest_hour)
+        && in.vpd_kpa > sp.vpd_high
+        && dew_margin_f(in) >= sp.fog_stress_min_dew_margin_f;
+}
+
+inline bool fog_hour_permitted(const SensorInputs& in, const Setpoints& sp) noexcept {
+    return fog_hour_in_window(in.local_hour, sp.fog_window_start, sp.fog_window_end)
+        || fog_stress_window_permitted(in, sp);
+}
+
 inline int local_minute_of_day(int hour, int minute) noexcept {
     hour = std::max(0, std::min(23, hour));
     minute = std::max(0, std::min(59, minute));
@@ -121,7 +153,7 @@ inline bool day_mask_allows(int day_mask, int day_of_week_zero_sunday) noexcept 
 inline bool fog_permitted(const SensorInputs& in, const Setpoints& sp) noexcept {
     return (in.rh_pct  <= sp.fog_rh_ceiling)
         && (in.temp_f  >= sp.fog_min_temp)
-        && fog_hour_in_window(in.local_hour, sp.fog_window_start, sp.fog_window_end);
+        && fog_hour_permitted(in, sp);
 }
 
 // Unified band-first controller clamps VPD hysteresis against the actual band width. The
@@ -145,13 +177,18 @@ inline float band_heat_target_f(const Setpoints& sp) noexcept {
     return sp.temp_low + band_width * BAND_HEAT_TARGET_FRACTION;
 }
 
-// Unified band-first controller normally cools at the raw upper band edge. Stage-2 fan
-// escalation is band-scaled so a 6°F crop band does not wait the full legacy
-// d_cool_stage_2 margin before using both fans. The same derived margin is
-// used only for cold-outdoor vent entry to avoid repeated cold-air slugs.
+// Unified band-first controller normally cools at the raw upper band edge.
+// Fan-2 escalation is now explicit AI policy instead of a hidden transform of
+// legacy d_cool_stage_2. Keep the old function name as a compatibility shim
+// for diagnostics/tests until downstream contracts are renamed.
 inline float band_cool_stage2_delta_f(const Setpoints& sp) noexcept {
+    return sp.cool_stage2_over_high_f;
+}
+
+inline float cold_vent_cooling_entry_margin_f(const Setpoints& sp) noexcept {
     const float band_width = std::max(2.0f, sp.temp_high - sp.temp_low);
-    return std::min(sp.dC2, std::max(1.0f, band_width * 0.25f));
+    const float legacy_cold_margin = std::max(1.0f, band_width * 0.25f);
+    return std::max(sp.cool_stage2_over_high_f, legacy_cold_margin);
 }
 
 inline float effective_dehum_aggressive_kpa(const Setpoints& sp) noexcept {
@@ -406,11 +443,11 @@ inline Mode determine_mode_band_first(
     const bool vpd_high = in.vpd_kpa > sp.vpd_high;
     const bool vpd_high_resolved = in.vpd_kpa <= (sp.vpd_high - HV);
     const bool outdoor_cold_for_vent =
-        std::isfinite(in.outdoor_temp_f) && in.outdoor_temp_f < (sp.temp_low - 10.0f);
+        std::isfinite(in.outdoor_temp_f) && in.outdoor_temp_f < (sp.temp_low - sp.cold_vent_guard_delta_f);
     const float cooling_exit_hysteresis =
-        outdoor_cold_for_vent ? std::max(sp.temp_hysteresis, 3.0f) : sp.temp_hysteresis;
+        outdoor_cold_for_vent ? std::max(sp.cool_exit_hysteresis_f, 3.0f) : sp.cool_exit_hysteresis_f;
     const float cooling_entry_margin =
-        outdoor_cold_for_vent ? band_cool_stage2_delta_f(sp) : 0.0f;
+        outdoor_cold_for_vent ? cold_vent_cooling_entry_margin_f(sp) : 0.0f;
     const bool needs_cooling = was_cooling
         ? in.temp_f > (temp_high - cooling_exit_hysteresis)
         : in.temp_f > (temp_high + cooling_entry_margin);
@@ -1145,7 +1182,7 @@ inline OverrideFlags evaluate_overrides(
     f.fog_gate_rh     = fog_wanted && (in.rh_pct  > sp.fog_rh_ceiling);
     f.fog_gate_temp   = fog_wanted && (in.temp_f  < sp.fog_min_temp);
     f.fog_gate_window = fog_wanted
-        && !fog_hour_in_window(in.local_hour, sp.fog_window_start, sp.fog_window_end);
+        && !fog_hour_permitted(in, sp);
 
     // Relief-cycle breaker: firmware forces VENTILATE instead of the seal
     // the planner's dwell was setting up.
@@ -1276,7 +1313,8 @@ inline RelayOutputs resolve_equipment(
             const float stage2_delta = sp.sw_fsm_controller_enabled
                 ? band_cool_stage2_delta_f(sp)
                 : sp.dC2;
-            bool needs_both = in.temp_f > (Thigh + stage2_delta);
+            bool needs_both = in.temp_f > (Thigh + stage2_delta)
+                           || (sp.cool_all_fans_at_high_enabled && in.temp_f > Thigh);
             if (lead_is_fan1) { out.fan1 = true; out.fan2 = needs_both; }
             else              { out.fan2 = true; out.fan1 = needs_both; }
             // FW-9b (PR-A lowered): fire fog concurrently with vent when VPD

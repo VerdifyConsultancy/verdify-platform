@@ -230,8 +230,8 @@ clamps stale active-plan rows before DB or ESP32 side effects. Every Tier 1 knob
 is readback-verified via a `cfg_*` sensor — alert_monitor catches silent
 drops within one planner cycle.
 
-The full registry (122 schema tunables, including dispatcher-routed and
-readback-only firmware inputs, clamps, push owners, and readback status) is
+The full registry (including dispatcher-routed and readback-only firmware
+inputs, clamps, push owners, and readback status) is
 defined in `verdify_schemas/tunable_registry.py`. The runtime context bundle
 also includes a generated TUNABLE TRACEABILITY BRIEF from
 `scripts/generate-ai-tunables-page.py`; use it before changing any tunable and
@@ -259,7 +259,10 @@ Use tactical knobs below to shift behavior instead.
 **Staging:**
 - `heat_hysteresis` °F, [0-3], def 1 — heat-stage clear margin above the interior heating target; higher holds heat longer
 - `temp_hysteresis` °F, [0.5-3], def 1.5 — temp transition deadband; lower tightens band compliance, higher reduces churn
-- `d_cool_stage_2` °F, [2-15], def 3 — fan2 engages at Thigh + this
+- `cool_stage2_over_high_f` °F, [0-3], def 1 — fan2 engages this far above `temp_high`
+- `cool_exit_hysteresis_f` °F, [0.3-3], def 1.5 — VENTILATE exits at `temp_high - this`
+- `cold_vent_guard_delta_f` °F, [0-15], def 10 — cold-outdoor vent guard; lower allows earlier outdoor exchange, higher avoids cold slugs
+- `sw_cool_all_fans_at_high_enabled` switch, def off — when on, VENTILATE runs both fans immediately above `temp_high`
 
 **Mister engagement:**
 - `mister_engage_kpa` kPa, [0.5-2.5], def 1.6 — physical S1 mister permissive once humidity/zone demand exists; SEALED_MIST entry itself comes from `vpd_high`/`vpd_watch_dwell_s`. During VPD-high or near-edge `VENTILATE` stress, keep near `vpd_high + 0.05` unless dew margin is tight.
@@ -283,6 +286,9 @@ Use tactical knobs below to shift behavior instead.
 - `fog_escalation_kpa` kPa Δ, [0.1-0.5], def 0.4 — VPD above `vpd_high_eff` to trigger fog inside VENTILATE; lower = more fog. Post-PR-A (2026-04-25), fog escalates at `vpd_high_eff + fog_escalation_kpa`, no longer at the safety ceiling. During VPD-high or near-edge `VENTILATE` stress, keep this around 0.20-0.30 when dew margin is healthy; concurrent vent-fog is intended for hot-dry stress and firmware still enforces the RH/temp/time window.
 - `min_fog_on_s` s, [15-300], def 60 — min fog on-time per cycle
 - `min_fog_off_s` s, [15-300], def 60 — min gap between fog cycles
+- `sw_fog_stress_window_extend_enabled` switch, def off — allows fog after the normal time window only during VPD-high stress when RH/temp gates and dew margin pass
+- `fog_stress_window_latest_hour` local hour, [17-22], def 19 — latest hour for fog stress extension
+- `fog_stress_min_dew_margin_f` °F, [5-15], def 10 — minimum temp-dewpoint margin for fog stress extension
 
 **Economiser (outdoor-air coupling):**
 - `enthalpy_open` kJ/kg Δ, [-5-0], def -2 — vent opens when outdoor enthalpy better by this much
@@ -303,6 +309,10 @@ Use tactical knobs below to shift behavior instead.
 - `sw_direct_wet_gate_enabled` is the master direct-wet gate. When enabled, misters and scheduled clean/fert irrigation are blocked outside the activity window and during each zone drydown hold.
 - Zone offsets: `direct_wet_wall_start_offset_min`, `direct_wet_south_start_offset_min`, `direct_wet_west_start_offset_min`, `direct_wet_center_start_offset_min` delay wetting after global on. `direct_wet_*_drydown_before_off_min` blocks direct wetting before global off. Use these per zone rather than crop-specific logic.
 - `direct_wet_min_temp_f` blocks automated wetting when the house is too cold.
+- `sw_direct_wet_stress_override_enabled` switch, def off — during VPD-high recovery, lets mister zones bypass drydown windows while preserving the master gate, direct-wet min temp, occupancy, irrigation, water budget, latest-hour, and dew-margin gates.
+- `direct_wet_stress_vpd_margin_kpa` kPa, [0-0.5], def 0.05 — VPD excess over `vpd_high` required before the stress override can open drydown-gated zones.
+- `direct_wet_stress_min_dew_margin_f` °F, [3-15], def 8 — minimum temp-dewpoint margin for direct-wet stress override.
+- `direct_wet_stress_latest_hour` local hour, [17-24], def 22 — latest local hour for bounded evening dry recovery.
 - Fertigation scheduling can use day masks: `irrig_wall_fert_days_mask`, `irrig_center_fert_days_mask` (bit0=Sunday ... bit6=Saturday). Nonzero masks supersede the legacy every-N fert cadence; zero preserves existing every-N behavior.
 
 **Phase-2 dwell gate (whipsaw reduction):**
@@ -314,7 +324,8 @@ Use tactical knobs below to shift behavior instead.
 Per-zone VPD rebalance, legacy irrigation start/duration changes, safety rail adjustments,
 occupancy inhibit, fog window shifts, economiser site pressure, fan-lead
 rotation, relay min-on/off protection dwell, crop bands, readbacks, retired
-aliases (`bias_heat`, `bias_cool`, `d_heat_stage_2`, `sw_fsm_controller_enabled`),
+aliases (`bias_heat`, `bias_cool`, `d_heat_stage_2`, `d_cool_stage_2`,
+`sw_fsm_controller_enabled`),
 and compatibility switches are not planner write targets. Treat them as explanatory context. If one must become planner-writable,
 request a platform/firmware contract promotion backed by replay evidence.
 
@@ -504,7 +515,8 @@ today's forecast, and set the daytime posture.
    anchored to solar milestones (dawn, morning ramp, peak stress, decline, evening).
    Each transition includes all tactical Tier 1 params. Do not include crop-band params
    (`temp_low`, `temp_high`, `vpd_low`, `vpd_high`) or retired knobs
-   (`bias_heat`, `bias_cool`, `d_heat_stage_2`, `sw_fsm_controller_enabled`);
+   (`bias_heat`, `bias_cool`, `d_heat_stage_2`, `d_cool_stage_2`,
+   `sw_fsm_controller_enabled`);
    use mist, fog, dwell, hysteresis, vent posture, and stage-2 cooling knobs to
    shift behavior. Include a hypothesis and experiment.
    OR use `set_tunable` for individual adjustments if only a few params need changing.
@@ -546,7 +558,8 @@ and set the overnight posture.
    anchored to evening/overnight milestones (evening_settle, midnight_posture, pre_dawn).
    Each transition includes all tactical Tier 1 params. Do not include crop-band params
    (`temp_low`, `temp_high`, `vpd_low`, `vpd_high`) or retired knobs
-   (`bias_heat`, `bias_cool`, `d_heat_stage_2`, `sw_fsm_controller_enabled`);
+   (`bias_heat`, `bias_cool`, `d_heat_stage_2`, `d_cool_stage_2`,
+   `sw_fsm_controller_enabled`);
    use mist, fog, dwell, hysteresis, vent posture, and stage-2 cooling knobs to
    shift behavior. Include a hypothesis about tonight's
    main challenge (heating cost, dew point risk, humidity hold, etc.).

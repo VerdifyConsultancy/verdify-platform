@@ -87,6 +87,33 @@ text_sensor:
     entity_category: diagnostic
     update_interval: 5s
 
+  # AI-control diagnostics: these explain whether a requested moisture assist
+  # path had an actuator route available. Published by controls.yaml only on
+  # value changes; behavior-neutral telemetry.
+  - platform: template
+    id: gh_moisture_block_reason
+    name: "Moisture Block Reason"
+    entity_category: diagnostic
+    update_interval: 5s
+
+  - platform: template
+    id: gh_vent_mist_assist_status
+    name: "Vent Mist Assist Status"
+    entity_category: diagnostic
+    update_interval: 5s
+
+  - platform: template
+    id: gh_direct_wet_zone_mask
+    name: "Direct Wet Zone Mask"
+    entity_category: diagnostic
+    update_interval: 5s
+
+  - platform: template
+    id: gh_fog_block_reason
+    name: "Fog Block Reason"
+    entity_category: diagnostic
+    update_interval: 5s
+
   - platform: template
     id: gl_main_state_text
     name: "GL Main State"
