@@ -1515,6 +1515,12 @@ def test_ai_moisture_stress_backfill_is_dry_run_first_and_routine_only():
     assert "ON CONFLICT (ts, parameter, plan_id) DO UPDATE" in script
     assert "WHERE setpoint_plan.is_active = false" in script
     assert "PR3 default backfill for AI moisture stress contract alignment" in script
+    assert "from verdify_schemas.tunable_registry import REGISTRY" in script
+    assert "DEFAULTS_SQL" in script
+    assert "candidate_default_values" in script
+    assert "default_values" in script
+    assert "('fog_stress_window_latest_hour', 22.0)" not in script
+    assert "('fog_stress_min_dew_margin_f', 8.0)" not in script
     for param in {
         "sw_direct_wet_stress_override_enabled",
         "direct_wet_stress_vpd_margin_kpa",

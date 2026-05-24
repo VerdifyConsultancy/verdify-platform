@@ -14,22 +14,45 @@ DB_USER="${DB_USER:-verdify}"
 DB_NAME="${DB_NAME:-verdify}"
 GREENHOUSE_ID="${GREENHOUSE_ID:-vallery}"
 APPLY="${APPLY:-0}"
+PYTHON_BIN="${PYTHON:-/srv/greenhouse/.venv/bin/python}"
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 PSQL=(docker exec -i "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -v ON_ERROR_STOP=1 -A -F '|')
 PSQL+=(-v greenhouse_id="$GREENHOUSE_ID")
+
+DEFAULTS_SQL="$("$PYTHON_BIN" - "$REPO_ROOT" <<'PY'
+import sys
+from pathlib import Path
+
+repo = Path(sys.argv[1])
+sys.path.insert(0, str(repo))
+
+from verdify_schemas.tunable_registry import REGISTRY  # noqa: E402
+
+params = (
+    "sw_direct_wet_stress_override_enabled",
+    "direct_wet_stress_vpd_margin_kpa",
+    "direct_wet_stress_min_dew_margin_f",
+    "direct_wet_stress_latest_hour",
+    "sw_fog_stress_window_extend_enabled",
+    "fog_stress_window_latest_hour",
+    "fog_stress_min_dew_margin_f",
+)
+
+rows = []
+for param in params:
+    value = REGISTRY[param].default
+    rows.append(f"    ('{param}', {float(value):.6g})")
+print(",\n".join(rows))
+PY
+)"
 
 if [ "$APPLY" = "1" ]; then
   echo "Applying PR3 AI moisture-stress default backfill for greenhouse_id=$GREENHOUSE_ID"
   "${PSQL[@]}" <<SQL
 WITH defaults(parameter, value) AS (
   VALUES
-    ('sw_direct_wet_stress_override_enabled', 0.0),
-    ('direct_wet_stress_vpd_margin_kpa', 0.05),
-    ('direct_wet_stress_min_dew_margin_f', 8.0),
-    ('direct_wet_stress_latest_hour', 22.0),
-    ('sw_fog_stress_window_extend_enabled', 0.0),
-    ('fog_stress_window_latest_hour', 22.0),
-    ('fog_stress_min_dew_margin_f', 8.0)
+${DEFAULTS_SQL}
 ),
 routine_plans AS (
   SELECT plan_id
@@ -116,20 +139,18 @@ SELECT 'upserted_rows' AS metric, count(*)::text AS value FROM upserted
 UNION ALL
 SELECT 'plans_touched', count(DISTINCT plan_id)::text FROM upserted
 UNION ALL
-SELECT 'transitions_touched', count(DISTINCT (plan_id, ts))::text FROM upserted;
+SELECT 'transitions_touched', count(DISTINCT (plan_id, ts))::text FROM upserted
+UNION ALL
+SELECT 'default_values',
+       coalesce(string_agg(DISTINCT parameter || '=' || value::text, ',' ORDER BY parameter || '=' || value::text), '')
+  FROM upserted;
 SQL
 else
   echo "Dry run only. Re-run with APPLY=1 after PR3 services are deployed."
   "${PSQL[@]}" <<SQL
 WITH defaults(parameter, value) AS (
   VALUES
-    ('sw_direct_wet_stress_override_enabled', 0.0),
-    ('direct_wet_stress_vpd_margin_kpa', 0.05),
-    ('direct_wet_stress_min_dew_margin_f', 8.0),
-    ('direct_wet_stress_latest_hour', 22.0),
-    ('sw_fog_stress_window_extend_enabled', 0.0),
-    ('fog_stress_window_latest_hour', 22.0),
-    ('fog_stress_min_dew_margin_f', 8.0)
+${DEFAULTS_SQL}
 ),
 routine_plans AS (
   SELECT plan_id
@@ -179,6 +200,10 @@ UNION ALL
 SELECT 'candidate_plans', count(DISTINCT plan_id)::text FROM missing
 UNION ALL
 SELECT 'candidate_transitions', count(DISTINCT (plan_id, ts))::text FROM missing
+UNION ALL
+SELECT 'candidate_default_values',
+       coalesce(string_agg(DISTINCT parameter || '=' || value::text, ',' ORDER BY parameter || '=' || value::text), '')
+  FROM missing
 UNION ALL
 SELECT 'candidate_parameters', coalesce(string_agg(DISTINCT parameter, ',' ORDER BY parameter), '') FROM missing
 UNION ALL

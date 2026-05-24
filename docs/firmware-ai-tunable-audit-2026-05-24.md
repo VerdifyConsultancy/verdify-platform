@@ -72,6 +72,12 @@ The executable contract is registry-first:
 - Added `scripts/backfill-ai-moisture-stress-defaults.sh`, a dry-run-first
   routine-plan backfill for the seven PR3 defaults. It excludes one-shot plans
   and should run only after PR3 services are deployed.
+- Follow-up cross-repo search caught a hand-copied backfill default mismatch:
+  fog stress defaults are `fog_stress_window_latest_hour=19` and
+  `fog_stress_min_dew_margin_f=10` in the platform registry and standalone
+  planner. Fixed the backfill script to derive values from
+  `verdify_schemas.tunable_registry.REGISTRY` and print candidate defaults in
+  dry-run output.
 
 ## Current PR3 behavior
 
