@@ -1093,6 +1093,29 @@ Current implementation status on 2026-05-24:
   required follow-up instrumentation handoff before claiming that part of the
   design is complete.
 
+Current implementation status on 2026-05-24:
+
+- `firmware/lib/greenhouse_types.h` and `greenhouse_logic.h` add the stress
+  override fields, clamps, dew-margin helper, direct-wet stress predicate, and
+  fog stress-window extension. Defaults are off, so existing behavior is
+  preserved until Iris pushes the posture.
+- `firmware/greenhouse/controls.yaml` applies the direct-wet stress predicate
+  only to the physical mister eligibility path; occupancy, irrigation, water
+  budget, direct-wet minimum temperature, dew margin, and latest-hour gates
+  remain deterministic.
+- `firmware/greenhouse/globals.yaml`, `tunables.yaml`, and `sensors.yaml`
+  expose HA controls and cfg readbacks for all seven PR3 tunables.
+- `verdify_schemas/tunable_registry.py` promotes the PR3 knobs into the
+  registry-backed planner-policy surface so MCP, dispatcher, site generation,
+  and plan validation derive the same contract.
+- Leaf-wetness fields exist in the DB/schema, but the ESP32 firmware has no
+  live leaf-wetness entity yet; the last 30 days of `climate` contain `0`
+  rows with non-null `leaf_wetness_north` or `leaf_wetness_south` out of
+  `42616` rows. This PR therefore enforces dew-margin and latest-hour
+  disease-risk gates in firmware and leaves true leaf-wetness lockout as a
+  required follow-up instrumentation handoff before claiming that part of the
+  design is complete.
+
 ### PR 4 - VPD Preempts Cooling Hold
 
 Add:
