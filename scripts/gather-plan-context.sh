@@ -62,7 +62,7 @@ echo ""
 # Active plan: compact transition summary (grouped by timestamp, Tier 1 only)
 echo "--- ACTIVE PLAN (future transitions only — your new plan will replace this entirely) ---"
 echo "Key variables shown per transition. Vent/fog timing params at defaults unless noted."
-echo "ts_mdt|raw_params|cool_s2|cool_exit|all_fans|engage|all|gap|wt|hyst|vent_max|fog_esc"
+echo "ts_mdt|raw_params|cool_s2|cool_exit|all_fans|dw_stress|dw_until|fog_stress|fog_until|engage|all|gap|wt|hyst|vent_max|fog_esc"
 $DB -c "
 WITH deduped AS (
   SELECT DISTINCT ON (ts, parameter) ts, parameter, value
@@ -74,6 +74,10 @@ SELECT to_char(ts AT TIME ZONE 'America/Denver', 'Dy MM-DD HH24:MI'),
   COALESCE(max(CASE WHEN parameter='cool_stage2_over_high_f' THEN round(value::numeric,1) END), 1.0),
   COALESCE(max(CASE WHEN parameter='cool_exit_hysteresis_f' THEN round(value::numeric,1) END), 1.5),
   COALESCE(max(CASE WHEN parameter='sw_cool_all_fans_at_high_enabled' THEN value::int END), 0),
+  COALESCE(max(CASE WHEN parameter='sw_direct_wet_stress_override_enabled' THEN value::int END), 0),
+  COALESCE(max(CASE WHEN parameter='direct_wet_stress_latest_hour' THEN value::int END), 22),
+  COALESCE(max(CASE WHEN parameter='sw_fog_stress_window_extend_enabled' THEN value::int END), 0),
+  COALESCE(max(CASE WHEN parameter='fog_stress_window_latest_hour' THEN value::int END), 19),
   COALESCE(max(CASE WHEN parameter='mister_engage_kpa' THEN round(value::numeric,1) END), 1.6),
   COALESCE(max(CASE WHEN parameter='mister_all_kpa' THEN round(value::numeric,1) END), 1.9),
   COALESCE(max(CASE WHEN parameter='mister_pulse_gap_s' THEN value::int END), 45),

@@ -34,8 +34,8 @@ The highest-value changes are:
    exit hysteresis.
 2. Add bounded VPD-over-cooling priority when temperature is no longer above the
    high edge by a meaningful margin.
-3. Add stress overrides for direct-wet and fog time gates when dew margin and
-   leaf wetness are safe.
+3. Add stress overrides for direct-wet and fog time gates when dew margin is
+   safe, with leaf-wetness enforcement following instrumentation.
 4. Add feed-forward solar/load cooling before the high edge is breached.
 5. Add telemetry for "why moisture/fans did not run" so Iris can tune the right
    knob instead of guessing.
@@ -286,7 +286,7 @@ Existing planner levers:
 These are planner-pushable Tier 2, but they are not routine Tier 1 keys and the
 planner prompt does not make them prominent enough for dry recovery.
 
-Proposed new tunables:
+Target tunables:
 
 | Tunable | Range | Default | Meaning |
 |---|---:|---:|---|
@@ -294,12 +294,14 @@ Proposed new tunables:
 | `direct_wet_stress_vpd_margin_kpa` | 0.0-0.5 | 0.05 | VPD excess needed to override drydown. |
 | `direct_wet_stress_min_dew_margin_f` | 3-15 | 8 | Minimum dew margin. |
 | `direct_wet_stress_latest_hour` | 17-24 | 22 | Latest local hour for stress override. |
-| `direct_wet_stress_leaf_wetness_max` | sensor units | conservative | Blocks override if leaf wetness is elevated. |
+| `direct_wet_stress_leaf_wetness_max` | sensor units | follow-up | Requires live leaf-wetness instrumentation before firmware can enforce it. |
 
 Expected outcome:
 
 - Prevents the exact 20:00-22:00 no-moisture failure mode.
-- Preserves disease-risk controls with dew margin, local hour, and leaf wetness.
+- Preserves disease-risk controls with dew margin and local hour now; leaf
+  wetness remains an instrumentation follow-up because current live rows have
+  no non-null leaf-wetness values.
 
 ### 5. Fog Stress Window
 
@@ -315,7 +317,7 @@ Proposed tunables:
 | `sw_fog_stress_window_extend_enabled` | bool | off | Allows fog after normal window during VPD-high stress. |
 | `fog_stress_window_latest_hour` | 17-22 | 19 | Latest local hour for fog stress extension. |
 | `fog_stress_min_dew_margin_f` | 5-15 | 10 | Dew margin required for fog extension. |
-| `fog_stress_min_leaf_wetness_clear_min` | 0-180 | 60 | Requires dry leaf sensors before fog extension. |
+| `fog_stress_min_leaf_wetness_clear_min` | 0-180 | follow-up | Requires live leaf-wetness instrumentation before firmware can enforce it. |
 
 Expected outcome:
 
@@ -428,7 +430,7 @@ The planner-facing policy should eventually be grouped this way:
 
 | Policy group | AI owns | Firmware still owns |
 |---|---|---|
-| Band intent | `temp_low`, `temp_high`, `vpd_low`, `vpd_high`, `bias_heat`, `bias_cool` | hard safety rails and relational validation |
+| Band intent | `temp_low`, `temp_high`, `vpd_low`, `vpd_high` | hard safety rails and relational validation |
 | Cooling posture | fan2 threshold, all-fans-at-high, cooling exit hysteresis, cold-vent guard, solar feed-forward | safety cool, vent/fan relay interlocks, cold-slug invariant |
 | Moisture posture | VPD dwell, mister pulse cadence, fog escalation, direct-wet stress override, fog stress extension | RH ceiling, dew/leaf-wetness hard gates, water/irrigation locks |
 | Priority arbitration | when VPD may preempt cooling hold, when solar may pre-stage cooling, when vent-mist assist is worth water | safety preemption and mode coherence |
@@ -1054,7 +1056,7 @@ Planner contract handoff status:
 
 ### PR 3 - Direct-Wet And Fog Stress Override
 
-Add bounded stress override tunables with dew margin and leaf wetness gates:
+Add bounded stress override tunables with dew-margin gates and latest-hour caps:
 
 - `sw_direct_wet_stress_override_enabled`
 - `direct_wet_stress_vpd_margin_kpa`
@@ -1065,7 +1067,8 @@ Add bounded stress override tunables with dew margin and leaf wetness gates:
 - `fog_stress_min_dew_margin_f`
 
 Replay must prove this only opens during VPD-high stress and never when dew
-margin or leaf wetness is unsafe.
+margin is unsafe. Leaf-wetness lockout remains a separate instrumentation
+handoff until live ESP32 leaf-wetness entities exist.
 
 Current implementation status on 2026-05-24:
 

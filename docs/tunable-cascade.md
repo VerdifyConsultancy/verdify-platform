@@ -233,7 +233,7 @@ data.
 - The main circuit runtime policy feeds the global activity window consumed by direct-wet gates.
 
 ### Switches
-- `sw_economiser_enabled`, `sw_fog_closes_vent`, `sw_mister_closes_vent`, `sw_gl_auto_mode`, `sw_gl_main_auto_mode`, `sw_gl_grow_auto_mode`, `sw_direct_wet_gate_enabled`, `sw_irrigation_enabled`, `sw_irrigation_wall_enabled`, `sw_irrigation_center_enabled`, `sw_irrigation_weather_skip`, `sw_occupancy_inhibit`, `sw_summer_vent_enabled`, `sw_dwell_gate_enabled`, `sw_fsm_controller_enabled`
+- `sw_economiser_enabled`, `sw_fog_closes_vent`, `sw_mister_closes_vent`, `sw_gl_auto_mode`, `sw_gl_main_auto_mode`, `sw_gl_grow_auto_mode`, `sw_direct_wet_gate_enabled`, `sw_direct_wet_stress_override_enabled`, `sw_fog_stress_window_extend_enabled`, `sw_cool_all_fans_at_high_enabled`, `sw_irrigation_enabled`, `sw_irrigation_wall_enabled`, `sw_irrigation_center_enabled`, `sw_irrigation_weather_skip`, `sw_occupancy_inhibit`, `sw_summer_vent_enabled`, `sw_dwell_gate_enabled`, `sw_fsm_controller_enabled`
 
 ### Reserved/no-op firmware globals
 - `mist_vent_close_lead_s` and `mist_vent_reopen_delay_s` have ESPHome numbers and cfg readbacks, but current firmware does not consume them. They are not planner-pushable until a firmware PR implements their semantics.

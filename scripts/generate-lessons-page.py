@@ -100,6 +100,10 @@ PARAM_TOKEN_RE = re.compile(
     r"fog_escalation_kpa|fog_min_temp_f|vpd_high|vpd_low|temp_high|temp_low|"
     r"d_cool_stage_2|cool_stage2_over_high_f|cool_exit_hysteresis_f|"
     r"cold_vent_guard_delta_f|sw_cool_all_fans_at_high_enabled|"
+    r"sw_direct_wet_stress_override_enabled|direct_wet_stress_vpd_margin_kpa|"
+    r"direct_wet_stress_min_dew_margin_f|direct_wet_stress_latest_hour|"
+    r"sw_fog_stress_window_extend_enabled|fog_stress_window_latest_hour|"
+    r"fog_stress_min_dew_margin_f|"
     r"enthalpy_open|enthalpy_close|mist_vent_close_lead_s)\b",
     re.IGNORECASE,
 )
