@@ -319,6 +319,13 @@ class TestDriftGuard:
             "cool_exit_hysteresis_f",
             "cold_vent_guard_delta_f",
             "sw_cool_all_fans_at_high_enabled",
+            "sw_direct_wet_stress_override_enabled",
+            "direct_wet_stress_vpd_margin_kpa",
+            "direct_wet_stress_min_dew_margin_f",
+            "direct_wet_stress_latest_hour",
+            "sw_fog_stress_window_extend_enabled",
+            "fog_stress_window_latest_hour",
+            "fog_stress_min_dew_margin_f",
         ):
             assert param in TIER1_REG
             assert param in PLANNER_PUSHABLE_REG
@@ -393,6 +400,9 @@ class TestActivityDirectWetGuards:
             "direct_wet_south_drydown_before_off_min",
             "direct_wet_west_drydown_before_off_min",
             "direct_wet_center_drydown_before_off_min",
+            "direct_wet_stress_override",
+            "wet_dew_margin_f",
+            "direct_wet_dew_margin",
         ]
         missing = [needle for needle in required if needle not in controls_yaml]
         assert not missing, f"Mister direct-wet gate coverage missing: {missing}"

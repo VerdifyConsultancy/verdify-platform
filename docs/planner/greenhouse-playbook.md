@@ -72,6 +72,7 @@ Check `temp_compliance_pct` vs `vpd_compliance_pct` from the scorecard. The lowe
 - VPD-low stress = over-humidification → increase `mister_pulse_gap_s`, raise `fog_escalation_kpa`, shorten sealed time
 - On dry days (<20% outdoor RH), VPD-high is expected. Focus on minimizing, not eliminating.
 - When temp control requires `VENTILATE`, VPD correction must travel with the air exchange. If dew margin is healthy, keep `mister_engage_kpa` near `vpd_high + 0.05`, `mister_all_kpa` near `max(1.0, vpd_high + 0.25)`, `mister_engage_delay_s` at 30-45s, `mister_all_delay_s` at 60-90s, `mister_pulse_gap_s` at 20-30s, and `fog_escalation_kpa` near 0.20-0.30. Do not set moisture thresholds far above the active VPD band unless dew-risk evidence justifies suppressing humidity.
+- If VPD-high persists after the normal direct-wet/fog windows close and dew margin is healthy, use `sw_direct_wet_stress_override_enabled` or `sw_fog_stress_window_extend_enabled` with conservative latest-hour caps instead of widening crop bands or lowering VPD thresholds.
 
 **Check utility trends:**
 - Compare today's `kwh`, `therms`, `water_gal` to `7d_avg_*`
@@ -283,4 +284,5 @@ The context is better for full-horizon scanning.
 5. **Never set min_heat_off_s below 300.** Gas heater ignition cycling damages the unit.
 6. **Never emit crop-band params in plans.** `temp_low`, `temp_high`, `vpd_low`, and `vpd_high` are dispatcher-owned read-only context; use mist, fog, dwell, hysteresis, vent posture, and stage-2 cooling knobs instead.
 7. **Never decouple moisture thresholds from the VPD band during active VPD-high stress.** The dispatcher will clamp conservative moisture values when live VPD is above band and dew margin is healthy; the planner should proactively choose band-coupled values instead of relying on that correction.
-8. **Never call docker exec, psql, or shell commands.** Use MCP tools only. Post a feature request if a tool is missing.
+8. **Never enable stress wetting without disease-risk evidence.** Direct-wet/fog stress overrides require VPD-high stress, healthy dew margin, latest-hour caps, and post-change readback verification.
+9. **Never call docker exec, psql, or shell commands.** Use MCP tools only. Post a feature request if a tool is missing.

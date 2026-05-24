@@ -115,6 +115,63 @@ TEST(direct_wet_window_uses_activity_offsets) {
     PASS();
 }
 
+TEST(direct_wet_stress_override_requires_vpd_dew_and_hour) {
+    auto sp = band_setpoints();
+    sp.direct_wet_stress_override_enabled = true;
+    sp.direct_wet_stress_vpd_margin_kpa = 0.05f;
+    sp.direct_wet_stress_min_dew_margin_f = 8.0f;
+    sp.direct_wet_stress_latest_hour = 22;
+    validate_setpoints(sp);
+
+    auto in = make_inputs(74.0f, sp.vpd_high + 0.10f);
+    in.local_hour = 20;
+    in.dew_point_f = 64.0f;
+    ASSERT_TRUE(direct_wet_stress_override_permitted(in, sp));
+
+    in.vpd_kpa = sp.vpd_high + 0.02f;
+    ASSERT_FALSE(direct_wet_stress_override_permitted(in, sp));
+
+    in.vpd_kpa = sp.vpd_high + 0.10f;
+    in.dew_point_f = 69.0f;
+    ASSERT_FALSE(direct_wet_stress_override_permitted(in, sp));
+
+    in.dew_point_f = 64.0f;
+    in.local_hour = 22;
+    ASSERT_FALSE(direct_wet_stress_override_permitted(in, sp));
+    PASS();
+}
+
+TEST(fog_stress_extension_requires_enabled_vpd_dew_and_extension_hour) {
+    auto sp = band_setpoints();
+    sp.fog_window_start = 7;
+    sp.fog_window_end = 17;
+    sp.fog_stress_window_extend_enabled = true;
+    sp.fog_stress_window_latest_hour = 19;
+    sp.fog_stress_min_dew_margin_f = 10.0f;
+    validate_setpoints(sp);
+
+    auto in = make_inputs(76.0f, sp.vpd_high + 0.10f, 60.0f);
+    in.local_hour = 18;
+    in.dew_point_f = 64.0f;
+    ASSERT_TRUE(fog_stress_window_permitted(in, sp));
+    ASSERT_TRUE(fog_permitted(in, sp));
+
+    in.dew_point_f = 70.0f;
+    ASSERT_FALSE(fog_stress_window_permitted(in, sp));
+    ASSERT_FALSE(fog_permitted(in, sp));
+
+    in.dew_point_f = 64.0f;
+    in.local_hour = 19;
+    ASSERT_FALSE(fog_stress_window_permitted(in, sp));
+    ASSERT_FALSE(fog_permitted(in, sp));
+
+    in.local_hour = 18;
+    in.vpd_kpa = sp.vpd_high - 0.01f;
+    ASSERT_FALSE(fog_stress_window_permitted(in, sp));
+    ASSERT_FALSE(fog_permitted(in, sp));
+    PASS();
+}
+
 TEST(day_mask_allows_zero_sunday) {
     ASSERT_TRUE(day_mask_allows(0b0000001, 0));
     ASSERT_FALSE(day_mask_allows(0b0000001, 1));

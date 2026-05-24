@@ -292,6 +292,20 @@ def _planner_guidance(name: str, spec: TunableDef, plan_required: set[str]) -> s
         return "Planner-policy tunable. Raise for cold-slug risk, lower when outdoor exchange is useful and temperature headroom is healthy."
     if name == "sw_cool_all_fans_at_high_enabled":
         return "Planner-policy switch. Enable only for forecast-backed heat stress windows where one-fan ventilation has been insufficient; disable after the window."
+    if name == "sw_direct_wet_stress_override_enabled":
+        return "Planner-policy switch. Enable only for VPD-high evening recovery when normal direct-wet drydown is blocking water and dew margin is safely above the configured floor."
+    if name == "direct_wet_stress_vpd_margin_kpa":
+        return "Planner-policy tunable. Keep low, around 0.05-0.15 kPa, when late dry recovery needs direct wetting; raise it to reserve override for stronger dry stress."
+    if name == "direct_wet_stress_min_dew_margin_f":
+        return "Planner-policy safety gate. Use 8 F or higher unless disease-risk evidence justifies a stricter margin; never lower to chase compliance blindly."
+    if name == "direct_wet_stress_latest_hour":
+        return "Planner-policy latest-hour cap. Use the earliest hour that covers the dry recovery window, then back out after VPD recovers."
+    if name == "sw_fog_stress_window_extend_enabled":
+        return "Planner-policy switch. Enable only when VPD-high persists after the normal fog window and dew/RH/temp gates are still safe."
+    if name == "fog_stress_window_latest_hour":
+        return "Planner-policy latest-hour cap for fog stress extension. Keep conservative; fog is high-power and disease-risk sensitive near nightfall."
+    if name == "fog_stress_min_dew_margin_f":
+        return "Planner-policy safety gate. Keep at least 10 F for evening fog extension unless stronger disease-risk instrumentation supports a stricter posture."
     if name == "mister_engage_kpa":
         return "Planner-policy tunable. During VPD-high or near-edge `VENTILATE` stress with healthy dew margin, keep near active `vpd_high + 0.05`; dispatcher clamps overly conservative values."
     if name == "mister_all_kpa":

@@ -290,7 +290,7 @@ Proposed new tunables:
 
 | Tunable | Range | Default | Meaning |
 |---|---:|---:|---|
-| `direct_wet_stress_override_enabled` | bool | off | Opens mister zones during VPD-high recovery if safety gates pass. |
+| `sw_direct_wet_stress_override_enabled` | bool | off | Opens mister zones during VPD-high recovery if safety gates pass. |
 | `direct_wet_stress_vpd_margin_kpa` | 0.0-0.5 | 0.05 | VPD excess needed to override drydown. |
 | `direct_wet_stress_min_dew_margin_f` | 3-15 | 8 | Minimum dew margin. |
 | `direct_wet_stress_latest_hour` | 17-24 | 22 | Latest local hour for stress override. |
@@ -312,7 +312,7 @@ Proposed tunables:
 
 | Tunable | Range | Default | Meaning |
 |---|---:|---:|---|
-| `fog_stress_window_extend_enabled` | bool | off | Allows fog after normal window during VPD-high stress. |
+| `sw_fog_stress_window_extend_enabled` | bool | off | Allows fog after normal window during VPD-high stress. |
 | `fog_stress_window_latest_hour` | 17-22 | 19 | Latest local hour for fog stress extension. |
 | `fog_stress_min_dew_margin_f` | 5-15 | 10 | Dew margin required for fog extension. |
 | `fog_stress_min_leaf_wetness_clear_min` | 0-180 | 60 | Requires dry leaf sensors before fog extension. |
@@ -788,7 +788,7 @@ Actions:
 
 - do not unwind moisture solely because the clock crossed the normal drydown
   boundary;
-- use `direct_wet_stress_override_enabled` or shortened direct-wet drydown
+- use `sw_direct_wet_stress_override_enabled` or shortened direct-wet drydown
   until VPD is back inside band;
 - cap stress override by latest local hour and leaf wetness;
 - if temp is no longer meaningfully hot, allow VPD to preempt cooling hold.
@@ -1056,15 +1056,39 @@ Planner contract handoff status:
 
 Add bounded stress override tunables with dew margin and leaf wetness gates:
 
-- `direct_wet_stress_override_enabled`
+- `sw_direct_wet_stress_override_enabled`
 - `direct_wet_stress_vpd_margin_kpa`
 - `direct_wet_stress_min_dew_margin_f`
 - `direct_wet_stress_latest_hour`
-- `fog_stress_window_extend_enabled`
+- `sw_fog_stress_window_extend_enabled`
 - `fog_stress_window_latest_hour`
+- `fog_stress_min_dew_margin_f`
 
 Replay must prove this only opens during VPD-high stress and never when dew
 margin or leaf wetness is unsafe.
+
+Current implementation status on 2026-05-24:
+
+- `firmware/lib/greenhouse_types.h` and `greenhouse_logic.h` add the stress
+  override fields, clamps, dew-margin helper, direct-wet stress predicate, and
+  fog stress-window extension. Defaults are off, so existing behavior is
+  preserved until Iris pushes the posture.
+- `firmware/greenhouse/controls.yaml` applies the direct-wet stress predicate
+  only to the physical mister eligibility path; occupancy, irrigation, water
+  budget, direct-wet minimum temperature, dew margin, and latest-hour gates
+  remain deterministic.
+- `firmware/greenhouse/globals.yaml`, `tunables.yaml`, and `sensors.yaml`
+  expose HA controls and cfg readbacks for all seven PR3 tunables.
+- `verdify_schemas/tunable_registry.py` promotes the PR3 knobs into the
+  registry-backed planner-policy surface so MCP, dispatcher, site generation,
+  and plan validation derive the same contract.
+- Leaf-wetness fields exist in the DB/schema, but the ESP32 firmware has no
+  live leaf-wetness entity yet; the last 30 days of `climate` contain `0`
+  rows with non-null `leaf_wetness_north` or `leaf_wetness_south` out of
+  `42616` rows. This PR therefore enforces dew-margin and latest-hour
+  disease-risk gates in firmware and leaves true leaf-wetness lockout as a
+  required follow-up instrumentation handoff before claiming that part of the
+  design is complete.
 
 ### PR 4 - VPD Preempts Cooling Hold
 

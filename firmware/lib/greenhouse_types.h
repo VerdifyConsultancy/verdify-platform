@@ -131,6 +131,13 @@ struct Setpoints {
     float    cool_exit_hysteresis_f;        // VENTILATE exits at temp_high - this
     float    cold_vent_guard_delta_f;       // outdoor < temp_low - delta is cold-vent guarded
     bool     cool_all_fans_at_high_enabled; // run both fans immediately above high edge
+    bool     direct_wet_stress_override_enabled; // bypass drydown windows only during dry stress
+    float    direct_wet_stress_vpd_margin_kpa;   // VPD excess over vpd_high required for override
+    float    direct_wet_stress_min_dew_margin_f; // minimum temp-dewpoint spread for wetting
+    int      direct_wet_stress_latest_hour;      // local-hour cap for dry-stress wetting
+    bool     fog_stress_window_extend_enabled;   // extend fog time window during dry stress
+    int      fog_stress_window_latest_hour;      // local-hour cap for fog stress extension
+    float    fog_stress_min_dew_margin_f;        // minimum temp-dewpoint spread for fog extension
     uint32_t mist_backoff_ms;
 };
 
@@ -341,6 +348,13 @@ inline Setpoints default_setpoints() {
         .cool_exit_hysteresis_f = 1.5f,
         .cold_vent_guard_delta_f = 10.0f,
         .cool_all_fans_at_high_enabled = false,
+        .direct_wet_stress_override_enabled = false,
+        .direct_wet_stress_vpd_margin_kpa = 0.05f,
+        .direct_wet_stress_min_dew_margin_f = 8.0f,
+        .direct_wet_stress_latest_hour = 22,
+        .fog_stress_window_extend_enabled = false,
+        .fog_stress_window_latest_hour = 19,
+        .fog_stress_min_dew_margin_f = 10.0f,
         .mist_backoff_ms = 600000u
     };
 }
@@ -448,6 +462,11 @@ inline void validate_setpoints(Setpoints& sp) {
     sp.cool_stage2_over_high_f = std::max(0.0f, std::min(3.0f, sp.cool_stage2_over_high_f));
     sp.cool_exit_hysteresis_f = std::max(0.3f, std::min(3.0f, sp.cool_exit_hysteresis_f));
     sp.cold_vent_guard_delta_f = std::max(0.0f, std::min(15.0f, sp.cold_vent_guard_delta_f));
+    sp.direct_wet_stress_vpd_margin_kpa = std::max(0.0f, std::min(0.5f, sp.direct_wet_stress_vpd_margin_kpa));
+    sp.direct_wet_stress_min_dew_margin_f = std::max(3.0f, std::min(15.0f, sp.direct_wet_stress_min_dew_margin_f));
+    sp.direct_wet_stress_latest_hour = std::max(17, std::min(24, sp.direct_wet_stress_latest_hour));
+    sp.fog_stress_window_latest_hour = std::max(17, std::min(22, sp.fog_stress_window_latest_hour));
+    sp.fog_stress_min_dew_margin_f = std::max(5.0f, std::min(15.0f, sp.fog_stress_min_dew_margin_f));
     sp.mist_backoff_ms = std::max(uint32_t(60000), std::min(uint32_t(3600000), sp.mist_backoff_ms));
 }
 

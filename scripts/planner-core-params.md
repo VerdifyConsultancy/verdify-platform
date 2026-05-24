@@ -36,6 +36,15 @@ the same horizon. Crop-band rows are not part of this contract.
   would let dry-air `VENTILATE` hold temperature while leaving VPD above band.
   Do not unwind this posture until observed VPD has stayed below the high band;
   forecasted solar decline alone is not recovery evidence.
+- During evening VPD-high recovery after the normal moisture windows close,
+  `sw_direct_wet_stress_override_enabled` can open drydown-gated mister zones only
+  when VPD is above `vpd_high + direct_wet_stress_vpd_margin_kpa`, dew margin
+  is at least `direct_wet_stress_min_dew_margin_f`, and the local hour is before
+  `direct_wet_stress_latest_hour`.
+- `sw_fog_stress_window_extend_enabled` extends fog after the normal fog window
+  only during VPD-high stress with RH/temp gates still satisfied, dew margin at
+  least `fog_stress_min_dew_margin_f`, and local hour before
+  `fog_stress_window_latest_hour`.
 - `d_heat_stage_2` and `d_cool_stage_2` are retired from live band-first
   planner policy. Use `cool_stage2_over_high_f`,
   `cool_exit_hysteresis_f`, `cold_vent_guard_delta_f`, and

@@ -425,6 +425,41 @@ globals:
     restore_value: no
     initial_value: '0'
 
+  - id: direct_wet_stress_override_enabled
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
+  - id: direct_wet_stress_vpd_margin_kpa
+    type: float
+    restore_value: no
+    initial_value: '0.05'
+
+  - id: direct_wet_stress_min_dew_margin_f
+    type: float
+    restore_value: no
+    initial_value: '8.0'
+
+  - id: direct_wet_stress_latest_hour
+    type: int
+    restore_value: no
+    initial_value: '22'
+
+  - id: fog_stress_window_extend_enabled
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
+  - id: fog_stress_window_latest_hour
+    type: int
+    restore_value: no
+    initial_value: '19'
+
+  - id: fog_stress_min_dew_margin_f
+    type: float
+    restore_value: no
+    initial_value: '10.0'
+
   # ─── Daily ON-cycle counters (reset at midnight) ───
   - id: cnt_fan1_today
     type: int

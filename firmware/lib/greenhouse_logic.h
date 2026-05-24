@@ -70,6 +70,38 @@ inline bool fog_hour_in_window(int hour, int start, int end) noexcept {
                           : (hour >= start || hour < end);
 }
 
+inline float dew_margin_f(const SensorInputs& in) noexcept {
+    if (!std::isfinite(in.temp_f) || !std::isfinite(in.dew_point_f)) return -999.0f;
+    return in.temp_f - in.dew_point_f;
+}
+
+inline bool fog_stress_hour_in_extension(int hour, int normal_end, int latest_hour) noexcept {
+    hour = std::max(0, std::min(23, hour));
+    normal_end = std::max(0, std::min(23, normal_end));
+    latest_hour = std::max(17, std::min(24, latest_hour));
+    if (latest_hour <= normal_end) return false;
+    return hour >= normal_end && hour < latest_hour;
+}
+
+inline bool direct_wet_stress_override_permitted(const SensorInputs& in, const Setpoints& sp) noexcept {
+    return sp.direct_wet_stress_override_enabled
+        && in.local_hour < sp.direct_wet_stress_latest_hour
+        && in.vpd_kpa > (sp.vpd_high + sp.direct_wet_stress_vpd_margin_kpa)
+        && dew_margin_f(in) >= sp.direct_wet_stress_min_dew_margin_f;
+}
+
+inline bool fog_stress_window_permitted(const SensorInputs& in, const Setpoints& sp) noexcept {
+    return sp.fog_stress_window_extend_enabled
+        && fog_stress_hour_in_extension(in.local_hour, sp.fog_window_end, sp.fog_stress_window_latest_hour)
+        && in.vpd_kpa > sp.vpd_high
+        && dew_margin_f(in) >= sp.fog_stress_min_dew_margin_f;
+}
+
+inline bool fog_hour_permitted(const SensorInputs& in, const Setpoints& sp) noexcept {
+    return fog_hour_in_window(in.local_hour, sp.fog_window_start, sp.fog_window_end)
+        || fog_stress_window_permitted(in, sp);
+}
+
 inline int local_minute_of_day(int hour, int minute) noexcept {
     hour = std::max(0, std::min(23, hour));
     minute = std::max(0, std::min(59, minute));
@@ -121,7 +153,7 @@ inline bool day_mask_allows(int day_mask, int day_of_week_zero_sunday) noexcept 
 inline bool fog_permitted(const SensorInputs& in, const Setpoints& sp) noexcept {
     return (in.rh_pct  <= sp.fog_rh_ceiling)
         && (in.temp_f  >= sp.fog_min_temp)
-        && fog_hour_in_window(in.local_hour, sp.fog_window_start, sp.fog_window_end);
+        && fog_hour_permitted(in, sp);
 }
 
 // Unified band-first controller clamps VPD hysteresis against the actual band width. The
@@ -1150,7 +1182,7 @@ inline OverrideFlags evaluate_overrides(
     f.fog_gate_rh     = fog_wanted && (in.rh_pct  > sp.fog_rh_ceiling);
     f.fog_gate_temp   = fog_wanted && (in.temp_f  < sp.fog_min_temp);
     f.fog_gate_window = fog_wanted
-        && !fog_hour_in_window(in.local_hour, sp.fog_window_start, sp.fog_window_end);
+        && !fog_hour_permitted(in, sp);
 
     // Relief-cycle breaker: firmware forces VENTILATE instead of the seal
     // the planner's dwell was setting up.
