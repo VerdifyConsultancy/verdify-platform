@@ -4646,3 +4646,12 @@ def test_sentinel_import_chain_wired():
 
     assert hasattr(tasks, "CONTEXT_GATHER_FAILED_SENTINEL")
     assert tasks.CONTEXT_GATHER_FAILED_SENTINEL == iris_planner.CONTEXT_GATHER_FAILED_SENTINEL
+
+
+def test_vision_snapshot_observations_carry_position_ids():
+    src = Path("scripts/analyze-greenhouse-snapshot.py").read_text()
+
+    assert "RETURNING id" in src
+    assert "SELECT MAX(id) FROM image_observations" not in src
+    assert "SELECT id, greenhouse_id, zone, position, zone_id, position_id" in src
+    assert "ts, crop_id, greenhouse_id, zone, position, zone_id, position_id," in src

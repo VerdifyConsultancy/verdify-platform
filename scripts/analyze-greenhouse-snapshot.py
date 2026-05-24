@@ -132,12 +132,13 @@ async def analyze_image(image_path: Path, conn, dry_run: bool = False) -> dict |
         token_count = tokens.total_token_count if tokens else None
 
         # Insert into DB
-        await conn.execute(
+        image_observation_id = await conn.fetchval(
             """
             INSERT INTO image_observations
                 (ts, camera, zone, image_path, model, raw_response, crops_observed,
                  environment_notes, recommended_actions, processing_ms, tokens_used, confidence)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            RETURNING id
         """,
             datetime.now(UTC),
             camera,
@@ -167,26 +168,41 @@ async def analyze_image(image_path: Path, conn, dry_run: bool = False) -> dict |
             health = obs.get("health_score")
             if not crop_name or health is None:
                 continue
-            # Find crop_id
-            crop_id = await conn.fetchval(
-                "SELECT id FROM crops WHERE name ILIKE $1 AND is_active LIMIT 1", f"%{crop_name}%"
+            crop = await conn.fetchrow(
+                """
+                SELECT id, greenhouse_id, zone, position, zone_id, position_id
+                FROM crops
+                WHERE name ILIKE $1
+                  AND is_active
+                ORDER BY CASE WHEN lower(name) = lower($2) THEN 0 ELSE 1 END, id
+                LIMIT 1
+            """,
+                f"%{crop_name}%",
+                crop_name,
             )
-            if crop_id:
+            if crop:
                 stress = obs.get("stress_indicators", [])
                 notes = obs.get("notes", "")
                 if stress:
                     notes = f"[{', '.join(stress)}] {notes}"
                 await conn.execute(
                     """
-                    INSERT INTO observations (ts, crop_id, zone, obs_type, notes, source, health_score, image_observation_id)
-                    VALUES ($1, $2, $3, 'visual_health', $4, 'gemini-vision', $5, $6)
+                    INSERT INTO observations (
+                        ts, crop_id, greenhouse_id, zone, position, zone_id, position_id,
+                        obs_type, notes, source, health_score, image_observation_id
+                    )
+                    VALUES ($1, $2, $3, $4, $5, $6, $7, 'visual_health', $8, 'gemini-vision', $9, $10)
                 """,
                     datetime.now(UTC),
-                    crop_id,
-                    obs.get("zone", zones[0]),
+                    crop["id"],
+                    crop["greenhouse_id"],
+                    obs.get("zone") or crop["zone"],
+                    crop["position"],
+                    crop["zone_id"],
+                    crop["position_id"],
                     notes,
                     float(health) / 10.0,  # Normalize to 0.0-1.0
-                    await conn.fetchval("SELECT MAX(id) FROM image_observations"),
+                    image_observation_id,
                 )
 
         return result
