@@ -2782,6 +2782,20 @@ DIRECT_WET_REQUIRED_OBJECT_IDS = frozenset(
         "direct_wet_center_drydown_before_off__min_",
     }
 )
+AI_MOISTURE_STRESS_POLICY_PARAMS = frozenset(
+    {
+        "sw_direct_wet_stress_override_enabled",
+        "direct_wet_stress_vpd_margin_kpa",
+        "direct_wet_stress_min_dew_margin_f",
+        "direct_wet_stress_latest_hour",
+        "sw_fog_stress_window_extend_enabled",
+        "fog_stress_window_latest_hour",
+        "fog_stress_min_dew_margin_f",
+    }
+)
+AI_MOISTURE_STRESS_REQUIRED_OBJECT_IDS = frozenset(
+    REGISTRY[param].esp_object_id for param in AI_MOISTURE_STRESS_POLICY_PARAMS if REGISTRY[param].esp_object_id
+)
 
 QUIET_STATE_ENTITIES = (
     QUIET_MODE_ENTITY,
@@ -2825,6 +2839,14 @@ def _direct_wet_policy_supported() -> bool:
     if keys:
         return DIRECT_WET_REQUIRED_OBJECT_IDS.issubset(set(keys))
     return any(param in shared.cfg_readback for param in DIRECT_WET_POLICY_PARAMS)
+
+
+def _ai_moisture_stress_policy_supported() -> bool:
+    """Return true once firmware exposes PR3 direct-wet/fog stress controls."""
+    keys = shared.esp32.get("keys") or {}
+    if keys:
+        return AI_MOISTURE_STRESS_REQUIRED_OBJECT_IDS.issubset(set(keys))
+    return AI_MOISTURE_STRESS_POLICY_PARAMS.issubset(set(shared.cfg_readback))
 
 
 def _activity_defaults_from_lighting(lighting_row, lighting_circuit_rows) -> dict[str, float]:
@@ -3316,6 +3338,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             param in shared.cfg_readback for param in LIGHTING_TARGET_MINUTE_PARAMS
         )
         direct_wet_supported = _direct_wet_policy_supported()
+        ai_moisture_stress_supported = _ai_moisture_stress_policy_supported()
         planner_meta = {
             r["parameter"]: {
                 "trigger_id": str(r["trigger_id"]) if r["trigger_id"] else None,
@@ -3558,6 +3581,8 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             if param in ACTIVITY_MIRROR_PARAMS:
                 continue
             if param in DIRECT_WET_POLICY_PARAMS and not direct_wet_supported:
+                continue
+            if param in AI_MOISTURE_STRESS_POLICY_PARAMS and not ai_moisture_stress_supported:
                 continue
             if param.startswith("plan_") or param in BAND_DRIVEN_PARAMS:
                 continue

@@ -65,6 +65,13 @@ The executable contract is registry-first:
   tunable tokens. Fixed so future lesson pages can surface them.
 - `docs/tunable-cascade.md` switch inventory omitted the new stress switches
   and cooling all-fans switch. Fixed.
+- The PR3 deployment order needed one more guard: services can receive/backfill
+  the seven new active-plan rows before OTA exposes matching ESPHome entities.
+  Fixed by gating dispatcher pushes for the PR3 moisture-stress params until
+  either ESPHome keys or cfg readbacks prove firmware support.
+- Added `scripts/backfill-ai-moisture-stress-defaults.sh`, a dry-run-first
+  routine-plan backfill for the seven PR3 defaults. It excludes one-shot plans
+  and should run only after PR3 services are deployed.
 
 ## Current PR3 behavior
 
@@ -120,5 +127,12 @@ Planner companion branch:
   `fog_stress_window_latest_hour`, and
   `fog_stress_min_dew_margin_f`.
 
-Do not deploy the new services and then declare alignment until a new routine
-plan or explicit default backfill creates 39-param active/future coverage.
+Do not declare service/firmware alignment until a new routine plan or explicit
+default backfill creates 39-param active/future coverage. The backfill should be
+run after PR3 service deploy and before OTA validation:
+
+```bash
+scripts/backfill-ai-moisture-stress-defaults.sh
+APPLY=1 scripts/backfill-ai-moisture-stress-defaults.sh
+scripts/validate-plan-coverage.sh
+```

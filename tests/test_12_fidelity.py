@@ -1458,6 +1458,75 @@ def test_dispatcher_direct_push_uses_dispatchable_changes_only():
     assert "for param, val in changes:" in body
 
 
+def test_dispatcher_gates_ai_moisture_stress_until_firmware_supports_entities():
+    """PR3 plan rows may exist before the OTA exposes matching ESPHome entities."""
+    import tasks
+
+    assert {
+        "sw_direct_wet_stress_override_enabled",
+        "direct_wet_stress_vpd_margin_kpa",
+        "direct_wet_stress_min_dew_margin_f",
+        "direct_wet_stress_latest_hour",
+        "sw_fog_stress_window_extend_enabled",
+        "fog_stress_window_latest_hour",
+        "fog_stress_min_dew_margin_f",
+    } == tasks.AI_MOISTURE_STRESS_POLICY_PARAMS
+    assert {
+        "direct_wet_stress_override_enabled",
+        "direct_wet_stress_vpd_margin_kpa",
+        "direct_wet_stress_min_dew_margin_f",
+        "direct_wet_stress_latest_hour",
+        "fog_stress_window_extend_enabled",
+        "fog_stress_window_latest_hour",
+        "fog_stress_min_dew_margin_f",
+    } == tasks.AI_MOISTURE_STRESS_REQUIRED_OBJECT_IDS
+
+    src = Path(tasks.__file__).read_text()
+    start = src.index("async def setpoint_dispatcher")
+    end = src.index("def _fetch_forecast", start)
+    body = src[start:end]
+    assert "ai_moisture_stress_supported = _ai_moisture_stress_policy_supported()" in body
+    assert "param in AI_MOISTURE_STRESS_POLICY_PARAMS and not ai_moisture_stress_supported" in body
+
+    original_keys = dict(tasks.shared.esp32.get("keys") or {})
+    original_readback = dict(tasks.shared.cfg_readback)
+    try:
+        tasks.shared.esp32["keys"] = {}
+        tasks.shared.cfg_readback.clear()
+        assert tasks._ai_moisture_stress_policy_supported() is False
+
+        tasks.shared.cfg_readback.update({param: 0.0 for param in tasks.AI_MOISTURE_STRESS_POLICY_PARAMS})
+        assert tasks._ai_moisture_stress_policy_supported() is True
+
+        tasks.shared.cfg_readback.clear()
+        tasks.shared.esp32["keys"] = {key: object() for key in tasks.AI_MOISTURE_STRESS_REQUIRED_OBJECT_IDS}
+        assert tasks._ai_moisture_stress_policy_supported() is True
+    finally:
+        tasks.shared.esp32["keys"] = original_keys
+        tasks.shared.cfg_readback.clear()
+        tasks.shared.cfg_readback.update(original_readback)
+
+
+def test_ai_moisture_stress_backfill_is_dry_run_first_and_routine_only():
+    script = (REPO_ROOT / "scripts" / "backfill-ai-moisture-stress-defaults.sh").read_text()
+    assert "Dry run only. Re-run with APPLY=1" in script
+    assert 'APPLY="${APPLY:-0}"' in script
+    assert "plan_id NOT LIKE 'iris-oneshot-%'" in script
+    assert "ON CONFLICT (ts, parameter, plan_id) DO UPDATE" in script
+    assert "WHERE setpoint_plan.is_active = false" in script
+    assert "PR3 default backfill for AI moisture stress contract alignment" in script
+    for param in {
+        "sw_direct_wet_stress_override_enabled",
+        "direct_wet_stress_vpd_margin_kpa",
+        "direct_wet_stress_min_dew_margin_f",
+        "direct_wet_stress_latest_hour",
+        "sw_fog_stress_window_extend_enabled",
+        "fog_stress_window_latest_hour",
+        "fog_stress_min_dew_margin_f",
+    }:
+        assert param in script
+
+
 def test_dispatcher_propagates_plan_audit_to_setpoint_changes():
     import tasks
 
