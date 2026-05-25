@@ -1265,6 +1265,24 @@ class TestPlannerToDispatcherE2E:
             self._cleanup()
 
 
+def test_second_based_cfg_readback_rounding_does_not_force_repush():
+    import tasks as tasks_mod
+
+    original_readback = tasks_mod.shared.cfg_readback.get("mister_pulse_on_s")
+    try:
+        assert tasks_mod.readback_values_equivalent("mister_pulse_on_s", 33.0, 33.75)
+        assert tasks_mod.readback_values_equivalent("mister_engage_delay_s", 38.0, 37.5)
+        assert not tasks_mod.readback_values_equivalent("mister_pulse_on_s", 30.0, 33.75)
+
+        tasks_mod.shared.cfg_readback["mister_pulse_on_s"] = 33.0
+        assert tasks_mod._readback_drift("mister_pulse_on_s", 33.75) is False
+    finally:
+        if original_readback is None:
+            tasks_mod.shared.cfg_readback.pop("mister_pulse_on_s", None)
+        else:
+            tasks_mod.shared.cfg_readback["mister_pulse_on_s"] = original_readback
+
+
 class TestSetpointsFailLoud:
     """API /setpoints must fail-loud on NULL band (Tier 1 #3)."""
 

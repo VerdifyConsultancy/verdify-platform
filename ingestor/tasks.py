@@ -136,6 +136,20 @@ HEAP_RECOVERY_PRIORITY_PARAMS = (
     )
     | IRRIGATION_SCHEDULE_PARAMS
 )
+SECOND_READBACK_ABS_TOLERANCE_PARAMS = frozenset(
+    {
+        "mister_engage_delay_s",
+        "mister_all_delay_s",
+        "mister_pulse_on_s",
+        "mister_pulse_gap_s",
+        "min_fog_on_s",
+        "min_fog_off_s",
+        "mist_backoff_s",
+        "mist_max_closed_vent_s",
+        "mist_thermal_relief_s",
+        "vpd_watch_dwell_s",
+    }
+)
 HOUSE_BAND_PARAMS = frozenset(
     name for name in CROP_BAND_REG if name.startswith("temp_") or name in {"vpd_low", "vpd_high"}
 )
@@ -3009,6 +3023,23 @@ def _should_skip(last: float | None, val: float, rel: float = 0.01, abs_floor: f
     return abs(last - val) / max(abs(val), abs_floor) < rel
 
 
+def readback_abs_tolerance(param: str) -> float:
+    """Absolute cfg-readback tolerance for quantized firmware readbacks."""
+    return 1.0 if param in SECOND_READBACK_ABS_TOLERANCE_PARAMS else 0.0
+
+
+def readback_values_equivalent(param: str, observed: float, desired: float) -> bool:
+    """Return true when a cfg_* readback is close enough to the requested value."""
+    try:
+        observed_f = float(observed)
+        desired_f = float(desired)
+    except (TypeError, ValueError):
+        return False
+    if _should_skip(observed_f, desired_f):
+        return True
+    return abs(observed_f - desired_f) <= readback_abs_tolerance(param)
+
+
 def _heap_push_defer_active(
     heap_alert_open: bool,
     heap_free_kb: float | None,
@@ -3052,10 +3083,7 @@ def _readback_drift(param: str, desired: float) -> bool:
     readback = shared.cfg_readback.get(param)
     if readback is None:
         return False
-    try:
-        return not _should_skip(float(readback), float(desired))
-    except (TypeError, ValueError):
-        return False
+    return not readback_values_equivalent(param, readback, desired)
 
 
 async def _write_clamp_audit_rows(

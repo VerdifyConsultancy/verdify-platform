@@ -72,6 +72,7 @@ from tasks import (
     midnight_watch,
     planner_memory_ingest_sync,
     planning_heartbeat,
+    readback_abs_tolerance,
     setpoint_confirmation_monitor,
     setpoint_dispatcher,
     shelly_sync,
@@ -1371,8 +1372,11 @@ async def flush_loop(pool: asyncpg.Pool) -> None:
                              WHERE sc.parameter = $1
                                AND sc.confirmed_at IS NULL
                                AND sc.ts > now() - interval '7 days'
-                               AND abs(sc.value - $2::double precision)
-                                     / greatest(abs($2::double precision), 1e-3) < 0.01
+                               AND (
+                                   abs(sc.value - $2::double precision)
+                                         / greatest(abs($2::double precision), 1e-3) < 0.01
+                                   OR abs(sc.value - $2::double precision) <= $3::double precision
+                               )
                                AND NOT EXISTS (
                                    SELECT 1
                                      FROM setpoint_changes newer
@@ -1380,11 +1384,14 @@ async def flush_loop(pool: asyncpg.Pool) -> None:
                                      AND COALESCE(newer.greenhouse_id, '') = COALESCE(sc.greenhouse_id, '')
                                      AND COALESCE(newer.source, '') <> 'esp32'
                                      AND newer.ts > sc.ts
-                                     AND abs(newer.value - $2::double precision)
-                                           / greatest(abs($2::double precision), 1e-3) >= 0.01
+                                     AND NOT (
+                                         abs(newer.value - $2::double precision)
+                                               / greatest(abs($2::double precision), 1e-3) < 0.01
+                                         OR abs(newer.value - $2::double precision) <= $3::double precision
+                                     )
                                )
                             """,
-                            [(param, val) for param, val in state.cfg_readback.items()],
+                            [(param, val, readback_abs_tolerance(param)) for param, val in state.cfg_readback.items()],
                         )
                 except Exception as e:
                     log.error(f"setpoint_snapshot write error: {e}")
