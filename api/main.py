@@ -2268,9 +2268,33 @@ async def public_home_metrics(greenhouse_id: str = DEFAULT_GREENHOUSE):
             WHERE source = 'forecast'
             """
         )
-        climate_action_log_age_s = await conn.fetchval(
-            "SELECT extract(epoch FROM now() - max(ts))::int FROM climate_action_log"
+        latest_action = await conn.fetchrow(
+            """
+            SELECT extract(epoch FROM now() - ts)::int AS age_s,
+                   climate_action,
+                   priority_axis,
+                   round(temp_target_delta_f::numeric, 2)::float AS temp_target_delta_f,
+                   round(vpd_target_delta_kpa::numeric, 3)::float AS vpd_target_delta_kpa,
+                   round(temp_band_error_f::numeric, 2)::float AS temp_band_error_f,
+                   round(vpd_band_error_kpa::numeric, 3)::float AS vpd_band_error_kpa,
+                   moisture_assist_state,
+                   wet_assist_allowed,
+                   wet_assist_block_reason,
+                   fog_allowed,
+                   fog_block_reason,
+                   relay_truth,
+                   sensor_status
+            FROM climate_action_log
+            WHERE COALESCE(greenhouse_id, 'vallery') = $1
+            ORDER BY ts DESC
+            LIMIT 1
+            """,
+            greenhouse_id,
         )
+        latest_action_data = (
+            _coerce_jsonb(dict(latest_action), "relay_truth", "sensor_status") if latest_action else None
+        )
+        climate_action_log_age_s = latest_action_data["age_s"] if latest_action_data else None
         climate_action_proof_missing = await conn.fetchval(CLIMATE_ACTION_PROOF_MISSING_SQL)
 
     climate_age_s = latest_climate["age_s"] if latest_climate else None
@@ -2349,6 +2373,22 @@ async def public_home_metrics(greenhouse_id: str = DEFAULT_GREENHOUSE):
         cost_today_usd=scorecard.get("cost_total"),
         water_today_gal=scorecard.get("water_gal") or scorecard.get("water_used_gal"),
         open_critical_high_alerts=open_critical_high or 0,
+        climate_action_log_age_s=climate_action_log_age_s,
+        controller_climate_action=latest_action_data["climate_action"] if latest_action_data else None,
+        controller_priority_axis=latest_action_data["priority_axis"] if latest_action_data else None,
+        controller_temp_target_delta_f=latest_action_data["temp_target_delta_f"] if latest_action_data else None,
+        controller_vpd_target_delta_kpa=latest_action_data["vpd_target_delta_kpa"] if latest_action_data else None,
+        controller_temp_band_error_f=latest_action_data["temp_band_error_f"] if latest_action_data else None,
+        controller_vpd_band_error_kpa=latest_action_data["vpd_band_error_kpa"] if latest_action_data else None,
+        controller_moisture_assist_state=latest_action_data["moisture_assist_state"] if latest_action_data else None,
+        controller_wet_assist_allowed=latest_action_data["wet_assist_allowed"] if latest_action_data else None,
+        controller_wet_assist_block_reason=latest_action_data["wet_assist_block_reason"]
+        if latest_action_data
+        else None,
+        controller_fog_allowed=latest_action_data["fog_allowed"] if latest_action_data else None,
+        controller_fog_block_reason=latest_action_data["fog_block_reason"] if latest_action_data else None,
+        controller_relay_truth=latest_action_data["relay_truth"] if latest_action_data else None,
+        controller_sensor_status=latest_action_data["sensor_status"] if latest_action_data else None,
         data_health_status=_overall_data_health(data_checks),
         data_health_warnings=warning_checks[:8],
     )

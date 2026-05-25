@@ -2039,6 +2039,7 @@ def test_climate_authority_action_log_contract_is_tracked():
 
 def test_health_checks_require_climate_action_log_freshness():
     api = (REPO_ROOT / "api" / "main.py").read_text()
+    api_schema = (REPO_ROOT / "verdify_schemas" / "api.py").read_text()
     health = (REPO_ROOT / "scripts" / "health-check.sh").read_text()
     liveness = (REPO_ROOT / "scripts" / "liveness-check.sh").read_text()
 
@@ -2050,6 +2051,29 @@ def test_health_checks_require_climate_action_log_freshness():
     assert "if age is None or age > 300:" in api
     assert "isinstance(climate_age, (int, float))" in api
     assert "isinstance(action_age, (int, float))" in api
+    assert "SELECT extract(epoch FROM now() - ts)::int AS age_s" in api
+    assert '_coerce_jsonb(dict(latest_action), "relay_truth", "sensor_status")' in api
+    assert "controller_climate_action=latest_action_data" in api
+    assert "controller_wet_assist_block_reason=latest_action_data" in api
+    assert "controller_fog_block_reason=latest_action_data" in api
+    assert "controller_relay_truth=latest_action_data" in api
+    for field in (
+        "climate_action_log_age_s",
+        "controller_climate_action",
+        "controller_priority_axis",
+        "controller_temp_target_delta_f",
+        "controller_vpd_target_delta_kpa",
+        "controller_temp_band_error_f",
+        "controller_vpd_band_error_kpa",
+        "controller_moisture_assist_state",
+        "controller_wet_assist_allowed",
+        "controller_wet_assist_block_reason",
+        "controller_fog_allowed",
+        "controller_fog_block_reason",
+        "controller_relay_truth",
+        "controller_sensor_status",
+    ):
+        assert field in api_schema
     assert 'checks["service_climate_action_log"] = (' in api
     assert "and action_age < 300 and not action_proof_missing else" in api
     assert api.count('"check_name": "climate_action_log_freshness"') == 2
