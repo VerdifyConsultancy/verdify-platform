@@ -2068,7 +2068,18 @@ def test_climate_wet_assist_is_separate_from_crop_direct_wet_windows():
         controls.index("auto climate_wet_assist_allowed") : controls.index("const bool south_crop_wet_allowed")
     ]
     assert "direct_wet_window_open" not in climate_block
+    assert "direct_wet_min_temp_f" not in climate_block
+    assert "direct_wet_gate_enabled" not in climate_block
+    assert "return climate_wet_assist_safety_ok;" in climate_block
     assert "climate_wet_assist_safety_ok" in climate_block
+
+    block_reason = controls[
+        controls.index("} else if(!any_mister_wet_allowed)") : controls.index("} else if(irrigation_block)")
+    ]
+    assert "if(climate_wet_assist_demand)" in block_reason
+    assert 'snprintf(moisture_block_reason, sizeof(moisture_block_reason), "dew_margin")' in block_reason
+    assert 'snprintf(moisture_block_reason, sizeof(moisture_block_reason), "time_window")' in block_reason
+    assert block_reason.index("if(climate_wet_assist_demand)") < block_reason.index("direct_wet_min_temp_f")
 
     watchdog = controls[
         controls.index("auto direct_wet_relay_watchdog") : controls.index("direct_wet_relay_watchdog();")
