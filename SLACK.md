@@ -26,6 +26,25 @@ Hermes is the production Iris planner gateway. It does not monitor Slack directl
 
 OpenClaw is the operator-facing assistant/listener for Iris Slack. The expected OpenClaw auth profiles for `iris` and `iris-planner` are `openai-codex:jason@verdify.ai`, default model `openai-codex/gpt-5.5`, fallback `vllm/gemma4-26b`. OpenClaw should use the Iris Slack app token from the configured local token file and either Socket Mode or the MCP `slack_ops` tool for greenhouse operations.
 
+## Current Runtime State
+
+As of 2026-05-25, OpenClaw is the only agent runtime confirmed to monitor and respond directly in `#greenhouse`. The active OpenClaw Slack connector is Socket Mode, not the HTTP Events API. It reads:
+
+- Bot token: `/etc/verdify/slack/iris_slack_bot_token.txt`
+- App token: `/etc/verdify/slack/iris_slack_app_token.txt`
+- Channel: `C0ANVVAPLD6`
+- Per-channel mention policy: `requireMention=false`
+
+The OpenClaw gateway reports Slack as enabled, configured, running, connected, and healthy. `iris` and `iris-planner` both use `openai-codex:jason@verdify.ai` with `openai-codex/gpt-5.5`; stale `jason@vallery.net` auth profiles are not present in the active OpenClaw config or per-agent auth stores.
+
+Live Slack tests on 2026-05-25:
+
+- Shared config/Web API smoke posted to Slack as `username=Iris`, `icon=:seedling:`, `bot_id=B0ANY7P8PR6`, `ts=1779744739.013619`.
+- OpenClaw `iris` delivered `[smoke] OpenClaw iris Slack delivery OK 2026-05-25` via `openai-codex/gpt-5.5`, `bot_id=B0ANY7P8PR6`, `ts=1779745414.906819`.
+- OpenClaw `iris-planner` delivered `[smoke] OpenClaw iris-planner Slack delivery OK 2026-05-25` via `openai-codex/gpt-5.5`, `bot_id=B0ANY7P8PR6`, `ts=1779745462.607289`.
+
+OpenClaw outbound delivery uses the same Iris Slack bot token, but its default send path does not set Slack `username` or `icons` on the message payload. For OpenClaw posts to display as Iris, the Slack app/bot display name itself must be Iris or OpenClaw delivery must be extended/configured to pass the shared identity fields.
+
 ## Slack Integration Points
 
 | Source | Trigger | Destination | Config path | Notes |
