@@ -66,6 +66,11 @@ if [[ ! "${climate_age:-}" =~ ^[0-9]+$ || "$climate_age" -gt 300 ]]; then
 fi
 pass "Climate telemetry fresh (${climate_age}s)"
 
+action_log_table="$("${DB[@]}" "SELECT CASE WHEN to_regclass('public.climate_action_log') IS NULL THEN 0 ELSE 1 END" | tr -d '[:space:]')"
+if [[ "$action_log_table" != "1" ]]; then
+    guard_or_fail "Climate action log table missing; no firmware OTA without controller-decision proof"
+fi
+
 action_age="$("${DB[@]}" "SELECT COALESCE(EXTRACT(EPOCH FROM now() - max(ts))::int, 2147483647) FROM climate_action_log" | tr -d '[:space:]')"
 if [[ ! "${action_age:-}" =~ ^[0-9]+$ || "$action_age" -gt 300 ]]; then
     guard_or_fail "Climate action log stale or missing (${action_age:-no data}s); no firmware OTA without fresh controller-decision proof"

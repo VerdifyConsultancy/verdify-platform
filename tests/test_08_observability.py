@@ -591,6 +591,8 @@ class TestContractDriftGuardrails:
         assert "No last-good rollback artifact" in preflight
         assert "Climate telemetry stale or missing" in preflight
         assert "fresh controller inputs" in preflight
+        assert "to_regclass('public.climate_action_log')" in preflight
+        assert "Climate action log table missing" in preflight
         assert "Climate action log stale or missing" in preflight
         assert "fresh controller-decision proof" in preflight
         assert "FIRMWARE_OTA_FREEZE_OVERRIDE_REASON" in preflight
