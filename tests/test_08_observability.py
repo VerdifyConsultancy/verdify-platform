@@ -630,6 +630,30 @@ class TestContractDriftGuardrails:
             assert "jsonb_typeof(relay_truth)" in body, f"{label} must reject non-object relay_truth"
             assert "'{}'::jsonb" in body, f"{label} must reject empty relay_truth"
 
+    def test_climate_authority_post_deploy_proof_target_gates_ota(self):
+        makefile = (REPO_ROOT / "Makefile").read_text()
+        script = (REPO_ROOT / "scripts" / "validate-climate-authority-post-deploy.sh").read_text()
+
+        assert "climate-authority-post-deploy-proof-plan:" in makefile
+        assert "climate-authority-post-deploy-proof:" in makefile
+        assert "bash scripts/validate-climate-authority-post-deploy.sh" in makefile
+        assert "does not restart services or run OTA" in makefile
+        assert "Wait at least 120 seconds" in makefile
+        assert "Only after that proof passes should an operator consider make firmware-deploy" in makefile
+
+        for required_command in (
+            "bash scripts/health-check.sh",
+            'curl -fsS "$API_HEALTH_URL"',
+            "bash scripts/validate-plan-coverage.sh",
+            "scripts/audit-climate-intent-contract.py",
+            "bash scripts/firmware-deploy-preflight.sh",
+        ):
+            assert required_command in script
+        assert "climate_action_log_proof_missing" in script
+        assert "service_climate_action_log" in script
+        assert "climate_action_log_age_seconds" in script
+        assert "does not restart services and does not flash firmware" in script
+
     def test_public_home_metrics_and_site_publish_have_traffic_backpressure_guards(self):
         api_source = (REPO_ROOT / "api" / "main.py").read_text()
         rebuild_source = (REPO_ROOT / "scripts" / "rebuild-site.sh").read_text()
