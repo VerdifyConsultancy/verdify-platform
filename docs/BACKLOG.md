@@ -33,6 +33,14 @@ Current posture:
   low-target-high bands; AI receives those targets as read-only context and
   owns bounded tactical forecast-aware intent, historical priors, and resource
   posture.
+- **ClimateIntent closeout state:** GitHub issue
+  [#8](https://github.com/VerdifyConsultancy/verdify-platform/issues/8)
+  tracks the current rollout closeout. As of 2026-05-25 15:46 MDT, platform
+  PR #4 and planner PR `verdify-planner#3` are open, non-draft, mergeable,
+  and validated; firmware hardening is preserved in draft PR #10. Live health
+  is green after the `/mnt/agents` share repair, but global closeout remains
+  open until coordinator-approved merges, service restarts/deploy, and a final
+  post-deploy health proof are complete.
 - **Climate-control sprint shipped:** the
   [`Climate Authority Sprint Plan`](climate-authority-sprint-plan-2026-05-24.md)
   closed the 2026-05-24 live gap where `VENT_COOL_MIST_ASSIST` was selected
