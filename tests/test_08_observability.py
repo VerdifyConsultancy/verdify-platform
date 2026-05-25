@@ -1429,6 +1429,10 @@ class TestClimateIntentControllerObservability:
         legacy_prefix = "climate_" + "s" + "hadow"
         assert legacy_prefix not in controls
         assert legacy_prefix not in hardware
+        assert "climate_diag_republish" in controls
+        assert ">= 60000UL" in controls
+        assert "last_climate_diag_publish_ms = climate_diag_now_ms" in controls
+        assert controls.count("|| climate_diag_republish") >= len(self.CLIMATE_KEYS)
         for key in self.CLIMATE_KEYS:
             assert f"id: gh_{key}" in hardware
             assert f"id(gh_{key}).publish_state(" in controls
