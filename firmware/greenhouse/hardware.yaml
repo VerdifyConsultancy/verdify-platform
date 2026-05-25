@@ -384,6 +384,13 @@ switch:
       mode: OUTPUT
       inverted: true
     restore_mode: RESTORE_DEFAULT_OFF
+    on_turn_on:
+      - lambda: |-
+          if(!id(water_controller_actuating)) {
+            id(west_wall_mister).turn_off();
+            ESP_LOGE("irrig","Blocked non-controller west clean-mister relay ON");
+            return;
+          }
 
   - platform: gpio
     id: west_wall_mister_fertilized
@@ -452,6 +459,13 @@ switch:
       mode: OUTPUT
       inverted: true
     restore_mode: RESTORE_DEFAULT_OFF
+    on_turn_on:
+      - lambda: |-
+          if(!id(water_controller_actuating)) {
+            id(south_wall_mister).turn_off();
+            ESP_LOGE("irrig","Blocked non-controller south clean-mister relay ON");
+            return;
+          }
 
   - platform: gpio
     id: wall_drips
@@ -462,6 +476,13 @@ switch:
       mode: OUTPUT
       inverted: true
     restore_mode: RESTORE_DEFAULT_OFF
+    on_turn_on:
+      - lambda: |-
+          if(!id(water_controller_actuating)) {
+            id(wall_drips).turn_off();
+            ESP_LOGE("irrig","Blocked non-controller wall clean-drip relay ON");
+            return;
+          }
 
   - platform: gpio
     id: center_mister
@@ -472,6 +493,13 @@ switch:
       mode: OUTPUT
       inverted: true
     restore_mode: RESTORE_DEFAULT_OFF
+    on_turn_on:
+      - lambda: |-
+          if(!id(water_controller_actuating)) {
+            id(center_mister).turn_off();
+            ESP_LOGE("irrig","Blocked non-controller center clean-mister relay ON");
+            return;
+          }
 
   - platform: gpio
     id: center_drips_fertilized
@@ -511,6 +539,13 @@ switch:
       mode: OUTPUT
       inverted: true
     restore_mode: RESTORE_DEFAULT_OFF
+    on_turn_on:
+      - lambda: |-
+          if(!id(water_controller_actuating)) {
+            id(center_drips).turn_off();
+            ESP_LOGE("irrig","Blocked non-controller center clean-drip relay ON");
+            return;
+          }
 
   - platform: gpio
     id: wall_drips_fertilized

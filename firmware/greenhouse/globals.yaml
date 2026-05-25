@@ -763,6 +763,14 @@ globals:
     restore_value: no
     initial_value: 'false'
 
+  # True only while the climate controller or irrigation scheduler is
+  # intentionally changing clean-water drip/mister relays. Relay-level guards
+  # use this to reject direct HA/manual clean-water actuation.
+  - id: water_controller_actuating
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
   - id: irrig_wall_cycle_count
     type: int
     restore_value: no

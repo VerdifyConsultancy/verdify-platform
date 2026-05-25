@@ -2223,6 +2223,82 @@ def test_fert_master_valve_is_wired_and_interlocked_with_fert_relays():
     assert 'sync_fert_master("flush-done")' in controls
 
 
+def test_clean_water_relays_reject_direct_on_and_keep_controller_paths():
+    hardware = Path("firmware/greenhouse/hardware.yaml").read_text()
+    controls = Path("firmware/greenhouse/controls.yaml").read_text()
+    globals_yaml = Path("firmware/greenhouse/globals.yaml").read_text()
+    tunables_yaml = Path("firmware/greenhouse/tunables.yaml").read_text()
+
+    assert "id: water_controller_actuating" in globals_yaml
+    assert "reject direct HA/manual clean-water actuation" in globals_yaml
+
+    for relay_id, relay_name in (
+        ("west_wall_mister", "west clean-mister"),
+        ("south_wall_mister", "south clean-mister"),
+        ("wall_drips", "wall clean-drip"),
+        ("center_mister", "center clean-mister"),
+        ("center_drips", "center clean-drip"),
+    ):
+        relay_start = hardware.index(f"\n    id: {relay_id}\n")
+        relay_end = hardware.find("\n  - platform: gpio", relay_start + 1)
+        relay_block = hardware[relay_start : relay_end if relay_end != -1 else len(hardware)]
+        assert "if(!id(water_controller_actuating))" in relay_block
+        assert f"id({relay_id}).turn_off();" in relay_block
+        assert f"Blocked non-controller {relay_name} relay ON" in relay_block
+
+    climate_zone_start = controls.index("auto turn_on_zone =")
+    climate_zone_end = controls.index("auto turn_off_all_misters", climate_zone_start)
+    climate_zone_block = controls[climate_zone_start:climate_zone_end]
+    assert "id(water_controller_actuating) = true;" in climate_zone_block
+    assert "id(water_controller_actuating) = false;" in climate_zone_block
+    for relay_turn_on in (
+        "id(south_wall_mister).turn_on();",
+        "id(west_wall_mister).turn_on();",
+        "id(center_mister).turn_on();",
+    ):
+        assert relay_turn_on in climate_zone_block
+        assert climate_zone_block.index("id(water_controller_actuating) = true;") < climate_zone_block.index(
+            relay_turn_on
+        )
+        assert climate_zone_block.index(relay_turn_on) < climate_zone_block.index(
+            "id(water_controller_actuating) = false;"
+        )
+
+    job_start = controls[
+        controls.index("// Open the fert master before any fertilized drip/mister relay.") : controls.index(
+            'sync_fert_master("job-start")'
+        )
+    ]
+    assert "id(water_controller_actuating) = true;" in job_start
+    assert "id(water_controller_actuating) = false;" in job_start
+    for relay_turn_on in (
+        "case 1: id(wall_drips).turn_on();",
+        "case 3: id(center_drips).turn_on();",
+    ):
+        assert relay_turn_on in job_start
+        assert job_start.index("id(water_controller_actuating) = true;") < job_start.index(relay_turn_on)
+        assert job_start.index(relay_turn_on) < job_start.index("id(water_controller_actuating) = false;")
+
+    flush_start = controls.index("// Flush is a separate rising edge on the matching clean relay")
+    flush_end = controls.index("const char* flush_name", flush_start)
+    flush_block = controls[flush_start:flush_end]
+    assert "id(water_controller_actuating) = true;" in flush_block
+    assert "id(water_controller_actuating) = false;" in flush_block
+    for relay_turn_on in (
+        "id(south_wall_mister).turn_on();",
+        "id(west_wall_mister).turn_on();",
+        "id(center_drips).turn_on();",
+        "id(wall_drips).turn_on();",
+    ):
+        assert relay_turn_on in flush_block
+        assert flush_block.index("id(water_controller_actuating) = true;") < flush_block.index(relay_turn_on)
+        assert flush_block.index(relay_turn_on) < flush_block.index("id(water_controller_actuating) = false;")
+
+    manual_buttons = tunables_yaml[tunables_yaml.index("# ─── IRRIGATION MANUAL TRIGGER BUTTONS") :]
+    assert ".turn_on()" not in manual_buttons
+    assert "id(irrig_queue) |=" in manual_buttons
+
+
 def test_irrigation_schedule_persists_and_is_readbacked():
     greenhouse_yaml = Path("firmware/greenhouse.yaml").read_text()
     globals_yaml = Path("firmware/greenhouse/globals.yaml").read_text()

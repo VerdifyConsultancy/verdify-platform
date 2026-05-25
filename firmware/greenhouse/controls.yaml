@@ -1032,9 +1032,11 @@ interval:
                 // sprint-7: per-zone cycle counters at the rising edge
                 //          (turn_on_zone is always preceded by all-off,
                 //          so every call is an off→on transition).
+                id(water_controller_actuating) = true;
                 if(zone == 1)      { id(south_wall_mister).turn_on(); id(last_fire_south_ms)  = now_ms; id(cnt_mister_south_today)  += 1; }
                 else if(zone == 2) { id(west_wall_mister).turn_on();  id(last_fire_west_ms)   = now_ms; id(cnt_mister_west_today)   += 1; }
                 else if(zone == 3) { id(center_mister).turn_on();     id(last_fire_center_ms) = now_ms; id(cnt_mister_center_today) += 1; }
+                id(water_controller_actuating) = false;
                 id(mister_pulse_zone) = zone;
                 id(mister_selected_zone) = zone;
               };
@@ -2086,6 +2088,7 @@ interval:
               // matches equipment_state's rising-edge count for the
               // underlying relay. Fert/clean increment the same zone
               // counter (audit granularity is per-zone).
+              id(water_controller_actuating) = true;
               switch(job){
                 case 1: id(wall_drips).turn_on();              id(cnt_drip_wall_today)   += 1; break;
                 case 2: id(wall_drips_fertilized).turn_on();   id(cnt_drip_wall_today)   += 1; break;
@@ -2094,6 +2097,7 @@ interval:
                 case 7: id(south_wall_mister_fertilized).turn_on(); id(cnt_mister_south_today) += 1; break;
                 case 8: id(west_wall_mister_fertilized).turn_on();  id(cnt_mister_west_today)  += 1; break;
               }
+              id(water_controller_actuating) = false;
               if(is_fert) id(fert_controller_actuating) = false;
               sync_fert_master("job-start");
 
@@ -2139,10 +2143,12 @@ interval:
                 id(irrig_timer_ms) = uint32_t(flush_min) * 60000UL;
                 // Flush is a separate rising edge on the matching clean relay,
                 // so equipment_state and firmware cycle counters stay aligned.
+                id(water_controller_actuating) = true;
                 if(is_south_mister)      { id(south_wall_mister).turn_on(); id(cnt_mister_south_today) += 1; }
                 else if(is_west_mister)  { id(west_wall_mister).turn_on();  id(cnt_mister_west_today)  += 1; }
                 else if(is_center)       { id(center_drips).turn_on();      id(cnt_drip_center_today)  += 1; }
                 else                     { id(wall_drips).turn_on();        id(cnt_drip_wall_today)    += 1; }
+                id(water_controller_actuating) = false;
                 const char* flush_name = is_south_mister ? "SOUTH_MISTER" : is_west_mister ? "WEST_MISTER" : is_center ? "CENTER" : "WALL";
                 ESP_LOGI("irrig","FLUSH %s — %dmin", flush_name, flush_min);
               } else {
