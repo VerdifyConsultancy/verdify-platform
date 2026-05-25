@@ -470,11 +470,22 @@ interval:
 
           const bool sensor_fault_relay_lock = mode == SENSOR_FAULT;
 
+          auto fog_safety_block_reason = [&]() -> const char* {
+            if(dew_margin_f(sensor_in) < setpts.fog_stress_min_dew_margin_f) return "dew_margin";
+            if(!fog_hour_permitted(sensor_in, setpts)) return "time_window";
+            if(sensor_in.rh_pct > setpts.fog_rh_ceiling) return "rh_ceiling";
+            if(sensor_in.temp_f < setpts.fog_min_temp) return "temp_low";
+            return "";
+          };
+          const bool manual_fog_requested = id(manual_fog_active);
+          const char* manual_fog_safety_block = fog_safety_block_reason();
+
           // Manual overrides (ESP32-only, not in header). They are still
-          // below the sensor-fault rail: fog/fan/vent need plausible control
-          // inputs unless a separate hardwired safety fallback owns the load.
+          // below the sensor-fault and fog-safety rails: fog/fan/vent need
+          // plausible control inputs unless a separate hardwired safety
+          // fallback owns the load.
           if(id(manual_fan_active) && !sensor_fault_relay_lock){ willFan1 = true; willFan2 = true; willVent = true; }
-          if(id(manual_fog_active) && !sensor_fault_relay_lock){ willFog = true; }
+          if(manual_fog_requested && !sensor_fault_relay_lock && manual_fog_safety_block[0] == '\0'){ willFog = true; }
           if(id(vent_lock_active) && !id(manual_fan_active) && mode != SAFETY_COOL){
             willFan1 = false;
             willFan2 = false;
@@ -1425,6 +1436,8 @@ interval:
               snprintf(fog_block_reason, sizeof(fog_block_reason), "irrigation");
             } else if(climate_water_budget_block) {
               snprintf(fog_block_reason, sizeof(fog_block_reason), "resource_budget");
+            } else if(manual_fog_requested && manual_fog_safety_block[0] != '\0') {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "%s", manual_fog_safety_block);
             } else if(id(fog_rly)->state) {
               snprintf(fog_block_reason, sizeof(fog_block_reason), "served");
             } else if(of.fog_gate_window) {

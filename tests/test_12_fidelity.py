@@ -2305,7 +2305,9 @@ def test_leak_detected_locks_water_actuators():
 def test_occupancy_inhibit_is_final_fog_force_off():
     controls = Path("firmware/greenhouse/controls.yaml").read_text()
 
-    manual_fog = "if(id(manual_fog_active) && !sensor_fault_relay_lock){ willFog = true; }"
+    manual_fog = (
+        "if(manual_fog_requested && !sensor_fault_relay_lock && manual_fog_safety_block[0] == '\\0'){ willFog = true; }"
+    )
     occupancy_gate = "const bool occupancy_moisture_block = id(occupancy_inhibit_enabled) && id(greenhouse_occupied);"
     assert manual_fog in controls
     assert occupancy_gate in controls
@@ -2329,6 +2331,32 @@ def test_occupancy_inhibit_is_final_fog_force_off():
     fog_end = controls.index("static char last_fog_block_reason", fog_start)
     fog_block = controls[fog_start:fog_end]
     assert fog_block.index("occupancy_moisture_block") < fog_block.index("id(fog_rly)->state")
+
+
+def test_manual_fog_cannot_bypass_final_fog_safety_rails():
+    controls = Path("firmware/greenhouse/controls.yaml").read_text()
+
+    manual_start = controls.index("auto fog_safety_block_reason")
+    manual_end = controls.index("/**************** 11a", manual_start)
+    manual_block = controls[manual_start:manual_end]
+
+    assert 'return "dew_margin";' in manual_block
+    assert 'return "time_window";' in manual_block
+    assert 'return "rh_ceiling";' in manual_block
+    assert 'return "temp_low";' in manual_block
+    assert "const bool manual_fog_requested = id(manual_fog_active);" in manual_block
+    assert "const char* manual_fog_safety_block = fog_safety_block_reason();" in manual_block
+    assert (
+        "if(manual_fog_requested && !sensor_fault_relay_lock && manual_fog_safety_block[0] == '\\0'){ willFog = true; }"
+        in manual_block
+    )
+
+    fog_start = controls.index("char fog_block_reason")
+    fog_end = controls.index("static char last_fog_block_reason", fog_start)
+    fog_block = controls[fog_start:fog_end]
+    assert "manual_fog_requested && manual_fog_safety_block[0] != '\\0'" in fog_block
+    assert 'snprintf(fog_block_reason, sizeof(fog_block_reason), "%s", manual_fog_safety_block)' in fog_block
+    assert fog_block.index("manual_fog_requested") < fog_block.index("id(fog_rly)->state")
 
 
 def test_fog_respects_conflict_and_budget_before_reporting_served():
@@ -2369,7 +2397,7 @@ def test_sensor_fault_is_final_relay_lock_above_manual_overrides():
 
     assert "const bool sensor_fault_relay_lock = mode == SENSOR_FAULT;" in controls
     assert "if(id(manual_fan_active) && !sensor_fault_relay_lock)" in controls
-    assert "if(id(manual_fog_active) && !sensor_fault_relay_lock)" in controls
+    assert "if(manual_fog_requested && !sensor_fault_relay_lock && manual_fog_safety_block[0] == '\\0')" in controls
     assert "const bool fan_requires_vent = !sensor_fault_relay_lock && mode != SAFETY_HEAT" in controls
     assert "const bool force_heat_off = heat_air_exchange_interlock_active || sensor_fault_relay_lock;" in controls
 
