@@ -59,6 +59,40 @@ check "Diagnostics: ${da}s ago (<300s)" "$([ "$da" -lt 300 ] && echo true || ech
 aa=$($DB "SELECT EXTRACT(EPOCH FROM now()-max(ts))::int FROM climate_action_log;" | tr -d ' ')
 check "Climate action log: ${aa:-no data}s ago (<300s)" "$([ -n "$aa" ] && [ "$aa" -lt 300 ] && echo true || echo "stale: ${aa:-no data}s")"
 
+ap_raw=$($DB "
+WITH latest AS (
+  SELECT *
+    FROM climate_action_log
+   ORDER BY ts DESC
+   LIMIT 1
+)
+SELECT COALESCE(
+  (
+    SELECT concat_ws(',',
+      CASE WHEN climate_action IS NULL OR climate_action = '' THEN 'climate_action' END,
+      CASE WHEN priority_axis IS NULL OR priority_axis = '' THEN 'priority_axis' END,
+      CASE WHEN climate_intent_version IS NULL OR climate_intent_version = '' THEN 'climate_intent_version' END,
+      CASE WHEN temp_low_f IS NULL THEN 'temp_low_f' END,
+      CASE WHEN temp_target_f IS NULL THEN 'temp_target_f' END,
+      CASE WHEN temp_high_f IS NULL THEN 'temp_high_f' END,
+      CASE WHEN vpd_low_kpa IS NULL THEN 'vpd_low_kpa' END,
+      CASE WHEN vpd_target_kpa IS NULL THEN 'vpd_target_kpa' END,
+      CASE WHEN vpd_high_kpa IS NULL THEN 'vpd_high_kpa' END,
+      CASE WHEN temp_target_delta_f IS NULL THEN 'temp_target_delta_f' END,
+      CASE WHEN vpd_target_delta_kpa IS NULL THEN 'vpd_target_delta_kpa' END,
+      CASE WHEN temp_band_error_f IS NULL THEN 'temp_band_error_f' END,
+      CASE WHEN vpd_band_error_kpa IS NULL THEN 'vpd_band_error_kpa' END,
+      CASE WHEN relay_truth IS NULL OR jsonb_typeof(relay_truth) <> 'object' OR relay_truth = '{}'::jsonb THEN 'relay_truth' END
+    )
+    FROM latest
+  ),
+  'missing'
+);" 2>/dev/null)
+ap_rc=$?
+ap=$(printf '%s' "$ap_raw" | tr -d '[:space:]')
+if [ "$ap_rc" -ne 0 ]; then ap="query_failed"; fi
+check "Climate action proof complete" "$([ -z "$ap" ] && echo true || echo "incomplete: $ap")"
+
 fc=$($DB "SELECT count(*) FROM weather_forecast WHERE ts > now();" | tr -d ' ')
 check "Future forecasts: $fc rows" "$([ "$fc" -gt 0 ] && echo true || echo "none")"
 

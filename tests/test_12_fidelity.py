@@ -2033,26 +2033,39 @@ def test_health_checks_require_climate_action_log_freshness():
     liveness = (REPO_ROOT / "scripts" / "liveness-check.sh").read_text()
 
     assert "climate_action_log_age_seconds" in api
+    assert "CLIMATE_ACTION_PROOF_MISSING_SQL" in api
+    assert "climate_action_log_proof_missing" in api
     assert "FROM climate_action_log" in api
     assert "service_climate_action_log" in api
     assert "if age is None or age > 300:" in api
     assert "isinstance(climate_age, (int, float))" in api
     assert "isinstance(action_age, (int, float))" in api
     assert 'checks["service_climate_action_log"] = (' in api
-    assert '"ok" if isinstance(action_age, (int, float)) and action_age < 300 else "stale"' in api
+    assert "and action_age < 300 and not action_proof_missing else" in api
     assert api.count('"check_name": "climate_action_log_freshness"') == 2
     assert api.count('"controller decision/action snapshot age seconds"') == 2
+    assert api.count('"check_name": "climate_action_log_proof_complete"') == 2
+    assert api.count('"latest controller proof row has graphable target deltas and relay truth"') == 2
+    assert api.count("missing fields: {climate_action_proof_missing}") == 2
     assert 'if not any(r["check_name"] == "climate_action_log_freshness" for r in check_rows)' in api
+    assert 'if not any(r["check_name"] == "climate_action_log_proof_complete" for r in check_rows)' in api
 
     assert "FROM climate_action_log" in health
     assert "Climate action log:" in health
     assert "<300s" in health
     assert "stale: ${aa:-no data}s" in health
+    assert "Climate action proof complete" in health
+    assert "incomplete: $ap" in health
+    assert 'ap="query_failed"' in health
 
     assert "ACTION_AGE=" in liveness
+    assert "ACTION_PROOF_MISSING=" in liveness
     assert "FROM climate_action_log" in liveness
     assert 'check "climate-action-log"' in liveness
+    assert 'check "climate-action-proof"' in liveness
     assert "stale ${ACTION_AGE:-null}s" in liveness
+    assert "incomplete ${ACTION_PROOF_MISSING:-missing}" in liveness
+    assert 'ACTION_PROOF_MISSING="query_failed"' in liveness
 
 
 def test_climate_action_log_treats_served_wet_assist_as_allowed():
