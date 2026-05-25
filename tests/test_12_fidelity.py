@@ -2399,6 +2399,34 @@ def test_manual_fan_cannot_open_vent_during_safety_heat():
     assert "willVent = true; }" not in manual_block.replace("if(mode != SAFETY_HEAT){ willVent = true; }", "")
 
 
+def test_manual_climate_buttons_are_flag_only_controller_path():
+    greenhouse = Path("firmware/greenhouse.yaml").read_text()
+
+    dashboard_start = greenhouse.index("# ───────────────────── DASHBOARD BUTTONS")
+    dashboard_end = greenhouse.index("# END OF FILE", dashboard_start)
+    dashboard = greenhouse[dashboard_start:dashboard_end]
+
+    assert "control loop remains the only relay actuator path" in dashboard
+    assert "id(manual_fan_active) = true;" in dashboard
+    assert "id(manual_fog_active) = true;" in dashboard
+    assert "id(vent_lock_active) = true;" in dashboard
+
+    for forbidden in (
+        "switch.turn_off: fan1_rly",
+        "switch.turn_off: fan2_rly",
+        "switch.turn_off: fog_rly",
+        "switch.turn_off: vent_rly",
+        "id(fan1_rly).turn_on()",
+        "id(fan2_rly).turn_on()",
+        "id(fog_rly).turn_on()",
+        "id(vent_rly).turn_off()",
+        "id(fan1_rly).turn_off()",
+        "id(fan2_rly).turn_off()",
+        "id(fog_rly).turn_off()",
+    ):
+        assert forbidden not in dashboard
+
+
 def test_fog_respects_conflict_and_budget_before_reporting_served():
     controls = Path("firmware/greenhouse/controls.yaml").read_text()
 

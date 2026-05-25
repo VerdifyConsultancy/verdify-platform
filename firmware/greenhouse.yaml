@@ -547,8 +547,6 @@ button:
             lambda: "return id(manual_fan_active);"
           then:
             - script.stop: manual_fan_burst
-            - switch.turn_off: fan1_rly
-            - switch.turn_off: fan2_rly
             - lambda: "id(manual_fan_active) = false;"
           else:
             - script.execute: manual_fan_burst
@@ -577,7 +575,6 @@ button:
             lambda: "return id(manual_fog_active);"
           then:
             - script.stop: manual_fog_burst
-            - switch.turn_off: fog_rly
             - lambda: "id(manual_fog_active) = false;"
           else:
             - script.execute: manual_fog_burst
@@ -594,33 +591,27 @@ script:
           id(sw_greenhouse_occupied).publish_state(false);
           ESP_LOGW("occupancy","Local button override: occupancy ignored for 60 minutes");
 
-  # Manual fan burst script.  Runs both fans for a user-defined number of minutes
+  # Manual fan burst script. Requests both fans for a user-defined number of
+  # minutes; the control loop remains the only relay actuator path.
   - id: manual_fan_burst
     mode: restart
     then:
       - lambda: |
           id(manual_fan_active) = true;
-          int minutes = id(fan_burst_minutes);
-          // Cap to 60 minutes for safety; if 0 or > 60, treat as 60
-          if(minutes <= 0 || minutes > 60) minutes = 60;
-          id(fan1_rly).turn_on();
-          id(fan2_rly).turn_on();
       - delay: !lambda |-
           int minutes = id(fan_burst_minutes);
           if(minutes <= 0 || minutes > 60) minutes = 60;
           return (uint32_t)minutes * 60000UL;
       - lambda: |
-          id(fan1_rly).turn_off();
-          id(fan2_rly).turn_off();
           id(manual_fan_active) = false;
 
-  # Vent bypass timer.  Locks out vent for user-defined minutes
+  # Vent bypass timer. Requests a vent lockout for user-defined minutes; safety
+  # rails in the control loop decide whether the vent may actually close.
   - id: vent_bypass_timer
     mode: restart
     then:
       - lambda: |
           id(vent_lock_active) = true;
-          id(vent_rly).turn_off();
       - delay: !lambda |-
           int minutes = id(vent_bypass_minutes);
           if(minutes <= 0 || minutes > 30) minutes = 30;
@@ -628,21 +619,18 @@ script:
       - lambda: |
           id(vent_lock_active) = false;
 
-  # Manual fog burst script.  Runs fog fan for a user-defined number of minutes
+  # Manual fog burst script. Requests fog for a user-defined number of minutes;
+  # the control loop remains the only relay actuator path.
   - id: manual_fog_burst
     mode: restart
     then:
       - lambda: |
           id(manual_fog_active) = true;
-          int minutes = id(fog_burst_minutes);
-          if(minutes <= 0 || minutes > 60) minutes = 60;
-          id(fog_rly).turn_on();
       - delay: !lambda |-
           int minutes = id(fog_burst_minutes);
           if(minutes <= 0 || minutes > 60) minutes = 60;
           return (uint32_t)minutes * 60000UL;
       - lambda: |
-          id(fog_rly).turn_off();
           id(manual_fog_active) = false;
 
 ###############################################################################
