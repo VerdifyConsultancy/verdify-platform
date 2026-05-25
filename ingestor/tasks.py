@@ -1121,12 +1121,35 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
         # above the active band where it is physically contradictory.
         relay_context = await conn.fetchrow(
             """
-            SELECT temp_avg, vpd_avg, sp_temp_high, sp_vpd_low, sp_vpd_high,
-                   heat1, heat2, vent, fan1, fan2, greenhouse_mode, ts
-              FROM v_greenhouse_state
-             WHERE ts >= now() - interval '10 minutes'
-             ORDER BY ts DESC
-             LIMIT 1
+            WITH latest_climate AS (
+                SELECT ts, temp_avg, vpd_avg
+                  FROM climate
+                 WHERE ts >= now() - interval '10 minutes'
+                   AND temp_avg IS NOT NULL
+                   AND vpd_avg IS NOT NULL
+                 ORDER BY ts DESC
+                 LIMIT 1
+            )
+            SELECT c.temp_avg,
+                   c.vpd_avg,
+                   fn_setpoint_at('temp_high', c.ts) AS sp_temp_high,
+                   fn_setpoint_at('vpd_low', c.ts) AS sp_vpd_low,
+                   fn_setpoint_at('vpd_high', c.ts) AS sp_vpd_high,
+                   fn_equip_at('heat1', c.ts) AS heat1,
+                   fn_equip_at('heat2', c.ts) AS heat2,
+                   fn_equip_at('vent', c.ts) AS vent,
+                   fn_equip_at('fan1', c.ts) AS fan1,
+                   fn_equip_at('fan2', c.ts) AS fan2,
+                   (
+                       SELECT ss.value
+                         FROM system_state ss
+                        WHERE ss.entity = 'greenhouse_state'
+                          AND ss.ts <= c.ts
+                        ORDER BY ss.ts DESC
+                        LIMIT 1
+                   ) AS greenhouse_mode,
+                   c.ts
+              FROM latest_climate c
             """
         )
         for r in await conn.fetch(
@@ -1278,9 +1301,29 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
         row = await conn.fetchrow(
             """
             WITH recent AS (
-                SELECT *
-                  FROM v_greenhouse_state
-                 WHERE ts >= now() - interval '15 minutes'
+                SELECT c.ts,
+                       c.temp_avg,
+                       c.vpd_avg,
+                       c.outdoor_temp_f,
+                       c.outdoor_rh_pct,
+                       fn_setpoint_at('temp_high', c.ts) AS sp_temp_high,
+                       fn_setpoint_at('vpd_high', c.ts) AS sp_vpd_high,
+                       fn_equip_at('fog', c.ts) AS fog,
+                       fn_equip_at('mister_south', c.ts) AS mist_south,
+                       fn_equip_at('mister_west', c.ts) AS mist_west,
+                       fn_equip_at('mister_center', c.ts) AS mist_center,
+                       (
+                           SELECT ss.value
+                             FROM system_state ss
+                            WHERE ss.entity = 'greenhouse_state'
+                              AND ss.ts <= c.ts
+                            ORDER BY ss.ts DESC
+                            LIMIT 1
+                       ) AS greenhouse_mode
+                  FROM climate c
+                 WHERE c.ts >= now() - interval '15 minutes'
+                   AND c.temp_avg IS NOT NULL
+                   AND c.vpd_avg IS NOT NULL
             ),
             agg AS (
                 SELECT count(*)::int AS samples,
@@ -1351,9 +1394,30 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
         row = await conn.fetchrow(
             """
             WITH recent AS (
-                SELECT *
-                  FROM v_greenhouse_state
-                 WHERE ts >= now() - interval '30 minutes'
+                SELECT c.ts,
+                       c.temp_avg,
+                       c.vpd_avg,
+                       c.outdoor_temp_f,
+                       c.outdoor_rh_pct,
+                       c.solar_irradiance_w_m2,
+                       fn_setpoint_at('temp_high', c.ts) AS sp_temp_high,
+                       fn_setpoint_at('vpd_high', c.ts) AS sp_vpd_high,
+                       fn_equip_at('fog', c.ts) AS fog,
+                       fn_equip_at('mister_south', c.ts) AS mist_south,
+                       fn_equip_at('mister_west', c.ts) AS mist_west,
+                       fn_equip_at('mister_center', c.ts) AS mist_center,
+                       (
+                           SELECT ss.value
+                             FROM system_state ss
+                            WHERE ss.entity = 'greenhouse_state'
+                              AND ss.ts <= c.ts
+                            ORDER BY ss.ts DESC
+                            LIMIT 1
+                       ) AS greenhouse_mode
+                  FROM climate c
+                 WHERE c.ts >= now() - interval '30 minutes'
+                   AND c.temp_avg IS NOT NULL
+                   AND c.vpd_avg IS NOT NULL
             ),
             agg AS (
                 SELECT count(*)::int AS samples,

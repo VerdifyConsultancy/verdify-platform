@@ -713,6 +713,24 @@ def test_vpd_high_moisture_guard_context_avoids_greenhouse_state_latest_scan():
     assert "ORDER BY ts DESC\n             LIMIT 1" in body
 
 
+def test_alert_monitor_avoids_greenhouse_state_hot_path_scans():
+    import tasks
+
+    src = Path(tasks.__file__).read_text()
+    start = src.index("async def alert_monitor")
+    end = src.index("# 8. SETPOINT DISPATCHER", start)
+    body = src[start:end]
+
+    assert "FROM v_greenhouse_state" not in body
+    assert "FROM climate" in body
+    assert "fn_setpoint_at('temp_high', c.ts)" in body
+    assert "fn_equip_at('mister_center', c.ts)" in body
+
+    standalone = (Path(tasks.__file__).resolve().parent.parent / "scripts" / "alert-monitor.py").read_text()
+    assert "FROM v_greenhouse_state" not in standalone
+    assert "latest_climate AS" in standalone
+
+
 def test_mcp_set_tunable_treats_vpd_low_as_band_owned():
     """MCP should expose crop-band params as read-only context, not Tier 1
     tactical tuning. The dispatcher owns vpd_low through fn_band_setpoints().
