@@ -13,7 +13,10 @@ Owned by the [`firmware`](../agents/firmware.md) agent. Sprint counter is agent-
   fields without relay behavior change; `F-CI-5` planner/dispatcher bounded
   intent emission; `F-CI-6` 14-21 day shadow bake scorecard; `F-CI-7`
   behavior-changing firmware PR only if replay, invariants, shadow evidence,
-  coordinator reproduction, and freeze-rule gates pass.
+  coordinator reproduction, and freeze-rule gates pass. Initial `F-CI-1`
+  tooling lives behind `make climate-intent-shadow-report` and reads the
+  existing replay corpus only. First report:
+  [`docs/firmware-climate-intent-shadow-report-2026-05-24.md`](../firmware-climate-intent-shadow-report-2026-05-24.md).
 - [ ] **48-hour v2 bake + reboot forensics follow-through.** Behavior-changing OTA for `2026.4.27.2009.2b5f2a5` began at `2026-04-28 02:12:25 UTC`; a wrapper-only main redeploy later put `2026.4.27.2040.c1a6403` live at `2026-04-28 02:41:54 UTC`. Sensor-health is `PASS 27 / FAIL 0 / WARN 0`, open critical/high alerts are `0`, and there are no post-OTA `Guru/Panic` / `Task WDT` resets in the sampled window. Keep OTA freeze intact during the bake. Current evidence reframes the old "midday crash-loop" as broader JSON/API/crash-forensics work; see [`docs/firmware-v2-postdeploy-forensics-2026-04-27.md`](../firmware-v2-postdeploy-forensics-2026-04-27.md).
 - [ ] **Contract + alert drift guard PR.** `firmware/contracts-alert-drift` makes `vpd_low` explicitly dispatcher/band-owned, adds expected-firmware-version mismatch alerting, and adds static drift guards for firmware override tags, `sw_mister_closes_vent` routing, and MCP Tier 1 validation.
 
