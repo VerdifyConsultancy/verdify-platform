@@ -1,5 +1,12 @@
 # Firmware AI-Tunable Control Design - 2026-05-24
 
+> Status update: this note is retained as evidence and historical audit context.
+> The implementation target is now the stricter
+> [`Firmware Climate-Intent Controller Final Design`](firmware-climate-intent-controller-final-design-2026-05-24.md),
+> which uses a compact `ClimateIntent` surface and a deterministic
+> safety/temp/VPD/resource priority selector instead of expanding the
+> planner-facing relay-tunable surface.
+
 ## Purpose
 
 This note captures the firmware and planner changes that would make Verdify less

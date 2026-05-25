@@ -107,7 +107,7 @@ int main(int argc, char** argv) {
         in.temp_f = parse_float(get("temp_avg"), 70.0f);
         in.rh_pct = parse_float(get("rh_avg"), 50.0f);
         in.vpd_kpa = parse_float(get("vpd_avg"), 0.8f);
-        in.dew_point_f = parse_float(get("indoor_dew_point"), in.temp_f - 10.0f);
+        in.dew_point_f = parse_float(get("indoor_dew_point"), NAN);
         in.enthalpy_delta = parse_float(get("enthalpy_delta"), -5.0f);
         in.solar_w_m2 = parse_float(get("solar_irradiance_w_m2"), 0.0f);
         // zone vpds unavailable in this CSV; use avg
@@ -168,17 +168,12 @@ int main(int argc, char** argv) {
         if (!force_fsm || !*force_fsm || *force_fsm != '0') {
             sp.sw_fsm_controller_enabled = true;
         }
-        // Phase-2 preview hook: DWELL_ENABLED=1 env var flips the dwell-gate
-        // master switch + bumps temp_hysteresis to 2.0°F (the two bundled
-        // Phase-2 knobs). Default off — run with flag on to see projected
-        // whipsaw reduction against the same corpus/same setpoints.
-        static const bool dwell_preview_on = []{
-            const char* e = std::getenv("DWELL_ENABLED");
-            return e && *e && *e != '0';
-        }();
-        if (dwell_preview_on) {
+        // Production ESPHome locks the dwell gate ON before every control
+        // tick. Keep replay aligned by default; set REPLAY_EMIT_FORCE_DWELL=0
+        // only for explicit historical forensics.
+        const char* force_dwell = std::getenv("REPLAY_EMIT_FORCE_DWELL");
+        if (!force_dwell || !*force_dwell || *force_dwell != '0') {
             sp.sw_dwell_gate_enabled = true;
-            sp.temp_hysteresis = 2.0f;
         }
         // validate_setpoints applies firmware clamps
         validate_setpoints(sp);

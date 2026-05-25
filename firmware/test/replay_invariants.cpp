@@ -1,6 +1,6 @@
 /*
  * replay_invariants.cpp — Phase-0 bulletproof-firmware harness.
- * Reads extended replay CSV and runs the 16 invariants from invariants.h.
+ * Reads extended replay CSV and runs the 20 invariants from invariants.h.
  *
  * Sibling to replay_overrides.cpp (which replays evaluate_overrides counts).
  * This file focuses on the invariant suite; the dual-ref old-vs-new mode
@@ -164,7 +164,7 @@ int main(int argc, char** argv) {
         r.temp_f  = parse_float(get("temp_avg"), 70.0f);
         r.rh_pct  = parse_float(get("rh_avg"), 50.0f);
         r.vpd_kpa = parse_float(get("vpd_avg"), 0.8f);
-        r.dew_point_f = parse_float(get("indoor_dew_point"), r.temp_f - 10.0f);
+        r.dew_point_f = parse_float(get("indoor_dew_point"), NAN);
 
         r.outdoor_temp_f     = parse_float(get("outdoor_temp_f"), NAN);
         r.outdoor_rh_pct     = parse_float(get("outdoor_rh_pct"), NAN);
@@ -217,6 +217,10 @@ int main(int argc, char** argv) {
         const char* force_fsm = std::getenv("REPLAY_INVARIANTS_FORCE_FSM");
         if (!force_fsm || *force_fsm != '0') {
             sp.sw_fsm_controller_enabled = true;
+        }
+        const char* force_dwell = std::getenv("REPLAY_INVARIANTS_FORCE_DWELL");
+        if (!force_dwell || *force_dwell != '0') {
+            sp.sw_dwell_gate_enabled = true;
         }
         validate_setpoints(sp);
 
@@ -278,6 +282,7 @@ int main(int argc, char** argv) {
             r.greenhouse_state = MODE_NAMES[(int)mode];
         }
         r.mode_reason = state.last_mode_reason ? state.last_mode_reason : "";
+        r.dry_override_active = state.dry_override_active;
         r.summer_vent_active = state.override_summer_vent;
         r.vent_mist_assist_active = state.vent_mist_assist_active;
 
@@ -287,10 +292,11 @@ int main(int argc, char** argv) {
         r.eq_fan2 = out.fan2 ? 1 : 0;
         r.eq_heat1 = out.heat1 ? 1 : 0;
         r.eq_heat2 = out.heat2 ? 1 : 0;
-        const bool any_mister = (mode == SEALED_MIST) || state.vent_mist_assist_active;
+        const bool any_mister = wet_dew_margin_safe(in)
+            && ((mode == SEALED_MIST) || state.vent_mist_assist_active);
         r.eq_mister_south = any_mister ? 1 : 0;
-        r.eq_mister_west = (mode == SEALED_MIST && state.mist_stage >= MIST_S2) ? 1 : 0;
-        r.eq_mister_center = (mode == SEALED_MIST && state.mist_stage >= MIST_S2) ? 1 : 0;
+        r.eq_mister_west = (any_mister && mode == SEALED_MIST && state.mist_stage >= MIST_S2) ? 1 : 0;
+        r.eq_mister_center = (any_mister && mode == SEALED_MIST && state.mist_stage >= MIST_S2) ? 1 : 0;
 
         runner.run(r, stats_report);
         rows++;
@@ -299,7 +305,7 @@ int main(int argc, char** argv) {
     // Summary
     std::printf("\n═══ Invariant summary — %ld rows ═══\n", rows);
     if (g_stats.counts_by_id.empty()) {
-        std::printf("  ✓ All 16 invariants passed.\n");
+        std::printf("  ✓ All 20 invariants passed.\n");
         return 0;
     }
     std::printf("  %d total violations across %zu distinct invariants.\n",

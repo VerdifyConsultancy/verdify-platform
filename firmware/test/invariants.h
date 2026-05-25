@@ -1,6 +1,6 @@
 #pragma once
 /*
- * invariants.h — 16 firmware behavioral invariants enforced against replay
+ * invariants.h — 20 firmware behavioral invariants enforced against replay
  * traces. Each invariant is a pure function over a stream of per-minute
  * TraceRow records. First breach fails the replay run.
  *
@@ -71,6 +71,7 @@ struct TraceRow {
     // State (observed from telemetry)
     std::string greenhouse_state;  // "SEALED_MIST_S1"/"VENTILATE"/...
     std::string mode_reason;       // sprint-15.1 diagnostic
+    bool dry_override_active;       // one-cycle VPD max-safe humidity rescue edge
     bool summer_vent_active;        // determine_mode() set override_summer_vent
     bool vent_mist_assist_active;   // band-first controller humidification assist while ventilating
 
@@ -224,6 +225,74 @@ inline bool check_16_heat2_requires_heat1(const TraceRow& r, ReportFn report = d
     return true;
 }
 
+// #17: wet actions and wet postures require a minimum air/dewpoint spread.
+// This is a condensation/leaf-wetness safety rail, not a planner resource
+// preference. SEALED_MIST and vent-mist assist are included even if relay
+// interlocks later keep the physical outputs off: the controller should not
+// claim a wet recovery mode when the wet rail is unsafe or unobservable.
+inline bool check_17_wet_actions_require_dew_margin(const TraceRow& r, ReportFn report = default_report) {
+    const bool any_wet = r.eq_fog || r.eq_mister_south || r.eq_mister_west || r.eq_mister_center;
+    const bool wet_posture = mode_is_sealed(r.greenhouse_state) || r.vent_mist_assist_active;
+    const bool dew_margin_ok =
+        std::isfinite(r.temp_f)
+        && std::isfinite(r.dew_point_f)
+        && (r.temp_f - r.dew_point_f) >= WET_DEW_MARGIN_FLOOR_F;
+    if ((any_wet || wet_posture) && !dew_margin_ok) {
+        report(17, "wet_action_dew_margin", r, "wet action/posture below dew-margin floor");
+        return false;
+    }
+    return true;
+}
+
+// #18: non-safety heat never overlaps active air exchange. SAFETY_HEAT may run
+// one circulation fan with the vent closed, but heat with vent, or heat with
+// fans outside SAFETY_HEAT, is contradictory relay truth.
+inline bool check_18_heat_air_exchange_exclusive(const TraceRow& r, ReportFn report = default_report) {
+    const bool any_heat = r.eq_heat1 || r.eq_heat2;
+    if (!any_heat) return true;
+
+    if (r.eq_vent) {
+        report(18, "heat_with_vent", r, "heat ON while vent ON");
+        return false;
+    }
+    if ((r.eq_fan1 || r.eq_fan2) && r.greenhouse_state != "SAFETY_HEAT") {
+        report(18, "non_safety_heat_with_fan", r, "non-safety heat ON while fan ON");
+        return false;
+    }
+    if (r.greenhouse_state == "SAFETY_HEAT" && r.eq_fan1 && r.eq_fan2) {
+        report(18, "safety_heat_two_fans", r, "SAFETY_HEAT with both fans ON");
+        return false;
+    }
+    return true;
+}
+
+// #19: SENSOR_FAULT is a hard fail-safe state. Firmware should not keep climate
+// relays energized when the controller no longer trusts its feedback sensors.
+inline bool check_19_sensor_fault_all_relays_off(const TraceRow& r, ReportFn report = default_report) {
+    if (r.greenhouse_state != "SENSOR_FAULT") return true;
+
+    const bool any_relay =
+        r.eq_fog || r.eq_vent || r.eq_fan1 || r.eq_fan2 || r.eq_heat1 || r.eq_heat2 ||
+        r.eq_mister_south || r.eq_mister_west || r.eq_mister_center;
+    if (any_relay) {
+        report(19, "sensor_fault_active_relay", r, "SENSOR_FAULT with climate relay ON");
+        return false;
+    }
+    return true;
+}
+
+// #20: SAFETY_HEAT is allowed to run heat plus one closed-vent circulation fan,
+// but it must never add fog or misters while trying to recover from cold.
+inline bool check_20_safety_heat_no_wet_actions(const TraceRow& r, ReportFn report = default_report) {
+    if (r.greenhouse_state != "SAFETY_HEAT") return true;
+
+    if (r.eq_fog || r.eq_mister_south || r.eq_mister_west || r.eq_mister_center) {
+        report(20, "safety_heat_wet_action", r, "SAFETY_HEAT with fog/mister ON");
+        return false;
+    }
+    return true;
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // Windowed invariants — evaluated over rolling windows. Helpers maintain
 // per-check state via a small context struct. Caller iterates rows and
@@ -357,6 +426,7 @@ inline bool check_10_equipment_toggle_auditable(Ctx10& c, const TraceRow& r, Rep
         const bool mode_changed = r.greenhouse_state != c.prev_mode;
         const bool reason_changed = r.mode_reason != c.prev_reason;
         const bool reason_auditable = r.mode_reason == "dehum_continue"
+                                   || r.mode_reason == "dew_margin"
                                    || r.mode_reason == "dry_override"
                                    || r.mode_reason == "dwell_expired"
                                    || r.mode_reason == "dwell_hold"
@@ -454,14 +524,24 @@ inline bool check_14_vent_cold_day_cap(Ctx14& c, const TraceRow& r, ReportFn rep
     return true;
 }
 
-// #13 — dry_override_active must clear within vpd_dry_override_max_ms of setting.
-// Not currently observable from replay CSV (would need ControlState snapshot).
-// Deferred to replay_diff.cpp which has full ControlState; leave a stub here.
-struct Ctx13 { /* unused in CSV-only replay */ };
-inline bool check_13_dry_override_clear(Ctx13& /*c*/, const TraceRow& /*r*/) { return true; }
+// #13 — dry_override_active is an edge flag, not a sticky operating mode.
+// It may fire on the row where firmware preempts the normal humidify dwell for
+// VPD > vpd_max_safe, but it must clear on the next control row. Sustained dry
+// recovery is represented by SEALED_MIST/humidify_continue, not a stale
+// override flag that would pollute audit trails and dwell preemption.
+struct Ctx13 { bool previous_dry_override = false; };
+inline bool check_13_dry_override_clear(Ctx13& c, const TraceRow& r, ReportFn report = default_report) {
+    if (r.dry_override_active && c.previous_dry_override) {
+        report(13, "dry_override_sticky", r, "dry_override_active remained true across consecutive rows");
+        c.previous_dry_override = true;
+        return false;
+    }
+    c.previous_dry_override = r.dry_override_active;
+    return true;
+}
 
 // ─────────────────────────────────────────────────────────────────────────
-// Public entry point — iterate all 16 invariants over a trace.
+// Public entry point — iterate all 20 invariants over a trace.
 // Returns 0 on pass, non-zero = count of violated invariants.
 // ─────────────────────────────────────────────────────────────────────────
 struct Runner {
@@ -482,10 +562,14 @@ struct Runner {
         if (!check_10_equipment_toggle_auditable(c10, r, report))   { failures++; ok = false; }
         if (!check_11_fog_heat_exclusive(r, report))                { failures++; ok = false; }
         if (!check_12_mist_progression(c12, r, report))             { failures++; ok = false; }
-        check_13_dry_override_clear(c13, r);   // deferred
+        if (!check_13_dry_override_clear(c13, r, report))           { failures++; ok = false; }
         if (!check_14_vent_cold_day_cap(c14, r, report))            { failures++; ok = false; }
         if (!check_15_mode_equipment_consistent(r, report))         { failures++; ok = false; }
         if (!check_16_heat2_requires_heat1(r, report))              { failures++; ok = false; }
+        if (!check_17_wet_actions_require_dew_margin(r, report))    { failures++; ok = false; }
+        if (!check_18_heat_air_exchange_exclusive(r, report))       { failures++; ok = false; }
+        if (!check_19_sensor_fault_all_relays_off(r, report))       { failures++; ok = false; }
+        if (!check_20_safety_heat_no_wet_actions(r, report))        { failures++; ok = false; }
         return ok;
     }
 };

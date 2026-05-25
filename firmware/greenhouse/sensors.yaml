@@ -1079,6 +1079,78 @@ sensor:
       float vpd = es*(1.0f-RHin/100.0f);
       return vpd < 0.0f ? 0.0f : vpd;
 
+  - platform: template
+    id: ctl_temp_band_error_f
+    name: "Control Temp Band Error (°F)"
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 10s
+    lambda: |-
+      if(isnan(id(control_tin).state)) return NAN;
+      Setpoints sp = default_setpoints();
+      sp.temp_low = id(target_temp_low_f);
+      sp.temp_high = id(target_temp_high_f);
+      validate_setpoints(sp);
+      SensorInputs in{};
+      in.temp_f = id(control_tin).state;
+      return temp_band_error_f(in, sp);
+
+  - platform: template
+    id: ctl_temp_target_error_f
+    name: "Control Temp Target Error (°F)"
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 10s
+    lambda: |-
+      if(isnan(id(control_tin).state)) return NAN;
+      Setpoints sp = default_setpoints();
+      sp.temp_low = id(target_temp_low_f);
+      sp.temp_high = id(target_temp_high_f);
+      validate_setpoints(sp);
+      SensorInputs in{};
+      in.temp_f = id(control_tin).state;
+      return temp_target_error_f(in, sp);
+
+  - platform: template
+    id: ctl_vpd_band_error_kpa
+    name: "Control VPD Band Error (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 10s
+    lambda: |-
+      if(isnan(id(control_vpd_kpa).state)) return NAN;
+      Setpoints sp = default_setpoints();
+      sp.vpd_low = id(target_vpd_low_kpa);
+      sp.vpd_high = id(target_vpd_high_kpa);
+      validate_setpoints(sp);
+      SensorInputs in{};
+      in.vpd_kpa = id(control_vpd_kpa).state;
+      return vpd_band_error_kpa(in, sp);
+
+  - platform: template
+    id: ctl_vpd_target_error_kpa
+    name: "Control VPD Target Error (kPa)"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 10s
+    lambda: |-
+      if(isnan(id(control_vpd_kpa).state)) return NAN;
+      Setpoints sp = default_setpoints();
+      sp.vpd_low = id(target_vpd_low_kpa);
+      sp.vpd_high = id(target_vpd_high_kpa);
+      validate_setpoints(sp);
+      SensorInputs in{};
+      in.vpd_kpa = id(control_vpd_kpa).state;
+      return vpd_target_error_kpa(in, sp);
+
 ################################################################################
 # 7. CONFIGURATION / SET‑POINT OUTPUTS  – entity_category fixed to “diagnostic”
 ################################################################################

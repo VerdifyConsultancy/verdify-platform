@@ -101,6 +101,14 @@ interval:
 
           auto set_relay = [&](RelayMeta &r,bool want,bool force_on,bool force_off=false){
             update_runtime(r);
+            if(force_off){
+              if(r.sw->state){
+                r.sw->turn_off();
+                r.last_off_ms = now_ms;
+                update_runtime(r);
+              }
+              return;
+            }
             if(want){
               if(!r.sw->state && (force_on || can_on(r))){
                 r.sw->turn_on();
@@ -387,7 +395,7 @@ interval:
 
           SensorInputs sensor_in = {
               .temp_f = Tin, .vpd_kpa = VPD, .rh_pct = RHin,
-              .dew_point_f = isnan(id(dewpoint_avg).state) ? Tin - 10.0f : id(dewpoint_avg).state,
+              .dew_point_f = id(dewpoint_avg).state,
               .outdoor_rh_pct = isnan(id(ha_outdoor_rh).state) ? 30.0f : id(ha_outdoor_rh).state,
               .enthalpy_delta = isnan(dH) ? -5.0f : dH,
               .solar_w_m2 = isnan(id(tempest_solar_w_m2)) ? 0.0f : id(tempest_solar_w_m2),
@@ -457,24 +465,82 @@ interval:
 
           validate_setpoints(setpts);
           setpts.sw_fsm_controller_enabled = true;
+          setpts.sw_dwell_gate_enabled = true;
           if (!id(sw_fsm_controller_enabled)) {
               id(sw_fsm_controller_enabled) = true;
               id(sw_fsm_controller_enabled_switch).publish_state(true);
           }
+          if (!id(sw_dwell_gate_enabled)) {
+              id(sw_dwell_gate_enabled) = true;
+              id(sw_dwell_gate_enabled_switch).publish_state(true);
+          }
           Mode mode = determine_mode(sensor_in, setpts, ctl_state, dt_ms);
           RelayOutputs relay_out = resolve_equipment(mode, sensor_in, setpts, ctl_state, leadIs1);
+          const bool wet_dew_margin_ok = wet_dew_margin_safe(sensor_in);
+          const float fog_vpd_width = std::max(0.2f, setpts.vpd_high - setpts.vpd_low);
+          const float fog_vpd_high_eff = setpts.vpd_high - fog_vpd_width * 0.25f;
+          const bool fog_vpd_pressure = VPD > (fog_vpd_high_eff + setpts.fog_escalation_kpa);
+          const bool fog_dew_margin_block =
+              !wet_dew_margin_ok
+              && (id(manual_fog_active)
+                  || ((mode == SAFETY_COOL || mode == VENTILATE) && fog_vpd_pressure)
+                  || (mode == SEALED_MIST && ctl_state.mist_stage >= MIST_S2 && fog_vpd_pressure));
 
           bool willHeat1 = relay_out.heat1, willHeat2 = relay_out.heat2;
           bool willFan1 = relay_out.fan1, willFan2 = relay_out.fan2;
           bool willFog = relay_out.fog, willVent = relay_out.vent;
 
-          // Manual overrides (ESP32-only, not in header)
-          if(id(manual_fan_active)){ willFan1 = true; willFan2 = true; willVent = true; }
-          if(id(manual_fog_active)){ willFog = true; }
-          if(id(vent_lock_active) && !id(manual_fan_active) && mode != SAFETY_COOL){
+          // Manual overrides are operator intent, not safety bypasses. Keep
+          // them below the hard rails and below temp-low recovery priority.
+          const bool manual_fan_requested = id(manual_fan_active);
+          const bool manual_fan_effective =
+              manual_fan_requested && manual_fan_override_allowed(mode, sensor_in, setpts);
+          static bool manual_fan_suppressed_prev = false;
+          const bool manual_fan_suppressed = manual_fan_requested && !manual_fan_effective;
+          if(manual_fan_suppressed != manual_fan_suppressed_prev) {
+            ESP_LOGW(
+              "interlock",
+              manual_fan_suppressed
+                ? "Manual fan override suppressed by safety/temp rail"
+                : "Manual fan override suppression cleared");
+            manual_fan_suppressed_prev = manual_fan_suppressed;
+          }
+          if(manual_fan_effective){ willFan1 = true; willFan2 = true; willVent = true; }
+          const bool manual_fog_requested = id(manual_fog_active);
+          const bool manual_fog_effective =
+              manual_fog_requested && manual_fog_override_allowed(mode, sensor_in, setpts);
+          static bool manual_fog_suppressed_prev = false;
+          const bool manual_fog_suppressed = manual_fog_requested && !manual_fog_effective;
+          if(manual_fog_suppressed != manual_fog_suppressed_prev) {
+            ESP_LOGW(
+              "interlock",
+              manual_fog_suppressed
+                ? "Manual fog override suppressed by safety/fog rail"
+                : "Manual fog override suppression cleared");
+            manual_fog_suppressed_prev = manual_fog_suppressed;
+          }
+          if(manual_fog_effective){ willFog = true; }
+          if(id(vent_lock_active) && !manual_fan_effective && vent_lock_suppresses_air_exchange(mode)){
             willFan1 = false;
             willFan2 = false;
             willVent = false;
+          }
+          const bool heat_priority_air_release =
+              heat_priority_releases_air_exchange(
+                  mode, sensor_in, setpts, relay_out, manual_fan_effective);
+          static bool heat_priority_air_release_prev = false;
+          if (heat_priority_air_release) {
+              willFan1 = false;
+              willFan2 = false;
+              willVent = false;
+          }
+          if (heat_priority_air_release != heat_priority_air_release_prev) {
+              if (heat_priority_air_release) {
+                  ESP_LOGI("interlock","Temp-low heat priority: forcing fan/vent off before heat");
+              } else {
+                  ESP_LOGI("interlock","Temp-low heat priority: fan/vent release cleared");
+              }
+              heat_priority_air_release_prev = heat_priority_air_release;
           }
 
           /**************** 11a — FAN/VENT + VENT-CLOSE INTERLOCKS ***************/
@@ -486,7 +552,11 @@ interval:
           // it runs the lead fan with vent closed to keep heat in.
           const bool fan_physically_on = id(fan1_rly)->state || id(fan2_rly)->state;
           const bool fan_wanted = willFan1 || willFan2;
-          const bool fan_requires_vent = mode != SAFETY_HEAT && (fan_physically_on || fan_wanted);
+          const bool fan_requires_vent =
+              !heat_priority_air_release
+              && mode != SAFETY_HEAT
+              && mode != SENSOR_FAULT
+              && (fan_physically_on || fan_wanted);
           const bool fan_vent_interlock_active = fan_requires_vent && !willVent;
           static bool fan_vent_interlock_prev = false;
           if (fan_requires_vent) {
@@ -567,29 +637,49 @@ interval:
           if (id(fog_closes_vent) && vent_is_open && !open_vent_fog_assist) {
               willFog = false;
           }
-
-          /**************** 10 — CYCLE COUNTERS ***********************************/
-          if(willHeat1 && !id(heat1_rly)->state) id(cnt_heat1_today) += 1;
-          if(willHeat2 && !id(heat2_rly)->state) id(cnt_heat2_today) += 1;
-          if(willFog && !id(fog_rly)->state)     id(cnt_fog_today) += 1;
-          if(willFan1 && !id(fan1_rly)->state)   id(cnt_fan1_today) += 1;
-          if(willFan2 && !id(fan2_rly)->state)   id(cnt_fan2_today) += 1;
-          if(willVent && !id(vent_rly)->state)    id(cnt_vent_today) += 1;
+          if (!wet_dew_margin_ok) {
+              willFog = false;
+          }
 
           /**************** 11 — APPLY RELAY OUTPUTS ******************************/
-          const bool force_heat_off = heat_air_exchange_interlock_active;
+          const bool force_all_climate_relays_off = mode == SENSOR_FAULT;
+          const bool force_heat_off = force_all_climate_relays_off || heat_air_exchange_interlock_active;
+          const bool force_vent_off =
+              force_all_climate_relays_off || mode == SAFETY_HEAT || heat_priority_air_release;
+          const bool force_fan1_off =
+              force_all_climate_relays_off || heat_priority_air_release || (mode == SAFETY_HEAT && !willFan1);
+          const bool force_fan2_off =
+              force_all_climate_relays_off || heat_priority_air_release || (mode == SAFETY_HEAT && !willFan2);
+          const bool force_fog_relay_off_now =
+              force_fog_relay_off(mode, sensor_in, heat_priority_air_release);
           const bool heat1_will_be_on_after_apply =
               (willHeat1 && (id(heat1_rly)->state || can_on(R[0])))
               || (id(heat1_rly)->state && !force_heat_off && !can_off(R[0]));
           const bool force_heat2_off =
               force_heat_off
               || (id(heat2_rly)->state && !willHeat2 && !heat1_will_be_on_after_apply);
+          const bool heat1_was_on = id(heat1_rly)->state;
+          const bool heat2_was_on = id(heat2_rly)->state;
+          const bool vent_was_on = id(vent_rly)->state;
+          const bool fan1_was_on = id(fan1_rly)->state;
+          const bool fan2_was_on = id(fan2_rly)->state;
+          const bool fog_was_on = id(fog_rly)->state;
           set_relay(R[0], willHeat1, false, force_heat_off);
           set_relay(R[1], willHeat2, false, force_heat2_off);
-          set_relay(R[5], willVent, fan_requires_vent);
-          set_relay(R[2], willFan1, false);
-          set_relay(R[3], willFan2, false);
-          set_relay(R[4], willFog, false);
+          set_relay(R[5], willVent, fan_requires_vent, force_vent_off);
+          set_relay(R[2], willFan1, false, force_fan1_off);
+          set_relay(R[3], willFan2, false, force_fan2_off);
+          set_relay(R[4], willFog, false, force_fog_relay_off_now);
+
+          /**************** 11b — CYCLE COUNTERS **********************************/
+          // Count physical relay rising edges after set_relay() applies
+          // force-off, force-on, and min-dwell gates.
+          if(!heat1_was_on && id(heat1_rly)->state) id(cnt_heat1_today) += 1;
+          if(!heat2_was_on && id(heat2_rly)->state) id(cnt_heat2_today) += 1;
+          if(!fog_was_on && id(fog_rly)->state)     id(cnt_fog_today) += 1;
+          if(!fan1_was_on && id(fan1_rly)->state)   id(cnt_fan1_today) += 1;
+          if(!fan2_was_on && id(fan2_rly)->state)   id(cnt_fan2_today) += 1;
+          if(!vent_was_on && id(vent_rly)->state)   id(cnt_vent_today) += 1;
 
           /**************** 12 — MISTER STATE MACHINE *****************************/
           // Runs only for SEALED_MIST or explicit VENTILATE assist. Zone stress
@@ -600,6 +690,8 @@ interval:
           {
             const uint32_t MISTER_ENGAGE_DELAY_MS = uint32_t(id(mister_engage_delay_s)) * 1000UL;
             const uint32_t MISTER_ALL_DELAY_MS    = uint32_t(id(mister_all_delay_s))    * 1000UL;
+            const bool force_mister_relay_off_now =
+                force_mister_relays_off(mode, sensor_in, heat_priority_air_release);
 
             float south_vpd = id(vpd_south).state;
             float west_vpd  = id(vpd_west).state;
@@ -734,6 +826,38 @@ interval:
               }
             };
             direct_wet_relay_watchdog();
+            static bool force_mister_relay_off_prev = false;
+            if(force_mister_relay_off_now) {
+              id(south_wall_mister).turn_off();
+              id(south_wall_mister_fertilized).turn_off();
+              id(west_wall_mister).turn_off();
+              id(west_wall_mister_fertilized).turn_off();
+              id(center_mister).turn_off();
+              if(!id(south_wall_mister_fertilized).state &&
+                 !id(west_wall_mister_fertilized).state &&
+                 !id(wall_drips_fertilized).state &&
+                 !id(center_drips_fertilized).state) {
+                id(fertilizer_master_valve).turn_off();
+              }
+              if(id(mister_pulse_zone) > 0) {
+                id(mister_pulse_zone) = 0;
+                id(mister_pulse_timer_ms) = 0;
+              }
+              if(id(mister_state) > 0) {
+                id(mister_state) = 0;
+                id(mister_selected_zone) = 0;
+                id(mister_duty_phase) = 0;
+                id(mister_duty_timer_ms) = 0;
+              }
+            }
+            if(force_mister_relay_off_now != force_mister_relay_off_prev) {
+              ESP_LOGI(
+                "interlock",
+                force_mister_relay_off_now
+                  ? "Mister relays forced off by safety/dew-margin/heat-priority rail"
+                  : "Mister relay force-off rail cleared");
+              force_mister_relay_off_prev = force_mister_relay_off_now;
+            }
             auto first_allowed_mister_zone = [&]() -> int {
               if(south_wet_allowed) return 1;
               if(west_wet_allowed) return 2;
@@ -788,10 +912,22 @@ interval:
                   budget_block
                   || !zone_mister_demand
                   || !any_mister_wet_allowed
+                  || force_mister_relay_off_now
+                  || !wet_dew_margin_ok
                   || irrigation_block
                   || occupancy_blocks;
               if(mister_blocked) {
-                if(budget_block) {
+                if(force_mister_relay_off_now) {
+                  if(heat_priority_air_release) {
+                    snprintf(moisture_block_reason, sizeof(moisture_block_reason), "heat_priority");
+                  } else if(mode == SAFETY_HEAT) {
+                    snprintf(moisture_block_reason, sizeof(moisture_block_reason), "safety_heat");
+                  } else if(mode == SENSOR_FAULT) {
+                    snprintf(moisture_block_reason, sizeof(moisture_block_reason), "sensor_fault");
+                  } else {
+                    snprintf(moisture_block_reason, sizeof(moisture_block_reason), "dew_margin");
+                  }
+                } else if(budget_block) {
                   snprintf(moisture_block_reason, sizeof(moisture_block_reason), "water_budget");
                 } else if(!zone_mister_demand) {
                   snprintf(
@@ -1204,6 +1340,16 @@ interval:
             char fog_block_reason[64];
             if(id(fog_rly)->state) {
               snprintf(fog_block_reason, sizeof(fog_block_reason), "served");
+            } else if(force_fog_relay_off_now && (id(manual_fog_active) || relay_out.fog || willFog)) {
+              if(heat_priority_air_release) {
+                snprintf(fog_block_reason, sizeof(fog_block_reason), "heat_priority");
+              } else if(mode == SAFETY_HEAT) {
+                snprintf(fog_block_reason, sizeof(fog_block_reason), "safety_heat");
+              } else if(mode == SENSOR_FAULT) {
+                snprintf(fog_block_reason, sizeof(fog_block_reason), "sensor_fault");
+              } else {
+                snprintf(fog_block_reason, sizeof(fog_block_reason), "dew_margin");
+              }
             } else if(of.fog_gate_window) {
               if(id(fog_stress_window_extend_enabled)
                  && fog_stress_extension_hour
@@ -1217,6 +1363,8 @@ interval:
               snprintf(fog_block_reason, sizeof(fog_block_reason), "rh_ceiling");
             } else if(of.fog_gate_temp) {
               snprintf(fog_block_reason, sizeof(fog_block_reason), "temp_low");
+            } else if(fog_dew_margin_block) {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "dew_margin");
             } else if(relay_out.fog && id(fog_closes_vent) && vent_is_open && !open_vent_fog_assist) {
               snprintf(fog_block_reason, sizeof(fog_block_reason), "vent_interlock");
             } else if(willFog && !id(fog_rly)->state) {
@@ -1552,9 +1700,6 @@ interval:
           uint32_t irrig_dt = (irrig_now < irrig_last_ms) ? 0 : (irrig_now - irrig_last_ms);
           irrig_last_ms = irrig_now;
 
-          // Track which job entered flush (persists across ticks)
-          static int flush_origin = 0;
-
           // ── VPD stress accumulator ──
           float cur_vpd = id(average_vpd_kpa).state;
           float vpd_hi = id(target_vpd_high_kpa);
@@ -1654,6 +1799,28 @@ interval:
             auto irrig_direct_wet_allowed = [&](bool is_wall) -> bool {
               return irrig_direct_wet_allowed_zone(is_wall ? 4 : 3);
             };
+            const float irrig_temp_f = id(average_temperature).state;
+            const float irrig_case_temp_f = id(case_temperature).state;
+            float irrig_control_temp_f = irrig_temp_f;
+            if(isnan(irrig_control_temp_f) && !isnan(irrig_case_temp_f)) {
+              irrig_control_temp_f = irrig_case_temp_f;
+            }
+            const bool irrig_sensor_fault =
+              isnan(irrig_control_temp_f) ||
+              irrig_control_temp_f < -20.0f ||
+              irrig_control_temp_f > 140.0f;
+            const bool irrig_safety_heat =
+              !irrig_sensor_fault && irrig_control_temp_f <= id(safety_min_f);
+            const Mode irrig_wet_mode =
+              irrig_sensor_fault ? SENSOR_FAULT : (irrig_safety_heat ? SAFETY_HEAT : IDLE);
+            SensorInputs irrig_wet_inputs{};
+            irrig_wet_inputs.temp_f = irrig_control_temp_f;
+            irrig_wet_inputs.dew_point_f = id(dewpoint_avg).state;
+            const bool irrig_mister_safety_off = force_mister_relays_off(irrig_wet_mode, irrig_wet_inputs, false);
+            const bool irrig_mister_occupancy_block =
+              id(occupancy_inhibit_enabled) && id(greenhouse_occupied);
+            const bool irrig_mister_block =
+              irrig_mister_safety_off || irrig_mister_occupancy_block;
             auto turn_off_all_irrigation = [&]() {
               id(wall_drips).turn_off();
               id(wall_drips_fertilized).turn_off();
@@ -1661,10 +1828,34 @@ interval:
               id(south_wall_mister_fertilized).turn_off();
               id(west_wall_mister).turn_off();
               id(west_wall_mister_fertilized).turn_off();
+              id(center_mister).turn_off();
               id(center_drips).turn_off();
               id(center_drips_fertilized).turn_off();
               id(fertilizer_master_valve).turn_off();
             };
+            const bool irrigation_physically_on =
+              id(wall_drips).state ||
+              id(wall_drips_fertilized).state ||
+              id(south_wall_mister).state ||
+              id(south_wall_mister_fertilized).state ||
+              id(west_wall_mister).state ||
+              id(west_wall_mister_fertilized).state ||
+              id(center_mister).state ||
+              id(center_drips).state ||
+              id(center_drips_fertilized).state ||
+              id(fertilizer_master_valve).state;
+            if(irrig_sensor_fault) {
+              const bool had_irrigation_work =
+                id(irrig_state) > 0 || id(irrig_queue) != 0 || irrigation_physically_on;
+              turn_off_all_irrigation();
+              id(irrig_state) = 0;
+              id(irrig_queue) = 0;
+              id(irrig_timer_ms) = 0;
+              if(had_irrigation_work) {
+                ESP_LOGW("irrig","STOPPED all irrigation by sensor-fault rail");
+              }
+              return;
+            }
             if(id(direct_wet_gate_enabled) && id(irrig_state) > 0) {
               bool active_wall = id(irrig_state) == 1 || id(irrig_state) == 2 || id(irrig_state) == 5;
               bool active_south = id(irrig_state) == 7 || id(irrig_state) == 9;
@@ -1680,10 +1871,45 @@ interval:
                 ESP_LOGW("irrig","STOPPED by direct-wet gate");
               }
             }
-            sync_fert_master("watchdog");
+            if(irrig_mister_block && id(irrig_state) > 0) {
+              bool active_south_mister = id(irrig_state) == 7 || id(irrig_state) == 9;
+              bool active_west_mister = id(irrig_state) == 8 || id(irrig_state) == 10;
+              if(active_south_mister || active_west_mister) {
+                id(south_wall_mister).turn_off();
+                id(south_wall_mister_fertilized).turn_off();
+                id(west_wall_mister).turn_off();
+                id(west_wall_mister_fertilized).turn_off();
+                if(!id(wall_drips_fertilized).state && !id(center_drips_fertilized).state) {
+                  id(fertilizer_master_valve).turn_off();
+                }
+                id(irrig_state) = 0;
+                id(irrig_timer_ms) = 0;
+                ESP_LOGW(
+                  "irrig",
+                  irrig_mister_occupancy_block
+                    ? "STOPPED mister job by occupancy rail"
+                    : "STOPPED mister job by safety/dew-margin rail");
+              }
+            }
 
-            // ── Skip if globally disabled ──
-            if(!id(irrig_enabled)) return;
+            // ── Global disable is an immediate executor stop, not just a
+            // scheduling gate. Otherwise an in-flight job can leave a valve on
+            // forever because the countdown/cleanup block below is skipped.
+            // Keep this before fertilizer-master sync so a disabled controller
+            // cannot briefly re-open the master through the watchdog interlock.
+            if(!id(irrig_enabled)) {
+              const bool had_irrigation_work =
+                id(irrig_state) > 0 || id(irrig_queue) != 0 || irrigation_physically_on;
+              turn_off_all_irrigation();
+              id(irrig_state) = 0;
+              id(irrig_queue) = 0;
+              id(irrig_timer_ms) = 0;
+              if(had_irrigation_work) {
+                ESP_LOGW("irrig","STOPPED all irrigation because irrigation is disabled");
+              }
+              return;
+            }
+            sync_fert_master("watchdog");
 
           // ── Schedule check (only when idle, no queue pending) ──
           if(id(irrig_state) == 0 && id(irrig_queue) == 0 &&
@@ -1774,17 +2000,30 @@ interval:
                 const char* drop_zone = (job_zone == 1) ? "SOUTH" : (job_zone == 2) ? "WEST" : (job_zone == 3) ? "CENTER" : "WALL";
                 ESP_LOGW("irrig","DROP QUEUED %s job (direct-wet gate)", drop_zone);
                 job = 0;
+              } else if((job_zone == 1 || job_zone == 2) && irrig_mister_block) {
+                const char* drop_zone = (job_zone == 1) ? "SOUTH" : "WEST";
+                ESP_LOGW(
+                  "irrig",
+                  irrig_mister_occupancy_block
+                    ? "DROP QUEUED %s mister job (occupancy rail)"
+                    : "DROP QUEUED %s mister job (safety/dew-margin rail)",
+                  drop_zone);
+                job = 0;
               }
             }
 
             if(job > 0){
-              id(irrig_state) = job;
-
               bool is_wall = (job == 1 || job == 2);
               bool is_center = (job == 3 || job == 4);
               bool is_south_mister = (job == 7);
               bool is_west_mister = (job == 8);
               bool is_fert = (job == 2 || job == 4 || is_south_mister || is_west_mister);
+              const char* job_name = (job == 1) ? "WALL_CLEAN" :
+                (job == 2) ? "WALL_FERT" :
+                (job == 3) ? "CENTER_CLEAN" :
+                (job == 4) ? "CENTER_FERT" :
+                (job == 7) ? "SOUTH_MISTER_FERT" :
+                (job == 8) ? "WEST_MISTER_FERT" : "UNKNOWN";
               int base_min = is_fert
                 ? (is_center ? id(irrig_center_fert_duration_min) : id(irrig_wall_fert_duration_min))
                 : (is_center ? id(irrig_center_duration_min) : id(irrig_wall_duration_min));
@@ -1798,42 +2037,43 @@ interval:
                          stress_hrs, id(irrig_vpd_boost_threshold_hrs), base_min);
               }
 
-              id(irrig_timer_ms) = uint32_t(base_min) * 60000UL;
+              if(base_min <= 0){
+                id(irrig_timer_ms) = 0;
+                ESP_LOGW("irrig","DROP QUEUED %s job (zero duration)", job_name);
+                job = 0;
+              } else {
+                id(irrig_state) = job;
+                id(irrig_timer_ms) = uint32_t(base_min) * 60000UL;
 
-              id(wall_drips).turn_off();
-              id(wall_drips_fertilized).turn_off();
-              id(south_wall_mister).turn_off();
-              id(south_wall_mister_fertilized).turn_off();
-              id(west_wall_mister).turn_off();
-              id(west_wall_mister_fertilized).turn_off();
-              id(center_drips).turn_off();
-              id(center_drips_fertilized).turn_off();
-              id(center_mister).turn_off();
+                id(wall_drips).turn_off();
+                id(wall_drips_fertilized).turn_off();
+                id(south_wall_mister).turn_off();
+                id(south_wall_mister_fertilized).turn_off();
+                id(west_wall_mister).turn_off();
+                id(west_wall_mister_fertilized).turn_off();
+                id(center_drips).turn_off();
+                id(center_drips_fertilized).turn_off();
+                id(center_mister).turn_off();
 
-              // Open the fert master before any fertilized drip/mister relay.
-              if(is_fert && !id(fertilizer_master_valve).state) id(fertilizer_master_valve).turn_on();
+                // Open the fert master before any fertilized drip/mister relay.
+                if(is_fert && !id(fertilizer_master_valve).state) id(fertilizer_master_valve).turn_on();
 
-              // Turn on drip line. sprint-7: count one cycle per dispatch —
-              // matches equipment_state's rising-edge count for the
-              // underlying relay. Fert/clean increment the same zone
-              // counter (audit granularity is per-zone).
-              switch(job){
-                case 1: id(wall_drips).turn_on();              id(cnt_drip_wall_today)   += 1; break;
-                case 2: id(wall_drips_fertilized).turn_on();   id(cnt_drip_wall_today)   += 1; break;
-                case 3: id(center_drips).turn_on();            id(cnt_drip_center_today) += 1; break;
-                case 4: id(center_drips_fertilized).turn_on(); id(cnt_drip_center_today) += 1; break;
-                case 7: id(south_wall_mister_fertilized).turn_on(); id(cnt_mister_south_today) += 1; break;
-                case 8: id(west_wall_mister_fertilized).turn_on();  id(cnt_mister_west_today)  += 1; break;
+                // Turn on drip line. sprint-7: count one cycle per dispatch —
+                // matches equipment_state's rising-edge count for the
+                // underlying relay. Fert/clean increment the same zone
+                // counter (audit granularity is per-zone).
+                switch(job){
+                  case 1: id(wall_drips).turn_on();              id(cnt_drip_wall_today)   += 1; break;
+                  case 2: id(wall_drips_fertilized).turn_on();   id(cnt_drip_wall_today)   += 1; break;
+                  case 3: id(center_drips).turn_on();            id(cnt_drip_center_today) += 1; break;
+                  case 4: id(center_drips_fertilized).turn_on(); id(cnt_drip_center_today) += 1; break;
+                  case 7: id(south_wall_mister_fertilized).turn_on(); id(cnt_mister_south_today) += 1; break;
+                  case 8: id(west_wall_mister_fertilized).turn_on();  id(cnt_mister_west_today)  += 1; break;
+                }
+                sync_fert_master("job-start");
+
+                ESP_LOGI("irrig","START %s — %dmin%s", job_name, base_min, fert_queue_pending ? " (fert queue)" : "");
               }
-              sync_fert_master("job-start");
-
-              const char* job_name = (job == 1) ? "WALL_CLEAN" :
-                (job == 2) ? "WALL_FERT" :
-                (job == 3) ? "CENTER_CLEAN" :
-                (job == 4) ? "CENTER_FERT" :
-                (job == 7) ? "SOUTH_MISTER_FERT" :
-                (job == 8) ? "WEST_MISTER_FERT" : "UNKNOWN";
-              ESP_LOGI("irrig","START %s — %dmin%s", job_name, base_min, fert_queue_pending ? " (fert queue)" : "");
             }
           }
 
@@ -1863,8 +2103,11 @@ interval:
 
               // Fert → flush with clean water
               int flush_min = is_center ? id(irrig_center_flush_min) : id(irrig_wall_flush_min);
-              if(is_fert && flush_min > 0){
-                flush_origin = job;
+              int flush_zone = is_south_mister ? 1 : is_west_mister ? 2 : is_center ? 3 : 4;
+              const bool flush_direct_wet_allowed = irrig_direct_wet_allowed_zone(flush_zone);
+              const bool flush_mister_blocked =
+                (is_south_mister || is_west_mister) && irrig_mister_block;
+              if(is_fert && flush_min > 0 && flush_direct_wet_allowed && !flush_mister_blocked){
                 id(irrig_state) = is_center ? 6 : is_south_mister ? 9 : is_west_mister ? 10 : 5;
                 id(irrig_timer_ms) = uint32_t(flush_min) * 60000UL;
                 // Flush is a separate rising edge on the matching clean relay,
@@ -1876,6 +2119,15 @@ interval:
                 const char* flush_name = is_south_mister ? "SOUTH_MISTER" : is_west_mister ? "WEST_MISTER" : is_center ? "CENTER" : "WALL";
                 ESP_LOGI("irrig","FLUSH %s — %dmin", flush_name, flush_min);
               } else {
+                if(is_fert && flush_min > 0 && (!flush_direct_wet_allowed || flush_mister_blocked)) {
+                  const char* flush_name = is_south_mister ? "SOUTH_MISTER" : is_west_mister ? "WEST_MISTER" : is_center ? "CENTER" : "WALL";
+                  ESP_LOGW(
+                    "irrig",
+                    flush_mister_blocked
+                      ? "SKIP FLUSH %s by safety/dew-margin/occupancy rail"
+                      : "SKIP FLUSH %s by direct-wet gate",
+                    flush_name);
+                }
                 // Done — finalize
                 if(is_wall){
                   id(irrig_wall_cycle_count) += 1;

@@ -6,12 +6,15 @@
  */
 
 #include "greenhouse_logic.h"
+#include "invariants.h"
 #include <cstdio>
 #include <cstring>
 #include <cassert>
 #include <vector>
 #include <cmath>
 #include <string>
+#include <fstream>
+#include <sstream>
 
 static int tests_passed = 0;
 static int tests_failed = 0;
@@ -30,6 +33,8 @@ static int tests_failed = 0;
 
 struct TestEntry { const char* name; void (*fn)(); };
 static std::vector<TestEntry> test_registry;
+
+static void ignore_invariant_report(int, const char*, const invariants::TraceRow&, const char*) {}
 
 static SensorInputs make_inputs(float temp, float vpd, float rh = 60.0f) {
     // Sprint-15: outdoor data defaults to STALE so the new summer-vent
@@ -406,6 +411,41 @@ TEST(fix8_sensor_fault_equipment) {
     ASSERT_FALSE(out.heat2);
     ASSERT_FALSE(out.vent);
     ASSERT_FALSE(out.fan1);
+    ASSERT_FALSE(out.fog);
+    PASS();
+}
+
+TEST(resolve_equipment_fails_closed_on_implausible_sensors) {
+    auto sp = band_setpoints();
+    auto s = initial_state();
+    s.heat2_latched = true;
+    s.mist_stage = MIST_FOG;
+
+    auto in = make_inputs(NAN, 1.8f);
+    auto out = resolve_equipment(SAFETY_HEAT, in, sp, s, true);
+    ASSERT_FALSE(out.heat1);
+    ASSERT_FALSE(out.heat2);
+    ASSERT_FALSE(out.vent);
+    ASSERT_FALSE(out.fan1);
+    ASSERT_FALSE(out.fan2);
+    ASSERT_FALSE(out.fog);
+
+    in = make_inputs(85.0f, NAN);
+    out = resolve_equipment(VENTILATE, in, sp, s, true);
+    ASSERT_FALSE(out.heat1);
+    ASSERT_FALSE(out.heat2);
+    ASSERT_FALSE(out.vent);
+    ASSERT_FALSE(out.fan1);
+    ASSERT_FALSE(out.fan2);
+    ASSERT_FALSE(out.fog);
+
+    in = make_inputs(72.0f, 1.8f, 150.0f);
+    out = resolve_equipment(SEALED_MIST, in, sp, s, true);
+    ASSERT_FALSE(out.heat1);
+    ASSERT_FALSE(out.heat2);
+    ASSERT_FALSE(out.vent);
+    ASSERT_FALSE(out.fan1);
+    ASSERT_FALSE(out.fan2);
     ASSERT_FALSE(out.fog);
     PASS();
 }
@@ -950,6 +990,36 @@ TEST(obs1e_vpd_dry_override_clears_on_next_cycle_when_conditions_pass) {
     PASS();
 }
 
+TEST(invariant_13_allows_single_dry_override_edge) {
+    invariants::Ctx13 ctx;
+    invariants::TraceRow r{};
+    r.ts_unix_s = 1;
+    r.greenhouse_state = "SEALED_MIST_S1";
+    r.mode_reason = "dry_override";
+    r.dry_override_active = true;
+    ASSERT_TRUE(invariants::check_13_dry_override_clear(ctx, r, ignore_invariant_report));
+
+    r.ts_unix_s = 61;
+    r.mode_reason = "humidify_continue";
+    r.dry_override_active = false;
+    ASSERT_TRUE(invariants::check_13_dry_override_clear(ctx, r, ignore_invariant_report));
+    PASS();
+}
+
+TEST(invariant_13_rejects_sticky_dry_override_edge) {
+    invariants::Ctx13 ctx;
+    invariants::TraceRow r{};
+    r.ts_unix_s = 1;
+    r.greenhouse_state = "SEALED_MIST_S1";
+    r.mode_reason = "dry_override";
+    r.dry_override_active = true;
+    ASSERT_TRUE(invariants::check_13_dry_override_clear(ctx, r, ignore_invariant_report));
+
+    r.ts_unix_s = 61;
+    ASSERT_FALSE(invariants::check_13_dry_override_clear(ctx, r, ignore_invariant_report));
+    PASS();
+}
+
 TEST(obs1e_all_quiet_on_idle_in_band) {
     auto sp = default_setpoints();
     auto s = initial_state();
@@ -1065,6 +1135,268 @@ TEST(s8_fog_window_wraps_midnight) {
     ASSERT_FALSE(fog_permitted(in, sp));
     in.local_hour = 6;
     ASSERT_FALSE(fog_permitted(in, sp));
+    PASS();
+}
+
+TEST(wet_dew_margin_floor_blocks_fog) {
+    auto sp = band_setpoints();
+    sp.fog_rh_ceiling = 95.0f;
+    sp.fog_min_temp = 55.0f;
+    sp.fog_window_start = 7;
+    sp.fog_window_end = 17;
+
+    auto in = make_inputs(80.0f, sp.vpd_high + sp.fog_escalation_kpa + 0.2f, 70.0f);
+    in.local_hour = 12;
+    in.dew_point_f = in.temp_f - (WET_DEW_MARGIN_FLOOR_F - 0.2f);
+
+    ASSERT_FALSE(wet_dew_margin_safe(in));
+    ASSERT_FALSE(fog_permitted(in, sp));
+    in.dew_point_f = NAN;
+    ASSERT_FALSE(wet_dew_margin_safe(in));
+    ASSERT_FALSE(fog_permitted(in, sp));
+
+    auto s = initial_state();
+    in.dew_point_f = in.temp_f - (WET_DEW_MARGIN_FLOOR_F - 0.2f);
+    auto out = resolve_equipment(VENTILATE, in, sp, s, true);
+    ASSERT_FALSE(out.fog);
+    PASS();
+}
+
+TEST(wet_relay_force_off_tracks_safety_dew_margin_and_heat_priority) {
+    auto in = make_inputs(80.0f, 1.8f, 70.0f);
+    in.dew_point_f = in.temp_f - (WET_DEW_MARGIN_FLOOR_F + 1.0f);
+
+    ASSERT_FALSE(force_fog_relay_off(VENTILATE, in, false));
+    ASSERT_TRUE(force_fog_relay_off(VENTILATE, in, true));
+    ASSERT_FALSE(force_mister_relays_off(VENTILATE, in, false));
+    ASSERT_TRUE(force_mister_relays_off(VENTILATE, in, true));
+
+    ASSERT_TRUE(force_fog_relay_off(SAFETY_HEAT, in, false));
+    ASSERT_TRUE(force_mister_relays_off(SAFETY_HEAT, in, false));
+    ASSERT_TRUE(force_fog_relay_off(SENSOR_FAULT, in, false));
+    ASSERT_TRUE(force_mister_relays_off(SENSOR_FAULT, in, false));
+
+    in.dew_point_f = in.temp_f - (WET_DEW_MARGIN_FLOOR_F - 0.1f);
+    ASSERT_TRUE(force_fog_relay_off(VENTILATE, in, false));
+    ASSERT_TRUE(force_mister_relays_off(VENTILATE, in, false));
+    PASS();
+}
+
+TEST(manual_fan_override_yields_to_safety_and_temp_recovery) {
+    auto sp = band_setpoints();
+    auto in = make_inputs(sp.temp_low + 0.5f, sp.vpd_high);
+
+    ASSERT_TRUE(manual_fan_override_allowed(VENTILATE, in, sp));
+
+    in.temp_f = sp.temp_low - 0.1f;
+    ASSERT_FALSE(manual_fan_override_allowed(IDLE, in, sp));
+
+    in.temp_f = sp.temp_low + 0.5f;
+    ASSERT_FALSE(manual_fan_override_allowed(SAFETY_HEAT, in, sp));
+    ASSERT_FALSE(manual_fan_override_allowed(SENSOR_FAULT, in, sp));
+
+    in.temp_f = NAN;
+    ASSERT_FALSE(manual_fan_override_allowed(VENTILATE, in, sp));
+    PASS();
+}
+
+TEST(manual_fog_override_yields_to_safety_and_fog_rails) {
+    auto sp = band_setpoints();
+    sp.fog_min_temp = 55.0f;
+    sp.fog_rh_ceiling = 90.0f;
+    auto in = make_inputs(70.0f, sp.vpd_high + 0.5f, 70.0f);
+    in.dew_point_f = in.temp_f - (WET_DEW_MARGIN_FLOOR_F + 1.0f);
+
+    ASSERT_TRUE(manual_fog_override_allowed(VENTILATE, in, sp));
+
+    in.rh_pct = sp.fog_rh_ceiling + 0.1f;
+    ASSERT_FALSE(manual_fog_override_allowed(VENTILATE, in, sp));
+
+    in.rh_pct = 70.0f;
+    in.temp_f = sp.fog_min_temp - 0.1f;
+    in.dew_point_f = in.temp_f - (WET_DEW_MARGIN_FLOOR_F + 1.0f);
+    ASSERT_FALSE(manual_fog_override_allowed(VENTILATE, in, sp));
+
+    in.temp_f = 70.0f;
+    in.dew_point_f = in.temp_f - (WET_DEW_MARGIN_FLOOR_F - 0.1f);
+    ASSERT_FALSE(manual_fog_override_allowed(VENTILATE, in, sp));
+
+    in.dew_point_f = in.temp_f - (WET_DEW_MARGIN_FLOOR_F + 1.0f);
+    ASSERT_FALSE(manual_fog_override_allowed(SAFETY_HEAT, in, sp));
+    ASSERT_FALSE(manual_fog_override_allowed(SENSOR_FAULT, in, sp));
+    PASS();
+}
+
+TEST(vent_lock_yields_to_safety_modes) {
+    ASSERT_TRUE(vent_lock_suppresses_air_exchange(IDLE));
+    ASSERT_TRUE(vent_lock_suppresses_air_exchange(VENTILATE));
+    ASSERT_TRUE(vent_lock_suppresses_air_exchange(SEALED_MIST));
+    ASSERT_FALSE(vent_lock_suppresses_air_exchange(SAFETY_COOL));
+    ASSERT_FALSE(vent_lock_suppresses_air_exchange(SAFETY_HEAT));
+    ASSERT_FALSE(vent_lock_suppresses_air_exchange(SENSOR_FAULT));
+    PASS();
+}
+
+TEST(band_error_helpers_report_signed_pressure) {
+    auto sp = band_setpoints();
+    auto in = make_inputs(sp.temp_high + 1.5f, sp.vpd_high + 0.25f);
+
+    ASSERT_TRUE(std::fabs(temp_band_error_f(in, sp) - 1.5f) < 0.001f);
+    ASSERT_TRUE(std::fabs(vpd_band_error_kpa(in, sp) - 0.25f) < 0.001f);
+
+    in.temp_f = sp.temp_low - 2.0f;
+    in.vpd_kpa = sp.vpd_low - 0.10f;
+    ASSERT_TRUE(std::fabs(temp_band_error_f(in, sp) + 2.0f) < 0.001f);
+    ASSERT_TRUE(std::fabs(vpd_band_error_kpa(in, sp) + 0.10f) < 0.001f);
+
+    in.temp_f = (sp.temp_low + sp.temp_high) * 0.5f;
+    in.vpd_kpa = (sp.vpd_low + sp.vpd_high) * 0.5f;
+    ASSERT_TRUE(std::fabs(temp_band_error_f(in, sp)) < 0.001f);
+    ASSERT_TRUE(std::fabs(vpd_band_error_kpa(in, sp)) < 0.001f);
+    ASSERT_TRUE(std::fabs(temp_target_error_f(in, sp)) < 0.001f);
+    ASSERT_TRUE(std::fabs(vpd_target_error_kpa(in, sp)) < 0.001f);
+    PASS();
+}
+
+TEST(irrigation_sensor_fault_is_executor_stop) {
+    std::ifstream file("greenhouse/controls.yaml");
+    ASSERT_TRUE(file.good());
+
+    std::ostringstream buf;
+    buf << file.rdbuf();
+    const std::string src = buf.str();
+
+    const std::string rail = "if(irrig_sensor_fault) {";
+    const size_t rail_pos = src.find(rail);
+    ASSERT_TRUE(rail_pos != std::string::npos);
+
+    const size_t next_gate_pos = src.find("if(id(direct_wet_gate_enabled)", rail_pos);
+    ASSERT_TRUE(next_gate_pos != std::string::npos);
+    ASSERT_TRUE(next_gate_pos > rail_pos);
+
+    const std::string block = src.substr(rail_pos, next_gate_pos - rail_pos);
+    ASSERT_TRUE(block.find("turn_off_all_irrigation();") != std::string::npos);
+    ASSERT_TRUE(block.find("id(irrig_state) = 0;") != std::string::npos);
+    ASSERT_TRUE(block.find("id(irrig_queue) = 0;") != std::string::npos);
+    ASSERT_TRUE(block.find("id(irrig_timer_ms) = 0;") != std::string::npos);
+    ASSERT_TRUE(block.find("return;") != std::string::npos);
+    ASSERT_TRUE(src.find("irrig_wet_inputs.temp_f = irrig_control_temp_f;") != std::string::npos);
+    ASSERT_TRUE(src.find("irrig_wet_inputs.temp_f = irrig_temp_f;") == std::string::npos);
+
+    const size_t disable_pos = src.find("if(!id(irrig_enabled))");
+    ASSERT_TRUE(disable_pos != std::string::npos);
+    const size_t sync_pos = src.find("sync_fert_master(\"watchdog\")");
+    ASSERT_TRUE(sync_pos != std::string::npos);
+    ASSERT_TRUE(disable_pos < sync_pos);
+    PASS();
+}
+
+TEST(irrigation_flush_rechecks_wet_rails_before_opening_relay) {
+    std::ifstream file("greenhouse/controls.yaml");
+    ASSERT_TRUE(file.good());
+
+    std::ostringstream buf;
+    buf << file.rdbuf();
+    const std::string src = buf.str();
+
+    const size_t flush_pos = src.find("flush with clean water");
+    ASSERT_TRUE(flush_pos != std::string::npos);
+
+    const size_t flush_countdown_pos = src.find("Flush countdown", flush_pos);
+    ASSERT_TRUE(flush_countdown_pos != std::string::npos);
+    ASSERT_TRUE(flush_countdown_pos > flush_pos);
+
+    const std::string block = src.substr(flush_pos, flush_countdown_pos - flush_pos);
+    ASSERT_TRUE(block.find("const bool flush_direct_wet_allowed = irrig_direct_wet_allowed_zone(flush_zone);") != std::string::npos);
+    ASSERT_TRUE(block.find("const bool flush_mister_blocked") != std::string::npos);
+    ASSERT_TRUE(block.find("if(is_fert && flush_min > 0 && flush_direct_wet_allowed && !flush_mister_blocked)") != std::string::npos);
+    ASSERT_TRUE(block.find("SKIP FLUSH %s by direct-wet gate") != std::string::npos);
+    ASSERT_TRUE(block.find("SKIP FLUSH %s by safety/dew-margin/occupancy rail") != std::string::npos);
+    PASS();
+}
+
+TEST(irrigation_zero_duration_jobs_drop_before_relay_start) {
+    std::ifstream file("greenhouse/controls.yaml");
+    ASSERT_TRUE(file.good());
+
+    std::ostringstream buf;
+    buf << file.rdbuf();
+    const std::string src = buf.str();
+
+    ASSERT_TRUE(src.find("flush_origin") == std::string::npos);
+
+    const size_t zero_pos = src.find("if(base_min <= 0)");
+    ASSERT_TRUE(zero_pos != std::string::npos);
+    const size_t state_pos = src.find("id(irrig_state) = job;", zero_pos);
+    const size_t timer_pos = src.find("id(irrig_timer_ms) = uint32_t(base_min) * 60000UL;", zero_pos);
+    const size_t relay_pos = src.find("id(fertilizer_master_valve).turn_on()", zero_pos);
+    ASSERT_TRUE(state_pos != std::string::npos);
+    ASSERT_TRUE(timer_pos != std::string::npos);
+    ASSERT_TRUE(relay_pos != std::string::npos);
+    ASSERT_TRUE(zero_pos < state_pos);
+    ASSERT_TRUE(zero_pos < timer_pos);
+    ASSERT_TRUE(zero_pos < relay_pos);
+
+    const std::string zero_block = src.substr(zero_pos, state_pos - zero_pos);
+    ASSERT_TRUE(zero_block.find("id(irrig_timer_ms) = 0;") != std::string::npos);
+    ASSERT_TRUE(zero_block.find("DROP QUEUED %s job (zero duration)") != std::string::npos);
+    ASSERT_TRUE(zero_block.find("turn_on()") == std::string::npos);
+    ASSERT_TRUE(zero_block.find("cnt_drip") == std::string::npos);
+    ASSERT_TRUE(zero_block.find("cnt_mister") == std::string::npos);
+    PASS();
+}
+
+TEST(climate_cycle_counters_track_post_apply_relay_edges) {
+    std::ifstream file("greenhouse/controls.yaml");
+    ASSERT_TRUE(file.good());
+
+    std::ostringstream buf;
+    buf << file.rdbuf();
+    const std::string src = buf.str();
+
+    const size_t apply_pos = src.find("APPLY RELAY OUTPUTS");
+    const size_t counter_pos = src.find("11b");
+    ASSERT_TRUE(apply_pos != std::string::npos);
+    ASSERT_TRUE(counter_pos != std::string::npos);
+    ASSERT_TRUE(apply_pos < counter_pos);
+
+    const std::string apply_block = src.substr(apply_pos, counter_pos - apply_pos);
+    ASSERT_TRUE(apply_block.find("const bool heat1_was_on = id(heat1_rly)->state;") != std::string::npos);
+    ASSERT_TRUE(apply_block.find("set_relay(R[4], willFog, false, force_fog_relay_off_now);") != std::string::npos);
+
+    const size_t mister_pos = src.find("MISTER STATE MACHINE", counter_pos);
+    ASSERT_TRUE(mister_pos != std::string::npos);
+    const std::string counter_block = src.substr(counter_pos, mister_pos - counter_pos);
+    ASSERT_TRUE(counter_block.find("if(!heat1_was_on && id(heat1_rly)->state)") != std::string::npos);
+    ASSERT_TRUE(counter_block.find("if(!vent_was_on && id(vent_rly)->state)") != std::string::npos);
+    ASSERT_TRUE(src.find("if(willHeat1 && !id(heat1_rly)->state)") == std::string::npos);
+    ASSERT_TRUE(src.find("if(willVent && !id(vent_rly)->state)") == std::string::npos);
+    PASS();
+}
+
+TEST(production_control_loop_locks_dwell_gate_on) {
+    std::ifstream controls("greenhouse/controls.yaml");
+    ASSERT_TRUE(controls.good());
+    std::ostringstream control_buf;
+    control_buf << controls.rdbuf();
+    const std::string control_src = control_buf.str();
+
+    ASSERT_TRUE(control_src.find("setpts.sw_dwell_gate_enabled = true;") != std::string::npos);
+    ASSERT_TRUE(control_src.find("id(sw_dwell_gate_enabled) = true;") != std::string::npos);
+
+    std::ifstream tunables("greenhouse/tunables.yaml");
+    ASSERT_TRUE(tunables.good());
+    std::ostringstream tunable_buf;
+    tunable_buf << tunables.rdbuf();
+    const std::string tunable_src = tunable_buf.str();
+    const size_t switch_pos = tunable_src.find("id: sw_dwell_gate_enabled_switch");
+    ASSERT_TRUE(switch_pos != std::string::npos);
+    const size_t fsm_pos = tunable_src.find("id: sw_fsm_controller_enabled_switch", switch_pos);
+    ASSERT_TRUE(fsm_pos != std::string::npos);
+    const std::string dwell_switch = tunable_src.substr(switch_pos, fsm_pos - switch_pos);
+    ASSERT_TRUE(dwell_switch.find("restore_mode: RESTORE_DEFAULT_ON") != std::string::npos);
+    ASSERT_TRUE(dwell_switch.find("Dwell Gate Enabled is locked ON") != std::string::npos);
+    ASSERT_TRUE(dwell_switch.find("id(sw_dwell_gate_enabled) = false;") == std::string::npos);
     PASS();
 }
 
@@ -1791,11 +2123,26 @@ TEST(s15_1_mode_reason_idle_default) {
 // ═══════════════════════════════════════════════════════════════════
 
 TEST(phase2_dwell_gate_off_by_default) {
-    // Default: sw_dwell_gate_enabled=false → no hold, current behavior
-    // preserved. This test ensures the feature flag works — if the default
-    // flipped on, this test would catch it and force review.
+    // Library fallback default stays OFF so targeted tests and rollback
+    // forensics can still exercise the raw cascade. Production ESPHome locks
+    // this field ON before calling determine_mode().
     auto sp = band_setpoints();
     ASSERT_TRUE(!sp.sw_dwell_gate_enabled);
+    PASS();
+}
+
+TEST(phase2_dwell_gate_bootstrap_allows_first_transition) {
+    // Dwell enforcement starts after the first accepted transition. Boot
+    // should not strand the controller in IDLE for five minutes before its
+    // first non-safety correction.
+    auto sp = band_setpoints();
+    sp.sw_dwell_gate_enabled = true;
+    sp.dwell_gate_ms = 300000;
+
+    auto s = initial_state();
+    Mode m = determine_mode(make_inputs(85.0f, 1.0f), sp, s, 5000);
+
+    ASSERT_EQ(m, VENTILATE);
     PASS();
 }
 
@@ -1916,9 +2263,8 @@ TEST(phase2_dwell_gate_thermal_relief_exit_preempts) {
 
 TEST(phase2_dwell_gate_tracks_ticks_when_off) {
     // Even with gate OFF, last_transition_tick_ms must still accumulate
-    // so that when the gate is flipped ON later (live operation), the
-    // first transition has correct dwell accounting. Shadow mode requires
-    // this so we don't mis-count when flipping on.
+    // so explicit forensics that flip the gate during replay do not
+    // mis-count transition age.
     auto sp = band_setpoints();
     sp.sw_dwell_gate_enabled = false;  // OFF
 
@@ -2230,6 +2576,51 @@ TEST(band_first_dehum_enters_below_vpd_low_hysteresis_and_exits_at_low_edge) {
     PASS();
 }
 
+TEST(band_first_temp_low_blocks_dehum_even_when_vpd_low) {
+    auto sp = band_first_setpoints();
+    auto s = initial_state();
+    const float HV = band_vpd_hysteresis(sp);
+
+    Mode m = determine_mode(make_inputs(sp.temp_low - 0.2f, sp.vpd_low - HV - 0.01f), sp, s, 5000);
+
+    ASSERT_EQ(m, IDLE);
+    ASSERT_TRUE(std::string(s.last_mode_reason) == "heat_stage2");
+    PASS();
+}
+
+TEST(band_first_temp_low_heat_priority_releases_air_exchange) {
+    auto sp = band_first_setpoints();
+    auto s = initial_state();
+    const float HV = band_vpd_hysteresis(sp);
+    auto in = make_inputs(sp.temp_low - 0.2f, sp.vpd_low - HV - 0.01f);
+
+    Mode m = determine_mode(in, sp, s, 5000);
+    auto out = resolve_equipment(m, in, sp, s, true);
+
+    ASSERT_EQ(m, IDLE);
+    ASSERT_TRUE(out.heat1);
+    ASSERT_TRUE(out.heat2);
+    ASSERT_TRUE(heat_priority_releases_air_exchange(m, in, sp, out, false));
+    ASSERT_FALSE(heat_priority_releases_air_exchange(m, in, sp, out, true));
+    PASS();
+}
+
+TEST(safety_heat_circulation_does_not_release_air_exchange_helper) {
+    auto sp = band_first_setpoints();
+    auto s = initial_state();
+    auto in = make_inputs(sp.safety_min - 0.2f, sp.vpd_low);
+
+    Mode m = determine_mode(in, sp, s, 5000);
+    auto out = resolve_equipment(m, in, sp, s, true);
+
+    ASSERT_EQ(m, SAFETY_HEAT);
+    ASSERT_TRUE(out.heat1);
+    ASSERT_TRUE(out.heat2);
+    ASSERT_TRUE(out.fan1);
+    ASSERT_FALSE(heat_priority_releases_air_exchange(m, in, sp, out, false));
+    PASS();
+}
+
 TEST(band_first_dehum_overshoot_respects_existing_dwell_hold) {
     auto sp = band_first_setpoints();
     sp.sw_dwell_gate_enabled = true;
@@ -2247,7 +2638,7 @@ TEST(band_first_dehum_overshoot_respects_existing_dwell_hold) {
     PASS();
 }
 
-TEST(band_first_dehum_overshoot_cooling_respects_existing_dwell_hold) {
+TEST(band_first_temp_high_preempts_dehum_dwell_hold) {
     auto sp = band_first_setpoints();
     sp.sw_dwell_gate_enabled = true;
     sp.dwell_gate_ms = 300000;
@@ -2258,12 +2649,174 @@ TEST(band_first_dehum_overshoot_cooling_respects_existing_dwell_hold) {
 
     Mode m = determine_mode(make_inputs(sp.temp_high + 1.0f, sp.vpd_high + 0.2f), sp, s, 5000);
 
-    ASSERT_EQ(m, DEHUM_VENT);
+    ASSERT_EQ(m, VENTILATE);
+    ASSERT_TRUE(std::string(s.last_mode_reason) == "temp_high");
+    ASSERT_TRUE(s.vent_mist_assist_active);
+    PASS();
+}
+
+TEST(band_first_hot_dry_vent_mist_assist_does_not_wait_for_seal_dwell) {
+    auto sp = band_first_setpoints();
+    sp.vpd_watch_dwell_ms = 120000;
+    auto s = initial_state();
+
+    Mode m = determine_mode(make_inputs(sp.temp_high + 1.0f, sp.vpd_high + 0.05f), sp, s, 5000);
+
+    ASSERT_EQ(m, VENTILATE);
+    ASSERT_TRUE(std::string(s.last_mode_reason) == "temp_high");
+    ASSERT_TRUE(s.vpd_watch_timer_ms < sp.vpd_watch_dwell_ms);
+    ASSERT_TRUE(s.vent_mist_assist_active);
+    PASS();
+}
+
+TEST(band_first_hot_dry_vent_mist_assist_requires_wet_dew_margin) {
+    auto sp = band_first_setpoints();
+    auto s = initial_state();
+    auto in = make_inputs(sp.temp_high + 1.0f, sp.vpd_high + 0.05f);
+    in.dew_point_f = NAN;
+
+    Mode m = determine_mode(in, sp, s, 5000);
+
+    ASSERT_EQ(m, VENTILATE);
+    ASSERT_TRUE(std::string(s.last_mode_reason) == "temp_high");
+    ASSERT_FALSE(s.vent_mist_assist_active);
+    auto f = evaluate_overrides(in, sp, s, m);
+    ASSERT_FALSE(f.vent_mist_assist);
+    PASS();
+}
+
+TEST(band_first_humidify_ready_preempts_dwell_hold) {
+    auto sp = band_first_setpoints();
+    sp.sw_dwell_gate_enabled = true;
+    sp.dwell_gate_ms = 300000;
+    auto s = initial_state();
+    s.mode = IDLE;
+    s.mode_prev = IDLE;
+    s.last_transition_tick_ms = 10000;
+    s.vpd_watch_timer_ms = sp.vpd_watch_dwell_ms;
+
+    Mode m = determine_mode(make_inputs(74.0f, sp.vpd_high + 0.2f), sp, s, 5000);
+
+    ASSERT_EQ(m, SEALED_MIST);
+    ASSERT_TRUE(std::string(s.last_mode_reason) == "humidify_enter");
+    PASS();
+}
+
+TEST(band_first_humidify_entry_requires_wet_dew_margin) {
+    auto sp = band_first_setpoints();
+    auto s = initial_state();
+    s.vpd_watch_timer_ms = sp.vpd_watch_dwell_ms;
+    auto in = make_inputs(74.0f, sp.vpd_high + 0.2f);
+    in.dew_point_f = NAN;
+
+    Mode m = determine_mode(in, sp, s, 5000);
+
+    ASSERT_EQ(m, IDLE);
+    ASSERT_TRUE(std::string(s.last_mode_reason) == "dew_margin");
+    ASSERT_FALSE(s.dry_override_active);
     ASSERT_FALSE(s.vent_mist_assist_active);
     PASS();
 }
 
-TEST(band_first_sealed_temp_preempt_respects_existing_dwell_gate) {
+TEST(band_first_unsafe_dew_margin_exits_sealed_mist) {
+    auto sp = band_first_setpoints();
+    auto s = initial_state();
+    s.mode = SEALED_MIST;
+    s.mode_prev = SEALED_MIST;
+    s.sealed_timer_ms = 30000;
+    s.vpd_watch_timer_ms = sp.vpd_watch_dwell_ms;
+    s.mist_stage = MIST_S2;
+    auto in = make_inputs(74.0f, sp.vpd_high + 0.2f);
+    in.dew_point_f = NAN;
+
+    Mode m = determine_mode(in, sp, s, 5000);
+
+    ASSERT_EQ(m, IDLE);
+    ASSERT_TRUE(std::string(s.last_mode_reason) == "dew_margin");
+    ASSERT_EQ(s.mist_stage, MIST_WATCH);
+    ASSERT_EQ(s.vpd_watch_timer_ms, 0u);
+    PASS();
+}
+
+TEST(band_first_vpd_max_safe_dry_override_bypasses_humidify_dwell) {
+    auto sp = band_first_setpoints();
+    sp.vpd_watch_dwell_ms = 120000;
+    sp.sw_dwell_gate_enabled = true;
+    sp.dwell_gate_ms = 300000;
+    auto s = initial_state();
+    s.mode = IDLE;
+    s.mode_prev = IDLE;
+    s.last_transition_tick_ms = 0;
+
+    Mode m = determine_mode(make_inputs(74.0f, sp.vpd_max_safe + 0.1f), sp, s, 5000);
+
+    ASSERT_EQ(m, SEALED_MIST);
+    ASSERT_TRUE(std::string(s.last_mode_reason) == "dry_override");
+    ASSERT_TRUE(s.dry_override_active);
+    ASSERT_EQ(s.vpd_watch_timer_ms, sp.vpd_watch_dwell_ms);
+    PASS();
+}
+
+TEST(band_first_vpd_max_safe_dry_override_yields_to_temp_priority) {
+    auto sp = band_first_setpoints();
+    sp.vpd_watch_dwell_ms = 120000;
+    auto s = initial_state();
+
+    Mode m = determine_mode(make_inputs(sp.temp_high + 1.0f, sp.vpd_max_safe + 0.1f), sp, s, 5000);
+
+    ASSERT_EQ(m, VENTILATE);
+    ASSERT_TRUE(std::string(s.last_mode_reason) == "temp_high");
+    ASSERT_FALSE(s.dry_override_active);
+    ASSERT_TRUE(s.vent_mist_assist_active);
+    PASS();
+}
+
+TEST(band_first_vpd_max_safe_dry_override_requires_wet_dew_margin) {
+    auto sp = band_first_setpoints();
+    sp.vpd_watch_dwell_ms = 120000;
+    auto s = initial_state();
+    auto in = make_inputs(74.0f, sp.vpd_max_safe + 0.1f);
+    in.dew_point_f = NAN;
+
+    Mode m = determine_mode(in, sp, s, 5000);
+
+    ASSERT_EQ(m, IDLE);
+    ASSERT_FALSE(s.dry_override_active);
+    PASS();
+}
+
+TEST(band_first_fresh_dry_override_does_not_skip_to_mist_s2) {
+    auto sp = band_first_setpoints();
+    sp.vpd_watch_dwell_ms = 120000;
+    sp.mist_s2_delay_ms = 5000;
+    auto s = initial_state();
+
+    Mode m = determine_mode(make_inputs(74.0f, sp.vpd_max_safe + 0.1f), sp, s, 5000);
+
+    ASSERT_EQ(m, SEALED_MIST);
+    ASSERT_TRUE(std::string(s.last_mode_reason) == "dry_override");
+    ASSERT_EQ(s.mist_stage, MIST_S1);
+    ASSERT_EQ(s.mist_stage_timer_ms, 0u);
+    PASS();
+}
+
+TEST(band_first_temp_low_preempts_dehum_dwell_hold) {
+    auto sp = band_first_setpoints();
+    sp.sw_dwell_gate_enabled = true;
+    sp.dwell_gate_ms = 300000;
+    auto s = initial_state();
+    s.mode = DEHUM_VENT;
+    s.mode_prev = DEHUM_VENT;
+    s.last_transition_tick_ms = 10000;
+
+    Mode m = determine_mode(make_inputs(sp.temp_low - 0.2f, sp.vpd_low - 0.2f), sp, s, 5000);
+
+    ASSERT_EQ(m, IDLE);
+    ASSERT_TRUE(std::string(s.last_mode_reason) == "heat_stage2");
+    PASS();
+}
+
+TEST(band_first_temp_high_preempts_sealed_dwell_hold) {
     auto sp = band_first_setpoints();
     sp.sw_dwell_gate_enabled = true;
     sp.dwell_gate_ms = 300000;
@@ -2277,9 +2830,52 @@ TEST(band_first_sealed_temp_preempt_respects_existing_dwell_gate) {
 
     Mode m = determine_mode(make_inputs(sp.temp_high + 1.0f, sp.vpd_high + 0.2f), sp, s, 5000);
 
-    ASSERT_EQ(m, SEALED_MIST);
-    ASSERT_TRUE(std::string(s.last_mode_reason) == "dwell_hold");
-    ASSERT_FALSE(s.vent_mist_assist_active);
+    ASSERT_EQ(m, VENTILATE);
+    ASSERT_TRUE(std::string(s.last_mode_reason) == "temp_preempts_humidify");
+    ASSERT_TRUE(s.vent_mist_assist_active);
+    PASS();
+}
+
+TEST(band_first_resolved_humidify_exit_preempts_dwell_hold) {
+    auto sp = band_first_setpoints();
+    sp.sw_dwell_gate_enabled = true;
+    sp.dwell_gate_ms = 300000;
+    auto s = initial_state();
+    s.mode = SEALED_MIST;
+    s.mode_prev = SEALED_MIST;
+    s.last_transition_tick_ms = 10000;
+    s.sealed_timer_ms = 30000;
+    s.vpd_watch_timer_ms = sp.vpd_watch_dwell_ms;
+    s.mist_stage = MIST_S2;
+
+    Mode m = determine_mode(make_inputs(74.0f, sp.vpd_high - band_vpd_hysteresis(sp) - 0.01f), sp, s, 5000);
+
+    ASSERT_EQ(m, IDLE);
+    ASSERT_TRUE(std::string(s.last_mode_reason) == "humidify_resolved");
+    ASSERT_EQ(s.mist_stage, MIST_WATCH);
+    PASS();
+}
+
+TEST(band_first_occupancy_humidify_exit_preempts_dwell_hold) {
+    auto sp = band_first_setpoints();
+    sp.sw_dwell_gate_enabled = true;
+    sp.dwell_gate_ms = 300000;
+    sp.occupancy_inhibit = true;
+    auto s = initial_state();
+    s.mode = SEALED_MIST;
+    s.mode_prev = SEALED_MIST;
+    s.last_transition_tick_ms = 10000;
+    s.sealed_timer_ms = 30000;
+    s.vpd_watch_timer_ms = sp.vpd_watch_dwell_ms;
+    s.mist_stage = MIST_S2;
+
+    auto in = make_inputs(74.0f, sp.vpd_high + 0.2f);
+    in.occupied = true;
+    Mode m = determine_mode(in, sp, s, 5000);
+
+    ASSERT_EQ(m, IDLE);
+    ASSERT_TRUE(std::string(s.last_mode_reason) == "moisture_blocked");
+    ASSERT_EQ(s.mist_stage, MIST_WATCH);
     PASS();
 }
 

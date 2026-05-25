@@ -189,7 +189,7 @@ int main(int argc, char* argv[]) {
         in.outdoor_rh_pct = parse_float(get("outdoor_rh_pct"), 30.0f);
         in.enthalpy_delta = parse_float(get("enthalpy_delta"), -5.0f);
         in.solar_w_m2 = parse_float(get("solar_irradiance_w_m2"), 0.0f);
-        in.dew_point_f = parse_float(get("indoor_dew_point"), in.temp_f - 10.0f);
+        in.dew_point_f = parse_float(get("indoor_dew_point"), NAN);
         in.vpd_south = in.vpd_kpa;
         in.vpd_west = in.vpd_kpa;
         in.vpd_east = in.vpd_kpa;
@@ -237,6 +237,10 @@ int main(int argc, char* argv[]) {
         const char* force_fsm = std::getenv("REPLAY_OVERRIDES_FORCE_FSM");
         if (!force_fsm || !*force_fsm || *force_fsm != '0') {
             sp.sw_fsm_controller_enabled = true;
+        }
+        const char* force_dwell = std::getenv("REPLAY_OVERRIDES_FORCE_DWELL");
+        if (!force_dwell || !*force_dwell || *force_dwell != '0') {
+            sp.sw_dwell_gate_enabled = true;
         }
         validate_setpoints(sp);
 

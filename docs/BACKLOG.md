@@ -133,6 +133,17 @@ In chronological order:
 - **Web/Data:** The 2026-05-20 lab-site feedback is tracked in `docs/backlog/lab-site-refactor-2026-05-20.md`: initial site/content refactor tasks (`CODEX-001` through `CODEX-012`), later visual/resource/architecture follow-ups (`CODEX-013` through `CODEX-018`), and Grafana/time-series research tasks (`RP-001` through `RP-007`).
 - **Web:** Image cleanup removed broken/public backup assets and documented current photo fit. The manual image catalog now has a machine-readable manifest checked by `site-doctor`; crop-specific photos for basil/cucumbers/tomatoes remain a content acquisition issue, not a rendering blocker.
 - **Web:** Raw ASCII/Mermaid diagrams were removed from hand-authored public pages. Forecast, daily-plan, plans-index, crop, and zone generated outputs now use web components instead of generated Markdown tables.
+- **Firmware:** `docs/backlog/firmware.md` now tracks `F-CLIMATE-INTENT`,
+  implementing
+  [`docs/firmware-climate-intent-controller-final-design-2026-05-24.md`](firmware-climate-intent-controller-final-design-2026-05-24.md).
+  The design keeps the ESP32 as relay authority, selects safe candidate actions
+  by strict priority order (safety, temperature compliance, VPD compliance,
+  resource use), and gives AI a compact climate-intent surface instead of more
+  planner-facing relay knobs. The 2026-05-25 operator decision is no shadow
+  mode: one controller, one production path, with replay, invariant, compile,
+  and live health evidence as the proof. Closeout is tracked in GitHub issue
+  #8 until the planner PR, dirty worktrees, stale PR wording, and warning-class
+  live alerts are resolved.
 
 ## Sprint numbering
 
@@ -227,6 +238,11 @@ The "fix-it-forward" spiral (sprint-15 regressions → 86°F whipsaw incident on
 ## Phase 3 architecture decision (2026-04-23)
 
 **Supersedes** the original plan.md Phase 3 ("9-mode → 6-mode consolidation"). User proposed **per-zone voting machines + central coordinator**. Five research agents dispatched to validate; all returned. Architecture validated, plan below.
+
+**Historical status:** superseded for implementation by the 2026-05-25
+`F-CLIMATE-INTENT` direction above. Keep this section as research context, but
+do not implement its shadow-mode rollout or broad per-zone tunable expansion as
+the current controller plan.
 
 ### The problem (data-backed)
 

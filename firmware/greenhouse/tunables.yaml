@@ -2041,14 +2041,13 @@ switch:
           id(sw_summer_vent_enabled) = false;
           id(sw_summer_vent_enabled_switch).publish_state(false);
 
-  # Phase-2 dwell gate master switch. Default OFF (shadow-mode bake).
-  # After 14d of replay + shadow validation per plan Phase 2 gate,
-  # planner flips this to ON to activate the 5-min mode-dwell hold.
+  # Production dwell gate master switch. Kept as a compatibility/readback
+  # surface, but the ESPHome control loop locks it ON.
   - platform: template
     id: sw_dwell_gate_enabled_switch
     name: "Dwell Gate Enabled"
     icon: "mdi:timer-lock"
-    restore_mode: RESTORE_DEFAULT_OFF
+    restore_mode: RESTORE_DEFAULT_ON
     lambda: 'return id(sw_dwell_gate_enabled);'
     turn_on_action:
       - lambda: |
@@ -2056,8 +2055,9 @@ switch:
           id(sw_dwell_gate_enabled_switch).publish_state(true);
     turn_off_action:
       - lambda: |
-          id(sw_dwell_gate_enabled) = false;
-          id(sw_dwell_gate_enabled_switch).publish_state(false);
+          id(sw_dwell_gate_enabled) = true;
+          id(sw_dwell_gate_enabled_switch).publish_state(true);
+          ESP_LOGW("tunables", "Dwell Gate Enabled is locked ON by the unified controller contract");
 
   - platform: template
     id: sw_fsm_controller_enabled_switch

@@ -110,14 +110,13 @@ struct Setpoints {
     float    vent_prefer_dp_delta_f;       // outdoor DP must be ≥ this much lower (°F)
     uint32_t outdoor_staleness_max_s;      // gate disables when outdoor data older than this (s)
     uint32_t summer_vent_min_runtime_s;    // min VENTILATE dwell after gate fires (s; reserved)
-    // Phase-2 (firmware stabilization plan): mode-transition dwell gate.
-    // When sw_dwell_gate_enabled is true, non-safety mode transitions are
-    // held for at least dwell_gate_ms after the last accepted transition.
-    // Safety rails, R2-3 dry override, and vpd_min_safe rescue preempt the
-    // dwell. Projected 80% reduction in whipsaw events (Explore B: 59 mode
-    // changes in 2h on 2026-04-17 stress window). Default OFF for shadow-
-    // mode bake; operator / planner flips to ON after 14d of replay +
-    // shadow validation.
+    // Production mode-transition dwell gate. Non-safety transitions are held
+    // for at least dwell_gate_ms after the last accepted transition. Safety
+    // rails, temp-band enforcement, VPD wet recovery, R2-3 dry override, and
+    // vpd_min_safe rescue preempt the dwell. Projected 80% reduction in
+    // whipsaw events (Explore B: 59 mode changes in 2h on 2026-04-17 stress
+    // window). ESPHome locks this ON; the field remains for readback and
+    // explicit test/forensics control.
     bool     sw_dwell_gate_enabled;
     uint32_t dwell_gate_ms;                // default 300000 (5 min)
     // Unified band-first controller. Kept as a compatibility/readback field,
@@ -183,9 +182,9 @@ struct ControlState {
     // Phase-2: monotonic tick count (ms, saturating) at which the most
     // recent mode transition was accepted. Drives the dwell gate —
     // new mode proposals within dwell_gate_ms of this timestamp are
-    // held (unless safety preempts). Updated by determine_mode on each
-    // non-held transition. Initialized to 0 which means "already past
-    // dwell at boot" so the first real decision isn't gated.
+    // held (unless a compliance/safety path preempts). Updated by
+    // determine_mode on each non-held transition. Initialized past dwell so
+    // the first real decision after boot is not gated.
     uint32_t last_transition_tick_ms;
     // band-first controller: lockout after a sealed humidification attempt times out.
     // During this window the firmware suppresses new SEALED_MIST entries while
@@ -336,8 +335,9 @@ inline Setpoints default_setpoints() {
         // disabling the gate.
         .outdoor_staleness_max_s = 600u,
         .summer_vent_min_runtime_s = 180u,
-        // Phase-2 dwell gate. Default OFF (shadow-mode bake before flipping
-        // to active). 5-min dwell projected to reduce whipsaw 80%.
+        // Dwell gate. ESPHome production locks this ON, but the library
+        // default stays OFF so tests can exercise the rollback/fallback path
+        // explicitly.
         .sw_dwell_gate_enabled = false,
         .dwell_gate_ms = 300000u,
         // Library fallback remains legacy so old unit tests/replay rows can
@@ -482,7 +482,7 @@ inline ControlState initial_state() {
         .heat2_latched = false,
         .override_summer_vent = false,
         .last_mode_reason = "init",
-        .last_transition_tick_ms = 0,
+        .last_transition_tick_ms = UINT32_MAX,
         .mist_backoff_timer_ms = 0,
         .vent_mist_assist_active = false
     };

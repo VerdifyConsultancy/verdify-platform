@@ -6,6 +6,28 @@ Owned by the [`firmware`](../agents/firmware.md) agent. Sprint counter is agent-
 
 - [ ] **48-hour v2 bake + reboot forensics follow-through.** Behavior-changing OTA for `2026.4.27.2009.2b5f2a5` began at `2026-04-28 02:12:25 UTC`; a wrapper-only main redeploy later put `2026.4.27.2040.c1a6403` live at `2026-04-28 02:41:54 UTC`. Sensor-health is `PASS 27 / FAIL 0 / WARN 0`, open critical/high alerts are `0`, and there are no post-OTA `Guru/Panic` / `Task WDT` resets in the sampled window. Keep OTA freeze intact during the bake. Current evidence reframes the old "midday crash-loop" as broader JSON/API/crash-forensics work; see [`docs/firmware-v2-postdeploy-forensics-2026-04-27.md`](../firmware-v2-postdeploy-forensics-2026-04-27.md).
 - [ ] **Contract + alert drift guard PR.** `firmware/contracts-alert-drift` makes `vpd_low` explicitly dispatcher/band-owned, adds expected-firmware-version mismatch alerting, and adds static drift guards for firmware override tags, `sw_mister_closes_vent` routing, and MCP Tier 1 validation.
+- [ ] **F-CLIMATE-INTENT first-principles controller implementation.**
+  Implement
+  [`docs/firmware-climate-intent-controller-final-design-2026-05-24.md`](../firmware-climate-intent-controller-final-design-2026-05-24.md).
+  The controller objective is strict priority order: safety rails first,
+  temperature-band compliance second, VPD-band compliance third, and resource
+  minimization fourth. Firmware remains the relay authority and selects among
+  safe candidate actions lexicographically; AI emits a compact `ClimateIntent`
+  overlay instead of raw relay commands or dozens of low-level relay knobs.
+  Real climate relay groups are `heat1`/`heat2`, `vent` plus `fan1`/`fan2`,
+  `fog`, clean climate misters (`mister_south`, `mister_west`,
+  `mister_center`), and DLI lights. Drip/fert relays remain owned by
+  irrigation/fertigation and appear to climate logic only as locks. Breakout:
+  `F-CI-1` single production controller path and action model; `F-CI-2`
+  `ClimateIntent` schema/registry ownership; `F-CI-3` firmware candidate action
+  structs and strict-priority tests; `F-CI-4` observability fields for action,
+  priority axis, block reasons, target error, band error, and timers; `F-CI-5`
+  planner/dispatcher intent wiring; `F-CI-6` replay, invariant, compile,
+  service-health, and post-OTA audit gates; `F-CI-7` deployment only with
+  explicit operator approval and rollback path. The 2026-05-25 operator
+  decision is no shadow mode: one controller, one production path, with replay
+  and health evidence as the proof. Global closeout blockers are tracked in
+  platform issue #8. No OTA is authorized by this backlog item alone.
 
 **Project recovery intake from `PROJECT_STATE.md`** (2026-05-22; coordinated
 through [`project-recovery-2026-05-22.md`](project-recovery-2026-05-22.md)).
