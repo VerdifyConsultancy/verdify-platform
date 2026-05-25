@@ -1112,7 +1112,63 @@ SELECT to_char(ts AT TIME ZONE 'America/Denver', 'MM-DD HH24:MI') AS reading_mdt
 echo "Priority order is safety rails, temp compliance, VPD compliance, then resource use. When VPD is above band and dew/occupancy rails are safe, resource minimization must not close wet/fog assist; use ClimateIntent to make moisture assist available near the dispatcher-owned VPD high edge."
 echo ""
 
-# ── 30b-4. HOT/DRY VENTILATE CONTROL UTILIZATION ─────────────────
+# ── 30b-4. CLIMATE ACTION PROOF ─────────────────────────────────
+echo "--- CLIMATE AUTHORITY ACTION PROOF (latest controller decision) ---"
+echo "age_s|action|priority|temp_target_delta_f|vpd_target_delta_kpa|temp_band_error_f|vpd_band_error_kpa|moisture_state|wet_allowed|wet_block|fog_allowed|fog_block|relay_truth|sensor_status|candidate_summary"
+$DB -c "
+WITH latest AS (
+  SELECT l.*,
+         EXTRACT(EPOCH FROM now() - l.ts)::int AS age_s
+    FROM climate_action_log l
+   WHERE COALESCE(l.greenhouse_id, 'vallery') = '${GREENHOUSE_ID}'
+   ORDER BY l.ts DESC
+   LIMIT 1
+)
+SELECT age_s,
+       climate_action,
+       priority_axis,
+       round(temp_target_delta_f::numeric, 2) AS temp_target_delta_f,
+       round(vpd_target_delta_kpa::numeric, 3) AS vpd_target_delta_kpa,
+       round(temp_band_error_f::numeric, 2) AS temp_band_error_f,
+       round(vpd_band_error_kpa::numeric, 3) AS vpd_band_error_kpa,
+       COALESCE(moisture_assist_state, 'unknown') AS moisture_state,
+       wet_assist_allowed,
+       COALESCE(wet_assist_block_reason, 'none') AS wet_block,
+       fog_allowed,
+       COALESCE(fog_block_reason, 'none') AS fog_block,
+       relay_truth,
+       sensor_status,
+       COALESCE(candidate_summary, '') AS candidate_summary
+  FROM latest;
+" 2>/dev/null || echo "(climate action proof unavailable)"
+echo "This is ESP32/controller-owned truth for the current action, target deltas, wet/fog block reasons, relay truth, and input freshness. Treat stale or missing proof as degraded context; tune only bounded ClimateIntent fields, not dispatcher-owned bands."
+echo ""
+
+echo "--- CLIMATE AUTHORITY ACTION ROLLUP (last 3h) ---"
+echo "action|priority|samples|max_abs_temp_band_error_f|max_abs_vpd_band_error_kpa|wet_allowed_pct|fog_allowed_pct|block_reasons"
+$DB -c "
+SELECT climate_action,
+       priority_axis,
+       count(*) AS samples,
+       round(max(abs(temp_band_error_f))::numeric, 2) AS max_abs_temp_band_error_f,
+       round(max(abs(vpd_band_error_kpa))::numeric, 3) AS max_abs_vpd_band_error_kpa,
+       round((100.0 * avg(CASE WHEN wet_assist_allowed THEN 1.0 ELSE 0.0 END))::numeric, 1) AS wet_allowed_pct,
+       round((100.0 * avg(CASE WHEN fog_allowed THEN 1.0 ELSE 0.0 END))::numeric, 1) AS fog_allowed_pct,
+       string_agg(
+         DISTINCT COALESCE(NULLIF(wet_assist_block_reason, ''), NULLIF(fog_block_reason, ''), moisture_assist_state, 'none'),
+         ', '
+         ORDER BY COALESCE(NULLIF(wet_assist_block_reason, ''), NULLIF(fog_block_reason, ''), moisture_assist_state, 'none')
+       ) AS block_reasons
+  FROM climate_action_log
+ WHERE COALESCE(greenhouse_id, 'vallery') = '${GREENHOUSE_ID}'
+   AND ts > now() - interval '3 hours'
+ GROUP BY climate_action, priority_axis
+ ORDER BY samples DESC, climate_action;
+" 2>/dev/null || echo "(climate action rollup unavailable)"
+echo "Use this to distinguish capacity limits from tactical limits: persistent high band errors with wet/fog disallowed point to safety/block reasons; high errors with assist allowed but low relay duty point to controller/relay proof that needs operator review."
+echo ""
+
+# ── 30b-5. HOT/DRY VENTILATE CONTROL UTILIZATION ─────────────────
 echo "--- HOT/DRY VENTILATE UTILIZATION (last 24h, firmware band basis) ---"
 $DB -c "
 WITH samples AS (
@@ -1211,6 +1267,80 @@ if [ -n "${climate_age_s:-}" ] && [ "${climate_age_s:-99999}" -lt 600 ]; then
   _check "climate telemetry fresh" ok "indoor sensors reporting within the last ${climate_age_s}s"
 else
   _check "climate telemetry fresh" fail "last climate row is ${climate_age_s:-unknown}s old; ESP32 may be offline — flag in brief"
+fi
+
+# Dispatcher target context: the planner must see controller-owned band edges
+# and signed target deltas before it can safely tune ClimateIntent around them.
+target_context_complete=$($DB -c "
+WITH latest_climate AS (
+  SELECT ts, temp_avg, vpd_avg
+    FROM climate
+   WHERE temp_avg IS NOT NULL
+     AND vpd_avg IS NOT NULL
+   ORDER BY ts DESC
+   LIMIT 1
+), latest AS (
+  SELECT c.temp_avg,
+         c.vpd_avg,
+         fn_setpoint_at('temp_low', c.ts) AS sp_temp_low,
+         fn_setpoint_at('temp_high', c.ts) AS sp_temp_high,
+         fn_setpoint_at('vpd_low', c.ts) AS sp_vpd_low,
+         fn_setpoint_at('vpd_high', c.ts) AS sp_vpd_high
+    FROM latest_climate c
+)
+SELECT CASE
+         WHEN count(*) = 1
+          AND bool_and(temp_avg IS NOT NULL)
+          AND bool_and(vpd_avg IS NOT NULL)
+          AND bool_and(sp_temp_low IS NOT NULL)
+          AND bool_and(sp_temp_high IS NOT NULL)
+          AND bool_and(sp_vpd_low IS NOT NULL)
+          AND bool_and(sp_vpd_high IS NOT NULL)
+         THEN 1
+         ELSE 0
+       END
+  FROM latest;
+" 2>/dev/null | tr -d ' ')
+if [ "${target_context_complete:-0}" = "1" ]; then
+  _check "dispatcher climate targets" ok "low/target/high and target deltas are available for read-only planner context"
+else
+  _check "dispatcher climate targets" fail "band target context is incomplete; do not tune ClimateIntent from missing targets"
+fi
+
+action_age_s=$($DB -c "SELECT COALESCE(EXTRACT(epoch FROM now() - max(ts))::int, 2147483647) FROM climate_action_log WHERE COALESCE(greenhouse_id, 'vallery') = '${GREENHOUSE_ID}';" 2>/dev/null | tr -d ' ')
+action_proof_missing=$($DB -c "
+WITH latest AS (
+  SELECT *
+    FROM climate_action_log
+   WHERE COALESCE(greenhouse_id, 'vallery') = '${GREENHOUSE_ID}'
+   ORDER BY ts DESC
+   LIMIT 1
+)
+SELECT array_to_string(
+         array_remove(ARRAY[
+           CASE WHEN climate_action IS NULL OR climate_action = '' THEN 'climate_action' END,
+           CASE WHEN priority_axis IS NULL OR priority_axis = '' THEN 'priority_axis' END,
+           CASE WHEN climate_intent_version IS NULL OR climate_intent_version = '' THEN 'climate_intent_version' END,
+           CASE WHEN temp_low_f IS NULL THEN 'temp_low_f' END,
+           CASE WHEN temp_target_f IS NULL THEN 'temp_target_f' END,
+           CASE WHEN temp_high_f IS NULL THEN 'temp_high_f' END,
+           CASE WHEN vpd_low_kpa IS NULL THEN 'vpd_low_kpa' END,
+           CASE WHEN vpd_target_kpa IS NULL THEN 'vpd_target_kpa' END,
+           CASE WHEN vpd_high_kpa IS NULL THEN 'vpd_high_kpa' END,
+           CASE WHEN temp_target_delta_f IS NULL THEN 'temp_target_delta_f' END,
+           CASE WHEN vpd_target_delta_kpa IS NULL THEN 'vpd_target_delta_kpa' END,
+           CASE WHEN temp_band_error_f IS NULL THEN 'temp_band_error_f' END,
+           CASE WHEN vpd_band_error_kpa IS NULL THEN 'vpd_band_error_kpa' END,
+           CASE WHEN relay_truth IS NULL OR jsonb_typeof(relay_truth) <> 'object' OR relay_truth = '{}'::jsonb THEN 'relay_truth' END
+         ], NULL),
+         ','
+       )
+  FROM latest;
+" 2>/dev/null | tr -d '[:space:]')
+if [ -n "${action_age_s:-}" ] && [ "${action_age_s:-2147483647}" -lt 300 ] && [ -z "${action_proof_missing:-}" ]; then
+  _check "climate action proof fresh" ok "controller action proof is ${action_age_s}s old and includes target deltas + relay truth"
+else
+  _check "climate action proof fresh" fail "action proof age=${action_age_s:-unknown}s missing=${action_proof_missing:-none}; planner must not infer why relays are off without fresh proof"
 fi
 
 # Scorecard function: non-zero rows for yesterday (data rolled up)

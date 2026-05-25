@@ -1954,6 +1954,16 @@ def test_planner_context_includes_dispatcher_owned_targets():
     assert "CLIMATE AUTHORITY MODE" in gather
     assert "COMPLIANCE_FIRST_TEMP_AND_VPD_HIGH" in gather
     assert "resource minimization must not close wet/fog assist" in gather
+    assert "CLIMATE AUTHORITY ACTION PROOF" in gather
+    assert "CLIMATE AUTHORITY ACTION ROLLUP" in gather
+    assert "controller-owned truth for the current action" in gather
+    assert "wet_assist_block_reason" in gather
+    assert "fog_block_reason" in gather
+    assert "relay_truth" in gather
+    assert "sensor_status" in gather
+    assert "dispatcher climate targets" in gather
+    assert "climate action proof fresh" in gather
+    assert "planner must not infer why relays are off without fresh proof" in gather
 
 
 def test_greenhouse_state_exposes_graphable_target_deltas():
