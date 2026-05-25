@@ -790,8 +790,13 @@ interval:
               if(west_wet_allowed && !isnan(west_vpd) && id(vpd_target_west) > 0 && west_vpd > id(vpd_target_west)) any_zone_stressed = true;
               if(!isnan(east_vpd) && id(vpd_target_east) > 0 && east_vpd > id(vpd_target_east)) any_zone_stressed = true;
               if(center_wet_allowed && id(vpd_target_center) > 0 && avg_vpd > id(vpd_target_center)) any_zone_stressed = true;
-              // FW-9: VPD emergency override — allow misting even if budget exhausted
-              float vpd_max_zone = fmax(south_vpd, fmax(west_vpd, east_vpd));
+              // FW-9: VPD emergency override — allow misting even if budget exhausted.
+              // Include avg_vpd so a house-level safety miss is not hidden by
+              // stale/missing zone sensors.
+              float vpd_max_zone = avg_vpd;
+              if(!isnan(south_vpd)) vpd_max_zone = isnan(vpd_max_zone) ? south_vpd : fmax(vpd_max_zone, south_vpd);
+              if(!isnan(west_vpd))  vpd_max_zone = isnan(vpd_max_zone) ? west_vpd  : fmax(vpd_max_zone, west_vpd);
+              if(!isnan(east_vpd))  vpd_max_zone = isnan(vpd_max_zone) ? east_vpd  : fmax(vpd_max_zone, east_vpd);
               bool vpd_emergency = !isnan(vpd_max_zone) && (vpd_max_zone > id(safety_vpd_max_kpa));
               bool global_stressed = (avg_vpd > id(mister_engage_kpa));
               bool budget_block =

@@ -2244,6 +2244,20 @@ def test_irrigation_scheduler_serializes_same_minute_zone_starts():
     assert "|| irrigation_block" in controls
 
 
+def test_mister_budget_emergency_uses_house_average_vpd():
+    controls = Path("firmware/greenhouse/controls.yaml").read_text()
+    start = controls.index("// FW-9: VPD emergency override")
+    end = controls.index("bool budget_block =", start)
+    block = controls[start:end]
+
+    assert "float vpd_max_zone = avg_vpd;" in block
+    assert "south_vpd" in block
+    assert "west_vpd" in block
+    assert "east_vpd" in block
+    assert "vpd_max_zone > id(safety_vpd_max_kpa)" in block
+    assert "!vpd_emergency" in controls[end : controls.index("bool irrigation_block", end)]
+
+
 def test_irrigation_schedule_is_heap_recovery_priority():
     import tasks
 
