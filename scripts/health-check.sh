@@ -5,6 +5,8 @@
 set -uo pipefail
 
 DB="docker exec verdify-timescaledb psql -U verdify -d verdify -t -c"
+API_HEALTH_URL="${API_HEALTH_URL:-http://127.0.0.1:8300/health}"
+PYTHON_BIN="${PYTHON:-/srv/greenhouse/.venv/bin/python}"
 PASS=0; FAIL=0; WARN=0
 
 check() {
@@ -30,7 +32,7 @@ done
 
 # ── Services ──
 echo "Services:"
-for svc in verdify-ingestor verdify-setpoint-server; do
+for svc in verdify-ingestor verdify-setpoint-server verdify-api; do
   a=$(systemctl is-active "$svc" 2>/dev/null || echo "inactive")
   check "$svc" "$([ "$a" = "active" ] && echo true || echo "$a")"
 done
@@ -92,6 +94,45 @@ ap_rc=$?
 ap=$(printf '%s' "$ap_raw" | tr -d '[:space:]')
 if [ "$ap_rc" -ne 0 ]; then ap="query_failed"; fi
 check "Climate action proof complete" "$([ -z "$ap" ] && echo true || echo "incomplete: $ap")"
+
+api_health_raw=$(curl -fsS "$API_HEALTH_URL" 2>/dev/null)
+api_health_rc=$?
+if [ "$api_health_rc" -ne 0 ]; then
+  check "API /health controller proof" "unreachable: ${API_HEALTH_URL}"
+else
+  api_health_result=$(printf '%s' "$api_health_raw" | "$PYTHON_BIN" -c '
+import json
+import sys
+
+try:
+    payload = json.load(sys.stdin)
+except Exception as exc:
+    print(f"invalid_json:{type(exc).__name__}")
+    sys.exit(0)
+
+checks = payload.get("checks") or {}
+failures = []
+if payload.get("status") != "ok":
+    failures.append("status={!r}".format(payload.get("status")))
+
+age = checks.get("climate_action_log_age_seconds")
+if not isinstance(age, (int, float)) or age >= 300:
+    failures.append(f"climate_action_log_age_seconds={age!r}")
+
+if "climate_action_log_proof_missing" not in checks:
+    failures.append("API /health lacks climate_action_log_proof_missing; restart/deploy verdify-api")
+elif checks.get("climate_action_log_proof_missing"):
+    failures.append(
+        "climate_action_log_proof_missing={!r}".format(checks.get("climate_action_log_proof_missing"))
+    )
+
+if checks.get("service_climate_action_log") != "ok":
+    failures.append("service_climate_action_log={!r}".format(checks.get("service_climate_action_log")))
+
+print("true" if not failures else "; ".join(failures))
+')
+  check "API /health controller proof" "$api_health_result"
+fi
 
 fc=$($DB "SELECT count(*) FROM weather_forecast WHERE ts > now();" | tr -d ' ')
 check "Future forecasts: $fc rows" "$([ "$fc" -gt 0 ] && echo true || echo "none")"
