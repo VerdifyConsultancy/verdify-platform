@@ -1841,7 +1841,9 @@ interval:
             auto sync_fert_master = [&](const char* reason) {
               const bool master_needed = fert_relay_active();
               if(master_needed && !id(fertilizer_master_valve).state) {
+                id(fert_controller_actuating) = true;
                 id(fertilizer_master_valve).turn_on();
+                id(fert_controller_actuating) = false;
                 ESP_LOGW("irrig","FERT MASTER opened by relay interlock (%s)", reason);
               } else if(!master_needed && id(fertilizer_master_valve).state) {
                 id(fertilizer_master_valve).turn_off();
@@ -2075,7 +2077,10 @@ interval:
               id(center_mister).turn_off();
 
               // Open the fert master before any fertilized drip/mister relay.
-              if(is_fert && !id(fertilizer_master_valve).state) id(fertilizer_master_valve).turn_on();
+              if(is_fert) {
+                id(fert_controller_actuating) = true;
+                if(!id(fertilizer_master_valve).state) id(fertilizer_master_valve).turn_on();
+              }
 
               // Turn on drip line. sprint-7: count one cycle per dispatch —
               // matches equipment_state's rising-edge count for the
@@ -2089,6 +2094,7 @@ interval:
                 case 7: id(south_wall_mister_fertilized).turn_on(); id(cnt_mister_south_today) += 1; break;
                 case 8: id(west_wall_mister_fertilized).turn_on();  id(cnt_mister_west_today)  += 1; break;
               }
+              if(is_fert) id(fert_controller_actuating) = false;
               sync_fert_master("job-start");
 
               const char* job_name = (job == 1) ? "WALL_CLEAN" :

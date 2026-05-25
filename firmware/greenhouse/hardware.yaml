@@ -396,6 +396,11 @@ switch:
     restore_mode: RESTORE_DEFAULT_OFF
     on_turn_on:
       - lambda: |-
+          if(!id(fert_controller_actuating)) {
+            id(west_wall_mister_fertilized).turn_off();
+            ESP_LOGE("irrig","Blocked non-controller west fert-mister relay ON");
+            return;
+          }
           if(!id(fertilizer_master_valve).state) {
             id(fertilizer_master_valve).turn_on();
             ESP_LOGW("irrig","FERT MASTER opened by west fert-mister relay");
@@ -420,6 +425,11 @@ switch:
     restore_mode: RESTORE_DEFAULT_OFF
     on_turn_on:
       - lambda: |-
+          if(!id(fert_controller_actuating)) {
+            id(south_wall_mister_fertilized).turn_off();
+            ESP_LOGE("irrig","Blocked non-controller south fert-mister relay ON");
+            return;
+          }
           if(!id(fertilizer_master_valve).state) {
             id(fertilizer_master_valve).turn_on();
             ESP_LOGW("irrig","FERT MASTER opened by south fert-mister relay");
@@ -474,6 +484,11 @@ switch:
     restore_mode: RESTORE_DEFAULT_OFF
     on_turn_on:
       - lambda: |-
+          if(!id(fert_controller_actuating)) {
+            id(center_drips_fertilized).turn_off();
+            ESP_LOGE("irrig","Blocked non-controller center fert-drip relay ON");
+            return;
+          }
           if(!id(fertilizer_master_valve).state) {
             id(fertilizer_master_valve).turn_on();
             ESP_LOGW("irrig","FERT MASTER opened by center fert-drip relay");
@@ -508,6 +523,11 @@ switch:
     restore_mode: RESTORE_DEFAULT_OFF
     on_turn_on:
       - lambda: |-
+          if(!id(fert_controller_actuating)) {
+            id(wall_drips_fertilized).turn_off();
+            ESP_LOGE("irrig","Blocked non-controller wall fert-drip relay ON");
+            return;
+          }
           if(!id(fertilizer_master_valve).state) {
             id(fertilizer_master_valve).turn_on();
             ESP_LOGW("irrig","FERT MASTER opened by wall fert-drip relay");
@@ -530,13 +550,21 @@ switch:
       mode: OUTPUT
       inverted: true
     restore_mode: RESTORE_DEFAULT_OFF
+    on_turn_on:
+      - lambda: |-
+          if(!id(fert_controller_actuating)) {
+            id(fertilizer_master_valve).turn_off();
+            ESP_LOGE("irrig","Blocked non-controller fert master ON");
+          }
     on_turn_off:
       - lambda: |-
           if(id(south_wall_mister_fertilized).state ||
              id(west_wall_mister_fertilized).state ||
              id(wall_drips_fertilized).state ||
              id(center_drips_fertilized).state) {
+            id(fert_controller_actuating) = true;
             id(fertilizer_master_valve).turn_on();
+            id(fert_controller_actuating) = false;
             ESP_LOGW("irrig","FERT MASTER manual-off corrected while fert relay active");
           }
 

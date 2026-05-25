@@ -755,6 +755,14 @@ globals:
     # Bitmask: bit0=wall_clean, bit1=wall_fert, bit2=center_clean,
     # bit3=center_fert, bit4=south_mister_fert, bit5=west_mister_fert
 
+  # True only while the irrigation state machine is intentionally changing
+  # fertilized relays or the fertilizer master valve. Relay-level guards use
+  # this to reject direct HA/manual fert actuation.
+  - id: fert_controller_actuating
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
   - id: irrig_wall_cycle_count
     type: int
     restore_value: no

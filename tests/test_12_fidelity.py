@@ -2161,23 +2161,33 @@ def test_required_plan_alert_ignores_validation_ack_only_rows():
 def test_fert_master_valve_is_wired_and_interlocked_with_fert_relays():
     hardware = Path("firmware/greenhouse/hardware.yaml").read_text()
     controls = Path("firmware/greenhouse/controls.yaml").read_text()
+    globals_yaml = Path("firmware/greenhouse/globals.yaml").read_text()
     entity_map = Path("ingestor/entity_map.py").read_text()
 
     assert "id: fertilizer_master_valve" in hardware
     assert 'name: "Valve • Fert. Master"' in hardware
+    assert "id: fert_controller_actuating" in globals_yaml
+    assert "Relay-level guards use" in globals_yaml
     fert_master_block = hardware[hardware.index("id: fertilizer_master_valve") :]
     assert "pcf8574: pcf_out_2" in fert_master_block
     assert "number: 1" in fert_master_block
+    assert "Blocked non-controller fert master ON" in fert_master_block
     assert "FERT MASTER manual-off corrected while fert relay active" in fert_master_block
     assert '"valve___fert__master": "fert_master_valve"' in entity_map
 
-    for relay_name in (
-        "west fert-mister",
-        "south fert-mister",
-        "center fert-drip",
-        "wall fert-drip",
+    for relay_id, relay_name in (
+        ("west_wall_mister_fertilized", "west fert-mister"),
+        ("south_wall_mister_fertilized", "south fert-mister"),
+        ("center_drips_fertilized", "center fert-drip"),
+        ("wall_drips_fertilized", "wall fert-drip"),
     ):
-        assert f"FERT MASTER opened by {relay_name} relay" in hardware
+        relay_start = hardware.index(f"id: {relay_id}")
+        relay_end = hardware.find("\n  - platform: gpio", relay_start + 1)
+        relay_block = hardware[relay_start : relay_end if relay_end != -1 else len(hardware)]
+        assert "if(!id(fert_controller_actuating))" in relay_block
+        assert f"Blocked non-controller {relay_name} relay ON" in relay_block
+        assert f"FERT MASTER opened by {relay_name} relay" in relay_block
+        assert relay_block.index("if(!id(fert_controller_actuating))") < relay_block.index("FERT MASTER opened")
 
     assert "auto fert_relay_active = [&]() -> bool" in controls
     for relay_id in (
@@ -2188,12 +2198,24 @@ def test_fert_master_valve_is_wired_and_interlocked_with_fert_relays():
     ):
         assert f"id({relay_id}).state" in controls
 
-    master_on = "if(is_fert && !id(fertilizer_master_valve).state) id(fertilizer_master_valve).turn_on();"
-    assert master_on in controls
-    assert controls.index(master_on) < controls.index("case 2: id(wall_drips_fertilized).turn_on();")
-    assert controls.index(master_on) < controls.index("case 4: id(center_drips_fertilized).turn_on();")
-    assert controls.index(master_on) < controls.index("case 7: id(south_wall_mister_fertilized).turn_on();")
-    assert controls.index(master_on) < controls.index("case 8: id(west_wall_mister_fertilized).turn_on();")
+    job_start = controls[
+        controls.index("// Open the fert master before any fertilized drip/mister relay.") : controls.index(
+            'sync_fert_master("job-start")'
+        )
+    ]
+    assert "if(is_fert) {" in job_start
+    assert "id(fert_controller_actuating) = true;" in job_start
+    assert "if(!id(fertilizer_master_valve).state) id(fertilizer_master_valve).turn_on();" in job_start
+    assert "if(is_fert) id(fert_controller_actuating) = false;" in job_start
+    for fert_turn_on in (
+        "case 2: id(wall_drips_fertilized).turn_on();",
+        "case 4: id(center_drips_fertilized).turn_on();",
+        "case 7: id(south_wall_mister_fertilized).turn_on();",
+        "case 8: id(west_wall_mister_fertilized).turn_on();",
+    ):
+        assert fert_turn_on in job_start
+        assert job_start.index("id(fert_controller_actuating) = true;") < job_start.index(fert_turn_on)
+        assert job_start.index(fert_turn_on) < job_start.index("id(fert_controller_actuating) = false;")
 
     assert 'sync_fert_master("watchdog")' in controls
     assert 'sync_fert_master("job-start")' in controls
