@@ -2009,6 +2009,23 @@ def test_climate_action_log_treats_served_wet_assist_as_allowed():
         ingestor.state.system.update(original_system)
 
 
+def test_climate_telemetry_uses_actual_mister_pulse_state():
+    controls = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
+    start = controls.index("/*** ClimateIntent controller decision")
+    end = controls.index("/*** OBS-1e", start)
+    block = controls[start:end]
+
+    assert "const bool selected_wet_action" in block
+    assert "const bool mister_relay_on" in block
+    assert 'effective_moisture_state = "pulse_on"' in block
+    assert 'effective_moisture_state = "pulse_gap"' in block
+    assert 'effective_moisture_state = "inactive"' in block
+    assert "effective_moisture_zone = climate_zone_name(id(mister_pulse_zone))" in block
+    assert "effective_next_mist_s = float(id(mister_pulse_timer_ms)) / 1000.0f" in block
+    assert "id(gh_climate_moisture_assist_state).publish_state(effective_moisture_state)" in block
+    assert "id(gh_climate_moisture_zone).publish_state(effective_moisture_zone)" in block
+
+
 def test_climate_decision_surface_excludes_fert_and_drip_relays():
     types_src = (REPO_ROOT / "firmware" / "lib" / "greenhouse_types.h").read_text()
     relay_block = types_src[

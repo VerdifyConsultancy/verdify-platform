@@ -1189,6 +1189,57 @@ interval:
             const char* priority_axis = CLIMATE_PRIORITY_AXIS_NAMES[climate_decision.priority_axis];
             const char* moisture_state = CLIMATE_MOISTURE_ASSIST_STATE_NAMES[climate_decision.moisture_assist_state];
             const char* moisture_zone = CLIMATE_MOISTURE_ZONE_NAMES[climate_decision.moisture_zone];
+            const bool selected_wet_action =
+              climate_decision.climate_action == CLIMATE_VENT_COOL_MIST_ASSIST
+              || climate_decision.climate_action == CLIMATE_VENT_COOL_FOG_ASSIST
+              || climate_decision.climate_action == CLIMATE_SEALED_HUMIDIFY
+              || climate_decision.climate_action == CLIMATE_SEALED_FOG;
+            const bool mister_relay_on =
+              id(south_wall_mister).state
+              || id(west_wall_mister).state
+              || id(center_mister).state;
+            auto climate_zone_name = [](int zone) -> const char* {
+              if(zone == 1) return "south";
+              if(zone == 2) return "west";
+              if(zone == 3) return "center";
+              return "none";
+            };
+            const char* effective_moisture_state = moisture_state;
+            const char* effective_moisture_zone = moisture_zone;
+            float effective_next_mist_s = climate_decision.next_mist_eligible_s;
+
+            if(!selected_wet_action && VPD <= VPDhi) {
+              effective_moisture_state = "inactive";
+              effective_moisture_zone = "none";
+              effective_next_mist_s = -1.0f;
+            } else if(selected_wet_action && mister_relay_on && id(mister_pulse_zone) > 0) {
+              effective_moisture_state = "pulse_on";
+              effective_moisture_zone = climate_zone_name(id(mister_pulse_zone));
+              effective_next_mist_s = 0.0f;
+            } else if(selected_wet_action && id(mister_state) > 0 && id(mister_pulse_zone) == 0 && id(mister_pulse_timer_ms) > 0) {
+              effective_moisture_state = "pulse_gap";
+              effective_moisture_zone = "none";
+              effective_next_mist_s = float(id(mister_pulse_timer_ms)) / 1000.0f;
+            } else if(selected_wet_action && strcmp(moisture_block_reason, "served") == 0) {
+              effective_moisture_state = "pulse_on";
+              effective_moisture_zone = climate_zone_name(id(mister_pulse_zone));
+              effective_next_mist_s = 0.0f;
+            } else if(selected_wet_action && strcmp(moisture_block_reason, "pulse_gap") == 0) {
+              effective_moisture_state = "pulse_gap";
+              effective_moisture_zone = "none";
+              effective_next_mist_s = float(id(mister_pulse_timer_ms)) / 1000.0f;
+            } else if(selected_wet_action && strcmp(moisture_block_reason, "engage_delay") == 0) {
+              effective_moisture_state = "engage_delay";
+              effective_moisture_zone = "none";
+            } else if(selected_wet_action
+                      && strcmp(moisture_block_reason, "none") != 0
+                      && strcmp(moisture_block_reason, "no_vpd_demand") != 0) {
+              effective_moisture_state = "blocked";
+              effective_moisture_zone = "none";
+              effective_next_mist_s = -1.0f;
+            } else if(!mister_relay_on && id(mister_pulse_zone) == 0) {
+              effective_moisture_zone = "none";
+            }
             char temp_error[24];
             char vpd_error[24];
             char fog_margin[24];
@@ -1197,8 +1248,8 @@ interval:
             snprintf(temp_error, sizeof(temp_error), "%.2f", climate_decision.temp_error_f);
             snprintf(vpd_error, sizeof(vpd_error), "%.3f", climate_decision.vpd_error_kpa);
             snprintf(fog_margin, sizeof(fog_margin), "%.3f", climate_decision.fog_margin_kpa);
-            if(climate_decision.next_mist_eligible_s >= 0.0f) {
-              snprintf(next_mist, sizeof(next_mist), "%.0f", climate_decision.next_mist_eligible_s);
+            if(effective_next_mist_s >= 0.0f) {
+              snprintf(next_mist, sizeof(next_mist), "%.0f", effective_next_mist_s);
             } else {
               snprintf(next_mist, sizeof(next_mist), "none");
             }
@@ -1224,14 +1275,14 @@ interval:
               snprintf(last_climate_candidate_summary, sizeof(last_climate_candidate_summary), "%s", climate_decision.candidate_summary);
             }
             static char last_climate_moisture_state[24] = "";
-            if(strcmp(last_climate_moisture_state, moisture_state) != 0){
-              id(gh_climate_moisture_assist_state).publish_state(moisture_state);
-              snprintf(last_climate_moisture_state, sizeof(last_climate_moisture_state), "%s", moisture_state);
+            if(strcmp(last_climate_moisture_state, effective_moisture_state) != 0){
+              id(gh_climate_moisture_assist_state).publish_state(effective_moisture_state);
+              snprintf(last_climate_moisture_state, sizeof(last_climate_moisture_state), "%s", effective_moisture_state);
             }
             static char last_climate_moisture_zone[24] = "";
-            if(strcmp(last_climate_moisture_zone, moisture_zone) != 0){
-              id(gh_climate_moisture_zone).publish_state(moisture_zone);
-              snprintf(last_climate_moisture_zone, sizeof(last_climate_moisture_zone), "%s", moisture_zone);
+            if(strcmp(last_climate_moisture_zone, effective_moisture_zone) != 0){
+              id(gh_climate_moisture_zone).publish_state(effective_moisture_zone);
+              snprintf(last_climate_moisture_zone, sizeof(last_climate_moisture_zone), "%s", effective_moisture_zone);
             }
             static char last_climate_temp_error[24] = "";
             if(strcmp(last_climate_temp_error, temp_error) != 0){
