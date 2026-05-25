@@ -586,6 +586,7 @@ class TestContractDriftGuardrails:
         assert ".dirty" in makefile
         assert "firmware-promote-last-good" in makefile
         assert "Rollback target unchanged while this build bakes" in makefile
+        assert makefile.index("bash scripts/firmware-deploy-preflight.sh") < makefile.index("upload --device")
         assert "FIRMWARE_DEPLOY_OPERATOR_SIGNOFF=1" in preflight
         assert "FIRMWARE_DEPLOY_OVERRIDE_REASON" in preflight
         assert "No last-good rollback artifact" in preflight
