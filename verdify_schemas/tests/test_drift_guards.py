@@ -55,6 +55,7 @@ from verdify_schemas.system_infra import (
     UtilityCost,
 )
 from verdify_schemas.telemetry import (
+    ClimateActionLogRow,
     ClimateRow,
     Diagnostics,
     EnergySample,
@@ -140,6 +141,7 @@ def _tasks_route_target_columns(repo_root: Path, *mapping_names: str) -> set[str
 DB_BACKED = [
     # Sprint 20/21 — telemetry + plan + setpoint + crops + lessons
     (ClimateRow, "climate"),
+    (ClimateActionLogRow, "climate_action_log"),
     (Diagnostics, "diagnostics"),
     (EquipmentStateEvent, "equipment_state"),
     (EnergySample, "energy"),

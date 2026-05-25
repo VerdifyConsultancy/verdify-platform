@@ -134,6 +134,63 @@ def test_climate_intent_materializes_to_complete_bounded_tier1_params() -> None:
     assert all(registry_value_error(name, value) is None for name, value in params.items())
 
 
+def test_materializer_forces_wet_assist_when_live_vpd_is_above_band_and_dew_is_safe() -> None:
+    intent = _valid_intent(
+        forecast_vpd_bias_kpa=0.0,
+        mist_duty_limit_pct=0.0,
+        fog_escalate_vpd_excess_kpa=0.5,
+        wet_cutoff_hour=17.0,
+        daily_mist_budget_gal=0.0,
+        resource_sensitivity=1.0,
+        relay_churn_penalty=1.0,
+    )
+
+    params = materialize_climate_intent_tier1(
+        intent,
+        {
+            "temp_low": 72.0,
+            "temp_high": 78.0,
+            "vpd_low": 0.8,
+            "vpd_high": 1.2,
+            "temp_actual_f": 82.0,
+            "vpd_actual_kpa": 1.55,
+            "dew_margin_f": 12.0,
+        },
+    )
+
+    assert params["sw_direct_wet_stress_override_enabled"] == 1.0
+    assert params["sw_fog_stress_window_extend_enabled"] == 1.0
+    assert params["direct_wet_stress_vpd_margin_kpa"] == pytest.approx(0.05)
+    assert params["fog_escalation_kpa"] == pytest.approx(0.2)
+    assert params["direct_wet_stress_latest_hour"] >= 19.0
+    assert params["mister_water_budget_gal"] >= 120.0
+
+
+def test_materializer_does_not_force_wet_assist_when_dew_margin_is_unsafe() -> None:
+    intent = _valid_intent(
+        forecast_vpd_bias_kpa=0.0,
+        mist_duty_limit_pct=0.0,
+        wet_cutoff_hour=17.0,
+        daily_mist_budget_gal=0.0,
+        resource_sensitivity=1.0,
+    )
+
+    params = materialize_climate_intent_tier1(
+        intent,
+        {
+            "temp_high": 78.0,
+            "vpd_low": 0.8,
+            "vpd_high": 1.2,
+            "temp_actual_f": 82.0,
+            "vpd_actual_kpa": 1.55,
+            "dew_margin_f": 4.0,
+        },
+    )
+
+    assert params["sw_direct_wet_stress_override_enabled"] == 0.0
+    assert params["sw_fog_stress_window_extend_enabled"] == 0.0
+
+
 def test_candidate_selection_is_lexicographic_not_weighted_sum() -> None:
     assert CLIMATE_PRIORITY_ORDER == ("safety", "temp", "vpd", "resource")
 

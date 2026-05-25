@@ -755,6 +755,8 @@ def _render_climate_intent_surface(summary: dict[str, Any]) -> list[str]:
             "",
             "The planner receives these target values as read-only prompt context. They are derived from crop profiles and dispatcher policy, and the target delta columns are signed `actual - target` metrics for graphing and mode diagnosis.",
             "",
+            "Controller priority is safety rails first, then temperature compliance, then VPD compliance, then resource use. When VPD is above the dispatcher-owned band and dew/occupancy rails are safe, resource minimization must not close wet/fog assist; ClimateIntent should make moisture assist available near the active VPD high edge until target deltas recover.",
+            "",
         ]
     )
     if target:

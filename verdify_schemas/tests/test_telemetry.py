@@ -9,6 +9,7 @@ from pydantic import ValidationError
 
 from verdify_schemas.telemetry import (
     OVERRIDE_EVENT_TYPES,
+    ClimateActionLogRow,
     ClimateRow,
     Diagnostics,
     EnergySample,
@@ -155,6 +156,42 @@ class TestSystemStateRow:
     def test_valid(self):
         s = SystemStateRow(ts=NOW, entity="greenhouse_state", value="SEALED_MIST")
         assert s.value == "SEALED_MIST"
+
+
+class TestClimateActionLogRow:
+    def test_valid_climate_authority_snapshot(self):
+        row = ClimateActionLogRow(
+            ts=NOW,
+            climate_action="VENT_COOL_MIST_ASSIST",
+            priority_axis="temp",
+            temp_low_f=62.0,
+            temp_target_f=63.6,
+            temp_high_f=65.2,
+            vpd_low_kpa=0.25,
+            vpd_target_kpa=0.525,
+            vpd_high_kpa=0.8,
+            temp_target_delta_f=5.1,
+            vpd_target_delta_kpa=0.72,
+            temp_band_error_f=3.4,
+            vpd_band_error_kpa=0.55,
+            moisture_assist_state="blocked",
+            moisture_zone="none",
+            wet_assist_allowed=False,
+            wet_assist_block_reason="direct_wet_window",
+            fog_allowed=False,
+            fog_block_reason="time_window",
+            relay_truth={"vent": True, "fan1": True, "fog": False},
+            resource_cost_estimate={"water_gal": 0.0},
+            climate_intent_version="2026-05-24",
+        )
+
+        assert row.climate_action == "VENT_COOL_MIST_ASSIST"
+        assert row.priority_axis == "temp"
+        assert row.relay_truth["vent"] is True
+
+    def test_rejects_unknown_action(self):
+        with pytest.raises(ValidationError):
+            ClimateActionLogRow(ts=NOW, climate_action="OPEN_VALVE", priority_axis="temp")
 
 
 class TestOverrideEvent:

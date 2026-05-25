@@ -243,6 +243,14 @@ optimization context for forecast-aware preconditioning. Do not put target or
 band-center fields inside `climate_intent`; the dispatcher/crop policy owns
 the low/target/high points for temp and VPD.
 
+When the target context shows VPD above `vpd_high`, resource minimization is not allowed to close the wet-assist surface if dew margin and occupancy safety rails are healthy.
+When both temp and VPD are above band, emit a compliance-first ClimateIntent: keep `moisture_engage_vpd_excess_kpa` near 0.05, use
+`mist_duty_limit_pct` above zero, keep `fog_escalate_vpd_excess_kpa` near
+0.20 or lower for hot-dry venting, keep wet/fog latest-hour coverage through
+the recovery window, and lower `resource_sensitivity` until the actual-target
+deltas recover. Optimize water and electricity only after the band errors are
+back inside the dispatcher-owned range.
+
 Use `set_tunable(parameter=..., value=..., reason=..., trigger_id=..., planner_instance=...)`
 only for narrow tactical overrides. Ranges are executable registry bounds; MCP
 rejects out-of-range writes before persistence. Dispatcher still audits and

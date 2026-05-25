@@ -141,6 +141,31 @@ TEST(direct_wet_stress_override_requires_vpd_dew_and_hour) {
     PASS();
 }
 
+TEST(climate_wet_assist_requires_safety_rails_not_ai_switch_or_crop_window) {
+    auto sp = band_setpoints();
+    sp.direct_wet_stress_override_enabled = false;
+    sp.direct_wet_stress_vpd_margin_kpa = 0.05f;
+    sp.direct_wet_stress_min_dew_margin_f = 8.0f;
+    sp.direct_wet_stress_latest_hour = 22;
+    validate_setpoints(sp);
+
+    auto in = make_inputs(86.0f, sp.vpd_high + 0.20f);
+    in.local_hour = 21;
+    in.dew_point_f = in.temp_f - 12.0f;
+
+    ASSERT_TRUE(climate_wet_assist_permitted(in, sp));
+
+    in.dew_point_f = in.temp_f - 4.0f;
+    ASSERT_FALSE(climate_wet_assist_permitted(in, sp));
+    ASSERT_TRUE(std::string(climate_wet_assist_block_reason(in, sp)) == "dew_margin");
+
+    in.dew_point_f = in.temp_f - 12.0f;
+    in.local_hour = 22;
+    ASSERT_FALSE(climate_wet_assist_permitted(in, sp));
+    ASSERT_TRUE(std::string(climate_wet_assist_block_reason(in, sp)) == "time_window");
+    PASS();
+}
+
 TEST(fog_stress_extension_requires_enabled_vpd_dew_and_extension_hour) {
     auto sp = band_setpoints();
     sp.fog_window_start = 7;
@@ -169,6 +194,48 @@ TEST(fog_stress_extension_requires_enabled_vpd_dew_and_extension_hour) {
     in.vpd_kpa = sp.vpd_high - 0.01f;
     ASSERT_FALSE(fog_stress_window_permitted(in, sp));
     ASSERT_FALSE(fog_permitted(in, sp));
+    PASS();
+}
+
+TEST(climate_fog_assist_uses_climate_window_independent_of_normal_fog_window) {
+    auto sp = band_setpoints();
+    sp.fog_window_start = 7;
+    sp.fog_window_end = 17;
+    sp.fog_stress_window_extend_enabled = true;
+    sp.fog_stress_window_latest_hour = 19;
+    sp.fog_stress_min_dew_margin_f = 10.0f;
+    validate_setpoints(sp);
+
+    auto in = make_inputs(86.0f, sp.vpd_high + 0.35f, 60.0f);
+    in.local_hour = 6;
+    in.dew_point_f = in.temp_f - 12.0f;
+
+    ASSERT_FALSE(fog_permitted(in, sp));
+    ASSERT_TRUE(climate_fog_assist_permitted(in, sp));
+
+    sp.fog_stress_window_extend_enabled = false;
+    ASSERT_TRUE(climate_fog_assist_permitted(in, sp));
+    PASS();
+}
+
+TEST(safety_cool_fog_uses_climate_fog_assist_gate) {
+    auto sp = band_setpoints();
+    sp.fog_window_start = 7;
+    sp.fog_window_end = 17;
+    sp.fog_stress_window_extend_enabled = true;
+    sp.fog_stress_window_latest_hour = 19;
+    sp.fog_stress_min_dew_margin_f = 10.0f;
+    validate_setpoints(sp);
+
+    auto in = make_inputs(sp.safety_max + 1.0f, sp.vpd_high + 0.8f, 60.0f);
+    in.local_hour = 6;
+    in.dew_point_f = in.temp_f - 12.0f;
+    auto relays = resolve_equipment(SAFETY_COOL, in, sp, initial_state(), true);
+
+    ASSERT_TRUE(relays.vent);
+    ASSERT_TRUE(relays.fan1);
+    ASSERT_TRUE(relays.fan2);
+    ASSERT_TRUE(relays.fog);
     PASS();
 }
 
@@ -333,6 +400,20 @@ TEST(climate_decision_drives_hot_dry_to_vent_mist_assist) {
     Mode m = determine_mode(in, sp, s, 5000);
     ASSERT_EQ(m, VENTILATE);
     ASSERT_TRUE(s.vent_mist_assist_active);
+    PASS();
+}
+
+TEST(climate_decision_selects_mist_assist_from_band_error_even_when_ai_switch_off) {
+    auto sp = band_setpoints();
+    sp.sw_fsm_controller_enabled = true;
+    sp.direct_wet_stress_override_enabled = false;
+    auto s = initial_state();
+    auto in = make_inputs(sp.temp_high + 4.0f, sp.vpd_high + 0.25f);
+    in.dew_point_f = in.temp_f - 12.0f;
+
+    ClimateActionDecision d = evaluate_climate_decision(in, sp, s);
+    ASSERT_EQ(d.climate_action, CLIMATE_VENT_COOL_MIST_ASSIST);
+    ASSERT_EQ(d.moisture_assist_state, CLIMATE_MOISTURE_SERVED);
     PASS();
 }
 
@@ -702,6 +783,9 @@ TEST(fix9_mist_stage_s1_to_s2) {
 
 TEST(fix9_mist_stage_s2_to_fog) {
     auto sp = band_setpoints(); sp.fog_escalation_kpa = 0.4;
+    sp.fog_stress_window_extend_enabled = true;
+    sp.fog_stress_window_latest_hour = 19;
+    sp.fog_stress_min_dew_margin_f = 10.0f;
     auto s = initial_state();
     s.mode_prev = SEALED_MIST; s.sealed_timer_ms = 100000;
     s.mist_stage = MIST_S2; s.mist_stage_timer_ms = 0;
@@ -723,8 +807,11 @@ TEST(fix9_mist_resets_on_seal_exit) {
 
 TEST(fix9_fog_in_equipment_reads_mist_stage) {
     auto sp = default_setpoints();
+    sp.fog_stress_window_extend_enabled = true;
+    sp.fog_stress_window_latest_hour = 19;
+    sp.fog_stress_min_dew_margin_f = 10.0f;
     auto s = initial_state(); s.mist_stage = MIST_FOG;
-    auto in = make_inputs(72, 1.7, 60);
+    auto in = make_inputs(72, sp.vpd_high + 0.4f, 60);
     auto out = resolve_equipment(SEALED_MIST, in, sp, s, true);
     ASSERT_TRUE(out.fog);
     PASS();
@@ -893,6 +980,9 @@ TEST(fw9b_ventilate_fog_on_vpd_emergency) {
     sp.fog_min_temp = 55.0f;
     sp.fog_window_start = 7;
     sp.fog_window_end = 17;
+    sp.fog_stress_window_extend_enabled = true;
+    sp.fog_stress_window_latest_hour = 19;
+    sp.fog_stress_min_dew_margin_f = 10.0f;
     auto s = initial_state();
     // 85°F, VPD 3.2 (above trigger 2.59), 25% RH, hour 14 (in fog window)
     auto in = make_inputs(85.0f, 3.2f, 25.0f);
@@ -923,6 +1013,9 @@ TEST(fw9b_ventilate_fog_production_band) {
     sp.fog_min_temp = 55.0f;
     sp.fog_window_start = 7;
     sp.fog_window_end = 17;
+    sp.fog_stress_window_extend_enabled = true;
+    sp.fog_stress_window_latest_hour = 19;
+    sp.fog_stress_min_dew_margin_f = 10.0f;
     auto s = initial_state();
     // 85°F, VPD 1.8 (above band, below OLD vpd_max_safe 3.0), hour 14
     // OLD BEHAVIOR: fog off (vpd < 3.0). NEW BEHAVIOR: fog on (vpd > 1.45).
@@ -2105,6 +2198,13 @@ static Setpoints band_first_setpoints() {
     sp.mist_backoff_ms = 600000;
     sp.safety_max = 100.0f;
     sp.safety_min = 40.0f;
+    sp.direct_wet_stress_override_enabled = true;
+    sp.direct_wet_stress_vpd_margin_kpa = 0.05f;
+    sp.direct_wet_stress_min_dew_margin_f = 8.0f;
+    sp.direct_wet_stress_latest_hour = 22;
+    sp.fog_stress_window_extend_enabled = true;
+    sp.fog_stress_window_latest_hour = 19;
+    sp.fog_stress_min_dew_margin_f = 10.0f;
     return sp;
 }
 

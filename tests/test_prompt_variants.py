@@ -113,6 +113,7 @@ class TestSplitInvariants:
             assert retired_ai_target_field not in iris_planner._PLANNER_CORE
         assert "dispatcher-owned read-only targets" in iris_planner._PLANNER_CORE
         assert "current target deltas" in iris_planner._PLANNER_CORE
+        assert "resource minimization is not allowed to close the wet-assist surface" in iris_planner._PLANNER_CORE
         assert "Do not emit in plans" in iris_planner._PLANNER_CORE
         assert "crop-band params" in iris_planner._sunrise_prompt("context")
         assert "crop-band params" in iris_planner._sunset_prompt("context")

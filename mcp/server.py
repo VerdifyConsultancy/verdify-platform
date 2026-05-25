@@ -121,7 +121,45 @@ async def _fetch_active_tier1_params(conn: asyncpg.Connection) -> dict[str, floa
         """,
         sorted(set(TIER1_REG) | set(BAND_OWNED_REG)),
     )
-    return {str(row["parameter"]): float(row["value"]) for row in rows}
+    params = {str(row["parameter"]): float(row["value"]) for row in rows}
+    target_row = await conn.fetchrow(
+        """
+        WITH latest_climate AS (
+          SELECT ts,
+                 temp_avg,
+                 vpd_avg,
+                 dew_point
+            FROM climate
+           WHERE temp_avg IS NOT NULL
+             AND vpd_avg IS NOT NULL
+           ORDER BY ts DESC
+           LIMIT 1
+        ), target AS (
+          SELECT ts,
+                 temp_avg,
+                 vpd_avg,
+                 dew_point,
+                 fn_setpoint_at('temp_low', ts) AS temp_low_f,
+                 fn_setpoint_at('temp_high', ts) AS temp_high_f,
+                 fn_setpoint_at('vpd_low', ts) AS vpd_low_kpa,
+                 fn_setpoint_at('vpd_high', ts) AS vpd_high_kpa
+            FROM latest_climate
+        )
+        SELECT temp_avg AS temp_actual_f,
+               vpd_avg AS vpd_actual_kpa,
+               CASE WHEN dew_point IS NULL THEN NULL ELSE temp_avg - dew_point END AS dew_margin_f,
+               greatest(0.0, temp_avg - temp_high_f) AS temp_above_high_f,
+               greatest(0.0, vpd_avg - vpd_high_kpa) AS vpd_above_high_kpa,
+               (temp_avg - ((temp_low_f + temp_high_f) / 2.0)) AS temp_target_delta_f,
+               (vpd_avg - ((vpd_low_kpa + vpd_high_kpa) / 2.0)) AS vpd_target_delta_kpa
+          FROM target
+        """
+    )
+    if target_row:
+        for key, value in dict(target_row).items():
+            if value is not None:
+                params[key] = float(value)
+    return params
 
 
 def _materialize_climate_intent_waypoints(
@@ -1005,10 +1043,10 @@ async def set_plan(
                             "trigger_id": normalized_trigger_id,
                         }
                     )
-                if delivery["status"] != "pending":
+                if delivery["status"] not in {"pending", "timed_out"}:
                     return json.dumps(
                         {
-                            "error": "trigger_id is not pending",
+                            "error": "trigger_id is not pending or timed_out",
                             "trigger_id": normalized_trigger_id,
                             "status": delivery["status"],
                         }
@@ -1101,7 +1139,7 @@ async def set_plan(
                            plan_written_at   = $3,
                            status            = 'plan_written'
                      WHERE trigger_id = $1::uuid
-                       AND status = 'pending'
+                       AND status IN ('pending', 'timed_out')
                     """,
                     normalized_trigger_id,
                     plan.plan_id,

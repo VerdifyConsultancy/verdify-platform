@@ -1072,6 +1072,46 @@ SELECT to_char(ts AT TIME ZONE 'America/Denver', 'MM-DD HH24:MI') AS reading_mdt
 echo "Dispatcher/crop policy owns low/target/high. The AI planner receives these as read-only prompt context and tunes only tactical ClimateIntent fields around them."
 echo ""
 
+echo "--- CLIMATE AUTHORITY MODE (current compliance priority) ---"
+$DB -c "
+WITH latest_climate AS (
+  SELECT ts,
+         temp_avg,
+         vpd_avg,
+         dew_point
+    FROM climate
+   WHERE temp_avg IS NOT NULL
+     AND vpd_avg IS NOT NULL
+   ORDER BY ts DESC
+   LIMIT 1
+), latest AS (
+  SELECT c.ts,
+         c.temp_avg,
+         c.vpd_avg,
+         c.dew_point,
+         fn_setpoint_at('temp_low', c.ts) AS sp_temp_low,
+         fn_setpoint_at('temp_high', c.ts) AS sp_temp_high,
+         fn_setpoint_at('vpd_low', c.ts) AS sp_vpd_low,
+         fn_setpoint_at('vpd_high', c.ts) AS sp_vpd_high,
+         (c.temp_avg - c.dew_point) AS dew_margin_f
+    FROM latest_climate c
+)
+SELECT to_char(ts AT TIME ZONE 'America/Denver', 'MM-DD HH24:MI') AS reading_mdt,
+       round(greatest(0.0, temp_avg - sp_temp_high)::numeric, 2) AS temp_above_high_f,
+       round(greatest(0.0, vpd_avg - sp_vpd_high)::numeric, 3) AS vpd_above_high_kpa,
+       round(dew_margin_f::numeric, 2) AS dew_margin_f,
+       CASE
+         WHEN temp_avg > sp_temp_high AND vpd_avg > sp_vpd_high THEN 'COMPLIANCE_FIRST_TEMP_AND_VPD_HIGH'
+         WHEN temp_avg > sp_temp_high THEN 'COMPLIANCE_FIRST_TEMP_HIGH'
+         WHEN vpd_avg > sp_vpd_high THEN 'COMPLIANCE_FIRST_VPD_HIGH'
+         WHEN temp_avg < sp_temp_low OR vpd_avg < sp_vpd_low THEN 'COMPLIANCE_FIRST_LOW_SIDE'
+         ELSE 'RESOURCE_OPTIMIZATION_ALLOWED'
+       END AS authority_mode
+  FROM latest;
+" 2>/dev/null || echo "(climate authority mode unavailable)"
+echo "Priority order is safety rails, temp compliance, VPD compliance, then resource use. When VPD is above band and dew/occupancy rails are safe, resource minimization must not close wet/fog assist; use ClimateIntent to make moisture assist available near the dispatcher-owned VPD high edge."
+echo ""
+
 # ── 30b-4. HOT/DRY VENTILATE CONTROL UTILIZATION ─────────────────
 echo "--- HOT/DRY VENTILATE UTILIZATION (last 24h, firmware band basis) ---"
 $DB -c "

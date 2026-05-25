@@ -90,6 +90,18 @@ inline bool direct_wet_stress_override_permitted(const SensorInputs& in, const S
         && dew_margin_f(in) >= sp.direct_wet_stress_min_dew_margin_f;
 }
 
+inline const char* climate_wet_assist_block_reason(const SensorInputs& in, const Setpoints& sp) noexcept {
+    if (moisture_blocked_by_occupancy(in, sp)) return "occupancy";
+    if (in.vpd_kpa <= (sp.vpd_high + sp.direct_wet_stress_vpd_margin_kpa)) return "below_threshold";
+    if (dew_margin_f(in) < sp.direct_wet_stress_min_dew_margin_f) return "dew_margin";
+    if (in.local_hour >= sp.direct_wet_stress_latest_hour) return "time_window";
+    return "";
+}
+
+inline bool climate_wet_assist_permitted(const SensorInputs& in, const Setpoints& sp) noexcept {
+    return climate_wet_assist_block_reason(in, sp)[0] == '\0';
+}
+
 inline bool fog_stress_window_permitted(const SensorInputs& in, const Setpoints& sp) noexcept {
     return sp.fog_stress_window_extend_enabled
         && fog_stress_hour_in_extension(in.local_hour, sp.fog_window_end, sp.fog_stress_window_latest_hour)
@@ -154,6 +166,20 @@ inline bool fog_permitted(const SensorInputs& in, const Setpoints& sp) noexcept 
     return (in.rh_pct  <= sp.fog_rh_ceiling)
         && (in.temp_f  >= sp.fog_min_temp)
         && fog_hour_permitted(in, sp);
+}
+
+inline const char* climate_fog_assist_block_reason(const SensorInputs& in, const Setpoints& sp) noexcept {
+    if (moisture_blocked_by_occupancy(in, sp)) return "occupancy";
+    if (in.vpd_kpa <= sp.vpd_high) return "below_threshold";
+    if (dew_margin_f(in) < sp.fog_stress_min_dew_margin_f) return "dew_margin";
+    if (in.local_hour >= sp.fog_stress_window_latest_hour) return "time_window";
+    if (in.rh_pct > sp.fog_rh_ceiling) return "rh_ceiling";
+    if (in.temp_f < sp.fog_min_temp) return "temp_low";
+    return "";
+}
+
+inline bool climate_fog_assist_permitted(const SensorInputs& in, const Setpoints& sp) noexcept {
+    return climate_fog_assist_block_reason(in, sp)[0] == '\0';
 }
 
 // Unified band-first controller clamps VPD hysteresis against the actual band width. The
@@ -315,28 +341,15 @@ inline ClimateActionDecision evaluate_climate_decision(
         && cold_dehum_allowed
         && (dehum_enter || dehum_continue);
 
-    const bool wet_occupancy_block = moisture_blocked_by_occupancy(in, sp);
-    const bool wet_dew_block = dew_margin_f(in) < sp.direct_wet_stress_min_dew_margin_f;
-    const bool wet_time_block = in.local_hour >= sp.direct_wet_stress_latest_hour;
-    const char* wet_block_reason = wet_occupancy_block
-        ? "occupancy"
-        : (wet_dew_block ? "dew_margin" : (wet_time_block ? "time_window" : ""));
-    const bool fog_rh_block = in.rh_pct > sp.fog_rh_ceiling;
-    const bool fog_temp_block = in.temp_f < sp.fog_min_temp;
-    const bool fog_time_block = !fog_hour_permitted(in, sp);
+    const char* wet_block_reason = climate_wet_assist_block_reason(in, sp);
     const char* fog_block_reason = "none";
-    if (wet_occupancy_block) {
+    const char* climate_fog_block = climate_fog_assist_block_reason(in, sp);
+    if (climate_fog_block[0] == 'o' && climate_fog_block[1] == 'c') {
         fog_block_reason = "occupancy";
     } else if (dry_excess < sp.fog_escalation_kpa) {
         fog_block_reason = "below_threshold";
-    } else if (wet_dew_block) {
-        fog_block_reason = "dew_margin";
-    } else if (fog_time_block) {
-        fog_block_reason = "time_window";
-    } else if (fog_rh_block) {
-        fog_block_reason = "rh_ceiling";
-    } else if (fog_temp_block) {
-        fog_block_reason = "temp_low";
+    } else {
+        fog_block_reason = climate_fog_block[0] == '\0' ? "none" : climate_fog_block;
     }
     const char* fog_candidate_block = fog_block_reason[0] == 'n' && fog_block_reason[1] == 'o' ? "" : fog_block_reason;
     const char* sealed_block_reason = !humidify_ready
@@ -544,28 +557,15 @@ inline ClimateActionDecision describe_effective_climate_decision(
     const float temp_error = climate_band_error(in.temp_f, sp.temp_low, sp.temp_high);
     const float vpd_error = climate_band_error(in.vpd_kpa, sp.vpd_low, sp.vpd_high);
     const float dry_excess = std::max(0.0f, in.vpd_kpa - sp.vpd_high);
-    const bool wet_occupancy_block = moisture_blocked_by_occupancy(in, sp);
-    const bool wet_dew_block = dew_margin_f(in) < sp.direct_wet_stress_min_dew_margin_f;
-    const bool wet_time_block = in.local_hour >= sp.direct_wet_stress_latest_hour;
-    const char* wet_block_reason = wet_occupancy_block
-        ? "occupancy"
-        : (wet_dew_block ? "dew_margin" : (wet_time_block ? "time_window" : ""));
-    const bool fog_rh_block = in.rh_pct > sp.fog_rh_ceiling;
-    const bool fog_temp_block = in.temp_f < sp.fog_min_temp;
-    const bool fog_time_block = !fog_hour_permitted(in, sp);
     const char* fog_block_reason = "none";
-    if (wet_occupancy_block) {
+    const char* wet_block_reason = climate_wet_assist_block_reason(in, sp);
+    const char* climate_fog_block = climate_fog_assist_block_reason(in, sp);
+    if (climate_fog_block[0] == 'o' && climate_fog_block[1] == 'c') {
         fog_block_reason = "occupancy";
     } else if (dry_excess < sp.fog_escalation_kpa) {
         fog_block_reason = "below_threshold";
-    } else if (wet_dew_block) {
-        fog_block_reason = "dew_margin";
-    } else if (fog_time_block) {
-        fog_block_reason = "time_window";
-    } else if (fog_rh_block) {
-        fog_block_reason = "rh_ceiling";
-    } else if (fog_temp_block) {
-        fog_block_reason = "temp_low";
+    } else {
+        fog_block_reason = climate_fog_block[0] == '\0' ? "none" : climate_fog_block;
     }
     const bool selected_wet = action == CLIMATE_VENT_COOL_MIST_ASSIST
         || action == CLIMATE_VENT_COOL_FOG_ASSIST
@@ -993,7 +993,7 @@ inline Mode determine_mode_band_first(
         }
     }
 
-    if (mode == SEALED_MIST && selected_action == CLIMATE_SEALED_FOG && fog_permitted(in, sp) && !moisture_blocked) {
+    if (mode == SEALED_MIST && selected_action == CLIMATE_SEALED_FOG && climate_fog_assist_permitted(in, sp) && !moisture_blocked) {
         state.mist_stage = MIST_FOG;
         state.mist_stage_timer_ms = 0;
     } else if (mode == SEALED_MIST && !entered_sealed_this_cycle) {
@@ -1010,7 +1010,7 @@ inline Mode determine_mode_band_first(
                 }
                 break;
             case MIST_S2: {
-                const bool fog_gated = !fog_permitted(in, sp) || moisture_blocked;
+                const bool fog_gated = !climate_fog_assist_permitted(in, sp) || moisture_blocked;
                 if (in.vpd_kpa > sp.vpd_high + sp.fog_escalation_kpa && !fog_gated) {
                     state.mist_stage = MIST_FOG;
                     state.mist_stage_timer_ms = 0;
@@ -1478,7 +1478,7 @@ inline Mode determine_mode(
                     }
                     break;
                 case MIST_S2: {
-                    const bool fog_gated = !fog_permitted(in, sp)
+                    const bool fog_gated = !climate_fog_assist_permitted(in, sp)
                                         || moisture_blocked_by_occupancy(in, sp);
                     if (in.vpd_kpa > vpd_high_eff + sp.fog_escalation_kpa && !fog_gated) {
                         state.mist_stage = MIST_FOG;
@@ -1602,7 +1602,7 @@ inline OverrideFlags evaluate_overrides(
     const bool fog_would_run =
         (mode == SEALED_MIST)
         && (state.mist_stage == MIST_FOG)
-        && fog_permitted(in, sp)
+        && climate_fog_assist_permitted(in, sp)
         && !moisture_blocked;
     f.fog_heat_assist = fog_would_run && (heat1_would_run || heat2_would_run);
 
@@ -1653,8 +1653,7 @@ inline RelayOutputs resolve_equipment(
         case SAFETY_COOL:
             out.vent = true;
             out.fan1 = true; out.fan2 = true;
-            out.fog = fog_permitted(in, sp)
-                   && !moisture_blocked_by_occupancy(in, sp)
+            out.fog = climate_fog_assist_permitted(in, sp)
                    && in.vpd_kpa > vpd_high_eff;
             break;
 
@@ -1673,8 +1672,7 @@ inline RelayOutputs resolve_equipment(
             if (needs_heating_s2) { out.heat1 = true; out.heat2 = true; }
             else if (needs_heating_s1) { out.heat1 = true; }
             out.fog = (state.mist_stage == MIST_FOG)
-                   && fog_permitted(in, sp)
-                   && !moisture_blocked_by_occupancy(in, sp);
+                   && climate_fog_assist_permitted(in, sp);
             break;
 
         case THERMAL_RELIEF:
@@ -1706,8 +1704,8 @@ inline RelayOutputs resolve_equipment(
             // handled in controls.yaml through vent_mist_assist_active, which
             // bypasses the normal closed-vent mister interlock only for this
             // explicit VENTILATE assist path.
-            if (in.vpd_kpa > (vpd_high_eff + sp.fog_escalation_kpa) && !moisture_blocked_by_occupancy(in, sp)) {
-                out.fog = fog_permitted(in, sp);
+            if (in.vpd_kpa > (vpd_high_eff + sp.fog_escalation_kpa)) {
+                out.fog = climate_fog_assist_permitted(in, sp);
             }
             break;
         }

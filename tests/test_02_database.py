@@ -27,6 +27,7 @@ class TestSchemaIntegrity:
         "water_meter_events",
         "daily_plan_archive_audit",
         "instrumentation_requirements",
+        "climate_action_log",
     ]
 
     REQUIRED_VIEWS = [
@@ -72,6 +73,9 @@ class TestSchemaIntegrity:
         "v_lighting_minutes_status_now",
         "v_lighting_qualified_minutes_daily",
         "v_lighting_daily",
+        "v_climate_action_effectiveness_5m",
+        "v_climate_action_effectiveness_15m",
+        "v_climate_action_daily_scorecard",
     ]
 
     REQUIRED_FUNCTIONS = [
@@ -91,6 +95,7 @@ class TestSchemaIntegrity:
         "fn_lighting_minutes_policy",
         "fn_lighting_timeline",
         "fn_lighting_lux_threshold_recommendation",
+        "fn_climate_action_effectiveness",
     ]
 
     def test_tables_exist(self):

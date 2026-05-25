@@ -152,6 +152,8 @@ def main() -> None:
             _fail(f"Hermes prompt still teaches AI-owned target/band field: {old_field}")
     if "dispatcher-owned read-only targets" not in iris_planner._PLANNER_CORE:
         _fail("Hermes prompt must identify dispatcher-owned targets as read-only context")
+    if "resource minimization is not allowed to close the wet-assist surface" not in iris_planner._PLANNER_CORE:
+        _fail("Hermes prompt must preserve compliance-first wet-assist authority guidance")
     gather = (REPO_ROOT / "scripts" / "gather-plan-context.sh").read_text()
     for marker in ("DISPATCHER-OWNED CLIMATE TARGETS", "temp_target_delta_f", "vpd_target_delta_kpa"):
         if marker not in gather:

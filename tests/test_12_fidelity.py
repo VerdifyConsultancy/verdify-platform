@@ -1902,6 +1902,11 @@ def test_mcp_set_plan_materializes_and_audits_climate_intent():
     assert "climate_intent_version" in body
     assert "climate_intent_segments" in body
     assert "$10::jsonb" in body
+    assert "temp_above_high_f" in server
+    assert "vpd_above_high_kpa" in server
+    assert "dew_margin_f" in server
+    assert '"timed_out"' in body
+    assert "trigger_id is not pending or timed_out" in body
 
 
 def test_planner_context_includes_dispatcher_owned_targets():
@@ -1920,6 +1925,9 @@ def test_planner_context_includes_dispatcher_owned_targets():
     ):
         assert column in gather
     assert "The AI planner receives these as read-only prompt context" in gather
+    assert "CLIMATE AUTHORITY MODE" in gather
+    assert "COMPLIANCE_FIRST_TEMP_AND_VPD_HIGH" in gather
+    assert "resource minimization must not close wet/fog assist" in gather
 
 
 def test_greenhouse_state_exposes_graphable_target_deltas():
@@ -1945,6 +1953,43 @@ def test_greenhouse_state_exposes_graphable_target_deltas():
     assert "signed target deltas" in schema
 
 
+def test_climate_authority_action_log_contract_is_tracked():
+    migration = (
+        Path(iris_planner.__file__).resolve().parent.parent / "db" / "migrations" / "142-climate-action-log.sql"
+    ).read_text()
+    schema = (Path(iris_planner.__file__).resolve().parent.parent / "db" / "schema.sql").read_text()
+    ingestor = (Path(iris_planner.__file__).resolve().parent.parent / "ingestor" / "ingestor.py").read_text()
+
+    for token in (
+        "CREATE TABLE IF NOT EXISTS public.climate_action_log",
+        "wet_assist_allowed",
+        "wet_assist_block_reason",
+        "relay_truth jsonb",
+        "CREATE OR REPLACE FUNCTION public.fn_climate_action_effectiveness",
+        "CREATE OR REPLACE VIEW public.v_climate_action_effectiveness_5m",
+        "CREATE OR REPLACE VIEW public.v_climate_action_effectiveness_15m",
+        "CREATE OR REPLACE VIEW public.v_climate_action_daily_scorecard",
+    ):
+        assert token in migration
+
+    for token in (
+        "CREATE TABLE public.climate_action_log",
+        "wet_assist_allowed",
+        "wet_assist_block_reason",
+        "relay_truth jsonb",
+        "CREATE FUNCTION public.fn_climate_action_effectiveness",
+        "CREATE VIEW public.v_climate_action_effectiveness_5m",
+        "CREATE VIEW public.v_climate_action_effectiveness_15m",
+        "CREATE VIEW public.v_climate_action_daily_scorecard",
+    ):
+        assert token in schema
+
+    assert "CLIMATE_ACTION_LOG_ENTITIES" in ingestor
+    assert "async def write_climate_action_log" in ingestor
+    assert "changed_entities & CLIMATE_ACTION_LOG_ENTITIES" in ingestor
+    assert "ClimateActionLogRow(" in ingestor
+
+
 def test_climate_decision_surface_excludes_fert_and_drip_relays():
     types_src = (REPO_ROOT / "firmware" / "lib" / "greenhouse_types.h").read_text()
     relay_block = types_src[
@@ -1965,6 +2010,42 @@ def test_climate_decision_surface_excludes_fert_and_drip_relays():
     ]
     for forbidden in ("fert", "drip", "fertilizer", "irrig"):
         assert forbidden not in decision_block.lower()
+
+
+def test_climate_wet_assist_is_separate_from_crop_direct_wet_windows():
+    controls = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
+
+    assert "auto crop_direct_wet_allowed" in controls
+    assert "auto climate_wet_assist_allowed" in controls
+    assert "const bool south_wet_allowed = south_crop_wet_allowed || climate_wet_assist_allowed(1);" in controls
+    assert "const bool west_wet_allowed = west_crop_wet_allowed || climate_wet_assist_allowed(2);" in controls
+    assert "const bool center_wet_allowed = center_crop_wet_allowed || climate_wet_assist_allowed(3);" in controls
+    assert "if(zone == 4) return false;  // climate control never drives wall drips." in controls
+
+    crop_block = controls[
+        controls.index("auto crop_direct_wet_allowed") : controls.index("auto climate_wet_assist_allowed")
+    ]
+    assert "direct_wet_stress_override" not in crop_block
+    assert "direct_wet_window_open" in crop_block
+
+    climate_block = controls[
+        controls.index("auto climate_wet_assist_allowed") : controls.index("const bool south_crop_wet_allowed")
+    ]
+    assert "direct_wet_window_open" not in climate_block
+    assert "climate_wet_assist_safety_ok" in climate_block
+
+    watchdog = controls[
+        controls.index("auto direct_wet_relay_watchdog") : controls.index("direct_wet_relay_watchdog();")
+    ]
+    for gate in (
+        "if(!south_wet_allowed)",
+        "if(!south_crop_wet_allowed)",
+        "if(!west_wet_allowed)",
+        "if(!west_crop_wet_allowed)",
+        "if(!center_wet_allowed)",
+        "if(!center_crop_wet_allowed)",
+    ):
+        assert gate in watchdog
 
 
 def test_mcp_set_tunable_resolves_trigger_ledger_with_oneshot_plan():

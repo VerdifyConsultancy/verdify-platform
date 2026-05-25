@@ -536,9 +536,10 @@ class TestContractDriftGuardrails:
             in controls_source
         )
         assert (
-            "bool humidity_demand = ((mode == SEALED_MIST) || ctl_state.vent_mist_assist_active) && mister_vent_ok;"
+            "const bool climate_wet_assist_demand = (mode == SEALED_MIST) || ctl_state.vent_mist_assist_active;"
             in controls_source
         )
+        assert "bool humidity_demand = climate_wet_assist_demand && mister_vent_ok;" in controls_source
 
     def test_post_boot_readback_repair_covers_static_and_planner_paths(self):
         ingestor_source = (REPO_ROOT / "ingestor" / "ingestor.py").read_text()

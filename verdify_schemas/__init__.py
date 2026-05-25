@@ -57,6 +57,7 @@ from .catalog import (
 )
 from .climate_intent import (
     CLIMATE_ACTIONS,
+    CLIMATE_INTENT_CONTRACT_VERSION,
     CLIMATE_INTENT_FIELD_DOCS,
     CLIMATE_INTENT_FIELDS,
     CLIMATE_PRIORITY_ORDER,
@@ -165,6 +166,7 @@ from .system_infra import (
 )
 from .telemetry import (
     OVERRIDE_EVENT_TYPES,
+    ClimateActionLogRow,
     ClimateRow,
     Diagnostics,
     EnergySample,
@@ -252,11 +254,13 @@ __all__ = [
     "CLIMATE_ACTIONS",
     "CLIMATE_INTENT_FIELD_DOCS",
     "CLIMATE_INTENT_FIELDS",
+    "CLIMATE_INTENT_CONTRACT_VERSION",
     "CLIMATE_PRIORITY_ORDER",
     "CLIMATE_RELAY_FIELD_DENYLIST",
     "ClampActivity24h",
     "FOG_BLOCK_REASONS",
     "ClimateAction",
+    "ClimateActionLogRow",
     "ClimateActionDecision",
     "ClimateCandidateProjection",
     "ClimateIntentFieldDoc",

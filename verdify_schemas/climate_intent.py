@@ -419,10 +419,38 @@ def materialize_climate_intent_tier1(
     resource = max(0.0, min(1.0, intent.resource_sensitivity))
     churn = max(0.0, min(1.0, intent.relay_churn_penalty))
     duty = max(0.0, min(1.0, intent.mist_duty_limit_pct / 100.0))
+    current_temp = _finite_number((base_params or {}).get("temp_actual_f"))
+    current_vpd = _finite_number((base_params or {}).get("vpd_actual_kpa"))
+    current_dew_margin = _finite_number((base_params or {}).get("dew_margin_f"))
+    temp_above_high = _finite_number((base_params or {}).get("temp_above_high_f"))
+    vpd_above_high = _finite_number((base_params or {}).get("vpd_above_high_kpa"))
+    if temp_above_high is None and current_temp is not None:
+        temp_above_high = max(0.0, current_temp - temp_high)
+    if vpd_above_high is None and current_vpd is not None:
+        vpd_above_high = max(0.0, current_vpd - vpd_high)
+    temp_above_high = max(0.0, temp_above_high or 0.0)
+    vpd_above_high = max(0.0, vpd_above_high or 0.0)
+    dew_margin_safe = current_dew_margin is None or current_dew_margin >= intent.dew_margin_floor_f
+    compliance_wet_required = vpd_above_high > 0.0 and dew_margin_safe
+    if compliance_wet_required:
+        resource = min(resource, 0.35)
+        churn = min(churn, 0.5)
+        duty = max(duty, 0.25)
     solar_pressure = max(0.0, min(1.0, intent.solar_precool_gain_f / 4.0))
     hot_forecast_pressure = max(0.0, min(1.0, intent.forecast_temp_bias_f / 4.0))
     dry_forecast_pressure = max(0.0, min(1.0, intent.forecast_vpd_bias_kpa / 0.4))
     wet_aggression = max(0.0, min(1.0, (duty + dry_forecast_pressure + (1.0 - resource)) / 3.0))
+    if compliance_wet_required:
+        wet_aggression = max(wet_aggression, 0.35)
+    moisture_engage_vpd_excess_kpa = intent.moisture_engage_vpd_excess_kpa
+    fog_escalate_vpd_excess_kpa = intent.fog_escalate_vpd_excess_kpa
+    wet_cutoff_hour = intent.wet_cutoff_hour
+    daily_mist_budget_gal = intent.daily_mist_budget_gal
+    if compliance_wet_required:
+        moisture_engage_vpd_excess_kpa = min(moisture_engage_vpd_excess_kpa, 0.05)
+        fog_escalate_vpd_excess_kpa = min(fog_escalate_vpd_excess_kpa, 0.2 if temp_above_high > 0.0 else 0.25)
+        wet_cutoff_hour = max(wet_cutoff_hour, 19.0)
+        daily_mist_budget_gal = max(daily_mist_budget_gal, 120.0)
 
     params.update(
         {
@@ -433,25 +461,22 @@ def materialize_climate_intent_tier1(
             "vent_prefer_temp_delta_f": intent.economizer_temp_advantage_f,
             "vent_prefer_dp_delta_f": intent.economizer_dewpoint_advantage_f,
             "cold_vent_guard_delta_f": max(6.0, min(15.0, intent.economizer_temp_advantage_f + 4.0)),
-            "direct_wet_stress_vpd_margin_kpa": intent.moisture_engage_vpd_excess_kpa,
+            "direct_wet_stress_vpd_margin_kpa": moisture_engage_vpd_excess_kpa,
             "direct_wet_stress_min_dew_margin_f": intent.dew_margin_floor_f,
-            "direct_wet_stress_latest_hour": intent.wet_cutoff_hour,
+            "direct_wet_stress_latest_hour": wet_cutoff_hour,
             "sw_direct_wet_stress_override_enabled": 1.0 if wet_aggression >= 0.35 else 0.0,
-            "fog_escalation_kpa": intent.fog_escalate_vpd_excess_kpa,
+            "fog_escalation_kpa": fog_escalate_vpd_excess_kpa,
             "fog_stress_min_dew_margin_f": intent.dew_margin_floor_f,
-            "fog_stress_window_latest_hour": min(intent.wet_cutoff_hour, 22.0),
-            "sw_fog_stress_window_extend_enabled": 1.0
-            if intent.wet_cutoff_hour > 17.0 and wet_aggression >= 0.35
-            else 0.0,
-            "mister_engage_kpa": vpd_high + intent.moisture_engage_vpd_excess_kpa,
-            "mister_all_kpa": vpd_high
-            + max(intent.fog_escalate_vpd_excess_kpa, intent.moisture_engage_vpd_excess_kpa + 0.2),
+            "fog_stress_window_latest_hour": min(wet_cutoff_hour, 22.0),
+            "sw_fog_stress_window_extend_enabled": 1.0 if wet_cutoff_hour > 17.0 and wet_aggression >= 0.35 else 0.0,
+            "mister_engage_kpa": vpd_high + moisture_engage_vpd_excess_kpa,
+            "mister_all_kpa": vpd_high + max(fog_escalate_vpd_excess_kpa, moisture_engage_vpd_excess_kpa + 0.2),
             "mister_vpd_weight": 1.0 + (2.0 * wet_aggression),
             "mister_pulse_on_s": 15.0 + (75.0 * duty),
             "mister_pulse_gap_s": 15.0 + (75.0 * resource),
             "mister_engage_delay_s": 15.0 + (45.0 * churn),
             "mister_all_delay_s": 30.0 + (90.0 * churn),
-            "mister_water_budget_gal": intent.daily_mist_budget_gal,
+            "mister_water_budget_gal": daily_mist_budget_gal,
             "min_fog_on_s": 30.0 + (45.0 * max(dry_forecast_pressure, 1.0 - resource)),
             "min_fog_off_s": 30.0 + (120.0 * resource),
             "vpd_hysteresis": max(0.1, min(0.5, vpd_width * 0.25 + churn * 0.1)),

@@ -617,7 +617,8 @@ interval:
             // fans/vent must remain open, and the planner/firmware are asking
             // for bounded evaporative support rather than sealed humidifying.
               const bool mister_vent_ok = open_vent_mister_assist || !id(mister_closes_vent) || !vent_is_open;
-              bool humidity_demand = ((mode == SEALED_MIST) || ctl_state.vent_mist_assist_active) && mister_vent_ok;
+              const bool climate_wet_assist_demand = (mode == SEALED_MIST) || ctl_state.vent_mist_assist_active;
+              bool humidity_demand = climate_wet_assist_demand && mister_vent_ok;
 
             auto now_for_wet_gate = id(sntp_time).now();
             const bool wet_time_valid = now_for_wet_gate.is_valid() && !id(sntp_failed);
@@ -627,18 +628,17 @@ interval:
             const float wet_dew_margin_f = (!isnan(Tin) && !isnan(id(dewpoint_avg).state))
               ? Tin - id(dewpoint_avg).state
               : -999.0f;
-            const bool direct_wet_stress_override =
+            const bool climate_wet_assist_safety_ok =
               wet_time_valid
-              && id(direct_wet_stress_override_enabled)
               && now_for_wet_gate.hour < id(direct_wet_stress_latest_hour)
               && VPD > (VPDhi + id(direct_wet_stress_vpd_margin_kpa))
               && wet_dew_margin_f >= id(direct_wet_stress_min_dew_margin_f);
-            auto direct_wet_allowed = [&](int zone) -> bool {
+            auto crop_direct_wet_allowed = [&](int zone) -> bool {
               if(!id(direct_wet_gate_enabled)) return true;
               if(!wet_time_valid) return false;
               if(id(direct_wet_min_temp_f) > 0.0f && (isnan(Tin) || Tin < id(direct_wet_min_temp_f))) return false;
               if(zone == 1) {
-                return direct_wet_stress_override || direct_wet_window_open(
+                return direct_wet_window_open(
                   wet_now_minute,
                   id(activity_start_hour),
                   id(activity_start_minute),
@@ -656,7 +656,7 @@ interval:
                   id(direct_wet_wall_drydown_before_off_min));
               }
               if(zone == 2) {
-                return direct_wet_stress_override || direct_wet_window_open(
+                return direct_wet_window_open(
                   wet_now_minute,
                   id(activity_start_hour),
                   id(activity_start_minute),
@@ -665,7 +665,7 @@ interval:
                   id(direct_wet_west_drydown_before_off_min));
               }
               if(zone == 3) {
-                return direct_wet_stress_override || direct_wet_window_open(
+                return direct_wet_window_open(
                   wet_now_minute,
                   id(activity_start_hour),
                   id(activity_start_minute),
@@ -675,10 +675,21 @@ interval:
               }
               return false;
             };
-            const bool south_wet_allowed = direct_wet_allowed(1);
-            const bool west_wet_allowed = direct_wet_allowed(2);
-            const bool center_wet_allowed = direct_wet_allowed(3);
-            const bool wall_wet_allowed = direct_wet_allowed(4);
+            auto climate_wet_assist_allowed = [&](int zone) -> bool {
+              if(zone == 4) return false;  // climate control never drives wall drips.
+              if(!climate_wet_assist_demand) return false;
+              if(!id(direct_wet_gate_enabled)) return true;
+              if(!wet_time_valid) return false;
+              if(id(direct_wet_min_temp_f) > 0.0f && (isnan(Tin) || Tin < id(direct_wet_min_temp_f))) return false;
+              return climate_wet_assist_safety_ok;
+            };
+            const bool south_crop_wet_allowed = crop_direct_wet_allowed(1);
+            const bool west_crop_wet_allowed = crop_direct_wet_allowed(2);
+            const bool center_crop_wet_allowed = crop_direct_wet_allowed(3);
+            const bool wall_wet_allowed = crop_direct_wet_allowed(4);
+            const bool south_wet_allowed = south_crop_wet_allowed || climate_wet_assist_allowed(1);
+            const bool west_wet_allowed = west_crop_wet_allowed || climate_wet_assist_allowed(2);
+            const bool center_wet_allowed = center_crop_wet_allowed || climate_wet_assist_allowed(3);
             const bool any_mister_wet_allowed = south_wet_allowed || west_wet_allowed || center_wet_allowed;
             {
               direct_wet_zone_mask[0] = '\0';
@@ -703,10 +714,14 @@ interval:
               if(!id(direct_wet_gate_enabled)) return;
               if(!south_wet_allowed) {
                 id(south_wall_mister).turn_off();
+              }
+              if(!south_crop_wet_allowed) {
                 id(south_wall_mister_fertilized).turn_off();
               }
               if(!west_wet_allowed) {
                 id(west_wall_mister).turn_off();
+              }
+              if(!west_crop_wet_allowed) {
                 id(west_wall_mister_fertilized).turn_off();
               }
               if(!wall_wet_allowed) {
@@ -715,6 +730,8 @@ interval:
               }
               if(!center_wet_allowed) {
                 id(center_mister).turn_off();
+              }
+              if(!center_crop_wet_allowed) {
                 id(center_drips).turn_off();
                 id(center_drips_fertilized).turn_off();
               }
@@ -807,13 +824,11 @@ interval:
                     snprintf(moisture_block_reason, sizeof(moisture_block_reason), "direct_wet_time_invalid");
                   } else if(id(direct_wet_min_temp_f) > 0.0f && (isnan(Tin) || Tin < id(direct_wet_min_temp_f))) {
                     snprintf(moisture_block_reason, sizeof(moisture_block_reason), "direct_wet_temp");
-                  } else if(id(direct_wet_stress_override_enabled)
-                            && VPD > (VPDhi + id(direct_wet_stress_vpd_margin_kpa))
-                            && wet_dew_margin_f < id(direct_wet_stress_min_dew_margin_f)) {
+                  } else if(climate_wet_assist_demand && VPD <= (VPDhi + id(direct_wet_stress_vpd_margin_kpa))) {
+                    snprintf(moisture_block_reason, sizeof(moisture_block_reason), "below_threshold");
+                  } else if(climate_wet_assist_demand && wet_dew_margin_f < id(direct_wet_stress_min_dew_margin_f)) {
                     snprintf(moisture_block_reason, sizeof(moisture_block_reason), "direct_wet_dew_margin");
-                  } else if(id(direct_wet_stress_override_enabled)
-                            && VPD > (VPDhi + id(direct_wet_stress_vpd_margin_kpa))
-                            && now_for_wet_gate.hour >= id(direct_wet_stress_latest_hour)) {
+                  } else if(climate_wet_assist_demand && now_for_wet_gate.hour >= id(direct_wet_stress_latest_hour)) {
                     snprintf(moisture_block_reason, sizeof(moisture_block_reason), "direct_wet_latest_hour");
                   } else {
                     snprintf(moisture_block_reason, sizeof(moisture_block_reason), "direct_wet_window");
@@ -967,7 +982,9 @@ interval:
                   int candidate = 0;
                   uint32_t candidate_age = 0;
                   auto check = [&](int z, float vpd, float target, uint32_t last_fire) {
-                    if(!direct_wet_allowed(z)) return;
+                    if((z == 1 && !south_wet_allowed)
+                       || (z == 2 && !west_wet_allowed)
+                       || (z == 3 && !center_wet_allowed)) return;
                     if(isnan(vpd) || target <= 0.0f) return;
                     if(vpd <= target) return;  // zone not stressed
                   uint32_t age = now_ms - last_fire;  // last_fire==0 ⇒ age == uptime
