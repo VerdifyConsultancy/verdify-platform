@@ -12,10 +12,15 @@ Hermes is now the only production route for Iris planning cycles.
 - `SOUL.md` — durable identity, authoritative-source priority order,
   behavioral contract. Short by design — per-cycle context comes from
   `gather-plan-context.sh` via the ingestor.
+- `slack.yaml` — copied from the Verdify repo root into the runtime dir by
+  `make hermes-deploy-config`; the container sees it as `/opt/data/slack.yaml`
+  through `VERDIFY_SLACK_CONFIG`.
 - Runtime state — **not in git**. Lives at `/var/lib/verdify/hermes/iris`
   and is bind-mounted as `/opt/data` in the container.
 - Runtime secrets — **not in git**. Live at `/etc/verdify/hermes-iris.env`
   and hold `OPENAI_API_KEY`, `VERDIFY_MCP_TOKEN`, `HERMES_IRIS_API_KEY`.
+  Slack token contents stay in `/etc/verdify/slack`, mounted read-only into
+  the container at the same path.
 
 ## Deployment
 

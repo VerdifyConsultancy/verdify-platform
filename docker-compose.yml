@@ -368,8 +368,11 @@ services:
       - "127.0.0.1:8642:8642"   # loopback only — never expose publicly
     volumes:
       - /var/lib/verdify/hermes/iris:/opt/data
+      - /etc/verdify/slack:/etc/verdify/slack:ro
     env_file:
       - /etc/verdify/hermes-iris.env
+    environment:
+      VERDIFY_SLACK_CONFIG: /opt/data/slack.yaml
     networks:
       - verdify-internal
     # host.docker.internal lets the container reach verdify-mcp.service

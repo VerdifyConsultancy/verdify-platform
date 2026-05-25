@@ -188,7 +188,7 @@ The ingestor (`/srv/verdify/ingestor/ingestor.py`, 945 lines) is the core data e
 | 15 0 * * * | generate-hydro-map.py | 60-position hydroponic layout HTML |
 | (event-driven) | iris_planner.py | Iris planner via Hermes `/v1/runs`, audited in `plan_delivery_log` |
 | 0 12,16,20,0 * * * | frigate-snapshot.py | Camera snapshots + Gemini vision analysis |
-| 0 13 * * * | checklist-to-slack.sh | Daily checklist → #greenhouse Slack |
+| 0 13 * * * | checklist-to-slack.sh | Daily checklist → #greenhouse Slack via root `slack.yaml` |
 
 ## API Endpoints (api.verdify.ai)
 
@@ -292,7 +292,8 @@ The `/setpoints` endpoint is kept aligned with the live dispatcher. It computes 
 |------|----------|---------|
 | gemini_api_key.txt | /mnt/agents/shared/credentials/ | Google AI Studio API key (planner, vision, embeddings) |
 | ha_token.txt | /mnt/agents/shared/credentials/ | Home Assistant long-lived access token |
-| slack_bot_token.txt | /mnt/agents/shared/credentials/ | Slack bot token for #greenhouse |
+| iris_slack_bot_token.txt | /etc/verdify/slack/ | Iris Slack bot token referenced by root `slack.yaml` |
+| iris_slack_app_token.txt | /etc/verdify/slack/ | Iris Slack app token for OpenClaw Socket Mode |
 | .env | /srv/verdify/ | POSTGRES_PASSWORD, GRAFANA_ADMIN_PASSWORD |
 | .env | /srv/verdify/ingestor/ | ESP32_API_KEY, DB credentials |
 | .env | /srv/verdify/api/ | DB credentials |
@@ -306,7 +307,7 @@ The `/setpoints` endpoint is kept aligned with the live dispatcher. It computes 
 | ESP32 | 192.168.10.111 | 6053 | Noise PSK | Ingestor |
 | Home Assistant | 192.168.30.107 | 8123 | Bearer token | Ingestor tasks, setpoint-server |
 | Sentinel MQTT | 192.168.30.107 | 1883 | user/pass | Ingestor mqtt_loop |
-| Slack API | api.slack.com | 443 | Bot token | Alert monitor, checklist |
+| Slack API | api.slack.com | 443 | Iris bot token from root `slack.yaml` | Alert monitor, forecast alerts, checklist, Slack archive |
 | Open-Meteo | api.open-meteo.com | 443 | None (public) | Forecast sync |
 | Google AI Studio | generativelanguage.googleapis.com | 443 | API key | Planner, vision, embeddings |
 | Frigate NVR | 192.168.30.142 | 5000 | None | Snapshot capture |
