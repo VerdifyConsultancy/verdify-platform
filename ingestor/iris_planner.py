@@ -45,7 +45,16 @@ CONTEXT_GATHER_TIMEOUT = int(os.getenv("IRIS_CONTEXT_GATHER_TIMEOUT", "120"))
 # time and (a) log critical, (b) flag the outgoing prompt so Iris knows to
 # degrade gracefully instead of referencing a file she can't open.
 PLANNER_PLAYBOOK_PATH = Path("/mnt/agents/iris/skills/greenhouse-planner.md")
-if not PLANNER_PLAYBOOK_PATH.exists():  # pragma: no cover — host-path check
+try:
+    _planner_playbook_available = PLANNER_PLAYBOOK_PATH.exists()
+except OSError as exc:  # pragma: no cover — host-path check
+    _planner_playbook_available = False
+    log.warning(
+        "Planner playbook is not readable at %s (%s). Iris will not have detailed tuning guidance at runtime.",
+        PLANNER_PLAYBOOK_PATH,
+        exc,
+    )
+if not _planner_playbook_available:  # pragma: no cover — host-path check
     log.warning(
         "Planner playbook missing at %s. Iris will not have detailed tuning "
         "guidance at runtime. Restore from docs/planner/greenhouse-playbook.md.",
