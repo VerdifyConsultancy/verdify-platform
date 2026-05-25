@@ -147,14 +147,15 @@ once into the live dispatcher/firmware contract, and the firmware chooses one
 executed climate action from that path. Replay and counterfactual tools may
 compare alternatives offline, but they must not fork production actuation.
 
+Dispatcher/crop policy owns the compliance targets. Every prompt includes
+read-only `temp_low`, `temp_target`, `temp_high`, `vpd_low`, `vpd_target`, and
+`vpd_high` values plus current actual-minus-target deltas; the AI planner tunes
+the tactical posture around those values but does not write them.
+
 Proposed Tier 1 intent fields:
 
 | Field | Meaning | First range |
 |---|---|---|
-| `temp_target_f` | Center of desired temperature band | crop-bounded |
-| `temp_band_f` | Width of desired temperature band | `3-12F` |
-| `vpd_target_kpa` | Center of desired VPD band | crop-bounded |
-| `vpd_band_kpa` | Width of desired VPD band | `0.35-1.2` |
 | `forecast_temp_bias_f` | Anticipatory temp offset from forecast pressure | `-4..4F` |
 | `forecast_vpd_bias_kpa` | Anticipatory VPD offset from forecast pressure | `-0.4..0.4` |
 | `solar_precool_gain_f` | Cooling lead under strong solar ramp | `0..4F` |
@@ -180,7 +181,9 @@ but they should not be the AI's primary control surface.
 Live context:
 
 - Current temp/VPD/dew margin by zone.
-- Current band, intent, and selected action.
+- Dispatcher-owned temp/VPD low, target, high, and signed actual-minus-target
+  deltas.
+- Current band, tactical intent, and selected action.
 - Relay truth and pulse/gap timers.
 - Water and electricity used today.
 - Open alerts and sensor health.

@@ -57,6 +57,7 @@ from .catalog import (
 )
 from .climate_intent import (
     CLIMATE_ACTIONS,
+    CLIMATE_INTENT_FIELD_DOCS,
     CLIMATE_INTENT_FIELDS,
     CLIMATE_PRIORITY_ORDER,
     CLIMATE_RELAY_FIELD_DENYLIST,
@@ -65,6 +66,7 @@ from .climate_intent import (
     ClimateActionDecision,
     ClimateCandidateProjection,
     ClimateIntent,
+    ClimateIntentFieldDoc,
     ClimatePriorityAxis,
     ClimateResourceCostEstimate,
     FogBlockReason,
@@ -248,6 +250,7 @@ __all__ = [
     "AlertType",
     "BandTraceRow",
     "CLIMATE_ACTIONS",
+    "CLIMATE_INTENT_FIELD_DOCS",
     "CLIMATE_INTENT_FIELDS",
     "CLIMATE_PRIORITY_ORDER",
     "CLIMATE_RELAY_FIELD_DENYLIST",
@@ -256,6 +259,7 @@ __all__ = [
     "ClimateAction",
     "ClimateActionDecision",
     "ClimateCandidateProjection",
+    "ClimateIntentFieldDoc",
     "ClimateIntent",
     "ClimatePriorityAxis",
     "ClimateResourceCostEstimate",

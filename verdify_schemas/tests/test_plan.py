@@ -77,10 +77,6 @@ class TestPlanTransition:
         t = PlanTransition(
             ts=_t(),
             climate_intent={
-                "temp_target_f": 72.0,
-                "temp_band_f": 6.0,
-                "vpd_target_kpa": 1.0,
-                "vpd_band_kpa": 0.5,
                 "forecast_temp_bias_f": 1.0,
                 "forecast_vpd_bias_kpa": 0.1,
                 "solar_precool_gain_f": 1.0,
@@ -100,7 +96,7 @@ class TestPlanTransition:
 
         assert t.params == {}
         assert t.climate_intent is not None
-        assert t.climate_intent.temp_band() == (69.0, 75.0)
+        assert t.climate_intent.forecast_temp_bias_f == 1.0
 
     def test_rejects_empty_params(self):
         with pytest.raises(ValidationError):

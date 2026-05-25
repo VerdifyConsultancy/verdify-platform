@@ -206,11 +206,6 @@ def read_replay_rows(path: Path) -> Iterator[ReplayClimateRow]:
 def intent_from_replay_row(row: ReplayClimateRow) -> ClimateIntent:
     """Build bounded semantic intent from active bands plus weather pressure."""
 
-    temp_width = _clamp(row.temp_high - row.temp_low, 3.0, 12.0)
-    vpd_width = _clamp(row.vpd_high - row.vpd_low, 0.35, 1.2)
-    temp_target = _clamp((row.temp_low + row.temp_high) / 2.0, 35.0, 95.0)
-    vpd_target = _clamp((row.vpd_low + row.vpd_high) / 2.0, 0.35, 2.8)
-
     solar_precool_gain_f = _clamp(row.solar_w_m2 / 225.0, 0.0, 4.0)
     outdoor_heat_pressure = max(0.0, (row.outdoor_temp_f or row.temp_f) - row.temp_high)
     forecast_temp_bias_f = -_clamp((solar_precool_gain_f * 0.55) + (outdoor_heat_pressure * 0.15), 0.0, 4.0)
@@ -221,10 +216,6 @@ def intent_from_replay_row(row: ReplayClimateRow) -> ClimateIntent:
     forecast_vpd_bias_kpa = _clamp(dewpoint_advantage / 40.0, -0.4, 0.4)
 
     return ClimateIntent(
-        temp_target_f=temp_target,
-        temp_band_f=temp_width,
-        vpd_target_kpa=vpd_target,
-        vpd_band_kpa=vpd_width,
         forecast_temp_bias_f=forecast_temp_bias_f,
         forecast_vpd_bias_kpa=forecast_vpd_bias_kpa,
         solar_precool_gain_f=solar_precool_gain_f,

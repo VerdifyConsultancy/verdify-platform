@@ -54,6 +54,7 @@ from verdify_schemas import (  # noqa: E402
 )
 from verdify_schemas.climate_intent import (  # noqa: E402
     CLIMATE_INTENT_CONTRACT_VERSION,
+    CLIMATE_INTENT_FIELDS,
     ClimateIntent,
     materialize_climate_intent_tier1,
 )
@@ -95,6 +96,17 @@ def _climate_intent_waypoint_errors(waypoints: object) -> list[dict[str, object]
             continue
         if "climate_intent" not in wp:
             errors.append({"transition_index": idx, "error": "missing climate_intent"})
+        elif isinstance(wp["climate_intent"], dict):
+            provided = set(wp["climate_intent"])
+            missing = sorted(set(CLIMATE_INTENT_FIELDS) - provided)
+            if missing:
+                errors.append(
+                    {
+                        "transition_index": idx,
+                        "error": "climate_intent must explicitly set every field",
+                        "missing_fields": missing,
+                    }
+                )
         if "params" in wp and wp.get("params") not in ({}, None):
             errors.append({"transition_index": idx, "error": "raw params are not accepted in set_plan"})
     return errors
@@ -107,7 +119,7 @@ async def _fetch_active_tier1_params(conn: asyncpg.Connection) -> dict[str, floa
           FROM v_active_plan
          WHERE parameter = ANY($1::text[])
         """,
-        sorted(TIER1_REG),
+        sorted(set(TIER1_REG) | set(BAND_OWNED_REG)),
     )
     return {str(row["parameter"]): float(row["value"]) for row in rows}
 

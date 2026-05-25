@@ -23745,63 +23745,127 @@ ALTER VIEW public.v_greenhouse_now OWNER TO verdify;
 --
 
 CREATE VIEW public.v_greenhouse_state AS
- SELECT ts,
-    temp_avg,
-    vpd_avg,
-    rh_avg,
-    dew_point,
-    temp_north,
-    temp_south,
-    temp_east,
-    temp_west,
-    vpd_south,
-    vpd_west,
-    vpd_east,
-    lux,
-    solar_irradiance_w_m2,
-    dli_today,
-    co2_ppm,
-    abs_humidity,
-    enthalpy_delta,
-    outdoor_temp_f,
-    outdoor_rh_pct,
-    round(((temp_avg - COALESCE(dew_point, (temp_avg - (10)::double precision))))::numeric, 1) AS dp_margin_f,
-    public.fn_equip_at('fan1'::text, ts) AS fan1,
-    public.fn_equip_at('fan2'::text, ts) AS fan2,
-    public.fn_equip_at('vent'::text, ts) AS vent,
-    public.fn_equip_at('fog'::text, ts) AS fog,
-    public.fn_equip_at('heat1'::text, ts) AS heat1,
-    public.fn_equip_at('heat2'::text, ts) AS heat2,
-    public.fn_equip_at('mister_south'::text, ts) AS mist_south,
-    public.fn_equip_at('mister_west'::text, ts) AS mist_west,
-    public.fn_equip_at('mister_center'::text, ts) AS mist_center,
-    public.fn_setpoint_at('temp_high'::text, ts) AS sp_temp_high,
-    public.fn_setpoint_at('temp_low'::text, ts) AS sp_temp_low,
-    public.fn_setpoint_at('vpd_high'::text, ts) AS sp_vpd_high,
-    public.fn_setpoint_at('vpd_low'::text, ts) AS sp_vpd_low,
-    public.fn_setpoint_at('bias_cool'::text, ts) AS sp_bias_cool,
-    public.fn_setpoint_at('bias_heat'::text, ts) AS sp_bias_heat,
-    public.fn_setpoint_at('vpd_hysteresis'::text, ts) AS sp_vpd_hysteresis,
-    public.fn_setpoint_at('mist_max_closed_vent_s'::text, ts) AS sp_sealed_max_s,
-    public.fn_setpoint_at('mist_thermal_relief_s'::text, ts) AS sp_relief_s,
-    public.fn_setpoint_at('vpd_watch_dwell_s'::text, ts) AS sp_watch_dwell_s,
-    public.fn_setpoint_at('d_cool_stage_2'::text, ts) AS sp_d_cool_s2,
-    public.fn_setpoint_at('mister_engage_kpa'::text, ts) AS sp_mister_engage,
+ WITH state_base AS (
+         SELECT c.ts,
+            c.temp_avg,
+            c.vpd_avg,
+            c.rh_avg,
+            c.dew_point,
+            c.temp_north,
+            c.temp_south,
+            c.temp_east,
+            c.temp_west,
+            c.vpd_south,
+            c.vpd_west,
+            c.vpd_east,
+            c.lux,
+            c.solar_irradiance_w_m2,
+            c.dli_today,
+            c.co2_ppm,
+            c.abs_humidity,
+            c.enthalpy_delta,
+            c.outdoor_temp_f,
+            c.outdoor_rh_pct,
+            round(((c.temp_avg - COALESCE(c.dew_point, (c.temp_avg - (10)::double precision))))::numeric, 1) AS dp_margin_f,
+            public.fn_equip_at('fan1'::text, c.ts) AS fan1,
+            public.fn_equip_at('fan2'::text, c.ts) AS fan2,
+            public.fn_equip_at('vent'::text, c.ts) AS vent,
+            public.fn_equip_at('fog'::text, c.ts) AS fog,
+            public.fn_equip_at('heat1'::text, c.ts) AS heat1,
+            public.fn_equip_at('heat2'::text, c.ts) AS heat2,
+            public.fn_equip_at('mister_south'::text, c.ts) AS mist_south,
+            public.fn_equip_at('mister_west'::text, c.ts) AS mist_west,
+            public.fn_equip_at('mister_center'::text, c.ts) AS mist_center,
+            public.fn_setpoint_at('temp_high'::text, c.ts) AS sp_temp_high,
+            public.fn_setpoint_at('temp_low'::text, c.ts) AS sp_temp_low,
+            public.fn_setpoint_at('vpd_high'::text, c.ts) AS sp_vpd_high,
+            public.fn_setpoint_at('vpd_low'::text, c.ts) AS sp_vpd_low,
+            public.fn_setpoint_at('bias_cool'::text, c.ts) AS sp_bias_cool,
+            public.fn_setpoint_at('bias_heat'::text, c.ts) AS sp_bias_heat,
+            public.fn_setpoint_at('vpd_hysteresis'::text, c.ts) AS sp_vpd_hysteresis,
+            public.fn_setpoint_at('mist_max_closed_vent_s'::text, c.ts) AS sp_sealed_max_s,
+            public.fn_setpoint_at('mist_thermal_relief_s'::text, c.ts) AS sp_relief_s,
+            public.fn_setpoint_at('vpd_watch_dwell_s'::text, c.ts) AS sp_watch_dwell_s,
+            public.fn_setpoint_at('d_cool_stage_2'::text, c.ts) AS sp_d_cool_s2,
+            public.fn_setpoint_at('mister_engage_kpa'::text, c.ts) AS sp_mister_engage,
+                CASE
+                    WHEN ((c.temp_avg >= COALESCE(public.fn_setpoint_at('temp_low'::text, c.ts), (58)::double precision)) AND (c.temp_avg <= COALESCE(public.fn_setpoint_at('temp_high'::text, c.ts), (82)::double precision))) THEN true
+                    ELSE false
+                END AS temp_in_band,
+                CASE
+                    WHEN ((c.vpd_avg >= COALESCE(public.fn_setpoint_at('vpd_low'::text, c.ts), (0.5)::double precision)) AND (c.vpd_avg <= COALESCE(public.fn_setpoint_at('vpd_high'::text, c.ts), (1.5)::double precision))) THEN true
+                    ELSE false
+                END AS vpd_in_band,
+            ( SELECT system_state.value
+                   FROM public.system_state
+                  WHERE ((system_state.entity = 'greenhouse_state'::text) AND (system_state.ts <= c.ts))
+                  ORDER BY system_state.ts DESC
+                 LIMIT 1) AS greenhouse_mode
+           FROM public.climate c
+          WHERE ((c.temp_avg IS NOT NULL) AND (c.ts >= (now() - '14 days'::interval)))
+        )
+ SELECT state_base.ts,
+    state_base.temp_avg,
+    state_base.vpd_avg,
+    state_base.rh_avg,
+    state_base.dew_point,
+    state_base.temp_north,
+    state_base.temp_south,
+    state_base.temp_east,
+    state_base.temp_west,
+    state_base.vpd_south,
+    state_base.vpd_west,
+    state_base.vpd_east,
+    state_base.lux,
+    state_base.solar_irradiance_w_m2,
+    state_base.dli_today,
+    state_base.co2_ppm,
+    state_base.abs_humidity,
+    state_base.enthalpy_delta,
+    state_base.outdoor_temp_f,
+    state_base.outdoor_rh_pct,
+    state_base.dp_margin_f,
+    state_base.fan1,
+    state_base.fan2,
+    state_base.vent,
+    state_base.fog,
+    state_base.heat1,
+    state_base.heat2,
+    state_base.mist_south,
+    state_base.mist_west,
+    state_base.mist_center,
+    state_base.sp_temp_high,
+    state_base.sp_temp_low,
+    state_base.sp_vpd_high,
+    state_base.sp_vpd_low,
+    state_base.sp_bias_cool,
+    state_base.sp_bias_heat,
+    state_base.sp_vpd_hysteresis,
+    state_base.sp_sealed_max_s,
+    state_base.sp_relief_s,
+    state_base.sp_watch_dwell_s,
+    state_base.sp_d_cool_s2,
+    state_base.sp_mister_engage,
+    state_base.temp_in_band,
+    state_base.vpd_in_band,
+    state_base.greenhouse_mode,
+    round((((state_base.sp_temp_low + state_base.sp_temp_high) / (2.0)::double precision))::numeric, 2) AS sp_temp_target,
+    round((((state_base.sp_vpd_low + state_base.sp_vpd_high) / (2.0)::double precision))::numeric, 3) AS sp_vpd_target,
+    round(((state_base.temp_avg - ((state_base.sp_temp_low + state_base.sp_temp_high) / (2.0)::double precision)))::numeric, 2) AS temp_target_delta_f,
+    round(((state_base.vpd_avg - ((state_base.sp_vpd_low + state_base.sp_vpd_high) / (2.0)::double precision)))::numeric, 3) AS vpd_target_delta_kpa,
+    round((
         CASE
-            WHEN ((temp_avg >= COALESCE(public.fn_setpoint_at('temp_low'::text, ts), (58)::double precision)) AND (temp_avg <= COALESCE(public.fn_setpoint_at('temp_high'::text, ts), (82)::double precision))) THEN true
-            ELSE false
-        END AS temp_in_band,
+            WHEN (state_base.temp_avg < state_base.sp_temp_low) THEN (state_base.temp_avg - state_base.sp_temp_low)
+            WHEN (state_base.temp_avg > state_base.sp_temp_high) THEN (state_base.temp_avg - state_base.sp_temp_high)
+            ELSE (0.0)::double precision
+        END)::numeric, 2) AS temp_band_error_f,
+    round((
         CASE
-            WHEN ((vpd_avg >= COALESCE(public.fn_setpoint_at('vpd_low'::text, ts), (0.5)::double precision)) AND (vpd_avg <= COALESCE(public.fn_setpoint_at('vpd_high'::text, ts), (1.5)::double precision))) THEN true
-            ELSE false
-        END AS vpd_in_band,
-    ( SELECT system_state.value
-           FROM public.system_state
-          WHERE ((system_state.entity = 'greenhouse_state'::text) AND (system_state.ts <= c.ts))
-          ORDER BY system_state.ts DESC
-         LIMIT 1) AS greenhouse_mode
-   FROM public.climate c
-  WHERE ((temp_avg IS NOT NULL) AND (ts >= (now() - '14 days'::interval)));
+            WHEN (state_base.vpd_avg < state_base.sp_vpd_low) THEN (state_base.vpd_avg - state_base.sp_vpd_low)
+            WHEN (state_base.vpd_avg > state_base.sp_vpd_high) THEN (state_base.vpd_avg - state_base.sp_vpd_high)
+            ELSE (0.0)::double precision
+        END)::numeric, 3) AS vpd_band_error_kpa
+   FROM state_base;
 
 
 ALTER VIEW public.v_greenhouse_state OWNER TO verdify;
@@ -23810,7 +23874,7 @@ ALTER VIEW public.v_greenhouse_state OWNER TO verdify;
 -- Name: VIEW v_greenhouse_state; Type: COMMENT; Schema: public; Owner: verdify
 --
 
-COMMENT ON VIEW public.v_greenhouse_state IS 'Live rolling 14-day greenhouse time series. One row per sensor reading with equipment, setpoints, compliance, and mode.';
+COMMENT ON VIEW public.v_greenhouse_state IS 'Live rolling 14-day greenhouse time series. One row per sensor reading with equipment, setpoints, compliance, mode, dispatcher-owned targets, and signed target deltas.';
 
 
 --

@@ -10,6 +10,7 @@ from pydantic import ValidationError
 
 from verdify_schemas.climate_intent import (
     CLIMATE_ACTIONS,
+    CLIMATE_INTENT_FIELD_DOCS,
     CLIMATE_INTENT_FIELDS,
     CLIMATE_PRIORITY_ORDER,
     CLIMATE_RELAY_FIELD_DENYLIST,
@@ -42,10 +43,6 @@ def _table_codes(section: str) -> tuple[str, ...]:
 
 def _valid_intent(**overrides: float) -> ClimateIntent:
     data = {
-        "temp_target_f": 72.0,
-        "temp_band_f": 6.0,
-        "vpd_target_kpa": 1.0,
-        "vpd_band_kpa": 0.5,
         "forecast_temp_bias_f": -1.0,
         "forecast_vpd_bias_kpa": 0.05,
         "solar_precool_gain_f": 1.5,
@@ -71,6 +68,8 @@ def test_design_doc_is_canonical_and_schema_matches_intent_surface() -> None:
 
     assert _table_codes(intent_section) == CLIMATE_INTENT_FIELDS
     assert set(ClimateIntent.model_fields) == set(CLIMATE_INTENT_FIELDS)
+    assert tuple(doc.name for doc in CLIMATE_INTENT_FIELD_DOCS) == CLIMATE_INTENT_FIELDS
+    assert all(doc.firmware_impact for doc in CLIMATE_INTENT_FIELD_DOCS)
 
 
 def test_design_doc_action_table_matches_schema_actions() -> None:
@@ -96,13 +95,10 @@ def test_climate_intent_excludes_raw_relay_commands() -> None:
 
 
 def test_climate_intent_ranges_are_bounded() -> None:
-    intent = _valid_intent()
-
-    assert intent.temp_band() == (69.0, 75.0)
-    assert intent.vpd_band() == (0.75, 1.25)
+    _valid_intent()
 
     with pytest.raises(ValidationError):
-        _valid_intent(temp_band_f=20.0)
+        _valid_intent(temp_target_f=72.0)  # type: ignore[call-arg]
     with pytest.raises(ValidationError):
         _valid_intent(forecast_vpd_bias_kpa=0.9)
     with pytest.raises(ValidationError):
@@ -119,7 +115,10 @@ def test_climate_intent_materializes_to_complete_bounded_tier1_params() -> None:
         relay_churn_penalty=0.25,
     )
 
-    params = materialize_climate_intent_tier1(intent, {"fog_escalation_kpa": 0.2})
+    params = materialize_climate_intent_tier1(
+        intent,
+        {"fog_escalation_kpa": 0.2, "temp_low": 64.0, "temp_high": 68.0, "vpd_low": 0.55, "vpd_high": 0.8},
+    )
 
     assert set(params) == set(TIER1_REG)
     assert params["sw_dwell_gate_enabled"] == 1.0
@@ -129,6 +128,7 @@ def test_climate_intent_materializes_to_complete_bounded_tier1_params() -> None:
     assert params["fog_stress_window_latest_hour"] == intent.wet_cutoff_hour
     assert params["mister_water_budget_gal"] == intent.daily_mist_budget_gal
     assert params["fog_escalation_kpa"] == intent.fog_escalate_vpd_excess_kpa
+    assert params["mister_engage_kpa"] == pytest.approx(0.85)
     assert all(registry_value_error(name, value) is None for name, value in params.items())
 
 

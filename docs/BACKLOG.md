@@ -29,8 +29,10 @@ Current posture:
 - **Active climate-control architecture target:** implement the
   [`ClimateIntent` controller design](firmware-climate-intent-controller-final-design-2026-05-24.md)
   as the new AI/controller boundary: firmware owns safety, relays, and
-  lexicographic candidate selection; AI owns bounded forecast-aware intent,
-  historical priors, and resource posture.
+  lexicographic candidate selection; dispatcher/crop policy owns temp/VPD
+  low-target-high bands; AI receives those targets as read-only context and
+  owns bounded tactical forecast-aware intent, historical priors, and resource
+  posture.
 - Broad SaaS/multi-tenant work moves behind consulting validation unless needed for Track A or public-site reliability.
 - Repo, GitHub, project-board, and agent-scope splits are coordinator-owned until boundaries are decided.
 - PR #80 stays intact as the first recovery baseline; unrelated dirty work must

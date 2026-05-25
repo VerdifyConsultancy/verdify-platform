@@ -102,11 +102,26 @@ semantic intent in `plan_journal`.
 
 ```json
 [
-  {"ts": "2026-04-12T06:30:00-06:00", "climate_intent": {"temp_target_f": 72, "temp_band_f": 6, "vpd_target_kpa": 1.0, "vpd_band_kpa": 0.5, "...": "..."}, "reason": "Dawn — overnight posture"},
-  {"ts": "2026-04-12T10:00:00-06:00", "climate_intent": {"...": "..."}, "reason": "Morning ramp — solar load building"},
-  {"ts": "2026-04-12T13:00:00-06:00", "climate_intent": {"...": "..."}, "reason": "Peak stress — max misting aggression"},
-  {"ts": "2026-04-12T17:00:00-06:00", "climate_intent": {"...": "..."}, "reason": "Decline — reduce misting, prep for evening"},
-  {"ts": "2026-04-12T19:30:00-06:00", "climate_intent": {"...": "..."}, "reason": "Evening — overnight heating posture"}
+  {
+    "ts": "2026-04-12T13:00:00-06:00",
+    "climate_intent": {
+      "forecast_temp_bias_f": -1.0,
+      "forecast_vpd_bias_kpa": 0.1,
+      "solar_precool_gain_f": 2.0,
+      "thermal_lead_time_min": 45,
+      "economizer_temp_advantage_f": 4,
+      "economizer_dewpoint_advantage_f": 3,
+      "moisture_engage_vpd_excess_kpa": 0.05,
+      "mist_duty_limit_pct": 35,
+      "fog_escalate_vpd_excess_kpa": 0.25,
+      "dew_margin_floor_f": 8,
+      "wet_cutoff_hour": 19,
+      "daily_mist_budget_gal": 160,
+      "resource_sensitivity": 0.35,
+      "relay_churn_penalty": 0.6
+    },
+    "reason": "Peak stress - precondition around dispatcher-owned temp/VPD targets"
+  }
 ]
 ```
 
@@ -114,8 +129,11 @@ Do not emit raw Tier 1 `params`, crop-band params (`temp_low`, `temp_high`,
 `vpd_low`, `vpd_high`), or retired legacy knobs (`bias_heat`, `bias_cool`,
 `d_heat_stage_2`, `d_cool_stage_2`, `sw_fsm_controller_enabled`). Use the
 ClimateIntent fields to shape mist, fog, dwell, hysteresis, vent posture, and
-stage-2 cooling behavior. The dispatcher executes the materialized tactical
-waypoints even if the planner is offline.
+stage-2 cooling behavior. Set every ClimateIntent field on every transition.
+The prompt supplies dispatcher-owned read-only `temp_low`, `temp_target`,
+`temp_high`, `vpd_low`, `vpd_target`, and `vpd_high`; do not put target or band
+center fields inside `climate_intent`. The dispatcher executes the materialized
+tactical waypoints even if the planner is offline.
 
 ### REPORT: Post to Slack
 

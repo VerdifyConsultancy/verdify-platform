@@ -1025,7 +1025,54 @@ SELECT to_char(transition_ts AT TIME ZONE 'America/Denver', 'MM-DD HH24:MI') AS 
 " 2>/dev/null || true
 echo ""
 
-# ── 30b-3. HOT/DRY VENTILATE CONTROL UTILIZATION ─────────────────
+# ── 30b-3. DISPATCHER-OWNED TARGET CONTEXT ──────────────────────
+echo "--- DISPATCHER-OWNED CLIMATE TARGETS (latest reading) ---"
+$DB -c "
+WITH latest_climate AS (
+  SELECT ts,
+         temp_avg,
+         vpd_avg
+    FROM climate
+   WHERE temp_avg IS NOT NULL
+     AND vpd_avg IS NOT NULL
+   ORDER BY ts DESC
+   LIMIT 1
+), latest AS (
+  SELECT c.ts,
+         c.temp_avg,
+         c.vpd_avg,
+         fn_setpoint_at('temp_low', c.ts) AS sp_temp_low,
+         fn_setpoint_at('temp_high', c.ts) AS sp_temp_high,
+         fn_setpoint_at('vpd_low', c.ts) AS sp_vpd_low,
+         fn_setpoint_at('vpd_high', c.ts) AS sp_vpd_high,
+         (
+           SELECT ss.value
+             FROM system_state ss
+            WHERE ss.entity = 'greenhouse_state'
+              AND ss.ts <= c.ts
+            ORDER BY ss.ts DESC
+            LIMIT 1
+         ) AS greenhouse_mode
+    FROM latest_climate c
+)
+SELECT to_char(ts AT TIME ZONE 'America/Denver', 'MM-DD HH24:MI') AS reading_mdt,
+       round(temp_avg::numeric, 2) AS temp_actual_f,
+       round(sp_temp_low::numeric, 2) AS temp_low_f,
+       round(((sp_temp_low + sp_temp_high) / 2.0)::numeric, 2) AS temp_target_f,
+       round(sp_temp_high::numeric, 2) AS temp_high_f,
+       round((temp_avg - ((sp_temp_low + sp_temp_high) / 2.0))::numeric, 2) AS temp_target_delta_f,
+       round(vpd_avg::numeric, 3) AS vpd_actual_kpa,
+       round(sp_vpd_low::numeric, 3) AS vpd_low_kpa,
+       round(((sp_vpd_low + sp_vpd_high) / 2.0)::numeric, 3) AS vpd_target_kpa,
+       round(sp_vpd_high::numeric, 3) AS vpd_high_kpa,
+       round((vpd_avg - ((sp_vpd_low + sp_vpd_high) / 2.0))::numeric, 3) AS vpd_target_delta_kpa,
+       greenhouse_mode
+  FROM latest;
+" 2>/dev/null || echo "(dispatcher-owned target context unavailable)"
+echo "Dispatcher/crop policy owns low/target/high. The AI planner receives these as read-only prompt context and tunes only tactical ClimateIntent fields around them."
+echo ""
+
+# ── 30b-4. HOT/DRY VENTILATE CONTROL UTILIZATION ─────────────────
 echo "--- HOT/DRY VENTILATE UTILIZATION (last 24h, firmware band basis) ---"
 $DB -c "
 WITH samples AS (

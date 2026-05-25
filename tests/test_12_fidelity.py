@@ -1894,12 +1894,55 @@ def test_mcp_set_plan_materializes_and_audits_climate_intent():
     assert "_climate_intent_waypoint_errors(waypoints_raw)" in body
     assert "_materialize_climate_intent_waypoints(" in body
     assert "set_plan requires climate_intent on every transition" in body
+    assert "CLIMATE_INTENT_FIELDS" in server
+    assert "climate_intent must explicitly set every field" in server
     assert "raw params are not accepted in set_plan" in server
     assert "ClimateIntent validation failed" in body
     assert "climate_intents" in body
     assert "climate_intent_version" in body
     assert "climate_intent_segments" in body
     assert "$10::jsonb" in body
+
+
+def test_planner_context_includes_dispatcher_owned_targets():
+    gather = (Path(iris_planner.__file__).resolve().parent.parent / "scripts" / "gather-plan-context.sh").read_text()
+
+    assert "DISPATCHER-OWNED CLIMATE TARGETS" in gather
+    for column in (
+        "temp_low_f",
+        "temp_target_f",
+        "temp_high_f",
+        "temp_target_delta_f",
+        "vpd_low_kpa",
+        "vpd_target_kpa",
+        "vpd_high_kpa",
+        "vpd_target_delta_kpa",
+    ):
+        assert column in gather
+    assert "The AI planner receives these as read-only prompt context" in gather
+
+
+def test_greenhouse_state_exposes_graphable_target_deltas():
+    migration = (
+        Path(iris_planner.__file__).resolve().parent.parent
+        / "db"
+        / "migrations"
+        / "141-greenhouse-state-target-deltas.sql"
+    ).read_text()
+    schema = (Path(iris_planner.__file__).resolve().parent.parent / "db" / "schema.sql").read_text()
+
+    for column in (
+        "sp_temp_target",
+        "sp_vpd_target",
+        "temp_target_delta_f",
+        "vpd_target_delta_kpa",
+        "temp_band_error_f",
+        "vpd_band_error_kpa",
+    ):
+        assert column in migration
+        assert column in schema
+    assert "ClimateIntent does" in migration
+    assert "signed target deltas" in schema
 
 
 def test_climate_decision_surface_excludes_fert_and_drip_relays():

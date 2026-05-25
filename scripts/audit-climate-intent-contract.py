@@ -12,6 +12,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from verdify_schemas.climate_intent import (  # noqa: E402
     CLIMATE_ACTIONS,
+    CLIMATE_INTENT_FIELD_DOCS,
     CLIMATE_INTENT_FIELDS,
     CLIMATE_PRIORITY_ORDER,
     CLIMATE_RELAY_FIELD_DENYLIST,
@@ -76,6 +77,8 @@ def main() -> None:
         _fail(f"ClimateIntent field drift: doc={doc_fields} schema={CLIMATE_INTENT_FIELDS}")
     if set(ClimateIntent.model_fields) != set(CLIMATE_INTENT_FIELDS):
         _fail("ClimateIntent model fields do not match CLIMATE_INTENT_FIELDS")
+    if tuple(doc.name for doc in CLIMATE_INTENT_FIELD_DOCS) != CLIMATE_INTENT_FIELDS:
+        _fail("ClimateIntent field docs do not match CLIMATE_INTENT_FIELDS")
 
     relay_overlap = sorted(set(CLIMATE_INTENT_FIELDS) & CLIMATE_RELAY_FIELD_DENYLIST)
     if relay_overlap:
@@ -84,10 +87,6 @@ def main() -> None:
         _fail(f"priority order drift: {CLIMATE_PRIORITY_ORDER}")
 
     probe = ClimateIntent(
-        temp_target_f=72.0,
-        temp_band_f=6.0,
-        vpd_target_kpa=1.0,
-        vpd_band_kpa=0.5,
         forecast_temp_bias_f=1.0,
         forecast_vpd_bias_kpa=0.1,
         solar_precool_gain_f=1.0,
@@ -130,6 +129,27 @@ def main() -> None:
         _fail("MCP set_plan must require ClimateIntent on every transition")
     if "raw params are not accepted in set_plan" not in server:
         _fail("MCP set_plan must reject raw params in full-plan transitions")
+    if "climate_intent must explicitly set every field" not in server:
+        _fail("MCP set_plan must require explicit ClimateIntent fields")
+    sys.path.insert(0, str(REPO_ROOT / "ingestor"))
+    import iris_planner  # noqa: PLC0415
+
+    for field in CLIMATE_INTENT_FIELDS:
+        if f"`{field}`" not in iris_planner._PLANNER_CORE:
+            _fail(f"Hermes prompt missing ClimateIntent field: {field}")
+    for old_field in ("temp_target_f", "temp_band_f", "vpd_target_kpa", "vpd_band_kpa"):
+        if old_field in iris_planner._PLANNER_CORE:
+            _fail(f"Hermes prompt still teaches AI-owned target/band field: {old_field}")
+    if "dispatcher-owned read-only targets" not in iris_planner._PLANNER_CORE:
+        _fail("Hermes prompt must identify dispatcher-owned targets as read-only context")
+    gather = (REPO_ROOT / "scripts" / "gather-plan-context.sh").read_text()
+    for marker in ("DISPATCHER-OWNED CLIMATE TARGETS", "temp_target_delta_f", "vpd_target_delta_kpa"):
+        if marker not in gather:
+            _fail(f"planner context gather missing target marker: {marker}")
+    generator = (REPO_ROOT / "scripts" / "generate-ai-tunables-page.py").read_text()
+    for marker in ("## ClimateIntent AI Surface", "## Dispatcher-Owned Climate Targets"):
+        if marker not in generator:
+            _fail(f"AI tunables page generator missing marker: {marker}")
     compose = (REPO_ROOT / "docker-compose.yml").read_text()
     if "hermes-iris-shadow" in compose or "server_shadow.py" in compose:
         _fail("docker-compose must not expose a runtime shadow planner profile")

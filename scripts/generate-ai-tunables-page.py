@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import ast
 import asyncio
+import json
 import math
 import re
 import sys
@@ -39,6 +40,7 @@ sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "ingestor"))
 
 from config import DB_DSN  # noqa: E402
+from verdify_schemas.climate_intent import CLIMATE_INTENT_FIELD_DOCS  # noqa: E402
 from verdify_schemas.tunable_registry import (  # noqa: E402
     PLANNER_PUSHABLE_REG,
     REGISTRY,
@@ -144,6 +146,18 @@ def _fmt_value(value: float | None) -> str:
     if abs(f - round(f)) < 1e-9:
         return str(int(round(f)))
     return f"{f:.3f}".rstrip("0").rstrip(".")
+
+
+def _summary_object(value: object) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str):
+        try:
+            decoded = json.loads(value)
+        except json.JSONDecodeError:
+            return {}
+        return decoded if isinstance(decoded, dict) else {}
+    return {}
 
 
 def _fmt_dt(ts: datetime | None) -> str:
@@ -570,7 +584,47 @@ async def _load_summary() -> dict[str, Any]:
                      FROM override_events
                     WHERE ts > now() - interval '7 days'
                     GROUP BY override_type
-                 ) o) AS overrides_7d
+                 ) o) AS overrides_7d,
+              (WITH latest_climate AS (
+                   SELECT ts, temp_avg, vpd_avg
+                     FROM climate
+                    WHERE temp_avg IS NOT NULL AND vpd_avg IS NOT NULL
+                    ORDER BY ts DESC
+                    LIMIT 1
+                 ), latest AS (
+                   SELECT c.ts,
+                          c.temp_avg,
+                          c.vpd_avg,
+                          fn_setpoint_at('temp_low', c.ts) AS sp_temp_low,
+                          fn_setpoint_at('temp_high', c.ts) AS sp_temp_high,
+                          fn_setpoint_at('vpd_low', c.ts) AS sp_vpd_low,
+                          fn_setpoint_at('vpd_high', c.ts) AS sp_vpd_high,
+                          (
+                            SELECT ss.value
+                              FROM system_state ss
+                             WHERE ss.entity = 'greenhouse_state'
+                               AND ss.ts <= c.ts
+                             ORDER BY ss.ts DESC
+                             LIMIT 1
+                          ) AS greenhouse_mode
+                     FROM latest_climate c
+                 )
+                 SELECT jsonb_build_object(
+                          'reading_ts', ts,
+                          'temp_actual_f', round(temp_avg::numeric, 2),
+                          'temp_low_f', round(sp_temp_low::numeric, 2),
+                          'temp_target_f', round(((sp_temp_low + sp_temp_high) / 2.0)::numeric, 2),
+                          'temp_high_f', round(sp_temp_high::numeric, 2),
+                          'temp_target_delta_f',
+                            round((temp_avg - ((sp_temp_low + sp_temp_high) / 2.0))::numeric, 2),
+                          'vpd_actual_kpa', round(vpd_avg::numeric, 3),
+                          'vpd_low_kpa', round(sp_vpd_low::numeric, 3),
+                          'vpd_target_kpa', round(((sp_vpd_low + sp_vpd_high) / 2.0)::numeric, 3),
+                          'vpd_high_kpa', round(sp_vpd_high::numeric, 3),
+                          'vpd_target_delta_kpa',
+                            round((vpd_avg - ((sp_vpd_low + sp_vpd_high) / 2.0))::numeric, 3),
+                          'greenhouse_mode', greenhouse_mode)
+                   FROM latest) AS climate_target_context
             """,
             sorted(RESERVED_NO_EFFECT),
         )
@@ -675,6 +729,51 @@ def _render_summary(summary: dict[str, Any], plan_required: set[str]) -> list[st
         "- During live, near-edge, or recently unrecovered `VENTILATE` VPD-high stress with healthy dew margin, the dispatcher clamps conservative moisture thresholds near the active `vpd_high` band: `mister_engage_kpa <= vpd_high + 0.05`, `mister_all_kpa <= max(1.0, vpd_high + 0.25)`, `fog_escalation_kpa <= 0.20` or `0.15` in hot/dry venting, shorter mist delays/gaps, and shorter `min_fog_off_s`.",
         "",
     ]
+
+
+def _render_climate_intent_surface(summary: dict[str, Any]) -> list[str]:
+    target = _summary_object(summary.get("climate_target_context"))
+    rows = [
+        "## ClimateIntent AI Surface",
+        "",
+        "Routine `set_plan` transitions must include a bounded `climate_intent` object with every field below explicitly set. These fields tune tactical posture around the dispatcher-owned targets; they do not own temp/VPD low, target, or high points.",
+        "",
+        "| Field | Bounds | Planner meaning | Firmware impact |",
+        "|---|---|---|---|",
+    ]
+    for doc in CLIMATE_INTENT_FIELD_DOCS:
+        rows.append(f"| `{doc.name}` | {doc.bounds} | {_md(doc.meaning)} | {_md(doc.firmware_impact)} |")
+
+    rows.extend(
+        [
+            "",
+            "## Dispatcher-Owned Climate Targets",
+            "",
+            "The planner receives these target values as read-only prompt context. They are derived from crop profiles and dispatcher policy, and the target delta columns are signed `actual - target` metrics for graphing and mode diagnosis.",
+            "",
+        ]
+    )
+    if target:
+        rows.extend(
+            [
+                "| Axis | Low | Target | High | Actual | Actual - target |",
+                "|---|---:|---:|---:|---:|---:|",
+                "| Temp F | "
+                f"{_fmt_value(target.get('temp_low_f'))} | {_fmt_value(target.get('temp_target_f'))} | "
+                f"{_fmt_value(target.get('temp_high_f'))} | {_fmt_value(target.get('temp_actual_f'))} | "
+                f"{_fmt_value(target.get('temp_target_delta_f'))} |",
+                "| VPD kPa | "
+                f"{_fmt_value(target.get('vpd_low_kpa'))} | {_fmt_value(target.get('vpd_target_kpa'))} | "
+                f"{_fmt_value(target.get('vpd_high_kpa'))} | {_fmt_value(target.get('vpd_actual_kpa'))} | "
+                f"{_fmt_value(target.get('vpd_target_delta_kpa'))} |",
+                "",
+                f"Latest sample: `{target.get('reading_ts', '-')}`; mode `{target.get('greenhouse_mode', '-')}`.",
+                "",
+            ]
+        )
+    else:
+        rows.extend(["Live target snapshot unavailable at generation time.", ""])
+    return rows
 
 
 def _render_contract_table(evidence: dict[str, Evidence], plan_required: set[str]) -> list[str]:
@@ -855,6 +954,7 @@ def _render_full_page(
         "",
     ]
     lines.extend(_render_summary(summary, plan_required))
+    lines.extend(_render_climate_intent_surface(summary))
     lines.extend(_render_contract_table(evidence, plan_required))
     lines.extend(
         [
@@ -917,6 +1017,7 @@ def _render_detail_artifact(
 
 
 def _render_planner_context(evidence: dict[str, Evidence], plan_required: set[str], summary: dict[str, Any]) -> str:
+    target = _summary_object(summary.get("climate_target_context"))
     lines = [
         "--- TUNABLE TRACEABILITY BRIEF (generated; use before set_plan/set_tunable) ---",
         f"schema_tunables={len(ALL_TUNABLES)} registry_rows={len(REGISTRY)} routine_plan_required={len(plan_required)} planner_policy={len(PLANNER_PUSHABLE_REG)}",
@@ -927,12 +1028,48 @@ def _render_planner_context(evidence: dict[str, Evidence], plan_required: set[st
         ),
         f"future_active_rows={summary.get('future_rows', '-')} future_active_params={summary.get('future_params', '-')} reserved_active_rows={summary.get('reserved_active_rows', '-')}",
         "Full-plan surface: emit bounded `climate_intent` per transition. MCP materializes it once into the 39 Tier 1 rows below and audits the semantic intent.",
+        "ClimateIntent must explicitly set every tactical field; dispatcher-owned temp/VPD low,target,high values are read-only prompt context, not AI-owned fields.",
         "Do not use reserved/no-op params: " + ", ".join(sorted(RESERVED_NO_EFFECT)),
         "mister_engage_kpa note: SEALED_MIST entry is vpd_high + vpd_watch_dwell_s; mister_engage_kpa gates physical S1 pulses once SEALED_MIST or explicit VENTILATE assist creates humidity demand.",
         "VPD-high guardrail: during live, near-edge, or recently unrecovered VENTILATE stress with healthy dew margin, keep moisture thresholds band-coupled (engage ~= vpd_high+0.05, all-zone ~= max(1.0,vpd_high+0.25), fog_escalation ~= 0.20 or 0.15 in hot/dry venting, shorter min_fog_off_s); dispatcher clamps conservative overrides until observed recovery.",
         "",
-        "param|active|future_rows|last_dispatch|7d_confirmed|last_rationale|planner_use",
+        "climate_intent_field|bounds|meaning|firmware_impact",
     ]
+    for doc in CLIMATE_INTENT_FIELD_DOCS:
+        lines.append("|".join([doc.name, doc.bounds, doc.meaning, doc.firmware_impact]))
+    if target:
+        lines.extend(
+            [
+                "",
+                "dispatcher_owned_target_context|low|target|high|actual|actual_minus_target",
+                "|".join(
+                    [
+                        "temp_f",
+                        _fmt_value(target.get("temp_low_f")),
+                        _fmt_value(target.get("temp_target_f")),
+                        _fmt_value(target.get("temp_high_f")),
+                        _fmt_value(target.get("temp_actual_f")),
+                        _fmt_value(target.get("temp_target_delta_f")),
+                    ]
+                ),
+                "|".join(
+                    [
+                        "vpd_kpa",
+                        _fmt_value(target.get("vpd_low_kpa")),
+                        _fmt_value(target.get("vpd_target_kpa")),
+                        _fmt_value(target.get("vpd_high_kpa")),
+                        _fmt_value(target.get("vpd_actual_kpa")),
+                        _fmt_value(target.get("vpd_target_delta_kpa")),
+                    ]
+                ),
+            ]
+        )
+    lines.extend(
+        [
+            "",
+            "param|active|future_rows|last_dispatch|7d_confirmed|last_rationale|planner_use",
+        ]
+    )
     for name in sorted(plan_required):
         ev = evidence[name]
         spec = REGISTRY[name]
@@ -994,6 +1131,8 @@ def main() -> int:
         required = [
             "auto-generated by scripts/generate-ai-tunables-page.py",
             "## Current Audit Snapshot",
+            "## ClimateIntent AI Surface",
+            "## Dispatcher-Owned Climate Targets",
             "## ClimateIntent Materialization Contract",
             "## Parameter Index",
             "`mister_engage_kpa` is effectful",

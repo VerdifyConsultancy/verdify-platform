@@ -16,6 +16,8 @@ from pathlib import Path
 
 import pytest
 
+from verdify_schemas.climate_intent import CLIMATE_INTENT_FIELDS
+
 _WORKTREE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
@@ -105,6 +107,12 @@ class TestSplitInvariants:
 
         for band_param in ("temp_low", "temp_high", "vpd_low", "vpd_high"):
             assert f"`{band_param}`" in iris_planner._PLANNER_CORE
+        for field in CLIMATE_INTENT_FIELDS:
+            assert f"`{field}`" in iris_planner._PLANNER_CORE
+        for retired_ai_target_field in ("temp_target_f", "temp_band_f", "vpd_target_kpa", "vpd_band_kpa"):
+            assert retired_ai_target_field not in iris_planner._PLANNER_CORE
+        assert "dispatcher-owned read-only targets" in iris_planner._PLANNER_CORE
+        assert "current target deltas" in iris_planner._PLANNER_CORE
         assert "Do not emit in plans" in iris_planner._PLANNER_CORE
         assert "crop-band params" in iris_planner._sunrise_prompt("context")
         assert "crop-band params" in iris_planner._sunset_prompt("context")

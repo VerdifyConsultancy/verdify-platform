@@ -224,9 +224,24 @@ Temp compliance can be 85%+ while VPD is 25%. Use these to diagnose where to foc
 
 ### Tunable Dictionary — Tactical Tier 1 + Read-Only Bands
 
-For full plans, use `climate_intent` in each `set_plan` transition:
-`{"ts":"...","climate_intent":{"temp_target_f":72,"temp_band_f":6,"vpd_target_kpa":1.0,"vpd_band_kpa":0.5,"forecast_temp_bias_f":0,"forecast_vpd_bias_kpa":0.1,"solar_precool_gain_f":1,"thermal_lead_time_min":30,"economizer_temp_advantage_f":4,"economizer_dewpoint_advantage_f":3,"moisture_engage_vpd_excess_kpa":0.05,"mist_duty_limit_pct":25,"fog_escalate_vpd_excess_kpa":0.25,"dew_margin_floor_f":8,"wet_cutoff_hour":19,"daily_mist_budget_gal":120,"resource_sensitivity":0.4,"relay_churn_penalty":0.6},"reason":"..."}`.
-This is the AI-facing surface; it is not raw relay control.
+For full plans, use `climate_intent` in each `set_plan` transition and set
+every ClimateIntent field explicitly:
+`{"ts":"...","climate_intent":{"forecast_temp_bias_f":0,"forecast_vpd_bias_kpa":0.1,"solar_precool_gain_f":1,"thermal_lead_time_min":30,"economizer_temp_advantage_f":4,"economizer_dewpoint_advantage_f":3,"moisture_engage_vpd_excess_kpa":0.05,"mist_duty_limit_pct":25,"fog_escalate_vpd_excess_kpa":0.25,"dew_margin_floor_f":8,"wet_cutoff_hour":19,"daily_mist_budget_gal":120,"resource_sensitivity":0.4,"relay_churn_penalty":0.6},"reason":"..."}`.
+Required ClimateIntent fields: `forecast_temp_bias_f`, `forecast_vpd_bias_kpa`,
+`solar_precool_gain_f`, `thermal_lead_time_min`,
+`economizer_temp_advantage_f`, `economizer_dewpoint_advantage_f`,
+`moisture_engage_vpd_excess_kpa`, `mist_duty_limit_pct`,
+`fog_escalate_vpd_excess_kpa`, `dew_margin_floor_f`, `wet_cutoff_hour`,
+`daily_mist_budget_gal`, `resource_sensitivity`, `relay_churn_penalty`.
+This is the AI-facing tactical surface; it is not raw relay control and it does
+not own crop targets or compliance bands.
+
+The assembled context includes dispatcher-owned read-only targets for every
+planning run: `temp_low`, `temp_target`, `temp_high`, `vpd_low`, `vpd_target`,
+and `vpd_high`, plus current target deltas. Use those target values as the
+optimization context for forecast-aware preconditioning. Do not put target or
+band-center fields inside `climate_intent`; the dispatcher/crop policy owns
+the low/target/high points for temp and VPD.
 
 Use `set_tunable(parameter=..., value=..., reason=..., trigger_id=..., planner_instance=...)`
 only for narrow tactical overrides. Ranges are executable registry bounds; MCP

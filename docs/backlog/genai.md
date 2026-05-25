@@ -60,6 +60,12 @@ remains the safety-critical controller.
   prompts require ClimateIntent, planner mirror emits ClimateIntent, MCP rejects
   raw-params full plans, and old runtime shadow services/scripts/tables were
   retired.
+- [x] **G-CI.2 Dispatcher-owned target context.** Keep temp/VPD low-target-high
+  ownership in crop policy + dispatcher, not AI. Hermes now receives those
+  targets and signed actual-minus-target deltas as read-only prompt context;
+  MCP requires every tactical ClimateIntent field explicitly on each full-plan
+  transition; the public AI tunables page documents the field-by-field firmware
+  impact.
 - [ ] **G-P1.1 Post-plan self-critique.** After each full plan, have Iris record a short structured rationale: forecast assumptions, expected stress windows, tunables intentionally changed, tunables intentionally left alone, and what evidence would falsify the plan.
 
 **Project recovery intake from `PROJECT_STATE.md`** (2026-05-22; coordinated

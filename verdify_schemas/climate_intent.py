@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import math
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -63,10 +64,6 @@ CLIMATE_ACTIONS: tuple[str, ...] = (
 CLIMATE_PRIORITY_ORDER: tuple[str, ...] = ("safety", "temp", "vpd", "resource")
 
 CLIMATE_INTENT_FIELDS: tuple[str, ...] = (
-    "temp_target_f",
-    "temp_band_f",
-    "vpd_target_kpa",
-    "vpd_band_kpa",
     "forecast_temp_bias_f",
     "forecast_vpd_bias_kpa",
     "solar_precool_gain_f",
@@ -81,6 +78,102 @@ CLIMATE_INTENT_FIELDS: tuple[str, ...] = (
     "daily_mist_budget_gal",
     "resource_sensitivity",
     "relay_churn_penalty",
+)
+
+
+@dataclass(frozen=True)
+class ClimateIntentFieldDoc:
+    name: str
+    meaning: str
+    bounds: str
+    firmware_impact: str
+
+
+CLIMATE_INTENT_FIELD_DOCS: tuple[ClimateIntentFieldDoc, ...] = (
+    ClimateIntentFieldDoc(
+        "forecast_temp_bias_f",
+        "Forecast-backed temperature pressure signal for the segment.",
+        "-4..4F",
+        "Raises or lowers cooling aggressiveness without changing dispatcher-owned temp_low/temp_target/temp_high.",
+    ),
+    ClimateIntentFieldDoc(
+        "forecast_vpd_bias_kpa",
+        "Forecast-backed dry/wet pressure signal for the segment.",
+        "-0.4..0.4 kPa",
+        "Shifts wet-action readiness without changing dispatcher-owned vpd_low/vpd_target/vpd_high.",
+    ),
+    ClimateIntentFieldDoc(
+        "solar_precool_gain_f",
+        "Solar ramp pressure that justifies cooling lead before peak heat.",
+        "0..4F",
+        "Tightens stage-2 cooling and fan readiness before high solar load arrives.",
+    ),
+    ClimateIntentFieldDoc(
+        "thermal_lead_time_min",
+        "How early forecast preconditioning may begin.",
+        "0..90 min",
+        "Planner audit context for lead timing; firmware safety and dispatcher timing still gate actuation.",
+    ),
+    ClimateIntentFieldDoc(
+        "economizer_temp_advantage_f",
+        "Outdoor temperature advantage needed before vent cooling is attractive.",
+        "1..15F",
+        "Materializes to vent preference and cold-vent guard thresholds.",
+    ),
+    ClimateIntentFieldDoc(
+        "economizer_dewpoint_advantage_f",
+        "Outdoor dewpoint advantage needed before dry-air decisions are attractive.",
+        "1..15F",
+        "Materializes to dewpoint preference for vent/dehumidification choices.",
+    ),
+    ClimateIntentFieldDoc(
+        "moisture_engage_vpd_excess_kpa",
+        "How far above dispatcher-owned vpd_high VPD may rise before mister assist is eligible.",
+        "0..0.5 kPa",
+        "Materializes mister and direct-wet thresholds relative to the active dispatcher VPD band.",
+    ),
+    ClimateIntentFieldDoc(
+        "mist_duty_limit_pct",
+        "Maximum climate-misting duty allowed during the segment.",
+        "0..100%",
+        "Materializes mister pulse duration, wet aggression, and resource budget gates.",
+    ),
+    ClimateIntentFieldDoc(
+        "fog_escalate_vpd_excess_kpa",
+        "How far above dispatcher-owned vpd_high VPD may rise before fog assist is eligible.",
+        "0.1..0.8 kPa",
+        "Materializes fog escalation and all-zone mister thresholds relative to the active VPD band.",
+    ),
+    ClimateIntentFieldDoc(
+        "dew_margin_floor_f",
+        "Minimum indoor air temperature minus dew point for wet climate actions.",
+        "3..15F",
+        "Materializes fog/direct-wet dew margin floors and blocks condensation-risk wetting.",
+    ),
+    ClimateIntentFieldDoc(
+        "wet_cutoff_hour",
+        "Latest local hour for climate wetting in this segment.",
+        "17..24",
+        "Materializes fog and direct-wet latest-hour limits.",
+    ),
+    ClimateIntentFieldDoc(
+        "daily_mist_budget_gal",
+        "Daily climate-water budget for mister use.",
+        "0..300 gal",
+        "Materializes the firmware mister water budget.",
+    ),
+    ClimateIntentFieldDoc(
+        "resource_sensitivity",
+        "Preference for conserving water/electricity after safety and band compliance.",
+        "0..1",
+        "Lengthens off dwell and reduces wet/cooling aggression when compliance allows it.",
+    ),
+    ClimateIntentFieldDoc(
+        "relay_churn_penalty",
+        "Preference for holding stable actions instead of changing modes frequently.",
+        "0..1",
+        "Materializes hysteresis, dwell, and mist delay values.",
+    ),
 )
 
 CLIMATE_RELAY_FIELD_DENYLIST: frozenset[str] = frozenset(
@@ -118,10 +211,6 @@ class ClimateIntent(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    temp_target_f: float = Field(..., ge=35.0, le=95.0)
-    temp_band_f: float = Field(..., ge=3.0, le=12.0)
-    vpd_target_kpa: float = Field(..., ge=0.35, le=2.8)
-    vpd_band_kpa: float = Field(..., ge=0.35, le=1.2)
     forecast_temp_bias_f: float = Field(0.0, ge=-4.0, le=4.0)
     forecast_vpd_bias_kpa: float = Field(0.0, ge=-0.4, le=0.4)
     solar_precool_gain_f: float = Field(0.0, ge=0.0, le=4.0)
@@ -136,14 +225,6 @@ class ClimateIntent(BaseModel):
     daily_mist_budget_gal: float = Field(300.0, ge=0.0, le=300.0)
     resource_sensitivity: float = Field(0.5, ge=0.0, le=1.0)
     relay_churn_penalty: float = Field(0.5, ge=0.0, le=1.0)
-
-    def temp_band(self) -> tuple[float, float]:
-        half_width = self.temp_band_f / 2.0
-        return self.temp_target_f - half_width, self.temp_target_f + half_width
-
-    def vpd_band(self) -> tuple[float, float]:
-        half_width = self.vpd_band_kpa / 2.0
-        return self.vpd_target_kpa - half_width, self.vpd_target_kpa + half_width
 
 
 class ClimateCandidateProjection(BaseModel):
@@ -259,6 +340,13 @@ def _tier1_base_params(base_params: Mapping[str, object] | None = None) -> dict[
     return params
 
 
+def _base_registry_value(parameter: str, base_params: Mapping[str, object] | None = None) -> float:
+    numeric = _finite_number((base_params or {}).get(parameter))
+    if numeric is None:
+        numeric = float(REGISTRY[parameter].default)
+    return _clamp_tier1_value(parameter, numeric)
+
+
 def materialize_climate_intent_tier1(
     intent: ClimateIntent,
     base_params: Mapping[str, object] | None = None,
@@ -271,8 +359,10 @@ def materialize_climate_intent_tier1(
     """
 
     params = _tier1_base_params(base_params)
-    _, temp_high = intent.temp_band()
-    _, vpd_high = intent.vpd_band()
+    temp_high = _base_registry_value("temp_high", base_params)
+    vpd_low = _base_registry_value("vpd_low", base_params)
+    vpd_high = _base_registry_value("vpd_high", base_params)
+    vpd_width = max(0.35, min(1.2, vpd_high - vpd_low))
     resource = max(0.0, min(1.0, intent.resource_sensitivity))
     churn = max(0.0, min(1.0, intent.relay_churn_penalty))
     duty = max(0.0, min(1.0, intent.mist_duty_limit_pct / 100.0))
@@ -311,7 +401,7 @@ def materialize_climate_intent_tier1(
             "mister_water_budget_gal": intent.daily_mist_budget_gal,
             "min_fog_on_s": 30.0 + (45.0 * max(dry_forecast_pressure, 1.0 - resource)),
             "min_fog_off_s": 30.0 + (120.0 * resource),
-            "vpd_hysteresis": max(0.1, min(0.5, intent.vpd_band_kpa * 0.25 + churn * 0.1)),
+            "vpd_hysteresis": max(0.1, min(0.5, vpd_width * 0.25 + churn * 0.1)),
             "vpd_watch_dwell_s": 15.0 + (75.0 * churn),
             "dwell_gate_ms": 60000.0 + (300000.0 * churn),
             "sw_dwell_gate_enabled": 1.0,
