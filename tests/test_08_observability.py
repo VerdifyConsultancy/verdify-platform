@@ -589,6 +589,10 @@ class TestContractDriftGuardrails:
         assert "FIRMWARE_DEPLOY_OPERATOR_SIGNOFF=1" in preflight
         assert "FIRMWARE_DEPLOY_OVERRIDE_REASON" in preflight
         assert "No last-good rollback artifact" in preflight
+        assert "Climate telemetry stale or missing" in preflight
+        assert "fresh controller inputs" in preflight
+        assert "Climate action log stale or missing" in preflight
+        assert "fresh controller-decision proof" in preflight
         assert "FIRMWARE_OTA_FREEZE_OVERRIDE_REASON" in preflight
         assert 'record_override "48-hour bake"' in preflight
         assert 'record_override "Weekly OTA limit"' in preflight

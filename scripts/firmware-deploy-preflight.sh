@@ -60,6 +60,18 @@ if [[ "${open_bad:-0}" -gt 0 ]]; then
 fi
 pass "No unresolved critical/legacy-high alerts"
 
+climate_age="$("${DB[@]}" "SELECT COALESCE(EXTRACT(EPOCH FROM now() - max(ts))::int, 2147483647) FROM climate WHERE temp_avg IS NOT NULL" | tr -d '[:space:]')"
+if [[ ! "${climate_age:-}" =~ ^[0-9]+$ || "$climate_age" -gt 300 ]]; then
+    guard_or_fail "Climate telemetry stale or missing (${climate_age:-no data}s); no firmware OTA without fresh controller inputs"
+fi
+pass "Climate telemetry fresh (${climate_age}s)"
+
+action_age="$("${DB[@]}" "SELECT COALESCE(EXTRACT(EPOCH FROM now() - max(ts))::int, 2147483647) FROM climate_action_log" | tr -d '[:space:]')"
+if [[ ! "${action_age:-}" =~ ^[0-9]+$ || "$action_age" -gt 300 ]]; then
+    guard_or_fail "Climate action log stale or missing (${action_age:-no data}s); no firmware OTA without fresh controller-decision proof"
+fi
+pass "Climate action log fresh (${action_age}s)"
+
 max_temp="$("${DB[@]}" "SELECT COALESCE(max(temp_f), -999) FROM weather_forecast WHERE ts > now() AND ts <= now() + interval '24 hours'" | tr -d '[:space:]')"
 if awk -v t="$max_temp" 'BEGIN { exit !(t > 85.0) }'; then
     warn "Forecast max next 24h is ${max_temp}F (>85F); proceed with normal post-OTA health validation"
