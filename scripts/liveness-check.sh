@@ -4,6 +4,7 @@
 set -uo pipefail
 
 LOG="/srv/verdify/state/liveness.log"
+DB_STATEMENT_TIMEOUT_MS="${VERDIFY_DB_STATEMENT_TIMEOUT_MS:-5000}"
 FAIL=0
 NOW=$(date '+%Y-%m-%d %H:%M:%S')
 
@@ -17,23 +18,25 @@ check() {
     fi
 }
 
+db() {
+    docker exec -e "PGOPTIONS=-c statement_timeout=${DB_STATEMENT_TIMEOUT_MS}" \
+        verdify-timescaledb psql -U verdify -d verdify -t -A -c "$1"
+}
+
 # 1. DB accepting connections
-DB_OK=$(docker exec verdify-timescaledb psql -U verdify -d verdify -t -A -c "SELECT 1;" 2>/dev/null)
+DB_OK=$(db "SELECT 1;" 2>/dev/null)
 check "db" "$([ "$DB_OK" = "1" ] && echo ok || echo 'connection failed')"
 
 # 2. Ingestor last insert <5min
-CLIMATE_AGE=$(docker exec verdify-timescaledb psql -U verdify -d verdify -t -A -c \
-    "SELECT EXTRACT(EPOCH FROM now()-max(ts))::int FROM climate WHERE temp_avg IS NOT NULL;" 2>/dev/null)
+CLIMATE_AGE=$(db "SELECT EXTRACT(EPOCH FROM now()-max(ts))::int FROM climate WHERE temp_avg IS NOT NULL;" 2>/dev/null)
 check "ingestor" "$([ -n "$CLIMATE_AGE" ] && [ "$CLIMATE_AGE" -lt 300 ] && echo ok || echo "stale ${CLIMATE_AGE:-null}s")"
 
 # 3. Climate action-log decision snapshots fresh
-ACTION_AGE=$(docker exec verdify-timescaledb psql -U verdify -d verdify -t -A -c \
-    "SELECT EXTRACT(EPOCH FROM now()-max(ts))::int FROM climate_action_log;" 2>/dev/null)
+ACTION_AGE=$(db "SELECT EXTRACT(EPOCH FROM now()-max(ts))::int FROM climate_action_log;" 2>/dev/null)
 check "climate-action-log" "$([ -n "$ACTION_AGE" ] && [ "$ACTION_AGE" -lt 300 ] && echo ok || echo "stale ${ACTION_AGE:-null}s")"
 
 # 4. Climate action-log proof row complete enough for controller/band diagnosis
-ACTION_PROOF_RAW=$(docker exec verdify-timescaledb psql -U verdify -d verdify -t -A -c \
-    "WITH latest AS (
+ACTION_PROOF_RAW=$(db "WITH latest AS (
        SELECT *
          FROM climate_action_log
         ORDER BY ts DESC

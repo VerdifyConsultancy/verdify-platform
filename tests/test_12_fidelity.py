@@ -2092,11 +2092,15 @@ def test_health_checks_require_climate_action_log_freshness():
     assert "incomplete: $ap" in health
     assert 'ap="query_failed"' in health
     assert "API_HEALTH_URL" in health
+    assert "VERDIFY_DB_STATEMENT_TIMEOUT_MS" in health
+    assert "statement_timeout=${DB_STATEMENT_TIMEOUT_MS}" in health
     assert "API /health controller proof" in health
     assert "API /health lacks climate_action_log_proof_missing; restart/deploy verdify-api" in health
     assert "service_climate_action_log" in health
 
     assert "ACTION_AGE=" in liveness
+    assert "VERDIFY_DB_STATEMENT_TIMEOUT_MS" in liveness
+    assert "statement_timeout=${DB_STATEMENT_TIMEOUT_MS}" in liveness
     assert "ACTION_PROOF_MISSING=" in liveness
     assert "FROM climate_action_log" in liveness
     assert 'check "climate-action-log"' in liveness
@@ -2105,6 +2109,10 @@ def test_health_checks_require_climate_action_log_freshness():
     assert "incomplete ${ACTION_PROOF_MISSING:-missing}" in liveness
     assert 'ACTION_PROOF_MISSING="query_failed"' in liveness
     assert 'exit "$FAIL"' in liveness
+
+    preflight = (REPO_ROOT / "scripts" / "firmware-deploy-preflight.sh").read_text()
+    assert "VERDIFY_DB_STATEMENT_TIMEOUT_MS" in preflight
+    assert "statement_timeout=${DB_STATEMENT_TIMEOUT_MS}" in preflight
 
 
 def test_climate_action_log_treats_served_wet_assist_as_allowed():

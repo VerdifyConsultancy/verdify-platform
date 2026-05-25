@@ -6,7 +6,8 @@
 
 set -euo pipefail
 
-DB=(docker exec verdify-timescaledb psql -U verdify -d verdify -t -A -F '|' -c)
+DB_STATEMENT_TIMEOUT_MS="${VERDIFY_DB_STATEMENT_TIMEOUT_MS:-5000}"
+DB=(docker exec -e "PGOPTIONS=-c statement_timeout=${DB_STATEMENT_TIMEOUT_MS}" verdify-timescaledb psql -U verdify -d verdify -t -A -F '|' -c)
 
 fail() { echo "✗ $1" >&2; exit 1; }
 pass() { echo "✓ $1"; }
