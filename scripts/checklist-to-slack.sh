@@ -4,9 +4,18 @@
 set -uo pipefail
 
 PYTHON="/srv/greenhouse/.venv/bin/python3"
+REPO="/srv/verdify"
 SCRIPTS="/srv/verdify/scripts"
-SLACK_TOKEN=$(cat /mnt/agents/shared/credentials/slack_bot_token.txt)
-CHANNEL="C0ANVVAPLD6"
+export PYTHONPATH="$REPO${PYTHONPATH:+:$PYTHONPATH}"
+SLACK_CONFIG="${VERDIFY_SLACK_CONFIG:-/srv/verdify/slack.yaml}"
+export VERDIFY_SLACK_CONFIG="$SLACK_CONFIG"
+read -r SLACK_TOKEN CHANNEL USERNAME ICON_EMOJI < <("$PYTHON" - <<'PY'
+from slack_config import load_slack_settings, read_slack_token
+
+s = load_slack_settings()
+print(read_slack_token(s.bot_token_file), s.channel_id, s.username, s.icon_emoji or "")
+PY
+)
 LOG="/srv/verdify/state/checklist-slack.log"
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG"; }
@@ -32,7 +41,10 @@ text = sys.stdin.read()
 # Convert to Slack mrkdwn
 text = text.replace('[ ]', ':white_large_square:').replace('[x]', ':white_check_mark:').replace('[-]', ':fast_forward:')
 link = '\n:bar_chart: <https://graphs.verdify.ai/d/greenhouse-grower-daily/|Full checklist + dashboard>'
-print(json.dumps({'channel': '$CHANNEL', 'text': ':clipboard: *' + text.split(chr(10))[0] + '*\n' + chr(10).join(text.split(chr(10))[1:]) + link}))
+payload = {'channel': '$CHANNEL', 'text': ':clipboard: *' + text.split(chr(10))[0] + '*\n' + chr(10).join(text.split(chr(10))[1:]) + link, 'username': '$USERNAME'}
+if '$ICON_EMOJI':
+    payload['icon_emoji'] = '$ICON_EMOJI'
+print(json.dumps(payload))
 " <<< "$SUMMARY")
 
 HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \

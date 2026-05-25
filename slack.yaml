@@ -1,0 +1,77 @@
+version: 1
+workspace: verdify
+
+identity:
+  agent_name: Iris
+  display_name: Iris
+  username: Iris
+  icon_emoji: ":seedling:"
+  greenhouse_id: vallery
+
+slack:
+  api_base_url: https://slack.com/api
+  channel_name: greenhouse
+  channel_id: C0ANVVAPLD6
+  bot_token_file: /etc/verdify/slack/iris_slack_bot_token.txt
+  app_token_file: /etc/verdify/slack/iris_slack_app_token.txt
+  signing_secret_file: /etc/verdify/slack/iris_slack_signing_secret.txt
+  archive_dir: /var/local/verdify/slack/archive
+  timezone: America/Denver
+
+notifications:
+  default_post_mode: thread
+  alert_policy:
+    immediate:
+      severity:
+        - critical
+      alert_type:
+        - leak_detected
+        - relay_stuck
+        - temp_safety
+        - vpd_extreme
+        - planner_gateway_delivery_failed
+        - planner_required_plan_missed
+        - planner_trigger_sla_timeout
+        - setpoint_unconfirmed
+    delayed:
+      sensor_offline: 2h
+      soil_sensor_offline: 2h
+    silent:
+      - esp32_reboot
+    digest:
+      - info
+  briefs:
+    morning:
+      time: "07:30"
+      channel_id: C0ANVVAPLD6
+      enabled: true
+    evening:
+      time: "18:00"
+      channel_id: C0ANVVAPLD6
+      enabled: true
+
+consumers:
+  ingestor:
+    posts:
+      - alert lifecycle
+      - planner delivery watchdog
+      - midnight watchdog
+      - operator briefs
+  hermes:
+    role: planner gateway
+    posts_via: MCP slack_ops tool
+  openclaw:
+    role: socket listener and operator assistant
+    account: jason@verdify.ai
+    agents:
+      - iris
+      - iris-planner
+    posts_via: Slack app token plus MCP slack_ops tool
+
+roles:
+  default_role: viewer
+  role_order:
+    - viewer
+    - grower
+    - operator
+    - coordinator

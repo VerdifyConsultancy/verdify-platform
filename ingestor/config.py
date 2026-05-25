@@ -10,6 +10,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from slack_config import load_slack_settings
+
 # Load .env files (ingestor-specific, then project-level)
 load_dotenv(Path(__file__).parent / ".env")
 load_dotenv(Path(__file__).parent.parent / ".env")
@@ -43,8 +45,9 @@ MQTT_USER = os.environ.get("MQTT_USER", "")
 MQTT_PASS = os.environ.get("MQTT_PASS", "")
 
 # ── Slack ─────────────────────────────────────────────────────────
-SLACK_TOKEN_FILE = os.environ.get("SLACK_TOKEN_FILE", "/mnt/agents/shared/credentials/slack_bot_token.txt")
-SLACK_CHANNEL = os.environ.get("SLACK_CHANNEL", "C0ANVVAPLD6")
+SLACK_SETTINGS = load_slack_settings()
+SLACK_TOKEN_FILE = os.environ.get("SLACK_TOKEN_FILE", SLACK_SETTINGS.bot_token_file)
+SLACK_CHANNEL = os.environ.get("SLACK_CHANNEL", SLACK_SETTINGS.channel_id)
 
 # ── External services ────────────────────────────────────────────
 FRIGATE_URL = os.environ.get("FRIGATE_URL", "http://192.168.30.142:5000")

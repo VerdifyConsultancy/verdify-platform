@@ -28,8 +28,16 @@ import sys
 import urllib.error
 import urllib.request
 from datetime import UTC, datetime
+from pathlib import Path
 
 import asyncpg
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from slack_config import build_slack_payload, load_slack_settings, read_slack_token  # noqa: E402
+from slack_ops.policy import should_post_alert  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,
@@ -39,8 +47,9 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 # --- Configuration ---
-SLACK_CHANNEL = "C0ANVVAPLD6"  # #greenhouse
-SLACK_TOKEN_FILE = "/mnt/agents/shared/credentials/slack_bot_token.txt"
+SLACK_SETTINGS = load_slack_settings()
+SLACK_CHANNEL = SLACK_SETTINGS.channel_id
+SLACK_TOKEN_FILE = SLACK_SETTINGS.bot_token_file
 DRY_RUN = "--dry-run" in sys.argv
 DIGEST_MODE = "--digest" in sys.argv
 AIR_EXCHANGE_RELAY_STUCK_MODES = frozenset({"VENTILATE", "DEHUM_VENT", "THERMAL_RELIEF", "SAFETY_COOL"})
@@ -64,8 +73,7 @@ def get_db_url() -> str:
 
 
 def load_slack_token() -> str:
-    with open(SLACK_TOKEN_FILE) as f:
-        return f.read().strip()
+    return read_slack_token(SLACK_TOKEN_FILE)
 
 
 def post_slack(token: str, channel: str, text: str, thread_ts: str | None = None) -> str | None:
@@ -74,13 +82,11 @@ def post_slack(token: str, channel: str, text: str, thread_ts: str | None = None
         log.info("DRY RUN — would post to Slack: %s", text[:100])
         return None
 
-    payload = {"channel": channel, "text": text}
-    if thread_ts:
-        payload["thread_ts"] = thread_ts
+    payload = build_slack_payload(SLACK_SETTINGS, text, channel=channel, thread_ts=thread_ts)
 
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
-        "https://slack.com/api/chat.postMessage",
+        f"{SLACK_SETTINGS.api_base_url.rstrip('/')}/chat.postMessage",
         data=data,
         headers={
             "Authorization": f"Bearer {token}",
@@ -590,11 +596,7 @@ async def main():
 
             # Escalation: sensor_offline only posts to Slack after 2h
             # Critical alerts (temp_safety, leak_detected, vpd_extreme) always post immediately
-            should_slack = True
-            if alert["alert_type"] == "sensor_offline":
-                should_slack = False  # Log to DB only; Slack on escalation
-            elif alert["alert_type"] == "esp32_reboot":
-                should_slack = False  # Info-level, DB only
+            should_slack = should_post_alert(alert["alert_type"], alert["severity"], settings=SLACK_SETTINGS)
 
             slack_ts = None
             if should_slack and not DRY_RUN:

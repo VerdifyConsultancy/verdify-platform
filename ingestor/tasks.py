@@ -36,6 +36,9 @@ from esp32_push import push_to_esp32
 from occupancy import expire_occupancy_latch, sync_occupancy_state
 from pydantic import ValidationError
 
+from slack_config import build_slack_payload
+from slack_ops.briefs import build_operator_brief
+from slack_ops.policy import should_post_alert
 from verdify_schemas import (
     AlertEnvelope,
     ClimateRow,
@@ -66,6 +69,7 @@ from config import (
     HA_TOKEN_FILE,
     HA_URL,
     SLACK_CHANNEL,
+    SLACK_SETTINGS,
     SLACK_TOKEN_FILE,
     STATE_DIR,
 )
@@ -526,12 +530,10 @@ def _fetch_all_cpu_samples() -> list[dict]:
 
 
 def _post_slack(token: str, channel: str, text: str, thread_ts: str | None = None) -> str | None:
-    payload = {"channel": channel, "text": text}
-    if thread_ts:
-        payload["thread_ts"] = thread_ts
+    payload = build_slack_payload(SLACK_SETTINGS, text, channel=channel, thread_ts=thread_ts)
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
-        "https://slack.com/api/chat.postMessage",
+        f"{SLACK_SETTINGS.api_base_url.rstrip('/')}/chat.postMessage",
         data=data,
         headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json; charset=utf-8"},
     )
@@ -2865,7 +2867,7 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
             except ValidationError as e:
                 log.error("alert skipped (envelope validation failed: %s): %r", e, a)
                 continue
-            should_slack = env.alert_type not in ("sensor_offline", "esp32_reboot")
+            should_slack = should_post_alert(env.alert_type, env.severity, settings=SLACK_SETTINGS)
             slack_ts = None
             if should_slack:
                 if slack_token is None:
@@ -6873,3 +6875,53 @@ async def midnight_watch(pool: asyncpg.Pool) -> None:
         log.info("midnight_watch: %s", msg)
     except Exception as e:
         log.error("midnight_watch Slack post failed: %s", e)
+
+
+# ═════════════════════════════════════════════════════════════════
+# 18. SLACK OPERATOR BRIEFS
+# ═════════════════════════════════════════════════════════════════
+
+_slack_brief_last_fire: dict[str, str] = {}
+
+
+async def slack_operator_briefs(pool: asyncpg.Pool) -> None:
+    """Post configured morning/evening operator briefs to #greenhouse."""
+
+    now_local = datetime.now(ZoneInfo(SLACK_SETTINGS.timezone))
+    today_key = str(now_local.date())
+    briefs = SLACK_SETTINGS.briefs or {}
+    for period, cfg in briefs.items():
+        if not cfg or not cfg.get("enabled", True):
+            continue
+        hh, mm = (int(part) for part in str(cfg.get("time", "00:00")).split(":", 1))
+        if now_local.hour != hh or not (mm <= now_local.minute < mm + 5):
+            continue
+        fire_key = f"{period}:{today_key}"
+        if _slack_brief_last_fire.get(period) == fire_key:
+            continue
+        async with pool.acquire() as conn:
+            text, payload = await build_operator_brief(conn, period, timezone=SLACK_SETTINGS.timezone)
+        try:
+            token = _load_token(SLACK_TOKEN_FILE)
+            ts = _post_slack(token, cfg.get("channel_id") or SLACK_CHANNEL, text)
+            async with pool.acquire() as conn:
+                await conn.execute(
+                    """
+                    INSERT INTO slack_notification_events (
+                        source, event_type, severity, channel_id, message_ts,
+                        entity_type, dedupe_key, status, post_mode, payload
+                    )
+                    VALUES ('ingestor', 'operator_brief', 'info', $1, $2,
+                            'brief', $3, 'posted', 'channel', $4::jsonb)
+                    ON CONFLICT (greenhouse_id, dedupe_key) WHERE dedupe_key IS NOT NULL
+                    DO UPDATE SET ts = now(), message_ts = EXCLUDED.message_ts, payload = EXCLUDED.payload
+                    """,
+                    cfg.get("channel_id") or SLACK_CHANNEL,
+                    ts,
+                    fire_key,
+                    json.dumps(payload),
+                )
+            _slack_brief_last_fire[period] = fire_key
+            log.info("Posted Slack %s operator brief", period)
+        except Exception as exc:
+            log.error("Slack %s operator brief failed: %s", period, exc)
