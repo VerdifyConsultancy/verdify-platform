@@ -699,6 +699,20 @@ def test_vpd_high_moisture_guardrail_does_not_run_when_idle_below_band():
     assert guardrails == {}
 
 
+def test_vpd_high_moisture_guard_context_avoids_greenhouse_state_latest_scan():
+    import tasks
+
+    src = Path(tasks.__file__).read_text()
+    start = src.index("async def _fetch_moisture_guard_context")
+    end = src.index("def _vpd_high_moisture_guardrails", start)
+    body = src[start:end]
+
+    assert "latest_climate AS" in body
+    assert "FROM climate" in body
+    assert "FROM v_greenhouse_state" not in body
+    assert "ORDER BY ts DESC\n             LIMIT 1" in body
+
+
 def test_mcp_set_tunable_treats_vpd_low_as_band_owned():
     """MCP should expose crop-band params as read-only context, not Tier 1
     tactical tuning. The dispatcher owns vpd_low through fn_band_setpoints().
@@ -1961,6 +1975,12 @@ def test_planner_context_includes_dispatcher_owned_targets():
     assert "resource minimization must not close wet/fog assist" in gather
     assert "CLIMATE AUTHORITY ACTION PROOF" in gather
     assert "CLIMATE AUTHORITY ACTION ROLLUP" in gather
+    assert "CLIMATE ACTION RESPONSE PRIORS" in gather
+    assert "5m lookahead" in gather
+    assert "LIMIT 300" in gather
+    assert "avg_temp_abs_error_delta_f" in gather
+    assert "avg_vpd_abs_error_delta_kpa" in gather
+    assert "Use this as a recent response prior alongside forecast pressure" in gather
     assert "controller-owned truth for the current action" in gather
     assert "wet_assist_block_reason" in gather
     assert "fog_block_reason" in gather

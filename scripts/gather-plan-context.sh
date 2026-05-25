@@ -1172,6 +1172,82 @@ SELECT climate_action,
 echo "Use this to distinguish capacity limits from tactical limits: persistent high band errors with wet/fog disallowed point to safety/block reasons; high errors with assist allowed but low relay duty point to controller/relay proof that needs operator review."
 echo ""
 
+# ── 30b-4a. BOUNDED RESPONSE PRIORS ─────────────────────────────
+echo "--- CLIMATE ACTION RESPONSE PRIORS (bounded last 24h, 5m lookahead) ---"
+echo "action|priority|matched_samples|avg_temp_abs_error_delta_f|avg_vpd_abs_error_delta_kpa|wet_served_pct|avg_est_water_gal|common_blocks"
+"${DB[@]}" -c "
+WITH bounded AS (
+  SELECT *
+    FROM (
+      SELECT ts,
+             greenhouse_id,
+             climate_action,
+             priority_axis,
+             temp_band_error_f,
+             vpd_band_error_kpa,
+             moisture_assist_state,
+             wet_assist_block_reason,
+             fog_block_reason,
+             relay_truth,
+             resource_cost_estimate
+        FROM climate_action_log
+       WHERE COALESCE(greenhouse_id, 'vallery') = '${GREENHOUSE_ID}'
+         AND ts > now() - interval '24 hours'
+         AND temp_band_error_f IS NOT NULL
+         AND vpd_band_error_kpa IS NOT NULL
+       ORDER BY ts DESC
+       LIMIT 300
+    ) recent
+), scored AS (
+  SELECT b.*,
+         nxt.temp_band_error_f AS temp_band_error_after_f,
+         nxt.vpd_band_error_kpa AS vpd_band_error_after_kpa
+    FROM bounded b
+    LEFT JOIN LATERAL (
+      SELECT n.temp_band_error_f,
+             n.vpd_band_error_kpa
+        FROM climate_action_log n
+       WHERE COALESCE(n.greenhouse_id, 'vallery') = COALESCE(b.greenhouse_id, 'vallery')
+         AND n.ts >= b.ts + interval '5 minutes'
+         AND n.ts <= b.ts + interval '7 minutes'
+         AND n.temp_band_error_f IS NOT NULL
+         AND n.vpd_band_error_kpa IS NOT NULL
+       ORDER BY n.ts ASC
+       LIMIT 1
+    ) nxt ON true
+)
+SELECT climate_action,
+       priority_axis,
+       count(*) FILTER (WHERE temp_band_error_after_f IS NOT NULL) AS matched_samples,
+       round(avg(abs(temp_band_error_after_f) - abs(temp_band_error_f))::numeric, 2)
+         AS avg_temp_abs_error_delta_f,
+       round(avg(abs(vpd_band_error_after_kpa) - abs(vpd_band_error_kpa))::numeric, 3)
+         AS avg_vpd_abs_error_delta_kpa,
+       round((100.0 * avg(CASE
+         WHEN moisture_assist_state IN ('served', 'pulse_on')
+           OR lower(COALESCE(relay_truth->>'fog', 'false')) = 'true'
+           OR lower(COALESCE(relay_truth->>'mister_south', 'false')) = 'true'
+           OR lower(COALESCE(relay_truth->>'mister_west', 'false')) = 'true'
+           OR lower(COALESCE(relay_truth->>'mister_center', 'false')) = 'true'
+         THEN 1.0 ELSE 0.0 END))::numeric, 1) AS wet_served_pct,
+       round(avg(NULLIF(resource_cost_estimate->>'water_gal', '')::numeric), 3)
+         AS avg_est_water_gal,
+       COALESCE(string_agg(
+         DISTINCT COALESCE(NULLIF(wet_assist_block_reason, ''), NULLIF(fog_block_reason, '')),
+         ', '
+       ) FILTER (
+         WHERE COALESCE(NULLIF(wet_assist_block_reason, ''), NULLIF(fog_block_reason, '')) IS NOT NULL
+           AND COALESCE(NULLIF(wet_assist_block_reason, ''), NULLIF(fog_block_reason, '')) <> 'none'
+       ), 'none') AS common_blocks
+  FROM scored
+ GROUP BY climate_action, priority_axis
+HAVING count(*) FILTER (WHERE temp_band_error_after_f IS NOT NULL) > 0
+ ORDER BY matched_samples DESC, climate_action
+ LIMIT 12;
+" 2>/dev/null || echo "(climate action response priors unavailable)"
+echo "Negative deltas mean the absolute band error improved after the action. Use this as a recent response prior alongside forecast pressure: prefer tactics that reduced temp/VPD error per unit water, and do not conserve resources by closing wet assist during safe dual-axis misses."
+echo ""
+
 # ── 30b-5. HOT/DRY VENTILATE CONTROL UTILIZATION ─────────────────
 echo "--- HOT/DRY VENTILATE UTILIZATION (last 24h, firmware band basis) ---"
 "${DB[@]}" -c "

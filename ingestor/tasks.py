@@ -3346,17 +3346,35 @@ def _control_band_from_house_row(house_row) -> dict[str, float] | None:
 async def _fetch_moisture_guard_context(conn) -> dict[str, float | str | None] | None:
     row = await conn.fetchrow(
         """
-        WITH latest AS (
-            SELECT temp_avg,
-                   sp_temp_high,
+        WITH latest_climate AS (
+            SELECT ts,
+                   temp_avg,
                    vpd_avg,
                    dew_point,
-                   greenhouse_mode,
                    outdoor_temp_f,
                    outdoor_rh_pct
-              FROM v_greenhouse_state
+              FROM climate
+             WHERE temp_avg IS NOT NULL
+               AND vpd_avg IS NOT NULL
              ORDER BY ts DESC
              LIMIT 1
+        ),
+        latest AS (
+            SELECT c.temp_avg,
+                   fn_setpoint_at('temp_high', c.ts) AS sp_temp_high,
+                   c.vpd_avg,
+                   c.dew_point,
+                   (
+                       SELECT ss.value
+                         FROM system_state ss
+                        WHERE ss.entity = 'greenhouse_state'
+                          AND ss.ts <= c.ts
+                        ORDER BY ss.ts DESC
+                        LIMIT 1
+                   ) AS greenhouse_mode,
+                   c.outdoor_temp_f,
+                   c.outdoor_rh_pct
+              FROM latest_climate c
         ),
         recent AS (
             SELECT count(*)::int AS recent_samples,
