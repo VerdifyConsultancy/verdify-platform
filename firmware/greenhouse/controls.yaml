@@ -578,6 +578,7 @@ interval:
               (mode == VENTILATE) && ctl_state.vent_mist_assist_active;
           const bool occupancy_moisture_block = id(occupancy_inhibit_enabled) && id(greenhouse_occupied);
           const bool leak_block = id(bs_leak_detected).state;
+          const bool irrigation_water_conflict = id(irrig_state) > 0;
           // FW-9: VPD emergency override — allow wet assist even if the daily
           // water budget is exhausted. Include house and zone VPD so a
           // safety miss is not hidden by stale/missing local sensors.
@@ -596,7 +597,7 @@ interval:
               id(mister_water_today) >= id(mister_water_budget_gal) && !climate_vpd_emergency;
           static bool leak_water_interlock_prev = false;
           static bool occupancy_water_interlock_prev = false;
-          if (leak_block || occupancy_moisture_block || climate_water_budget_block) {
+          if (leak_block || occupancy_moisture_block || irrigation_water_conflict || climate_water_budget_block) {
               willFog = false;
           }
           if (leak_block != leak_water_interlock_prev) {
@@ -644,7 +645,11 @@ interval:
               R[4],
               willFog,
               false,
-              sensor_fault_relay_lock || leak_block || occupancy_moisture_block || climate_water_budget_block);
+              sensor_fault_relay_lock
+                  || leak_block
+                  || occupancy_moisture_block
+                  || irrigation_water_conflict
+                  || climate_water_budget_block);
 
           /**************** 12 — MISTER STATE MACHINE *****************************/
           // Runs only for SEALED_MIST or explicit VENTILATE assist. Zone stress
@@ -847,7 +852,7 @@ interval:
               if(center_wet_allowed && id(vpd_target_center) > 0 && avg_vpd > id(vpd_target_center)) any_zone_stressed = true;
               bool global_stressed = (avg_vpd > id(mister_engage_kpa));
               bool budget_block = climate_water_budget_block;
-              bool irrigation_block = id(irrig_state) > 0;
+              bool irrigation_block = irrigation_water_conflict;
               bool zone_mister_demand = humidity_demand && mister_vent_ok;
               bool mister_blocked =
                   leak_block
@@ -1214,8 +1219,10 @@ interval:
                 snprintf(moisture_block_reason, sizeof(moisture_block_reason), "pulse_gap");
               }
 
-              // Water tracking (flow meter during mister pulse)
-              if(id(mister_pulse_zone) > 0 && id(mister_state) > 0){
+              // Water tracking (flow meter during climate wet assist)
+              const bool climate_mister_flow_active = id(mister_pulse_zone) > 0 && id(mister_state) > 0;
+              const bool climate_fog_flow_active = id(fog_rly)->state;
+              if(climate_mister_flow_active || climate_fog_flow_active){
                 float gpm = id(water_flow_rate).state;
                 if(!isnan(gpm) && gpm > 0.0f){
                   id(mister_water_today) += gpm * (float(dt_ms) / 60000.0f);
@@ -1414,6 +1421,8 @@ interval:
               snprintf(fog_block_reason, sizeof(fog_block_reason), "leak_detected");
             } else if(occupancy_moisture_block) {
               snprintf(fog_block_reason, sizeof(fog_block_reason), "occupancy");
+            } else if(irrigation_water_conflict) {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "irrigation");
             } else if(climate_water_budget_block) {
               snprintf(fog_block_reason, sizeof(fog_block_reason), "resource_budget");
             } else if(id(fog_rly)->state) {

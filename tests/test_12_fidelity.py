@@ -2240,7 +2240,8 @@ def test_irrigation_scheduler_serializes_same_minute_zone_starts():
     ):
         assert needle in controls
     assert controls.index("id(center_mister).turn_off();") < controls.index("switch(job){")
-    assert "bool irrigation_block = id(irrig_state) > 0;" in controls
+    assert "const bool irrigation_water_conflict = id(irrig_state) > 0;" in controls
+    assert "bool irrigation_block = irrigation_water_conflict;" in controls
     assert "|| irrigation_block" in controls
 
 
@@ -2269,9 +2270,14 @@ def test_leak_detected_locks_water_actuators():
     assert "Leak detected: forcing fog, misters, and irrigation off" in controls
     relay_apply = controls[controls.index("/**************** 11") : controls.index("/**************** 12")]
     assert "set_relay(\n              R[4]," in relay_apply
-    assert (
-        "sensor_fault_relay_lock || leak_block || occupancy_moisture_block || climate_water_budget_block" in relay_apply
-    )
+    for guard in (
+        "sensor_fault_relay_lock",
+        "leak_block",
+        "occupancy_moisture_block",
+        "irrigation_water_conflict",
+        "climate_water_budget_block",
+    ):
+        assert guard in relay_apply
 
     mister_start = controls.index("bool mister_blocked =")
     mister_end = controls.index("if(mister_blocked && id(mister_state) > 0)", mister_start)
@@ -2308,13 +2314,15 @@ def test_occupancy_inhibit_is_final_fog_force_off():
     final_gate_start = controls.index(occupancy_gate)
     final_gate_end = controls.index("/**************** 10", final_gate_start)
     final_gate = controls[final_gate_start:final_gate_end]
-    assert "if (leak_block || occupancy_moisture_block || climate_water_budget_block)" in final_gate
+    assert (
+        "if (leak_block || occupancy_moisture_block || irrigation_water_conflict || climate_water_budget_block)"
+        in final_gate
+    )
     assert "Occupancy inhibit: forcing fog and climate misters off" in final_gate
 
     relay_apply = controls[controls.index("/**************** 11") : controls.index("/**************** 12")]
-    assert (
-        "sensor_fault_relay_lock || leak_block || occupancy_moisture_block || climate_water_budget_block" in relay_apply
-    )
+    assert "irrigation_water_conflict" in relay_apply
+    assert "climate_water_budget_block" in relay_apply
     assert "bool occupancy_blocks = occupancy_moisture_block;" in controls
 
     fog_start = controls.index("char fog_block_reason")
@@ -2323,22 +2331,37 @@ def test_occupancy_inhibit_is_final_fog_force_off():
     assert fog_block.index("occupancy_moisture_block") < fog_block.index("id(fog_rly)->state")
 
 
-def test_fog_respects_climate_water_budget_before_reporting_served():
+def test_fog_respects_conflict_and_budget_before_reporting_served():
     controls = Path("firmware/greenhouse/controls.yaml").read_text()
 
     final_gate_start = controls.index("const bool climate_water_budget_block =")
     final_gate_end = controls.index("/**************** 10", final_gate_start)
     final_gate = controls[final_gate_start:final_gate_end]
-    assert "if (leak_block || occupancy_moisture_block || climate_water_budget_block)" in final_gate
+    assert (
+        "if (leak_block || occupancy_moisture_block || irrigation_water_conflict || climate_water_budget_block)"
+        in final_gate
+    )
 
     relay_apply = controls[controls.index("/**************** 11") : controls.index("/**************** 12")]
+    assert "irrigation_water_conflict" in relay_apply
     assert "climate_water_budget_block" in relay_apply
 
     fog_start = controls.index("char fog_block_reason")
     fog_end = controls.index("static char last_fog_block_reason", fog_start)
     fog_block = controls[fog_start:fog_end]
+    assert 'snprintf(fog_block_reason, sizeof(fog_block_reason), "irrigation")' in fog_block
     assert 'snprintf(fog_block_reason, sizeof(fog_block_reason), "resource_budget")' in fog_block
+    assert fog_block.index("irrigation_water_conflict") < fog_block.index("id(fog_rly)->state")
     assert fog_block.index("climate_water_budget_block") < fog_block.index("id(fog_rly)->state")
+
+    water_tracking_start = controls.index("// Water tracking (flow meter during climate wet assist)")
+    water_tracking_end = controls.index("}", controls.index("id(mister_water_today) +=", water_tracking_start)) + 1
+    water_tracking = controls[water_tracking_start:water_tracking_end]
+    assert (
+        "const bool climate_mister_flow_active = id(mister_pulse_zone) > 0 && id(mister_state) > 0;" in water_tracking
+    )
+    assert "const bool climate_fog_flow_active = id(fog_rly)->state;" in water_tracking
+    assert "if(climate_mister_flow_active || climate_fog_flow_active)" in water_tracking
 
 
 def test_sensor_fault_is_final_relay_lock_above_manual_overrides():
@@ -2360,9 +2383,8 @@ def test_sensor_fault_is_final_relay_lock_above_manual_overrides():
     assert "set_relay(R[5], willVent, fan_requires_vent, sensor_fault_relay_lock);" in relay_apply
     assert "set_relay(R[2], willFan1, false, sensor_fault_relay_lock);" in relay_apply
     assert "set_relay(R[3], willFan2, false, sensor_fault_relay_lock);" in relay_apply
-    assert (
-        "sensor_fault_relay_lock || leak_block || occupancy_moisture_block || climate_water_budget_block" in relay_apply
-    )
+    assert "irrigation_water_conflict" in relay_apply
+    assert "climate_water_budget_block" in relay_apply
 
 
 def test_irrigation_schedule_is_heap_recovery_priority():
