@@ -1990,6 +1990,24 @@ def test_climate_authority_action_log_contract_is_tracked():
     assert "ClimateActionLogRow(" in ingestor
 
 
+def test_climate_action_log_treats_served_wet_assist_as_allowed():
+    original_system = dict(ingestor.state.system)
+    try:
+        ingestor.state.system["vent_mist_assist_status"] = "blocked:pulse_gap"
+
+        assert ingestor._climate_wet_assist_status("VENT_COOL_MIST_ASSIST", "served", False) == (True, None)
+        assert ingestor._climate_wet_assist_status("VENT_COOL_MIST_ASSIST", "pulse_gap", False) == (True, None)
+
+        ingestor.state.system["vent_mist_assist_status"] = "blocked:dew_margin"
+        assert ingestor._climate_wet_assist_status("VENT_COOL_MIST_ASSIST", "pulse_gap", False) == (
+            False,
+            "dew_margin",
+        )
+    finally:
+        ingestor.state.system.clear()
+        ingestor.state.system.update(original_system)
+
+
 def test_climate_decision_surface_excludes_fert_and_drip_relays():
     types_src = (REPO_ROOT / "firmware" / "lib" / "greenhouse_types.h").read_text()
     relay_block = types_src[

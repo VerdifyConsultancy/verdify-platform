@@ -21,17 +21,21 @@ Owned by the [`firmware`](../agents/firmware.md) agent. Sprint counter is agent-
   rather than re-running a parallel selector. Production rule: no alternate
   live controller and no second proposal path; offline replay/counterfactual
   tools are diagnostic only.
-- [ ] **F-CI-7 Climate Authority: decouple climate wet assist from crop
+- [x] **F-CI-7 Climate Authority: decouple climate wet assist from crop
   direct-wet windows.** Canonical sprint plan:
   [`docs/climate-authority-sprint-plan-2026-05-24.md`](../climate-authority-sprint-plan-2026-05-24.md).
   GitHub issue:
   [#5](https://github.com/VerdifyConsultancy/verdify-platform/issues/5).
-  Implement `crop_direct_wet_allowed`, `climate_wet_assist_allowed`, and
+  Implemented `crop_direct_wet_allowed`, `climate_wet_assist_allowed`, and
   `climate_fog_assist_allowed` as separate safety gates. `VENT_COOL_MIST_ASSIST`
   and sealed humidification may use safe climate misters outside crop direct-wet
-  windows; crop wetting, drips, and fertigation remain window-gated. Add the
-  2026-05-24 21:48 MDT regression fixture, block-reason tests, replay evidence,
-  invariants, firmware compile, and freeze-rule OTA evidence before deploy.
+  windows; crop wetting, drips, and fertigation remain window-gated. Shipped in
+  commit `9dd2b94` and OTA `2026.5.24.2255.9dd2b94` with operator-approved
+  weekly override. Gates: `make lint`, `make test`, `make test-firmware`,
+  `make firmware-invariants`, `make firmware-check`,
+  `make firmware-audit-traceability-proof`, replay diff `2.65%` vs pre-change
+  baseline under explicit `3%` threshold, and post-OTA sensor-health
+  `PASS: 27 FAIL: 0 WARN: 0`.
 - [ ] **48-hour v2 bake + reboot forensics follow-through.** Behavior-changing OTA for `2026.4.27.2009.2b5f2a5` began at `2026-04-28 02:12:25 UTC`; a wrapper-only main redeploy later put `2026.4.27.2040.c1a6403` live at `2026-04-28 02:41:54 UTC`. Sensor-health is `PASS 27 / FAIL 0 / WARN 0`, open critical/high alerts are `0`, and there are no post-OTA `Guru/Panic` / `Task WDT` resets in the sampled window. Keep OTA freeze intact during the bake. Current evidence reframes the old "midday crash-loop" as broader JSON/API/crash-forensics work; see [`docs/firmware-v2-postdeploy-forensics-2026-04-27.md`](../firmware-v2-postdeploy-forensics-2026-04-27.md).
 - [ ] **Contract + alert drift guard PR.** `firmware/contracts-alert-drift` makes `vpd_low` explicitly dispatcher/band-owned, adds expected-firmware-version mismatch alerting, and adds static drift guards for firmware override tags, `sw_mister_closes_vent` routing, and MCP Tier 1 validation.
 

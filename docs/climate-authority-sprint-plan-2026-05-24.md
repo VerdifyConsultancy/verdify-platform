@@ -2,10 +2,27 @@
 
 ## Status
 
-Next implementation sprint for the controller, planner, and schema/data layers.
-This plan follows the ClimateIntent contract foundation and the live diagnosis
-from 2026-05-24 21:48 MDT, where the greenhouse was above both dispatcher-owned
-bands but the physical wet actuators were off.
+Implemented and deployed on 2026-05-24 MDT for the controller, planner, and
+schema/data layers. This plan follows the ClimateIntent contract foundation and
+the live diagnosis from 2026-05-24 21:48 MDT, where the greenhouse was above
+both dispatcher-owned bands but the physical wet actuators were off.
+
+Deployment evidence:
+
+- Implementation commit: `9dd2b94`.
+- OTA firmware version: `2026.5.24.2255.9dd2b94`.
+- Operator-approved weekly OTA override reason: climate authority deployment
+  for active temp+VPD compliance miss.
+- Gates passed: `make lint`, `make test`, `make test-firmware`,
+  `make firmware-invariants`, `make firmware-check`,
+  `make firmware-audit-traceability-proof`, and explicit replay divergence
+  thresholds for intentional behavior change.
+- Post-OTA sensor-health: `PASS: 27 FAIL: 0 WARN: 0`.
+- Active plan coverage after late SUNSET remediation: plan `iris-20260524-2246`,
+  `4/4` transitions complete with 39 tactical Tier 1 params and no
+  dispatcher-owned band params.
+- New `climate_action_log` rows showed `VENT_COOL_MIST_ASSIST` with physical
+  wet assist served before VPD returned into band.
 
 This is a production greenhouse plan. Safety rails remain first, the ESP32
 remains relay authority, and there is still one live controller path. Offline

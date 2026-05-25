@@ -440,15 +440,22 @@ def _parse_json_object(value: str | None) -> dict[str, Any]:
 def _climate_wet_assist_status(action: str, moisture_state: str | None, fog_allowed: bool) -> tuple[bool, str | None]:
     if action not in CLIMATE_WET_ACTIONS:
         return False, None
+    if moisture_state == "served":
+        return True, None
     if fog_allowed:
         return True, None
 
     vent_status = state.system.get("vent_mist_assist_status") or ""
+    blocked_reason = None
     if vent_status.startswith("blocked:"):
-        return False, vent_status.split(":", 1)[1] or "blocked"
+        blocked_reason = vent_status.split(":", 1)[1] or "blocked"
 
-    if moisture_state in {"engage_delay", "pulse_on", "pulse_gap", "served"}:
+    if moisture_state in {"engage_delay", "pulse_on", "pulse_gap"}:
+        if blocked_reason and blocked_reason not in {"engage_delay", "pulse_gap", "served", "none"}:
+            return False, blocked_reason
         return True, None
+    if blocked_reason:
+        return False, blocked_reason
     if moisture_state == "blocked":
         return False, state.system.get("moisture_block_reason") or "blocked"
 

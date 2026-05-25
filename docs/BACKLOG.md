@@ -33,16 +33,17 @@ Current posture:
   low-target-high bands; AI receives those targets as read-only context and
   owns bounded tactical forecast-aware intent, historical priors, and resource
   posture.
-- **Next climate-control sprint:** execute the
+- **Climate-control sprint shipped:** the
   [`Climate Authority Sprint Plan`](climate-authority-sprint-plan-2026-05-24.md)
-  to close the 2026-05-24 live gap where `VENT_COOL_MIST_ASSIST` was selected
-  but wet relays were blocked by crop direct-wet and fog clock windows. Tracked
-  issues: [#5](https://github.com/VerdifyConsultancy/verdify-platform/issues/5)
-  controller climate wet assist,
-  [#6](https://github.com/VerdifyConsultancy/verdify-platform/issues/6)
-  planner compliance-first ClimateIntent, and
-  [#7](https://github.com/VerdifyConsultancy/verdify-platform/issues/7)
-  structured action/effectiveness data.
+  closed the 2026-05-24 live gap where `VENT_COOL_MIST_ASSIST` was selected
+  but wet relays were blocked by crop direct-wet and fog clock windows. Commit
+  `9dd2b94` deployed firmware `2026.5.24.2255.9dd2b94` with operator-approved
+  weekly OTA override, sensor-health `PASS: 27 FAIL: 0 WARN: 0`, active plan
+  coverage `4/4` transitions with 39 Tier 1 params, and new structured
+  `climate_action_log` rows showing wet assist served before VPD returned into
+  band. Tracked issues: [#5](https://github.com/VerdifyConsultancy/verdify-platform/issues/5),
+  [#6](https://github.com/VerdifyConsultancy/verdify-platform/issues/6), and
+  [#7](https://github.com/VerdifyConsultancy/verdify-platform/issues/7).
 - Broad SaaS/multi-tenant work moves behind consulting validation unless needed for Track A or public-site reliability.
 - Repo, GitHub, project-board, and agent-scope splits are coordinator-owned until boundaries are decided.
 - PR #80 stays intact as the first recovery baseline; unrelated dirty work must

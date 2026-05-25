@@ -66,18 +66,19 @@ remains the safety-critical controller.
   MCP requires every tactical ClimateIntent field explicitly on each full-plan
   transition; the public AI tunables page documents the field-by-field firmware
   impact.
-- [ ] **G-CI.3 Compliance-first ClimateIntent authority context.** Canonical
+- [x] **G-CI.3 Compliance-first ClimateIntent authority context.** Canonical
   sprint plan:
   [`docs/climate-authority-sprint-plan-2026-05-24.md`](../climate-authority-sprint-plan-2026-05-24.md).
   GitHub issue:
   [#6](https://github.com/VerdifyConsultancy/verdify-platform/issues/6).
-  Add the current control-authority state to Hermes context: selected climate
+  Added the current control-authority state to Hermes context: selected climate
   action, temp/VPD band errors, wet/fog block reasons, wet-assist switches and
-  cutoffs, recent clamps, and setpoint confirmations. Update planner guidance
+  cutoffs, recent clamps, and setpoint confirmations. Updated planner guidance
   so safe dual-axis compliance misses do not materialize wet assist off merely
-  to conserve resources. Add materializer/MCP contradiction checks for obvious
+  to conserve resources. Added materializer/MCP contradiction checks for obvious
   conflicts such as high VPD pressure with wet gates disabled and no named
-  safety block.
+  safety block; live context now exposes dispatcher-owned targets and authority
+  mode while keeping temp/VPD bands read-only to AI.
 - [ ] **G-P1.1 Post-plan self-critique.** After each full plan, have Iris record a short structured rationale: forecast assumptions, expected stress windows, tunables intentionally changed, tunables intentionally left alone, and what evidence would falsify the plan.
 
 **Project recovery intake from `PROJECT_STATE.md`** (2026-05-22; coordinated
