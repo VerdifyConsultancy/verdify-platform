@@ -227,6 +227,15 @@ inline float climate_band_error(float value, float low, float high) noexcept {
     return 0.0f;
 }
 
+inline bool climate_reason_is(const char* reason, const char* expected) noexcept {
+    if (!reason || !expected) return false;
+    while (*reason != '\0' && *expected != '\0' && *reason == *expected) {
+        reason++;
+        expected++;
+    }
+    return *reason == '\0' && *expected == '\0';
+}
+
 inline ClimateResourceCostEstimate climate_resource_estimate(ClimateAction action) noexcept {
     float water_gal = 0.0f;
     if (action == CLIMATE_VENT_COOL_MIST_ASSIST || action == CLIMATE_SEALED_HUMIDIFY) {
@@ -297,6 +306,48 @@ inline const char* climate_summary_for_action(ClimateAction action) noexcept {
         case CLIMATE_DEHUM_VENT: return "DEHUM_VENT selected; VPD below band";
     }
     return "unknown climate action";
+}
+
+inline bool climate_wet_block_is_hard(const char* wet_block_reason) noexcept {
+    return wet_block_reason
+        && wet_block_reason[0] != '\0'
+        && !climate_reason_is(wet_block_reason, "below_threshold");
+}
+
+inline ClimateMoistureAssistState climate_moisture_state_for_decision(
+    bool selected_wet,
+    float dry_excess,
+    const char* wet_block_reason,
+    const ControlState& state,
+    const Setpoints& sp
+) noexcept {
+    if (selected_wet) return CLIMATE_MOISTURE_SERVED;
+    if (dry_excess <= 0.0f) return CLIMATE_MOISTURE_INACTIVE;
+    if (climate_wet_block_is_hard(wet_block_reason)) return CLIMATE_MOISTURE_BLOCKED;
+    if (state.mist_backoff_timer_ms > 0) return CLIMATE_MOISTURE_PULSE_GAP;
+    if (state.vpd_watch_timer_ms < sp.vpd_watch_dwell_ms) return CLIMATE_MOISTURE_ENGAGE_DELAY;
+    return CLIMATE_MOISTURE_ENGAGE_DELAY;
+}
+
+inline float climate_next_mist_eligible_seconds(
+    bool selected_wet,
+    float dry_excess,
+    const char* wet_block_reason,
+    const ControlState& state,
+    const Setpoints& sp
+) noexcept {
+    if (selected_wet) return 0.0f;
+    if (dry_excess <= 0.0f) return -1.0f;
+    if (climate_wet_block_is_hard(wet_block_reason)) return -1.0f;
+    if (climate_reason_is(wet_block_reason, "below_threshold")) return -1.0f;
+    if (state.mist_backoff_timer_ms > 0) {
+        if (state.mist_backoff_timer_ms >= sp.mist_backoff_ms) return 0.0f;
+        return float(sp.mist_backoff_ms - state.mist_backoff_timer_ms) / 1000.0f;
+    }
+    if (state.vpd_watch_timer_ms < sp.vpd_watch_dwell_ms) {
+        return float(sp.vpd_watch_dwell_ms - state.vpd_watch_timer_ms) / 1000.0f;
+    }
+    return 0.0f;
 }
 
 inline ClimateActionDecision evaluate_climate_decision(
@@ -422,9 +473,6 @@ inline ClimateActionDecision evaluate_climate_decision(
         || action == CLIMATE_VENT_COOL_FOG_ASSIST
         || action == CLIMATE_SEALED_HUMIDIFY
         || action == CLIMATE_SEALED_FOG;
-    const ClimateMoistureAssistState moisture_state = wet_block_reason[0] != '\0'
-        ? CLIMATE_MOISTURE_BLOCKED
-        : (selected_wet ? CLIMATE_MOISTURE_SERVED : (dry_excess > 0.0f ? CLIMATE_MOISTURE_ENGAGE_DELAY : CLIMATE_MOISTURE_INACTIVE));
     const ClimateMoistureZone moisture_zone = (action == CLIMATE_VENT_COOL_MIST_ASSIST || action == CLIMATE_SEALED_HUMIDIFY)
         ? CLIMATE_ZONE_CENTER
         : CLIMATE_ZONE_NONE;
@@ -435,9 +483,9 @@ inline ClimateActionDecision evaluate_climate_decision(
         .temp_error_f = temp_error,
         .vpd_error_kpa = vpd_error,
         .candidate_summary = climate_summary_for_action(action),
-        .moisture_assist_state = moisture_state,
+        .moisture_assist_state = climate_moisture_state_for_decision(selected_wet, dry_excess, wet_block_reason, state, sp),
         .moisture_zone = moisture_zone,
-        .next_mist_eligible_s = selected_wet ? 0.0f : -1.0f,
+        .next_mist_eligible_s = climate_next_mist_eligible_seconds(selected_wet, dry_excess, wet_block_reason, state, sp),
         .fog_margin_kpa = dry_excess - sp.fog_escalation_kpa,
         .fog_block_reason = fog_block_reason,
         .resource_cost_estimate = climate_resource_estimate(action)
@@ -463,15 +511,6 @@ inline Mode climate_action_to_mode(ClimateAction action) noexcept {
             return IDLE;
     }
     return IDLE;
-}
-
-inline bool climate_reason_is(const char* reason, const char* expected) noexcept {
-    if (!reason || !expected) return false;
-    while (*reason != '\0' && *expected != '\0' && *reason == *expected) {
-        reason++;
-        expected++;
-    }
-    return *reason == '\0' && *expected == '\0';
 }
 
 inline ClimateAction effective_climate_action_for_mode(
@@ -571,9 +610,6 @@ inline ClimateActionDecision describe_effective_climate_decision(
         || action == CLIMATE_VENT_COOL_FOG_ASSIST
         || action == CLIMATE_SEALED_HUMIDIFY
         || action == CLIMATE_SEALED_FOG;
-    const ClimateMoistureAssistState moisture_state = wet_block_reason[0] != '\0'
-        ? CLIMATE_MOISTURE_BLOCKED
-        : (selected_wet ? CLIMATE_MOISTURE_SERVED : (dry_excess > 0.0f ? CLIMATE_MOISTURE_ENGAGE_DELAY : CLIMATE_MOISTURE_INACTIVE));
     const ClimateMoistureZone moisture_zone = (action == CLIMATE_VENT_COOL_MIST_ASSIST || action == CLIMATE_SEALED_HUMIDIFY)
         ? CLIMATE_ZONE_CENTER
         : CLIMATE_ZONE_NONE;
@@ -584,9 +620,9 @@ inline ClimateActionDecision describe_effective_climate_decision(
         .temp_error_f = temp_error,
         .vpd_error_kpa = vpd_error,
         .candidate_summary = climate_summary_for_effective_action(action, state),
-        .moisture_assist_state = moisture_state,
+        .moisture_assist_state = climate_moisture_state_for_decision(selected_wet, dry_excess, wet_block_reason, state, sp),
         .moisture_zone = moisture_zone,
-        .next_mist_eligible_s = selected_wet ? 0.0f : -1.0f,
+        .next_mist_eligible_s = climate_next_mist_eligible_seconds(selected_wet, dry_excess, wet_block_reason, state, sp),
         .fog_margin_kpa = dry_excess - sp.fog_escalation_kpa,
         .fog_block_reason = fog_block_reason,
         .resource_cost_estimate = climate_resource_estimate(action)

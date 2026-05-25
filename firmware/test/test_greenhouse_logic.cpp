@@ -431,6 +431,51 @@ TEST(climate_decision_blocks_wet_assist_when_occupied) {
     PASS();
 }
 
+TEST(climate_decision_reports_inactive_moisture_when_vpd_in_band) {
+    auto sp = band_setpoints();
+    sp.sw_fsm_controller_enabled = true;
+    auto s = initial_state();
+    auto in = make_inputs(75.0f, 1.0f);
+    in.dew_point_f = in.temp_f - 2.0f;
+
+    ClimateActionDecision d = evaluate_climate_decision(in, sp, s);
+    ASSERT_EQ(d.moisture_assist_state, CLIMATE_MOISTURE_INACTIVE);
+    ASSERT_TRUE(d.next_mist_eligible_s < 0.0f);
+    PASS();
+}
+
+TEST(climate_decision_reports_engage_delay_timer_before_mist_eligibility) {
+    auto sp = band_setpoints();
+    sp.sw_fsm_controller_enabled = true;
+    sp.vpd_watch_dwell_ms = 60000;
+    auto s = initial_state();
+    s.vpd_watch_timer_ms = 30000;
+    auto in = make_inputs(75.0f, sp.vpd_high + 0.2f);
+    in.dew_point_f = in.temp_f - 12.0f;
+
+    ClimateActionDecision d = evaluate_climate_decision(in, sp, s);
+    ASSERT_EQ(d.moisture_assist_state, CLIMATE_MOISTURE_ENGAGE_DELAY);
+    ASSERT_EQ(int(d.next_mist_eligible_s), 30);
+    PASS();
+}
+
+TEST(climate_decision_reports_mist_backoff_gap_timer) {
+    auto sp = band_setpoints();
+    sp.sw_fsm_controller_enabled = true;
+    sp.vpd_watch_dwell_ms = 60000;
+    sp.mist_backoff_ms = 90000;
+    auto s = initial_state();
+    s.vpd_watch_timer_ms = sp.vpd_watch_dwell_ms;
+    s.mist_backoff_timer_ms = 30000;
+    auto in = make_inputs(75.0f, sp.vpd_high + 0.2f);
+    in.dew_point_f = in.temp_f - 12.0f;
+
+    ClimateActionDecision d = evaluate_climate_decision(in, sp, s);
+    ASSERT_EQ(d.moisture_assist_state, CLIMATE_MOISTURE_PULSE_GAP);
+    ASSERT_EQ(int(d.next_mist_eligible_s), 60);
+    PASS();
+}
+
 TEST(climate_decision_forces_safety_before_band_compliance) {
     auto sp = band_setpoints();
     sp.sw_fsm_controller_enabled = true;
@@ -2553,6 +2598,21 @@ TEST(climate_effective_decision_reports_actual_held_mode) {
     ASSERT_EQ(d.climate_action, CLIMATE_IDLE);
     ASSERT_EQ(d.priority_axis, CLIMATE_PRIORITY_TEMP);
     ASSERT_TRUE(std::string(d.candidate_summary) == "IDLE selected; dwell gate holding prior mode");
+    PASS();
+}
+
+TEST(climate_effective_decision_reports_inactive_moisture_when_vpd_in_band) {
+    auto sp = band_first_setpoints();
+    auto s = initial_state();
+    auto in = make_inputs(75.0f, 1.0f);
+    in.dew_point_f = in.temp_f - 2.0f;
+
+    const RelayOutputs relays = {true, false, false, false, false, false};
+    ClimateActionDecision d = describe_effective_climate_decision(IDLE, in, sp, s, relays);
+
+    ASSERT_EQ(d.climate_action, CLIMATE_HEAT);
+    ASSERT_EQ(d.moisture_assist_state, CLIMATE_MOISTURE_INACTIVE);
+    ASSERT_TRUE(d.next_mist_eligible_s < 0.0f);
     PASS();
 }
 
