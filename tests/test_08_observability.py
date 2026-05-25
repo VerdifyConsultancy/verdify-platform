@@ -1392,7 +1392,8 @@ class TestClimateIntentControllerObservability:
     def test_controls_publish_primary_climate_fields(self):
         controls = (REPO_ROOT / "firmware/greenhouse/controls.yaml").read_text()
         hardware = (REPO_ROOT / "firmware/greenhouse/hardware.yaml").read_text()
-        assert "evaluate_climate_decision(sensor_in, setpts, ctl_state)" in controls
+        assert "describe_effective_climate_decision(mode, sensor_in, setpts, ctl_state, relay_out)" in controls
+        assert "evaluate_climate_decision(sensor_in, setpts, ctl_state)" not in controls
         legacy_prefix = "climate_" + "s" + "hadow"
         assert legacy_prefix not in controls
         assert legacy_prefix not in hardware

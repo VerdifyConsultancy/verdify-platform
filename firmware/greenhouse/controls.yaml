@@ -1167,7 +1167,7 @@ interval:
 
           /*** ClimateIntent controller decision — primary path telemetry ***/
           {
-            ClimateActionDecision climate_decision = evaluate_climate_decision(sensor_in, setpts, ctl_state);
+            ClimateActionDecision climate_decision = describe_effective_climate_decision(mode, sensor_in, setpts, ctl_state, relay_out);
             const char* climate_action = CLIMATE_ACTION_NAMES[climate_decision.climate_action];
             const char* priority_axis = CLIMATE_PRIORITY_AXIS_NAMES[climate_decision.priority_axis];
             const char* moisture_state = CLIMATE_MOISTURE_ASSIST_STATE_NAMES[climate_decision.moisture_assist_state];

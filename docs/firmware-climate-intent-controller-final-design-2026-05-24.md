@@ -43,6 +43,11 @@ Likewise, a VPD improvement cannot close the vent while temperature is actively
 above band unless the projection says temperature compliance remains at least
 equivalent.
 
+Resource/churn dwell is below both compliance axes. It may hold transitions when
+the greenhouse is already inside the active temp/VPD bands, but it must not hold
+`IDLE`, `DEHUM_VENT`, or `SEALED_MIST` against a safe action needed for active
+temperature or VPD-band recovery.
+
 ## Control Boundary
 
 Firmware owns:
@@ -233,7 +238,8 @@ Required invariants:
 - No wet action below dew-margin floor.
 - No climate logic drives fert/drip relays.
 - No relay runs without plausible sensors except hardwired safety fallback.
-- Relay min-on/min-off and dwell guards are respected.
+- Relay min-on/min-off and dwell guards are respected, except resource/churn
+  dwell cannot outrank active temp/VPD-band compliance.
 - Vent/fan sequencing prevents fan-with-closed-vent except explicit circulation
   or safety heat.
 - Water budget is enforced unless a named safety/emergency policy allows a
@@ -246,7 +252,8 @@ Required invariants:
 The current system is too hard to reason about from the outside. The new
 controller must publish:
 
-- `climate_action`: selected candidate action.
+- `climate_action`: executed controller action after safety, dwell, and
+  interlock resolution. It is not produced by a second selector pass.
 - `priority_axis`: `safety`, `temp`, `vpd`, or `resource`.
 - `temp_error_f` and `vpd_error_kpa`.
 - `candidate_summary`: compact top candidate and first rejected reason.

@@ -2382,7 +2382,7 @@ TEST(band_first_dehum_enters_below_vpd_low_hysteresis_and_exits_at_low_edge) {
     PASS();
 }
 
-TEST(band_first_dehum_overshoot_respects_existing_dwell_hold) {
+TEST(band_first_vpd_compliance_preempts_dehum_dwell_hold) {
     auto sp = band_first_setpoints();
     sp.sw_dwell_gate_enabled = true;
     sp.dwell_gate_ms = 300000;
@@ -2393,13 +2393,13 @@ TEST(band_first_dehum_overshoot_respects_existing_dwell_hold) {
 
     Mode m = determine_mode(make_inputs(75.0f, sp.vpd_high + 0.2f), sp, s, 5000);
 
-    ASSERT_EQ(m, DEHUM_VENT);
-    ASSERT_TRUE(std::string(s.last_mode_reason) == "dwell_hold");
+    ASSERT_EQ(m, SEALED_MIST);
+    ASSERT_TRUE(std::string(s.last_mode_reason) == "humidify_enter");
     ASSERT_FALSE(s.vent_mist_assist_active);
     PASS();
 }
 
-TEST(band_first_dehum_overshoot_cooling_respects_existing_dwell_hold) {
+TEST(band_first_temp_compliance_preempts_dehum_dwell_hold) {
     auto sp = band_first_setpoints();
     sp.sw_dwell_gate_enabled = true;
     sp.dwell_gate_ms = 300000;
@@ -2410,12 +2410,13 @@ TEST(band_first_dehum_overshoot_cooling_respects_existing_dwell_hold) {
 
     Mode m = determine_mode(make_inputs(sp.temp_high + 1.0f, sp.vpd_high + 0.2f), sp, s, 5000);
 
-    ASSERT_EQ(m, DEHUM_VENT);
-    ASSERT_FALSE(s.vent_mist_assist_active);
+    ASSERT_EQ(m, VENTILATE);
+    ASSERT_TRUE(std::string(s.last_mode_reason) == "vent_mist_assist");
+    ASSERT_TRUE(s.vent_mist_assist_active);
     PASS();
 }
 
-TEST(band_first_sealed_temp_preempt_respects_existing_dwell_gate) {
+TEST(band_first_temp_compliance_preempts_sealed_dwell_hold) {
     auto sp = band_first_setpoints();
     sp.sw_dwell_gate_enabled = true;
     sp.dwell_gate_ms = 300000;
@@ -2429,9 +2430,29 @@ TEST(band_first_sealed_temp_preempt_respects_existing_dwell_gate) {
 
     Mode m = determine_mode(make_inputs(sp.temp_high + 1.0f, sp.vpd_high + 0.2f), sp, s, 5000);
 
-    ASSERT_EQ(m, SEALED_MIST);
-    ASSERT_TRUE(std::string(s.last_mode_reason) == "dwell_hold");
-    ASSERT_FALSE(s.vent_mist_assist_active);
+    ASSERT_EQ(m, VENTILATE);
+    ASSERT_TRUE(std::string(s.last_mode_reason) == "vent_mist_assist");
+    ASSERT_TRUE(s.vent_mist_assist_active);
+    PASS();
+}
+
+TEST(climate_effective_decision_reports_actual_held_mode) {
+    auto sp = band_first_setpoints();
+    auto s = initial_state();
+    s.last_mode_reason = "dwell_hold";
+
+    const RelayOutputs relays = {false, false, false, false, false, false};
+    ClimateActionDecision d = describe_effective_climate_decision(
+        IDLE,
+        make_inputs(sp.temp_high + 1.0f, sp.vpd_high + 0.2f),
+        sp,
+        s,
+        relays
+    );
+
+    ASSERT_EQ(d.climate_action, CLIMATE_IDLE);
+    ASSERT_EQ(d.priority_axis, CLIMATE_PRIORITY_TEMP);
+    ASSERT_TRUE(std::string(d.candidate_summary) == "IDLE selected; dwell gate holding prior mode");
     PASS();
 }
 
