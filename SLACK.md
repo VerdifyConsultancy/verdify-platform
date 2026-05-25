@@ -1,0 +1,84 @@
+# Verdify Slack Operations
+
+`slack.yaml` is the versioned source of truth for Verdify Slack behavior. Runtime secrets are never committed. The Iris Slack app tokens live on the Iris VM under `/etc/verdify/slack/`:
+
+- `iris_slack_bot_token.txt` - Web API bot token used for `chat.postMessage`, history/archive reads, and deterministic command replies.
+- `iris_slack_app_token.txt` - Socket Mode app token used by OpenClaw when the Slack listener is enabled.
+- `iris_slack_signing_secret.txt` - Events API signing secret for any HTTP receiver.
+
+All runtime code should load Slack settings through `slack_config.load_slack_settings()`. `SLACK_TOKEN_FILE`, `SLACK_CHANNEL`, and `VERDIFY_SLACK_CONFIG` are deployment overrides only.
+
+## Identity
+
+All greenhouse posts are sent as Iris:
+
+- Slack channel: `#greenhouse`
+- Channel ID: `C0ANVVAPLD6`
+- Display username: `Iris`
+- Icon: `:seedling:`
+- Greenhouse ID: `vallery`
+
+The displayed Slack identity ultimately depends on the bot token file containing the Iris Slack app bot token. A token from another Slack app will display as that app no matter what username is passed in the payload.
+
+## Agents
+
+Hermes is the production Iris planner gateway. It does not monitor Slack directly. Hermes can use the MCP `slack_ops` tool, which executes deterministic Slack operations through Python and the database.
+
+OpenClaw is the operator-facing assistant/listener for Iris Slack. The expected OpenClaw auth profiles for `iris` and `iris-planner` are `openai-codex:jason@verdify.ai`, default model `openai-codex/gpt-5.5`, fallback `vllm/gemma4-26b`. OpenClaw should use the Iris Slack app token from the configured local token file and either Socket Mode or the MCP `slack_ops` tool for greenhouse operations.
+
+## Slack Integration Points
+
+| Source | Trigger | Destination | Config path | Notes |
+|---|---|---|---|---|
+| `ingestor/tasks.py::alert_monitor` | every 5 min in ingestor task loop | `#greenhouse` alert parent/thread messages | `slack.yaml` via `ingestor/config.py` | Posts critical/immediate alerts and resolution thread updates. Policy comes from `notifications.alert_policy`. |
+| `ingestor/tasks.py::planning_heartbeat` | every 60 s | `#greenhouse` | `slack.yaml` | Posts planner delivery failures and MCP auto-restart notices. |
+| `ingestor/tasks.py::midnight_watch` | 00:05-00:10 MDT | `#greenhouse` | `slack.yaml` | Posts one nightly status for the MIDNIGHT trigger. |
+| `ingestor/tasks.py::slack_operator_briefs` | morning/evening schedule from `slack.yaml` | `#greenhouse` | `slack.yaml` | Posts deterministic operator brief and records `slack_notification_events`. |
+| `ingestor/tasks.py::forecast_action_engine` | every 15 min | `#greenhouse` | `slack.yaml` | Uses shared `_post_slack`; standalone script also uses shared config. |
+| `scripts/checklist-to-slack.sh` | cron `0 13 * * *` | `#greenhouse` | `slack.yaml` | Daily checklist post. |
+| `scripts/slack-channel-archive.py` | cron `0 */6 * * *` | archive files | `slack.yaml` | Reads channel history and writes markdown archive under configured archive dir. |
+| `scripts/alert-monitor.py` | legacy/manual cron path | `#greenhouse` | `slack.yaml` | Kept for compatibility; in-process ingestor task is preferred. |
+| `scripts/forecast-action-engine.py` | legacy/manual cron path | `#greenhouse` | `slack.yaml` | Kept for compatibility with standalone runs. |
+| `mcp/server.py::slack_ops` | Hermes/OpenClaw MCP call | database/Slack command state | `slack.yaml` | Deterministic command path; direct relay control is denied. |
+
+## Command Surface
+
+Deterministic commands are parsed in `slack_ops/intents.py` and executed in `slack_ops/service.py`.
+
+- Read-only: `status`, `brief morning`, `plan status`, `firmware health`, `zone south`, `position A3`, `equipment`, `sensor temp`, `crop map`, `empty positions`, `harvest due`, `scouting due`.
+- Alert actions: `ack alert 12`, `resolve alert 12 fixed`, `snooze alert 12 2h`, `assign alert 12 @name`, `false positive alert 12`.
+- Crop writes: `plant basil in A3`, `observe basil A3 ...`, `clear basil A3`, `transplant basil A3 to B2`, `harvest basil A3 230g grade A destination kitchen labor 12 min`, `treat basil ...`.
+- Planner: `trigger planner`.
+- Confirmation: risky writes return a confirmation id and require `confirm <uuid>` or `cancel <uuid>`.
+
+Slack is not an actuator surface. Commands that directly open/close relays, force heaters/fans/fog/misters/vents/lights, or bypass the firmware controller are denied.
+
+## Data Model
+
+Migration `db/migrations/143-slack-ops.sql` adds:
+
+- Slack linkage fields on `alert_log`, `observations`, `crop_events`, `harvests`, and `treatments`.
+- `slack_user_roles` for RBAC.
+- `slack_command_audit` for every parsed command.
+- `slack_confirmation_requests` for risky writes.
+- `slack_alert_actions` for alert lifecycle actions.
+- `slack_notification_events` for outbound post tracking.
+- `crop_tasks` and `v_slack_crop_tasks_due` for scouting/harvest/treatment follow-up.
+- `v_slack_open_alert_threads` for active alert thread state.
+
+## Validation
+
+Local deterministic tests:
+
+```bash
+/srv/greenhouse/.venv/bin/python -m pytest tests/test_slack_config.py tests/test_slack_ops.py verdify_schemas/tests/test_slack_ops.py
+```
+
+Live smoke without posting:
+
+```bash
+/srv/greenhouse/.venv/bin/python scripts/slack-ops.py status --json
+/srv/greenhouse/.venv/bin/python scripts/slack-ops.py "brief morning" --json
+```
+
+Live Slack post smoke requires the Iris bot token to be present at the configured token path. Use a clearly marked test message and record the Slack timestamp in `slack_notification_events`.

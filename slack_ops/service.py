@@ -6,6 +6,7 @@ import json
 import os
 import re
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any
 from uuid import UUID
 
@@ -18,6 +19,14 @@ from verdify_schemas.slack_ops import SlackCommandRequest, SlackCommandResponse,
 
 
 def _env_password() -> str:
+    for env_path in (Path("/srv/verdify/.env"), Path(__file__).resolve().parents[1] / ".env"):
+        try:
+            if env_path.exists():
+                for line in env_path.read_text(encoding="utf-8").splitlines():
+                    if line.strip().startswith(("POSTGRES_PASSWORD=", "DB_PASSWORD=")):
+                        return line.split("=", 1)[1].strip().strip('"').strip("'")
+        except OSError:
+            pass
     for path in ("/run/secrets/postgres_password", "/etc/verdify/postgres_password"):
         try:
             if os.path.exists(path):
@@ -378,12 +387,12 @@ async def _status(conn, intent):
 
 async def _plan_status(conn, intent):
     row = await conn.fetchrow(
-        "SELECT plan_id, created_at, source, planner_instance FROM plan_journal ORDER BY created_at DESC LIMIT 1"
+        "SELECT plan_id, created_at, planner_instance FROM plan_journal ORDER BY created_at DESC LIMIT 1"
     )
     if not row:
         return _text_response("No plan_journal rows found.", ok=False, status="failed", intent=intent)
     return _text_response(
-        f"Latest plan `{row['plan_id']}` at {row['created_at']:%m-%d %H:%M UTC} from {row['source']}/{row['planner_instance']}.",
+        f"Latest plan `{row['plan_id']}` at {row['created_at']:%m-%d %H:%M UTC} from `{row['planner_instance']}`.",
         intent=intent,
     )
 

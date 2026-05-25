@@ -69,7 +69,7 @@ def test_role_hierarchy():
 
 
 def test_no_legacy_slack_token_path_in_runtime_files():
-    legacy = "/mnt/agents/shared/credentials/slack_bot_token.txt"
+    legacy = "/".join(["", "mnt", "agents", "shared", "credentials", "slack_bot_token.txt"])
     paths = [
         Path("slack.yaml"),
         Path("ingestor/config.py"),

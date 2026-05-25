@@ -292,7 +292,7 @@ The `/setpoints` endpoint is kept aligned with the live dispatcher. It computes 
 |------|----------|---------|
 | gemini_api_key.txt | /mnt/agents/shared/credentials/ | Google AI Studio API key (planner, vision, embeddings) |
 | ha_token.txt | /mnt/agents/shared/credentials/ | Home Assistant long-lived access token |
-| slack_bot_token.txt | /mnt/agents/shared/credentials/ | Slack bot token for #greenhouse |
+| iris_slack_bot_token.txt | /etc/verdify/slack/ | Iris Slack app bot token for #greenhouse |
 | .env | /srv/verdify/ | POSTGRES_PASSWORD, GRAFANA_ADMIN_PASSWORD |
 | .env | /srv/verdify/ingestor/ | ESP32_API_KEY, DB credentials |
 | .env | /srv/verdify/api/ | DB credentials |

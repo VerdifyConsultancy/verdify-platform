@@ -43,7 +43,7 @@ async def build_operator_brief(
         """
         SELECT min(temp_f) AS min_temp_f,
                max(temp_f) AS max_temp_f,
-               max(precip_prob) AS max_precip_prob,
+               max(precip_prob_pct) AS max_precip_prob,
                max(wind_speed_mph) AS max_wind_mph
           FROM weather_forecast
          WHERE ts >= now() AND ts < now() + interval '24 hours'
@@ -63,7 +63,7 @@ async def build_operator_brief(
     tasks = await conn.fetch("SELECT * FROM v_slack_crop_tasks_due LIMIT 8")
     recent_plan = await conn.fetchrow(
         """
-        SELECT plan_id, created_at, source, planner_instance
+        SELECT plan_id, created_at, planner_instance
           FROM plan_journal
          ORDER BY created_at DESC
          LIMIT 1
@@ -100,8 +100,8 @@ async def build_operator_brief(
         lines.append(
             "Today: "
             f"temp {_fmt_num(daily.get('temp_min'), 'F')}-{_fmt_num(daily.get('temp_max'), 'F')}, "
-            f"water {_fmt_num(daily.get('water_gal'), ' gal')}, "
-            f"electric {_fmt_num(daily.get('electric_kwh'), ' kWh')}"
+            f"water {_fmt_num(daily.get('water_used_gal'), ' gal')}, "
+            f"electric {_fmt_num(daily.get('kwh_total'), ' kWh')}"
         )
 
     if forecast:
