@@ -848,6 +848,31 @@ def test_firmware_lighting_telemetry_fails_closed_when_time_invalid():
     assert "publish_lighting_epoch(id(gl_grow_decision_epoch), time.timestamp)" in controls
 
 
+def test_controller_time_failure_is_final_fog_rail():
+    controls = Path("firmware/greenhouse/controls.yaml").read_text()
+    sensors = Path("firmware/greenhouse/sensors.yaml").read_text()
+
+    assert "const bool controller_time_valid = sntp_now.is_valid() && !id(sntp_failed);" in controls
+    assert "int local_hour = controller_time_valid ? sntp_now.hour : 12;" in controls
+    assert 'if(!controller_time_valid) return "time_invalid";' in controls
+
+    final_gate_start = controls.index("const bool climate_water_budget_block =")
+    final_gate_end = controls.index("/**************** 10", final_gate_start)
+    final_gate = controls[final_gate_start:final_gate_end]
+    assert "!controller_time_valid" in final_gate
+    assert final_gate.index("!controller_time_valid") < final_gate.index("willFog = false;")
+
+    relay_apply = controls[controls.index("/**************** 11") : controls.index("/**************** 12")]
+    assert "|| !controller_time_valid" in relay_apply
+
+    fog_start = controls.index("char fog_block_reason")
+    fog_end = controls.index("static char last_fog_block_reason", fog_start)
+    fog_block = controls[fog_start:fog_end]
+    assert 'snprintf(fog_block_reason, sizeof(fog_block_reason), "time_invalid")' in fog_block
+    assert fog_block.index("!controller_time_valid") < fog_block.index("manual_fog_requested")
+    assert "if(!now.is_valid() || id(sntp_failed)) return NAN;" in sensors
+
+
 def test_full_epoch_telemetry_uses_text_sensor_not_float():
     sensors = Path("firmware/greenhouse/sensors.yaml").read_text()
     controls = Path("firmware/greenhouse/controls.yaml").read_text()
@@ -2317,7 +2342,7 @@ def test_occupancy_inhibit_is_final_fog_force_off():
     final_gate_end = controls.index("/**************** 10", final_gate_start)
     final_gate = controls[final_gate_start:final_gate_end]
     assert (
-        "if (leak_block || occupancy_moisture_block || irrigation_water_conflict || climate_water_budget_block)"
+        "if (!controller_time_valid || leak_block || occupancy_moisture_block || irrigation_water_conflict || climate_water_budget_block)"
         in final_gate
     )
     assert "Occupancy inhibit: forcing fog and climate misters off" in final_gate
@@ -2381,7 +2406,7 @@ def test_fog_respects_conflict_and_budget_before_reporting_served():
     final_gate_end = controls.index("/**************** 10", final_gate_start)
     final_gate = controls[final_gate_start:final_gate_end]
     assert (
-        "if (leak_block || occupancy_moisture_block || irrigation_water_conflict || climate_water_budget_block)"
+        "if (!controller_time_valid || leak_block || occupancy_moisture_block || irrigation_water_conflict || climate_water_budget_block)"
         in final_gate
     )
 

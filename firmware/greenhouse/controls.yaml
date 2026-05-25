@@ -358,7 +358,8 @@ interval:
           // mist_telemetry replaced by ctl_state.mist_stage (the authority)  // 0=off, 1=S1, 2=S2
 
           auto sntp_now = id(sntp_time).now();
-          int local_hour = sntp_now.is_valid() ? sntp_now.hour : 12;
+          const bool controller_time_valid = sntp_now.is_valid() && !id(sntp_failed);
+          int local_hour = controller_time_valid ? sntp_now.hour : 12;
 
           // Sprint-15: outdoor temp + dewpoint feed the summer-vent gate.
           // Sources:
@@ -471,6 +472,7 @@ interval:
           const bool sensor_fault_relay_lock = mode == SENSOR_FAULT;
 
           auto fog_safety_block_reason = [&]() -> const char* {
+            if(!controller_time_valid) return "time_invalid";
             if(dew_margin_f(sensor_in) < setpts.fog_stress_min_dew_margin_f) return "dew_margin";
             if(!fog_hour_permitted(sensor_in, setpts)) return "time_window";
             if(sensor_in.rh_pct > setpts.fog_rh_ceiling) return "rh_ceiling";
@@ -612,7 +614,7 @@ interval:
               id(mister_water_today) >= id(mister_water_budget_gal) && !climate_vpd_emergency;
           static bool leak_water_interlock_prev = false;
           static bool occupancy_water_interlock_prev = false;
-          if (leak_block || occupancy_moisture_block || irrigation_water_conflict || climate_water_budget_block) {
+          if (!controller_time_valid || leak_block || occupancy_moisture_block || irrigation_water_conflict || climate_water_budget_block) {
               willFog = false;
           }
           if (leak_block != leak_water_interlock_prev) {
@@ -664,6 +666,7 @@ interval:
                   || leak_block
                   || occupancy_moisture_block
                   || irrigation_water_conflict
+                  || !controller_time_valid
                   || climate_water_budget_block);
 
           /**************** 12 — MISTER STATE MACHINE *****************************/
@@ -1440,6 +1443,8 @@ interval:
               snprintf(fog_block_reason, sizeof(fog_block_reason), "irrigation");
             } else if(climate_water_budget_block) {
               snprintf(fog_block_reason, sizeof(fog_block_reason), "resource_budget");
+            } else if(!controller_time_valid) {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "time_invalid");
             } else if(manual_fog_requested && manual_fog_safety_block[0] != '\0') {
               snprintf(fog_block_reason, sizeof(fog_block_reason), "%s", manual_fog_safety_block);
             } else if(id(fog_rly)->state) {
