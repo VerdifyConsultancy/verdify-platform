@@ -592,9 +592,13 @@ echo ""
 
 # ── 18. ESP32 FIRMWARE MIN/MAX CONSTRAINTS ────────────────────────
 echo "--- TUNABLE CONSTRAINTS (min/max/step) ---"
-curl -s -H "Authorization: Bearer $HA_TOKEN" "$HA_URL/api/states" 2>/dev/null | python3 -c "
+if [ -n "$HA_TOKEN" ]; then
+  if ! curl -fsS -H "Authorization: Bearer $HA_TOKEN" "$HA_URL/api/states" 2>/dev/null | python3 -c "
 import json, sys
-data = json.load(sys.stdin)
+try:
+    data = json.load(sys.stdin)
+except json.JSONDecodeError:
+    sys.exit(1)
 key_params = ['set_temp_low_degf','set_temp_high_degf','set_vpd_low_kpa','set_vpd_high_kpa',
   'vpd_mister_engage_kpa','vpd_mister_all_kpa','mister_water_budget_gal',
   'gl_dli_target_mol','gl_lux_threshold','irrig_wall_duration_min']
@@ -605,7 +609,12 @@ for e in data:
         if name in key_params:
             a = e.get('attributes',{})
             print(f\"{name}: val={e['state']} min={a.get('min')} max={a.get('max')} step={a.get('step')}\")
-" 2>/dev/null
+" 2>/dev/null; then
+    echo "(HA states unavailable; tunable constraints omitted)"
+  fi
+else
+  echo "(HA token unavailable; tunable constraints omitted)"
+fi
 echo ""
 
 # ── 19. FORECAST BIAS (7-day rolling correction) ──────────────────
