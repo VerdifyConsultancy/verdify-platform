@@ -599,6 +599,37 @@ class TestContractDriftGuardrails:
             }
         )
 
+    def test_climate_action_proof_checks_share_required_fields(self):
+        required_fields = (
+            "climate_action",
+            "priority_axis",
+            "climate_intent_version",
+            "temp_low_f",
+            "temp_target_f",
+            "temp_high_f",
+            "vpd_low_kpa",
+            "vpd_target_kpa",
+            "vpd_high_kpa",
+            "temp_target_delta_f",
+            "vpd_target_delta_kpa",
+            "temp_band_error_f",
+            "vpd_band_error_kpa",
+            "relay_truth",
+        )
+        proof_surfaces = {
+            "api": REPO_ROOT / "api" / "main.py",
+            "alert_monitor": REPO_ROOT / "ingestor" / "tasks.py",
+            "firmware_preflight": REPO_ROOT / "scripts" / "firmware-deploy-preflight.sh",
+            "health_check": REPO_ROOT / "scripts" / "health-check.sh",
+            "liveness_check": REPO_ROOT / "scripts" / "liveness-check.sh",
+        }
+        for label, path in proof_surfaces.items():
+            body = path.read_text()
+            missing = [field for field in required_fields if field not in body]
+            assert not missing, f"{label} climate-action proof check is missing fields: {missing}"
+            assert "jsonb_typeof(relay_truth)" in body, f"{label} must reject non-object relay_truth"
+            assert "'{}'::jsonb" in body, f"{label} must reject empty relay_truth"
+
     def test_public_home_metrics_and_site_publish_have_traffic_backpressure_guards(self):
         api_source = (REPO_ROOT / "api" / "main.py").read_text()
         rebuild_source = (REPO_ROOT / "scripts" / "rebuild-site.sh").read_text()
