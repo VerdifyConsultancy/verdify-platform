@@ -1665,13 +1665,32 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
         # planner_stale.
         timed_out_deliveries = await conn.fetch(
             """
-            SELECT id, event_type, event_label, instance, gateway_status, delivered_at,
-                   gateway_body, trigger_id, hermes_run_id,
+            WITH recent AS (
+                SELECT id, event_type, expected_at, status, plan_delivery_log_id
+                  FROM planner_trigger_ledger
+                 WHERE expected_at > now() - interval '36 hours'
+            ),
+            last_required_recovery AS (
+                SELECT max(expected_at) AS expected_at
+                  FROM recent
+                 WHERE event_type IN ('SUNRISE', 'SUNSET', 'MIDNIGHT')
+                   AND status = 'plan_written'
+            )
+            SELECT pdl.id, pdl.event_type, pdl.event_label, pdl.instance,
+                   pdl.gateway_status, pdl.delivered_at, pdl.gateway_body,
+                   pdl.trigger_id, pdl.hermes_run_id,
                    EXTRACT(EPOCH FROM (now() - delivered_at))::int AS elapsed_seconds
-              FROM plan_delivery_log
-             WHERE status = 'timed_out'
-               AND delivered_at > now() - interval '6 hours'
-             ORDER BY delivered_at DESC
+              FROM plan_delivery_log pdl
+              LEFT JOIN recent r ON r.plan_delivery_log_id = pdl.id
+              CROSS JOIN last_required_recovery lrr
+             WHERE pdl.status = 'timed_out'
+               AND pdl.delivered_at > now() - interval '6 hours'
+               AND (
+                     pdl.event_type NOT IN ('SUNRISE', 'SUNSET', 'MIDNIGHT')
+                     OR lrr.expected_at IS NULL
+                     OR COALESCE(r.expected_at, pdl.delivered_at) > lrr.expected_at
+                   )
+             ORDER BY pdl.delivered_at DESC
              LIMIT 10
             """
         )
@@ -1718,22 +1737,38 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
         # delivered-but-no-plan and no delivery row at all.
         required_misses = await conn.fetch(
             """
-            WITH latest_required AS (
-                SELECT id, event_type, event_label, instance, status, expected_at, due_at,
-                       delivered_at, plan_delivery_log_id, trigger_id, resulting_plan_id, notes,
-                       row_number() OVER (PARTITION BY event_type ORDER BY expected_at DESC) AS rn
-                 FROM planner_trigger_ledger
+            WITH recent AS (
+                SELECT id, event_type, event_label, instance, status, expected_at,
+                       due_at, delivered_at, plan_delivery_log_id, trigger_id,
+                       resulting_plan_id, notes
+                  FROM planner_trigger_ledger
                  WHERE event_type IN ('SUNRISE', 'SUNSET', 'MIDNIGHT')
                    AND expected_at > now() - interval '36 hours'
                    AND event_label NOT ILIKE 'validation%ack-only%'
+            ),
+            last_required_recovery AS (
+                SELECT max(expected_at) AS expected_at
+                  FROM recent
+                 WHERE status = 'plan_written'
+            ),
+            unrecovered_required_misses AS (
+                SELECT r.*
+                  FROM recent r
+                  CROSS JOIN last_required_recovery lrr
+                 WHERE r.due_at < now()
+                   AND (
+                         r.status IN ('missed', 'timed_out', 'delivery_failed')
+                         OR r.status IN ('expected', 'delivered')
+                       )
+                   AND (
+                         lrr.expected_at IS NULL
+                         OR r.expected_at > lrr.expected_at
+                       )
             )
             SELECT id, event_type, event_label, instance, status, expected_at, due_at,
                    delivered_at, plan_delivery_log_id, trigger_id, resulting_plan_id, notes
-              FROM latest_required
-             WHERE rn = 1
-               AND status <> 'plan_written'
-               AND due_at < now()
-             ORDER BY delivered_at DESC
+              FROM unrecovered_required_misses
+             ORDER BY expected_at DESC
             """
         )
         if required_misses:

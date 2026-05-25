@@ -1126,8 +1126,9 @@ def test_alert_monitor_detects_planner_delivery_outages():
     assert "system.planner_required_plan" in src
     assert "planner_trigger_ledger" in src
     assert "event_type IN ('SUNRISE', 'SUNSET', 'MIDNIGHT')" in src
-    assert "row_number() OVER (PARTITION BY event_type ORDER BY expected_at DESC)" in src
-    assert "status <> 'plan_written'" in src
+    assert "last_required_recovery" in src
+    assert "COALESCE(r.expected_at, pdl.delivered_at) > lrr.expected_at" in src
+    assert "r.status IN ('missed', 'timed_out', 'delivery_failed')" in src
 
 
 def test_forecast_deviation_defaults_cover_material_axes():
@@ -2097,10 +2098,11 @@ def test_required_plan_alert_ignores_validation_ack_only_rows():
     import tasks
 
     src = Path(tasks.__file__).read_text()
-    start = src.index("WITH latest_required AS")
+    start = src.index("# 7b. Required SUNRISE/SUNSET/MIDNIGHT plans")
     end = src.index("if required_misses:", start)
     body = src[start:end]
     assert "event_label NOT ILIKE 'validation%ack-only%'" in body
+    assert "unrecovered_required_misses" in body
 
 
 def test_fert_master_valve_is_wired_and_interlocked_with_fert_relays():
