@@ -635,7 +635,7 @@ async def _harvest_due(conn, intent):
 
 
 async def _scouting_due(conn, intent):
-    rows = await conn.fetch("SELECT * FROM v_slack_crop_tasks_due WHERE task_type ILIKE '%scout%' LIMIT 20")
+    rows = await conn.fetch("SELECT * FROM v_slack_crop_tasks_due WHERE task_type = 'scouting' LIMIT 20")
     if not rows:
         return _text_response("No scouting tasks are due in the next 24h.", intent=intent)
     text = "; ".join(f"#{r['id']} {r['crop_name'] or r['position_label']} due {r['due_at']:%m-%d %H:%M}" for r in rows)
@@ -661,7 +661,7 @@ async def _generate_crop_tasks(conn, req, intent):
             greenhouse_id, task_type, priority, status, crop_id, position_id,
             zone_id, due_at, source, notes
         )
-        SELECT c.greenhouse_id, 'scout', 'normal', 'open', c.id, c.position_id,
+        SELECT c.greenhouse_id, 'scouting', 'normal', 'open', c.id, c.position_id,
                c.zone_id, now() + interval '24 hours', 'slack',
                'Generated from Slack crop task refresh by ' || $1
           FROM crops c
@@ -671,7 +671,7 @@ async def _generate_crop_tasks(conn, req, intent):
                 SELECT 1 FROM crop_tasks ct
                  WHERE ct.crop_id = c.id
                    AND ct.status IN ('open','snoozed')
-                   AND ct.task_type ILIKE '%scout%'
+                   AND ct.task_type = 'scouting'
                    AND ct.due_at <= now() + interval '7 days'
            )
         RETURNING id
@@ -684,7 +684,8 @@ async def _generate_crop_tasks(conn, req, intent):
             greenhouse_id, task_type, priority, status, crop_id, position_id,
             zone_id, due_at, source, notes
         )
-        SELECT c.greenhouse_id, 'harvest_check',
+        SELECT c.greenhouse_id,
+               CASE WHEN c.expected_harvest <= current_date THEN 'harvest_overdue' ELSE 'harvest_due' END,
                CASE WHEN c.expected_harvest <= current_date THEN 'high' ELSE 'normal' END,
                'open', c.id, c.position_id, c.zone_id,
                ((c.expected_harvest::timestamp + time '08:00') AT TIME ZONE 'America/Denver'),
@@ -1298,7 +1299,7 @@ async def _create_crop_default_tasks(conn, crop_id: int, position: dict[str, Any
             zone_id, due_at, source, notes
         )
         VALUES (
-            'vallery', 'scout', 'normal', 'open', $1, $2, $3,
+            'vallery', 'scouting', 'normal', 'open', $1, $2, $3,
             now() + interval '24 hours', 'slack',
             'Initial scouting task generated after Slack planting by ' || $4
         )
@@ -1322,7 +1323,7 @@ async def _complete_observation_tasks(conn, crop_id: int, observation_id: int, c
          WHERE crop_id=$1
            AND status IN ('open','snoozed')
            AND (
-                task_type ILIKE '%scout%'
+                task_type = 'scouting'
              OR task_type ILIKE '%treatment_followup%'
            )
         """,
