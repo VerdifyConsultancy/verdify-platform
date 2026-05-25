@@ -2022,6 +2022,21 @@ def test_climate_authority_action_log_contract_is_tracked():
     assert "ClimateActionLogRow(" in ingestor
 
 
+def test_health_checks_require_climate_action_log_freshness():
+    health = (REPO_ROOT / "scripts" / "health-check.sh").read_text()
+    liveness = (REPO_ROOT / "scripts" / "liveness-check.sh").read_text()
+
+    assert "FROM climate_action_log" in health
+    assert "Climate action log:" in health
+    assert "<300s" in health
+    assert "stale: ${aa:-no data}s" in health
+
+    assert "ACTION_AGE=" in liveness
+    assert "FROM climate_action_log" in liveness
+    assert 'check "climate-action-log"' in liveness
+    assert "stale ${ACTION_AGE:-null}s" in liveness
+
+
 def test_climate_action_log_treats_served_wet_assist_as_allowed():
     original_system = dict(ingestor.state.system)
     try:

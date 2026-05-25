@@ -56,6 +56,9 @@ check "Equipment: ${ea}s ago (<86400s)" "$([ "$ea" -lt 86400 ] && echo true || e
 da=$($DB "SELECT EXTRACT(EPOCH FROM now()-max(ts))::int FROM diagnostics;" | tr -d ' ')
 check "Diagnostics: ${da}s ago (<300s)" "$([ "$da" -lt 300 ] && echo true || echo "stale: ${da}s")"
 
+aa=$($DB "SELECT EXTRACT(EPOCH FROM now()-max(ts))::int FROM climate_action_log;" | tr -d ' ')
+check "Climate action log: ${aa:-no data}s ago (<300s)" "$([ -n "$aa" ] && [ "$aa" -lt 300 ] && echo true || echo "stale: ${aa:-no data}s")"
+
 fc=$($DB "SELECT count(*) FROM weather_forecast WHERE ts > now();" | tr -d ' ')
 check "Future forecasts: $fc rows" "$([ "$fc" -gt 0 ] && echo true || echo "none")"
 
