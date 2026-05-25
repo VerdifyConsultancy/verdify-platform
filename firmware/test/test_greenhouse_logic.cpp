@@ -210,6 +210,115 @@ TEST(dehum_when_vpd_low) {
     PASS();
 }
 
+TEST(climate_action_names_match_contract_order) {
+    ASSERT_EQ(CLIMATE_DEHUM_VENT, 10);
+    ASSERT_TRUE(strcmp(CLIMATE_ACTION_NAMES[CLIMATE_SENSOR_FAULT], "SENSOR_FAULT") == 0);
+    ASSERT_TRUE(strcmp(CLIMATE_ACTION_NAMES[CLIMATE_VENT_COOL_MIST_ASSIST], "VENT_COOL_MIST_ASSIST") == 0);
+    ASSERT_TRUE(strcmp(CLIMATE_ACTION_NAMES[CLIMATE_SEALED_HUMIDIFY], "SEALED_HUMIDIFY") == 0);
+    ASSERT_TRUE(strcmp(CLIMATE_ACTION_NAMES[CLIMATE_DEHUM_VENT], "DEHUM_VENT") == 0);
+    PASS();
+}
+
+TEST(climate_candidate_selector_prefers_temperature_before_vpd_and_resource) {
+    ClimateCandidateProjection candidates[] = {
+        {
+            .action = CLIMATE_SEALED_HUMIDIFY,
+            .safety_ok = true,
+            .blocked_reason = "",
+            .projected_temp_error_f = 2.0f,
+            .projected_vpd_error_kpa = 0.0f,
+            .resource_cost = 0.0f,
+            .relay_churn_cost = 0.0f,
+            .confidence = 0.8f,
+            .prior_action_hold_preference = 0.0f
+        },
+        {
+            .action = CLIMATE_VENT_COOL_MIST_ASSIST,
+            .safety_ok = true,
+            .blocked_reason = "",
+            .projected_temp_error_f = 1.0f,
+            .projected_vpd_error_kpa = 0.2f,
+            .resource_cost = 10.0f,
+            .relay_churn_cost = 1.0f,
+            .confidence = 0.8f,
+            .prior_action_hold_preference = 0.0f
+        }
+    };
+    ASSERT_EQ(choose_climate_candidate_index(candidates, 2), 1);
+    PASS();
+}
+
+TEST(climate_candidate_selector_uses_vpd_then_resource_as_tie_breakers) {
+    ClimateCandidateProjection candidates[] = {
+        {
+            .action = CLIMATE_VENT_COOL,
+            .safety_ok = true,
+            .blocked_reason = "",
+            .projected_temp_error_f = 0.0f,
+            .projected_vpd_error_kpa = 0.3f,
+            .resource_cost = 0.0f,
+            .relay_churn_cost = 0.0f,
+            .confidence = 0.8f,
+            .prior_action_hold_preference = 0.0f
+        },
+        {
+            .action = CLIMATE_VENT_COOL_MIST_ASSIST,
+            .safety_ok = true,
+            .blocked_reason = "",
+            .projected_temp_error_f = 0.0f,
+            .projected_vpd_error_kpa = 0.1f,
+            .resource_cost = 5.0f,
+            .relay_churn_cost = 1.0f,
+            .confidence = 0.8f,
+            .prior_action_hold_preference = 0.0f
+        },
+        {
+            .action = CLIMATE_IDLE,
+            .safety_ok = true,
+            .blocked_reason = "",
+            .projected_temp_error_f = 0.0f,
+            .projected_vpd_error_kpa = 0.1f,
+            .resource_cost = 1.0f,
+            .relay_churn_cost = 0.0f,
+            .confidence = 0.8f,
+            .prior_action_hold_preference = 0.0f
+        }
+    };
+    ASSERT_EQ(choose_climate_candidate_index(candidates, 3), 2);
+    PASS();
+}
+
+TEST(climate_candidate_selector_rejects_unsafe_candidates) {
+    ClimateCandidateProjection candidates[] = {
+        {
+            .action = CLIMATE_VENT_COOL,
+            .safety_ok = false,
+            .blocked_reason = "occupancy",
+            .projected_temp_error_f = 0.0f,
+            .projected_vpd_error_kpa = 0.0f,
+            .resource_cost = 0.0f,
+            .relay_churn_cost = 0.0f,
+            .confidence = 0.8f,
+            .prior_action_hold_preference = 0.0f
+        },
+        {
+            .action = CLIMATE_IDLE,
+            .safety_ok = true,
+            .blocked_reason = "",
+            .projected_temp_error_f = 2.0f,
+            .projected_vpd_error_kpa = 1.0f,
+            .resource_cost = 0.0f,
+            .relay_churn_cost = 0.0f,
+            .confidence = 0.8f,
+            .prior_action_hold_preference = 0.0f
+        }
+    };
+    ASSERT_EQ(choose_climate_candidate_index(candidates, 2), 1);
+    candidates[1].safety_ok = false;
+    ASSERT_EQ(choose_climate_candidate_index(candidates, 2), -1);
+    PASS();
+}
+
 // ═══════════════════════════════════════════════════════════════
 // FIX 1: mode_prev reads last cycle
 // ═══════════════════════════════════════════════════════════════

@@ -78,6 +78,14 @@ def test_design_doc_action_table_matches_schema_actions() -> None:
     assert _table_codes(action_section) == CLIMATE_ACTIONS
 
 
+def test_firmware_climate_action_names_match_schema_actions() -> None:
+    header = (REPO_ROOT / "firmware" / "lib" / "greenhouse_types.h").read_text()
+    action_names = header.split("inline constexpr const char* CLIMATE_ACTION_NAMES[] = {", 1)[1].split("};", 1)[0]
+
+    assert tuple(re.findall(r'"([^"]+)"', action_names)) == CLIMATE_ACTIONS
+    assert "choose_climate_candidate_index" in header
+
+
 def test_climate_intent_excludes_raw_relay_commands() -> None:
     assert not (set(CLIMATE_INTENT_FIELDS) & CLIMATE_RELAY_FIELD_DENYLIST)
 

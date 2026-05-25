@@ -9,6 +9,7 @@
  */
 
 #include <cstdint>
+#include <cstddef>
 #include <cmath>
 #include <algorithm>
 
@@ -205,6 +206,129 @@ struct RelayOutputs {
     bool fog;
     bool vent;
 };
+
+// ── ClimateIntent candidate-action shadow contract ───────────────────
+// These types mirror verdify_schemas.climate_intent and are intentionally not
+// wired into determine_mode() yet. They let firmware unit tests prove the new
+// strict-priority candidate selector before any relay behavior changes.
+enum ClimateAction {
+    CLIMATE_SENSOR_FAULT,
+    CLIMATE_SAFETY_HEAT,
+    CLIMATE_SAFETY_COOL,
+    CLIMATE_HEAT,
+    CLIMATE_IDLE,
+    CLIMATE_VENT_COOL,
+    CLIMATE_VENT_COOL_MIST_ASSIST,
+    CLIMATE_VENT_COOL_FOG_ASSIST,
+    CLIMATE_SEALED_HUMIDIFY,
+    CLIMATE_SEALED_FOG,
+    CLIMATE_DEHUM_VENT
+};
+
+static_assert(CLIMATE_DEHUM_VENT == 10, "ClimateAction enum changed — update CLIMATE_ACTION_NAMES and schemas");
+
+inline constexpr const char* CLIMATE_ACTION_NAMES[] = {
+    "SENSOR_FAULT",
+    "SAFETY_HEAT",
+    "SAFETY_COOL",
+    "HEAT",
+    "IDLE",
+    "VENT_COOL",
+    "VENT_COOL_MIST_ASSIST",
+    "VENT_COOL_FOG_ASSIST",
+    "SEALED_HUMIDIFY",
+    "SEALED_FOG",
+    "DEHUM_VENT"
+};
+
+enum ClimatePriorityAxis {
+    CLIMATE_PRIORITY_SAFETY,
+    CLIMATE_PRIORITY_TEMP,
+    CLIMATE_PRIORITY_VPD,
+    CLIMATE_PRIORITY_RESOURCE
+};
+
+enum ClimateMoistureAssistState {
+    CLIMATE_MOISTURE_INACTIVE,
+    CLIMATE_MOISTURE_ENGAGE_DELAY,
+    CLIMATE_MOISTURE_PULSE_ON,
+    CLIMATE_MOISTURE_PULSE_GAP,
+    CLIMATE_MOISTURE_BLOCKED,
+    CLIMATE_MOISTURE_SERVED
+};
+
+enum ClimateMoistureZone {
+    CLIMATE_ZONE_NONE,
+    CLIMATE_ZONE_SOUTH,
+    CLIMATE_ZONE_WEST,
+    CLIMATE_ZONE_CENTER,
+    CLIMATE_ZONE_ALL
+};
+
+struct ClimateCandidateProjection {
+    ClimateAction action;
+    bool safety_ok;
+    const char* blocked_reason;
+    float projected_temp_error_f;
+    float projected_vpd_error_kpa;
+    float resource_cost;
+    float relay_churn_cost;
+    float confidence;
+    float prior_action_hold_preference;
+};
+
+struct ClimateResourceCostEstimate {
+    float water_gal;
+    float electric_kwh;
+    float gas_therm;
+};
+
+struct ClimateActionDecision {
+    ClimateAction climate_action;
+    ClimatePriorityAxis priority_axis;
+    float temp_error_f;
+    float vpd_error_kpa;
+    const char* candidate_summary;
+    ClimateMoistureAssistState moisture_assist_state;
+    ClimateMoistureZone moisture_zone;
+    float next_mist_eligible_s;
+    float fog_margin_kpa;
+    const char* fog_block_reason;
+    ClimateResourceCostEstimate resource_cost_estimate;
+};
+
+inline bool climate_candidate_precedes(
+    const ClimateCandidateProjection& a,
+    const ClimateCandidateProjection& b
+) noexcept {
+    if (a.projected_temp_error_f != b.projected_temp_error_f) {
+        return a.projected_temp_error_f < b.projected_temp_error_f;
+    }
+    if (a.projected_vpd_error_kpa != b.projected_vpd_error_kpa) {
+        return a.projected_vpd_error_kpa < b.projected_vpd_error_kpa;
+    }
+    if (a.resource_cost != b.resource_cost) {
+        return a.resource_cost < b.resource_cost;
+    }
+    if (a.relay_churn_cost != b.relay_churn_cost) {
+        return a.relay_churn_cost < b.relay_churn_cost;
+    }
+    return a.prior_action_hold_preference > b.prior_action_hold_preference;
+}
+
+inline int choose_climate_candidate_index(
+    const ClimateCandidateProjection* candidates,
+    std::size_t count
+) noexcept {
+    int selected = -1;
+    for (std::size_t i = 0; i < count; i++) {
+        if (!candidates[i].safety_ok) continue;
+        if (selected < 0 || climate_candidate_precedes(candidates[i], candidates[selected])) {
+            selected = static_cast<int>(i);
+        }
+    }
+    return selected;
+}
 
 // ── Supplemental lighting state machines ───────────────────────────────
 // Each Lutron circuit is evaluated independently. The crop/DLI policy can seed
