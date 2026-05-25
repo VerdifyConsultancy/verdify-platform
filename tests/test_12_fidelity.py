@@ -2030,7 +2030,11 @@ def test_health_checks_require_climate_action_log_freshness():
     assert "climate_action_log_age_seconds" in api
     assert "FROM climate_action_log" in api
     assert "service_climate_action_log" in api
-    assert 'checks["service_climate_action_log"] = "ok" if action_age < 300 else "stale"' in api
+    assert "if age is None or age > 300:" in api
+    assert "isinstance(climate_age, (int, float))" in api
+    assert "isinstance(action_age, (int, float))" in api
+    assert 'checks["service_climate_action_log"] = (' in api
+    assert '"ok" if isinstance(action_age, (int, float)) and action_age < 300 else "stale"' in api
     assert api.count('"check_name": "climate_action_log_freshness"') == 2
     assert api.count('"controller decision/action snapshot age seconds"') == 2
     assert 'if not any(r["check_name"] == "climate_action_log_freshness" for r in check_rows)' in api
