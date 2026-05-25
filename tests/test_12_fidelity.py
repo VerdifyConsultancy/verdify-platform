@@ -1927,6 +1927,9 @@ def test_mcp_set_plan_materializes_and_audits_climate_intent():
     assert "climate_intents" in body
     assert "climate_intent_version" in body
     assert "climate_intent_segments" in body
+    assert "climate_intent_guardrails" in body
+    assert "climate_intent_materialization_guardrails" in server
+    assert 'record["guardrails"] = guardrails' in server
     assert "$10::jsonb" in body
     assert "temp_above_high_f" in server
     assert "vpd_above_high_kpa" in server

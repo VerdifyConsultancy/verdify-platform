@@ -400,6 +400,109 @@ def _base_registry_value(parameter: str, base_params: Mapping[str, object] | Non
     return _clamp_tier1_value(parameter, numeric)
 
 
+def _climate_intent_pressure_context(
+    intent: ClimateIntent,
+    base_params: Mapping[str, object] | None = None,
+) -> dict[str, float | bool]:
+    temp_high = _base_registry_value("temp_high", base_params)
+    vpd_high = _base_registry_value("vpd_high", base_params)
+    current_temp = _finite_number((base_params or {}).get("temp_actual_f"))
+    current_vpd = _finite_number((base_params or {}).get("vpd_actual_kpa"))
+    current_dew_margin = _finite_number((base_params or {}).get("dew_margin_f"))
+    temp_above_high = _finite_number((base_params or {}).get("temp_above_high_f"))
+    vpd_above_high = _finite_number((base_params or {}).get("vpd_above_high_kpa"))
+    if temp_above_high is None and current_temp is not None:
+        temp_above_high = max(0.0, current_temp - temp_high)
+    if vpd_above_high is None and current_vpd is not None:
+        vpd_above_high = max(0.0, current_vpd - vpd_high)
+    temp_above_high = max(0.0, temp_above_high or 0.0)
+    vpd_above_high = max(0.0, vpd_above_high or 0.0)
+    dew_margin_safe = current_dew_margin is None or current_dew_margin >= intent.dew_margin_floor_f
+    dry_forecast_pressure = max(0.0, min(1.0, intent.forecast_vpd_bias_kpa / 0.4))
+    return {
+        "temp_above_high_f": temp_above_high,
+        "vpd_above_high_kpa": vpd_above_high,
+        "dew_margin_safe": dew_margin_safe,
+        "dry_forecast_pressure": dry_forecast_pressure,
+        "compliance_wet_required": vpd_above_high > 0.0 and dew_margin_safe,
+        "forecast_wet_required": dry_forecast_pressure >= 0.75 and dew_margin_safe,
+    }
+
+
+def climate_intent_materialization_guardrails(
+    intent: ClimateIntent,
+    base_params: Mapping[str, object] | None = None,
+    materialized_params: Mapping[str, object] | None = None,
+) -> list[dict[str, object]]:
+    """Return audit annotations when the materializer overrides contradictory intent.
+
+    These annotations are deliberately advisory: the materializer still produces
+    one bounded Tier 1 plan, but the plan journal records when compliance pressure
+    forced wet-assist availability despite resource- or churn-heavy intent.
+    """
+
+    ctx = _climate_intent_pressure_context(intent, base_params)
+    annotations: list[dict[str, object]] = []
+    materialized = materialized_params or {}
+    wet_switch = _finite_number(materialized.get("sw_direct_wet_stress_override_enabled"))
+    fog_window = _finite_number(materialized.get("sw_fog_stress_window_extend_enabled"))
+
+    if ctx["compliance_wet_required"] and (
+        intent.mist_duty_limit_pct < 25.0
+        or intent.daily_mist_budget_gal < 120.0
+        or intent.resource_sensitivity > 0.35
+        or intent.relay_churn_penalty > 0.5
+        or intent.moisture_engage_vpd_excess_kpa > 0.05
+        or intent.wet_cutoff_hour < 19.0
+        or wet_switch == 0.0
+    ):
+        annotations.append(
+            {
+                "code": "live_vpd_compliance_wet_assist_forced",
+                "severity": "info",
+                "reason": "VPD is above dispatcher-owned band and dew margin is safe; materializer keeps wet assist available before resource minimization.",
+                "vpd_above_high_kpa": round(float(ctx["vpd_above_high_kpa"]), 3),
+            }
+        )
+
+    if ctx["forecast_wet_required"] and (
+        intent.mist_duty_limit_pct < 15.0
+        or intent.daily_mist_budget_gal < 60.0
+        or intent.resource_sensitivity > 0.6
+        or intent.relay_churn_penalty > 0.75
+        or intent.moisture_engage_vpd_excess_kpa > 0.1
+        or intent.wet_cutoff_hour < 19.0
+        or wet_switch == 0.0
+        or fog_window == 0.0
+    ):
+        annotations.append(
+            {
+                "code": "forecast_vpd_wet_assist_guard",
+                "severity": "info",
+                "reason": "High positive forecast VPD pressure requires keeping climate wet assist available unless a safety rail blocks it.",
+                "forecast_vpd_bias_kpa": round(intent.forecast_vpd_bias_kpa, 3),
+            }
+        )
+
+    if (
+        ctx["temp_above_high_f"] > 0.0
+        and ctx["vpd_above_high_kpa"] > 0.0
+        and ctx["dew_margin_safe"]
+        and intent.resource_sensitivity > 0.6
+    ):
+        annotations.append(
+            {
+                "code": "dual_axis_resource_sensitivity_capped",
+                "severity": "info",
+                "reason": "Both temp and VPD are above band; resource sensitivity is capped below compliance priority.",
+                "temp_above_high_f": round(float(ctx["temp_above_high_f"]), 2),
+                "vpd_above_high_kpa": round(float(ctx["vpd_above_high_kpa"]), 3),
+            }
+        )
+
+    return annotations
+
+
 def materialize_climate_intent_tier1(
     intent: ClimateIntent,
     base_params: Mapping[str, object] | None = None,
@@ -419,33 +522,33 @@ def materialize_climate_intent_tier1(
     resource = max(0.0, min(1.0, intent.resource_sensitivity))
     churn = max(0.0, min(1.0, intent.relay_churn_penalty))
     duty = max(0.0, min(1.0, intent.mist_duty_limit_pct / 100.0))
-    current_temp = _finite_number((base_params or {}).get("temp_actual_f"))
-    current_vpd = _finite_number((base_params or {}).get("vpd_actual_kpa"))
-    current_dew_margin = _finite_number((base_params or {}).get("dew_margin_f"))
-    temp_above_high = _finite_number((base_params or {}).get("temp_above_high_f"))
-    vpd_above_high = _finite_number((base_params or {}).get("vpd_above_high_kpa"))
-    if temp_above_high is None and current_temp is not None:
-        temp_above_high = max(0.0, current_temp - temp_high)
-    if vpd_above_high is None and current_vpd is not None:
-        vpd_above_high = max(0.0, current_vpd - vpd_high)
-    temp_above_high = max(0.0, temp_above_high or 0.0)
-    vpd_above_high = max(0.0, vpd_above_high or 0.0)
-    dew_margin_safe = current_dew_margin is None or current_dew_margin >= intent.dew_margin_floor_f
-    compliance_wet_required = vpd_above_high > 0.0 and dew_margin_safe
+    ctx = _climate_intent_pressure_context(intent, base_params)
+    temp_above_high = float(ctx["temp_above_high_f"])
+    compliance_wet_required = bool(ctx["compliance_wet_required"])
+    forecast_wet_required = bool(ctx["forecast_wet_required"])
+    dry_forecast_pressure = float(ctx["dry_forecast_pressure"])
     if compliance_wet_required:
         resource = min(resource, 0.35)
         churn = min(churn, 0.5)
         duty = max(duty, 0.25)
+    elif forecast_wet_required:
+        resource = min(resource, 0.6)
+        churn = min(churn, 0.75)
+        duty = max(duty, 0.15)
     solar_pressure = max(0.0, min(1.0, intent.solar_precool_gain_f / 4.0))
     hot_forecast_pressure = max(0.0, min(1.0, intent.forecast_temp_bias_f / 4.0))
-    dry_forecast_pressure = max(0.0, min(1.0, intent.forecast_vpd_bias_kpa / 0.4))
     wet_aggression = max(0.0, min(1.0, (duty + dry_forecast_pressure + (1.0 - resource)) / 3.0))
-    if compliance_wet_required:
+    if compliance_wet_required or forecast_wet_required:
         wet_aggression = max(wet_aggression, 0.35)
     moisture_engage_vpd_excess_kpa = intent.moisture_engage_vpd_excess_kpa
     fog_escalate_vpd_excess_kpa = intent.fog_escalate_vpd_excess_kpa
     wet_cutoff_hour = intent.wet_cutoff_hour
     daily_mist_budget_gal = intent.daily_mist_budget_gal
+    if forecast_wet_required:
+        moisture_engage_vpd_excess_kpa = min(moisture_engage_vpd_excess_kpa, 0.1)
+        fog_escalate_vpd_excess_kpa = min(fog_escalate_vpd_excess_kpa, 0.3)
+        wet_cutoff_hour = max(wet_cutoff_hour, 19.0)
+        daily_mist_budget_gal = max(daily_mist_budget_gal, 60.0)
     if compliance_wet_required:
         moisture_engage_vpd_excess_kpa = min(moisture_engage_vpd_excess_kpa, 0.05)
         fog_escalate_vpd_excess_kpa = min(fog_escalate_vpd_excess_kpa, 0.2 if temp_above_high > 0.0 else 0.25)

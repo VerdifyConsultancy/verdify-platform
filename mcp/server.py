@@ -56,6 +56,7 @@ from verdify_schemas.climate_intent import (  # noqa: E402
     CLIMATE_INTENT_CONTRACT_VERSION,
     CLIMATE_INTENT_FIELDS,
     ClimateIntent,
+    climate_intent_materialization_guardrails,
     materialize_climate_intent_tier1,
 )
 from verdify_schemas.tunable_registry import (  # noqa: E402
@@ -174,17 +175,19 @@ def _materialize_climate_intent_waypoints(
             continue
         intent = ClimateIntent.model_validate(wp["climate_intent"])
         materialized = materialize_climate_intent_tier1(intent, active_tier1_params)
+        guardrails = climate_intent_materialization_guardrails(intent, active_tier1_params, materialized)
         expanded_wp = dict(wp)
         expanded_wp["params"] = materialized
         expanded.append(expanded_wp)
-        intent_records.append(
-            {
-                "ts": wp.get("ts"),
-                "reason": wp.get("reason"),
-                "climate_intent": intent.model_dump(mode="json"),
-                "materialized_params": materialized,
-            }
-        )
+        record = {
+            "ts": wp.get("ts"),
+            "reason": wp.get("reason"),
+            "climate_intent": intent.model_dump(mode="json"),
+            "materialized_params": materialized,
+        }
+        if guardrails:
+            record["guardrails"] = guardrails
+        intent_records.append(record)
     return expanded, intent_records
 
 
@@ -1169,6 +1172,7 @@ async def set_plan(
             "forced_on_params": forced_on_params,
             "climate_intent_segments": len(climate_intent_records),
             "climate_intent_version": CLIMATE_INTENT_CONTRACT_VERSION if climate_intent_records else None,
+            "climate_intent_guardrails": sum(len(record.get("guardrails", ())) for record in climate_intent_records),
             "structured_hypothesis": structured_payload is not None,
             "trigger_id": normalized_trigger_id,
             "planner_instance": planner_instance,

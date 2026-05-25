@@ -18,6 +18,7 @@ from verdify_schemas.climate_intent import (
     ClimateCandidateProjection,
     ClimateIntent,
     choose_climate_candidate,
+    climate_intent_materialization_guardrails,
     materialize_climate_intent_tier1,
 )
 from verdify_schemas.tunable_registry import TIER1_REG, registry_value_error
@@ -164,6 +165,56 @@ def test_materializer_forces_wet_assist_when_live_vpd_is_above_band_and_dew_is_s
     assert params["fog_escalation_kpa"] == pytest.approx(0.2)
     assert params["direct_wet_stress_latest_hour"] >= 19.0
     assert params["mister_water_budget_gal"] >= 120.0
+    guardrails = climate_intent_materialization_guardrails(
+        intent,
+        {
+            "temp_low": 72.0,
+            "temp_high": 78.0,
+            "vpd_low": 0.8,
+            "vpd_high": 1.2,
+            "temp_actual_f": 82.0,
+            "vpd_actual_kpa": 1.55,
+            "dew_margin_f": 12.0,
+        },
+        params,
+    )
+    assert {item["code"] for item in guardrails} >= {
+        "live_vpd_compliance_wet_assist_forced",
+        "dual_axis_resource_sensitivity_capped",
+    }
+
+
+def test_materializer_keeps_wet_assist_available_for_high_forecast_vpd_pressure() -> None:
+    intent = _valid_intent(
+        forecast_vpd_bias_kpa=0.4,
+        mist_duty_limit_pct=0.0,
+        fog_escalate_vpd_excess_kpa=0.8,
+        wet_cutoff_hour=17.0,
+        daily_mist_budget_gal=0.0,
+        resource_sensitivity=1.0,
+        relay_churn_penalty=1.0,
+    )
+    base = {
+        "temp_low": 72.0,
+        "temp_high": 78.0,
+        "vpd_low": 0.8,
+        "vpd_high": 1.2,
+        "temp_actual_f": 75.0,
+        "vpd_actual_kpa": 1.1,
+        "dew_margin_f": 12.0,
+    }
+
+    params = materialize_climate_intent_tier1(intent, base)
+
+    assert params["sw_direct_wet_stress_override_enabled"] == 1.0
+    assert params["sw_fog_stress_window_extend_enabled"] == 1.0
+    assert params["direct_wet_stress_vpd_margin_kpa"] <= 0.1
+    assert params["fog_escalation_kpa"] <= 0.3
+    assert params["direct_wet_stress_latest_hour"] >= 19.0
+    assert params["mister_water_budget_gal"] >= 60.0
+    assert params["mister_pulse_on_s"] >= 26.0
+    guardrails = climate_intent_materialization_guardrails(intent, base, params)
+    assert [item["code"] for item in guardrails] == ["forecast_vpd_wet_assist_guard"]
 
 
 def test_materializer_does_not_force_wet_assist_when_dew_margin_is_unsafe() -> None:
