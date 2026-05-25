@@ -321,7 +321,7 @@ def _planner_guidance(name: str, spec: TunableDef, plan_required: set[str]) -> s
     if name.startswith("direct_wet_") or name == "sw_direct_wet_gate_enabled":
         return "Planner-policy gate for direct plant wetting. Tune per zone to move morning wet start or pre-off drydown without adding crop-specific firmware logic."
     if name in plan_required:
-        return "Materialized Tier 1 field. Prefer bounded `climate_intent` in routine `set_plan`; hand-author raw params only for compatibility/debug, and then include the full 39-param set."
+        return "Materialized Tier 1 field. Routine `set_plan` writes must use bounded `climate_intent`; MCP derives this low-level row."
     if control_class == "planner_policy":
         return "Planner-policy tunable. Use only when forecast or previous-plan evidence points directly to this control path."
     if control_class == "crop_band":
@@ -681,7 +681,7 @@ def _render_contract_table(evidence: dict[str, Evidence], plan_required: set[str
     rows = [
         "## ClimateIntent Materialization Contract",
         "",
-        "Routine `set_plan` calls should emit bounded `climate_intent` transitions. MCP validates that semantic surface, materializes it into the low-level Tier 1 rows below, and stores the original intent in `plan_journal.climate_intents`. Raw `params` remain a compatibility/debug path only and must include the full 39-field set.",
+        "Routine `set_plan` calls emit bounded `climate_intent` transitions. MCP validates that semantic surface, materializes it into the low-level Tier 1 rows below, and stores the original intent in `plan_journal.climate_intents`.",
         "",
         "| Parameter | Active | Future rows | Last dispatch | 7d confirmed | Planner instruction |",
         "|---|---:|---:|---|---:|---|",
@@ -846,7 +846,7 @@ def _render_full_page(
         "## Accepted Writes And Publishing",
         "",
         '<div class="data-table">',
-        '  <div class="data-row"><strong><code>set_plan</code></strong><span>Required for full-plan triggers</span><p>Validates the plan envelope, bounded <code>climate_intent</code> or compatibility raw params, bounds, trigger ID, planner instance, and structured hypothesis; materializes to <code>setpoint_plan</code> and audits semantic intent in <code>plan_journal</code>.</p></div>',
+        '  <div class="data-row"><strong><code>set_plan</code></strong><span>Required for full-plan triggers</span><p>Validates the plan envelope, bounded <code>climate_intent</code>, bounds, trigger ID, planner instance, and structured hypothesis; materializes to <code>setpoint_plan</code> and audits semantic intent in <code>plan_journal</code>.</p></div>',
         '  <div class="data-row"><strong><code>set_tunable</code></strong><span>Narrow tactical correction</span><p>Validates one planner-pushable parameter against this registry and writes an audited one-shot setpoint row.</p></div>',
         '  <div class="data-row"><strong><code>acknowledge_trigger</code></strong><span>No-op closeout</span><p>Allowed for no-op transition, forecast-deviation, heartbeat, and validation-smoke events; rejected for normal required full-plan cycles.</p></div>',
         '  <div class="data-row"><strong><code>plan_evaluate</code></strong><span>Learning-loop closure</span><p>Writes outcome, score, anchor score, optional lesson extraction, and validation time back to <code>plan_journal</code>.</p></div>',
@@ -926,7 +926,7 @@ def _render_planner_context(evidence: dict[str, Evidence], plan_required: set[st
             for control_class in ("planner_policy", "crop_band", "controller_safety", "readback_context", "retired")
         ),
         f"future_active_rows={summary.get('future_rows', '-')} future_active_params={summary.get('future_params', '-')} reserved_active_rows={summary.get('reserved_active_rows', '-')}",
-        "Preferred full-plan surface: emit bounded `climate_intent` per transition. MCP materializes it once into the 39 Tier 1 rows below and audits the semantic intent. Raw `params` are compatibility/debug only.",
+        "Full-plan surface: emit bounded `climate_intent` per transition. MCP materializes it once into the 39 Tier 1 rows below and audits the semantic intent.",
         "Do not use reserved/no-op params: " + ", ".join(sorted(RESERVED_NO_EFFECT)),
         "mister_engage_kpa note: SEALED_MIST entry is vpd_high + vpd_watch_dwell_s; mister_engage_kpa gates physical S1 pulses once SEALED_MIST or explicit VENTILATE assist creates humidity demand.",
         "VPD-high guardrail: during live, near-edge, or recently unrecovered VENTILATE stress with healthy dew margin, keep moisture thresholds band-coupled (engage ~= vpd_high+0.05, all-zone ~= max(1.0,vpd_high+0.25), fog_escalation ~= 0.20 or 0.15 in hot/dry venting, shorter min_fog_off_s); dispatcher clamps conservative overrides until observed recovery.",
@@ -994,7 +994,7 @@ def main() -> int:
         required = [
             "auto-generated by scripts/generate-ai-tunables-page.py",
             "## Current Audit Snapshot",
-            "## Routine Plan Contract",
+            "## ClimateIntent Materialization Contract",
             "## Parameter Index",
             "`mister_engage_kpa` is effectful",
             "`fallback_window_s`",

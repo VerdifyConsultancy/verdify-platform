@@ -107,7 +107,8 @@ All managed via `/srv/verdify/docker-compose.yml`:
 | verdify-promtail | grafana/promtail:latest | host network | host | Docker/journald/state log shipper to Loki |
 | hermes-iris | nousresearch/hermes-agent | 127.0.0.1:8642 | internal | Iris planner gateway; profile-gated but kept running in production |
 
-`hermes-iris-shadow` is defined for shadow testing but is not part of the normal running set.
+There is no production shadow planner profile; full plans enter through the
+single Hermes Iris gateway and bounded `climate_intent` `set_plan` path.
 
 ### Docker Networks
 

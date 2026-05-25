@@ -8,8 +8,8 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PYTHON_BIN="${PYTHON:-/srv/greenhouse/.venv/bin/python}"
 DB_CMD=(docker exec -i verdify-timescaledb psql -U verdify -d verdify -t -A -F '|' -v ON_ERROR_STOP=1)
-AI_TUNABLES_PAGE="${AI_TUNABLES_PAGE:-/mnt/iris/verdify-vault/website/reference/ai-tunables.md}"
-LESSONS_PAGE="${LESSONS_PAGE:-/mnt/iris/verdify-vault/website/reference/lessons.md}"
+AI_TUNABLES_PAGE="${AI_TUNABLES_PAGE:-/srv/verdify/verdify-site/content/reference/ai-tunables.md}"
+LESSONS_PAGE="${LESSONS_PAGE:-/srv/verdify/verdify-site/content/reference/lessons.md}"
 LIVE_SOURCE_ROOT="${LIVE_SOURCE_ROOT:-/srv/verdify}"
 ALLOW_LIVE_SOURCE_DRIFT="${FIRMWARE_AUDIT_ALLOW_LIVE_SOURCE_DRIFT:-0}"
 
@@ -263,8 +263,8 @@ fi
 
 section "generated AI tunables page"
 [ -f "$AI_TUNABLES_PAGE" ] || fail "missing AI tunables page: $AI_TUNABLES_PAGE"
-routine_section="$(awk '/^## Routine Plan Contract/{flag=1} /^## Findings That Matter/{flag=0} flag' "$AI_TUNABLES_PAGE")"
-[ -n "$routine_section" ] || fail "Routine Plan Contract section missing"
+routine_section="$(awk '/^## ClimateIntent Materialization Contract/{flag=1} /^## Findings That Matter/{flag=0} flag' "$AI_TUNABLES_PAGE")"
+[ -n "$routine_section" ] || fail "ClimateIntent Materialization Contract section missing"
 if echo "$routine_section" | rg -n 'bias_heat|bias_cool|d_heat_stage_2|sw_fsm_controller_enabled' >/dev/null; then
   fail "retired params found in Routine Plan Contract"
 fi

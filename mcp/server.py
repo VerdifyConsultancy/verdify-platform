@@ -85,8 +85,19 @@ TIER1_TUNABLES = TIER1_REG
 FORCED_ON_SWITCH_PARAMS = frozenset({"sw_fsm_controller_enabled"})
 
 
-def _contains_climate_intent_waypoint(waypoints: object) -> bool:
-    return isinstance(waypoints, list) and any(isinstance(wp, dict) and "climate_intent" in wp for wp in waypoints)
+def _climate_intent_waypoint_errors(waypoints: object) -> list[dict[str, object]]:
+    if not isinstance(waypoints, list):
+        return [{"transition_index": -1, "error": "transitions must be a JSON array"}]
+    errors: list[dict[str, object]] = []
+    for idx, wp in enumerate(waypoints):
+        if not isinstance(wp, dict):
+            errors.append({"transition_index": idx, "error": "transition must be an object"})
+            continue
+        if "climate_intent" not in wp:
+            errors.append({"transition_index": idx, "error": "missing climate_intent"})
+        if "params" in wp and wp.get("params") not in ({}, None):
+            errors.append({"transition_index": idx, "error": "raw params are not accepted in set_plan"})
+    return errors
 
 
 async def _fetch_active_tier1_params(conn: asyncpg.Connection) -> dict[str, float]:
@@ -112,8 +123,7 @@ def _materialize_climate_intent_waypoints(
             expanded.append(wp)
             continue
         intent = ClimateIntent.model_validate(wp["climate_intent"])
-        explicit_params = wp.get("params") if isinstance(wp.get("params"), dict) else {}
-        materialized = materialize_climate_intent_tier1(intent, {**active_tier1_params, **explicit_params})
+        materialized = materialize_climate_intent_tier1(intent, active_tier1_params)
         expanded_wp = dict(wp)
         expanded_wp["params"] = materialized
         expanded.append(expanded_wp)
@@ -729,7 +739,7 @@ async def set_plan(
         fenced ```json block matching PlanHypothesisStructured (conditions +
         stress_windows + rationale). If present, it's validated and stored in
         plan_journal.hypothesis_structured for structured downstream rendering.
-    transitions: JSON array of objects: [{"ts": "ISO8601-with-TZ", "params": {"param": value, ...}, "reason": "..."}]
+    transitions: JSON array of objects: [{"ts": "ISO8601-with-TZ", "climate_intent": {...}, "reason": "..."}]
     experiment: optional one-line experiment description
     expected_outcome: optional measurable prediction
     trigger_id, planner_instance: required contract v1.5 audit fields. Pass
@@ -763,29 +773,33 @@ async def set_plan(
     except json.JSONDecodeError as e:
         return json.dumps({"error": f"Invalid JSON in transitions: {e}"})
 
-    climate_intent_records: list[dict[str, object]] = []
-    if _contains_climate_intent_waypoint(waypoints_raw):
-        if not isinstance(waypoints_raw, list):
-            return json.dumps({"error": "transitions must be a JSON array"})
-        conn_for_intent = await _db()
-        try:
-            active_tier1_params = await _fetch_active_tier1_params(conn_for_intent)
-        finally:
-            await conn_for_intent.close()
-        try:
-            waypoints_raw, climate_intent_records = _materialize_climate_intent_waypoints(
-                waypoints_raw,
-                active_tier1_params,
-            )
-        except ValidationError as e:
-            return json.dumps(
-                {
-                    "error": "ClimateIntent validation failed",
-                    "details": json.loads(e.json(include_input=False))[:10],
-                }
-            )
-        except ValueError as e:
-            return json.dumps({"error": "ClimateIntent materialization failed", "detail": str(e)})
+    climate_intent_errors = _climate_intent_waypoint_errors(waypoints_raw)
+    if climate_intent_errors:
+        return json.dumps(
+            {
+                "error": "set_plan requires climate_intent on every transition",
+                "details": climate_intent_errors[:10],
+            }
+        )
+    conn_for_intent = await _db()
+    try:
+        active_tier1_params = await _fetch_active_tier1_params(conn_for_intent)
+    finally:
+        await conn_for_intent.close()
+    try:
+        waypoints_raw, climate_intent_records = _materialize_climate_intent_waypoints(
+            waypoints_raw,
+            active_tier1_params,
+        )
+    except ValidationError as e:
+        return json.dumps(
+            {
+                "error": "ClimateIntent validation failed",
+                "details": json.loads(e.json(include_input=False))[:10],
+            }
+        )
+    except ValueError as e:
+        return json.dumps({"error": "ClimateIntent materialization failed", "detail": str(e)})
 
     try:
         plan = Plan.model_validate(

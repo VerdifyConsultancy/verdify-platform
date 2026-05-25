@@ -5793,8 +5793,8 @@ async def planner_memory_ingest_sync(pool: asyncpg.Pool) -> None:
     Failures are logged and skipped; this path must never block greenhouse ops.
     """
 
-    from planner_graph_shadow import (
-        PlannerGraphShadowError,
+    from planner_memory_ingest import (
+        PlannerMemoryIngestError,
         PlannerMemoryItem,
         build_outcome_memory_item,
         build_prior_plan_memory_item,
@@ -5829,7 +5829,7 @@ async def planner_memory_ingest_sync(pool: asyncpg.Pool) -> None:
                 support_items = [item for item in all_support_items if item.source_id not in seeded_support_doc_ids][
                     :max_items
                 ]
-            except (OSError, ValueError, TypeError, PlannerGraphShadowError) as exc:
+            except (OSError, ValueError, TypeError, PlannerMemoryIngestError) as exc:
                 log.warning("planner memory support-doc load failed: %s", exc)
 
     journal_items: list[PlannerMemoryItem] = []
@@ -5885,7 +5885,7 @@ async def planner_memory_ingest_sync(pool: asyncpg.Pool) -> None:
     batch_id = f"verdify-memory-{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}"
     result = ingest_planner_memory_batch(items=items, batch_id=batch_id)
     if result.status >= 400:
-        raise PlannerGraphShadowError(f"memory ingest failed: HTTP {result.status}: {result.body}")
+        raise PlannerMemoryIngestError(f"memory ingest failed: HTTP {result.status}: {result.body}")
     body = result.body if isinstance(result.body, dict) else {}
     log.info(
         "planner memory ingest batch=%s items=%d accepted=%s duplicates=%s rejected=%s",

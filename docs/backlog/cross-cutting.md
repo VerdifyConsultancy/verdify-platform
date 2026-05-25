@@ -40,7 +40,9 @@ into a clean, integrated repo. PR #80 stays intact and is RM-0's baseline.
   `3a2eb87426a355a5e71c036bc3460686b68b5b56`; main CI run `26315767545`
   passed; deployment synced the merged files, restarted only
   `verdify-ingestor`, validated accepted shadow row `4`, confirmed no duplicate
-  shadow rows per trigger, and ran deployed backfill dry-runs.
+  shadow rows per trigger, and ran deployed backfill dry-runs. Superseded by
+  the ClimateIntent single-path PR, which removes the runtime shadow service,
+  scripts, tests, Docker profile, MCP server, and live shadow tables.
 - [x] **C-RM5 Site/Grafana integration gate.** Coordinate the site/Grafana
   pieces that cross `docker-compose.yml`, Grafana provisioning, generated site
   output, and live service reloads; include

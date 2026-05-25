@@ -18,7 +18,7 @@ All source-of-truth content lives on NFS (`/mnt/iris/` or `/mnt/jason/`). Three 
 
 ```
 /mnt/iris/verdify/
-├── docker-compose.yml          orchestrates 14 running containers (+ profile-gated shadow services)
+├── docker-compose.yml          orchestrates production containers
 ├── Makefile                    entry point for every developer action
 ├── pyproject.toml              ruff + pytest config; project deps
 ├── README.md

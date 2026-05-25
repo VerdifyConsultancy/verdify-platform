@@ -1687,6 +1687,26 @@ def test_send_to_iris_targets_hermes_gateway():
     assert "prepare_delivery_result" in src
 
 
+def test_single_path_removes_runtime_shadow_surfaces():
+    assert not (REPO_ROOT / "ingestor" / "planner_graph_shadow.py").exists()
+    assert not (REPO_ROOT / "mcp" / "server_shadow.py").exists()
+    assert not (REPO_ROOT / "hermes" / "iris-shadow" / "config.yaml").exists()
+    assert not (REPO_ROOT / "hermes" / "iris-shadow" / "SOUL.md").exists()
+    assert not (REPO_ROOT / "scripts" / "compare-shadow-plans.py").exists()
+    assert not (REPO_ROOT / "scripts" / "planner-graph-shadow-smoke.py").exists()
+    assert not (REPO_ROOT / "scripts" / "planner-graph-shadow-report.py").exists()
+
+    compose = (REPO_ROOT / "docker-compose.yml").read_text()
+    assert "hermes-iris-shadow" not in compose
+    assert "server_shadow.py" not in compose
+    assert "--profile shadow" not in compose
+
+    schema = (REPO_ROOT / "db" / "schema.sql").read_text()
+    assert "plan_delivery_log_shadow" not in schema
+    assert "setpoint_plan_shadow" not in schema
+    assert "plan_journal_shadow" not in schema
+
+
 def test_midnight_trigger_has_required_review_prompt_and_wake_mode():
     src = Path(iris_planner.__file__).read_text()
     assert "def _midnight_prompt" in src
@@ -1848,8 +1868,10 @@ def test_mcp_set_plan_materializes_and_audits_climate_intent():
     end = server.index("@mcp.tool()", start + 1)
     body = server[start:end]
 
-    assert "_contains_climate_intent_waypoint(waypoints_raw)" in body
+    assert "_climate_intent_waypoint_errors(waypoints_raw)" in body
     assert "_materialize_climate_intent_waypoints(" in body
+    assert "set_plan requires climate_intent on every transition" in body
+    assert "raw params are not accepted in set_plan" in server
     assert "ClimateIntent validation failed" in body
     assert "climate_intents" in body
     assert "climate_intent_version" in body

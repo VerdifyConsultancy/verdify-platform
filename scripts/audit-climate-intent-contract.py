@@ -21,6 +21,15 @@ from verdify_schemas.plan import PlanTransition  # noqa: E402
 from verdify_schemas.tunable_registry import TIER1_REG, registry_value_error  # noqa: E402
 
 DESIGN_DOC = REPO_ROOT / "docs" / "firmware-climate-intent-controller-final-design-2026-05-24.md"
+REMOVED_RUNTIME_SHADOW_PATHS = (
+    REPO_ROOT / "ingestor" / "planner_graph_shadow.py",
+    REPO_ROOT / "mcp" / "server_shadow.py",
+    REPO_ROOT / "scripts" / "compare-shadow-plans.py",
+    REPO_ROOT / "scripts" / "planner-graph-shadow-smoke.py",
+    REPO_ROOT / "scripts" / "planner-graph-shadow-report.py",
+    REPO_ROOT / "hermes" / "iris-shadow" / "config.yaml",
+    REPO_ROOT / "hermes" / "iris-shadow" / "SOUL.md",
+)
 
 
 def _section(text: str, start: str, end: str) -> str:
@@ -91,10 +100,23 @@ def main() -> None:
         _fail("ClimateIntent materializer produced registry drift: " + "; ".join(errors))
     if "climate_intent" not in PlanTransition.model_fields:
         _fail("PlanTransition must accept climate_intent for bounded set_plan emission")
+    existing_shadow_paths = [str(path.relative_to(REPO_ROOT)) for path in REMOVED_RUNTIME_SHADOW_PATHS if path.exists()]
+    if existing_shadow_paths:
+        _fail("runtime shadow surfaces must stay removed: " + ", ".join(existing_shadow_paths))
+
+    server = (REPO_ROOT / "mcp" / "server.py").read_text()
+    if "set_plan requires climate_intent on every transition" not in server:
+        _fail("MCP set_plan must require ClimateIntent on every transition")
+    if "raw params are not accepted in set_plan" not in server:
+        _fail("MCP set_plan must reject raw params in full-plan transitions")
+    compose = (REPO_ROOT / "docker-compose.yml").read_text()
+    if "hermes-iris-shadow" in compose or "server_shadow.py" in compose:
+        _fail("docker-compose must not expose a runtime shadow planner profile")
 
     print(f"climate_intent_fields={len(CLIMATE_INTENT_FIELDS)}")
     print(f"climate_actions={len(CLIMATE_ACTIONS)}")
     print(f"materialized_tier1={len(materialized)}")
+    print("runtime_shadow_surfaces=0")
     print("OK")
 
 

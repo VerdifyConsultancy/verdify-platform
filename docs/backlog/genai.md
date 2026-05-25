@@ -51,12 +51,15 @@ remains the safety-critical controller.
 - [x] **G-P0.6 MCP `plan_run` audit parity.** Manual/ad-hoc `plan_run` now creates a MANUAL trigger row, sends through `send_to_iris`, returns audit fields, and resolves through the same `plan_delivery_log` correlation path.
 - [x] **G-P0.7 Strict registry validation at MCP boundary.** `PlanTransition` / `set_plan` and `set_tunable` now reject values outside `tunable_registry` min/max before writing `setpoint_plan`. Errors include offending parameter, requested value, registry range, and nearest safe value so Iris can self-correct.
 - [x] **G-P0.8 Historical local planner smoke.** Live smoke sent MANUAL/FORECAST/DEVIATION/TRANSITION/SUNRISE/SUNSET validation triggers to local Gemma4 before the Hermes cutover, verified acknowledgements with matching `trigger_id`, rejected an out-of-range `vpd_hysteresis=0.6`, restored a valid tactical nudge through dispatcher readback, and audited active/future plan rows with zero registry violations.
-- [ ] **G-CI.1 ClimateIntent single-path emission.** Update the Hermes prompt
+- [x] **G-CI.1 ClimateIntent single-path emission.** Update the Hermes prompt
   and standalone planner mirror so full plans emit bounded `climate_intent`
   segments on the same production `set_plan` path. MCP materializes the intent
   once into registry-bounded Tier 1 rows and stores the semantic intent in
   `plan_journal`. No production shadow/proposal path is allowed; offline replay
-  remains diagnostic only.
+  remains diagnostic only. Completed by the ClimateIntent contract PR: Hermes
+  prompts require ClimateIntent, planner mirror emits ClimateIntent, MCP rejects
+  raw-params full plans, and old runtime shadow services/scripts/tables were
+  retired.
 - [ ] **G-P1.1 Post-plan self-critique.** After each full plan, have Iris record a short structured rationale: forecast assumptions, expected stress windows, tunables intentionally changed, tunables intentionally left alone, and what evidence would falsify the plan.
 
 **Project recovery intake from `PROJECT_STATE.md`** (2026-05-22; coordinated
@@ -78,13 +81,11 @@ through [`project-recovery-2026-05-22.md`](project-recovery-2026-05-22.md)).
   current, executable behavior. No backlog item may promise a missing operator
   script after RM-4 exits. Implemented in PR #84; deployed `outcomes` and
   `support-docs` dry-runs passed.
-- [x] **G-RM4 Shadow rollout boundary.** Keep planner graph shadow
-  non-authoritative during recovery. Any change that would make the graph path
-  authoritative, alter Hermes routing, or change production `set_plan` /
-  `set_tunable` behavior needs a separate coordinator-approved rollout. PR #84
-  only adds the disabled sidecar hook and operator scripts; deployed env has
-  `PLANNER_GRAPH_SHADOW_ENABLED` unset, and no shadow rows were written after
-  the ingestor restart.
+- [x] **G-RM4 Shadow rollout boundary.** Historical recovery boundary is closed.
+  The later ClimateIntent single-path PR removed the disabled runtime shadow
+  service, sidecar hook, scripts, tests, MCP server, Docker profile, and live
+  shadow tables. Planner-owned memory ingestion now lives in
+  `ingestor/planner_memory_ingest.py`.
 
 ## Tracked list
 

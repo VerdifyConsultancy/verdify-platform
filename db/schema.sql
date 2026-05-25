@@ -19770,55 +19770,6 @@ ALTER SEQUENCE public.plan_delivery_log_id_seq OWNED BY public.plan_delivery_log
 
 
 --
--- Name: plan_delivery_log_shadow; Type: TABLE; Schema: public; Owner: verdify
---
-
-CREATE TABLE public.plan_delivery_log_shadow (
-    id bigint NOT NULL,
-    delivered_at timestamp with time zone DEFAULT now(),
-    event_type text NOT NULL,
-    event_label text,
-    session_key text,
-    gateway_status integer,
-    gateway_body text,
-    trigger_id uuid,
-    instance text,
-    hermes_run_id text,
-    matched_prod_delivery_log_id integer
-);
-
-
-ALTER TABLE public.plan_delivery_log_shadow OWNER TO verdify;
-
---
--- Name: TABLE plan_delivery_log_shadow; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON TABLE public.plan_delivery_log_shadow IS 'Shadow plan_delivery_log — every shadow-Hermes /v1/runs call records here with the same trigger_id as the prod delivery, so diff scripts can pair them up.';
-
-
---
--- Name: plan_delivery_log_shadow_id_seq; Type: SEQUENCE; Schema: public; Owner: verdify
---
-
-CREATE SEQUENCE public.plan_delivery_log_shadow_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER SEQUENCE public.plan_delivery_log_shadow_id_seq OWNER TO verdify;
-
---
--- Name: plan_delivery_log_shadow_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: verdify
---
-
-ALTER SEQUENCE public.plan_delivery_log_shadow_id_seq OWNED BY public.plan_delivery_log_shadow.id;
-
-
---
 -- Name: plan_journal; Type: TABLE; Schema: public; Owner: verdify
 --
 
@@ -19886,41 +19837,6 @@ COMMENT ON COLUMN public.plan_journal.climate_intents IS 'Validated ClimateInten
 --
 
 COMMENT ON COLUMN public.plan_journal.climate_intent_version IS 'ClimateIntent contract version used by MCP materialization.';
-
-
---
--- Name: plan_journal_shadow; Type: TABLE; Schema: public; Owner: verdify
---
-
-CREATE TABLE public.plan_journal_shadow (
-    plan_id text NOT NULL,
-    created_at timestamp with time zone DEFAULT now(),
-    conditions_summary text,
-    hypothesis text,
-    experiment text,
-    expected_outcome text,
-    params_changed text[],
-    actual_outcome text,
-    outcome_score smallint,
-    anchor_score smallint,
-    lesson_extracted text,
-    validated_at timestamp with time zone,
-    greenhouse_id text DEFAULT 'vallery'::text,
-    hypothesis_structured jsonb,
-    planner_instance text,
-    trigger_id uuid,
-    matched_prod_plan_id text,
-    CONSTRAINT plan_journal_shadow_outcome_score_check CHECK (((outcome_score IS NULL) OR ((outcome_score >= 1) AND (outcome_score <= 10))))
-);
-
-
-ALTER TABLE public.plan_journal_shadow OWNER TO verdify;
-
---
--- Name: TABLE plan_journal_shadow; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON TABLE public.plan_journal_shadow IS 'Shadow plan_journal — shadow-Hermes (Phase 6) writes plan rows here instead of the production plan_journal so we can score shadow plans against the same telemetry without touching prod setpoints.';
 
 
 --
@@ -20337,29 +20253,6 @@ ALTER SEQUENCE public.sensors_id_seq OWNER TO verdify;
 --
 
 ALTER SEQUENCE public.sensors_id_seq OWNED BY public.sensors.id;
-
-
---
--- Name: setpoint_plan_shadow; Type: TABLE; Schema: public; Owner: verdify
---
-
-CREATE TABLE public.setpoint_plan_shadow (
-    ts timestamp with time zone NOT NULL,
-    parameter text NOT NULL,
-    value double precision,
-    plan_id text NOT NULL,
-    reason text,
-    inserted_at timestamp with time zone DEFAULT now()
-);
-
-
-ALTER TABLE public.setpoint_plan_shadow OWNER TO verdify;
-
---
--- Name: TABLE setpoint_plan_shadow; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON TABLE public.setpoint_plan_shadow IS 'Shadow setpoint_plan — shadow-Hermes waypoints, never dispatched to ESP32. Compared to prod setpoint_plan by scripts/compare-shadow-plans.py for parameter-validity + plan-shape regression checks.';
 
 
 --
@@ -32231,13 +32124,6 @@ ALTER TABLE ONLY public.plan_delivery_log ALTER COLUMN id SET DEFAULT nextval('p
 
 
 --
--- Name: plan_delivery_log_shadow id; Type: DEFAULT; Schema: public; Owner: verdify
---
-
-ALTER TABLE ONLY public.plan_delivery_log_shadow ALTER COLUMN id SET DEFAULT nextval('public.plan_delivery_log_shadow_id_seq'::regclass);
-
-
---
 -- Name: planner_lessons id; Type: DEFAULT; Schema: public; Owner: verdify
 --
 
@@ -32981,14 +32867,6 @@ ALTER TABLE ONLY public.plan_delivery_log
 
 
 --
--- Name: plan_delivery_log_shadow plan_delivery_log_shadow_pkey; Type: CONSTRAINT; Schema: public; Owner: verdify
---
-
-ALTER TABLE ONLY public.plan_delivery_log_shadow
-    ADD CONSTRAINT plan_delivery_log_shadow_pkey PRIMARY KEY (id);
-
-
---
 -- Name: plan_delivery_log plan_delivery_log_trigger_id_key; Type: CONSTRAINT; Schema: public; Owner: verdify
 --
 
@@ -33002,14 +32880,6 @@ ALTER TABLE ONLY public.plan_delivery_log
 
 ALTER TABLE ONLY public.plan_journal
     ADD CONSTRAINT plan_journal_pkey PRIMARY KEY (plan_id);
-
-
---
--- Name: plan_journal_shadow plan_journal_shadow_pkey; Type: CONSTRAINT; Schema: public; Owner: verdify
---
-
-ALTER TABLE ONLY public.plan_journal_shadow
-    ADD CONSTRAINT plan_journal_shadow_pkey PRIMARY KEY (plan_id);
 
 
 --
@@ -33114,14 +32984,6 @@ ALTER TABLE ONLY public.sensors
 
 ALTER TABLE ONLY public.setpoint_plan
     ADD CONSTRAINT setpoint_plan_pkey PRIMARY KEY (ts, parameter, plan_id);
-
-
---
--- Name: setpoint_plan_shadow setpoint_plan_shadow_pkey; Type: CONSTRAINT; Schema: public; Owner: verdify
---
-
-ALTER TABLE ONLY public.setpoint_plan_shadow
-    ADD CONSTRAINT setpoint_plan_shadow_pkey PRIMARY KEY (ts, parameter, plan_id);
 
 
 --
@@ -43191,45 +43053,10 @@ CREATE INDEX idx_plan_delivery_log_hermes_run ON public.plan_delivery_log USING 
 
 
 --
--- Name: idx_plan_delivery_log_shadow_event; Type: INDEX; Schema: public; Owner: verdify
---
-
-CREATE INDEX idx_plan_delivery_log_shadow_event ON public.plan_delivery_log_shadow USING btree (event_type, delivered_at DESC);
-
-
---
--- Name: idx_plan_delivery_log_shadow_trigger; Type: INDEX; Schema: public; Owner: verdify
---
-
-CREATE INDEX idx_plan_delivery_log_shadow_trigger ON public.plan_delivery_log_shadow USING btree (trigger_id);
-
-
---
 -- Name: idx_plan_journal_instance; Type: INDEX; Schema: public; Owner: verdify
 --
 
 CREATE INDEX idx_plan_journal_instance ON public.plan_journal USING btree (planner_instance);
-
-
---
--- Name: idx_plan_journal_shadow_created; Type: INDEX; Schema: public; Owner: verdify
---
-
-CREATE INDEX idx_plan_journal_shadow_created ON public.plan_journal_shadow USING btree (created_at DESC);
-
-
---
--- Name: idx_plan_journal_shadow_matched; Type: INDEX; Schema: public; Owner: verdify
---
-
-CREATE INDEX idx_plan_journal_shadow_matched ON public.plan_journal_shadow USING btree (matched_prod_plan_id);
-
-
---
--- Name: idx_plan_journal_shadow_trigger; Type: INDEX; Schema: public; Owner: verdify
---
-
-CREATE INDEX idx_plan_journal_shadow_trigger ON public.plan_journal_shadow USING btree (trigger_id);
 
 
 --
@@ -43384,20 +43211,6 @@ CREATE INDEX idx_setpoint_clamps_ts ON public.setpoint_clamps USING btree (ts DE
 --
 
 CREATE INDEX idx_setpoint_plan_instance ON public.setpoint_plan USING btree (planner_instance, created_at DESC) WHERE (planner_instance IS NOT NULL);
-
-
---
--- Name: idx_setpoint_plan_shadow_plan; Type: INDEX; Schema: public; Owner: verdify
---
-
-CREATE INDEX idx_setpoint_plan_shadow_plan ON public.setpoint_plan_shadow USING btree (plan_id);
-
-
---
--- Name: idx_setpoint_plan_shadow_ts; Type: INDEX; Schema: public; Owner: verdify
---
-
-CREATE INDEX idx_setpoint_plan_shadow_ts ON public.setpoint_plan_shadow USING btree (ts);
 
 
 --

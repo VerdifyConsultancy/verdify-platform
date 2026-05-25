@@ -108,8 +108,10 @@ class TestSplitInvariants:
         assert "Do not emit in plans" in iris_planner._PLANNER_CORE
         assert "crop-band params" in iris_planner._sunrise_prompt("context")
         assert "crop-band params" in iris_planner._sunset_prompt("context")
-        assert "all tactical Tier 1 params" in iris_planner._sunrise_prompt("context")
-        assert "all tactical Tier 1 params" in iris_planner._sunset_prompt("context")
+        assert "bounded `climate_intent` object" in iris_planner._sunrise_prompt("context")
+        assert "bounded `climate_intent` object" in iris_planner._sunset_prompt("context")
+        assert "Do not emit raw" in iris_planner._sunrise_prompt("context")
+        assert "Do not emit raw" in iris_planner._sunset_prompt("context")
         assert "Each transition includes ALL 24 Tier 1 params" not in iris_planner._sunrise_prompt("context")
         assert "Each transition includes ALL 24 Tier 1 params" not in iris_planner._sunset_prompt("context")
 

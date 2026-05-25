@@ -47,7 +47,7 @@ day-to-day coordination. The older section remains as historical context.
 | RM-1 | `coordinator` | Quarantine dirty state and split independent PR branches/worktrees | **Complete:** dirty themes split into reviewed PRs or archived RM7 patches; temp worktrees/stashes disposed |
 | RM-2 | `coordinator` + `ingestor` + `web` | Integrate irrigation/fertigation canonicalization software without running the finalizer | **Merge/deploy complete:** PR #83 merged at `a8f8ffa`; main CI run `26314849773` passed; migration 134, ingestor/MCP restart, Grafana restart, and software-only live validation completed |
 | RM-3 | `coordinator` + operator | Repair physical irrigation feedback and only then run the finalizer | Four feedback rows `ok`; no critical/high alerts |
-| RM-4 | `genai` + `coordinator` | Reconcile planner-graph shadow and memory-backfill work, including stale `genai` worktree files | **Merge/deploy complete:** PR #84 merged at `3a2eb87`; main CI run `26315767545` passed; ingestor-only restart completed; live shadow smoke wrote accepted non-authoritative row `4`; deployed backfill dry-runs passed |
+| RM-4 | `genai` + `coordinator` | Reconcile planner-graph shadow and memory-backfill work, including stale `genai` worktree files | **Closed and superseded:** PR #84 merged at `3a2eb87`; later ClimateIntent single-path work removed the runtime shadow service, scripts, tests, Docker profile, MCP server, and live shadow tables |
 | RM-5 | `web` + `coordinator` | Integrate public lab/Grafana refinements and cache-warm fix | **Complete:** PR #81 source/deploy/cache-warmer done; `lab.verdify.ai` and `labs.verdify.ai` both resolve to gateway and serve HTTP 200; issue #82 closed |
 | RM-6 | `ingestor` + `coordinator` | Integrate climate overlay semantics and loose guard changes | **Merge/deploy complete:** PR #85 merged at `45758b6`; main CI run `26316119564` passed; ingestor restart/live-tail clean; deployed Tempest script wrote `weather_station` without orphan `climate` rows |
 | RM-7 | `coordinator` | Clean temp worktrees, stashes, and generated-state risks | **Complete:** temp/recovery worktrees removed, stale genai worktree reset, stashes archived+dropped, `.git/.DS_Store` removed, persistent agent worktrees fast-forwarded to `45758b6` |
@@ -312,6 +312,12 @@ From failure-mode analysis — cannot be deferred:
 - [x] **PR-B** dropped — PR-A handles the breaker-latch high-VPD window. Verified against 2026-04-22 17:53 event.
 
 **Strategic (weeks 2-16, Phase 3 proper):**
+
+This April coordinator-shadow rollout plan is historical. Current Track A
+controller architecture is the ClimateIntent single path: planner emits bounded
+intent, MCP materializes Tier 1 rows, dispatcher validates, and ESP32 firmware
+executes the only live relay controller. Do not introduce production shadow
+controllers or second proposal paths.
 
 - [ ] **PR-1 — Zone FSM + vote struct (pure refactor, zero behavior change).** Define `ZoneVote`, `ZoneBand`, `compute_*_want()`, `probe_confidence()`. Refactor existing per-zone logic (mist_pulse_controller) into explicit `compute_vpd_vote(zone)`. Emit votes to diagnostic sensor for shadow observation. Replay-diff zero. Tunables: 32 zone-band thresholds added (8 per zone × 4 zones) + probe confidence timings.
 

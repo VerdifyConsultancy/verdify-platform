@@ -96,25 +96,26 @@ The dispatcher applies within 5 minutes.
 
 **For 72-hour plans** (sunrise, sunset):
 Use `set_plan(plan_id=..., hypothesis=..., transitions=..., trigger_id=..., planner_instance=...)` to write a multi-waypoint plan.
-Structure transitions around solar milestones:
+Structure transitions around solar milestones. Every transition uses bounded
+`climate_intent`; MCP materializes the low-level Tier 1 rows and audits the
+semantic intent in `plan_journal`.
 
 ```json
 [
-  {"ts": "2026-04-12T06:30:00-06:00", "params": {...tactical Tier 1 params...}, "reason": "Dawn — overnight posture"},
-  {"ts": "2026-04-12T10:00:00-06:00", "params": {...}, "reason": "Morning ramp — solar load building"},
-  {"ts": "2026-04-12T13:00:00-06:00", "params": {...}, "reason": "Peak stress — max misting aggression"},
-  {"ts": "2026-04-12T17:00:00-06:00", "params": {...}, "reason": "Decline — reduce misting, prep for evening"},
-  {"ts": "2026-04-12T19:30:00-06:00", "params": {...}, "reason": "Evening — overnight heating posture"}
+  {"ts": "2026-04-12T06:30:00-06:00", "climate_intent": {"temp_target_f": 72, "temp_band_f": 6, "vpd_target_kpa": 1.0, "vpd_band_kpa": 0.5, "...": "..."}, "reason": "Dawn — overnight posture"},
+  {"ts": "2026-04-12T10:00:00-06:00", "climate_intent": {"...": "..."}, "reason": "Morning ramp — solar load building"},
+  {"ts": "2026-04-12T13:00:00-06:00", "climate_intent": {"...": "..."}, "reason": "Peak stress — max misting aggression"},
+  {"ts": "2026-04-12T17:00:00-06:00", "climate_intent": {"...": "..."}, "reason": "Decline — reduce misting, prep for evening"},
+  {"ts": "2026-04-12T19:30:00-06:00", "climate_intent": {"...": "..."}, "reason": "Evening — overnight heating posture"}
 ]
 ```
 
-Each transition MUST include all tactical Tier 1 params. Do not include
-crop-band params (`temp_low`, `temp_high`, `vpd_low`, `vpd_high`) or retired
-legacy knobs (`bias_heat`, `bias_cool`, `d_heat_stage_2`,
-`d_cool_stage_2`, `sw_fsm_controller_enabled`); crop profiles, firmware defaults, and the
-dispatcher own them. Use mist, fog, dwell, hysteresis, vent posture, and
-stage-2 cooling knobs to shift behavior. The dispatcher executes the persisted
-tactical waypoints even if the planner is offline.
+Do not emit raw Tier 1 `params`, crop-band params (`temp_low`, `temp_high`,
+`vpd_low`, `vpd_high`), or retired legacy knobs (`bias_heat`, `bias_cool`,
+`d_heat_stage_2`, `d_cool_stage_2`, `sw_fsm_controller_enabled`). Use the
+ClimateIntent fields to shape mist, fog, dwell, hysteresis, vent posture, and
+stage-2 cooling behavior. The dispatcher executes the materialized tactical
+waypoints even if the planner is offline.
 
 ### REPORT: Post to Slack
 

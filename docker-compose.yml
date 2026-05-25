@@ -383,39 +383,6 @@ services:
           memory: 4G
           cpus: "2.0"
 
-  # ── Hermes Iris SHADOW (Phase 6 of the Iris loop overhaul) ─────────
-  # Parallel Hermes profile for the 7-day shadow week. Same model + tool
-  # surface as production hermes-iris but points at mcp/server_shadow.py
-  # (port 8001) so set_plan / set_tunable / plan_evaluate writes land in
-  # *_shadow tables instead of touching production setpoints.
-  #
-  # Brought up only during the Phase 6 shadow week, then torn down once
-  # Phase 7 canary promotes the prod hermes-iris.
-  #
-  # Uses its own data dir so memory / sessions / logs are isolated.
-  hermes-iris-shadow:
-    profiles:
-      - shadow                # Opt-in: `docker compose --profile shadow up -d`
-    image: nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e
-    container_name: hermes-iris-shadow
-    restart: unless-stopped
-    command: gateway run
-    ports:
-      - "127.0.0.1:8643:8642"
-    volumes:
-      - /var/lib/verdify/hermes/iris-shadow:/opt/data
-    env_file:
-      - /etc/verdify/hermes-iris-shadow.env
-    networks:
-      - verdify-internal
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    deploy:
-      resources:
-        limits:
-          memory: 4G
-          cpus: "2.0"
-
 volumes:
   tsdb_data:
   grafana_data:
