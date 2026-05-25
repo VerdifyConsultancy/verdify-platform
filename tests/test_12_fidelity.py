@@ -1879,6 +1879,28 @@ def test_mcp_set_plan_materializes_and_audits_climate_intent():
     assert "$10::jsonb" in body
 
 
+def test_climate_decision_surface_excludes_fert_and_drip_relays():
+    types_src = (REPO_ROOT / "firmware" / "lib" / "greenhouse_types.h").read_text()
+    relay_block = types_src[
+        types_src.index("struct RelayOutputs") : types_src.index(
+            "// ── ClimateIntent candidate-action controller contract"
+        )
+    ]
+    for climate_relay in ("heat1", "heat2", "fan1", "fan2", "fog", "vent"):
+        assert f"bool {climate_relay};" in relay_block
+    for forbidden in ("fert", "drip", "fertilizer", "irrig"):
+        assert forbidden not in relay_block.lower()
+
+    logic_src = (REPO_ROOT / "firmware" / "lib" / "greenhouse_logic.h").read_text()
+    decision_block = logic_src[
+        logic_src.index("inline ClimateActionDecision evaluate_climate_decision") : logic_src.index(
+            "inline Mode climate_action_to_mode"
+        )
+    ]
+    for forbidden in ("fert", "drip", "fertilizer", "irrig"):
+        assert forbidden not in decision_block.lower()
+
+
 def test_mcp_set_tunable_resolves_trigger_ledger_with_oneshot_plan():
     server = (Path(iris_planner.__file__).resolve().parent.parent / "mcp" / "server.py").read_text()
     start = server.index("async def set_tunable")
