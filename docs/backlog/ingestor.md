@@ -6,6 +6,19 @@ Full delivery plan with reasoning, cross-agent branch survey, and risk register 
 
 ## In flight
 
+**Climate Authority support** (coordinated through
+[`docs/climate-authority-sprint-plan-2026-05-24.md`](../climate-authority-sprint-plan-2026-05-24.md)).
+
+- [ ] **I-CI.1 Structured climate action ingestion.** Support GitHub issue
+  [#7](https://github.com/VerdifyConsultancy/verdify-platform/issues/7) by
+  routing ESP32 climate decision telemetry into a durable action/effectiveness
+  surface instead of relying only on latest `system_state` rows. Required
+  fields include selected action, priority axis, temp/VPD target deltas, band
+  errors, wet/fog allowance, block reasons, relay truth, resource estimate,
+  ClimateIntent version, and plan/trigger identifiers when available. Keep
+  planner live context on fast latest-row queries and avoid unbounded
+  `v_greenhouse_state ORDER BY ts DESC` scans.
+
 **Sprint 25.1 — Operational recovery** (`ingestor/sprint-25.1-operational-recovery`) is closing the 2026-04-27 full-review findings:
 
 - [x] Branch rebased onto current `origin/main` so topology/tunable registry/heap-pressure alignment is present.

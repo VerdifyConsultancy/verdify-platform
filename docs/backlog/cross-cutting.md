@@ -102,6 +102,19 @@ Launch work is tracked in [`docs/backlog/launch.md`](launch.md) with the command
 - [x] **Per-alert-type discriminated union for `AlertEnvelope`.** Requested by `ingestor`. `AlertEnvelope` now preserves the existing model API while validating through a tagged per-alert registry covering every current alert writer, including planner, API, dispatcher, heap, firmware, setpoint-confirmation, and forecast-deviation alerts.
 - [x] **Migrate `verdify_schemas.crops.ObservationAction.data` union to also accept `HarvestCreate` / `TreatmentCreate`.** Verified with regression coverage.
 - [x] **Scorecard typed projection** (requested by `genai` + `web`). `ScorecardResponse` is the shared typed shape; migration 096 and `db/schema.sql` now match the live 25-metric numeric `fn_planner_scorecard()`, and `/api/v1/scorecard` returns that schema.
+- [ ] **C-CI.1 Climate action/effectiveness data contract.** Canonical sprint
+  plan:
+  [`docs/climate-authority-sprint-plan-2026-05-24.md`](../climate-authority-sprint-plan-2026-05-24.md).
+  GitHub issue:
+  [#7](https://github.com/VerdifyConsultancy/verdify-platform/issues/7).
+  Add a structured climate action log or equivalent durable surface for
+  selected action, priority axis, dispatcher-owned target deltas, band errors,
+  wet/fog allowance, block reasons, relay truth, resource estimates,
+  ClimateIntent version, and plan/trigger correlation. Add 5-minute,
+  15-minute, and daily effectiveness views so controller changes can be judged
+  by before/after temp/VPD error, time to recovery, wet relay duty, water,
+  energy, and outdoor context. Keep live planner context on indexed/latest-row
+  reads, not unbounded `v_greenhouse_state` scans.
 
 ### Planner contract v1.5 — historical local-first hardening
 

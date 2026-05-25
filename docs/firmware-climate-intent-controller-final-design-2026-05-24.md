@@ -12,6 +12,12 @@ This document is the implementation contract. Any OTA must still follow
 firmware freeze rules, replay/invariant gates, service restart documentation,
 and operator approval.
 
+Next implementation sprint:
+[`docs/climate-authority-sprint-plan-2026-05-24.md`](climate-authority-sprint-plan-2026-05-24.md).
+It closes the live 2026-05-24 gap where `VENT_COOL_MIST_ASSIST` was selected
+while wet relays stayed off because climate evaporative assist was still
+coupled to crop direct-wet and fog clock windows.
+
 ## Objective
 
 Optimize greenhouse operation in this strict priority order:
@@ -339,3 +345,7 @@ Recommended implementation tasks:
 4. `F-CI-4`: Publish live controller observability fields.
 5. `F-CI-5`: Wire planner/dispatcher to emit bounded intent.
 6. `F-CI-6`: Deploy, validate live health, and publish scorecard.
+7. `F-CI-7`: Implement the Climate Authority sprint: split crop direct-wet
+   windows from climate wet-assist authority, update planner intent guidance,
+   and add structured action/effectiveness data. Canonical plan:
+   [`docs/climate-authority-sprint-plan-2026-05-24.md`](climate-authority-sprint-plan-2026-05-24.md).
