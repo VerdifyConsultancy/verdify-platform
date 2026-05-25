@@ -79,6 +79,16 @@ def main() -> None:
         _fail("ClimateIntent model fields do not match CLIMATE_INTENT_FIELDS")
     if tuple(doc.name for doc in CLIMATE_INTENT_FIELD_DOCS) != CLIMATE_INTENT_FIELDS:
         _fail("ClimateIntent field docs do not match CLIMATE_INTENT_FIELDS")
+    missing_doc_depth = [
+        doc.name
+        for doc in CLIMATE_INTENT_FIELD_DOCS
+        if not doc.meaning or not doc.bounds or not doc.firmware_impact or not doc.planner_guidance
+    ]
+    if missing_doc_depth:
+        _fail(
+            "ClimateIntent field docs must include meaning, bounds, firmware impact, and guidance: "
+            + ", ".join(missing_doc_depth)
+        )
 
     relay_overlap = sorted(set(CLIMATE_INTENT_FIELDS) & CLIMATE_RELAY_FIELD_DENYLIST)
     if relay_overlap:
@@ -147,7 +157,12 @@ def main() -> None:
         if marker not in gather:
             _fail(f"planner context gather missing target marker: {marker}")
     generator = (REPO_ROOT / "scripts" / "generate-ai-tunables-page.py").read_text()
-    for marker in ("## ClimateIntent AI Surface", "## Dispatcher-Owned Climate Targets"):
+    for marker in (
+        "## ClimateIntent AI Surface",
+        "## Dispatcher-Owned Climate Targets",
+        "materialized_knobs",
+        "planner_guidance",
+    ):
         if marker not in generator:
             _fail(f"AI tunables page generator missing marker: {marker}")
     compose = (REPO_ROOT / "docker-compose.yml").read_text()

@@ -152,24 +152,25 @@ read-only `temp_low`, `temp_target`, `temp_high`, `vpd_low`, `vpd_target`, and
 `vpd_high` values plus current actual-minus-target deltas; the AI planner tunes
 the tactical posture around those values but does not write them.
 
-Proposed Tier 1 intent fields:
+Proposed Tier 1 intent fields. The generated planner prompt and public site
+render the same source-of-truth docs from `verdify_schemas.climate_intent`:
 
-| Field | Meaning | First range |
-|---|---|---|
-| `forecast_temp_bias_f` | Anticipatory temp offset from forecast pressure | `-4..4F` |
-| `forecast_vpd_bias_kpa` | Anticipatory VPD offset from forecast pressure | `-0.4..0.4` |
-| `solar_precool_gain_f` | Cooling lead under strong solar ramp | `0..4F` |
-| `thermal_lead_time_min` | How early preconditioning may begin | `0..90` |
-| `economizer_temp_advantage_f` | Outdoor temp advantage needed for vent cooling | `1..15F` |
-| `economizer_dewpoint_advantage_f` | Outdoor dewpoint advantage for dry-air decisions | `1..15F` |
-| `moisture_engage_vpd_excess_kpa` | VPD excess before mister assist | `0..0.5` |
-| `mist_duty_limit_pct` | Max mister duty during the period | `0..100` |
-| `fog_escalate_vpd_excess_kpa` | VPD excess before fog candidate is eligible | `0.1..0.8` |
-| `dew_margin_floor_f` | Minimum air temp minus dewpoint for wet actions | `3..15F` |
-| `wet_cutoff_hour` | Latest local hour for climate wetting | `17..24` |
-| `daily_mist_budget_gal` | Daily climate-water budget | site-bounded |
-| `resource_sensitivity` | Preference for conserving water/electricity | `0..1` |
-| `relay_churn_penalty` | Preference for holding stable action | `0..1` |
+| Field | Meaning | Firmware impact | Primary materialized knobs |
+|---|---|---|---|
+| `forecast_temp_bias_f` | Forecast-backed hot-air pressure | More anticipatory cooling without changing dispatcher-owned bands | `cool_stage2_over_high_f`, `sw_cool_all_fans_at_high_enabled` |
+| `forecast_vpd_bias_kpa` | Forecast-backed dry/wet pressure | More wet-action availability without changing dispatcher-owned bands | `sw_direct_wet_stress_override_enabled`, `mister_vpd_weight`, `min_fog_on_s` |
+| `solar_precool_gain_f` | Solar ramp pressure before peak heat | Tightens stage-2 cooling and fan readiness | `cool_stage2_over_high_f`, `sw_cool_all_fans_at_high_enabled` |
+| `thermal_lead_time_min` | Intended forecast preconditioning lead | Audit/hypothesis context; firmware safety still gates actuation | audit context only |
+| `economizer_temp_advantage_f` | Outdoor temp advantage needed for vent cooling | Shapes vent preference and cold-vent guard | `vent_prefer_temp_delta_f`, `cold_vent_guard_delta_f` |
+| `economizer_dewpoint_advantage_f` | Outdoor dewpoint advantage for dry-air decisions | Shapes dewpoint preference for vent/dehumidification | `vent_prefer_dp_delta_f` |
+| `moisture_engage_vpd_excess_kpa` | VPD excess above dispatcher `vpd_high` before mister assist | Couples mister/direct-wet thresholds to active band | `direct_wet_stress_vpd_margin_kpa`, `mister_engage_kpa`, `mister_all_kpa` |
+| `mist_duty_limit_pct` | Max climate-misting duty | Shapes pulse duration, wet aggression, and resource gates | `mister_pulse_on_s`, `mister_pulse_gap_s`, `mister_vpd_weight` |
+| `fog_escalate_vpd_excess_kpa` | VPD excess above dispatcher `vpd_high` before fog assist | Shapes fog escalation and all-zone mister threshold | `fog_escalation_kpa`, `mister_all_kpa` |
+| `dew_margin_floor_f` | Minimum air temp minus dewpoint for wet actions | Blocks condensation-risk wetting | `direct_wet_stress_min_dew_margin_f`, `fog_stress_min_dew_margin_f` |
+| `wet_cutoff_hour` | Latest local hour for climate wetting | Limits evening fog/direct-wet windows | `direct_wet_stress_latest_hour`, `fog_stress_window_latest_hour` |
+| `daily_mist_budget_gal` | Daily climate-water budget | Caps firmware mister water budget | `mister_water_budget_gal` |
+| `resource_sensitivity` | Conserve water/electricity after compliance | Lengthens off dwell and reduces wet/cooling aggression | `mister_pulse_gap_s`, `min_fog_off_s`, `min_fog_on_s` |
+| `relay_churn_penalty` | Hold stable actions instead of changing modes | Shapes hysteresis, dwell, and mist delays | `cool_exit_hysteresis_f`, `temp_hysteresis`, `vpd_hysteresis`, `dwell_gate_ms` |
 
 This replaces the planner needing to reason about dozens of low-level fields
 such as individual fog windows, mister pulse gaps, stage delays, and scattered

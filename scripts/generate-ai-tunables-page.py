@@ -738,11 +738,15 @@ def _render_climate_intent_surface(summary: dict[str, Any]) -> list[str]:
         "",
         "Routine `set_plan` transitions must include a bounded `climate_intent` object with every field below explicitly set. These fields tune tactical posture around the dispatcher-owned targets; they do not own temp/VPD low, target, or high points.",
         "",
-        "| Field | Bounds | Planner meaning | Firmware impact |",
-        "|---|---|---|---|",
+        "| Field | Bounds | Planner meaning | Firmware impact | Materialized knobs | Planner guidance |",
+        "|---|---|---|---|---|---|",
     ]
     for doc in CLIMATE_INTENT_FIELD_DOCS:
-        rows.append(f"| `{doc.name}` | {doc.bounds} | {_md(doc.meaning)} | {_md(doc.firmware_impact)} |")
+        knobs = ", ".join(f"`{name}`" for name in doc.materialized_knobs) or "audit context only"
+        rows.append(
+            f"| `{doc.name}` | {doc.bounds} | {_md(doc.meaning)} | {_md(doc.firmware_impact)} | "
+            f"{knobs} | {_md(doc.planner_guidance)} |"
+        )
 
     rows.extend(
         [
@@ -1033,10 +1037,21 @@ def _render_planner_context(evidence: dict[str, Evidence], plan_required: set[st
         "mister_engage_kpa note: SEALED_MIST entry is vpd_high + vpd_watch_dwell_s; mister_engage_kpa gates physical S1 pulses once SEALED_MIST or explicit VENTILATE assist creates humidity demand.",
         "VPD-high guardrail: during live, near-edge, or recently unrecovered VENTILATE stress with healthy dew margin, keep moisture thresholds band-coupled (engage ~= vpd_high+0.05, all-zone ~= max(1.0,vpd_high+0.25), fog_escalation ~= 0.20 or 0.15 in hot/dry venting, shorter min_fog_off_s); dispatcher clamps conservative overrides until observed recovery.",
         "",
-        "climate_intent_field|bounds|meaning|firmware_impact",
+        "climate_intent_field|bounds|meaning|firmware_impact|materialized_knobs|planner_guidance",
     ]
     for doc in CLIMATE_INTENT_FIELD_DOCS:
-        lines.append("|".join([doc.name, doc.bounds, doc.meaning, doc.firmware_impact]))
+        lines.append(
+            "|".join(
+                [
+                    doc.name,
+                    doc.bounds,
+                    doc.meaning,
+                    doc.firmware_impact,
+                    ",".join(doc.materialized_knobs) or "audit_context_only",
+                    doc.planner_guidance,
+                ]
+            )
+        )
     if target:
         lines.extend(
             [

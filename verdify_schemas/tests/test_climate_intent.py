@@ -70,6 +70,8 @@ def test_design_doc_is_canonical_and_schema_matches_intent_surface() -> None:
     assert set(ClimateIntent.model_fields) == set(CLIMATE_INTENT_FIELDS)
     assert tuple(doc.name for doc in CLIMATE_INTENT_FIELD_DOCS) == CLIMATE_INTENT_FIELDS
     assert all(doc.firmware_impact for doc in CLIMATE_INTENT_FIELD_DOCS)
+    assert all(doc.planner_guidance for doc in CLIMATE_INTENT_FIELD_DOCS)
+    assert any(doc.materialized_knobs for doc in CLIMATE_INTENT_FIELD_DOCS)
 
 
 def test_design_doc_action_table_matches_schema_actions() -> None:

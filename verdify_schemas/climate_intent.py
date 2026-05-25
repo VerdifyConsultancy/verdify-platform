@@ -87,92 +87,145 @@ class ClimateIntentFieldDoc:
     meaning: str
     bounds: str
     firmware_impact: str
+    materialized_knobs: tuple[str, ...] = ()
+    planner_guidance: str = ""
 
 
 CLIMATE_INTENT_FIELD_DOCS: tuple[ClimateIntentFieldDoc, ...] = (
     ClimateIntentFieldDoc(
         "forecast_temp_bias_f",
-        "Forecast-backed temperature pressure signal for the segment.",
+        "Forecast-backed hot-air pressure signal for the segment.",
         "-4..4F",
-        "Raises or lowers cooling aggressiveness without changing dispatcher-owned temp_low/temp_target/temp_high.",
+        "Positive values make cooling more anticipatory without changing dispatcher-owned temp_low/temp_target/temp_high.",
+        ("cool_stage2_over_high_f", "sw_cool_all_fans_at_high_enabled"),
+        "Use positive values when forecast or recent misses imply heat will outrun the band; use 0 when no hot miss is expected.",
     ),
     ClimateIntentFieldDoc(
         "forecast_vpd_bias_kpa",
         "Forecast-backed dry/wet pressure signal for the segment.",
         "-0.4..0.4 kPa",
-        "Shifts wet-action readiness without changing dispatcher-owned vpd_low/vpd_target/vpd_high.",
+        "Positive values make wet actions more available without changing dispatcher-owned vpd_low/vpd_target/vpd_high.",
+        ("sw_direct_wet_stress_override_enabled", "mister_vpd_weight", "min_fog_on_s"),
+        "Use positive values for dry forecast error or dry-air ventilation risk; use 0 or negative when dew/RH risk dominates.",
     ),
     ClimateIntentFieldDoc(
         "solar_precool_gain_f",
         "Solar ramp pressure that justifies cooling lead before peak heat.",
         "0..4F",
         "Tightens stage-2 cooling and fan readiness before high solar load arrives.",
+        ("cool_stage2_over_high_f", "sw_cool_all_fans_at_high_enabled"),
+        "Raise during steep solar ramps or known lag; lower after shade/clouds or evening recovery.",
     ),
     ClimateIntentFieldDoc(
         "thermal_lead_time_min",
         "How early forecast preconditioning may begin.",
         "0..90 min",
         "Planner audit context for lead timing; firmware safety and dispatcher timing still gate actuation.",
+        (),
+        "Set to the intended lead window for the segment hypothesis; it documents forecast timing even when no direct Tier 1 knob changes.",
     ),
     ClimateIntentFieldDoc(
         "economizer_temp_advantage_f",
         "Outdoor temperature advantage needed before vent cooling is attractive.",
         "1..15F",
         "Materializes to vent preference and cold-vent guard thresholds.",
+        ("vent_prefer_temp_delta_f", "cold_vent_guard_delta_f"),
+        "Lower when outside air can cool without cold shock; raise when cold-slug or oscillation risk is high.",
     ),
     ClimateIntentFieldDoc(
         "economizer_dewpoint_advantage_f",
         "Outdoor dewpoint advantage needed before dry-air decisions are attractive.",
         "1..15F",
         "Materializes to dewpoint preference for vent/dehumidification choices.",
+        ("vent_prefer_dp_delta_f",),
+        "Lower when outdoor air is safely drier and dehumidification is needed; raise when dry ventilation would worsen VPD stress.",
     ),
     ClimateIntentFieldDoc(
         "moisture_engage_vpd_excess_kpa",
         "How far above dispatcher-owned vpd_high VPD may rise before mister assist is eligible.",
         "0..0.5 kPa",
         "Materializes mister and direct-wet thresholds relative to the active dispatcher VPD band.",
+        ("direct_wet_stress_vpd_margin_kpa", "mister_engage_kpa", "mister_all_kpa"),
+        "Keep near 0.05 kPa when VPD compliance is the bottleneck; raise only to conserve water after recovery is proven.",
     ),
     ClimateIntentFieldDoc(
         "mist_duty_limit_pct",
         "Maximum climate-misting duty allowed during the segment.",
         "0..100%",
         "Materializes mister pulse duration, wet aggression, and resource budget gates.",
+        (
+            "mister_pulse_on_s",
+            "mister_pulse_gap_s",
+            "mister_vpd_weight",
+            "sw_direct_wet_stress_override_enabled",
+        ),
+        "Raise during hot/dry recovery windows with safe dew margin; lower for disease risk, occupancy, or resource conservation.",
     ),
     ClimateIntentFieldDoc(
         "fog_escalate_vpd_excess_kpa",
         "How far above dispatcher-owned vpd_high VPD may rise before fog assist is eligible.",
         "0.1..0.8 kPa",
         "Materializes fog escalation and all-zone mister thresholds relative to the active VPD band.",
+        ("fog_escalation_kpa", "mister_all_kpa"),
+        "Use lower values when VPD is repeatedly above band during ventilation; use higher values when fog overshoot or disease risk is the constraint.",
     ),
     ClimateIntentFieldDoc(
         "dew_margin_floor_f",
         "Minimum indoor air temperature minus dew point for wet climate actions.",
         "3..15F",
         "Materializes fog/direct-wet dew margin floors and blocks condensation-risk wetting.",
+        ("direct_wet_stress_min_dew_margin_f", "fog_stress_min_dew_margin_f"),
+        "Keep conservative at night or near leaf-wetness risk; do not lower it just to chase VPD compliance.",
     ),
     ClimateIntentFieldDoc(
         "wet_cutoff_hour",
         "Latest local hour for climate wetting in this segment.",
         "17..24",
         "Materializes fog and direct-wet latest-hour limits.",
+        (
+            "direct_wet_stress_latest_hour",
+            "fog_stress_window_latest_hour",
+            "sw_fog_stress_window_extend_enabled",
+        ),
+        "Extend only when dry recovery is worth evening wetting risk and dew margin remains healthy.",
     ),
     ClimateIntentFieldDoc(
         "daily_mist_budget_gal",
         "Daily climate-water budget for mister use.",
         "0..300 gal",
         "Materializes the firmware mister water budget.",
+        ("mister_water_budget_gal",),
+        "Budget water according to forecast stress and recent usage; use 0 only when wet actions should be unavailable.",
     ),
     ClimateIntentFieldDoc(
         "resource_sensitivity",
         "Preference for conserving water/electricity after safety and band compliance.",
         "0..1",
         "Lengthens off dwell and reduces wet/cooling aggression when compliance allows it.",
+        (
+            "mister_pulse_gap_s",
+            "min_fog_off_s",
+            "min_fog_on_s",
+            "cool_stage2_over_high_f",
+            "sw_direct_wet_stress_override_enabled",
+        ),
+        "Raise only after safety and compliance are stable; lower when temp or VPD is outside band.",
     ),
     ClimateIntentFieldDoc(
         "relay_churn_penalty",
         "Preference for holding stable actions instead of changing modes frequently.",
         "0..1",
         "Materializes hysteresis, dwell, and mist delay values.",
+        (
+            "cool_exit_hysteresis_f",
+            "temp_hysteresis",
+            "vpd_hysteresis",
+            "vpd_watch_dwell_s",
+            "dwell_gate_ms",
+            "mister_engage_delay_s",
+            "mister_all_delay_s",
+        ),
+        "Raise when mode churn or relay wear is the observed failure; lower when response lag is missing compliance windows.",
     ),
 )
 
