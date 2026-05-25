@@ -2265,7 +2265,7 @@ def test_leak_detected_locks_water_actuators():
     assert "id: bs_leak_detected" in greenhouse_yaml
     assert "const bool leak_block = id(bs_leak_detected).state;" in controls
     assert "Leak detected: forcing fog, misters, and irrigation off" in controls
-    assert "set_relay(R[4], willFog, false, leak_block);" in controls
+    assert "set_relay(R[4], willFog, false, leak_block || occupancy_moisture_block);" in controls
 
     mister_start = controls.index("bool mister_blocked =")
     mister_end = controls.index("if(mister_blocked && id(mister_state) > 0)", mister_start)
@@ -2277,6 +2277,7 @@ def test_leak_detected_locks_water_actuators():
     fog_end = controls.index("static char last_fog_block_reason", fog_start)
     fog_block = controls[fog_start:fog_end]
     assert 'snprintf(fog_block_reason, sizeof(fog_block_reason), "leak_detected")' in fog_block
+    assert 'snprintf(fog_block_reason, sizeof(fog_block_reason), "occupancy")' in fog_block
     assert fog_block.index("leak_block") < fog_block.index("id(fog_rly)->state")
 
     irrigation_start = controls.index("auto turn_off_all_irrigation")
@@ -2287,6 +2288,30 @@ def test_leak_detected_locks_water_actuators():
     assert "id(irrig_queue) = 0;" in irrigation_block
     assert 'sync_fert_master("leak_lock")' in irrigation_block
     assert "STOPPED by leak_detected" in irrigation_block
+
+
+def test_occupancy_inhibit_is_final_fog_force_off():
+    controls = Path("firmware/greenhouse/controls.yaml").read_text()
+
+    manual_fog = "if(id(manual_fog_active)){ willFog = true; }"
+    occupancy_gate = "const bool occupancy_moisture_block = id(occupancy_inhibit_enabled) && id(greenhouse_occupied);"
+    assert manual_fog in controls
+    assert occupancy_gate in controls
+    assert controls.index(manual_fog) < controls.index(occupancy_gate)
+
+    final_gate_start = controls.index(occupancy_gate)
+    final_gate_end = controls.index("/**************** 10", final_gate_start)
+    final_gate = controls[final_gate_start:final_gate_end]
+    assert "if (leak_block || occupancy_moisture_block)" in final_gate
+    assert "Occupancy inhibit: forcing fog and climate misters off" in final_gate
+
+    assert "set_relay(R[4], willFog, false, leak_block || occupancy_moisture_block);" in controls
+    assert "bool occupancy_blocks = occupancy_moisture_block;" in controls
+
+    fog_start = controls.index("char fog_block_reason")
+    fog_end = controls.index("static char last_fog_block_reason", fog_start)
+    fog_block = controls[fog_start:fog_end]
+    assert fog_block.index("occupancy_moisture_block") < fog_block.index("id(fog_rly)->state")
 
 
 def test_irrigation_schedule_is_heap_recovery_priority():

@@ -564,9 +564,11 @@ interval:
               (mode == VENTILATE) && ctl_state.vent_mist_assist_active && relay_out.fog;
           const bool open_vent_mister_assist =
               (mode == VENTILATE) && ctl_state.vent_mist_assist_active;
+          const bool occupancy_moisture_block = id(occupancy_inhibit_enabled) && id(greenhouse_occupied);
           const bool leak_block = id(bs_leak_detected).state;
           static bool leak_water_interlock_prev = false;
-          if (leak_block) {
+          static bool occupancy_water_interlock_prev = false;
+          if (leak_block || occupancy_moisture_block) {
               willFog = false;
           }
           if (leak_block != leak_water_interlock_prev) {
@@ -576,6 +578,14 @@ interval:
                   ESP_LOGW("interlock","Leak lock cleared: water actuators may resume");
               }
               leak_water_interlock_prev = leak_block;
+          }
+          if (occupancy_moisture_block != occupancy_water_interlock_prev) {
+              if (occupancy_moisture_block) {
+                  ESP_LOGW("interlock","Occupancy inhibit: forcing fog and climate misters off");
+              } else {
+                  ESP_LOGI("interlock","Occupancy inhibit cleared: moisture actuators may resume");
+              }
+              occupancy_water_interlock_prev = occupancy_moisture_block;
           }
           if (id(fog_closes_vent) && vent_is_open && !open_vent_fog_assist) {
               willFog = false;
@@ -602,7 +612,7 @@ interval:
           set_relay(R[5], willVent, fan_requires_vent);
           set_relay(R[2], willFan1, false);
           set_relay(R[3], willFan2, false);
-          set_relay(R[4], willFog, false, leak_block);
+          set_relay(R[4], willFog, false, leak_block || occupancy_moisture_block);
 
           /**************** 12 — MISTER STATE MACHINE *****************************/
           // Runs only for SEALED_MIST or explicit VENTILATE assist. Zone stress
@@ -796,7 +806,7 @@ interval:
             // Misters run for sealed humidification and band-first controller vent mist assist.
             // Fog remains the heavy escalation and is still gated by the vent
             // close interlock above when fog_closes_vent is enabled.
-              bool occupancy_blocks = id(occupancy_inhibit_enabled) && id(greenhouse_occupied);
+              bool occupancy_blocks = occupancy_moisture_block;
               // Quick check: is any zone above its crop VPD target?
               bool any_zone_stressed = false;
               if(south_wet_allowed && !isnan(south_vpd) && id(vpd_target_south) > 0 && south_vpd > id(vpd_target_south)) any_zone_stressed = true;
@@ -1379,6 +1389,8 @@ interval:
             char fog_block_reason[64];
             if(leak_block) {
               snprintf(fog_block_reason, sizeof(fog_block_reason), "leak_detected");
+            } else if(occupancy_moisture_block) {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "occupancy");
             } else if(id(fog_rly)->state) {
               snprintf(fog_block_reason, sizeof(fog_block_reason), "served");
             } else if(of.fog_gate_window) {
