@@ -4,7 +4,7 @@ Owned by the [`firmware`](../agents/firmware.md) agent. Sprint counter is agent-
 
 ## In flight
 
-- [ ] **F-CLIMATE-INTENT first-principles controller implementation.** Canonical
+- [x] **F-CLIMATE-INTENT first-principles controller implementation.** Canonical
   design:
   [`docs/firmware-climate-intent-controller-final-design-2026-05-24.md`](../firmware-climate-intent-controller-final-design-2026-05-24.md).
   Implement as one controller path: `F-CI-1` replay evaluator and historical
@@ -20,12 +20,15 @@ Owned by the [`firmware`](../agents/firmware.md) agent. Sprint counter is agent-
   and ClimateIntent telemetry describes the executed controller action
   rather than re-running a parallel selector. Production rule: no alternate
   live controller and no second proposal path; offline replay/counterfactual
-  tools are diagnostic only. Current closeout evidence is preserved in draft
-  PR #10 (`bc85f03`): `make test-firmware` passed with 192 tests,
-  `make firmware-invariants` passed across 193525 replay rows with all 20
-  invariants, `make firmware-check` compiled with config hash `0xae4f1659`,
-  and deploy preflight hard gates are clear. PR #10 is review/preservation
-  only until coordinator approval; it is not standalone OTA authorization.
+  tools are diagnostic only. Accepted rollout landed through platform PR #4
+  and planner PR `verdify-planner#3`, then passed live
+  `make climate-authority-post-deploy-proof`, sensor-health, and site doctor.
+  The separate PR #10 firmware hardening branch (`bc85f03`) represented an
+  abandoned alternate controller architecture. It was archived at tag
+  `archive/pr10-abandoned-controller-architecture-2026-05-25`, exported to
+  `/mnt/iris/archives/verdify/`, closed unmerged, and its branch deleted. Do
+  not rebase or apply PR #10 as a continuation path; start from current `main`
+  if future firmware hardening is needed.
 - [x] **F-CI-7 Climate Authority: decouple climate wet assist from crop
   direct-wet windows.** Canonical sprint plan:
   [`docs/climate-authority-sprint-plan-2026-05-24.md`](../climate-authority-sprint-plan-2026-05-24.md).
