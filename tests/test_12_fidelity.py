@@ -2011,8 +2011,14 @@ def test_climate_authority_action_log_contract_is_tracked():
         assert token in schema
 
     assert "CLIMATE_ACTION_LOG_ENTITIES" in ingestor
+    assert "CLIMATE_ACTION_LOG_INTERVAL = 60" in ingestor
     assert "async def write_climate_action_log" in ingestor
+    assert "-> bool" in ingestor[ingestor.index("async def write_climate_action_log") :].splitlines()[0]
+    assert "last_climate_action_log = 0.0" in ingestor
+    assert "if now - last_climate_action_log >= CLIMATE_ACTION_LOG_INTERVAL" in ingestor
     assert "changed_entities & CLIMATE_ACTION_LOG_ENTITIES" in ingestor
+    assert "last_climate_action_log != now" in ingestor
+    assert "last_climate_action_log = now" in ingestor
     assert "ClimateActionLogRow(" in ingestor
 
 

@@ -113,6 +113,7 @@ DB_DSN = (
 )
 
 CLIMATE_FLUSH_INTERVAL = 60  # seconds between climate row writes
+CLIMATE_ACTION_LOG_INTERVAL = 60  # seconds between controller decision snapshots
 DIAG_FLUSH_INTERVAL = 60  # seconds between diagnostics row writes
 LOG_FLUSH_INTERVAL = 10  # seconds between log batch writes
 
@@ -466,12 +467,12 @@ def _climate_wet_assist_status(action: str, moisture_state: str | None, fog_allo
     return False, None
 
 
-async def write_climate_action_log(pool: asyncpg.Pool, ts: datetime) -> None:
+async def write_climate_action_log(pool: asyncpg.Pool, ts: datetime) -> bool:
     """Persist one structured ClimateIntent controller decision snapshot."""
     action = state.system.get("climate_action")
     priority_axis = state.system.get("climate_priority_axis")
     if not action or not priority_axis:
-        return
+        return False
 
     moisture_state = state.system.get("climate_moisture_assist_state")
     moisture_zone = state.system.get("climate_moisture_zone") or "none"
@@ -504,7 +505,7 @@ async def write_climate_action_log(pool: asyncpg.Pool, ts: datetime) -> None:
         )
     except ValidationError as e:
         log.error("climate_action_log skipped (validation failed: %s): action=%s priority=%s", e, action, priority_axis)
-        return
+        return False
 
     async with pool.acquire() as conn:
         await conn.execute(
@@ -634,6 +635,7 @@ async def write_climate_action_log(pool: asyncpg.Pool, ts: datetime) -> None:
             json.dumps(source_system_state, sort_keys=True),
         )
     log.debug("climate_action_log: action=%s priority=%s wet_allowed=%s", action, priority_axis, wet_assist_allowed)
+    return True
 
 
 async def write_override_events(pool: asyncpg.Pool, ts: datetime) -> None:
@@ -1310,6 +1312,7 @@ def on_state_change(entity_state) -> None:
 async def flush_loop(pool: asyncpg.Pool) -> None:
     """Periodically flush buffered data to the database."""
     last_climate = 0.0
+    last_climate_action_log = 0.0
     last_diag = 0.0
 
     while True:
@@ -1321,6 +1324,9 @@ async def flush_loop(pool: asyncpg.Pool) -> None:
         if now - last_climate >= CLIMATE_FLUSH_INTERVAL:
             try:
                 await write_climate(pool, ts)
+                if now - last_climate_action_log >= CLIMATE_ACTION_LOG_INTERVAL:
+                    if await write_climate_action_log(pool, ts):
+                        last_climate_action_log = now
                 last_climate = now
             except Exception as e:
                 log.error(f"climate write error: {e}")
@@ -1407,8 +1413,9 @@ async def flush_loop(pool: asyncpg.Pool) -> None:
         if state.pending_states:
             try:
                 changed_entities = await write_state_transitions(pool, ts)
-                if changed_entities & CLIMATE_ACTION_LOG_ENTITIES:
-                    await write_climate_action_log(pool, ts)
+                if changed_entities & CLIMATE_ACTION_LOG_ENTITIES and last_climate_action_log != now:
+                    if await write_climate_action_log(pool, ts):
+                        last_climate_action_log = now
             except Exception as e:
                 log.error(f"system_state write error: {e}")
 
