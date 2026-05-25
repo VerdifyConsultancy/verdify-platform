@@ -1574,6 +1574,37 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                                       OR jsonb_typeof(relay_truth) <> 'object'
                                       OR relay_truth = '{}'::jsonb
                                     THEN 'relay_truth'
+                                END,
+                                CASE
+                                    WHEN sensor_status IS NULL
+                                      OR jsonb_typeof(sensor_status) <> 'object'
+                                      OR sensor_status = '{}'::jsonb
+                                    THEN 'sensor_status'
+                                END,
+                                CASE
+                                    WHEN sensor_status->>'latest_climate_ts' IS NULL
+                                      OR sensor_status->>'latest_climate_ts' = ''
+                                    THEN 'sensor_status.latest_climate_ts'
+                                END,
+                                CASE
+                                    WHEN CASE
+                                        WHEN sensor_status->>'latest_climate_age_s' ~ '^[0-9]+$'
+                                        THEN (sensor_status->>'latest_climate_age_s')::int < 300
+                                        ELSE false
+                                    END IS NOT true
+                                    THEN 'sensor_status.latest_climate_age_s'
+                                END,
+                                CASE
+                                    WHEN sensor_status->>'temp_avg_present' IS DISTINCT FROM 'true'
+                                    THEN 'sensor_status.temp_avg_present'
+                                END,
+                                CASE
+                                    WHEN sensor_status->>'vpd_avg_present' IS DISTINCT FROM 'true'
+                                    THEN 'sensor_status.vpd_avg_present'
+                                END,
+                                CASE
+                                    WHEN sensor_status->>'band_context_complete' IS DISTINCT FROM 'true'
+                                    THEN 'sensor_status.band_context_complete'
                                 END
                             )
                             FROM latest

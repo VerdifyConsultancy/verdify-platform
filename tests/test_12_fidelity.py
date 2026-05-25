@@ -2104,6 +2104,7 @@ def test_health_checks_require_climate_action_log_freshness():
     assert "stale ${ACTION_AGE:-null}s" in liveness
     assert "incomplete ${ACTION_PROOF_MISSING:-missing}" in liveness
     assert 'ACTION_PROOF_MISSING="query_failed"' in liveness
+    assert 'exit "$FAIL"' in liveness
 
 
 def test_climate_action_log_treats_served_wet_assist_as_allowed():

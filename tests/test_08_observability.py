@@ -615,6 +615,12 @@ class TestContractDriftGuardrails:
             "temp_band_error_f",
             "vpd_band_error_kpa",
             "relay_truth",
+            "sensor_status",
+            "sensor_status.latest_climate_ts",
+            "sensor_status.latest_climate_age_s",
+            "sensor_status.temp_avg_present",
+            "sensor_status.vpd_avg_present",
+            "sensor_status.band_context_complete",
         )
         proof_surfaces = {
             "api": REPO_ROOT / "api" / "main.py",
@@ -629,6 +635,11 @@ class TestContractDriftGuardrails:
             assert not missing, f"{label} climate-action proof check is missing fields: {missing}"
             assert "jsonb_typeof(relay_truth)" in body, f"{label} must reject non-object relay_truth"
             assert "'{}'::jsonb" in body, f"{label} must reject empty relay_truth"
+            assert "jsonb_typeof(sensor_status)" in body, f"{label} must reject non-object sensor_status"
+            assert "latest_climate_age_s' ~ '^[0-9]+$'" in body, f"{label} must reject nonnumeric climate age"
+            assert "sensor_status->>'temp_avg_present' IS DISTINCT FROM 'true'" in body
+            assert "sensor_status->>'vpd_avg_present' IS DISTINCT FROM 'true'" in body
+            assert "sensor_status->>'band_context_complete' IS DISTINCT FROM 'true'" in body
 
     def test_climate_authority_post_deploy_proof_target_gates_ota(self):
         makefile = (REPO_ROOT / "Makefile").read_text()
