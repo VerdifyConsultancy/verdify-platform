@@ -36,6 +36,8 @@ from esp32_push import push_to_esp32
 from occupancy import expire_occupancy_latch, sync_occupancy_state
 from pydantic import ValidationError
 
+from slack_config import build_slack_payload
+from slack_ops.policy import should_post_alert
 from verdify_schemas import (
     AlertEnvelope,
     ClimateRow,
@@ -66,6 +68,7 @@ from config import (
     HA_TOKEN_FILE,
     HA_URL,
     SLACK_CHANNEL,
+    SLACK_SETTINGS,
     SLACK_TOKEN_FILE,
     STATE_DIR,
 )
@@ -526,17 +529,16 @@ def _fetch_all_cpu_samples() -> list[dict]:
 
 
 def _post_slack(token: str, channel: str, text: str, thread_ts: str | None = None) -> str | None:
-    payload = {"channel": channel, "text": text}
-    if thread_ts:
-        payload["thread_ts"] = thread_ts
+    payload = build_slack_payload(SLACK_SETTINGS, text, thread_ts=thread_ts)
+    payload["channel"] = channel
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
-        "https://slack.com/api/chat.postMessage",
+        f"{SLACK_SETTINGS.api_base_url}/chat.postMessage",
         data=data,
         headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json; charset=utf-8"},
     )
     try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with urllib.request.urlopen(req, timeout=SLACK_SETTINGS.timeout_seconds) as resp:
             result = json.loads(resp.read())
             return result.get("ts") if result.get("ok") else None
     except Exception:
@@ -2865,7 +2867,7 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
             except ValidationError as e:
                 log.error("alert skipped (envelope validation failed: %s): %r", e, a)
                 continue
-            should_slack = env.alert_type not in ("sensor_offline", "esp32_reboot")
+            should_slack = should_post_alert(env.alert_type, env.severity, settings=SLACK_SETTINGS)
             slack_ts = None
             if should_slack:
                 if slack_token is None:
@@ -2887,7 +2889,14 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                     )
 
             await conn.execute(
-                "INSERT INTO alert_log (alert_type, severity, category, sensor_id, zone, message, details, source, slack_ts, metric_value, threshold_value) VALUES ($1,$2,$3,$4,$5,$6,$7,'system',$8,$9,$10)",
+                """
+                INSERT INTO alert_log (
+                    alert_type, severity, category, sensor_id, zone, message,
+                    details, source, slack_ts, slack_channel_id, slack_message_ts,
+                    slack_thread_ts, slack_last_posted_at, metric_value, threshold_value
+                )
+                VALUES ($1,$2,$3,$4,$5,$6,$7,'system',$8,$9,$10,$11,$12,$13,$14)
+                """,
                 env.alert_type,
                 env.severity,
                 env.category,
@@ -2896,6 +2905,10 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                 env.message,
                 json.dumps(env.details) if env.details else None,
                 slack_ts,
+                SLACK_CHANNEL if slack_ts else None,
+                slack_ts,
+                slack_ts,
+                datetime.now(UTC) if slack_ts else None,
                 env.metric_value,
                 env.threshold_value,
             )
@@ -6713,6 +6726,7 @@ async def setpoint_confirmation_monitor(pool: asyncpg.Pool) -> None:
         if not rows:
             return
 
+        slack_token = None
         for r in rows:
             age_s = int(r["age_s"])
             severity = "critical" if age_s >= 900 else "warning"
@@ -6725,8 +6739,8 @@ async def setpoint_confirmation_monitor(pool: asyncpg.Pool) -> None:
             last_cfg = float(snap["value"]) if snap and snap["value"] is not None else None
 
             # Skip duplicate alerts: one open alert per (parameter, ts) pair.
-            existing = await conn.fetchval(
-                "SELECT id FROM alert_log "
+            existing = await conn.fetchrow(
+                "SELECT id, severity, slack_ts, slack_thread_ts FROM alert_log "
                 "WHERE alert_type='setpoint_unconfirmed' "
                 "  AND resolved_at IS NULL "
                 "  AND sensor_id=$1",
@@ -6757,10 +6771,41 @@ async def setpoint_confirmation_monitor(pool: asyncpg.Pool) -> None:
                     )
                     await conn.execute(
                         "UPDATE alert_log SET severity='critical', message=$2, details=$3 WHERE id=$1",
-                        existing,
+                        existing["id"],
                         alert.message,
                         json.dumps(alert.details),
                     )
+                    if existing["severity"] != "critical" and should_post_alert(
+                        alert.alert_type, alert.severity, settings=SLACK_SETTINGS
+                    ):
+                        if slack_token is None:
+                            try:
+                                slack_token = _load_token(SLACK_TOKEN_FILE)
+                            except Exception:
+                                slack_token = ""
+                        if slack_token:
+                            thread_ts = existing["slack_thread_ts"] or existing["slack_ts"]
+                            post_ts = _post_slack(
+                                slack_token,
+                                SLACK_CHANNEL,
+                                f"\U0001f534 *[ESCALATED->CRITICAL]* `{alert.alert_type}` - {alert.message}",
+                                thread_ts=thread_ts,
+                            )
+                            if post_ts and not thread_ts:
+                                await conn.execute(
+                                    """
+                                    UPDATE alert_log
+                                       SET slack_ts = COALESCE(slack_ts, $2),
+                                           slack_channel_id = COALESCE(slack_channel_id, $3),
+                                           slack_message_ts = COALESCE(slack_message_ts, $2),
+                                           slack_thread_ts = COALESCE(slack_thread_ts, $2),
+                                           slack_last_posted_at = now()
+                                     WHERE id = $1
+                                    """,
+                                    existing["id"],
+                                    post_ts,
+                                    SLACK_CHANNEL,
+                                )
                 continue
 
             alert = AlertEnvelope.model_validate(
@@ -6783,14 +6828,41 @@ async def setpoint_confirmation_monitor(pool: asyncpg.Pool) -> None:
                     },
                 }
             )
+            slack_ts = None
+            if should_post_alert(alert.alert_type, alert.severity, settings=SLACK_SETTINGS):
+                if slack_token is None:
+                    try:
+                        slack_token = _load_token(SLACK_TOKEN_FILE)
+                    except Exception:
+                        slack_token = ""
+                if slack_token:
+                    emoji = "\U0001f534" if alert.severity == "critical" else "\U0001f7e1"
+                    slack_ts = _post_slack(
+                        slack_token,
+                        SLACK_CHANNEL,
+                        f"{emoji} *[{alert.severity.upper()}]* `{alert.alert_type}` - {alert.message}",
+                    )
             await conn.execute(
-                "INSERT INTO alert_log "
-                "(alert_type, severity, category, sensor_id, message, details, source) "
-                "VALUES ('setpoint_unconfirmed', $1, 'system', $2, $3, $4::jsonb, 'ingestor')",
+                """
+                INSERT INTO alert_log (
+                    alert_type, severity, category, sensor_id, message, details,
+                    source, slack_ts, slack_channel_id, slack_message_ts,
+                    slack_thread_ts, slack_last_posted_at
+                )
+                VALUES (
+                    'setpoint_unconfirmed', $1, 'system', $2, $3, $4::jsonb,
+                    'ingestor', $5, $6, $7, $8, $9
+                )
+                """,
                 alert.severity,
                 alert.sensor_id,
                 alert.message,
                 json.dumps(alert.details),
+                slack_ts,
+                SLACK_CHANNEL if slack_ts else None,
+                slack_ts,
+                slack_ts,
+                datetime.now(UTC) if slack_ts else None,
             )
 
         log.info("Setpoint confirmation monitor: %d unconfirmed row(s)", len(rows))

@@ -2,6 +2,12 @@
 .env
 *.env
 secrets.yaml
+secrets/
+.secrets/
+config/credentials/
+*.token
+*_token.txt
+slack.local.yaml
 mqtt/password_file
 traefik/acme/
 

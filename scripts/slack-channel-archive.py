@@ -13,6 +13,7 @@ Output: /mnt/agents/iris/memory/slack/YYYY-MM-DD.md
 
 import json
 import logging
+import sys
 import time
 import urllib.request
 from collections import defaultdict
@@ -20,14 +21,21 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from slack_config import load_slack_settings  # noqa: E402
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [slack-archive] %(message)s")
 log = logging.getLogger(__name__)
 
-CHANNEL_ID = "C0ANVVAPLD6"
-TOKEN_FILE = "/mnt/agents/shared/credentials/slack_bot_token.txt"
-OUTPUT_DIR = Path("/mnt/agents/iris/memory/slack")
+SLACK_SETTINGS = load_slack_settings()
+CHANNEL_ID = SLACK_SETTINGS.channel_id
+TOKEN_FILE = SLACK_SETTINGS.bot_token_file
+OUTPUT_DIR = SLACK_SETTINGS.archive_output_dir
 STATE_FILE = OUTPUT_DIR / ".last-sync.json"
-TZ = ZoneInfo("America/Denver")
+TZ = ZoneInfo(SLACK_SETTINGS.timezone)
 
 
 def load_token():
@@ -36,7 +44,7 @@ def load_token():
 
 def slack_api(method, params=None, token=None):
     """Call Slack Web API."""
-    url = f"https://slack.com/api/{method}"
+    url = f"{SLACK_SETTINGS.api_base_url}/{method}"
     if params:
         url += "?" + "&".join(f"{k}={v}" for k, v in params.items())
     req = urllib.request.Request(url, headers={"Authorization": f"Bearer {token}"})

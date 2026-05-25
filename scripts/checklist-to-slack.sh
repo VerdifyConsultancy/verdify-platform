@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
 # checklist-to-slack.sh — Generate daily checklist and post to Slack #greenhouse
-# Cron: 0 13 * * * (7:00 AM MDT = 13:00 UTC)
+# Cron: 0 13 * * * in the host timezone (America/Denver)
 set -uo pipefail
 
 PYTHON="/srv/greenhouse/.venv/bin/python3"
 SCRIPTS="/srv/verdify/scripts"
-SLACK_TOKEN=$(cat /mnt/agents/shared/credentials/slack_bot_token.txt)
-CHANNEL="C0ANVVAPLD6"
 LOG="/srv/verdify/state/checklist-slack.log"
 
 log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG"; }
@@ -26,23 +24,17 @@ if [ -z "$SUMMARY" ]; then
 fi
 
 # 3. Post to Slack
-PAYLOAD=$(python3 -c "
-import json, sys
+MESSAGE=$("$PYTHON" -c "
+import sys
 text = sys.stdin.read()
 # Convert to Slack mrkdwn
 text = text.replace('[ ]', ':white_large_square:').replace('[x]', ':white_check_mark:').replace('[-]', ':fast_forward:')
 link = '\n:bar_chart: <https://graphs.verdify.ai/d/greenhouse-grower-daily/|Full checklist + dashboard>'
-print(json.dumps({'channel': '$CHANNEL', 'text': ':clipboard: *' + text.split(chr(10))[0] + '*\n' + chr(10).join(text.split(chr(10))[1:]) + link}))
+print(':clipboard: *' + text.split(chr(10))[0] + '*\n' + chr(10).join(text.split(chr(10))[1:]) + link)
 " <<< "$SUMMARY")
 
-HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
-    -X POST "https://slack.com/api/chat.postMessage" \
-    -H "Authorization: Bearer $SLACK_TOKEN" \
-    -H "Content-Type: application/json" \
-    -d "$PAYLOAD")
-
-if [ "$HTTP_CODE" = "200" ]; then
-    log "OK: Posted checklist to #greenhouse ($HTTP_CODE)"
+if printf '%s' "$MESSAGE" | "$PYTHON" "$SCRIPTS/slack-post.py" >> "$LOG" 2>&1; then
+    log "OK: Posted checklist to Slack"
 else
-    log "WARN: Slack post returned $HTTP_CODE"
+    log "WARN: Slack post failed"
 fi

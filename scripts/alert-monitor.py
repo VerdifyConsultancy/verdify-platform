@@ -1,8 +1,10 @@
 #!/usr/bin/env /srv/greenhouse/.venv/bin/python3
 """
-alert-monitor.py — Check alert conditions, write to alert_log, post to Slack.
+alert-monitor.py — Legacy one-shot alert check, alert_log writer, and Slack poster.
 
-Runs every 5 minutes via cron. Checks 6 conditions:
+The active production alert path is ingestor/tasks.py::alert_monitor inside
+verdify-ingestor.service. This script remains for manual/digest compatibility.
+Checks 6 conditions:
 1. sensor_offline — v_sensor_staleness stale = true
 2. relay_stuck — v_relay_stuck is_stuck = true
 3. vpd_stress — v_stress_hours_today vpd_stress_hours > 2
@@ -12,7 +14,7 @@ Runs every 5 minutes via cron. Checks 6 conditions:
 
 Deduplicates: won't re-alert for the same open condition.
 Auto-resolves: clears alerts when the condition passes.
-Posts to Slack #greenhouse via bot token API.
+Posts to Slack #greenhouse via root slack.yaml.
 
 Usage:
     alert-monitor.py           # run once (default, cron mode)
@@ -28,8 +30,16 @@ import sys
 import urllib.error
 import urllib.request
 from datetime import UTC, datetime
+from pathlib import Path
 
 import asyncpg
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from slack_config import build_slack_payload, load_slack_settings  # noqa: E402
+from slack_ops.policy import should_post_alert  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,
@@ -39,8 +49,9 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 # --- Configuration ---
-SLACK_CHANNEL = "C0ANVVAPLD6"  # #greenhouse
-SLACK_TOKEN_FILE = "/mnt/agents/shared/credentials/slack_bot_token.txt"
+SLACK_SETTINGS = load_slack_settings()
+SLACK_CHANNEL = SLACK_SETTINGS.channel_id
+SLACK_TOKEN_FILE = SLACK_SETTINGS.bot_token_file
 DRY_RUN = "--dry-run" in sys.argv
 DIGEST_MODE = "--digest" in sys.argv
 AIR_EXCHANGE_RELAY_STUCK_MODES = frozenset({"VENTILATE", "DEHUM_VENT", "THERMAL_RELIEF", "SAFETY_COOL"})
@@ -74,13 +85,12 @@ def post_slack(token: str, channel: str, text: str, thread_ts: str | None = None
         log.info("DRY RUN — would post to Slack: %s", text[:100])
         return None
 
-    payload = {"channel": channel, "text": text}
-    if thread_ts:
-        payload["thread_ts"] = thread_ts
+    payload = build_slack_payload(SLACK_SETTINGS, text, thread_ts=thread_ts)
+    payload["channel"] = channel
 
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
-        "https://slack.com/api/chat.postMessage",
+        f"{SLACK_SETTINGS.api_base_url}/chat.postMessage",
         data=data,
         headers={
             "Authorization": f"Bearer {token}",
@@ -88,7 +98,7 @@ def post_slack(token: str, channel: str, text: str, thread_ts: str | None = None
         },
     )
     try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with urllib.request.urlopen(req, timeout=SLACK_SETTINGS.timeout_seconds) as resp:
             result = json.loads(resp.read())
             if result.get("ok"):
                 return result.get("ts")
@@ -588,13 +598,7 @@ async def main():
             if key in open_keys:
                 continue  # Already alerted
 
-            # Escalation: sensor_offline only posts to Slack after 2h
-            # Critical alerts (temp_safety, leak_detected, vpd_extreme) always post immediately
-            should_slack = True
-            if alert["alert_type"] == "sensor_offline":
-                should_slack = False  # Log to DB only; Slack on escalation
-            elif alert["alert_type"] == "esp32_reboot":
-                should_slack = False  # Info-level, DB only
+            should_slack = should_post_alert(alert["alert_type"], alert["severity"], settings=SLACK_SETTINGS)
 
             slack_ts = None
             if should_slack and not DRY_RUN:
@@ -604,8 +608,12 @@ async def main():
             # Insert into alert_log
             await conn.execute(
                 """
-                INSERT INTO alert_log (alert_type, severity, category, sensor_id, zone, message, details, source, slack_ts, metric_value, threshold_value)
-                VALUES ($1, $2, $3, $4, $5, $6, $7, 'system', $8, $9, $10)
+                INSERT INTO alert_log (
+                    alert_type, severity, category, sensor_id, zone, message,
+                    details, source, slack_ts, slack_channel_id, slack_message_ts,
+                    slack_thread_ts, slack_last_posted_at, metric_value, threshold_value
+                )
+                VALUES ($1, $2, $3, $4, $5, $6, $7, 'system', $8, $9, $10, $11, $12, $13, $14)
             """,
                 alert["alert_type"],
                 alert["severity"],
@@ -615,6 +623,10 @@ async def main():
                 alert["message"],
                 json.dumps(alert["details"]) if alert["details"] else None,
                 slack_ts,
+                SLACK_CHANNEL if slack_ts else None,
+                slack_ts,
+                slack_ts,
+                datetime.now(UTC) if slack_ts else None,
                 alert.get("metric_value"),
                 alert.get("threshold_value"),
             )

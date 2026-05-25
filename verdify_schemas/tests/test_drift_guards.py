@@ -48,6 +48,14 @@ from verdify_schemas.setpoint import (
     SetpointPlanRow,
     SetpointSnapshot,
 )
+from verdify_schemas.slack_ops import (
+    CropTaskRow,
+    SlackAlertActionRow,
+    SlackCommandAuditRow,
+    SlackConfirmationRequestRow,
+    SlackNotificationEventRow,
+    SlackUserRoleRow,
+)
 from verdify_schemas.system_infra import (
     DataGap,
     ESP32LogRow,
@@ -176,6 +184,13 @@ DB_BACKED = [
     (SensorRegistry, "sensor_registry"),
     (ESP32LogRow, "esp32_logs"),
     (DataGap, "data_gaps"),
+    # Slack greenhouse operations
+    (SlackUserRoleRow, "slack_user_roles"),
+    (SlackCommandAuditRow, "slack_command_audit"),
+    (SlackConfirmationRequestRow, "slack_confirmation_requests"),
+    (SlackAlertActionRow, "slack_alert_actions"),
+    (SlackNotificationEventRow, "slack_notification_events"),
+    (CropTaskRow, "crop_tasks"),
 ]
 
 
@@ -204,6 +219,7 @@ LINKAGE_CRITICAL_COLUMNS = {
     "harvests": ("crop_id", "position_id"),
     "observations": ("crop_id", "position_id", "zone_id"),
     "treatments": ("crop_id", "position_id", "observation_id"),
+    "crop_tasks": ("crop_id", "position_id", "zone_id"),
 }
 
 
