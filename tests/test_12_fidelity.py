@@ -2023,8 +2023,14 @@ def test_climate_authority_action_log_contract_is_tracked():
 
 
 def test_health_checks_require_climate_action_log_freshness():
+    api = (REPO_ROOT / "api" / "main.py").read_text()
     health = (REPO_ROOT / "scripts" / "health-check.sh").read_text()
     liveness = (REPO_ROOT / "scripts" / "liveness-check.sh").read_text()
+
+    assert "climate_action_log_age_seconds" in api
+    assert "FROM climate_action_log" in api
+    assert "service_climate_action_log" in api
+    assert 'checks["service_climate_action_log"] = "ok" if action_age < 300 else "stale"' in api
 
     assert "FROM climate_action_log" in health
     assert "Climate action log:" in health

@@ -855,6 +855,11 @@ async def health():
         if age and age > 300:
             overall = "degraded"
 
+        action_age = await conn.fetchval("SELECT extract(epoch FROM now() - max(ts))::int FROM climate_action_log")
+        checks["climate_action_log_age_seconds"] = action_age
+        if action_age is None or action_age > 300:
+            overall = "degraded"
+
         # Scorecard
         score_row = await conn.fetchrow(
             "SELECT compliance_pct, planner_score FROM v_planner_performance WHERE date = CURRENT_DATE"
@@ -879,7 +884,9 @@ async def health():
 
     # Service health inferred from data freshness (API runs inside Docker — no systemctl/host access)
     climate_age = checks.get("climate_age_seconds", 999)
+    action_age = checks.get("climate_action_log_age_seconds", 999)
     checks["service_ingestor"] = "ok" if climate_age < 300 else "stale"
+    checks["service_climate_action_log"] = "ok" if action_age < 300 else "stale"
     # MCP server health is monitored by the ingestor (planning_heartbeat), not the API.
     # The API can't reach localhost:8000 from inside Docker (MCP binds to 127.0.0.1 on host).
 
