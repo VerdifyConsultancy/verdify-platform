@@ -2299,6 +2299,21 @@ def test_clean_water_relays_reject_direct_on_and_keep_controller_paths():
     assert "id(irrig_queue) |=" in manual_buttons
 
 
+def test_visible_gpio_relays_are_internal_or_controller_guarded():
+    hardware = Path("firmware/greenhouse/hardware.yaml").read_text()
+
+    for raw_block in hardware.split("\n  - platform: gpio")[1:]:
+        block = "\n  - platform: gpio" + raw_block
+        id_line = next((line.strip() for line in block.splitlines() if line.strip().startswith("id: ")), "")
+        if "internal: true" in block:
+            continue
+        if "name: " not in block:
+            continue
+        assert "on_turn_on:" in block, f"{id_line} is visible but has no turn-on guard"
+        assert "Blocked non-controller" in block, f"{id_line} is visible but does not block direct ON"
+        assert ".turn_off();" in block, f"{id_line} guard does not force relay OFF"
+
+
 def test_irrigation_schedule_persists_and_is_readbacked():
     greenhouse_yaml = Path("firmware/greenhouse.yaml").read_text()
     globals_yaml = Path("firmware/greenhouse/globals.yaml").read_text()
