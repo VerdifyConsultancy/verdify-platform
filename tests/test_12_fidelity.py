@@ -2258,6 +2258,37 @@ def test_mister_budget_emergency_uses_house_average_vpd():
     assert "!vpd_emergency" in controls[end : controls.index("bool irrigation_block", end)]
 
 
+def test_leak_detected_locks_water_actuators():
+    greenhouse_yaml = Path("firmware/greenhouse.yaml").read_text()
+    controls = Path("firmware/greenhouse/controls.yaml").read_text()
+
+    assert "id: bs_leak_detected" in greenhouse_yaml
+    assert "const bool leak_block = id(bs_leak_detected).state;" in controls
+    assert "Leak detected: forcing fog, misters, and irrigation off" in controls
+    assert "set_relay(R[4], willFog, false, leak_block);" in controls
+
+    mister_start = controls.index("bool mister_blocked =")
+    mister_end = controls.index("if(mister_blocked && id(mister_state) > 0)", mister_start)
+    mister_block = controls[mister_start:mister_end]
+    assert "leak_block" in mister_block
+    assert '"leak_detected"' in mister_block
+
+    fog_start = controls.index("char fog_block_reason")
+    fog_end = controls.index("static char last_fog_block_reason", fog_start)
+    fog_block = controls[fog_start:fog_end]
+    assert 'snprintf(fog_block_reason, sizeof(fog_block_reason), "leak_detected")' in fog_block
+    assert fog_block.index("leak_block") < fog_block.index("id(fog_rly)->state")
+
+    irrigation_start = controls.index("auto turn_off_all_irrigation")
+    irrigation_end = controls.index("// \u2500\u2500 Schedule check", irrigation_start)
+    irrigation_block = controls[irrigation_start:irrigation_end]
+    assert "id(center_mister).turn_off();" in irrigation_block
+    assert "if(leak_block)" in irrigation_block
+    assert "id(irrig_queue) = 0;" in irrigation_block
+    assert 'sync_fert_master("leak_lock")' in irrigation_block
+    assert "STOPPED by leak_detected" in irrigation_block
+
+
 def test_irrigation_schedule_is_heap_recovery_priority():
     import tasks
 

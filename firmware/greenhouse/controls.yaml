@@ -564,6 +564,19 @@ interval:
               (mode == VENTILATE) && ctl_state.vent_mist_assist_active && relay_out.fog;
           const bool open_vent_mister_assist =
               (mode == VENTILATE) && ctl_state.vent_mist_assist_active;
+          const bool leak_block = id(bs_leak_detected).state;
+          static bool leak_water_interlock_prev = false;
+          if (leak_block) {
+              willFog = false;
+          }
+          if (leak_block != leak_water_interlock_prev) {
+              if (leak_block) {
+                  ESP_LOGE("interlock","Leak detected: forcing fog, misters, and irrigation off");
+              } else {
+                  ESP_LOGW("interlock","Leak lock cleared: water actuators may resume");
+              }
+              leak_water_interlock_prev = leak_block;
+          }
           if (id(fog_closes_vent) && vent_is_open && !open_vent_fog_assist) {
               willFog = false;
           }
@@ -589,7 +602,7 @@ interval:
           set_relay(R[5], willVent, fan_requires_vent);
           set_relay(R[2], willFan1, false);
           set_relay(R[3], willFan2, false);
-          set_relay(R[4], willFog, false);
+          set_relay(R[4], willFog, false, leak_block);
 
           /**************** 12 — MISTER STATE MACHINE *****************************/
           // Runs only for SEALED_MIST or explicit VENTILATE assist. Zone stress
@@ -804,13 +817,16 @@ interval:
               bool irrigation_block = id(irrig_state) > 0;
               bool zone_mister_demand = humidity_demand && mister_vent_ok;
               bool mister_blocked =
-                  budget_block
+                  leak_block
+                  || budget_block
                   || !zone_mister_demand
                   || !any_mister_wet_allowed
                   || irrigation_block
                   || occupancy_blocks;
               if(mister_blocked) {
-                if(budget_block) {
+                if(leak_block) {
+                  snprintf(moisture_block_reason, sizeof(moisture_block_reason), "leak_detected");
+                } else if(budget_block) {
                   snprintf(moisture_block_reason, sizeof(moisture_block_reason), "water_budget");
                 } else if(!zone_mister_demand) {
                   snprintf(
@@ -1361,7 +1377,9 @@ interval:
             const bool fog_stress_extension_hour =
               fog_stress_hour_in_extension(local_hour, id(fog_time_window_end), id(fog_stress_window_latest_hour));
             char fog_block_reason[64];
-            if(id(fog_rly)->state) {
+            if(leak_block) {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "leak_detected");
+            } else if(id(fog_rly)->state) {
               snprintf(fog_block_reason, sizeof(fog_block_reason), "served");
             } else if(of.fog_gate_window) {
               if(id(fog_stress_window_extend_enabled)
@@ -1713,6 +1731,7 @@ interval:
 
           // Track which job entered flush (persists across ticks)
           static int flush_origin = 0;
+          const bool leak_block = id(bs_leak_detected).state;
 
           // ── VPD stress accumulator ──
           float cur_vpd = id(average_vpd_kpa).state;
@@ -1820,10 +1839,28 @@ interval:
               id(south_wall_mister_fertilized).turn_off();
               id(west_wall_mister).turn_off();
               id(west_wall_mister_fertilized).turn_off();
+              id(center_mister).turn_off();
               id(center_drips).turn_off();
               id(center_drips_fertilized).turn_off();
               id(fertilizer_master_valve).turn_off();
             };
+            static bool leak_irrigation_lock_prev = false;
+            if(leak_block) {
+              turn_off_all_irrigation();
+              id(irrig_state) = 0;
+              id(irrig_queue) = 0;
+              id(irrig_timer_ms) = 0;
+              sync_fert_master("leak_lock");
+              if(!leak_irrigation_lock_prev) {
+                ESP_LOGE("irrig","STOPPED by leak_detected");
+              }
+              leak_irrigation_lock_prev = true;
+              return;
+            }
+            if(leak_irrigation_lock_prev) {
+              ESP_LOGW("irrig","Leak lock cleared");
+              leak_irrigation_lock_prev = false;
+            }
             if(id(direct_wet_gate_enabled) && id(irrig_state) > 0) {
               bool active_wall = id(irrig_state) == 1 || id(irrig_state) == 2 || id(irrig_state) == 5;
               bool active_south = id(irrig_state) == 7 || id(irrig_state) == 9;
