@@ -183,6 +183,8 @@ CLIMATE_WET_ACTIONS = frozenset(
     }
 )
 CLIMATE_FOG_ACTIONS = frozenset({"VENT_COOL_FOG_ASSIST", "SEALED_FOG", "SAFETY_COOL"})
+_NO_FOG_BLOCK_REASONS = {None, "", "none"}
+_FOG_ALLOWED_REASONS = _NO_FOG_BLOCK_REASONS | {"served"}
 CLIMATE_RELAY_EQUIPMENT = (
     "heat1",
     "heat2",
@@ -467,6 +469,27 @@ def _climate_wet_assist_status(action: str, moisture_state: str | None, fog_allo
     return False, None
 
 
+def _normalized_block_reason(value: object) -> str | None:
+    if value is None:
+        return None
+    reason = str(value).strip()
+    return reason or None
+
+
+def _climate_fog_assist_status(
+    action: str,
+    climate_block_reason: object,
+    final_block_reason: object,
+) -> tuple[bool, str | None]:
+    """Return final fog authority after candidate and relay-level gates."""
+
+    climate_reason = _normalized_block_reason(climate_block_reason)
+    final_reason = _normalized_block_reason(final_block_reason)
+    reason = final_reason if final_reason not in _NO_FOG_BLOCK_REASONS else climate_reason
+    fog_allowed = bool(action in CLIMATE_FOG_ACTIONS and reason in _FOG_ALLOWED_REASONS)
+    return fog_allowed, reason
+
+
 async def write_climate_action_log(pool: asyncpg.Pool, ts: datetime) -> bool:
     """Persist one structured ClimateIntent controller decision snapshot."""
     action = state.system.get("climate_action")
@@ -476,8 +499,11 @@ async def write_climate_action_log(pool: asyncpg.Pool, ts: datetime) -> bool:
 
     moisture_state = state.system.get("climate_moisture_assist_state")
     moisture_zone = state.system.get("climate_moisture_zone") or "none"
-    fog_block_reason = state.system.get("climate_fog_block_reason") or state.system.get("fog_block_reason") or None
-    fog_allowed = bool(action in CLIMATE_FOG_ACTIONS and fog_block_reason in {None, "", "none", "served"})
+    fog_allowed, fog_block_reason = _climate_fog_assist_status(
+        action,
+        state.system.get("climate_fog_block_reason"),
+        state.system.get("fog_block_reason"),
+    )
     wet_assist_allowed, wet_block_reason = _climate_wet_assist_status(action, moisture_state, fog_allowed)
     relay_truth = {equipment: bool(state.equipment.get(equipment, False)) for equipment in CLIMATE_RELAY_EQUIPMENT}
     source_system_state = {entity: state.system.get(entity) for entity in sorted(CLIMATE_ACTION_LOG_ENTITIES)}

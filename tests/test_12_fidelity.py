@@ -2120,6 +2120,26 @@ def test_climate_action_log_treats_served_wet_assist_as_allowed():
         ingestor.state.system.update(original_system)
 
 
+def test_climate_action_log_prefers_final_fog_block_reason():
+    assert ingestor._climate_fog_assist_status("VENT_COOL_FOG_ASSIST", "none", "resource_budget") == (
+        False,
+        "resource_budget",
+    )
+    assert ingestor._climate_fog_assist_status("VENT_COOL_FOG_ASSIST", "none", "vent_interlock") == (
+        False,
+        "vent_interlock",
+    )
+    assert ingestor._climate_fog_assist_status("VENT_COOL_FOG_ASSIST", "time_window", "none") == (
+        False,
+        "time_window",
+    )
+    assert ingestor._climate_fog_assist_status("VENT_COOL_FOG_ASSIST", "none", "served") == (
+        True,
+        "served",
+    )
+    assert ingestor._climate_fog_assist_status("VENT_COOL", "none", "served") == (False, "served")
+
+
 def test_climate_telemetry_uses_actual_mister_pulse_state():
     controls = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
     start = controls.index("/*** ClimateIntent controller decision")
