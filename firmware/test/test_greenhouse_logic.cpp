@@ -141,6 +141,31 @@ TEST(direct_wet_stress_override_requires_vpd_dew_and_hour) {
     PASS();
 }
 
+TEST(climate_wet_assist_requires_safety_rails_not_ai_switch_or_crop_window) {
+    auto sp = band_setpoints();
+    sp.direct_wet_stress_override_enabled = false;
+    sp.direct_wet_stress_vpd_margin_kpa = 0.05f;
+    sp.direct_wet_stress_min_dew_margin_f = 8.0f;
+    sp.direct_wet_stress_latest_hour = 22;
+    validate_setpoints(sp);
+
+    auto in = make_inputs(86.0f, sp.vpd_high + 0.20f);
+    in.local_hour = 21;
+    in.dew_point_f = in.temp_f - 12.0f;
+
+    ASSERT_TRUE(climate_wet_assist_permitted(in, sp));
+
+    in.dew_point_f = in.temp_f - 4.0f;
+    ASSERT_FALSE(climate_wet_assist_permitted(in, sp));
+    ASSERT_TRUE(std::string(climate_wet_assist_block_reason(in, sp)) == "dew_margin");
+
+    in.dew_point_f = in.temp_f - 12.0f;
+    in.local_hour = 22;
+    ASSERT_FALSE(climate_wet_assist_permitted(in, sp));
+    ASSERT_TRUE(std::string(climate_wet_assist_block_reason(in, sp)) == "time_window");
+    PASS();
+}
+
 TEST(fog_stress_extension_requires_enabled_vpd_dew_and_extension_hour) {
     auto sp = band_setpoints();
     sp.fog_window_start = 7;
@@ -169,6 +194,48 @@ TEST(fog_stress_extension_requires_enabled_vpd_dew_and_extension_hour) {
     in.vpd_kpa = sp.vpd_high - 0.01f;
     ASSERT_FALSE(fog_stress_window_permitted(in, sp));
     ASSERT_FALSE(fog_permitted(in, sp));
+    PASS();
+}
+
+TEST(climate_fog_assist_uses_climate_window_independent_of_normal_fog_window) {
+    auto sp = band_setpoints();
+    sp.fog_window_start = 7;
+    sp.fog_window_end = 17;
+    sp.fog_stress_window_extend_enabled = true;
+    sp.fog_stress_window_latest_hour = 19;
+    sp.fog_stress_min_dew_margin_f = 10.0f;
+    validate_setpoints(sp);
+
+    auto in = make_inputs(86.0f, sp.vpd_high + 0.35f, 60.0f);
+    in.local_hour = 6;
+    in.dew_point_f = in.temp_f - 12.0f;
+
+    ASSERT_FALSE(fog_permitted(in, sp));
+    ASSERT_TRUE(climate_fog_assist_permitted(in, sp));
+
+    sp.fog_stress_window_extend_enabled = false;
+    ASSERT_TRUE(climate_fog_assist_permitted(in, sp));
+    PASS();
+}
+
+TEST(safety_cool_fog_uses_climate_fog_assist_gate) {
+    auto sp = band_setpoints();
+    sp.fog_window_start = 7;
+    sp.fog_window_end = 17;
+    sp.fog_stress_window_extend_enabled = true;
+    sp.fog_stress_window_latest_hour = 19;
+    sp.fog_stress_min_dew_margin_f = 10.0f;
+    validate_setpoints(sp);
+
+    auto in = make_inputs(sp.safety_max + 1.0f, sp.vpd_high + 0.8f, 60.0f);
+    in.local_hour = 6;
+    in.dew_point_f = in.temp_f - 12.0f;
+    auto relays = resolve_equipment(SAFETY_COOL, in, sp, initial_state(), true);
+
+    ASSERT_TRUE(relays.vent);
+    ASSERT_TRUE(relays.fan1);
+    ASSERT_TRUE(relays.fan2);
+    ASSERT_TRUE(relays.fog);
     PASS();
 }
 
@@ -207,6 +274,218 @@ TEST(relief_after_sealed_max) {
 TEST(dehum_when_vpd_low) {
     auto s = initial_state();
     ASSERT_EQ(determine_mode(make_inputs(72, 0.15), default_setpoints(), s, 5000), DEHUM_VENT);
+    PASS();
+}
+
+TEST(climate_action_names_match_contract_order) {
+    ASSERT_EQ(CLIMATE_DEHUM_VENT, 10);
+    ASSERT_TRUE(strcmp(CLIMATE_ACTION_NAMES[CLIMATE_SENSOR_FAULT], "SENSOR_FAULT") == 0);
+    ASSERT_TRUE(strcmp(CLIMATE_ACTION_NAMES[CLIMATE_VENT_COOL_MIST_ASSIST], "VENT_COOL_MIST_ASSIST") == 0);
+    ASSERT_TRUE(strcmp(CLIMATE_ACTION_NAMES[CLIMATE_SEALED_HUMIDIFY], "SEALED_HUMIDIFY") == 0);
+    ASSERT_TRUE(strcmp(CLIMATE_ACTION_NAMES[CLIMATE_DEHUM_VENT], "DEHUM_VENT") == 0);
+    PASS();
+}
+
+TEST(climate_candidate_selector_prefers_temperature_before_vpd_and_resource) {
+    ClimateCandidateProjection candidates[] = {
+        {
+            .action = CLIMATE_SEALED_HUMIDIFY,
+            .safety_ok = true,
+            .blocked_reason = "",
+            .projected_temp_error_f = 2.0f,
+            .projected_vpd_error_kpa = 0.0f,
+            .resource_cost = 0.0f,
+            .relay_churn_cost = 0.0f,
+            .confidence = 0.8f,
+            .prior_action_hold_preference = 0.0f
+        },
+        {
+            .action = CLIMATE_VENT_COOL_MIST_ASSIST,
+            .safety_ok = true,
+            .blocked_reason = "",
+            .projected_temp_error_f = 1.0f,
+            .projected_vpd_error_kpa = 0.2f,
+            .resource_cost = 10.0f,
+            .relay_churn_cost = 1.0f,
+            .confidence = 0.8f,
+            .prior_action_hold_preference = 0.0f
+        }
+    };
+    ASSERT_EQ(choose_climate_candidate_index(candidates, 2), 1);
+    PASS();
+}
+
+TEST(climate_candidate_selector_uses_vpd_then_resource_as_tie_breakers) {
+    ClimateCandidateProjection candidates[] = {
+        {
+            .action = CLIMATE_VENT_COOL,
+            .safety_ok = true,
+            .blocked_reason = "",
+            .projected_temp_error_f = 0.0f,
+            .projected_vpd_error_kpa = 0.3f,
+            .resource_cost = 0.0f,
+            .relay_churn_cost = 0.0f,
+            .confidence = 0.8f,
+            .prior_action_hold_preference = 0.0f
+        },
+        {
+            .action = CLIMATE_VENT_COOL_MIST_ASSIST,
+            .safety_ok = true,
+            .blocked_reason = "",
+            .projected_temp_error_f = 0.0f,
+            .projected_vpd_error_kpa = 0.1f,
+            .resource_cost = 5.0f,
+            .relay_churn_cost = 1.0f,
+            .confidence = 0.8f,
+            .prior_action_hold_preference = 0.0f
+        },
+        {
+            .action = CLIMATE_IDLE,
+            .safety_ok = true,
+            .blocked_reason = "",
+            .projected_temp_error_f = 0.0f,
+            .projected_vpd_error_kpa = 0.1f,
+            .resource_cost = 1.0f,
+            .relay_churn_cost = 0.0f,
+            .confidence = 0.8f,
+            .prior_action_hold_preference = 0.0f
+        }
+    };
+    ASSERT_EQ(choose_climate_candidate_index(candidates, 3), 2);
+    PASS();
+}
+
+TEST(climate_candidate_selector_rejects_unsafe_candidates) {
+    ClimateCandidateProjection candidates[] = {
+        {
+            .action = CLIMATE_VENT_COOL,
+            .safety_ok = false,
+            .blocked_reason = "occupancy",
+            .projected_temp_error_f = 0.0f,
+            .projected_vpd_error_kpa = 0.0f,
+            .resource_cost = 0.0f,
+            .relay_churn_cost = 0.0f,
+            .confidence = 0.8f,
+            .prior_action_hold_preference = 0.0f
+        },
+        {
+            .action = CLIMATE_IDLE,
+            .safety_ok = true,
+            .blocked_reason = "",
+            .projected_temp_error_f = 2.0f,
+            .projected_vpd_error_kpa = 1.0f,
+            .resource_cost = 0.0f,
+            .relay_churn_cost = 0.0f,
+            .confidence = 0.8f,
+            .prior_action_hold_preference = 0.0f
+        }
+    };
+    ASSERT_EQ(choose_climate_candidate_index(candidates, 2), 1);
+    candidates[1].safety_ok = false;
+    ASSERT_EQ(choose_climate_candidate_index(candidates, 2), -1);
+    PASS();
+}
+
+TEST(climate_decision_drives_hot_dry_to_vent_mist_assist) {
+    auto sp = band_setpoints();
+    sp.sw_fsm_controller_enabled = true;
+    sp.direct_wet_stress_override_enabled = true;
+    sp.direct_wet_stress_vpd_margin_kpa = 0.05f;
+    auto s = initial_state();
+    auto in = make_inputs(sp.temp_high + 4.0f, sp.vpd_high + 0.25f);
+    in.dew_point_f = in.temp_f - 12.0f;
+    ClimateActionDecision d = evaluate_climate_decision(in, sp, s);
+    ASSERT_EQ(d.climate_action, CLIMATE_VENT_COOL_MIST_ASSIST);
+    ASSERT_EQ(d.priority_axis, CLIMATE_PRIORITY_TEMP);
+    Mode m = determine_mode(in, sp, s, 5000);
+    ASSERT_EQ(m, VENTILATE);
+    ASSERT_TRUE(s.vent_mist_assist_active);
+    PASS();
+}
+
+TEST(climate_decision_selects_mist_assist_from_band_error_even_when_ai_switch_off) {
+    auto sp = band_setpoints();
+    sp.sw_fsm_controller_enabled = true;
+    sp.direct_wet_stress_override_enabled = false;
+    auto s = initial_state();
+    auto in = make_inputs(sp.temp_high + 4.0f, sp.vpd_high + 0.25f);
+    in.dew_point_f = in.temp_f - 12.0f;
+
+    ClimateActionDecision d = evaluate_climate_decision(in, sp, s);
+    ASSERT_EQ(d.climate_action, CLIMATE_VENT_COOL_MIST_ASSIST);
+    ASSERT_EQ(d.moisture_assist_state, CLIMATE_MOISTURE_SERVED);
+    PASS();
+}
+
+TEST(climate_decision_blocks_wet_assist_when_occupied) {
+    auto sp = band_setpoints();
+    sp.sw_fsm_controller_enabled = true;
+    auto s = initial_state();
+    auto in = make_inputs(sp.temp_high + 4.0f, sp.vpd_high + 0.25f);
+    in.occupied = true;
+    sp.occupancy_inhibit = true;
+    ClimateActionDecision d = evaluate_climate_decision(in, sp, s);
+    ASSERT_EQ(d.climate_action, CLIMATE_VENT_COOL);
+    ASSERT_EQ(d.moisture_assist_state, CLIMATE_MOISTURE_BLOCKED);
+    ASSERT_TRUE(std::string(d.fog_block_reason) == "occupancy");
+    PASS();
+}
+
+TEST(climate_decision_reports_inactive_moisture_when_vpd_in_band) {
+    auto sp = band_setpoints();
+    sp.sw_fsm_controller_enabled = true;
+    auto s = initial_state();
+    auto in = make_inputs(75.0f, 1.0f);
+    in.dew_point_f = in.temp_f - 2.0f;
+
+    ClimateActionDecision d = evaluate_climate_decision(in, sp, s);
+    ASSERT_EQ(d.moisture_assist_state, CLIMATE_MOISTURE_INACTIVE);
+    ASSERT_TRUE(d.next_mist_eligible_s < 0.0f);
+    PASS();
+}
+
+TEST(climate_decision_reports_engage_delay_timer_before_mist_eligibility) {
+    auto sp = band_setpoints();
+    sp.sw_fsm_controller_enabled = true;
+    sp.vpd_watch_dwell_ms = 60000;
+    auto s = initial_state();
+    s.vpd_watch_timer_ms = 30000;
+    auto in = make_inputs(75.0f, sp.vpd_high + 0.2f);
+    in.dew_point_f = in.temp_f - 12.0f;
+
+    ClimateActionDecision d = evaluate_climate_decision(in, sp, s);
+    ASSERT_EQ(d.moisture_assist_state, CLIMATE_MOISTURE_ENGAGE_DELAY);
+    ASSERT_EQ(int(d.next_mist_eligible_s), 30);
+    PASS();
+}
+
+TEST(climate_decision_reports_mist_backoff_gap_timer) {
+    auto sp = band_setpoints();
+    sp.sw_fsm_controller_enabled = true;
+    sp.vpd_watch_dwell_ms = 60000;
+    sp.mist_backoff_ms = 90000;
+    auto s = initial_state();
+    s.vpd_watch_timer_ms = sp.vpd_watch_dwell_ms;
+    s.mist_backoff_timer_ms = 30000;
+    auto in = make_inputs(75.0f, sp.vpd_high + 0.2f);
+    in.dew_point_f = in.temp_f - 12.0f;
+
+    ClimateActionDecision d = evaluate_climate_decision(in, sp, s);
+    ASSERT_EQ(d.moisture_assist_state, CLIMATE_MOISTURE_PULSE_GAP);
+    ASSERT_EQ(int(d.next_mist_eligible_s), 60);
+    PASS();
+}
+
+TEST(climate_decision_forces_safety_before_band_compliance) {
+    auto sp = band_setpoints();
+    sp.sw_fsm_controller_enabled = true;
+    auto s = initial_state();
+    auto in = make_inputs(sp.safety_max + 1.0f, sp.vpd_high + 0.6f);
+    ClimateActionDecision d = evaluate_climate_decision(in, sp, s);
+    ASSERT_EQ(d.climate_action, CLIMATE_SAFETY_COOL);
+    ASSERT_EQ(d.priority_axis, CLIMATE_PRIORITY_SAFETY);
+    Mode m = determine_mode(in, sp, s, 5000);
+    ASSERT_EQ(m, SAFETY_COOL);
     PASS();
 }
 
@@ -549,6 +828,9 @@ TEST(fix9_mist_stage_s1_to_s2) {
 
 TEST(fix9_mist_stage_s2_to_fog) {
     auto sp = band_setpoints(); sp.fog_escalation_kpa = 0.4;
+    sp.fog_stress_window_extend_enabled = true;
+    sp.fog_stress_window_latest_hour = 19;
+    sp.fog_stress_min_dew_margin_f = 10.0f;
     auto s = initial_state();
     s.mode_prev = SEALED_MIST; s.sealed_timer_ms = 100000;
     s.mist_stage = MIST_S2; s.mist_stage_timer_ms = 0;
@@ -570,8 +852,11 @@ TEST(fix9_mist_resets_on_seal_exit) {
 
 TEST(fix9_fog_in_equipment_reads_mist_stage) {
     auto sp = default_setpoints();
+    sp.fog_stress_window_extend_enabled = true;
+    sp.fog_stress_window_latest_hour = 19;
+    sp.fog_stress_min_dew_margin_f = 10.0f;
     auto s = initial_state(); s.mist_stage = MIST_FOG;
-    auto in = make_inputs(72, 1.7, 60);
+    auto in = make_inputs(72, sp.vpd_high + 0.4f, 60);
     auto out = resolve_equipment(SEALED_MIST, in, sp, s, true);
     ASSERT_TRUE(out.fog);
     PASS();
@@ -740,6 +1025,9 @@ TEST(fw9b_ventilate_fog_on_vpd_emergency) {
     sp.fog_min_temp = 55.0f;
     sp.fog_window_start = 7;
     sp.fog_window_end = 17;
+    sp.fog_stress_window_extend_enabled = true;
+    sp.fog_stress_window_latest_hour = 19;
+    sp.fog_stress_min_dew_margin_f = 10.0f;
     auto s = initial_state();
     // 85°F, VPD 3.2 (above trigger 2.59), 25% RH, hour 14 (in fog window)
     auto in = make_inputs(85.0f, 3.2f, 25.0f);
@@ -770,6 +1058,9 @@ TEST(fw9b_ventilate_fog_production_band) {
     sp.fog_min_temp = 55.0f;
     sp.fog_window_start = 7;
     sp.fog_window_end = 17;
+    sp.fog_stress_window_extend_enabled = true;
+    sp.fog_stress_window_latest_hour = 19;
+    sp.fog_stress_min_dew_margin_f = 10.0f;
     auto s = initial_state();
     // 85°F, VPD 1.8 (above band, below OLD vpd_max_safe 3.0), hour 14
     // OLD BEHAVIOR: fog off (vpd < 3.0). NEW BEHAVIOR: fog on (vpd > 1.45).
@@ -1917,8 +2208,7 @@ TEST(phase2_dwell_gate_thermal_relief_exit_preempts) {
 TEST(phase2_dwell_gate_tracks_ticks_when_off) {
     // Even with gate OFF, last_transition_tick_ms must still accumulate
     // so that when the gate is flipped ON later (live operation), the
-    // first transition has correct dwell accounting. Shadow mode requires
-    // this so we don't mis-count when flipping on.
+    // first transition has correct dwell accounting when flipping on.
     auto sp = band_setpoints();
     sp.sw_dwell_gate_enabled = false;  // OFF
 
@@ -1953,6 +2243,13 @@ static Setpoints band_first_setpoints() {
     sp.mist_backoff_ms = 600000;
     sp.safety_max = 100.0f;
     sp.safety_min = 40.0f;
+    sp.direct_wet_stress_override_enabled = true;
+    sp.direct_wet_stress_vpd_margin_kpa = 0.05f;
+    sp.direct_wet_stress_min_dew_margin_f = 8.0f;
+    sp.direct_wet_stress_latest_hour = 22;
+    sp.fog_stress_window_extend_enabled = true;
+    sp.fog_stress_window_latest_hour = 19;
+    sp.fog_stress_min_dew_margin_f = 10.0f;
     return sp;
 }
 
@@ -2108,7 +2405,7 @@ TEST(band_first_temp_band_preempts_humidification) {
 
     Mode m = determine_mode(make_inputs(82.0f, 1.6f), sp, s, 5000);
     ASSERT_EQ(m, VENTILATE);
-    ASSERT_TRUE(std::string(s.last_mode_reason) == "temp_high");
+    ASSERT_TRUE(std::string(s.last_mode_reason) == "vent_mist_assist");
     ASSERT_TRUE(s.vent_mist_assist_active);
     PASS();
 }
@@ -2230,7 +2527,7 @@ TEST(band_first_dehum_enters_below_vpd_low_hysteresis_and_exits_at_low_edge) {
     PASS();
 }
 
-TEST(band_first_dehum_overshoot_respects_existing_dwell_hold) {
+TEST(band_first_vpd_compliance_preempts_dehum_dwell_hold) {
     auto sp = band_first_setpoints();
     sp.sw_dwell_gate_enabled = true;
     sp.dwell_gate_ms = 300000;
@@ -2241,13 +2538,13 @@ TEST(band_first_dehum_overshoot_respects_existing_dwell_hold) {
 
     Mode m = determine_mode(make_inputs(75.0f, sp.vpd_high + 0.2f), sp, s, 5000);
 
-    ASSERT_EQ(m, DEHUM_VENT);
-    ASSERT_TRUE(std::string(s.last_mode_reason) == "dwell_hold");
+    ASSERT_EQ(m, SEALED_MIST);
+    ASSERT_TRUE(std::string(s.last_mode_reason) == "humidify_enter");
     ASSERT_FALSE(s.vent_mist_assist_active);
     PASS();
 }
 
-TEST(band_first_dehum_overshoot_cooling_respects_existing_dwell_hold) {
+TEST(band_first_temp_compliance_preempts_dehum_dwell_hold) {
     auto sp = band_first_setpoints();
     sp.sw_dwell_gate_enabled = true;
     sp.dwell_gate_ms = 300000;
@@ -2258,12 +2555,13 @@ TEST(band_first_dehum_overshoot_cooling_respects_existing_dwell_hold) {
 
     Mode m = determine_mode(make_inputs(sp.temp_high + 1.0f, sp.vpd_high + 0.2f), sp, s, 5000);
 
-    ASSERT_EQ(m, DEHUM_VENT);
-    ASSERT_FALSE(s.vent_mist_assist_active);
+    ASSERT_EQ(m, VENTILATE);
+    ASSERT_TRUE(std::string(s.last_mode_reason) == "vent_mist_assist");
+    ASSERT_TRUE(s.vent_mist_assist_active);
     PASS();
 }
 
-TEST(band_first_sealed_temp_preempt_respects_existing_dwell_gate) {
+TEST(band_first_temp_compliance_preempts_sealed_dwell_hold) {
     auto sp = band_first_setpoints();
     sp.sw_dwell_gate_enabled = true;
     sp.dwell_gate_ms = 300000;
@@ -2277,9 +2575,44 @@ TEST(band_first_sealed_temp_preempt_respects_existing_dwell_gate) {
 
     Mode m = determine_mode(make_inputs(sp.temp_high + 1.0f, sp.vpd_high + 0.2f), sp, s, 5000);
 
-    ASSERT_EQ(m, SEALED_MIST);
-    ASSERT_TRUE(std::string(s.last_mode_reason) == "dwell_hold");
-    ASSERT_FALSE(s.vent_mist_assist_active);
+    ASSERT_EQ(m, VENTILATE);
+    ASSERT_TRUE(std::string(s.last_mode_reason) == "vent_mist_assist");
+    ASSERT_TRUE(s.vent_mist_assist_active);
+    PASS();
+}
+
+TEST(climate_effective_decision_reports_actual_held_mode) {
+    auto sp = band_first_setpoints();
+    auto s = initial_state();
+    s.last_mode_reason = "dwell_hold";
+
+    const RelayOutputs relays = {false, false, false, false, false, false};
+    ClimateActionDecision d = describe_effective_climate_decision(
+        IDLE,
+        make_inputs(sp.temp_high + 1.0f, sp.vpd_high + 0.2f),
+        sp,
+        s,
+        relays
+    );
+
+    ASSERT_EQ(d.climate_action, CLIMATE_IDLE);
+    ASSERT_EQ(d.priority_axis, CLIMATE_PRIORITY_TEMP);
+    ASSERT_TRUE(std::string(d.candidate_summary) == "IDLE selected; dwell gate holding prior mode");
+    PASS();
+}
+
+TEST(climate_effective_decision_reports_inactive_moisture_when_vpd_in_band) {
+    auto sp = band_first_setpoints();
+    auto s = initial_state();
+    auto in = make_inputs(75.0f, 1.0f);
+    in.dew_point_f = in.temp_f - 2.0f;
+
+    const RelayOutputs relays = {true, false, false, false, false, false};
+    ClimateActionDecision d = describe_effective_climate_decision(IDLE, in, sp, s, relays);
+
+    ASSERT_EQ(d.climate_action, CLIMATE_HEAT);
+    ASSERT_EQ(d.moisture_assist_state, CLIMATE_MOISTURE_INACTIVE);
+    ASSERT_TRUE(d.next_mist_eligible_s < 0.0f);
     PASS();
 }
 

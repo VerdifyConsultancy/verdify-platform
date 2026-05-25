@@ -279,6 +279,72 @@ CONTACT_NOTIFY_SUBJECT_PREFIX = "Verdify contact"
 PUBLIC_CAMERA_IDS = {"greenhouse_1", "greenhouse_2"}
 FRIGATE_BASE_URL_ENV = "VERDIFY_FRIGATE_PUBLIC_BASE_URL"
 GO2RTC_BASE_URL_ENV = "VERDIFY_GO2RTC_PUBLIC_BASE_URL"
+CLIMATE_ACTION_PROOF_MISSING_SQL = """
+WITH latest AS (
+    SELECT *
+    FROM climate_action_log
+    ORDER BY ts DESC
+    LIMIT 1
+)
+SELECT COALESCE(
+    (
+        SELECT concat_ws(',',
+            CASE WHEN climate_action IS NULL OR climate_action = '' THEN 'climate_action' END,
+            CASE WHEN priority_axis IS NULL OR priority_axis = '' THEN 'priority_axis' END,
+            CASE WHEN climate_intent_version IS NULL OR climate_intent_version = '' THEN 'climate_intent_version' END,
+            CASE WHEN temp_low_f IS NULL THEN 'temp_low_f' END,
+            CASE WHEN temp_target_f IS NULL THEN 'temp_target_f' END,
+            CASE WHEN temp_high_f IS NULL THEN 'temp_high_f' END,
+            CASE WHEN vpd_low_kpa IS NULL THEN 'vpd_low_kpa' END,
+            CASE WHEN vpd_target_kpa IS NULL THEN 'vpd_target_kpa' END,
+            CASE WHEN vpd_high_kpa IS NULL THEN 'vpd_high_kpa' END,
+            CASE WHEN temp_target_delta_f IS NULL THEN 'temp_target_delta_f' END,
+            CASE WHEN vpd_target_delta_kpa IS NULL THEN 'vpd_target_delta_kpa' END,
+            CASE WHEN temp_band_error_f IS NULL THEN 'temp_band_error_f' END,
+            CASE WHEN vpd_band_error_kpa IS NULL THEN 'vpd_band_error_kpa' END,
+            CASE
+                WHEN relay_truth IS NULL
+                  OR jsonb_typeof(relay_truth) <> 'object'
+                  OR relay_truth = '{}'::jsonb
+                THEN 'relay_truth'
+            END,
+            CASE
+                WHEN sensor_status IS NULL
+                  OR jsonb_typeof(sensor_status) <> 'object'
+                  OR sensor_status = '{}'::jsonb
+                THEN 'sensor_status'
+            END,
+            CASE
+                WHEN sensor_status->>'latest_climate_ts' IS NULL
+                  OR sensor_status->>'latest_climate_ts' = ''
+                THEN 'sensor_status.latest_climate_ts'
+            END,
+            CASE
+                WHEN CASE
+                    WHEN sensor_status->>'latest_climate_age_s' ~ '^[0-9]+$'
+                    THEN (sensor_status->>'latest_climate_age_s')::int < 300
+                    ELSE false
+                END IS NOT true
+                THEN 'sensor_status.latest_climate_age_s'
+            END,
+            CASE
+                WHEN sensor_status->>'temp_avg_present' IS DISTINCT FROM 'true'
+                THEN 'sensor_status.temp_avg_present'
+            END,
+            CASE
+                WHEN sensor_status->>'vpd_avg_present' IS DISTINCT FROM 'true'
+                THEN 'sensor_status.vpd_avg_present'
+            END,
+            CASE
+                WHEN sensor_status->>'band_context_complete' IS DISTINCT FROM 'true'
+                THEN 'sensor_status.band_context_complete'
+            END
+        )
+        FROM latest
+    ),
+    'missing'
+)
+"""
 
 
 def _truthy_env(name: str) -> bool:
@@ -852,7 +918,17 @@ async def health():
         # Climate data freshness
         age = await conn.fetchval("SELECT extract(epoch FROM now() - max(ts))::int FROM climate")
         checks["climate_age_seconds"] = age
-        if age and age > 300:
+        if age is None or age > 300:
+            overall = "degraded"
+
+        action_age = await conn.fetchval("SELECT extract(epoch FROM now() - max(ts))::int FROM climate_action_log")
+        checks["climate_action_log_age_seconds"] = action_age
+        if action_age is None or action_age > 300:
+            overall = "degraded"
+
+        action_proof_missing = await conn.fetchval(CLIMATE_ACTION_PROOF_MISSING_SQL)
+        checks["climate_action_log_proof_missing"] = action_proof_missing or ""
+        if action_proof_missing:
             overall = "degraded"
 
         # Scorecard
@@ -879,7 +955,12 @@ async def health():
 
     # Service health inferred from data freshness (API runs inside Docker — no systemctl/host access)
     climate_age = checks.get("climate_age_seconds", 999)
-    checks["service_ingestor"] = "ok" if climate_age < 300 else "stale"
+    action_age = checks.get("climate_action_log_age_seconds", 999)
+    action_proof_missing = checks.get("climate_action_log_proof_missing", "missing")
+    checks["service_ingestor"] = "ok" if isinstance(climate_age, (int, float)) and climate_age < 300 else "stale"
+    checks["service_climate_action_log"] = (
+        "ok" if isinstance(action_age, (int, float)) and action_age < 300 and not action_proof_missing else "stale"
+    )
     # MCP server health is monitored by the ingestor (planning_heartbeat), not the API.
     # The API can't reach localhost:8000 from inside Docker (MCP binds to 127.0.0.1 on host).
 
@@ -1424,6 +1505,10 @@ async def public_data_health():
               AND severity IN ('critical', 'high')
             """
         )
+        climate_action_log_age_s = await conn.fetchval(
+            "SELECT extract(epoch FROM now() - max(ts))::int FROM climate_action_log"
+        )
+        climate_action_proof_missing = await conn.fetchval(CLIMATE_ACTION_PROOF_MISSING_SQL)
         try:
             async with conn.transaction():
                 await conn.execute("SET LOCAL jit = off")
@@ -1461,6 +1546,24 @@ async def public_data_health():
             "details": "weather_forecast fetched_at age seconds",
         },
         {
+            "check_name": "climate_action_log_freshness",
+            "status": "ok" if climate_action_log_age_s is not None and climate_action_log_age_s <= 300 else "fail",
+            "metric_value": climate_action_log_age_s,
+            "threshold_value": 300,
+            "details": "controller decision/action snapshot age seconds",
+        },
+        {
+            "check_name": "climate_action_log_proof_complete",
+            "status": "ok" if not climate_action_proof_missing else "fail",
+            "metric_value": 0 if not climate_action_proof_missing else 1,
+            "threshold_value": 0,
+            "details": (
+                "latest controller proof row has graphable target deltas and relay truth"
+                if not climate_action_proof_missing
+                else f"missing fields: {climate_action_proof_missing}"
+            ),
+        },
+        {
             "check_name": "open_critical_or_high_alerts",
             "status": "ok" if not open_critical_high else "fail",
             "metric_value": open_critical_high or 0,
@@ -1471,6 +1574,10 @@ async def public_data_health():
     check_rows = [dict(r) for r in trust_rows] if trust_rows else fallback_check_rows
     if not any(r["check_name"] == "open_critical_or_high_alerts" for r in check_rows):
         check_rows.append(fallback_check_rows[-1])
+    if not any(r["check_name"] == "climate_action_log_freshness" for r in check_rows):
+        check_rows.append(fallback_check_rows[2])
+    if not any(r["check_name"] == "climate_action_log_proof_complete" for r in check_rows):
+        check_rows.append(fallback_check_rows[3])
     checks = [
         PublicDataHealthCheck(
             name=r["check_name"],
@@ -2192,6 +2299,34 @@ async def public_home_metrics(greenhouse_id: str = DEFAULT_GREENHOUSE):
             WHERE source = 'forecast'
             """
         )
+        latest_action = await conn.fetchrow(
+            """
+            SELECT extract(epoch FROM now() - ts)::int AS age_s,
+                   climate_action,
+                   priority_axis,
+                   round(temp_target_delta_f::numeric, 2)::float AS temp_target_delta_f,
+                   round(vpd_target_delta_kpa::numeric, 3)::float AS vpd_target_delta_kpa,
+                   round(temp_band_error_f::numeric, 2)::float AS temp_band_error_f,
+                   round(vpd_band_error_kpa::numeric, 3)::float AS vpd_band_error_kpa,
+                   moisture_assist_state,
+                   wet_assist_allowed,
+                   wet_assist_block_reason,
+                   fog_allowed,
+                   fog_block_reason,
+                   relay_truth,
+                   sensor_status
+            FROM climate_action_log
+            WHERE COALESCE(greenhouse_id, 'vallery') = $1
+            ORDER BY ts DESC
+            LIMIT 1
+            """,
+            greenhouse_id,
+        )
+        latest_action_data = (
+            _coerce_jsonb(dict(latest_action), "relay_truth", "sensor_status") if latest_action else None
+        )
+        climate_action_log_age_s = latest_action_data["age_s"] if latest_action_data else None
+        climate_action_proof_missing = await conn.fetchval(CLIMATE_ACTION_PROOF_MISSING_SQL)
 
     climate_age_s = latest_climate["age_s"] if latest_climate else None
     forecast_age_s = forecast_health["age_s"] if forecast_health else None
@@ -2209,6 +2344,24 @@ async def public_home_metrics(greenhouse_id: str = DEFAULT_GREENHOUSE):
             "metric_value": forecast_age_s,
             "threshold_value": 21600,
             "details": "weather_forecast fetched_at age seconds",
+        },
+        {
+            "check_name": "climate_action_log_freshness",
+            "status": "ok" if climate_action_log_age_s is not None and climate_action_log_age_s <= 300 else "fail",
+            "metric_value": climate_action_log_age_s,
+            "threshold_value": 300,
+            "details": "controller decision/action snapshot age seconds",
+        },
+        {
+            "check_name": "climate_action_log_proof_complete",
+            "status": "ok" if not climate_action_proof_missing else "fail",
+            "metric_value": 0 if not climate_action_proof_missing else 1,
+            "threshold_value": 0,
+            "details": (
+                "latest controller proof row has graphable target deltas and relay truth"
+                if not climate_action_proof_missing
+                else f"missing fields: {climate_action_proof_missing}"
+            ),
         },
         {
             "check_name": "open_critical_or_high_alerts",
@@ -2251,6 +2404,22 @@ async def public_home_metrics(greenhouse_id: str = DEFAULT_GREENHOUSE):
         cost_today_usd=scorecard.get("cost_total"),
         water_today_gal=scorecard.get("water_gal") or scorecard.get("water_used_gal"),
         open_critical_high_alerts=open_critical_high or 0,
+        climate_action_log_age_s=climate_action_log_age_s,
+        controller_climate_action=latest_action_data["climate_action"] if latest_action_data else None,
+        controller_priority_axis=latest_action_data["priority_axis"] if latest_action_data else None,
+        controller_temp_target_delta_f=latest_action_data["temp_target_delta_f"] if latest_action_data else None,
+        controller_vpd_target_delta_kpa=latest_action_data["vpd_target_delta_kpa"] if latest_action_data else None,
+        controller_temp_band_error_f=latest_action_data["temp_band_error_f"] if latest_action_data else None,
+        controller_vpd_band_error_kpa=latest_action_data["vpd_band_error_kpa"] if latest_action_data else None,
+        controller_moisture_assist_state=latest_action_data["moisture_assist_state"] if latest_action_data else None,
+        controller_wet_assist_allowed=latest_action_data["wet_assist_allowed"] if latest_action_data else None,
+        controller_wet_assist_block_reason=latest_action_data["wet_assist_block_reason"]
+        if latest_action_data
+        else None,
+        controller_fog_allowed=latest_action_data["fog_allowed"] if latest_action_data else None,
+        controller_fog_block_reason=latest_action_data["fog_block_reason"] if latest_action_data else None,
+        controller_relay_truth=latest_action_data["relay_truth"] if latest_action_data else None,
+        controller_sensor_status=latest_action_data["sensor_status"] if latest_action_data else None,
         data_health_status=_overall_data_health(data_checks),
         data_health_warnings=warning_checks[:8],
     )

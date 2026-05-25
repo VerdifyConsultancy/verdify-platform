@@ -13,7 +13,7 @@ INGESTOR_ROOT = REPO_ROOT / "ingestor"
 if str(INGESTOR_ROOT) not in sys.path:
     sys.path.insert(0, str(INGESTOR_ROOT))
 
-import planner_graph_shadow  # noqa: E402
+import planner_memory_ingest  # noqa: E402
 import tasks  # noqa: E402
 
 
@@ -31,7 +31,7 @@ def test_build_outcome_memory_item_shapes_observed_outcome() -> None:
         "validated_at": datetime(2026, 5, 22, 14, 0, tzinfo=UTC),
     }
 
-    item = planner_graph_shadow.build_outcome_memory_item(row)
+    item = planner_memory_ingest.build_outcome_memory_item(row)
 
     assert item.memory_type == "observed_outcome"
     assert item.source_type == "verdify_outcome"
@@ -43,7 +43,7 @@ def test_build_outcome_memory_item_shapes_observed_outcome() -> None:
 
 
 def test_build_memory_ingest_request_wraps_items() -> None:
-    item = planner_graph_shadow.PlannerMemoryItem(
+    item = planner_memory_ingest.PlannerMemoryItem(
         memory_type="support_doc",
         source_type="verdify_doc",
         source_id="doc-001",
@@ -54,7 +54,7 @@ def test_build_memory_ingest_request_wraps_items() -> None:
         tags=("reference",),
     )
 
-    payload = planner_graph_shadow.build_memory_ingest_request(
+    payload = planner_memory_ingest.build_memory_ingest_request(
         greenhouse_id="vallery",
         batch_id="batch-1",
         items=[item],
@@ -68,7 +68,7 @@ def test_build_memory_ingest_request_wraps_items() -> None:
 
 
 def test_support_docs_example_loads() -> None:
-    items = planner_graph_shadow.load_support_doc_items(
+    items = planner_memory_ingest.load_support_doc_items(
         REPO_ROOT / "docs" / "planner" / "support_docs.example.json",
         greenhouse_id="vallery",
     )
@@ -85,7 +85,7 @@ def test_backfill_script_dry_run_summary_uses_stable_source_ids() -> None:
         str(REPO_ROOT / "scripts" / "backfill-planner-memory.py"),
         run_name="_test_backfill_planner_memory",
     )
-    item = planner_graph_shadow.PlannerMemoryItem(
+    item = planner_memory_ingest.PlannerMemoryItem(
         memory_type="observed_outcome",
         source_type="verdify_outcome",
         source_id="plan-eval:iris-2026-05-22-001",
@@ -154,25 +154,25 @@ async def test_planner_memory_ingest_sync_advances_validated_watermark(monkeypat
         }
     ]
 
-    monkeypatch.setattr(planner_graph_shadow, "planner_memory_ingest_enabled", lambda: True)
-    monkeypatch.setattr(planner_graph_shadow, "planner_memory_ingest_outcomes_enabled", lambda: True)
-    monkeypatch.setattr(planner_graph_shadow, "planner_memory_ingest_prior_plans_enabled", lambda: False)
-    monkeypatch.setattr(planner_graph_shadow, "planner_memory_ingest_support_docs_enabled", lambda: False)
-    monkeypatch.setattr(planner_graph_shadow, "planner_memory_ingest_max_batch_items", lambda: 10)
+    monkeypatch.setattr(planner_memory_ingest, "planner_memory_ingest_enabled", lambda: True)
+    monkeypatch.setattr(planner_memory_ingest, "planner_memory_ingest_outcomes_enabled", lambda: True)
+    monkeypatch.setattr(planner_memory_ingest, "planner_memory_ingest_prior_plans_enabled", lambda: False)
+    monkeypatch.setattr(planner_memory_ingest, "planner_memory_ingest_support_docs_enabled", lambda: False)
+    monkeypatch.setattr(planner_memory_ingest, "planner_memory_ingest_max_batch_items", lambda: 10)
     monkeypatch.setattr(
-        planner_graph_shadow,
+        planner_memory_ingest,
         "load_memory_ingest_state",
         lambda: {"last_validated_at": None, "seeded_support_doc_ids": []},
     )
     monkeypatch.setattr(
-        planner_graph_shadow,
+        planner_memory_ingest,
         "save_memory_ingest_state",
         lambda state: saved_state.update(state),
     )
     monkeypatch.setattr(
-        planner_graph_shadow,
+        planner_memory_ingest,
         "ingest_planner_memory_batch",
-        lambda **kwargs: planner_graph_shadow.HttpResult(
+        lambda **kwargs: planner_memory_ingest.HttpResult(
             200,
             {"accepted_count": 1, "duplicate_count": 0, "rejected_count": 0},
             12,
@@ -188,20 +188,20 @@ async def test_planner_memory_ingest_sync_advances_validated_watermark(monkeypat
 async def test_planner_memory_ingest_sync_parses_saved_watermark(monkeypatch) -> None:
     pool = _FakePool([])
 
-    monkeypatch.setattr(planner_graph_shadow, "planner_memory_ingest_enabled", lambda: True)
-    monkeypatch.setattr(planner_graph_shadow, "planner_memory_ingest_outcomes_enabled", lambda: True)
-    monkeypatch.setattr(planner_graph_shadow, "planner_memory_ingest_prior_plans_enabled", lambda: False)
-    monkeypatch.setattr(planner_graph_shadow, "planner_memory_ingest_support_docs_enabled", lambda: False)
-    monkeypatch.setattr(planner_graph_shadow, "planner_memory_ingest_max_batch_items", lambda: 10)
+    monkeypatch.setattr(planner_memory_ingest, "planner_memory_ingest_enabled", lambda: True)
+    monkeypatch.setattr(planner_memory_ingest, "planner_memory_ingest_outcomes_enabled", lambda: True)
+    monkeypatch.setattr(planner_memory_ingest, "planner_memory_ingest_prior_plans_enabled", lambda: False)
+    monkeypatch.setattr(planner_memory_ingest, "planner_memory_ingest_support_docs_enabled", lambda: False)
+    monkeypatch.setattr(planner_memory_ingest, "planner_memory_ingest_max_batch_items", lambda: 10)
     monkeypatch.setattr(
-        planner_graph_shadow,
+        planner_memory_ingest,
         "load_memory_ingest_state",
         lambda: {
             "last_validated_at": "2026-05-22T14:00:00+00:00",
             "seeded_support_doc_ids": [],
         },
     )
-    monkeypatch.setattr(planner_graph_shadow, "save_memory_ingest_state", lambda state: None)
+    monkeypatch.setattr(planner_memory_ingest, "save_memory_ingest_state", lambda state: None)
 
     await tasks.planner_memory_ingest_sync(pool)
 

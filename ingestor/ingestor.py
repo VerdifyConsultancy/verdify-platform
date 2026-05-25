@@ -72,6 +72,7 @@ from tasks import (
     midnight_watch,
     planner_memory_ingest_sync,
     planning_heartbeat,
+    readback_abs_tolerance,
     setpoint_confirmation_monitor,
     setpoint_dispatcher,
     shelly_sync,
@@ -80,6 +81,8 @@ from tasks import (
 )
 
 from verdify_schemas import (
+    CLIMATE_INTENT_CONTRACT_VERSION,
+    ClimateActionLogRow,
     ClimateRow,
     DailySummaryRow,
     Diagnostics,
@@ -110,6 +113,7 @@ DB_DSN = (
 )
 
 CLIMATE_FLUSH_INTERVAL = 60  # seconds between climate row writes
+CLIMATE_ACTION_LOG_INTERVAL = 60  # seconds between controller decision snapshots
 DIAG_FLUSH_INTERVAL = 60  # seconds between diagnostics row writes
 LOG_FLUSH_INTERVAL = 10  # seconds between log batch writes
 
@@ -147,6 +151,51 @@ logging.basicConfig(
     datefmt="%Y-%m-%dT%H:%M:%S",
 )
 log = logging.getLogger("ingestor")
+
+CLIMATE_ACTION_LOG_ENTITIES = frozenset(
+    {
+        "climate_action",
+        "climate_priority_axis",
+        "climate_candidate_summary",
+        "climate_moisture_assist_state",
+        "climate_moisture_zone",
+        "climate_temp_error_f",
+        "climate_vpd_error_kpa",
+        "climate_fog_margin_kpa",
+        "climate_fog_block_reason",
+        "climate_resource_cost_estimate",
+        "climate_next_mist_eligible_s",
+        "moisture_block_reason",
+        "vent_mist_assist_status",
+        "direct_wet_zone_mask",
+        "fog_block_reason",
+        "greenhouse_state",
+        "mode_reason",
+    }
+)
+CLIMATE_WET_ACTIONS = frozenset(
+    {
+        "VENT_COOL_MIST_ASSIST",
+        "VENT_COOL_FOG_ASSIST",
+        "SEALED_HUMIDIFY",
+        "SEALED_FOG",
+        "SAFETY_COOL",
+    }
+)
+CLIMATE_FOG_ACTIONS = frozenset({"VENT_COOL_FOG_ASSIST", "SEALED_FOG", "SAFETY_COOL"})
+_NO_FOG_BLOCK_REASONS = {None, "", "none"}
+_FOG_ALLOWED_REASONS = _NO_FOG_BLOCK_REASONS | {"served"}
+CLIMATE_RELAY_EQUIPMENT = (
+    "heat1",
+    "heat2",
+    "fan1",
+    "fan2",
+    "vent",
+    "fog",
+    "mister_south",
+    "mister_west",
+    "mister_center",
+)
 
 
 # ──────────────────────────────────────────────────────────────
@@ -347,10 +396,10 @@ async def write_equipment_events(pool: asyncpg.Pool, ts: datetime) -> None:
     log.debug(f"equipment_state: {len(validated)} events written")
 
 
-async def write_state_transitions(pool: asyncpg.Pool, ts: datetime) -> None:
+async def write_state_transitions(pool: asyncpg.Pool, ts: datetime) -> set[str]:
     """Flush pending state machine transitions."""
     if not state.pending_states:
-        return
+        return set()
     transitions = state.pending_states.copy()
     state.pending_states.clear()
     validated: list[tuple[datetime, str, str]] = []
@@ -362,13 +411,273 @@ async def write_state_transitions(pool: asyncpg.Pool, ts: datetime) -> None:
             continue
         validated.append((ts, entity, val))
     if not validated:
-        return
+        return set()
     async with pool.acquire() as conn:
         await conn.executemany(
             "INSERT INTO system_state (ts, entity, value) VALUES ($1, $2, $3)",
             validated,
         )
     log.debug(f"system_state: {len(validated)} transitions written")
+    return {entity for _, entity, _ in validated}
+
+
+def _parse_float_state(value: str | None) -> float | None:
+    if value is None or value == "" or value == "none":
+        return None
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return None
+    return parsed if math.isfinite(parsed) else None
+
+
+def _parse_json_object(value: str | None) -> dict[str, Any]:
+    if not value:
+        return {}
+    try:
+        parsed = json.loads(value)
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return {"raw": value}
+    return parsed if isinstance(parsed, dict) else {"raw": parsed}
+
+
+def _climate_wet_assist_status(action: str, moisture_state: str | None, fog_allowed: bool) -> tuple[bool, str | None]:
+    if action not in CLIMATE_WET_ACTIONS:
+        return False, None
+    if moisture_state == "served":
+        return True, None
+    if fog_allowed:
+        return True, None
+
+    vent_status = state.system.get("vent_mist_assist_status") or ""
+    blocked_reason = None
+    if vent_status.startswith("blocked:"):
+        blocked_reason = vent_status.split(":", 1)[1] or "blocked"
+
+    if moisture_state in {"engage_delay", "pulse_on", "pulse_gap"}:
+        if blocked_reason and blocked_reason not in {"engage_delay", "pulse_gap", "served", "none"}:
+            return False, blocked_reason
+        return True, None
+    if blocked_reason:
+        return False, blocked_reason
+    if moisture_state == "blocked":
+        return False, state.system.get("moisture_block_reason") or "blocked"
+
+    block = state.system.get("moisture_block_reason")
+    if block and block not in {"none", "served", "pulse_gap"}:
+        return False, block
+    return False, None
+
+
+def _normalized_block_reason(value: object) -> str | None:
+    if value is None:
+        return None
+    reason = str(value).strip()
+    return reason or None
+
+
+def _climate_fog_assist_status(
+    action: str,
+    climate_block_reason: object,
+    final_block_reason: object,
+) -> tuple[bool, str | None]:
+    """Return final fog authority after candidate and relay-level gates."""
+
+    climate_reason = _normalized_block_reason(climate_block_reason)
+    final_reason = _normalized_block_reason(final_block_reason)
+    reason = final_reason if final_reason not in _NO_FOG_BLOCK_REASONS else climate_reason
+    fog_allowed = bool(action in CLIMATE_FOG_ACTIONS and reason in _FOG_ALLOWED_REASONS)
+    return fog_allowed, reason
+
+
+async def write_climate_action_log(pool: asyncpg.Pool, ts: datetime) -> bool:
+    """Persist one structured ClimateIntent controller decision snapshot."""
+    action = state.system.get("climate_action")
+    priority_axis = state.system.get("climate_priority_axis")
+    if not action or not priority_axis:
+        return False
+
+    moisture_state = state.system.get("climate_moisture_assist_state")
+    moisture_zone = state.system.get("climate_moisture_zone") or "none"
+    fog_allowed, fog_block_reason = _climate_fog_assist_status(
+        action,
+        state.system.get("climate_fog_block_reason"),
+        state.system.get("fog_block_reason"),
+    )
+    wet_assist_allowed, wet_block_reason = _climate_wet_assist_status(action, moisture_state, fog_allowed)
+    relay_truth = {equipment: bool(state.equipment.get(equipment, False)) for equipment in CLIMATE_RELAY_EQUIPMENT}
+    source_system_state = {entity: state.system.get(entity) for entity in sorted(CLIMATE_ACTION_LOG_ENTITIES)}
+    resource_cost = _parse_json_object(state.system.get("climate_resource_cost_estimate"))
+
+    try:
+        ClimateActionLogRow(
+            ts=ts,
+            greenhouse_id=GREENHOUSE_ID,
+            climate_action=action,
+            priority_axis=priority_axis,
+            temp_band_error_f=_parse_float_state(state.system.get("climate_temp_error_f")),
+            vpd_band_error_kpa=_parse_float_state(state.system.get("climate_vpd_error_kpa")),
+            moisture_assist_state=moisture_state,
+            moisture_zone=moisture_zone,
+            wet_assist_allowed=wet_assist_allowed,
+            wet_assist_block_reason=wet_block_reason,
+            fog_allowed=fog_allowed,
+            fog_block_reason=fog_block_reason,
+            relay_truth=relay_truth,
+            resource_cost_estimate=resource_cost,
+            climate_intent_version=CLIMATE_INTENT_CONTRACT_VERSION,
+            candidate_summary=state.system.get("climate_candidate_summary"),
+            source_system_state=source_system_state,
+        )
+    except ValidationError as e:
+        log.error("climate_action_log skipped (validation failed: %s): action=%s priority=%s", e, action, priority_axis)
+        return False
+
+    async with pool.acquire() as conn:
+        await conn.execute(
+            """
+            WITH latest_climate AS (
+                SELECT c.*
+                  FROM climate c
+                 WHERE COALESCE(c.greenhouse_id, $1) = $1
+                   AND c.temp_avg IS NOT NULL
+                   AND c.vpd_avg IS NOT NULL
+                 ORDER BY c.ts DESC
+                 LIMIT 1
+            ),
+            band AS (
+                SELECT
+                    fn_setpoint_at($1, 'temp_low', COALESCE((SELECT ts FROM latest_climate), $2)) AS temp_low_f,
+                    fn_setpoint_at($1, 'temp_high', COALESCE((SELECT ts FROM latest_climate), $2)) AS temp_high_f,
+                    fn_setpoint_at($1, 'vpd_low', COALESCE((SELECT ts FROM latest_climate), $2)) AS vpd_low_kpa,
+                    fn_setpoint_at($1, 'vpd_high', COALESCE((SELECT ts FROM latest_climate), $2)) AS vpd_high_kpa
+            ),
+            plan_context AS (
+                SELECT sp.plan_id, sp.trigger_id, sp.planner_instance
+                  FROM setpoint_plan sp
+                 WHERE COALESCE(sp.greenhouse_id, $1) = $1
+                   AND sp.is_active = true
+                   AND sp.parameter <> 'plan_metadata'
+                   AND sp.ts <= COALESCE((SELECT ts FROM latest_climate), $2)
+                 ORDER BY sp.ts DESC, sp.created_at DESC
+                 LIMIT 1
+            )
+            INSERT INTO climate_action_log (
+                ts,
+                greenhouse_id,
+                climate_action,
+                priority_axis,
+                temp_low_f,
+                temp_target_f,
+                temp_high_f,
+                vpd_low_kpa,
+                vpd_target_kpa,
+                vpd_high_kpa,
+                temp_target_delta_f,
+                vpd_target_delta_kpa,
+                temp_band_error_f,
+                vpd_band_error_kpa,
+                moisture_assist_state,
+                moisture_zone,
+                wet_assist_allowed,
+                wet_assist_block_reason,
+                fog_allowed,
+                fog_block_reason,
+                relay_truth,
+                resource_cost_estimate,
+                climate_intent_version,
+                plan_id,
+                trigger_id,
+                planner_instance,
+                sensor_status,
+                candidate_summary,
+                source_system_state
+            )
+            SELECT
+                $2,
+                $1,
+                $3,
+                $4,
+                band.temp_low_f,
+                CASE WHEN band.temp_low_f IS NULL OR band.temp_high_f IS NULL
+                     THEN NULL ELSE (band.temp_low_f + band.temp_high_f) / 2.0 END,
+                band.temp_high_f,
+                band.vpd_low_kpa,
+                CASE WHEN band.vpd_low_kpa IS NULL OR band.vpd_high_kpa IS NULL
+                     THEN NULL ELSE (band.vpd_low_kpa + band.vpd_high_kpa) / 2.0 END,
+                band.vpd_high_kpa,
+                CASE WHEN lc.temp_avg IS NULL OR band.temp_low_f IS NULL OR band.temp_high_f IS NULL
+                     THEN NULL ELSE lc.temp_avg - ((band.temp_low_f + band.temp_high_f) / 2.0) END,
+                CASE WHEN lc.vpd_avg IS NULL OR band.vpd_low_kpa IS NULL OR band.vpd_high_kpa IS NULL
+                     THEN NULL ELSE lc.vpd_avg - ((band.vpd_low_kpa + band.vpd_high_kpa) / 2.0) END,
+                CASE
+                    WHEN lc.temp_avg IS NULL OR band.temp_low_f IS NULL OR band.temp_high_f IS NULL THEN $5
+                    WHEN lc.temp_avg < band.temp_low_f THEN lc.temp_avg - band.temp_low_f
+                    WHEN lc.temp_avg > band.temp_high_f THEN lc.temp_avg - band.temp_high_f
+                    ELSE 0.0
+                END,
+                CASE
+                    WHEN lc.vpd_avg IS NULL OR band.vpd_low_kpa IS NULL OR band.vpd_high_kpa IS NULL THEN $6
+                    WHEN lc.vpd_avg < band.vpd_low_kpa THEN lc.vpd_avg - band.vpd_low_kpa
+                    WHEN lc.vpd_avg > band.vpd_high_kpa THEN lc.vpd_avg - band.vpd_high_kpa
+                    ELSE 0.0
+                END,
+                $7,
+                $8,
+                $9,
+                $10,
+                $11,
+                $12,
+                $13::jsonb,
+                $14::jsonb,
+                $15,
+                pc.plan_id,
+                pc.trigger_id,
+                pc.planner_instance,
+                jsonb_strip_nulls(
+                    $16::jsonb || jsonb_build_object(
+                        'latest_climate_ts', lc.ts,
+                        'latest_climate_age_s',
+                            CASE
+                                WHEN lc.ts IS NULL THEN NULL
+                                ELSE greatest(0, extract(epoch FROM ($2 - lc.ts))::int)
+                            END,
+                        'temp_avg_present', lc.temp_avg IS NOT NULL,
+                        'vpd_avg_present', lc.vpd_avg IS NOT NULL,
+                        'band_context_complete',
+                            band.temp_low_f IS NOT NULL
+                            AND band.temp_high_f IS NOT NULL
+                            AND band.vpd_low_kpa IS NOT NULL
+                            AND band.vpd_high_kpa IS NOT NULL
+                    )
+                ),
+                $17,
+                $18::jsonb
+            FROM band
+            LEFT JOIN latest_climate lc ON true
+            LEFT JOIN plan_context pc ON true
+            """,
+            GREENHOUSE_ID,
+            ts,
+            action,
+            priority_axis,
+            _parse_float_state(state.system.get("climate_temp_error_f")),
+            _parse_float_state(state.system.get("climate_vpd_error_kpa")),
+            moisture_state,
+            moisture_zone,
+            wet_assist_allowed,
+            wet_block_reason,
+            fog_allowed,
+            fog_block_reason,
+            json.dumps(relay_truth, sort_keys=True),
+            json.dumps(resource_cost, sort_keys=True),
+            CLIMATE_INTENT_CONTRACT_VERSION,
+            json.dumps({"latest_climate_age_s": None}, sort_keys=True),
+            state.system.get("climate_candidate_summary"),
+            json.dumps(source_system_state, sort_keys=True),
+        )
+    log.debug("climate_action_log: action=%s priority=%s wet_allowed=%s", action, priority_axis, wet_assist_allowed)
+    return True
 
 
 async def write_override_events(pool: asyncpg.Pool, ts: datetime) -> None:
@@ -1045,6 +1354,7 @@ def on_state_change(entity_state) -> None:
 async def flush_loop(pool: asyncpg.Pool) -> None:
     """Periodically flush buffered data to the database."""
     last_climate = 0.0
+    last_climate_action_log = 0.0
     last_diag = 0.0
 
     while True:
@@ -1056,6 +1366,9 @@ async def flush_loop(pool: asyncpg.Pool) -> None:
         if now - last_climate >= CLIMATE_FLUSH_INTERVAL:
             try:
                 await write_climate(pool, ts)
+                if now - last_climate_action_log >= CLIMATE_ACTION_LOG_INTERVAL:
+                    if await write_climate_action_log(pool, ts):
+                        last_climate_action_log = now
                 last_climate = now
             except Exception as e:
                 log.error(f"climate write error: {e}")
@@ -1107,8 +1420,11 @@ async def flush_loop(pool: asyncpg.Pool) -> None:
                              WHERE sc.parameter = $1
                                AND sc.confirmed_at IS NULL
                                AND sc.ts > now() - interval '7 days'
-                               AND abs(sc.value - $2::double precision)
-                                     / greatest(abs($2::double precision), 1e-3) < 0.01
+                               AND (
+                                   abs(sc.value - $2::double precision)
+                                         / greatest(abs($2::double precision), 1e-3) < 0.01
+                                   OR abs(sc.value - $2::double precision) <= $3::double precision
+                               )
                                AND NOT EXISTS (
                                    SELECT 1
                                      FROM setpoint_changes newer
@@ -1116,11 +1432,14 @@ async def flush_loop(pool: asyncpg.Pool) -> None:
                                      AND COALESCE(newer.greenhouse_id, '') = COALESCE(sc.greenhouse_id, '')
                                      AND COALESCE(newer.source, '') <> 'esp32'
                                      AND newer.ts > sc.ts
-                                     AND abs(newer.value - $2::double precision)
-                                           / greatest(abs($2::double precision), 1e-3) >= 0.01
+                                     AND NOT (
+                                         abs(newer.value - $2::double precision)
+                                               / greatest(abs($2::double precision), 1e-3) < 0.01
+                                         OR abs(newer.value - $2::double precision) <= $3::double precision
+                                     )
                                )
                             """,
-                            [(param, val) for param, val in state.cfg_readback.items()],
+                            [(param, val, readback_abs_tolerance(param)) for param, val in state.cfg_readback.items()],
                         )
                 except Exception as e:
                     log.error(f"setpoint_snapshot write error: {e}")
@@ -1135,7 +1454,10 @@ async def flush_loop(pool: asyncpg.Pool) -> None:
         # State transitions (flush immediately)
         if state.pending_states:
             try:
-                await write_state_transitions(pool, ts)
+                changed_entities = await write_state_transitions(pool, ts)
+                if changed_entities & CLIMATE_ACTION_LOG_ENTITIES and last_climate_action_log != now:
+                    if await write_climate_action_log(pool, ts):
+                        last_climate_action_log = now
             except Exception as e:
                 log.error(f"system_state write error: {e}")
 

@@ -52,6 +52,13 @@ from verdify_schemas import (  # noqa: E402
     SetpointSummary,
     TreatmentCreate,
 )
+from verdify_schemas.climate_intent import (  # noqa: E402
+    CLIMATE_INTENT_CONTRACT_VERSION,
+    CLIMATE_INTENT_FIELDS,
+    ClimateIntent,
+    climate_intent_materialization_guardrails,
+    materialize_climate_intent_tier1,
+)
 from verdify_schemas.tunable_registry import (  # noqa: E402
     BAND_OWNED_REG,
     PLANNER_PUSHABLE_REG,
@@ -80,6 +87,110 @@ TIER1_TUNABLES = TIER1_REG
 FORCED_ON_SWITCH_PARAMS = frozenset({"sw_fsm_controller_enabled"})
 
 
+def _climate_intent_waypoint_errors(waypoints: object) -> list[dict[str, object]]:
+    if not isinstance(waypoints, list):
+        return [{"transition_index": -1, "error": "transitions must be a JSON array"}]
+    errors: list[dict[str, object]] = []
+    for idx, wp in enumerate(waypoints):
+        if not isinstance(wp, dict):
+            errors.append({"transition_index": idx, "error": "transition must be an object"})
+            continue
+        if "climate_intent" not in wp:
+            errors.append({"transition_index": idx, "error": "missing climate_intent"})
+        elif isinstance(wp["climate_intent"], dict):
+            provided = set(wp["climate_intent"])
+            missing = sorted(set(CLIMATE_INTENT_FIELDS) - provided)
+            if missing:
+                errors.append(
+                    {
+                        "transition_index": idx,
+                        "error": "climate_intent must explicitly set every field",
+                        "missing_fields": missing,
+                    }
+                )
+        if "params" in wp and wp.get("params") not in ({}, None):
+            errors.append({"transition_index": idx, "error": "raw params are not accepted in set_plan"})
+    return errors
+
+
+async def _fetch_active_tier1_params(conn: asyncpg.Connection) -> dict[str, float]:
+    rows = await conn.fetch(
+        """
+        SELECT parameter, value
+          FROM v_active_plan
+         WHERE parameter = ANY($1::text[])
+        """,
+        sorted(set(TIER1_REG) | set(BAND_OWNED_REG)),
+    )
+    params = {str(row["parameter"]): float(row["value"]) for row in rows}
+    target_row = await conn.fetchrow(
+        """
+        WITH latest_climate AS (
+          SELECT ts,
+                 temp_avg,
+                 vpd_avg,
+                 dew_point
+            FROM climate
+           WHERE temp_avg IS NOT NULL
+             AND vpd_avg IS NOT NULL
+           ORDER BY ts DESC
+           LIMIT 1
+        ), target AS (
+          SELECT ts,
+                 temp_avg,
+                 vpd_avg,
+                 dew_point,
+                 fn_setpoint_at('temp_low', ts) AS temp_low_f,
+                 fn_setpoint_at('temp_high', ts) AS temp_high_f,
+                 fn_setpoint_at('vpd_low', ts) AS vpd_low_kpa,
+                 fn_setpoint_at('vpd_high', ts) AS vpd_high_kpa
+            FROM latest_climate
+        )
+        SELECT temp_avg AS temp_actual_f,
+               vpd_avg AS vpd_actual_kpa,
+               CASE WHEN dew_point IS NULL THEN NULL ELSE temp_avg - dew_point END AS dew_margin_f,
+               greatest(0.0, temp_avg - temp_high_f) AS temp_above_high_f,
+               greatest(0.0, vpd_avg - vpd_high_kpa) AS vpd_above_high_kpa,
+               (temp_avg - ((temp_low_f + temp_high_f) / 2.0)) AS temp_target_delta_f,
+               (vpd_avg - ((vpd_low_kpa + vpd_high_kpa) / 2.0)) AS vpd_target_delta_kpa
+          FROM target
+        """
+    )
+    if target_row:
+        for key, value in dict(target_row).items():
+            if value is not None:
+                params[key] = float(value)
+    return params
+
+
+def _materialize_climate_intent_waypoints(
+    waypoints: list[object],
+    active_tier1_params: dict[str, float],
+) -> tuple[list[object], list[dict[str, object]]]:
+    expanded: list[object] = []
+    intent_records: list[dict[str, object]] = []
+    for wp in waypoints:
+        if not isinstance(wp, dict) or "climate_intent" not in wp:
+            expanded.append(wp)
+            continue
+        intent = ClimateIntent.model_validate(wp["climate_intent"])
+        materialized = materialize_climate_intent_tier1(intent, active_tier1_params)
+        guardrails = climate_intent_materialization_guardrails(intent, active_tier1_params, materialized)
+        expanded_wp = dict(wp)
+        expanded_wp["params"] = materialized
+        expanded.append(expanded_wp)
+        record = {
+            "ts": wp.get("ts"),
+            "reason": wp.get("reason"),
+            "climate_intent": intent.model_dump(mode="json"),
+            "materialized_params": materialized,
+        }
+        if guardrails:
+            record["guardrails"] = guardrails
+        intent_records.append(record)
+    return expanded, intent_records
+
+
 def _json(obj):
     """JSON serialize with asyncpg/Decimal support."""
     import decimal
@@ -99,7 +210,8 @@ mcp = FastMCP(
     instructions="""Verdify greenhouse control tools. Use these to monitor climate,
     manage setpoints, run the AI planner, and review performance.
     The greenhouse has temp/VPD bands, misters, fog, fans, heaters, and a vent.
-    The planner sets registry-approved tunables that shape how the controller responds.
+    The planner emits bounded ClimateIntent in set_plan transitions; MCP
+    materializes it into registry-approved tunables that shape how the controller responds.
     Band params (temp_low, temp_high, vpd_low, vpd_high) are dispatcher-owned
     read-only context in routine plans. Temp comes from crop policy; house VPD is
     derived from crop + zone policy. Use direct tunable pushes only for explicit overrides.""",
@@ -680,7 +792,7 @@ async def set_plan(
         fenced ```json block matching PlanHypothesisStructured (conditions +
         stress_windows + rationale). If present, it's validated and stored in
         plan_journal.hypothesis_structured for structured downstream rendering.
-    transitions: JSON array of objects: [{"ts": "ISO8601-with-TZ", "params": {"param": value, ...}, "reason": "..."}]
+    transitions: JSON array of objects: [{"ts": "ISO8601-with-TZ", "climate_intent": {...}, "reason": "..."}]
     experiment: optional one-line experiment description
     expected_outcome: optional measurable prediction
     trigger_id, planner_instance: required contract v1.5 audit fields. Pass
@@ -713,6 +825,34 @@ async def set_plan(
         waypoints_raw = json.loads(transitions)
     except json.JSONDecodeError as e:
         return json.dumps({"error": f"Invalid JSON in transitions: {e}"})
+
+    climate_intent_errors = _climate_intent_waypoint_errors(waypoints_raw)
+    if climate_intent_errors:
+        return json.dumps(
+            {
+                "error": "set_plan requires climate_intent on every transition",
+                "details": climate_intent_errors[:10],
+            }
+        )
+    conn_for_intent = await _db()
+    try:
+        active_tier1_params = await _fetch_active_tier1_params(conn_for_intent)
+    finally:
+        await conn_for_intent.close()
+    try:
+        waypoints_raw, climate_intent_records = _materialize_climate_intent_waypoints(
+            waypoints_raw,
+            active_tier1_params,
+        )
+    except ValidationError as e:
+        return json.dumps(
+            {
+                "error": "ClimateIntent validation failed",
+                "details": json.loads(e.json(include_input=False))[:10],
+            }
+        )
+    except ValueError as e:
+        return json.dumps({"error": "ClimateIntent materialization failed", "detail": str(e)})
 
     try:
         plan = Plan.model_validate(
@@ -906,10 +1046,10 @@ async def set_plan(
                             "trigger_id": normalized_trigger_id,
                         }
                     )
-                if delivery["status"] != "pending":
+                if delivery["status"] not in {"pending", "timed_out"}:
                     return json.dumps(
                         {
-                            "error": "trigger_id is not pending",
+                            "error": "trigger_id is not pending or timed_out",
                             "trigger_id": normalized_trigger_id,
                             "status": delivery["status"],
                         }
@@ -977,9 +1117,10 @@ async def set_plan(
                 """INSERT INTO plan_journal
                      (plan_id, created_at, hypothesis, experiment, expected_outcome,
                       hypothesis_structured, greenhouse_id, planner_instance, trigger_id,
-                      conditions_summary, params_changed)
+                      conditions_summary, params_changed, climate_intents,
+                      climate_intent_version)
                    VALUES ($1, now(), $2, $3, $4, $5::jsonb, 'vallery', $6, $7::uuid,
-                           $8, $9::text[])
+                           $8, $9::text[], $10::jsonb, $11)
                    RETURNING created_at""",
                 plan.plan_id,
                 plan.hypothesis,
@@ -990,6 +1131,8 @@ async def set_plan(
                 normalized_trigger_id,
                 conditions_summary,
                 params_seen,
+                json.dumps(climate_intent_records) if climate_intent_records else None,
+                CLIMATE_INTENT_CONTRACT_VERSION if climate_intent_records else None,
             )
             if normalized_trigger_id:
                 await conn.execute(
@@ -999,7 +1142,7 @@ async def set_plan(
                            plan_written_at   = $3,
                            status            = 'plan_written'
                      WHERE trigger_id = $1::uuid
-                       AND status = 'pending'
+                       AND status IN ('pending', 'timed_out')
                     """,
                     normalized_trigger_id,
                     plan.plan_id,
@@ -1027,6 +1170,9 @@ async def set_plan(
             "rows_written": rows_written,
             "band_params_dropped": band_params_dropped,
             "forced_on_params": forced_on_params,
+            "climate_intent_segments": len(climate_intent_records),
+            "climate_intent_version": CLIMATE_INTENT_CONTRACT_VERSION if climate_intent_records else None,
+            "climate_intent_guardrails": sum(len(record.get("guardrails", ())) for record in climate_intent_records),
             "structured_hypothesis": structured_payload is not None,
             "trigger_id": normalized_trigger_id,
             "planner_instance": planner_instance,

@@ -81,8 +81,8 @@ Phase 8 is complete when:
    `ingestor/config.py`.
 
 After (4), the loop overhaul work is fully discharged. Future model
-swaps or Hermes profile changes use the shadow-week infrastructure
-(Phase 6) as the replay/regression harness.
+swaps or Hermes profile changes use offline replay/counterfactual tooling as
+the regression harness, not a production shadow controller.
 
 ## Failure modes
 

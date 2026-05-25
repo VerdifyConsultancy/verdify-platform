@@ -755,6 +755,22 @@ globals:
     # Bitmask: bit0=wall_clean, bit1=wall_fert, bit2=center_clean,
     # bit3=center_fert, bit4=south_mister_fert, bit5=west_mister_fert
 
+  # True only while the irrigation state machine is intentionally changing
+  # fertilized relays or the fertilizer master valve. Relay-level guards use
+  # this to reject direct HA/manual fert actuation.
+  - id: fert_controller_actuating
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
+  # True only while the climate controller or irrigation scheduler is
+  # intentionally changing clean-water drip/mister relays. Relay-level guards
+  # use this to reject direct HA/manual clean-water actuation.
+  - id: water_controller_actuating
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
   - id: irrig_wall_cycle_count
     type: int
     restore_value: no
@@ -1120,9 +1136,8 @@ globals:
 
   # ─── Phase-2 dwell gate ───────────────────────────────────────────
   # 5-min hold on non-safety mode transitions to kill whipsaw. Default
-  # OFF for shadow-mode bake; planner flips to ON after 14d replay +
-  # shadow validation. See plan Phase 2 in
-  # .claude-agents/iris-dev/plans/yo-iris-dev-you-help-humming-stonebraker.md
+  # OFF until replay/invariant evidence and operator approval allow direct
+  # activation in the single live controller path.
   - id: sw_dwell_gate_enabled
     type: bool
     restore_value: no

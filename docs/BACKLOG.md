@@ -26,6 +26,32 @@ Current posture:
 
 - Track A greenhouse operations still outrank all business/site/repo work.
 - `lab.verdify.ai` is the greenhouse lab + evidence site; `verdify.ai` / `www.verdify.ai` redirect there until the separate consulting CMS is ready.
+- **Active climate-control architecture target:** implement the
+  [`ClimateIntent` controller design](firmware-climate-intent-controller-final-design-2026-05-24.md)
+  as the new AI/controller boundary: firmware owns safety, relays, and
+  lexicographic candidate selection; dispatcher/crop policy owns temp/VPD
+  low-target-high bands; AI receives those targets as read-only context and
+  owns bounded tactical forecast-aware intent, historical priors, and resource
+  posture.
+- **ClimateIntent closeout state:** GitHub issue
+  [#8](https://github.com/VerdifyConsultancy/verdify-platform/issues/8)
+  tracks the current rollout closeout. As of 2026-05-25 15:46 MDT, platform
+  PR #4 and planner PR `verdify-planner#3` are open, non-draft, mergeable,
+  and validated; firmware hardening is preserved in draft PR #10. Live health
+  is green after the `/mnt/agents` share repair, but global closeout remains
+  open until coordinator-approved merges, service restarts/deploy, and a final
+  post-deploy health proof are complete.
+- **Climate-control sprint shipped:** the
+  [`Climate Authority Sprint Plan`](climate-authority-sprint-plan-2026-05-24.md)
+  closed the 2026-05-24 live gap where `VENT_COOL_MIST_ASSIST` was selected
+  but wet relays were blocked by crop direct-wet and fog clock windows. Commit
+  `9dd2b94` deployed firmware `2026.5.24.2255.9dd2b94` with operator-approved
+  weekly OTA override, sensor-health `PASS: 27 FAIL: 0 WARN: 0`, active plan
+  coverage `4/4` transitions with 39 Tier 1 params, and new structured
+  `climate_action_log` rows showing wet assist served before VPD returned into
+  band. Tracked issues: [#5](https://github.com/VerdifyConsultancy/verdify-platform/issues/5),
+  [#6](https://github.com/VerdifyConsultancy/verdify-platform/issues/6), and
+  [#7](https://github.com/VerdifyConsultancy/verdify-platform/issues/7).
 - Broad SaaS/multi-tenant work moves behind consulting validation unless needed for Track A or public-site reliability.
 - Repo, GitHub, project-board, and agent-scope splits are coordinator-owned until boundaries are decided.
 - PR #80 stays intact as the first recovery baseline; unrelated dirty work must
@@ -42,7 +68,7 @@ day-to-day coordination. The older section remains as historical context.
 | RM-1 | `coordinator` | Quarantine dirty state and split independent PR branches/worktrees | **Complete:** dirty themes split into reviewed PRs or archived RM7 patches; temp worktrees/stashes disposed |
 | RM-2 | `coordinator` + `ingestor` + `web` | Integrate irrigation/fertigation canonicalization software without running the finalizer | **Merge/deploy complete:** PR #83 merged at `a8f8ffa`; main CI run `26314849773` passed; migration 134, ingestor/MCP restart, Grafana restart, and software-only live validation completed |
 | RM-3 | `coordinator` + operator | Repair physical irrigation feedback and only then run the finalizer | Four feedback rows `ok`; no critical/high alerts |
-| RM-4 | `genai` + `coordinator` | Reconcile planner-graph shadow and memory-backfill work, including stale `genai` worktree files | **Merge/deploy complete:** PR #84 merged at `3a2eb87`; main CI run `26315767545` passed; ingestor-only restart completed; live shadow smoke wrote accepted non-authoritative row `4`; deployed backfill dry-runs passed |
+| RM-4 | `genai` + `coordinator` | Reconcile planner-graph alternate-path and memory-backfill work, including stale `genai` worktree files | **Closed and superseded:** PR #84 merged at `3a2eb87`; later ClimateIntent single-path work removed the runtime alternate service, scripts, tests, Docker profile, MCP server, and live side-channel tables |
 | RM-5 | `web` + `coordinator` | Integrate public lab/Grafana refinements and cache-warm fix | **Complete:** PR #81 source/deploy/cache-warmer done; `lab.verdify.ai` and `labs.verdify.ai` both resolve to gateway and serve HTTP 200; issue #82 closed |
 | RM-6 | `ingestor` + `coordinator` | Integrate climate overlay semantics and loose guard changes | **Merge/deploy complete:** PR #85 merged at `45758b6`; main CI run `26316119564` passed; ingestor restart/live-tail clean; deployed Tempest script wrote `weather_station` without orphan `climate` rows |
 | RM-7 | `coordinator` | Clean temp worktrees, stashes, and generated-state risks | **Complete:** temp/recovery worktrees removed, stale genai worktree reset, stashes archived+dropped, `.git/.DS_Store` removed, persistent agent worktrees fast-forwarded to `45758b6` |
@@ -306,13 +332,19 @@ From failure-mode analysis — cannot be deferred:
 - [x] **PR-A** (#36 merged `150c133`) — VENTILATE fog trigger at band+escalation, not safety-threshold. Closes ~38% of concurrent-gap measured in corpus.
 - [x] **PR-B** dropped — PR-A handles the breaker-latch high-VPD window. Verified against 2026-04-22 17:53 event.
 
-**Strategic (weeks 2-16, Phase 3 proper):**
+**Strategic (superseded by ClimateIntent single-path controller):**
 
-- [ ] **PR-1 — Zone FSM + vote struct (pure refactor, zero behavior change).** Define `ZoneVote`, `ZoneBand`, `compute_*_want()`, `probe_confidence()`. Refactor existing per-zone logic (mist_pulse_controller) into explicit `compute_vpd_vote(zone)`. Emit votes to diagnostic sensor for shadow observation. Replay-diff zero. Tunables: 32 zone-band thresholds added (8 per zone × 4 zones) + probe confidence timings.
+This April coordinator rollout plan is historical. Current Track A
+controller architecture is the ClimateIntent single path: planner emits bounded
+intent, MCP materializes Tier 1 rows, dispatcher validates, and ESP32 firmware
+executes the only live relay controller. Do not introduce alternate production
+controllers or second proposal paths.
 
-- [ ] **PR-2 — Coordinator skeleton + fog/mister under coordinator.** New `coordinator()` function with quorum/veto/aggregate/guardrails structure. Feature flag `use_coordinator` (default off). **Partial rollout:** fog + misters only move under coordinator control; fans/vent/heat stay mode-driven. Shadow mode 14 days. Why partial: fog/mister is where the user-visible duty-cycle gap lives and smallest blast radius.
+- [ ] **PR-1 — Zone FSM + vote struct (pure refactor, zero behavior change).** Define `ZoneVote`, `ZoneBand`, `compute_*_want()`, `probe_confidence()`. Refactor existing per-zone logic (mist_pulse_controller) into explicit `compute_vpd_vote(zone)`. Emit votes to diagnostic sensors for observability only. Replay-diff zero. Tunables: 32 zone-band thresholds added (8 per zone × 4 zones) + probe confidence timings.
 
-- [ ] **PR-3 — Fan + vent + heat under coordinator + all 8 guardrails.** Full relay resolution moves to coordinator. Per-actuator dwell, quorum, warmup, occupancy, budget, interlocks, tunable TTL. Shadow mode **21 days** (longer than PR-2 because broader surface). Invariant suite expands to 30 (original 15 + 15 coordinator-specific).
+- [ ] **PR-2 — Coordinator skeleton + fog/mister under coordinator.** New `coordinator()` function with quorum/veto/aggregate/guardrails structure. Any activation must be direct in the single live path after replay/invariant proof and operator approval. Do not create a partial production controller fork.
+
+- [ ] **PR-3 — Fan + vent + heat under coordinator + all 8 guardrails.** Full relay resolution moves to coordinator only if it replaces the live path atomically after replay/invariant proof. Per-actuator dwell, quorum, warmup, occupancy, budget, interlocks, tunable TTL. Invariant suite expands to 30 (original 15 + 15 coordinator-specific).
 
 - [ ] **PR-4 — `determine_mode()` retired.** Mode becomes derived label via `derive_mode(relay_outputs, state)`. Feature flag flipped `use_coordinator=true`. Delete `determine_mode()` 2 weeks after flip.
 
@@ -342,11 +374,11 @@ From failure-mode analysis — cannot be deferred:
 - [ ] **Zone bands — per-zone vs global + offset.** Per-zone = 32 new tunables; global + offset = 4 new + ~8 offsets. Research leans per-zone; cost is Iris prompt surface.
 - [ ] **South probe hardware mitigation.** 14.35% NULL is independent of Phase 3 — needs a new probe / Modbus audit. Separate track alongside firmware work.
 - [ ] **Iris tunable tiering.** Phase 3 adds ~32 tunables. Need to decide which are Tier 1 (daily tuning) vs Tier 2 (escape-hatch) so the prompt we just slimmed in Phase 1d doesn't rebloat.
-- [ ] **Shadow-mode length.** PR-3 nominally 21 days; can we start shadow telemetry earlier (PR-1) to accumulate observation hours before PR-2 ships?
+- [x] **Runtime alternate-controller rollout removed.** No production alternate path. Validation is offline replay, invariants, tests, operator approval, and post-deploy health.
 
 ### Risks
 
-- Coordinator surface is larger than mode-based — 25-30 new tunables, 15 new invariants, 21-day shadow bake. More room for silent-push corruption (mitigated by guardrail #7 tunable TTL).
+- Coordinator surface is larger than mode-based — 25-30 new tunables and 15 new invariants. More room for silent-push corruption, mitigated by guardrail #7 tunable TTL and by refusing a second production controller path.
 - Per-zone bands require per-zone probe reliability; south probe is unreliable. Either fix the probe or weight south's votes lower by default until fixed.
 - Mode-derived telemetry may break downstream consumers (alert_monitor rules, scorecard, Iris's mental model). Needs audit during PR-4.
 - Reboot rate is ~800/day — warmup guardrail MUST be robust, otherwise every reboot creates a 10-tick all-off window that could briefly lose a stress event. Might need to persist `last_healthy_vote` across boot.
@@ -355,14 +387,14 @@ From failure-mode analysis — cannot be deferred:
 
 ```
 W1 (now):   PR-A shipped ✅ | PR #35 + PR-A deploy when bake opens
-W2-3:       PR-1 refactor + shadow vote telemetry
-W4:         PR-1 bake
-W5-6:       PR-2 coordinator skeleton (fog+misters)
-W7-8:       PR-2 14-day shadow
-W9-10:      PR-3 full relay coordinator
-W11-13:     PR-3 21-day shadow
-W14:        Flip use_coordinator=true
-W16:        PR-4 delete determine_mode
+W2-3:       PR-1 refactor + observability/replay evidence
+W4:         Replay/invariant/operator gate
+W5-6:       PR-2 single-path controller slice, if still needed
+W7-8:       Post-deploy health scoring
+W9-10:      PR-3 full relay controller only as an atomic live-path replacement
+W11-13:     Replay/invariant/operator gate for broader surface
+W14:        Direct activation, if approved
+W16:        PR-4 delete retired mode code
 ```
 
 Total: ~16 weeks (vs. original plan's 8 weeks for 6-mode consolidation). Longer because architecture is more ambitious; validates more thoroughly.

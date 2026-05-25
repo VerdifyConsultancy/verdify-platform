@@ -11,7 +11,11 @@ if [ "${1:-}" = "--greenhouse-id" ] && [ -n "${2:-}" ]; then
     GREENHOUSE_ID="$2"
 fi
 
-DB="docker exec verdify-timescaledb psql -U verdify -d verdify -t -A"
+DB_STATEMENT_TIMEOUT_MS="${VERDIFY_PLANNER_CONTEXT_DB_STATEMENT_TIMEOUT_MS:-15000}"
+DB=(
+  docker exec -e "PGOPTIONS=-c statement_timeout=${DB_STATEMENT_TIMEOUT_MS}"
+  verdify-timescaledb psql -U verdify -d verdify -t -A
+)
 HA_TOKEN=$(cat /mnt/agents/shared/credentials/ha_token.txt 2>/dev/null || echo "")
 HA_URL="http://192.168.30.107:8123"
 SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -54,7 +58,7 @@ echo ""
 
 # ── 1. CORE PLANNING VIEW (7 JSON columns in one query) ───────────
 echo "--- SYSTEM HEALTH ---"
-$DB -c "
+"${DB[@]}" -c "
 SELECT row_to_json(v)->'system_health' FROM v_iris_planning_context v;
 " 2>/dev/null || echo "{}"
 echo ""
@@ -63,7 +67,7 @@ echo ""
 echo "--- ACTIVE PLAN (future transitions only — your new plan will replace this entirely) ---"
 echo "Key variables shown per transition. Vent/fog timing params at defaults unless noted."
 echo "ts_mdt|raw_params|cool_s2|cool_exit|all_fans|dw_stress|dw_until|fog_stress|fog_until|engage|all|gap|wt|hyst|vent_max|fog_esc"
-$DB -c "
+"${DB[@]}" -c "
 WITH deduped AS (
   SELECT DISTINCT ON (ts, parameter) ts, parameter, value
   FROM setpoint_plan WHERE ts > now() AND parameter != 'plan_metadata' AND is_active = true
@@ -93,7 +97,7 @@ echo ""
 
 # ── 2. CURRENT ZONE-LEVEL CONDITIONS ──────────────────────────────
 echo "--- ZONE CONDITIONS ---"
-$DB -c "
+"${DB[@]}" -c "
 SELECT json_build_object(
   'ts', ts,
   'temp_south', round(temp_south::numeric,1), 'temp_north', round(temp_north::numeric,1),
@@ -113,7 +117,7 @@ SELECT json_build_object(
 # Outdoor freshness — Tempest UPDATEs outdoor_* onto recent climate rows, so
 # MAX(ts) WHERE outdoor_temp_f IS NOT NULL ≈ last successful Tempest sync.
 # Lets the planner see whether outdoor inputs are stale before trusting them.
-$DB -c "
+"${DB[@]}" -c "
 SELECT 'OUTDOOR FRESHNESS: outdoor_data_age_s=' ||
        COALESCE(extract(epoch FROM now() - MAX(ts))::int::text, 'NULL') ||
        ' (>300s = stale, planner should de-weight outdoor signals)'
@@ -123,7 +127,7 @@ WHERE outdoor_temp_f IS NOT NULL
 " 2>/dev/null
 
 # Dynamic zone ranking with context
-$DB -c "SELECT 'ZONE VPD (current): ' || string_agg(z || '=' || v, ', ' ORDER BY v DESC)
+"${DB[@]}" -c "SELECT 'ZONE VPD (current): ' || string_agg(z || '=' || v, ', ' ORDER BY v DESC)
 FROM (SELECT unnest(ARRAY['north','south','east','west']) AS z,
       unnest(ARRAY[round(vpd_north::numeric,2), round(vpd_south::numeric,2),
                     round(vpd_east::numeric,2), round(vpd_west::numeric,2)]) AS v
@@ -131,7 +135,7 @@ FROM (SELECT unnest(ARRAY['north','south','east','west']) AS z,
 echo "NOTE: North reads driest overnight (equipment zone). Daytime misting priority: south first (6 heads, 0.23 kPa/pulse), west second (3 heads, 0.15 kPa/pulse)."
 echo ""
 echo "--- ZONE SPREAD / LOCALIZED STRESS ---"
-$DB -c "
+"${DB[@]}" -c "
 WITH recent AS (
   SELECT ts,
     (SELECT max(v) - min(v)
@@ -167,7 +171,7 @@ SELECT json_build_object(
 echo ""
 
 # ── 3. GREENHOUSE STATE + SWITCHES (from HA or DB) ──────────────
-ESP_STATE=$($DB -c "SELECT value FROM system_state WHERE entity = 'greenhouse_state' ORDER BY ts DESC LIMIT 1;" 2>/dev/null | tr -d ' ')
+ESP_STATE=$("${DB[@]}" -c "SELECT value FROM system_state WHERE entity = 'greenhouse_state' ORDER BY ts DESC LIMIT 1;" 2>/dev/null | tr -d ' ')
 if [ -n "$ESP_STATE" ] && [ "$ESP_STATE" != "" ]; then
   echo "--- ESP32 STATE ---"
   echo "state: $ESP_STATE"
@@ -177,7 +181,7 @@ fi
 # ── 4. 24H HOURLY CLIMATE PATTERN ─────────────────────────────────
 echo "--- 24H HOURLY PATTERN ---"
 echo "hour|temp_f|rh_pct|vpd_kpa|co2_ppm|peak_lux"
-$DB -c "
+"${DB[@]}" -c "
 SELECT to_char(date_trunc('hour', ts) AT TIME ZONE 'America/Denver', 'HH:MI AM') as hour,
   round(avg(temp_avg)::numeric,1) as temp_f, round(avg(rh_avg)::numeric,1) as rh,
   round(avg(vpd_avg)::numeric,2) as vpd, round(avg(co2_ppm)::numeric,0) as co2,
@@ -192,11 +196,11 @@ echo ""
 TODAY=$(date +%Y-%m-%d)
 echo "--- PLANNER SCORECARD (${TODAY} — partial if before midnight, informational only) ---"
 echo "metric|value"
-$DB -c "SELECT * FROM fn_planner_scorecard((now() AT TIME ZONE 'America/Denver')::date);"
+"${DB[@]}" -c "SELECT * FROM fn_planner_scorecard((now() AT TIME ZONE 'America/Denver')::date);"
 echo ""
 echo "--- PLANNER SCORE TREND (7 complete calendar days, excludes today) ---"
 echo "date|score|comp|temp%|vpd%|stress_h|heat|cold|vpd_hi|vpd_lo|kwh|therms|water_gal|cost"
-$DB -c "
+"${DB[@]}" -c "
 SELECT date, planner_score, compliance_pct, temp_compliance_pct, vpd_compliance_pct,
        total_stress_h, heat_stress_h, cold_stress_h, vpd_high_stress_h, vpd_low_stress_h,
        kwh, therms, water_gal, cost_total
@@ -214,13 +218,13 @@ echo ""
 # ── 6. COMPLIANCE (24h by zone) ───────────────────────────────────
 echo "--- COMPLIANCE (24h by zone) ---"
 echo "zone|in_band_pct|above_pct|below_pct|na_pct"
-$DB -c "SELECT * FROM fn_compliance_pct('24 hours'::interval);"
+"${DB[@]}" -c "SELECT * FROM fn_compliance_pct('24 hours'::interval);"
 echo ""
 
 # ── 7. DIF (day/night temperature differential, 7 days) ──────────
 echo "--- DIF (7 days) ---"
 echo "day|day_avg_f|night_avg_f|dif_f"
-$DB -c "
+"${DB[@]}" -c "
 SELECT to_char(date, 'MM-DD') as day, round(day_avg_temp::numeric,1) as day_f,
   round(night_avg_temp::numeric,1) as night_f, round(dif::numeric,1) as dif_f
 FROM v_dif WHERE date >= CURRENT_DATE - 6 ORDER BY date DESC;
@@ -230,7 +234,7 @@ echo ""
 # ── 8. HYDROPONIC SYSTEM ──────────────────────────────────────────
 echo "--- HYDROPONIC SYSTEM (East Zone) ---"
 echo "ph|ec_us_cm|tds_ppm|water_temp_f|orp_mv|battery_pct"
-$DB -c "
+"${DB[@]}" -c "
 SELECT round(hydro_ph::numeric,2) as ph, round(hydro_ec_us_cm::numeric,0) as ec_us,
   round(hydro_tds_ppm::numeric,0) as tds, round(hydro_water_temp_f::numeric,1) as water_f,
   round(hydro_orp_mv::numeric,0) as orp, hydro_battery_pct as batt
@@ -241,7 +245,7 @@ echo ""
 # ── 9. EQUIPMENT RUNTIME 24H ──────────────────────────────────────
 echo "--- EQUIPMENT RUNTIME 24H ---"
 echo "equipment|on_hours|transitions"
-$DB -c "
+"${DB[@]}" -c "
 SELECT equipment,
   round(sum(CASE WHEN state NOT IN ('f','off','false') THEN extract(epoch from coalesce(lead_ts - ts, interval '0')) END)::numeric/3600, 2) as on_hours,
   count(*) as transitions
@@ -258,7 +262,7 @@ echo ""
 # ── 10. ENERGY CONSUMPTION 24H ────────────────────────────────────
 echo "--- ENERGY 24H ---"
 echo "kwh_today|avg_watts|peak_watts|avg_heat_watts"
-$DB -c "
+"${DB[@]}" -c "
 SELECT round(max(kwh_today)::numeric, 1) as kwh_today,
   round(avg(watts_total)::numeric, 0) as avg_watts,
   round(max(watts_total)::numeric, 0) as peak_watts,
@@ -269,7 +273,7 @@ echo ""
 
 # ── 11. IRRIGATION ────────────────────────────────────────────────
 echo "--- IRRIGATION SCHEDULE ---"
-$DB -c "
+"${DB[@]}" -c "
 SELECT zone_path,
        array_to_string(serves_zones, ',') AS serves_zones,
        enabled,
@@ -287,7 +291,7 @@ SELECT zone_path,
 "
 echo ""
 echo "--- IRRIGATION / FERTIGATION RUNS (7 days) ---"
-$DB -c "
+"${DB[@]}" -c "
 SELECT to_char(run_start AT TIME ZONE 'America/Denver', 'MM-DD HH24:MI') AS mdt,
        zone_path,
        fert_relay,
@@ -307,18 +311,18 @@ echo ""
 # ── 12. QUALIFIED LIGHT MINUTES + GROW LIGHTS ─────────────────────
 echo "--- QUALIFIED LIGHT MINUTES + GROW LIGHTS ---"
 echo "Current readings:"
-$DB -c "
+"${DB[@]}" -c "
 SELECT round(dli_today::numeric,1) as dli_mol, round(lux::numeric,0) as lux_now
 FROM climate ORDER BY ts DESC LIMIT 1;
 " 2>/dev/null
 echo "DLI last 7 days:"
-$DB -c "
+"${DB[@]}" -c "
 SELECT to_char(date_trunc('day', ts)::date, 'MM-DD') as day, round(max(dli_today)::numeric,1) as peak_dli
 FROM climate WHERE ts > now() - interval '7 days' GROUP BY 1 ORDER BY 1;
 "
 echo ""
 echo "LIGHTING POLICY (read-only; dispatcher pushes these to ESP32):"
-$DB -c "
+"${DB[@]}" -c "
 SELECT target_dli,
        target_light_hours,
        sunrise_hour,
@@ -332,7 +336,7 @@ echo "Do not set gl_dli_target, gl_sunrise_hour, gl_sunset_hour, or sw_gl_auto_m
 echo "Lighting automation is enforced by two ESP32 per-circuit state machines after dispatcher push."
 echo ""
 echo "PER-CIRCUIT LIGHTING POLICY (planner-managed tunables; crop policy seeds defaults):"
-$DB -c "
+"${DB[@]}" -c "
 SELECT light_key,
        equipment,
        target_light_minutes,
@@ -351,7 +355,7 @@ echo "You may set gl_main_target_light_minutes/gl_grow_target_light_minutes plus
 echo "Policy rows use confirmed cfg/readback state; latest desired setpoint rows are shown separately below for traceability."
 echo ""
 echo "QUALIFIED LIGHT MINUTES TODAY:"
-$DB -c "
+"${DB[@]}" -c "
 SELECT light_key,
        target_light_minutes AS target,
        cfg_target_light_minutes AS cfg_target,
@@ -371,7 +375,7 @@ ORDER BY light_key;
 echo "A qualified minute counts once when natural lux is above the circuit threshold OR the actual switch is ON; overlap is not double-counted."
 echo ""
 echo "TEMPEST LUX THRESHOLD RECOMMENDATION (planner guidance for per-circuit tunables):"
-$DB -c "
+"${DB[@]}" -c "
 SELECT sample_count,
        overcast_sample_count,
        clear_sample_count,
@@ -387,8 +391,8 @@ echo "current_gl_lux_threshold/current_gl_lux_hysteresis are recommendation evid
 echo "Use Tempest outdoor illuminance as the lighting trigger. Set gl_main_target_light_minutes/gl_grow_target_light_minutes, gl_main_lux_threshold/gl_main_lux_hysteresis, and gl_grow_lux_threshold/gl_grow_lux_hysteresis from this evidence unless you have a stronger observation."
 echo ""
 echo "DLI CORRECTION (estimated actual plant DLI):"
-SENSOR_DLI=$($DB -c "SELECT round(COALESCE(max(dli_today), 0)::numeric, 1) FROM climate WHERE ts >= date_trunc('day', now() AT TIME ZONE 'America/Denver');" 2>/dev/null)
-GL_HOURS=$($DB -c "SELECT round(COALESCE(runtime_grow_light_min, 0)::numeric / 60, 1) FROM daily_summary ORDER BY date DESC LIMIT 1;" 2>/dev/null)
+SENSOR_DLI=$("${DB[@]}" -c "SELECT round(COALESCE(max(dli_today), 0)::numeric, 1) FROM climate WHERE ts >= date_trunc('day', now() AT TIME ZONE 'America/Denver');" 2>/dev/null)
+GL_HOURS=$("${DB[@]}" -c "SELECT round(COALESCE(runtime_grow_light_min, 0)::numeric / 60, 1) FROM daily_summary ORDER BY date DESC LIMIT 1;" 2>/dev/null)
 SENSOR_DLI=${SENSOR_DLI:-0}
 GL_HOURS=${GL_HOURS:-0}
 python3 -c "s=${SENSOR_DLI};g=${GL_HOURS};print(f'sensor_dli={s} | estimated_actual_dli={s*3.5:.1f} | gl_hours={g} | estimated_total_plant_dli={s*3.5+g*0.8:.1f}')" 2>/dev/null || echo "sensor_dli=${SENSOR_DLI} | gl_hours=${GL_HOURS}"
@@ -400,12 +404,12 @@ echo ""
 
 # ── 13. DISEASE RISK ──────────────────────────────────────────────
 echo "--- DISEASE RISK (last 6h) ---"
-$DB -c "SELECT * FROM v_disease_risk ORDER BY hour DESC LIMIT 6;" 2>/dev/null || echo "(n/a)"
+"${DB[@]}" -c "SELECT * FROM v_disease_risk ORDER BY hour DESC LIMIT 6;" 2>/dev/null || echo "(n/a)"
 echo ""
 
 # ── 14. ACTIVE CROPS ──────────────────────────────────────────────
 echo "--- ACTIVE CROPS ---"
-$DB -c "
+"${DB[@]}" -c "
 SELECT name, variety, position, zone, stage, planted_date
 FROM crops WHERE is_active ORDER BY zone, position;
 " 2>/dev/null || echo "(none)"
@@ -421,17 +425,17 @@ YESTERDAY=$(date -d "yesterday" +%Y-%m-%d)
 
 # Primary governing plan for sections that need a single anchor (e.g. structured
 # hypothesis display): the plan that governed the most hours in the last 24h.
-GOVERNING_PLAN=$($DB -c "
+GOVERNING_PLAN=$("${DB[@]}" -c "
   SELECT plan_id FROM v_plan_execution_intervals
    WHERE interval_end >= now() - interval '24 hours' AND interval_start < now()
    ORDER BY governed_hours DESC NULLS LAST LIMIT 1;
 " 2>/dev/null | tr -d ' ')
-GOVERNING_VALIDATED=$($DB -c "SELECT CASE WHEN validated_at IS NOT NULL THEN 'yes' ELSE 'no' END FROM plan_journal WHERE plan_id = '${GOVERNING_PLAN}';" 2>/dev/null | tr -d ' ')
+GOVERNING_VALIDATED=$("${DB[@]}" -c "SELECT CASE WHEN validated_at IS NOT NULL THEN 'yes' ELSE 'no' END FROM plan_journal WHERE plan_id = '${GOVERNING_PLAN}';" 2>/dev/null | tr -d ' ')
 
 # Evaluation backlog: every completed Iris plan that still has no validation.
 # The old hour-window filter caught SUNRISE plans but missed SUNSET/manual
 # updates, which made the feedback loop selective and biased.
-EVAL_BACKLOG=$($DB -c "
+EVAL_BACKLOG=$("${DB[@]}" -c "
   SELECT COUNT(*)
     FROM plan_journal pj
     LEFT JOIN v_plan_execution_intervals pei USING (plan_id)
@@ -453,7 +457,7 @@ echo "history only; validate outcomes, but use the AI Tunables Routine Plan"
 echo "Contract and current Tier 1 surface for any new plan."
 if [ -n "${EVAL_BACKLOG}" ] && [ "${EVAL_BACKLOG}" -gt 0 ]; then
   echo "EVALUATION BACKLOG: ${EVAL_BACKLOG} completed Iris plans still unevaluated — CALL plan_evaluate ON EACH BEFORE WRITING A NEW PLAN."
-  $DB -c "
+  "${DB[@]}" -c "
   SELECT pj.plan_id,
          to_char(pj.created_at AT TIME ZONE 'America/Denver', 'MM-DD HH24:MI') AS planned_at,
          to_char(COALESCE(pei.interval_end, pj.created_at + interval '24 hours') AT TIME ZONE 'America/Denver', 'MM-DD HH24:MI') AS ended_at,
@@ -468,7 +472,7 @@ if [ -n "${EVAL_BACKLOG}" ] && [ "${EVAL_BACKLOG}" -gt 0 ]; then
    LIMIT 10;
   " 2>/dev/null
 fi
-$DB -c "
+"${DB[@]}" -c "
 SELECT pj.plan_id,
   to_char(pj.created_at AT TIME ZONE 'America/Denver', 'MM-DD HH24:MI') AS planned_at,
   round(pei.governed_hours::numeric, 1) AS gov_h,
@@ -499,7 +503,7 @@ fi
 echo ""
 echo "--- WINDOW SCORECARD per plan (use these for plan_evaluate, NOT daily_summary) ---"
 echo "Each row scopes stress + compliance + cost to ONLY the wall-clock time the plan governed."
-$DB -c "
+"${DB[@]}" -c "
 SELECT pws.plan_id,
   round(pws.governed_day_fraction::numeric, 3) AS gov_frac,
   round(pws.compliance_pct::numeric, 1)        AS comp,
@@ -525,7 +529,7 @@ echo ""
 # structured predictions (conditions, stress_windows, param rationales)
 # against the MOST RECENT COMPLETE PLAN EVALUATION block above.
 echo "--- STRUCTURED HYPOTHESIS (yesterday's typed predictions, compare to eval block above) ---"
-HAS_STRUCTURED=$($DB -c "SELECT CASE WHEN hypothesis_structured IS NULL THEN 'no' ELSE 'yes' END FROM plan_journal WHERE plan_id = '${GOVERNING_PLAN}';" 2>/dev/null | tr -d ' ')
+HAS_STRUCTURED=$("${DB[@]}" -c "SELECT CASE WHEN hypothesis_structured IS NULL THEN 'no' ELSE 'yes' END FROM plan_journal WHERE plan_id = '${GOVERNING_PLAN}';" 2>/dev/null | tr -d ' ')
 if [ "${HAS_STRUCTURED}" = "yes" ]; then
   # predicted_vs_actual: extract the scalar conditions from the structured
   # hypothesis and line them up with daily_summary + climate actuals.
@@ -534,7 +538,7 @@ if [ "${HAS_STRUCTURED}" = "yes" ]; then
   #   climate.solar_irradiance_w_m2 (MAX for yesterday)
   # cloud_cover actuals don't have a first-class column; we leave n/a.
   echo "predicted_vs_actual (from hypothesis_structured.conditions):"
-  $DB -c "
+  "${DB[@]}" -c "
   SELECT metric, predicted, COALESCE(actual, 'n/a') AS actual FROM (
     SELECT 'outdoor_temp_peak_f' AS metric, 1 AS ord,
       (hypothesis_structured->'conditions'->>'outdoor_temp_peak_f')::text AS predicted,
@@ -559,7 +563,7 @@ if [ "${HAS_STRUCTURED}" = "yes" ]; then
   # + rationale (which aren't extractable into a flat table).
   echo ""
   echo "full structured hypothesis (stress_windows + rationale — grade each against actual stress hours + scorecard above):"
-  $DB -c "SELECT jsonb_pretty(hypothesis_structured) FROM plan_journal WHERE plan_id = '${GOVERNING_PLAN}';" 2>/dev/null
+  "${DB[@]}" -c "SELECT jsonb_pretty(hypothesis_structured) FROM plan_journal WHERE plan_id = '${GOVERNING_PLAN}';" 2>/dev/null
   echo ""
   echo "Grade each stress_window: did its predicted kind/severity match the actual stress_hours column for that type?"
   echo "Grade each rationale: did new_value produce the expected_effect? If not, note it in your previous_plan_validation."
@@ -570,7 +574,7 @@ echo ""
 
 # ── 16. WATER USAGE TREND ─────────────────────────────────────────
 echo "--- WATER (7 days) ---"
-$DB -c "
+"${DB[@]}" -c "
 SELECT to_char(day, 'MM-DD') as day, used_gal FROM v_water_daily
 WHERE day >= CURRENT_DATE - 6 ORDER BY day;
 "
@@ -579,7 +583,7 @@ echo ""
 
 # ── 17. OCCUPANCY ─────────────────────────────────────────────────
 echo "--- OCCUPANCY ---"
-$DB -c "
+"${DB[@]}" -c "
 SELECT to_char(ts AT TIME ZONE 'America/Denver', 'HH:MI AM') as time, value as state
 FROM system_state WHERE entity = 'occupancy' AND ts > now() - interval '12 hours'
 ORDER BY ts DESC LIMIT 5;
@@ -588,9 +592,13 @@ echo ""
 
 # ── 18. ESP32 FIRMWARE MIN/MAX CONSTRAINTS ────────────────────────
 echo "--- TUNABLE CONSTRAINTS (min/max/step) ---"
-curl -s -H "Authorization: Bearer $HA_TOKEN" "$HA_URL/api/states" 2>/dev/null | python3 -c "
+if [ -n "$HA_TOKEN" ]; then
+  if ! curl -fsS -H "Authorization: Bearer $HA_TOKEN" "$HA_URL/api/states" 2>/dev/null | python3 -c "
 import json, sys
-data = json.load(sys.stdin)
+try:
+    data = json.load(sys.stdin)
+except json.JSONDecodeError:
+    sys.exit(1)
 key_params = ['set_temp_low_degf','set_temp_high_degf','set_vpd_low_kpa','set_vpd_high_kpa',
   'vpd_mister_engage_kpa','vpd_mister_all_kpa','mister_water_budget_gal',
   'gl_dli_target_mol','gl_lux_threshold','irrig_wall_duration_min']
@@ -601,11 +609,16 @@ for e in data:
         if name in key_params:
             a = e.get('attributes',{})
             print(f\"{name}: val={e['state']} min={a.get('min')} max={a.get('max')} step={a.get('step')}\")
-" 2>/dev/null
+" 2>/dev/null; then
+    echo "(HA states unavailable; tunable constraints omitted)"
+  fi
+else
+  echo "(HA token unavailable; tunable constraints omitted)"
+fi
 echo ""
 
 # ── 19. FORECAST BIAS (7-day rolling correction) ──────────────────
-BIAS=$($DB -c "SELECT * FROM fn_forecast_correction('temp_f', 24);" 2>/dev/null)
+BIAS=$("${DB[@]}" -c "SELECT * FROM fn_forecast_correction('temp_f', 24);" 2>/dev/null)
 if [ -n "$BIAS" ] && [ "$BIAS" != "" ]; then
   echo "--- FORECAST BIAS ---"
   echo "param|bias_f|window_hours"
@@ -615,7 +628,7 @@ fi
 
 # ── 20. ACTIVE LESSONS (accumulated planner knowledge) ────────────
 echo "--- ACTIVE LESSONS (top 10 by confidence + validation count) ---"
-$DB -c "
+"${DB[@]}" -c "
 WITH deduped AS (
   SELECT DISTINCT ON (lesson) id, category, condition, lesson, confidence, times_validated
   FROM planner_lessons
@@ -657,7 +670,7 @@ echo ""
 # cooler/wetter, so the aggressive misting becomes over-humidification.
 echo "--- FORECAST CALIBRATION (apply these biases when interpreting today's forecast) ---"
 echo "Open-Meteo forecast bias (last 7 days, by lead time):"
-$DB -c "
+"${DB[@]}" -c "
 SELECT param,
        lead_bucket,
        round(AVG(bias)::numeric, 2)  AS bias,
@@ -671,7 +684,7 @@ echo "Rule: positive bias = forecast OVERSHOOTS reality. Discount accordingly."
 echo "Solar bias historically +47 W/m^2 (~5-15%% of peak). Do not pre-stage aggressive"
 echo "misting until live morning VPD confirms the predicted dry ramp."
 echo "Bias-corrected next-24h planning priors (corrected = raw forecast - recent bias):"
-$DB -c "
+"${DB[@]}" -c "
 WITH bias AS (
   SELECT param, avg(bias)::float AS bias
     FROM v_forecast_accuracy_lead_buckets
@@ -706,7 +719,7 @@ echo ""
 
 # ── 20b. CURRENT ACTIVE SETPOINTS (for mandatory waypoint emission) ─
 echo "--- CURRENT ACTIVE SETPOINTS ---"
-$DB -c "
+"${DB[@]}" -c "
 SELECT parameter, value
 FROM (SELECT DISTINCT ON (parameter) parameter, value FROM setpoint_changes ORDER BY parameter, ts DESC) sub
 WHERE parameter IN (${ACTIVE_CONTEXT_PARAMS_SQL})
@@ -720,7 +733,7 @@ echo ""
 
 echo "--- BAND SETPOINT PROVENANCE (crop -> dispatcher/API -> firmware -> cfg readback) ---"
 echo "parameter|crop_target|dispatcher_or_api|firmware_push|cfg_readback|automation_source"
-$DB -c "
+"${DB[@]}" -c "
 SELECT parameter,
        round(crop_target_value::numeric, 2) AS crop_target,
        round(dispatcher_value::numeric, 2) AS dispatcher_or_api,
@@ -763,7 +776,7 @@ echo ""
 
 # ── 22. FORECAST ALERTS (proactive warnings for next 24-48h) ─────
 echo "--- FORECAST ALERTS ---"
-$DB -c "
+"${DB[@]}" -c "
 WITH latest AS (
   SELECT ts, temp_f, rh_pct, cloud_cover_pct, precip_prob_pct,
          ROW_NUMBER() OVER (PARTITION BY ts ORDER BY fetched_at DESC) AS rn
@@ -816,7 +829,7 @@ alerts AS (
 SELECT alert FROM alerts ORDER BY ord;
 "
 # If query returned nothing, show nominal
-if [ $? -ne 0 ] || ! $DB -c "
+if [ $? -ne 0 ] || ! "${DB[@]}" -c "
 WITH latest AS (
   SELECT ts, temp_f, rh_pct,
          ROW_NUMBER() OVER (PARTITION BY ts ORDER BY fetched_at DESC) AS rn
@@ -832,14 +845,14 @@ echo ""
 # ── 23. EXPERIMENT TRACKER (recent hypotheses + outcomes) ─────────
 echo "--- EXPERIMENT TRACKER ---"
 echo "Latest pending:"
-$DB -c "
+"${DB[@]}" -c "
 SELECT plan_id, to_char(created_at AT TIME ZONE 'America/Denver', 'MM-DD HH:MI') AS date,
   COALESCE(experiment, '(none)') AS experiment
 FROM plan_journal WHERE validated_at IS NULL AND plan_id NOT LIKE 'iris-reactive%'
 ORDER BY created_at DESC LIMIT 1;
 " 2>/dev/null || echo "(none pending)"
 echo "Last completed:"
-$DB -c "
+"${DB[@]}" -c "
 SELECT plan_id, outcome_score, COALESCE(lesson_extracted, '(no lesson)') AS lesson
 FROM plan_journal WHERE validated_at IS NOT NULL AND plan_id NOT LIKE 'iris-reactive%'
 ORDER BY validated_at DESC LIMIT 1;
@@ -853,7 +866,7 @@ echo ""
 # ── 24. 72-HOUR HOURLY FORECAST ──────────────────────────────────
 echo "--- 72H HOURLY FORECAST ---"
 echo "hour_mdt|temp_f|rh_pct|cloud_pct|wind_mph|vpd_kpa|solar_w_m2|et0_mm|precip_prob_pct|weather_code"
-$DB -c "
+"${DB[@]}" -c "
 SELECT to_char(ts AT TIME ZONE 'America/Denver', 'Dy MM-DD HH24:00') as hour_mdt,
   round(temp_f::numeric,0) as temp_f,
   round(rh_pct::numeric,0) as rh,
@@ -875,7 +888,7 @@ echo ""
 
 # ── 25. DAYS 4-7 DAILY OUTLOOK ──────────────────────────────────
 echo "--- DAYS 4-7 DAILY OUTLOOK ---"
-$DB -c "
+"${DB[@]}" -c "
 SELECT to_char(date_trunc('day', ts) AT TIME ZONE 'America/Denver', 'Dy MM-DD') as day,
   round(min(temp_f)::numeric,0) as low_f,
   round(max(temp_f)::numeric,0) as high_f,
@@ -909,14 +922,14 @@ echo ""
 # ── 28. FORECAST ACCURACY ─────────────────────────────────────────
 echo "--- FORECAST ACCURACY (7 days) ---"
 echo "date|metric|forecast|actual|error|abs_error|lead_hours"
-$DB -c "SELECT * FROM v_forecast_accuracy_daily WHERE date >= CURRENT_DATE - 7 ORDER BY date DESC, param;" 2>/dev/null
+"${DB[@]}" -c "SELECT * FROM v_forecast_accuracy_daily WHERE date >= CURRENT_DATE - 7 ORDER BY date DESC, param;" 2>/dev/null
 echo "Use this to calibrate your trust in the forecast. If 48h accuracy is consistently worse than 24h, weight near-term forecasts more heavily."
 echo ""
 
 # ── 29. PLAN COMPARISON ───────────────────────────────────────────
 echo "--- PLAN COMPARISON (Tier 1 only, current vs previous) ---"
 echo "parameter|current_avg|previous_avg|delta"
-$DB -c "
+"${DB[@]}" -c "
 SELECT DISTINCT ON (parameter)
   parameter, round(cur_avg::numeric,2), round(prev_avg::numeric,2), round(delta_avg::numeric,2)
 FROM v_plan_comparison
@@ -928,7 +941,7 @@ echo ""
 
 # ── 30. CROP HEALTH (Gemini Vision observations) ────────────────
 echo "--- CROP HEALTH (latest visual observations) ---"
-$DB -c "
+"${DB[@]}" -c "
 SELECT to_char(ts AT TIME ZONE 'America/Denver', 'MM-DD HH:MI') AS observed,
   camera, zone, confidence,
   crops_observed::text
@@ -937,7 +950,7 @@ WHERE ts > now() - interval '48 hours'
 ORDER BY ts DESC LIMIT 4;
 " 2>/dev/null
 echo ""
-$DB -c "
+"${DB[@]}" -c "
 SELECT to_char(ts AT TIME ZONE 'America/Denver', 'MM-DD HH:MI') AS observed,
   array_to_string(recommended_actions, '; ') AS actions
 FROM image_observations
@@ -954,7 +967,7 @@ echo ""
 # page Jason first. Counts >1 'pending'/'timed_out' in one event_type row
 # indicate a real silent-drop pattern; she should flag it in her Slack brief.
 echo "--- YOUR RECENT DELIVERIES (last 24h from plan_delivery_log) ---"
-$DB -c "
+"${DB[@]}" -c "
 SELECT event_type, status, count(*) AS n,
   to_char(max(delivered_at) AT TIME ZONE 'America/Denver', 'MM-DD HH24:MI') AS most_recent
 FROM plan_delivery_log
@@ -974,7 +987,7 @@ echo ""
 # landed in setpoint_clamps, not setpoint_changes). Grouped so a repeating
 # clamp is obvious; full per-row detail would overwhelm the context.
 echo "--- RECENT CLAMPS (dispatcher rejections, last 24h, top 10 params) ---"
-$DB -c "
+"${DB[@]}" -c "
 SELECT parameter, count(*) AS n_clamped,
   round(avg(requested)::numeric, 3) AS avg_requested,
   round(avg(applied)::numeric, 3) AS avg_applied,
@@ -995,7 +1008,7 @@ echo ""
 # normal matches from safety holds where the dispatcher intentionally kept the
 # already-applied value and therefore did not emit a setpoint_changes row.
 echo "--- GUARDRAIL-AWARE TRANSITION AUDIT (last 36h) ---"
-$DB -c "
+"${DB[@]}" -c "
 SELECT plan_id,
        status,
        count(*) AS n,
@@ -1007,7 +1020,7 @@ SELECT plan_id,
 " 2>/dev/null || echo "(fn_plan_transition_audit unavailable; migration 120 may not be applied)"
 echo "Any status other than matched/already_at_value/guardrailed/held_by_guardrail requires investigation before trusting the plan."
 echo "Recent held/missed/mismatch details:"
-$DB -c "
+"${DB[@]}" -c "
 SELECT to_char(transition_ts AT TIME ZONE 'America/Denver', 'MM-DD HH24:MI') AS transition_mdt,
        plan_id,
        parameter,
@@ -1025,9 +1038,228 @@ SELECT to_char(transition_ts AT TIME ZONE 'America/Denver', 'MM-DD HH24:MI') AS 
 " 2>/dev/null || true
 echo ""
 
-# ── 30b-3. HOT/DRY VENTILATE CONTROL UTILIZATION ─────────────────
+# ── 30b-3. DISPATCHER-OWNED TARGET CONTEXT ──────────────────────
+echo "--- DISPATCHER-OWNED CLIMATE TARGETS (latest reading) ---"
+"${DB[@]}" -c "
+WITH latest_climate AS (
+  SELECT ts,
+         temp_avg,
+         vpd_avg
+    FROM climate
+   WHERE temp_avg IS NOT NULL
+     AND vpd_avg IS NOT NULL
+   ORDER BY ts DESC
+   LIMIT 1
+), latest AS (
+  SELECT c.ts,
+         c.temp_avg,
+         c.vpd_avg,
+         fn_setpoint_at('temp_low', c.ts) AS sp_temp_low,
+         fn_setpoint_at('temp_high', c.ts) AS sp_temp_high,
+         fn_setpoint_at('vpd_low', c.ts) AS sp_vpd_low,
+         fn_setpoint_at('vpd_high', c.ts) AS sp_vpd_high,
+         (
+           SELECT ss.value
+             FROM system_state ss
+            WHERE ss.entity = 'greenhouse_state'
+              AND ss.ts <= c.ts
+            ORDER BY ss.ts DESC
+            LIMIT 1
+         ) AS greenhouse_mode
+    FROM latest_climate c
+)
+SELECT to_char(ts AT TIME ZONE 'America/Denver', 'MM-DD HH24:MI') AS reading_mdt,
+       round(temp_avg::numeric, 2) AS temp_actual_f,
+       round(sp_temp_low::numeric, 2) AS temp_low_f,
+       round(((sp_temp_low + sp_temp_high) / 2.0)::numeric, 2) AS temp_target_f,
+       round(sp_temp_high::numeric, 2) AS temp_high_f,
+       round((temp_avg - ((sp_temp_low + sp_temp_high) / 2.0))::numeric, 2) AS temp_target_delta_f,
+       round(vpd_avg::numeric, 3) AS vpd_actual_kpa,
+       round(sp_vpd_low::numeric, 3) AS vpd_low_kpa,
+       round(((sp_vpd_low + sp_vpd_high) / 2.0)::numeric, 3) AS vpd_target_kpa,
+       round(sp_vpd_high::numeric, 3) AS vpd_high_kpa,
+       round((vpd_avg - ((sp_vpd_low + sp_vpd_high) / 2.0))::numeric, 3) AS vpd_target_delta_kpa,
+       greenhouse_mode
+  FROM latest;
+" 2>/dev/null || echo "(dispatcher-owned target context unavailable)"
+echo "Dispatcher/crop policy owns low/target/high. The AI planner receives these as read-only prompt context and tunes only tactical ClimateIntent fields around them."
+echo ""
+
+echo "--- CLIMATE AUTHORITY MODE (current compliance priority) ---"
+"${DB[@]}" -c "
+WITH latest_climate AS (
+  SELECT ts,
+         temp_avg,
+         vpd_avg,
+         dew_point
+    FROM climate
+   WHERE temp_avg IS NOT NULL
+     AND vpd_avg IS NOT NULL
+   ORDER BY ts DESC
+   LIMIT 1
+), latest AS (
+  SELECT c.ts,
+         c.temp_avg,
+         c.vpd_avg,
+         c.dew_point,
+         fn_setpoint_at('temp_low', c.ts) AS sp_temp_low,
+         fn_setpoint_at('temp_high', c.ts) AS sp_temp_high,
+         fn_setpoint_at('vpd_low', c.ts) AS sp_vpd_low,
+         fn_setpoint_at('vpd_high', c.ts) AS sp_vpd_high,
+         (c.temp_avg - c.dew_point) AS dew_margin_f
+    FROM latest_climate c
+)
+SELECT to_char(ts AT TIME ZONE 'America/Denver', 'MM-DD HH24:MI') AS reading_mdt,
+       round(greatest(0.0, temp_avg - sp_temp_high)::numeric, 2) AS temp_above_high_f,
+       round(greatest(0.0, vpd_avg - sp_vpd_high)::numeric, 3) AS vpd_above_high_kpa,
+       round(dew_margin_f::numeric, 2) AS dew_margin_f,
+       CASE
+         WHEN temp_avg > sp_temp_high AND vpd_avg > sp_vpd_high THEN 'COMPLIANCE_FIRST_TEMP_AND_VPD_HIGH'
+         WHEN temp_avg > sp_temp_high THEN 'COMPLIANCE_FIRST_TEMP_HIGH'
+         WHEN vpd_avg > sp_vpd_high THEN 'COMPLIANCE_FIRST_VPD_HIGH'
+         WHEN temp_avg < sp_temp_low OR vpd_avg < sp_vpd_low THEN 'COMPLIANCE_FIRST_LOW_SIDE'
+         ELSE 'RESOURCE_OPTIMIZATION_ALLOWED'
+       END AS authority_mode
+  FROM latest;
+" 2>/dev/null || echo "(climate authority mode unavailable)"
+echo "Priority order is safety rails, temp compliance, VPD compliance, then resource use. When VPD is above band and dew/occupancy rails are safe, resource minimization must not close wet/fog assist; use ClimateIntent to make moisture assist available near the dispatcher-owned VPD high edge."
+echo ""
+
+# ── 30b-4. CLIMATE ACTION PROOF ─────────────────────────────────
+echo "--- CLIMATE AUTHORITY ACTION PROOF (latest controller decision) ---"
+echo "age_s|action|priority|temp_target_delta_f|vpd_target_delta_kpa|temp_band_error_f|vpd_band_error_kpa|moisture_state|wet_allowed|wet_block|fog_allowed|fog_block|relay_truth|sensor_status|candidate_summary"
+"${DB[@]}" -c "
+WITH latest AS (
+  SELECT l.*,
+         EXTRACT(EPOCH FROM now() - l.ts)::int AS age_s
+    FROM climate_action_log l
+   WHERE COALESCE(l.greenhouse_id, 'vallery') = '${GREENHOUSE_ID}'
+   ORDER BY l.ts DESC
+   LIMIT 1
+)
+SELECT age_s,
+       climate_action,
+       priority_axis,
+       round(temp_target_delta_f::numeric, 2) AS temp_target_delta_f,
+       round(vpd_target_delta_kpa::numeric, 3) AS vpd_target_delta_kpa,
+       round(temp_band_error_f::numeric, 2) AS temp_band_error_f,
+       round(vpd_band_error_kpa::numeric, 3) AS vpd_band_error_kpa,
+       COALESCE(moisture_assist_state, 'unknown') AS moisture_state,
+       wet_assist_allowed,
+       COALESCE(wet_assist_block_reason, 'none') AS wet_block,
+       fog_allowed,
+       COALESCE(fog_block_reason, 'none') AS fog_block,
+       relay_truth,
+       sensor_status,
+       COALESCE(candidate_summary, '') AS candidate_summary
+  FROM latest;
+" 2>/dev/null || echo "(climate action proof unavailable)"
+echo "This is ESP32/controller-owned truth for the current action, target deltas, wet/fog block reasons, relay truth, and input freshness. Treat stale or missing proof as degraded context; tune only bounded ClimateIntent fields, not dispatcher-owned bands."
+echo ""
+
+echo "--- CLIMATE AUTHORITY ACTION ROLLUP (last 3h) ---"
+echo "action|priority|samples|max_abs_temp_band_error_f|max_abs_vpd_band_error_kpa|wet_allowed_pct|fog_allowed_pct|block_reasons"
+"${DB[@]}" -c "
+SELECT climate_action,
+       priority_axis,
+       count(*) AS samples,
+       round(max(abs(temp_band_error_f))::numeric, 2) AS max_abs_temp_band_error_f,
+       round(max(abs(vpd_band_error_kpa))::numeric, 3) AS max_abs_vpd_band_error_kpa,
+       round((100.0 * avg(CASE WHEN wet_assist_allowed THEN 1.0 ELSE 0.0 END))::numeric, 1) AS wet_allowed_pct,
+       round((100.0 * avg(CASE WHEN fog_allowed THEN 1.0 ELSE 0.0 END))::numeric, 1) AS fog_allowed_pct,
+       string_agg(
+         DISTINCT COALESCE(NULLIF(wet_assist_block_reason, ''), NULLIF(fog_block_reason, ''), moisture_assist_state, 'none'),
+         ', '
+         ORDER BY COALESCE(NULLIF(wet_assist_block_reason, ''), NULLIF(fog_block_reason, ''), moisture_assist_state, 'none')
+       ) AS block_reasons
+  FROM climate_action_log
+ WHERE COALESCE(greenhouse_id, 'vallery') = '${GREENHOUSE_ID}'
+   AND ts > now() - interval '3 hours'
+ GROUP BY climate_action, priority_axis
+ ORDER BY samples DESC, climate_action;
+" 2>/dev/null || echo "(climate action rollup unavailable)"
+echo "Use this to distinguish capacity limits from tactical limits: persistent high band errors with wet/fog disallowed point to safety/block reasons; high errors with assist allowed but low relay duty point to controller/relay proof that needs operator review."
+echo ""
+
+# ── 30b-4a. BOUNDED RESPONSE PRIORS ─────────────────────────────
+echo "--- CLIMATE ACTION RESPONSE PRIORS (bounded last 24h, 5m lookahead) ---"
+echo "action|priority|matched_samples|avg_temp_abs_error_delta_f|avg_vpd_abs_error_delta_kpa|wet_served_pct|avg_est_water_gal|common_blocks"
+"${DB[@]}" -c "
+WITH bounded AS (
+  SELECT *
+    FROM (
+      SELECT ts,
+             greenhouse_id,
+             climate_action,
+             priority_axis,
+             temp_band_error_f,
+             vpd_band_error_kpa,
+             moisture_assist_state,
+             wet_assist_block_reason,
+             fog_block_reason,
+             relay_truth,
+             resource_cost_estimate
+        FROM climate_action_log
+       WHERE COALESCE(greenhouse_id, 'vallery') = '${GREENHOUSE_ID}'
+         AND ts > now() - interval '24 hours'
+         AND temp_band_error_f IS NOT NULL
+         AND vpd_band_error_kpa IS NOT NULL
+       ORDER BY ts DESC
+       LIMIT 300
+    ) recent
+), scored AS (
+  SELECT b.*,
+         nxt.temp_band_error_f AS temp_band_error_after_f,
+         nxt.vpd_band_error_kpa AS vpd_band_error_after_kpa
+    FROM bounded b
+    LEFT JOIN LATERAL (
+      SELECT n.temp_band_error_f,
+             n.vpd_band_error_kpa
+        FROM climate_action_log n
+       WHERE COALESCE(n.greenhouse_id, 'vallery') = COALESCE(b.greenhouse_id, 'vallery')
+         AND n.ts >= b.ts + interval '5 minutes'
+         AND n.ts <= b.ts + interval '7 minutes'
+         AND n.temp_band_error_f IS NOT NULL
+         AND n.vpd_band_error_kpa IS NOT NULL
+       ORDER BY n.ts ASC
+       LIMIT 1
+    ) nxt ON true
+)
+SELECT climate_action,
+       priority_axis,
+       count(*) FILTER (WHERE temp_band_error_after_f IS NOT NULL) AS matched_samples,
+       round(avg(abs(temp_band_error_after_f) - abs(temp_band_error_f))::numeric, 2)
+         AS avg_temp_abs_error_delta_f,
+       round(avg(abs(vpd_band_error_after_kpa) - abs(vpd_band_error_kpa))::numeric, 3)
+         AS avg_vpd_abs_error_delta_kpa,
+       round((100.0 * avg(CASE
+         WHEN moisture_assist_state IN ('served', 'pulse_on')
+           OR lower(COALESCE(relay_truth->>'fog', 'false')) = 'true'
+           OR lower(COALESCE(relay_truth->>'mister_south', 'false')) = 'true'
+           OR lower(COALESCE(relay_truth->>'mister_west', 'false')) = 'true'
+           OR lower(COALESCE(relay_truth->>'mister_center', 'false')) = 'true'
+         THEN 1.0 ELSE 0.0 END))::numeric, 1) AS wet_served_pct,
+       round(avg(NULLIF(resource_cost_estimate->>'water_gal', '')::numeric), 3)
+         AS avg_est_water_gal,
+       COALESCE(string_agg(
+         DISTINCT COALESCE(NULLIF(wet_assist_block_reason, ''), NULLIF(fog_block_reason, '')),
+         ', '
+       ) FILTER (
+         WHERE COALESCE(NULLIF(wet_assist_block_reason, ''), NULLIF(fog_block_reason, '')) IS NOT NULL
+           AND COALESCE(NULLIF(wet_assist_block_reason, ''), NULLIF(fog_block_reason, '')) <> 'none'
+       ), 'none') AS common_blocks
+  FROM scored
+ GROUP BY climate_action, priority_axis
+HAVING count(*) FILTER (WHERE temp_band_error_after_f IS NOT NULL) > 0
+ ORDER BY matched_samples DESC, climate_action
+ LIMIT 12;
+" 2>/dev/null || echo "(climate action response priors unavailable)"
+echo "Negative deltas mean the absolute band error improved after the action. Use this as a recent response prior alongside forecast pressure: prefer tactics that reduced temp/VPD error per unit water, and do not conserve resources by closing wet assist during safe dual-axis misses."
+echo ""
+
+# ── 30b-5. HOT/DRY VENTILATE CONTROL UTILIZATION ─────────────────
 echo "--- HOT/DRY VENTILATE UTILIZATION (last 24h, firmware band basis) ---"
-$DB -c "
+"${DB[@]}" -c "
 WITH samples AS (
   SELECT c.ts,
          c.temp_avg,
@@ -1119,15 +1351,101 @@ else
 fi
 
 # Climate freshness: latest climate row within 10 minutes
-climate_age_s=$($DB -c "SELECT EXTRACT(epoch FROM now() - max(ts))::int FROM climate;" 2>/dev/null | tr -d ' ')
+climate_age_s=$("${DB[@]}" -c "SELECT EXTRACT(epoch FROM now() - max(ts))::int FROM climate;" 2>/dev/null | tr -d ' ')
 if [ -n "${climate_age_s:-}" ] && [ "${climate_age_s:-99999}" -lt 600 ]; then
   _check "climate telemetry fresh" ok "indoor sensors reporting within the last ${climate_age_s}s"
 else
   _check "climate telemetry fresh" fail "last climate row is ${climate_age_s:-unknown}s old; ESP32 may be offline — flag in brief"
 fi
 
+# Dispatcher target context: the planner must see controller-owned band edges
+# and signed target deltas before it can safely tune ClimateIntent around them.
+target_context_complete=$("${DB[@]}" -c "
+WITH latest_climate AS (
+  SELECT ts, temp_avg, vpd_avg
+    FROM climate
+   WHERE temp_avg IS NOT NULL
+     AND vpd_avg IS NOT NULL
+   ORDER BY ts DESC
+   LIMIT 1
+), latest AS (
+  SELECT c.temp_avg,
+         c.vpd_avg,
+         fn_setpoint_at('temp_low', c.ts) AS sp_temp_low,
+         fn_setpoint_at('temp_high', c.ts) AS sp_temp_high,
+         fn_setpoint_at('vpd_low', c.ts) AS sp_vpd_low,
+         fn_setpoint_at('vpd_high', c.ts) AS sp_vpd_high
+    FROM latest_climate c
+)
+SELECT CASE
+         WHEN count(*) = 1
+          AND bool_and(temp_avg IS NOT NULL)
+          AND bool_and(vpd_avg IS NOT NULL)
+          AND bool_and(sp_temp_low IS NOT NULL)
+          AND bool_and(sp_temp_high IS NOT NULL)
+          AND bool_and(sp_vpd_low IS NOT NULL)
+          AND bool_and(sp_vpd_high IS NOT NULL)
+         THEN 1
+         ELSE 0
+       END
+  FROM latest;
+" 2>/dev/null | tr -d ' ' || true)
+if [ "${target_context_complete:-0}" = "1" ]; then
+  _check "dispatcher climate targets" ok "low/target/high and target deltas are available for read-only planner context"
+else
+  _check "dispatcher climate targets" fail "band target context is incomplete; do not tune ClimateIntent from missing targets"
+fi
+
+action_age_s=$("${DB[@]}" -c "SELECT COALESCE(EXTRACT(epoch FROM now() - max(ts))::int, 2147483647) FROM climate_action_log WHERE COALESCE(greenhouse_id, 'vallery') = '${GREENHOUSE_ID}';" 2>/dev/null | tr -d ' ' || true)
+action_proof_missing=$("${DB[@]}" -c "
+WITH latest AS (
+  SELECT *
+    FROM climate_action_log
+   WHERE COALESCE(greenhouse_id, 'vallery') = '${GREENHOUSE_ID}'
+   ORDER BY ts DESC
+   LIMIT 1
+)
+SELECT array_to_string(
+         array_remove(ARRAY[
+           CASE WHEN climate_action IS NULL OR climate_action = '' THEN 'climate_action' END,
+           CASE WHEN priority_axis IS NULL OR priority_axis = '' THEN 'priority_axis' END,
+           CASE WHEN climate_intent_version IS NULL OR climate_intent_version = '' THEN 'climate_intent_version' END,
+           CASE WHEN temp_low_f IS NULL THEN 'temp_low_f' END,
+           CASE WHEN temp_target_f IS NULL THEN 'temp_target_f' END,
+           CASE WHEN temp_high_f IS NULL THEN 'temp_high_f' END,
+           CASE WHEN vpd_low_kpa IS NULL THEN 'vpd_low_kpa' END,
+           CASE WHEN vpd_target_kpa IS NULL THEN 'vpd_target_kpa' END,
+           CASE WHEN vpd_high_kpa IS NULL THEN 'vpd_high_kpa' END,
+           CASE WHEN temp_target_delta_f IS NULL THEN 'temp_target_delta_f' END,
+           CASE WHEN vpd_target_delta_kpa IS NULL THEN 'vpd_target_delta_kpa' END,
+           CASE WHEN temp_band_error_f IS NULL THEN 'temp_band_error_f' END,
+           CASE WHEN vpd_band_error_kpa IS NULL THEN 'vpd_band_error_kpa' END,
+           CASE WHEN relay_truth IS NULL OR jsonb_typeof(relay_truth) <> 'object' OR relay_truth = '{}'::jsonb THEN 'relay_truth' END,
+           CASE WHEN sensor_status IS NULL OR jsonb_typeof(sensor_status) <> 'object' OR sensor_status = '{}'::jsonb THEN 'sensor_status' END,
+           CASE WHEN sensor_status->>'latest_climate_ts' IS NULL OR sensor_status->>'latest_climate_ts' = '' THEN 'sensor_status.latest_climate_ts' END,
+           CASE
+             WHEN CASE
+               WHEN sensor_status->>'latest_climate_age_s' ~ '^[0-9]+$'
+               THEN (sensor_status->>'latest_climate_age_s')::int < 300
+               ELSE false
+             END IS NOT true THEN 'sensor_status.latest_climate_age_s'
+           END,
+           CASE WHEN sensor_status->>'temp_avg_present' IS DISTINCT FROM 'true' THEN 'sensor_status.temp_avg_present' END,
+           CASE WHEN sensor_status->>'vpd_avg_present' IS DISTINCT FROM 'true' THEN 'sensor_status.vpd_avg_present' END,
+           CASE WHEN sensor_status->>'band_context_complete' IS DISTINCT FROM 'true' THEN 'sensor_status.band_context_complete' END
+         ], NULL),
+         ','
+       )
+  FROM latest;
+" 2>/dev/null | tr -d '[:space:]' || true)
+if [ -n "${action_age_s:-}" ] && [ "${action_age_s:-2147483647}" -lt 300 ] && [ -z "${action_proof_missing:-}" ]; then
+  _check "climate action proof fresh" ok "controller action proof is ${action_age_s}s old and includes target deltas, relay truth, and sensor freshness"
+else
+  _check "climate action proof fresh" fail "action proof age=${action_age_s:-unknown}s missing=${action_proof_missing:-none}; planner must not infer why relays are off without fresh proof"
+fi
+
 # Scorecard function: non-zero rows for yesterday (data rolled up)
-sc_rows=$($DB -c "SELECT count(*) FROM fn_planner_scorecard(CURRENT_DATE - 1);" 2>/dev/null | tr -d ' ')
+sc_rows=$("${DB[@]}" -c "SELECT count(*) FROM fn_planner_scorecard(CURRENT_DATE - 1);" 2>/dev/null | tr -d ' ')
 if [ -n "${sc_rows:-}" ] && [ "${sc_rows:-0}" -ge 20 ]; then
   _check "yesterday scorecard rolled up" ok "${sc_rows} metrics available — previous_plan_validation can be computed"
 else
@@ -1135,7 +1453,7 @@ else
 fi
 
 # Weather forecast: a row for a time in the next 24h
-fc_rows=$($DB -c "SELECT count(*) FROM weather_forecast WHERE ts BETWEEN now() AND now() + interval '24 hours';" 2>/dev/null | tr -d ' ')
+fc_rows=$("${DB[@]}" -c "SELECT count(*) FROM weather_forecast WHERE ts BETWEEN now() AND now() + interval '24 hours';" 2>/dev/null | tr -d ' ')
 if [ -n "${fc_rows:-}" ] && [ "${fc_rows:-0}" -gt 0 ]; then
   _check "weather forecast present" ok "${fc_rows} forecast hours in the next 24h"
 else

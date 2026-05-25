@@ -130,12 +130,35 @@ async def check_conditions(conn) -> list[dict]:
 
     # 2. Relay stuck
     relay_context = await conn.fetchrow("""
-        SELECT temp_avg, vpd_avg, sp_temp_high, sp_vpd_low, sp_vpd_high,
-               heat1, heat2, vent, fan1, fan2, greenhouse_mode, ts
-          FROM v_greenhouse_state
-         WHERE ts >= now() - interval '10 minutes'
-         ORDER BY ts DESC
-         LIMIT 1
+        WITH latest_climate AS (
+            SELECT ts, temp_avg, vpd_avg
+              FROM climate
+             WHERE ts >= now() - interval '10 minutes'
+               AND temp_avg IS NOT NULL
+               AND vpd_avg IS NOT NULL
+             ORDER BY ts DESC
+             LIMIT 1
+        )
+        SELECT c.temp_avg,
+               c.vpd_avg,
+               fn_setpoint_at('temp_high', c.ts) AS sp_temp_high,
+               fn_setpoint_at('vpd_low', c.ts) AS sp_vpd_low,
+               fn_setpoint_at('vpd_high', c.ts) AS sp_vpd_high,
+               fn_equip_at('heat1', c.ts) AS heat1,
+               fn_equip_at('heat2', c.ts) AS heat2,
+               fn_equip_at('vent', c.ts) AS vent,
+               fn_equip_at('fan1', c.ts) AS fan1,
+               fn_equip_at('fan2', c.ts) AS fan2,
+               (
+                   SELECT ss.value
+                     FROM system_state ss
+                    WHERE ss.entity = 'greenhouse_state'
+                      AND ss.ts <= c.ts
+                    ORDER BY ss.ts DESC
+                    LIMIT 1
+               ) AS greenhouse_mode,
+               c.ts
+          FROM latest_climate c
     """)
     rows = await conn.fetch("SELECT equipment, hours_on, threshold_hours FROM v_relay_stuck WHERE is_stuck = true")
     for r in rows:

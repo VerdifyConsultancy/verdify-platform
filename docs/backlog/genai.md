@@ -51,6 +51,34 @@ remains the safety-critical controller.
 - [x] **G-P0.6 MCP `plan_run` audit parity.** Manual/ad-hoc `plan_run` now creates a MANUAL trigger row, sends through `send_to_iris`, returns audit fields, and resolves through the same `plan_delivery_log` correlation path.
 - [x] **G-P0.7 Strict registry validation at MCP boundary.** `PlanTransition` / `set_plan` and `set_tunable` now reject values outside `tunable_registry` min/max before writing `setpoint_plan`. Errors include offending parameter, requested value, registry range, and nearest safe value so Iris can self-correct.
 - [x] **G-P0.8 Historical local planner smoke.** Live smoke sent MANUAL/FORECAST/DEVIATION/TRANSITION/SUNRISE/SUNSET validation triggers to local Gemma4 before the Hermes cutover, verified acknowledgements with matching `trigger_id`, rejected an out-of-range `vpd_hysteresis=0.6`, restored a valid tactical nudge through dispatcher readback, and audited active/future plan rows with zero registry violations.
+- [x] **G-CI.1 ClimateIntent single-path emission.** Update the Hermes prompt
+  and standalone planner mirror so full plans emit bounded `climate_intent`
+  segments on the same production `set_plan` path. MCP materializes the intent
+  once into registry-bounded Tier 1 rows and stores the semantic intent in
+  `plan_journal`. No production shadow/proposal path is allowed; offline replay
+  remains diagnostic only. Completed by the ClimateIntent contract PR: Hermes
+  prompts require ClimateIntent, planner mirror emits ClimateIntent, MCP rejects
+  raw-params full plans, and old runtime shadow services/scripts/tables were
+  retired.
+- [x] **G-CI.2 Dispatcher-owned target context.** Keep temp/VPD low-target-high
+  ownership in crop policy + dispatcher, not AI. Hermes now receives those
+  targets and signed actual-minus-target deltas as read-only prompt context;
+  MCP requires every tactical ClimateIntent field explicitly on each full-plan
+  transition; the public AI tunables page documents the field-by-field firmware
+  impact.
+- [x] **G-CI.3 Compliance-first ClimateIntent authority context.** Canonical
+  sprint plan:
+  [`docs/climate-authority-sprint-plan-2026-05-24.md`](../climate-authority-sprint-plan-2026-05-24.md).
+  GitHub issue:
+  [#6](https://github.com/VerdifyConsultancy/verdify-platform/issues/6).
+  Added the current control-authority state to Hermes context: selected climate
+  action, temp/VPD band errors, wet/fog block reasons, wet-assist switches and
+  cutoffs, recent clamps, and setpoint confirmations. Updated planner guidance
+  so safe dual-axis compliance misses do not materialize wet assist off merely
+  to conserve resources. Added materializer/MCP contradiction checks for obvious
+  conflicts such as high VPD pressure with wet gates disabled and no named
+  safety block; live context now exposes dispatcher-owned targets and authority
+  mode while keeping temp/VPD bands read-only to AI.
 - [ ] **G-P1.1 Post-plan self-critique.** After each full plan, have Iris record a short structured rationale: forecast assumptions, expected stress windows, tunables intentionally changed, tunables intentionally left alone, and what evidence would falsify the plan.
 
 **Project recovery intake from `PROJECT_STATE.md`** (2026-05-22; coordinated
@@ -72,13 +100,11 @@ through [`project-recovery-2026-05-22.md`](project-recovery-2026-05-22.md)).
   current, executable behavior. No backlog item may promise a missing operator
   script after RM-4 exits. Implemented in PR #84; deployed `outcomes` and
   `support-docs` dry-runs passed.
-- [x] **G-RM4 Shadow rollout boundary.** Keep planner graph shadow
-  non-authoritative during recovery. Any change that would make the graph path
-  authoritative, alter Hermes routing, or change production `set_plan` /
-  `set_tunable` behavior needs a separate coordinator-approved rollout. PR #84
-  only adds the disabled sidecar hook and operator scripts; deployed env has
-  `PLANNER_GRAPH_SHADOW_ENABLED` unset, and no shadow rows were written after
-  the ingestor restart.
+- [x] **G-RM4 Shadow rollout boundary.** Historical recovery boundary is closed.
+  The later ClimateIntent single-path PR removed the disabled runtime shadow
+  service, sidecar hook, scripts, tests, MCP server, Docker profile, and live
+  shadow tables. Planner-owned memory ingestion now lives in
+  `ingestor/planner_memory_ingest.py`.
 
 ## Tracked list
 
@@ -94,7 +120,7 @@ through [`project-recovery-2026-05-22.md`](project-recovery-2026-05-22.md)).
 | G6 | Split planner prompt into immutable rubric (cacheable) + per-cycle context (non-cacheable). Measure cache-hit rate after | Prompt refactor | cost | L | pending |
 | G7 | Close the hypothesis loop: inject prior plan's `hypothesis_structured` + `actual_outcome` into the next SUNRISE prompt as a "what did yesterday predict vs deliver" block | Prompt + MCP read path | — | M | **done** (d6de832) |
 | G8 | Lessons state machine: `LessonState` literal (`proposed`/`validated`/`superseded`/`retired`), transition guards, `lessons_manage` `supersede(old_id, new_id)` action | Schema + MCP | — | M | pending |
-| G9 | Multi-model eval: shadow Gemini 2.5 Pro call on N% of cycles; store both plans + outcome; publish weekly comparison page | Infra + prompt | coordinator sign-off | L | pending |
+| G9 | Offline counterfactual replay against alternate planner/model outputs; never a production shadow controller or second actuation path | Infra + prompt | coordinator sign-off | L | pending |
 | G10 | Harden `scripts/gather-plan-context.sh`: aggregate per-section exit codes, emit a "context completeness" header Iris can read and flag | Script | — | M | **done** (58ade59) |
 | G11 | Purpose-name the feedback-loop smoke script as `scripts/smoke-feedback-loop.py`; adopt purpose-named smoke scripts going forward | Cleanup | — | XS | **done** |
 | G12 | Either populate or drop `plan_journal.conditions_summary` (propose migration to coordinator) | Coordinator handshake | — | S | pending |

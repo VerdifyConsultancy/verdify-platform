@@ -73,6 +73,31 @@ class TestPlanTransition:
         with pytest.raises(ValidationError):
             PlanTransition(ts=datetime(2026, 4, 18, 12), params={"temp_low": 55.0})
 
+    def test_accepts_climate_intent_without_low_level_params(self):
+        t = PlanTransition(
+            ts=_t(),
+            climate_intent={
+                "forecast_temp_bias_f": 1.0,
+                "forecast_vpd_bias_kpa": 0.1,
+                "solar_precool_gain_f": 1.0,
+                "thermal_lead_time_min": 30.0,
+                "economizer_temp_advantage_f": 4.0,
+                "economizer_dewpoint_advantage_f": 3.0,
+                "moisture_engage_vpd_excess_kpa": 0.05,
+                "mist_duty_limit_pct": 25.0,
+                "fog_escalate_vpd_excess_kpa": 0.25,
+                "dew_margin_floor_f": 8.0,
+                "wet_cutoff_hour": 19.0,
+                "daily_mist_budget_gal": 120.0,
+                "resource_sensitivity": 0.4,
+                "relay_churn_penalty": 0.6,
+            },
+        )
+
+        assert t.params == {}
+        assert t.climate_intent is not None
+        assert t.climate_intent.forecast_temp_bias_f == 1.0
+
     def test_rejects_empty_params(self):
         with pytest.raises(ValidationError):
             PlanTransition(ts=_t(), params={})

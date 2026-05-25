@@ -9,6 +9,7 @@
  */
 
 #include <cstdint>
+#include <cstddef>
 #include <cmath>
 #include <algorithm>
 
@@ -115,9 +116,8 @@ struct Setpoints {
     // held for at least dwell_gate_ms after the last accepted transition.
     // Safety rails, R2-3 dry override, and vpd_min_safe rescue preempt the
     // dwell. Projected 80% reduction in whipsaw events (Explore B: 59 mode
-    // changes in 2h on 2026-04-17 stress window). Default OFF for shadow-
-    // mode bake; operator / planner flips to ON after 14d of replay +
-    // shadow validation.
+    // changes in 2h on 2026-04-17 stress window). Default OFF until replay
+    // validation and operator approval.
     bool     sw_dwell_gate_enabled;
     uint32_t dwell_gate_ms;                // default 300000 (5 min)
     // Unified band-first controller. Kept as a compatibility/readback field,
@@ -205,6 +205,152 @@ struct RelayOutputs {
     bool fog;
     bool vent;
 };
+
+// ── ClimateIntent candidate-action controller contract ────────────────
+// These types mirror verdify_schemas.climate_intent. Firmware uses them as the
+// single climate decision surface; relay mechanics and interlocks remain local.
+enum ClimateAction {
+    CLIMATE_SENSOR_FAULT,
+    CLIMATE_SAFETY_HEAT,
+    CLIMATE_SAFETY_COOL,
+    CLIMATE_HEAT,
+    CLIMATE_IDLE,
+    CLIMATE_VENT_COOL,
+    CLIMATE_VENT_COOL_MIST_ASSIST,
+    CLIMATE_VENT_COOL_FOG_ASSIST,
+    CLIMATE_SEALED_HUMIDIFY,
+    CLIMATE_SEALED_FOG,
+    CLIMATE_DEHUM_VENT
+};
+
+static_assert(CLIMATE_DEHUM_VENT == 10, "ClimateAction enum changed — update CLIMATE_ACTION_NAMES and schemas");
+
+inline constexpr const char* CLIMATE_ACTION_NAMES[] = {
+    "SENSOR_FAULT",
+    "SAFETY_HEAT",
+    "SAFETY_COOL",
+    "HEAT",
+    "IDLE",
+    "VENT_COOL",
+    "VENT_COOL_MIST_ASSIST",
+    "VENT_COOL_FOG_ASSIST",
+    "SEALED_HUMIDIFY",
+    "SEALED_FOG",
+    "DEHUM_VENT"
+};
+
+enum ClimatePriorityAxis {
+    CLIMATE_PRIORITY_SAFETY,
+    CLIMATE_PRIORITY_TEMP,
+    CLIMATE_PRIORITY_VPD,
+    CLIMATE_PRIORITY_RESOURCE
+};
+
+inline constexpr const char* CLIMATE_PRIORITY_AXIS_NAMES[] = {
+    "safety",
+    "temp",
+    "vpd",
+    "resource"
+};
+
+enum ClimateMoistureAssistState {
+    CLIMATE_MOISTURE_INACTIVE,
+    CLIMATE_MOISTURE_ENGAGE_DELAY,
+    CLIMATE_MOISTURE_PULSE_ON,
+    CLIMATE_MOISTURE_PULSE_GAP,
+    CLIMATE_MOISTURE_BLOCKED,
+    CLIMATE_MOISTURE_SERVED
+};
+
+inline constexpr const char* CLIMATE_MOISTURE_ASSIST_STATE_NAMES[] = {
+    "inactive",
+    "engage_delay",
+    "pulse_on",
+    "pulse_gap",
+    "blocked",
+    "served"
+};
+
+enum ClimateMoistureZone {
+    CLIMATE_ZONE_NONE,
+    CLIMATE_ZONE_SOUTH,
+    CLIMATE_ZONE_WEST,
+    CLIMATE_ZONE_CENTER,
+    CLIMATE_ZONE_ALL
+};
+
+inline constexpr const char* CLIMATE_MOISTURE_ZONE_NAMES[] = {
+    "none",
+    "south",
+    "west",
+    "center",
+    "all"
+};
+
+struct ClimateCandidateProjection {
+    ClimateAction action;
+    bool safety_ok;
+    const char* blocked_reason;
+    float projected_temp_error_f;
+    float projected_vpd_error_kpa;
+    float resource_cost;
+    float relay_churn_cost;
+    float confidence;
+    float prior_action_hold_preference;
+};
+
+struct ClimateResourceCostEstimate {
+    float water_gal;
+    float electric_kwh;
+    float gas_therm;
+};
+
+struct ClimateActionDecision {
+    ClimateAction climate_action;
+    ClimatePriorityAxis priority_axis;
+    float temp_error_f;
+    float vpd_error_kpa;
+    const char* candidate_summary;
+    ClimateMoistureAssistState moisture_assist_state;
+    ClimateMoistureZone moisture_zone;
+    float next_mist_eligible_s;
+    float fog_margin_kpa;
+    const char* fog_block_reason;
+    ClimateResourceCostEstimate resource_cost_estimate;
+};
+
+inline bool climate_candidate_precedes(
+    const ClimateCandidateProjection& a,
+    const ClimateCandidateProjection& b
+) noexcept {
+    if (a.projected_temp_error_f != b.projected_temp_error_f) {
+        return a.projected_temp_error_f < b.projected_temp_error_f;
+    }
+    if (a.projected_vpd_error_kpa != b.projected_vpd_error_kpa) {
+        return a.projected_vpd_error_kpa < b.projected_vpd_error_kpa;
+    }
+    if (a.resource_cost != b.resource_cost) {
+        return a.resource_cost < b.resource_cost;
+    }
+    if (a.relay_churn_cost != b.relay_churn_cost) {
+        return a.relay_churn_cost < b.relay_churn_cost;
+    }
+    return a.prior_action_hold_preference > b.prior_action_hold_preference;
+}
+
+inline int choose_climate_candidate_index(
+    const ClimateCandidateProjection* candidates,
+    std::size_t count
+) noexcept {
+    int selected = -1;
+    for (std::size_t i = 0; i < count; i++) {
+        if (!candidates[i].safety_ok) continue;
+        if (selected < 0 || climate_candidate_precedes(candidates[i], candidates[selected])) {
+            selected = static_cast<int>(i);
+        }
+    }
+    return selected;
+}
 
 // ── Supplemental lighting state machines ───────────────────────────────
 // Each Lutron circuit is evaluated independently. The crop/DLI policy can seed
@@ -336,8 +482,8 @@ inline Setpoints default_setpoints() {
         // disabling the gate.
         .outdoor_staleness_max_s = 600u,
         .summer_vent_min_runtime_s = 180u,
-        // Phase-2 dwell gate. Default OFF (shadow-mode bake before flipping
-        // to active). 5-min dwell projected to reduce whipsaw 80%.
+        // Phase-2 dwell gate. Default OFF until replay validation and
+        // operator approval. 5-min dwell projected to reduce whipsaw 80%.
         .sw_dwell_gate_enabled = false,
         .dwell_gate_ms = 300000u,
         // Library fallback remains legacy so old unit tests/replay rows can

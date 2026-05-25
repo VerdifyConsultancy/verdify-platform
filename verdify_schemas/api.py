@@ -12,7 +12,7 @@ and auto-populates the OpenAPI spec at /docs.
 from __future__ import annotations
 
 from datetime import date as DateType
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
@@ -157,6 +157,20 @@ class PublicHomeMetrics(BaseModel):
     cost_today_usd: float | None = None
     water_today_gal: float | None = None
     open_critical_high_alerts: int = Field(..., ge=0)
+    climate_action_log_age_s: int | None = Field(default=None, ge=0)
+    controller_climate_action: str | None = None
+    controller_priority_axis: str | None = None
+    controller_temp_target_delta_f: float | None = None
+    controller_vpd_target_delta_kpa: float | None = None
+    controller_temp_band_error_f: float | None = None
+    controller_vpd_band_error_kpa: float | None = None
+    controller_moisture_assist_state: str | None = None
+    controller_wet_assist_allowed: bool | None = None
+    controller_wet_assist_block_reason: str | None = None
+    controller_fog_allowed: bool | None = None
+    controller_fog_block_reason: str | None = None
+    controller_relay_truth: dict[str, Any] | None = None
+    controller_sensor_status: dict[str, Any] | None = None
     data_health_status: Literal["ok", "warn", "fail"]
     data_health_warnings: list[PublicDataHealthCheck] = Field(default_factory=list)
 

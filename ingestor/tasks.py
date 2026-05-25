@@ -136,6 +136,20 @@ HEAP_RECOVERY_PRIORITY_PARAMS = (
     )
     | IRRIGATION_SCHEDULE_PARAMS
 )
+SECOND_READBACK_ABS_TOLERANCE_PARAMS = frozenset(
+    {
+        "mister_engage_delay_s",
+        "mister_all_delay_s",
+        "mister_pulse_on_s",
+        "mister_pulse_gap_s",
+        "min_fog_on_s",
+        "min_fog_off_s",
+        "mist_backoff_s",
+        "mist_max_closed_vent_s",
+        "mist_thermal_relief_s",
+        "vpd_watch_dwell_s",
+    }
+)
 HOUSE_BAND_PARAMS = frozenset(
     name for name in CROP_BAND_REG if name.startswith("temp_") or name in {"vpd_low", "vpd_high"}
 )
@@ -1107,12 +1121,35 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
         # above the active band where it is physically contradictory.
         relay_context = await conn.fetchrow(
             """
-            SELECT temp_avg, vpd_avg, sp_temp_high, sp_vpd_low, sp_vpd_high,
-                   heat1, heat2, vent, fan1, fan2, greenhouse_mode, ts
-              FROM v_greenhouse_state
-             WHERE ts >= now() - interval '10 minutes'
-             ORDER BY ts DESC
-             LIMIT 1
+            WITH latest_climate AS (
+                SELECT ts, temp_avg, vpd_avg
+                  FROM climate
+                 WHERE ts >= now() - interval '10 minutes'
+                   AND temp_avg IS NOT NULL
+                   AND vpd_avg IS NOT NULL
+                 ORDER BY ts DESC
+                 LIMIT 1
+            )
+            SELECT c.temp_avg,
+                   c.vpd_avg,
+                   fn_setpoint_at('temp_high', c.ts) AS sp_temp_high,
+                   fn_setpoint_at('vpd_low', c.ts) AS sp_vpd_low,
+                   fn_setpoint_at('vpd_high', c.ts) AS sp_vpd_high,
+                   fn_equip_at('heat1', c.ts) AS heat1,
+                   fn_equip_at('heat2', c.ts) AS heat2,
+                   fn_equip_at('vent', c.ts) AS vent,
+                   fn_equip_at('fan1', c.ts) AS fan1,
+                   fn_equip_at('fan2', c.ts) AS fan2,
+                   (
+                       SELECT ss.value
+                         FROM system_state ss
+                        WHERE ss.entity = 'greenhouse_state'
+                          AND ss.ts <= c.ts
+                        ORDER BY ss.ts DESC
+                        LIMIT 1
+                   ) AS greenhouse_mode,
+                   c.ts
+              FROM latest_climate c
             """
         )
         for r in await conn.fetch(
@@ -1264,9 +1301,29 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
         row = await conn.fetchrow(
             """
             WITH recent AS (
-                SELECT *
-                  FROM v_greenhouse_state
-                 WHERE ts >= now() - interval '15 minutes'
+                SELECT c.ts,
+                       c.temp_avg,
+                       c.vpd_avg,
+                       c.outdoor_temp_f,
+                       c.outdoor_rh_pct,
+                       fn_setpoint_at('temp_high', c.ts) AS sp_temp_high,
+                       fn_setpoint_at('vpd_high', c.ts) AS sp_vpd_high,
+                       fn_equip_at('fog', c.ts) AS fog,
+                       fn_equip_at('mister_south', c.ts) AS mist_south,
+                       fn_equip_at('mister_west', c.ts) AS mist_west,
+                       fn_equip_at('mister_center', c.ts) AS mist_center,
+                       (
+                           SELECT ss.value
+                             FROM system_state ss
+                            WHERE ss.entity = 'greenhouse_state'
+                              AND ss.ts <= c.ts
+                            ORDER BY ss.ts DESC
+                            LIMIT 1
+                       ) AS greenhouse_mode
+                  FROM climate c
+                 WHERE c.ts >= now() - interval '15 minutes'
+                   AND c.temp_avg IS NOT NULL
+                   AND c.vpd_avg IS NOT NULL
             ),
             agg AS (
                 SELECT count(*)::int AS samples,
@@ -1337,9 +1394,30 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
         row = await conn.fetchrow(
             """
             WITH recent AS (
-                SELECT *
-                  FROM v_greenhouse_state
-                 WHERE ts >= now() - interval '30 minutes'
+                SELECT c.ts,
+                       c.temp_avg,
+                       c.vpd_avg,
+                       c.outdoor_temp_f,
+                       c.outdoor_rh_pct,
+                       c.solar_irradiance_w_m2,
+                       fn_setpoint_at('temp_high', c.ts) AS sp_temp_high,
+                       fn_setpoint_at('vpd_high', c.ts) AS sp_vpd_high,
+                       fn_equip_at('fog', c.ts) AS fog,
+                       fn_equip_at('mister_south', c.ts) AS mist_south,
+                       fn_equip_at('mister_west', c.ts) AS mist_west,
+                       fn_equip_at('mister_center', c.ts) AS mist_center,
+                       (
+                           SELECT ss.value
+                             FROM system_state ss
+                            WHERE ss.entity = 'greenhouse_state'
+                              AND ss.ts <= c.ts
+                            ORDER BY ss.ts DESC
+                            LIMIT 1
+                       ) AS greenhouse_mode
+                  FROM climate c
+                 WHERE c.ts >= now() - interval '30 minutes'
+                   AND c.temp_avg IS NOT NULL
+                   AND c.vpd_avg IS NOT NULL
             ),
             agg AS (
                 SELECT count(*)::int AS samples,
@@ -1520,6 +1598,114 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                     }
                 )
 
+        # 6b. Climate action proof stale/incomplete. This is the controller
+        # graph/OTA-readiness surface: fresh climate rows alone do not prove
+        # what action the authority controller selected or why.
+        action_log_exists = await conn.fetchval("SELECT to_regclass('public.climate_action_log') IS NOT NULL")
+        if not action_log_exists:
+            action_proof = {"age_s": None, "latest_ts": None, "proof_missing": "table_missing"}
+        else:
+            action_proof = await conn.fetchrow(
+                """
+                WITH latest AS (
+                    SELECT *
+                      FROM climate_action_log
+                     ORDER BY ts DESC
+                     LIMIT 1
+                )
+                SELECT
+                    (SELECT EXTRACT(EPOCH FROM now() - ts)::int FROM latest) AS age_s,
+                    (SELECT ts FROM latest) AS latest_ts,
+                    COALESCE(
+                        (
+                            SELECT concat_ws(',',
+                                CASE WHEN climate_action IS NULL OR climate_action = '' THEN 'climate_action' END,
+                                CASE WHEN priority_axis IS NULL OR priority_axis = '' THEN 'priority_axis' END,
+                                CASE WHEN climate_intent_version IS NULL OR climate_intent_version = ''
+                                     THEN 'climate_intent_version' END,
+                                CASE WHEN temp_low_f IS NULL THEN 'temp_low_f' END,
+                                CASE WHEN temp_target_f IS NULL THEN 'temp_target_f' END,
+                                CASE WHEN temp_high_f IS NULL THEN 'temp_high_f' END,
+                                CASE WHEN vpd_low_kpa IS NULL THEN 'vpd_low_kpa' END,
+                                CASE WHEN vpd_target_kpa IS NULL THEN 'vpd_target_kpa' END,
+                                CASE WHEN vpd_high_kpa IS NULL THEN 'vpd_high_kpa' END,
+                                CASE WHEN temp_target_delta_f IS NULL THEN 'temp_target_delta_f' END,
+                                CASE WHEN vpd_target_delta_kpa IS NULL THEN 'vpd_target_delta_kpa' END,
+                                CASE WHEN temp_band_error_f IS NULL THEN 'temp_band_error_f' END,
+                                CASE WHEN vpd_band_error_kpa IS NULL THEN 'vpd_band_error_kpa' END,
+                                CASE
+                                    WHEN relay_truth IS NULL
+                                      OR jsonb_typeof(relay_truth) <> 'object'
+                                      OR relay_truth = '{}'::jsonb
+                                    THEN 'relay_truth'
+                                END,
+                                CASE
+                                    WHEN sensor_status IS NULL
+                                      OR jsonb_typeof(sensor_status) <> 'object'
+                                      OR sensor_status = '{}'::jsonb
+                                    THEN 'sensor_status'
+                                END,
+                                CASE
+                                    WHEN sensor_status->>'latest_climate_ts' IS NULL
+                                      OR sensor_status->>'latest_climate_ts' = ''
+                                    THEN 'sensor_status.latest_climate_ts'
+                                END,
+                                CASE
+                                    WHEN CASE
+                                        WHEN sensor_status->>'latest_climate_age_s' ~ '^[0-9]+$'
+                                        THEN (sensor_status->>'latest_climate_age_s')::int < 300
+                                        ELSE false
+                                    END IS NOT true
+                                    THEN 'sensor_status.latest_climate_age_s'
+                                END,
+                                CASE
+                                    WHEN sensor_status->>'temp_avg_present' IS DISTINCT FROM 'true'
+                                    THEN 'sensor_status.temp_avg_present'
+                                END,
+                                CASE
+                                    WHEN sensor_status->>'vpd_avg_present' IS DISTINCT FROM 'true'
+                                    THEN 'sensor_status.vpd_avg_present'
+                                END,
+                                CASE
+                                    WHEN sensor_status->>'band_context_complete' IS DISTINCT FROM 'true'
+                                    THEN 'sensor_status.band_context_complete'
+                                END
+                            )
+                            FROM latest
+                        ),
+                        'missing'
+                    ) AS proof_missing
+                """
+            )
+        proof_age_s = action_proof["age_s"] if action_proof else None
+        proof_missing = action_proof["proof_missing"] if action_proof else "missing"
+        latest_ts = action_proof["latest_ts"] if action_proof else None
+        if proof_age_s is None or proof_age_s > 300 or proof_missing:
+            reason_parts = []
+            if proof_age_s is None:
+                reason_parts.append("missing")
+            elif proof_age_s > 300:
+                reason_parts.append(f"stale {proof_age_s}s")
+            if proof_missing:
+                reason_parts.append(f"incomplete: {proof_missing}")
+            alerts.append(
+                {
+                    "alert_type": "climate_action_proof_stale",
+                    "severity": "warning",
+                    "category": "system",
+                    "sensor_id": "system.climate_action_log",
+                    "zone": None,
+                    "message": "Climate action proof is " + "; ".join(reason_parts),
+                    "details": {
+                        "age_s": proof_age_s,
+                        "latest_ts": latest_ts.isoformat() if latest_ts else None,
+                        "proof_missing": proof_missing or None,
+                    },
+                    "metric_value": float(proof_age_s) if proof_age_s is not None else None,
+                    "threshold_value": 300.0,
+                }
+            )
+
         # 7. Planner stale. Threshold 14h = SUNSET→SUNRISE gap (~12.7h) + 1.3h slack.
         # Iris emits full plans at SUNRISE and SUNSET only; interim TRANSITION /
         # FORECAST / DEVIATION events adjust tunables or trigger replans. An 8h
@@ -1651,13 +1837,32 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
         # planner_stale.
         timed_out_deliveries = await conn.fetch(
             """
-            SELECT id, event_type, event_label, instance, gateway_status, delivered_at,
-                   gateway_body, trigger_id, hermes_run_id,
+            WITH recent AS (
+                SELECT id, event_type, expected_at, status, plan_delivery_log_id
+                  FROM planner_trigger_ledger
+                 WHERE expected_at > now() - interval '36 hours'
+            ),
+            last_required_recovery AS (
+                SELECT max(expected_at) AS expected_at
+                  FROM recent
+                 WHERE event_type IN ('SUNRISE', 'SUNSET', 'MIDNIGHT')
+                   AND status = 'plan_written'
+            )
+            SELECT pdl.id, pdl.event_type, pdl.event_label, pdl.instance,
+                   pdl.gateway_status, pdl.delivered_at, pdl.gateway_body,
+                   pdl.trigger_id, pdl.hermes_run_id,
                    EXTRACT(EPOCH FROM (now() - delivered_at))::int AS elapsed_seconds
-              FROM plan_delivery_log
-             WHERE status = 'timed_out'
-               AND delivered_at > now() - interval '6 hours'
-             ORDER BY delivered_at DESC
+              FROM plan_delivery_log pdl
+              LEFT JOIN recent r ON r.plan_delivery_log_id = pdl.id
+              CROSS JOIN last_required_recovery lrr
+             WHERE pdl.status = 'timed_out'
+               AND pdl.delivered_at > now() - interval '6 hours'
+               AND (
+                     pdl.event_type NOT IN ('SUNRISE', 'SUNSET', 'MIDNIGHT')
+                     OR lrr.expected_at IS NULL
+                     OR COALESCE(r.expected_at, pdl.delivered_at) > lrr.expected_at
+                   )
+             ORDER BY pdl.delivered_at DESC
              LIMIT 10
             """
         )
@@ -1704,22 +1909,38 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
         # delivered-but-no-plan and no delivery row at all.
         required_misses = await conn.fetch(
             """
-            WITH latest_required AS (
-                SELECT id, event_type, event_label, instance, status, expected_at, due_at,
-                       delivered_at, plan_delivery_log_id, trigger_id, resulting_plan_id, notes,
-                       row_number() OVER (PARTITION BY event_type ORDER BY expected_at DESC) AS rn
-                 FROM planner_trigger_ledger
+            WITH recent AS (
+                SELECT id, event_type, event_label, instance, status, expected_at,
+                       due_at, delivered_at, plan_delivery_log_id, trigger_id,
+                       resulting_plan_id, notes
+                  FROM planner_trigger_ledger
                  WHERE event_type IN ('SUNRISE', 'SUNSET', 'MIDNIGHT')
                    AND expected_at > now() - interval '36 hours'
                    AND event_label NOT ILIKE 'validation%ack-only%'
+            ),
+            last_required_recovery AS (
+                SELECT max(expected_at) AS expected_at
+                  FROM recent
+                 WHERE status = 'plan_written'
+            ),
+            unrecovered_required_misses AS (
+                SELECT r.*
+                  FROM recent r
+                  CROSS JOIN last_required_recovery lrr
+                 WHERE r.due_at < now()
+                   AND (
+                         r.status IN ('missed', 'timed_out', 'delivery_failed')
+                         OR r.status IN ('expected', 'delivered')
+                       )
+                   AND (
+                         lrr.expected_at IS NULL
+                         OR r.expected_at > lrr.expected_at
+                       )
             )
             SELECT id, event_type, event_label, instance, status, expected_at, due_at,
                    delivered_at, plan_delivery_log_id, trigger_id, resulting_plan_id, notes
-              FROM latest_required
-             WHERE rn = 1
-               AND status <> 'plan_written'
-               AND due_at < now()
-             ORDER BY delivered_at DESC
+              FROM unrecovered_required_misses
+             ORDER BY expected_at DESC
             """
         )
         if required_misses:
@@ -3009,6 +3230,23 @@ def _should_skip(last: float | None, val: float, rel: float = 0.01, abs_floor: f
     return abs(last - val) / max(abs(val), abs_floor) < rel
 
 
+def readback_abs_tolerance(param: str) -> float:
+    """Absolute cfg-readback tolerance for quantized firmware readbacks."""
+    return 1.0 if param in SECOND_READBACK_ABS_TOLERANCE_PARAMS else 0.0
+
+
+def readback_values_equivalent(param: str, observed: float, desired: float) -> bool:
+    """Return true when a cfg_* readback is close enough to the requested value."""
+    try:
+        observed_f = float(observed)
+        desired_f = float(desired)
+    except (TypeError, ValueError):
+        return False
+    if _should_skip(observed_f, desired_f):
+        return True
+    return abs(observed_f - desired_f) <= readback_abs_tolerance(param)
+
+
 def _heap_push_defer_active(
     heap_alert_open: bool,
     heap_free_kb: float | None,
@@ -3052,10 +3290,7 @@ def _readback_drift(param: str, desired: float) -> bool:
     readback = shared.cfg_readback.get(param)
     if readback is None:
         return False
-    try:
-        return not _should_skip(float(readback), float(desired))
-    except (TypeError, ValueError):
-        return False
+    return not readback_values_equivalent(param, readback, desired)
 
 
 async def _write_clamp_audit_rows(
@@ -3175,17 +3410,35 @@ def _control_band_from_house_row(house_row) -> dict[str, float] | None:
 async def _fetch_moisture_guard_context(conn) -> dict[str, float | str | None] | None:
     row = await conn.fetchrow(
         """
-        WITH latest AS (
-            SELECT temp_avg,
-                   sp_temp_high,
+        WITH latest_climate AS (
+            SELECT ts,
+                   temp_avg,
                    vpd_avg,
                    dew_point,
-                   greenhouse_mode,
                    outdoor_temp_f,
                    outdoor_rh_pct
-              FROM v_greenhouse_state
+              FROM climate
+             WHERE temp_avg IS NOT NULL
+               AND vpd_avg IS NOT NULL
              ORDER BY ts DESC
              LIMIT 1
+        ),
+        latest AS (
+            SELECT c.temp_avg,
+                   fn_setpoint_at('temp_high', c.ts) AS sp_temp_high,
+                   c.vpd_avg,
+                   c.dew_point,
+                   (
+                       SELECT ss.value
+                         FROM system_state ss
+                        WHERE ss.entity = 'greenhouse_state'
+                          AND ss.ts <= c.ts
+                        ORDER BY ss.ts DESC
+                        LIMIT 1
+                   ) AS greenhouse_mode,
+                   c.outdoor_temp_f,
+                   c.outdoor_rh_pct
+              FROM latest_climate c
         ),
         recent AS (
             SELECT count(*)::int AS recent_samples,
@@ -5793,8 +6046,8 @@ async def planner_memory_ingest_sync(pool: asyncpg.Pool) -> None:
     Failures are logged and skipped; this path must never block greenhouse ops.
     """
 
-    from planner_graph_shadow import (
-        PlannerGraphShadowError,
+    from planner_memory_ingest import (
+        PlannerMemoryIngestError,
         PlannerMemoryItem,
         build_outcome_memory_item,
         build_prior_plan_memory_item,
@@ -5829,7 +6082,7 @@ async def planner_memory_ingest_sync(pool: asyncpg.Pool) -> None:
                 support_items = [item for item in all_support_items if item.source_id not in seeded_support_doc_ids][
                     :max_items
                 ]
-            except (OSError, ValueError, TypeError, PlannerGraphShadowError) as exc:
+            except (OSError, ValueError, TypeError, PlannerMemoryIngestError) as exc:
                 log.warning("planner memory support-doc load failed: %s", exc)
 
     journal_items: list[PlannerMemoryItem] = []
@@ -5885,7 +6138,7 @@ async def planner_memory_ingest_sync(pool: asyncpg.Pool) -> None:
     batch_id = f"verdify-memory-{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}"
     result = ingest_planner_memory_batch(items=items, batch_id=batch_id)
     if result.status >= 400:
-        raise PlannerGraphShadowError(f"memory ingest failed: HTTP {result.status}: {result.body}")
+        raise PlannerMemoryIngestError(f"memory ingest failed: HTTP {result.status}: {result.body}")
     body = result.body if isinstance(result.body, dict) else {}
     log.info(
         "planner memory ingest batch=%s items=%d accepted=%s duplicates=%s rejected=%s",

@@ -31,6 +31,7 @@ AlertType = Literal[
     "heat_staging_inversion",
     "irrigation_feedback_gap",
     "leak_detected",
+    "climate_action_proof_stale",
     "plan_context_failed",
     "planner_band_ownership_drift",
     "planner_evaluation_missed",
@@ -67,6 +68,7 @@ ALERT_TYPES: tuple[str, ...] = (
     "heat_staging_inversion",
     "irrigation_feedback_gap",
     "leak_detected",
+    "climate_action_proof_stale",
     "plan_context_failed",
     "planner_band_ownership_drift",
     "planner_evaluation_missed",
@@ -173,6 +175,12 @@ class VpdExtremeDetails(_DetailsBase):
 
 class LeakDetectedDetails(_DetailsBase):
     since: AwareDatetime
+
+
+class ClimateActionProofStaleDetails(_DetailsBase):
+    age_s: int | None = Field(default=None, ge=0)
+    latest_ts: AwareDatetime | None = None
+    proof_missing: str | None = None
 
 
 class ESP32RebootDetails(_DetailsBase):
@@ -434,6 +442,11 @@ class LeakDetectedAlert(_AlertBase):
     details: LeakDetectedDetails
 
 
+class ClimateActionProofStaleAlert(_AlertBase):
+    alert_type: Literal["climate_action_proof_stale"]
+    details: ClimateActionProofStaleDetails
+
+
 class ESP32RebootAlert(_AlertBase):
     alert_type: Literal["esp32_reboot"]
     details: ESP32RebootDetails
@@ -573,6 +586,7 @@ AlertEnvelopeUnion = Annotated[
     | HeatStagingInversionAlert
     | IrrigationFeedbackGapAlert
     | LeakDetectedAlert
+    | ClimateActionProofStaleAlert
     | PlanContextFailedAlert
     | PlannerBandOwnershipDriftAlert
     | PlannerEvaluationMissedAlert

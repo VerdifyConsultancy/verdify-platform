@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict AUzdOb7rnTaX2jRxM9IlFHncToIYKmq8oaEJnBemwdxFfDMOZeeP6McZvqO6RR1
+\restrict CaqlcCS2PtlBejVdLUrR5EGqo5PQLESXkvhB2aK2MQYGoK5deUlTmzfjQtVwpEj
 
 -- Dumped from database version 16.11
 -- Dumped by pg_dump version 16.11
@@ -984,6 +984,167 @@ ALTER FUNCTION public.fn_band_trace(p_start timestamp with time zone, p_end time
 --
 
 COMMENT ON FUNCTION public.fn_band_trace(p_start timestamp with time zone, p_end timestamp with time zone, p_greenhouse_id text) IS 'Canonical sample-level band trace: raw/smoothed climate, crop targets, firmware setpoints, cfg readbacks, compliance flags, and trace quality.';
+
+
+--
+-- Name: fn_climate_action_effectiveness(interval); Type: FUNCTION; Schema: public; Owner: verdify
+--
+
+CREATE FUNCTION public.fn_climate_action_effectiveness(p_window interval) RETURNS TABLE(action_ts timestamp with time zone, greenhouse_id text, climate_action text, priority_axis text, plan_id text, trigger_id uuid, planner_instance text, temp_band_error_before_f double precision, vpd_band_error_before_kpa double precision, temp_band_error_after_f double precision, vpd_band_error_after_kpa double precision, temp_abs_error_delta_f double precision, vpd_abs_error_delta_kpa double precision, recovered_within_window boolean, time_to_recover_s double precision, wet_relay_duty_pct double precision, vent_fan_duty_pct double precision, fog_duty_pct double precision, mister_water_delta_gal double precision, outdoor_temp_f double precision, outdoor_dewpoint_f double precision, solar_irradiance_w_m2 double precision, wet_assist_allowed boolean, wet_assist_block_reason text, fog_allowed boolean, fog_block_reason text, relay_truth jsonb, resource_cost_estimate jsonb)
+    LANGUAGE sql STABLE
+    AS $$
+WITH base AS (
+    SELECT
+        l.*,
+        c0.ts AS before_climate_ts,
+        c0.temp_avg AS before_temp_f,
+        c0.vpd_avg AS before_vpd_kpa,
+        c0.mister_water_today AS before_mister_water_gal,
+        c0.outdoor_temp_f,
+        c0.outdoor_rh_pct,
+        c0.dew_point AS before_dew_point_f,
+        c0.solar_irradiance_w_m2,
+        c1.ts AS after_climate_ts,
+        c1.temp_avg AS after_temp_f,
+        c1.vpd_avg AS after_vpd_kpa,
+        c1.mister_water_today AS after_mister_water_gal,
+        fn_setpoint_at(l.greenhouse_id, 'temp_low', COALESCE(c1.ts, l.ts)) AS after_temp_low,
+        fn_setpoint_at(l.greenhouse_id, 'temp_high', COALESCE(c1.ts, l.ts)) AS after_temp_high,
+        fn_setpoint_at(l.greenhouse_id, 'vpd_low', COALESCE(c1.ts, l.ts)) AS after_vpd_low,
+        fn_setpoint_at(l.greenhouse_id, 'vpd_high', COALESCE(c1.ts, l.ts)) AS after_vpd_high
+    FROM public.climate_action_log l
+    LEFT JOIN LATERAL (
+        SELECT c.*
+        FROM public.climate c
+        WHERE COALESCE(c.greenhouse_id, 'vallery') = COALESCE(l.greenhouse_id, 'vallery')
+          AND c.temp_avg IS NOT NULL
+          AND c.vpd_avg IS NOT NULL
+          AND c.ts <= l.ts
+        ORDER BY c.ts DESC
+        LIMIT 1
+    ) c0 ON true
+    LEFT JOIN LATERAL (
+        SELECT c.*
+        FROM public.climate c
+        WHERE COALESCE(c.greenhouse_id, 'vallery') = COALESCE(l.greenhouse_id, 'vallery')
+          AND c.temp_avg IS NOT NULL
+          AND c.vpd_avg IS NOT NULL
+          AND c.ts >= l.ts + p_window
+          AND c.ts <= l.ts + p_window + interval '3 minutes'
+        ORDER BY c.ts ASC
+        LIMIT 1
+    ) c1 ON true
+    WHERE l.ts >= now() - interval '14 days'
+),
+scored AS (
+    SELECT
+        b.*,
+        CASE
+            WHEN b.after_temp_f IS NULL OR b.after_temp_low IS NULL OR b.after_temp_high IS NULL THEN NULL
+            WHEN b.after_temp_f < b.after_temp_low THEN b.after_temp_f - b.after_temp_low
+            WHEN b.after_temp_f > b.after_temp_high THEN b.after_temp_f - b.after_temp_high
+            ELSE 0.0
+        END AS after_temp_band_error,
+        CASE
+            WHEN b.after_vpd_kpa IS NULL OR b.after_vpd_low IS NULL OR b.after_vpd_high IS NULL THEN NULL
+            WHEN b.after_vpd_kpa < b.after_vpd_low THEN b.after_vpd_kpa - b.after_vpd_low
+            WHEN b.after_vpd_kpa > b.after_vpd_high THEN b.after_vpd_kpa - b.after_vpd_high
+            ELSE 0.0
+        END AS after_vpd_band_error
+    FROM base b
+)
+SELECT
+    s.ts AS action_ts,
+    s.greenhouse_id,
+    s.climate_action,
+    s.priority_axis,
+    s.plan_id,
+    s.trigger_id,
+    s.planner_instance,
+    s.temp_band_error_f AS temp_band_error_before_f,
+    s.vpd_band_error_kpa AS vpd_band_error_before_kpa,
+    s.after_temp_band_error AS temp_band_error_after_f,
+    s.after_vpd_band_error AS vpd_band_error_after_kpa,
+    CASE
+        WHEN s.after_temp_band_error IS NULL OR s.temp_band_error_f IS NULL THEN NULL
+        ELSE abs(s.after_temp_band_error) - abs(s.temp_band_error_f)
+    END AS temp_abs_error_delta_f,
+    CASE
+        WHEN s.after_vpd_band_error IS NULL OR s.vpd_band_error_kpa IS NULL THEN NULL
+        ELSE abs(s.after_vpd_band_error) - abs(s.vpd_band_error_kpa)
+    END AS vpd_abs_error_delta_kpa,
+    recovery.time_to_recover_s IS NOT NULL AS recovered_within_window,
+    recovery.time_to_recover_s,
+    duty.wet_relay_duty_pct,
+    duty.vent_fan_duty_pct,
+    duty.fog_duty_pct,
+    CASE
+        WHEN s.before_mister_water_gal IS NULL OR s.after_mister_water_gal IS NULL THEN NULL
+        ELSE greatest(0.0, s.after_mister_water_gal - s.before_mister_water_gal)
+    END AS mister_water_delta_gal,
+    s.outdoor_temp_f,
+    CASE
+        WHEN s.outdoor_temp_f IS NULL OR s.outdoor_rh_pct IS NULL OR s.outdoor_rh_pct <= 0 THEN NULL
+        ELSE (
+            243.04 * (
+                ln(s.outdoor_rh_pct / 100.0)
+                + ((17.625 * ((s.outdoor_temp_f - 32.0) * 5.0 / 9.0))
+                   / (243.04 + ((s.outdoor_temp_f - 32.0) * 5.0 / 9.0)))
+            )
+            / (
+                17.625
+                - ln(s.outdoor_rh_pct / 100.0)
+                - ((17.625 * ((s.outdoor_temp_f - 32.0) * 5.0 / 9.0))
+                   / (243.04 + ((s.outdoor_temp_f - 32.0) * 5.0 / 9.0)))
+            )
+        ) * 9.0 / 5.0 + 32.0
+    END AS outdoor_dewpoint_f,
+    s.solar_irradiance_w_m2,
+    s.wet_assist_allowed,
+    s.wet_assist_block_reason,
+    s.fog_allowed,
+    s.fog_block_reason,
+    s.relay_truth,
+    s.resource_cost_estimate
+FROM scored s
+LEFT JOIN LATERAL (
+    SELECT extract(epoch FROM min(c.ts - s.ts))::double precision AS time_to_recover_s
+    FROM public.climate c
+    WHERE COALESCE(c.greenhouse_id, 'vallery') = COALESCE(s.greenhouse_id, 'vallery')
+      AND c.ts >= s.ts
+      AND c.ts <= s.ts + p_window
+      AND c.temp_avg BETWEEN COALESCE(fn_setpoint_at(s.greenhouse_id, 'temp_low', c.ts), -1000)
+                         AND COALESCE(fn_setpoint_at(s.greenhouse_id, 'temp_high', c.ts), 1000)
+      AND c.vpd_avg BETWEEN COALESCE(fn_setpoint_at(s.greenhouse_id, 'vpd_low', c.ts), -1000)
+                        AND COALESCE(fn_setpoint_at(s.greenhouse_id, 'vpd_high', c.ts), 1000)
+) recovery ON true
+LEFT JOIN LATERAL (
+    SELECT
+        round((avg((
+            COALESCE(fn_equip_at('fog', sample_ts), false)
+            OR COALESCE(fn_equip_at('mister_south', sample_ts), false)
+            OR COALESCE(fn_equip_at('mister_west', sample_ts), false)
+            OR COALESCE(fn_equip_at('mister_center', sample_ts), false)
+        )::int) * 100.0)::numeric, 2)::double precision AS wet_relay_duty_pct,
+        round((avg((
+            COALESCE(fn_equip_at('vent', sample_ts), false)
+            OR COALESCE(fn_equip_at('fan1', sample_ts), false)
+            OR COALESCE(fn_equip_at('fan2', sample_ts), false)
+        )::int) * 100.0)::numeric, 2)::double precision AS vent_fan_duty_pct,
+        round((avg(COALESCE(fn_equip_at('fog', sample_ts), false)::int) * 100.0)::numeric, 2)::double precision
+            AS fog_duty_pct
+    FROM generate_series(s.ts, s.ts + p_window, interval '1 minute') AS sample(sample_ts)
+) duty ON true;
+$$;
+
+
+ALTER FUNCTION public.fn_climate_action_effectiveness(p_window interval) OWNER TO verdify;
+
+--
+-- Name: FUNCTION fn_climate_action_effectiveness(p_window interval); Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON FUNCTION public.fn_climate_action_effectiveness(p_window interval) IS 'Returns per-action before/after temp and VPD error plus relay duty estimates for a requested analysis window.';
 
 
 --
@@ -2839,29 +3000,14 @@ ALTER FUNCTION public.fn_setpoint_at(p_param text, p_ts timestamp with time zone
 CREATE FUNCTION public.fn_setpoint_at(p_greenhouse_id text, p_param text, p_ts timestamp with time zone) RETURNS double precision
     LANGUAGE sql STABLE
     AS $$
-    WITH latest AS (
-        SELECT value, expired_at
-          FROM setpoint_changes
-         WHERE greenhouse_id = p_greenhouse_id
-           AND parameter = p_param
-           AND ts <= p_ts
-         ORDER BY ts DESC
-         LIMIT 1
-    ), active AS (
-        SELECT value
-          FROM latest
-         WHERE expired_at IS NULL OR expired_at > p_ts
-    ), fallback AS (
-        SELECT CASE
-            WHEN p_param = 'temp_low' THEN (SELECT temp_low FROM fn_band_setpoints(p_ts))
-            WHEN p_param = 'temp_high' THEN (SELECT temp_high FROM fn_band_setpoints(p_ts))
-            WHEN p_param = 'vpd_low' THEN (SELECT house_vpd_low FROM fn_house_vpd_control_band(p_ts))
-            WHEN p_param = 'vpd_high' THEN (SELECT house_vpd_high FROM fn_house_vpd_control_band(p_ts))
-            ELSE NULL::double precision
-        END AS value
-        WHERE EXISTS (SELECT 1 FROM latest WHERE expired_at IS NOT NULL AND expired_at <= p_ts)
-    )
-    SELECT COALESCE((SELECT value FROM active), (SELECT value FROM fallback));
+    SELECT value
+      FROM setpoint_changes
+     WHERE greenhouse_id = p_greenhouse_id
+       AND parameter = p_param
+       AND ts <= p_ts
+       AND (expired_at IS NULL OR expired_at > p_ts)
+     ORDER BY ts DESC
+     LIMIT 1;
 $$;
 
 
@@ -7562,17 +7708,17 @@ CREATE TABLE public.diagnostics (
     vpd_watch_timer_s integer,
     mist_backoff_timer_s integer,
     vent_mist_assist_active integer,
-    effective_heat_target_f double precision,
-    effective_cool_stage2_delta_f double precision,
-    effective_vpd_hysteresis_kpa double precision,
-    effective_dehum_aggressive_kpa double precision,
     heap_min_free_kb double precision,
     heap_largest_free_block_kb double precision,
     controller_time_epoch bigint,
     controller_local_hour integer,
     sntp_valid integer,
     sntp_miss_count integer,
-    last_sntp_sync_age_s integer
+    last_sntp_sync_age_s integer,
+    effective_heat_target_f double precision,
+    effective_cool_stage2_delta_f double precision,
+    effective_vpd_hysteresis_kpa double precision,
+    effective_dehum_aggressive_kpa double precision
 );
 
 
@@ -7628,6 +7774,20 @@ COMMENT ON COLUMN public.diagnostics.vent_mist_assist_active IS 'Controller v2: 
 
 
 --
+-- Name: COLUMN diagnostics.heap_min_free_kb; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.diagnostics.heap_min_free_kb IS 'ESP32 minimum free heap since boot, in kB; persists the Minimum Free Heap sensor.';
+
+
+--
+-- Name: COLUMN diagnostics.heap_largest_free_block_kb; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.diagnostics.heap_largest_free_block_kb IS 'ESP32 largest allocatable heap block, in kB; primary fragmentation signal for heap-pressure alerts.';
+
+
+--
 -- Name: COLUMN diagnostics.effective_heat_target_f; Type: COMMENT; Schema: public; Owner: verdify
 --
 
@@ -7653,20 +7813,6 @@ COMMENT ON COLUMN public.diagnostics.effective_vpd_hysteresis_kpa IS 'Controller
 --
 
 COMMENT ON COLUMN public.diagnostics.effective_dehum_aggressive_kpa IS 'Controller diagnostic: validated dehumidification aggressive margin in kPa after house-band clamps.';
-
-
---
--- Name: COLUMN diagnostics.heap_min_free_kb; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON COLUMN public.diagnostics.heap_min_free_kb IS 'ESP32 minimum free heap since boot, in kB; persists the Minimum Free Heap sensor.';
-
-
---
--- Name: COLUMN diagnostics.heap_largest_free_block_kb; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON COLUMN public.diagnostics.heap_largest_free_block_kb IS 'ESP32 largest allocatable heap block, in kB; primary fragmentation signal for heap-pressure alerts.';
 
 
 --
@@ -8598,18 +8744,6 @@ CREATE TABLE public.esp32_logs (
 ALTER TABLE public.esp32_logs OWNER TO verdify;
 
 --
--- Name: _hyper_8_388_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
---
-
-CREATE TABLE _timescaledb_internal._hyper_8_388_chunk (
-    CONSTRAINT constraint_310 CHECK (((ts >= '2026-04-16 00:00:00+00'::timestamp with time zone) AND (ts < '2026-04-23 00:00:00+00'::timestamp with time zone)))
-)
-INHERITS (public.esp32_logs);
-
-
-ALTER TABLE _timescaledb_internal._hyper_8_388_chunk OWNER TO verdify;
-
---
 -- Name: _hyper_8_404_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -8720,6 +8854,18 @@ INHERITS (public.weather_station);
 
 
 ALTER TABLE _timescaledb_internal._hyper_9_312_chunk OWNER TO verdify;
+
+--
+-- Name: _hyper_9_706_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_9_706_chunk (
+    CONSTRAINT constraint_610 CHECK (((ts >= '2026-05-21 00:00:00+00'::timestamp with time zone) AND (ts < '2026-05-28 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.weather_station);
+
+
+ALTER TABLE _timescaledb_internal._hyper_9_706_chunk OWNER TO verdify;
 
 --
 -- Name: compress_hyper_12_242_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
@@ -17296,7 +17442,11 @@ CREATE TABLE _timescaledb_internal.compress_hyper_14_241_chunk (
     controller_local_hour _timescaledb_internal.compressed_data,
     sntp_valid _timescaledb_internal.compressed_data,
     sntp_miss_count _timescaledb_internal.compressed_data,
-    last_sntp_sync_age_s _timescaledb_internal.compressed_data
+    last_sntp_sync_age_s _timescaledb_internal.compressed_data,
+    effective_heat_target_f _timescaledb_internal.compressed_data,
+    effective_cool_stage2_delta_f _timescaledb_internal.compressed_data,
+    effective_vpd_hysteresis_kpa _timescaledb_internal.compressed_data,
+    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_241_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -17345,7 +17495,11 @@ CREATE TABLE _timescaledb_internal.compress_hyper_14_244_chunk (
     controller_local_hour _timescaledb_internal.compressed_data,
     sntp_valid _timescaledb_internal.compressed_data,
     sntp_miss_count _timescaledb_internal.compressed_data,
-    last_sntp_sync_age_s _timescaledb_internal.compressed_data
+    last_sntp_sync_age_s _timescaledb_internal.compressed_data,
+    effective_heat_target_f _timescaledb_internal.compressed_data,
+    effective_cool_stage2_delta_f _timescaledb_internal.compressed_data,
+    effective_vpd_hysteresis_kpa _timescaledb_internal.compressed_data,
+    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_244_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -17394,7 +17548,11 @@ CREATE TABLE _timescaledb_internal.compress_hyper_14_246_chunk (
     controller_local_hour _timescaledb_internal.compressed_data,
     sntp_valid _timescaledb_internal.compressed_data,
     sntp_miss_count _timescaledb_internal.compressed_data,
-    last_sntp_sync_age_s _timescaledb_internal.compressed_data
+    last_sntp_sync_age_s _timescaledb_internal.compressed_data,
+    effective_heat_target_f _timescaledb_internal.compressed_data,
+    effective_cool_stage2_delta_f _timescaledb_internal.compressed_data,
+    effective_vpd_hysteresis_kpa _timescaledb_internal.compressed_data,
+    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_246_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -17443,7 +17601,11 @@ CREATE TABLE _timescaledb_internal.compress_hyper_14_247_chunk (
     controller_local_hour _timescaledb_internal.compressed_data,
     sntp_valid _timescaledb_internal.compressed_data,
     sntp_miss_count _timescaledb_internal.compressed_data,
-    last_sntp_sync_age_s _timescaledb_internal.compressed_data
+    last_sntp_sync_age_s _timescaledb_internal.compressed_data,
+    effective_heat_target_f _timescaledb_internal.compressed_data,
+    effective_cool_stage2_delta_f _timescaledb_internal.compressed_data,
+    effective_vpd_hysteresis_kpa _timescaledb_internal.compressed_data,
+    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_247_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -17492,7 +17654,11 @@ CREATE TABLE _timescaledb_internal.compress_hyper_14_250_chunk (
     controller_local_hour _timescaledb_internal.compressed_data,
     sntp_valid _timescaledb_internal.compressed_data,
     sntp_miss_count _timescaledb_internal.compressed_data,
-    last_sntp_sync_age_s _timescaledb_internal.compressed_data
+    last_sntp_sync_age_s _timescaledb_internal.compressed_data,
+    effective_heat_target_f _timescaledb_internal.compressed_data,
+    effective_cool_stage2_delta_f _timescaledb_internal.compressed_data,
+    effective_vpd_hysteresis_kpa _timescaledb_internal.compressed_data,
+    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_250_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -17541,7 +17707,11 @@ CREATE TABLE _timescaledb_internal.compress_hyper_14_318_chunk (
     controller_local_hour _timescaledb_internal.compressed_data,
     sntp_valid _timescaledb_internal.compressed_data,
     sntp_miss_count _timescaledb_internal.compressed_data,
-    last_sntp_sync_age_s _timescaledb_internal.compressed_data
+    last_sntp_sync_age_s _timescaledb_internal.compressed_data,
+    effective_heat_target_f _timescaledb_internal.compressed_data,
+    effective_cool_stage2_delta_f _timescaledb_internal.compressed_data,
+    effective_vpd_hysteresis_kpa _timescaledb_internal.compressed_data,
+    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_318_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -17590,7 +17760,11 @@ CREATE TABLE _timescaledb_internal.compress_hyper_14_367_chunk (
     controller_local_hour _timescaledb_internal.compressed_data,
     sntp_valid _timescaledb_internal.compressed_data,
     sntp_miss_count _timescaledb_internal.compressed_data,
-    last_sntp_sync_age_s _timescaledb_internal.compressed_data
+    last_sntp_sync_age_s _timescaledb_internal.compressed_data,
+    effective_heat_target_f _timescaledb_internal.compressed_data,
+    effective_cool_stage2_delta_f _timescaledb_internal.compressed_data,
+    effective_vpd_hysteresis_kpa _timescaledb_internal.compressed_data,
+    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_367_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -17639,7 +17813,11 @@ CREATE TABLE _timescaledb_internal.compress_hyper_14_382_chunk (
     controller_local_hour _timescaledb_internal.compressed_data,
     sntp_valid _timescaledb_internal.compressed_data,
     sntp_miss_count _timescaledb_internal.compressed_data,
-    last_sntp_sync_age_s _timescaledb_internal.compressed_data
+    last_sntp_sync_age_s _timescaledb_internal.compressed_data,
+    effective_heat_target_f _timescaledb_internal.compressed_data,
+    effective_cool_stage2_delta_f _timescaledb_internal.compressed_data,
+    effective_vpd_hysteresis_kpa _timescaledb_internal.compressed_data,
+    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_382_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -17691,7 +17869,11 @@ CREATE TABLE _timescaledb_internal.compress_hyper_14_397_chunk (
     controller_local_hour _timescaledb_internal.compressed_data,
     sntp_valid _timescaledb_internal.compressed_data,
     sntp_miss_count _timescaledb_internal.compressed_data,
-    last_sntp_sync_age_s _timescaledb_internal.compressed_data
+    last_sntp_sync_age_s _timescaledb_internal.compressed_data,
+    effective_heat_target_f _timescaledb_internal.compressed_data,
+    effective_cool_stage2_delta_f _timescaledb_internal.compressed_data,
+    effective_vpd_hysteresis_kpa _timescaledb_internal.compressed_data,
+    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_397_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -17752,7 +17934,11 @@ CREATE TABLE _timescaledb_internal.compress_hyper_14_414_chunk (
     controller_local_hour _timescaledb_internal.compressed_data,
     sntp_valid _timescaledb_internal.compressed_data,
     sntp_miss_count _timescaledb_internal.compressed_data,
-    last_sntp_sync_age_s _timescaledb_internal.compressed_data
+    last_sntp_sync_age_s _timescaledb_internal.compressed_data,
+    effective_heat_target_f _timescaledb_internal.compressed_data,
+    effective_cool_stage2_delta_f _timescaledb_internal.compressed_data,
+    effective_vpd_hysteresis_kpa _timescaledb_internal.compressed_data,
+    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_414_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -17824,7 +18010,11 @@ CREATE TABLE _timescaledb_internal.compress_hyper_14_429_chunk (
     controller_local_hour _timescaledb_internal.compressed_data,
     sntp_valid _timescaledb_internal.compressed_data,
     sntp_miss_count _timescaledb_internal.compressed_data,
-    last_sntp_sync_age_s _timescaledb_internal.compressed_data
+    last_sntp_sync_age_s _timescaledb_internal.compressed_data,
+    effective_heat_target_f _timescaledb_internal.compressed_data,
+    effective_cool_stage2_delta_f _timescaledb_internal.compressed_data,
+    effective_vpd_hysteresis_kpa _timescaledb_internal.compressed_data,
+    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_429_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -17908,7 +18098,11 @@ CREATE TABLE _timescaledb_internal.compress_hyper_14_456_chunk (
     controller_local_hour _timescaledb_internal.compressed_data,
     sntp_valid _timescaledb_internal.compressed_data,
     sntp_miss_count _timescaledb_internal.compressed_data,
-    last_sntp_sync_age_s _timescaledb_internal.compressed_data
+    last_sntp_sync_age_s _timescaledb_internal.compressed_data,
+    effective_heat_target_f _timescaledb_internal.compressed_data,
+    effective_cool_stage2_delta_f _timescaledb_internal.compressed_data,
+    effective_vpd_hysteresis_kpa _timescaledb_internal.compressed_data,
+    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_456_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -17998,7 +18192,11 @@ CREATE TABLE _timescaledb_internal.compress_hyper_14_474_chunk (
     controller_local_hour _timescaledb_internal.compressed_data,
     sntp_valid _timescaledb_internal.compressed_data,
     sntp_miss_count _timescaledb_internal.compressed_data,
-    last_sntp_sync_age_s _timescaledb_internal.compressed_data
+    last_sntp_sync_age_s _timescaledb_internal.compressed_data,
+    effective_heat_target_f _timescaledb_internal.compressed_data,
+    effective_cool_stage2_delta_f _timescaledb_internal.compressed_data,
+    effective_vpd_hysteresis_kpa _timescaledb_internal.compressed_data,
+    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_474_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -18088,7 +18286,11 @@ CREATE TABLE _timescaledb_internal.compress_hyper_14_520_chunk (
     controller_local_hour _timescaledb_internal.compressed_data,
     sntp_valid _timescaledb_internal.compressed_data,
     sntp_miss_count _timescaledb_internal.compressed_data,
-    last_sntp_sync_age_s _timescaledb_internal.compressed_data
+    last_sntp_sync_age_s _timescaledb_internal.compressed_data,
+    effective_heat_target_f _timescaledb_internal.compressed_data,
+    effective_cool_stage2_delta_f _timescaledb_internal.compressed_data,
+    effective_vpd_hysteresis_kpa _timescaledb_internal.compressed_data,
+    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_520_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -18219,6 +18421,82 @@ CREATE TABLE public.camera_zone_map (
 
 
 ALTER TABLE public.camera_zone_map OWNER TO verdify;
+
+--
+-- Name: climate_action_log; Type: TABLE; Schema: public; Owner: verdify
+--
+
+CREATE TABLE public.climate_action_log (
+    ts timestamp with time zone NOT NULL,
+    greenhouse_id text DEFAULT 'vallery'::text,
+    climate_action text NOT NULL,
+    priority_axis text NOT NULL,
+    temp_low_f double precision,
+    temp_target_f double precision,
+    temp_high_f double precision,
+    vpd_low_kpa double precision,
+    vpd_target_kpa double precision,
+    vpd_high_kpa double precision,
+    temp_target_delta_f double precision,
+    vpd_target_delta_kpa double precision,
+    temp_band_error_f double precision,
+    vpd_band_error_kpa double precision,
+    moisture_assist_state text,
+    moisture_zone text DEFAULT 'none'::text,
+    wet_assist_allowed boolean DEFAULT false,
+    wet_assist_block_reason text,
+    fog_allowed boolean DEFAULT false,
+    fog_block_reason text,
+    relay_truth jsonb DEFAULT '{}'::jsonb NOT NULL,
+    resource_cost_estimate jsonb DEFAULT '{}'::jsonb NOT NULL,
+    climate_intent_version text,
+    plan_id text,
+    trigger_id uuid,
+    planner_instance text,
+    sensor_status jsonb DEFAULT '{}'::jsonb NOT NULL,
+    candidate_summary text,
+    source_system_state jsonb DEFAULT '{}'::jsonb NOT NULL,
+    CONSTRAINT climate_action_log_action_check CHECK ((climate_action = ANY (ARRAY['SENSOR_FAULT'::text, 'SAFETY_HEAT'::text, 'SAFETY_COOL'::text, 'HEAT'::text, 'IDLE'::text, 'VENT_COOL'::text, 'VENT_COOL_MIST_ASSIST'::text, 'VENT_COOL_FOG_ASSIST'::text, 'SEALED_HUMIDIFY'::text, 'SEALED_FOG'::text, 'DEHUM_VENT'::text]))),
+    CONSTRAINT climate_action_log_priority_check CHECK ((priority_axis = ANY (ARRAY['safety'::text, 'temp'::text, 'vpd'::text, 'resource'::text])))
+);
+
+
+ALTER TABLE public.climate_action_log OWNER TO verdify;
+
+--
+-- Name: TABLE climate_action_log; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON TABLE public.climate_action_log IS 'Durable ESP32 ClimateIntent controller decision snapshots. One row captures selected action, priority, target deltas, wet/fog authority, relay truth, and plan correlation for graphing and post-hoc validation.';
+
+
+--
+-- Name: COLUMN climate_action_log.climate_action; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.climate_action_log.climate_action IS 'Executed controller action after firmware safety, dwell, and interlock resolution.';
+
+
+--
+-- Name: COLUMN climate_action_log.wet_assist_allowed; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.climate_action_log.wet_assist_allowed IS 'True when the selected climate action had a permitted climate wet-assist path; false when inactive or blocked.';
+
+
+--
+-- Name: COLUMN climate_action_log.wet_assist_block_reason; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.climate_action_log.wet_assist_block_reason IS 'Named reason climate wet assist could not physically serve, e.g. dew_margin, occupancy, irrigation, water_budget, wet_cutoff, or direct_wet_window before firmware issue #5 lands.';
+
+
+--
+-- Name: COLUMN climate_action_log.relay_truth; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.climate_action_log.relay_truth IS 'Latest ingestor relay truth snapshot for climate relays at action-log write time.';
+
 
 --
 -- Name: consumables_log; Type: TABLE; Schema: public; Owner: verdify
@@ -19770,55 +20048,6 @@ ALTER SEQUENCE public.plan_delivery_log_id_seq OWNED BY public.plan_delivery_log
 
 
 --
--- Name: plan_delivery_log_shadow; Type: TABLE; Schema: public; Owner: verdify
---
-
-CREATE TABLE public.plan_delivery_log_shadow (
-    id bigint NOT NULL,
-    delivered_at timestamp with time zone DEFAULT now(),
-    event_type text NOT NULL,
-    event_label text,
-    session_key text,
-    gateway_status integer,
-    gateway_body text,
-    trigger_id uuid,
-    instance text,
-    hermes_run_id text,
-    matched_prod_delivery_log_id integer
-);
-
-
-ALTER TABLE public.plan_delivery_log_shadow OWNER TO verdify;
-
---
--- Name: TABLE plan_delivery_log_shadow; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON TABLE public.plan_delivery_log_shadow IS 'Shadow plan_delivery_log — every shadow-Hermes /v1/runs call records here with the same trigger_id as the prod delivery, so diff scripts can pair them up.';
-
-
---
--- Name: plan_delivery_log_shadow_id_seq; Type: SEQUENCE; Schema: public; Owner: verdify
---
-
-CREATE SEQUENCE public.plan_delivery_log_shadow_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-
-ALTER SEQUENCE public.plan_delivery_log_shadow_id_seq OWNER TO verdify;
-
---
--- Name: plan_delivery_log_shadow_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: verdify
---
-
-ALTER SEQUENCE public.plan_delivery_log_shadow_id_seq OWNED BY public.plan_delivery_log_shadow.id;
-
-
---
 -- Name: plan_journal; Type: TABLE; Schema: public; Owner: verdify
 --
 
@@ -19839,6 +20068,8 @@ CREATE TABLE public.plan_journal (
     planner_instance text,
     trigger_id uuid,
     anchor_score smallint,
+    climate_intents jsonb,
+    climate_intent_version text,
     CONSTRAINT plan_journal_outcome_score_check CHECK (((outcome_score >= 1) AND (outcome_score <= 10)))
 );
 
@@ -19874,38 +20105,17 @@ COMMENT ON COLUMN public.plan_journal.anchor_score IS 'Deterministic 1-10 grade 
 
 
 --
--- Name: plan_journal_shadow; Type: TABLE; Schema: public; Owner: verdify
+-- Name: COLUMN plan_journal.climate_intents; Type: COMMENT; Schema: public; Owner: verdify
 --
 
-CREATE TABLE public.plan_journal_shadow (
-    plan_id text NOT NULL,
-    created_at timestamp with time zone DEFAULT now(),
-    conditions_summary text,
-    hypothesis text,
-    experiment text,
-    expected_outcome text,
-    params_changed text[],
-    actual_outcome text,
-    outcome_score smallint,
-    anchor_score smallint,
-    lesson_extracted text,
-    validated_at timestamp with time zone,
-    greenhouse_id text DEFAULT 'vallery'::text,
-    hypothesis_structured jsonb,
-    planner_instance text,
-    trigger_id uuid,
-    matched_prod_plan_id text,
-    CONSTRAINT plan_journal_shadow_outcome_score_check CHECK (((outcome_score IS NULL) OR ((outcome_score >= 1) AND (outcome_score <= 10))))
-);
+COMMENT ON COLUMN public.plan_journal.climate_intents IS 'Validated ClimateIntent transition payloads emitted by set_plan, including materialized Tier 1 params. NULL for legacy plans.';
 
-
-ALTER TABLE public.plan_journal_shadow OWNER TO verdify;
 
 --
--- Name: TABLE plan_journal_shadow; Type: COMMENT; Schema: public; Owner: verdify
+-- Name: COLUMN plan_journal.climate_intent_version; Type: COMMENT; Schema: public; Owner: verdify
 --
 
-COMMENT ON TABLE public.plan_journal_shadow IS 'Shadow plan_journal — shadow-Hermes (Phase 6) writes plan rows here instead of the production plan_journal so we can score shadow plans against the same telemetry without touching prod setpoints.';
+COMMENT ON COLUMN public.plan_journal.climate_intent_version IS 'ClimateIntent contract version used by MCP materialization.';
 
 
 --
@@ -20322,29 +20532,6 @@ ALTER SEQUENCE public.sensors_id_seq OWNER TO verdify;
 --
 
 ALTER SEQUENCE public.sensors_id_seq OWNED BY public.sensors.id;
-
-
---
--- Name: setpoint_plan_shadow; Type: TABLE; Schema: public; Owner: verdify
---
-
-CREATE TABLE public.setpoint_plan_shadow (
-    ts timestamp with time zone NOT NULL,
-    parameter text NOT NULL,
-    value double precision,
-    plan_id text NOT NULL,
-    reason text,
-    inserted_at timestamp with time zone DEFAULT now()
-);
-
-
-ALTER TABLE public.setpoint_plan_shadow OWNER TO verdify;
-
---
--- Name: TABLE setpoint_plan_shadow; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON TABLE public.setpoint_plan_shadow IS 'Shadow setpoint_plan — shadow-Hermes waypoints, never dispatched to ESP32. Compared to prod setpoint_plan by scripts/compare-shadow-plans.py for parameter-validity + plan-shape regression checks.';
 
 
 --
@@ -20899,6 +21086,127 @@ ALTER VIEW public.v_clamp_activity_24h OWNER TO verdify;
 --
 
 COMMENT ON VIEW public.v_clamp_activity_24h IS 'Dispatcher clamp frequency over last 24h. High counts = planner is asking for values outside the crop band.';
+
+
+--
+-- Name: v_climate_action_effectiveness_15m; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_climate_action_effectiveness_15m AS
+ SELECT action_ts,
+    greenhouse_id,
+    climate_action,
+    priority_axis,
+    plan_id,
+    trigger_id,
+    planner_instance,
+    temp_band_error_before_f,
+    vpd_band_error_before_kpa,
+    temp_band_error_after_f,
+    vpd_band_error_after_kpa,
+    temp_abs_error_delta_f,
+    vpd_abs_error_delta_kpa,
+    recovered_within_window,
+    time_to_recover_s,
+    wet_relay_duty_pct,
+    vent_fan_duty_pct,
+    fog_duty_pct,
+    mister_water_delta_gal,
+    outdoor_temp_f,
+    outdoor_dewpoint_f,
+    solar_irradiance_w_m2,
+    wet_assist_allowed,
+    wet_assist_block_reason,
+    fog_allowed,
+    fog_block_reason,
+    relay_truth,
+    resource_cost_estimate
+   FROM public.fn_climate_action_effectiveness('00:15:00'::interval) fn_climate_action_effectiveness(action_ts, greenhouse_id, climate_action, priority_axis, plan_id, trigger_id, planner_instance, temp_band_error_before_f, vpd_band_error_before_kpa, temp_band_error_after_f, vpd_band_error_after_kpa, temp_abs_error_delta_f, vpd_abs_error_delta_kpa, recovered_within_window, time_to_recover_s, wet_relay_duty_pct, vent_fan_duty_pct, fog_duty_pct, mister_water_delta_gal, outdoor_temp_f, outdoor_dewpoint_f, solar_irradiance_w_m2, wet_assist_allowed, wet_assist_block_reason, fog_allowed, fog_block_reason, relay_truth, resource_cost_estimate);
+
+
+ALTER VIEW public.v_climate_action_effectiveness_15m OWNER TO verdify;
+
+--
+-- Name: VIEW v_climate_action_effectiveness_15m; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_climate_action_effectiveness_15m IS 'Fifteen-minute climate action effectiveness: before/after band error, recovery, relay duty, and weather context.';
+
+
+--
+-- Name: v_climate_action_daily_scorecard; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_climate_action_daily_scorecard AS
+ SELECT ((action_ts AT TIME ZONE 'America/Denver'::text))::date AS date,
+    greenhouse_id,
+    climate_action,
+    count(*) AS decisions,
+    round((avg(abs(temp_band_error_before_f)))::numeric, 2) AS avg_abs_temp_error_before_f,
+    round((avg(abs(vpd_band_error_before_kpa)))::numeric, 3) AS avg_abs_vpd_error_before_kpa,
+    round((avg(temp_abs_error_delta_f))::numeric, 2) AS avg_temp_abs_error_delta_15m_f,
+    round((avg(vpd_abs_error_delta_kpa))::numeric, 3) AS avg_vpd_abs_error_delta_15m_kpa,
+    round((avg(wet_relay_duty_pct))::numeric, 2) AS avg_wet_relay_duty_pct,
+    round((avg(vent_fan_duty_pct))::numeric, 2) AS avg_vent_fan_duty_pct,
+    round((sum(COALESCE(mister_water_delta_gal, (0.0)::double precision)))::numeric, 3) AS mister_water_delta_gal,
+    count(*) FILTER (WHERE (wet_assist_block_reason IS NOT NULL)) AS wet_blocked_decisions,
+    count(*) FILTER (WHERE ((fog_block_reason IS NOT NULL) AND (fog_block_reason <> 'none'::text))) AS fog_blocked_decisions
+   FROM public.v_climate_action_effectiveness_15m
+  GROUP BY (((action_ts AT TIME ZONE 'America/Denver'::text))::date), greenhouse_id, climate_action;
+
+
+ALTER VIEW public.v_climate_action_daily_scorecard OWNER TO verdify;
+
+--
+-- Name: VIEW v_climate_action_daily_scorecard; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_climate_action_daily_scorecard IS 'Daily climate-action scorecard by action, showing compliance-error movement, relay duty, water, and block counts.';
+
+
+--
+-- Name: v_climate_action_effectiveness_5m; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_climate_action_effectiveness_5m AS
+ SELECT action_ts,
+    greenhouse_id,
+    climate_action,
+    priority_axis,
+    plan_id,
+    trigger_id,
+    planner_instance,
+    temp_band_error_before_f,
+    vpd_band_error_before_kpa,
+    temp_band_error_after_f,
+    vpd_band_error_after_kpa,
+    temp_abs_error_delta_f,
+    vpd_abs_error_delta_kpa,
+    recovered_within_window,
+    time_to_recover_s,
+    wet_relay_duty_pct,
+    vent_fan_duty_pct,
+    fog_duty_pct,
+    mister_water_delta_gal,
+    outdoor_temp_f,
+    outdoor_dewpoint_f,
+    solar_irradiance_w_m2,
+    wet_assist_allowed,
+    wet_assist_block_reason,
+    fog_allowed,
+    fog_block_reason,
+    relay_truth,
+    resource_cost_estimate
+   FROM public.fn_climate_action_effectiveness('00:05:00'::interval) fn_climate_action_effectiveness(action_ts, greenhouse_id, climate_action, priority_axis, plan_id, trigger_id, planner_instance, temp_band_error_before_f, vpd_band_error_before_kpa, temp_band_error_after_f, vpd_band_error_after_kpa, temp_abs_error_delta_f, vpd_abs_error_delta_kpa, recovered_within_window, time_to_recover_s, wet_relay_duty_pct, vent_fan_duty_pct, fog_duty_pct, mister_water_delta_gal, outdoor_temp_f, outdoor_dewpoint_f, solar_irradiance_w_m2, wet_assist_allowed, wet_assist_block_reason, fog_allowed, fog_block_reason, relay_truth, resource_cost_estimate);
+
+
+ALTER VIEW public.v_climate_action_effectiveness_5m OWNER TO verdify;
+
+--
+-- Name: VIEW v_climate_action_effectiveness_5m; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_climate_action_effectiveness_5m IS 'Five-minute climate action effectiveness: before/after band error, recovery, relay duty, and weather context.';
 
 
 --
@@ -22750,392 +23058,6 @@ COMMENT ON VIEW public.v_equipment_runtime_daily IS 'Daily equipment runtime fro
 
 
 --
--- Name: v_fan_balance_7d; Type: VIEW; Schema: public; Owner: verdify
---
-
-CREATE VIEW public.v_fan_balance_7d AS
- WITH bounds AS (
-         SELECT (now() - '7 days'::interval) AS start_ts,
-            now() AS end_ts
-        ), fan_set AS (
-         SELECT DISTINCT equipment_state.greenhouse_id,
-            equipment_state.equipment
-           FROM public.equipment_state
-          WHERE (equipment_state.equipment = ANY (ARRAY['fan1'::text, 'fan2'::text]))
-        ), seed AS (
-         SELECT DISTINCT ON (fs.greenhouse_id, fs.equipment) fs.greenhouse_id,
-            fs.equipment,
-            b.start_ts AS ts,
-            COALESCE(es.state, false) AS state
-           FROM ((fan_set fs
-             CROSS JOIN bounds b)
-             LEFT JOIN public.equipment_state es ON (((es.greenhouse_id = fs.greenhouse_id) AND (es.equipment = fs.equipment) AND (es.ts <= b.start_ts))))
-          ORDER BY fs.greenhouse_id, fs.equipment, es.ts DESC NULLS LAST
-        ), events AS (
-         SELECT seed.greenhouse_id,
-            seed.equipment,
-            seed.ts,
-            seed.state
-           FROM seed
-        UNION ALL
-         SELECT es.greenhouse_id,
-            es.equipment,
-            es.ts,
-            es.state
-           FROM (public.equipment_state es
-             CROSS JOIN bounds b)
-          WHERE ((es.equipment = ANY (ARRAY['fan1'::text, 'fan2'::text])) AND (es.ts > b.start_ts) AND (es.ts <= b.end_ts))
-        ), ordered AS (
-         SELECT e.greenhouse_id,
-            e.equipment,
-            e.ts,
-            e.state,
-            lag(e.state) OVER (PARTITION BY e.greenhouse_id, e.equipment ORDER BY e.ts) AS prev_state,
-            lead(e.ts) OVER (PARTITION BY e.greenhouse_id, e.equipment ORDER BY e.ts) AS next_ts
-           FROM events e
-        ), rollup AS (
-         SELECT o.greenhouse_id,
-            o.equipment,
-            sum((EXTRACT(epoch FROM (LEAST(COALESCE(o.next_ts, b.end_ts), b.end_ts) - GREATEST(o.ts, b.start_ts))) / 60.0)) FILTER (WHERE (o.state IS TRUE)) AS on_minutes,
-            count(*) FILTER (WHERE ((o.state IS TRUE) AND (COALESCE(o.prev_state, false) IS FALSE) AND (o.ts > b.start_ts))) AS cycles
-           FROM (ordered o
-             CROSS JOIN bounds b)
-          WHERE ((o.ts < b.end_ts) AND (COALESCE(o.next_ts, b.end_ts) > b.start_ts))
-          GROUP BY o.greenhouse_id, o.equipment
-        )
- SELECT COALESCE(f1.greenhouse_id, f2.greenhouse_id) AS greenhouse_id,
-    b.start_ts AS window_start,
-    b.end_ts AS window_end,
-    round((COALESCE(f1.on_minutes, (0)::numeric))::numeric, 1) AS fan1_minutes,
-    round((COALESCE(f2.on_minutes, (0)::numeric))::numeric, 1) AS fan2_minutes,
-    COALESCE(f1.cycles, (0)::bigint) AS fan1_cycles,
-    COALESCE(f2.cycles, (0)::bigint) AS fan2_cycles,
-    round((abs((COALESCE(f1.on_minutes, (0)::numeric) - COALESCE(f2.on_minutes, (0)::numeric))))::numeric, 1) AS imbalance_minutes,
-    round(((100.0 * abs((COALESCE(f1.on_minutes, (0)::numeric) - COALESCE(f2.on_minutes, (0)::numeric)))) / NULLIF(GREATEST(COALESCE(f1.on_minutes, (0)::numeric), COALESCE(f2.on_minutes, (0)::numeric)), (0)::numeric)), 1) AS imbalance_pct,
-        CASE
-            WHEN (COALESCE(f1.on_minutes, (0)::numeric) <= COALESCE(f2.on_minutes, (0)::numeric)) THEN 'fan1'::text
-            ELSE 'fan2'::text
-        END AS lower_runtime_fan,
-    (abs((COALESCE(f1.on_minutes, (0)::numeric) - COALESCE(f2.on_minutes, (0)::numeric))) > 10.0) AS rebalance_needed
-   FROM ((bounds b
-     LEFT JOIN rollup f1 ON ((f1.equipment = 'fan1'::text)))
-     LEFT JOIN rollup f2 ON (((f2.equipment = 'fan2'::text) AND (f2.greenhouse_id = f1.greenhouse_id))));
-
-
-ALTER VIEW public.v_fan_balance_7d OWNER TO verdify;
-
---
--- Name: VIEW v_fan_balance_7d; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON VIEW public.v_fan_balance_7d IS 'Rolling seven-day fan runtime/cycle balance from equipment_state, clipped at the exact window bounds. Used to audit runtime-aware lead selection.';
-
-
---
--- Name: v_heat_in_band_7d; Type: VIEW; Schema: public; Owner: verdify
---
-
-CREATE VIEW public.v_heat_in_band_7d AS
- WITH samples AS (
-         SELECT bt.ts,
-            bt.greenhouse_id,
-            bt.timeline_phase,
-            bt.firmware_temp_low,
-            bt.firmware_temp_high,
-            bt.indoor_temp_f,
-            lead(bt.ts) OVER (PARTITION BY bt.greenhouse_id ORDER BY bt.ts) AS next_ts,
-            public.fn_equip_at('heat1'::text, bt.ts) AS heat1_on,
-            public.fn_equip_at('heat2'::text, bt.ts) AS heat2_on
-           FROM public.fn_band_timeline((now() - '7 days'::interval), now(), '00:05:00'::interval, 'vallery'::text) bt
-          WHERE (bt.timeline_phase = 'actual'::text)
-        ), classified AS (
-         SELECT s.ts,
-            s.greenhouse_id,
-            s.firmware_temp_low,
-            s.firmware_temp_high,
-            s.indoor_temp_f,
-            s.next_ts,
-            s.heat1_on,
-            s.heat2_on,
-            (GREATEST(0.0, LEAST(EXTRACT(epoch FROM (COALESCE(s.next_ts, now()) - s.ts)), 300.0)) / 60.0) AS sample_minutes,
-            ((s.indoor_temp_f >= s.firmware_temp_low) AND (s.indoor_temp_f <= s.firmware_temp_high)) AS temp_in_band,
-            (s.indoor_temp_f < s.firmware_temp_low) AS temp_below_band,
-            (s.indoor_temp_f > s.firmware_temp_high) AS temp_above_band
-           FROM samples s
-          WHERE ((s.indoor_temp_f IS NOT NULL) AND (s.firmware_temp_low IS NOT NULL) AND (s.firmware_temp_high IS NOT NULL))
-        )
- SELECT greenhouse_id,
-    min(ts) AS window_start,
-    max(ts) AS window_end,
-    count(*) AS samples,
-    round((sum(sample_minutes) FILTER (WHERE heat1_on))::numeric, 1) AS heat1_minutes,
-    round((sum(sample_minutes) FILTER (WHERE heat2_on))::numeric, 1) AS heat2_minutes,
-    round((sum(sample_minutes) FILTER (WHERE (heat1_on AND temp_in_band)))::numeric, 1) AS heat1_in_band_minutes,
-    round((sum(sample_minutes) FILTER (WHERE (heat2_on AND temp_in_band)))::numeric, 1) AS heat2_in_band_minutes,
-    round((sum(sample_minutes) FILTER (WHERE (heat1_on AND temp_below_band)))::numeric, 1) AS heat1_below_band_minutes,
-    round((sum(sample_minutes) FILTER (WHERE (heat2_on AND temp_below_band)))::numeric, 1) AS heat2_below_band_minutes,
-    round((sum(sample_minutes) FILTER (WHERE ((heat1_on OR heat2_on) AND temp_above_band)))::numeric, 1) AS heat_above_band_minutes,
-    round(((100.0 * sum(sample_minutes) FILTER (WHERE ((heat1_on OR heat2_on) AND temp_in_band))) / NULLIF(sum(sample_minutes) FILTER (WHERE (heat1_on OR heat2_on)), (0)::numeric)), 1) AS heat_runtime_in_band_pct
-   FROM classified
-  GROUP BY greenhouse_id;
-
-
-ALTER VIEW public.v_heat_in_band_7d OWNER TO verdify;
-
---
--- Name: VIEW v_heat_in_band_7d; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON VIEW public.v_heat_in_band_7d IS 'Rolling seven-day sampled heat runtime classified against fn_band_timeline crop-band thresholds. Highlights resource use while already inside band.';
-
-
---
--- Name: v_setpoint_effective_drift_7d; Type: VIEW; Schema: public; Owner: verdify
---
-
-CREATE VIEW public.v_setpoint_effective_drift_7d AS
- WITH ranked AS (
-         SELECT c.ts,
-            c.parameter,
-            c.requested,
-            c.applied,
-            c.band_lo,
-            c.band_hi,
-            c.reason,
-            c.greenhouse_id,
-            c.status,
-            c.plan_id,
-            c.plan_ts,
-            c.trigger_id,
-            c.planner_instance,
-            row_number() OVER (PARTITION BY c.greenhouse_id, c.parameter ORDER BY c.ts DESC) AS rn
-           FROM public.setpoint_clamps c
-          WHERE (c.ts > (now() - '7 days'::interval))
-        )
- SELECT greenhouse_id,
-    parameter,
-    count(*) AS drift_events,
-    count(*) FILTER (WHERE (status = 'guardrailed'::text)) AS guardrailed_events,
-    count(*) FILTER (WHERE (status = 'held_by_guardrail'::text)) AS held_events,
-    count(*) FILTER (WHERE (status = 'rejected'::text)) AS rejected_events,
-    round(avg(abs((requested - applied)))::numeric, 3) AS avg_abs_delta,
-    round(max(abs((requested - applied)))::numeric, 3) AS max_abs_delta,
-    min(ts) AS first_seen,
-    max(ts) AS last_seen,
-    max(requested) FILTER (WHERE (rn = 1)) AS latest_requested,
-    max(applied) FILTER (WHERE (rn = 1)) AS latest_effective,
-    max(reason) FILTER (WHERE (rn = 1)) AS latest_reason,
-    max(status) FILTER (WHERE (rn = 1)) AS latest_status,
-    max(plan_id) FILTER (WHERE (rn = 1)) AS latest_plan_id
-   FROM ranked
-  GROUP BY greenhouse_id, parameter
-  ORDER BY (count(*)) DESC, parameter;
-
-
-ALTER VIEW public.v_setpoint_effective_drift_7d OWNER TO verdify;
-
---
--- Name: VIEW v_setpoint_effective_drift_7d; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON VIEW public.v_setpoint_effective_drift_7d IS 'Rolling seven-day planner requested vs dispatcher effective/applied drift from setpoint_clamps. Used to find hidden clamp or retired-param pressure.';
-
-
---
--- Name: v_vent_mist_assist_7d; Type: VIEW; Schema: public; Owner: verdify
---
-
-CREATE VIEW public.v_vent_mist_assist_7d AS
- WITH bounds AS (
-         SELECT (now() - '7 days'::interval) AS start_ts,
-            now() AS end_ts
-        ), diag AS (
-         SELECT d.greenhouse_id,
-            d.ts,
-            d.vent_mist_assist_active,
-            lead(d.ts) OVER (PARTITION BY d.greenhouse_id ORDER BY d.ts) AS next_ts
-           FROM (public.diagnostics d
-             CROSS JOIN bounds b)
-          WHERE ((d.ts > (b.start_ts - '00:10:00'::interval)) AND (d.ts <= b.end_ts))
-        ), assist AS (
-         SELECT d.greenhouse_id,
-            GREATEST(d.ts, b.start_ts) AS ts,
-            LEAST(COALESCE(d.next_ts, b.end_ts), b.end_ts) AS next_ts
-           FROM (diag d
-             CROSS JOIN bounds b)
-          WHERE ((d.vent_mist_assist_active = 1) AND (d.ts < b.end_ts) AND (COALESCE(d.next_ts, b.end_ts) > b.start_ts))
-        ), enriched AS (
-         SELECT a.greenhouse_id,
-            a.ts,
-            (EXTRACT(epoch FROM (a.next_ts - a.ts)) / 60.0) AS minutes,
-            COALESCE(state.value, 'unknown'::text) AS greenhouse_state,
-            COALESCE(reason.value, 'vent_mist_assist_active'::text) AS mode_reason,
-            public.fn_equip_at('vent'::text, a.ts) AS vent_on,
-            public.fn_equip_at('fog'::text, a.ts) AS fog_on,
-            ((public.fn_equip_at('mister_south'::text, a.ts) OR public.fn_equip_at('mister_west'::text, a.ts)) OR public.fn_equip_at('mister_center'::text, a.ts)) AS any_mister_on,
-            c.temp_avg,
-            c.vpd_avg,
-            c.outdoor_temp_f,
-            c.outdoor_rh_pct
-           FROM (((assist a
-             LEFT JOIN LATERAL ( SELECT ss.value
-                   FROM public.system_state ss
-                  WHERE ((ss.greenhouse_id = a.greenhouse_id) AND (ss.entity = 'greenhouse_state'::text) AND (ss.ts <= a.ts))
-                  ORDER BY ss.ts DESC
-                 LIMIT 1) state ON (true))
-             LEFT JOIN LATERAL ( SELECT ss.value
-                   FROM public.system_state ss
-                  WHERE ((ss.greenhouse_id = a.greenhouse_id) AND (ss.entity = 'mode_reason'::text) AND (ss.ts <= a.ts))
-                  ORDER BY ss.ts DESC
-                 LIMIT 1) reason ON (true))
-             LEFT JOIN LATERAL ( SELECT c_1.temp_avg,
-                    c_1.vpd_avg,
-                    c_1.outdoor_temp_f,
-                    c_1.outdoor_rh_pct
-                   FROM public.climate c_1
-                  WHERE ((c_1.greenhouse_id = a.greenhouse_id) AND (c_1.ts <= a.ts))
-                  ORDER BY c_1.ts DESC
-                 LIMIT 1) c ON (true))
-          WHERE (a.next_ts > a.ts)
-        )
- SELECT greenhouse_id,
-    greenhouse_state,
-    mode_reason,
-    count(*) AS samples,
-    round(sum(minutes)::numeric, 1) AS assist_minutes,
-    round((sum(minutes) FILTER (WHERE vent_on))::numeric, 1) AS vent_open_minutes,
-    round((sum(minutes) FILTER (WHERE fog_on))::numeric, 1) AS fog_minutes,
-    round((sum(minutes) FILTER (WHERE any_mister_on))::numeric, 1) AS mister_minutes,
-    round(avg(temp_avg)::numeric, 1) AS avg_temp_f,
-    round(avg(vpd_avg)::numeric, 2) AS avg_vpd_kpa,
-    round(avg(outdoor_temp_f)::numeric, 1) AS avg_outdoor_temp_f,
-    round(avg(outdoor_rh_pct)::numeric, 1) AS avg_outdoor_rh_pct
-   FROM enriched
-  GROUP BY greenhouse_id, greenhouse_state, mode_reason
-  ORDER BY (round(sum(minutes)::numeric, 1)) DESC;
-
-
-ALTER VIEW public.v_vent_mist_assist_7d OWNER TO verdify;
-
---
--- Name: VIEW v_vent_mist_assist_7d; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON VIEW public.v_vent_mist_assist_7d IS 'Rolling seven-day open-vent moisture assist runtime by controller state/reason, using diagnostics.vent_mist_assist_active and equipment_state.';
-
-
---
--- Name: v_mister_fairness_7d; Type: VIEW; Schema: public; Owner: verdify
---
-
-CREATE VIEW public.v_mister_fairness_7d AS
- WITH bounds AS (
-         SELECT (now() - '7 days'::interval) AS start_ts,
-            now() AS end_ts
-        ), zone_map AS (
-         SELECT z.equipment,
-            z.zone
-           FROM ( VALUES ('mister_south'::text,'south'::text), ('mister_west'::text,'west'::text), ('mister_center'::text,'center'::text)) z(equipment, zone)
-        ), mister_set AS (
-         SELECT DISTINCT es.greenhouse_id,
-            z.equipment,
-            z.zone
-           FROM (public.equipment_state es
-             JOIN zone_map z ON ((z.equipment = es.equipment)))
-        ), seed AS (
-         SELECT DISTINCT ON (ms.greenhouse_id, ms.equipment) ms.greenhouse_id,
-            ms.equipment,
-            ms.zone,
-            b.start_ts AS ts,
-            COALESCE(es.state, false) AS state
-           FROM ((mister_set ms
-             CROSS JOIN bounds b)
-             LEFT JOIN public.equipment_state es ON (((es.greenhouse_id = ms.greenhouse_id) AND (es.equipment = ms.equipment) AND (es.ts <= b.start_ts))))
-          ORDER BY ms.greenhouse_id, ms.equipment, es.ts DESC NULLS LAST
-        ), events AS (
-         SELECT seed.greenhouse_id,
-            seed.equipment,
-            seed.zone,
-            seed.ts,
-            seed.state
-           FROM seed
-        UNION ALL
-         SELECT es.greenhouse_id,
-            es.equipment,
-            z.zone,
-            es.ts,
-            es.state
-           FROM ((public.equipment_state es
-             JOIN zone_map z ON ((z.equipment = es.equipment)))
-             CROSS JOIN bounds b)
-          WHERE ((es.ts > b.start_ts) AND (es.ts <= b.end_ts))
-        ), ordered AS (
-         SELECT e.greenhouse_id,
-            e.equipment,
-            e.zone,
-            e.ts,
-            e.state,
-            lag(e.state) OVER (PARTITION BY e.greenhouse_id, e.equipment ORDER BY e.ts) AS prev_state,
-            lead(e.ts) OVER (PARTITION BY e.greenhouse_id, e.equipment ORDER BY e.ts) AS next_ts
-           FROM events e
-        ), rollup AS (
-         SELECT o.greenhouse_id,
-            o.equipment,
-            o.zone,
-            sum((EXTRACT(epoch FROM (LEAST(COALESCE(o.next_ts, b.end_ts), b.end_ts) - GREATEST(o.ts, b.start_ts))) / 60.0)) FILTER (WHERE (o.state IS TRUE)) AS runtime_min,
-            count(*) FILTER (WHERE ((o.state IS TRUE) AND (COALESCE(o.prev_state, false) IS FALSE) AND (o.ts > b.start_ts))) AS cycles
-           FROM (ordered o
-             CROSS JOIN bounds b)
-          WHERE ((o.ts < b.end_ts) AND (COALESCE(o.next_ts, b.end_ts) > b.start_ts))
-          GROUP BY o.greenhouse_id, o.equipment, o.zone
-        ), totals AS (
-         SELECT rollup.greenhouse_id,
-            sum(COALESCE(rollup.runtime_min, (0)::numeric)) AS total_runtime_min,
-            sum(COALESCE(rollup.cycles, (0)::bigint)) AS total_cycles
-           FROM rollup
-          GROUP BY rollup.greenhouse_id
-        ), effect AS (
-         SELECT 'vallery'::text AS greenhouse_id,
-            v_mister_zone_effectiveness.zone,
-            count(*) AS effect_samples,
-            round(avg(v_mister_zone_effectiveness.zone_vpd_delta), 3) AS avg_vpd_delta_kpa
-           FROM public.v_mister_zone_effectiveness
-          WHERE (v_mister_zone_effectiveness.on_ts > (now() - '7 days'::interval))
-          GROUP BY v_mister_zone_effectiveness.zone
-        ), fairness AS (
-         SELECT daily_summary.greenhouse_id,
-            COALESCE(sum(daily_summary.mister_fairness_overrides_today), (0)::bigint) AS fairness_overrides
-           FROM public.daily_summary
-          WHERE (daily_summary.date >= (((now() AT TIME ZONE 'America/Denver'::text))::date - 6))
-          GROUP BY daily_summary.greenhouse_id
-        )
- SELECT r.greenhouse_id,
-    r.zone,
-    r.equipment,
-    round((COALESCE(r.runtime_min, (0)::numeric))::numeric, 1) AS runtime_minutes,
-    COALESCE(r.cycles, (0)::bigint) AS cycles,
-    round(((100.0 * COALESCE(r.runtime_min, (0)::numeric)) / NULLIF(t.total_runtime_min, (0)::numeric)), 1) AS runtime_share_pct,
-    round(((100.0 * (COALESCE(r.cycles, (0)::bigint))::numeric) / NULLIF((t.total_cycles)::numeric, (0)::numeric)), 1) AS cycle_share_pct,
-    e.effect_samples,
-    e.avg_vpd_delta_kpa,
-    COALESCE(f.fairness_overrides, (0)::bigint) AS fairness_overrides_7d
-   FROM (((rollup r
-     JOIN totals t ON ((t.greenhouse_id = r.greenhouse_id)))
-     LEFT JOIN effect e ON (((e.greenhouse_id = r.greenhouse_id) AND (e.zone = r.zone))))
-     LEFT JOIN fairness f ON ((f.greenhouse_id = r.greenhouse_id)))
-  ORDER BY r.greenhouse_id, r.zone;
-
-
-ALTER VIEW public.v_mister_fairness_7d OWNER TO verdify;
-
---
--- Name: VIEW v_mister_fairness_7d; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON VIEW public.v_mister_fairness_7d IS 'Rolling seven-day mister zone runtime, cycle share, effectiveness, and firmware fairness override count for resource-balance audits.';
-
-
---
 -- Name: v_equipment_runtime_today; Type: VIEW; Schema: public; Owner: verdify
 --
 
@@ -23245,6 +23167,88 @@ CREATE VIEW public.v_exterior_vpd AS
 
 
 ALTER VIEW public.v_exterior_vpd OWNER TO verdify;
+
+--
+-- Name: v_fan_balance_7d; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_fan_balance_7d AS
+ WITH bounds AS (
+         SELECT (now() - '7 days'::interval) AS start_ts,
+            now() AS end_ts
+        ), fan_set AS (
+         SELECT DISTINCT es.greenhouse_id,
+            es.equipment
+           FROM public.equipment_state es
+          WHERE (es.equipment = ANY (ARRAY['fan1'::text, 'fan2'::text]))
+        ), seed AS (
+         SELECT DISTINCT ON (fs.greenhouse_id, fs.equipment) fs.greenhouse_id,
+            fs.equipment,
+            b_1.start_ts AS ts,
+            COALESCE(es.state, false) AS state
+           FROM ((fan_set fs
+             CROSS JOIN bounds b_1)
+             LEFT JOIN public.equipment_state es ON (((es.greenhouse_id = fs.greenhouse_id) AND (es.equipment = fs.equipment) AND (es.ts <= b_1.start_ts))))
+          ORDER BY fs.greenhouse_id, fs.equipment, es.ts DESC NULLS LAST
+        ), events AS (
+         SELECT seed.greenhouse_id,
+            seed.equipment,
+            seed.ts,
+            seed.state
+           FROM seed
+        UNION ALL
+         SELECT es.greenhouse_id,
+            es.equipment,
+            es.ts,
+            es.state
+           FROM (public.equipment_state es
+             CROSS JOIN bounds b_1)
+          WHERE ((es.equipment = ANY (ARRAY['fan1'::text, 'fan2'::text])) AND (es.ts > b_1.start_ts) AND (es.ts <= b_1.end_ts))
+        ), ordered AS (
+         SELECT e.greenhouse_id,
+            e.equipment,
+            e.ts,
+            e.state,
+            lag(e.state) OVER (PARTITION BY e.greenhouse_id, e.equipment ORDER BY e.ts) AS prev_state,
+            lead(e.ts) OVER (PARTITION BY e.greenhouse_id, e.equipment ORDER BY e.ts) AS next_ts
+           FROM events e
+        ), rollup AS (
+         SELECT o.greenhouse_id,
+            o.equipment,
+            sum((EXTRACT(epoch FROM (LEAST(COALESCE(o.next_ts, b_1.end_ts), b_1.end_ts) - GREATEST(o.ts, b_1.start_ts))) / 60.0)) FILTER (WHERE (o.state IS TRUE)) AS on_minutes,
+            count(*) FILTER (WHERE ((o.state IS TRUE) AND (COALESCE(o.prev_state, false) IS FALSE) AND (o.ts > b_1.start_ts))) AS cycles
+           FROM (ordered o
+             CROSS JOIN bounds b_1)
+          WHERE ((o.ts < b_1.end_ts) AND (COALESCE(o.next_ts, b_1.end_ts) > b_1.start_ts))
+          GROUP BY o.greenhouse_id, o.equipment
+        )
+ SELECT COALESCE(f1.greenhouse_id, f2.greenhouse_id) AS greenhouse_id,
+    b.start_ts AS window_start,
+    b.end_ts AS window_end,
+    round(COALESCE(f1.on_minutes, (0)::numeric), 1) AS fan1_minutes,
+    round(COALESCE(f2.on_minutes, (0)::numeric), 1) AS fan2_minutes,
+    COALESCE(f1.cycles, (0)::bigint) AS fan1_cycles,
+    COALESCE(f2.cycles, (0)::bigint) AS fan2_cycles,
+    round(abs((COALESCE(f1.on_minutes, (0)::numeric) - COALESCE(f2.on_minutes, (0)::numeric))), 1) AS imbalance_minutes,
+    round(((100.0 * abs((COALESCE(f1.on_minutes, (0)::numeric) - COALESCE(f2.on_minutes, (0)::numeric)))) / NULLIF(GREATEST(COALESCE(f1.on_minutes, (0)::numeric), COALESCE(f2.on_minutes, (0)::numeric)), (0)::numeric)), 1) AS imbalance_pct,
+        CASE
+            WHEN (COALESCE(f1.on_minutes, (0)::numeric) <= COALESCE(f2.on_minutes, (0)::numeric)) THEN 'fan1'::text
+            ELSE 'fan2'::text
+        END AS lower_runtime_fan,
+    (abs((COALESCE(f1.on_minutes, (0)::numeric) - COALESCE(f2.on_minutes, (0)::numeric))) > 10.0) AS rebalance_needed
+   FROM ((bounds b
+     LEFT JOIN rollup f1 ON ((f1.equipment = 'fan1'::text)))
+     LEFT JOIN rollup f2 ON (((f2.equipment = 'fan2'::text) AND (f2.greenhouse_id = f1.greenhouse_id))));
+
+
+ALTER VIEW public.v_fan_balance_7d OWNER TO verdify;
+
+--
+-- Name: VIEW v_fan_balance_7d; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_fan_balance_7d IS 'Rolling seven-day fan runtime/cycle balance from equipment_state, clipped at the exact window bounds. Used to audit runtime-aware lead selection.';
+
 
 --
 -- Name: v_forecast_accuracy; Type: VIEW; Schema: public; Owner: verdify
@@ -23837,6 +23841,65 @@ ALTER VIEW public.v_greenhouse_now OWNER TO verdify;
 --
 
 CREATE VIEW public.v_greenhouse_state AS
+ WITH state_base AS (
+         SELECT c.ts,
+            c.temp_avg,
+            c.vpd_avg,
+            c.rh_avg,
+            c.dew_point,
+            c.temp_north,
+            c.temp_south,
+            c.temp_east,
+            c.temp_west,
+            c.vpd_south,
+            c.vpd_west,
+            c.vpd_east,
+            c.lux,
+            c.solar_irradiance_w_m2,
+            c.dli_today,
+            c.co2_ppm,
+            c.abs_humidity,
+            c.enthalpy_delta,
+            c.outdoor_temp_f,
+            c.outdoor_rh_pct,
+            round(((c.temp_avg - COALESCE(c.dew_point, (c.temp_avg - (10)::double precision))))::numeric, 1) AS dp_margin_f,
+            public.fn_equip_at('fan1'::text, c.ts) AS fan1,
+            public.fn_equip_at('fan2'::text, c.ts) AS fan2,
+            public.fn_equip_at('vent'::text, c.ts) AS vent,
+            public.fn_equip_at('fog'::text, c.ts) AS fog,
+            public.fn_equip_at('heat1'::text, c.ts) AS heat1,
+            public.fn_equip_at('heat2'::text, c.ts) AS heat2,
+            public.fn_equip_at('mister_south'::text, c.ts) AS mist_south,
+            public.fn_equip_at('mister_west'::text, c.ts) AS mist_west,
+            public.fn_equip_at('mister_center'::text, c.ts) AS mist_center,
+            public.fn_setpoint_at('temp_high'::text, c.ts) AS sp_temp_high,
+            public.fn_setpoint_at('temp_low'::text, c.ts) AS sp_temp_low,
+            public.fn_setpoint_at('vpd_high'::text, c.ts) AS sp_vpd_high,
+            public.fn_setpoint_at('vpd_low'::text, c.ts) AS sp_vpd_low,
+            public.fn_setpoint_at('bias_cool'::text, c.ts) AS sp_bias_cool,
+            public.fn_setpoint_at('bias_heat'::text, c.ts) AS sp_bias_heat,
+            public.fn_setpoint_at('vpd_hysteresis'::text, c.ts) AS sp_vpd_hysteresis,
+            public.fn_setpoint_at('mist_max_closed_vent_s'::text, c.ts) AS sp_sealed_max_s,
+            public.fn_setpoint_at('mist_thermal_relief_s'::text, c.ts) AS sp_relief_s,
+            public.fn_setpoint_at('vpd_watch_dwell_s'::text, c.ts) AS sp_watch_dwell_s,
+            public.fn_setpoint_at('d_cool_stage_2'::text, c.ts) AS sp_d_cool_s2,
+            public.fn_setpoint_at('mister_engage_kpa'::text, c.ts) AS sp_mister_engage,
+                CASE
+                    WHEN ((c.temp_avg >= COALESCE(public.fn_setpoint_at('temp_low'::text, c.ts), (58)::double precision)) AND (c.temp_avg <= COALESCE(public.fn_setpoint_at('temp_high'::text, c.ts), (82)::double precision))) THEN true
+                    ELSE false
+                END AS temp_in_band,
+                CASE
+                    WHEN ((c.vpd_avg >= COALESCE(public.fn_setpoint_at('vpd_low'::text, c.ts), (0.5)::double precision)) AND (c.vpd_avg <= COALESCE(public.fn_setpoint_at('vpd_high'::text, c.ts), (1.5)::double precision))) THEN true
+                    ELSE false
+                END AS vpd_in_band,
+            ( SELECT system_state.value
+                   FROM public.system_state
+                  WHERE ((system_state.entity = 'greenhouse_state'::text) AND (system_state.ts <= c.ts))
+                  ORDER BY system_state.ts DESC
+                 LIMIT 1) AS greenhouse_mode
+           FROM public.climate c
+          WHERE ((c.temp_avg IS NOT NULL) AND (c.ts >= (now() - '14 days'::interval)))
+        )
  SELECT ts,
     temp_avg,
     vpd_avg,
@@ -23857,43 +23920,48 @@ CREATE VIEW public.v_greenhouse_state AS
     enthalpy_delta,
     outdoor_temp_f,
     outdoor_rh_pct,
-    round(((temp_avg - COALESCE(dew_point, (temp_avg - (10)::double precision))))::numeric, 1) AS dp_margin_f,
-    public.fn_equip_at('fan1'::text, ts) AS fan1,
-    public.fn_equip_at('fan2'::text, ts) AS fan2,
-    public.fn_equip_at('vent'::text, ts) AS vent,
-    public.fn_equip_at('fog'::text, ts) AS fog,
-    public.fn_equip_at('heat1'::text, ts) AS heat1,
-    public.fn_equip_at('heat2'::text, ts) AS heat2,
-    public.fn_equip_at('mister_south'::text, ts) AS mist_south,
-    public.fn_equip_at('mister_west'::text, ts) AS mist_west,
-    public.fn_equip_at('mister_center'::text, ts) AS mist_center,
-    public.fn_setpoint_at('temp_high'::text, ts) AS sp_temp_high,
-    public.fn_setpoint_at('temp_low'::text, ts) AS sp_temp_low,
-    public.fn_setpoint_at('vpd_high'::text, ts) AS sp_vpd_high,
-    public.fn_setpoint_at('vpd_low'::text, ts) AS sp_vpd_low,
-    public.fn_setpoint_at('bias_cool'::text, ts) AS sp_bias_cool,
-    public.fn_setpoint_at('bias_heat'::text, ts) AS sp_bias_heat,
-    public.fn_setpoint_at('vpd_hysteresis'::text, ts) AS sp_vpd_hysteresis,
-    public.fn_setpoint_at('mist_max_closed_vent_s'::text, ts) AS sp_sealed_max_s,
-    public.fn_setpoint_at('mist_thermal_relief_s'::text, ts) AS sp_relief_s,
-    public.fn_setpoint_at('vpd_watch_dwell_s'::text, ts) AS sp_watch_dwell_s,
-    public.fn_setpoint_at('d_cool_stage_2'::text, ts) AS sp_d_cool_s2,
-    public.fn_setpoint_at('mister_engage_kpa'::text, ts) AS sp_mister_engage,
+    dp_margin_f,
+    fan1,
+    fan2,
+    vent,
+    fog,
+    heat1,
+    heat2,
+    mist_south,
+    mist_west,
+    mist_center,
+    sp_temp_high,
+    sp_temp_low,
+    sp_vpd_high,
+    sp_vpd_low,
+    sp_bias_cool,
+    sp_bias_heat,
+    sp_vpd_hysteresis,
+    sp_sealed_max_s,
+    sp_relief_s,
+    sp_watch_dwell_s,
+    sp_d_cool_s2,
+    sp_mister_engage,
+    temp_in_band,
+    vpd_in_band,
+    greenhouse_mode,
+    round((((sp_temp_low + sp_temp_high) / (2.0)::double precision))::numeric, 2) AS sp_temp_target,
+    round((((sp_vpd_low + sp_vpd_high) / (2.0)::double precision))::numeric, 3) AS sp_vpd_target,
+    round(((temp_avg - ((sp_temp_low + sp_temp_high) / (2.0)::double precision)))::numeric, 2) AS temp_target_delta_f,
+    round(((vpd_avg - ((sp_vpd_low + sp_vpd_high) / (2.0)::double precision)))::numeric, 3) AS vpd_target_delta_kpa,
+    round((
         CASE
-            WHEN ((temp_avg >= COALESCE(public.fn_setpoint_at('temp_low'::text, ts), (58)::double precision)) AND (temp_avg <= COALESCE(public.fn_setpoint_at('temp_high'::text, ts), (82)::double precision))) THEN true
-            ELSE false
-        END AS temp_in_band,
+            WHEN (temp_avg < sp_temp_low) THEN (temp_avg - sp_temp_low)
+            WHEN (temp_avg > sp_temp_high) THEN (temp_avg - sp_temp_high)
+            ELSE (0.0)::double precision
+        END)::numeric, 2) AS temp_band_error_f,
+    round((
         CASE
-            WHEN ((vpd_avg >= COALESCE(public.fn_setpoint_at('vpd_low'::text, ts), (0.5)::double precision)) AND (vpd_avg <= COALESCE(public.fn_setpoint_at('vpd_high'::text, ts), (1.5)::double precision))) THEN true
-            ELSE false
-        END AS vpd_in_band,
-    ( SELECT system_state.value
-           FROM public.system_state
-          WHERE ((system_state.entity = 'greenhouse_state'::text) AND (system_state.ts <= c.ts))
-          ORDER BY system_state.ts DESC
-         LIMIT 1) AS greenhouse_mode
-   FROM public.climate c
-  WHERE ((temp_avg IS NOT NULL) AND (ts >= (now() - '14 days'::interval)));
+            WHEN (vpd_avg < sp_vpd_low) THEN (vpd_avg - sp_vpd_low)
+            WHEN (vpd_avg > sp_vpd_high) THEN (vpd_avg - sp_vpd_high)
+            ELSE (0.0)::double precision
+        END)::numeric, 3) AS vpd_band_error_kpa
+   FROM state_base;
 
 
 ALTER VIEW public.v_greenhouse_state OWNER TO verdify;
@@ -23902,7 +23970,7 @@ ALTER VIEW public.v_greenhouse_state OWNER TO verdify;
 -- Name: VIEW v_greenhouse_state; Type: COMMENT; Schema: public; Owner: verdify
 --
 
-COMMENT ON VIEW public.v_greenhouse_state IS 'Live rolling 14-day greenhouse time series. One row per sensor reading with equipment, setpoints, compliance, and mode.';
+COMMENT ON VIEW public.v_greenhouse_state IS 'Live rolling 14-day greenhouse time series. One row per sensor reading with equipment, setpoints, compliance, mode, dispatcher-owned targets, and signed target deltas.';
 
 
 --
@@ -24033,6 +24101,165 @@ ALTER VIEW public.v_harvest_story OWNER TO verdify;
 --
 
 COMMENT ON VIEW public.v_harvest_story IS 'Harvest outcome evidence normalized by DLI, gallons, and measured kWh when available.';
+
+
+--
+-- Name: v_heat_in_band_7d; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_heat_in_band_7d AS
+ WITH samples AS (
+         SELECT bt.ts,
+            bt.greenhouse_id,
+            bt.timeline_phase,
+            bt.crop_temp_low,
+            bt.crop_temp_high,
+            bt.crop_vpd_low,
+            bt.crop_vpd_high,
+            bt.projected_temp_low,
+            bt.projected_temp_high,
+            bt.projected_vpd_low,
+            bt.projected_vpd_high,
+            bt.actual_temp_low,
+            bt.actual_temp_high,
+            bt.actual_vpd_low,
+            bt.actual_vpd_high,
+            bt.firmware_temp_low,
+            bt.firmware_temp_high,
+            bt.firmware_vpd_low,
+            bt.firmware_vpd_high,
+            bt.temp_width_f,
+            bt.vpd_width_kpa,
+            bt.sw_fsm_controller_enabled,
+            bt.indoor_temp_f,
+            bt.indoor_vpd_kpa,
+            bt.outdoor_temp_f,
+            bt.outdoor_vpd_kpa,
+            bt.solar_w_m2,
+            bt.outdoor_cold_for_vent,
+            bt.temp_hysteresis_f,
+            bt.heat_hysteresis_f,
+            bt.d_heat_stage_2_f,
+            bt.d_cool_stage_2_f,
+            bt.bias_heat_f,
+            bt.bias_cool_f,
+            bt.vpd_hysteresis_kpa,
+            bt.vpd_hysteresis_effective_kpa,
+            bt.fog_escalation_kpa,
+            bt.temp_heat_target_f,
+            bt.temp_heat_on_below_f,
+            bt.temp_heat2_on_below_f,
+            bt.temp_heat2_clear_f,
+            bt.temp_cool_on_above_f,
+            bt.temp_cool_hold_until_f,
+            bt.temp_cooling_entry_margin_f,
+            bt.temp_cooling_exit_hysteresis_f,
+            bt.solar_cooling_lead_f,
+            bt.temp_cool_stage2_delta_f,
+            bt.temp_cool_stage2_on_above_f,
+            bt.vpd_humidify_on_above_kpa,
+            bt.vpd_humidify_resolved_below_kpa,
+            bt.vpd_dehum_on_below_kpa,
+            bt.vpd_dehum_resolved_above_kpa,
+            bt.vpd_low_eff_kpa,
+            bt.vpd_high_eff_kpa,
+            bt.vpd_vent_fog_on_above_kpa,
+            bt.vpd_sealed_fog_on_above_kpa,
+            lead(bt.ts) OVER (PARTITION BY bt.greenhouse_id ORDER BY bt.ts) AS next_ts,
+            public.fn_equip_at('heat1'::text, bt.ts) AS heat1_on,
+            public.fn_equip_at('heat2'::text, bt.ts) AS heat2_on
+           FROM public.fn_band_timeline((now() - '7 days'::interval), now(), '00:05:00'::interval, 'vallery'::text) bt(ts, greenhouse_id, timeline_phase, crop_temp_low, crop_temp_high, crop_vpd_low, crop_vpd_high, projected_temp_low, projected_temp_high, projected_vpd_low, projected_vpd_high, actual_temp_low, actual_temp_high, actual_vpd_low, actual_vpd_high, firmware_temp_low, firmware_temp_high, firmware_vpd_low, firmware_vpd_high, temp_width_f, vpd_width_kpa, sw_fsm_controller_enabled, indoor_temp_f, indoor_vpd_kpa, outdoor_temp_f, outdoor_vpd_kpa, solar_w_m2, outdoor_cold_for_vent, temp_hysteresis_f, heat_hysteresis_f, d_heat_stage_2_f, d_cool_stage_2_f, bias_heat_f, bias_cool_f, vpd_hysteresis_kpa, vpd_hysteresis_effective_kpa, fog_escalation_kpa, temp_heat_target_f, temp_heat_on_below_f, temp_heat2_on_below_f, temp_heat2_clear_f, temp_cool_on_above_f, temp_cool_hold_until_f, temp_cooling_entry_margin_f, temp_cooling_exit_hysteresis_f, solar_cooling_lead_f, temp_cool_stage2_delta_f, temp_cool_stage2_on_above_f, vpd_humidify_on_above_kpa, vpd_humidify_resolved_below_kpa, vpd_dehum_on_below_kpa, vpd_dehum_resolved_above_kpa, vpd_low_eff_kpa, vpd_high_eff_kpa, vpd_vent_fog_on_above_kpa, vpd_sealed_fog_on_above_kpa)
+          WHERE (bt.timeline_phase = 'actual'::text)
+        ), classified AS (
+         SELECT s.ts,
+            s.greenhouse_id,
+            s.timeline_phase,
+            s.crop_temp_low,
+            s.crop_temp_high,
+            s.crop_vpd_low,
+            s.crop_vpd_high,
+            s.projected_temp_low,
+            s.projected_temp_high,
+            s.projected_vpd_low,
+            s.projected_vpd_high,
+            s.actual_temp_low,
+            s.actual_temp_high,
+            s.actual_vpd_low,
+            s.actual_vpd_high,
+            s.firmware_temp_low,
+            s.firmware_temp_high,
+            s.firmware_vpd_low,
+            s.firmware_vpd_high,
+            s.temp_width_f,
+            s.vpd_width_kpa,
+            s.sw_fsm_controller_enabled,
+            s.indoor_temp_f,
+            s.indoor_vpd_kpa,
+            s.outdoor_temp_f,
+            s.outdoor_vpd_kpa,
+            s.solar_w_m2,
+            s.outdoor_cold_for_vent,
+            s.temp_hysteresis_f,
+            s.heat_hysteresis_f,
+            s.d_heat_stage_2_f,
+            s.d_cool_stage_2_f,
+            s.bias_heat_f,
+            s.bias_cool_f,
+            s.vpd_hysteresis_kpa,
+            s.vpd_hysteresis_effective_kpa,
+            s.fog_escalation_kpa,
+            s.temp_heat_target_f,
+            s.temp_heat_on_below_f,
+            s.temp_heat2_on_below_f,
+            s.temp_heat2_clear_f,
+            s.temp_cool_on_above_f,
+            s.temp_cool_hold_until_f,
+            s.temp_cooling_entry_margin_f,
+            s.temp_cooling_exit_hysteresis_f,
+            s.solar_cooling_lead_f,
+            s.temp_cool_stage2_delta_f,
+            s.temp_cool_stage2_on_above_f,
+            s.vpd_humidify_on_above_kpa,
+            s.vpd_humidify_resolved_below_kpa,
+            s.vpd_dehum_on_below_kpa,
+            s.vpd_dehum_resolved_above_kpa,
+            s.vpd_low_eff_kpa,
+            s.vpd_high_eff_kpa,
+            s.vpd_vent_fog_on_above_kpa,
+            s.vpd_sealed_fog_on_above_kpa,
+            s.next_ts,
+            s.heat1_on,
+            s.heat2_on,
+            (GREATEST(0.0, LEAST(EXTRACT(epoch FROM (COALESCE(s.next_ts, now()) - s.ts)), 300.0)) / 60.0) AS sample_minutes,
+            ((s.indoor_temp_f >= s.firmware_temp_low) AND (s.indoor_temp_f <= s.firmware_temp_high)) AS temp_in_band,
+            (s.indoor_temp_f < s.firmware_temp_low) AS temp_below_band,
+            (s.indoor_temp_f > s.firmware_temp_high) AS temp_above_band
+           FROM samples s
+          WHERE ((s.indoor_temp_f IS NOT NULL) AND (s.firmware_temp_low IS NOT NULL) AND (s.firmware_temp_high IS NOT NULL))
+        )
+ SELECT greenhouse_id,
+    min(ts) AS window_start,
+    max(ts) AS window_end,
+    count(*) AS samples,
+    round(sum(sample_minutes) FILTER (WHERE heat1_on), 1) AS heat1_minutes,
+    round(sum(sample_minutes) FILTER (WHERE heat2_on), 1) AS heat2_minutes,
+    round(sum(sample_minutes) FILTER (WHERE (heat1_on AND temp_in_band)), 1) AS heat1_in_band_minutes,
+    round(sum(sample_minutes) FILTER (WHERE (heat2_on AND temp_in_band)), 1) AS heat2_in_band_minutes,
+    round(sum(sample_minutes) FILTER (WHERE (heat1_on AND temp_below_band)), 1) AS heat1_below_band_minutes,
+    round(sum(sample_minutes) FILTER (WHERE (heat2_on AND temp_below_band)), 1) AS heat2_below_band_minutes,
+    round(sum(sample_minutes) FILTER (WHERE ((heat1_on OR heat2_on) AND temp_above_band)), 1) AS heat_above_band_minutes,
+    round(((100.0 * sum(sample_minutes) FILTER (WHERE ((heat1_on OR heat2_on) AND temp_in_band))) / NULLIF(sum(sample_minutes) FILTER (WHERE (heat1_on OR heat2_on)), (0)::numeric)), 1) AS heat_runtime_in_band_pct
+   FROM classified
+  GROUP BY greenhouse_id;
+
+
+ALTER VIEW public.v_heat_in_band_7d OWNER TO verdify;
+
+--
+-- Name: VIEW v_heat_in_band_7d; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_heat_in_band_7d IS 'Rolling seven-day sampled heat runtime classified against fn_band_timeline crop-band thresholds. Highlights resource use while already inside band.';
 
 
 --
@@ -24754,17 +24981,17 @@ CREATE VIEW public.v_lighting_minutes_status_now AS
             fn_lighting_minutes_policy.controller_contract
            FROM public.fn_lighting_minutes_policy(now(), 'vallery'::text) fn_lighting_minutes_policy(greenhouse_id, ts, light_key, equipment, target_light_minutes, start_hour, cutoff_hour, lux_on_threshold, lux_hysteresis, lux_off_threshold, min_on_s, min_off_s, auto_enabled, legacy_dli_target, source_chain, controller_contract)
         ), today_window AS (
-         SELECT p_1.light_key,
-            p_1.equipment,
-            p_1.target_light_minutes,
-            p_1.start_hour,
-            p_1.cutoff_hour,
-            p_1.lux_on_threshold,
-            p_1.lux_hysteresis,
-            p_1.lux_off_threshold,
-            ((((now() AT TIME ZONE 'America/Denver'::text))::date + make_interval(hours => p_1.start_hour)) AT TIME ZONE 'America/Denver'::text) AS start_ts,
-            LEAST(((((now() AT TIME ZONE 'America/Denver'::text))::date + make_interval(hours => p_1.cutoff_hour)) AT TIME ZONE 'America/Denver'::text), now()) AS end_ts
-           FROM policy p_1
+         SELECT p.light_key,
+            p.equipment,
+            p.target_light_minutes,
+            p.start_hour,
+            p.cutoff_hour,
+            p.lux_on_threshold,
+            p.lux_hysteresis,
+            p.lux_off_threshold,
+            ((((now() AT TIME ZONE 'America/Denver'::text))::date + make_interval(hours => p.start_hour)) AT TIME ZONE 'America/Denver'::text) AS start_ts,
+            LEAST(((((now() AT TIME ZONE 'America/Denver'::text))::date + make_interval(hours => p.cutoff_hour)) AT TIME ZONE 'America/Denver'::text), now()) AS end_ts
+           FROM policy p
         ), minute_grid AS (
          SELECT w.light_key,
             w.equipment,
@@ -24780,30 +25007,30 @@ CREATE VIEW public.v_lighting_minutes_status_now AS
            FROM (today_window w
              LEFT JOIN LATERAL generate_series(w.start_ts, (w.end_ts - '00:01:00'::interval), '00:01:00'::interval) gs(minute_ts) ON ((w.end_ts > w.start_ts)))
         ), lux_min AS (
-         SELECT public.time_bucket('00:01:00'::interval, c_1.ts) AS minute_ts,
-            avg(COALESCE(c_1.outdoor_lux, c_1.lux)) AS natural_lux
-           FROM public.climate c_1
-          WHERE ((c_1.greenhouse_id = 'vallery'::text) AND (c_1.ts >= ( SELECT min(today_window.start_ts) AS min
-                   FROM today_window)) AND (c_1.ts <= ( SELECT max(today_window.end_ts) AS max
-                   FROM today_window)) AND (COALESCE(c_1.outdoor_lux, c_1.lux) IS NOT NULL))
-          GROUP BY (public.time_bucket('00:01:00'::interval, c_1.ts))
+         SELECT public.time_bucket('00:01:00'::interval, c.ts) AS minute_ts,
+            avg(COALESCE(c.outdoor_lux, c.lux)) AS natural_lux
+           FROM public.climate c
+          WHERE ((c.greenhouse_id = 'vallery'::text) AND (c.ts >= ( SELECT min(today_window.start_ts) AS min
+                   FROM today_window)) AND (c.ts <= ( SELECT max(today_window.end_ts) AS max
+                   FROM today_window)) AND (COALESCE(c.outdoor_lux, c.lux) IS NOT NULL))
+          GROUP BY (public.time_bucket('00:01:00'::interval, c.ts))
         ), state_seed AS (
          SELECT w.light_key,
             w.equipment,
             w.start_ts AS ts,
-            COALESCE(( SELECT e_1.state
-                   FROM public.equipment_state e_1
-                  WHERE ((e_1.greenhouse_id = 'vallery'::text) AND (e_1.equipment = w.equipment) AND (e_1.ts <= w.start_ts))
-                  ORDER BY e_1.ts DESC
+            COALESCE(( SELECT e.state
+                   FROM public.equipment_state e
+                  WHERE ((e.greenhouse_id = 'vallery'::text) AND (e.equipment = w.equipment) AND (e.ts <= w.start_ts))
+                  ORDER BY e.ts DESC
                  LIMIT 1), false) AS state
            FROM today_window w
         ), state_events AS (
          SELECT w.light_key,
             w.equipment,
-            e_1.ts,
-            e_1.state
+            e.ts,
+            e.state
            FROM (today_window w
-             JOIN public.equipment_state e_1 ON (((e_1.greenhouse_id = 'vallery'::text) AND (e_1.equipment = w.equipment) AND (e_1.ts >= w.start_ts) AND (e_1.ts <= w.end_ts))))
+             JOIN public.equipment_state e ON (((e.greenhouse_id = 'vallery'::text) AND (e.equipment = w.equipment) AND (e.ts >= w.start_ts) AND (e.ts <= w.end_ts))))
         ), state_timeline AS (
          SELECT x.light_key,
             x.equipment,
@@ -24893,60 +25120,131 @@ CREATE VIEW public.v_lighting_minutes_status_now AS
            FROM public.system_state
           WHERE (system_state.entity = ANY (ARRAY['gl_main_state'::text, 'gl_main_reason'::text, 'gl_grow_state'::text, 'gl_grow_reason'::text]))
           ORDER BY system_state.entity, system_state.ts DESC
+        ), latest_occupancy AS (
+         SELECT DISTINCT ON (system_state.entity) system_state.entity,
+            system_state.value,
+            system_state.ts
+           FROM public.system_state
+          WHERE (system_state.entity = ANY (ARRAY['occupancy'::text, 'occupancy_until'::text]))
+          ORDER BY system_state.entity, system_state.ts DESC
+        ), occupancy AS (
+         SELECT (COALESCE((state.value = 'occupied'::text), false) AND COALESCE(
+                CASE
+                    WHEN (until_row.value ~ '^[0-9]{4}-[0-9]{2}-[0-9]{2}T'::text) THEN ((until_row.value)::timestamp with time zone > now())
+                    ELSE false
+                END, false)) AS occupancy_active
+           FROM ((( SELECT 1 AS "?column?") seed
+             LEFT JOIN latest_occupancy state ON ((state.entity = 'occupancy'::text)))
+             LEFT JOIN latest_occupancy until_row ON ((until_row.entity = 'occupancy_until'::text)))
+        ), outdoor_staleness AS (
+         SELECT COALESCE(( SELECT GREATEST(120, LEAST(1800, (round(setpoint_snapshot.value))::integer)) AS "greatest"
+                   FROM public.setpoint_snapshot
+                  WHERE ((COALESCE(setpoint_snapshot.greenhouse_id, 'vallery'::text) = 'vallery'::text) AND (setpoint_snapshot.parameter = 'outdoor_staleness_max_s'::text))
+                  ORDER BY setpoint_snapshot.ts DESC
+                 LIMIT 1), 600) AS max_age_s
+        ), joined AS (
+         SELECT p.greenhouse_id,
+            p.ts,
+            p.light_key,
+            p.equipment,
+            p.target_light_minutes,
+            p.start_hour,
+            p.cutoff_hour,
+            p.lux_on_threshold,
+            p.lux_hysteresis,
+            p.lux_off_threshold,
+            p.min_on_s,
+            p.min_off_s,
+            p.auto_enabled,
+            p.legacy_dli_target,
+            p.source_chain,
+            p.controller_contract,
+            COALESCE(t.qualified_light_minutes, 0) AS qualified_light_minutes,
+            COALESCE(t.natural_qualified_minutes, 0) AS natural_qualified_minutes,
+            COALESCE(t.switch_on_minutes, 0) AS switch_on_minutes,
+            COALESCE(t.overlap_minutes, 0) AS overlap_minutes,
+            GREATEST(0, (p.target_light_minutes - COALESCE(t.qualified_light_minutes, 0))) AS remaining_light_minutes,
+            c.ts AS climate_ts,
+            c.dli_today,
+            c.lux AS indoor_lux,
+            c.outdoor_lux,
+            c.outdoor_lux AS exterior_lux,
+            COALESCE(c.outdoor_lux, c.lux, (0.0)::double precision) AS natural_lux,
+            (COALESCE(c.outdoor_lux, c.lux, (0.0)::double precision) >= p.lux_on_threshold) AS natural_qualified_now,
+            (EXTRACT(hour FROM (now() AT TIME ZONE 'America/Denver'::text)))::integer AS local_hour,
+                CASE
+                    WHEN (p.start_hour <= p.cutoff_hour) THEN (((EXTRACT(hour FROM (now() AT TIME ZONE 'America/Denver'::text)))::integer >= p.start_hour) AND ((EXTRACT(hour FROM (now() AT TIME ZONE 'America/Denver'::text)))::integer < p.cutoff_hour))
+                    ELSE (((EXTRACT(hour FROM (now() AT TIME ZONE 'America/Denver'::text)))::integer >= p.start_hour) OR ((EXTRACT(hour FROM (now() AT TIME ZONE 'America/Denver'::text)))::integer < p.cutoff_hour))
+                END AS in_light_window,
+            (COALESCE(t.qualified_light_minutes, 0) < p.target_light_minutes) AS minutes_below_target,
+            (COALESCE(c.outdoor_lux, c.lux, (0.0)::double precision) < p.lux_on_threshold) AS lux_below_on_threshold,
+            (COALESCE(c.outdoor_lux, c.lux, (0.0)::double precision) < p.lux_off_threshold) AS lux_below_off_threshold,
+            ((c.outdoor_lux IS NOT NULL) AND (c.ts > (now() - make_interval(secs => (os.max_age_s)::double precision)))) AS exterior_lux_fresh,
+            ((c.outdoor_lux IS NOT NULL) AND (c.ts > (now() - make_interval(secs => (os.max_age_s)::double precision))) AND (c.outdoor_lux < p.lux_on_threshold)) AS exterior_lux_below_on_threshold,
+            ((c.outdoor_lux IS NOT NULL) AND (c.ts > (now() - make_interval(secs => (os.max_age_s)::double precision))) AND (c.outdoor_lux < p.lux_off_threshold)) AS exterior_lux_below_off_threshold,
+            o.occupancy_active,
+            COALESCE(e.state, false) AS actual_on,
+            state_row.value AS firmware_state,
+            reason_row.value AS firmware_reason,
+            ((state_row.ts >= COALESCE(( SELECT current_firmware_start.ts
+                   FROM current_firmware_start), (now() - '24:00:00'::interval))) AND (reason_row.ts >= COALESCE(( SELECT current_firmware_start.ts
+                   FROM current_firmware_start), (now() - '24:00:00'::interval))) AND (state_row.ts > (now() - '00:15:00'::interval)) AND (reason_row.ts > (now() - '00:15:00'::interval))) AS firmware_telemetry_fresh,
+            e.ts AS equipment_ts
+           FROM (((((((policy p
+             LEFT JOIN today t ON (((t.light_key = p.light_key) AND (t.equipment = p.equipment))))
+             LEFT JOIN latest_climate c ON (true))
+             LEFT JOIN latest_equipment e ON ((e.equipment = p.equipment)))
+             LEFT JOIN latest_reason state_row ON ((state_row.entity = (('gl_'::text || p.light_key) || '_state'::text))))
+             LEFT JOIN latest_reason reason_row ON ((reason_row.entity = (('gl_'::text || p.light_key) || '_reason'::text))))
+             CROSS JOIN occupancy o)
+             CROSS JOIN outdoor_staleness os)
         )
- SELECT p.greenhouse_id,
-    p.ts,
-    p.light_key,
-    p.equipment,
-    p.target_light_minutes,
-    p.start_hour,
-    p.cutoff_hour,
-    p.lux_on_threshold,
-    p.lux_hysteresis,
-    p.lux_off_threshold,
-    p.min_on_s,
-    p.min_off_s,
-    p.auto_enabled,
-    p.legacy_dli_target,
-    p.source_chain,
-    p.controller_contract,
-    COALESCE(t.qualified_light_minutes, 0) AS qualified_light_minutes,
-    COALESCE(t.natural_qualified_minutes, 0) AS natural_qualified_minutes,
-    COALESCE(t.switch_on_minutes, 0) AS switch_on_minutes,
-    COALESCE(t.overlap_minutes, 0) AS overlap_minutes,
-    GREATEST(0, (p.target_light_minutes - COALESCE(t.qualified_light_minutes, 0))) AS remaining_light_minutes,
-    c.ts AS climate_ts,
-    c.dli_today,
-    c.lux AS indoor_lux,
-    c.outdoor_lux,
-    COALESCE(c.outdoor_lux, c.lux, (0.0)::double precision) AS natural_lux,
-    (COALESCE(c.outdoor_lux, c.lux, (0.0)::double precision) >= p.lux_on_threshold) AS natural_qualified_now,
-    (EXTRACT(hour FROM (now() AT TIME ZONE 'America/Denver'::text)))::integer AS local_hour,
-        CASE
-            WHEN (p.start_hour <= p.cutoff_hour) THEN (((EXTRACT(hour FROM (now() AT TIME ZONE 'America/Denver'::text)))::integer >= p.start_hour) AND ((EXTRACT(hour FROM (now() AT TIME ZONE 'America/Denver'::text)))::integer < p.cutoff_hour))
-            ELSE (((EXTRACT(hour FROM (now() AT TIME ZONE 'America/Denver'::text)))::integer >= p.start_hour) OR ((EXTRACT(hour FROM (now() AT TIME ZONE 'America/Denver'::text)))::integer < p.cutoff_hour))
-        END AS in_light_window,
-    (COALESCE(t.qualified_light_minutes, 0) < p.target_light_minutes) AS minutes_below_target,
-    (COALESCE(c.outdoor_lux, c.lux, (0.0)::double precision) < p.lux_on_threshold) AS lux_below_on_threshold,
-    (COALESCE(c.outdoor_lux, c.lux, (0.0)::double precision) < p.lux_off_threshold) AS lux_below_off_threshold,
-    (p.auto_enabled AND
-        CASE
-            WHEN (p.start_hour <= p.cutoff_hour) THEN (((EXTRACT(hour FROM (now() AT TIME ZONE 'America/Denver'::text)))::integer >= p.start_hour) AND ((EXTRACT(hour FROM (now() AT TIME ZONE 'America/Denver'::text)))::integer < p.cutoff_hour))
-            ELSE (((EXTRACT(hour FROM (now() AT TIME ZONE 'America/Denver'::text)))::integer >= p.start_hour) OR ((EXTRACT(hour FROM (now() AT TIME ZONE 'America/Denver'::text)))::integer < p.cutoff_hour))
-        END AND (COALESCE(t.qualified_light_minutes, 0) < p.target_light_minutes) AND ((COALESCE(c.outdoor_lux, c.lux, (0.0)::double precision) < p.lux_on_threshold) OR ((COALESCE(e.state, false) OR (upper(COALESCE(state_row.value, ''::text)) = 'ON'::text)) AND (COALESCE(c.outdoor_lux, c.lux, (0.0)::double precision) < p.lux_off_threshold)))) AS expected_on,
-    COALESCE(e.state, false) AS actual_on,
-    state_row.value AS firmware_state,
-    reason_row.value AS firmware_reason,
-    ((state_row.ts >= COALESCE(( SELECT current_firmware_start.ts
-           FROM current_firmware_start), (now() - '24:00:00'::interval))) AND (reason_row.ts >= COALESCE(( SELECT current_firmware_start.ts
-           FROM current_firmware_start), (now() - '24:00:00'::interval))) AND (state_row.ts > (now() - '00:15:00'::interval)) AND (reason_row.ts > (now() - '00:15:00'::interval))) AS firmware_telemetry_fresh,
-    e.ts AS equipment_ts
-   FROM (((((policy p
-     LEFT JOIN today t ON (((t.light_key = p.light_key) AND (t.equipment = p.equipment))))
-     LEFT JOIN latest_climate c ON (true))
-     LEFT JOIN latest_equipment e ON ((e.equipment = p.equipment)))
-     LEFT JOIN latest_reason state_row ON ((state_row.entity = (('gl_'::text || p.light_key) || '_state'::text))))
-     LEFT JOIN latest_reason reason_row ON ((reason_row.entity = (('gl_'::text || p.light_key) || '_reason'::text))));
+ SELECT greenhouse_id,
+    ts,
+    light_key,
+    equipment,
+    target_light_minutes,
+    start_hour,
+    cutoff_hour,
+    lux_on_threshold,
+    lux_hysteresis,
+    lux_off_threshold,
+    min_on_s,
+    min_off_s,
+    auto_enabled,
+    legacy_dli_target,
+    source_chain,
+    controller_contract,
+    qualified_light_minutes,
+    natural_qualified_minutes,
+    switch_on_minutes,
+    overlap_minutes,
+    remaining_light_minutes,
+    climate_ts,
+    dli_today,
+    indoor_lux,
+    outdoor_lux,
+    exterior_lux,
+    natural_lux,
+    natural_qualified_now,
+    local_hour,
+    in_light_window,
+    minutes_below_target,
+    lux_below_on_threshold,
+    lux_below_off_threshold,
+    exterior_lux_fresh,
+    exterior_lux_below_on_threshold,
+    exterior_lux_below_off_threshold,
+    occupancy_active,
+    actual_on,
+    firmware_state,
+    firmware_reason,
+    firmware_telemetry_fresh,
+    equipment_ts,
+    (auto_enabled AND in_light_window AND minutes_below_target AND (lux_below_on_threshold OR ((actual_on OR (firmware_telemetry_fresh AND (upper(COALESCE(firmware_state, ''::text)) = 'ON'::text))) AND lux_below_off_threshold))) AS plant_supplement_demand,
+    (auto_enabled AND occupancy_active AND exterior_lux_fresh AND (exterior_lux_below_on_threshold OR ((actual_on OR (firmware_telemetry_fresh AND (upper(COALESCE(firmware_state, ''::text)) = 'ON'::text))) AND exterior_lux_below_off_threshold))) AS occupancy_lux_demand,
+    ((auto_enabled AND in_light_window AND minutes_below_target AND (lux_below_on_threshold OR ((actual_on OR (firmware_telemetry_fresh AND (upper(COALESCE(firmware_state, ''::text)) = 'ON'::text))) AND lux_below_off_threshold))) OR (auto_enabled AND occupancy_active AND exterior_lux_fresh AND (exterior_lux_below_on_threshold OR ((actual_on OR (firmware_telemetry_fresh AND (upper(COALESCE(firmware_state, ''::text)) = 'ON'::text))) AND exterior_lux_below_off_threshold)))) AS expected_on
+   FROM joined j;
 
 
 ALTER VIEW public.v_lighting_minutes_status_now OWNER TO verdify;
@@ -24955,7 +25253,7 @@ ALTER VIEW public.v_lighting_minutes_status_now OWNER TO verdify;
 -- Name: VIEW v_lighting_minutes_status_now; Type: COMMENT; Schema: public; Owner: verdify
 --
 
-COMMENT ON VIEW public.v_lighting_minutes_status_now IS 'Current per-circuit qualified-light-minutes policy, minutes progress, expected state, firmware text state, and actual Lutron switch state.';
+COMMENT ON VIEW public.v_lighting_minutes_status_now IS 'Current per-circuit qualified-light-minutes policy, plant supplement demand, lux-gated occupancy task-light demand, firmware state, and actual Lutron switch state.';
 
 
 --
@@ -25374,6 +25672,7 @@ CREATE VIEW public.v_lighting_traceability_now AS
             v_lighting_minutes_status_now.dli_today,
             v_lighting_minutes_status_now.indoor_lux,
             v_lighting_minutes_status_now.outdoor_lux,
+            v_lighting_minutes_status_now.exterior_lux,
             v_lighting_minutes_status_now.natural_lux,
             v_lighting_minutes_status_now.natural_qualified_now,
             v_lighting_minutes_status_now.local_hour,
@@ -25381,12 +25680,18 @@ CREATE VIEW public.v_lighting_traceability_now AS
             v_lighting_minutes_status_now.minutes_below_target,
             v_lighting_minutes_status_now.lux_below_on_threshold,
             v_lighting_minutes_status_now.lux_below_off_threshold,
-            v_lighting_minutes_status_now.expected_on,
+            v_lighting_minutes_status_now.exterior_lux_fresh,
+            v_lighting_minutes_status_now.exterior_lux_below_on_threshold,
+            v_lighting_minutes_status_now.exterior_lux_below_off_threshold,
+            v_lighting_minutes_status_now.occupancy_active,
             v_lighting_minutes_status_now.actual_on,
             v_lighting_minutes_status_now.firmware_state,
             v_lighting_minutes_status_now.firmware_reason,
             v_lighting_minutes_status_now.firmware_telemetry_fresh,
-            v_lighting_minutes_status_now.equipment_ts
+            v_lighting_minutes_status_now.equipment_ts,
+            v_lighting_minutes_status_now.plant_supplement_demand,
+            v_lighting_minutes_status_now.occupancy_lux_demand,
+            v_lighting_minutes_status_now.expected_on
            FROM public.v_lighting_minutes_status_now
         ), latest_desired AS (
          SELECT DISTINCT ON (setpoint_changes.parameter) setpoint_changes.parameter,
@@ -25436,6 +25741,7 @@ CREATE VIEW public.v_lighting_traceability_now AS
     s.dli_today,
     s.indoor_lux,
     s.outdoor_lux,
+    s.exterior_lux,
     s.natural_lux,
     s.natural_qualified_now,
     s.local_hour,
@@ -25443,12 +25749,18 @@ CREATE VIEW public.v_lighting_traceability_now AS
     s.minutes_below_target,
     s.lux_below_on_threshold,
     s.lux_below_off_threshold,
-    s.expected_on,
+    s.exterior_lux_fresh,
+    s.exterior_lux_below_on_threshold,
+    s.exterior_lux_below_off_threshold,
+    s.occupancy_active,
     s.actual_on,
     s.firmware_state,
     s.firmware_reason,
     s.firmware_telemetry_fresh,
     s.equipment_ts,
+    s.plant_supplement_demand,
+    s.occupancy_lux_demand,
+    s.expected_on,
     cfg_target.value AS cfg_target_light_minutes,
     cfg_lux.value AS cfg_lux_on_threshold,
     cfg_hyst.value AS cfg_lux_hysteresis,
@@ -25485,7 +25797,7 @@ ALTER VIEW public.v_lighting_traceability_now OWNER TO verdify;
 -- Name: VIEW v_lighting_traceability_now; Type: COMMENT; Schema: public; Owner: verdify
 --
 
-COMMENT ON VIEW public.v_lighting_traceability_now IS 'Lighting policy traceability split into desired setpoint rows, confirmed cfg readbacks, exact firmware decision epoch text, and physical Lutron state.';
+COMMENT ON VIEW public.v_lighting_traceability_now IS 'Lighting policy traceability split into plant supplement demand, lux-gated occupancy task-light demand, desired setpoint rows, confirmed cfg readbacks, exact firmware decision epoch text, and physical Lutron state.';
 
 
 --
@@ -25602,6 +25914,117 @@ ALTER VIEW public.v_mister_zone_effectiveness OWNER TO verdify;
 --
 
 COMMENT ON VIEW public.v_mister_zone_effectiveness IS 'Mister on-events with zone-local VPD before and after the pulse. Center uses greenhouse average until a center VPD sensor exists.';
+
+
+--
+-- Name: v_mister_fairness_7d; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_mister_fairness_7d AS
+ WITH bounds AS (
+         SELECT (now() - '7 days'::interval) AS start_ts,
+            now() AS end_ts
+        ), zone_map AS (
+         SELECT z.equipment,
+            z.zone
+           FROM ( VALUES ('mister_south'::text,'south'::text), ('mister_west'::text,'west'::text), ('mister_center'::text,'center'::text)) z(equipment, zone)
+        ), mister_set AS (
+         SELECT DISTINCT es.greenhouse_id,
+            z.equipment,
+            z.zone
+           FROM (public.equipment_state es
+             JOIN zone_map z ON ((z.equipment = es.equipment)))
+        ), seed AS (
+         SELECT DISTINCT ON (ms.greenhouse_id, ms.equipment) ms.greenhouse_id,
+            ms.equipment,
+            ms.zone,
+            b.start_ts AS ts,
+            COALESCE(es.state, false) AS state
+           FROM ((mister_set ms
+             CROSS JOIN bounds b)
+             LEFT JOIN public.equipment_state es ON (((es.greenhouse_id = ms.greenhouse_id) AND (es.equipment = ms.equipment) AND (es.ts <= b.start_ts))))
+          ORDER BY ms.greenhouse_id, ms.equipment, es.ts DESC NULLS LAST
+        ), events AS (
+         SELECT seed.greenhouse_id,
+            seed.equipment,
+            seed.zone,
+            seed.ts,
+            seed.state
+           FROM seed
+        UNION ALL
+         SELECT es.greenhouse_id,
+            es.equipment,
+            z.zone,
+            es.ts,
+            es.state
+           FROM ((public.equipment_state es
+             JOIN zone_map z ON ((z.equipment = es.equipment)))
+             CROSS JOIN bounds b)
+          WHERE ((es.ts > b.start_ts) AND (es.ts <= b.end_ts))
+        ), ordered AS (
+         SELECT e_1.greenhouse_id,
+            e_1.equipment,
+            e_1.zone,
+            e_1.ts,
+            e_1.state,
+            lag(e_1.state) OVER (PARTITION BY e_1.greenhouse_id, e_1.equipment ORDER BY e_1.ts) AS prev_state,
+            lead(e_1.ts) OVER (PARTITION BY e_1.greenhouse_id, e_1.equipment ORDER BY e_1.ts) AS next_ts
+           FROM events e_1
+        ), rollup AS (
+         SELECT o.greenhouse_id,
+            o.equipment,
+            o.zone,
+            sum((EXTRACT(epoch FROM (LEAST(COALESCE(o.next_ts, b.end_ts), b.end_ts) - GREATEST(o.ts, b.start_ts))) / 60.0)) FILTER (WHERE (o.state IS TRUE)) AS runtime_min,
+            count(*) FILTER (WHERE ((o.state IS TRUE) AND (COALESCE(o.prev_state, false) IS FALSE) AND (o.ts > b.start_ts))) AS cycles
+           FROM (ordered o
+             CROSS JOIN bounds b)
+          WHERE ((o.ts < b.end_ts) AND (COALESCE(o.next_ts, b.end_ts) > b.start_ts))
+          GROUP BY o.greenhouse_id, o.equipment, o.zone
+        ), totals AS (
+         SELECT rollup.greenhouse_id,
+            sum(COALESCE(rollup.runtime_min, (0)::numeric)) AS total_runtime_min,
+            sum(COALESCE(rollup.cycles, (0)::bigint)) AS total_cycles
+           FROM rollup
+          GROUP BY rollup.greenhouse_id
+        ), effect AS (
+         SELECT 'vallery'::text AS greenhouse_id,
+            v_mister_zone_effectiveness.zone,
+            count(*) AS effect_samples,
+            round(avg(v_mister_zone_effectiveness.zone_vpd_delta), 3) AS avg_vpd_delta_kpa
+           FROM public.v_mister_zone_effectiveness
+          WHERE (v_mister_zone_effectiveness.on_ts > (now() - '7 days'::interval))
+          GROUP BY 'vallery'::text, v_mister_zone_effectiveness.zone
+        ), fairness AS (
+         SELECT daily_summary.greenhouse_id,
+            COALESCE(sum(daily_summary.mister_fairness_overrides_today), (0)::bigint) AS fairness_overrides
+           FROM public.daily_summary
+          WHERE (daily_summary.date >= (((now() AT TIME ZONE 'America/Denver'::text))::date - 6))
+          GROUP BY daily_summary.greenhouse_id
+        )
+ SELECT r.greenhouse_id,
+    r.zone,
+    r.equipment,
+    round(COALESCE(r.runtime_min, (0)::numeric), 1) AS runtime_minutes,
+    COALESCE(r.cycles, (0)::bigint) AS cycles,
+    round(((100.0 * COALESCE(r.runtime_min, (0)::numeric)) / NULLIF(t.total_runtime_min, (0)::numeric)), 1) AS runtime_share_pct,
+    round(((100.0 * (COALESCE(r.cycles, (0)::bigint))::numeric) / NULLIF(t.total_cycles, (0)::numeric)), 1) AS cycle_share_pct,
+    e.effect_samples,
+    e.avg_vpd_delta_kpa,
+    COALESCE(f.fairness_overrides, (0)::bigint) AS fairness_overrides_7d
+   FROM (((rollup r
+     JOIN totals t ON ((t.greenhouse_id = r.greenhouse_id)))
+     LEFT JOIN effect e ON (((e.greenhouse_id = r.greenhouse_id) AND (e.zone = r.zone))))
+     LEFT JOIN fairness f ON ((f.greenhouse_id = r.greenhouse_id)))
+  ORDER BY r.greenhouse_id, r.zone;
+
+
+ALTER VIEW public.v_mister_fairness_7d OWNER TO verdify;
+
+--
+-- Name: VIEW v_mister_fairness_7d; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_mister_fairness_7d IS 'Rolling seven-day mister zone runtime, cycle share, effectiveness, and firmware fairness override count for resource-balance audits.';
 
 
 --
@@ -26544,6 +26967,58 @@ COMMENT ON VIEW public.v_setpoint_delivery_latency IS 'Seven-day setpoint push/r
 
 
 --
+-- Name: v_setpoint_effective_drift_7d; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_setpoint_effective_drift_7d AS
+ WITH ranked AS (
+         SELECT c.ts,
+            c.parameter,
+            c.requested,
+            c.applied,
+            c.band_lo,
+            c.band_hi,
+            c.reason,
+            c.greenhouse_id,
+            c.status,
+            c.plan_id,
+            c.plan_ts,
+            c.trigger_id,
+            c.planner_instance,
+            row_number() OVER (PARTITION BY c.greenhouse_id, c.parameter ORDER BY c.ts DESC) AS rn
+           FROM public.setpoint_clamps c
+          WHERE (c.ts > (now() - '7 days'::interval))
+        )
+ SELECT greenhouse_id,
+    parameter,
+    count(*) AS drift_events,
+    count(*) FILTER (WHERE (status = 'guardrailed'::text)) AS guardrailed_events,
+    count(*) FILTER (WHERE (status = 'held_by_guardrail'::text)) AS held_events,
+    count(*) FILTER (WHERE (status = 'rejected'::text)) AS rejected_events,
+    round((avg(abs((requested - applied))))::numeric, 3) AS avg_abs_delta,
+    round((max(abs((requested - applied))))::numeric, 3) AS max_abs_delta,
+    min(ts) AS first_seen,
+    max(ts) AS last_seen,
+    max(requested) FILTER (WHERE (rn = 1)) AS latest_requested,
+    max(applied) FILTER (WHERE (rn = 1)) AS latest_effective,
+    max(reason) FILTER (WHERE (rn = 1)) AS latest_reason,
+    max(status) FILTER (WHERE (rn = 1)) AS latest_status,
+    max(plan_id) FILTER (WHERE (rn = 1)) AS latest_plan_id
+   FROM ranked
+  GROUP BY greenhouse_id, parameter
+  ORDER BY (count(*)) DESC, parameter;
+
+
+ALTER VIEW public.v_setpoint_effective_drift_7d OWNER TO verdify;
+
+--
+-- Name: VIEW v_setpoint_effective_drift_7d; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_setpoint_effective_drift_7d IS 'Rolling seven-day planner requested vs dispatcher effective/applied drift from setpoint_clamps. Used to find hidden clamp or retired-param pressure.';
+
+
+--
 -- Name: v_setpoint_forward; Type: VIEW; Schema: public; Owner: verdify
 --
 
@@ -26960,6 +27435,89 @@ ALTER VIEW public.v_topology_tree OWNER TO verdify;
 --
 
 COMMENT ON VIEW public.v_topology_tree IS 'Sprint 22: greenhouse → zone → shelf → position recursive tree as a single JSONB blob. Drives website nav + /api/v1/topology.';
+
+
+--
+-- Name: v_vent_mist_assist_7d; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_vent_mist_assist_7d AS
+ WITH bounds AS (
+         SELECT (now() - '7 days'::interval) AS start_ts,
+            now() AS end_ts
+        ), diag AS (
+         SELECT d.greenhouse_id,
+            d.ts,
+            d.vent_mist_assist_active,
+            lead(d.ts) OVER (PARTITION BY d.greenhouse_id ORDER BY d.ts) AS next_ts
+           FROM (public.diagnostics d
+             CROSS JOIN bounds b)
+          WHERE ((d.ts > (b.start_ts - '00:10:00'::interval)) AND (d.ts <= b.end_ts))
+        ), assist AS (
+         SELECT d.greenhouse_id,
+            GREATEST(d.ts, b.start_ts) AS ts,
+            LEAST(COALESCE(d.next_ts, b.end_ts), b.end_ts) AS next_ts
+           FROM (diag d
+             CROSS JOIN bounds b)
+          WHERE ((d.vent_mist_assist_active = 1) AND (d.ts < b.end_ts) AND (COALESCE(d.next_ts, b.end_ts) > b.start_ts))
+        ), enriched AS (
+         SELECT a.greenhouse_id,
+            a.ts,
+            (EXTRACT(epoch FROM (a.next_ts - a.ts)) / 60.0) AS minutes,
+            COALESCE(state.value, 'unknown'::text) AS greenhouse_state,
+            COALESCE(reason.value, 'vent_mist_assist_active'::text) AS mode_reason,
+            public.fn_equip_at('vent'::text, a.ts) AS vent_on,
+            public.fn_equip_at('fog'::text, a.ts) AS fog_on,
+            (public.fn_equip_at('mister_south'::text, a.ts) OR public.fn_equip_at('mister_west'::text, a.ts) OR public.fn_equip_at('mister_center'::text, a.ts)) AS any_mister_on,
+            c.temp_avg,
+            c.vpd_avg,
+            c.outdoor_temp_f,
+            c.outdoor_rh_pct
+           FROM (((assist a
+             LEFT JOIN LATERAL ( SELECT ss.value
+                   FROM public.system_state ss
+                  WHERE ((ss.greenhouse_id = a.greenhouse_id) AND (ss.entity = 'greenhouse_state'::text) AND (ss.ts <= a.ts))
+                  ORDER BY ss.ts DESC
+                 LIMIT 1) state ON (true))
+             LEFT JOIN LATERAL ( SELECT ss.value
+                   FROM public.system_state ss
+                  WHERE ((ss.greenhouse_id = a.greenhouse_id) AND (ss.entity = 'mode_reason'::text) AND (ss.ts <= a.ts))
+                  ORDER BY ss.ts DESC
+                 LIMIT 1) reason ON (true))
+             LEFT JOIN LATERAL ( SELECT c_1.temp_avg,
+                    c_1.vpd_avg,
+                    c_1.outdoor_temp_f,
+                    c_1.outdoor_rh_pct
+                   FROM public.climate c_1
+                  WHERE ((c_1.greenhouse_id = a.greenhouse_id) AND (c_1.ts <= a.ts))
+                  ORDER BY c_1.ts DESC
+                 LIMIT 1) c ON (true))
+          WHERE (a.next_ts > a.ts)
+        )
+ SELECT greenhouse_id,
+    greenhouse_state,
+    mode_reason,
+    count(*) AS samples,
+    round(sum(minutes), 1) AS assist_minutes,
+    round(sum(minutes) FILTER (WHERE vent_on), 1) AS vent_open_minutes,
+    round(sum(minutes) FILTER (WHERE fog_on), 1) AS fog_minutes,
+    round(sum(minutes) FILTER (WHERE any_mister_on), 1) AS mister_minutes,
+    round((avg(temp_avg))::numeric, 1) AS avg_temp_f,
+    round((avg(vpd_avg))::numeric, 2) AS avg_vpd_kpa,
+    round((avg(outdoor_temp_f))::numeric, 1) AS avg_outdoor_temp_f,
+    round((avg(outdoor_rh_pct))::numeric, 1) AS avg_outdoor_rh_pct
+   FROM enriched
+  GROUP BY greenhouse_id, greenhouse_state, mode_reason
+  ORDER BY (round(sum(minutes), 1)) DESC;
+
+
+ALTER VIEW public.v_vent_mist_assist_7d OWNER TO verdify;
+
+--
+-- Name: VIEW v_vent_mist_assist_7d; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_vent_mist_assist_7d IS 'Rolling seven-day open-vent moisture assist runtime by controller state/reason, using diagnostics.vent_mist_assist_active and equipment_state.';
 
 
 --
@@ -32055,6 +32613,13 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_9_312_chunk ALTER COLUMN source SE
 
 
 --
+-- Name: _hyper_9_706_chunk source; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_9_706_chunk ALTER COLUMN source SET DEFAULT 'tempest'::text;
+
+
+--
 -- Name: alert_log id; Type: DEFAULT; Schema: public; Owner: verdify
 --
 
@@ -32213,13 +32778,6 @@ ALTER TABLE ONLY public.openclaw_interaction_log ALTER COLUMN id SET DEFAULT nex
 --
 
 ALTER TABLE ONLY public.plan_delivery_log ALTER COLUMN id SET DEFAULT nextval('public.plan_delivery_log_id_seq'::regclass);
-
-
---
--- Name: plan_delivery_log_shadow id; Type: DEFAULT; Schema: public; Owner: verdify
---
-
-ALTER TABLE ONLY public.plan_delivery_log_shadow ALTER COLUMN id SET DEFAULT nextval('public.plan_delivery_log_shadow_id_seq'::regclass);
 
 
 --
@@ -32966,14 +33524,6 @@ ALTER TABLE ONLY public.plan_delivery_log
 
 
 --
--- Name: plan_delivery_log_shadow plan_delivery_log_shadow_pkey; Type: CONSTRAINT; Schema: public; Owner: verdify
---
-
-ALTER TABLE ONLY public.plan_delivery_log_shadow
-    ADD CONSTRAINT plan_delivery_log_shadow_pkey PRIMARY KEY (id);
-
-
---
 -- Name: plan_delivery_log plan_delivery_log_trigger_id_key; Type: CONSTRAINT; Schema: public; Owner: verdify
 --
 
@@ -32987,14 +33537,6 @@ ALTER TABLE ONLY public.plan_delivery_log
 
 ALTER TABLE ONLY public.plan_journal
     ADD CONSTRAINT plan_journal_pkey PRIMARY KEY (plan_id);
-
-
---
--- Name: plan_journal_shadow plan_journal_shadow_pkey; Type: CONSTRAINT; Schema: public; Owner: verdify
---
-
-ALTER TABLE ONLY public.plan_journal_shadow
-    ADD CONSTRAINT plan_journal_shadow_pkey PRIMARY KEY (plan_id);
 
 
 --
@@ -33099,14 +33641,6 @@ ALTER TABLE ONLY public.sensors
 
 ALTER TABLE ONLY public.setpoint_plan
     ADD CONSTRAINT setpoint_plan_pkey PRIMARY KEY (ts, parameter, plan_id);
-
-
---
--- Name: setpoint_plan_shadow setpoint_plan_shadow_pkey; Type: CONSTRAINT; Schema: public; Owner: verdify
---
-
-ALTER TABLE ONLY public.setpoint_plan_shadow
-    ADD CONSTRAINT setpoint_plan_shadow_pkey PRIMARY KEY (ts, parameter, plan_id);
 
 
 --
@@ -41853,27 +42387,6 @@ CREATE INDEX _hyper_7_507_chunk_weather_forecast_ts_idx ON _timescaledb_internal
 
 
 --
--- Name: _hyper_8_388_chunk_esp32_logs_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
---
-
-CREATE INDEX _hyper_8_388_chunk_esp32_logs_ts_idx ON _timescaledb_internal._hyper_8_388_chunk USING btree (ts DESC);
-
-
---
--- Name: _hyper_8_388_chunk_idx_esp32_logs_level; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
---
-
-CREATE INDEX _hyper_8_388_chunk_idx_esp32_logs_level ON _timescaledb_internal._hyper_8_388_chunk USING btree (level, ts DESC);
-
-
---
--- Name: _hyper_8_388_chunk_idx_esp32_logs_tag; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
---
-
-CREATE INDEX _hyper_8_388_chunk_idx_esp32_logs_tag ON _timescaledb_internal._hyper_8_388_chunk USING btree (tag, ts DESC);
-
-
---
 -- Name: _hyper_8_404_chunk_esp32_logs_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -41983,6 +42496,20 @@ CREATE INDEX _hyper_9_312_chunk_idx_weather_station_source ON _timescaledb_inter
 --
 
 CREATE INDEX _hyper_9_312_chunk_weather_station_ts_idx ON _timescaledb_internal._hyper_9_312_chunk USING btree (ts DESC);
+
+
+--
+-- Name: _hyper_9_706_chunk_idx_weather_station_source; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_9_706_chunk_idx_weather_station_source ON _timescaledb_internal._hyper_9_706_chunk USING btree (source, ts DESC);
+
+
+--
+-- Name: _hyper_9_706_chunk_weather_station_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_9_706_chunk_weather_station_ts_idx ON _timescaledb_internal._hyper_9_706_chunk USING btree (ts DESC);
 
 
 --
@@ -42658,6 +43185,13 @@ CREATE INDEX compress_hyper_14_520_chunk__ts_meta_min_1__ts_meta_max_1___idx ON 
 
 
 --
+-- Name: climate_action_log_ts_idx; Type: INDEX; Schema: public; Owner: verdify
+--
+
+CREATE INDEX climate_action_log_ts_idx ON public.climate_action_log USING btree (ts DESC);
+
+
+--
 -- Name: climate_ts_idx; Type: INDEX; Schema: public; Owner: verdify
 --
 
@@ -42781,6 +43315,41 @@ CREATE INDEX idx_checklist_log_date ON public.daily_checklist_log USING btree (d
 --
 
 CREATE INDEX idx_checklist_log_date_completed ON public.daily_checklist_log USING btree (date, completed_at);
+
+
+--
+-- Name: idx_climate_action_log_action_ts; Type: INDEX; Schema: public; Owner: verdify
+--
+
+CREATE INDEX idx_climate_action_log_action_ts ON public.climate_action_log USING btree (climate_action, ts DESC);
+
+
+--
+-- Name: idx_climate_action_log_greenhouse_ts; Type: INDEX; Schema: public; Owner: verdify
+--
+
+CREATE INDEX idx_climate_action_log_greenhouse_ts ON public.climate_action_log USING btree (greenhouse_id, ts DESC);
+
+
+--
+-- Name: idx_climate_action_log_plan; Type: INDEX; Schema: public; Owner: verdify
+--
+
+CREATE INDEX idx_climate_action_log_plan ON public.climate_action_log USING btree (plan_id, ts DESC) WHERE (plan_id IS NOT NULL);
+
+
+--
+-- Name: idx_climate_action_log_trigger; Type: INDEX; Schema: public; Owner: verdify
+--
+
+CREATE INDEX idx_climate_action_log_trigger ON public.climate_action_log USING btree (trigger_id) WHERE (trigger_id IS NOT NULL);
+
+
+--
+-- Name: idx_climate_action_log_ts; Type: INDEX; Schema: public; Owner: verdify
+--
+
+CREATE INDEX idx_climate_action_log_ts ON public.climate_action_log USING btree (ts DESC);
 
 
 --
@@ -43176,17 +43745,10 @@ CREATE INDEX idx_plan_delivery_log_hermes_run ON public.plan_delivery_log USING 
 
 
 --
--- Name: idx_plan_delivery_log_shadow_event; Type: INDEX; Schema: public; Owner: verdify
+-- Name: idx_plan_journal_climate_intents; Type: INDEX; Schema: public; Owner: verdify
 --
 
-CREATE INDEX idx_plan_delivery_log_shadow_event ON public.plan_delivery_log_shadow USING btree (event_type, delivered_at DESC);
-
-
---
--- Name: idx_plan_delivery_log_shadow_trigger; Type: INDEX; Schema: public; Owner: verdify
---
-
-CREATE INDEX idx_plan_delivery_log_shadow_trigger ON public.plan_delivery_log_shadow USING btree (trigger_id);
+CREATE INDEX idx_plan_journal_climate_intents ON public.plan_journal USING gin (climate_intents);
 
 
 --
@@ -43194,27 +43756,6 @@ CREATE INDEX idx_plan_delivery_log_shadow_trigger ON public.plan_delivery_log_sh
 --
 
 CREATE INDEX idx_plan_journal_instance ON public.plan_journal USING btree (planner_instance);
-
-
---
--- Name: idx_plan_journal_shadow_created; Type: INDEX; Schema: public; Owner: verdify
---
-
-CREATE INDEX idx_plan_journal_shadow_created ON public.plan_journal_shadow USING btree (created_at DESC);
-
-
---
--- Name: idx_plan_journal_shadow_matched; Type: INDEX; Schema: public; Owner: verdify
---
-
-CREATE INDEX idx_plan_journal_shadow_matched ON public.plan_journal_shadow USING btree (matched_prod_plan_id);
-
-
---
--- Name: idx_plan_journal_shadow_trigger; Type: INDEX; Schema: public; Owner: verdify
---
-
-CREATE INDEX idx_plan_journal_shadow_trigger ON public.plan_journal_shadow USING btree (trigger_id);
 
 
 --
@@ -43362,20 +43903,6 @@ CREATE INDEX idx_setpoint_clamps_ts ON public.setpoint_clamps USING btree (ts DE
 --
 
 CREATE INDEX idx_setpoint_plan_instance ON public.setpoint_plan USING btree (planner_instance, created_at DESC) WHERE (planner_instance IS NOT NULL);
-
-
---
--- Name: idx_setpoint_plan_shadow_plan; Type: INDEX; Schema: public; Owner: verdify
---
-
-CREATE INDEX idx_setpoint_plan_shadow_plan ON public.setpoint_plan_shadow USING btree (plan_id);
-
-
---
--- Name: idx_setpoint_plan_shadow_ts; Type: INDEX; Schema: public; Owner: verdify
---
-
-CREATE INDEX idx_setpoint_plan_shadow_ts ON public.setpoint_plan_shadow USING btree (ts);
 
 
 --
@@ -47266,6 +47793,14 @@ ALTER TABLE ONLY public.camera_zone_map
 
 
 --
+-- Name: climate_action_log climate_action_log_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.climate_action_log
+    ADD CONSTRAINT climate_action_log_greenhouse_id_fkey FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
+
+
+--
 -- Name: consumables_log consumables_log_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: verdify
 --
 
@@ -47845,4 +48380,4 @@ ALTER TABLE ONLY public.zones
 -- PostgreSQL database dump complete
 --
 
-\unrestrict AUzdOb7rnTaX2jRxM9IlFHncToIYKmq8oaEJnBemwdxFfDMOZeeP6McZvqO6RR1
+\unrestrict CaqlcCS2PtlBejVdLUrR5EGqo5PQLESXkvhB2aK2MQYGoK5deUlTmzfjQtVwpEj

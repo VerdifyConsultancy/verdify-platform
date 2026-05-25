@@ -733,7 +733,7 @@ sensor:
     update_interval: 60s
     lambda: |-
       auto now = id(sntp_time).now();
-      if(!now.is_valid()) return NAN;
+      if(!now.is_valid() || id(sntp_failed)) return NAN;
       return (float)now.hour;
 
   - platform: template

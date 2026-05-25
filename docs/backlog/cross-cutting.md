@@ -40,7 +40,9 @@ into a clean, integrated repo. PR #80 stays intact and is RM-0's baseline.
   `3a2eb87426a355a5e71c036bc3460686b68b5b56`; main CI run `26315767545`
   passed; deployment synced the merged files, restarted only
   `verdify-ingestor`, validated accepted shadow row `4`, confirmed no duplicate
-  shadow rows per trigger, and ran deployed backfill dry-runs.
+  shadow rows per trigger, and ran deployed backfill dry-runs. Superseded by
+  the ClimateIntent single-path PR, which removes the runtime shadow service,
+  scripts, tests, Docker profile, MCP server, and live shadow tables.
 - [x] **C-RM5 Site/Grafana integration gate.** Coordinate the site/Grafana
   pieces that cross `docker-compose.yml`, Grafana provisioning, generated site
   output, and live service reloads; include
@@ -75,6 +77,12 @@ into a clean, integrated repo. PR #80 stays intact and is RM-0's baseline.
   firmware/tunable drift tests, live service checks, Grafana render sample,
   public lab route checks, and zero open critical/high alerts. Issues #18, #19,
   and #82 are closed with verification comments.
+- [ ] **C-RM9 Grafana render CPU guard.** On 2026-05-24 post-ClimateIntent OTA,
+  `verdify-grafana-renderer` was observed spawning continuous Chromium renders
+  for `d-solo/*` panels and sampling at `288%` CPU. The renderer container was
+  stopped as a protective mitigation; greenhouse services and Grafana stayed up.
+  Follow-up: identify the requester/cache-warmer loop, add render concurrency
+  and rate limits, then re-enable the renderer intentionally.
 
 ## Launch coordination
 
@@ -94,6 +102,33 @@ Launch work is tracked in [`docs/backlog/launch.md`](launch.md) with the command
 - [x] **Per-alert-type discriminated union for `AlertEnvelope`.** Requested by `ingestor`. `AlertEnvelope` now preserves the existing model API while validating through a tagged per-alert registry covering every current alert writer, including planner, API, dispatcher, heap, firmware, setpoint-confirmation, and forecast-deviation alerts.
 - [x] **Migrate `verdify_schemas.crops.ObservationAction.data` union to also accept `HarvestCreate` / `TreatmentCreate`.** Verified with regression coverage.
 - [x] **Scorecard typed projection** (requested by `genai` + `web`). `ScorecardResponse` is the shared typed shape; migration 096 and `db/schema.sql` now match the live 25-metric numeric `fn_planner_scorecard()`, and `/api/v1/scorecard` returns that schema.
+- [x] **C-CI.1 Climate action/effectiveness data contract.** Canonical sprint
+  plan:
+  [`docs/climate-authority-sprint-plan-2026-05-24.md`](../climate-authority-sprint-plan-2026-05-24.md).
+  GitHub issue:
+  [#7](https://github.com/VerdifyConsultancy/verdify-platform/issues/7).
+  Added a structured climate action log and durable schema surface for
+  selected action, priority axis, dispatcher-owned target deltas, band errors,
+  wet/fog allowance, block reasons, relay truth, resource estimates,
+  ClimateIntent version, and plan/trigger correlation. Added 5-minute,
+  15-minute, and daily effectiveness views so controller changes can be judged
+  by before/after temp/VPD error, time to recovery, wet relay duty, water,
+  energy, and outdoor context. Keep live planner context on indexed/latest-row
+  reads, not unbounded `v_greenhouse_state` scans. Migration
+  `142-climate-action-log.sql` was applied live and `db/schema.sql` regenerated.
+- [ ] **C-CI.2 ClimateIntent rollout closeout and post-merge proof.** GitHub
+  issue [#8](https://github.com/VerdifyConsultancy/verdify-platform/issues/8)
+  is the live closeout tracker. Current validated inputs are platform PR #4
+  (`46d2b42`), planner PR `verdify-planner#3` (`32bf08c`), and draft firmware
+  preservation PR #10 (`bc85f03`). Before closing the rollout, merge/deploy the
+  approved platform and planner changes, restart the affected runtime services
+  (`verdify-ingestor`, `verdify-mcp`, `verdify-setpoint-server`,
+  `verdify-api`, and Hermes/planner gateway if changed), then rerun the final
+  proof set: `make lint`, `make test`, ClimateIntent audit, planner tests,
+  firmware tests/invariants/compile, `scripts/health-check.sh`,
+  `make sensor-health`, plan coverage, site doctor, no critical/high alerts,
+  and an updated alert inventory. Keep Slack integration out of this closeout;
+  it is owned by a separate agent/PR stack.
 
 ### Planner contract v1.5 — historical local-first hardening
 

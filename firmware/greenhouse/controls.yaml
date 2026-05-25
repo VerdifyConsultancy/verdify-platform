@@ -358,7 +358,8 @@ interval:
           // mist_telemetry replaced by ctl_state.mist_stage (the authority)  // 0=off, 1=S1, 2=S2
 
           auto sntp_now = id(sntp_time).now();
-          int local_hour = sntp_now.is_valid() ? sntp_now.hour : 12;
+          const bool controller_time_valid = sntp_now.is_valid() && !id(sntp_failed);
+          int local_hour = controller_time_valid ? sntp_now.hour : 12;
 
           // Sprint-15: outdoor temp + dewpoint feed the summer-vent gate.
           // Sources:
@@ -468,12 +469,40 @@ interval:
           bool willFan1 = relay_out.fan1, willFan2 = relay_out.fan2;
           bool willFog = relay_out.fog, willVent = relay_out.vent;
 
-          // Manual overrides (ESP32-only, not in header)
-          if(id(manual_fan_active)){ willFan1 = true; willFan2 = true; willVent = true; }
-          if(id(manual_fog_active)){ willFog = true; }
+          const bool sensor_fault_relay_lock = mode == SENSOR_FAULT;
+
+          auto fog_safety_block_reason = [&]() -> const char* {
+            if(!controller_time_valid) return "time_invalid";
+            if(dew_margin_f(sensor_in) < setpts.fog_stress_min_dew_margin_f) return "dew_margin";
+            if(!fog_hour_permitted(sensor_in, setpts)) return "time_window";
+            if(sensor_in.rh_pct > setpts.fog_rh_ceiling) return "rh_ceiling";
+            if(sensor_in.temp_f < setpts.fog_min_temp) return "temp_low";
+            return "";
+          };
+          const bool manual_fog_requested = id(manual_fog_active);
+          const char* manual_fog_safety_block = fog_safety_block_reason();
+
+          // Manual overrides (ESP32-only, not in header). They are still
+          // below the sensor-fault, safety-heat, and fog-safety rails:
+          // fog/fan/vent need plausible control inputs unless a separate
+          // hardwired safety fallback owns the load.
+          if(id(manual_fan_active) && !sensor_fault_relay_lock){
+            willFan1 = true;
+            willFan2 = true;
+            if(mode != SAFETY_HEAT){ willVent = true; }
+          }
+          if(manual_fog_requested && !sensor_fault_relay_lock && manual_fog_safety_block[0] == '\0'){ willFog = true; }
           if(id(vent_lock_active) && !id(manual_fan_active) && mode != SAFETY_COOL){
             willFan1 = false;
             willFan2 = false;
+            willVent = false;
+          }
+          if(sensor_fault_relay_lock) {
+            willHeat1 = false;
+            willHeat2 = false;
+            willFan1 = false;
+            willFan2 = false;
+            willFog = false;
             willVent = false;
           }
 
@@ -486,7 +515,7 @@ interval:
           // it runs the lead fan with vent closed to keep heat in.
           const bool fan_physically_on = id(fan1_rly)->state || id(fan2_rly)->state;
           const bool fan_wanted = willFan1 || willFan2;
-          const bool fan_requires_vent = mode != SAFETY_HEAT && (fan_physically_on || fan_wanted);
+          const bool fan_requires_vent = !sensor_fault_relay_lock && mode != SAFETY_HEAT && (fan_physically_on || fan_wanted);
           const bool fan_vent_interlock_active = fan_requires_vent && !willVent;
           static bool fan_vent_interlock_prev = false;
           if (fan_requires_vent) {
@@ -564,6 +593,46 @@ interval:
               (mode == VENTILATE) && ctl_state.vent_mist_assist_active && relay_out.fog;
           const bool open_vent_mister_assist =
               (mode == VENTILATE) && ctl_state.vent_mist_assist_active;
+          const bool occupancy_moisture_block = id(occupancy_inhibit_enabled) && id(greenhouse_occupied);
+          const bool leak_block = id(bs_leak_detected).state;
+          const bool irrigation_water_conflict = id(irrig_state) > 0;
+          // FW-9: VPD emergency override — allow wet assist even if the daily
+          // water budget is exhausted. Include house and zone VPD so a
+          // safety miss is not hidden by stale/missing local sensors.
+          float budget_vpd_max = VPD;
+          auto merge_budget_vpd = [&](float observed_vpd) {
+              if(!isnan(observed_vpd)) {
+                  budget_vpd_max = isnan(budget_vpd_max) ? observed_vpd : fmax(budget_vpd_max, observed_vpd);
+              }
+          };
+          merge_budget_vpd(id(vpd_south).state);
+          merge_budget_vpd(id(vpd_west).state);
+          merge_budget_vpd(id(vpd_east).state);
+          const bool climate_vpd_emergency =
+              !isnan(budget_vpd_max) && (budget_vpd_max > id(safety_vpd_max_kpa));
+          const bool climate_water_budget_block =
+              id(mister_water_today) >= id(mister_water_budget_gal) && !climate_vpd_emergency;
+          static bool leak_water_interlock_prev = false;
+          static bool occupancy_water_interlock_prev = false;
+          if (!controller_time_valid || leak_block || occupancy_moisture_block || irrigation_water_conflict || climate_water_budget_block) {
+              willFog = false;
+          }
+          if (leak_block != leak_water_interlock_prev) {
+              if (leak_block) {
+                  ESP_LOGE("interlock","Leak detected: forcing fog, misters, and irrigation off");
+              } else {
+                  ESP_LOGW("interlock","Leak lock cleared: water actuators may resume");
+              }
+              leak_water_interlock_prev = leak_block;
+          }
+          if (occupancy_moisture_block != occupancy_water_interlock_prev) {
+              if (occupancy_moisture_block) {
+                  ESP_LOGW("interlock","Occupancy inhibit: forcing fog and climate misters off");
+              } else {
+                  ESP_LOGI("interlock","Occupancy inhibit cleared: moisture actuators may resume");
+              }
+              occupancy_water_interlock_prev = occupancy_moisture_block;
+          }
           if (id(fog_closes_vent) && vent_is_open && !open_vent_fog_assist) {
               willFog = false;
           }
@@ -577,7 +646,7 @@ interval:
           if(willVent && !id(vent_rly)->state)    id(cnt_vent_today) += 1;
 
           /**************** 11 — APPLY RELAY OUTPUTS ******************************/
-          const bool force_heat_off = heat_air_exchange_interlock_active;
+          const bool force_heat_off = heat_air_exchange_interlock_active || sensor_fault_relay_lock;
           const bool heat1_will_be_on_after_apply =
               (willHeat1 && (id(heat1_rly)->state || can_on(R[0])))
               || (id(heat1_rly)->state && !force_heat_off && !can_off(R[0]));
@@ -586,10 +655,19 @@ interval:
               || (id(heat2_rly)->state && !willHeat2 && !heat1_will_be_on_after_apply);
           set_relay(R[0], willHeat1, false, force_heat_off);
           set_relay(R[1], willHeat2, false, force_heat2_off);
-          set_relay(R[5], willVent, fan_requires_vent);
-          set_relay(R[2], willFan1, false);
-          set_relay(R[3], willFan2, false);
-          set_relay(R[4], willFog, false);
+          set_relay(R[5], willVent, fan_requires_vent, sensor_fault_relay_lock);
+          set_relay(R[2], willFan1, false, sensor_fault_relay_lock);
+          set_relay(R[3], willFan2, false, sensor_fault_relay_lock);
+          set_relay(
+              R[4],
+              willFog,
+              false,
+              sensor_fault_relay_lock
+                  || leak_block
+                  || occupancy_moisture_block
+                  || irrigation_water_conflict
+                  || !controller_time_valid
+                  || climate_water_budget_block);
 
           /**************** 12 — MISTER STATE MACHINE *****************************/
           // Runs only for SEALED_MIST or explicit VENTILATE assist. Zone stress
@@ -617,7 +695,8 @@ interval:
             // fans/vent must remain open, and the planner/firmware are asking
             // for bounded evaporative support rather than sealed humidifying.
               const bool mister_vent_ok = open_vent_mister_assist || !id(mister_closes_vent) || !vent_is_open;
-              bool humidity_demand = ((mode == SEALED_MIST) || ctl_state.vent_mist_assist_active) && mister_vent_ok;
+              const bool climate_wet_assist_demand = (mode == SEALED_MIST) || ctl_state.vent_mist_assist_active;
+              bool humidity_demand = climate_wet_assist_demand && mister_vent_ok;
 
             auto now_for_wet_gate = id(sntp_time).now();
             const bool wet_time_valid = now_for_wet_gate.is_valid() && !id(sntp_failed);
@@ -627,18 +706,17 @@ interval:
             const float wet_dew_margin_f = (!isnan(Tin) && !isnan(id(dewpoint_avg).state))
               ? Tin - id(dewpoint_avg).state
               : -999.0f;
-            const bool direct_wet_stress_override =
+            const bool climate_wet_assist_safety_ok =
               wet_time_valid
-              && id(direct_wet_stress_override_enabled)
               && now_for_wet_gate.hour < id(direct_wet_stress_latest_hour)
               && VPD > (VPDhi + id(direct_wet_stress_vpd_margin_kpa))
               && wet_dew_margin_f >= id(direct_wet_stress_min_dew_margin_f);
-            auto direct_wet_allowed = [&](int zone) -> bool {
+            auto crop_direct_wet_allowed = [&](int zone) -> bool {
               if(!id(direct_wet_gate_enabled)) return true;
               if(!wet_time_valid) return false;
               if(id(direct_wet_min_temp_f) > 0.0f && (isnan(Tin) || Tin < id(direct_wet_min_temp_f))) return false;
               if(zone == 1) {
-                return direct_wet_stress_override || direct_wet_window_open(
+                return direct_wet_window_open(
                   wet_now_minute,
                   id(activity_start_hour),
                   id(activity_start_minute),
@@ -656,7 +734,7 @@ interval:
                   id(direct_wet_wall_drydown_before_off_min));
               }
               if(zone == 2) {
-                return direct_wet_stress_override || direct_wet_window_open(
+                return direct_wet_window_open(
                   wet_now_minute,
                   id(activity_start_hour),
                   id(activity_start_minute),
@@ -665,7 +743,7 @@ interval:
                   id(direct_wet_west_drydown_before_off_min));
               }
               if(zone == 3) {
-                return direct_wet_stress_override || direct_wet_window_open(
+                return direct_wet_window_open(
                   wet_now_minute,
                   id(activity_start_hour),
                   id(activity_start_minute),
@@ -675,10 +753,18 @@ interval:
               }
               return false;
             };
-            const bool south_wet_allowed = direct_wet_allowed(1);
-            const bool west_wet_allowed = direct_wet_allowed(2);
-            const bool center_wet_allowed = direct_wet_allowed(3);
-            const bool wall_wet_allowed = direct_wet_allowed(4);
+            auto climate_wet_assist_allowed = [&](int zone) -> bool {
+              if(zone == 4) return false;  // climate control never drives wall drips.
+              if(!climate_wet_assist_demand) return false;
+              return climate_wet_assist_safety_ok;
+            };
+            const bool south_crop_wet_allowed = crop_direct_wet_allowed(1);
+            const bool west_crop_wet_allowed = crop_direct_wet_allowed(2);
+            const bool center_crop_wet_allowed = crop_direct_wet_allowed(3);
+            const bool wall_wet_allowed = crop_direct_wet_allowed(4);
+            const bool south_wet_allowed = south_crop_wet_allowed || climate_wet_assist_allowed(1);
+            const bool west_wet_allowed = west_crop_wet_allowed || climate_wet_assist_allowed(2);
+            const bool center_wet_allowed = center_crop_wet_allowed || climate_wet_assist_allowed(3);
             const bool any_mister_wet_allowed = south_wet_allowed || west_wet_allowed || center_wet_allowed;
             {
               direct_wet_zone_mask[0] = '\0';
@@ -703,10 +789,14 @@ interval:
               if(!id(direct_wet_gate_enabled)) return;
               if(!south_wet_allowed) {
                 id(south_wall_mister).turn_off();
+              }
+              if(!south_crop_wet_allowed) {
                 id(south_wall_mister_fertilized).turn_off();
               }
               if(!west_wet_allowed) {
                 id(west_wall_mister).turn_off();
+              }
+              if(!west_crop_wet_allowed) {
                 id(west_wall_mister_fertilized).turn_off();
               }
               if(!wall_wet_allowed) {
@@ -715,6 +805,8 @@ interval:
               }
               if(!center_wet_allowed) {
                 id(center_mister).turn_off();
+              }
+              if(!center_crop_wet_allowed) {
                 id(center_drips).turn_off();
                 id(center_drips_fertilized).turn_off();
               }
@@ -769,29 +861,28 @@ interval:
             // Misters run for sealed humidification and band-first controller vent mist assist.
             // Fog remains the heavy escalation and is still gated by the vent
             // close interlock above when fog_closes_vent is enabled.
-              bool occupancy_blocks = id(occupancy_inhibit_enabled) && id(greenhouse_occupied);
+              bool occupancy_blocks = occupancy_moisture_block;
               // Quick check: is any zone above its crop VPD target?
               bool any_zone_stressed = false;
               if(south_wet_allowed && !isnan(south_vpd) && id(vpd_target_south) > 0 && south_vpd > id(vpd_target_south)) any_zone_stressed = true;
               if(west_wet_allowed && !isnan(west_vpd) && id(vpd_target_west) > 0 && west_vpd > id(vpd_target_west)) any_zone_stressed = true;
               if(!isnan(east_vpd) && id(vpd_target_east) > 0 && east_vpd > id(vpd_target_east)) any_zone_stressed = true;
               if(center_wet_allowed && id(vpd_target_center) > 0 && avg_vpd > id(vpd_target_center)) any_zone_stressed = true;
-              // FW-9: VPD emergency override — allow misting even if budget exhausted
-              float vpd_max_zone = fmax(south_vpd, fmax(west_vpd, east_vpd));
-              bool vpd_emergency = !isnan(vpd_max_zone) && (vpd_max_zone > id(safety_vpd_max_kpa));
               bool global_stressed = (avg_vpd > id(mister_engage_kpa));
-              bool budget_block =
-                  id(mister_water_today) >= id(mister_water_budget_gal) && !vpd_emergency;
-              bool irrigation_block = id(irrig_state) > 0;
+              bool budget_block = climate_water_budget_block;
+              bool irrigation_block = irrigation_water_conflict;
               bool zone_mister_demand = humidity_demand && mister_vent_ok;
               bool mister_blocked =
-                  budget_block
+                  leak_block
+                  || budget_block
                   || !zone_mister_demand
                   || !any_mister_wet_allowed
                   || irrigation_block
                   || occupancy_blocks;
               if(mister_blocked) {
-                if(budget_block) {
+                if(leak_block) {
+                  snprintf(moisture_block_reason, sizeof(moisture_block_reason), "leak_detected");
+                } else if(budget_block) {
                   snprintf(moisture_block_reason, sizeof(moisture_block_reason), "water_budget");
                 } else if(!zone_mister_demand) {
                   snprintf(
@@ -801,20 +892,24 @@ interval:
                       ? "vent_interlock"
                       : "no_humidity_demand");
                 } else if(!any_mister_wet_allowed) {
-                  if(!id(direct_wet_gate_enabled)) {
+                  if(climate_wet_assist_demand) {
+                    if(!wet_time_valid) {
+                      snprintf(moisture_block_reason, sizeof(moisture_block_reason), "direct_wet_time_invalid");
+                    } else if(VPD <= (VPDhi + id(direct_wet_stress_vpd_margin_kpa))) {
+                      snprintf(moisture_block_reason, sizeof(moisture_block_reason), "below_threshold");
+                    } else if(wet_dew_margin_f < id(direct_wet_stress_min_dew_margin_f)) {
+                      snprintf(moisture_block_reason, sizeof(moisture_block_reason), "dew_margin");
+                    } else if(now_for_wet_gate.hour >= id(direct_wet_stress_latest_hour)) {
+                      snprintf(moisture_block_reason, sizeof(moisture_block_reason), "time_window");
+                    } else {
+                      snprintf(moisture_block_reason, sizeof(moisture_block_reason), "no_zone_available");
+                    }
+                  } else if(!id(direct_wet_gate_enabled)) {
                     snprintf(moisture_block_reason, sizeof(moisture_block_reason), "no_zone_available");
                   } else if(!wet_time_valid) {
                     snprintf(moisture_block_reason, sizeof(moisture_block_reason), "direct_wet_time_invalid");
                   } else if(id(direct_wet_min_temp_f) > 0.0f && (isnan(Tin) || Tin < id(direct_wet_min_temp_f))) {
                     snprintf(moisture_block_reason, sizeof(moisture_block_reason), "direct_wet_temp");
-                  } else if(id(direct_wet_stress_override_enabled)
-                            && VPD > (VPDhi + id(direct_wet_stress_vpd_margin_kpa))
-                            && wet_dew_margin_f < id(direct_wet_stress_min_dew_margin_f)) {
-                    snprintf(moisture_block_reason, sizeof(moisture_block_reason), "direct_wet_dew_margin");
-                  } else if(id(direct_wet_stress_override_enabled)
-                            && VPD > (VPDhi + id(direct_wet_stress_vpd_margin_kpa))
-                            && now_for_wet_gate.hour >= id(direct_wet_stress_latest_hour)) {
-                    snprintf(moisture_block_reason, sizeof(moisture_block_reason), "direct_wet_latest_hour");
                   } else {
                     snprintf(moisture_block_reason, sizeof(moisture_block_reason), "direct_wet_window");
                   }
@@ -937,9 +1032,11 @@ interval:
                 // sprint-7: per-zone cycle counters at the rising edge
                 //          (turn_on_zone is always preceded by all-off,
                 //          so every call is an off→on transition).
+                id(water_controller_actuating) = true;
                 if(zone == 1)      { id(south_wall_mister).turn_on(); id(last_fire_south_ms)  = now_ms; id(cnt_mister_south_today)  += 1; }
                 else if(zone == 2) { id(west_wall_mister).turn_on();  id(last_fire_west_ms)   = now_ms; id(cnt_mister_west_today)   += 1; }
                 else if(zone == 3) { id(center_mister).turn_on();     id(last_fire_center_ms) = now_ms; id(cnt_mister_center_today) += 1; }
+                id(water_controller_actuating) = false;
                 id(mister_pulse_zone) = zone;
                 id(mister_selected_zone) = zone;
               };
@@ -967,7 +1064,9 @@ interval:
                   int candidate = 0;
                   uint32_t candidate_age = 0;
                   auto check = [&](int z, float vpd, float target, uint32_t last_fire) {
-                    if(!direct_wet_allowed(z)) return;
+                    if((z == 1 && !south_wet_allowed)
+                       || (z == 2 && !west_wet_allowed)
+                       || (z == 3 && !center_wet_allowed)) return;
                     if(isnan(vpd) || target <= 0.0f) return;
                     if(vpd <= target) return;  // zone not stressed
                   uint32_t age = now_ms - last_fire;  // last_fire==0 ⇒ age == uptime
@@ -1140,8 +1239,10 @@ interval:
                 snprintf(moisture_block_reason, sizeof(moisture_block_reason), "pulse_gap");
               }
 
-              // Water tracking (flow meter during mister pulse)
-              if(id(mister_pulse_zone) > 0 && id(mister_state) > 0){
+              // Water tracking (flow meter during climate wet assist)
+              const bool climate_mister_flow_active = id(mister_pulse_zone) > 0 && id(mister_state) > 0;
+              const bool climate_fog_flow_active = id(fog_rly)->state;
+              if(climate_mister_flow_active || climate_fog_flow_active){
                 float gpm = id(water_flow_rate).state;
                 if(!isnan(gpm) && gpm > 0.0f){
                   id(mister_water_today) += gpm * (float(dt_ms) / 60000.0f);
@@ -1162,6 +1263,158 @@ interval:
             if(strcmp(last_gh_state, lbl) != 0){
               id(gh_state).publish_state(lbl);
               snprintf(last_gh_state, sizeof(last_gh_state), "%s", lbl);
+            }
+          }
+
+          /*** ClimateIntent controller decision — primary path telemetry ***/
+          {
+            ClimateActionDecision climate_decision = describe_effective_climate_decision(mode, sensor_in, setpts, ctl_state, relay_out);
+            const char* climate_action = CLIMATE_ACTION_NAMES[climate_decision.climate_action];
+            const char* priority_axis = CLIMATE_PRIORITY_AXIS_NAMES[climate_decision.priority_axis];
+            const char* moisture_state = CLIMATE_MOISTURE_ASSIST_STATE_NAMES[climate_decision.moisture_assist_state];
+            const char* moisture_zone = CLIMATE_MOISTURE_ZONE_NAMES[climate_decision.moisture_zone];
+            const bool selected_wet_action =
+              climate_decision.climate_action == CLIMATE_VENT_COOL_MIST_ASSIST
+              || climate_decision.climate_action == CLIMATE_VENT_COOL_FOG_ASSIST
+              || climate_decision.climate_action == CLIMATE_SEALED_HUMIDIFY
+              || climate_decision.climate_action == CLIMATE_SEALED_FOG;
+            const bool mister_relay_on =
+              id(south_wall_mister).state
+              || id(west_wall_mister).state
+              || id(center_mister).state;
+            auto climate_zone_name = [](int zone) -> const char* {
+              if(zone == 1) return "south";
+              if(zone == 2) return "west";
+              if(zone == 3) return "center";
+              return "none";
+            };
+            const char* effective_moisture_state = moisture_state;
+            const char* effective_moisture_zone = moisture_zone;
+            float effective_next_mist_s = climate_decision.next_mist_eligible_s;
+
+            if(!selected_wet_action && VPD <= VPDhi) {
+              effective_moisture_state = "inactive";
+              effective_moisture_zone = "none";
+              effective_next_mist_s = -1.0f;
+            } else if(selected_wet_action && mister_relay_on && id(mister_pulse_zone) > 0) {
+              effective_moisture_state = "pulse_on";
+              effective_moisture_zone = climate_zone_name(id(mister_pulse_zone));
+              effective_next_mist_s = 0.0f;
+            } else if(selected_wet_action && id(mister_state) > 0 && id(mister_pulse_zone) == 0 && id(mister_pulse_timer_ms) > 0) {
+              effective_moisture_state = "pulse_gap";
+              effective_moisture_zone = "none";
+              effective_next_mist_s = float(id(mister_pulse_timer_ms)) / 1000.0f;
+            } else if(selected_wet_action && strcmp(moisture_block_reason, "served") == 0) {
+              effective_moisture_state = "pulse_on";
+              effective_moisture_zone = climate_zone_name(id(mister_pulse_zone));
+              effective_next_mist_s = 0.0f;
+            } else if(selected_wet_action && strcmp(moisture_block_reason, "pulse_gap") == 0) {
+              effective_moisture_state = "pulse_gap";
+              effective_moisture_zone = "none";
+              effective_next_mist_s = float(id(mister_pulse_timer_ms)) / 1000.0f;
+            } else if(selected_wet_action && strcmp(moisture_block_reason, "engage_delay") == 0) {
+              effective_moisture_state = "engage_delay";
+              effective_moisture_zone = "none";
+            } else if(selected_wet_action
+                      && strcmp(moisture_block_reason, "none") != 0
+                      && strcmp(moisture_block_reason, "no_vpd_demand") != 0) {
+              effective_moisture_state = "blocked";
+              effective_moisture_zone = "none";
+              effective_next_mist_s = -1.0f;
+            } else if(!mister_relay_on && id(mister_pulse_zone) == 0) {
+              effective_moisture_zone = "none";
+            }
+            char temp_error[24];
+            char vpd_error[24];
+            char fog_margin[24];
+            char next_mist[24];
+            char resource_cost[112];
+            snprintf(temp_error, sizeof(temp_error), "%.2f", climate_decision.temp_error_f);
+            snprintf(vpd_error, sizeof(vpd_error), "%.3f", climate_decision.vpd_error_kpa);
+            snprintf(fog_margin, sizeof(fog_margin), "%.3f", climate_decision.fog_margin_kpa);
+            if(effective_next_mist_s >= 0.0f) {
+              snprintf(next_mist, sizeof(next_mist), "%.0f", effective_next_mist_s);
+            } else {
+              snprintf(next_mist, sizeof(next_mist), "none");
+            }
+            snprintf(resource_cost, sizeof(resource_cost),
+                     "{\"water_gal\":%.3f,\"electric_kwh\":%.3f,\"gas_therm\":%.3f}",
+                     climate_decision.resource_cost_estimate.water_gal,
+                     climate_decision.resource_cost_estimate.electric_kwh,
+                     climate_decision.resource_cost_estimate.gas_therm);
+            const uint32_t climate_diag_now_ms = millis();
+            static uint32_t last_climate_diag_publish_ms = 0;
+            const bool climate_diag_republish = (climate_diag_now_ms - last_climate_diag_publish_ms) >= 60000UL;
+            bool climate_diag_published = false;
+
+            static char last_climate_action[48] = "";
+            if(strcmp(last_climate_action, climate_action) != 0 || climate_diag_republish){
+              id(gh_climate_action).publish_state(climate_action);
+              snprintf(last_climate_action, sizeof(last_climate_action), "%s", climate_action);
+              climate_diag_published = true;
+            }
+            static char last_climate_priority_axis[24] = "";
+            if(strcmp(last_climate_priority_axis, priority_axis) != 0 || climate_diag_republish){
+              id(gh_climate_priority_axis).publish_state(priority_axis);
+              snprintf(last_climate_priority_axis, sizeof(last_climate_priority_axis), "%s", priority_axis);
+              climate_diag_published = true;
+            }
+            static char last_climate_candidate_summary[160] = "";
+            if(strcmp(last_climate_candidate_summary, climate_decision.candidate_summary) != 0 || climate_diag_republish){
+              id(gh_climate_candidate_summary).publish_state(climate_decision.candidate_summary);
+              snprintf(last_climate_candidate_summary, sizeof(last_climate_candidate_summary), "%s", climate_decision.candidate_summary);
+              climate_diag_published = true;
+            }
+            static char last_climate_moisture_state[24] = "";
+            if(strcmp(last_climate_moisture_state, effective_moisture_state) != 0 || climate_diag_republish){
+              id(gh_climate_moisture_assist_state).publish_state(effective_moisture_state);
+              snprintf(last_climate_moisture_state, sizeof(last_climate_moisture_state), "%s", effective_moisture_state);
+              climate_diag_published = true;
+            }
+            static char last_climate_moisture_zone[24] = "";
+            if(strcmp(last_climate_moisture_zone, effective_moisture_zone) != 0 || climate_diag_republish){
+              id(gh_climate_moisture_zone).publish_state(effective_moisture_zone);
+              snprintf(last_climate_moisture_zone, sizeof(last_climate_moisture_zone), "%s", effective_moisture_zone);
+              climate_diag_published = true;
+            }
+            static char last_climate_temp_error[24] = "";
+            if(strcmp(last_climate_temp_error, temp_error) != 0 || climate_diag_republish){
+              id(gh_climate_temp_error_f).publish_state(temp_error);
+              snprintf(last_climate_temp_error, sizeof(last_climate_temp_error), "%s", temp_error);
+              climate_diag_published = true;
+            }
+            static char last_climate_vpd_error[24] = "";
+            if(strcmp(last_climate_vpd_error, vpd_error) != 0 || climate_diag_republish){
+              id(gh_climate_vpd_error_kpa).publish_state(vpd_error);
+              snprintf(last_climate_vpd_error, sizeof(last_climate_vpd_error), "%s", vpd_error);
+              climate_diag_published = true;
+            }
+            static char last_climate_fog_margin[24] = "";
+            if(strcmp(last_climate_fog_margin, fog_margin) != 0 || climate_diag_republish){
+              id(gh_climate_fog_margin_kpa).publish_state(fog_margin);
+              snprintf(last_climate_fog_margin, sizeof(last_climate_fog_margin), "%s", fog_margin);
+              climate_diag_published = true;
+            }
+            static char last_climate_fog_block[48] = "";
+            if(strcmp(last_climate_fog_block, climate_decision.fog_block_reason) != 0 || climate_diag_republish){
+              id(gh_climate_fog_block_reason).publish_state(climate_decision.fog_block_reason);
+              snprintf(last_climate_fog_block, sizeof(last_climate_fog_block), "%s", climate_decision.fog_block_reason);
+              climate_diag_published = true;
+            }
+            static char last_climate_resource_cost[112] = "";
+            if(strcmp(last_climate_resource_cost, resource_cost) != 0 || climate_diag_republish){
+              id(gh_climate_resource_cost_estimate).publish_state(resource_cost);
+              snprintf(last_climate_resource_cost, sizeof(last_climate_resource_cost), "%s", resource_cost);
+              climate_diag_published = true;
+            }
+            static char last_climate_next_mist[24] = "";
+            if(strcmp(last_climate_next_mist, next_mist) != 0 || climate_diag_republish){
+              id(gh_climate_next_mist_eligible_s).publish_state(next_mist);
+              snprintf(last_climate_next_mist, sizeof(last_climate_next_mist), "%s", next_mist);
+              climate_diag_published = true;
+            }
+            if(climate_diag_published){
+              last_climate_diag_publish_ms = climate_diag_now_ms;
             }
           }
 
@@ -1202,7 +1455,19 @@ interval:
             const bool fog_stress_extension_hour =
               fog_stress_hour_in_extension(local_hour, id(fog_time_window_end), id(fog_stress_window_latest_hour));
             char fog_block_reason[64];
-            if(id(fog_rly)->state) {
+            if(leak_block) {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "leak_detected");
+            } else if(occupancy_moisture_block) {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "occupancy");
+            } else if(irrigation_water_conflict) {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "irrigation");
+            } else if(climate_water_budget_block) {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "resource_budget");
+            } else if(!controller_time_valid) {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "time_invalid");
+            } else if(manual_fog_requested && manual_fog_safety_block[0] != '\0') {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "%s", manual_fog_safety_block);
+            } else if(id(fog_rly)->state) {
               snprintf(fog_block_reason, sizeof(fog_block_reason), "served");
             } else if(of.fog_gate_window) {
               if(id(fog_stress_window_extend_enabled)
@@ -1554,6 +1819,7 @@ interval:
 
           // Track which job entered flush (persists across ticks)
           static int flush_origin = 0;
+          const bool leak_block = id(bs_leak_detected).state;
 
           // ── VPD stress accumulator ──
           float cur_vpd = id(average_vpd_kpa).state;
@@ -1595,7 +1861,9 @@ interval:
             auto sync_fert_master = [&](const char* reason) {
               const bool master_needed = fert_relay_active();
               if(master_needed && !id(fertilizer_master_valve).state) {
+                id(fert_controller_actuating) = true;
                 id(fertilizer_master_valve).turn_on();
+                id(fert_controller_actuating) = false;
                 ESP_LOGW("irrig","FERT MASTER opened by relay interlock (%s)", reason);
               } else if(!master_needed && id(fertilizer_master_valve).state) {
                 id(fertilizer_master_valve).turn_off();
@@ -1661,10 +1929,28 @@ interval:
               id(south_wall_mister_fertilized).turn_off();
               id(west_wall_mister).turn_off();
               id(west_wall_mister_fertilized).turn_off();
+              id(center_mister).turn_off();
               id(center_drips).turn_off();
               id(center_drips_fertilized).turn_off();
               id(fertilizer_master_valve).turn_off();
             };
+            static bool leak_irrigation_lock_prev = false;
+            if(leak_block) {
+              turn_off_all_irrigation();
+              id(irrig_state) = 0;
+              id(irrig_queue) = 0;
+              id(irrig_timer_ms) = 0;
+              sync_fert_master("leak_lock");
+              if(!leak_irrigation_lock_prev) {
+                ESP_LOGE("irrig","STOPPED by leak_detected");
+              }
+              leak_irrigation_lock_prev = true;
+              return;
+            }
+            if(leak_irrigation_lock_prev) {
+              ESP_LOGW("irrig","Leak lock cleared");
+              leak_irrigation_lock_prev = false;
+            }
             if(id(direct_wet_gate_enabled) && id(irrig_state) > 0) {
               bool active_wall = id(irrig_state) == 1 || id(irrig_state) == 2 || id(irrig_state) == 5;
               bool active_south = id(irrig_state) == 7 || id(irrig_state) == 9;
@@ -1811,12 +2097,16 @@ interval:
               id(center_mister).turn_off();
 
               // Open the fert master before any fertilized drip/mister relay.
-              if(is_fert && !id(fertilizer_master_valve).state) id(fertilizer_master_valve).turn_on();
+              if(is_fert) {
+                id(fert_controller_actuating) = true;
+                if(!id(fertilizer_master_valve).state) id(fertilizer_master_valve).turn_on();
+              }
 
               // Turn on drip line. sprint-7: count one cycle per dispatch —
               // matches equipment_state's rising-edge count for the
               // underlying relay. Fert/clean increment the same zone
               // counter (audit granularity is per-zone).
+              id(water_controller_actuating) = true;
               switch(job){
                 case 1: id(wall_drips).turn_on();              id(cnt_drip_wall_today)   += 1; break;
                 case 2: id(wall_drips_fertilized).turn_on();   id(cnt_drip_wall_today)   += 1; break;
@@ -1825,6 +2115,8 @@ interval:
                 case 7: id(south_wall_mister_fertilized).turn_on(); id(cnt_mister_south_today) += 1; break;
                 case 8: id(west_wall_mister_fertilized).turn_on();  id(cnt_mister_west_today)  += 1; break;
               }
+              id(water_controller_actuating) = false;
+              if(is_fert) id(fert_controller_actuating) = false;
               sync_fert_master("job-start");
 
               const char* job_name = (job == 1) ? "WALL_CLEAN" :
@@ -1869,10 +2161,12 @@ interval:
                 id(irrig_timer_ms) = uint32_t(flush_min) * 60000UL;
                 // Flush is a separate rising edge on the matching clean relay,
                 // so equipment_state and firmware cycle counters stay aligned.
+                id(water_controller_actuating) = true;
                 if(is_south_mister)      { id(south_wall_mister).turn_on(); id(cnt_mister_south_today) += 1; }
                 else if(is_west_mister)  { id(west_wall_mister).turn_on();  id(cnt_mister_west_today)  += 1; }
                 else if(is_center)       { id(center_drips).turn_on();      id(cnt_drip_center_today)  += 1; }
                 else                     { id(wall_drips).turn_on();        id(cnt_drip_wall_today)    += 1; }
+                id(water_controller_actuating) = false;
                 const char* flush_name = is_south_mister ? "SOUTH_MISTER" : is_west_mister ? "WEST_MISTER" : is_center ? "CENTER" : "WALL";
                 ESP_LOGI("irrig","FLUSH %s — %dmin", flush_name, flush_min);
               } else {

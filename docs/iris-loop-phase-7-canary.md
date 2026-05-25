@@ -1,7 +1,10 @@
 # Phase 7 — Hermes canary cutover runbook
 
-**Status:** runbook (executed by operator after Phase 6 shadow-week gates green).
-**Prerequisite:** all 7 days of `compare-shadow-plans.py` diffs show shadow ≈ prod within ±10% on every gate metric.
+**Status:** historical runbook, superseded by the 2026-05-11 Hermes cutover and
+the 2026-05-24 ClimateIntent single-path controller contract. The shadow tooling
+named below has been removed from the live platform.
+**Prerequisite at the time:** all 7 days of planner diff evidence showed the
+candidate path close enough to prod for canary promotion.
 **Pre-flight:** `AI_GATEWAY_PROVIDER` is `openclaw`, `AI_GATEWAY_BY_EVENT` is `{}`, OpenClaw container is healthy.
 
 ## Idea

@@ -3,7 +3,7 @@
     "source_id": "support-doc:venting-hot-dry-afternoon",
     "title": "Hot dry afternoon venting posture",
     "summary": "Use outdoor heat, VPD, wind, and solar context before escalating ventilation and mist assist.",
-    "body": "When outdoor heat and solar load climb together, prefer staged ventilation with mist assist only when indoor VPD or temperature stress requires it. Keep relay authority with the ESP32 firmware and bounded setpoints; planner proposals should explain the expected stress reduction and watch for dew point margin.",
+    "body": "When outdoor heat and solar load climb together, prefer staged ventilation with mist assist only when indoor VPD or temperature stress requires it. Keep relay authority with the ESP32 firmware and bounded setpoints; planner intent should explain the expected stress reduction and watch for dew point margin.",
     "event_type": "TRANSITION",
     "tags": ["ventilation", "vpd", "heat", "operator-reference"],
     "importance": 4,

@@ -22,7 +22,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "ingestor"))
 
-import planner_graph_shadow as pgs  # noqa: E402
+import planner_memory_ingest as pmi  # noqa: E402
 
 from config import DB_DSN, GREENHOUSE_ID  # noqa: E402
 
@@ -42,7 +42,7 @@ def _parse_timestamp(raw: str | None) -> datetime | None:
     return parsed
 
 
-def _chunked(items: list[pgs.PlannerMemoryItem], size: int) -> Iterable[list[pgs.PlannerMemoryItem]]:
+def _chunked(items: list[pmi.PlannerMemoryItem], size: int) -> Iterable[list[pmi.PlannerMemoryItem]]:
     for index in range(0, len(items), size):
         yield items[index : index + size]
 
@@ -52,7 +52,7 @@ async def _fetch_outcome_items(
     since: datetime | None,
     until: datetime | None,
     limit: int,
-) -> list[pgs.PlannerMemoryItem]:
+) -> list[pmi.PlannerMemoryItem]:
     conn = await asyncpg.connect(DB_DSN)
     try:
         rows = await conn.fetch(
@@ -88,7 +88,7 @@ async def _fetch_outcome_items(
         )
     finally:
         await conn.close()
-    return [pgs.build_outcome_memory_item(dict(row)) for row in rows]
+    return [pmi.build_outcome_memory_item(dict(row)) for row in rows]
 
 
 async def _fetch_prior_plan_items(
@@ -96,7 +96,7 @@ async def _fetch_prior_plan_items(
     since: datetime | None,
     until: datetime | None,
     limit: int,
-) -> list[pgs.PlannerMemoryItem]:
+) -> list[pmi.PlannerMemoryItem]:
     conn = await asyncpg.connect(DB_DSN)
     try:
         rows = await conn.fetch(
@@ -131,13 +131,13 @@ async def _fetch_prior_plan_items(
         )
     finally:
         await conn.close()
-    return [pgs.build_prior_plan_memory_item(dict(row)) for row in rows]
+    return [pmi.build_prior_plan_memory_item(dict(row)) for row in rows]
 
 
 def _dry_run_summary(
     *,
     mode: str,
-    items: list[pgs.PlannerMemoryItem],
+    items: list[pmi.PlannerMemoryItem],
     batch_size: int,
     greenhouse_id: str,
 ) -> dict[str, Any]:
@@ -147,7 +147,7 @@ def _dry_run_summary(
         "dry_run": True,
         "candidate_count": len(items),
         "source_ids": [item.source_id for item in items],
-        "sample_payload": pgs.build_memory_ingest_request(
+        "sample_payload": pmi.build_memory_ingest_request(
             greenhouse_id=greenhouse_id,
             batch_id=f"dry-run-{mode}",
             items=sample_items,
@@ -155,7 +155,7 @@ def _dry_run_summary(
     }
 
 
-async def _load_items(args: argparse.Namespace) -> list[pgs.PlannerMemoryItem]:
+async def _load_items(args: argparse.Namespace) -> list[pmi.PlannerMemoryItem]:
     since = _parse_timestamp(args.since)
     until = _parse_timestamp(args.until)
     if args.mode == "outcomes":
@@ -164,7 +164,7 @@ async def _load_items(args: argparse.Namespace) -> list[pgs.PlannerMemoryItem]:
         return await _fetch_prior_plan_items(since=since, until=until, limit=args.limit)
     if not args.support_doc_file:
         raise SystemExit("--support-doc-file is required for --mode support-docs")
-    return pgs.load_support_doc_items(Path(args.support_doc_file), greenhouse_id=args.greenhouse_id)[: args.limit]
+    return pmi.load_support_doc_items(Path(args.support_doc_file), greenhouse_id=args.greenhouse_id)[: args.limit]
 
 
 async def _run(args: argparse.Namespace) -> int:
@@ -186,11 +186,11 @@ async def _run(args: argparse.Namespace) -> int:
         )
         return 0
 
-    pgs.GREENHOUSE_ID = args.greenhouse_id
+    pmi.GREENHOUSE_ID = args.greenhouse_id
     total = {"accepted_count": 0, "duplicate_count": 0, "rejected_count": 0}
     for batch_number, batch in enumerate(_chunked(items, args.batch_size), start=1):
         batch_id = f"historical-{args.mode}-{datetime.now(UTC).strftime('%Y%m%dT%H%M%SZ')}-{batch_number:04d}"
-        result = pgs.ingest_planner_memory_batch(
+        result = pmi.ingest_planner_memory_batch(
             items=batch,
             batch_id=batch_id,
             base_url=args.base_url,
@@ -243,7 +243,7 @@ def main() -> int:
     parser.add_argument("--batch-size", type=int, default=10)
     parser.add_argument("--support-doc-file", help="JSON array seed file for support docs.")
     parser.add_argument("--greenhouse-id", default=GREENHOUSE_ID)
-    parser.add_argument("--base-url", help="Override PLANNER_GRAPH_URL for writes.")
+    parser.add_argument("--base-url", help="Override PLANNER_MEMORY_URL for writes.")
     parser.add_argument("--timeout", type=float, default=None)
     args = parser.parse_args()
     return asyncio.run(_run(args))

@@ -115,6 +115,72 @@ text_sensor:
     update_interval: 5s
 
   - platform: template
+    id: gh_climate_action
+    name: "Climate Action"
+    entity_category: diagnostic
+    update_interval: 5s
+
+  - platform: template
+    id: gh_climate_priority_axis
+    name: "Climate Priority Axis"
+    entity_category: diagnostic
+    update_interval: 5s
+
+  - platform: template
+    id: gh_climate_candidate_summary
+    name: "Climate Candidate Summary"
+    entity_category: diagnostic
+    update_interval: 5s
+
+  - platform: template
+    id: gh_climate_moisture_assist_state
+    name: "Climate Moisture Assist State"
+    entity_category: diagnostic
+    update_interval: 5s
+
+  - platform: template
+    id: gh_climate_moisture_zone
+    name: "Climate Moisture Zone"
+    entity_category: diagnostic
+    update_interval: 5s
+
+  - platform: template
+    id: gh_climate_temp_error_f
+    name: "Climate Temp Error F"
+    entity_category: diagnostic
+    update_interval: 5s
+
+  - platform: template
+    id: gh_climate_vpd_error_kpa
+    name: "Climate VPD Error kPa"
+    entity_category: diagnostic
+    update_interval: 5s
+
+  - platform: template
+    id: gh_climate_fog_margin_kpa
+    name: "Climate Fog Margin kPa"
+    entity_category: diagnostic
+    update_interval: 5s
+
+  - platform: template
+    id: gh_climate_fog_block_reason
+    name: "Climate Fog Block Reason"
+    entity_category: diagnostic
+    update_interval: 5s
+
+  - platform: template
+    id: gh_climate_resource_cost_estimate
+    name: "Climate Resource Cost Estimate"
+    entity_category: diagnostic
+    update_interval: 5s
+
+  - platform: template
+    id: gh_climate_next_mist_eligible_s
+    name: "Climate Next Mist Eligible s"
+    entity_category: diagnostic
+    update_interval: 5s
+
+  - platform: template
     id: gl_main_state_text
     name: "GL Main State"
     entity_category: diagnostic
@@ -318,6 +384,13 @@ switch:
       mode: OUTPUT
       inverted: true
     restore_mode: RESTORE_DEFAULT_OFF
+    on_turn_on:
+      - lambda: |-
+          if(!id(water_controller_actuating)) {
+            id(west_wall_mister).turn_off();
+            ESP_LOGE("irrig","Blocked non-controller west clean-mister relay ON");
+            return;
+          }
 
   - platform: gpio
     id: west_wall_mister_fertilized
@@ -330,6 +403,11 @@ switch:
     restore_mode: RESTORE_DEFAULT_OFF
     on_turn_on:
       - lambda: |-
+          if(!id(fert_controller_actuating)) {
+            id(west_wall_mister_fertilized).turn_off();
+            ESP_LOGE("irrig","Blocked non-controller west fert-mister relay ON");
+            return;
+          }
           if(!id(fertilizer_master_valve).state) {
             id(fertilizer_master_valve).turn_on();
             ESP_LOGW("irrig","FERT MASTER opened by west fert-mister relay");
@@ -354,6 +432,11 @@ switch:
     restore_mode: RESTORE_DEFAULT_OFF
     on_turn_on:
       - lambda: |-
+          if(!id(fert_controller_actuating)) {
+            id(south_wall_mister_fertilized).turn_off();
+            ESP_LOGE("irrig","Blocked non-controller south fert-mister relay ON");
+            return;
+          }
           if(!id(fertilizer_master_valve).state) {
             id(fertilizer_master_valve).turn_on();
             ESP_LOGW("irrig","FERT MASTER opened by south fert-mister relay");
@@ -376,6 +459,13 @@ switch:
       mode: OUTPUT
       inverted: true
     restore_mode: RESTORE_DEFAULT_OFF
+    on_turn_on:
+      - lambda: |-
+          if(!id(water_controller_actuating)) {
+            id(south_wall_mister).turn_off();
+            ESP_LOGE("irrig","Blocked non-controller south clean-mister relay ON");
+            return;
+          }
 
   - platform: gpio
     id: wall_drips
@@ -386,6 +476,13 @@ switch:
       mode: OUTPUT
       inverted: true
     restore_mode: RESTORE_DEFAULT_OFF
+    on_turn_on:
+      - lambda: |-
+          if(!id(water_controller_actuating)) {
+            id(wall_drips).turn_off();
+            ESP_LOGE("irrig","Blocked non-controller wall clean-drip relay ON");
+            return;
+          }
 
   - platform: gpio
     id: center_mister
@@ -396,6 +493,13 @@ switch:
       mode: OUTPUT
       inverted: true
     restore_mode: RESTORE_DEFAULT_OFF
+    on_turn_on:
+      - lambda: |-
+          if(!id(water_controller_actuating)) {
+            id(center_mister).turn_off();
+            ESP_LOGE("irrig","Blocked non-controller center clean-mister relay ON");
+            return;
+          }
 
   - platform: gpio
     id: center_drips_fertilized
@@ -408,6 +512,11 @@ switch:
     restore_mode: RESTORE_DEFAULT_OFF
     on_turn_on:
       - lambda: |-
+          if(!id(fert_controller_actuating)) {
+            id(center_drips_fertilized).turn_off();
+            ESP_LOGE("irrig","Blocked non-controller center fert-drip relay ON");
+            return;
+          }
           if(!id(fertilizer_master_valve).state) {
             id(fertilizer_master_valve).turn_on();
             ESP_LOGW("irrig","FERT MASTER opened by center fert-drip relay");
@@ -430,6 +539,13 @@ switch:
       mode: OUTPUT
       inverted: true
     restore_mode: RESTORE_DEFAULT_OFF
+    on_turn_on:
+      - lambda: |-
+          if(!id(water_controller_actuating)) {
+            id(center_drips).turn_off();
+            ESP_LOGE("irrig","Blocked non-controller center clean-drip relay ON");
+            return;
+          }
 
   - platform: gpio
     id: wall_drips_fertilized
@@ -442,6 +558,11 @@ switch:
     restore_mode: RESTORE_DEFAULT_OFF
     on_turn_on:
       - lambda: |-
+          if(!id(fert_controller_actuating)) {
+            id(wall_drips_fertilized).turn_off();
+            ESP_LOGE("irrig","Blocked non-controller wall fert-drip relay ON");
+            return;
+          }
           if(!id(fertilizer_master_valve).state) {
             id(fertilizer_master_valve).turn_on();
             ESP_LOGW("irrig","FERT MASTER opened by wall fert-drip relay");
@@ -464,13 +585,21 @@ switch:
       mode: OUTPUT
       inverted: true
     restore_mode: RESTORE_DEFAULT_OFF
+    on_turn_on:
+      - lambda: |-
+          if(!id(fert_controller_actuating)) {
+            id(fertilizer_master_valve).turn_off();
+            ESP_LOGE("irrig","Blocked non-controller fert master ON");
+          }
     on_turn_off:
       - lambda: |-
           if(id(south_wall_mister_fertilized).state ||
              id(west_wall_mister_fertilized).state ||
              id(wall_drips_fertilized).state ||
              id(center_drips_fertilized).state) {
+            id(fert_controller_actuating) = true;
             id(fertilizer_master_valve).turn_on();
+            id(fert_controller_actuating) = false;
             ESP_LOGW("irrig","FERT MASTER manual-off corrected while fert relay active");
           }
 

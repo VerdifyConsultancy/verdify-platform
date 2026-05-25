@@ -1255,7 +1255,7 @@ number:
           id(irrig_vpd_boost_threshold_hrs) = x;
           id(num_irrig_vpd_boost_threshold).publish_state(x);
 
-  # ─── Grow Light Shadow-Aware Automation ───
+  # ─── Grow Light Shade-Aware Automation ───
   - platform: template
     id: num_gl_lux_threshold
     name: "GL Lux Threshold"
@@ -2041,9 +2041,9 @@ switch:
           id(sw_summer_vent_enabled) = false;
           id(sw_summer_vent_enabled_switch).publish_state(false);
 
-  # Phase-2 dwell gate master switch. Default OFF (shadow-mode bake).
-  # After 14d of replay + shadow validation per plan Phase 2 gate,
-  # planner flips this to ON to activate the 5-min mode-dwell hold.
+  # Phase-2 dwell gate master switch. Default OFF until replay/invariant
+  # evidence and operator approval allow direct activation in the single live
+  # controller path.
   - platform: template
     id: sw_dwell_gate_enabled_switch
     name: "Dwell Gate Enabled"

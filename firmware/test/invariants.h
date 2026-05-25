@@ -360,6 +360,8 @@ inline bool check_10_equipment_toggle_auditable(Ctx10& c, const TraceRow& r, Rep
                                    || r.mode_reason == "dry_override"
                                    || r.mode_reason == "dwell_expired"
                                    || r.mode_reason == "dwell_hold"
+                                   || r.mode_reason == "fog_continue"
+                                   || r.mode_reason == "fog_enter"
                                    || r.mode_reason == "heat_stage1"
                                    || r.mode_reason == "heat_stage2"
                                    || r.mode_reason == "humidify_continue"
@@ -382,6 +384,8 @@ inline bool check_10_equipment_toggle_auditable(Ctx10& c, const TraceRow& r, Rep
                                    || r.mode_reason == "temp_preempts_humidify"
                                    || r.mode_reason == "thermal_relief"
                                    || r.mode_reason == "thermal_relief_forced"
+                                   || r.mode_reason == "vent_fog_assist"
+                                   || r.mode_reason == "vent_mist_assist"
                                    || r.mode_reason == "vpd_low"
                                    || r.mode_reason == "vpd_min_safe_rescue"
                                    || r.mode_reason == "vpd_too_low";

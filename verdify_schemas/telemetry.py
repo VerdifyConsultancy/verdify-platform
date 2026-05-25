@@ -21,6 +21,8 @@ from typing import Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator
 
+from .climate_intent import ClimateAction, ClimatePriorityAxis, MoistureAssistState, MoistureZone
+
 OVERRIDE_EVENT_TYPES: frozenset[str] = frozenset(
     {
         "occupancy_blocks_equipment",
@@ -300,6 +302,48 @@ class SystemStateRow(BaseModel):
     entity: str
     value: str  # Free-form — mode names, booleans-as-strings, floats-as-strings all land here
     greenhouse_id: str = "vallery"
+
+
+class ClimateActionLogRow(BaseModel):
+    """climate_action_log hypertable row — structured controller decision.
+
+    This is the durable counterpart to firmware ClimateIntent text sensors.
+    It captures selected action, band error, wet/fog authority, relay truth, and
+    plan correlation so controller decisions can be graphed and audited without
+    reconstructing latest key/value state.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    ts: AwareDatetime
+    greenhouse_id: str = "vallery"
+    climate_action: ClimateAction
+    priority_axis: ClimatePriorityAxis
+    temp_low_f: float | None = None
+    temp_target_f: float | None = None
+    temp_high_f: float | None = None
+    vpd_low_kpa: float | None = None
+    vpd_target_kpa: float | None = None
+    vpd_high_kpa: float | None = None
+    temp_target_delta_f: float | None = None
+    vpd_target_delta_kpa: float | None = None
+    temp_band_error_f: float | None = None
+    vpd_band_error_kpa: float | None = None
+    moisture_assist_state: MoistureAssistState | None = None
+    moisture_zone: MoistureZone = "none"
+    wet_assist_allowed: bool = False
+    wet_assist_block_reason: str | None = None
+    fog_allowed: bool = False
+    fog_block_reason: str | None = None
+    relay_truth: dict = Field(default_factory=dict)
+    resource_cost_estimate: dict = Field(default_factory=dict)
+    climate_intent_version: str | None = None
+    plan_id: str | None = None
+    trigger_id: str | None = None
+    planner_instance: str | None = None
+    sensor_status: dict = Field(default_factory=dict)
+    candidate_summary: str | None = None
+    source_system_state: dict = Field(default_factory=dict)
 
 
 class OverrideEvent(BaseModel):

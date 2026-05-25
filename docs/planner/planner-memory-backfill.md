@@ -36,7 +36,7 @@ Planner remains responsible for:
 
 Already implemented in Verdify:
 
-- `ingestor/planner_graph_shadow.py`
+- `ingestor/planner_memory_ingest.py`
   - auth resolution
   - memory item shaping helpers
   - support-doc file loader
@@ -236,7 +236,7 @@ reported as accepted, duplicate, or rejected counts per batch.
 
 The script should:
 
-- reuse `ingestor/planner_graph_shadow.py`
+- reuse `ingestor/planner_memory_ingest.py`
 - reuse the existing auth path
 - reuse existing item builders where practical
 - print batch summaries

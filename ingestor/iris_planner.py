@@ -118,10 +118,11 @@ _STANDING_DIRECTIVES = """
     `plan_evaluate`, explain mismatches in the next plan, and turn durable
     lessons into `lessons_manage` updates.
 
-11. **No stale carryover in full plans.** Every `set_plan` transition must carry
-    every tactical Tier 1 key listed below, including staging, hysteresis, delay,
-    switch, and dwell-gate params. Omitted keys are rejected because otherwise
-    old active rows silently carry forward.
+11. **Use bounded ClimateIntent for full plans.** Every routine `set_plan`
+    transition carries a `climate_intent` object with the semantic fields listed
+    below. MCP validates the bounded intent, materializes it into the complete
+    tactical Tier 1 setpoint rows the dispatcher needs today, and stores the
+    original intent in `plan_journal.climate_intents` for audit.
 """
 
 # ── Planner knowledge ──────────────────────────────────────────────
@@ -223,11 +224,38 @@ Temp compliance can be 85%+ while VPD is 25%. Use these to diagnose where to foc
 
 ### Tunable Dictionary — Tactical Tier 1 + Read-Only Bands
 
-Push via `set_tunable(parameter=..., value=..., reason=..., trigger_id=..., planner_instance=...)` or as a transition key in
-`set_plan`. Ranges are executable registry bounds; MCP rejects
-out-of-range writes before persistence. Dispatcher still audits and
-clamps stale active-plan rows before DB or ESP32 side effects. Every Tier 1 knob below
-is readback-verified via a `cfg_*` sensor — alert_monitor catches silent
+For full plans, use `climate_intent` in each `set_plan` transition and set
+every ClimateIntent field explicitly:
+`{"ts":"...","climate_intent":{"forecast_temp_bias_f":0,"forecast_vpd_bias_kpa":0.1,"solar_precool_gain_f":1,"thermal_lead_time_min":30,"economizer_temp_advantage_f":4,"economizer_dewpoint_advantage_f":3,"moisture_engage_vpd_excess_kpa":0.05,"mist_duty_limit_pct":25,"fog_escalate_vpd_excess_kpa":0.25,"dew_margin_floor_f":8,"wet_cutoff_hour":19,"daily_mist_budget_gal":120,"resource_sensitivity":0.4,"relay_churn_penalty":0.6},"reason":"..."}`.
+Required ClimateIntent fields: `forecast_temp_bias_f`, `forecast_vpd_bias_kpa`,
+`solar_precool_gain_f`, `thermal_lead_time_min`,
+`economizer_temp_advantage_f`, `economizer_dewpoint_advantage_f`,
+`moisture_engage_vpd_excess_kpa`, `mist_duty_limit_pct`,
+`fog_escalate_vpd_excess_kpa`, `dew_margin_floor_f`, `wet_cutoff_hour`,
+`daily_mist_budget_gal`, `resource_sensitivity`, `relay_churn_penalty`.
+This is the AI-facing tactical surface; it is not raw relay control and it does
+not own crop targets or compliance bands.
+
+The assembled context includes dispatcher-owned read-only targets for every
+planning run: `temp_low`, `temp_target`, `temp_high`, `vpd_low`, `vpd_target`,
+and `vpd_high`, plus current target deltas. Use those target values as the
+optimization context for forecast-aware preconditioning. Do not put target or
+band-center fields inside `climate_intent`; the dispatcher/crop policy owns
+the low/target/high points for temp and VPD.
+
+When the target context shows VPD above `vpd_high`, resource minimization is not allowed to close the wet-assist surface if dew margin and occupancy safety rails are healthy.
+When both temp and VPD are above band, emit a compliance-first ClimateIntent: keep `moisture_engage_vpd_excess_kpa` near 0.05, use
+`mist_duty_limit_pct` above zero, keep `fog_escalate_vpd_excess_kpa` near
+0.20 or lower for hot-dry venting, keep wet/fog latest-hour coverage through
+the recovery window, and lower `resource_sensitivity` until the actual-target
+deltas recover. Optimize water and electricity only after the band errors are
+back inside the dispatcher-owned range.
+
+Use `set_tunable(parameter=..., value=..., reason=..., trigger_id=..., planner_instance=...)`
+only for narrow tactical overrides. Ranges are executable registry bounds; MCP
+rejects out-of-range writes before persistence. Dispatcher still audits and
+clamps stale active-plan rows before DB or ESP32 side effects. Every Tier 1 knob
+below is readback-verified via a `cfg_*` sensor — alert_monitor catches silent
 drops within one planner cycle.
 
 The full registry (including dispatcher-routed and readback-only firmware
@@ -513,12 +541,10 @@ today's forecast, and set the daytime posture.
 6. **Check alerts** — call `alerts`. Acknowledge or resolve any that are stale.
 7. **Write today's plan** — use `set_plan(plan_id=..., hypothesis=..., transitions=..., trigger_id=..., planner_instance=...)` with 5-8 waypoints
    anchored to solar milestones (dawn, morning ramp, peak stress, decline, evening).
-   Each transition includes all tactical Tier 1 params. Do not include crop-band params
-   (`temp_low`, `temp_high`, `vpd_low`, `vpd_high`) or retired knobs
-   (`bias_heat`, `bias_cool`, `d_heat_stage_2`, `d_cool_stage_2`,
-   `sw_fsm_controller_enabled`);
-   use mist, fog, dwell, hysteresis, vent posture, and stage-2 cooling knobs to
-   shift behavior. Include a hypothesis and experiment.
+   Include a bounded `climate_intent` object in each transition. Do not emit raw
+   Tier 1 `params`, crop-band params (`temp_low`, `temp_high`, `vpd_low`,
+   `vpd_high`), or retired knobs (`bias_heat`, `bias_cool`, `d_heat_stage_2`,
+   `d_cool_stage_2`, `sw_fsm_controller_enabled`). Include a hypothesis and experiment.
    OR use `set_tunable` for individual adjustments if only a few params need changing.
 7. **Post morning brief to #greenhouse** — include:
    - Yesterday's scorecard: score, temp vs VPD compliance, stress breakdown, utility cost + trend
@@ -556,10 +582,10 @@ and set the overnight posture.
 5. **Check alerts** — call `alerts`. Resolve any from today.
 6. **Write overnight plan** — use `set_plan(plan_id=..., hypothesis=..., transitions=..., trigger_id=..., planner_instance=...)` with 3-5 waypoints
    anchored to evening/overnight milestones (evening_settle, midnight_posture, pre_dawn).
-   Each transition includes all tactical Tier 1 params. Do not include crop-band params
-   (`temp_low`, `temp_high`, `vpd_low`, `vpd_high`) or retired knobs
-   (`bias_heat`, `bias_cool`, `d_heat_stage_2`, `d_cool_stage_2`,
-   `sw_fsm_controller_enabled`);
+   Each transition includes a bounded `climate_intent` object. Do not emit raw
+   Tier 1 `params`, crop-band params (`temp_low`, `temp_high`, `vpd_low`,
+   `vpd_high`), or retired knobs (`bias_heat`, `bias_cool`, `d_heat_stage_2`,
+   `d_cool_stage_2`, `sw_fsm_controller_enabled`);
    use mist, fog, dwell, hysteresis, vent posture, and stage-2 cooling knobs to
    shift behavior. Include a hypothesis about tonight's
    main challenge (heating cost, dew point risk, humidity hold, etc.).
@@ -605,9 +631,9 @@ required full-plan trigger, separate from SUNRISE and SUNSET.
    plan coverage.
 4. **Start the new local day with a plan** — call `set_plan` with
    `trigger_id` and `planner_instance`. The plan should cover the post-midnight,
-   pre-dawn, sunrise-ramp, and early-day handoff window using all tactical Tier
-   1 params. Do not include crop-band params (`temp_low`, `temp_high`,
-   `vpd_low`, `vpd_high`).
+   pre-dawn, sunrise-ramp, and early-day handoff window using bounded
+   `climate_intent` transitions. Do not emit raw Tier 1 `params` or crop-band
+   params (`temp_low`, `temp_high`, `vpd_low`, `vpd_high`).
 5. **Post a concise midnight review brief** — include the prior day's score,
    what matched or missed the hypothesis, new lessons, current risk, and the
    new plan posture.
@@ -1104,17 +1130,5 @@ def send_to_iris(
         )
         result["gateway_status"] = 0
         result["gateway_body"] = f"exception: {type(e).__name__}: {e}"[:2000]
-
-    try:
-        from planner_graph_shadow import maybe_start_planner_graph_shadow
-
-        maybe_start_planner_graph_shadow(
-            event_type=event_type,
-            event_label=label,
-            context=context,
-            delivery_result=result,
-        )
-    except Exception:
-        log.exception("planner_graph shadow hook failed for trigger_id=%s", trigger_id)
 
     return result

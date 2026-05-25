@@ -512,10 +512,11 @@ class TestContractDriftGuardrails:
         assert "mode != SAFETY_HEAT" in controls_source
         assert "id(fan1_rly)->state || id(fan2_rly)->state" in controls_source
         assert "willVent = true;" in controls_source
-        assert "set_relay(R[5], willVent, fan_requires_vent)" in controls_source
-        assert controls_source.index("set_relay(R[5], willVent, fan_requires_vent)") < controls_source.index(
-            "set_relay(R[2], willFan1, false)"
-        )
+        vent_apply = "set_relay(R[5], willVent, fan_requires_vent, sensor_fault_relay_lock)"
+        fan_apply = "set_relay(R[2], willFan1, false, sensor_fault_relay_lock)"
+        assert vent_apply in controls_source
+        assert fan_apply in controls_source
+        assert controls_source.index(vent_apply) < controls_source.index(fan_apply)
 
     def test_firmware_suppresses_non_safety_heat_while_vent_open(self):
         controls_source = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
@@ -536,9 +537,10 @@ class TestContractDriftGuardrails:
             in controls_source
         )
         assert (
-            "bool humidity_demand = ((mode == SEALED_MIST) || ctl_state.vent_mist_assist_active) && mister_vent_ok;"
+            "const bool climate_wet_assist_demand = (mode == SEALED_MIST) || ctl_state.vent_mist_assist_active;"
             in controls_source
         )
+        assert "bool humidity_demand = climate_wet_assist_demand && mister_vent_ok;" in controls_source
 
     def test_post_boot_readback_repair_covers_static_and_planner_paths(self):
         ingestor_source = (REPO_ROOT / "ingestor" / "ingestor.py").read_text()
@@ -566,6 +568,103 @@ class TestContractDriftGuardrails:
         assert 'failures.append("open_critical_high_alerts")' in monitor_source
         assert 'failures.append("open_alerts")' not in monitor_source
 
+    def test_alert_monitor_tracks_climate_action_proof_freshness(self):
+        tasks_source = (REPO_ROOT / "ingestor" / "tasks.py").read_text()
+        alerts_source = (REPO_ROOT / "verdify_schemas" / "alerts.py").read_text()
+        assert '"climate_action_proof_stale"' in alerts_source
+        assert "class ClimateActionProofStaleDetails" in alerts_source
+        assert "class ClimateActionProofStaleAlert" in alerts_source
+        assert '"alert_type": "climate_action_proof_stale"' in tasks_source
+        assert '"sensor_id": "system.climate_action_log"' in tasks_source
+        assert "proof_missing" in tasks_source
+        assert 'threshold_value": 300.0' in tasks_source
+        assert "to_regclass('public.climate_action_log')" in tasks_source
+
+        from verdify_schemas import AlertEnvelope
+
+        AlertEnvelope.model_validate(
+            {
+                "alert_type": "climate_action_proof_stale",
+                "severity": "warning",
+                "category": "system",
+                "sensor_id": "system.climate_action_log",
+                "message": "Climate action proof is stale 360s",
+                "details": {
+                    "age_s": 360,
+                    "latest_ts": "2026-05-25T16:00:00+00:00",
+                    "proof_missing": None,
+                },
+                "metric_value": 360.0,
+                "threshold_value": 300.0,
+            }
+        )
+
+    def test_climate_action_proof_checks_share_required_fields(self):
+        required_fields = (
+            "climate_action",
+            "priority_axis",
+            "climate_intent_version",
+            "temp_low_f",
+            "temp_target_f",
+            "temp_high_f",
+            "vpd_low_kpa",
+            "vpd_target_kpa",
+            "vpd_high_kpa",
+            "temp_target_delta_f",
+            "vpd_target_delta_kpa",
+            "temp_band_error_f",
+            "vpd_band_error_kpa",
+            "relay_truth",
+            "sensor_status",
+            "sensor_status.latest_climate_ts",
+            "sensor_status.latest_climate_age_s",
+            "sensor_status.temp_avg_present",
+            "sensor_status.vpd_avg_present",
+            "sensor_status.band_context_complete",
+        )
+        proof_surfaces = {
+            "api": REPO_ROOT / "api" / "main.py",
+            "alert_monitor": REPO_ROOT / "ingestor" / "tasks.py",
+            "firmware_preflight": REPO_ROOT / "scripts" / "firmware-deploy-preflight.sh",
+            "health_check": REPO_ROOT / "scripts" / "health-check.sh",
+            "liveness_check": REPO_ROOT / "scripts" / "liveness-check.sh",
+        }
+        for label, path in proof_surfaces.items():
+            body = path.read_text()
+            missing = [field for field in required_fields if field not in body]
+            assert not missing, f"{label} climate-action proof check is missing fields: {missing}"
+            assert "jsonb_typeof(relay_truth)" in body, f"{label} must reject non-object relay_truth"
+            assert "'{}'::jsonb" in body, f"{label} must reject empty relay_truth"
+            assert "jsonb_typeof(sensor_status)" in body, f"{label} must reject non-object sensor_status"
+            assert "latest_climate_age_s' ~ '^[0-9]+$'" in body, f"{label} must reject nonnumeric climate age"
+            assert "sensor_status->>'temp_avg_present' IS DISTINCT FROM 'true'" in body
+            assert "sensor_status->>'vpd_avg_present' IS DISTINCT FROM 'true'" in body
+            assert "sensor_status->>'band_context_complete' IS DISTINCT FROM 'true'" in body
+
+    def test_climate_authority_post_deploy_proof_target_gates_ota(self):
+        makefile = (REPO_ROOT / "Makefile").read_text()
+        script = (REPO_ROOT / "scripts" / "validate-climate-authority-post-deploy.sh").read_text()
+
+        assert "climate-authority-post-deploy-proof-plan:" in makefile
+        assert "climate-authority-post-deploy-proof:" in makefile
+        assert "bash scripts/validate-climate-authority-post-deploy.sh" in makefile
+        assert "does not restart services or run OTA" in makefile
+        assert "Wait at least 120 seconds" in makefile
+        assert "Only after that proof passes should an operator consider make firmware-deploy" in makefile
+
+        for required_command in (
+            "bash scripts/health-check.sh",
+            'curl -fsS "$API_HEALTH_URL"',
+            "bash scripts/validate-plan-coverage.sh",
+            "scripts/audit-climate-intent-contract.py",
+            "bash scripts/firmware-deploy-preflight.sh",
+        ):
+            assert required_command in script
+        assert "climate_action_log_proof_missing" in script
+        assert "service_climate_action_log" in script
+        assert "climate_action_log_age_seconds" in script
+        assert "does not restart services and does not flash firmware" in script
+
     def test_public_home_metrics_and_site_publish_have_traffic_backpressure_guards(self):
         api_source = (REPO_ROOT / "api" / "main.py").read_text()
         rebuild_source = (REPO_ROOT / "scripts" / "rebuild-site.sh").read_text()
@@ -584,9 +683,21 @@ class TestContractDriftGuardrails:
         assert ".dirty" in makefile
         assert "firmware-promote-last-good" in makefile
         assert "Rollback target unchanged while this build bakes" in makefile
+        assert makefile.index("bash scripts/firmware-deploy-preflight.sh") < makefile.index("upload --device")
         assert "FIRMWARE_DEPLOY_OPERATOR_SIGNOFF=1" in preflight
         assert "FIRMWARE_DEPLOY_OVERRIDE_REASON" in preflight
         assert "No last-good rollback artifact" in preflight
+        assert "Climate telemetry stale or missing" in preflight
+        assert "fresh controller inputs" in preflight
+        assert "to_regclass('public.climate_action_log')" in preflight
+        assert "Climate action log table missing" in preflight
+        assert "Climate action log stale or missing" in preflight
+        assert "fresh controller-decision proof" in preflight
+        assert "Climate action log proof incomplete" in preflight
+        assert "temp_target_delta_f" in preflight
+        assert "vpd_target_delta_kpa" in preflight
+        assert "relay_truth" in preflight
+        assert "graphable target deltas and relay truth" in preflight
         assert "FIRMWARE_OTA_FREEZE_OVERRIDE_REASON" in preflight
         assert 'record_override "48-hour bake"' in preflight
         assert 'record_override "Weekly OTA limit"' in preflight
@@ -1264,6 +1375,24 @@ class TestPlannerToDispatcherE2E:
             self._cleanup()
 
 
+def test_second_based_cfg_readback_rounding_does_not_force_repush():
+    import tasks as tasks_mod
+
+    original_readback = tasks_mod.shared.cfg_readback.get("mister_pulse_on_s")
+    try:
+        assert tasks_mod.readback_values_equivalent("mister_pulse_on_s", 33.0, 33.75)
+        assert tasks_mod.readback_values_equivalent("mister_engage_delay_s", 38.0, 37.5)
+        assert not tasks_mod.readback_values_equivalent("mister_pulse_on_s", 30.0, 33.75)
+
+        tasks_mod.shared.cfg_readback["mister_pulse_on_s"] = 33.0
+        assert tasks_mod._readback_drift("mister_pulse_on_s", 33.75) is False
+    finally:
+        if original_readback is None:
+            tasks_mod.shared.cfg_readback.pop("mister_pulse_on_s", None)
+        else:
+            tasks_mod.shared.cfg_readback["mister_pulse_on_s"] = original_readback
+
+
 class TestSetpointsFailLoud:
     """API /setpoints must fail-loud on NULL band (Tier 1 #3)."""
 
@@ -1363,3 +1492,50 @@ class TestSetpointsFailLoud:
             )
         finally:
             api_mod.pool = original_pool
+
+
+class TestClimateIntentControllerObservability:
+    """ClimateIntent must be the live controller surface, not a parallel path."""
+
+    CLIMATE_KEYS = {
+        "climate_action",
+        "climate_priority_axis",
+        "climate_candidate_summary",
+        "climate_moisture_assist_state",
+        "climate_moisture_zone",
+        "climate_temp_error_f",
+        "climate_vpd_error_kpa",
+        "climate_fog_margin_kpa",
+        "climate_fog_block_reason",
+        "climate_resource_cost_estimate",
+        "climate_next_mist_eligible_s",
+    }
+
+    def test_firmware_uses_climate_decision_in_live_mode_path(self):
+        logic = (REPO_ROOT / "firmware/lib/greenhouse_logic.h").read_text()
+        assert "evaluate_climate_decision(" in logic
+        assert "evaluate_climate_" + "s" + "hadow_decision" not in logic
+        assert "ClimateActionDecision climate_decision = evaluate_climate_decision(in, sp, state);" in logic
+        assert "Mode mode = climate_action_to_mode(selected_action);" in logic
+
+    def test_controls_publish_primary_climate_fields(self):
+        controls = (REPO_ROOT / "firmware/greenhouse/controls.yaml").read_text()
+        hardware = (REPO_ROOT / "firmware/greenhouse/hardware.yaml").read_text()
+        assert "describe_effective_climate_decision(mode, sensor_in, setpts, ctl_state, relay_out)" in controls
+        assert "evaluate_climate_decision(sensor_in, setpts, ctl_state)" not in controls
+        legacy_prefix = "climate_" + "s" + "hadow"
+        assert legacy_prefix not in controls
+        assert legacy_prefix not in hardware
+        assert "climate_diag_republish" in controls
+        assert ">= 60000UL" in controls
+        assert "last_climate_diag_publish_ms = climate_diag_now_ms" in controls
+        assert controls.count("|| climate_diag_republish") >= len(self.CLIMATE_KEYS)
+        for key in self.CLIMATE_KEYS:
+            assert f"id: gh_{key}" in hardware
+            assert f"id(gh_{key}).publish_state(" in controls
+
+    def test_ingestor_routes_primary_climate_fields(self):
+        entity_map = (REPO_ROOT / "ingestor/entity_map.py").read_text()
+        assert "climate_" + "s" + "hadow" not in entity_map
+        for key in self.CLIMATE_KEYS:
+            assert f'"{key}": "{key}"' in entity_map

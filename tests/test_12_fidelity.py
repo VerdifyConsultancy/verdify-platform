@@ -699,6 +699,38 @@ def test_vpd_high_moisture_guardrail_does_not_run_when_idle_below_band():
     assert guardrails == {}
 
 
+def test_vpd_high_moisture_guard_context_avoids_greenhouse_state_latest_scan():
+    import tasks
+
+    src = Path(tasks.__file__).read_text()
+    start = src.index("async def _fetch_moisture_guard_context")
+    end = src.index("def _vpd_high_moisture_guardrails", start)
+    body = src[start:end]
+
+    assert "latest_climate AS" in body
+    assert "FROM climate" in body
+    assert "FROM v_greenhouse_state" not in body
+    assert "ORDER BY ts DESC\n             LIMIT 1" in body
+
+
+def test_alert_monitor_avoids_greenhouse_state_hot_path_scans():
+    import tasks
+
+    src = Path(tasks.__file__).read_text()
+    start = src.index("async def alert_monitor")
+    end = src.index("# 8. SETPOINT DISPATCHER", start)
+    body = src[start:end]
+
+    assert "FROM v_greenhouse_state" not in body
+    assert "FROM climate" in body
+    assert "fn_setpoint_at('temp_high', c.ts)" in body
+    assert "fn_equip_at('mister_center', c.ts)" in body
+
+    standalone = (Path(tasks.__file__).resolve().parent.parent / "scripts" / "alert-monitor.py").read_text()
+    assert "FROM v_greenhouse_state" not in standalone
+    assert "latest_climate AS" in standalone
+
+
 def test_mcp_set_tunable_treats_vpd_low_as_band_owned():
     """MCP should expose crop-band params as read-only context, not Tier 1
     tactical tuning. The dispatcher owns vpd_low through fn_band_setpoints().
@@ -846,6 +878,31 @@ def test_firmware_lighting_telemetry_fails_closed_when_time_invalid():
     assert "return (float)now.timestamp" not in sensors
     assert "publish_lighting_epoch(id(gl_main_decision_epoch), time.timestamp)" in controls
     assert "publish_lighting_epoch(id(gl_grow_decision_epoch), time.timestamp)" in controls
+
+
+def test_controller_time_failure_is_final_fog_rail():
+    controls = Path("firmware/greenhouse/controls.yaml").read_text()
+    sensors = Path("firmware/greenhouse/sensors.yaml").read_text()
+
+    assert "const bool controller_time_valid = sntp_now.is_valid() && !id(sntp_failed);" in controls
+    assert "int local_hour = controller_time_valid ? sntp_now.hour : 12;" in controls
+    assert 'if(!controller_time_valid) return "time_invalid";' in controls
+
+    final_gate_start = controls.index("const bool climate_water_budget_block =")
+    final_gate_end = controls.index("/**************** 10", final_gate_start)
+    final_gate = controls[final_gate_start:final_gate_end]
+    assert "!controller_time_valid" in final_gate
+    assert final_gate.index("!controller_time_valid") < final_gate.index("willFog = false;")
+
+    relay_apply = controls[controls.index("/**************** 11") : controls.index("/**************** 12")]
+    assert "|| !controller_time_valid" in relay_apply
+
+    fog_start = controls.index("char fog_block_reason")
+    fog_end = controls.index("static char last_fog_block_reason", fog_start)
+    fog_block = controls[fog_start:fog_end]
+    assert 'snprintf(fog_block_reason, sizeof(fog_block_reason), "time_invalid")' in fog_block
+    assert fog_block.index("!controller_time_valid") < fog_block.index("manual_fog_requested")
+    assert "if(!now.is_valid() || id(sntp_failed)) return NAN;" in sensors
 
 
 def test_full_epoch_telemetry_uses_text_sensor_not_float():
@@ -1126,8 +1183,9 @@ def test_alert_monitor_detects_planner_delivery_outages():
     assert "system.planner_required_plan" in src
     assert "planner_trigger_ledger" in src
     assert "event_type IN ('SUNRISE', 'SUNSET', 'MIDNIGHT')" in src
-    assert "row_number() OVER (PARTITION BY event_type ORDER BY expected_at DESC)" in src
-    assert "status <> 'plan_written'" in src
+    assert "last_required_recovery" in src
+    assert "COALESCE(r.expected_at, pdl.delivered_at) > lrr.expected_at" in src
+    assert "r.status IN ('missed', 'timed_out', 'delivery_failed')" in src
 
 
 def test_forecast_deviation_defaults_cover_material_axes():
@@ -1681,8 +1739,53 @@ def test_send_to_iris_targets_hermes_gateway():
     assert "HERMES_URL" in body
     assert "HERMES_API_KEY" in body
     assert "hermes_run_id" in body
+    assert "maybe_start_planner_graph_shadow" not in body
+    assert "planner_graph_shadow" not in body
     assert '"MANUAL"' in src
     assert "prepare_delivery_result" in src
+
+
+def test_single_path_removes_runtime_shadow_surfaces():
+    assert not (REPO_ROOT / "ingestor" / "planner_graph_shadow.py").exists()
+    assert not (REPO_ROOT / "mcp" / "server_shadow.py").exists()
+    assert not (REPO_ROOT / "hermes" / "iris-shadow" / "config.yaml").exists()
+    assert not (REPO_ROOT / "hermes" / "iris-shadow" / "SOUL.md").exists()
+    assert not (REPO_ROOT / "scripts" / "compare-shadow-plans.py").exists()
+    assert not (REPO_ROOT / "scripts" / "planner-graph-shadow-smoke.py").exists()
+    assert not (REPO_ROOT / "scripts" / "planner-graph-shadow-report.py").exists()
+
+    compose = (REPO_ROOT / "docker-compose.yml").read_text()
+    assert "hermes-iris-shadow" not in compose
+    assert "server_shadow.py" not in compose
+    assert "--profile shadow" not in compose
+
+    schema = (REPO_ROOT / "db" / "schema.sql").read_text()
+    assert "plan_delivery_log_shadow" not in schema
+    assert "setpoint_plan_shadow" not in schema
+    assert "plan_journal_shadow" not in schema
+
+
+def test_single_path_policy_docs_do_not_reintroduce_alternate_rollout():
+    policy_files = (
+        "docs/firmware-climate-intent-controller-final-design-2026-05-24.md",
+        "docs/BACKLOG.md",
+        "docs/backlog/firmware.md",
+        "docs/langgraph-planner-design.md",
+        "docs/planner/langgraph-decisions.md",
+        "docs/planner/langgraph-implementation-approach.md",
+        "docs/planner/langgraph-external-implementation-context.md",
+        "firmware/greenhouse/tunables.yaml",
+        "firmware/greenhouse/globals.yaml",
+        "scripts/firmware-dwell-preview.sh",
+    )
+    forbidden_terms = ("shadow", "canary")
+    hits = []
+    for rel_path in policy_files:
+        text = (REPO_ROOT / rel_path).read_text().lower()
+        for term in forbidden_terms:
+            if term in text:
+                hits.append(f"{rel_path}:{term}")
+    assert not hits
 
 
 def test_midnight_trigger_has_required_review_prompt_and_wake_mode():
@@ -1840,6 +1943,352 @@ def test_mcp_set_plan_populates_plan_journal_feedback_fields():
     assert "$9::text[]" in body
 
 
+def test_mcp_set_plan_materializes_and_audits_climate_intent():
+    server = (Path(iris_planner.__file__).resolve().parent.parent / "mcp" / "server.py").read_text()
+    start = server.index("async def set_plan")
+    end = server.index("@mcp.tool()", start + 1)
+    body = server[start:end]
+
+    assert "_climate_intent_waypoint_errors(waypoints_raw)" in body
+    assert "_materialize_climate_intent_waypoints(" in body
+    assert "set_plan requires climate_intent on every transition" in body
+    assert "CLIMATE_INTENT_FIELDS" in server
+    assert "climate_intent must explicitly set every field" in server
+    assert "raw params are not accepted in set_plan" in server
+    assert "ClimateIntent validation failed" in body
+    assert "climate_intents" in body
+    assert "climate_intent_version" in body
+    assert "climate_intent_segments" in body
+    assert "climate_intent_guardrails" in body
+    assert "climate_intent_materialization_guardrails" in server
+    assert 'record["guardrails"] = guardrails' in server
+    assert "$10::jsonb" in body
+    assert "temp_above_high_f" in server
+    assert "vpd_above_high_kpa" in server
+    assert "dew_margin_f" in server
+    assert '"timed_out"' in body
+    assert "trigger_id is not pending or timed_out" in body
+
+
+def test_planner_context_includes_dispatcher_owned_targets():
+    gather = (Path(iris_planner.__file__).resolve().parent.parent / "scripts" / "gather-plan-context.sh").read_text()
+
+    assert "DISPATCHER-OWNED CLIMATE TARGETS" in gather
+    for column in (
+        "temp_low_f",
+        "temp_target_f",
+        "temp_high_f",
+        "temp_target_delta_f",
+        "vpd_low_kpa",
+        "vpd_target_kpa",
+        "vpd_high_kpa",
+        "vpd_target_delta_kpa",
+    ):
+        assert column in gather
+    assert "The AI planner receives these as read-only prompt context" in gather
+    assert "VERDIFY_PLANNER_CONTEXT_DB_STATEMENT_TIMEOUT_MS" in gather
+    assert "statement_timeout=${DB_STATEMENT_TIMEOUT_MS}" in gather
+    assert "CLIMATE AUTHORITY MODE" in gather
+    assert "COMPLIANCE_FIRST_TEMP_AND_VPD_HIGH" in gather
+    assert "resource minimization must not close wet/fog assist" in gather
+    assert "CLIMATE AUTHORITY ACTION PROOF" in gather
+    assert "CLIMATE AUTHORITY ACTION ROLLUP" in gather
+    assert "CLIMATE ACTION RESPONSE PRIORS" in gather
+    assert "5m lookahead" in gather
+    assert "LIMIT 300" in gather
+    assert "avg_temp_abs_error_delta_f" in gather
+    assert "avg_vpd_abs_error_delta_kpa" in gather
+    assert "Use this as a recent response prior alongside forecast pressure" in gather
+    assert "controller-owned truth for the current action" in gather
+    assert "wet_assist_block_reason" in gather
+    assert "fog_block_reason" in gather
+    assert "relay_truth" in gather
+    assert "sensor_status" in gather
+    assert "jsonb_typeof(sensor_status)" in gather
+    assert "sensor_status.latest_climate_ts" in gather
+    assert "sensor_status.latest_climate_age_s" in gather
+    assert "sensor_status.temp_avg_present" in gather
+    assert "sensor_status.vpd_avg_present" in gather
+    assert "sensor_status.band_context_complete" in gather
+    assert "target deltas, relay truth, and sensor freshness" in gather
+    assert "dispatcher climate targets" in gather
+    assert "climate action proof fresh" in gather
+    assert "planner must not infer why relays are off without fresh proof" in gather
+
+
+def test_greenhouse_state_exposes_graphable_target_deltas():
+    migration = (
+        Path(iris_planner.__file__).resolve().parent.parent
+        / "db"
+        / "migrations"
+        / "141-greenhouse-state-target-deltas.sql"
+    ).read_text()
+    schema = (Path(iris_planner.__file__).resolve().parent.parent / "db" / "schema.sql").read_text()
+
+    for column in (
+        "sp_temp_target",
+        "sp_vpd_target",
+        "temp_target_delta_f",
+        "vpd_target_delta_kpa",
+        "temp_band_error_f",
+        "vpd_band_error_kpa",
+    ):
+        assert column in migration
+        assert column in schema
+    assert "ClimateIntent does" in migration
+    assert "signed target deltas" in schema
+
+
+def test_climate_authority_action_log_contract_is_tracked():
+    migration = (
+        Path(iris_planner.__file__).resolve().parent.parent / "db" / "migrations" / "142-climate-action-log.sql"
+    ).read_text()
+    schema = (Path(iris_planner.__file__).resolve().parent.parent / "db" / "schema.sql").read_text()
+    ingestor = (Path(iris_planner.__file__).resolve().parent.parent / "ingestor" / "ingestor.py").read_text()
+
+    for token in (
+        "CREATE TABLE IF NOT EXISTS public.climate_action_log",
+        "wet_assist_allowed",
+        "wet_assist_block_reason",
+        "relay_truth jsonb",
+        "CREATE OR REPLACE FUNCTION public.fn_climate_action_effectiveness",
+        "CREATE OR REPLACE VIEW public.v_climate_action_effectiveness_5m",
+        "CREATE OR REPLACE VIEW public.v_climate_action_effectiveness_15m",
+        "CREATE OR REPLACE VIEW public.v_climate_action_daily_scorecard",
+    ):
+        assert token in migration
+
+    for token in (
+        "CREATE TABLE public.climate_action_log",
+        "wet_assist_allowed",
+        "wet_assist_block_reason",
+        "relay_truth jsonb",
+        "CREATE FUNCTION public.fn_climate_action_effectiveness",
+        "CREATE VIEW public.v_climate_action_effectiveness_5m",
+        "CREATE VIEW public.v_climate_action_effectiveness_15m",
+        "CREATE VIEW public.v_climate_action_daily_scorecard",
+    ):
+        assert token in schema
+
+    assert "CLIMATE_ACTION_LOG_ENTITIES" in ingestor
+    assert "CLIMATE_ACTION_LOG_INTERVAL = 60" in ingestor
+    assert "async def write_climate_action_log" in ingestor
+    assert "-> bool" in ingestor[ingestor.index("async def write_climate_action_log") :].splitlines()[0]
+    assert "last_climate_action_log = 0.0" in ingestor
+    assert "if now - last_climate_action_log >= CLIMATE_ACTION_LOG_INTERVAL" in ingestor
+    assert "changed_entities & CLIMATE_ACTION_LOG_ENTITIES" in ingestor
+    assert "last_climate_action_log != now" in ingestor
+    assert "last_climate_action_log = now" in ingestor
+    assert "'latest_climate_ts', lc.ts" in ingestor
+    assert "'latest_climate_age_s'" in ingestor
+    assert "'temp_avg_present', lc.temp_avg IS NOT NULL" in ingestor
+    assert "'vpd_avg_present', lc.vpd_avg IS NOT NULL" in ingestor
+    assert "'band_context_complete'" in ingestor
+    assert "ClimateActionLogRow(" in ingestor
+
+
+def test_health_checks_require_climate_action_log_freshness():
+    api = (REPO_ROOT / "api" / "main.py").read_text()
+    api_schema = (REPO_ROOT / "verdify_schemas" / "api.py").read_text()
+    health = (REPO_ROOT / "scripts" / "health-check.sh").read_text()
+    liveness = (REPO_ROOT / "scripts" / "liveness-check.sh").read_text()
+
+    assert "climate_action_log_age_seconds" in api
+    assert "CLIMATE_ACTION_PROOF_MISSING_SQL" in api
+    assert "climate_action_log_proof_missing" in api
+    assert "FROM climate_action_log" in api
+    assert "service_climate_action_log" in api
+    assert "if age is None or age > 300:" in api
+    assert "isinstance(climate_age, (int, float))" in api
+    assert "isinstance(action_age, (int, float))" in api
+    assert "SELECT extract(epoch FROM now() - ts)::int AS age_s" in api
+    assert '_coerce_jsonb(dict(latest_action), "relay_truth", "sensor_status")' in api
+    assert "controller_climate_action=latest_action_data" in api
+    assert "controller_wet_assist_block_reason=latest_action_data" in api
+    assert "controller_fog_block_reason=latest_action_data" in api
+    assert "controller_relay_truth=latest_action_data" in api
+    for field in (
+        "climate_action_log_age_s",
+        "controller_climate_action",
+        "controller_priority_axis",
+        "controller_temp_target_delta_f",
+        "controller_vpd_target_delta_kpa",
+        "controller_temp_band_error_f",
+        "controller_vpd_band_error_kpa",
+        "controller_moisture_assist_state",
+        "controller_wet_assist_allowed",
+        "controller_wet_assist_block_reason",
+        "controller_fog_allowed",
+        "controller_fog_block_reason",
+        "controller_relay_truth",
+        "controller_sensor_status",
+    ):
+        assert field in api_schema
+    assert 'checks["service_climate_action_log"] = (' in api
+    assert "and action_age < 300 and not action_proof_missing else" in api
+    assert api.count('"check_name": "climate_action_log_freshness"') == 2
+    assert api.count('"controller decision/action snapshot age seconds"') == 2
+    assert api.count('"check_name": "climate_action_log_proof_complete"') == 2
+    assert api.count('"latest controller proof row has graphable target deltas and relay truth"') == 2
+    assert api.count("missing fields: {climate_action_proof_missing}") == 2
+    assert 'if not any(r["check_name"] == "climate_action_log_freshness" for r in check_rows)' in api
+    assert 'if not any(r["check_name"] == "climate_action_log_proof_complete" for r in check_rows)' in api
+
+    assert "FROM climate_action_log" in health
+    assert "Climate action log:" in health
+    assert "<300s" in health
+    assert "stale: ${aa:-no data}s" in health
+    assert "Climate action proof complete" in health
+    assert "incomplete: $ap" in health
+    assert 'ap="query_failed"' in health
+    assert "API_HEALTH_URL" in health
+    assert "VERDIFY_DB_STATEMENT_TIMEOUT_MS" in health
+    assert "statement_timeout=${DB_STATEMENT_TIMEOUT_MS}" in health
+    assert "API /health controller proof" in health
+    assert "API /health lacks climate_action_log_proof_missing; restart/deploy verdify-api" in health
+    assert "service_climate_action_log" in health
+
+    assert "ACTION_AGE=" in liveness
+    assert "VERDIFY_DB_STATEMENT_TIMEOUT_MS" in liveness
+    assert "statement_timeout=${DB_STATEMENT_TIMEOUT_MS}" in liveness
+    assert "ACTION_PROOF_MISSING=" in liveness
+    assert "FROM climate_action_log" in liveness
+    assert 'check "climate-action-log"' in liveness
+    assert 'check "climate-action-proof"' in liveness
+    assert "stale ${ACTION_AGE:-null}s" in liveness
+    assert "incomplete ${ACTION_PROOF_MISSING:-missing}" in liveness
+    assert 'ACTION_PROOF_MISSING="query_failed"' in liveness
+    assert 'exit "$FAIL"' in liveness
+
+    preflight = (REPO_ROOT / "scripts" / "firmware-deploy-preflight.sh").read_text()
+    assert "VERDIFY_DB_STATEMENT_TIMEOUT_MS" in preflight
+    assert "statement_timeout=${DB_STATEMENT_TIMEOUT_MS}" in preflight
+
+
+def test_climate_action_log_treats_served_wet_assist_as_allowed():
+    original_system = dict(ingestor.state.system)
+    try:
+        ingestor.state.system["vent_mist_assist_status"] = "blocked:pulse_gap"
+
+        assert ingestor._climate_wet_assist_status("VENT_COOL_MIST_ASSIST", "served", False) == (True, None)
+        assert ingestor._climate_wet_assist_status("VENT_COOL_MIST_ASSIST", "pulse_gap", False) == (True, None)
+
+        ingestor.state.system["vent_mist_assist_status"] = "blocked:dew_margin"
+        assert ingestor._climate_wet_assist_status("VENT_COOL_MIST_ASSIST", "pulse_gap", False) == (
+            False,
+            "dew_margin",
+        )
+    finally:
+        ingestor.state.system.clear()
+        ingestor.state.system.update(original_system)
+
+
+def test_climate_action_log_prefers_final_fog_block_reason():
+    assert ingestor._climate_fog_assist_status("VENT_COOL_FOG_ASSIST", "none", "resource_budget") == (
+        False,
+        "resource_budget",
+    )
+    assert ingestor._climate_fog_assist_status("VENT_COOL_FOG_ASSIST", "none", "vent_interlock") == (
+        False,
+        "vent_interlock",
+    )
+    assert ingestor._climate_fog_assist_status("VENT_COOL_FOG_ASSIST", "time_window", "none") == (
+        False,
+        "time_window",
+    )
+    assert ingestor._climate_fog_assist_status("VENT_COOL_FOG_ASSIST", "none", "served") == (
+        True,
+        "served",
+    )
+    assert ingestor._climate_fog_assist_status("VENT_COOL", "none", "served") == (False, "served")
+
+
+def test_climate_telemetry_uses_actual_mister_pulse_state():
+    controls = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
+    start = controls.index("/*** ClimateIntent controller decision")
+    end = controls.index("/*** OBS-1e", start)
+    block = controls[start:end]
+
+    assert "const bool selected_wet_action" in block
+    assert "const bool mister_relay_on" in block
+    assert 'effective_moisture_state = "pulse_on"' in block
+    assert 'effective_moisture_state = "pulse_gap"' in block
+    assert 'effective_moisture_state = "inactive"' in block
+    assert "effective_moisture_zone = climate_zone_name(id(mister_pulse_zone))" in block
+    assert "effective_next_mist_s = float(id(mister_pulse_timer_ms)) / 1000.0f" in block
+    assert "id(gh_climate_moisture_assist_state).publish_state(effective_moisture_state)" in block
+    assert "id(gh_climate_moisture_zone).publish_state(effective_moisture_zone)" in block
+
+
+def test_climate_decision_surface_excludes_fert_and_drip_relays():
+    types_src = (REPO_ROOT / "firmware" / "lib" / "greenhouse_types.h").read_text()
+    relay_block = types_src[
+        types_src.index("struct RelayOutputs") : types_src.index(
+            "// ── ClimateIntent candidate-action controller contract"
+        )
+    ]
+    for climate_relay in ("heat1", "heat2", "fan1", "fan2", "fog", "vent"):
+        assert f"bool {climate_relay};" in relay_block
+    for forbidden in ("fert", "drip", "fertilizer", "irrig"):
+        assert forbidden not in relay_block.lower()
+
+    logic_src = (REPO_ROOT / "firmware" / "lib" / "greenhouse_logic.h").read_text()
+    decision_block = logic_src[
+        logic_src.index("inline ClimateActionDecision evaluate_climate_decision") : logic_src.index(
+            "inline Mode climate_action_to_mode"
+        )
+    ]
+    for forbidden in ("fert", "drip", "fertilizer", "irrig"):
+        assert forbidden not in decision_block.lower()
+
+
+def test_climate_wet_assist_is_separate_from_crop_direct_wet_windows():
+    controls = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
+
+    assert "auto crop_direct_wet_allowed" in controls
+    assert "auto climate_wet_assist_allowed" in controls
+    assert "const bool south_wet_allowed = south_crop_wet_allowed || climate_wet_assist_allowed(1);" in controls
+    assert "const bool west_wet_allowed = west_crop_wet_allowed || climate_wet_assist_allowed(2);" in controls
+    assert "const bool center_wet_allowed = center_crop_wet_allowed || climate_wet_assist_allowed(3);" in controls
+    assert "if(zone == 4) return false;  // climate control never drives wall drips." in controls
+
+    crop_block = controls[
+        controls.index("auto crop_direct_wet_allowed") : controls.index("auto climate_wet_assist_allowed")
+    ]
+    assert "direct_wet_stress_override" not in crop_block
+    assert "direct_wet_window_open" in crop_block
+
+    climate_block = controls[
+        controls.index("auto climate_wet_assist_allowed") : controls.index("const bool south_crop_wet_allowed")
+    ]
+    assert "direct_wet_window_open" not in climate_block
+    assert "direct_wet_min_temp_f" not in climate_block
+    assert "direct_wet_gate_enabled" not in climate_block
+    assert "return climate_wet_assist_safety_ok;" in climate_block
+    assert "climate_wet_assist_safety_ok" in climate_block
+
+    block_reason = controls[
+        controls.index("} else if(!any_mister_wet_allowed)") : controls.index("} else if(irrigation_block)")
+    ]
+    assert "if(climate_wet_assist_demand)" in block_reason
+    assert 'snprintf(moisture_block_reason, sizeof(moisture_block_reason), "dew_margin")' in block_reason
+    assert 'snprintf(moisture_block_reason, sizeof(moisture_block_reason), "time_window")' in block_reason
+    assert block_reason.index("if(climate_wet_assist_demand)") < block_reason.index("direct_wet_min_temp_f")
+
+    watchdog = controls[
+        controls.index("auto direct_wet_relay_watchdog") : controls.index("direct_wet_relay_watchdog();")
+    ]
+    for gate in (
+        "if(!south_wet_allowed)",
+        "if(!south_crop_wet_allowed)",
+        "if(!west_wet_allowed)",
+        "if(!west_crop_wet_allowed)",
+        "if(!center_wet_allowed)",
+        "if(!center_crop_wet_allowed)",
+    ):
+        assert gate in watchdog
+
+
 def test_mcp_set_tunable_resolves_trigger_ledger_with_oneshot_plan():
     server = (Path(iris_planner.__file__).resolve().parent.parent / "mcp" / "server.py").read_text()
     start = server.index("async def set_tunable")
@@ -1871,32 +2320,43 @@ def test_required_plan_alert_ignores_validation_ack_only_rows():
     import tasks
 
     src = Path(tasks.__file__).read_text()
-    start = src.index("WITH latest_required AS")
+    start = src.index("# 7b. Required SUNRISE/SUNSET/MIDNIGHT plans")
     end = src.index("if required_misses:", start)
     body = src[start:end]
     assert "event_label NOT ILIKE 'validation%ack-only%'" in body
+    assert "unrecovered_required_misses" in body
 
 
 def test_fert_master_valve_is_wired_and_interlocked_with_fert_relays():
     hardware = Path("firmware/greenhouse/hardware.yaml").read_text()
     controls = Path("firmware/greenhouse/controls.yaml").read_text()
+    globals_yaml = Path("firmware/greenhouse/globals.yaml").read_text()
     entity_map = Path("ingestor/entity_map.py").read_text()
 
     assert "id: fertilizer_master_valve" in hardware
     assert 'name: "Valve • Fert. Master"' in hardware
+    assert "id: fert_controller_actuating" in globals_yaml
+    assert "Relay-level guards use" in globals_yaml
     fert_master_block = hardware[hardware.index("id: fertilizer_master_valve") :]
     assert "pcf8574: pcf_out_2" in fert_master_block
     assert "number: 1" in fert_master_block
+    assert "Blocked non-controller fert master ON" in fert_master_block
     assert "FERT MASTER manual-off corrected while fert relay active" in fert_master_block
     assert '"valve___fert__master": "fert_master_valve"' in entity_map
 
-    for relay_name in (
-        "west fert-mister",
-        "south fert-mister",
-        "center fert-drip",
-        "wall fert-drip",
+    for relay_id, relay_name in (
+        ("west_wall_mister_fertilized", "west fert-mister"),
+        ("south_wall_mister_fertilized", "south fert-mister"),
+        ("center_drips_fertilized", "center fert-drip"),
+        ("wall_drips_fertilized", "wall fert-drip"),
     ):
-        assert f"FERT MASTER opened by {relay_name} relay" in hardware
+        relay_start = hardware.index(f"id: {relay_id}")
+        relay_end = hardware.find("\n  - platform: gpio", relay_start + 1)
+        relay_block = hardware[relay_start : relay_end if relay_end != -1 else len(hardware)]
+        assert "if(!id(fert_controller_actuating))" in relay_block
+        assert f"Blocked non-controller {relay_name} relay ON" in relay_block
+        assert f"FERT MASTER opened by {relay_name} relay" in relay_block
+        assert relay_block.index("if(!id(fert_controller_actuating))") < relay_block.index("FERT MASTER opened")
 
     assert "auto fert_relay_active = [&]() -> bool" in controls
     for relay_id in (
@@ -1907,17 +2367,120 @@ def test_fert_master_valve_is_wired_and_interlocked_with_fert_relays():
     ):
         assert f"id({relay_id}).state" in controls
 
-    master_on = "if(is_fert && !id(fertilizer_master_valve).state) id(fertilizer_master_valve).turn_on();"
-    assert master_on in controls
-    assert controls.index(master_on) < controls.index("case 2: id(wall_drips_fertilized).turn_on();")
-    assert controls.index(master_on) < controls.index("case 4: id(center_drips_fertilized).turn_on();")
-    assert controls.index(master_on) < controls.index("case 7: id(south_wall_mister_fertilized).turn_on();")
-    assert controls.index(master_on) < controls.index("case 8: id(west_wall_mister_fertilized).turn_on();")
+    job_start = controls[
+        controls.index("// Open the fert master before any fertilized drip/mister relay.") : controls.index(
+            'sync_fert_master("job-start")'
+        )
+    ]
+    assert "if(is_fert) {" in job_start
+    assert "id(fert_controller_actuating) = true;" in job_start
+    assert "if(!id(fertilizer_master_valve).state) id(fertilizer_master_valve).turn_on();" in job_start
+    assert "if(is_fert) id(fert_controller_actuating) = false;" in job_start
+    for fert_turn_on in (
+        "case 2: id(wall_drips_fertilized).turn_on();",
+        "case 4: id(center_drips_fertilized).turn_on();",
+        "case 7: id(south_wall_mister_fertilized).turn_on();",
+        "case 8: id(west_wall_mister_fertilized).turn_on();",
+    ):
+        assert fert_turn_on in job_start
+        assert job_start.index("id(fert_controller_actuating) = true;") < job_start.index(fert_turn_on)
+        assert job_start.index(fert_turn_on) < job_start.index("id(fert_controller_actuating) = false;")
 
     assert 'sync_fert_master("watchdog")' in controls
     assert 'sync_fert_master("job-start")' in controls
     assert 'sync_fert_master("fert-done-before-flush")' in controls
     assert 'sync_fert_master("flush-done")' in controls
+
+
+def test_clean_water_relays_reject_direct_on_and_keep_controller_paths():
+    hardware = Path("firmware/greenhouse/hardware.yaml").read_text()
+    controls = Path("firmware/greenhouse/controls.yaml").read_text()
+    globals_yaml = Path("firmware/greenhouse/globals.yaml").read_text()
+    tunables_yaml = Path("firmware/greenhouse/tunables.yaml").read_text()
+
+    assert "id: water_controller_actuating" in globals_yaml
+    assert "reject direct HA/manual clean-water actuation" in globals_yaml
+
+    for relay_id, relay_name in (
+        ("west_wall_mister", "west clean-mister"),
+        ("south_wall_mister", "south clean-mister"),
+        ("wall_drips", "wall clean-drip"),
+        ("center_mister", "center clean-mister"),
+        ("center_drips", "center clean-drip"),
+    ):
+        relay_start = hardware.index(f"\n    id: {relay_id}\n")
+        relay_end = hardware.find("\n  - platform: gpio", relay_start + 1)
+        relay_block = hardware[relay_start : relay_end if relay_end != -1 else len(hardware)]
+        assert "if(!id(water_controller_actuating))" in relay_block
+        assert f"id({relay_id}).turn_off();" in relay_block
+        assert f"Blocked non-controller {relay_name} relay ON" in relay_block
+
+    climate_zone_start = controls.index("auto turn_on_zone =")
+    climate_zone_end = controls.index("auto turn_off_all_misters", climate_zone_start)
+    climate_zone_block = controls[climate_zone_start:climate_zone_end]
+    assert "id(water_controller_actuating) = true;" in climate_zone_block
+    assert "id(water_controller_actuating) = false;" in climate_zone_block
+    for relay_turn_on in (
+        "id(south_wall_mister).turn_on();",
+        "id(west_wall_mister).turn_on();",
+        "id(center_mister).turn_on();",
+    ):
+        assert relay_turn_on in climate_zone_block
+        assert climate_zone_block.index("id(water_controller_actuating) = true;") < climate_zone_block.index(
+            relay_turn_on
+        )
+        assert climate_zone_block.index(relay_turn_on) < climate_zone_block.index(
+            "id(water_controller_actuating) = false;"
+        )
+
+    job_start = controls[
+        controls.index("// Open the fert master before any fertilized drip/mister relay.") : controls.index(
+            'sync_fert_master("job-start")'
+        )
+    ]
+    assert "id(water_controller_actuating) = true;" in job_start
+    assert "id(water_controller_actuating) = false;" in job_start
+    for relay_turn_on in (
+        "case 1: id(wall_drips).turn_on();",
+        "case 3: id(center_drips).turn_on();",
+    ):
+        assert relay_turn_on in job_start
+        assert job_start.index("id(water_controller_actuating) = true;") < job_start.index(relay_turn_on)
+        assert job_start.index(relay_turn_on) < job_start.index("id(water_controller_actuating) = false;")
+
+    flush_start = controls.index("// Flush is a separate rising edge on the matching clean relay")
+    flush_end = controls.index("const char* flush_name", flush_start)
+    flush_block = controls[flush_start:flush_end]
+    assert "id(water_controller_actuating) = true;" in flush_block
+    assert "id(water_controller_actuating) = false;" in flush_block
+    for relay_turn_on in (
+        "id(south_wall_mister).turn_on();",
+        "id(west_wall_mister).turn_on();",
+        "id(center_drips).turn_on();",
+        "id(wall_drips).turn_on();",
+    ):
+        assert relay_turn_on in flush_block
+        assert flush_block.index("id(water_controller_actuating) = true;") < flush_block.index(relay_turn_on)
+        assert flush_block.index(relay_turn_on) < flush_block.index("id(water_controller_actuating) = false;")
+
+    manual_buttons = tunables_yaml[tunables_yaml.index("# ─── IRRIGATION MANUAL TRIGGER BUTTONS") :]
+    assert ".turn_on()" not in manual_buttons
+    assert "id(irrig_queue) |=" in manual_buttons
+
+
+def test_visible_gpio_relays_are_internal_or_controller_guarded():
+    hardware = Path("firmware/greenhouse/hardware.yaml").read_text()
+
+    for raw_block in hardware.split("\n  - platform: gpio")[1:]:
+        block = "\n  - platform: gpio" + raw_block
+        id_line = next((line.strip() for line in block.splitlines() if line.strip().startswith("id: ")), "")
+        if "internal: true" in block:
+            continue
+        if "name: " not in block:
+            continue
+        assert "on_turn_on:" in block, f"{id_line} is visible but has no turn-on guard"
+        assert "Blocked non-controller" in block, f"{id_line} is visible but does not block direct ON"
+        assert ".turn_off();" in block, f"{id_line} guard does not force relay OFF"
 
 
 def test_irrigation_schedule_persists_and_is_readbacked():
@@ -1984,8 +2547,222 @@ def test_irrigation_scheduler_serializes_same_minute_zone_starts():
     ):
         assert needle in controls
     assert controls.index("id(center_mister).turn_off();") < controls.index("switch(job){")
-    assert "bool irrigation_block = id(irrig_state) > 0;" in controls
+    assert "const bool irrigation_water_conflict = id(irrig_state) > 0;" in controls
+    assert "bool irrigation_block = irrigation_water_conflict;" in controls
     assert "|| irrigation_block" in controls
+
+
+def test_mister_budget_emergency_uses_house_average_vpd():
+    controls = Path("firmware/greenhouse/controls.yaml").read_text()
+    start = controls.index("// FW-9: VPD emergency override")
+    end = controls.index("static bool leak_water_interlock_prev", start)
+    block = controls[start:end]
+
+    assert "float budget_vpd_max = VPD;" in block
+    assert "merge_budget_vpd(id(vpd_south).state);" in block
+    assert "merge_budget_vpd(id(vpd_west).state);" in block
+    assert "merge_budget_vpd(id(vpd_east).state);" in block
+    assert "budget_vpd_max > id(safety_vpd_max_kpa)" in block
+    assert "const bool climate_water_budget_block =" in block
+    assert "!climate_vpd_emergency" in block
+    assert "bool budget_block = climate_water_budget_block;" in controls
+
+
+def test_leak_detected_locks_water_actuators():
+    greenhouse_yaml = Path("firmware/greenhouse.yaml").read_text()
+    controls = Path("firmware/greenhouse/controls.yaml").read_text()
+
+    assert "id: bs_leak_detected" in greenhouse_yaml
+    assert "const bool leak_block = id(bs_leak_detected).state;" in controls
+    assert "Leak detected: forcing fog, misters, and irrigation off" in controls
+    relay_apply = controls[controls.index("/**************** 11") : controls.index("/**************** 12")]
+    assert "set_relay(\n              R[4]," in relay_apply
+    for guard in (
+        "sensor_fault_relay_lock",
+        "leak_block",
+        "occupancy_moisture_block",
+        "irrigation_water_conflict",
+        "climate_water_budget_block",
+    ):
+        assert guard in relay_apply
+
+    mister_start = controls.index("bool mister_blocked =")
+    mister_end = controls.index("if(mister_blocked && id(mister_state) > 0)", mister_start)
+    mister_block = controls[mister_start:mister_end]
+    assert "leak_block" in mister_block
+    assert '"leak_detected"' in mister_block
+
+    fog_start = controls.index("char fog_block_reason")
+    fog_end = controls.index("static char last_fog_block_reason", fog_start)
+    fog_block = controls[fog_start:fog_end]
+    assert 'snprintf(fog_block_reason, sizeof(fog_block_reason), "leak_detected")' in fog_block
+    assert 'snprintf(fog_block_reason, sizeof(fog_block_reason), "occupancy")' in fog_block
+    assert fog_block.index("leak_block") < fog_block.index("id(fog_rly)->state")
+
+    irrigation_start = controls.index("auto turn_off_all_irrigation")
+    irrigation_end = controls.index("// \u2500\u2500 Schedule check", irrigation_start)
+    irrigation_block = controls[irrigation_start:irrigation_end]
+    assert "id(center_mister).turn_off();" in irrigation_block
+    assert "if(leak_block)" in irrigation_block
+    assert "id(irrig_queue) = 0;" in irrigation_block
+    assert 'sync_fert_master("leak_lock")' in irrigation_block
+    assert "STOPPED by leak_detected" in irrigation_block
+
+
+def test_occupancy_inhibit_is_final_fog_force_off():
+    controls = Path("firmware/greenhouse/controls.yaml").read_text()
+
+    manual_fog = (
+        "if(manual_fog_requested && !sensor_fault_relay_lock && manual_fog_safety_block[0] == '\\0'){ willFog = true; }"
+    )
+    occupancy_gate = "const bool occupancy_moisture_block = id(occupancy_inhibit_enabled) && id(greenhouse_occupied);"
+    assert manual_fog in controls
+    assert occupancy_gate in controls
+    assert controls.index(manual_fog) < controls.index(occupancy_gate)
+
+    final_gate_start = controls.index(occupancy_gate)
+    final_gate_end = controls.index("/**************** 10", final_gate_start)
+    final_gate = controls[final_gate_start:final_gate_end]
+    assert (
+        "if (!controller_time_valid || leak_block || occupancy_moisture_block || irrigation_water_conflict || climate_water_budget_block)"
+        in final_gate
+    )
+    assert "Occupancy inhibit: forcing fog and climate misters off" in final_gate
+
+    relay_apply = controls[controls.index("/**************** 11") : controls.index("/**************** 12")]
+    assert "irrigation_water_conflict" in relay_apply
+    assert "climate_water_budget_block" in relay_apply
+    assert "bool occupancy_blocks = occupancy_moisture_block;" in controls
+
+    fog_start = controls.index("char fog_block_reason")
+    fog_end = controls.index("static char last_fog_block_reason", fog_start)
+    fog_block = controls[fog_start:fog_end]
+    assert fog_block.index("occupancy_moisture_block") < fog_block.index("id(fog_rly)->state")
+
+
+def test_manual_fog_cannot_bypass_final_fog_safety_rails():
+    controls = Path("firmware/greenhouse/controls.yaml").read_text()
+
+    manual_start = controls.index("auto fog_safety_block_reason")
+    manual_end = controls.index("/**************** 11a", manual_start)
+    manual_block = controls[manual_start:manual_end]
+
+    assert 'return "dew_margin";' in manual_block
+    assert 'return "time_window";' in manual_block
+    assert 'return "rh_ceiling";' in manual_block
+    assert 'return "temp_low";' in manual_block
+    assert "const bool manual_fog_requested = id(manual_fog_active);" in manual_block
+    assert "const char* manual_fog_safety_block = fog_safety_block_reason();" in manual_block
+    assert (
+        "if(manual_fog_requested && !sensor_fault_relay_lock && manual_fog_safety_block[0] == '\\0'){ willFog = true; }"
+        in manual_block
+    )
+
+    fog_start = controls.index("char fog_block_reason")
+    fog_end = controls.index("static char last_fog_block_reason", fog_start)
+    fog_block = controls[fog_start:fog_end]
+    assert "manual_fog_requested && manual_fog_safety_block[0] != '\\0'" in fog_block
+    assert 'snprintf(fog_block_reason, sizeof(fog_block_reason), "%s", manual_fog_safety_block)' in fog_block
+    assert fog_block.index("manual_fog_requested") < fog_block.index("id(fog_rly)->state")
+
+
+def test_manual_fan_cannot_open_vent_during_safety_heat():
+    controls = Path("firmware/greenhouse/controls.yaml").read_text()
+
+    manual_start = controls.index("// Manual overrides")
+    manual_end = controls.index("if(id(vent_lock_active)", manual_start)
+    manual_block = controls[manual_start:manual_end]
+
+    assert "below the sensor-fault, safety-heat, and fog-safety rails" in manual_block
+    assert "if(id(manual_fan_active) && !sensor_fault_relay_lock)" in manual_block
+    assert "willFan1 = true;" in manual_block
+    assert "willFan2 = true;" in manual_block
+    assert "if(mode != SAFETY_HEAT){ willVent = true; }" in manual_block
+    assert "willVent = true; }" not in manual_block.replace("if(mode != SAFETY_HEAT){ willVent = true; }", "")
+
+
+def test_manual_climate_buttons_are_flag_only_controller_path():
+    greenhouse = Path("firmware/greenhouse.yaml").read_text()
+
+    dashboard_start = greenhouse.index("# ───────────────────── DASHBOARD BUTTONS")
+    dashboard_end = greenhouse.index("# END OF FILE", dashboard_start)
+    dashboard = greenhouse[dashboard_start:dashboard_end]
+
+    assert "control loop remains the only relay actuator path" in dashboard
+    assert "id(manual_fan_active) = true;" in dashboard
+    assert "id(manual_fog_active) = true;" in dashboard
+    assert "id(vent_lock_active) = true;" in dashboard
+
+    for forbidden in (
+        "switch.turn_off: fan1_rly",
+        "switch.turn_off: fan2_rly",
+        "switch.turn_off: fog_rly",
+        "switch.turn_off: vent_rly",
+        "id(fan1_rly).turn_on()",
+        "id(fan2_rly).turn_on()",
+        "id(fog_rly).turn_on()",
+        "id(vent_rly).turn_off()",
+        "id(fan1_rly).turn_off()",
+        "id(fan2_rly).turn_off()",
+        "id(fog_rly).turn_off()",
+    ):
+        assert forbidden not in dashboard
+
+
+def test_fog_respects_conflict_and_budget_before_reporting_served():
+    controls = Path("firmware/greenhouse/controls.yaml").read_text()
+
+    final_gate_start = controls.index("const bool climate_water_budget_block =")
+    final_gate_end = controls.index("/**************** 10", final_gate_start)
+    final_gate = controls[final_gate_start:final_gate_end]
+    assert (
+        "if (!controller_time_valid || leak_block || occupancy_moisture_block || irrigation_water_conflict || climate_water_budget_block)"
+        in final_gate
+    )
+
+    relay_apply = controls[controls.index("/**************** 11") : controls.index("/**************** 12")]
+    assert "irrigation_water_conflict" in relay_apply
+    assert "climate_water_budget_block" in relay_apply
+
+    fog_start = controls.index("char fog_block_reason")
+    fog_end = controls.index("static char last_fog_block_reason", fog_start)
+    fog_block = controls[fog_start:fog_end]
+    assert 'snprintf(fog_block_reason, sizeof(fog_block_reason), "irrigation")' in fog_block
+    assert 'snprintf(fog_block_reason, sizeof(fog_block_reason), "resource_budget")' in fog_block
+    assert fog_block.index("irrigation_water_conflict") < fog_block.index("id(fog_rly)->state")
+    assert fog_block.index("climate_water_budget_block") < fog_block.index("id(fog_rly)->state")
+
+    water_tracking_start = controls.index("// Water tracking (flow meter during climate wet assist)")
+    water_tracking_end = controls.index("}", controls.index("id(mister_water_today) +=", water_tracking_start)) + 1
+    water_tracking = controls[water_tracking_start:water_tracking_end]
+    assert (
+        "const bool climate_mister_flow_active = id(mister_pulse_zone) > 0 && id(mister_state) > 0;" in water_tracking
+    )
+    assert "const bool climate_fog_flow_active = id(fog_rly)->state;" in water_tracking
+    assert "if(climate_mister_flow_active || climate_fog_flow_active)" in water_tracking
+
+
+def test_sensor_fault_is_final_relay_lock_above_manual_overrides():
+    controls = Path("firmware/greenhouse/controls.yaml").read_text()
+
+    assert "const bool sensor_fault_relay_lock = mode == SENSOR_FAULT;" in controls
+    assert "if(id(manual_fan_active) && !sensor_fault_relay_lock)" in controls
+    assert "if(manual_fog_requested && !sensor_fault_relay_lock && manual_fog_safety_block[0] == '\\0')" in controls
+    assert "const bool fan_requires_vent = !sensor_fault_relay_lock && mode != SAFETY_HEAT" in controls
+    assert "const bool force_heat_off = heat_air_exchange_interlock_active || sensor_fault_relay_lock;" in controls
+
+    lock_start = controls.index("if(sensor_fault_relay_lock) {")
+    lock_end = controls.index("/**************** 11a", lock_start)
+    lock_block = controls[lock_start:lock_end]
+    for relay in ("willHeat1", "willHeat2", "willFan1", "willFan2", "willFog", "willVent"):
+        assert f"{relay} = false;" in lock_block
+
+    relay_apply = controls[controls.index("/**************** 11") : controls.index("/**************** 12")]
+    assert "set_relay(R[5], willVent, fan_requires_vent, sensor_fault_relay_lock);" in relay_apply
+    assert "set_relay(R[2], willFan1, false, sensor_fault_relay_lock);" in relay_apply
+    assert "set_relay(R[3], willFan2, false, sensor_fault_relay_lock);" in relay_apply
+    assert "irrigation_water_conflict" in relay_apply
+    assert "climate_water_budget_block" in relay_apply
 
 
 def test_irrigation_schedule_is_heap_recovery_priority():
