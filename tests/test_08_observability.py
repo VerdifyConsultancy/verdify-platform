@@ -596,6 +596,11 @@ class TestContractDriftGuardrails:
         assert "Climate action log table missing" in preflight
         assert "Climate action log stale or missing" in preflight
         assert "fresh controller-decision proof" in preflight
+        assert "Climate action log proof incomplete" in preflight
+        assert "temp_target_delta_f" in preflight
+        assert "vpd_target_delta_kpa" in preflight
+        assert "relay_truth" in preflight
+        assert "graphable target deltas and relay truth" in preflight
         assert "FIRMWARE_OTA_FREEZE_OVERRIDE_REASON" in preflight
         assert 'record_override "48-hour bake"' in preflight
         assert 'record_override "Weekly OTA limit"' in preflight
