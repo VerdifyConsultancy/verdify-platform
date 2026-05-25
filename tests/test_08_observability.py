@@ -568,6 +568,37 @@ class TestContractDriftGuardrails:
         assert 'failures.append("open_critical_high_alerts")' in monitor_source
         assert 'failures.append("open_alerts")' not in monitor_source
 
+    def test_alert_monitor_tracks_climate_action_proof_freshness(self):
+        tasks_source = (REPO_ROOT / "ingestor" / "tasks.py").read_text()
+        alerts_source = (REPO_ROOT / "verdify_schemas" / "alerts.py").read_text()
+        assert '"climate_action_proof_stale"' in alerts_source
+        assert "class ClimateActionProofStaleDetails" in alerts_source
+        assert "class ClimateActionProofStaleAlert" in alerts_source
+        assert '"alert_type": "climate_action_proof_stale"' in tasks_source
+        assert '"sensor_id": "system.climate_action_log"' in tasks_source
+        assert "proof_missing" in tasks_source
+        assert 'threshold_value": 300.0' in tasks_source
+        assert "to_regclass('public.climate_action_log')" in tasks_source
+
+        from verdify_schemas import AlertEnvelope
+
+        AlertEnvelope.model_validate(
+            {
+                "alert_type": "climate_action_proof_stale",
+                "severity": "warning",
+                "category": "system",
+                "sensor_id": "system.climate_action_log",
+                "message": "Climate action proof is stale 360s",
+                "details": {
+                    "age_s": 360,
+                    "latest_ts": "2026-05-25T16:00:00+00:00",
+                    "proof_missing": None,
+                },
+                "metric_value": 360.0,
+                "threshold_value": 300.0,
+            }
+        )
+
     def test_public_home_metrics_and_site_publish_have_traffic_backpressure_guards(self):
         api_source = (REPO_ROOT / "api" / "main.py").read_text()
         rebuild_source = (REPO_ROOT / "scripts" / "rebuild-site.sh").read_text()

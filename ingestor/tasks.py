@@ -1534,6 +1534,83 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                     }
                 )
 
+        # 6b. Climate action proof stale/incomplete. This is the controller
+        # graph/OTA-readiness surface: fresh climate rows alone do not prove
+        # what action the authority controller selected or why.
+        action_log_exists = await conn.fetchval("SELECT to_regclass('public.climate_action_log') IS NOT NULL")
+        if not action_log_exists:
+            action_proof = {"age_s": None, "latest_ts": None, "proof_missing": "table_missing"}
+        else:
+            action_proof = await conn.fetchrow(
+                """
+                WITH latest AS (
+                    SELECT *
+                      FROM climate_action_log
+                     ORDER BY ts DESC
+                     LIMIT 1
+                )
+                SELECT
+                    (SELECT EXTRACT(EPOCH FROM now() - ts)::int FROM latest) AS age_s,
+                    (SELECT ts FROM latest) AS latest_ts,
+                    COALESCE(
+                        (
+                            SELECT concat_ws(',',
+                                CASE WHEN climate_action IS NULL OR climate_action = '' THEN 'climate_action' END,
+                                CASE WHEN priority_axis IS NULL OR priority_axis = '' THEN 'priority_axis' END,
+                                CASE WHEN climate_intent_version IS NULL OR climate_intent_version = ''
+                                     THEN 'climate_intent_version' END,
+                                CASE WHEN temp_low_f IS NULL THEN 'temp_low_f' END,
+                                CASE WHEN temp_target_f IS NULL THEN 'temp_target_f' END,
+                                CASE WHEN temp_high_f IS NULL THEN 'temp_high_f' END,
+                                CASE WHEN vpd_low_kpa IS NULL THEN 'vpd_low_kpa' END,
+                                CASE WHEN vpd_target_kpa IS NULL THEN 'vpd_target_kpa' END,
+                                CASE WHEN vpd_high_kpa IS NULL THEN 'vpd_high_kpa' END,
+                                CASE WHEN temp_target_delta_f IS NULL THEN 'temp_target_delta_f' END,
+                                CASE WHEN vpd_target_delta_kpa IS NULL THEN 'vpd_target_delta_kpa' END,
+                                CASE WHEN temp_band_error_f IS NULL THEN 'temp_band_error_f' END,
+                                CASE WHEN vpd_band_error_kpa IS NULL THEN 'vpd_band_error_kpa' END,
+                                CASE
+                                    WHEN relay_truth IS NULL
+                                      OR jsonb_typeof(relay_truth) <> 'object'
+                                      OR relay_truth = '{}'::jsonb
+                                    THEN 'relay_truth'
+                                END
+                            )
+                            FROM latest
+                        ),
+                        'missing'
+                    ) AS proof_missing
+                """
+            )
+        proof_age_s = action_proof["age_s"] if action_proof else None
+        proof_missing = action_proof["proof_missing"] if action_proof else "missing"
+        latest_ts = action_proof["latest_ts"] if action_proof else None
+        if proof_age_s is None or proof_age_s > 300 or proof_missing:
+            reason_parts = []
+            if proof_age_s is None:
+                reason_parts.append("missing")
+            elif proof_age_s > 300:
+                reason_parts.append(f"stale {proof_age_s}s")
+            if proof_missing:
+                reason_parts.append(f"incomplete: {proof_missing}")
+            alerts.append(
+                {
+                    "alert_type": "climate_action_proof_stale",
+                    "severity": "warning",
+                    "category": "system",
+                    "sensor_id": "system.climate_action_log",
+                    "zone": None,
+                    "message": "Climate action proof is " + "; ".join(reason_parts),
+                    "details": {
+                        "age_s": proof_age_s,
+                        "latest_ts": latest_ts.isoformat() if latest_ts else None,
+                        "proof_missing": proof_missing or None,
+                    },
+                    "metric_value": float(proof_age_s) if proof_age_s is not None else None,
+                    "threshold_value": 300.0,
+                }
+            )
+
         # 7. Planner stale. Threshold 14h = SUNSET→SUNRISE gap (~12.7h) + 1.3h slack.
         # Iris emits full plans at SUNRISE and SUNSET only; interim TRANSITION /
         # FORECAST / DEVIATION events adjust tunables or trigger replans. An 8h
