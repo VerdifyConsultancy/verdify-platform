@@ -1431,6 +1431,9 @@ async def public_data_health():
               AND severity IN ('critical', 'high')
             """
         )
+        climate_action_log_age_s = await conn.fetchval(
+            "SELECT extract(epoch FROM now() - max(ts))::int FROM climate_action_log"
+        )
         try:
             async with conn.transaction():
                 await conn.execute("SET LOCAL jit = off")
@@ -1468,6 +1471,13 @@ async def public_data_health():
             "details": "weather_forecast fetched_at age seconds",
         },
         {
+            "check_name": "climate_action_log_freshness",
+            "status": "ok" if climate_action_log_age_s is not None and climate_action_log_age_s <= 300 else "fail",
+            "metric_value": climate_action_log_age_s,
+            "threshold_value": 300,
+            "details": "controller decision/action snapshot age seconds",
+        },
+        {
             "check_name": "open_critical_or_high_alerts",
             "status": "ok" if not open_critical_high else "fail",
             "metric_value": open_critical_high or 0,
@@ -1478,6 +1488,8 @@ async def public_data_health():
     check_rows = [dict(r) for r in trust_rows] if trust_rows else fallback_check_rows
     if not any(r["check_name"] == "open_critical_or_high_alerts" for r in check_rows):
         check_rows.append(fallback_check_rows[-1])
+    if not any(r["check_name"] == "climate_action_log_freshness" for r in check_rows):
+        check_rows.append(fallback_check_rows[2])
     checks = [
         PublicDataHealthCheck(
             name=r["check_name"],
@@ -2199,6 +2211,9 @@ async def public_home_metrics(greenhouse_id: str = DEFAULT_GREENHOUSE):
             WHERE source = 'forecast'
             """
         )
+        climate_action_log_age_s = await conn.fetchval(
+            "SELECT extract(epoch FROM now() - max(ts))::int FROM climate_action_log"
+        )
 
     climate_age_s = latest_climate["age_s"] if latest_climate else None
     forecast_age_s = forecast_health["age_s"] if forecast_health else None
@@ -2216,6 +2231,13 @@ async def public_home_metrics(greenhouse_id: str = DEFAULT_GREENHOUSE):
             "metric_value": forecast_age_s,
             "threshold_value": 21600,
             "details": "weather_forecast fetched_at age seconds",
+        },
+        {
+            "check_name": "climate_action_log_freshness",
+            "status": "ok" if climate_action_log_age_s is not None and climate_action_log_age_s <= 300 else "fail",
+            "metric_value": climate_action_log_age_s,
+            "threshold_value": 300,
+            "details": "controller decision/action snapshot age seconds",
         },
         {
             "check_name": "open_critical_or_high_alerts",
