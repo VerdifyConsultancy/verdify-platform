@@ -578,9 +578,25 @@ interval:
               (mode == VENTILATE) && ctl_state.vent_mist_assist_active;
           const bool occupancy_moisture_block = id(occupancy_inhibit_enabled) && id(greenhouse_occupied);
           const bool leak_block = id(bs_leak_detected).state;
+          // FW-9: VPD emergency override — allow wet assist even if the daily
+          // water budget is exhausted. Include house and zone VPD so a
+          // safety miss is not hidden by stale/missing local sensors.
+          float budget_vpd_max = VPD;
+          auto merge_budget_vpd = [&](float observed_vpd) {
+              if(!isnan(observed_vpd)) {
+                  budget_vpd_max = isnan(budget_vpd_max) ? observed_vpd : fmax(budget_vpd_max, observed_vpd);
+              }
+          };
+          merge_budget_vpd(id(vpd_south).state);
+          merge_budget_vpd(id(vpd_west).state);
+          merge_budget_vpd(id(vpd_east).state);
+          const bool climate_vpd_emergency =
+              !isnan(budget_vpd_max) && (budget_vpd_max > id(safety_vpd_max_kpa));
+          const bool climate_water_budget_block =
+              id(mister_water_today) >= id(mister_water_budget_gal) && !climate_vpd_emergency;
           static bool leak_water_interlock_prev = false;
           static bool occupancy_water_interlock_prev = false;
-          if (leak_block || occupancy_moisture_block) {
+          if (leak_block || occupancy_moisture_block || climate_water_budget_block) {
               willFog = false;
           }
           if (leak_block != leak_water_interlock_prev) {
@@ -624,7 +640,11 @@ interval:
           set_relay(R[5], willVent, fan_requires_vent, sensor_fault_relay_lock);
           set_relay(R[2], willFan1, false, sensor_fault_relay_lock);
           set_relay(R[3], willFan2, false, sensor_fault_relay_lock);
-          set_relay(R[4], willFog, false, sensor_fault_relay_lock || leak_block || occupancy_moisture_block);
+          set_relay(
+              R[4],
+              willFog,
+              false,
+              sensor_fault_relay_lock || leak_block || occupancy_moisture_block || climate_water_budget_block);
 
           /**************** 12 — MISTER STATE MACHINE *****************************/
           // Runs only for SEALED_MIST or explicit VENTILATE assist. Zone stress
@@ -825,17 +845,8 @@ interval:
               if(west_wet_allowed && !isnan(west_vpd) && id(vpd_target_west) > 0 && west_vpd > id(vpd_target_west)) any_zone_stressed = true;
               if(!isnan(east_vpd) && id(vpd_target_east) > 0 && east_vpd > id(vpd_target_east)) any_zone_stressed = true;
               if(center_wet_allowed && id(vpd_target_center) > 0 && avg_vpd > id(vpd_target_center)) any_zone_stressed = true;
-              // FW-9: VPD emergency override — allow misting even if budget exhausted.
-              // Include avg_vpd so a house-level safety miss is not hidden by
-              // stale/missing zone sensors.
-              float vpd_max_zone = avg_vpd;
-              if(!isnan(south_vpd)) vpd_max_zone = isnan(vpd_max_zone) ? south_vpd : fmax(vpd_max_zone, south_vpd);
-              if(!isnan(west_vpd))  vpd_max_zone = isnan(vpd_max_zone) ? west_vpd  : fmax(vpd_max_zone, west_vpd);
-              if(!isnan(east_vpd))  vpd_max_zone = isnan(vpd_max_zone) ? east_vpd  : fmax(vpd_max_zone, east_vpd);
-              bool vpd_emergency = !isnan(vpd_max_zone) && (vpd_max_zone > id(safety_vpd_max_kpa));
               bool global_stressed = (avg_vpd > id(mister_engage_kpa));
-              bool budget_block =
-                  id(mister_water_today) >= id(mister_water_budget_gal) && !vpd_emergency;
+              bool budget_block = climate_water_budget_block;
               bool irrigation_block = id(irrig_state) > 0;
               bool zone_mister_demand = humidity_demand && mister_vent_ok;
               bool mister_blocked =
@@ -1403,6 +1414,8 @@ interval:
               snprintf(fog_block_reason, sizeof(fog_block_reason), "leak_detected");
             } else if(occupancy_moisture_block) {
               snprintf(fog_block_reason, sizeof(fog_block_reason), "occupancy");
+            } else if(climate_water_budget_block) {
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "resource_budget");
             } else if(id(fog_rly)->state) {
               snprintf(fog_block_reason, sizeof(fog_block_reason), "served");
             } else if(of.fog_gate_window) {

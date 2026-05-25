@@ -2247,15 +2247,17 @@ def test_irrigation_scheduler_serializes_same_minute_zone_starts():
 def test_mister_budget_emergency_uses_house_average_vpd():
     controls = Path("firmware/greenhouse/controls.yaml").read_text()
     start = controls.index("// FW-9: VPD emergency override")
-    end = controls.index("bool budget_block =", start)
+    end = controls.index("static bool leak_water_interlock_prev", start)
     block = controls[start:end]
 
-    assert "float vpd_max_zone = avg_vpd;" in block
-    assert "south_vpd" in block
-    assert "west_vpd" in block
-    assert "east_vpd" in block
-    assert "vpd_max_zone > id(safety_vpd_max_kpa)" in block
-    assert "!vpd_emergency" in controls[end : controls.index("bool irrigation_block", end)]
+    assert "float budget_vpd_max = VPD;" in block
+    assert "merge_budget_vpd(id(vpd_south).state);" in block
+    assert "merge_budget_vpd(id(vpd_west).state);" in block
+    assert "merge_budget_vpd(id(vpd_east).state);" in block
+    assert "budget_vpd_max > id(safety_vpd_max_kpa)" in block
+    assert "const bool climate_water_budget_block =" in block
+    assert "!climate_vpd_emergency" in block
+    assert "bool budget_block = climate_water_budget_block;" in controls
 
 
 def test_leak_detected_locks_water_actuators():
@@ -2265,9 +2267,10 @@ def test_leak_detected_locks_water_actuators():
     assert "id: bs_leak_detected" in greenhouse_yaml
     assert "const bool leak_block = id(bs_leak_detected).state;" in controls
     assert "Leak detected: forcing fog, misters, and irrigation off" in controls
+    relay_apply = controls[controls.index("/**************** 11") : controls.index("/**************** 12")]
+    assert "set_relay(\n              R[4]," in relay_apply
     assert (
-        "set_relay(R[4], willFog, false, sensor_fault_relay_lock || leak_block || occupancy_moisture_block);"
-        in controls
+        "sensor_fault_relay_lock || leak_block || occupancy_moisture_block || climate_water_budget_block" in relay_apply
     )
 
     mister_start = controls.index("bool mister_blocked =")
@@ -2305,12 +2308,12 @@ def test_occupancy_inhibit_is_final_fog_force_off():
     final_gate_start = controls.index(occupancy_gate)
     final_gate_end = controls.index("/**************** 10", final_gate_start)
     final_gate = controls[final_gate_start:final_gate_end]
-    assert "if (leak_block || occupancy_moisture_block)" in final_gate
+    assert "if (leak_block || occupancy_moisture_block || climate_water_budget_block)" in final_gate
     assert "Occupancy inhibit: forcing fog and climate misters off" in final_gate
 
+    relay_apply = controls[controls.index("/**************** 11") : controls.index("/**************** 12")]
     assert (
-        "set_relay(R[4], willFog, false, sensor_fault_relay_lock || leak_block || occupancy_moisture_block);"
-        in controls
+        "sensor_fault_relay_lock || leak_block || occupancy_moisture_block || climate_water_budget_block" in relay_apply
     )
     assert "bool occupancy_blocks = occupancy_moisture_block;" in controls
 
@@ -2318,6 +2321,24 @@ def test_occupancy_inhibit_is_final_fog_force_off():
     fog_end = controls.index("static char last_fog_block_reason", fog_start)
     fog_block = controls[fog_start:fog_end]
     assert fog_block.index("occupancy_moisture_block") < fog_block.index("id(fog_rly)->state")
+
+
+def test_fog_respects_climate_water_budget_before_reporting_served():
+    controls = Path("firmware/greenhouse/controls.yaml").read_text()
+
+    final_gate_start = controls.index("const bool climate_water_budget_block =")
+    final_gate_end = controls.index("/**************** 10", final_gate_start)
+    final_gate = controls[final_gate_start:final_gate_end]
+    assert "if (leak_block || occupancy_moisture_block || climate_water_budget_block)" in final_gate
+
+    relay_apply = controls[controls.index("/**************** 11") : controls.index("/**************** 12")]
+    assert "climate_water_budget_block" in relay_apply
+
+    fog_start = controls.index("char fog_block_reason")
+    fog_end = controls.index("static char last_fog_block_reason", fog_start)
+    fog_block = controls[fog_start:fog_end]
+    assert 'snprintf(fog_block_reason, sizeof(fog_block_reason), "resource_budget")' in fog_block
+    assert fog_block.index("climate_water_budget_block") < fog_block.index("id(fog_rly)->state")
 
 
 def test_sensor_fault_is_final_relay_lock_above_manual_overrides():
@@ -2340,8 +2361,7 @@ def test_sensor_fault_is_final_relay_lock_above_manual_overrides():
     assert "set_relay(R[2], willFan1, false, sensor_fault_relay_lock);" in relay_apply
     assert "set_relay(R[3], willFan2, false, sensor_fault_relay_lock);" in relay_apply
     assert (
-        "set_relay(R[4], willFog, false, sensor_fault_relay_lock || leak_block || occupancy_moisture_block);"
-        in relay_apply
+        "sensor_fault_relay_lock || leak_block || occupancy_moisture_block || climate_water_budget_block" in relay_apply
     )
 
 
