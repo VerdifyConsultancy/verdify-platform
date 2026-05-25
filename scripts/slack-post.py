@@ -18,7 +18,7 @@ from slack_config import build_slack_payload, load_slack_settings, read_slack_to
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--channel", default="greenhouse", help="channel key from slack.yaml")
+    parser.add_argument("--channel", default=None, help="Slack channel override; defaults to slack.yaml")
     parser.add_argument("--thread-ts", default=None)
     parser.add_argument("--text", default=None)
     args = parser.parse_args()
@@ -28,16 +28,16 @@ def main() -> int:
         print("slack-post: empty message", file=sys.stderr)
         return 2
 
-    settings = load_slack_settings(channel_key=args.channel)
-    token = read_slack_token(settings)
-    payload = build_slack_payload(settings, text, thread_ts=args.thread_ts)
+    settings = load_slack_settings()
+    token = read_slack_token(settings.bot_token_file)
+    payload = build_slack_payload(settings, text, channel=args.channel, thread_ts=args.thread_ts)
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
         f"{settings.api_base_url}/chat.postMessage",
         data=data,
         headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json; charset=utf-8"},
     )
-    with urllib.request.urlopen(req, timeout=settings.timeout_seconds) as resp:
+    with urllib.request.urlopen(req, timeout=10) as resp:
         result = json.loads(resp.read())
     if not result.get("ok"):
         print(f"slack-post: Slack API error: {result.get('error', 'unknown')}", file=sys.stderr)

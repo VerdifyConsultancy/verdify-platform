@@ -6,16 +6,11 @@ sensible defaults where appropriate. No secrets have default values.
 """
 
 import os
-import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-if str(REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(REPO_ROOT))
-
-from slack_config import load_slack_settings  # noqa: E402
+from slack_config import load_slack_settings
 
 # Load .env files (ingestor-specific, then project-level)
 load_dotenv(Path(__file__).parent / ".env")
@@ -51,8 +46,8 @@ MQTT_PASS = os.environ.get("MQTT_PASS", "")
 
 # ── Slack ─────────────────────────────────────────────────────────
 SLACK_SETTINGS = load_slack_settings()
-SLACK_TOKEN_FILE = SLACK_SETTINGS.bot_token_file
-SLACK_CHANNEL = SLACK_SETTINGS.channel_id
+SLACK_TOKEN_FILE = os.environ.get("SLACK_TOKEN_FILE", SLACK_SETTINGS.bot_token_file)
+SLACK_CHANNEL = os.environ.get("SLACK_CHANNEL", SLACK_SETTINGS.channel_id)
 
 # ── External services ────────────────────────────────────────────
 FRIGATE_URL = os.environ.get("FRIGATE_URL", "http://192.168.30.142:5000")

@@ -52,6 +52,7 @@ mcp_servers:
         - plan_status
         - history
         - alerts
+        - slack_ops
         # Knowledge
         - lessons
         - lessons_search       # Phase 3

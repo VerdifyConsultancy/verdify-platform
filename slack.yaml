@@ -1,103 +1,77 @@
-schema_version: 1
-
-workspace:
-  name: Vallery
-  slack_team: vallery
+version: 1
+workspace: verdify
 
 identity:
-  agent: iris
+  agent_name: Iris
   display_name: Iris
+  username: Iris
   icon_emoji: ":seedling:"
-  customize_messages: true
+  greenhouse_id: vallery
 
-credentials:
-  # Secret material is not tracked. These local files must contain the Iris
-  # Slack app credentials, not Orbit or shared fleet tokens.
+slack:
+  api_base_url: https://slack.com/api
+  channel_name: greenhouse
+  channel_id: C0ANVVAPLD6
   bot_token_file: /etc/verdify/slack/iris_slack_bot_token.txt
-  # Used by OpenClaw socket-mode Slack ingestion, not by Verdify's ingestor posts.
   app_token_file: /etc/verdify/slack/iris_slack_app_token.txt
-
-api:
-  base_url: https://slack.com/api
-  timeout_seconds: 10
-  unfurl_links: false
-  unfurl_media: false
-
-channels:
-  greenhouse:
-    name: "#greenhouse"
-    id: C0ANVVAPLD6
-    purpose: Primary operator surface for Verdify greenhouse planning, alerts, checklists, and observations.
-
-archive:
-  channel: greenhouse
-  output_dir: /var/lib/verdify/openclaw-iris/memory/slack
+  signing_secret_file: /etc/verdify/slack/iris_slack_signing_secret.txt
+  archive_dir: /var/local/verdify/slack/archive
   timezone: America/Denver
 
 notifications:
-  alert_defaults:
-    critical: immediate
-    warning: immediate
-    info: digest
-    digest: digest
-  quiet_types: []
-  digest_types:
-    - sensor_offline
-    - esp32_reboot
-    - tunable_zero_variance
-  critical_types:
-    - leak_detected
-    - temp_safety
-    - vpd_extreme
-    - safety_invalid
-    - heat_staging_inversion
-    - heap_pressure_critical
-    - planner_required_plan_missed
-  alert_types:
-    sensor_offline:
-      mode: digest
-    esp32_reboot:
-      mode: digest
-    setpoint_unconfirmed:
-      mode: immediate
-    forecast_deviation:
-      mode: immediate
-    crop_observation_overdue:
-      mode: digest
-    crop_health_declining:
-      mode: immediate
-    crop_treatment_followup_due:
-      mode: digest
-
-commands:
-  enabled_channel_ids:
-    - C0ANVVAPLD6
-  default_role: viewer
-  role_map_table: slack_user_roles
-  unsafe_direct_relay_control: false
-  deterministic_entrypoint: scripts/slack-ops.py
-  mcp_tool: slack_ops
-  confirmation_ttl_minutes: 10
-
-runbooks:
-  leak_detected: Check valves and visible floor flow first; then inspect water meter and irrigation state.
-  temp_safety: Check current firmware mode, fan/vent/heater relay state, and whether sensor data is fresh.
-  vpd_extreme: Check temp, RH, VPD, mist/fog availability, and whether venting is worsening dry air.
-  setpoint_unconfirmed: Check setpoint_changes delivery_status and cfg_* readback before touching firmware.
-  crop_health_declining: Inspect the crop in person, record an observation, and attach a photo when possible.
+  default_post_mode: thread
+  alert_policy:
+    immediate:
+      severity:
+        - critical
+      alert_type:
+        - leak_detected
+        - relay_stuck
+        - temp_safety
+        - vpd_extreme
+        - planner_gateway_delivery_failed
+        - planner_required_plan_missed
+        - planner_trigger_sla_timeout
+        - setpoint_unconfirmed
+    delayed:
+      sensor_offline: 2h
+      soil_sensor_offline: 2h
+    silent:
+      - esp32_reboot
+    digest:
+      - info
+  briefs:
+    morning:
+      time: "07:30"
+      channel_id: C0ANVVAPLD6
+      enabled: true
+    evening:
+      time: "18:00"
+      channel_id: C0ANVVAPLD6
+      enabled: true
 
 consumers:
-  verdify_ingestor:
-    service: verdify-ingestor.service
-    config_env: VERDIFY_SLACK_CONFIG
-    runtime_config: /srv/verdify/slack.yaml
-  hermes_iris:
-    container: hermes-iris
-    runtime_config: /opt/data/slack.yaml
-    host_runtime_config: /var/lib/verdify/hermes/iris/slack.yaml
-    secret_mount: /etc/verdify/slack:/etc/verdify/slack:ro
-  openclaw_iris:
-    runtime_config: /home/jason/.openclaw/openclaw.json
-    channel: greenhouse
-    expected_identity: Iris
-    credential_source: /etc/verdify/slack
+  ingestor:
+    posts:
+      - alert lifecycle
+      - planner delivery watchdog
+      - midnight watchdog
+      - operator briefs
+  hermes:
+    role: planner gateway
+    posts_via: MCP slack_ops tool
+  openclaw:
+    role: socket listener and operator assistant
+    account: jason@verdify.ai
+    agents:
+      - iris
+      - iris-planner
+    posts_via: Slack app token plus MCP slack_ops tool
+
+roles:
+  default_role: viewer
+  role_order:
+    - viewer
+    - grower
+    - operator
+    - coordinator

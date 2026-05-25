@@ -1,435 +1,231 @@
-"""Deterministic Slack command parsing for greenhouse operations."""
+"""Small deterministic parser for #greenhouse Slack commands."""
 
 from __future__ import annotations
 
 import re
 from typing import Any
 
-from verdify_schemas.slack_ops import SlackParsedIntent, SlackRole
+from verdify_schemas.slack_ops import SlackParsedIntent
 
-ROLE_ORDER: dict[SlackRole, int] = {
-    "viewer": 0,
-    "operator": 1,
-    "grower": 2,
-    "coordinator": 3,
+ROLE_RANK = {"viewer": 0, "grower": 1, "operator": 2, "coordinator": 3}
+INTENT_ROLE = {
+    "status.get": "viewer",
+    "brief.get": "viewer",
+    "plan.status.get": "viewer",
+    "firmware.health.get": "viewer",
+    "zone.status.get": "viewer",
+    "position.status.get": "viewer",
+    "equipment.status.get": "viewer",
+    "sensor.status.get": "viewer",
+    "alert.runbook.get": "viewer",
+    "forecast.triage.get": "viewer",
+    "guardrails.summary.get": "viewer",
+    "ops.log.get": "viewer",
+    "crop.map.get": "viewer",
+    "crop.empty_positions.get": "viewer",
+    "crop.harvest_due.get": "viewer",
+    "crop.scouting_due.get": "viewer",
+    "crop.tasks_due.get": "viewer",
+    "crop.tasks.generate": "operator",
+    "crop.task.complete": "grower",
+    "crop.observe": "grower",
+    "crop.photo_observation.record": "grower",
+    "crop.create": "grower",
+    "crop.clear": "grower",
+    "crop.transplant": "grower",
+    "crop.harvest": "grower",
+    "crop.treatment.record": "grower",
+    "lesson.extract.request": "operator",
+    "alert.ack": "operator",
+    "alert.resolve": "operator",
+    "alert.snooze": "operator",
+    "alert.assign": "operator",
+    "alert.false_positive": "coordinator",
+    "plan.trigger": "operator",
+    "confirmation.confirm": "viewer",
+    "confirmation.cancel": "viewer",
 }
-
-DIRECT_RELAY_RE = re.compile(
-    r"\b(turn|switch|set|force)\s+(on|off|open|closed?|start|stop)\b.*\b"
-    r"(relay|fan|heater|heat|mister|fog|vent|pump|valve|light)\b",
-    re.IGNORECASE,
-)
-ALERT_ID_RE = re.compile(r"\balert\s+#?(?P<alert_id>\d+)\b", re.IGNORECASE)
-POSITION_RE = re.compile(r"\bposition\s+(?P<label>[a-z0-9_-]+)\b", re.IGNORECASE)
-ZONE_STATUS_RE = re.compile(r"\bzone\s+(?P<zone>[a-z0-9_-]+)\s+(status|state)\b", re.IGNORECASE)
-EQUIPMENT_STATUS_RE = re.compile(r"\b(?:relay|equipment)\s+(?P<equipment>[a-z0-9 _-]+)\b", re.IGNORECASE)
-SENSOR_STATUS_RE = re.compile(r"\bsensor\s+(?P<sensor>[a-z0-9 _.-]+)\b", re.IGNORECASE)
-SNOOZE_RE = re.compile(
-    r"\bsnooze\s+alert\s+#?(?P<alert_id>\d+)\s+(?P<duration>\d+\s*(?:m|min|h|hr|hour|hours|d|day|days))\b",
-    re.IGNORECASE,
-)
-ASSIGN_RE = re.compile(
-    r"\bassign\s+alert\s+#?(?P<alert_id>\d+)\s+to\s+(?P<assignee><@[^>]+>|[a-z0-9_.@ -]+)\s*$", re.IGNORECASE
-)
-NOTE_RE = re.compile(r"\bnote\s+alert\s+#?(?P<alert_id>\d+)[:\s]+(?P<note>.+)$", re.IGNORECASE)
-OBSERVE_RE = re.compile(r"\b(?:observe|note)\s+(?P<target>[a-z0-9 _-]+)[:\s]+(?P<notes>.+)$", re.IGNORECASE)
-PLANT_RE = re.compile(
-    r"\bplant\s+(?P<crop>.+?)\s+in\s+(?P<position>[a-z0-9_-]+)"
-    r"(?:\s+count\s+(?P<count>\d+))?(?:\s+stage\s+(?P<stage>[a-z_]+))?\b",
-    re.IGNORECASE,
-)
-CLEAR_RE = re.compile(r"\bclear\s+(?:crop\s+)?(?P<target>[a-z0-9 _-]+)\b", re.IGNORECASE)
-TRANSPLANT_RE = re.compile(
-    r"\btransplant\s+(?:crop\s+)?(?P<target>[a-z0-9 _-]+)\s+to\s+(?P<position>[a-z0-9_-]+)\b",
-    re.IGNORECASE,
-)
-HARVEST_RE = re.compile(r"\bharvest\s+(?P<body>.+)$", re.IGNORECASE)
-TREATMENT_RE = re.compile(
-    r"\b(?:record\s+)?treatment\s+(?:for\s+)?(?P<target>[a-z0-9 _-]+)[:\s]+(?P<notes>.+)$", re.IGNORECASE
-)
-HEALTH_RE = re.compile(
-    r"\bhealth\s+score\s+(?P<score>\d+(?:\.\d+)?)\s+(?:for\s+)?(?P<target>[a-z0-9 _-]+)\b", re.IGNORECASE
-)
-PLANNER_TRIGGER_RE = re.compile(
-    r"\b(?:run|trigger)\s+(?:the\s+)?planner(?:\s+because\s+(?P<reason>.+))?\b", re.IGNORECASE
-)
-CONFIRM_RE = re.compile(
-    r"\b(?P<action>confirm|cancel)\s+(?P<confirmation_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\b",
-    re.IGNORECASE,
-)
+RISKY_INTENTS = {"crop.clear", "crop.transplant", "crop.harvest", "alert.snooze", "plan.trigger"}
 
 
-def _clean(text: str) -> str:
-    value = text.strip()
-    value = re.sub(r"^\s*<@[^>]+>\s*", "", value)
-    value = re.sub(r"^\s*iris[\s,:-]+", "", value, flags=re.IGNORECASE)
-    return value.strip()
-
-
-def _intent(
-    name: str,
-    *,
-    args: dict[str, Any] | None = None,
-    target_type: str | None = None,
-    target_id: str | None = None,
-    required_role: SlackRole = "viewer",
-    write: bool = False,
-    requires_confirmation: bool = False,
-    requires_ai: bool = False,
-    unsafe_blocked: bool = False,
-    reason: str | None = None,
-) -> SlackParsedIntent:
-    return SlackParsedIntent.model_validate(
-        {
-            "name": name,
-            "args": args or {},
-            "target_type": target_type,
-            "target_id": target_id,
-            "required_role": required_role,
-            "write": write,
-            "requires_confirmation": requires_confirmation,
-            "requires_ai": requires_ai,
-            "unsafe_blocked": unsafe_blocked,
-            "reason": reason,
-        }
+def _intent(name: str, args: dict[str, Any] | None = None, *, confidence: float = 0.95) -> SlackParsedIntent:
+    required_role = INTENT_ROLE.get(name, "viewer")
+    return SlackParsedIntent(
+        normalized_intent=name,
+        args=args or {},
+        required_role=required_role,
+        requires_confirmation=name in RISKY_INTENTS,
+        confidence=confidence,
     )
 
 
-def parse_command(command_text: str) -> SlackParsedIntent:
-    """Parse a Slack message into a deterministic Verdify intent."""
-
-    text = _clean(command_text)
-    lowered = text.lower()
-
-    if DIRECT_RELAY_RE.search(text):
-        return _intent(
-            "unsafe.direct_relay_control",
-            unsafe_blocked=True,
-            reason="Slack cannot directly control relays or equipment; use planner/setpoint workflows.",
-        )
-
-    if lowered in {"status", "greenhouse status", "what needs attention", "what needs attention?"}:
-        return _intent("status.get")
-
-    confirm_match = CONFIRM_RE.search(text)
-    if confirm_match:
-        action = confirm_match.group("action").lower()
-        return _intent(
-            "confirmation.confirm" if action == "confirm" else "confirmation.cancel",
-            args={"confirmation_id": confirm_match.group("confirmation_id")},
-            required_role="viewer",
-            write=True,
-        )
-
-    if lowered in {"morning brief", "brief morning"}:
-        return _intent("brief.get", args={"period": "morning"})
-    if lowered in {"evening brief", "brief evening"}:
-        return _intent("brief.get", args={"period": "evening"})
-
-    if lowered in {"plan status", "planner status", "active plan"}:
-        return _intent("plan.status.get")
-    if lowered.startswith("why ") or " why " in lowered or lowered.startswith("what changed"):
-        return _intent("plan.explain", requires_ai=True, reason="Explanation needs Iris reasoning over context.")
-    if "forecast deviation" in lowered or "forecast changed" in lowered:
-        return _intent("forecast.deviation.triage", requires_ai=True)
-    if lowered in {"firmware health", "esp32 health", "controller health"}:
-        return _intent("firmware.health.get")
-
-    zone_match = ZONE_STATUS_RE.search(text)
-    if zone_match:
-        zone = zone_match.group("zone").lower()
-        return _intent("zone.status.get", args={"zone": zone}, target_type="zone", target_id=zone)
-
-    position_match = POSITION_RE.search(text) or re.search(r"\bwhat'?s\s+in\s+(?P<label>[a-z0-9_-]+)\b", text, re.I)
-    if position_match:
-        label = position_match.group("label").upper()
-        return _intent("position.status.get", args={"position": label}, target_type="position", target_id=label)
-
-    equipment_match = EQUIPMENT_STATUS_RE.search(text)
-    if equipment_match:
-        equipment = equipment_match.group("equipment").strip().lower()
-        return _intent(
-            "equipment.status.get",
-            args={"equipment": equipment},
-            target_type="equipment",
-            target_id=equipment,
-        )
-
-    sensor_match = SENSOR_STATUS_RE.search(text)
-    if sensor_match:
-        sensor = sensor_match.group("sensor").strip()
-        return _intent("sensor.status.get", args={"sensor": sensor}, target_type="sensor", target_id=sensor)
-
-    if lowered in {"planting map", "crop map", "what is planted where", "what's planted where"}:
-        return _intent("crop.map.get")
-    if lowered in {"empty positions", "open positions", "available positions"}:
-        return _intent("crop.empty_positions.get")
-    if "due for harvest" in lowered or "harvest due" in lowered:
-        return _intent("crop.harvest_due.get")
-    if "scouting due" in lowered or "needs scouting" in lowered:
-        return _intent("crop.scouting_due.get")
-
-    snooze_match = SNOOZE_RE.search(text)
-    if snooze_match:
-        return _intent(
-            "alert.snooze",
-            args={"alert_id": int(snooze_match.group("alert_id")), "duration": snooze_match.group("duration")},
-            target_type="alert",
-            target_id=snooze_match.group("alert_id"),
-            required_role="operator",
-            write=True,
-        )
-    assign_match = ASSIGN_RE.search(text)
-    if assign_match:
-        return _intent(
-            "alert.assign",
-            args={"alert_id": int(assign_match.group("alert_id")), "assignee": assign_match.group("assignee").strip()},
-            target_type="alert",
-            target_id=assign_match.group("alert_id"),
-            required_role="operator",
-            write=True,
-        )
-    note_match = NOTE_RE.search(text)
-    if note_match:
-        return _intent(
-            "alert.note",
-            args={"alert_id": int(note_match.group("alert_id")), "note": note_match.group("note").strip()},
-            target_type="alert",
-            target_id=note_match.group("alert_id"),
-            required_role="operator",
-            write=True,
-        )
-    alert_match = ALERT_ID_RE.search(text)
-    if alert_match and ("ack" in lowered or "acknowledge" in lowered):
-        return _intent(
-            "alert.ack",
-            args={"alert_id": int(alert_match.group("alert_id"))},
-            target_type="alert",
-            target_id=alert_match.group("alert_id"),
-            required_role="operator",
-            write=True,
-        )
-    if alert_match and ("resolve" in lowered or "resolved" in lowered):
-        return _intent(
-            "alert.resolve",
-            args={"alert_id": int(alert_match.group("alert_id"))},
-            target_type="alert",
-            target_id=alert_match.group("alert_id"),
-            required_role="operator",
-            write=True,
-        )
-    if alert_match and "false positive" in lowered:
-        return _intent(
-            "alert.false_positive",
-            args={"alert_id": int(alert_match.group("alert_id"))},
-            target_type="alert",
-            target_id=alert_match.group("alert_id"),
-            required_role="coordinator",
-            write=True,
-            requires_confirmation=True,
-        )
-
-    health_match = HEALTH_RE.search(text)
-    if health_match:
-        score = float(health_match.group("score"))
-        return _intent(
-            "crop.observe",
-            args={"target": health_match.group("target").strip(), "health_score": score / 100 if score > 1 else score},
-            target_type="crop_or_position",
-            target_id=health_match.group("target").strip(),
-            required_role="operator",
-            write=True,
-        )
-
-    observe_match = OBSERVE_RE.search(text)
-    if observe_match and not lowered.startswith("note alert"):
-        notes = observe_match.group("notes").strip()
-        return _intent(
-            "crop.observe",
-            args={
-                "target": observe_match.group("target").strip(),
-                "notes": notes,
-                "severity": _severity_from_text(notes),
-                "affected_pct": _affected_pct_from_text(notes),
-                "obs_type": _obs_type_from_text(notes),
-            },
-            target_type="crop_or_position",
-            target_id=observe_match.group("target").strip(),
-            required_role="operator",
-            write=True,
-        )
-
-    plant_match = PLANT_RE.search(text)
-    if plant_match:
-        return _intent(
-            "crop.create",
-            args={
-                "crop": plant_match.group("crop").strip(),
-                "position": plant_match.group("position").upper(),
-                "count": int(plant_match.group("count")) if plant_match.group("count") else None,
-                "stage": plant_match.group("stage") or "seedling",
-            },
-            target_type="position",
-            target_id=plant_match.group("position").upper(),
-            required_role="grower",
-            write=True,
-        )
-
-    transplant_match = TRANSPLANT_RE.search(text)
-    if transplant_match:
-        return _intent(
-            "crop.transplant",
-            args={
-                "target": transplant_match.group("target").strip(),
-                "position": transplant_match.group("position").upper(),
-            },
-            target_type="crop_or_position",
-            target_id=transplant_match.group("target").strip(),
-            required_role="grower",
-            write=True,
-            requires_confirmation=True,
-        )
-
-    clear_match = CLEAR_RE.search(text)
-    if clear_match:
-        return _intent(
-            "crop.clear",
-            args={"target": clear_match.group("target").strip()},
-            target_type="crop_or_position",
-            target_id=clear_match.group("target").strip(),
-            required_role="grower",
-            write=True,
-            requires_confirmation=True,
-        )
-
-    harvest_match = HARVEST_RE.search(text)
-    if harvest_match:
-        harvest_args = _harvest_args_from_text(harvest_match.group("body"))
-        return _intent(
-            "crop.harvest",
-            args=harvest_args,
-            target_type="crop_or_position",
-            target_id=harvest_args["target"],
-            required_role="grower",
-            write=True,
-            requires_confirmation=True,
-        )
-
-    treatment_match = TREATMENT_RE.search(text)
-    if treatment_match:
-        return _intent(
-            "crop.treatment.record",
-            args={"target": treatment_match.group("target").strip(), "notes": treatment_match.group("notes").strip()},
-            target_type="crop_or_position",
-            target_id=treatment_match.group("target").strip(),
-            required_role="grower",
-            write=True,
-        )
-
-    planner_match = PLANNER_TRIGGER_RE.search(text)
-    if planner_match:
-        reason = planner_match.group("reason")
-        return _intent(
-            "plan.trigger",
-            args={"reason": reason.strip() if reason else "manual Slack request"},
-            target_type="planner",
-            required_role="operator",
-            write=True,
-            requires_confirmation=bool(reason),
-        )
-
-    return _intent(
-        "unknown",
-        requires_ai=True,
-        reason="No deterministic Slack operation matched.",
-    )
+def role_allows(role: str, required_role: str) -> bool:
+    return ROLE_RANK.get(role, -1) >= ROLE_RANK.get(required_role, 99)
 
 
-def role_allows(actual: SlackRole, required: SlackRole) -> bool:
-    return ROLE_ORDER[actual] >= ROLE_ORDER[required]
+def _alert_id(text: str) -> int | None:
+    match = re.search(r"\b(?:alert\s*)?#?(\d+)\b", text)
+    return int(match.group(1)) if match else None
 
 
-def _severity_from_text(text: str) -> int | None:
-    lowered = text.lower()
-    if "critical" in lowered or "severe" in lowered:
-        return 5
-    if "high" in lowered:
-        return 4
-    if "medium" in lowered or "moderate" in lowered:
-        return 3
-    if "low" in lowered or "minor" in lowered:
-        return 2
-    return None
+def _target_after(prefix: str, text: str) -> str:
+    return re.sub(prefix, "", text, count=1, flags=re.I).strip(" :,-")
 
 
-def _affected_pct_from_text(text: str) -> float | None:
-    match = re.search(r"(\d+(?:\.\d+)?)\s*(?:%|percent)", text, re.IGNORECASE)
-    return float(match.group(1)) if match else None
+def _duration(text: str) -> str | None:
+    match = re.search(r"\b(\d+)\s*(m|min|minute|minutes|h|hr|hour|hours|d|day|days)\b", text)
+    if not match:
+        return None
+    return f"{match.group(1)}{match.group(2)[0]}"
 
 
-def _obs_type_from_text(text: str) -> str:
-    lowered = text.lower()
-    if any(word in lowered for word in ("aphid", "mite", "pest", "thrip")):
-        return "pest"
-    if any(word in lowered for word in ("mildew", "rot", "disease", "fungus", "blight")):
-        return "disease"
-    if any(word in lowered for word in ("photo", "picture", "image")):
-        return "photo"
-    if any(word in lowered for word in ("height", "leaf", "measurement")):
-        return "measurement"
-    return "health_check"
-
-
-def _harvest_args_from_text(body: str) -> dict[str, Any]:
-    """Parse harvest body while keeping the crop/position target stable."""
-
-    value = body.strip()
-    amount_match = re.search(r"\b(?P<amount>\d+(?:\.\d+)?)\s*(?P<unit>g|kg|lb|lbs|oz|units?)\b", value, re.I)
-    details = ""
-    amount: float | None = None
-    unit: str | None = None
-    if amount_match:
-        amount = float(amount_match.group("amount"))
-        unit = amount_match.group("unit").lower()
-        target = value[: amount_match.start()].strip()
-        details = value[amount_match.end() :].strip(" ,;")
-    else:
-        target = value
-
-    args: dict[str, Any] = {
-        "target": target,
-        "amount": amount,
-        "unit": unit,
-        "details": details or None,
-    }
-    parsed_fields = _kv_fields_from_text(details)
-    args.update(parsed_fields)
+def _harvest_args(text: str) -> dict[str, Any]:
+    body = _target_after(r"^(iris\s+)?(record\s+)?harvest\s+", text)
+    args: dict[str, Any] = {"target": body}
+    amount = re.search(r"\b(\d+(?:\.\d+)?)\s*(kg|g|lb|lbs|oz|unit|units)\b", body, re.I)
+    if amount:
+        args["amount"] = float(amount.group(1))
+        args["unit"] = amount.group(2).lower()
+        args["target"] = body[: amount.start()].strip(" ,:-") or body
+    grade = re.search(r"\bgrade\s+([A-Za-z0-9+-]+)\b", body, re.I)
+    if grade:
+        args["quality_grade"] = grade.group(1)
+    destination = re.search(r"\bdestination\s+([A-Za-z0-9 _-]+?)(?:\s+labor\b|$)", body, re.I)
+    if destination:
+        args["destination"] = destination.group(1).strip()
+    labor = re.search(r"\blabor\s+(\d+)\s*(?:min|minutes?)?\b", body, re.I)
+    if labor:
+        args["labor_minutes"] = int(labor.group(1))
     return args
 
 
-def _kv_fields_from_text(text: str) -> dict[str, Any]:
-    fields: dict[str, Any] = {}
-    if not text:
-        return fields
-    patterns: tuple[tuple[str, str, Any], ...] = (
-        ("quality_grade", r"\b(?:grade|quality)\s+([a-z0-9_-]+)", str),
-        (
-            "destination",
-            r"\b(?:destination|to)\s+([a-z0-9 _-]+?)(?=\s+\b(?:grade|quality|salable|cull|labor|notes?)\b|$)",
-            str,
-        ),
-        ("salable_amount", r"\bsalable\s+(\d+(?:\.\d+)?)\s*(g|kg|lb|lbs|oz)\b", tuple),
-        ("cull_amount", r"\bcull\s+(\d+(?:\.\d+)?)\s*(g|kg|lb|lbs|oz)\b", tuple),
-        ("labor_minutes", r"\blabor\s+(\d+)\s*(?:m|min|minutes?)\b", int),
-    )
-    for key, pattern, caster in patterns:
-        match = re.search(pattern, text, re.I)
-        if not match:
-            continue
-        if caster is tuple:
-            fields[key] = {"amount": float(match.group(1)), "unit": match.group(2).lower()}
-        elif caster is int:
-            fields[key] = int(match.group(1))
-        else:
-            fields[key] = match.group(1).strip(" ,;")
-    return fields
+def parse_command(text: str) -> SlackParsedIntent:
+    raw = (text or "").strip()
+    lowered = raw.lower().strip()
+    cleaned = re.sub(r"^iris[:,]?\s+", "", lowered).strip()
+
+    if not cleaned:
+        return _intent("unknown", {"reason": "empty"}, confidence=0.0)
+
+    if re.search(r"\b(turn|switch|force|open|close)\b.*\b(relay|heater|heat|fan|fog|mister|vent|light)\b", cleaned):
+        return SlackParsedIntent(
+            normalized_intent="unsafe.direct_relay_control",
+            args={"text": raw},
+            required_role="coordinator",
+            requires_confirmation=False,
+            confidence=1.0,
+            blocked_reason="Direct relay control is not allowed from Slack. Use bounded setpoints or planner tools.",
+        )
+
+    if cleaned in {"status", "greenhouse status", "current status", "now"}:
+        return _intent("status.get")
+    if cleaned.startswith("brief") or cleaned in {"morning brief", "evening brief"}:
+        period = "evening" if "evening" in cleaned else "morning" if "morning" in cleaned else "current"
+        return _intent("brief.get", {"period": period})
+    if "plan status" in cleaned:
+        return _intent("plan.status.get")
+    if "firmware" in cleaned and ("health" in cleaned or "status" in cleaned):
+        return _intent("firmware.health.get")
+    if cleaned.startswith("zone "):
+        return _intent("zone.status.get", {"zone": _target_after(r"^zone\s+", cleaned)})
+    if cleaned.startswith("position "):
+        return _intent("position.status.get", {"position": _target_after(r"^position\s+", cleaned).upper()})
+    if cleaned.startswith("equipment"):
+        return _intent("equipment.status.get", {"target": _target_after(r"^equipment\s*", cleaned)})
+    if cleaned.startswith("sensor"):
+        return _intent("sensor.status.get", {"target": _target_after(r"^sensor\s*", cleaned)})
+    if "runbook" in cleaned and "alert" in cleaned:
+        return _intent("alert.runbook.get", {"alert_id": _alert_id(cleaned), "text": raw})
+    if cleaned.startswith("runbook "):
+        return _intent("alert.runbook.get", {"alert_type": _target_after(r"^runbook\s+", cleaned)})
+    if (
+        "forecast triage" in cleaned
+        or "deviation triage" in cleaned
+        or cleaned in {"forecast deviations", "deviations"}
+    ):
+        return _intent("forecast.triage.get")
+    if cleaned in {"guardrails", "guardrail summary"} or cleaned.startswith("guardrail "):
+        return _intent("guardrails.summary.get")
+    if cleaned in {"ops log", "operations log", "public ops log", "slack ops log"}:
+        return _intent("ops.log.get")
+
+    if cleaned in {"crop map", "planting map", "positions"}:
+        return _intent("crop.map.get")
+    if "empty" in cleaned and ("position" in cleaned or "positions" in cleaned):
+        return _intent("crop.empty_positions.get")
+    if "harvest due" in cleaned or "due harvest" in cleaned:
+        return _intent("crop.harvest_due.get")
+    if "scouting due" in cleaned or "scout due" in cleaned:
+        return _intent("crop.scouting_due.get")
+    if cleaned in {"tasks due", "crop tasks due", "task list", "open tasks"}:
+        return _intent("crop.tasks_due.get")
+    if cleaned in {"generate crop tasks", "refresh crop tasks", "seed crop tasks"}:
+        return _intent("crop.tasks.generate")
+    task_done = re.search(r"\b(?:complete|done|close)\s+task\s+#?(\d+)\b", cleaned)
+    if task_done:
+        return _intent("crop.task.complete", {"task_id": int(task_done.group(1))})
+
+    if cleaned.startswith(("ack alert", "acknowledge alert")):
+        return _intent("alert.ack", {"alert_id": _alert_id(cleaned)})
+    if cleaned.startswith(("resolve alert", "close alert")):
+        alert_id = _alert_id(cleaned)
+        note = re.sub(r"^(resolve|close)\s+alert\s+#?\d+\s*", "", raw, count=1, flags=re.I).strip()
+        return _intent("alert.resolve", {"alert_id": alert_id, "note": note})
+    if cleaned.startswith("snooze alert"):
+        return _intent("alert.snooze", {"alert_id": _alert_id(cleaned), "duration": _duration(cleaned)})
+    if cleaned.startswith("assign alert"):
+        assignee = re.search(r"<@([A-Z0-9]+)>|@([A-Za-z0-9._-]+)", raw)
+        return _intent(
+            "alert.assign",
+            {
+                "alert_id": _alert_id(cleaned),
+                "assigned_to": (assignee.group(1) or assignee.group(2)) if assignee else None,
+            },
+        )
+    if "false positive" in cleaned and "alert" in cleaned:
+        return _intent("alert.false_positive", {"alert_id": _alert_id(cleaned)})
+
+    if cleaned.startswith(("plant ", "create crop ", "crop create ")):
+        match = re.search(r"(?:plant|create crop|crop create)\s+(.+?)\s+(?:in|at)\s+([A-Za-z0-9_-]+)", raw, re.I)
+        return _intent(
+            "crop.create",
+            {"name": match.group(1).strip(), "position": match.group(2).upper()} if match else {"text": raw},
+        )
+    if cleaned.startswith(("observe ", "observation ")):
+        if "photo" in cleaned or "image" in cleaned:
+            return _intent("crop.photo_observation.record", {"text": _target_after(r"^(observe|observation)\s+", raw)})
+        return _intent("crop.observe", {"text": _target_after(r"^(observe|observation)\s+", raw)})
+    if cleaned.startswith(("photo observation ", "image observation ")):
+        return _intent(
+            "crop.photo_observation.record",
+            {"text": _target_after(r"^(photo|image)\s+observation\s+", raw)},
+        )
+    if cleaned.startswith("clear "):
+        return _intent("crop.clear", {"target": _target_after(r"^clear\s+", raw)})
+    if cleaned.startswith("transplant "):
+        body = _target_after(r"^transplant\s+", raw)
+        match = re.search(r"(.+?)\s+(?:to|into)\s+([A-Za-z0-9_-]+)$", body, re.I)
+        return _intent(
+            "crop.transplant",
+            {"target": match.group(1).strip(), "position": match.group(2).upper()} if match else {"target": body},
+        )
+    if cleaned.startswith(("harvest ", "record harvest ")):
+        return _intent("crop.harvest", _harvest_args(raw))
+    if cleaned.startswith(("treat ", "treatment ")):
+        return _intent("crop.treatment.record", {"text": _target_after(r"^(treat|treatment)\s+", raw)})
+
+    if "trigger planner" in cleaned or cleaned.startswith("plan trigger") or cleaned.startswith("run planner"):
+        return _intent("plan.trigger", {"reason": raw})
+    if cleaned in {"extract lessons", "extract actions", "lesson extraction", "lessons from slack"} or (
+        "extract" in cleaned and ("lesson" in cleaned or "action" in cleaned)
+    ):
+        return _intent("lesson.extract.request", {"text": raw})
+
+    confirm = re.search(r"\bconfirm\s+([0-9a-f-]{8,36})\b", cleaned)
+    if confirm:
+        return _intent("confirmation.confirm", {"confirmation_id": confirm.group(1)})
+    cancel = re.search(r"\bcancel\s+([0-9a-f-]{8,36})\b", cleaned)
+    if cancel:
+        return _intent("confirmation.cancel", {"confirmation_id": cancel.group(1)})
+
+    return _intent("unknown", {"text": raw}, confidence=0.2)

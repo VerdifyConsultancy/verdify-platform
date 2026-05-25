@@ -25,7 +25,7 @@ import asyncpg
 REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
-from slack_config import build_slack_payload, load_slack_settings  # noqa: E402
+from slack_config import build_slack_payload, load_slack_settings, read_slack_token  # noqa: E402
 from verdify_schemas.tunable_registry import BAND_OWNED_REG  # noqa: E402
 
 logging.basicConfig(
@@ -38,6 +38,7 @@ log = logging.getLogger(__name__)
 DRY_RUN = "--dry-run" in sys.argv
 SLACK_SETTINGS = load_slack_settings()
 SLACK_TOKEN_FILE = SLACK_SETTINGS.bot_token_file
+SLACK_CHANNEL = SLACK_SETTINGS.channel_id
 
 INTERVAL_MAP = {"24h": "24 hours", "48h": "48 hours", "12h": "12 hours", "6h": "6 hours"}
 BAND_OWNED_PARAMS = BAND_OWNED_REG
@@ -55,14 +56,14 @@ def get_db_url():
 
 def post_slack(text):
     try:
-        token = open(SLACK_TOKEN_FILE).read().strip()
-        data = json.dumps(build_slack_payload(SLACK_SETTINGS, text)).encode()
+        token = read_slack_token(SLACK_TOKEN_FILE)
+        data = json.dumps(build_slack_payload(SLACK_SETTINGS, text, channel=SLACK_CHANNEL)).encode()
         req = urllib.request.Request(
-            f"{SLACK_SETTINGS.api_base_url}/chat.postMessage",
+            f"{SLACK_SETTINGS.api_base_url.rstrip('/')}/chat.postMessage",
             data=data,
             headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
         )
-        urllib.request.urlopen(req, timeout=SLACK_SETTINGS.timeout_seconds)
+        urllib.request.urlopen(req, timeout=10)
     except Exception as e:
         log.warning("Slack post failed: %s", e)
 

@@ -1,10 +1,8 @@
 #!/usr/bin/env /srv/greenhouse/.venv/bin/python3
 """
-alert-monitor.py — Legacy one-shot alert check, alert_log writer, and Slack poster.
+alert-monitor.py — Check alert conditions, write to alert_log, post to Slack.
 
-The active production alert path is ingestor/tasks.py::alert_monitor inside
-verdify-ingestor.service. This script remains for manual/digest compatibility.
-Checks 6 conditions:
+Runs every 5 minutes via cron. Checks 6 conditions:
 1. sensor_offline — v_sensor_staleness stale = true
 2. relay_stuck — v_relay_stuck is_stuck = true
 3. vpd_stress — v_stress_hours_today vpd_stress_hours > 2
@@ -14,7 +12,7 @@ Checks 6 conditions:
 
 Deduplicates: won't re-alert for the same open condition.
 Auto-resolves: clears alerts when the condition passes.
-Posts to Slack #greenhouse via root slack.yaml.
+Posts to Slack #greenhouse via bot token API.
 
 Usage:
     alert-monitor.py           # run once (default, cron mode)
@@ -38,8 +36,9 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from slack_config import build_slack_payload, load_slack_settings  # noqa: E402
+from slack_config import build_slack_payload, load_slack_settings, read_slack_token  # noqa: E402
 from slack_ops.policy import should_post_alert  # noqa: E402
+from slack_ops.runbooks import fetch_alert_runbook, format_runbook  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,
@@ -75,8 +74,7 @@ def get_db_url() -> str:
 
 
 def load_slack_token() -> str:
-    with open(SLACK_TOKEN_FILE) as f:
-        return f.read().strip()
+    return read_slack_token(SLACK_TOKEN_FILE)
 
 
 def post_slack(token: str, channel: str, text: str, thread_ts: str | None = None) -> str | None:
@@ -85,12 +83,11 @@ def post_slack(token: str, channel: str, text: str, thread_ts: str | None = None
         log.info("DRY RUN — would post to Slack: %s", text[:100])
         return None
 
-    payload = build_slack_payload(SLACK_SETTINGS, text, thread_ts=thread_ts)
-    payload["channel"] = channel
+    payload = build_slack_payload(SLACK_SETTINGS, text, channel=channel, thread_ts=thread_ts)
 
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
-        f"{SLACK_SETTINGS.api_base_url}/chat.postMessage",
+        f"{SLACK_SETTINGS.api_base_url.rstrip('/')}/chat.postMessage",
         data=data,
         headers={
             "Authorization": f"Bearer {token}",
@@ -98,7 +95,7 @@ def post_slack(token: str, channel: str, text: str, thread_ts: str | None = None
         },
     )
     try:
-        with urllib.request.urlopen(req, timeout=SLACK_SETTINGS.timeout_seconds) as resp:
+        with urllib.request.urlopen(req, timeout=10) as resp:
             result = json.loads(resp.read())
             if result.get("ok"):
                 return result.get("ts")
@@ -598,22 +595,25 @@ async def main():
             if key in open_keys:
                 continue  # Already alerted
 
+            # Escalation: sensor_offline only posts to Slack after 2h
+            # Critical alerts (temp_safety, leak_detected, vpd_extreme) always post immediately
             should_slack = should_post_alert(alert["alert_type"], alert["severity"], settings=SLACK_SETTINGS)
 
             slack_ts = None
             if should_slack and not DRY_RUN:
-                slack_text = format_alert(alert["severity"], alert["alert_type"], alert["message"])
+                runbook = await fetch_alert_runbook(conn, alert["alert_type"], alert["severity"])
+                slack_text = (
+                    format_alert(alert["severity"], alert["alert_type"], alert["message"])
+                    + "\n"
+                    + format_runbook(runbook, compact=True)
+                )
                 slack_ts = post_slack(slack_token, SLACK_CHANNEL, slack_text)
 
             # Insert into alert_log
             await conn.execute(
                 """
-                INSERT INTO alert_log (
-                    alert_type, severity, category, sensor_id, zone, message,
-                    details, source, slack_ts, slack_channel_id, slack_message_ts,
-                    slack_thread_ts, slack_last_posted_at, metric_value, threshold_value
-                )
-                VALUES ($1, $2, $3, $4, $5, $6, $7, 'system', $8, $9, $10, $11, $12, $13, $14)
+                INSERT INTO alert_log (alert_type, severity, category, sensor_id, zone, message, details, source, slack_ts, metric_value, threshold_value)
+                VALUES ($1, $2, $3, $4, $5, $6, $7, 'system', $8, $9, $10)
             """,
                 alert["alert_type"],
                 alert["severity"],
@@ -623,10 +623,6 @@ async def main():
                 alert["message"],
                 json.dumps(alert["details"]) if alert["details"] else None,
                 slack_ts,
-                SLACK_CHANNEL if slack_ts else None,
-                slack_ts,
-                slack_ts,
-                datetime.now(UTC) if slack_ts else None,
                 alert.get("metric_value"),
                 alert.get("threshold_value"),
             )
@@ -641,7 +637,12 @@ async def main():
                 AND slack_ts IS NULL AND ts < now() - interval '2 hours'
             """)
             for sa in stale_alerts:
-                escalation_text = format_alert("warning", sa["alert_type"], f"[ESCALATED 2h+] {sa['message']}")
+                runbook = await fetch_alert_runbook(conn, sa["alert_type"], "warning")
+                escalation_text = (
+                    format_alert("warning", sa["alert_type"], f"[ESCALATED 2h+] {sa['message']}")
+                    + "\n"
+                    + format_runbook(runbook, compact=True)
+                )
                 esc_ts = post_slack(slack_token, SLACK_CHANNEL, escalation_text)
                 if esc_ts:
                     await conn.execute("UPDATE alert_log SET slack_ts = $1 WHERE id = $2", esc_ts, sa["id"])

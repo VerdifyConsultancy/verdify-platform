@@ -76,6 +76,7 @@ from tasks import (
     setpoint_confirmation_monitor,
     setpoint_dispatcher,
     shelly_sync,
+    slack_operator_briefs,
     tempest_sync,
     water_flowing_sync,
 )
@@ -1698,6 +1699,7 @@ async def task_loop(pool: asyncpg.Pool) -> None:
         # dedup by date). Sprint 24.7 ops stopgap — retires when Sprint 25
         # alert_monitor rule 7 rewrite ships.
         ("midnight_watch", 60, midnight_watch),
+        ("slack_operator_briefs", 60, slack_operator_briefs),
         # Public inference-infra proof data. Kept after greenhouse-critical
         # tasks and sampled at 5m cadence so exporter stalls cannot starve
         # dispatch, alerts, or planner heartbeat.

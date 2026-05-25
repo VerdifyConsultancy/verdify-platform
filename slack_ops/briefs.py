@@ -1,190 +1,148 @@
-"""Deterministic greenhouse Slack brief builders."""
+"""Deterministic operator briefs for #greenhouse."""
 
 from __future__ import annotations
 
 from datetime import UTC, datetime, time
-from decimal import Decimal
-from typing import Any
 from zoneinfo import ZoneInfo
 
-DEFAULT_GREENHOUSE = "vallery"
 
-
-def _num(value: Any, digits: int = 1) -> str:
+def _fmt_num(value, suffix: str = "", digits: int = 1) -> str:
     if value is None:
         return "n/a"
-    if isinstance(value, Decimal):
-        value = float(value)
-    if isinstance(value, float):
-        return f"{value:.{digits}f}"
-    return str(value)
+    try:
+        return f"{float(value):.{digits}f}{suffix}"
+    except (TypeError, ValueError):
+        return "n/a"
 
 
-def _local_day_bounds(now_local: datetime) -> tuple[datetime, datetime]:
-    start = datetime.combine(now_local.date(), time.min, tzinfo=now_local.tzinfo)
-    return start.astimezone(UTC), now_local.astimezone(UTC)
-
-
-def _alert_text(rows: list[Any]) -> str:
-    if not rows:
-        return "none"
-    return "; ".join(f"#{r['id']} {r['severity']} {r['alert_type']}" for r in rows[:5])
-
-
-def _task_text(rows: list[Any]) -> str:
-    if not rows:
-        return "none"
-    return "; ".join(
-        f"#{r['id']} {r['task_type']} {r['crop_name'] or r['position_label'] or 'unassigned'}" for r in rows[:6]
-    )
-
-
-def forecast_summary(row: Any | None) -> str:
-    if not row:
-        return "forecast unavailable"
-    water = f", ET0 {_num(row['et0_mm'], 1)} mm" if row["et0_mm"] is not None else ""
-    return (
-        f"high {_num(row['max_temp_f'], 0)} F, low {_num(row['min_temp_f'], 0)} F, "
-        f"max VPD {_num(row['max_vpd_kpa'], 2)} kPa, min dew margin {_num(row['min_dew_margin_f'], 1)} F, "
-        f"wind {_num(row['max_wind_mph'], 0)} mph, precip {_num(row['max_precip_prob_pct'], 0)}%{water}"
-    )
-
-
-def summary_line(row: Any | None, *, period: str) -> str:
-    if not row:
-        label = "Overnight" if period == "morning" else "Today"
-        return f"{label}: daily_summary unavailable"
-    label = "Overnight so far" if period == "morning" else "Today"
-    return (
-        f"{label}: compliance {_num(row['compliance_pct'], 0)}%, temp {_num(row['temp_min'], 1)}-"
-        f"{_num(row['temp_max'], 1)} F, VPD max {_num(row['vpd_max'], 2)} kPa, "
-        f"dew margin min {_num(row['min_dp_margin_f'], 1)} F, water {_num(row['water_used_gal'], 1)} gal"
-    )
+def _day_bounds(now: datetime, timezone: str) -> tuple[datetime, datetime]:
+    local = now.astimezone(ZoneInfo(timezone))
+    start = datetime.combine(local.date(), time.min, tzinfo=local.tzinfo)
+    end = datetime.combine(local.date(), time.max, tzinfo=local.tzinfo)
+    return start.astimezone(UTC), end.astimezone(UTC)
 
 
 async def build_operator_brief(
-    conn: Any,
+    conn,
     period: str,
     *,
     now: datetime | None = None,
     timezone: str = "America/Denver",
     site_base_url: str = "https://lab.verdify.ai",
-) -> tuple[str, dict[str, Any]]:
-    tz = ZoneInfo(timezone)
-    now_local = now.astimezone(tz) if now else datetime.now(tz)
-    day_start_utc, now_utc = _local_day_bounds(now_local)
-    local_date = now_local.date()
-    missing: list[str] = []
+) -> tuple[str, dict]:
+    """Build a Slack-ready morning/evening/current greenhouse brief."""
 
-    current = await conn.fetchrow("SELECT * FROM v_greenhouse_now LIMIT 1")
-    if not current:
-        missing.append("current greenhouse snapshot")
-    elif current["ts"] and (now_utc - current["ts"]).total_seconds() > 900:
-        missing.append(f"current greenhouse snapshot stale since {current['ts']:%H:%M UTC}")
+    now = now or datetime.now(UTC)
+    start_utc, end_utc = _day_bounds(now, timezone)
 
-    summary = await conn.fetchrow(
-        "SELECT * FROM daily_summary WHERE greenhouse_id=$1 AND date=$2",
-        DEFAULT_GREENHOUSE,
-        local_date,
-    )
-    if not summary:
-        missing.append("daily_summary row")
-
-    forecast = await conn.fetchrow(
+    current_row = await conn.fetchrow("SELECT * FROM v_greenhouse_now LIMIT 1")
+    current = dict(current_row) if current_row else None
+    daily_row = await conn.fetchrow("SELECT * FROM daily_summary WHERE date = (now() AT TIME ZONE $1)::date", timezone)
+    daily = dict(daily_row) if daily_row else None
+    forecast_row = await conn.fetchrow(
         """
-        WITH latest AS (
-            SELECT DISTINCT ON (ts) *
-              FROM weather_forecast
-             WHERE greenhouse_id=$1
-               AND ts BETWEEN now() AND now() + interval '24 hours'
-             ORDER BY ts, fetched_at DESC
-        )
-        SELECT max(temp_f) AS max_temp_f,
-               min(temp_f) AS min_temp_f,
-               max(vpd_kpa) AS max_vpd_kpa,
-               max(GREATEST(COALESCE(wind_gust_mph, 0), COALESCE(wind_speed_mph, 0))) AS max_wind_mph,
-               max(precip_prob_pct) AS max_precip_prob_pct,
-               min(temp_f - dew_point_f) AS min_dew_margin_f,
-               sum(et0_mm) AS et0_mm,
-               max(fetched_at) AS fetched_at
-          FROM latest
-        """,
-        DEFAULT_GREENHOUSE,
+        SELECT min(temp_f) AS min_temp_f,
+               max(temp_f) AS max_temp_f,
+               max(precip_prob_pct) AS max_precip_prob,
+               max(wind_speed_mph) AS max_wind_mph
+          FROM weather_forecast
+         WHERE ts >= now() AND ts < now() + interval '24 hours'
+        """
     )
-    if not forecast or forecast["max_temp_f"] is None:
-        missing.append("24h forecast")
-
+    forecast = dict(forecast_row) if forecast_row else None
     alerts = await conn.fetch(
         """
         SELECT id, alert_type, severity, message
           FROM alert_log
          WHERE resolved_at IS NULL
            AND disposition IN ('open', 'acknowledged')
-         ORDER BY CASE severity WHEN 'critical' THEN 0 WHEN 'warning' THEN 1 ELSE 2 END, ts DESC
-         LIMIT 8
-        """
-    )
-    tasks = await conn.fetch("SELECT * FROM v_slack_crop_tasks_due ORDER BY due_at, priority DESC LIMIT 8")
-    plans = await conn.fetch(
-        """
-        SELECT event_type, event_label, status, resulting_plan_id, delivered_at, acked_at
-          FROM plan_delivery_log
-         WHERE greenhouse_id=$1 AND delivered_at >= $2
-         ORDER BY delivered_at DESC
+         ORDER BY severity DESC, ts DESC
          LIMIT 5
-        """,
-        DEFAULT_GREENHOUSE,
-        day_start_utc,
-    )
-    if not plans:
-        missing.append("planner trigger rows today")
-
-    unconfirmed = await conn.fetch(
         """
-        SELECT parameter, value, ts
+    )
+    tasks = await conn.fetch("SELECT * FROM v_slack_crop_tasks_due LIMIT 8")
+    recent_plan = await conn.fetchrow(
+        """
+        SELECT plan_id, created_at, planner_instance
+          FROM plan_journal
+         ORDER BY created_at DESC
+         LIMIT 1
+        """
+    )
+    unconfirmed = await conn.fetchval(
+        """
+        SELECT count(*)::int
           FROM setpoint_changes
-         WHERE greenhouse_id=$1
-           AND confirmed_at IS NULL
-           AND expired_at IS NULL
-           AND COALESCE(source, '') <> 'esp32'
-           AND ts > now() - interval '12 hours'
-         ORDER BY ts DESC
-         LIMIT 5
-        """,
-        DEFAULT_GREENHOUSE,
+         WHERE COALESCE(source, '') <> 'esp32'
+           AND COALESCE(delivery_status, 'pending') = 'pending'
+           AND ts > now() - interval '24 hours'
+        """
     )
 
-    title = "Morning greenhouse brief" if period == "morning" else "Evening greenhouse brief"
-    lines = [f"*{title}* - {now_local:%Y-%m-%d %H:%M %Z}", f"<{site_base_url}/greenhouse|operator view>"]
+    heading = {
+        "morning": "Morning greenhouse brief",
+        "evening": "Evening greenhouse brief",
+    }.get(period, "Greenhouse brief")
+    lines = [f"*{heading}*"]
+
     if current:
         lines.append(
-            f"Current: {_num(current['temp_avg'], 1)} F, RH {_num(current['rh_avg'], 0)}%, "
-            f"VPD {_num(current['vpd_avg'], 2)} kPa, mode `{current['state'] or 'unknown'}`"
+            "Now: "
+            f"{_fmt_num(current.get('temp_avg'), 'F')} / "
+            f"{_fmt_num(current.get('rh_avg'), '%', 0)} RH / "
+            f"VPD {_fmt_num(current.get('vpd_avg'), ' kPa')} / "
+            f"state `{current.get('state') or 'unknown'}`"
         )
-    lines.append(summary_line(summary, period=period))
-    lines.append(f"Forecast 24h: {forecast_summary(forecast)}")
-    if period == "morning":
-        lines.append(
-            f"Planner today: {len(plans)} trigger rows; latest `{plans[0]['status']}`"
-            if plans
-            else "Planner today: no trigger rows"
-        )
-        lines.append(f"Crop tasks due: {_task_text(tasks)}")
     else:
+        lines.append("Now: no v_greenhouse_now row available")
+
+    if daily:
         lines.append(
-            f"Unconfirmed setpoints: {len(unconfirmed)}"
-            + (f" ({', '.join(r['parameter'] for r in unconfirmed)})" if unconfirmed else "")
+            "Today: "
+            f"temp {_fmt_num(daily.get('temp_min'), 'F')}-{_fmt_num(daily.get('temp_max'), 'F')}, "
+            f"water {_fmt_num(daily.get('water_used_gal'), ' gal')}, "
+            f"electric {_fmt_num(daily.get('kwh_total'), ' kWh')}"
         )
-        lines.append(f"Night/dew risk: min dew margin {_num(forecast['min_dew_margin_f'] if forecast else None, 1)} F")
-        lines.append(f"Tasks not completed: {_task_text(tasks)}")
-    lines.append(f"Open alerts: {_alert_text(alerts)}")
-    if missing:
-        lines.append("Missing/stale data: " + "; ".join(missing))
-    return "\n".join(lines), {
+
+    if forecast:
+        lines.append(
+            "Next 24h: "
+            f"{_fmt_num(forecast.get('min_temp_f'), 'F')}-{_fmt_num(forecast.get('max_temp_f'), 'F')}, "
+            f"precip {forecast.get('max_precip_prob') or 0}%, "
+            f"wind {_fmt_num(forecast.get('max_wind_mph'), ' mph', 0)}"
+        )
+
+    if recent_plan:
+        lines.append(
+            f"Planner: latest `{recent_plan['plan_id']}` from {recent_plan['created_at']:%m-%d %H:%M UTC}; "
+            f"unconfirmed setpoints: {unconfirmed or 0}"
+        )
+    else:
+        lines.append(f"Planner: no recent plan row; unconfirmed setpoints: {unconfirmed or 0}")
+
+    if tasks:
+        lines.append("*Due crop tasks:*")
+        for raw_row in tasks[:5]:
+            row = dict(raw_row)
+            target = row.get("crop_name") or row.get("position_label") or f"task {row['id']}"
+            lines.append(f"- `{row['task_type']}` {target} ({row['priority']})")
+    else:
+        lines.append("Due crop tasks: none in the next 24h")
+
+    if alerts:
+        lines.append("*Open alerts:*")
+        for row in alerts:
+            lines.append(f"- #{row['id']} `{row['severity']}` `{row['alert_type']}` - {row['message']}")
+    else:
+        lines.append("Open alerts: none")
+
+    lines.append(f"<{site_base_url}/greenhouse/|Operator view>")
+    data = {
         "period": period,
-        "missing": missing,
-        "alerts": [dict(r) for r in alerts],
-        "tasks": [dict(r) for r in tasks],
-        "plans": [dict(r) for r in plans],
-        "unconfirmed_setpoints": [dict(r) for r in unconfirmed],
+        "window_start": start_utc.isoformat(),
+        "window_end": end_utc.isoformat(),
+        "open_alerts": len(alerts),
+        "due_tasks": len(tasks),
+        "unconfirmed_setpoints": unconfirmed or 0,
     }
+    return "\n".join(lines), data

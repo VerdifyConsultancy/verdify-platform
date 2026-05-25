@@ -24,6 +24,7 @@ from pydantic import ValidationError
 # verdify_schemas lives one level up from this server file in every worktree.
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
+from slack_config import load_slack_settings  # noqa: E402
 from slack_ops.service import handle_slack_command  # noqa: E402
 from verdify_schemas import (  # noqa: E402
     ALL_TUNABLES,
@@ -230,6 +231,34 @@ mcp = FastMCP(
 
 async def _db() -> asyncpg.Connection:
     return await asyncpg.connect(DB_DSN)
+
+
+@mcp.tool()
+async def slack_ops(
+    text: str,
+    slack_user_id: str = "iris",
+    slack_user_name: str = "Iris",
+    role_override: str = "operator",
+) -> str:
+    """Execute deterministic Iris Slack operations against the #greenhouse command surface.
+
+    Use this for greenhouse status, briefs, alert runbooks/actions, forecast
+    triage, guardrail summaries, public-safe ops logs, crop observations/photo
+    intake, crop lifecycle/task writes, lesson extraction requests, and planner
+    triggers. Direct relay commands are denied by policy.
+    """
+
+    settings = load_slack_settings()
+    req = SlackCommandRequest(
+        text=text,
+        slack_user_id=slack_user_id,
+        slack_user_name=slack_user_name,
+        channel_id=settings.channel_id,
+        channel_name=settings.channel_name,
+        raw_event={"source": "mcp.slack_ops"},
+    )
+    response = await handle_slack_command(req, dsn=DB_DSN, settings=settings, role_override=role_override)
+    return response.model_dump_json()
 
 
 async def _insert_plan_delivery_log(conn: asyncpg.Connection, result: dict) -> str | None:
@@ -1497,42 +1526,6 @@ async def history(metric: str = "climate", hours: int = 24, resolution_min: int 
         return _json([dict(r) for r in rows[:500]])
     finally:
         await conn.close()
-
-
-# ═══════════════════════════════════════════════════════════════
-# SLACK OPERATIONS TOOL
-# ═══════════════════════════════════════════════════════════════
-
-
-@mcp.tool()
-async def slack_ops(
-    command_text: str,
-    sender_id: str = "",
-    sender_name: str = "",
-    channel_id: str = "",
-    message_ts: str = "",
-    thread_ts: str = "",
-    execute: bool = True,
-) -> str:
-    """Deterministic greenhouse Slack operations for Iris/OpenClaw.
-
-    Use this before free-form reasoning when a #greenhouse message is an
-    operator command such as `iris status`, `plan status`, `planting map`,
-    `position A3`, `ack alert 123`, `observe A3: aphids severity medium`, or
-    `plant basil in A3 count 12`. The tool blocks direct relay control and
-    writes all executed operations to the Slack audit tables.
-    """
-    request = SlackCommandRequest(
-        command_text=command_text,
-        slack_user_id=sender_id or None,
-        slack_user_name=sender_name or None,
-        channel_id=channel_id or None,
-        message_ts=message_ts or None,
-        thread_ts=thread_ts or None,
-        execute=execute,
-    )
-    result = await handle_slack_command(request, dsn=DB_DSN)
-    return result.model_dump_json()
 
 
 # ═══════════════════════════════════════════════════════════════
