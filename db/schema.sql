@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict CaqlcCS2PtlBejVdLUrR5EGqo5PQLESXkvhB2aK2MQYGoK5deUlTmzfjQtVwpEj
+\restrict Ih2eUi2HGgnl77zGmiZ6g3vm03yEPlOdhVqE4xi69D4Jj0HrLJGI2d1FVKrk65C
 
 -- Dumped from database version 16.11
 -- Dumped by pg_dump version 16.11
@@ -30,6 +30,20 @@ CREATE EXTENSION IF NOT EXISTS timescaledb WITH SCHEMA public;
 --
 
 COMMENT ON EXTENSION timescaledb IS 'Enables scalable inserts and complex queries for time-series data (Community Edition)';
+
+
+--
+-- Name: pgcrypto; Type: EXTENSION; Schema: -; Owner: -
+--
+
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
+
+
+--
+-- Name: EXTENSION pgcrypto; Type: COMMENT; Schema: -; Owner:
+--
+
+COMMENT ON EXTENSION pgcrypto IS 'cryptographic functions';
 
 
 --
@@ -5663,6 +5677,94 @@ INHERITS (public.infra_cpu);
 
 
 ALTER TABLE _timescaledb_internal._hyper_23_519_chunk OWNER TO verdify;
+
+--
+-- Name: climate_action_log; Type: TABLE; Schema: public; Owner: verdify
+--
+
+CREATE TABLE public.climate_action_log (
+    ts timestamp with time zone NOT NULL,
+    greenhouse_id text DEFAULT 'vallery'::text,
+    climate_action text NOT NULL,
+    priority_axis text NOT NULL,
+    temp_low_f double precision,
+    temp_target_f double precision,
+    temp_high_f double precision,
+    vpd_low_kpa double precision,
+    vpd_target_kpa double precision,
+    vpd_high_kpa double precision,
+    temp_target_delta_f double precision,
+    vpd_target_delta_kpa double precision,
+    temp_band_error_f double precision,
+    vpd_band_error_kpa double precision,
+    moisture_assist_state text,
+    moisture_zone text DEFAULT 'none'::text,
+    wet_assist_allowed boolean DEFAULT false,
+    wet_assist_block_reason text,
+    fog_allowed boolean DEFAULT false,
+    fog_block_reason text,
+    relay_truth jsonb DEFAULT '{}'::jsonb NOT NULL,
+    resource_cost_estimate jsonb DEFAULT '{}'::jsonb NOT NULL,
+    climate_intent_version text,
+    plan_id text,
+    trigger_id uuid,
+    planner_instance text,
+    sensor_status jsonb DEFAULT '{}'::jsonb NOT NULL,
+    candidate_summary text,
+    source_system_state jsonb DEFAULT '{}'::jsonb NOT NULL,
+    CONSTRAINT climate_action_log_action_check CHECK ((climate_action = ANY (ARRAY['SENSOR_FAULT'::text, 'SAFETY_HEAT'::text, 'SAFETY_COOL'::text, 'HEAT'::text, 'IDLE'::text, 'VENT_COOL'::text, 'VENT_COOL_MIST_ASSIST'::text, 'VENT_COOL_FOG_ASSIST'::text, 'SEALED_HUMIDIFY'::text, 'SEALED_FOG'::text, 'DEHUM_VENT'::text]))),
+    CONSTRAINT climate_action_log_priority_check CHECK ((priority_axis = ANY (ARRAY['safety'::text, 'temp'::text, 'vpd'::text, 'resource'::text])))
+);
+
+
+ALTER TABLE public.climate_action_log OWNER TO verdify;
+
+--
+-- Name: TABLE climate_action_log; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON TABLE public.climate_action_log IS 'Durable ESP32 ClimateIntent controller decision snapshots. One row captures selected action, priority, target deltas, wet/fog authority, relay truth, and plan correlation for graphing and post-hoc validation.';
+
+
+--
+-- Name: COLUMN climate_action_log.climate_action; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.climate_action_log.climate_action IS 'Executed controller action after firmware safety, dwell, and interlock resolution.';
+
+
+--
+-- Name: COLUMN climate_action_log.wet_assist_allowed; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.climate_action_log.wet_assist_allowed IS 'True when the selected climate action had a permitted climate wet-assist path; false when inactive or blocked.';
+
+
+--
+-- Name: COLUMN climate_action_log.wet_assist_block_reason; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.climate_action_log.wet_assist_block_reason IS 'Named reason climate wet assist could not physically serve, e.g. dew_margin, occupancy, irrigation, water_budget, wet_cutoff, or direct_wet_window before firmware issue #5 lands.';
+
+
+--
+-- Name: COLUMN climate_action_log.relay_truth; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.climate_action_log.relay_truth IS 'Latest ingestor relay truth snapshot for climate relays at action-log write time.';
+
+
+--
+-- Name: _hyper_26_707_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_26_707_chunk (
+    CONSTRAINT constraint_611 CHECK (((ts >= '2026-05-21 00:00:00+00'::timestamp with time zone) AND (ts < '2026-05-28 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.climate_action_log);
+
+
+ALTER TABLE _timescaledb_internal._hyper_26_707_chunk OWNER TO verdify;
 
 --
 -- Name: equipment_state; Type: TABLE; Schema: public; Owner: verdify
@@ -18371,6 +18473,13 @@ CREATE TABLE public.alert_log (
     notes text,
     greenhouse_id text DEFAULT 'vallery'::text,
     zone_id integer,
+    slack_channel_id text,
+    slack_message_ts text,
+    slack_thread_ts text,
+    slack_last_posted_at timestamp with time zone,
+    slack_snoozed_until timestamp with time zone,
+    slack_snoozed_by text,
+    slack_assigned_to text,
     CONSTRAINT chk_alert_disposition CHECK ((disposition = ANY (ARRAY['open'::text, 'acknowledged'::text, 'resolved'::text, 'false_positive'::text, 'suppressed'::text]))),
     CONSTRAINT chk_alert_severity CHECK ((severity = ANY (ARRAY['info'::text, 'warning'::text, 'critical'::text])))
 );
@@ -18421,82 +18530,6 @@ CREATE TABLE public.camera_zone_map (
 
 
 ALTER TABLE public.camera_zone_map OWNER TO verdify;
-
---
--- Name: climate_action_log; Type: TABLE; Schema: public; Owner: verdify
---
-
-CREATE TABLE public.climate_action_log (
-    ts timestamp with time zone NOT NULL,
-    greenhouse_id text DEFAULT 'vallery'::text,
-    climate_action text NOT NULL,
-    priority_axis text NOT NULL,
-    temp_low_f double precision,
-    temp_target_f double precision,
-    temp_high_f double precision,
-    vpd_low_kpa double precision,
-    vpd_target_kpa double precision,
-    vpd_high_kpa double precision,
-    temp_target_delta_f double precision,
-    vpd_target_delta_kpa double precision,
-    temp_band_error_f double precision,
-    vpd_band_error_kpa double precision,
-    moisture_assist_state text,
-    moisture_zone text DEFAULT 'none'::text,
-    wet_assist_allowed boolean DEFAULT false,
-    wet_assist_block_reason text,
-    fog_allowed boolean DEFAULT false,
-    fog_block_reason text,
-    relay_truth jsonb DEFAULT '{}'::jsonb NOT NULL,
-    resource_cost_estimate jsonb DEFAULT '{}'::jsonb NOT NULL,
-    climate_intent_version text,
-    plan_id text,
-    trigger_id uuid,
-    planner_instance text,
-    sensor_status jsonb DEFAULT '{}'::jsonb NOT NULL,
-    candidate_summary text,
-    source_system_state jsonb DEFAULT '{}'::jsonb NOT NULL,
-    CONSTRAINT climate_action_log_action_check CHECK ((climate_action = ANY (ARRAY['SENSOR_FAULT'::text, 'SAFETY_HEAT'::text, 'SAFETY_COOL'::text, 'HEAT'::text, 'IDLE'::text, 'VENT_COOL'::text, 'VENT_COOL_MIST_ASSIST'::text, 'VENT_COOL_FOG_ASSIST'::text, 'SEALED_HUMIDIFY'::text, 'SEALED_FOG'::text, 'DEHUM_VENT'::text]))),
-    CONSTRAINT climate_action_log_priority_check CHECK ((priority_axis = ANY (ARRAY['safety'::text, 'temp'::text, 'vpd'::text, 'resource'::text])))
-);
-
-
-ALTER TABLE public.climate_action_log OWNER TO verdify;
-
---
--- Name: TABLE climate_action_log; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON TABLE public.climate_action_log IS 'Durable ESP32 ClimateIntent controller decision snapshots. One row captures selected action, priority, target deltas, wet/fog authority, relay truth, and plan correlation for graphing and post-hoc validation.';
-
-
---
--- Name: COLUMN climate_action_log.climate_action; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON COLUMN public.climate_action_log.climate_action IS 'Executed controller action after firmware safety, dwell, and interlock resolution.';
-
-
---
--- Name: COLUMN climate_action_log.wet_assist_allowed; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON COLUMN public.climate_action_log.wet_assist_allowed IS 'True when the selected climate action had a permitted climate wet-assist path; false when inactive or blocked.';
-
-
---
--- Name: COLUMN climate_action_log.wet_assist_block_reason; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON COLUMN public.climate_action_log.wet_assist_block_reason IS 'Named reason climate wet assist could not physically serve, e.g. dew_margin, occupancy, irrigation, water_budget, wet_cutoff, or direct_wet_window before firmware issue #5 lands.';
-
-
---
--- Name: COLUMN climate_action_log.relay_truth; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON COLUMN public.climate_action_log.relay_truth IS 'Latest ingestor relay truth snapshot for climate relays at action-log write time.';
-
 
 --
 -- Name: consumables_log; Type: TABLE; Schema: public; Owner: verdify
@@ -18634,7 +18667,11 @@ CREATE TABLE public.crop_events (
     source text DEFAULT 'manual'::text,
     notes text,
     greenhouse_id text DEFAULT 'vallery'::text,
-    position_id integer
+    position_id integer,
+    slack_channel_id text,
+    slack_message_ts text,
+    slack_thread_ts text,
+    slack_user_id text
 );
 
 
@@ -18724,6 +18761,62 @@ ALTER SEQUENCE public.crop_target_profiles_id_seq OWNER TO verdify;
 --
 
 ALTER SEQUENCE public.crop_target_profiles_id_seq OWNED BY public.crop_target_profiles.id;
+
+
+--
+-- Name: crop_tasks; Type: TABLE; Schema: public; Owner: verdify
+--
+
+CREATE TABLE public.crop_tasks (
+    id integer NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    greenhouse_id text DEFAULT 'vallery'::text NOT NULL,
+    task_type text NOT NULL,
+    priority text DEFAULT 'normal'::text NOT NULL,
+    status text DEFAULT 'open'::text NOT NULL,
+    crop_id integer,
+    position_id integer,
+    zone_id integer,
+    due_at timestamp with time zone NOT NULL,
+    completed_at timestamp with time zone,
+    completed_by text,
+    source text DEFAULT 'slack_ops'::text NOT NULL,
+    related_observation_id integer,
+    related_treatment_id integer,
+    related_harvest_id integer,
+    slack_channel_id text,
+    slack_message_ts text,
+    slack_thread_ts text,
+    notes text,
+    CONSTRAINT crop_tasks_priority_check CHECK ((priority = ANY (ARRAY['low'::text, 'normal'::text, 'high'::text, 'critical'::text]))),
+    CONSTRAINT crop_tasks_status_check CHECK ((status = ANY (ARRAY['open'::text, 'snoozed'::text, 'completed'::text, 'canceled'::text]))),
+    CONSTRAINT crop_tasks_type_check CHECK ((task_type = ANY (ARRAY['scouting'::text, 'treatment_followup'::text, 'harvest_due'::text, 'harvest_overdue'::text, 'stage_check'::text, 'observation_followup'::text])))
+);
+
+
+ALTER TABLE public.crop_tasks OWNER TO verdify;
+
+--
+-- Name: crop_tasks_id_seq; Type: SEQUENCE; Schema: public; Owner: verdify
+--
+
+CREATE SEQUENCE public.crop_tasks_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.crop_tasks_id_seq OWNER TO verdify;
+
+--
+-- Name: crop_tasks_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: verdify
+--
+
+ALTER SEQUENCE public.crop_tasks_id_seq OWNED BY public.crop_tasks.id;
 
 
 --
@@ -19486,7 +19579,11 @@ CREATE TABLE public.harvests (
     cull_weight_kg double precision,
     cull_reason text,
     quality_reason text,
-    labor_minutes integer
+    labor_minutes integer,
+    slack_channel_id text,
+    slack_message_ts text,
+    slack_thread_ts text,
+    slack_user_id text
 );
 
 
@@ -19871,6 +19968,12 @@ CREATE TABLE public.observations (
     root_condition text,
     mortality_count integer,
     stress_tags text[],
+    slack_channel_id text,
+    slack_message_ts text,
+    slack_thread_ts text,
+    slack_user_id text,
+    slack_file_ids text[],
+    slack_file_refs jsonb DEFAULT '[]'::jsonb NOT NULL,
     CONSTRAINT observations_severity_check CHECK (((severity >= 1) AND (severity <= 5)))
 );
 
@@ -20628,6 +20731,307 @@ CREATE TABLE public.site_content (
 ALTER TABLE public.site_content OWNER TO verdify;
 
 --
+-- Name: slack_ai_work_items; Type: TABLE; Schema: public; Owner: verdify
+--
+
+CREATE TABLE public.slack_ai_work_items (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    completed_at timestamp with time zone,
+    greenhouse_id text DEFAULT 'vallery'::text NOT NULL,
+    work_type text NOT NULL,
+    status text DEFAULT 'queued'::text NOT NULL,
+    model_routing text DEFAULT 'openclaw'::text NOT NULL,
+    requested_by text,
+    channel_id text,
+    message_ts text,
+    thread_ts text,
+    related_record_type text,
+    related_record_id text,
+    input_payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    result_payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    error text,
+    CONSTRAINT slack_ai_work_items_model_routing_check CHECK ((model_routing = ANY (ARRAY['openclaw'::text, 'hermes'::text]))),
+    CONSTRAINT slack_ai_work_items_status_check CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'completed'::text, 'failed'::text, 'canceled'::text])))
+);
+
+
+ALTER TABLE public.slack_ai_work_items OWNER TO verdify;
+
+--
+-- Name: slack_alert_actions; Type: TABLE; Schema: public; Owner: verdify
+--
+
+CREATE TABLE public.slack_alert_actions (
+    id integer NOT NULL,
+    ts timestamp with time zone DEFAULT now() NOT NULL,
+    greenhouse_id text DEFAULT 'vallery'::text NOT NULL,
+    alert_id integer NOT NULL,
+    action text NOT NULL,
+    slack_user_id text,
+    slack_user_name text,
+    channel_id text,
+    message_ts text,
+    thread_ts text,
+    note text,
+    snoozed_until timestamp with time zone,
+    assigned_to text,
+    command_audit_id integer,
+    CONSTRAINT slack_alert_actions_action_check CHECK ((action = ANY (ARRAY['acknowledge'::text, 'snooze'::text, 'assign'::text, 'note'::text, 'false_positive'::text, 'resolve'::text])))
+);
+
+
+ALTER TABLE public.slack_alert_actions OWNER TO verdify;
+
+--
+-- Name: slack_alert_actions_id_seq; Type: SEQUENCE; Schema: public; Owner: verdify
+--
+
+CREATE SEQUENCE public.slack_alert_actions_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.slack_alert_actions_id_seq OWNER TO verdify;
+
+--
+-- Name: slack_alert_actions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: verdify
+--
+
+ALTER SEQUENCE public.slack_alert_actions_id_seq OWNED BY public.slack_alert_actions.id;
+
+
+--
+-- Name: slack_alert_runbooks; Type: TABLE; Schema: public; Owner: verdify
+--
+
+CREATE TABLE public.slack_alert_runbooks (
+    id integer NOT NULL,
+    greenhouse_id text DEFAULT 'vallery'::text NOT NULL,
+    alert_type text NOT NULL,
+    severity text,
+    title text NOT NULL,
+    summary text NOT NULL,
+    runbook_url text,
+    steps text[] DEFAULT ARRAY[]::text[] NOT NULL,
+    is_active boolean DEFAULT true NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.slack_alert_runbooks OWNER TO verdify;
+
+--
+-- Name: slack_alert_runbooks_id_seq; Type: SEQUENCE; Schema: public; Owner: verdify
+--
+
+CREATE SEQUENCE public.slack_alert_runbooks_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.slack_alert_runbooks_id_seq OWNER TO verdify;
+
+--
+-- Name: slack_alert_runbooks_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: verdify
+--
+
+ALTER SEQUENCE public.slack_alert_runbooks_id_seq OWNED BY public.slack_alert_runbooks.id;
+
+
+--
+-- Name: slack_command_audit; Type: TABLE; Schema: public; Owner: verdify
+--
+
+CREATE TABLE public.slack_command_audit (
+    id integer NOT NULL,
+    ts timestamp with time zone DEFAULT now() NOT NULL,
+    greenhouse_id text DEFAULT 'vallery'::text NOT NULL,
+    channel_id text,
+    channel_name text,
+    message_ts text,
+    thread_ts text,
+    slack_team_id text,
+    slack_user_id text,
+    slack_user_name text,
+    role text,
+    command_text text NOT NULL,
+    normalized_intent text NOT NULL,
+    status text DEFAULT 'received'::text NOT NULL,
+    requires_confirmation boolean DEFAULT false NOT NULL,
+    confirmation_id uuid,
+    target_type text,
+    target_id text,
+    record_type text,
+    record_id text,
+    response_text text,
+    error text,
+    raw_event jsonb DEFAULT '{}'::jsonb NOT NULL,
+    model_routing text DEFAULT 'deterministic'::text NOT NULL,
+    handled_by text DEFAULT 'slack_ops'::text NOT NULL,
+    CONSTRAINT slack_command_audit_model_routing_check CHECK ((model_routing = ANY (ARRAY['deterministic'::text, 'openclaw'::text, 'hermes'::text, 'openclaw_ai'::text, 'hybrid'::text]))),
+    CONSTRAINT slack_command_audit_role_check CHECK (((role IS NULL) OR (role = ANY (ARRAY['viewer'::text, 'operator'::text, 'grower'::text, 'coordinator'::text])))),
+    CONSTRAINT slack_command_audit_status_check CHECK ((status = ANY (ARRAY['received'::text, 'parsed'::text, 'needs_confirmation'::text, 'executed'::text, 'denied'::text, 'failed'::text, 'canceled'::text, 'expired'::text, 'confirmed'::text, 'not_found'::text, 'ambiguous'::text, 'error'::text, 'unsupported'::text, 'unsafe_blocked'::text])))
+);
+
+
+ALTER TABLE public.slack_command_audit OWNER TO verdify;
+
+--
+-- Name: slack_command_audit_id_seq; Type: SEQUENCE; Schema: public; Owner: verdify
+--
+
+CREATE SEQUENCE public.slack_command_audit_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.slack_command_audit_id_seq OWNER TO verdify;
+
+--
+-- Name: slack_command_audit_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: verdify
+--
+
+ALTER SEQUENCE public.slack_command_audit_id_seq OWNED BY public.slack_command_audit.id;
+
+
+--
+-- Name: slack_confirmation_requests; Type: TABLE; Schema: public; Owner: verdify
+--
+
+CREATE TABLE public.slack_confirmation_requests (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    expires_at timestamp with time zone NOT NULL,
+    confirmed_at timestamp with time zone,
+    canceled_at timestamp with time zone,
+    greenhouse_id text DEFAULT 'vallery'::text NOT NULL,
+    slack_team_id text,
+    slack_user_id text NOT NULL,
+    channel_id text,
+    message_ts text,
+    thread_ts text,
+    normalized_intent text NOT NULL,
+    target_type text,
+    target_id text,
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    status text DEFAULT 'pending'::text NOT NULL,
+    command_audit_id integer,
+    confirmation_text text NOT NULL,
+    CONSTRAINT slack_confirmation_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'confirmed'::text, 'canceled'::text, 'expired'::text])))
+);
+
+
+ALTER TABLE public.slack_confirmation_requests OWNER TO verdify;
+
+--
+-- Name: slack_notification_events; Type: TABLE; Schema: public; Owner: verdify
+--
+
+CREATE TABLE public.slack_notification_events (
+    id integer NOT NULL,
+    ts timestamp with time zone DEFAULT now() NOT NULL,
+    greenhouse_id text DEFAULT 'vallery'::text NOT NULL,
+    source text NOT NULL,
+    event_type text NOT NULL,
+    severity text,
+    channel_id text,
+    message_ts text,
+    thread_ts text,
+    entity_type text,
+    entity_id text,
+    dedupe_key text,
+    status text DEFAULT 'posted'::text NOT NULL,
+    post_mode text DEFAULT 'immediate'::text NOT NULL,
+    payload jsonb DEFAULT '{}'::jsonb NOT NULL,
+    error text,
+    CONSTRAINT slack_notification_events_post_mode_check CHECK ((post_mode = ANY (ARRAY['immediate'::text, 'thread'::text, 'digest'::text, 'suppressed'::text]))),
+    CONSTRAINT slack_notification_events_status_check CHECK ((status = ANY (ARRAY['planned'::text, 'posted'::text, 'suppressed'::text, 'digest'::text, 'failed'::text, 'deleted'::text])))
+);
+
+
+ALTER TABLE public.slack_notification_events OWNER TO verdify;
+
+--
+-- Name: slack_notification_events_id_seq; Type: SEQUENCE; Schema: public; Owner: verdify
+--
+
+CREATE SEQUENCE public.slack_notification_events_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.slack_notification_events_id_seq OWNER TO verdify;
+
+--
+-- Name: slack_notification_events_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: verdify
+--
+
+ALTER SEQUENCE public.slack_notification_events_id_seq OWNED BY public.slack_notification_events.id;
+
+
+--
+-- Name: slack_user_roles; Type: TABLE; Schema: public; Owner: verdify
+--
+
+CREATE TABLE public.slack_user_roles (
+    id integer NOT NULL,
+    greenhouse_id text DEFAULT 'vallery'::text NOT NULL,
+    slack_team_id text,
+    slack_user_id text NOT NULL,
+    display_name text,
+    role text DEFAULT 'viewer'::text NOT NULL,
+    is_active boolean DEFAULT true NOT NULL,
+    notes text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT slack_user_roles_role_check CHECK ((role = ANY (ARRAY['viewer'::text, 'operator'::text, 'grower'::text, 'coordinator'::text])))
+);
+
+
+ALTER TABLE public.slack_user_roles OWNER TO verdify;
+
+--
+-- Name: slack_user_roles_id_seq; Type: SEQUENCE; Schema: public; Owner: verdify
+--
+
+CREATE SEQUENCE public.slack_user_roles_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.slack_user_roles_id_seq OWNER TO verdify;
+
+--
+-- Name: slack_user_roles_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: verdify
+--
+
+ALTER SEQUENCE public.slack_user_roles_id_seq OWNED BY public.slack_user_roles.id;
+
+
+--
 -- Name: soil_moisture_targets; Type: TABLE; Schema: public; Owner: verdify
 --
 
@@ -20792,7 +21196,11 @@ CREATE TABLE public.treatments (
     greenhouse_id text DEFAULT 'vallery'::text,
     followup_due_at timestamp with time zone,
     followup_completed_at timestamp with time zone,
-    outcome text
+    outcome text,
+    slack_channel_id text,
+    slack_message_ts text,
+    slack_thread_ts text,
+    slack_user_id text
 );
 
 
@@ -27078,6 +27486,181 @@ CREATE VIEW public.v_setpoint_velocity AS
 ALTER VIEW public.v_setpoint_velocity OWNER TO verdify;
 
 --
+-- Name: v_slack_crop_tasks_due; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_slack_crop_tasks_due AS
+ SELECT ct.id,
+    ct.greenhouse_id,
+    ct.task_type,
+    ct.priority,
+    ct.status,
+    ct.due_at,
+    ct.crop_id,
+    c.name AS crop_name,
+    c.variety AS crop_variety,
+    c.stage AS crop_stage,
+    ct.position_id,
+    p.label AS position_label,
+    z.slug AS zone_slug,
+    ct.notes
+   FROM (((public.crop_tasks ct
+     LEFT JOIN public.crops c ON ((c.id = ct.crop_id)))
+     LEFT JOIN public.positions p ON ((p.id = ct.position_id)))
+     LEFT JOIN public.zones z ON ((z.id = COALESCE(ct.zone_id, c.zone_id))))
+  WHERE ((ct.status = ANY (ARRAY['open'::text, 'snoozed'::text])) AND (ct.due_at <= (now() + '24:00:00'::interval)))
+  ORDER BY ct.due_at, ct.priority DESC, ct.id;
+
+
+ALTER VIEW public.v_slack_crop_tasks_due OWNER TO verdify;
+
+--
+-- Name: v_slack_forecast_triage; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_slack_forecast_triage AS
+ WITH items AS (
+         SELECT forecast_deviation_log.ts,
+            forecast_deviation_log.greenhouse_id,
+            'forecast_deviation'::text AS item_type,
+            forecast_deviation_log.parameter AS target,
+                CASE
+                    WHEN forecast_deviation_log.triggered THEN 'triggered'::text
+                    ELSE 'observed'::text
+                END AS status,
+            abs(forecast_deviation_log.delta) AS urgency,
+            jsonb_build_object('observed', forecast_deviation_log.observed, 'forecasted', forecast_deviation_log.forecasted, 'delta', forecast_deviation_log.delta, 'threshold', forecast_deviation_log.threshold, 'triggered', forecast_deviation_log.triggered) AS details
+           FROM public.forecast_deviation_log
+          WHERE (forecast_deviation_log.ts >= (now() - '72:00:00'::interval))
+        UNION ALL
+         SELECT COALESCE(forecast_action_log.triggered_at, forecast_action_log.outcome_evaluated_at, now()) AS ts,
+            forecast_action_log.greenhouse_id,
+            'forecast_action'::text AS item_type,
+            COALESCE(forecast_action_log.param, forecast_action_log.rule_name) AS target,
+            COALESCE(forecast_action_log.outcome, forecast_action_log.action_taken) AS status,
+            (
+                CASE
+                    WHEN (forecast_action_log.action_taken <> 'evaluated_ok'::text) THEN 1
+                    ELSE 0
+                END)::double precision AS urgency,
+            jsonb_build_object('rule_name', forecast_action_log.rule_name, 'action_taken', forecast_action_log.action_taken, 'plan_id', forecast_action_log.plan_id, 'old_value', forecast_action_log.old_value, 'new_value', forecast_action_log.new_value, 'condition', forecast_action_log.forecast_condition, 'outcome_metrics', forecast_action_log.outcome_metrics) AS details
+           FROM public.forecast_action_log
+          WHERE (COALESCE(forecast_action_log.triggered_at, forecast_action_log.outcome_evaluated_at, now()) >= (now() - '72:00:00'::interval))
+        )
+ SELECT row_number() OVER (ORDER BY urgency DESC NULLS LAST, ts DESC) AS id,
+    ts,
+    greenhouse_id,
+    item_type,
+    target,
+    status,
+    urgency,
+    details
+   FROM items
+  ORDER BY urgency DESC NULLS LAST, ts DESC;
+
+
+ALTER VIEW public.v_slack_forecast_triage OWNER TO verdify;
+
+--
+-- Name: v_slack_guardrail_summary; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_slack_guardrail_summary AS
+ SELECT pj.plan_id,
+    pj.created_at,
+    pj.planner_instance,
+    COALESCE(gs.guardrail_events, 0) AS guardrail_events,
+    COALESCE(gs.held_guardrail_events, 0) AS held_guardrail_events,
+    COALESCE(gs.dispatched_guardrail_events, 0) AS dispatched_guardrail_events,
+    COALESCE(gs.vpd_high_guardrail_events, 0) AS vpd_high_guardrail_events,
+    COALESCE((gs.guardrail_penalty)::integer, 0) AS guardrail_penalty
+   FROM (public.plan_journal pj
+     LEFT JOIN public.v_plan_guardrail_scorecard gs ON ((gs.plan_id = pj.plan_id)))
+  ORDER BY pj.created_at DESC;
+
+
+ALTER VIEW public.v_slack_guardrail_summary OWNER TO verdify;
+
+--
+-- Name: v_slack_open_alert_threads; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_slack_open_alert_threads AS
+ SELECT id AS alert_id,
+    greenhouse_id,
+    alert_type,
+    severity,
+    category,
+    sensor_id,
+    zone,
+    zone_id,
+    message,
+    disposition,
+    ts,
+    acknowledged_at,
+    acknowledged_by,
+    slack_channel_id,
+    COALESCE(slack_thread_ts, slack_ts) AS slack_thread_ts,
+    COALESCE(slack_message_ts, slack_ts) AS slack_message_ts,
+    slack_snoozed_until,
+    slack_assigned_to
+   FROM public.alert_log
+  WHERE ((resolved_at IS NULL) AND (disposition = ANY (ARRAY['open'::text, 'acknowledged'::text])));
+
+
+ALTER VIEW public.v_slack_open_alert_threads OWNER TO verdify;
+
+--
+-- Name: v_slack_public_ops_log; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_slack_public_ops_log AS
+ SELECT (slack_command_audit.id)::text AS id,
+    slack_command_audit.ts,
+    slack_command_audit.greenhouse_id,
+    'command'::text AS event_kind,
+    slack_command_audit.normalized_intent AS event_type,
+    slack_command_audit.status,
+    slack_command_audit.role,
+    slack_command_audit.record_type,
+    slack_command_audit.record_id,
+    slack_command_audit.model_routing,
+    slack_command_audit.handled_by,
+    "left"(regexp_replace(COALESCE(slack_command_audit.response_text, slack_command_audit.command_text), '<@[A-Z0-9]+>'::text, '@user'::text, 'g'::text), 320) AS public_text
+   FROM public.slack_command_audit
+UNION ALL
+ SELECT (slack_notification_events.id)::text AS id,
+    slack_notification_events.ts,
+    slack_notification_events.greenhouse_id,
+    'notification'::text AS event_kind,
+    slack_notification_events.event_type,
+    slack_notification_events.status,
+    NULL::text AS role,
+    slack_notification_events.entity_type AS record_type,
+    slack_notification_events.entity_id AS record_id,
+    'deterministic'::text AS model_routing,
+    slack_notification_events.source AS handled_by,
+    "left"(COALESCE((slack_notification_events.payload ->> 'text'::text), slack_notification_events.event_type), 320) AS public_text
+   FROM public.slack_notification_events
+UNION ALL
+ SELECT (slack_alert_actions.id)::text AS id,
+    slack_alert_actions.ts,
+    slack_alert_actions.greenhouse_id,
+    'alert_action'::text AS event_kind,
+    slack_alert_actions.action AS event_type,
+    'executed'::text AS status,
+    NULL::text AS role,
+    'alert_log'::text AS record_type,
+    (slack_alert_actions.alert_id)::text AS record_id,
+    'deterministic'::text AS model_routing,
+    'python'::text AS handled_by,
+    "left"(COALESCE(slack_alert_actions.note, 'alert action recorded'::text), 320) AS public_text
+   FROM public.slack_alert_actions;
+
+
+ALTER VIEW public.v_slack_public_ops_log OWNER TO verdify;
+
+--
 -- Name: v_soil_status; Type: VIEW; Schema: public; Owner: verdify
 --
 
@@ -30653,6 +31236,62 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_23_519_chunk ALTER COLUMN greenhou
 
 
 --
+-- Name: _hyper_26_707_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_26_707_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
+-- Name: _hyper_26_707_chunk moisture_zone; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_26_707_chunk ALTER COLUMN moisture_zone SET DEFAULT 'none'::text;
+
+
+--
+-- Name: _hyper_26_707_chunk wet_assist_allowed; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_26_707_chunk ALTER COLUMN wet_assist_allowed SET DEFAULT false;
+
+
+--
+-- Name: _hyper_26_707_chunk fog_allowed; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_26_707_chunk ALTER COLUMN fog_allowed SET DEFAULT false;
+
+
+--
+-- Name: _hyper_26_707_chunk relay_truth; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_26_707_chunk ALTER COLUMN relay_truth SET DEFAULT '{}'::jsonb;
+
+
+--
+-- Name: _hyper_26_707_chunk resource_cost_estimate; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_26_707_chunk ALTER COLUMN resource_cost_estimate SET DEFAULT '{}'::jsonb;
+
+
+--
+-- Name: _hyper_26_707_chunk sensor_status; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_26_707_chunk ALTER COLUMN sensor_status SET DEFAULT '{}'::jsonb;
+
+
+--
+-- Name: _hyper_26_707_chunk source_system_state; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_26_707_chunk ALTER COLUMN source_system_state SET DEFAULT '{}'::jsonb;
+
+
+--
 -- Name: _hyper_2_17_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -32655,6 +33294,13 @@ ALTER TABLE ONLY public.crop_target_profiles ALTER COLUMN id SET DEFAULT nextval
 
 
 --
+-- Name: crop_tasks id; Type: DEFAULT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.crop_tasks ALTER COLUMN id SET DEFAULT nextval('public.crop_tasks_id_seq'::regclass);
+
+
+--
 -- Name: crops id; Type: DEFAULT; Schema: public; Owner: verdify
 --
 
@@ -32834,6 +33480,41 @@ ALTER TABLE ONLY public.sensors ALTER COLUMN id SET DEFAULT nextval('public.sens
 --
 
 ALTER TABLE ONLY public.shelves ALTER COLUMN id SET DEFAULT nextval('public.shelves_id_seq'::regclass);
+
+
+--
+-- Name: slack_alert_actions id; Type: DEFAULT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.slack_alert_actions ALTER COLUMN id SET DEFAULT nextval('public.slack_alert_actions_id_seq'::regclass);
+
+
+--
+-- Name: slack_alert_runbooks id; Type: DEFAULT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.slack_alert_runbooks ALTER COLUMN id SET DEFAULT nextval('public.slack_alert_runbooks_id_seq'::regclass);
+
+
+--
+-- Name: slack_command_audit id; Type: DEFAULT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.slack_command_audit ALTER COLUMN id SET DEFAULT nextval('public.slack_command_audit_id_seq'::regclass);
+
+
+--
+-- Name: slack_notification_events id; Type: DEFAULT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.slack_notification_events ALTER COLUMN id SET DEFAULT nextval('public.slack_notification_events_id_seq'::regclass);
+
+
+--
+-- Name: slack_user_roles id; Type: DEFAULT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.slack_user_roles ALTER COLUMN id SET DEFAULT nextval('public.slack_user_roles_id_seq'::regclass);
 
 
 --
@@ -33292,6 +33973,14 @@ ALTER TABLE ONLY public.crop_target_profiles
 
 
 --
+-- Name: crop_tasks crop_tasks_pkey; Type: CONSTRAINT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.crop_tasks
+    ADD CONSTRAINT crop_tasks_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: crops crops_pkey; Type: CONSTRAINT; Schema: public; Owner: verdify
 --
 
@@ -33673,6 +34362,62 @@ ALTER TABLE ONLY public.shelves
 
 ALTER TABLE ONLY public.site_content
     ADD CONSTRAINT site_content_pkey PRIMARY KEY (page_path);
+
+
+--
+-- Name: slack_ai_work_items slack_ai_work_items_pkey; Type: CONSTRAINT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.slack_ai_work_items
+    ADD CONSTRAINT slack_ai_work_items_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: slack_alert_actions slack_alert_actions_pkey; Type: CONSTRAINT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.slack_alert_actions
+    ADD CONSTRAINT slack_alert_actions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: slack_alert_runbooks slack_alert_runbooks_pkey; Type: CONSTRAINT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.slack_alert_runbooks
+    ADD CONSTRAINT slack_alert_runbooks_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: slack_command_audit slack_command_audit_pkey; Type: CONSTRAINT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.slack_command_audit
+    ADD CONSTRAINT slack_command_audit_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: slack_confirmation_requests slack_confirmation_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.slack_confirmation_requests
+    ADD CONSTRAINT slack_confirmation_requests_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: slack_notification_events slack_notification_events_pkey; Type: CONSTRAINT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.slack_notification_events
+    ADD CONSTRAINT slack_notification_events_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: slack_user_roles slack_user_roles_pkey; Type: CONSTRAINT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.slack_user_roles
+    ADD CONSTRAINT slack_user_roles_pkey PRIMARY KEY (id);
 
 
 --
@@ -37176,6 +37921,41 @@ CREATE INDEX _hyper_23_519_chunk_idx_infra_cpu_host_ts ON _timescaledb_internal.
 --
 
 CREATE INDEX _hyper_23_519_chunk_infra_cpu_ts_idx ON _timescaledb_internal._hyper_23_519_chunk USING btree (ts DESC);
+
+
+--
+-- Name: _hyper_26_707_chunk_climate_action_log_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_26_707_chunk_climate_action_log_ts_idx ON _timescaledb_internal._hyper_26_707_chunk USING btree (ts DESC);
+
+
+--
+-- Name: _hyper_26_707_chunk_idx_climate_action_log_action_ts; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_26_707_chunk_idx_climate_action_log_action_ts ON _timescaledb_internal._hyper_26_707_chunk USING btree (climate_action, ts DESC);
+
+
+--
+-- Name: _hyper_26_707_chunk_idx_climate_action_log_greenhouse_ts; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_26_707_chunk_idx_climate_action_log_greenhouse_ts ON _timescaledb_internal._hyper_26_707_chunk USING btree (greenhouse_id, ts DESC);
+
+
+--
+-- Name: _hyper_26_707_chunk_idx_climate_action_log_plan; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_26_707_chunk_idx_climate_action_log_plan ON _timescaledb_internal._hyper_26_707_chunk USING btree (plan_id, ts DESC) WHERE (plan_id IS NOT NULL);
+
+
+--
+-- Name: _hyper_26_707_chunk_idx_climate_action_log_trigger; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_26_707_chunk_idx_climate_action_log_trigger ON _timescaledb_internal._hyper_26_707_chunk USING btree (trigger_id) WHERE (trigger_id IS NOT NULL);
 
 
 --
@@ -43402,6 +44182,20 @@ CREATE INDEX idx_crop_events_crop ON public.crop_events USING btree (crop_id, ts
 
 
 --
+-- Name: idx_crop_tasks_crop; Type: INDEX; Schema: public; Owner: verdify
+--
+
+CREATE INDEX idx_crop_tasks_crop ON public.crop_tasks USING btree (crop_id, due_at DESC);
+
+
+--
+-- Name: idx_crop_tasks_due; Type: INDEX; Schema: public; Owner: verdify
+--
+
+CREATE INDEX idx_crop_tasks_due ON public.crop_tasks USING btree (greenhouse_id, status, due_at);
+
+
+--
 -- Name: idx_crops_active; Type: INDEX; Schema: public; Owner: verdify
 --
 
@@ -43948,6 +44742,62 @@ CREATE INDEX idx_shelves_zone ON public.shelves USING btree (zone_id);
 
 
 --
+-- Name: idx_slack_ai_work_items_related; Type: INDEX; Schema: public; Owner: verdify
+--
+
+CREATE INDEX idx_slack_ai_work_items_related ON public.slack_ai_work_items USING btree (related_record_type, related_record_id);
+
+
+--
+-- Name: idx_slack_ai_work_items_status; Type: INDEX; Schema: public; Owner: verdify
+--
+
+CREATE INDEX idx_slack_ai_work_items_status ON public.slack_ai_work_items USING btree (greenhouse_id, status, created_at DESC);
+
+
+--
+-- Name: idx_slack_alert_actions_alert; Type: INDEX; Schema: public; Owner: verdify
+--
+
+CREATE INDEX idx_slack_alert_actions_alert ON public.slack_alert_actions USING btree (alert_id, ts DESC);
+
+
+--
+-- Name: idx_slack_command_audit_intent; Type: INDEX; Schema: public; Owner: verdify
+--
+
+CREATE INDEX idx_slack_command_audit_intent ON public.slack_command_audit USING btree (normalized_intent, ts DESC);
+
+
+--
+-- Name: idx_slack_command_audit_ts; Type: INDEX; Schema: public; Owner: verdify
+--
+
+CREATE INDEX idx_slack_command_audit_ts ON public.slack_command_audit USING btree (ts DESC);
+
+
+--
+-- Name: idx_slack_command_audit_user; Type: INDEX; Schema: public; Owner: verdify
+--
+
+CREATE INDEX idx_slack_command_audit_user ON public.slack_command_audit USING btree (greenhouse_id, slack_user_id, ts DESC);
+
+
+--
+-- Name: idx_slack_confirm_pending; Type: INDEX; Schema: public; Owner: verdify
+--
+
+CREATE INDEX idx_slack_confirm_pending ON public.slack_confirmation_requests USING btree (greenhouse_id, slack_user_id, expires_at) WHERE (status = 'pending'::text);
+
+
+--
+-- Name: idx_slack_confirmation_pending; Type: INDEX; Schema: public; Owner: verdify
+--
+
+CREATE INDEX idx_slack_confirmation_pending ON public.slack_confirmation_requests USING btree (greenhouse_id, slack_user_id, created_at DESC) WHERE (status = 'pending'::text);
+
+
+--
 -- Name: idx_snapshot_param; Type: INDEX; Schema: public; Owner: verdify
 --
 
@@ -44211,6 +45061,27 @@ CREATE INDEX setpoint_snapshot_ts_idx ON public.setpoint_snapshot USING btree (t
 --
 
 CREATE INDEX system_state_ts_idx ON public.system_state USING btree (ts DESC);
+
+
+--
+-- Name: ux_slack_alert_runbooks_active; Type: INDEX; Schema: public; Owner: verdify
+--
+
+CREATE UNIQUE INDEX ux_slack_alert_runbooks_active ON public.slack_alert_runbooks USING btree (greenhouse_id, lower(alert_type), COALESCE(severity, ''::text)) WHERE is_active;
+
+
+--
+-- Name: ux_slack_notification_dedupe; Type: INDEX; Schema: public; Owner: verdify
+--
+
+CREATE UNIQUE INDEX ux_slack_notification_dedupe ON public.slack_notification_events USING btree (greenhouse_id, dedupe_key) WHERE (dedupe_key IS NOT NULL);
+
+
+--
+-- Name: ux_slack_user_roles_active; Type: INDEX; Schema: public; Owner: verdify
+--
+
+CREATE UNIQUE INDEX ux_slack_user_roles_active ON public.slack_user_roles USING btree (greenhouse_id, slack_user_id) WHERE is_active;
 
 
 --
@@ -45411,6 +46282,13 @@ CREATE TRIGGER trg_climate_solar_position BEFORE INSERT ON public.climate FOR EA
 
 
 --
+-- Name: crop_tasks trg_crop_tasks_updated_at; Type: TRIGGER; Schema: public; Owner: verdify
+--
+
+CREATE TRIGGER trg_crop_tasks_updated_at BEFORE UPDATE ON public.crop_tasks FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+
+--
 -- Name: crops trg_crops_log_clear; Type: TRIGGER; Schema: public; Owner: verdify
 --
 
@@ -45471,6 +46349,13 @@ CREATE TRIGGER trg_setpoint_notify AFTER INSERT ON public.setpoint_changes FOR E
 --
 
 CREATE TRIGGER trg_setpoint_schedule_updated_at BEFORE UPDATE ON public.setpoint_schedule FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
+
+--
+-- Name: slack_user_roles trg_slack_user_roles_updated_at; Type: TRIGGER; Schema: public; Owner: verdify
+--
+
+CREATE TRIGGER trg_slack_user_roles_updated_at BEFORE UPDATE ON public.slack_user_roles FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 
 --
@@ -47585,6 +48470,14 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_2_69_chunk
 
 
 --
+-- Name: _hyper_26_707_chunk 707_747_climate_action_log_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_26_707_chunk
+    ADD CONSTRAINT "707_747_climate_action_log_greenhouse_id_fkey" FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
+
+
+--
 -- Name: _hyper_2_71_chunk 71_52_equipment_state_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -47838,6 +48731,62 @@ ALTER TABLE ONLY public.crop_events
 
 ALTER TABLE ONLY public.crop_target_profiles
     ADD CONSTRAINT crop_target_profiles_crop_catalog_id_fkey FOREIGN KEY (crop_catalog_id) REFERENCES public.crop_catalog(id) ON DELETE SET NULL;
+
+
+--
+-- Name: crop_tasks crop_tasks_crop_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.crop_tasks
+    ADD CONSTRAINT crop_tasks_crop_id_fkey FOREIGN KEY (crop_id) REFERENCES public.crops(id) ON DELETE CASCADE;
+
+
+--
+-- Name: crop_tasks crop_tasks_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.crop_tasks
+    ADD CONSTRAINT crop_tasks_greenhouse_id_fkey FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
+
+
+--
+-- Name: crop_tasks crop_tasks_position_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.crop_tasks
+    ADD CONSTRAINT crop_tasks_position_id_fkey FOREIGN KEY (position_id) REFERENCES public.positions(id) ON DELETE SET NULL;
+
+
+--
+-- Name: crop_tasks crop_tasks_related_harvest_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.crop_tasks
+    ADD CONSTRAINT crop_tasks_related_harvest_id_fkey FOREIGN KEY (related_harvest_id) REFERENCES public.harvests(id) ON DELETE SET NULL;
+
+
+--
+-- Name: crop_tasks crop_tasks_related_observation_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.crop_tasks
+    ADD CONSTRAINT crop_tasks_related_observation_id_fkey FOREIGN KEY (related_observation_id) REFERENCES public.observations(id) ON DELETE SET NULL;
+
+
+--
+-- Name: crop_tasks crop_tasks_related_treatment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.crop_tasks
+    ADD CONSTRAINT crop_tasks_related_treatment_id_fkey FOREIGN KEY (related_treatment_id) REFERENCES public.treatments(id) ON DELETE SET NULL;
+
+
+--
+-- Name: crop_tasks crop_tasks_zone_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.crop_tasks
+    ADD CONSTRAINT crop_tasks_zone_id_fkey FOREIGN KEY (zone_id) REFERENCES public.zones(id) ON DELETE SET NULL;
 
 
 --
@@ -48257,6 +49206,70 @@ ALTER TABLE ONLY public.shelves
 
 
 --
+-- Name: slack_alert_actions slack_alert_actions_alert_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.slack_alert_actions
+    ADD CONSTRAINT slack_alert_actions_alert_id_fkey FOREIGN KEY (alert_id) REFERENCES public.alert_log(id) ON DELETE CASCADE;
+
+
+--
+-- Name: slack_alert_actions slack_alert_actions_command_audit_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.slack_alert_actions
+    ADD CONSTRAINT slack_alert_actions_command_audit_id_fkey FOREIGN KEY (command_audit_id) REFERENCES public.slack_command_audit(id) ON DELETE SET NULL;
+
+
+--
+-- Name: slack_alert_actions slack_alert_actions_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.slack_alert_actions
+    ADD CONSTRAINT slack_alert_actions_greenhouse_id_fkey FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
+
+
+--
+-- Name: slack_command_audit slack_command_audit_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.slack_command_audit
+    ADD CONSTRAINT slack_command_audit_greenhouse_id_fkey FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
+
+
+--
+-- Name: slack_confirmation_requests slack_confirmation_requests_command_audit_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.slack_confirmation_requests
+    ADD CONSTRAINT slack_confirmation_requests_command_audit_id_fkey FOREIGN KEY (command_audit_id) REFERENCES public.slack_command_audit(id) ON DELETE SET NULL;
+
+
+--
+-- Name: slack_confirmation_requests slack_confirmation_requests_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.slack_confirmation_requests
+    ADD CONSTRAINT slack_confirmation_requests_greenhouse_id_fkey FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
+
+
+--
+-- Name: slack_notification_events slack_notification_events_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.slack_notification_events
+    ADD CONSTRAINT slack_notification_events_greenhouse_id_fkey FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
+
+
+--
+-- Name: slack_user_roles slack_user_roles_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.slack_user_roles
+    ADD CONSTRAINT slack_user_roles_greenhouse_id_fkey FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
+
+
+--
 -- Name: soil_moisture_targets soil_moisture_targets_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: verdify
 --
 
@@ -48380,4 +49393,4 @@ ALTER TABLE ONLY public.zones
 -- PostgreSQL database dump complete
 --
 
-\unrestrict CaqlcCS2PtlBejVdLUrR5EGqo5PQLESXkvhB2aK2MQYGoK5deUlTmzfjQtVwpEj
+\unrestrict Ih2eUi2HGgnl77zGmiZ6g3vm03yEPlOdhVqE4xi69D4Jj0HrLJGI2d1FVKrk65C
