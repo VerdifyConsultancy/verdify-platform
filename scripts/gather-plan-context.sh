@@ -1300,14 +1300,14 @@ SELECT CASE
          ELSE 0
        END
   FROM latest;
-" 2>/dev/null | tr -d ' ')
+" 2>/dev/null | tr -d ' ' || true)
 if [ "${target_context_complete:-0}" = "1" ]; then
   _check "dispatcher climate targets" ok "low/target/high and target deltas are available for read-only planner context"
 else
   _check "dispatcher climate targets" fail "band target context is incomplete; do not tune ClimateIntent from missing targets"
 fi
 
-action_age_s=$($DB -c "SELECT COALESCE(EXTRACT(epoch FROM now() - max(ts))::int, 2147483647) FROM climate_action_log WHERE COALESCE(greenhouse_id, 'vallery') = '${GREENHOUSE_ID}';" 2>/dev/null | tr -d ' ')
+action_age_s=$($DB -c "SELECT COALESCE(EXTRACT(epoch FROM now() - max(ts))::int, 2147483647) FROM climate_action_log WHERE COALESCE(greenhouse_id, 'vallery') = '${GREENHOUSE_ID}';" 2>/dev/null | tr -d ' ' || true)
 action_proof_missing=$($DB -c "
 WITH latest AS (
   SELECT *
@@ -1336,7 +1336,7 @@ SELECT array_to_string(
          ','
        )
   FROM latest;
-" 2>/dev/null | tr -d '[:space:]')
+" 2>/dev/null | tr -d '[:space:]' || true)
 if [ -n "${action_age_s:-}" ] && [ "${action_age_s:-2147483647}" -lt 300 ] && [ -z "${action_proof_missing:-}" ]; then
   _check "climate action proof fresh" ok "controller action proof is ${action_age_s}s old and includes target deltas + relay truth"
 else
