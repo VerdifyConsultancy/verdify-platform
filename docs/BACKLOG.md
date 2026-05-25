@@ -26,6 +26,11 @@ Current posture:
 
 - Track A greenhouse operations still outrank all business/site/repo work.
 - `lab.verdify.ai` is the greenhouse lab + evidence site; `verdify.ai` / `www.verdify.ai` redirect there until the separate consulting CMS is ready.
+- **Active climate-control architecture target:** implement the
+  [`ClimateIntent` controller design](firmware-climate-intent-controller-final-design-2026-05-24.md)
+  as the new AI/controller boundary: firmware owns safety, relays, and
+  lexicographic candidate selection; AI owns bounded forecast-aware intent,
+  historical priors, and resource posture.
 - Broad SaaS/multi-tenant work moves behind consulting validation unless needed for Track A or public-site reliability.
 - Repo, GitHub, project-board, and agent-scope splits are coordinator-owned until boundaries are decided.
 - PR #80 stays intact as the first recovery baseline; unrelated dirty work must

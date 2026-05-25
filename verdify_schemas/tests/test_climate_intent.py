@@ -1,0 +1,164 @@
+"""Drift guards for the ClimateIntent controller contract."""
+
+from __future__ import annotations
+
+import pathlib
+import re
+
+import pytest
+from pydantic import ValidationError
+
+from verdify_schemas.climate_intent import (
+    CLIMATE_ACTIONS,
+    CLIMATE_INTENT_FIELDS,
+    CLIMATE_PRIORITY_ORDER,
+    CLIMATE_RELAY_FIELD_DENYLIST,
+    ClimateActionDecision,
+    ClimateCandidateProjection,
+    ClimateIntent,
+    choose_climate_candidate,
+)
+
+REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
+DESIGN_DOC = REPO_ROOT / "docs" / "firmware-climate-intent-controller-final-design-2026-05-24.md"
+
+
+def _section(text: str, start: str, end: str) -> str:
+    return text.split(start, 1)[1].split(end, 1)[0]
+
+
+def _table_codes(section: str) -> tuple[str, ...]:
+    values: list[str] = []
+    for line in section.splitlines():
+        if not line.startswith("| `"):
+            continue
+        match = re.match(r"\| `([^`]+)`", line)
+        if match:
+            values.append(match.group(1))
+    return tuple(values)
+
+
+def _valid_intent(**overrides: float) -> ClimateIntent:
+    data = {
+        "temp_target_f": 72.0,
+        "temp_band_f": 6.0,
+        "vpd_target_kpa": 1.0,
+        "vpd_band_kpa": 0.5,
+        "forecast_temp_bias_f": -1.0,
+        "forecast_vpd_bias_kpa": 0.05,
+        "solar_precool_gain_f": 1.5,
+        "thermal_lead_time_min": 45.0,
+        "economizer_temp_advantage_f": 4.0,
+        "economizer_dewpoint_advantage_f": 3.0,
+        "moisture_engage_vpd_excess_kpa": 0.05,
+        "mist_duty_limit_pct": 20.0,
+        "fog_escalate_vpd_excess_kpa": 0.25,
+        "dew_margin_floor_f": 8.0,
+        "wet_cutoff_hour": 19.0,
+        "daily_mist_budget_gal": 120.0,
+        "resource_sensitivity": 0.4,
+        "relay_churn_penalty": 0.6,
+    }
+    data.update(overrides)
+    return ClimateIntent(**data)
+
+
+def test_design_doc_is_canonical_and_schema_matches_intent_surface() -> None:
+    text = DESIGN_DOC.read_text()
+    intent_section = _section(text, "## ClimateIntent Surface", "## Context Inputs For AI")
+
+    assert _table_codes(intent_section) == CLIMATE_INTENT_FIELDS
+    assert set(ClimateIntent.model_fields) == set(CLIMATE_INTENT_FIELDS)
+
+
+def test_design_doc_action_table_matches_schema_actions() -> None:
+    text = DESIGN_DOC.read_text()
+    action_section = _section(text, "## Physical Action Set", "## Candidate Evaluation")
+
+    assert _table_codes(action_section) == CLIMATE_ACTIONS
+
+
+def test_climate_intent_excludes_raw_relay_commands() -> None:
+    assert not (set(CLIMATE_INTENT_FIELDS) & CLIMATE_RELAY_FIELD_DENYLIST)
+
+    with pytest.raises(ValidationError):
+        _valid_intent(fog=1.0)  # type: ignore[call-arg]
+
+
+def test_climate_intent_ranges_are_bounded() -> None:
+    intent = _valid_intent()
+
+    assert intent.temp_band() == (69.0, 75.0)
+    assert intent.vpd_band() == (0.75, 1.25)
+
+    with pytest.raises(ValidationError):
+        _valid_intent(temp_band_f=20.0)
+    with pytest.raises(ValidationError):
+        _valid_intent(forecast_vpd_bias_kpa=0.9)
+    with pytest.raises(ValidationError):
+        _valid_intent(resource_sensitivity=2.0)
+
+
+def test_candidate_selection_is_lexicographic_not_weighted_sum() -> None:
+    assert CLIMATE_PRIORITY_ORDER == ("safety", "temp", "vpd", "resource")
+
+    cheap_vpd_better = ClimateCandidateProjection(
+        action="SEALED_HUMIDIFY",
+        safety_ok=True,
+        projected_temp_error_f=2.0,
+        projected_vpd_error_kpa=0.0,
+        resource_cost=0.0,
+        relay_churn_cost=0.0,
+        confidence=0.8,
+    )
+    temp_better_expensive = ClimateCandidateProjection(
+        action="VENT_COOL_MIST_ASSIST",
+        safety_ok=True,
+        projected_temp_error_f=1.0,
+        projected_vpd_error_kpa=0.2,
+        resource_cost=10.0,
+        relay_churn_cost=1.0,
+        confidence=0.8,
+    )
+    unsafe_best_projection = ClimateCandidateProjection(
+        action="VENT_COOL",
+        safety_ok=False,
+        blocked_reasons=("occupancy",),
+        projected_temp_error_f=0.0,
+        projected_vpd_error_kpa=0.0,
+        resource_cost=0.0,
+        relay_churn_cost=0.0,
+        confidence=0.8,
+    )
+
+    assert choose_climate_candidate([cheap_vpd_better, temp_better_expensive, unsafe_best_projection]).action == (
+        "VENT_COOL_MIST_ASSIST"
+    )
+
+
+def test_action_decision_validates_observability_block_reasons() -> None:
+    decision = ClimateActionDecision(
+        climate_action="VENT_COOL_MIST_ASSIST",
+        priority_axis="temp",
+        temp_error_f=1.0,
+        vpd_error_kpa=0.05,
+        candidate_summary="VENT_COOL_MIST_ASSIST selected; FOG below threshold",
+        moisture_assist_state="pulse_gap",
+        moisture_zone="center",
+        next_mist_eligible_s=12.0,
+        fog_margin_kpa=-0.02,
+        fog_block_reason="below_threshold,time_window",
+    )
+
+    assert decision.fog_block_reason == "below_threshold,time_window"
+
+    with pytest.raises(ValidationError):
+        ClimateActionDecision(
+            climate_action="VENT_COOL_MIST_ASSIST",
+            priority_axis="temp",
+            temp_error_f=1.0,
+            vpd_error_kpa=0.05,
+            candidate_summary="bad block reason",
+            moisture_assist_state="blocked",
+            fog_block_reason="none,time_window",
+        )
