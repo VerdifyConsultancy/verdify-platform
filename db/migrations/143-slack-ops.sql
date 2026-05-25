@@ -139,8 +139,8 @@ CREATE TABLE IF NOT EXISTS slack_notification_events (
   entity_type text,
   entity_id text,
   dedupe_key text,
-  status text NOT NULL DEFAULT 'posted',
-  post_mode text NOT NULL DEFAULT 'thread',
+  status text NOT NULL DEFAULT 'posted' CHECK (status IN ('planned', 'posted', 'suppressed', 'digest', 'failed', 'deleted')),
+  post_mode text NOT NULL DEFAULT 'immediate' CHECK (post_mode IN ('immediate', 'thread', 'digest', 'suppressed')),
   payload jsonb,
   error text
 );

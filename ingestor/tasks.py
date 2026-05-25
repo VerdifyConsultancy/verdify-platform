@@ -6912,7 +6912,7 @@ async def slack_operator_briefs(pool: asyncpg.Pool) -> None:
                         entity_type, dedupe_key, status, post_mode, payload
                     )
                     VALUES ('ingestor', 'operator_brief', 'info', $1, $2,
-                            'brief', $3, 'posted', 'channel', $4::jsonb)
+                            'brief', $3, 'posted', 'immediate', $4::jsonb)
                     ON CONFLICT (greenhouse_id, dedupe_key) WHERE dedupe_key IS NOT NULL
                     DO UPDATE SET ts = now(), message_ts = EXCLUDED.message_ts, payload = EXCLUDED.payload
                     """,
