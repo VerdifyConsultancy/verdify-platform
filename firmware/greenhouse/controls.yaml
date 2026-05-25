@@ -468,12 +468,24 @@ interval:
           bool willFan1 = relay_out.fan1, willFan2 = relay_out.fan2;
           bool willFog = relay_out.fog, willVent = relay_out.vent;
 
-          // Manual overrides (ESP32-only, not in header)
-          if(id(manual_fan_active)){ willFan1 = true; willFan2 = true; willVent = true; }
-          if(id(manual_fog_active)){ willFog = true; }
+          const bool sensor_fault_relay_lock = mode == SENSOR_FAULT;
+
+          // Manual overrides (ESP32-only, not in header). They are still
+          // below the sensor-fault rail: fog/fan/vent need plausible control
+          // inputs unless a separate hardwired safety fallback owns the load.
+          if(id(manual_fan_active) && !sensor_fault_relay_lock){ willFan1 = true; willFan2 = true; willVent = true; }
+          if(id(manual_fog_active) && !sensor_fault_relay_lock){ willFog = true; }
           if(id(vent_lock_active) && !id(manual_fan_active) && mode != SAFETY_COOL){
             willFan1 = false;
             willFan2 = false;
+            willVent = false;
+          }
+          if(sensor_fault_relay_lock) {
+            willHeat1 = false;
+            willHeat2 = false;
+            willFan1 = false;
+            willFan2 = false;
+            willFog = false;
             willVent = false;
           }
 
@@ -486,7 +498,7 @@ interval:
           // it runs the lead fan with vent closed to keep heat in.
           const bool fan_physically_on = id(fan1_rly)->state || id(fan2_rly)->state;
           const bool fan_wanted = willFan1 || willFan2;
-          const bool fan_requires_vent = mode != SAFETY_HEAT && (fan_physically_on || fan_wanted);
+          const bool fan_requires_vent = !sensor_fault_relay_lock && mode != SAFETY_HEAT && (fan_physically_on || fan_wanted);
           const bool fan_vent_interlock_active = fan_requires_vent && !willVent;
           static bool fan_vent_interlock_prev = false;
           if (fan_requires_vent) {
@@ -600,7 +612,7 @@ interval:
           if(willVent && !id(vent_rly)->state)    id(cnt_vent_today) += 1;
 
           /**************** 11 — APPLY RELAY OUTPUTS ******************************/
-          const bool force_heat_off = heat_air_exchange_interlock_active;
+          const bool force_heat_off = heat_air_exchange_interlock_active || sensor_fault_relay_lock;
           const bool heat1_will_be_on_after_apply =
               (willHeat1 && (id(heat1_rly)->state || can_on(R[0])))
               || (id(heat1_rly)->state && !force_heat_off && !can_off(R[0]));
@@ -609,10 +621,10 @@ interval:
               || (id(heat2_rly)->state && !willHeat2 && !heat1_will_be_on_after_apply);
           set_relay(R[0], willHeat1, false, force_heat_off);
           set_relay(R[1], willHeat2, false, force_heat2_off);
-          set_relay(R[5], willVent, fan_requires_vent);
-          set_relay(R[2], willFan1, false);
-          set_relay(R[3], willFan2, false);
-          set_relay(R[4], willFog, false, leak_block || occupancy_moisture_block);
+          set_relay(R[5], willVent, fan_requires_vent, sensor_fault_relay_lock);
+          set_relay(R[2], willFan1, false, sensor_fault_relay_lock);
+          set_relay(R[3], willFan2, false, sensor_fault_relay_lock);
+          set_relay(R[4], willFog, false, sensor_fault_relay_lock || leak_block || occupancy_moisture_block);
 
           /**************** 12 — MISTER STATE MACHINE *****************************/
           // Runs only for SEALED_MIST or explicit VENTILATE assist. Zone stress

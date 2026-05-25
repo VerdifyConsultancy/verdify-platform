@@ -512,10 +512,11 @@ class TestContractDriftGuardrails:
         assert "mode != SAFETY_HEAT" in controls_source
         assert "id(fan1_rly)->state || id(fan2_rly)->state" in controls_source
         assert "willVent = true;" in controls_source
-        assert "set_relay(R[5], willVent, fan_requires_vent)" in controls_source
-        assert controls_source.index("set_relay(R[5], willVent, fan_requires_vent)") < controls_source.index(
-            "set_relay(R[2], willFan1, false)"
-        )
+        vent_apply = "set_relay(R[5], willVent, fan_requires_vent, sensor_fault_relay_lock)"
+        fan_apply = "set_relay(R[2], willFan1, false, sensor_fault_relay_lock)"
+        assert vent_apply in controls_source
+        assert fan_apply in controls_source
+        assert controls_source.index(vent_apply) < controls_source.index(fan_apply)
 
     def test_firmware_suppresses_non_safety_heat_while_vent_open(self):
         controls_source = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
