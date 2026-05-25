@@ -1954,6 +1954,8 @@ def test_planner_context_includes_dispatcher_owned_targets():
     ):
         assert column in gather
     assert "The AI planner receives these as read-only prompt context" in gather
+    assert "VERDIFY_PLANNER_CONTEXT_DB_STATEMENT_TIMEOUT_MS" in gather
+    assert "statement_timeout=${DB_STATEMENT_TIMEOUT_MS}" in gather
     assert "CLIMATE AUTHORITY MODE" in gather
     assert "COMPLIANCE_FIRST_TEMP_AND_VPD_HIGH" in gather
     assert "resource minimization must not close wet/fog assist" in gather
