@@ -17,16 +17,25 @@ INTENT_ROLE = {
     "position.status.get": "viewer",
     "equipment.status.get": "viewer",
     "sensor.status.get": "viewer",
+    "alert.runbook.get": "viewer",
+    "forecast.triage.get": "viewer",
+    "guardrails.summary.get": "viewer",
+    "ops.log.get": "viewer",
     "crop.map.get": "viewer",
     "crop.empty_positions.get": "viewer",
     "crop.harvest_due.get": "viewer",
     "crop.scouting_due.get": "viewer",
+    "crop.tasks_due.get": "viewer",
+    "crop.tasks.generate": "operator",
+    "crop.task.complete": "grower",
     "crop.observe": "grower",
+    "crop.photo_observation.record": "grower",
     "crop.create": "grower",
     "crop.clear": "grower",
     "crop.transplant": "grower",
     "crop.harvest": "grower",
     "crop.treatment.record": "grower",
+    "lesson.extract.request": "operator",
     "alert.ack": "operator",
     "alert.resolve": "operator",
     "alert.snooze": "operator",
@@ -125,6 +134,20 @@ def parse_command(text: str) -> SlackParsedIntent:
         return _intent("equipment.status.get", {"target": _target_after(r"^equipment\s*", cleaned)})
     if cleaned.startswith("sensor"):
         return _intent("sensor.status.get", {"target": _target_after(r"^sensor\s*", cleaned)})
+    if "runbook" in cleaned and "alert" in cleaned:
+        return _intent("alert.runbook.get", {"alert_id": _alert_id(cleaned), "text": raw})
+    if cleaned.startswith("runbook "):
+        return _intent("alert.runbook.get", {"alert_type": _target_after(r"^runbook\s+", cleaned)})
+    if (
+        "forecast triage" in cleaned
+        or "deviation triage" in cleaned
+        or cleaned in {"forecast deviations", "deviations"}
+    ):
+        return _intent("forecast.triage.get")
+    if cleaned in {"guardrails", "guardrail summary"} or cleaned.startswith("guardrail "):
+        return _intent("guardrails.summary.get")
+    if cleaned in {"ops log", "operations log", "public ops log", "slack ops log"}:
+        return _intent("ops.log.get")
 
     if cleaned in {"crop map", "planting map", "positions"}:
         return _intent("crop.map.get")
@@ -134,6 +157,13 @@ def parse_command(text: str) -> SlackParsedIntent:
         return _intent("crop.harvest_due.get")
     if "scouting due" in cleaned or "scout due" in cleaned:
         return _intent("crop.scouting_due.get")
+    if cleaned in {"tasks due", "crop tasks due", "task list", "open tasks"}:
+        return _intent("crop.tasks_due.get")
+    if cleaned in {"generate crop tasks", "refresh crop tasks", "seed crop tasks"}:
+        return _intent("crop.tasks.generate")
+    task_done = re.search(r"\b(?:complete|done|close)\s+task\s+#?(\d+)\b", cleaned)
+    if task_done:
+        return _intent("crop.task.complete", {"task_id": int(task_done.group(1))})
 
     if cleaned.startswith(("ack alert", "acknowledge alert")):
         return _intent("alert.ack", {"alert_id": _alert_id(cleaned)})
@@ -162,7 +192,14 @@ def parse_command(text: str) -> SlackParsedIntent:
             {"name": match.group(1).strip(), "position": match.group(2).upper()} if match else {"text": raw},
         )
     if cleaned.startswith(("observe ", "observation ")):
+        if "photo" in cleaned or "image" in cleaned:
+            return _intent("crop.photo_observation.record", {"text": _target_after(r"^(observe|observation)\s+", raw)})
         return _intent("crop.observe", {"text": _target_after(r"^(observe|observation)\s+", raw)})
+    if cleaned.startswith(("photo observation ", "image observation ")):
+        return _intent(
+            "crop.photo_observation.record",
+            {"text": _target_after(r"^(photo|image)\s+observation\s+", raw)},
+        )
     if cleaned.startswith("clear "):
         return _intent("crop.clear", {"target": _target_after(r"^clear\s+", raw)})
     if cleaned.startswith("transplant "):
@@ -179,6 +216,10 @@ def parse_command(text: str) -> SlackParsedIntent:
 
     if "trigger planner" in cleaned or cleaned.startswith("plan trigger") or cleaned.startswith("run planner"):
         return _intent("plan.trigger", {"reason": raw})
+    if cleaned in {"extract lessons", "extract actions", "lesson extraction", "lessons from slack"} or (
+        "extract" in cleaned and ("lesson" in cleaned or "action" in cleaned)
+    ):
+        return _intent("lesson.extract.request", {"text": raw})
 
     confirm = re.search(r"\bconfirm\s+([0-9a-f-]{8,36})\b", cleaned)
     if confirm:

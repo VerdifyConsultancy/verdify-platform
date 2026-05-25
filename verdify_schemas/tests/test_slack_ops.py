@@ -3,7 +3,9 @@ from uuid import uuid4
 
 from verdify_schemas.slack_ops import (
     CropTaskRow,
+    SlackAIWorkItemRow,
     SlackAlertActionRow,
+    SlackAlertRunbookRow,
     SlackCommandAuditRow,
     SlackCommandRequest,
     SlackCommandResponse,
@@ -41,3 +43,5 @@ def test_slack_db_row_contracts_validate():
     SlackAlertActionRow(alert_id=1, action="ack", slack_user_id="U1", channel_id="C0ANVVAPLD6")
     SlackNotificationEventRow(source="ingestor", event_type="operator_brief", channel_id="C0ANVVAPLD6")
     CropTaskRow(task_type="scout", due_at=now)
+    SlackAlertRunbookRow(alert_type="temp_safety", title="Temperature safety", summary="Check equipment")
+    SlackAIWorkItemRow(id=uuid4(), work_type="lesson_extraction")

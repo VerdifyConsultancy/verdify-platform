@@ -11,7 +11,7 @@ SlackRole = Literal["viewer", "grower", "operator", "coordinator"]
 SlackCommandStatus = Literal[
     "received", "parsed", "needs_confirmation", "executed", "denied", "failed", "canceled", "expired"
 ]
-SlackRouting = Literal["deterministic", "openclaw", "hermes"]
+SlackRouting = Literal["deterministic", "openclaw", "hermes", "openclaw_ai", "hybrid"]
 
 
 class SlackUserRoleRow(BaseModel):
@@ -117,7 +117,7 @@ class SlackNotificationEventRow(BaseModel):
     entity_id: str | None = None
     dedupe_key: str | None = None
     status: str = "posted"
-    post_mode: str = "thread"
+    post_mode: str = "immediate"
     payload: dict[str, Any] | None = None
     error: str | None = None
 
@@ -146,6 +146,44 @@ class CropTaskRow(BaseModel):
     slack_message_ts: str | None = None
     slack_thread_ts: str | None = None
     notes: str | None = None
+
+
+class SlackAlertRunbookRow(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    id: int | None = None
+    greenhouse_id: str = "vallery"
+    alert_type: str
+    severity: str | None = None
+    title: str
+    summary: str
+    runbook_url: str | None = None
+    steps: list[str] = Field(default_factory=list)
+    is_active: bool = True
+    created_at: AwareDatetime | None = None
+    updated_at: AwareDatetime | None = None
+
+
+class SlackAIWorkItemRow(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    id: UUID
+    created_at: AwareDatetime | None = None
+    updated_at: AwareDatetime | None = None
+    completed_at: AwareDatetime | None = None
+    greenhouse_id: str = "vallery"
+    work_type: str
+    status: str = "queued"
+    model_routing: Literal["openclaw", "hermes"] = "openclaw"
+    requested_by: str | None = None
+    channel_id: str | None = None
+    message_ts: str | None = None
+    thread_ts: str | None = None
+    related_record_type: str | None = None
+    related_record_id: str | None = None
+    input_payload: dict[str, Any] = Field(default_factory=dict)
+    result_payload: dict[str, Any] = Field(default_factory=dict)
+    error: str | None = None
 
 
 class SlackCommandRequest(BaseModel):

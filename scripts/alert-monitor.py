@@ -38,6 +38,7 @@ if str(REPO_ROOT) not in sys.path:
 
 from slack_config import build_slack_payload, load_slack_settings, read_slack_token  # noqa: E402
 from slack_ops.policy import should_post_alert  # noqa: E402
+from slack_ops.runbooks import fetch_alert_runbook, format_runbook  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,
@@ -600,7 +601,12 @@ async def main():
 
             slack_ts = None
             if should_slack and not DRY_RUN:
-                slack_text = format_alert(alert["severity"], alert["alert_type"], alert["message"])
+                runbook = await fetch_alert_runbook(conn, alert["alert_type"], alert["severity"])
+                slack_text = (
+                    format_alert(alert["severity"], alert["alert_type"], alert["message"])
+                    + "\n"
+                    + format_runbook(runbook, compact=True)
+                )
                 slack_ts = post_slack(slack_token, SLACK_CHANNEL, slack_text)
 
             # Insert into alert_log
@@ -631,7 +637,12 @@ async def main():
                 AND slack_ts IS NULL AND ts < now() - interval '2 hours'
             """)
             for sa in stale_alerts:
-                escalation_text = format_alert("warning", sa["alert_type"], f"[ESCALATED 2h+] {sa['message']}")
+                runbook = await fetch_alert_runbook(conn, sa["alert_type"], "warning")
+                escalation_text = (
+                    format_alert("warning", sa["alert_type"], f"[ESCALATED 2h+] {sa['message']}")
+                    + "\n"
+                    + format_runbook(runbook, compact=True)
+                )
                 esc_ts = post_slack(slack_token, SLACK_CHANNEL, escalation_text)
                 if esc_ts:
                     await conn.execute("UPDATE alert_log SET slack_ts = $1 WHERE id = $2", esc_ts, sa["id"])

@@ -157,7 +157,9 @@ from .setpoint import (
 )
 from .slack_ops import (
     CropTaskRow,
+    SlackAIWorkItemRow,
     SlackAlertActionRow,
+    SlackAlertRunbookRow,
     SlackCommandAuditRow,
     SlackCommandRequest,
     SlackCommandResponse,
@@ -429,7 +431,9 @@ __all__ = [
     "ShelfCreate",
     "ShelfId",
     "ShelfKind",
+    "SlackAIWorkItemRow",
     "SlackAlertActionRow",
+    "SlackAlertRunbookRow",
     "SlackCommandAuditRow",
     "SlackCommandRequest",
     "SlackCommandResponse",

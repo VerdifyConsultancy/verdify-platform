@@ -13,6 +13,19 @@ def test_parse_blocks_direct_relay_control():
     assert intent.blocked_reason
 
 
+def test_parse_completion_intents():
+    assert parse_command("runbook alert 123").normalized_intent == "alert.runbook.get"
+    assert parse_command("forecast triage").normalized_intent == "forecast.triage.get"
+    assert parse_command("guardrail summary").normalized_intent == "guardrails.summary.get"
+    assert parse_command("ops log").normalized_intent == "ops.log.get"
+    assert parse_command("photo observation basil A3 yellow leaves").normalized_intent == (
+        "crop.photo_observation.record"
+    )
+    assert parse_command("refresh crop tasks").normalized_intent == "crop.tasks.generate"
+    assert parse_command("complete task 42").args["task_id"] == 42
+    assert parse_command("extract lessons").normalized_intent == "lesson.extract.request"
+
+
 def test_parse_harvest_fields():
     intent = parse_command("iris harvest basil A3 230g grade A destination kitchen labor 12 min")
 

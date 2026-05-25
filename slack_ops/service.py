@@ -15,6 +15,7 @@ import asyncpg
 from slack_config import SlackSettings, load_slack_settings
 from slack_ops.briefs import build_operator_brief
 from slack_ops.intents import parse_command, role_allows
+from slack_ops.runbooks import fetch_alert_runbook, format_runbook
 from verdify_schemas.slack_ops import SlackCommandRequest, SlackCommandResponse, SlackParsedIntent
 
 
@@ -328,6 +329,14 @@ async def _execute(
         return await _equipment_status(conn, intent)
     if name == "sensor.status.get":
         return await _sensor_status(conn, intent)
+    if name == "alert.runbook.get":
+        return await _alert_runbook(conn, intent)
+    if name == "forecast.triage.get":
+        return await _forecast_triage(conn, intent)
+    if name == "guardrails.summary.get":
+        return await _guardrail_summary(conn, intent)
+    if name == "ops.log.get":
+        return await _ops_log(conn, intent)
     if name == "crop.map.get":
         return await _crop_map(conn, intent)
     if name == "crop.empty_positions.get":
@@ -336,10 +345,18 @@ async def _execute(
         return await _harvest_due(conn, intent)
     if name == "crop.scouting_due.get":
         return await _scouting_due(conn, intent)
+    if name == "crop.tasks_due.get":
+        return await _tasks_due(conn, intent)
+    if name == "crop.tasks.generate":
+        return await _generate_crop_tasks(conn, req, intent)
+    if name == "crop.task.complete":
+        return await _complete_task(conn, req, intent)
     if name.startswith("alert."):
         return await _alert_action(conn, req, intent, audit_id)
     if name == "crop.observe":
         return await _crop_observe(conn, req, intent)
+    if name == "crop.photo_observation.record":
+        return await _crop_photo_observation(conn, req, intent)
     if name == "crop.create":
         return await _crop_create(conn, req, intent)
     if name == "crop.clear":
@@ -350,6 +367,8 @@ async def _execute(
         return await _crop_harvest(conn, req, intent)
     if name == "crop.treatment.record":
         return await _crop_treatment(conn, req, intent)
+    if name == "lesson.extract.request":
+        return await _lesson_extract_request(conn, req, intent)
     if name == "plan.trigger":
         row = await conn.fetchrow(
             """
@@ -473,6 +492,107 @@ async def _sensor_status(conn, intent):
     return _text_response(f"Sensors: {text}", intent=intent)
 
 
+async def _alert_runbook(conn, intent):
+    alert_id = intent.args.get("alert_id")
+    alert_type = intent.args.get("alert_type")
+    severity = None
+    message = None
+    if alert_id:
+        row = await conn.fetchrow(
+            """
+            SELECT id, alert_type, severity, message
+              FROM alert_log
+             WHERE id = $1
+             LIMIT 1
+            """,
+            int(alert_id),
+        )
+        if not row:
+            return _text_response(
+                "No matching alert found for runbook lookup.", ok=False, status="failed", intent=intent
+            )
+        alert_type = row["alert_type"]
+        severity = row["severity"]
+        message = row["message"]
+    if not alert_type:
+        return _text_response(
+            "Tell me the alert id or alert type for the runbook.", ok=False, status="failed", intent=intent
+        )
+
+    runbook = await fetch_alert_runbook(conn, str(alert_type), severity)
+    prefix = f"Alert #{alert_id} `{alert_type}`: {message}\n" if alert_id else f"`{alert_type}`\n"
+    return _text_response(prefix + format_runbook(runbook), intent=intent, record_type="slack_alert_runbooks")
+
+
+async def _forecast_triage(conn, intent):
+    rows = await conn.fetch("SELECT * FROM v_slack_forecast_triage LIMIT 8")
+    if not rows:
+        return _text_response("No forecast deviations or forecast actions in the last 72h.", intent=intent)
+
+    lines = ["*Forecast triage*"]
+    for raw in rows:
+        row = dict(raw)
+        details = row.get("details") or {}
+        if isinstance(details, str):
+            try:
+                details = json.loads(details)
+            except json.JSONDecodeError:
+                details = {}
+        if row["item_type"] == "forecast_deviation":
+            lines.append(
+                "- "
+                f"`{row['target']}` {row['status']} delta {details.get('delta')} "
+                f"(threshold {details.get('threshold')}) at {row['ts']:%m-%d %H:%M UTC}"
+            )
+        else:
+            lines.append(
+                "- "
+                f"`{row['target']}` {row['status']} action `{details.get('action_taken')}` "
+                f"at {row['ts']:%m-%d %H:%M UTC}"
+            )
+    return _text_response("\n".join(lines), intent=intent)
+
+
+async def _guardrail_summary(conn, intent):
+    row = await conn.fetchrow("SELECT * FROM v_slack_guardrail_summary LIMIT 1")
+    recent = await conn.fetch(
+        """
+        SELECT parameter, applied AS value, status, reason, ts
+          FROM setpoint_clamps
+         WHERE status IN ('guardrailed', 'held_by_guardrail', 'clamped')
+            OR COALESCE(reason, '') ILIKE '%guardrail%'
+         ORDER BY ts DESC
+         LIMIT 5
+        """
+    )
+    if not row and not recent:
+        return _text_response("No guardrail summary rows or recent guardrail setpoint events found.", intent=intent)
+
+    lines = ["*Guardrail summary*"]
+    if row:
+        lines.append(
+            f"Latest plan `{row['plan_id']}`: {row['guardrail_events']} guardrail events, "
+            f"{row['held_guardrail_events']} held, {row['dispatched_guardrail_events']} dispatched, "
+            f"penalty {row['guardrail_penalty']}."
+        )
+    if recent:
+        lines.append("*Recent guardrail/clamp events:*")
+        for r in recent:
+            lines.append(f"- `{r['parameter']}`={r['value']} `{r['status']}` {r['ts']:%m-%d %H:%M UTC}")
+    return _text_response("\n".join(lines), intent=intent)
+
+
+async def _ops_log(conn, intent):
+    rows = await conn.fetch("SELECT * FROM v_slack_public_ops_log ORDER BY ts DESC LIMIT 10")
+    if not rows:
+        return _text_response("No Slack operations log rows found.", intent=intent)
+    lines = ["*Public-safe Slack operations log*"]
+    for r in rows:
+        text = (r["public_text"] or "").replace("\n", " ")
+        lines.append(f"- {r['ts']:%m-%d %H:%M UTC} `{r['event_kind']}` `{r['event_type']}` `{r['status']}` - {text}")
+    return _text_response("\n".join(lines), intent=intent)
+
+
 async def _crop_map(conn, intent):
     rows = await conn.fetch(
         """
@@ -520,6 +640,104 @@ async def _scouting_due(conn, intent):
         return _text_response("No scouting tasks are due in the next 24h.", intent=intent)
     text = "; ".join(f"#{r['id']} {r['crop_name'] or r['position_label']} due {r['due_at']:%m-%d %H:%M}" for r in rows)
     return _text_response(f"Scouting due: {text}", intent=intent)
+
+
+async def _tasks_due(conn, intent):
+    rows = await conn.fetch("SELECT * FROM v_slack_crop_tasks_due LIMIT 20")
+    if not rows:
+        return _text_response("No crop tasks are due in the next 24h.", intent=intent)
+    text = "; ".join(
+        f"#{r['id']} `{r['task_type']}` {r['crop_name'] or r['position_label'] or 'greenhouse'} "
+        f"due {r['due_at']:%m-%d %H:%M}"
+        for r in rows
+    )
+    return _text_response(f"Crop tasks due: {text}", intent=intent)
+
+
+async def _generate_crop_tasks(conn, req, intent):
+    scout_rows = await conn.fetch(
+        """
+        INSERT INTO crop_tasks (
+            greenhouse_id, task_type, priority, status, crop_id, position_id,
+            zone_id, due_at, source, notes
+        )
+        SELECT c.greenhouse_id, 'scout', 'normal', 'open', c.id, c.position_id,
+               c.zone_id, now() + interval '24 hours', 'slack',
+               'Generated from Slack crop task refresh by ' || $1
+          FROM crops c
+         WHERE c.greenhouse_id = 'vallery'
+           AND COALESCE(c.is_active, true)
+           AND NOT EXISTS (
+                SELECT 1 FROM crop_tasks ct
+                 WHERE ct.crop_id = c.id
+                   AND ct.status IN ('open','snoozed')
+                   AND ct.task_type ILIKE '%scout%'
+                   AND ct.due_at <= now() + interval '7 days'
+           )
+        RETURNING id
+        """,
+        req.slack_user_name or req.slack_user_id,
+    )
+    harvest_rows = await conn.fetch(
+        """
+        INSERT INTO crop_tasks (
+            greenhouse_id, task_type, priority, status, crop_id, position_id,
+            zone_id, due_at, source, notes
+        )
+        SELECT c.greenhouse_id, 'harvest_check',
+               CASE WHEN c.expected_harvest <= current_date THEN 'high' ELSE 'normal' END,
+               'open', c.id, c.position_id, c.zone_id,
+               ((c.expected_harvest::timestamp + time '08:00') AT TIME ZONE 'America/Denver'),
+               'slack',
+               'Generated from Slack crop task refresh by ' || $1
+          FROM crops c
+         WHERE c.greenhouse_id = 'vallery'
+           AND COALESCE(c.is_active, true)
+           AND c.expected_harvest IS NOT NULL
+           AND c.expected_harvest <= current_date + 14
+           AND NOT EXISTS (
+                SELECT 1 FROM crop_tasks ct
+                 WHERE ct.crop_id = c.id
+                   AND ct.status IN ('open','snoozed')
+                   AND ct.task_type ILIKE '%harvest%'
+           )
+        RETURNING id
+        """,
+        req.slack_user_name or req.slack_user_id,
+    )
+    return _text_response(
+        f"Generated {len(scout_rows)} scouting task(s) and {len(harvest_rows)} harvest check task(s).",
+        intent=intent,
+        record_type="crop_tasks",
+    )
+
+
+async def _complete_task(conn, req, intent):
+    task_id = intent.args.get("task_id")
+    if not task_id:
+        return _text_response("Missing task id.", ok=False, status="failed", intent=intent)
+    row = await conn.fetchrow(
+        """
+        UPDATE crop_tasks
+           SET status='completed',
+               completed_at=now(),
+               completed_by=$2,
+               updated_at=now()
+         WHERE id=$1
+           AND status IN ('open','snoozed')
+        RETURNING id, task_type
+        """,
+        int(task_id),
+        req.slack_user_name or req.slack_user_id,
+    )
+    if not row:
+        return _text_response("No open matching task found.", ok=False, status="failed", intent=intent)
+    return _text_response(
+        f"Task #{row['id']} `{row['task_type']}` completed.",
+        intent=intent,
+        record_type="crop_tasks",
+        record_id=str(row["id"]),
+    )
 
 
 async def _alert_action(conn, req: SlackCommandRequest, intent: SlackParsedIntent, audit_id):
@@ -620,11 +838,82 @@ async def _crop_observe(conn, req, intent):
         req.thread_ts,
         req.slack_user_id,
     )
+    await _complete_observation_tasks(conn, crop["id"], row["id"], req.slack_user_name or req.slack_user_id)
     return _text_response(
         f"Observation recorded for `{crop['name']}` as #{row['id']}.",
         intent=intent,
         record_type="observations",
         record_id=str(row["id"]),
+    )
+
+
+async def _crop_photo_observation(conn, req, intent):
+    files = _slack_files(req)
+    crop = await _resolve_crop(conn, intent.args.get("text") or "")
+    if not crop and not files:
+        return _text_response(
+            "Could not resolve crop or Slack file for photo observation.",
+            ok=False,
+            status="failed",
+            intent=intent,
+        )
+
+    file_ids = [str(f.get("id")) for f in files if f.get("id")]
+    refs = {
+        "files": files,
+        "message_ts": req.message_ts,
+        "thread_ts": req.thread_ts,
+        "source": "slack",
+    }
+    notes = intent.args.get("text") or "Slack photo observation"
+    row = await conn.fetchrow(
+        """
+        INSERT INTO observations (
+            crop_id, greenhouse_id, zone, position, zone_id, position_id,
+            obs_type, notes, observer, source, slack_channel_id,
+            slack_message_ts, slack_thread_ts, slack_user_id,
+            slack_file_ids, slack_file_refs
+        )
+        VALUES ($1,'vallery',$2,$3,$4,$5,'photo',$6,$7,'slack',$8,$9,$10,$11,$12,$13::jsonb)
+        RETURNING id
+        """,
+        crop["id"] if crop else None,
+        crop["zone"] if crop else None,
+        crop["position"] if crop else None,
+        crop["zone_id"] if crop else None,
+        crop["position_id"] if crop else None,
+        notes,
+        req.slack_user_name or req.slack_user_id,
+        req.channel_id,
+        req.message_ts,
+        req.thread_ts,
+        req.slack_user_id,
+        file_ids or None,
+        json.dumps(refs),
+    )
+    if crop:
+        await _complete_observation_tasks(conn, crop["id"], row["id"], req.slack_user_name or req.slack_user_id)
+    work = await _create_ai_work_item(
+        conn,
+        req,
+        "photo_observation_analysis",
+        {
+            "observation_id": row["id"],
+            "crop_id": crop["id"] if crop else None,
+            "notes": notes,
+            "files": files,
+            "instruction": "Analyze the Slack photo observation for crop health, pests, disease, growth stage, and follow-up actions.",
+        },
+        related_record_type="observations",
+        related_record_id=str(row["id"]),
+    )
+    target = f" for `{crop['name']}`" if crop else ""
+    return _text_response(
+        f"Photo observation recorded{target} as #{row['id']}; OpenClaw analysis work item `{work}` queued.",
+        intent=intent,
+        record_type="observations",
+        record_id=str(row["id"]),
+        routing="openclaw",
     )
 
 
@@ -645,6 +934,7 @@ async def _crop_create(conn, req, intent):
         position["zone_id"],
         f"Created from Slack by {req.slack_user_name or req.slack_user_id}",
     )
+    await _create_crop_default_tasks(conn, row["id"], position, req.slack_user_name or req.slack_user_id)
     return _text_response(
         f"Crop `{intent.args.get('name')}` planted at `{position['position_label']}` as #{row['id']}.",
         intent=intent,
@@ -806,11 +1096,83 @@ async def _crop_treatment(conn, req, intent):
         req.thread_ts,
         req.slack_user_id,
     )
+    await conn.execute(
+        "UPDATE treatments SET followup_due_at = now() + interval '48 hours' WHERE id = $1",
+        row["id"],
+    )
+    await conn.execute(
+        """
+        INSERT INTO crop_tasks (
+            greenhouse_id, task_type, priority, status, crop_id, position_id,
+            zone_id, due_at, source, related_treatment_id,
+            slack_channel_id, slack_message_ts, slack_thread_ts, notes
+        )
+        VALUES (
+            'vallery', 'treatment_followup', 'high', 'open', $1, $2, $3,
+            now() + interval '48 hours', 'slack', $4, $5, $6, $7,
+            'Check treatment outcome and record any pest/disease changes.'
+        )
+        """,
+        crop["id"],
+        crop["position_id"],
+        crop["zone_id"],
+        row["id"],
+        req.channel_id,
+        req.message_ts,
+        req.thread_ts,
+    )
     return _text_response(
-        f"Treatment note recorded for `{crop['name']}` as #{row['id']}.",
+        f"Treatment note recorded for `{crop['name']}` as #{row['id']}; follow-up task due in 48h.",
         intent=intent,
         record_type="treatments",
         record_id=str(row["id"]),
+    )
+
+
+async def _lesson_extract_request(conn, req, intent):
+    commands = await conn.fetch(
+        """
+        SELECT ts, normalized_intent, status, response_text, record_type, record_id
+          FROM slack_command_audit
+         WHERE greenhouse_id = 'vallery'
+         ORDER BY ts DESC
+         LIMIT 30
+        """
+    )
+    alerts = await conn.fetch(
+        """
+        SELECT id, alert_type, severity, disposition, message, ts, resolved_at, resolution
+          FROM alert_log
+         WHERE greenhouse_id = 'vallery'
+         ORDER BY ts DESC
+         LIMIT 20
+        """
+    )
+    plans = await conn.fetch(
+        """
+        SELECT plan_id, created_at, outcome_score, anchor_score, lesson_extracted
+          FROM plan_journal
+         ORDER BY created_at DESC
+         LIMIT 10
+        """
+    )
+    payload = {
+        "requested_text": intent.args.get("text"),
+        "commands": [dict(row) for row in commands],
+        "alerts": [dict(row) for row in alerts],
+        "plans": [dict(row) for row in plans],
+        "instruction": (
+            "Use OpenClaw reasoning to extract durable greenhouse lessons and operator follow-up actions. "
+            "Only propose planner_lessons rows when the evidence is specific and reusable."
+        ),
+    }
+    work_id = await _create_ai_work_item(conn, req, "lesson_extraction", payload)
+    return _text_response(
+        f"Lesson/action extraction queued for OpenClaw as work item `{work_id}`.",
+        intent=intent,
+        record_type="slack_ai_work_items",
+        record_id=str(work_id),
+        routing="openclaw",
     )
 
 
@@ -876,6 +1238,98 @@ def _duration_to_until(value: str) -> datetime:
     unit = match.group(2) if match else "h"
     delta = {"m": timedelta(minutes=amount), "h": timedelta(hours=amount), "d": timedelta(days=amount)}[unit]
     return datetime.now(UTC) + delta
+
+
+def _slack_files(req: SlackCommandRequest) -> list[dict[str, Any]]:
+    raw = req.raw_event or {}
+    files = raw.get("files") or raw.get("event", {}).get("files") or []
+    cleaned: list[dict[str, Any]] = []
+    for file_ref in files:
+        if not isinstance(file_ref, dict):
+            continue
+        cleaned.append(
+            {
+                "id": file_ref.get("id"),
+                "name": file_ref.get("name") or file_ref.get("title"),
+                "mimetype": file_ref.get("mimetype") or file_ref.get("filetype"),
+                "url_private": file_ref.get("url_private"),
+                "permalink": file_ref.get("permalink"),
+            }
+        )
+    return cleaned
+
+
+async def _create_ai_work_item(
+    conn,
+    req: SlackCommandRequest,
+    work_type: str,
+    payload: dict[str, Any],
+    *,
+    related_record_type: str | None = None,
+    related_record_id: str | None = None,
+) -> UUID:
+    row = await conn.fetchrow(
+        """
+        INSERT INTO slack_ai_work_items (
+            greenhouse_id, work_type, status, model_routing, requested_by,
+            channel_id, message_ts, thread_ts, related_record_type,
+            related_record_id, input_payload
+        )
+        VALUES ('vallery', $1, 'queued', 'openclaw', $2, $3, $4, $5, $6, $7, $8::jsonb)
+        RETURNING id
+        """,
+        work_type,
+        req.slack_user_id,
+        req.channel_id,
+        req.message_ts,
+        req.thread_ts,
+        related_record_type,
+        related_record_id,
+        json.dumps(payload, default=str),
+    )
+    return row["id"]
+
+
+async def _create_crop_default_tasks(conn, crop_id: int, position: dict[str, Any], requested_by: str) -> None:
+    await conn.execute(
+        """
+        INSERT INTO crop_tasks (
+            greenhouse_id, task_type, priority, status, crop_id, position_id,
+            zone_id, due_at, source, notes
+        )
+        VALUES (
+            'vallery', 'scout', 'normal', 'open', $1, $2, $3,
+            now() + interval '24 hours', 'slack',
+            'Initial scouting task generated after Slack planting by ' || $4
+        )
+        """,
+        crop_id,
+        position["position_id"],
+        position["zone_id"],
+        requested_by,
+    )
+
+
+async def _complete_observation_tasks(conn, crop_id: int, observation_id: int, completed_by: str) -> None:
+    await conn.execute(
+        """
+        UPDATE crop_tasks
+           SET status='completed',
+               completed_at=now(),
+               completed_by=$3,
+               related_observation_id=$2,
+               updated_at=now()
+         WHERE crop_id=$1
+           AND status IN ('open','snoozed')
+           AND (
+                task_type ILIKE '%scout%'
+             OR task_type ILIKE '%treatment_followup%'
+           )
+        """,
+        crop_id,
+        observation_id,
+        completed_by,
+    )
 
 
 def _kg(amount: float | None, unit: str | None) -> float | None:

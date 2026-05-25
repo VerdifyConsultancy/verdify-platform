@@ -42,6 +42,7 @@ Live Slack tests on 2026-05-25:
 - Shared config/Web API smoke posted to Slack as `username=Iris`, `icon=:seedling:`, `bot_id=B0ANY7P8PR6`, `ts=1779744739.013619`.
 - OpenClaw `iris` delivered `[smoke] OpenClaw iris Slack delivery OK 2026-05-25` via `openai-codex/gpt-5.5`, `bot_id=B0ANY7P8PR6`, `ts=1779745414.906819`.
 - OpenClaw `iris-planner` delivered `[smoke] OpenClaw iris-planner Slack delivery OK 2026-05-25` via `openai-codex/gpt-5.5`, `bot_id=B0ANY7P8PR6`, `ts=1779745462.607289`.
+- Deterministic command smokes passed for `runbook temp_safety`, `forecast triage`, `guardrail summary`, `ops log`, and `extract lessons`.
 
 OpenClaw outbound delivery uses the same Iris Slack bot token, but its default send path does not set Slack `username` or `icons` on the message payload. For OpenClaw posts to display as Iris, the Slack app/bot display name itself must be Iris or OpenClaw delivery must be extended/configured to pass the shared identity fields.
 
@@ -64,10 +65,11 @@ OpenClaw outbound delivery uses the same Iris Slack bot token, but its default s
 
 Deterministic commands are parsed in `slack_ops/intents.py` and executed in `slack_ops/service.py`.
 
-- Read-only: `status`, `brief morning`, `plan status`, `firmware health`, `zone south`, `position A3`, `equipment`, `sensor temp`, `crop map`, `empty positions`, `harvest due`, `scouting due`.
+- Read-only: `status`, `brief morning`, `plan status`, `firmware health`, `zone south`, `position A3`, `equipment`, `sensor temp`, `crop map`, `empty positions`, `harvest due`, `scouting due`, `tasks due`, `runbook temp_safety`, `forecast triage`, `guardrail summary`, `ops log`.
 - Alert actions: `ack alert 12`, `resolve alert 12 fixed`, `snooze alert 12 2h`, `assign alert 12 @name`, `false positive alert 12`.
-- Crop writes: `plant basil in A3`, `observe basil A3 ...`, `clear basil A3`, `transplant basil A3 to B2`, `harvest basil A3 230g grade A destination kitchen labor 12 min`, `treat basil ...`.
+- Crop writes: `plant basil in A3`, `observe basil A3 ...`, `photo observation basil A3 ...`, `clear basil A3`, `transplant basil A3 to B2`, `harvest basil A3 230g grade A destination kitchen labor 12 min`, `treat basil ...`, `refresh crop tasks`, `complete task 12`.
 - Planner: `trigger planner`.
+- OpenClaw AI work: `extract lessons` queues recent Slack/alert/plan context for OpenClaw reasoning; photo observation intake queues image-analysis work.
 - Confirmation: risky writes return a confirmation id and require `confirm <uuid>` or `cancel <uuid>`.
 
 Slack is not an actuator surface. Commands that directly open/close relays, force heaters/fans/fog/misters/vents/lights, or bypass the firmware controller are denied.
@@ -83,6 +85,10 @@ Migration `db/migrations/143-slack-ops.sql` adds:
 - `slack_alert_actions` for alert lifecycle actions.
 - `slack_notification_events` for outbound post tracking.
 - `crop_tasks` and `v_slack_crop_tasks_due` for scouting/harvest/treatment follow-up.
+- `slack_alert_runbooks` for alert-type runbook text and operator links.
+- `slack_ai_work_items` for OpenClaw/Hermes reasoning work queued from deterministic Slack commands.
+- `v_slack_public_ops_log` for public-safe command/notification/action history.
+- `v_slack_forecast_triage` and `v_slack_guardrail_summary` for deterministic operator triage.
 - `v_slack_open_alert_threads` for active alert thread state.
 
 ## Validation

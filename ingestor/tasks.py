@@ -39,6 +39,7 @@ from pydantic import ValidationError
 from slack_config import build_slack_payload
 from slack_ops.briefs import build_operator_brief
 from slack_ops.policy import should_post_alert
+from slack_ops.runbooks import fetch_alert_runbook, format_runbook
 from verdify_schemas import (
     AlertEnvelope,
     ClimateRow,
@@ -2854,10 +2855,12 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                         except Exception:
                             slack_token = ""
                     if slack_token:
+                        runbook = await fetch_alert_runbook(conn, env.alert_type, env.severity)
                         _post_slack(
                             slack_token,
                             SLACK_CHANNEL,
-                            f"\U0001f534 *[ESCALATED→CRITICAL]* `{env.alert_type}` — {env.message}",
+                            f"\U0001f534 *[ESCALATED->CRITICAL]* `{env.alert_type}` - {env.message}\n"
+                            f"{format_runbook(runbook, compact=True)}",
                             thread_ts=existing["slack_ts"],
                         )
                     escalated_count += 1
@@ -2882,10 +2885,12 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                         "warn": "\U0001f7e1",
                         "info": "\u2139\ufe0f",
                     }.get(env.severity, "")
+                    runbook = await fetch_alert_runbook(conn, env.alert_type, env.severity)
                     slack_ts = _post_slack(
                         slack_token,
                         SLACK_CHANNEL,
-                        f"{emoji} *[{env.severity.upper()}]* `{env.alert_type}` — {env.message}",
+                        f"{emoji} *[{env.severity.upper()}]* `{env.alert_type}` - {env.message}\n"
+                        f"{format_runbook(runbook, compact=True)}",
                     )
 
             await conn.execute(

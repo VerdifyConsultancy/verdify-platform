@@ -242,9 +242,10 @@ async def slack_ops(
 ) -> str:
     """Execute deterministic Iris Slack operations against the #greenhouse command surface.
 
-    Use this for greenhouse status, briefs, alert ack/snooze/resolve, crop
-    observations, crop lifecycle writes, and planner triggers. Direct relay
-    commands are denied by policy.
+    Use this for greenhouse status, briefs, alert runbooks/actions, forecast
+    triage, guardrail summaries, public-safe ops logs, crop observations/photo
+    intake, crop lifecycle/task writes, lesson extraction requests, and planner
+    triggers. Direct relay commands are denied by policy.
     """
 
     settings = load_slack_settings()

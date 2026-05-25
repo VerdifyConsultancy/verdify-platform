@@ -50,7 +50,9 @@ from verdify_schemas.setpoint import (
 )
 from verdify_schemas.slack_ops import (
     CropTaskRow,
+    SlackAIWorkItemRow,
     SlackAlertActionRow,
+    SlackAlertRunbookRow,
     SlackCommandAuditRow,
     SlackConfirmationRequestRow,
     SlackNotificationEventRow,
@@ -191,6 +193,8 @@ DB_BACKED = [
     (SlackAlertActionRow, "slack_alert_actions"),
     (SlackNotificationEventRow, "slack_notification_events"),
     (CropTaskRow, "crop_tasks"),
+    (SlackAlertRunbookRow, "slack_alert_runbooks"),
+    (SlackAIWorkItemRow, "slack_ai_work_items"),
 ]
 
 
