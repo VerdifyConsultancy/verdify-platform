@@ -2359,6 +2359,21 @@ def test_manual_fog_cannot_bypass_final_fog_safety_rails():
     assert fog_block.index("manual_fog_requested") < fog_block.index("id(fog_rly)->state")
 
 
+def test_manual_fan_cannot_open_vent_during_safety_heat():
+    controls = Path("firmware/greenhouse/controls.yaml").read_text()
+
+    manual_start = controls.index("// Manual overrides")
+    manual_end = controls.index("if(id(vent_lock_active)", manual_start)
+    manual_block = controls[manual_start:manual_end]
+
+    assert "below the sensor-fault, safety-heat, and fog-safety rails" in manual_block
+    assert "if(id(manual_fan_active) && !sensor_fault_relay_lock)" in manual_block
+    assert "willFan1 = true;" in manual_block
+    assert "willFan2 = true;" in manual_block
+    assert "if(mode != SAFETY_HEAT){ willVent = true; }" in manual_block
+    assert "willVent = true; }" not in manual_block.replace("if(mode != SAFETY_HEAT){ willVent = true; }", "")
+
+
 def test_fog_respects_conflict_and_budget_before_reporting_served():
     controls = Path("firmware/greenhouse/controls.yaml").read_text()
 

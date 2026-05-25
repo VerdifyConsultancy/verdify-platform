@@ -481,10 +481,14 @@ interval:
           const char* manual_fog_safety_block = fog_safety_block_reason();
 
           // Manual overrides (ESP32-only, not in header). They are still
-          // below the sensor-fault and fog-safety rails: fog/fan/vent need
-          // plausible control inputs unless a separate hardwired safety
-          // fallback owns the load.
-          if(id(manual_fan_active) && !sensor_fault_relay_lock){ willFan1 = true; willFan2 = true; willVent = true; }
+          // below the sensor-fault, safety-heat, and fog-safety rails:
+          // fog/fan/vent need plausible control inputs unless a separate
+          // hardwired safety fallback owns the load.
+          if(id(manual_fan_active) && !sensor_fault_relay_lock){
+            willFan1 = true;
+            willFan2 = true;
+            if(mode != SAFETY_HEAT){ willVent = true; }
+          }
           if(manual_fog_requested && !sensor_fault_relay_lock && manual_fog_safety_block[0] == '\0'){ willFog = true; }
           if(id(vent_lock_active) && !id(manual_fan_active) && mode != SAFETY_COOL){
             willFan1 = false;
