@@ -75,6 +75,12 @@ into a clean, integrated repo. PR #80 stays intact and is RM-0's baseline.
   firmware/tunable drift tests, live service checks, Grafana render sample,
   public lab route checks, and zero open critical/high alerts. Issues #18, #19,
   and #82 are closed with verification comments.
+- [ ] **C-RM9 Grafana render CPU guard.** On 2026-05-24 post-ClimateIntent OTA,
+  `verdify-grafana-renderer` was observed spawning continuous Chromium renders
+  for `d-solo/*` panels and sampling at `288%` CPU. The renderer container was
+  stopped as a protective mitigation; greenhouse services and Grafana stayed up.
+  Follow-up: identify the requester/cache-warmer loop, add render concurrency
+  and rate limits, then re-enable the renderer intentionally.
 
 ## Launch coordination
 
