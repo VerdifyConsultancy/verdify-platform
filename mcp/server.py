@@ -24,6 +24,8 @@ from pydantic import ValidationError
 # verdify_schemas lives one level up from this server file in every worktree.
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
+from slack_config import load_slack_settings  # noqa: E402
+from slack_ops.service import handle_slack_command  # noqa: E402
 from verdify_schemas import (  # noqa: E402
     ALL_TUNABLES,
     AlertAckPayload,
@@ -50,6 +52,7 @@ from verdify_schemas import (  # noqa: E402
     PlanStatusWaypoint,
     ScorecardResponse,
     SetpointSummary,
+    SlackCommandRequest,
     TreatmentCreate,
 )
 from verdify_schemas.climate_intent import (  # noqa: E402
@@ -228,6 +231,33 @@ mcp = FastMCP(
 
 async def _db() -> asyncpg.Connection:
     return await asyncpg.connect(DB_DSN)
+
+
+@mcp.tool()
+async def slack_ops(
+    text: str,
+    slack_user_id: str = "iris",
+    slack_user_name: str = "Iris",
+    role_override: str = "operator",
+) -> str:
+    """Execute deterministic Iris Slack operations against the #greenhouse command surface.
+
+    Use this for greenhouse status, briefs, alert ack/snooze/resolve, crop
+    observations, crop lifecycle writes, and planner triggers. Direct relay
+    commands are denied by policy.
+    """
+
+    settings = load_slack_settings()
+    req = SlackCommandRequest(
+        text=text,
+        slack_user_id=slack_user_id,
+        slack_user_name=slack_user_name,
+        channel_id=settings.channel_id,
+        channel_name=settings.channel_name,
+        raw_event={"source": "mcp.slack_ops"},
+    )
+    response = await handle_slack_command(req, dsn=DB_DSN, settings=settings, role_override=role_override)
+    return response.model_dump_json()
 
 
 async def _insert_plan_delivery_log(conn: asyncpg.Connection, result: dict) -> str | None:
