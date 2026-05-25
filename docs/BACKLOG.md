@@ -35,12 +35,14 @@ Current posture:
   posture.
 - **ClimateIntent closeout state:** GitHub issue
   [#8](https://github.com/VerdifyConsultancy/verdify-platform/issues/8)
-  tracks the current rollout closeout. As of 2026-05-25 15:46 MDT, platform
-  PR #4 and planner PR `verdify-planner#3` are open, non-draft, mergeable,
-  and validated; firmware hardening is preserved in draft PR #10. Live health
-  is green after the `/mnt/agents` share repair, but global closeout remains
-  open until coordinator-approved merges, service restarts/deploy, and a final
-  post-deploy health proof are complete.
+  tracks the rollout closeout. As of 2026-05-25 16:30 MDT, platform PR #4,
+  planner PR `verdify-planner#3`, and the doc-only review PR are merged.
+  The alternate firmware/controller hardening path from PR #10 was abandoned
+  by operator decision, archived at tag
+  `archive/pr10-abandoned-controller-architecture-2026-05-25`, exported under
+  `/mnt/iris/archives/verdify/`, closed unmerged, and its branch deleted. The
+  live `/srv/verdify` Slack WIP branch contains current platform `main`; final
+  ClimateIntent post-deploy proof, sensor-health, and site doctor passed.
 - **Climate-control sprint shipped:** the
   [`Climate Authority Sprint Plan`](climate-authority-sprint-plan-2026-05-24.md)
   closed the 2026-05-24 live gap where `VENT_COOL_MIST_ASSIST` was selected

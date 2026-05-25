@@ -116,19 +116,19 @@ Launch work is tracked in [`docs/backlog/launch.md`](launch.md) with the command
   energy, and outdoor context. Keep live planner context on indexed/latest-row
   reads, not unbounded `v_greenhouse_state` scans. Migration
   `142-climate-action-log.sql` was applied live and `db/schema.sql` regenerated.
-- [ ] **C-CI.2 ClimateIntent rollout closeout and post-merge proof.** GitHub
+- [x] **C-CI.2 ClimateIntent rollout closeout and post-merge proof.** GitHub
   issue [#8](https://github.com/VerdifyConsultancy/verdify-platform/issues/8)
-  is the live closeout tracker. Current validated inputs are platform PR #4
-  (`46d2b42`), planner PR `verdify-planner#3` (`32bf08c`), and draft firmware
-  preservation PR #10 (`bc85f03`). Before closing the rollout, merge/deploy the
-  approved platform and planner changes, restart the affected runtime services
-  (`verdify-ingestor`, `verdify-mcp`, `verdify-setpoint-server`,
-  `verdify-api`, and Hermes/planner gateway if changed), then rerun the final
-  proof set: `make lint`, `make test`, ClimateIntent audit, planner tests,
-  firmware tests/invariants/compile, `scripts/health-check.sh`,
-  `make sensor-health`, plan coverage, site doctor, no critical/high alerts,
-  and an updated alert inventory. Keep Slack integration out of this closeout;
-  it is owned by a separate agent/PR stack.
+  was the live closeout tracker. Platform PR #4, planner PR
+  `verdify-planner#3`, and the doc-only review PR are merged. The live
+  `/srv/verdify` Slack WIP branch was merged forward to current platform
+  `main`, and affected runtime services were restarted. Final proof passed:
+  `make climate-authority-post-deploy-proof`, ClimateIntent audit, active-plan
+  coverage, firmware deploy preflight, `make sensor-health SINCE='5 minutes'`,
+  and `scripts/site-doctor.py`. The only open platform PRs after closeout are
+  Slack WIP PRs owned by another agent. PR #10 (`bc85f03`) was not merged; it
+  was an abandoned alternate controller architecture, archived at tag
+  `archive/pr10-abandoned-controller-architecture-2026-05-25`, exported to
+  `/mnt/iris/archives/verdify/`, closed unmerged, and its branch deleted.
 
 ### Planner contract v1.5 — historical local-first hardening
 
