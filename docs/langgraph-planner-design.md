@@ -19,7 +19,9 @@ Key decisions:
 - V1 uses Direct OpenAI for structured LLM calls.
 - LangGraph state is persisted in Postgres through a LangGraph checkpointer.
 - Verdify operational truth remains in existing tables such as `plan_delivery_log`, plan journals, readbacks, scorecards, and guardrail audit views.
-- Initial rollout is shadow/canary before replacing the current Hermes production path.
+- Rollout is a direct single-path replacement only after offline replay,
+  deterministic validation, and operator approval; no alternate production
+  controller is allowed.
 
 ## 1. Architecture Overview
 
@@ -99,7 +101,7 @@ LangGraph state is execution state, not Verdify's source of truth.
 - `event_label`
 - `thread_id`
 - `graph_version`
-- `run_mode`: `shadow`, `canary`, or `production`
+- `execution_mode`: `offline_replay`, `dry_run`, or `production`
 
 Lifecycle fields:
 
@@ -294,7 +296,7 @@ Key distinction:
 - Calls MCP only.
 - Uses `set_plan`, `set_tunable`, or `acknowledge_trigger`.
 - Ensures idempotency by `trigger_id` and selected action.
-- In shadow mode, does not perform production writes.
+- In offline/dry-run validation, does not perform production writes.
 - Records MCP result in `PlannerState`.
 
 ### `verify`
@@ -353,18 +355,18 @@ Long-term retrieval memory:
 1. Design-only phase:
    - Add the architecture document.
    - No runtime behavior changes.
-2. Shadow phase:
-   - Run LangGraph on selected triggers.
+2. Offline replay/dry-run phase:
+   - Run LangGraph against captured triggers and fixture context outside the live
+     production trigger path.
    - No production greenhouse writes.
-   - Compare LangGraph decisions to Hermes/current path.
-3. Canary phase:
-   - Enable MCP writes for low-risk event types.
+   - Compare decisions to historical outcomes and the ClimateIntent contract.
+3. Production replacement phase:
+   - Move required planner triggers to LangGraph as the one planner path.
    - Keep exact `trigger_id` correlation and delivery ledger semantics.
-4. Production phase:
-   - Move required planner triggers to LangGraph.
-   - Keep Hermes available as fallback until LangGraph reliability is proven.
-5. Cleanup phase:
-   - Retire the old Hermes planner path only after measured parity and operator acceptance.
+   - Do not keep a second live planner/controller path.
+4. Cleanup phase:
+   - Retire the replaced Hermes planner path in the same change window or before
+     production traffic is handed over.
 
 ## 9. Testing Plan
 
@@ -380,7 +382,7 @@ Required test scenarios:
 - `deterministic_validate` rejects firmware-owned band violations.
 - `guardrail_preview` identifies likely clamp/hold outcomes.
 - `write_or_ack` is idempotent for repeated `trigger_id` runs.
-- Shadow mode performs no production MCP writes.
+- Offline/dry-run validation performs no production MCP writes.
 - `verify` distinguishes MCP accepted, dispatcher delivered, and readback observed.
 - `evaluate_later` runs separately from the immediate graph.
 - Full graph can resume from a Postgres checkpoint after interruption.
@@ -392,7 +394,8 @@ Required test scenarios:
 - V1 service is private/internal only, with no public Traefik route.
 - V1 uses Postgres for LangGraph checkpointing.
 - V1 uses `trigger_id` as the LangGraph `thread_id`.
-- V1 keeps current Hermes/current planner path active during shadow and canary.
+- V1 does not run alongside Hermes as a second live planner. It replaces the
+  active planner path only after offline evidence and operator approval.
 - V1 does not modify firmware, dispatcher ownership, or MCP write contracts.
 - V1 does not introduce a new long-term memory system; it reuses existing Verdify retrieval sources.
 - Any production cutover is a later implementation step, not part of this design-doc-only change.

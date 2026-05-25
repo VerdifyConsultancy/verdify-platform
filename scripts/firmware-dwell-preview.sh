@@ -7,8 +7,8 @@
 # per hour window to quantify whipsaw reduction.
 #
 # Purpose: de-risk Phase-2 activation. If the replay shows <60%
-# reduction, the gate design has a flaw and we investigate BEFORE
-# the 14-day live shadow bake, not after.
+# reduction, the gate design has a flaw and we investigate before direct
+# activation in the single live controller path.
 #
 # Output: per-hour transition comparison + headline reduction %.
 set -euo pipefail

@@ -137,11 +137,11 @@ In `ControlState`:
 
 ## Pre-deploy validation
 
-**Shadow mode first (no behavior change):**
-- Land the gate code but wire it to a telemetry-only path that LOGS what it would decide vs what the existing logic decides, without actually changing the mode
-- Run for ~3 days in summer hot-dry conditions
-- Compare shadow decisions to Iris's judgment + Jason's intuition
-- If shadow decisions match expected ("would have vented, not sealed, on all four 12-15:00 hours today") → flip to active
+**Replay first, then direct activation:**
+- Validate the gate against replay data and synthetic hot-dry cases before OTA.
+- Do not add a runtime alternate controller or proposal path.
+- Compare replay decisions to Iris's judgment and Jason's intuition.
+- If decisions match expected ("would have vented, not sealed, on all four 12-15:00 hours today"), deploy the single live firmware path with normal OTA guardrails.
 
 **OTA deploy guardrails:**
 - `firmware/artifacts/last-good.ota.bin` current before deploy
@@ -173,6 +173,6 @@ If sprint-15 had been live today:
 1. `firmware` agent picks up this doc on next cycle.
 2. Coordinator (iris-dev / Jason) lands `verdify_schemas/tunables.py` + `ingestor/entity_map.py` changes first (schema-first rule in `CLAUDE.md`).
 3. `firmware` agent lands sprint-15 code on `firmware/sprint-15-summer-vent` branch.
-4. Shadow-mode deploy; 3-day bake.
-5. Flip to active, 24h observation.
+4. Deploy the single active firmware path under normal OTA guardrails.
+5. Run 24h observation.
 6. Close sprint.

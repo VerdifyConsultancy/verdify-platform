@@ -21,8 +21,8 @@ Deferred:
 
 Rationale:
 
-- The first slice should prove planner run lifecycle, status inspection, and shadow execution before
-  implementing delayed outcome evaluation.
+- The first slice should prove planner run lifecycle, status inspection, and
+  offline/dry-run execution before implementing delayed outcome evaluation.
 - Evaluation depends on settled downstream outcome data and can be added after the immediate trigger
   graph exists.
 
@@ -49,7 +49,7 @@ Implementation consequence:
 Decision:
 
 - Include a minimal worker module now.
-- Keep execution shadow-only and stubbed at first.
+- Keep execution dry-run-only and stubbed at first.
 
 Rationale:
 
@@ -62,5 +62,5 @@ Implementation consequence:
 
 - Add `planner_graph/worker.py` in the first slice.
 - The API starts or resumes runs; the worker executes them.
-- Early graph nodes may be stubs, but shadow mode must perform no production MCP writes.
-
+- Early graph nodes may be stubs, but dry-run validation must perform no
+  production MCP writes.

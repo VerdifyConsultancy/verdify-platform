@@ -1707,6 +1707,29 @@ def test_single_path_removes_runtime_shadow_surfaces():
     assert "plan_journal_shadow" not in schema
 
 
+def test_single_path_policy_docs_do_not_reintroduce_alternate_rollout():
+    policy_files = (
+        "docs/firmware-climate-intent-controller-final-design-2026-05-24.md",
+        "docs/BACKLOG.md",
+        "docs/backlog/firmware.md",
+        "docs/langgraph-planner-design.md",
+        "docs/planner/langgraph-decisions.md",
+        "docs/planner/langgraph-implementation-approach.md",
+        "docs/planner/langgraph-external-implementation-context.md",
+        "firmware/greenhouse/tunables.yaml",
+        "firmware/greenhouse/globals.yaml",
+        "scripts/firmware-dwell-preview.sh",
+    )
+    forbidden_terms = ("shadow", "canary")
+    hits = []
+    for rel_path in policy_files:
+        text = (REPO_ROOT / rel_path).read_text().lower()
+        for term in forbidden_terms:
+            if term in text:
+                hits.append(f"{rel_path}:{term}")
+    assert not hits
+
+
 def test_midnight_trigger_has_required_review_prompt_and_wake_mode():
     src = Path(iris_planner.__file__).read_text()
     assert "def _midnight_prompt" in src

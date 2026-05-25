@@ -141,7 +141,7 @@ historical model is missing or stale.
 The AI tuning surface should be compact and semantic. It should tune
 forecast-aware intent and tradeoff thresholds, not relay mechanics.
 
-There is no shadow controller in the production loop. The planner emits one
+There is no alternate controller in the production loop. The planner emits one
 bounded `ClimateIntent` per forecast segment, MCP validates and materializes it
 once into the live dispatcher/firmware contract, and the firmware chooses one
 executed climate action from that path. Replay and counterfactual tools may
@@ -293,7 +293,7 @@ controller must publish:
    - Add candidate action structs and observability to the live controller.
    - Use one selector path for mode choice, relay resolution, and published
      `climate_action`.
-   - Do not run a parallel shadow/proposal controller in production.
+   - Do not run a parallel proposal controller in production.
    - Add unit tests for candidate sorting and invariants.
 
 4. Cross-agent contract handoff.

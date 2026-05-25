@@ -30,6 +30,19 @@ REMOVED_RUNTIME_SHADOW_PATHS = (
     REPO_ROOT / "hermes" / "iris-shadow" / "config.yaml",
     REPO_ROOT / "hermes" / "iris-shadow" / "SOUL.md",
 )
+SINGLE_PATH_POLICY_FILES = (
+    REPO_ROOT / "docs" / "firmware-climate-intent-controller-final-design-2026-05-24.md",
+    REPO_ROOT / "docs" / "BACKLOG.md",
+    REPO_ROOT / "docs" / "backlog" / "firmware.md",
+    REPO_ROOT / "docs" / "langgraph-planner-design.md",
+    REPO_ROOT / "docs" / "planner" / "langgraph-decisions.md",
+    REPO_ROOT / "docs" / "planner" / "langgraph-implementation-approach.md",
+    REPO_ROOT / "docs" / "planner" / "langgraph-external-implementation-context.md",
+    REPO_ROOT / "firmware" / "greenhouse" / "tunables.yaml",
+    REPO_ROOT / "firmware" / "greenhouse" / "globals.yaml",
+    REPO_ROOT / "scripts" / "firmware-dwell-preview.sh",
+)
+FORBIDDEN_SINGLE_PATH_TERMS = ("shadow", "canary")
 
 
 def _section(text: str, start: str, end: str) -> str:
@@ -103,6 +116,14 @@ def main() -> None:
     existing_shadow_paths = [str(path.relative_to(REPO_ROOT)) for path in REMOVED_RUNTIME_SHADOW_PATHS if path.exists()]
     if existing_shadow_paths:
         _fail("runtime shadow surfaces must stay removed: " + ", ".join(existing_shadow_paths))
+    policy_hits: list[str] = []
+    for path in SINGLE_PATH_POLICY_FILES:
+        lowered = path.read_text().lower()
+        for term in FORBIDDEN_SINGLE_PATH_TERMS:
+            if term in lowered:
+                policy_hits.append(f"{path.relative_to(REPO_ROOT)}:{term}")
+    if policy_hits:
+        _fail("single-path policy files must not reintroduce alternate rollout language: " + ", ".join(policy_hits))
 
     server = (REPO_ROOT / "mcp" / "server.py").read_text()
     if "set_plan requires climate_intent on every transition" not in server:
@@ -117,6 +138,7 @@ def main() -> None:
     print(f"climate_actions={len(CLIMATE_ACTIONS)}")
     print(f"materialized_tier1={len(materialized)}")
     print("runtime_shadow_surfaces=0")
+    print(f"single_path_policy_files={len(SINGLE_PATH_POLICY_FILES)}")
     print("OK")
 
 

@@ -44,7 +44,8 @@ run and return quickly. The worker owns graph execution semantics even while ear
 
 ## Initial Runtime Behavior
 
-The first runtime mode is shadow-only.
+The first runtime behavior is dry-run-only and must not be wired into the live
+production trigger path.
 
 In the first slice:
 
@@ -53,8 +54,8 @@ In the first slice:
 - The worker runs a minimal graph path with stubbed deterministic nodes.
 - The graph records enough state to support `GET /runs/{trigger_id}`.
 - No production MCP writes occur.
-- Shadow write nodes must prove they do not call `set_plan`, `set_tunable`, `acknowledge_trigger`,
-  or `plan_evaluate`.
+- Dry-run write nodes must prove they do not call `set_plan`, `set_tunable`,
+  `acknowledge_trigger`, or `plan_evaluate`.
 
 The first slice may use an in-memory or test double execution store only for local tests, but the
 module boundaries should match the eventual Postgres checkpointed design.
@@ -68,8 +69,8 @@ First behavior to prove:
 - A caller can request a run through the planner API.
 - The API returns accepted status without executing long-running work in the request handler.
 - The worker owns execution.
-- The status endpoint can report the resulting shadow run.
-- Shadow mode performs no production greenhouse writes.
+- The status endpoint can report the resulting dry-run execution.
+- Dry-run mode performs no production greenhouse writes.
 
 Useful early tests:
 
@@ -77,7 +78,7 @@ Useful early tests:
 - `POST /triggers/{trigger_id}/run` starts or resumes a run for that trigger ID.
 - `GET /runs/{trigger_id}` returns a bounded planner state summary.
 - duplicate run requests for the same `trigger_id` use the same `thread_id`.
-- shadow execution does not call MCP write tools.
+- dry-run execution does not call MCP write tools.
 
 ## Documentation Flow
 
@@ -88,4 +89,3 @@ Keep the documentation split by purpose:
 - `docs/planner/langgraph-decisions.md`: decisions made while refining the design.
 - `docs/planner/greenhouse-reference.md`: greenhouse operational facts the planner must respect.
 - `docs/planner/greenhouse-playbook.md`: operational playbook and planning heuristics.
-

@@ -181,4 +181,4 @@ What is still unresolved:
 4. Instrument JSON/API failure bursts as first-class observability: count `json:064` parse errors, slow API operations, and crash-log detections into DB-visible diagnostics or alert rows.
 5. Tighten the `setpoint_unconfirmed` warning lifecycle if the transient matching-readback warnings recur after future redeploys.
 6. Make `vpd_low` explicit in the active planner/setpoint contract or document why firmware fallback owns that boundary.
-7. After the bake, start the next firmware PR as shadow telemetry first: emit controller vote/state-machine diagnostics without changing relays.
+7. After the bake, start the next firmware PR with replay-backed diagnostics and normal OTA evidence; do not add a runtime alternate controller path.

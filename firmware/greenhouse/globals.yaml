@@ -1120,9 +1120,8 @@ globals:
 
   # ─── Phase-2 dwell gate ───────────────────────────────────────────
   # 5-min hold on non-safety mode transitions to kill whipsaw. Default
-  # OFF for shadow-mode bake; planner flips to ON after 14d replay +
-  # shadow validation. See plan Phase 2 in
-  # .claude-agents/iris-dev/plans/yo-iris-dev-you-help-humming-stonebraker.md
+  # OFF until replay/invariant evidence and operator approval allow direct
+  # activation in the single live controller path.
   - id: sw_dwell_gate_enabled
     type: bool
     restore_value: no

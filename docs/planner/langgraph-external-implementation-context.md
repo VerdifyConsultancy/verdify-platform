@@ -65,7 +65,10 @@ Current production shape:
 - Ingestor: Python async service that captures ESP32 data, runs periodic tasks, forecast/deviation checks, and setpoint dispatcher.
 - Dispatcher cadence: every 300 seconds.
 - ESP32 control loop: every 5 seconds.
-- Current planner gateway: Hermes `hermes-iris`; new planner runs shadow/canary before replacing it.
+- Current planner gateway: Hermes `hermes-iris`; any new planner must replace
+  that path directly after offline replay, deterministic validation, and
+  operator approval. Verdify no longer allows an alternate production planner
+  path.
 
 Key repo references:
 
@@ -107,7 +110,8 @@ Allowed production write tools are only:
 - `acknowledge_trigger`
 - `plan_evaluate`
 
-During shadow mode, the planner must call none of those production write tools.
+During offline/dry-run validation, the planner must call none of those
+production write tools.
 
 ## 5. Trigger And Audit Model
 
@@ -338,7 +342,7 @@ Ownership classes:
 The standalone planner has two acceptable validation strategies:
 
 1. Query/import a Verdify-provided registry artifact generated from `tunable_registry.py`.
-2. Call MCP in dry-run/shadow validation mode if Verdify exposes one.
+2. Call MCP in dry-run validation mode if Verdify exposes one.
 
 Do not maintain a hand-copied tunable list as the long-term source of truth. If an early prototype needs a static fixture, make it explicitly test-only and fail closed when unknown params appear.
 
@@ -502,31 +506,35 @@ Implement these nodes in the standalone planner:
 - `draft_plan`: Direct OpenAI structured-output draft action.
 - `deterministic_validate`: schema, registry, Tier 1, action legality, band ownership, trigger correlation.
 - `guardrail_preview`: estimate clamps/holds/ineffective plans without bypassing guardrails.
-- `write_or_ack`: MCP-only side-effect node; disabled for production writes in shadow mode.
+- `write_or_ack`: MCP-only side-effect node; disabled for production writes in
+  dry-run validation.
 - `verify`: read Verdify operational records to confirm accepted write vs delivered/readback outcome.
 - `report`: emit one terminal summary/report per trigger.
 - `evaluate_later`: separate delayed graph/job, not part of immediate trigger graph.
 
 LLM nodes must produce structured output validated by Pydantic before deterministic validation and before any write node.
 
-## 14. Run Modes
+## 14. Execution Modes
 
 Support these modes:
 
-- `shadow`: no production MCP writes. Run graph, produce proposed action, compare to Hermes/current path.
-- `canary`: allow production MCP writes only for explicitly enabled low-risk event types.
-- `production`: handle required planner triggers after reliability is proven.
+- `offline_replay`: no production MCP writes. Run graph against captured
+  triggers/context and compare to historical outcomes.
+- `dry_run`: no production MCP writes. Validate request shape and reporting
+  around a live trigger without entering the live trigger path.
+- `production`: handle required planner triggers as the one planner path after
+  reliability is proven.
 
-Default to `shadow`.
+Default to `dry_run`.
 
-Shadow mode must be test-proven not to call:
+Offline/dry-run validation must be test-proven not to call:
 
 - `set_plan`
 - `set_tunable`
 - `acknowledge_trigger`
 - `plan_evaluate`
 
-The planner can still call read-only MCP tools or DB reads in shadow mode.
+The planner can still call read-only MCP tools or DB reads in dry-run mode.
 
 ## 15. Verification Semantics
 
@@ -555,12 +563,12 @@ Build the smallest standalone planner that proves the boundary:
 
 1. FastAPI app with `GET /health`, `POST /triggers/{trigger_id}/run`, and `GET /runs/{trigger_id}`.
 2. Worker process with a minimal claim/execute loop.
-3. LangGraph graph with stub or deterministic nodes for intake, context, validation, shadow write, and report.
+3. LangGraph graph with stub or deterministic nodes for intake, context, validation, dry-run write, and report.
 4. `thread_id = trigger_id` checkpoint behavior.
-5. Shadow-only run mode.
+5. Dry-run-only execution mode.
 6. Bounded run status summary.
 7. Tests proving duplicate run requests use the same execution thread.
-8. Tests proving shadow mode performs no production MCP writes.
+8. Tests proving dry-run mode performs no production MCP writes.
 
 Do not implement production cutover in the first slice.
 
@@ -579,7 +587,7 @@ Minimum tests:
 - `deterministic_validate` rejects missing Tier 1 coverage for full plans.
 - `guardrail_preview` identifies likely clamp/hold outcomes.
 - `write_or_ack` is idempotent for repeated `trigger_id`.
-- Shadow mode calls no production MCP write tools.
+- Dry-run mode calls no production MCP write tools.
 - `verify` distinguishes MCP accepted, dispatcher delivered, readback observed, and physical outcome pending.
 - Full graph can resume from a Postgres checkpoint after interruption.
 - API request handlers return quickly and do not own long-running graph execution.
@@ -596,8 +604,9 @@ Use these defaults unless Verdify operators override them:
 - Postgres checkpointer for LangGraph state.
 - `thread_id = trigger_id`.
 - Default greenhouse ID is `vallery`.
-- Default run mode is `shadow`.
-- Keep Hermes/current planner path active during shadow and canary.
+- Default execution mode is `dry_run`.
+- Do not run beside Hermes as a second live planner. Production traffic moves
+  only when LangGraph replaces the active planner path.
 - Do not add a new long-term memory system in V1; reuse Verdify lessons/docs/prior plans/embeddings.
 - Do not modify firmware, dispatcher ownership, or MCP write contracts.
 
@@ -612,11 +621,12 @@ Use these defaults unless Verdify operators override them:
 
 The standalone implementation is successful when:
 
-- It can run a shadow LangGraph execution for a real Verdify trigger ID.
+- It can run a dry-run LangGraph execution for a real Verdify trigger ID.
 - It persists and resumes state with `thread_id = trigger_id`.
 - It exposes internal health/run/status endpoints.
 - It reads enough Verdify context to draft a bounded action.
 - It validates against registry/band/Tier 1/action rules before any write path.
 - It produces a clear terminal report.
-- It performs no production writes in shadow mode.
-- It can be canary-enabled later without changing the Verdify firmware, dispatcher, or MCP tool contracts.
+- It performs no production writes in dry-run mode.
+- It can be promoted to production only as the single active planner path,
+  without changing the Verdify firmware, dispatcher, or MCP tool contracts.
