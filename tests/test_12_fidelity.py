@@ -2019,6 +2019,11 @@ def test_climate_authority_action_log_contract_is_tracked():
     assert "changed_entities & CLIMATE_ACTION_LOG_ENTITIES" in ingestor
     assert "last_climate_action_log != now" in ingestor
     assert "last_climate_action_log = now" in ingestor
+    assert "'latest_climate_ts', lc.ts" in ingestor
+    assert "'latest_climate_age_s'" in ingestor
+    assert "'temp_avg_present', lc.temp_avg IS NOT NULL" in ingestor
+    assert "'vpd_avg_present', lc.vpd_avg IS NOT NULL" in ingestor
+    assert "'band_context_complete'" in ingestor
     assert "ClimateActionLogRow(" in ingestor
 
 

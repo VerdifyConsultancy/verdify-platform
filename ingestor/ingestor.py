@@ -608,7 +608,23 @@ async def write_climate_action_log(pool: asyncpg.Pool, ts: datetime) -> bool:
                 pc.plan_id,
                 pc.trigger_id,
                 pc.planner_instance,
-                $16::jsonb,
+                jsonb_strip_nulls(
+                    $16::jsonb || jsonb_build_object(
+                        'latest_climate_ts', lc.ts,
+                        'latest_climate_age_s',
+                            CASE
+                                WHEN lc.ts IS NULL THEN NULL
+                                ELSE greatest(0, extract(epoch FROM ($2 - lc.ts))::int)
+                            END,
+                        'temp_avg_present', lc.temp_avg IS NOT NULL,
+                        'vpd_avg_present', lc.vpd_avg IS NOT NULL,
+                        'band_context_complete',
+                            band.temp_low_f IS NOT NULL
+                            AND band.temp_high_f IS NOT NULL
+                            AND band.vpd_low_kpa IS NOT NULL
+                            AND band.vpd_high_kpa IS NOT NULL
+                    )
+                ),
                 $17,
                 $18::jsonb
             FROM band
