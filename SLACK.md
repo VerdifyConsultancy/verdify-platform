@@ -44,6 +44,7 @@ Live Slack tests on 2026-05-25:
 - OpenClaw `iris-planner` delivered `[smoke] OpenClaw iris-planner Slack delivery OK 2026-05-25` via `openai-codex/gpt-5.5`, `bot_id=B0ANY7P8PR6`, `ts=1779745462.607289`.
 - Deterministic command smokes passed for `runbook temp_safety`, `forecast triage`, `guardrail summary`, `ops log`, and `extract lessons`.
 - Post-deploy OpenClaw MCP smoke called `verdify.slack_ops` once, returned `intent=alert.runbook.get`, and delivered to Slack at `ts=1779746566.359979`.
+- Post-deploy OpenClaw AI-queue smoke called `verdify.slack_ops` once, returned `routing=openclaw`, and delivered to Slack with `[smoke] OpenClaw MCP slack_ops AI-queue OK routing=openclaw`.
 - Post-deploy operator brief validation posted through shared config as `username=Iris`, `icon=:seedling:`, `bot_id=B0ANY7P8PR6`, `ts=1779746583.673699`, and was recorded in `slack_notification_events`.
 - Post-deploy gates passed: `make lint`; `make test` (`554 passed, 2 skipped, 1 xfailed`).
 
