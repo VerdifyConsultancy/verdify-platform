@@ -8,9 +8,9 @@ knobs. The earlier AI-tunable audit/design work remains useful evidence, but
 the implementation target is now a smaller climate-intent surface plus a
 deterministic firmware action selector.
 
-This document is design-only. It does not authorize an OTA. Any implementation
-must follow firmware freeze rules, replay/invariant gates, service restart
-documentation, and a shadow bake before behavior changes.
+This document is the implementation contract. Any OTA must still follow
+firmware freeze rules, replay/invariant gates, service restart documentation,
+and operator approval.
 
 ## Objective
 
@@ -57,7 +57,7 @@ AI/planner owns:
 
 - Bounded climate intent for upcoming forecast periods.
 - Forecast-aware preconditioning and resource posture.
-- Historical-response priors used by firmware or shadow evaluators.
+- Historical-response priors used by firmware or replay evaluators.
 - Plan-level explanations and post-hoc scorecard learning.
 
 AI must not own:
@@ -269,16 +269,17 @@ controller must publish:
    - Draft `ClimateIntent` schema and ownership map.
    - Decide which current tunables become internal/operator-only.
 
-2. Shadow evaluator.
+2. Replay evaluator.
    - Build a replay-only evaluator that consumes historical telemetry and
      emits candidate action decisions without commanding relays.
    - Compare current firmware decisions vs proposed decisions.
    - Report temp/VPD projected compliance, relay churn, water, and electric
      cost.
 
-3. Firmware feature flag.
-   - Add candidate action structs and observability behind a feature flag.
-   - Keep current relay behavior while publishing shadow decisions.
+3. Firmware controller path.
+   - Add candidate action structs and observability to the live controller.
+   - Use one selector path for mode choice, relay resolution, and published
+     `climate_action`.
    - Add unit tests for candidate sorting and invariants.
 
 4. Cross-agent contract handoff.
@@ -288,43 +289,35 @@ controller must publish:
    - Ingestor owns dispatcher routing, confirmation, and state logging.
    - Firmware owns action selection and relay application.
 
-5. Shadow bake.
-   - Run 14-21 days with no behavior-changing OTA from this work.
-   - Require zero invariant violations.
-   - Require no increase in command churn.
-   - Require clear evidence of equal or better projected temp compliance before
-     considering VPD/resource gains.
-
-6. Behavior flip.
-   - Only after shadow evidence and replay proof.
+5. Deploy and audit.
    - Firmware PR must include replay diff, invariant output, unit-test delta,
      coordinator reproduction, planner concurrence, rollback plan, and service
      restart documentation.
+   - After OTA, validate no critical/high alerts, confirm published
+     `climate_action`, and compare live outcomes against replay expectations.
 
 ## Acceptance Gates
 
 The implementation is not complete until all of these are true:
 
 - A final `ClimateIntent` schema exists with bounded fields and ownership.
-- Firmware candidate action selection is implemented behind a flag.
-- Replay/shadow evaluator covers at least the hot/dry May 2026 windows and the
+- Firmware candidate action selection is the live controller path.
+- Replay evaluator covers at least the hot/dry May 2026 windows and the
   current replay corpus.
 - Observability exposes action, priority axis, block reasons, and timers.
 - Tests prove candidate selection follows the strict priority order.
 - Tests prove climate logic cannot drive fert/drip relays.
 - `make test-firmware`, `make firmware-invariants`, and firmware replay pass.
 - No critical/high alerts block rollout.
-- 14-21 day shadow bake shows no command-churn regression.
 - A behavior-changing OTA is separately approved under freeze rules.
 
 ## Near-Term Backlog Breakdown
 
 Recommended implementation tasks:
 
-1. `F-CI-1`: Add shadow evaluator and historical action report.
+1. `F-CI-1`: Add replay evaluator and historical action report.
 2. `F-CI-2`: Define `ClimateIntent` schema and registry ownership.
 3. `F-CI-3`: Add firmware candidate action projection structs and tests.
-4. `F-CI-4`: Add observability fields without changing relay behavior.
+4. `F-CI-4`: Publish live controller observability fields.
 5. `F-CI-5`: Wire planner/dispatcher to emit bounded intent.
-6. `F-CI-6`: Run shadow bake and publish scorecard.
-7. `F-CI-7`: Prepare behavior-changing firmware PR only if gates pass.
+6. `F-CI-6`: Deploy, validate live health, and publish scorecard.

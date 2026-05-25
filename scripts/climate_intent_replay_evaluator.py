@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Replay-only shadow evaluator for the ClimateIntent controller design.
+"""Replay-only evaluator for the ClimateIntent controller design.
 
 This script consumes the existing firmware replay corpus and projects the new
 candidate-action contract without commanding relays. It is intentionally simple:
 the first model uses current bands, outdoor context, dew margin, solar pressure,
-and occupancy to produce a deterministic shadow action and compliance/resource
+and occupancy to produce a deterministic replay action and compliance/resource
 summary for historical rows.
 """
 
@@ -243,7 +243,7 @@ def intent_from_replay_row(row: ReplayClimateRow) -> ClimateIntent:
 
 
 @dataclass(frozen=True)
-class ShadowEvaluation:
+class ReplayEvaluation:
     row: ReplayClimateRow
     intent: ClimateIntent
     decision: ClimateActionDecision
@@ -276,7 +276,7 @@ def _projection(
     )
 
 
-def evaluate_shadow_row(row: ReplayClimateRow, prior_action: str | None = None) -> ShadowEvaluation:
+def evaluate_replay_row(row: ReplayClimateRow, prior_action: str | None = None) -> ReplayEvaluation:
     intent = intent_from_replay_row(row)
     dew_margin = row.dew_margin_f
     hour = _parse_local_hour(row.ts)
@@ -473,7 +473,7 @@ def evaluate_shadow_row(row: ReplayClimateRow, prior_action: str | None = None) 
         fog_block_reason=",".join(fog_block_reasons),
         resource_cost_estimate=_resource_estimate(selected.action),
     )
-    return ShadowEvaluation(row=row, intent=intent, decision=decision, candidates=tuple(candidates))
+    return ReplayEvaluation(row=row, intent=intent, decision=decision, candidates=tuple(candidates))
 
 
 def _fog_block_reasons(
@@ -498,7 +498,7 @@ def _candidate_by_action(candidates: Iterable[ClimateCandidateProjection], actio
 
 
 def _resource_estimate(action: str) -> ClimateResourceCostEstimate:
-    """Return a conservative per-row resource estimate for shadow reporting.
+    """Return a conservative per-row resource estimate for replay reporting.
 
     These are deliberately coarse until water/electric/gas metering is wired to
     candidate actions. Candidate selection still uses the relative
@@ -538,11 +538,11 @@ def _candidate_summary(selected: ClimateCandidateProjection, candidates: Iterabl
     return f"{selected.action} selected; {first_blocked.action} blocked by {','.join(first_blocked.blocked_reasons)}"
 
 
-def evaluate_rows(rows: Iterable[ReplayClimateRow], *, limit: int | None = None) -> Iterator[ShadowEvaluation]:
+def evaluate_rows(rows: Iterable[ReplayClimateRow], *, limit: int | None = None) -> Iterator[ReplayEvaluation]:
     prior_action: str | None = None
     count = 0
     for row in rows:
-        evaluation = evaluate_shadow_row(row, prior_action=prior_action)
+        evaluation = evaluate_replay_row(row, prior_action=prior_action)
         prior_action = evaluation.decision.climate_action
         yield evaluation
         count += 1
@@ -550,7 +550,7 @@ def evaluate_rows(rows: Iterable[ReplayClimateRow], *, limit: int | None = None)
             return
 
 
-def summarize(evaluations: Iterable[ShadowEvaluation]) -> dict[str, Any]:
+def summarize(evaluations: Iterable[ReplayEvaluation]) -> dict[str, Any]:
     action_counts: Counter[str] = Counter()
     priority_counts: Counter[str] = Counter()
     firmware_state_counts: Counter[str] = Counter()
@@ -559,11 +559,11 @@ def summarize(evaluations: Iterable[ShadowEvaluation]) -> dict[str, Any]:
     temp_out = 0
     vpd_out = 0
     hot_dry = 0
-    wet_when_shadow_blocked = 0
+    wet_when_replay_blocked = 0
     rows = 0
-    shadow_transitions = 0
+    replay_transitions = 0
     firmware_transitions = 0
-    previous_shadow: str | None = None
+    previous_replay: str | None = None
     previous_firmware: str | None = None
     water_cost = 0.0
     electric_cost = 0.0
@@ -581,10 +581,10 @@ def summarize(evaluations: Iterable[ShadowEvaluation]) -> dict[str, Any]:
         temp_out += int(evaluation.decision.temp_error_f > 0.0)
         vpd_out += int(evaluation.decision.vpd_error_kpa > 0.0)
         hot_dry += int(row.temp_f > row.temp_high and row.vpd_kpa > row.vpd_high)
-        wet_when_shadow_blocked += int(row.wet_relays_on and evaluation.decision.moisture_assist_state == "blocked")
-        shadow_transitions += int(previous_shadow is not None and previous_shadow != action)
+        wet_when_replay_blocked += int(row.wet_relays_on and evaluation.decision.moisture_assist_state == "blocked")
+        replay_transitions += int(previous_replay is not None and previous_replay != action)
         firmware_transitions += int(previous_firmware is not None and previous_firmware != row.greenhouse_state)
-        previous_shadow = action
+        previous_replay = action
         previous_firmware = row.greenhouse_state
         water_cost += evaluation.decision.resource_cost_estimate.water_gal
         electric_cost += evaluation.decision.resource_cost_estimate.electric_kwh
@@ -592,7 +592,7 @@ def summarize(evaluations: Iterable[ShadowEvaluation]) -> dict[str, Any]:
 
     return {
         "rows": rows,
-        "shadow_action_counts": dict(action_counts.most_common()),
+        "replay_action_counts": dict(action_counts.most_common()),
         "priority_axis_counts": dict(priority_counts.most_common()),
         "firmware_state_counts": dict(firmware_state_counts.most_common(12)),
         "mode_reason_counts": dict(mode_reason_counts.most_common(12)),
@@ -600,8 +600,8 @@ def summarize(evaluations: Iterable[ShadowEvaluation]) -> dict[str, Any]:
         "temp_out_of_band_rows": temp_out,
         "vpd_out_of_band_rows": vpd_out,
         "hot_dry_rows": hot_dry,
-        "wet_relay_rows_when_shadow_blocked": wet_when_shadow_blocked,
-        "shadow_action_transitions": shadow_transitions,
+        "wet_relay_rows_when_replay_blocked": wet_when_replay_blocked,
+        "replay_action_transitions": replay_transitions,
         "firmware_state_transitions": firmware_transitions,
         "resource_estimate": {
             "water_gal": round(water_cost, 3),
@@ -612,19 +612,19 @@ def summarize(evaluations: Iterable[ShadowEvaluation]) -> dict[str, Any]:
 
 
 def _print_text(summary: dict[str, Any]) -> None:
-    print("ClimateIntent shadow replay report")
+    print("ClimateIntent replay report")
     for key in (
         "rows",
         "temp_out_of_band_rows",
         "vpd_out_of_band_rows",
         "hot_dry_rows",
-        "wet_relay_rows_when_shadow_blocked",
-        "shadow_action_transitions",
+        "wet_relay_rows_when_replay_blocked",
+        "replay_action_transitions",
         "firmware_state_transitions",
     ):
         print(f"{key}={summary[key]}")
     print(f"resource_estimate={json.dumps(summary['resource_estimate'], sort_keys=True)}")
-    for key in ("shadow_action_counts", "priority_axis_counts", "firmware_state_counts", "mode_reason_counts"):
+    for key in ("replay_action_counts", "priority_axis_counts", "firmware_state_counts", "mode_reason_counts"):
         print(f"{key}={json.dumps(summary[key], sort_keys=True)}")
 
 

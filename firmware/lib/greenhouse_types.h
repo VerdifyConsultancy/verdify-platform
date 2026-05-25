@@ -116,9 +116,8 @@ struct Setpoints {
     // held for at least dwell_gate_ms after the last accepted transition.
     // Safety rails, R2-3 dry override, and vpd_min_safe rescue preempt the
     // dwell. Projected 80% reduction in whipsaw events (Explore B: 59 mode
-    // changes in 2h on 2026-04-17 stress window). Default OFF for shadow-
-    // mode bake; operator / planner flips to ON after 14d of replay +
-    // shadow validation.
+    // changes in 2h on 2026-04-17 stress window). Default OFF until replay
+    // validation and operator approval.
     bool     sw_dwell_gate_enabled;
     uint32_t dwell_gate_ms;                // default 300000 (5 min)
     // Unified band-first controller. Kept as a compatibility/readback field,
@@ -207,10 +206,9 @@ struct RelayOutputs {
     bool vent;
 };
 
-// ── ClimateIntent candidate-action shadow contract ───────────────────
-// These types mirror verdify_schemas.climate_intent and are intentionally not
-// wired into determine_mode() yet. They let firmware unit tests prove the new
-// strict-priority candidate selector before any relay behavior changes.
+// ── ClimateIntent candidate-action controller contract ────────────────
+// These types mirror verdify_schemas.climate_intent. Firmware uses them as the
+// single climate decision surface; relay mechanics and interlocks remain local.
 enum ClimateAction {
     CLIMATE_SENSOR_FAULT,
     CLIMATE_SAFETY_HEAT,
@@ -248,6 +246,13 @@ enum ClimatePriorityAxis {
     CLIMATE_PRIORITY_RESOURCE
 };
 
+inline constexpr const char* CLIMATE_PRIORITY_AXIS_NAMES[] = {
+    "safety",
+    "temp",
+    "vpd",
+    "resource"
+};
+
 enum ClimateMoistureAssistState {
     CLIMATE_MOISTURE_INACTIVE,
     CLIMATE_MOISTURE_ENGAGE_DELAY,
@@ -257,12 +262,29 @@ enum ClimateMoistureAssistState {
     CLIMATE_MOISTURE_SERVED
 };
 
+inline constexpr const char* CLIMATE_MOISTURE_ASSIST_STATE_NAMES[] = {
+    "inactive",
+    "engage_delay",
+    "pulse_on",
+    "pulse_gap",
+    "blocked",
+    "served"
+};
+
 enum ClimateMoistureZone {
     CLIMATE_ZONE_NONE,
     CLIMATE_ZONE_SOUTH,
     CLIMATE_ZONE_WEST,
     CLIMATE_ZONE_CENTER,
     CLIMATE_ZONE_ALL
+};
+
+inline constexpr const char* CLIMATE_MOISTURE_ZONE_NAMES[] = {
+    "none",
+    "south",
+    "west",
+    "center",
+    "all"
 };
 
 struct ClimateCandidateProjection {
@@ -460,8 +482,8 @@ inline Setpoints default_setpoints() {
         // disabling the gate.
         .outdoor_staleness_max_s = 600u,
         .summer_vent_min_runtime_s = 180u,
-        // Phase-2 dwell gate. Default OFF (shadow-mode bake before flipping
-        // to active). 5-min dwell projected to reduce whipsaw 80%.
+        // Phase-2 dwell gate. Default OFF until replay validation and
+        // operator approval. 5-min dwell projected to reduce whipsaw 80%.
         .sw_dwell_gate_enabled = false,
         .dwell_gate_ms = 300000u,
         // Library fallback remains legacy so old unit tests/replay rows can

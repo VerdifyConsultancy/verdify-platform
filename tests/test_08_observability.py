@@ -1363,3 +1363,45 @@ class TestSetpointsFailLoud:
             )
         finally:
             api_mod.pool = original_pool
+
+
+class TestClimateIntentControllerObservability:
+    """ClimateIntent must be the live controller surface, not a parallel path."""
+
+    CLIMATE_KEYS = {
+        "climate_action",
+        "climate_priority_axis",
+        "climate_candidate_summary",
+        "climate_moisture_assist_state",
+        "climate_moisture_zone",
+        "climate_temp_error_f",
+        "climate_vpd_error_kpa",
+        "climate_fog_margin_kpa",
+        "climate_fog_block_reason",
+        "climate_resource_cost_estimate",
+        "climate_next_mist_eligible_s",
+    }
+
+    def test_firmware_uses_climate_decision_in_live_mode_path(self):
+        logic = (REPO_ROOT / "firmware/lib/greenhouse_logic.h").read_text()
+        assert "evaluate_climate_decision(" in logic
+        assert "evaluate_climate_" + "s" + "hadow_decision" not in logic
+        assert "ClimateActionDecision climate_decision = evaluate_climate_decision(in, sp, state);" in logic
+        assert "Mode mode = climate_action_to_mode(selected_action);" in logic
+
+    def test_controls_publish_primary_climate_fields(self):
+        controls = (REPO_ROOT / "firmware/greenhouse/controls.yaml").read_text()
+        hardware = (REPO_ROOT / "firmware/greenhouse/hardware.yaml").read_text()
+        assert "evaluate_climate_decision(sensor_in, setpts, ctl_state)" in controls
+        legacy_prefix = "climate_" + "s" + "hadow"
+        assert legacy_prefix not in controls
+        assert legacy_prefix not in hardware
+        for key in self.CLIMATE_KEYS:
+            assert f"id: gh_{key}" in hardware
+            assert f"id(gh_{key}).publish_state(" in controls
+
+    def test_ingestor_routes_primary_climate_fields(self):
+        entity_map = (REPO_ROOT / "ingestor/entity_map.py").read_text()
+        assert "climate_" + "s" + "hadow" not in entity_map
+        for key in self.CLIMATE_KEYS:
+            assert f'"{key}": "{key}"' in entity_map

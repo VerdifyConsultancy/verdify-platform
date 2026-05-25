@@ -1165,6 +1165,89 @@ interval:
             }
           }
 
+          /*** ClimateIntent controller decision — primary path telemetry ***/
+          {
+            ClimateActionDecision climate_decision = evaluate_climate_decision(sensor_in, setpts, ctl_state);
+            const char* climate_action = CLIMATE_ACTION_NAMES[climate_decision.climate_action];
+            const char* priority_axis = CLIMATE_PRIORITY_AXIS_NAMES[climate_decision.priority_axis];
+            const char* moisture_state = CLIMATE_MOISTURE_ASSIST_STATE_NAMES[climate_decision.moisture_assist_state];
+            const char* moisture_zone = CLIMATE_MOISTURE_ZONE_NAMES[climate_decision.moisture_zone];
+            char temp_error[24];
+            char vpd_error[24];
+            char fog_margin[24];
+            char next_mist[24];
+            char resource_cost[112];
+            snprintf(temp_error, sizeof(temp_error), "%.2f", climate_decision.temp_error_f);
+            snprintf(vpd_error, sizeof(vpd_error), "%.3f", climate_decision.vpd_error_kpa);
+            snprintf(fog_margin, sizeof(fog_margin), "%.3f", climate_decision.fog_margin_kpa);
+            if(climate_decision.next_mist_eligible_s >= 0.0f) {
+              snprintf(next_mist, sizeof(next_mist), "%.0f", climate_decision.next_mist_eligible_s);
+            } else {
+              snprintf(next_mist, sizeof(next_mist), "none");
+            }
+            snprintf(resource_cost, sizeof(resource_cost),
+                     "{\"water_gal\":%.3f,\"electric_kwh\":%.3f,\"gas_therm\":%.3f}",
+                     climate_decision.resource_cost_estimate.water_gal,
+                     climate_decision.resource_cost_estimate.electric_kwh,
+                     climate_decision.resource_cost_estimate.gas_therm);
+
+            static char last_climate_action[48] = "";
+            if(strcmp(last_climate_action, climate_action) != 0){
+              id(gh_climate_action).publish_state(climate_action);
+              snprintf(last_climate_action, sizeof(last_climate_action), "%s", climate_action);
+            }
+            static char last_climate_priority_axis[24] = "";
+            if(strcmp(last_climate_priority_axis, priority_axis) != 0){
+              id(gh_climate_priority_axis).publish_state(priority_axis);
+              snprintf(last_climate_priority_axis, sizeof(last_climate_priority_axis), "%s", priority_axis);
+            }
+            static char last_climate_candidate_summary[160] = "";
+            if(strcmp(last_climate_candidate_summary, climate_decision.candidate_summary) != 0){
+              id(gh_climate_candidate_summary).publish_state(climate_decision.candidate_summary);
+              snprintf(last_climate_candidate_summary, sizeof(last_climate_candidate_summary), "%s", climate_decision.candidate_summary);
+            }
+            static char last_climate_moisture_state[24] = "";
+            if(strcmp(last_climate_moisture_state, moisture_state) != 0){
+              id(gh_climate_moisture_assist_state).publish_state(moisture_state);
+              snprintf(last_climate_moisture_state, sizeof(last_climate_moisture_state), "%s", moisture_state);
+            }
+            static char last_climate_moisture_zone[24] = "";
+            if(strcmp(last_climate_moisture_zone, moisture_zone) != 0){
+              id(gh_climate_moisture_zone).publish_state(moisture_zone);
+              snprintf(last_climate_moisture_zone, sizeof(last_climate_moisture_zone), "%s", moisture_zone);
+            }
+            static char last_climate_temp_error[24] = "";
+            if(strcmp(last_climate_temp_error, temp_error) != 0){
+              id(gh_climate_temp_error_f).publish_state(temp_error);
+              snprintf(last_climate_temp_error, sizeof(last_climate_temp_error), "%s", temp_error);
+            }
+            static char last_climate_vpd_error[24] = "";
+            if(strcmp(last_climate_vpd_error, vpd_error) != 0){
+              id(gh_climate_vpd_error_kpa).publish_state(vpd_error);
+              snprintf(last_climate_vpd_error, sizeof(last_climate_vpd_error), "%s", vpd_error);
+            }
+            static char last_climate_fog_margin[24] = "";
+            if(strcmp(last_climate_fog_margin, fog_margin) != 0){
+              id(gh_climate_fog_margin_kpa).publish_state(fog_margin);
+              snprintf(last_climate_fog_margin, sizeof(last_climate_fog_margin), "%s", fog_margin);
+            }
+            static char last_climate_fog_block[48] = "";
+            if(strcmp(last_climate_fog_block, climate_decision.fog_block_reason) != 0){
+              id(gh_climate_fog_block_reason).publish_state(climate_decision.fog_block_reason);
+              snprintf(last_climate_fog_block, sizeof(last_climate_fog_block), "%s", climate_decision.fog_block_reason);
+            }
+            static char last_climate_resource_cost[112] = "";
+            if(strcmp(last_climate_resource_cost, resource_cost) != 0){
+              id(gh_climate_resource_cost_estimate).publish_state(resource_cost);
+              snprintf(last_climate_resource_cost, sizeof(last_climate_resource_cost), "%s", resource_cost);
+            }
+            static char last_climate_next_mist[24] = "";
+            if(strcmp(last_climate_next_mist, next_mist) != 0){
+              id(gh_climate_next_mist_eligible_s).publish_state(next_mist);
+              snprintf(last_climate_next_mist, sizeof(last_climate_next_mist), "%s", next_mist);
+            }
+          }
+
           /*** OBS-1e — Silent-override audit (Sprint 16) ***/
           {
             OverrideFlags of = evaluate_overrides(sensor_in, setpts, ctl_state, mode);

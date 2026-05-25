@@ -142,7 +142,7 @@ class ClimateIntent(BaseModel):
 
 
 class ClimateCandidateProjection(BaseModel):
-    """Firmware/shadow-evaluator projection for one candidate action."""
+    """Firmware/replay-evaluator projection for one candidate action."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -168,7 +168,7 @@ class ClimateResourceCostEstimate(BaseModel):
 
 
 class ClimateActionDecision(BaseModel):
-    """Published controller/shadow decision observability record."""
+    """Published controller/replay decision observability record."""
 
     model_config = ConfigDict(extra="forbid")
 

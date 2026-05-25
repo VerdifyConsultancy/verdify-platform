@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from scripts.climate_intent_shadow_evaluator import (
+from scripts.climate_intent_replay_evaluator import (
     ReplayClimateRow,
+    evaluate_replay_row,
     evaluate_rows,
-    evaluate_shadow_row,
     read_replay_rows,
     summarize,
 )
@@ -47,16 +47,16 @@ def _row(**overrides) -> ReplayClimateRow:
     return ReplayClimateRow(**base)
 
 
-def test_shadow_prefers_temp_compliance_over_sealed_vpd_recovery() -> None:
-    evaluation = evaluate_shadow_row(_row())
+def test_replay_prefers_temp_compliance_over_sealed_vpd_recovery() -> None:
+    evaluation = evaluate_replay_row(_row())
 
     assert evaluation.decision.priority_axis == "temp"
     assert evaluation.decision.climate_action == "VENT_COOL_MIST_ASSIST"
     assert "SEALED_HUMIDIFY" in {candidate.action for candidate in evaluation.candidates}
 
 
-def test_shadow_blocks_wet_actions_when_occupied() -> None:
-    evaluation = evaluate_shadow_row(_row(occupied=True))
+def test_replay_blocks_wet_actions_when_occupied() -> None:
+    evaluation = evaluate_replay_row(_row(occupied=True))
 
     assert evaluation.decision.climate_action == "VENT_COOL"
     assert evaluation.decision.moisture_assist_state == "blocked"
@@ -64,8 +64,8 @@ def test_shadow_blocks_wet_actions_when_occupied() -> None:
 
 
 def test_wet_cutoff_uses_greenhouse_local_time() -> None:
-    before_cutoff = evaluate_shadow_row(_row(ts="2026-05-24 18:00:00+00"))
-    after_cutoff = evaluate_shadow_row(_row(ts="2026-05-25 02:00:00+00"))
+    before_cutoff = evaluate_replay_row(_row(ts="2026-05-24 18:00:00+00"))
+    after_cutoff = evaluate_replay_row(_row(ts="2026-05-25 02:00:00+00"))
 
     assert before_cutoff.decision.climate_action == "VENT_COOL_MIST_ASSIST"
     assert "time_window" not in before_cutoff.decision.fog_block_reason
@@ -73,8 +73,8 @@ def test_wet_cutoff_uses_greenhouse_local_time() -> None:
     assert "time_window" in after_cutoff.decision.fog_block_reason
 
 
-def test_shadow_uses_safety_before_band_compliance() -> None:
-    evaluation = evaluate_shadow_row(_row(temp_f=97.0, safety_max=95.0, vpd_kpa=1.5))
+def test_replay_uses_safety_before_band_compliance() -> None:
+    evaluation = evaluate_replay_row(_row(temp_f=97.0, safety_max=95.0, vpd_kpa=1.5))
 
     assert evaluation.decision.priority_axis == "safety"
     assert evaluation.decision.climate_action == "SAFETY_COOL"
@@ -158,5 +158,5 @@ def test_replay_reader_and_summary_use_existing_corpus_shape(tmp_path: Path) -> 
 
     assert len(rows) == 1
     assert summary["rows"] == 1
-    assert summary["shadow_action_counts"] == {"VENT_COOL_MIST_ASSIST": 1}
+    assert summary["replay_action_counts"] == {"VENT_COOL_MIST_ASSIST": 1}
     assert summary["firmware_state_counts"] == {"VENTILATE": 1}

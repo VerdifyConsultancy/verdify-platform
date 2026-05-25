@@ -195,6 +195,263 @@ inline float effective_dehum_aggressive_kpa(const Setpoints& sp) noexcept {
     return std::max(0.05f, std::min(sp.vpd_low - 0.05f, sp.dehum_aggressive_kpa));
 }
 
+inline float climate_band_error(float value, float low, float high) noexcept {
+    if (value < low) return low - value;
+    if (value > high) return value - high;
+    return 0.0f;
+}
+
+inline ClimateResourceCostEstimate climate_resource_estimate(ClimateAction action) noexcept {
+    float water_gal = 0.0f;
+    if (action == CLIMATE_VENT_COOL_MIST_ASSIST || action == CLIMATE_SEALED_HUMIDIFY) {
+        water_gal = 0.04f;
+    }
+    if (action == CLIMATE_VENT_COOL_FOG_ASSIST || action == CLIMATE_SEALED_FOG) {
+        water_gal = std::max(water_gal, 0.02f);
+    }
+
+    float electric_kwh = 0.0f;
+    if (action == CLIMATE_VENT_COOL
+        || action == CLIMATE_VENT_COOL_MIST_ASSIST
+        || action == CLIMATE_VENT_COOL_FOG_ASSIST
+        || action == CLIMATE_DEHUM_VENT
+        || action == CLIMATE_SAFETY_COOL) {
+        electric_kwh = 0.006f;
+    }
+    if (action == CLIMATE_VENT_COOL_FOG_ASSIST || action == CLIMATE_SEALED_FOG) {
+        electric_kwh += 0.002f;
+    }
+
+    const float gas_therm = (action == CLIMATE_HEAT || action == CLIMATE_SAFETY_HEAT) ? 0.002f : 0.0f;
+    return {
+        .water_gal = water_gal,
+        .electric_kwh = electric_kwh,
+        .gas_therm = gas_therm
+    };
+}
+
+inline ClimateCandidateProjection climate_projection(
+    ClimateAction action,
+    const SensorInputs& in,
+    const Setpoints& sp,
+    float temp_effect_f,
+    float vpd_effect_kpa,
+    float resource_cost,
+    float relay_churn_cost,
+    const char* blocked_reason,
+    ClimateAction prior_action
+) noexcept {
+    const float projected_temp = in.temp_f + temp_effect_f;
+    const float projected_vpd = in.vpd_kpa + vpd_effect_kpa;
+    return {
+        .action = action,
+        .safety_ok = blocked_reason == nullptr || blocked_reason[0] == '\0',
+        .blocked_reason = blocked_reason ? blocked_reason : "",
+        .projected_temp_error_f = climate_band_error(projected_temp, sp.temp_low, sp.temp_high),
+        .projected_vpd_error_kpa = climate_band_error(projected_vpd, sp.vpd_low, sp.vpd_high),
+        .resource_cost = resource_cost,
+        .relay_churn_cost = relay_churn_cost,
+        .confidence = 0.65f,
+        .prior_action_hold_preference = action == prior_action ? 1.0f : 0.0f
+    };
+}
+
+inline const char* climate_summary_for_action(ClimateAction action) noexcept {
+    switch (action) {
+        case CLIMATE_SENSOR_FAULT: return "SENSOR_FAULT selected; sensor plausibility failed";
+        case CLIMATE_SAFETY_HEAT: return "SAFETY_HEAT selected; hard low-temperature rail";
+        case CLIMATE_SAFETY_COOL: return "SAFETY_COOL selected; hard high-temperature rail";
+        case CLIMATE_HEAT: return "HEAT selected; temperature below band";
+        case CLIMATE_IDLE: return "IDLE selected; band satisfied or resource tie-break";
+        case CLIMATE_VENT_COOL: return "VENT_COOL selected; temperature priority";
+        case CLIMATE_VENT_COOL_MIST_ASSIST: return "VENT_COOL_MIST_ASSIST selected; temp priority with VPD assist";
+        case CLIMATE_VENT_COOL_FOG_ASSIST: return "VENT_COOL_FOG_ASSIST selected; temp priority with fog assist";
+        case CLIMATE_SEALED_HUMIDIFY: return "SEALED_HUMIDIFY selected; VPD recovery while temp safe";
+        case CLIMATE_SEALED_FOG: return "SEALED_FOG selected; severe VPD recovery while temp safe";
+        case CLIMATE_DEHUM_VENT: return "DEHUM_VENT selected; VPD below band";
+    }
+    return "unknown climate action";
+}
+
+inline ClimateActionDecision evaluate_climate_decision(
+    const SensorInputs& in,
+    const Setpoints& sp,
+    const ControlState& state
+) noexcept {
+    const bool sensor_fault = !sensors_plausible(in);
+    const float temp_error = climate_band_error(in.temp_f, sp.temp_low, sp.temp_high);
+    const float vpd_error = climate_band_error(in.vpd_kpa, sp.vpd_low, sp.vpd_high);
+    const float dry_excess = std::max(0.0f, in.vpd_kpa - sp.vpd_high);
+    const float temp_high_excess = std::max(0.0f, in.temp_f - sp.temp_high);
+    const float temp_low_excess = std::max(0.0f, sp.temp_low - in.temp_f);
+    const float outdoor_cooling_advantage = std::isfinite(in.outdoor_temp_f)
+        ? std::max(0.0f, in.temp_f - in.outdoor_temp_f)
+        : 0.0f;
+    const float vent_cooling_effect = -std::max(0.2f, std::min(4.0f, outdoor_cooling_advantage * 0.35f + 0.6f));
+    const bool outdoor_dewpoint_advantage =
+        std::isfinite(in.outdoor_dewpoint_f)
+        && std::isfinite(in.dew_point_f)
+        && in.outdoor_dewpoint_f < in.dew_point_f;
+    const bool was_cooling = state.mode_prev == VENTILATE || state.mode_prev == THERMAL_RELIEF;
+    const bool outdoor_cold_for_vent =
+        std::isfinite(in.outdoor_temp_f) && in.outdoor_temp_f < (sp.temp_low - sp.cold_vent_guard_delta_f);
+    const float cooling_exit_hysteresis =
+        outdoor_cold_for_vent ? std::max(sp.cool_exit_hysteresis_f, 3.0f) : sp.cool_exit_hysteresis_f;
+    const float cooling_entry_margin =
+        outdoor_cold_for_vent ? cold_vent_cooling_entry_margin_f(sp) : 0.0f;
+    const bool needs_cooling = was_cooling
+        ? in.temp_f > (sp.temp_high - cooling_exit_hysteresis)
+        : in.temp_f > (sp.temp_high + cooling_entry_margin);
+    const bool heat_demand =
+        state.heat2_latched || in.temp_f < (band_heat_target_f(sp) + sp.heat_hysteresis);
+    const bool humidify_ready = dry_excess > 0.0f && state.vpd_watch_timer_ms >= sp.vpd_watch_dwell_ms;
+    const bool sealed_backoff = state.mist_backoff_timer_ms > 0;
+    const bool cold_dehum_allowed =
+        !outdoor_cold_for_vent || in.temp_f > (sp.temp_low + std::max(2.0f, sp.temp_hysteresis));
+    const float dehum_hysteresis = band_vpd_hysteresis(sp);
+    const bool dehum_enter = in.vpd_kpa < (sp.vpd_low - dehum_hysteresis);
+    const bool dehum_continue = state.mode_prev == DEHUM_VENT && in.vpd_kpa < sp.vpd_low;
+    const bool dehum_wanted = !sp.econ_block
+        && cold_dehum_allowed
+        && (dehum_enter || dehum_continue);
+
+    const bool wet_occupancy_block = moisture_blocked_by_occupancy(in, sp);
+    const bool wet_dew_block = dew_margin_f(in) < sp.direct_wet_stress_min_dew_margin_f;
+    const bool wet_time_block = in.local_hour >= sp.direct_wet_stress_latest_hour;
+    const char* wet_block_reason = wet_occupancy_block
+        ? "occupancy"
+        : (wet_dew_block ? "dew_margin" : (wet_time_block ? "time_window" : ""));
+    const bool fog_rh_block = in.rh_pct > sp.fog_rh_ceiling;
+    const bool fog_temp_block = in.temp_f < sp.fog_min_temp;
+    const bool fog_time_block = !fog_hour_permitted(in, sp);
+    const char* fog_block_reason = "none";
+    if (wet_occupancy_block) {
+        fog_block_reason = "occupancy";
+    } else if (dry_excess < sp.fog_escalation_kpa) {
+        fog_block_reason = "below_threshold";
+    } else if (wet_dew_block) {
+        fog_block_reason = "dew_margin";
+    } else if (fog_time_block) {
+        fog_block_reason = "time_window";
+    } else if (fog_rh_block) {
+        fog_block_reason = "rh_ceiling";
+    } else if (fog_temp_block) {
+        fog_block_reason = "temp_low";
+    }
+    const char* fog_candidate_block = fog_block_reason[0] == 'n' && fog_block_reason[1] == 'o' ? "" : fog_block_reason;
+    const char* sealed_block_reason = !humidify_ready
+        ? "engage_delay"
+        : (sealed_backoff ? "mist_backoff" : wet_block_reason);
+
+    const ClimateAction prior_action = (state.mode == VENTILATE)
+        ? (state.vent_mist_assist_active ? CLIMATE_VENT_COOL_MIST_ASSIST : CLIMATE_VENT_COOL)
+        : (state.mode == SEALED_MIST
+            ? (state.mist_stage == MIST_FOG ? CLIMATE_SEALED_FOG : CLIMATE_SEALED_HUMIDIFY)
+            : (state.mode == DEHUM_VENT ? CLIMATE_DEHUM_VENT : CLIMATE_IDLE));
+
+    ClimateCandidateProjection candidates[] = {
+        climate_projection(CLIMATE_SENSOR_FAULT, in, sp, 0.0f, 0.0f, 0.0f, 0.0f,
+                           sensor_fault ? "" : "not_faulted", prior_action),
+        climate_projection(CLIMATE_SAFETY_HEAT, in, sp, 2.5f, 0.05f, 8.0f, 1.0f,
+                           in.temp_f <= sp.safety_min ? "" : "not_safety_heat", prior_action),
+        climate_projection(CLIMATE_SAFETY_COOL, in, sp, vent_cooling_effect - 0.5f, dry_excess > 0.0f ? -0.05f : 0.05f, 4.0f, 1.0f,
+                           in.temp_f >= sp.safety_max ? "" : "not_safety_cool", prior_action),
+        climate_projection(CLIMATE_HEAT, in, sp, std::min(2.0f, temp_low_excess), 0.05f, 6.0f, 1.0f,
+                           heat_demand ? "" : "temp_not_low", prior_action),
+        climate_projection(CLIMATE_IDLE, in, sp, 0.0f, 0.0f, 0.0f, 0.0f,
+                           (!needs_cooling && !heat_demand && !dehum_wanted && !(humidify_ready && dry_excess > 0.0f))
+                               ? "" : "active_demand", prior_action),
+        climate_projection(CLIMATE_VENT_COOL, in, sp, vent_cooling_effect, outdoor_dewpoint_advantage ? 0.08f : 0.0f, 2.0f, 1.0f,
+                           needs_cooling ? "" : "temp_not_high", prior_action),
+        climate_projection(CLIMATE_VENT_COOL_MIST_ASSIST, in, sp, vent_cooling_effect - 0.4f, -std::min(dry_excess, 0.18f), 5.0f, 1.3f,
+                           (needs_cooling && dry_excess >= sp.direct_wet_stress_vpd_margin_kpa)
+                               ? wet_block_reason : "temp_or_vpd_below_assist", prior_action),
+        climate_projection(CLIMATE_VENT_COOL_FOG_ASSIST, in, sp, vent_cooling_effect - 0.7f, -std::min(dry_excess, 0.3f), 7.0f, 1.5f,
+                           (needs_cooling && dry_excess >= sp.fog_escalation_kpa)
+                               ? fog_candidate_block : "below_threshold", prior_action),
+        climate_projection(CLIMATE_SEALED_HUMIDIFY, in, sp, temp_high_excess > 0.0f ? 0.2f : 0.0f, -std::min(dry_excess, 0.16f), 4.0f, 1.2f,
+                           (!needs_cooling && dry_excess > 0.0f)
+                               ? sealed_block_reason : "temp_priority_blocks_seal", prior_action),
+        climate_projection(CLIMATE_SEALED_FOG, in, sp, temp_high_excess > 0.0f ? 0.3f : 0.0f, -std::min(dry_excess, 0.3f), 6.0f, 1.4f,
+                           (!needs_cooling && dry_excess >= sp.fog_escalation_kpa)
+                               ? (sealed_block_reason[0] == '\0' ? fog_candidate_block : sealed_block_reason) : "below_threshold", prior_action),
+        climate_projection(CLIMATE_DEHUM_VENT, in, sp, vent_cooling_effect * 0.4f, 0.15f, 2.5f, 1.0f,
+                           dehum_wanted ? "" : "vpd_not_low", prior_action)
+    };
+
+    int selected_index = -1;
+    if (sensor_fault) {
+        selected_index = 0;
+    } else if (in.temp_f >= sp.safety_max) {
+        selected_index = 2;
+    } else if (in.temp_f <= sp.safety_min) {
+        selected_index = 1;
+    } else {
+        selected_index = choose_climate_candidate_index(candidates, sizeof(candidates) / sizeof(candidates[0]));
+    }
+    if (selected_index < 0) selected_index = 4;  // IDLE fallback; should not be reached.
+
+    const ClimateAction action = candidates[selected_index].action;
+    const ClimatePriorityAxis axis = (sensor_fault || action == CLIMATE_SAFETY_COOL || action == CLIMATE_SAFETY_HEAT)
+        ? CLIMATE_PRIORITY_SAFETY
+        : ((action == CLIMATE_HEAT
+            || action == CLIMATE_VENT_COOL
+            || action == CLIMATE_VENT_COOL_MIST_ASSIST
+            || action == CLIMATE_VENT_COOL_FOG_ASSIST)
+            ? CLIMATE_PRIORITY_TEMP
+            : ((action == CLIMATE_SEALED_HUMIDIFY
+                || action == CLIMATE_SEALED_FOG
+                || action == CLIMATE_DEHUM_VENT)
+                ? CLIMATE_PRIORITY_VPD
+                : (temp_error > 0.0f ? CLIMATE_PRIORITY_TEMP : (vpd_error > 0.0f ? CLIMATE_PRIORITY_VPD : CLIMATE_PRIORITY_RESOURCE))));
+
+    const bool selected_wet = action == CLIMATE_VENT_COOL_MIST_ASSIST
+        || action == CLIMATE_VENT_COOL_FOG_ASSIST
+        || action == CLIMATE_SEALED_HUMIDIFY
+        || action == CLIMATE_SEALED_FOG;
+    const ClimateMoistureAssistState moisture_state = wet_block_reason[0] != '\0'
+        ? CLIMATE_MOISTURE_BLOCKED
+        : (selected_wet ? CLIMATE_MOISTURE_SERVED : (dry_excess > 0.0f ? CLIMATE_MOISTURE_ENGAGE_DELAY : CLIMATE_MOISTURE_INACTIVE));
+    const ClimateMoistureZone moisture_zone = (action == CLIMATE_VENT_COOL_MIST_ASSIST || action == CLIMATE_SEALED_HUMIDIFY)
+        ? CLIMATE_ZONE_CENTER
+        : CLIMATE_ZONE_NONE;
+
+    return {
+        .climate_action = action,
+        .priority_axis = axis,
+        .temp_error_f = temp_error,
+        .vpd_error_kpa = vpd_error,
+        .candidate_summary = climate_summary_for_action(action),
+        .moisture_assist_state = moisture_state,
+        .moisture_zone = moisture_zone,
+        .next_mist_eligible_s = selected_wet ? 0.0f : -1.0f,
+        .fog_margin_kpa = dry_excess - sp.fog_escalation_kpa,
+        .fog_block_reason = fog_block_reason,
+        .resource_cost_estimate = climate_resource_estimate(action)
+    };
+}
+
+inline Mode climate_action_to_mode(ClimateAction action) noexcept {
+    switch (action) {
+        case CLIMATE_SENSOR_FAULT: return SENSOR_FAULT;
+        case CLIMATE_SAFETY_COOL: return SAFETY_COOL;
+        case CLIMATE_SAFETY_HEAT: return SAFETY_HEAT;
+        case CLIMATE_VENT_COOL:
+        case CLIMATE_VENT_COOL_MIST_ASSIST:
+        case CLIMATE_VENT_COOL_FOG_ASSIST:
+            return VENTILATE;
+        case CLIMATE_SEALED_HUMIDIFY:
+        case CLIMATE_SEALED_FOG:
+            return SEALED_MIST;
+        case CLIMATE_DEHUM_VENT:
+            return DEHUM_VENT;
+        case CLIMATE_HEAT:
+        case CLIMATE_IDLE:
+            return IDLE;
+    }
+    return IDLE;
+}
+
 static constexpr uint32_t FAN_LEAD_RUNTIME_DEADBAND_MS = 600000U;
 
 inline uint32_t relay_runtime_with_active_ms(
@@ -504,13 +761,27 @@ inline Mode determine_mode_band_first(
                                   && humidify_ready;
     }
 
-    Mode mode = IDLE;
+    const ClimateActionDecision climate_decision = evaluate_climate_decision(in, sp, state);
+    ClimateAction selected_action = climate_decision.climate_action;
+    Mode mode = climate_action_to_mode(selected_action);
     state.dry_override_active = false;
     state.last_mode_reason = "idle";
 
-    if (safety_cool) {
-        mode = SAFETY_COOL;
-        state.last_mode_reason = "safety_cool";
+    switch (selected_action) {
+        case CLIMATE_SENSOR_FAULT: state.last_mode_reason = "sensor_fault"; break;
+        case CLIMATE_SAFETY_COOL: state.last_mode_reason = "safety_cool"; break;
+        case CLIMATE_SAFETY_HEAT: state.last_mode_reason = "safety_heat"; break;
+        case CLIMATE_HEAT: state.last_mode_reason = state.heat2_latched ? "heat_stage2" : "heat_stage1"; break;
+        case CLIMATE_IDLE: state.last_mode_reason = "idle"; break;
+        case CLIMATE_VENT_COOL: state.last_mode_reason = state.override_summer_vent ? "summer_vent" : "temp_high"; break;
+        case CLIMATE_VENT_COOL_MIST_ASSIST: state.last_mode_reason = "vent_mist_assist"; break;
+        case CLIMATE_VENT_COOL_FOG_ASSIST: state.last_mode_reason = "vent_fog_assist"; break;
+        case CLIMATE_SEALED_HUMIDIFY: state.last_mode_reason = prev == SEALED_MIST ? "humidify_continue" : "humidify_enter"; break;
+        case CLIMATE_SEALED_FOG: state.last_mode_reason = prev == SEALED_MIST ? "fog_continue" : "fog_enter"; break;
+        case CLIMATE_DEHUM_VENT: state.last_mode_reason = was_dehum && !vpd_dehum_exit ? "dehum_continue" : "vpd_low"; break;
+    }
+
+    if (mode == SAFETY_COOL || mode == SAFETY_HEAT || mode == SENSOR_FAULT) {
         state.sealed_timer_ms = 0;
         state.relief_timer_ms = 0;
         state.vpd_watch_timer_ms = 0;
@@ -518,37 +789,20 @@ inline Mode determine_mode_band_first(
         state.vent_latch_timer_ms = 0;
         state.mist_backoff_timer_ms = 0;
         state.vent_mist_assist_active = false;
-    } else if (safety_heat) {
-        mode = SAFETY_HEAT;
-        state.last_mode_reason = "safety_heat";
-        state.sealed_timer_ms = 0;
-        state.relief_timer_ms = 0;
-        state.vpd_watch_timer_ms = 0;
-        state.relief_cycle_count = 0;
-        state.vent_latch_timer_ms = 0;
-        state.mist_backoff_timer_ms = 0;
-        state.vent_mist_assist_active = false;
-    } else if (prev == SEALED_MIST) {
-        state.sealed_timer_ms = sat_add(state.sealed_timer_ms, dt_ms);
-        if (vpd_high_resolved || moisture_blocked) {
-            mode = needs_cooling ? VENTILATE : IDLE;
-            state.last_mode_reason = moisture_blocked ? "moisture_blocked" : "humidify_resolved";
-            state.sealed_timer_ms = 0;
-            state.vpd_watch_timer_ms = 0;
-            state.relief_cycle_count = 0;
-            state.vent_latch_timer_ms = 0;
-            state.mist_backoff_timer_ms = 0;
-            state.mist_stage = MIST_WATCH;
+    }
+    bool entered_sealed_this_cycle = false;
+    if (mode == SEALED_MIST) {
+        if (prev == SEALED_MIST) {
+            state.sealed_timer_ms = sat_add(state.sealed_timer_ms, dt_ms);
+        } else {
+            entered_sealed_this_cycle = true;
+            state.sealed_timer_ms = dt_ms;
+            state.mist_stage = MIST_S1;
             state.mist_stage_timer_ms = 0;
-        } else if (needs_cooling || in.temp_f >= (sp.safety_max - sp.safety_max_seal_margin_f)) {
-            mode = VENTILATE;
-            state.last_mode_reason = "temp_preempts_humidify";
-            state.sealed_timer_ms = 0;
             state.vent_latch_timer_ms = 0;
-            state.mist_backoff_timer_ms = 0;
-            state.mist_stage = MIST_WATCH;
-            state.mist_stage_timer_ms = 0;
-        } else if (state.sealed_timer_ms >= sp.sealed_max_ms) {
+        }
+        if (state.sealed_timer_ms >= sp.sealed_max_ms) {
+            selected_action = CLIMATE_IDLE;
             mode = IDLE;
             state.last_mode_reason = "mist_backoff";
             state.relief_cycle_count = sat_add(state.relief_cycle_count, 1);
@@ -558,42 +812,19 @@ inline Mode determine_mode_band_first(
             state.mist_backoff_timer_ms = dt_ms;
             state.mist_stage = MIST_WATCH;
             state.mist_stage_timer_ms = 0;
-        } else {
-            mode = SEALED_MIST;
-            state.last_mode_reason = "humidify_continue";
         }
-    } else if (needs_cooling) {
-        mode = VENTILATE;
-        state.last_mode_reason = state.override_summer_vent ? "summer_vent" : "temp_high";
-        state.sealed_timer_ms = 0;
-    } else if (vpd_low_enter) {
-        mode = DEHUM_VENT;
-        state.last_mode_reason = "vpd_low";
-        state.sealed_timer_ms = 0;
-    } else if (was_dehum && !vpd_dehum_exit && !sp.econ_block) {
-        mode = DEHUM_VENT;
-        state.last_mode_reason = "dehum_continue";
-        state.sealed_timer_ms = 0;
-    } else if (state.mist_backoff_timer_ms > 0) {
-        mode = IDLE;
-        state.last_mode_reason = "mist_backoff";
-        state.sealed_timer_ms = 0;
-    } else if (humidify_ready
-               && !moisture_blocked
-               && !temp_below_band
-               && in.temp_f < (sp.safety_max - sp.safety_max_seal_margin_f)) {
-        mode = SEALED_MIST;
-        state.last_mode_reason = "humidify_enter";
-        state.sealed_timer_ms = dt_ms;
-        state.mist_stage = MIST_S1;
-        state.mist_stage_timer_ms = 0;
-        state.vent_latch_timer_ms = 0;
     } else {
-        mode = IDLE;
-        if (needs_heating_s1) {
-            state.last_mode_reason = state.heat2_latched ? "heat_stage2" : "heat_stage1";
-        } else {
-            state.last_mode_reason = "idle";
+        if (prev == SEALED_MIST) {
+            state.vpd_watch_timer_ms = vpd_high_resolved || moisture_blocked ? 0 : state.vpd_watch_timer_ms;
+            state.relief_cycle_count = vpd_high_resolved ? 0 : state.relief_cycle_count;
+            state.vent_latch_timer_ms = 0;
+            state.mist_stage = MIST_WATCH;
+            state.mist_stage_timer_ms = 0;
+            if (vpd_high_resolved) {
+                state.last_mode_reason = "humidify_resolved";
+            } else if (moisture_blocked) {
+                state.last_mode_reason = "moisture_blocked";
+            }
         }
         state.sealed_timer_ms = 0;
     }
@@ -617,7 +848,10 @@ inline Mode determine_mode_band_first(
         }
     }
 
-    if (mode == SEALED_MIST) {
+    if (mode == SEALED_MIST && selected_action == CLIMATE_SEALED_FOG && fog_permitted(in, sp) && !moisture_blocked) {
+        state.mist_stage = MIST_FOG;
+        state.mist_stage_timer_ms = 0;
+    } else if (mode == SEALED_MIST && !entered_sealed_this_cycle) {
         state.mist_stage_timer_ms = sat_add(state.mist_stage_timer_ms, dt_ms);
         switch (state.mist_stage) {
             case MIST_WATCH:
@@ -659,7 +893,8 @@ inline Mode determine_mode_band_first(
 
     state.vent_mist_assist_active =
         (mode == VENTILATE)
-        && humidify_ready
+        && (selected_action == CLIMATE_VENT_COOL_MIST_ASSIST
+            || selected_action == CLIMATE_VENT_COOL_FOG_ASSIST)
         && !moisture_blocked
         && !safety_cool
         && !safety_heat
@@ -1030,10 +1265,9 @@ inline Mode determine_mode(
     // (SENSOR_FAULT), R2-3 dry override, vpd_min_safe rescue. Safety
     // must ALWAYS fire immediately — no dwell gate on life-safety paths.
     //
-    // Shadow mode: default sp.sw_dwell_gate_enabled=false. Firmware
-    // logs what it WOULD decide (via last_mode_reason suffix) but still
-    // applies the transition. After 14d shadow-mode bake, flip to true.
-    // See plan Phase 2 gate criteria.
+    // Dwell-gate preview: default sp.sw_dwell_gate_enabled=false. The
+    // accumulator still runs so operators can enable the gate without a
+    // cold-start timing artifact after replay validation.
     //
     // Accounting: last_transition_tick_ms is a "ms since last accepted
     // transition" accumulator. Each cycle: += dt_ms if mode unchanged,
@@ -1068,8 +1302,8 @@ inline Mode determine_mode(
             mode = state.mode_prev;
             state.last_mode_reason = "dwell_hold";
         }
-        // Update accumulator regardless of flag state — shadow mode needs
-        // the counter so post-flip the first transition has correct dwell.
+        // Update accumulator regardless of flag state so post-flip the first
+        // transition has correct dwell timing.
         if (mode != state.mode_prev) {
             state.last_transition_tick_ms = 0;
         } else {

@@ -319,6 +319,50 @@ TEST(climate_candidate_selector_rejects_unsafe_candidates) {
     PASS();
 }
 
+TEST(climate_decision_drives_hot_dry_to_vent_mist_assist) {
+    auto sp = band_setpoints();
+    sp.sw_fsm_controller_enabled = true;
+    sp.direct_wet_stress_override_enabled = true;
+    sp.direct_wet_stress_vpd_margin_kpa = 0.05f;
+    auto s = initial_state();
+    auto in = make_inputs(sp.temp_high + 4.0f, sp.vpd_high + 0.25f);
+    in.dew_point_f = in.temp_f - 12.0f;
+    ClimateActionDecision d = evaluate_climate_decision(in, sp, s);
+    ASSERT_EQ(d.climate_action, CLIMATE_VENT_COOL_MIST_ASSIST);
+    ASSERT_EQ(d.priority_axis, CLIMATE_PRIORITY_TEMP);
+    Mode m = determine_mode(in, sp, s, 5000);
+    ASSERT_EQ(m, VENTILATE);
+    ASSERT_TRUE(s.vent_mist_assist_active);
+    PASS();
+}
+
+TEST(climate_decision_blocks_wet_assist_when_occupied) {
+    auto sp = band_setpoints();
+    sp.sw_fsm_controller_enabled = true;
+    auto s = initial_state();
+    auto in = make_inputs(sp.temp_high + 4.0f, sp.vpd_high + 0.25f);
+    in.occupied = true;
+    sp.occupancy_inhibit = true;
+    ClimateActionDecision d = evaluate_climate_decision(in, sp, s);
+    ASSERT_EQ(d.climate_action, CLIMATE_VENT_COOL);
+    ASSERT_EQ(d.moisture_assist_state, CLIMATE_MOISTURE_BLOCKED);
+    ASSERT_TRUE(std::string(d.fog_block_reason) == "occupancy");
+    PASS();
+}
+
+TEST(climate_decision_forces_safety_before_band_compliance) {
+    auto sp = band_setpoints();
+    sp.sw_fsm_controller_enabled = true;
+    auto s = initial_state();
+    auto in = make_inputs(sp.safety_max + 1.0f, sp.vpd_high + 0.6f);
+    ClimateActionDecision d = evaluate_climate_decision(in, sp, s);
+    ASSERT_EQ(d.climate_action, CLIMATE_SAFETY_COOL);
+    ASSERT_EQ(d.priority_axis, CLIMATE_PRIORITY_SAFETY);
+    Mode m = determine_mode(in, sp, s, 5000);
+    ASSERT_EQ(m, SAFETY_COOL);
+    PASS();
+}
+
 // ═══════════════════════════════════════════════════════════════
 // FIX 1: mode_prev reads last cycle
 // ═══════════════════════════════════════════════════════════════
@@ -2026,8 +2070,7 @@ TEST(phase2_dwell_gate_thermal_relief_exit_preempts) {
 TEST(phase2_dwell_gate_tracks_ticks_when_off) {
     // Even with gate OFF, last_transition_tick_ms must still accumulate
     // so that when the gate is flipped ON later (live operation), the
-    // first transition has correct dwell accounting. Shadow mode requires
-    // this so we don't mis-count when flipping on.
+    // first transition has correct dwell accounting when flipping on.
     auto sp = band_setpoints();
     sp.sw_dwell_gate_enabled = false;  // OFF
 
@@ -2217,7 +2260,7 @@ TEST(band_first_temp_band_preempts_humidification) {
 
     Mode m = determine_mode(make_inputs(82.0f, 1.6f), sp, s, 5000);
     ASSERT_EQ(m, VENTILATE);
-    ASSERT_TRUE(std::string(s.last_mode_reason) == "temp_high");
+    ASSERT_TRUE(std::string(s.last_mode_reason) == "vent_mist_assist");
     ASSERT_TRUE(s.vent_mist_assist_active);
     PASS();
 }
