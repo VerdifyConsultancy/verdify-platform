@@ -1964,6 +1964,13 @@ def test_planner_context_includes_dispatcher_owned_targets():
     assert "fog_block_reason" in gather
     assert "relay_truth" in gather
     assert "sensor_status" in gather
+    assert "jsonb_typeof(sensor_status)" in gather
+    assert "sensor_status.latest_climate_ts" in gather
+    assert "sensor_status.latest_climate_age_s" in gather
+    assert "sensor_status.temp_avg_present" in gather
+    assert "sensor_status.vpd_avg_present" in gather
+    assert "sensor_status.band_context_complete" in gather
+    assert "target deltas, relay truth, and sensor freshness" in gather
     assert "dispatcher climate targets" in gather
     assert "climate action proof fresh" in gather
     assert "planner must not infer why relays are off without fresh proof" in gather
