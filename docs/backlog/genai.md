@@ -51,6 +51,12 @@ remains the safety-critical controller.
 - [x] **G-P0.6 MCP `plan_run` audit parity.** Manual/ad-hoc `plan_run` now creates a MANUAL trigger row, sends through `send_to_iris`, returns audit fields, and resolves through the same `plan_delivery_log` correlation path.
 - [x] **G-P0.7 Strict registry validation at MCP boundary.** `PlanTransition` / `set_plan` and `set_tunable` now reject values outside `tunable_registry` min/max before writing `setpoint_plan`. Errors include offending parameter, requested value, registry range, and nearest safe value so Iris can self-correct.
 - [x] **G-P0.8 Historical local planner smoke.** Live smoke sent MANUAL/FORECAST/DEVIATION/TRANSITION/SUNRISE/SUNSET validation triggers to local Gemma4 before the Hermes cutover, verified acknowledgements with matching `trigger_id`, rejected an out-of-range `vpd_hysteresis=0.6`, restored a valid tactical nudge through dispatcher readback, and audited active/future plan rows with zero registry violations.
+- [ ] **G-CI.1 ClimateIntent single-path emission.** Update the Hermes prompt
+  and standalone planner mirror so full plans emit bounded `climate_intent`
+  segments on the same production `set_plan` path. MCP materializes the intent
+  once into registry-bounded Tier 1 rows and stores the semantic intent in
+  `plan_journal`. No production shadow/proposal path is allowed; offline replay
+  remains diagnostic only.
 - [ ] **G-P1.1 Post-plan self-critique.** After each full plan, have Iris record a short structured rationale: forecast assumptions, expected stress windows, tunables intentionally changed, tunables intentionally left alone, and what evidence would falsify the plan.
 
 **Project recovery intake from `PROJECT_STATE.md`** (2026-05-22; coordinated
@@ -94,7 +100,7 @@ through [`project-recovery-2026-05-22.md`](project-recovery-2026-05-22.md)).
 | G6 | Split planner prompt into immutable rubric (cacheable) + per-cycle context (non-cacheable). Measure cache-hit rate after | Prompt refactor | cost | L | pending |
 | G7 | Close the hypothesis loop: inject prior plan's `hypothesis_structured` + `actual_outcome` into the next SUNRISE prompt as a "what did yesterday predict vs deliver" block | Prompt + MCP read path | — | M | **done** (d6de832) |
 | G8 | Lessons state machine: `LessonState` literal (`proposed`/`validated`/`superseded`/`retired`), transition guards, `lessons_manage` `supersede(old_id, new_id)` action | Schema + MCP | — | M | pending |
-| G9 | Multi-model eval: shadow Gemini 2.5 Pro call on N% of cycles; store both plans + outcome; publish weekly comparison page | Infra + prompt | coordinator sign-off | L | pending |
+| G9 | Offline counterfactual replay against alternate planner/model outputs; never a production shadow controller or second actuation path | Infra + prompt | coordinator sign-off | L | pending |
 | G10 | Harden `scripts/gather-plan-context.sh`: aggregate per-section exit codes, emit a "context completeness" header Iris can read and flag | Script | — | M | **done** (58ade59) |
 | G11 | Purpose-name the feedback-loop smoke script as `scripts/smoke-feedback-loop.py`; adopt purpose-named smoke scripts going forward | Cleanup | — | XS | **done** |
 | G12 | Either populate or drop `plan_journal.conditions_summary` (propose migration to coordinator) | Coordinator handshake | — | S | pending |

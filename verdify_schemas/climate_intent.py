@@ -7,10 +7,15 @@ interlocks, and candidate-action selection.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+import math
+from collections.abc import Mapping, Sequence
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from .tunable_registry import REGISTRY, TIER1_REG, registry_value_error
+
+CLIMATE_INTENT_CONTRACT_VERSION = "2026-05-24"
 
 ClimateAction = Literal[
     "SENSOR_FAULT",
@@ -217,3 +222,109 @@ def choose_climate_candidate(candidates: Sequence[ClimateCandidateProjection]) -
     if not eligible:
         raise ValueError("no safety-ok climate candidates")
     return min(eligible, key=climate_candidate_sort_key)
+
+
+def _finite_number(value: object) -> float | None:
+    if isinstance(value, bool):
+        numeric = 1.0 if value else 0.0
+    elif isinstance(value, (int, float)):
+        numeric = float(value)
+    else:
+        return None
+    return numeric if math.isfinite(numeric) else None
+
+
+def _clamp_tier1_value(parameter: str, value: float) -> float:
+    spec = REGISTRY[parameter]
+    if spec.kind == "switch":
+        return 1.0 if value >= 0.5 else 0.0
+
+    lo = spec.fw_clamp_lo if spec.fw_clamp_lo is not None else spec.min
+    hi = spec.fw_clamp_hi if spec.fw_clamp_hi is not None else spec.max
+    if lo is not None:
+        value = max(float(lo), value)
+    if hi is not None:
+        value = min(float(hi), value)
+    return float(value)
+
+
+def _tier1_base_params(base_params: Mapping[str, object] | None = None) -> dict[str, float]:
+    params = {name: float(REGISTRY[name].default) for name in TIER1_REG}
+    for name, raw_value in (base_params or {}).items():
+        if name not in TIER1_REG:
+            continue
+        numeric = _finite_number(raw_value)
+        if numeric is not None:
+            params[name] = _clamp_tier1_value(name, numeric)
+    return params
+
+
+def materialize_climate_intent_tier1(
+    intent: ClimateIntent,
+    base_params: Mapping[str, object] | None = None,
+) -> dict[str, float]:
+    """Translate semantic ClimateIntent into the current Tier 1 firmware knobs.
+
+    The end-state controller should consume ClimateIntent directly. Until that
+    path replaces every legacy setpoint route, this adapter is the single bridge
+    from the compact AI surface to the existing dispatcher/ESP32 contract.
+    """
+
+    params = _tier1_base_params(base_params)
+    _, temp_high = intent.temp_band()
+    _, vpd_high = intent.vpd_band()
+    resource = max(0.0, min(1.0, intent.resource_sensitivity))
+    churn = max(0.0, min(1.0, intent.relay_churn_penalty))
+    duty = max(0.0, min(1.0, intent.mist_duty_limit_pct / 100.0))
+    solar_pressure = max(0.0, min(1.0, intent.solar_precool_gain_f / 4.0))
+    hot_forecast_pressure = max(0.0, min(1.0, intent.forecast_temp_bias_f / 4.0))
+    dry_forecast_pressure = max(0.0, min(1.0, intent.forecast_vpd_bias_kpa / 0.4))
+    wet_aggression = max(0.0, min(1.0, (duty + dry_forecast_pressure + (1.0 - resource)) / 3.0))
+
+    params.update(
+        {
+            "cool_stage2_over_high_f": 1.8 - (0.7 * solar_pressure) - (0.4 * hot_forecast_pressure) + (0.3 * resource),
+            "cool_exit_hysteresis_f": 0.7 + (1.8 * churn),
+            "temp_hysteresis": 0.7 + (1.8 * churn),
+            "sw_cool_all_fans_at_high_enabled": 1.0 if solar_pressure >= 0.5 or hot_forecast_pressure >= 0.5 else 0.0,
+            "vent_prefer_temp_delta_f": intent.economizer_temp_advantage_f,
+            "vent_prefer_dp_delta_f": intent.economizer_dewpoint_advantage_f,
+            "cold_vent_guard_delta_f": max(6.0, min(15.0, intent.economizer_temp_advantage_f + 4.0)),
+            "direct_wet_stress_vpd_margin_kpa": intent.moisture_engage_vpd_excess_kpa,
+            "direct_wet_stress_min_dew_margin_f": intent.dew_margin_floor_f,
+            "direct_wet_stress_latest_hour": intent.wet_cutoff_hour,
+            "sw_direct_wet_stress_override_enabled": 1.0 if wet_aggression >= 0.35 else 0.0,
+            "fog_escalation_kpa": intent.fog_escalate_vpd_excess_kpa,
+            "fog_stress_min_dew_margin_f": intent.dew_margin_floor_f,
+            "fog_stress_window_latest_hour": min(intent.wet_cutoff_hour, 22.0),
+            "sw_fog_stress_window_extend_enabled": 1.0
+            if intent.wet_cutoff_hour > 17.0 and wet_aggression >= 0.35
+            else 0.0,
+            "mister_engage_kpa": vpd_high + intent.moisture_engage_vpd_excess_kpa,
+            "mister_all_kpa": vpd_high
+            + max(intent.fog_escalate_vpd_excess_kpa, intent.moisture_engage_vpd_excess_kpa + 0.2),
+            "mister_vpd_weight": 1.0 + (2.0 * wet_aggression),
+            "mister_pulse_on_s": 15.0 + (75.0 * duty),
+            "mister_pulse_gap_s": 15.0 + (75.0 * resource),
+            "mister_engage_delay_s": 15.0 + (45.0 * churn),
+            "mister_all_delay_s": 30.0 + (90.0 * churn),
+            "mister_water_budget_gal": intent.daily_mist_budget_gal,
+            "min_fog_on_s": 30.0 + (45.0 * max(dry_forecast_pressure, 1.0 - resource)),
+            "min_fog_off_s": 30.0 + (120.0 * resource),
+            "vpd_hysteresis": max(0.1, min(0.5, intent.vpd_band_kpa * 0.25 + churn * 0.1)),
+            "vpd_watch_dwell_s": 15.0 + (75.0 * churn),
+            "dwell_gate_ms": 60000.0 + (300000.0 * churn),
+            "sw_dwell_gate_enabled": 1.0,
+            "sw_summer_vent_enabled": 1.0,
+            "sw_fog_closes_vent": 1.0,
+            "sw_mister_closes_vent": 0.0
+            if temp_high >= 70.0 and wet_aggression >= 0.35
+            else params["sw_mister_closes_vent"],
+        }
+    )
+
+    materialized = {name: _clamp_tier1_value(name, params[name]) for name in TIER1_REG}
+    errors = [error for name, value in materialized.items() if (error := registry_value_error(name, value))]
+    if errors:
+        raise ValueError("ClimateIntent materialization produced registry violations: " + "; ".join(errors))
+    return {name: materialized[name] for name in sorted(materialized)}

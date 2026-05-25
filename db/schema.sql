@@ -19839,6 +19839,8 @@ CREATE TABLE public.plan_journal (
     planner_instance text,
     trigger_id uuid,
     anchor_score smallint,
+    climate_intents jsonb,
+    climate_intent_version text,
     CONSTRAINT plan_journal_outcome_score_check CHECK (((outcome_score >= 1) AND (outcome_score <= 10)))
 );
 
@@ -19871,6 +19873,19 @@ COMMENT ON COLUMN public.plan_journal.trigger_id IS 'Correlation key back to pla
 --
 
 COMMENT ON COLUMN public.plan_journal.anchor_score IS 'Deterministic 1-10 grade computed by fn_plan_anchor_score() over the plan''s governed interval. Iris''s outcome_score is expected within +/-2 of this; deviation is a learning-quality metric.';
+
+--
+-- Name: COLUMN plan_journal.climate_intents; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.plan_journal.climate_intents IS 'Validated ClimateIntent transition payloads emitted by set_plan, including materialized Tier 1 params. NULL for legacy plans.';
+
+
+--
+-- Name: COLUMN plan_journal.climate_intent_version; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.plan_journal.climate_intent_version IS 'ClimateIntent contract version used by MCP materialization.';
 
 
 --
@@ -43222,6 +43237,13 @@ CREATE INDEX idx_plan_journal_shadow_trigger ON public.plan_journal_shadow USING
 --
 
 CREATE INDEX idx_plan_journal_structured ON public.plan_journal USING gin (hypothesis_structured);
+
+
+--
+-- Name: idx_plan_journal_climate_intents; Type: INDEX; Schema: public; Owner: verdify
+--
+
+CREATE INDEX idx_plan_journal_climate_intents ON public.plan_journal USING gin (climate_intents);
 
 
 --

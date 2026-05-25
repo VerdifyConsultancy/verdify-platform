@@ -1681,6 +1681,8 @@ def test_send_to_iris_targets_hermes_gateway():
     assert "HERMES_URL" in body
     assert "HERMES_API_KEY" in body
     assert "hermes_run_id" in body
+    assert "maybe_start_planner_graph_shadow" not in body
+    assert "planner_graph_shadow" not in body
     assert '"MANUAL"' in src
     assert "prepare_delivery_result" in src
 
@@ -1838,6 +1840,21 @@ def test_mcp_set_plan_populates_plan_journal_feedback_fields():
     assert "conditions_summary" in body
     assert "params_changed" in body
     assert "$9::text[]" in body
+
+
+def test_mcp_set_plan_materializes_and_audits_climate_intent():
+    server = (Path(iris_planner.__file__).resolve().parent.parent / "mcp" / "server.py").read_text()
+    start = server.index("async def set_plan")
+    end = server.index("@mcp.tool()", start + 1)
+    body = server[start:end]
+
+    assert "_contains_climate_intent_waypoint(waypoints_raw)" in body
+    assert "_materialize_climate_intent_waypoints(" in body
+    assert "ClimateIntent validation failed" in body
+    assert "climate_intents" in body
+    assert "climate_intent_version" in body
+    assert "climate_intent_segments" in body
+    assert "$10::jsonb" in body
 
 
 def test_mcp_set_tunable_resolves_trigger_ledger_with_oneshot_plan():

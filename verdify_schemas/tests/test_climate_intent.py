@@ -17,7 +17,9 @@ from verdify_schemas.climate_intent import (
     ClimateCandidateProjection,
     ClimateIntent,
     choose_climate_candidate,
+    materialize_climate_intent_tier1,
 )
+from verdify_schemas.tunable_registry import TIER1_REG, registry_value_error
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 DESIGN_DOC = REPO_ROOT / "docs" / "firmware-climate-intent-controller-final-design-2026-05-24.md"
@@ -105,6 +107,29 @@ def test_climate_intent_ranges_are_bounded() -> None:
         _valid_intent(forecast_vpd_bias_kpa=0.9)
     with pytest.raises(ValidationError):
         _valid_intent(resource_sensitivity=2.0)
+
+
+def test_climate_intent_materializes_to_complete_bounded_tier1_params() -> None:
+    intent = _valid_intent(
+        forecast_temp_bias_f=3.0,
+        forecast_vpd_bias_kpa=0.25,
+        solar_precool_gain_f=3.0,
+        mist_duty_limit_pct=80.0,
+        resource_sensitivity=0.2,
+        relay_churn_penalty=0.25,
+    )
+
+    params = materialize_climate_intent_tier1(intent, {"fog_escalation_kpa": 0.2})
+
+    assert set(params) == set(TIER1_REG)
+    assert params["sw_dwell_gate_enabled"] == 1.0
+    assert params["sw_summer_vent_enabled"] == 1.0
+    assert params["vent_prefer_temp_delta_f"] == intent.economizer_temp_advantage_f
+    assert params["direct_wet_stress_min_dew_margin_f"] == intent.dew_margin_floor_f
+    assert params["fog_stress_window_latest_hour"] == intent.wet_cutoff_hour
+    assert params["mister_water_budget_gal"] == intent.daily_mist_budget_gal
+    assert params["fog_escalation_kpa"] == intent.fog_escalate_vpd_excess_kpa
+    assert all(registry_value_error(name, value) is None for name, value in params.items())
 
 
 def test_candidate_selection_is_lexicographic_not_weighted_sum() -> None:

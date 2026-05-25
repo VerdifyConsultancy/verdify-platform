@@ -52,6 +52,11 @@ from verdify_schemas import (  # noqa: E402
     SetpointSummary,
     TreatmentCreate,
 )
+from verdify_schemas.climate_intent import (  # noqa: E402
+    CLIMATE_INTENT_CONTRACT_VERSION,
+    ClimateIntent,
+    materialize_climate_intent_tier1,
+)
 from verdify_schemas.tunable_registry import (  # noqa: E402
     BAND_OWNED_REG,
     PLANNER_PUSHABLE_REG,
@@ -80,6 +85,49 @@ TIER1_TUNABLES = TIER1_REG
 FORCED_ON_SWITCH_PARAMS = frozenset({"sw_fsm_controller_enabled"})
 
 
+def _contains_climate_intent_waypoint(waypoints: object) -> bool:
+    return isinstance(waypoints, list) and any(isinstance(wp, dict) and "climate_intent" in wp for wp in waypoints)
+
+
+async def _fetch_active_tier1_params(conn: asyncpg.Connection) -> dict[str, float]:
+    rows = await conn.fetch(
+        """
+        SELECT parameter, value
+          FROM v_active_plan
+         WHERE parameter = ANY($1::text[])
+        """,
+        sorted(TIER1_REG),
+    )
+    return {str(row["parameter"]): float(row["value"]) for row in rows}
+
+
+def _materialize_climate_intent_waypoints(
+    waypoints: list[object],
+    active_tier1_params: dict[str, float],
+) -> tuple[list[object], list[dict[str, object]]]:
+    expanded: list[object] = []
+    intent_records: list[dict[str, object]] = []
+    for wp in waypoints:
+        if not isinstance(wp, dict) or "climate_intent" not in wp:
+            expanded.append(wp)
+            continue
+        intent = ClimateIntent.model_validate(wp["climate_intent"])
+        explicit_params = wp.get("params") if isinstance(wp.get("params"), dict) else {}
+        materialized = materialize_climate_intent_tier1(intent, {**active_tier1_params, **explicit_params})
+        expanded_wp = dict(wp)
+        expanded_wp["params"] = materialized
+        expanded.append(expanded_wp)
+        intent_records.append(
+            {
+                "ts": wp.get("ts"),
+                "reason": wp.get("reason"),
+                "climate_intent": intent.model_dump(mode="json"),
+                "materialized_params": materialized,
+            }
+        )
+    return expanded, intent_records
+
+
 def _json(obj):
     """JSON serialize with asyncpg/Decimal support."""
     import decimal
@@ -99,7 +147,8 @@ mcp = FastMCP(
     instructions="""Verdify greenhouse control tools. Use these to monitor climate,
     manage setpoints, run the AI planner, and review performance.
     The greenhouse has temp/VPD bands, misters, fog, fans, heaters, and a vent.
-    The planner sets registry-approved tunables that shape how the controller responds.
+    The planner emits bounded ClimateIntent in set_plan transitions; MCP
+    materializes it into registry-approved tunables that shape how the controller responds.
     Band params (temp_low, temp_high, vpd_low, vpd_high) are dispatcher-owned
     read-only context in routine plans. Temp comes from crop policy; house VPD is
     derived from crop + zone policy. Use direct tunable pushes only for explicit overrides.""",
@@ -714,6 +763,30 @@ async def set_plan(
     except json.JSONDecodeError as e:
         return json.dumps({"error": f"Invalid JSON in transitions: {e}"})
 
+    climate_intent_records: list[dict[str, object]] = []
+    if _contains_climate_intent_waypoint(waypoints_raw):
+        if not isinstance(waypoints_raw, list):
+            return json.dumps({"error": "transitions must be a JSON array"})
+        conn_for_intent = await _db()
+        try:
+            active_tier1_params = await _fetch_active_tier1_params(conn_for_intent)
+        finally:
+            await conn_for_intent.close()
+        try:
+            waypoints_raw, climate_intent_records = _materialize_climate_intent_waypoints(
+                waypoints_raw,
+                active_tier1_params,
+            )
+        except ValidationError as e:
+            return json.dumps(
+                {
+                    "error": "ClimateIntent validation failed",
+                    "details": json.loads(e.json(include_input=False))[:10],
+                }
+            )
+        except ValueError as e:
+            return json.dumps({"error": "ClimateIntent materialization failed", "detail": str(e)})
+
     try:
         plan = Plan.model_validate(
             {
@@ -977,9 +1050,10 @@ async def set_plan(
                 """INSERT INTO plan_journal
                      (plan_id, created_at, hypothesis, experiment, expected_outcome,
                       hypothesis_structured, greenhouse_id, planner_instance, trigger_id,
-                      conditions_summary, params_changed)
+                      conditions_summary, params_changed, climate_intents,
+                      climate_intent_version)
                    VALUES ($1, now(), $2, $3, $4, $5::jsonb, 'vallery', $6, $7::uuid,
-                           $8, $9::text[])
+                           $8, $9::text[], $10::jsonb, $11)
                    RETURNING created_at""",
                 plan.plan_id,
                 plan.hypothesis,
@@ -990,6 +1064,8 @@ async def set_plan(
                 normalized_trigger_id,
                 conditions_summary,
                 params_seen,
+                json.dumps(climate_intent_records) if climate_intent_records else None,
+                CLIMATE_INTENT_CONTRACT_VERSION if climate_intent_records else None,
             )
             if normalized_trigger_id:
                 await conn.execute(
@@ -1027,6 +1103,8 @@ async def set_plan(
             "rows_written": rows_written,
             "band_params_dropped": band_params_dropped,
             "forced_on_params": forced_on_params,
+            "climate_intent_segments": len(climate_intent_records),
+            "climate_intent_version": CLIMATE_INTENT_CONTRACT_VERSION if climate_intent_records else None,
             "structured_hypothesis": structured_payload is not None,
             "trigger_id": normalized_trigger_id,
             "planner_instance": planner_instance,

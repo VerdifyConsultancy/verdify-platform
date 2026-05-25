@@ -14,6 +14,7 @@ from uuid import UUID
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from .climate_intent import ClimateIntent
 from .tunable_registry import registry_value_error
 from .tunables import ALL_TUNABLES, NUMERIC_TUNABLES, SWITCH_TUNABLES, TunableParameter
 
@@ -27,7 +28,8 @@ class PlanTransition(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
 
     ts: AwareDatetime
-    params: dict[str, float] = Field(..., min_length=1)
+    params: dict[str, float] = Field(default_factory=dict)
+    climate_intent: ClimateIntent | None = None
     reason: str | None = Field(default=None, max_length=500)
     confirmed_at: AwareDatetime | None = None
 
@@ -49,6 +51,8 @@ class PlanTransition(BaseModel):
     @model_validator(mode="after")
     def _validate_physics(self) -> PlanTransition:
         p = self.params
+        if not p and self.climate_intent is None:
+            raise ValueError("PlanTransition requires params or climate_intent")
         if "temp_low" in p and "temp_high" in p and p["temp_low"] >= p["temp_high"]:
             raise ValueError(
                 f"temp_low ({p['temp_low']}) must be < temp_high ({p['temp_high']})",
@@ -171,6 +175,17 @@ class PlanHypothesisStructured(BaseModel):
         return v
 
 
+class PlanClimateIntentSegment(BaseModel):
+    """Semantic intent emitted for one plan transition and its materialization."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    ts: AwareDatetime
+    climate_intent: ClimateIntent
+    materialized_params: dict[str, float]
+    reason: str | None = None
+
+
 # ── Plan evaluation (later — next-plan runs this after the outcome settles) ──
 
 
@@ -212,6 +227,8 @@ class PlanJournalRow(BaseModel):
     lesson_extracted: str | None = None
     validated_at: AwareDatetime | None = None
     hypothesis_structured: PlanHypothesisStructured | None = None
+    climate_intents: list[PlanClimateIntentSegment] | None = None
+    climate_intent_version: str | None = None
     greenhouse_id: str = "vallery"
     # v1.4 audit columns (migration 093). Populated by MCP server from
     # X-Planner-Instance + X-Trigger-Id headers; NULL on pre-v1.4 rows.

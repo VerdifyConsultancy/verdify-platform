@@ -2288,8 +2288,9 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="planner",
         planner_pushable=True,
         tier=1,
-        notes="Master switch for Phase-2 mode-dwell gate. Default OFF for "
-        "shadow-mode bake. Flip to ON after 14d replay+shadow validation.",
+        notes="Master switch for Phase-2 mode-dwell gate. ClimateIntent may "
+        "enable this on the single live controller path when relay-churn "
+        "preference warrants it; offline replay remains diagnostic only.",
     ),
     "dwell_gate_ms": TunableDef(
         name="dwell_gate_ms",
