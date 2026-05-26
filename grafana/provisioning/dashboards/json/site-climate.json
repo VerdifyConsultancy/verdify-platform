@@ -2933,7 +2933,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT time_bucket('5 minutes', ts) AS time,\n       avg(temp_target_delta_f::double precision) AS \"Actual minus temp target\",\n       avg(temp_band_error_f::double precision) AS \"Band error above/below\"\n  FROM v_greenhouse_state\n WHERE $__timeFilter(ts)\n   AND ts <= now()\n   AND temp_target_delta_f IS NOT NULL\n GROUP BY 1\n ORDER BY 1",
+          "rawSql": "SELECT time_bucket('5 minutes', ts) AS time,\n       avg(temp_target_delta_f) AS \"Actual minus temp target\",\n       avg(temp_band_error_f) AS \"Band error above/below\"\n  FROM climate_action_log\n WHERE $__timeFilter(ts)\n   AND ts <= now()\n   AND temp_target_delta_f IS NOT NULL\n GROUP BY 1\n ORDER BY 1",
           "refId": "A",
           "sql": {
             "columns": [
@@ -3108,7 +3108,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT time_bucket('5 minutes', ts) AS time,\n       avg(vpd_target_delta_kpa::double precision) AS \"Actual minus VPD target\",\n       avg(vpd_band_error_kpa::double precision) AS \"Band error above/below\"\n  FROM v_greenhouse_state\n WHERE $__timeFilter(ts)\n   AND ts <= now()\n   AND vpd_target_delta_kpa IS NOT NULL\n GROUP BY 1\n ORDER BY 1",
+          "rawSql": "SELECT time_bucket('5 minutes', ts) AS time,\n       avg(vpd_target_delta_kpa) AS \"Actual minus VPD target\",\n       avg(vpd_band_error_kpa) AS \"Band error above/below\"\n  FROM climate_action_log\n WHERE $__timeFilter(ts)\n   AND ts <= now()\n   AND vpd_target_delta_kpa IS NOT NULL\n GROUP BY 1\n ORDER BY 1",
           "refId": "A",
           "sql": {
             "columns": [
