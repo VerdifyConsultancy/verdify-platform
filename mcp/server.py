@@ -157,6 +157,10 @@ async def _fetch_active_tier1_params(conn: asyncpg.Connection) -> dict[str, floa
         )
         SELECT temp_avg AS temp_actual_f,
                vpd_avg AS vpd_actual_kpa,
+               temp_low_f,
+               temp_high_f,
+               vpd_low_kpa,
+               vpd_high_kpa,
                CASE WHEN dew_point IS NULL THEN NULL ELSE temp_avg - dew_point END AS dew_margin_f,
                greatest(0.0, temp_avg - temp_high_f) AS temp_above_high_f,
                greatest(0.0, vpd_avg - vpd_high_kpa) AS vpd_above_high_kpa,

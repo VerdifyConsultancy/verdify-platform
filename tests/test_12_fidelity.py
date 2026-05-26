@@ -1983,6 +1983,7 @@ def test_mcp_climate_intent_materializer_uses_dispatcher_band_aliases():
         "vpd_high_kpa": "vpd_high",
     }.items():
         assert f'"{source}": "{target}"' in server
+        assert f"               {source}," in body
     assert "CLIMATE_TARGET_PARAM_ALIASES.get(key)" in body
     assert "params[alias] = numeric" in body
 
