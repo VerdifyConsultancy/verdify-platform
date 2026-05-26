@@ -2831,7 +2831,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#73BF69",
                 "value": null
               }
             ]
@@ -2848,7 +2848,7 @@
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "#EAB839",
+                  "fixedColor": "#EF5350",
                   "mode": "fixed"
                 }
               },
@@ -2867,7 +2867,37 @@
               {
                 "id": "color",
                 "value": {
+                  "fixedColor": "#8C8C8C",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Actual minus temp target"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
                   "fixedColor": "#5794F2",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Band error above/below"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#EF5350",
                   "mode": "fixed"
                 }
               }
@@ -2884,11 +2914,8 @@
       "id": 130,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull",
-            "mean"
-          ],
-          "displayMode": "table",
+          "calcs": [],
+          "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
         },
@@ -2928,7 +2955,8 @@
         }
       ],
       "title": "Temp Target Delta & Band Error",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -2978,7 +3006,7 @@
             "mode": "absolute",
             "steps": [
               {
-                "color": "green",
+                "color": "#73BF69",
                 "value": null
               }
             ]
@@ -2995,7 +3023,7 @@
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "#EAB839",
+                  "fixedColor": "#EF5350",
                   "mode": "fixed"
                 }
               },
@@ -3014,7 +3042,37 @@
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "#5794F2",
+                  "fixedColor": "#8C8C8C",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Actual minus VPD target"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#AB47BC",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Band error above/below"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#EF5350",
                   "mode": "fixed"
                 }
               }
@@ -3031,11 +3089,8 @@
       "id": 131,
       "options": {
         "legend": {
-          "calcs": [
-            "lastNotNull",
-            "mean"
-          ],
-          "displayMode": "table",
+          "calcs": [],
+          "displayMode": "list",
           "placement": "bottom",
           "showLegend": true
         },
@@ -3075,7 +3130,8 @@
         }
       ],
       "title": "VPD Target Delta & Band Error",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -3120,7 +3176,38 @@
           },
           "unit": "short"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Action"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#26A69A",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Decisions"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#73BF69",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -3181,7 +3268,8 @@
         }
       ],
       "title": "Climate Action Mode Mix",
-      "type": "barchart"
+      "type": "barchart",
+      "transparent": true
     }
   ],
   "annotations": {
