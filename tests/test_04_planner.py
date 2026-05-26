@@ -71,7 +71,7 @@ class TestPlannerPrompt:
     def preamble(self):
         import sys
 
-        sys.path.insert(0, "/srv/verdify/ingestor")
+        sys.path.insert(0, str(REPO_ROOT / "ingestor"))
         from iris_planner import _PREAMBLE
 
         assert len(_PREAMBLE) > 5000, f"Preamble too short: {len(_PREAMBLE)} chars"
@@ -98,6 +98,7 @@ class TestPlannerPrompt:
         assert "vpd_hysteresis" in preamble
         assert "mister_vpd_weight" in preamble
         assert "fog_escalation_kpa" in preamble
+        assert "Moisture tuning ladder" in preamble
 
     def test_has_modes(self, preamble):
         assert "SEALED_MIST" in preamble

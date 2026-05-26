@@ -74,6 +74,51 @@ Check `temp_compliance_pct` vs `vpd_compliance_pct` from the scorecard. The lowe
 - When temp control requires `VENTILATE`, VPD correction must travel with the air exchange. If dew margin is healthy, keep `mister_engage_kpa` near `vpd_high + 0.05`, `mister_all_kpa` near `max(1.0, vpd_high + 0.25)`, `mister_engage_delay_s` at 30-45s, `mister_all_delay_s` at 60-90s, `mister_pulse_gap_s` at 20-30s, and `fog_escalation_kpa` near 0.20-0.30. Do not set moisture thresholds far above the active VPD band unless dew-risk evidence justifies suppressing humidity.
 - If VPD-high persists after the normal direct-wet/fog windows close and dew margin is healthy, use `sw_direct_wet_stress_override_enabled` or `sw_fog_stress_window_extend_enabled` with conservative latest-hour caps instead of widening crop bands or lowering VPD thresholds.
 
+### Moisture / Fog Tuning Ladder
+
+The dispatcher owns the crop band: `vpd_low`, `vpd_target`, and `vpd_high`. The
+planner tunes how hard the controller works around those targets. Use
+band-relative values and current target deltas; do not treat the top of a
+registry range as a neutral or safe value during live VPD-high stress.
+
+**Hot/dry VENTILATE, temp above band, VPD above band, dew margin healthy:**
+- Open the moisture surface first. Keep `mister_engage_kpa` near
+  `vpd_high + 0.05` and `mister_all_kpa` near `max(1.0, vpd_high + 0.25)`.
+- Use fast but bounded latency: `mister_engage_delay_s` 30-45s and
+  `mister_all_delay_s` 60-90s.
+- Prefer shortening `mister_pulse_gap_s` before lengthening
+  `mister_pulse_on_s`: use about 18-22s gap in hot/dry VENTILATE, 25-35s near
+  the edge, and 45-60s after VPD-low overshoot or condensation risk. Keep
+  `mister_pulse_on_s` near 60s unless VPD cycles clearly fail to respond.
+- Fog is the heavy 7x wet-assist path. Use `fog_escalation_kpa` 0.15-0.20 for
+  hot/dry venting with healthy dew margin, 0.25-0.30 for mild dry stress, and
+  0.35-0.50 only when VPD-low overshoot, condensation risk, or resource limits
+  are the active constraint. Use `min_fog_off_s` 30-45s only while persistent
+  hot/dry stress remains.
+
+**VPD high but temp in band or only slightly high:**
+- Start with misters and sealed/vent dwell before making fog more aggressive.
+- If misters are already cycling and VPD remains above band, lower
+  `fog_escalation_kpa` one step rather than chasing heat with more misting.
+- If zone spread is the problem, raise `mister_vpd_weight` toward 2.5-3.0 for
+  the dry outlier. This changes zone selection, not total moisture duty.
+
+**VPD low, condensation risk, disease risk, occupancy, irrigation conflict, or
+water budget binding:**
+- Raise `mister_engage_kpa` and `mister_all_kpa` only enough to stop the unsafe
+  wet assist; avoid large jumps that leave the next dry window uncorrectable.
+- Lengthen `mister_pulse_gap_s`, `min_fog_off_s`, and the engage/all delays
+  before widening crop bands.
+- Keep stress overrides off unless VPD-high recovery is active and latest-hour,
+  dew-margin, water, occupancy, and irrigation gates all pass.
+
+**Evening dry recovery after normal wet/fog windows:**
+- If VPD remains above `vpd_high` and dew margin is healthy, prefer bounded
+  `sw_direct_wet_stress_override_enabled` or
+  `sw_fog_stress_window_extend_enabled` with conservative latest-hour caps.
+- Back out of the override after observed VPD stays below the high band. Do not
+  disable moisture assist merely because forecast solar has declined.
+
 **Check utility trends:**
 - Compare today's `kwh`, `therms`, `water_gal` to `7d_avg_*`
 - Rising water trend with flat VPD compliance = misting getting less effective → consider fog
@@ -303,5 +348,6 @@ The context is better for full-horizon scanning.
 5. **Never set min_heat_off_s below 300.** Gas heater ignition cycling damages the unit.
 6. **Never emit crop-band params in plans.** `temp_low`, `temp_high`, `vpd_low`, and `vpd_high` are dispatcher-owned read-only context; use mist, fog, dwell, hysteresis, vent posture, and stage-2 cooling knobs instead.
 7. **Never decouple moisture thresholds from the VPD band during active VPD-high stress.** The dispatcher will clamp conservative moisture values when live VPD is above band and dew margin is healthy; the planner should proactively choose band-coupled values instead of relying on that correction.
-8. **Never enable stress wetting without disease-risk evidence.** Direct-wet/fog stress overrides require VPD-high stress, healthy dew margin, latest-hour caps, and post-change readback verification.
-9. **Never call docker exec, psql, or shell commands.** Use MCP tools only. Post a feature request if a tool is missing.
+8. **Never set `mister_engage_kpa` or `mister_all_kpa` to 2.5 during VPD-high venting as a resource-saving tactic.** That closes the moisture surface while the crop is already dry. Use high thresholds only when a safety rail or explicit water cap requires suppression.
+9. **Never enable stress wetting without disease-risk evidence.** Direct-wet/fog stress overrides require VPD-high stress, healthy dew margin, latest-hour caps, and post-change readback verification.
+10. **Never call docker exec, psql, or shell commands.** Use MCP tools only. Post a feature request if a tool is missing.

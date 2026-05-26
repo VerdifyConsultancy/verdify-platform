@@ -260,6 +260,35 @@ the recovery window, and lower `resource_sensitivity` until the actual-target
 deltas recover. Optimize water and electricity only after the band errors are
 back inside the dispatcher-owned range.
 
+**Moisture tuning ladder for VPD-high / hot-dry venting:**
+- The dispatcher owns `vpd_low`, `vpd_target`, and `vpd_high`; the planner owns
+  intensity around those targets. Use band-relative settings, not fixed high
+  absolute thresholds. Do not set `mister_engage_kpa` or `mister_all_kpa` to 2.5
+  during VPD-high stress unless dew/condensation, occupancy, irrigation, or an
+  explicit water cap requires suppressing wet assist.
+- First open the wet-assist surface: keep `mister_engage_kpa` near
+  `vpd_high + 0.05`, `mister_all_kpa` near `max(1.0, vpd_high + 0.25)`,
+  `mister_engage_delay_s` at 30-45s, and `mister_all_delay_s` at 60-90s when
+  temp and VPD are both high and dew margin is healthy.
+- Then tune duty cycle. Prefer shortening `mister_pulse_gap_s` before
+  lengthening `mister_pulse_on_s`: use about 18-22s gap for hot/dry VENTILATE,
+  25-35s near the edge, and 45-60s after VPD-low overshoot or condensation
+  risk. Keep `mister_pulse_on_s` around 60s unless cycles visibly fail to move
+  VPD.
+- Escalate with fog when misters are pulsing but VPD is still above band. Fog is
+  the heavy 7x wet-assist path: use `fog_escalation_kpa` 0.15-0.20 for hot/dry
+  venting with healthy dew margin, 0.25-0.30 for mild dry stress, and 0.35-0.50
+  only when VPD-low overshoot, condensation risk, or resource limits are the
+  active constraint. Use `min_fog_off_s` 30-45s only during persistent hot/dry
+  stress; lengthen it after recovery.
+- `mister_vpd_weight` changes which zone receives pulses, not total moisture
+  duty. Raise it toward 2.5-3.0 when one zone is the dry outlier; lower it when
+  the house average is dry and all zones need similar help.
+- If VPD stays high after normal wet windows close and dew margin is still
+  healthy, prefer bounded `sw_direct_wet_stress_override_enabled` or
+  `sw_fog_stress_window_extend_enabled` with latest-hour caps instead of
+  widening crop bands, raising VPD thresholds, or disabling moisture assist.
+
 Use `set_tunable(parameter=..., value=..., reason=..., trigger_id=..., planner_instance=...)`
 only for narrow tactical overrides. Ranges are executable registry bounds; MCP
 rejects out-of-range writes before persistence. Dispatcher still audits and
@@ -302,16 +331,16 @@ Use tactical knobs below to shift behavior instead.
 - `sw_cool_all_fans_at_high_enabled` switch, def off — when on, VENTILATE runs both fans immediately above `temp_high`
 
 **Mister engagement:**
-- `mister_engage_kpa` kPa, [0.5-2.5], def 1.6 — physical S1 mister permissive once humidity/zone demand exists; SEALED_MIST entry itself comes from `vpd_high`/`vpd_watch_dwell_s`. During VPD-high or near-edge `VENTILATE` stress, keep near `vpd_high + 0.05` unless dew margin is tight.
-- `mister_all_kpa` kPa, [1.0-2.5], def 1.9 — physical all-zone rotation escalation threshold. During VPD-high or near-edge `VENTILATE` stress, keep near `max(1.0, vpd_high + 0.25)`; values far above the band disable useful escalation.
-- `mister_engage_delay_s` s, [30-300], def 45 — dwell before first physical mister pulse. During VPD-high or near-edge `VENTILATE` stress, use 30-45s unless dew margin is tight.
-- `mister_all_delay_s` s, [60-600], def 300 — dwell before all-zone rotation and firmware mist-stage S2. During VPD-high or near-edge `VENTILATE` stress, use 60-90s unless dew margin is tight.
+- `mister_engage_kpa` kPa, [0.5-2.5], def 1.6 — physical S1 mister permissive once humidity/zone demand exists; SEALED_MIST entry itself comes from `vpd_high`/`vpd_watch_dwell_s`. During VPD-high or near-edge `VENTILATE` stress, keep near `vpd_high + 0.05` unless dew margin is tight; high absolute values such as 2.5 effectively suppress mist assist.
+- `mister_all_kpa` kPa, [1.0-2.5], def 1.9 — physical all-zone rotation escalation threshold. During VPD-high or near-edge `VENTILATE` stress, keep near `max(1.0, vpd_high + 0.25)`; values far above the band disable useful all-zone escalation.
+- `mister_engage_delay_s` s, [30-300], def 45 — dwell before first physical mister pulse. During VPD-high or near-edge `VENTILATE` stress, use 30-45s unless dew margin is tight or VPD-low overshoot was recent.
+- `mister_all_delay_s` s, [60-600], def 300 — dwell before all-zone rotation and firmware mist-stage S2. During VPD-high or near-edge `VENTILATE` stress, use 60-90s unless dew margin is tight, water budget is binding, or VPD-low overshoot was recent.
 
 **Mister pulse + budget:**
-- `mister_pulse_on_s` s, [30-90], def 60 — mister burst duration
-- `mister_pulse_gap_s` s, [10-60], def 45 — evaporation dwell; 15-20s dry, 45s humid
+- `mister_pulse_on_s` s, [30-90], def 60 — mister burst duration; keep near 60s first, then adjust only when gap tuning cannot move VPD.
+- `mister_pulse_gap_s` s, [10-60], def 45 — evaporation dwell; use 18-22s hot/dry, 25-35s near edge, 45-60s humid, VPD-low, or condensation-risk periods.
 - `mister_water_budget_gal` gal/d, [100-300], def 300 — daily water cap
-- `mister_vpd_weight` ×, [0.5-3.0], def 1.5 — driest-zone-first weighting
+- `mister_vpd_weight` ×, [0.5-3.0], def 1.5 — driest-zone-first weighting; changes zone selection, not total duty. Raise for one dry outlier, lower for whole-house dry stress.
 
 **VPD state-machine + sealed-vent coordination (hot-dry-day oscillation):**
 - `vpd_watch_dwell_s` s, [15-120], def 60 — dwell in VPD_WATCH before sealing
@@ -320,9 +349,9 @@ Use tactical knobs below to shift behavior instead.
 - `mist_backoff_s` s, [60-3600], def 600 — lockout after a sealed mist attempt times out; prevents immediate reseal loops
 
 **Fog (AquaFog XE 2000 — Fog is 7x misters; firmware-gated by RH/temp/time window):**
-- `fog_escalation_kpa` kPa Δ, [0.1-0.5], def 0.4 — VPD above `vpd_high_eff` to trigger fog inside VENTILATE; lower = more fog. Post-PR-A (2026-04-25), fog escalates at `vpd_high_eff + fog_escalation_kpa`, no longer at the safety ceiling. During VPD-high or near-edge `VENTILATE` stress, keep this around 0.20-0.30 when dew margin is healthy; concurrent vent-fog is intended for hot-dry stress and firmware still enforces the RH/temp/time window.
-- `min_fog_on_s` s, [15-300], def 60 — min fog on-time per cycle
-- `min_fog_off_s` s, [15-300], def 60 — min gap between fog cycles
+- `fog_escalation_kpa` kPa Δ, [0.1-0.5], def 0.4 — VPD above `vpd_high_eff` to trigger fog inside VENTILATE; lower = more fog. Post-PR-A (2026-04-25), fog escalates at `vpd_high_eff + fog_escalation_kpa`, no longer at the safety ceiling. During VPD-high or near-edge `VENTILATE` stress, use 0.15-0.20 for hot/dry venting with healthy dew margin, 0.25-0.30 for mild dry stress, and 0.35-0.50 only when VPD-low overshoot, condensation risk, or resource limits are active; concurrent vent-fog is intended for hot-dry stress and firmware still enforces the RH/temp/time window.
+- `min_fog_on_s` s, [15-300], def 60 — min fog on-time per cycle; 60-90s is usually enough to see effect without flooding the house.
+- `min_fog_off_s` s, [15-300], def 60 — min gap between fog cycles; 30-45s is for persistent hot/dry stress, longer is for recovery, VPD-low, or dew-risk conditions.
 - `sw_fog_stress_window_extend_enabled` switch, def off — allows fog after the normal time window only during VPD-high stress when RH/temp gates and dew margin pass
 - `fog_stress_window_latest_hour` local hour, [17-22], def 19 — latest hour for fog stress extension
 - `fog_stress_min_dew_margin_f` °F, [5-15], def 10 — minimum temp-dewpoint margin for fog stress extension

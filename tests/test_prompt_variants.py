@@ -146,6 +146,20 @@ class TestSplitInvariants:
         missing = [line for line in expected_lines if line not in core]
         assert not missing, missing
 
+    def test_core_has_prescriptive_moisture_tuning_ladder(self, iris_planner):
+        core = iris_planner._PLANNER_CORE
+        expected = [
+            "Moisture tuning ladder for VPD-high / hot-dry venting",
+            "Do not set `mister_engage_kpa` or `mister_all_kpa` to 2.5",
+            "Prefer shortening `mister_pulse_gap_s` before",
+            "the heavy 7x wet-assist path",
+            "`mister_vpd_weight` changes which zone receives pulses",
+            "not total moisture",
+            "prefer bounded `sw_direct_wet_stress_override_enabled` or",
+        ]
+        missing = [text for text in expected if text not in core]
+        assert not missing, missing
+
     def test_core_contains_decision_precedence(self, iris_planner):
         assert "Decision Precedence" in iris_planner._PLANNER_CORE
 
