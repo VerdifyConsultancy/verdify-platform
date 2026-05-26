@@ -241,6 +241,9 @@ Update planner guidance so that when both temp and VPD are above band:
   segment when evening VPD remains high and dew margin is safe;
 - `moisture_engage_vpd_excess_kpa` should stay near the lower bound during
   active VPD-band misses;
+- `all_zone_vpd_excess_kpa` should express distributed mister escalation
+  independently from fog so Iris can request all-zone mist while holding fog
+  back for dew or disease risk;
 - `fog_escalate_vpd_excess_kpa` should be lower only when fog is safe and recent
   fog response helped compliance without overshoot;
 - resource sensitivity may reduce duty cycle, but it should not make the wet

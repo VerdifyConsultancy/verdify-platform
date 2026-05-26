@@ -51,6 +51,7 @@ def _valid_intent(**overrides: float) -> ClimateIntent:
         "economizer_temp_advantage_f": 4.0,
         "economizer_dewpoint_advantage_f": 3.0,
         "moisture_engage_vpd_excess_kpa": 0.05,
+        "all_zone_vpd_excess_kpa": 0.25,
         "mist_duty_limit_pct": 20.0,
         "fog_escalate_vpd_excess_kpa": 0.25,
         "dew_margin_floor_f": 8.0,
@@ -106,6 +107,8 @@ def test_climate_intent_ranges_are_bounded() -> None:
         _valid_intent(forecast_vpd_bias_kpa=0.9)
     with pytest.raises(ValidationError):
         _valid_intent(resource_sensitivity=2.0)
+    with pytest.raises(ValidationError, match="all_zone_vpd_excess_kpa"):
+        _valid_intent(moisture_engage_vpd_excess_kpa=0.3, all_zone_vpd_excess_kpa=0.2)
 
 
 def test_climate_intent_materializes_to_complete_bounded_tier1_params() -> None:
@@ -132,13 +135,32 @@ def test_climate_intent_materializes_to_complete_bounded_tier1_params() -> None:
     assert params["mister_water_budget_gal"] == intent.daily_mist_budget_gal
     assert params["fog_escalation_kpa"] == intent.fog_escalate_vpd_excess_kpa
     assert params["mister_engage_kpa"] == pytest.approx(0.85)
+    assert params["mister_all_kpa"] == pytest.approx(1.05)
     assert all(registry_value_error(name, value) is None for name, value in params.items())
+
+
+def test_all_zone_mist_threshold_is_independent_from_fog_escalation() -> None:
+    intent = _valid_intent(
+        moisture_engage_vpd_excess_kpa=0.05,
+        all_zone_vpd_excess_kpa=0.35,
+        fog_escalate_vpd_excess_kpa=0.15,
+    )
+
+    params = materialize_climate_intent_tier1(
+        intent,
+        {"temp_low": 70.0, "temp_high": 76.0, "vpd_low": 0.8, "vpd_high": 1.1},
+    )
+
+    assert params["mister_engage_kpa"] == pytest.approx(1.15)
+    assert params["mister_all_kpa"] == pytest.approx(1.45)
+    assert params["fog_escalation_kpa"] == pytest.approx(0.15)
 
 
 def test_materializer_forces_wet_assist_when_live_vpd_is_above_band_and_dew_is_safe() -> None:
     intent = _valid_intent(
         forecast_vpd_bias_kpa=0.0,
         mist_duty_limit_pct=0.0,
+        all_zone_vpd_excess_kpa=0.7,
         fog_escalate_vpd_excess_kpa=0.5,
         wet_cutoff_hour=17.0,
         daily_mist_budget_gal=0.0,
@@ -162,6 +184,7 @@ def test_materializer_forces_wet_assist_when_live_vpd_is_above_band_and_dew_is_s
     assert params["sw_direct_wet_stress_override_enabled"] == 1.0
     assert params["sw_fog_stress_window_extend_enabled"] == 1.0
     assert params["direct_wet_stress_vpd_margin_kpa"] == pytest.approx(0.05)
+    assert params["mister_all_kpa"] == pytest.approx(1.45)
     assert params["fog_escalation_kpa"] == pytest.approx(0.2)
     assert params["direct_wet_stress_latest_hour"] >= 19.0
     assert params["mister_water_budget_gal"] >= 120.0
@@ -188,6 +211,7 @@ def test_materializer_keeps_wet_assist_available_for_high_forecast_vpd_pressure(
     intent = _valid_intent(
         forecast_vpd_bias_kpa=0.4,
         mist_duty_limit_pct=0.0,
+        all_zone_vpd_excess_kpa=0.7,
         fog_escalate_vpd_excess_kpa=0.8,
         wet_cutoff_hour=17.0,
         daily_mist_budget_gal=0.0,
@@ -209,6 +233,7 @@ def test_materializer_keeps_wet_assist_available_for_high_forecast_vpd_pressure(
     assert params["sw_direct_wet_stress_override_enabled"] == 1.0
     assert params["sw_fog_stress_window_extend_enabled"] == 1.0
     assert params["direct_wet_stress_vpd_margin_kpa"] <= 0.1
+    assert params["mister_all_kpa"] <= 1.5
     assert params["fog_escalation_kpa"] <= 0.3
     assert params["direct_wet_stress_latest_hour"] >= 19.0
     assert params["mister_water_budget_gal"] >= 60.0

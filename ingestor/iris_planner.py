@@ -235,13 +235,14 @@ Temp compliance can be 85%+ while VPD is 25%. Use these to diagnose where to foc
 
 For full plans, use `climate_intent` in each `set_plan` transition and set
 every ClimateIntent field explicitly:
-`{"ts":"...","climate_intent":{"forecast_temp_bias_f":0,"forecast_vpd_bias_kpa":0.1,"solar_precool_gain_f":1,"thermal_lead_time_min":30,"economizer_temp_advantage_f":4,"economizer_dewpoint_advantage_f":3,"moisture_engage_vpd_excess_kpa":0.05,"mist_duty_limit_pct":25,"fog_escalate_vpd_excess_kpa":0.25,"dew_margin_floor_f":8,"wet_cutoff_hour":19,"daily_mist_budget_gal":120,"resource_sensitivity":0.4,"relay_churn_penalty":0.6},"reason":"..."}`.
+`{"ts":"...","climate_intent":{"forecast_temp_bias_f":0,"forecast_vpd_bias_kpa":0.1,"solar_precool_gain_f":1,"thermal_lead_time_min":30,"economizer_temp_advantage_f":4,"economizer_dewpoint_advantage_f":3,"moisture_engage_vpd_excess_kpa":0.05,"all_zone_vpd_excess_kpa":0.25,"mist_duty_limit_pct":25,"fog_escalate_vpd_excess_kpa":0.25,"dew_margin_floor_f":8,"wet_cutoff_hour":19,"daily_mist_budget_gal":120,"resource_sensitivity":0.4,"relay_churn_penalty":0.6},"reason":"..."}`.
 Required ClimateIntent fields: `forecast_temp_bias_f`, `forecast_vpd_bias_kpa`,
 `solar_precool_gain_f`, `thermal_lead_time_min`,
 `economizer_temp_advantage_f`, `economizer_dewpoint_advantage_f`,
-`moisture_engage_vpd_excess_kpa`, `mist_duty_limit_pct`,
-`fog_escalate_vpd_excess_kpa`, `dew_margin_floor_f`, `wet_cutoff_hour`,
-`daily_mist_budget_gal`, `resource_sensitivity`, `relay_churn_penalty`.
+`moisture_engage_vpd_excess_kpa`, `all_zone_vpd_excess_kpa`,
+`mist_duty_limit_pct`, `fog_escalate_vpd_excess_kpa`, `dew_margin_floor_f`,
+`wet_cutoff_hour`, `daily_mist_budget_gal`, `resource_sensitivity`,
+`relay_churn_penalty`.
 This is the AI-facing tactical surface; it is not raw relay control and it does
 not own crop targets or compliance bands.
 
@@ -254,11 +255,12 @@ the low/target/high points for temp and VPD.
 
 When the target context shows VPD above `vpd_high`, resource minimization is not allowed to close the wet-assist surface if dew margin and occupancy safety rails are healthy.
 When both temp and VPD are above band, emit a compliance-first ClimateIntent: keep `moisture_engage_vpd_excess_kpa` near 0.05, use
-`mist_duty_limit_pct` above zero, keep `fog_escalate_vpd_excess_kpa` near
-0.20 or lower for hot-dry venting, keep wet/fog latest-hour coverage through
-the recovery window, and lower `resource_sensitivity` until the actual-target
-deltas recover. Optimize water and electricity only after the band errors are
-back inside the dispatcher-owned range.
+`all_zone_vpd_excess_kpa` near 0.20-0.30, use `mist_duty_limit_pct` above zero,
+keep `fog_escalate_vpd_excess_kpa` near 0.20 or lower for hot-dry venting when
+fog is safe, keep wet/fog latest-hour coverage through the recovery window, and
+lower `resource_sensitivity` until the actual-target deltas recover. Optimize
+water and electricity only after the band errors are back inside the
+dispatcher-owned range.
 
 **Moisture tuning ladder for VPD-high / hot-dry venting:**
 - The dispatcher owns `vpd_low`, `vpd_target`, and `vpd_high`; the planner owns
@@ -269,7 +271,9 @@ back inside the dispatcher-owned range.
 - First open the wet-assist surface: keep `mister_engage_kpa` near
   `vpd_high + 0.05`, `mister_all_kpa` near `max(1.0, vpd_high + 0.25)`,
   `mister_engage_delay_s` at 30-45s, and `mister_all_delay_s` at 60-90s when
-  temp and VPD are both high and dew margin is healthy.
+  temp and VPD are both high and dew margin is healthy. In ClimateIntent terms,
+  that means `moisture_engage_vpd_excess_kpa` near 0.05 and
+  `all_zone_vpd_excess_kpa` near 0.25.
 - Then tune duty cycle. Prefer shortening `mister_pulse_gap_s` before
   lengthening `mister_pulse_on_s`: use about 18-22s gap for hot/dry VENTILATE,
   25-35s near the edge, and 45-60s after VPD-low overshoot or condensation
@@ -279,8 +283,10 @@ back inside the dispatcher-owned range.
   the heavy 7x wet-assist path: use `fog_escalation_kpa` 0.15-0.20 for hot/dry
   venting with healthy dew margin, 0.25-0.30 for mild dry stress, and 0.35-0.50
   only when VPD-low overshoot, condensation risk, or resource limits are the
-  active constraint. Use `min_fog_off_s` 30-45s only during persistent hot/dry
-  stress; lengthen it after recovery.
+  active constraint. `fog_escalate_vpd_excess_kpa` is independent from
+  `all_zone_vpd_excess_kpa`, so you can request all-zone mist while holding fog
+  back for dew or disease risk. Use `min_fog_off_s` 30-45s only during
+  persistent hot/dry stress; lengthen it after recovery.
 - `mister_vpd_weight` changes which zone receives pulses, not total moisture
   duty. Raise it toward 2.5-3.0 when one zone is the dry outlier; lower it when
   the house average is dry and all zones need similar help.

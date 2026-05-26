@@ -84,6 +84,8 @@ registry range as a neutral or safe value during live VPD-high stress.
 **Hot/dry VENTILATE, temp above band, VPD above band, dew margin healthy:**
 - Open the moisture surface first. Keep `mister_engage_kpa` near
   `vpd_high + 0.05` and `mister_all_kpa` near `max(1.0, vpd_high + 0.25)`.
+  In `ClimateIntent`, use `moisture_engage_vpd_excess_kpa` near 0.05 and
+  `all_zone_vpd_excess_kpa` near 0.20-0.30.
 - Use fast but bounded latency: `mister_engage_delay_s` 30-45s and
   `mister_all_delay_s` 60-90s.
 - Prefer shortening `mister_pulse_gap_s` before lengthening
@@ -93,8 +95,10 @@ registry range as a neutral or safe value during live VPD-high stress.
 - Fog is the heavy 7x wet-assist path. Use `fog_escalation_kpa` 0.15-0.20 for
   hot/dry venting with healthy dew margin, 0.25-0.30 for mild dry stress, and
   0.35-0.50 only when VPD-low overshoot, condensation risk, or resource limits
-  are the active constraint. Use `min_fog_off_s` 30-45s only while persistent
-  hot/dry stress remains.
+  are the active constraint. `fog_escalate_vpd_excess_kpa` is independent from
+  `all_zone_vpd_excess_kpa`, so hold fog back when dew/disease risk is active
+  without also delaying all-zone mist rotation. Use `min_fog_off_s` 30-45s only
+  while persistent hot/dry stress remains.
 
 **VPD high but temp in band or only slightly high:**
 - Start with misters and sealed/vent dwell before making fog more aggressive.
@@ -157,6 +161,7 @@ semantic intent in `plan_journal`.
       "economizer_temp_advantage_f": 4,
       "economizer_dewpoint_advantage_f": 3,
       "moisture_engage_vpd_excess_kpa": 0.05,
+      "all_zone_vpd_excess_kpa": 0.25,
       "mist_duty_limit_pct": 35,
       "fog_escalate_vpd_excess_kpa": 0.25,
       "dew_margin_floor_f": 8,

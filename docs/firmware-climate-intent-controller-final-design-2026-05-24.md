@@ -169,9 +169,10 @@ render the same source-of-truth docs from `verdify_schemas.climate_intent`:
 | `thermal_lead_time_min` | Intended forecast preconditioning lead | Audit/hypothesis context; firmware safety still gates actuation | audit context only |
 | `economizer_temp_advantage_f` | Outdoor temp advantage needed for vent cooling | Shapes vent preference and cold-vent guard | `vent_prefer_temp_delta_f`, `cold_vent_guard_delta_f` |
 | `economizer_dewpoint_advantage_f` | Outdoor dewpoint advantage for dry-air decisions | Shapes dewpoint preference for vent/dehumidification | `vent_prefer_dp_delta_f` |
-| `moisture_engage_vpd_excess_kpa` | VPD excess above dispatcher `vpd_high` before mister assist | Couples mister/direct-wet thresholds to active band | `direct_wet_stress_vpd_margin_kpa`, `mister_engage_kpa`, `mister_all_kpa` |
+| `moisture_engage_vpd_excess_kpa` | VPD excess above dispatcher `vpd_high` before targeted mister assist | Couples targeted mister/direct-wet thresholds to active band | `direct_wet_stress_vpd_margin_kpa`, `mister_engage_kpa` |
+| `all_zone_vpd_excess_kpa` | VPD excess above dispatcher `vpd_high` before all-zone mister rotation | Shapes distributed mister escalation independently from fog | `mister_all_kpa` |
 | `mist_duty_limit_pct` | Max climate-misting duty | Shapes pulse duration, wet aggression, and resource gates | `mister_pulse_on_s`, `mister_pulse_gap_s`, `mister_vpd_weight` |
-| `fog_escalate_vpd_excess_kpa` | VPD excess above dispatcher `vpd_high` before fog assist | Shapes fog escalation and all-zone mister threshold | `fog_escalation_kpa`, `mister_all_kpa` |
+| `fog_escalate_vpd_excess_kpa` | VPD excess above dispatcher `vpd_high` before fog assist | Shapes fog escalation independently from all-zone mister rotation | `fog_escalation_kpa` |
 | `dew_margin_floor_f` | Minimum air temp minus dewpoint for wet actions | Blocks condensation-risk wetting | `direct_wet_stress_min_dew_margin_f`, `fog_stress_min_dew_margin_f` |
 | `wet_cutoff_hour` | Latest local hour for climate wetting | Limits evening fog/direct-wet windows | `direct_wet_stress_latest_hour`, `fog_stress_window_latest_hour` |
 | `daily_mist_budget_gal` | Daily climate-water budget | Caps firmware mister water budget | `mister_water_budget_gal` |

@@ -129,6 +129,14 @@ Launch work is tracked in [`docs/backlog/launch.md`](launch.md) with the command
   was an abandoned alternate controller architecture, archived at tag
   `archive/pr10-abandoned-controller-architecture-2026-05-25`, exported to
   `/mnt/iris/archives/verdify/`, closed unmerged, and its branch deleted.
+- [x] **C-CI.3 VPD policy v2 schema contract.** Add
+  `all_zone_vpd_excess_kpa` to the shared ClimateIntent contract so the
+  AI-facing surface can tune all-zone mister rotation independently from fog.
+  The contract version moves to `2026-05-25`; Pydantic validation requires the
+  all-zone threshold to stay at or above the first wet-assist threshold; MCP,
+  planner prompt, replay evaluator, docs, and AI tunables generation all derive
+  from the same field list. No migration is required because persisted
+  `climate_intents` are JSONB with a version marker.
 
 ### Planner contract v1.5 — historical local-first hardening
 

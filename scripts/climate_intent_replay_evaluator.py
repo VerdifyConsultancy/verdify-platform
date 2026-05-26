@@ -223,6 +223,7 @@ def intent_from_replay_row(row: ReplayClimateRow) -> ClimateIntent:
         economizer_temp_advantage_f=_clamp(row.temp_f - (row.outdoor_temp_f or row.temp_f), 1.0, 15.0),
         economizer_dewpoint_advantage_f=_clamp(dewpoint_advantage, 1.0, 15.0),
         moisture_engage_vpd_excess_kpa=0.05,
+        all_zone_vpd_excess_kpa=0.25,
         mist_duty_limit_pct=35.0 if row.vpd_kpa > row.vpd_high else 15.0,
         fog_escalate_vpd_excess_kpa=_clamp(row.fog_escalation_kpa, 0.1, 0.8),
         dew_margin_floor_f=8.0,

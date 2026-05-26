@@ -79,6 +79,14 @@ remains the safety-critical controller.
   conflicts such as high VPD pressure with wet gates disabled and no named
   safety block; live context now exposes dispatcher-owned targets and authority
   mode while keeping temp/VPD bands read-only to AI.
+- [x] **G-CI.4 VPD policy surface v2: all-zone/fog decoupling.** Add
+  `all_zone_vpd_excess_kpa` to the required `ClimateIntent` fields so Iris can
+  ask for distributed all-zone mister rotation independently from fog. Update
+  the Hermes prompt, canonical greenhouse playbook, replay evaluator, AI
+  tunables generator, and drift audit so the moisture ladder is explicit:
+  targeted mister/direct-wet first, all-zone mist second, fog as the heavy
+  high-water path. No shadow controller or deterministic planner branch is
+  introduced; MCP still validates one explicit ClimateIntent per transition.
 - [ ] **G-P1.1 Post-plan self-critique.** After each full plan, have Iris record a short structured rationale: forecast assumptions, expected stress windows, tunables intentionally changed, tunables intentionally left alone, and what evidence would falsify the plan.
 
 **Project recovery intake from `PROJECT_STATE.md`** (2026-05-22; coordinated

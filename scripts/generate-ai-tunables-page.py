@@ -727,7 +727,7 @@ def _render_summary(summary: dict[str, Any], plan_required: set[str]) -> list[st
         "- `heat2` is never valid without `heat1`; any observed heat2-without-heat1 interval is a fault to investigate, not a planner tactic.",
         "- The dispatcher preserves a minimum 0.55 kPa house VPD deadband so mixed-zone crop targets do not create controller chatter.",
         "- During live, near-edge, or recently unrecovered `VENTILATE` VPD-high stress with healthy dew margin, the dispatcher clamps conservative moisture thresholds near the active `vpd_high` band: `mister_engage_kpa <= vpd_high + 0.05`, `mister_all_kpa <= max(1.0, vpd_high + 0.25)`, `fog_escalation_kpa <= 0.20` or `0.15` in hot/dry venting, shorter mist delays/gaps, and shorter `min_fog_off_s`.",
-        "- Planner moisture tuning ladder: open the band-coupled mister surface first, shorten `mister_pulse_gap_s` before increasing `mister_pulse_on_s`, use fog as the heavy 7x escalation path, and remember `mister_vpd_weight` changes zone selection rather than total duty.",
+        "- Planner moisture tuning ladder: open the band-coupled mister surface first, use `all_zone_vpd_excess_kpa` for distributed mister escalation, shorten `mister_pulse_gap_s` before increasing `mister_pulse_on_s`, use fog as the heavy 7x escalation path, and remember `mister_vpd_weight` changes zone selection rather than total duty.",
         "",
     ]
 
@@ -968,7 +968,7 @@ def _render_full_page(
             "## Findings That Matter",
             "",
             "- `mister_engage_kpa` is effectful, but it is not the state-machine entry trigger. Firmware enters humidification from `vpd_high` plus `vpd_watch_dwell_s`; `mister_engage_kpa` gates physical S1 mister pulses once `SEALED_MIST` or explicit `VENTILATE` assist creates humidity demand. Zone stress can choose the pulse target or satisfy the S1 stress check, but it cannot create a standalone mister mode.",
-            "- `mister_all_kpa` controls physical all-zone mister rotation. The header mist-stage delay also uses `mister_all_delay_s`; fog escalation uses `fog_escalation_kpa`.",
+            "- `mister_all_kpa` controls physical all-zone mister rotation. The header mist-stage delay also uses `mister_all_delay_s`; fog escalation uses `fog_escalation_kpa` independently.",
             "- The planner tunes moisture intensity, not the crop band. In `VENTILATE`, dry outside air can keep temperature in band while pushing VPD high, so moisture thresholds must stay coupled to the active `vpd_high` unless dew-risk evidence justifies suppression.",
             "- High `mister_engage_kpa`/`mister_all_kpa` values are not resource-neutral during VPD-high stress; they can close the wet-assist path. Save them for dew, occupancy, irrigation, or water-cap constraints.",
             "- Reserved/no-op values are intentionally not planner-pushable: "
@@ -1040,7 +1040,7 @@ def _render_planner_context(evidence: dict[str, Evidence], plan_required: set[st
         "Do not use reserved/no-op params: " + ", ".join(sorted(RESERVED_NO_EFFECT)),
         "mister_engage_kpa note: SEALED_MIST entry is vpd_high + vpd_watch_dwell_s; mister_engage_kpa gates physical S1 pulses once SEALED_MIST or explicit VENTILATE assist creates humidity demand.",
         "VPD-high guardrail: during live, near-edge, or recently unrecovered VENTILATE stress with healthy dew margin, keep moisture thresholds band-coupled (engage ~= vpd_high+0.05, all-zone ~= max(1.0,vpd_high+0.25), fog_escalation ~= 0.20 or 0.15 in hot/dry venting, shorter min_fog_off_s); dispatcher clamps conservative overrides until observed recovery.",
-        "Planner moisture tuning ladder: open the band-coupled mister surface first; shorten mister_pulse_gap_s before increasing mister_pulse_on_s; use fog as the heavy 7x escalation path; treat mister_vpd_weight as zone selection, not total duty.",
+        "Planner moisture tuning ladder: open the band-coupled mister surface first; use all_zone_vpd_excess_kpa for distributed mister escalation; shorten mister_pulse_gap_s before increasing mister_pulse_on_s; use fog as the heavy 7x escalation path; treat mister_vpd_weight as zone selection, not total duty.",
         "",
         "climate_intent_field|bounds|meaning|firmware_impact|materialized_knobs|planner_guidance",
     ]

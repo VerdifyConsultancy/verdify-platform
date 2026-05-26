@@ -12,11 +12,11 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from .tunable_registry import REGISTRY, TIER1_REG, registry_value_error
 
-CLIMATE_INTENT_CONTRACT_VERSION = "2026-05-24"
+CLIMATE_INTENT_CONTRACT_VERSION = "2026-05-25"
 
 ClimateAction = Literal[
     "SENSOR_FAULT",
@@ -71,6 +71,7 @@ CLIMATE_INTENT_FIELDS: tuple[str, ...] = (
     "economizer_temp_advantage_f",
     "economizer_dewpoint_advantage_f",
     "moisture_engage_vpd_excess_kpa",
+    "all_zone_vpd_excess_kpa",
     "mist_duty_limit_pct",
     "fog_escalate_vpd_excess_kpa",
     "dew_margin_floor_f",
@@ -144,9 +145,17 @@ CLIMATE_INTENT_FIELD_DOCS: tuple[ClimateIntentFieldDoc, ...] = (
         "moisture_engage_vpd_excess_kpa",
         "How far above dispatcher-owned vpd_high VPD may rise before mister assist is eligible.",
         "0..0.5 kPa",
-        "Materializes mister and direct-wet thresholds relative to the active dispatcher VPD band.",
-        ("direct_wet_stress_vpd_margin_kpa", "mister_engage_kpa", "mister_all_kpa"),
+        "Materializes targeted mister and direct-wet thresholds relative to the active dispatcher VPD band.",
+        ("direct_wet_stress_vpd_margin_kpa", "mister_engage_kpa"),
         "Keep near 0.05 kPa when VPD compliance is the bottleneck; raise only to conserve water after recovery is proven.",
+    ),
+    ClimateIntentFieldDoc(
+        "all_zone_vpd_excess_kpa",
+        "How far above dispatcher-owned vpd_high VPD may rise before all-zone mister rotation is eligible.",
+        "0.05..0.8 kPa",
+        "Materializes the all-zone mister escalation threshold relative to the active dispatcher VPD band without forcing fog earlier.",
+        ("mister_all_kpa",),
+        "Keep near 0.20-0.30 kPa during hot/dry recovery; raise when water use is high without VPD improvement or wetting risk is active.",
     ),
     ClimateIntentFieldDoc(
         "mist_duty_limit_pct",
@@ -165,9 +174,9 @@ CLIMATE_INTENT_FIELD_DOCS: tuple[ClimateIntentFieldDoc, ...] = (
         "fog_escalate_vpd_excess_kpa",
         "How far above dispatcher-owned vpd_high VPD may rise before fog assist is eligible.",
         "0.1..0.8 kPa",
-        "Materializes fog escalation and all-zone mister thresholds relative to the active VPD band.",
-        ("fog_escalation_kpa", "mister_all_kpa"),
-        "Use lower values when VPD is repeatedly above band during ventilation; use higher values when fog overshoot or disease risk is the constraint.",
+        "Materializes fog escalation relative to the active VPD band, independently from all-zone mist rotation.",
+        ("fog_escalation_kpa",),
+        "Use lower values when VPD is repeatedly above band during ventilation and fog is safe; use higher values when fog overshoot or disease risk is the constraint.",
     ),
     ClimateIntentFieldDoc(
         "dew_margin_floor_f",
@@ -271,6 +280,7 @@ class ClimateIntent(BaseModel):
     economizer_temp_advantage_f: float = Field(2.0, ge=1.0, le=15.0)
     economizer_dewpoint_advantage_f: float = Field(2.0, ge=1.0, le=15.0)
     moisture_engage_vpd_excess_kpa: float = Field(0.05, ge=0.0, le=0.5)
+    all_zone_vpd_excess_kpa: float = Field(0.25, ge=0.05, le=0.8)
     mist_duty_limit_pct: float = Field(25.0, ge=0.0, le=100.0)
     fog_escalate_vpd_excess_kpa: float = Field(0.25, ge=0.1, le=0.8)
     dew_margin_floor_f: float = Field(8.0, ge=3.0, le=15.0)
@@ -278,6 +288,12 @@ class ClimateIntent(BaseModel):
     daily_mist_budget_gal: float = Field(300.0, ge=0.0, le=300.0)
     resource_sensitivity: float = Field(0.5, ge=0.0, le=1.0)
     relay_churn_penalty: float = Field(0.5, ge=0.0, le=1.0)
+
+    @model_validator(mode="after")
+    def _validate_moisture_ladder(self) -> ClimateIntent:
+        if self.all_zone_vpd_excess_kpa < self.moisture_engage_vpd_excess_kpa:
+            raise ValueError("all_zone_vpd_excess_kpa must be >= moisture_engage_vpd_excess_kpa")
+        return self
 
 
 class ClimateCandidateProjection(BaseModel):
@@ -453,6 +469,7 @@ def climate_intent_materialization_guardrails(
         or intent.resource_sensitivity > 0.35
         or intent.relay_churn_penalty > 0.5
         or intent.moisture_engage_vpd_excess_kpa > 0.05
+        or intent.all_zone_vpd_excess_kpa > 0.25
         or intent.wet_cutoff_hour < 19.0
         or wet_switch == 0.0
     ):
@@ -471,6 +488,7 @@ def climate_intent_materialization_guardrails(
         or intent.resource_sensitivity > 0.6
         or intent.relay_churn_penalty > 0.75
         or intent.moisture_engage_vpd_excess_kpa > 0.1
+        or intent.all_zone_vpd_excess_kpa > 0.3
         or intent.wet_cutoff_hour < 19.0
         or wet_switch == 0.0
         or fog_window == 0.0
@@ -541,16 +559,19 @@ def materialize_climate_intent_tier1(
     if compliance_wet_required or forecast_wet_required:
         wet_aggression = max(wet_aggression, 0.35)
     moisture_engage_vpd_excess_kpa = intent.moisture_engage_vpd_excess_kpa
+    all_zone_vpd_excess_kpa = intent.all_zone_vpd_excess_kpa
     fog_escalate_vpd_excess_kpa = intent.fog_escalate_vpd_excess_kpa
     wet_cutoff_hour = intent.wet_cutoff_hour
     daily_mist_budget_gal = intent.daily_mist_budget_gal
     if forecast_wet_required:
         moisture_engage_vpd_excess_kpa = min(moisture_engage_vpd_excess_kpa, 0.1)
+        all_zone_vpd_excess_kpa = min(all_zone_vpd_excess_kpa, 0.3)
         fog_escalate_vpd_excess_kpa = min(fog_escalate_vpd_excess_kpa, 0.3)
         wet_cutoff_hour = max(wet_cutoff_hour, 19.0)
         daily_mist_budget_gal = max(daily_mist_budget_gal, 60.0)
     if compliance_wet_required:
         moisture_engage_vpd_excess_kpa = min(moisture_engage_vpd_excess_kpa, 0.05)
+        all_zone_vpd_excess_kpa = min(all_zone_vpd_excess_kpa, 0.25)
         fog_escalate_vpd_excess_kpa = min(fog_escalate_vpd_excess_kpa, 0.2 if temp_above_high > 0.0 else 0.25)
         wet_cutoff_hour = max(wet_cutoff_hour, 19.0)
         daily_mist_budget_gal = max(daily_mist_budget_gal, 120.0)
@@ -573,7 +594,7 @@ def materialize_climate_intent_tier1(
             "fog_stress_window_latest_hour": min(wet_cutoff_hour, 22.0),
             "sw_fog_stress_window_extend_enabled": 1.0 if wet_cutoff_hour > 17.0 and wet_aggression >= 0.35 else 0.0,
             "mister_engage_kpa": vpd_high + moisture_engage_vpd_excess_kpa,
-            "mister_all_kpa": vpd_high + max(fog_escalate_vpd_excess_kpa, moisture_engage_vpd_excess_kpa + 0.2),
+            "mister_all_kpa": vpd_high + all_zone_vpd_excess_kpa,
             "mister_vpd_weight": 1.0 + (2.0 * wet_aggression),
             "mister_pulse_on_s": 15.0 + (75.0 * duty),
             "mister_pulse_gap_s": 15.0 + (75.0 * resource),

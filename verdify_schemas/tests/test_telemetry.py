@@ -182,7 +182,7 @@ class TestClimateActionLogRow:
             fog_block_reason="time_window",
             relay_truth={"vent": True, "fan1": True, "fog": False},
             resource_cost_estimate={"water_gal": 0.0},
-            climate_intent_version="2026-05-24",
+            climate_intent_version="2026-05-25",
         )
 
         assert row.climate_action == "VENT_COOL_MIST_ASSIST"

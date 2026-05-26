@@ -104,6 +104,7 @@ def main() -> None:
         economizer_temp_advantage_f=4.0,
         economizer_dewpoint_advantage_f=3.0,
         moisture_engage_vpd_excess_kpa=0.05,
+        all_zone_vpd_excess_kpa=0.25,
         mist_duty_limit_pct=25.0,
         fog_escalate_vpd_excess_kpa=0.25,
         dew_margin_floor_f=8.0,

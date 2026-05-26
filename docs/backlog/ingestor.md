@@ -21,6 +21,15 @@ Full delivery plan with reasoning, cross-agent branch survey, and risk register 
   `142-climate-action-log.sql`, `ClimateActionLogRow`, ingestor writes on
   climate decision changes, and post-OTA live rows for plan
   `iris-20260524-2246`.
+- [x] **I-CI.2 VPD policy v2 materialization support.** Support the
+  ClimateIntent surface split that separates first wet assist, all-zone mister
+  rotation, and fog escalation. The ingestor/dispatcher path still consumes the
+  same materialized Tier 1 knobs (`mister_engage_kpa`, `mister_all_kpa`,
+  `fog_escalation_kpa`) and keeps dispatcher-owned temp/VPD bands read-only to
+  Iris. No DB migration is required for this slice because `plan_journal`
+  already stores `climate_intents` JSON plus `climate_intent_version`, and
+  `climate_action_log` already captures wet/fog allowance, block reasons, band
+  deltas, and relay truth for post-deploy validation.
 
 **Sprint 25.1 — Operational recovery** (`ingestor/sprint-25.1-operational-recovery`) is closing the 2026-04-27 full-review findings:
 

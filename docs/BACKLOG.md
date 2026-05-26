@@ -54,6 +54,14 @@ Current posture:
   band. Tracked issues: [#5](https://github.com/VerdifyConsultancy/verdify-platform/issues/5),
   [#6](https://github.com/VerdifyConsultancy/verdify-platform/issues/6), and
   [#7](https://github.com/VerdifyConsultancy/verdify-platform/issues/7).
+- **ClimateIntent VPD policy v2:** the next control-surface refinement splits
+  targeted mist, all-zone mist, and fog into separate AI-facing intent fields.
+  `moisture_engage_vpd_excess_kpa` governs first wet assist,
+  `all_zone_vpd_excess_kpa` governs distributed mister rotation, and
+  `fog_escalate_vpd_excess_kpa` governs the high-water fog path independently.
+  This is a schema/prompt/materialization/deploy change over the existing Tier
+  1 knobs; firmware OTA is required only if validation finds a firmware-side
+  contract gap.
 - Broad SaaS/multi-tenant work moves behind consulting validation unless needed for Track A or public-site reliability.
 - Repo, GitHub, project-board, and agent-scope splits are coordinator-owned until boundaries are decided.
 - PR #80 stays intact as the first recovery baseline; unrelated dirty work must
