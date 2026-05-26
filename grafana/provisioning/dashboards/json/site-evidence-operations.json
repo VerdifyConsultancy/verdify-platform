@@ -1423,6 +1423,392 @@
           }
         ]
       }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "verdify-tsdb"
+      },
+      "description": "ESP32 decision snapshots from climate_action_log: selected action, priority axis, moisture assist state, and wet/fog authority state.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "fillOpacity": 70,
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "spanNulls": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        }
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 38
+      },
+      "id": 19,
+      "options": {
+        "alignValue": "left",
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "mergeValues": true,
+        "rowHeight": 0.9,
+        "showValue": "always",
+        "tooltip": {
+          "mode": "single",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "verdify-tsdb"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT $__time(ts), climate_action AS \"Climate action\"\n  FROM climate_action_log\n WHERE $__timeFilter(ts)\n ORDER BY ts",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "verdify-tsdb"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT $__time(ts), priority_axis AS \"Priority axis\"\n  FROM climate_action_log\n WHERE $__timeFilter(ts)\n ORDER BY ts",
+          "refId": "B",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "verdify-tsdb"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT $__time(ts), moisture_assist_state AS \"Moisture assist\"\n  FROM climate_action_log\n WHERE $__timeFilter(ts)\n ORDER BY ts",
+          "refId": "C",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "verdify-tsdb"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT $__time(ts), CASE WHEN wet_assist_allowed THEN 'wet_allowed' ELSE coalesce(nullif(wet_assist_block_reason, ''), 'wet_not_requested') END AS \"Wet authority\"\n  FROM climate_action_log\n WHERE $__timeFilter(ts)\n ORDER BY ts",
+          "refId": "D",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "verdify-tsdb"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT $__time(ts), CASE WHEN fog_allowed THEN 'fog_allowed' ELSE coalesce(nullif(fog_block_reason, ''), 'fog_not_requested') END AS \"Fog authority\"\n  FROM climate_action_log\n WHERE $__timeFilter(ts)\n ORDER BY ts",
+          "refId": "E",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "ClimateIntent Action Timeline",
+      "type": "state-timeline"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "verdify-tsdb"
+      },
+      "description": "Recent climate_action_log rows with signed target deltas, band errors, authority decisions, relay truth, and plan correlation.",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto",
+            "cellOptions": {
+              "type": "auto"
+            },
+            "inspect": false
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 47
+      },
+      "id": 20,
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm",
+        "footer": {
+          "show": false,
+          "reducer": [
+            "sum"
+          ],
+          "countRows": false,
+          "fields": ""
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "verdify-tsdb"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT to_char(ts AT TIME ZONE 'America/Denver', 'MM/DD HH24:MI:SS') AS \"MDT\",\n       climate_action AS \"Action\",\n       priority_axis AS \"Axis\",\n       round(temp_target_delta_f::numeric, 2) AS \"Temp delta F\",\n       round(vpd_target_delta_kpa::numeric, 3) AS \"VPD delta kPa\",\n       round(temp_band_error_f::numeric, 2) AS \"Temp band err\",\n       round(vpd_band_error_kpa::numeric, 3) AS \"VPD band err\",\n       moisture_assist_state AS \"Moisture assist\",\n       CASE WHEN wet_assist_allowed THEN 'allowed' ELSE coalesce(nullif(wet_assist_block_reason, ''), 'not_requested') END AS \"Wet authority\",\n       CASE WHEN fog_allowed THEN 'allowed' ELSE coalesce(nullif(fog_block_reason, ''), 'not_requested') END AS \"Fog authority\",\n       coalesce(relay_truth->>'fan1', '') AS \"Fan1\",\n       coalesce(relay_truth->>'fan2', '') AS \"Fan2\",\n       coalesce(relay_truth->>'fog', '') AS \"Fog\",\n       coalesce(relay_truth->>'mister_south', '') AS \"Mist S\",\n       coalesce(relay_truth->>'mister_west', '') AS \"Mist W\",\n       coalesce(relay_truth->>'mister_center', '') AS \"Mist C\",\n       coalesce(plan_id, '') AS \"Plan\"\n  FROM climate_action_log\n WHERE $__timeFilter(ts)\n ORDER BY ts DESC\n LIMIT 40",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Latest ClimateIntent Decision Proof",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "verdify-tsdb"
+      },
+      "description": "Counts of decisions where wet assist or fog authority was withheld over the visible time range.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "decisions",
+            "axisPlacement": "auto",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineWidth": 1,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#73BF69",
+                "value": null
+              }
+            ]
+          },
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 56
+      },
+      "id": 21,
+      "options": {
+        "barRadius": 0,
+        "barWidth": 0.8,
+        "fullHighlight": false,
+        "groupWidth": 0.7,
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "orientation": "auto",
+        "showValue": "auto",
+        "stacking": "normal",
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        },
+        "xTickLabelRotation": -20,
+        "xTickLabelSpacing": 0
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "verdify-tsdb"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH reasons AS (\n  SELECT 'wet: ' || coalesce(nullif(wet_assist_block_reason, ''), 'not_requested') AS reason\n    FROM climate_action_log\n   WHERE $__timeFilter(ts)\n     AND NOT wet_assist_allowed\n  UNION ALL\n  SELECT 'fog: ' || coalesce(nullif(fog_block_reason, ''), 'not_requested') AS reason\n    FROM climate_action_log\n   WHERE $__timeFilter(ts)\n     AND NOT fog_allowed\n)\nSELECT reason AS \"Block reason\", count(*)::int AS \"Decisions\"\n  FROM reasons\n GROUP BY 1\n ORDER BY 2 DESC\n LIMIT 12",
+          "refId": "A",
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          }
+        }
+      ],
+      "title": "Wet/Fog Authority Blocks",
+      "type": "barchart"
     }
   ],
   "annotations": {
