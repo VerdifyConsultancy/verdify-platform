@@ -88,6 +88,12 @@ PLAN_REQUIRED_PARAMS = TIER1_REG
 TIER1_TUNABLES = TIER1_REG
 
 FORCED_ON_SWITCH_PARAMS = frozenset({"sw_fsm_controller_enabled"})
+CLIMATE_TARGET_PARAM_ALIASES = {
+    "temp_low_f": "temp_low",
+    "temp_high_f": "temp_high",
+    "vpd_low_kpa": "vpd_low",
+    "vpd_high_kpa": "vpd_high",
+}
 
 
 def _climate_intent_waypoint_errors(waypoints: object) -> list[dict[str, object]]:
@@ -162,7 +168,10 @@ async def _fetch_active_tier1_params(conn: asyncpg.Connection) -> dict[str, floa
     if target_row:
         for key, value in dict(target_row).items():
             if value is not None:
-                params[key] = float(value)
+                numeric = float(value)
+                params[key] = numeric
+                if alias := CLIMATE_TARGET_PARAM_ALIASES.get(key):
+                    params[alias] = numeric
     return params
 
 

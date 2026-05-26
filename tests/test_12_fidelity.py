@@ -1970,6 +1970,23 @@ def test_mcp_set_plan_materializes_and_audits_climate_intent():
     assert "trigger_id is not pending or timed_out" in body
 
 
+def test_mcp_climate_intent_materializer_uses_dispatcher_band_aliases():
+    server = (Path(iris_planner.__file__).resolve().parent.parent / "mcp" / "server.py").read_text()
+    start = server.index("async def _fetch_active_tier1_params")
+    end = server.index("def _materialize_climate_intent_waypoints", start)
+    body = server[start:end]
+
+    for source, target in {
+        "temp_low_f": "temp_low",
+        "temp_high_f": "temp_high",
+        "vpd_low_kpa": "vpd_low",
+        "vpd_high_kpa": "vpd_high",
+    }.items():
+        assert f'"{source}": "{target}"' in server
+    assert "CLIMATE_TARGET_PARAM_ALIASES.get(key)" in body
+    assert "params[alias] = numeric" in body
+
+
 def test_planner_context_includes_dispatcher_owned_targets():
     gather = (Path(iris_planner.__file__).resolve().parent.parent / "scripts" / "gather-plan-context.sh").read_text()
 
