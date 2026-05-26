@@ -224,6 +224,16 @@ class TestPromptBuilders:
         local_msg = builder("<context stub>", "<label stub>", "local")
         assert opus_msg == local_msg
 
+    def test_forecast_deviation_prompt_treats_forecast_gaps_as_no_tune(self, iris_planner):
+        message = iris_planner._PROMPT_BUILDERS["FORECAST_DEVIATION"](
+            "<context stub>",
+            '[{"parameter":"forecast_missing_min"}]',
+            "local",
+        )
+        assert "Do not tune for data gaps" in message
+        assert "forecast_missing_min" in message
+        assert "acknowledge_trigger" in message
+
     def test_builder_default_instance_is_local(self, iris_planner):
         """Contract v1.5: existing callers that don't pass `instance` get local."""
         builder = iris_planner._PROMPT_BUILDERS["SUNRISE"]

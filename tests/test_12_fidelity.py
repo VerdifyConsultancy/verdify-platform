@@ -1201,13 +1201,18 @@ def test_forecast_deviation_defaults_cover_material_axes():
         "wind_gust_mph",
         "precip_in",
         "cloud_cover_pct",
-        "forecast_missing_min",
     } <= set(thresholds)
+    assert "forecast_missing_min" not in thresholds
 
     disabled = tasks._forecast_deviation_threshold_map(
         [{"parameter": "wind_speed_mph", "enabled": False, "threshold": 99.0, "unit": "mph", "cooldown_min": 1}]
     )
     assert "wind_speed_mph" not in disabled
+
+    stale_db_row = tasks._forecast_deviation_threshold_map(
+        [{"parameter": "forecast_missing_min", "enabled": True, "threshold": 90.0, "unit": "min", "cooldown_min": 60}]
+    )
+    assert "forecast_missing_min" not in stale_db_row
 
 
 def test_forecast_deviation_helpers_compute_vpd_and_cloud_proxy():
@@ -1241,7 +1246,6 @@ def test_forecast_deviation_check_covers_distinct_axes_without_global_cooldown()
         "wind_gust_mph",
         "precip_in",
         "cloud_cover_pct",
-        "forecast_missing_min",
     ):
         assert parameter in body
     assert "_last_deviation_trigger_ts" not in body
@@ -1252,6 +1256,27 @@ def test_forecast_deviation_check_covers_distinct_axes_without_global_cooldown()
     assert "consecutive_cycles" in body
     assert "_insert_forecast_deviation_alert" in body
     assert "write_text" not in body
+    assert 'consider_deviation("forecast_missing_min"' not in body
+
+
+def test_forecast_freshness_is_system_health_not_planner_deviation():
+    import tasks
+
+    src = Path(tasks.__file__).read_text()
+    alert_start = src.index("async def alert_monitor")
+    alert_end = src.index("# 8. SETPOINT DISPATCHER", alert_start)
+    alert_body = src[alert_start:alert_end]
+    deviation_start = src.index("async def forecast_deviation_check")
+    deviation_end = src.index("async def _refresh_daily_summary_for_date", deviation_start)
+    deviation_body = src[deviation_start:deviation_end]
+
+    assert tasks._FORECAST_STALE_SENSOR_ID == "system.weather_forecast"
+    assert "_FORECAST_STALE_THRESHOLD_S = 2 * 60 * 60" in src
+    assert "Forecast data stale" in alert_body
+    assert '"alert_type": "sensor_offline"' in alert_body
+    assert '"type": "forecast_sync"' in alert_body
+    assert "forecast_missing_min" not in tasks._FORECAST_DEVIATION_DEFAULTS
+    assert "forecast_missing_min" not in deviation_body
 
 
 def test_forecast_deviation_uses_alert_envelope_with_legacy_file_fallback():

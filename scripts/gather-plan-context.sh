@@ -669,6 +669,15 @@ echo ""
 # repeats — Iris plans for the forecast (bright + dry) and the day arrives
 # cooler/wetter, so the aggressive misting becomes over-humidification.
 echo "--- FORECAST CALIBRATION (apply these biases when interpreting today's forecast) ---"
+echo "Forecast freshness:"
+"${DB[@]}" -c "
+SELECT 'latest_fetch_mdt=' ||
+       COALESCE(to_char(max(fetched_at) AT TIME ZONE 'America/Denver', 'YYYY-MM-DD HH24:MI'), 'NULL') ||
+       ' age_min=' || COALESCE(round((EXTRACT(epoch FROM now() - max(fetched_at)) / 60.0)::numeric, 1)::text, 'NULL') ||
+       ' distinct_future_24h=' || count(DISTINCT ts) FILTER (WHERE ts BETWEEN now() AND now() + interval '24 hours')::text
+  FROM weather_forecast;
+" 2>/dev/null || echo "(forecast freshness unavailable)"
+echo "Rule: if forecast age is over 120 minutes, treat forecast freshness as degraded system health. Do not tune merely because forecast data is stale."
 echo "Open-Meteo forecast bias (last 7 days, by lead time):"
 "${DB[@]}" -c "
 SELECT param,
@@ -1452,12 +1461,18 @@ else
   _check "yesterday scorecard rolled up" fail "only ${sc_rows:-0} metrics (need ~25); daily_summary snapshot may have failed overnight"
 fi
 
-# Weather forecast: a row for a time in the next 24h
-fc_rows=$("${DB[@]}" -c "SELECT count(*) FROM weather_forecast WHERE ts BETWEEN now() AND now() + interval '24 hours';" 2>/dev/null | tr -d ' ')
-if [ -n "${fc_rows:-}" ] && [ "${fc_rows:-0}" -gt 0 ]; then
-  _check "weather forecast present" ok "${fc_rows} forecast hours in the next 24h"
+# Weather forecast: distinct future hours plus fetched_at freshness.
+fc_health=$("${DB[@]}" -F '|' -c "
+SELECT COALESCE(EXTRACT(epoch FROM now() - max(fetched_at))::int, 2147483647) || '|' ||
+       count(DISTINCT ts) FILTER (WHERE ts BETWEEN now() AND now() + interval '24 hours')
+FROM weather_forecast;
+" 2>/dev/null | tr -d ' ' || true)
+fc_age_s="${fc_health%%|*}"
+fc_rows="${fc_health##*|}"
+if [ -n "${fc_rows:-}" ] && [ "${fc_rows:-0}" -gt 0 ] && [ -n "${fc_age_s:-}" ] && [ "${fc_age_s:-2147483647}" -lt 7200 ]; then
+  _check "weather forecast fresh" ok "${fc_rows} distinct forecast hours in the next 24h; latest fetch ${fc_age_s}s ago"
 else
-  _check "weather forecast present" fail "no forecast for the next 24h — forecast-sync.py may not have run; posture decisions fall back to current-conditions only"
+  _check "weather forecast fresh" fail "${fc_rows:-0} distinct future forecast hours; latest fetch age=${fc_age_s:-unknown}s — stale forecast is system health, not a climate-regime deviation"
 fi
 
 # HA token readable (irrigation schedule + tunable readback sections)

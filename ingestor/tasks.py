@@ -1117,6 +1117,60 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                 }
             )
 
+        forecast_health = await conn.fetchrow(
+            """
+            SELECT max(fetched_at) AS latest_fetched_at,
+                   EXTRACT(EPOCH FROM now() - max(fetched_at))::int AS age_s,
+                   count(DISTINCT ts) FILTER (
+                       WHERE ts >= date_trunc('hour', now())
+                         AND ts < date_trunc('hour', now()) + interval '2 hours'
+                   )::int AS current_horizon_hours,
+                   count(DISTINCT ts) FILTER (
+                       WHERE ts >= now()
+                         AND ts < now() + interval '24 hours'
+                   )::int AS future_24h_hours
+              FROM weather_forecast
+            """
+        )
+        forecast_age_s = forecast_health["age_s"] if forecast_health else None
+        current_horizon_hours = int(forecast_health["current_horizon_hours"] or 0) if forecast_health else 0
+        future_24h_hours = int(forecast_health["future_24h_hours"] or 0) if forecast_health else 0
+        latest_fetched_at = forecast_health["latest_fetched_at"] if forecast_health else None
+        if (
+            latest_fetched_at is None
+            or forecast_age_s is None
+            or forecast_age_s > _FORECAST_STALE_THRESHOLD_S
+            or current_horizon_hours == 0
+            or future_24h_hours < 12
+        ):
+            reason_parts = []
+            if latest_fetched_at is None:
+                reason_parts.append("no forecast rows")
+            elif forecast_age_s is not None and forecast_age_s > _FORECAST_STALE_THRESHOLD_S:
+                reason_parts.append(f"last fetch {forecast_age_s // 60}min ago")
+            if current_horizon_hours == 0:
+                reason_parts.append("no current-hour forecast coverage")
+            if future_24h_hours < 12:
+                reason_parts.append(f"only {future_24h_hours} distinct future forecast hours")
+            alerts.append(
+                {
+                    "alert_type": "sensor_offline",
+                    "severity": "warning",
+                    "category": "system",
+                    "sensor_id": _FORECAST_STALE_SENSOR_ID,
+                    "zone": None,
+                    "message": "Forecast data stale: " + "; ".join(reason_parts),
+                    "details": {
+                        "type": "forecast_sync",
+                        "staleness_ratio": round(float(forecast_age_s) / float(_FORECAST_STALE_THRESHOLD_S), 2)
+                        if forecast_age_s is not None
+                        else None,
+                    },
+                    "metric_value": float(forecast_age_s) if forecast_age_s is not None else None,
+                    "threshold_value": float(_FORECAST_STALE_THRESHOLD_S),
+                }
+            )
+
         # 2. relay_stuck
         # v_relay_stuck is derived from commanded switch state, not independent
         # relay feedback. Treat long heater runtime as normal when current
@@ -4548,8 +4602,9 @@ _FORECAST_DEVIATION_DEFAULTS: dict[str, dict[str, float | int | str | bool]] = {
     "wind_gust_mph": {"threshold": 18.0, "unit": "mph", "cooldown_min": 60, "enabled": True},
     "precip_in": {"threshold": 0.03, "unit": "in/h", "cooldown_min": 60, "enabled": True},
     "cloud_cover_pct": {"threshold": 40.0, "unit": "%", "cooldown_min": 60, "enabled": True},
-    "forecast_missing_min": {"threshold": 90.0, "unit": "min", "cooldown_min": 60, "enabled": True},
 }
+_FORECAST_STALE_SENSOR_ID = "system.weather_forecast"
+_FORECAST_STALE_THRESHOLD_S = 2 * 60 * 60
 _FORECAST_DEVIATION_SIGMA_MULTIPLIER = 1.5
 _FORECAST_DEVIATION_SIGMA_HISTORY_DAYS = 7
 
@@ -4559,6 +4614,9 @@ def _forecast_deviation_threshold_map(rows) -> dict[str, dict[str, float | int |
     thresholds = {name: dict(spec) for name, spec in _FORECAST_DEVIATION_DEFAULTS.items() if spec.get("enabled", True)}
     for row in rows or []:
         parameter = row["parameter"]
+        if parameter not in _FORECAST_DEVIATION_DEFAULTS:
+            log.warning("Ignoring unknown forecast deviation threshold parameter: %s", parameter)
+            continue
         if not row["enabled"]:
             thresholds.pop(parameter, None)
             continue
@@ -4805,28 +4863,9 @@ async def forecast_deviation_check(pool: asyncpg.Pool) -> None:
             dev["recent_cycles"] = int(recent_cycles or 0) + 1
             triggering.append(dev)
 
-        # Prolonged missing forecast is a planner input gap, not a daylight-only
-        # outdoor deviation, so evaluate it before the daytime gate.
-        latest_forecast = await conn.fetchrow(
-            """
-            SELECT max(fetched_at) AS latest_fetched_at,
-                   count(*) FILTER (
-                       WHERE ts >= date_trunc('hour', now())
-                         AND ts < date_trunc('hour', now()) + interval '2 hours'
-                   )::int AS current_horizon_rows
-              FROM weather_forecast
-            """
-        )
-        missing_spec = thresholds.get("forecast_missing_min")
-        if missing_spec is not None:
-            if latest_forecast is None or latest_forecast["latest_fetched_at"] is None:
-                await consider_deviation("forecast_missing_min", float(missing_spec["threshold"]) + 1.0, 0.0)
-            else:
-                age_min = (datetime.now(UTC) - latest_forecast["latest_fetched_at"]).total_seconds() / 60.0
-                horizon_rows = int(latest_forecast["current_horizon_rows"] or 0)
-                if age_min > float(missing_spec["threshold"]) or horizon_rows == 0:
-                    observed_gap = max(age_min, float(missing_spec["threshold"]) + 1.0 if horizon_rows == 0 else 0.0)
-                    await consider_deviation("forecast_missing_min", observed_gap, 0.0)
+        # Forecast data freshness is system health, not a weather-regime
+        # deviation. alert_monitor owns stale/missing forecast alerts so the
+        # planner is not woken for data pipeline outages.
 
         # Time-of-day gate: only check during daytime + 1h buffer after sunset
         # Nighttime RH/temp deviations are climatologically normal and not actionable

@@ -788,14 +788,19 @@ threshold tripped):
    forecast error? Apply FORECAST CALIBRATION (assembled context); a
    deviation that goes the SAME direction as the historical bias is the
    forecast catching up to reality, not a regime change.
-4. **Adjust tunables** — use `set_tunable` to adapt to actual conditions:
+4. **Do not tune for data gaps** — if the payload is only
+   `forecast_missing_min`, stale forecast data, or another forecast-ingestor
+   health gap, call `acknowledge_trigger`. Missing forecast freshness is system
+   health, not a climate regime change.
+5. **Adjust tunables only for live weather misses** — use `set_tunable` to
+   adapt to actual conditions:
    - If hotter than expected: increase misting, consider lowering
      `fog_escalation_kpa`.
    - If cooler than expected: reduce misting aggressiveness and check heat
      hysteresis/dwell posture.
    - If more humid: watch dew point margin and use VPD hysteresis, vent posture,
      and fog/mister thresholds instead of retired bias knobs.
-5. **Post what changed** — explain the deviation, your diagnosis, and your
+6. **Post what changed** — explain the deviation, your diagnosis, and your
    response.
 
 ### Assembled Context
