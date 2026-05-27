@@ -2808,12 +2808,17 @@ def test_sensor_fault_is_final_relay_lock_above_manual_overrides():
     assert "climate_water_budget_block" in relay_apply
 
 
-def test_irrigation_schedule_is_heap_recovery_priority():
+def test_heap_guard_is_all_or_nothing_for_dispatcher_snapshot():
     import tasks
 
-    assert {"temp_low", "temp_high", "vpd_low", "vpd_high", "safety_min", "safety_max"} <= (
-        tasks.HEAP_RECOVERY_PRIORITY_PARAMS
-    )
+    assert not hasattr(tasks, "HEAP_RECOVERY_PRIORITY_PARAMS")
+    assert not hasattr(tasks, "_heap_push_recovery_limited")
+    assert tasks._heap_push_defer_active(False, 78.0, 58.0) is False
+    assert tasks._heap_push_defer_active(True, 78.0, 58.0) is False
+    assert tasks._heap_push_defer_active(True, None, None) is True
+    assert tasks._heap_push_defer_active(False, 29.9, 58.0) is True
+    assert tasks._heap_push_defer_active(False, 78.0, 17.9) is True
+
     required = {
         "irrig_wall_start_hour",
         "irrig_wall_start_min",
@@ -2825,7 +2830,6 @@ def test_irrigation_schedule_is_heap_recovery_priority():
         "irrig_center_fert_days_mask",
     }
     assert required <= tasks.IRRIGATION_SCHEDULE_PARAMS
-    assert required <= tasks.HEAP_RECOVERY_PRIORITY_PARAMS
 
 
 def test_center_root_zone_runoff_mapping_is_ready_for_instrumentation():

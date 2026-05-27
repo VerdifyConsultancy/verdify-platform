@@ -141,18 +141,18 @@ class TestDispatcherWiring:
         assert "HEAP_CRITICAL_RECOVERY_FREE_KB = 25.0" in body
         assert "HEAP_CRITICAL_RECOVERY_LARGEST_BLOCK_KB = 20.0" in body
         assert "HEAP_CRITICAL_RECOVERY_SAMPLES = 2" in body
-        assert "HEAP_RECOVERY_LIMIT_FREE_KB = 35.0" in body
-        assert "HEAP_RECOVERY_LIMIT_MIN_FREE_KB = 12.0" in body
-        assert "HEAP_RECOVERY_MAX_CHANGES = 12" in body
-        assert "HEAP_RECOVERY_PRIORITY_PARAMS" in body
         assert "_heap_push_defer_active" in body
-        assert "_heap_push_recovery_limited" in body
         assert "return heap_alert_open" in body
+        assert "HEAP_RECOVERY_LIMIT_FREE_KB" not in body
+        assert "HEAP_RECOVERY_LIMIT_MIN_FREE_KB" not in body
+        assert "HEAP_RECOVERY_MAX_CHANGES" not in body
+        assert "HEAP_RECOVERY_PRIORITY_PARAMS" not in body
+        assert "_heap_push_recovery_limited" not in body
         assert "alert_type IN ('heap_pressure_warning', 'heap_pressure_critical')" in body
         assert "heap_defer_active" in body
-        assert "heap_recovery_limited" in body
-        assert "held %d setpoint retry row(s) during active heap pressure" in body
-        assert "limited heap-recovery push to %d priority lighting setpoint(s)" in body
+        assert "heap_recovery_limited" not in body
+        assert "held full %d-row setpoint snapshot during active heap pressure" in body
+        assert "limited heap-recovery push" not in body
         assert "_last_pushed.pop(param, None)" in body
         assert "delivery_status = 'deferred_heap_pressure'" in body
         assert "COALESCE(sc.delivery_status, 'pending') IN ('pending', 'deferred_heap_pressure')" in body

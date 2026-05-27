@@ -113,43 +113,6 @@ IRRIGATION_SCHEDULE_PARAMS = frozenset(
         "irrig_center_interval_days",
     }
 )
-HEAP_RECOVERY_PRIORITY_PARAMS = (
-    frozenset(
-        name
-        for name in LIGHTING_CIRCUIT_DEFAULT_PARAMS
-        if name.endswith(
-            ("_target_light_minutes", "_sunrise_hour", "_sunset_hour", "_lux_threshold", "_lux_hysteresis")
-        )
-        or name.startswith(("sw_gl_main_", "sw_gl_grow_"))
-    )
-    | frozenset(
-        {
-            # The ESP32 real-time climate controller must never be stranded on
-            # an old crop band while heap recovery throttles lower-priority
-            # reconciliation. These four values decide heat vs vent/cool.
-            "temp_low",
-            "temp_high",
-            "vpd_low",
-            "vpd_high",
-            "safety_min",
-            "safety_max",
-            "activity_start_hour",
-            "activity_start_minute",
-            "activity_duration_min",
-            "direct_wet_min_temp_f",
-            "direct_wet_wall_start_offset_min",
-            "direct_wet_wall_drydown_before_off_min",
-            "direct_wet_south_start_offset_min",
-            "direct_wet_south_drydown_before_off_min",
-            "direct_wet_west_start_offset_min",
-            "direct_wet_west_drydown_before_off_min",
-            "direct_wet_center_start_offset_min",
-            "direct_wet_center_drydown_before_off_min",
-            "sw_direct_wet_gate_enabled",
-        }
-    )
-    | IRRIGATION_SCHEDULE_PARAMS
-)
 SECOND_READBACK_ABS_TOLERANCE_PARAMS = frozenset(
     {
         "mister_engage_delay_s",
@@ -3025,18 +2988,14 @@ FIRMWARE_READBACK_PARAMS = frozenset(CFG_READBACK_MAP.values())
 FIRMWARE_HAS_PER_CIRCUIT_LIGHTING = LIGHTING_CIRCUIT_SUPPORT_SENTINELS <= FIRMWARE_READBACK_PARAMS
 FIRMWARE_HAS_LIGHTING_TARGET_MINUTES = LIGHTING_TARGET_MINUTE_PARAMS <= FIRMWARE_READBACK_PARAMS
 
-# Direct ESP32 pushes are heap-expensive, but an open heap alert can also be
-# stale after the controller has rebooted and current fragmentation is healthy.
-# Gate on fresh diagnostics so post-OTA setpoint reconciliation can recover.
+# Direct ESP32 pushes are heap-expensive only during current pressure. A
+# since-boot low-water mark is diagnostic evidence, not an active throttle:
+# partial config snapshots can strand the controller on contradictory setpoints.
 HEAP_DEFER_FREE_KB = 30.0
 HEAP_DEFER_LARGEST_BLOCK_KB = 18.0
 HEAP_CRITICAL_RECOVERY_FREE_KB = 25.0
 HEAP_CRITICAL_RECOVERY_LARGEST_BLOCK_KB = 20.0
 HEAP_CRITICAL_RECOVERY_SAMPLES = 2
-HEAP_RECOVERY_LIMIT_FREE_KB = 35.0
-HEAP_RECOVERY_LIMIT_MIN_FREE_KB = 12.0
-HEAP_RECOVERY_LIMIT_LARGEST_BLOCK_KB = 24.0
-HEAP_RECOVERY_MAX_CHANGES = 12
 
 # Unified band-first controller compatibility/readback field. ESPHome control
 # loop, dispatcher, MCP, and outbound-listener guardrails force it ON.
@@ -3320,37 +3279,15 @@ def readback_values_equivalent(param: str, observed: float, desired: float) -> b
 def _heap_push_defer_active(
     heap_alert_open: bool,
     heap_free_kb: float | None,
-    heap_min_free_kb: float | None,
     heap_largest_free_block_kb: float | None,
 ) -> bool:
-    """Return true when direct ESP32 setpoint pushes should be deferred."""
+    """Return true when the full ESP32 setpoint snapshot should be deferred."""
 
     if heap_free_kb is None:
         return heap_alert_open
     if heap_free_kb < HEAP_DEFER_FREE_KB:
         return True
     if heap_largest_free_block_kb is not None and heap_largest_free_block_kb < HEAP_DEFER_LARGEST_BLOCK_KB:
-        return True
-    return False
-
-
-def _heap_push_recovery_limited(
-    heap_alert_open: bool,
-    heap_free_kb: float | None,
-    heap_min_free_kb: float | None,
-    heap_largest_free_block_kb: float | None,
-) -> bool:
-    """Return true when only high-priority lighting reconciliation should push."""
-
-    if _heap_push_defer_active(heap_alert_open, heap_free_kb, heap_min_free_kb, heap_largest_free_block_kb):
-        return False
-    if heap_alert_open:
-        return True
-    if heap_free_kb is not None and heap_free_kb < HEAP_RECOVERY_LIMIT_FREE_KB:
-        return True
-    if heap_min_free_kb is not None and heap_min_free_kb < HEAP_RECOVERY_LIMIT_MIN_FREE_KB:
-        return True
-    if heap_largest_free_block_kb is not None and heap_largest_free_block_kb < HEAP_RECOVERY_LIMIT_LARGEST_BLOCK_KB:
         return True
     return False
 
@@ -3992,13 +3929,10 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             if heap_guard and heap_guard["heap_largest_free_block_kb"] is not None
             else None
         )
-        heap_defer_active = _heap_push_defer_active(bool(heap_alert_open), heap_free, heap_min, heap_largest)
-        heap_recovery_limited = _heap_push_recovery_limited(bool(heap_alert_open), heap_free, heap_min, heap_largest)
+        heap_defer_active = _heap_push_defer_active(bool(heap_alert_open), heap_free, heap_largest)
 
         dispatchable_changes: list[tuple[str, float, str]] = []
         skipped_heap_deferred = 0
-        skipped_heap_recovery = 0
-        heap_recovery_push_count = 0
         for param, val in changes:
             source = _dispatch_source(param, planner_params, quiet_params)
 
@@ -4028,12 +3962,6 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                 skipped_heap_deferred += 1
                 _last_pushed.pop(param, None)
                 continue
-            if heap_recovery_limited:
-                if param not in HEAP_RECOVERY_PRIORITY_PARAMS or heap_recovery_push_count >= HEAP_RECOVERY_MAX_CHANGES:
-                    skipped_heap_recovery += 1
-                    _last_pushed.pop(param, None)
-                    continue
-                heap_recovery_push_count += 1
 
             # Sprint 24.9 (G-2): validate through SetpointChange before INSERT.
             # Defense-in-depth: MCP's PlanTransition.params already validates
@@ -4084,14 +4012,8 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             dispatchable_changes.append((param, float(val), source))
         if skipped_heap_deferred:
             log.warning(
-                "Dispatcher: held %d setpoint retry row(s) during active heap pressure",
+                "Dispatcher: held full %d-row setpoint snapshot during active heap pressure",
                 skipped_heap_deferred,
-            )
-        if skipped_heap_recovery:
-            log.warning(
-                "Dispatcher: limited heap-recovery push to %d priority lighting setpoint(s); held %d other drift row(s)",
-                heap_recovery_push_count,
-                skipped_heap_recovery,
             )
         # Tier 1 #2: persist guardrail audit. Rows are written even when the
         # guardrail intentionally holds an unchanged applied value and no
@@ -4158,7 +4080,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             if heap_guard and heap_guard["heap_largest_free_block_kb"] is not None
             else None
         )
-        if _heap_push_defer_active(bool(heap_alert_open), heap_free, heap_min, heap_largest):
+        if _heap_push_defer_active(bool(heap_alert_open), heap_free, heap_largest):
             log.warning(
                 "Dispatcher: skipped direct ESP32 push of %d change(s) due to heap pressure "
                 "(heap=%.1fKB min=%sKB largest=%sKB alert_open=%s)",
