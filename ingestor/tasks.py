@@ -124,6 +124,15 @@ HEAP_RECOVERY_PRIORITY_PARAMS = (
     )
     | frozenset(
         {
+            # The ESP32 real-time climate controller must never be stranded on
+            # an old crop band while heap recovery throttles lower-priority
+            # reconciliation. These four values decide heat vs vent/cool.
+            "temp_low",
+            "temp_high",
+            "vpd_low",
+            "vpd_high",
+            "safety_min",
+            "safety_max",
             "activity_start_hour",
             "activity_start_minute",
             "activity_duration_min",

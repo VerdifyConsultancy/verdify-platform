@@ -2811,6 +2811,9 @@ def test_sensor_fault_is_final_relay_lock_above_manual_overrides():
 def test_irrigation_schedule_is_heap_recovery_priority():
     import tasks
 
+    assert {"temp_low", "temp_high", "vpd_low", "vpd_high", "safety_min", "safety_max"} <= (
+        tasks.HEAP_RECOVERY_PRIORITY_PARAMS
+    )
     required = {
         "irrig_wall_start_hour",
         "irrig_wall_start_min",
