@@ -6,6 +6,7 @@
  */
 
 #include "greenhouse_logic.h"
+#include "invariants.h"
 #include <cstdio>
 #include <cstring>
 #include <cassert>
@@ -121,6 +122,9 @@ TEST(direct_wet_stress_override_requires_vpd_dew_and_hour) {
     sp.direct_wet_stress_vpd_margin_kpa = 0.05f;
     sp.direct_wet_stress_min_dew_margin_f = 8.0f;
     sp.direct_wet_stress_latest_hour = 22;
+    // Isolate the legacy latest_hour mechanic: the new authoritative dusk
+    // cutoff (CYC-1/SAF-3) is exercised separately in the dusk_cutoff tests.
+    sp.sw_dusk_cutoff_enabled = false;
     validate_setpoints(sp);
 
     auto in = make_inputs(74.0f, sp.vpd_high + 0.10f);
@@ -147,6 +151,8 @@ TEST(climate_wet_assist_requires_safety_rails_not_ai_switch_or_crop_window) {
     sp.direct_wet_stress_vpd_margin_kpa = 0.05f;
     sp.direct_wet_stress_min_dew_margin_f = 8.0f;
     sp.direct_wet_stress_latest_hour = 22;
+    // Isolate the legacy time_window mechanic; dusk cutoff tested separately.
+    sp.sw_dusk_cutoff_enabled = false;
     validate_setpoints(sp);
 
     auto in = make_inputs(86.0f, sp.vpd_high + 0.20f);
@@ -173,6 +179,9 @@ TEST(fog_stress_extension_requires_enabled_vpd_dew_and_extension_hour) {
     sp.fog_stress_window_extend_enabled = true;
     sp.fog_stress_window_latest_hour = 19;
     sp.fog_stress_min_dew_margin_f = 10.0f;
+    // Isolate the legacy fog-stress-extension mechanic; the dusk cutoff
+    // (which would otherwise cap hour 18) is exercised separately.
+    sp.sw_dusk_cutoff_enabled = false;
     validate_setpoints(sp);
 
     auto in = make_inputs(76.0f, sp.vpd_high + 0.10f, 60.0f);
@@ -236,6 +245,232 @@ TEST(safety_cool_fog_uses_climate_fog_assist_gate) {
     ASSERT_TRUE(relays.fan1);
     ASSERT_TRUE(relays.fan2);
     ASSERT_TRUE(relays.fog);
+    PASS();
+}
+
+// ── ENV-2: night econ-heat suppression (Vanda day/night-drop companion) ──
+TEST(night_econ_heat_suppressed_during_night_window) {
+    auto sp = band_setpoints();
+    // Wrap-aware night window 20:00 → 06:00.
+    ASSERT_TRUE(is_night_hour(22, 20, 6));
+    ASSERT_TRUE(is_night_hour(2, 20, 6));
+    ASSERT_TRUE(is_night_hour(20, 20, 6));
+    ASSERT_FALSE(is_night_hour(6, 20, 6));   // exclusive end
+    ASSERT_FALSE(is_night_hour(12, 20, 6));
+    ASSERT_FALSE(is_night_hour(19, 20, 6));
+
+    // In-band temp (above the heat target, below Thigh-econ_margin) + very
+    // dry → ONLY the econ VPD-rescue path wants heat, not band heating.
+    // band 65-82 → heat target ~69, Thigh 82, econ fires below 82-5=77.
+    auto in = make_inputs(72.0f, 0.10f);
+    sp.econ_block = true;
+    validate_setpoints(sp);
+
+    // Daytime: econ-rescue heat fires (legacy behavior preserved).
+    in.local_hour = 12;
+    auto day = resolve_equipment(IDLE, in, sp, initial_state(), true);
+    ASSERT_TRUE(day.heat1);
+
+    // Night: econ-rescue heat suppressed — no heat-to-chase-humidity.
+    in.local_hour = 23;
+    auto night = resolve_equipment(IDLE, in, sp, initial_state(), true);
+    ASSERT_FALSE(night.heat1);
+    ASSERT_FALSE(night.heat2);
+
+    // Suppression is toggleable; OFF restores legacy night heating.
+    sp.sw_night_econ_heat_suppress_enabled = false;
+    auto night_legacy = resolve_equipment(IDLE, in, sp, initial_state(), true);
+    ASSERT_TRUE(night_legacy.heat1);
+    PASS();
+}
+
+TEST(night_econ_suppression_never_blocks_band_heating) {
+    // ENV-2 only suppresses the ECON VPD-rescue heat, not real low-temp
+    // band heating. A genuinely cold night must still heat.
+    auto sp = band_setpoints();
+    sp.econ_block = true;
+    validate_setpoints(sp);
+    auto in = make_inputs(sp.temp_low - 6.0f, 1.0f);  // below band → real heat demand
+    in.local_hour = 2;
+    auto night = resolve_equipment(IDLE, in, sp, initial_state(), true);
+    ASSERT_TRUE(night.heat1);  // band heating unaffected by night-econ suppression
+    PASS();
+}
+
+// ── CYC-1 / SAF-3: authoritative VPD-independent dusk cutoff ──
+TEST(dusk_cutoff_blocks_fog_and_mist_regardless_of_vpd) {
+    auto sp = band_setpoints();
+    sp.dusk_cutoff_hour = 18;
+    sp.night_end_hour = 6;
+    sp.direct_wet_stress_latest_hour = 22;       // legacy would extend to 22
+    sp.fog_stress_window_extend_enabled = true;
+    sp.fog_stress_window_latest_hour = 22;
+    sp.fog_stress_min_dew_margin_f = 10.0f;
+    sp.direct_wet_stress_min_dew_margin_f = 8.0f;
+    sp.direct_wet_stress_vpd_margin_kpa = 0.05f;
+    validate_setpoints(sp);
+
+    // Severe high-VPD dry stress at 21:00 (past dusk) with good dew margin —
+    // legacy stress windows would keep wetting alive; the cutoff must not.
+    auto in = make_inputs(80.0f, sp.vpd_high + 0.6f, 50.0f);
+    in.local_hour = 21;
+    in.dew_point_f = in.temp_f - 14.0f;
+
+    ASSERT_TRUE(past_dusk_cutoff(in, sp));
+    ASSERT_FALSE(climate_wet_assist_permitted(in, sp));
+    ASSERT_TRUE(std::string(climate_wet_assist_block_reason(in, sp)) == "dusk_cutoff");
+    ASSERT_FALSE(climate_fog_assist_permitted(in, sp));
+    ASSERT_TRUE(std::string(climate_fog_assist_block_reason(in, sp)) == "dusk_cutoff");
+    ASSERT_FALSE(fog_stress_window_permitted(in, sp));
+
+    // Before the cutoff (17:00) the same stress is still served.
+    in.local_hour = 17;
+    ASSERT_FALSE(past_dusk_cutoff(in, sp));
+    ASSERT_TRUE(climate_wet_assist_permitted(in, sp));
+    ASSERT_TRUE(climate_fog_assist_permitted(in, sp));
+    PASS();
+}
+
+TEST(dusk_cutoff_caps_stress_latest_hours) {
+    auto sp = band_setpoints();
+    sp.dusk_cutoff_hour = 18;
+    validate_setpoints(sp);
+    // latest hours are capped at the cutoff regardless of how high they push.
+    ASSERT_EQ(dusk_capped_latest_hour(22, sp), 18);
+    ASSERT_EQ(dusk_capped_latest_hour(17, sp), 17);  // below cutoff → unchanged
+    sp.sw_dusk_cutoff_enabled = false;
+    ASSERT_EQ(dusk_capped_latest_hour(22, sp), 22);  // disabled → passthrough
+    PASS();
+}
+
+TEST(dusk_cutoff_never_blocks_safety_cool_fog) {
+    // SAF-6: at the safety_max rail, fog is survival cooling — the dusk
+    // cutoff must not suppress it even deep at night.
+    auto sp = band_setpoints();
+    sp.dusk_cutoff_hour = 18;
+    validate_setpoints(sp);
+    auto in = make_inputs(sp.safety_max + 1.0f, sp.vpd_high + 0.8f, 60.0f);
+    in.local_hour = 23;                 // well past dusk
+    in.dew_point_f = in.temp_f - 12.0f;
+    auto relays = resolve_equipment(SAFETY_COOL, in, sp, initial_state(), true);
+    ASSERT_TRUE(relays.fog);
+    PASS();
+}
+
+// ── FRT-6 / FRT-7: post-feed absorption hold ──
+TEST(feed_hold_blocks_all_clean_wetting) {
+    auto sp = band_setpoints();
+    validate_setpoints(sp);
+    auto in = make_inputs(78.0f, sp.vpd_high + 0.5f, 50.0f);  // dry → wants to mist/fog
+    in.local_hour = 9;                                        // mid-morning, pre-dusk
+    in.dew_point_f = in.temp_f - 14.0f;
+
+    // No hold → wetting permitted.
+    sp.feed_hold_active = false;
+    ASSERT_TRUE(climate_wet_assist_permitted(in, sp));
+    ASSERT_TRUE(climate_fog_assist_permitted(in, sp));
+
+    // Hold active → both mister and fog assist hard-blocked.
+    sp.feed_hold_active = true;
+    ASSERT_FALSE(climate_wet_assist_permitted(in, sp));
+    ASSERT_TRUE(std::string(climate_wet_assist_block_reason(in, sp)) == "feed_hold");
+    ASSERT_FALSE(climate_fog_assist_permitted(in, sp));
+    ASSERT_TRUE(std::string(climate_fog_assist_block_reason(in, sp)) == "feed_hold");
+    PASS();
+}
+
+TEST(feed_hold_never_blocks_safety_cool_fog) {
+    // Survival cooling outranks the absorption hold.
+    auto sp = band_setpoints();
+    sp.feed_hold_active = true;
+    validate_setpoints(sp);
+    auto in = make_inputs(sp.safety_max + 1.0f, sp.vpd_high + 0.8f, 60.0f);
+    in.local_hour = 9;
+    in.dew_point_f = in.temp_f - 12.0f;
+    auto relays = resolve_equipment(SAFETY_COOL, in, sp, initial_state(), true);
+    ASSERT_TRUE(relays.fog);
+    PASS();
+}
+
+// ── New Vanda-band invariants (invariants.h #17-#20) ──
+static void silent_report(int, const char*, const invariants::TraceRow&, const char*) {}
+
+TEST(invariant_18_fog_fert_exclusive) {
+    invariants::TraceRow r{};
+    r.eq_fog = 1; r.eq_fertilizer_master = 0;
+    ASSERT_TRUE(invariants::check_18_fog_fert_exclusive(r, silent_report));
+    r.eq_fertilizer_master = 1;   // salts could reach fogger → breach
+    ASSERT_FALSE(invariants::check_18_fog_fert_exclusive(r, silent_report));
+    r.eq_fog = 0;                 // fog off → no conflict
+    ASSERT_TRUE(invariants::check_18_fog_fert_exclusive(r, silent_report));
+    PASS();
+}
+
+TEST(invariant_19_feed_hold_no_clean_center) {
+    invariants::TraceRow r{};
+    // Fert master open → no center mister / fog allowed.
+    r.eq_fertilizer_master = 1;
+    r.eq_mister_center = 1;
+    ASSERT_FALSE(invariants::check_19_feed_hold_no_clean_center(r, silent_report));
+    r.eq_mister_center = 0; r.eq_fog = 1;
+    ASSERT_FALSE(invariants::check_19_feed_hold_no_clean_center(r, silent_report));
+    r.eq_fog = 0;
+    ASSERT_TRUE(invariants::check_19_feed_hold_no_clean_center(r, silent_report));
+    // Absorption-hold flag alone (master already closed) still blocks.
+    r.eq_fertilizer_master = 0; r.feed_hold_active = true; r.eq_mister_center = 1;
+    ASSERT_FALSE(invariants::check_19_feed_hold_no_clean_center(r, silent_report));
+    r.feed_hold_active = false;
+    ASSERT_TRUE(invariants::check_19_feed_hold_no_clean_center(r, silent_report));
+    PASS();
+}
+
+TEST(invariant_20_feed_hold_window_persists) {
+    invariants::Ctx20 c;
+    invariants::TraceRow r{};
+    // Feed begins: master open.
+    r.eq_fertilizer_master = 1;
+    ASSERT_TRUE(invariants::check_20_feed_hold_window(c, r, silent_report));
+    // Master closes but hold flag persists → still blocking.
+    r.eq_fertilizer_master = 0; r.feed_hold_active = true;
+    r.eq_mister_center = 1;     // clean pulse during hold → breach
+    ASSERT_FALSE(invariants::check_20_feed_hold_window(c, r, silent_report));
+    // Hold clears → wetting allowed again.
+    r.feed_hold_active = false; r.eq_mister_center = 1;
+    ASSERT_TRUE(invariants::check_20_feed_hold_window(c, r, silent_report));
+    PASS();
+}
+
+TEST(invariant_17_night_drop_enforced_under_new_band) {
+    invariants::Ctx17 c;
+    invariants::TraceRow r{};
+    r.night_start_hour = 20; r.night_end_hour = 6;   // new-band config present
+    r.ts_unix_s = 1769112000ULL;                      // arbitrary day anchor
+
+    // Daytime row establishes the day peak (temp_high 88).
+    r.local_hour = 14; r.temp_high = 88.0f; r.temp_low = 78.0f;
+    ASSERT_TRUE(invariants::check_17_night_drop(c, r, silent_report));
+
+    // Compliant night row: temp_low 67 is 21°F below peak 88 → pass.
+    r.local_hour = 2; r.temp_high = 67.0f; r.temp_low = 61.0f;
+    ASSERT_TRUE(invariants::check_17_night_drop(c, r, silent_report));
+
+    // Non-compliant night row: temp_low 80 is only 8°F below peak 88 → breach.
+    r.local_hour = 3; r.temp_low = 80.0f;
+    ASSERT_FALSE(invariants::check_17_night_drop(c, r, silent_report));
+    PASS();
+}
+
+TEST(invariant_17_night_drop_skipped_without_new_band_config) {
+    // Historical corpus (no night config columns) must NOT trip #17 even with
+    // a shallow drop — the ≥10°F drop is a property of the new Vanda band.
+    invariants::Ctx17 c;
+    invariants::TraceRow r{};
+    r.night_start_hour = 0; r.night_end_hour = 0;     // config absent
+    r.ts_unix_s = 1769112000ULL;
+    r.local_hour = 14; r.temp_high = 75.0f; r.temp_low = 70.0f;
+    ASSERT_TRUE(invariants::check_17_night_drop(c, r, silent_report));
+    r.local_hour = 2; r.temp_low = 70.0f;             // only 5°F drop, but skipped
+    ASSERT_TRUE(invariants::check_17_night_drop(c, r, silent_report));
     PASS();
 }
 

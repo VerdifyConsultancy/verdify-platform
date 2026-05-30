@@ -136,6 +136,16 @@ interval:
                   id(runtime_fan2_ms)  = 0;
                   id(runtime_fog_ms)   = 0;
                   id(runtime_vent_ms)  = 0;
+                  // SAF-4/IRR-5: reset the per-zone mister cumulative-runtime
+                  // counters that back the non-bypassable duty cap, and the
+                  // daily mister volume, so the cap and the hard volume ceiling
+                  // re-arm each local day. (Previously runtime_mister_*_ms
+                  // accumulated forever on the climate side and were never
+                  // reset, which would permanently lock out the duty cap.)
+                  id(runtime_mister_south_ms)  = 0;
+                  id(runtime_mister_west_ms)   = 0;
+                  id(runtime_mister_center_ms) = 0;
+                  id(mister_water_today) = 0.0f;
                   // B5: reset DLI accumulator at midnight
                   id(dli_accumulator) = 0.0f;
                   last_doy = doy;
@@ -402,6 +412,14 @@ interval:
               .outdoor_data_age_s = outdoor_age
           };
 
+          // FRT-6: absorption hold active while now_ms is before the armed
+          // deadline. Wrap-aware (millis() wraps ~49.7 days): a hold is at most
+          // post_feed_hold_min minutes, far below the wrap period, so the
+          // signed-difference test is safe. 0 deadline = no hold.
+          const bool feed_hold_active =
+              id(feed_hold_until_ms) != 0
+              && (int32_t)(id(feed_hold_until_ms) - now_ms) > 0;
+
           Setpoints setpts = {
               .temp_high = id(target_temp_high_f),
               .temp_low = id(target_temp_low_f),
@@ -453,7 +471,16 @@ interval:
               .fog_stress_window_extend_enabled = id(fog_stress_window_extend_enabled),
               .fog_stress_window_latest_hour = id(fog_stress_window_latest_hour),
               .fog_stress_min_dew_margin_f = id(fog_stress_min_dew_margin_f),
-              .mist_backoff_ms = (uint32_t)id(mist_backoff_s) * 1000UL
+              .mist_backoff_ms = (uint32_t)id(mist_backoff_s) * 1000UL,
+              // ENV-2 night econ-heat suppression.
+              .sw_night_econ_heat_suppress_enabled = id(sw_night_econ_heat_suppress_enabled),
+              .night_start_hour = id(night_start_hour),
+              .night_end_hour = id(night_end_hour),
+              // CYC-1/SAF-3 authoritative dusk cutoff.
+              .sw_dusk_cutoff_enabled = id(sw_dusk_cutoff_enabled),
+              .dusk_cutoff_hour = id(dusk_cutoff_hour),
+              // FRT-6 absorption hold (computed above from feed_hold_until_ms).
+              .feed_hold_active = feed_hold_active
           };
 
           validate_setpoints(setpts);
@@ -612,9 +639,34 @@ interval:
               !isnan(budget_vpd_max) && (budget_vpd_max > id(safety_vpd_max_kpa));
           const bool climate_water_budget_block =
               id(mister_water_today) >= id(mister_water_budget_gal) && !climate_vpd_emergency;
+          // SAF-4: absolute daily volume hard-ceiling. Unlike the soft budget
+          // above, this is NOT bypassed by climate_vpd_emergency — even a VPD
+          // emergency cannot push wetting past the hard cap. It sits above the
+          // budget (default 360 vs 300 gal) so normal emergencies still have
+          // headroom but runaway saturation is impossible.
+          const bool mister_volume_hard_block =
+              id(mister_daily_volume_max_gal) > 0.0f
+              && id(mister_water_today) >= id(mister_daily_volume_max_gal);
           static bool leak_water_interlock_prev = false;
           static bool occupancy_water_interlock_prev = false;
-          if (!controller_time_valid || leak_block || occupancy_moisture_block || irrigation_water_conflict || climate_water_budget_block) {
+          static bool mister_volume_hard_block_prev = false;
+          if (mister_volume_hard_block != mister_volume_hard_block_prev) {
+              if (mister_volume_hard_block) {
+                  ESP_LOGW("interlock","SAF-4 daily volume hard-ceiling reached (%.0f >= %.0f gal): all wetting off",
+                           id(mister_water_today), id(mister_daily_volume_max_gal));
+              } else {
+                  ESP_LOGI("interlock","SAF-4 daily volume hard-ceiling cleared");
+              }
+              mister_volume_hard_block_prev = mister_volume_hard_block;
+          }
+          // SAF-5: the AquaFog is clean-water-only by plumbing (there is no
+          // fog_fert relay). Positive interlock: fog NEVER co-fires with the
+          // fertilizer master valve, so salts can never reach the fogger even
+          // if a future plumbing change introduced a path. Also covered by
+          // irrigation_water_conflict (irrig_state>0 while feeding), but this
+          // is the explicit, plumbing-independent assertion of the invariant.
+          const bool fert_master_on = id(fertilizer_master_valve).state;
+          if (!controller_time_valid || leak_block || occupancy_moisture_block || irrigation_water_conflict || climate_water_budget_block || mister_volume_hard_block || fert_master_on) {
               willFog = false;
           }
           if (leak_block != leak_water_interlock_prev) {
@@ -667,7 +719,9 @@ interval:
                   || occupancy_moisture_block
                   || irrigation_water_conflict
                   || !controller_time_valid
-                  || climate_water_budget_block);
+                  || climate_water_budget_block
+                  || mister_volume_hard_block
+                  || fert_master_on);
 
           /**************** 12 — MISTER STATE MACHINE *****************************/
           // Runs only for SEALED_MIST or explicit VENTILATE assist. Zone stress
@@ -706,9 +760,17 @@ interval:
             const float wet_dew_margin_f = (!isnan(Tin) && !isnan(id(dewpoint_avg).state))
               ? Tin - id(dewpoint_avg).state
               : -999.0f;
+            // CYC-1/SAF-3: the climate stress-wetting latest hour is capped at
+            // the authoritative dusk cutoff (matches the C++ gate), and FRT-6:
+            // climate wetting is blocked during the post-feed absorption hold.
+            const int climate_wet_latest_hour =
+              id(sw_dusk_cutoff_enabled)
+                ? min((int)id(direct_wet_stress_latest_hour), (int)id(dusk_cutoff_hour))
+                : (int)id(direct_wet_stress_latest_hour);
             const bool climate_wet_assist_safety_ok =
               wet_time_valid
-              && now_for_wet_gate.hour < id(direct_wet_stress_latest_hour)
+              && !feed_hold_active
+              && now_for_wet_gate.hour < climate_wet_latest_hour
               && VPD > (VPDhi + id(direct_wet_stress_vpd_margin_kpa))
               && wet_dew_margin_f >= id(direct_wet_stress_min_dew_margin_f);
             auto crop_direct_wet_allowed = [&](int zone) -> bool {
@@ -762,9 +824,26 @@ interval:
             const bool west_crop_wet_allowed = crop_direct_wet_allowed(2);
             const bool center_crop_wet_allowed = crop_direct_wet_allowed(3);
             const bool wall_wet_allowed = crop_direct_wet_allowed(4);
-            const bool south_wet_allowed = south_crop_wet_allowed || climate_wet_assist_allowed(1);
-            const bool west_wet_allowed = west_crop_wet_allowed || climate_wet_assist_allowed(2);
-            const bool center_wet_allowed = center_crop_wet_allowed || climate_wet_assist_allowed(3);
+            // SAF-4/IRR-5: non-bypassable per-zone (center) cumulative-runtime
+            // duty cap. Once the center mister has run mister_max_runtime_min
+            // minutes today it is locked out for the rest of the day —
+            // regardless of VPD emergency — so the bare-root Vanda velamen
+            // cycles green<->silver instead of staying continuously saturated.
+            // (runtime_mister_center_ms resets at midnight.) mister_max_runtime
+            // <= 0 disables the cap.
+            const bool center_duty_cap_reached =
+                id(mister_max_runtime_min) > 0
+                && id(runtime_mister_center_ms) >= (uint32_t)id(mister_max_runtime_min) * 60000UL;
+            // SAF-4: absolute daily volume hard-ceiling — blocks ALL climate
+            // misting even under a VPD emergency (mister_volume_hard_block is
+            // computed earlier from mister_water_today vs the hard cap).
+            const bool south_wet_allowed = (south_crop_wet_allowed || climate_wet_assist_allowed(1))
+                                           && !mister_volume_hard_block;
+            const bool west_wet_allowed = (west_crop_wet_allowed || climate_wet_assist_allowed(2))
+                                          && !mister_volume_hard_block;
+            const bool center_wet_allowed = (center_crop_wet_allowed || climate_wet_assist_allowed(3))
+                                            && !center_duty_cap_reached
+                                            && !mister_volume_hard_block;
             const bool any_mister_wet_allowed = south_wet_allowed || west_wet_allowed || center_wet_allowed;
             {
               direct_wet_zone_mask[0] = '\0';
@@ -965,7 +1044,11 @@ interval:
 
               const uint32_t PULSE_ON_MS  = uint32_t(id(mister_pulse_on_s)) * 1000UL;
               const uint32_t PULSE_GAP_MS = uint32_t(id(mister_pulse_gap_s)) * 1000UL;
-              const float MISTER_HYST = fminf(HV, fmaxf(0.05f, id(mister_engage_kpa) * 0.25f));
+              // IRR-2: raise the hysteresis floor from the legacy 0.05 to the
+              // operator-tunable mister_hysteresis_kpa (default 0.10) so the
+              // mister state machine cannot chatter inside a tight band. Still
+              // capped by band width (HV) and the engage-kPa-derived term.
+              const float MISTER_HYST = fminf(HV, fmaxf(id(mister_hysteresis_kpa), id(mister_engage_kpa) * 0.25f));
 
               // Helper: select mister zone with highest stress score.
               // Each zone has its own VPD target from its planted crops.
@@ -1821,6 +1904,14 @@ interval:
           static int flush_origin = 0;
           const bool leak_block = id(bs_leak_detected).state;
 
+          // FRT-6: absorption hold active while irrig_now is before the armed
+          // deadline (same wrap-aware test as the climate loop). During the
+          // hold, NO new clean wetting job may dispatch — the velamen absorbs
+          // the feed before any clean rinse/flush is allowed to run.
+          const bool feed_hold_active =
+              id(feed_hold_until_ms) != 0
+              && (int32_t)(id(feed_hold_until_ms) - irrig_now) > 0;
+
           // ── VPD stress accumulator ──
           float cur_vpd = id(average_vpd_kpa).state;
           float vpd_hi = id(target_vpd_high_kpa);
@@ -1970,6 +2061,21 @@ interval:
 
             // ── Skip if globally disabled ──
             if(!id(irrig_enabled)) return;
+
+          // TODO(IRR-3 / IRR-4) — DEFERRED, NOT IMPLEMENTED.
+          // IRR-3 dawn rehydrate burst (sunrise-anchored, longer ON / shorter
+          //   GAP center-mister pre-wet of the velamen) and IRR-4 midday heavy
+          //   drench (solar-peak-anchored deeper soak) are larger NEW
+          //   time-anchored behaviors. They require new sunrise/solar-peak
+          //   anchor globals pushed by the dispatcher (vanda design §4.2),
+          //   new irrigation states/timers, and crop-observation calibration
+          //   of volume — none of which is cleanly validatable in the C++
+          //   replay harness (irrigation runs in controls.yaml, outside the
+          //   replay corpus). Per the honesty rule they are left as a marked
+          //   stub rather than shipped unvalidated into the live greenhouse.
+          //   Implement with: anchor globals + new dispatch states gated by
+          //   feed_hold_active (already wired) and the SAF-4 duty cap (already
+          //   wired), then add a controls-level acceptance test before OTA.
 
           // ── Schedule check (only when idle, no queue pending) ──
           if(id(irrig_state) == 0 && id(irrig_queue) == 0 &&
@@ -2151,16 +2257,29 @@ interval:
                 case 7: id(south_wall_mister_fertilized).turn_off(); break;
                 case 8: id(west_wall_mister_fertilized).turn_off(); break;
               }
-              sync_fert_master("fert-done-before-flush");
+              sync_fert_master("fert-done-before-hold");
 
-              // Fert → flush with clean water
+              // FRT-6/FRT-7: after a FERTILIZER feed, enter the post-feed
+              // ABSORPTION HOLD before any clean flush. Arm the shared
+              // feed_hold_until_ms deadline (also gates the climate fog/mister
+              // path) and park in state 11 with the flush origin remembered.
+              // The clean flush (FRT-7, salt rinse) is relocated to fire AFTER
+              // the hold expires. Clean (non-fert) jobs are unchanged. If the
+              // hold is disabled (post_feed_hold_min <= 0) fall through to the
+              // legacy immediate-flush behavior.
               int flush_min = is_center ? id(irrig_center_flush_min) : id(irrig_wall_flush_min);
-              if(is_fert && flush_min > 0){
+              const int hold_min = id(post_feed_hold_min);
+              if(is_fert && hold_min > 0){
+                flush_origin = job;
+                id(feed_hold_until_ms) = irrig_now + uint32_t(hold_min) * 60000UL;
+                id(irrig_state) = 11;  // absorption hold (all clean wetting blocked)
+                id(irrig_timer_ms) = uint32_t(hold_min) * 60000UL;
+                ESP_LOGI("irrig","FEED HOLD %dmin (origin job %d) — clean wetting blocked", hold_min, job);
+              } else if(is_fert && flush_min > 0){
+                // Hold disabled → legacy immediate clean flush.
                 flush_origin = job;
                 id(irrig_state) = is_center ? 6 : is_south_mister ? 9 : is_west_mister ? 10 : 5;
                 id(irrig_timer_ms) = uint32_t(flush_min) * 60000UL;
-                // Flush is a separate rising edge on the matching clean relay,
-                // so equipment_state and firmware cycle counters stay aligned.
                 id(water_controller_actuating) = true;
                 if(is_south_mister)      { id(south_wall_mister).turn_on(); id(cnt_mister_south_today) += 1; }
                 else if(is_west_mister)  { id(west_wall_mister).turn_on();  id(cnt_mister_west_today)  += 1; }
@@ -2168,7 +2287,7 @@ interval:
                 else                     { id(wall_drips).turn_on();        id(cnt_drip_wall_today)    += 1; }
                 id(water_controller_actuating) = false;
                 const char* flush_name = is_south_mister ? "SOUTH_MISTER" : is_west_mister ? "WEST_MISTER" : is_center ? "CENTER" : "WALL";
-                ESP_LOGI("irrig","FLUSH %s — %dmin", flush_name, flush_min);
+                ESP_LOGI("irrig","FLUSH %s — %dmin (hold disabled)", flush_name, flush_min);
               } else {
                 // Done — finalize
                 if(is_wall){
@@ -2185,6 +2304,56 @@ interval:
                   ESP_LOGI("irrig","DONE %s_MISTER_FERT", is_south_mister ? "SOUTH" : "WEST");
                 }
                 sync_fert_master("job-done");
+                id(irrig_state) = 0;
+              }
+            }
+          }
+
+          // ── FRT-6: absorption-hold countdown (state 11) ──
+          // No relay runs during the hold (the fert line was closed before
+          // entering; the clean flush has not started yet). When the hold
+          // expires, start the relocated clean flush (FRT-7) for the remembered
+          // origin job, or finalize if no flush configured.
+          if(id(irrig_state) == 11){
+            if(irrig_dt >= id(irrig_timer_ms)) id(irrig_timer_ms) = 0;
+            else id(irrig_timer_ms) -= irrig_dt;
+
+            if(id(irrig_timer_ms) == 0){
+              int job = flush_origin;
+              bool is_center = (job == 3 || job == 4);
+              bool is_south_mister = (job == 7);
+              bool is_west_mister = (job == 8);
+              id(feed_hold_until_ms) = 0;  // hold complete → clean wetting allowed
+              int flush_min = is_center ? id(irrig_center_flush_min) : id(irrig_wall_flush_min);
+              if(flush_min > 0){
+                id(irrig_state) = is_center ? 6 : is_south_mister ? 9 : is_west_mister ? 10 : 5;
+                id(irrig_timer_ms) = uint32_t(flush_min) * 60000UL;
+                // Flush is a separate rising edge on the matching clean relay,
+                // so equipment_state and firmware cycle counters stay aligned.
+                id(water_controller_actuating) = true;
+                if(is_south_mister)      { id(south_wall_mister).turn_on(); id(cnt_mister_south_today) += 1; }
+                else if(is_west_mister)  { id(west_wall_mister).turn_on();  id(cnt_mister_west_today)  += 1; }
+                else if(is_center)       { id(center_drips).turn_on();      id(cnt_drip_center_today)  += 1; }
+                else                     { id(wall_drips).turn_on();        id(cnt_drip_wall_today)    += 1; }
+                id(water_controller_actuating) = false;
+                const char* flush_name = is_south_mister ? "SOUTH_MISTER" : is_west_mister ? "WEST_MISTER" : is_center ? "CENTER" : "WALL";
+                ESP_LOGI("irrig","FLUSH %s — %dmin (post-hold)", flush_name, flush_min);
+              } else {
+                // No flush configured — finalize the originating fert cycle.
+                if(is_center){
+                  id(irrig_center_cycle_count) += 1;
+                  if(id(sntp_time).now().is_valid())
+                    id(irrig_last_center_doy) = id(sntp_time).now().day_of_year;
+                  ESP_LOGI("irrig","DONE CENTER+HOLD (cycle #%d)", id(irrig_center_cycle_count));
+                } else if(is_south_mister || is_west_mister){
+                  ESP_LOGI("irrig","DONE %s_MISTER_FERT+HOLD", is_south_mister ? "SOUTH" : "WEST");
+                } else {
+                  id(irrig_wall_cycle_count) += 1;
+                  if(id(sntp_time).now().is_valid())
+                    id(irrig_last_wall_doy) = id(sntp_time).now().day_of_year;
+                  ESP_LOGI("irrig","DONE WALL+HOLD (cycle #%d)", id(irrig_wall_cycle_count));
+                }
+                sync_fert_master("hold-done");
                 id(irrig_state) = 0;
               }
             }

@@ -19,6 +19,7 @@ import time
 import urllib.error
 import urllib.request
 import uuid
+from bisect import bisect_right
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from datetime import timedelta as _td
@@ -156,6 +157,466 @@ VPD_HIGH_MOISTURE_GUARDRAIL_PARAMS = frozenset(
         "fog_escalation_kpa",
     }
 )
+# ── Graded + feasibility-aware compliance (migration 146 dual-write) ──────
+# Python mirror of the DB compliance engine (band-compliance-architecture §6).
+# These accumulate the new daily_summary *_v2 columns + daily_zone_compliance
+# rows ALONGSIDE the untouched binary calc during the co-existence window.
+# The DB functions (fn_grade_credit / fn_zone_band_grade / fn_compliance_v2)
+# are the canonical source once migration 146 lands; this loop is the writer
+# the design (§6.6) specifies so no extra full-climate scan is incurred.
+#
+# Graded zones: center (orchid proxy via temp_avg/vpd_avg), east (food crops,
+# intersection-ideal / union-stress band), north (_default house-comfort band).
+# House roll-up uses priority weights (center 0.60 / east 0.40); empty zones
+# (north/south/west) carry weight 0 and are excluded from the house reward
+# (§6.3). Weights mirror the compliance_zone_weights seed; if the table exists
+# at write-time the DB seed is authoritative and these are the fallback.
+COMPLIANCE_ZONE_WEIGHTS_DEFAULT = {"center": 0.60, "east": 0.40, "north": 0.0}
+# relay_truth (per-miss feasibility) only exists from this cutover; older rows
+# are labelled feasibility_unknown rather than mislabelled (§6.2).
+RELAY_TRUTH_START = datetime(2026, 5, 24, 22, 47, tzinfo=ZoneInfo("America/Denver"))
+# _default house-comfort band for empty zones (§4.1): ideal 60–80F / stress
+# 45–95F, vpd ideal 0.4–1.4 / stress 0.2–2.0. Used when crop_target_profiles
+# has no _default row yet (pre-migration-146 fallback so the grader never NULLs).
+DEFAULT_ZONE_BAND = {
+    "temp_ideal_min": 60.0,
+    "temp_ideal_max": 80.0,
+    "temp_stress_low": 45.0,
+    "temp_stress_high": 95.0,
+    "vpd_ideal_min": 0.4,
+    "vpd_ideal_max": 1.4,
+    "vpd_stress_low": 0.2,
+    "vpd_stress_high": 2.0,
+}
+
+
+def _grade_credit(
+    x: float | None,
+    stress_lo: float,
+    ideal_lo: float,
+    ideal_hi: float,
+    stress_hi: float,
+) -> float | None:
+    """Python mirror of fn_grade_credit (band-compliance §6.1).
+
+    Graded credit g in [0,1]: 1.0 inside the ideal band, linear partial credit
+    in the stress shoulders, 0 beyond the stress edges. Denominators guarded.
+    """
+    if x is None:
+        return None
+    if ideal_lo <= x <= ideal_hi:
+        return 1.0
+    if x < stress_lo or x > stress_hi:
+        return 0.0
+    if x < ideal_lo:
+        denom = ideal_lo - stress_lo
+        return max(0.0, (x - stress_lo) / denom) if denom > 0 else 0.0
+    denom = stress_hi - ideal_hi
+    return max(0.0, (stress_hi - x) / denom) if denom > 0 else 0.0
+
+
+def _zone_score(g_temp: float | None, g_vpd: float | None) -> float | None:
+    """Geometric mean sqrt(g_temp·g_vpd) (§6.1) — both axes must be good."""
+    if g_temp is None or g_vpd is None:
+        return None
+    return (g_temp * g_vpd) ** 0.5
+
+
+def _classify_hot_feasibility(
+    relay: dict[str, bool], outdoor_temp_f: float | None, served_temp_high: float | None, indoor_temp_f: float
+) -> str:
+    """HOT miss → 'unachievable' | 'controller' (§6.2).
+
+    Unachievable when the box physically cannot beat ambient: vent ON and
+    outdoor >= served target, OR the full stack (vent + both fans) is ON and
+    outdoor >= indoor (2nd fan is futile).
+    """
+    vent = relay.get("vent", False)
+    if vent and outdoor_temp_f is not None and served_temp_high is not None and outdoor_temp_f >= served_temp_high:
+        return "unachievable"
+    if (
+        vent
+        and relay.get("fan1", False)
+        and relay.get("fan2", False)
+        and outdoor_temp_f is not None
+        and outdoor_temp_f >= indoor_temp_f
+    ):
+        return "unachievable"
+    return "controller"
+
+
+def _classify_cold_feasibility(relay: dict[str, bool]) -> str:
+    """COLD miss → unachievable iff both heaters already ON (§6.2)."""
+    return "unachievable" if relay.get("heat1", False) and relay.get("heat2", False) else "controller"
+
+
+def _classify_vpd_high_feasibility(
+    relay: dict[str, bool],
+    outdoor_temp_f: float | None,
+    served_temp_high: float | None,
+    temp_band_error_f: float | None,
+) -> str:
+    """VPD-HIGH (too dry) miss → 'unachievable' | 'controller' (§6.2 TIGHTENED).
+
+    Unachievable only when venting is genuinely forced by heat
+    (temp_band_error > 0 or outdoor >= target) — vent-while-temp-OK is
+    reclassified as controller-error (the 7.9% gameable case) — OR a humidity
+    actuator is already running (fog / any mister ON).
+    """
+    if (
+        relay.get("fog", False)
+        or relay.get("mister_center", False)
+        or relay.get("mister_south", False)
+        or relay.get("mister_west", False)
+    ):
+        return "unachievable"
+    vent = relay.get("vent", False)
+    if vent and (
+        (temp_band_error_f is not None and temp_band_error_f > 0)
+        or (outdoor_temp_f is not None and served_temp_high is not None and outdoor_temp_f >= served_temp_high)
+    ):
+        return "unachievable"
+    return "controller"
+
+
+def _classify_vpd_low_feasibility(
+    relay: dict[str, bool], outdoor_rh_pct: float | None, indoor_rh_pct: float | None
+) -> str:
+    """VPD-LOW (too humid) miss → unachievable iff venting can't help (§6.2)."""
+    if (
+        relay.get("vent", False)
+        and outdoor_rh_pct is not None
+        and indoor_rh_pct is not None
+        and outdoor_rh_pct >= indoor_rh_pct
+    ):
+        return "unachievable"
+    return "controller"
+
+
+# Relays whose per-timestamp state the feasibility classifier needs.
+_GRADE_RELAYS = ("fan1", "fan2", "vent", "fog", "heat1", "heat2", "mister_center", "mister_south", "mister_west")
+
+# Zone → profile crop_type resolution for the GRADING band (§4.1). center grades
+# against the orchid profile (temp_avg/vpd_avg proxy); east is the food-crop
+# intersection-ideal / union-stress band; north is the _default house band.
+# south/west are empty (weight 0) so they are not graded into the house roll-up.
+_GRADED_ZONES = ("center", "east", "north")
+
+
+async def _build_zone_band_timeline(conn: asyncpg.Connection) -> dict[str, dict[int, dict[str, float]]]:
+    """Per-zone agronomic GRADING band keyed by (zone, hour_of_day) (§4.1).
+
+    center → orchid; east → intersection(ideal)/union(stress) over its active
+    crops; north → _default. Reads the CURRENT season + is_active occupancy so
+    the band reflects live planting. Returns {} entries fall back to
+    DEFAULT_ZONE_BAND so the grader never NULLs (pre-migration-146 safe).
+    """
+    season = await conn.fetchval("SELECT fn_current_season()")
+    bands: dict[str, dict[int, dict[str, float]]] = {z: {} for z in _GRADED_ZONES}
+
+    # center: single orchid band.
+    for row in await conn.fetch(
+        """
+        SELECT hour_of_day, temp_ideal_min, temp_ideal_max, temp_stress_low, temp_stress_high,
+               vpd_ideal_min, vpd_ideal_max, vpd_stress_low, vpd_stress_high
+          FROM crop_target_profiles
+         WHERE crop_type = 'orchid' AND season = $1
+        """,
+        season,
+    ):
+        bands["center"][int(row["hour_of_day"])] = {k: float(row[k]) for k in DEFAULT_ZONE_BAND}
+
+    # east: intersection of ideal, union of stress across active east crops.
+    for row in await conn.fetch(
+        """
+        SELECT p.hour_of_day,
+               MAX(p.temp_ideal_min)  AS temp_ideal_min,
+               MIN(p.temp_ideal_max)  AS temp_ideal_max,
+               MIN(p.temp_stress_low) AS temp_stress_low,
+               MAX(p.temp_stress_high) AS temp_stress_high,
+               MAX(p.vpd_ideal_min)   AS vpd_ideal_min,
+               MIN(p.vpd_ideal_max)   AS vpd_ideal_max,
+               MIN(p.vpd_stress_low)  AS vpd_stress_low,
+               MAX(p.vpd_stress_high) AS vpd_stress_high
+          FROM crop_target_profiles p
+          JOIN crops c ON c.crop_catalog_id = p.crop_catalog_id
+                      AND c.is_active AND c.zone = 'east'
+         WHERE p.season = $1
+         GROUP BY p.hour_of_day
+        """,
+        season,
+    ):
+        bands["east"][int(row["hour_of_day"])] = {k: float(row[k]) for k in DEFAULT_ZONE_BAND}
+
+    # north: _default house-comfort band (if a row exists; else DEFAULT_ZONE_BAND).
+    for row in await conn.fetch(
+        """
+        SELECT hour_of_day, temp_ideal_min, temp_ideal_max, temp_stress_low, temp_stress_high,
+               vpd_ideal_min, vpd_ideal_max, vpd_stress_low, vpd_stress_high
+          FROM crop_target_profiles
+         WHERE crop_type = '_default' AND season = $1
+        """,
+        season,
+    ):
+        bands["north"][int(row["hour_of_day"])] = {k: float(row[k]) for k in DEFAULT_ZONE_BAND}
+    return bands
+
+
+def _zone_band_at(zone_bands: dict[str, dict[int, dict[str, float]]], zone: str, ts) -> dict[str, float]:
+    """Resolve the per-zone band for a reading's local hour, with fallback."""
+    hour = ts.astimezone(ZoneInfo("America/Denver")).hour
+    return zone_bands.get(zone, {}).get(hour) or DEFAULT_ZONE_BAND
+
+
+async def _build_relay_forward_fill(conn: asyncpg.Connection, target_day, equipment: tuple[str, ...]):
+    """Per-equipment transition timeline (seeded before day-start) for bisect.
+
+    Returns a callable relay_state_at(ts) → {equipment: bool}. Mirrors the
+    _band_at forward-fill pattern: the state at ts is the last transition at or
+    before ts (so a relay that turned ON at 13:00 reads ON for every reading
+    until it turns OFF). Reuses the same equipment_state seeding the binary
+    runtime block uses (band-compliance §6.2 / §6.6).
+    """
+    rows = await conn.fetch(
+        """
+        WITH day_bounds AS (
+            SELECT $1::date::timestamp AT TIME ZONE 'America/Denver' AS day_start,
+                   ($1::date + 1)::timestamp AT TIME ZONE 'America/Denver' AS day_end
+        ),
+        seeded AS (
+            SELECT DISTINCT ON (e.equipment) e.equipment, day_bounds.day_start AS ts, e.state
+              FROM equipment_state e CROSS JOIN day_bounds
+             WHERE e.ts < day_bounds.day_start AND e.equipment = ANY($2::text[])
+             ORDER BY e.equipment, e.ts DESC
+        ),
+        day_events AS (
+            SELECT e.equipment, e.ts, e.state
+              FROM equipment_state e CROSS JOIN day_bounds
+             WHERE e.ts >= day_bounds.day_start AND e.ts < day_bounds.day_end
+               AND e.equipment = ANY($2::text[])
+        )
+        SELECT equipment, ts, state FROM seeded
+        UNION ALL
+        SELECT equipment, ts, state FROM day_events
+        ORDER BY equipment, ts
+        """,
+        target_day,
+        list(equipment),
+    )
+    timelines: dict[str, list[tuple]] = {}
+    times: dict[str, list] = {}
+    for row in rows:
+        timelines.setdefault(row["equipment"], []).append(row["ts"])
+        times.setdefault(row["equipment"], []).append(bool(row["state"]))
+
+    def relay_state_at(ts) -> dict[str, bool]:
+        state: dict[str, bool] = {}
+        for eq in equipment:
+            ts_list = timelines.get(eq)
+            if not ts_list:
+                state[eq] = False
+                continue
+            idx = bisect_right(ts_list, ts) - 1
+            state[eq] = times[eq][idx] if idx >= 0 else False
+        return state
+
+    return relay_state_at
+
+
+class _GradedComplianceAccumulator:
+    """Accumulates graded + feasibility sums per zone over a day (§6).
+
+    One instance per daily refresh. `add_reading` is called once per scored
+    climate row; `finalize` returns the per-zone rollups + the priority-weighted
+    house raw/attributable compliance + unachievable fraction. All arithmetic
+    mirrors the DB engine; nothing here mutates the binary calc.
+    """
+
+    def __init__(self, weights: dict[str, float]):
+        self._weights = weights
+        self._interval_h = 1.0 / 60.0
+        self._zones: dict[str, dict[str, float]] = {
+            z: {
+                "n": 0.0,
+                "sum_g_temp": 0.0,
+                "sum_g_vpd": 0.0,
+                "sum_zone_score": 0.0,
+                "sum_ctrl_score": 0.0,
+                "unachievable_min": 0.0,
+                "controller_miss_min": 0.0,
+                "unknown_min": 0.0,
+                "sh_heat": 0.0,
+                "sh_cold": 0.0,
+                "sh_vpd_high": 0.0,
+                "sh_vpd_low": 0.0,
+            }
+            for z in _GRADED_ZONES
+        }
+
+    @staticmethod
+    def _zone_reading(zone: str, r) -> tuple[float | None, float | None, float | None]:
+        """(temp, vpd, rh) for a zone. center uses the avg proxy (no probe)."""
+        if zone == "center":
+            return (
+                float(r["temp_avg"]) if r["temp_avg"] is not None else None,
+                float(r["vpd_avg"]) if r["vpd_avg"] is not None else None,
+                float(r["rh_avg"]) if r["rh_avg"] is not None else None,
+            )
+        if zone == "east":
+            return (
+                float(r["temp_east"]) if r["temp_east"] is not None else None,
+                float(r["vpd_east"]) if r["vpd_east"] is not None else None,
+                None,
+            )
+        # north (and any empty graded zone) — use the per-zone probe if present.
+        return (
+            float(r["temp_north"]) if r["temp_north"] is not None else None,
+            float(r["vpd_north"]) if r["vpd_north"] is not None else None,
+            None,
+        )
+
+    def add_reading(self, r, served_temp_high, zone_bands, relay_state_at) -> None:
+        ts = r["ts"]
+        relay = relay_state_at(ts)
+        outdoor_temp_f = float(r["outdoor_temp_f"]) if r["outdoor_temp_f"] is not None else None
+        outdoor_rh_pct = float(r["outdoor_rh_pct"]) if r["outdoor_rh_pct"] is not None else None
+        feas_known = ts >= RELAY_TRUTH_START
+
+        for zone in _GRADED_ZONES:
+            temp, vpd, rh = self._zone_reading(zone, r)
+            if temp is None and vpd is None:
+                continue
+            band = _zone_band_at(zone_bands, zone, ts)
+            g_temp = _grade_credit(
+                temp,
+                band["temp_stress_low"],
+                band["temp_ideal_min"],
+                band["temp_ideal_max"],
+                band["temp_stress_high"],
+            )
+            g_vpd = _grade_credit(
+                vpd,
+                band["vpd_stress_low"],
+                band["vpd_ideal_min"],
+                band["vpd_ideal_max"],
+                band["vpd_stress_high"],
+            )
+            score = _zone_score(g_temp, g_vpd)
+            if score is None:
+                continue
+            acc = self._zones[zone]
+            acc["n"] += 1.0
+            acc["sum_g_temp"] += g_temp
+            acc["sum_g_vpd"] += g_vpd
+            acc["sum_zone_score"] += score
+
+            # Graded stress-hours = severity-weighted deficit integral (§6.5).
+            if temp is not None and g_temp < 1.0:
+                if temp > band["temp_ideal_max"]:
+                    acc["sh_heat"] += (1.0 - g_temp) * self._interval_h
+                elif temp < band["temp_ideal_min"]:
+                    acc["sh_cold"] += (1.0 - g_temp) * self._interval_h
+            if vpd is not None and g_vpd < 1.0:
+                if vpd > band["vpd_ideal_max"]:
+                    acc["sh_vpd_high"] += (1.0 - g_vpd) * self._interval_h
+                elif vpd < band["vpd_ideal_min"]:
+                    acc["sh_vpd_low"] += (1.0 - g_vpd) * self._interval_h
+
+            # Feasibility: a perfect reading has no miss; otherwise classify the
+            # dominant deficit. Controller-attributable score credits an
+            # unachievable miss as full (§6.2). The *_min accumulators are in
+            # MINUTES (one climate reading ≈ one minute) to match the
+            # daily_zone_compliance schema columns; stress-hours stay in hours.
+            if score >= 1.0:
+                acc["sum_ctrl_score"] += 1.0
+                continue
+            if not feas_known:
+                acc["unknown_min"] += 1.0
+                acc["sum_ctrl_score"] += score  # cannot attribute → score as-is
+                continue
+            feas = self._classify(zone, temp, vpd, rh, band, relay, served_temp_high, outdoor_temp_f, outdoor_rh_pct)
+            if feas == "unachievable":
+                acc["unachievable_min"] += 1.0
+                acc["sum_ctrl_score"] += 1.0
+            else:
+                acc["controller_miss_min"] += 1.0
+                acc["sum_ctrl_score"] += score
+
+    @staticmethod
+    def _classify(zone, temp, vpd, rh, band, relay, served_temp_high, outdoor_temp_f, outdoor_rh_pct) -> str:
+        """Pick the dominant miss axis and classify it (§6.2).
+
+        Unachievable wins if ANY contributing miss axis is unachievable —
+        consistent with crediting the controller only for levers it owns.
+        """
+        labels: list[str] = []
+        if temp is not None:
+            if temp > band["temp_ideal_max"]:
+                labels.append(_classify_hot_feasibility(relay, outdoor_temp_f, served_temp_high, temp))
+            elif temp < band["temp_ideal_min"]:
+                labels.append(_classify_cold_feasibility(relay))
+        if vpd is not None:
+            if vpd > band["vpd_ideal_max"]:
+                temp_band_error_f = (
+                    (temp - served_temp_high) if (temp is not None and served_temp_high is not None) else None
+                )
+                labels.append(
+                    _classify_vpd_high_feasibility(relay, outdoor_temp_f, served_temp_high, temp_band_error_f)
+                )
+            elif vpd < band["vpd_ideal_min"]:
+                labels.append(_classify_vpd_low_feasibility(relay, outdoor_rh_pct, rh))
+        if not labels:
+            return "controller"
+        return "unachievable" if "unachievable" in labels else "controller"
+
+    def finalize(self) -> dict:
+        """Per-zone rollups + priority-weighted house raw/attributable."""
+        zones: dict[str, dict] = {}
+        house_raw_num = house_ctrl_num = house_w = 0.0
+        total_unach = total_min = 0.0
+        for zone, acc in self._zones.items():
+            nz = acc["n"]
+            if nz <= 0:
+                zones[zone] = None
+                continue
+            raw_pct = 100.0 * acc["sum_zone_score"] / nz
+            ctrl_pct = 100.0 * acc["sum_ctrl_score"] / nz
+            zones[zone] = {
+                "raw_compliance_pct": round(raw_pct, 1),
+                "ctrl_compliance_pct": round(ctrl_pct, 1),
+                "graded_temp_compliance_pct": round(100.0 * acc["sum_g_temp"] / nz, 1),
+                "graded_vpd_compliance_pct": round(100.0 * acc["sum_g_vpd"] / nz, 1),
+                "graded_stress_hours_heat": round(acc["sh_heat"], 2),
+                "graded_stress_hours_cold": round(acc["sh_cold"], 2),
+                "graded_stress_hours_vpd_high": round(acc["sh_vpd_high"], 2),
+                "graded_stress_hours_vpd_low": round(acc["sh_vpd_low"], 2),
+                "unachievable_min": round(acc["unachievable_min"], 2),
+                "controller_miss_min": round(acc["controller_miss_min"], 2),
+                "feasibility_unknown_min": round(acc["unknown_min"], 2),
+                "proxy_flag": zone == "center",
+            }
+            w = self._weights.get(zone, 0.0)
+            if w > 0:
+                house_raw_num += w * raw_pct
+                house_ctrl_num += w * ctrl_pct
+                house_w += w
+            # nz counts readings (≈ minutes); unachievable_min is in minutes,
+            # so the fraction is unachievable-minutes / total-scored-minutes.
+            total_unach += acc["unachievable_min"]
+            total_min += nz
+        house_raw = round(house_raw_num / house_w, 1) if house_w > 0 else None
+        house_ctrl = round(house_ctrl_num / house_w, 1) if house_w > 0 else None
+        unach_frac = round(total_unach / total_min, 4) if total_min > 0 else None
+        unknown_min = round(sum(a["unknown_min"] for a in self._zones.values()), 2)
+        return {
+            "zones": zones,
+            "house_raw_pct": house_raw,
+            "house_ctrl_pct": house_ctrl,
+            "unachievable_frac": unach_frac,
+            "feasibility_unknown_min": unknown_min,
+        }
+
+
 GPU_POWER_EXPORTER_URL = os.environ.get("GPU_POWER_EXPORTER_URL", "http://192.168.30.105:9400/metrics")
 GPU_POWER_HOST = os.environ.get("GPU_POWER_HOST", "cortex")
 INFRA_TELEMETRY_GREENHOUSE_ID = os.environ.get("INFRA_TELEMETRY_GREENHOUSE_ID", "vallery")
@@ -1264,6 +1725,15 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
         # Daily cumulative stress belongs in the scorecard; an open alert
         # should represent a condition that is still active. Gate the daily
         # >2h threshold by the last 15 minutes so recovered VPD auto-resolves.
+        #
+        # Dual-write window (band-compliance §6.5/§7.4): migration 146 re-points
+        # v_stress_hours_today.vpd_stress_hours to a graded-deficit integral
+        # while keeping the column name, so this read stays backward-compatible.
+        # The 2.0h threshold is calibrated against the broken 78F served band and
+        # goes structurally unreachable once 145 raises the orchid band; its
+        # recalibration to max(0.5, p75 rolling-30d graded center vpd_high) is
+        # deferred to the coupled alert-monitor re-point (needs graded history
+        # that does not exist until 146 backfills) and is NOT changed here.
         row = await conn.fetchrow(
             """
             WITH daily AS (
@@ -2249,31 +2719,58 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                 )
 
         # 9. Soil sensor offline (daytime only, 6AM–10PM MDT)
+        #
+        # UNPOTTED != BROKEN (Vanda zone-control design §5.4 / correction #1):
+        # a soil column with no data is only a *sensor* fault if the probe's
+        # zone has an active crop. When the zone is empty (e.g. Canna moved to
+        # the patio for summer 2026, leaving south/west soil probes dangling in
+        # bare media), the missing reading is expected — the probe is unpotted,
+        # not failed. Downgrade those to severity='info' and NEVER recommend
+        # probe replacement.
         local_hour = datetime.now(ZoneInfo("America/Denver")).hour
         if 6 <= local_hour < 22:
+            soil_active_zones = {
+                str(r["zone"])
+                for r in await conn.fetch("SELECT DISTINCT zone FROM crops WHERE is_active = true AND zone IS NOT NULL")
+            }
             soil_cols = [
-                ("soil_moisture_south_1", "soil.south_1"),
-                ("soil_temp_south_1", "soil.south_1"),
-                ("soil_ec_south_1", "soil.south_1"),
-                ("soil_moisture_south_2", "soil.south_2"),
-                ("soil_temp_south_2", "soil.south_2"),
-                ("soil_moisture_west", "soil.west"),
-                ("soil_temp_west", "soil.west"),
+                ("soil_moisture_south_1", "soil.south_1", "south"),
+                ("soil_temp_south_1", "soil.south_1", "south"),
+                ("soil_ec_south_1", "soil.south_1", "south"),
+                ("soil_moisture_south_2", "soil.south_2", "south"),
+                ("soil_temp_south_2", "soil.south_2", "south"),
+                ("soil_moisture_west", "soil.west", "west"),
+                ("soil_temp_west", "soil.west", "west"),
             ]
-            for col, sensor_id in soil_cols:
+            for col, sensor_id, zone in soil_cols:
                 non_null = await conn.fetchval(
                     f"SELECT COUNT(*) FROM climate WHERE ts >= now() - interval '30 minutes' AND {col} IS NOT NULL"
                 )
                 if non_null == 0:
+                    zone_occupied = zone in soil_active_zones
+                    if zone_occupied:
+                        severity = "warning"
+                        message = f"Soil sensor `{col}` has no data for 30 min"
+                        occupancy = "occupied"
+                    else:
+                        # Empty zone: the probe is unpotted, not broken. No
+                        # probe action; this is operator context, not a fault.
+                        severity = "info"
+                        message = (
+                            f"Soil sensor `{col}` has no data for 30 min — "
+                            f"{zone} zone has no active crop (probe unpotted, "
+                            "no action needed)"
+                        )
+                        occupancy = "unpotted"
                     alerts.append(
                         {
                             "alert_type": "soil_sensor_offline",
-                            "severity": "warning",
+                            "severity": severity,
                             "category": "sensor",
                             "sensor_id": f"{sensor_id}.{col}",
                             "zone": None,
-                            "message": f"Soil sensor `{col}` has no data for 30 min",
-                            "details": {"column": col, "sensor": sensor_id},
+                            "message": message,
+                            "details": {"column": col, "sensor": sensor_id, "occupancy": occupancy},
                             "metric_value": None,
                             "threshold_value": 30.0,
                         }
@@ -4942,7 +5439,6 @@ async def _refresh_daily_summary_for_date(conn: asyncpg.Connection, target_day) 
         target_day,
         sorted(HOUSE_BAND_PARAMS),
     )
-    from bisect import bisect_right
 
     timelines: dict[str, list[tuple]] = {}
     timeline_ts: dict[str, list] = {}
@@ -4967,7 +5463,10 @@ async def _refresh_daily_summary_for_date(conn: asyncpg.Connection, target_day) 
 
     readings = await conn.fetch(
         """
-        SELECT ts, temp_avg, vpd_avg FROM climate
+        SELECT ts, temp_avg, vpd_avg, rh_avg,
+               temp_east, vpd_east, temp_north, vpd_north,
+               outdoor_temp_f, outdoor_rh_pct
+          FROM climate
         WHERE ts >= $1::date::timestamp AT TIME ZONE 'America/Denver'
           AND ts < ($1::date + 1)::timestamp AT TIME ZONE 'America/Denver'
           AND temp_avg IS NOT NULL
@@ -4975,6 +5474,15 @@ async def _refresh_daily_summary_for_date(conn: asyncpg.Connection, target_day) 
         """,
         target_day,
     )
+
+    # ── Graded + feasibility dual-write setup (migration 146, §6.6) ──────
+    # Per-zone agronomic band timeline (O(24h × 3 zones)) + per-equipment relay
+    # forward-fill so the loop can grade each reading and classify each miss
+    # without a second climate scan. Built once per day; falls back gracefully
+    # when crop_target_profiles lacks the _default / east rows (pre-migration).
+    zone_bands = await _build_zone_band_timeline(conn)
+    relay_state_at = await _build_relay_forward_fill(conn, target_day, _GRADE_RELAYS)
+    grade_acc = _GradedComplianceAccumulator(COMPLIANCE_ZONE_WEIGHTS_DEFAULT)
 
     heat_s = cold_s = vpd_hi_s = vpd_lo_s = 0
     temp_in_band = vpd_in_band = both_in_band = 0
@@ -5007,6 +5515,9 @@ async def _refresh_daily_summary_for_date(conn: asyncpg.Connection, target_day) 
         if t_ok and v_ok:
             both_in_band += 1
 
+        # Graded + feasibility accumulation (does NOT touch the binary calc).
+        grade_acc.add_reading(r, served_temp_high=th, zone_bands=zone_bands, relay_state_at=relay_state_at)
+
     n = scored_readings or len(readings) or 1
     compliance_pct = round((both_in_band / n) * 100, 1)
     temp_compliance_pct = round((temp_in_band / n) * 100, 1)
@@ -5017,6 +5528,7 @@ async def _refresh_daily_summary_for_date(conn: asyncpg.Connection, target_day) 
         "cold": round(cold_s, 2),
         "vpd_low": round(vpd_lo_s, 2),
     }
+    graded = grade_acc.finalize()
 
     # Dew point margin (condensation risk)
     dp = await conn.fetchrow(
@@ -5294,8 +5806,124 @@ async def _refresh_daily_summary_for_date(conn: asyncpg.Connection, target_day) 
         target_day,
     )
 
+    # ── Graded + feasibility dual-write (migration 146, §6.6/§6.7) ────────
+    # Writes the new *_v2 / graded columns + daily_zone_compliance rows ONLY;
+    # the binary columns above are untouched (co-existence). Guarded so a node
+    # running this code BEFORE migration 146 lands (columns/tables absent) logs
+    # once and continues rather than failing the whole daily refresh. Cannot be
+    # runtime-validated tonight (migration apply is forbidden) — logic-reviewed.
+    await _write_graded_compliance(conn, target_day, graded)
+
     temp_max = float(climate["temp_max"]) if climate and climate["temp_max"] else 0.0
     return ct, temp_max, compliance_pct
+
+
+async def _write_graded_compliance(conn: asyncpg.Connection, target_day, graded: dict) -> None:
+    """Dual-write the graded house columns + per-zone rows (§6.7).
+
+    Safe to call before migration 146: an UndefinedColumn/UndefinedTable error
+    means the schema is not yet migrated, so we skip silently (debug-log) — the
+    binary calc has already been written. Once 146 lands these writes populate.
+    """
+    try:
+        await conn.execute(
+            """
+            UPDATE daily_summary SET
+                compliance_v2_raw_pct=$2,
+                compliance_v2_attributable_pct=$3,
+                compliance_v2_unachievable_frac=$4,
+                graded_temp_compliance_pct=$5,
+                graded_vpd_compliance_pct=$6,
+                graded_stress_hours_heat=$7,
+                graded_stress_hours_cold=$8,
+                graded_stress_hours_vpd_high=$9,
+                graded_stress_hours_vpd_low=$10,
+                feasibility_unknown_min=$11,
+                captured_at=now()
+            WHERE date = $1
+            """,
+            target_day,
+            graded["house_raw_pct"],
+            graded["house_ctrl_pct"],
+            graded["unachievable_frac"],
+            _graded_house_axis(graded, "graded_temp_compliance_pct"),
+            _graded_house_axis(graded, "graded_vpd_compliance_pct"),
+            _graded_house_axis(graded, "graded_stress_hours_heat", sum_axis=True),
+            _graded_house_axis(graded, "graded_stress_hours_cold", sum_axis=True),
+            _graded_house_axis(graded, "graded_stress_hours_vpd_high", sum_axis=True),
+            _graded_house_axis(graded, "graded_stress_hours_vpd_low", sum_axis=True),
+            graded["feasibility_unknown_min"],
+        )
+        for zone, z in graded["zones"].items():
+            if z is None:
+                continue
+            await conn.execute(
+                """
+                INSERT INTO daily_zone_compliance (
+                    date, zone, raw_compliance_pct, ctrl_compliance_pct,
+                    graded_temp_compliance_pct, graded_vpd_compliance_pct,
+                    graded_stress_hours_heat, graded_stress_hours_cold,
+                    graded_stress_hours_vpd_high, graded_stress_hours_vpd_low,
+                    unachievable_min, controller_miss_min, proxy_flag, captured_at
+                ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13, now())
+                ON CONFLICT (date, zone) DO UPDATE SET
+                    raw_compliance_pct=EXCLUDED.raw_compliance_pct,
+                    ctrl_compliance_pct=EXCLUDED.ctrl_compliance_pct,
+                    graded_temp_compliance_pct=EXCLUDED.graded_temp_compliance_pct,
+                    graded_vpd_compliance_pct=EXCLUDED.graded_vpd_compliance_pct,
+                    graded_stress_hours_heat=EXCLUDED.graded_stress_hours_heat,
+                    graded_stress_hours_cold=EXCLUDED.graded_stress_hours_cold,
+                    graded_stress_hours_vpd_high=EXCLUDED.graded_stress_hours_vpd_high,
+                    graded_stress_hours_vpd_low=EXCLUDED.graded_stress_hours_vpd_low,
+                    unachievable_min=EXCLUDED.unachievable_min,
+                    controller_miss_min=EXCLUDED.controller_miss_min,
+                    proxy_flag=EXCLUDED.proxy_flag,
+                    captured_at=now()
+                """,
+                target_day,
+                zone,
+                z["raw_compliance_pct"],
+                z["ctrl_compliance_pct"],
+                z["graded_temp_compliance_pct"],
+                z["graded_vpd_compliance_pct"],
+                z["graded_stress_hours_heat"],
+                z["graded_stress_hours_cold"],
+                z["graded_stress_hours_vpd_high"],
+                z["graded_stress_hours_vpd_low"],
+                z["unachievable_min"],
+                z["controller_miss_min"],
+                z["proxy_flag"],
+            )
+    except (
+        asyncpg.exceptions.UndefinedColumnError,
+        asyncpg.exceptions.UndefinedTableError,
+    ):
+        # Migration 146 not yet applied on this node — binary calc already
+        # persisted; graded dual-write resumes automatically post-migration.
+        log.debug("graded compliance dual-write skipped (migration 146 not applied for %s)", target_day)
+
+
+def _graded_house_axis(graded: dict, key: str, sum_axis: bool = False) -> float | None:
+    """House-level graded axis from the per-zone rollups (priority-weighted).
+
+    For compliance percents: priority-weighted mean across graded zones (same
+    weights as the house roll-up). For stress-hours: priority-weighted mean of
+    the per-zone deficit hours (so the house figure is comparable to a single
+    zone's hours, not an inflated sum). Returns None if no zone contributed.
+    """
+    weights = COMPLIANCE_ZONE_WEIGHTS_DEFAULT
+    num = den = 0.0
+    for zone, z in graded["zones"].items():
+        if z is None:
+            continue
+        w = weights.get(zone, 0.0)
+        if w <= 0:
+            continue
+        num += w * z[key]
+        den += w
+    if den <= 0:
+        return None
+    return round(num / den, 2 if sum_axis else 1)
 
 
 async def daily_summary_live(pool: asyncpg.Pool) -> None:
@@ -5310,6 +5938,13 @@ async def daily_summary_live(pool: asyncpg.Pool) -> None:
         computed from equipment_state transitions — which overrides the
         midnight ESP32-accumulator values for the current day (intentional:
         equipment-state-derived is the higher-fidelity source).
+
+      Migration-146 dual-write (band-compliance §6.6): the per-reading loop in
+      `_refresh_daily_summary_for_date` ALSO computes the graded + feasibility
+      compliance and writes the new daily_summary *_v2 columns +
+      daily_zone_compliance rows alongside the untouched binary calc. That
+      write is guarded (no-ops until migration 146 adds the columns/tables), so
+      this function is forward-safe to ship before the migration lands.
     """
     async with pool.acquire() as conn:
         today = await conn.fetchval("SELECT (now() AT TIME ZONE 'America/Denver')::date")

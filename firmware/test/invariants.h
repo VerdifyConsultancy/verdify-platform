@@ -77,6 +77,23 @@ struct TraceRow {
     // Equipment (0/1)
     int eq_fog, eq_vent, eq_fan1, eq_fan2, eq_heat1, eq_heat2;
     int eq_mister_south, eq_mister_west, eq_mister_center;
+    // SAF-5 / FRT-6: fertilizer master valve state. Defaults to 0 when the
+    // replay corpus does not export it (current C++ replay reconstructs
+    // climate relays only; fertilizer relays live in controls.yaml). When
+    // export-replay-overrides.sh adds an `eq_fertilizer_master` column the
+    // SAF-5 / feed-hold invariants below become active over history.
+    int eq_fertilizer_master;
+    // FRT-6: absorption hold flag (controls.yaml computes now_ms <
+    // feed_hold_until_ms). Default 0 absent the column.
+    bool feed_hold_active;
+
+    // Night-window / dusk-cutoff config the firmware was running with
+    // (defaults applied when absent; see Setpoints). Used by the ENV-2
+    // night-drop and dusk-cutoff invariants.
+    int night_start_hour;
+    int night_end_hour;
+    int dusk_cutoff_hour;
+    bool dusk_cutoff_enabled;
 
     bool occupied;
 };
@@ -219,6 +236,33 @@ inline bool check_15_mode_equipment_consistent(const TraceRow& r, ReportFn repor
 inline bool check_16_heat2_requires_heat1(const TraceRow& r, ReportFn report = default_report) {
     if (r.eq_heat2 && !r.eq_heat1) {
         report(16, "heat2_requires_heat1", r, "heat2 ON while heat1 OFF");
+        return false;
+    }
+    return true;
+}
+
+// #18 (SAF-5): the fogger is clean-water-only by plumbing (no fog_fert relay).
+// Fertilizer must NEVER reach the AquaFog. Positive interlock: fog_rly and
+// fertilizer_master_valve are mutually exclusive. (Vacuously true until the
+// corpus exports eq_fertilizer_master; active thereafter.)
+inline bool check_18_fog_fert_exclusive(const TraceRow& r, ReportFn report = default_report) {
+    if (r.eq_fog && r.eq_fertilizer_master) {
+        report(18, "fog_fert_exclusive", r,
+               "fog_rly ON while fertilizer_master_valve ON (salts could reach fogger)");
+        return false;
+    }
+    return true;
+}
+
+// #19 (FRT-6): during the post-feed absorption hold, no clean center wetting.
+// fertilizer_master ON OR the hold flag set ⇒ center_mister and fog_rly must
+// be OFF so the velamen absorbs the feed before any rinse. (Single-row form;
+// the windowed companion #20 enforces it for the full hold duration.)
+inline bool check_19_feed_hold_no_clean_center(const TraceRow& r, ReportFn report = default_report) {
+    const bool feeding_or_holding = r.eq_fertilizer_master || r.feed_hold_active;
+    if (feeding_or_holding && (r.eq_mister_center || r.eq_fog)) {
+        report(19, "feed_hold_no_clean_center", r,
+               "center_mister/fog ON while fertilizer_master ON or feed-hold active");
         return false;
     }
     return true;
@@ -464,12 +508,80 @@ inline bool check_14_vent_cold_day_cap(Ctx14& c, const TraceRow& r, ReportFn rep
 struct Ctx13 { /* unused in CSV-only replay */ };
 inline bool check_13_dry_override_clear(Ctx13& /*c*/, const TraceRow& /*r*/) { return true; }
 
+// #17 (ENV-2): NIGHT-DROP INVARIANT. The served band must preserve a ≥10°F
+// day/night drop — the night temp_low must sit at least 10°F below the day's
+// peak served temp_high. This is the firmware companion to the DB diurnal
+// curve raising the night VPD floor: without a guaranteed drop, raising night
+// humidity would flatten the diurnal cycle the Vanda needs to silver its
+// velamen overnight. Implemented per local-day: track the day-peak temp_high
+// (over daytime rows), and for night-window rows assert
+//   night temp_low <= day_peak_temp_high − 10.
+// A 1°F slack absorbs interpolation/rounding at the band endpoints.
+struct Ctx17 {
+    uint64_t day_bucket = 0;
+    float    day_peak_high = -1e9f;   // max temp_high seen in daytime rows this day
+    bool     have_peak = false;
+};
+inline bool check_17_night_drop(Ctx17& c, const TraceRow& r, ReportFn report = default_report) {
+    // FORWARD invariant. The ≥10°F day/night drop is a property of the NEW
+    // Vanda diurnal band (migration 145), not of the pre-fix telemetry. The
+    // historical replay corpus served the OLD broken band (night ~66.5 vs
+    // day-peak ~75 → only ~8.5°F) and is EXPECTED to violate this. So this
+    // check is gated on the new-band config being explicitly present
+    // (sp_night_start_hour/sp_night_end_hour columns) — it activates only
+    // once the corpus is refreshed under the Vanda band. The native unit
+    // test `night_drop_invariant_*` exercises it directly with that config.
+    const bool new_band_config = !(r.night_start_hour == 0 && r.night_end_hour == 0);
+    if (!new_band_config) return true;
+
+    const uint64_t day = r.ts_unix_s / 86400ULL;
+    if (day != c.day_bucket) {
+        c.day_bucket = day;
+        c.day_peak_high = -1e9f;
+        c.have_peak = false;
+    }
+    const bool night = is_night_hour(r.local_hour, r.night_start_hour, r.night_end_hour);
+    if (!night) {
+        if (r.temp_high > c.day_peak_high) { c.day_peak_high = r.temp_high; c.have_peak = true; }
+        return true;
+    }
+    // Night row: require ≥10°F drop from the established day peak. Skip until
+    // we have at least one daytime sample so cold-start nights are not flagged.
+    if (c.have_peak && r.temp_low > c.day_peak_high - 10.0f + 1.0f) {
+        char detail[160];
+        std::snprintf(detail, sizeof(detail),
+            "night temp_low %.1f°F not >=10°F below day-peak temp_high %.1f°F",
+            r.temp_low, c.day_peak_high);
+        report(17, "night_drop", r, detail);
+        return false;
+    }
+    return true;
+}
+
+// #20 (FRT-6 windowed): once a fertilizer feed/hold begins, no clean center
+// wetting (center_mister/fog) may fire until the hold clears. Tracks the
+// holding state across rows so a mid-hold clean pulse is caught even on a row
+// where the fert master has already closed but the absorption hold persists.
+struct Ctx20 { bool holding = false; };
+inline bool check_20_feed_hold_window(Ctx20& c, const TraceRow& r, ReportFn report = default_report) {
+    const bool holding_now = r.eq_fertilizer_master || r.feed_hold_active;
+    if (holding_now) c.holding = true;
+    else c.holding = false;
+    if (c.holding && (r.eq_mister_center || r.eq_fog)) {
+        report(20, "feed_hold_window", r,
+               "clean center_mister/fog fired during active feed/absorption hold");
+        return false;
+    }
+    return true;
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // Public entry point — iterate all 16 invariants over a trace.
 // Returns 0 on pass, non-zero = count of violated invariants.
 // ─────────────────────────────────────────────────────────────────────────
 struct Runner {
     Ctx4 c4; Ctx5 c5; Ctx6 c6; Ctx8 c8; Ctx10 c10; Ctx12 c12; Ctx13 c13; Ctx14 c14;
+    Ctx17 c17; Ctx20 c20;
     int failures = 0;
 
     bool run(const TraceRow& r, ReportFn report = default_report) {
@@ -490,6 +602,11 @@ struct Runner {
         if (!check_14_vent_cold_day_cap(c14, r, report))            { failures++; ok = false; }
         if (!check_15_mode_equipment_consistent(r, report))         { failures++; ok = false; }
         if (!check_16_heat2_requires_heat1(r, report))              { failures++; ok = false; }
+        // ── New Vanda-band-compliance invariants ──
+        if (!check_17_night_drop(c17, r, report))                   { failures++; ok = false; }
+        if (!check_18_fog_fert_exclusive(r, report))                { failures++; ok = false; }
+        if (!check_19_feed_hold_no_clean_center(r, report))         { failures++; ok = false; }
+        if (!check_20_feed_hold_window(c20, r, report))             { failures++; ok = false; }
         return ok;
     }
 };

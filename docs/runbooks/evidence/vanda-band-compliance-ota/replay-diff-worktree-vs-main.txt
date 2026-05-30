@@ -1,0 +1,20 @@
+bash scripts/firmware-replay-worktree-diff.sh "main"
+[1/4] Building OLD (main)...
+Preparing worktree (checking out 'main')
+[2/4] Building NEW (current worktree)...
+[3/4] Running both against /tmp/firmware-replay-worktree-diff/replay_overrides.csv...
+replay_emit: 193525 rows emitted
+replay_emit: 193525 rows emitted
+[4/4] Diffing...
+4919 divergent rows
+
+═══ Worktree replay diff summary ═══
+  OLD ref:        main (fb17f43)
+  NEW ref:        current worktree
+  CSV:            /tmp/firmware-replay-worktree-diff/replay_overrides.csv (193525 rows)
+  Divergent rows: 4919
+  Diagnostic-only rows: 9039 (ignored: mode/relay/mist unchanged)
+  Full diff:      /tmp/replay_diff_worktree.tsv
+  Divergent pct:  2.54% (threshold: 0%)
+  ✗ Divergence exceeds threshold. Review /tmp/replay_diff_worktree.tsv before merging.
+make: *** [Makefile:118: firmware-replay-worktree] Error 1

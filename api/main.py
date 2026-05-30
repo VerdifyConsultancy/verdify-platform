@@ -1393,7 +1393,17 @@ async def planner_scorecard(scorecard_date: Annotated[date | None, Query(alias="
             "SELECT metric, value FROM fn_planner_scorecard(COALESCE($1::date, CURRENT_DATE)) ORDER BY metric",
             scorecard_date,
         )
-    return ScorecardResponse.from_metric_rows(rows)
+    try:
+        return ScorecardResponse.from_metric_rows(rows)
+    except ValidationError:
+        # Belt-and-suspenders (band-compliance §7.1): ScorecardResponse uses
+        # extra='forbid', so a brand-new fn_planner_scorecard metric (e.g. the
+        # migration-146/147 graded keys before this schema is bumped) would
+        # otherwise 500 the public endpoint. Drop only the unmodeled keys and
+        # serve the metrics we DO recognize rather than failing the request.
+        known = ScorecardResponse.metric_names()
+        kept = [r for r in rows if str(r["metric"]) in known]
+        return ScorecardResponse.from_metric_rows(kept)
 
 
 async def _fetch_public_band_trace_generated_at() -> object:

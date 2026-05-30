@@ -91,7 +91,15 @@ async def backfill() -> None:
             plan_id = r["plan_id"]
             start = r["created_at"]
             end = r["next_created_at"]
-            # Aggregate planner-performance over the window (by date membership)
+            # Aggregate planner-performance over the window (by date membership).
+            #
+            # Reward-loop integrity (band-compliance §7.1/§7.3): during the
+            # migration-146 dual-write window this MUST keep reading the BINARY
+            # compliance_pct — moving it to compliance_v2_attributable_pct now
+            # would re-scale the reward before the ladder is re-anchored (147)
+            # and corrupt the learning loop. The reward swap is migration 147,
+            # which also freezes the 103 anchored + 228 outcome rows; this
+            # one-shot backfill is NOT re-run over history then.
             perf = await conn.fetchrow(
                 """
                 SELECT avg(compliance_pct) AS avg_compliance,

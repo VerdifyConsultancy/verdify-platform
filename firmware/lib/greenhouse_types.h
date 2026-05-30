@@ -139,6 +139,37 @@ struct Setpoints {
     int      fog_stress_window_latest_hour;      // local-hour cap for fog stress extension
     float    fog_stress_min_dew_margin_f;        // minimum temp-dewpoint spread for fog extension
     uint32_t mist_backoff_ms;
+    // ── ENV-2 (Vanda night-drop companion to the DB diurnal curve) ──
+    // Raising the night VPD floor (DB curve §3/§5) makes the IDLE econ
+    // VPD-rescue heat path fire MORE overnight (it triggers on
+    // vpd_kpa < vpd_low_eff). That is heat-to-chase-humidity, which
+    // destroys the ≥10°F day/night drop the Vanda needs to silver its
+    // velamen. When sw_night_econ_heat_suppress_enabled is true and the
+    // local hour is in the night window [night_start_hour, night_end_hour)
+    // (wrap-aware, crosses midnight), the econ-rescue heat path is
+    // suppressed. Safety heat (safety_min) is NOT affected — only the
+    // economy/VPD-rescue heat in IDLE.
+    bool     sw_night_econ_heat_suppress_enabled; // default true
+    int      night_start_hour;                    // local hour night begins (default 20, ~sunset)
+    int      night_end_hour;                      // local hour night ends   (default 6,  ~sunrise)
+    // ── CYC-1 / SAF-3 (authoritative VPD-independent dusk cutoff) ──
+    // A single sunset-relative hard rail. The dispatcher pushes
+    // dusk_cutoff_hour (= sunset−2h floored to the hour). When
+    // sw_dusk_cutoff_enabled is true, ALL fog and ALL climate-driven
+    // mister/drip wetting ceases at/after dusk_cutoff_hour, BEFORE any
+    // stress-extension logic. This also caps both stress windows
+    // (fog_stress_window_latest_hour AND direct_wet_stress_latest_hour) at
+    // the cutoff so no stress path extends wetting past dark. dusk_cutoff
+    // wraps: hours in [dusk_cutoff_hour, night_end_hour) are "after dusk".
+    bool     sw_dusk_cutoff_enabled;              // default true
+    int      dusk_cutoff_hour;                     // local hour wetting must cease (default 18, sunset−2h)
+    // ── FRT-6 / FRT-7 (post-feed absorption hold) ──
+    // Set true by controls.yaml while now_ms < feed_hold_until_ms (the
+    // shared globals.yaml timestamp armed when a fertilizer feed completes).
+    // During the hold, ALL clean wetting (center_mister, fog_rly, clean
+    // drips) is blocked so the velamen absorbs the feed before a rinse.
+    // The post-fert clean flush is relocated to fire AFTER the hold.
+    bool     feed_hold_active;                     // default false; controls.yaml computes from feed_hold_until
 };
 
 static constexpr uint32_t STATE_SENTINEL = 0xBEEF0042;
@@ -501,7 +532,20 @@ inline Setpoints default_setpoints() {
         .fog_stress_window_extend_enabled = false,
         .fog_stress_window_latest_hour = 19,
         .fog_stress_min_dew_margin_f = 10.0f,
-        .mist_backoff_ms = 600000u
+        .mist_backoff_ms = 600000u,
+        // ENV-2: night econ-heat suppression. Default ON — never chase
+        // overnight humidity with heat (it kills the day/night drop).
+        // Default night window 20:00→06:00 local matches the Vanda curve's
+        // sunset≈20:18 / sunrise≈05:42 endpoints.
+        .sw_night_econ_heat_suppress_enabled = true,
+        .night_start_hour = 20,
+        .night_end_hour = 6,
+        // CYC-1/SAF-3: dusk cutoff. Default ON; default hour 18 ≈ sunset−2h
+        // for today's ~20:18 sunset. Dispatcher pushes the sun-tracked value.
+        .sw_dusk_cutoff_enabled = true,
+        .dusk_cutoff_hour = 18,
+        // FRT-6: absorption hold inactive until controls.yaml arms it.
+        .feed_hold_active = false
     };
 }
 
@@ -614,6 +658,12 @@ inline void validate_setpoints(Setpoints& sp) {
     sp.fog_stress_window_latest_hour = std::max(17, std::min(22, sp.fog_stress_window_latest_hour));
     sp.fog_stress_min_dew_margin_f = std::max(5.0f, std::min(15.0f, sp.fog_stress_min_dew_margin_f));
     sp.mist_backoff_ms = std::max(uint32_t(60000), std::min(uint32_t(3600000), sp.mist_backoff_ms));
+
+    // --- ENV-2 night-window clamps (wrap-aware: start may be > end) ---
+    sp.night_start_hour = std::max(0, std::min(23, sp.night_start_hour));
+    sp.night_end_hour   = std::max(0, std::min(23, sp.night_end_hour));
+    // --- CYC-1/SAF-3 dusk-cutoff clamp ---
+    sp.dusk_cutoff_hour = std::max(0, std::min(23, sp.dusk_cutoff_hour));
 }
 
 inline ControlState initial_state() {

@@ -107,13 +107,22 @@ class TestScorecard:
         - Live deployed fn_planner_scorecard emits 25 metrics.
         - Migration-076/077-era (what CI's db/schema.sql serves) emits 27 —
           the deployed function dropped `7d_avg_stress` + `7d_avg_dp_risk`.
-        Schema covers both until G15 resyncs migrations with live."""
+        Schema covers both until G15 resyncs migrations with live.
+
+        Plus the 9 graded + feasibility metrics modelled schema-first for the
+        migration-146/147 compliance rearchitecture (band-compliance §6-§7):
+        compliance_v2_raw/attributable/unachievable_frac, graded temp/vpd, and
+        4 graded_*_stress_h — accepted BEFORE fn_planner_scorecard emits them so
+        the extra='forbid' contract cannot 500 the public /api/v1/scorecard."""
         names = ScorecardResponse.metric_names()
-        assert len(names) == 27
+        assert len(names) == 27 + 9
         assert "planner_score" in names
         assert "7d_avg_score" in names
         assert "7d_avg_stress" in names  # CI-only until G15
         assert "7d_avg_dp_risk" in names  # CI-only until G15
+        # Graded compliance metrics (schema-first, migration 146/147).
+        assert "compliance_v2_attributable_pct" in names
+        assert "graded_vpd_high_stress_h" in names
 
 
 # ── Drift guard: live fn_planner_scorecard() metric names must be a subset of

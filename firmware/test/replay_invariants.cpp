@@ -292,6 +292,21 @@ int main(int argc, char** argv) {
         r.eq_mister_west = (mode == SEALED_MIST && state.mist_stage >= MIST_S2) ? 1 : 0;
         r.eq_mister_center = (mode == SEALED_MIST && state.mist_stage >= MIST_S2) ? 1 : 0;
 
+        // SAF-5 / FRT-6: fertilizer master + absorption-hold are controls.yaml
+        // concerns the C++ replay does not reconstruct. Read them from the
+        // corpus when present (export-replay-overrides.sh may add the columns);
+        // default 0/false otherwise so #18/#19/#20 are vacuously true on the
+        // climate-only corpus and become active once exported.
+        r.eq_fertilizer_master = parse_int(get("eq_fertilizer_master"), 0);
+        r.feed_hold_active = parse_bool(get("feed_hold_active"), false);
+
+        // ENV-2 night-drop / dusk-cutoff config. Absent → invariant #17 uses
+        // its built-in 20:00→06:00 default night window (Ctx17).
+        r.night_start_hour = parse_int(get("sp_night_start_hour"), 0);
+        r.night_end_hour   = parse_int(get("sp_night_end_hour"), 0);
+        r.dusk_cutoff_hour = parse_int(get("sp_dusk_cutoff_hour"), 18);
+        r.dusk_cutoff_enabled = parse_bool(get("sp_dusk_cutoff_enabled"), true);
+
         runner.run(r, stats_report);
         rows++;
     }

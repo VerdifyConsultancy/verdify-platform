@@ -40,6 +40,11 @@ class PlannerPerformance(BaseModel):
     vpd_high_stress_h: float | None = Field(default=None, ge=0, le=24)
     vpd_low_stress_h: float | None = Field(default=None, ge=0, le=24)
     total_stress_h: float | None = Field(default=None, ge=0, le=96)  # 4 axes, max 4×24
+    # Reward column: re-pointed in migration 147 to the controller-attributable
+    # graded value (compliance_v2_attributable_pct), falling back to binary during
+    # the dual-write co-existence window. The column name stays `compliance_pct`
+    # (CREATE OR REPLACE VIEW forbids renaming existing columns; v_plan_window_scorecard
+    # depends on it by name), so consumers read the new reward through this field.
     compliance_pct: Decimal | None = Field(default=None, ge=0, le=100)
     temp_compliance_pct: Decimal | None = Field(default=None, ge=0, le=100)
     vpd_compliance_pct: Decimal | None = Field(default=None, ge=0, le=100)
@@ -49,6 +54,13 @@ class PlannerPerformance(BaseModel):
     cost_water: float | None = Field(default=None, ge=0)
     cost_per_stress_hour: Decimal | None = None
     planner_score: Decimal | None = Field(default=None, ge=0, le=100)
+    # Unscored context columns appended by migration 147 (positions 16-18):
+    # the prior binary compliance, the raw (non-attributable) graded compliance,
+    # and the unachievable fraction. Exposed for transparency during the
+    # dual-write co-existence window; not part of planner_score.
+    compliance_binary_pct: Decimal | None = Field(default=None, ge=0, le=100)
+    compliance_raw_graded_pct: Decimal | None = Field(default=None, ge=0, le=100)
+    unachievable_frac: Decimal | None = Field(default=None, ge=0, le=1)
 
 
 class PlanAccuracy(BaseModel):

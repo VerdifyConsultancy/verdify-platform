@@ -198,18 +198,54 @@ DB_BACKED = [
 ]
 
 
+# Columns declared in the schema ONE CYCLE AHEAD of the migration that adds
+# them (schema-first ordering, band-compliance §7.1/§8.3). Until the named
+# migration lands, the live/CI DB legitimately lacks these columns, so the
+# subset guard tolerates ONLY this explicit, documented set — every OTHER
+# unknown column still fails loud. Remove an entry once its migration is in
+# db/schema.sql (the guard then enforces it like any other column).
+PENDING_MIGRATION_COLUMNS: dict[str, set[str]] = {
+    # migration 146 — compliance rearchitecture dual-write (§6.7).
+    "daily_summary": {
+        "compliance_v2_raw_pct",
+        "compliance_v2_attributable_pct",
+        "compliance_v2_unachievable_frac",
+        "graded_temp_compliance_pct",
+        "graded_vpd_compliance_pct",
+        "graded_stress_hours_heat",
+        "graded_stress_hours_cold",
+        "graded_stress_hours_vpd_high",
+        "graded_stress_hours_vpd_low",
+        "feasibility_unknown_min",
+    },
+}
+
+
 @pytest.mark.parametrize("model_class,table_name", DB_BACKED)
 def test_schema_fields_subset_of_db_columns(model_class, table_name):
-    """Every field declared in the schema must exist in the DB table."""
+    """Every field declared in the schema must exist in the DB table.
+
+    Exception: columns in PENDING_MIGRATION_COLUMNS are declared schema-first,
+    one cycle ahead of the migration that adds them (band-compliance §8.3).
+    They are tolerated until the migration lands; all other drift still fails.
+    """
     db_cols = _table_columns(table_name)
     if not db_cols:
         pytest.skip(f"table {table_name!r} not found (migration pending?)")
     schema_fields = set(model_class.model_fields.keys())
-    missing_in_db = sorted(schema_fields - db_cols)
+    pending = PENDING_MIGRATION_COLUMNS.get(table_name, set())
+    missing_in_db = sorted(schema_fields - db_cols - pending)
     assert not missing_in_db, (
         f"{model_class.__name__} declares field(s) the {table_name!r} table doesn't have: "
         f"{missing_in_db}. Either the schema is stale (field renamed/removed in DB) "
         f"or a migration is missing."
+    )
+    # Once the migration lands, drop the column from PENDING_MIGRATION_COLUMNS
+    # so the guard enforces it. Flag entries that are now satisfied by the DB.
+    stale_pending = sorted(pending & db_cols)
+    assert not stale_pending, (
+        f"{table_name!r} columns {stale_pending} are in PENDING_MIGRATION_COLUMNS "
+        f"but the DB now has them — remove them from the allowlist so the guard enforces them."
     )
 
 

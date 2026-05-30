@@ -282,6 +282,10 @@ class HeatManualOverrideDetails(_DetailsBase):
 class SoilSensorOfflineDetails(_DetailsBase):
     column: str
     sensor: str
+    # 'occupied' = zone has an active crop → genuine sensor fault (warning).
+    # 'unpotted' = zone empty (e.g. Canna on the patio) → probe dangling, no
+    # action needed (downgraded to info). Vanda zone-control design §5.4.
+    occupancy: Literal["occupied", "unpotted"] | None = None
 
 
 class HeatStagingInversionDetails(_DetailsBase):

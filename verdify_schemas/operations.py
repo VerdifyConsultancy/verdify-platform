@@ -16,6 +16,7 @@ from __future__ import annotations
 from datetime import date as DateType
 from datetime import time as TimeType
 from decimal import Decimal
+from typing import Literal
 
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
@@ -208,6 +209,41 @@ class LabResult(BaseModel):
     recipe_id: int | None = None
     source_sample_id: str | None = None
     notes: str | None = None
+
+
+class NutrientRecipe(BaseModel):
+    """nutrient_recipes table row — a feed formula consumers dose against.
+
+    `salt_model` / `product_name` are the migration-145/146 additions (design
+    §5.3). Without them a consumer doing `stock_a_ml_per_l × factor` produces a
+    NULL EC for single-salt recipes (Vanda MSU 13-3-15 carries NULL stock_a/b),
+    a SAF-2 blind-dose risk. `salt_model='single_salt'` says "dose by mixing to
+    target_ec, NOT by A/B ml/L math". Both fields are optional so existing
+    2-part GH-Flora rows (NULL salt_model) keep validating during co-existence.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    id: int | None = None
+    name: str = Field(..., min_length=1)
+    crop_id: int | None = None
+    stage: str | None = None
+    target_ec: float | None = Field(default=None, ge=0)
+    target_ph_low: float | None = Field(default=None, ge=0, le=14)
+    target_ph_high: float | None = Field(default=None, ge=0, le=14)
+    n_ppm: float | None = Field(default=None, ge=0)
+    p_ppm: float | None = Field(default=None, ge=0)
+    k_ppm: float | None = Field(default=None, ge=0)
+    ca_ppm: float | None = Field(default=None, ge=0)
+    mg_ppm: float | None = Field(default=None, ge=0)
+    fe_ppm: float | None = Field(default=None, ge=0)
+    stock_a_ml_per_l: float | None = Field(default=None, ge=0)
+    stock_b_ml_per_l: float | None = Field(default=None, ge=0)
+    salt_model: Literal["two_part", "single_salt"] | None = None
+    product_name: str | None = None
+    notes: str | None = None
+    is_active: bool = True
+    created_at: AwareDatetime | None = None
 
 
 class MaintenanceLog(BaseModel):

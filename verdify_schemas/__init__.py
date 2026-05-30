@@ -91,7 +91,7 @@ from .crops import (
     ObservationCreate,
     ObservationType,
 )
-from .daily import DailySummaryRow
+from .daily import ComplianceZoneWeightRow, DailySummaryRow, DailyZoneComplianceRow
 from .external import (
     HAEntityState,
     OpenMeteoForecastResponse,
@@ -130,6 +130,7 @@ from .operations import (
     IrrigationSchedule,
     LabResult,
     MaintenanceLog,
+    NutrientRecipe,
     Treatment,
     TreatmentCreate,
 )
@@ -309,12 +310,14 @@ __all__ = [
     "CropStage",
     "CropStageTarget",
     "CropUpdate",
+    "ComplianceZoneWeightRow",
     "CropVaultFrontmatter",
     "DailyOscillation",
     "DailyOscillationSummary",
     "DailyPlanVaultFrontmatter",
     "DailySummaryRow",
     "DailyVaultFrontmatter",
+    "DailyZoneComplianceRow",
     "DataGap",
     "DataGapStatus",
     "DewPointRiskRow",
@@ -361,6 +364,7 @@ __all__ = [
     "MoistureAssistState",
     "MoistureZone",
     "NUMERIC_TUNABLES",
+    "NutrientRecipe",
     "Observation",
     "ObservationAction",
     "ObservationCreate",

@@ -1,0 +1,237 @@
+cd firmware && g++ -std=c++17 -I lib -o test/test_greenhouse test/test_greenhouse_logic.cpp && ./test/test_greenhouse
+═══════════════════════════════════════════════════════
+  Greenhouse Logic Tests — 11-fix review synthesis + OBS-1e
+  Same code as ESP32 firmware
+═══════════════════════════════════════════════════════
+
+  idle_when_in_band                                  ✓
+  ventilate_when_hot                                 ✓
+  sealed_after_dwell                                 ✓
+  minute_window_wraps_midnight                       ✓
+  direct_wet_window_uses_activity_offsets            ✓
+  direct_wet_stress_override_requires_vpd_dew_and_hour ✓
+  climate_wet_assist_requires_safety_rails_not_ai_switch_or_crop_window ✓
+  fog_stress_extension_requires_enabled_vpd_dew_and_extension_hour ✓
+  climate_fog_assist_uses_climate_window_independent_of_normal_fog_window ✓
+  safety_cool_fog_uses_climate_fog_assist_gate       ✓
+  night_econ_heat_suppressed_during_night_window     ✓
+  night_econ_suppression_never_blocks_band_heating   ✓
+  dusk_cutoff_blocks_fog_and_mist_regardless_of_vpd  ✓
+  dusk_cutoff_caps_stress_latest_hours               ✓
+  dusk_cutoff_never_blocks_safety_cool_fog           ✓
+  feed_hold_blocks_all_clean_wetting                 ✓
+  feed_hold_never_blocks_safety_cool_fog             ✓
+  invariant_18_fog_fert_exclusive                    ✓
+  invariant_19_feed_hold_no_clean_center             ✓
+  invariant_20_feed_hold_window_persists             ✓
+  invariant_17_night_drop_enforced_under_new_band    ✓
+  invariant_17_night_drop_skipped_without_new_band_config ✓
+  day_mask_allows_zero_sunday                        ✓
+  not_sealed_before_dwell                            ✓
+  safety_cool                                        ✓
+  safety_heat                                        ✓
+  relief_after_sealed_max                            ✓
+  dehum_when_vpd_low                                 ✓
+  climate_action_names_match_contract_order          ✓
+  climate_candidate_selector_prefers_temperature_before_vpd_and_resource ✓
+  climate_candidate_selector_uses_vpd_then_resource_as_tie_breakers ✓
+  climate_candidate_selector_rejects_unsafe_candidates ✓
+  climate_decision_drives_hot_dry_to_vent_mist_assist ✓
+  climate_decision_selects_mist_assist_from_band_error_even_when_ai_switch_off ✓
+  climate_decision_blocks_wet_assist_when_occupied   ✓
+  climate_decision_reports_inactive_moisture_when_vpd_in_band ✓
+  climate_decision_reports_engage_delay_timer_before_mist_eligibility ✓
+  climate_decision_reports_mist_backoff_gap_timer    ✓
+  climate_decision_forces_safety_before_band_compliance ✓
+  fix1_mode_prev_tracks_correctly                    ✓
+  fix1_relief_to_idle_transition                     ✓
+  fix2_vpd_safety_no_stomp_safety_heat               ✓
+  fix2_vpd_safety_no_stomp_thermal_relief            ✓
+  fix3_ventilate_exit_hysteresis                     ✓
+  fix3_heat_hysteresis                               ✓
+  fix4_dehum_stays_until_vpd_low                     ✓
+  fix5_relief_exits_to_ventilate_when_hot            ✓
+  fix5_relief_exits_to_sealed_when_vpd_high          ✓
+  fix6_econ_heat_electric_only                       ✓
+  fix6_econ_heat_capped_by_temp                      ✓
+  fix7_watch_timer_frozen_during_safety              ✓
+  fix8_nan_temp                                      ✓
+  fix8_nan_vpd                                       ✓
+  fix8_sensor_fault_equipment                        ✓
+  r2_2_sensor_fault_preserves_mode_prev              ✓
+  r2_3_vpd_override_no_stomp_ventilate               ✓
+  r2_4_implausible_temp_triggers_fault               ✓
+  r2_4_implausible_rh_triggers_fault                 ✓
+  r2_5_occupancy_blocks_fog                          ✓
+  r2_5_occupancy_blocks_routine_fans                 ✓
+  r2_5_occupancy_does_not_block_safety_cool_fans     ✓
+  r2_6_relief_cycle_forces_ventilate                 ✓
+  r2_8_dehum_respects_econ_block_change              ✓
+  r2_9_fog_stage_blocked_by_time_window              ✓
+  fix9_mist_stage_s1_on_seal                         ✓
+  fix9_mist_stage_s1_to_s2                           ✓
+  fix9_mist_stage_s2_to_fog                          ✓
+  fix9_mist_resets_on_seal_exit                      ✓
+  fix9_fog_in_equipment_reads_mist_stage             ✓
+  fix9_no_fog_when_not_mist_fog_stage                ✓
+  sealed_mist_never_opens_vent_or_fans               ✓
+  no_heater_with_vent                                ✓
+  no_fan_without_vent                                ✓
+  cold_night_no_vent_oscillation                     ✓
+  fw7_sealed_mist_temp_guard                         ✓
+  fw7_sealed_mist_exit_on_high_temp                  ✓
+  fw8_relief_latch_timeout                           ✓
+  fw9b_ventilate_fog_on_vpd_emergency                ✓
+  fw9b_ventilate_fog_production_band                 ✓
+  obs1e_occupancy_blocks_equipment_fires_in_seal     ✓
+  obs1e_occupancy_blocks_equipment_fires_in_ventilate ✓
+  obs1e_occupancy_quiet_when_nothing_wanted          ✓
+  obs1e_fog_gate_rh_fires                            ✓
+  obs1e_fog_gate_temp_fires                          ✓
+  obs1e_fog_gate_window_fires                        ✓
+  obs1e_fog_gate_quiet_when_not_in_s2                ✓
+  obs1e_relief_cycle_breaker_fires                   ✓
+  obs1e_relief_cycle_breaker_quiet_below_ceiling     ✓
+  obs1e_seal_blocked_temp_fires                      ✓
+  obs1e_seal_blocked_temp_quiet_when_cool            ✓
+  obs1e_vpd_dry_override_fires_when_r23_forces_seal  ✓
+  obs1e_vpd_dry_override_quiet_when_planner_already_sealed ✓
+  obs1e_vpd_dry_override_clears_on_next_cycle_when_conditions_pass ✓
+  obs1e_all_quiet_on_idle_in_band                    ✓
+  s8_r23_preserves_mist_stage_when_already_sealed    ✓
+  s8_r23_preserves_sealed_timer_under_sustained_dryness ✓
+  s8_r23_still_forces_seal_from_idle                 ✓
+  s8_fog_window_wraps_midnight                       ✓
+  s9_heat2_latch_sets_when_below_s2_threshold        ✓
+  s9_heat2_latches_through_minor_fluctuation         ✓
+  s9_heat2_latch_does_not_re_set_in_hysteresis_band  ✓
+  s9_validate_swaps_inverted_vpd_bounds              ✓
+  s9_validate_enforces_vpd_ordering_across_all_four  ✓
+  s9_validate_enforces_safety_gt_thigh_plus_dc2      ✓
+  s9_validate_fixes_zero_width_fog_window            ✓
+  s9_validate_prevents_relief_longer_than_sealed     ✓
+  s9_validate_preserves_valid_input                  ✓
+  validate_clamps_cooling_ai_policy_knobs            ✓
+  s14_validate_clamps_bias_heat_above_5              ✓
+  s14_validate_clamps_bias_heat_below_minus_5        ✓
+  s14_validate_clamps_bias_cool_above_5              ✓
+  s14_validate_clamps_bias_cool_below_minus_5        ✓
+  s14_validate_preserves_bias_in_range               ✓
+  s10_thermal_relief_runs_both_fans                  ✓
+  s10_vpd_min_safe_breaks_sealed_mist_with_cleanup   ✓
+  s10_vpd_min_safe_override_respects_econ_block      ✓
+  s10_vent_latch_timeout_is_tunable                  ✓
+  s10_econ_heat_margin_is_tunable                    ✓
+  s9_safety_heat_runs_lead_fan_for_circulation       ✓
+  s8_safety_heat_clears_same_timers_as_safety_cool   ✓
+  s12_heating_targets_band_interior                  ✓
+  s12_cooling_targets_band_interior                  ✓
+  s12_narrow_band_floor_guard                        ✓
+  s15_gate_fires_when_outdoor_cooler_and_drier       ✓
+  s15_gate_inactive_when_outdoor_warmer              ✓
+  s15_gate_inactive_when_outdoor_humid               ✓
+  s15_gate_inactive_when_outdoor_data_stale          ✓
+  s15_gate_inactive_when_switch_off                  ✓
+  s15_gate_inactive_when_indoor_cool                 ✓
+  s15_safety_cool_still_pre_empts_gate               ✓
+  s15_thermal_relief_still_pre_empts_gate            ✓
+  s15_integration_today_1300_data                    ✓
+  s15_1_gate_unseals_was_sealed_cycle                ✓
+  s15_1_gate_fresh_at_400s_with_default_600          ✓
+  s15_1_mode_reason_seal_enter                       ✓
+  s15_1_mode_reason_summer_vent_preempt              ✓
+  s15_1_mode_reason_idle_default                     ✓
+  phase2_dwell_gate_off_by_default                   ✓
+  phase2_dwell_gate_holds_normal_transition          ✓
+  phase2_dwell_gate_safety_preempts                  ✓
+  phase2_dwell_gate_dry_override_preempts            ✓
+  phase2_dwell_gate_thermal_relief_entry_preempts    ✓
+  phase2_dwell_gate_thermal_relief_exit_preempts     ✓
+  phase2_dwell_gate_tracks_ticks_when_off            ✓
+  band_first_heat1_targets_temp_band_lower_quartile  ✓
+  band_first_controller_flag_is_explicit_test_setup  ✓
+  band_first_heat2_latches_at_temp_low_not_stage2_margin ✓
+  band_first_heat2_clears_after_lower_target_recovery ✓
+  runtime_fan_lead_prefers_lower_runtime_outside_deadband ✓
+  runtime_fan_lead_holds_inside_deadband_while_running ✓
+  runtime_fan_lead_uses_wall_clock_tiebreak_only_when_idle ✓
+  relay_runtime_with_active_includes_current_on_interval ✓
+  band_first_relief_exhausted_does_not_force_cold_vent ✓
+  band_first_sealed_timeout_enters_backoff_not_relief ✓
+  band_first_temp_band_preempts_humidification       ✓
+  band_first_cooling_enters_at_raw_temp_high         ✓
+  band_first_cold_outdoor_cooling_entry_uses_band_margin ✓
+  band_first_replay_safe_no_solar_preventive_cooling_before_temp_high ✓
+  band_first_solar_preventive_cooling_respects_cold_outdoor_guard ✓
+  band_first_cooling_stage2_uses_explicit_ai_delta   ✓
+  band_first_all_fans_at_high_enabled_runs_both_at_high_edge ✓
+  band_first_cooling_exit_uses_explicit_ai_hysteresis ✓
+  band_first_dehum_enters_below_vpd_low_hysteresis_and_exits_at_low_edge ✓
+  band_first_vpd_compliance_preempts_dehum_dwell_hold ✓
+  band_first_temp_compliance_preempts_dehum_dwell_hold ✓
+  band_first_temp_compliance_preempts_sealed_dwell_hold ✓
+  climate_effective_decision_reports_actual_held_mode ✓
+  climate_effective_decision_reports_inactive_moisture_when_vpd_in_band ✓
+  band_first_safety_cool_does_not_set_vent_mist_assist ✓
+  band_first_vpd_hysteresis_is_band_width_limited    ✓
+  band_first_retries_after_backoff_window            ✓
+  band_first_cold_dehum_requires_temp_headroom       ✓
+  band_first_cold_dehum_allowed_with_temp_headroom   ✓
+  band_first_heat_suppressed_at_upper_band           ✓
+  band_first_allows_fog_heat_assist_when_cold_dry    ✓
+  obs1e_fog_heat_assist_flag_fires                   ✓
+  lighting_state_machine_turns_on_below_lux_band     ✓
+  lighting_state_machine_holds_until_off_threshold   ✓
+  lighting_state_machine_enforces_min_on_dwell       ✓
+  lighting_state_machine_respects_per_light_window_and_minutes_goal ✓
+  lighting_occupancy_task_demand_turns_on_when_exterior_lux_low ✓
+  lighting_occupancy_task_demand_stays_off_when_exterior_lux_high ✓
+  lighting_occupancy_task_demand_requires_fresh_exterior_lux ✓
+  lighting_occupancy_holds_until_exterior_off_threshold ✓
+  lighting_occupancy_clear_turns_off_without_plant_demand ✓
+  lighting_occupancy_clear_keeps_on_when_plant_demand_remains ✓
+  lighting_occupancy_task_demand_respects_min_off_dwell ✓
+  lighting_qualified_minutes_count_natural_or_switch_once ✓
+  lighting_dli_increment_uses_corrected_indoor_or_tempest_fallback ✓
+  lighting_dli_increment_counts_supplemental_light_runtime ✓
+
+═══════════════════════════════════════════════════════
+  190 passed, 0 failed
+═══════════════════════════════════════════════════════
+# OBS-1e (Sprint 16) — replay validation against 8 months of real telemetry.
+# Required gate per CLAUDE.md Firmware Change Protocol: unit tests alone
+# cannot catch structural flag regressions (e.g. the shipped-and-caught
+# vpd_dry_override dead code in commit 82b18ad → patched in caa2cea).
+gzip -cd firmware/test/data/replay_overrides.csv.gz > /tmp/verdify-replay-overrides.csv
+cd firmware && g++ -std=c++17 -O2 -I lib -o test/replay_overrides test/replay_overrides.cpp
+set -o pipefail; ./firmware/test/replay_overrides /tmp/verdify-replay-overrides.csv | tail -30
+  2026-04-12      23     0     0     0     0   134     0     0     1     0    158
+  2026-04-21       0     0     0     1     0    94     0     0    34     0    129
+  2025-08-08       0     0     0     1   118     8     0     0     0     0    127
+  2026-03-17       0     0     0     0     0     0     0     0   121     0    121
+  2026-03-25      41     0     0     0     0    31     0     0    49     0    121
+  2026-04-25       0     0     0     0     0     0     0     0    91     0     91
+
+Days 2026-04-13 → 2026-04-17 (96h review window):
+  date           occ   fRH    fT    fW   rlf   sBT   VdO  SumV  VMst  FgHt  total
+  2026-04-13      11     0     0     0     0     0     0     0     6     0     17
+  2026-04-14      10     0     0     0     0     0     0     0     0     4     14
+  2026-04-15       0     0     0     0     0     0     0     0     0     0      0
+  2026-04-16       0     0     0     0     0     0     0     0     8     0      8
+  2026-04-17       6     0     0     0     0     0     0     0     0     0      6
+
+Synthetic self-test (contrived inputs to force each flag):
+  occupancy_blocks_equipment   ✓
+  occupancy_blocks_equipment   ✓
+  fog_gate_rh                  ✓
+  fog_gate_temp                ✓
+  fog_gate_window              ✓
+  relief_cycle_breaker         ✓
+  seal_blocked_temp            ✓
+  vpd_dry_override             ✓ (mode=SEALED_MIST, r23_triggered=yes)
+  summer_vent                  ✓ (mode=VENTILATE, reason=vent_mist_assist)
+  vent_mist_assist             ✓ (mode=VENTILATE, assist_active=yes)
+  fog_heat_assist              ✓
+
+═══════════════════════════════════════════════════════════════
+═══════════════════════════════════════════════════════════════

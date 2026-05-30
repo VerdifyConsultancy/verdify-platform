@@ -13,6 +13,7 @@ from verdify_schemas.alerts import (
     ALERT_TYPES,
     AlertEnvelope,
     BandFnNullAlert,
+    ClimateActionProofStaleAlert,
     ESP32PushFailedAlert,
     ESP32RebootAlert,
     FirmwareReliefCeilingAlert,
@@ -53,6 +54,10 @@ CASES = {
     "band_fn_null": (
         BandFnNullAlert,
         {"band_row_null": True, "zone_row_null": False, "house_row_null": True},
+    ),
+    "climate_action_proof_stale": (
+        ClimateActionProofStaleAlert,
+        {"age_s": 360, "latest_ts": NOW, "proof_missing": "relay_truth"},
     ),
     "esp32_push_failed": (
         ESP32PushFailedAlert,
@@ -415,7 +420,12 @@ def test_schema_covers_alert_types_in_write_paths():
     patterns = [
         re.compile(r'"alert_type"\s*:\s*"([^"]+)"'),
         re.compile(r"alert_type\s*=\s*'([^']+)'"),
-        re.compile(r"VALUES\s*\('([^']+)',\s*'\w+',\s*'\w+'", re.MULTILINE),
+        # Positional `INSERT INTO alert_log VALUES (alert_type, severity, ...)`.
+        # The 2nd field MUST be a valid AlertSeverity — without that constraint
+        # the pattern also matched unrelated inserts into other tables whose 2nd
+        # column happens to be a quoted string (e.g. slack_notification_events
+        # VALUES ('ingestor', 'operator_brief', ...)), a false alert_type.
+        re.compile(r"VALUES\s*\('([^']+)',\s*'(?:info|warning|critical)',\s*'\w+'", re.MULTILINE),
     ]
     for source in sources:
         text = source.read_text()

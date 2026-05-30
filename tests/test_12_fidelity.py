@@ -2290,9 +2290,22 @@ def test_climate_wet_assist_is_separate_from_crop_direct_wet_windows():
 
     assert "auto crop_direct_wet_allowed" in controls
     assert "auto climate_wet_assist_allowed" in controls
-    assert "const bool south_wet_allowed = south_crop_wet_allowed || climate_wet_assist_allowed(1);" in controls
-    assert "const bool west_wet_allowed = west_crop_wet_allowed || climate_wet_assist_allowed(2);" in controls
-    assert "const bool center_wet_allowed = center_crop_wet_allowed || climate_wet_assist_allowed(3);" in controls
+    # SAF-4 wraps the per-zone wet-allowed booleans with the daily-volume
+    # hard-ceiling (and, for center, the cumulative-runtime duty cap). The
+    # crop ∥ climate-assist core remains; the SAF-4 guards are AND-appended.
+    assert (
+        "const bool south_wet_allowed = (south_crop_wet_allowed || climate_wet_assist_allowed(1))\n"
+        "                                           && !mister_volume_hard_block;"
+    ) in controls
+    assert (
+        "const bool west_wet_allowed = (west_crop_wet_allowed || climate_wet_assist_allowed(2))\n"
+        "                                          && !mister_volume_hard_block;"
+    ) in controls
+    assert (
+        "const bool center_wet_allowed = (center_crop_wet_allowed || climate_wet_assist_allowed(3))\n"
+        "                                            && !center_duty_cap_reached\n"
+        "                                            && !mister_volume_hard_block;"
+    ) in controls
     assert "if(zone == 4) return false;  // climate control never drives wall drips." in controls
 
     crop_block = controls[
@@ -2431,7 +2444,13 @@ def test_fert_master_valve_is_wired_and_interlocked_with_fert_relays():
 
     assert 'sync_fert_master("watchdog")' in controls
     assert 'sync_fert_master("job-start")' in controls
-    assert 'sync_fert_master("fert-done-before-flush")' in controls
+    # FRT-6/FRT-7: the post-feed clean flush is relocated to fire AFTER a
+    # post-feed absorption hold (irrig_state 11). The fert master is therefore
+    # closed at "fert-done-before-hold" (was "fert-done-before-flush"), and the
+    # hold path resyncs at "hold-done" before either the relocated flush runs or
+    # the cycle finalizes.
+    assert 'sync_fert_master("fert-done-before-hold")' in controls
+    assert 'sync_fert_master("hold-done")' in controls
     assert 'sync_fert_master("flush-done")' in controls
 
 
@@ -2667,7 +2686,7 @@ def test_occupancy_inhibit_is_final_fog_force_off():
     final_gate_end = controls.index("/**************** 10", final_gate_start)
     final_gate = controls[final_gate_start:final_gate_end]
     assert (
-        "if (!controller_time_valid || leak_block || occupancy_moisture_block || irrigation_water_conflict || climate_water_budget_block)"
+        "if (!controller_time_valid || leak_block || occupancy_moisture_block || irrigation_water_conflict || climate_water_budget_block || mister_volume_hard_block || fert_master_on)"
         in final_gate
     )
     assert "Occupancy inhibit: forcing fog and climate misters off" in final_gate
@@ -2759,7 +2778,7 @@ def test_fog_respects_conflict_and_budget_before_reporting_served():
     final_gate_end = controls.index("/**************** 10", final_gate_start)
     final_gate = controls[final_gate_start:final_gate_end]
     assert (
-        "if (!controller_time_valid || leak_block || occupancy_moisture_block || irrigation_water_conflict || climate_water_budget_block)"
+        "if (!controller_time_valid || leak_block || occupancy_moisture_block || irrigation_water_conflict || climate_water_budget_block || mister_volume_hard_block || fert_master_on)"
         in final_gate
     )
 

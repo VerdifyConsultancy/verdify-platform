@@ -460,6 +460,57 @@ globals:
     restore_value: no
     initial_value: '10.0'
 
+  # ─── ENV-2: night econ-heat suppression (Vanda day/night-drop companion) ───
+  # When enabled, the IDLE econ VPD-rescue heat path is suppressed during the
+  # night window [night_start_hour, night_end_hour) so we never chase overnight
+  # humidity with heat (which would erase the >=10F diurnal drop). Default night
+  # 20:00->06:00 matches the Vanda curve's sunset~20:18 / sunrise~05:42.
+  - id: sw_night_econ_heat_suppress_enabled
+    type: bool
+    restore_value: no
+    initial_value: 'true'
+
+  - id: night_start_hour
+    type: int
+    restore_value: no
+    initial_value: '20'
+
+  - id: night_end_hour
+    type: int
+    restore_value: no
+    initial_value: '6'
+
+  # ─── CYC-1 / SAF-3: authoritative VPD-independent dusk cutoff ───
+  # Dispatcher pushes dusk_cutoff_hour = floor(sunset - dusk_offset). When
+  # enabled, ALL fog + climate mister/drip wetting ceases at/after this hour,
+  # before any VPD stress-extension logic, and both stress latest-hours are
+  # capped here. Default 18 ~= sunset(20:18) - 2h.
+  - id: sw_dusk_cutoff_enabled
+    type: bool
+    restore_value: no
+    initial_value: 'true'
+
+  - id: dusk_cutoff_hour
+    type: int
+    restore_value: no
+    initial_value: '18'
+
+  # ─── FRT-6 / FRT-7: post-feed absorption hold ───
+  # feed_hold_until_ms is the millis() deadline (uint32, wrap-aware compare)
+  # until which ALL clean wetting is blocked after a fertilizer feed. Armed by
+  # the irrigation state machine when a fert job finishes; the post-fert clean
+  # flush is relocated to fire AFTER the hold. 0 = no hold armed.
+  - id: feed_hold_until_ms
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+
+  # Minutes of absorption hold after a feed completes (default 90).
+  - id: post_feed_hold_min
+    type: int
+    restore_value: no
+    initial_value: '90'
+
   # ─── Daily ON-cycle counters (reset at midnight) ───
   - id: cnt_fan1_today
     type: int
@@ -692,6 +743,26 @@ globals:
     type: int
     restore_value: no
     initial_value: '120'
+
+  # ─── IRR-2: mister VPD hysteresis floor (kPa) ───
+  # Raises the MISTER_HYST floor from the legacy 0.05 to 0.10 so the climate
+  # mister state machine cannot chatter inside a tight band. The effective
+  # hysteresis is still capped by the band width (band_vpd_hysteresis) and the
+  # engage-kPa-derived term; this is only the lower bound.
+  - id: mister_hysteresis_kpa
+    type: float
+    restore_value: no
+    initial_value: '0.10'
+
+  # ─── SAF-4: absolute daily mister volume hard-ceiling (gal) ───
+  # A non-bypassable ceiling that sits ABOVE the VPD-emergency budget
+  # (mister_water_budget_gal, which climate_vpd_emergency can bypass). Even a
+  # VPD emergency cannot push center misting past this hard cap. Default 360 =
+  # 1.2x the 300-gal budget; tune per plumbing.
+  - id: mister_daily_volume_max_gal
+    type: float
+    restore_value: no
+    initial_value: '360.0'
 
   # ─── Mister runtime counters (reset at midnight) ───
   - id: runtime_mister_south_ms

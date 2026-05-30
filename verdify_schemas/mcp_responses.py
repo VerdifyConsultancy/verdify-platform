@@ -84,6 +84,16 @@ class ScorecardResponse(BaseModel):
     temp_compliance_pct: float | None = None
     vpd_compliance_pct: float | None = None
 
+    # ── Graded + feasibility-aware compliance (migration 146/147, §6-§7) ──
+    # Schema-first: these are modelled BEFORE fn_planner_scorecard emits them
+    # so the extra='forbid' contract does not 500 the public /api/v1/scorecard
+    # endpoint when the DB function grows the graded metrics. All optional.
+    compliance_v2_raw_pct: float | None = None
+    compliance_v2_attributable_pct: float | None = None
+    compliance_v2_unachievable_frac: float | None = None
+    graded_temp_compliance_pct: float | None = None
+    graded_vpd_compliance_pct: float | None = None
+
     # ── Stress hours (four independent categories; overlap allowed so
     #    total_stress_h can exceed 24h)
     total_stress_h: float | None = None
@@ -91,6 +101,12 @@ class ScorecardResponse(BaseModel):
     cold_stress_h: float | None = None
     vpd_high_stress_h: float | None = None
     vpd_low_stress_h: float | None = None
+
+    # ── Graded stress hours (deficit integral; subsumes binary paths) ─────
+    graded_heat_stress_h: float | None = None
+    graded_cold_stress_h: float | None = None
+    graded_vpd_high_stress_h: float | None = None
+    graded_vpd_low_stress_h: float | None = None
 
     # ── Utility usage (raw)
     kwh: float | None = None

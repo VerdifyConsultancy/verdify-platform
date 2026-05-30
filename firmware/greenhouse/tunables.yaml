@@ -1771,6 +1771,110 @@ number:
           id(fog_stress_min_dew_margin_f) = x;
           id(num_fog_stress_min_dew_margin_f).publish_state(x);
 
+  # ─── Vanda band-compliance OTA tunables (cfg_* readbacks, CLAUDE.md rule 6) ───
+
+  # CYC-1/SAF-3: authoritative dusk cutoff hour (sunset−2h, dispatcher-pushed).
+  - platform: template
+    id: num_dusk_cutoff_hour
+    name: "Dusk Cutoff Hour"
+    min_value: 12
+    max_value: 23
+    step: 1
+    lambda: "return id(dusk_cutoff_hour);"
+    set_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          int val = int(roundf(x));
+          if(val < 0) val = 0;
+          if(val > 23) val = 23;
+          id(dusk_cutoff_hour) = val;
+          id(num_dusk_cutoff_hour).publish_state(val);
+
+  # ENV-2: night window start hour (econ-heat suppression begins).
+  - platform: template
+    id: num_night_start_hour
+    name: "Night Start Hour"
+    min_value: 12
+    max_value: 23
+    step: 1
+    lambda: "return id(night_start_hour);"
+    set_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          int val = int(roundf(x));
+          if(val < 0) val = 0;
+          if(val > 23) val = 23;
+          id(night_start_hour) = val;
+          id(num_night_start_hour).publish_state(val);
+
+  # ENV-2: night window end hour (econ-heat suppression ends / sunrise).
+  - platform: template
+    id: num_night_end_hour
+    name: "Night End Hour"
+    min_value: 0
+    max_value: 12
+    step: 1
+    lambda: "return id(night_end_hour);"
+    set_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          int val = int(roundf(x));
+          if(val < 0) val = 0;
+          if(val > 23) val = 23;
+          id(night_end_hour) = val;
+          id(num_night_end_hour).publish_state(val);
+
+  # FRT-6: post-feed absorption hold minutes.
+  - platform: template
+    id: num_post_feed_hold_min
+    name: "Post Feed Hold (min)"
+    min_value: 0
+    max_value: 240
+    step: 5
+    lambda: "return id(post_feed_hold_min);"
+    set_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          int val = int(roundf(x));
+          if(val < 0) val = 0;
+          if(val > 240) val = 240;
+          id(post_feed_hold_min) = val;
+          id(num_post_feed_hold_min).publish_state(val);
+
+  # IRR-2: mister VPD hysteresis floor (kPa).
+  - platform: template
+    id: num_mister_hysteresis_kpa
+    name: "Mister Hysteresis (kPa)"
+    min_value: 0.05
+    max_value: 0.50
+    step: 0.01
+    lambda: "return id(mister_hysteresis_kpa);"
+    set_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          float val = x;
+          if(val < 0.05f) val = 0.05f;
+          if(val > 0.50f) val = 0.50f;
+          id(mister_hysteresis_kpa) = val;
+          id(num_mister_hysteresis_kpa).publish_state(val);
+
+  # SAF-4: absolute daily mister volume hard-ceiling (gal).
+  - platform: template
+    id: num_mister_daily_volume_max
+    name: "Mister Daily Volume Max (gal)"
+    min_value: 100
+    max_value: 600
+    step: 10
+    lambda: "return id(mister_daily_volume_max_gal);"
+    set_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          float val = x;
+          if(val < 100.0f) val = 100.0f;
+          if(val > 600.0f) val = 600.0f;
+          id(mister_daily_volume_max_gal) = val;
+          id(num_mister_daily_volume_max).publish_state(val);
+
 # ─────────────────────────────── BOOL SWITCHES ────────────────────────────────
 # These template switches expose boolean configuration flags to Home Assistant.
 # Users can toggle these switches in the UI, which updates the corresponding
@@ -1843,6 +1947,42 @@ switch:
           id(cfg_first_pull_ok) = true;
           id(fog_stress_window_extend_enabled) = false;
           id(sw_fog_stress_window_extend_enabled).publish_state(false);
+
+  # ENV-2: night econ-heat suppression master enable (default ON).
+  - platform: template
+    id: sw_night_econ_heat_suppress_enabled_switch
+    name: "Night Econ Heat Suppress Enabled"
+    optimistic: false
+    restore_mode: RESTORE_DEFAULT_ON
+    lambda: "return id(sw_night_econ_heat_suppress_enabled);"
+    turn_on_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(sw_night_econ_heat_suppress_enabled) = true;
+          id(sw_night_econ_heat_suppress_enabled_switch).publish_state(true);
+    turn_off_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(sw_night_econ_heat_suppress_enabled) = false;
+          id(sw_night_econ_heat_suppress_enabled_switch).publish_state(false);
+
+  # CYC-1/SAF-3: authoritative dusk cutoff master enable (default ON).
+  - platform: template
+    id: sw_dusk_cutoff_enabled_switch
+    name: "Dusk Cutoff Enabled"
+    optimistic: false
+    restore_mode: RESTORE_DEFAULT_ON
+    lambda: "return id(sw_dusk_cutoff_enabled);"
+    turn_on_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(sw_dusk_cutoff_enabled) = true;
+          id(sw_dusk_cutoff_enabled_switch).publish_state(true);
+    turn_off_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(sw_dusk_cutoff_enabled) = false;
+          id(sw_dusk_cutoff_enabled_switch).publish_state(false);
 
   # Grow light auto mode — enable DLI-based supplementation
   - platform: template

@@ -83,18 +83,71 @@ inline bool fog_stress_hour_in_extension(int hour, int normal_end, int latest_ho
     return hour >= normal_end && hour < latest_hour;
 }
 
+// ── ENV-2: night-window test (wrap-aware) ──────────────────────────────
+// Returns true when `hour` is inside the night window [start, end). When
+// start > end the window crosses midnight (e.g. 20→6 means 20:00-05:59).
+// Mirrors fog_hour_in_window semantics so day/night phrasing is consistent.
+inline bool is_night_hour(int hour, int night_start, int night_end) noexcept {
+    hour = std::max(0, std::min(23, hour));
+    night_start = std::max(0, std::min(23, night_start));
+    night_end = std::max(0, std::min(23, night_end));
+    if (night_start == night_end) return false;  // degenerate → treat as no night window
+    return (night_start <= night_end)
+        ? (hour >= night_start && hour < night_end)
+        : (hour >= night_start || hour < night_end);
+}
+
+// ── ENV-2: suppress the IDLE econ VPD-rescue heat path overnight ───────
+// The econ-rescue heat (resolve_equipment IDLE: fires heat1 when
+// vpd < vpd_low_eff && econ_block) has NO time-of-day gate today. Raising
+// the night VPD floor makes it fire MORE overnight — heat-to-chase-humidity,
+// which collapses the day/night drop. Suppress it during the night window.
+inline bool night_econ_heat_suppressed(const SensorInputs& in, const Setpoints& sp) noexcept {
+    return sp.sw_night_econ_heat_suppress_enabled
+        && is_night_hour(in.local_hour, sp.night_start_hour, sp.night_end_hour);
+}
+
+// ── CYC-1 / SAF-3: authoritative VPD-independent dusk cutoff ───────────
+// The single hard rail. "After dusk" = the hour is in the dark window
+// [dusk_cutoff_hour, night_end_hour) (wrap-aware). When enabled, ALL fog
+// and climate-driven mister wetting must cease here, BEFORE any stress
+// extension. This is the firmware companion to the dispatcher pushing
+// sunset−2h into dusk_cutoff_hour. night_end_hour (sunrise) re-opens
+// wetting in the morning; the window therefore covers dusk→dawn.
+inline bool past_dusk_cutoff(const SensorInputs& in, const Setpoints& sp) noexcept {
+    if (!sp.sw_dusk_cutoff_enabled) return false;
+    return is_night_hour(in.local_hour, sp.dusk_cutoff_hour, sp.night_end_hour);
+}
+
+// Cap a stress-window latest-hour at the dusk cutoff so no VPD-driven
+// stress extension can push wetting past the authoritative rail. When the
+// cutoff is disabled the original latest_hour is returned unchanged.
+inline int dusk_capped_latest_hour(int latest_hour, const Setpoints& sp) noexcept {
+    if (!sp.sw_dusk_cutoff_enabled) return latest_hour;
+    return std::min(latest_hour, sp.dusk_cutoff_hour);
+}
+
 inline bool direct_wet_stress_override_permitted(const SensorInputs& in, const Setpoints& sp) noexcept {
+    // SAF-3: the dry-stress wetting window is capped at the dusk cutoff so a
+    // high-VPD reading can never extend misting past dark.
     return sp.direct_wet_stress_override_enabled
-        && in.local_hour < sp.direct_wet_stress_latest_hour
+        && !past_dusk_cutoff(in, sp)
+        && in.local_hour < dusk_capped_latest_hour(sp.direct_wet_stress_latest_hour, sp)
         && in.vpd_kpa > (sp.vpd_high + sp.direct_wet_stress_vpd_margin_kpa)
         && dew_margin_f(in) >= sp.direct_wet_stress_min_dew_margin_f;
 }
 
 inline const char* climate_wet_assist_block_reason(const SensorInputs& in, const Setpoints& sp) noexcept {
     if (moisture_blocked_by_occupancy(in, sp)) return "occupancy";
+    // FRT-6: absorption hold — block ALL clean wetting after a feed.
+    if (sp.feed_hold_active) return "feed_hold";
+    // SAF-3: the dusk cutoff is a hard, VPD-independent rail evaluated
+    // BEFORE the below_threshold / stress checks so no high-VPD reading can
+    // keep misting alive past dark.
+    if (past_dusk_cutoff(in, sp)) return "dusk_cutoff";
     if (in.vpd_kpa <= (sp.vpd_high + sp.direct_wet_stress_vpd_margin_kpa)) return "below_threshold";
     if (dew_margin_f(in) < sp.direct_wet_stress_min_dew_margin_f) return "dew_margin";
-    if (in.local_hour >= sp.direct_wet_stress_latest_hour) return "time_window";
+    if (in.local_hour >= dusk_capped_latest_hour(sp.direct_wet_stress_latest_hour, sp)) return "time_window";
     return "";
 }
 
@@ -103,8 +156,15 @@ inline bool climate_wet_assist_permitted(const SensorInputs& in, const Setpoints
 }
 
 inline bool fog_stress_window_permitted(const SensorInputs& in, const Setpoints& sp) noexcept {
+    // SAF-3: cap the fog stress extension at the dusk cutoff so high-VPD
+    // dry-stress cannot push fog past dark (today it extended to hour 22,
+    // ~2h past sunset). past_dusk_cutoff() is an additional hard rail in
+    // case the cutoff falls inside the [fog_window_end, latest) band.
+    if (past_dusk_cutoff(in, sp)) return false;
     return sp.fog_stress_window_extend_enabled
-        && fog_stress_hour_in_extension(in.local_hour, sp.fog_window_end, sp.fog_stress_window_latest_hour)
+        && fog_stress_hour_in_extension(
+               in.local_hour, sp.fog_window_end,
+               dusk_capped_latest_hour(sp.fog_stress_window_latest_hour, sp))
         && in.vpd_kpa > sp.vpd_high
         && dew_margin_f(in) >= sp.fog_stress_min_dew_margin_f;
 }
@@ -170,9 +230,23 @@ inline bool fog_permitted(const SensorInputs& in, const Setpoints& sp) noexcept 
 
 inline const char* climate_fog_assist_block_reason(const SensorInputs& in, const Setpoints& sp) noexcept {
     if (moisture_blocked_by_occupancy(in, sp)) return "occupancy";
+    // SAF-6: at/above the safety_max rail, evaporative fog is a survival
+    // cooling aid — neither the absorption hold nor the dusk cutoff may
+    // suppress it. (SAFETY_COOL in resolve_equipment calls this gate.)
+    const bool safety_cool_active = in.temp_f >= sp.safety_max;
+    // FRT-6: fogger is clean-water-only; block it during the absorption hold
+    // so a feed is not immediately rinsed/diluted at the canopy.
+    if (!safety_cool_active && sp.feed_hold_active) return "feed_hold";
+    // SAF-3: dusk cutoff is the authoritative VPD-independent rail; evaluate
+    // it before below_threshold so no stress reading keeps fog past dark.
+    if (!safety_cool_active && past_dusk_cutoff(in, sp)) return "dusk_cutoff";
     if (in.vpd_kpa <= sp.vpd_high) return "below_threshold";
     if (dew_margin_f(in) < sp.fog_stress_min_dew_margin_f) return "dew_margin";
-    if (in.local_hour >= sp.fog_stress_window_latest_hour) return "time_window";
+    // The time-window/dusk caps gate dry-down strategy, not survival cooling.
+    if (!safety_cool_active
+        && in.local_hour >= dusk_capped_latest_hour(sp.fog_stress_window_latest_hour, sp)) {
+        return "time_window";
+    }
     if (in.rh_pct > sp.fog_rh_ceiling) return "rh_ceiling";
     if (in.temp_f < sp.fog_min_temp) return "temp_low";
     return "";
@@ -1767,8 +1841,15 @@ inline RelayOutputs resolve_equipment(
             // interior target AND temp is below the interior cooling
             // target minus econ_heat_margin_f. Same semantics as before,
             // retargeted to the band interior.
+            //
+            // ENV-2: suppress this path overnight. It is the only
+            // heat-to-chase-humidity path in the controller; raising the
+            // night VPD floor (DB diurnal curve) would make it fire across
+            // the dark hours and erase the ≥10°F day/night drop the Vanda
+            // needs. Safety heat (handled by SAFETY_HEAT mode) is untouched.
             if (in.vpd_kpa < vpd_low_eff && sp.econ_block
-                && in.temp_f < Thigh - sp.econ_heat_margin_f) {
+                && in.temp_f < Thigh - sp.econ_heat_margin_f
+                && !night_econ_heat_suppressed(in, sp)) {
                 out.heat1 = true;
             }
             break;

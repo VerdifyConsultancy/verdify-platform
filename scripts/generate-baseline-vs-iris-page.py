@@ -433,7 +433,7 @@ The comparison is more useful when stress is shown beside what the greenhouse sp
 ## Definitions
 
 <div class="data-table">
-  <div class="data-row"><strong>Both-axis compliance</strong><span><code>daily_summary.compliance_pct</code></span><p>Percent of samples where temperature and VPD were both inside the firmware-enforced band.</p></div>
+  <div class="data-row"><strong>Both-axis compliance</strong><span><code>daily_summary.compliance_pct</code></span><p>Percent of samples where temperature and VPD were both inside the served band (binary, house-level). A graded, per-zone, feasibility-aware compliance metric (<code>compliance_v2_*</code>) is being phased in alongside this figure; this page continues to report the binary house metric until the graded metric is promoted.</p></div>
   <div class="data-row"><strong>Cumulative stress-axis hours/day</strong><span>Heat + cold + VPD-high + VPD-low</span><p>Summed daily stress duration from corrected daily summary fields. This is not capped at one stress type; a hot-dry hour can count on more than one axis.</p></div>
   <div class="data-row"><strong>Planner score</strong><span><code>v_planner_performance.planner_score</code></span><p>Composite score: 80% compliance and 20% cost efficiency. It is useful as an operational KPI, not as a yield claim.</p></div>
   <div class="data-row"><strong>Runtime-modeled electric energy/day</strong><span><code>daily_summary.kwh_estimated</code></span><p>Electric energy from published equipment wattage multiplied by observed on-time; metered kWh is retained separately as diagnostic evidence.</p></div>
