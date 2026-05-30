@@ -480,7 +480,25 @@ interval:
               .sw_dusk_cutoff_enabled = id(sw_dusk_cutoff_enabled),
               .dusk_cutoff_hour = id(dusk_cutoff_hour),
               // FRT-6 absorption hold (computed above from feed_hold_until_ms).
-              .feed_hold_active = feed_hold_active
+              .feed_hold_active = feed_hold_active,
+              // IRR-3 dawn rehydrate: anchor the window start to the DISPATCHED
+              // sunrise hour (gl_sunrise_hour) so it tracks the season; the
+              // dispatcher can refine it later. Minute/duration/on/gap are the
+              // new operator tunables.
+              .sw_dawn_rehydrate_enabled = id(sw_dawn_rehydrate_enabled),
+              .dawn_rehydrate_start_hour = id(gl_sunrise_hour),
+              .dawn_rehydrate_start_minute = id(dawn_rehydrate_start_minute),
+              .dawn_rehydrate_window_min = id(dawn_rehydrate_window_min),
+              .dawn_rehydrate_on_s = id(dawn_rehydrate_on_s),
+              .dawn_rehydrate_gap_s = id(dawn_rehydrate_gap_s),
+              // IRR-4 midday drench: anchored to midday_drench_hour (default 14
+              // ~= solar/thermal peak; dispatcher-overridable global).
+              .sw_midday_drench_enabled = id(sw_midday_drench_enabled),
+              .midday_drench_hour = id(midday_drench_hour),
+              .midday_drench_start_minute = id(midday_drench_start_minute),
+              .midday_drench_window_min = id(midday_drench_window_min),
+              .midday_drench_on_s = id(midday_drench_on_s),
+              .midday_drench_gap_s = id(midday_drench_gap_s)
           };
 
           validate_setpoints(setpts);
@@ -1044,6 +1062,40 @@ interval:
 
               const uint32_t PULSE_ON_MS  = uint32_t(id(mister_pulse_on_s)) * 1000UL;
               const uint32_t PULSE_GAP_MS = uint32_t(id(mister_pulse_gap_s)) * 1000UL;
+
+              // ── IRR-3 (dawn rehydrate) / IRR-4 (midday drench) ──
+              // Re-evaluate the CENTER-zone time-anchored cadence override with
+              // minute-precise SNTP (determine_mode only had local_hour, so its
+              // ctl_state.center_burst is hour-granular). center_burst_decision
+              // re-checks every rail (feed-hold, dusk cutoff, dew margin,
+              // over-saturation VPD gate, occupancy, plausibility) from the same
+              // sensor_in/setpts the FSM used, so the burst can fire only when
+              // the center is already eligible to wet. It does NOT bypass the
+              // SAF-4 duty cap / daily-volume ceiling (center_wet_allowed +
+              // mister_volume_hard_block, enforced above) — those still gate the
+              // relay, so a burst counts toward and is bounded by the cap. The
+              // override touches ONLY the center pulse ON/GAP; west/south/east
+              // keep the base cadence.
+              CenterBurst center_burst = wet_time_valid
+                ? center_burst_decision(wet_now_minute, sensor_in, setpts)
+                : CENTER_BURST_NONE;
+              // The center burst is also disallowed if the center zone itself is
+              // not currently wet-eligible (duty cap reached / volume ceiling /
+              // crop+climate gate closed) — never drive a denser cadence into a
+              // capped zone.
+              if(!center_wet_allowed) center_burst = CENTER_BURST_NONE;
+              ctl_state.center_burst = center_burst;
+              int center_burst_on_s = 0, center_burst_gap_s = 0;
+              const bool center_burst_active =
+                  center_burst_cadence_s(center_burst, setpts, center_burst_on_s, center_burst_gap_s);
+              const uint32_t CENTER_PULSE_ON_MS  = center_burst_active
+                  ? (uint32_t)center_burst_on_s  * 1000UL : PULSE_ON_MS;
+              const uint32_t CENTER_PULSE_GAP_MS = center_burst_active
+                  ? (uint32_t)center_burst_gap_s * 1000UL : PULSE_GAP_MS;
+              // Per-zone cadence: ONLY zone 3 (center) gets the burst override.
+              auto pulse_on_ms_for  = [&](int zone) -> uint32_t { return zone == 3 ? CENTER_PULSE_ON_MS  : PULSE_ON_MS;  };
+              auto pulse_gap_ms_for = [&](int zone) -> uint32_t { return zone == 3 ? CENTER_PULSE_GAP_MS : PULSE_GAP_MS; };
+
               // IRR-2: raise the hysteresis floor from the legacy 0.05 to the
               // operator-tunable mister_hysteresis_kpa (default 0.10) so the
               // mister state machine cannot chatter inside a tight band. Still
@@ -1197,9 +1249,12 @@ interval:
                   id(mister_state) = 1;  // S1 = single zone pulse
                   id(mister_vpd_at_start) = avg_vpd;  // Track effectiveness
                   turn_on_zone(zone);
-                  id(mister_pulse_timer_ms) = PULSE_ON_MS;
-                  ESP_LOGI("mister","S1 MISTERS: pulse %s %ds (VPD=%.2f, target=%.2f)",
-                           zone_names[zone], id(mister_pulse_on_s), avg_vpd,
+                  // IRR-3/IRR-4: cadence keyed on the ACTUAL fired zone
+                  // (turn_on_zone may remap to first_allowed); center override
+                  // only applies to zone 3.
+                  id(mister_pulse_timer_ms) = pulse_on_ms_for(id(mister_pulse_zone));
+                  ESP_LOGI("mister","S1 MISTERS: pulse %s %ums (VPD=%.2f, target=%.2f)",
+                           zone_names[zone], (unsigned)pulse_on_ms_for(id(mister_pulse_zone)), avg_vpd,
                            zone == 1 ? id(vpd_target_south) : zone == 2 ? id(vpd_target_west) : id(vpd_target_center));
                 }
               }
@@ -1214,7 +1269,10 @@ interval:
                     int zone = select_zone_for_pulse();
                     if(zone == 0) zone = fallback_wet_zone();
                     turn_on_zone(zone);
-                  uint32_t weighted_ms = PULSE_ON_MS;
+                  // IRR-3/IRR-4: base ON keyed on actual fired zone (center
+                  // burst override applies only to zone 3). The south/west
+                  // VPD-weight multiplier is unchanged and never touches center.
+                  uint32_t weighted_ms = pulse_on_ms_for(id(mister_pulse_zone));
                   float svpd = isnan(south_vpd) ? 0.0f : south_vpd;
                   float wvpd = isnan(west_vpd) ? 0.0f : west_vpd;
                   float max_vpd = max(max(svpd, wvpd), avg_vpd);
@@ -1240,7 +1298,7 @@ interval:
                   int zone = select_zone_for_pulse();
                   if(zone == 0) zone = fallback_wet_zone();
                   turn_on_zone(zone);
-                id(mister_pulse_timer_ms) = PULSE_ON_MS;
+                id(mister_pulse_timer_ms) = pulse_on_ms_for(id(mister_pulse_zone));
               }
 
               // --- DE-ESCALATE S1 → off ---
@@ -1265,16 +1323,20 @@ interval:
                 if(id(mister_pulse_timer_ms) == 0){
                   if(id(mister_pulse_zone) > 0){
                     // === PULSE ON → GAP ===
+                    // IRR-3/IRR-4: capture the just-finished zone BEFORE
+                    // turn_off_all_misters() clears mister_pulse_zone, so the
+                    // GAP after a CENTER pulse uses the denser center gap.
+                    const int finished_zone = id(mister_pulse_zone);
                     // Track effectiveness: VPD change during this pulse
                     if(!isnan(id(mister_vpd_at_start)) && !isnan(avg_vpd)){
                       float delta = avg_vpd - id(mister_vpd_at_start);
                       id(mister_vpd_delta).publish_state(delta);
                       ESP_LOGI("mister","Pulse done: zone=%s delta=%.3f kPa (%.2f → %.2f)",
-                               zone_names[id(mister_pulse_zone)], delta,
+                               zone_names[finished_zone], delta,
                                id(mister_vpd_at_start), avg_vpd);
                     }
                     turn_off_all_misters();
-                    id(mister_pulse_timer_ms) = PULSE_GAP_MS;
+                    id(mister_pulse_timer_ms) = pulse_gap_ms_for(finished_zone);
 
                   }else{
                     // === GAP → NEXT PULSE ===
@@ -1284,9 +1346,9 @@ interval:
                         if(zone == 0) zone = fallback_wet_zone();
                       id(mister_vpd_at_start) = avg_vpd;  // Track effectiveness
                       turn_on_zone(zone);
-                      id(mister_pulse_timer_ms) = PULSE_ON_MS;
-                      ESP_LOGI("mister","PULSE: %s %ds (VPD=%.2f)",
-                               zone_names[zone], id(mister_pulse_on_s), avg_vpd);
+                      id(mister_pulse_timer_ms) = pulse_on_ms_for(id(mister_pulse_zone));
+                      ESP_LOGI("mister","PULSE: %s %ums (VPD=%.2f)",
+                               zone_names[zone], (unsigned)pulse_on_ms_for(id(mister_pulse_zone)), avg_vpd);
 
                     }else if(id(mister_state) == 2){
                         // S2: pick the most stressed zone each pulse (not round-robin)
@@ -1294,8 +1356,11 @@ interval:
                         if(zone == 0) zone = fallback_wet_zone();
                       id(mister_vpd_at_start) = avg_vpd;  // Track effectiveness
                       turn_on_zone(zone);
-                      // VPD-weighted duration for high-stress zones
-                      uint32_t weighted_ms = PULSE_ON_MS;
+                      // VPD-weighted duration for high-stress zones. Base ON is
+                      // keyed on the actual fired zone (IRR-3/IRR-4 center burst
+                      // override applies only to zone 3); the south/west VPD
+                      // weight multiplier is unchanged and never touches center.
+                      uint32_t weighted_ms = pulse_on_ms_for(id(mister_pulse_zone));
                       float zone_vpd = (zone == 1) ? south_vpd : (zone == 2) ? west_vpd : avg_vpd;
                       float zone_target = (zone == 1) ? id(vpd_target_south) : (zone == 2) ? id(vpd_target_west) : id(vpd_target_center);
                       if(!isnan(zone_vpd) && zone_target > 0 && zone_vpd > zone_target * 1.2f){

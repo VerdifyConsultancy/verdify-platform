@@ -72,7 +72,7 @@ class TunableDef(BaseModel):
     fw_clamp_hi: float | None = None
     esp_object_id: str | None
     cfg_readback_object_id: str | None = None
-    push_owner: Literal["planner", "band", "safety", "operator", "dispatcher_default", "firmware_internal"]
+    push_owner: Literal["planner", "band", "schedule", "safety", "operator", "dispatcher_default", "firmware_internal"]
     planner_pushable: bool = True
     tier: Literal[1, 2] = 1
     enum_values: dict[str, int] | None = None
@@ -81,7 +81,7 @@ class TunableDef(BaseModel):
     @property
     def control_class(
         self,
-    ) -> Literal["planner_policy", "crop_band", "controller_safety", "readback_context", "retired"]:
+    ) -> Literal["planner_policy", "crop_band", "scheduled_policy", "controller_safety", "readback_context", "retired"]:
         """Canonical cleanup class used by planner/MCP/site surfaces."""
         return tunable_control_class(self.name, self)
 
@@ -1150,8 +1150,8 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=90,
         esp_object_id="direct_wet_min_temp__f_",
         cfg_readback_object_id="cfg_direct_wet_min_temp_f",
-        push_owner="planner",
-        planner_pushable=True,
+        push_owner="schedule",
+        planner_pushable=False,
         tier=2,
         notes="Minimum house temperature for automated direct wetting across misters, fert paths, and drips.",
     ),
@@ -1165,8 +1165,8 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=720,
         esp_object_id="direct_wet_south_start_offset__min_",
         cfg_readback_object_id="cfg_direct_wet_south_start_offset_min",
-        push_owner="planner",
-        planner_pushable=True,
+        push_owner="schedule",
+        planner_pushable=False,
         tier=2,
         notes="South-zone direct-wet start offset from global activity start. Applies to clean/fert wetting paths in the zone.",
     ),
@@ -1180,8 +1180,8 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=720,
         esp_object_id="direct_wet_wall_start_offset__min_",
         cfg_readback_object_id="cfg___direct_wet_wall_start_offset__min_",
-        push_owner="planner",
-        planner_pushable=True,
+        push_owner="schedule",
+        planner_pushable=False,
         tier=2,
         notes="Wall drip direct-wet start offset from global activity start. Applies to wall clean/fert drip and flush paths.",
     ),
@@ -1195,8 +1195,8 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=720,
         esp_object_id="direct_wet_wall_drydown_before_off__min_",
         cfg_readback_object_id="cfg___direct_wet_wall_drydown_before_off__min_",
-        push_owner="planner",
-        planner_pushable=True,
+        push_owner="schedule",
+        planner_pushable=False,
         tier=2,
         notes="Wall drip drydown hold before global activity off. Applies to wall clean/fert drip and flush paths.",
     ),
@@ -1210,8 +1210,8 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=720,
         esp_object_id="direct_wet_south_drydown_before_off__min_",
         cfg_readback_object_id="cfg_direct_wet_south_drydown_before_off_min",
-        push_owner="planner",
-        planner_pushable=True,
+        push_owner="schedule",
+        planner_pushable=False,
         tier=2,
         notes="South-zone drydown hold before global activity off. Applies to clean/fert wetting paths in the zone.",
     ),
@@ -1225,8 +1225,8 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=720,
         esp_object_id="direct_wet_west_start_offset__min_",
         cfg_readback_object_id="cfg_direct_wet_west_start_offset_min",
-        push_owner="planner",
-        planner_pushable=True,
+        push_owner="schedule",
+        planner_pushable=False,
         tier=2,
         notes="West-zone direct-wet start offset from global activity start. Applies to clean/fert wetting paths in the zone.",
     ),
@@ -1240,8 +1240,8 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=720,
         esp_object_id="direct_wet_west_drydown_before_off__min_",
         cfg_readback_object_id="cfg_direct_wet_west_drydown_before_off_min",
-        push_owner="planner",
-        planner_pushable=True,
+        push_owner="schedule",
+        planner_pushable=False,
         tier=2,
         notes="West-zone drydown hold before global activity off. Applies to clean/fert wetting paths in the zone.",
     ),
@@ -1255,8 +1255,8 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=720,
         esp_object_id="direct_wet_center_start_offset__min_",
         cfg_readback_object_id="cfg_direct_wet_center_start_offset_min",
-        push_owner="planner",
-        planner_pushable=True,
+        push_owner="schedule",
+        planner_pushable=False,
         tier=2,
         notes="Center-zone direct-wet start offset from global activity start. Applies to clean/fert wetting paths in the zone.",
     ),
@@ -1270,8 +1270,8 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=720,
         esp_object_id="direct_wet_center_drydown_before_off__min_",
         cfg_readback_object_id="cfg_direct_wet_center_drydown_before_off_min",
-        push_owner="planner",
-        planner_pushable=True,
+        push_owner="schedule",
+        planner_pushable=False,
         tier=2,
         notes="Center-zone drydown hold before global activity off. Applies to clean/fert wetting paths in the zone.",
     ),
@@ -1423,8 +1423,8 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=127,
         esp_object_id="irrig_wall_days_mask",
         cfg_readback_object_id="cfg_irrig_wall_days_mask",
-        push_owner="planner",
-        planner_pushable=True,
+        push_owner="schedule",
+        planner_pushable=False,
         tier=2,
         notes="Explicit wall watering day mask, bit0=Sunday through bit6=Saturday.",
     ),
@@ -1438,8 +1438,8 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=127,
         esp_object_id="irrig_wall_fert_days_mask",
         cfg_readback_object_id="cfg_irrig_wall_fert_days_mask",
-        push_owner="planner",
-        planner_pushable=True,
+        push_owner="schedule",
+        planner_pushable=False,
         tier=2,
         notes="Explicit wall fertigation day mask. Nonzero supersedes irrig_wall_fert_every_n.",
     ),
@@ -1552,8 +1552,8 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=127,
         esp_object_id="irrig_center_days_mask",
         cfg_readback_object_id="cfg_irrig_center_days_mask",
-        push_owner="planner",
-        planner_pushable=True,
+        push_owner="schedule",
+        planner_pushable=False,
         tier=2,
         notes="Explicit center watering day mask, bit0=Sunday through bit6=Saturday.",
     ),
@@ -1567,8 +1567,8 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=127,
         esp_object_id="irrig_center_fert_days_mask",
         cfg_readback_object_id="cfg_irrig_center_fert_days_mask",
-        push_owner="planner",
-        planner_pushable=True,
+        push_owner="schedule",
+        planner_pushable=False,
         tier=2,
         notes="Explicit center fertigation day mask. Nonzero supersedes irrig_center_fert_every_n.",
     ),
@@ -1733,8 +1733,8 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=1080,
         esp_object_id="gl_main_target_light_minutes",
         cfg_readback_object_id="cfg_gl_main_target_light_minutes",
-        push_owner="planner",
-        planner_pushable=True,
+        push_owner="schedule",
+        planner_pushable=False,
         tier=2,
         notes="Main/overhead daily qualified-light-minutes target. A minute counts once when natural lux is above threshold or the actual switch is ON.",
     ),
@@ -1748,8 +1748,8 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=100000,
         esp_object_id="gl_main_lux_threshold",
         cfg_readback_object_id="cfg_gl_main_lux_threshold",
-        push_owner="planner",
-        planner_pushable=True,
+        push_owner="schedule",
+        planner_pushable=False,
         tier=2,
         notes="Main/overhead circuit ON threshold from Tempest outdoor lux.",
     ),
@@ -1763,8 +1763,8 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=25000,
         esp_object_id="gl_main_lux_hysteresis",
         cfg_readback_object_id="cfg_gl_main_lux_hysteresis",
-        push_owner="planner",
-        planner_pushable=True,
+        push_owner="schedule",
+        planner_pushable=False,
         tier=2,
         notes="Main/overhead circuit OFF threshold is ON threshold plus this hysteresis.",
     ),
@@ -1778,8 +1778,8 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=23,
         esp_object_id="gl_main_sunrise_hour",
         cfg_readback_object_id="cfg_gl_main_sunrise_hour",
-        push_owner="planner",
-        planner_pushable=True,
+        push_owner="schedule",
+        planner_pushable=False,
         tier=2,
         notes="Earliest local hour the main/overhead circuit may turn on.",
     ),
@@ -1793,8 +1793,8 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=23,
         esp_object_id="gl_main_sunset_hour",
         cfg_readback_object_id="cfg_gl_main_sunset_hour",
-        push_owner="planner",
-        planner_pushable=True,
+        push_owner="schedule",
+        planner_pushable=False,
         tier=2,
         notes="Latest local hour the main/overhead circuit may remain on.",
     ),
@@ -1808,8 +1808,8 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=3600,
         esp_object_id="gl_main_min_on_s",
         cfg_readback_object_id="cfg_gl_main_min_on_s",
-        push_owner="planner",
-        planner_pushable=True,
+        push_owner="schedule",
+        planner_pushable=False,
         tier=2,
         notes="Minimum ON dwell for main/overhead lighting state machine.",
     ),
@@ -1823,8 +1823,8 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=3600,
         esp_object_id="gl_main_min_off_s",
         cfg_readback_object_id="cfg_gl_main_min_off_s",
-        push_owner="planner",
-        planner_pushable=True,
+        push_owner="schedule",
+        planner_pushable=False,
         tier=2,
         notes="Minimum OFF dwell for main/overhead lighting state machine.",
     ),
@@ -1853,8 +1853,8 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=1080,
         esp_object_id="gl_grow_target_light_minutes",
         cfg_readback_object_id="cfg_gl_grow_target_light_minutes",
-        push_owner="planner",
-        planner_pushable=True,
+        push_owner="schedule",
+        planner_pushable=False,
         tier=2,
         notes="Grow/secondary daily qualified-light-minutes target. A minute counts once when natural lux is above threshold or the actual switch is ON.",
     ),
@@ -1868,8 +1868,8 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=100000,
         esp_object_id="gl_grow_lux_threshold",
         cfg_readback_object_id="cfg_gl_grow_lux_threshold",
-        push_owner="planner",
-        planner_pushable=True,
+        push_owner="schedule",
+        planner_pushable=False,
         tier=2,
         notes="Grow/secondary circuit ON threshold from Tempest outdoor lux.",
     ),
@@ -1883,8 +1883,8 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=25000,
         esp_object_id="gl_grow_lux_hysteresis",
         cfg_readback_object_id="cfg_gl_grow_lux_hysteresis",
-        push_owner="planner",
-        planner_pushable=True,
+        push_owner="schedule",
+        planner_pushable=False,
         tier=2,
         notes="Grow/secondary circuit OFF threshold is ON threshold plus this hysteresis.",
     ),
@@ -1898,8 +1898,8 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=23,
         esp_object_id="gl_grow_sunrise_hour",
         cfg_readback_object_id="cfg_gl_grow_sunrise_hour",
-        push_owner="planner",
-        planner_pushable=True,
+        push_owner="schedule",
+        planner_pushable=False,
         tier=2,
         notes="Earliest local hour the grow/secondary circuit may turn on.",
     ),
@@ -1913,8 +1913,8 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=23,
         esp_object_id="gl_grow_sunset_hour",
         cfg_readback_object_id="cfg_gl_grow_sunset_hour",
-        push_owner="planner",
-        planner_pushable=True,
+        push_owner="schedule",
+        planner_pushable=False,
         tier=2,
         notes="Latest local hour the grow/secondary circuit may remain on.",
     ),
@@ -1928,8 +1928,8 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=3600,
         esp_object_id="gl_grow_min_on_s",
         cfg_readback_object_id="cfg_gl_grow_min_on_s",
-        push_owner="planner",
-        planner_pushable=True,
+        push_owner="schedule",
+        planner_pushable=False,
         tier=2,
         notes="Minimum ON dwell for grow/secondary lighting state machine.",
     ),
@@ -1943,8 +1943,8 @@ REGISTRY: dict[str, TunableDef] = {
         fw_clamp_hi=3600,
         esp_object_id="gl_grow_min_off_s",
         cfg_readback_object_id="cfg_gl_grow_min_off_s",
-        push_owner="planner",
-        planner_pushable=True,
+        push_owner="schedule",
+        planner_pushable=False,
         tier=2,
         notes="Minimum OFF dwell for grow/secondary lighting state machine.",
     ),
@@ -2039,8 +2039,8 @@ REGISTRY: dict[str, TunableDef] = {
         default=1,
         esp_object_id="gl_main_auto_mode",
         cfg_readback_object_id="cfg_gl_main_auto_mode",
-        push_owner="planner",
-        planner_pushable=True,
+        push_owner="schedule",
+        planner_pushable=False,
         tier=2,
         notes="Per-circuit automation enable for main/overhead lighting.",
     ),
@@ -2050,8 +2050,8 @@ REGISTRY: dict[str, TunableDef] = {
         default=1,
         esp_object_id="gl_grow_auto_mode",
         cfg_readback_object_id="cfg_gl_grow_auto_mode",
-        push_owner="planner",
-        planner_pushable=True,
+        push_owner="schedule",
+        planner_pushable=False,
         tier=2,
         notes="Per-circuit automation enable for grow/secondary lighting.",
     ),
@@ -2444,13 +2444,31 @@ RETIRED_TUNABLES_REG: frozenset[str] = frozenset(
 
 def tunable_control_class(
     name: str, spec: TunableDef
-) -> Literal["planner_policy", "crop_band", "controller_safety", "readback_context", "retired"]:
+) -> Literal["planner_policy", "crop_band", "scheduled_policy", "controller_safety", "readback_context", "retired"]:
     """Classify a tunable for the cleanup contract.
 
     This is the single policy split used by MCP, planner context, and the
     public AI Tunables page. It deliberately separates visibility from
     writeability: non-policy rows stay documented and searchable, but planner
     may only write `planner_policy` rows.
+
+    `scheduled_policy` is the lighting/irrigation *schedule* layer
+    (`push_owner="schedule"`): per-circuit `gl_main_*`/`gl_grow_*` lighting
+    state-machine knobs and the `irrig_*`/`direct_wet_*` watering-schedule
+    offsets/masks. These are owned by the band/schedule layer that publishes
+    them every cycle — the planner reads them as context but does not drive
+    them (verified live: 0 planner-sourced `setpoint_changes` over 30d versus
+    the dispatcher `band` source that owns the cadence). They were previously
+    mislabeled `planner_policy`, inflating the writable surface with knobs Iris
+    never touched. They stay fully visible/readback-routed for traceability but
+    are no longer planner write targets. The genuinely tactical
+    `direct_wet_stress_*` / `sw_direct_wet_stress_override_enabled` override
+    knobs stay `planner_policy` (the planner actively pushes them during
+    VPD-high recovery).
+
+    Kept deliberately distinct from `crop_band` so the schedule layer does not
+    leak into `CROP_BAND_REG`/`BAND_OWNED_REG` (which the dispatcher and the
+    HTTP/setpoint-server fallbacks treat as the crop temp/VPD band surface).
     """
     if name in RETIRED_TUNABLES_REG:
         return "retired"
@@ -2458,6 +2476,8 @@ def tunable_control_class(
         return "readback_context"
     if spec.planner_pushable:
         return "planner_policy"
+    if spec.push_owner == "schedule":
+        return "scheduled_policy"
     if spec.push_owner == "band":
         return "crop_band"
     return "controller_safety"
@@ -2469,6 +2489,22 @@ def _contract_classes() -> dict[str, str]:
 
 def _all_tunables() -> frozenset[str]:
     return frozenset(REGISTRY)
+
+
+def _active_tunables() -> frozenset[str]:
+    """Live tunable surface — every registry row EXCEPT retired aliases.
+
+    Retired rows (`RETIRED_TUNABLES_REG`) stay in `REGISTRY` so their cfg_*
+    readbacks and legacy `setpoint_changes` history remain documented and
+    searchable (`control_class == "retired"`). They must NOT appear on the
+    live MCP/planner surface: they are not planner-pushable, MCP `set_tunable`
+    rejects them, and `get_setpoints` / the `ALL_TUNABLES` schema enum should
+    enumerate `ACTIVE_TUNABLES_REG` rather than `ALL_TUNABLES_REG` so a stale
+    alias the firmware no longer consumes (verified live 2026-05-29:
+    `fog_burst_min`, `mister_on_s`, `bias_heat`, etc. still receive dispatcher
+    writes) cannot masquerade as a live knob.
+    """
+    return frozenset(REGISTRY) - RETIRED_TUNABLES_REG
 
 
 def _tier1() -> frozenset[str]:
@@ -2493,6 +2529,19 @@ _LIGHTING_CIRCUIT_PREFIXES = ("gl_main_", "gl_grow_", "sw_gl_main_", "sw_gl_grow
 def _crop_band() -> frozenset[str]:
     """Tunables owned by crop/zone band policy rather than routine plans."""
     return frozenset(n for n, d in REGISTRY.items() if d.control_class == "crop_band")
+
+
+def _scheduled_policy() -> frozenset[str]:
+    """Lighting/irrigation schedule-layer tunables (push_owner="schedule").
+
+    Per-circuit `gl_main_*`/`gl_grow_*` lighting state-machine knobs and the
+    `irrig_*`/`direct_wet_*` watering-schedule offsets/masks. The band/schedule
+    layer publishes these every cycle; the planner sees them as read-only
+    context and MCP rejects planner writes. Deliberately disjoint from
+    `CROP_BAND_REG` so the schedule layer does not leak into the crop temp/VPD
+    band surface the dispatcher and HTTP fallbacks resolve.
+    """
+    return frozenset(n for n, d in REGISTRY.items() if d.control_class == "scheduled_policy")
 
 
 def _legacy_shared_lighting() -> frozenset[str]:
@@ -2554,10 +2603,12 @@ def _cfg_readback_aliases() -> dict[str, str]:
 # `ALL_TUNABLES` in `tunables.py` during migration; Phase 1d flips the legacy
 # module to import from here.
 ALL_TUNABLES_REG: frozenset[str] = _all_tunables()
+ACTIVE_TUNABLES_REG: frozenset[str] = _active_tunables()
 TIER1_REG: frozenset[str] = _tier1()
 PLANNER_PUSHABLE_REG: frozenset[str] = _planner_pushable()
 TUNABLE_CONTRACT_CLASSES_REG: dict[str, str] = _contract_classes()
 CROP_BAND_REG: frozenset[str] = _crop_band()
+SCHEDULED_POLICY_REG: frozenset[str] = _scheduled_policy()
 LEGACY_SHARED_LIGHTING_REG: frozenset[str] = _legacy_shared_lighting()
 BAND_OWNED_REG: frozenset[str] = CROP_BAND_REG | LEGACY_SHARED_LIGHTING_REG
 LIGHTING_CIRCUIT_DEFAULT_REG: frozenset[str] = _lighting_circuit_defaults()

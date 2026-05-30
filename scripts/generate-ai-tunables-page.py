@@ -104,6 +104,9 @@ class Evidence:
     last_readback_value: float | None = None
     readbacks_7d: int = 0
     clamps_30d: int = 0
+    clamps_24h: int = 0
+    clamp_avg_requested: float | None = None
+    clamp_avg_applied: float | None = None
     latest_clamp_ts: datetime | None = None
     latest_clamp_reason: str | None = None
     latest_rationale_plan: str | None = None
@@ -502,6 +505,9 @@ async def _load_evidence(params: list[str]) -> dict[str, Evidence]:
             """
             SELECT parameter,
                    COUNT(*) FILTER (WHERE ts > now() - interval '30 days')::int AS clamps_30d,
+                   COUNT(*) FILTER (WHERE ts > now() - interval '24 hours')::int AS clamps_24h,
+                   AVG(requested) FILTER (WHERE ts > now() - interval '30 days') AS avg_requested,
+                   AVG(applied) FILTER (WHERE ts > now() - interval '30 days') AS avg_applied,
                    MAX(ts) AS latest_clamp_ts
               FROM setpoint_clamps
              WHERE parameter = ANY($1::text[])
@@ -511,6 +517,9 @@ async def _load_evidence(params: list[str]) -> dict[str, Evidence]:
         ):
             ev = evidence[row["parameter"]]
             ev.clamps_30d = row["clamps_30d"] or 0
+            ev.clamps_24h = row["clamps_24h"] or 0
+            ev.clamp_avg_requested = float(row["avg_requested"]) if row["avg_requested"] is not None else None
+            ev.clamp_avg_applied = float(row["avg_applied"]) if row["avg_applied"] is not None else None
             ev.latest_clamp_ts = row["latest_clamp_ts"]
 
         for row in await conn.fetch(
@@ -571,6 +580,9 @@ async def _load_summary() -> dict[str, Any]:
               (SELECT COUNT(*) FROM setpoint_changes
                 WHERE ts > now() - interval '30 minutes' AND source='plan' AND trigger_id IS NOT NULL)::int
                 AS plan_dispatch_triggered_30m,
+              (SELECT COUNT(*) FROM planner_trigger_ledger
+                WHERE event_type = 'FORECAST_DEVIATION' AND created_at > now() - interval '14 days')::int
+                AS forecast_deviation_fires_14d,
               (SELECT jsonb_object_agg(source_type, count)
                  FROM (SELECT source_type, COUNT(*)::int AS count FROM verdify_embeddings GROUP BY source_type) e)
                 AS embedding_counts,
@@ -825,8 +837,8 @@ def _render_parameter_index(
             [
                 f"### {category}",
                 "",
-                "| Parameter | Class | Owner | Default / bounds | Active | Readback | Route | Planner status |",
-                "|---|---|---|---|---:|---:|---|---|",
+                "| Parameter | Class | Owner | Default / bounds | Active | Readback | Route | Clamps 30d | Planner status |",
+                "|---|---|---|---|---:|---:|---|---:|---|",
             ]
         )
         for name in sorted(grouped[category]):
@@ -838,13 +850,60 @@ def _render_parameter_index(
             route = _route_summary(name, spec, ev)
             if hit_count:
                 route = f"{route}; firmware refs {hit_count}"
+            clamps_cell = f"{ev.clamps_30d} ({_age(ev.latest_clamp_ts)})" if ev.clamps_30d else "-"
             rows.append(
                 "| "
                 f"`{name}` | `{spec.control_class}` | {owner} | default `{_fmt_value(spec.default)}`; {bounds} | "
                 f"{_fmt_value(ev.active_value)} | {_fmt_value(ev.last_readback_value)} ({_age(ev.last_readback_ts)}) | "
-                f"{route} | {_planner_status(name, spec, plan_required)} |"
+                f"{route} | {clamps_cell} | {_planner_status(name, spec, plan_required)} |"
             )
         rows.append("")
+    return rows
+
+
+def _render_clamp_activity(evidence: dict[str, Evidence]) -> list[str]:
+    """Surface dispatcher setpoint clamps so humans see what Iris asked for vs what landed.
+
+    The dispatcher clamps planner-pushed setpoints against the band/guardrail surface
+    each cycle (setpoint_clamps). Those events are fed to Iris through gather-plan-context
+    but were previously invisible on the public contract page. This section makes the
+    last-30-day clamp pressure legible: how often each parameter was clamped, the average
+    requested vs applied value, the most recent reason, and recency.
+    """
+    clamped = sorted(
+        (name for name, ev in evidence.items() if ev.clamps_30d),
+        key=lambda name: evidence[name].clamps_30d,
+        reverse=True,
+    )
+    rows = [
+        "## Clamp Activity (last 30 days)",
+        "",
+        "When the AI planning agent pushes a setpoint outside the active band or a guardrail floor/ceiling, "
+        "the dispatcher clamps it before it reaches the ESP32 and records the event in `setpoint_clamps`. "
+        "A high clamp count means the planner is repeatedly asking for a value the band/guardrail layer will "
+        "not honor; for moisture knobs that usually means aggressive VPD-hold misting is being capped. These "
+        "rows are sourced from `setpoint_clamps` grouped by parameter; the dispatcher also feeds them to the "
+        "planner each cycle through `scripts/gather-plan-context.sh`.",
+        "",
+    ]
+    if not clamped:
+        rows.extend(["No setpoint clamps recorded in the last 30 days.", ""])
+        return rows
+    rows.extend(
+        [
+            "| Parameter | Clamps 30d | Clamps 24h | Avg requested | Avg applied | Latest reason | Last clamp |",
+            "|---|---:|---:|---:|---:|---|---|",
+        ]
+    )
+    for name in clamped:
+        ev = evidence[name]
+        rows.append(
+            "| "
+            f"`{name}` | {ev.clamps_30d} | {ev.clamps_24h} | {_fmt_value(ev.clamp_avg_requested)} | "
+            f"{_fmt_value(ev.clamp_avg_applied)} | {_md(ev.latest_clamp_reason)} | "
+            f"{_fmt_dt(ev.latest_clamp_ts)} ({_age(ev.latest_clamp_ts)}) |"
+        )
+    rows.append("")
     return rows
 
 
@@ -905,6 +964,13 @@ def _render_full_page(
     plan_required: set[str],
     firmware_hits: dict[str, dict[str, int]],
 ) -> str:
+    forecast_deviation_fires = summary.get("forecast_deviation_fires_14d")
+    if forecast_deviation_fires is None:
+        forecast_deviation_status = "fire status unavailable at generation time"
+    elif forecast_deviation_fires:
+        forecast_deviation_status = f"fired {forecast_deviation_fires}x in the last 14 days"
+    else:
+        forecast_deviation_status = "configured; not currently firing (0 ledger fires in the last 14 days)"
     lines: list[str] = [
         _frontmatter().rstrip(),
         "",
@@ -934,7 +1000,11 @@ def _render_full_page(
         '  <div class="data-row"><strong><code>SOLAR_MAX</code></strong><span>Astral solar noon</span><p>Solar checkpoint for a small tactical correction or honest no-change acknowledgement.</p></div>',
         '  <div class="data-row"><strong><code>TRANSITION</code></strong><span>Peak stress and decline</span><p>Bounded tactical checkpoint for the two highest-signal day transitions.</p></div>',
         '  <div class="data-row"><strong><code>SUNSET</code></strong><span>Astral sunset</span><p>Required evening full plan for overnight cold, humidity, dew point, and pre-dawn posture.</p></div>',
-        '  <div class="data-row"><strong><code>FORECAST_DEVIATION</code></strong><span>Sigma-gated observed miss</span><p>Triggered only when actual outdoor conditions diverge materially from forecast after cooldown and threshold checks.</p></div>',
+        '  <div class="data-row"><strong><code>FORECAST_DEVIATION</code></strong>'
+        f"<span>Sigma-gated observed miss; {forecast_deviation_status}</span>"
+        "<p>Triggered only when actual outdoor conditions diverge materially from forecast after cooldown "
+        "and threshold checks. The ledger fire count is read live from <code>planner_trigger_ledger</code> "
+        "so this label reflects whether the trigger is actually firing, not just configured.</p></div>",
         '  <div class="data-row"><strong><code>MANUAL</code></strong><span>Operator initiated</span><p>Ad-hoc audited planner run with the same MCP bounds and audit metadata as scheduled triggers.</p></div>',
         "</div>",
         "",
@@ -978,6 +1048,7 @@ def _render_full_page(
             "",
         ]
     )
+    lines.extend(_render_clamp_activity(evidence))
     lines.extend(_render_parameter_index(evidence, plan_required, firmware_hits))
     lines.extend(
         [
@@ -1154,6 +1225,7 @@ def main() -> int:
             "## ClimateIntent AI Surface",
             "## Dispatcher-Owned Climate Targets",
             "## ClimateIntent Materialization Contract",
+            "## Clamp Activity (last 30 days)",
             "## Parameter Index",
             "`mister_engage_kpa` is effectful",
             "`fallback_window_s`",

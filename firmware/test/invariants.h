@@ -1,8 +1,9 @@
 #pragma once
 /*
- * invariants.h — 16 firmware behavioral invariants enforced against replay
- * traces. Each invariant is a pure function over a stream of per-minute
- * TraceRow records. First breach fails the replay run.
+ * invariants.h — 18+ firmware behavioral invariants enforced against replay
+ * traces (originally 16; +#17-#20 Vanda band-compliance, +#21-#22 IRR-3/IRR-4
+ * center-burst rails). Each invariant is a pure function over a stream of
+ * per-minute TraceRow records. First breach fails the replay run.
  *
  * See plan file at .claude-agents/iris-dev/plans/yo-iris-dev-you-help-humming-stonebraker.md
  * Appendix A for the canonical list + rationale.
@@ -263,6 +264,64 @@ inline bool check_19_feed_hold_no_clean_center(const TraceRow& r, ReportFn repor
     if (feeding_or_holding && (r.eq_mister_center || r.eq_fog)) {
         report(19, "feed_hold_no_clean_center", r,
                "center_mister/fog ON while fertilizer_master ON or feed-hold active");
+        return false;
+    }
+    return true;
+}
+
+// Build the minimal SensorInputs/Setpoints needed to evaluate the IRR-3/IRR-4
+// center-burst RAIL gate from a TraceRow. Only the rail-relevant fields are
+// populated (the dusk-cutoff, feed-hold, dew-margin, over-saturation, and
+// occupancy preconditions); the dawn/midday WINDOW config is intentionally
+// left at defaults because #21/#22 assert rails that are window-independent.
+inline void irr_burst_rail_view(const TraceRow& r, SensorInputs& in, Setpoints& sp) {
+    sp = default_setpoints();
+    sp.vpd_high = r.vpd_high;
+    sp.vpd_low  = r.vpd_low;
+    sp.dusk_cutoff_hour = r.dusk_cutoff_hour;
+    sp.sw_dusk_cutoff_enabled = r.dusk_cutoff_enabled;
+    sp.night_end_hour = (r.night_end_hour == 0 && r.night_start_hour == 0) ? 6 : r.night_end_hour;
+    sp.feed_hold_active = r.feed_hold_active;
+    in = SensorInputs{};
+    in.temp_f = r.temp_f;
+    in.rh_pct = r.rh_pct;
+    in.vpd_kpa = r.vpd_kpa;
+    in.dew_point_f = r.dew_point_f;
+    in.local_hour = r.local_hour;
+    in.occupied = r.occupied;
+    in.outdoor_temp_f = NAN;
+    in.outdoor_dewpoint_f = NAN;
+    in.outdoor_data_age_s = 99999u;
+}
+
+// #21 (IRR-3/IRR-4): a CENTER-zone dawn/midday burst can NEVER be permitted
+// past the CYC-1 dusk cutoff. center_burst_rails_permit() must be false on any
+// row that is past_dusk_cutoff(), regardless of VPD. Pure single-row check
+// over the row's actual dusk config — proves the burst respects the dusk rail
+// across the full history.
+inline bool check_21_center_burst_pre_dusk(const TraceRow& r, ReportFn report = default_report) {
+    SensorInputs in; Setpoints sp;
+    irr_burst_rail_view(r, in, sp);
+    if (!sensors_plausible(in)) return true;             // SENSOR_FAULT handled elsewhere
+    if (past_dusk_cutoff(in, sp) && center_burst_rails_permit(in, sp)) {
+        report(21, "center_burst_pre_dusk", r,
+               "IRR-3/IRR-4 center-burst rails permitted past the dusk cutoff");
+        return false;
+    }
+    return true;
+}
+
+// #22 (IRR-3/IRR-4 × FRT-6): a CENTER-zone dawn/midday burst can NEVER be
+// permitted during the post-feed absorption hold. center_burst_rails_permit()
+// must be false whenever feed_hold_active. (Vacuously true until the corpus
+// exports feed_hold_active; active thereafter — same as #19/#20.)
+inline bool check_22_center_burst_no_feed_hold(const TraceRow& r, ReportFn report = default_report) {
+    SensorInputs in; Setpoints sp;
+    irr_burst_rail_view(r, in, sp);
+    if (!sensors_plausible(in)) return true;
+    if (r.feed_hold_active && center_burst_rails_permit(in, sp)) {
+        report(22, "center_burst_no_feed_hold", r,
+               "IRR-3/IRR-4 center-burst rails permitted during the absorption hold");
         return false;
     }
     return true;
@@ -607,6 +666,9 @@ struct Runner {
         if (!check_18_fog_fert_exclusive(r, report))                { failures++; ok = false; }
         if (!check_19_feed_hold_no_clean_center(r, report))         { failures++; ok = false; }
         if (!check_20_feed_hold_window(c20, r, report))             { failures++; ok = false; }
+        // ── IRR-3 / IRR-4 center-burst rail invariants ──
+        if (!check_21_center_burst_pre_dusk(r, report))             { failures++; ok = false; }
+        if (!check_22_center_burst_no_feed_hold(r, report))         { failures++; ok = false; }
         return ok;
     }
 };

@@ -30,6 +30,14 @@ static_assert(IDLE == 7, "Mode enum ordering changed — update MODE_NAMES and s
 // Mister sub-stages within SEALED_MIST (owned by this code, not ESPHome)
 enum MistStage { MIST_WATCH, MIST_S1, MIST_S2, MIST_FOG };
 
+// IRR-3/IRR-4 center-zone time-anchored cadence override. NONE = use the
+// normal center pulse cadence; DAWN/MIDDAY = the controls.yaml center pulse
+// uses the denser dawn/midday on/gap instead. Center-zone only — never alters
+// west/south/east. Owned by this code (determine_mode), read by controls.yaml.
+enum CenterBurst { CENTER_BURST_NONE, CENTER_BURST_DAWN, CENTER_BURST_MIDDAY };
+
+inline constexpr const char* CENTER_BURST_NAMES[] = {"none", "dawn_rehydrate", "midday_drench"};
+
 inline constexpr const char* MODE_NAMES[] = {
     "SENSOR_FAULT", "SAFETY_COOL", "SAFETY_HEAT", "SEALED_MIST",
     "THERMAL_RELIEF", "VENTILATE", "DEHUM_VENT", "IDLE"
@@ -170,6 +178,34 @@ struct Setpoints {
     // drips) is blocked so the velamen absorbs the feed before a rinse.
     // The post-fert clean flush is relocated to fire AFTER the hold.
     bool     feed_hold_active;                     // default false; controls.yaml computes from feed_hold_until
+    // ── IRR-3 (dawn rehydrate) / IRR-4 (midday drench) ──
+    // Two time-anchored CENTER-ZONE mist cadence OVERRIDES for the bare-root
+    // Vanda. They do NOT create a new relay path or a new mode — they only
+    // make the existing center-mist pulse cadence (controls.yaml PULSE_ON/GAP)
+    // denser inside two short pre-dusk windows, so the velamen re-saturates
+    // after the overnight dry-down (dawn) and gets a deeper midday soak at the
+    // solar/thermal peak. West/south/east cadence is untouched. Both windows
+    // remain inside the FSM + every safety rail: the dawn/midday burst is
+    // permitted ONLY when the center is already eligible to wet (climate wet
+    // assist gate: not feed-hold, not past dusk, dew margin OK, VPD above the
+    // center target), so the SAF-4 duty cap, daily-volume ceiling, FRT-6
+    // absorption hold, CYC-1 dusk cutoff, and SENSOR_FAULT all still bound it.
+    //
+    // Anchors reuse dispatched hours: dawn = sunrise hour (gl_sunrise_hour),
+    // midday = midday_drench_hour (a dispatcher-overridable global, default 14
+    // ~= solar/thermal peak). on/gap/duration are the new tunables below.
+    bool     sw_dawn_rehydrate_enabled;            // default true; IRR-3 master enable
+    int      dawn_rehydrate_start_hour;            // local hour the dawn window opens (= dispatched sunrise hour)
+    int      dawn_rehydrate_start_minute;          // minute-of-hour the dawn window opens (default 0)
+    int      dawn_rehydrate_window_min;            // dawn window duration, minutes (default 12)
+    int      dawn_rehydrate_on_s;                  // center pulse ON during dawn window (default 90s — longer than the 60s base)
+    int      dawn_rehydrate_gap_s;                 // center pulse GAP during dawn window (default 20s — shorter than the 45s base → denser)
+    bool     sw_midday_drench_enabled;             // default true; IRR-4 master enable
+    int      midday_drench_hour;                   // local hour the midday window opens (default 14 ~= solar peak; dispatcher-overridable)
+    int      midday_drench_start_minute;           // minute-of-hour the midday window opens (default 0)
+    int      midday_drench_window_min;             // midday window duration, minutes (default 11)
+    int      midday_drench_on_s;                   // center pulse ON during midday window (default 120s — deeper soak than dawn)
+    int      midday_drench_gap_s;                  // center pulse GAP during midday window (default 25s — still denser than base)
 };
 
 static constexpr uint32_t STATE_SENTINEL = 0xBEEF0042;
@@ -226,6 +262,12 @@ struct ControlState {
     // VPD is also above band. controls.yaml uses this to allow directional
     // misters during vent cooling without pretending the mode is SEALED_MIST.
     bool vent_mist_assist_active;
+    // IRR-3/IRR-4: which (if any) time-anchored CENTER-zone cadence override is
+    // active this cycle. Freshly evaluated every cycle by determine_mode from
+    // center_burst_decision(); never persisted across a reset. controls.yaml
+    // reads it to swap the center pulse ON/GAP for the denser dawn/midday
+    // cadence. CENTER_BURST_NONE on safety/fault/blocked cycles.
+    CenterBurst center_burst;
 };
 
 struct RelayOutputs {
@@ -545,7 +587,29 @@ inline Setpoints default_setpoints() {
         .sw_dusk_cutoff_enabled = true,
         .dusk_cutoff_hour = 18,
         // FRT-6: absorption hold inactive until controls.yaml arms it.
-        .feed_hold_active = false
+        .feed_hold_active = false,
+        // IRR-3 dawn rehydrate: ON by default so it ships active in the OTA;
+        // operator-toggleable. Anchor (dawn_rehydrate_start_hour) is set from
+        // the dispatched sunrise hour at the call site; the 7h default mirrors
+        // gl_sunrise_hour. 12-min window with a 90s-ON / 20s-GAP cadence —
+        // denser than the 60/45 base so the velamen re-saturates quickly after
+        // the overnight dry-down without ever exceeding the SAF-4 duty cap.
+        .sw_dawn_rehydrate_enabled = true,
+        .dawn_rehydrate_start_hour = 7,
+        .dawn_rehydrate_start_minute = 0,
+        .dawn_rehydrate_window_min = 12,
+        .dawn_rehydrate_on_s = 90,
+        .dawn_rehydrate_gap_s = 20,
+        // IRR-4 midday drench: ON by default, operator-toggleable. Default 14h
+        // ~= solar/thermal peak (dispatcher can override midday_drench_hour).
+        // 11-min window, deeper 120s-ON / 25s-GAP soak. Still pre-dusk (< the
+        // default dusk_cutoff_hour=18) and still bounded by the duty cap.
+        .sw_midday_drench_enabled = true,
+        .midday_drench_hour = 14,
+        .midday_drench_start_minute = 0,
+        .midday_drench_window_min = 11,
+        .midday_drench_on_s = 120,
+        .midday_drench_gap_s = 25
     };
 }
 
@@ -664,6 +728,23 @@ inline void validate_setpoints(Setpoints& sp) {
     sp.night_end_hour   = std::max(0, std::min(23, sp.night_end_hour));
     // --- CYC-1/SAF-3 dusk-cutoff clamp ---
     sp.dusk_cutoff_hour = std::max(0, std::min(23, sp.dusk_cutoff_hour));
+
+    // --- IRR-3/IRR-4 center-burst clamps ---
+    // Hours/minutes to valid clock ranges. Windows clamped to [0, 120] min so a
+    // bad dispatcher push can't open an all-day burst. ON >= 1s; the denser
+    // gap is floored at 5s (below that the relay would chatter). The on/gap
+    // values are CADENCE knobs only — the SAF-4 duty cap + daily-volume ceiling
+    // are the actual runtime/volume rails and are unaffected by these clamps.
+    sp.dawn_rehydrate_start_hour   = std::max(0, std::min(23, sp.dawn_rehydrate_start_hour));
+    sp.dawn_rehydrate_start_minute = std::max(0, std::min(59, sp.dawn_rehydrate_start_minute));
+    sp.dawn_rehydrate_window_min   = std::max(0, std::min(120, sp.dawn_rehydrate_window_min));
+    sp.dawn_rehydrate_on_s         = std::max(1, std::min(600, sp.dawn_rehydrate_on_s));
+    sp.dawn_rehydrate_gap_s        = std::max(5, std::min(600, sp.dawn_rehydrate_gap_s));
+    sp.midday_drench_hour          = std::max(0, std::min(23, sp.midday_drench_hour));
+    sp.midday_drench_start_minute  = std::max(0, std::min(59, sp.midday_drench_start_minute));
+    sp.midday_drench_window_min    = std::max(0, std::min(120, sp.midday_drench_window_min));
+    sp.midday_drench_on_s          = std::max(1, std::min(600, sp.midday_drench_on_s));
+    sp.midday_drench_gap_s         = std::max(5, std::min(600, sp.midday_drench_gap_s));
 }
 
 inline ControlState initial_state() {
@@ -680,6 +761,7 @@ inline ControlState initial_state() {
         .last_mode_reason = "init",
         .last_transition_tick_ms = 0,
         .mist_backoff_timer_ms = 0,
-        .vent_mist_assist_active = false
+        .vent_mist_assist_active = false,
+        .center_burst = CENTER_BURST_NONE
     };
 }

@@ -59,6 +59,7 @@ from verdify_schemas.tunable_registry import (  # noqa: E402
     CROP_BAND_REG,
     PLANNER_PUSHABLE_REG,
     REGISTRY,
+    SCHEDULED_POLICY_REG,
     SETPOINT_MAP_REG,
 )
 
@@ -773,10 +774,15 @@ def test_setpoint_server_firmware_allowlist_comes_from_registry_routes():
     assert set(module["FIRMWARE_SETPOINT_PARAMS"]) == set(SETPOINT_MAP_REG.values())
 
 
-def test_per_circuit_lighting_thresholds_are_planner_pushable_but_not_required_tier1():
-    """Iris should tune Tempest lux cutoffs through per-circuit knobs from
-    observation evidence without making them mandatory every-waypoint Tier 1
-    params. Legacy shared gl_lux_* values remain dispatcher/default context.
+def test_per_circuit_lighting_thresholds_are_schedule_owned_scheduled_policy():
+    """Per-circuit lighting knobs are schedule-layer owned, not planner-pushable.
+
+    The live DB shows Iris pushes the gl_main_*/gl_grow_*/sw_gl_*_auto_mode
+    cluster 0x; the band/schedule writer drives them from
+    fn_lighting_minutes_policy. They were reclassified out of the
+    planner-pushable surface into scheduled_policy (push_owner='schedule',
+    planner_pushable=False) while keeping Tier 2 standing + cfg_* readbacks.
+    Legacy shared gl_lux_* values remain dispatcher/default context.
     """
     assert not REGISTRY["gl_lux_threshold"].planner_pushable
     assert REGISTRY["gl_lux_threshold"].tier == 2
@@ -806,9 +812,12 @@ def test_per_circuit_lighting_thresholds_are_planner_pushable_but_not_required_t
         "sw_gl_grow_auto_mode",
     ):
         assert param in REGISTRY
-        assert REGISTRY[param].planner_pushable
+        assert not REGISTRY[param].planner_pushable
+        assert REGISTRY[param].push_owner == "schedule"
+        assert REGISTRY[param].control_class == "scheduled_policy"
         assert REGISTRY[param].tier == 2
-        assert param in PLANNER_PUSHABLE_REG
+        assert param not in PLANNER_PUSHABLE_REG
+        assert param in SCHEDULED_POLICY_REG
 
 
 def test_lighting_automation_audit_static_passes():
@@ -1065,8 +1074,12 @@ def test_lighting_automation_audit_checks_tunable_and_lutron_contracts():
     src = Path("scripts/audit-lighting-automation.py").read_text()
 
     assert "tunable registry per-circuit lighting contract" in src
-    assert 'REGISTRY[param].push_owner != "planner"' in src
-    assert "param not in PLANNER_PUSHABLE_REG" in src
+    # Per-circuit lighting is schedule-layer owned, not planner-pushable: the
+    # audit now enforces push_owner=='schedule' / control_class=='scheduled_policy'
+    # and that the params are NOT in the planner-writable surface.
+    assert 'REGISTRY[param].push_owner != "schedule"' in src
+    assert 'REGISTRY[param].control_class != "scheduled_policy"' in src
+    assert "param in PLANNER_PUSHABLE_REG" in src
     assert "REGISTRY[param].tier != 2" in src
     assert "legacy shared lighting params are read-only" in src
     assert 'REGISTRY[param].push_owner != "dispatcher_default"' in src

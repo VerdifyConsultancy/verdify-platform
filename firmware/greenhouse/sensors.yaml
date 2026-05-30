@@ -2894,6 +2894,138 @@ sensor:
       if (!id(cfg_first_pull_ok)) return NAN;
       return id(gl_grow_auto_enabled) ? 1.0f : 0.0f;
 
+  # ─── IRR-3 (dawn rehydrate) / IRR-4 (midday drench) config readbacks ───
+  # One cfg_* diagnostic per new tunable (CLAUDE.md rule 6 + CI
+  # no-new-fire-and-forget). Each reads the underlying global back so a silent
+  # push corruption surfaces. Names mirror the tunables.yaml entity ids
+  # (cfg_<entity_id>) so the readback-coverage gate matches them.
+  - platform: template
+    id: cfg_num_dawn_rehydrate_start_minute
+    name: "Cfg Dawn Rehydrate Start Minute"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(dawn_rehydrate_start_minute);
+
+  - platform: template
+    id: cfg_num_dawn_rehydrate_window_min
+    name: "Cfg Dawn Rehydrate Window (min)"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(dawn_rehydrate_window_min);
+
+  - platform: template
+    id: cfg_num_dawn_rehydrate_on_s
+    name: "Cfg Dawn Rehydrate Pulse On (s)"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(dawn_rehydrate_on_s);
+
+  - platform: template
+    id: cfg_num_dawn_rehydrate_gap_s
+    name: "Cfg Dawn Rehydrate Pulse Gap (s)"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(dawn_rehydrate_gap_s);
+
+  - platform: template
+    id: cfg_sw_dawn_rehydrate_enabled_switch
+    name: "Cfg Dawn Rehydrate Enabled"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(sw_dawn_rehydrate_enabled) ? 1.0f : 0.0f;
+
+  - platform: template
+    id: cfg_num_midday_drench_hour
+    name: "Cfg Midday Drench Hour"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(midday_drench_hour);
+
+  - platform: template
+    id: cfg_num_midday_drench_start_minute
+    name: "Cfg Midday Drench Start Minute"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(midday_drench_start_minute);
+
+  - platform: template
+    id: cfg_num_midday_drench_window_min
+    name: "Cfg Midday Drench Window (min)"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(midday_drench_window_min);
+
+  - platform: template
+    id: cfg_num_midday_drench_on_s
+    name: "Cfg Midday Drench Pulse On (s)"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(midday_drench_on_s);
+
+  - platform: template
+    id: cfg_num_midday_drench_gap_s
+    name: "Cfg Midday Drench Pulse Gap (s)"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(midday_drench_gap_s);
+
+  - platform: template
+    id: cfg_sw_midday_drench_enabled_switch
+    name: "Cfg Midday Drench Enabled"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(sw_midday_drench_enabled) ? 1.0f : 0.0f;
+
   # Mister pulse VPD effectiveness (updated by controls.yaml after each pulse)
   - platform: template
     id: mister_vpd_delta

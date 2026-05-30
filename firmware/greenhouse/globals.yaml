@@ -511,6 +511,80 @@ globals:
     restore_value: no
     initial_value: '90'
 
+  # ─── IRR-3 (dawn rehydrate) / IRR-4 (midday drench) ───
+  # Two time-anchored CENTER-ZONE mist cadence OVERRIDES for the bare-root
+  # Vanda. They do NOT create a new relay path or mode — they make the existing
+  # center-mist pulse cadence (mister_pulse_on_s / mister_pulse_gap_s) DENSER
+  # inside two short pre-dusk windows so the velamen re-saturates after the
+  # overnight dry-down (dawn) and gets a deeper soak at the solar/thermal peak
+  # (midday). West/south/east cadence is untouched. The burst fires only when
+  # the center is already eligible to wet (climate wet-assist rails: not
+  # feed-hold, not past dusk, dew margin OK, VPD above the center target) and
+  # still counts toward / is bounded by the SAF-4 duty cap + daily-volume
+  # ceiling — a burst can never exceed the cap. Switches default ON so the
+  # feature ships active in the OTA; operator-toggleable.
+  #
+  # IRR-3 dawn: window START anchors to the dispatched sunrise hour
+  # (gl_sunrise_hour) in controls.yaml; only the minute/duration/on/gap live
+  # here. 12-min window, 90s-ON / 20s-GAP — denser than the 60/45 base.
+  - id: sw_dawn_rehydrate_enabled
+    type: bool
+    restore_value: no
+    initial_value: 'true'
+
+  - id: dawn_rehydrate_start_minute
+    type: int
+    restore_value: no
+    initial_value: '0'        # minute-of-hour the dawn window opens (anchor hour = gl_sunrise_hour)
+
+  - id: dawn_rehydrate_window_min
+    type: int
+    restore_value: no
+    initial_value: '12'       # dawn rehydrate window length (minutes)
+
+  - id: dawn_rehydrate_on_s
+    type: int
+    restore_value: no
+    initial_value: '90'       # center pulse ON during dawn window (s) — longer than 60s base
+
+  - id: dawn_rehydrate_gap_s
+    type: int
+    restore_value: no
+    initial_value: '20'       # center pulse GAP during dawn window (s) — shorter than 45s base → denser
+
+  # IRR-4 midday: anchored to midday_drench_hour (default 14 ~= solar/thermal
+  # peak; the dispatcher can override this hour). 11-min window, deeper
+  # 120s-ON / 25s-GAP soak. Still pre-dusk (< default dusk_cutoff_hour 18).
+  - id: sw_midday_drench_enabled
+    type: bool
+    restore_value: no
+    initial_value: 'true'
+
+  - id: midday_drench_hour
+    type: int
+    restore_value: no
+    initial_value: '14'       # local hour the midday window opens (~solar peak; dispatcher-overridable)
+
+  - id: midday_drench_start_minute
+    type: int
+    restore_value: no
+    initial_value: '0'        # minute-of-hour the midday window opens
+
+  - id: midday_drench_window_min
+    type: int
+    restore_value: no
+    initial_value: '11'       # midday drench window length (minutes)
+
+  - id: midday_drench_on_s
+    type: int
+    restore_value: no
+    initial_value: '120'      # center pulse ON during midday window (s) — deeper soak than dawn
+
+  - id: midday_drench_gap_s
+    type: int
+    restore_value: no
+    initial_value: '25'       # center pulse GAP during midday window (s) — still denser than 45s base
+
   # ─── Daily ON-cycle counters (reset at midnight) ───
   - id: cnt_fan1_today
     type: int

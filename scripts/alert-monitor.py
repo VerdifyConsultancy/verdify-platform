@@ -39,6 +39,7 @@ if str(REPO_ROOT) not in sys.path:
 from slack_config import build_slack_payload, load_slack_settings, read_slack_token  # noqa: E402
 from slack_ops.policy import should_post_alert  # noqa: E402
 from slack_ops.runbooks import fetch_alert_runbook, format_runbook  # noqa: E402
+from verdify_schemas.tunable_registry import PLANNER_PUSHABLE_REG  # noqa: E402
 
 logging.basicConfig(
     level=logging.INFO,
@@ -54,6 +55,14 @@ SLACK_TOKEN_FILE = SLACK_SETTINGS.bot_token_file
 DRY_RUN = "--dry-run" in sys.argv
 DIGEST_MODE = "--digest" in sys.argv
 AIR_EXCHANGE_RELAY_STUCK_MODES = frozenset({"VENTILATE", "DEHUM_VENT", "THERMAL_RELIEF", "SAFETY_COOL"})
+
+# A planner-policy param clamped more than this many times in a trailing hour means the
+# AI planning agent is repeatedly pushing values the band/guardrail layer rejects, so its
+# tuning intent is silently dropped. The dispatcher clamps about every 5s while a stress
+# guardrail is active, so a sustained guardrail can produce ~700+ clamps/hour for a single
+# param; 60/hour (one clamp/minute sustained) is a conservative floor that filters
+# incidental clamps but catches a stuck planner-vs-guardrail tug-of-war.
+PLANNER_CLAMP_RATE_THRESHOLD_PER_HOUR = 60
 
 SEVERITY_EMOJI = {
     "critical": "\U0001f534",  # 🔴
@@ -507,6 +516,56 @@ async def check_conditions(conn) -> list[dict]:
                     "threshold_value": 1000.0,
                 }
             )
+
+    # 11. Planner-policy clamp pressure — a planner-pushable param is being clamped
+    # by the dispatcher band/guardrail layer faster than threshold/hour, meaning the
+    # AI planning agent's tuning intent is silently dropped. Clamps are visible to Iris
+    # (gather-plan-context) but were invisible to humans; this surfaces them to Slack.
+    clamp_rows = await conn.fetch(
+        """
+        SELECT parameter,
+               count(*)::int AS clamp_events,
+               round(avg(abs(requested - applied))::numeric, 3) AS avg_delta,
+               (array_agg(reason ORDER BY ts DESC))[1] AS latest_reason
+          FROM setpoint_clamps
+         WHERE ts > now() - interval '1 hour'
+           AND parameter = ANY($1::text[])
+         GROUP BY parameter
+        HAVING count(*) > $2
+         ORDER BY count(*) DESC
+        """,
+        sorted(PLANNER_PUSHABLE_REG),
+        PLANNER_CLAMP_RATE_THRESHOLD_PER_HOUR,
+    )
+    for r in clamp_rows:
+        param = r["parameter"]
+        events = int(r["clamp_events"])
+        avg_delta = float(r["avg_delta"]) if r["avg_delta"] is not None else None
+        reason = r["latest_reason"] or "unknown"
+        delta_str = f", avg clamp delta {avg_delta:g}" if avg_delta is not None else ""
+        alerts.append(
+            {
+                "alert_type": "planner_clamp_pressure",
+                "severity": "warning",
+                "category": "system",
+                "sensor_id": f"setpoint_clamps.{param}",
+                "zone": None,
+                "message": (
+                    f"Planner-policy `{param}` clamped {events}x in the last hour "
+                    f"(reason `{reason}`{delta_str}); the AI planning agent's tuning intent is being "
+                    "silently capped by the band/guardrail layer"
+                ),
+                "details": {
+                    "parameter": param,
+                    "clamp_events_1h": events,
+                    "avg_clamp_delta": avg_delta,
+                    "latest_reason": reason,
+                    "threshold_per_hour": PLANNER_CLAMP_RATE_THRESHOLD_PER_HOUR,
+                },
+                "metric_value": float(events),
+                "threshold_value": float(PLANNER_CLAMP_RATE_THRESHOLD_PER_HOUR),
+            }
+        )
 
     # 10. Reactive planning trigger — sustained stress with stale plan
     MARKER = "/srv/verdify/state/reactive-plan-needed.txt"

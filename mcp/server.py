@@ -1371,17 +1371,25 @@ async def plan_evaluate(plan_id: str, outcome_score: int, actual_outcome: str, l
                 """,
                 ev.plan_id,
             )
+            # Persist the guardrail penalty alongside the outcome/anchor scores.
+            # It was fetched (and surfaced in the return payload) but never
+            # written back, so v_plan_guardrail_scorecard's signal could not
+            # feed the reward swap (migration 147) or any downstream learning
+            # query reading plan_journal directly. Default to 0 (no clamps in
+            # the governed interval) when the scorecard has no row yet.
+            guardrail_penalty = guardrail_row["guardrail_penalty"] if guardrail_row else 0
 
             await conn.execute(
                 """UPDATE plan_journal SET
                     outcome_score = $2, actual_outcome = $3, lesson_extracted = $4,
-                    anchor_score  = $5, validated_at = now()
+                    anchor_score  = $5, guardrail_penalty = $6, validated_at = now()
                    WHERE plan_id = $1""",
                 ev.plan_id,
                 ev.outcome_score,
                 ev.actual_outcome,
                 ev.lesson_extracted,
                 anchor_score,
+                guardrail_penalty,
             )
 
             lesson_row_id = None

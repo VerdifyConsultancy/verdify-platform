@@ -1227,6 +1227,98 @@
         }
       ],
       "description": "Shows the underlying components feeding the overall system health score."
+    },
+    {
+      "id": 18,
+      "type": "row",
+      "title": "Setpoint Clamps",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 54
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 19,
+      "type": "table",
+      "title": "Clamped Setpoints (24h)",
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 55
+      },
+      "datasource": {
+        "uid": "verdify-tsdb",
+        "type": "grafana-postgresql-datasource"
+      },
+      "options": {
+        "showHeader": true,
+        "sortBy": [
+          {
+            "displayName": "Clamps",
+            "desc": true
+          }
+        ]
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Clamps"
+            },
+            "properties": [
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-background"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "#73BF69",
+                      "value": null
+                    },
+                    {
+                      "color": "#FDD835",
+                      "value": 60
+                    },
+                    {
+                      "color": "#EF5350",
+                      "value": 240
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "uid": "verdify-tsdb",
+            "type": "grafana-postgresql-datasource"
+          },
+          "rawSql": "SELECT parameter AS \"Parameter\", clamp_events AS \"Clamps\", avg_clamp_delta AS \"Avg Delta\", max_clamp_delta AS \"Max Delta\", to_char(last_seen AT TIME ZONE 'America/Denver', 'MM/DD HH24:MI') AS \"Last Clamp\" FROM v_clamp_activity_24h ORDER BY clamp_events DESC",
+          "format": "table",
+          "refId": "A"
+        }
+      ],
+      "description": "Per-parameter dispatcher clamp activity in the last 24h from v_clamp_activity_24h. A clamp means a planner-pushed setpoint was capped by the band/guardrail layer before reaching the ESP32. High counts on moisture knobs (mister_engage_kpa, mister_all_kpa, fog_escalation_kpa) mean aggressive VPD-hold misting is being suppressed; the planner sees these via gather-plan-context but operators previously could not."
     }
   ],
   "refresh": "30s",

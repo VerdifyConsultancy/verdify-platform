@@ -15,7 +15,12 @@ import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from verdify_schemas.tunable_registry import CROP_BAND_REG, PLANNER_PUSHABLE_REG
+from verdify_schemas.tunable_registry import (
+    BAND_OWNED_REG,
+    CROP_BAND_REG,
+    PLANNER_PUSHABLE_REG,
+    SCHEDULED_POLICY_REG,
+)
 
 INGESTOR_PATH = str(Path(__file__).resolve().parent.parent / "ingestor")
 if INGESTOR_PATH not in sys.path:
@@ -153,9 +158,17 @@ def test_manual_overlay_source_classification_still_precedes_band_source():
 
 
 def test_live_active_plan_params_are_pushable():
-    """The current planner surface should not contain params the dispatcher
-    refuses to apply. This catches stale setpoint_plan rows that still have
-    ESPHome routes but are not part of the planner-pushable contract."""
+    """The current planner surface should only contain params the dispatcher
+    knows how to handle. This catches stale setpoint_plan rows that still have
+    ESPHome routes but are not part of any known dispatcher contract.
+
+    A param is "known" if it is planner-pushable, a crop-band/band-owned context
+    param, or a schedule-layer policy param. After the gl_*/irrig_*/direct_wet_*
+    reclassification (planner_pushable -> scheduled_policy), the day/fert masks
+    and per-circuit lighting knobs live in SCHEDULED_POLICY_REG, not
+    PLANNER_PUSHABLE_REG, but they still have legitimate dispatcher routes, so
+    they must be tolerated here rather than flagged as stale orphans.
+    """
 
     result = subprocess.run(
         [
@@ -180,7 +193,8 @@ def test_live_active_plan_params_are_pushable():
     )
     active = {line.strip() for line in result.stdout.splitlines() if line.strip()}
 
-    assert sorted(active - set(PLANNER_PUSHABLE_REG)) == []
+    known = set(PLANNER_PUSHABLE_REG) | set(SCHEDULED_POLICY_REG) | set(BAND_OWNED_REG)
+    assert sorted(active - known) == []
 
 
 def test_live_active_plan_has_no_band_owned_rows():

@@ -392,6 +392,152 @@ TEST(feed_hold_never_blocks_safety_cool_fog) {
     PASS();
 }
 
+// ── IRR-3 (dawn rehydrate) / IRR-4 (midday drench) ──
+// A "dry, pre-dusk, good-dew-margin" center-eligible row: VPD above the center
+// band ceiling so the over-saturation gate opens, dew margin well above the
+// floor. Used as the baseline that the rail tests then knock out one rail at a
+// time. Bands: vpd_high=1.4, so vpd 1.9 is clearly above.
+static SensorInputs irr_dry_inputs(int hour) {
+    auto in = make_inputs(78.0f, 1.9f, 45.0f);
+    in.local_hour = hour;
+    in.dew_point_f = in.temp_f - 14.0f;   // dew margin 14°F >> 8°F floor
+    return in;
+}
+static Setpoints irr_setpoints() {
+    auto sp = band_setpoints();   // vpd_high 1.4, vpd_low 0.8
+    // Defaults: dawn 7:00 +12min, midday 14:00 +11min, dusk_cutoff 18.
+    validate_setpoints(sp);
+    return sp;
+}
+
+TEST(center_burst_windows_match_anchors_and_durations) {
+    auto sp = irr_setpoints();
+    // Dawn window: [7:00, 7:12)
+    ASSERT_TRUE(in_dawn_rehydrate_window(local_minute_of_day(7, 0), sp));
+    ASSERT_TRUE(in_dawn_rehydrate_window(local_minute_of_day(7, 11), sp));
+    ASSERT_FALSE(in_dawn_rehydrate_window(local_minute_of_day(7, 12), sp));
+    ASSERT_FALSE(in_dawn_rehydrate_window(local_minute_of_day(6, 59), sp));
+    // Midday window: [14:00, 14:11)
+    ASSERT_TRUE(in_midday_drench_window(local_minute_of_day(14, 0), sp));
+    ASSERT_TRUE(in_midday_drench_window(local_minute_of_day(14, 10), sp));
+    ASSERT_FALSE(in_midday_drench_window(local_minute_of_day(14, 11), sp));
+    ASSERT_FALSE(in_midday_drench_window(local_minute_of_day(13, 59), sp));
+    PASS();
+}
+
+TEST(center_burst_decision_selects_dawn_then_midday) {
+    auto sp = irr_setpoints();
+    // Inside dawn window → DAWN.
+    ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), irr_dry_inputs(7), sp), CENTER_BURST_DAWN);
+    // Inside midday window → MIDDAY.
+    ASSERT_EQ(center_burst_decision(local_minute_of_day(14, 5), irr_dry_inputs(14), sp), CENTER_BURST_MIDDAY);
+    // Outside both windows (mid-morning) → NONE even though dry+eligible.
+    ASSERT_EQ(center_burst_decision(local_minute_of_day(10, 0), irr_dry_inputs(10), sp), CENTER_BURST_NONE);
+    PASS();
+}
+
+TEST(center_burst_cadence_is_denser_than_base_and_per_burst) {
+    auto sp = irr_setpoints();
+    int on_s = 0, gap_s = 0;
+    ASSERT_FALSE(center_burst_cadence_s(CENTER_BURST_NONE, sp, on_s, gap_s));
+    ASSERT_TRUE(center_burst_cadence_s(CENTER_BURST_DAWN, sp, on_s, gap_s));
+    ASSERT_EQ(on_s, 90); ASSERT_EQ(gap_s, 20);
+    ASSERT_TRUE(center_burst_cadence_s(CENTER_BURST_MIDDAY, sp, on_s, gap_s));
+    ASSERT_EQ(on_s, 120); ASSERT_EQ(gap_s, 25);
+    // Denser than the 60s-ON / 45s-GAP base: longer ON, shorter GAP.
+    ASSERT_TRUE(sp.dawn_rehydrate_on_s   > 60);  ASSERT_TRUE(sp.dawn_rehydrate_gap_s   < 45);
+    ASSERT_TRUE(sp.midday_drench_on_s    > 60);  ASSERT_TRUE(sp.midday_drench_gap_s    < 45);
+    PASS();
+}
+
+TEST(center_burst_blocked_by_each_rail) {
+    // feed-hold (FRT-6 absorption hold) blocks the burst.
+    {
+        auto sp = irr_setpoints(); sp.feed_hold_active = true;
+        ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), irr_dry_inputs(7), sp), CENTER_BURST_NONE);
+    }
+    // dusk cutoff: a window pushed past the cutoff never bursts (and the
+    // default windows are already pre-dusk). Force a dusk-cutoff hour that
+    // makes hour 14 "past dusk".
+    {
+        auto sp = irr_setpoints(); sp.dusk_cutoff_hour = 12; sp.night_end_hour = 6;
+        validate_setpoints(sp);
+        ASSERT_TRUE(past_dusk_cutoff(irr_dry_inputs(14), sp));
+        ASSERT_EQ(center_burst_decision(local_minute_of_day(14, 5), irr_dry_inputs(14), sp), CENTER_BURST_NONE);
+    }
+    // dew margin below floor blocks (don't wet a cold leaf).
+    {
+        auto sp = irr_setpoints();
+        auto in = irr_dry_inputs(7); in.dew_point_f = in.temp_f - 2.0f;  // 2°F << 8°F floor
+        ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), in, sp), CENTER_BURST_NONE);
+    }
+    // over-saturation sanity gate: VPD at/below center band ceiling → no drench.
+    {
+        auto sp = irr_setpoints();
+        auto in = irr_dry_inputs(7); in.vpd_kpa = sp.vpd_high;        // exactly at ceiling
+        ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), in, sp), CENTER_BURST_NONE);
+        in.vpd_kpa = sp.vpd_high - 0.2f;                              // humid → below ceiling
+        ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), in, sp), CENTER_BURST_NONE);
+    }
+    // occupancy inhibit blocks the burst.
+    {
+        auto sp = irr_setpoints(); sp.occupancy_inhibit = true;
+        auto in = irr_dry_inputs(7); in.occupied = true;
+        ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), in, sp), CENTER_BURST_NONE);
+    }
+    // sensor fault (implausible inputs) blocks the burst.
+    {
+        auto sp = irr_setpoints();
+        auto in = irr_dry_inputs(7); in.vpd_kpa = NAN;
+        ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), in, sp), CENTER_BURST_NONE);
+    }
+    PASS();
+}
+
+TEST(center_burst_respects_enable_switches) {
+    auto sp = irr_setpoints();
+    sp.sw_dawn_rehydrate_enabled = false;
+    ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), irr_dry_inputs(7), sp), CENTER_BURST_NONE);
+    // midday still works while dawn disabled.
+    ASSERT_EQ(center_burst_decision(local_minute_of_day(14, 5), irr_dry_inputs(14), sp), CENTER_BURST_MIDDAY);
+    sp.sw_midday_drench_enabled = false;
+    ASSERT_EQ(center_burst_decision(local_minute_of_day(14, 5), irr_dry_inputs(14), sp), CENTER_BURST_NONE);
+    PASS();
+}
+
+TEST(center_burst_windows_are_pre_dusk_by_default) {
+    // The shipped default windows must end strictly before the default dusk
+    // cutoff (18:00) — a burst can never fire past dusk (CYC-1 assertion).
+    auto sp = irr_setpoints();
+    const int dawn_end   = local_minute_of_day(sp.dawn_rehydrate_start_hour, sp.dawn_rehydrate_start_minute)
+                         + dawn_rehydrate_window_minutes(sp);
+    const int midday_end = local_minute_of_day(sp.midday_drench_hour, sp.midday_drench_start_minute)
+                         + midday_drench_window_minutes(sp);
+    const int dusk_min   = local_minute_of_day(sp.dusk_cutoff_hour, 0);
+    ASSERT_TRUE(dawn_end   <= dusk_min);
+    ASSERT_TRUE(midday_end <= dusk_min);
+    PASS();
+}
+
+TEST(determine_mode_stamps_center_burst_and_clears_under_safety) {
+    auto sp = irr_setpoints();
+    sp.sw_fsm_controller_enabled = true;
+    validate_setpoints(sp);
+    sp.sw_fsm_controller_enabled = true;
+    // Dry, pre-dusk, dawn hour, VPD above center ceiling, dwell satisfied so we
+    // are firmly in SEALED_MIST → FSM stamps DAWN (hour-granular: hour 7 → 7:00).
+    auto in = irr_dry_inputs(7);
+    auto s = initial_state(); s.vpd_watch_timer_ms = sp.vpd_watch_dwell_ms;
+    determine_mode(in, sp, s, 5000);
+    ASSERT_EQ(s.center_burst, CENTER_BURST_DAWN);
+
+    // Drive temp to the safety_max rail → SAFETY_COOL must clear the burst.
+    auto hot = in; hot.temp_f = sp.safety_max + 2.0f;
+    determine_mode(hot, sp, s, 5000);
+    ASSERT_EQ(s.center_burst, CENTER_BURST_NONE);
+    PASS();
+}
+
 // ── New Vanda-band invariants (invariants.h #17-#20) ──
 static void silent_report(int, const char*, const invariants::TraceRow&, const char*) {}
 
@@ -437,6 +583,37 @@ TEST(invariant_20_feed_hold_window_persists) {
     // Hold clears → wetting allowed again.
     r.feed_hold_active = false; r.eq_mister_center = 1;
     ASSERT_TRUE(invariants::check_20_feed_hold_window(c, r, silent_report));
+    PASS();
+}
+
+TEST(invariant_21_center_burst_pre_dusk) {
+    invariants::TraceRow r{};
+    // Dry, plausible, pre-dusk → rails may permit (not a breach either way).
+    r.temp_f = 78.0f; r.rh_pct = 45.0f; r.vpd_kpa = 1.9f; r.dew_point_f = 64.0f;
+    r.vpd_high = 1.4f; r.vpd_low = 0.8f;
+    r.dusk_cutoff_hour = 18; r.dusk_cutoff_enabled = true; r.night_end_hour = 6;
+    r.local_hour = 7;
+    ASSERT_TRUE(invariants::check_21_center_burst_pre_dusk(r, silent_report));
+    // Same dryness but PAST dusk (21:00) → rails must be closed; check passes
+    // precisely because the burst is correctly suppressed.
+    r.local_hour = 21;
+    ASSERT_TRUE(invariants::check_21_center_burst_pre_dusk(r, silent_report));
+    PASS();
+}
+
+TEST(invariant_22_center_burst_no_feed_hold) {
+    invariants::TraceRow r{};
+    r.temp_f = 78.0f; r.rh_pct = 45.0f; r.vpd_kpa = 1.9f; r.dew_point_f = 64.0f;
+    r.vpd_high = 1.4f; r.vpd_low = 0.8f;
+    r.dusk_cutoff_hour = 18; r.dusk_cutoff_enabled = true; r.night_end_hour = 6;
+    r.local_hour = 7;
+    // No feed hold → check passes.
+    r.feed_hold_active = false;
+    ASSERT_TRUE(invariants::check_22_center_burst_no_feed_hold(r, silent_report));
+    // Feed hold active → rails must be closed; check passes because the burst
+    // is suppressed (the invariant would FAIL if rails permitted).
+    r.feed_hold_active = true;
+    ASSERT_TRUE(invariants::check_22_center_burst_no_feed_hold(r, silent_report));
     PASS();
 }
 

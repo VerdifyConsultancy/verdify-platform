@@ -379,13 +379,29 @@ Use tactical knobs below to shift behavior instead.
 **Greenhouse activity / direct wetting (all clean/fert misters and drips):**
 - Global biological activity is mirrored from the grow-light policy: `gl_sunrise_hour` + `gl_sunset_hour` define the on/off window, and dispatcher owns `activity_start_hour`, `activity_start_minute`, `activity_duration_min`. Do not push the activity mirror directly; tune the light window when the global on/off window should move.
 - `sw_direct_wet_gate_enabled` is the master direct-wet gate. When enabled, misters and scheduled clean/fert irrigation are blocked outside the activity window and during each zone drydown hold.
-- Zone offsets: `direct_wet_wall_start_offset_min`, `direct_wet_south_start_offset_min`, `direct_wet_west_start_offset_min`, `direct_wet_center_start_offset_min` delay wetting after global on. `direct_wet_*_drydown_before_off_min` blocks direct wetting before global off. Use these per zone rather than crop-specific logic.
+- Zone offsets: `direct_wet_wall_start_offset_min`, `direct_wet_south_start_offset_min`, `direct_wet_west_start_offset_min`, `direct_wet_center_start_offset_min` delay wetting after global on. Use these per zone rather than crop-specific logic.
+- Per-zone drydown holds before global off, min [0-720], def 0 — `direct_wet_wall_drydown_before_off_min`, `direct_wet_south_drydown_before_off_min`, `direct_wet_west_drydown_before_off_min`, `direct_wet_center_drydown_before_off_min` block clean/fert wetting in the named zone for the final N minutes before the global activity window closes. Schedule-layer cadence; leave at 0 unless a zone needs a deliberate end-of-day dry-down for disease/root health, then raise only that zone.
 - `direct_wet_min_temp_f` blocks automated wetting when the house is too cold.
 - `sw_direct_wet_stress_override_enabled` switch, def off — during VPD-high recovery, lets mister zones bypass drydown windows while preserving the master gate, direct-wet min temp, occupancy, irrigation, water budget, latest-hour, and dew-margin gates.
 - `direct_wet_stress_vpd_margin_kpa` kPa, [0-0.5], def 0.05 — VPD excess over `vpd_high` required before the stress override can open drydown-gated zones.
 - `direct_wet_stress_min_dew_margin_f` °F, [3-15], def 8 — minimum temp-dewpoint margin for direct-wet stress override.
 - `direct_wet_stress_latest_hour` local hour, [17-24], def 22 — latest local hour for bounded evening dry recovery.
 - Fertigation scheduling can use day masks: `irrig_wall_fert_days_mask`, `irrig_center_fert_days_mask` (bit0=Sunday ... bit6=Saturday). Nonzero masks supersede the legacy every-N fert cadence; zero preserves existing every-N behavior.
+- Clean-water watering day masks: `irrig_wall_days_mask`, `irrig_center_days_mask` [0-127], def 127 (every day; bit0=Sunday ... bit6=Saturday). These set which days the wall/center clean-water drip runs at all. Schedule-layer cadence — change only to deliberately skip watering days, not as a tactical climate lever.
+
+**Lighting policy (schedule-layer owned; main/overhead + grow/secondary circuits):**
+The light window also mirrors into the global activity window above, so moving
+these moves clean/fert wetting timing too. Iris normally leaves lighting to the
+schedule layer; touch it only for a deliberate photoperiod/DLI change, not for
+short-term climate stress. Both circuits share the same parameter shape:
+- `gl_main_sunrise_hour`, `gl_grow_sunrise_hour` local hour, [0-23], def 7 — earliest hour the circuit may turn on.
+- `gl_main_sunset_hour`, `gl_grow_sunset_hour` local hour, [0-23], def 19 — latest hour the circuit may stay on.
+- `gl_main_target_light_minutes`, `gl_grow_target_light_minutes` min/day, [0-1080], def 960 — daily qualified-light-minutes target (a minute counts when outdoor lux is above threshold OR the switch is on); this is the photoperiod/DLI lever.
+- `gl_main_lux_threshold`, `gl_grow_lux_threshold` lux, [100-100000], def 40000 — outdoor lux above which the circuit turns ON.
+- `gl_main_lux_hysteresis`, `gl_grow_lux_hysteresis` lux, [0-25000], def 8000 — OFF threshold sits this far above the ON threshold to prevent flicker.
+- `gl_main_min_on_s`, `gl_grow_min_on_s` s, [0-3600], def 120 — minimum ON dwell for the lighting state machine.
+- `gl_main_min_off_s`, `gl_grow_min_off_s` s, [0-3600], def 60 — minimum OFF dwell for the lighting state machine.
+- `sw_gl_main_auto_mode`, `sw_gl_grow_auto_mode` switch, def on — per-circuit automation enable; off pins the circuit to its manual state, so only disable for maintenance.
 
 **Phase-2 dwell gate (whipsaw reduction):**
 - `sw_dwell_gate_enabled` — master switch; firmware default OFF, planner may enable for oscillation control. THERMAL_RELIEF, SAFETY_COOL, SAFETY_HEAT, SENSOR_FAULT, dehum→humidify overshoot, and sealed-mist temp preemption bypass the gate.

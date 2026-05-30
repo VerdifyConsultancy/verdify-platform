@@ -1,0 +1,85 @@
+=== BEGIN rolled-back migration replay 146+147+148 (on live 145; 148 inner txn neutralized) ===
+BEGIN
+--- applying 146-compliance-rearchitecture ---
+DO
+CREATE FUNCTION
+COMMENT
+CREATE FUNCTION
+CREATE TABLE
+COMMENT
+INSERT 0 5
+CREATE FUNCTION
+COMMENT
+SELECT 219
+CREATE INDEX
+COMMENT
+CREATE FUNCTION
+COMMENT
+CREATE FUNCTION
+COMMENT
+ALTER TABLE
+COMMENT
+CREATE TABLE
+COMMENT
+CREATE FUNCTION
+COMMENT
+CREATE VIEW
+COMMENT
+DROP VIEW
+psql:/tmp/146-compliance-rearchitecture.sql:549: NOTICE:  function public.fn_target_band_smooth(timestamptz) does not exist, skipping
+psql:/tmp/146-compliance-rearchitecture.sql:549: NOTICE:  function public.fn_target_band(timestamptz) does not exist, skipping
+DO
+--- applying 147-reward-swap-and-ladder-reanchor ---
+DO
+CREATE TABLE
+COMMENT
+INSERT 0 10
+psql:/tmp/147-reward-swap-and-ladder-reanchor.sql:183: NOTICE:  Ladder re-anchor: 106 anchored plans (0 with graded comp). derivation=binary_fallback
+DO
+CREATE FUNCTION
+COMMENT
+CREATE VIEW
+COMMENT
+CREATE VIEW
+COMMENT
+UPDATE 41
+DO
+--- applying 148-plan-accuracy-repoint-plan-journal (inner BEGIN/COMMIT neutralized for replay) ---
+psql:/tmp/147-reward-swap-and-ladder-reanchor.sql:427: NOTICE:  Ladder ordinal stability: 77/147 anchored plans reproduce anchor (%52.4). derivation=binary_fallback. (Acceptance >=90% against dual-written history.)
+DROP VIEW
+DROP VIEW
+DROP VIEW
+DROP VIEW
+CREATE VIEW
+COMMENT
+CREATE VIEW
+COMMENT
+CREATE VIEW
+COMMENT
+CREATE VIEW
+COMMENT
+ALTER TABLE
+COMMENT
+--- all three applied inside tx; verifying then rolling back ---
+ plan_accuracy_rows_repointed
+------------------------------
+                          231
+(1 row)
+
+ plan_compliance_rows
+----------------------
+                  231
+(1 row)
+
+ zone_weights_seeded
+---------------------
+                   5
+(1 row)
+
+ anchored_in_tx | total
+----------------+-------
+            147 |   233
+(1 row)
+
+ROLLBACK
+=== ROLLBACK complete — no changes committed ===

@@ -256,6 +256,94 @@ inline bool climate_fog_assist_permitted(const SensorInputs& in, const Setpoints
     return climate_fog_assist_block_reason(in, sp)[0] == '\0';
 }
 
+// ── IRR-3 (dawn rehydrate) / IRR-4 (midday drench) ─────────────────────
+// Two time-anchored CENTER-zone mist cadence overrides for the bare-root
+// Vanda. These do NOT pick a mode or fire a relay; they only report whether
+// the current minute is inside a burst window AND every rail still permits
+// CENTER wetting, so controls.yaml can swap the center pulse ON/GAP for the
+// denser dawn/midday cadence. West/south/east are never consulted here.
+//
+// RAILS (each is a hard precondition — a burst can fire only when ALL hold):
+//   * master enable switch (sw_dawn_rehydrate_enabled / sw_midday_drench_enabled)
+//   * sensors plausible (SENSOR_FAULT ⇒ no burst)
+//   * NOT during the FRT-6 post-feed absorption hold (feed_hold_active)
+//   * NOT at/after the CYC-1 dusk cutoff (past_dusk_cutoff)
+//   * NOT occupancy-inhibited
+//   * dew margin >= the center wet-assist dew floor (don't wet onto a cold leaf)
+//   * VPD STRICTLY above the center target proxy (vpd_high): the over-saturation
+//     sanity gate — if the air is already at/below the center band the velamen
+//     is humid enough and we do not drench.
+// The SAF-4 duty cap + mister_daily_volume_max_gal ceiling are enforced in
+// controls.yaml (cumulative-runtime/volume state lives there); a burst counts
+// toward and is bounded by them — it can never exceed the cap.
+//
+// Note: these mirror climate_wet_assist_block_reason()'s rails but use a
+// STRICT VPD-above-target test (not the +margin stress test) because a dawn
+// rehydrate intentionally engages at a lower stress threshold than the dry-
+// stress override — the point is to pre-empt the dry-down, not chase an
+// emergency. The dusk/feed-hold/dew/occupancy rails are identical.
+inline int dawn_rehydrate_window_minutes(const Setpoints& sp) noexcept {
+    return clamp_day_minutes(sp.dawn_rehydrate_window_min);
+}
+inline int midday_drench_window_minutes(const Setpoints& sp) noexcept {
+    return clamp_day_minutes(sp.midday_drench_window_min);
+}
+
+// True iff `now_minute` (minutes from local midnight) is inside the dawn window
+// [start, start+window). Window start anchors to dawn_rehydrate_start_hour:minute
+// (the dispatched sunrise hour). Zero-length window ⇒ never.
+inline bool in_dawn_rehydrate_window(int now_minute, const Setpoints& sp) noexcept {
+    const int start = local_minute_of_day(sp.dawn_rehydrate_start_hour, sp.dawn_rehydrate_start_minute);
+    return minute_in_window(now_minute, start, dawn_rehydrate_window_minutes(sp));
+}
+inline bool in_midday_drench_window(int now_minute, const Setpoints& sp) noexcept {
+    const int start = local_minute_of_day(sp.midday_drench_hour, sp.midday_drench_start_minute);
+    return minute_in_window(now_minute, start, midday_drench_window_minutes(sp));
+}
+
+// The shared per-cycle rail gate for either burst (everything except the
+// window membership + per-burst enable). Center-zone only.
+inline bool center_burst_rails_permit(const SensorInputs& in, const Setpoints& sp) noexcept {
+    if (!sensors_plausible(in)) return false;
+    if (moisture_blocked_by_occupancy(in, sp)) return false;
+    if (sp.feed_hold_active) return false;        // FRT-6 absorption hold
+    if (past_dusk_cutoff(in, sp)) return false;   // CYC-1 dusk cutoff (assert pre-dusk)
+    if (dew_margin_f(in) < sp.direct_wet_stress_min_dew_margin_f) return false;
+    // Over-saturation sanity gate: only burst when the air is drier than the
+    // center band ceiling. If VPD <= vpd_high the canopy is already humid.
+    if (in.vpd_kpa <= sp.vpd_high) return false;
+    return true;
+}
+
+// Decide which CENTER-zone burst (if any) is active for the supplied minute.
+// `now_minute` is minutes-from-local-midnight (the caller derives it from SNTP,
+// matching the climate wet-assist gate). Dawn takes precedence if both windows
+// somehow overlap (a misconfiguration the clamps guard against).
+inline CenterBurst center_burst_decision(int now_minute, const SensorInputs& in, const Setpoints& sp) noexcept {
+    if (!center_burst_rails_permit(in, sp)) return CENTER_BURST_NONE;
+    if (sp.sw_dawn_rehydrate_enabled && in_dawn_rehydrate_window(now_minute, sp)) {
+        return CENTER_BURST_DAWN;
+    }
+    if (sp.sw_midday_drench_enabled && in_midday_drench_window(now_minute, sp)) {
+        return CENTER_BURST_MIDDAY;
+    }
+    return CENTER_BURST_NONE;
+}
+
+// Center pulse ON / GAP (seconds) for the active burst. Returns false when no
+// burst is active (caller keeps the base mister_pulse_on_s / mister_pulse_gap_s).
+inline bool center_burst_cadence_s(CenterBurst burst, const Setpoints& sp, int& on_s, int& gap_s) noexcept {
+    switch (burst) {
+        case CENTER_BURST_DAWN:
+            on_s = sp.dawn_rehydrate_on_s;  gap_s = sp.dawn_rehydrate_gap_s;  return true;
+        case CENTER_BURST_MIDDAY:
+            on_s = sp.midday_drench_on_s;   gap_s = sp.midday_drench_gap_s;   return true;
+        case CENTER_BURST_NONE:
+        default:
+            return false;
+    }
+}
+
 // Unified band-first controller clamps VPD hysteresis against the actual band width. The
 // legacy cascade allows hyst_vpd_kpa=0.4 with a 0.8-1.2 band, which makes
 // SEALED_MIST exit only below 0.7 kPa. That turns normal high-VPD periods
@@ -937,6 +1025,7 @@ inline Mode determine_mode_band_first(
         state.vent_latch_timer_ms = 0;
         state.mist_backoff_timer_ms = 0;
         state.vent_mist_assist_active = false;
+        state.center_burst = CENTER_BURST_NONE;  // IRR-3/IRR-4: no burst under fault
         state.last_mode_reason = "sensor_fault";
         return SENSOR_FAULT;
     }
@@ -1154,6 +1243,18 @@ inline Mode determine_mode_band_first(
         && !safety_cool
         && !safety_heat
         && in.temp_f < (sp.safety_max - sp.safety_max_seal_margin_f);
+
+    // IRR-3/IRR-4: evaluate the CENTER-zone time-anchored cadence override.
+    // SensorInputs carries only local_hour, so the FSM evaluates the window at
+    // hour granularity (minute 0). This is the telemetry/replay-visible value;
+    // controls.yaml re-evaluates with minute-precise SNTP before driving the
+    // center pulse cadence (it has the minute the FSM does not). Safety modes
+    // never burst — a burst is a routine wetting cadence, not a safety action.
+    if (mode == SAFETY_COOL || mode == SAFETY_HEAT || mode == SENSOR_FAULT) {
+        state.center_burst = CENTER_BURST_NONE;
+    } else {
+        state.center_burst = center_burst_decision(local_minute_of_day(in.local_hour, 0), in, sp);
+    }
 
     state.mode = mode;
     state.mode_prev = mode;
@@ -1617,6 +1718,14 @@ inline Mode determine_mode(
             state.mist_stage = MIST_WATCH;
             state.mist_stage_timer_ms = 0;
         }
+    }
+
+    // IRR-3/IRR-4: same center-burst evaluation as the band-first path, so the
+    // legacy controller path keeps the field defined (no burst under safety).
+    if (mode == SAFETY_COOL || mode == SAFETY_HEAT || mode == SENSOR_FAULT) {
+        state.center_burst = CENTER_BURST_NONE;
+    } else {
+        state.center_burst = center_burst_decision(local_minute_of_day(in.local_hour, 0), in, sp);
     }
 
     state.mode = mode;

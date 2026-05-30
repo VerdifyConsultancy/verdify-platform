@@ -354,15 +354,21 @@ def static_checks(audit: Audit) -> None:
         "all per-circuit lighting params have cfg_* readback sensors",
         "one or more per-circuit lighting cfg_* readbacks are missing",
     )
+    # Per-circuit lighting is schedule-layer owned (the band/schedule writer drives
+    # these from fn_lighting_minutes_policy; Iris pushes them 0x in the live DB).
+    # They were reclassified out of the planner-pushable surface into
+    # scheduled_policy (push_owner='schedule', planner_pushable=False) but keep
+    # their Tier 2 standing and cfg_* readbacks for traceability.
     registry_missing = sorted(param for param in PER_CIRCUIT_PARAMS if param not in REGISTRY)
     registry_bad = sorted(
         param
         for param in PER_CIRCUIT_PARAMS
         if param in REGISTRY
         and (
-            REGISTRY[param].push_owner != "planner"
-            or not REGISTRY[param].planner_pushable
-            or param not in PLANNER_PUSHABLE_REG
+            REGISTRY[param].push_owner != "schedule"
+            or REGISTRY[param].planner_pushable
+            or param in PLANNER_PUSHABLE_REG
+            or REGISTRY[param].control_class != "scheduled_policy"
             or REGISTRY[param].tier != 2
             or not REGISTRY[param].cfg_readback_object_id
         )
@@ -370,7 +376,7 @@ def static_checks(audit: Audit) -> None:
     audit.check(
         not registry_missing and not registry_bad,
         "tunable registry per-circuit lighting contract",
-        "per-circuit lighting params are planner-owned, MCP-pushable Tier 2 tunables with cfg readbacks",
+        "per-circuit lighting params are schedule-owned scheduled_policy Tier 2 tunables with cfg readbacks (not planner-pushable)",
         f"registry missing={registry_missing} bad={registry_bad}",
     )
     legacy_lighting_params = ("gl_lux_threshold", "gl_lux_hysteresis")

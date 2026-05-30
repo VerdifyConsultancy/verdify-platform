@@ -6313,6 +6313,101 @@ async def _ensure_expected_planner_triggers(
     return ledger_ids
 
 
+def _deviation_expected_at(trigger_data: dict[str, object] | None) -> datetime:
+    """Resolve the deviation event's expected_at for the ledger unique key.
+
+    Uses the trigger payload's `ts` (the alert/queue time) so re-deliveries of
+    the same alert collapse onto one ledger row. Falls back to now() if the ts
+    is missing or unparseable (legacy replan-needed.json without a stamp)."""
+    raw_ts = trigger_data.get("ts") if trigger_data else None
+    if raw_ts:
+        try:
+            parsed = datetime.fromisoformat(str(raw_ts))
+            if parsed.tzinfo is None:
+                parsed = parsed.replace(tzinfo=UTC)
+            return parsed
+        except (ValueError, TypeError):
+            pass
+    return datetime.now(UTC)
+
+
+async def _ensure_deviation_trigger_ledger(
+    conn: asyncpg.Connection,
+    *,
+    instance: str,
+    trigger_data: dict[str, object] | None,
+) -> int | None:
+    """Materialize a FORECAST_DEVIATION row in planner_trigger_ledger.
+
+    Scheduled milestones get their ledger rows from
+    _ensure_expected_planner_triggers, but the σ-gated deviation path fired
+    through the alert_log queue and never wrote a ledger row — so ~50
+    deviation-driven set_tunable deliveries/14d were invisible to the SLA/
+    trigger-health surface (0 FORECAST_DEVIATION rows despite live deliveries).
+
+    The row is keyed on (greenhouse_id, event_type, expected_at) like the
+    milestone path, with expected_at = the deviation's queue time, so a
+    re-delivered alert upserts the same row rather than duplicating it. SLA
+    fields (due_at, sla_seconds, expected_action) match the FORECAST_DEVIATION
+    spec so _expire_planner_trigger_slas can time it out like any other
+    trigger. Returns the ledger id to thread into _deliver_and_log, or None on
+    failure (delivery still proceeds — the ledger is observability, not a
+    gate)."""
+    spec = PLANNER_TRIGGER_MATRIX["FORECAST_DEVIATION"]
+    event_type = spec.event_type
+    label = spec.event_label
+    expected_at = _deviation_expected_at(trigger_data)
+    sla_s = _sla_seconds(event_type, instance)
+    # The SLA clock starts when the planner is woken (now), not at the alert's
+    # queue time: the deviation alert may have waited up to one heartbeat in
+    # alert_log before this delivery, and expected_at is only the dedup key.
+    # Basing due_at on expected_at would risk _expire_planner_trigger_slas
+    # marking a freshly delivered row 'timed_out' on the same cycle.
+    due_at = datetime.now(UTC) + _td(seconds=sla_s or spec.catchup_seconds or 300)
+    expected_action = _expected_action_for_event(event_type, label)
+    try:
+        ledger_id = await conn.fetchval(
+            """
+            INSERT INTO planner_trigger_ledger
+              (greenhouse_id, event_type, event_label, instance, expected_at,
+               due_at, expected_action, sla_seconds)
+            VALUES ('vallery', $1, $2, $3, $4, $5, $6, $7)
+            ON CONFLICT (greenhouse_id, event_type, expected_at) DO UPDATE
+               SET event_label     = EXCLUDED.event_label,
+                   instance        = EXCLUDED.instance,
+                   due_at          = EXCLUDED.due_at,
+                   expected_action = EXCLUDED.expected_action,
+                   sla_seconds     = EXCLUDED.sla_seconds,
+                   updated_at      = now()
+             WHERE planner_trigger_ledger.status = 'expected'
+            RETURNING id
+            """,
+            event_type,
+            label,
+            instance,
+            expected_at,
+            due_at,
+            expected_action,
+            sla_s,
+        )
+        if ledger_id is None:
+            ledger_id = await conn.fetchval(
+                """
+                SELECT id
+                  FROM planner_trigger_ledger
+                 WHERE greenhouse_id = 'vallery'
+                   AND event_type = $1
+                   AND expected_at = $2
+                """,
+                event_type,
+                expected_at,
+            )
+    except Exception as e:
+        log.warning("deviation trigger ledger materialization failed: %s", e)
+        return None
+    return int(ledger_id) if ledger_id is not None else None
+
+
 async def _mark_expected_trigger_delivered(
     pool: asyncpg.Pool,
     *,
@@ -6925,12 +7020,27 @@ async def planning_heartbeat(pool: asyncpg.Pool) -> None:
             severity_event_type = spec.severity_event_type or spec.event_type
             severity = classify_severity(severity_event_type, severity_ctx)
             instance = pick_instance(severity_event_type, severity)
+            # Materialize the deviation in planner_trigger_ledger before
+            # delivery so the SLA clock and trigger-health surface see it the
+            # same way they see scheduled milestones. _deliver_and_log then
+            # links the delivery row and marks it delivered/failed.
+            deviation_ledger_id: int | None = None
+            try:
+                async with pool.acquire() as conn:
+                    deviation_ledger_id = await _ensure_deviation_trigger_ledger(
+                        conn,
+                        instance=instance,
+                        trigger_data=forecast_trigger_data,
+                    )
+            except Exception as e:
+                log.warning("deviation ledger pre-delivery write failed (proceeding): %s", e)
             await _deliver_and_log(
                 pool,
                 spec.event_type,
                 deviations_str,
                 context,
                 instance=instance,
+                expected_trigger_id=deviation_ledger_id,
             )
             if forecast_alert_id is not None:
                 async with pool.acquire() as conn:

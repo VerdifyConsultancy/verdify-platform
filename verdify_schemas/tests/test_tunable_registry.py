@@ -301,13 +301,20 @@ class TestDriftGuard:
         assert PLANNER_PUSHABLE_REG == planner_policy
         assert all(REGISTRY[name].control_class == "planner_policy" for name in PLANNER_PUSHABLE_REG)
         assert set(TIER1_REG) <= set(PLANNER_PUSHABLE_REG)
+        # Per-circuit lighting knobs were reclassified OUT of the planner-writable
+        # surface: the band/schedule layer owns the lighting state machine (the
+        # planner pushed 0 of these over 30d live). They stay visible/readback
+        # context as scheduled_policy, but MCP no longer accepts planner writes.
         for param in (
             "gl_main_lux_threshold",
             "gl_main_lux_hysteresis",
             "gl_grow_lux_threshold",
             "gl_grow_lux_hysteresis",
         ):
-            assert param in PLANNER_PUSHABLE_REG
+            assert param not in PLANNER_PUSHABLE_REG
+            assert REGISTRY[param].control_class == "scheduled_policy"
+            assert REGISTRY[param].push_owner == "schedule"
+            assert not REGISTRY[param].planner_pushable
             assert REGISTRY[param].tier == 2
         assert REGISTRY["temp_low"].control_class == "crop_band"
         assert REGISTRY["safety_min"].control_class == "controller_safety"
@@ -374,11 +381,28 @@ class TestActivityDirectWetGuards:
             assert not row.planner_pushable
             assert row.cfg_readback_object_id
 
-    def test_direct_wet_policy_is_tunable_and_readbacked(self) -> None:
+    def test_direct_wet_schedule_offsets_are_scheduled_policy_and_readbacked(self) -> None:
+        """The per-zone watering offsets/masks are the schedule layer, not a
+        planner lever. They were reclassified out of the writable surface (the
+        band/schedule layer pushes them every cycle; the planner pushed 0 over
+        30d live), but stay readback-visible for traceability. The genuinely
+        tactical `direct_wet_stress_*` override knobs and the
+        `sw_direct_wet_gate_enabled` master gate switch remain planner-writable.
+        """
         for name in self.DIRECT_WET_NUMERIC:
             row = REGISTRY[name]
-            assert row.planner_pushable
-            assert row.cfg_readback_object_id
+            assert not row.planner_pushable
+            assert row.control_class == "scheduled_policy"
+            assert row.push_owner == "schedule"
+            assert row.cfg_readback_object_id  # readback visibility preserved
+        for name in (
+            "direct_wet_stress_vpd_margin_kpa",
+            "direct_wet_stress_min_dew_margin_f",
+            "direct_wet_stress_latest_hour",
+            "sw_direct_wet_stress_override_enabled",
+        ):
+            assert REGISTRY[name].planner_pushable
+            assert REGISTRY[name].control_class == "planner_policy"
         assert REGISTRY["sw_direct_wet_gate_enabled"].kind == "switch"
         assert REGISTRY["sw_direct_wet_gate_enabled"].planner_pushable
         assert REGISTRY["sw_direct_wet_gate_enabled"].cfg_readback_object_id

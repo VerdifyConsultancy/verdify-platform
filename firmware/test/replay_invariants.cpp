@@ -1,6 +1,6 @@
 /*
  * replay_invariants.cpp — Phase-0 bulletproof-firmware harness.
- * Reads extended replay CSV and runs the 16 invariants from invariants.h.
+ * Reads extended replay CSV and runs all invariants from invariants.h.
  *
  * Sibling to replay_overrides.cpp (which replays evaluate_overrides counts).
  * This file focuses on the invariant suite; the dual-ref old-vs-new mode
@@ -314,7 +314,7 @@ int main(int argc, char** argv) {
     // Summary
     std::printf("\n═══ Invariant summary — %ld rows ═══\n", rows);
     if (g_stats.counts_by_id.empty()) {
-        std::printf("  ✓ All 16 invariants passed.\n");
+        std::printf("  ✓ All invariants passed.\n");
         return 0;
     }
     std::printf("  %d total violations across %zu distinct invariants.\n",
