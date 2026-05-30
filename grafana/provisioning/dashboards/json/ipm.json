@@ -819,6 +819,298 @@
           "sort": "desc"
         }
       }
+    },
+    {
+      "id": 7,
+      "type": "row",
+      "title": "Per-Zone Disease & Heat KPIs",
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 51
+      },
+      "panels": []
+    },
+    {
+      "id": 70,
+      "type": "timeseries",
+      "title": "Per-Zone Botrytis Risk (each zone's own RH+temp, not house avg)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 52
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT $__time(ts), 100.0 * avg(CASE WHEN rh_north > 85 AND temp_north BETWEEN 60 AND 80 THEN 1 ELSE 0 END) AS \"North\" FROM climate WHERE $__timeFilter(ts) AND rh_north IS NOT NULL AND temp_north IS NOT NULL GROUP BY 1 ORDER BY 1",
+          "refId": "A",
+          "format": "time_series"
+        },
+        {
+          "rawSql": "SELECT $__time(ts), 100.0 * avg(CASE WHEN rh_south > 85 AND temp_south BETWEEN 60 AND 80 THEN 1 ELSE 0 END) AS \"South\" FROM climate WHERE $__timeFilter(ts) AND rh_south IS NOT NULL AND temp_south IS NOT NULL GROUP BY 1 ORDER BY 1",
+          "refId": "B",
+          "format": "time_series"
+        },
+        {
+          "rawSql": "SELECT $__time(ts), 100.0 * avg(CASE WHEN rh_east > 85 AND temp_east BETWEEN 60 AND 80 THEN 1 ELSE 0 END) AS \"East\" FROM climate WHERE $__timeFilter(ts) AND rh_east IS NOT NULL AND temp_east IS NOT NULL GROUP BY 1 ORDER BY 1",
+          "refId": "C",
+          "format": "time_series"
+        },
+        {
+          "rawSql": "SELECT $__time(ts), 100.0 * avg(CASE WHEN rh_west > 85 AND temp_west BETWEEN 60 AND 80 THEN 1 ELSE 0 END) AS \"West\" FROM climate WHERE $__timeFilter(ts) AND rh_west IS NOT NULL AND temp_west IS NOT NULL GROUP BY 1 ORDER BY 1",
+          "refId": "D",
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "min": 0,
+          "max": 100,
+          "custom": {
+            "lineWidth": 2,
+            "spanNulls": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "North"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#42A5F5",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "South"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#EF5350",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "East"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#AB47BC",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "West"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#66BB6A",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "description": "Botrytis-favorable share per zone, computed from each zone's own RH and temperature (rh>85% and temp 60-80F), replacing the house-average v_disease_risk view so localized disease pockets are visible per zone (backlog M12).",
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
+    },
+    {
+      "id": 71,
+      "type": "timeseries",
+      "title": "Per-Zone Temperature / Heat Pressure (vs house avg)",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 52
+      },
+      "targets": [
+        {
+          "rawSql": "SELECT $__time(ts), temp_north AS \"North\" FROM climate WHERE $__timeFilter(ts) AND temp_north IS NOT NULL ORDER BY ts",
+          "refId": "A",
+          "format": "time_series"
+        },
+        {
+          "rawSql": "SELECT $__time(ts), temp_south AS \"South\" FROM climate WHERE $__timeFilter(ts) AND temp_south IS NOT NULL ORDER BY ts",
+          "refId": "B",
+          "format": "time_series"
+        },
+        {
+          "rawSql": "SELECT $__time(ts), temp_east AS \"East\" FROM climate WHERE $__timeFilter(ts) AND temp_east IS NOT NULL ORDER BY ts",
+          "refId": "C",
+          "format": "time_series"
+        },
+        {
+          "rawSql": "SELECT $__time(ts), temp_west AS \"West\" FROM climate WHERE $__timeFilter(ts) AND temp_west IS NOT NULL ORDER BY ts",
+          "refId": "D",
+          "format": "time_series"
+        },
+        {
+          "rawSql": "SELECT $__time(ts), temp_control AS \"Center\" FROM climate WHERE $__timeFilter(ts) AND temp_control IS NOT NULL ORDER BY ts",
+          "refId": "E",
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "fahrenheit",
+          "custom": {
+            "lineWidth": 2,
+            "spanNulls": false
+          },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 85
+              },
+              {
+                "color": "red",
+                "value": 90
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "North"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#42A5F5",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "South"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#EF5350",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "East"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#AB47BC",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "West"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#66BB6A",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Center"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#FFA726",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "description": "Per-zone temperature so heat pressure is read where it actually occurs (east food crops vs Vanda center) rather than only the house temp_avg; 85F/90F thresholds flag heat stress (backlog M12).",
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      }
     }
   ],
   "templating": {

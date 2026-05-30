@@ -146,6 +146,8 @@ interval:
                   id(runtime_mister_west_ms)   = 0;
                   id(runtime_mister_center_ms) = 0;
                   id(mister_water_today) = 0.0f;
+                  // CYC-4: reset the overnight micro-pulse daily count.
+                  id(cnt_micropulse_today) = 0;
                   // B5: reset DLI accumulator at midnight
                   id(dli_accumulator) = 0.0f;
                   last_doy = doy;
@@ -409,7 +411,17 @@ interval:
               .occupied = id(greenhouse_occupied),
               .outdoor_temp_f = outdoorT,
               .outdoor_dewpoint_f = outdoor_dp,
-              .outdoor_data_age_s = outdoor_age
+              .outdoor_data_age_s = outdoor_age,
+              // SAF-1 / SF1: degraded when the indoor AVERAGE temp/RH probes are
+              // unavailable (avg_ok==false, computed in step 4 above) — whether
+              // we fell back to the case probe OR to the fabricated 65/50
+              // default. The VPD/RH the controller sees is then not a measured
+              // canopy average, so VPD-chasing wetting (humidify/dehum/fog) is
+              // suppressed in the header and only conservative timed center
+              // bursts + temp control remain. SENSOR_FAULT (inf/garbage) still
+              // takes over via sensors_plausible() when even the fabricated
+              // value is implausible.
+              .sensor_degraded = !avg_ok
           };
 
           // FRT-6: absorption hold active while now_ms is before the armed
@@ -498,7 +510,14 @@ interval:
               .midday_drench_start_minute = id(midday_drench_start_minute),
               .midday_drench_window_min = id(midday_drench_window_min),
               .midday_drench_on_s = id(midday_drench_on_s),
-              .midday_drench_gap_s = id(midday_drench_gap_s)
+              .midday_drench_gap_s = id(midday_drench_gap_s),
+              // CYC-4 (NB7): overnight ≤5s fog micro-pulse.
+              .sw_overnight_micropulse_enabled = id(sw_overnight_micropulse_enabled),
+              .sw_night_humidity_source_present = id(sw_night_humidity_source_present),
+              .micropulse_vpd_ceiling = id(micropulse_vpd_ceiling),
+              .micropulse_max_on_s = id(micropulse_max_on_s),
+              .micropulse_min_gap_s = id(micropulse_min_gap_s),
+              .micropulse_min_dew_margin_f = id(micropulse_min_dew_margin_f)
           };
 
           validate_setpoints(setpts);
@@ -677,6 +696,66 @@ interval:
               }
               mister_volume_hard_block_prev = mister_volume_hard_block;
           }
+
+          // CYC-4 (NB7): overnight ≤5s fog micro-pulse. A DEDICATED short-pulse
+          // path SEPARATE from the SEALED_MIST/fog duty table: its own ON timer
+          // (≤micropulse_max_on_s) + lockout (micropulse_min_gap_s), using the
+          // relay force_on/force_off args to BYPASS MIN_FOG_ON_MS/MIN_FOG_OFF_MS
+          // so the pulse is genuinely ≤5s (the standard 60s min-on would defeat
+          // the "micro" cap). The header gate overnight_micropulse_permitted()
+          // owns ALL the conditions (dark window, VPD>ceiling, dew/RH/temp,
+          // feed-hold, occupancy, plausibility, NB5-absent). Here we only run
+          // the timer + counter and surface force flags. The downstream
+          // willFog interlocks (leak / fert / budget / hard-ceiling / time)
+          // still apply and can force the pulse off mid-burst.
+          bool micropulse_force_on = false;
+          bool micropulse_force_off = false;
+          bool micropulse_fog_request = false;
+          {
+            const uint32_t mp_max_on_ms = uint32_t(setpts.micropulse_max_on_s) * 1000UL;
+            const uint32_t mp_gap_ms    = uint32_t(setpts.micropulse_min_gap_s) * 1000UL;
+            const bool mp_pulse_active =
+                id(micropulse_on_until_ms) != 0
+                && (int32_t)(id(micropulse_on_until_ms) - now_ms) > 0;
+            const bool mp_locked_out =
+                id(micropulse_lockout_until_ms) != 0
+                && (int32_t)(id(micropulse_lockout_until_ms) - now_ms) > 0;
+            const bool mp_permitted = overnight_micropulse_permitted(sensor_in, setpts);
+            if (mp_pulse_active) {
+              // Mid-pulse: keep fog ON (bypass min-off if the relay just toggled)
+              // unless the gate dropped (e.g. VPD relieved) — then end it early.
+              if (mp_permitted) {
+                micropulse_fog_request = true;
+                micropulse_force_on = true;
+              } else {
+                id(micropulse_on_until_ms) = 0;
+                micropulse_force_off = true;  // end the pulse now, bypass min-on
+              }
+            } else if (id(micropulse_on_until_ms) != 0) {
+              // Pulse window just elapsed → force OFF (bypass min-on so the ≤5s
+              // cap is HARD) and arm the lockout.
+              id(micropulse_on_until_ms) = 0;
+              micropulse_force_off = true;
+            } else if (mp_permitted && !mp_locked_out
+                       && !leak_block && !occupancy_moisture_block
+                       && !id(fertilizer_master_valve).state
+                       && !climate_water_budget_block && !mister_volume_hard_block) {
+              // Start a fresh pulse.
+              id(micropulse_on_until_ms)      = now_ms + mp_max_on_ms;
+              id(micropulse_lockout_until_ms) = now_ms + mp_max_on_ms + mp_gap_ms;
+              id(cnt_micropulse_today) += 1;
+              micropulse_fog_request = true;
+              micropulse_force_on = true;
+              ESP_LOGW("micropulse","CYC-4 overnight fog micro-pulse %ds (VPD %.2f > %.2f ceiling)",
+                       setpts.micropulse_max_on_s, sensor_in.vpd_kpa, setpts.micropulse_vpd_ceiling);
+            }
+          }
+          // Fold the micro-pulse request into willFog so the SAME safety
+          // interlocks below (leak / fert / occupancy / budget / vent / time)
+          // still gate it. The force flags only bypass the relay min-on/off
+          // duty timing, never the safety interlocks.
+          if (micropulse_fog_request) willFog = true;
+
           // SAF-5: the AquaFog is clean-water-only by plumbing (there is no
           // fog_fert relay). Positive interlock: fog NEVER co-fires with the
           // fertilizer master valve, so salts can never reach the fogger even
@@ -731,8 +810,13 @@ interval:
           set_relay(
               R[4],
               willFog,
-              false,
-              sensor_fault_relay_lock
+              // CYC-4: force_on bypasses MIN_FOG_OFF_MS so a ≤5s micro-pulse can
+              // start even if the fogger toggled recently; force_off bypasses
+              // MIN_FOG_ON_MS so the pulse is cut at its ≤5s cap (and on any
+              // safety interlock). The safety disjunction below is unchanged.
+              micropulse_force_on,
+              micropulse_force_off
+                  || sensor_fault_relay_lock
                   || leak_block
                   || occupancy_moisture_block
                   || irrigation_water_conflict
@@ -1658,6 +1742,23 @@ interval:
             }
           }
 
+          // SAF-1 / SF1: surface the sensor-degraded fallback to operators so a
+          // single-probe loss (avg probes down, running on the case-probe/
+          // fabricated value with VPD-chasing suppressed) is visible, not
+          // silent. Only publish on change.
+          {
+            static int last_degraded = -1;
+            const int degraded_now = sensor_in.sensor_degraded ? 1 : 0;
+            if(degraded_now != last_degraded){
+              id(sensor_degraded_active).publish_state((float)degraded_now);
+              last_degraded = degraded_now;
+              if(degraded_now)
+                ESP_LOGW("sensor","DEGRADED — avg probes down; VPD-chasing suppressed, timed wetting only");
+              else
+                ESP_LOGI("sensor","Sensor-degraded cleared — VPD control restored");
+            }
+          }
+
           /*** AI-control diagnostics — requested vs served actuator paths ***/
           {
             const bool vent_mist_served =
@@ -2231,6 +2332,28 @@ interval:
                 const char* drop_zone = (job_zone == 1) ? "SOUTH" : (job_zone == 2) ? "WEST" : (job_zone == 3) ? "CENTER" : "WALL";
                 ESP_LOGW("irrig","DROP QUEUED %s job (direct-wet gate)", drop_zone);
                 job = 0;
+              }
+              // FRT-8 / F3: AM-only feed window. Fertilizer jobs (2=wall_fert,
+              // 4=center_fert, 7=south_mister_fert, 8=west_mister_fert) are the
+              // ONLY jobs that carry salts; they are dropped outside the local
+              // [feed_start_hour, feed_end_hour) window REGARDLESS of VPD. This
+              // is the single chokepoint that gates both scheduled fert and the
+              // manual fert buttons (which only set irrig_queue). Clean jobs
+              // (1/3) are unaffected. Requires a valid clock; if the clock is
+              // invalid we fail SAFE and drop the fert job rather than feed at
+              // an unknown hour.
+              const bool is_fert_job = (job == 2 || job == 4 || job == 7 || job == 8);
+              if(job > 0 && is_fert_job){
+                const bool feed_clock_ok = wet_time_valid;
+                const bool feed_window_ok = feed_clock_ok &&
+                  feed_window_open(wet_now_t.hour, id(feed_start_hour), id(feed_end_hour));
+                if(!feed_window_ok){
+                  ESP_LOGW("irrig","DROP QUEUED FERT job %d (feed window %d:00-%d:00, hour=%d%s)",
+                           job, id(feed_start_hour), id(feed_end_hour),
+                           feed_clock_ok ? wet_now_t.hour : -1,
+                           feed_clock_ok ? "" : ", clock invalid");
+                  job = 0;
+                }
               }
             }
 

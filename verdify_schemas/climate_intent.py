@@ -255,6 +255,18 @@ CLIMATE_RELAY_FIELD_DENYLIST: frozenset[str] = frozenset(
     }
 )
 
+# Authoritative fog-block-reason vocabulary. MUST be a superset of every value
+# the firmware can publish to climate_action_log.fog_block_reason, or the strict
+# ClimateActionDecision validator rejects real persisted rows (B16/M8: ~3104
+# stored rows across `served`/`vent_interlock`/`irrigation`/`time_invalid` were
+# latently un-decodable). Source of truth is the shared C++ logic
+# (firmware/lib/greenhouse_logic.h `climate_fog_assist_block_reason()` →
+# `feed_hold`/`dusk_cutoff`/`below_threshold`/`dew_margin`/`time_window`/
+# `rh_ceiling`/`temp_low`/`occupancy`) plus the ESPHome manual/safety + interlock
+# path (firmware/greenhouse/controls.yaml → `served`/`vent_interlock`/
+# `irrigation`/`resource_budget`/`time_invalid`/`leak_detected`/`relay_min_off`).
+# test_climate_intent.test_fog_block_reasons_cover_stored_db_values guards this
+# against the live climate_action_log column.
 FOG_BLOCK_REASONS: tuple[str, ...] = (
     "none",
     "below_threshold",
@@ -265,6 +277,14 @@ FOG_BLOCK_REASONS: tuple[str, ...] = (
     "occupancy",
     "relay_min_off",
     "resource_budget",
+    # B16/M8 additions — firmware-emitted + DB-stored, previously rejected:
+    "served",  # served band already satisfied (no fog demand)
+    "irrigation",  # mutual-exclusion with an active irrigation job
+    "vent_interlock",  # vent open → fog suppressed (SAF interlock)
+    "time_invalid",  # controller clock not yet valid (RTC/NTP unsynced)
+    "leak_detected",  # leak-detect safety lock
+    "feed_hold",  # FRT-6 absorption hold after a feed
+    "dusk_cutoff",  # SAF-3 VPD-independent dusk cutoff rail
 )
 
 

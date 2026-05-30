@@ -134,11 +134,22 @@ def planning_block(data: dict) -> str:
     outcome_score = last_validated.get("outcome_score")
     outcome_text = f" with outcome score {outcome_score}" if outcome_score is not None else ""
 
+    # Graded, controller-attributable compliance (band-compliance §6-§7) is only
+    # surfaced once the graded engine is promoted (migration 146/147). Until the
+    # public API returns a value, the card is omitted rather than shown as "No data".
+    graded_attributable = pq.get("graded_compliance_attributable_pct")
+    graded_card = (
+        f'\n  <div class="metric-card"><strong>{esc(fmt_number(graded_attributable, 1, "%"))}</strong>'
+        "<p>Graded compliance (controller-attributable)</p></div>"
+        if graded_attributable is not None
+        else ""
+    )
+
     return f"""Static public API snapshot: **{fmt_snapshot_time(data)}**. Source: [evidence snapshot JSON](https://api.verdify.ai/api/v1/public/evidence-snapshot) and [scorecard API](https://api.verdify.ai/api/v1/scorecard?date={score_date}). These values are crawler-friendly receipts; use the live dashboard link above for continuously refreshed panels.
 
 <div class="metric-grid">
   <div class="metric-card"><strong>{esc(fmt_number(pq.get("planner_score_today"), 1))}</strong><p>Today's planner score</p></div>
-  <div class="metric-card"><strong>{esc(fmt_number(pq.get("both_axis_compliance_pct"), 1, "%"))}</strong><p>Both-axis compliance</p></div>
+  <div class="metric-card"><strong>{esc(fmt_number(pq.get("both_axis_compliance_pct"), 1, "%"))}</strong><p>Both-axis compliance (binary, house)</p></div>{graded_card}
   <div class="metric-card"><strong>{esc(fmt_number(pq.get("temp_compliance_pct"), 1, "%"))}</strong><p>Temperature compliance</p></div>
   <div class="metric-card"><strong>{esc(fmt_number(pq.get("vpd_compliance_pct"), 1, "%"))}</strong><p>VPD compliance</p></div>
   <div class="metric-card"><strong>{esc(fmt_number(pq.get("stress_axis_hours"), 2, "h"))}</strong><p>Stress-axis hours</p></div>

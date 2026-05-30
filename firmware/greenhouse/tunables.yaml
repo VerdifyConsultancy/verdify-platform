@@ -2414,24 +2414,53 @@ button:
     name: "Wall Fert - RUN ALL"
     on_press:
       - lambda: |-
-          id(irrig_queue) |= (2 | 16 | 32);
-          ESP_LOGI("irrig","Manual: WALL FERT + SOUTH/WEST MISTER FERT queued");
+          // FRT-8 / F3: manual fert buttons obey the AM-only feed window too.
+          // Reject (do not queue) outside [feed_start_hour, feed_end_hour),
+          // regardless of VPD. The dequeue gate is the authoritative backstop;
+          // this gives the operator immediate feedback at the press. The clean
+          // half (wall clean) is unaffected — only fert bits are withheld.
+          auto t = id(sntp_time).now();
+          const bool ok = t.is_valid() && !id(sntp_failed) &&
+            feed_window_open(t.hour, id(feed_start_hour), id(feed_end_hour));
+          if(ok){
+            id(irrig_queue) |= (2 | 16 | 32);
+            ESP_LOGI("irrig","Manual: WALL FERT + SOUTH/WEST MISTER FERT queued");
+          } else {
+            ESP_LOGW("irrig","Manual WALL FERT REJECTED — outside feed window %d:00-%d:00",
+                     id(feed_start_hour), id(feed_end_hour));
+          }
 
   - platform: template
     id: btn_south_mister_fert
     name: "South Wall Mister - RUN FERT"
     on_press:
       - lambda: |-
-          id(irrig_queue) |= 16;
-          ESP_LOGI("irrig","Manual: SOUTH MISTER FERT queued");
+          auto t = id(sntp_time).now();
+          const bool ok = t.is_valid() && !id(sntp_failed) &&
+            feed_window_open(t.hour, id(feed_start_hour), id(feed_end_hour));
+          if(ok){
+            id(irrig_queue) |= 16;
+            ESP_LOGI("irrig","Manual: SOUTH MISTER FERT queued");
+          } else {
+            ESP_LOGW("irrig","Manual SOUTH MISTER FERT REJECTED — outside feed window %d:00-%d:00",
+                     id(feed_start_hour), id(feed_end_hour));
+          }
 
   - platform: template
     id: btn_west_mister_fert
     name: "West Wall Mister - RUN FERT"
     on_press:
       - lambda: |-
-          id(irrig_queue) |= 32;
-          ESP_LOGI("irrig","Manual: WEST MISTER FERT queued");
+          auto t = id(sntp_time).now();
+          const bool ok = t.is_valid() && !id(sntp_failed) &&
+            feed_window_open(t.hour, id(feed_start_hour), id(feed_end_hour));
+          if(ok){
+            id(irrig_queue) |= 32;
+            ESP_LOGI("irrig","Manual: WEST MISTER FERT queued");
+          } else {
+            ESP_LOGW("irrig","Manual WEST MISTER FERT REJECTED — outside feed window %d:00-%d:00",
+                     id(feed_start_hour), id(feed_end_hour));
+          }
 
   - platform: template
     id: btn_center_clean
@@ -2446,8 +2475,18 @@ button:
     name: "Center Drips - RUN FERT"
     on_press:
       - lambda: |-
-          id(irrig_queue) |= 8;
-          ESP_LOGI("irrig","Manual: CENTER FERT queued");
+          // FRT-8 / F3: the priority-Vanda manual feed. Reject outside the
+          // AM-only feed window regardless of VPD (fail SAFE on an invalid clock).
+          auto t = id(sntp_time).now();
+          const bool ok = t.is_valid() && !id(sntp_failed) &&
+            feed_window_open(t.hour, id(feed_start_hour), id(feed_end_hour));
+          if(ok){
+            id(irrig_queue) |= 8;
+            ESP_LOGI("irrig","Manual: CENTER FERT queued");
+          } else {
+            ESP_LOGW("irrig","Manual CENTER FERT REJECTED — outside feed window %d:00-%d:00",
+                     id(feed_start_hour), id(feed_end_hour));
+          }
 
 ###############################################################################
 # END OF FILE

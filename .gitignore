@@ -67,3 +67,4 @@ firmware/artifacts/
 .claude/settings.local.json
 
 CLAUDE.md
+.claude-tmp/

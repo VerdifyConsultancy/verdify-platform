@@ -36,6 +36,18 @@ inline bool sensors_plausible(const SensorInputs& in) noexcept {
         && in.local_hour >= 0        && in.local_hour <= 23;
 }
 
+// ── SAF-1 / SF1: VPD-control trust gate ────────────────────────────────
+// VPD/RH control (humidify, dehum, fog-for-humidity, the VPD over-saturation
+// burst gate) is only trustworthy when the indoor average RH/VPD probes are
+// live. When in.sensor_degraded is set the VPD reading is fabricated from a
+// fallback probe, so every VPD-CHASING path is suppressed and the controller
+// falls back to conservative TIMED wetting + temp-only control. Temperature
+// control (safety rails, vent cooling, heat) is NOT gated — the case probe
+// still yields a plausible temp.
+inline bool vpd_control_trusted(const SensorInputs& in) noexcept {
+    return !in.sensor_degraded;
+}
+
 // ── Occupancy quiet guards ──
 // When occupied, do not seal for misting, fire fog, or run routine fans.
 // Note: the caller (controls.yaml) already computes sp.occupancy_inhibit as
@@ -220,6 +232,28 @@ inline bool day_mask_allows(int day_mask, int day_of_week_zero_sunday) noexcept 
     return (day_mask & (1 << day_of_week_zero_sunday)) != 0;
 }
 
+// ── FRT-8 / F3 (AM-only feed window) ───────────────────────────────────
+// Returns true iff `hour` is inside the morning feed window [start, end).
+// This is the authoritative, VPD-INDEPENDENT rail that gates every
+// fertilizer job (scheduled fert states 2/4/7/8 AND the manual fert
+// buttons). Bare-root Vanda must be fed once per day in the morning so the
+// velamen has the full daylight period to absorb and the surfaces dry well
+// before the dusk cutoff; an afternoon/dusk/overnight feed leaves salts on
+// wet roots into the night (rot/burn risk). Wrap-aware like
+// fog_hour_in_window: when start <= end the window is the simple [start,
+// end); a start > end would cross midnight (degenerate for a morning feed,
+// but handled for safety). A degenerate start == end is treated as "always
+// closed" so a misconfigured pair fails SAFE (no feed) rather than open.
+inline bool feed_window_open(int hour, int feed_start_hour, int feed_end_hour) noexcept {
+    hour = std::max(0, std::min(23, hour));
+    feed_start_hour = std::max(0, std::min(23, feed_start_hour));
+    feed_end_hour   = std::max(0, std::min(24, feed_end_hour));
+    if (feed_start_hour == feed_end_hour) return false;  // degenerate → fail closed
+    return (feed_start_hour < feed_end_hour)
+        ? (hour >= feed_start_hour && hour < feed_end_hour)
+        : (hour >= feed_start_hour || hour < feed_end_hour);
+}
+
 // True iff all of RH, temp, and hour-of-day permit fogging. Occupancy is
 // NOT checked here — see moisture_blocked_by_occupancy().
 inline bool fog_permitted(const SensorInputs& in, const Setpoints& sp) noexcept {
@@ -311,7 +345,14 @@ inline bool center_burst_rails_permit(const SensorInputs& in, const Setpoints& s
     if (dew_margin_f(in) < sp.direct_wet_stress_min_dew_margin_f) return false;
     // Over-saturation sanity gate: only burst when the air is drier than the
     // center band ceiling. If VPD <= vpd_high the canopy is already humid.
-    if (in.vpd_kpa <= sp.vpd_high) return false;
+    // SAF-1 / SF1: when the VPD reading is degraded (fabricated) this gate is
+    // BYPASSED — the whole point of the degraded fallback is conservative
+    // *timed* wetting that does NOT chase VPD. The dawn/midday windows + every
+    // other rail (dusk, feed-hold, dew margin, occupancy, plausibility) plus
+    // the controls.yaml SAF-4 duty cap / daily-volume ceiling still bound it,
+    // so this stays safe; it just no longer requires a trusted dry reading to
+    // run the calibrated morning/midday drench.
+    if (vpd_control_trusted(in) && in.vpd_kpa <= sp.vpd_high) return false;
     return true;
 }
 
@@ -342,6 +383,44 @@ inline bool center_burst_cadence_s(CenterBurst burst, const Setpoints& sp, int& 
         default:
             return false;
     }
+}
+
+// ── CYC-4 (NB7): overnight ≤5s fog micro-pulse (last resort) ─────────────
+// Returns the block reason ("" = permitted) for an overnight emergency fog
+// micro-pulse. This is the DELIBERATE, narrowly-scoped exception to the dusk
+// cutoff: a single ≤ micropulse_max_on_s pulse to arrest a dangerous overnight
+// VPD spike when there is no non-overhead night humidity source. Every gate is
+// hard:
+//   * master enable + NB5-not-present (auto-disable when night humidity HW lands)
+//   * sensors plausible (no pulsing on garbage)
+//   * OVERNIGHT only: must be past the dusk cutoff (the dark window). During the
+//     day the normal SEALED_MIST/fog path owns humidity; this path is dark-only.
+//   * VPD STRICTLY above micropulse_vpd_ceiling (default 1.25)
+//   * RH below fog ceiling, temp above fog min (fogger physical limits)
+//   * dew margin above micropulse_min_dew_margin_f (no crown condensation)
+//   * NOT during the FRT-6 absorption hold, NOT occupancy-blocked
+// The pulse-vs-lockout TIMING (≤5s ON then micropulse_min_gap_s lockout) is
+// owned by controls.yaml's dedicated timer — this gate only answers "may a
+// micro-pulse fire at all this cycle?".
+inline const char* overnight_micropulse_block_reason(const SensorInputs& in, const Setpoints& sp) noexcept {
+    if (!sp.sw_overnight_micropulse_enabled) return "disabled";
+    if (sp.sw_night_humidity_source_present) return "nb5_present";
+    if (!sensors_plausible(in)) return "sensor_fault";
+    if (moisture_blocked_by_occupancy(in, sp)) return "occupancy";
+    if (sp.feed_hold_active) return "feed_hold";
+    // Dark-window only. past_dusk_cutoff is wrap-aware over
+    // [dusk_cutoff_hour, night_end_hour); when the cutoff is disabled there is
+    // no defined overnight window, so the micro-pulse cannot run.
+    if (!past_dusk_cutoff(in, sp)) return "not_overnight";
+    if (in.vpd_kpa <= sp.micropulse_vpd_ceiling) return "below_ceiling";
+    if (dew_margin_f(in) < sp.micropulse_min_dew_margin_f) return "dew_margin";
+    if (in.rh_pct > sp.fog_rh_ceiling) return "rh_ceiling";
+    if (in.temp_f < sp.fog_min_temp) return "temp_low";
+    return "";
+}
+
+inline bool overnight_micropulse_permitted(const SensorInputs& in, const Setpoints& sp) noexcept {
+    return overnight_micropulse_block_reason(in, sp)[0] == '\0';
 }
 
 // Unified band-first controller clamps VPD hysteresis against the actual band width. The
@@ -518,9 +597,14 @@ inline ClimateActionDecision evaluate_climate_decision(
     const ControlState& state
 ) noexcept {
     const bool sensor_fault = !sensors_plausible(in);
+    // SAF-1 / SF1: when the average RH/VPD probes are degraded, the VPD reading
+    // is fabricated. Neutralize every VPD-chasing input so the controller does
+    // NOT humidify/dehum/fog on a guess — it falls back to temp-only control +
+    // the conservative timed center bursts. Temperature inputs stay live.
+    const bool vpd_trusted = vpd_control_trusted(in);
     const float temp_error = climate_band_error(in.temp_f, sp.temp_low, sp.temp_high);
-    const float vpd_error = climate_band_error(in.vpd_kpa, sp.vpd_low, sp.vpd_high);
-    const float dry_excess = std::max(0.0f, in.vpd_kpa - sp.vpd_high);
+    const float vpd_error = vpd_trusted ? climate_band_error(in.vpd_kpa, sp.vpd_low, sp.vpd_high) : 0.0f;
+    const float dry_excess = vpd_trusted ? std::max(0.0f, in.vpd_kpa - sp.vpd_high) : 0.0f;
     const float temp_high_excess = std::max(0.0f, in.temp_f - sp.temp_high);
     const float temp_low_excess = std::max(0.0f, sp.temp_low - in.temp_f);
     const float outdoor_cooling_advantage = std::isfinite(in.outdoor_temp_f)
@@ -550,7 +634,8 @@ inline ClimateActionDecision evaluate_climate_decision(
     const float dehum_hysteresis = band_vpd_hysteresis(sp);
     const bool dehum_enter = in.vpd_kpa < (sp.vpd_low - dehum_hysteresis);
     const bool dehum_continue = state.mode_prev == DEHUM_VENT && in.vpd_kpa < sp.vpd_low;
-    const bool dehum_wanted = !sp.econ_block
+    const bool dehum_wanted = vpd_trusted
+        && !sp.econ_block
         && cold_dehum_allowed
         && (dehum_enter || dehum_continue);
 
@@ -929,7 +1014,15 @@ inline LightingDecision evaluate_lighting(
         && in_window
         && minutes_below_target
         && ((!current_on && lux_below_on) || (current_on && lux_below_off));
+    // ENV-5 (M14): occupancy task-light is GATED on in_window so an evening
+    // visit cannot turn grow lights on during the protected dark period.
+    // Empirically grow lights were observed on at 23:49 local because this
+    // branch (evaluated BEFORE the !in_window guard below) omitted the window
+    // test. The window [start_hour, cutoff_hour) is the dispatcher-pushed
+    // photoperiod (Vanda-driven, not the highest-DLI crop); keeping the
+    // occupancy convenience light inside it guarantees the >=6h dark block.
     const bool occupancy_task_light_demand = sp.auto_enabled
+        && in_window
         && in.occupied
         && exterior_lux_available
         && ((!current_on && exterior_lux_below_on) || (current_on && exterior_lux_below_off));
@@ -945,15 +1038,19 @@ inline LightingDecision evaluate_lighting(
     } else if (plant_supplement_demand) {
         want_on = true;
         reason = (!current_on && lux_below_on) ? "plant_lux_low" : "plant_hysteresis_hold";
+    } else if (!in_window) {
+        // ENV-5 (M14): outside the photoperiod window NOTHING lights — neither
+        // the plant supplement nor an occupancy task light. Reported before the
+        // occupancy fallbacks so a visit during the dark block is auditable as
+        // "outside_window" rather than "lux_sufficient".
+        want_on = false;
+        reason = "outside_window";
     } else if (in.occupied && !exterior_lux_available) {
         want_on = false;
         reason = "occupancy_lux_unavailable";
     } else if (in.occupied && exterior_lux_available) {
         want_on = false;
         reason = "lux_sufficient";
-    } else if (!in_window) {
-        want_on = false;
-        reason = "outside_window";
     } else if (!minutes_below_target) {
         want_on = false;
         reason = "minutes_met";
@@ -1037,8 +1134,14 @@ inline Mode determine_mode_band_first(
     const bool safety_cool = in.temp_f >= sp.safety_max;
     const bool safety_heat = in.temp_f <= sp.safety_min;
     const bool was_cooling = (prev == VENTILATE) || (prev == THERMAL_RELIEF);
-    const bool vpd_high = in.vpd_kpa > sp.vpd_high;
-    const bool vpd_high_resolved = in.vpd_kpa <= (sp.vpd_high - HV);
+    // SAF-1 / SF1: a degraded VPD reading is fabricated — treat VPD as "not
+    // high" so the vpd_watch timer never accrues, humidify/summer-vent never
+    // arm, and the FSM mirrors the VPD-suppressed evaluate_climate_decision.
+    // vpd_high_resolved is forced TRUE so any in-flight sealed state exits
+    // cleanly (rather than latching on the fabricated reading).
+    const bool vpd_trusted = vpd_control_trusted(in);
+    const bool vpd_high = vpd_trusted && in.vpd_kpa > sp.vpd_high;
+    const bool vpd_high_resolved = !vpd_trusted || in.vpd_kpa <= (sp.vpd_high - HV);
     const bool outdoor_cold_for_vent =
         std::isfinite(in.outdoor_temp_f) && in.outdoor_temp_f < (sp.temp_low - sp.cold_vent_guard_delta_f);
     const float cooling_exit_hysteresis =
@@ -1322,13 +1425,20 @@ inline Mode determine_mode(
     const float vpd_high_eff = sp.vpd_high - vpd_width * 0.25f;
     const float HV    = std::min(sp.vpd_hysteresis, vpd_high_eff * 0.5f);
 
+    // SAF-1 / SF1: when the average RH/VPD probes are degraded the VPD is
+    // fabricated — suppress VPD-CHASING entry (no seal-for-mist, no dehum-vent)
+    // and force the exits TRUE so any in-flight VPD state unwinds. Temperature
+    // control (safety, vent, heat) is untouched. (Legacy cascade mirror of the
+    // band-first gating; production runs band-first, but the rollback path must
+    // be safe too.)
+    const bool vpd_trusted = vpd_control_trusted(in);
     bool safety_cool    = in.temp_f >= sp.safety_max;
     bool safety_heat    = in.temp_f <= sp.safety_min;
-    bool vpd_above_band = in.vpd_kpa > vpd_high_eff;
-    bool vpd_below_exit = in.vpd_kpa < (vpd_high_eff - HV);
+    bool vpd_above_band = vpd_trusted && in.vpd_kpa > vpd_high_eff;
+    bool vpd_below_exit = !vpd_trusted || in.vpd_kpa < (vpd_high_eff - HV);
 
-    bool vpd_too_low_enter = in.vpd_kpa < (vpd_low_eff - HV) && !sp.econ_block;
-    bool vpd_dehum_exit    = in.vpd_kpa >= vpd_low_eff;
+    bool vpd_too_low_enter = vpd_trusted && in.vpd_kpa < (vpd_low_eff - HV) && !sp.econ_block;
+    bool vpd_dehum_exit    = !vpd_trusted || in.vpd_kpa >= vpd_low_eff;
 
     bool was_ventilating = (prev == VENTILATE);
     bool needs_cooling   = was_ventilating
@@ -1564,7 +1674,9 @@ inline Mode determine_mode(
         const Mode pre_r23_mode = mode;
         state.dry_override_active = false;
 
-        if (in.vpd_kpa > sp.vpd_max_safe && can_seal_for_dryness) {
+        // SAF-1 / SF1: the R2-3 dry override is VPD-driven; suppress it when
+        // the VPD is fabricated (degraded probes) so a guess cannot force a seal.
+        if (vpd_trusted && in.vpd_kpa > sp.vpd_max_safe && can_seal_for_dryness) {
             mode = SEALED_MIST;
             // Sprint-15.1 fix 8: tag this path distinctly so gh_mode_reason
             // shows "dry_override" rather than the prior branch's reason.
@@ -1593,7 +1705,9 @@ inline Mode determine_mode(
     // with state cleanup (mirrors the normal was_sealed → exit path so
     // the next seal cycle starts clean, not inheriting stale timers or
     // a stale mist_stage).
-    if (in.vpd_kpa < sp.vpd_min_safe && (mode == IDLE || mode == SEALED_MIST)) {
+    // SAF-1 / SF1: the vpd_min_safe rescue is VPD-driven; gated on a trusted
+    // reading so a fabricated low VPD cannot force DEHUM_VENT.
+    if (vpd_trusted && in.vpd_kpa < sp.vpd_min_safe && (mode == IDLE || mode == SEALED_MIST)) {
         if (!sp.econ_block) {
             if (mode == SEALED_MIST) {
                 state.sealed_timer_ms = 0;
@@ -1956,7 +2070,11 @@ inline RelayOutputs resolve_equipment(
             // night VPD floor (DB diurnal curve) would make it fire across
             // the dark hours and erase the ≥10°F day/night drop the Vanda
             // needs. Safety heat (handled by SAFETY_HEAT mode) is untouched.
-            if (in.vpd_kpa < vpd_low_eff && sp.econ_block
+            // SAF-1 / SF1: this is the only VPD-driven heat path; suppress it
+            // when the VPD is fabricated so degraded probes cannot chase
+            // humidity with heat (also the ENV-2 night-suppression concern).
+            if (vpd_control_trusted(in)
+                && in.vpd_kpa < vpd_low_eff && sp.econ_block
                 && in.temp_f < Thigh - sp.econ_heat_margin_f
                 && !night_econ_heat_suppressed(in, sp)) {
                 out.heat1 = true;

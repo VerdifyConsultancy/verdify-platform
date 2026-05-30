@@ -43,6 +43,39 @@ SLACK_CHANNEL = SLACK_SETTINGS.channel_id
 INTERVAL_MAP = {"24h": "24 hours", "48h": "48 hours", "12h": "12 hours", "6h": "6 hours"}
 BAND_OWNED_PARAMS = BAND_OWNED_REG
 
+# P3a (B17 + heat-critical): the pre-emptive heat pre-cool was dead-on-arrival.
+# heat_wave / extreme_heat rules target temp_high, which is dispatcher/band-owned
+# (BAND_OWNED_PARAMS), so every fire hit the skipped_band_owned branch and NEVER
+# actuated. Lowering the served band ceiling is correctly the dispatcher's job
+# (it derives the achievable envelope), so the forecast engine must NOT poke it.
+# Instead, when a band-owned THERMAL target fires we re-route the pre-cool onto
+# dedicated, non-band-owned, planner-pushable cooling levers the dispatcher honors:
+#   * cool_stage2_over_high_f  — how far over temp_high before 2nd cooling stage
+#     engages; default 1.0F. Drop to 0.0 to pre-engage stage-2 cooling at the band
+#     ceiling ahead of the heat instead of waiting +1F into the miss.
+#   * sw_cool_all_fans_at_high_enabled — 0/1; force all fans at the high band so
+#     the box runs full exhaust authority before the spike, not after.
+# This makes the heat pre-cool actually fire ahead of the June 4-9 cluster
+# (94-105F) without touching the served band the firmware enforces.
+#
+# Map: band-owned thermal trigger param -> list of (precool_param, precool_value).
+# Cooling-direction (heat) pre-cool only; band-owned freeze targets (temp_low)
+# stay skipped — pre-heating is not the heat-critical gap and the heat path is
+# the one verified dead-on-arrival against the imminent cluster.
+PRECOOL_REMAP = {
+    "temp_high": [
+        ("cool_stage2_over_high_f", 0.0),
+        ("sw_cool_all_fans_at_high_enabled", 1.0),
+    ],
+}
+
+# Widen the look-ahead window for heat pre-cool so a sustained multi-day cluster
+# (June 4-9, 94-105F) is seen 48-72h out, not just inside the rule's stored 24h
+# window. Keyed by rule name; falls back to the rule's own time_window otherwise.
+# 72h covers the run-up to the 6/7 (100.2F) / 6/8 (105.1F) peak from two days prior.
+HEAT_PRECOOL_WINDOW = "72 hours"
+HEAT_PRECOOL_RULES = {"heat_wave", "extreme_heat"}
+
 
 def get_db_url():
     pw = "verdify"
@@ -151,6 +184,11 @@ async def main():
             op = rule["operator"]
             threshold = float(rule["threshold"])
             window = INTERVAL_MAP.get(rule["time_window"], "24 hours")
+            # P3a: widen the heat pre-cool look-ahead to 48-72h so the sustained
+            # June 4-9 heat cluster is acted on ahead of the peak, not only once
+            # it falls inside the rule's stored 24h window.
+            if name in HEAT_PRECOOL_RULES:
+                window = HEAT_PRECOOL_WINDOW
             param = rule["param"]
             adj_value = rule["adjustment_value"]
             action_type = rule["action_type"]
@@ -211,7 +249,82 @@ async def main():
                 "RULE TRIGGERED: %s — %s %s %s (actual: %s at %s)", name, metric, op, threshold, trigger_val, trigger_ts
             )
 
+            # P3a: band-owned thermal pre-cool re-route. Checked FIRST, before the
+            # band-owned skip guard. The trigger param (e.g. temp_high) IS band-owned,
+            # so we never write it — instead we actuate its dedicated NON-band-owned
+            # re-route targets (cool_stage2_over_high_f, sw_cool_all_fans_at_high_enabled)
+            # so the heat pre-cool actually fires ahead of the spike instead of hitting
+            # the dead skipped_band_owned path. This branch is deliberately OUTSIDE the
+            # band-owned guard block below so that guard stays a pure no-write skip
+            # (the dispatcher-served-band contract in tests/test_12_fidelity.py).
+            precool_remap = PRECOOL_REMAP.get(param) if action_type == "setpoint" else None
+            if precool_remap is not None:
+                plan_id = f"preemptive-{now.strftime('%Y%m%d-%H%M')}"
+                for precool_param, precool_value in precool_remap:
+                    old_val = await conn.fetchval(
+                        "SELECT value FROM setpoint_changes WHERE parameter = $1 ORDER BY ts DESC LIMIT 1",
+                        precool_param,
+                    )
+                    reason = (
+                        f"Forecast pre-cool: {name} — {metric} {op} {threshold} "
+                        f"(actual {trigger_val} at {trigger_ts.strftime('%H:%M')}); "
+                        f"re-routed from band-owned {param} to {precool_param}"
+                    )
+                    if not DRY_RUN:
+                        await conn.execute(
+                            "INSERT INTO setpoint_plan (ts, parameter, value, plan_id, source, reason) "
+                            "VALUES (now(), $1, $2, $3, 'preemptive', $4)",
+                            precool_param,
+                            float(precool_value),
+                            plan_id,
+                            reason,
+                        )
+                        await conn.execute(
+                            "INSERT INTO setpoint_changes (ts, parameter, value, source) "
+                            "VALUES (now(), $1, $2, 'preemptive')",
+                            precool_param,
+                            float(precool_value),
+                        )
+                    await conn.execute(
+                        "INSERT INTO forecast_action_log "
+                        "(rule_id, rule_name, triggered_at, forecast_condition, action_taken, plan_id, param, old_value, new_value, outcome, outcome_evaluated_at, outcome_metrics) "
+                        "VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'pending', NULL, $10)",
+                        rule_id,
+                        name,
+                        now,
+                        json.dumps(forecast_snapshot),
+                        "precool_rerouted" if not DRY_RUN else "dry_run",
+                        plan_id,
+                        precool_param,
+                        float(old_val) if old_val is not None else None,
+                        float(precool_value),
+                        json.dumps(
+                            {
+                                "evaluator": "forecast-action-engine",
+                                "reason": "precool_reroute_from_band_owned",
+                                "original_band_owned_param": param,
+                                "original_adjustment_value": float(adj_value) if adj_value is not None else None,
+                                "lookahead_window": window,
+                            }
+                        ),
+                    )
+                    log.info(
+                        "  → pre-cool %s: %s → %s (re-routed from band-owned %s, plan: %s)%s",
+                        precool_param,
+                        old_val,
+                        precool_value,
+                        param,
+                        plan_id,
+                        " [DRY RUN]" if DRY_RUN else "",
+                    )
+                actions_taken += 1
+                continue
+
             if action_type == "setpoint" and param in BAND_OWNED_PARAMS:
+                # Pure dispatcher-contract skip: a band-owned param with NO pre-cool
+                # re-route (the re-route above already `continue`d). This block NEVER
+                # writes setpoint_plan / setpoint_changes — the dispatcher owns the
+                # served band (fidelity guard: tests/test_12_fidelity.py).
                 log.warning("Skipping dispatcher-owned forecast action %s for %s; dispatcher owns policy", name, param)
                 await conn.execute(
                     "INSERT INTO forecast_action_log "

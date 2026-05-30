@@ -2618,6 +2618,7 @@ async def public_evidence_snapshot(greenhouse_id: str = DEFAULT_GREENHOUSE):
         "open_critical_high_alerts": open_critical_high or 0,
         "planner_score_today": scorecard.get("planner_score"),
         "both_axis_compliance_pct": scorecard.get("compliance_pct"),
+        "graded_compliance_attributable_pct": scorecard.get("compliance_v2_attributable_pct"),
         "temp_compliance_pct": scorecard.get("temp_compliance_pct"),
         "vpd_compliance_pct": scorecard.get("vpd_compliance_pct"),
         "stress_axis_hours": scorecard.get("total_stress_h"),
@@ -2637,6 +2638,7 @@ async def public_evidence_snapshot(greenhouse_id: str = DEFAULT_GREENHOUSE):
         "planning_quality": {
             "planner_score_today": scorecard.get("planner_score"),
             "both_axis_compliance_pct": scorecard.get("compliance_pct"),
+            "graded_compliance_attributable_pct": scorecard.get("compliance_v2_attributable_pct"),
             "temp_compliance_pct": scorecard.get("temp_compliance_pct"),
             "vpd_compliance_pct": scorecard.get("vpd_compliance_pct"),
             "stress_axis_hours": scorecard.get("total_stress_h"),

@@ -64,6 +64,7 @@ from verdify_schemas.climate_intent import (  # noqa: E402
 )
 from verdify_schemas.tunable_registry import (  # noqa: E402
     BAND_OWNED_REG,
+    CROP_BAND_REG,
     PLANNER_PUSHABLE_REG,
     TIER1_REG,
     registry_value_error,
@@ -80,6 +81,13 @@ if _env_path.exists():
 DB_DSN = os.environ.get("DB_DSN", f"postgresql://verdify:{_db_pass}@localhost:5432/verdify")
 # Legacy planner.py removed — planning runs via iris_planner.py → Hermes /v1/runs
 BAND_OWNED_PARAMS = BAND_OWNED_REG
+# P1a (B6): the crop temp/VPD band targets (temp_low/high, vpd_low/high, per-zone
+# vpd targets). These are dispatcher/curve-owned and MUST NOT be written to
+# setpoint_plan (that caused clamp storms), but the planner's INTENDED band is
+# worth recording in the plan_journal audit so v_plan_accuracy / v_plan_compliance
+# can grade planned-vs-served band against the new (migration-145) curve. We
+# capture them into hypothesis_structured.planned_band WITHOUT actuating them.
+CROP_BAND_PARAMS = CROP_BAND_REG
 _OPENAI_KEY_FILES = (
     Path("/etc/verdify/hermes-iris.env"),
     Path("/mnt/agents/shared/credentials/openai_api_key.txt"),
@@ -370,11 +378,30 @@ async def climate() -> str:
 @mcp.tool()
 async def scorecard(target_date: str = "") -> str:
     """Get the planner scorecard — 25 KPI metrics for a given day.
-    Includes: planner_score, compliance_pct (both in firmware-enforced band),
-    temp_compliance_pct, vpd_compliance_pct, stress hours
-    (heat/cold/vpd_high/vpd_low), utility usage
+    Includes: planner_score, compliance_pct, temp_compliance_pct,
+    vpd_compliance_pct, stress hours (heat/cold/vpd_high/vpd_low), utility usage
     (kwh, therms, water_gal, mister_water_gal), costs (electric/gas/water/total),
     dew point safety, and 7-day averages. Pass date as YYYY-MM-DD or omit for today.
+
+    Compliance is moving from a single binary house metric to GRADED + PER-ZONE +
+    FEASIBILITY-AWARE scoring (band-compliance rearchitecture, migrations 146-147).
+    GRADED: full credit inside the ideal band, linear partial credit through the
+    stress band, zero beyond — a reading 0.1F out of band no longer scores the same
+    as one 15F out. PER-ZONE: each zone graded against what is actually planted there
+    (center = Vanda orchid; east = lettuce/strawberry/pepper), aggregated to a house
+    number (center weight 0.60, east 0.40). FEASIBILITY-AWARE: every miss is split
+    into controller-error (a cooling/heating stage was idle with authority available)
+    vs physically-unachievable (e.g. vent saturated and outdoor >= the served target —
+    an exhaust-only box cannot beat ambient). The reward becomes the
+    CONTROLLER-ATTRIBUTABLE compliance so weather Iris cannot change is not scored
+    against her; unachievable_frac is reported context that should cue WIDENING the
+    served envelope, not working the actuators harder.
+
+    Until migration 147 lands, the live planner_score still uses the binary
+    compliance_pct (% of readings with BOTH temp and VPD in the served band); the
+    graded compliance_v2_* / controller-attributable columns dual-write alongside it
+    first, so treat the graded framing above as the target semantics, not yet the
+    live reward.
 
     Response is validated through verdify_schemas.ScorecardResponse — partial
     days emit a subset of metrics as null. DB drift (new metric) surfaces as a
@@ -982,7 +1009,31 @@ async def set_plan(
             elif structured_warning is None:
                 structured_warning = sw
 
-    params_seen = sorted({param for wp in plan.transitions for param in wp.params if param not in BAND_OWNED_PARAMS})
+    # P1a (B6): the planner's crop-band targets (temp_low/high, vpd_low/high,
+    # per-zone vpd targets) are dropped from setpoint_plan below (clamp-safe — the
+    # dispatcher/curve owns the served band), but they were ALSO silently excluded
+    # from the plan_journal audit, so plan-accuracy had no record of what band the
+    # planner intended. Restore band-param *recording* (NOT actuation): include the
+    # crop-band param NAMES the planner touched in params_changed so v_plan_accuracy
+    # / v_plan_compliance can grade planned-vs-served band against the new curve.
+    # Lighting band-owned params (gl_*) stay excluded — they are not the crop band.
+    planned_band: list[dict] = []
+    for wp in plan.transitions:
+        band_targets = {p: float(v) for p, v in wp.params.items() if p in CROP_BAND_PARAMS}
+        if band_targets:
+            planned_band.append(
+                {"ts": wp.ts.isoformat() if hasattr(wp.ts, "isoformat") else str(wp.ts), **band_targets}
+            )
+
+    params_seen = sorted(
+        {
+            param
+            for wp in plan.transitions
+            for param in wp.params
+            if param not in BAND_OWNED_PARAMS or param in CROP_BAND_PARAMS
+        }
+    )
+
     conditions_summary: str | None = None
     if structured_payload:
         try:
@@ -1213,6 +1264,7 @@ async def set_plan(
             "transitions": len(plan.transitions),
             "rows_written": rows_written,
             "band_params_dropped": band_params_dropped,
+            "planned_band_recorded": len(planned_band),
             "forced_on_params": forced_on_params,
             "climate_intent_segments": len(climate_intent_records),
             "climate_intent_version": CLIMATE_INTENT_CONTRACT_VERSION if climate_intent_records else None,
@@ -1558,7 +1610,10 @@ async def history(metric: str = "climate", hours: int = 24, resolution_min: int 
 async def crops(action: str, crop_id: int = 0, data: str = "") -> str:
     """Manage greenhouse crops. Actions: list, get, create, update, deactivate.
     list: all active crops with zone, stage, recent health
-    get: full detail for one crop including observations and events
+    get: full detail for one crop including its nutrient recipe(s), observations,
+         and events. For the Vanda (crop_id 5) this surfaces `vanda_orchid_active`
+         (MSU 13-3-15, 50 ppm N, ec 0.40 ABSOLUTE on RO; is_active=FALSE until the
+         operator confirms it). Dose to target_ec — NOT 2-part A/B ml/L math (SAF-2).
     create: data = {"name", "variety", "zone", "position", "planted_date", "stage", ...}
     update: data = {"name"?, "stage"?, "zone"?, "expected_harvest"?, "notes"?, ...}
     deactivate: soft-delete by crop_id"""
@@ -1588,9 +1643,24 @@ async def crops(action: str, crop_id: int = 0, data: str = "") -> str:
                 "SELECT ts, event_type, old_stage, new_stage, notes FROM crop_events WHERE crop_id = $1 ORDER BY ts DESC LIMIT 10",
                 crop_id,
             )
+            # N1 (FRT-1): surface this crop's nutrient recipe(s) so the planner can
+            # reason about feed without blind A/B dose math. For the Vanda (crop_id 5)
+            # this exposes `vanda_orchid_active` (MSU 13-3-15, 50 ppm N, ec 0.40
+            # ABSOLUTE on RO). The recipe ships is_active=FALSE until the operator
+            # confirms it physically — `is_active` tells the planner whether the feed
+            # is live or provisional; the notes carry the SAF-2 dosing guardrails
+            # (single-salt, dose-to-EC not A/B ml/L, AM-only, absorption hold).
+            recipes = await conn.fetch(
+                """SELECT name, stage, is_active, target_ec, target_ph_low, target_ph_high,
+                          n_ppm, p_ppm, k_ppm, ca_ppm, mg_ppm, fe_ppm,
+                          stock_a_ml_per_l, stock_b_ml_per_l, notes
+                     FROM nutrient_recipes WHERE crop_id = $1 ORDER BY is_active DESC, name""",
+                crop_id,
+            )
             return _json(
                 {
                     "crop": dict(row),
+                    "nutrient_recipes": [dict(r) for r in recipes],
                     "recent_observations": [dict(o) for o in obs],
                     "recent_events": [dict(e) for e in events],
                 }

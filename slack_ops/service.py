@@ -367,6 +367,12 @@ async def _execute(
         return await _crop_harvest(conn, req, intent)
     if name == "crop.treatment.record":
         return await _crop_treatment(conn, req, intent)
+    if name == "crop.feed.record":
+        return await _crop_feed(conn, req, intent)
+    if name == "crop.shade.event.record":
+        return await _shade_event(conn, req, intent)
+    if name == "topology.confirm":
+        return await _topology_confirm(conn, req, intent)
     if name == "lesson.extract.request":
         return await _lesson_extract_request(conn, req, intent)
     if name == "plan.trigger":
@@ -922,22 +928,34 @@ async def _crop_create(conn, req, intent):
     position = await _resolve_position(conn, intent.args.get("position") or "")
     if not position:
         return _text_response("Could not resolve target position.", ok=False, status="failed", intent=intent)
+    name = intent.args.get("name") or "unknown crop"
+    catalog = await _resolve_catalog(conn, name)
+    catalog_id = catalog["id"] if catalog else None
     row = await conn.fetchrow(
         """
-        INSERT INTO crops (name, position, zone, planted_date, stage, position_id, zone_id, greenhouse_id, notes)
-        VALUES ($1,$2,$3,current_date,'seedling',$4,$5,'vallery',$6)
+        INSERT INTO crops (
+            name, position, zone, planted_date, stage, position_id, zone_id,
+            crop_catalog_id, greenhouse_id, notes
+        )
+        VALUES ($1,$2,$3,current_date,'seedling',$4,$5,$6,'vallery',$7)
         RETURNING id
         """,
-        intent.args.get("name") or "unknown crop",
+        name,
         position["position_label"],
         position["zone_slug"],
         position["position_id"],
         position["zone_id"],
+        catalog_id,
         f"Created from Slack by {req.slack_user_name or req.slack_user_id}",
     )
     await _create_crop_default_tasks(conn, row["id"], position, req.slack_user_name or req.slack_user_id)
+    catalog_note = (
+        f" mapped to catalog `{catalog['slug']}` (joins band)"
+        if catalog
+        else " (no catalog match — `topology confirm` to resolve before it joins the band)"
+    )
     return _text_response(
-        f"Crop `{intent.args.get('name')}` planted at `{position['position_label']}` as #{row['id']}.",
+        f"Crop `{name}` planted at `{position['position_label']}` as #{row['id']}{catalog_note}.",
         intent=intent,
         record_type="crops",
         record_id=str(row["id"]),
@@ -988,9 +1006,20 @@ async def _crop_transplant(conn, req, intent):
         if intent.args.get("crop_id")
         else await _resolve_crop(conn, intent.args.get("target") or "")
     )
-    pos = await _resolve_position(conn, intent.args.get("position") or intent.args.get("position_label") or "")
+    requested = intent.args.get("position") or intent.args.get("position_label") or ""
+    pos = await _resolve_position(conn, requested)
+    if not pos and _is_patio_label(requested):
+        return _text_response(
+            "The `patio` pseudo-position is not provisioned yet. Once the coordinator adds the patio "
+            "`positions` row (SL2 migration), seasonal moves transplant (preserve record) instead of clear "
+            "so the crop can return in fall. For now use `clear` and re-create, or ask coordinator to apply SL2.",
+            ok=False,
+            status="failed",
+            intent=intent,
+        )
     if not crop or not pos:
         return _text_response("Could not resolve crop or target position.", ok=False, status="failed", intent=intent)
+    seasonal = _is_patio_label(pos["position_label"]) or _is_patio_label(pos["zone_slug"])
     await conn.execute(
         "UPDATE crops SET position=$2, zone=$3, position_id=$4, zone_id=$5, updated_at=now() WHERE id=$1",
         crop["id"],
@@ -1011,18 +1040,28 @@ async def _crop_transplant(conn, req, intent):
         crop["id"],
         pos["position_id"],
         req.slack_user_name or req.slack_user_id,
-        f"Transplanted from {crop['position']} to {pos['position_label']}",
+        (
+            f"Seasonal move from {crop['position']} to {pos['position_label']} "
+            "(record preserved; crop can return in fall)"
+            if seasonal
+            else f"Transplanted from {crop['position']} to {pos['position_label']}"
+        ),
         req.channel_id,
         req.message_ts,
         req.thread_ts,
         req.slack_user_id,
     )
+    suffix = " (seasonal move; record preserved, not cleared)" if seasonal else ""
     return _text_response(
-        f"Transplanted `{crop['name']}` to `{pos['position_label']}`.",
+        f"Transplanted `{crop['name']}` to `{pos['position_label']}`{suffix}.",
         intent=intent,
         record_type="crop_events",
         record_id=str(row["id"]),
     )
+
+
+def _is_patio_label(value: str | None) -> bool:
+    return bool(value) and bool(re.search(r"\b(patio|external|outdoor|overwinter)\b", str(value), re.I))
 
 
 async def _crop_harvest(conn, req, intent):
@@ -1127,6 +1166,211 @@ async def _crop_treatment(conn, req, intent):
         intent=intent,
         record_type="treatments",
         record_id=str(row["id"]),
+    )
+
+
+async def _crop_feed(conn, req, intent):
+    crop = await _resolve_crop(conn, intent.args.get("target") or intent.args.get("text") or "")
+    if not crop:
+        return _text_response(
+            "Could not resolve crop for feed/fertigation log.", ok=False, status="failed", intent=intent
+        )
+    ec = intent.args.get("ec")
+    volume_ml = intent.args.get("volume_ml")
+    ppm_n = intent.args.get("ppm_n")
+    recipe = intent.args.get("recipe")
+    fed_at = intent.args.get("fed_at_local")
+    detail = {
+        "kind": "fertigation",
+        "ec": ec,
+        "volume_ml": volume_ml,
+        "ppm_n": ppm_n,
+        "recipe": recipe,
+        "fed_at_local": fed_at,
+        "logged_by": req.slack_user_name or req.slack_user_id,
+    }
+    parts = []
+    if recipe:
+        parts.append(f"recipe {recipe}")
+    if ec is not None:
+        parts.append(f"EC {ec}")
+    if ppm_n is not None:
+        parts.append(f"{ppm_n} ppm N")
+    if volume_ml is not None:
+        parts.append(f"{volume_ml:g} mL")
+    if fed_at:
+        parts.append(f"at {fed_at}")
+    summary = "; ".join(parts) or "no dose detail captured"
+    note = f"Feed/fertigation logged from Slack: {summary} | {json.dumps(detail, default=str)}"
+    row = await conn.fetchrow(
+        """
+        INSERT INTO crop_events (
+            crop_id, greenhouse_id, position_id, event_type, operator, source,
+            notes, slack_channel_id, slack_message_ts, slack_thread_ts, slack_user_id
+        )
+        VALUES ($1,'vallery',$2,'fed',$3,'slack',$4,$5,$6,$7,$8)
+        RETURNING id
+        """,
+        crop["id"],
+        crop["position_id"],
+        req.slack_user_name or req.slack_user_id,
+        note,
+        req.channel_id,
+        req.message_ts,
+        req.thread_ts,
+        req.slack_user_id,
+    )
+    # Mirror to observations so dose telemetry lands in the per-crop log the planner reads.
+    await conn.fetchrow(
+        """
+        INSERT INTO observations (
+            crop_id, greenhouse_id, zone, position, zone_id, position_id,
+            obs_type, notes, observer, source, slack_channel_id,
+            slack_message_ts, slack_thread_ts, slack_user_id
+        )
+        VALUES ($1,'vallery',$2,$3,$4,$5,'fertigation',$6,$7,'slack',$8,$9,$10,$11)
+        RETURNING id
+        """,
+        crop["id"],
+        crop["zone"],
+        crop["position"],
+        crop["zone_id"],
+        crop["position_id"],
+        note,
+        req.slack_user_name or req.slack_user_id,
+        req.channel_id,
+        req.message_ts,
+        req.thread_ts,
+        req.slack_user_id,
+    )
+    await _complete_feed_tasks(conn, crop["id"], req.slack_user_name or req.slack_user_id)
+    return _text_response(
+        f"Feed recorded for `{crop['name']}` ({summary}) as crop_event #{row['id']}.",
+        intent=intent,
+        record_type="crop_events",
+        record_id=str(row["id"]),
+    )
+
+
+async def _shade_event(conn, req, intent):
+    action = intent.args.get("action") or "noted"
+    zone = intent.args.get("zone")
+    coverage = intent.args.get("coverage_pct")
+    text = intent.args.get("text") or ""
+    zone_row = await _resolve_zone(conn, zone) if zone else None
+    detail = {
+        "kind": "shade",
+        "action": action,
+        "zone": zone,
+        "coverage_pct": coverage,
+        "logged_by": req.slack_user_name or req.slack_user_id,
+    }
+    note = f"Shade event from Slack: {action}" + (f" over {zone}" if zone else "")
+    if coverage is not None:
+        note += f" ({coverage}% coverage)"
+    if text:
+        note += f" — {text}"
+    note += f" | {json.dumps(detail, default=str)}"
+    row = await conn.fetchrow(
+        """
+        INSERT INTO observations (
+            crop_id, greenhouse_id, zone, position, zone_id, position_id,
+            obs_type, notes, observer, source, slack_channel_id,
+            slack_message_ts, slack_thread_ts, slack_user_id
+        )
+        VALUES (NULL,'vallery',$1,NULL,$2,NULL,'shade_event',$3,$4,'slack',$5,$6,$7,$8)
+        RETURNING id
+        """,
+        zone,
+        zone_row["id"] if zone_row else None,
+        note,
+        req.slack_user_name or req.slack_user_id,
+        req.channel_id,
+        req.message_ts,
+        req.thread_ts,
+        req.slack_user_id,
+    )
+    return _text_response(
+        f"Shade event ({action}{f' over {zone}' if zone else ''}) recorded as observation #{row['id']}.",
+        intent=intent,
+        record_type="observations",
+        record_id=str(row["id"]),
+    )
+
+
+async def _topology_confirm(conn, req, intent):
+    occupied = await conn.fetch(
+        """
+        SELECT position_label, zone_slug, crop_id, crop_name, crop_catalog_slug
+          FROM v_position_current
+         WHERE is_occupied
+         ORDER BY zone_slug, position_label
+        """
+    )
+    unmapped = await conn.fetch(
+        """
+        SELECT id, name, position
+          FROM crops
+         WHERE greenhouse_id = 'vallery'
+           AND is_active
+           AND crop_catalog_id IS NULL
+         ORDER BY id
+        """
+    )
+    repaired = 0
+    repaired_names: list[str] = []
+    for crop in unmapped:
+        catalog = await _resolve_catalog(conn, crop["name"])
+        if catalog:
+            await conn.execute(
+                "UPDATE crops SET crop_catalog_id=$2, updated_at=now() WHERE id=$1",
+                crop["id"],
+                catalog["id"],
+            )
+            repaired += 1
+            repaired_names.append(f"{crop['name']}→{catalog['slug']}")
+    # Re-read still-unmapped after repair attempt so the operator sees true gaps.
+    still_unmapped = [
+        f"#{c['id']} {c['name']} @ {c['position']}" for c in unmapped if not await _resolve_catalog(conn, c["name"])
+    ]
+    refreshed = await conn.fetch(
+        """
+        SELECT position_label, crop_name, crop_catalog_slug
+          FROM v_position_current
+         WHERE is_occupied
+         ORDER BY zone_slug, position_label
+        """
+    )
+    lines = ["*Topology confirmation*"]
+    lines.append(f"{len(occupied)} occupied position(s).")
+    if repaired:
+        lines.append(f"Resolved crop_catalog_id for {repaired} crop(s): {', '.join(repaired_names)}.")
+    if still_unmapped:
+        lines.append("Still unmapped (need catalog/topology fix): " + ", ".join(still_unmapped))
+    for r in refreshed:
+        slug = r["crop_catalog_slug"] or "no-catalog"
+        lines.append(f"- `{r['position_label']}` = {r['crop_name']} (`{slug}`)")
+    work_id = await _create_ai_work_item(
+        conn,
+        req,
+        "topology_confirmation",
+        {
+            "requested_text": intent.args.get("text"),
+            "occupied": [dict(r) for r in refreshed],
+            "still_unmapped": still_unmapped,
+            "instruction": (
+                "Confirm what-is-planted-where against operator ground truth. Flag the south Canna "
+                "'dying' read: south/west soil probes are UNPOTTED (Canna moved to patio), not broken — "
+                "do not treat the soil-probe reading as a live crop-health signal."
+            ),
+        },
+    )
+    lines.append(f"Topology review work item `{work_id}` queued for OpenClaw cross-check.")
+    return _text_response(
+        "\n".join(lines),
+        intent=intent,
+        record_type="crops",
+        routing="openclaw",
     )
 
 
@@ -1361,6 +1605,89 @@ def _normalized_harvest_fields(args: dict[str, Any]) -> dict[str, Any]:
         if isinstance(value, dict):
             fields[target] = _kg(value.get("amount"), value.get("unit"))
     return {k: v for k, v in fields.items() if v is not None}
+
+
+def _match_catalog(name: str, catalog: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Pure crop name → crop_catalog row matcher (unit-testable, no DB).
+
+    crop_catalog slugs are mixed plural/singular (`peppers`, `orchid`); operator
+    crop names are loose (`pepper`, `Vanda Orchids`). Match on exact slug/common_name,
+    then on singular/plural variants, then on token/synonym containment.
+    """
+
+    name = (name or "").strip().lower()
+    if not name:
+        return None
+    # Drop a trailing position token (e.g. "basil a3") so it does not poison the match.
+    head = re.split(r"\s+", name)[0]
+    variants = {name, head, head.rstrip("s"), head + "s"}
+    # Common operator synonyms → catalog slug.
+    synonyms = {
+        "vanda": "orchid",
+        "vandas": "orchid",
+        "orchids": "orchid",
+        "tomato": "tomatoes",
+        "cucumber": "cucumbers",
+        "herb": "herbs",
+        "pepper": "peppers",
+        "strawberry": "strawberries",
+    }
+    for token in list(variants):
+        if token in synonyms:
+            variants.add(synonyms[token])
+    # 1) exact slug
+    for entry in catalog:
+        if (entry.get("slug") or "").lower() in variants:
+            return entry
+    # 2) singular/plural slug match
+    variant_stems = {v.rstrip("s") for v in variants if v}
+    for entry in catalog:
+        slug = (entry.get("slug") or "").lower()
+        if slug and slug.rstrip("s") in variant_stems:
+            return entry
+    # 3) slug appears in the crop name, or a variant appears in the catalog common_name
+    for entry in catalog:
+        slug = (entry.get("slug") or "").lower()
+        common = (entry.get("common_name") or "").lower()
+        if (slug and slug in name) or any(v and v in common for v in variants):
+            return entry
+    return None
+
+
+async def _resolve_catalog(conn, name: str) -> dict[str, Any] | None:
+    """Best-effort crop_catalog match so new plantings join the served band."""
+
+    if not (name or "").strip():
+        return None
+    rows = await conn.fetch("SELECT id, slug, common_name FROM crop_catalog")
+    return _match_catalog(name, [dict(r) for r in rows])
+
+
+async def _resolve_zone(conn, slug: str | None) -> dict[str, Any] | None:
+    if not slug:
+        return None
+    row = await conn.fetchrow(
+        "SELECT id, slug, name FROM zones WHERE lower(slug)=lower($1) OR lower(name)=lower($1) LIMIT 1",
+        str(slug).strip(),
+    )
+    return _dict(row)
+
+
+async def _complete_feed_tasks(conn, crop_id: int, completed_by: str) -> None:
+    await conn.execute(
+        """
+        UPDATE crop_tasks
+           SET status='completed',
+               completed_at=now(),
+               completed_by=$2,
+               updated_at=now()
+         WHERE crop_id=$1
+           AND status IN ('open','snoozed')
+           AND (task_type ILIKE '%feed%' OR task_type ILIKE '%fertig%')
+        """,
+        crop_id,
+        completed_by,
+    )
 
 
 async def _resolve_position(conn, label: str) -> dict[str, Any] | None:

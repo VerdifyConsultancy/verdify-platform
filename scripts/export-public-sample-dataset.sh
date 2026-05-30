@@ -11,6 +11,18 @@ DB=(docker exec -i verdify-timescaledb psql -U verdify -d verdify -q -v ON_ERROR
 
 mkdir -p "$OUT_DIR"
 
+# Graded, controller-attributable compliance (band-compliance design §6-§7) is
+# dual-written into daily_summary.compliance_v2_attributable_pct once migration
+# 146/147 land. Probe for the column so the public dataset gains a graded column
+# automatically post-migration, and stays valid (column absent -> omitted) today.
+GRADED_COL_PRESENT=$(docker exec -i verdify-timescaledb psql -U verdify -d verdify -tAc \
+  "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='daily_summary' AND column_name='compliance_v2_attributable_pct');")
+if [ "$GRADED_COL_PRESENT" = "t" ]; then
+  GRADED_SELECT="    round(ds.compliance_v2_attributable_pct::numeric, 1) AS graded_compliance_attributable_pct,"
+else
+  GRADED_SELECT="    NULL::numeric AS graded_compliance_attributable_pct,"
+fi
+
 "${DB[@]}" >"$OUT_DIR/verdify-sample-7d-climate.csv" <<'SQL'
 COPY (
   WITH climate_5m AS (
@@ -55,34 +67,36 @@ COPY (
 ) TO STDOUT WITH CSV HEADER;
 SQL
 
-"${DB[@]}" >"$OUT_DIR/verdify-sample-30d-plan-outcomes.csv" <<'SQL'
+"${DB[@]}" >"$OUT_DIR/verdify-sample-30d-plan-outcomes.csv" <<SQL
 COPY (
   SELECT
-    date,
-    to_char(created_at AT TIME ZONE 'America/Denver', 'YYYY-MM-DD HH24:MI') AS created_local,
-    plan_id,
-    round(temp_mae_f, 2) AS temp_mae_f,
-    round(vpd_mae_kpa, 3) AS vpd_mae_kpa,
-    round(solar_mae_w, 1) AS solar_mae_w,
-    round(compliance_pct::numeric, 1) AS compliance_pct,
-    round(temp_compliance_pct::numeric, 1) AS temp_compliance_pct,
-    round(vpd_compliance_pct::numeric, 1) AS vpd_compliance_pct,
-    round(stress_hours_heat::numeric, 2) AS stress_hours_heat,
-    round(stress_hours_vpd_high::numeric, 2) AS stress_hours_vpd_high,
-    round(stress_hours_cold::numeric, 2) AS stress_hours_cold,
-    round(stress_hours_vpd_low::numeric, 2) AS stress_hours_vpd_low,
-    round(water_used_gal::numeric, 2) AS water_used_gal,
-    round(mister_water_gal::numeric, 2) AS mister_water_gal,
-    round(kwh::numeric, 2) AS kwh,
-    round(therms_estimated::numeric, 3) AS therms_estimated,
-    round(cost_total::numeric, 2) AS cost_total_usd,
-    outcome_score,
-    hypothesis,
-    expected_outcome,
-    actual_outcome
-  FROM v_forecast_plan_outcome_mart
-  WHERE date >= current_date - interval '30 days'
-  ORDER BY date, created_at
+    m.date,
+    to_char(m.created_at AT TIME ZONE 'America/Denver', 'YYYY-MM-DD HH24:MI') AS created_local,
+    m.plan_id,
+    round(m.temp_mae_f, 2) AS temp_mae_f,
+    round(m.vpd_mae_kpa, 3) AS vpd_mae_kpa,
+    round(m.solar_mae_w, 1) AS solar_mae_w,
+    round(m.compliance_pct::numeric, 1) AS compliance_pct,
+${GRADED_SELECT}
+    round(m.temp_compliance_pct::numeric, 1) AS temp_compliance_pct,
+    round(m.vpd_compliance_pct::numeric, 1) AS vpd_compliance_pct,
+    round(m.stress_hours_heat::numeric, 2) AS stress_hours_heat,
+    round(m.stress_hours_vpd_high::numeric, 2) AS stress_hours_vpd_high,
+    round(m.stress_hours_cold::numeric, 2) AS stress_hours_cold,
+    round(m.stress_hours_vpd_low::numeric, 2) AS stress_hours_vpd_low,
+    round(m.water_used_gal::numeric, 2) AS water_used_gal,
+    round(m.mister_water_gal::numeric, 2) AS mister_water_gal,
+    round(m.kwh::numeric, 2) AS kwh,
+    round(m.therms_estimated::numeric, 3) AS therms_estimated,
+    round(m.cost_total::numeric, 2) AS cost_total_usd,
+    m.outcome_score,
+    m.hypothesis,
+    m.expected_outcome,
+    m.actual_outcome
+  FROM v_forecast_plan_outcome_mart m
+  LEFT JOIN daily_summary ds ON ds.date = m.date
+  WHERE m.date >= current_date - interval '30 days'
+  ORDER BY m.date, m.created_at
 ) TO STDOUT WITH CSV HEADER;
 SQL
 perl -0pi -e 's/\bOpenClaw\/Iris\b/planner/g; s/\bIris\b(?!-)/AI planning agent/g; s/\bOpenClaw\b/planner gateway/g; s/\blocal Gemma context overflow\b/planner context overflow/gi; s/\blocal Gemma overflow\b/planner context overflow/gi; s/\blocal Gemma\b/planner/gi; s/\bGemma\b/planner/g; s/ESP32 v2 band-first controller/ESP32 band-first controller/g' "$OUT_DIR/verdify-sample-30d-plan-outcomes.csv"
@@ -94,6 +108,14 @@ Generated: $(date -Is)
 Files:
 - verdify-sample-7d-climate.csv: 5-minute greenhouse climate/weather/hydro/soil sample for the most recent 7 days.
 - verdify-sample-30d-plan-outcomes.csv: plan/outcome scorecard rows for the most recent 30 days.
+
+Column notes:
+- compliance_pct is the binary, house-level both-axis compliance: the share of samples where house-average
+  temperature and VPD were both inside the single served control band. It is not a per-zone or per-plant
+  guarantee, and a reading just outside the band scores the same as one far outside.
+- graded_compliance_attributable_pct is the graded, per-zone, feasibility-aware controller-attributable
+  compliance (band-compliance design). It is blank until the graded compliance engine is promoted, then
+  populated automatically by this export.
 
 Timestamps are rendered in America/Denver local time. The export intentionally omits local IPs, device IDs, trigger UUIDs, alert channels, hostnames, and raw sensor entity names.
 EOF

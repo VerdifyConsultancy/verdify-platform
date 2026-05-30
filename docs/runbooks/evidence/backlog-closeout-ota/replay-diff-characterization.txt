@@ -1,0 +1,85 @@
+Backlog close-out OTA — replay-diff characterization
+=====================================================
+FW version (staged):  2026.5.30.1314.f2bad50-backlog-closeout
+Branch:               firmware/vanda-band-compliance-rearch
+Replay base (OLD):    f2bad50  ("Vanda sprint-2" — the last committed firmware on this branch,
+                                 i.e. the branch state BEFORE this sprint's uncommitted F1/F3/SF1/M2/M14/NB7 work)
+Replay NEW:           current worktree (uncommitted sprint changes applied)
+Corpus:               firmware/test/data/replay_overrides.csv.gz — 193,525 rows
+Command:              make firmware-replay-worktree OLD=f2bad50
+
+RESULT: 0 divergent rows / 0 diagnostic-only rows. Mode + relay behavior 100% preserved.
+
+WHY 0% IS THE CORRECT, EXPECTED RESULT (not a no-op build)
+----------------------------------------------------------
+The replay harness (firmware/test/replay_emit.cpp) drives ONLY
+determine_mode() + resolve_equipment() per historical row and diffs
+mode / relay_fog / relay_vent / relay_fan1 / relay_fan2 / relay_heat1 /
+relay_heat2 / mist_stage. Every behavior added this sprint is gated on a
+flag or executed in a code path that the climate-decision replay does not
+reach with the historical corpus, so none of them can move a mode/relay
+cell on past inputs:
+
+1. SF1 / SAF-1 (sensor_degraded) — the entire VPD-trust gate is conditioned
+   on SensorInputs.sensor_degraded. The replay corpus carries NO
+   sensor_degraded column (header is temp_avg/vpd_avg/rh_avg/... with no
+   degraded field) and replay_emit never sets it, so it defaults to false.
+   With sensor_degraded=false, vpd_control_trusted() is true and every new
+   branch (vpd_error/dry_excess zeroing in evaluate_climate_decision;
+   vpd_high/vpd_high_resolved gating in determine_mode_band_first +
+   determine_mode; the R2-3 dry-override gate; the vpd_min_safe rescue gate;
+   the econ-heat path gate in resolve_equipment) collapses back to the
+   pre-sprint expression. => Divergence is ONLY reachable under degraded
+   probes, which the corpus cannot represent. Positively verified instead by
+   the +16 new unit tests in test_greenhouse_logic.cpp (215 vs base 199).
+
+2. NB7 / CYC-4 overnight micro-pulse — the gate logic
+   (overnight_micropulse_permitted / overnight_micropulse_block_reason) is
+   new pure code, but it is INVOKED only by the controls.yaml interval lambda
+   (the micro-pulse ON timer + lockout + the willFog fold + the R[4] fog
+   set_relay force_on/force_off). replay_emit does not execute the ESPHome
+   controls.yaml lambda, so the micro-pulse path is REPLAY-INVISIBLE. Its
+   safety envelope is verified instead by replay invariant #24
+   (overnight fog ON past the dusk cutoff must be a permitted micro-pulse or
+   SAFETY_COOL) which passed over all 193,525 rows, and by the new unit tests.
+
+3. M14 / ENV-5 dark guarantee — lives in evaluate_lighting(), which the
+   climate replay_emit harness does not call at all. Verified instead by
+   replay invariant #23 (config-level min-dark: lighting can be ON at most
+   18/24h => >=6h guaranteed dark), which passed (production window [6,22) =>
+   8h dark), plus the reordered want_on/"outside_window" unit tests.
+
+4. F1 / F3 / FRT-8 feed-window guard — the AM-only [feed_start_hour,
+   feed_end_hour) rail. feed_window_open() is new pure code, but it is
+   enforced in (a) the controls.yaml irrigation DEQUEUE gate and (b) the
+   tunables.yaml manual-fert button lambdas — both ESPHome paths, not the
+   climate decision. REPLAY-INVISIBLE to mode/relay. Verified by the new unit
+   tests for feed_window_open() (wrap-aware + degenerate-fails-closed).
+
+5. M2 / B13 CO2 inverted-linear transform + plausibility gate — entirely in
+   sensors.yaml (ADC->ppm lambda + co2_plausible flag). Does not feed any
+   climate mode/relay input. REPLAY-INVISIBLE.
+
+CORPUS BLIND-SPOTS (explicitly called out)
+-------------------------------------------
+* sensor_degraded is NOT a corpus column: the SF1/SAF-1 VPD-suppression
+  behavior cannot be exercised by replay at all. Its correctness rests on
+  unit tests + code review, not on the replay diff. A future corpus refresh
+  that adds an avg_ok/sensor_degraded column (export-replay-overrides.sh)
+  would let replay measure the degraded-regime divergence directly.
+* controls.yaml / sensors.yaml / tunables.yaml are CADENCE/RELAY-WIRING and
+  ADC layers that replay_emit does not run. The micro-pulse timer, the feed-
+  window dequeue gate, the manual-fert button gates, and the CO2 transform
+  are therefore replay-invisible by construction. (This is the documented
+  "controls.yaml-cadence changes may be replay-invisible" blind-spot.) Their
+  guarantees are carried by invariants #23/#24 and the +16 unit tests.
+* The per-minute corpus cannot measure sub-minute pulse DURATION; invariant
+  #24 asserts the LEGALITY of overnight fog being on (micro-pulse-or-safety),
+  while the <=5s cap is enforced structurally by validate_setpoints
+  (micropulse_max_on_s clamp <=10) + the controls.yaml dedicated timer.
+
+NET: this OTA bundle is a behavior-preserving superset on the historical
+record (0% mode/relay divergence) whose NEW behaviors are all conditionally
+gated; the conditions live outside what the climate replay corpus can drive.
+The invariant suite (#1-#24, incl. the two new ones) and the +16 unit tests
+are the load-bearing evidence for the new paths.

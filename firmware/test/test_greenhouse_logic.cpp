@@ -494,6 +494,182 @@ TEST(center_burst_blocked_by_each_rail) {
     PASS();
 }
 
+// ── SAF-1 / SF1: sensor-degraded conservative timed wetting ──
+TEST(sf1_degraded_suppresses_vpd_chasing_seal) {
+    // High VPD that WOULD seal for misting, with the watch dwell already
+    // satisfied. Trusted → SEALED_MIST. Degraded → the fabricated VPD must not
+    // drive wetting, so the controller falls back to a non-wetting mode.
+    auto sp = band_setpoints();
+    auto s_ok = initial_state(); s_ok.vpd_watch_timer_ms = 60000;
+    ASSERT_EQ(determine_mode(make_inputs(72, 1.8), sp, s_ok, 5000), SEALED_MIST);
+
+    auto in = make_inputs(72, 1.8);
+    in.sensor_degraded = true;
+    auto s_deg = initial_state(); s_deg.vpd_watch_timer_ms = 60000;
+    Mode m = determine_mode(in, sp, s_deg, 5000);
+    ASSERT_TRUE(m != SEALED_MIST);   // no VPD-chasing humidification
+    PASS();
+}
+
+TEST(sf1_degraded_suppresses_dehum_vent) {
+    // Low VPD that WOULD trigger DEHUM_VENT when trusted; degraded suppresses it.
+    auto sp = band_setpoints();
+    sp.econ_block = false;
+    auto in_ok = make_inputs(72, 0.4);   // well below vpd_low 0.8
+    auto s_ok = initial_state();
+    ASSERT_EQ(determine_mode(in_ok, sp, s_ok, 5000), DEHUM_VENT);
+
+    auto in = make_inputs(72, 0.4);
+    in.sensor_degraded = true;
+    auto s_deg = initial_state();
+    ASSERT_TRUE(determine_mode(in, sp, s_deg, 5000) != DEHUM_VENT);
+    PASS();
+}
+
+TEST(sf1_degraded_keeps_temp_safety_rails) {
+    // Temperature control is NOT gated by degradation — the case probe still
+    // gives a plausible temp. Safety cool/heat and vent cooling must still fire.
+    auto sp = band_setpoints();
+    {
+        auto in = make_inputs(sp.safety_max + 2.0f, 1.0f);
+        in.sensor_degraded = true;
+        auto s = initial_state();
+        ASSERT_EQ(determine_mode(in, sp, s, 5000), SAFETY_COOL);
+    }
+    {
+        auto in = make_inputs(sp.safety_min - 2.0f, 1.0f);
+        in.sensor_degraded = true;
+        auto s = initial_state();
+        ASSERT_EQ(determine_mode(in, sp, s, 5000), SAFETY_HEAT);
+    }
+    {
+        // Hot but below safety → VENTILATE (temp-only cooling still works).
+        auto in = make_inputs(sp.temp_high + 4.0f, 1.0f);
+        in.sensor_degraded = true;
+        auto s = initial_state();
+        ASSERT_EQ(determine_mode(in, sp, s, 5000), VENTILATE);
+    }
+    PASS();
+}
+
+TEST(sf1_degraded_allows_timed_center_burst_without_vpd) {
+    // The conservative timed fallback: dawn/midday center bursts still fire when
+    // degraded, even though VPD is at/below the band ceiling (the over-saturation
+    // gate is bypassed because the VPD reading is untrusted). Every OTHER rail
+    // (dusk, feed-hold, dew margin, occupancy, plausibility) still applies.
+    auto sp = irr_setpoints();
+    // Humid reading that would normally block the burst (VPD <= ceiling).
+    auto in = irr_dry_inputs(7);
+    in.vpd_kpa = sp.vpd_high - 0.5f;     // below ceiling → trusted path blocks
+    ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), in, sp), CENTER_BURST_NONE);
+    in.sensor_degraded = true;            // degraded → over-saturation gate bypassed
+    ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), in, sp), CENTER_BURST_DAWN);
+    // ...but a degraded burst STILL respects the dusk cutoff and feed hold.
+    {
+        auto sp2 = sp; sp2.feed_hold_active = true;
+        ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), in, sp2), CENTER_BURST_NONE);
+    }
+    {
+        auto in2 = in; in2.dew_point_f = in2.temp_f - 2.0f;   // cold leaf → blocked
+        ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), in2, sp), CENTER_BURST_NONE);
+    }
+    PASS();
+}
+
+TEST(sf1_implausible_still_sensor_fault_all_off) {
+    // SF1 is BROADER than SENSOR_FAULT but does not replace it. An implausible
+    // (inf/garbage) reading still forces SENSOR_FAULT → all relays off, even if
+    // sensor_degraded is also set.
+    auto sp = band_setpoints();
+    auto in = make_inputs(72, 1.8);
+    in.vpd_kpa = INFINITY;        // garbage → sensors_plausible() false
+    in.sensor_degraded = true;
+    auto s = initial_state();
+    ASSERT_EQ(determine_mode(in, sp, s, 5000), SENSOR_FAULT);
+    auto relays = resolve_equipment(SENSOR_FAULT, in, sp, s, true);
+    ASSERT_FALSE(relays.fog || relays.fan1 || relays.fan2 ||
+                 relays.heat1 || relays.heat2 || relays.vent);
+    PASS();
+}
+
+// ── CYC-4 (NB7): overnight ≤5s fog micro-pulse ──
+// A "dry, overnight, clean" row: past the dusk cutoff, VPD above the micro-pulse
+// ceiling, dew margin and RH/temp all OK. irr_setpoints gives dusk_cutoff 18,
+// night_end 6 → hour 23 is overnight.
+static SensorInputs micropulse_dry_overnight_inputs() {
+    auto in = make_inputs(72.0f, 1.6f, 40.0f);   // VPD 1.6 > 1.25 ceiling, RH 40 < 90
+    in.local_hour = 23;                           // past dusk cutoff (18), pre-sunrise
+    in.dew_point_f = in.temp_f - 14.0f;           // 14°F margin >> 6°F floor
+    return in;
+}
+
+TEST(micropulse_permitted_overnight_when_dry_and_clean) {
+    auto sp = irr_setpoints();
+    auto in = micropulse_dry_overnight_inputs();
+    ASSERT_TRUE(overnight_micropulse_permitted(in, sp));
+    ASSERT_TRUE(std::string(overnight_micropulse_block_reason(in, sp)) == "");
+    PASS();
+}
+
+TEST(micropulse_blocked_by_each_rail) {
+    auto sp = irr_setpoints();
+    // master disable
+    { auto s2 = sp; s2.sw_overnight_micropulse_enabled = false;
+      ASSERT_TRUE(std::string(overnight_micropulse_block_reason(micropulse_dry_overnight_inputs(), s2)) == "disabled"); }
+    // NB5 present → auto-disabled
+    { auto s2 = sp; s2.sw_night_humidity_source_present = true;
+      ASSERT_TRUE(std::string(overnight_micropulse_block_reason(micropulse_dry_overnight_inputs(), s2)) == "nb5_present"); }
+    // daytime (not overnight): hour 12 is well inside the day
+    { auto in = micropulse_dry_overnight_inputs(); in.local_hour = 12;
+      ASSERT_TRUE(std::string(overnight_micropulse_block_reason(in, sp)) == "not_overnight"); }
+    // VPD at/below ceiling → no pulse
+    { auto in = micropulse_dry_overnight_inputs(); in.vpd_kpa = sp.micropulse_vpd_ceiling;
+      ASSERT_TRUE(std::string(overnight_micropulse_block_reason(in, sp)) == "below_ceiling"); }
+    // dew margin too small (would condense)
+    { auto in = micropulse_dry_overnight_inputs(); in.dew_point_f = in.temp_f - 2.0f;
+      ASSERT_TRUE(std::string(overnight_micropulse_block_reason(in, sp)) == "dew_margin"); }
+    // RH above fog ceiling
+    { auto in = micropulse_dry_overnight_inputs(); in.rh_pct = sp.fog_rh_ceiling + 1.0f;
+      ASSERT_TRUE(std::string(overnight_micropulse_block_reason(in, sp)) == "rh_ceiling"); }
+    // temp below fog min
+    { auto in = micropulse_dry_overnight_inputs(); in.temp_f = sp.fog_min_temp - 1.0f;
+      in.dew_point_f = in.temp_f - 14.0f;
+      ASSERT_TRUE(std::string(overnight_micropulse_block_reason(in, sp)) == "temp_low"); }
+    // feed hold blocks
+    { auto s2 = sp; s2.feed_hold_active = true;
+      ASSERT_TRUE(std::string(overnight_micropulse_block_reason(micropulse_dry_overnight_inputs(), s2)) == "feed_hold"); }
+    // occupancy inhibit blocks
+    { auto s2 = sp; s2.occupancy_inhibit = true; auto in = micropulse_dry_overnight_inputs(); in.occupied = true;
+      ASSERT_TRUE(std::string(overnight_micropulse_block_reason(in, s2)) == "occupancy"); }
+    // implausible (sensor fault) blocks
+    { auto in = micropulse_dry_overnight_inputs(); in.vpd_kpa = NAN;
+      ASSERT_TRUE(std::string(overnight_micropulse_block_reason(in, sp)) == "sensor_fault"); }
+    PASS();
+}
+
+TEST(micropulse_max_on_is_clamped_to_5s_cap) {
+    // The load-bearing ≤5s cap: a bad push of micropulse_max_on_s is hard-clamped
+    // to <=10s by validate_setpoints (never a full fog run).
+    auto sp = default_setpoints();
+    ASSERT_TRUE(sp.micropulse_max_on_s == 5);     // shipped default
+    sp.micropulse_max_on_s = 600;                  // hostile push
+    validate_setpoints(sp);
+    ASSERT_TRUE(sp.micropulse_max_on_s <= 10);
+    sp.micropulse_max_on_s = 0;                    // too small
+    validate_setpoints(sp);
+    ASSERT_TRUE(sp.micropulse_max_on_s >= 1);
+    PASS();
+}
+
+TEST(micropulse_disabled_when_dusk_cutoff_off) {
+    // With no dusk cutoff there is no defined overnight window → never pulses.
+    auto sp = irr_setpoints();
+    sp.sw_dusk_cutoff_enabled = false;
+    auto in = micropulse_dry_overnight_inputs();
+    ASSERT_TRUE(std::string(overnight_micropulse_block_reason(in, sp)) == "not_overnight");
+    PASS();
+}
+
 TEST(center_burst_respects_enable_switches) {
     auto sp = irr_setpoints();
     sp.sw_dawn_rehydrate_enabled = false;
@@ -617,6 +793,64 @@ TEST(invariant_22_center_burst_no_feed_hold) {
     PASS();
 }
 
+TEST(invariant_24_overnight_fog_must_be_micropulse_or_safety) {
+    invariants::TraceRow r{};
+    r.vpd_high = 1.4f; r.vpd_low = 0.8f;
+    r.fog_rh_ceiling = 90.0f; r.fog_min_temp = 55.0f;
+    r.dusk_cutoff_hour = 18; r.dusk_cutoff_enabled = true; r.night_end_hour = 6;
+    // No fog → vacuously passes.
+    r.eq_fog = 0; r.local_hour = 23;
+    ASSERT_TRUE(invariants::check_24_overnight_fog_micropulse_only(r, silent_report));
+    // Daytime fog (hour 12, not overnight) → allowed (normal path).
+    r.eq_fog = 1; r.local_hour = 12; r.temp_f = 72.0f; r.vpd_kpa = 1.8f;
+    r.rh_pct = 40.0f; r.dew_point_f = 58.0f;
+    ASSERT_TRUE(invariants::check_24_overnight_fog_micropulse_only(r, silent_report));
+    // Overnight fog WITH a permitted micro-pulse condition (dry, clean) → allowed.
+    r.local_hour = 23; r.vpd_kpa = 1.8f; r.rh_pct = 40.0f; r.dew_point_f = 58.0f;
+    r.greenhouse_state = "IDLE";
+    ASSERT_TRUE(invariants::check_24_overnight_fog_micropulse_only(r, silent_report));
+    // Overnight fog with NO micro-pulse justification (VPD below ceiling) and not
+    // SAFETY_COOL → BREACH.
+    r.vpd_kpa = 1.0f;   // below the 1.25 default ceiling → micro-pulse not permitted
+    ASSERT_FALSE(invariants::check_24_overnight_fog_micropulse_only(r, silent_report));
+    // Same low-VPD overnight fog but in SAFETY_COOL → allowed (survival cooling).
+    r.greenhouse_state = "SAFETY_COOL";
+    ASSERT_TRUE(invariants::check_24_overnight_fog_micropulse_only(r, silent_report));
+    PASS();
+}
+
+TEST(invariant_23_min_dark_holds_for_production_window) {
+    // ENV-5 / M14: the production [6,22) photoperiod leaves 8h dark → passes.
+    LightingSetpoints sp{};
+    sp.target_light_minutes = 960;
+    sp.lux_on_threshold = 40000.0f;
+    sp.lux_hysteresis = 8000.0f;
+    sp.start_hour = 6;
+    sp.cutoff_hour = 22;
+    sp.min_on_ms = 120000u;
+    sp.min_off_ms = 60000u;
+    sp.auto_enabled = true;
+    ASSERT_TRUE(invariants::check_23_min_dark(sp, silent_report));
+    PASS();
+}
+
+TEST(invariant_23_min_dark_catches_overlong_window) {
+    // A window wider than 18h (e.g. 05:00→01:00 = 20h) leaves only 4h dark and
+    // MUST breach. This is the regression the M14 gate + invariant guard against:
+    // before M14 an all-occupied day could light all 24h regardless of window.
+    LightingSetpoints sp{};
+    sp.target_light_minutes = 960;
+    sp.lux_on_threshold = 40000.0f;
+    sp.lux_hysteresis = 8000.0f;
+    sp.start_hour = 5;
+    sp.cutoff_hour = 1;       // wraps midnight → 20h window
+    sp.min_on_ms = 120000u;
+    sp.min_off_ms = 60000u;
+    sp.auto_enabled = true;
+    ASSERT_FALSE(invariants::check_23_min_dark(sp, silent_report));
+    PASS();
+}
+
 TEST(invariant_17_night_drop_enforced_under_new_band) {
     invariants::Ctx17 c;
     invariants::TraceRow r{};
@@ -656,6 +890,41 @@ TEST(day_mask_allows_zero_sunday) {
     ASSERT_FALSE(day_mask_allows(0b0000001, 1));
     ASSERT_TRUE(day_mask_allows(0b0100100, 2));
     ASSERT_TRUE(day_mask_allows(0b0100100, 5));
+    PASS();
+}
+
+TEST(feed_window_open_am_only) {
+    // FRT-8 / F3: default 06:00-09:00 window. Inside → open; outside → closed.
+    ASSERT_TRUE(feed_window_open(6, 6, 9));    // window start, inclusive
+    ASSERT_TRUE(feed_window_open(7, 6, 9));    // ~06:30 feed lands here (and 07:xx)
+    ASSERT_TRUE(feed_window_open(8, 6, 9));    // last in-window hour
+    ASSERT_FALSE(feed_window_open(9, 6, 9));   // end, exclusive
+    ASSERT_FALSE(feed_window_open(5, 6, 9));   // before dawn
+    ASSERT_FALSE(feed_window_open(10, 6, 9));  // the old 10:30 feed time — now blocked
+    ASSERT_FALSE(feed_window_open(15, 6, 9));  // afternoon — blocked
+    ASSERT_FALSE(feed_window_open(22, 6, 9));  // dusk/overnight — blocked
+    ASSERT_FALSE(feed_window_open(0, 6, 9));   // midnight — blocked
+    PASS();
+}
+
+TEST(feed_window_open_fails_safe_degenerate) {
+    // start == end is degenerate → fail CLOSED (no feed) rather than open 24/7.
+    for (int h = 0; h < 24; h++) {
+        ASSERT_FALSE(feed_window_open(h, 8, 8));
+    }
+    PASS();
+}
+
+TEST(feed_window_open_clamps_and_wraps) {
+    // Out-of-range hours are clamped into [0,23]; a wrap window (start>end) is
+    // handled (degenerate for a morning feed but must not open everything).
+    ASSERT_TRUE(feed_window_open(99, 6, 9) == feed_window_open(23, 6, 9));  // clamp
+    // Wrap window 22->2 covers 22,23,0,1 only.
+    ASSERT_TRUE(feed_window_open(23, 22, 2));
+    ASSERT_TRUE(feed_window_open(0, 22, 2));
+    ASSERT_TRUE(feed_window_open(1, 22, 2));
+    ASSERT_FALSE(feed_window_open(2, 22, 2));
+    ASSERT_FALSE(feed_window_open(12, 22, 2));
     PASS();
 }
 
@@ -3218,15 +3487,33 @@ TEST(lighting_state_machine_respects_per_light_window_and_minutes_goal) {
 }
 
 TEST(lighting_occupancy_task_demand_turns_on_when_exterior_lux_low) {
+    // ENV-5 (M14): occupancy task-light fires only INSIDE the photoperiod
+    // window. Hour 12 is inside [6,22); exterior lux below threshold.
+    auto sp = lighting_setpoints();
+    auto s = initial_lighting_state();
+    auto d = evaluate_lighting(lighting_inputs(1000.0f, 12, true, 1000.0f, true), sp, s, false, 120000);
+    ASSERT_TRUE(d.want_on);
+    ASSERT_TRUE(d.in_window);
+    ASSERT_TRUE(d.exterior_lux_available);
+    ASSERT_TRUE(d.occupancy_task_light_demand);
+    ASSERT_TRUE(std::string(d.reason) == "occupancy_lux_low");
+    PASS();
+}
+
+// ENV-5 (M14): the load-bearing dark-block guard. An evening visit (hour 23,
+// OUTSIDE the [6,22) window) with low exterior lux must NOT light — neither the
+// occupancy task light nor the plant supplement. Pre-M14 the occupancy branch
+// omitted in_window and grow lights came on at 23:49 local, violating the >=6h
+// dark requirement the Vanda needs.
+TEST(lighting_occupancy_cannot_light_during_dark_block) {
     auto sp = lighting_setpoints();
     auto s = initial_lighting_state();
     auto d = evaluate_lighting(lighting_inputs(1000.0f, 23, true, 1000.0f, true), sp, s, false, 120000);
-    ASSERT_TRUE(d.want_on);
+    ASSERT_FALSE(d.want_on);
     ASSERT_FALSE(d.in_window);
-    ASSERT_TRUE(d.exterior_lux_available);
-    ASSERT_TRUE(d.occupancy_task_light_demand);
+    ASSERT_FALSE(d.occupancy_task_light_demand);
     ASSERT_FALSE(d.plant_supplement_demand);
-    ASSERT_TRUE(std::string(d.reason) == "occupancy_lux_low");
+    ASSERT_TRUE(std::string(d.reason) == "outside_window");
     PASS();
 }
 
@@ -3242,9 +3529,13 @@ TEST(lighting_occupancy_task_demand_stays_off_when_exterior_lux_high) {
 }
 
 TEST(lighting_occupancy_task_demand_requires_fresh_exterior_lux) {
+    // In-window (hour 12) so the stale-exterior-lux path is the one exercised,
+    // not the ENV-5 dark-block. target_light_minutes met to suppress plant
+    // demand, isolating the occupancy-lux-unavailable reason.
     auto sp = lighting_setpoints();
+    sp.target_light_minutes = 0;  // plant minutes goal already met → no plant demand
     auto s = initial_lighting_state();
-    auto d = evaluate_lighting(lighting_inputs(1000.0f, 23, true, 1000.0f, false), sp, s, false, 120000);
+    auto d = evaluate_lighting(lighting_inputs(1000.0f, 12, true, 1000.0f, false), sp, s, false, 120000);
     ASSERT_FALSE(d.want_on);
     ASSERT_FALSE(d.exterior_lux_available);
     ASSERT_FALSE(d.occupancy_task_light_demand);
@@ -3253,9 +3544,11 @@ TEST(lighting_occupancy_task_demand_requires_fresh_exterior_lux) {
 }
 
 TEST(lighting_occupancy_holds_until_exterior_off_threshold) {
+    // In-window (hour 12): occupancy hysteresis hold when exterior lux sits
+    // between the on and off thresholds and the light is already on.
     auto sp = lighting_setpoints();
     auto s = initial_lighting_state();
-    auto d = evaluate_lighting(lighting_inputs(1000.0f, 23, true, 45000.0f, true), sp, s, true, 180000);
+    auto d = evaluate_lighting(lighting_inputs(1000.0f, 12, true, 45000.0f, true), sp, s, true, 180000);
     ASSERT_TRUE(d.want_on);
     ASSERT_TRUE(d.occupancy_task_light_demand);
     ASSERT_TRUE(std::string(d.reason) == "occupancy_hysteresis_hold");
@@ -3263,10 +3556,14 @@ TEST(lighting_occupancy_holds_until_exterior_off_threshold) {
 }
 
 TEST(lighting_occupancy_clear_turns_off_without_plant_demand) {
+    // Prime the light ON in-window (hour 12) with occupancy, then advance past
+    // the min-on dwell so the hold cannot keep it on. Occupancy then clears AND
+    // the hour rolls past cutoff into the dark block (hour 23): the light must
+    // turn off for "outside_window".
     auto sp = lighting_setpoints();
     auto s = initial_lighting_state();
-    evaluate_lighting(lighting_inputs(1000.0f, 23, true, 1000.0f, true), sp, s, false, 120000);
-    auto d = evaluate_lighting(lighting_inputs(1000.0f, 23, false, 1000.0f, true), sp, s, true, 240000);
+    evaluate_lighting(lighting_inputs(1000.0f, 12, true, 1000.0f, true), sp, s, false, 120000);
+    auto d = evaluate_lighting(lighting_inputs(1000.0f, 23, false, 1000.0f, true), sp, s, true, 1000000);
     ASSERT_FALSE(d.want_on);
     ASSERT_FALSE(d.occupancy_task_light_demand);
     ASSERT_FALSE(d.plant_supplement_demand);
@@ -3287,10 +3584,12 @@ TEST(lighting_occupancy_clear_keeps_on_when_plant_demand_remains) {
 }
 
 TEST(lighting_occupancy_task_demand_respects_min_off_dwell) {
+    // In-window (hour 12): occupancy demand present but the min-off dwell since
+    // the last transition has not elapsed, so the light is held off.
     auto sp = lighting_setpoints();
     auto s = initial_lighting_state();
     s.last_transition_tick_ms = 100000;
-    auto d = evaluate_lighting(lighting_inputs(1000.0f, 23, true, 1000.0f, true), sp, s, false, 120000);
+    auto d = evaluate_lighting(lighting_inputs(1000.0f, 12, true, 1000.0f, true), sp, s, false, 120000);
     ASSERT_FALSE(d.want_on);
     ASSERT_TRUE(d.occupancy_task_light_demand);
     ASSERT_TRUE(std::string(d.reason) == "min_off_hold");

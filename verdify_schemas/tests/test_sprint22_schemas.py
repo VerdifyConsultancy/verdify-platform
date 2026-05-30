@@ -26,6 +26,7 @@ from verdify_schemas import (
     IrrigationSchedule,
     LabResult,
     MaintenanceLog,
+    NutrientRecipe,
     ObservationAction,
     SensorRegistry,
     Treatment,
@@ -199,6 +200,48 @@ class TestConsumablesLog:
                 item_name="y",
                 cost_usd=-5,
             )
+
+
+class TestNutrientRecipe:
+    """N1: salt_model / product_name contract additions (design §5.3).
+
+    Both fields are optional so existing 2-part GH-Flora rows (NULL salt_model)
+    keep validating during co-existence, while the single-salt Vanda MSU recipe
+    can declare salt_model='single_salt' (dose-to-EC, NOT A/B ml/L math — SAF-2).
+    """
+
+    def test_two_part_legacy_row_validates_without_new_fields(self):
+        r = NutrientRecipe(
+            name="GH Flora veg",
+            target_ec=1.2,
+            stock_a_ml_per_l=5.0,
+            stock_b_ml_per_l=5.0,
+        )
+        assert r.salt_model is None
+        assert r.product_name is None
+
+    def test_single_salt_vanda_recipe(self):
+        r = NutrientRecipe(
+            name="vanda_orchid_active",
+            target_ec=0.40,
+            n_ppm=50.0,
+            salt_model="single_salt",
+            product_name="MSU 13-3-15",
+            is_active=False,
+        )
+        assert r.salt_model == "single_salt"
+        assert r.product_name == "MSU 13-3-15"
+        # single-salt carries no A/B stock ml/L (the blind-dose risk this guards)
+        assert r.stock_a_ml_per_l is None
+        assert r.stock_b_ml_per_l is None
+
+    def test_two_part_explicit_salt_model(self):
+        r = NutrientRecipe(name="two-part", salt_model="two_part")
+        assert r.salt_model == "two_part"
+
+    def test_rejects_unknown_salt_model(self):
+        with pytest.raises(ValidationError):
+            NutrientRecipe(name="bad", salt_model="three_part")
 
 
 class TestCropTargetProfile:

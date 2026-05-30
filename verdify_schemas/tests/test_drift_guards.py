@@ -27,7 +27,11 @@ import pytest
 from verdify_schemas.alerts import AlertLogRow
 from verdify_schemas.crop_profiles import CropTargetProfile
 from verdify_schemas.crops import Crop, CropEvent, Observation
-from verdify_schemas.daily import DailySummaryRow
+from verdify_schemas.daily import (
+    ComplianceZoneWeightRow,
+    DailySummaryRow,
+    DailyZoneComplianceRow,
+)
 from verdify_schemas.forecast import ForecastHour
 from verdify_schemas.forecast_ops import ForecastActionLog, ForecastActionRule
 from verdify_schemas.lessons import PlannerLesson
@@ -164,6 +168,12 @@ DB_BACKED = [
     (PlanJournalRow, "plan_journal"),
     (PlanDeliveryLogRow, "plan_delivery_log"),
     (DailySummaryRow, "daily_summary"),
+    # Migration 146 compliance rearchitecture child tables (§6.7). Schema-first:
+    # these tables don't exist until 146 lands, so the subset guard skips them
+    # (table-not-found) until then, then enforces field↔column parity like any
+    # other DB-backed model.
+    (DailyZoneComplianceRow, "daily_zone_compliance"),
+    (ComplianceZoneWeightRow, "compliance_zone_weights"),
     (ForecastHour, "weather_forecast"),
     (AlertLogRow, "alert_log"),
     (Crop, "crops"),

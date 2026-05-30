@@ -65,6 +65,18 @@ struct SensorInputs {
     float    outdoor_temp_f;        // outdoor air temperature (°F, Tempest primary; legacy pulled fallback if present)
     float    outdoor_dewpoint_f;    // outdoor dewpoint (°F, computed from temp+RH at caller)
     uint32_t outdoor_data_age_s;    // seconds since last outdoor reading update
+    // ── SAF-1 / SF1: sensor-degraded flag ──
+    // Set true by the caller when the indoor AVERAGE temp/RH probes are
+    // unavailable (avg_ok==false) but a fallback probe (case) still yields a
+    // PLAUSIBLE temp — so sensors_plausible() is true but the VPD/RH the
+    // controller is acting on is fabricated, not measured. This is BROADER
+    // than the all-probes-NaN SENSOR_FAULT (which makes sensors_plausible()
+    // false → all relays off). In the degraded regime the controller must NOT
+    // chase a fabricated VPD with humidification/dehum/fog; instead it falls
+    // back to conservative TIMED center wetting (the dawn/midday bursts at
+    // their calibrated volume) and temp-only safety/vent/heat control. Defaults
+    // to false so existing call sites and tests are unaffected.
+    bool     sensor_degraded;
 };
 
 // ── Setpoints (band + planner tunables + firmware config) ──
@@ -206,6 +218,32 @@ struct Setpoints {
     int      midday_drench_window_min;             // midday window duration, minutes (default 11)
     int      midday_drench_on_s;                   // center pulse ON during midday window (default 120s — deeper soak than dawn)
     int      midday_drench_gap_s;                  // center pulse GAP during midday window (default 25s — still denser than base)
+    // ── CYC-4 (NB7): overnight ≤5s fog micro-pulse (last resort) ───────────
+    // The greenhouse has NO non-overhead night humidity source yet (NB5/OPN-2
+    // is operator HW), so the ONLY way to relieve a dangerously dry overnight
+    // canopy is a brief overhead fog pulse — which also lightly wets the bare
+    // roots. To minimize that wetting while still arresting a VPD spike, this is
+    // a DEDICATED short-pulse path SEPARATE from the SEALED_MIST/fog duty table:
+    // a single ≤ micropulse_max_on_s burst (default 5s, vs the 60s min_fog_on_s
+    // base) followed by a long lockout (micropulse_min_gap_s). It fires ONLY:
+    //   * when sw_overnight_micropulse_enabled (master) is true, AND
+    //   * NB5 night-humidity hardware is NOT present
+    //     (sw_night_humidity_source_present false — auto-disables CYC-4), AND
+    //   * the local hour is past the CYC-1 dusk cutoff (the overnight/dark
+    //     window), AND
+    //   * VPD strictly exceeds micropulse_vpd_ceiling (default 1.25 kPa), AND
+    //   * RH below the fog ceiling, temp above the fog min, dew margin above
+    //     micropulse_min_dew_margin_f (clean, no crown condensation), AND
+    //   * not feed-hold, not occupancy-blocked, sensors plausible.
+    // It is the deliberate exception to "no wetting past the dusk cutoff": a ≤5s
+    // emergency pulse, not the routine wetting the cutoff bars. The replay
+    // invariant #24 asserts any fog ON past the wet window is ≤ this max.
+    bool     sw_overnight_micropulse_enabled;      // default true; CYC-4 master enable
+    bool     sw_night_humidity_source_present;     // default false; true auto-disables CYC-4 (NB5 installed)
+    float    micropulse_vpd_ceiling;               // overnight VPD that triggers a pulse (default 1.25 kPa)
+    int      micropulse_max_on_s;                  // hard cap on a single pulse, seconds (default 5; clamp <=10)
+    int      micropulse_min_gap_s;                 // lockout between pulses, seconds (default 600 = 10 min)
+    float    micropulse_min_dew_margin_f;          // min temp-dewpoint spread to pulse (default 6°F; no condensation)
 };
 
 static constexpr uint32_t STATE_SENTINEL = 0xBEEF0042;
@@ -609,7 +647,17 @@ inline Setpoints default_setpoints() {
         .midday_drench_start_minute = 0,
         .midday_drench_window_min = 11,
         .midday_drench_on_s = 120,
-        .midday_drench_gap_s = 25
+        .midday_drench_gap_s = 25,
+        // CYC-4 (NB7): overnight ≤5s fog micro-pulse. ON by default (the only
+        // overnight humidity relief until NB5 hardware lands); auto-disables
+        // when sw_night_humidity_source_present flips true. 1.25 kPa ceiling,
+        // 5s max pulse, 10-min lockout, 6°F dew margin.
+        .sw_overnight_micropulse_enabled = true,
+        .sw_night_humidity_source_present = false,
+        .micropulse_vpd_ceiling = 1.25f,
+        .micropulse_max_on_s = 5,
+        .micropulse_min_gap_s = 600,
+        .micropulse_min_dew_margin_f = 6.0f
     };
 }
 
@@ -745,6 +793,18 @@ inline void validate_setpoints(Setpoints& sp) {
     sp.midday_drench_window_min    = std::max(0, std::min(120, sp.midday_drench_window_min));
     sp.midday_drench_on_s          = std::max(1, std::min(600, sp.midday_drench_on_s));
     sp.midday_drench_gap_s         = std::max(5, std::min(600, sp.midday_drench_gap_s));
+
+    // --- CYC-4 (NB7) overnight micro-pulse clamps ---
+    // The ≤5s pulse is the load-bearing constraint: HARD-cap micropulse_max_on_s
+    // at 10s so a bad push can never turn the "micro" pulse into a real fog run
+    // (the invariant #24 and the ACC-2 "no overnight wetting" intent depend on
+    // it). Ceiling >= the typical day band high so it only fires on a genuine
+    // overnight spike. Lockout floored at 60s so pulses cannot chain into a
+    // continuous run. Dew margin in the same range as the other wetting gates.
+    sp.micropulse_vpd_ceiling      = std::max(0.8f, std::min(3.0f, sp.micropulse_vpd_ceiling));
+    sp.micropulse_max_on_s         = std::max(1, std::min(10, sp.micropulse_max_on_s));
+    sp.micropulse_min_gap_s        = std::max(60, std::min(3600, sp.micropulse_min_gap_s));
+    sp.micropulse_min_dew_margin_f = std::max(3.0f, std::min(15.0f, sp.micropulse_min_dew_margin_f));
 }
 
 inline ControlState initial_state() {

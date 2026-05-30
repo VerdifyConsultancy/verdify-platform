@@ -142,6 +142,27 @@ int main(int argc, char** argv) {
     ControlState state = initial_state();
     uint64_t last_ts_unix = 0;
     long rows = 0;
+
+    // #23 (ENV-5 / M14): config-level min-dark guarantee. Runs ONCE, before the
+    // climate replay loop, because it is a property of the lighting photoperiod
+    // window (no per-row climate input). Uses the production Vanda-era window
+    // [6, 22) (16h photoperiod → 8h dark, well over the >=6h floor). A regression
+    // that widened the window past 18h, or re-introduced the un-windowed
+    // occupancy branch, fails here.
+    {
+        LightingSetpoints light_sp{};
+        light_sp.target_light_minutes = 960;
+        light_sp.lux_on_threshold = 40000.0f;
+        light_sp.lux_hysteresis = 8000.0f;
+        light_sp.start_hour = 6;
+        light_sp.cutoff_hour = 22;
+        light_sp.min_on_ms = 120000u;
+        light_sp.min_off_ms = 60000u;
+        light_sp.auto_enabled = true;
+        if (!invariants::check_23_min_dark(light_sp, stats_report)) {
+            // stats_report already recorded it; the summary below reports it.
+        }
+    }
     while (std::getline(f, line)) {
         std::vector<std::string> cols;
         {

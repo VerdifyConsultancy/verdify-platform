@@ -961,6 +961,26 @@ async def write_esp32_logs(pool: asyncpg.Pool) -> None:
             validated,
         )
 
+        # M4 / B9: MEASURED A/B instrumentation for esp32_logs re-enable.
+        # esp32_logs forwarding was disabled at the firmware to protect heap
+        # (commit 90bc358). We do NOT auto-re-enable it — that is a firmware OTA
+        # decision. But whenever logs ARE flowing (a controlled operator
+        # re-enable), this records the concurrent heap state alongside the log
+        # batch size so the heap impact is MEASURED rather than guessed. The
+        # paired log-quiet baseline is every diagnostics row where no log batch
+        # flushed; comparing largest-free-block in the two regimes is the A/B.
+        heap_now = await conn.fetchrow(
+            "SELECT heap_largest_free_block_kb, heap_min_free_kb, heap_bytes FROM diagnostics ORDER BY ts DESC LIMIT 1"
+        )
+        if heap_now is not None:
+            log.info(
+                "esp32_logs A/B: flushed %d msgs; concurrent heap largest_free=%.1fkB min_free=%.1fkB "
+                "(log-active sample — compare vs log-quiet diagnostics baseline before re-enabling)",
+                len(validated),
+                float(heap_now["heap_largest_free_block_kb"] or 0.0),
+                float(heap_now["heap_min_free_kb"] or 0.0),
+            )
+
     # Push to Loki (best-effort, don't block on failure)
     try:
         loki_lines = []
@@ -1505,6 +1525,14 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
     On disconnect, logs the gap duration and reconnects automatically.
     """
     last_disconnected_at: datetime | None = None
+    # M6 / B11: in-process disconnects set last_disconnected_at, but a restart of
+    # the ingestor PROCESS itself (systemd bounce, crash, deploy) loses that state
+    # — the very first connect of a new process has last_disconnected_at=None, so
+    # the gap between the last telemetry row written before the restart and the
+    # first row after was silently NOT recorded as a data_gap (the under-report
+    # bug). We detect the first connect of this process and reconstruct the gap
+    # from the last persisted telemetry timestamp in the DB.
+    first_connect = True
 
     while True:
         log.info(f"Connecting to ESP32 at {ESP32_HOST}:{ESP32_PORT}...")
@@ -1544,9 +1572,33 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
                         await backfill_gap(pool, last_disconnected_at, connected_at)
                     except Exception as e:
                         log.error(f"Gap backfill failed: {e}")
+            elif first_connect:
+                # M6 / B11: first connect of this process. last_disconnected_at is
+                # None not because there was no gap, but because the prior
+                # disconnect happened in a previous process (restart). Reconstruct
+                # the restart gap from the last persisted telemetry timestamp so it
+                # is no longer under-reported.
+                try:
+                    last_telemetry_ts = await _last_telemetry_ts(pool)
+                except Exception as e:
+                    last_telemetry_ts = None
+                    log.error(f"Restart-gap lookup failed: {e}")
+                if last_telemetry_ts is not None:
+                    gap = (connected_at - last_telemetry_ts).total_seconds()
+                    if gap > 120:
+                        log.info(f"Connected to ESP32 (restart gap: {gap:.0f}s since last telemetry)")
+                        try:
+                            await backfill_gap(pool, last_telemetry_ts, connected_at, reason="ingestor_process_restart")
+                        except Exception as e:
+                            log.error(f"Restart-gap backfill failed: {e}")
+                    else:
+                        log.info("Connected to ESP32")
+                else:
+                    log.info("Connected to ESP32 (no prior telemetry; first run)")
             else:
                 log.info("Connected to ESP32")
             last_disconnected_at = None
+            first_connect = False
 
             # Enumerate entities to build key→object_id map
             entities, services = await client.list_entities_services()
@@ -1877,16 +1929,29 @@ async def setpoint_listener(pool: asyncpg.Pool) -> None:
 # ──────────────────────────────────────────────────────────────
 # Gap detection and backfill on reconnect
 # ──────────────────────────────────────────────────────────────
-async def backfill_gap(pool: asyncpg.Pool, gap_start: datetime, gap_end: datetime) -> None:
+async def _last_telemetry_ts(pool: asyncpg.Pool) -> datetime | None:
+    """Most recent persisted telemetry timestamp (for restart-gap detection, M6).
+
+    Uses the climate hypertable — the canonical 1/min telemetry stream. Returns
+    None when the table is empty (genuine first-ever run, no gap to record).
+    """
+    async with pool.acquire() as conn:
+        return await conn.fetchval("SELECT max(ts) FROM climate")
+
+
+async def backfill_gap(
+    pool: asyncpg.Pool, gap_start: datetime, gap_end: datetime, reason: str = "ingestor_restart"
+) -> None:
     """Record data gap and snapshot current equipment state after reconnect."""
     duration = (gap_end - gap_start).total_seconds()
     async with pool.acquire() as conn:
         await conn.execute(
             "INSERT INTO data_gaps (start_ts, end_ts, duration_s, reason, backfill_status) "
-            "VALUES ($1, $2, $3, 'ingestor_restart', 'snapshot_taken')",
+            "VALUES ($1, $2, $3, $4, 'snapshot_taken')",
             gap_start,
             gap_end,
             duration,
+            reason,
         )
 
         # Snapshot current equipment state (we know NOW, not what happened during gap)

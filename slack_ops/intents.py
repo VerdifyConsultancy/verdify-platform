@@ -35,6 +35,9 @@ INTENT_ROLE = {
     "crop.transplant": "grower",
     "crop.harvest": "grower",
     "crop.treatment.record": "grower",
+    "crop.feed.record": "grower",
+    "crop.shade.event.record": "grower",
+    "topology.confirm": "grower",
     "lesson.extract.request": "operator",
     "alert.ack": "operator",
     "alert.resolve": "operator",
@@ -96,6 +99,71 @@ def _harvest_args(text: str) -> dict[str, Any]:
     labor = re.search(r"\blabor\s+(\d+)\s*(?:min|minutes?)?\b", body, re.I)
     if labor:
         args["labor_minutes"] = int(labor.group(1))
+    return args
+
+
+def _feed_args(text: str) -> dict[str, Any]:
+    body = _target_after(r"^(iris\s+)?(record\s+|log\s+)?(feed|fertigate|fertigation)\s+", text)
+    args: dict[str, Any] = {"target": body}
+    # EC / conductivity, e.g. "EC 0.4", "0.4 mS/cm", "ec=0.4", "0.4 ms"
+    ec = re.search(r"\bec\s*[:=]?\s*(\d+(?:\.\d+)?)\b", body, re.I) or re.search(
+        r"\b(\d+(?:\.\d+)?)\s*(?:ms/?cm|ms|ds/?m|mscm)\b", body, re.I
+    )
+    if ec:
+        args["ec"] = float(ec.group(1))
+    # Volume in mL or L, e.g. "120 ml", "0.15 l", "vol 120ml"
+    volume = re.search(r"\b(\d+(?:\.\d+)?)\s*(ml|millilit\w*)\b", body, re.I)
+    if volume:
+        args["volume_ml"] = float(volume.group(1))
+    else:
+        liters = re.search(r"\b(\d+(?:\.\d+)?)\s*(l|liter\w*|litre\w*)\b", body, re.I)
+        if liters:
+            args["volume_ml"] = float(liters.group(1)) * 1000.0
+    # ppm N, e.g. "50 ppm", "ppm 50"
+    ppm = re.search(r"\bppm\s*[:=]?\s*(\d+(?:\.\d+)?)\b", body, re.I) or re.search(
+        r"\b(\d+(?:\.\d+)?)\s*ppm\b", body, re.I
+    )
+    if ppm:
+        args["ppm_n"] = float(ppm.group(1))
+    # Recipe / product, e.g. "recipe MSU 13-3-15"
+    recipe = re.search(
+        r"\b(?:recipe|product|salt)\s+([A-Za-z0-9 +/.-]+?)(?:\s+(?:ec|ppm|vol\w*|at|time)\b|$)",
+        body,
+        re.I,
+    )
+    if recipe:
+        args["recipe"] = recipe.group(1).strip()
+    # Explicit feed clock time, e.g. "at 06:30", "time 0630"
+    clock = re.search(r"\b(?:at|time)\s+(\d{1,2}:\d{2}|\d{3,4})\b", body, re.I)
+    if clock:
+        args["fed_at_local"] = clock.group(1)
+    # Strip parsed quantities off the resolution target so crop lookup stays clean.
+    cut = re.search(
+        r"\s*(?:\bec\b|\bppm\b|\bvol\w*\b|\brecipe\b|\bproduct\b|\bsalt\b|\bat\b|\btime\b|"
+        r"\d+(?:\.\d+)?\s*(?:ml|l|ppm|ms/?cm|ms|ds/?m))",
+        body,
+        re.I,
+    )
+    if cut and cut.start() > 0:
+        args["target"] = body[: cut.start()].strip(" ,:-") or body
+    return args
+
+
+def _shade_args(text: str) -> dict[str, Any]:
+    body = _target_after(r"^(iris\s+)?(record\s+|log\s+)?shade\s+", text)
+    args: dict[str, Any] = {"text": body}
+    state = re.search(r"\b(deployed|deploy|on|closed|close|drawn|extended)\b", body, re.I)
+    if state:
+        args["action"] = "deployed"
+    retract = re.search(r"\b(retracted|retract|off|opened|open|removed|stowed)\b", body, re.I)
+    if retract:
+        args["action"] = "retracted"
+    zone = re.search(r"\b(?:zone|over)\s+([A-Za-z][A-Za-z0-9_-]*)\b", body, re.I)
+    if zone:
+        args["zone"] = zone.group(1).lower()
+    coverage = re.search(r"\b(\d+)\s*%", body)
+    if coverage:
+        args["coverage_pct"] = int(coverage.group(1))
     return args
 
 
@@ -202,9 +270,9 @@ def parse_command(text: str) -> SlackParsedIntent:
         )
     if cleaned.startswith("clear "):
         return _intent("crop.clear", {"target": _target_after(r"^clear\s+", raw)})
-    if cleaned.startswith("transplant "):
-        body = _target_after(r"^transplant\s+", raw)
-        match = re.search(r"(.+?)\s+(?:to|into)\s+([A-Za-z0-9_-]+)$", body, re.I)
+    if cleaned.startswith(("transplant ", "move ")):
+        body = _target_after(r"^(transplant|move)\s+", raw)
+        match = re.search(r"(.+?)\s+(?:to|into|onto)\s+([A-Za-z0-9_-]+)$", body, re.I)
         return _intent(
             "crop.transplant",
             {"target": match.group(1).strip(), "position": match.group(2).upper()} if match else {"target": body},
@@ -213,6 +281,14 @@ def parse_command(text: str) -> SlackParsedIntent:
         return _intent("crop.harvest", _harvest_args(raw))
     if cleaned.startswith(("treat ", "treatment ")):
         return _intent("crop.treatment.record", {"text": _target_after(r"^(treat|treatment)\s+", raw)})
+    if cleaned.startswith(("feed ", "fertigate ", "fertigation ", "record feed ", "log feed ")):
+        return _intent("crop.feed.record", _feed_args(raw))
+    if cleaned.startswith(("shade ", "record shade ", "log shade ")):
+        return _intent("crop.shade.event.record", _shade_args(raw))
+    if cleaned.startswith(
+        ("topology confirm", "confirm topology", "topology refresh", "refresh topology")
+    ) or cleaned in {"topology", "what is planted where", "whats planted where", "confirm planting"}:
+        return _intent("topology.confirm", {"text": raw})
 
     if "trigger planner" in cleaned or cleaned.startswith("plan trigger") or cleaned.startswith("run planner"):
         return _intent("plan.trigger", {"reason": raw})

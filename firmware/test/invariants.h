@@ -327,6 +327,98 @@ inline bool check_22_center_burst_no_feed_hold(const TraceRow& r, ReportFn repor
     return true;
 }
 
+// #23 (ENV-5 / M14): MIN-DARK GUARANTEE. The supplemental-lighting controller
+// must never be able to drive the grow lights for more than 18 hours of the
+// day, i.e. it must leave >=6h of guaranteed dark. This is a CONFIG-level
+// property over LightingSetpoints, not a per-climate-row check (the replay
+// corpus carries no lighting columns). It sweeps all 24 local hours under the
+// adversarial assumption that the greenhouse is occupied with low exterior lux
+// at EVERY hour (the worst case for the occupancy task-light branch that M14
+// gated) and counts how many hours `evaluate_lighting` would permit the light.
+// Pre-M14 the occupancy branch omitted in_window, so an all-occupied day could
+// light all 24 hours → 0h dark (verified empirically: grow lights ON at 23:49
+// local). Post-M14 the permitted hours equal the photoperiod window width,
+// which must be <= 18.
+inline bool check_23_min_dark(const LightingSetpoints& sp_in,
+                              ReportFn report = default_report) {
+    LightingSetpoints sp = sp_in;
+    validate_lighting_setpoints(sp);
+    int permitted_hours = 0;
+    for (int hour = 0; hour < 24; hour++) {
+        LightingInputs in{};
+        in.natural_lux = 0.0f;          // pitch dark indoors
+        in.exterior_lux = 0.0f;         // pitch dark outdoors → exterior_lux_below_on
+        in.exterior_lux_fresh = true;   // fresh so the occupancy branch is eligible
+        in.local_hour = hour;
+        in.occupied = true;             // adversarial: someone present every hour
+        LightingState st = initial_lighting_state();
+        // current_on=false: ask whether the controller would TURN the light on.
+        LightingDecision d = evaluate_lighting(in, sp, st, false, 120000u, 60.0f);
+        if (d.want_on) permitted_hours++;
+    }
+    const int dark_hours = 24 - permitted_hours;
+    if (dark_hours < 6) {
+        TraceRow row{};
+        row.local_hour = 0;
+        char detail[160];
+        std::snprintf(detail, sizeof(detail),
+            "lighting can be ON %d/24h (window %d..%d) → only %dh dark (<6h min)",
+            permitted_hours, sp.start_hour, sp.cutoff_hour, dark_hours);
+        report(23, "min_dark", row, detail);
+        return false;
+    }
+    return true;
+}
+
+// #24 (CYC-4 / NB7): OVERNIGHT FOG IS A MICRO-PULSE OR SAFETY ONLY. Any fog ON
+// past the CYC-1 dusk cutoff (the dark/overnight window) must be attributable to
+// either (a) a permitted ≤5s overnight micro-pulse, or (b) survival cooling
+// (SAFETY_COOL). A continuous/routine fog run past the cutoff is forbidden
+// (ACC-2: surfaces dry overnight). This is a single-row property over the row's
+// actual dusk config + the micro-pulse gate. (The ≤5s DURATION cap is enforced
+// in controls.yaml's dedicated timer + validate_setpoints' max_on_s<=10 clamp;
+// the per-minute replay corpus cannot measure sub-minute pulse length, so this
+// asserts the legality of fog being on at all overnight, which is the property
+// that matters for the dark-dry intent.)
+inline bool check_24_overnight_fog_micropulse_only(const TraceRow& r,
+                                                   ReportFn report = default_report) {
+    if (!r.eq_fog) return true;
+    // Build the micro-pulse rail view from the row (reuse the dusk/feed-hold/
+    // dew/RH/temp fields). Defaults for the micro-pulse tunables come from
+    // default_setpoints() and are overridden where the row carries config.
+    SensorInputs in; Setpoints sp;
+    sp = default_setpoints();
+    sp.vpd_high = r.vpd_high;
+    sp.vpd_low  = r.vpd_low;
+    sp.fog_rh_ceiling = r.fog_rh_ceiling;
+    sp.fog_min_temp   = r.fog_min_temp;
+    sp.dusk_cutoff_hour = r.dusk_cutoff_hour;
+    sp.sw_dusk_cutoff_enabled = r.dusk_cutoff_enabled;
+    sp.night_end_hour = (r.night_end_hour == 0 && r.night_start_hour == 0) ? 6 : r.night_end_hour;
+    sp.feed_hold_active = r.feed_hold_active;
+    in = SensorInputs{};
+    in.temp_f = r.temp_f;
+    in.rh_pct = r.rh_pct;
+    in.vpd_kpa = r.vpd_kpa;
+    in.dew_point_f = r.dew_point_f;
+    in.local_hour = r.local_hour;
+    in.occupied = r.occupied;
+    in.outdoor_temp_f = NAN;
+    in.outdoor_dewpoint_f = NAN;
+    in.outdoor_data_age_s = 99999u;
+
+    if (!sensors_plausible(in)) return true;       // SENSOR_FAULT handled elsewhere
+    if (!past_dusk_cutoff(in, sp)) return true;    // daytime fog is the normal path
+    // Overnight fog is legal ONLY as a permitted micro-pulse or survival cooling.
+    const bool safety_cooling = mode_is_safety_cool(r.greenhouse_state);
+    if (!overnight_micropulse_permitted(in, sp) && !safety_cooling) {
+        report(24, "overnight_fog_micropulse_only", r,
+               "fog ON past the dusk cutoff without a permitted micro-pulse or SAFETY_COOL");
+        return false;
+    }
+    return true;
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // Windowed invariants — evaluated over rolling windows. Helpers maintain
 // per-check state via a small context struct. Caller iterates rows and
@@ -669,6 +761,8 @@ struct Runner {
         // ── IRR-3 / IRR-4 center-burst rail invariants ──
         if (!check_21_center_burst_pre_dusk(r, report))             { failures++; ok = false; }
         if (!check_22_center_burst_no_feed_hold(r, report))         { failures++; ok = false; }
+        // ── CYC-4 overnight micro-pulse invariant ──
+        if (!check_24_overnight_fog_micropulse_only(r, report))     { failures++; ok = false; }
         return ok;
     }
 };

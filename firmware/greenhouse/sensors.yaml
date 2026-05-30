@@ -76,11 +76,54 @@ sensor:
     unit_of_measurement: "ppm"
     state_class: measurement
     accuracy_decimals: 0
-    lambda: "return id(co2_raw_v).state * (5.0/3.3) * (10000.0/5.0);"
+    lambda: |-
+      // B13 / M2: corrected CO2 transform.
+      // The analog module's output voltage DECREASES as CO2 rises (MG811-style),
+      // so the prior linear `raw_v * K` produced an INVERTED diurnal (low at
+      // night when respiration raised CO2, high midday when photosynthesis drew
+      // it down). Use a two-point INVERTED-linear map: ppm falls as voltage
+      // rises, anchored on (v_lo_ppm @ co2_cal_lo_ppm) and (v_hi_ppm @
+      // co2_cal_hi_ppm). True absolute accuracy still needs a reference-NDIR
+      // two-point field calibration (see globals.yaml co2_cal_*).
+      float v = id(co2_raw_v).state;
+      float v_lo = id(co2_cal_v_lo_ppm);   // voltage at LOW ppm (higher v)
+      float v_hi = id(co2_cal_v_hi_ppm);   // voltage at HIGH ppm (lower v)
+      float ppm_lo = id(co2_cal_lo_ppm);
+      float ppm_hi = id(co2_cal_hi_ppm);
+      // Guard a degenerate calibration (equal voltages) → avoid div-by-zero.
+      float dv = v_hi - v_lo;
+      if (fabsf(dv) < 1e-4f) {
+        id(co2_plausible) = false;
+        return NAN;
+      }
+      float ppm = ppm_lo + (v - v_lo) * (ppm_hi - ppm_lo) / dv;
+      // Plausibility gate: a disconnected/railed analog line, or a ppm outside
+      // the planted-greenhouse band, is flagged AND suppressed (NAN) rather than
+      // fed downstream as a real reading.
+      bool raw_ok = v >= id(co2_raw_v_min) && v <= id(co2_raw_v_max);
+      bool ppm_ok = ppm >= id(co2_plausible_min_ppm) && ppm <= id(co2_plausible_max_ppm);
+      bool ok = raw_ok && ppm_ok;
+      id(co2_plausible) = ok;
+      if (!ok) return NAN;   // flagged implausible → don't publish a bogus value
+      return ppm;
     filters:
       - clamp:
           min_value: 0
           max_value: 10000
+
+  # B13 / M2: plausibility flag for the CO2 reading (1 = inside band, 0 = the
+  # last sample was flagged implausible — disconnected/railed line or ppm out of
+  # the 300–5000 planted-greenhouse band). Lets the planner/operator distinguish
+  # "no data" from "real low CO2".
+  - platform: template
+    id: co2_plausible_flag
+    name: "CO₂ Plausible"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      return id(co2_plausible) ? 1.0f : 0.0f;
 
   - platform: adc
     id: lux_raw_v
@@ -3026,6 +3069,111 @@ sensor:
       if (!id(cfg_first_pull_ok)) return NAN;
       return id(sw_midday_drench_enabled) ? 1.0f : 0.0f;
 
+  # FRT-8 / F3 / F1: AM-only feed window readbacks (rule 6).
+  - platform: template
+    id: cfg_num_feed_start_hour
+    name: "Cfg Feed Start Hour"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(feed_start_hour);
+
+  - platform: template
+    id: cfg_num_feed_end_hour
+    name: "Cfg Feed End Hour"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(feed_end_hour);
+
+  # CYC-4 (NB7): overnight micro-pulse readbacks (rule 6).
+  - platform: template
+    id: cfg_sw_overnight_micropulse_enabled_switch
+    name: "Cfg Overnight Micropulse Enabled"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(sw_overnight_micropulse_enabled) ? 1.0f : 0.0f;
+
+  - platform: template
+    id: cfg_sw_night_humidity_source_present_switch
+    name: "Cfg Night Humidity Source Present"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(sw_night_humidity_source_present) ? 1.0f : 0.0f;
+
+  - platform: template
+    id: cfg_num_micropulse_vpd_ceiling
+    name: "Cfg Micropulse VPD Ceiling"
+    unit_of_measurement: "kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(micropulse_vpd_ceiling);
+
+  - platform: template
+    id: cfg_num_micropulse_max_on_s
+    name: "Cfg Micropulse Max On (s)"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(micropulse_max_on_s);
+
+  - platform: template
+    id: cfg_num_micropulse_min_gap_s
+    name: "Cfg Micropulse Min Gap (s)"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(micropulse_min_gap_s);
+
+  - platform: template
+    id: cfg_num_micropulse_min_dew_margin_f
+    name: "Cfg Micropulse Min Dew Margin (F)"
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(micropulse_min_dew_margin_f);
+
+  # CYC-4 daily micro-pulse count (operator visibility into overnight relief).
+  - platform: template
+    id: micropulse_count_today
+    name: "Micropulse Count Today"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 60s
+    lambda: |-
+      return (float)id(cnt_micropulse_today);
+
   # Mister pulse VPD effectiveness (updated by controls.yaml after each pulse)
   - platform: template
     id: mister_vpd_delta
@@ -3034,6 +3182,19 @@ sensor:
     accuracy_decimals: 3
     update_interval: never
     icon: "mdi:water-opacity"
+
+  # SAF-1 / SF1: 1 while the indoor average probes are degraded (controller
+  # running on the case-probe/fabricated value with VPD-chasing suppressed and
+  # conservative timed wetting only); 0 when VPD control is trusted. Published
+  # on change by controls.yaml.
+  - platform: template
+    id: sensor_degraded_active
+    name: "Sensor Degraded Active"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: never
+    icon: "mdi:alert-circle-outline"
 
 # ─────────────────── TEXT SENSORS ──────────────────────────────────────────
 

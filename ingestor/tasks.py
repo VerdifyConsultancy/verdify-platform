@@ -137,6 +137,80 @@ SAFETY_RAIL_PARAMS = frozenset(name for name, spec in REGISTRY.items() if spec.p
 HOUSE_VPD_MIN_WIDTH_KPA = 0.55
 HOUSE_VPD_LOW_MARGIN_KPA = 0.20
 AIR_EXCHANGE_RELAY_STUCK_MODES = frozenset({"VENTILATE", "DEHUM_VENT", "THERMAL_RELIEF", "SAFETY_COOL"})
+
+# M5 / B10: alert auto-close disposition.
+#
+# When a previously-OPEN alert stops being produced, the auto-resolver marks it
+# disposition='resolved' (the condition recovered). But some alerts represent a
+# KNOWN, ACCEPTED, software-unactionable gap — chiefly the irrigation/soil-probe
+# feedback alerts for hardware that is not installed (center EC/pH/moisture
+# probes, NB1-3, hardware-gated) or for an unpotted/empty zone. When the
+# operator ACKNOWLEDGES such an alert, closing it later as 'resolved' is a lie
+# (nothing recovered — the probe still isn't there) and re-emitting it floods
+# the open backlog (the ~92% orphan population in B10). For these we reach
+# disposition='suppressed' instead: it leaves the canonical open set (v_open_alerts,
+# db-group) without falsely claiming recovery, and it carries the operator's prior
+# acknowledgement forward. Genuine transient recoveries still resolve normally.
+SUPPRESSIBLE_ALERT_TYPES = frozenset(
+    {
+        "irrigation_feedback_gap",  # missing/stuck center+south probe feedback (HW-gated)
+        "soil_sensor_offline",  # unpotted/empty-zone probe (occupancy-aware; S1)
+    }
+)
+
+
+def _auto_close_disposition(alert_type: str, prior_disposition: str) -> tuple[str, str]:
+    """Pick (disposition, resolution) for an alert that left the active set.
+
+    A suppressible alert type that the operator already ACKNOWLEDGED is closed
+    as 'suppressed' (accepted hardware/occupancy gap, not a recovery). Everything
+    else auto-resolves as before.
+    """
+    if alert_type in SUPPRESSIBLE_ALERT_TYPES and prior_disposition == "acknowledged":
+        return "suppressed", "auto-suppressed: acknowledged hardware/occupancy gap, no recovery claimed"
+    return "resolved", "auto-resolved"
+
+
+# G6 / B19 §7.4: VPD-high stress alert threshold (hours/day).
+#
+# The legacy 2.0h threshold was calibrated against the broken 78F served band.
+# Once migration 145 raises the orchid band AND 146 re-points
+# v_stress_hours_today.vpd_stress_hours to a graded-DEFICIT integral
+# (severity-weighted, always <= the old binary count), 2.0h is structurally
+# unreachable -> a dead alert. The design recalibrates to
+#   max(VPD_STRESS_FLOOR_H, p75 of rolling-30d graded_stress_hours_vpd_high[center]).
+# That graded history only exists after 146 dual-writes it, so the threshold is
+# computed dynamically and self-recalibrates the moment the column is populated;
+# until then it falls back to the legacy binary threshold so the alert keeps
+# working byte-identically during co-existence.
+VPD_STRESS_FLOOR_H = 0.5
+VPD_STRESS_LEGACY_THRESHOLD_H = 2.0
+
+
+async def _vpd_stress_alert_threshold(conn: asyncpg.Connection) -> float:
+    """Dynamic VPD-high stress threshold (hours/day), graded-history aware (G6).
+
+    Returns max(VPD_STRESS_FLOOR_H, p75 of the rolling-30d center graded vpd_high
+    deficit). Falls back to the legacy 2.0h binary threshold when the graded
+    column does not yet exist (pre-migration-146) or has no populated history, so
+    the alert never goes silently dead and never NULLs out.
+    """
+    try:
+        p75 = await conn.fetchval(
+            """
+            SELECT percentile_cont(0.75) WITHIN GROUP (ORDER BY graded_stress_hours_vpd_high)
+              FROM daily_summary
+             WHERE date >= (now() AT TIME ZONE 'America/Denver')::date - 30
+               AND graded_stress_hours_vpd_high IS NOT NULL
+            """
+        )
+    except (asyncpg.exceptions.UndefinedColumnError, asyncpg.exceptions.UndefinedTableError):
+        return VPD_STRESS_LEGACY_THRESHOLD_H
+    if p75 is None:
+        return VPD_STRESS_LEGACY_THRESHOLD_H
+    return max(VPD_STRESS_FLOOR_H, float(p75))
+
+
 VPD_HIGH_GUARD_MARGIN_KPA = 0.02
 VPD_MOISTURE_DEW_MARGIN_F = 7.0
 VPD_MOISTURE_RECOVERY_WINDOW_MIN = 15
@@ -1724,16 +1798,17 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
         # 3. VPD stress
         # Daily cumulative stress belongs in the scorecard; an open alert
         # should represent a condition that is still active. Gate the daily
-        # >2h threshold by the last 15 minutes so recovered VPD auto-resolves.
+        # threshold by the last 15 minutes so recovered VPD auto-resolves.
         #
         # Dual-write window (band-compliance §6.5/§7.4): migration 146 re-points
         # v_stress_hours_today.vpd_stress_hours to a graded-deficit integral
         # while keeping the column name, so this read stays backward-compatible.
-        # The 2.0h threshold is calibrated against the broken 78F served band and
-        # goes structurally unreachable once 145 raises the orchid band; its
-        # recalibration to max(0.5, p75 rolling-30d graded center vpd_high) is
-        # deferred to the coupled alert-monitor re-point (needs graded history
-        # that does not exist until 146 backfills) and is NOT changed here.
+        # The threshold is RECALIBRATED (G6) from the broken-band 2.0h constant to
+        # max(0.5, p75 rolling-30d graded center vpd_high) so it does not go
+        # structurally unreachable once 145 raises the orchid band + 146 grades the
+        # deficit. _vpd_stress_alert_threshold falls back to the legacy 2.0h until
+        # the graded column is populated, so the alert never goes silently dead.
+        vpd_stress_threshold = await _vpd_stress_alert_threshold(conn)
         row = await conn.fetchrow(
             """
             WITH daily AS (
@@ -1767,7 +1842,7 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
         if (
             row
             and row["vpd_stress_hours"]
-            and float(row["vpd_stress_hours"]) > 2.0
+            and float(row["vpd_stress_hours"]) > vpd_stress_threshold
             and int(row["samples"] or 0) >= 3
             and float(row["recent_high_fraction"] or 0.0) >= 0.5
         ):
@@ -1780,7 +1855,10 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                     "category": "climate",
                     "sensor_id": "climate.vpd_avg",
                     "zone": None,
-                    "message": f"VPD stress active: {hrs:.1f} hours today, {high_fraction:.0%} high in last 15m",
+                    "message": (
+                        f"VPD stress active: {hrs:.1f} hours today "
+                        f"(threshold {vpd_stress_threshold:.1f}h), {high_fraction:.0%} high in last 15m"
+                    ),
                     "details": {
                         "vpd_stress_hours": hrs,
                         "recent_samples": int(row["samples"] or 0),
@@ -1790,7 +1868,7 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                         "avg_vpd_high_15m": float(row["avg_vpd_high"]) if row["avg_vpd_high"] is not None else None,
                     },
                     "metric_value": hrs,
-                    "threshold_value": 2.0,
+                    "threshold_value": vpd_stress_threshold,
                 }
             )
 
@@ -3333,7 +3411,7 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
         # — auto-resolving them here caused setpoint_unconfirmed to flap
         # open↔resolved every alert_monitor cycle.
         open_rows = await conn.fetch(
-            "SELECT id, alert_type, severity, sensor_id, slack_ts FROM alert_log "
+            "SELECT id, alert_type, severity, sensor_id, slack_ts, disposition FROM alert_log "
             "WHERE disposition IN ('open', 'acknowledged') AND resolved_at IS NULL AND source = 'system'"
         )
         open_keys = {(r["alert_type"], r["sensor_id"]): r for r in open_rows}
@@ -3431,13 +3509,18 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
             )
             new_count += 1
 
-        # Auto-resolve
+        # Auto-resolve (or suppress accepted hardware/occupancy gaps \u2014 M5/B10).
         resolved = 0
+        suppressed = 0
         for key, row in open_keys.items():
             if key not in active_keys:
+                disposition, resolution = _auto_close_disposition(row["alert_type"], row["disposition"])
                 await conn.execute(
-                    "UPDATE alert_log SET disposition = 'resolved', resolved_at = now(), resolved_by = 'system', resolution = 'auto-resolved' WHERE id = $1",
+                    "UPDATE alert_log SET disposition = $2, resolved_at = now(), resolved_by = 'system', "
+                    "resolution = $3 WHERE id = $1",
                     row["id"],
+                    disposition,
+                    resolution,
                 )
                 if row["slack_ts"]:
                     if slack_token is None:
@@ -3446,16 +3529,27 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                         except Exception:
                             slack_token = ""
                     if slack_token:
+                        verb = "Suppressed" if disposition == "suppressed" else "Resolved"
+                        emoji = "\U0001f507" if disposition == "suppressed" else "\u2705"
                         _post_slack(
                             slack_token,
                             SLACK_CHANNEL,
-                            f"\u2705 Resolved: `{row['alert_type']}` for `{row['sensor_id']}`",
+                            f"{emoji} {verb}: `{row['alert_type']}` for `{row['sensor_id']}`",
                             thread_ts=row["slack_ts"],
                         )
-                resolved += 1
+                if disposition == "suppressed":
+                    suppressed += 1
+                else:
+                    resolved += 1
 
-        if new_count or resolved or escalated_count:
-            log.info("Alerts: %d new, %d resolved, %d escalated", new_count, resolved, escalated_count)
+        if new_count or resolved or suppressed or escalated_count:
+            log.info(
+                "Alerts: %d new, %d resolved, %d suppressed, %d escalated",
+                new_count,
+                resolved,
+                suppressed,
+                escalated_count,
+            )
 
 
 # Reactive planner REMOVED in Sprint 5 P6 — replaced by forecast deviation monitor (P4)
@@ -4924,6 +5018,14 @@ async def grow_light_daily(pool: asyncpg.Pool) -> None:
             cw,
             ct,
         )
+        # B5 / M3: kwh_total comes from the Shelly clamp power integral
+        # (v_energy_daily.measured_kwh), which only meters 2 channels and so
+        # UNDERCOUNTS whole-greenhouse draw by 3-6.6x (verified: kwh_total ~4-15
+        # vs runtime-estimate kwh_estimated ~20-30 on the same day). It is kept
+        # for the peak_kw panel and partial-load visibility only. The
+        # AUTHORITATIVE energy + cost figures the planner scores against are
+        # kwh_estimated / cost_* (the runtime-estimate path, written above);
+        # kwh_total must NOT be presented as a reliable whole-house total.
         await conn.execute(
             """
             UPDATE daily_summary ds
@@ -4938,7 +5040,13 @@ async def grow_light_daily(pool: asyncpg.Pool) -> None:
             yesterday,
         )
 
-    log.info("Daily summary (%s): %.1f kWh, %.3f therms, $%.2f", yesterday, kwh, therms, ct)
+    log.info(
+        "Daily summary (%s): %.1f kWh (runtime-estimate; kwh_total partial-meter, unreliable), %.3f therms, $%.2f",
+        yesterday,
+        kwh,
+        therms,
+        ct,
+    )
 
     # ── utility_cost monthly roll-up (idempotent) ──
     async with pool.acquire() as conn:
@@ -5410,19 +5518,37 @@ async def _refresh_daily_summary_for_date(conn: asyncpg.Connection, target_day) 
     # Ensure row exists
     await conn.execute("INSERT INTO daily_summary (date) VALUES ($1) ON CONFLICT (date) DO NOTHING", target_day)
 
-    # Climate aggregates
+    # Climate aggregates.
+    #
+    # mister_water_gal (B12 / M1): `mister_water_today` is a firmware-side daily
+    # accumulator that resets to 0 at local midnight AND on every ESP32 reboot.
+    # MAX() over the day is therefore wrong on any day with a mid-day reset — a
+    # post-reboot peak BELOW the pre-reboot peak undercounts (we lose the water
+    # misted before the reboot), and a noisy counter can leave a spurious high
+    # MAX that over-counts. Verified over 30d: MAX-based 5679 gal vs reset-aware
+    # 3142 gal (the ~1211-vs-949 B12 discrepancy at scale). The fix is a
+    # reset-aware delta sum: add only the POSITIVE step between consecutive
+    # readings (a negative step = a reset, contributing 0), which is monotonic-
+    # safe and reboot-safe. The first reading of the day seeds from 0 (the
+    # midnight reset), so its full value is counted.
     climate = await conn.fetchrow(
         """
+        WITH day_climate AS (
+            SELECT temp_avg, vpd_avg, rh_avg, outdoor_temp_f, co2_ppm, dli_today,
+                   mister_water_today,
+                   LAG(mister_water_today) OVER (ORDER BY ts) AS prev_mister
+            FROM climate
+            WHERE ts >= $1::date::timestamp AT TIME ZONE 'America/Denver'
+              AND ts < ($1::date + 1)::timestamp AT TIME ZONE 'America/Denver'
+              AND temp_avg IS NOT NULL
+        )
         SELECT MIN(temp_avg) AS temp_min, MAX(temp_avg) AS temp_max, AVG(temp_avg) AS temp_avg,
                MIN(vpd_avg) AS vpd_min, MAX(vpd_avg) AS vpd_max, AVG(vpd_avg) AS vpd_avg,
                MIN(rh_avg) AS rh_min, MAX(rh_avg) AS rh_max, AVG(rh_avg) AS rh_avg,
                MIN(outdoor_temp_f) AS outdoor_temp_min, MAX(outdoor_temp_f) AS outdoor_temp_max,
                AVG(co2_ppm) AS co2_avg, MAX(dli_today) AS dli_final,
-               MAX(mister_water_today) AS mister_water_gal
-        FROM climate
-        WHERE ts >= $1::date::timestamp AT TIME ZONE 'America/Denver'
-          AND ts < ($1::date + 1)::timestamp AT TIME ZONE 'America/Denver'
-          AND temp_avg IS NOT NULL
+               SUM(GREATEST(mister_water_today - COALESCE(prev_mister, 0), 0)) AS mister_water_gal
+        FROM day_climate
     """,
         target_day,
     )
@@ -5792,6 +5918,9 @@ async def _refresh_daily_summary_for_date(conn: asyncpg.Connection, target_day) 
         irrigation_water_gal,
         irrigation_water_gal,
     )
+    # B5 / M3: kwh_total = Shelly 2-channel partial meter (undercounts whole-house
+    # draw 3-6.6x). Kept for peak_kw / partial-load visibility only. The planner
+    # scores against kwh_estimated / cost_* (runtime estimate), never kwh_total.
     await conn.execute(
         """
         UPDATE daily_summary ds

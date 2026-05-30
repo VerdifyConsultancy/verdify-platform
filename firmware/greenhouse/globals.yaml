@@ -223,6 +223,62 @@ globals:
     restore_value: no
     initial_value: '15.0'
 
+  # ─── B13 / M2: CO2 inverted-diurnal fix + plausibility calibration ───
+  # The analog CO2 module on GPIO36 outputs a voltage that DECREASES as CO2
+  # rises (MG811-style). The old linear `raw_v * K` map therefore produced an
+  # INVERTED diurnal: it read LOW at night (when respiration raises CO2 →
+  # voltage falls) and HIGH midday (photosynthesis draws CO2 down → voltage
+  # rises) — backwards from real plant physiology. The corrected transform is a
+  # two-point INVERTED-linear map anchored on (v_lo_ppm @ v at LOW ppm) and
+  # (v_hi_ppm @ v at HIGH ppm): ppm falls as voltage rises.
+  #
+  # IMPORTANT: these anchors are PLACEHOLDERS that only fix the inversion +
+  # bound the range. A trustworthy absolute ppm needs a TWO-POINT field
+  # calibration against a reference NDIR meter (e.g. fresh-air ~420 ppm and a
+  # known elevated point): set co2_cal_v_lo_ppm / co2_cal_v_hi_ppm to the
+  # measured ADC voltages at co2_cal_lo_ppm / co2_cal_hi_ppm. Until then the
+  # value is directionally correct (de-inverted) but not absolutely accurate —
+  # surfaced via the co2_plausible flag.
+  - id: co2_cal_lo_ppm
+    type: float
+    restore_value: no
+    initial_value: '400.0'    # reference LOW concentration (fresh-air ~420 ppm)
+  - id: co2_cal_hi_ppm
+    type: float
+    restore_value: no
+    initial_value: '2000.0'   # reference HIGH concentration
+  - id: co2_cal_v_lo_ppm
+    type: float
+    restore_value: no
+    initial_value: '2.7'      # measured ADC volts AT co2_cal_lo_ppm (HIGH v at LOW ppm; placeholder)
+  - id: co2_cal_v_hi_ppm
+    type: float
+    restore_value: no
+    initial_value: '1.2'      # measured ADC volts AT co2_cal_hi_ppm (LOW v at HIGH ppm; placeholder)
+  # Plausibility band: a valid CO2 reading for a vented planted greenhouse sits
+  # roughly 300–5000 ppm; the raw ADC voltage must also be inside a sane window
+  # (a disconnected/short sensor pegs near 0 or rail). Out-of-band → flagged.
+  - id: co2_plausible_min_ppm
+    type: float
+    restore_value: no
+    initial_value: '300.0'
+  - id: co2_plausible_max_ppm
+    type: float
+    restore_value: no
+    initial_value: '5000.0'
+  - id: co2_raw_v_min
+    type: float
+    restore_value: no
+    initial_value: '0.05'     # below this the analog line is likely disconnected/shorted low
+  - id: co2_raw_v_max
+    type: float
+    restore_value: no
+    initial_value: '3.2'      # above this the line is likely railed (ADC ~3.3V ceiling at 12db)
+  - id: co2_plausible
+    type: bool
+    restore_value: no
+    initial_value: 'true'     # published flag: last CO2 reading inside the plausibility band
+
   # ─── DLI accumulator (B5) ───
   - id: dli_accumulator
     type: float
@@ -511,6 +567,25 @@ globals:
     restore_value: no
     initial_value: '90'
 
+  # ─── FRT-8 / F3 / F1: AM-only feed window ───
+  # Authoritative VPD-INDEPENDENT rail. Every fertilizer job (scheduled fert
+  # states 2/4/7/8 AND the manual fert buttons) is rejected outside the local
+  # [feed_start_hour, feed_end_hour) morning window, regardless of VPD stress.
+  # Default 06:00-09:00 places the once-daily Vanda feed at ~06:30 (F1: the
+  # dispatcher pushes irrig_center_start_hour/minute to 06:30; this gate is the
+  # firmware backstop so PM/dusk/overnight feeds can never run even if a
+  # schedule or manual press lands off-window). Dispatcher-overridable per
+  # season. feed_start_hour == feed_end_hour fails SAFE (no feed).
+  - id: feed_start_hour
+    type: int
+    restore_value: no
+    initial_value: '6'
+
+  - id: feed_end_hour
+    type: int
+    restore_value: no
+    initial_value: '9'
+
   # ─── IRR-3 (dawn rehydrate) / IRR-4 (midday drench) ───
   # Two time-anchored CENTER-ZONE mist cadence OVERRIDES for the bare-root
   # Vanda. They do NOT create a new relay path or mode — they make the existing
@@ -584,6 +659,58 @@ globals:
     type: int
     restore_value: no
     initial_value: '25'       # center pulse GAP during midday window (s) — still denser than 45s base
+
+  # ─── CYC-4 (NB7): overnight ≤5s fog micro-pulse ───
+  # Dedicated short-pulse path SEPARATE from the SEALED_MIST/fog duty table. A
+  # single ≤micropulse_max_on_s pulse (default 5s) relieves a dangerous overnight
+  # VPD spike, then a micropulse_min_gap_s lockout (default 10 min). Auto-disabled
+  # when sw_night_humidity_source_present flips true (NB5 HW installed). Switches
+  # ship ON; the gate (overnight_micropulse_permitted) is dark+dew+RH+temp gated.
+  - id: sw_overnight_micropulse_enabled
+    type: bool
+    restore_value: no
+    initial_value: 'true'
+
+  - id: sw_night_humidity_source_present
+    type: bool
+    restore_value: no
+    initial_value: 'false'    # true once a non-overhead night humidity source (NB5/OPN-2) lands → auto-disables CYC-4
+
+  - id: micropulse_vpd_ceiling
+    type: float
+    restore_value: no
+    initial_value: '1.25'     # overnight VPD (kPa) above which a pulse may fire
+
+  - id: micropulse_max_on_s
+    type: int
+    restore_value: no
+    initial_value: '5'        # HARD cap on a single pulse (s); validate_setpoints clamps <=10
+
+  - id: micropulse_min_gap_s
+    type: int
+    restore_value: no
+    initial_value: '600'      # lockout between pulses (s) — pulses can never chain into a run
+
+  - id: micropulse_min_dew_margin_f
+    type: float
+    restore_value: no
+    initial_value: '6.0'      # min temp-dewpoint spread (°F) to pulse — no crown condensation
+
+  # Micro-pulse timer state (millis() deadlines; wrap-aware signed compares).
+  - id: micropulse_on_until_ms
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'        # while now < this, the current pulse is ON (0 = no pulse active)
+
+  - id: micropulse_lockout_until_ms
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'        # while now < this, no new pulse may start
+
+  - id: cnt_micropulse_today
+    type: int
+    restore_value: no
+    initial_value: '0'        # daily count of overnight micro-pulses (reset at midnight)
 
   # ─── Daily ON-cycle counters (reset at midnight) ───
   - id: cnt_fan1_today

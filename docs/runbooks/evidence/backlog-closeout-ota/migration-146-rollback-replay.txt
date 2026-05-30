@@ -1,0 +1,8 @@
+### Migration 146 rollback-replay (begin..rollback, ON_ERROR_STOP=1) — 2026-05-30T13:16:16-06:00
+### No internal top-level BEGIN;/COMMIT; (verified: all BEGIN are PL/pgSQL block-level inside DO/function bodies)
+### Wrapped externally; ROLLBACK at end — nothing committed to prod.
+---
+NOTICE:  function public.fn_target_band_smooth(timestamptz) does not exist, skipping
+NOTICE:  function public.fn_target_band(timestamptz) does not exist, skipping
+--- psql exit code: 0 ---
+OK: migration 146 replays cleanly inside a rolled-back transaction

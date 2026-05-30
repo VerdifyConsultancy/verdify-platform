@@ -186,8 +186,15 @@ about pre-change behavior.
 ### Decision Precedence
 
 1. **Safety** — never zero safety rails, respect condensation/disease gates
-2. **Band compliance** — keep temp AND VPD inside the firmware-enforced band. PRIMARY objective.
-   Every tuning decision should first ask: "does this keep us in band?"
+2. **Band compliance** — keep each zone's temp AND VPD inside its agronomic band. PRIMARY objective.
+   Compliance is GRADED (full credit in the ideal band, partial credit through the
+   stress band, zero beyond), PER-ZONE (center=Vanda orchid, east=lettuce/strawberry/
+   pepper — each graded against what is planted there, not one house average), and
+   FEASIBILITY-AWARE (a miss you cannot fix — vent saturated, outdoor hotter than the
+   served target — is not held against you). Every tuning decision should first ask:
+   "does this move a CONTROLLER-attributable miss toward its ideal band?" Do not chase
+   a physically-unachievable miss with more actuator effort — widen the served envelope
+   instead (the dispatcher owns that) and spend effort where you have authority.
 3. **Lessons** — high-confidence validated lessons override forecast reasoning
 4. **Forecast/conditions** — weather drives tactical posture
 5. **Cost** — gas over electric heating, minimize water waste. Optimize cost only AFTER compliance.
@@ -195,17 +202,33 @@ about pre-change behavior.
 
 ### KPI: Planner Score (0-100)
 
-- **80% Compliance** — % of day with temp AND VPD **both** inside the firmware-enforced band. Target: >90%.
+- **80% Compliance** — graded, per-zone, feasibility-aware band compliance,
+  aggregated to a house number (center=Vanda 0.60, east=food 0.40). Target: >90%.
+  The reward is becoming the **controller-attributable** compliance: misses that are
+  physically unachievable (vent saturated and outdoor hotter than the served target —
+  an exhaust-only box cannot cool below ambient) are NOT scored against you; only
+  misses where a stage was idle while you had cooling/heating authority count.
+  *(Staged: until migration 147 lands, the live score still uses the binary
+  `compliance_pct` — % of readings with both temp and VPD in the served band. The
+  graded/controller-attributable columns dual-write alongside it first. Plan to the
+  graded framing; read `compliance_pct` as the current scored number.)*
 - **20% Cost efficiency** — daily utility spend. <$5/day = full marks, $15+ = zero.
 - Call `scorecard()` to check current and historical scores (25 metrics).
 
 **Utility metrics** (all in `scorecard()` output):
-- `kwh` — daily electricity usage. Covers fans, fog, grow lights.
+- `kwh` — daily electricity usage. Covers fans, fog, grow lights. **UNRELIABLE — do
+  not use for decisions.** The Shelly `kwh_total` meter undercounts real draw by
+  ~3-6.6x (verified), so any raw `kwh`/`kwh_total` figure is a floor, not the truth.
+  The cost path below already uses a **runtime-estimate** energy model (relay-on time
+  x rated power), NOT the meter, so trust `cost_electric` / `cost_total`, not `kwh`.
+  When you need an electricity signal, reason from runtime/cost, never from `kwh`.
 - `therms` — daily gas usage. Covers gas heater (3.9x cheaper per BTU than electric).
 - `water_gal` — total water (misting + irrigation + sink).
 - `mister_water_gal` — misting-only water (subset of total).
 - `cost_electric`, `cost_gas`, `cost_water`, `cost_total` — dollar cost breakdown.
-- 7-day averages: `7d_avg_cost`, `7d_avg_kwh`, `7d_avg_therms`, `7d_avg_water_gal`.
+  `cost_electric` is the runtime-estimate energy cost (reliable), not the Shelly meter.
+- 7-day averages: `7d_avg_cost`, `7d_avg_kwh`, `7d_avg_therms`, `7d_avg_water_gal`
+  (`7d_avg_kwh` inherits the same meter unreliability — prefer `7d_avg_cost`).
 
 Use the breakdown to understand resource shifts:
 - High gas + low electric = cold night (heating dominated). Normal in winter/spring.
@@ -213,10 +236,57 @@ Use the breakdown to understand resource shifts:
 - Rising water trend = misting getting more aggressive. Is VPD compliance improving?
 - Cost > $5/day = review whether stress reduction justifies the spend.
 
-**Three compliance metrics** (all in `scorecard()` output):
-- `compliance_pct` — % of readings where **both** temp AND VPD are in the firmware-enforced band. This drives the score.
-- `temp_compliance_pct` — % of readings where temp alone is in the firmware-enforced band.
-- `vpd_compliance_pct` — % of readings where VPD alone is in the firmware-enforced band.
+**Compliance metrics** (all in `scorecard()` output):
+- `compliance_pct` — binary house metric: % of readings where **both** temp AND VPD
+  are in the served band. This is the **currently scored** number (until migration 147
+  flips the reward to the graded/controller-attributable column).
+- `temp_compliance_pct` — % of readings where temp alone is in the served band.
+- `vpd_compliance_pct` — % of readings where VPD alone is in the served band.
+- *(dual-writing alongside, scored after 147):* `compliance_v2_raw_pct` (graded,
+  per-zone, weather and all), `compliance_v2_attributable_pct` (graded but with
+  physically-unachievable misses credited — the future reward), and
+  `compliance_v2_unachievable_frac` (share of misses you could not fix). When
+  `unachievable_frac` is high, the lever is to **widen the served envelope**, not to
+  push the actuators harder.
+
+**Graded compliance (decision #2).** A reading scores full credit (1.0) inside the
+ideal band, **linear partial credit** through the stress band, and 0 only beyond the
+stress edge — so severity is visible (0.1F out != 15F out). Temp and VPD are graded
+independently, then combined per zone as the geometric mean (a zone is only fully
+compliant when BOTH axes are good; one-axis collapse is punished hard).
+
+**Per-zone (decision #1).** Each zone is graded against its own crop band: center =
+Vanda orchid; east = lettuce/strawberry/pepper (ideal = the intersection where all
+three are happy, stress = the union any one still tolerates). The single served
+control line follows the priority center/Vanda zone (temperature is one air volume —
+one vent, one set of fans), so east/empty-zone temp bands are for GRADING only, never
+actuated. The house number weights center 0.60 / east 0.40; empty zones (north/south/
+west — no active crop) are excluded.
+
+**Priority crop = Vanda Orchids (center, crop_id 5, hanging, bare-root).** Call
+`crops` action=get crop_id=5 to read its nutrient recipe: `vanda_orchid_active`
+(single-salt MSU 13-3-15, ~50 ppm N, target_ec **0.40 ABSOLUTE on an RO base**).
+It ships **is_active=FALSE** — provisional until the operator confirms the feed
+physically, so treat it as the planned recipe, not a live one. Dosing guardrails
+(SAF-2): it is NOT a 2-part GH Flora recipe, so do NOT use A/B ml/L dose math — dose
+by mixing to target_ec; AM feed only; 60-90 min absorption hold after feed; no
+organics/particulate. Read the recipe before reasoning about any Vanda feed.
+
+**Feasibility classifier (decision #2, design §6.2).** Every miss is labeled
+controller-error vs physically-unachievable so the reward credits only what you own:
+- **HOT miss UNACHIEVABLE** if vent is ON and outdoor >= the served temp_high (the box
+  cannot beat ambient), or the full stack (vent + both fans) is ON and outdoor >=
+  indoor. Otherwise CONTROLLER (a cooling stage was idle while outdoor < indoor).
+- **COLD miss UNACHIEVABLE** only if both heaters are already ON; otherwise CONTROLLER.
+- **VPD-HIGH (too dry) UNACHIEVABLE** only if venting is genuinely forced by heat
+  (vent ON AND (temp is above band OR outdoor >= served target)), OR fog/a mister is
+  ON, OR the mister budget is exhausted. Vent-while-temp-is-already-OK is CONTROLLER,
+  not unachievable — do not run the vent in-band to harvest "unachievable" credit.
+- **VPD-LOW (too humid) UNACHIEVABLE** if vent ON and outdoor RH >= indoor RH (rare at
+  15% outdoor RH); otherwise CONTROLLER.
+Verified today: ~73% of hot-misses are physically unachievable (exhaust-only box,
+outdoor >= target). Diagnose with this split: chase CONTROLLER misses with tuning;
+answer a large UNACHIEVABLE share with envelope width and hardware (shade), not effort.
 
 On dry spring days, VPD compliance is usually the bottleneck (tight band, 15% outdoor RH).
 Temp compliance can be 85%+ while VPD is 25%. Use these to diagnose where to focus:

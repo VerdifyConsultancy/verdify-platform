@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import os
 import pathlib
 import re
+import subprocess
 
 import pytest
 from pydantic import ValidationError
@@ -14,6 +16,7 @@ from verdify_schemas.climate_intent import (
     CLIMATE_INTENT_FIELDS,
     CLIMATE_PRIORITY_ORDER,
     CLIMATE_RELAY_FIELD_DENYLIST,
+    FOG_BLOCK_REASONS,
     ClimateActionDecision,
     ClimateCandidateProjection,
     ClimateIntent,
@@ -330,3 +333,80 @@ def test_action_decision_validates_observability_block_reasons() -> None:
             moisture_assist_state="blocked",
             fog_block_reason="none,time_window",
         )
+
+
+# ── B16/M8: FOG_BLOCK_REASONS must decode every real persisted row ────────
+
+
+def _docker_available() -> bool:
+    r = subprocess.run(["docker", "ps"], capture_output=True, text=True, check=False)
+    return r.returncode == 0
+
+
+def _ci_postgres_reachable() -> bool:
+    return bool(os.environ.get("POSTGRES_HOST"))
+
+
+def _stored_fog_block_reasons() -> set[str]:
+    """Distinct fog_block_reason atoms persisted in the live climate_action_log.
+
+    Firmware may publish a comma-joined value (e.g. "below_threshold,time_window"),
+    so split on commas and trim — the validator accepts the same comma form. Runs
+    against the live Docker Postgres (or a CI Postgres service); skips when neither
+    is available.
+    """
+    sql = (
+        "SELECT DISTINCT trim(unnest(string_to_array(fog_block_reason, ','))) "
+        "FROM climate_action_log WHERE fog_block_reason IS NOT NULL"
+    )
+    if _ci_postgres_reachable():
+        env = os.environ.copy()
+        env.setdefault("PGHOST", env.get("POSTGRES_HOST", "localhost"))
+        env.setdefault("PGPORT", env.get("POSTGRES_PORT", "5432"))
+        env.setdefault("PGUSER", env.get("POSTGRES_USER", "verdify"))
+        env.setdefault("PGPASSWORD", env.get("POSTGRES_PASSWORD", "verdify"))
+        env.setdefault("PGDATABASE", env.get("POSTGRES_DB", "verdify"))
+        cmd = ["psql", "-t", "-A", "-c", sql]
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=20, check=True, env=env)
+    else:
+        r = subprocess.run(
+            ["docker", "exec", "verdify-timescaledb", "psql", "-U", "verdify", "-d", "verdify", "-t", "-A", "-c", sql],
+            capture_output=True,
+            text=True,
+            timeout=20,
+            check=True,
+        )
+    return {ln.strip() for ln in r.stdout.splitlines() if ln.strip()}
+
+
+@pytest.mark.skipif(
+    not (_ci_postgres_reachable() or _docker_available()),
+    reason="no DB backend available (need POSTGRES_HOST env or local docker)",
+)
+def test_fog_block_reasons_cover_stored_db_values() -> None:
+    """Every fog_block_reason atom the firmware has persisted must be a member
+    of FOG_BLOCK_REASONS. Otherwise the strict ClimateActionDecision validator
+    rejects real rows (B16/M8: served/vent_interlock/irrigation/time_invalid
+    were stored ~3104x but absent from the enum)."""
+    stored = _stored_fog_block_reasons()
+    if not stored:
+        pytest.skip("climate_action_log has no fog_block_reason rows yet")
+    unknown = sorted(stored - set(FOG_BLOCK_REASONS))
+    assert not unknown, (
+        f"climate_action_log stores fog_block_reason value(s) not in FOG_BLOCK_REASONS: {unknown}. "
+        f"Add them to verdify_schemas.climate_intent.FOG_BLOCK_REASONS (source of truth is the firmware "
+        f"climate_fog_assist_block_reason() / controls.yaml emit path)."
+    )
+
+    # Every stored atom must round-trip through the strict validator.
+    for atom in sorted(stored):
+        decision = ClimateActionDecision(
+            climate_action="VENT_COOL_FOG_ASSIST",
+            priority_axis="temp",
+            temp_error_f=0.0,
+            vpd_error_kpa=0.0,
+            candidate_summary=f"persisted reason {atom}",
+            moisture_assist_state="blocked",
+            fog_block_reason=atom,
+        )
+        assert decision.fog_block_reason == atom

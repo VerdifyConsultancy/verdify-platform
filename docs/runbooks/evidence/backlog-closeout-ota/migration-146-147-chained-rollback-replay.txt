@@ -1,0 +1,13 @@
+### Migration 146+147 CHAINED rollback-replay (begin..rollback, ON_ERROR_STOP=1) — 2026-05-30T13:17:01-06:00
+### 147 has a RAISE EXCEPTION prerequisite guard requiring 146's daily_summary.compliance_v2_attributable_pct.
+### Standalone 147 replay therefore (correctly) aborts at the guard; this chained replay applies 146 then 147
+### inside ONE outer transaction and ROLLS BACK — validating the real 146->147 apply sequence with NOTHING committed.
+### SAFETY: neither 146 nor 147 contains its OWN top-level BEGIN;/COMMIT; (all BEGIN are PL/pgSQL block-level),
+###         so chaining under an outer begin..rollback is safe (no inner commit can escape the rollback).
+---
+NOTICE:  function public.fn_target_band_smooth(timestamptz) does not exist, skipping
+NOTICE:  function public.fn_target_band(timestamptz) does not exist, skipping
+NOTICE:  Ladder re-anchor: 106 anchored plans (0 with graded comp). derivation=binary_fallback
+NOTICE:  Ladder ordinal stability: 77/147 anchored plans reproduce anchor (%52.4). derivation=binary_fallback. (Acceptance >=90% against dual-written history.)
+--- psql exit code: 0 ---
+OK: 146->147 sequence replays cleanly inside a rolled-back transaction

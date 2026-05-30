@@ -408,11 +408,17 @@ class TestActivityDirectWetGuards:
         assert REGISTRY["sw_direct_wet_gate_enabled"].cfg_readback_object_id
 
     def test_mister_state_machine_gates_each_wet_zone(self, controls_yaml: str) -> None:
+        # The SAF-4 duty-cap split (commit e7781a3) renamed the per-zone helper
+        # `direct_wet_allowed(N)` → `crop_direct_wet_allowed(N)` and the per-zone
+        # vars to `*_crop_wet_allowed`, then composed the final `*_wet_allowed`
+        # gate as `(crop_wet || climate_wet_assist) && !volume_hard_block` (center
+        # additionally `&& !center_duty_cap_reached`). The gating is intact; these
+        # needles track the CURRENT identifiers, not the pre-split ones.
         required = [
-            "south_wet_allowed = direct_wet_allowed(1)",
-            "west_wet_allowed = direct_wet_allowed(2)",
-            "center_wet_allowed = direct_wet_allowed(3)",
-            "wall_wet_allowed = direct_wet_allowed(4)",
+            "south_crop_wet_allowed = crop_direct_wet_allowed(1)",
+            "west_crop_wet_allowed = crop_direct_wet_allowed(2)",
+            "center_crop_wet_allowed = crop_direct_wet_allowed(3)",
+            "wall_wet_allowed = crop_direct_wet_allowed(4)",
             "direct_wet_relay_watchdog",
             "id(south_wall_mister_fertilized).turn_off();",
             "id(west_wall_mister_fertilized).turn_off();",
@@ -426,7 +432,9 @@ class TestActivityDirectWetGuards:
             "direct_wet_center_drydown_before_off_min",
             "direct_wet_stress_override",
             "wet_dew_margin_f",
-            "direct_wet_dew_margin",
+            # Dew-margin gate is now expressed as the explicit comparison that
+            # forbids stress wetting when the dew-point margin is too tight.
+            "wet_dew_margin_f >= id(direct_wet_stress_min_dew_margin_f)",
         ]
         missing = [needle for needle in required if needle not in controls_yaml]
         assert not missing, f"Mister direct-wet gate coverage missing: {missing}"

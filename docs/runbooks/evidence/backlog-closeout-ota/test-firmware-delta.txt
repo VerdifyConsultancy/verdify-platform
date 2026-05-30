@@ -1,0 +1,26 @@
+test-firmware unit-test delta — backlog close-out OTA
+=====================================================
+Base (f2bad50, pre-sprint):   199 passed, 0 failed
+NEW  (current worktree):      215 passed, 0 failed
+Delta:                        +16 native unit tests, 0 regressions
+
+Replay-overrides gate (8 months telemetry): PASS, synthetic self-test all flags ✓ (see test-firmware.txt)
+Invariant suite (#1–#24, incl. new #23 min-dark + #24 overnight-fog): PASS over 193,525 rows (see firmware-invariants.txt)
+
+New TEST() cases added this sprint (covering F1/F3/SF1/M14/NB7):
+TEST(sf1_degraded_suppresses_vpd_chasing_seal) {
+TEST(sf1_degraded_suppresses_dehum_vent) {
+TEST(sf1_degraded_keeps_temp_safety_rails) {
+TEST(sf1_degraded_allows_timed_center_burst_without_vpd) {
+TEST(sf1_implausible_still_sensor_fault_all_off) {
+TEST(micropulse_permitted_overnight_when_dry_and_clean) {
+TEST(micropulse_blocked_by_each_rail) {
+TEST(micropulse_max_on_is_clamped_to_5s_cap) {
+TEST(micropulse_disabled_when_dusk_cutoff_off) {
+TEST(invariant_24_overnight_fog_must_be_micropulse_or_safety) {
+TEST(invariant_23_min_dark_holds_for_production_window) {
+TEST(invariant_23_min_dark_catches_overlong_window) {
+TEST(feed_window_open_am_only) {
+TEST(feed_window_open_fails_safe_degenerate) {
+TEST(feed_window_open_clamps_and_wraps) {
+TEST(lighting_occupancy_cannot_light_during_dark_block) {

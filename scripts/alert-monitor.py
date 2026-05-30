@@ -2,13 +2,15 @@
 """
 alert-monitor.py — Check alert conditions, write to alert_log, post to Slack.
 
-Runs every 5 minutes via cron. Checks 6 conditions:
+Runs every 5 minutes via cron. Checks conditions including:
 1. sensor_offline — v_sensor_staleness stale = true
 2. relay_stuck — v_relay_stuck is_stuck = true
-3. vpd_stress — v_stress_hours_today vpd_stress_hours > 2
+3. vpd_stress — v_stress_hours_today vpd_stress_hours over threshold
 4. temp_safety — climate temp_avg < 35 or > 100
 5. leak_detected — equipment_state leak_detected = true
 6. esp32_reboot — diagnostics uptime_s < 300
+6b. esp32_boot_loop — 3+ same-build reboots under 120s in 10 min (M7)
+6c. heap_largest_free_block_low — sustained heap fragmentation pressure (M7)
 
 Deduplicates: won't re-alert for the same open condition.
 Auto-resolves: clears alerts when the condition passes.
@@ -63,6 +65,70 @@ AIR_EXCHANGE_RELAY_STUCK_MODES = frozenset({"VENTILATE", "DEHUM_VENT", "THERMAL_
 # param; 60/hour (one clamp/minute sustained) is a conservative floor that filters
 # incidental clamps but catches a stuck planner-vs-guardrail tug-of-war.
 PLANNER_CLAMP_RATE_THRESHOLD_PER_HOUR = 60
+
+# M7 / heap + boot-loop watchdogs (commit 90bc358 heap-protection context).
+#
+# Boot-loop: a healthy ESP32 reboots rarely (OTA, manual). 3+ reboots of the
+# SAME firmware build, each with uptime below BOOTLOOP_UPTIME_S, inside a 10-min
+# window means the new build is crash-looping — page it as a deploy-quality
+# critical so the operator rolls back rather than letting it thrash.
+BOOTLOOP_UPTIME_S = 120
+BOOTLOOP_MIN_REBOOTS = 3
+BOOTLOOP_WINDOW_MIN = 10
+# Sustained-low largest-free-block: the heap can have free bytes yet no single
+# contiguous block large enough to allocate (fragmentation), which is what
+# actually strands the controller. Healthy avg ~60kB, p05 ~38kB. A SUSTAINED dip
+# below LFB_LOW_KB (most samples in the trailing window) is real heap pressure;
+# a single transient dip is not. Warns; the firmware's own debounced
+# heap_pressure_critical binary sensor remains the hard rail.
+LFB_LOW_KB = 22.0
+LFB_WINDOW_MIN = 15
+LFB_MIN_SAMPLES = 8
+LFB_LOW_FRACTION = 0.8
+
+# M4 / B8: data-pipeline coverage for the three pipelines absent from
+# v_data_pipeline_health (esp32_logs, irrigation_log, weather_station). These are
+# chronically off / by-design idle, so we do NOT page on their being stale per se
+# — that would be permanent noise. Instead we detect a NEWLY-dead pipeline: one
+# that produced rows within the trailing recovery window (so it was alive) but
+# whose freshest row is now older than its expected cadence. (table, cadence_s,
+# recently-active window_s, severity). irrigation_log is by-design event-driven
+# (62d gaps are normal) so it only flags if it was active in the last 7d then
+# stalls; esp32_logs/weather_station use tighter windows.
+PIPELINE_COVERAGE = (
+    ("esp32_logs", 3600, 6 * 3600, "warning"),
+    ("weather_station", 3600, 6 * 3600, "warning"),
+    ("irrigation_log", 24 * 3600, 7 * 24 * 3600, "info"),
+)
+
+# G6 / B19 §7.4: VPD-high stress alert threshold (hours/day). The legacy 2.0h
+# constant was tuned against the broken 78F band; once 145 raises the orchid band
+# and 146 re-points v_stress_hours_today.vpd_stress_hours to a graded-deficit
+# integral (always <= the binary count), 2.0h is unreachable -> dead alert.
+# Recalibrate to max(0.5, p75 rolling-30d graded center vpd_high), falling back to
+# the legacy 2.0h until the graded column exists. Mirrors tasks.py
+# _vpd_stress_alert_threshold so both VPD-stress consumers stay consistent.
+VPD_STRESS_FLOOR_H = 0.5
+VPD_STRESS_LEGACY_THRESHOLD_H = 2.0
+
+
+async def vpd_stress_threshold(conn) -> float:
+    """Dynamic VPD-high stress threshold (hours/day), graded-history aware (G6)."""
+    try:
+        p75 = await conn.fetchval(
+            """
+            SELECT percentile_cont(0.75) WITHIN GROUP (ORDER BY graded_stress_hours_vpd_high)
+              FROM daily_summary
+             WHERE date >= (now() AT TIME ZONE 'America/Denver')::date - 30
+               AND graded_stress_hours_vpd_high IS NOT NULL
+            """
+        )
+    except asyncpg.exceptions.PostgresError:
+        return VPD_STRESS_LEGACY_THRESHOLD_H
+    if p75 is None:
+        return VPD_STRESS_LEGACY_THRESHOLD_H
+    return max(VPD_STRESS_FLOOR_H, float(p75))
+
 
 SEVERITY_EMOJI = {
     "critical": "\U0001f534",  # 🔴
@@ -250,7 +316,10 @@ async def check_conditions(conn) -> list[dict]:
             }
         )
 
-    # 3. VPD stress > 2 hours today, still active in the last 15 minutes.
+    # 3. VPD stress over the (recalibrated) daily threshold, still active in the
+    # last 15 minutes. Threshold is graded-history-aware (G6) — see
+    # vpd_stress_threshold; it self-recalibrates once 146 grades the deficit.
+    vpd_threshold = await vpd_stress_threshold(conn)
     row = await conn.fetchrow("""
         WITH daily AS (
             SELECT vpd_stress_hours::float AS vpd_stress_hours
@@ -282,7 +351,7 @@ async def check_conditions(conn) -> list[dict]:
     if (
         row
         and row["vpd_stress_hours"]
-        and float(row["vpd_stress_hours"]) > 2.0
+        and float(row["vpd_stress_hours"]) > vpd_threshold
         and int(row["samples"] or 0) >= 3
         and float(row["recent_high_fraction"] or 0.0) >= 0.5
     ):
@@ -295,7 +364,10 @@ async def check_conditions(conn) -> list[dict]:
                 "category": "climate",
                 "sensor_id": "climate.vpd_avg",
                 "zone": None,
-                "message": f"VPD stress active: {hrs:.1f} hours today, {high_fraction:.0%} high in last 15m",
+                "message": (
+                    f"VPD stress active: {hrs:.1f} hours today "
+                    f"(threshold {vpd_threshold:.1f}h), {high_fraction:.0%} high in last 15m"
+                ),
                 "details": {
                     "vpd_stress_hours": hrs,
                     "recent_samples": int(row["samples"] or 0),
@@ -305,7 +377,7 @@ async def check_conditions(conn) -> list[dict]:
                     "avg_vpd_high_15m": float(row["avg_vpd_high"]) if row["avg_vpd_high"] is not None else None,
                 },
                 "metric_value": hrs,
-                "threshold_value": 2.0,
+                "threshold_value": vpd_threshold,
             }
         )
 
@@ -421,6 +493,159 @@ async def check_conditions(conn) -> list[dict]:
                 "details": {"uptime_s": row["uptime_s"], "reset_reason": row.get("reset_reason")},
             }
         )
+
+    # 6b. ESP32 boot-loop — 3+ reboots of the SAME build under BOOTLOOP_UPTIME_S
+    # within a 10-min window (M7). A reboot is a sample whose uptime_s dropped
+    # below the prior sample's (a reset), and is itself below the short-uptime
+    # floor. Counting resets (not just low-uptime rows) avoids inflating one slow
+    # boot's consecutive low samples into a false loop.
+    bootloop = await conn.fetchrow(
+        """
+        WITH samples AS (
+            SELECT ts, uptime_s, firmware_version,
+                   lag(uptime_s) OVER (PARTITION BY firmware_version ORDER BY ts) AS prev_uptime
+              FROM diagnostics
+             WHERE ts >= now() - make_interval(mins => $1)
+               AND uptime_s IS NOT NULL
+        ),
+        reboots AS (
+            SELECT firmware_version, ts, uptime_s
+              FROM samples
+             WHERE uptime_s < $2
+               AND (prev_uptime IS NULL OR uptime_s < prev_uptime)
+        )
+        SELECT firmware_version,
+               count(*)::int AS reboot_count,
+               min(uptime_s)::int AS min_uptime_s,
+               max(ts) AS last_reboot_ts
+          FROM reboots
+         GROUP BY firmware_version
+        HAVING count(*) >= $3
+         ORDER BY count(*) DESC
+         LIMIT 1
+        """,
+        BOOTLOOP_WINDOW_MIN,
+        BOOTLOOP_UPTIME_S,
+        BOOTLOOP_MIN_REBOOTS,
+    )
+    if bootloop:
+        fw = bootloop["firmware_version"] or "unknown"
+        count = int(bootloop["reboot_count"])
+        alerts.append(
+            {
+                "alert_type": "esp32_boot_loop",
+                "severity": "critical",
+                "category": "system",
+                "sensor_id": "diag.uptime_s",
+                "zone": None,
+                "message": (
+                    f"ESP32 BOOT-LOOP — build `{fw}` rebooted {count}x in {BOOTLOOP_WINDOW_MIN} min "
+                    f"(each uptime <{BOOTLOOP_UPTIME_S}s, min {bootloop['min_uptime_s']}s); "
+                    "the running build is crash-looping — roll back"
+                ),
+                "details": {
+                    "firmware_version": fw,
+                    "reboot_count": count,
+                    "window_min": BOOTLOOP_WINDOW_MIN,
+                    "uptime_floor_s": BOOTLOOP_UPTIME_S,
+                    "min_uptime_s": bootloop["min_uptime_s"],
+                    "last_reboot_ts": bootloop["last_reboot_ts"].isoformat() if bootloop["last_reboot_ts"] else None,
+                },
+                "metric_value": float(count),
+                "threshold_value": float(BOOTLOOP_MIN_REBOOTS),
+            }
+        )
+
+    # 6c. Sustained low largest-free-block — heap fragmentation pressure (M7).
+    # Alert only when MOST samples in the trailing window sit below the floor
+    # (a sustained dip), not a single transient, and we have enough samples to
+    # judge. Distinct from the firmware's debounced heap_pressure binary sensors:
+    # this catches a slow fragmentation creep before the hard rail trips.
+    lfb = await conn.fetchrow(
+        """
+        SELECT count(*)::int AS samples,
+               count(*) FILTER (WHERE heap_largest_free_block_kb < $1)::int AS low_samples,
+               round(min(heap_largest_free_block_kb)::numeric, 1) AS min_lfb,
+               round(avg(heap_largest_free_block_kb)::numeric, 1) AS avg_lfb
+          FROM diagnostics
+         WHERE ts >= now() - make_interval(mins => $2)
+           AND heap_largest_free_block_kb IS NOT NULL
+        """,
+        LFB_LOW_KB,
+        LFB_WINDOW_MIN,
+    )
+    if (
+        lfb
+        and int(lfb["samples"] or 0) >= LFB_MIN_SAMPLES
+        and int(lfb["low_samples"] or 0) >= LFB_LOW_FRACTION * int(lfb["samples"])
+    ):
+        low_frac = int(lfb["low_samples"]) / int(lfb["samples"])
+        alerts.append(
+            {
+                "alert_type": "heap_largest_free_block_low",
+                "severity": "warning",
+                "category": "system",
+                "sensor_id": "diag.heap_largest_free_block_kb",
+                "zone": None,
+                "message": (
+                    f"ESP32 heap fragmentation — largest free block sustained <{LFB_LOW_KB:g}kB "
+                    f"({low_frac:.0%} of last {LFB_WINDOW_MIN} min, min {lfb['min_lfb']}kB, avg {lfb['avg_lfb']}kB); "
+                    "allocations may fail before the heap_pressure rail trips"
+                ),
+                "details": {
+                    "min_lfb_kb": float(lfb["min_lfb"]) if lfb["min_lfb"] is not None else None,
+                    "avg_lfb_kb": float(lfb["avg_lfb"]) if lfb["avg_lfb"] is not None else None,
+                    "low_sample_fraction": round(low_frac, 3),
+                    "samples": int(lfb["samples"]),
+                    "window_min": LFB_WINDOW_MIN,
+                    "threshold_kb": LFB_LOW_KB,
+                },
+                "metric_value": float(lfb["min_lfb"]) if lfb["min_lfb"] is not None else None,
+                "threshold_value": LFB_LOW_KB,
+            }
+        )
+
+    # 6d. Data-pipeline coverage — newly-dead pipelines absent from
+    # v_data_pipeline_health (esp32_logs / irrigation_log / weather_station, M4).
+    # Flags only a pipeline that was active within its recovery window but has now
+    # gone stale beyond its cadence (a transition to dead), so chronically-off
+    # pipelines do not page perpetually.
+    for table, cadence_s, active_window_s, severity in PIPELINE_COVERAGE:
+        cov = await conn.fetchrow(
+            f"""
+            SELECT GREATEST(EXTRACT(epoch FROM now() - max(ts))::int, 0) AS age_s,
+                   count(*) FILTER (WHERE ts > now() - make_interval(secs => $1)) AS rows_recent
+              FROM {table}
+            """,  # noqa: S608 - table from a fixed module-level allowlist, not user input
+            active_window_s,
+        )
+        if cov is None or cov["age_s"] is None:
+            continue
+        age_s = int(cov["age_s"])
+        rows_recent = int(cov["rows_recent"] or 0)
+        # Was alive in the window AND is now stale beyond cadence -> newly dead.
+        if rows_recent > 0 and age_s > cadence_s:
+            alerts.append(
+                {
+                    "alert_type": "pipeline_stale",
+                    "severity": severity,
+                    "category": "system",
+                    "sensor_id": f"pipeline.{table}",
+                    "zone": None,
+                    "message": (
+                        f"Data pipeline `{table}` went stale — no rows for {age_s // 60} min "
+                        f"(cadence {cadence_s // 60} min) after being active in the trailing window"
+                    ),
+                    "details": {
+                        "table": table,
+                        "age_s": age_s,
+                        "cadence_s": cadence_s,
+                        "rows_in_active_window": rows_recent,
+                    },
+                    "metric_value": float(age_s),
+                    "threshold_value": float(cadence_s),
+                }
+            )
 
     # 7. Planner heartbeat — no plan written in 14h (SUNSET→SUNRISE ~12.7h + 1.3h slack)
     plan_age = await conn.fetchval("SELECT EXTRACT(EPOCH FROM now() - MAX(created_at))::int FROM setpoint_plan")
