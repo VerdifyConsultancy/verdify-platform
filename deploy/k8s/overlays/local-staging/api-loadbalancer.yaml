@@ -1,0 +1,35 @@
+# Expose the Verdify api on the APPS subnet (VLAN 7) via the MetalLB apps-pool.
+# This is the only user-facing surface that gets an LB IP; mcp / db / ingestor
+# stay ClusterIP / connect-out. (handoff §2.5)
+#
+# apps-pool has autoAssign:false, so the address-pool + loadBalancerIPs
+# annotations are REQUIRED. A fixed IP keeps DNS / Authentik stable.
+#
+# HARD RULES (handoff §2.5):
+#   - NEVER also set spec.loadBalancerIP alongside the annotation → MetalLB
+#     AllocationFailed (dual mechanism). Use the annotation ONLY.
+#   - Do NOT use Cilium lbipam.cilium.io/* annotations — the live cluster honors
+#     metallb.universe.tf/* only.
+#   - 192.168.7.21 is a PLACEHOLDER inside the apps-pool range
+#     (192.168.7.10-192.168.7.250). The real reservation is a laptop-root/Jason
+#     networking surface (propose → confirm → reserve in the registry, like
+#     gravity's .7.20). Do not assume this IP is allocated.
+apiVersion: v1
+kind: Service
+metadata:
+  name: verdify-api
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: api
+  annotations:
+    metallb.universe.tf/address-pool: apps-pool
+    metallb.universe.tf/loadBalancerIPs: 192.168.7.21   # PLACEHOLDER — reserve via registry, confirm with Jason
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Local
+  selector:
+    app.kubernetes.io/component: api
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

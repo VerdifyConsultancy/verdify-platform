@@ -1,0 +1,144 @@
+# Verdify FastAPI api — public crop catalog + setpoints, stateless, reads
+# TimescaleDB (handoff §3.1). Minimal FastAPI image (no agent toolchain).
+#
+# SECURITY FIXES baked in here:
+#   - Retires the host 0.0.0.0:8300 all-interface bind (the gravity "bound
+#     0.0.0.0 on all interfaces" finding). The container listens on 8080 and the
+#     Service is ClusterIP; user reach is via the apps-pool LB / Traefik ingress
+#     behind Authentik (overlay), not a host bind. Binding 0.0.0.0 INSIDE the
+#     container is correct — the fix is that the surface is ClusterIP, not a
+#     host NIC.
+#   - VERDIFY_ALLOW_UNAUTHENTICATED_WRITES is NOT in verdify-config, so
+#     require_write_access() (api/main.py) fails CLOSED.
+#   - GIT_SHA is baked at build time (VERDIFY_GIT_SHA) and surfaced at a health
+#     endpoint so image==source is verifiable (#1 cross-cutting req, §3.1).
+#     Adding /health/detailed is an api-scope code change handled in the
+#     containerize PR; this manifest only wires the env + probes.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-api
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: api
+  strategy:
+    # Stateless reader → RollingUpdate is safe (unlike the ingestor, which must
+    # be Recreate for the single-writer ESP32 invariant).
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: api
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: wait-for-db
+          image: timescale/timescaledb:2.17.2-pg16
+          command:
+            - sh
+            - -c
+            - until pg_isready -h verdify-db -p 5432 -U verdify; do echo "waiting for db"; sleep 2; done
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      containers:
+        - name: api
+          image: ghcr.io/jvallery/verdify-api:latest  # pinned to a digest by the overlay
+          command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: verdify-config
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: POSTGRES_PASSWORD
+            # api/main.py builds the DSN from DB_HOST/DB_NAME/DB_USER/DB_PASS
+            # (api/main.py:192-195); DB_PASS comes from the same Secret key.
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: POSTGRES_PASSWORD
+            # Write/admin endpoints are guarded by this key (api/main.py:266).
+            # Present + non-empty → writes require auth. NO unauth-write escape
+            # hatch is set anywhere in this tree (it fails closed).
+            - name: VERDIFY_WRITE_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_WRITE_API_KEY
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              memory: "1Gi"
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          livenessProbe:
+            # /health exists today (api/main.py:911). /health/live + /health/ready
+            # are the gravity convention; switch the probe paths once the api
+            # scope owner adds them in the containerize PR.
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 20
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: verdify-api
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: api
+spec:
+  # ClusterIP by default — the api is NOT exposed externally at the base layer.
+  # The user-facing apps-pool LoadBalancer is an OVERLAY patch (VLAN 7) so the
+  # base stays portable / lint-able without a MetalLB pool.
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/component: api
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

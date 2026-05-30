@@ -1,0 +1,77 @@
+# Verdify image build context (repo root) — exclusions.
+#
+# Build context spans the repo root because api/mcp/ingestor each COPY the
+# shared repo-root packages (verdify_schemas/, slack_config.py, slack_ops/).
+# This file trims the context to keep builds fast and the images clean. Keep in
+# sync with the COPY lines in api/Dockerfile, mcp/Dockerfile, ingestor/Dockerfile.
+
+# --- VCS / tooling metadata ---
+.git
+.gitignore
+.github
+.editorconfig
+.pre-commit-config.yaml
+.stignore
+
+# --- caches / build junk (never belongs in an image) ---
+**/__pycache__
+**/*.pyc
+**/*.pyo
+.pytest_cache
+.ruff_cache
+**/.mypy_cache
+__pycache__
+
+# --- the heavy, image-irrelevant trees (firmware ~432M, site ~21M) ---
+# Firmware is ESP32 C++/ESPHome + a ~193k-row replay corpus; never shipped in a
+# python service image and never built/flashed by CI.
+firmware
+# Quartz static site + its build output.
+site
+# Long-form docs / design / audits — not runtime.
+docs
+
+# --- other compose/infra dirs not needed by the api/mcp/ingestor images ---
+grafana
+goaccess
+mqtt
+promtail
+traefik
+launch
+templates
+config
+db
+hermes
+
+# --- secrets / local env (NEVER bake into an image; secrets come from k8s) ---
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+**/secrets.yaml
+**/*.key
+**/*.pem
+
+# --- the throwaway/dev scratch + worktree artifacts ---
+.claude
+.claude-tmp
+.claude-agents
+
+# --- top-level docs the images don't need ---
+*.md
+!verdify_schemas/README.md
+README.md
+GOAL.md
+CONTEXT.md
+SLACK.md
+CLAUDE.md
+AGENTS.md
+
+# --- repo-level python tooling config not needed at runtime ---
+.venv
+venv
+
+# NOTE: deliberately NOT ignored (the images COPY these):
+#   api/  mcp/  ingestor/  verdify_schemas/  slack_config.py  slack_ops/  slack.yaml
+# (slack.yaml is non-secret config — channel IDs + credential file paths, not tokens.)

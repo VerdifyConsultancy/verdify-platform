@@ -1,0 +1,106 @@
+name: K8s Manifests
+
+# Gate the k3s deploy manifests (mirrors jvallery/gravity k8s-manifests.yml).
+# Render every kustomize overlay and validate the output against upstream
+# Kubernetes schemas with kubeconform. Keeps the repo-driven k3s deployment
+# honest (push -> build -> deploy) by catching broken manifests before they
+# reach Argo CD.
+#
+# ─── PROPOSED / PROPOSED-PR NOTES (coordinator + James review required) ──────
+#  * `.github/**` is SHARED INFRA per CLAUDE.md — this file lands as a PR for
+#    coordinator/James review, NOT an autonomous merge. PR into the READ-ONLY
+#    VerdifyConsultancy org with James coordinating.
+#  * The `deploy/k8s/**` tree is net-new (P3) and lands in a SEPARATE PR. Until
+#    it exists this workflow's path filter never matches, so it is dormant and
+#    harmless. The auto-discovery below tolerates either the gravity layout
+#    (deploy/k8s/base + deploy/k8s/overlays/<name>/) or the live ArgoCD
+#    convention used by vast-cloud-tco (deploy/k8s/base + deploy/k8s/local-*).
+#  * kustomize is PINNED to v5.4.3 — the base `labels` transformer
+#    (kustomize.config.k8s.io/v1beta1) requires it; older releases break.
+
+on:
+  push:
+    branches:
+      - live/platform-main
+      - main
+    paths:
+      - "deploy/k8s/**"
+      - ".github/workflows/k8s-manifests.yml"
+  pull_request:
+    branches:
+      - live/platform-main
+      - main
+    paths:
+      - "deploy/k8s/**"
+      - ".github/workflows/k8s-manifests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Render and validate manifests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install kustomize
+        run: |
+          set -euo pipefail
+          # Pinned release tarball (the upstream install_kustomize.sh script is
+          # not reliable in CI). v5.4.3 supports the kustomize.config.k8s.io/v1beta1
+          # `labels` transformer used by the base.
+          KUSTOMIZE_VERSION=v5.4.3
+          curl -sfL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz" \
+            | tar xz kustomize
+          sudo mv kustomize /usr/local/bin/
+          kustomize version
+
+      - name: Install kubeconform
+        run: |
+          set -euo pipefail
+          curl -sfL "https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz" \
+            | tar xz kubeconform
+          sudo mv kubeconform /usr/local/bin/
+          kubeconform -v
+
+      - name: Build and validate base
+        run: |
+          set -euo pipefail
+          if [ ! -f deploy/k8s/base/kustomization.yaml ]; then
+            echo "::notice::deploy/k8s/base not present yet (net-new in P3); nothing to validate."
+            exit 0
+          fi
+          kustomize build deploy/k8s/base > /tmp/base.yaml
+          kubeconform -strict -summary -ignore-missing-schemas /tmp/base.yaml
+
+      - name: Build and validate overlays
+        run: |
+          set -euo pipefail
+          # Discover overlay directories under either layout:
+          #   - deploy/k8s/overlays/<name>/        (gravity layout)
+          #   - deploy/k8s/<env>/  e.g. local-staging, local-dev  (vast/live layout)
+          # An overlay is any directory containing a kustomization.yaml that is
+          # NOT the base.
+          found=0
+          while IFS= read -r kustomization; do
+            overlay="$(dirname "$kustomization")"
+            # Skip the base; it is validated in the previous step.
+            if [ "$overlay" = "deploy/k8s/base" ]; then
+              continue
+            fi
+            found=1
+            name="$(basename "$overlay")"
+            echo "::group::overlay $name ($overlay)"
+            kustomize build "$overlay" > "/tmp/${name}.yaml"
+            # CRDs (MetalLB/ServiceMonitor/etc.) are validated leniently; core
+            # Kubernetes objects are validated strictly.
+            kubeconform -strict -summary -ignore-missing-schemas "/tmp/${name}.yaml"
+            echo "::endgroup::"
+          done < <(find deploy/k8s -mindepth 2 -name kustomization.yaml 2>/dev/null | sort)
+
+          if [ "$found" -eq 0 ]; then
+            echo "::notice::No deploy/k8s overlays present yet (net-new in P3); nothing to validate."
+          fi

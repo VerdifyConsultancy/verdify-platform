@@ -1,0 +1,43 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Verdify APP base. One instance = one overlay of this base.
+#
+# NOTE: the verdify-app-secrets Secret is NOT defined here. It is managed by the
+# fleet SOPS+age secret backend in jvallery/agent-fleet-control
+# (secrets/encrypted/verdify-*.enc.yaml, registry/secrets/<id>.yaml meta) and
+# applied by the GitOps secret-delivery step BEFORE this app reconciles. The
+# manifests reference it BY NAME ONLY. For a throwaway local `kustomize build`,
+# the overlays/local-staging overlay layers a config.kubernetes.io/local-config
+# placeholder so the tree renders + lints without the secret backend.
+#
+# The `labels:` transformer below is why kustomize v5.4.3 is required (the
+# k8s-manifests.yml CI gate pins that version).
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: verdify
+    includeSelectors: false
+
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - db-statefulset.yaml
+  - migration-job.yaml
+  - api-deployment.yaml
+  - mcp-deployment.yaml
+  - ingestor-deployment.yaml
+  - networkpolicy.yaml
+
+# Image pins. `latest` here is the validation placeholder; CI / the cross-repo
+# image-pin PR in jvallery/agents rewrites these to
+# ghcr.io/jvallery/verdify-<comp>:sha-<gitsha> (12-char) before apply.
+images:
+  - name: ghcr.io/jvallery/verdify-api
+    newTag: latest
+  - name: ghcr.io/jvallery/verdify-mcp
+    newTag: latest
+  - name: ghcr.io/jvallery/verdify-ingestor
+    newTag: latest
+  - name: ghcr.io/jvallery/verdify-py
+    newTag: latest
