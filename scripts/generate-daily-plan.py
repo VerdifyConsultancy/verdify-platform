@@ -33,8 +33,40 @@ sys.path.insert(0, "/mnt/iris/verdify")
 from verdify_schemas import DailyPlanVaultFrontmatter  # noqa: E402
 
 CONTENT_DIR = Path("/srv/verdify/verdify-site/content/plans")
-DB_CMD = "docker exec verdify-timescaledb psql -U verdify -d verdify -t -A"
 DB_TIMEOUT_S = int(os.environ.get("VERDIFY_DAILY_PLAN_DB_TIMEOUT_S", "60"))
+
+
+def _resolve_db_cmd() -> str:
+    """Resolve the psql connection-prefix argv via the shared psql-verdify.sh
+    abstraction (#24) so in-cluster/direct modes work without code changes.
+
+    Falls back to the historical docker-exec argv if the lib is unavailable, so
+    behavior on the live VM is byte-identical. An explicit
+    VERDIFY_DAILY_PLAN_DB_CMD env var still wins (back-compat override).
+    """
+    fallback = "docker exec verdify-timescaledb psql -U verdify -d verdify -t -A"
+    lib = Path(__file__).resolve().parent / "lib" / "psql-verdify.sh"
+    if not lib.exists():
+        return fallback
+    try:
+        out = subprocess.run(
+            ["bash", "-c", f'. "{lib}"; verdify_psql_cmd'],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=True,
+        )
+    except (subprocess.SubprocessError, OSError):
+        return fallback
+    prefix = " ".join(shlex.quote(tok) for tok in out.stdout.split())
+    if not prefix:
+        return fallback
+    # The historical default appends -t -A (tuples-only, unaligned). Preserve it
+    # for docker-exec/direct alike; the lib only emits the connection prefix.
+    return f"{prefix} -t -A"
+
+
+DB_CMD = _resolve_db_cmd()
 
 
 def _yaml_escape(val: str) -> str:

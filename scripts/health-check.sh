@@ -5,9 +5,17 @@
 set -uo pipefail
 
 DB_STATEMENT_TIMEOUT_MS="${VERDIFY_DB_STATEMENT_TIMEOUT_MS:-5000}"
+# #24: DB access via the shared psql-verdify abstraction (docker-exec default
+# preserves the exact prior VM argv:
+#   docker exec -e PGOPTIONS=... verdify-timescaledb psql -U verdify -d verdify -t).
+# The PGOPTIONS statement-timeout is passed as a docker-exec extra flag in
+# docker-exec mode; PGOPTIONS is also exported so direct/in-cluster psql honors
+# the same statement timeout (where the -e extra is ignored).
+. "$(dirname "${BASH_SOURCE[0]}")/lib/psql-verdify.sh"
+export PGOPTIONS="-c statement_timeout=${DB_STATEMENT_TIMEOUT_MS}"
+mapfile -t DB < <(verdify_psql_cmd -e "PGOPTIONS=-c statement_timeout=${DB_STATEMENT_TIMEOUT_MS}")
 db() {
-  docker exec -e "PGOPTIONS=-c statement_timeout=${DB_STATEMENT_TIMEOUT_MS}" \
-    verdify-timescaledb psql -U verdify -d verdify -t -c "$1"
+  "${DB[@]}" -t -c "$1"
 }
 API_HEALTH_URL="${API_HEALTH_URL:-http://127.0.0.1:8300/health}"
 PYTHON_BIN="${PYTHON:-/srv/greenhouse/.venv/bin/python}"

@@ -444,10 +444,14 @@ ingestor-logs: ## Tail ingestor logs
 # ── Database ────────────────────────────────────────────────────────
 
 db-shell: ## Open psql shell
-	docker exec -it verdify-timescaledb psql -U verdify -d verdify
+	@. scripts/lib/psql-verdify.sh; \
+	mapfile -t DB < <(VERDIFY_DOCKER_TTY=1 verdify_pg_program_cmd psql); \
+	"$${DB[@]}"
 
 db-dump: ## Dump schema to db/schema.sql
-	docker exec verdify-timescaledb pg_dump -U verdify -d verdify --schema-only > db/schema.sql
+	@. scripts/lib/psql-verdify.sh; \
+	mapfile -t PGDUMP < <(verdify_pg_program_cmd pg_dump); \
+	"$${PGDUMP[@]}" --schema-only > db/schema.sql
 
 db-scorecard: ## Show today's planner scorecard
 	@. scripts/lib/psql-verdify.sh; verdify_psql -c "SELECT * FROM fn_planner_scorecard(CURRENT_DATE);"

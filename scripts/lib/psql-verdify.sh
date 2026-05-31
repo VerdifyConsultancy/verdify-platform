@@ -119,3 +119,47 @@ verdify_psql_stdin() {
 verdify_psql_cmd_with() {
     verdify_psql_cmd "$@"
 }
+
+# verdify_pg_program_cmd <program> [docker-extra-flags...] — print the
+# connection-prefix argv for an arbitrary Postgres client other than psql
+# (e.g. pg_dump, pg_restore, an interactive psql shell). docker-exec mode emits
+#   docker exec [-i|-it] [extra...] <container> <program> -U <user> -d <db>
+# direct/in-cluster mode exports PG* and emits a bare <program> (the program
+# reads PG* env). Interactive use: set VERDIFY_DOCKER_TTY=1 for `docker exec -it`.
+verdify_pg_program_cmd() {
+    local program="$1"; shift
+    local -a docker_extra=("$@")
+    case "$VERDIFY_PSQL_MODE" in
+        docker-exec)
+            printf '%s\n' docker exec
+            if [[ "${VERDIFY_DOCKER_TTY:-0}" == "1" ]]; then
+                printf '%s\n' -it
+            elif [[ "${VERDIFY_DOCKER_STDIN:-0}" == "1" ]]; then
+                printf '%s\n' -i
+            fi
+            local f
+            for f in "${docker_extra[@]}"; do
+                printf '%s\n' "$f"
+            done
+            printf '%s\n' "$VERDIFY_DB_CONTAINER" "$program" -U "$VERDIFY_DB_USER" -d "$VERDIFY_DB_NAME"
+            ;;
+        direct|in-cluster)
+            export PGHOST="${PGHOST:-${DB_HOST:-localhost}}"
+            export PGPORT="${PGPORT:-${DB_PORT:-5432}}"
+            export PGDATABASE="${PGDATABASE:-$VERDIFY_DB_NAME}"
+            export PGUSER="${PGUSER:-$VERDIFY_DB_USER}"
+            if [[ -z "${PGPASSWORD:-}" ]]; then
+                if [[ -n "${POSTGRES_PASSWORD:-}" ]]; then
+                    export PGPASSWORD="$POSTGRES_PASSWORD"
+                elif [[ -n "${DB_PASS:-}" ]]; then
+                    export PGPASSWORD="$DB_PASS"
+                fi
+            fi
+            printf '%s\n' "$program"
+            ;;
+        *)
+            echo "psql-verdify.sh: unknown VERDIFY_PSQL_MODE='$VERDIFY_PSQL_MODE'" >&2
+            return 2
+            ;;
+    esac
+}
