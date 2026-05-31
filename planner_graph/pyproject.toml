@@ -1,0 +1,35 @@
+[project]
+name = "planner-graph"
+version = "0.1.0"
+description = "Standalone production LangGraph planner service for Verdify."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "fastapi>=0.115.0",
+  "langgraph>=0.2.60",
+  "pydantic>=2.9.0",
+  "psycopg[binary]>=3.2.0",
+  "uvicorn>=0.32.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "httpx>=0.28.0",
+  "pytest>=8.3.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+filterwarnings = [
+  "ignore::DeprecationWarning:httpx.*",
+]
+
+[tool.pyright]
+include = ["planner_graph", "tests"]
+typeCheckingMode = "standard"
+venvPath = "."
+venv = ".venv"

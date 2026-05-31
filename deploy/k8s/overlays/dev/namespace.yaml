@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  # PINNED namespace string. This MUST be byte-identical to:
+  #   - the ArgoCD Application destination.namespace (the verdify-dev App CR,
+  #     created by laptop-root — does NOT exist yet, so this overlay is INERT)
+  #   - every registry/secrets/<id>.yaml target.namespace
+  # A sealed Secret applied to a mismatched namespace silently never mounts.
+  name: verdify-dev
+  labels:
+    app.kubernetes.io/part-of: verdify
+    # PodSecurity: enforce the restricted profile (all Verdify workloads run
+    # non-root with dropped capabilities — passes cleanly, catches regressions).
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/warn: restricted

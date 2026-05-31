@@ -1,0 +1,13 @@
+# dev instance config patch (strategic merge onto base verdify-config).
+#
+# APP_ENV=dev: planner_graph/config.py keys store/memory defaults off APP_ENV.
+# VERDIFY_DEVICE_WRITE_ENABLED="0": dev is a read-only telemetry SUBSCRIBER and
+# NEVER writes the live ESP32 (only prod writes the device). Pinned explicitly
+# here so no path can silently flip dev into a second device writer.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-config
+data:
+  APP_ENV: "dev"
+  VERDIFY_DEVICE_WRITE_ENABLED: "0"

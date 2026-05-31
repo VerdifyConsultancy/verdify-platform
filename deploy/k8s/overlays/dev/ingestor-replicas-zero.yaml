@@ -1,0 +1,14 @@
+# DEVICE SAFETY — dev. The ingestor is the only device-touching workload (it
+# opens the aioesphomeapi connection to the LIVE ESP32 and pushes setpoints).
+# dev is a read-only telemetry SUBSCRIBER (MQTT fan-out from prod, #114) and
+# MUST NEVER write the device. Until the #114 subscribe-from-prod-MQTT ingest
+# mode lands, pin the base ingestor OFF here so an ArgoCD selfHeal reconcile
+# cannot stand up a second live-ESP32 writer. Only prod runs a device-writing
+# ingestor (replicas:1 + DEVICE_WRITE=1). A manual `kubectl scale` is not
+# durable under selfHeal, which is why this pin lives in git.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-ingestor
+spec:
+  replicas: 0

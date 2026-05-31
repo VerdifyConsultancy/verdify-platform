@@ -1,0 +1,54 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Instance: verdify-dev — the dev k3s Verdify APP instance (read-only telemetry
+# SUBSCRIBER; never writes the ESP32). New env from milestone #5.
+#
+# INERT-ON-MERGE: there is NO verdify-dev ArgoCD Application CR and NO
+# synology-iscsi-ssd StorageClass yet (both created by laptop-root). The live
+# verdify-local-staging ArgoCD app syncs ONLY overlays/staging, so merging this
+# overlay to live/platform-main does NOT degrade staging and does NOT deploy
+# anything until those two prerequisites exist. This is the reviewable target
+# shape, validated by `kustomize build | kubeconform` + `apply --dry-run`.
+#
+# The namespace string is PINNED. It MUST equal:
+#   - the Namespace object in this overlay (verdify-dev)
+#   - the future ArgoCD Application destination.namespace
+#   - every registry/secrets/<id>.yaml target.namespace
+namespace: verdify-dev
+
+resources:
+  - namespace.yaml
+  - ../../base
+  # Placeholder Secret for local `kustomize build` validation ONLY. The SOPS
+  # backend provides the real verdify-app-secrets out-of-band. See the file.
+  - secrets.placeholder.yaml
+
+# verdify-planner (#117) — referenced as a Component, NOT added to base, so it
+# never renders into overlays/staging. Same pattern in overlays/prod.
+components:
+  - ../../components/planner
+
+patches:
+  # APP_ENV=dev + VERDIFY_DEVICE_WRITE_ENABLED=0 (dev never writes the device).
+  - path: env-configmap.yaml
+  # DEVICE SAFETY: pin the device-touching ingestor OFF until the #114
+  # subscribe-from-prod-MQTT ingest mode lands. dev must never be a 2nd writer.
+  - path: ingestor-replicas-zero.yaml
+
+# Image digest pins. Canonical namespace ghcr.io/verdifyconsultancy/verdify-*,
+# immutable @sha256 (NEVER a mutable :latest/:dev tag). The app images reuse the
+# staging-verified digests as a known-good baseline; verdify-planner is a
+# PLACEHOLDER digest (no image published yet — gh api returns 404). The digest
+# write-back job owns these once container-publish for verdify-planner is green.
+images:
+  - name: ghcr.io/verdifyconsultancy/verdify-api
+    digest: sha256:ce4ca79f9e6442c39558cbe02b1665c3cddc3e269c1867997d4f292f3a5ce8ff
+  - name: ghcr.io/verdifyconsultancy/verdify-mcp
+    digest: sha256:9824020a0d2fe77191b2c01ca2634c3bcec6031b79d2fef1c3334b2d5665768d
+  - name: ghcr.io/verdifyconsultancy/verdify-ingestor
+    digest: sha256:4f141a5901f802e52b37b15a6a92b8d0bc906f3d854066e3ddd52911aa457d0d
+  - name: ghcr.io/verdifyconsultancy/verdify-migrate
+    digest: sha256:7a39c3deb6df2182c7480cdd653bffa6575570bbfd262bf7c9694abcc58badf5
+  - name: ghcr.io/verdifyconsultancy/verdify-planner
+    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
