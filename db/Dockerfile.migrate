@@ -27,12 +27,30 @@ set -eu
 : "${DB_HOST:?DB_HOST required}" "${DB_NAME:?DB_NAME required}" "${DB_USER:?DB_USER required}" "${DB_PASS:?DB_PASS required}"
 export PGPASSWORD="$DB_PASS"
 PSQL="psql -h ${DB_HOST} -p ${DB_PORT:-5432} -U ${DB_USER} -d ${DB_NAME} -q"
-echo "[migrate] replaying db/schema.sql (ON_ERROR_STOP=0; hypertable catalog repaired by 000) ..."
+# Idempotent / verify-not-rebuild. On an ALREADY-POPULATED DB (the data-migrate
+# restore path, or a prior run) the core schema is present, so we VERIFY and
+# exit 0 — we do NOT replay schema.sql or re-run the 000 hypertable repair
+# (re-running 000 with ON_ERROR_STOP=1 against restored hypertables is unsafe).
+# Only a genuinely fresh/empty DB takes the build path.
+have_core=$($PSQL -tAc "select to_regclass('public.climate') is not null")
+if [ "$have_core" = "t" ]; then
+  echo "[migrate] core schema already present — verify-not-rebuild (no-op build)."
+  $PSQL -v ON_ERROR_STOP=1 -tAc "select 1 from pg_extension where extname='timescaledb'" | grep -q 1 \
+    || { echo "[migrate] FATAL: timescaledb extension missing"; exit 1; }
+  for t in climate setpoint_changes equipment_state; do
+    [ "$($PSQL -tAc "select to_regclass('public.$t') is not null")" = "t" ] \
+      || { echo "[migrate] FATAL: expected core table '$t' missing"; exit 1; }
+  done
+  echo "[migrate] verify OK — schema present, exiting 0."
+  exit 0
+fi
+echo "[migrate] fresh/empty DB — replaying db/schema.sql (ON_ERROR_STOP=0; 000 repairs hypertable catalog) ..."
 $PSQL -v ON_ERROR_STOP=0 -f /db/schema.sql
 echo "[migrate] running 000 (TimescaleDB hypertable-catalog repair) ..."
 $PSQL -v ON_ERROR_STOP=1 -f /db/000-fresh-schema-hypertable-repair.sql
 echo "[migrate] asserting core schema present ..."
-$PSQL -v ON_ERROR_STOP=1 -tAc "select case when to_regclass('public.climate') is null then 1/0 else 1 end" >/dev/null
+[ "$($PSQL -tAc "select to_regclass('public.climate') is not null")" = "t" ] \
+  || { echo "[migrate] FATAL: public.climate missing after build"; exit 1; }
 echo "[migrate] schema build complete."
 SCRIPT
 RUN chmod 0755 /usr/local/bin/migrate.sh && chmod 0644 /db/*.sql
