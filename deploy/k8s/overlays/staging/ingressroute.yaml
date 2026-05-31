@@ -60,8 +60,13 @@ spec:
       middlewares:
         - name: verdify-strip-identity-headers
       services:
+        # Service PORT (not container port): the staging verdify-api Service is the
+        # apps-pool LoadBalancer overlay (api-loadbalancer.yaml) which exposes :80
+        # (name http -> targetPort http/8080). Traefik's kubernetescrd provider
+        # resolves against Service .spec.ports[].port, so this MUST be 80, not 8080
+        # (8080 -> Traefik "service port not found: 8080" -> 404 at the edge).
         - name: verdify-api
-          port: 8080
+          port: 80
     # --- *.verdify.ai : THE PRODUCT DOMAIN, same one-pattern as *.vallery.net ---
     # api.verdify.ai is the anchor host — the ONLY *.verdify.ai host with a ready
     # k8s backend (verdify-api). It routes THROUGH this same shared apps Traefik
@@ -77,7 +82,7 @@ spec:
         - name: verdify-strip-identity-headers
       services:
         - name: verdify-api
-          port: 8080
+          port: 80   # Service port (see note above) — staging LB Service exposes :80
   # tls: {} = Traefik default cert. The valid public wildcard that SHOULD be served
   # here is *.verdify.ai, which does NOT exist yet (cert-manager letsencrypt-dns01
   # solver selector is dnsZones:[vallery.net] only; no verdify.ai Cloudflare DNS-01
