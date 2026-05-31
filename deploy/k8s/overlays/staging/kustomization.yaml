@@ -30,6 +30,17 @@ resources:
   # DEVICE-SAFETY: staging-only egress lock dropping all egress to the greenhouse
   # device VLAN (192.168.10.0/24) from the ingestor pod — see deny-esp32-egress.yaml.
   - deny-esp32-egress.yaml
+  # EDGE/WAN: host-routed exposure of verdify-api through the shared apps Traefik on
+  # the .7.10 VIP for verdify.vallery.net / verdify-staging.vallery.net AND
+  # api.verdify.ai (the ONE pattern across BOTH domains; closes the tunnel-forwards-
+  # but-404 gap; ADR-15 ADD-THEN-DROP add-half). See ingressroute.yaml.
+  - ingressroute.yaml
+  # CONTRACT: allow the SHARED apps-ingress (ns traefik-apps) to reach verdify-api:8080.
+  # The base allow-api-from-ingress only names the k3s built-in "traefik" ns + the
+  # apps VLAN ipBlock, neither of which matches the traefik-apps pod source IP. flannel
+  # does not enforce NetworkPolicy today, but this keeps the contract correct under the
+  # planned Cilium re-CNI (ADR-17). See allow-api-from-apps-ingress.yaml.
+  - allow-api-from-apps-ingress.yaml
 
 # Instance patches.
 patches:
