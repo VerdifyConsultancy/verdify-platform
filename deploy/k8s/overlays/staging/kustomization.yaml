@@ -17,6 +17,14 @@ resources:
   # Placeholder Secret for local `kustomize build` validation ONLY. Remove this
   # line (and the file) when rendering for a real apply; the SOPS backend
   # provides the real verdify-app-secrets. See secrets.placeholder.yaml.
+  #
+  # REAL secret = secrets.sops.yaml (#66): a SOPS+age sealed verdify-app-secrets
+  # in THIS dir, sealed to the fleet age recipient. It is deliberately NOT a
+  # kustomize `resources:` entry — kustomize cannot decrypt SOPS, so the sealed
+  # manifest is applied OUT-OF-BAND by the GitOps secret-delivery step (sops
+  # --decrypt | kubectl apply -n verdify-staging) BEFORE this app reconciles,
+  # exactly like the fleet's other SOPS secrets. The placeholder above keeps
+  # `kustomize build` / kubeconform complete in CI without the secret backend.
   - secrets.placeholder.yaml
   # DEVICE-SAFETY: staging-only egress lock dropping all egress to the greenhouse
   # device VLAN (192.168.10.0/24) from the ingestor pod — see deny-esp32-egress.yaml.
