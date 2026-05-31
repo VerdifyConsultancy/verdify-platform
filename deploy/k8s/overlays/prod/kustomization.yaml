@@ -29,22 +29,36 @@ patches:
   - path: device-write-configmap.yaml
   # ingestor keeps the base replicas:1 + Recreate (single-writer invariant); no
   # replicas:0 pin here (that is staging's two-writer safety pin).
+  # PROD DB STORAGE (#86 + Jason LOCKED 2026-05-31): retarget the verdify-db
+  # StatefulSet volumeClaimTemplate off the base local-path onto the volume1/SSD
+  # durable iSCSI tier (synology-iscsi-ssd, laptop-root #84) + over-provision to
+  # 200Gi. Prune=false intent for the DB documented in db-storage.yaml (enforced
+  # on the laptop-root-owned ArgoCD Application CR). See db-storage.yaml.
+  - path: db-storage.yaml
 
 # Image digest pins. Same canonical namespace as staging
 # (ghcr.io/verdifyconsultancy/verdify-*), pinned to immutable @sha256 digests
-# (NEVER :latest/:staging). PLACEHOLDER digests; the promotion flow writes real
-# GHCR digests in-repo.
+# (NEVER :latest/:staging).
+#
+# PROMOTE-SAME-DIGEST (#86): prod is pinned to the EXACT in-org digests staging
+# was validated on (overlays/staging/kustomization.yaml, real published GHCR
+# digests verified 2026-05-31). Promotion is byte-identical image promotion — the
+# same artifact that ran GREEN in verdify-staging is what verdify-prod runs; no
+# rebuild, no new tag, no digest drift between the two overlays. promote-diff-guard
+# is the only gate on this autonomous promotion: it asserts prod's digests equal
+# the staging-validated set before a prod sync. Keep these BYTE-IDENTICAL to
+# staging — any divergence is a promote-diff-guard failure by design.
 images:
   - name: ghcr.io/verdifyconsultancy/verdify-api
-    digest: sha256:00d0615f5653fa9c4bd01673855da35d8b44aa3a27311e1a134a59ce0baaf9c9
+    digest: sha256:ce4ca79f9e6442c39558cbe02b1665c3cddc3e269c1867997d4f292f3a5ce8ff
   - name: ghcr.io/verdifyconsultancy/verdify-mcp
-    digest: sha256:51d42e88f00e9f514de8eef324ae7e1076360052a917fe5a8eac1956756da3b9
+    digest: sha256:9824020a0d2fe77191b2c01ca2634c3bcec6031b79d2fef1c3334b2d5665768d
   - name: ghcr.io/verdifyconsultancy/verdify-ingestor
-    digest: sha256:c26e0e67ea0d67751e21448a95660e3e4a37c214d98f228f50a8b08c02d1fbc5
+    digest: sha256:4f141a5901f802e52b37b15a6a92b8d0bc906f3d854066e3ddd52911aa457d0d
   - name: ghcr.io/verdifyconsultancy/verdify-migrate
     digest: sha256:7a39c3deb6df2182c7480cdd653bffa6575570bbfd262bf7c9694abcc58badf5
-  # verdify-site: prod tracks the same in-org image. The promote-diff-guard flow
-  # writes the real promoted digest in-repo; this is the staging-validated digest
-  # as the initial value (content-baked Quartz site, identical build).
+  # verdify-site: prod tracks the same in-org image, same staging-validated digest
+  # (content-baked Quartz site, identical build). lab.verdify.ai converges onto
+  # the prod instance at cutover.
   - name: ghcr.io/verdifyconsultancy/verdify-site
     digest: sha256:eb589b37ba0508cd12b5c5c956057b2647653ff8800ad6dedf3ef27ee16397d4

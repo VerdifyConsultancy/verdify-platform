@@ -1,0 +1,54 @@
+# PROD DB STORAGE — volume1/SSD durable iSCSI (#86 + Jason LOCKED 2026-05-31).
+#
+# The base verdify-db StatefulSet authors its volumeClaimTemplate on `local-path`
+# / 50Gi — the right default for the STAGING instance (ephemeral validation copy,
+# node-local, fine to lose). PROD is the system of record for the live greenhouse
+# and MUST NOT live on node-local local-path: a node loss would take the DB with
+# it. Per Jason's LOCKED decision (2026-05-31) the production DB lives on the
+# Synology volume1/SSD iSCSI tier.
+#
+# STORAGECLASS: synology-iscsi-ssd — the volume1/SSD iSCSI StorageClass. This is
+# the SAME agreed name the obs PVCs reference (obs-pvcs.yaml). It deliberately is
+# NOT the existing `synology-iscsi` SC (that targets /volume2 and must NOT hold
+# the durable DB). The synology-iscsi-ssd SC DOES NOT EXIST YET — it is
+# laptop-root's #84 (csi.san.synology.com provisioner pointed at volume1, Retain
+# reclaim, WaitForFirstConsumer, allowVolumeExpansion). This volumeClaimTemplate
+# references it BY THE AGREED NAME; the prod DB pod will stay Pending until #84
+# lands. That is intentional and expected — prod does not reconcile a live DB
+# until the SSD tier exists.
+#
+# SIZE: over-provisioned to 200Gi (base/staging is 50Gi). The live VM TimescaleDB
+# is the source of record under a copy-not-move migration (handoff §3.6); the
+# prod claim is sized with generous headroom for the hypertable + compression
+# growth so we never re-size under load. allowVolumeExpansion on the SC (set by
+# laptop-root at #84) still permits later growth, but we provision high up front.
+#
+# RECLAIM / PRUNE INTENT (prune:false): the Retain reclaim policy is set on the
+# synology-iscsi-ssd StorageClass at the platform layer (laptop-root #84); a PVC
+# cannot set reclaim, so this template does not. SEPARATELY, the ArgoCD
+# Application for verdify-prod (laptop-root-owned CR — NOT authored here) MUST
+# carry the DB resources with `Prune=false` (syncOptions / per-resource
+# argocd.argoproj.io/sync-options: Prune=false) so a manifest refactor or an
+# accidental kustomization delete can NEVER trigger ArgoCD to prune the verdify-db
+# StatefulSet / its PVC and destroy the system of record. Retain (SC) protects the
+# underlying iSCSI LUN if a PVC is deleted; Prune=false (Application) stops ArgoCD
+# from issuing that delete in the first place. Both are required; this manifest
+# documents the intent and the Application CR enforces it.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: verdify-db
+spec:
+  volumeClaimTemplates:
+    - metadata:
+        name: db-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        # volume1/SSD durable iSCSI — laptop-root #84, agreed name. Overrides the
+        # base local-path (staging-appropriate) for the production system-of-record.
+        storageClassName: synology-iscsi-ssd
+        resources:
+          requests:
+            # Over-provisioned vs base/staging 50Gi — generous hypertable +
+            # compression growth headroom so prod never re-sizes under load.
+            storage: 200Gi
