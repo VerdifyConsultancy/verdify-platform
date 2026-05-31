@@ -14,6 +14,13 @@ name: Reusable Container Build
 
 on:
   workflow_call:
+    outputs:
+      image_digest:
+        description: >-
+          The immutable repo@sha256:<hex> digest of the published image. Empty
+          when the build did not publish (e.g. pull_request validation builds).
+          Consumed by the in-repo overlays/staging digest write-back.
+        value: ${{ jobs.publish.outputs.image_digest }}
     inputs:
       context:
         description: Build context path.
@@ -261,6 +268,8 @@ jobs:
     permissions:
       contents: read
       packages: write
+    outputs:
+      image_digest: ${{ steps.digest.outputs.image_digest }}
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -328,3 +337,23 @@ jobs:
               docker push "$tag"
             fi
           done <<< "$TAGS"
+
+      - name: Capture published digest
+        id: digest
+        env:
+          PRIMARY_TAG: ${{ needs.metadata.outputs.primary_tag }}
+          IMAGE_REF: ${{ needs.metadata.outputs.image }}
+        run: |
+          set -euo pipefail
+          # Resolve the immutable digest from the registry by the just-pushed
+          # primary tag. docker buildx imagetools queries the registry manifest
+          # directly, so this is the authoritative repo digest (not a local id).
+          digest="$(docker buildx imagetools inspect "$PRIMARY_TAG" \
+            --format '{{json .Manifest.Digest}}' | tr -d '"')"
+          if [ -z "$digest" ] || [ "${digest#sha256:}" = "$digest" ]; then
+            echo "failed to resolve sha256 digest for $PRIMARY_TAG (got: '$digest')" >&2
+            exit 1
+          fi
+          # Emit the canonical repo@sha256 reference (registry/image@digest).
+          echo "image_digest=${IMAGE_REF}@${digest}" >> "$GITHUB_OUTPUT"
+          echo "Resolved ${PRIMARY_TAG} -> ${IMAGE_REF}@${digest}"
