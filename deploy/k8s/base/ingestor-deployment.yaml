@@ -51,7 +51,7 @@ spec:
           type: RuntimeDefault
       initContainers:
         - name: wait-for-db
-          image: timescale/timescaledb:2.17.2-pg16
+          image: timescale/timescaledb:2.25.2-pg16
           command:
             - sh
             - -c
@@ -69,7 +69,7 @@ spec:
           # ingestor.py but absent from pyproject.toml / ingestor/requirements.txt
           # — it lives ambiently in the shared .venv today). Reconstruct the
           # image deps from actual imports in the P3 containerize PR.
-          image: ghcr.io/jvallery/verdify-ingestor:latest  # pinned to a digest by the overlay
+          image: ghcr.io/verdifyconsultancy/verdify-ingestor  # pinned to a @sha256 digest by the kustomization images: transformer
           command: ["python", "ingestor.py"]
           # No ports: connect-out worker only (esp32 push, MQTT sub, DB write).
           envFrom:

@@ -1,0 +1,56 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Instance: verdify-staging — the first k3s Verdify APP instance, deployed
+# ALONGSIDE the live VM stack for additive validation (the VM compose/systemd
+# stack is NOT stopped until a gated cutover). Track A > Track B always.
+#
+# The namespace string is PINNED. It MUST equal:
+#   - the Namespace object in this overlay (verdify-staging)
+#   - the ArgoCD Application destination.namespace
+#   - every registry/secrets/<id>.yaml target.namespace
+namespace: verdify-staging
+
+resources:
+  - namespace.yaml
+  - ../../base
+  # Placeholder Secret for local `kustomize build` validation ONLY. Remove this
+  # line (and the file) when rendering for a real apply; the SOPS backend
+  # provides the real verdify-app-secrets. See secrets.placeholder.yaml.
+  - secrets.placeholder.yaml
+  # DEVICE-SAFETY: staging-only egress lock dropping all egress to the greenhouse
+  # device VLAN (192.168.10.0/24) from the ingestor pod — see deny-esp32-egress.yaml.
+  - deny-esp32-egress.yaml
+
+# Instance patches.
+patches:
+  # Expose the user-facing api on the apps-pool LoadBalancer (VLAN 7). Everything
+  # else stays ClusterIP / connect-out.
+  - path: api-loadbalancer.yaml
+    target:
+      kind: Service
+      name: verdify-api
+  # DEVICE SAFETY: pin the device-touching ingestor OFF in staging (replicas:0)
+  # so ArgoCD selfHeal cannot bring up a second live-ESP32 writer before the
+  # device-VLAN spike is proven + Jason confirms. See ingestor-replicas-zero.yaml.
+  - path: ingestor-replicas-zero.yaml
+  # DEVICE-WRITE INTERLOCK (#79): explicit VERDIFY_DEVICE_WRITE_ENABLED=0 in
+  # staging (the only place it is NOT 1). See device-write-configmap.yaml.
+  - path: device-write-configmap.yaml
+
+# Image digest pins. Canonical namespace is
+# ghcr.io/verdifyconsultancy/verdify-{api,mcp,ingestor,migrate}. These are pinned
+# to immutable @sha256 digests (NEVER a mutable :latest/:staging tag). The digests
+# below are PLACEHOLDERS; a later stage writes the real GHCR digests in-repo
+# (digest write-back into this overlay; no cross-repo PR, no ArgoCD Image
+# Updater). The 64-hex placeholder is a valid digest shape so kustomize renders
+# and kubeconform validates, but it is NOT a deployable image.
+images:
+  - name: ghcr.io/verdifyconsultancy/verdify-api
+    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  - name: ghcr.io/verdifyconsultancy/verdify-mcp
+    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  - name: ghcr.io/verdifyconsultancy/verdify-ingestor
+    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  - name: ghcr.io/verdifyconsultancy/verdify-migrate
+    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000

@@ -42,7 +42,7 @@ spec:
           type: RuntimeDefault
       initContainers:
         - name: wait-for-db
-          image: timescale/timescaledb:2.17.2-pg16
+          image: timescale/timescaledb:2.25.2-pg16
           command:
             - sh
             - -c
@@ -59,7 +59,7 @@ spec:
           # verdify-migrate (db/Dockerfile.migrate): a thin psql client carrying
           # db/schema.sql + migration 000. Pinned to a sha-<gitsha> by the
           # overlay/CI image-pin; `latest` here is the kustomize validation tag.
-          image: ghcr.io/jvallery/verdify-migrate:latest
+          image: ghcr.io/verdifyconsultancy/verdify-migrate  # pinned to a @sha256 digest by the kustomization images: transformer
           # Real runner: replay db/schema.sql (ON_ERROR_STOP=0; the production
           # pg_dump snapshot) then migration 000 (hypertable-catalog repair) —
           # the documented fresh-DB build. DB_HOST/DB_NAME/DB_USER come from the

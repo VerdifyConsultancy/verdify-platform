@@ -1,0 +1,16 @@
+# DEVICE-WRITE INTERLOCK (#79) — prod.
+#
+# VERDIFY_DEVICE_WRITE_ENABLED="1" is set HERE and ONLY here. prod is the single
+# instance whose ingestor is the real single writer to the live ESP32, so the
+# device-write path is enabled. Staging pins this to "0". Enabling the live
+# device-write path is a gated cutover step (handoff §6 STOP-and-ask) — this
+# manifest declares the intended prod shape; flipping the live loop onto k3s is
+# still human-gated with explicit Jason sign-off.
+#
+# Patched onto the base verdify-config ConfigMap (strategic merge adds the key).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-config
+data:
+  VERDIFY_DEVICE_WRITE_ENABLED: "1"

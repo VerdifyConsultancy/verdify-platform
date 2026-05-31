@@ -1,0 +1,69 @@
+# DEVICE-VLAN EGRESS ALLOW (#80) — prod ONLY.
+#
+# This is the SINGLE place the ingestor is permitted to reach the greenhouse
+# device VLAN. It is the network-layer counterpart of VERDIFY_DEVICE_WRITE_ENABLED=1:
+# the production ingestor is the one real single writer, so it CAN open the
+# ESPHome native-API connection to the live ESP32 (192.168.10.111:6053), reach
+# Home Assistant + local MQTT on the services VLAN, and read Frigate/go2rtc
+# occupancy.
+#
+# Staging carries the inverse (deny-esp32-egress drops 192.168.10.0/24). Only
+# ONE of the two overlays ever grants this — never both, never the base.
+#
+# GATING (handoff §3.4 / §6): declaring this policy does NOT by itself move the
+# device loop to k3s — it also requires the device-VLAN route, the single-writer
+# cutover choreography, and explicit Jason confirmation. This manifest is the
+# reviewable target shape for prod, not an instruction to cut over.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-ingestor-device-egress
+  labels:
+    app.kubernetes.io/part-of: verdify
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: ingestor
+  policyTypes: ["Egress"]
+  egress:
+    # ESP32 ESPHome native API (greenhouse VLAN) — telemetry + setpoint/occupancy push.
+    - to:
+        - ipBlock:
+            cidr: 192.168.10.0/24
+      ports:
+        - protocol: TCP
+          port: 6053
+    # Home Assistant REST + local MQTT (services VLAN).
+    - to:
+        - ipBlock:
+            cidr: 192.168.30.107/32
+      ports:
+        - protocol: TCP
+          port: 8123
+        - protocol: TCP
+          port: 1883
+    # Frigate / go2rtc occupancy (services VLAN).
+    - to:
+        - ipBlock:
+            cidr: 192.168.30.142/32
+      ports:
+        - protocol: TCP
+          port: 5000
+        - protocol: TCP
+          port: 1984
+    # In-cluster DB egress + cluster DNS so the ingestor can still write
+    # TimescaleDB and resolve names once an Egress policy is attached to it.
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: db
+      ports:
+        - protocol: TCP
+          port: 5432
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

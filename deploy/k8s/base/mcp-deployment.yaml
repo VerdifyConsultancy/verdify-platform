@@ -35,7 +35,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: mcp
-          image: ghcr.io/jvallery/verdify-mcp:latest  # pinned to a digest by the overlay
+          image: ghcr.io/verdifyconsultancy/verdify-mcp  # pinned to a @sha256 digest by the kustomization images: transformer
           command: ["python", "mcp/server.py"]
           ports:
             - name: http
