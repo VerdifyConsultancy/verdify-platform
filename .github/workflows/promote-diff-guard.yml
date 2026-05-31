@@ -1,0 +1,111 @@
+name: Promote Diff Guard
+
+# #82 — prod-promotion safety gate.
+#
+# Promotion to prod is a deliberate, human-gated digest copy: a prod-promote PR
+# must ONLY advance deploy/k8s/overlays/prod image digests to match the digests
+# CURRENTLY pinned in deploy/k8s/overlays/staging (which the in-repo digest
+# write-back keeps current — locked decision). It must not change manifests,
+# replica counts, the device-write interlock, NetworkPolicies, or anything else,
+# and it must not invent a digest that staging has never run.
+#
+# This guard asserts exactly that. It is intentionally a SEPARATE workflow from
+# ci.yml so it can be wired as its own required status check on prod-promote PRs.
+#
+# SCOPE / TODO: the v1 enforcement below is digest-equality + change-surface
+# containment, which covers the locked-decision contract ("prod digests == the
+# current staging digests, nothing else changed"). A richer future version could
+# additionally diff the fully-rendered prod overlay against a synthetic
+# "staging-image-set applied to prod overlay" render to prove byte-identical
+# non-image manifests; that is left as a TODO and not required for Sprint 1.
+
+on:
+  pull_request:
+    branches:
+      - live/platform-main
+      - main
+    paths:
+      - "deploy/k8s/overlays/prod/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  promote-diff-guard:
+    name: Assert prod promote only advances prod digests to staging digests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR head (with base history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install kustomize (pinned v5.4.3)
+        run: |
+          set -euo pipefail
+          KUSTOMIZE_VERSION=v5.4.3
+          curl -sfL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz" \
+            | tar xz kustomize
+          sudo mv kustomize /usr/local/bin/
+          kustomize version
+
+      - name: Change-surface containment (prod overlay = digests only)
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          BASE="$(git merge-base HEAD "origin/${BASE_REF}")"
+
+          # 1) The ONLY file a prod-promote PR may touch under the prod overlay
+          #    is kustomization.yaml (where the digests live). Anything else
+          #    under overlays/prod/ is a non-promotion change and must go through
+          #    a normal reviewed PR, not this gate.
+          PROD_CHANGED="$(git diff --name-only "$BASE" HEAD -- 'deploy/k8s/overlays/prod/' || true)"
+          BAD="$(printf '%s\n' "$PROD_CHANGED" | grep -v '^deploy/k8s/overlays/prod/kustomization.yaml$' | grep -v '^$' || true)"
+          if [ -n "$BAD" ]; then
+            echo "::error::prod-promote PR changed prod-overlay files other than kustomization.yaml:"
+            printf '  %s\n' $BAD
+            exit 1
+          fi
+
+          # 2) Within prod/kustomization.yaml, the ONLY changed lines may be
+          #    `digest:` lines (the image pins). Any added/removed line that is
+          #    not a digest line means the promotion edited manifests/patches.
+          NON_DIGEST="$(git diff "$BASE" HEAD -- deploy/k8s/overlays/prod/kustomization.yaml \
+            | grep -E '^[+-]' \
+            | grep -vE '^(\+\+\+|---)' \
+            | grep -vE '^[+-][[:space:]]*digest:[[:space:]]*sha256:[0-9a-f]{64}[[:space:]]*$' \
+            || true)"
+          if [ -n "$NON_DIGEST" ]; then
+            echo "::error::prod/kustomization.yaml changed non-digest lines; a promote PR may only advance digests:"
+            printf '%s\n' "$NON_DIGEST"
+            exit 1
+          fi
+          echo "Change-surface OK: only prod digests changed."
+
+      - name: Prod digests after promote must equal current staging digests
+        run: |
+          set -euo pipefail
+
+          # Extract the effective image -> digest map kustomize actually renders
+          # for each overlay. Rendering (vs grepping the file) is robust to
+          # formatting and proves the *effective* pin, not just the source line.
+          digests_for() {
+            kustomize build "$1" \
+              | grep -oE 'ghcr\.io/verdifyconsultancy/verdify-[a-z]+@sha256:[0-9a-f]{64}' \
+              | sort -u
+          }
+
+          digests_for deploy/k8s/overlays/prod    > /tmp/prod.digests
+          digests_for deploy/k8s/overlays/staging > /tmp/staging.digests
+
+          echo "=== prod (PR head) ==="; cat /tmp/prod.digests
+          echo "=== staging (current) ==="; cat /tmp/staging.digests
+
+          if ! diff -u /tmp/staging.digests /tmp/prod.digests; then
+            echo "::error::prod digests after this promote do NOT match the current staging digests."
+            echo "A prod-promote PR must pin prod to EXACTLY the digests staging is currently running."
+            exit 1
+          fi
+          echo "Promote OK: prod digests == current staging digests."
