@@ -25,6 +25,10 @@ patches:
     target:
       kind: Service
       name: verdify-api
+  # DEVICE SAFETY: pin the device-touching ingestor OFF in staging (replicas:0)
+  # so ArgoCD selfHeal cannot bring up a second live-ESP32 writer before the
+  # §3.4 device-VLAN spike is proven + Jason confirms. See ingestor-replicas-zero.yaml.
+  - path: ingestor-replicas-zero.yaml
 
 # Pin images to immutable ghcr SHAs in production (set by the cross-repo
 # image-pin PR in jvallery/agents on each release). `latest` here is the
@@ -37,5 +41,5 @@ images:
     newTag: latest
   - name: ghcr.io/jvallery/verdify-ingestor
     newTag: latest
-  - name: ghcr.io/jvallery/verdify-py
+  - name: ghcr.io/jvallery/verdify-migrate
     newTag: latest
