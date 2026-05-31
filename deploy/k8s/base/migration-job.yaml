@@ -34,6 +34,14 @@ spec:
         app.kubernetes.io/component: migrate
     spec:
       restartPolicy: Never
+      # Private in-org migrate image lives at ghcr.io/verdifyconsultancy/*. The
+      # ghcr-jvallery-readonly secret in the namespace carries host-level
+      # (ghcr.io) auth that covers both orgs; reference it explicitly so the
+      # PreSync hook Job pod can pull the pinned @sha256 digest (the namespace
+      # default SA has no imagePullSecrets, and we do not mutate it from the
+      # overlay). The wait-for-db init container shares this one pod spec.
+      imagePullSecrets:
+        - name: ghcr-jvallery-readonly
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000

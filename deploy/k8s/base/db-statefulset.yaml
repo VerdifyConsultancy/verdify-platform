@@ -33,6 +33,12 @@ spec:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: db
     spec:
+      # Consistent with the app pods: reference the namespace's host-level
+      # ghcr.io pull secret. The db image is public today, but keeping the
+      # field here means a future private-mirror swap pulls without a manifest
+      # change, and the namespace default SA stays untouched.
+      imagePullSecrets:
+        - name: ghcr-jvallery-readonly
       securityContext:
         runAsNonRoot: true
         runAsUser: 999          # postgres uid in the timescaledb image

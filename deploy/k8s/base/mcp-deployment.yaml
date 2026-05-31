@@ -26,6 +26,13 @@ spec:
         app.kubernetes.io/part-of: verdify
         app.kubernetes.io/component: mcp
     spec:
+      # Private in-org images live at ghcr.io/verdifyconsultancy/*. The
+      # ghcr-jvallery-readonly secret in the namespace carries host-level
+      # (ghcr.io) auth that covers both orgs; reference it explicitly here so
+      # the kubelet can pull the pinned @sha256 digests (the namespace default
+      # SA has no imagePullSecrets, and we do not mutate it from the overlay).
+      imagePullSecrets:
+        - name: ghcr-jvallery-readonly
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
