@@ -7,7 +7,11 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PYTHON_BIN="${PYTHON:-/srv/greenhouse/.venv/bin/python}"
-DB_CMD=(docker exec -i verdify-timescaledb psql -U verdify -d verdify -t -A -F '|' -v ON_ERROR_STOP=1)
+# #24: DB access via the shared psql-verdify abstraction (docker-exec default
+# preserves prior VM argv). Heredoc SQL needs stdin -> VERDIFY_DOCKER_STDIN=1.
+. "$REPO_ROOT/scripts/lib/psql-verdify.sh"
+mapfile -t DB_CMD < <(VERDIFY_DOCKER_STDIN=1 verdify_psql_cmd)
+DB_CMD+=(-t -A -F '|' -v ON_ERROR_STOP=1)
 AI_TUNABLES_PAGE="${AI_TUNABLES_PAGE:-/srv/verdify/verdify-site/content/reference/ai-tunables.md}"
 LESSONS_PAGE="${LESSONS_PAGE:-/srv/verdify/verdify-site/content/reference/lessons.md}"
 LIVE_SOURCE_ROOT="${LIVE_SOURCE_ROOT:-/srv/verdify}"

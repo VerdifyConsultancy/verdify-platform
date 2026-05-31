@@ -7,7 +7,12 @@
 set -euo pipefail
 
 DB_STATEMENT_TIMEOUT_MS="${VERDIFY_DB_STATEMENT_TIMEOUT_MS:-5000}"
-DB=(docker exec -e "PGOPTIONS=-c statement_timeout=${DB_STATEMENT_TIMEOUT_MS}" verdify-timescaledb psql -U verdify -d verdify -t -A -F '|' -c)
+# #24: DB access via the shared psql-verdify abstraction (docker-exec default
+# preserves the exact prior argv on the VM). The PGOPTIONS statement-timeout is
+# injected as a docker-exec extra flag in docker-exec mode.
+. "$(dirname "${BASH_SOURCE[0]}")/lib/psql-verdify.sh"
+mapfile -t DB < <(verdify_psql_cmd -e "PGOPTIONS=-c statement_timeout=${DB_STATEMENT_TIMEOUT_MS}")
+DB+=(-t -A -F '|' -c)
 
 fail() { echo "✗ $1" >&2; exit 1; }
 pass() { echo "✓ $1"; }

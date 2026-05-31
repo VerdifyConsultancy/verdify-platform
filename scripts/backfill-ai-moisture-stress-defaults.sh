@@ -17,7 +17,13 @@ APPLY="${APPLY:-0}"
 PYTHON_BIN="${PYTHON:-/srv/greenhouse/.venv/bin/python}"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-PSQL=(docker exec -i "$DB_CONTAINER" psql -U "$DB_USER" -d "$DB_NAME" -v ON_ERROR_STOP=1 -A -F '|')
+# #24: DB access via the shared psql-verdify abstraction. The script's existing
+# DB_CONTAINER/DB_USER/DB_NAME env vars feed the lib (VERDIFY_DB_* read DB_*),
+# and heredoc SQL needs stdin -> VERDIFY_DOCKER_STDIN=1. docker-exec default
+# preserves prior VM argv.
+. "$REPO_ROOT/scripts/lib/psql-verdify.sh"
+mapfile -t PSQL < <(VERDIFY_DOCKER_STDIN=1 VERDIFY_DB_CONTAINER="$DB_CONTAINER" VERDIFY_DB_USER="$DB_USER" VERDIFY_DB_NAME="$DB_NAME" verdify_psql_cmd)
+PSQL+=(-v ON_ERROR_STOP=1 -A -F '|')
 PSQL+=(-v greenhouse_id="$GREENHOUSE_ID")
 
 DEFAULTS_SQL="$("$PYTHON_BIN" - "$REPO_ROOT" <<'PY'

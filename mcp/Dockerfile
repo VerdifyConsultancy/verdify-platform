@@ -22,11 +22,17 @@
 # RUNTIME EXPECTATIONS (set by the Deployment env/ConfigMap, NOT baked here):
 #   MCP_HTTP_HOST=0.0.0.0   (server.py defaults to 127.0.0.1; the Service is
 #                            ClusterIP, so binding 0.0.0.0 in-pod is correct)
-#   MCP_HTTP_PORT=8400      (server.py defaults to 8000; the documented transport
-#                            port is 8400 — set it explicitly via ConfigMap)
-#   DB_DSN=postgresql://...  (server.py reads DB_DSN from env; falls back to a
-#                            hardcoded /srv/verdify/.env path that does NOT exist
-#                            in-container, so DB_DSN MUST be provided)
+#   MCP_HTTP_PORT=8000      (#81 reconcile: server.py reads MCP_HTTP_PORT and
+#                            defaults to 8000 — mcp/server.py:249. The canonical
+#                            transport port is therefore 8000; the base
+#                            ConfigMap + Deployment + Service all use 8000. The
+#                            "8400" in the module docstring is stale prose, NOT
+#                            what the code binds.)
+#   DB_DSN=postgresql://...  (server.py reads DB_DSN from env — mcp/server.py:81;
+#                            falls back to a hardcoded /srv/verdify/.env path that
+#                            does NOT exist in-container, so DB_DSN MUST be
+#                            provided. NOTE: server.py uses a single DB_DSN, NOT
+#                            DB_HOST/DB_PASS — see the k3s ConfigMap reconcile.)
 # ============================================================================
 
 FROM python:3.13-slim AS base
@@ -90,13 +96,16 @@ LABEL org.opencontainers.image.source="https://github.com/VerdifyConsultancy/ver
       org.opencontainers.image.created=$BUILD_TIME \
       org.opencontainers.image.title="verdify-mcp"
 
-# Documented streamable-http transport port (set MCP_HTTP_PORT=8400 to match).
-EXPOSE 8400
+# Canonical streamable-http transport port (#81): server.py binds MCP_HTTP_PORT
+# default 8000 (mcp/server.py:249). EXPOSE + healthcheck default reconciled to
+# 8000 to match the code and the base k3s manifests; MCP_HTTP_PORT still
+# overrides at runtime via the ConfigMap.
+EXPOSE 8000
 # TCP-level liveness only: the MCP streamable-http transport has no unauthed
 # GET health route, so probe the listener rather than an HTTP path.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD curl -fsS -o /dev/null "http://localhost:${MCP_HTTP_PORT:-8400}/" \
-        || python -c "import socket,os; socket.create_connection(('127.0.0.1', int(os.environ.get('MCP_HTTP_PORT','8400'))), 3).close()" \
+    CMD curl -fsS -o /dev/null "http://localhost:${MCP_HTTP_PORT:-8000}/" \
+        || python -c "import socket,os; socket.create_connection(('127.0.0.1', int(os.environ.get('MCP_HTTP_PORT','8000'))), 3).close()" \
         || exit 1
 
 # Unchanged entrypoint: run the existing module exactly as the systemd unit does.

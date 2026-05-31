@@ -2,9 +2,13 @@
 # validate-plan-coverage.sh — Verify tactical Tier 1 params present at every transition
 set -euo pipefail
 
-DB="docker exec verdify-timescaledb psql -U verdify -d verdify -t -A -c"
 PYTHON_BIN="${PYTHON:-/srv/greenhouse/.venv/bin/python}"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# #24: DB access via the shared psql-verdify abstraction (docker-exec default
+# preserves prior VM argv). Build an argv array; call sites use "${DB[@]}".
+. "$REPO_ROOT/scripts/lib/psql-verdify.sh"
+mapfile -t DB < <(verdify_psql_cmd)
+DB+=(-t -A -c)
 
 # The tactical Tier 1 params and dispatcher-owned exclusion set come from the
 # tunable registry. This keeps plan coverage validation aligned with MCP,
@@ -35,7 +39,7 @@ LEGACY_BIAS_PARAMS="'bias_heat_f','bias_cool_f'"
 # Tactical one-shot writes can supersede one parameter after a routine plan; they
 # remain guarded by planner-pushable checks but must not be treated as full-plan
 # coverage candidates.
-LATEST=$($DB "
+LATEST=$("${DB[@]}" "
 WITH candidate AS (
   SELECT plan_id,
          max(created_at) AS latest_created,
@@ -58,7 +62,7 @@ if [ -z "$LATEST" ]; then
 fi
 
 # 2. For each distinct timestamp, check all tactical Tier 1 params exist
-RESULT=$($DB "
+RESULT=$("${DB[@]}" "
 WITH core(param) AS (
   SELECT unnest(string_to_array('$CORE', ',')) AS param
 ),
@@ -91,7 +95,7 @@ echo "routine_plan_id: $LATEST"
 echo "transitions: ${TRANSITIONS:-0}"
 echo "complete: ${COMPLETE:-0}"
 
-BAND_PRESENT=$($DB "
+BAND_PRESENT=$("${DB[@]}" "
 SELECT coalesce(string_agg(DISTINCT parameter || ':' || coalesce(plan_id, '<null>'), ',' ORDER BY parameter || ':' || coalesce(plan_id, '<null>')), '')
 FROM setpoint_plan
 WHERE is_active = true
@@ -104,7 +108,7 @@ if [ -n "$BAND_PRESENT" ]; then
 fi
 
 # Check if plan uses old param names (bias_heat_f vs bias_heat)
-HAS_OLD=$($DB "SELECT count(*) FROM setpoint_plan WHERE plan_id = '$LATEST' AND parameter IN ($LEGACY_BIAS_PARAMS);" | tr -d ' ')
+HAS_OLD=$("${DB[@]}" "SELECT count(*) FROM setpoint_plan WHERE plan_id = '$LATEST' AND parameter IN ($LEGACY_BIAS_PARAMS);" | tr -d ' ')
 if [ "${HAS_OLD:-0}" -gt 0 ] && [ -n "$MISSING_LIST" ]; then
     echo "Plan uses pre-Tier-1 naming (bias_heat_f). Coverage validation applies to new schema plans only."
     exit 0
