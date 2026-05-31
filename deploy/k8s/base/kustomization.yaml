@@ -39,5 +39,5 @@ images:
     newTag: latest
   - name: ghcr.io/jvallery/verdify-ingestor
     newTag: latest
-  - name: ghcr.io/jvallery/verdify-py
+  - name: ghcr.io/jvallery/verdify-migrate
     newTag: latest

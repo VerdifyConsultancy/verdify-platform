@@ -68,15 +68,18 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+          # FastMCP (mcp/server.py) serves the streamable-http MCP protocol at
+          # /mcp, not a plain GET /health (the staging proof saw httpGet /health
+          # return 404 -> pod never Ready). A tcpSocket probe confirms the process
+          # is listening without touching the server.py DANGER surface (handoff
+          # §3.2: no tool-semantic edits to add a /health route).
           livenessProbe:
-            httpGet:
-              path: /health
+            tcpSocket:
               port: http
             initialDelaySeconds: 15
             periodSeconds: 30
           readinessProbe:
-            httpGet:
-              path: /health
+            tcpSocket:
               port: http
             initialDelaySeconds: 10
             periodSeconds: 10

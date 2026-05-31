@@ -271,6 +271,32 @@ jobs:
         GIT_REF=${{ github.ref_name }}
       extra-tags: local-dev
 
+  migrate-image:
+    name: Build and publish migrate image
+    needs: image-impact
+    # verdify-migrate (db/Dockerfile.migrate) carries db/schema.sql + migration
+    # 000; it is tiny and rebuilt on any publish so the staging schema stays
+    # current. NOTE: a db/-only change (schema.sql / migrations / migrate.sh) does
+    # not yet set image_publish via the api/mcp/ingestor impact paths — add db/**
+    # to the image-impact paths, or use workflow_dispatch, to rebuild it then.
+    if: needs.image-impact.outputs.image_publish == 'true' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      packages: write
+    uses: jvallery/agents/.github/workflows/reusable-container-build.yml@main
+    with:
+      # Build context = repo root so the Dockerfile can COPY db/schema.sql +
+      # db/migrations/000-* + db/migrate.sh.
+      context: .
+      dockerfile: db/Dockerfile.migrate
+      image-name: ${{ github.repository_owner }}/verdify-migrate
+      push: true
+      publish-branches: live/platform-main,main
+      build-args: |
+        GIT_SHA=${{ github.sha }}
+        GIT_REF=${{ github.ref_name }}
+      extra-tags: local-dev
+
   # ---------------------------------------------------------------------------
   # Request the Agent Fleet GitOps dev-to-test promotion. The api image SHA tag
   # is the canonical deployable revision. This only runs on a real
@@ -289,6 +315,7 @@ jobs:
       - api-image
       - mcp-image
       - ingestor-image
+      - migrate-image
     # always() so a skipped optional image (no impact) does not block the deploy
     # request; we still gate on a successful publish path and a production push.
     if: |
@@ -298,7 +325,8 @@ jobs:
       needs.image-impact.outputs.image_publish == 'true' &&
       needs.api-image.result != 'failure' &&
       needs.mcp-image.result != 'failure' &&
-      needs.ingestor-image.result != 'failure'
+      needs.ingestor-image.result != 'failure' &&
+      needs.migrate-image.result != 'failure'
     runs-on: ubuntu-latest
     permissions:
       contents: read
