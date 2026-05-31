@@ -27,8 +27,24 @@ log = logging.getLogger("esp32_push")
 _DEVICE_WRITE_DISABLED_LOGGED = False
 
 
+def _shadow_mode_enabled() -> bool:
+    """True when SHADOW_MODE/DRY_RUN forces all writes off (#25).
+
+    Read locally (not imported at module top) so the device gate stays
+    self-contained and import-light, matching the existing pattern.
+    """
+    return os.environ.get("VERDIFY_SHADOW_MODE", "") == "1" or os.environ.get("DRY_RUN", "") == "1"
+
+
 def _device_writes_enabled() -> bool:
-    """True only when VERDIFY_DEVICE_WRITE_ENABLED == '1' (default-deny)."""
+    """True only when VERDIFY_DEVICE_WRITE_ENABLED == '1' (default-deny).
+
+    SHADOW_MODE/DRY_RUN is a hard override: it forces device writes off even
+    if VERDIFY_DEVICE_WRITE_ENABLED == '1', so a shadow parallel-run can never
+    drive the physical greenhouse.
+    """
+    if _shadow_mode_enabled():
+        return False
     return os.environ.get("VERDIFY_DEVICE_WRITE_ENABLED", "") == "1"
 
 

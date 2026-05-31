@@ -54,8 +54,10 @@ from entity_map import (
     normalize_feedback_value,
 )
 from esp32_push import push_to_esp32
+from healthz import touch_heartbeat
 from occupancy import refresh_latest_occupancy_state, sync_occupancy_state
 from pydantic import ValidationError
+from shadow_mode import connection_class, shadow_mode_enabled
 from tasks import (
     BAND_DRIVEN_PARAMS,
     IRRIGATION_SCHEDULE_PARAMS,
@@ -1383,6 +1385,15 @@ async def flush_loop(pool: asyncpg.Pool) -> None:
         now = asyncio.get_event_loop().time()
         ts = datetime.now(UTC)
 
+        # Liveness heartbeat (#25): touch a state file every cycle. This is a
+        # filesystem write, NOT a DB write, so it fires in SHADOW_MODE too —
+        # giving a shadow (non-writing) pod a readiness signal. ingestor-healthz
+        # reads its mtime. Best-effort; never let a probe artifact break ingest.
+        try:
+            touch_heartbeat()
+        except Exception as e:
+            log.debug("heartbeat touch failed: %s", e)
+
         # Climate row every 60s
         if now - last_climate >= CLIMATE_FLUSH_INTERVAL:
             try:
@@ -1913,8 +1924,10 @@ async def setpoint_listener(pool: asyncpg.Pool) -> None:
             if pushed:
                 log.info("RT push: %s=%s → ESP32 (<1s)", param, val_str)
 
-    # Acquire a dedicated connection for LISTEN (can't share with pool)
-    conn = await asyncpg.connect(DB_DSN)
+    # Acquire a dedicated connection for LISTEN (can't share with pool).
+    # Use the shadow-aware connection class for consistency (#25); LISTEN
+    # itself is read-class so it passes through regardless.
+    conn = await asyncpg.connect(DB_DSN, connection_class=connection_class())
     await conn.add_listener("setpoint_changed", _on_notify)
     log.info("Setpoint listener: LISTEN on setpoint_changed channel")
 
@@ -1977,8 +1990,13 @@ async def main() -> None:
     global ESP32_HOST, ESP32_PORT, ESP32_API_KEY, GREENHOUSE_ID
     log.info("Verdify ingestor starting (greenhouse: %s)...", GREENHOUSE_ID)
 
-    pool = await asyncpg.create_pool(DB_DSN, min_size=2, max_size=10)
-    log.info("DB connection pool ready")
+    # Shadow-mode DB gate (#25): ShadowConnection suppresses write statements
+    # when VERDIFY_SHADOW_MODE/DRY_RUN == '1'. No-cost passthrough otherwise.
+    pool = await asyncpg.create_pool(DB_DSN, min_size=2, max_size=10, connection_class=connection_class())
+    if shadow_mode_enabled():
+        log.warning("DB connection pool ready in SHADOW_MODE — all writes suppressed")
+    else:
+        log.info("DB connection pool ready")
 
     # Load ESP32 config from greenhouses table (overrides .env)
     try:
