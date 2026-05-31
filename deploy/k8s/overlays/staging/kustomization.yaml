@@ -48,18 +48,20 @@ patches:
   - path: device-write-configmap.yaml
 
 # Image digest pins. Canonical namespace is
-# ghcr.io/verdifyconsultancy/verdify-{api,mcp,ingestor,migrate}. These are pinned
-# to immutable @sha256 digests (NEVER a mutable :latest/:staging tag). The digests
-# below are PLACEHOLDERS; a later stage writes the real GHCR digests in-repo
-# (digest write-back into this overlay; no cross-repo PR, no ArgoCD Image
-# Updater). The 64-hex placeholder is a valid digest shape so kustomize renders
-# and kubeconform validates, but it is NOT a deployable image.
+# ghcr.io/verdifyconsultancy/verdify-{api,mcp,ingestor,migrate}, immutable @sha256
+# (NEVER a mutable :latest/:staging tag). These are the REAL published, repo-linked,
+# in-cluster-pullable (via ghcr-jvallery-readonly) digests verified 2026-05-31:
+#   api/mcp/ingestor = CI build of live/platform-main HEAD 352f299e (tag sha-352f299e9475)
+#   migrate          = tag sha-998afc149421 (rebuilds only on db/** changes)
+# When container-publish goes fully green (after the orphaned verdify-migrate
+# package is removed so CI can publish it repo-linked), the digest write-back job
+# (k8s-manifests.yml, no cross-repo PR / no ArgoCD Image Updater) will own these.
 images:
   - name: ghcr.io/verdifyconsultancy/verdify-api
-    digest: sha256:00d0615f5653fa9c4bd01673855da35d8b44aa3a27311e1a134a59ce0baaf9c9
+    digest: sha256:4ace345dbff4e0ba749c2b4faf8aa3c1e1ca991939448b9382aeae7a4292f9f2
   - name: ghcr.io/verdifyconsultancy/verdify-mcp
-    digest: sha256:51d42e88f00e9f514de8eef324ae7e1076360052a917fe5a8eac1956756da3b9
+    digest: sha256:7e880caf736802391bc6a5b3fd72abd3ca814cc3ee6dc58797c67be9e9cfff18
   - name: ghcr.io/verdifyconsultancy/verdify-ingestor
-    digest: sha256:c26e0e67ea0d67751e21448a95660e3e4a37c214d98f228f50a8b08c02d1fbc5
+    digest: sha256:5be4321f5221b2670efa12798f2a524d3f4472254cbbe0519e355272213bc8a5
   - name: ghcr.io/verdifyconsultancy/verdify-migrate
     digest: sha256:4ef590665b726dcaaf06cb4481cd84c47ed3079a46a6411c04afaf0583e7fb2b
