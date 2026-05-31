@@ -8,8 +8,12 @@ OUTDIR=/srv/verdify/firmware/test/data
 mkdir -p "$OUTDIR"
 OUTFILE="$OUTDIR/replay_data.csv"
 
+# #24: DB access via the shared psql-verdify abstraction (docker-exec default
+# preserves prior VM argv).
+. "$(dirname "${BASH_SOURCE[0]}")/lib/psql-verdify.sh"
+
 echo "Exporting last ${DAYS} days from v_greenhouse_state..."
-docker exec verdify-timescaledb psql -U verdify -d verdify -c "
+verdify_psql -c "
 COPY (
     SELECT * FROM v_greenhouse_state
     WHERE ts >= now() - interval '${DAYS} days'

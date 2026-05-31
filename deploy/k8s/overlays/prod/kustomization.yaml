@@ -1,0 +1,45 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Instance: verdify-prod — the production k3s Verdify APP instance. This is the
+# instance whose ingestor is the ONE real single writer to the live ESP32. The
+# device-write path is enabled HERE and only here (VERDIFY_DEVICE_WRITE_ENABLED=1
+# + the allow-ingestor-device-egress NetworkPolicy). Cutting the live control
+# loop onto k3s remains a human-gated step (handoff §6); this overlay is the
+# reviewable target shape.
+#
+# The namespace string is PINNED. It MUST equal:
+#   - the Namespace object in this overlay (verdify-prod)
+#   - the ArgoCD Application destination.namespace
+#   - every registry/secrets/<id>.yaml target.namespace
+namespace: verdify-prod
+
+resources:
+  - namespace.yaml
+  - ../../base
+  # Placeholder Secret for local `kustomize build` validation ONLY. Removed for a
+  # real apply; the SOPS backend provides the real verdify-app-secrets.
+  - secrets.placeholder.yaml
+  # DEVICE WRITE PATH: the SINGLE egress allow letting the prod ingestor reach the
+  # live device VLAN. See allow-ingestor-device-egress.yaml.
+  - allow-ingestor-device-egress.yaml
+
+patches:
+  # DEVICE-WRITE INTERLOCK (#79): VERDIFY_DEVICE_WRITE_ENABLED=1 — prod only.
+  - path: device-write-configmap.yaml
+  # ingestor keeps the base replicas:1 + Recreate (single-writer invariant); no
+  # replicas:0 pin here (that is staging's two-writer safety pin).
+
+# Image digest pins. Same canonical namespace as staging
+# (ghcr.io/verdifyconsultancy/verdify-*), pinned to immutable @sha256 digests
+# (NEVER :latest/:staging). PLACEHOLDER digests; the promotion flow writes real
+# GHCR digests in-repo.
+images:
+  - name: ghcr.io/verdifyconsultancy/verdify-api
+    digest: sha256:00d0615f5653fa9c4bd01673855da35d8b44aa3a27311e1a134a59ce0baaf9c9
+  - name: ghcr.io/verdifyconsultancy/verdify-mcp
+    digest: sha256:51d42e88f00e9f514de8eef324ae7e1076360052a917fe5a8eac1956756da3b9
+  - name: ghcr.io/verdifyconsultancy/verdify-ingestor
+    digest: sha256:c26e0e67ea0d67751e21448a95660e3e4a37c214d98f228f50a8b08c02d1fbc5
+  - name: ghcr.io/verdifyconsultancy/verdify-migrate
+    digest: sha256:4ef590665b726dcaaf06cb4481cd84c47ed3079a46a6411c04afaf0583e7fb2b

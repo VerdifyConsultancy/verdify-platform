@@ -1,15 +1,21 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-# Verdify APP base. One instance = one overlay of this base.
+# Verdify APP base. One instance = one overlay of this base
+# (overlays/staging, overlays/prod).
+#
+# NAMESPACE: the base intentionally does NOT carry a Namespace object or a
+# `namespace:` directive. Each overlay owns its namespace (verdify-staging /
+# verdify-prod) so a single base feeds both instances without a hardcoded name.
+# The namespace string is PINNED per overlay and MUST be byte-identical to the
+# ArgoCD Application destination.namespace and every sealed-secret target.
 #
 # NOTE: the verdify-app-secrets Secret is NOT defined here. It is managed by the
-# fleet SOPS+age secret backend in jvallery/agent-fleet-control
-# (secrets/encrypted/verdify-*.enc.yaml, registry/secrets/<id>.yaml meta) and
-# applied by the GitOps secret-delivery step BEFORE this app reconciles. The
-# manifests reference it BY NAME ONLY. For a throwaway local `kustomize build`,
-# the overlays/local-staging overlay layers a config.kubernetes.io/local-config
-# placeholder so the tree renders + lints without the secret backend.
+# fleet SOPS+age secret backend (encrypted secret + registry meta) and applied
+# by the GitOps secret-delivery step BEFORE this app reconciles. The manifests
+# reference it BY NAME ONLY. For a throwaway local `kustomize build`, each
+# overlay layers a config.kubernetes.io/local-config placeholder so the tree
+# renders + lints without the secret backend.
 #
 # The `labels:` transformer below is why kustomize v5.4.3 is required (the
 # k8s-manifests.yml CI gate pins that version).
@@ -20,7 +26,6 @@ labels:
     includeSelectors: false
 
 resources:
-  - namespace.yaml
   - configmap.yaml
   - db-statefulset.yaml
   - migration-job.yaml
@@ -29,15 +34,15 @@ resources:
   - ingestor-deployment.yaml
   - networkpolicy.yaml
 
-# Image pins. `latest` here is the validation placeholder; CI / the cross-repo
-# image-pin PR in jvallery/agents rewrites these to
-# ghcr.io/jvallery/verdify-<comp>:sha-<gitsha> (12-char) before apply.
+# Image namespace. Canonical org namespace is
+# ghcr.io/verdifyconsultancy/verdify-{api,mcp,ingestor,migrate} (NEVER
+# jvallery/*). The base leaves these UNPINNED (image name only, no tag); the
+# overlays' `images:` transformer pins each to an immutable @sha256 digest.
+# A later stage writes the real digests into overlays/staging (in-repo digest
+# write-back; no cross-repo PR, no ArgoCD Image Updater). No mutable
+# :latest/:staging tag is ever rendered.
 images:
-  - name: ghcr.io/jvallery/verdify-api
-    newTag: latest
-  - name: ghcr.io/jvallery/verdify-mcp
-    newTag: latest
-  - name: ghcr.io/jvallery/verdify-ingestor
-    newTag: latest
-  - name: ghcr.io/jvallery/verdify-migrate
-    newTag: latest
+  - name: ghcr.io/verdifyconsultancy/verdify-api
+  - name: ghcr.io/verdifyconsultancy/verdify-mcp
+  - name: ghcr.io/verdifyconsultancy/verdify-ingestor
+  - name: ghcr.io/verdifyconsultancy/verdify-migrate

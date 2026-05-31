@@ -26,6 +26,14 @@ on:
     paths:
       - "deploy/k8s/**"
       - ".github/workflows/k8s-manifests.yml"
+    # LOOP-BREAK companion (#78): container-publish's bump-staging-digests job
+    # commits @sha256 digests back into overlays/staging/kustomization.yaml on
+    # every live/platform-main publish. That commit always kustomize-renders
+    # clean, so revalidating it here is pure noise. Ignore it. A push that ALSO
+    # touches base/, overlays/prod/, diagnostics/, or any non-staging-overlay
+    # path still matches `paths:` and is validated.
+    paths-ignore:
+      - "deploy/k8s/overlays/staging/**"
   pull_request:
     branches:
       - live/platform-main

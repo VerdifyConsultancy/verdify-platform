@@ -5,8 +5,10 @@
 # The hypertable + compression extensions must survive any dump/restore; the
 # image is pinned (NOT the mutable `latest-pg16` the compose stack uses) so a
 # pod reschedule cannot silently bump the minor version and force an
-# `ALTER EXTENSION timescaledb UPDATE`. The kustomization `images:` block pins
-# the deployable digest; this tag is the validation default.
+# `ALTER EXTENSION timescaledb UPDATE`. Pinned to 2.25.2-pg16 to match the live
+# VM (~2.25.2) so the in-cluster engine never trails the source-of-record on a
+# dump/restore. (This is the upstream timescaledb image, not an app image, so it
+# is NOT rewritten by the kustomization `images:` transformer.)
 #
 # DATA MIGRATION (handoff §3.6) is copy-NOT-move: pg_dump -Fc from the VM → fresh
 # StatefulSet → idempotent restore Job → verify row counts AND hypertable +
@@ -40,7 +42,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: postgres
-          image: timescale/timescaledb:2.17.2-pg16
+          image: timescale/timescaledb:2.25.2-pg16
           args:
             - postgres
             - -c

@@ -39,7 +39,14 @@ spec:
   externalTrafficPolicy: Local
   selector:
     app.kubernetes.io/component: api
+  # $patch: replace — the base verdify-api Service already exposes a port named
+  # "http" (8080). A strategic merge keys ports by port-NUMBER, so without this
+  # the patch's :80 and the base's :8080 would BOTH survive with name "http",
+  # producing a Service with a duplicate port name (rejected by the apiserver:
+  # "spec.ports[1].name: Duplicate value: http"). Replacing the list makes the LB
+  # expose exactly one port (80 -> container http/8080).
   ports:
+    - $patch: replace
     - name: http
       port: 80
       targetPort: http

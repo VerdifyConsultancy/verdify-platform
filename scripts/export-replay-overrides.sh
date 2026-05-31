@@ -42,7 +42,10 @@ fi
 #   eq_<relay>            — forward-filled equipment_state at row ts (0/1)
 #   mode_reason           — sprint-15.1 diagnostic enum; drives invariant #10
 #   greenhouse_state      — for invariant #6 transition counting
-docker exec verdify-timescaledb psql -U verdify -d verdify -c "
+# #24: DB access via the shared psql-verdify abstraction (docker-exec default
+# preserves prior VM argv).
+. "$(dirname "${BASH_SOURCE[0]}")/lib/psql-verdify.sh"
+verdify_psql -c "
 COPY (
     SELECT
         c.ts,

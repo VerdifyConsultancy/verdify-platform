@@ -46,6 +46,17 @@ on:
     branches:
       - live/platform-main
       - main
+    # LOOP-BREAK (#78): the bump-staging-digests job below commits the new
+    # @sha256 digests back into deploy/k8s/overlays/staging/** on a push to
+    # live/platform-main. Without this filter that bump commit would retrigger
+    # this same workflow (rebuild -> publish -> bump -> ...), an infinite loop.
+    # The bump commit ONLY touches overlays/staging/kustomization.yaml, so a
+    # push whose entire diff is under overlays/staging never rebuilds images.
+    # Defense-in-depth: the bump commit body also carries [skip ci]; this
+    # paths-ignore is the primary, deterministic guard (skip-ci only covers the
+    # exact-marker case, not e.g. a hand-edit to the overlay).
+    paths-ignore:
+      - "deploy/k8s/overlays/staging/**"
   pull_request:
     branches:
       - live/platform-main
@@ -297,6 +308,119 @@ jobs:
         GIT_SHA=${{ github.sha }}
         GIT_REF=${{ github.ref_name }}
       extra-tags: local-dev
+
+  # ---------------------------------------------------------------------------
+  # In-repo digest write-back into deploy/k8s/overlays/staging (LOCKED DECISION:
+  # the digest bump is an in-repo commit on live/platform-main — NO cross-repo
+  # PR, NO ArgoCD Image Updater). After the 4 verdify-* images publish to in-org
+  # GHCR, this job pins overlays/staging to the exact @sha256 digests of the
+  # images built from THIS commit and commits the bump back to
+  # live/platform-main. ArgoCD (repoint is jvallery/laptop-root's #65) then
+  # reconciles staging to the new digests. prod is promoted separately (gated),
+  # so it is intentionally NOT auto-bumped here.
+  #
+  # Only images that actually rebuilt this run carry a digest; skipped images
+  # (no path impact) leave an empty output, and we keep the existing pin for
+  # those — the bump is digest-by-digest, never blanking an unbuilt image.
+  # ---------------------------------------------------------------------------
+  bump-staging-digests:
+    name: Bump overlays/staging image digests
+    needs:
+      - image-impact
+      - api-image
+      - mcp-image
+      - ingestor-image
+      - migrate-image
+    if: |
+      always() &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/live/platform-main' &&
+      needs.image-impact.outputs.image_publish == 'true' &&
+      needs.api-image.result != 'failure' &&
+      needs.mcp-image.result != 'failure' &&
+      needs.ingestor-image.result != 'failure' &&
+      needs.migrate-image.result != 'failure'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout live/platform-main
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: live/platform-main
+          # Need a writable token to push the digest bump back to the branch.
+          token: ${{ github.token }}
+
+      - name: Install kustomize
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/kustomize.tar.gz \
+            https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.3/kustomize_v5.4.3_linux_amd64.tar.gz
+          tar -C /usr/local/bin -xzf /tmp/kustomize.tar.gz kustomize
+          kustomize version
+
+      - name: Pin published digests into overlays/staging
+        env:
+          API_DIGEST: ${{ needs.api-image.outputs.image_digest }}
+          MCP_DIGEST: ${{ needs.mcp-image.outputs.image_digest }}
+          INGESTOR_DIGEST: ${{ needs.ingestor-image.outputs.image_digest }}
+          MIGRATE_DIGEST: ${{ needs.migrate-image.outputs.image_digest }}
+        run: |
+          set -euo pipefail
+          cd deploy/k8s/overlays/staging
+
+          # ref is "ghcr.io/verdifyconsultancy/verdify-<c>@sha256:<hex>".
+          # `kustomize edit set image name@digest` rewrites the pin in place.
+          pin() {
+            local ref="$1"
+            if [ -z "$ref" ]; then return 0; fi
+            case "$ref" in
+              *@sha256:*) ;;
+              *) echo "refusing non-digest image ref: $ref" >&2; exit 1 ;;
+            esac
+            kustomize edit set image "$ref"
+            echo "pinned $ref"
+          }
+
+          pin "$API_DIGEST"
+          pin "$MCP_DIGEST"
+          pin "$INGESTOR_DIGEST"
+          pin "$MIGRATE_DIGEST"
+
+      - name: Validate digest-only render
+        run: |
+          set -euo pipefail
+          # Every verdify-* image must be @sha256-pinned (no mutable tag leaks).
+          rendered="$(kustomize build deploy/k8s/overlays/staging)"
+          if printf "%s" "$rendered" \
+              | grep -E '^\s+image: ghcr.io/verdifyconsultancy/verdify-' \
+              | grep -qv '@sha256:'; then
+            echo "a verdify-* image is not digest-pinned after bump" >&2
+            printf "%s" "$rendered" | grep -E '^\s+image: ghcr.io/verdifyconsultancy/verdify-' >&2
+            exit 1
+          fi
+
+      - name: Commit and push digest bump
+        run: |
+          set -euo pipefail
+          git config user.name "verdify-ci[bot]"
+          git config user.email "verdify-ci@users.noreply.github.com"
+          if git diff --quiet -- deploy/k8s/overlays/staging/kustomization.yaml; then
+            echo "no digest change to commit"
+            exit 0
+          fi
+          git add deploy/k8s/overlays/staging/kustomization.yaml
+          # [skip ci] in the SUBJECT line (honored by GitHub Actions anywhere in
+          # the message, but placed first so it is unmissable) is the secondary
+          # loop-break; the primary is the on.push paths-ignore for
+          # deploy/k8s/overlays/staging/** above. Bot author keeps the bump
+          # commits attributable + filterable.
+          git commit -m "ci: [skip ci] bump overlays/staging image digests to ${GITHUB_SHA:0:12}
+
+          In-repo digest write-back (locked decision, no cross-repo PR, no
+          ArgoCD Image Updater). Digests pin overlays/staging to the verdify-*
+          images built from ${GITHUB_SHA}. ArgoCD reconciles staging from here."
+          git push origin HEAD:live/platform-main
 
   # ---------------------------------------------------------------------------
   # Request the Agent Fleet GitOps dev-to-test promotion. The api image SHA tag

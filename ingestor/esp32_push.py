@@ -9,12 +9,40 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import time
 
 import shared
 from entity_map import SETPOINT_MAP
 
 log = logging.getLogger("esp32_push")
+
+# ── Device-write safety gate (#79) ──────────────────────────────────────────
+# Default-deny: the ingestor only writes to the physical ESP32 when
+# VERDIFY_DEVICE_WRITE_ENABLED is exactly '1'. Staging (and any env that
+# forgets to set it) is therefore a no-op against the device — the k3s staging
+# overlay deliberately leaves this unset/0 so a staged ingestor can never drive
+# the live greenhouse. Prod sets it to '1'. The check is import-safe (reads env
+# at call time, not import time, so a test can toggle it) and cheap.
+_DEVICE_WRITE_DISABLED_LOGGED = False
+
+
+def _device_writes_enabled() -> bool:
+    """True only when VERDIFY_DEVICE_WRITE_ENABLED == '1' (default-deny)."""
+    return os.environ.get("VERDIFY_DEVICE_WRITE_ENABLED", "") == "1"
+
+
+def _log_device_writes_disabled_once(where: str) -> None:
+    """Emit a single WARNING the first time a device write is gated off."""
+    global _DEVICE_WRITE_DISABLED_LOGGED
+    if not _DEVICE_WRITE_DISABLED_LOGGED:
+        _DEVICE_WRITE_DISABLED_LOGGED = True
+        log.warning(
+            "Device writes DISABLED (VERDIFY_DEVICE_WRITE_ENABLED != '1'); "
+            "%s and all subsequent ESP32 writes are no-ops",
+            where,
+        )
+
 
 # Large reconnect reconciliations can push dozens of values immediately after
 # OTA, while ESPHome is also rebuilding API/MQTT state. Pace conservatively to
@@ -44,6 +72,12 @@ async def push_to_esp32(changes: list[tuple[str, float, str]]) -> int:
     Returns:
         Count of successfully pushed changes. Returns 0 when disconnected.
     """
+    # Device-write gate (#79): default-deny. No-op without a physical write when
+    # VERDIFY_DEVICE_WRITE_ENABLED != '1'.
+    if not _device_writes_enabled():
+        _log_device_writes_disabled_once("push_to_esp32")
+        return 0
+
     client = shared.esp32["client"]
     keys = shared.esp32["keys"]
     if client is None:
@@ -86,6 +120,12 @@ async def push_to_esp32(changes: list[tuple[str, float, str]]) -> int:
 
 async def push_occupancy_to_esp32(occupied: bool, source: str) -> int:
     """Push greenhouse occupancy state through the native ESPHome API."""
+    # Device-write gate (#79): default-deny. Guarded here too (defense in depth)
+    # even though push_to_esp32 below is the true chokepoint.
+    if not _device_writes_enabled():
+        _log_device_writes_disabled_once("push_occupancy_to_esp32")
+        return 0
+
     label = "occupied" if occupied else "empty"
     if "greenhouse_occupied" not in shared.esp32["keys"]:
         log.debug("Occupancy ESP32 push skipped via %s: greenhouse_occupied API switch unavailable", source)

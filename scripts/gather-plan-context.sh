@@ -12,10 +12,12 @@ if [ "${1:-}" = "--greenhouse-id" ] && [ -n "${2:-}" ]; then
 fi
 
 DB_STATEMENT_TIMEOUT_MS="${VERDIFY_PLANNER_CONTEXT_DB_STATEMENT_TIMEOUT_MS:-15000}"
-DB=(
-  docker exec -e "PGOPTIONS=-c statement_timeout=${DB_STATEMENT_TIMEOUT_MS}"
-  verdify-timescaledb psql -U verdify -d verdify -t -A
-)
+# #24: DB access via the shared psql-verdify abstraction (docker-exec default
+# preserves prior VM argv). The PGOPTIONS statement-timeout is injected as a
+# docker-exec extra flag in docker-exec mode. Call sites add -c "...".
+. "$(dirname "${BASH_SOURCE[0]}")/lib/psql-verdify.sh"
+mapfile -t DB < <(verdify_psql_cmd -e "PGOPTIONS=-c statement_timeout=${DB_STATEMENT_TIMEOUT_MS}")
+DB+=(-t -A)
 HA_TOKEN=$(cat /mnt/agents/shared/credentials/ha_token.txt 2>/dev/null || echo "")
 HA_URL="http://192.168.30.107:8123"
 SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -1352,8 +1354,8 @@ _check() {
   fi
 }
 
-# DB: docker container reachable + basic query
-if docker exec verdify-timescaledb psql -U verdify -d verdify -t -A -c "SELECT 1" >/dev/null 2>&1; then
+# DB: container/endpoint reachable + basic query (#24: via psql-verdify abstraction)
+if verdify_psql -t -A -c "SELECT 1" >/dev/null 2>&1; then
   _check "timescaledb reachable" ok "all DB-backed sections above are current"
 else
   _check "timescaledb reachable" fail "every DB section above returned '(unavailable)' or an empty row; DO NOT plan from this data"

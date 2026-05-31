@@ -35,14 +35,14 @@ spec:
           type: RuntimeDefault
       containers:
         - name: mcp
-          image: ghcr.io/jvallery/verdify-mcp:latest  # pinned to a digest by the overlay
+          image: ghcr.io/verdifyconsultancy/verdify-mcp  # pinned to a @sha256 digest by the kustomization images: transformer
           command: ["python", "mcp/server.py"]
           ports:
             - name: http
               containerPort: 8000
           envFrom:
             - configMapRef:
-                name: verdify-config   # provides MCP_HTTP_HOST=0.0.0.0, MCP_HTTP_PORT=8000
+                name: verdify-config   # provides MCP_HTTP_HOST=0.0.0.0, MCP_HTTP_PORT=8000, DB_HOST/PORT/NAME/USER
           env:
             - name: POSTGRES_PASSWORD
               valueFrom:
@@ -54,6 +54,16 @@ spec:
                 secretKeyRef:
                   name: verdify-app-secrets
                   key: POSTGRES_PASSWORD
+            # #81 DB-env reconcile: mcp/server.py reads ONLY DB_DSN (server.py:81)
+            # — it does NOT build a DSN from DB_HOST/DB_PASS the way api/main.py
+            # does. Without DB_DSN it falls back to localhost:5432 / password
+            # 'verdify' (a hardcoded /srv/verdify/.env path that does not exist
+            # in-container), so in-cluster it would never reach verdify-db.
+            # Construct the DSN here from the ConfigMap connection fields +
+            # the Secret password. $(VAR) references resolve against the other
+            # env entries (POSTGRES_PASSWORD above + DB_* from envFrom).
+            - name: DB_DSN
+              value: "postgresql://$(DB_USER):$(POSTGRES_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)"
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

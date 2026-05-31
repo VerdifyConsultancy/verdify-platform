@@ -209,12 +209,12 @@ site-lint: ## Run cheap lint for public-site content and routes
 	$(PYTHON) scripts/lint_public_site.py
 
 irrigation-migration-check: ## Replay irrigation migration 134 inside a rollback transaction
-	@set -o pipefail; { printf 'BEGIN;\n'; cat db/migrations/134-irrigation-fertigation-canonical.sql; printf '\nROLLBACK;\n'; } | docker exec -i verdify-timescaledb psql -U verdify -d verdify -v ON_ERROR_STOP=1 -q
+	@set -o pipefail; . scripts/lib/psql-verdify.sh; { printf 'BEGIN;\n'; cat db/migrations/134-irrigation-fertigation-canonical.sql; printf '\nROLLBACK;\n'; } | verdify_psql_stdin -v ON_ERROR_STOP=1 -q
 	@echo "OK: migration 134 replays cleanly in rollback transaction"
 
 irrigation-migration-proof: ## Replay and persist irrigation migration rollback proof
 	@mkdir -p "$(dir $(IRRIGATION_MIGRATION_PROOF))"
-	@set -o pipefail; { { printf 'BEGIN;\n'; cat db/migrations/134-irrigation-fertigation-canonical.sql; printf '\nROLLBACK;\n'; } | docker exec -i verdify-timescaledb psql -U verdify -d verdify -v ON_ERROR_STOP=1 -q && echo "OK: migration 134 replays cleanly in rollback transaction"; } 2>&1 | tee "$(IRRIGATION_MIGRATION_PROOF)"
+	@set -o pipefail; . scripts/lib/psql-verdify.sh; { { printf 'BEGIN;\n'; cat db/migrations/134-irrigation-fertigation-canonical.sql; printf '\nROLLBACK;\n'; } | verdify_psql_stdin -v ON_ERROR_STOP=1 -q && echo "OK: migration 134 replays cleanly in rollback transaction"; } 2>&1 | tee "$(IRRIGATION_MIGRATION_PROOF)"
 
 irrigation-field-diagnostics: ## Run non-gating field diagnostics for physical feedback blockers
 	$(MAKE) irrigation-field-sensor-health-proof
@@ -450,7 +450,7 @@ db-dump: ## Dump schema to db/schema.sql
 	docker exec verdify-timescaledb pg_dump -U verdify -d verdify --schema-only > db/schema.sql
 
 db-scorecard: ## Show today's planner scorecard
-	docker exec verdify-timescaledb psql -U verdify -d verdify -c "SELECT * FROM fn_planner_scorecard(CURRENT_DATE);"
+	@. scripts/lib/psql-verdify.sh; verdify_psql -c "SELECT * FROM fn_planner_scorecard(CURRENT_DATE);"
 
 # ── Cleanup ─────────────────────────────────────────────────────────
 
