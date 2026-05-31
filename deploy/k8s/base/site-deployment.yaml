@@ -1,0 +1,105 @@
+# verdify-site — Quartz static site serving lab.verdify.ai (content audit,
+# Sprint 2). STATELESS: content is baked into the image at build time (see
+# verdify-site/Dockerfile.k3s + scripts/build-site-image.sh); there is NO PVC.
+# A content change is a new image digest + GitOps redeploy, not a live rebuild.
+#
+# The live VM serves this via a stock nginx:alpine mounting a host-built
+# public/. In k3s the image IS the built site (multi-stage, content baked), so
+# the Deployment is a plain stateless web server. nginx listens on 8080
+# (non-privileged) per nginx-cloud.conf so the pod runs under the restricted
+# PodSecurity profile as non-root.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-site
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: site
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: site
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: site
+    spec:
+      imagePullSecrets:
+        - name: ghcr-jvallery-readonly
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101            # nginx uid in nginx:alpine
+        runAsGroup: 101
+        fsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: nginx
+          image: ghcr.io/verdifyconsultancy/verdify-site  # pinned to @sha256 by the overlay images: transformer
+          ports:
+            - name: http
+              containerPort: 8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "32Mi"
+            limits:
+              memory: "128Mi"
+          # nginx:alpine needs writable runtime dirs; with readOnlyRootFilesystem
+          # we provide them as emptyDir (the served HTML stays read-only baked).
+          volumeMounts:
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
+            - name: nginx-run
+              mountPath: /var/run
+            - name: nginx-tmp
+              mountPath: /tmp
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+      volumes:
+        - name: nginx-cache
+          emptyDir: {}
+        - name: nginx-run
+          emptyDir: {}
+        - name: nginx-tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: verdify-site
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: site
+spec:
+  # ClusterIP — user reach is via the Traefik IngressRoute (lab.verdify.ai),
+  # not a host bind or a per-app LB. (ADR-15 shared apps-ingress alignment.)
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/component: site
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

@@ -1,0 +1,74 @@
+# Grafana non-secret config + provisioned datasource (Verdify obs tier).
+#
+# verdify-grafana-config: the GF_* env from the VM compose, MINUS the admin
+# password (sealed, injected via secretKeyRef in the Deployment). Anonymous
+# Viewer access is preserved (the public dashboards on lab.verdify.ai embed
+# these), embedding is allowed, sign-up disabled.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-grafana-config
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: grafana
+data:
+  GF_SERVER_ROOT_URL: "https://graphs.verdify.ai"
+  GF_SERVER_DOMAIN: "graphs.verdify.ai"
+  GF_SECURITY_ADMIN_USER: "admin"
+  GF_USERS_ALLOW_SIGN_UP: "false"
+  GF_AUTH_ANONYMOUS_ENABLED: "true"
+  GF_AUTH_ANONYMOUS_ORG_NAME: "Main Org."
+  GF_AUTH_ANONYMOUS_ORG_ROLE: "Viewer"
+  GF_AUTH_DISABLE_LOGIN_FORM: "false"
+  GF_USERS_VIEWERS_CAN_EDIT: "false"
+  GF_SNAPSHOTS_EXTERNAL_ENABLED: "false"
+  GF_SECURITY_ALLOW_EMBEDDING: "true"
+  GF_SECURITY_COOKIE_SAMESITE: "none"
+  GF_SECURITY_COOKIE_SECURE: "true"
+  GF_EXPLORE_ENABLED: "false"
+  GF_ALERTING_ENABLED: "false"
+  GF_UNIFIED_ALERTING_ENABLED: "false"
+  GF_HIDE_VERSION: "true"
+  # Image renderer points at the in-cluster renderer Service (graphs homepage
+  # render path). The renderer sidecar Deployment is authored separately; until
+  # then this URL resolves to nothing and only the /render path degrades.
+  GF_RENDERING_SERVER_URL: "http://verdify-grafana-renderer:8081/render"
+  GF_RENDERING_CALLBACK_URL: "http://verdify-grafana:3000/"
+  GF_RENDERING_CONCURRENT_RENDER_REQUEST_LIMIT: "30"
+---
+# Provisioned TimescaleDB datasource (the verdify-db Service). Password is read
+# from $POSTGRES_PASSWORD (Deployment injects it from verdify-app-secrets).
+# url points at the in-cluster verdify-db Service (NOT the compose
+# `timescaledb:5432`).
+#
+# DASHBOARDS: the 59 canonical dashboard JSONs (grafana/provisioning/dashboards/
+# json, ~3.5M) exceed the etcd ConfigMap limit and are NOT inlined here. They
+# are delivered post-cutover via a dashboard-provisioning sidecar (git-sync of
+# grafana/dashboards) or a dedicated PVC seed — tracked as a STAGED follow-up.
+# This datasource ConfigMap is the run-ready provisioning piece.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-grafana-datasources
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: grafana
+data:
+  timescaledb.yml: |
+    apiVersion: 1
+    datasources:
+      - name: TimescaleDB (Verdify)
+        type: postgres
+        uid: verdify-tsdb
+        url: verdify-db:5432
+        database: verdify
+        user: verdify
+        secureJsonData:
+          password: ${POSTGRES_PASSWORD}
+        jsonData:
+          database: verdify
+          sslmode: disable
+          postgresVersion: 1600
+          timescaledb: true
+        isDefault: true
+        editable: false

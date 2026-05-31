@@ -43,3 +43,8 @@ images:
     digest: sha256:c26e0e67ea0d67751e21448a95660e3e4a37c214d98f228f50a8b08c02d1fbc5
   - name: ghcr.io/verdifyconsultancy/verdify-migrate
     digest: sha256:7a39c3deb6df2182c7480cdd653bffa6575570bbfd262bf7c9694abcc58badf5
+  # verdify-site: prod tracks the same in-org image. The promote-diff-guard flow
+  # writes the real promoted digest in-repo; this is the staging-validated digest
+  # as the initial value (content-baked Quartz site, identical build).
+  - name: ghcr.io/verdifyconsultancy/verdify-site
+    digest: sha256:eb589b37ba0508cd12b5c5c956057b2647653ff8800ad6dedf3ef27ee16397d4

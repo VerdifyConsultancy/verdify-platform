@@ -33,6 +33,21 @@ resources:
   - mcp-deployment.yaml
   - ingestor-deployment.yaml
   - networkpolicy.yaml
+  # ---- Web + observability tier (#88/#63) --------------------------------
+  # verdify-site is STATELESS (content baked into the image). The obs workloads
+  # (grafana/umami/loki) are STAGED-ON-STORAGE: their PVCs reference
+  # synology-iscsi-ssd (volume1/SSD, laptop-root #84) and stay Pending until
+  # that SC exists. goaccess is RUN-READY (no PVC). The verdify-site
+  # IngressRoute is overlay-scoped (staging), not here. promtail-daemonset.yaml
+  # is intentionally NOT listed — it needs hostPath which the `restricted` PSA
+  # forbids; see its header for the resolution (central monitoring Loki).
+  - site-deployment.yaml
+  - obs-pvcs.yaml
+  - grafana-config.yaml
+  - grafana-deployment.yaml
+  - umami-deployment.yaml
+  - goaccess-deployment.yaml
+  - loki-deployment.yaml
 
 # Image namespace. Canonical org namespace is
 # ghcr.io/verdifyconsultancy/verdify-{api,mcp,ingestor,migrate} (NEVER
@@ -46,3 +61,6 @@ images:
   - name: ghcr.io/verdifyconsultancy/verdify-mcp
   - name: ghcr.io/verdifyconsultancy/verdify-ingestor
   - name: ghcr.io/verdifyconsultancy/verdify-migrate
+  # verdify-site (lab.verdify.ai Quartz) is an IN-ORG app image, content baked
+  # at build time (verdify-site/Dockerfile.k3s). Overlays pin it to a @sha256.
+  - name: ghcr.io/verdifyconsultancy/verdify-site

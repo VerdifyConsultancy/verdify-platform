@@ -30,6 +30,12 @@ resources:
   # DEVICE-SAFETY: staging-only egress lock dropping all egress to the greenhouse
   # device VLAN (192.168.10.0/24) from the ingestor pod — see deny-esp32-egress.yaml.
   - deny-esp32-egress.yaml
+  # WEB: verdify-site IngressRoute + strip Middleware for lab.verdify.ai (ADR-15
+  # ClusterIP + IngressRoute target shape). STAGED-on-apps-ingress: the shared
+  # apps-ingress VIP + registry app-record are laptop-root-owned; included here
+  # for kustomize/kubeconform validation + as the reviewable target. See
+  # site-ingressroute.yaml.
+  - site-ingressroute.yaml
 
 # Instance patches.
 patches:
@@ -65,3 +71,9 @@ images:
     digest: sha256:4f141a5901f802e52b37b15a6a92b8d0bc906f3d854066e3ddd52911aa457d0d
   - name: ghcr.io/verdifyconsultancy/verdify-migrate
     digest: sha256:7a39c3deb6df2182c7480cdd653bffa6575570bbfd262bf7c9694abcc58badf5
+  # verdify-site: built locally from verdify-site/Dockerfile.k3s (Quartz, content
+  # baked), pushed + verified repo-linked 2026-05-31. tag sha-fd39de56b135
+  # (verdify-site nested-repo HEAD). Content build: 114 markdown -> 558 emitted
+  # files; served read-only by nginx:alpine on :8080.
+  - name: ghcr.io/verdifyconsultancy/verdify-site
+    digest: sha256:eb589b37ba0508cd12b5c5c956057b2647653ff8800ad6dedf3ef27ee16397d4

@@ -1,0 +1,123 @@
+# Grafana (graphs.verdify.ai) — Verdify observability tier (#88/#63).
+#
+# STATEFUL: Grafana keeps its own SQLite db (users, dashboards UI state, render
+# cache metadata) under /var/lib/grafana. That is a durable PVC on the volume1
+# SSD StorageClass (synology-iscsi-ssd) — see grafana-pvc.yaml. The DASHBOARD
+# DATA itself lives in TimescaleDB (the verdify-db datasource), not here; the
+# PVC only holds Grafana's own state.
+#
+# RUN-READINESS: STAGED-ON-STORAGE. The synology-iscsi-ssd StorageClass
+# (volume1/SSD) does NOT exist yet — it is laptop-root's #84. Until that SC is
+# created, the grafana-pvc cannot bind and this Deployment cannot schedule. The
+# manifest is authored + validated (kustomize/kubeconform) as the target shape.
+#
+# The grafana-proxy (branding-strip + render-cache nginx) from the VM compose is
+# folded into Grafana's own config here where practical; the render-cache nginx
+# sidecar is a separate concern tracked with the image-renderer (not yet moved).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-grafana
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: grafana
+spec:
+  replicas: 1
+  # Recreate: single writer to the grafana state PVC (RWO).
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: grafana
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: grafana
+    spec:
+      imagePullSecrets:
+        - name: ghcr-jvallery-readonly
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 472          # grafana uid
+        runAsGroup: 472
+        fsGroup: 472
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: grafana
+          # Upstream image pinned by tag (not :latest) to match the VM's
+          # grafana-oss. Digest-pin at the overlay when a vetted digest is
+          # chosen; the app images: transformer does NOT rewrite this upstream ref.
+          image: grafana/grafana-oss:11.6.0
+          ports:
+            - name: http
+              containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: verdify-grafana-config
+          env:
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: GRAFANA_ADMIN_PASSWORD
+            # The TimescaleDB datasource password (provisioned datasource reads
+            # $POSTGRES_PASSWORD from env via the datasource ConfigMap).
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: POSTGRES_PASSWORD
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false   # grafana writes plugins/cache under /var/lib/grafana
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              memory: "1Gi"
+          volumeMounts:
+            - name: grafana-data
+              mountPath: /var/lib/grafana
+            - name: grafana-datasources
+              mountPath: /etc/grafana/provisioning/datasources
+              readOnly: true
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 30
+      volumes:
+        - name: grafana-data
+          persistentVolumeClaim:
+            claimName: verdify-grafana-data
+        - name: grafana-datasources
+          configMap:
+            name: verdify-grafana-datasources
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: verdify-grafana
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: grafana
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/component: grafana
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http

@@ -1,0 +1,187 @@
+# GoAccess (logs.verdify.ai) — static access-log analytics report.
+#
+# RUN-READINESS: STATELESS / RUN-READY (no PVC). Two containers share an
+# emptyDir: `goaccess` re-parses the Traefik access log every 60s and writes
+# index.html; `nginx` serves that HTML. The report is regenerated from the log
+# on every loop, so a pod restart loses nothing durable — the report rebuilds.
+#
+# LOG SOURCE (dependency, NOT a PVC): on the VM, goaccess read
+# ./traefik/logs/access.log (a host bind). In k3s the access log belongs to the
+# apps Traefik (traefik-apps ns). Wiring goaccess to that log is a cross-ns
+# concern (a shared RWX log volume or a Traefik access-log sink). Until that is
+# wired, goaccess parses an empty/sample log and the report is empty — the
+# workload still runs (RUN-READY), it just has nothing to chart yet. The
+# accessLogPath is configurable via the verdify-goaccess-config ConfigMap.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-goaccess
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: goaccess
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: goaccess
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: goaccess
+    spec:
+      imagePullSecrets:
+        - name: ghcr-jvallery-readonly
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        # Parser: regenerate the HTML report from the access log every 60s.
+        - name: goaccess
+          image: allinurl/goaccess:1.9.4
+          command:
+            - /bin/sh
+            - -c
+            - |
+              touch /var/log/traefik/access.log
+              while true; do
+                goaccess /var/log/traefik/access.log \
+                  -p /etc/goaccess/goaccess.conf \
+                  --output=/var/www/goaccess/index.html \
+                  --no-progress || true
+                sleep 60
+              done
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "64Mi"
+            limits:
+              memory: "256Mi"
+          volumeMounts:
+            - name: report
+              mountPath: /var/www/goaccess
+            - name: goaccess-conf
+              mountPath: /etc/goaccess
+              readOnly: true
+            - name: traefik-logs
+              mountPath: /var/log/traefik
+        # Server: serve the generated report.
+        - name: nginx
+          image: nginx:alpine
+          ports:
+            - name: http
+              containerPort: 8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: "20m"
+              memory: "32Mi"
+            limits:
+              memory: "128Mi"
+          volumeMounts:
+            - name: report
+              mountPath: /usr/share/nginx/html
+              readOnly: true
+            - name: goaccess-nginx-conf
+              mountPath: /etc/nginx/conf.d
+              readOnly: true
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
+            - name: nginx-run
+              mountPath: /var/run
+            - name: nginx-tmp
+              mountPath: /tmp
+      volumes:
+        - name: report
+          emptyDir: {}
+        - name: goaccess-conf
+          configMap:
+            name: verdify-goaccess-config
+        - name: goaccess-nginx-conf
+          configMap:
+            name: verdify-goaccess-nginx
+        # The Traefik access log source. emptyDir today (empty until the apps
+        # Traefik access-log sink is wired, see header). Swap to the shared RWX
+        # log volume when that exists.
+        - name: traefik-logs
+          emptyDir: {}
+        - name: nginx-cache
+          emptyDir: {}
+        - name: nginx-run
+          emptyDir: {}
+        - name: nginx-tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: verdify-goaccess
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: goaccess
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/component: goaccess
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-goaccess-config
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: goaccess
+data:
+  goaccess.conf: |
+    time-format %T
+    date-format %d/%b/%Y
+    log-format %h %^[%d:%t %^] "%r" %s %b "%R" "%u" %^ "%^" "%^" %^
+    html-report-title Verdify access analytics
+    real-time-html false
+    ignore-crawlers false
+    agent-list true
+    http-protocol yes
+    http-method yes
+    no-query-string true
+    with-output-resolver false
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-goaccess-nginx
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: goaccess
+data:
+  default.conf: |
+    server {
+        listen 8080;
+        server_name _;
+        root /usr/share/nginx/html;
+        index index.html;
+        location / {
+            try_files $uri $uri/ =404;
+        }
+    }

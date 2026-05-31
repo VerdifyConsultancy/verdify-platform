@@ -1,0 +1,163 @@
+# Loki — log aggregation for the Verdify tier (#88/#63). Single-binary,
+# filesystem-backed (boltdb-shipper + filesystem chunks).
+#
+# RUN-READINESS: STAGED-ON-STORAGE. Loki's chunk + index store is a durable PVC
+# on volume1/SSD (verdify-loki-data → synology-iscsi-ssd, laptop-root #84).
+# Until that SC exists, Loki cannot bind its PVC and cannot schedule. Authored +
+# validated as the target shape.
+#
+# CONTEXT: the VM promtail shipped to an EXTERNAL Loki (192.168.30.100:3100). A
+# `monitoring` namespace with its own Loki may already exist in-cluster. This
+# Loki is the verdify-tier-local option per the "empty the management VM" goal;
+# if the cluster standard is the shared `monitoring` Loki, promtail's client URL
+# (verdify-promtail-config) repoints there and THIS Loki is dropped — that is a
+# laptop-root/monitoring-owner call. Authored here so the tier is self-contained.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-loki
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: loki
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate    # single writer to the RWO chunk store
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: loki
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: loki
+    spec:
+      imagePullSecrets:
+        - name: ghcr-jvallery-readonly
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: loki
+          image: grafana/loki:3.4.2
+          args:
+            - -config.file=/etc/loki/loki-config.yml
+          ports:
+            - name: http
+              containerPort: 3100
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              memory: "1Gi"
+          volumeMounts:
+            - name: loki-data
+              mountPath: /loki
+            - name: loki-config
+              mountPath: /etc/loki
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 45
+            periodSeconds: 30
+      volumes:
+        - name: loki-data
+          persistentVolumeClaim:
+            claimName: verdify-loki-data
+        - name: loki-config
+          configMap:
+            name: verdify-loki-config
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: verdify-loki
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: loki
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/component: loki
+  ports:
+    - name: http
+      port: 3100
+      targetPort: http
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: verdify-loki-data
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: loki
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: synology-iscsi-ssd   # STAGED: laptop-root #84 (volume1/SSD)
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-loki-config
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: loki
+data:
+  loki-config.yml: |
+    auth_enabled: false
+    server:
+      http_listen_port: 3100
+      grpc_listen_port: 9096
+    common:
+      instance_addr: 127.0.0.1
+      path_prefix: /loki
+      storage:
+        filesystem:
+          chunks_directory: /loki/chunks
+          rules_directory: /loki/rules
+      replication_factor: 1
+      ring:
+        kvstore:
+          store: inmemory
+    schema_config:
+      configs:
+        - from: 2024-01-01
+          store: tsdb
+          object_store: filesystem
+          schema: v13
+          index:
+            prefix: index_
+            period: 24h
+    limits_config:
+      retention_period: 720h
+      reject_old_samples: true
+      reject_old_samples_max_age: 168h
+    compactor:
+      working_directory: /loki/compactor
+      retention_enabled: true
+      delete_request_store: filesystem

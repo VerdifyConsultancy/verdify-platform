@@ -1,0 +1,78 @@
+# verdify-site IngressRoute — lab.verdify.ai (staging).
+#
+# ADR-15 ALIGNMENT (Model B′, accepted 2026-05-30): HTTP apps on VLAN 7 are
+# ClusterIP + host-routed IngressRoute + strip Middleware behind the ONE shared
+# apps-ingress VIP (NOT a per-app LoadBalancer). The base verdify-site Service
+# is already ClusterIP, so it is ADR-15-ready. This IngressRoute is the
+# reviewable TARGET shape for the add-then-drop onboarding: ADD this route on
+# the apps Traefik, prove lab.verdify.ai serves 200, THEN there is no LB to drop
+# (verdify-site is authored ClusterIP-only from day one — no interim LB, unlike
+# verdify-api's .7.21).
+#
+# OWNERSHIP / GATE (STAGED): per ADR-15 §5 the apps-ingress VIP Service, the
+# per-app IngressRoute/Middleware, the registry `app` record, and the reconciler
+# are laptop-root / registry-owned (reconciler-generated from the registry,
+# NEVER hand-mapped). The `traefik-apps` namespace now exists (was absent at
+# ADR-15 authoring) but the shared apps-ingress VIP + the registry app-record
+# for verdify-site are still a laptop-root hand-off. This manifest is authored
+# as the concrete proposal + reviewable target; it must NOT be applied until the
+# registry app-record exists and laptop-root reconciles it. It is INCLUDED in
+# the overlay so kustomize build / kubeconform validate the shape, but treat it
+# as STAGED-on-apps-ingress.
+#
+# Registry `app`-record inputs for verdify-site (hand-off to laptop-root):
+#   host       : lab.verdify.ai  (public lab site; also labs.verdify.ai legacy
+#                 alias + verdify.ai/www.verdify.ai 301 -> lab, see redirect note)
+#   namespace  : verdify-staging
+#   service    : verdify-site / 80  (ClusterIP, targetPort http/8080)
+#   auth       : none  (fully public static site — no Authentik gate)
+#   tls        : edge cloudflare wildcard / k3s-wildcard router (no per-app cert)
+#   strip      : full X-authentik-* set (anti-spoof Middleware) — applied even
+#                though auth:none, matching the gravity-strip-identity-headers
+#                template so no spoofed identity headers reach the origin.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: verdify-site
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: site
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - kind: Rule
+      match: Host(`lab.verdify.ai`) || Host(`labs.verdify.ai`)
+      services:
+        - name: verdify-site
+          port: 80
+      middlewares:
+        - name: verdify-site-strip-identity-headers
+  tls: {}
+---
+# Anti-spoof strip Middleware (ADR-15 §3). Strips the full X-authentik-* set so
+# no client-supplied identity header reaches the origin. Templated on
+# gravity-strip-identity-headers. Even with auth:none this guards against header
+# injection through the shared apps-ingress hop.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: verdify-site-strip-identity-headers
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: site
+spec:
+  headers:
+    customRequestHeaders:
+      X-authentik-username: ""
+      X-authentik-groups: ""
+      X-authentik-email: ""
+      X-authentik-name: ""
+      X-authentik-uid: ""
+      X-authentik-jwt: ""
+      X-authentik-meta-jwks: ""
+      X-authentik-meta-outpost: ""
+      X-authentik-meta-provider: ""
+      X-authentik-meta-app: ""
+      X-authentik-meta-version: ""
+      X-authentik-meta-uid: ""

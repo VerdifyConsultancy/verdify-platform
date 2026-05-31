@@ -1,0 +1,40 @@
+# Durable PVCs for the Verdify observability tier (grafana state, umami
+# postgres). STAGED-ON-STORAGE.
+#
+# STORAGECLASS: synology-iscsi-ssd — the volume1/SSD iSCSI StorageClass. Per
+# Jason's LOCKED decision (2026-05-31) the durable DB-class data lives on
+# volume1/SSD, NOT the existing `synology-iscsi` SC which targets /volume2 (do
+# NOT use that for durable DB-class storage). The synology-iscsi-ssd SC does NOT
+# exist yet — it is laptop-root's #84 (csi.san.synology.com provisioner pointed
+# at volume1, Retain reclaim, WaitForFirstConsumer, allowVolumeExpansion). These
+# PVCs reference it by the AGREED name; they will stay Pending until #84 lands.
+#
+# Reclaim: the SC itself carries Retain (set at SC creation by laptop-root) so
+# the data survives PVC churn — these claims do not (and cannot) set reclaim.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: verdify-grafana-data
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: grafana
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: synology-iscsi-ssd   # STAGED: laptop-root #84 (volume1/SSD)
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: verdify-umami-db-data
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: umami-db
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: synology-iscsi-ssd   # STAGED: laptop-root #84 (volume1/SSD)
+  resources:
+    requests:
+      storage: 10Gi
