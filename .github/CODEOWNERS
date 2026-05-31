@@ -13,13 +13,13 @@
 #     ESP32 writer; VERDIFY_DEVICE_WRITE_ENABLED=1 lives here and only here).
 #     Any change to the prod digests / device-egress allow / device-write
 #     interlock must be human-reviewed. ───────────────────────────────────────
-/deploy/k8s/overlays/prod/   @jvallery
+/deploy/k8s/overlays/prod/**   @jvallery
 
 # ─── CI/CD + all GitHub Actions workflows. These build + publish the in-org
 #     GHCR images and write digests back to live/platform-main; a bad workflow
 #     edit can mis-deploy or break the loop-break guards. SHARED INFRA per
 #     CLAUDE.md (changes route through the coordinator). ──────────────────────
-/.github/workflows/   @jvallery
+/.github/workflows/**   @jvallery
 
 # The CODEOWNERS file itself is owned too, so ownership can't be silently
 # rewritten in an unreviewed PR.

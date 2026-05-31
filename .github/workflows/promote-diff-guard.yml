@@ -20,20 +20,69 @@ name: Promote Diff Guard
 # non-image manifests; that is left as a TODO and not required for Sprint 1.
 
 on:
+  # NOTE: a `paths:` filter and `types: [labeled]` do NOT compose as an OR on a
+  # single pull_request trigger — GitHub ANDs them, so a label event with no
+  # overlays/prod path change would be filtered out. To honour the contract
+  # ("fires on PRs labeled prod-promote OR touching overlays/prod") we trigger
+  # broadly on the relevant activity types and do the OR gating in the job `if:`
+  # below (label present OR prod-overlay files changed).
   pull_request:
     branches:
       - live/platform-main
       - main
-    paths:
-      - "deploy/k8s/overlays/prod/**"
+    types:
+      - opened
+      - synchronize
+      - reopened
+      - labeled
+      - unlabeled
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
+  detect:
+    name: Decide whether this PR is a prod promotion
+    runs-on: ubuntu-latest
+    outputs:
+      is_promote: ${{ steps.gate.outputs.is_promote }}
+    steps:
+      - name: Checkout PR head (with base history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Gate — label `prod-promote` OR overlays/prod changed
+        id: gate
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          # Space-joined label-name list, e.g. "prod-promote needs-review".
+          PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ' ') }}
+        run: |
+          set -euo pipefail
+          is_promote=false
+
+          # (a) explicit label
+          for l in $PR_LABELS; do
+            if [ "$l" = "prod-promote" ]; then
+              is_promote=true
+            fi
+          done
+
+          # (b) PR touches the prod overlay
+          BASE="$(git merge-base HEAD "origin/${BASE_REF}")"
+          if git diff --name-only "$BASE" HEAD -- 'deploy/k8s/overlays/prod/' | grep -q .; then
+            is_promote=true
+          fi
+
+          echo "is_promote=${is_promote}" >> "$GITHUB_OUTPUT"
+          echo "Promotion gate: is_promote=${is_promote} (labels='${PR_LABELS}')"
+
   promote-diff-guard:
     name: Assert prod promote only advances prod digests to staging digests
+    needs: detect
+    if: needs.detect.outputs.is_promote == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout PR head (with base history)
