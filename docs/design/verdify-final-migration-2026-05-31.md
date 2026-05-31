@@ -341,3 +341,17 @@ Work items:
 - Whether to retire the per-env separate DB in favor of a single shared TimescaleDB with per-env schemas (Jason's target says each env has its OWN DB copy — assumed three separate StatefulSets; confirm this is intended over a shared instance for cost/storage).
 - Timing of the G9 atomic single-writer ESP32 handoff and the irreversible VM destroy (Gate 31, #91) — both are hardware/Track-A HARD STOPS only Jason can schedule, contingent on twin-divergence trust (#31/#34) being established.
 - Whether stale GCP SaaS-mirror resources (Cloud SQL/GCE Mosquitto/PubSub/Firebase) should be deleted now to stop billing — requires the GCP IAM access fix first; #53 is closed but resources may still exist.
+
+---
+
+## CONFIRMED DECISIONS (Jason, 2026-05-31) — these SUPERSEDE the recommendations above
+
+1. **Telemetry = MQTT fan-out bus (single bidirectional device owner).** `api.verdify.ai` (prod, via the ingestor/dispatcher) is the ONLY thing that talks to the greenhouse controller **bidirectionally**. The **prod ingestor publishes ALL telemetry** — every source (ESP32, Tempest, Shelly, etc.), not just the ESP32 — as **MQTT topics**. **dev + stage SUBSCRIBE to the production MQTT topics** (read-only) for all their data. **No Home Assistant** in the dev/stage path.
+   - *Build impact:* model the **MQTT broker in k3s** (prod, reachable cross-env); add a prod "publish-all-sources→MQTT" ingestor mode + a dev/stage "subscribe-from-prod-MQTT" ingest mode; the single bidirectional ESP32 path is prod-only. This replaces the earlier "dev/stage via MQTT/HA" rec — it's MQTT-only, and prod is the canonical publisher of *all* telemetry.
+2. **verdify-www → MOVE INTO k3s** (off Cloud Run). `www.verdify.ai` served from the cluster: GHCR image + overlay + IngressRoute. (Accepts home-dependency for the marketing front door.)
+3. **verdify-planner → RUN IN k3s, per-env** (off Cloud Run). Fold `planner_graph` into the monorepo (#102) **and** run it as a k3s service in each env.
+4. **3 separate TimescaleDB StatefulSets** — one per env, each with its own DB copy.
+
+**Implication: GCP fully EXITS for Verdify** once www + planner migrate → decommission the Cloud Run services + any GCP SaaS-mirror resources (requires the `gcloud` re-auth / IAM fix to enumerate + delete).
+
+**Defaults locked (override anytime):** dev/stage URLs on `*.k3s.verdify.ai` (per the stated target, net-new edge = out-of-lane); prod DB cutover via **dump-restore** (proven in staging, simpler than pg_basebackup).
