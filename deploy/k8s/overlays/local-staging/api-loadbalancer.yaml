@@ -2,6 +2,16 @@
 # This is the only user-facing surface that gets an LB IP; mcp / db / ingestor
 # stay ClusterIP / connect-out. (handoff §2.5)
 #
+# ADR-15 (Model B′, accepted 2026-05-30): this per-app LoadBalancer is the INTERIM
+# path only and is the documented anti-pattern to retire (ADR-15 names
+# `verdify-api .7.21` explicitly). verdify-api converges to ClusterIP + a
+# host-routed IngressRoute + strip Middleware behind the ONE shared apps-ingress
+# VIP, ADD-THEN-DROP (add the IngressRoute, prove it serves, THEN drop this LB),
+# gated on the apps-Traefik/VIP existing (get-well-plan C1) and owned by
+# laptop-root/registry (reconciler-generated, never hand-mapped). The base
+# verdify-api Service is already ClusterIP, so it is ADR-15-ready. See
+# docs/runbooks/verdify-cutover-readiness.md "ADR-15 / Model B′ alignment".
+#
 # apps-pool has autoAssign:false, so the address-pool + loadBalancerIPs
 # annotations are REQUIRED. A fixed IP keeps DNS / Authentik stable.
 #
