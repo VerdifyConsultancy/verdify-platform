@@ -208,7 +208,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    uses: jvallery/agents/.github/workflows/reusable-container-build.yml@main
+    uses: ./.github/workflows/reusable-container-build.yml
     with:
       # FastAPI must COPY verdify_schemas/ from the repo root, so the build
       # context is the repo root (".") with the Dockerfile under ./api.
@@ -234,7 +234,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    uses: jvallery/agents/.github/workflows/reusable-container-build.yml@main
+    uses: ./.github/workflows/reusable-container-build.yml
     with:
       # MCP also COPYs verdify_schemas/ + slack_config/slack_ops from the repo
       # root, so the build context is the repo root. P3 shipped the hardened
@@ -257,7 +257,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    uses: jvallery/agents/.github/workflows/reusable-container-build.yml@main
+    uses: ./.github/workflows/reusable-container-build.yml
     with:
       # Ingestor COPYs verdify_schemas/ + slack_config/slack_ops from the repo
       # root, so the build context is the repo root.
@@ -283,7 +283,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    uses: jvallery/agents/.github/workflows/reusable-container-build.yml@main
+    uses: ./.github/workflows/reusable-container-build.yml
     with:
       # Build context = repo root so the Dockerfile can COPY db/schema.sql +
       # db/migrations/000-* + db/migrate.sh.
