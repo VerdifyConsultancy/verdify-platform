@@ -36,7 +36,18 @@ metadata:
     metallb.universe.tf/loadBalancerIPs: 192.168.7.21   # PLACEHOLDER — reserve via registry, confirm with Jason
 spec:
   type: LoadBalancer
-  externalTrafficPolicy: Local
+  # externalTrafficPolicy: Cluster — DURABLE off-cluster reachability fix (laptop-root,
+  # 2026-05-31, jvallery/agents#361). apps-pool is advertised to the UDM via MetalLB
+  # BGP (bgpadvertisement/apps-pool, peer "udm"). Under ETP=Local only the single node
+  # hosting the api pod advertises .7.21, so a resize-driven pod reschedule + a BGP/FIB
+  # re-advertise gap silently blackholes the VIP off-cluster (.7.21 -> 000). The two
+  # PROVEN-WORKING apps-pool VIPs behind the same BGP advertisement — traefik-apps
+  # (.7.10) and gravity-ui (.7.22) — both use ETP=Cluster, so every speaker advertises
+  # the VIP and kube-proxy hairpins to the pod regardless of which node it lands on.
+  # Match that pattern. (We lose client source-IP, acceptable: this is a staging api
+  # behind the edge; the ADR-15 convergence to a host-routed IngressRoute behind the
+  # shared .7.10 apps-ingress remains the end-state and supersedes this whole LB.)
+  externalTrafficPolicy: Cluster
   selector:
     app.kubernetes.io/component: api
   # $patch: replace — the base verdify-api Service already exposes a port named
