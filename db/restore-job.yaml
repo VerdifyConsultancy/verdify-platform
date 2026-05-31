@@ -1,0 +1,229 @@
+# Verdify TimescaleDB copy-not-move DATA restore Job.
+#
+# PURPOSE (handoff §3.6): load a READ-ONLY pg_dump -Fc snapshot of the LIVE VM
+# TimescaleDB into the IN-CLUSTER verdify-db StatefulSet, WITHOUT ever stopping
+# or writing the live VM DB. The live VM DB remains the system of record until a
+# separate, Jason-confirmed cutover switch. This Job is the DATA half of the
+# copy; the SCHEMA half (db/Dockerfile.migrate + migration-job.yaml, an ArgoCD
+# PreSync hook) must have run FIRST and built the empty, hypertable-registered
+# schema. See docs/runbooks/db-copy-not-move.md for the full gated sequence.
+#
+# THIS IS NOT WIRED INTO ARGOCD. It carries NO argocd.argoproj.io/hook annotation
+# on purpose — it is a HUMAN-RUN, one-shot, gated Job that laptop-root applies by
+# hand inside the cluster during a quiescence window. ArgoCD must never sync it
+# (it is excluded from the kustomization resource list). Wiring a data-restore
+# into selfHeal could re-run a destructive --clean restore on every reconcile.
+#
+# WHY timescale/timescaledb (NOT the postgres:16-alpine verdify-migrate base):
+# a --data-only restore into TimescaleDB hypertables must be bracketed by
+# timescaledb_pre_restore() / timescaledb_post_restore() so the catalog triggers
+# and background workers are quiesced while chunk data lands. Those functions
+# only exist in an image that has the timescaledb extension .so loaded — the
+# alpine migrate image does not. This image also carries pg_restore/psql clients.
+# Pin EXACTLY the same tag as db-statefulset.yaml so the client and server
+# TimescaleDB versions match (see the version-skew gate in the runbook).
+#
+# DUMP DELIVERY: an initContainer fetches the .enc/.dump archive from the
+# read-only NFS dump share (the same NAS path the nightly pg_dump writes to,
+# handoff §2.6 "NAS gets dumps only, never live DB files") into an emptyDir that
+# the restore container reads. The archive is produced OUT OF BAND by the
+# human-run, read-only `pg_dump -Fc` against the live VM DB (runbook step 2).
+# No values, no credentials, no DB writes happen on the live VM in this manifest.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: verdify-db-restore
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: db-restore
+  annotations:
+    # Explicitly NOT an ArgoCD hook. Human-applied only. Documented so a future
+    # reader does not "helpfully" add it to the kustomization or add a hook.
+    verdify.ai/run-mode: "human-gated-one-shot"
+    verdify.ai/gate: "laptop-root applies in-cluster; cutover-switch is Jason-confirmed"
+spec:
+  # One attempt — a partial data-only restore must be inspected, not blindly
+  # retried (a retry after a partial COPY could double-insert). On failure, the
+  # operator drops + recreates the empty hypertables (runbook rollback) and reruns.
+  backoffLimit: 0
+  # Keep the Job + its logs around for post-restore inspection of the verify
+  # output; the operator deletes it explicitly after the verify checklist passes.
+  ttlSecondsAfterFinished: 86400
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: db-restore
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999            # postgres uid in the timescaledb image
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        # 1) Block until the StatefulSet DB is accepting connections AND the
+        #    schema build (migration-job.yaml) has registered the core
+        #    hypertables. If climate is not yet a hypertable, the schema half has
+        #    not run — fail fast rather than data-restore into a plain table.
+        - name: wait-for-schema
+          image: timescale/timescaledb:2.17.2-pg16
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              export PGPASSWORD="$DB_PASS"
+              until pg_isready -h "$DB_HOST" -p "${DB_PORT:-5432}" -U "$DB_USER"; do
+                echo "[restore-init] waiting for db ..."; sleep 2
+              done
+              echo "[restore-init] db up; asserting core hypertables registered ..."
+              psql -h "$DB_HOST" -p "${DB_PORT:-5432}" -U "$DB_USER" -d "$DB_NAME" \
+                -v ON_ERROR_STOP=1 -tAc \
+                "select case when count(*) < 4 then 1/0 else 1 end
+                 from timescaledb_information.hypertables
+                 where hypertable_name in
+                   ('climate','equipment_state','system_state','weather_forecast')" >/dev/null
+              echo "[restore-init] schema half confirmed (core hypertables present)."
+          envFrom:
+            - configMapRef:
+                name: verdify-config
+          env:
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: POSTGRES_PASSWORD
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: dump
+              mountPath: /dump
+        # 2) Fetch the pg_dump -Fc archive from the read-only NFS dump share into
+        #    the shared emptyDir. The share is mounted READ-ONLY; this container
+        #    only copies OUT of it. The archive name is parameterized by env
+        #    (DUMP_FILE) so the operator points it at the exact snapshot taken in
+        #    runbook step 2. Replace this with whatever fetch the operator prefers
+        #    (kubectl cp, an objectstore get) — the contract is: archive lands at
+        #    /dump/verdify.dump for the restore container, nothing writes the live DB.
+        - name: fetch-dump
+          image: timescale/timescaledb:2.17.2-pg16
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              SRC="/nfs-dumps/${DUMP_FILE}"
+              echo "[restore-init] copying dump ${SRC} -> /dump/verdify.dump"
+              test -r "$SRC" || { echo "[restore-init] dump not readable: $SRC"; exit 1; }
+              cp "$SRC" /dump/verdify.dump
+              ls -l /dump/verdify.dump
+          env:
+            # The exact snapshot filename on the NFS dump share, set by the
+            # operator at apply time (runbook step 2 produces it).
+            - name: DUMP_FILE
+              value: "verdify-PLACEHOLDER.dump"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: dump
+              mountPath: /dump
+            - name: nfs-dumps
+              mountPath: /nfs-dumps
+              readOnly: true
+      containers:
+        # 3) The restore. --data-only into the schema the migrate Job already
+        #    built, bracketed by timescaledb_pre_restore()/post_restore() so chunk
+        #    rows route correctly and no compression/policy background job fires
+        #    mid-restore. --no-owner / --no-privileges so the in-cluster `verdify`
+        #    role owns everything regardless of the dump's recorded owner. We
+        #    restore table data into the 4 core hypertable PARENTS (TimescaleDB
+        #    re-chunks them) and into every NON-hypertable table verbatim.
+        - name: restore
+          image: timescale/timescaledb:2.17.2-pg16
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              export PGPASSWORD="$DB_PASS"
+              PSQL="psql -h ${DB_HOST} -p ${DB_PORT:-5432} -U ${DB_USER} -d ${DB_NAME} -v ON_ERROR_STOP=1"
+              echo "[restore] timescaledb_pre_restore() ..."
+              $PSQL -tAc "SELECT timescaledb_pre_restore();" >/dev/null
+              echo "[restore] pg_restore --data-only (parallel) ..."
+              # On ANY failure, still run post_restore so the DB is left usable,
+              # then surface the error.
+              set +e
+              pg_restore \
+                --host="${DB_HOST}" --port="${DB_PORT:-5432}" \
+                --username="${DB_USER}" --dbname="${DB_NAME}" \
+                --data-only --no-owner --no-privileges \
+                --disable-triggers \
+                --jobs="${RESTORE_JOBS:-2}" \
+                --verbose \
+                /dump/verdify.dump
+              RC=$?
+              set -e
+              echo "[restore] timescaledb_post_restore() ..."
+              $PSQL -tAc "SELECT timescaledb_post_restore();" >/dev/null
+              if [ "$RC" -ne 0 ]; then
+                echo "[restore] pg_restore exited ${RC}; inspect before retry (see runbook rollback)."
+                exit "$RC"
+              fi
+              echo "[restore] post-restore ANALYZE ..."
+              $PSQL -tAc "ANALYZE;" >/dev/null
+              echo "[restore] data restore complete. Run the verify checklist (runbook step 6)."
+          envFrom:
+            - configMapRef:
+                name: verdify-config
+          env:
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: POSTGRES_PASSWORD
+            # pg_restore parallelism. Keep modest — the StatefulSet has a 6Gi
+            # memory limit and the restore competes with nothing else during the
+            # quiescence window. 2 is safe; the operator may raise it.
+            - name: RESTORE_JOBS
+              value: "2"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "512Mi"
+            limits:
+              memory: "2Gi"
+          volumeMounts:
+            - name: dump
+              mountPath: /dump
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        # Shared scratch holding the fetched dump archive (init → restore).
+        - name: dump
+          emptyDir:
+            sizeLimit: 4Gi
+        - name: tmp
+          emptyDir: {}
+        # Read-only NFS dump share (the NAS path the nightly pg_dump writes to).
+        # This is the SAME static-NFS read-only pattern as gravity's source-pv
+        # (handoff §2.6). The PV/PVC are platform-layer objects; this Job binds by
+        # claimName. NEVER mount live DB files — dumps only. The PVC name is the
+        # contract; laptop-root provisions the matching ReadOnlyMany PV.
+        - name: nfs-dumps
+          persistentVolumeClaim:
+            claimName: verdify-db-dumps
+            readOnly: true

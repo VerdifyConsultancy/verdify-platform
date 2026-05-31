@@ -1,0 +1,136 @@
+# Verdify ingestor + setpoint dispatcher — the DEVICE-TOUCHING workload
+# (handoff §3.3). Runs 5 concurrent async loops (esp32_loop, flush_loop,
+# task_loop, mqtt_loop, setpoint_listener) and holds ONE persistent
+# aioesphomeapi connection to the ESP32, pacing pushes (min 2s) to avoid heap
+# pressure. Net-new containerization — it runs as a host systemd unit off a
+# shared .venv today.
+#
+# ============================================================================
+# SINGLE-WRITER INVARIANT (correctness + device safety, NON-NEGOTIABLE):
+#   replicas: 1  +  strategy: Recreate.
+# Exactly one process may hold the ESP32 native-API connection and own pushes.
+# RollingUpdate is FORBIDDEN: a second pod connecting mid-rollout would
+# double-push / thrash the live ESP32. Recreate tears the old pod down fully
+# before the new one starts.
+# ============================================================================
+#
+# DEVICE-VLAN REACHABILITY (§3.4) is a GATED SPIKE, NOT proven here. A normal
+# k3s pod cannot reach the greenhouse VLAN (192.168.10.0/24) or the services
+# VLAN by default. The egress allow needed for this pod is a PLACEHOLDER,
+# commented out, in networkpolicy.yaml (gated-§3.4). The recommendation
+# (Track A wins) is that this ingestor STAYS VM-SIDE initially and moves LAST or
+# never — this manifest exists so the shape is reviewable, NOT so it is deployed
+# against the live device. No Service / no inbound port (it is a connect-out
+# worker).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-ingestor
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: ingestor
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: ingestor
+  strategy:
+    type: Recreate   # single-writer ESP32 invariant — do NOT change to RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: ingestor
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: wait-for-db
+          image: timescale/timescaledb:2.17.2-pg16
+          command:
+            - sh
+            - -c
+            - until pg_isready -h verdify-db -p 5432 -U verdify; do echo "waiting for db"; sleep 2; done
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      containers:
+        - name: ingestor
+          # The verdify-ingestor image MUST include paho-mqtt (imported by
+          # ingestor.py but absent from pyproject.toml / ingestor/requirements.txt
+          # — it lives ambiently in the shared .venv today). Reconstruct the
+          # image deps from actual imports in the P3 containerize PR.
+          image: ghcr.io/jvallery/verdify-ingestor:latest  # pinned to a digest by the overlay
+          command: ["python", "ingestor.py"]
+          # No ports: connect-out worker only (esp32 push, MQTT sub, DB write).
+          envFrom:
+            - configMapRef:
+                name: verdify-config
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: POSTGRES_PASSWORD
+            # ingestor/config.py reads DB_PASSWORD or POSTGRES_PASSWORD (line 24).
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: POSTGRES_PASSWORD
+            # ESP32 Noise PSK. DEVICE-AFFECTING (handoff §6) — sealing/rotating
+            # this is gated on explicit Jason confirmation and must never trigger
+            # a re-flash. Referenced by name only; never a value in this tree.
+            # NOTE: ingestor.py also reads esp32_api_key from the greenhouses DB
+            # row which OVERRIDES this env (ingestor.py:1987-1993).
+            - name: ESP32_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: ESP32_API_KEY
+            # MQTT credentials for the HAOS broker (anonymous disabled).
+            - name: MQTT_USER
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: MQTT_USER
+            - name: MQTT_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: MQTT_PASS
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              memory: "1Gi"
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          # No httpGet probe — connect-out worker. A heartbeat/freshness exec or
+          # in-process flag probe is the §3.3 design (queries max(ts) FROM climate)
+          # with a generous initialDelay so transient DB latency does not restart
+          # the single writer. Wired in the containerize PR; omitted here to keep
+          # the base manifest free of an entrypoint that does not exist yet.
+      # gated-§3.4: when (and only when) the device-VLAN reachability spike clears
+      # AND Jason confirms, this pod is pinned to a greenhouse-VLAN-reachable node
+      # via nodeSelector / affinity. Left UNSET so the base never schedules it
+      # somewhere assuming reachability it does not have.
+      volumes:
+        - name: tmp
+          emptyDir: {}

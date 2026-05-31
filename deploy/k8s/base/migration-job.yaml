@@ -1,0 +1,94 @@
+# Idempotent DB migration / restore Job. Runs as an ArgoCD PreSync hook so it
+# completes BEFORE the api/mcp/ingestor pods reconcile, and so those pods never
+# race each other applying schema changes.
+#
+# RE-RUNNABLE: the runner (verdify-migrate image) replays db/schema.sql with
+# ON_ERROR_STOP=0 then migration 000 (hypertable-catalog repair). On a populated
+# DB the replay's "already exists" errors are tolerated and it exits 0, so it is
+# safe as a PreSync hook on every sync. The hook-delete-policy replaces the Job.
+# (No schema_migrations ledger exists; the pg_dump schema snapshot is the source.)
+#
+# DATA MIGRATION SAFETY (handoff §3.6): this Job applies schema migrations
+# against the in-cluster verdify-db. The copy-not-move TimescaleDB restore
+# (pg_dump -Fc from the VM, plus the row-count + hypertable + compression
+# verification) is a SEPARATE, gated, human-run runbook — it is deliberately NOT
+# wired into this Job. Never let the VM stack and the k3s stack write the same DB.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: verdify-migrate
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: migrate
+  annotations:
+    # ArgoCD: run before the app syncs; replace the Job each reconcile.
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: migrate
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        - name: wait-for-db
+          image: timescale/timescaledb:2.17.2-pg16
+          command:
+            - sh
+            - -c
+            - until pg_isready -h verdify-db -p 5432 -U verdify; do echo "waiting for db"; sleep 2; done
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      containers:
+        - name: migrate
+          # verdify-migrate (db/Dockerfile.migrate): a thin psql client carrying
+          # db/schema.sql + migration 000. Pinned to a sha-<gitsha> by the
+          # overlay/CI image-pin; `latest` here is the kustomize validation tag.
+          image: ghcr.io/jvallery/verdify-migrate:latest
+          # Real runner: replay db/schema.sql (ON_ERROR_STOP=0; the production
+          # pg_dump snapshot) then migration 000 (hypertable-catalog repair) —
+          # the documented fresh-DB build. DB_HOST/DB_NAME/DB_USER come from the
+          # verdify-config ConfigMap (envFrom); DB_PASS from the Secret below.
+          command: ["/usr/local/bin/migrate.sh"]
+          envFrom:
+            - configMapRef:
+                name: verdify-config
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: POSTGRES_PASSWORD
+            # api/main.py builds the DSN from DB_HOST/DB_NAME/DB_USER/DB_PASS;
+            # surface the secret as DB_PASS too so the runner can connect either way.
+            - name: DB_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: POSTGRES_PASSWORD
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

@@ -1,0 +1,122 @@
+# TimescaleDB (PostgreSQL 16 + Timescale extension) — system of record for one
+# Verdify instance. Single-replica StatefulSet on a Retain local-path PVC.
+#
+# IMAGE NOTE: this is timescale/timescaledb (NOT pgvector/pgvector like gravity).
+# The hypertable + compression extensions must survive any dump/restore; the
+# image is pinned (NOT the mutable `latest-pg16` the compose stack uses) so a
+# pod reschedule cannot silently bump the minor version and force an
+# `ALTER EXTENSION timescaledb UPDATE`. The kustomization `images:` block pins
+# the deployable digest; this tag is the validation default.
+#
+# DATA MIGRATION (handoff §3.6) is copy-NOT-move: pg_dump -Fc from the VM → fresh
+# StatefulSet → idempotent restore Job → verify row counts AND hypertable +
+# compression state before trust. This manifest stands the empty DB up; the
+# restore/verify runbook is a separate gated step, never automated here.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: verdify-db
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: db
+spec:
+  serviceName: verdify-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: db
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: db
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999          # postgres uid in the timescaledb image
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: postgres
+          image: timescale/timescaledb:2.17.2-pg16
+          args:
+            - postgres
+            - -c
+            - shared_preload_libraries=timescaledb,pg_stat_statements
+            - -c
+            - shared_buffers=2GB
+            - -c
+            - work_mem=16MB
+            - -c
+            - track_io_timing=on
+            - -c
+            - log_min_duration_statement=1000
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              value: verdify
+            - name: POSTGRES_DB
+              value: verdify
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: POSTGRES_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false   # postgres writes its own runtime files
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "2Gi"
+            limits:
+              memory: "6Gi"
+          volumeMounts:
+            - name: db-data
+              mountPath: /var/lib/postgresql/data
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "verdify", "-d", "verdify"]
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "verdify", "-d", "verdify"]
+            initialDelaySeconds: 30
+            periodSeconds: 30
+  volumeClaimTemplates:
+    - metadata:
+        name: db-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        # local-path provisioner; reclaim policy Retain is set on the
+        # StorageClass at the platform layer so the data survives PVC churn
+        # (handoff §2.6 / §3.6 copy-not-move).
+        storageClassName: local-path
+        resources:
+          requests:
+            storage: 50Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: verdify-db
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: db
+spec:
+  clusterIP: None          # headless; the StatefulSet pod is addressed directly
+  selector:
+    app.kubernetes.io/component: db
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432

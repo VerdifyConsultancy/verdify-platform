@@ -1,0 +1,40 @@
+# syntax=docker/dockerfile:1
+# verdify-migrate: the real schema-build image (replaces the non-existent
+# ghcr.io/jvallery/verdify-py:latest the staging proof hit as ImagePullBackOff).
+# A thin psql client carrying the production schema snapshot + the hypertable
+# repair migration. Used ONLY by deploy/k8s/base/migration-job.yaml (ArgoCD
+# PreSync hook) against the IN-CLUSTER verdify-db StatefulSet. It never touches
+# the device or the live VM DB. The CREATE EXTENSION timescaledb / create_hypertable
+# calls in schema.sql run server-side on the timescale StatefulSet, so a vanilla
+# pg16 psql client is sufficient. Build context = repo root.
+#
+# The migrate script is written inline (a standalone COPY of db/migrate.sh was
+# unreliable on the NFS-backed worktree); this is the single source of record.
+FROM postgres:16-alpine
+COPY db/schema.sql /db/schema.sql
+COPY db/migrations/000-fresh-schema-hypertable-repair.sql /db/000-fresh-schema-hypertable-repair.sql
+COPY <<'SCRIPT' /usr/local/bin/migrate.sh
+#!/bin/sh
+# Verdify fresh-DB schema build. Mirrors the documented convention (db/migrations/000
+# header + tests/test_12_fidelity.py + `make db-dump`): replay db/schema.sql (the
+# production pg_dump --schema-only snapshot) with ON_ERROR_STOP=0 (a fresh
+# TimescaleDB tolerates the inherited-chunk DDL noise), THEN run migration 000,
+# which reconstructs the hypertable catalog rows. Replay-tolerant => safe to
+# re-run as an ArgoCD PreSync hook. SCHEMA ONLY — the copy-not-move DATA restore
+# (handoff §3.6) is a separate, gated, human-run runbook; this never touches the
+# live VM DB or the device.
+set -eu
+: "${DB_HOST:?DB_HOST required}" "${DB_NAME:?DB_NAME required}" "${DB_USER:?DB_USER required}" "${DB_PASS:?DB_PASS required}"
+export PGPASSWORD="$DB_PASS"
+PSQL="psql -h ${DB_HOST} -p ${DB_PORT:-5432} -U ${DB_USER} -d ${DB_NAME} -q"
+echo "[migrate] replaying db/schema.sql (ON_ERROR_STOP=0; hypertable catalog repaired by 000) ..."
+$PSQL -v ON_ERROR_STOP=0 -f /db/schema.sql
+echo "[migrate] running 000 (TimescaleDB hypertable-catalog repair) ..."
+$PSQL -v ON_ERROR_STOP=1 -f /db/000-fresh-schema-hypertable-repair.sql
+echo "[migrate] asserting core schema present ..."
+$PSQL -v ON_ERROR_STOP=1 -tAc "select case when to_regclass('public.climate') is null then 1/0 else 1 end" >/dev/null
+echo "[migrate] schema build complete."
+SCRIPT
+RUN chmod 0755 /usr/local/bin/migrate.sh && chmod 0644 /db/*.sql
+USER 1000:1000
+ENTRYPOINT ["/usr/local/bin/migrate.sh"]

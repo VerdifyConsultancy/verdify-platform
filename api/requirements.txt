@@ -1,0 +1,16 @@
+# Verdify api — minimal FastAPI runtime deps (k3s image).
+#
+# Deliberately MINIMAL: the public crop-catalog / setpoints API only needs
+# FastAPI + an async Postgres driver + pydantic. NO agent toolchain, NO
+# planner SDKs (anthropic/openai/google), NO aioesphomeapi/paho — those belong
+# to the ingestor image. This keeps the public-facing web blast radius small,
+# mirroring gravity's api/Dockerfile.prod image-split.
+#
+# Floors track pyproject.toml [project] + [project.optional-dependencies].api;
+# upper bounds match the majors currently installed in the live /srv venv
+# (python3.13) so image==live-runtime behaviour holds.
+fastapi>=0.115,<1
+uvicorn[standard]>=0.34,<1
+asyncpg>=0.29,<1
+pydantic>=2.8,<3
+httpx>=0.27,<1

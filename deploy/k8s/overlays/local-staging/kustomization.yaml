@@ -1,0 +1,45 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Instance: verdify-staging — the first k3s Verdify APP instance, deployed
+# ALONGSIDE the live VM stack for additive validation (the VM compose/systemd
+# stack is NOT stopped until a gated cutover). Track A > Track B always.
+#
+# The namespace string is PINNED. It MUST equal:
+#   - the base Namespace object (verdify-staging)
+#   - the ArgoCD Application destination.namespace in jvallery/agents
+#   - every registry/secrets/<id>.yaml target.namespace
+namespace: verdify-staging
+
+resources:
+  - ../../base
+  # Placeholder Secret for local `kustomize build` validation ONLY. Remove this
+  # line (and the file) when rendering for a real apply; the SOPS backend
+  # provides the real verdify-app-secrets. See secrets.placeholder.yaml.
+  - secrets.placeholder.yaml
+
+# Instance patches: expose the user-facing api on the apps-pool LoadBalancer
+# (VLAN 7). Everything else stays ClusterIP / connect-out.
+patches:
+  - path: api-loadbalancer.yaml
+    target:
+      kind: Service
+      name: verdify-api
+  # DEVICE SAFETY: pin the device-touching ingestor OFF in staging (replicas:0)
+  # so ArgoCD selfHeal cannot bring up a second live-ESP32 writer before the
+  # §3.4 device-VLAN spike is proven + Jason confirms. See ingestor-replicas-zero.yaml.
+  - path: ingestor-replicas-zero.yaml
+
+# Pin images to immutable ghcr SHAs in production (set by the cross-repo
+# image-pin PR in jvallery/agents on each release). `latest` here is the
+# validation placeholder; the promotion flow rewrites these to
+# ghcr.io/jvallery/verdify-<comp>:sha-<gitsha> before apply.
+images:
+  - name: ghcr.io/jvallery/verdify-api
+    newTag: latest
+  - name: ghcr.io/jvallery/verdify-mcp
+    newTag: latest
+  - name: ghcr.io/jvallery/verdify-ingestor
+    newTag: latest
+  - name: ghcr.io/jvallery/verdify-migrate
+    newTag: latest

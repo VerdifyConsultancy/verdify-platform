@@ -1,0 +1,381 @@
+name: Container Publish
+
+# Verdify APP CI/CD (golden-path, mirrors jvallery/gravity container-publish.yml).
+#
+# On push to the production branch, build and publish the Verdify application
+# images to GHCR, then request a k3s GitOps deploy via the Agent Fleet
+# (jvallery/agents) desired-state promotion workflow. The repo drives the
+# deployment: push -> build -> publish -> GitOps desired-state PR -> Argo CD.
+#
+# The Verdify application is composed of three image contexts (handoff §3):
+#   - api       (FastAPI public crop catalog + setpoints)  ./api
+#   - mcp       (MCP transport server, Iris/Hermes tools)  ./mcp
+#   - ingestor  (telemetry + single-writer setpoint dispatcher, device loop) ./ingestor
+#
+# Image publishing is gated by reusable-container-build.yml branch rules
+# (publish only from the production branch, never from a pull_request). Pull
+# requests build the images without publishing through the same reusable
+# workflow for validation.
+#
+# ─── PROPOSED / PROPOSED-PR NOTES (coordinator + James review required) ──────
+#  * `.github/**` is SHARED INFRA per CLAUDE.md — this file lands as a PR for
+#    coordinator/James review, NOT an autonomous merge.
+#  * VerdifyConsultancy/verdify-platform is READ-ONLY to the agent: this is a
+#    PR into that org with James coordinating; never a direct push.
+#  * PRODUCTION BRANCH DRIFT (P0): the verified production branch on-box and on
+#    the remote is `live/platform-main` (4 ahead of `main`, 0 behind), NOT a
+#    bare `live` and NOT `main`. The default branch is still `main`. This
+#    Per Jason's 2026-05-31 decision the canonical source-of-truth / deploy
+#    branch is `live/platform-main` (the ArgoCD targetRevision). This workflow
+#    publishes ONLY from `live/platform-main`; pushes to `main` build but never
+#    publish. ArgoCD reconciles `deploy/k8s/overlays/{staging,prod}` from it.
+#  * The Dockerfiles (./api/Dockerfile.prod, ./mcp/Dockerfile.prod,
+#    ./ingestor/Dockerfile) and the deploy/k8s tree are net-new (P3) and land in
+#    a SEPARATE PR. Until they exist these build jobs will fail at `docker build`
+#    — intentional: this workflow is the CI/CD wiring (P4), the images are P3.
+#  * The cross-repo promotion target (jvallery/agents
+#    verdify-gitops-dev-test-promotion.yml) + AGENT_FLEET_PROJECT_TOKEN secret
+#    are P5 jvallery-side wiring that does NOT exist yet; the
+#    request-gitops-promotion job below is a safe no-op until they land.
+#  * FIRMWARE / OTA: this workflow NEVER builds-and-flashes firmware. The ESP32
+#    OTA path stays on the human-gated `make firmware-deploy`. No firmware image
+#    context is published here.
+
+on:
+  push:
+    branches:
+      - live/platform-main
+      - main
+  pull_request:
+    branches:
+      - live/platform-main
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: verdify-container-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  image-impact:
+    name: Resolve image publish impact
+    runs-on: ubuntu-latest
+    outputs:
+      image_publish: ${{ steps.impact.outputs.image_publish }}
+      api_impact: ${{ steps.impact.outputs.api_impact }}
+      mcp_impact: ${{ steps.impact.outputs.mcp_impact }}
+      ingestor_impact: ${{ steps.impact.outputs.ingestor_impact }}
+      reason: ${{ steps.impact.outputs.reason }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Resolve changed files and image impact
+        id: impact
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+
+          # ─── Collect the changed-file list for this event ───────────────────
+          changed_files="$(mktemp)"
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            : > "$changed_files"
+          elif [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            git fetch --no-tags --depth=1 origin "$BASE_SHA" || true
+            git diff --name-only "$BASE_SHA" "$GITHUB_SHA" > "$changed_files" 2>/dev/null \
+              || git diff --name-only HEAD^ HEAD > "$changed_files"
+          elif [ -n "${BEFORE_SHA:-}" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
+            git diff --name-only "$BEFORE_SHA" "$GITHUB_SHA" > "$changed_files" 2>/dev/null \
+              || git diff --name-only HEAD^ HEAD > "$changed_files"
+          else
+            git diff --name-only HEAD^ HEAD > "$changed_files" 2>/dev/null || : > "$changed_files"
+          fi
+
+          echo "Changed files:"
+          sed 's/^/  /' "$changed_files" || true
+
+          # ─── Image-impact resolution (inline; mirrors gravity's
+          #     scripts/resolve-deploy-impact.rb but self-contained so this
+          #     workflow needs no net-new Ruby helper script). ──────────────────
+          #
+          # Per-image path prefixes. A change to verdify_schemas/ or
+          # docker-compose.yml impacts every Python image (all three COPY the
+          # shared schemas; compose defines the shared runtime contract).
+          manual=false
+          [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ] && manual=true
+
+          api_impact=false
+          mcp_impact=false
+          ingestor_impact=false
+          doc_only=true
+          any_changed=false
+
+          # Files that never change a published APP runtime image.
+          # NOTE: firmware/* is doc-only HERE because firmware never produces a
+          # published APP image — CI never flashes; firmware artifacts are
+          # validated by the existing ci.yml firmware jobs, not this pipeline.
+          # *.md subsumes README/CLAUDE/etc., so they are not listed separately.
+          is_doc_only() {
+            case "$1" in
+              docs/*|*.md|LICENSE|\
+              .github/ISSUE_TEMPLATE/*|\
+              deploy/k8s/*|firmware/*) return 0 ;;
+              *) return 1 ;;
+            esac
+          }
+
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            any_changed=true
+            if ! is_doc_only "$f"; then
+              doc_only=false
+            fi
+            case "$f" in
+              api/*|verdify_schemas/*|docker-compose.yml|pyproject.toml) api_impact=true ;;
+            esac
+            case "$f" in
+              mcp/*|slack_config.py|slack_ops/*|verdify_schemas/*|docker-compose.yml|pyproject.toml) mcp_impact=true ;;
+            esac
+            case "$f" in
+              ingestor/*|slack_config.py|slack_ops/*|verdify_schemas/*|docker-compose.yml|pyproject.toml) ingestor_impact=true ;;
+            esac
+          done < "$changed_files"
+
+          if [ "$manual" = "true" ]; then
+            api_impact=true
+            mcp_impact=true
+            ingestor_impact=true
+          fi
+
+          any_image=false
+          { [ "$api_impact" = "true" ] || [ "$mcp_impact" = "true" ] || [ "$ingestor_impact" = "true" ]; } && any_image=true
+
+          image_publish=false
+          if [ "$manual" = "true" ]; then
+            image_publish=true
+            reason="manual workflow_dispatch: building all Verdify images"
+          elif [ "$any_changed" = "false" ]; then
+            reason="no changed files detected; skipping image publish"
+          elif [ "$doc_only" = "true" ]; then
+            reason="docs/firmware/manifests-only change; skipping image publish"
+          elif [ "$any_image" = "false" ]; then
+            reason="no image-impacting files changed; skipping image publish"
+          else
+            image_publish=true
+            changed="api=$api_impact mcp=$mcp_impact ingestor=$ingestor_impact"
+            reason="image-impacting change ($changed)"
+          fi
+
+          echo "$reason"
+          {
+            echo "image_publish=$image_publish"
+            echo "api_impact=$api_impact"
+            echo "mcp_impact=$mcp_impact"
+            echo "ingestor_impact=$ingestor_impact"
+            echo "reason=$reason"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### Image publish impact"
+            echo
+            echo "- image_publish: \`$image_publish\`"
+            echo "- api_impact: \`$api_impact\`"
+            echo "- mcp_impact: \`$mcp_impact\`"
+            echo "- ingestor_impact: \`$ingestor_impact\`"
+            echo "- reason: $reason"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------------
+  # Per-image build/publish jobs. The reusable workflow only publishes on the
+  # production/main branch; pull_request events always build without pushing for
+  # validation (push_allowed is false on pull_request inside the reusable flow).
+  #
+  # Image naming: ghcr.io/<owner>/verdify-<component>:sha-<12char>. <owner> is
+  # the repo owner (VerdifyConsultancy), lowercased by GHCR. We pass the owner
+  # via github.repository_owner so this is correct under either org.
+  # ---------------------------------------------------------------------------
+  api-image:
+    name: Build and publish api image
+    needs: image-impact
+    if: needs.image-impact.outputs.image_publish == 'true' && (needs.image-impact.outputs.api_impact == 'true' || github.event_name == 'workflow_dispatch')
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/reusable-container-build.yml
+    with:
+      # FastAPI must COPY verdify_schemas/ from the repo root, so the build
+      # context is the repo root (".") with the Dockerfile under ./api.
+      context: .
+      # Hardened, slim production image (FastAPI only; no agent toolchain) —
+      # mirrors gravity's Dockerfile.prod image-split security fix. The P3
+      # artifact shipped this as the multi-stage api/Dockerfile (it replaced the
+      # prior throwaway inline build), so the reference is the plain name, not
+      # the gravity .prod suffix. RECONCILED 2026-05-30; flag for coordinator.
+      dockerfile: api/Dockerfile
+      image-name: ${{ github.repository_owner }}/verdify-api
+      push: true
+      publish-branches: live/platform-main
+      build-args: |
+        GIT_SHA=${{ github.sha }}
+        GIT_REF=${{ github.ref_name }}
+      extra-tags: local-dev
+
+  mcp-image:
+    name: Build and publish mcp image
+    needs: image-impact
+    if: needs.image-impact.outputs.image_publish == 'true' && (needs.image-impact.outputs.mcp_impact == 'true' || github.event_name == 'workflow_dispatch')
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/reusable-container-build.yml
+    with:
+      # MCP also COPYs verdify_schemas/ + slack_config/slack_ops from the repo
+      # root, so the build context is the repo root. P3 shipped the hardened
+      # multi-stage image as the plain mcp/Dockerfile (DANGER surface: wraps
+      # mcp/server.py with zero tool-semantic change). RECONCILED 2026-05-30.
+      context: .
+      dockerfile: mcp/Dockerfile
+      image-name: ${{ github.repository_owner }}/verdify-mcp
+      push: true
+      publish-branches: live/platform-main
+      build-args: |
+        GIT_SHA=${{ github.sha }}
+        GIT_REF=${{ github.ref_name }}
+      extra-tags: local-dev
+
+  ingestor-image:
+    name: Build and publish ingestor image
+    needs: image-impact
+    if: needs.image-impact.outputs.image_publish == 'true' && (needs.image-impact.outputs.ingestor_impact == 'true' || github.event_name == 'workflow_dispatch')
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/reusable-container-build.yml
+    with:
+      # Ingestor COPYs verdify_schemas/ + slack_config/slack_ops from the repo
+      # root, so the build context is the repo root.
+      context: .
+      dockerfile: ingestor/Dockerfile
+      image-name: ${{ github.repository_owner }}/verdify-ingestor
+      push: true
+      publish-branches: live/platform-main
+      build-args: |
+        GIT_SHA=${{ github.sha }}
+        GIT_REF=${{ github.ref_name }}
+      extra-tags: local-dev
+
+  migrate-image:
+    name: Build and publish migrate image
+    needs: image-impact
+    # verdify-migrate (db/Dockerfile.migrate) carries db/schema.sql + migration
+    # 000; it is tiny and rebuilt on any publish so the staging schema stays
+    # current. NOTE: a db/-only change (schema.sql / migrations / migrate.sh) does
+    # not yet set image_publish via the api/mcp/ingestor impact paths — add db/**
+    # to the image-impact paths, or use workflow_dispatch, to rebuild it then.
+    if: needs.image-impact.outputs.image_publish == 'true' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/reusable-container-build.yml
+    with:
+      # Build context = repo root so the Dockerfile can COPY db/schema.sql +
+      # db/migrations/000-* + db/migrate.sh.
+      context: .
+      dockerfile: db/Dockerfile.migrate
+      image-name: ${{ github.repository_owner }}/verdify-migrate
+      push: true
+      publish-branches: live/platform-main
+      build-args: |
+        GIT_SHA=${{ github.sha }}
+        GIT_REF=${{ github.ref_name }}
+      extra-tags: local-dev
+
+  # ---------------------------------------------------------------------------
+  # Request the Agent Fleet GitOps dev-to-test promotion. The api image SHA tag
+  # is the canonical deployable revision. This only runs on a real
+  # production-branch push that published images. The desired-state PR (and Argo
+  # CD reconcile) is owned by jvallery/agents.
+  #
+  # SAFE NO-OP UNTIL P5: the jvallery/agents
+  # `verdify-gitops-dev-test-promotion.yml` workflow and the
+  # AGENT_FLEET_PROJECT_TOKEN secret do not exist yet. When the token is unset
+  # the dispatch step exits 0 with a message instead of failing.
+  # ---------------------------------------------------------------------------
+  request-gitops-promotion:
+    name: Request Agent Fleet k3s deploy
+    needs:
+      - image-impact
+      - api-image
+      - mcp-image
+      - ingestor-image
+      - migrate-image
+    # always() so a skipped optional image (no impact) does not block the deploy
+    # request; we still gate on a successful publish path and a production push.
+    if: |
+      always() &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/live/platform-main' &&
+      needs.image-impact.outputs.image_publish == 'true' &&
+      needs.api-image.result != 'failure' &&
+      needs.mcp-image.result != 'failure' &&
+      needs.ingestor-image.result != 'failure' &&
+      needs.migrate-image.result != 'failure'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Resolve immutable image metadata
+        id: image
+        env:
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
+          owner="$(printf '%s' "$OWNER" | tr '[:upper:]' '[:lower:]')"
+          short_sha="${GITHUB_SHA:0:12}"
+          {
+            echo "api_image=ghcr.io/${owner}/verdify-api:sha-${short_sha}"
+            echo "mcp_image=ghcr.io/${owner}/verdify-mcp:sha-${short_sha}"
+            echo "ingestor_image=ghcr.io/${owner}/verdify-ingestor:sha-${short_sha}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch Agent Fleet GitOps promotion
+        env:
+          GH_TOKEN: ${{ secrets.AGENT_FLEET_PROJECT_TOKEN }}
+          API_IMAGE: ${{ steps.image.outputs.api_image }}
+          MCP_IMAGE: ${{ steps.image.outputs.mcp_image }}
+          INGESTOR_IMAGE: ${{ steps.image.outputs.ingestor_image }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "AGENT_FLEET_PROJECT_TOKEN is not configured; skipping Agent Fleet GitOps promotion dispatch."
+            echo "This is expected until the P5 jvallery/agents promotion wiring lands." >&2
+            exit 0
+          fi
+
+          gh workflow run verdify-gitops-dev-test-promotion.yml \
+            --repo jvallery/agents \
+            --ref main \
+            -f mode=pull-request \
+            -f source_revision="$GITHUB_SHA" \
+            -f api_image="$API_IMAGE" \
+            -f mcp_image="$MCP_IMAGE" \
+            -f ingestor_image="$INGESTOR_IMAGE"
+
+          {
+            echo "### Agent Fleet GitOps promotion dispatch"
+            echo
+            echo "- Source revision: \`${GITHUB_SHA}\`"
+            echo "- api image: \`${API_IMAGE}\`"
+            echo "- mcp image: \`${MCP_IMAGE}\`"
+            echo "- ingestor image: \`${INGESTOR_IMAGE}\`"
+            echo "- Workflow: \`jvallery/agents/.github/workflows/verdify-gitops-dev-test-promotion.yml\`"
+            echo "- Target: \`local-dev\` then gated \`local-staging\` after dev health"
+          } >> "$GITHUB_STEP_SUMMARY"

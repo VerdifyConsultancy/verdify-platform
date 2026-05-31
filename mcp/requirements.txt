@@ -1,0 +1,16 @@
+# Verdify mcp — MCP (FastMCP) tool-surface runtime deps (k3s image, ClusterIP).
+#
+# mcp/server.py imports (top-level):
+#   mcp.server.fastmcp.FastMCP   -> the `mcp` PyPI package (FastMCP)
+#   asyncpg, pydantic            -> DB + schema validation
+#   slack_config (top-level)     -> imports `yaml`  -> pyyaml required at import
+#   slack_ops.service            -> stdlib + verdify_schemas (repo-root, COPYed in)
+#
+# NO agent toolchain. The DANGER-surface tool semantics are NOT changed here —
+# this is a runtime dependency set only. Floors track pyproject.toml; upper
+# bounds match the majors in the live /srv venv (python3.13).
+mcp>=1.27,<2
+asyncpg>=0.29,<1
+pydantic>=2.8,<3
+pyyaml>=6.0,<7
+python-dotenv>=1.0,<2
