@@ -25,9 +25,10 @@ name: Container Publish
 #  * PRODUCTION BRANCH DRIFT (P0): the verified production branch on-box and on
 #    the remote is `live/platform-main` (4 ahead of `main`, 0 behind), NOT a
 #    bare `live` and NOT `main`. The default branch is still `main`. This
-#    workflow therefore publishes from BOTH `live/platform-main` (production)
-#    and `main` so it keeps working after the live<->main reconciliation that
-#    Jason/James must resolve first. Trim to a single branch once reconciled.
+#    Per Jason's 2026-05-31 decision the canonical source-of-truth / deploy
+#    branch is `live/platform-main` (the ArgoCD targetRevision). This workflow
+#    publishes ONLY from `live/platform-main`; pushes to `main` build but never
+#    publish. ArgoCD reconciles `deploy/k8s/overlays/{staging,prod}` from it.
 #  * The Dockerfiles (./api/Dockerfile.prod, ./mcp/Dockerfile.prod,
 #    ./ingestor/Dockerfile) and the deploy/k8s tree are net-new (P3) and land in
 #    a SEPARATE PR. Until they exist these build jobs will fail at `docker build`
@@ -208,7 +209,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    uses: jvallery/agents/.github/workflows/reusable-container-build.yml@main
+    uses: ./.github/workflows/reusable-container-build.yml
     with:
       # FastAPI must COPY verdify_schemas/ from the repo root, so the build
       # context is the repo root (".") with the Dockerfile under ./api.
@@ -221,7 +222,7 @@ jobs:
       dockerfile: api/Dockerfile
       image-name: ${{ github.repository_owner }}/verdify-api
       push: true
-      publish-branches: live/platform-main,main
+      publish-branches: live/platform-main
       build-args: |
         GIT_SHA=${{ github.sha }}
         GIT_REF=${{ github.ref_name }}
@@ -234,7 +235,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    uses: jvallery/agents/.github/workflows/reusable-container-build.yml@main
+    uses: ./.github/workflows/reusable-container-build.yml
     with:
       # MCP also COPYs verdify_schemas/ + slack_config/slack_ops from the repo
       # root, so the build context is the repo root. P3 shipped the hardened
@@ -244,7 +245,7 @@ jobs:
       dockerfile: mcp/Dockerfile
       image-name: ${{ github.repository_owner }}/verdify-mcp
       push: true
-      publish-branches: live/platform-main,main
+      publish-branches: live/platform-main
       build-args: |
         GIT_SHA=${{ github.sha }}
         GIT_REF=${{ github.ref_name }}
@@ -257,7 +258,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    uses: jvallery/agents/.github/workflows/reusable-container-build.yml@main
+    uses: ./.github/workflows/reusable-container-build.yml
     with:
       # Ingestor COPYs verdify_schemas/ + slack_config/slack_ops from the repo
       # root, so the build context is the repo root.
@@ -265,7 +266,7 @@ jobs:
       dockerfile: ingestor/Dockerfile
       image-name: ${{ github.repository_owner }}/verdify-ingestor
       push: true
-      publish-branches: live/platform-main,main
+      publish-branches: live/platform-main
       build-args: |
         GIT_SHA=${{ github.sha }}
         GIT_REF=${{ github.ref_name }}
@@ -283,7 +284,7 @@ jobs:
     permissions:
       contents: read
       packages: write
-    uses: jvallery/agents/.github/workflows/reusable-container-build.yml@main
+    uses: ./.github/workflows/reusable-container-build.yml
     with:
       # Build context = repo root so the Dockerfile can COPY db/schema.sql +
       # db/migrations/000-* + db/migrate.sh.
@@ -291,7 +292,7 @@ jobs:
       dockerfile: db/Dockerfile.migrate
       image-name: ${{ github.repository_owner }}/verdify-migrate
       push: true
-      publish-branches: live/platform-main,main
+      publish-branches: live/platform-main
       build-args: |
         GIT_SHA=${{ github.sha }}
         GIT_REF=${{ github.ref_name }}
@@ -321,7 +322,7 @@ jobs:
     if: |
       always() &&
       github.event_name == 'push' &&
-      (github.ref == 'refs/heads/live/platform-main' || github.ref == 'refs/heads/main') &&
+      github.ref == 'refs/heads/live/platform-main' &&
       needs.image-impact.outputs.image_publish == 'true' &&
       needs.api-image.result != 'failure' &&
       needs.mcp-image.result != 'failure' &&
