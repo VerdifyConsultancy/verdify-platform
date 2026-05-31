@@ -98,6 +98,42 @@ spec:
                 secretKeyRef:
                   name: verdify-app-secrets
                   key: VERDIFY_WRITE_API_KEY
+            # ---- Contact-form secrets (api/main.py contact endpoint) ----------
+            # SMTP auth (host/port/ssl/starttls/timeout + NOTIFY_* addressing are
+            # NON-secret config and live in verdify-config, not here). The
+            # username is part of SMTP auth (and the NOTIFY_FROM fallback), the
+            # password is the SMTP credential — both sealed. Turnstile secret is
+            # the Cloudflare server-side verify key; the hash salt anonymizes
+            # submitter IPs (api/main.py:_contact_ip_hash falls back to the write
+            # key / DB pass when unset — supply it explicitly so the salt is
+            # stable + independent of credential rotation).
+            # optional: true so the api still boots in an instance where the
+            # contact surface is not configured (the endpoints fail-closed at
+            # request time via the missing-config guards in api/main.py).
+            - name: VERDIFY_CONTACT_SMTP_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_CONTACT_SMTP_USERNAME
+                  optional: true
+            - name: VERDIFY_CONTACT_SMTP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_CONTACT_SMTP_PASSWORD
+                  optional: true
+            - name: VERDIFY_TURNSTILE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_TURNSTILE_SECRET
+                  optional: true
+            - name: VERDIFY_CONTACT_HASH_SALT
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: VERDIFY_CONTACT_HASH_SALT
+                  optional: true
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true

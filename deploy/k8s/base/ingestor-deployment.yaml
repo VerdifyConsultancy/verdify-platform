@@ -115,6 +115,33 @@ spec:
                 secretKeyRef:
                   name: verdify-app-secrets
                   key: MQTT_PASS
+            # Hermes/Iris planner gateway auth. ingestor/config.py:59 reads
+            # HERMES_IRIS_API_KEY (default ""). The planner loop authenticates to
+            # the Hermes gateway with it; absent → planner calls fail auth.
+            - name: HERMES_IRIS_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: HERMES_IRIS_API_KEY
+            # OpenAI embeddings. ingestor + mcp + scripts/embed-corpora.py all read
+            # OPENAI_API_KEY from the environment. optional so the loop still runs
+            # if embedding work is not configured for this instance.
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: OPENAI_API_KEY
+                  optional: true
+            # Home Assistant long-lived token. ingestor/config.py:39 consumes it
+            # as a FILE (HA_TOKEN_FILE → load_token() reads + strips the file).
+            # In-cluster there is no NAS mount, so the token is delivered as a
+            # secret key mounted at /etc/verdify-secrets/ha_token and HA_TOKEN_FILE
+            # is repointed there via the verdify-config ConfigMap. This is the
+            # ingestor's OWN HA token (distinct from the firmware ha_token /
+            # ha_bearer_token). See the ha-token volume + volumeMount below.
+            # NOTE: device-VLAN reachability to HA (192.168.30.107) is the gated
+            # §3.4 spike; wiring the credential here does not grant reachability,
+            # and the staging ingestor stays replicas:0.
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -129,6 +156,11 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+            # HA long-lived token, delivered as a read-only secret-backed file so
+            # the existing file-based loader (load_token) works unchanged.
+            - name: ha-token
+              mountPath: /etc/verdify-secrets
+              readOnly: true
           # No httpGet probe — connect-out worker. A heartbeat/freshness exec or
           # in-process flag probe is the §3.3 design (queries max(ts) FROM climate)
           # with a generous initialDelay so transient DB latency does not restart
@@ -141,3 +173,15 @@ spec:
       volumes:
         - name: tmp
           emptyDir: {}
+        # HA token projected from the verdify-app-secrets Secret as a single file
+        # (key HA_TOKEN → file ha_token). HA_TOKEN_FILE in verdify-config points at
+        # /etc/verdify-secrets/ha_token. optional so the pod still schedules in an
+        # instance that has not sealed an HA token yet (the HA sync tasks then
+        # no-op rather than the pod failing to mount).
+        - name: ha-token
+          secret:
+            secretName: verdify-app-secrets
+            optional: true
+            items:
+              - key: HA_TOKEN
+                path: ha_token

@@ -42,3 +42,25 @@ data:
   MQTT_HOST: "192.168.30.107"
   MQTT_PORT: "1883"
   FRIGATE_URL: "http://192.168.30.142:5000"
+
+  # ---- HA token file location (in-cluster) --------------------------------
+  # ingestor/config.py:39 reads HA_TOKEN_FILE (default the NAS path
+  # /mnt/agents/shared/credentials/ha_token.txt, which does NOT exist in a pod).
+  # The token is delivered as the verdify-app-secrets key HA_TOKEN, projected as
+  # a file at /etc/verdify-secrets/ha_token by the ingestor's ha-token volume.
+  # Repoint the loader here so the file-based load_token() works unchanged. This
+  # is the ingestor's OWN HA long-lived token (distinct from the firmware HA
+  # tokens) and is a VALUE secret, sealed under HA_TOKEN.
+  HA_TOKEN_FILE: "/etc/verdify-secrets/ha_token"
+
+  # ---- Contact-form NON-secret transport config (api/main.py) -------------
+  # Addresses/ports/bools only — the SMTP username/password, turnstile secret,
+  # and hash salt are VALUE secrets injected from verdify-app-secrets (see
+  # api-deployment.yaml). These keys are config, intentionally NOT secrets.
+  # Pinned per-instance; left here as the documented shape (an instance that does
+  # not run the contact surface can drop them). Values are placeholders an
+  # overlay/instance pins; the api guards fail-closed if SMTP_HOST is unset.
+  VERDIFY_CONTACT_SMTP_PORT: "587"
+  VERDIFY_CONTACT_SMTP_SSL: "false"
+  VERDIFY_CONTACT_SMTP_STARTTLS: "true"
+  VERDIFY_CONTACT_SMTP_TIMEOUT_S: "6"

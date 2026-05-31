@@ -71,6 +71,20 @@ spec:
             # env entries (POSTGRES_PASSWORD above + DB_* from envFrom).
             - name: DB_DSN
               value: "postgresql://$(DB_USER):$(POSTGRES_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)"
+            # OPENAI_API_KEY: mcp/server.py reads it from the environment for the
+            # lessons_search / knowledge_search embedding queries (server.py:2260).
+            # There is NO mcp-side .env in-container (the server.py fallback that
+            # parses an OPENAI_API_KEY= line from a dotenv path will not find one),
+            # so the embedding tools depend on this env being injected. optional:
+            # true so the rest of the tool surface still serves if the key is
+            # absent — server.py returns a clear "requires OPENAI_API_KEY" error
+            # for the two embedding tools rather than crashing (server.py:2340/2405).
+            - name: OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: OPENAI_API_KEY
+                  optional: true
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
