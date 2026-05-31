@@ -56,7 +56,10 @@ def test_echo_suppression_covers_delayed_esphome_state_publish():
     assert "RT push suppressed for recently pushed" in src
 
 
-def test_esp32_push_marks_shared_recently_pushed():
+def test_esp32_push_marks_shared_recently_pushed(monkeypatch):
+    # Device-write gate (#79) is default-deny; this test exercises the actual
+    # push mechanics, so enable the interlock.
+    monkeypatch.setenv("VERDIFY_DEVICE_WRITE_ENABLED", "1")
     import esp32_push
     import shared
 
@@ -76,7 +79,9 @@ def test_esp32_push_marks_shared_recently_pushed():
     assert shared.recently_pushed_values["temp_low"] == 64.0
 
 
-def test_occupancy_push_targets_presence_state_not_inhibit_tunable():
+def test_occupancy_push_targets_presence_state_not_inhibit_tunable(monkeypatch):
+    # Device-write gate (#79) is default-deny; enable it to exercise the push.
+    monkeypatch.setenv("VERDIFY_DEVICE_WRITE_ENABLED", "1")
     import esp32_push
     import shared
     from entity_map import EQUIPMENT_SWITCH_MAP
