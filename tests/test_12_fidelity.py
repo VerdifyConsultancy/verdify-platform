@@ -1119,19 +1119,19 @@ def test_grafana_dashboard_provider_poll_interval_avoids_sqlite_lock_churn():
     assert "allowUiUpdates: true" in provider
 
 
-def test_grafana_render_cache_warmer_handles_transient_renderer_failures():
-    script = Path("scripts/warm-grafana-render-cache.py").read_text()
-    service = Path("systemd/verdify-grafana-render-cache-warm.service").read_text()
-    timer = Path("systemd/verdify-grafana-render-cache-warm.timer").read_text()
-
-    assert "TRANSIENT_HTTP_STATUS = {429, 500, 502, 503, 504}" in script
-    assert 'parser.add_argument("--retries"' in script
-    assert '"--failure-threshold-pct"' in script
-    assert "failure_pct <= max(0.0, args.failure_threshold_pct)" in script
-    assert "--workers 1" in service
-    assert "--retries 2" in service
-    assert "--failure-threshold-pct 5" in service
-    assert "OnUnitActiveSec=30min" in timer
+def test_grafana_render_cache_warmer_is_retired():
+    """The Grafana render-cache-warm timer/service and its warmer script were
+    retired (issue #60): the timer had been dead since 2026-05-25 emitting HTTP
+    500s from the headless-Chromium `/render/d-solo/...` path, and the whole web
+    tier (grafana + renderer + proxy) is migrating to k3s where observability is
+    handed to nexus. The warmer was a pure cache-priming optimization — removing
+    it warms nothing on a schedule but breaks no dashboard (PNG/iframe embeds
+    still render on first request). This test locks in the retirement so the
+    dead units/script do not silently return.
+    """
+    assert not Path("scripts/warm-grafana-render-cache.py").exists()
+    assert not Path("systemd/verdify-grafana-render-cache-warm.service").exists()
+    assert not Path("systemd/verdify-grafana-render-cache-warm.timer").exists()
 
 
 def test_lighting_automation_audit_checks_live_planner_context():

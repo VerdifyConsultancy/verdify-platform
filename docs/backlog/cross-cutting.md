@@ -53,7 +53,13 @@ into a clean, integrated repo. PR #80 stays intact and is RM-0's baseline.
   with `133/133` HTTP 200 renders and zero failures. RM-8 validation confirmed
   public `lab.verdify.ai` and `labs.verdify.ai` both resolve to
   `gateway.verdify.ai` / `8.44.158.103` and return HTTP 200; issue #82 is
-  closed.
+  closed. **Follow-up (issue #60, 2026-06-01):** the warmer regressed and was
+  dead since 2026-05-25 (HTTP 500s from the headless-Chromium `/render/d-solo/`
+  path). Decision: **retire** — the unit/timer + `warm-grafana-render-cache.py`
+  are removed from the repo; no dashboard depends on a warm cache (PNG/iframe
+  embeds still render on first request) and the web tier is moving to k3s with
+  observability handed to nexus. Live-host `systemctl disable --now` is an
+  operator action (gate:jason).
 - [x] **C-RM6 Climate overlay semantics.** Isolate Tempest/HA overlay behavior
   from broader recovery branches and drop unjustified loose planner tests. PR
   #85 merged at `45758b66c08e8c40ec1eb48cd735db48b8ced0f5`; main CI run

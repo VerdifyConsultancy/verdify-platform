@@ -140,10 +140,8 @@ Tracked source copies live in `/srv/verdify/systemd/`; install details are in `s
 | verdify-setpoint-server.service | always-on service | Compatibility `/setpoints` export + Lutron light helper | enabled |
 | verdify-plan-publish.path | path unit | Watches planner output and publishes public plan archive | enabled |
 | verdify-forecast-page.timer | timer | Runs generated-site publisher on forecast cadence | enabled |
-| verdify-grafana-render-cache-warm.timer | timer | Warms mobile Grafana render cache every 30 minutes | enabled |
 | verdify-site-poll.timer | timer | Polls vault content every 10 seconds and rebuilds site when needed | enabled |
 | verdify-forecast-page.service | oneshot | Generated-site publisher | timer-triggered |
-| verdify-grafana-render-cache-warm.service | oneshot | Render-cache warmer | timer-triggered |
 | verdify-site-poll.service | oneshot | Site poller | timer-triggered |
 | verdify-site-build.service | oneshot | Quartz rebuild and nginx restart | poller-triggered |
 | verdify-plan-publish.service | oneshot | Plan archive generation/publishing | path-triggered |
