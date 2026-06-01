@@ -57,6 +57,13 @@ patches:
   # DEVICE-WRITE INTERLOCK (#79): explicit VERDIFY_DEVICE_WRITE_ENABLED=0 in
   # staging (the only place it is NOT 1). See device-write-configmap.yaml.
   - path: device-write-configmap.yaml
+  # STORAGE MIGRATION (staging-only): move verdify-db off node-pinned local-path
+  # onto synology-iscsi-ssd so the DB lands on a WORKER and frees node1 to
+  # etcd-only isolation. STS volumeClaimTemplate.storageClassName is immutable,
+  # so committing this is paired with a STS+PVC+PV delete/recreate; data is
+  # preserved via the verified preflight pg_dump, not the volume. Prod stays on
+  # base local-path. See db-storageclass-iscsi.yaml.
+  - path: db-storageclass-iscsi.yaml
 
 # Image digest pins. Canonical namespace is
 # ghcr.io/verdifyconsultancy/verdify-{api,mcp,ingestor,migrate}, immutable @sha256
