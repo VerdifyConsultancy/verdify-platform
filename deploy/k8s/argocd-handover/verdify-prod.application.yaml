@@ -1,0 +1,41 @@
+# ArgoCD Application — verdify-prod (HANDOVER: laptop-root applies to argocd ns).
+# Shape mirrors the live verdify-local-staging Application (read from cluster
+# 2026-05-31); only per-env fields differ.
+#
+# *** DEVICE-WRITE GATE ***  overlays/prod is the ONE real ESP32 writer
+# (VERDIFY_DEVICE_WRITE_ENABLED=1 + allow-ingestor-device-egress). With
+# selfHeal:true, applying this CR brings the prod ingestor up as a device writer
+# once its image + secrets resolve. Do NOT apply until: (a) the §3.4 device-VLAN
+# reachability/latency spike is signed off by Jason, AND (b) the live VM control
+# loop cutover is explicitly approved. Apply verdify-dev first. See README.md.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: verdify-prod
+  namespace: argocd
+  labels:
+    agent-fleet.vallery.net/environment: prod
+    agent-fleet.vallery.net/project: iris-verdify
+    app.kubernetes.io/part-of: agent-fleet
+  annotations:
+    agent-fleet.vallery.net/app-repo: https://github.com/VerdifyConsultancy/verdify-platform.git
+    agent-fleet.vallery.net/environment: prod
+    agent-fleet.vallery.net/image-tag: ghcr.io/verdifyconsultancy/verdify-api@sha256-digest-pinned
+    agent-fleet.vallery.net/source-repo: https://github.com/VerdifyConsultancy/verdify-platform.git
+    agent-fleet.vallery.net/source-revision: live/platform-main
+    agent-fleet.vallery.net/url: https://verdify.vallery.net
+spec:
+  project: app-test
+  source:
+    repoURL: https://github.com/VerdifyConsultancy/verdify-platform.git
+    targetRevision: live/platform-main
+    path: deploy/k8s/overlays/prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: verdify-prod
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false

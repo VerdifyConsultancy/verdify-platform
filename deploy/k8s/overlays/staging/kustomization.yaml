@@ -41,6 +41,25 @@ resources:
   # does not enforce NetworkPolicy today, but this keeps the contract correct under the
   # planned Cilium re-CNI (ADR-17). See allow-api-from-apps-ingress.yaml.
   - allow-api-from-apps-ingress.yaml
+  # WEB TIER (stateless, #116): host-route the staging verdify-www on
+  # www-staging.vallery.net through the shared apps Traefik (.7.10). Added to
+  # staging now that the edge is reliable; verdify-www is a real published image,
+  # stateless (no PVC), NO device path, so it cannot degrade the live staging app.
+  # See www-ingressroute.yaml.
+  - www-ingressroute.yaml
+  # CONTRACT: allow the apps-ingress to reach verdify-www:8080 (base default-deny).
+  # See allow-www-from-ingress.yaml.
+  - allow-www-from-ingress.yaml
+
+# verdify-www (#116) — the stateless marketing site, referenced as a Component so
+# its Deployment+Service render into THIS overlay. SAFE for staging (real GHCR
+# image, no PVC, no device path); historically dev/prod-only purely for the
+# "no new staging workload" containment rule, which a stateless+pullable workload
+# does not violate. The planner/mqtt/setpoint/hermes Components stay OUT of staging
+# (planner image unpublished -> placeholder digest -> ImagePullBackOff; the others
+# are device-affecting or prod-anchored).
+components:
+  - ../../components/www
 
 # Instance patches.
 patches:
@@ -83,3 +102,9 @@ images:
     digest: sha256:4f141a5901f802e52b37b15a6a92b8d0bc906f3d854066e3ddd52911aa457d0d
   - name: ghcr.io/verdifyconsultancy/verdify-migrate
     digest: sha256:7a39c3deb6df2182c7480cdd653bffa6575570bbfd262bf7c9694abcc58badf5
+  # verdify-www (#116): real GHCR digest of the marketing site image built from
+  # the upstream verdify-www repo at sha d3720dc (see components/www/www.yaml).
+  # Verified pullable via the org GHCR package API 2026-05-31 (the ONLY non-app
+  # image pinned here; the env-agnostic static content matches dev/prod's pin).
+  - name: ghcr.io/verdifyconsultancy/verdify-www
+    digest: sha256:5e00bc2080ee03fe7f21517d326acf0a89f93baefc0b27fcb481bab59ab7c58a

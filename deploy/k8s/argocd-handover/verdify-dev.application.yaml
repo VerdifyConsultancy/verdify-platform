@@ -1,0 +1,36 @@
+# ArgoCD Application — verdify-dev (HANDOVER: laptop-root applies to argocd ns).
+# Shape mirrors the live verdify-local-staging Application (read from cluster
+# 2026-05-31); only per-env fields differ. See README.md in this dir for the
+# hard prerequisites (secret delivery, per-env DB SC, unpublished planner image)
+# that MUST precede applying this. dev never writes the ESP32.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: verdify-dev
+  namespace: argocd
+  labels:
+    agent-fleet.vallery.net/environment: dev
+    agent-fleet.vallery.net/project: iris-verdify
+    app.kubernetes.io/part-of: agent-fleet
+  annotations:
+    agent-fleet.vallery.net/app-repo: https://github.com/VerdifyConsultancy/verdify-platform.git
+    agent-fleet.vallery.net/environment: dev
+    agent-fleet.vallery.net/image-tag: ghcr.io/verdifyconsultancy/verdify-api@sha256-digest-pinned
+    agent-fleet.vallery.net/source-repo: https://github.com/VerdifyConsultancy/verdify-platform.git
+    agent-fleet.vallery.net/source-revision: live/platform-main
+    agent-fleet.vallery.net/url: https://verdify.dev.k3s.vallery.net
+spec:
+  project: app-test
+  source:
+    repoURL: https://github.com/VerdifyConsultancy/verdify-platform.git
+    targetRevision: live/platform-main
+    path: deploy/k8s/overlays/dev
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: verdify-dev
+  syncPolicy:
+    automated:
+      prune: false
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false
