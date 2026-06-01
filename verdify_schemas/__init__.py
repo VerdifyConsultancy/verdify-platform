@@ -249,6 +249,8 @@ from .views import (
     PlannerPerformance,
     PositionCurrentEntry,
     WaterBudgetRow,
+    ZoneBandGradeRollup,
+    ZoneBandRow,
 )
 
 __all__ = [
@@ -459,6 +461,8 @@ __all__ = [
     "UtilityCost",
     "VaultFrontmatter",
     "WaterBudgetRow",
+    "ZoneBandGradeRollup",
+    "ZoneBandRow",
     "ZoneDetail",
     "ZoneListItem",
     "ZoneObservation",
