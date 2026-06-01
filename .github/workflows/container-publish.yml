@@ -283,6 +283,10 @@ jobs:
         GIT_SHA=${{ github.sha }}
         GIT_REF=${{ github.ref_name }}
       extra-tags: local-dev
+      # In-image pre-push proof (#26 residual): the shared alerts contract must
+      # import inside the built api image (WORKDIR /app, verdify_schemas/ COPYed
+      # to /app/verdify_schemas) before it can be pushed/digest-pinned.
+      smoke-import: verdify_schemas.alerts
 
   mcp-image:
     name: Build and publish mcp image
@@ -306,6 +310,9 @@ jobs:
         GIT_SHA=${{ github.sha }}
         GIT_REF=${{ github.ref_name }}
       extra-tags: local-dev
+      # In-image pre-push proof (#26 residual): WORKDIR /app, verdify_schemas/
+      # COPYed to /app/verdify_schemas — alerts must import before push.
+      smoke-import: verdify_schemas.alerts
 
   ingestor-image:
     name: Build and publish ingestor image
@@ -327,6 +334,11 @@ jobs:
         GIT_SHA=${{ github.sha }}
         GIT_REF=${{ github.ref_name }}
       extra-tags: local-dev
+      # In-image pre-push proof (#26 residual): the ingestor image sets
+      # WORKDIR /app/ingestor but COPYs verdify_schemas/ to /app/verdify_schemas,
+      # so the smoke run is pinned to /app to keep the top-level import resolvable.
+      smoke-import: verdify_schemas.alerts
+      smoke-import-workdir: /app
 
   planner-image:
     name: Build and publish planner image
@@ -412,6 +424,10 @@ jobs:
         GIT_SHA=${{ github.sha }}
         GIT_REF=${{ github.ref_name }}
       extra-tags: local-dev
+      # In-image pre-push proof (#26 residual): WORKDIR /app, verdify_schemas/
+      # COPYed to /app/verdify_schemas — alerts must import before push (same
+      # contract closure the setpoint-server's tunable_registry import relies on).
+      smoke-import: verdify_schemas.alerts
 
   # ---------------------------------------------------------------------------
   # In-repo digest write-back into deploy/k8s/overlays/staging (LOCKED DECISION:

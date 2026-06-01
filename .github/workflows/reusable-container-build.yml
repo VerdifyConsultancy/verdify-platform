@@ -66,6 +66,27 @@ on:
         required: false
         default: ""
         type: string
+      smoke-import:
+        description: >-
+          Optional Python module to import inside the freshly-built image BEFORE
+          push, as a post-build sanity gate (e.g. `verdify_schemas.alerts`). When
+          set, the publish job runs `python -c "import <module>"` against the
+          local image tag and aborts the push on failure, so a missing-/broken
+          shared-contract image never reaches GHCR. Empty (default) skips it —
+          images that do not carry the module (e.g. planner, migrate) leave it
+          unset.
+        required: false
+        default: ""
+        type: string
+      smoke-import-workdir:
+        description: >-
+          Working directory inside the image for the smoke-import run. Defaults to
+          /app, where api/mcp/setpoint COPY verdify_schemas. The ingestor image
+          sets WORKDIR /app/ingestor, so it passes /app here to keep the
+          `verdify_schemas` top-level import resolvable.
+        required: false
+        default: "/app"
+        type: string
 permissions:
   contents: read
 
@@ -288,7 +309,7 @@ jobs:
           fi
           printf "%s" "$password" | docker login "$REGISTRY" --username "$username" --password-stdin
 
-      - name: Build and push image
+      - name: Build image (pre-push)
         env:
           CONTEXT: ${{ inputs.context }}
           DOCKERFILE: ${{ inputs.dockerfile }}
@@ -332,6 +353,36 @@ jobs:
             --label "org.opencontainers.image.url=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}" \
             "$CONTEXT"
 
+      # In-image import smoke gate (#26 residual). When smoke-import is set, run
+      # `python -c "import <module>"` inside the just-built local image BEFORE the
+      # push. This is the pre-push proof the issue's last open AC asks for: the
+      # shared-contract module must import inside the actual runtime image (catches
+      # a missing COPY, a broken sys.path, or an unsatisfied dep) so a broken image
+      # never reaches GHCR — and therefore never gets digest-pinned into
+      # overlays/staging. Skipped (no-op) when smoke-import is empty, e.g. for the
+      # planner image (carries its own contract mirror, not verdify_schemas) and
+      # the migrate image (no Python package). Runs against the primary tag, which
+      # is one of the local tags built above.
+      - name: Smoke-test built image import
+        if: inputs.smoke-import != ''
+        env:
+          PRIMARY_TAG: ${{ needs.metadata.outputs.primary_tag }}
+          SMOKE_IMPORT: ${{ inputs.smoke-import }}
+          SMOKE_WORKDIR: ${{ inputs.smoke-import-workdir }}
+        run: |
+          set -euo pipefail
+          echo "Smoke-testing 'import ${SMOKE_IMPORT}' in ${PRIMARY_TAG} (workdir ${SMOKE_WORKDIR})"
+          docker run --rm \
+            --entrypoint python \
+            --workdir "$SMOKE_WORKDIR" \
+            "$PRIMARY_TAG" \
+            -c "import ${SMOKE_IMPORT}; print('smoke import ok: ${SMOKE_IMPORT}')"
+
+      - name: Push image
+        env:
+          TAGS: ${{ needs.metadata.outputs.tags }}
+        run: |
+          set -euo pipefail
           while IFS= read -r tag; do
             if [ -n "$tag" ]; then
               docker push "$tag"
