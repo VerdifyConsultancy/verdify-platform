@@ -1,0 +1,54 @@
+# ArgoCD Application — verdify-dev  (HANDOVER: author here, laptop-root applies)
+#
+# The coordinator agent has FULL CRUD in verdify-staging but NO write to the
+# argocd namespace, so it AUTHORS this manifest; laptop-root APPLIES it to the
+# argocd ns (drop it into the canonical agent-fleet gitops repo so ArgoCD does
+# not self-prune it). As of authoring (2026-05-31) the ONLY live verdify ArgoCD
+# Application is verdify-local-staging (Synced + Healthy, syncing
+# deploy/k8s/overlays/staging). overlays/dev is INERT until this CR exists.
+#
+# Shape mirrors the live verdify-local-staging Application (read from the cluster
+# 2026-05-31); only per-env fields + syncPolicy differ:
+#   - dev is an AUTOMATED env: automated{selfHeal:true, prune:true}. It is a
+#     read-only telemetry subscriber (VERDIFY_DEVICE_WRITE_ENABLED=0,
+#     ingestor replicas:0) and NEVER writes the ESP32, so auto-prune is safe —
+#     unlike prod, nothing here can touch the live device.
+#
+# HARD PREREQUISITES before laptop-root applies (see
+# docs/runbooks/dev-prod-argocd-handover.md):
+#   1. SOPS verdify-app-secrets delivered to verdify-dev BEFORE first reconcile.
+#   2. synology-iscsi-ssd StorageClass present (verified working on node4).
+#   3. verdify-planner image is a PLACEHOLDER digest (GHCR 404 as of 2026-05-31);
+#      with selfHeal+prune the planner Deployment ImagePullBackOffs until the real
+#      digest is written back. api/mcp/db/www use real digests and come up clean.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: verdify-dev
+  namespace: argocd
+  labels:
+    agent-fleet.vallery.net/environment: dev
+    agent-fleet.vallery.net/project: iris-verdify
+    app.kubernetes.io/part-of: agent-fleet
+  annotations:
+    agent-fleet.vallery.net/app-repo: https://github.com/VerdifyConsultancy/verdify-platform.git
+    agent-fleet.vallery.net/environment: dev
+    agent-fleet.vallery.net/image-tag: ghcr.io/verdifyconsultancy/verdify-api@sha256-digest-pinned
+    agent-fleet.vallery.net/source-repo: https://github.com/VerdifyConsultancy/verdify-platform.git
+    agent-fleet.vallery.net/source-revision: live/platform-main
+    agent-fleet.vallery.net/url: https://api.k3s.verdify.ai
+spec:
+  project: app-test
+  source:
+    repoURL: https://github.com/VerdifyConsultancy/verdify-platform.git
+    targetRevision: live/platform-main
+    path: deploy/k8s/overlays/dev
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: verdify-dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=false
