@@ -23,6 +23,14 @@ resources:
   # Placeholder Secret for local `kustomize build` validation ONLY. The SOPS
   # backend provides the real verdify-app-secrets out-of-band. See the file.
   - secrets.placeholder.yaml
+  # DEVICE-SAFETY: dev-only egress lock dropping all egress to the greenhouse
+  # device VLAN (192.168.10.0/24) from the ingestor pod. Mirrors staging; the
+  # inverse allow lives ONLY in overlays/prod. See deny-esp32-egress.yaml.
+  - deny-esp32-egress.yaml
+  # EDGE/WAN: host-route the dev verdify-api on api.k3s.verdify.ai through the
+  # shared apps Traefik (.7.10). dev/stage URLs live on *.k3s.verdify.ai (prod
+  # owns the bare *.verdify.ai hosts). See ingressroute.yaml.
+  - ingressroute.yaml
 
 # verdify-planner (#117) — referenced as a Component, NOT added to base, so it
 # never renders into overlays/staging. Same pattern in overlays/prod.
@@ -35,6 +43,13 @@ patches:
   # DEVICE SAFETY: pin the device-touching ingestor OFF until the #114
   # subscribe-from-prod-MQTT ingest mode lands. dev must never be a 2nd writer.
   - path: ingestor-replicas-zero.yaml
+  # PER-ENV DB STORAGE (#115): retarget the verdify-db PVC from the base
+  # local-path to the volume1 'synology-iscsi-ssd' StorageClass (laptop-root
+  # gate). dev gets its OWN TimescaleDB StatefulSet on the Synology SSD.
+  - path: db-storageclass.yaml
+    target:
+      kind: StatefulSet
+      name: verdify-db
 
 # Image digest pins. Canonical namespace ghcr.io/verdifyconsultancy/verdify-*,
 # immutable @sha256 (NEVER a mutable :latest/:dev tag). The app images reuse the

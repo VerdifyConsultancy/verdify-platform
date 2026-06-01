@@ -20,6 +20,10 @@ resources:
   # Placeholder Secret for local `kustomize build` validation ONLY. Removed for a
   # real apply; the SOPS backend provides the real verdify-app-secrets.
   - secrets.placeholder.yaml
+  # PLACEHOLDER HA token Secret for local build ONLY (#118 setpoint-server). Uses
+  # the local-config ANNOTATION so it is EXCLUDED from build output (a
+  # device-affecting HA token is never emitted). Real verdify-ha-token via SOPS.
+  - ha-token.placeholder.yaml
   # DEVICE WRITE PATH: the SINGLE egress allow letting the prod ingestor reach the
   # live device VLAN. See allow-ingestor-device-egress.yaml.
   - allow-ingestor-device-egress.yaml
@@ -32,6 +36,13 @@ resources:
 components:
   - ../../components/planner
   - ../../components/mqtt-broker
+  # #118 verdify-setpoint-server — the grow-light writer + setpoint diagnostics.
+  # PROD-ONLY: it is a DEVICE-AFFECTING writer (toggles the live grow lights via
+  # HA), so it is never referenced by overlays/dev or overlays/staging.
+  - ../../components/setpoint-server
+  # #119 hermes-iris — the sole planner gateway, ported from the compose `hermes`
+  # profile. prod-anchored (run-state PVC + OpenAI key). Image digest preserved.
+  - ../../components/hermes-iris
 
 patches:
   # DEVICE-WRITE INTERLOCK (#79): VERDIFY_DEVICE_WRITE_ENABLED=1 — prod only.
@@ -58,4 +69,10 @@ images:
   # PLACEHOLDER — no verdify-planner image published yet (gh api 404). The digest
   # write-back flow pins the real GHCR digest once container-publish is green.
   - name: ghcr.io/verdifyconsultancy/verdify-planner
+    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  # PLACEHOLDER — #118 verdify-setpoint-server image not published yet
+  # (scripts/Dockerfile.setpoint-server is new). Real GHCR digest pinned by the
+  # write-back flow once container-publish is green. hermes-agent is deliberately
+  # ABSENT here — its upstream @sha256 is preserved inline (NOT transformer-pinned).
+  - name: ghcr.io/verdifyconsultancy/verdify-setpoint-server
     digest: sha256:0000000000000000000000000000000000000000000000000000000000000000

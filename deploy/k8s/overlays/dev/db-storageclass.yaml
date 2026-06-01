@@ -1,0 +1,38 @@
+# PER-ENV DB STORAGE (#115) — dev.
+#
+# The base verdify-db StatefulSet pins the volumeClaimTemplates storageClassName
+# to "local-path" (the portable, always-present k3s default that keeps the base
+# tree lint-able without a platform-specific SC). The CONFIRMED dev/stage/prod
+# architecture is THREE SEPARATE per-env TimescaleDB StatefulSets, each backed by
+# the volume1 'synology-iscsi-ssd' StorageClass (iSCSI-attached SSD on the
+# Synology), NOT node-local-path. This JSON6902 patch retargets the dev DB PVC to
+# that class.
+#
+# INERT-ON-MERGE: the 'synology-iscsi-ssd' StorageClass does NOT exist yet (it is
+# created by laptop-root at the platform layer, same gate as the verdify-dev
+# ArgoCD Application CR). Until BOTH exist, this overlay deploys nothing — the
+# live verdify-local-staging ArgoCD app syncs ONLY overlays/staging, so merging
+# this to live/platform-main does not degrade staging and does not provision any
+# volume. This is the reviewable target shape, validated by kustomize build |
+# kubeconform + kubectl apply --dry-run=server.
+#
+# A retarget of an EXISTING StatefulSet's volumeClaimTemplates is immutable in
+# k8s; this only ever applies to the fresh dev DB that comes up the first time
+# the dev ArgoCD app reconciles (handoff §3.6 copy-NOT-move: pg_dump from the VM
+# -> fresh StatefulSet -> restore Job -> verify). No live data is touched.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: verdify-db
+spec:
+  volumeClaimTemplates:
+    - metadata:
+        name: db-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        # volume1 iSCSI SSD class (laptop-root-provisioned). Replaces the base
+        # local-path so the dev DB lives on the Synology SSD, not node-local disk.
+        storageClassName: synology-iscsi-ssd
+        resources:
+          requests:
+            storage: 50Gi
