@@ -1,0 +1,39 @@
+# Allow the shared apps-ingress (traefik-apps) + the apps VLAN to reach
+# verdify-lab:8080 in staging. Mirrors allow-www-from-ingress.yaml. The base
+# default-deny-ingress (networkpolicy.yaml rule 1) otherwise drops all ingress to
+# the lab pod under a NetworkPolicy-enforcing CNI.
+#
+# NOT WIRED INTO overlays/staging/kustomization.yaml YET — paired with
+# lab-ingressroute.yaml, both are the reviewable target shape, added to staging in
+# the same PR that flips the placeholder verdify-lab digest to a real published
+# one (see lab-ingressroute.yaml header). flannel does NOT enforce NetworkPolicy
+# on the live cluster today (same note as base allow-api-from-ingress and the
+# staging allow-www-from-ingress), so this is a contract for the planned Cilium
+# re-CNI (ADR-17): it names BOTH the k3s built-in "traefik" namespace, the
+# "traefik-apps" shared-ingress namespace (the pod source for the .7.10 VIP), and
+# the apps VLAN ipBlock — the union the www allow uses already.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-lab-from-ingress
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: lab-site
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: lab-site
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: traefik
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: traefik-apps
+        - ipBlock:
+            cidr: 192.168.7.0/24
+      ports:
+        - protocol: TCP
+          port: 8080
