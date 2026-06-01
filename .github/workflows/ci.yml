@@ -472,3 +472,62 @@ jobs:
             exit 1
           fi
           echo "PR body documents service restart"
+
+  migration-rollback-safety:
+    name: Migration rollback-safety guard (no self-committing wrap)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    # Codifies the 2026-05-30 live-commit incident (#23): a SELF-committing
+    # migration (its own top-level COMMIT, or a commit-forcing statement like
+    # CREATE INDEX CONCURRENTLY / VACUUM / ALTER SYSTEM) chained under an outer
+    # BEGIN..ROLLBACK dry-run defeats the rollback and commits to the LIVE DB.
+    # scripts/check_migration_rollback_safety.py classifies each db/migrations
+    # file (stripping comments / string literals / dollar-quoted bodies so a
+    # CONCURRENTLY mentioned only in a comment never trips it). This job flags
+    # any self-committing migration touched in the PR so a reviewer confirms the
+    # apply/rollback tooling is NOT blindly wrapping it. No DB / no device.
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Flag self-committing migrations touched in this PR
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          BASE=$(git merge-base HEAD "origin/${BASE_REF}")
+          # Only the real numbered set under db/migrations/ — the git pathspec
+          # `db/migrations/*.sql` matches RECURSIVELY, so we explicitly exclude the
+          # db/migrations/fixtures/ tree (the deliberately self-committing guard
+          # fixtures, which are NOT applied migrations).
+          CHANGED=$(git diff --name-only --diff-filter=d "$BASE" HEAD \
+            -- 'db/migrations/*.sql' ':(exclude)db/migrations/fixtures/*' 2>/dev/null || true)
+          if [ -z "$CHANGED" ]; then
+            echo "No applied db/migrations/*.sql changed in this PR; nothing to guard."
+            exit 0
+          fi
+          echo "Changed migrations:"
+          echo "$CHANGED"
+          # shellcheck disable=SC2086
+          python scripts/check_migration_rollback_safety.py --check $CHANGED
+      - name: Guard self-test (bad fixture must fail, 151-155 must pass)
+        run: |
+          set -euo pipefail
+          if python scripts/check_migration_rollback_safety.py --check db/migrations/fixtures/_self_committing_bad.sql; then
+            echo "::error::guard FAILED to reject the self-committing fixture"
+            exit 1
+          fi
+          python scripts/check_migration_rollback_safety.py --check \
+            db/migrations/151-backfill-suppressed-sensor-offline-resolved-at.sql \
+            db/migrations/152-kwh-coalesce-sanity-gate.sql \
+            db/migrations/153-pipeline-health-weather-station-dark-sources.sql \
+            db/migrations/154-consolidate-oscillation-views.sql \
+            db/migrations/155-twin-observability-tables.sql
+          echo "guard self-test passed"
+      - name: Guard unit tests
+        run: |
+          pip install pytest
+          pytest tests/test_migration_rollback_safety.py -q
