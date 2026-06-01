@@ -84,6 +84,7 @@ from tasks import (
     setpoint_confirmation_monitor,
     setpoint_dispatcher,
     shelly_sync,
+    site_content_refresh,
     slack_operator_briefs,
     tempest_sync,
     water_flowing_sync,
@@ -1817,6 +1818,10 @@ async def task_loop(pool: asyncpg.Pool) -> None:
         ("ha_sensor_sync", 300, ha_sensor_sync),
         ("alert_monitor", 300, alert_monitor),
         ("planner_memory_ingest", 300, planner_memory_ingest_sync),
+        # Daily RAG-snapshot refresh: re-materialize the vault/docs corpus into
+        # site_content so Iris retrieval doesn't silently drift stale (#43).
+        # Read/embed side only — no device path. 86400s = daily cadence.
+        ("site_content_refresh", 86400, site_content_refresh),
         # reactive_planner removed in Sprint 5 P6 — replaced by forecast deviation monitor
         ("setpoint_dispatch", 300, setpoint_dispatcher),
         ("setpoint_confirmation", 300, setpoint_confirmation_monitor),

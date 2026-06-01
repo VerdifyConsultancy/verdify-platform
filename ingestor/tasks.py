@@ -1216,6 +1216,124 @@ async def matview_refresh(pool: asyncpg.Pool) -> None:
 
 
 # ═════════════════════════════════════════════════════════════════
+# 2b. SITE_CONTENT RAG REFRESH (daily, every 86400s)
+# ═════════════════════════════════════════════════════════════════
+# The site_content table is Iris's semantic-retrieval snapshot of the public
+# vault/docs corpus (chunked + embedded downstream by embed-corpora.py). Before
+# this task there was no scheduled refresh, so site_content silently drifted
+# stale (max(updated_at) lagged the vault by a week — issue #43). This task
+# re-materializes the corpus into site_content on a daily cadence using the same
+# walk helpers as scripts/populate-site-content.py (single source of truth for
+# what counts as a public RAG page), then asserts max(updated_at) lands back
+# inside the cadence freshness window. Read/embed side only — no device path.
+
+# Daily cadence; the freshness window allows one full cadence plus a grace
+# margin before the snapshot is considered stale. Kept as module constants so
+# the registration interval and the freshness assertion can't drift apart.
+SITE_CONTENT_REFRESH_INTERVAL_S = 86400  # 24h
+SITE_CONTENT_FRESHNESS_GRACE_S = 6 * 3600  # 6h slack for run jitter / long walks
+SITE_CONTENT_FRESHNESS_WINDOW_S = SITE_CONTENT_REFRESH_INTERVAL_S + SITE_CONTENT_FRESHNESS_GRACE_S
+
+_POPULATE_SITE_CONTENT_SCRIPT = REPO_ROOT / "scripts" / "populate-site-content.py"
+
+
+def _load_site_content_populator():
+    """Import scripts/populate-site-content.py as a module.
+
+    The filename uses hyphens, so it can't be imported with a plain `import`.
+    Loading it here keeps the corpus-walk logic (which roots count, which docs
+    are excluded, how page_path is derived, how a row is upserted) single-sourced
+    with the standalone populator instead of forking a second copy in tasks.py.
+    """
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("populate_site_content", _POPULATE_SITE_CONTENT_SCRIPT)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load populator from {_POPULATE_SITE_CONTENT_SCRIPT}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+async def _refresh_site_content_corpus(conn, populator) -> int:
+    """Upsert every in-scope corpus page into site_content; return rows touched.
+
+    Each upsert stamps updated_at = now() (see populator._upsert_site_doc), so a
+    successful pass advances the snapshot watermark. Missing roots (e.g. the
+    vault mount absent in an env) are skipped, mirroring the standalone script.
+    """
+    written = 0
+    for root, rel_root in populator.SITE_DOC_ROOTS:
+        if not root.is_dir():
+            continue
+        for md_path in sorted(root.rglob("*.md")):
+            if populator._is_excluded(md_path):
+                continue
+            # The repo playbook has its own table; don't mirror it into site_content.
+            if root == populator.REPO_ROOT / "docs" and md_path.parent.name == "planner":
+                continue
+            rel = populator._site_doc_relative_path(md_path, rel_root)
+            content = md_path.read_text(encoding="utf-8")
+            if not content.strip():
+                continue
+            await populator._upsert_site_doc(conn, rel, content)
+            written += 1
+    return written
+
+
+def site_content_is_fresh(max_updated_at: datetime | None, now: datetime | None = None) -> bool:
+    """True if site_content's newest row is inside the daily cadence window.
+
+    A None watermark (empty table) is never "fresh" — there is nothing to serve
+    Iris. This is the freshness assertion the task self-checks after refreshing.
+    """
+    if max_updated_at is None:
+        return False
+    if now is None:
+        now = datetime.now(UTC)
+    if max_updated_at.tzinfo is None:
+        max_updated_at = max_updated_at.replace(tzinfo=UTC)
+    age_s = (now - max_updated_at).total_seconds()
+    return 0 <= age_s <= SITE_CONTENT_FRESHNESS_WINDOW_S
+
+
+async def site_content_refresh(pool: asyncpg.Pool) -> None:
+    """Daily refresh of the site_content RAG snapshot from the vault corpus.
+
+    Re-materializes the public docs/website corpus into site_content (advancing
+    updated_at), then verifies max(updated_at) is back inside the cadence
+    freshness window. A stale watermark after a refresh attempt means the corpus
+    roots were unavailable (e.g. vault unmounted) — logged loudly but never
+    raised, since this RAG-maintenance task must never block greenhouse ops.
+    """
+    try:
+        populator = _load_site_content_populator()
+    except Exception as e:  # noqa: BLE001 — corpus refresh must never crash the loop
+        log.error("site_content_refresh: could not load populator: %s", e)
+        return
+
+    async with pool.acquire() as conn:
+        written = await _refresh_site_content_corpus(conn, populator)
+        max_updated_at = await conn.fetchval("SELECT max(updated_at) FROM site_content")
+
+    if site_content_is_fresh(max_updated_at):
+        log.info(
+            "site_content_refresh: %d rows refreshed; max(updated_at)=%s within %dh window",
+            written,
+            max_updated_at.isoformat() if max_updated_at else "none",
+            SITE_CONTENT_FRESHNESS_WINDOW_S // 3600,
+        )
+    else:
+        log.warning(
+            "site_content_refresh: snapshot still stale after refresh "
+            "(rows touched=%d, max(updated_at)=%s, window=%dh) — corpus roots may be unavailable",
+            written,
+            max_updated_at.isoformat() if max_updated_at else "none",
+            SITE_CONTENT_FRESHNESS_WINDOW_S // 3600,
+        )
+
+
+# ═════════════════════════════════════════════════════════════════
 # 3. SHELLY ENERGY SYNC (every 300s)
 # ═════════════════════════════════════════════════════════════════
 _SHELLY_PREFIX = "sensor.shellyproem50_ac15186daafc_energy_meter"
