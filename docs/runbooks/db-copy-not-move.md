@@ -508,12 +508,20 @@ This is the count enforced by G-DB-4.2; per-name view drift is caught by
 `SELECT table_name FROM information_schema.views WHERE table_schema='public'
 ORDER BY 1` returns on `iris`.
 
-Oscillation views (the #47 consolidation target): the canonical set has exactly
-two — **`v_daily_oscillation`** and **`v_daily_oscillation_summary`**. Any
-restore/staging DB that carries additional ad-hoc oscillation views, or is
-missing either of these, fails parity. #47's consolidation should leave precisely
-this pair; this runbook is the place that pins the expected oscillation-view
-membership so a future divergence is visible.
+Oscillation views (consolidated in #47 / migration 154): the canonical set has
+exactly two, formalized as a **base + derived-summary pair** with documented
+roles:
+- **`v_daily_oscillation`** — CANONICAL BASE. Per-day, per-equipment peak
+  hourly transition count. Render this for per-equipment drill-down.
+- **`v_daily_oscillation_summary`** — DERIVED. Single-row-per-day rollup built
+  strictly `FROM v_daily_oscillation`. Render this for the day scorecard /
+  embeds.
+
+Migration 154 left precisely this pair (no view dropped — the summary already
+wrapped the base, so the fix was to document which to render, resolving the
+renderer confusion). Any restore/staging DB that carries additional ad-hoc
+oscillation views, or is missing either of these, fails parity. This runbook
+pins the expected oscillation-view membership so a future divergence is visible.
 
 To enumerate the live canonical set read-only:
 

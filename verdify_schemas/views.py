@@ -10,9 +10,13 @@ Views covered:
 - v_plan_accuracy             → PlanAccuracy         (per-plan compliance rollup)
 - v_dew_point_risk            → DewPointRiskRow
 - v_water_budget              → WaterBudgetRow
-- v_daily_oscillation         → DailyOscillation     (per-equipment peak hourly
-                                                      transition count)
-- v_daily_oscillation_summary → DailyOscillationSummary (single worst hour/day)
+- v_daily_oscillation         → DailyOscillation     (CANONICAL BASE: per-day,
+                                                      per-equipment peak hourly
+                                                      transition count; render
+                                                      for drill-down)
+- v_daily_oscillation_summary → DailyOscillationSummary (DERIVED single-row-per-day
+                                                      rollup built FROM the base;
+                                                      render for the scorecard)
 - v_override_activity_24h     → OverrideActivity24h
 - v_clamp_activity_24h        → ClampActivity24h
 - v_band_trace_recent         → BandTraceRow
@@ -111,6 +115,10 @@ class DailyOscillation(BaseModel):
     """v_daily_oscillation row — per-equipment peak hourly transitions.
 
     FW-2 (Sprint 18). Target post-DI-1: peak_transitions_per_hour << 170.
+
+    CANONICAL BASE of the oscillation pair (#47). Render this for
+    per-equipment drill-down; DailyOscillationSummary is the day-rollup
+    derived from this view.
     """
 
     model_config = ConfigDict(extra="ignore")
@@ -124,7 +132,12 @@ class DailyOscillation(BaseModel):
 
 
 class DailyOscillationSummary(BaseModel):
-    """v_daily_oscillation_summary — one row per day, worst-case snapshot."""
+    """v_daily_oscillation_summary — one row per day, worst-case snapshot.
+
+    DERIVED rollup (#47): computed strictly FROM v_daily_oscillation (the
+    canonical base). Render this for the day scorecard / embeds; drill down
+    via DailyOscillation.
+    """
 
     model_config = ConfigDict(extra="ignore")
 
