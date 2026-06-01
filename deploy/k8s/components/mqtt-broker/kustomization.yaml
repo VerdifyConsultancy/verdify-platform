@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+# Kustomize COMPONENT: the verdify-mqtt fan-out broker (#113). Referenced by
+# overlays/dev + overlays/prod via `components:` — deliberately NOT a base
+# resource, so it never renders into overlays/staging (the only overlay the live
+# verdify-local-staging ArgoCD app syncs). Adding any new workload to staging
+# risks its green status; this component keeps the broker out of staging while
+# still living in-tree for review + dev/prod activation. emptyDir storage only
+# (no PVC, no volume1 dependency) — see mqtt-broker.yaml header.
+resources:
+  - mqtt-broker.yaml

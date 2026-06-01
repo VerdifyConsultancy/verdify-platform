@@ -24,15 +24,21 @@ resources:
   # live device VLAN. See allow-ingestor-device-egress.yaml.
   - allow-ingestor-device-egress.yaml
 
-# verdify-planner (#117) — referenced as a Component, NOT added to base, so it
-# never renders into overlays/staging (the only overlay the live ArgoCD app
-# syncs). Same pattern in overlays/dev. The planner is NOT a device writer.
+# verdify-planner (#117) + verdify-mqtt fan-out broker (#113) — referenced as
+# Components, NOT added to base, so they never render into overlays/staging (the
+# only overlay the live ArgoCD app syncs). Same pattern in overlays/dev. The
+# fan-out broker runs in PROD ONLY: prod publishes the bus, dev/stage subscribe
+# to it cross-namespace. The planner is NOT a device writer.
 components:
   - ../../components/planner
+  - ../../components/mqtt-broker
 
 patches:
   # DEVICE-WRITE INTERLOCK (#79): VERDIFY_DEVICE_WRITE_ENABLED=1 — prod only.
   - path: device-write-configmap.yaml
+  # #113 publish-all: prod re-emits every flushed telemetry row onto the fan-out
+  # bus (verdify-mqtt) so dev/stage subscribers mirror it. prod-only env.
+  - path: publish-all-configmap.yaml
   # ingestor keeps the base replicas:1 + Recreate (single-writer invariant); no
   # replicas:0 pin here (that is staging's two-writer safety pin).
 

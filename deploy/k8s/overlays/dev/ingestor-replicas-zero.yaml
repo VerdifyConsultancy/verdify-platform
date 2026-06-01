@@ -1,14 +1,21 @@
-# DEVICE SAFETY — dev. The ingestor is the only device-touching workload (it
-# opens the aioesphomeapi connection to the LIVE ESP32 and pushes setpoints).
-# dev is a read-only telemetry SUBSCRIBER (MQTT fan-out from prod, #114) and
-# MUST NEVER write the device. Until the #114 subscribe-from-prod-MQTT ingest
-# mode lands, pin the base ingestor OFF here so an ArgoCD selfHeal reconcile
-# cannot stand up a second live-ESP32 writer. Only prod runs a device-writing
-# ingestor (replicas:1 + DEVICE_WRITE=1). A manual `kubectl scale` is not
-# durable under selfHeal, which is why this pin lives in git.
+# DEVICE SAFETY — dev. The ingestor is the only potentially device-touching
+# workload. In dev it runs in #114 SUBSCRIBE mode
+# (VERDIFY_INGEST_SOURCE=mqtt-subscribe, set in env-configmap.yaml): it opens NO
+# aioesphomeapi connection, runs NO occupancy bridge, and the #79 device-write
+# gate (VERDIFY_DEVICE_WRITE_ENABLED=0) bars any push regardless. It is a pure
+# read-only telemetry mirror from prod's fan-out bus into dev's own DB.
+#
+# With subscribe mode landed (#114), dev runs the ingestor at replicas:1. There
+# is no single-writer concern: a subscriber holds no device connection, so the
+# Recreate strategy from base is sufficient and a second subscriber would at
+# worst double-write mirror rows (idempotency is the DB's concern, never the
+# device). replicas:1 keeps it lean.
+#
+# NOTE: filename kept (ingestor-replicas-zero.yaml) to avoid churn in the
+# kustomization patch list; it now pins replicas:1 for subscribe mode.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: verdify-ingestor
 spec:
-  replicas: 0
+  replicas: 1
