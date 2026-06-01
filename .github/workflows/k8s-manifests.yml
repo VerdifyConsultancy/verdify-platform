@@ -23,17 +23,22 @@ on:
     branches:
       - live/platform-main
       - main
+    # INGESTION FIX (#126): GitHub rejects a workflow that puts BOTH `paths:` and
+    # `paths-ignore:` on the SAME event ("You cannot use both the paths and
+    # paths-ignore filters for the same event") — the rejection surfaces as a
+    # completed-FAILURE run with zero jobs ("This run likely failed because of a
+    # workflow file issue"), which is exactly how this gate was silently dead on
+    # every live/platform-main push. We express the #78 loop-break as a single
+    # `paths:` list with a trailing `!` negation instead. Per GitHub glob rules a
+    # later pattern overrides an earlier one, so a push whose diff is ENTIRELY
+    # under overlays/staging/** nets to "no match" (skipped, breaking the
+    # container-publish digest-bump rebuild loop), while a push that ALSO touches
+    # base/, overlays/prod/, argocd/, diagnostics/, or any non-staging path still
+    # matches and is validated. Same intent as the old paths-ignore, legal syntax.
     paths:
       - "deploy/k8s/**"
       - ".github/workflows/k8s-manifests.yml"
-    # LOOP-BREAK companion (#78): container-publish's bump-staging-digests job
-    # commits @sha256 digests back into overlays/staging/kustomization.yaml on
-    # every live/platform-main publish. That commit always kustomize-renders
-    # clean, so revalidating it here is pure noise. Ignore it. A push that ALSO
-    # touches base/, overlays/prod/, diagnostics/, or any non-staging-overlay
-    # path still matches `paths:` and is validated.
-    paths-ignore:
-      - "deploy/k8s/overlays/staging/**"
+      - "!deploy/k8s/overlays/staging/**"
   pull_request:
     branches:
       - live/platform-main
