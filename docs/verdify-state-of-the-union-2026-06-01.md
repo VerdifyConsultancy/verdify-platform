@@ -316,3 +316,65 @@ ArgoCD apps:  verdify-local-staging (Synced/Healthy), verdify-edge (Unknown/BROK
 - *Caveat: VM-Services and Networking reviewer passes were rate-limited; those domains are synthesized from corroborating reviewers + my own live spot-checks, not a dedicated deep pass — flagged accordingly in §6 Networking.*
 
 Key paths: `/mnt/iris/verdify/deploy/k8s/{base,overlays/{staging,dev,prod},components,argocd/apps}`, `/mnt/iris/verdify/.github/workflows/k8s-manifests.yml`, `/mnt/iris/verdify/db/restore-job.yaml`, `/mnt/iris/verdify/docs/runbooks/db-copy-not-move.md`, `/var/local/verdify/state`, `/mnt/iris/verdify-vault`.
+
+---
+
+# Appendix A — Full cross-board backlog reconciliation (2026-06-01)
+
+The body of this report was scoped to the **`VerdifyConsultancy/verdify-platform`** board (70 open). A full sweep of **every** issue board, list, and backlog doc surfaced two additional boards that track the Verdify migration and were **not enumerated** above, plus several genuinely-new items. They are added here so the report is complete against all boards.
+
+## A.0 — Tracking topology (the migration is tracked in THREE places — a coordination risk)
+| Board | Open | Verdify scope |
+|---|---|---|
+| `VerdifyConsultancy/verdify-platform` | 70 | The in-lane build backlog (epics #15/#69–#75/#111/#112; work items) — covered in the report body |
+| `jvallery/agents` (fleet command center) | 44 | **Theme C** = the fleet-authoritative Verdify migration phasing (#277 + #298–#307), several **owned by `verdify-agent` (me)** |
+| `jvallery/network-infra` | 53 | `area:verdify` = the out-of-lane DNS/cert/firewall/storage/cutover gates (#40–#64 subset) |
+| `verdify-www / verdify-planner / verdify-site-legacy / verdify-vault` | 0 each | no issues; code-only repos (consolidation pending, see A.3) |
+| `jvallery/agent-fleet-control` | 0 | GitOps registry; carries the ArgoCD apps + sealed secrets, no issues |
+
+**⚠️ The same migration work is duplicated across boards** (e.g. DB migration = platform #28/#84 ≈ agents #302 ≈ network-infra #44; device cutover = platform #71/#91 ≈ agents #303 ≈ network-infra #40; re-home setpoint/hermes = platform #118/#119 ≈ agents #304 ≈ network-infra #55). One source-of-truth should be designated to avoid drift.
+
+## A.1 — `jvallery/agents` Theme C (Verdify) — fleet-authoritative phasing
+| # | Item | Owner | Maps to report / platform |
+|---|---|---|---|
+| #277 | EPIC: Theme C — Verdify device-safe k3s migration | verdify-agent | umbrella for all below |
+| #298 | Merge verdify-platform PR #55 (GitOps source) | jason (gated) | **DONE** (PR #55 merged 352f299) — issue stale, close |
+| #300 | Phase 1 — real verdify-py migrate image + DB ≥2.25.2 on synology-iscsi | verdify-agent | ≈ platform #57/#83/#84 (largely done) |
+| #301 | Phase 0 — local-first foundation (split-horizon DNS + wildcard cert + IngressRoutes + device allow) | verdify-agent | ≈ #87 + out-of-lane DNS/cert |
+| #302 | Phase 2 — DB migration (pg_dump iris→restore + re-arm jobs + validate) | verdify-agent | ≈ #28/#85 |
+| #303 | Phase 3 — ATOMIC single-writer device cutover (HARD STOP) | **jason** | ≈ #71/#73 (the G9 gate) |
+| #304 | Re-home setpoint-server :8200 + hermes-iris as k3s Deployments | verdify-agent | = #118/#119 |
+| #305 | Phase 4 — web/content/observability tier + repair 2 FAILED content units | verdify-agent | = #88/#124/#59/#60 + k3s observability |
+| #306 | **monorepo consolidation + DELETE 5 secondary repos (www/planner/site-legacy/agent-context/vault) + sunshine_club** | verdify-agent (James owns the deletes) | **NEW — not in report; see A.3** |
+| #307 | Phase 5/6 — external WAN split-horizon + relocate James-owned iris lanes + VM decommission (HARD STOP) | jason (gated) | ≈ #90/#91 |
+| #325 | Gated-decision register (the human gates on the critical path) | jason | the consolidated Jason-gate list |
+| #323 | Provide Cloudflare verdify.ai DNS:Edit token (blocks *.verdify.ai wildcard cert) | **james** | gates network-infra #54 / the prod URLs |
+| #334/#330 | SOPS→reconciler per-agent sealed secrets at scale | laptop-root | the per-env secret delivery mechanism |
+| #361/#359 | .7.21 VIP off-cluster reachability (BGP/FIB) + node4 systemd hung | laptop-root | edge/substrate (node4 since fixed) |
+
+## A.2 — `jvallery/network-infra` `area:verdify` — out-of-lane gates
+| # | Item | Owner |
+|---|---|---|
+| #40 | verdify single-writer ESP32 device cutover (live-plant handoff, never automated) | **jason** |
+| #42 | net-new Cluster↔IoT firewall allow (k3s node .35 → ESP32 .10.111:6053) + keep iris pinned | nexus |
+| #43 | **net-new Cluster→Infra flows: HAOS MQTT :1883 + HA :8123 + WAN planner egress** | nexus | 
+| #44 | TimescaleDB prod data migration (1.5GB / 6.14M rows) iris→k3s on synology-iscsi | verdify+nexus |
+| #45 | **build real migrate image + alembic baseline + harden CI/CD (G1–G11)** | verdify+nexus |
+| #53 | split-horizon DNS *.verdify.ai → .7.10 + IngressRoutes + DNS records + rewrite tunnel | nexus (CF-blocked) |
+| #54 | *.verdify.ai wildcard cert via cert-manager DNS-01 (James CF token) | root (CF-blocked) |
+| #55 | containerize hermes/planner gateway (:8642) + setpoint-server (:8200) | nexus |
+| #64 | retire dead services + migrate stateful web tier + **verdify-agent RBAC** | verdify |
+| #50/#51/#52 | k3s node faults + durable NAS NFS export + deprecate hanging nfs-rwx SC | root/jason |
+
+## A.3 — Genuinely-NEW items the report did not capture (now added)
+1. **#306 (agents) — monorepo consolidation + IRREVERSIBLE delete of 5 secondary repos** (www/planner/site-legacy/agent-context/vault) + sunshine_club, into the single `verdify-platform` monorepo. James owns the VerdifyConsultancy deletes; Jason co-gates. Supersedes/extends platform #102/#103/#62. **A strategic decision not previously in this report.**
+2. **#43 (network-infra) — net-new Cluster→Infra cross-zone flows: HAOS MQTT :1883, HA :8123, WAN planner egress.** The MQTT/HA reachability the prod ingestor + the MQTT fan-out bus actually need — a networking dependency the report's networking section under-specified.
+3. **#45 (network-infra) — alembic baseline + CI/CD hardening G1–G11.** The "real migrate image" is done (idempotent restore-aware), but the **alembic baseline / migration-versioning** layer is a distinct, unbuilt item.
+4. **#64 (network-infra) — verdify-agent RBAC** for the new namespaces (my SA currently lacks verdify-dev access — confirmed: `Forbidden` listing verdify-dev).
+5. **#323/#325 (agents) — the James Cloudflare-token dependency and the consolidated Jason gated-decision register** as first-class tracked blockers.
+
+## A.4 — Backlog docs / lists (not GitHub issues)
+`docs/BACKLOG.md` + `docs/backlog/{cross-cutting,firmware,genai,ingestor,web,saas,refocus,launch}.md` + `docs/backlog/verdify-unified-backlog-2026-05-29.md` (and the network-infra `docs/BACKLOG-CONSOLIDATED.md` referenced by its issues) are the **consolidation SOURCES** that fed the GitHub boards on 2026-05-29/05-31. They are now **superseded by the live boards** above; no uncaptured items remain in them beyond what the boards track. (If kept, they should carry a "superseded — see GitHub boards" header.)
+
+## A.5 — Cross-org issue-number collision (disambiguation)
+Issue numbers repeat across orgs. Where the report body cites a bare `#NN` it means **`verdify-platform`** unless noted. The DNS/cert/firewall/cutover citations resolve to **`network-infra`**: split-horizon DNS = network-infra **#53**, wildcard cert = network-infra **#54**, cross-VLAN device firewall = network-infra **#42**, single-writer cutover = network-infra **#40** / agents **#303**. (verdify-platform #40/#42/#53/#54 are unrelated: soil-dryout / pipeline-health / closed-GCP / closed-labels.)
