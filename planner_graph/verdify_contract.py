@@ -75,6 +75,7 @@ CLIMATE_INTENT_DEFAULTS: dict[str, float] = {
     "economizer_temp_advantage_f": 5.0,
     "economizer_dewpoint_advantage_f": 5.0,
     "moisture_engage_vpd_excess_kpa": 0.05,
+    "all_zone_vpd_excess_kpa": 0.25,
     "mist_duty_limit_pct": 25.0,
     "fog_escalate_vpd_excess_kpa": 0.4,
     "dew_margin_floor_f": 10.0,
@@ -98,6 +99,7 @@ CLIMATE_INTENT_RANGES: dict[str, tuple[float, float]] = {
     "economizer_temp_advantage_f": (1.0, 15.0),
     "economizer_dewpoint_advantage_f": (1.0, 15.0),
     "moisture_engage_vpd_excess_kpa": (0.0, 0.5),
+    "all_zone_vpd_excess_kpa": (0.05, 0.8),
     "mist_duty_limit_pct": (0.0, 100.0),
     "fog_escalate_vpd_excess_kpa": (0.1, 0.8),
     "dew_margin_floor_f": (3.0, 15.0),
@@ -219,6 +221,18 @@ def build_climate_intent(active_plan_summary: object) -> dict[str, float]:
     )
     dwell = params["dwell_gate_ms"]
 
+    # all_zone_vpd_excess_kpa is the inverse of the canonical materializer
+    # relation `mister_all_kpa = vpd_high + all_zone_vpd_excess_kpa`
+    # (verdify_schemas.climate_intent.materialize_climate_intent_tier1). vpd_high
+    # is the top of the active VPD band (vpd_target + vpd_band/2). The canonical
+    # ClimateIntent enforces the moisture ladder all_zone >= moisture_engage, so
+    # we floor the recovered value at the engage excess before range-clamping.
+    moisture_engage_excess = params["direct_wet_stress_vpd_margin_kpa"]
+    vpd_high = vpd_target + (vpd_band / 2.0)
+    all_zone_vpd_excess_kpa = max(
+        params["mister_all_kpa"] - vpd_high, moisture_engage_excess
+    )
+
     intent = {
         **CLIMATE_INTENT_DEFAULTS,
         "temp_target_f": temp_target,
@@ -227,7 +241,8 @@ def build_climate_intent(active_plan_summary: object) -> dict[str, float]:
         "vpd_band_kpa": vpd_band,
         "economizer_temp_advantage_f": params["vent_prefer_temp_delta_f"],
         "economizer_dewpoint_advantage_f": params["vent_prefer_dp_delta_f"],
-        "moisture_engage_vpd_excess_kpa": params["direct_wet_stress_vpd_margin_kpa"],
+        "moisture_engage_vpd_excess_kpa": moisture_engage_excess,
+        "all_zone_vpd_excess_kpa": all_zone_vpd_excess_kpa,
         "mist_duty_limit_pct": duty_pct,
         "fog_escalate_vpd_excess_kpa": params["fog_escalation_kpa"],
         "dew_margin_floor_f": max(
