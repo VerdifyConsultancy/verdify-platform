@@ -45,6 +45,7 @@ AlertType = Literal[
     "safety_invalid",
     "sensor_offline",
     "setpoint_unconfirmed",
+    "soil_dryout",
     "soil_sensor_offline",
     "temp_safety",
     "tunable_zero_variance",
@@ -82,6 +83,7 @@ ALERT_TYPES: tuple[str, ...] = (
     "safety_invalid",
     "sensor_offline",
     "setpoint_unconfirmed",
+    "soil_dryout",
     "soil_sensor_offline",
     "temp_safety",
     "tunable_zero_variance",
@@ -286,6 +288,27 @@ class SoilSensorOfflineDetails(_DetailsBase):
     # 'unpotted' = zone empty (e.g. Canna on the patio) → probe dangling, no
     # action needed (downgraded to info). Vanda zone-control design §5.4.
     occupancy: Literal["occupied", "unpotted"] | None = None
+
+
+class SoilDryoutDetails(_DetailsBase):
+    # A LIVE root-zone probe (non-stuck, non-missing) that has read continuously
+    # below its zone wilt threshold for > duration_h hours. Read-side paging only:
+    # this never actuates irrigation, it pages an operator (audit §7-#1, the west
+    # probe that crashed 11 days with no value-below-wilt rule to catch it).
+    column: str
+    sensor: str
+    zone: str
+    wilt_pct: float = Field(..., ge=0)
+    latest_pct: float = Field(..., ge=0)
+    min_pct: float = Field(..., ge=0)
+    max_pct: float = Field(..., ge=0)
+    duration_h: float = Field(..., ge=0)
+    samples: int = Field(..., ge=0)
+    # 'occupied' = zone has an active crop -> genuine dryout, page critical. The
+    # rule is suppressed entirely for unpotted/empty zones (mirrors
+    # soil_sensor_offline occupancy semantics), so this is always 'occupied' on a
+    # fired alert; carried for symmetry + dashboard context.
+    occupancy: Literal["occupied"] | None = None
 
 
 class HeatStagingInversionDetails(_DetailsBase):
@@ -511,6 +534,11 @@ class SoilSensorOfflineAlert(_AlertBase):
     details: SoilSensorOfflineDetails
 
 
+class SoilDryoutAlert(_AlertBase):
+    alert_type: Literal["soil_dryout"]
+    details: SoilDryoutDetails
+
+
 class HeatStagingInversionAlert(_AlertBase):
     alert_type: Literal["heat_staging_inversion"]
     details: HeatStagingInversionDetails
@@ -604,6 +632,7 @@ AlertEnvelopeUnion = Annotated[
     | SafetyInvalidAlert
     | SensorOfflineAlert
     | SetpointUnconfirmedAlert
+    | SoilDryoutAlert
     | SoilSensorOfflineAlert
     | TempSafetyAlert
     | TunableZeroVarianceAlert
