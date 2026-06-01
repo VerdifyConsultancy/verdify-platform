@@ -8,4 +8,5 @@ data/replay_overrides.prev.csv.gz
 # Golden fixtures (tracked) — see Makefile test-firmware target
 !data/replay_overrides.csv.gz
 replay_emit
+replay_emit_follow
 replay_invariants

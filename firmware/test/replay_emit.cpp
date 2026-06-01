@@ -18,6 +18,31 @@
  * Output TSV columns:
  *   ts, mode, relay_bitmask, mist_stage, last_mode_reason,
  *   override_flags_bitmask
+ *
+ * --stream / follow build (digital-twin Phase 0, TWIN-1/TWIN-2):
+ *   When compiled with -DREPLAY_EMIT_STREAM the binary (built as
+ *   `replay_emit_follow`) keeps one resident ControlState and blocks on stdin
+ *   instead of exiting at EOF, so a long-running twin driver can feed one
+ *   telemetry line per tick and read back one decision row. The stream build
+ *   also appends a `climate_action` column derived from the existing
+ *   describe_effective_climate_decision() (greenhouse_logic.h) — no
+ *   translation table.
+ *
+ *   This is gated entirely behind the build flag: the stock `replay_emit`
+ *   binary (no -DREPLAY_EMIT_STREAM) is byte-for-byte unchanged — same 11
+ *   columns, same code path — so the rule-8 firmware-replay-diff CI gate,
+ *   firmware-invariants, and test-firmware are unaffected.
+ *
+ *   Compile: g++ -std=c++17 -DREPLAY_EMIT_STREAM -I../lib \
+ *                -o replay_emit_follow replay_emit.cpp
+ *   Run:     ./replay_emit_follow --stream --header-from data/replay_overrides.csv
+ *            (then write one TSV data line per tick on stdin; one decision row
+ *             is flushed per line. A header CSV path may also be passed
+ *             positionally, in which case its data rows prime the resident
+ *             state before stdin follow begins.)
+ *
+ *   This file is the OFFLINE replay harness only — it never touches the ESP32
+ *   firmware path and is not part of any OTA artifact.
  */
 
 #include "greenhouse_logic.h"
@@ -26,6 +51,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
+#include <iostream>
 #include <sstream>
 #include <string>
 #include <unordered_map>
@@ -73,37 +99,30 @@ static uint64_t parse_ts_unix(const std::string& s) {
 
 // MODE_NAMES is already defined in greenhouse_types.h (included via greenhouse_logic.h)
 
-int main(int argc, char** argv) {
-    if (argc < 2) { std::fprintf(stderr, "Usage: %s <replay.csv>\n", argv[0]); return 2; }
-    std::ifstream f(argv[1]);
-    if (!f) { std::fprintf(stderr, "Cannot open %s\n", argv[1]); return 2; }
+// process_row advances the resident ControlState by exactly one telemetry row
+// and prints one TSV decision line. The logic is identical for the batch path
+// and the stream/follow path — only the call site differs (a file loop vs a
+// stdin loop). `emit_climate_action` appends the additive climate_action
+// column derived from describe_effective_climate_decision(); it is only set on
+// the -DREPLAY_EMIT_STREAM build so the stock batch output stays byte-for-byte
+// identical and the rule-8 firmware-replay-diff gate is unaffected.
+static void process_row(const Header& h,
+                        const std::string& line,
+                        ControlState& state,
+                        uint64_t& last_ts_unix,
+                        bool emit_climate_action) {
+    std::vector<std::string> cols;
+    {
+        std::istringstream ss(line);
+        std::string tok;
+        while (std::getline(ss, tok, '\t')) cols.push_back(std::move(tok));
+    }
+    auto get = [&](const std::string& name, const std::string& def = "") -> std::string {
+        size_t i = h.of(name);
+        return (i == SIZE_MAX || i >= cols.size()) ? def : cols[i];
+    };
 
-    std::string line;
-    if (!std::getline(f, line)) { std::fprintf(stderr, "Empty\n"); return 2; }
-    Header h;
-    h.parse(line);
-
-    // Initialize controller state.
-    ControlState state = initial_state();
-    uint64_t last_ts_unix = 0;
-
-    // Emit header
-    std::printf("ts\tmode\trelay_fog\trelay_vent\trelay_fan1\trelay_fan2\trelay_heat1\trelay_heat2\tmist_stage\treason\toverride_bits\n");
-
-    long rows = 0;
-    while (std::getline(f, line)) {
-        std::vector<std::string> cols;
-        {
-            std::istringstream ss(line);
-            std::string tok;
-            while (std::getline(ss, tok, '\t')) cols.push_back(std::move(tok));
-        }
-        auto get = [&](const std::string& name, const std::string& def = "") -> std::string {
-            size_t i = h.of(name);
-            return (i == SIZE_MAX || i >= cols.size()) ? def : cols[i];
-        };
-
-        SensorInputs in{};
+    SensorInputs in{};
         in.temp_f = parse_float(get("temp_avg"), 70.0f);
         in.rh_pct = parse_float(get("rh_avg"), 50.0f);
         in.vpd_kpa = parse_float(get("vpd_avg"), 0.8f);
@@ -207,16 +226,155 @@ int main(int argc, char** argv) {
                           | (of.vpd_dry_override << 6) | (of.summer_vent_active << 7)
                           | (of.fog_heat_assist << 8) | (of.vent_mist_assist << 9);
 
-        std::printf("%s\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%s\t%d\n",
-                    ts.c_str(),
-                    MODE_NAMES[(int)mode],
-                    r.fog, r.vent, r.fan1, r.fan2, r.heat1, r.heat2,
-                    (int)state.mist_stage,
-                    reason,
-                    override_bits);
+        if (emit_climate_action) {
+            // Additive twin column (TWIN-2). Reuse the firmware's own mapping —
+            // describe_effective_climate_decision() in greenhouse_logic.h — so the
+            // twin's climate_action joins 1:1 against climate_action_log with no
+            // translation table.
+            const ClimateActionDecision decision =
+                describe_effective_climate_decision(mode, in, sp, state, r);
+            std::printf("%s\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%s\t%d\t%s\n",
+                        ts.c_str(),
+                        MODE_NAMES[(int)mode],
+                        r.fog, r.vent, r.fan1, r.fan2, r.heat1, r.heat2,
+                        (int)state.mist_stage,
+                        reason,
+                        override_bits,
+                        CLIMATE_ACTION_NAMES[(int)decision.climate_action]);
+        } else {
+            std::printf("%s\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%s\t%d\n",
+                        ts.c_str(),
+                        MODE_NAMES[(int)mode],
+                        r.fog, r.vent, r.fan1, r.fan2, r.heat1, r.heat2,
+                        (int)state.mist_stage,
+                        reason,
+                        override_bits);
+        }
+}
+
+#ifdef REPLAY_EMIT_STREAM
+// ── Stream / follow build (TWIN-1) ───────────────────────────────────────────
+// Gated entirely behind -DREPLAY_EMIT_STREAM (built as `replay_emit_follow`).
+// Keeps one resident ControlState and blocks on stdin instead of exiting at
+// EOF, so a long-running twin driver can feed one telemetry line per tick and
+// read back one decision row. Emits the additive climate_action column.
+//
+// Header source: from the positional CSV argument's first line, or from
+// `--header-from <csv>`. If a positional CSV is given, its DATA rows are
+// replayed first to prime the resident ControlState before stdin follow
+// begins (so a driver can hand the harness a warm-up window then stream).
+
+static int usage_stream(const char* argv0) {
+    std::fprintf(stderr,
+        "Usage: %s [--stream] [--header-from <csv> | <csv>]\n"
+        "  --stream            follow stdin (default in this build)\n"
+        "  --header-from <csv> read the TSV header from <csv>, do not replay its rows\n"
+        "  <csv>               read header from <csv> AND replay its data rows to\n"
+        "                      prime ControlState, then follow stdin\n"
+        "Reads one TSV telemetry line per stdin line; flushes one decision row\n"
+        "(with the climate_action column) per line. Resident ControlState.\n",
+        argv0);
+    return 2;
+}
+
+int main(int argc, char** argv) {
+    std::string header_csv;     // CSV used only for its header line
+    std::string prime_csv;      // CSV whose data rows prime ControlState
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "--stream" || arg == "--follow") {
+            continue;  // follow is the only mode this build offers
+        } else if (arg == "--header-from") {
+            if (i + 1 >= argc) return usage_stream(argv[0]);
+            header_csv = argv[++i];
+        } else if (arg == "-h" || arg == "--help") {
+            return usage_stream(argv[0]);
+        } else if (arg[0] == '-') {
+            std::fprintf(stderr, "Unknown flag: %s\n", arg.c_str());
+            return usage_stream(argv[0]);
+        } else {
+            prime_csv = arg;          // positional CSV: header + prime rows
+            if (header_csv.empty()) header_csv = arg;
+        }
+    }
+    if (header_csv.empty()) {
+        std::fprintf(stderr, "Stream build needs a header: pass <csv> or --header-from <csv>.\n");
+        return usage_stream(argv[0]);
+    }
+
+    Header h;
+    {
+        std::ifstream hf(header_csv);
+        if (!hf) { std::fprintf(stderr, "Cannot open %s\n", header_csv.c_str()); return 2; }
+        std::string header_line;
+        if (!std::getline(hf, header_line)) { std::fprintf(stderr, "Empty header CSV\n"); return 2; }
+        h.parse(header_line);
+    }
+
+    ControlState state = initial_state();
+    uint64_t last_ts_unix = 0;
+
+    // Header includes the additive climate_action column.
+    std::printf("ts\tmode\trelay_fog\trelay_vent\trelay_fan1\trelay_fan2\trelay_heat1\trelay_heat2\tmist_stage\treason\toverride_bits\tclimate_action\n");
+    std::fflush(stdout);
+
+    // Prime: replay the data rows of the positional CSV (if any) to warm up
+    // ControlState before following stdin.
+    long primed = 0;
+    if (!prime_csv.empty()) {
+        std::ifstream pf(prime_csv);
+        if (!pf) { std::fprintf(stderr, "Cannot open %s\n", prime_csv.c_str()); return 2; }
+        std::string line;
+        std::getline(pf, line);  // discard header
+        while (std::getline(pf, line)) {
+            process_row(h, line, state, last_ts_unix, /*emit_climate_action=*/true);
+            primed++;
+        }
+        std::fflush(stdout);
+    }
+
+    // Follow: block on stdin, one decision row per input line, flush each tick
+    // so a driver reading the pipe sees the result immediately.
+    std::string line;
+    long ticks = 0;
+    while (std::getline(std::cin, line)) {
+        if (line.empty()) continue;
+        process_row(h, line, state, last_ts_unix, /*emit_climate_action=*/true);
+        std::fflush(stdout);
+        ticks++;
+    }
+
+    std::fprintf(stderr, "replay_emit_follow: primed %ld, streamed %ld rows\n", primed, ticks);
+    return 0;
+}
+
+#else  // batch build (stock replay_emit — unchanged behavior)
+
+int main(int argc, char** argv) {
+    if (argc < 2) { std::fprintf(stderr, "Usage: %s <replay.csv>\n", argv[0]); return 2; }
+    std::ifstream f(argv[1]);
+    if (!f) { std::fprintf(stderr, "Cannot open %s\n", argv[1]); return 2; }
+
+    std::string line;
+    if (!std::getline(f, line)) { std::fprintf(stderr, "Empty\n"); return 2; }
+    Header h;
+    h.parse(line);
+
+    // Initialize controller state.
+    ControlState state = initial_state();
+    uint64_t last_ts_unix = 0;
+
+    // Emit header
+    std::printf("ts\tmode\trelay_fog\trelay_vent\trelay_fan1\trelay_fan2\trelay_heat1\trelay_heat2\tmist_stage\treason\toverride_bits\n");
+
+    long rows = 0;
+    while (std::getline(f, line)) {
+        process_row(h, line, state, last_ts_unix, /*emit_climate_action=*/false);
         rows++;
     }
 
     std::fprintf(stderr, "replay_emit: %ld rows emitted\n", rows);
     return 0;
 }
+
+#endif  // REPLAY_EMIT_STREAM
