@@ -1,0 +1,93 @@
+# syntax=docker/dockerfile:1.7
+# ============================================================================
+# Verdify setpoint-server — grow-light writer + setpoint diagnostics (#118)
+#
+# Net-new containerization of the host systemd `verdify-setpoint-server.service`
+# (systemd/verdify-setpoint-server.service -> scripts/setpoint-server.py). It is
+# a small stdlib HTTP server on :8200 that:
+#   - toggles the greenhouse grow lights via the Home Assistant REST API
+#     (switch.greenhouse_{main,grow}) — this is a DEVICE-AFFECTING write path, and
+#   - serves GET /setpoints (current+next planned setpoints) for diagnostics +
+#     recovery tooling (NOT the ESP32 control loop; the ESP32 is a passive ESPHome
+#     device that the ingestor pushes to over aioesphomeapi — see the migration
+#     doc §0.1).
+#
+# PROD-ONLY: because it writes the live grow lights, the workload built from this
+# image is referenced ONLY by overlays/prod (alongside the prod device-egress
+# allow). It is NEVER added to overlays/dev or overlays/staging, and NEVER to the
+# base. Same containment pattern as the prod-only mqtt-broker fan-out source.
+#
+# CODE-CHANGE GATE (migration doc §A1, NOT yet landed): scripts/setpoint-server.py
+# today hardcodes get_db_url() -> localhost:5432 (reading /srv/verdify/.env for the
+# password) and HA_TOKEN_FILE=/mnt/agents/shared/credentials/ha_token.txt. The k3s
+# Deployment supplies the DB via verdify-config (DB_HOST=verdify-db) + the
+# verdify-app-secrets password and mounts the HA token Secret at the SAME path. The
+# env-first DSN refactor (§A1: setpoint-server.py:241 -> VERDIFY_DB_DSN/PGHOST) is a
+# gated prerequisite; until it lands the running container would still resolve
+# localhost. This image + manifest are the reviewable TARGET shape (same posture as
+# the verdify-planner placeholder digest), not an instruction to cut the live
+# grow-light path onto k3s — that is human-gated (handoff §6).
+#
+# BUILD CONTEXT IS THE REPO ROOT (setpoint-server.py inserts the repo root on
+# sys.path and imports verdify_schemas.tunable_registry).
+#   docker build -f scripts/Dockerfile.setpoint-server \
+#     --build-arg GIT_SHA=$(git rev-parse HEAD) \
+#     -t ghcr.io/verdifyconsultancy/verdify-setpoint-server:dev .
+# ============================================================================
+
+FROM python:3.13-slim AS base
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ca-certificates \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+FROM base AS builder
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential gcc \
+    && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+# Third-party needs: asyncpg (DB) + pydantic (verdify_schemas.tunable_registry
+# and the verdify_schemas package __init__ import-closure both require it). Pinned
+# major to keep the image reproducible without dragging in the full ingestor
+# requirements closure.
+RUN pip install --no-cache-dir --prefix=/install asyncpg "pydantic>=2,<3"
+
+FROM base AS final
+WORKDIR /app
+
+COPY --from=builder /install /usr/local
+
+# The script + the local package it imports (verdify_schemas.tunable_registry).
+# REPO_ROOT in setpoint-server.py resolves to /app (parents[1] of /app/scripts),
+# so verdify_schemas at /app/verdify_schemas is import-resolvable.
+COPY scripts/setpoint-server.py /app/scripts/setpoint-server.py
+COPY verdify_schemas/ /app/verdify_schemas/
+
+# Non-root (uid 1000). It connects OUT to HA + DB and exposes ONE inbound port
+# (:8200, ClusterIP only — diagnostics, never ESP32-facing).
+RUN useradd -m -u 1000 -s /usr/sbin/nologin appuser \
+    && chown -R appuser:appuser /app
+USER appuser
+
+ENV HOME=/home/appuser \
+    PATH="/home/appuser/.local/bin:${PATH}" \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+ARG GIT_SHA=unknown
+ARG BUILD_TIME=unknown
+ARG GIT_REF=unknown
+ENV VERDIFY_GIT_SHA=$GIT_SHA \
+    VERDIFY_BUILD_TIME=$BUILD_TIME \
+    VERDIFY_GIT_REF=$GIT_REF
+LABEL org.opencontainers.image.source="https://github.com/VerdifyConsultancy/verdify-platform" \
+      org.opencontainers.image.revision=$GIT_SHA \
+      org.opencontainers.image.created=$BUILD_TIME \
+      org.opencontainers.image.title="verdify-setpoint-server"
+
+EXPOSE 8200
+HEALTHCHECK --interval=60s --timeout=10s --start-period=30s --retries=3 \
+    CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8200/health', timeout=5).status==200 else 1)" || exit 1
+
+CMD ["python", "scripts/setpoint-server.py"]

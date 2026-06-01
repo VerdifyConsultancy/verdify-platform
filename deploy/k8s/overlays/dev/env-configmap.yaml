@@ -1,0 +1,24 @@
+# dev instance config patch (strategic merge onto base verdify-config).
+#
+# APP_ENV=dev: planner_graph/config.py keys store/memory defaults off APP_ENV.
+# VERDIFY_DEVICE_WRITE_ENABLED="0": dev is a read-only telemetry SUBSCRIBER and
+# NEVER writes the live ESP32 (only prod writes the device). Pinned explicitly
+# here so no path can silently flip dev into a second device writer.
+#
+# #114 fan-out subscribe mode:
+# VERDIFY_INGEST_SOURCE="mqtt-subscribe" — dev ingests telemetry ONLY from prod's
+# fan-out bus and mirrors it into its own DB. No ESP32 loop, no Home Assistant,
+# no occupancy bridge (the subscribe branch in ingestor.main() skips them all).
+# FANOUT_MQTT_HOST points at the prod broker's cross-namespace FQDN; the broker
+# (verdify-mqtt) runs in the prod overlay only — dev/stage are pure subscribers.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-config
+data:
+  APP_ENV: "dev"
+  VERDIFY_DEVICE_WRITE_ENABLED: "0"
+  VERDIFY_INGEST_SOURCE: "mqtt-subscribe"
+  FANOUT_MQTT_HOST: "verdify-mqtt.verdify-prod.svc.cluster.local"
+  FANOUT_MQTT_PORT: "1883"
+  FANOUT_MQTT_TOPIC_ROOT: "verdify/fanout"

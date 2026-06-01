@@ -1,0 +1,26 @@
+# PLACEHOLDER Home Assistant token Secret for LOCAL VALIDATION ONLY
+# (kustomize build / kubeconform). #118 setpoint-server.
+#
+# THIS IS NOT A REAL CREDENTIAL and MUST NOT be applied to a real cluster. The
+# real verdify-ha-token Secret is provided by the fleet SOPS+age secret backend
+# and applied OUT-OF-BAND by the GitOps secret-delivery step BEFORE this app
+# reconciles (migration doc §3, verdify-ha-token -> HA long-lived token). The
+# setpoint-server mounts it at /mnt/agents/shared/credentials/ha_token.txt — the
+# SAME path scripts/setpoint-server.py:141 load_token() reads — so the code runs
+# unchanged.
+#
+# The config.kubernetes.io/local-config ANNOTATION (NOT a label) makes
+# `kustomize build` EXCLUDE this object from output, so a device-affecting HA
+# token placeholder is never emitted into a real-apply manifest. For a real
+# apply, the SOPS backend provides the Secret; this file is build-time only.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: verdify-ha-token
+  labels:
+    app.kubernetes.io/part-of: verdify
+  annotations:
+    config.kubernetes.io/local-config: "true"   # excluded from build output
+type: Opaque
+stringData:
+  ha_token.txt: "PLACEHOLDER_NOT_A_REAL_SECRET"

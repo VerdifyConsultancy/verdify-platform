@@ -1,0 +1,22 @@
+# FAN-OUT PUBLISH-ALL (#113) — prod ONLY.
+#
+# VERDIFY_MQTT_PUBLISH_ALL="1" is set HERE and only here. prod is the single env
+# that captures telemetry (ESP32 + Home Assistant + Tempest/Shelly), so it is the
+# single publisher onto the fan-out bus. Every row prod flushes to its own DB is
+# ALSO published (best-effort, QoS 0) to verdify-mqtt; dev/stage subscribe and
+# mirror into their own DB (VERDIFY_INGEST_SOURCE=mqtt-subscribe).
+#
+# The bus host defaults (config.py) to the in-cluster Service name verdify-mqtt,
+# which resolves in-namespace for the prod publisher. dev/stage override
+# FANOUT_MQTT_HOST to the prod FQDN. A bus outage NEVER blocks prod's DB write.
+#
+# Patched onto the base verdify-config ConfigMap (strategic merge adds the keys).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-config
+data:
+  VERDIFY_MQTT_PUBLISH_ALL: "1"
+  FANOUT_MQTT_HOST: "verdify-mqtt"
+  FANOUT_MQTT_PORT: "1883"
+  FANOUT_MQTT_TOPIC_ROOT: "verdify/fanout"

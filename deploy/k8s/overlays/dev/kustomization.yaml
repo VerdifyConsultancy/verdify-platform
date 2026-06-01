@@ -1,0 +1,78 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Instance: verdify-dev — the dev k3s Verdify APP instance (read-only telemetry
+# SUBSCRIBER; never writes the ESP32). New env from milestone #5.
+#
+# INERT-ON-MERGE: there is NO verdify-dev ArgoCD Application CR and NO
+# synology-iscsi-ssd StorageClass yet (both created by laptop-root). The live
+# verdify-local-staging ArgoCD app syncs ONLY overlays/staging, so merging this
+# overlay to live/platform-main does NOT degrade staging and does NOT deploy
+# anything until those two prerequisites exist. This is the reviewable target
+# shape, validated by `kustomize build | kubeconform` + `apply --dry-run`.
+#
+# The namespace string is PINNED. It MUST equal:
+#   - the Namespace object in this overlay (verdify-dev)
+#   - the future ArgoCD Application destination.namespace
+#   - every registry/secrets/<id>.yaml target.namespace
+namespace: verdify-dev
+
+resources:
+  - namespace.yaml
+  - ../../base
+  # Placeholder Secret for local `kustomize build` validation ONLY. The SOPS
+  # backend provides the real verdify-app-secrets out-of-band. See the file.
+  - secrets.placeholder.yaml
+  # DEVICE-SAFETY: dev-only egress lock dropping all egress to the greenhouse
+  # device VLAN (192.168.10.0/24) from the ingestor pod. Mirrors staging; the
+  # inverse allow lives ONLY in overlays/prod. See deny-esp32-egress.yaml.
+  - deny-esp32-egress.yaml
+  # EDGE/WAN: host-route the dev verdify-api on api.k3s.verdify.ai through the
+  # shared apps Traefik (.7.10). dev/stage URLs live on *.k3s.verdify.ai (prod
+  # owns the bare *.verdify.ai hosts). See ingressroute.yaml.
+  - ingressroute.yaml
+  # EDGE/WAN: host-route the dev verdify-www on www.k3s.verdify.ai through the
+  # same shared apps Traefik (#116). See www-ingressroute.yaml.
+  - www-ingressroute.yaml
+
+# verdify-planner (#117) + verdify-www (#116) — referenced as Components, NOT
+# added to base, so they never render into overlays/staging. Same pattern in
+# overlays/prod.
+components:
+  - ../../components/planner
+  - ../../components/www
+
+patches:
+  # APP_ENV=dev + VERDIFY_DEVICE_WRITE_ENABLED=0 (dev never writes the device).
+  - path: env-configmap.yaml
+  # DEVICE SAFETY: pin the device-touching ingestor OFF until the #114
+  # subscribe-from-prod-MQTT ingest mode lands. dev must never be a 2nd writer.
+  - path: ingestor-replicas-zero.yaml
+  # PER-ENV DB STORAGE (#115): retarget the verdify-db PVC from the base
+  # local-path to the volume1 'synology-iscsi-ssd' StorageClass (laptop-root
+  # gate). dev gets its OWN TimescaleDB StatefulSet on the Synology SSD.
+  - path: db-storageclass.yaml
+    target:
+      kind: StatefulSet
+      name: verdify-db
+
+# Image digest pins. Canonical namespace ghcr.io/verdifyconsultancy/verdify-*,
+# immutable @sha256 (NEVER a mutable :latest/:dev tag). The app images reuse the
+# staging-verified digests as a known-good baseline; verdify-planner is a
+# PLACEHOLDER digest (no image published yet — gh api returns 404). The digest
+# write-back job owns these once container-publish for verdify-planner is green.
+images:
+  - name: ghcr.io/verdifyconsultancy/verdify-api
+    digest: sha256:ce4ca79f9e6442c39558cbe02b1665c3cddc3e269c1867997d4f292f3a5ce8ff
+  - name: ghcr.io/verdifyconsultancy/verdify-mcp
+    digest: sha256:9824020a0d2fe77191b2c01ca2634c3bcec6031b79d2fef1c3334b2d5665768d
+  - name: ghcr.io/verdifyconsultancy/verdify-ingestor
+    digest: sha256:4f141a5901f802e52b37b15a6a92b8d0bc906f3d854066e3ddd52911aa457d0d
+  - name: ghcr.io/verdifyconsultancy/verdify-migrate
+    digest: sha256:7a39c3deb6df2182c7480cdd653bffa6575570bbfd262bf7c9694abcc58badf5
+  - name: ghcr.io/verdifyconsultancy/verdify-planner
+    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  # verdify-www (#116): real GHCR digest of the marketing site image built from
+  # the upstream verdify-www repo at sha d3720dc (see components/www/www.yaml).
+  - name: ghcr.io/verdifyconsultancy/verdify-www
+    digest: sha256:5e00bc2080ee03fe7f21517d326acf0a89f93baefc0b27fcb481bab59ab7c58a

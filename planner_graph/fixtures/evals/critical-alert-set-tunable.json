@@ -1,0 +1,118 @@
+{
+  "expectations": {
+    "diagnosis_contains": [
+      "vpd"
+    ],
+    "forbidden_payload_fields": [
+      "tunable_changes.nonexistent"
+    ],
+    "min_confidence": 0.2,
+    "payload_fields": {
+      "tunable_changes.fog_escalation_kpa": 0.4
+    },
+    "rationale_contains": [
+      "set_tunable"
+    ],
+    "required_payload_fields": [
+      "tunable_changes.fog_escalation_kpa"
+    ],
+    "selected_action": "set_tunable"
+  },
+  "request": {
+    "context": {
+      "active_plan_summary": {
+        "cold_vent_guard_delta_f": 10.0,
+        "cool_exit_hysteresis_f": 1.5,
+        "cool_stage2_over_high_f": 1.0,
+        "direct_wet_stress_latest_hour": 22.0,
+        "direct_wet_stress_min_dew_margin_f": 8.0,
+        "direct_wet_stress_vpd_margin_kpa": 0.05,
+        "dwell_gate_ms": 300000.0,
+        "enthalpy_close": 1.0,
+        "enthalpy_open": -2.0,
+        "fog_escalation_kpa": 0.4,
+        "fog_stress_min_dew_margin_f": 10.0,
+        "fog_stress_window_latest_hour": 19.0,
+        "heat_hysteresis": 1.0,
+        "min_fog_off_s": 60.0,
+        "min_fog_on_s": 60.0,
+        "mist_backoff_s": 600.0,
+        "mist_max_closed_vent_s": 600.0,
+        "mist_thermal_relief_s": 90.0,
+        "mister_all_delay_s": 300.0,
+        "mister_all_kpa": 1.9,
+        "mister_engage_delay_s": 45.0,
+        "mister_engage_kpa": 1.6,
+        "mister_pulse_gap_s": 45.0,
+        "mister_pulse_on_s": 60.0,
+        "mister_vpd_weight": 1.5,
+        "mister_water_budget_gal": 300.0,
+        "outdoor_staleness_max_s": 600.0,
+        "sw_cool_all_fans_at_high_enabled": 0.0,
+        "sw_direct_wet_stress_override_enabled": 0.0,
+        "sw_dwell_gate_enabled": 0.0,
+        "sw_fog_closes_vent": 1.0,
+        "sw_fog_stress_window_extend_enabled": 0.0,
+        "sw_mister_closes_vent": 0.0,
+        "sw_summer_vent_enabled": 1.0,
+        "temp_hysteresis": 1.5,
+        "vent_prefer_dp_delta_f": 5.0,
+        "vent_prefer_temp_delta_f": 5.0,
+        "vpd_hysteresis": 0.3,
+        "vpd_watch_dwell_s": 60.0,
+        "future_waypoints": 3
+      },
+      "alerts_summary": [
+        "critical: VPD excursion risk"
+      ],
+      "clamp_summary": {
+        "active_clamps_24h": 0
+      },
+      "climate_snapshot": {
+        "rh_pct": 44,
+        "temp_f": 87.1,
+        "vpd_kpa": 2.0
+      },
+      "forecast_summary": {
+        "headline": "Critical dry peak expected",
+        "max_vpd_kpa": 2.4
+      },
+      "guardrail_audit_summary": {
+        "readback_freshness_seconds": 30
+      },
+      "retrieval_refs": [
+        {
+          "id": "lesson-2",
+          "snippet": "Escalate fog early during severe VPD spikes."
+        }
+      ],
+      "scorecard_summary": {
+        "compliance_pct": 82.0,
+        "planner_score": 63.0
+      },
+      "site_refs": [
+        {
+          "id": "playbook-2",
+          "snippet": "Critical dry alerts may justify a tunable intervention."
+        }
+      ]
+    },
+    "planner": {
+      "context_version": "v1",
+      "contract_version": "2026-05-24",
+      "request_id": "eval-critical-001",
+      "run_mode": "production",
+      "trace_id": "trace-eval-critical-001"
+    },
+    "trigger": {
+      "event_label": "Critical dry alert",
+      "event_type": "ALERT",
+      "expected_action": "set_tunable",
+      "greenhouse_id": "vallery",
+      "planner_instance": "planner_graph",
+      "source": "fixture",
+      "trigger_id": "33333333-3333-3333-3333-333333333333",
+      "triggered_at": "2026-05-19T14:30:00-06:00"
+    }
+  }
+}

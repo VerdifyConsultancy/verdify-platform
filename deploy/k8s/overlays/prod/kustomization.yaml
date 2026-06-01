@@ -20,13 +20,43 @@ resources:
   # Placeholder Secret for local `kustomize build` validation ONLY. Removed for a
   # real apply; the SOPS backend provides the real verdify-app-secrets.
   - secrets.placeholder.yaml
+  # PLACEHOLDER HA token Secret for local build ONLY (#118 setpoint-server). Uses
+  # the local-config ANNOTATION so it is EXCLUDED from build output (a
+  # device-affecting HA token is never emitted). Real verdify-ha-token via SOPS.
+  - ha-token.placeholder.yaml
   # DEVICE WRITE PATH: the SINGLE egress allow letting the prod ingestor reach the
   # live device VLAN. See allow-ingestor-device-egress.yaml.
   - allow-ingestor-device-egress.yaml
+  # EDGE/WAN: host-route the prod verdify-www on www.verdify.ai + apex through the
+  # shared apps Traefik (.7.10) (#116). See www-ingressroute.yaml.
+  - www-ingressroute.yaml
+
+# verdify-planner (#117) + verdify-mqtt fan-out broker (#113) — referenced as
+# Components, NOT added to base, so they never render into overlays/staging (the
+# only overlay the live ArgoCD app syncs). Same pattern in overlays/dev. The
+# fan-out broker runs in PROD ONLY: prod publishes the bus, dev/stage subscribe
+# to it cross-namespace. The planner is NOT a device writer.
+components:
+  - ../../components/planner
+  - ../../components/mqtt-broker
+  # #118 verdify-setpoint-server — the grow-light writer + setpoint diagnostics.
+  # PROD-ONLY: it is a DEVICE-AFFECTING writer (toggles the live grow lights via
+  # HA), so it is never referenced by overlays/dev or overlays/staging.
+  - ../../components/setpoint-server
+  # #119 hermes-iris — the sole planner gateway, ported from the compose `hermes`
+  # profile. prod-anchored (run-state PVC + OpenAI key). Image digest preserved.
+  - ../../components/hermes-iris
+  # #116 verdify-www — the public marketing site (www.verdify.ai). Pure web tier,
+  # stateless, NO device path; referenced by dev + prod, never staging. Built
+  # from the upstream verdify-www repo (see components/www/www.yaml).
+  - ../../components/www
 
 patches:
   # DEVICE-WRITE INTERLOCK (#79): VERDIFY_DEVICE_WRITE_ENABLED=1 — prod only.
   - path: device-write-configmap.yaml
+  # #113 publish-all: prod re-emits every flushed telemetry row onto the fan-out
+  # bus (verdify-mqtt) so dev/stage subscribers mirror it. prod-only env.
+  - path: publish-all-configmap.yaml
   # ingestor keeps the base replicas:1 + Recreate (single-writer invariant); no
   # replicas:0 pin here (that is staging's two-writer safety pin).
 
@@ -43,3 +73,19 @@ images:
     digest: sha256:c26e0e67ea0d67751e21448a95660e3e4a37c214d98f228f50a8b08c02d1fbc5
   - name: ghcr.io/verdifyconsultancy/verdify-migrate
     digest: sha256:7a39c3deb6df2182c7480cdd653bffa6575570bbfd262bf7c9694abcc58badf5
+  # PLACEHOLDER — no verdify-planner image published yet (gh api 404). The digest
+  # write-back flow pins the real GHCR digest once container-publish is green.
+  - name: ghcr.io/verdifyconsultancy/verdify-planner
+    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  # PLACEHOLDER — #118 verdify-setpoint-server image not published yet
+  # (scripts/Dockerfile.setpoint-server is new). Real GHCR digest pinned by the
+  # write-back flow once container-publish is green. hermes-agent is deliberately
+  # ABSENT here — its upstream @sha256 is preserved inline (NOT transformer-pinned).
+  - name: ghcr.io/verdifyconsultancy/verdify-setpoint-server
+    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  # verdify-www (#116): real GHCR digest of the marketing site image built from
+  # the upstream verdify-www repo at sha d3720dc (see components/www/www.yaml).
+  # The site is env-agnostic static content + Node runtime, so prod + dev pin the
+  # same known-good digest; the promotion flow advances it on a content rebuild.
+  - name: ghcr.io/verdifyconsultancy/verdify-www
+    digest: sha256:5e00bc2080ee03fe7f21517d326acf0a89f93baefc0b27fcb481bab59ab7c58a
