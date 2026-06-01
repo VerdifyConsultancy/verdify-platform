@@ -48,6 +48,7 @@ Stage 1  verdify-site  (Quartz/nginx)              stateless, no device dep  [GA
 Stage 2  verdify-api   (FastAPI, apps-LB VLAN 7)   stateless DB-reader       [GATE: Jason stop]
 Stage 3  verdify-mcp   (planner tool surface)      ClusterIP DANGER surface  [GATE: Jason stop]
 Stage 4  grafana / umami / goaccess / traefik      supporting surfaces       [GATE: Jason stop, per service]
+Stage 4b hermes-iris planner gateway (#119)        ClusterIP gateway+state   [GATE: Jason R7 env-repoint+stop, laptop-root state copy]
 Stage 5  DB write-ownership handoff                atomic; one writer only   [GATE: Jason quiescence]
 Stage 6  ingestor / setpoint dispatcher  ── LAST, SEPARATELY GATED ──        [GATE: Jason — §3.4 spike PASS + first-setpoint + single-writer stop]
 ```
@@ -55,8 +56,12 @@ Stage 6  ingestor / setpoint dispatcher  ── LAST, SEPARATELY GATED ──   
 Rationale for the order: site → api → mcp move zero device risk (stateless / read-only /
 ClusterIP). The DB (Stage 0 copy, Stage 5 write-handoff) is split: the **copy** is
 non-destructive and happens early; the **write-ownership handoff** is the atomic quiescent
-moment and happens just before the device loop. The **ingestor is dead last** and is gated
-separately because it is the only workload that touches the live ESP32.
+moment and happens just before the device loop. **Stage 4b (hermes-iris)** sits after the
+supporting surfaces because it depends on Stage 3's mcp DNS being settled (its tool calls
+must reach the k3s mcp), but it is NOT a device writer and carries run-state, so it is
+ordered after the stateless surfaces and before the DB write-handoff. The **ingestor is
+dead last** and is gated separately because it is the only workload that touches the live
+ESP32.
 
 ---
 
@@ -180,6 +185,55 @@ untouched VM service is always the rollback.
   > the ESP32 speaks native API only (no `mqtt:` block in `greenhouse.yaml`), but Sentinel
   > occupancy uses MQTT. If the device path needs the LOCAL broker, mosquitto stays near the
   > device VLAN and is NOT cut here — it moves (or stays) with Stage 6.
+
+### Stage 4b — `hermes-iris` planner gateway (#119) — ClusterIP gateway + state copy
+
+The k3s **manifest is already authored and merged** (PR #122, `deploy/k8s/components/hermes-iris/`):
+the `verdify-hermes-iris` Deployment (upstream `nousresearch/hermes-agent@sha256:a7111ab…aec72e`
+digest preserved — NOT transformer-rewritten), ClusterIP `Service` (replacing the VM
+`127.0.0.1:8642` loopback bind), the `verdify-hermes-iris-data` PVC on `synology-iscsi-ssd`,
+and the `allow-hermes-from-ingestor` NetworkPolicy. It is referenced ONLY by `overlays/prod`
+as a Component (prod-anchored: run-state PVC + OpenAI key), and renders into NEITHER
+`overlays/dev` NOR `overlays/staging`. **This stage is the deferred live-state copy + R7
+MCP-URL reconcile — the manifest authoring for #119 is done; only the cutover-tail handoff
+remains.** hermes-iris is NOT a device writer (it reaches the mcp tool surface in-cluster);
+the danger surface (`set_plan`/`set_tunable`) lives behind the mcp, gated at Stage 3.
+
+- **Precondition:** Stage 3 done (the k3s `verdify-mcp` is the canonical tool surface on
+  cluster DNS, `host.docker.internal` retired). `verdify-prod` ArgoCD Application exists and
+  the `synology-iscsi-ssd` StorageClass is provisioned (laptop-root gate — the PVC is INERT
+  until then). The `verdify-hermes` + `verdify-hermes-slack` Secrets are sealed and synced
+  out-of-band (SOPS backend); this repo references them BY NAME only — **no secret value is
+  read, echoed, or sealed in this runbook.**
+- **Action (copy, never move — same posture as Stage 0):**
+  1. **R7 MCP-URL reconcile `[GATE: Jason]` — MUST precede the VM mcp stop.** The MCP URL
+     hermes calls lives in the out-of-band `/etc/verdify/hermes-iris.env` (`verdify-hermes`
+     Secret), NOT in this repo. Repoint it to `verdify-mcp.<ns>.svc:8000` in that sealed env
+     BEFORE the systemd/compose MCP is stopped, or hermes fails at tool-call time (not at
+     startup). This is migration-doc **R7** and is a pure env edit — no manifest change here.
+  2. **Live state copy `[GATE: laptop-root apply, Jason quiescence]` — DEFERRED to this
+     cutover tail; do NOT copy early.** Copy (never move) the VM host
+     `/var/lib/verdify/hermes/iris` (the `slack.yaml` + Iris run history that the compose
+     `hermes` profile mounts at `/opt/data`) into the `verdify-hermes-iris-data` PVC, via a
+     one-shot gated copy runner (e.g. a short-lived Job mounting the PVC, `rsync`/`tar` from
+     a dump on local NVMe/NAS — **never a live read off NFS**). The VM source is untouched
+     and stays authoritative until the cutover gate.
+  3. Bring the k3s `verdify-hermes-iris` pod up ALONGSIDE the VM `hermes` compose service;
+     repoint the ingestor's `HERMES_URL` to `http://verdify-hermes-iris.<ns>.svc:8642` via
+     `verdify-config`. Prove a read-only planner round-trip. Then `[GATE: Jason]` stop the VM
+     `hermes` compose service (`docker compose stop hermes` — NOT `down -v`).
+- **Verify:** the k3s pod is Ready (tcpSocket `:8642`); the ingestor reaches it by cluster
+  DNS (loopback bind retired); hermes reaches the k3s mcp by `verdify-mcp.<ns>.svc:8000`
+  (R7 confirmed); `slack.yaml` + run history present on the PVC (state-copy parity — file
+  listing / run-count spot check, NOT a device action); NO `set_plan`/`set_tunable` is fired
+  as a verify (those are device-affecting and gated at the mcp). The Service is ClusterIP —
+  never an LB, never WAN — same surface posture as the loopback bind it replaces.
+- **Rollback:** `docker compose up -d hermes` on the VM; revert `HERMES_URL` to the VM
+  loopback and the env MCP URL to the VM mcp. The VM state dir was copied, never moved, so it
+  remains intact; the PVC is RWO/Retain-class. Fully reversible.
+- **Gate-owner:** **Jason** (R7 env-repoint + VM `hermes` stop + quiescence), **laptop-root**
+  (StorageClass + the one-shot state-copy Job apply). DoD ties: #5 (ClusterIP-private
+  gateway), #1/#2 (ArgoCD-driven prod). **M6/cutover-tail item — see §6 follow-up.**
 
 ### Stage 5 — DB write-ownership handoff (the atomic quiescent moment)
 
@@ -349,3 +403,31 @@ directly or merge autonomously.
 - No live-service stop. The VM stack is fully intact and authoritative throughout.
 - No edit to `firmware/lib/**`, `greenhouse_logic.h`, `entity_map.py`, `mcp/server.py`
   semantics. Track A (greenhouse alive) was never at risk.
+- No copy of the live `/var/lib/verdify/hermes/iris` state (Stage 4b). The hermes-iris k3s
+  manifest is authored + merged (PR #122); the state copy is DEFERRED to the cutover tail and
+  is documented as a §6 follow-up only — no VM read, no Job apply here.
+
+---
+
+## 6. Deferred follow-up — hermes-iris live-state copy + R7 MCP-URL reconcile (#119, M6)
+
+**Status:** FOLLOW-UP / DEFERRED. The k3s manifest authoring for #119 is COMPLETE and merged
+(PR #122). This section records the two cutover-tail handoff steps that remain, so they are
+not lost; **neither is executed by authoring this doc.**
+
+1. **R7 MCP-URL reconcile** — repoint the MCP URL inside the out-of-band
+   `/etc/verdify/hermes-iris.env` (`verdify-hermes` Secret) to `verdify-mcp.<ns>.svc:8000`
+   BEFORE the systemd/compose MCP is stopped. Sealed-env edit; no manifest, no repo change.
+   `[GATE: Jason]`. Without it, hermes fails at tool-call time (not startup).
+
+2. **Live state copy** — copy (never move) the VM host `/var/lib/verdify/hermes/iris`
+   (`slack.yaml` + Iris run history, mounted at `/opt/data`) into the
+   `verdify-hermes-iris-data` PVC via a one-shot gated copy runner, after the
+   `synology-iscsi-ssd` StorageClass + `verdify-prod` ArgoCD Application exist.
+   `[GATE: laptop-root apply, Jason quiescence]`. The VM source is left authoritative; the
+   copy is reversible.
+
+Both are sequenced into the prod cutover/decommission tail (Stage 4b above) — issue #119
+comment by jvallery ("Sequenced into the prod cutover/decommission tail → M6"). Tracking
+references: final-migration design doc line 29 ("COPY if Hermes folds into k3s") + Sprint 7
+("hermes-iris pod live (state copied)").
