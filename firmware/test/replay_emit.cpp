@@ -71,6 +71,17 @@ static bool parse_bool(const std::string& s, bool def) {
     if (s.empty() || s == "\\N" || s == "NULL") return def;
     return s == "t" || s == "true" || s == "1";
 }
+// TWIN-3 (#31): switch setpoints are forward-filled from setpoint_snapshot,
+// whose `value` column is FLOAT — so an enabled switch arrives as "1" / "1.0"
+// and disabled as "0" / "0.0". parse_bool() above only matches the literal
+// "1"/"true"/"t", so use a float-threshold parser for the snapshot-sourced
+// sp_sw_* columns. Empty / NULL keeps the firmware default.
+static bool parse_bool_float(const std::string& s, bool def) {
+    if (s.empty() || s == "\\N" || s == "NULL") return def;
+    if (s == "t" || s == "true") return true;
+    if (s == "f" || s == "false") return false;
+    try { return std::stof(s) >= 0.5f; } catch (...) { return def; }
+}
 
 struct Header {
     std::unordered_map<std::string, size_t> idx;
@@ -85,6 +96,77 @@ struct Header {
         return it == idx.end() ? SIZE_MAX : it->second;
     }
 };
+
+// ── TWIN-3 (#31): setpoint-coverage assertion ────────────────────────────────
+// Single source of truth for the sp_* columns the current Setpoints struct
+// expects from the replay CSV. Every dispatcher-pushed field with an active
+// greenhouse_logic.h path is here. Fields that are default-only or
+// firmware-derived (econ_block, the ENV-2 night window, CYC-1 dusk cutoff,
+// FRT-6 feed_hold_active, IRR-3 dawn_rehydrate_start_hour) are intentionally
+// absent — the twin agrees with the firmware on them by construction, so there
+// is no sp_* column to require.
+static const char* const EXPECTED_SP_COLUMNS[] = {
+    // pre-existing coverage (the original ~17)
+    "sp_temp_low", "sp_temp_high", "sp_vpd_low", "sp_vpd_high",
+    "sp_bias_cool", "sp_bias_heat", "sp_vpd_hysteresis", "sp_temp_hysteresis",
+    "sp_safety_max", "sp_safety_min", "sp_vpd_max_safe", "sp_vpd_min_safe",
+    "sp_fog_escalation_kpa", "sp_watch_dwell_s", "sp_mist_backoff_s",
+    "sp_mist_s2_delay_s", "sp_sw_fsm_controller_enabled",
+    // TWIN-3 additions
+    "sp_heat_hysteresis", "sp_sealed_max_s", "sp_relief_duration_s",
+    "sp_max_relief_cycles", "sp_fog_rh_ceiling", "sp_fog_min_temp",
+    "sp_fog_window_start", "sp_fog_window_end", "sp_dehum_aggressive_kpa",
+    "sp_occupancy_inhibit", "sp_vent_latch_timeout_ms",
+    "sp_safety_max_seal_margin_f", "sp_econ_heat_margin_f",
+    "sp_sw_summer_vent_enabled", "sp_vent_prefer_temp_delta_f",
+    "sp_vent_prefer_dp_delta_f", "sp_outdoor_staleness_max_s",
+    "sp_summer_vent_min_runtime_s", "sp_sw_dwell_gate_enabled", "sp_dwell_gate_ms",
+    "sp_cool_stage2_over_high_f", "sp_cool_exit_hysteresis_f",
+    "sp_cold_vent_guard_delta_f", "sp_cool_all_fans_at_high_enabled",
+    "sp_direct_wet_stress_override_enabled", "sp_direct_wet_stress_vpd_margin_kpa",
+    "sp_direct_wet_stress_min_dew_margin_f", "sp_direct_wet_stress_latest_hour",
+    "sp_fog_stress_window_extend_enabled", "sp_fog_stress_window_latest_hour",
+    "sp_fog_stress_min_dew_margin_f",
+    "sp_sw_dawn_rehydrate_enabled", "sp_dawn_rehydrate_start_minute",
+    "sp_dawn_rehydrate_window_min", "sp_dawn_rehydrate_on_s", "sp_dawn_rehydrate_gap_s",
+    "sp_sw_midday_drench_enabled", "sp_midday_drench_hour",
+    "sp_midday_drench_start_minute", "sp_midday_drench_window_min",
+    "sp_midday_drench_on_s", "sp_midday_drench_gap_s",
+    "sp_sw_overnight_micropulse_enabled", "sp_sw_night_humidity_source_present",
+    "sp_micropulse_vpd_ceiling", "sp_micropulse_max_on_s",
+    "sp_micropulse_min_gap_s", "sp_micropulse_min_dew_margin_f",
+};
+
+// Warns loudly (and, when REPLAY_EMIT_REQUIRE_FULL_SETPOINTS=1, aborts) if the
+// CSV header is missing any sp_* column the Setpoints struct expects. The live
+// twin driver sets the env var so a schema drift (a new dispatcher-pushed field
+// the export forgot to add) fails loudly instead of silently defaulting and
+// manufacturing false divergence — the exact failure mode TWIN-3 closes. The
+// offline rule-8 replay-diff runs against the prior corpus (which legitimately
+// predates these columns), so the default is a non-fatal warning: additive
+// coverage must never break the freeze gate.
+static int check_setpoint_coverage(const Header& h) {
+    std::vector<std::string> missing;
+    for (const char* col : EXPECTED_SP_COLUMNS) {
+        if (h.of(col) == SIZE_MAX) missing.push_back(col);
+    }
+    if (missing.empty()) return 0;
+    const char* require = std::getenv("REPLAY_EMIT_REQUIRE_FULL_SETPOINTS");
+    const bool hard = require && *require && *require != '0';
+    std::fprintf(stderr,
+        "[replay_emit] %s: %zu sp_* column(s) the Setpoints struct expects are "
+        "absent from the CSV header (TWIN-3 setpoint-coverage). These fields will "
+        "fall back to default_setpoints() and can manufacture false divergence:\n",
+        hard ? "FATAL" : "WARNING", missing.size());
+    for (const auto& m : missing) std::fprintf(stderr, "    - %s\n", m.c_str());
+    if (hard) {
+        std::fprintf(stderr,
+            "[replay_emit] aborting: REPLAY_EMIT_REQUIRE_FULL_SETPOINTS is set and "
+            "the export is missing columns. Re-run scripts/export-replay-overrides.sh.\n");
+        return 1;
+    }
+    return 0;
+}
 
 static uint64_t parse_ts_unix(const std::string& s) {
     if (s.size() < 19) return 0;
@@ -176,6 +258,85 @@ static void process_row(const Header& h,
         if (!std::isnan(mist_s2_delay_s) && mist_s2_delay_s > 0.0f) {
             sp.mist_s2_delay_ms = (uint32_t)(mist_s2_delay_s * 1000.0f);
         }
+
+        // ── TWIN-3 (#31): close the setpoint-coverage gap ──────────────────
+        // Wire every remaining dispatcher-pushed Setpoints field from its new
+        // sp_* column. These are ADDITIVE: a column absent from the CSV header
+        // (e.g. the older checked-in corpus) makes get() return "" and the
+        // field keeps its default_setpoints() value — byte-for-byte identical
+        // to the prior behavior, so the rule-8 replay-diff stays
+        // THRESHOLD_PCT=0 green. The fields only bind when a freshly-exported
+        // corpus carries them. Mirrors controls.yaml's Setpoints construction:
+        // *_s columns are seconds (×1000 → ms), *_ms columns are already ms.
+        auto assign_int = [&](const std::string& name, int& field) {
+            float value = parse_float(get(name), NAN);
+            if (!std::isnan(value)) field = (int)value;
+        };
+        auto assign_positive_u32_from_s = [&](const std::string& name, uint32_t& field) {
+            float secs = parse_float(get(name), NAN);
+            if (!std::isnan(secs) && secs > 0.0f) field = (uint32_t)(secs * 1000.0f);
+        };
+        auto assign_positive_u32_ms = [&](const std::string& name, uint32_t& field) {
+            float ms = parse_float(get(name), NAN);
+            if (!std::isnan(ms) && ms > 0.0f) field = (uint32_t)ms;
+        };
+        auto assign_positive_u32 = [&](const std::string& name, uint32_t& field) {
+            float value = parse_float(get(name), NAN);
+            if (!std::isnan(value) && value >= 0.0f) field = (uint32_t)value;
+        };
+        auto assign_switch = [&](const std::string& name, bool& field) {
+            field = parse_bool_float(get(name), field);
+        };
+
+        assign_positive_float("sp_heat_hysteresis", sp.heat_hysteresis);
+        assign_positive_u32_from_s("sp_sealed_max_s", sp.sealed_max_ms);
+        assign_positive_u32_from_s("sp_relief_duration_s", sp.relief_duration_ms);
+        assign_positive_u32("sp_max_relief_cycles", sp.max_relief_cycles);
+        assign_positive_float("sp_fog_rh_ceiling", sp.fog_rh_ceiling);
+        assign_positive_float("sp_fog_min_temp", sp.fog_min_temp);
+        assign_int("sp_fog_window_start", sp.fog_window_start);
+        assign_int("sp_fog_window_end", sp.fog_window_end);
+        assign_positive_float("sp_dehum_aggressive_kpa", sp.dehum_aggressive_kpa);
+        assign_switch("sp_occupancy_inhibit", sp.occupancy_inhibit);
+        assign_positive_u32_ms("sp_vent_latch_timeout_ms", sp.vent_latch_timeout_ms);
+        assign_positive_float("sp_safety_max_seal_margin_f", sp.safety_max_seal_margin_f);
+        assign_positive_float("sp_econ_heat_margin_f", sp.econ_heat_margin_f);
+        assign_switch("sp_sw_summer_vent_enabled", sp.sw_summer_vent_enabled);
+        assign_positive_float("sp_vent_prefer_temp_delta_f", sp.vent_prefer_temp_delta_f);
+        assign_positive_float("sp_vent_prefer_dp_delta_f", sp.vent_prefer_dp_delta_f);
+        assign_positive_u32("sp_outdoor_staleness_max_s", sp.outdoor_staleness_max_s);
+        assign_positive_u32("sp_summer_vent_min_runtime_s", sp.summer_vent_min_runtime_s);
+        assign_switch("sp_sw_dwell_gate_enabled", sp.sw_dwell_gate_enabled);
+        assign_positive_u32_ms("sp_dwell_gate_ms", sp.dwell_gate_ms);
+        assign_float("sp_cool_stage2_over_high_f", sp.cool_stage2_over_high_f);
+        assign_positive_float("sp_cool_exit_hysteresis_f", sp.cool_exit_hysteresis_f);
+        assign_float("sp_cold_vent_guard_delta_f", sp.cold_vent_guard_delta_f);
+        assign_switch("sp_cool_all_fans_at_high_enabled", sp.cool_all_fans_at_high_enabled);
+        assign_switch("sp_direct_wet_stress_override_enabled", sp.direct_wet_stress_override_enabled);
+        assign_float("sp_direct_wet_stress_vpd_margin_kpa", sp.direct_wet_stress_vpd_margin_kpa);
+        assign_positive_float("sp_direct_wet_stress_min_dew_margin_f", sp.direct_wet_stress_min_dew_margin_f);
+        assign_int("sp_direct_wet_stress_latest_hour", sp.direct_wet_stress_latest_hour);
+        assign_switch("sp_fog_stress_window_extend_enabled", sp.fog_stress_window_extend_enabled);
+        assign_int("sp_fog_stress_window_latest_hour", sp.fog_stress_window_latest_hour);
+        assign_positive_float("sp_fog_stress_min_dew_margin_f", sp.fog_stress_min_dew_margin_f);
+        assign_switch("sp_sw_dawn_rehydrate_enabled", sp.sw_dawn_rehydrate_enabled);
+        assign_int("sp_dawn_rehydrate_start_minute", sp.dawn_rehydrate_start_minute);
+        assign_int("sp_dawn_rehydrate_window_min", sp.dawn_rehydrate_window_min);
+        assign_int("sp_dawn_rehydrate_on_s", sp.dawn_rehydrate_on_s);
+        assign_int("sp_dawn_rehydrate_gap_s", sp.dawn_rehydrate_gap_s);
+        assign_switch("sp_sw_midday_drench_enabled", sp.sw_midday_drench_enabled);
+        assign_int("sp_midday_drench_hour", sp.midday_drench_hour);
+        assign_int("sp_midday_drench_start_minute", sp.midday_drench_start_minute);
+        assign_int("sp_midday_drench_window_min", sp.midday_drench_window_min);
+        assign_int("sp_midday_drench_on_s", sp.midday_drench_on_s);
+        assign_int("sp_midday_drench_gap_s", sp.midday_drench_gap_s);
+        assign_switch("sp_sw_overnight_micropulse_enabled", sp.sw_overnight_micropulse_enabled);
+        assign_switch("sp_sw_night_humidity_source_present", sp.sw_night_humidity_source_present);
+        assign_positive_float("sp_micropulse_vpd_ceiling", sp.micropulse_vpd_ceiling);
+        assign_int("sp_micropulse_max_on_s", sp.micropulse_max_on_s);
+        assign_int("sp_micropulse_min_gap_s", sp.micropulse_min_gap_s);
+        assign_positive_float("sp_micropulse_min_dew_margin_f", sp.micropulse_min_dew_margin_f);
+
         sp.sw_fsm_controller_enabled = parse_bool(
             get("sp_sw_fsm_controller_enabled"),
             sp.sw_fsm_controller_enabled
@@ -310,6 +471,7 @@ int main(int argc, char** argv) {
         if (!std::getline(hf, header_line)) { std::fprintf(stderr, "Empty header CSV\n"); return 2; }
         h.parse(header_line);
     }
+    if (check_setpoint_coverage(h) != 0) return 3;
 
     ControlState state = initial_state();
     uint64_t last_ts_unix = 0;
@@ -359,6 +521,7 @@ int main(int argc, char** argv) {
     if (!std::getline(f, line)) { std::fprintf(stderr, "Empty\n"); return 2; }
     Header h;
     h.parse(line);
+    if (check_setpoint_coverage(h) != 0) return 3;
 
     // Initialize controller state.
     ControlState state = initial_state();
