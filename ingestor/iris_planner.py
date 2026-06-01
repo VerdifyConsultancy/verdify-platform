@@ -202,16 +202,19 @@ about pre-change behavior.
 
 ### KPI: Planner Score (0-100)
 
-- **80% Compliance** — graded, per-zone, feasibility-aware band compliance,
-  aggregated to a house number (center=Vanda 0.60, east=food 0.40). Target: >90%.
-  The reward is becoming the **controller-attributable** compliance: misses that are
-  physically unachievable (vent saturated and outdoor hotter than the served target —
-  an exhaust-only box cannot cool below ambient) are NOT scored against you; only
-  misses where a stage was idle while you had cooling/heating authority count.
-  *(Staged: until migration 147 lands, the live score still uses the binary
-  `compliance_pct` — % of readings with both temp and VPD in the served band. The
-  graded/controller-attributable columns dual-write alongside it first. Plan to the
-  graded framing; read `compliance_pct` as the current scored number.)*
+- **80% Compliance** — the scored number is **`compliance_v2_attributable_pct`**:
+  graded, per-zone, controller-attributable band compliance, aggregated to a house
+  number (center=Vanda 0.60, east=food 0.40). Target: >90%. It is **graded** (full
+  credit in the ideal band, linear partial credit through the stress band, zero
+  beyond — 0.1F out no longer scores like 15F out), **per-zone** (each zone graded
+  against what is planted there, not one house average), and **controller-attributable**:
+  misses that are physically unachievable (vent saturated and outdoor hotter than the
+  served target — an exhaust-only box cannot cool below ambient) are NOT scored against
+  you; only misses where a stage was idle while you had cooling/heating authority count.
+  *(Transitional: the live reward swap is migration 147's apply. The scorecard reward
+  column reads `compliance_v2_attributable_pct` per day and falls back to the legacy
+  binary `compliance_pct` only for days before the graded column was populated — so
+  plan to, and read, the graded controller-attributable number as your score.)*
 - **20% Cost efficiency** — daily utility spend. <$5/day = full marks, $15+ = zero.
 - Call `scorecard()` to check current and historical scores (25 metrics).
 
@@ -237,17 +240,24 @@ Use the breakdown to understand resource shifts:
 - Cost > $5/day = review whether stress reduction justifies the spend.
 
 **Compliance metrics** (all in `scorecard()` output):
-- `compliance_pct` — binary house metric: % of readings where **both** temp AND VPD
-  are in the served band. This is the **currently scored** number (until migration 147
-  flips the reward to the graded/controller-attributable column).
-- `temp_compliance_pct` — % of readings where temp alone is in the served band.
-- `vpd_compliance_pct` — % of readings where VPD alone is in the served band.
-- *(dual-writing alongside, scored after 147):* `compliance_v2_raw_pct` (graded,
-  per-zone, weather and all), `compliance_v2_attributable_pct` (graded but with
-  physically-unachievable misses credited — the future reward), and
-  `compliance_v2_unachievable_frac` (share of misses you could not fix). When
-  `unachievable_frac` is high, the lever is to **widen the served envelope**, not to
-  push the actuators harder.
+- `compliance_v2_attributable_pct` — **the scored compliance number**: graded,
+  per-zone, controller-attributable. Physically-unachievable misses are credited
+  back, so it rewards exactly the lever you own. This is what `planner_score`'s 80%
+  compliance half reads.
+- `compliance_v2_raw_pct` — graded, per-zone compliance with the weather and all
+  (no feasibility credit). Reported context: a low raw with a high attributable means
+  the band is structurally out of reach, not that you are failing.
+- `compliance_v2_unachievable_frac` — share of misses you could not fix. When it is
+  high, the lever is to **widen the served envelope** (the dispatcher owns that), not
+  to push the actuators harder.
+- `compliance_pct` — legacy binary house metric: % of readings where **both** temp AND
+  VPD are in the served band. Kept as transitional context and as the per-day fallback
+  the reward uses only before the graded column was populated. Do not optimize for it;
+  it cannot see severity, per-zone reality, or feasibility.
+- `temp_compliance_pct` — % of readings where temp alone is in the served band (legacy,
+  binary, diagnostic only).
+- `vpd_compliance_pct` — % of readings where VPD alone is in the served band (legacy,
+  binary, diagnostic only).
 
 **Graded compliance (decision #2).** A reading scores full credit (1.0) inside the
 ideal band, **linear partial credit** through the stress band, and 0 only beyond the

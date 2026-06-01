@@ -1,0 +1,134 @@
+"""CI gate (G9): planner prompt + MCP scorecard copy describes GRADED / PER-ZONE /
+CONTROLLER-ATTRIBUTABLE compliance, with `compliance_v2_attributable_pct` named as
+the scored number — NOT the old binary `compliance_pct`.
+
+Background: band-compliance-architecture.md §7.1 Family-2. The reward column is
+`compliance_v2_attributable_pct` (graded, per-zone, controller-attributable;
+migration 147). The schema fields landed in #18. This guard keeps the prose Iris
+reads from regressing back to the old binary "both in the firmware-enforced band /
+this is the currently scored number" framing once a future edit touches the prompt
+or the scorecard tool docstring.
+
+Pure text parsing — no DB, no ESPHome build, no module import side effects (mirrors
+test_planner_prompt_coverage.py). Run anchored to a fixed UTC capture timestamp so
+the assertion set is a snapshot, not a moving target.
+"""
+
+from __future__ import annotations
+
+import datetime as dt
+import pathlib
+import re
+
+# UTC capture timestamp for this copy snapshot (no bare-green: the assertions below
+# describe the copy as audited at this instant; a regression flips them red).
+SNAPSHOT_TS = dt.datetime(2026, 6, 1, 0, 0, 0, tzinfo=dt.UTC)
+
+REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
+PLANNER_PATH = REPO_ROOT / "ingestor" / "iris_planner.py"
+MCP_SERVER_PATH = REPO_ROOT / "mcp" / "server.py"
+
+# The assembled planner prompt is these three module-level triple-quoted constants.
+_PROMPT_CONSTANTS = ("_STANDING_DIRECTIVES", "_PLANNER_EXTENDED", "_PLANNER_CORE")
+
+# Phrases that asserted the OLD binary semantics as the scored truth. Any of these
+# back in the planner-facing copy is a regression of the G9 rewrite.
+_FORBIDDEN_BINARY_FRAMINGS = (
+    "both in firmware-enforced band",
+    "both inside the firmware-enforced band",
+    "the currently scored number",
+    "current scored number",
+    "the live score still uses the binary",
+    "still uses the binary",
+)
+
+
+def _prompt_text() -> str:
+    """Concatenate the bodies of the three triple-quoted prompt constants."""
+    src = PLANNER_PATH.read_text()
+    bodies: list[str] = []
+    for const in _PROMPT_CONSTANTS:
+        m = re.search(rf'{const}\s*=\s*"""(?P<body>.*?)"""', src, re.DOTALL)
+        assert m, f"Could not locate prompt constant {const} in {PLANNER_PATH}"
+        bodies.append(m.group("body"))
+    text = "\n".join(bodies)
+    assert text.strip(), "Assembled planner prompt text is empty"
+    return text
+
+
+def _scorecard_docstring() -> str:
+    """Extract the body of the `scorecard()` tool docstring from mcp/server.py."""
+    src = MCP_SERVER_PATH.read_text()
+    m = re.search(
+        r'async def scorecard\([^)]*\)\s*->\s*str:\s*"""(?P<body>.*?)"""',
+        src,
+        re.DOTALL,
+    )
+    assert m, f"Could not locate scorecard() docstring in {MCP_SERVER_PATH}"
+    body = m.group("body")
+    assert body.strip(), "scorecard() docstring is empty"
+    return body
+
+
+def test_snapshot_ts_is_utc() -> None:
+    """Guard against a naive/local timestamp slipping into the snapshot anchor."""
+    assert SNAPSHOT_TS.tzinfo is dt.UTC
+    assert SNAPSHOT_TS.utcoffset() == dt.timedelta(0)
+
+
+def test_planner_prompt_names_graded_attributable_score() -> None:
+    """The prompt must tell Iris the scored compliance is the graded,
+    controller-attributable, per-zone metric (`compliance_v2_attributable_pct`)."""
+    text = _prompt_text()
+    assert "compliance_v2_attributable_pct" in text, (
+        f"Planner prompt must name compliance_v2_attributable_pct as the scored compliance metric ({PLANNER_PATH})."
+    )
+    lowered = text.lower()
+    for token in ("graded", "per-zone", "controller-attributable"):
+        assert token in lowered, f"Planner prompt must describe '{token}' compliance semantics ({PLANNER_PATH})."
+
+
+def test_planner_prompt_drops_binary_scored_framing() -> None:
+    """The old binary 'currently scored / firmware-enforced band' framing must be gone
+    from the planner-facing prompt prose."""
+    lowered = _prompt_text().lower()
+    offenders = [p for p in _FORBIDDEN_BINARY_FRAMINGS if p.lower() in lowered]
+    assert not offenders, (
+        f"Planner prompt still carries old binary-as-scored framing {offenders} "
+        f"({PLANNER_PATH}). compliance_pct is legacy/diagnostic context now; the score "
+        f"is compliance_v2_attributable_pct."
+    )
+
+
+def test_planner_prompt_keeps_binary_as_legacy_context_only() -> None:
+    """`compliance_pct` may still appear, but only flagged as legacy/transitional —
+    never as the optimization target."""
+    lowered = _prompt_text().lower()
+    if "compliance_pct" in lowered:
+        assert "legacy" in lowered, (
+            f"compliance_pct still referenced but not flagged 'legacy' in the planner prompt ({PLANNER_PATH})."
+        )
+
+
+def test_scorecard_docstring_names_graded_attributable_score() -> None:
+    """The MCP scorecard tool docstring must lead with the graded attributable score."""
+    body = _scorecard_docstring()
+    assert "compliance_v2_attributable_pct" in body, (
+        "scorecard() docstring must name compliance_v2_attributable_pct as the scored "
+        f"compliance metric ({MCP_SERVER_PATH})."
+    )
+    lowered = body.lower()
+    for token in ("graded", "per-zone", "controller-attributable"):
+        assert token in lowered, (
+            f"scorecard() docstring must describe '{token}' compliance semantics ({MCP_SERVER_PATH})."
+        )
+
+
+def test_scorecard_docstring_drops_binary_scored_framing() -> None:
+    """The scorecard docstring must not assert the binary compliance_pct is the live
+    score (it is the transitional fallback only)."""
+    lowered = _scorecard_docstring().lower()
+    offenders = [p for p in _FORBIDDEN_BINARY_FRAMINGS if p.lower() in lowered]
+    assert not offenders, (
+        f"scorecard() docstring still carries old binary-as-scored framing {offenders} ({MCP_SERVER_PATH})."
+    )

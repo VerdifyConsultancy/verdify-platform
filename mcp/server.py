@@ -386,30 +386,34 @@ async def climate() -> str:
 @mcp.tool()
 async def scorecard(target_date: str = "") -> str:
     """Get the planner scorecard — 25 KPI metrics for a given day.
-    Includes: planner_score, compliance_pct, temp_compliance_pct,
-    vpd_compliance_pct, stress hours (heat/cold/vpd_high/vpd_low), utility usage
-    (kwh, therms, water_gal, mister_water_gal), costs (electric/gas/water/total),
-    dew point safety, and 7-day averages. Pass date as YYYY-MM-DD or omit for today.
+    Includes: planner_score, compliance_v2_attributable_pct (the scored compliance),
+    compliance_v2_raw_pct, compliance_v2_unachievable_frac, the legacy binary
+    compliance_pct / temp_compliance_pct / vpd_compliance_pct, stress hours
+    (heat/cold/vpd_high/vpd_low), utility usage (kwh, therms, water_gal,
+    mister_water_gal), costs (electric/gas/water/total), dew point safety, and 7-day
+    averages. Pass date as YYYY-MM-DD or omit for today.
 
-    Compliance is moving from a single binary house metric to GRADED + PER-ZONE +
-    FEASIBILITY-AWARE scoring (band-compliance rearchitecture, migrations 146-147).
-    GRADED: full credit inside the ideal band, linear partial credit through the
-    stress band, zero beyond — a reading 0.1F out of band no longer scores the same
-    as one 15F out. PER-ZONE: each zone graded against what is actually planted there
-    (center = Vanda orchid; east = lettuce/strawberry/pepper), aggregated to a house
-    number (center weight 0.60, east 0.40). FEASIBILITY-AWARE: every miss is split
-    into controller-error (a cooling/heating stage was idle with authority available)
-    vs physically-unachievable (e.g. vent saturated and outdoor >= the served target —
-    an exhaust-only box cannot beat ambient). The reward becomes the
-    CONTROLLER-ATTRIBUTABLE compliance so weather Iris cannot change is not scored
-    against her; unachievable_frac is reported context that should cue WIDENING the
-    served envelope, not working the actuators harder.
+    Compliance is GRADED + PER-ZONE + CONTROLLER-ATTRIBUTABLE (band-compliance
+    rearchitecture, migrations 146-147), and the scored compliance number is
+    compliance_v2_attributable_pct. GRADED: full credit inside the ideal band, linear
+    partial credit through the stress band, zero beyond — a reading 0.1F out of band no
+    longer scores the same as one 15F out. PER-ZONE: each zone graded against what is
+    actually planted there (center = Vanda orchid; east = lettuce/strawberry/pepper),
+    aggregated to a house number (center weight 0.60, east 0.40). CONTROLLER-ATTRIBUTABLE:
+    every miss is split into controller-error (a cooling/heating stage was idle with
+    authority available) vs physically-unachievable (e.g. vent saturated and outdoor >=
+    the served target — an exhaust-only box cannot beat ambient); the unachievable misses
+    are credited back so weather Iris cannot change is not scored against her.
+    compliance_v2_raw_pct and compliance_v2_unachievable_frac are reported context — a
+    high unachievable_frac should cue WIDENING the served envelope, not working the
+    actuators harder.
 
-    Until migration 147 lands, the live planner_score still uses the binary
-    compliance_pct (% of readings with BOTH temp and VPD in the served band); the
-    graded compliance_v2_* / controller-attributable columns dual-write alongside it
-    first, so treat the graded framing above as the target semantics, not yet the
-    live reward.
+    The live reward swap is migration 147's apply. planner_score's compliance half reads
+    compliance_v2_attributable_pct per day and falls back to the legacy binary
+    compliance_pct (% of readings with BOTH temp and VPD in the served band) only for
+    days before the graded column was populated — so treat the graded
+    controller-attributable number as the score, and the binary compliance_pct as
+    transitional/diagnostic context only.
 
     Response is validated through verdify_schemas.ScorecardResponse — partial
     days emit a subset of metrics as null. DB drift (new metric) surfaces as a
