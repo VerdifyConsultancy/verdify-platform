@@ -10,9 +10,13 @@
 # Shape mirrors the live verdify-local-staging Application (read from the cluster
 # 2026-05-31); only per-env fields + syncPolicy differ:
 #   - dev is an AUTOMATED env: automated{selfHeal:true, prune:true}. It is a
-#     read-only telemetry subscriber (VERDIFY_DEVICE_WRITE_ENABLED=0,
-#     ingestor replicas:0) and NEVER writes the ESP32, so auto-prune is safe —
-#     unlike prod, nothing here can touch the live device.
+#     read-only telemetry SUBSCRIBER (#114): VERDIFY_DEVICE_WRITE_ENABLED=0 +
+#     VERDIFY_INGEST_SOURCE=mqtt-subscribe, so the ingestor holds NO ESP32
+#     connection. It runs at replicas:1 (a subscriber is not a device writer;
+#     see overlays/dev/ingestor-replicas-zero.yaml), and the dev-only
+#     deny-esp32-egress NetworkPolicy drops all egress to the greenhouse VLAN
+#     as the belt-and-suspenders network half. NOTHING here can touch the live
+#     device, so auto-prune is safe — unlike prod.
 #
 # HARD PREREQUISITES before laptop-root applies (see
 # docs/runbooks/dev-prod-argocd-handover.md):
