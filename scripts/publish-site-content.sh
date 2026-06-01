@@ -46,11 +46,64 @@ LOG=${VERDIFY_PUBLISH_LOG:-/srv/verdify/state/publish.log}
 LOCK=${VERDIFY_PUBLISH_LOCK:-/var/lock/verdify-site-content-publish.lock}
 PREV_DATE=$(date -d "${DATE} -1 day" +%Y-%m-%d)
 
+# Bounded retry/timeout guard (issue #59). The generators below make outbound
+# HTTPS calls (e.g. update-evidence-snapshots.py hits https://api.verdify.ai).
+# A transient egress timeout used to wedge the whole oneshot unit
+# (verdify-forecast-page / verdify-plan-publish) into a failed state. Each step
+# now runs under a hard wall-clock timeout and is retried a bounded number of
+# times; a step that exhausts its retries is logged loudly and recorded as a
+# failure but does NOT abort the remaining generators, so one flaky upstream
+# does not leave the units failed. The unit exits non-zero at the end iff a
+# step ultimately failed, so genuine breakage is still surfaced to systemd.
+STEP_TIMEOUT=${VERDIFY_PUBLISH_STEP_TIMEOUT:-120}   # seconds per attempt (0 disables)
+STEP_RETRIES=${VERDIFY_PUBLISH_STEP_RETRIES:-3}     # total attempts per step
+STEP_RETRY_DELAY=${VERDIFY_PUBLISH_STEP_RETRY_DELAY:-5} # seconds between attempts
+
 mkdir -p "$(dirname "$LOG")" "$(dirname "$LOCK")"
 
+FAILED_STEPS=()
+
+# run_step COMMAND [ARGS...] — execute one generator with a bounded wall-clock
+# timeout and bounded retries. Records (does not abort on) terminal failures.
 run_step() {
-  echo "[$(date -Is)] $*" | tee -a "$LOG"
-  "$@" 2>&1 | tee -a "$LOG"
+  local attempt rc
+  for ((attempt = 1; attempt <= STEP_RETRIES; attempt++)); do
+    echo "[$(date -Is)] step (attempt ${attempt}/${STEP_RETRIES}, timeout=${STEP_TIMEOUT}s): $*" | tee -a "$LOG"
+    rc=0
+    # Run inside `if` so `set -e`/`pipefail` does not abort the function on a
+    # non-zero step; then read PIPESTATUS[0] — the generator's real exit code,
+    # not tee's — to classify the failure. (A trailing `|| true` would clobber
+    # PIPESTATUS, so we must branch on the pipeline directly.)
+    if [[ "$STEP_TIMEOUT" -gt 0 ]]; then
+      # --kill-after sends SIGKILL 10s after SIGTERM so a wedged HTTPS read that
+      # ignores the term signal cannot hold the unit open indefinitely.
+      if timeout --kill-after=10s "${STEP_TIMEOUT}s" "$@" 2>&1 | tee -a "$LOG"; then
+        rc=0
+      else
+        rc=${PIPESTATUS[0]}
+      fi
+    else
+      if "$@" 2>&1 | tee -a "$LOG"; then
+        rc=0
+      else
+        rc=${PIPESTATUS[0]}
+      fi
+    fi
+    if [[ "$rc" -eq 0 ]]; then
+      return 0
+    fi
+    if [[ "$rc" -eq 124 || "$rc" -eq 137 ]]; then
+      echo "[$(date -Is)] TIMEOUT after ${STEP_TIMEOUT}s (rc=${rc}) on attempt ${attempt}/${STEP_RETRIES}: $*" | tee -a "$LOG" >&2
+    else
+      echo "[$(date -Is)] FAILED (rc=${rc}) on attempt ${attempt}/${STEP_RETRIES}: $*" | tee -a "$LOG" >&2
+    fi
+    if [[ "$attempt" -lt "$STEP_RETRIES" ]]; then
+      sleep "$STEP_RETRY_DELAY"
+    fi
+  done
+  echo "[$(date -Is)] GIVING UP after ${STEP_RETRIES} attempts (last rc=${rc}); continuing remaining steps: $*" | tee -a "$LOG" >&2
+  FAILED_STEPS+=("$*")
+  return 0
 }
 
 {
@@ -81,5 +134,18 @@ run_step() {
     echo "[$(date -Is)] Site content publish complete: reason=${REASON}, date=${DATE}" | tee -a "$LOG"
   else
     echo "[$(date -Is)] Site content generated without rebuild: reason=${REASON}, date=${DATE}" | tee -a "$LOG"
+  fi
+
+  # Surface terminal failures once, at the end. A step that recovered on retry
+  # leaves FAILED_STEPS empty and we exit clean even though a transient timeout
+  # occurred — that is the whole point: a flaky egress no longer wedges the unit.
+  # A step that exhausted its retries exits the unit non-zero so systemd still
+  # records genuine, persistent breakage as a failure.
+  if [[ ${#FAILED_STEPS[@]} -gt 0 ]]; then
+    echo "[$(date -Is)] publish finished with ${#FAILED_STEPS[@]} failed step(s) after retries:" | tee -a "$LOG" >&2
+    for step in "${FAILED_STEPS[@]}"; do
+      echo "[$(date -Is)]   - ${step}" | tee -a "$LOG" >&2
+    done
+    exit 1
   fi
 } 9>"$LOCK"
