@@ -78,6 +78,11 @@ if _env_path.exists():
     for line in _env_path.read_text().splitlines():
         if line.startswith("POSTGRES_PASSWORD="):
             _db_pass = line.split("=", 1)[1].strip().strip('"').strip("'")
+# #24: the MCP server is already DSN-native — it connects via asyncpg against
+# DB_DSN, never `docker exec psql`. This IS the VERDIFY_DB_BACKEND=dsn path of
+# the shared scripts/lib/psql-verdify.sh contract: setting DB_DSN to an
+# in-cluster Postgres endpoint moves this service off the VM with no code change.
+# Default below preserves the live VM connection (localhost:5432).
 DB_DSN = os.environ.get("DB_DSN", f"postgresql://verdify:{_db_pass}@localhost:5432/verdify")
 # Legacy planner.py removed — planning runs via iris_planner.py → Hermes /v1/runs
 BAND_OWNED_PARAMS = BAND_OWNED_REG

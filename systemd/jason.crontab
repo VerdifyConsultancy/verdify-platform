@@ -2,8 +2,11 @@
 # All times are MDT (America/Denver)
 
 
-# DB backup to NFS (1:00 AM)
-0 1 * * * docker exec verdify-timescaledb pg_dump -U verdify -Fc verdify > /mnt/iris/backups/verdify-$(date +\%Y\%m\%d).dump 2>> /srv/verdify/state/backup.log
+# DB backup to NFS (1:00 AM) — via scripts/db-backup.sh (#24: psql-verdify
+# abstraction; docker-exec default keeps the prior dump byte-identical, dsn
+# backend works in-cluster without a docker socket). The script writes the
+# dated .dump itself; the cron line only logs status/errors.
+0 1 * * * /srv/verdify/scripts/db-backup.sh >> /srv/verdify/state/backup.log 2>&1
 
 # Daily summary finalization (12:05 AM)
 5 0 * * * /srv/verdify/scripts/daily-summary-snapshot.py >> /srv/verdify/state/daily-snapshot.log 2>&1
