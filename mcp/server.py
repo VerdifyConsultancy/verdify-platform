@@ -39,6 +39,7 @@ from verdify_schemas import (  # noqa: E402
     HarvestCreate,
     LessonCreate,
     LessonSummary,
+    LessonSupersede,
     LessonUpdate,
     LessonValidate,
     ObservationCreate,
@@ -54,6 +55,8 @@ from verdify_schemas import (  # noqa: E402
     SetpointSummary,
     SlackCommandRequest,
     TreatmentCreate,
+    derive_lesson_state,
+    is_legal_lesson_transition,
 )
 from verdify_schemas.climate_intent import (  # noqa: E402
     CLIMATE_INTENT_CONTRACT_VERSION,
@@ -2057,14 +2060,39 @@ async def alerts(action: str = "list", alert_id: int = 0, data: str = "") -> str
 # ═══════════════════════════════════════════════════════════════
 
 
+async def _lesson_state_row(conn, lesson_id: int) -> dict | None:
+    """Fetch the columns needed to derive a lesson's lifecycle state.
+
+    `last_validated > created_at` is the authoritative "validated beyond
+    creation" signal; `times_validated` is the fallback the derive helper uses
+    when that flag is unavailable. Returns None if the lesson doesn't exist.
+    """
+    return await conn.fetchrow(
+        """
+        SELECT id, is_active, superseded_by, times_validated,
+               (last_validated IS NOT NULL AND created_at IS NOT NULL
+                AND last_validated > created_at) AS has_independent_validation
+          FROM planner_lessons WHERE id = $1
+        """,
+        lesson_id,
+    )
+
+
 @mcp.tool()
 async def lessons_manage(action: str, lesson_id: int = 0, data: str = "") -> str:
     """Manage planner lessons (accumulated operational knowledge).
-    Actions: create, update, deactivate, validate.
+
+    Actions: create, update, deactivate, validate, supersede.
+    Lifecycle state machine (G8): proposed -> validated -> superseded/retired.
+    State is derived from is_active/superseded_by/validation history; illegal
+    transitions (e.g. validating a superseded or retired lesson) are rejected.
+
     create: data = {"category", "condition", "lesson", "confidence": "low|medium|high"}
     update: data = {"lesson"?, "condition"?, "confidence"?}
-    deactivate: mark lesson as inactive
-    validate: increment times_validated, optionally upgrade confidence"""
+    validate: proposed/validated -> validated; increment times_validated, optionally upgrade confidence
+    deactivate: proposed/validated -> retired (terminal)
+    supersede: proposed/validated -> superseded by a newer lesson;
+        data = {"new_id": <existing lesson id>} (terminal)"""
     d = json.loads(data) if data else {}
     conn = await _db()
     try:
@@ -2098,14 +2126,42 @@ async def lessons_manage(action: str, lesson_id: int = 0, data: str = "") -> str
             return _json(dict(row)) if row else json.dumps({"error": "Lesson not found"})
 
         elif action == "deactivate" and lesson_id:
+            cur = await _lesson_state_row(conn, lesson_id)
+            if cur is None:
+                return json.dumps({"error": "Lesson not found"})
+            state = derive_lesson_state(
+                is_active=cur["is_active"],
+                superseded_by=cur["superseded_by"],
+                times_validated=cur["times_validated"] or 1,
+                has_independent_validation=bool(cur["has_independent_validation"]),
+            )
+            if not is_legal_lesson_transition(state, "retired"):
+                return json.dumps(
+                    {"error": f"Illegal transition {state} -> retired", "lesson_id": lesson_id, "state": state}
+                )
+            if state == "retired":  # idempotent
+                return json.dumps({"ok": True, "lesson_id": lesson_id, "action": "deactivated", "state": "retired"})
             await conn.execute("UPDATE planner_lessons SET is_active = false WHERE id = $1", lesson_id)
-            return json.dumps({"ok": True, "lesson_id": lesson_id, "action": "deactivated"})
+            return json.dumps({"ok": True, "lesson_id": lesson_id, "action": "deactivated", "state": "retired"})
 
         elif action == "validate" and lesson_id:
             try:
                 val = LessonValidate.model_validate(d) if d else LessonValidate()
             except ValidationError as e:
                 return json.dumps({"error": "LessonValidate validation failed", "details": json.loads(e.json())})
+            cur = await _lesson_state_row(conn, lesson_id)
+            if cur is None:
+                return json.dumps({"error": "Lesson not found"})
+            state = derive_lesson_state(
+                is_active=cur["is_active"],
+                superseded_by=cur["superseded_by"],
+                times_validated=cur["times_validated"] or 1,
+                has_independent_validation=bool(cur["has_independent_validation"]),
+            )
+            if not is_legal_lesson_transition(state, "validated"):
+                return json.dumps(
+                    {"error": f"Illegal transition {state} -> validated", "lesson_id": lesson_id, "state": state}
+                )
             if val.confidence:
                 await conn.execute(
                     "UPDATE planner_lessons SET times_validated = times_validated + 1, "
@@ -2118,9 +2174,49 @@ async def lessons_manage(action: str, lesson_id: int = 0, data: str = "") -> str
                     "UPDATE planner_lessons SET times_validated = times_validated + 1, last_validated = now() WHERE id = $1",
                     lesson_id,
                 )
-            return json.dumps({"ok": True, "lesson_id": lesson_id, "action": "validated"})
+            return json.dumps({"ok": True, "lesson_id": lesson_id, "action": "validated", "state": "validated"})
 
-        return json.dumps({"error": f"Unknown action '{action}'. Use: create, update, deactivate, validate"})
+        elif action == "supersede" and lesson_id:
+            try:
+                sup = LessonSupersede.model_validate(d)
+            except ValidationError as e:
+                return json.dumps({"error": "LessonSupersede validation failed", "details": json.loads(e.json())})
+            if sup.new_id == lesson_id:
+                return json.dumps({"error": "A lesson cannot supersede itself", "lesson_id": lesson_id})
+            cur = await _lesson_state_row(conn, lesson_id)
+            if cur is None:
+                return json.dumps({"error": "Lesson not found", "lesson_id": lesson_id})
+            new_exists = await conn.fetchval("SELECT 1 FROM planner_lessons WHERE id = $1", sup.new_id)
+            if new_exists is None:
+                return json.dumps({"error": f"Superseding lesson {sup.new_id} not found", "new_id": sup.new_id})
+            state = derive_lesson_state(
+                is_active=cur["is_active"],
+                superseded_by=cur["superseded_by"],
+                times_validated=cur["times_validated"] or 1,
+                has_independent_validation=bool(cur["has_independent_validation"]),
+            )
+            if not is_legal_lesson_transition(state, "superseded"):
+                return json.dumps(
+                    {"error": f"Illegal transition {state} -> superseded", "lesson_id": lesson_id, "state": state}
+                )
+            # superseded lessons drop out of the live set (is_active=true AND
+            # superseded_by IS NULL); also flip is_active=false for clarity.
+            await conn.execute(
+                "UPDATE planner_lessons SET superseded_by = $2, is_active = false WHERE id = $1",
+                lesson_id,
+                sup.new_id,
+            )
+            return json.dumps(
+                {
+                    "ok": True,
+                    "lesson_id": lesson_id,
+                    "action": "superseded",
+                    "superseded_by": sup.new_id,
+                    "state": "superseded",
+                }
+            )
+
+        return json.dumps({"error": f"Unknown action '{action}'. Use: create, update, deactivate, validate, supersede"})
     finally:
         await conn.close()
 

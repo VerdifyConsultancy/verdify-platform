@@ -707,6 +707,8 @@ and set the overnight posture.
 2. **Check lessons** — call `lessons`. Did today validate or invalidate any?
    - If a lesson was validated: `lessons_manage(action="validate", lesson_id=ID)`
    - If something new was learned: `lessons_manage(action="create", data=...)`
+   - If a newer lesson replaces an older one: `lessons_manage(action="supersede", lesson_id=OLD, data={"new_id": NEW})`
+     (lessons move proposed→validated→superseded/retired; superseding/retiring is terminal)
 3. **Check current conditions** — call `climate` for dew point margin and outdoor forecast.
 4. **Review overnight forecast** — call `forecast` for the next 12 hours.
 5. **Check alerts** — call `alerts`. Resolve any from today.
