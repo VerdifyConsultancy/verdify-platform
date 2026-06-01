@@ -282,6 +282,26 @@ jobs:
       - name: Database smoke tests (against CI Postgres)
         run: VERDIFY_DB_QUERY_MODE=direct pytest tests/test_02_database.py::TestSchemaIntegrity -q
 
+  device-write-gate:
+    name: Device-Write Safety Gate (single-writer interlock)
+    runs-on: ubuntu-latest
+    # Layer-3 of the #71 single-writer interlock. The ingestor must NEVER drive
+    # the physical ESP32 unless VERDIFY_DEVICE_WRITE_ENABLED == '1' (default-deny);
+    # this lets a k3s STAGING ingestor exist with zero risk to the live greenhouse.
+    # tests/test_device_write_gate.py mocks the aioesphomeapi client and asserts
+    # ZERO device writes when the gate is off. PR-blocking: a regression that
+    # re-opens push_to_esp32 / push_occupancy_to_esp32 with the gate off fails
+    # here. No Postgres / no device contact — every write path is mocked.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install Python deps
+        run: pip install "pydantic>=2.8" pytest pyyaml
+      - name: Device-write gate tests (mocked client, default-deny)
+        run: pytest tests/test_device_write_gate.py -v
+
   firmware:
     name: Firmware Compile Check
     runs-on: ubuntu-latest
