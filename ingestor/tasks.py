@@ -187,6 +187,90 @@ VPD_STRESS_FLOOR_H = 0.5
 VPD_STRESS_LEGACY_THRESHOLD_H = 2.0
 
 
+# ── Soil dryout (issue #40) ──────────────────────────────────────────────
+#
+# Audit §7-#1 / P0: a root-zone probe crashed for 11 days and NO alert fired,
+# because alert_monitor only had soil_sensor_offline (no-data) and
+# irrigation_feedback_gap (stuck/missing) — there was no value-below-wilt rule.
+# The surviving soil_moisture_west probe is alive (~40.6%) so a below-wilt rule
+# is now exercisable.
+#
+# This rule is READ-SIDE PAGING ONLY. It never actuates irrigation and never
+# writes the device. When a LIVE probe (continuous samples, non-stuck) reads
+# continuously below its zone wilt threshold for > SOIL_DRYOUT_MIN_DURATION_H
+# hours it pages a critical alert. It is occupancy-aware: suppressed entirely
+# for unpotted/empty zones (mirrors soil_sensor_offline). A stuck-zero or
+# missing probe is NOT a dryout — that is owned by irrigation_feedback_gap /
+# soil_sensor_offline — so a fired dryout requires every in-window sample to be
+# strictly positive (min_pct > 0) and below wilt.
+SOIL_DRYOUT_MIN_DURATION_H = 2.0
+# A 5 s ESP32 loop yields ~720 soil samples/h. Require well over an hour of
+# coverage so a brief reporting gap or a single spurious read can't satisfy the
+# >2h-continuous test. ~60 samples ≈ 5 min of data even at a heavily decimated
+# 1/min cadence; the duration_h gate (oldest in-window sample ≥ 2h old) is the
+# real "continuously" guard, this just rejects too-sparse windows.
+SOIL_DRYOUT_MIN_SAMPLES = 60
+
+
+@dataclass
+class SoilDryoutWindow:
+    """Per-probe rollup over the dryout look-back window.
+
+    Field semantics match the SQL aggregate in alert_monitor: counts/extrema of
+    the NON-NULL soil-moisture samples in the window, plus the age of the oldest
+    in-window sample (how long the probe has been reporting continuously).
+    """
+
+    column: str
+    sensor_id: str
+    zone: str
+    samples: int
+    min_pct: float | None
+    max_pct: float | None
+    latest_pct: float | None
+    oldest_sample_age_h: float | None
+
+
+def evaluate_soil_dryout(
+    window: SoilDryoutWindow,
+    wilt_pct: float | None,
+    zone_occupied: bool,
+    *,
+    min_duration_h: float = SOIL_DRYOUT_MIN_DURATION_H,
+    min_samples: int = SOIL_DRYOUT_MIN_SAMPLES,
+) -> bool:
+    """Decide whether a LIVE probe is in a paging soil-dryout condition.
+
+    Fires (returns True) only when ALL hold:
+      * the zone is occupied (an active crop) — empty/unpotted zones are
+        suppressed, consistent with soil_sensor_offline occupancy semantics;
+      * a wilt threshold is configured for the zone;
+      * the window has enough samples to be "continuous" (>= min_samples) and
+        the oldest in-window sample is at least min_duration_h old (the probe
+        has been reading the whole >2h span, not just recently);
+      * every in-window sample is below wilt (max_pct < wilt) — one reading at
+        or above wilt breaks the "continuously below wilt" requirement;
+      * the probe is LIVE, not stuck-zero/garbage (min_pct > 0): a stuck-zero or
+        missing probe is owned by irrigation_feedback_gap / soil_sensor_offline,
+        not this dryout rule.
+
+    Pure function: no DB, no I/O, no device write. Unit-tested directly.
+    """
+    if not zone_occupied:
+        return False
+    if wilt_pct is None:
+        return False
+    if window.samples < min_samples:
+        return False
+    if window.min_pct is None or window.max_pct is None:
+        return False
+    if window.oldest_sample_age_h is None or window.oldest_sample_age_h < min_duration_h:
+        return False
+    if window.min_pct <= 0:
+        return False
+    return window.max_pct < wilt_pct
+
+
 async def _vpd_stress_alert_threshold(conn: asyncpg.Connection) -> float:
     """Dynamic VPD-high stress threshold (hours/day), graded-history aware (G6).
 
@@ -2844,6 +2928,87 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                             "threshold_value": 30.0,
                         }
                     )
+
+            # 9a. Soil dryout (issue #40): a LIVE root-zone probe reading
+            # continuously below its zone wilt threshold for > 2h pages a
+            # CRITICAL. Read-side paging only — no actuation, no device write.
+            # Occupancy-aware + daytime-gated (this block), so empty/dark zones
+            # are suppressed, consistent with soil_sensor_offline. A stuck-zero
+            # or missing probe is NOT a dryout (owned by irrigation_feedback_gap
+            # / soil_sensor_offline); the SQL window + evaluate_soil_dryout()
+            # require every in-window sample strictly positive and below wilt.
+            # Auto-resolves on recovery via the standard dedupe loop below: once
+            # the probe climbs back to/above wilt the (alert_type, sensor_id)
+            # key drops out of active_keys and the alert closes 'resolved'.
+            wilt_by_zone = {
+                str(r["zone"]): float(r["wilt_pct"])
+                for r in await conn.fetch("SELECT zone, wilt_pct FROM soil_moisture_targets WHERE wilt_pct IS NOT NULL")
+            }
+            dryout_cols = [
+                ("soil_moisture_south_1", "soil.south_1", "south"),
+                ("soil_moisture_south_2", "soil.south_2", "south"),
+                ("soil_moisture_west", "soil.west", "west"),
+            ]
+            lookback_interval = f"{SOIL_DRYOUT_MIN_DURATION_H + 0.5} hours"
+            for col, sensor_id, zone in dryout_cols:
+                stats = await conn.fetchrow(
+                    f"""
+                    SELECT COUNT({col}) AS samples,
+                           MIN({col}) AS min_pct,
+                           MAX({col}) AS max_pct,
+                           EXTRACT(EPOCH FROM (now() - MIN(ts) FILTER (WHERE {col} IS NOT NULL))) / 3600.0
+                               AS oldest_sample_age_h,
+                           (array_agg({col} ORDER BY ts DESC) FILTER (WHERE {col} IS NOT NULL))[1]
+                               AS latest_pct
+                      FROM climate
+                     WHERE ts >= now() - interval '{lookback_interval}'
+                    """
+                )
+                window = SoilDryoutWindow(
+                    column=col,
+                    sensor_id=sensor_id,
+                    zone=zone,
+                    samples=int(stats["samples"] or 0),
+                    min_pct=float(stats["min_pct"]) if stats["min_pct"] is not None else None,
+                    max_pct=float(stats["max_pct"]) if stats["max_pct"] is not None else None,
+                    latest_pct=float(stats["latest_pct"]) if stats["latest_pct"] is not None else None,
+                    oldest_sample_age_h=float(stats["oldest_sample_age_h"])
+                    if stats["oldest_sample_age_h"] is not None
+                    else None,
+                )
+                wilt_pct = wilt_by_zone.get(zone)
+                zone_occupied = zone in soil_active_zones
+                if not evaluate_soil_dryout(window, wilt_pct, zone_occupied):
+                    continue
+                alerts.append(
+                    {
+                        "alert_type": "soil_dryout",
+                        "severity": "critical",
+                        "category": "sensor",
+                        "sensor_id": f"{sensor_id}.{col}",
+                        "zone": zone,
+                        "message": (
+                            f"SOIL DRYOUT: `{col}` ({zone}) below wilt "
+                            f"({wilt_pct:.0f}%) for {window.oldest_sample_age_h:.1f}h — "
+                            f"now {window.latest_pct:.1f}% (min {window.min_pct:.1f}%, "
+                            f"max {window.max_pct:.1f}% over window). Inspect irrigation to this zone."
+                        ),
+                        "details": {
+                            "column": col,
+                            "sensor": sensor_id,
+                            "zone": zone,
+                            "wilt_pct": wilt_pct,
+                            "latest_pct": window.latest_pct,
+                            "min_pct": window.min_pct,
+                            "max_pct": window.max_pct,
+                            "duration_h": window.oldest_sample_age_h,
+                            "samples": window.samples,
+                            "occupancy": "occupied",
+                        },
+                        "metric_value": window.latest_pct,
+                        "threshold_value": wilt_pct,
+                    }
+                )
 
         # 9b. Irrigation feedback gaps: south probe stuck-zero and center
         # root-zone/runoff feedback missing/stale. The status view owns the
