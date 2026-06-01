@@ -24,6 +24,12 @@ resources:
   # the local-config ANNOTATION so it is EXCLUDED from build output (a
   # device-affecting HA token is never emitted). Real verdify-ha-token via SOPS.
   - ha-token.placeholder.yaml
+  # PLACEHOLDER hermes gateway Secret for local build ONLY (#119 hermes-iris).
+  # hermes-iris references verdify-hermes via envFrom.secretRef; this completes
+  # the #30 contract surface so the prod build is lint-able. local-config
+  # ANNOTATION -> EXCLUDED from build output (OpenAI key never emitted). Real
+  # verdify-hermes via SOPS out-of-band. See hermes-secret.placeholder.yaml.
+  - hermes-secret.placeholder.yaml
   # DEVICE WRITE PATH: the SINGLE egress allow letting the prod ingestor reach the
   # live device VLAN. See allow-ingestor-device-egress.yaml.
   - allow-ingestor-device-egress.yaml
