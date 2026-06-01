@@ -241,25 +241,43 @@ def get_db_url() -> str:
     return f"postgresql://verdify:{pw}@localhost:5432/verdify"
 
 
+def _resolve_psql_prefix() -> list[str]:
+    """Resolve the psql connection-prefix argv via the shared psql-verdify.sh
+    abstraction (#24) so in-cluster/DSN modes work without a code change.
+
+    The VERDIFY_DB_BACKEND knob (docker|dsn, default docker) selects the backend
+    in the lib. Falls back to the historical docker-exec argv if the lib is
+    unavailable, so behavior on the live VM is byte-identical.
+    """
+    import shlex
+    import subprocess
+
+    fallback = ["docker", "exec", "verdify-timescaledb", "psql", "-U", "verdify", "-d", "verdify"]
+    lib = Path(__file__).resolve().parent / "lib" / "psql-verdify.sh"
+    if not lib.exists():
+        return fallback
+    try:
+        out = subprocess.run(
+            ["bash", "-c", f'. "{lib}"; verdify_psql_cmd'],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=True,
+        )
+    except (subprocess.SubprocessError, OSError):
+        return fallback
+    prefix = shlex.split(out.stdout)
+    return prefix or fallback
+
+
 def get_setpoint_text_sync() -> str:
     """Query setpoint_plan for current active values. Synchronous for HTTP thread."""
     import subprocess
 
-    db_cmd = [
-        "docker",
-        "exec",
-        "verdify-timescaledb",
-        "psql",
-        "-U",
-        "verdify",
-        "-d",
-        "verdify",
-        "-t",
-        "-A",
-        "-F",
-        "=",
-        "-c",
-    ]
+    # #24: connection prefix via the shared psql-verdify abstraction (docker-exec
+    # default preserves the exact prior argv on the VM). Formatting flags
+    # (-t -A -F = -c) are unchanged so the parsed output is byte-identical.
+    db_cmd = _resolve_psql_prefix() + ["-t", "-A", "-F", "=", "-c"]
 
     # Planner/dispatcher param names → firmware-compatible param names.
     # The current ESP32 firmware receives values through ESPHome native API
