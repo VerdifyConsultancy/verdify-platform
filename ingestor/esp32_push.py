@@ -72,6 +72,13 @@ async def push_to_esp32(changes: list[tuple[str, float, str]]) -> int:
     Returns:
         Count of successfully pushed changes. Returns 0 when disconnected.
     """
+    if shared.is_shadow_mode():
+        # SHADOW_MODE: never touch the device. This is the single chokepoint for
+        # all aioesphomeapi number_command/switch_command writes (RT setpoint
+        # listener, occupancy, dispatcher, reconnect reconcile all route here).
+        log.info("SHADOW_MODE: suppressed ESP32 push of %d change(s)", len(changes))
+        return 0
+
     # Device-write gate (#79): default-deny. No-op without a physical write when
     # VERDIFY_DEVICE_WRITE_ENABLED != '1'.
     if not _device_writes_enabled():

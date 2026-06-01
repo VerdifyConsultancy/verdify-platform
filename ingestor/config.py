@@ -82,6 +82,15 @@ HERMES_URL = os.environ.get("HERMES_URL", "http://127.0.0.1:8642")
 HERMES_API_KEY = os.environ.get("HERMES_IRIS_API_KEY", "")
 HERMES_SESSION_PREFIX = os.environ.get("HERMES_SESSION_PREFIX", "hermes:iris:main")
 
+# ── Shadow mode (safe parallel-run guard) ─────────────────────────
+# When ON, the ingestor still consumes and parses all telemetry but suppresses
+# EVERY write: all DB INSERT/UPDATE/DELETE, all aioesphomeapi number/switch
+# device commands, and any state publish. Default OFF == zero behavior change
+# to the live single-writer. This is the hard pre-condition for running a
+# second (cluster) ingestor against the live DB/ESP32 without double-writing
+# telemetry or double-actuating the device. See K3S-2 / design §4.2.
+SHADOW_MODE = os.environ.get("VERDIFY_SHADOW_MODE", "").strip().lower() in {"1", "true", "yes", "on"}
+
 # ── Greenhouse ────────────────────────────────────────────────────
 GREENHOUSE_ID = os.environ.get("GREENHOUSE_ID", "vallery")
 LATITUDE = float(os.environ.get("LATITUDE", "40.1672"))
