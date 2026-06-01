@@ -32,6 +32,12 @@
 -- dry-run (unlike a self-committing migration, which would defeat the
 -- rollback). When the migrate Job replays it directly, each statement still
 -- auto-commits in its own implicit transaction.
+--
+-- Post-merge restart (CLAUDE.md rule #7): this PR also touches
+-- verdify_schemas/views.py (docstring-only — the DailyOscillation /
+-- DailyOscillationSummary field contracts are unchanged). The schema-consuming
+-- services to bounce after this lands so the new docstrings load are
+-- verdify-mcp and verdify-ingestor.
 
 -- Canonical BASE view: per-day, per-equipment peak hourly transition count.
 -- Body unchanged from migration 083 (re-asserted for idempotent replay).
