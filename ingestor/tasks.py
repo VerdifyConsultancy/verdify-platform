@@ -813,15 +813,6 @@ def _ha_state(states: dict[str, dict], eid: str) -> HAEntityState | None:
         return None
 
 
-def _parse_float(s) -> float | None:
-    if s in ("unavailable", "unknown", "None", "", None):
-        return None
-    try:
-        return float(s)
-    except (ValueError, TypeError):
-        return None
-
-
 def _fetch_ha_entity(token: str, entity_id: str) -> dict | None:
     """Fetch a single HA entity state (blocking — run in executor for batch)."""
     url = f"{HA_URL}/api/states/{entity_id}"

@@ -97,6 +97,7 @@ from verdify_schemas import (
     Diagnostics,
     EquipmentStateEvent,
     ESP32LogRow,
+    HAEntityState,
     OverrideEvent,
     SetpointChange,
     SetpointSnapshot,
@@ -456,14 +457,19 @@ async def write_state_transitions(pool: asyncpg.Pool, ts: datetime) -> set[str]:
     return {entity for _, entity, _ in validated}
 
 
-def _parse_float_state(value: str | None) -> float | None:
-    if value is None or value == "" or value == "none":
+def _finite_state_float(value: str | None) -> float | None:
+    """Parse a system_state string to a finite float, or None.
+
+    Routes the parse through the shared ``HAEntityState.as_float()`` contract
+    (handles unavailable / non-numeric values) and additionally rejects
+    non-finite results (inf/nan), which must never reach DB float columns.
+    """
+    if value is None:
         return None
-    try:
-        parsed = float(value)
-    except (TypeError, ValueError):
+    parsed = HAEntityState(entity_id="system_state", state=value).as_float()
+    if parsed is None or not math.isfinite(parsed):
         return None
-    return parsed if math.isfinite(parsed) else None
+    return parsed
 
 
 def _parse_json_object(value: str | None) -> dict[str, Any]:
@@ -550,8 +556,8 @@ async def write_climate_action_log(pool: asyncpg.Pool, ts: datetime) -> bool:
             greenhouse_id=GREENHOUSE_ID,
             climate_action=action,
             priority_axis=priority_axis,
-            temp_band_error_f=_parse_float_state(state.system.get("climate_temp_error_f")),
-            vpd_band_error_kpa=_parse_float_state(state.system.get("climate_vpd_error_kpa")),
+            temp_band_error_f=_finite_state_float(state.system.get("climate_temp_error_f")),
+            vpd_band_error_kpa=_finite_state_float(state.system.get("climate_vpd_error_kpa")),
             moisture_assist_state=moisture_state,
             moisture_zone=moisture_zone,
             wet_assist_allowed=wet_assist_allowed,
@@ -696,8 +702,8 @@ async def write_climate_action_log(pool: asyncpg.Pool, ts: datetime) -> bool:
             ts,
             action,
             priority_axis,
-            _parse_float_state(state.system.get("climate_temp_error_f")),
-            _parse_float_state(state.system.get("climate_vpd_error_kpa")),
+            _finite_state_float(state.system.get("climate_temp_error_f")),
+            _finite_state_float(state.system.get("climate_vpd_error_kpa")),
             moisture_state,
             moisture_zone,
             wet_assist_allowed,
