@@ -84,6 +84,17 @@ def test_build_climate_intent_uses_bounded_single_path_surface() -> None:
         intent["moisture_engage_vpd_excess_kpa"]
         == TIER1_PLAN_DEFAULTS["direct_wet_stress_vpd_margin_kpa"]
     )
+    # all_zone_vpd_excess_kpa is the inverse of the canonical relation
+    # mister_all_kpa = vpd_high + all_zone_vpd_excess_kpa. vpd_high here is the
+    # top of the active band (vpd_target 1.0 + vpd_band 0.6 / 2 = 1.3), so the
+    # recovered excess is mister_all_kpa (1.9) - 1.3 = 0.6.
+    assert intent["all_zone_vpd_excess_kpa"] == pytest.approx(0.6)
+    # Moisture ladder invariant from verdify_schemas.climate_intent.ClimateIntent:
+    # all_zone_vpd_excess_kpa must never fall below moisture_engage_vpd_excess_kpa.
+    assert (
+        intent["all_zone_vpd_excess_kpa"]
+        >= intent["moisture_engage_vpd_excess_kpa"]
+    )
     assert (
         intent["fog_escalate_vpd_excess_kpa"]
         == TIER1_PLAN_DEFAULTS["fog_escalation_kpa"]

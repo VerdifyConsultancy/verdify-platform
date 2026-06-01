@@ -243,6 +243,35 @@ Read-only multi-axis audit covered climate/weather, HVAC/control, water/soil/nut
 - [x] **Data trust ledger dashboard.** Added provisioned Grafana dashboard `greenhouse-data-trust-ledger` on `v_data_trust_ledger`, instrumentation readiness, and daily plan archive self-checks.
 - [x] **Daily plan archive self-check.** Added `daily_plan_archive_audit`, `v_daily_plan_archive_self_check`, and writer support in `scripts/generate-daily-plan.py`.
 
+## Planner DDL serialization (follow-up to #102)
+
+The standalone planner was folded into the monorepo as `planner_graph/` (issue
+#102, commit `1113a75`). One **residual remains for the coordinator** and is
+intentionally NOT authored in the #102 PR (db migrations are serialized — one
+migration PR at a time, coordinator-approved sequence):
+
+- [ ] **C-PLN1 Fold planner DDL into the serialized `db/migrations/` chain.**
+  The planner currently provisions its own Postgres tables OUTSIDE the canonical
+  numbered migration chain, which is a data-state divergence risk before the
+  management VM is decommissioned (#91):
+  - `planner_graph_runs` (+ `planner_graph_runs_status_idx`) — created at runtime
+    by `planner_graph/store.py` via `CREATE TABLE IF NOT EXISTS` on first run.
+  - `planner_memory_items`, `planner_memory_retrievals` (+ their indexes) —
+    created at runtime by `planner_graph/memory.py` and also captured in the
+    standalone `planner_graph/migrations/001_planner_memory.sql`.
+  - `planner_memory_embeddings` — documented in `planner_graph/docs/planner-memory.md`
+    (pgvector), provisioned alongside the memory backend.
+
+  Action for the coordinator (next migration slot, NOT in #102): port the DDL in
+  `planner_graph/migrations/001_planner_memory.sql` + the `store.py`
+  `planner_graph_runs` definition into the next numbered `db/migrations/NNN-*.sql`
+  (current head is `150-vanda-nutrient-recipe.sql`), add the tables to
+  `db/schema.sql`, and decide whether the runtime `CREATE TABLE IF NOT EXISTS`
+  guards in `store.py`/`memory.py` stay as defense-in-depth or are removed once
+  the migration is the single source of truth. These tables are currently NULL in
+  the live DB (planner memory backend not yet enabled in production), so this is a
+  pre-enable hardening step, not an in-flight-data migration.
+
 ## Open design questions (flagged earlier)
 
 1. Worktree migration path — rename `slot-*` to `worktrees/{agent}/` now vs. lazily per first sprint.

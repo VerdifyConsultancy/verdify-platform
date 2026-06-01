@@ -7,10 +7,21 @@ name: Container Publish
 # (jvallery/agents) desired-state promotion workflow. The repo drives the
 # deployment: push -> build -> publish -> GitOps desired-state PR -> Argo CD.
 #
-# The Verdify application is composed of three image contexts (handoff §3):
+# The Verdify application is composed of these image contexts (handoff §3):
 #   - api       (FastAPI public crop catalog + setpoints)  ./api
 #   - mcp       (MCP transport server, Iris/Hermes tools)  ./mcp
 #   - ingestor  (telemetry + single-writer setpoint dispatcher, device loop) ./ingestor
+#   - planner   (standalone LangGraph planner, folded from verdify-planner #102) ./planner_graph
+#
+# ─── PLANNER IMAGE IS ARTIFACT-ONLY (#102) ───────────────────────────────────
+#  The planner-image job below builds + publishes ghcr.io/<owner>/verdify-planner
+#  so the folded planner_graph package stops being an un-built blob, but it is
+#  DELIBERATELY NOT wired into the deploy path. It is absent from both
+#  bump-staging-digests (the overlays/staging @sha256 write-back) and
+#  request-gitops-promotion (the Agent Fleet GitOps dispatch). The planner is not
+#  yet a deployed k3s workload — this image is a build artifact only. Wiring it
+#  into the deploy path is a separate, gated change once a planner Deployment +
+#  overlay exists. NEVER add `planner-image` to those two jobs in this PR's scope.
 #
 # Image publishing is gated by reusable-container-build.yml branch rules
 # (publish only from the production branch, never from a pull_request). Pull
@@ -80,6 +91,7 @@ jobs:
       api_impact: ${{ steps.impact.outputs.api_impact }}
       mcp_impact: ${{ steps.impact.outputs.mcp_impact }}
       ingestor_impact: ${{ steps.impact.outputs.ingestor_impact }}
+      planner_impact: ${{ steps.impact.outputs.planner_impact }}
       reason: ${{ steps.impact.outputs.reason }}
     steps:
       - name: Checkout
@@ -126,6 +138,7 @@ jobs:
           api_impact=false
           mcp_impact=false
           ingestor_impact=false
+          planner_impact=false
           doc_only=true
           any_changed=false
 
@@ -158,16 +171,25 @@ jobs:
             case "$f" in
               ingestor/*|slack_config.py|slack_ops/*|verdify_schemas/*|docker-compose.yml|pyproject.toml) ingestor_impact=true ;;
             esac
+            # planner image is built from the repo root with planner_graph/Dockerfile
+            # but COPYs ONLY planner_graph/** (its own pyproject.toml + uv.lock); it
+            # does NOT COPY the shared verdify_schemas/ — the planner carries its own
+            # copied contract mirror. So a verdify_schemas/ change does not impact the
+            # planner image, unlike the other three Python images.
+            case "$f" in
+              planner_graph/*) planner_impact=true ;;
+            esac
           done < "$changed_files"
 
           if [ "$manual" = "true" ]; then
             api_impact=true
             mcp_impact=true
             ingestor_impact=true
+            planner_impact=true
           fi
 
           any_image=false
-          { [ "$api_impact" = "true" ] || [ "$mcp_impact" = "true" ] || [ "$ingestor_impact" = "true" ]; } && any_image=true
+          { [ "$api_impact" = "true" ] || [ "$mcp_impact" = "true" ] || [ "$ingestor_impact" = "true" ] || [ "$planner_impact" = "true" ]; } && any_image=true
 
           image_publish=false
           if [ "$manual" = "true" ]; then
@@ -181,7 +203,7 @@ jobs:
             reason="no image-impacting files changed; skipping image publish"
           else
             image_publish=true
-            changed="api=$api_impact mcp=$mcp_impact ingestor=$ingestor_impact"
+            changed="api=$api_impact mcp=$mcp_impact ingestor=$ingestor_impact planner=$planner_impact"
             reason="image-impacting change ($changed)"
           fi
 
@@ -191,6 +213,7 @@ jobs:
             echo "api_impact=$api_impact"
             echo "mcp_impact=$mcp_impact"
             echo "ingestor_impact=$ingestor_impact"
+            echo "planner_impact=$planner_impact"
             echo "reason=$reason"
           } >> "$GITHUB_OUTPUT"
 
@@ -201,6 +224,7 @@ jobs:
             echo "- api_impact: \`$api_impact\`"
             echo "- mcp_impact: \`$mcp_impact\`"
             echo "- ingestor_impact: \`$ingestor_impact\`"
+            echo "- planner_impact: \`$planner_impact\` (artifact-only; not deployed)"
             echo "- reason: $reason"
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -276,6 +300,34 @@ jobs:
       context: .
       dockerfile: ingestor/Dockerfile
       image-name: ${{ github.repository_owner }}/verdify-ingestor
+      push: true
+      publish-branches: live/platform-main
+      build-args: |
+        GIT_SHA=${{ github.sha }}
+        GIT_REF=${{ github.ref_name }}
+      extra-tags: local-dev
+
+  planner-image:
+    name: Build and publish planner image
+    needs: image-impact
+    # ARTIFACT-ONLY (#102): build + publish the folded standalone planner image so
+    # planner_graph/ stops being an unbuilt blob. This image is intentionally NOT
+    # consumed by bump-staging-digests or request-gitops-promotion below — the
+    # planner is not yet a deployed k3s workload. Publishing the artifact is not a
+    # deploy. The 4 deploy-path images stay api/mcp/ingestor/migrate.
+    if: needs.image-impact.outputs.image_publish == 'true' && (needs.image-impact.outputs.planner_impact == 'true' || github.event_name == 'workflow_dispatch')
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/reusable-container-build.yml
+    with:
+      # Build context = repo root (matches api/mcp/ingestor convention); the
+      # Dockerfile lives at planner_graph/Dockerfile and COPYs only planner_graph/**
+      # (its own pyproject.toml + uv.lock with langgraph etc.), NOT the repo-root
+      # pyproject or the shared verdify_schemas (the planner carries its own mirror).
+      context: .
+      dockerfile: planner_graph/Dockerfile
+      image-name: ${{ github.repository_owner }}/verdify-planner
       push: true
       publish-branches: live/platform-main
       build-args: |
