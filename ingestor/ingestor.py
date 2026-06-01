@@ -2163,6 +2163,10 @@ async def main() -> None:
     assert_modes_consistent()
 
     pool = await asyncpg.create_pool(DB_DSN, min_size=2, max_size=10)
+    # SHADOW_MODE: wrap the pool so every acquired connection suppresses write
+    # SQL while still serving reads (freshness probe, config load). Default-off
+    # returns the pool unchanged — zero behavior change to the live writer.
+    pool = shared.wrap_pool_for_shadow(pool)
     log.info("DB connection pool ready")
 
     # ── #114: subscribe mode (dev/stage) — ingest FROM prod's fan-out bus ─────
