@@ -1,0 +1,42 @@
+# prod verdify-lab edge exposure on the production lab.verdify.ai host (#124).
+#
+# CONFIRMED ARCHITECTURE: prod owns the bare *.verdify.ai hosts
+# (www/lab/api/graphs.verdify.ai); dev/stage live on *.k3s.verdify.ai. This routes
+# the prod verdify-lab THROUGH the shared apps Traefik (traefik-apps on the .7.10
+# VIP) — the ONE conformant front door, the same one-pattern as the prod www route
+# (overlays/prod/www-ingressroute.yaml www.verdify.ai rule).
+#
+# INERT-ON-MERGE: there is no verdify-prod ArgoCD Application CR yet (laptop-root
+# gate). The live verdify-local-staging app syncs ONLY overlays/staging, so this
+# IngressRoute is never reconciled by merging to live/platform-main. It is the
+# reviewable target shape. The cloudflared vallery-edge tunnel forwarding
+# lab.verdify.ai -> .7.10, the *.verdify.ai split-horizon DNS, and a public
+# wildcard-verdify-ai Certificate (cert-manager letsencrypt-dns01; the same
+# residual gate documented for www.verdify.ai/api.verdify.ai) are platform-layer
+# prerequisites (needs:nexus). HTTP routing is the shape here.
+#
+# No strip-identity Middleware: the research site is fully public and trusts no
+# forward-auth identity (unlike the api). tls: {} == Traefik default cert until
+# the *.verdify.ai wildcard lands.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: verdify-lab
+  namespace: verdify-prod
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: lab-site
+spec:
+  entryPoints:
+    - websecure
+    - web
+  routes:
+    # prod lab on the product domain. The component verdify-lab Service is
+    # ClusterIP :8080 (no per-app LoadBalancer — the ADR-15 anti-pattern). Traefik
+    # resolves against the Service .spec.ports[].port (8080).
+    - kind: Rule
+      match: Host(`lab.verdify.ai`)
+      services:
+        - name: verdify-lab
+          port: 8080
+  tls: {}

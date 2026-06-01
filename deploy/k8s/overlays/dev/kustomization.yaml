@@ -34,13 +34,17 @@ resources:
   # EDGE/WAN: host-route the dev verdify-www on www.k3s.verdify.ai through the
   # same shared apps Traefik (#116). See www-ingressroute.yaml.
   - www-ingressroute.yaml
+  # EDGE/WAN: host-route the dev verdify-lab Quartz site on lab.k3s.verdify.ai
+  # through the same shared apps Traefik (#124). See lab-ingressroute.yaml.
+  - lab-ingressroute.yaml
 
-# verdify-planner (#117) + verdify-www (#116) — referenced as Components, NOT
-# added to base, so they never render into overlays/staging. Same pattern in
-# overlays/prod.
+# verdify-planner (#117) + verdify-www (#116) + verdify-lab (#124) — referenced as
+# Components, NOT added to base, so they never render into overlays/staging. Same
+# pattern in overlays/prod.
 components:
   - ../../components/planner
   - ../../components/www
+  - ../../components/lab-site
 
 patches:
   # APP_ENV=dev + VERDIFY_DEVICE_WRITE_ENABLED=0 (dev never writes the device).
@@ -76,3 +80,9 @@ images:
   # the upstream verdify-www repo at sha d3720dc (see components/www/www.yaml).
   - name: ghcr.io/verdifyconsultancy/verdify-www
     digest: sha256:5e00bc2080ee03fe7f21517d326acf0a89f93baefc0b27fcb481bab59ab7c58a
+  # PLACEHOLDER — no verdify-lab (Quartz research site, #124) image published yet:
+  # verdify-site is an orphan GHCR repo (repo:None) so CI cannot publish it until a
+  # #99-class relink. The digest write-back flow pins the real GHCR digest once
+  # container-publish for verdify-lab is green. See components/lab-site/lab-site.yaml.
+  - name: ghcr.io/verdifyconsultancy/verdify-lab
+    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
