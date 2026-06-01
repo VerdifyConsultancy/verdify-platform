@@ -100,12 +100,17 @@ from .external import (
 from .forecast import ForecastHour
 from .forecast_ops import ForecastActionLog, ForecastActionRule, ForecastActionType
 from .lessons import (
+    LESSON_TRANSITIONS,
     LessonAction,
     LessonConfidence,
     LessonCreate,
+    LessonState,
+    LessonSupersede,
     LessonUpdate,
     LessonValidate,
     PlannerLesson,
+    derive_lesson_state,
+    is_legal_lesson_transition,
 )
 from .mcp_responses import (
     ClimateSnapshot,
@@ -354,10 +359,13 @@ __all__ = [
     "IrrigationLog",
     "IrrigationSchedule",
     "LabResult",
+    "LESSON_TRANSITIONS",
     "LessonAction",
     "LessonConfidence",
     "LessonCreate",
+    "LessonState",
     "LessonSummary",
+    "LessonSupersede",
     "LessonUpdate",
     "LessonValidate",
     "LessonsVaultFrontmatter",
@@ -477,4 +485,6 @@ __all__ = [
     "ZoneUpdate",
     "choose_climate_candidate",
     "climate_candidate_sort_key",
+    "derive_lesson_state",
+    "is_legal_lesson_transition",
 ]
