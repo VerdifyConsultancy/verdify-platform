@@ -20,6 +20,8 @@ Views covered:
 - v_override_activity_24h     → OverrideActivity24h
 - v_clamp_activity_24h        → ClampActivity24h
 - v_band_trace_recent         → BandTraceRow
+- v_zone_band                 → ZoneBandRow          (per-zone live grading band)
+- mv_zone_band_grade          → ZoneBandGradeRollup  (hourly per-zone graded rollup)
 """
 
 from __future__ import annotations
@@ -219,6 +221,61 @@ class BandTraceRow(BaseModel):
     fw_minus_crop_vpd_low_kpa: float | None = None
     fw_minus_crop_vpd_high_kpa: float | None = None
     trace_quality_flag: str
+
+
+# ── Band-compliance rearchitecture: per-zone grading views (§6.8) ───────
+
+
+class ZoneBandRow(BaseModel):
+    """v_zone_band row — per-zone live grading band (ideal + stress) at now().
+
+    One row per zone (center, east, north, south, west). Projection of
+    `fn_zone_band(zone, now())` (migration 146.8). center→orchid; east→
+    intersection(ideal)/union(stress) of its crops; empty zones→`_default`.
+    Replaces `fn_target_band_smooth` as the dashboard band surface
+    (`v_target_curve` repointed here). `is_proxy` flags zones graded against
+    a proxy reading (center vpd_avg until the vpd_center probe lands, HW-1).
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    zone: str
+    temp_low: float | None = None
+    temp_high: float | None = None
+    temp_stress_low: float | None = None
+    temp_stress_high: float | None = None
+    vpd_low: float | None = None
+    vpd_high: float | None = None
+    vpd_stress_low: float | None = None
+    vpd_stress_high: float | None = None
+    crop_basis: str | None = None
+    is_proxy: bool | None = None
+
+
+class ZoneBandGradeRollup(BaseModel):
+    """mv_zone_band_grade row — hourly per-zone graded-compliance rollup.
+
+    One row per (bucket, zone) over the trailing window. Sums of the
+    per-minute graded credit (`sum_g_temp` / `sum_g_vpd` / `sum_zone_score`)
+    plus the feasibility split (`n_unachievable` / `n_controller` / `n_unknown`
+    out of `n` total minutes). Refreshed by verdify-ingestor
+    (`REFRESH MATERIALIZED VIEW CONCURRENTLY mv_zone_band_grade`); replaces
+    `v_setpoint_compliance`. See band-compliance §6.4/§6.6.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    bucket: AwareDatetime
+    zone: str
+    n: int = Field(..., ge=0)
+    sum_g_temp: Decimal | None = None
+    sum_g_vpd: Decimal | None = None
+    sum_zone_score: Decimal | None = None
+    sum_score_unachievable: Decimal | None = None
+    n_unachievable: int | None = Field(default=None, ge=0)
+    n_controller: int | None = Field(default=None, ge=0)
+    n_unknown: int | None = Field(default=None, ge=0)
+    proxy_center: bool | None = None
 
 
 # ── Sprint 23: crop history views ──────────────────────────────────────
