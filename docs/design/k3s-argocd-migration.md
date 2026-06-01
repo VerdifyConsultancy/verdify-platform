@@ -206,7 +206,6 @@ CMD ["uvicorn","main:app","--host","0.0.0.0","--port","8300"]
 | Source | Schedule | Entrypoint |
 |---|---|---|
 | `verdify-forecast-page.timer` | `*/30 * * * *` | `publish-site-content.sh --reason forecast` |
-| `verdify-grafana-render-cache-warm.timer` | `*/30 * * * *` | render cache warm |
 | DB backup (`jason.crontab:6`) | `0 1 * * *` | network `pg_dump` (NOT `docker exec`) → NFS |
 | daily-summary, vault-daily/crop, hydro-map | `0 0 * * *` | respective scripts |
 | frigate-snapshot | `0 12,16,20,0` | `frigate-snapshot.py` |
@@ -214,6 +213,8 @@ CMD ["uvicorn","main:app","--host","0.0.0.0","--port","8300"]
 | slack-channel-archive | `0 */6 * * *` | `slack-channel-archive.py` |
 | publish-daily-plan ×3 | `0 7`,`15 20`,`30 0` | `publish-daily-plan.sh` |
 | `replay-corpus-refresh` (Makefile:130) | weekly | normal DB-read CronJob; writes refreshed `.csv.gz` back as a PR artifact (**not** with the OTA job) |
+
+**Retired, not ported** (issue #60): `verdify-grafana-render-cache-warm.timer`/`.service` + `scripts/warm-grafana-render-cache.py`. The timer had been dead since 2026-05-25 emitting HTTP 500s from the headless-Chromium `/render/d-solo/...` path; it was a pure cache-priming optimization (no dashboard depends on a warm cache — PNG/iframe embeds still render on first request) and the web tier is moving here with observability handed to nexus, so a VM-only warm loop is throwaway.
 
 **Not CronJobs** (sub-minute / event):
 - `verdify-site-poll.timer` (**every 10 s**) + `verdify-site-build.service` + `verdify-plan-publish.path` (inotify on `/var/local/verdify/state/plan-publish-trigger`). The README documents the 10 s poll exists *because inotify on NFS is unreliable*. In-cluster these become a small **`site-watcher` Deployment** loop, and the plan-publish trigger should become a **DB NOTIFY** the watcher LISTENs on (avoids cross-node PVC inotify). Also: `rebuild-site.sh` calls `docker restart verdify-site` — that fails in a pod; replace with a ConfigMap-hash annotation / `kubectl rollout restart`. **This is web-agent territory** — file a `requested-by: firmware` PR; keep the systemd path on the VM until the redesign lands.
