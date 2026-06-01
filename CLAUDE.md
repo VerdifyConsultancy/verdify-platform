@@ -41,6 +41,38 @@ Rule: if the file listed here is in your diff, pause and ask coordinator.
 4. **Drift guards are the wire protocol.** If `verdify_schemas/tests/test_drift_guards.py` passes, two agents can merge independently — the boundary is intact.
 5. **Hand off by doc, not by DM.** Anything a future session of any agent needs to know goes into that agent's `docs/agents/{name}.md` or a memory file, not into chat.
 
+## Migration safety: never wrap a self-committing migration
+
+**Lesson from the 2026-05-30 live-commit incident (#23).** A migration that owns
+its own top-level `COMMIT;` — or contains a *commit-forcing* statement that
+cannot run inside a transaction block (`CREATE INDEX CONCURRENTLY`, `DROP INDEX
+CONCURRENTLY`, `REINDEX ... CONCURRENTLY`, `VACUUM`, `CREATE/DROP DATABASE`,
+`CREATE/DROP TABLESPACE`, `ALTER SYSTEM`) — must **never** be replayed under an
+outer `BEGIN; … ROLLBACK;` dry-run. The inner `COMMIT` (or commit-forcing
+statement) commits to the **live** database the instant psql reaches it,
+silently defeating the rollback. On 2026-05-30 exactly this happened.
+
+The two shapes (per `docs/runbooks/backlog-closeout-deploy-2026-05-30.md`):
+
+- **Self-transactional** (e.g. 149, 150): own top-level `BEGIN;`/`COMMIT;`.
+  Apply as-is; rollback-validate by swapping the trailing `COMMIT;` for
+  `ROLLBACK;`. **Do NOT wrap in an outer `BEGIN..ROLLBACK`.**
+- **Non-self-transactional** (e.g. 134, 146, 147, 151–155): no top-level
+  `COMMIT`; only DO-block `BEGIN`s. Safe to rollback-validate by wrapping in an
+  outer `BEGIN; … ROLLBACK;`.
+
+The guard is codified, not prose-only:
+
+- `scripts/check_migration_rollback_safety.py` classifies each migration
+  (stripping comments, string literals, and dollar-quoted bodies, so a
+  `CONCURRENTLY` mentioned only in a `--` comment never trips it).
+  `--rollback-wrap FILE` is the preflight `make irrigation-migration-check` /
+  `irrigation-migration-proof` run before piping into psql; it refuses to wrap a
+  self-committing migration. `make migration-rollback-safety` lists the full
+  classification.
+- CI job `migration-rollback-safety` (`.github/workflows/ci.yml`) flags any
+  self-committing migration touched in a PR.
+
 ## Branches & sprints
 
 - Each agent has its own sprint counter. Example: `ingestor/sprint-5-...`, `firmware/sprint-7-...`, `saas/sprint-11-...`.
