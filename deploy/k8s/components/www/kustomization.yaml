@@ -1,0 +1,12 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+# Kustomize COMPONENT: the verdify-www marketing-site workload (#116). Referenced
+# by overlays/dev + overlays/prod via `components:` — deliberately NOT a base
+# resource, so it never renders into overlays/staging (the only overlay the live
+# verdify-local-staging ArgoCD app syncs). See www.yaml header for the full
+# rationale (build source = upstream verdify-www repo; Node runtime preserved).
+# The image (ghcr.io/verdifyconsultancy/verdify-www) is pinned to a @sha256
+# digest by each consuming overlay's images: transformer.
+resources:
+  - www.yaml

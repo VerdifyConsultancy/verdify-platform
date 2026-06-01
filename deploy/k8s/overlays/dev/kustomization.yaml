@@ -31,11 +31,16 @@ resources:
   # shared apps Traefik (.7.10). dev/stage URLs live on *.k3s.verdify.ai (prod
   # owns the bare *.verdify.ai hosts). See ingressroute.yaml.
   - ingressroute.yaml
+  # EDGE/WAN: host-route the dev verdify-www on www.k3s.verdify.ai through the
+  # same shared apps Traefik (#116). See www-ingressroute.yaml.
+  - www-ingressroute.yaml
 
-# verdify-planner (#117) — referenced as a Component, NOT added to base, so it
-# never renders into overlays/staging. Same pattern in overlays/prod.
+# verdify-planner (#117) + verdify-www (#116) — referenced as Components, NOT
+# added to base, so they never render into overlays/staging. Same pattern in
+# overlays/prod.
 components:
   - ../../components/planner
+  - ../../components/www
 
 patches:
   # APP_ENV=dev + VERDIFY_DEVICE_WRITE_ENABLED=0 (dev never writes the device).
@@ -67,3 +72,7 @@ images:
     digest: sha256:7a39c3deb6df2182c7480cdd653bffa6575570bbfd262bf7c9694abcc58badf5
   - name: ghcr.io/verdifyconsultancy/verdify-planner
     digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  # verdify-www (#116): real GHCR digest of the marketing site image built from
+  # the upstream verdify-www repo at sha d3720dc (see components/www/www.yaml).
+  - name: ghcr.io/verdifyconsultancy/verdify-www
+    digest: sha256:5e00bc2080ee03fe7f21517d326acf0a89f93baefc0b27fcb481bab59ab7c58a

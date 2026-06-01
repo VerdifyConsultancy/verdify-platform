@@ -27,6 +27,9 @@ resources:
   # DEVICE WRITE PATH: the SINGLE egress allow letting the prod ingestor reach the
   # live device VLAN. See allow-ingestor-device-egress.yaml.
   - allow-ingestor-device-egress.yaml
+  # EDGE/WAN: host-route the prod verdify-www on www.verdify.ai + apex through the
+  # shared apps Traefik (.7.10) (#116). See www-ingressroute.yaml.
+  - www-ingressroute.yaml
 
 # verdify-planner (#117) + verdify-mqtt fan-out broker (#113) — referenced as
 # Components, NOT added to base, so they never render into overlays/staging (the
@@ -43,6 +46,10 @@ components:
   # #119 hermes-iris — the sole planner gateway, ported from the compose `hermes`
   # profile. prod-anchored (run-state PVC + OpenAI key). Image digest preserved.
   - ../../components/hermes-iris
+  # #116 verdify-www — the public marketing site (www.verdify.ai). Pure web tier,
+  # stateless, NO device path; referenced by dev + prod, never staging. Built
+  # from the upstream verdify-www repo (see components/www/www.yaml).
+  - ../../components/www
 
 patches:
   # DEVICE-WRITE INTERLOCK (#79): VERDIFY_DEVICE_WRITE_ENABLED=1 — prod only.
@@ -76,3 +83,9 @@ images:
   # ABSENT here — its upstream @sha256 is preserved inline (NOT transformer-pinned).
   - name: ghcr.io/verdifyconsultancy/verdify-setpoint-server
     digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  # verdify-www (#116): real GHCR digest of the marketing site image built from
+  # the upstream verdify-www repo at sha d3720dc (see components/www/www.yaml).
+  # The site is env-agnostic static content + Node runtime, so prod + dev pin the
+  # same known-good digest; the promotion flow advances it on a content rebuild.
+  - name: ghcr.io/verdifyconsultancy/verdify-www
+    digest: sha256:5e00bc2080ee03fe7f21517d326acf0a89f93baefc0b27fcb481bab59ab7c58a
