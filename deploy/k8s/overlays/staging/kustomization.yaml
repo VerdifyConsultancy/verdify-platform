@@ -11,9 +11,6 @@ kind: Kustomization
 #   - every registry/secrets/<id>.yaml target.namespace
 namespace: verdify-staging
 
-resources:
-  - namespace.yaml
-  - ../../base
   # Placeholder Secret for local `kustomize build` validation ONLY. Remove this
   # line (and the file) when rendering for a real apply; the SOPS backend
   # provides the real verdify-app-secrets. See secrets.placeholder.yaml.
@@ -26,30 +23,33 @@ resources:
   # ESP32_API_KEY, MQTT_USER/PASS) — re-applying is a no-op (avoid DB-auth drift).
   # kustomize cannot decrypt SOPS, so it is NOT a `resources:` entry; the
   # placeholder above only keeps `kustomize build` / kubeconform complete in CI.
-  - secrets.placeholder.yaml
   # DEVICE-SAFETY: staging-only egress lock dropping all egress to the greenhouse
   # device VLAN (192.168.10.0/24) from the ingestor pod — see deny-esp32-egress.yaml.
-  - deny-esp32-egress.yaml
   # EDGE/WAN: host-routed exposure of verdify-api through the shared apps Traefik on
   # the .7.10 VIP for verdify.vallery.net / verdify-staging.vallery.net AND
   # api.verdify.ai (the ONE pattern across BOTH domains; closes the tunnel-forwards-
   # but-404 gap; ADR-15 ADD-THEN-DROP add-half). See ingressroute.yaml.
-  - ingressroute.yaml
   # CONTRACT: allow the SHARED apps-ingress (ns traefik-apps) to reach verdify-api:8080.
   # The base allow-api-from-ingress only names the k3s built-in "traefik" ns + the
   # apps VLAN ipBlock, neither of which matches the traefik-apps pod source IP. flannel
   # does not enforce NetworkPolicy today, but this keeps the contract correct under the
   # planned Cilium re-CNI (ADR-17). See allow-api-from-apps-ingress.yaml.
-  - allow-api-from-apps-ingress.yaml
   # WEB TIER (stateless, #116): host-route the staging verdify-www on
   # www-staging.vallery.net through the shared apps Traefik (.7.10). Added to
   # staging now that the edge is reliable; verdify-www is a real published image,
   # stateless (no PVC), NO device path, so it cannot degrade the live staging app.
   # See www-ingressroute.yaml.
-  - www-ingressroute.yaml
   # CONTRACT: allow the apps-ingress to reach verdify-www:8080 (base default-deny).
   # See allow-www-from-ingress.yaml.
-  - allow-www-from-ingress.yaml
+resources:
+- namespace.yaml
+- ../../base
+- secrets.placeholder.yaml
+- deny-esp32-egress.yaml
+- ingressroute.yaml
+- allow-api-from-apps-ingress.yaml
+- www-ingressroute.yaml
+- allow-www-from-ingress.yaml
 
 # verdify-www (#116) — the stateless marketing site, referenced as a Component so
 # its Deployment+Service render into THIS overlay. SAFE for staging (real GHCR
@@ -59,30 +59,30 @@ resources:
 # (planner image unpublished -> placeholder digest -> ImagePullBackOff; the others
 # are device-affecting or prod-anchored).
 components:
-  - ../../components/www
+- ../../components/www
 
 # Instance patches.
-patches:
   # Expose the user-facing api on the apps-pool LoadBalancer (VLAN 7). Everything
   # else stays ClusterIP / connect-out.
-  - path: api-loadbalancer.yaml
-    target:
-      kind: Service
-      name: verdify-api
   # DEVICE SAFETY: pin the device-touching ingestor OFF in staging (replicas:0)
   # so ArgoCD selfHeal cannot bring up a second live-ESP32 writer before the
   # device-VLAN spike is proven + Jason confirms. See ingestor-replicas-zero.yaml.
-  - path: ingestor-replicas-zero.yaml
   # DEVICE-WRITE INTERLOCK (#79): explicit VERDIFY_DEVICE_WRITE_ENABLED=0 in
   # staging (the only place it is NOT 1). See device-write-configmap.yaml.
-  - path: device-write-configmap.yaml
   # STORAGE MIGRATION (staging-only): move verdify-db off node-pinned local-path
   # onto synology-iscsi-ssd so the DB lands on a WORKER and frees node1 to
   # etcd-only isolation. STS volumeClaimTemplate.storageClassName is immutable,
   # so committing this is paired with a STS+PVC+PV delete/recreate; data is
   # preserved via the verified preflight pg_dump, not the volume. Prod stays on
   # base local-path. See db-storageclass-iscsi.yaml.
-  - path: db-storageclass-iscsi.yaml
+patches:
+- path: api-loadbalancer.yaml
+  target:
+    kind: Service
+    name: verdify-api
+- path: ingestor-replicas-zero.yaml
+- path: device-write-configmap.yaml
+- path: db-storageclass-iscsi.yaml
 
 # Image digest pins. Canonical namespace is
 # ghcr.io/verdifyconsultancy/verdify-{api,mcp,ingestor,migrate}, immutable @sha256
@@ -93,18 +93,18 @@ patches:
 # When container-publish goes fully green (after the orphaned verdify-migrate
 # package is removed so CI can publish it repo-linked), the digest write-back job
 # (k8s-manifests.yml, no cross-repo PR / no ArgoCD Image Updater) will own these.
-images:
-  - name: ghcr.io/verdifyconsultancy/verdify-api
-    digest: sha256:ce4ca79f9e6442c39558cbe02b1665c3cddc3e269c1867997d4f292f3a5ce8ff
-  - name: ghcr.io/verdifyconsultancy/verdify-mcp
-    digest: sha256:9824020a0d2fe77191b2c01ca2634c3bcec6031b79d2fef1c3334b2d5665768d
-  - name: ghcr.io/verdifyconsultancy/verdify-ingestor
-    digest: sha256:4f141a5901f802e52b37b15a6a92b8d0bc906f3d854066e3ddd52911aa457d0d
-  - name: ghcr.io/verdifyconsultancy/verdify-migrate
-    digest: sha256:7a39c3deb6df2182c7480cdd653bffa6575570bbfd262bf7c9694abcc58badf5
   # verdify-www (#116): real GHCR digest of the marketing site image built from
   # the upstream verdify-www repo at sha d3720dc (see components/www/www.yaml).
   # Verified pullable via the org GHCR package API 2026-05-31 (the ONLY non-app
   # image pinned here; the env-agnostic static content matches dev/prod's pin).
-  - name: ghcr.io/verdifyconsultancy/verdify-www
-    digest: sha256:5e00bc2080ee03fe7f21517d326acf0a89f93baefc0b27fcb481bab59ab7c58a
+images:
+- digest: sha256:e854c93d29d2cc7d1c305c1ed67bfa4eb6811457ed32db8125122b55a008b603
+  name: ghcr.io/verdifyconsultancy/verdify-api
+- digest: sha256:b29bb0c41c65d84050c05b208914e946b413f756a3ff96f44a859aa876490c16
+  name: ghcr.io/verdifyconsultancy/verdify-ingestor
+- digest: sha256:7a632e82b73dba45f08ca35b3585b0c60f171be8ee3498319edd06d581955bb0
+  name: ghcr.io/verdifyconsultancy/verdify-mcp
+- digest: sha256:7a39c3deb6df2182c7480cdd653bffa6575570bbfd262bf7c9694abcc58badf5
+  name: ghcr.io/verdifyconsultancy/verdify-migrate
+- digest: sha256:5e00bc2080ee03fe7f21517d326acf0a89f93baefc0b27fcb481bab59ab7c58a
+  name: ghcr.io/verdifyconsultancy/verdify-www
