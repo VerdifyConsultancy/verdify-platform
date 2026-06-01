@@ -100,7 +100,7 @@ patches:
 images:
 - digest: sha256:e1f79751acb61a819ccb063a7933b7cd1dab4c9aa15e9c46d69b760db70b1b0a
   name: ghcr.io/verdifyconsultancy/verdify-api
-- digest: sha256:7ad5f25976a4dbb847913ad115ed86cf4e74b7b1a60089086a59fd1c751f2481
+- digest: sha256:1f4b54ddabb7df0744df0bd428d0fe863a4e2953ee54d75b4696cf4aa5cb15c3
   name: ghcr.io/verdifyconsultancy/verdify-ingestor
 - digest: sha256:6341dba8f492cf013db247a776e0334b46c2212bf5eaf5458949a232f098c428
   name: ghcr.io/verdifyconsultancy/verdify-mcp
