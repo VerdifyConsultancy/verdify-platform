@@ -499,11 +499,14 @@ jobs:
         run: |
           set -euo pipefail
           BASE=$(git merge-base HEAD "origin/${BASE_REF}")
-          # Only the real numbered set under db/migrations/ (fixtures/ excluded
-          # by the trailing slash → no subdirectories), changed in this PR.
-          CHANGED=$(git diff --name-only --diff-filter=d "$BASE" HEAD -- 'db/migrations/*.sql' 2>/dev/null || true)
+          # Only the real numbered set under db/migrations/ — the git pathspec
+          # `db/migrations/*.sql` matches RECURSIVELY, so we explicitly exclude the
+          # db/migrations/fixtures/ tree (the deliberately self-committing guard
+          # fixtures, which are NOT applied migrations).
+          CHANGED=$(git diff --name-only --diff-filter=d "$BASE" HEAD \
+            -- 'db/migrations/*.sql' ':(exclude)db/migrations/fixtures/*' 2>/dev/null || true)
           if [ -z "$CHANGED" ]; then
-            echo "No db/migrations/*.sql changed in this PR; nothing to guard."
+            echo "No applied db/migrations/*.sql changed in this PR; nothing to guard."
             exit 0
           fi
           echo "Changed migrations:"
