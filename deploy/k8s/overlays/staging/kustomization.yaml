@@ -98,11 +98,11 @@ patches:
   # Verified pullable via the org GHCR package API 2026-05-31 (the ONLY non-app
   # image pinned here; the env-agnostic static content matches dev/prod's pin).
 images:
-- digest: sha256:e1f79751acb61a819ccb063a7933b7cd1dab4c9aa15e9c46d69b760db70b1b0a
+- digest: sha256:96d8999b4d770be7153ab21118beaed941be13a49a32fcc352f1ad17770fdc72
   name: ghcr.io/verdifyconsultancy/verdify-api
-- digest: sha256:1f4b54ddabb7df0744df0bd428d0fe863a4e2953ee54d75b4696cf4aa5cb15c3
+- digest: sha256:9bc4e3ce0d9e68e17cb902b6ff4267d1bd88677607e46120a3bf6e580b15f324
   name: ghcr.io/verdifyconsultancy/verdify-ingestor
-- digest: sha256:6341dba8f492cf013db247a776e0334b46c2212bf5eaf5458949a232f098c428
+- digest: sha256:22f958b199f143f90a3984f416e6bfdcbb5a2ebd214b97fe32819a8c8f4864fc
   name: ghcr.io/verdifyconsultancy/verdify-mcp
 - digest: sha256:7a39c3deb6df2182c7480cdd653bffa6575570bbfd262bf7c9694abcc58badf5
   name: ghcr.io/verdifyconsultancy/verdify-migrate
