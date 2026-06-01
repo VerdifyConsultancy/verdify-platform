@@ -341,3 +341,197 @@ no device touch, no firewall/route change, no secret values (the in-cluster
 `POSTGRES_PASSWORD` is referenced by `secretKeyRef` name only). The live VM DB is
 the source of truth until step 8, which is Jason-confirmed and lives in the cutover
 runbook, not here.
+
+---
+
+## 8. Parity gate (G-DB-4), captured baseline, and the applied-migrations ledger (IRIS-W007 / #129)
+
+The sections above describe HOW the copy-not-move restore is performed and
+the V1–V11 verify checklist (step 6). The sections below make that
+verification **measurable and automatable**: `scripts/db-parity.sh` (a
+read-only, 9-dimension diff that goes through `scripts/lib/psql-verdify.sh`)
+is the executable form of the step-6 trust gate, and the applied-migrations
+ledger pins migration provenance so a restore cannot silently diverge in
+applied history. Part of epic #72 (data-durability); precondition for
+IRIS-W008 (restore reconcile) and IRIS-W010 (prod migration).
+
+This runbook makes DB parity **measurable** before any cutover. The cardinal
+rule of the migration is **copy, never move**: the live `iris` database is the
+read-only source of truth and is never the thing we `--clean`, drop, or rebuild.
+A candidate TARGET (a restore of the nightly dump, or a staging DB) must prove
+9-dimension parity with `iris` before it can take traffic.
+
+> Convention: the live DB is reached read-only with
+> `docker exec -e PGOPTIONS='-c default_transaction_read_only=on' verdify-timescaledb psql -U verdify -d verdify -tAc "<SQL>"`.
+> All tooling here goes through `scripts/lib/psql-verdify.sh`, which forces a
+> read-only session on every connection. **Nothing in this runbook writes to a
+> database.**
+
+---
+
+### Captured live baseline (2026-06-01, read-only)
+
+Reproduced against the live `verdify-timescaledb` with `scripts/db-parity.sh`
+in self-parity mode:
+
+| Dimension | Baseline |
+|---|---|
+| schema/tables | **81** public BASE TABLES (excludes `_hyper_*`/`_timescaledb*` chunks) |
+| views | **132** views (3 of them materialized) |
+| extensions | `timescaledb 2.25.2`, `vector 0.8.1`, `pgcrypto 1.3`, `plpgsql 1.0` |
+| hypertables | **19** |
+| continuous aggregates | **0** |
+| background jobs | **11** (`policy_compression`×4, `policy_retention`×5, `refresh_climate_merged`×1, `refresh_relay_stuck`×1; job_ids 1002-1009,1014,1015,1021) |
+| compression | **5** compressed hypertables (`climate`, `diagnostics`, `energy`, `esp32_logs`, `setpoint_snapshot`) |
+| row-counts BY SCOPE | per-`greenhouse_id` within RPO window (NOT raw whole-table counts) |
+| max timestamps | newest `ts` per hypertable (`ts` is the time column on all 19) |
+| restore recency | nightly `pg_dump -Fc` to `/mnt/iris/backups/verdify-YYYYMMDD.dump` (cron 01:00 MDT); newest dump must be < `--max-dump-age-hours` (default 26h) |
+| DB size | ~1605 MB |
+
+The 19 hypertables: `climate, climate_action_log, diagnostics, energy,
+equipment_state, esp32_logs, forecast_deviation_log, gpu_power, infra_cpu,
+irrigation_log, model_predictions, override_events, setpoint_changes,
+setpoint_clamps, setpoint_plan, setpoint_snapshot, system_state,
+weather_forecast, weather_station`. Two of them (`esp32_logs`, `weather_station`)
+have **no** `greenhouse_id` column and are row-counted table-global.
+
+---
+
+### Why row counts are compared BY SCOPE, not raw
+
+`setpoint_snapshot` grew **6.13M → 6.36M** during the planning of this very
+ticket. The append-only hypertables gain rows every few seconds (ingestor writes
+every 5 s). A raw `count(*)` diff between a frozen restore and the still-growing
+source is therefore **meaningless** — it will always "diverge."
+
+`scripts/db-parity.sh` instead compares, per hypertable, the **per-greenhouse
+row count inside a bounded RPO window** (`--rpo-window`, default `24 hours`).
+A faithful copy-not-move restore must match the source for that bounded tail.
+Tables without `greenhouse_id` are compared table-global within the same window.
+Likewise, max-timestamps are compared with a `--ts-skew-secs` tolerance (the
+restore is allowed to lag the source by up to N seconds, but **never lead** it).
+
+---
+
+### G-DB-4 — Parity gate checklist
+
+G-DB-4 is **green** only when every box is checked. It is the hard gate in
+front of IRIS-W008 / IRIS-W010.
+
+- [ ] **G-DB-4.1 — Script passes.** `scripts/db-parity.sh --iris <source> --target <candidate>` exits **0** with `PARITY: all 9 dimensions match`. Capture the full output + UTC timestamp in the cutover ticket.
+- [ ] **G-DB-4.2 — Schema/tables.** 81 BASE TABLES, identical sorted name set; 132 views.
+- [ ] **G-DB-4.3 — Extensions.** `timescaledb 2.25.2`, `vector 0.8.1`, `pgcrypto 1.3`, `plpgsql 1.0` — exact name+version match (a TimescaleDB minor-version skew is a divergence).
+- [ ] **G-DB-4.4 — Hypertables.** 19, identical name set.
+- [ ] **G-DB-4.5 — Continuous aggregates.** 0 (if a future migration adds one, both sides must carry it).
+- [ ] **G-DB-4.6 — Background jobs.** 11, identical `job_id:proc_name` set. Confirm retention/compression policies survived the restore (they are catalog rows, not data, and are easy to lose).
+- [ ] **G-DB-4.7 — Row-counts BY SCOPE.** Per-greenhouse counts match within the agreed RPO window. **Define the RPO window first** — it is the maximum acceptable data loss at cutover and must be signed off before comparing.
+- [ ] **G-DB-4.8 — Max timestamps.** Target lags source by ≤ `--ts-skew-secs` and never leads. Freeze the source (compare against a dump, not the live writer) for a clean result.
+- [ ] **G-DB-4.9 — Compression.** 5 compressed hypertables, identical set; spot-check that compressed chunks restored as compressed (not silently decompressed).
+- [ ] **G-DB-4.10 — Restore recency.** Newest `/mnt/iris/backups/*.dump` is younger than the max acceptable dump age; this defines the RPO floor of the copy-not-move flow.
+- [ ] **G-DB-4.11 — Applied-migrations ledger present and equal.** `schema_migrations` exists on both sides and `SELECT source, filename, sha256 FROM schema_migrations ORDER BY 1,2` is identical (see "Applied-migrations ledger" below). Catches "same physical shape, different applied history."
+- [ ] **G-DB-4.12 — No write happened.** Confirm the parity run touched neither DB (read-only sessions; no rows added to `schema_migrations` by the check itself).
+
+### How to run the parity check
+
+```bash
+# Self-parity smoke test against the live DB (read-only, exit 0 = baseline holds):
+scripts/db-parity.sh --iris verdify-timescaledb --target verdify-timescaledb
+
+# Real comparison: live iris vs a restored/staging TARGET.
+# TARGET can be a docker container name or a libpq DSN; freeze it (a restore,
+# not a live writer) so dimensions 7/8 are stable:
+VERDIFY_TARGET_DSN='postgresql://USER@HOST:5432/verdify' \
+  scripts/db-parity.sh --iris verdify-timescaledb --ts-skew-secs 30 --rpo-window '24 hours'
+```
+
+Exit codes: `0` full parity, `1` ≥1 dimension diverged (NOT safe to cut over),
+`2` usage/connectivity error.
+
+---
+
+### Applied-migrations ledger
+
+There is **no** applied-migrations ledger today: no `schema_migrations` /
+`applied_migrations` table, no `alembic_version`. The migrate runner
+(`db/Dockerfile.migrate`, in the platform deploy path) is a `db/schema.sql`
+replay + "verify-not-rebuild" model, and `db/migrations/000-150` are bare
+numbered SQL files. Parity has been asserted only narratively.
+
+The ledger is designed in **`db/ledger/schema_migrations.sql`** (a DESIGN
+ARTIFACT / DDL template, **not** a numbered migration — numbered migrations are
+serialized and reviewed holistically by the coordinator; this lands separately
+as part of IRIS-W008/W010 sequencing).
+
+Key design choices:
+
+- **Identity is the full filename, not an integer version.** The repo has
+  duplicate numbers (`031, 060, 070, 071, 072, 073, 074, 078` each appear twice)
+  and gaps (`001, 019, 067` are absent), so an integer `version` cannot
+  represent the history. Primary key is `(source, filename)`.
+- **One ledger, two streams.** `source='db/migrations'` (this repo, 157 files)
+  and `source='planner_graph/migrations'` (the `001_planner_memory.sql` migration
+  that lives in the separate verdify planner repo). Both coexist in one table.
+- **`sha256` per file** so a restored DB can detect a migration that was
+  edited-in-place after it was applied.
+- **`stamp_migration(...)` helper** is idempotent (upsert). The migrate runner
+  calls it once per file it applies/verifies; on an existing prod DB the DDL is
+  mostly `IF NOT EXISTS` no-ops but the stamp still records provenance.
+
+The one-time baseline stamp for the existing prod schema is **generated** (never
+hand-written) by **`scripts/gen-ledger-backfill.sh`**, which reads every
+`db/migrations/*.sql` + the planner migration, computes sha256s, and writes
+**`db/ledger/backfill_ledger.sql`** (158 `stamp_migration` calls:
+157 + 1 planner). Regenerate it after adding any migration.
+
+Rollout (sequenced under IRIS-W008/W010, not in this PR):
+
+```bash
+# 1. create the ledger (idempotent):
+psql ... -f db/ledger/schema_migrations.sql
+# 2. baseline-stamp the existing applied set (idempotent upsert):
+scripts/gen-ledger-backfill.sh                # regenerate from current repo
+psql ... -f db/ledger/backfill_ledger.sql
+# 3. from then on, the migrate runner stamps each new migration as it applies it.
+```
+
+Validated on a disposable TimescaleDB fixture (never the live DB): DDL applies,
+158 rows stamped (`seq=31` correctly carries 2 rows — the duplicate-number
+proof), and re-running the backfill leaves the count unchanged (idempotent).
+
+---
+
+### Canonical view set (folds in #47 oscillation-view consolidation)
+
+The canonical view set is **132 views** (3 materialized: see `pg_matviews`).
+This is the count enforced by G-DB-4.2; per-name view drift is caught by
+`db/schema.sql` review. The authoritative live list is whatever
+`SELECT table_name FROM information_schema.views WHERE table_schema='public'
+ORDER BY 1` returns on `iris`.
+
+Oscillation views (the #47 consolidation target): the canonical set has exactly
+two — **`v_daily_oscillation`** and **`v_daily_oscillation_summary`**. Any
+restore/staging DB that carries additional ad-hoc oscillation views, or is
+missing either of these, fails parity. #47's consolidation should leave precisely
+this pair; this runbook is the place that pins the expected oscillation-view
+membership so a future divergence is visible.
+
+To enumerate the live canonical set read-only:
+
+```bash
+docker exec -e PGOPTIONS='-c default_transaction_read_only=on' verdify-timescaledb \
+  psql -U verdify -d verdify -tAc \
+  "SELECT table_name FROM information_schema.views WHERE table_schema='public' ORDER BY 1;"
+```
+
+---
+
+### Guardrails
+
+- **Copy, never move.** `iris` is the read-only source; never `pg_restore
+  --clean` over it, never drop it. The TARGET is the only thing that gets built.
+- **Read-only everywhere.** `scripts/lib/psql-verdify.sh` opens every session
+  with `default_transaction_read_only=on`; do not bypass it with a raw `psql`.
+- **No device path.** This work never contacts the ESP32 or live setpoint
+  writers; it only reads the DB.
+- **Freeze the target for dimensions 7/8.** Comparing against a still-writing DB
+  produces transient max-timestamp races; compare against a frozen restore.

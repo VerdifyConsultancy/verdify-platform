@@ -186,3 +186,148 @@ verdify_pg_program_cmd() {
             ;;
     esac
 }
+
+# ============================================================================
+# READ-ONLY PARITY LAYER (pv_*) — used by scripts/db-parity.sh (#129).
+# ============================================================================
+# Sourceable helper. It NEVER writes: every session is opened with
+# `default_transaction_read_only=on` and a statement timeout, so even an
+# accidental DDL/DML in a caller aborts. It is the single connection seam used
+# by scripts/db-parity.sh and any other read-only parity / audit tooling.
+#
+# Usage:
+#   source "$(dirname "$0")/lib/psql-verdify.sh"
+#   pv_target_init iris              # pick a named target (iris|target|<dsn>)
+#   val=$(pv_psql_val "SELECT count(*) FROM climate;")
+#   pv_psql "SELECT 1;"              # tab-separated, unaligned, tuples-only
+#
+# Two transport modes, auto-selected per target:
+#   1. Docker container (default): `docker exec <container> psql -U <user> -d <db>`
+#      Vars: VERDIFY_DB_CONTAINER (default verdify-timescaledb),
+#            VERDIFY_DB_USER (default verdify), VERDIFY_DB_NAME (default verdify)
+#   2. Direct DSN: a libpq URI / conninfo string (for staging or a disposable
+#      fixture that is not the live docker container).
+#      Provide via VERDIFY_DB_DSN, or pass a string containing "://" or "="
+#      to pv_target_init.
+#
+# Named targets let db-parity.sh reference an "iris" (source of truth) side and
+# a "TARGET" side without hard-coding either:
+#   VERDIFY_IRIS_DSN / VERDIFY_IRIS_CONTAINER   -> the iris/source database
+#   VERDIFY_TARGET_DSN / VERDIFY_TARGET_CONTAINER -> the candidate database
+#
+# No secret values are echoed by this library; DSNs are referenced, not printed.
+#
+# This layer is ADDITIVE on top of the verdify_* wrapper above. The verdify_*
+# functions remain the general (read/write-capable) DB seam with the
+# VERDIFY_DB_BACKEND=docker|dsn switch; the pv_* functions below are a
+# strictly READ-ONLY seam for parity/audit tooling. Double-sourcing is already
+# guarded by _VERDIFY_PSQL_LIB_LOADED at the top of this file.
+
+# Read-only enforcement + a default statement timeout (ms). Callers may raise
+# the timeout for heavy COUNT(*) on large hypertables.
+PV_DB_STATEMENT_TIMEOUT_MS="${VERDIFY_DB_STATEMENT_TIMEOUT_MS:-30000}"
+PV_PGOPTIONS="-c default_transaction_read_only=on -c statement_timeout=${PV_DB_STATEMENT_TIMEOUT_MS} -c idle_in_transaction_session_timeout=60000"
+
+# Active transport state, set by pv_target_init.
+PV_MODE=""        # "docker" | "dsn"
+PV_DSN=""         # libpq conninfo when PV_MODE=dsn
+PV_CONTAINER=""   # container name when PV_MODE=docker
+PV_USER=""
+PV_DB=""
+
+# pv_target_init <name|dsn>
+#   name "iris"   -> VERDIFY_IRIS_*   (defaults to docker verdify-timescaledb)
+#   name "target" -> VERDIFY_TARGET_* (defaults to docker verdify-timescaledb)
+#   any string containing "://" or "=" -> treated as a direct DSN
+#   anything else -> treated as a docker container name
+pv_target_init() {
+  local sel="${1:-iris}"
+  PV_MODE=""; PV_DSN=""; PV_CONTAINER=""; PV_USER=""; PV_DB=""
+
+  case "$sel" in
+    iris)
+      if [ -n "${VERDIFY_IRIS_DSN:-}" ]; then
+        PV_MODE="dsn"; PV_DSN="$VERDIFY_IRIS_DSN"
+      else
+        PV_MODE="docker"
+        PV_CONTAINER="${VERDIFY_IRIS_CONTAINER:-${VERDIFY_DB_CONTAINER:-verdify-timescaledb}}"
+      fi
+      ;;
+    target)
+      if [ -n "${VERDIFY_TARGET_DSN:-}" ]; then
+        PV_MODE="dsn"; PV_DSN="$VERDIFY_TARGET_DSN"
+      elif [ -n "${VERDIFY_TARGET_CONTAINER:-}" ]; then
+        PV_MODE="docker"; PV_CONTAINER="$VERDIFY_TARGET_CONTAINER"
+      else
+        # No explicit target -> fall back to the same docker default. db-parity.sh
+        # warns when iris and target resolve to the same endpoint.
+        PV_MODE="docker"
+        PV_CONTAINER="${VERDIFY_DB_CONTAINER:-verdify-timescaledb}"
+      fi
+      ;;
+    *://*|*=*)
+      PV_MODE="dsn"; PV_DSN="$sel"
+      ;;
+    *)
+      PV_MODE="docker"; PV_CONTAINER="$sel"
+      ;;
+  esac
+
+  PV_USER="${VERDIFY_DB_USER:-verdify}"
+  PV_DB="${VERDIFY_DB_NAME:-verdify}"
+}
+
+# Human-readable endpoint label (never includes credentials).
+pv_target_label() {
+  case "$PV_MODE" in
+    docker) printf 'docker:%s/%s' "$PV_CONTAINER" "$PV_DB" ;;
+    dsn)
+      # Strip any "user:pass@" and query string so secrets are not printed.
+      local d="$PV_DSN"
+      d="${d##*@}"
+      d="${d%%\?*}"
+      printf 'dsn:%s' "$d"
+      ;;
+    *) printf 'uninitialized' ;;
+  esac
+}
+
+# A stable identity used to detect "iris and target are the same endpoint".
+pv_target_fingerprint() {
+  case "$PV_MODE" in
+    docker) printf 'docker:%s:%s:%s' "$PV_CONTAINER" "$PV_USER" "$PV_DB" ;;
+    dsn)    printf 'dsn:%s' "$PV_DSN" ;;
+    *)      printf 'none' ;;
+  esac
+}
+
+# pv_psql <sql>  -> tuples-only, unaligned, tab-field output (read-only).
+pv_psql() {
+  local sql="$1"
+  case "$PV_MODE" in
+    docker)
+      docker exec -e "PGOPTIONS=${PV_PGOPTIONS}" "$PV_CONTAINER" \
+        psql -U "$PV_USER" -d "$PV_DB" -X -q -t -A -F $'\t' -c "$sql"
+      ;;
+    dsn)
+      PGOPTIONS="${PV_PGOPTIONS}" psql "$PV_DSN" \
+        -X -q -t -A -F $'\t' -c "$sql"
+      ;;
+    *)
+      echo "pv_psql: target not initialized (call pv_target_init first)" >&2
+      return 2
+      ;;
+  esac
+}
+
+# pv_psql_val <sql> -> single scalar, whitespace-trimmed. Empty string on no row.
+pv_psql_val() {
+  pv_psql "$1" | head -n1 | tr -d '[:space:]'
+}
+
+# pv_check_conn -> 0 if the target answers SELECT 1 read-only, else non-zero.
+pv_check_conn() {
+  local v
+  v="$(pv_psql_val 'SELECT 1;' 2>/dev/null || true)"
+  [ "$v" = "1" ]
+}
