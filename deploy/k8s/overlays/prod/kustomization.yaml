@@ -88,10 +88,17 @@ images:
     digest: sha256:c26e0e67ea0d67751e21448a95660e3e4a37c214d98f228f50a8b08c02d1fbc5
   - name: ghcr.io/verdifyconsultancy/verdify-migrate
     digest: sha256:7a39c3deb6df2182c7480cdd653bffa6575570bbfd262bf7c9694abcc58badf5
-  # PLACEHOLDER — no verdify-planner image published yet (gh api 404). The digest
-  # write-back flow pins the real GHCR digest once container-publish is green.
+  # verdify-planner (#117): real published GHCR digest, resolved read-only via
+  # `gh api orgs/VerdifyConsultancy/packages/container/verdify-planner/versions`
+  # (the `branch-live-platform-main` build of planner_graph/). The planner image is
+  # env-agnostic (it carries its own planner_graph package; per-env DB/secrets come
+  # from each overlay's verdify-config + sealed secret), so prod pins the SAME
+  # known-good digest dev already carries — same one-digest-across-envs pattern as
+  # verdify-www. prod is human-gated and is NOT auto-bumped by bump-staging-digests
+  # (that job only repins overlays/staging + the INERT overlays/dev planner pin),
+  # so this prod pin is a deliberate in-repo write-back, never CI-mutated.
   - name: ghcr.io/verdifyconsultancy/verdify-planner
-    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+    digest: sha256:3e51abaec6372c0bed26ef9859a80008261fcd20a1e8ec1e37627304e1c6b637
   # PLACEHOLDER — #118 verdify-setpoint-server image not published yet
   # (scripts/Dockerfile.setpoint-server is new). Real GHCR digest pinned by the
   # write-back flow once container-publish is green. hermes-agent is deliberately
