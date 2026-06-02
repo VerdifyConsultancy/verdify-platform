@@ -108,6 +108,13 @@ class Audit:
 
 
 def read(path: Path) -> str:
+    # Issue #46 split ingestor/tasks.py into the ingestor/tasks/ package. Reading
+    # the legacy single-file path returns the concatenated package source so the
+    # source-string audits below keep matching wherever the code now lives.
+    if path.name == "tasks.py" and path.parent.name == "ingestor" and not path.exists():
+        pkg = path.parent / "tasks"
+        if pkg.is_dir():
+            return "\n".join(p.read_text(encoding="utf-8") for p in sorted(pkg.glob("*.py")))
     return path.read_text(encoding="utf-8")
 
 

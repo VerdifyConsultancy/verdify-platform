@@ -66,6 +66,54 @@ from verdify_schemas.tunable_registry import (  # noqa: E402
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
+def _tasks_src() -> str:
+    """Full source of the tasks implementation.
+
+    Issue #46 split ``ingestor/tasks.py`` into the ``ingestor/tasks/`` package.
+    Source-string invariant checks read the whole package (every submodule) so
+    the same literal assertions still hold wherever the code now lives.
+    """
+    pkg = REPO_ROOT / "ingestor" / "tasks"
+    if pkg.is_dir():
+        return "\n".join(p.read_text() for p in sorted(pkg.glob("*.py")))
+    return (REPO_ROOT / "ingestor" / "tasks.py").read_text()
+
+
+def _tasks_submodule_src(stem: str) -> str:
+    """Source of one tasks-package submodule (e.g. 'alerts', 'forecast').
+
+    Pre-#46 these tests sliced a region out of the single tasks.py by section
+    marker. With the package split, each task entry-point lives in its own
+    submodule, so reading that submodule's source preserves the same scope.
+    """
+    pkg = REPO_ROOT / "ingestor" / "tasks"
+    if pkg.is_dir():
+        return (pkg / f"{stem}.py").read_text()
+    return (REPO_ROOT / "ingestor" / "tasks.py").read_text()
+
+
+def _tasks_module_for(name: str) -> Path:
+    """Return the package submodule (or legacy file) that defines ``name``.
+
+    Used by AST-based assignment extraction (``_assigned_set``) so it parses the
+    one module that owns a top-level assignment rather than the whole package.
+    """
+    pkg = REPO_ROOT / "ingestor" / "tasks"
+    if not pkg.is_dir():
+        return REPO_ROOT / "ingestor" / "tasks.py"
+    for p in sorted(pkg.glob("*.py")):
+        tree = ast.parse(p.read_text())
+        for node in tree.body:
+            targets = []
+            if isinstance(node, ast.Assign):
+                targets = [t.id for t in node.targets if isinstance(t, ast.Name)]
+            elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+                targets = [node.target.id]
+            if name in targets:
+                return p
+    raise AssertionError(f"{name} assignment not found in tasks package")
+
+
 def _assigned_set(path: Path, name: str) -> set[str]:
     tree = ast.parse(path.read_text())
     for node in tree.body:
@@ -257,7 +305,7 @@ def test_daily_lifecycle_artifact_export_covers_public_safe_receipts():
 
 
 def test_daily_summary_live_total_water_floors_known_mister_subset():
-    src = Path("ingestor/tasks.py").read_text()
+    src = _tasks_src()
     start = src.index("async def _refresh_daily_summary_for_date")
     end = src.index("async def daily_summary_live", start)
     block = src[start:end]
@@ -276,9 +324,8 @@ def test_zero_variance_rule_covers_vpd_target_west():
     # Rule lives inside alert_monitor's body. We verify the param appears
     # in the tasks.py file as a string literal — coarser than ideal but
     # doesn't require the full async DB path.
-    import tasks
 
-    tasks_source = Path(tasks.__file__).read_text()
+    tasks_source = _tasks_src()
     assert '"vpd_target_west"' in tasks_source or "'vpd_target_west'" in tasks_source
     # All four zone targets should be in the zero-variance scan list
     for param in ("vpd_target_south", "vpd_target_west", "vpd_target_east", "vpd_target_center"):
@@ -287,9 +334,8 @@ def test_zero_variance_rule_covers_vpd_target_west():
 
 def test_zero_variance_rule_skips_empty_zone_target_fallbacks():
     """A zone target pinned at its fallback is expected when that zone has no active crop."""
-    import tasks
 
-    tasks_source = Path(tasks.__file__).read_text()
+    tasks_source = _tasks_src()
     assert "active_crop_zones" in tasks_source
     assert "zone_target_params" in tasks_source
     assert "if zone in active_crop_zones" in tasks_source
@@ -298,9 +344,8 @@ def test_zero_variance_rule_skips_empty_zone_target_fallbacks():
 def test_zero_variance_rule_also_covers_band_params():
     """temp_low / temp_high / vpd_low / vpd_high should track crop + dispatcher
     state. If they go flat for 7 days, something upstream is broken."""
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     # Look for these all appearing in the same zone_var_params tuple
     for param in ("temp_low", "temp_high", "vpd_low", "vpd_high"):
         assert f'"{param}"' in src
@@ -310,7 +355,7 @@ def test_alert_monitor_detects_band_owned_plan_rows():
     """Future dispatcher-owned policy rows in setpoint_plan must open an alert."""
     import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     assert "planner_band_ownership_drift" in src
     assert "system.planner_band_ownership" in src
     assert "setpoint_plan" in src
@@ -356,9 +401,8 @@ def test_setpoint_confirmation_monitor_resolves_acknowledged_alerts():
     the monitor must resolve them once a confirmation or superseding setpoint
     lands.
     """
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     start = src.index("async def setpoint_confirmation_monitor")
     block = src[start:]
     assert "al.resolved_at IS NULL" in block
@@ -392,7 +436,7 @@ def test_dispatcher_band_owned_contract_is_explicit():
     }
     assert tasks.BAND_DRIVEN_PARAMS == expected
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     assert "fn_band_setpoints(now())" in src
     assert "fn_house_vpd_control_band(now())" in src
     assert "fn_lighting_policy(now())" in src
@@ -503,7 +547,7 @@ def test_ha_light_sync_reads_real_lutron_switch_entities():
     """DB equipment_state should trace the same Lutron switch entities the
     proxy commands, not stale light.* wrappers.
     """
-    tasks = Path("ingestor/tasks.py").read_text()
+    tasks = _tasks_src()
     sync = Path("scripts/ha-sensor-sync.py").read_text()
 
     for src in (tasks, sync):
@@ -701,9 +745,8 @@ def test_vpd_high_moisture_guardrail_does_not_run_when_idle_below_band():
 
 
 def test_vpd_high_moisture_guard_context_avoids_greenhouse_state_latest_scan():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     start = src.index("async def _fetch_moisture_guard_context")
     end = src.index("def _vpd_high_moisture_guardrails", start)
     body = src[start:end]
@@ -715,19 +758,18 @@ def test_vpd_high_moisture_guard_context_avoids_greenhouse_state_latest_scan():
 
 
 def test_alert_monitor_avoids_greenhouse_state_hot_path_scans():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
-    start = src.index("async def alert_monitor")
-    end = src.index("# 8. SETPOINT DISPATCHER", start)
-    body = src[start:end]
+    # alert_monitor is the sole entry point in the alerts submodule (#46 split),
+    # so its module source is exactly the function body scope this test guards.
+    body = _tasks_submodule_src("alerts")
+    assert "async def alert_monitor" in body
 
     assert "FROM v_greenhouse_state" not in body
     assert "FROM climate" in body
     assert "fn_setpoint_at('temp_high', c.ts)" in body
     assert "fn_equip_at('mister_center', c.ts)" in body
 
-    standalone = (Path(tasks.__file__).resolve().parent.parent / "scripts" / "alert-monitor.py").read_text()
+    standalone = (REPO_ROOT / "scripts" / "alert-monitor.py").read_text()
     assert "FROM v_greenhouse_state" not in standalone
     assert "latest_climate AS" in standalone
 
@@ -942,7 +984,7 @@ def test_firmware_omits_mqtt_and_uses_ingestor_occupancy_push():
     greenhouse = Path("firmware/greenhouse.yaml").read_text()
     hardware = Path("firmware/greenhouse/hardware.yaml").read_text()
     ingestor_src = Path("ingestor/ingestor.py").read_text()
-    tasks_src = Path("ingestor/tasks.py").read_text()
+    tasks_src = _tasks_src()
     push_src = Path("ingestor/esp32_push.py").read_text()
     occupancy_src = Path("ingestor/occupancy.py").read_text()
     entity_map_src = Path("ingestor/entity_map.py").read_text()
@@ -1180,9 +1222,8 @@ def test_mcp_set_plan_rejects_non_policy_tunables():
 
 def test_alert_monitor_detects_planner_delivery_outages():
     """Hermes outages and missed required plans must be visible alerts."""
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     assert "planner_gateway_delivery_failed" in src
     assert "system.hermes" in src
     assert "WITH last_success AS" in src
@@ -1243,12 +1284,12 @@ def test_forecast_deviation_helpers_compute_vpd_and_cloud_proxy():
 
 
 def test_forecast_deviation_check_covers_distinct_axes_without_global_cooldown():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
-    start = src.index("async def forecast_deviation_check")
-    end = src.index("async def _refresh_daily_summary_for_date", start)
-    body = src[start:end]
+    # forecast_deviation_check is the last entry point in the forecast submodule
+    # (#46 split); slicing from it to EOF preserves the original scope.
+    fsrc = _tasks_submodule_src("forecast")
+    start = fsrc.index("async def forecast_deviation_check")
+    body = fsrc[start:]
 
     for parameter in (
         "temp_f",
@@ -1275,13 +1316,13 @@ def test_forecast_deviation_check_covers_distinct_axes_without_global_cooldown()
 def test_forecast_freshness_is_system_health_not_planner_deviation():
     import tasks
 
-    src = Path(tasks.__file__).read_text()
-    alert_start = src.index("async def alert_monitor")
-    alert_end = src.index("# 8. SETPOINT DISPATCHER", alert_start)
-    alert_body = src[alert_start:alert_end]
-    deviation_start = src.index("async def forecast_deviation_check")
-    deviation_end = src.index("async def _refresh_daily_summary_for_date", deviation_start)
-    deviation_body = src[deviation_start:deviation_end]
+    src = _tasks_src()
+    # alert_monitor and forecast_deviation_check are sole entry points in their
+    # respective #46-split submodules; their module sources are the scopes here.
+    alert_body = _tasks_submodule_src("alerts")
+    fsrc = _tasks_submodule_src("forecast")
+    deviation_start = fsrc.index("async def forecast_deviation_check")
+    deviation_body = fsrc[deviation_start:]
 
     assert tasks._FORECAST_STALE_SENSOR_ID == "system.weather_forecast"
     assert "_FORECAST_STALE_THRESHOLD_S = 2 * 60 * 60" in src
@@ -1293,9 +1334,8 @@ def test_forecast_freshness_is_system_health_not_planner_deviation():
 
 
 def test_forecast_deviation_uses_alert_envelope_with_legacy_file_fallback():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     assert "forecast_deviation" in src
     assert "AlertEnvelope.model_validate(_forecast_deviation_alert_payload(trigger))" in src
     assert "INSERT INTO alert_log" in src
@@ -1360,12 +1400,15 @@ def test_planning_milestones_are_derived_from_trigger_matrix(monkeypatch):
             "sunset": _dt(date.year, date.month, date.day, 20, 10, tzinfo=tzinfo),
         }
 
-    monkeypatch.setattr(tasks, "_sun", fake_sun)
-    monkeypatch.setattr(tasks, "_load_milestone_state", lambda: None)
-    monkeypatch.setattr(tasks, "datetime", EarlyDatetime)
-    tasks._milestones_date = None
-    tasks._milestones_cache = {}
-    tasks._milestones_fired = {}
+    # #46 split: _compute_milestones lives in the tasks.heartbeat submodule and
+    # reads its own module globals (datetime/_sun/state), so patch there.
+    hb = tasks.heartbeat
+    monkeypatch.setattr(hb, "_sun", fake_sun)
+    monkeypatch.setattr(hb, "_load_milestone_state", lambda: None)
+    monkeypatch.setattr(hb, "datetime", EarlyDatetime)
+    hb._milestones_date = None
+    hb._milestones_cache = {}
+    hb._milestones_fired = {}
 
     milestones = tasks._compute_milestones()
     assert list(milestones) == [key for key, spec in tasks.PLANNER_TRIGGER_MATRIX.items() if spec.materialize_expected]
@@ -1420,9 +1463,8 @@ def test_resolve_delivery_log_sets_status_plan_written():
     """The _resolve_delivery_log UPDATE must set status='plan_written'
     alongside resulting_plan_id so the status column stays truthful.
     String-check only — running the UPDATE requires asyncpg."""
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     # Locate the _resolve_delivery_log function and check its UPDATE string
     start = src.index("async def _resolve_delivery_log")
     end = src.index("async def ", start + 1)
@@ -1437,9 +1479,8 @@ def test_resolve_delivery_log_sets_status_plan_written():
 
 def test_resolve_delivery_log_fallback_is_legacy_null_uuid_only():
     """Rows with trigger_id must never use the old 2h time-window fallback."""
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     start = src.index("async def _resolve_delivery_log")
     end = src.index("async def ", start + 1)
     body = src[start:end]
@@ -1450,9 +1491,8 @@ def test_resolve_delivery_log_fallback_is_legacy_null_uuid_only():
 
 
 def test_failed_plan_delivery_logs_delivery_failed_status():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     start = src.index("async def _log_plan_delivery")
     end = src.index("async def _deliver_and_log", start)
     body = src[start:end]
@@ -1462,9 +1502,8 @@ def test_failed_plan_delivery_logs_delivery_failed_status():
 
 
 def test_deliver_and_log_precreates_delivery_row_before_post():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     start = src.index("async def _deliver_and_log")
     end = src.index("async def _resolve_delivery_log", start)
     body = src[start:end]
@@ -1474,9 +1513,8 @@ def test_deliver_and_log_precreates_delivery_row_before_post():
 
 
 def test_planner_expected_trigger_ledger_is_materialized_before_delivery():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     assert "async def _ensure_expected_planner_triggers" in src
     assert "planner_trigger_ledger" in src
     assert "ON CONFLICT (greenhouse_id, event_type, expected_at)" in src
@@ -1485,9 +1523,8 @@ def test_planner_expected_trigger_ledger_is_materialized_before_delivery():
 
 
 def test_planner_sla_lifecycle_uses_configured_pair_timeout():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     start = src.index("async def _expire_planner_trigger_slas")
     end = src.index("async def _log_plan_delivery", start)
     body = src[start:end]
@@ -1498,9 +1535,8 @@ def test_planner_sla_lifecycle_uses_configured_pair_timeout():
 
 
 def test_active_future_plan_range_guard_uses_tunable_registry():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     assert "planner_tunable_range_drift" in src
     assert "registry_value_error(parameter, value)" in src
     assert "controller_locked_on" in src
@@ -1513,9 +1549,8 @@ def test_active_future_plan_range_guard_uses_tunable_registry():
 
 
 def test_alert_monitor_detects_missing_future_plan_horizon():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     assert "planner_plan_horizon_missing" in src
     assert "system.planner_plan_horizon" in src
     assert "ts > now()" in src
@@ -1542,9 +1577,8 @@ def test_dispatcher_coerces_registry_bounds_before_insert_and_push():
 
 
 def test_dispatcher_direct_push_uses_dispatchable_changes_only():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     start = src.index("async def setpoint_dispatcher")
     end = src.index("def _fetch_forecast", start)
     body = src[start:end]
@@ -1577,7 +1611,7 @@ def test_dispatcher_gates_ai_moisture_stress_until_firmware_supports_entities():
         "fog_stress_min_dew_margin_f",
     } == tasks.AI_MOISTURE_STRESS_REQUIRED_OBJECT_IDS
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     start = src.index("async def setpoint_dispatcher")
     end = src.index("def _fetch_forecast", start)
     body = src[start:end]
@@ -1630,9 +1664,8 @@ def test_ai_moisture_stress_backfill_is_dry_run_first_and_routine_only():
 
 
 def test_dispatcher_propagates_plan_audit_to_setpoint_changes():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     start = src.index("async def setpoint_dispatcher")
     end = src.index("def _fetch_forecast", start)
     body = src[start:end]
@@ -1644,9 +1677,8 @@ def test_dispatcher_propagates_plan_audit_to_setpoint_changes():
 
 
 def test_dispatcher_writes_guardrail_hold_audits_without_setpoint_push():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     start = src.index("async def setpoint_dispatcher")
     end = src.index("def _fetch_forecast", start)
     body = src[start:end]
@@ -1657,9 +1689,8 @@ def test_dispatcher_writes_guardrail_hold_audits_without_setpoint_push():
 
 
 def test_dispatcher_clamp_audit_rows_carry_plan_metadata():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     assert "INSERT INTO setpoint_clamps" in src
     assert "status, plan_id, plan_ts, trigger_id, planner_instance" in src
     assert '"plan_id": r["plan_id"]' in src
@@ -1856,19 +1887,21 @@ def test_midnight_milestone_exists_only_inside_catchup_window(monkeypatch):
             "sunset": _dt(date.year, date.month, date.day, 20, 10, tzinfo=tzinfo),
         }
 
-    monkeypatch.setattr(tasks, "_sun", fake_sun)
-    monkeypatch.setattr(tasks, "_load_milestone_state", lambda: None)
+    # #46 split: patch the heartbeat submodule that owns _compute_milestones.
+    hb = tasks.heartbeat
+    monkeypatch.setattr(hb, "_sun", fake_sun)
+    monkeypatch.setattr(hb, "_load_milestone_state", lambda: None)
 
-    monkeypatch.setattr(tasks, "datetime", EarlyDatetime)
-    tasks._milestones_date = None
-    tasks._milestones_cache = {}
-    tasks._milestones_fired = {}
+    monkeypatch.setattr(hb, "datetime", EarlyDatetime)
+    hb._milestones_date = None
+    hb._milestones_cache = {}
+    hb._milestones_fired = {}
     assert tasks._compute_milestones()["MIDNIGHT"].hour == 0
 
-    monkeypatch.setattr(tasks, "datetime", LateDatetime)
-    tasks._milestones_date = None
-    tasks._milestones_cache = {}
-    tasks._milestones_fired = {}
+    monkeypatch.setattr(hb, "datetime", LateDatetime)
+    hb._milestones_date = None
+    hb._milestones_cache = {}
+    hb._milestones_fired = {}
     assert "MIDNIGHT" not in tasks._compute_milestones()
 
 
@@ -2386,9 +2419,8 @@ def test_mcp_rejects_non_validation_solar_acknowledgement():
 
 
 def test_required_plan_alert_ignores_validation_ack_only_rows():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     start = src.index("# 7b. Required SUNRISE/SUNSET/MIDNIGHT plans")
     end = src.index("if required_misses:", start)
     body = src[start:end]
@@ -3148,9 +3180,8 @@ def test_schema_contract_marks_legacy_irrigation_as_retired():
 
 
 def test_daily_summary_runtime_includes_fertigation_relays():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     runtime_block = src[
         src.index("_RT_EQUIP = (") : src.index("rt_rows = await conn.fetch", src.index("_RT_EQUIP = ("))
     ]
@@ -3183,9 +3214,8 @@ def test_daily_summary_runtime_includes_fertigation_relays():
 
 
 def test_alert_monitor_tracks_irrigation_feedback_gaps():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
 
     assert "v_irrigation_sensor_feedback_status" in src
     assert '"alert_type": "irrigation_feedback_gap"' in src

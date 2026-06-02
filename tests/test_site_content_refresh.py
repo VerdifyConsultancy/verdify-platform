@@ -116,7 +116,9 @@ async def test_site_content_refresh_selects_and_upserts_corpus(fixture_corpus, m
 
     populator = tasks._load_site_content_populator()
     _point_populator_at(populator, fixture_corpus)
-    monkeypatch.setattr(tasks, "_load_site_content_populator", lambda: populator)
+    # #46: site_content_refresh + _load_site_content_populator live in tasks.ha;
+    # patch there so the function-under-test sees the fixture populator.
+    monkeypatch.setattr(tasks.ha, "_load_site_content_populator", lambda: populator)
 
     await tasks.site_content_refresh(pool)
 
@@ -141,7 +143,9 @@ async def test_site_content_refresh_advances_freshness_watermark(fixture_corpus,
 
     populator = tasks._load_site_content_populator()
     _point_populator_at(populator, fixture_corpus)
-    monkeypatch.setattr(tasks, "_load_site_content_populator", lambda: populator)
+    # #46: site_content_refresh + _load_site_content_populator live in tasks.ha;
+    # patch there so the function-under-test sees the fixture populator.
+    monkeypatch.setattr(tasks.ha, "_load_site_content_populator", lambda: populator)
 
     # Before the refresh the snapshot is stale.
     assert tasks.site_content_is_fresh(stale, now=stamp) is False
