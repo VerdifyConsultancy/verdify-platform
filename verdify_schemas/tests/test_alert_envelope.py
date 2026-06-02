@@ -427,8 +427,12 @@ def test_every_alert_type_has_a_case():
 
 def test_schema_covers_alert_types_in_write_paths():
     root = Path(__file__).resolve().parents[2]
+    # Issue #46 split ingestor/tasks.py into the ingestor/tasks/ package; expand
+    # it to every submodule so the alert-type write-path scan still covers it.
+    tasks_pkg = root / "ingestor" / "tasks"
+    tasks_sources = sorted(tasks_pkg.glob("*.py")) if tasks_pkg.is_dir() else [root / "ingestor" / "tasks.py"]
     sources = [
-        root / "ingestor" / "tasks.py",
+        *tasks_sources,
         root / "ingestor" / "iris_planner.py",
         root / "api" / "main.py",
     ]
