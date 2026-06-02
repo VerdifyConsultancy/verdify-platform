@@ -15,6 +15,11 @@ COPY db/schema.sql /db/schema.sql
 COPY db/migrations/000-fresh-schema-hypertable-repair.sql /db/000-fresh-schema-hypertable-repair.sql
 COPY <<'SCRIPT' /usr/local/bin/migrate.sh
 #!/bin/sh
+# Image schema coverage: db/schema.sql is the production pg_dump --schema-only
+# snapshot through migration 156 (155 twin-observability tables + 156
+# planner_lessons canonicalization / active-lessons prune). Replaying it here
+# builds those into a fresh DB; migration 000 then repairs the hypertable catalog.
+# (This comment is a real db/** edit so the migrate image rebuilds on push — #99.)
 # Verdify fresh-DB schema build. Mirrors the documented convention (db/migrations/000
 # header + tests/test_12_fidelity.py + `make db-dump`): replay db/schema.sql (the
 # production pg_dump --schema-only snapshot) with ON_ERROR_STOP=0 (a fresh

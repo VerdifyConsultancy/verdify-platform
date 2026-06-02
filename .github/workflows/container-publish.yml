@@ -99,6 +99,7 @@ jobs:
       ingestor_impact: ${{ steps.impact.outputs.ingestor_impact }}
       planner_impact: ${{ steps.impact.outputs.planner_impact }}
       setpoint_impact: ${{ steps.impact.outputs.setpoint_impact }}
+      migrate_impact: ${{ steps.impact.outputs.migrate_impact }}
       reason: ${{ steps.impact.outputs.reason }}
     steps:
       - name: Checkout
@@ -147,6 +148,7 @@ jobs:
           ingestor_impact=false
           planner_impact=false
           setpoint_impact=false
+          migrate_impact=false
           doc_only=true
           any_changed=false
 
@@ -197,6 +199,19 @@ jobs:
             case "$f" in
               scripts/setpoint-server.py|scripts/Dockerfile.setpoint-server|verdify_schemas/*) setpoint_impact=true ;;
             esac
+            # verdify-migrate image (db/Dockerfile.migrate) carries db/schema.sql
+            # (the production pg_dump --schema-only snapshot) + migration 000 + the
+            # inline migrate.sh. A db/-only change (schema.sql / migrations / the
+            # migrate.sh inline script / Dockerfile.migrate) MUST rebuild it so the
+            # staging schema-build hook stays current — historically a db/-only
+            # change left image_publish=false (only api/mcp/ingestor/setpoint paths
+            # set it) so migrations never rebuilt the migrate image and its digest
+            # only ever published via manual workflow_dispatch (where the
+            # bump-staging-digests write-back is skipped, stranding staging on a
+            # phantom pin). This db/** path closes that gap. (#99)
+            case "$f" in
+              db/*) migrate_impact=true ;;
+            esac
           done < "$changed_files"
 
           if [ "$manual" = "true" ]; then
@@ -205,10 +220,11 @@ jobs:
             ingestor_impact=true
             planner_impact=true
             setpoint_impact=true
+            migrate_impact=true
           fi
 
           any_image=false
-          { [ "$api_impact" = "true" ] || [ "$mcp_impact" = "true" ] || [ "$ingestor_impact" = "true" ] || [ "$planner_impact" = "true" ] || [ "$setpoint_impact" = "true" ]; } && any_image=true
+          { [ "$api_impact" = "true" ] || [ "$mcp_impact" = "true" ] || [ "$ingestor_impact" = "true" ] || [ "$planner_impact" = "true" ] || [ "$setpoint_impact" = "true" ] || [ "$migrate_impact" = "true" ]; } && any_image=true
 
           image_publish=false
           if [ "$manual" = "true" ]; then
@@ -222,7 +238,7 @@ jobs:
             reason="no image-impacting files changed; skipping image publish"
           else
             image_publish=true
-            changed="api=$api_impact mcp=$mcp_impact ingestor=$ingestor_impact planner=$planner_impact setpoint=$setpoint_impact"
+            changed="api=$api_impact mcp=$mcp_impact ingestor=$ingestor_impact planner=$planner_impact setpoint=$setpoint_impact migrate=$migrate_impact"
             reason="image-impacting change ($changed)"
           fi
 
@@ -234,6 +250,7 @@ jobs:
             echo "ingestor_impact=$ingestor_impact"
             echo "planner_impact=$planner_impact"
             echo "setpoint_impact=$setpoint_impact"
+            echo "migrate_impact=$migrate_impact"
             echo "reason=$reason"
           } >> "$GITHUB_OUTPUT"
 
@@ -246,6 +263,7 @@ jobs:
             echo "- ingestor_impact: \`$ingestor_impact\`"
             echo "- planner_impact: \`$planner_impact\` (artifact-only; not deployed)"
             echo "- setpoint_impact: \`$setpoint_impact\` (artifact-only; not deployed)"
+            echo "- migrate_impact: \`$migrate_impact\` (db/** schema-build image)"
             echo "- reason: $reason"
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -375,9 +393,13 @@ jobs:
     needs: image-impact
     # verdify-migrate (db/Dockerfile.migrate) carries db/schema.sql + migration
     # 000; it is tiny and rebuilt on any publish so the staging schema stays
-    # current. NOTE: a db/-only change (schema.sql / migrations / migrate.sh) does
-    # not yet set image_publish via the api/mcp/ingestor impact paths — add db/**
-    # to the image-impact paths, or use workflow_dispatch, to rebuild it then.
+    # current. A db/-only change (schema.sql / migrations / the inline migrate.sh /
+    # Dockerfile.migrate) now sets migrate_impact -> image_publish via the
+    # image-impact db/** path (#99), so migrations rebuild + republish the migrate
+    # image on a real push (not only via workflow_dispatch, where the
+    # bump-staging-digests write-back is skipped and staging strands on a phantom
+    # pin). The `if:` stays image_publish-gated (rebuild on ANY publish keeps the
+    # staging schema current); migrate_impact guarantees a db/-only push reaches it.
     if: needs.image-impact.outputs.image_publish == 'true' || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
