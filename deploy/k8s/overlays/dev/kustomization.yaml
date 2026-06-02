@@ -62,10 +62,12 @@ patches:
 
 # Image digest pins. Canonical namespace ghcr.io/verdifyconsultancy/verdify-*,
 # immutable @sha256 (NEVER a mutable :latest/:dev tag). The app images reuse the
-# staging-verified digests as a known-good baseline; verdify-planner now carries
-# its real published GHCR digest (#99 — the image is published + repo-linked; the
-# bump-staging-digests job auto-repins it on each green planner build). dev is
-# INERT (no ArgoCD app), so this pin deploys nothing.
+# staging-verified digests as a known-good baseline; verdify-planner and
+# verdify-migrate now carry their real published GHCR digests (#99 — both images
+# are published + repo-linked; the bump-staging-digests job auto-repins BOTH the
+# planner (on each green planner build) and the migrate (on each green migrate
+# build) digest into this dev overlay, so neither self-heals away from a phantom
+# pin again). dev is INERT (no ArgoCD app), so this pin deploys nothing.
 images:
   - name: ghcr.io/verdifyconsultancy/verdify-api
     digest: sha256:ce4ca79f9e6442c39558cbe02b1665c3cddc3e269c1867997d4f292f3a5ce8ff
@@ -74,7 +76,7 @@ images:
   - name: ghcr.io/verdifyconsultancy/verdify-ingestor
     digest: sha256:4f141a5901f802e52b37b15a6a92b8d0bc906f3d854066e3ddd52911aa457d0d
   - name: ghcr.io/verdifyconsultancy/verdify-migrate
-    digest: sha256:7a39c3deb6df2182c7480cdd653bffa6575570bbfd262bf7c9694abcc58badf5
+    digest: sha256:aa85ac7ff3839f78620784095df2eea09031810083a486a3995f275fb892d24f
   - name: ghcr.io/verdifyconsultancy/verdify-planner
     digest: sha256:3e51abaec6372c0bed26ef9859a80008261fcd20a1e8ec1e37627304e1c6b637
   # verdify-www (#116): real GHCR digest of the marketing site image built from
