@@ -104,7 +104,7 @@ images:
   name: ghcr.io/verdifyconsultancy/verdify-ingestor
 - digest: sha256:22f958b199f143f90a3984f416e6bfdcbb5a2ebd214b97fe32819a8c8f4864fc
   name: ghcr.io/verdifyconsultancy/verdify-mcp
-- digest: sha256:7a39c3deb6df2182c7480cdd653bffa6575570bbfd262bf7c9694abcc58badf5
+- digest: sha256:54c0697dd87f4673f41d2749c9dad85078ad668499c88998847e61dfcf0271ce
   name: ghcr.io/verdifyconsultancy/verdify-migrate
 - digest: sha256:5e00bc2080ee03fe7f21517d326acf0a89f93baefc0b27fcb481bab59ab7c58a
   name: ghcr.io/verdifyconsultancy/verdify-www
