@@ -128,10 +128,18 @@ def _tasks_route_target_columns(repo_root: Path, *mapping_names: str) -> set[str
     scope. This guard only needs the first element of each route tuple, so keep
     schema CI independent from the full service dependency tree.
     """
-    tree = ast.parse((repo_root / "ingestor" / "tasks.py").read_text())
+    # Issue #46 split ingestor/tasks.py into the ingestor/tasks/ package; scan
+    # every submodule's top-level statements so the route maps are still found.
+    pkg = repo_root / "ingestor" / "tasks"
+    if pkg.is_dir():
+        bodies: list[ast.stmt] = []
+        for f in sorted(pkg.glob("*.py")):
+            bodies.extend(ast.parse(f.read_text()).body)
+    else:
+        bodies = ast.parse((repo_root / "ingestor" / "tasks.py").read_text()).body
     wanted = set(mapping_names)
     columns: set[str] = set()
-    for node in tree.body:
+    for node in bodies:
         if not isinstance(node, ast.Assign):
             continue
         target_names = {target.id for target in node.targets if isinstance(target, ast.Name)}
@@ -147,7 +155,7 @@ def _tasks_route_target_columns(repo_root: Path, *mapping_names: str) -> set[str
             )
             columns.add(column_node.value)
         wanted -= matched
-    assert wanted == set(), f"missing route map(s) in ingestor/tasks.py: {sorted(wanted)}"
+    assert wanted == set(), f"missing route map(s) in ingestor/tasks package: {sorted(wanted)}"
     return columns
 
 

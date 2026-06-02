@@ -86,8 +86,12 @@ def greenhouse_yaml() -> str:
 
 @pytest.fixture(scope="module")
 def tasks_py() -> str:
-    path = REPO_ROOT / "ingestor" / "tasks.py"
-    return path.read_text()
+    # Issue #46 split ingestor/tasks.py into the ingestor/tasks/ package; read
+    # the whole package so the source-string drift guards still match.
+    pkg = REPO_ROOT / "ingestor" / "tasks"
+    if pkg.is_dir():
+        return "\n".join(p.read_text() for p in sorted(pkg.glob("*.py")))
+    return (REPO_ROOT / "ingestor" / "tasks.py").read_text()
 
 
 @pytest.fixture(scope="module")
