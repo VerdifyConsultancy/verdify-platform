@@ -161,7 +161,13 @@ SELECT stamp_migration('db/migrations/147-reward-swap-and-ladder-reanchor.sql', 
 SELECT stamp_migration('db/migrations/148-plan-accuracy-repoint-plan-journal.sql', 'db/migrations', 148, '873f4fb0a57dc7b2702094d4e7b83bea271f222bf986dcc25729a9b5ab87f928', 'baseline');
 SELECT stamp_migration('db/migrations/149-compress-snapshot-open-alerts-zone-kpis.sql', 'db/migrations', 149, 'bc770faa85973a1d614f1defa5265e603d04736aaf9f52b9fac5aa75316337aa', 'baseline');
 SELECT stamp_migration('db/migrations/150-vanda-nutrient-recipe.sql', 'db/migrations', 150, '89326344502f4d6c28961e002321658b47f6317de44a9bfaa331dd9c7cb487c6', 'baseline');
-SELECT stamp_migration('planner_graph/migrations/001_planner_memory.sql', 'planner_graph/migrations', 1, NULL, 'baseline');
+SELECT stamp_migration('db/migrations/151-backfill-suppressed-sensor-offline-resolved-at.sql', 'db/migrations', 151, '05de42dc96d1f7b9869ca463c30e40eed90bed4ef411c48f17212d5c597f6fa8', 'baseline');
+SELECT stamp_migration('db/migrations/152-kwh-coalesce-sanity-gate.sql', 'db/migrations', 152, 'af6e312cfb8278955e08ea1019d65a93b10fb863c746154ae8bf2de17e421d97', 'baseline');
+SELECT stamp_migration('db/migrations/153-pipeline-health-weather-station-dark-sources.sql', 'db/migrations', 153, '7ccce5af590167f1cb90d6186c0dfd2a77b3889e0fc33e7b6b8d65b0811cf9e3', 'baseline');
+SELECT stamp_migration('db/migrations/154-consolidate-oscillation-views.sql', 'db/migrations', 154, '33cf6059d8df0b4d608f8913c6dce302a7917fa3b2ed8c9e475fecdac6e91375', 'baseline');
+SELECT stamp_migration('db/migrations/155-twin-observability-tables.sql', 'db/migrations', 155, 'bfbf32c08a21f396e5721b9a5c539a93bcd8f81db771055e016fd90923a1223c', 'baseline');
+SELECT stamp_migration('db/migrations/156-prune-active-planner-lessons.sql', 'db/migrations', 156, '2a5177c4e75a60cdc5c907ee52fbfb2bf9e32b1ec361ace7b577bbd55380da44', 'baseline');
+SELECT stamp_migration('planner_graph/migrations/001_planner_memory.sql', 'planner_graph/migrations', 1, 'fadceba8d3f49eaa9e11e53fe9d22888228a9177e2532266732e1aca7cb2dd98', 'baseline');
 COMMIT;
 
--- stamped: 157 db/migrations + 1 planner_graph migration
+-- stamped: 163 db/migrations + 1 planner_graph migration
