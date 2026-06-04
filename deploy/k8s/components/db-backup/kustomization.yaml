@@ -1,0 +1,25 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+# Kustomize COMPONENT: the namespaced prod DB backup substrate (M3.3; refs
+# #84/#28/#130). An env opts in by listing ../../components/db-backup under its
+# overlay `components:` (same pattern as planner/mqtt-broker/www). Referenced by
+# NO overlay today, so it renders into nothing the live verdify-local-staging
+# ArgoCD app syncs — merging it deploys nothing. Root (or a deliberate overlay
+# opt-in) turns it on.
+#
+# Contains the NAMESPACED resources only (they inherit the overlay namespace):
+#   - dumps-pvc.yaml      verdify-db-dumps PVC (binds Root's static NFS PV)
+#   - backup-cronjob.yaml nightly pg_dump -Fc + retention + db-backup->db allow
+#
+# The cluster-scoped synology-iscsi-ssd StorageClass is DELIBERATELY NOT here —
+# it lives in ./storageclass as its own kustomization so it is applied once per
+# CLUSTER, not once per namespace (see that dir's header).
+#
+# SINGLE-WRITER SAFE: the CronJob reads the DB with pg_dump (SELECT-only) and
+# only writes the dumps PVC. It is not a second DB writer and does not touch the
+# device path, so it is safe to enable independently of the M5 prod ingestor
+# gate.
+resources:
+  - dumps-pvc.yaml
+  - backup-cronjob.yaml
