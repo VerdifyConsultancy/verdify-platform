@@ -17,48 +17,48 @@ kind: Kustomization
 #   - every registry/secrets/<id>.yaml target.namespace
 namespace: verdify-dev
 
-resources:
-  - namespace.yaml
-  - ../../base
   # Placeholder Secret for local `kustomize build` validation ONLY. The SOPS
   # backend provides the real verdify-app-secrets out-of-band. See the file.
-  - secrets.placeholder.yaml
   # DEVICE-SAFETY: dev-only egress lock dropping all egress to the greenhouse
   # device VLAN (192.168.10.0/24) from the ingestor pod. Mirrors staging; the
   # inverse allow lives ONLY in overlays/prod. See deny-esp32-egress.yaml.
-  - deny-esp32-egress.yaml
   # EDGE/WAN: host-route the dev verdify-api on api.k3s.verdify.ai through the
   # shared apps Traefik (.7.10). dev/stage URLs live on *.k3s.verdify.ai (prod
   # owns the bare *.verdify.ai hosts). See ingressroute.yaml.
-  - ingressroute.yaml
   # EDGE/WAN: host-route the dev verdify-www on www.k3s.verdify.ai through the
   # same shared apps Traefik (#116). See www-ingressroute.yaml.
-  - www-ingressroute.yaml
   # EDGE/WAN: host-route the dev verdify-lab Quartz site on lab.k3s.verdify.ai
   # through the same shared apps Traefik (#124). See lab-ingressroute.yaml.
-  - lab-ingressroute.yaml
+resources:
+- namespace.yaml
+- ../../base
+- secrets.placeholder.yaml
+- deny-esp32-egress.yaml
+- ingressroute.yaml
+- www-ingressroute.yaml
+- lab-ingressroute.yaml
 
 # verdify-planner (#117) + verdify-www (#116) + verdify-lab (#124) — referenced as
 # Components, NOT added to base, so they never render into overlays/staging. Same
 # pattern in overlays/prod.
 components:
-  - ../../components/planner
-  - ../../components/www
-  - ../../components/lab-site
+- ../../components/planner
+- ../../components/www
+- ../../components/lab-site
 
-patches:
   # APP_ENV=dev + VERDIFY_DEVICE_WRITE_ENABLED=0 (dev never writes the device).
-  - path: env-configmap.yaml
   # DEVICE SAFETY: pin the device-touching ingestor OFF until the #114
   # subscribe-from-prod-MQTT ingest mode lands. dev must never be a 2nd writer.
-  - path: ingestor-replicas-zero.yaml
   # PER-ENV DB STORAGE (#115): retarget the verdify-db PVC from the base
   # local-path to the volume1 'synology-iscsi-ssd' StorageClass (laptop-root
   # gate). dev gets its OWN TimescaleDB StatefulSet on the Synology SSD.
-  - path: db-storageclass.yaml
-    target:
-      kind: StatefulSet
-      name: verdify-db
+patches:
+- path: env-configmap.yaml
+- path: ingestor-replicas-zero.yaml
+- path: db-storageclass.yaml
+  target:
+    kind: StatefulSet
+    name: verdify-db
 
 # Image digest pins. Canonical namespace ghcr.io/verdifyconsultancy/verdify-*,
 # immutable @sha256 (NEVER a mutable :latest/:dev tag). The app images reuse the
@@ -68,24 +68,24 @@ patches:
 # planner (on each green planner build) and the migrate (on each green migrate
 # build) digest into this dev overlay, so neither self-heals away from a phantom
 # pin again). dev is INERT (no ArgoCD app), so this pin deploys nothing.
-images:
-  - name: ghcr.io/verdifyconsultancy/verdify-api
-    digest: sha256:ce4ca79f9e6442c39558cbe02b1665c3cddc3e269c1867997d4f292f3a5ce8ff
-  - name: ghcr.io/verdifyconsultancy/verdify-mcp
-    digest: sha256:9824020a0d2fe77191b2c01ca2634c3bcec6031b79d2fef1c3334b2d5665768d
-  - name: ghcr.io/verdifyconsultancy/verdify-ingestor
-    digest: sha256:4f141a5901f802e52b37b15a6a92b8d0bc906f3d854066e3ddd52911aa457d0d
-  - name: ghcr.io/verdifyconsultancy/verdify-migrate
-    digest: sha256:aa85ac7ff3839f78620784095df2eea09031810083a486a3995f275fb892d24f
-  - name: ghcr.io/verdifyconsultancy/verdify-planner
-    digest: sha256:3e51abaec6372c0bed26ef9859a80008261fcd20a1e8ec1e37627304e1c6b637
   # verdify-www (#116): real GHCR digest of the marketing site image built from
   # the upstream verdify-www repo at sha d3720dc (see components/www/www.yaml).
-  - name: ghcr.io/verdifyconsultancy/verdify-www
-    digest: sha256:5e00bc2080ee03fe7f21517d326acf0a89f93baefc0b27fcb481bab59ab7c58a
   # PLACEHOLDER — no verdify-lab (Quartz research site, #124) image published yet:
   # verdify-site is an orphan GHCR repo (repo:None) so CI cannot publish it until a
   # #99-class relink. The digest write-back flow pins the real GHCR digest once
   # container-publish for verdify-lab is green. See components/lab-site/lab-site.yaml.
-  - name: ghcr.io/verdifyconsultancy/verdify-lab
-    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+images:
+- digest: sha256:ce4ca79f9e6442c39558cbe02b1665c3cddc3e269c1867997d4f292f3a5ce8ff
+  name: ghcr.io/verdifyconsultancy/verdify-api
+- digest: sha256:4f141a5901f802e52b37b15a6a92b8d0bc906f3d854066e3ddd52911aa457d0d
+  name: ghcr.io/verdifyconsultancy/verdify-ingestor
+- digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+  name: ghcr.io/verdifyconsultancy/verdify-lab
+- digest: sha256:9824020a0d2fe77191b2c01ca2634c3bcec6031b79d2fef1c3334b2d5665768d
+  name: ghcr.io/verdifyconsultancy/verdify-mcp
+- digest: sha256:6079701f11306687ec3bffb41f0a3f89740880e889f88469fd97d12f07cc375b
+  name: ghcr.io/verdifyconsultancy/verdify-migrate
+- digest: sha256:3e51abaec6372c0bed26ef9859a80008261fcd20a1e8ec1e37627304e1c6b637
+  name: ghcr.io/verdifyconsultancy/verdify-planner
+- digest: sha256:5e00bc2080ee03fe7f21517d326acf0a89f93baefc0b27fcb481bab59ab7c58a
+  name: ghcr.io/verdifyconsultancy/verdify-www
