@@ -1,0 +1,24 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+# Kustomize COMPONENT: the residual Umami analytics tier (#130 M6.2 / #88 Phase
+# 4) — umami app + its own umami-db Postgres StatefulSet. DESIGNED-FOR
+# overlays/prod ONLY (analytics.verdify.ai is a prod host) — NOT a base resource,
+# so it can never render into overlays/staging (the only overlay the live
+# verdify-local-staging ArgoCD app syncs).
+#
+# NOT YET WIRED into overlays/prod: the prod-promote diff guard (#82) treats any
+# edit to overlays/prod as a digest-only promotion, so the overlay `components:`
+# wiring is a separate, gated follow-on (same posture as db/restore-job.yaml).
+# This PR delivers the reviewable target shape + the state-migration runbook; the
+# prod wiring lands at the human-gated cutover. See
+# docs/runbooks/iris-state-preservation.md §10.
+#
+# Upstream postgres + umami images (NOT transformer-rewritten — not verdify-*
+# names). The umami_db_data PVC is on the laptop-root synology-iscsi-ssd
+# StorageClass and the verdify-umami-secrets Secret is out-of-band (secretKeyRef
+# optional so the Component renders standalone). INERT until the verdify-prod
+# ArgoCD app + StorageClass exist. State migration + restore: see
+# docs/runbooks/iris-state-preservation.md. See umami.yaml header.
+resources:
+  - umami.yaml
