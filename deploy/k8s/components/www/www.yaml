@@ -5,12 +5,17 @@
 # git sha, using THAT repo's own Dockerfile (Astro static build -> Node runtime).
 # We deliberately do NOT vendor the whole Astro app into /mnt/iris/verdify; the
 # only artifact this monorepo carries is the immutable @sha256 image digest pin
-# (overlays' images: transformer) + these manifests. Rebuild recipe:
+# (overlays' images: transformer) + these manifests. The image now publishes
+# automatically: verdify-www's own .github/workflows/publish-image.yml builds +
+# pushes ghcr.io/verdifyconsultancy/verdify-www on push to its default branch
+# (GITHUB_TOKEN packages:write -> repo-linked). Manual rebuild recipe:
 #   gh repo clone VerdifyConsultancy/verdify-www && cd verdify-www
 #   docker build -t ghcr.io/verdifyconsultancy/verdify-www:sha-$(git rev-parse --short HEAD) .
 #   docker push  ghcr.io/verdifyconsultancy/verdify-www:sha-<sha>   # -> @sha256 digest
-# First image: repo sha d3720dc -> ghcr.io/verdifyconsultancy/verdify-www
-#   @sha256:5e00bc2080ee03fe7f21517d326acf0a89f93baefc0b27fcb481bab59ab7c58a
+# First REAL published image: repo sha b33f4cd -> ghcr.io/verdifyconsultancy/verdify-www
+#   @sha256:633fb18ab3c9a637693094917615c720a09baaef4877cce8dcea0568bca0b467
+# (this replaced an earlier placeholder pin sha256:5e00bc20… whose package 404'd —
+#  it had never actually been built/pushed to GHCR.)
 #
 # RUNTIME (load-bearing — why NOT a plain nginx static swap): astro.config.mjs is
 # output:"static", BUT the upstream Dockerfile serves dist/ via scripts/server.mjs

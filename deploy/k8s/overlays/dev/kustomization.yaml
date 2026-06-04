@@ -75,7 +75,11 @@ patches:
 # build) digest into this dev overlay, so neither self-heals away from a phantom
 # pin again). dev is INERT (no ArgoCD app), so this pin deploys nothing.
   # verdify-www (#116): real GHCR digest of the marketing site image built from
-  # the upstream verdify-www repo at sha d3720dc (see components/www/www.yaml).
+  # the upstream verdify-www repo at sha b33f4cd (see components/www/www.yaml).
+  # Published + repo-linked by verdify-www's publish-image.yml workflow and
+  # verified pullable 2026-06-04 — REPLACES the prior placeholder pin
+  # (sha256:5e00bc20…) whose package 404'd. dev pins the SAME env-agnostic digest
+  # as staging/prod (one-digest-across-envs static content).
   # PLACEHOLDER — no verdify-lab (Quartz research site, #124) image published yet:
   # verdify-site is an orphan GHCR repo (repo:None) so CI cannot publish it until a
   # #99-class relink. The digest write-back flow pins the real GHCR digest once
@@ -93,5 +97,5 @@ images:
   name: ghcr.io/verdifyconsultancy/verdify-migrate
 - digest: sha256:3e51abaec6372c0bed26ef9859a80008261fcd20a1e8ec1e37627304e1c6b637
   name: ghcr.io/verdifyconsultancy/verdify-planner
-- digest: sha256:5e00bc2080ee03fe7f21517d326acf0a89f93baefc0b27fcb481bab59ab7c58a
+- digest: sha256:633fb18ab3c9a637693094917615c720a09baaef4877cce8dcea0568bca0b467
   name: ghcr.io/verdifyconsultancy/verdify-www
