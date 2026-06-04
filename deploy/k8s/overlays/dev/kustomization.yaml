@@ -80,16 +80,21 @@ patches:
   # verified pullable 2026-06-04 — REPLACES the prior placeholder pin
   # (sha256:5e00bc20…) whose package 404'd. dev pins the SAME env-agnostic digest
   # as staging/prod (one-digest-across-envs static content).
-  # PLACEHOLDER — no verdify-lab (Quartz research site, #124) image published yet:
-  # verdify-site is an orphan GHCR repo (repo:None) so CI cannot publish it until a
-  # #99-class relink. The digest write-back flow pins the real GHCR digest once
-  # container-publish for verdify-lab is green. See components/lab-site/lab-site.yaml.
+  # verdify-lab (#124): real GHCR digest of the Quartz research-site image built
+  # from the verdify-site-legacy repo's Dockerfile.k3s (Quartz `npx quartz build`
+  # -> static public/ -> nginx-unprivileged on :8080). Published + repo-linked by
+  # verdify-site-legacy's publish-lab-image.yml workflow (package repository.name
+  # == verdify-site-legacy) and verified pullable 2026-06-04 — REPLACES the prior
+  # all-zeros placeholder pin whose package 404'd (verdify-site was an orphan GHCR
+  # repo). lab is NOT in overlays/staging (it is a dev/prod-only Component), so it
+  # is EXEMPT from the promote-diff-guard staging-equality check; dev pins the SAME
+  # env-agnostic digest as prod (one-digest-across-envs static content).
 images:
 - digest: sha256:ce4ca79f9e6442c39558cbe02b1665c3cddc3e269c1867997d4f292f3a5ce8ff
   name: ghcr.io/verdifyconsultancy/verdify-api
 - digest: sha256:4f141a5901f802e52b37b15a6a92b8d0bc906f3d854066e3ddd52911aa457d0d
   name: ghcr.io/verdifyconsultancy/verdify-ingestor
-- digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+- digest: sha256:92ab47073fad5372832274ba591291fd1c209968fd311892f4130bc423b1140b
   name: ghcr.io/verdifyconsultancy/verdify-lab
 - digest: sha256:9824020a0d2fe77191b2c01ca2634c3bcec6031b79d2fef1c3334b2d5665768d
   name: ghcr.io/verdifyconsultancy/verdify-mcp
