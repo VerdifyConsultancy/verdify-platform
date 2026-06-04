@@ -1,0 +1,114 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Instance: verdify-prod-dark — the DEVICE-DARK production shape (M4.1 adoption).
+#
+# WHY THIS OVERLAY EXISTS: overlays/prod is the DEVICE-WRITER shape
+# (VERDIFY_DEVICE_WRITE_ENABLED=1 + allow-ingestor-device-egress + ingestor
+# replicas:1 + setpoint-server). laptop-root CANNOT activate that under the
+# MASTER single-writer gate (it would create a SECOND live-ESP32 writer; the VM
+# is the one real writer today). To adopt the EXISTING verdify-prod namespace +
+# the EXISTING verdify-db StatefulSet under GitOps WITHOUT a writer — so the M4
+# 48h proof can READ the parity-restored prod TimescaleDB and SERVE it — this
+# overlay renders the prod stack PROVABLY device-dark.
+#
+# DEVICE-DARK — the three layers (each independently sufficient, all three present):
+#   1. ingestor replicas:0             (ingestor-replicas-zero.yaml)
+#   2. NO allow-ingestor-device-egress; deny-esp32-egress instead (deny-esp32-egress.yaml)
+#   3. VERDIFY_DEVICE_WRITE_ENABLED=0  (device-write-configmap.yaml)
+# PLUS: the setpoint-server Component (the 2nd, grow-light writer) is EXCLUDED
+# from `components:` entirely — it never renders here.
+#
+# READ/SERVE STACK (so the 48h proof can read + serve parity-restored data):
+#   - verdify-db (the EXISTING base StatefulSet — adopted, NOT recreated; prune:false)
+#   - api, mcp, migration-job (from ../../base)
+#   - planner, mqtt-broker, hermes-iris, www, lab (Components; NONE are device writers)
+# All app images are pinned to the SAME real @sha256 digests as overlays/prod
+# (no sha256:0000 placeholders) so prod-dark runs the identical, pullable bits.
+#
+# The namespace string is PINNED to verdify-prod (the EXISTING prod ns). It MUST
+# equal the ArgoCD Application destination.namespace (verdify-prod-dark.yaml) and
+# every sealed-secret target.namespace.
+namespace: verdify-prod
+
+resources:
+  - namespace.yaml
+  - ../../base
+  # Placeholder Secret for local `kustomize build` validation ONLY. Removed for a
+  # real apply; the SOPS backend provides the real verdify-app-secrets. The
+  # local-config ANNOTATION EXCLUDES it from build output.
+  - secrets.placeholder.yaml
+  # PLACEHOLDER hermes gateway Secret for local build ONLY (#119 hermes-iris).
+  # hermes-iris references verdify-hermes via envFrom.secretRef. local-config
+  # ANNOTATION -> EXCLUDED from build output (OpenAI key never emitted). Real
+  # verdify-hermes via SOPS out-of-band. See hermes-secret.placeholder.yaml.
+  - hermes-secret.placeholder.yaml
+  # NO ha-token.placeholder.yaml: the verdify-ha-token Secret is consumed ONLY by
+  # the setpoint-server (the grow-light writer), which prod-dark EXCLUDES. A
+  # device-affecting HA token surface is absent from the device-dark shape.
+  # DEVICE-DARK NETWORK HALF: drop all ingestor egress to the greenhouse device
+  # VLAN. This REPLACES overlays/prod's allow-ingestor-device-egress — prod-dark
+  # carries the DENY and never the allow. See deny-esp32-egress.yaml.
+  - deny-esp32-egress.yaml
+  # EDGE/WAN: host-route prod verdify-www on www.verdify.ai + apex through the
+  # shared apps Traefik (.7.10). Same bare-host routing as overlays/prod (#116).
+  - www-ingressroute.yaml
+  # EDGE/WAN: host-route prod verdify-lab Quartz site on lab.verdify.ai through
+  # the same shared apps Traefik (#124). Same as overlays/prod.
+  - lab-ingressroute.yaml
+
+# READ/SERVE Components only. verdify-planner (#117), mqtt fan-out broker (#113),
+# hermes-iris (#119), verdify-www (#116), verdify-lab (#124) — NONE is a device
+# writer. They are referenced as Components (NOT added to base) so they never
+# render into overlays/staging.
+#
+# DELIBERATELY EXCLUDED: ../../components/setpoint-server — it is the SECOND
+# device writer (grow-light + HA setpoint push), so it has NO place in the
+# device-dark shape. Its absence is a hard part of "prod-dark has no writer".
+components:
+  - ../../components/planner
+  - ../../components/mqtt-broker
+  - ../../components/hermes-iris
+  - ../../components/www
+  - ../../components/lab-site
+  # M3.3 backup substrate (refs #84/#28/#130): verdify-db-dumps NFS PVC + nightly
+  # pg_dump -Fc CronJob + retention + allow-db-from-backup. pg_dump is SELECT-only
+  # on the DB (NOT a second writer) and only writes the dumps PVC, so it is SAFE
+  # in the device-dark shape and gives the M4 proof a fresh <26h dump before any
+  # restore. Wired identically into overlays/staging + overlays/prod.
+  - ../../components/db-backup
+
+patches:
+  # DEVICE-DARK env half: VERDIFY_DEVICE_WRITE_ENABLED=0 (the inverse of prod).
+  - path: device-write-configmap.yaml
+  # DEVICE-DARK replica half: pin the ingestor OFF so no device writer exists.
+  - path: ingestor-replicas-zero.yaml
+  # NO publish-all-configmap patch: prod-dark's ingestor is replicas:0 and
+  # captures NO telemetry, so there is nothing to publish onto the fan-out bus.
+  # The mqtt-broker still runs (serve stack) but prod-dark is not a publisher.
+
+# Image digest pins — the SAME real, pullable @sha256 digests overlays/prod
+# carries (verified pullable 2026-06-04). No placeholder sha256:0000…; prod-dark
+# runs the identical bits the writer shape would, minus the writer wiring. Kept
+# byte-aligned with overlays/prod's images: block so a later (gated) prod adopt
+# describes the same images with no drift.
+images:
+  - name: ghcr.io/verdifyconsultancy/verdify-api
+    digest: sha256:00d0615f5653fa9c4bd01673855da35d8b44aa3a27311e1a134a59ce0baaf9c9
+  - name: ghcr.io/verdifyconsultancy/verdify-mcp
+    digest: sha256:51d42e88f00e9f514de8eef324ae7e1076360052a917fe5a8eac1956756da3b9
+  - name: ghcr.io/verdifyconsultancy/verdify-ingestor
+    digest: sha256:c26e0e67ea0d67751e21448a95660e3e4a37c214d98f228f50a8b08c02d1fbc5
+  - name: ghcr.io/verdifyconsultancy/verdify-migrate
+    digest: sha256:7a39c3deb6df2182c7480cdd653bffa6575570bbfd262bf7c9694abcc58badf5
+  # verdify-planner (#117): SAME env-agnostic digest overlays/prod + dev pin.
+  - name: ghcr.io/verdifyconsultancy/verdify-planner
+    digest: sha256:3e51abaec6372c0bed26ef9859a80008261fcd20a1e8ec1e37627304e1c6b637
+  # verdify-www (#116): SAME env-agnostic static-content digest as dev/staging/prod.
+  - name: ghcr.io/verdifyconsultancy/verdify-www
+    digest: sha256:633fb18ab3c9a637693094917615c720a09baaef4877cce8dcea0568bca0b467
+  # verdify-lab (#124): SAME env-agnostic Quartz digest overlays/prod + dev pin.
+  - name: ghcr.io/verdifyconsultancy/verdify-lab
+    digest: sha256:92ab47073fad5372832274ba591291fd1c209968fd311892f4130bc423b1140b
+  # NO verdify-setpoint-server pin: the setpoint-server Component is excluded, so
+  # its image never renders here (device-dark has no grow-light writer).

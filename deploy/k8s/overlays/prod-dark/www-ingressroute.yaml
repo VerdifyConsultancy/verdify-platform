@@ -1,0 +1,37 @@
+# prod-dark verdify-www edge exposure on the production www.verdify.ai host (#116).
+#
+# CONFIRMED ARCHITECTURE: prod owns the bare *.verdify.ai hosts
+# (www/lab/api/graphs.verdify.ai); dev/stage live on *.k3s.verdify.ai. prod-dark
+# adopts the SAME verdify-prod namespace and the SAME bare-host routing as
+# overlays/prod (device-dark does not change the front door) — it routes the prod
+# verdify-www THROUGH the shared apps Traefik (traefik-apps on the .7.10 VIP),
+# the ONE conformant front door. Byte-identical to overlays/prod/www-ingressroute.yaml.
+#
+# APEX: verdify.ai is routed to the same backend; the upstream server.mjs serves
+# the site at "/" and owns its own internal path redirects (NOT an apex->www
+# bounce here — keep edge routing dumb, let the app own redirect policy).
+#
+# No strip-identity Middleware: the marketing site is fully public and trusts no
+# forward-auth identity (unlike the api). tls: {} == Traefik default cert until
+# the *.verdify.ai wildcard lands.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: verdify-www
+  namespace: verdify-prod
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: www
+spec:
+  entryPoints:
+    - websecure
+    - web
+  routes:
+    # prod www + apex on the product domain. The component verdify-www Service is
+    # ClusterIP :8080. Traefik resolves against the Service .spec.ports[].port (8080).
+    - kind: Rule
+      match: Host(`www.verdify.ai`) || Host(`verdify.ai`)
+      services:
+        - name: verdify-www
+          port: 8080
+  tls: {}
