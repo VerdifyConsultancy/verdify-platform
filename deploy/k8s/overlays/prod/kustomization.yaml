@@ -65,6 +65,15 @@ components:
   # would degrade the live staging app). Built from the verdify-site repo
   # Dockerfile.k3s (see components/lab-site/lab-site.yaml).
   - ../../components/lab-site
+  # db-backup (M3.3; refs #84/#28/#130) — the verdify-db-dumps NFS PVC + nightly
+  # pg_dump -Fc CronJob + retention + allow-db-from-backup. pg_dump is SELECT-only
+  # on the DB (NOT a second writer) and only writes the dumps PVC, so it is SAFE
+  # in the prod writer shape AND in overlays/prod-dark, and gives a fresh <26h dump
+  # before any restore. Renders into the verdify-prod namespace. Root binds
+  # verdify-db-dumps to a static NFS PV (dumps-pvc.yaml is storageClassName:"" ->
+  # waits for that PV). The cluster-scoped synology-iscsi-ssd StorageClass is NOT
+  # pulled here — Root applies it once via components/db-backup/storageclass.
+  - ../../components/db-backup
 
 patches:
   # DEVICE-WRITE INTERLOCK (#79): VERDIFY_DEVICE_WRITE_ENABLED=1 — prod only.

@@ -1,0 +1,81 @@
+# ArgoCD Application — verdify-prod-dark  (HANDOVER: IRIS authors, laptop-root applies)
+#
+# IRIS AUTHORS this manifest; laptop-root APPLIES it to the argocd ns (drop it
+# into the canonical agent-fleet gitops repo). overlays/prod-dark is INERT until
+# this CR exists.
+#
+# *** DEVICE-DARK ADOPTION — MANUAL SYNC ON PURPOSE ***
+# This App adopts the EXISTING verdify-prod namespace + the EXISTING verdify-db
+# StatefulSet under GitOps as a PROVABLY DEVICE-DARK read/serve stack for the M4
+# 48h proof. It points at deploy/k8s/overlays/prod-dark, which renders NO device
+# writer — the three device-dark layers, all present:
+#   1. ingestor replicas:0
+#   2. NO allow-ingestor-device-egress (deny-esp32-egress instead)
+#   3. VERDIFY_DEVICE_WRITE_ENABLED=0
+# and the setpoint-server (2nd, grow-light writer) Component is EXCLUDED.
+# Therefore adopting this App can NEVER stand up a second live-ESP32 writer — the
+# MASTER single-writer gate holds (exactly ONE device writer: the VM, today).
+#
+# This is DELIBERATELY a MANUAL-SYNC App: NO syncPolicy.automated block. Even
+# though prod-dark is device-dark, manual sync keeps prod adoption operator-paced
+# and mirrors overlays/prod's posture — sync is operator-initiated
+# (argocd app sync verdify-prod-dark) only. (Flipping prod to a WRITER is a
+# SEPARATE, Jason-gated step that adopts overlays/prod, NOT this App.)
+#
+# prune is FALSE — the EXISTING verdify-db StatefulSet + its PVC hold the
+# parity-restored TimescaleDB data the M4 proof reads; auto-prune must NEVER reap
+# the DB on a manifest reshuffle. (Mirrors the live staging policy + verdify-prod.)
+#
+# verdify-db ADOPTION — NON-DESTRUCTIVE: overlays/prod-dark renders the verdify-db
+# StatefulSet from the base (storageClassName: local-path), BYTE-IDENTICAL to
+# overlays/prod's STS. It does NOT carry staging's synology-iscsi-ssd retarget,
+# because volumeClaimTemplate.storageClassName is IMMUTABLE on a live STS — so
+# adopting the already-running prod STS forces no immutable-field change and never
+# triggers a delete/recreate of the DB. If the live prod STS is already on a
+# different class, repin prod-dark's base before first sync (do NOT let ArgoCD
+# fight an immutable diff).
+#
+# HARD PREREQUISITES before laptop-root applies:
+#   1. SOPS verdify-app-secrets present in verdify-prod (#193: already present,
+#      POSTGRES_PASSWORD) BEFORE first reconcile. verdify-hermes is needed only if
+#      hermes-iris must come up; absent it, hermes-iris stays NotReady (harmless,
+#      device-dark). verdify-ha-token is NOT needed (setpoint-server excluded).
+#   2. The verdify-db-dumps NFS PVC binds a static NFS PV laptop-root applies at
+#      the platform layer (see deploy/k8s/components/db-backup/dumps-pvc.yaml). The
+#      nightly pg_dump CronJob lands here. Run it once for a fresh <26h dump before
+#      any M3.4 restore.
+#   3. The synology-iscsi-ssd StorageClass exists cluster-wide (#193: present).
+#   4. app images (api/mcp/ingestor/migrate/planner/www/lab) are REAL pullable
+#      @sha256 digests (verified 2026-06-04), the SAME pins overlays/prod carries.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: verdify-prod-dark
+  namespace: argocd
+  labels:
+    agent-fleet.vallery.net/environment: prod
+    agent-fleet.vallery.net/project: iris-verdify
+    app.kubernetes.io/part-of: agent-fleet
+  annotations:
+    agent-fleet.vallery.net/app-repo: https://github.com/VerdifyConsultancy/verdify-platform.git
+    agent-fleet.vallery.net/environment: prod
+    agent-fleet.vallery.net/image-tag: ghcr.io/verdifyconsultancy/verdify-api@sha256-digest-pinned
+    agent-fleet.vallery.net/source-repo: https://github.com/VerdifyConsultancy/verdify-platform.git
+    agent-fleet.vallery.net/source-revision: live/platform-main
+    agent-fleet.vallery.net/url: https://www.verdify.ai
+spec:
+  project: app-test
+  source:
+    repoURL: https://github.com/VerdifyConsultancy/verdify-platform.git
+    targetRevision: live/platform-main
+    path: deploy/k8s/overlays/prod-dark
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: verdify-prod
+  # MANUAL SYNC: no automated block (prod adoption is operator-paced; see header).
+  # prune stays false at the app level; operator-initiated syncs must use the
+  # ArgoCD prune confirmation explicitly and NEVER prune the verdify-db
+  # StatefulSet/PVC or the verdify-db-dumps backup PVC.
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=false

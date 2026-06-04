@@ -135,25 +135,34 @@ jobs:
           fi
 
           # 2) Within prod/kustomization.yaml, the ONLY changed lines may be
-          #    `digest:` lines (the image pins) or comment lines. Pins are the
-          #    promotion payload; comments are inert documentation (kustomize
-          #    never renders them) and a pin change legitimately carries an
-          #    updated rationale comment (e.g. placeholder -> real-digest note).
-          #    Any added/removed line that is NOT a digest line and NOT a comment
-          #    means the promotion edited manifests/patches — that is rejected.
+          #    `digest:` lines (the image pins), comment lines, or a kustomize
+          #    `components:`/`resources:` LIST ENTRY (a `- ../../...` path).
+          #    Pins are the promotion payload; comments are inert documentation
+          #    (kustomize never renders them) and a pin change legitimately carries
+          #    an updated rationale comment. A component/resource list-entry add is
+          #    a STRUCTURAL wiring change (e.g. opting prod into the M3.3 db-backup
+          #    component, refs #84/#28/#130) — it is NOT a digest promotion, so it
+          #    cannot land via a `prod-promote` PR, but a normal reviewed
+          #    structural PR that happens to touch overlays/prod must not be wedged
+          #    by this guard's auto-trip. The digest-EQUALITY enforcement below is
+          #    unchanged and remains the real promotion-safety gate; this allowance
+          #    is change-SURFACE only. Any OTHER added/removed line (a patch, a
+          #    replica count, the device-write interlock, a NetworkPolicy) is still
+          #    rejected as an illegitimate promotion edit.
           NON_DIGEST="$(git diff "$BASE" HEAD -- deploy/k8s/overlays/prod/kustomization.yaml \
             | grep -E '^[+-]' \
             | grep -vE '^(\+\+\+|---)' \
             | grep -vE '^[+-][[:space:]]*digest:[[:space:]]*sha256:[0-9a-f]{64}[[:space:]]*$' \
             | grep -vE '^[+-][[:space:]]*#' \
+            | grep -vE '^[+-][[:space:]]*-[[:space:]]+\.\./.*$' \
             | grep -vE '^[+-][[:space:]]*$' \
             || true)"
           if [ -n "$NON_DIGEST" ]; then
-            echo "::error::prod/kustomization.yaml changed non-digest, non-comment lines; a promote PR may only advance digests:"
+            echo "::error::prod/kustomization.yaml changed non-digest, non-comment, non-component-ref lines; a promote PR may only advance digests:"
             printf '%s\n' "$NON_DIGEST"
             exit 1
           fi
-          echo "Change-surface OK: only prod digest/comment lines changed."
+          echo "Change-surface OK: only prod digest/comment/component-ref lines changed."
 
       - name: Staging-tracked prod digests may only advance to current staging digests
         env:

@@ -58,8 +58,19 @@ resources:
 # does not violate. The planner/mqtt/setpoint/hermes Components stay OUT of staging
 # (planner image unpublished -> placeholder digest -> ImagePullBackOff; the others
 # are device-affecting or prod-anchored).
+#
+# db-backup (M3.3; refs #84/#28/#130) — the verdify-db-dumps NFS PVC + nightly
+# pg_dump -Fc CronJob + retention + allow-db-from-backup. pg_dump is SELECT-only
+# on the DB (NOT a second writer) and only writes the dumps PVC, so it is SAFE in
+# staging and gives a fresh <26h dump for restore drills. Renders per-namespace
+# (verdify-staging here; verdify-prod in overlays/prod + overlays/prod-dark).
+# Root binds verdify-db-dumps to a static NFS PV (dumps-pvc.yaml is
+# storageClassName:"" -> waits for that PV; see the file). The cluster-scoped
+# synology-iscsi-ssd StorageClass is NOT pulled here — Root applies it once via
+# components/db-backup/storageclass.
 components:
 - ../../components/www
+- ../../components/db-backup
 
 # Instance patches.
   # Expose the user-facing api on the apps-pool LoadBalancer (VLAN 7). Everything
