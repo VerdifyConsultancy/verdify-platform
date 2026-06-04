@@ -69,7 +69,7 @@ spec:
         #    hypertables. If climate is not yet a hypertable, the schema half has
         #    not run — fail fast rather than data-restore into a plain table.
         - name: wait-for-schema
-          image: timescale/timescaledb:2.17.2-pg16
+          image: timescale/timescaledb:2.25.2-pg16
           command:
             - sh
             - -c
@@ -112,7 +112,7 @@ spec:
         #    (kubectl cp, an objectstore get) — the contract is: archive lands at
         #    /dump/verdify.dump for the restore container, nothing writes the live DB.
         - name: fetch-dump
-          image: timescale/timescaledb:2.17.2-pg16
+          image: timescale/timescaledb:2.25.2-pg16
           command:
             - sh
             - -c
@@ -148,7 +148,7 @@ spec:
         #    restore table data into the 4 core hypertable PARENTS (TimescaleDB
         #    re-chunks them) and into every NON-hypertable table verbatim.
         - name: restore
-          image: timescale/timescaledb:2.17.2-pg16
+          image: timescale/timescaledb:2.25.2-pg16
           command:
             - sh
             - -c
