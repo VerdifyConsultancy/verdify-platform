@@ -146,7 +146,9 @@ spec:
         #    mid-restore. --no-owner / --no-privileges so the in-cluster `verdify`
         #    role owns everything regardless of the dump's recorded owner. We
         #    restore table data into the 4 core hypertable PARENTS (TimescaleDB
-        #    re-chunks them) and into every NON-hypertable table verbatim.
+        #    re-chunks them) and into every NON-hypertable table verbatim. After
+        #    ANALYZE we REFRESH the 3 plain matviews (G4) so they are non-empty;
+        #    re-adding compression/retention policies stays a manual step (5.2).
         - name: restore
           image: timescale/timescaledb:2.25.2-pg16
           command:
@@ -180,6 +182,26 @@ spec:
               fi
               echo "[restore] post-restore ANALYZE ..."
               $PSQL -tAc "ANALYZE;" >/dev/null
+              # Refresh the 3 PLAIN materialized views (runbook G4 / step 5.1).
+              # --data-only restores BASE-table rows only; matviews are created
+              # WITH NO DATA by the schema build and stay EMPTY through the
+              # restore, so without this they read 0 rows after a historical
+              # restore. There are NO TimescaleDB continuous aggregates here
+              # (timescaledb_information.continuous_aggregates is empty — see
+              # runbook G4); all 3 are PLAIN matviews, so the correct command is
+              # a plain REFRESH MATERIALIZED VIEW, NOT a CAgg refresh.
+              # NON-concurrent on purpose: CONCURRENTLY needs an already-populated
+              # matview + a unique index (only mv_zone_band_grade has one); these
+              # are unpopulated post-restore, so CONCURRENTLY would error. The
+              # ingestor's steady-state CONCURRENTLY refresh is a separate path.
+              # None of the 3 depends on another matview (each reads base tables /
+              # a function over base tables), but we mirror the runbook order.
+              # This runs AFTER ANALYZE and BEFORE the operator re-adds the
+              # compression/retention policies (runbook step 5.2, still manual).
+              echo "[restore] refreshing plain materialized views (G4) ..."
+              $PSQL -tAc "REFRESH MATERIALIZED VIEW public.v_climate_merged;" >/dev/null
+              $PSQL -tAc "REFRESH MATERIALIZED VIEW public.mv_zone_band_grade;" >/dev/null
+              $PSQL -tAc "REFRESH MATERIALIZED VIEW public.v_relay_stuck;" >/dev/null
               echo "[restore] data restore complete. Run the verify checklist (runbook step 6)."
           envFrom:
             - configMapRef:
