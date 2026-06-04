@@ -468,7 +468,7 @@ Key design choices:
   duplicate numbers (`031, 060, 070, 071, 072, 073, 074, 078` each appear twice)
   and gaps (`001, 019, 067` are absent), so an integer `version` cannot
   represent the history. Primary key is `(source, filename)`.
-- **One ledger, two streams.** `source='db/migrations'` (this repo, 157 files)
+- **One ledger, two streams.** `source='db/migrations'` (this repo, 163 files)
   and `source='planner_graph/migrations'` (the `001_planner_memory.sql` migration
   that lives in the separate verdify planner repo). Both coexist in one table.
 - **`sha256` per file** so a restored DB can detect a migration that was
@@ -480,8 +480,8 @@ Key design choices:
 The one-time baseline stamp for the existing prod schema is **generated** (never
 hand-written) by **`scripts/gen-ledger-backfill.sh`**, which reads every
 `db/migrations/*.sql` + the planner migration, computes sha256s, and writes
-**`db/ledger/backfill_ledger.sql`** (158 `stamp_migration` calls:
-157 + 1 planner). Regenerate it after adding any migration.
+**`db/ledger/backfill_ledger.sql`** (164 `stamp_migration` calls:
+163 + 1 planner). Regenerate it after adding any migration.
 
 Rollout (sequenced under IRIS-W008/W010, not in this PR):
 
@@ -495,7 +495,7 @@ psql ... -f db/ledger/backfill_ledger.sql
 ```
 
 Validated on a disposable TimescaleDB fixture (never the live DB): DDL applies,
-158 rows stamped (`seq=31` correctly carries 2 rows — the duplicate-number
+164 rows stamped (`seq=31` correctly carries 2 rows — the duplicate-number
 proof), and re-running the backfill leaves the count unchanged (idempotent).
 
 ---
