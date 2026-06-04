@@ -99,12 +99,18 @@ images:
   # so this prod pin is a deliberate in-repo write-back, never CI-mutated.
   - name: ghcr.io/verdifyconsultancy/verdify-planner
     digest: sha256:3e51abaec6372c0bed26ef9859a80008261fcd20a1e8ec1e37627304e1c6b637
-  # PLACEHOLDER — #118 verdify-setpoint-server image not published yet
-  # (scripts/Dockerfile.setpoint-server is new). Real GHCR digest pinned by the
-  # write-back flow once container-publish is green. hermes-agent is deliberately
-  # ABSENT here — its upstream @sha256 is preserved inline (NOT transformer-pinned).
+  # verdify-setpoint-server (#118): real GHCR digest of the grow-light writer +
+  # setpoint-diagnostics image built from scripts/Dockerfile.setpoint-server. The
+  # `branch-live-platform-main` build is published + repo-linked to
+  # VerdifyConsultancy/verdify-platform and verified pullable 2026-06-04 (GHCR
+  # manifest HEAD -> 200) — REPLACES the prior all-zeros placeholder pin.
+  # setpoint-server is a PROD-ONLY device-affecting Component (ABSENT from
+  # overlays/staging), so it is EXEMPT from the promote-diff-guard staging-equality
+  # check per the guard's derived prod-only exemption set. A rebuild advances it.
+  # hermes-agent is deliberately ABSENT from this transformer — its upstream
+  # @sha256 is preserved inline in the component (NOT transformer-pinned).
   - name: ghcr.io/verdifyconsultancy/verdify-setpoint-server
-    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+    digest: sha256:73f5599f4a8e6e00c5d6e80847e1cbe3d49cc3e95527d0e53d150ac94b0e2f5a
   # verdify-www (#116): real GHCR digest of the marketing site image built from
   # the upstream verdify-www repo at sha b33f4cd (see components/www/www.yaml).
   # Published + repo-linked by verdify-www's publish-image.yml workflow and
