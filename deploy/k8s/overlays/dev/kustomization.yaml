@@ -17,18 +17,18 @@ kind: Kustomization
 #   - every registry/secrets/<id>.yaml target.namespace
 namespace: verdify-dev
 
-  # Placeholder Secret for local `kustomize build` validation ONLY. The SOPS
-  # backend provides the real verdify-app-secrets out-of-band. See the file.
-  # DEVICE-SAFETY: dev-only egress lock dropping all egress to the greenhouse
-  # device VLAN (192.168.10.0/24) from the ingestor pod. Mirrors staging; the
-  # inverse allow lives ONLY in overlays/prod. See deny-esp32-egress.yaml.
-  # EDGE/WAN: host-route the dev verdify-api on api.k3s.verdify.ai through the
-  # shared apps Traefik (.7.10). dev/stage URLs live on *.k3s.verdify.ai (prod
-  # owns the bare *.verdify.ai hosts). See ingressroute.yaml.
-  # EDGE/WAN: host-route the dev verdify-www on www.k3s.verdify.ai through the
-  # same shared apps Traefik (#116). See www-ingressroute.yaml.
-  # EDGE/WAN: host-route the dev verdify-lab Quartz site on lab.k3s.verdify.ai
-  # through the same shared apps Traefik (#124). See lab-ingressroute.yaml.
+# Placeholder Secret for local `kustomize build` validation ONLY. The SOPS
+# backend provides the real verdify-app-secrets out-of-band. See the file.
+# DEVICE-SAFETY: dev-only egress lock dropping all egress to the greenhouse
+# device VLAN (192.168.10.0/24) from the ingestor pod. Mirrors staging; the
+# inverse allow lives ONLY in overlays/prod. See deny-esp32-egress.yaml.
+# EDGE/WAN: host-route the dev verdify-api on api.k3s.verdify.ai through the
+# shared apps Traefik (.7.10). dev/stage URLs live on *.k3s.verdify.ai (prod
+# owns the bare *.verdify.ai hosts). See ingressroute.yaml.
+# EDGE/WAN: host-route the dev verdify-www on www.k3s.verdify.ai through the
+# same shared apps Traefik (#116). See www-ingressroute.yaml.
+# EDGE/WAN: host-route the dev verdify-lab Quartz site on lab.k3s.verdify.ai
+# through the same shared apps Traefik (#124). See lab-ingressroute.yaml.
 resources:
 - namespace.yaml
 - ../../base
@@ -46,12 +46,18 @@ components:
 - ../../components/www
 - ../../components/lab-site
 
-  # APP_ENV=dev + VERDIFY_DEVICE_WRITE_ENABLED=0 (dev never writes the device).
-  # DEVICE SAFETY: pin the device-touching ingestor OFF until the #114
-  # subscribe-from-prod-MQTT ingest mode lands. dev must never be a 2nd writer.
-  # PER-ENV DB STORAGE (#115): retarget the verdify-db PVC from the base
-  # local-path to the volume1 'synology-iscsi-ssd' StorageClass (laptop-root
-  # gate). dev gets its OWN TimescaleDB StatefulSet on the Synology SSD.
+# APP_ENV=dev + VERDIFY_DEVICE_WRITE_ENABLED=0 + VERDIFY_INGEST_SOURCE=
+# mqtt-subscribe (dev is a read-only telemetry SUBSCRIBER, never writes the
+# device). See env-configmap.yaml.
+# DEVICE SAFETY (single-writer invariant): pin the ingestor workload OFF
+# (replicas:0), mirroring overlays/staging, so verdify-dev is PROVABLY
+# device-dark — no ingestor pod runs until the Jason-gated M5 cutover, and an
+# ArgoCD selfHeal reconcile cannot stand up a second writer. dev must never be a
+# 2nd writer. See ingestor-replicas-zero.yaml.
+# PER-ENV DB STORAGE (#115): retarget the verdify-db PVC from the base
+# local-path to the volume1 'synology-iscsi-ssd' StorageClass (laptop-root
+# gate). dev gets its OWN TimescaleDB StatefulSet on the Synology SSD (NOT
+# prod's DB), seeded by the gated copy-not-move pg_dump restore runbook.
 patches:
 - path: env-configmap.yaml
 - path: ingestor-replicas-zero.yaml
