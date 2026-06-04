@@ -1,0 +1,47 @@
+# Reusable in-repo definition of the volume1 'synology-iscsi-ssd' StorageClass
+# (M3.3 prod DB substrate; refs #84/#28/#130).
+#
+# WHY THIS EXISTS: every overlay (overlays/{dev,staging,prod}) retargets the
+# verdify-db volumeClaimTemplate onto storageClassName: synology-iscsi-ssd, but
+# the class itself was never defined in this repo — it was hand-applied by
+# laptop-root at the platform layer, so the manifests reference a name with no
+# in-repo source of truth. This file makes that class a reusable, reviewable
+# artifact ROOT can apply (or that an env can opt into via the db-backup
+# component) instead of a side-channel kubectl apply.
+#
+# NOT AUTO-ENABLED: this component is referenced by NO overlay. Adding it to a
+# StorageClass tree is cluster-scoped + Root-gated — the live ArgoCD app syncs
+# only overlays/staging, and overlays/staging does NOT pull this component, so
+# merging it provisions nothing and cannot create a duplicate/conflicting class
+# on the live cluster. Root applies it (or an overlay opts in) deliberately.
+#
+# PROVISIONER: the Synology CSI driver (csi.san.synology.com), volume1 SSD pool,
+# matching the class dev/staging/prod already name and the staging migration
+# (commit 4024f4d) already proved against a real worker-bound PVC.
+#
+# reclaimPolicy: Retain is the whole point for a DB volume — when the bound PVC
+# is deleted (e.g. an immutable volumeClaimTemplate retarget forces a STS
+# delete/recreate, handoff §3.6), the underlying iSCSI LUN is RELEASED, not
+# deleted, so the data survives PVC churn and a human reclaims/rebinds it.
+# volumeBindingMode: WaitForFirstConsumer so the LUN is created on the node the
+# DB pod actually schedules onto (a WORKER, not the cordoned etcd-only node1).
+# allowVolumeExpansion: true so the 50Gi DB volume can grow without a recreate.
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: synology-iscsi-ssd
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: db-backup
+provisioner: csi.san.synology.com
+parameters:
+  # volume1 SSD pool, ext4, thin-provisioned LUN — matches the proven staging
+  # migration. fsType/dsm/location are CSI-driver params Root tunes at apply if
+  # the live driver config differs; the contract here is the class NAME +
+  # Retain + WaitForFirstConsumer that the overlays depend on.
+  fsType: ext4
+  location: /volume1
+  dsm: "192.168.30.20"
+reclaimPolicy: Retain
+volumeBindingMode: WaitForFirstConsumer
+allowVolumeExpansion: true
