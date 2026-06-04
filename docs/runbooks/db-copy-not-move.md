@@ -79,7 +79,7 @@ DB's full TimescaleDB topology:
 | G1 | **TimescaleDB version skew.** Live VM DB = **2.25.2**; in-cluster image (`db-statefulset.yaml` + restore-job init) = **2.17.2-pg16**. | A dump catalog from 2.25 restored under 2.17 is a **downgrade** — unsupported and may fail catalog/data restore. | **coordinator / laptop-root:** bump the StatefulSet + restore image tag to a TimescaleDB **≥ 2.25.2-pg16** before executing, OR pin a known-compatible pair. Re-validate the manifests after the bump. This is a manifest change outside this firmware prep task — flag it, do not silently edit `db-statefulset.yaml`. |
 | G2 | **Only 4 of 20 hypertables are repaired by migration 000.** The live DB has **20 hypertables**; migration 000 recreates only `climate`, `equipment_state`, `system_state`, `weather_forecast`. The other 16 (incl. **`setpoint_snapshot` — 6.05M rows, the bulk of the DB**, `energy` 530k, `diagnostics`, `esp32_logs`, `irrigation_log`, ...) come out of `schema.sql` as **plain tables, not hypertables**. | A `--data-only` restore loads their rows fine, but they will NOT be hypertables in-cluster (no chunking, no compression, no retention). Functionally correct reads, but a topology divergence and a storage/perf regression for `setpoint_snapshot`. | **coordinator:** decide whether migration 000 must be extended to recreate all 20 hypertables (with their original `time` columns + chunk intervals), OR whether the non-core tables are intentionally flat in-cluster. This is a schema decision (serialized migration rule) — land it as its own migration PR first. |
 | G3 | **Compression + retention POLICIES are not recreated.** The live DB runs `policy_compression` (12h) and `policy_retention` (1 day) jobs on `climate`, `energy`, `diagnostics`, `esp32_logs`, `setpoint_snapshot`. Neither `schema.sql` nor migration 000 recreates these policy jobs. | In-cluster the data lands **uncompressed** and **un-retained** — it will grow without bound and not match live compression state. | **coordinator:** add the `add_compression_policy()` / `add_retention_policy()` calls to the schema build (a migration), and decide whether to compress matching chunks post-restore. Verify step V5 below checks for this. |
-| G4 | **No continuous aggregates exist** (confirmed: `timescaledb_information.continuous_aggregates` is empty). The 3 `CREATE MATERIALIZED VIEW`s in `schema.sql` (`mv_zone_band_grade`, `v_climate_merged`, `v_relay_stuck`) are **plain** materialized views, not TimescaleDB continuous aggregates. | No continuous-agg refresh policy to worry about. The plain matviews are created empty by the schema build and must be **`REFRESH MATERIALIZED VIEW`**'d post-restore (verify step V6). | firmware/coordinator: include the `REFRESH MATERIALIZED VIEW` calls in the post-restore step (step 5). |
+| G4 | **No continuous aggregates exist** (confirmed: `timescaledb_information.continuous_aggregates` is empty). The 3 `CREATE MATERIALIZED VIEW`s in `schema.sql` (`mv_zone_band_grade`, `v_climate_merged`, `v_relay_stuck`) are **plain** materialized views, not TimescaleDB continuous aggregates. | No continuous-agg refresh policy to worry about. The plain matviews are created empty by the schema build and must be **`REFRESH MATERIALIZED VIEW`**'d post-restore (verify step V6). | **RESOLVED** (#72): the `REFRESH MATERIALIZED VIEW` calls now run inside the restore Job (`db/restore-job.yaml`, after `ANALYZE`), so the matviews are non-empty before the V6 verify check. |
 
 G1 is a **hard blocker** — do not restore across a TimescaleDB downgrade. G2/G3
 are topology-fidelity decisions; the runbook can proceed for a *functional* copy
@@ -206,14 +206,19 @@ kubectl -n verdify-staging logs job/verdify-db-restore --all-containers
 The Job: waits for the schema (init `wait-for-schema`), fetches the dump (init
 `fetch-dump`), then `timescaledb_pre_restore()` → `pg_restore --data-only
 --no-owner --no-privileges --disable-triggers` → `timescaledb_post_restore()` →
-`ANALYZE`. On failure it still runs `post_restore` (leaves the DB usable) and
+`ANALYZE` → `REFRESH MATERIALIZED VIEW` of the 3 plain matviews (G4, see step 5.1
+— the Job now does this automatically so the matviews are non-empty before
+verify). On failure it still runs `post_restore` (leaves the DB usable) and
 exits non-zero — go to rollback (section 8).
 
 ### Step 5 — Post-restore reconciliation (laptop-root)
 `[GATE: laptop-root — in-cluster]`
 
 Steps the `--data-only` restore does NOT do, run once after it completes:
-1. **Refresh the plain materialized views** (G4):
+1. **Refresh the plain materialized views** (G4) — **now done by the Job**
+   (`db/restore-job.yaml`, restore container, after `ANALYZE`). The Job runs the
+   plain (non-concurrent) refresh below; no manual step is needed. Kept here for
+   reference / manual re-run if a verify check (V6) shows an empty matview:
    ```
    kubectl -n verdify-staging exec statefulset/verdify-db -- psql -U verdify -d verdify -c \
      "REFRESH MATERIALIZED VIEW public.v_climate_merged;
@@ -221,7 +226,8 @@ Steps the `--data-only` restore does NOT do, run once after it completes:
       REFRESH MATERIALIZED VIEW public.v_relay_stuck;"
    ```
 2. **(If G3 resolved)** re-add compression/retention policies and compress the
-   matching historical chunks, per the migration that resolves G3.
+   matching historical chunks, per the migration that resolves G3. This stays a
+   manual step and runs AFTER the Job's matview refresh (step 5.1).
 
 ### Step 6 — VERIFY (laptop-root; coordinator reviews) — the trust gate
 `[GATE: laptop-root runs; coordinator confirms parity before any cutover talk]`
