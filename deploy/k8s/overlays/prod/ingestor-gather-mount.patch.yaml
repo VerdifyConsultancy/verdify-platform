@@ -1,0 +1,103 @@
+# ============================================================================
+# STAGED — NOT WIRED INTO kustomization.yaml. (#211) GATED INGESTOR PATCH.
+# ============================================================================
+# This is the verdify-ingestor Deployment patch that makes gather-plan-context.sh
+# runnable in-pod. It is DELIBERATELY NOT listed in overlays/prod/kustomization
+# `patches:` because applying it RESTARTS the verdify-ingestor pod — which is the
+# LIVE single writer to the greenhouse ESP32 (device loop). It must be applied
+# ONLY via laptop-root's guarded stop/verify restart (single-writer Recreate: the
+# old writer is fully torn down before the new one starts — no double-writer), at
+# the gated window. The other three #210-213 ConfigMap pieces (HERMES_URL,
+# gather-script ConfigMap, gather-env, hermes key) are already live/wired and do
+# NOT restart the ingestor by themselves.
+#
+# WHAT IT ADDS (all ADDITIVE strategic-merge; base /tmp + ha-token preserved):
+#  1. initContainer `install-psql` — the ingestor image (Debian trixie/glibc) has
+#     NO psql client. This copies psql + its shared libs from the glibc postgres:16
+#     image into a shared emptyDir /opt/pgclient. PROVEN runnable on the real
+#     ingestor image (psql 16.14 --version OK) with LD_LIBRARY_PATH=/opt/pgclient/lib.
+#  2. volume `gather-script` (ConfigMap verdify-ingestor-gather-script, mode 0555)
+#     + volume `pgclient` (emptyDir) for the copied client.
+#  3. volumeMounts on the ingestor container:
+#       - gather-script -> /srv/verdify/scripts (gather-plan-context.sh +
+#         lib/psql-verdify.sh; matches GATHER_SCRIPT in ingestor/iris_planner.py:38;
+#         the script sources $(dirname)/lib/psql-verdify.sh so the lib MUST be the
+#         `lib` subdir — delivered via subPath placement below).
+#       - pgclient -> /opt/pgclient (the copied psql).
+#  4. container env PATH (prepend /opt/pgclient/bin) + LD_LIBRARY_PATH so the
+#     gather script's bare `psql` (direct mode, VERDIFY_DB_BACKEND=dsn from
+#     verdify-config) resolves and links. PGHOST/PGPORT/PGDATABASE/PGUSER come
+#     from DB_HOST/DB_PORT/DB_NAME/DB_USER (verdify-config); PGPASSWORD from the
+#     ingestor's existing $POSTGRES_PASSWORD — all already in the pod.
+#
+# NOTE on the ConfigMap mount + the lib subdir: a single ConfigMap volume cannot
+# place a file in a `lib/` subdirectory via plain key mounting (ConfigMap keys are
+# flat). Two clean options — pick one at apply time:
+#   (A) mount the ConfigMap at /srv/verdify/scripts with items mapping
+#       psql-verdify.sh -> lib/psql-verdify.sh (subPath-style key path), OR
+#   (B) the form below: mount gather-plan-context.sh and lib/psql-verdify.sh as
+#       two subPath mounts. subPath mounts do NOT receive ConfigMap updates
+#       automatically, which is FINE here (the gated restart re-reads them).
+# This patch uses (B) with explicit defaultMode 0555 (executable).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-ingestor
+spec:
+  template:
+    spec:
+      initContainers:
+        # ADDITIVE to the base wait-for-db initContainer (strategic merge keys by
+        # name; wait-for-db is preserved). Provides a glibc psql in /opt/pgclient.
+        - name: install-psql
+          image: postgres:16
+          command: ["bash", "-c"]
+          args:
+            - |
+              set -e
+              mkdir -p /opt/pgclient/bin /opt/pgclient/lib
+              cp -L /usr/lib/postgresql/16/bin/psql /opt/pgclient/bin/psql
+              for lib in $(ldd /usr/lib/postgresql/16/bin/psql | awk '/=>/{print $3}'); do
+                cp -L "$lib" /opt/pgclient/lib/ 2>/dev/null || true
+              done
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+            - name: pgclient
+              mountPath: /opt/pgclient
+      containers:
+        - name: ingestor
+          env:
+            # Prepend the copied psql to PATH so the gather script's bare `psql`
+            # (lib/psql-verdify.sh direct mode) resolves; LD_LIBRARY_PATH lets it
+            # link the copied libpq + deps. Full base PATH preserved after.
+            - name: PATH
+              value: "/opt/pgclient/bin:/home/appuser/.local/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin"
+            - name: LD_LIBRARY_PATH
+              value: "/opt/pgclient/lib"
+          volumeMounts:
+            - name: gather-script
+              mountPath: /srv/verdify/scripts/gather-plan-context.sh
+              subPath: gather-plan-context.sh
+              readOnly: true
+            - name: gather-script
+              mountPath: /srv/verdify/scripts/lib/psql-verdify.sh
+              subPath: psql-verdify.sh
+              readOnly: true
+            - name: pgclient
+              mountPath: /opt/pgclient
+              readOnly: true
+      volumes:
+        - name: gather-script
+          configMap:
+            name: verdify-ingestor-gather-script
+            defaultMode: 0555
+        - name: pgclient
+          emptyDir: {}

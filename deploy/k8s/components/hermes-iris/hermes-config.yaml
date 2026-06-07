@@ -1,0 +1,127 @@
+# verdify-hermes-iris-config (#213) — the Iris planner Hermes profile, delivered
+# as IaC so it can NEVER silently drift on the PVC again.
+#
+# ROOT CAUSE THIS CLOSES: Hermes reads its profile from $HERMES_HOME/config.yaml
+# (= /opt/data/config.yaml on the RWO state PVC). That file was historically
+# seeded by the VM-era `make hermes-deploy-config` and was NEVER IaC in k3s, so
+# the live PVC ended up holding the STOCK hermes-agent template — model
+# anthropic/claude-opus-4.6 + provider auto -> base_url openrouter.ai. With no
+# OPENROUTER_API_KEY in the verdify-hermes Secret, every planner LLM call 401'd
+# ("Missing Authentication header"), so all scheduled + crop-deviation plan
+# DELIVERY failed. The verdify-hermes Secret's OPENAI_API_KEY is VALID (proven:
+# 200 on api.openai.com + a gpt-5.5 completion). The bug was the drifted profile
+# pointing at the wrong provider/model, NOT a missing/bad key.
+#
+# This is the repo-canonical hermes/iris/config.yaml (gpt-5.5 / provider custom /
+# base_url api.openai.com — OPENAI_API_KEY auto-picked-up) with ONE k3s edit: the
+# mcp_servers.verdify_greenhouse.url is the in-cluster ClusterIP
+# verdify-mcp.verdify-prod.svc:8000/mcp (was the VM compose host.docker.internal).
+# The seed initContainer in hermes-iris.yaml installs this onto the PVC at every
+# pod start (idempotent), so a pod restart always restores the correct profile.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-hermes-iris-config
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: hermes-iris
+data:
+  config.yaml: |
+    # Hermes profile config for the Verdify Iris planner — single profile,
+    # OpenAI GPT-5.5 with reasoning_effort=high, MCP-only tool surface.
+    #
+    # Canonical source: hermes/iris/config.yaml (this repo).
+    # Runtime location: /var/lib/verdify/hermes/iris/config.yaml (bind-mounted into
+    # the hermes-iris Docker container per docker-compose.yml).
+    #
+    # Deploy: this file is copied to the runtime location via
+    # `make hermes-deploy-config`. Runtime secrets live in
+    # /etc/verdify/hermes-iris.env, are injected by docker-compose.yml, and are
+    # NEVER versioned.
+
+    model:
+      # Hermes doesn't expose a generic "openai" provider — direct OpenAI access
+      # goes through the "custom" provider with an OpenAI-compatible base_url.
+      # OPENAI_API_KEY is picked up automatically.
+      default: "gpt-5.5"
+      provider: "custom"
+      base_url: "https://api.openai.com/v1"
+      reasoning_effort: high
+
+    agent:
+      # Iris's longest cycles (SUNRISE/SUNSET) read ~6-10 MCP tools in sequence
+      # plus write a plan. 30 turns is generous; over that, suspect a tool-call
+      # loop and surface as a Hermes alert instead of letting the cycle run away.
+      max_turns: 30
+      # Hermes-side capabilities Verdify doesn't want in the production planner.
+      # Memory: Verdify already has TimescaleDB-backed plan_journal + planner_lessons.
+      # Web/browser/terminal/filesystem: Iris must not browse the live site, exec
+      # shell commands, read raw files, or hit arbitrary URLs. Every write goes
+      # through the MCP allowlist below.
+      disabled_toolsets:
+        - memory
+        - web
+        - terminal
+        - filesystem
+        - browser
+
+    mcp_servers:
+      verdify_greenhouse:
+        url: "http://verdify-mcp.verdify-prod.svc:8000/mcp"   # k3s: was host.docker.internal:8000 (VM compose); in-cluster ClusterIP (#211/#119 R7)
+        headers:
+          Authorization: "Bearer ${VERDIFY_MCP_TOKEN}"
+        tools:
+          include:
+            # Monitoring
+            - climate
+            - scorecard
+            - equipment_state
+            - forecast
+            - get_setpoints
+            - plan_status
+            - history
+            - alerts
+            - slack_ops
+            # Knowledge
+            - lessons
+            - lessons_search       # Phase 3
+            - knowledge_search     # Phase 3
+            # Crops + topology
+            - crops
+            - observations
+            - topology
+            - position_current
+            - crop_history
+            - crop_lifecycle
+            # Writes — all carry trigger_id + planner_instance audit
+            - set_plan
+            - set_tunable
+            - acknowledge_trigger
+            - plan_evaluate
+            - lessons_manage
+          exclude:
+            - query  # raw-SQL escape hatch — deliberately denied in production
+          resources: false
+          prompts: false
+
+    skills:
+      # Hermes own skill system is dormant for Verdify — Iris's identity + tactics
+      # come from gather-plan-context.sh + _STANDING_DIRECTIVES + _PLANNER_CORE
+      # in ingestor/iris_planner.py. Guarding new skills protects against drift.
+      guard_agent_created: true
+
+    # API server: loopback only. The ingestor calls /v1/runs from the same host.
+    # api_server platform: Hermes reads under platforms.<name>.extra (see
+    # /opt/hermes/gateway/config.py:PlatformConfig). API_SERVER_KEY env var
+    # is the actual auth source — config.api_key_env is not a Hermes schema.
+    platforms:
+      api_server:
+        enabled: true
+        extra:
+          host: "0.0.0.0"   # container-internal; docker-compose binds 127.0.0.1
+          port: 8642
+
+    # Dashboard off — the API server is the only interface. Avoids accidental
+    # port-forward exposure.
+    dashboard:
+      enabled: false
