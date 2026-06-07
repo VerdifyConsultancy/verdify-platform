@@ -39,6 +39,13 @@ resources:
   # EDGE/WAN: host-route the prod verdify-lab Quartz site on lab.verdify.ai through
   # the same shared apps Traefik (.7.10) (#124). See lab-ingressroute.yaml.
   - lab-ingressroute.yaml
+  # TWO-TIER TRAEFIK (#199 / D7): the shared apps Traefik (.7.10) tier-1
+  # (verdify-tier1-forward) forwards *.verdify.ai to a dedicated in-namespace
+  # verdify-traefik tier-2 (verdify-web entryPoint) which host-routes verdify-t2-*
+  # to the ClusterIP services. This is ADDITIVE to / coexists with the legacy
+  # www/lab IngressRoutes above (verdify-t2-* are distinctly named) and matches
+  # the live verdify-prod cluster exactly. See traefik/ for the full set.
+  - traefik
 
 # verdify-planner (#117) + verdify-mqtt fan-out broker (#113) — referenced as
 # Components, NOT added to base, so they never render into overlays/staging (the
