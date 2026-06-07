@@ -86,7 +86,16 @@ spec:
           # UPSTREAM image, digest PRESERVED from compose:363 (NOT rewritten by
           # the overlay images: transformer — name does not match verdify-*).
           image: nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e
-          command: ["gateway", "run"]
+          # MUST be `args:`, NOT `command:`. The image ENTRYPOINT is
+          # `tini -g -- /opt/hermes/docker/entrypoint.sh` (verified on the live VM
+          # container 2026-06-07), and that entrypoint script is what resolves the
+          # `gateway` binary onto PATH. Setting k8s `command:` OVERRIDES the
+          # ENTRYPOINT, so the kubelet exec'd `gateway` directly and crashed with
+          # `exec: "gateway": executable file not found in $PATH`
+          # (CrashLoopBackOff, verified verdify-prod 2026-06-07). `args:` maps to
+          # Docker CMD (compose had Cmd=`gateway run`), preserving the entrypoint.
+          # Lane-3 fix — this is NOT a NetworkPolicy/DB issue (hermes has no DB dep).
+          args: ["gateway", "run"]
           ports:
             - name: gateway
               containerPort: 8642
