@@ -1,8 +1,10 @@
 # NetworkPolicies for the Verdify APP (handoff §2.6 / §3.4). Default-deny
-# ingress, then scoped allows. flannel does NOT enforce these at L3/L4 on the
-# live cluster (tier egress is honored at the UniFi boundary), but we declare
-# them as the intended contract — and this is the file where the §3.4
-# device-VLAN egress allow lives (commented, gated).
+# ingress, then scoped allows. NOTE (2026-06-07): the live cluster CNI DOES
+# enforce these Ingress policies at L3/L4 — empirically, a pod whose component
+# is absent from an allow-set (e.g. the planner before this fix) gets connection
+# refused to verdify-db. Treat every allow-set here as load-bearing, not merely
+# declarative. This is also the file where the §3.4 device-VLAN egress allow
+# lives (commented, gated).
 
 # 1. Default-deny ALL ingress in the namespace.
 apiVersion: networking.k8s.io/v1
@@ -15,8 +17,11 @@ spec:
   podSelector: {}
   policyTypes: ["Ingress"]
 ---
-# 2. DB accepts connections only from api, mcp, ingestor, and the migration Job
-#    in this namespace. Never from ingress.
+# 2. DB accepts connections only from api, mcp, ingestor, the migration Job, and
+#    the planner in this namespace. Never from ingress. The planner's wait-for-db
+#    init (pg_isready) + its DATABASE_URL connect straight to verdify-db:5432, so
+#    it MUST be in this allow-set or it hangs at Init:0/1 (verified live in
+#    verdify-prod 2026-06-07 — this CNI DOES enforce ingress; see header note).
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -34,7 +39,7 @@ spec:
             matchExpressions:
               - key: app.kubernetes.io/component
                 operator: In
-                values: ["api", "mcp", "ingestor", "migrate"]
+                values: ["api", "mcp", "ingestor", "migrate", "planner"]
       ports:
         - protocol: TCP
           port: 5432
