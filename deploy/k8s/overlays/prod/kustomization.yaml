@@ -27,9 +27,17 @@ resources:
   # DEVICE WRITE PATH: the SINGLE egress allow letting the prod ingestor reach the
   # live device VLAN. See allow-ingestor-device-egress.yaml.
   - allow-ingestor-device-egress.yaml
-  # EDGE/WAN: host-route the prod verdify-www on www.verdify.ai + apex through the
-  # shared apps Traefik (.7.10) (#116). See www-ingressroute.yaml.
-  - www-ingressroute.yaml
+  # EDGE/WAN (D7 two-tier): the prod product surface (www/apex/lab/api/mcp on
+  # *.verdify.ai) is served through the shared apps Traefik (.7.10) -> a dedicated
+  # in-namespace verdify-traefik -> the ClusterIP services. This SUPERSEDES the
+  # single-tier www-ingressroute.yaml (#116): the tier-1 forwarder claims
+  # www.verdify.ai + apex at priority 100 and the dedicated verdify-traefik owns the
+  # full verdify routing table behind it, replacing the network-infra `verdify-sites`
+  # backend that pointed at the .150 VM. See traefik/ for the full set + cutover order.
+  - traefik
+  # www-ingressroute.yaml is intentionally NOT referenced anymore — its www/apex
+  # route is subsumed by traefik/verdify-traefik-routes.yaml (verdify-t2-www) behind
+  # the tier-1 forwarder. Left in-tree for history/diff; safe to delete in a follow-up.
 
 # verdify-planner (#117) + verdify-mqtt fan-out broker (#113) — referenced as
 # Components, NOT added to base, so they never render into overlays/staging (the

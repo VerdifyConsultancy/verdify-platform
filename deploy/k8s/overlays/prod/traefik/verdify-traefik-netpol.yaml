@@ -1,0 +1,69 @@
+# Tier-2 Verdify Traefik — NetworkPolicies (D7 two-tier edge).
+#
+# verdify-prod runs default-deny-ingress, and the existing per-component allows only
+# admit the shared apps Traefik (namespace=traefik) + the .7.x ipBlock. In the
+# two-tier model the backends are now reached by the in-namespace verdify-traefik
+# pods, so they need an explicit allow, else every backend 502s (the symptom that
+# proved the routers were built but the hop was blocked).
+#
+# Two policies:
+#   1. allow the verdify-traefik pods themselves to receive the tier-1 forward from
+#      the shared apps Traefik (namespace=traefik) + the .7.x apps VIP ipBlock, on
+#      the tier-2 web entryPoint (:8000).
+#   2. allow the verdify-traefik pods to reach the backend web tiers (www/lab/api on
+#      :8080, mcp on :8000) — additive to the existing per-component allows.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-verdify-traefik-from-apps-ingress
+  namespace: verdify-prod
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: edge-traefik
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: verdify-traefik
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        # the shared apps Traefik (.7.10 VIP) runs in the `traefik-apps` namespace —
+        # this is the pod-to-pod path for the tier-1 forward.
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: traefik-apps
+        # the apps-pool VIP subnet (.7.x) — MetalLB L2/BGP hairpin / direct hits.
+        - ipBlock:
+            cidr: 192.168.7.0/24
+      ports:
+        - port: 8000
+          protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-web-tiers-from-verdify-traefik
+  namespace: verdify-prod
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: edge-traefik
+spec:
+  # the marketing/web tiers fronted by the tier-2 Traefik.
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/component
+        operator: In
+        values: [www, lab-site, api, mcp]
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/name: verdify-traefik
+      ports:
+        - port: 8080
+          protocol: TCP
+        - port: 8000
+          protocol: TCP
