@@ -214,21 +214,7 @@ DB_BACKED = [
 # subset guard tolerates ONLY this explicit, documented set — every OTHER
 # unknown column still fails loud. Remove an entry once its migration is in
 # db/schema.sql (the guard then enforces it like any other column).
-PENDING_MIGRATION_COLUMNS: dict[str, set[str]] = {
-    # migration 146 — compliance rearchitecture dual-write (§6.7).
-    "daily_summary": {
-        "compliance_v2_raw_pct",
-        "compliance_v2_attributable_pct",
-        "compliance_v2_unachievable_frac",
-        "graded_temp_compliance_pct",
-        "graded_vpd_compliance_pct",
-        "graded_stress_hours_heat",
-        "graded_stress_hours_cold",
-        "graded_stress_hours_vpd_high",
-        "graded_stress_hours_vpd_low",
-        "feasibility_unknown_min",
-    },
-}
+PENDING_MIGRATION_COLUMNS: dict[str, set[str]] = {}
 
 
 @pytest.mark.parametrize("model_class,table_name", DB_BACKED)
