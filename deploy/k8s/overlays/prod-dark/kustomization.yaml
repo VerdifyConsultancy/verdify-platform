@@ -43,9 +43,13 @@ resources:
   # ANNOTATION -> EXCLUDED from build output (OpenAI key never emitted). Real
   # verdify-hermes via SOPS out-of-band. See hermes-secret.placeholder.yaml.
   - hermes-secret.placeholder.yaml
-  # NO ha-token.placeholder.yaml: the verdify-ha-token Secret is consumed ONLY by
-  # the setpoint-server (the grow-light writer), which prod-dark EXCLUDES. A
-  # device-affecting HA token surface is absent from the device-dark shape.
+  # ha-token.placeholder.yaml: the verdify-ha-token Secret is consumed by the
+  # ingestor (shelly_sync / ha_sensor_sync / tempest_sync HA-telemetry tasks —
+  # energy + hydro + weather) which the base now mounts. This is a READ to Home
+  # Assistant on the SERVICES VLAN, NOT a device-VLAN write, so it does not
+  # violate the device-dark posture. local-config ANNOTATION -> excluded from
+  # build output (token never emitted); real Secret via SOPS out-of-band.
+  - ha-token.placeholder.yaml
   # DEVICE-DARK NETWORK HALF: drop all ingestor egress to the greenhouse device
   # VLAN. This REPLACES overlays/prod's allow-ingestor-device-egress — prod-dark
   # carries the DENY and never the allow. See deny-esp32-egress.yaml.
