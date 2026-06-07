@@ -122,6 +122,26 @@ jobs:
           set -euo pipefail
           BASE="$(git merge-base HEAD "origin/${BASE_REF}")"
 
+          # 0) Is this PR ACTUALLY a digest promotion? A promotion is defined by a
+          #    changed `digest:` pin line in prod/kustomization.yaml. The
+          #    change-surface containment in step 1 (prod overlay = kustomization.yaml
+          #    only) is the constraint on a PROMOTION; it must NOT wedge a normal
+          #    reviewed STRUCTURAL PR that adds new prod-overlay files (e.g. wiring in
+          #    the two-tier-traefik `traefik/` dir via a `- traefik` resource entry,
+          #    refs #199) and changes NO digest. Such a PR is not a promotion, so the
+          #    digits-only surface check below does not apply to it; the digest-
+          #    EQUALITY enforcement in the final step still runs and remains the real
+          #    promotion-safety gate (a structural PR that changes no pin trivially
+          #    passes it). This mirrors the documented intent in step 2's comment.
+          IS_DIGEST_PROMOTE="$(git diff "$BASE" HEAD -- deploy/k8s/overlays/prod/kustomization.yaml \
+            | grep -E '^[+-][[:space:]]*digest:[[:space:]]*sha256:[0-9a-f]{64}[[:space:]]*$' \
+            || true)"
+          if [ -z "$IS_DIGEST_PROMOTE" ]; then
+            echo "Not a digest promotion (no changed digest: pin) — structural/reviewed PR."
+            echo "Change-surface containment is for promotions only; skipping it. Digest-equality still enforced below."
+            exit 0
+          fi
+
           # 1) The ONLY file a prod-promote PR may touch under the prod overlay
           #    is kustomization.yaml (where the digests live). Anything else
           #    under overlays/prod/ is a non-promotion change and must go through
