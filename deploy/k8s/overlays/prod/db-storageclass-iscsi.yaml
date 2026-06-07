@@ -1,0 +1,31 @@
+# PROD storage reconcile: the live prod verdify-db has ALREADY been migrated off
+# the node-pinned local-path PVC onto the proven synology-iscsi-ssd StorageClass
+# (csi.san.synology.com, /volume1 SSD, reclaim=Retain, WaitForFirstConsumer,
+# expandable) — its db-data-verdify-db-0 PVC has been Bound on synology-iscsi-ssd
+# since the gated DB cutover (verified live: 50Gi RWO synology-iscsi-ssd, Bound,
+# 5d+). The base db-statefulset.yaml still pins local-path (shared with the dev/
+# staging pattern), so the prod overlay must restate the volumeClaimTemplate to
+# match the live cluster — otherwise ArgoCD renders local-path, diffs the live
+# STS, and tries to patch the IMMUTABLE volumeClaimTemplates.storageClassName
+# (the StatefulSet "Forbidden: updates to spec for fields other than ..." sync
+# failure). This patch makes git == live so there is NO diff and NO patch attempt.
+#
+# This is a RECONCILE-TO-LIVE git change only; it does NOT touch or recreate the
+# live StatefulSet (git now equals the running spec). Mirrors the staging
+# db-storageclass-iscsi.yaml pattern. The whole volumeClaimTemplate element is
+# restated (kustomize keys volumeClaimTemplates by metadata.name and replaces the
+# matched element) so accessModes + size are preserved alongside the SC.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: verdify-db
+spec:
+  volumeClaimTemplates:
+    - metadata:
+        name: db-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: synology-iscsi-ssd
+        resources:
+          requests:
+            storage: 50Gi
