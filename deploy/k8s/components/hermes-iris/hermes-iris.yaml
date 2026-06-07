@@ -110,6 +110,27 @@ spec:
             # compose:375 VERDIFY_SLACK_CONFIG=/opt/data/slack.yaml (on the PVC).
             - name: VERDIFY_SLACK_CONFIG
               value: /opt/data/slack.yaml
+            # BIND THE :8642 API SERVER ON 0.0.0.0 (CrashLoop fix, verdify-prod
+            # 2026-06-07). The api_server platform (the /v1/runs listener the
+            # ingestor calls) is auto-enabled because verdify-hermes provides
+            # API_SERVER_KEY (gateway/config.py:1386 `if api_server_enabled or
+            # api_server_key`). But Hermes' DEFAULT_HOST is 127.0.0.1
+            # (gateway/platforms/api_server.py:57) — proven: with only the secret
+            # the gateway binds 127.0.0.1:8642, so the kubelet tcpSocket probe to
+            # the POD IP is refused, fails 3x, SIGTERMs the gateway -> CrashLoop.
+            # On the VM hermes/iris/config.yaml set platforms.api_server.extra
+            # host: 0.0.0.0 (and docker-compose published 127.0.0.1 externally);
+            # in k3s /opt/data is an empty PVC so that config.yaml is absent and
+            # the entrypoint falls back to the cli-config example (no api_server,
+            # default 127.0.0.1). These two env vars are the k8s-native port of
+            # that config.yaml host override — non-secret bind params only; the
+            # ClusterIP Service + allow-hermes-from-ingestor NetworkPolicy keep the
+            # surface in-namespace (never LB, never WAN). API_SERVER_KEY stays the
+            # auth source (in verdify-hermes, never in this repo).
+            - name: API_SERVER_HOST
+              value: "0.0.0.0"
+            - name: API_SERVER_PORT
+              value: "8642"
           securityContext:
             allowPrivilegeEscalation: false
             # hermes writes run state under /opt/data (PVC); root FS can stay RO.
