@@ -115,6 +115,22 @@ spec:
                 secretKeyRef:
                   name: verdify-app-secrets
                   key: MQTT_PASS
+            # AI-plan gateway auth (#213). iris_planner posts the scheduled +
+            # crop-deviation plan requests to Hermes /v1/runs with
+            # Authorization: Bearer ${HERMES_IRIS_API_KEY}
+            # (ingestor/config.py:59 -> iris_planner.py:1200). Hermes validates
+            # this bearer against its own API_SERVER_KEY; the verdify-hermes
+            # Secret holds the SAME value under both HERMES_IRIS_API_KEY and
+            # API_SERVER_KEY (sha b164964a). Without this wiring the ingestor
+            # sends an EMPTY bearer and Hermes returns its OpenAI-shaped
+            # {"code":"invalid_api_key"} 401 at the auth middleware BEFORE any
+            # OpenAI call — the root cause of the recurring plan_delivery_log
+            # gateway_status=401 (NOT a bad OPENAI_API_KEY / config.yaml drift).
+            - name: HERMES_IRIS_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-hermes
+                  key: HERMES_IRIS_API_KEY
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
