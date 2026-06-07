@@ -81,6 +81,10 @@ patches:
   # #113 publish-all: prod re-emits every flushed telemetry row onto the fan-out
   # bus (verdify-mqtt) so dev/stage subscribers mirror it. prod-only env.
   - path: publish-all-configmap.yaml
+  # #130 ingestor state volume: writable emptyDir at /srv/verdify/state so the
+  # live setpoint-dispatcher + MCP-restart logging stops thrashing post-cutover.
+  # emptyDir now; durable RWO PVC is the #130 follow-up. See ingestor-state-volume.yaml.
+  - path: ingestor-state-volume.yaml
   # ingestor keeps the base replicas:1 + Recreate (single-writer invariant); no
   # replicas:0 pin here (that is staging's two-writer safety pin).
 
