@@ -85,11 +85,19 @@ spec:
   policyTypes: ["Ingress"]
   ingress:
     - from:
+        # hermes-iris (#213): the planner gateway is an MCP CLIENT — its Iris
+        # profile reaches the MCP tool surface at verdify-mcp:8000/mcp
+        # (HERMES_MCP_URL / config mcp_servers). It was missing from this allow,
+        # so every hermes->MCP connect was refused ([Errno 111]) the moment the
+        # LLM-provider fix let a run reach tool-call time. hermes-iris is a
+        # prod-only Component (no such pod in dev/staging), so adding it to this
+        # base allow is inert in those overlays. (#119 R7 wired the env URL but
+        # never extended this NetworkPolicy — latent until the LLM 401 cleared.)
         - podSelector:
             matchExpressions:
               - key: app.kubernetes.io/component
                 operator: In
-                values: ["api", "ingestor"]
+                values: ["api", "ingestor", "hermes-iris"]
       ports:
         - protocol: TCP
           port: 8000

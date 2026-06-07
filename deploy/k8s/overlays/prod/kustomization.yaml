@@ -88,6 +88,12 @@ components:
   # Host(graphs.verdify.ai) -> verdify-grafana:3000 through the verdify-traefik
   # tier-2 (verdify-web entryPoint). NOT a device writer.
   - ../../components/grafana
+  # #211 ingestor-gather-script — the planner context-gather ConfigMap
+  # (gather-plan-context.sh + lib/psql-verdify.sh) the ingestor mounts at
+  # /srv/verdify/scripts/. prod-only (only prod runs the planner). Adding the
+  # ConfigMap does NOT touch the running ingestor; the mount + psql initContainer
+  # ship in the gated ingestor patch (see PR / ingestor-gather-mount.patch.yaml).
+  - ../../components/ingestor-gather-script
 
 patches:
   # PROD DB STORAGE RECONCILE: restate verdify-db's volumeClaimTemplate onto
@@ -100,6 +106,16 @@ patches:
   # #113 publish-all: prod re-emits every flushed telemetry row onto the fan-out
   # bus (verdify-mqtt) so dev/stage subscribers mirror it. prod-only env.
   - path: publish-all-configmap.yaml
+  # #212 HERMES_URL: repoint the ingestor's iris_planner gateway POST off the
+  # VM-era loopback default (127.0.0.1:8642) onto the in-cluster hermes-iris
+  # ClusterIP Service. Env-only override; no ingestor rebuild. See
+  # hermes-url-configmap.yaml. (Restart to apply is a gated step — see PR.)
+  - path: hermes-url-configmap.yaml
+  # #211 gather-script runtime env: VERDIFY_DB_BACKEND=dsn (in-cluster psql) +
+  # PYTHON=python3 + PYTHONPATH=/app, consumed ONLY by the mounted gather
+  # subprocess (not the ingestor app / device path). See
+  # gather-script-env-configmap.yaml. (Picked up on the gated restart.)
+  - path: gather-script-env-configmap.yaml
   # #130 ingestor state volume: writable emptyDir at /srv/verdify/state so the
   # live setpoint-dispatcher + MCP-restart logging stops thrashing post-cutover.
   # emptyDir now; durable RWO PVC is the #130 follow-up. See ingestor-state-volume.yaml.
