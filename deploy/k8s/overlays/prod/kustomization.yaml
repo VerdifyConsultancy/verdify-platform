@@ -74,6 +74,13 @@ components:
   # waits for that PV). The cluster-scoped synology-iscsi-ssd StorageClass is NOT
   # pulled here — Root applies it once via components/db-backup/storageclass.
   - ../../components/db-backup
+  # #498 verdify-grafana — OUR OWN Grafana on graphs.verdify.ai. Independent,
+  # in-cluster, reading the prod TimescaleDB (verdify-db:5432). PROD-ONLY (graphs
+  # is a prod host); never staging. Stateless (emptyDir; provisioned datasource +
+  # site-*.json dashboards + anonymous-Viewer embeds). Tier-2 IngressRoute routes
+  # Host(graphs.verdify.ai) -> verdify-grafana:3000 through the verdify-traefik
+  # tier-2 (verdify-web entryPoint). NOT a device writer.
+  - ../../components/grafana
 
 patches:
   # DEVICE-WRITE INTERLOCK (#79): VERDIFY_DEVICE_WRITE_ENABLED=1 — prod only.
