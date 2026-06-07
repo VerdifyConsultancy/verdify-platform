@@ -75,6 +75,31 @@ spec:
                 - -c
                 - |
                   set -euo pipefail
+                  # NETPOL-RACE WAIT (why this job had NEVER succeeded):
+                  # the CNI (kube-router) programs the allow-db-from-backup
+                  # ingress rule for a freshly-scheduled pod ASYNCHRONOUSLY.
+                  # For the first ~5-10s of a new pod's life the rule is not
+                  # yet in the dataplane, so a connection to the DB is REJECTed
+                  # (Connection refused). The original script fired pg_dump
+                  # immediately under `set -e`, so it died on that refusal and
+                  # every nightly run (and its backoff retries, each a NEW pod
+                  # hitting the same race) failed. Block until the DB is
+                  # actually reachable before dumping. pg_isready is a cheap
+                  # SELECT-free TCP+startup probe; it does NOT write the DB.
+                  echo "[backup] waiting for ${DB_HOST}:${DB_PORT} to be reachable (CNI netpol-program race)"
+                  ready=0
+                  for attempt in $(seq 1 60); do
+                    if pg_isready -h "${DB_HOST}" -p "${DB_PORT}" -U "${DB_USER}" -d "${DB_NAME}" -t 3 >/dev/null 2>&1; then
+                      echo "[backup] DB reachable after ${attempt} attempt(s)"
+                      ready=1
+                      break
+                    fi
+                    sleep 2
+                  done
+                  if [ "${ready}" -ne 1 ]; then
+                    echo "[backup] FATAL: ${DB_HOST}:${DB_PORT} never became reachable after 120s" >&2
+                    exit 1
+                  fi
                   ts="$(date -u +%Y%m%dT%H%M%SZ)"
                   out="${BACKUP_DIR}/verdify-${ts}.dump"
                   echo "[backup] pg_dump -Fc ${DB_NAME}@${DB_HOST} -> ${out}"

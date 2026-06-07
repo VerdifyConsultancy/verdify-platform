@@ -23,3 +23,7 @@ kind: Component
 resources:
   - dumps-pvc.yaml
   - backup-cronjob.yaml
+  # Always-on RPO alarm source: reads the dumps PVC mtime read-only and exports
+  # verdify_db_backup_last_success_timestamp_seconds for the VerdifyDBBackupStale
+  # alert (no kube-state-metrics in this cluster). See its header.
+  - backup-freshness-exporter.yaml
