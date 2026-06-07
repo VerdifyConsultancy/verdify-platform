@@ -1,19 +1,36 @@
 # DEVICE-VLAN EGRESS ALLOW (#80) — prod ONLY.
 #
-# This is the SINGLE place the ingestor is permitted to reach the greenhouse
-# device VLAN. It is the network-layer counterpart of VERDIFY_DEVICE_WRITE_ENABLED=1:
-# the production ingestor is the one real single writer, so it CAN open the
-# ESPHome native-API connection to the live ESP32 (192.168.10.111:6053), reach
-# Home Assistant + local MQTT on the services VLAN, and read Frigate/go2rtc
-# occupancy.
+# This is the egress policy that lets the prod ingestor — the ONE real single
+# writer — reach the live greenhouse device + every telemetry source it pulls
+# from. It is the network-layer counterpart of VERDIFY_DEVICE_WRITE_ENABLED=1.
 #
-# Staging carries the inverse (deny-esp32-egress drops 192.168.10.0/24). Only
-# ONE of the two overlays ever grants this — never both, never the base.
+# *** PROVEN CUTOVER SHAPE — broad egress + DNS, NOT a tight per-IP allow-list. ***
+# The 2026-06-07 attended cutover (DECISIONS-LOCKED D9) was applied IMPERATIVELY
+# by patching the prod-dark `deny-esp32-egress` policy to egress 0.0.0.0/0 (i.e.
+# REMOVING the `except: 192.168.10.0/24`) plus an explicit DNS allow. That is the
+# shape proven live: the ingestor opened the ESPHome native-API to the ESP32 and
+# has been the sole writer + telemetry persister since 2026-06-07T17:15Z.
 #
-# GATING (handoff §3.4 / §6): declaring this policy does NOT by itself move the
-# device loop to k3s — it also requires the device-VLAN route, the single-writer
-# cutover choreography, and explicit Jason confirmation. This manifest is the
-# reviewable target shape for prod, not an instruction to cut over.
+# This overlay reconciles overlays/prod to THAT PROVEN SHAPE so a future ArgoCD
+# sync REINFORCES the cutover rather than reverting it. The earlier tight per-IP
+# allow-list (ESP32:6053 / HA:8123,1883 / Frigate:5000,1984 / db:5432 / DNS) was
+# the reviewable pre-cutover target, but it is now known to REGRESS real egress
+# the live ingestor uses and is therefore replaced:
+#   - immich GPU-power metrics  http://192.168.30.108:9400/metrics  (GPU power sync)
+#   - the in-cluster fan-out broker verdify-mqtt:1883 (VERDIFY_MQTT_PUBLISH_ALL=1,
+#     publish-all-configmap.yaml) — prod re-emits every flushed row onto the bus
+#   - and, per DECISIONS-LOCKED D4, the durable story is an ingestor that PULLS
+#     from the IoT VLAN and is EXTENSIBLE to OTHER IoT devices — a fixed per-IP
+#     list would have to be edited for every new source.
+#
+# A broad-egress + scoped-DNS policy still keeps an Egress policyType ATTACHED to
+# the ingestor (so it is not "no egress policy = allow all" by accident — it is a
+# deliberate, declared allow), and it provably covers every destination above
+# with zero regression risk. Ingress to the ingestor stays default-denied by
+# base default-deny-ingress; this policy is Egress-only.
+#
+# Staging carries the inverse (deny-esp32-egress drops 192.168.10.0/24). Only the
+# prod overlay grants device egress — never staging, never the base.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -26,40 +43,18 @@ spec:
       app.kubernetes.io/component: ingestor
   policyTypes: ["Egress"]
   egress:
-    # ESP32 ESPHome native API (greenhouse VLAN) — telemetry + setpoint/occupancy push.
+    # Broad egress: ESP32 greenhouse VLAN (192.168.10.0/24:6053), Home Assistant +
+    # external MQTT broker (192.168.30.107:8123,1883), Frigate/go2rtc
+    # (192.168.30.142:5000,1984), immich GPU metrics (192.168.30.108:9400),
+    # in-cluster verdify-db:5432 + verdify-mqtt fan-out:1883, and any further IoT
+    # telemetry source the ingestor is extended to pull from (D4). This is the
+    # exact shape proven live at the 2026-06-07 cutover.
     - to:
         - ipBlock:
-            cidr: 192.168.10.0/24
-      ports:
-        - protocol: TCP
-          port: 6053
-    # Home Assistant REST + local MQTT (services VLAN).
-    - to:
-        - ipBlock:
-            cidr: 192.168.30.107/32
-      ports:
-        - protocol: TCP
-          port: 8123
-        - protocol: TCP
-          port: 1883
-    # Frigate / go2rtc occupancy (services VLAN).
-    - to:
-        - ipBlock:
-            cidr: 192.168.30.142/32
-      ports:
-        - protocol: TCP
-          port: 5000
-        - protocol: TCP
-          port: 1984
-    # In-cluster DB egress + cluster DNS so the ingestor can still write
-    # TimescaleDB and resolve names once an Egress policy is attached to it.
-    - to:
-        - podSelector:
-            matchLabels:
-              app.kubernetes.io/component: db
-      ports:
-        - protocol: TCP
-          port: 5432
+            cidr: 0.0.0.0/0
+    # Cluster DNS so the ingestor resolves in-cluster Service names (verdify-db,
+    # verdify-mqtt, verdify-mcp) once an Egress policy is attached to it. Matches
+    # the explicit DNS allow added in the live cutover patch.
     - to:
         - namespaceSelector: {}
       ports:

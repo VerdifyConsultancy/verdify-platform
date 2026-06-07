@@ -1,0 +1,39 @@
+# INGESTOR STATE VOLUME (#130) — prod.
+#
+# The prod ingestor runs with readOnlyRootFilesystem:true and the base only mounts
+# an emptyDir at /tmp. The live setpoint dispatcher + MCP-restart paths write to a
+# FIXED path /srv/verdify/state (carried over from the VM host layout):
+#   - /srv/verdify/state/setpoint-dispatcher.log   (every setpoint_dispatch task)
+#   - /srv/verdify/state/mcp-server.log            (every MCP restart attempt)
+# Without a writable mount there the live pod throws, observed post-cutover:
+#   ERROR Task setpoint_dispatch failed: [Errno 2] No such file or directory:
+#     '/srv/verdify/state/setpoint-dispatcher.log'
+#   ERROR MCP server restart failed: [Errno 2] No such file or directory:
+#     '/srv/verdify/state/mcp-server.log'
+# i.e. the dispatcher task and MCP supervisor thrash on every cycle. The device
+# pushes themselves still land (direct-push to ESP32 succeeds) but the logging +
+# MCP-restart bookkeeping fails, so the dispatcher task is marked failed each run.
+#
+# FIX: mount a writable emptyDir at /srv/verdify/state. emptyDir is the MINIMUM
+# that clears the thrash (the logs are diagnostic, lost on pod restart — acceptable
+# for now). #130 tracks the DURABLE follow-up: a small RWO PVC (synology-iscsi-ssd)
+# so the dispatcher/MCP logs survive a restart. Modeled as a strategic-merge patch
+# onto the base ingestor Deployment (adds the volume + volumeMount, /tmp preserved).
+#
+# laptop-root applies the restart that picks this up (single-writer Recreate: the
+# old writer pod is torn down fully before the new one starts — no double-writer).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-ingestor
+spec:
+  template:
+    spec:
+      containers:
+        - name: ingestor
+          volumeMounts:
+            - name: state
+              mountPath: /srv/verdify/state
+      volumes:
+        - name: state
+          emptyDir: {}
