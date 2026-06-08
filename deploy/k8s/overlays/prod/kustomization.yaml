@@ -46,6 +46,11 @@ resources:
   # www/lab IngressRoutes above (verdify-t2-* are distinctly named) and matches
   # the live verdify-prod cluster exactly. See traefik/ for the full set.
   - traefik
+  # HA Sprint ha-1 / LANE B (#230): PodDisruptionBudgets giving every 2-replica
+  # stateless surface (www/lab/api/mcp) + tier-2 verdify-traefik a disruption
+  # floor (minAvailable:1), and grafana a drain-safe maxUnavailable:1 (RWO PVC
+  # singleton). The incident had ZERO PDBs in verdify-prod. See pdb.yaml.
+  - pdb.yaml
 
 # verdify-planner (#117) + verdify-mqtt fan-out broker (#113) — referenced as
 # Components, NOT added to base, so they never render into overlays/staging (the
@@ -122,6 +127,11 @@ patches:
   - path: ingestor-state-volume.yaml
   # ingestor keeps the base replicas:1 + Recreate (single-writer invariant); no
   # replicas:0 pin here (that is staging's two-writer safety pin).
+  # HA Sprint ha-1 / LANE B (#230): scale www/lab/api/mcp 1->2, hard hostname
+  # spread (DoNotSchedule + matchLabelKeys), zero-downtime rollout. Scoped to
+  # overlays/prod so base (api/mcp -> staging) + the www/lab components (-> dev)
+  # stay at replicas:1. ingestor/setpoint-server are NOT in this patch.
+  - path: ha-stateless-spread.patch.yaml
 
 # Image digest pins. Same canonical namespace as staging
 # (ghcr.io/verdifyconsultancy/verdify-*), pinned to immutable @sha256 digests
