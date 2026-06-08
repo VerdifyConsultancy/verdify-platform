@@ -89,12 +89,19 @@ patches:
   # repo). lab is NOT in overlays/staging (it is a dev/prod-only Component), so it
   # is EXEMPT from the promote-diff-guard staging-equality check; dev pins the SAME
   # env-agnostic digest as prod (one-digest-across-envs static content).
+  #
+  # 2026-06-07 #263 CONVERGENCE (laptop-root): the prior 92ab47.. pin was the
+  # SYNTHETIC CI temp-vault build (stock "Welcome to Quartz 4" starter). Repointed
+  # to the SAME real vault-built digest overlays/prod already serves on
+  # lab.verdify.ai (bf71018, 121 .md -> 566 static files), so no overlay carries
+  # the synthetic placeholder and a sync can never seed the Quartz manual. The
+  # durable CI-from-real-vault fix is Iris #124 / PR #259.
 images:
 - digest: sha256:ce4ca79f9e6442c39558cbe02b1665c3cddc3e269c1867997d4f292f3a5ce8ff
   name: ghcr.io/verdifyconsultancy/verdify-api
 - digest: sha256:4f141a5901f802e52b37b15a6a92b8d0bc906f3d854066e3ddd52911aa457d0d
   name: ghcr.io/verdifyconsultancy/verdify-ingestor
-- digest: sha256:92ab47073fad5372832274ba591291fd1c209968fd311892f4130bc423b1140b
+- digest: sha256:bf71018f181f4e37e585b8778852eb209875555525c425921663e7744891c973
   name: ghcr.io/verdifyconsultancy/verdify-lab
 - digest: sha256:9824020a0d2fe77191b2c01ca2634c3bcec6031b79d2fef1c3334b2d5665768d
   name: ghcr.io/verdifyconsultancy/verdify-mcp
