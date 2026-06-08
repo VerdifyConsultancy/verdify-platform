@@ -26,3 +26,4 @@ resources:
   - generated/provisioning-cm.yaml
   - generated/dashboards-cm-0.yaml
   - generated/dashboards-cm-1.yaml
+  - generated/dashboards-cm-2.yaml
