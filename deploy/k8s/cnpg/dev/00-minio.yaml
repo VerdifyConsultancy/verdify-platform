@@ -1,0 +1,162 @@
+# Dev-only MinIO object store for CNPG Barman WAL archiving + base backups + PITR
+# (HA-4.1/#243, HA-4.2 validation/#244).
+#
+# WHY A DEDICATED DEV MINIO (not the existing onyx-minio): isolation. The WAL/
+# PITR datapath under test must not couple to another team's namespace or share
+# a bucket lifecycle. This is a throwaway dev store (emptyDir-backed is fine for
+# the failover/PITR drill; switch to a PVC if you want the dev WAL archive to
+# survive a MinIO pod restart). It lives in verdify-dev and is NEVER exposed
+# outside the namespace (ClusterIP only). The PROD design (#244) targets an
+# OFF-NAS / external S3 target, NOT this pod — see the runbook.
+#
+# NOTE: single-replica, no HA — it is a test fixture, not a production backup
+# target. A dev PITR drill that needs the archive to survive a MinIO restart
+# uses the PVC variant (commented below).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: minio-dev-creds
+  namespace: verdify-dev
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: cnpg-backup-store
+    verdify.io/scope: dev-only
+type: Opaque
+stringData:
+  # Dev-only throwaway credentials. NOT a real secret; this MinIO is
+  # namespace-internal and never reachable off-cluster. Rotate/replace for any
+  # non-dev use. (Prod #244 uses SOPS-managed external S3 creds, not this.)
+  MINIO_ROOT_USER: verdify-dev-cnpg
+  MINIO_ROOT_PASSWORD: dev-cnpg-wal-store-CHANGE-ME-not-prod
+  AWS_ACCESS_KEY_ID: verdify-dev-cnpg
+  AWS_SECRET_ACCESS_KEY: dev-cnpg-wal-store-CHANGE-ME-not-prod
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio-dev
+  namespace: verdify-dev
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: cnpg-backup-store
+    verdify.io/scope: dev-only
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: cnpg-backup-store
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: cnpg-backup-store
+        verdify.io/scope: dev-only
+    spec:
+      # verdify-dev enforces PodSecurity 'restricted' — every container needs
+      # the full hardened securityContext or the pod is rejected.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: minio
+          image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+          args: ["server", "/data", "--console-address", ":9001"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities: { drop: ["ALL"] }
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef: { name: minio-dev-creds, key: MINIO_ROOT_USER }
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: minio-dev-creds, key: MINIO_ROOT_PASSWORD }
+          ports:
+            - { name: s3, containerPort: 9000 }
+            - { name: console, containerPort: 9001 }
+          readinessProbe:
+            httpGet: { path: /minio/health/ready, port: 9000 }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests: { cpu: "50m", memory: "256Mi" }
+            limits: { memory: "512Mi" }
+          volumeMounts:
+            - { name: data, mountPath: /data }
+      volumes:
+        # Dev fixture: emptyDir. For a PITR drill that must survive a MinIO
+        # restart, swap this for a small PVC (synology-iscsi, 10Gi).
+        - name: data
+          emptyDir: { sizeLimit: 10Gi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio-dev
+  namespace: verdify-dev
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: cnpg-backup-store
+spec:
+  selector:
+    app.kubernetes.io/component: cnpg-backup-store
+  ports:
+    - { name: s3, port: 9000, targetPort: 9000 }
+    - { name: console, port: 9001, targetPort: 9001 }
+---
+# One-shot Job to create the WAL bucket on the dev MinIO before the cluster
+# bootstraps. CNPG's barmanObjectStore expects the destinationPath bucket to
+# exist. Idempotent (mc mb --ignore-existing).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: minio-dev-mkbucket
+  namespace: verdify-dev
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: cnpg-backup-store
+spec:
+  backoffLimit: 10
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: cnpg-backup-store
+    spec:
+      restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: mc
+          image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities: { drop: ["ALL"] }
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              until mc alias set dev http://minio-dev:9000 "$AWS_ACCESS_KEY_ID" "$AWS_SECRET_ACCESS_KEY"; do
+                echo "waiting for minio-dev..."; sleep 3
+              done
+              mc mb --ignore-existing dev/verdify-wal
+              mc ls dev/
+              echo "bucket ready"
+          env:
+            # mc writes its config under $MC_CONFIG_DIR; point it at a writable
+            # tmpfs since uid 1000's HOME (/) is not writable.
+            - name: MC_CONFIG_DIR
+              value: /tmp/.mc
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom: { secretKeyRef: { name: minio-dev-creds, key: AWS_ACCESS_KEY_ID } }
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom: { secretKeyRef: { name: minio-dev-creds, key: AWS_SECRET_ACCESS_KEY } }

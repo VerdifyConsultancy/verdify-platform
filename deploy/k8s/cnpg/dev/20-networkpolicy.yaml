@@ -1,0 +1,60 @@
+# NetworkPolicies for the dev CNPG stack. verdify-dev has a default-deny-ingress
+# policy, so every new pod that must RECEIVE traffic needs an explicit allow.
+#
+# Without these:
+#   * mkbucket + the CNPG WAL archiver cannot reach minio-dev:9000
+#     (connection refused / timeout) → ContinuousArchivingFailing, no PITR.
+#   * the CNPG operator's instance status probe (manager :8000) and the
+#     instances' replication/PG ports get blocked → the cosmetic
+#     "Instance Status Extraction Error: HTTP communication issue".
+---
+# Allow ingress to MinIO (S3 :9000 + console :9001) from anything in the
+# namespace (dev fixture; the store is namespace-internal only).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-minio-dev
+  namespace: verdify-dev
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: cnpg-backup-store
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: cnpg-backup-store
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: {}        # any pod in verdify-dev
+      ports:
+        - { protocol: TCP, port: 9000 }
+        - { protocol: TCP, port: 9001 }
+---
+# Allow the CNPG cluster instances to receive: PostgreSQL (5432), the CNPG
+# instance-manager status/metrics (8000), and inter-instance replication. From
+# any pod in the namespace (the operator runs in cnpg-system, but the status
+# probe and app traffic originate in-namespace and from the operator; allow
+# both the namespace and the operator namespace).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-cnpg-cluster
+  namespace: verdify-dev
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: db-cnpg
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: verdify-db-cnpg
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: {}                       # in-namespace (app, peer instances)
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: cnpg-system   # the operator
+      ports:
+        - { protocol: TCP, port: 5432 }   # postgres
+        - { protocol: TCP, port: 8000 }   # cnpg instance manager (status/metrics)
+        - { protocol: TCP, port: 9187 }   # postgres_exporter (if scraped)
