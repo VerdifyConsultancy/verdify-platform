@@ -85,6 +85,20 @@ async def push_to_esp32(changes: list[tuple[str, float, str]]) -> int:
         _log_device_writes_disabled_once("push_to_esp32")
         return 0
 
+    # HA-3.2 single-writer FENCE gate (#240): the LAST gate before any device
+    # command. No push may leave this process unless we hold a fresh writer
+    # Lease (renew-or-die). Disabled/pre-arm → writer_lease_held() returns True
+    # (unchanged behaviour). Once armed, a lease-lost / API-partitioned pod is
+    # blocked here even if a stale shared.esp32["client"] reference survives —
+    # the same self-fence the esp32_loop enforces by disconnecting, applied to
+    # the dispatcher/RT-listener/occupancy push paths that call this directly.
+    if not shared.writer_lease_held():
+        log.warning(
+            "push_to_esp32: BLOCKED by writer-lease fence (not held); %d change(s) suppressed",
+            len(changes),
+        )
+        return 0
+
     client = shared.esp32["client"]
     keys = shared.esp32["keys"]
     if client is None:

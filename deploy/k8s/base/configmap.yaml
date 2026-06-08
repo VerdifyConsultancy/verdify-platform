@@ -42,3 +42,13 @@ data:
   MQTT_HOST: "192.168.30.107"
   MQTT_PORT: "1883"
   FRIGATE_URL: "http://192.168.30.142:5000"
+
+  # ---- HA-3.2 single-writer FENCE (#240) ---------------------------------
+  # The coordination.k8s.io Lease fence is DEFAULT-OFF here, exactly like the
+  # device-write gate (#79). The lease code is fully inert (is_held()→True,
+  # behaviour identical to the pre-fence ingestor) until this flag is "1". It is
+  # armed ONLY in the prod overlay, and ONLY via the gated live-arm runbook with
+  # Jason sign-off (see deploy/k8s/overlays/prod/STAGED-ha3-writer-fence-arm.md).
+  # Renew-or-die windows (15s lease / 10s renew / 2s retry) are the writer_lease
+  # defaults; overridable per-env via VERDIFY_WRITER_LEASE_* if ever needed.
+  VERDIFY_WRITER_LEASE_ENABLED: "0"

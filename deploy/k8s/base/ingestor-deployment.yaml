@@ -49,6 +49,12 @@ spec:
       # SA has no imagePullSecrets, and we do not mutate it from the overlay).
       imagePullSecrets:
         - name: ghcr-jvallery-readonly
+      # HA-3.2 FENCE (#240): bind the dedicated SA whose Role grants the minimal
+      # Lease verbs (ingestor-rbac.yaml). The lease code is INERT until
+      # VERDIFY_WRITER_LEASE_ENABLED=1, so binding the SA ahead of the gated arm
+      # is safe and makes the arm a pure config flip. A pod with no projected SA
+      # token, or with the flag off, degrades to the pre-fence always-held no-op.
+      serviceAccountName: verdify-ingestor
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
@@ -83,6 +89,17 @@ spec:
             - configMapRef:
                 name: verdify-config
           env:
+            # HA-3.2 FENCE (#240): the Lease holderIdentity is this pod's name,
+            # so two pods are always distinct holders. POD_NAMESPACE scopes the
+            # Lease to this overlay's namespace. Downward API — no secret.
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:

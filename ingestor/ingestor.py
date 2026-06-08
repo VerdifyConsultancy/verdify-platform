@@ -89,6 +89,7 @@ from tasks import (
     tempest_sync,
     water_flowing_sync,
 )
+from writer_lease import WriterLease
 
 from verdify_schemas import (
     CLIMATE_INTENT_CONTRACT_VERSION,
@@ -263,6 +264,12 @@ state = State()
 # (prod-only). Set up in main(); used by the flush path to re-emit every flushed
 # row onto the cross-env bus. Never gates the local DB write.
 _fanout_publisher: FanoutPublisher | None = None
+
+# HA-3.2 single-writer fence (#240). The renew-or-die WriterLease. Constructed in
+# main(), published to shared.writer_lease so the push path can gate on it, and
+# acquired BEFORE the ESP32 connect in esp32_loop. INERT unless
+# VERDIFY_WRITER_LEASE_ENABLED is set (then is_held() is the real gate).
+_writer_lease: WriterLease | None = None
 
 
 def _fanout_publish(table: str, row: dict[str, Any]) -> None:
@@ -1615,6 +1622,16 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
     first_connect = True
 
     while True:
+        # HA-3.2 FENCE (#240): acquire the writer Lease BEFORE opening the ESP32
+        # connection. A standby pod blocks here until the active holder stops
+        # renewing for >= leaseDurationSeconds (15s) — so the two pods' device
+        # connections never overlap. No-op (returns immediately) when the fence
+        # is disabled/pre-arm. We poll in a bounded loop so a never-acquiring
+        # standby still logs progress rather than blocking silently forever.
+        if _writer_lease is not None and _writer_lease.enabled:
+            while not await _writer_lease.acquire(timeout=30):
+                log.info("Writer lease held by another writer — standing by (will not connect ESP32)")
+
         log.info(f"Connecting to ESP32 at {ESP32_HOST}:{ESP32_PORT}...")
         client = APIClient(
             address=ESP32_HOST,
@@ -1759,24 +1776,46 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
             except Exception as e:
                 log.error(f"Post-reconnect dispatch failed: {e}")
 
-            # Keepalive loop: ping every 60s via device_info()
-            # Also watches for on_stop callback via connection_lost event
+            # Keepalive loop: ping every 60s via device_info().
+            # Watches for: (a) on_stop callback via connection_lost; (b) silent
+            # TCP death via the keepalive ping; (c) HA-3.2 FENCE — loss of the
+            # writer Lease (renew-or-die). The fence is polled on a SHORT cadence
+            # (every keepalive_wait) so a lease loss disconnects the ESP32 within
+            # a couple seconds — well inside the 15s lease window — guaranteeing
+            # the OLD pod drops its device ESTAB before any replacement can
+            # acquire the lease and connect (never two, even under partition).
+            fenced = _writer_lease is not None and _writer_lease.enabled
+            keepalive_elapsed = 0.0
+            keepalive_wait = 2.0 if fenced else 60.0
             while not connection_lost.is_set():
+                # FENCE check FIRST: if we no longer hold the lease, self-fence
+                # immediately (disconnect + stop pushing). Telemetry-read could
+                # in principle continue, but the safe, simple action is a full
+                # disconnect-and-reacquire — the standby has already taken over.
+                if fenced and not _writer_lease.is_held():
+                    log.warning("Writer lease LOST — SELF-FENCING: disconnecting ESP32 immediately")
+                    if disconnected_at is None:
+                        disconnected_at = datetime.now(UTC)
+                    connection_lost.set()
+                    break
                 try:
-                    # Wait up to 60s — if connection_lost fires, we break immediately
-                    await asyncio.wait_for(connection_lost.wait(), timeout=60.0)
-                    # If we get here, connection_lost was set
+                    # Wait up to keepalive_wait — if connection_lost fires, break.
+                    await asyncio.wait_for(connection_lost.wait(), timeout=keepalive_wait)
                     break
                 except TimeoutError:
-                    # 60s passed without disconnect — send keepalive ping
-                    try:
-                        await asyncio.wait_for(client.device_info(), timeout=10.0)
-                    except (TimeoutError, Exception) as ping_err:
-                        log.warning(f"Keepalive ping failed: {ping_err}")
-                        if disconnected_at is None:
-                            disconnected_at = datetime.now(UTC)
-                        connection_lost.set()
-                        break
+                    keepalive_elapsed += keepalive_wait
+                    # Send the device keepalive ping only every ~60s, regardless
+                    # of the (shorter, fence-driven) poll cadence.
+                    if keepalive_elapsed >= 60.0:
+                        keepalive_elapsed = 0.0
+                        try:
+                            await asyncio.wait_for(client.device_info(), timeout=10.0)
+                        except (TimeoutError, Exception) as ping_err:
+                            log.warning(f"Keepalive ping failed: {ping_err}")
+                            if disconnected_at is None:
+                                disconnected_at = datetime.now(UTC)
+                            connection_lost.set()
+                            break
 
             log.warning("Connection lost — will reconnect")
             last_disconnected_at = disconnected_at or datetime.now(UTC)
@@ -2161,7 +2200,7 @@ async def backfill_gap(
 # Main
 # ──────────────────────────────────────────────────────────────
 async def main() -> None:
-    global ESP32_HOST, ESP32_PORT, ESP32_API_KEY, GREENHOUSE_ID, _fanout_publisher
+    global ESP32_HOST, ESP32_PORT, ESP32_API_KEY, GREENHOUSE_ID, _fanout_publisher, _writer_lease
 
     # Fail loudly if both fan-out modes are set (publisher + subscriber in one
     # process would re-emit what it consumes — a self-feeding topic storm).
@@ -2234,13 +2273,66 @@ async def main() -> None:
     except Exception as e:
         log.warning("Could not load greenhouse config from DB: %s (using .env)", e)
 
-    await asyncio.gather(
+    # HA-3.2 single-writer FENCE (#240). Construct the renew-or-die WriterLease
+    # and publish it to shared so the push path (esp32_push.push_to_esp32) and
+    # esp32_loop both gate on it. INERT unless VERDIFY_WRITER_LEASE_ENABLED is
+    # set — until armed, is_held() always returns True and behaviour is identical
+    # to the pre-fence ingestor. start() spawns the background renew loop (no-op
+    # when disabled/off-cluster).
+    _writer_lease = WriterLease()
+    shared.writer_lease = _writer_lease
+    await _writer_lease.start()
+
+    # SIGTERM handler: on graceful eviction / drain / rollout, RELEASE the lease
+    # (clears holderIdentity so a replacement acquires in seconds, not 15s) and
+    # let the process exit. This turns a planned-disruption zero-writer gap from
+    # ~15s into seconds. SIGTERM during a Recreate rollout: the old pod releases,
+    # the new pod (already blocked in esp32_loop.acquire) takes over immediately.
+    loop = asyncio.get_running_loop()
+    _shutdown = asyncio.Event()
+
+    async def _on_sigterm() -> None:
+        log.warning("SIGTERM received — releasing writer lease + shutting down")
+        try:
+            await _writer_lease.release()
+        except Exception as e:  # noqa: BLE001
+            log.warning("Lease release on SIGTERM failed: %s", e)
+        _shutdown.set()
+
+    try:
+        import signal as _signal
+
+        loop.add_signal_handler(_signal.SIGTERM, lambda: asyncio.create_task(_on_sigterm()))
+        loop.add_signal_handler(_signal.SIGINT, lambda: asyncio.create_task(_on_sigterm()))
+    except (NotImplementedError, RuntimeError):
+        # add_signal_handler unsupported (e.g. non-main thread / Windows) — the
+        # lease still expires within leaseDurationSeconds, so correctness holds;
+        # only the fast graceful-release optimization is unavailable.
+        log.info("Signal handlers unavailable; lease will expire on hard stop")
+
+    main_tasks = asyncio.gather(
         esp32_loop(pool),
         flush_loop(pool),
         task_loop(pool),
         mqtt_loop(pool),
         setpoint_listener(pool),
     )
+
+    # Race the worker gather against the shutdown signal so SIGTERM unwinds
+    # promptly (releasing the lease) instead of waiting on the never-returning
+    # loops. On shutdown, cancel the workers and return.
+    shutdown_wait = asyncio.ensure_future(_shutdown.wait())
+    done, pending = await asyncio.wait({main_tasks, shutdown_wait}, return_when=asyncio.FIRST_COMPLETED)
+    if _shutdown.is_set():
+        main_tasks.cancel()
+        try:
+            await main_tasks
+        except (asyncio.CancelledError, Exception):
+            pass
+        return
+    # If the gather itself returned/raised, propagate (surfaces fatal errors).
+    shutdown_wait.cancel()
+    await main_tasks
 
 
 if __name__ == "__main__":
