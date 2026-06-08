@@ -1,0 +1,18 @@
+# HA-1.9 (#234) — descheduler kustomization (cluster-scoped tool).
+#
+# Applied via TARGETED additive `kubectl apply -k` (descheduler-arm.md), NOT an
+# ArgoCD auto-sync — so it never risks pruning/reverting any live workload.
+#
+# DRY-RUN by default. The two STAGED files are deliberately NOT listed here:
+#   - STAGED-rebalanceable-labels-patch.yaml  (relabels live stateless deploys —
+#     one rolling restart of www/lab/api/mcp/planner/traefik; NEVER singletons)
+#   - STAGED-enforce-patch.yaml               (drops --dry-run; arms enforcement)
+# Both are applied only by the gated runbook, in order, after the dry-run proof.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - namespace.yaml
+  - rbac.yaml
+  - policy-configmap.yaml
+  - cronjob.yaml

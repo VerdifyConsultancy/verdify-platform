@@ -1,0 +1,35 @@
+# ============================================================================
+# STAGED — HA-1.9 (#234): ARM the descheduler (drop --dry-run → enforce). DO NOT
+# APPLY outside the gated runbook, and ONLY after the dry-run proof is green.
+# ============================================================================
+# Intentionally NOT referenced by descheduler/kustomization.yaml. This strategic
+# patch removes the `--dry-run` arg so the next CronJob run actually evicts.
+#
+# PRECONDITIONS (descheduler-arm.md): a dry-run job has run AND its log proves the
+# eviction set contains ONLY duplicate stateless replicas and lists NEITHER the
+# ingestor NOR any singleton (grafana/hermes/mqtt/db/db-backup-exporter), AND the
+# rebalanceable labels patch has landed.
+#
+# Apply with a strategic-merge patch that replaces the args list:
+#   ssh jason@192.168.30.32 sudo k3s kubectl -n verdify-descheduler patch cronjob descheduler \
+#     --type=json -p='[{"op":"replace","path":"/spec/jobTemplate/spec/template/spec/containers/0/args","value":["--policy-config-file=/policy-dir/policy.yaml","--descheduling-interval=0","--v=4"]}]'
+#
+# Rollback (instant): re-add "--dry-run" to the args (reverse patch).
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: descheduler
+  namespace: verdify-descheduler
+spec:
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: descheduler
+              args:
+                - "--policy-config-file=/policy-dir/policy.yaml"
+                - "--descheduling-interval=0"
+                - "--v=4"
+                # NO --dry-run — ENFORCING. Evictions still gated by the policy's
+                # 4 exclusion layers + PDBs + maxNoOfPodsToEvictPerNode:1.
