@@ -6,6 +6,66 @@ This repo is worked by several Claude agents in parallel plus a human coordinato
 
 An AI-driven climate controller for a single 367 sq ft greenhouse in Longmont, CO. **Production** — plants are alive, the ESP32 is in the loop every 5 s, the planner runs on real data. Keeping the greenhouse operational ("Track A") always outranks SaaS/cloud refactor progress ("Track B"). See `README.md` for the architecture one-pager.
 
+## Deployment reality — Verdify runs on k3s now (2026-06-07)
+
+The legacy docker-compose/systemd stack on the **iris VM `.150` is DECOMMISSIONED and POWERED OFF**
+(kept as instant rollback; `qm destroy` is a gated later step). **The whole product plane now runs
+on the homelab k3s cluster, ns `verdify-prod`,** deployed GitOps via ArgoCD from this repo.
+
+- **Deploy topology.** Kustomize: `deploy/k8s/base` + `deploy/k8s/components` + per-env overlays
+  `deploy/k8s/overlays/{prod,prod-dark,staging,dev}`. Live prod = the **`prod` overlay** (ArgoCD app,
+  auto-sync). The **`prod-dark` overlay** is a manual-sync dark/canary lane (ArgoCD app
+  `verdify-prod-dark`) — build/validate there before touching live prod. `staging`/`dev` overlays
+  are non-prod. Images are GHCR digests under `ghcr.io/verdifyconsultancy/verdify-*`; CI builds, the
+  overlay pins the digest, ArgoCD reconciles. **git == live** is an enforced invariant on prod.
+- **Edge / public surfaces.** `verdify.ai`, `lab.verdify.ai`, `graphs.verdify.ai` serve from k3s
+  behind a two-tier Traefik edge: apps-Traefik (`.7.10` VIP, WAN edge) → in-namespace
+  `verdify-traefik` → services. Cloudflare tunnel is the primary WAN path; the `.7.10` LAN edge +
+  Pi-hole local DNS is the tunnel-down backup. The old `.100` tunnel is killed.
+
+## The device-writer single-writer MASTER GATE (read before any ingestor/device change)
+
+**Invariant: exactly ONE process writes the ESP32** (`192.168.10.111:6053`) at all times — never
+two, never a sustained zero-writer gap. In k3s this is the **`verdify-ingestor` Deployment,
+`replicas:1` + `strategy:Recreate`** (sole writer; runs on a worker, 0 restarts). **NEVER scale it
+>1, never run a second writer (no parallel dev/staging writer against the live device — dev/staging
+overlays pin the ingestor `replicas:0`).**
+
+**Critical, non-obvious safety fact:** the firmware (`firmware/greenhouse.yaml`) sets
+`api: max_connections: 20` and `reboot_timeout: 0s`. **So the device is NOT a natural fence** — two
+ingestor pods CAN both connect and both push setpoints (real split-brain is physically possible),
+and a zero-writer gap does NOT self-heal via reboot (the ESP32 holds its last commanded setpoint
+until a writer returns — safe, high thermal mass). The exactly-one guarantee is therefore a
+**`coordination.k8s.io` Lease (`verdify-ingestor-writer`) with renew-or-die self-fencing** (acquire
+before connecting, renew every 10s, gate every push on a fresh lease, disconnect immediately on any
+renewal failure incl. API-server partition). It is **built and ARM-READY but NOT yet armed (gated,
+dev-first)**. Out-of-band oracle: `verdify-writer-exporter` DaemonSet (ns `observability`) →
+`sum(verdify_esp32_writer_estab)` must be `1` (`>=2` = split-brain critical page). The single-writer
+gate holds until the Lease is the live mechanism. **The greenhouse device/plant lane is Jason-gated;
+the firmware-freeze rules below still apply.**
+
+## Planning delivery path
+
+Plan lifecycle is `gather → HERMES → key-delivery` (the `verdify-hermes-iris` deployment runs the
+HERMES agent; planning gateway proven at gw=202). Touching the planner/MCP/HERMES path still routes
+through the `genai` scope + firmware-freeze schema-restart rules below.
+
+## HA posture (epic #225 / milestone M7) + firmware-optimization direction
+
+- **HA.** Stateless surfaces (`www/lab/api/mcp/planner`) run **2 replicas, hard hostname
+  `topologySpreadConstraints` + PDB `minAvailable:1`** (chaos-proven); resource governance is in
+  place (CPU limits, per-ns `LimitRange`/`ResourceQuota`, 4-tier PriorityClasses). The DB is moving
+  to **CNPG** (`verdify-db-cnpg`, 1+2 sync + Barman PITR) — **built + healthy but INERT**; live DB
+  is still the `verdify-db` StatefulSet (`timescale/timescaledb:2.25.2-pg16`). Full design +
+  chaos-test contract: `root/docs/verdify-ha-architecture-2026-06-07.md` (in the agents share).
+- **Firmware optimization (SHADOW, epic #249).** Direction: **rip out the orchid time-of-day band
+  curve** (#250) and **realign the VPD + temperature bands** (#251) via `crop_target_profiles`;
+  shadow shows in-ideal-band 19.8%→58.6%, the band dashboard is live. Apply is gated (band-live-apply
+  runbook + the firmware-freeze rules below).
+- **Gated runbooks (Jason-gated, do not self-apply):** the writer-fence arm (HA-3.2 #240 / HA-3.1
+  #239), the **gated atomic live-DB cutover to CNPG (#245)**, and the firmware band live-apply.
+  Unblocked HA backlog is exhausted; what remains is the gated set.
+
 ## Agents
 
 Five persistent agents, each owning one scope. Branches are prefixed by agent name; worktrees live at `/mnt/iris/verdify-worktrees/{agent}/`. Per-agent scope docs live in `docs/agents/`.
@@ -27,7 +87,9 @@ No agent owns these. Changes here go through coordinator (Jason) — file a focu
 
 - `verdify_schemas/` — cross-layer Pydantic contracts; touched by every agent
 - `db/migrations/` — schema migrations; serialized, reviewed holistically
-- `docker-compose.yml`, `systemd/`, `traefik/`, `mqtt/`, `.github/workflows/` — infra
+- `deploy/k8s/**` (base/components/overlays — the LIVE k3s deploy; prod overlay is git==live),
+  `traefik/`, `mqtt/`, `.github/workflows/` — infra. (`docker-compose.yml`/`systemd/` are the
+  retired `.150` VM stack, kept only for reference/rollback — not the live runtime.)
 - `CLAUDE.md` (this file), `README.md`, `docs/agents/**` — organizational docs
 - `pyproject.toml` — tool config
 
