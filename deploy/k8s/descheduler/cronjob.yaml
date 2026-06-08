@@ -1,0 +1,94 @@
+# HA-1.9 (#234) — descheduler CronJob.
+#
+# Ships DRY-RUN by default (`--dry-run`): it logs which pods it WOULD evict but
+# evicts NOTHING. This is the conservative ship mandated by the HA gate — the
+# enforcing (non-dry-run) mode is flipped only AFTER a dry-run run is proven to
+# (a) never list the ingestor or any singleton, and (b) only list duplicate
+# stateless replicas. See descheduler-arm.md for the gated enforce flip.
+#
+# Runs every 30 min. Concurrency Forbid + leader-election lease (RBAC role) so two
+# runs never overlap. priorityClassName verdify-batch (1000) — the descheduler is
+# itself the lowest-priority workload (it must never preempt anything).
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: descheduler
+  namespace: verdify-descheduler
+  labels:
+    app.kubernetes.io/name: descheduler
+spec:
+  schedule: "*/30 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  startingDeadlineSeconds: 200
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 600
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: descheduler
+          annotations:
+            # Never let the descheduler evict itself.
+            descheduler.alpha.kubernetes.io/evict: "false"
+        spec:
+          serviceAccountName: descheduler
+          priorityClassName: verdify-batch
+          restartPolicy: Never
+          # Do not schedule onto the cordoned etcd nodes.
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                  - matchExpressions:
+                      - key: node-role.kubernetes.io/control-plane
+                        operator: DoesNotExist
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: descheduler
+              # registry.k8s.io/descheduler/descheduler:v0.36.0 (k8s 1.35 deps),
+              # digest-pinned per the cluster's image policy.
+              image: registry.k8s.io/descheduler/descheduler:v0.36.0@sha256:7ca92c0a7b4f1c51d306409da6b832005fcadb224e384795646376726734c6e5
+              imagePullPolicy: IfNotPresent
+              command:
+                - "/bin/descheduler"
+              args:
+                - "--policy-config-file=/policy-dir/policy.yaml"
+                - "--descheduling-interval=0"   # CronJob drives the cadence; run once and exit.
+                - "--v=4"
+                # DRY-RUN: log would-evict decisions, evict nothing. Removing this
+                # flag (gated, descheduler-arm.md) is what arms enforcement.
+                - "--dry-run"
+              resources:
+                requests:
+                  cpu: "50m"
+                  memory: "64Mi"
+                limits:
+                  memory: "256Mi"
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop:
+                    - ALL
+              volumeMounts:
+                - name: policy-volume
+                  mountPath: /policy-dir
+                  readOnly: true
+              livenessProbe:
+                httpGet:
+                  path: /healthz
+                  port: 10258
+                  scheme: HTTPS
+                initialDelaySeconds: 3
+                periodSeconds: 10
+          volumes:
+            - name: policy-volume
+              configMap:
+                name: descheduler-policy

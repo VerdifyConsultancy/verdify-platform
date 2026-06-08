@@ -1,0 +1,15 @@
+# HA-1.9 (#234) — descheduler namespace.
+#
+# The descheduler is a cluster-scoped rebalancer, deployed in its OWN namespace
+# (NOT verdify-prod) so it is decoupled from the manual-sync `verdify-prod-dark`
+# ArgoCD app — applying/removing the descheduler never risks a prune/revert of the
+# live verdify-prod workloads. It is applied via a TARGETED additive `kubectl apply`
+# (see descheduler-arm.md), never an ArgoCD auto-sync.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: verdify-descheduler
+  labels:
+    app.kubernetes.io/name: descheduler
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: capacity-rebalancer
