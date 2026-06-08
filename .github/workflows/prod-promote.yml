@@ -1,0 +1,389 @@
+name: Prod Promote
+
+# #220 — ONE-CLICK / ONE-APPROVAL prod-promotion entry point.
+#
+# This is the missing top of the gated commit -> stage -> prod promotion flow.
+# The lower half already exists and is LIVE on live/platform-main:
+#
+#   container-publish.yml   push -> build+publish digest-pinned images ->
+#                           IN-REPO write-back bumps overlays/staging (+ dev)
+#                           digests -> ArgoCD AUTO-SYNCS verdify-local-staging.
+#                           (LOCKED decision: in-repo bump, no cross-repo PR,
+#                           no ArgoCD Image Updater.)
+#   k8s-manifests.yml       renders+kubeconform-validates every overlay.
+#   ci.yml                  the logic/schema/firmware/drift gates.
+#   promote-diff-guard.yml  the REQUIRED check on a prod-promote PR: asserts the
+#                           PR advances ONLY prod image digests, and only to the
+#                           digest staging is CURRENTLY running (no fabricated
+#                           pin, no manifest/replica/device-write/NetPol edit).
+#
+# WHAT WAS MISSING (this file): a button that GENERATES the prod-promote PR so
+# Jason stops hand-editing overlays/prod digests. A maintainer clicks Run
+# workflow (mode=pull-request) -> this job reads the CURRENT staging digests,
+# runs the local promotion gates (Device-Write-Safety-Gate + change-surface
+# self-check), bumps overlays/prod/kustomization.yaml to exactly those digests,
+# and opens a `prod-promote`-labelled PR. promote-diff-guard.yml then enforces
+# the same invariants as a required status check, and a human reviews+merges.
+#
+# *** THE DEVICE-WRITE HUMAN GATE IS PRESERVED ***
+# Merging this PR only changes the prod overlay's image digests in git. It does
+# NOT sync the cluster: the verdify-prod ArgoCD Application is MANUAL-SYNC on
+# purpose (no syncPolicy.automated) precisely because its ingestor is the ONE
+# real ESP32 writer. The new prod digests sit OutOfSync until an operator runs
+# `argocd app sync verdify-prod` AFTER the separate device-VLAN sign-off +
+# single-writer cutover are explicitly approved by Jason. This workflow never
+# calls ArgoCD, never scales/patches the live ingestor, never touches the device.
+#
+# DRY-RUN by default: prints the digest delta and the gate verdicts but opens no
+# PR. mode=pull-request opens the PR. This mirrors the de-noised
+# vast-gitops-dev-test-promotion.yml posture (dispatch-only, dry-run default).
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "dry-run prints the promotion delta; pull-request opens the prod-promote PR."
+        required: true
+        default: dry-run
+        type: choice
+        options:
+          - dry-run
+          - pull-request
+      images:
+        description: >-
+          Comma-separated staging-tracked images to promote (subset of:
+          api,mcp,ingestor,migrate,www). Empty = promote EVERY staging-tracked
+          prod pin that currently lags staging. Prod-only images
+          (planner/setpoint-server/lab/mqtt/hermes) are NEVER promoted here.
+        required: false
+        default: ""
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verdify-prod-promote
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    name: Compute staging->prod digest promotion and open PR
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    env:
+      MODE: ${{ github.event.inputs.mode }}
+      IMAGES_INPUT: ${{ github.event.inputs.images }}
+      PROMOTE_BRANCH: gitops/verdify-prod-promote
+      PROD_OVERLAY: deploy/k8s/overlays/prod
+      STAGING_OVERLAY: deploy/k8s/overlays/staging
+      DEV_OVERLAY: deploy/k8s/overlays/dev
+    steps:
+      - name: Checkout live/platform-main
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: live/platform-main
+          fetch-depth: 0
+          token: ${{ github.token }}
+
+      - name: Install kustomize (pinned v5.4.3)
+        run: |
+          set -euo pipefail
+          KUSTOMIZE_VERSION=v5.4.3
+          curl -sfL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2F${KUSTOMIZE_VERSION}/kustomize_${KUSTOMIZE_VERSION}_linux_amd64.tar.gz" \
+            | tar xz kustomize
+          sudo mv kustomize /usr/local/bin/
+          kustomize version
+
+      # ── Resolve the EFFECTIVE rendered digest maps (robust to formatting) ────
+      - name: Compute staging-tracked promotion delta
+        id: delta
+        run: |
+          set -euo pipefail
+
+          # image<TAB>digest from the RENDERED overlay (the effective pin, not the
+          # raw source line). Restricted to the canonical verdify-* namespace.
+          render_map() {
+            kustomize build "$1" \
+              | grep -oE 'ghcr\.io/verdifyconsultancy/verdify-[a-z-]+@sha256:[0-9a-f]{64}' \
+              | sed -E 's#^ghcr\.io/verdifyconsultancy/(verdify-[a-z-]+)@(sha256:[0-9a-f]{64})$#\1\t\2#' \
+              | sort -u
+          }
+
+          render_map "$STAGING_OVERLAY" > /tmp/staging.map
+          render_map "$PROD_OVERLAY"    > /tmp/prod.map
+
+          # Snapshot the prod render with image lines STRIPPED — this is the
+          # device-write posture surface (NetworkPolicies, ConfigMaps, replicas,
+          # patches, components). The Device-Write-Safety-Gate later asserts this
+          # is byte-identical after the digest bump (only image: lines may move).
+          kustomize build "$PROD_OVERLAY" \
+            | grep -vE '^\s+image: ghcr\.io/verdifyconsultancy/' \
+            > /tmp/prod.render.base.noimg
+
+          echo "=== staging (current, source of truth for promotable digests) ==="
+          cat /tmp/staging.map
+          echo "=== prod (current pins) ==="
+          cat /tmp/prod.map
+
+          # STAGING-TRACKED set is DERIVED = exactly the images the staging
+          # overlay renders (NOT a hand-maintained allowlist). This is the same
+          # derivation promote-diff-guard.yml uses, so the two can never drift:
+          # only images staging actually runs are promotable; prod-only
+          # Components (planner/setpoint/lab/mqtt/hermes) are absent from staging
+          # and therefore NEVER promoted by this workflow.
+          #
+          # Optional subset filter from the `images` input (api,mcp,...). An
+          # entry is matched against the verdify-<name> suffix.
+          declare -A want=()
+          subset=false
+          if [ -n "${IMAGES_INPUT// /}" ]; then
+            subset=true
+            IFS=',' read -ra parts <<< "$IMAGES_INPUT"
+            for p in "${parts[@]}"; do
+              p="$(echo "$p" | tr -d '[:space:]')"
+              [ -n "$p" ] && want["verdify-${p#verdify-}"]=1
+            done
+          fi
+
+          : > /tmp/promote.pairs   # image<TAB>staging_digest  (the ones to bump)
+          changes=0
+          while IFS="$(printf '\t')" read -r img staging_digest; do
+            [ -n "$img" ] || continue
+            # Skip images prod doesn't even pin (nothing to promote).
+            prod_digest="$(awk -F'\t' -v i="$img" '$1==i{print $2}' /tmp/prod.map)"
+            [ -n "$prod_digest" ] || { echo "skip ${img}: prod does not pin it"; continue; }
+            # Honour the optional subset filter.
+            if [ "$subset" = true ] && [ -z "${want[$img]:-}" ]; then
+              echo "skip ${img}: not in requested subset"
+              continue
+            fi
+            if [ "$prod_digest" = "$staging_digest" ]; then
+              echo "noop ${img}: prod already == staging (${staging_digest})"
+              continue
+            fi
+            echo "PROMOTE ${img}: ${prod_digest} -> ${staging_digest}"
+            printf '%s\t%s\n' "$img" "$staging_digest" >> /tmp/promote.pairs
+            changes=$((changes+1))
+          done < /tmp/staging.map
+
+          echo "changes=${changes}" >> "$GITHUB_OUTPUT"
+          {
+            echo "### Prod promotion delta (staging -> prod)"
+            echo
+            if [ "$changes" -eq 0 ]; then
+              echo "No staging-tracked prod pin lags staging — nothing to promote."
+            else
+              echo "| image | prod (current) | -> | staging (promote to) |"
+              echo "|---|---|---|---|"
+              while IFS="$(printf '\t')" read -r img sd; do
+                pd="$(awk -F'\t' -v i="$img" '$1==i{print $2}' /tmp/prod.map)"
+                echo "| \`$img\` | \`${pd}\` | -> | \`${sd}\` |"
+              done < /tmp/promote.pairs
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # ── DEVICE-WRITE-SAFETY-GATE (static, pre-PR) ────────────────────────────
+      # The live device-write posture lives in the prod overlay as:
+      #   * the device-write interlock ConfigMap patch (VERDIFY_DEVICE_WRITE_ENABLED=1)
+      #   * the allow-ingestor-device-egress NetworkPolicy
+      #   * the ingestor replicas (base replicas:1, NO replicas:0 pin in prod)
+      # A digest promotion MUST NOT alter any of these. This gate proves the
+      # promotion we are about to PR changes ONLY image digest lines, so the
+      # device-write path is byte-identical before/after. (promote-diff-guard.yml
+      # re-asserts this on the PR as the REQUIRED check; running it HERE fails
+      # fast before a PR is ever opened, and documents the invariant at the
+      # promotion source.)
+      - name: Apply the digest bump in place (surgical, comment-preserving)
+        if: ${{ steps.delta.outputs.changes != '0' }}
+        run: |
+          set -euo pipefail
+          # SURGICAL digest replacement (NOT `kustomize edit set image`). The prod
+          # overlay's images: block uses the hand-authored
+          #   - name: ghcr.io/verdifyconsultancy/verdify-<c>
+          #     digest: sha256:<hex>
+          # form, each pin carrying a multi-line rationale comment. `kustomize edit
+          # set image` REWRITES the whole kustomization.yaml — it reflows the
+          # resources/components/patches list indentation (2-space `  - x` -> flush
+          # `- x`). That whitespace reflow is semantically a no-op (the render is
+          # identical) BUT it trips promote-diff-guard.yml's change-surface check,
+          # which requires a promote PR to change ONLY digest/comment/component-ref
+          # lines — so a kustomize-edit PR would be REJECTED by the required gate.
+          # This awk swaps ONLY the digest value on the line immediately following
+          # each targeted `- name:` line, leaving every byte of formatting and
+          # every rationale comment intact, so the PR passes promote-diff-guard.
+          awk '
+            BEGIN {
+              pf=ARGV[1]; delete ARGV[1];
+              while ((getline line < pf) > 0) {
+                n=split(line, a, "\t"); if (n>=2) want[a[1]]=a[2];
+              }
+            }
+            {
+              if ($0 ~ /^[[:space:]]*-?[[:space:]]*name:[[:space:]]*ghcr\.io\/verdifyconsultancy\/verdify-[a-z-]+[[:space:]]*$/) {
+                img=$0; sub(/^.*verdify-/, "verdify-", img); sub(/[[:space:]]*$/, "", img);
+                cur = (img in want) ? want[img] : ""; print; next;
+              }
+              if (cur != "" && $0 ~ /^[[:space:]]*digest:[[:space:]]*sha256:[0-9a-f]{64}[[:space:]]*$/) {
+                sub(/sha256:[0-9a-f]{64}/, cur); cur="";
+              }
+              print;
+            }
+          ' /tmp/promote.pairs "$PROD_OVERLAY/kustomization.yaml" > /tmp/kz.new
+          mv /tmp/kz.new "$PROD_OVERLAY/kustomization.yaml"
+
+          # Prove the surgical edit touched ONLY digest lines (defence-in-depth
+          # against an awk regression; mirrors promote-diff-guard's surface check).
+          NON_DIGEST="$(git diff -- "$PROD_OVERLAY/kustomization.yaml" \
+            | grep -E '^[+-]' | grep -vE '^(\+\+\+|---)' \
+            | grep -vE '^[+-][[:space:]]*digest:[[:space:]]*sha256:[0-9a-f]{64}[[:space:]]*$' \
+            || true)"
+          if [ -n "$NON_DIGEST" ]; then
+            echo "::error::surgical digest edit changed non-digest lines (awk bug?):"
+            printf '%s\n' "$NON_DIGEST"
+            exit 1
+          fi
+          echo "Surgical bump applied: only digest lines changed."
+
+      - name: Device-Write-Safety-Gate (render-equality; digests-only)
+        if: ${{ steps.delta.outputs.changes != '0' }}
+        run: |
+          set -euo pipefail
+          # Render the bumped prod overlay with image lines STRIPPED and assert it
+          # is BYTE-IDENTICAL to the pre-bump snapshot. This proves the promotion
+          # changes ONLY image references and leaves the device-write posture —
+          # the VERDIFY_DEVICE_WRITE_ENABLED=1 interlock ConfigMap, the
+          # allow-ingestor-device-egress NetworkPolicy, the ingestor replicas, and
+          # every other manifest — untouched. (`kustomize edit` reflows the source
+          # YAML formatting, so a raw source line-diff is noisy; a RENDER diff is
+          # the semantically correct check, and matches promote-diff-guard.yml's
+          # render-based equality enforcement.)
+          kustomize build "$PROD_OVERLAY" \
+            | grep -vE '^\s+image: ghcr\.io/verdifyconsultancy/' \
+            > /tmp/prod.render.cand.noimg
+
+          if ! diff -u /tmp/prod.render.base.noimg /tmp/prod.render.cand.noimg > /tmp/posture.diff; then
+            echo "::error::Device-Write-Safety-Gate FAILED: the promotion changed non-image manifests in the prod render:"
+            cat /tmp/posture.diff
+            exit 1
+          fi
+
+          # Positive assertions: the device-write interlock + egress-allow must be
+          # present in the bumped render (so a future refactor can't silently drop
+          # them and still pass the equality check on an already-broken baseline).
+          rendered="$(kustomize build "$PROD_OVERLAY")"
+          echo "$rendered" | grep -q 'VERDIFY_DEVICE_WRITE_ENABLED' \
+            || { echo "::error::prod render lost the device-write interlock ConfigMap"; exit 1; }
+          echo "$rendered" | grep -q 'allow-ingestor-device-egress' \
+            || { echo "::error::prod render lost the allow-ingestor-device-egress NetworkPolicy"; exit 1; }
+          echo "Device-Write-Safety-Gate OK: non-image render byte-identical; interlock + egress-allow intact."
+
+      - name: Assert every prod image pin is digest-pinned (no tag leak)
+        if: ${{ steps.delta.outputs.changes != '0' }}
+        run: |
+          set -euo pipefail
+          rendered="$(kustomize build "$PROD_OVERLAY")"
+          if printf '%s' "$rendered" \
+              | grep -E '^\s+image: ghcr.io/verdifyconsultancy/verdify-' \
+              | grep -qv '@sha256:'; then
+            echo "::error::a verdify-* image is not digest-pinned in the promotion candidate"
+            printf '%s' "$rendered" | grep -E '^\s+image: ghcr.io/verdifyconsultancy/verdify-'
+            exit 1
+          fi
+          echo "All promoted prod pins are immutable @sha256 digests."
+
+      - name: Dry-run stop
+        if: ${{ github.event.inputs.mode != 'pull-request' }}
+        run: |
+          echo "DRY-RUN: gates passed; no PR opened. Re-run with mode=pull-request to open the prod-promote PR."
+
+      # ── Open the prod-promote PR (mode=pull-request only) ────────────────────
+      - name: Open prod-promote PR
+        if: ${{ github.event.inputs.mode == 'pull-request' && steps.delta.outputs.changes != '0' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name "verdify-promote[bot]"
+          git config user.email "verdify-promote@users.noreply.github.com"
+
+          # The digest bump is ALREADY applied in the worktree (the "Apply the
+          # digest bump in place" step above, gated by the Device-Write-Safety-
+          # Gate). Carry that working-tree edit onto a fresh promotion branch.
+          branch="${PROMOTE_BRANCH}-$(date -u +%Y%m%d%H%M%S)"
+          git checkout -b "$branch"
+
+          if git diff --quiet -- "$PROD_OVERLAY/kustomization.yaml"; then
+            echo "No net change in the prod overlay (unexpected after a non-zero delta); nothing to PR."
+            exit 0
+          fi
+
+          # Build a human-readable promotion body.
+          body_file="$(mktemp)"
+          {
+            echo "## Prod promotion (staging -> prod digests)"
+            echo
+            echo "Generated by the **Prod Promote** workflow (#220). This PR advances"
+            echo "the \`overlays/prod\` image digests to **exactly the digests"
+            echo "\`overlays/staging\` is currently running** — the proven-on-staging set."
+            echo
+            echo "| image | prod (was) | -> | staging (now) |"
+            echo "|---|---|---|---|"
+            while IFS="$(printf '\t')" read -r img sd; do
+              pd="$(awk -F'\t' -v i="$img" '$1==i{print $2}' /tmp/prod.map)"
+              echo "| \`$img\` | \`${pd}\` | -> | \`${sd}\` |"
+            done < /tmp/promote.pairs
+            echo
+            echo "### Gates"
+            echo "- Device-Write-Safety-Gate: PASS (digests-only; interlock + egress-allow intact)."
+            echo "- \`promote-diff-guard\` will re-assert digest-equality + change-surface as the REQUIRED check."
+            echo
+            echo "### Device-write human gate is PRESERVED"
+            echo "Merging this PR changes git only. \`verdify-prod\` is a **manual-sync**"
+            echo "ArgoCD Application; the new digests sit **OutOfSync** until an operator"
+            echo "runs \`argocd app sync verdify-prod\` AFTER the device-VLAN sign-off +"
+            echo "single-writer cutover are explicitly approved by Jason. This PR never"
+            echo "touches the cluster, the live ingestor, or the device."
+            echo
+            echo "Runbook: \`docs/runbooks/prod-promotion.md\`."
+          } > "$body_file"
+
+          commit_file="$(mktemp)"
+          {
+            echo "ci: promote overlays/prod image digests to current staging (#220)"
+            echo
+            echo "In-repo staging->prod digest promotion (locked decision: no cross-repo PR,"
+            echo "no ArgoCD Image Updater). Advances each lagging staging-tracked prod pin to"
+            echo "the digest overlays/staging is currently running. Device-write posture"
+            echo "(interlock ConfigMap + allow-ingestor-device-egress NetPol + ingestor"
+            echo "replicas) is UNCHANGED — digests only. verdify-prod stays manual-sync; this"
+            echo "is a git change only, gated by promote-diff-guard + the human device gate."
+          } > "$commit_file"
+
+          git add "$PROD_OVERLAY/kustomization.yaml"
+          git commit -F "$commit_file"
+
+          git push origin "$branch"
+
+          pr_url="$(gh pr create \
+            --repo "$GITHUB_REPOSITORY" \
+            --base live/platform-main \
+            --head "$branch" \
+            --title "ci: prod-promote — advance overlays/prod digests to staging (#220)" \
+            --label prod-promote \
+            --body-file "$body_file")"
+          echo "Opened prod-promote PR: $pr_url"
+          {
+            echo "### Prod-promote PR opened"
+            echo
+            echo "$pr_url"
+            echo
+            echo "Next: \`promote-diff-guard\` must pass, a human reviews+merges, THEN an"
+            echo "operator runs the gated \`argocd app sync verdify-prod\` per the runbook."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Nothing to promote
+        if: ${{ github.event.inputs.mode == 'pull-request' && steps.delta.outputs.changes == '0' }}
+        run: echo "No staging-tracked prod pin lags staging; no PR opened."
