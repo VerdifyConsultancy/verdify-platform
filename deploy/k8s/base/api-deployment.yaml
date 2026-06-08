@@ -112,21 +112,52 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
-          livenessProbe:
-            # /health exists today (api/main.py:911). /health/live + /health/ready
-            # are the gravity convention; switch the probe paths once the api
-            # scope owner adds them in the containerize PR.
+          # GRACEFUL DRAIN (HA #231, Lane C). On SIGTERM the api must stay
+          # listening for ~5s so Traefik/kube-proxy can drop this pod's endpoint
+          # BEFORE uvicorn stops accepting — otherwise a rolling update / drain
+          # can deliver a request to an already-shutting-down replica → a
+          # mid-rollout 503. The preStop sleep + terminationGracePeriodSeconds
+          # below give that drain window (uvicorn then gets ~25s to finish
+          # in-flight requests before SIGKILL).
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "5"]
+          # PROBE DECOUPLING (HA #231, Lane C — the "startup gap" fix). /health
+          # (api/main.py:911) does a DB roundtrip (SELECT ... FROM climate, etc).
+          # Using it for LIVENESS meant a slow/cold asyncpg pool or a transient DB
+          # blip flap-RESTARTED the api (incident night). Fixed by separating the
+          # two concerns:
+          #   - livenessProbe  = a cheap process-alive TCP check on :8080 that
+          #     does NOT touch the DB. A DB-less-but-listening pod is NEVER killed.
+          #     (Interim form per the design doc; swaps to GET /health/live once
+          #     the api scope owner adds that no-DB route in the containerize PR.)
+          #   - readinessProbe = stays on /health (DB-coupled is CORRECT here): a
+          #     pod that can't reach the DB is pulled from rotation but NOT killed.
+          #   - startupProbe   = /health with failureThreshold:30 periodSeconds:5
+          #     → up to 150s for pool/DB warmup before liveness arms, so a cold
+          #     start never trips the (now TCP) liveness probe.
+          startupProbe:
             httpGet:
               path: /health
               port: http
-            initialDelaySeconds: 20
+            periodSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            tcpSocket:
+              port: http
             periodSeconds: 30
+            failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /health
               port: http
             initialDelaySeconds: 15
             periodSeconds: 10
+      # Endpoint-drain window for the preStop hooks above (HA #231). 30s is the
+      # k8s default, pinned explicit so it is reviewable and survives a default
+      # change: ~5s endpoint drain + ~25s for uvicorn to finish in-flight work.
+      terminationGracePeriodSeconds: 30
       volumes:
         - name: tmp
           emptyDir: {}

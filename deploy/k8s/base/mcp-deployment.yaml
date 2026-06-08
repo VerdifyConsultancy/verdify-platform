@@ -85,21 +85,38 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+          # GRACEFUL DRAIN (HA #231, Lane C). preStop sleep so Traefik/kube-proxy
+          # drop this pod's endpoint before the server stops accepting, avoiding a
+          # mid-rollout 503 (same drain contract as www/lab/api).
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "5"]
           # FastMCP (mcp/server.py) serves the streamable-http MCP protocol at
           # /mcp, not a plain GET /health (the staging proof saw httpGet /health
           # return 404 -> pod never Ready). A tcpSocket probe confirms the process
           # is listening without touching the server.py DANGER surface (handoff
-          # §3.2: no tool-semantic edits to add a /health route).
+          # §3.2: no tool-semantic edits to add a /health route). Liveness here is
+          # ALREADY DB-independent (TCP only), so the api "startup gap" cannot
+          # occur for mcp; the startupProbe below just holds liveness off until the
+          # listener is up so a slow import never trips it.
+          startupProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+            failureThreshold: 30
           livenessProbe:
             tcpSocket:
               port: http
-            initialDelaySeconds: 15
             periodSeconds: 30
+            failureThreshold: 3
           readinessProbe:
             tcpSocket:
               port: http
             initialDelaySeconds: 10
             periodSeconds: 10
+      # Endpoint-drain window for the preStop hook above (HA #231); 30s explicit.
+      terminationGracePeriodSeconds: 30
       volumes:
         - name: tmp
           emptyDir: {}
