@@ -34,6 +34,7 @@ resources:
 - ../../base
 - secrets.placeholder.yaml
 - deny-esp32-egress.yaml
+- allow-web-from-apps-ingress.yaml
 - ingressroute.yaml
 - www-ingressroute.yaml
 - lab-ingressroute.yaml

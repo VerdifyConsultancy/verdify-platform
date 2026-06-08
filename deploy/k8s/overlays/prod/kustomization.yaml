@@ -33,12 +33,6 @@ resources:
   # DEVICE WRITE PATH: the SINGLE egress allow letting the prod ingestor reach the
   # live device VLAN. See allow-ingestor-device-egress.yaml.
   - allow-ingestor-device-egress.yaml
-  # EDGE/WAN: host-route the prod verdify-www on www.verdify.ai + apex through the
-  # shared apps Traefik (.7.10) (#116). See www-ingressroute.yaml.
-  - www-ingressroute.yaml
-  # EDGE/WAN: host-route the prod verdify-lab Quartz site on lab.verdify.ai through
-  # the same shared apps Traefik (.7.10) (#124). See lab-ingressroute.yaml.
-  - lab-ingressroute.yaml
   # HA-3 (#239): ingestor PDB maxUnavailable:1 (singleton-may-be-disrupted intent;
   # correctness is the Lease fence, not the PDB). Additive — does NOT restart the
   # writer. The fast-failover podSpec patch (priority/tolerations/cpu) is the
@@ -47,9 +41,9 @@ resources:
   # TWO-TIER TRAEFIK (#199 / D7): the shared apps Traefik (.7.10) tier-1
   # (verdify-tier1-forward) forwards *.verdify.ai to a dedicated in-namespace
   # verdify-traefik tier-2 (verdify-web entryPoint) which host-routes verdify-t2-*
-  # to the ClusterIP services. This is ADDITIVE to / coexists with the legacy
-  # www/lab IngressRoutes above (verdify-t2-* are distinctly named) and matches
-  # the live verdify-prod cluster exactly. See traefik/ for the full set.
+  # to the ClusterIP services. This is the only prod product-domain ingress owner;
+  # the older direct www/lab IngressRoutes were retired with the .150 route cleanup.
+  # See traefik/ for the full set.
   - traefik
   # HA Sprint ha-1 / LANE B (#230): PodDisruptionBudgets giving every 2-replica
   # stateless surface (www/lab/api/mcp) + tier-2 verdify-traefik a disruption
