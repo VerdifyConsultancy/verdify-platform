@@ -1,0 +1,20 @@
+# verdify-dev CNPG validation stack (HA-4.1 #243).
+#
+# Applies the dev MinIO WAL store, the TimescaleDB-on-CNPG cluster, and the
+# scheduled base backup into the EXISTING verdify-dev namespace. It deploys
+# ALONGSIDE the legacy dev StatefulSet `verdify-db` (different object name +
+# different services) — nothing is replaced or migrated by this kustomization.
+#
+# NOT wired into any ArgoCD Application yet: this is a dev-first validation
+# fixture applied manually (kubectl apply -k) for the failover/PITR drills.
+# Promotion to a managed App + the prod variant is #244/#245.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: verdify-dev
+
+resources:
+  - 00-minio.yaml
+  - 10-cluster.yaml
+  - 20-networkpolicy.yaml
+  - 30-scheduledbackup.yaml

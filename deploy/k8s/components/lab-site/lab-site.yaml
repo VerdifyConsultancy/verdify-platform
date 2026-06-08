@@ -99,6 +99,14 @@ spec:
               mountPath: /var/cache/nginx
             - name: nginx-run
               mountPath: /var/run
+          # GRACEFUL DRAIN (HA #231, Lane C). preStop sleep so Traefik/kube-proxy
+          # drop this pod's endpoint before nginx stops accepting, avoiding a
+          # mid-rollout 503 (same drain contract as api/mcp/www). Static "/" probes
+          # are DB-free already, so only the drain hook + explicit grace are added.
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "5"]
           # Static site served at "/"; use the homepage as the probe target (no
           # dedicated /healthz in a Quartz static build).
           livenessProbe:
@@ -113,6 +121,8 @@ spec:
               port: http
             initialDelaySeconds: 5
             periodSeconds: 10
+      # Endpoint-drain window for the preStop hook above (HA #231); 30s explicit.
+      terminationGracePeriodSeconds: 30
       volumes:
         - name: tmp
           emptyDir: {}

@@ -146,6 +146,19 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+            # HA token mounted at the SAME path config.py reads
+            # (HA_TOKEN_FILE=/mnt/agents/shared/credentials/ha_token.txt) so
+            # load_token() works unchanged. The shelly_sync / ha_sensor_sync /
+            # tempest_sync ingestor tasks (energy + hydro + weather telemetry)
+            # fetch from Home Assistant with this token; without it they fail
+            # every run ("[Errno 2] ... ha_token.txt") and the energy table +
+            # climate hydro_* columns go stale (the 2026-06-07 cutover regression).
+            # Real token via the verdify-ha-token Secret (out-of-band SOPS), the
+            # SAME Secret the setpoint-server component mounts; local builds use
+            # the placeholder file.
+            - name: ha-token
+              mountPath: /mnt/agents/shared/credentials
+              readOnly: true
           # No httpGet probe — connect-out worker. A heartbeat/freshness exec or
           # in-process flag probe is the §3.3 design (queries max(ts) FROM climate)
           # with a generous initialDelay so transient DB latency does not restart
@@ -158,3 +171,13 @@ spec:
       volumes:
         - name: tmp
           emptyDir: {}
+        # verdify-ha-token Secret is delivered OUT-OF-BAND (SOPS/age, by-name,
+        # like grafana-admin) BEFORE this app reconciles; the prod overlay
+        # ha-token.placeholder.yaml is local-config (build-time only, excluded
+        # from real apply). Same Secret/shape as components/setpoint-server.
+        - name: ha-token
+          secret:
+            secretName: verdify-ha-token
+            items:
+              - key: ha_token.txt
+                path: ha_token.txt

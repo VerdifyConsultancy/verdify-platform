@@ -81,12 +81,49 @@ spec:
         fsGroup: 1000
         seccompProfile:
           type: RuntimeDefault
+      initContainers:
+        # SEED CONFIG (#213): install the IaC profile onto the RWO state PVC at
+        # /opt/data/config.yaml (= $HERMES_HOME/config.yaml) on EVERY pod start.
+        # Idempotent: it overwrites the PVC copy from the verdify-hermes-iris-config
+        # ConfigMap so the profile can NEVER silently drift back to the stock
+        # hermes-agent template (the openrouter/anthropic default that 401'd every
+        # planner LLM call). The PVC stays the writable HERMES_HOME for run state;
+        # only config.yaml is reconciled here. Uses the SAME upstream image (no
+        # extra pull) just to get a shell; it only does a file copy.
+        - name: seed-config
+          image: nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e
+          command: ["sh", "-c", "cp -f /etc/verdify/hermes-config/config.yaml /opt/data/config.yaml && echo 'seeded /opt/data/config.yaml from verdify-hermes-iris-config'"]
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+            - name: data
+              mountPath: /opt/data
+            - name: hermes-config
+              mountPath: /etc/verdify/hermes-config
+              readOnly: true
       containers:
         - name: hermes-iris
           # UPSTREAM image, digest PRESERVED from compose:363 (NOT rewritten by
           # the overlay images: transformer — name does not match verdify-*).
           image: nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e
-          command: ["gateway", "run"]
+          # MUST be `args:`, NOT `command:`. The image ENTRYPOINT is
+          # `tini -g -- /opt/hermes/docker/entrypoint.sh` (verified on the live VM
+          # container 2026-06-07), and that entrypoint script is what resolves the
+          # `gateway` binary onto PATH. Setting k8s `command:` OVERRIDES the
+          # ENTRYPOINT, so the kubelet exec'd `gateway` directly and crashed with
+          # `exec: "gateway": executable file not found in $PATH`
+          # (CrashLoopBackOff, verified verdify-prod 2026-06-07). `args:` maps to
+          # Docker CMD (compose had Cmd=`gateway run`), preserving the entrypoint.
+          # Lane-3 fix — this is NOT a NetworkPolicy/DB issue (hermes has no DB dep).
+          args: ["gateway", "run"]
           ports:
             - name: gateway
               containerPort: 8642
@@ -144,6 +181,10 @@ spec:
             optional: true
         - name: tmp
           emptyDir: {}
+        # #213 IaC Hermes profile, seeded onto the PVC by the seed-config init.
+        - name: hermes-config
+          configMap:
+            name: verdify-hermes-iris-config
 ---
 apiVersion: v1
 kind: Service

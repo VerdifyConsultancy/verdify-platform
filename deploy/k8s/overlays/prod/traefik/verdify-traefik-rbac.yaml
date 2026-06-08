@@ -1,0 +1,72 @@
+# Tier-2 Verdify Traefik — RBAC (D7 two-tier edge).
+#
+# This is the DEDICATED, Verdify-owned Traefik that lives inside verdify-prod and
+# fronts the verdify app services (www/lab/api/mcp/...). It is the SECOND tier of
+# the D7 path:
+#
+#   CF tunnel (vallery-edge) -> apps Traefik (traefik-apps, .7.10 VIP)
+#       -> [tier-1 IngressRoute, *.verdify.ai] -> verdify-traefik (this) ClusterIP
+#       -> [tier-2 IngressRoutes] -> www/lab/api/mcp ClusterIP services
+#
+# It replaces the network-infra `verdify-sites` IngressRoute backend that today
+# points at the .150 VM (verdify-iris-dot150). The apps Traefik keeps being the
+# single .7.10 front door; Verdify owns its own routing table behind it.
+#
+# Scope: this Traefik watches IngressRoute/Middleware CRDs ONLY in verdify-prod and
+# ONLY those carrying label `traefik-tier=verdify` (see Deployment args
+# --providers.kubernetescrd.labelselector). That guarantees the shared apps Traefik
+# (no labelselector, cluster-wide) and this Traefik never double-claim the same
+# router: the verdify backend routes use a private entryPoint `verdify-web` that the
+# apps Traefik does not define, so the apps Traefik ignores them even if it sees them.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: verdify-traefik
+  namespace: verdify-prod
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: edge-traefik
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: verdify-traefik
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: edge-traefik
+rules:
+  - apiGroups: [""]
+    resources: [services, endpoints, secrets, configmaps, nodes]
+    verbs: [get, list, watch]
+  - apiGroups: [discovery.k8s.io]
+    resources: [endpointslices]
+    verbs: [get, list, watch]
+  - apiGroups: [traefik.io]
+    resources:
+      - ingressroutes
+      - ingressroutetcps
+      - ingressrouteudps
+      - middlewares
+      - middlewaretcps
+      - tlsoptions
+      - tlsstores
+      - traefikservices
+      - serverstransports
+      - serverstransporttcps
+    verbs: [get, list, watch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: verdify-traefik
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: edge-traefik
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: verdify-traefik
+subjects:
+  - kind: ServiceAccount
+    name: verdify-traefik
+    namespace: verdify-prod

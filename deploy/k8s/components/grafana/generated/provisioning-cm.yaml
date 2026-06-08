@@ -1,0 +1,51 @@
+# Grafana declarative provisioning for graphs.verdify.ai (#498).
+#
+# Mounted via subPath into /etc/grafana/provisioning/datasources/ and
+# /etc/grafana/provisioning/dashboards/ (Grafana only scans those subdirs).
+#
+#   datasources/timescaledb.yaml: the IN-CLUSTER prod TimescaleDB
+#     (verdify-db:5432, db verdify, user verdify). uid MUST be `verdify-tsdb`
+#     to match the datasource ref baked into every site-*.json panel target.
+#     Password from $POSTGRES_PASSWORD (verdify-app-secrets via the Deployment
+#     env; never inline). This is the ONLY datasource — never .100, never .150.
+#   dashboards/provider.yaml: a file provider scanning the json/ dir which is
+#     populated by the verdify-grafana-dashboards-{0,1} ConfigMaps.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-grafana-provisioning
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: grafana
+data:
+  datasources.yaml: |-
+    apiVersion: 1
+    datasources:
+      - name: TimescaleDB (Verdify)
+        type: grafana-postgresql-datasource
+        uid: verdify-tsdb
+        url: verdify-db:5432
+        database: verdify
+        user: verdify
+        isDefault: true
+        editable: false
+        secureJsonData:
+          password: ${POSTGRES_PASSWORD}
+        jsonData:
+          database: verdify
+          sslmode: disable
+          postgresVersion: 1600
+          timescaledb: true
+  dashboards.yaml: |-
+    apiVersion: 1
+    providers:
+      - name: Verdify Site
+        type: file
+        disableDeletion: false
+        updateIntervalSeconds: 300
+        allowUiUpdates: false
+        options:
+          path: /etc/grafana/provisioning/dashboards/json
+          foldersFromFilesStructure: false
+        folder: Site
+        folderUID: site

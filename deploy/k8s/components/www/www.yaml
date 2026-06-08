@@ -96,6 +96,15 @@ spec:
           volumeMounts:
             - name: tmp
               mountPath: /tmp
+          # GRACEFUL DRAIN (HA #231, Lane C). preStop sleep so Traefik/kube-proxy
+          # drop this pod's endpoint before server.mjs stops accepting, avoiding a
+          # mid-rollout 503 (same drain contract as api/mcp/lab). Probes already
+          # hit the cheap static "/" homepage (no DB), so no liveness decoupling is
+          # needed here — only the drain hook + explicit grace.
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "5"]
           # server.mjs serves the static dist/ from "/" — use the homepage as the
           # liveness/readiness target (no dedicated /healthz in the upstream app).
           livenessProbe:
@@ -110,6 +119,8 @@ spec:
               port: http
             initialDelaySeconds: 5
             periodSeconds: 10
+      # Endpoint-drain window for the preStop hook above (HA #231); 30s explicit.
+      terminationGracePeriodSeconds: 30
       volumes:
         - name: tmp
           emptyDir: {}

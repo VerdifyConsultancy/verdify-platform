@@ -1,54 +1,37 @@
-# Verdify Grafana (graphs.verdify.ai) — the residual observability tier
-# (#130 M6.2 / #88 Phase 4). Ported from docker-compose.yml:52 (`grafana`) +
-# :113 (`grafana-renderer`). The compose `grafana-proxy` nginx sidecar is NOT
-# ported as a separate workload — its only job was injecting the brand CSS +
-# fronting the renderer; in k3s the brand CSS is mounted from the same
-# verdify-grafana-custom assets and the public front door is the per-env
-# IngressRoute on the shared apps Traefik (no per-app nginx hop).
+# Verdify Grafana — graphs.verdify.ai (#498 / #130 M6.2 / #88 Phase 4).
 #
-# STATE (#130 MIGRATE class): grafana_data:/var/lib/grafana holds the SQLite
-# dashboard/datasource/org store + the anonymous-Viewer org. It is NOT in any
-# pg_dump and NOT in verdify-vault, so it is a MIGRATE item — this Deployment
-# binds a 2Gi PVC on the volume1 'synology-iscsi-ssd' StorageClass (same
-# laptop-root gate as the per-env DBs + hermes). Restore method is documented in
-# docs/runbooks/iris-state-preservation.md (tar copy of the SQLite store into the
-# PVC; Grafana must be stopped while the file is swapped). The provisioning/ +
-# custom/ trees are baked from the repo via ConfigMaps (declarative, not state).
+# OUR OWN Grafana, IN-CLUSTER, in ns verdify-prod, reading the IN-CLUSTER prod
+# TimescaleDB (verdify-db:5432). DELIBERATELY independent from the fleet obs
+# stack and from the now-OFF .150 VM and the retired .100 Grafana. It restores
+# the public solo-panel embeds on lab.verdify.ai (/d-solo/site-home panels
+# 30/31/36) and the /d/site-home dashboard.
 #
-# WHY A KUSTOMIZE COMPONENT (not a base resource): #5 hard rule — anything added
-# to deploy/k8s/base renders into overlays/staging, which the live
-# verdify-local-staging ArgoCD app syncs; we must not add a new workload to
-# staging. DESIGNED-FOR overlays/prod ONLY (graphs.verdify.ai is a prod host).
-# NO device path — pure observability tier reading the prod DB read-only.
+# STATELESS: anonymous-Viewer + provisioned datasource + provisioned dashboards
+# means there is NO durable org/user/dashboard state worth a PVC — the SQLite
+# store is rebuilt from git provisioning on every start. /var/lib/grafana is an
+# emptyDir (no synology-iscsi-ssd PVC; no MIGRATE item). This sheds the prior
+# PVC/Recreate gate so the tier lands cleanly in overlays/prod.
 #
-# NOT YET WIRED into overlays/prod (the prod-promote diff guard, #82, treats a
-# prod-overlay edit as a digest-only promotion). The overlay `components:` entry +
-# its placeholder Secret land at the human-gated cutover as a separate follow-on,
-# same posture as db/restore-job.yaml. See iris-state-preservation.md §10.
+# DATASOURCE (verdify-grafana-provisioning CM): uid `verdify-tsdb` — the exact
+# uid every site-*.json panel target references — pointed at verdify-db:5432.
+# Password is $POSTGRES_PASSWORD from verdify-app-secrets (secretKeyRef; never
+# inline / never printed).
 #
-# IMAGE: grafana/grafana-oss + grafana/grafana-image-renderer are UPSTREAM images.
-# Compose used the MUTABLE :latest tag — here they carry an explicit version tag
-# (11.6.0 / 3.12.6) so a reconcile no longer silently rolls the version; laptop-
-# root SHOULD resolve these to immutable @sha256 digests at apply time (see the
-# runbook's "pin the residual upstream images" note). They are NOT
-# ghcr.io/verdifyconsultancy/* names, so the overlay images: transformer leaves
-# them untouched (same posture as the preserved hermes-agent digest).
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: verdify-grafana-data
-  labels:
-    app.kubernetes.io/part-of: verdify
-    app.kubernetes.io/component: grafana
-spec:
-  accessModes: ["ReadWriteOnce"]
-  # volume1 iSCSI SSD class (laptop-root-provisioned). Same gate as the per-env
-  # DB StatefulSets + hermes-iris; INERT until the StorageClass exists.
-  storageClassName: synology-iscsi-ssd
-  resources:
-    requests:
-      storage: 2Gi
----
+# DASHBOARDS: all grafana/dashboards/site-*.json provisioned via the
+# verdify-grafana-dashboards-{0,1} ConfigMaps (split to stay under the 1MiB
+# ConfigMap limit) mounted under /etc/grafana/provisioning/dashboards/json.
+#
+# PUBLIC EMBED: anonymous Viewer + allow_embedding + cookie_samesite=none/secure
+# + root_url=https://graphs.verdify.ai, so the cross-site lab.verdify.ai
+# /d-solo iframes render with no login.
+#
+# IMAGE: grafana/grafana-oss — UPSTREAM (NOT a verdify-* name, so the overlay
+# images: transformer leaves it untouched). No renderer sidecar: the lab embeds
+# are live iframes (browser-rendered), not server-side PNG renders, so the
+# renderer is not needed for #498 and is dropped to keep the pod lean.
+#
+# COMPONENT (not base): graphs.verdify.ai is a prod host; wiring lives in
+# overlays/prod only, never staging.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -62,8 +45,6 @@ spec:
     matchLabels:
       app.kubernetes.io/component: grafana
   strategy:
-    # Recreate: single pod holding the RWO grafana_data PVC (SQLite store); no two
-    # pods mount it. Same posture as the hermes-iris state gateway.
     type: Recreate
   template:
     metadata:
@@ -80,23 +61,38 @@ spec:
           type: RuntimeDefault
       containers:
         - name: grafana
-          # UPSTREAM image, pinned to an immutable @sha256 (compose used :latest).
-          # NOT a verdify-* name, so the overlay images: transformer leaves it
-          # untouched. Bump deliberately, not on every reconcile.
           image: grafana/grafana-oss:11.6.0
           ports:
             - name: http
               containerPort: 3000
           env:
-            # Ported verbatim from compose:55-91 (the anonymous-Viewer, embedding,
-            # locked-down-viewer posture for the lab.verdify.ai iframes). Secrets
-            # (admin password, DB password) come from the Secret below — never
-            # inline. The renderer URL points at the in-pod renderer sidecar on
-            # localhost:8081 (same pod, so no cross-pod NetworkPolicy needed).
+            # --- public front door ---
             - name: GF_SERVER_ROOT_URL
               value: https://graphs.verdify.ai
+            - name: GF_SERVER_SERVE_FROM_SUB_PATH
+              value: "false"
             - name: GF_SERVER_DOMAIN
               value: graphs.verdify.ai
+            # --- anonymous public viewing (no login for the embeds) ---
+            - name: GF_AUTH_ANONYMOUS_ENABLED
+              value: "true"
+            - name: GF_AUTH_ANONYMOUS_ORG_NAME
+              value: "Main Org."
+            - name: GF_AUTH_ANONYMOUS_ORG_ROLE
+              value: "Viewer"
+            - name: GF_USERS_ALLOW_SIGN_UP
+              value: "false"
+            - name: GF_USERS_VIEWERS_CAN_EDIT
+              value: "false"
+            # --- cross-site embedding for the lab.verdify.ai /d-solo iframes ---
+            - name: GF_SECURITY_ALLOW_EMBEDDING
+              value: "true"
+            - name: GF_SECURITY_COOKIE_SAMESITE
+              value: "none"
+            - name: GF_SECURITY_COOKIE_SECURE
+              value: "true"
+            # --- admin (out-of-band secret; optional so the Component renders
+            #     standalone in CI). Login form stays on for the admin only. ---
             - name: GF_SECURITY_ADMIN_USER
               value: admin
             - name: GF_SECURITY_ADMIN_PASSWORD
@@ -104,31 +100,10 @@ spec:
                 secretKeyRef:
                   name: verdify-grafana-secrets
                   key: GRAFANA_ADMIN_PASSWORD
-                  # optional so a standalone `kustomize build` of this Component
-                  # renders without a placeholder Secret; the real
-                  # verdify-grafana-secrets is delivered out-of-band before the
-                  # prod ArgoCD app reconciles. Same posture as planner OPENAI_API_KEY.
                   optional: true
-            - name: GF_USERS_ALLOW_SIGN_UP
-              value: "false"
-            - name: GF_AUTH_ANONYMOUS_ENABLED
-              value: "true"
-            - name: GF_AUTH_ANONYMOUS_ORG_NAME
-              value: "Main Org."
-            - name: GF_AUTH_ANONYMOUS_ORG_ROLE
-              value: "Viewer"
-            - name: GF_AUTH_DISABLE_LOGIN_FORM
-              value: "false"
-            - name: GF_USERS_VIEWERS_CAN_EDIT
-              value: "false"
+            # --- lean tier: no alerting / explore / external snapshots ---
             - name: GF_SNAPSHOTS_EXTERNAL_ENABLED
               value: "false"
-            - name: GF_SECURITY_ALLOW_EMBEDDING
-              value: "true"
-            - name: GF_SECURITY_COOKIE_SAMESITE
-              value: "none"
-            - name: GF_SECURITY_COOKIE_SECURE
-              value: "true"
             - name: GF_EXPLORE_ENABLED
               value: "false"
             - name: GF_ALERTING_ENABLED
@@ -137,33 +112,42 @@ spec:
               value: "false"
             - name: GF_HIDE_VERSION
               value: "true"
-            # In-pod renderer sidecar (localhost:8081). The callback URL is this
-            # pod's own Service so the renderer can fetch panels back.
+            - name: GF_ANALYTICS_REPORTING_ENABLED
+              value: "false"
+            - name: GF_ANALYTICS_CHECK_FOR_UPDATES
+              value: "false"
+            # Grafana 11.6 ships preinstalled apps (grafana-lokiexplore-app,
+            # pyroscope, …) whose module.js 404s on `react/jsx-runtime` and throws
+            # an uncaught exception that CRASHES the headless-render page (frame
+            # detached -> 500 on /render). We use none of them; disable the
+            # preinstall so the render page loads cleanly.
+            - name: GF_PLUGINS_PREINSTALL_DISABLED
+              value: "true"
+            # --- image renderer (in-pod sidecar on localhost:8081) ---
+            # The lab.verdify.ai homepage embeds BOTH live /d-solo iframes AND
+            # /render/d-solo server-side PNGs (as <img> fallbacks). Without a
+            # renderer the /render PNGs are a "no renderer" placeholder, so the
+            # sidecar IS needed to fully restore the lab embeds. Callback URL is
+            # this pod's own Service so the renderer can fetch panels back.
             - name: GF_RENDERING_SERVER_URL
               value: http://localhost:8081/render
+            # Hardcoded ns: this Component is PROD-ONLY (verdify-prod). A
+            # fieldRef $(POD_NAMESPACE) substitution is order-fragile in the env
+            # list and was passing the literal string to the renderer.
             - name: GF_RENDERING_CALLBACK_URL
-              value: http://verdify-grafana.$(POD_NAMESPACE).svc:3000/
+              value: http://verdify-grafana.verdify-prod.svc:3000/
             - name: GF_RENDERING_CONCURRENT_RENDER_REQUEST_LIMIT
               value: "30"
-            # The Grafana TimescaleDB datasource password (provisioned datasource
-            # reads $POSTGRES_PASSWORD). Sourced from the shared app secret, same
-            # key the api/mcp/planner read.
+            # --- datasource password (the provisioned datasource reads
+            #     $POSTGRES_PASSWORD); same key the api/mcp/planner read. ---
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: verdify-app-secrets
                   key: POSTGRES_PASSWORD
-                  # The shared app secret is present in every real env; optional
-                  # only so the Component renders standalone in CI.
                   optional: true
-            - name: POD_NAMESPACE
-              valueFrom:
-                fieldRef:
-                  fieldPath: metadata.namespace
           securityContext:
             allowPrivilegeEscalation: false
-            # Grafana writes plugins/logs under /var/lib/grafana (PVC) + needs a
-            # writable /tmp; the root FS itself can stay RO.
             readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
@@ -176,20 +160,30 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/grafana
-            # Declarative provisioning (datasources/dashboards) baked from the repo
-            # grafana/provisioning tree via a ConfigMap. NOT state — rebuilt from
-            # git, so it is EPHEMERAL/declarative, not a MIGRATE item.
-            - name: provisioning
-              mountPath: /etc/grafana/provisioning
-              readOnly: true
-            # Brand CSS/JS (compose mounted grafana/custom RO). Declarative asset
-            # from the repo; the compose grafana-proxy's only other job (CSS inject)
-            # is subsumed here.
-            - name: custom
-              mountPath: /usr/share/grafana/public/build/custom
-              readOnly: true
             - name: tmp
               mountPath: /tmp
+            # Grafana only scans provisioning/datasources/*.y*ml and
+            # provisioning/dashboards/*.y*ml — mount each config via subPath into
+            # its expected subdir.
+            - name: provisioning
+              mountPath: /etc/grafana/provisioning/datasources/datasources.yaml
+              subPath: datasources.yaml
+              readOnly: true
+            - name: provisioning
+              mountPath: /etc/grafana/provisioning/dashboards/dashboards.yaml
+              subPath: dashboards.yaml
+              readOnly: true
+            # All site-*.json land in the provider's scan dir.
+            - name: dashboards-0
+              mountPath: /etc/grafana/provisioning/dashboards/json/bucket0
+              readOnly: true
+            - name: dashboards-1
+              mountPath: /etc/grafana/provisioning/dashboards/json/bucket1
+              readOnly: true
+            # bucket2: band-tuning-diurnal (#252) — additive, separate ConfigMap.
+            - name: dashboards-2
+              mountPath: /etc/grafana/provisioning/dashboards/json/bucket2
+              readOnly: true
           livenessProbe:
             httpGet:
               path: /api/health
@@ -202,17 +196,15 @@ spec:
               port: http
             initialDelaySeconds: 15
             periodSeconds: 10
-        # Renderer sidecar — same pod, reached at localhost:8081 (compose ran it
-        # as a separate service on the internal network; co-locating drops the
-        # cross-pod hop + NetworkPolicy). grafana/grafana-image-renderer, pinned.
+        # Renderer sidecar — same pod, reached at localhost:8081. Powers the
+        # /render/d-solo PNG embeds on lab.verdify.ai. grafana-image-renderer,
+        # pinned (UPSTREAM image; not transformer-rewritten).
         - name: renderer
           image: grafana/grafana-image-renderer:3.12.6
           ports:
             - name: renderer
               containerPort: 8081
           env:
-            - name: ENABLE_METRICS
-              value: "true"
             - name: HTTP_PORT
               value: "8081"
             - name: LOG_LEVEL
@@ -225,6 +217,15 @@ spec:
               value: "4"
             - name: RENDERING_CLUSTERING_TIMEOUT
               value: "30"
+            # Chromium flags: --no-sandbox (no SYS_ADMIN cap) +
+            # --disable-dev-shm-usage so it uses /tmp not the tiny /dev/shm,
+            # avoiding the "frame detached" crash under user 472.
+            - name: RENDERING_ARGS
+              value: --no-sandbox,--disable-gpu,--disable-dev-shm-usage
+            # HOME must be writable for the Chromium profile (the pod runs the
+            # sidecar as uid 472 whose image home isn't writable); point it at tmp.
+            - name: HOME
+              value: /tmp
           securityContext:
             allowPrivilegeEscalation: false
             # The headless-Chromium renderer needs a writable scratch + cannot run
@@ -241,22 +242,32 @@ spec:
           volumeMounts:
             - name: renderer-tmp
               mountPath: /tmp
+            # Memory-backed /dev/shm (256Mi vs the 64Mi default) for Chromium.
+            - name: renderer-shm
+              mountPath: /dev/shm
       volumes:
         - name: data
-          persistentVolumeClaim:
-            claimName: verdify-grafana-data
-        - name: provisioning
-          configMap:
-            name: verdify-grafana-provisioning
-            optional: true
-        - name: custom
-          configMap:
-            name: verdify-grafana-custom
-            optional: true
+          emptyDir: {}
         - name: tmp
           emptyDir: {}
         - name: renderer-tmp
           emptyDir: {}
+        - name: renderer-shm
+          emptyDir:
+            medium: Memory
+            sizeLimit: 256Mi
+        - name: provisioning
+          configMap:
+            name: verdify-grafana-provisioning
+        - name: dashboards-0
+          configMap:
+            name: verdify-grafana-dashboards-0
+        - name: dashboards-1
+          configMap:
+            name: verdify-grafana-dashboards-1
+        - name: dashboards-2
+          configMap:
+            name: verdify-grafana-dashboards-2
 ---
 apiVersion: v1
 kind: Service
@@ -266,9 +277,8 @@ metadata:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: grafana
 spec:
-  # ClusterIP only — the public front door is the shared apps Traefik via the
-  # prod IngressRoute (graphs.verdify.ai). No per-app LoadBalancer (ADR-15
-  # anti-pattern); same as www/lab/planner.
+  # ClusterIP — public front door is the tier-2 verdify-traefik IngressRoute
+  # (graphs.verdify.ai), same one-pattern as www/lab/api/mcp.
   type: ClusterIP
   selector:
     app.kubernetes.io/component: grafana
@@ -278,9 +288,8 @@ spec:
       targetPort: http
 ---
 # Ingress allow: the base default-deny-ingress otherwise drops all inbound.
-# Accept 3000 from the shared apps-ingress namespace (graphs.verdify.ai is a
-# public host) AND from in-namespace pods (lab-site iframes resolve through the
-# same edge, but server-side embeds also hit the Service directly).
+# Accept 3000 from the in-namespace tier-2 verdify-traefik (the public edge for
+# graphs.verdify.ai) AND from any in-namespace pod.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -295,13 +304,37 @@ spec:
   policyTypes: ["Ingress"]
   ingress:
     - from:
-        # Shared apps Traefik (ns traefik-apps) — the public edge for
-        # graphs.verdify.ai. Same source the www/lab IngressRoutes resolve from.
+        # tier-2 verdify-traefik + in-namespace callers.
+        - podSelector: {}
+        # shared apps Traefik (tier-1 forward) if it ever targets us directly.
         - namespaceSelector:
             matchLabels:
               kubernetes.io/metadata.name: traefik-apps
-        # In-namespace callers (e.g. the renderer callback, in-cluster embeds).
-        - podSelector: {}
       ports:
         - protocol: TCP
           port: 3000
+---
+# Egress->db: the base allow-db-from-app only admits api/mcp/ingestor/migrate
+# (+planner) to verdify-db:5432. Grafana's provisioned TimescaleDB datasource
+# also needs to reach it. This prod-only Component policy ADDS grafana to the db
+# ingress allow set (read-only SELECT queries from the dashboards; NOT a writer).
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-db-from-grafana
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: grafana
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: db
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: grafana
+      ports:
+        - protocol: TCP
+          port: 5432

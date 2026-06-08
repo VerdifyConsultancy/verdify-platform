@@ -44,6 +44,28 @@ resources:
   # writer. The fast-failover podSpec patch (priority/tolerations/cpu) is the
   # SEPARATE gated STAGED-ha3-fast-failover-patch.yaml, deliberately NOT listed.
   - ingestor-pdb.yaml
+  # TWO-TIER TRAEFIK (#199 / D7): the shared apps Traefik (.7.10) tier-1
+  # (verdify-tier1-forward) forwards *.verdify.ai to a dedicated in-namespace
+  # verdify-traefik tier-2 (verdify-web entryPoint) which host-routes verdify-t2-*
+  # to the ClusterIP services. This is ADDITIVE to / coexists with the legacy
+  # www/lab IngressRoutes above (verdify-t2-* are distinctly named) and matches
+  # the live verdify-prod cluster exactly. See traefik/ for the full set.
+  - traefik
+  # HA Sprint ha-1 / LANE B (#230): PodDisruptionBudgets giving every 2-replica
+  # stateless surface (www/lab/api/mcp) + tier-2 verdify-traefik a disruption
+  # floor (minAvailable:1), and grafana a drain-safe maxUnavailable:1 (RWO PVC
+  # singleton). The incident had ZERO PDBs in verdify-prod. See pdb.yaml.
+  - pdb.yaml
+  # HA Sprint ha-1 / Lane A — resource governance (#226/#227/#229).
+  # 4-tier PriorityClasses (cluster-scoped; additive — see priorityclasses.yaml).
+  # The device-writer class is CREATED but NOT assigned to the ingestor here
+  # (that is gated ha-3); verdify-serving IS assigned to the stateless surfaces
+  # via ha-serving-resources.yaml in patches: below.
+  - priorityclasses.yaml
+  # Conservative namespace LimitRange so future pods aren't unbounded. Sets a
+  # mem default + defaultRequest only (NO CPU `default` limit) so it can never
+  # inject a throttling CPU limit into the gated device path. See limitrange.yaml.
+  - limitrange.yaml
 
 # verdify-planner (#117) + verdify-mqtt fan-out broker (#113) — referenced as
 # Components, NOT added to base, so they never render into overlays/staging (the
@@ -79,19 +101,68 @@ components:
   # waits for that PV). The cluster-scoped synology-iscsi-ssd StorageClass is NOT
   # pulled here — Root applies it once via components/db-backup/storageclass.
   - ../../components/db-backup
+  # #498 verdify-grafana — OUR OWN Grafana on graphs.verdify.ai. Independent,
+  # in-cluster, reading the prod TimescaleDB (verdify-db:5432). PROD-ONLY (graphs
+  # is a prod host); never staging. Stateless (emptyDir; provisioned datasource +
+  # site-*.json dashboards + anonymous-Viewer embeds). Tier-2 IngressRoute routes
+  # Host(graphs.verdify.ai) -> verdify-grafana:3000 through the verdify-traefik
+  # tier-2 (verdify-web entryPoint). NOT a device writer.
+  - ../../components/grafana
+  # #211 ingestor-gather-script — the planner context-gather ConfigMap
+  # (gather-plan-context.sh + lib/psql-verdify.sh) the ingestor mounts at
+  # /srv/verdify/scripts/. prod-only (only prod runs the planner). Adding the
+  # ConfigMap does NOT touch the running ingestor; the mount + psql initContainer
+  # ship in the gated ingestor patch (see PR / ingestor-gather-mount.patch.yaml).
+  - ../../components/ingestor-gather-script
 
 patches:
+  # PROD DB STORAGE RECONCILE: restate verdify-db's volumeClaimTemplate onto
+  # synology-iscsi-ssd to match the ALREADY-MIGRATED live prod DB (Bound 5d+).
+  # git==live -> no immutable-field StatefulSet patch attempt. See
+  # db-storageclass-iscsi.yaml. Reconcile-to-live only; does NOT recreate the STS.
+  - path: db-storageclass-iscsi.yaml
   # DEVICE-WRITE INTERLOCK (#79): VERDIFY_DEVICE_WRITE_ENABLED=1 — prod only.
   - path: device-write-configmap.yaml
   # #113 publish-all: prod re-emits every flushed telemetry row onto the fan-out
   # bus (verdify-mqtt) so dev/stage subscribers mirror it. prod-only env.
   - path: publish-all-configmap.yaml
+  # #212 HERMES_URL: repoint the ingestor's iris_planner gateway POST off the
+  # VM-era loopback default (127.0.0.1:8642) onto the in-cluster hermes-iris
+  # ClusterIP Service. Env-only override; no ingestor rebuild. See
+  # hermes-url-configmap.yaml. (Restart to apply is a gated step — see PR.)
+  - path: hermes-url-configmap.yaml
+  # #211 gather-script runtime env: VERDIFY_DB_BACKEND=dsn (in-cluster psql) +
+  # PYTHON=python3 + PYTHONPATH=/app, consumed ONLY by the mounted gather
+  # subprocess (not the ingestor app / device path). See
+  # gather-script-env-configmap.yaml. (Picked up on the gated restart.)
+  - path: gather-script-env-configmap.yaml
+  # #211/#263 GIT==LIVE INGESTOR CAPTURE (laptop-root 2026-06-07): the gather-mount
+  # patch — install-psql initContainer + gather-script/pgclient mounts +
+  # PATH/LD_LIBRARY_PATH + HERMES_IRIS_API_KEY + PGPASSWORD env. The LIVE writer
+  # (node4) ALREADY runs this exact shape (plan deliveries proven), so rendering it
+  # makes a verdify-prod-dark reconcile a NO-OP on the ingestor (REINFORCE, not
+  # revert). Applying it via kubectl/sync still RESTARTS the single ESP32 writer —
+  # that is a laptop-root guarded Recreate at the gated window, NOT an autonomous
+  # action. See ingestor-gather-mount.patch.yaml header.
+  - path: ingestor-gather-mount.patch.yaml
   # #130 ingestor state volume: writable emptyDir at /srv/verdify/state so the
   # live setpoint-dispatcher + MCP-restart logging stops thrashing post-cutover.
   # emptyDir now; durable RWO PVC is the #130 follow-up. See ingestor-state-volume.yaml.
   - path: ingestor-state-volume.yaml
+  # HA Sprint ha-1 / Lane A (#226/#227/#229): add verdify-serving priorityClass +
+  # a CPU LIMIT (burst containment, NOT a tight throttle) + tuned mem to the
+  # STATELESS surfaces (www/lab/api/mcp/planner/grafana). Strategic-merge by
+  # name -> only these deployments + named containers are touched; the device
+  # path (ingestor/setpoint-server) is DELIBERATELY EXCLUDED. See
+  # ha-serving-resources.yaml.
+  - path: ha-serving-resources.yaml
   # ingestor keeps the base replicas:1 + Recreate (single-writer invariant); no
   # replicas:0 pin here (that is staging's two-writer safety pin).
+  # HA Sprint ha-1 / LANE B (#230): scale www/lab/api/mcp 1->2, hard hostname
+  # spread (DoNotSchedule + matchLabelKeys), zero-downtime rollout. Scoped to
+  # overlays/prod so base (api/mcp -> staging) + the www/lab components (-> dev)
+  # stay at replicas:1. ingestor/setpoint-server are NOT in this patch.
+  - path: ha-stateless-spread.patch.yaml
 
 # Image digest pins. Same canonical namespace as staging
 # (ghcr.io/verdifyconsultancy/verdify-*), pinned to immutable @sha256 digests
@@ -150,5 +221,14 @@ images:
   # so it is EXEMPT from the promote-diff-guard staging-equality check (per the
   # guard's own derived-exemption set); prod pins the SAME env-agnostic digest as
   # dev (one-digest-across-envs static content). A content rebuild advances it.
+  #
+  # 2026-06-07 ONE-OFF VAULT RESTORE (laptop-root): the prior 92ab47.. image was
+  # built from a synthetic CI temp-vault (docs/ fallback in Dockerfile.k3s), so it
+  # served the DEFAULT "Welcome to Quartz 4" starter — empty content/ in
+  # verdify-platform. Rebuilt the runtime image from the REAL synced vault
+  # (/Users/jason/Iris/verdify-vault/website, 121 .md -> npx quartz build -> 566
+  # files -> nginx-unprivileged :8080) and pushed to the same GHCR package. The
+  # durable fix (CI sourcing the real vault) is Iris #124; this only advances the
+  # pin so ArgoCD serves the real lab site now.
   - name: ghcr.io/verdifyconsultancy/verdify-lab
-    digest: sha256:92ab47073fad5372832274ba591291fd1c209968fd311892f4130bc423b1140b
+    digest: sha256:bf71018f181f4e37e585b8778852eb209875555525c425921663e7744891c973

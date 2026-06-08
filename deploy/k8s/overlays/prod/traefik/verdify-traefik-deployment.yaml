@@ -1,0 +1,143 @@
+# Tier-2 Verdify Traefik — Deployment + Service (D7 two-tier edge).
+#
+# Pinned to the SAME Traefik version as the shared apps Traefik (docker.io/traefik
+# :v3.7.1, observed live 2026-06-07) so CRD schema + behaviour match exactly.
+#
+# Provider scope (the load-bearing isolation):
+#   - kubernetescrd ONLY, namespaces=verdify-prod, labelselector traefik-tier=verdify.
+#     So this instance ONLY ever builds routers from the verdify-prod IngressRoutes
+#     that explicitly opt in with label traefik-tier=verdify.
+#   - Its only routing entryPoint is `verdify-web` (:8000). The shared apps Traefik
+#     uses entryPoints web/websecure, which this instance does NOT define, and the
+#     tier-2 IngressRoutes reference entryPoint `verdify-web`, which the apps Traefik
+#     does NOT define -> zero cross-claiming in either direction.
+#
+# TLS is terminated at the OUTER tier (Cloudflare edge + apps Traefik default cert);
+# the tier-1 IngressRoute reaches this Service over plain HTTP inside the cluster, so
+# this instance only needs the HTTP `verdify-web` entryPoint.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-traefik
+  namespace: verdify-prod
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: edge-traefik
+spec:
+  replicas: 2
+  # Sprint ha-1 (#230): zero-downtime rollout — never drop a ready edge replica
+  # below the running count during a rollout (the default 25% maxUnavailable
+  # could briefly take the 2-replica tier to 1).
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: verdify-traefik
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: verdify-traefik
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: edge-traefik
+    spec:
+      serviceAccountName: verdify-traefik
+      # HA ha-1 / Lane A (#229): serving-tier priority so the tier-2 edge proxy
+      # is preempted only after batch, and never starved under node pressure.
+      priorityClassName: verdify-serving
+      # Spread the 2 replicas across nodes so a single node loss can't take the
+      # whole verdify edge tier down. Sprint ha-1 (#230): upgraded to HARD
+      # (DoNotSchedule) — 4 schedulable workers >= 2 replicas => always
+      # satisfiable, so the hard guarantee carries no Pending risk.
+      # matchLabelKeys:[pod-template-hash] so a rolling update's surging replica
+      # also lands on a distinct node.
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          matchLabelKeys:
+            - pod-template-hash
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: verdify-traefik
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        # verdify-prod enforces PodSecurity `restricted` — seccomp RuntimeDefault
+        # is mandatory at pod level.
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: traefik
+          image: docker.io/traefik:v3.7.1
+          args:
+            - "--global.checknewversion=false"
+            - "--global.sendanonymoususage=false"
+            - "--entryPoints.verdify-web.address=:8000/tcp"
+            - "--entryPoints.traefik.address=:8080/tcp"
+            - "--ping=true"
+            - "--ping.entrypoint=traefik"
+            - "--api.dashboard=false"
+            - "--providers.kubernetescrd"
+            - "--providers.kubernetescrd.namespaces=verdify-prod"
+            - "--providers.kubernetescrd.labelselector=traefik-tier=verdify"
+            - "--providers.kubernetescrd.allowEmptyServices=true"
+            - "--log.level=INFO"
+            - "--accesslog=true"
+          ports:
+            - name: verdify-web
+              containerPort: 8000
+              protocol: TCP
+            - name: traefik
+              containerPort: 8080
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: traefik
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: traefik
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              # HA ha-1 / Lane A (#226/#227): cap pathological burst on the
+              # tier-2 proxy. 1 core is ~500x steady (~2m) and far above any
+              # realistic tier-2 load, so CFS throttling never engages in
+              # practice (the design doc's keepalive concern is about TIGHT caps
+              # — this is a runaway ceiling, not a throttle).
+              cpu: "1"
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: verdify-traefik
+  namespace: verdify-prod
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: edge-traefik
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: verdify-traefik
+  ports:
+    - name: web
+      port: 80
+      targetPort: verdify-web
+      protocol: TCP

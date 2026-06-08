@@ -1,0 +1,147 @@
+# Sprint ha-1 / LANE B (#230) — STATELESS MULTI-REPLICA + HARD HOSTNAME SPREAD.
+#
+# Why a prod-overlay patch (not a base/component edit): base (api/mcp) renders
+# into overlays/staging, and the www/lab components render into overlays/dev, so
+# editing them there would change those instances. These availability changes are
+# a PROD posture, so they are applied here as strategic-merge patches scoped to
+# overlays/prod only. staging/dev keep replicas:1 + their existing strategy.
+#
+# Root cause (incident 2026-06-07): ~11 of 13 verdify-prod pods stacked on node7
+# (the smallest worker, 8c/16G) with nothing telling the scheduler to spread, so
+# a 2-"replica" namespace had the availability of a 1-replica one. The fix:
+#   1. replicas 1 -> 2 (N+1: survive one node loss/drain with >=1 ready endpoint).
+#   2. topologySpreadConstraints hostname maxSkew:1 whenUnsatisfiable:DoNotSchedule
+#      with matchLabelKeys:[pod-template-hash] -> the 2 replicas (and a rolling
+#      update's surging replica) land on 2 DISTINCT of the 4 schedulable workers
+#      (node4/5/6/7). 4 workers >= 2 replicas => the hard constraint is ALWAYS
+#      satisfiable, so DoNotSchedule carries no Pending risk.
+#   3. RollingUpdate maxUnavailable:0, maxSurge:1 -> zero-downtime: scaling and
+#      every future rollout never drops the ready-endpoint count below running.
+#
+# Selectors match each deployment's live spec.selector.matchLabels exactly
+# (www=www, lab=lab-site, api=api, mcp=mcp, planner=planner, traefik
+# name=verdify-traefik).
+# NOT touched here: verdify-ingestor / verdify-setpoint-server (single-writer
+# device path — gated ha-3), grafana (RWO PVC singleton — stays replicas:1).
+#
+# ha-5 (#230, this commit): verdify-planner added — the last replicas:1
+# stateless serving surface. It is a stateless HTTP service (run state lives in
+# Postgres via PostgresRunStore) reached in-cluster via Hermes/Iris, NOT a
+# device writer, so 1->2 + hard hostname spread is the same safe posture as
+# www/lab/api/mcp. This patch matches the live cluster state applied at the
+# same time, so an ArgoCD sync REINFORCES it rather than reverting.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-www
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          matchLabelKeys:
+            - pod-template-hash
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/component: www
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-lab
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          matchLabelKeys:
+            - pod-template-hash
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/component: lab-site
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-api
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          matchLabelKeys:
+            - pod-template-hash
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/component: api
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-mcp
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          matchLabelKeys:
+            - pod-template-hash
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/component: mcp
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-planner
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    spec:
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          matchLabelKeys:
+            - pod-template-hash
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/component: planner

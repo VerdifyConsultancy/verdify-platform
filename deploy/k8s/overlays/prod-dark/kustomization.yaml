@@ -43,9 +43,13 @@ resources:
   # ANNOTATION -> EXCLUDED from build output (OpenAI key never emitted). Real
   # verdify-hermes via SOPS out-of-band. See hermes-secret.placeholder.yaml.
   - hermes-secret.placeholder.yaml
-  # NO ha-token.placeholder.yaml: the verdify-ha-token Secret is consumed ONLY by
-  # the setpoint-server (the grow-light writer), which prod-dark EXCLUDES. A
-  # device-affecting HA token surface is absent from the device-dark shape.
+  # ha-token.placeholder.yaml: the verdify-ha-token Secret is consumed by the
+  # ingestor (shelly_sync / ha_sensor_sync / tempest_sync HA-telemetry tasks —
+  # energy + hydro + weather) which the base now mounts. This is a READ to Home
+  # Assistant on the SERVICES VLAN, NOT a device-VLAN write, so it does not
+  # violate the device-dark posture. local-config ANNOTATION -> excluded from
+  # build output (token never emitted); real Secret via SOPS out-of-band.
+  - ha-token.placeholder.yaml
   # DEVICE-DARK NETWORK HALF: drop all ingestor egress to the greenhouse device
   # VLAN. This REPLACES overlays/prod's allow-ingestor-device-egress — prod-dark
   # carries the DENY and never the allow. See deny-esp32-egress.yaml.
@@ -108,7 +112,12 @@ images:
   - name: ghcr.io/verdifyconsultancy/verdify-www
     digest: sha256:633fb18ab3c9a637693094917615c720a09baaef4877cce8dcea0568bca0b467
   # verdify-lab (#124): SAME env-agnostic Quartz digest overlays/prod + dev pin.
+  # 2026-06-07 #263 CONVERGENCE (laptop-root): repointed off the SYNTHETIC 92ab47..
+  # CI temp-vault build to the REAL vault-built bf71018 that overlays/prod serves
+  # on lab.verdify.ai, so no overlay carries the Quartz-starter placeholder. No
+  # ArgoCD app targets overlays/prod-dark today, but keeping it byte-aligned with
+  # overlays/prod means a later (gated) prod-dark adopt can't regress the lab site.
   - name: ghcr.io/verdifyconsultancy/verdify-lab
-    digest: sha256:92ab47073fad5372832274ba591291fd1c209968fd311892f4130bc423b1140b
+    digest: sha256:bf71018f181f4e37e585b8778852eb209875555525c425921663e7744891c973
   # NO verdify-setpoint-server pin: the setpoint-server Component is excluded, so
   # its image never renders here (device-dark has no grow-light writer).
