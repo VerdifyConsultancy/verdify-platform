@@ -7,7 +7,8 @@
 # replica, then BLOCKS until its replacement is Ready on another node before the
 # second can go — the surface never hits zero during cluster maintenance.
 #
-#   - www / lab / api / mcp / verdify-traefik: minAvailable: 1 (2-replica surfaces).
+#   - www / lab / api / mcp / planner / verdify-traefik: minAvailable: 1
+#     (2-replica surfaces; planner added in ha-5 / #230).
 #   - grafana: maxUnavailable: 1 (RWO iSCSI PVC singleton, stays replicas:1).
 #     minAvailable:1 on a 1-replica object would block EVERY node drain forever;
 #     maxUnavailable:1 lets the drain proceed (its HA is fast PVC-reattach
@@ -55,6 +56,19 @@ spec:
   selector:
     matchLabels:
       app.kubernetes.io/component: api
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: verdify-planner
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: planner
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: planner
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
