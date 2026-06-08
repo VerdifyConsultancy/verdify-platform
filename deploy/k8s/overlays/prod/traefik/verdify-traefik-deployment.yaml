@@ -25,6 +25,14 @@ metadata:
     app.kubernetes.io/component: edge-traefik
 spec:
   replicas: 2
+  # Sprint ha-1 (#230): zero-downtime rollout — never drop a ready edge replica
+  # below the running count during a rollout (the default 25% maxUnavailable
+  # could briefly take the 2-replica tier to 1).
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app.kubernetes.io/name: verdify-traefik
@@ -37,11 +45,17 @@ spec:
     spec:
       serviceAccountName: verdify-traefik
       # Spread the 2 replicas across nodes so a single node loss can't take the
-      # whole verdify edge tier down (now possible on all 7 L2-consistent nodes).
+      # whole verdify edge tier down. Sprint ha-1 (#230): upgraded to HARD
+      # (DoNotSchedule) — 4 schedulable workers >= 2 replicas => always
+      # satisfiable, so the hard guarantee carries no Pending risk.
+      # matchLabelKeys:[pod-template-hash] so a rolling update's surging replica
+      # also lands on a distinct node.
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
-          whenUnsatisfiable: ScheduleAnyway
+          whenUnsatisfiable: DoNotSchedule
+          matchLabelKeys:
+            - pod-template-hash
           labelSelector:
             matchLabels:
               app.kubernetes.io/name: verdify-traefik
