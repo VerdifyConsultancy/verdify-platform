@@ -138,6 +138,68 @@ def test_unknown_backend_warns_and_falls_back_to_docker():
     assert "unknown VERDIFY_DB_BACKEND" in res.stderr
 
 
+# ── kube-exec backend (#254 — re-home the firmware preflight DB handle) ───────
+
+
+def test_backend_kube_emits_kubectl_exec_never_docker():
+    """kube backend -> `kubectl exec -n verdify-prod verdify-db-0 -c postgres -- psql`."""
+    res = _source_and_run("verdify_psql_cmd", env={"VERDIFY_DB_BACKEND": "kube"})
+    assert res.returncode == 0, res.stderr
+    tokens = res.stdout.split()
+    assert tokens == [
+        "kubectl", "exec", "-n", "verdify-prod", "verdify-db-0",
+        "-c", "postgres", "--", "psql", "-U", "verdify", "-d", "verdify",
+    ], tokens
+    assert "docker" not in tokens
+
+
+def test_backend_kube_multitoken_driver_is_word_split():
+    """VERDIFY_KUBECTL may be a remote driver; it must be word-split, not one token."""
+    res = _source_and_run(
+        "verdify_psql_cmd",
+        env={"VERDIFY_DB_BACKEND": "kube", "VERDIFY_KUBECTL": "ssh host sudo k3s kubectl"},
+    )
+    tokens = res.stdout.split()
+    assert tokens[:6] == ["ssh", "host", "sudo", "k3s", "kubectl", "exec"], tokens
+
+
+def test_backend_kube_translates_pgoptions_to_in_pod_env():
+    """A `-e PGOPTIONS=...` docker-extra must survive as in-pod `env PGOPTIONS=...`."""
+    res = _source_and_run(
+        'verdify_psql_cmd -e "PGOPTIONS=-c statement_timeout=5000"',
+        env={"VERDIFY_DB_BACKEND": "kube"},
+    )
+    out = res.stdout
+    assert "\nenv\nPGOPTIONS=-c statement_timeout=5000\n" in out, out
+    # env must sit immediately before psql (so psql inherits it in-pod).
+    lines = out.splitlines()
+    assert lines[lines.index("env") + 2] == "psql"
+
+
+def test_backend_kube_custom_namespace_pod_container():
+    res = _source_and_run(
+        "verdify_psql_cmd",
+        env={
+            "VERDIFY_DB_BACKEND": "kube",
+            "VERDIFY_DB_NAMESPACE": "verdify-dev",
+            "VERDIFY_DB_POD": "verdify-db-9",
+            "VERDIFY_DB_PGCONTAINER": "pg",
+        },
+    )
+    tokens = res.stdout.split()
+    assert tokens[:8] == ["kubectl", "exec", "-n", "verdify-dev", "verdify-db-9", "-c", "pg", "--"], tokens
+
+
+def test_backend_kube_pg_dump_emits_kubectl_exec():
+    res = _source_and_run("verdify_pg_program_cmd pg_dump", env={"VERDIFY_DB_BACKEND": "kube"})
+    tokens = res.stdout.split()
+    assert tokens == [
+        "kubectl", "exec", "-n", "verdify-prod", "verdify-db-0",
+        "-c", "postgres", "--", "pg_dump", "-U", "verdify", "-d", "verdify",
+    ], tokens
+    assert "docker" not in tokens
+
+
 # ── the freeze-critical preflight is itself socket-less ──────────────────────
 
 
