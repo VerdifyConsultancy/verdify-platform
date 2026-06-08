@@ -1,0 +1,52 @@
+# HA Sprint ha-1 / Lane A (#226) — conservative namespace LimitRange for
+# verdify-prod so FUTURE pods are not created completely unbounded.
+#
+# SAFETY DESIGN (why this cannot break or throttle an existing pod):
+#   * We set defaultRequest ONLY (NOT a `default` limit) for CPU. A LimitRange
+#     `default` CPU limit would be INJECTED into any container that lacks one on
+#     its next (re)create — including the GATED device-writer (ingestor /
+#     setpoint-server), where a CPU limit is FORBIDDEN (CFS throttling harms
+#     device keepalive timing). Omitting the CPU `default` guarantees we never
+#     silently cap the writer. The stateless surfaces get their CPU limits
+#     explicitly from their own per-surface patches, not from here.
+#   * The `default` MEMORY limit (1Gi) is HIGH enough that no current
+#     verdify-prod container exceeds it EXCEPT ones that already declare their
+#     own memory limit (api/mcp/planner 1Gi, grafana, hermes 4Gi) — a container
+#     that already sets a limit is untouched by the LimitRange default. So the
+#     only containers that would adopt the 1Gi mem default are tiny ones
+#     (mqtt 2Mi, exporters ~10-20Mi) — no OOM risk.
+#   * NO CPU `max` EITHER. A LimitRange `max.cpu` is ENFORCED by INJECTING that
+#     ceiling as the container's CPU LIMIT when the container declares no CPU
+#     limit of its own (verified by server dry-run: the ingestor template gets
+#     cpu:4 injected). That would silently put a CPU limit on the GATED device
+#     write path (ingestor) on its next restart — forbidden (CFS throttling
+#     harms ESP32 keepalive). So this LimitRange governs MEMORY ceilings only
+#     and intentionally sets NO CPU `default` and NO CPU `max`. The stateless
+#     surfaces get their CPU limits explicitly from ha-serving-resources.yaml.
+#   * mem `max` is well above the largest existing limit (hermes 4Gi) so nothing
+#     running is rejected. min is tiny.
+# Verify after apply: no pod enters OOMKilled / CPUThrottlingHigh, and a server
+# dry-run create of the ingestor template yields NO cpu limit.
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: verdify-prod-defaults
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/managed-by: verdify-ha
+spec:
+  limits:
+    - type: Container
+      # Defaults applied only to containers that omit the field. CPU limit is
+      # DELIBERATELY ABSENT (see header) so the device path is never throttled.
+      defaultRequest:
+        cpu: 25m
+        memory: 32Mi
+      default:
+        memory: 1Gi
+      # MEMORY ceiling only — generous, above the largest existing limit
+      # (hermes 4Gi). NO cpu max (would inject a CPU limit into the device path).
+      max:
+        memory: 6Gi
+      min:
+        memory: 8Mi

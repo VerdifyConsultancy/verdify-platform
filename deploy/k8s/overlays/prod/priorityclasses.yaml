@@ -1,0 +1,72 @@
+# HA Sprint ha-1 / Lane A (#229) — 4-tier PriorityClasses for the verdify stack.
+#
+# All four are BELOW system-cluster-critical (2000000000) and
+# system-node-critical (2000001000) so kubelet/CNI/CSI/coredns are NEVER
+# preempted — the precondition for a flapped node to self-heal (design doc
+# §2.4). Eviction/preemption order under node pressure becomes:
+#   batch (1000)  ->  serving (100000)  ->  data-critical (800000000)
+#   ->  device-writer (900000000)  ->  system-*.
+#
+# Cluster-scoped objects. Additive: creating a PriorityClass does NOT mutate any
+# running pod; a pod only adopts a class when its template sets
+# priorityClassName AND the pod is (re)created. The ingestor/setpoint device
+# path is intentionally NOT assigned verdify-device-writer here — that
+# assignment is the GATED ha-3 sprint. This file only CREATES the class.
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: verdify-device-writer
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/managed-by: verdify-ha
+value: 900000000
+globalDefault: false
+preemptionPolicy: PreemptLowerPriority
+description: >-
+  Highest verdify tier. Reserved for the single-writer device path
+  (ingestor / setpoint-server) so it is never the pod starved/preempted/evicted
+  under node pressure. CREATED in ha-1; ASSIGNED to the writer only in the gated
+  ha-3 sprint. Below system-* so node-critical daemons always win.
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: verdify-data-critical
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/managed-by: verdify-ha
+value: 800000000
+globalDefault: false
+preemptionPolicy: PreemptLowerPriority
+description: >-
+  Stateful single-writer data tier (verdify-db / CNPG). Survives node pressure
+  above the stateless serving tier; below the device writer.
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: verdify-serving
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/managed-by: verdify-ha
+value: 100000
+globalDefault: false
+preemptionPolicy: PreemptLowerPriority
+description: >-
+  Stateless public-serving surfaces (www / lab / api / mcp / planner / grafana)
+  and the in-namespace tier-2 verdify-traefik. Preempted only after batch; a
+  surviving replica + PDB keep the surface up during eviction.
+---
+apiVersion: scheduling.k8s.io/v1
+kind: PriorityClass
+metadata:
+  name: verdify-batch
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/managed-by: verdify-ha
+value: 1000
+globalDefault: false
+preemptionPolicy: PreemptLowerPriority
+description: >-
+  Batch / best-effort (exporters, db-backup, manual jobs). Evicted FIRST under
+  node pressure so no serving/data/device pod is disrupted by a batch spike.
