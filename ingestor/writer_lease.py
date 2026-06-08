@@ -100,16 +100,10 @@ class WriterLease:
     def __init__(self) -> None:
         self.enabled = _flag_enabled()
         self._token = _read(_TOKEN_PATH)
-        self._namespace = (
-            os.environ.get("POD_NAMESPACE") or _read(_NS_PATH) or "verdify-prod"
-        )
+        self._namespace = os.environ.get("POD_NAMESPACE") or _read(_NS_PATH) or "verdify-prod"
         # Stable, unique holder identity. Prefer the pod name (downward API);
         # fall back to hostname so two processes never share an identity.
-        self.identity = (
-            os.environ.get("POD_NAME")
-            or os.environ.get("HOSTNAME")
-            or socket.gethostname()
-        )
+        self.identity = os.environ.get("POD_NAME") or os.environ.get("HOSTNAME") or socket.gethostname()
         self._api = os.environ.get("KUBERNETES_SERVICE_HOST")
         self._api_port = os.environ.get("KUBERNETES_SERVICE_PORT_HTTPS", "443")
         self._ssl_ctx: ssl.SSLContext | None = None
@@ -121,9 +115,7 @@ class WriterLease:
 
         # Whether we can actually talk to the API as a SA. If not, the fence
         # degrades to an always-held no-op (off-cluster / no token).
-        self._can_fence = bool(
-            self.enabled and self._token and self._api and self._ssl_ctx
-        )
+        self._can_fence = bool(self.enabled and self._token and self._api and self._ssl_ctx)
 
         # Last successful renew (monotonic). Held iff (now - last_renew) < duration.
         self._last_renew = 0.0
@@ -137,8 +129,7 @@ class WriterLease:
                 "fence DEGRADED to always-held no-op (off-cluster?)"
             )
         log.info(
-            "writer_lease: enabled=%s can_fence=%s ns=%s identity=%s "
-            "(duration=%ds renew=%ds retry=%.0fs)",
+            "writer_lease: enabled=%s can_fence=%s ns=%s identity=%s (duration=%ds renew=%ds retry=%.0fs)",
             self.enabled,
             self._can_fence,
             self._namespace,
@@ -219,9 +210,7 @@ class WriterLease:
     async def _renew_loop(self) -> None:
         while not self._stop.is_set():
             try:
-                ok = await asyncio.get_event_loop().run_in_executor(
-                    None, self._try_acquire_or_renew
-                )
+                ok = await asyncio.get_event_loop().run_in_executor(None, self._try_acquire_or_renew)
                 if ok:
                     self._last_renew = time.monotonic()
                     if not self._held:
@@ -280,10 +269,7 @@ class WriterLease:
 
     # ── raw k8s coordination.k8s.io/v1 REST (stdlib only) ────────────────────
     def _url(self, name: str | None = None) -> str:
-        base = (
-            f"https://{self._api}:{self._api_port}"
-            f"/apis/coordination.k8s.io/v1/namespaces/{self._namespace}/leases"
-        )
+        base = f"https://{self._api}:{self._api_port}/apis/coordination.k8s.io/v1/namespaces/{self._namespace}/leases"
         return f"{base}/{name}" if name else base
 
     def _headers(self, content_type: str | None = None) -> dict[str, str]:
@@ -292,11 +278,10 @@ class WriterLease:
             h["Content-Type"] = content_type
         return h
 
-    def _request(self, method: str, url: str, body: bytes | None = None,
-                 content_type: str | None = None) -> dict | None:
-        req = urllib.request.Request(
-            url, data=body, method=method, headers=self._headers(content_type)
-        )
+    def _request(
+        self, method: str, url: str, body: bytes | None = None, content_type: str | None = None
+    ) -> dict | None:
+        req = urllib.request.Request(url, data=body, method=method, headers=self._headers(content_type))
         try:
             with urllib.request.urlopen(req, timeout=API_TIMEOUT_S, context=self._ssl_ctx) as resp:
                 raw = resp.read()

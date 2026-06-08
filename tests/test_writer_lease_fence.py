@@ -35,7 +35,7 @@ if _INGESTOR_PATH not in sys.path:
     sys.path.insert(0, _INGESTOR_PATH)
 
 import writer_lease as wl  # noqa: E402
-from writer_lease import _Conflict, WriterLease  # noqa: E402
+from writer_lease import WriterLease, _Conflict  # noqa: E402
 
 
 class FakeLeaseAPI:

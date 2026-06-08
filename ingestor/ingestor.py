@@ -54,7 +54,6 @@ from entity_map import (
     normalize_feedback_value,
 )
 from esp32_push import push_to_esp32
-from writer_lease import WriterLease
 from mqtt_fanout import (
     FanoutPublisher,
     assert_modes_consistent,
@@ -90,6 +89,7 @@ from tasks import (
     tempest_sync,
     water_flowing_sync,
 )
+from writer_lease import WriterLease
 
 from verdify_schemas import (
     CLIMATE_INTENT_CONTRACT_VERSION,
@@ -2322,9 +2322,7 @@ async def main() -> None:
     # promptly (releasing the lease) instead of waiting on the never-returning
     # loops. On shutdown, cancel the workers and return.
     shutdown_wait = asyncio.ensure_future(_shutdown.wait())
-    done, pending = await asyncio.wait(
-        {main_tasks, shutdown_wait}, return_when=asyncio.FIRST_COMPLETED
-    )
+    done, pending = await asyncio.wait({main_tasks, shutdown_wait}, return_when=asyncio.FIRST_COMPLETED)
     if _shutdown.is_set():
         main_tasks.cancel()
         try:
