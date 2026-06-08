@@ -1,15 +1,20 @@
 # ============================================================================
-# STAGED — NOT WIRED INTO kustomization.yaml. (#211) GATED INGESTOR PATCH.
+# WIRED INTO kustomization.yaml — git==live CAPTURE. (#211/#263) INGESTOR PATCH.
 # ============================================================================
 # This is the verdify-ingestor Deployment patch that makes gather-plan-context.sh
-# runnable in-pod. It is DELIBERATELY NOT listed in overlays/prod/kustomization
-# `patches:` because applying it RESTARTS the verdify-ingestor pod — which is the
-# LIVE single writer to the greenhouse ESP32 (device loop). It must be applied
-# ONLY via laptop-root's guarded stop/verify restart (single-writer Recreate: the
-# old writer is fully torn down before the new one starts — no double-writer), at
-# the gated window. The other three #210-213 ConfigMap pieces (HERMES_URL,
-# gather-script ConfigMap, gather-env, hermes key) are already live/wired and do
-# NOT restart the ingestor by themselves.
+# runnable in-pod. It is now LISTED in overlays/prod/kustomization `patches:`
+# (laptop-root 2026-06-07) BECAUSE the live writer (node4) is ALREADY running this
+# exact shape — install-psql initContainer, gather-script + pgclient mounts,
+# PATH/LD_LIBRARY_PATH + HERMES_IRIS_API_KEY + PGPASSWORD env (deliveries proven).
+# Wiring it makes git == live, so an ArgoCD reconcile of verdify-prod-dark
+# (path overlays/prod) RENDERS the same ingestor it already runs and REINFORCES
+# the plan-delivery path instead of STRIPPING it. The original concern — that
+# *applying* this RESTARTS the live single ESP32 writer — still governs any
+# kubectl-apply / manual sync: that remains a laptop-root guarded stop/verify
+# Recreate at the gated window. But omitting it from git was the LARGER hazard
+# (a naive sync would revert live), which this capture closes. The other #210-213
+# ConfigMap pieces (HERMES_URL, gather-script ConfigMap, gather-env) are already
+# live/wired and do NOT restart the ingestor by themselves.
 #
 # WHAT IT ADDS (all ADDITIVE strategic-merge; base /tmp + ha-token preserved):
 #  1. initContainer `install-psql` — the ingestor image (Debian trixie/glibc) has
@@ -82,6 +87,25 @@ spec:
               value: "/opt/pgclient/bin:/home/appuser/.local/bin:/usr/local/bin:/usr/local/sbin:/usr/sbin:/usr/bin:/sbin:/bin"
             - name: LD_LIBRARY_PATH
               value: "/opt/pgclient/lib"
+            # #212/#213 plan-delivery env (git==live capture, laptop-root 2026-06-07):
+            # HERMES_IRIS_API_KEY authenticates the ingestor's iris_planner POST to
+            # the in-cluster hermes-iris gateway (HERMES_URL in verdify-config).
+            # These two are ALREADY on the LIVE writer pod (node4, deliveries proven)
+            # but were the only env the prod overlay did not render — without them a
+            # sync would strip the auth + PGPASSWORD and break delivery. Captured
+            # here (additive strategic merge, keyed by name) so a sync REINFORCES.
+            - name: HERMES_IRIS_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-hermes
+                  key: HERMES_IRIS_API_KEY
+            # PGPASSWORD for the gather script's direct `psql` (its lib reads
+            # $PGPASSWORD); sourced from the same secret/key as POSTGRES_PASSWORD.
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-app-secrets
+                  key: POSTGRES_PASSWORD
           volumeMounts:
             - name: gather-script
               mountPath: /srv/verdify/scripts/gather-plan-context.sh

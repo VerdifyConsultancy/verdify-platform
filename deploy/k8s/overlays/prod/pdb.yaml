@@ -96,3 +96,25 @@ spec:
   selector:
     matchLabels:
       app.kubernetes.io/component: grafana
+---
+# verdify-planner: GIT==LIVE CAPTURE (laptop-root 2026-06-07). This PDB EXISTS on
+# the live verdify-prod cluster (minAvailable:1, selector component=planner) but
+# was never in this file — so a verdify-prod-dark reconcile would have PRUNED it.
+# Captured EXACTLY as live (minAvailable:1) so the sync is a no-op REINFORCE, not
+# a prune. NOTE/FOLLOW-UP: the planner Deployment is replicas:1, so minAvailable:1
+# is drain-BLOCKING (same footgun the grafana PDB above avoids via maxUnavailable:1).
+# Switching it to maxUnavailable:1 would be a live BEHAVIOR change on sync, NOT a
+# reinforce, so it is deliberately left == live here and flagged as a follow-up
+# (the planner is not on node4/the ingestor, so this does not affect the writer).
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: verdify-planner
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: planner
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: planner

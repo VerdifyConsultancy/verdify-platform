@@ -131,6 +131,15 @@ patches:
   # subprocess (not the ingestor app / device path). See
   # gather-script-env-configmap.yaml. (Picked up on the gated restart.)
   - path: gather-script-env-configmap.yaml
+  # #211/#263 GIT==LIVE INGESTOR CAPTURE (laptop-root 2026-06-07): the gather-mount
+  # patch — install-psql initContainer + gather-script/pgclient mounts +
+  # PATH/LD_LIBRARY_PATH + HERMES_IRIS_API_KEY + PGPASSWORD env. The LIVE writer
+  # (node4) ALREADY runs this exact shape (plan deliveries proven), so rendering it
+  # makes a verdify-prod-dark reconcile a NO-OP on the ingestor (REINFORCE, not
+  # revert). Applying it via kubectl/sync still RESTARTS the single ESP32 writer —
+  # that is a laptop-root guarded Recreate at the gated window, NOT an autonomous
+  # action. See ingestor-gather-mount.patch.yaml header.
+  - path: ingestor-gather-mount.patch.yaml
   # #130 ingestor state volume: writable emptyDir at /srv/verdify/state so the
   # live setpoint-dispatcher + MCP-restart logging stops thrashing post-cutover.
   # emptyDir now; durable RWO PVC is the #130 follow-up. See ingestor-state-volume.yaml.
