@@ -25,11 +25,18 @@
 #   mapfile -t DB < <(verdify_psql_cmd)                # NOT needed; see helpers
 #   "${DB[@]}" -t -A -c "SELECT 1"
 #
-# Backend switch (VERDIFY_DB_BACKEND) — the issue-#24 contract:
+# Backend switch (VERDIFY_DB_BACKEND) — the issue-#24/#254 contract:
 #   docker  (DEFAULT) — docker exec [-i] <container> psql ...  (byte-identical VM)
 #   dsn               — bare psql against PG* / k3s ConfigMap+Secret env (no
 #                       docker socket; in-cluster or any host with a reachable
 #                       Postgres endpoint).
+#   kube              — <kubectl> exec [-i] -n <ns> <pod> -c <ctr> -- psql ...
+#                       (#254: re-homes the VM `docker exec verdify-timescaledb`
+#                       firmware preflight DB handle to the k3s prod DB from a
+#                       tooling host that has kubectl but no Postgres socket —
+#                       the headless verdify-db Service is in-cluster only).
+#                       VERDIFY_KUBECTL may be a multi-token remote driver, e.g.
+#                       "ssh jason@192.168.30.32 sudo k3s kubectl".
 # VERDIFY_DB_BACKEND is the documented top-level knob. It is implemented on top
 # of the lower-level VERDIFY_PSQL_MODE (below): docker -> docker-exec,
 # dsn -> direct. If a caller sets VERDIFY_PSQL_MODE explicitly it still wins
@@ -44,12 +51,17 @@
 #                            contract) and exports PG* for psql.
 #
 # Env knobs (all optional; defaults preserve VM behavior):
-#   VERDIFY_DB_BACKEND      docker | dsn                          (default docker)
-#   VERDIFY_PSQL_MODE       docker-exec | direct | in-cluster     (overrides backend)
+#   VERDIFY_DB_BACKEND      docker | dsn | kube                   (default docker)
+#   VERDIFY_PSQL_MODE       docker-exec | direct | kube-exec      (overrides backend)
 #   VERDIFY_DB_CONTAINER    docker container name   (default verdify-timescaledb)
 #   VERDIFY_DB_USER         db user                 (default verdify)
 #   VERDIFY_DB_NAME         db name                 (default verdify)
 #   VERDIFY_DOCKER_STDIN    1 to add `docker exec -i` (for piped/heredoc SQL)
+#   --- kube-exec backend (#254) ---
+#   VERDIFY_KUBECTL         kubectl binary or remote driver       (default kubectl)
+#   VERDIFY_DB_NAMESPACE    k3s namespace           (default verdify-prod)
+#   VERDIFY_DB_POD          DB pod                  (default verdify-db-0)
+#   VERDIFY_DB_PGCONTAINER  pod container w/ psql   (default postgres)
 #
 # The function intentionally does NOT bake -t/-A/-F/-c etc.: callers pass those
 # so each site keeps its exact formatting flags.
@@ -68,8 +80,9 @@ if [[ -z "${VERDIFY_PSQL_MODE:-}" ]]; then
     case "${VERDIFY_DB_BACKEND:-docker}" in
         docker|docker-exec) VERDIFY_PSQL_MODE="docker-exec" ;;
         dsn|direct|in-cluster) VERDIFY_PSQL_MODE="direct" ;;
+        kube|kubectl|kube-exec) VERDIFY_PSQL_MODE="kube-exec" ;;
         *)
-            echo "psql-verdify.sh: unknown VERDIFY_DB_BACKEND='${VERDIFY_DB_BACKEND}' (use docker|dsn)" >&2
+            echo "psql-verdify.sh: unknown VERDIFY_DB_BACKEND='${VERDIFY_DB_BACKEND}' (use docker|dsn|kube)" >&2
             VERDIFY_PSQL_MODE="$_VERDIFY_PSQL_MODE_DEFAULT"
             ;;
     esac
@@ -78,6 +91,36 @@ VERDIFY_PSQL_MODE="${VERDIFY_PSQL_MODE:-$_VERDIFY_PSQL_MODE_DEFAULT}"
 VERDIFY_DB_CONTAINER="${VERDIFY_DB_CONTAINER:-verdify-timescaledb}"
 VERDIFY_DB_USER="${VERDIFY_DB_USER:-${DB_USER:-verdify}}"
 VERDIFY_DB_NAME="${VERDIFY_DB_NAME:-${DB_NAME:-verdify}}"
+
+# kube-exec backend knobs (#254 — re-home the VM-era `docker exec verdify-
+# timescaledb` firmware preflight DB handle to the k3s prod DB from a tooling
+# host that has kubectl, NOT a Postgres socket). Defaults target verdify-prod/
+# verdify-db-0 (container `postgres`). VERDIFY_KUBECTL lets the call run the
+# binary verbatim OR through a remote driver, e.g.
+#   VERDIFY_KUBECTL="ssh jason@192.168.30.32 sudo k3s kubectl"
+# (it is word-split intentionally so a multi-token driver works).
+VERDIFY_KUBECTL="${VERDIFY_KUBECTL:-kubectl}"
+VERDIFY_DB_NAMESPACE="${VERDIFY_DB_NAMESPACE:-verdify-prod}"
+VERDIFY_DB_POD="${VERDIFY_DB_POD:-verdify-db-0}"
+VERDIFY_DB_PGCONTAINER="${VERDIFY_DB_PGCONTAINER:-postgres}"
+
+# _verdify_pgoptions_from_extra — pull a `-e PGOPTIONS=...` pair out of the
+# docker-extra args a call site passes to verdify_psql_cmd (e.g. the firmware
+# preflight's statement_timeout). In docker-exec mode those args are forwarded
+# verbatim to `docker exec`; the direct/kube-exec backends have no docker, so we
+# translate the PGOPTIONS into an in-band `env PGOPTIONS=...` so the statement
+# timeout is NOT silently dropped (the latent bug #254 calls out). Echoes the
+# bare PGOPTIONS value (no `-e`/key); empty if none present.
+_verdify_pgoptions_from_extra() {
+    local prev="" f
+    for f in "$@"; do
+        if [[ "$prev" == "-e" && "$f" == PGOPTIONS=* ]]; then
+            printf '%s' "${f#PGOPTIONS=}"
+            return 0
+        fi
+        prev="$f"
+    done
+}
 
 # verdify_psql_cmd — print the connection-prefix argv (one token per line) for
 # the active mode. Call sites that keep a `DB=(...)` array do:
@@ -113,7 +156,41 @@ verdify_psql_cmd() {
                     export PGPASSWORD="$DB_PASS"
                 fi
             fi
+            # #254: don't drop a caller's `-e PGOPTIONS=...` (e.g. the firmware
+            # preflight statement_timeout). psql honors the PGOPTIONS env var, so
+            # export it when present and not already set on the environment.
+            local _pgopt
+            _pgopt="$(_verdify_pgoptions_from_extra "${docker_extra[@]}")"
+            if [[ -n "$_pgopt" && -z "${PGOPTIONS:-}" ]]; then
+                export PGOPTIONS="$_pgopt"
+            fi
             printf '%s\n' psql
+            ;;
+        kube-exec)
+            # #254: re-home the VM `docker exec verdify-timescaledb psql ...` to
+            # `<kubectl> exec [-i] -n <ns> <pod> -c <container> -- psql ...`. The
+            # firmware preflight (and any other docker-exec call site) becomes
+            # mode-agnostic: only the connection PREFIX changes, the psql flags +
+            # SQL the call site appends are untouched. VERDIFY_KUBECTL is word-
+            # split so a multi-token remote driver (ssh ... sudo k3s kubectl)
+            # works. A `-e PGOPTIONS=...` from docker_extra is translated into an
+            # in-pod `env PGOPTIONS=...` so statement_timeout survives.
+            local _kbin
+            # shellcheck disable=SC2206  # intentional word-split of the driver
+            local -a _kctl=($VERDIFY_KUBECTL)
+            printf '%s\n' "${_kctl[@]}"
+            printf '%s\n' exec
+            if [[ "${VERDIFY_DOCKER_STDIN:-0}" == "1" ]]; then
+                printf '%s\n' -i
+            fi
+            printf '%s\n' -n "$VERDIFY_DB_NAMESPACE" "$VERDIFY_DB_POD" \
+                -c "$VERDIFY_DB_PGCONTAINER" --
+            local _kpgopt
+            _kpgopt="$(_verdify_pgoptions_from_extra "${docker_extra[@]}")"
+            if [[ -n "$_kpgopt" ]]; then
+                printf '%s\n' env "PGOPTIONS=${_kpgopt}"
+            fi
+            printf '%s\n' psql -U "$VERDIFY_DB_USER" -d "$VERDIFY_DB_NAME"
             ;;
         *)
             echo "psql-verdify.sh: unknown VERDIFY_PSQL_MODE='$VERDIFY_PSQL_MODE'" >&2
@@ -179,6 +256,23 @@ verdify_pg_program_cmd() {
             # bare program name. libpq clients (pg_dump etc.) read PG*.
             verdify_psql_cmd >/dev/null || return $?
             printf '%s\n' "$program"
+            ;;
+        kube-exec)
+            # #254: `<kubectl> exec [-i][-t] -n <ns> <pod> -c <container> --
+            # <program> -U <user> -d <db>`. -U/-d baked to match the docker-exec
+            # contract (the pod's libpq has no PG* from the caller's host).
+            local -a _kctl=($VERDIFY_KUBECTL)
+            printf '%s\n' "${_kctl[@]}"
+            printf '%s\n' exec
+            if [[ "${VERDIFY_DOCKER_STDIN:-0}" == "1" ]]; then
+                printf '%s\n' -i
+            fi
+            if [[ "${VERDIFY_DOCKER_TTY:-0}" == "1" ]]; then
+                printf '%s\n' -t
+            fi
+            printf '%s\n' -n "$VERDIFY_DB_NAMESPACE" "$VERDIFY_DB_POD" \
+                -c "$VERDIFY_DB_PGCONTAINER" -- \
+                "$program" -U "$VERDIFY_DB_USER" -d "$VERDIFY_DB_NAME"
             ;;
         *)
             echo "psql-verdify.sh: unknown VERDIFY_PSQL_MODE='$VERDIFY_PSQL_MODE'" >&2

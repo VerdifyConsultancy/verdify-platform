@@ -29,6 +29,13 @@ IRRIGATION_STALE_RETAINED_TOPICS := greenhouse/sensor/south_1_soil_moisture____/
 IRRIGATION_STALE_NEAR_MISS_TOPICS := greenhouse/sensor/east_soil_moisture____/state greenhouse/sensor/south_2_soil_moisture____/state greenhouse/sensor/west_soil_moisture____/state
 FIRMWARE_ESPHOME := scripts/firmware-esphome-worktree.sh
 FIRMWARE_OTA_BIN := firmware/.esphome/build/greenhouse/.pioenvs/greenhouse/firmware.ota.bin
+# #254: the firmware-deploy preflight DB handle is re-homed off the dead .150 VM
+# (which ran `docker exec verdify-timescaledb`) to the k3s prod DB. The default
+# backend is `kube` — lib/psql-verdify.sh runs `kubectl exec -n verdify-prod
+# verdify-db-0 -c postgres -- psql ...` from any tooling host with a kubeconfig.
+# Override to `docker` only if a local verdify-timescaledb container is reachable
+# (legacy VM), or `dsn` when running in-cluster with PG*/POSTGRES_PASSWORD set.
+FIRMWARE_DB_BACKEND ?= kube
 REPLAY_CORPUS_GZ := firmware/test/data/replay_overrides.csv.gz
 REPLAY_CORPUS_TMP ?= /tmp/verdify-replay-overrides.csv
 HERMES_IRIS_RUNTIME_DIR ?= /var/lib/verdify/hermes/iris
@@ -368,7 +375,7 @@ irrigation-post-deploy-acceptance-plan: ## Print non-mutating post-deploy accept
 irrigation-post-deploy-acceptance: irrigation-full-acceptance ## Post-deploy production proof after merge/restart/site publish
 
 firmware-deploy: ## Compile + OTA deploy to ESP32 + post-deploy sensor-health sweep + auto-rollback on failure
-	bash scripts/firmware-deploy-preflight.sh
+	VERDIFY_DB_BACKEND=$(FIRMWARE_DB_BACKEND) bash scripts/firmware-deploy-preflight.sh
 	@mkdir -p firmware/artifacts
 	@DIRTY="$$(git diff --quiet -- . && git diff --cached --quiet -- . || echo .dirty)"; \
 	if [ -n "$$DIRTY" ] && [ "$(ALLOW_DIRTY_FIRMWARE_DEPLOY)" != "1" ]; then \
