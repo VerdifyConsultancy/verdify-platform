@@ -51,6 +51,16 @@ resources:
   # floor (minAvailable:1), and grafana a drain-safe maxUnavailable:1 (RWO PVC
   # singleton). The incident had ZERO PDBs in verdify-prod. See pdb.yaml.
   - pdb.yaml
+  # HA Sprint ha-1 / Lane A — resource governance (#226/#227/#229).
+  # 4-tier PriorityClasses (cluster-scoped; additive — see priorityclasses.yaml).
+  # The device-writer class is CREATED but NOT assigned to the ingestor here
+  # (that is gated ha-3); verdify-serving IS assigned to the stateless surfaces
+  # via ha-serving-resources.yaml in patches: below.
+  - priorityclasses.yaml
+  # Conservative namespace LimitRange so future pods aren't unbounded. Sets a
+  # mem default + defaultRequest only (NO CPU `default` limit) so it can never
+  # inject a throttling CPU limit into the gated device path. See limitrange.yaml.
+  - limitrange.yaml
 
 # verdify-planner (#117) + verdify-mqtt fan-out broker (#113) — referenced as
 # Components, NOT added to base, so they never render into overlays/staging (the
@@ -125,6 +135,13 @@ patches:
   # live setpoint-dispatcher + MCP-restart logging stops thrashing post-cutover.
   # emptyDir now; durable RWO PVC is the #130 follow-up. See ingestor-state-volume.yaml.
   - path: ingestor-state-volume.yaml
+  # HA Sprint ha-1 / Lane A (#226/#227/#229): add verdify-serving priorityClass +
+  # a CPU LIMIT (burst containment, NOT a tight throttle) + tuned mem to the
+  # STATELESS surfaces (www/lab/api/mcp/planner/grafana). Strategic-merge by
+  # name -> only these deployments + named containers are touched; the device
+  # path (ingestor/setpoint-server) is DELIBERATELY EXCLUDED. See
+  # ha-serving-resources.yaml.
+  - path: ha-serving-resources.yaml
   # ingestor keeps the base replicas:1 + Recreate (single-writer invariant); no
   # replicas:0 pin here (that is staging's two-writer safety pin).
   # HA Sprint ha-1 / LANE B (#230): scale www/lab/api/mcp 1->2, hard hostname
