@@ -147,8 +147,19 @@ def test_backend_kube_emits_kubectl_exec_never_docker():
     assert res.returncode == 0, res.stderr
     tokens = res.stdout.split()
     assert tokens == [
-        "kubectl", "exec", "-n", "verdify-prod", "verdify-db-0",
-        "-c", "postgres", "--", "psql", "-U", "verdify", "-d", "verdify",
+        "kubectl",
+        "exec",
+        "-n",
+        "verdify-prod",
+        "verdify-db-0",
+        "-c",
+        "postgres",
+        "--",
+        "psql",
+        "-U",
+        "verdify",
+        "-d",
+        "verdify",
     ], tokens
     assert "docker" not in tokens
 
@@ -194,8 +205,19 @@ def test_backend_kube_pg_dump_emits_kubectl_exec():
     res = _source_and_run("verdify_pg_program_cmd pg_dump", env={"VERDIFY_DB_BACKEND": "kube"})
     tokens = res.stdout.split()
     assert tokens == [
-        "kubectl", "exec", "-n", "verdify-prod", "verdify-db-0",
-        "-c", "postgres", "--", "pg_dump", "-U", "verdify", "-d", "verdify",
+        "kubectl",
+        "exec",
+        "-n",
+        "verdify-prod",
+        "verdify-db-0",
+        "-c",
+        "postgres",
+        "--",
+        "pg_dump",
+        "-U",
+        "verdify",
+        "-d",
+        "verdify",
     ], tokens
     assert "docker" not in tokens
 
