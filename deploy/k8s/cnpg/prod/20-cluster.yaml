@@ -1,0 +1,162 @@
+# PROD-TARGET TimescaleDB-on-CloudNativePG cluster (HA-6 / #244).
+#
+# This is the PRODUCTION-GRADE rehearsal operand: 1 primary + 2 replicas with
+# SYNCHRONOUS replication (RPO=0), the GHCR DIGEST-PINNED TimescaleDB-2.25.2-pg16
+# image, synology-iscsi-ssd storage sized to the LIVE StatefulSet (50Gi), WAL
+# archiving + PITR to a DEDICATED isolated MinIO. It is built ALONGSIDE the live
+# verdify-prod/verdify-db and NOTHING points at it (separate namespace, no app
+# wiring, not in any ArgoCD Application) — it de-risks the gated cutover (#245)
+# without touching the live DB or the device-writer ingestor.
+#
+# DIFFERENCES FROM THE DEV CLUSTER (cnpg/dev/10-cluster.yaml):
+#   * instances 3 (1+2), minSyncReplicas/maxSyncReplicas 1 → RPO=0 sync standby
+#     (dev was capacity-gated to instances:1, RPO=0 unproven; HERE it is proven).
+#   * GHCR digest-pinned image (NOT localhost/ node-import) — the real prod
+#     operand path.
+#   * synology-iscsi-ssd 50Gi data (matches live) instead of dev local-path 20Gi.
+#   * podAntiAffinity spreads the 3 instances across distinct nodes (real HA),
+#     replacing the dev single-node nodeSelector capacity-pin.
+#   * resources closer to live (1Gi req / 4Gi limit, shared_buffers 1GB). The
+#     live StatefulSet is 2Gi req / 6Gi limit / shared_buffers 2GB; requests are
+#     trimmed for the build-alongside rehearsal so 3 instances schedule cleanly
+#     across the current worker headroom. The runbook §2 restores live sizing for
+#     the in-place verdify-prod cutover. The CPU LIMIT is deliberately OMITTED
+#     (HA design: the DB must not be CFS-throttled).
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: verdify-db-cnpg
+  namespace: verdify-db-cnpg
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: db-cnpg
+spec:
+  instances: 3
+
+  # GHCR DIGEST-PINNED operand image, built + published by the cnpg-image.yml CI
+  # workflow from deploy/k8s/cnpg/image/Dockerfile on live/platform-main. Pinning
+  # by @sha256 (not the :16.13-ts2.25.2 tag) makes the operand immutable +
+  # reproducible — a tag re-push cannot silently change the running engine.
+  # The tag 16.13-ts2.25.2 resolves to this digest today; CNPG parses the PG
+  # major from the imageName when it is a tag, but with a pure digest it reads
+  # the major from the running instance — verified 16 on first boot.
+  imageName: ghcr.io/verdifyconsultancy/verdify-timescaledb-cnpg:16.13-ts2.25.2@sha256:b2513cc02e8c7b0bc710ac6b35813f3a4c5a43d86100e7f7aa395373315143e4
+  imagePullPolicy: IfNotPresent
+
+  # GHCR is private; reuse the verified-working read-only pull secret. CNPG
+  # propagates imagePullSecrets to the instance pods.
+  imagePullSecrets:
+    - name: ghcr-jvallery-readonly
+
+  # --- PostgreSQL configuration -------------------------------------------
+  postgresql:
+    shared_preload_libraries:
+      - timescaledb
+      - pg_stat_statements
+    parameters:
+      # Rehearsal sizing. LIVE is shared_buffers=2GB; the runbook restores that
+      # for the in-place verdify-prod cutover. 1GB is ample for the 1.2GB
+      # dataset's failover/PITR drills.
+      shared_buffers: "1GB"
+      work_mem: "16MB"
+      track_io_timing: "on"
+      log_min_duration_statement: "1000"
+      max_worker_processes: "32"
+
+  # --- Storage (matches the live StatefulSet) -----------------------------
+  storage:
+    size: 50Gi
+    storageClass: synology-iscsi-ssd
+  walStorage:
+    # Separate WAL volume (CNPG best practice; isolates WAL IO + fill).
+    size: 20Gi
+    storageClass: synology-iscsi-ssd
+
+  # --- Replication / RPO=0 ------------------------------------------------
+  # SYNCHRONOUS replication: at least 1 standby ACKs every commit → RPO=0 for
+  # committed transactions on an instant primary loss. With 3 instances and
+  # min=max=1, exactly one standby is sync (RPO=0) and one is an async spare;
+  # if the sync standby is the one lost, the spare is promoted to sync and
+  # commits continue (no permanent write-stall because maxSyncReplicas=1, leaving
+  # the third instance as the available sync candidate).
+  minSyncReplicas: 1
+  maxSyncReplicas: 1
+
+  primaryUpdateStrategy: unsupervised
+  primaryUpdateMethod: switchover
+
+  # --- Bootstrap ----------------------------------------------------------
+  # Fresh initdb (NOT restore-from-WAL of the live primary — that would COUPLE
+  # this cluster to the live DB's WAL, which the lane explicitly forbids). The
+  # live schema+data are loaded by the seed Job (30-seed-job.yaml) via
+  # pg_restore of the 02:21Z OFF-CLUSTER dump — decoupled from the live primary.
+  bootstrap:
+    initdb:
+      database: verdify
+      owner: verdify
+      secret:
+        name: verdify-db-cnpg-app
+      postInitApplicationSQL:
+        - CREATE EXTENSION IF NOT EXISTS timescaledb VERSION '2.25.2';
+        - CREATE EXTENSION IF NOT EXISTS pgcrypto;
+        - CREATE EXTENSION IF NOT EXISTS vector;
+
+  # --- Backup / WAL archiving / PITR --------------------------------------
+  # In-tree Barman object store → the dedicated MinIO. archive_mode is enabled
+  # automatically by CNPG when backup.barmanObjectStore is present → continuous
+  # WAL shipping = the PITR foundation. Base backups via ScheduledBackup +
+  # on-demand. PROD cutover (#245) repoints destinationPath/endpointURL/creds to
+  # the external OFF-NAS S3 target with a one-block edit.
+  backup:
+    retentionPolicy: "7d"
+    barmanObjectStore:
+      destinationPath: s3://verdify-wal/
+      endpointURL: http://minio:9000
+      s3Credentials:
+        accessKeyId:
+          name: minio-creds
+          key: AWS_ACCESS_KEY_ID
+        secretAccessKey:
+          name: minio-creds
+          key: AWS_SECRET_ACCESS_KEY
+      wal:
+        compression: gzip
+        maxParallel: 4
+      data:
+        compression: gzip
+        jobs: 2
+
+  # --- Scheduling: spread the 3 instances across distinct nodes (real HA) ----
+  # Anti-affinity is REQUIRED (not preferred) so a single node loss can never
+  # take more than one instance — the property the dev single-node pin could not
+  # prove. enablePodAntiAffinity + topologyKey hostname is the CNPG-native form.
+  affinity:
+    enablePodAntiAffinity: true
+    topologyKey: kubernetes.io/hostname
+    podAntiAffinityType: required
+
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      memory: "4Gi"
+---
+# App-role credentials for the CNPG-managed `verdify` owner. Rehearsal throwaway
+# value — this cluster is inert, nothing authenticates against it in anger. The
+# PROD cutover (#245 §3.2) seeds this role with the LIVE POSTGRES_PASSWORD (from
+# the SOPS-managed verdify-app-secrets) so the app's eventual DB_HOST flip needs
+# NO credential change.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: verdify-db-cnpg-app
+  namespace: verdify-db-cnpg
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: db-cnpg
+    cnpg.io/reload: "true"
+type: kubernetes.io/basic-auth
+stringData:
+  username: verdify
+  password: rehearsal-verdify-not-a-prod-secret

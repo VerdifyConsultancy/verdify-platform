@@ -1,0 +1,36 @@
+# PROD-TARGET CNPG cluster — DEDICATED, ISOLATED namespace (HA-6 / #244).
+#
+# WHY A SEPARATE NAMESPACE (not verdify-prod):
+#   * INERT-BY-CONSTRUCTION. This cluster is built ALONGSIDE the live
+#     verdify-prod/verdify-db to de-risk the gated cutover (#245). It is NOT the
+#     live DB and NOTHING points at it. Standing it in its own namespace makes
+#     "no app wires to it" structurally true: no verdify-prod ConfigMap/Service
+#     selector can accidentally resolve to it, and no ArgoCD Application that
+#     reconciles verdify-prod can sync or prune it.
+#   * BLAST-RADIUS ISOLATION for the WAL/PITR object store. The runbook (#245 §1)
+#     requires the WAL target to be OUTSIDE the live DB's correlated failure
+#     domain. The dedicated MinIO lives here, not in verdify-prod.
+#   * CLEAN DECOM. When the real cutover (#245) lands the CNPG cluster INTO
+#     verdify-prod as the live DB, this whole validation namespace is deleted in
+#     one shot — it is throwaway proof, not the production operand.
+#
+# At cutover time (#245) the PROD operand is re-materialized in verdify-prod
+# (same manifests, verdify-prod namespace, live credentials) — this namespace is
+# the rehearsal, not the destination.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: verdify-db-cnpg
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: db-cnpg-prod-target
+    verdify.io/scope: prod-cutover-rehearsal
+    # NOT a PodSecurity 'restricted' enforce label here: CNPG operand pods and
+    # the MinIO fixture run with the hardened securityContexts already, but the
+    # in-tree barman/minio jobs need a touch more latitude than verdify-dev's
+    # strict profile allowed. Baseline+audit is sufficient for a throwaway
+    # rehearsal namespace; the real cutover lands in verdify-prod under its
+    # existing policy.
+    pod-security.kubernetes.io/enforce: baseline
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted

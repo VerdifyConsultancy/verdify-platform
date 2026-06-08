@@ -1,0 +1,18 @@
+# Scheduled base backup for the PROD-TARGET CNPG cluster (HA-6 / #244). A base
+# backup + continuous WAL = the PITR window. CNPG schedule is a 6-field cron
+# (seconds first). target prefer-standby so the primary's IO is undisturbed
+# (mirrors the prod intent of never loading the primary for backups).
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: verdify-db-cnpg-daily
+  namespace: verdify-db-cnpg
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: db-cnpg
+spec:
+  schedule: "0 30 2 * * *"
+  backupOwnerReference: self
+  cluster:
+    name: verdify-db-cnpg
+  target: prefer-standby

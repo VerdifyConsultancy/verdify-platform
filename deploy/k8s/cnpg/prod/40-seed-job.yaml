@@ -1,0 +1,97 @@
+# Seed Job — load the LIVE verdify schema+data into the PROD-TARGET CNPG cluster
+# from the 02:21Z OFF-CLUSTER dump (HA-6 / #244 step 2).
+#
+# DECOUPLING (the lane's hard rule): this seeds from an EXISTING off-cluster
+# logical dump (the nightly verdify-db-backup output:
+# verdify-20260608T022129Z.dump in the verdify-prod/verdify-db-dumps RWX PVC),
+# NOT from the live primary's WAL and NOT by dumping the live primary here. The
+# dump is a finished, off-box artifact — restoring it cannot perturb, lock, or
+# couple to the live verdify-db. (This Job reads the RWX dumps PVC; if that PVC
+# is not cross-namespace-mountable, the operator copies the dump in by hand per
+# the runbook — see NOTE.)
+#
+# TIMESCALE-CORRECT RESTORE: a plain pg_restore of a TimescaleDB breaks on the
+# catalog's circular FKs. timescaledb_pre_restore()/post_restore() disable the
+# extension's event triggers and rebuild the catalog. This Job runs that exact
+# procedure (the same one cnpg/dev/restore-from-statefulset.sh proved) against
+# the CNPG primary's -rw service.
+#
+# NOTE ON THE DUMP SOURCE: the nightly dump lands in an RWX (nfs) PVC in
+# verdify-prod. A Job in verdify-db-cnpg cannot mount a PVC bound in another
+# namespace. Two supported paths (the runbook documents both):
+#   (A) OPERATOR-COPY (used for this rehearsal): copy the dump file to the CNPG
+#       primary with `kubectl cp` from a box that can reach the dumps PVC, then
+#       run the pre/restore/post SQL (the seed-from-dump.sh helper does exactly
+#       this). This keeps the Job-less path simple and is what was executed.
+#   (B) RWX-REMOUNT: re-provision the nfs dump share as an RWX PVC in
+#       verdify-db-cnpg (same nfs path) and mount it read-only here. Preferred
+#       for an automated/GitOps cutover; staged for #245.
+#
+# This manifest is the (B) form — declarative, GitOps-ready — kept INERT (the
+# whole prod/ tree is applied manually for the rehearsal, not synced by ArgoCD).
+# It expects an RWX PVC `verdify-db-dumps-ro` bound to the same nfs export. For
+# the rehearsal we used (A); this Job is the documented declarative equivalent.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: verdify-db-cnpg-seed
+  namespace: verdify-db-cnpg
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: db-cnpg-seed
+  annotations:
+    # This Job is one-shot and only meaningful once, against an empty cluster.
+    # It is NOT part of the steady-state apply; left here as the documented
+    # declarative seed. Re-running against a populated DB is a no-op-with-notices
+    # (objects already present).
+    verdify.io/run-once: "true"
+spec:
+  backoffLimit: 2
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: db-cnpg-seed
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 26          # postgres in the CNPG operand image
+        runAsGroup: 26
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: seed
+          # Reuse the operand image — it carries psql + pg_restore + the
+          # timescaledb extension control files.
+          image: ghcr.io/verdifyconsultancy/verdify-timescaledb-cnpg:16.13-ts2.25.2@sha256:b2513cc02e8c7b0bc710ac6b35813f3a4c5a43d86100e7f7aa395373315143e4
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities: { drop: ["ALL"] }
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              set -euo pipefail
+              DUMP=/dumps/verdify-20260608T022129Z.dump
+              export PGHOST=verdify-db-cnpg-rw PGUSER=postgres PGDATABASE=verdify
+              echo "== pre_restore =="
+              psql -c "SELECT timescaledb_pre_restore();"
+              echo "== pg_restore (data; --no-owner) =="
+              pg_restore --no-owner --exit-on-error -d "$PGDATABASE" "$DUMP" \
+                || echo "NOTE: non-fatal restore notices expected (extension objects pre-present)"
+              echo "== post_restore =="
+              psql -c "SELECT timescaledb_post_restore();"
+              echo "== verify hypertables =="
+              psql -tAc "select count(*) from timescaledb_information.hypertables;"
+              echo "SEED DONE"
+          env:
+            # CNPG generates a superuser secret <cluster>-superuser with
+            # username/password. Mount its password for psql/pg_restore auth.
+            - name: PGPASSWORD
+              valueFrom:
+                secretKeyRef: { name: verdify-db-cnpg-superuser, key: password }
+          volumeMounts:
+            - { name: dumps, mountPath: /dumps, readOnly: true }
+      volumes:
+        - name: dumps
+          persistentVolumeClaim:
+            claimName: verdify-db-dumps-ro

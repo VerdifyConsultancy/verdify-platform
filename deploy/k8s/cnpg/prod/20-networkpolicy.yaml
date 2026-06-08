@@ -1,0 +1,53 @@
+# NetworkPolicies for the PROD-TARGET CNPG stack. Even though verdify-db-cnpg is
+# a fresh namespace (no default-deny inherited), shipping explicit allows makes
+# the security posture intentional and mirrors what the in-place verdify-prod
+# cutover (#245) will need (verdify-prod DOES have default-deny-ingress).
+---
+# Allow ingress to MinIO (S3 :9000 + console :9001) from in-namespace pods (the
+# CNPG WAL archiver + mkbucket + base-backup jobs). Namespace-internal only.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-minio
+  namespace: verdify-db-cnpg
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: cnpg-backup-store
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: cnpg-backup-store
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: {}
+      ports:
+        - { protocol: TCP, port: 9000 }
+        - { protocol: TCP, port: 9001 }
+---
+# Allow the CNPG cluster instances to receive: PostgreSQL (5432), the CNPG
+# instance-manager status/metrics (8000), inter-instance replication, and the
+# postgres_exporter (9187). From in-namespace pods AND the operator namespace.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-cnpg-cluster
+  namespace: verdify-db-cnpg
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: db-cnpg
+spec:
+  podSelector:
+    matchLabels:
+      cnpg.io/cluster: verdify-db-cnpg
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: {}
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: cnpg-system
+      ports:
+        - { protocol: TCP, port: 5432 }
+        - { protocol: TCP, port: 8000 }
+        - { protocol: TCP, port: 9187 }

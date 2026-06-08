@@ -1,0 +1,26 @@
+# PROD-TARGET CNPG rehearsal stack (HA-6 / #244).
+#
+# Stands a production-grade CNPG TimescaleDB cluster (1 primary + 2 sync-capable
+# replicas, GHCR digest-pinned operand, synology-iscsi-ssd, WAL/PITR to a
+# dedicated MinIO) in its OWN namespace `verdify-db-cnpg`, ALONGSIDE the live
+# verdify-prod/verdify-db. It de-risks the gated cutover (#245) and is INERT:
+#   * nothing in verdify-prod points at it (separate namespace);
+#   * it is NOT wired into any ArgoCD Application (applied manually with
+#     `kubectl apply -k` for the failover/PITR rehearsal);
+#   * it never touches the live verdify-db or the device-writer ingestor.
+#
+# The seed Job (40-seed-job.yaml) is the DECLARATIVE seed-from-off-cluster-dump
+# form and is INTENTIONALLY EXCLUDED from this kustomization's steady-state
+# resource list — seeding is a one-shot operator action (run-once), not a
+# reconciled resource. It is committed as documentation + the GitOps-ready (B)
+# path for #245. Include it only when an RWX dumps PVC exists in this namespace.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - 00-namespace.yaml
+  - 10-minio.yaml
+  - 20-networkpolicy.yaml
+  - 20-cluster.yaml
+  - 30-scheduledbackup.yaml
+  # - 40-seed-job.yaml   # one-shot seed; run manually, not reconciled (see file)

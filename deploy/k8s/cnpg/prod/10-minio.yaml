@@ -1,0 +1,177 @@
+# Dedicated, ISOLATED MinIO object store for the PROD-TARGET CNPG cluster's
+# Barman WAL archiving + base backups + PITR (HA-6 / #244).
+#
+# WHY A DEDICATED MinIO (vs onyx-minio or the dev minio-dev):
+#   * ISOLATION / blast-radius. The runbook (#245 §1) mandates the WAL target be
+#     OFF the live DB's correlated failure domain and NOT shared with another
+#     team's bucket lifecycle. onyx-minio is the Onyx team's store; minio-dev is
+#     the dev fixture in verdify-dev. This one is the verdify DB-HA store.
+#   * DURABLE. Unlike the dev emptyDir fixture, this is PVC-backed
+#     (synology-iscsi) so the WAL archive SURVIVES a MinIO pod restart — required
+#     for a credible PITR proof and to mirror the prod intent (continuous
+#     archive that outlives any single pod).
+#
+# PROD-CUTOVER NOTE (#245): at real cutover the WAL/PITR target is an
+# OFF-NAS / external S3 endpoint (a store whose loss is NOT correlated with the
+# Synology that backs the DB PVCs) with SOPS-managed credentials. This in-cluster
+# MinIO is the REHEARSAL target — it proves the barman datapath, retention, and
+# PITR mechanics end-to-end; the runbook §1/§9 repoints destinationPath +
+# endpointURL + s3Credentials to the external store with a one-block edit. The
+# Cluster manifest's barmanObjectStore stanza is identical in shape.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: minio-creds
+  namespace: verdify-db-cnpg
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: cnpg-backup-store
+type: Opaque
+stringData:
+  # Rehearsal credentials for the namespace-internal MinIO. This store is
+  # ClusterIP-only and never reachable off-cluster. The PROD cutover (#245) swaps
+  # in SOPS-managed EXTERNAL S3 creds; these are never used outside this
+  # throwaway rehearsal namespace.
+  MINIO_ROOT_USER: verdify-cnpg-prod
+  MINIO_ROOT_PASSWORD: rehearsal-wal-store-not-a-prod-secret
+  AWS_ACCESS_KEY_ID: verdify-cnpg-prod
+  AWS_SECRET_ACCESS_KEY: rehearsal-wal-store-not-a-prod-secret
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minio-data
+  namespace: verdify-db-cnpg
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: cnpg-backup-store
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: synology-iscsi
+  resources:
+    requests:
+      # Sized to hold base backups (gzip'd ~ tens of MB for the 1.2GB DB) + the
+      # WAL stream within the 7d retention. 30Gi is generous for the rehearsal.
+      storage: 30Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio
+  namespace: verdify-db-cnpg
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: cnpg-backup-store
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate           # single RWO PVC; never two pods mounting it
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: cnpg-backup-store
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: cnpg-backup-store
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: minio
+          image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+          args: ["server", "/data", "--console-address", ":9001"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities: { drop: ["ALL"] }
+          env:
+            - name: MINIO_ROOT_USER
+              valueFrom:
+                secretKeyRef: { name: minio-creds, key: MINIO_ROOT_USER }
+            - name: MINIO_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: minio-creds, key: MINIO_ROOT_PASSWORD }
+          ports:
+            - { name: s3, containerPort: 9000 }
+            - { name: console, containerPort: 9001 }
+          readinessProbe:
+            httpGet: { path: /minio/health/ready, port: 9000 }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests: { cpu: "50m", memory: "256Mi" }
+            limits: { memory: "512Mi" }
+          volumeMounts:
+            - { name: data, mountPath: /data }
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: minio-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio
+  namespace: verdify-db-cnpg
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: cnpg-backup-store
+spec:
+  selector:
+    app.kubernetes.io/component: cnpg-backup-store
+  ports:
+    - { name: s3, port: 9000, targetPort: 9000 }
+    - { name: console, port: 9001, targetPort: 9001 }
+---
+# One-shot Job to create the WAL bucket before the cluster bootstraps. CNPG's
+# barmanObjectStore expects destinationPath's bucket to exist. Idempotent.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: minio-mkbucket
+  namespace: verdify-db-cnpg
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: cnpg-backup-store
+spec:
+  backoffLimit: 10
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: cnpg-backup-store
+    spec:
+      restartPolicy: OnFailure
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        seccompProfile: { type: RuntimeDefault }
+      containers:
+        - name: mc
+          image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            capabilities: { drop: ["ALL"] }
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -e
+              until mc alias set s3 http://minio:9000 "$AWS_ACCESS_KEY_ID" "$AWS_SECRET_ACCESS_KEY"; do
+                echo "waiting for minio..."; sleep 3
+              done
+              mc mb --ignore-existing s3/verdify-wal
+              mc ls s3/
+              echo "bucket ready"
+          env:
+            - name: MC_CONFIG_DIR
+              value: /tmp/.mc
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom: { secretKeyRef: { name: minio-creds, key: AWS_ACCESS_KEY_ID } }
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom: { secretKeyRef: { name: minio-creds, key: AWS_SECRET_ACCESS_KEY } }
