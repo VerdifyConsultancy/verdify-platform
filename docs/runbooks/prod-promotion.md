@@ -164,9 +164,10 @@ PR; prod SYNCING is the device gate.
 | Gate | Where | What it proves |
 |---|---|---|
 | ci.yml ledger (~12) | CI on every PR/push | lint, schemas+drift, firmware logic/replay-diff, fire-and-forget, restart hygiene |
+| **Device-Write Safety Gate (code)** | **ci.yml** | `tests/test_device_write_gate.py`: the ingestor never drives the ESP32 unless `VERDIFY_DEVICE_WRITE_ENABLED=='1'` (default-deny, layer-3 of the #71 interlock) |
 | k8s-manifests | CI | every overlay renders + kubeconform-valid |
 | container-publish smoke-import | CI, pre-push | the built image imports `verdify_schemas.alerts` before it can be pushed |
-| **Device-Write-Safety-Gate (static)** | **prod-promote.yml** | promotion is digests-only; non-image render byte-identical; interlock + egress-allow intact; all @sha256 |
+| **Device-Write-Safety-Gate (manifest)** | **prod-promote.yml** | promotion is digests-only; non-image render byte-identical; interlock + egress-allow intact; all @sha256 |
 | promote-diff-guard | **required check on the PR** | change-surface containment + a changed prod pin lands on EXACTLY the current staging digest |
 | **smoke (device-dark)** | **operator, post-staging-green (G10)** | api/mcp/db serve; staging ingestor replicas==0; ZERO device-VLAN sockets |
 | **device-monitor (single-writer)** | **operator, post-prod-sync** | EXACTLY ONE pod holds the ESP32 writer connection |
