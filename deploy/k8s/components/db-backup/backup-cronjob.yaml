@@ -75,42 +75,57 @@ spec:
                 - -c
                 - |
                   set -euo pipefail
-                  # NETPOL-RACE WAIT (why this job had NEVER succeeded):
-                  # the CNI (kube-router) programs the allow-db-from-backup
-                  # ingress rule for a freshly-scheduled pod ASYNCHRONOUSLY.
-                  # For the first ~5-10s of a new pod's life the rule is not
-                  # yet in the dataplane, so a connection to the DB is REJECTed
-                  # (Connection refused). The original script fired pg_dump
-                  # immediately under `set -e`, so it died on that refusal and
-                  # every nightly run (and its backoff retries, each a NEW pod
-                  # hitting the same race) failed. Block until the DB is
-                  # actually reachable before dumping. pg_isready is a cheap
-                  # SELECT-free TCP+startup probe; it does NOT write the DB.
-                  echo "[backup] waiting for ${DB_HOST}:${DB_PORT} to be reachable (CNI netpol-program race)"
-                  ready=0
-                  for attempt in $(seq 1 60); do
-                    if pg_isready -h "${DB_HOST}" -p "${DB_PORT}" -U "${DB_USER}" -d "${DB_NAME}" -t 3 >/dev/null 2>&1; then
-                      echo "[backup] DB reachable after ${attempt} attempt(s)"
-                      ready=1
-                      break
-                    fi
-                    sleep 2
-                  done
-                  if [ "${ready}" -ne 1 ]; then
-                    echo "[backup] FATAL: ${DB_HOST}:${DB_PORT} never became reachable after 120s" >&2
-                    exit 1
-                  fi
+                  # NETPOL-RACE: the CNI (kube-router) programs the
+                  # allow-db-from-backup ingress rule for a freshly-scheduled pod
+                  # ASYNCHRONOUSLY. For the first seconds of a new pod's life the
+                  # rule is not yet in the dataplane, so a connection to the DB is
+                  # REJECTed (Connection refused).
+                  #
+                  # A `pg_isready` gate is NOT sufficient (proven #273): pg_isready
+                  # can return rc=0 on one short probe while the very NEXT
+                  # connection — the pg_dump — still races a not-yet-fully-programmed
+                  # dataplane and gets `Connection refused`, leaving a 0-byte
+                  # .partial. Every nightly run did exactly that. The only reliable
+                  # readiness signal is a SUCCESSFUL pg_dump itself, so RETRY THE
+                  # DUMP (not just a probe) until it connects, with the same
+                  # write-partial-then-atomic-rename safety.
                   ts="$(date -u +%Y%m%dT%H%M%SZ)"
                   out="${BACKUP_DIR}/verdify-${ts}.dump"
-                  echo "[backup] pg_dump -Fc ${DB_NAME}@${DB_HOST} -> ${out}"
                   # -Fc custom format (compressed, restorable with pg_restore;
                   # preserves the TimescaleDB hypertable/compression catalog when
                   # paired with timescaledb_pre/post_restore at restore time).
-                  # Write to a .partial file first, then atomically rename, so a
-                  # crash mid-dump never leaves a truncated file that the prune
-                  # or a restore could mistake for a good backup.
-                  pg_dump -Fc -h "${DB_HOST}" -p "${DB_PORT}" -U "${DB_USER}" \
-                    -d "${DB_NAME}" -f "${out}.partial"
+                  echo "[backup] pg_dump -Fc ${DB_NAME}@${DB_HOST} -> ${out} (with netpol-race retry)"
+                  dumped=0
+                  for attempt in $(seq 1 30); do
+                    # cheap pre-probe just to log progress; the dump is the gate.
+                    pg_isready -h "${DB_HOST}" -p "${DB_PORT}" -U "${DB_USER}" -d "${DB_NAME}" -t 3 >/dev/null 2>&1 || true
+                    # A fresh .partial each attempt; a refused connection leaves a
+                    # 0-byte file we overwrite next loop, never a truncated good name.
+                    if pg_dump -Fc -h "${DB_HOST}" -p "${DB_PORT}" -U "${DB_USER}" \
+                         -d "${DB_NAME}" -f "${out}.partial" 2> /tmp/pg_dump.err; then
+                      dumped=1
+                      echo "[backup] pg_dump succeeded on attempt ${attempt}"
+                      break
+                    fi
+                    # Only swallow the transient connection-refused race; any other
+                    # pg_dump error (auth, disk, corruption) must fail loudly.
+                    if grep -qiE 'connection.*(refused|reset|timed out)|could not connect|server closed the connection' /tmp/pg_dump.err; then
+                      echo "[backup] attempt ${attempt}: DB not reachable yet (netpol race), retrying in 2s"
+                      sleep 2
+                      continue
+                    fi
+                    echo "[backup] FATAL: pg_dump failed with a non-transient error:" >&2
+                    cat /tmp/pg_dump.err >&2
+                    exit 1
+                  done
+                  if [ "${dumped}" -ne 1 ]; then
+                    echo "[backup] FATAL: pg_dump never connected after 30 attempts (~60s+):" >&2
+                    cat /tmp/pg_dump.err >&2
+                    rm -f "${out}.partial" || true
+                    exit 1
+                  fi
+                  # Atomic publish: rename the completed .partial to its final name
+                  # so the prune / a restore never sees a truncated file.
                   mv "${out}.partial" "${out}"
                   echo "[backup] wrote ${out} ($(du -h "${out}" | cut -f1))"
                   # RETENTION: keep the newest ${RETENTION_DAYS} days of dumps;
