@@ -32,6 +32,10 @@ resources:
   - api-deployment.yaml
   - mcp-deployment.yaml
   - ingestor-deployment.yaml
+  # HA-3.2 FENCE (#240): SA + Role/RoleBinding granting the ingestor minimal
+  # coordination.k8s.io Lease verbs for the single-writer fence. Inert until
+  # VERDIFY_WRITER_LEASE_ENABLED=1 (gated prod arm).
+  - ingestor-rbac.yaml
   - networkpolicy.yaml
 
 # Image namespace. Canonical org namespace is

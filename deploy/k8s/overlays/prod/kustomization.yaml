@@ -39,6 +39,11 @@ resources:
   # EDGE/WAN: host-route the prod verdify-lab Quartz site on lab.verdify.ai through
   # the same shared apps Traefik (.7.10) (#124). See lab-ingressroute.yaml.
   - lab-ingressroute.yaml
+  # HA-3 (#239): ingestor PDB maxUnavailable:1 (singleton-may-be-disrupted intent;
+  # correctness is the Lease fence, not the PDB). Additive — does NOT restart the
+  # writer. The fast-failover podSpec patch (priority/tolerations/cpu) is the
+  # SEPARATE gated STAGED-ha3-fast-failover-patch.yaml, deliberately NOT listed.
+  - ingestor-pdb.yaml
 
 # verdify-planner (#117) + verdify-mqtt fan-out broker (#113) — referenced as
 # Components, NOT added to base, so they never render into overlays/staging (the

@@ -160,3 +160,29 @@ setpoint_dispatch_in_progress = False
 
 # Timestamp of last ESP32 connect (used for boot-window gating)
 esp32_connected_at: float = 0.0
+
+# ── HA-3.2 single-writer fence (#240) ────────────────────────────────────────
+# The active WriterLease holder, set by esp32_loop in main() once the lease is
+# constructed. esp32_push.push_to_esp32 consults writer_lease_held() BEFORE every
+# device command so a fenced/lease-lost pod can NEVER push — even if a stale
+# shared.esp32["client"] reference lingers. None until set; when None the gate is
+# OPEN (fence inert / pre-arm), preserving exact pre-fence behaviour.
+writer_lease = None
+
+
+def writer_lease_held() -> bool:
+    """True iff it is safe to push to the device right now.
+
+    Returns True when no lease is configured (fence disabled/pre-arm) so the
+    push path is unchanged until the gated arm; otherwise defers to the
+    renew-or-die WriterLease.is_held().
+    """
+    lease = writer_lease
+    if lease is None:
+        return True
+    try:
+        return bool(lease.is_held())
+    except Exception:
+        # A bug in the fence must FAIL SAFE: if we cannot determine lease state,
+        # do NOT push (better a bounded zero-writer gap than a split-brain push).
+        return False
