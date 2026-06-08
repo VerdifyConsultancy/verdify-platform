@@ -44,6 +44,9 @@ spec:
         app.kubernetes.io/component: edge-traefik
     spec:
       serviceAccountName: verdify-traefik
+      # HA ha-1 / Lane A (#229): serving-tier priority so the tier-2 edge proxy
+      # is preempted only after batch, and never starved under node pressure.
+      priorityClassName: verdify-serving
       # Spread the 2 replicas across nodes so a single node loss can't take the
       # whole verdify edge tier down. Sprint ha-1 (#230): upgraded to HARD
       # (DoNotSchedule) — 4 schedulable workers >= 2 replicas => always
@@ -113,6 +116,12 @@ spec:
               cpu: 50m
               memory: 64Mi
             limits:
+              # HA ha-1 / Lane A (#226/#227): cap pathological burst on the
+              # tier-2 proxy. 1 core is ~500x steady (~2m) and far above any
+              # realistic tier-2 load, so CFS throttling never engages in
+              # practice (the design doc's keepalive concern is about TIGHT caps
+              # — this is a runaway ceiling, not a throttle).
+              cpu: "1"
               memory: 256Mi
 ---
 apiVersion: v1

@@ -1,0 +1,133 @@
+# HA Sprint ha-1 / Lane A (#226/#227/#229) — strategic-merge patches that add
+# verdify-serving priorityClass + a CPU LIMIT (burst containment, NOT a tight
+# throttle) to the STATELESS verdify-prod surfaces. PROD-OVERLAY ONLY — staging
+# and dev never reference this file, and base/components are untouched.
+#
+# Root cause being fixed: these containers carried CPU+mem REQUESTS and mem
+# LIMITS but NO CPU LIMIT, so any one could burst into all of a node's cores and
+# drive load to ~56 (incident). Each CPU limit below is ~8-80x the OBSERVED
+# steady CPU (kubectl top, 2026-06-07) and well above the request, so a healthy
+# pod is NEVER throttled — it only caps pathological runaway.
+#
+# Observed steady CPU (kubectl top -n verdify-prod):
+#   www 1m | lab 1m | api 3m | mcp 3m | planner 19m | grafana 26m(+renderer)
+#   | traefik 2m. Requests are LEFT AS-IS (already sane for scheduling).
+#
+# NOT INCLUDED (device path, gated ha-3): verdify-ingestor, verdify-setpoint-server.
+# Those keep NO CPU limit on purpose (CFS throttling harms device keepalive).
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-www
+spec:
+  template:
+    spec:
+      priorityClassName: verdify-serving
+      containers:
+        - name: www
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 250m      # ~250x steady 1m; pure caps for a static Node site
+              memory: 256Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-lab
+spec:
+  template:
+    spec:
+      priorityClassName: verdify-serving
+      containers:
+        - name: lab-site
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 250m      # static nginx; cap runaway only
+              memory: 128Mi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-api
+spec:
+  template:
+    spec:
+      priorityClassName: verdify-serving
+      containers:
+        - name: api
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: "2"       # 8x request; ample headroom for asyncpg bursts
+              memory: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-mcp
+spec:
+  template:
+    spec:
+      priorityClassName: verdify-serving
+      containers:
+        - name: mcp
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: "2"       # 8x request
+              memory: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-planner
+spec:
+  template:
+    spec:
+      priorityClassName: verdify-serving
+      containers:
+        - name: planner
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              cpu: "2"       # 8x request; >>observed 19m
+              memory: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-grafana
+spec:
+  template:
+    spec:
+      priorityClassName: verdify-serving
+      containers:
+        - name: grafana
+          resources:
+            requests:
+              cpu: 100m
+              memory: 384Mi   # bump 256->384Mi (observed working set ~768Mi);
+            limits:           # avoids eviction under node pressure (design §2.2)
+              cpu: "1"        # ~38x steady 26m
+              memory: 1Gi     # raise 768Mi->1Gi to match observed working set
+        - name: renderer
+          resources:
+            requests:
+              cpu: 50m
+              memory: 256Mi
+            limits:
+              cpu: "1"
+              memory: 1Gi
