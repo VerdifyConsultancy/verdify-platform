@@ -47,6 +47,11 @@ metadata:
   labels:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: api
+    agent-fleet.vallery.net/edge: vallery-edge
+  annotations:
+    agent-fleet.vallery.net/exposure: public
+    agent-fleet.vallery.net/auth-mode: none
+    agent-fleet.vallery.net/public-dns-gate: api-auth-review-required
 spec:
   entryPoints:
     - websecure

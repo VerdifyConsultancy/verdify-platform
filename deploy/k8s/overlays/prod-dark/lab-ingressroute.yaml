@@ -18,6 +18,11 @@ metadata:
   labels:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: lab-site
+    agent-fleet.vallery.net/edge: vallery-edge
+  annotations:
+    agent-fleet.vallery.net/exposure: public
+    agent-fleet.vallery.net/auth-mode: none
+    agent-fleet.vallery.net/public-dns-gate: intentional-public-content
 spec:
   entryPoints:
     - websecure

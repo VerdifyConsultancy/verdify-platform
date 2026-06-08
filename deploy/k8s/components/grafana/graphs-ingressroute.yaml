@@ -19,6 +19,11 @@ metadata:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: grafana
     traefik-tier: verdify
+    agent-fleet.vallery.net/edge: verdify-tier2
+  annotations:
+    agent-fleet.vallery.net/exposure: public
+    agent-fleet.vallery.net/auth-mode: none
+    agent-fleet.vallery.net/public-dns-gate: intentional-public-content
 spec:
   entryPoints: [verdify-web]
   routes:

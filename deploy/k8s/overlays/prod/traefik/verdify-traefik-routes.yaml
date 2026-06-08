@@ -43,6 +43,11 @@ metadata:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: www
     traefik-tier: verdify
+    agent-fleet.vallery.net/edge: verdify-tier2
+  annotations:
+    agent-fleet.vallery.net/exposure: public
+    agent-fleet.vallery.net/auth-mode: none
+    agent-fleet.vallery.net/public-dns-gate: intentional-public-content
 spec:
   entryPoints: [verdify-web]
   routes:
@@ -64,6 +69,11 @@ metadata:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: lab-site
     traefik-tier: verdify
+    agent-fleet.vallery.net/edge: verdify-tier2
+  annotations:
+    agent-fleet.vallery.net/exposure: public
+    agent-fleet.vallery.net/auth-mode: none
+    agent-fleet.vallery.net/public-dns-gate: intentional-public-content
 spec:
   entryPoints: [verdify-web]
   routes:
@@ -85,6 +95,11 @@ metadata:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: api
     traefik-tier: verdify
+    agent-fleet.vallery.net/edge: verdify-tier2
+  annotations:
+    agent-fleet.vallery.net/exposure: public
+    agent-fleet.vallery.net/auth-mode: none
+    agent-fleet.vallery.net/public-dns-gate: api-auth-review-required
 spec:
   entryPoints: [verdify-web]
   routes:
@@ -106,6 +121,11 @@ metadata:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: mcp
     traefik-tier: verdify
+    agent-fleet.vallery.net/edge: verdify-tier2
+  annotations:
+    agent-fleet.vallery.net/exposure: public
+    agent-fleet.vallery.net/auth-mode: none
+    agent-fleet.vallery.net/public-dns-gate: mcp-auth-review-required
 spec:
   entryPoints: [verdify-web]
   routes:
