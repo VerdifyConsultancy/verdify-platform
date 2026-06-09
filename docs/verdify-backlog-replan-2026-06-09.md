@@ -190,3 +190,39 @@ Authoritative replan of the entire Verdify board, executed live against `Verdify
 
 ---
 *Generated 2026-06-09 by the firmware agent (Claude) under operator authorization; executed live with an admin-scoped repo token. See the unified roll-up epic #286 for the living board.*
+
+## Follow-up — 2026-06-09 PM
+
+This section records post-replan actions taken on the afternoon of 2026-06-09, weaving in operator (Jason) input and the GitHub tracking work completed.
+
+### Native GitHub sub-issue hierarchy created
+
+The replan's three epics are now linked via native GitHub sub-issue relationships (not just prose references), so the hierarchy is navigable directly in the issue UI and on the Org Project board:
+
+- **#286** (replan roll-up) → **#287** (Greenhouse Control Optimization, req A–E) and **#288** (Deploy Enablement)
+- **#287** → children **#289 … #300**
+- **#288** → children **#301 … #307**
+
+### Two issues added
+
+- **#307 — PR-only branch protection.** Codifies that firmware/code/shared-territory changes land via PR (the firmware CI gates run only on `pull_request`); docs may go direct. Filed as a child of #288.
+- **#308 — Public lab-site crop exposure.** Tracks exposing crop data on the public lab site.
+
+### Two PRs opened
+
+- **#309 — Firmware-OTA SealedSecret shape + runbook** → targets `live/platform-main`. Carries the turnkey OTA password-sealing artifacts (the #301 prerequisite for the firmware-OTA subset).
+- **#310 — BACKLOG canonical pointer** → targets `main`. Establishes the canonical pointer for the backlog.
+
+### R4 fan button — operator answer resolves the path forward
+
+Operator (Jason) confirmed the failed R4 fan press was **yesterday evening (2026-06-08 PM)** and that **it happens REGULARLY** (recurring, not a one-off). A recurring/systematic failure points primarily at the min-off dwell cause (H2: fans applied with `force_on=false` at `controls.yaml` ~808–809, so a press within ~90 s of a fan cycle-off is silently swallowed) and/or a habitual double-press toggle-cancel (H1).
+
+Decision: the fix — pass `force_on=true` for fans/vent during the manual window, mirroring the fog micropulse — addresses the recurring case and **proceeds WITHOUT waiting on the exact-timestamp telemetry discriminator**. The DB pull is now confirmation, not a blocker. Tracked as **#289**.
+
+### OTA password sealing reframed (#301)
+
+OTA password sealing is reframed from "hard blocker" to a **tracked backlog prerequisite for the firmware-OTA subset only**. Most of the control-optimization program (req B/C/D — dispatcher/registry/DB-policy work) ships WITHOUT any OTA. Only the firmware halves — button fix **#289** and dusk-cutoff firmware **#292** — need the compile → bake → OTA path. Turnkey sealing artifacts live in **PR #309**. Tracked as **#301**.
+
+### Full coverage
+
+All work is tracked: **63 issues + 8 PRs**, all on Org Project "Iris / Verdify" **#1**.

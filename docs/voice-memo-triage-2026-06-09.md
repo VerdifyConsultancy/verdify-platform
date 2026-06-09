@@ -14,7 +14,7 @@ adversarial code-walks). File references are to this repo at `live/platform-main
 | R1 | Fans button: momentary toggle → both fans ON + vent OPEN for configurable timeout (default 10 min), superseding all automation; second press cancels | **Partial** — mechanism exists, precedence doesn't |
 | R2 | Humid button: same semantics, fogger only | **Broken** — subordinate to every fog rail; dead while vent is open |
 | R3 | Vent bypass: fans ON with vent CLOSED (winter house-air pull) | **Missing** — current button does the opposite (full air lockdown) |
-| R4 | Buttons supersede everything; live observation: fan press → no fans | **Broken** — confirmed, 4 ranked causes, discriminator identified |
+| R4 | Buttons supersede everything; live observation: fan press → no fans | **Broken (recurring)** — last failed press 2026-06-08 PM, happens regularly; points at the systematic min-off dwell cause (H2); `force_on` fix proceeds now (#289), discriminator is confirmation not a blocker |
 | R5 | Temp+VPD on solar-aligned smooth curve; remove "weird orchid dry cutoff" | **Half-shipped** — DB curve is solar+smooth (mig 145); firmware night rails frozen at June clock-hours because the dispatcher push was never built |
 | R6 | Two lighting schedules: main=orchid photoperiod, grow=hydroponics | **Partial** — per-circuit machinery shipped, but one shared max-DLI(pepper) policy feeds both |
 | R7 | Soil moisture/EC feedback loop on irrigation/fertigation | **Missing by design** — read-side only; gated on probe bring-up (RM-3), now 2 generations stale vs physical reality |
@@ -65,7 +65,16 @@ Ranked, code-confirmed causes for "pressed fans, nothing happened":
    clamp, so a saturated probe reading 100.x% fails the `<=100.0` test.
 4. **Dead PCF8574 (H4).** Press never reaches firmware; nothing logs.
 
-**Discriminator (needs live DB + incident timestamp from Jason):** the
+**Recurring failure (operator confirmation 2026-06-09):** the failed press was the
+**evening of 2026-06-08**, and it **happens regularly** — not a one-off. A recurring,
+systematic failure points primarily at the min-off dwell cause (H2: fans applied with
+`force_on=false` at `controls.yaml:808-809`, so a press within ~90 s of a fan cycle-off
+is silently swallowed) and/or a habitual double-press toggle-cancel (H1). The `force_on`
+fix (below) addresses the recurring case and **should proceed now without waiting on the
+exact-timestamp discriminator — the DB pull is confirmation, not a blocker.** Tracked as
+issue #289.
+
+**Discriminator (live DB confirmation, no longer gating the fix):** the
 `fan_burst_active` series (`entity_map.py:329`) plus `fan1/fan2` equipment_state and
 `mode_reason` at press time. Flag armed + fans off → H2/H3 (mode_reason
 `sensor_fault` separates H3); flag flicker/fall → H1; no change → H4 (and absence of
@@ -117,8 +126,10 @@ The dispatch reader confirmed nothing server-side can be the culprit (fan relays
 overlays retired with "quiet behavior belongs in firmware"). The boost window already
 lives in the right place; what's missing is precedence, not placement:
 
-1. Pass `force_on=true` for fans (and fogger during fog boost) while the manual
-   window is active — mirror the vent's existing escape.
+1. Pass `force_on=true` for fans (and vent/fogger during the manual window) — mirror
+   the vent's existing escape and the fog micropulse. This addresses the recurring H2
+   dwell-swallow directly and **proceeds now** (discriminator = confirmation, not a
+   blocker). Tracked as issue #289.
 2. Debounce the PCF8574 inputs (`delayed_on` filter) and split "start" vs "cancel"
    feedback (at minimum an ESP_LOG + a distinct HA event; ideally a panel LED).
 3. New vent-bypass semantics: a modifier flag that (a) keeps manual-fan boost active,
@@ -339,10 +350,13 @@ no alternate controllers, replay zero-divergence, single live control path.
 
 - Freeze rules in force: no OTA with open critical alerts, ≤1 OTA/week, 48 h bake,
   replay-diff THRESHOLD_PCT=0, cfg_* readback per new tunable, full PR artifact set.
-- **OTA may be blocked entirely right now:** post-k3s-cutover the `.150` VM is off,
-  preflight is re-homed to kube-exec, but the OTA password is **not yet sealed in
-  k3s** (gated on Jason, per 87f5610) and the rollback-floor refresh (#256) is staged
-  only. Seal the secret before any R1–R4 OTA.
+- **OTA sealing blocks only the firmware-OTA subset; tracked as #301.** Post-k3s-cutover
+  the `.150` VM is off, preflight is re-homed to kube-exec, but the OTA password is **not
+  yet sealed in k3s** and the rollback-floor refresh (#256) is staged only. This is a
+  tracked backlog item (#301), turnkey via PR #309 — **not a hard blocker.** It only
+  gates the firmware halves (button fix #289, dusk-cutoff firmware #292); the rest of the
+  control-optimization program (dispatcher/registry/DB-policy work) ships without any OTA.
+  Seal the secret before the R1–R4 button-fix OTA.
 - Live firmware version needs confirmation (staged 2026.5.30.1314 vs live
   2026.5.30.1155) via kube-exec, plus live-DB confirmation that migrations 145/146+
   applied per the 2026-05-30 runbook.
@@ -351,8 +365,10 @@ no alternate controllers, replay zero-divergence, single live control path.
 
 ## Decisions needed from Jason
 
-1. **R4 incident timestamp** (approx. time of the failed press on 2026-06-09) so the
-   telemetry discriminator can be run — this picks the fix.
+1. **R4 incident timestamp — ANSWERED (2026-06-09):** the failed press was the **evening
+   of 2026-06-08** and **happens regularly** (recurring, not a one-off). The recurring
+   signature points at the systematic H2 dwell cause; the `force_on` fix (#289) proceeds
+   now and the telemetry discriminator is confirmation, not a blocker.
 2. **R2 supersede tier:** which fog gates may a manual humid press beat (07–17
    window, RH≤90, 10 °F dew margin, fog-closes-vent) vs. keep (leak, SAF-5
    fert-master, SAF-4 volume cap)? And must fan-boost + fog-boost work
@@ -375,7 +391,10 @@ no alternate controllers, replay zero-divergence, single live control path.
    cannabis pot? And confirm the "both probes in one cucumber pot" history vs. the
    repo's "unpotted" record, for re-baselining S1.
 9. **West grow circuit:** OK to set `sw_gl_grow_auto_mode=0` now?
-10. **OTA secret sealing** in k3s — unblocks all firmware work.
+10. **OTA secret sealing** in k3s — tracked **backlog item #301** (turnkey artifacts in
+    PR #309), **not a blocker** for the non-OTA control-optimization work (req B/C/D —
+    dispatcher/registry/DB-policy). It is a prerequisite only for the firmware-OTA subset
+    (button fix #289, dusk-cutoff firmware #292).
 
 ## Suggested routing (per CLAUDE.md agent scopes)
 
