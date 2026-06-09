@@ -56,9 +56,9 @@ components:
 # ArgoCD selfHeal reconcile cannot stand up a second writer. dev must never be a
 # 2nd writer. See ingestor-replicas-zero.yaml.
 # PER-ENV DB STORAGE (#115): retarget the verdify-db PVC from the base
-# local-path to the volume1 'synology-iscsi-ssd' StorageClass (laptop-root
-# gate). dev gets its OWN TimescaleDB StatefulSet on the Synology SSD (NOT
-# prod's DB), seeded by the gated copy-not-move pg_dump restore runbook.
+# local-path to Longhorn NVMe RWO storage. dev gets its OWN TimescaleDB
+# StatefulSet (NOT prod's DB), seeded by the gated copy-not-move pg_dump restore
+# runbook.
 patches:
 - path: env-configmap.yaml
 - path: ingestor-replicas-zero.yaml

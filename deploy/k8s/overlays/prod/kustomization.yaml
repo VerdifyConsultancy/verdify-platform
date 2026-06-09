@@ -111,8 +111,8 @@ components:
 
 patches:
   # PROD DB STORAGE RECONCILE: restate verdify-db's volumeClaimTemplate onto
-  # synology-iscsi-ssd to match the ALREADY-MIGRATED live prod DB (Bound 5d+).
-  # git==live -> no immutable-field StatefulSet patch attempt. See
+  # Longhorn NVMe RWO storage to match the migrated live prod DB. git==live
+  # -> no immutable-field StatefulSet patch attempt. See
   # db-storageclass-iscsi.yaml. Reconcile-to-live only; does NOT recreate the STS.
   - path: db-storageclass-iscsi.yaml
   # DEVICE-WRITE INTERLOCK (#79): VERDIFY_DEVICE_WRITE_ENABLED=1 — prod only.

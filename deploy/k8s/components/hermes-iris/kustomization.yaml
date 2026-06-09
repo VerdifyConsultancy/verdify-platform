@@ -8,8 +8,8 @@ kind: Component
 # compose, deliberately PRESERVED (the overlay images: transformer only matches
 # the verdify-* app names, so it is left byte-identical). State PVC +
 # verdify-hermes / verdify-hermes-slack Secrets are provided out-of-band; this
-# component is INERT until the verdify-prod ArgoCD app + synology-iscsi-ssd
-# StorageClass exist (laptop-root gate). See hermes-iris.yaml header.
+# component is INERT until the verdify-prod ArgoCD app + Longhorn storage
+# classes exist (laptop-root gate). See hermes-iris.yaml header.
 resources:
   - hermes-iris.yaml
   # #213 IaC Hermes profile (gpt-5.5/OpenAI + in-cluster MCP url), seeded onto the

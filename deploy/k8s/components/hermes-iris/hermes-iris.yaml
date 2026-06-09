@@ -31,8 +31,7 @@
 # gated handoff step.
 #
 # STATE PVC: compose mounts host /var/lib/verdify/hermes/iris -> /opt/data. In
-# k3s this is a PVC on the volume1 'synology-iscsi-ssd' StorageClass (laptop-root
-# gate, same as the per-env DBs). The slack.yaml referenced by
+# k3s this is a PVC on Longhorn NVMe RWO storage. The slack.yaml referenced by
 # VERDIFY_SLACK_CONFIG=/opt/data/slack.yaml lives on that PVC; the NON-SECRET
 # slack channel config is also available from the verdify-hermes-slack mount.
 apiVersion: v1
@@ -44,9 +43,8 @@ metadata:
     app.kubernetes.io/component: hermes-iris
 spec:
   accessModes: ["ReadWriteOnce"]
-  # volume1 iSCSI SSD class (laptop-root-provisioned). Same gate as the per-env
-  # DB StatefulSets; INERT until the StorageClass exists.
-  storageClassName: synology-iscsi-ssd
+  # Longhorn NVMe RWO storage. Same platform gate as the per-env DB StatefulSets.
+  storageClassName: longhorn-nvme-rwo
   resources:
     requests:
       storage: 5Gi
