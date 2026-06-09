@@ -1,5 +1,13 @@
 # Backlog — Cycle Index
 
+> **CANONICAL TRACKING (2026-06-09 full replan):** the authoritative live backlog is now
+> GitHub Issues + Org Project **"Iris / Verdify" #1**, rolled up under epic **#286**.
+> The written replan is [`docs/verdify-backlog-replan-2026-06-09.md`](verdify-backlog-replan-2026-06-09.md)
+> (per-issue triage, milestone map, workstreams) with control diagnoses in
+> [`docs/voice-memo-triage-2026-06-09.md`](voice-memo-triage-2026-06-09.md). Greenhouse control
+> work = epic **#287** (req A–E); deploy/agent enablement = epic **#288**. The per-agent
+> `docs/backlog/*.md` files below predate this replan and are historical reference.
+
 Per-agent backlogs live in `docs/backlog/{agent}.md`. This file is the index + "who's on what this cycle."
 
 ## Verdify refocus command (2026-05-15)
