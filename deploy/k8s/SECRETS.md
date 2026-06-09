@@ -70,6 +70,7 @@ Service → Secret → key wiring as authored in `deploy/k8s/{base,components}`:
 | `verdify-app-secrets` | `ESP32_API_KEY` | ingestor (`secretKeyRef`); **device-affecting** | ref-only¹ | ref-only¹ | ✓ |
 | `verdify-app-secrets` | `OPENAI_API_KEY` | planner (`secretKeyRef`, `optional: true`) | ✓ | — | ✓ |
 | `verdify-ha-token` | `ha_token.txt` | setpoint-server (volume mount); **device-affecting** | — | — | ✓ |
+| `verdify-firmware-ota` | `ota_password` | **operator OTA tooling host** (`OTA_PW` env for `make firmware-deploy` / `firmware-rollback.sh`); NOT a pod; **device-affecting**, standalone | — | — | ✓³ |
 | `verdify-hermes` | `OPENAI_API_KEY`, `HERMES_MCP_URL`² | hermes-iris (`envFrom.secretRef`) | — | — | ✓ |
 | `verdify-hermes-slack` | slack channel config | hermes-iris (optional volume mount; **non-secret** channel cfg) | — | — | opt |
 | `ghcr-jvallery-readonly` | `.dockerconfigjson` | all workloads (`imagePullSecrets`) | ✓ | ✓ | ✓ |
@@ -80,6 +81,17 @@ but is never exercised — those envs never connect to the live ESP32.
 
 ² `HERMES_MCP_URL` is the migration doc **R7** gate: it must point at
 `verdify-mcp.verdify-prod.svc:8000` and is repointed at SEAL time, never committed.
+
+³ `verdify-firmware-ota` is the ESPHome OTA password (`firmware/greenhouse.yaml`
+`ota:` → `!secret ota_password`). UNLIKE every other Secret here, **no in-cluster
+workload mounts it** — the operator OTA tooling host reads it into `OTA_PW` for
+`make firmware-deploy` / `scripts/firmware-rollback.sh` (espota2 → ESP32
+`192.168.10.111:3232`, run from a greenhouse-LAN host, NEVER a pod). OTA is never part
+of the k3s cutover (`k3s-cutover-sequence.md` DoD #7). Device-affecting and kept
+STANDALONE (like `verdify-esp32-psk`) so a bulk app-secret re-seal can never touch it;
+the value + canonical source + rotate-vs-carry are **Jason-gated** (a rotation implies
+a re-flash, so the default is carry-existing, no re-flash). Sealing procedure:
+`docs/runbooks/firmware-ota-secret-sealing.md`.
 
 `DB_PASS` / `DB_PASSWORD` / `DB_DSN` / `VERDIFY_DB_DSN` are derived in-manifest from
 `POSTGRES_PASSWORD` + the non-secret connection fields in the `verdify-config`
@@ -115,6 +127,7 @@ For a REAL apply, drop the `- *.placeholder.yaml` lines from the overlay's
 | `overlays/prod/secrets.placeholder.yaml` | `verdify-app-secrets` | prod |
 | `overlays/prod/ha-token.placeholder.yaml` | `verdify-ha-token` | prod |
 | `overlays/prod/hermes-secret.placeholder.yaml` | `verdify-hermes` | prod |
+| `overlays/prod/firmware-ota-secret.placeholder.yaml` | `verdify-firmware-ota` | prod |
 
 `verdify-hermes-slack` (optional, non-secret channel config) and
 `ghcr-jvallery-readonly` (image-pull, delivered out-of-band by Root) have no

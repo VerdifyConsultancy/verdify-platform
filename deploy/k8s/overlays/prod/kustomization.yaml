@@ -30,6 +30,14 @@ resources:
   # ANNOTATION -> EXCLUDED from build output (OpenAI key never emitted). Real
   # verdify-hermes via SOPS out-of-band. See hermes-secret.placeholder.yaml.
   - hermes-secret.placeholder.yaml
+  # PLACEHOLDER firmware OTA-password Secret for local build ONLY. NO pod mounts it:
+  # the operator OTA tooling host reads verdify-firmware-ota/ota_password into OTA_PW
+  # for `make firmware-deploy` / firmware-rollback.sh (espota2 -> :3232, NOT a pod).
+  # Device-affecting, standalone (cf. verdify-esp32-psk), prod-only. local-config
+  # ANNOTATION -> EXCLUDED from build output. Real value via SOPS out-of-band,
+  # Jason-gated. See docs/runbooks/firmware-ota-secret-sealing.md +
+  # firmware-ota-secret.placeholder.yaml.
+  - firmware-ota-secret.placeholder.yaml
   # DEVICE WRITE PATH: the SINGLE egress allow letting the prod ingestor reach the
   # live device VLAN. See allow-ingestor-device-egress.yaml.
   - allow-ingestor-device-egress.yaml
