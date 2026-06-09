@@ -17,6 +17,18 @@ kind: StatefulSet
 metadata:
   name: verdify-db
 spec:
+  template:
+    spec:
+      nodeSelector:
+        storage.vallery.net/longhorn: "true"
+      containers:
+        - name: postgres
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              memory: "6Gi"
   volumeClaimTemplates:
     - metadata:
         name: db-data
