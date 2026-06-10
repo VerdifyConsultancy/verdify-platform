@@ -193,7 +193,7 @@ images:
   # hermes-agent is deliberately ABSENT from this transformer — its upstream
   # @sha256 is preserved inline in the component (NOT transformer-pinned).
   - name: ghcr.io/verdifyconsultancy/verdify-setpoint-server
-    digest: sha256:73f5599f4a8e6e00c5d6e80847e1cbe3d49cc3e95527d0e53d150ac94b0e2f5a
+    digest: sha256:5ada15b7834b178107c94c842cad9cd9ff1f6a910cda0faccdf29c4e9012e575
   # verdify-www (#116): real GHCR digest of the marketing site image built from
   # the upstream verdify-www repo at sha b33f4cd (see components/www/www.yaml).
   # Published + repo-linked by verdify-www's publish-image.yml workflow and
