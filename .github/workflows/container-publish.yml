@@ -100,7 +100,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 2
+          # Full history: the impact diff runs against github.event.before /
+          # the PR base sha; a shallow fetch-depth:2 made those diffs fail and
+          # silently fall back to HEAD^..HEAD (last commit only), which skipped
+          # builds on multi-commit pushes (observed 2026-06-10).
+          fetch-depth: 0
 
       - name: Resolve changed files and image impact
         id: impact
@@ -477,9 +481,13 @@ jobs:
     # dev workload (verdify-planner runs in verdify-dev), so its digest pins
     # like the others here; it remains excluded from the prod-promote tracked
     # set until its prod adoption is gated in.
+    # workflow_dispatch included (2026-06-10): a manual dispatch on main is the
+    # operator's full-pipeline button — build+publish ALL images, then bump the
+    # dev overlay digests so verdify-dev auto-deploys them. Historically the
+    # bump was push-only, which stranded dispatch-published digests unpinned.
     if: |
       always() &&
-      github.event_name == 'push' &&
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
       github.ref == 'refs/heads/main' &&
       needs.image-impact.outputs.image_publish == 'true'
     runs-on: ubuntu-latest
