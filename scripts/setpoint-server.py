@@ -231,6 +231,24 @@ def record_state_change_sync(equipment: str, is_on: bool) -> bool:
 
 
 def get_db_url() -> str:
+    # Env-first DSN (#118 §A1 code gate — the k3s prerequisite). Order:
+    #   1. VERDIFY_DB_DSN / DATABASE_URL (a full DSN; ignored if it still
+    #      carries unexpanded $(VAR) k8s references — envFrom vars are not
+    #      available to $() expansion, so a composed spec value arrives raw)
+    #   2. DB_HOST + friends (the verdify-config ConfigMap via envFrom +
+    #      POSTGRES_PASSWORD via secretKeyRef — the in-cluster shape)
+    #   3. legacy VM fallback: /srv/verdify/.env + localhost
+    for var in ("VERDIFY_DB_DSN", "DATABASE_URL"):
+        dsn = os.environ.get(var, "")
+        if dsn and "$(" not in dsn:
+            return dsn
+    host = os.environ.get("DB_HOST")
+    if host:
+        user = os.environ.get("DB_USER", "verdify")
+        pw = os.environ.get("POSTGRES_PASSWORD") or os.environ.get("DB_PASSWORD", "verdify")
+        port = os.environ.get("DB_PORT", "5432")
+        name = os.environ.get("DB_NAME", "verdify")
+        return f"postgresql://{user}:{pw}@{host}:{port}/{name}"
     pw = "verdify"
     env_file = "/srv/verdify/.env"
     if os.path.exists(env_file):

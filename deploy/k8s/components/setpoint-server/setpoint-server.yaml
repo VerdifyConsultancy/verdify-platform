@@ -89,10 +89,12 @@ spec:
                 secretKeyRef:
                   name: verdify-app-secrets
                   key: POSTGRES_PASSWORD
-            # Env-first DSN (consumed once the §A1 setpoint-server.py refactor
-            # lands; harmless to set now). $(VAR) resolves against envFrom + env.
-            - name: VERDIFY_DB_DSN
-              value: "postgresql://$(DB_USER):$(POSTGRES_PASSWORD)@$(DB_HOST):$(DB_PORT)/$(DB_NAME)"
+            # NO composed VERDIFY_DB_DSN here: k8s $(VAR) expansion cannot see
+            # envFrom variables, so the composed value arrived as a raw
+            # "$(DB_USER):..." literal. The §A1 env-first get_db_url() (landed
+            # 2026-06-10) builds the DSN from DB_HOST/DB_PORT/DB_NAME/DB_USER
+            # (envFrom verdify-config) + POSTGRES_PASSWORD (secretKeyRef) at
+            # runtime instead.
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
