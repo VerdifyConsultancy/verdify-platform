@@ -1,6 +1,10 @@
 # Verdify — Agent Working Guide
 
-This repo is worked by several Claude agents in parallel plus a human coordinator (Jason). Every session that edits code here should read this file first.
+This repo is worked by **one agent** (Claude, running on Jason's laptop with full
+project ownership) plus Jason as the human gate for device-affecting and
+outward-facing actions. Every session that edits code here should read this
+file first. (The earlier five-persistent-agents model is retired — Jason,
+2026-06-10.)
 
 ## What Verdify is
 
@@ -30,40 +34,32 @@ An AI-driven climate controller for a single 367 sq ft greenhouse in Longmont, C
   gated prod sync, and the firmware OTA procedure (all runnable from any
   kubectl host).
 
-## Agents
+## Ownership
 
-Five persistent agents, each owning one scope. Branches are prefixed by agent name; worktrees live at `/mnt/iris/verdify-worktrees/{agent}/`. Per-agent scope docs live in `docs/agents/`.
+**One agent owns the whole project** — firmware (ESP32 C++ / ESPHome / OTA),
+ingestor, planner/genai (iris_planner, mcp, prompts), web (api, site
+generators, Quartz lab site), deploy/k8s + CI, schemas, and migrations. The
+per-subsystem docs under `docs/agents/` survive as **subsystem reference
+docs** (what each layer does, its invariants, its gotchas) — read the
+relevant one before deep work in that layer; ignore their multi-agent
+routing/handoff language.
 
-| Agent | Owns | Branch prefix | Scope doc |
-|---|---|---|---|
-| [`firmware`](docs/agents/firmware.md) | ESP32 C++ (`greenhouse_logic.h`), ESPHome YAML, firmware replay, OTA, sensor health | `firmware/*` | `docs/agents/firmware.md` |
-| [`ingestor`](docs/agents/ingestor.md) | `ingestor/*.py`, setpoint dispatcher, HA/Shelly/Tempest sync, `alert_monitor`, daily snapshot | `ingestor/*` | `docs/agents/ingestor.md` |
-| [`genai`](docs/agents/genai.md) | `iris_planner.py`, `mcp/server.py`, `templates/`, prompts, scorecard/lessons/plan-evaluation | `genai/*` | `docs/agents/genai.md` |
-| [`web`](docs/agents/web.md) | `api/main.py`, `scripts/generate-*`, `scripts/vault-*`, Quartz `site/` | `web/*` | `docs/agents/web.md` |
-| [`saas`](docs/agents/saas.md) | Cloud Run, Cloud SQL, GCE MQTT, Firebase Auth, future React app | `saas/*` | `docs/agents/saas.md` |
-| [`coordinator`](docs/agents/coordinator.md) | Schemas, migrations, CI, infra, cross-cutting refactors, review + merge | `coordinator/*` or direct to main | `docs/agents/coordinator.md` |
+**Jason is the human gate** for: device-affecting actions (firmware OTA, the
+prod ArgoCD sync that touches the live writer, anything on the device VLAN),
+DB-destructive operations on prod, credential rotation, and outward-facing
+infra (public DNS/edge, org settings). Everything else — code, schemas,
+migrations (with the safety rules below), CI, k8s manifests, docs — the agent
+lands autonomously on `main`, keeping CI green.
 
-**Find your scope doc and read it before touching files.** Scope docs name what's yours, what adjacent agents touch, and what to route through coordinator.
+Discipline that stays (it was never about the org chart):
 
-## Shared territory
-
-No agent owns these. Changes here go through coordinator (Jason) — file a focused PR, don't edit autonomously:
-
-- `verdify_schemas/` — cross-layer Pydantic contracts; touched by every agent
-- `db/migrations/` — schema migrations; serialized, reviewed holistically
-- `docker-compose.yml`, `systemd/`, `traefik/`, `mqtt/`, `.github/workflows/` — infra
-- `CLAUDE.md` (this file), `README.md`, `docs/agents/**` — organizational docs
-- `pyproject.toml` — tool config
-
-Rule: if the file listed here is in your diff, pause and ask coordinator.
-
-## How agents coordinate
-
-1. **Schema changes land first.** If your work needs a new `verdify_schemas/` model or a field addition, land that in a schema-only PR (coordinator reviews). Next cycle, the consumer PR (yours) lands against the new schema.
-2. **Migrations are serialized.** One migration PR at a time across the whole repo. Coordinator approves the sequence.
-3. **When you need another agent's territory**, file a focused PR into their scope, don't reach across. Label it `requested-by: {your-agent}` in the PR body. The owning agent reviews on their next cycle.
-4. **Drift guards are the wire protocol.** If `verdify_schemas/tests/test_drift_guards.py` passes, two agents can merge independently — the boundary is intact.
-5. **Hand off by doc, not by DM.** Anything a future session of any agent needs to know goes into that agent's `docs/agents/{name}.md` or a memory file, not into chat.
+1. **Schema changes land first**, consumers next — keeps drift guards meaningful.
+2. **Migrations are serialized** — one migration change at a time, classified
+   by the rollback-safety tooling below.
+3. **Drift guards are the wire protocol** — `verdify_schemas/tests/test_drift_guards.py`
+   green means layer boundaries are intact.
+4. **Hand off by doc** — anything a future session needs goes into docs/
+   (or project memory), not chat history.
 
 ## Migration safety: never wrap a self-committing migration
 
@@ -97,21 +93,20 @@ The guard is codified, not prose-only:
 - CI job `migration-rollback-safety` (`.github/workflows/ci.yml`) flags any
   self-committing migration touched in a PR.
 
-## Branches & sprints
+## Branches, working copy & memory
 
-- Each agent has its own sprint counter. Example: `ingestor/sprint-5-...`, `firmware/sprint-7-...`, `saas/sprint-11-...`.
-- The old dual-stream numbering retires. The prior operational sprints (17–23) are documented in each agent's scope doc where they overlap.
-- Sprints land as **one commit per sprint** with a detailed multi-section message (see `e96f9ba`, `47f8154` for examples).
-
-## Worktrees & memory
-
-- Worktrees: `/mnt/iris/verdify-worktrees/{firmware,ingestor,genai,web,saas}/`. The `main` worktree at `/mnt/iris/verdify` is coordinator-only.
-- Persistent agent memory: `~/.claude-agents/verdify-{agent}/projects/-mnt-iris-verdify-worktrees-{agent}/memory/`.
-- User-level and feedback memories (about Jason, how he likes to work) are shared across all agent dirs — duplicate them at the start of each agent's life.
+- Work lands on `main` (direct commits for routine work, PRs when review is
+  useful or a workflow generates them, e.g. prod-promote). Topic branches are
+  free-form; no sprint counters (retired with the multi-agent model — the
+  iris-VM worktrees at `/mnt/iris/...` are gone with the .150 VM).
+- The working copy is `~/repos/verdify-platform` on Jason's laptop; persistent
+  agent memory lives in the laptop project-memory directory and survives
+  sessions.
 
 ## Backlog
 
-See `docs/BACKLOG.md` for the cycle index. Per-agent backlogs in `docs/backlog/{agent}.md`. Cross-cutting work (schemas, infra, Grafana, deps) in `docs/backlog/cross-cutting.md`.
+GitHub issues on `VerdifyConsultancy/verdify-platform` are THE tracker.
+`docs/BACKLOG.md` / `docs/backlog/*` are historical; don't extend them.
 
 ## Checks before commit
 
@@ -140,14 +135,14 @@ Post-2026-04-21 incident (sprint-15/15.1 fix-it-forward spiral producing repeate
 
 8. **Every firmware PR must show a replay-diff.** CI job `firmware-replay-diff` runs `scripts/firmware-replay-diff.sh` against merge-base. Default `THRESHOLD_PCT=0` means zero mode/relay divergence allowed. Intentional divergence (e.g. Phase 2 dwell-gate rollout) requires coordinator approval + explicit `THRESHOLD_PCT` override in the PR.
 
-9. **Required PR artifacts** for firmware changes:
+9. **Required artifacts** for firmware changes (PR body or commit message):
    - Replay diff output (`make firmware-replay OLD=<base> NEW=HEAD`)
    - Invariant-suite output (`make firmware-invariants`)
    - Unit-test delta (`make test-firmware`)
-   - Coordinator (iris-dev) independent replay reproduction
-   - Iris planner concurrence brief for any interface-level change
 
-Coordinator approves merge only when all three reviewers (firmware agent, coordinator, iris) agree. Then 48-hour wait before OTA.
+Single-agent model: the CI gates (replay-diff, invariants, unit tests) are
+the reviewers; Jason is the human gate for the OTA itself. The 48-hour bake
+between OTAs stays.
 
 ## Testing infrastructure (phase-0 deliverables)
 
