@@ -164,13 +164,13 @@ patches:
 # GHCR digests in-repo.
 images:
   - name: ghcr.io/verdifyconsultancy/verdify-api
-    digest: sha256:00d0615f5653fa9c4bd01673855da35d8b44aa3a27311e1a134a59ce0baaf9c9
+    digest: sha256:02e4e5e3a567b12d94e24bbd64768049c468e1bb3604c395a7a3e67a4c68690d
   - name: ghcr.io/verdifyconsultancy/verdify-mcp
-    digest: sha256:51d42e88f00e9f514de8eef324ae7e1076360052a917fe5a8eac1956756da3b9
+    digest: sha256:24ca85ebff5fe74f968ca6df469f1d0e30979fee0cb909522f0d90c497af4ac8
   - name: ghcr.io/verdifyconsultancy/verdify-ingestor
-    digest: sha256:c26e0e67ea0d67751e21448a95660e3e4a37c214d98f228f50a8b08c02d1fbc5
+    digest: sha256:e4717dc3b94917366b24ea24d50361ee4ffb275b8b5d68c22b46c744ac6395c4
   - name: ghcr.io/verdifyconsultancy/verdify-migrate
-    digest: sha256:3d16d2e7c67fe6a5edcccd059d7c27a01f50caa711d3b935c553c904f48d8fa0
+    digest: sha256:6c754b09c2e7eafd8d28fc8cee56f1d9366a86105fd77f16548e096dbc5d2c9a
   # verdify-planner (#117): real published GHCR digest, resolved read-only via
   # `gh api orgs/VerdifyConsultancy/packages/container/verdify-planner/versions`
   # (the `branch-live-platform-main` build of planner_graph/). The planner image is
@@ -181,7 +181,7 @@ images:
   # (that job only repins overlays/staging + the INERT overlays/dev planner pin),
   # so this prod pin is a deliberate in-repo write-back, never CI-mutated.
   - name: ghcr.io/verdifyconsultancy/verdify-planner
-    digest: sha256:3e51abaec6372c0bed26ef9859a80008261fcd20a1e8ec1e37627304e1c6b637
+    digest: sha256:b149869996b2322fea26ad68a0d963dd607e0a93c626e136d0a8378d263e33c4
   # verdify-setpoint-server (#118): real GHCR digest of the grow-light writer +
   # setpoint-diagnostics image built from scripts/Dockerfile.setpoint-server. The
   # `branch-live-platform-main` build is published + repo-linked to
