@@ -45,7 +45,7 @@ spec:
   project: app-test
   source:
     repoURL: https://github.com/VerdifyConsultancy/verdify-platform.git
-    targetRevision: live/platform-main
+    targetRevision: main
     path: deploy/k8s/overlays/dev
   destination:
     server: https://kubernetes.default.svc

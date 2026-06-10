@@ -33,13 +33,13 @@ name: Container Publish
 #    coordinator/James review, NOT an autonomous merge.
 #  * VerdifyConsultancy/verdify-platform is READ-ONLY to the agent: this is a
 #    PR into that org with James coordinating; never a direct push.
-#  * PRODUCTION BRANCH DRIFT (P0): the verified production branch on-box and on
-#    the remote is `live/platform-main` (4 ahead of `main`, 0 behind), NOT a
-#    bare `live` and NOT `main`. The default branch is still `main`. This
-#    Per Jason's 2026-05-31 decision the canonical source-of-truth / deploy
-#    branch is `live/platform-main` (the ArgoCD targetRevision). This workflow
-#    publishes ONLY from `live/platform-main`; pushes to `main` build but never
-#    publish. ArgoCD reconciles `deploy/k8s/overlays/{staging,prod}` from it.
+#  * CANONICAL BRANCH = `main` (Jason, 2026-06-10): the 2026-05-31
+#    `live/platform-main` split is retired — `main` (the default branch, where
+#    PRs land) is the single source-of-truth / deploy branch and the ArgoCD
+#    targetRevision. This workflow publishes ONLY from `main`; pull requests
+#    build without publishing. ArgoCD reconciles `deploy/k8s/overlays/{dev,prod}`
+#    from `main`. The staging overlay/env is RETIRED (the verdify-local-staging
+#    app + verdify-staging ns were removed); `dev` is the proving environment.
 #  * The Dockerfiles (./api/Dockerfile.prod, ./mcp/Dockerfile.prod,
 #    ./ingestor/Dockerfile) and the deploy/k8s tree are net-new (P3) and land in
 #    a SEPARATE PR. Until they exist these build jobs will fail at `docker build`
@@ -55,29 +55,23 @@ name: Container Publish
 on:
   push:
     branches:
-      - live/platform-main
       - main
-    # LOOP-BREAK (#78): the bump-staging-digests job below commits the new
-    # @sha256 digests back into deploy/k8s/overlays/staging/** on a push to
-    # live/platform-main. Without this filter that bump commit would retrigger
-    # this same workflow (rebuild -> publish -> bump -> ...), an infinite loop.
-    # The bump commit ONLY touches overlays/staging/kustomization.yaml, so a
-    # push whose entire diff is under overlays/staging never rebuilds images.
+    # LOOP-BREAK (#78): the bump-dev-digests job below commits the new
+    # @sha256 digests back into deploy/k8s/overlays/dev/** on a push to
+    # main. Without this filter that bump commit would retrigger this same
+    # workflow (rebuild -> publish -> bump -> ...), an infinite loop. The bump
+    # commit ONLY touches overlays/dev/kustomization.yaml, so a push whose
+    # entire diff is under overlays/dev never rebuilds images.
     # Defense-in-depth: the bump commit body also carries [skip ci]; this
     # paths-ignore is the primary, deterministic guard (skip-ci only covers the
     # exact-marker case, not e.g. a hand-edit to the overlay).
-    #
-    # overlays/dev (#127, #99): the same bump commit also repins the
-    # verdify-planner AND verdify-migrate digests into
-    # overlays/dev/kustomization.yaml. dev is INERT (no ArgoCD app applied), and
-    # that repin must likewise not retrigger this workflow, so the dev overlay is
-    # included in the loop-break paths-ignore.
+    # overlays/staging stays listed while the retired staging overlay is still
+    # in-tree (hand-edits to it must never rebuild images either).
     paths-ignore:
       - "deploy/k8s/overlays/staging/**"
       - "deploy/k8s/overlays/dev/**"
   pull_request:
     branches:
-      - live/platform-main
       - main
   workflow_dispatch:
 
@@ -297,7 +291,7 @@ jobs:
       dockerfile: api/Dockerfile
       image-name: ${{ github.repository_owner }}/verdify-api
       push: true
-      publish-branches: live/platform-main
+      publish-branches: main
       build-args: |
         GIT_SHA=${{ github.sha }}
         GIT_REF=${{ github.ref_name }}
@@ -324,7 +318,7 @@ jobs:
       dockerfile: mcp/Dockerfile
       image-name: ${{ github.repository_owner }}/verdify-mcp
       push: true
-      publish-branches: live/platform-main
+      publish-branches: main
       build-args: |
         GIT_SHA=${{ github.sha }}
         GIT_REF=${{ github.ref_name }}
@@ -348,7 +342,7 @@ jobs:
       dockerfile: ingestor/Dockerfile
       image-name: ${{ github.repository_owner }}/verdify-ingestor
       push: true
-      publish-branches: live/platform-main
+      publish-branches: main
       build-args: |
         GIT_SHA=${{ github.sha }}
         GIT_REF=${{ github.ref_name }}
@@ -383,7 +377,7 @@ jobs:
       dockerfile: planner_graph/Dockerfile
       image-name: ${{ github.repository_owner }}/verdify-planner
       push: true
-      publish-branches: live/platform-main
+      publish-branches: main
       build-args: |
         GIT_SHA=${{ github.sha }}
         GIT_REF=${{ github.ref_name }}
@@ -413,7 +407,7 @@ jobs:
       dockerfile: db/Dockerfile.migrate
       image-name: ${{ github.repository_owner }}/verdify-migrate
       push: true
-      publish-branches: live/platform-main
+      publish-branches: main
       build-args: |
         GIT_SHA=${{ github.sha }}
         GIT_REF=${{ github.ref_name }}
@@ -442,7 +436,7 @@ jobs:
       dockerfile: scripts/Dockerfile.setpoint-server
       image-name: ${{ github.repository_owner }}/verdify-setpoint-server
       push: true
-      publish-branches: live/platform-main
+      publish-branches: main
       build-args: |
         GIT_SHA=${{ github.sha }}
         GIT_REF=${{ github.ref_name }}
@@ -453,21 +447,21 @@ jobs:
       smoke-import: verdify_schemas.alerts
 
   # ---------------------------------------------------------------------------
-  # In-repo digest write-back into deploy/k8s/overlays/staging (LOCKED DECISION:
-  # the digest bump is an in-repo commit on live/platform-main — NO cross-repo
-  # PR, NO ArgoCD Image Updater). After the 4 verdify-* images publish to in-org
-  # GHCR, this job pins overlays/staging to the exact @sha256 digests of the
-  # images built from THIS commit and commits the bump back to
-  # live/platform-main. ArgoCD (repoint is jvallery/laptop-root's #65) then
-  # reconciles staging to the new digests. prod is promoted separately (gated),
-  # so it is intentionally NOT auto-bumped here.
+  # In-repo digest write-back into deploy/k8s/overlays/dev (LOCKED DECISION:
+  # the digest bump is an in-repo commit on main — NO cross-repo PR, NO ArgoCD
+  # Image Updater). After the verdify-* images publish to in-org GHCR, this job
+  # pins overlays/dev to the exact @sha256 digests of the images built from
+  # THIS commit and commits the bump back to main. ArgoCD (verdify-dev app,
+  # auto-sync) then reconciles the dev environment to the new digests — dev is
+  # the proving environment (staging is RETIRED). prod is promoted separately
+  # via the gated prod-promote workflow, so it is intentionally NOT auto-bumped.
   #
   # Only images that actually rebuilt this run carry a digest; skipped images
   # (no path impact) leave an empty output, and we keep the existing pin for
   # those — the bump is digest-by-digest, never blanking an unbuilt image.
   # ---------------------------------------------------------------------------
-  bump-staging-digests:
-    name: Bump overlays/staging image digests
+  bump-dev-digests:
+    name: Bump overlays/dev image digests
     needs:
       - image-impact
       - api-image
@@ -475,33 +469,27 @@ jobs:
       - ingestor-image
       - migrate-image
       - planner-image
-    # DECOUPLED FROM migrate (#78): the orphaned verdify-migrate package
-    # (repo:None -> permission_denied: write_package) failing must NOT block
-    # bumping api/mcp/ingestor. This job now runs with always() semantics gated
-    # ONLY on a production-branch push that intended to publish images; it no
-    # longer hard-requires ANY individual image job's result in the `if:`. The
-    # pin() helper below already no-ops on an empty digest, so a failed/skipped
-    # image simply keeps its current overlay pin and never blocks the others.
-    # migrate stays in `needs:` so its digest is readable for BOTH the staging
-    # pin (the staging overlay references verdify-migrate) and the overlays/dev
-    # migrate repin (#99 — dev self-heals its migrate pin off a phantom on each
-    # green migrate build, mirroring the staging pin), but it is dropped from the
-    # `if:` gate so its failure cannot block the bump.
-    # The planner image is in `needs:` ONLY to read its digest for the dev-overlay
-    # repin (#127); the planner is still absent from overlays/staging.
+    # DECOUPLED FROM migrate (#78): a single failing image job must NOT block
+    # bumping the others. This job runs with always() semantics gated ONLY on a
+    # main-branch push that intended to publish images; the pin() helper below
+    # no-ops on an empty digest, so a failed/skipped image simply keeps its
+    # current overlay pin and never blocks the rest. The planner IS a deployed
+    # dev workload (verdify-planner runs in verdify-dev), so its digest pins
+    # like the others here; it remains excluded from the prod-promote tracked
+    # set until its prod adoption is gated in.
     if: |
       always() &&
       github.event_name == 'push' &&
-      github.ref == 'refs/heads/live/platform-main' &&
+      github.ref == 'refs/heads/main' &&
       needs.image-impact.outputs.image_publish == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - name: Checkout live/platform-main
+      - name: Checkout main
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
-          ref: live/platform-main
+          ref: main
           # Need a writable token to push the digest bump back to the branch.
           token: ${{ github.token }}
 
@@ -513,15 +501,16 @@ jobs:
           tar -C /usr/local/bin -xzf /tmp/kustomize.tar.gz kustomize
           kustomize version
 
-      - name: Pin published digests into overlays/staging
+      - name: Pin published digests into overlays/dev
         env:
           API_DIGEST: ${{ needs.api-image.outputs.image_digest }}
           MCP_DIGEST: ${{ needs.mcp-image.outputs.image_digest }}
           INGESTOR_DIGEST: ${{ needs.ingestor-image.outputs.image_digest }}
           MIGRATE_DIGEST: ${{ needs.migrate-image.outputs.image_digest }}
+          PLANNER_DIGEST: ${{ needs.planner-image.outputs.image_digest }}
         run: |
           set -euo pipefail
-          cd deploy/k8s/overlays/staging
+          cd deploy/k8s/overlays/dev
 
           # ref is "ghcr.io/verdifyconsultancy/verdify-<c>@sha256:<hex>".
           # `kustomize edit set image name@digest` rewrites the pin in place.
@@ -540,48 +529,13 @@ jobs:
           pin "$MCP_DIGEST"
           pin "$INGESTOR_DIGEST"
           pin "$MIGRATE_DIGEST"
-
-      - name: Repin planner + migrate digests into overlays/dev (#127, #99)
-        env:
-          PLANNER_DIGEST: ${{ needs.planner-image.outputs.image_digest }}
-          MIGRATE_DIGEST: ${{ needs.migrate-image.outputs.image_digest }}
-        run: |
-          set -euo pipefail
-          # AUTO-REPIN THE PLANNER + MIGRATE DIGESTS IN THE DEV OVERLAY (#127,
-          # #99). The dev overlay reuses the staging-verified app-image digests
-          # as a known-good baseline, but the planner and migrate pins can drift
-          # to a phantom (a placeholder @sha256:0000… for planner; a deleted
-          # digest for migrate). When either image publishes this run, write its
-          # real @sha256 digest into overlays/dev so neither stays a dead pin.
-          # The dev migrate repin MIRRORS the staging migrate pin above (same
-          # MIGRATE_DIGEST source), so a migrate-impacting (db/**) push now
-          # self-heals BOTH overlays' migrate pin in one bump. SAFE: dev is
-          # INERT — there is NO verdify-dev ArgoCD Application applied, so this
-          # bump deploys nothing. prod is NEVER touched here (human-gated). The
-          # push paths-ignore is extended to overlays/dev/** so this bump commit
-          # does not retrigger the workflow (same loop-break as overlays/staging).
-          cd deploy/k8s/overlays/dev
-          repin() {
-            local label="$1" ref="$2"
-            if [ -z "$ref" ]; then
-              echo "no $label digest published this run (job skipped/failed); keeping the existing dev pin."
-              return 0
-            fi
-            case "$ref" in
-              *@sha256:*) ;;
-              *) echo "refusing non-digest $label image ref: $ref" >&2; exit 1 ;;
-            esac
-            kustomize edit set image "$ref"
-            echo "repinned dev $label -> $ref"
-          }
-          repin planner "${PLANNER_DIGEST:-}"
-          repin migrate "${MIGRATE_DIGEST:-}"
+          pin "$PLANNER_DIGEST"
 
       - name: Validate digest-only render
         run: |
           set -euo pipefail
           # Every verdify-* image must be @sha256-pinned (no mutable tag leaks).
-          rendered="$(kustomize build deploy/k8s/overlays/staging)"
+          rendered="$(kustomize build deploy/k8s/overlays/dev)"
           if printf "%s" "$rendered" \
               | grep -E '^\s+image: ghcr.io/verdifyconsultancy/verdify-' \
               | grep -qv '@sha256:'; then
@@ -595,29 +549,25 @@ jobs:
           set -euo pipefail
           git config user.name "verdify-ci[bot]"
           git config user.email "verdify-ci@users.noreply.github.com"
-          # Both overlays can change independently: staging on an api/mcp/ingestor/
-          # migrate digest bump, dev on a planner repin (#127). Commit if EITHER
-          # moved; exit clean if neither did.
-          staging_overlay="deploy/k8s/overlays/staging/kustomization.yaml"
           dev_overlay="deploy/k8s/overlays/dev/kustomization.yaml"
-          if git diff --quiet -- "$staging_overlay" "$dev_overlay"; then
+          if git diff --quiet -- "$dev_overlay"; then
             echo "no digest change to commit"
             exit 0
           fi
-          git add "$staging_overlay" "$dev_overlay"
+          git add "$dev_overlay"
           # [skip ci] in the SUBJECT line (honored by GitHub Actions anywhere in
           # the message, but placed first so it is unmissable) is the secondary
           # loop-break; the primary is the on.push paths-ignore for
           # deploy/k8s/overlays/{staging,dev}/** above. Bot author keeps the bump
           # commits attributable + filterable.
-          git commit -m "ci: [skip ci] bump overlays staging+dev image digests to ${GITHUB_SHA:0:12}
+          git commit -m "ci: [skip ci] bump overlays/dev image digests to ${GITHUB_SHA:0:12}
 
           In-repo digest write-back (locked decision, no cross-repo PR, no
-          ArgoCD Image Updater). Digests pin overlays/staging to the verdify-*
-          images built from ${GITHUB_SHA}; overlays/dev gets the verdify-planner
-          digest repinned (#127, dev is INERT — no ArgoCD app applied). ArgoCD
-          reconciles staging from here; prod is human-gated and never bumped."
-          git push origin HEAD:live/platform-main
+          ArgoCD Image Updater). Digests pin overlays/dev to the verdify-*
+          images built from ${GITHUB_SHA}. ArgoCD (verdify-dev, auto-sync)
+          reconciles the dev environment from here; prod is human-gated via
+          prod-promote and never auto-bumped."
+          git push origin HEAD:main
 
   # ---------------------------------------------------------------------------
   # Request the Agent Fleet GitOps dev-to-test promotion. The api image SHA tag
@@ -646,7 +596,7 @@ jobs:
     if: |
       always() &&
       github.event_name == 'push' &&
-      github.ref == 'refs/heads/live/platform-main' &&
+      github.ref == 'refs/heads/main' &&
       needs.image-impact.outputs.image_publish == 'true'
     runs-on: ubuntu-latest
     permissions:

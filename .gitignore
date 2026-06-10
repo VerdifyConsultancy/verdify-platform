@@ -68,3 +68,4 @@ firmware/artifacts/
 
 CLAUDE.md
 .claude-tmp/
+.claude/

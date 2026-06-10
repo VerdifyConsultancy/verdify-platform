@@ -7,16 +7,16 @@ name: CNPG TimescaleDB image
 #
 # SHARED-INFRA / PR-GATED: like container-publish.yml, .github/** is shared infra
 # and VerdifyConsultancy is PR-only for the agent — this lands as a reviewed PR,
-# never an autonomous merge. Publishes ONLY from live/platform-main; PRs build
+# never an autonomous merge. Publishes ONLY from main; PRs build
 # without pushing for validation.
 on:
   push:
-    branches: [live/platform-main]
+    branches: [main]
     paths:
       - "deploy/k8s/cnpg/image/**"
       - ".github/workflows/cnpg-image.yml"
   pull_request:
-    branches: [live/platform-main, main]
+    branches: [main]
     paths:
       - "deploy/k8s/cnpg/image/**"
       - ".github/workflows/cnpg-image.yml"
@@ -45,7 +45,7 @@ jobs:
       dockerfile: deploy/k8s/cnpg/image/Dockerfile
       image-name: ${{ github.repository_owner }}/verdify-timescaledb-cnpg
       push: true
-      publish-branches: live/platform-main
+      publish-branches: main
       # The tag MUST start with the PG major so CNPG can parse the version from
       # the image tag (16.13-ts2.25.2 → major 16). The reusable build also emits
       # the immutable @sha256 digest (its output) — pin THAT in overlays/prod.

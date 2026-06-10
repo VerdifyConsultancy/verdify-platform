@@ -2,24 +2,24 @@ name: Prod Promote
 
 # #220 — ONE-CLICK / ONE-APPROVAL prod-promotion entry point.
 #
-# This is the missing top of the gated commit -> stage -> prod promotion flow.
-# The lower half already exists and is LIVE on live/platform-main:
+# This is the top of the gated commit -> dev -> prod promotion flow.
+# The lower half lives on main (staging is RETIRED; dev is the proving env):
 #
 #   container-publish.yml   push -> build+publish digest-pinned images ->
-#                           IN-REPO write-back bumps overlays/staging (+ dev)
-#                           digests -> ArgoCD AUTO-SYNCS verdify-local-staging.
+#                           IN-REPO write-back bumps overlays/dev digests ->
+#                           ArgoCD AUTO-SYNCS verdify-dev.
 #                           (LOCKED decision: in-repo bump, no cross-repo PR,
 #                           no ArgoCD Image Updater.)
 #   k8s-manifests.yml       renders+kubeconform-validates every overlay.
 #   ci.yml                  the logic/schema/firmware/drift gates.
 #   promote-diff-guard.yml  the REQUIRED check on a prod-promote PR: asserts the
 #                           PR advances ONLY prod image digests, and only to the
-#                           digest staging is CURRENTLY running (no fabricated
+#                           digest dev is CURRENTLY running (no fabricated
 #                           pin, no manifest/replica/device-write/NetPol edit).
 #
-# WHAT WAS MISSING (this file): a button that GENERATES the prod-promote PR so
-# Jason stops hand-editing overlays/prod digests. A maintainer clicks Run
-# workflow (mode=pull-request) -> this job reads the CURRENT staging digests,
+# WHAT THIS FILE IS: a button that GENERATES the prod-promote PR so Jason
+# stops hand-editing overlays/prod digests. A maintainer clicks Run
+# workflow (mode=pull-request) -> this job reads the CURRENT dev digests,
 # runs the local promotion gates (Device-Write-Safety-Gate + change-surface
 # self-check), bumps overlays/prod/kustomization.yaml to exactly those digests,
 # and opens a `prod-promote`-labelled PR. promote-diff-guard.yml then enforces
@@ -27,11 +27,12 @@ name: Prod Promote
 #
 # *** THE DEVICE-WRITE HUMAN GATE IS PRESERVED ***
 # Merging this PR only changes the prod overlay's image digests in git. It does
-# NOT sync the cluster: the verdify-prod ArgoCD Application is MANUAL-SYNC on
-# purpose (no syncPolicy.automated) precisely because its ingestor is the ONE
-# real ESP32 writer. The new prod digests sit OutOfSync until an operator runs
-# `argocd app sync verdify-prod` AFTER the separate device-VLAN sign-off +
-# single-writer cutover are explicitly approved by Jason. This workflow never
+# NOT sync the cluster: the prod ArgoCD Application (live app name:
+# verdify-prod-dark) is MANUAL-SYNC on purpose (no syncPolicy.automated)
+# precisely because its ingestor is the ONE real ESP32 writer. The new prod
+# digests sit OutOfSync until an operator runs
+# `argocd app sync verdify-prod-dark` AFTER the device-write gate is
+# explicitly approved by Jason. This workflow never
 # calls ArgoCD, never scales/patches the live ingestor, never touches the device.
 #
 # DRY-RUN by default: prints the digest delta and the gate verdicts but opens no
@@ -51,10 +52,11 @@ on:
           - pull-request
       images:
         description: >-
-          Comma-separated staging-tracked images to promote (subset of:
-          api,mcp,ingestor,migrate,www). Empty = promote EVERY staging-tracked
-          prod pin that currently lags staging. Prod-only images
-          (planner/setpoint-server/lab/mqtt/hermes) are NEVER promoted here.
+          Comma-separated dev-tracked images to promote (e.g.
+          api,mcp,ingestor,migrate,www,lab,planner). Empty = promote EVERY
+          dev-tracked prod pin that currently lags dev. Prod-only images
+          (those absent from the dev render, e.g. setpoint-server) are NEVER
+          promoted here.
         required: false
         default: ""
         type: string
@@ -68,7 +70,7 @@ concurrency:
 
 jobs:
   promote:
-    name: Compute staging->prod digest promotion and open PR
+    name: Compute dev->prod digest promotion and open PR
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -78,13 +80,12 @@ jobs:
       IMAGES_INPUT: ${{ github.event.inputs.images }}
       PROMOTE_BRANCH: gitops/verdify-prod-promote
       PROD_OVERLAY: deploy/k8s/overlays/prod
-      STAGING_OVERLAY: deploy/k8s/overlays/staging
       DEV_OVERLAY: deploy/k8s/overlays/dev
     steps:
-      - name: Checkout live/platform-main
+      - name: Checkout main
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
-          ref: live/platform-main
+          ref: main
           fetch-depth: 0
           token: ${{ github.token }}
 
@@ -98,7 +99,7 @@ jobs:
           kustomize version
 
       # ── Resolve the EFFECTIVE rendered digest maps (robust to formatting) ────
-      - name: Compute staging-tracked promotion delta
+      - name: Compute dev-tracked promotion delta
         id: delta
         run: |
           set -euo pipefail
@@ -112,7 +113,7 @@ jobs:
               | sort -u
           }
 
-          render_map "$STAGING_OVERLAY" > /tmp/staging.map
+          render_map "$DEV_OVERLAY" > /tmp/dev.map
           render_map "$PROD_OVERLAY"    > /tmp/prod.map
 
           # Snapshot the prod render with image lines STRIPPED — this is the
@@ -123,17 +124,17 @@ jobs:
             | grep -vE '^\s+image: ghcr\.io/verdifyconsultancy/' \
             > /tmp/prod.render.base.noimg
 
-          echo "=== staging (current, source of truth for promotable digests) ==="
-          cat /tmp/staging.map
+          echo "=== dev (current, source of truth for promotable digests) ==="
+          cat /tmp/dev.map
           echo "=== prod (current pins) ==="
           cat /tmp/prod.map
 
-          # STAGING-TRACKED set is DERIVED = exactly the images the staging
+          # DEV-TRACKED set is DERIVED = exactly the images the dev
           # overlay renders (NOT a hand-maintained allowlist). This is the same
           # derivation promote-diff-guard.yml uses, so the two can never drift:
-          # only images staging actually runs are promotable; prod-only
-          # Components (planner/setpoint/lab/mqtt/hermes) are absent from staging
-          # and therefore NEVER promoted by this workflow.
+          # only images dev actually runs are promotable; prod-only
+          # Components (those absent from the dev render, e.g. setpoint-server)
+          # are NEVER promoted by this workflow.
           #
           # Optional subset filter from the `images` input (api,mcp,...). An
           # entry is matched against the verdify-<name> suffix.
@@ -148,9 +149,9 @@ jobs:
             done
           fi
 
-          : > /tmp/promote.pairs   # image<TAB>staging_digest  (the ones to bump)
+          : > /tmp/promote.pairs   # image<TAB>dev_digest  (the ones to bump)
           changes=0
-          while IFS="$(printf '\t')" read -r img staging_digest; do
+          while IFS="$(printf '\t')" read -r img dev_digest; do
             [ -n "$img" ] || continue
             # Skip images prod doesn't even pin (nothing to promote).
             prod_digest="$(awk -F'\t' -v i="$img" '$1==i{print $2}' /tmp/prod.map)"
@@ -160,23 +161,23 @@ jobs:
               echo "skip ${img}: not in requested subset"
               continue
             fi
-            if [ "$prod_digest" = "$staging_digest" ]; then
-              echo "noop ${img}: prod already == staging (${staging_digest})"
+            if [ "$prod_digest" = "$dev_digest" ]; then
+              echo "noop ${img}: prod already == dev (${dev_digest})"
               continue
             fi
-            echo "PROMOTE ${img}: ${prod_digest} -> ${staging_digest}"
-            printf '%s\t%s\n' "$img" "$staging_digest" >> /tmp/promote.pairs
+            echo "PROMOTE ${img}: ${prod_digest} -> ${dev_digest}"
+            printf '%s\t%s\n' "$img" "$dev_digest" >> /tmp/promote.pairs
             changes=$((changes+1))
-          done < /tmp/staging.map
+          done < /tmp/dev.map
 
           echo "changes=${changes}" >> "$GITHUB_OUTPUT"
           {
-            echo "### Prod promotion delta (staging -> prod)"
+            echo "### Prod promotion delta (dev -> prod)"
             echo
             if [ "$changes" -eq 0 ]; then
-              echo "No staging-tracked prod pin lags staging — nothing to promote."
+              echo "No dev-tracked prod pin lags dev — nothing to promote."
             else
-              echo "| image | prod (current) | -> | staging (promote to) |"
+              echo "| image | prod (current) | -> | dev (promote to) |"
               echo "|---|---|---|---|"
               while IFS="$(printf '\t')" read -r img sd; do
                 pd="$(awk -F'\t' -v i="$img" '$1==i{print $2}' /tmp/prod.map)"
@@ -323,13 +324,13 @@ jobs:
           # Build a human-readable promotion body.
           body_file="$(mktemp)"
           {
-            echo "## Prod promotion (staging -> prod digests)"
+            echo "## Prod promotion (dev -> prod digests)"
             echo
             echo "Generated by the **Prod Promote** workflow (#220). This PR advances"
             echo "the \`overlays/prod\` image digests to **exactly the digests"
-            echo "\`overlays/staging\` is currently running** — the proven-on-staging set."
+            echo "\`overlays/dev\` is currently running** — the proven-on-dev set."
             echo
-            echo "| image | prod (was) | -> | staging (now) |"
+            echo "| image | prod (was) | -> | dev (now) |"
             echo "|---|---|---|---|"
             while IFS="$(printf '\t')" read -r img sd; do
               pd="$(awk -F'\t' -v i="$img" '$1==i{print $2}' /tmp/prod.map)"
@@ -341,10 +342,10 @@ jobs:
             echo "- \`promote-diff-guard\` will re-assert digest-equality + change-surface as the REQUIRED check."
             echo
             echo "### Device-write human gate is PRESERVED"
-            echo "Merging this PR changes git only. \`verdify-prod\` is a **manual-sync**"
-            echo "ArgoCD Application; the new digests sit **OutOfSync** until an operator"
-            echo "runs \`argocd app sync verdify-prod\` AFTER the device-VLAN sign-off +"
-            echo "single-writer cutover are explicitly approved by Jason. This PR never"
+            echo "Merging this PR changes git only. The prod ArgoCD app (live name:"
+            echo "\`verdify-prod-dark\`) is **manual-sync**; the new digests sit **OutOfSync**"
+            echo "until an operator runs \`argocd app sync verdify-prod-dark\` AFTER the"
+            echo "device-write gate is explicitly approved by Jason. This PR never"
             echo "touches the cluster, the live ingestor, or the device."
             echo
             echo "Runbook: \`docs/runbooks/prod-promotion.md\`."
@@ -352,13 +353,13 @@ jobs:
 
           commit_file="$(mktemp)"
           {
-            echo "ci: promote overlays/prod image digests to current staging (#220)"
+            echo "ci: promote overlays/prod image digests to current dev (#220)"
             echo
-            echo "In-repo staging->prod digest promotion (locked decision: no cross-repo PR,"
-            echo "no ArgoCD Image Updater). Advances each lagging staging-tracked prod pin to"
-            echo "the digest overlays/staging is currently running. Device-write posture"
+            echo "In-repo dev->prod digest promotion (locked decision: no cross-repo PR,"
+            echo "no ArgoCD Image Updater). Advances each lagging dev-tracked prod pin to"
+            echo "the digest overlays/dev is currently running. Device-write posture"
             echo "(interlock ConfigMap + allow-ingestor-device-egress NetPol + ingestor"
-            echo "replicas) is UNCHANGED — digests only. verdify-prod stays manual-sync; this"
+            echo "replicas) is UNCHANGED — digests only. Prod stays manual-sync; this"
             echo "is a git change only, gated by promote-diff-guard + the human device gate."
           } > "$commit_file"
 
@@ -369,9 +370,9 @@ jobs:
 
           pr_url="$(gh pr create \
             --repo "$GITHUB_REPOSITORY" \
-            --base live/platform-main \
+            --base main \
             --head "$branch" \
-            --title "ci: prod-promote — advance overlays/prod digests to staging (#220)" \
+            --title "ci: prod-promote — advance overlays/prod digests to current dev (#220)" \
             --label prod-promote \
             --body-file "$body_file")"
           echo "Opened prod-promote PR: $pr_url"
@@ -381,9 +382,9 @@ jobs:
             echo "$pr_url"
             echo
             echo "Next: \`promote-diff-guard\` must pass, a human reviews+merges, THEN an"
-            echo "operator runs the gated \`argocd app sync verdify-prod\` per the runbook."
+            echo "operator runs the gated \`argocd app sync verdify-prod-dark\` per the runbook."
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Nothing to promote
         if: ${{ github.event.inputs.mode == 'pull-request' && steps.delta.outputs.changes == '0' }}
-        run: echo "No staging-tracked prod pin lags staging; no PR opened."
+        run: echo "No dev-tracked prod pin lags dev; no PR opened."

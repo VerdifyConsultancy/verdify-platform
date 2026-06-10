@@ -1,7 +1,10 @@
 # Verdify — Development Commands
 # Usage: make <target>
 SHELL := /bin/bash
-VENV := /srv/greenhouse/.venv
+# Tooling venv: prefer a repo-local .venv (laptop / agent-pod hosts) and fall
+# back to the legacy greenhouse-VM path so existing hosts keep working.
+# Override explicitly with `make VENV=/path/to/venv <target>`.
+VENV ?= $(if $(wildcard .venv/bin/python),.venv,/srv/greenhouse/.venv)
 PYTHON := $(VENV)/bin/python
 PYTEST := $(PYTHON) -m pytest
 RUFF := $(VENV)/bin/ruff

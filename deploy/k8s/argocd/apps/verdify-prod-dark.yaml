@@ -53,7 +53,7 @@ spec:
   project: app-test
   source:
     repoURL: https://github.com/VerdifyConsultancy/verdify-platform.git
-    targetRevision: live/platform-main
+    targetRevision: main
     # LIVE prod overlay (device writer). Reconciled from the stale overlays/prod-dark
     # to match the running App spec (verified live 2026-06-07).
     path: deploy/k8s/overlays/prod
