@@ -6,6 +6,30 @@ This repo is worked by several Claude agents in parallel plus a human coordinato
 
 An AI-driven climate controller for a single 367 sq ft greenhouse in Longmont, CO. **Production** — plants are alive, the ESP32 is in the loop every 5 s, the planner runs on real data. Keeping the greenhouse operational ("Track A") always outranks SaaS/cloud refactor progress ("Track B"). See `README.md` for the architecture one-pager.
 
+## Branch & deployment model (Jason, 2026-06-10 — supersedes the live/platform-main split)
+
+- **`main` is the single canonical branch.** PRs land on main; all CI
+  (build/publish/validate) and every ArgoCD targetRevision point at main. The
+  2026-05-31 `live/platform-main` deploy branch is RETIRED (kept aligned as a
+  pointer during transition; do not push to it).
+- **Two environments, no staging.** `verdify-dev` (ns verdify-dev, auto-sync)
+  is the proving environment: every push to main publishes digest-pinned
+  images and the `bump-dev-digests` job pins them into `overlays/dev`, which
+  dev deploys automatically. Prod (ns verdify-prod, ArgoCD app
+  `verdify-prod-dark` — legacy name) is **manual-sync behind the device-write
+  gate**: the `prod-promote` workflow opens a dev-equality-guarded PR, a human
+  merges, and an operator-initiated sync applies it. The staging overlay in
+  this repo is retired dead weight pending removal.
+- **Dev is device-dark by construction** (ingestor replicas:0 +
+  deny-esp32-egress + VERDIFY_DEVICE_WRITE_ENABLED=0) and its database is a
+  **nightly restored copy of prod** (overlays/dev/db-restore-from-prod.yaml;
+  dev-written plans are wiped nightly and never replicate to prod). Firmware
+  is hot-staged direct to prod — there is no dev device.
+- **Operating from the laptop:** see `docs/runbooks/laptop-operator.md` for
+  DB access (`scripts/verdify-db.sh`), pipeline triggers, promotion, the
+  gated prod sync, and the firmware OTA procedure (all runnable from any
+  kubectl host).
+
 ## Agents
 
 Five persistent agents, each owning one scope. Branches are prefixed by agent name; worktrees live at `/mnt/iris/verdify-worktrees/{agent}/`. Per-agent scope docs live in `docs/agents/`.
