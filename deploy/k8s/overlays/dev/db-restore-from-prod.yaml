@@ -97,11 +97,26 @@ spec:
             app.kubernetes.io/component: db-restore
         spec:
           restartPolicy: Never
+          # verdify-dev enforces pod-security `restricted` — mirror the prod
+          # db-backup CronJob's posture (postgres uid 999 in the timescaledb
+          # image; RuntimeDefault seccomp; no escalation, no capabilities).
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999
+            runAsGroup: 999
+            fsGroup: 999
+            seccompProfile:
+              type: RuntimeDefault
           containers:
             - name: restore
               # Same image as the verdify-db StatefulSet — guarantees matching
               # pg_restore/psql + timescaledb client versions.
               image: timescale/timescaledb:2.25.2-pg16
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
               env:
                 - name: PGHOST
                   value: verdify-db
@@ -118,6 +133,8 @@ spec:
                 - name: dumps
                   mountPath: /dumps
                   readOnly: true
+                - name: tmp
+                  mountPath: /tmp
               resources:
                 requests:
                   cpu: 100m
@@ -170,3 +187,5 @@ spec:
               persistentVolumeClaim:
                 claimName: verdify-db-dumps-prod-ro
                 readOnly: true
+            - name: tmp
+              emptyDir: {}
