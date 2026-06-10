@@ -1,17 +1,11 @@
 name: CI
 
-# ─── Issue #22 / P0 branch-drift fix (PROPOSED — coordinator + James review) ──
-# The 8 gate jobs below were defined but never gated a PR/push: every recent run
-# is `workflow_dispatch` and PR #12 (base `main`) reported zero status checks.
-# Root cause is the P0 branch drift — production lands on `live/platform-main`
-# (the verified production branch, 4 ahead of `main`), but these triggers only
-# named `main`, so neither pushes to production nor PRs targeting it ever fired
-# CI. The acceptance criteria for #22 (PRs/pushes trigger ci.yml; all 8 jobs
-# report status checks) require CI to fire on the branch where work actually
-# lands. We therefore add `live/platform-main` to both push and pull_request.
-# `.github/**` is SHARED INFRA per CLAUDE.md, so this trigger change lands as a
-# PROPOSED PR for coordinator/James review, never an autonomous merge. Trim back
-# to a single branch once Jason/James reconcile the live<->main drift.
+# ─── Branch model (Jason, 2026-06-10): `main` is the single canonical branch ──
+# The 2026-05-31 `live/platform-main` deploy-branch split is RETIRED. All work
+# lands on `main` via PRs; these gates fire on every push/PR to `main`. The
+# issue-#22 era dual-branch trigger was trimmed when the drift was reconciled
+# (main and live/platform-main merged both ways; ArgoCD + all workflows now
+# point at main).
 on:
   workflow_dispatch:
   push:
