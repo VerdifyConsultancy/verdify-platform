@@ -27,17 +27,29 @@ if INGESTOR_PATH not in sys.path:
     sys.path.insert(0, INGESTOR_PATH)
 
 
+def _tasks_src() -> str:
+    """Full source of the tasks implementation.
+
+    Issue #46 split ingestor/tasks.py into the ingestor/tasks/ package; read the
+    whole package so the source-string invariants still hold.
+    """
+    pkg = Path(INGESTOR_PATH, "tasks")
+    if pkg.is_dir():
+        return "\n".join(p.read_text() for p in sorted(pkg.glob("*.py")))
+    return Path(INGESTOR_PATH, "tasks.py").read_text()
+
+
 def test_tasks_does_not_import_ingestor_entrypoint_for_push():
     """Importing ingestor.py from tasks.py creates split module state under
     systemd because the service entrypoint is __main__."""
-    src = Path(INGESTOR_PATH, "tasks.py").read_text()
+    src = _tasks_src()
     assert "from ingestor import push_to_esp32" not in src
     assert "from esp32_push import push_to_esp32" in src
 
 
 def test_service_modules_use_repo_relative_schema_path():
-    for filename in ("ingestor.py", "tasks.py"):
-        src = Path(INGESTOR_PATH, filename).read_text()
+    sources = (Path(INGESTOR_PATH, "ingestor.py").read_text(), _tasks_src())
+    for src in sources:
         assert 'sys.path.insert(0, "/mnt/iris/verdify")' not in src
         assert "Path(__file__).resolve().parent.parent" in src
 
@@ -56,7 +68,10 @@ def test_echo_suppression_covers_delayed_esphome_state_publish():
     assert "RT push suppressed for recently pushed" in src
 
 
-def test_esp32_push_marks_shared_recently_pushed():
+def test_esp32_push_marks_shared_recently_pushed(monkeypatch):
+    # Device-write gate (#79) is default-deny; this test exercises the actual
+    # push mechanics, so enable the interlock.
+    monkeypatch.setenv("VERDIFY_DEVICE_WRITE_ENABLED", "1")
     import esp32_push
     import shared
 
@@ -76,7 +91,9 @@ def test_esp32_push_marks_shared_recently_pushed():
     assert shared.recently_pushed_values["temp_low"] == 64.0
 
 
-def test_occupancy_push_targets_presence_state_not_inhibit_tunable():
+def test_occupancy_push_targets_presence_state_not_inhibit_tunable(monkeypatch):
+    # Device-write gate (#79) is default-deny; enable it to exercise the push.
+    monkeypatch.setenv("VERDIFY_DEVICE_WRITE_ENABLED", "1")
     import esp32_push
     import shared
     from entity_map import EQUIPMENT_SWITCH_MAP

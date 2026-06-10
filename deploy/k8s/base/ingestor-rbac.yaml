@@ -1,0 +1,65 @@
+# HA-3.2 single-writer FENCE RBAC (#240).
+#
+# The ingestor acquires a coordination.k8s.io/v1 Lease (`verdify-ingestor-writer`)
+# to enforce exactly-one device writer (the ESP32 firmware allows max_connections:20,
+# so the device is NOT a natural fence — the Lease is). This SA + Role grant the
+# MINIMUM verbs needed on Leases, namespace-scoped (no cluster-wide reach):
+#   get/list/watch   — read the current holder/renewTime
+#   create           — first-ever acquire (Lease object does not exist yet)
+#   update/patch     — renew + release (clear holderIdentity on SIGTERM)
+#
+# Scoped to a SINGLE Lease name via resourceNames where the verb supports it
+# (get/update/patch/delete); create/list/watch cannot be name-scoped by the API,
+# so they are granted on the leases resource but the SA has no other powers in
+# the namespace. The ingestor Deployment binds this SA and exposes POD_NAME /
+# POD_NAMESPACE via the downward API so the Lease holderIdentity is the pod name.
+#
+# INERT until armed: the deployment carries VERDIFY_WRITER_LEASE_ENABLED=0 by
+# default, so even with this RBAC present the lease code is a no-op until the
+# gated live-arm flips the flag. Granting the RBAC ahead of the flag is safe and
+# lets the armed image be a pure config flip (no manifest change at arm time).
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: verdify-ingestor
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: ingestor
+# imagePullSecrets on the SA so the lease-armed pod still pulls in-org GHCR
+# digests without relying on the namespace default SA (which has none). Mirrors
+# the explicit imagePullSecrets already on the Deployment podSpec.
+imagePullSecrets:
+  - name: ghcr-jvallery-readonly
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: verdify-ingestor-writer-lease
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: ingestor
+rules:
+  # create/list/watch cannot be restricted to a resourceName by the API server.
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["create", "list", "watch"]
+  # get/update/patch/delete scoped to the ONE lease this fence owns.
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    resourceNames: ["verdify-ingestor-writer"]
+    verbs: ["get", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: verdify-ingestor-writer-lease
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: ingestor
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: verdify-ingestor-writer-lease
+subjects:
+  - kind: ServiceAccount
+    name: verdify-ingestor

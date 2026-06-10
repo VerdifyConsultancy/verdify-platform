@@ -1,0 +1,49 @@
+# staging verdify-www edge exposure (#116) — the FIRST stateless web-tier
+# workload added to overlays/staging now that the shared apps-ingress (.7.10)
+# is reliably serving (UDM BGP fixed, 2026-05-31; verified: all three staging
+# Hosts return 200 via the edge VIP, unknown Host 404s).
+#
+# WHY SAFE TO ADD TO STAGING (the #5 hard rule re-examined): the historical
+# containment posture kept verdify-www OUT of overlays/staging because the live
+# verdify-local-staging ArgoCD app syncs this overlay and a Pending/CrashLoop
+# workload would degrade it. That risk does not apply to verdify-www:
+#   - Image is REAL + published: ghcr.io/verdifyconsultancy/verdify-www
+#     @sha256:5e00bc20... (verified pullable via the org GHCR package API).
+#   - STATELESS: no PVC, emptyDir /tmp only — NO synology-iscsi-ssd dependency,
+#     so no MountDevice gate. (iSCSI is independently verified working on node4,
+#     but verdify-www does not need it.)
+#   - Pure web tier, NO device path, never writes the ESP32.
+# So adding it cannot push the live staging app to Pending/CrashLoop.
+#
+# HOST: staging owns *-staging on the vallery.net edge, same convention as the
+# api route (verdify-staging.vallery.net). www-staging.vallery.net routes the
+# staging marketing site THROUGH the shared apps Traefik (traefik-apps, .7.10) —
+# the ONE conformant front door, identical pattern to overlays/dev/www-ingressroute
+# (www.k3s.verdify.ai). The cloudflared vallery-edge tunnel host-forward for
+# www-staging.vallery.net + the matching DNS record are platform-layer (laptop-root)
+# prerequisites for WAN/LAN reach; the in-cluster Traefik host-route is live now.
+#
+# No strip-identity Middleware: the marketing site is fully public and trusts no
+# forward-auth identity (unlike the api). tls: {} == Traefik default cert.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: verdify-www
+  namespace: verdify-staging
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: www
+spec:
+  entryPoints:
+    - websecure
+    - web
+  routes:
+    # The component verdify-www Service is ClusterIP :8080 (no LoadBalancer
+    # overlay). Traefik's kubernetescrd provider resolves against the Service
+    # .spec.ports[].port, which is 8080.
+    - kind: Rule
+      match: Host(`www-staging.vallery.net`)
+      services:
+        - name: verdify-www
+          port: 8080
+  tls: {}

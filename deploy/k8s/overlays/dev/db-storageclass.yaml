@@ -1,0 +1,31 @@
+# PER-ENV DB STORAGE (#115) — dev.
+#
+# The base verdify-db StatefulSet pins the volumeClaimTemplates storageClassName
+# to "local-path" (the portable, always-present k3s default that keeps the base
+# tree lint-able without a platform-specific SC). The CONFIRMED dev/stage/prod
+# architecture is THREE SEPARATE per-env TimescaleDB StatefulSets. In the k3s
+# cluster these DBs live on Longhorn NVMe RWO storage, not node-local-path and
+# not the old Synology iSCSI class. This JSON6902 patch retargets the dev DB PVC
+# to that class.
+#
+# A retarget of an EXISTING StatefulSet's volumeClaimTemplates is immutable in
+# k8s; this only ever applies to the fresh dev DB that comes up the first time
+# the dev ArgoCD app reconciles (handoff §3.6 copy-NOT-move: pg_dump from the VM
+# -> fresh StatefulSet -> restore Job -> verify). No live data is touched.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: verdify-db
+spec:
+  volumeClaimTemplates:
+    - metadata:
+        name: db-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        # Longhorn NVMe RWO, two replicas while only node4/node5 are schedulable
+        # storage targets. Replaces the base local-path and retired Synology SSD
+        # class.
+        storageClassName: longhorn-nvme-rwo
+        resources:
+          requests:
+            storage: 50Gi

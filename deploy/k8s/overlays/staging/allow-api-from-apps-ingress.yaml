@@ -1,0 +1,34 @@
+# Allow the SHARED apps-ingress Traefik (ns traefik-apps, the .7.10 front door)
+# to reach verdify-api on 8080. The base allow-api-from-ingress NetworkPolicy
+# only names the k3s built-in Traefik namespace ("traefik") + the apps VLAN
+# ipBlock; the conformant ADR-15 path routes through the SEPARATE traefik-apps
+# namespace, whose pod source IP is cluster-internal (10.42.0.0/16), so neither
+# the "traefik" namespaceSelector nor the 192.168.7.0/24 ipBlock matches it.
+# Without this allow, an enforcing CNI would default-deny the IngressRoute hop.
+#
+# NOTE: the live cluster is flannel, which does NOT enforce NetworkPolicy at
+# L3/L4 (base/networkpolicy.yaml header), so the IngressRoute path works today
+# regardless — this is the CONTRACT so it stays correct under the planned
+# Cilium re-CNI (ADR-17). Additive: a second NetworkPolicy on the same api
+# podSelector is purely union-ing allowed sources.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-api-from-apps-ingress
+  namespace: verdify-staging
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: api
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: api
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: traefik-apps
+      ports:
+        - protocol: TCP
+          port: 8080

@@ -29,12 +29,19 @@ IRRIGATION_STALE_RETAINED_TOPICS := greenhouse/sensor/south_1_soil_moisture____/
 IRRIGATION_STALE_NEAR_MISS_TOPICS := greenhouse/sensor/east_soil_moisture____/state greenhouse/sensor/south_2_soil_moisture____/state greenhouse/sensor/west_soil_moisture____/state
 FIRMWARE_ESPHOME := scripts/firmware-esphome-worktree.sh
 FIRMWARE_OTA_BIN := firmware/.esphome/build/greenhouse/.pioenvs/greenhouse/firmware.ota.bin
+# #254: the firmware-deploy preflight DB handle is re-homed off the dead .150 VM
+# (which ran `docker exec verdify-timescaledb`) to the k3s prod DB. The default
+# backend is `kube` — lib/psql-verdify.sh runs `kubectl exec -n verdify-prod
+# verdify-db-0 -c postgres -- psql ...` from any tooling host with a kubeconfig.
+# Override to `docker` only if a local verdify-timescaledb container is reachable
+# (legacy VM), or `dsn` when running in-cluster with PG*/POSTGRES_PASSWORD set.
+FIRMWARE_DB_BACKEND ?= kube
 REPLAY_CORPUS_GZ := firmware/test/data/replay_overrides.csv.gz
 REPLAY_CORPUS_TMP ?= /tmp/verdify-replay-overrides.csv
 HERMES_IRIS_RUNTIME_DIR ?= /var/lib/verdify/hermes/iris
 HERMES_IRIS_ENV_FILE ?= /etc/verdify/hermes-iris.env
 
-.PHONY: help test lint format check lighting-audit-static lighting-audit-current lighting-audit-live lighting-audit-complete climate-intent-replay-report climate-authority-post-deploy-proof-plan climate-authority-post-deploy-proof firmware-check firmware-check-worktree firmware-check-all firmware-invariants firmware-replay firmware-replay-worktree firmware-audit-traceability-proof firmware-audit-worktree-proof firmware-dwell-preview firmware-deploy firmware-archive-artifacts firmware-promote-last-good smoke hermes-deploy-config hermes-restart hermes-smoke clean irrigation-migration-check irrigation-migration-proof irrigation-field-diagnostics irrigation-field-sensor-health-proof irrigation-stack-software-check irrigation-stack-check irrigation-feedback-check irrigation-feedback-discover irrigation-feedback-discovery-proof irrigation-feedback-work-order irrigation-feedback-work-order-proof irrigation-feedback-clear-stale-retained irrigation-feedback-clear-stale-near-misses irrigation-feedback-watch irrigation-feedback-watch-field irrigation-feedback-watch-field-proof irrigation-feedback-finalize-dry-run irrigation-feedback-finalize-dry-run-proof irrigation-feedback-finalize irrigation-feedback-finalize-proof irrigation-feedback-proof-json irrigation-sensor-health-proof irrigation-stack-proof irrigation-completion-audit irrigation-completion-audit-proof irrigation-acceptance irrigation-full-acceptance irrigation-post-deploy-acceptance-plan irrigation-post-deploy-acceptance
+.PHONY: help test lint format check lighting-audit-static lighting-audit-current lighting-audit-live lighting-audit-complete climate-intent-replay-report climate-authority-post-deploy-proof-plan climate-authority-post-deploy-proof firmware-check firmware-check-worktree firmware-check-all firmware-invariants firmware-replay firmware-replay-worktree firmware-replay-stream-check firmware-audit-traceability-proof firmware-audit-worktree-proof firmware-dwell-preview firmware-deploy firmware-archive-artifacts firmware-promote-last-good smoke hermes-deploy-config hermes-restart hermes-smoke clean migration-rollback-safety irrigation-migration-check irrigation-migration-proof irrigation-field-diagnostics irrigation-field-sensor-health-proof irrigation-stack-software-check irrigation-stack-check irrigation-feedback-check irrigation-feedback-discover irrigation-feedback-discovery-proof irrigation-feedback-work-order irrigation-feedback-work-order-proof irrigation-feedback-clear-stale-retained irrigation-feedback-clear-stale-near-misses irrigation-feedback-watch irrigation-feedback-watch-field irrigation-feedback-watch-field-proof irrigation-feedback-finalize-dry-run irrigation-feedback-finalize-dry-run-proof irrigation-feedback-finalize irrigation-feedback-finalize-proof irrigation-feedback-proof-json irrigation-sensor-health-proof irrigation-stack-proof irrigation-completion-audit irrigation-completion-audit-proof irrigation-acceptance irrigation-full-acceptance irrigation-post-deploy-acceptance-plan irrigation-post-deploy-acceptance
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -100,6 +107,21 @@ test-firmware: ## Run native C++ logic tests + replay against golden CSV (same c
 test-replay-overrides: ## Validate evaluate_overrides() against full history + synthetic self-test (OBS-1e)
 	bash scripts/export-replay-overrides.sh
 	cd firmware && g++ -std=c++17 -O2 -I lib -o test/replay_overrides test/replay_overrides.cpp && ./test/replay_overrides test/data/replay_overrides.csv
+
+firmware-replay-stream-check: ## TWIN-1/2: build the gated replay_emit_follow (--stream + climate_action) and smoke it; prove stock batch output byte-identical
+	gzip -cd $(REPLAY_CORPUS_GZ) > $(REPLAY_CORPUS_TMP)
+	cd firmware && g++ -std=c++17 -O2 -I lib -o test/replay_emit test/replay_emit.cpp
+	cd firmware && g++ -std=c++17 -O2 -DREPLAY_EMIT_STREAM -I lib -o test/replay_emit_follow test/replay_emit.cpp
+	# stock batch header is the unchanged 11-column schema (rule-8 gate intact)
+	REPLAY_EMIT_FORCE_FSM=1 ./firmware/test/replay_emit $(REPLAY_CORPUS_TMP) 2>/dev/null | head -1 \
+	    | grep -qx 'ts	mode	relay_fog	relay_vent	relay_fan1	relay_fan2	relay_heat1	relay_heat2	mist_stage	reason	override_bits' \
+	    && echo "batch header byte-identical (11 cols) ✓"
+	# stream build emits the additive climate_action column via describe_effective_climate_decision()
+	REPLAY_EMIT_FORCE_FSM=1 sh -c 'tail -n +2 $(REPLAY_CORPUS_TMP) | head -50 | ./firmware/test/replay_emit_follow --stream --header-from $(REPLAY_CORPUS_TMP)' \
+	    | head -1 | grep -q 'climate_action' \
+	    && echo "stream header carries climate_action column ✓"
+	REPLAY_EMIT_FORCE_FSM=1 sh -c 'tail -n +2 $(REPLAY_CORPUS_TMP) | head -50 | ./firmware/test/replay_emit_follow --stream --header-from $(REPLAY_CORPUS_TMP)' \
+	    | tail -n +2 | awk -F"\t" 'NF==12{ok++} END{ if(ok>0){print "stream emitted "ok" decision rows w/ 12 cols ✓"} else {print "FAIL: no stream rows"; exit 1} }'
 
 firmware-invariants: ## Phase-0: run 16 invariants from invariants.h against the replay corpus (pass = bulletproof gate green)
 	gzip -cd $(REPLAY_CORPUS_GZ) > $(REPLAY_CORPUS_TMP)
@@ -208,13 +230,22 @@ grafana-brand-check-live: ## Verify live embedded Grafana panels use Verdify Lab
 site-lint: ## Run cheap lint for public-site content and routes
 	$(PYTHON) scripts/lint_public_site.py
 
+migration-rollback-safety: ## Classify db/migrations as self-committing vs safe-to-wrap (#23 guard)
+	@$(PYTHON) scripts/check_migration_rollback_safety.py --list
+
 irrigation-migration-check: ## Replay irrigation migration 134 inside a rollback transaction
-	@set -o pipefail; { printf 'BEGIN;\n'; cat db/migrations/134-irrigation-fertigation-canonical.sql; printf '\nROLLBACK;\n'; } | docker exec -i verdify-timescaledb psql -U verdify -d verdify -v ON_ERROR_STOP=1 -q
+	@# Preflight (#23): refuse to wrap a self-committing migration in an outer
+	@# BEGIN..ROLLBACK — its own top-level COMMIT / commit-forcing statement would
+	@# defeat the rollback and commit to the LIVE DB (2026-05-30 live-commit incident).
+	@$(PYTHON) scripts/check_migration_rollback_safety.py --rollback-wrap db/migrations/134-irrigation-fertigation-canonical.sql
+	@set -o pipefail; . scripts/lib/psql-verdify.sh; { printf 'BEGIN;\n'; cat db/migrations/134-irrigation-fertigation-canonical.sql; printf '\nROLLBACK;\n'; } | verdify_psql_stdin -v ON_ERROR_STOP=1 -q
 	@echo "OK: migration 134 replays cleanly in rollback transaction"
 
 irrigation-migration-proof: ## Replay and persist irrigation migration rollback proof
 	@mkdir -p "$(dir $(IRRIGATION_MIGRATION_PROOF))"
-	@set -o pipefail; { { printf 'BEGIN;\n'; cat db/migrations/134-irrigation-fertigation-canonical.sql; printf '\nROLLBACK;\n'; } | docker exec -i verdify-timescaledb psql -U verdify -d verdify -v ON_ERROR_STOP=1 -q && echo "OK: migration 134 replays cleanly in rollback transaction"; } 2>&1 | tee "$(IRRIGATION_MIGRATION_PROOF)"
+	@# Preflight (#23): refuse to wrap a self-committing migration (see irrigation-migration-check).
+	@$(PYTHON) scripts/check_migration_rollback_safety.py --rollback-wrap db/migrations/134-irrigation-fertigation-canonical.sql
+	@set -o pipefail; . scripts/lib/psql-verdify.sh; { { printf 'BEGIN;\n'; cat db/migrations/134-irrigation-fertigation-canonical.sql; printf '\nROLLBACK;\n'; } | verdify_psql_stdin -v ON_ERROR_STOP=1 -q && echo "OK: migration 134 replays cleanly in rollback transaction"; } 2>&1 | tee "$(IRRIGATION_MIGRATION_PROOF)"
 
 irrigation-field-diagnostics: ## Run non-gating field diagnostics for physical feedback blockers
 	$(MAKE) irrigation-field-sensor-health-proof
@@ -344,7 +375,7 @@ irrigation-post-deploy-acceptance-plan: ## Print non-mutating post-deploy accept
 irrigation-post-deploy-acceptance: irrigation-full-acceptance ## Post-deploy production proof after merge/restart/site publish
 
 firmware-deploy: ## Compile + OTA deploy to ESP32 + post-deploy sensor-health sweep + auto-rollback on failure
-	bash scripts/firmware-deploy-preflight.sh
+	VERDIFY_DB_BACKEND=$(FIRMWARE_DB_BACKEND) bash scripts/firmware-deploy-preflight.sh
 	@mkdir -p firmware/artifacts
 	@DIRTY="$$(git diff --quiet -- . && git diff --cached --quiet -- . || echo .dirty)"; \
 	if [ -n "$$DIRTY" ] && [ "$(ALLOW_DIRTY_FIRMWARE_DEPLOY)" != "1" ]; then \
@@ -450,7 +481,7 @@ db-dump: ## Dump schema to db/schema.sql
 	docker exec verdify-timescaledb pg_dump -U verdify -d verdify --schema-only > db/schema.sql
 
 db-scorecard: ## Show today's planner scorecard
-	docker exec verdify-timescaledb psql -U verdify -d verdify -c "SELECT * FROM fn_planner_scorecard(CURRENT_DATE);"
+	@. scripts/lib/psql-verdify.sh; verdify_psql -c "SELECT * FROM fn_planner_scorecard(CURRENT_DATE);"
 
 # ── Cleanup ─────────────────────────────────────────────────────────
 

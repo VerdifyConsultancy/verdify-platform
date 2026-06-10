@@ -39,6 +39,7 @@ from verdify_schemas import (  # noqa: E402
     HarvestCreate,
     LessonCreate,
     LessonSummary,
+    LessonSupersede,
     LessonUpdate,
     LessonValidate,
     ObservationCreate,
@@ -54,6 +55,8 @@ from verdify_schemas import (  # noqa: E402
     SetpointSummary,
     SlackCommandRequest,
     TreatmentCreate,
+    derive_lesson_state,
+    is_legal_lesson_transition,
 )
 from verdify_schemas.climate_intent import (  # noqa: E402
     CLIMATE_INTENT_CONTRACT_VERSION,
@@ -78,6 +81,11 @@ if _env_path.exists():
     for line in _env_path.read_text().splitlines():
         if line.startswith("POSTGRES_PASSWORD="):
             _db_pass = line.split("=", 1)[1].strip().strip('"').strip("'")
+# #24: the MCP server is already DSN-native — it connects via asyncpg against
+# DB_DSN, never `docker exec psql`. This IS the VERDIFY_DB_BACKEND=dsn path of
+# the shared scripts/lib/psql-verdify.sh contract: setting DB_DSN to an
+# in-cluster Postgres endpoint moves this service off the VM with no code change.
+# Default below preserves the live VM connection (localhost:5432).
 DB_DSN = os.environ.get("DB_DSN", f"postgresql://verdify:{_db_pass}@localhost:5432/verdify")
 # Legacy planner.py removed — planning runs via iris_planner.py → Hermes /v1/runs
 BAND_OWNED_PARAMS = BAND_OWNED_REG
@@ -378,30 +386,34 @@ async def climate() -> str:
 @mcp.tool()
 async def scorecard(target_date: str = "") -> str:
     """Get the planner scorecard — 25 KPI metrics for a given day.
-    Includes: planner_score, compliance_pct, temp_compliance_pct,
-    vpd_compliance_pct, stress hours (heat/cold/vpd_high/vpd_low), utility usage
-    (kwh, therms, water_gal, mister_water_gal), costs (electric/gas/water/total),
-    dew point safety, and 7-day averages. Pass date as YYYY-MM-DD or omit for today.
+    Includes: planner_score, compliance_v2_attributable_pct (the scored compliance),
+    compliance_v2_raw_pct, compliance_v2_unachievable_frac, the legacy binary
+    compliance_pct / temp_compliance_pct / vpd_compliance_pct, stress hours
+    (heat/cold/vpd_high/vpd_low), utility usage (kwh, therms, water_gal,
+    mister_water_gal), costs (electric/gas/water/total), dew point safety, and 7-day
+    averages. Pass date as YYYY-MM-DD or omit for today.
 
-    Compliance is moving from a single binary house metric to GRADED + PER-ZONE +
-    FEASIBILITY-AWARE scoring (band-compliance rearchitecture, migrations 146-147).
-    GRADED: full credit inside the ideal band, linear partial credit through the
-    stress band, zero beyond — a reading 0.1F out of band no longer scores the same
-    as one 15F out. PER-ZONE: each zone graded against what is actually planted there
-    (center = Vanda orchid; east = lettuce/strawberry/pepper), aggregated to a house
-    number (center weight 0.60, east 0.40). FEASIBILITY-AWARE: every miss is split
-    into controller-error (a cooling/heating stage was idle with authority available)
-    vs physically-unachievable (e.g. vent saturated and outdoor >= the served target —
-    an exhaust-only box cannot beat ambient). The reward becomes the
-    CONTROLLER-ATTRIBUTABLE compliance so weather Iris cannot change is not scored
-    against her; unachievable_frac is reported context that should cue WIDENING the
-    served envelope, not working the actuators harder.
+    Compliance is GRADED + PER-ZONE + CONTROLLER-ATTRIBUTABLE (band-compliance
+    rearchitecture, migrations 146-147), and the scored compliance number is
+    compliance_v2_attributable_pct. GRADED: full credit inside the ideal band, linear
+    partial credit through the stress band, zero beyond — a reading 0.1F out of band no
+    longer scores the same as one 15F out. PER-ZONE: each zone graded against what is
+    actually planted there (center = Vanda orchid; east = lettuce/strawberry/pepper),
+    aggregated to a house number (center weight 0.60, east 0.40). CONTROLLER-ATTRIBUTABLE:
+    every miss is split into controller-error (a cooling/heating stage was idle with
+    authority available) vs physically-unachievable (e.g. vent saturated and outdoor >=
+    the served target — an exhaust-only box cannot beat ambient); the unachievable misses
+    are credited back so weather Iris cannot change is not scored against her.
+    compliance_v2_raw_pct and compliance_v2_unachievable_frac are reported context — a
+    high unachievable_frac should cue WIDENING the served envelope, not working the
+    actuators harder.
 
-    Until migration 147 lands, the live planner_score still uses the binary
-    compliance_pct (% of readings with BOTH temp and VPD in the served band); the
-    graded compliance_v2_* / controller-attributable columns dual-write alongside it
-    first, so treat the graded framing above as the target semantics, not yet the
-    live reward.
+    The live reward swap is migration 147's apply. planner_score's compliance half reads
+    compliance_v2_attributable_pct per day and falls back to the legacy binary
+    compliance_pct (% of readings with BOTH temp and VPD in the served band) only for
+    days before the graded column was populated — so treat the graded
+    controller-attributable number as the score, and the binary compliance_pct as
+    transitional/diagnostic context only.
 
     Response is validated through verdify_schemas.ScorecardResponse — partial
     days emit a subset of metrics as null. DB drift (new metric) surfaces as a
@@ -2052,14 +2064,39 @@ async def alerts(action: str = "list", alert_id: int = 0, data: str = "") -> str
 # ═══════════════════════════════════════════════════════════════
 
 
+async def _lesson_state_row(conn, lesson_id: int) -> dict | None:
+    """Fetch the columns needed to derive a lesson's lifecycle state.
+
+    `last_validated > created_at` is the authoritative "validated beyond
+    creation" signal; `times_validated` is the fallback the derive helper uses
+    when that flag is unavailable. Returns None if the lesson doesn't exist.
+    """
+    return await conn.fetchrow(
+        """
+        SELECT id, is_active, superseded_by, times_validated,
+               (last_validated IS NOT NULL AND created_at IS NOT NULL
+                AND last_validated > created_at) AS has_independent_validation
+          FROM planner_lessons WHERE id = $1
+        """,
+        lesson_id,
+    )
+
+
 @mcp.tool()
 async def lessons_manage(action: str, lesson_id: int = 0, data: str = "") -> str:
     """Manage planner lessons (accumulated operational knowledge).
-    Actions: create, update, deactivate, validate.
+
+    Actions: create, update, deactivate, validate, supersede.
+    Lifecycle state machine (G8): proposed -> validated -> superseded/retired.
+    State is derived from is_active/superseded_by/validation history; illegal
+    transitions (e.g. validating a superseded or retired lesson) are rejected.
+
     create: data = {"category", "condition", "lesson", "confidence": "low|medium|high"}
     update: data = {"lesson"?, "condition"?, "confidence"?}
-    deactivate: mark lesson as inactive
-    validate: increment times_validated, optionally upgrade confidence"""
+    validate: proposed/validated -> validated; increment times_validated, optionally upgrade confidence
+    deactivate: proposed/validated -> retired (terminal)
+    supersede: proposed/validated -> superseded by a newer lesson;
+        data = {"new_id": <existing lesson id>} (terminal)"""
     d = json.loads(data) if data else {}
     conn = await _db()
     try:
@@ -2093,14 +2130,42 @@ async def lessons_manage(action: str, lesson_id: int = 0, data: str = "") -> str
             return _json(dict(row)) if row else json.dumps({"error": "Lesson not found"})
 
         elif action == "deactivate" and lesson_id:
+            cur = await _lesson_state_row(conn, lesson_id)
+            if cur is None:
+                return json.dumps({"error": "Lesson not found"})
+            state = derive_lesson_state(
+                is_active=cur["is_active"],
+                superseded_by=cur["superseded_by"],
+                times_validated=cur["times_validated"] or 1,
+                has_independent_validation=bool(cur["has_independent_validation"]),
+            )
+            if not is_legal_lesson_transition(state, "retired"):
+                return json.dumps(
+                    {"error": f"Illegal transition {state} -> retired", "lesson_id": lesson_id, "state": state}
+                )
+            if state == "retired":  # idempotent
+                return json.dumps({"ok": True, "lesson_id": lesson_id, "action": "deactivated", "state": "retired"})
             await conn.execute("UPDATE planner_lessons SET is_active = false WHERE id = $1", lesson_id)
-            return json.dumps({"ok": True, "lesson_id": lesson_id, "action": "deactivated"})
+            return json.dumps({"ok": True, "lesson_id": lesson_id, "action": "deactivated", "state": "retired"})
 
         elif action == "validate" and lesson_id:
             try:
                 val = LessonValidate.model_validate(d) if d else LessonValidate()
             except ValidationError as e:
                 return json.dumps({"error": "LessonValidate validation failed", "details": json.loads(e.json())})
+            cur = await _lesson_state_row(conn, lesson_id)
+            if cur is None:
+                return json.dumps({"error": "Lesson not found"})
+            state = derive_lesson_state(
+                is_active=cur["is_active"],
+                superseded_by=cur["superseded_by"],
+                times_validated=cur["times_validated"] or 1,
+                has_independent_validation=bool(cur["has_independent_validation"]),
+            )
+            if not is_legal_lesson_transition(state, "validated"):
+                return json.dumps(
+                    {"error": f"Illegal transition {state} -> validated", "lesson_id": lesson_id, "state": state}
+                )
             if val.confidence:
                 await conn.execute(
                     "UPDATE planner_lessons SET times_validated = times_validated + 1, "
@@ -2113,9 +2178,49 @@ async def lessons_manage(action: str, lesson_id: int = 0, data: str = "") -> str
                     "UPDATE planner_lessons SET times_validated = times_validated + 1, last_validated = now() WHERE id = $1",
                     lesson_id,
                 )
-            return json.dumps({"ok": True, "lesson_id": lesson_id, "action": "validated"})
+            return json.dumps({"ok": True, "lesson_id": lesson_id, "action": "validated", "state": "validated"})
 
-        return json.dumps({"error": f"Unknown action '{action}'. Use: create, update, deactivate, validate"})
+        elif action == "supersede" and lesson_id:
+            try:
+                sup = LessonSupersede.model_validate(d)
+            except ValidationError as e:
+                return json.dumps({"error": "LessonSupersede validation failed", "details": json.loads(e.json())})
+            if sup.new_id == lesson_id:
+                return json.dumps({"error": "A lesson cannot supersede itself", "lesson_id": lesson_id})
+            cur = await _lesson_state_row(conn, lesson_id)
+            if cur is None:
+                return json.dumps({"error": "Lesson not found", "lesson_id": lesson_id})
+            new_exists = await conn.fetchval("SELECT 1 FROM planner_lessons WHERE id = $1", sup.new_id)
+            if new_exists is None:
+                return json.dumps({"error": f"Superseding lesson {sup.new_id} not found", "new_id": sup.new_id})
+            state = derive_lesson_state(
+                is_active=cur["is_active"],
+                superseded_by=cur["superseded_by"],
+                times_validated=cur["times_validated"] or 1,
+                has_independent_validation=bool(cur["has_independent_validation"]),
+            )
+            if not is_legal_lesson_transition(state, "superseded"):
+                return json.dumps(
+                    {"error": f"Illegal transition {state} -> superseded", "lesson_id": lesson_id, "state": state}
+                )
+            # superseded lessons drop out of the live set (is_active=true AND
+            # superseded_by IS NULL); also flip is_active=false for clarity.
+            await conn.execute(
+                "UPDATE planner_lessons SET superseded_by = $2, is_active = false WHERE id = $1",
+                lesson_id,
+                sup.new_id,
+            )
+            return json.dumps(
+                {
+                    "ok": True,
+                    "lesson_id": lesson_id,
+                    "action": "superseded",
+                    "superseded_by": sup.new_id,
+                    "state": "superseded",
+                }
+            )
+
+        return json.dumps({"error": f"Unknown action '{action}'. Use: create, update, deactivate, validate, supersede"})
     finally:
         await conn.close()
 

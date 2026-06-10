@@ -1,0 +1,52 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Verdify APP base. One instance = one overlay of this base
+# (overlays/staging, overlays/prod).
+#
+# NAMESPACE: the base intentionally does NOT carry a Namespace object or a
+# `namespace:` directive. Each overlay owns its namespace (verdify-staging /
+# verdify-prod) so a single base feeds both instances without a hardcoded name.
+# The namespace string is PINNED per overlay and MUST be byte-identical to the
+# ArgoCD Application destination.namespace and every sealed-secret target.
+#
+# NOTE: the verdify-app-secrets Secret is NOT defined here. It is managed by the
+# fleet SOPS+age secret backend (encrypted secret + registry meta) and applied
+# by the GitOps secret-delivery step BEFORE this app reconciles. The manifests
+# reference it BY NAME ONLY. For a throwaway local `kustomize build`, each
+# overlay layers a config.kubernetes.io/local-config placeholder so the tree
+# renders + lints without the secret backend.
+#
+# The `labels:` transformer below is why kustomize v5.4.3 is required (the
+# k8s-manifests.yml CI gate pins that version).
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: verdify
+    includeSelectors: false
+
+resources:
+  - configmap.yaml
+  - db-statefulset.yaml
+  - migration-job.yaml
+  - api-deployment.yaml
+  - mcp-deployment.yaml
+  - ingestor-deployment.yaml
+  # HA-3.2 FENCE (#240): SA + Role/RoleBinding granting the ingestor minimal
+  # coordination.k8s.io Lease verbs for the single-writer fence. Inert until
+  # VERDIFY_WRITER_LEASE_ENABLED=1 (gated prod arm).
+  - ingestor-rbac.yaml
+  - networkpolicy.yaml
+
+# Image namespace. Canonical org namespace is
+# ghcr.io/verdifyconsultancy/verdify-{api,mcp,ingestor,migrate} (NEVER
+# jvallery/*). The base leaves these UNPINNED (image name only, no tag); the
+# overlays' `images:` transformer pins each to an immutable @sha256 digest.
+# A later stage writes the real digests into overlays/staging (in-repo digest
+# write-back; no cross-repo PR, no ArgoCD Image Updater). No mutable
+# :latest/:staging tag is ever rendered.
+images:
+  - name: ghcr.io/verdifyconsultancy/verdify-api
+  - name: ghcr.io/verdifyconsultancy/verdify-mcp
+  - name: ghcr.io/verdifyconsultancy/verdify-ingestor
+  - name: ghcr.io/verdifyconsultancy/verdify-migrate

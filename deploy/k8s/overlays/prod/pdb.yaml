@@ -1,0 +1,112 @@
+# Sprint ha-1 / LANE B (#230) — PodDisruptionBudgets for the verdify-prod
+# stateless surfaces + tier-2 edge.
+#
+# The incident had ZERO PDBs in verdify-prod, so a drain/upgrade/TaintManager
+# eviction could take any surface to zero ready endpoints. These PDBs give every
+# 2-replica surface a disruption FLOOR: a voluntary disruption (drain) evicts one
+# replica, then BLOCKS until its replacement is Ready on another node before the
+# second can go — the surface never hits zero during cluster maintenance.
+#
+#   - www / lab / api / mcp / planner / verdify-traefik: minAvailable: 1
+#     (2-replica surfaces; planner added in ha-5 / #230).
+#   - grafana: maxUnavailable: 1 (RWO iSCSI PVC singleton, stays replicas:1).
+#     minAvailable:1 on a 1-replica object would block EVERY node drain forever;
+#     maxUnavailable:1 lets the drain proceed (its HA is fast PVC-reattach
+#     failover, NOT a second replica) — the §2.2 design.
+#
+# Selectors mirror each deployment's live spec.selector.matchLabels exactly.
+# NOT covered: verdify-ingestor / verdify-setpoint-server (gated ha-3 device
+# path — their PDB is authored in that sprint, not here).
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: verdify-www
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: www
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: www
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: verdify-lab
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: lab-site
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: lab-site
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: verdify-api
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: api
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: api
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: verdify-planner
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: planner
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: planner
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: verdify-mcp
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: mcp
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: mcp
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: verdify-traefik
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: edge-traefik
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: verdify-traefik
+---
+# grafana: RWO PVC singleton (replicas:1). maxUnavailable:1 (NOT minAvailable:1)
+# so node drains can proceed; HA is fast reschedule + PVC re-attach failover.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: verdify-grafana
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: grafana
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: grafana

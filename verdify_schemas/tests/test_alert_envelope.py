@@ -39,6 +39,7 @@ from verdify_schemas.alerts import (
     SafetyInvalidAlert,
     SensorOfflineAlert,
     SetpointUnconfirmedAlert,
+    SoilDryoutAlert,
     SoilSensorOfflineAlert,
     TempSafetyAlert,
     TunableZeroVarianceAlert,
@@ -302,6 +303,21 @@ CASES = {
             "pushed_at": NOW,
         },
     ),
+    "soil_dryout": (
+        SoilDryoutAlert,
+        {
+            "column": "soil_moisture_west",
+            "sensor": "soil.west",
+            "zone": "west",
+            "wilt_pct": 18.0,
+            "latest_pct": 12.4,
+            "min_pct": 11.0,
+            "max_pct": 14.9,
+            "duration_h": 2.4,
+            "samples": 1700,
+            "occupancy": "occupied",
+        },
+    ),
     "soil_sensor_offline": (
         SoilSensorOfflineAlert,
         {"column": "soil_moisture_south_1", "sensor": "soil.south_1"},
@@ -411,8 +427,12 @@ def test_every_alert_type_has_a_case():
 
 def test_schema_covers_alert_types_in_write_paths():
     root = Path(__file__).resolve().parents[2]
+    # Issue #46 split ingestor/tasks.py into the ingestor/tasks/ package; expand
+    # it to every submodule so the alert-type write-path scan still covers it.
+    tasks_pkg = root / "ingestor" / "tasks"
+    tasks_sources = sorted(tasks_pkg.glob("*.py")) if tasks_pkg.is_dir() else [root / "ingestor" / "tasks.py"]
     sources = [
-        root / "ingestor" / "tasks.py",
+        *tasks_sources,
         root / "ingestor" / "iris_planner.py",
         root / "api" / "main.py",
     ]

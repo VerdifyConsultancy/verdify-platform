@@ -1,0 +1,103 @@
+# HA-1.9 (#234) — DeschedulerPolicy. THE SAFETY BOUNDARY.
+#
+# Goal: keep the multi-replica STATELESS verdify surfaces (www/lab/api/mcp/planner,
+# and edge-traefik) spread across nodes after node events — WITHOUT EVER evicting
+# the device-writer ingestor or ANY singleton (ingestor/grafana/hermes/mqtt/db/CNPG).
+#
+# ============================================================================
+# FOUR INDEPENDENT EXCLUSION LAYERS (any one alone would protect the singletons;
+# all four together = defence in depth). The ingestor can NEVER be in the
+# eviction set:
+# ============================================================================
+#
+#  L1 — POSITIVE ALLOWLIST (DefaultEvictor.labelSelector):
+#       Only pods carrying `verdify.ai/rebalanceable: "true"` are EVER eviction
+#       candidates. This label is applied ONLY to the 6 multi-replica stateless
+#       Deployments (see descheduler-rebalanceable-labels patch). The ingestor and
+#       every singleton lack the label → structurally invisible to the evictor.
+#       This is the primary guard and is INDEPENDENT of priority.
+#
+#  L2 — PRIORITY CEILING (DefaultEvictor.priorityThreshold.value: 100001):
+#       Only pods with priority <= 100000 (verdify-serving) are candidates. The
+#       armed ingestor runs at priorityClass `verdify-device-writer` (900000000)
+#       and data-critical (CNPG) at 800000000 — both far ABOVE the ceiling, so
+#       they are excluded by priority even if (impossibly) they were also labelled.
+#
+#  L3 — NAMESPACE SCOPE (per-plugin namespaces.include: [verdify-prod]):
+#       Plugins only ever consider pods in verdify-prod. The CNPG cluster
+#       (verdify-db-cnpg), observability, auth, kube-system, and every other ns are
+#       out of scope entirely.
+#
+#  L4 — PDB RESPECT + maxNoOfPodsToEvictPerNode:1 (cannot break availability):
+#       The descheduler evicts via the eviction subresource, which the API server
+#       refuses when it would violate a PodDisruptionBudget. Every stateless surface
+#       has a minAvailable:1 PDB, so the last replica is never evictable. Capped at
+#       1 eviction/node/run + nodeFit (only evict if a fitting node exists).
+#
+# Two BALANCE plugins only (no deschedule plugins — we never time-out or pressure-
+# evict; we only RE-SPREAD duplicates after a node event):
+#   - RemoveDuplicates: two replicas of the same Deployment on one node → spread.
+#   - RemovePodsViolatingTopologySpreadConstraint: re-enforce the maxSkew:1 hostname
+#     TSC already on www/lab/api/mcp/planner/traefik after a node returns.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: descheduler-policy
+  namespace: verdify-descheduler
+  labels:
+    app.kubernetes.io/name: descheduler
+data:
+  policy.yaml: |
+    apiVersion: "descheduler/v1alpha2"
+    kind: "DeschedulerPolicy"
+    # Global cap: at most ONE pod evicted per node per descheduler run, summed
+    # across all plugins. A node-spread correction is gradual, never a stampede.
+    maxNoOfPodsToEvictPerNode: 1
+    # Never touch the cordoned control-plane/etcd nodes; only the worker pool runs
+    # the stateless surfaces. (node-role.kubernetes.io/control-plane is the etcd
+    # nodes node1/2/3 which are SchedulingDisabled.)
+    nodeSelector: "!node-role.kubernetes.io/control-plane"
+    profiles:
+      - name: verdify-stateless-rebalance
+        pluginConfig:
+          # ---- THE EVICTOR: the global gate every balance plugin passes through ----
+          - name: "DefaultEvictor"
+            args:
+              # L1 positive allowlist — ONLY rebalanceable stateless pods are candidates.
+              labelSelector:
+                matchLabels:
+                  verdify.ai/rebalanceable: "true"
+              # L2 priority ceiling — never evict at/above verdify-serving+1; the
+              # device-writer (900000000) and data-critical (800000000) are excluded.
+              priorityThreshold:
+                value: 100001
+              # Only evict a pod if some other node can actually fit it (no churn
+              # into a wall; no evicting onto pressure).
+              nodeFit: true
+              # Hard refusals — never evict local-storage pods, never system-critical
+              # pods, never DaemonSet pods, never bare/un-owned pods, never mirror pods.
+              evictLocalStoragePods: false
+              evictSystemCriticalPods: false
+              evictDaemonSetPods: false
+              evictFailedBarePods: false
+              ignorePvcPods: true
+              # PDBs are honored by default via the eviction subresource (L4).
+          - name: "RemoveDuplicates"
+            args:
+              namespaces:
+                include:
+                  - "verdify-prod"
+          - name: "RemovePodsViolatingTopologySpreadConstraint"
+            args:
+              namespaces:
+                include:
+                  - "verdify-prod"
+              # Only act on the hard (DoNotSchedule) constraints already declared on
+              # the stateless deployments — never invent spreading the singletons.
+              constraints:
+                - DoNotSchedule
+        plugins:
+          balance:
+            enabled:
+              - "RemoveDuplicates"
+              - "RemovePodsViolatingTopologySpreadConstraint"

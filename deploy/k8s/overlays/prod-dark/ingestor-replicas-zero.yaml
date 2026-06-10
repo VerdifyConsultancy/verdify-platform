@@ -1,0 +1,19 @@
+# DEVICE SAFETY (MASTER single-writer gate) — prod-dark.
+#
+# The ingestor is the ONLY device-touching workload: it opens the persistent
+# aioesphomeapi connection to the LIVE ESP32 (192.168.10.111:6053) and pushes
+# setpoints. In prod-dark it MUST stay at replicas:0 so the prod namespace runs
+# read/serve-only for the M4 48h proof and an ArgoCD selfHeal reconcile cannot
+# bring up a SECOND writer to the live device. The VM stays the one real writer.
+#
+# The base sets replicas:1 (the eventual single-writer target that overlays/prod
+# keeps); prod-dark pins it OFF. A manual `kubectl scale` to 0 is NOT durable —
+# a reconcile would revert it to the manifest value, which is exactly why this
+# lives in git. Flipping prod to a writer is a SEPARATE, Jason-gated step that
+# adopts overlays/prod (the writer shape), never prod-dark.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-ingestor
+spec:
+  replicas: 0

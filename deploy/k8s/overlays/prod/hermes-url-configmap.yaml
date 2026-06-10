@@ -1,0 +1,24 @@
+# HERMES GATEWAY URL (#212) — prod ONLY.
+#
+# The ingestor's iris_planner POSTs plan-context to the Hermes gateway at
+# config.HERMES_URL (ingestor/config.py:58). That default is the VM-era loopback
+# http://127.0.0.1:8642 — correct when hermes ran as a sibling container on the
+# same host, but WRONG in k3s where hermes-iris is its own pod reached via the
+# ClusterIP Service verdify-hermes-iris:8642. With the default unset, the live
+# ingestor's HERMES_URL was empty -> it fell back to 127.0.0.1 -> every scheduled
+# + crop-deviation plan delivery POST failed (nothing listens on the ingestor
+# pod's own loopback:8642). This override repoints it at the in-namespace Service.
+#
+# It is an env-only override read from verdify-config — NO ingestor image rebuild.
+# prod ONLY: the hermes-iris gateway is a prod-anchored Component (ABSENT from
+# overlays/dev and overlays/staging), so its Service name only resolves here.
+#
+# Patched onto the base verdify-config ConfigMap (strategic merge adds the key).
+# NOTE: applying this ConfigMap does NOT by itself restart the ingestor; the new
+# value is picked up on the next ingestor pod start (gated restart — see PR).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-config
+data:
+  HERMES_URL: "http://verdify-hermes-iris:8642"

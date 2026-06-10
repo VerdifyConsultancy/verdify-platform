@@ -1,0 +1,701 @@
+name: Container Publish
+
+# Verdify APP CI/CD (golden-path, mirrors jvallery/gravity container-publish.yml).
+#
+# On push to the production branch, build and publish the Verdify application
+# images to GHCR, then request a k3s GitOps deploy via the Agent Fleet
+# (jvallery/agents) desired-state promotion workflow. The repo drives the
+# deployment: push -> build -> publish -> GitOps desired-state PR -> Argo CD.
+#
+# The Verdify application is composed of these image contexts (handoff §3):
+#   - api       (FastAPI public crop catalog + setpoints)  ./api
+#   - mcp       (MCP transport server, Iris/Hermes tools)  ./mcp
+#   - ingestor  (telemetry + single-writer setpoint dispatcher, device loop) ./ingestor
+#   - planner   (standalone LangGraph planner, folded from verdify-planner #102) ./planner_graph
+#
+# ─── PLANNER IMAGE IS ARTIFACT-ONLY (#102) ───────────────────────────────────
+#  The planner-image job below builds + publishes ghcr.io/<owner>/verdify-planner
+#  so the folded planner_graph package stops being an un-built blob, but it is
+#  DELIBERATELY NOT wired into the deploy path. It is absent from both
+#  bump-staging-digests (the overlays/staging @sha256 write-back) and
+#  request-gitops-promotion (the Agent Fleet GitOps dispatch). The planner is not
+#  yet a deployed k3s workload — this image is a build artifact only. Wiring it
+#  into the deploy path is a separate, gated change once a planner Deployment +
+#  overlay exists. NEVER add `planner-image` to those two jobs in this PR's scope.
+#
+# Image publishing is gated by reusable-container-build.yml branch rules
+# (publish only from the production branch, never from a pull_request). Pull
+# requests build the images without publishing through the same reusable
+# workflow for validation.
+#
+# ─── PROPOSED / PROPOSED-PR NOTES (coordinator + James review required) ──────
+#  * `.github/**` is SHARED INFRA per CLAUDE.md — this file lands as a PR for
+#    coordinator/James review, NOT an autonomous merge.
+#  * VerdifyConsultancy/verdify-platform is READ-ONLY to the agent: this is a
+#    PR into that org with James coordinating; never a direct push.
+#  * PRODUCTION BRANCH DRIFT (P0): the verified production branch on-box and on
+#    the remote is `live/platform-main` (4 ahead of `main`, 0 behind), NOT a
+#    bare `live` and NOT `main`. The default branch is still `main`. This
+#    Per Jason's 2026-05-31 decision the canonical source-of-truth / deploy
+#    branch is `live/platform-main` (the ArgoCD targetRevision). This workflow
+#    publishes ONLY from `live/platform-main`; pushes to `main` build but never
+#    publish. ArgoCD reconciles `deploy/k8s/overlays/{staging,prod}` from it.
+#  * The Dockerfiles (./api/Dockerfile.prod, ./mcp/Dockerfile.prod,
+#    ./ingestor/Dockerfile) and the deploy/k8s tree are net-new (P3) and land in
+#    a SEPARATE PR. Until they exist these build jobs will fail at `docker build`
+#    — intentional: this workflow is the CI/CD wiring (P4), the images are P3.
+#  * The cross-repo promotion target (jvallery/agents
+#    verdify-gitops-dev-test-promotion.yml) + AGENT_FLEET_PROJECT_TOKEN secret
+#    are P5 jvallery-side wiring that does NOT exist yet; the
+#    request-gitops-promotion job below is a safe no-op until they land.
+#  * FIRMWARE / OTA: this workflow NEVER builds-and-flashes firmware. The ESP32
+#    OTA path stays on the human-gated `make firmware-deploy`. No firmware image
+#    context is published here.
+
+on:
+  push:
+    branches:
+      - live/platform-main
+      - main
+    # LOOP-BREAK (#78): the bump-staging-digests job below commits the new
+    # @sha256 digests back into deploy/k8s/overlays/staging/** on a push to
+    # live/platform-main. Without this filter that bump commit would retrigger
+    # this same workflow (rebuild -> publish -> bump -> ...), an infinite loop.
+    # The bump commit ONLY touches overlays/staging/kustomization.yaml, so a
+    # push whose entire diff is under overlays/staging never rebuilds images.
+    # Defense-in-depth: the bump commit body also carries [skip ci]; this
+    # paths-ignore is the primary, deterministic guard (skip-ci only covers the
+    # exact-marker case, not e.g. a hand-edit to the overlay).
+    #
+    # overlays/dev (#127, #99): the same bump commit also repins the
+    # verdify-planner AND verdify-migrate digests into
+    # overlays/dev/kustomization.yaml. dev is INERT (no ArgoCD app applied), and
+    # that repin must likewise not retrigger this workflow, so the dev overlay is
+    # included in the loop-break paths-ignore.
+    paths-ignore:
+      - "deploy/k8s/overlays/staging/**"
+      - "deploy/k8s/overlays/dev/**"
+  pull_request:
+    branches:
+      - live/platform-main
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: verdify-container-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  image-impact:
+    name: Resolve image publish impact
+    runs-on: ubuntu-latest
+    outputs:
+      image_publish: ${{ steps.impact.outputs.image_publish }}
+      api_impact: ${{ steps.impact.outputs.api_impact }}
+      mcp_impact: ${{ steps.impact.outputs.mcp_impact }}
+      ingestor_impact: ${{ steps.impact.outputs.ingestor_impact }}
+      planner_impact: ${{ steps.impact.outputs.planner_impact }}
+      setpoint_impact: ${{ steps.impact.outputs.setpoint_impact }}
+      migrate_impact: ${{ steps.impact.outputs.migrate_impact }}
+      reason: ${{ steps.impact.outputs.reason }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Resolve changed files and image impact
+        id: impact
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+
+          # ─── Collect the changed-file list for this event ───────────────────
+          changed_files="$(mktemp)"
+          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
+            : > "$changed_files"
+          elif [ "${GITHUB_EVENT_NAME}" = "pull_request" ]; then
+            git fetch --no-tags --depth=1 origin "$BASE_SHA" || true
+            git diff --name-only "$BASE_SHA" "$GITHUB_SHA" > "$changed_files" 2>/dev/null \
+              || git diff --name-only HEAD^ HEAD > "$changed_files"
+          elif [ -n "${BEFORE_SHA:-}" ] && [ "$BEFORE_SHA" != "0000000000000000000000000000000000000000" ]; then
+            git diff --name-only "$BEFORE_SHA" "$GITHUB_SHA" > "$changed_files" 2>/dev/null \
+              || git diff --name-only HEAD^ HEAD > "$changed_files"
+          else
+            git diff --name-only HEAD^ HEAD > "$changed_files" 2>/dev/null || : > "$changed_files"
+          fi
+
+          echo "Changed files:"
+          sed 's/^/  /' "$changed_files" || true
+
+          # ─── Image-impact resolution (inline; mirrors gravity's
+          #     scripts/resolve-deploy-impact.rb but self-contained so this
+          #     workflow needs no net-new Ruby helper script). ──────────────────
+          #
+          # Per-image path prefixes. A change to verdify_schemas/ or
+          # docker-compose.yml impacts every Python image (all three COPY the
+          # shared schemas; compose defines the shared runtime contract).
+          manual=false
+          [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ] && manual=true
+
+          api_impact=false
+          mcp_impact=false
+          ingestor_impact=false
+          planner_impact=false
+          setpoint_impact=false
+          migrate_impact=false
+          doc_only=true
+          any_changed=false
+
+          # Files that never change a published APP runtime image.
+          # NOTE: firmware/* is doc-only HERE because firmware never produces a
+          # published APP image — CI never flashes; firmware artifacts are
+          # validated by the existing ci.yml firmware jobs, not this pipeline.
+          # *.md subsumes README/CLAUDE/etc., so they are not listed separately.
+          is_doc_only() {
+            case "$1" in
+              docs/*|*.md|LICENSE|\
+              .github/ISSUE_TEMPLATE/*|\
+              deploy/k8s/*|firmware/*) return 0 ;;
+              *) return 1 ;;
+            esac
+          }
+
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            any_changed=true
+            if ! is_doc_only "$f"; then
+              doc_only=false
+            fi
+            case "$f" in
+              api/*|verdify_schemas/*|docker-compose.yml|pyproject.toml) api_impact=true ;;
+            esac
+            case "$f" in
+              mcp/*|slack_config.py|slack_ops/*|verdify_schemas/*|docker-compose.yml|pyproject.toml) mcp_impact=true ;;
+            esac
+            case "$f" in
+              ingestor/*|slack_config.py|slack_ops/*|verdify_schemas/*|docker-compose.yml|pyproject.toml) ingestor_impact=true ;;
+            esac
+            # planner image is built from the repo root with planner_graph/Dockerfile
+            # but COPYs ONLY planner_graph/** (its own pyproject.toml + uv.lock); it
+            # does NOT COPY the shared verdify_schemas/ — the planner carries its own
+            # copied contract mirror. So a verdify_schemas/ change does not impact the
+            # planner image, unlike the other three Python images.
+            case "$f" in
+              planner_graph/*) planner_impact=true ;;
+            esac
+            # setpoint-server image (#128) is built from scripts/setpoint-server.py
+            # with scripts/Dockerfile.setpoint-server (repo-root context, COPYs
+            # verdify_schemas/). It is ARTIFACT-ONLY — published but never wired into
+            # bump-staging-digests or request-gitops-promotion (no staging overlay;
+            # prod is human-gated; the workload stays scaled-to-0/device-write-disabled).
+            # A verdify_schemas/ change does impact it (it COPYs the package), matching
+            # the api/mcp/ingestor closure.
+            case "$f" in
+              scripts/setpoint-server.py|scripts/Dockerfile.setpoint-server|verdify_schemas/*) setpoint_impact=true ;;
+            esac
+            # verdify-migrate image (db/Dockerfile.migrate) carries db/schema.sql
+            # (the production pg_dump --schema-only snapshot) + migration 000 + the
+            # inline migrate.sh. A db/-only change (schema.sql / migrations / the
+            # migrate.sh inline script / Dockerfile.migrate) MUST rebuild it so the
+            # staging schema-build hook stays current — historically a db/-only
+            # change left image_publish=false (only api/mcp/ingestor/setpoint paths
+            # set it) so migrations never rebuilt the migrate image and its digest
+            # only ever published via manual workflow_dispatch (where the
+            # bump-staging-digests write-back is skipped, stranding staging on a
+            # phantom pin). This db/** path closes that gap. (#99)
+            case "$f" in
+              db/*) migrate_impact=true ;;
+            esac
+          done < "$changed_files"
+
+          if [ "$manual" = "true" ]; then
+            api_impact=true
+            mcp_impact=true
+            ingestor_impact=true
+            planner_impact=true
+            setpoint_impact=true
+            migrate_impact=true
+          fi
+
+          any_image=false
+          { [ "$api_impact" = "true" ] || [ "$mcp_impact" = "true" ] || [ "$ingestor_impact" = "true" ] || [ "$planner_impact" = "true" ] || [ "$setpoint_impact" = "true" ] || [ "$migrate_impact" = "true" ]; } && any_image=true
+
+          image_publish=false
+          if [ "$manual" = "true" ]; then
+            image_publish=true
+            reason="manual workflow_dispatch: building all Verdify images"
+          elif [ "$any_changed" = "false" ]; then
+            reason="no changed files detected; skipping image publish"
+          elif [ "$doc_only" = "true" ]; then
+            reason="docs/firmware/manifests-only change; skipping image publish"
+          elif [ "$any_image" = "false" ]; then
+            reason="no image-impacting files changed; skipping image publish"
+          else
+            image_publish=true
+            changed="api=$api_impact mcp=$mcp_impact ingestor=$ingestor_impact planner=$planner_impact setpoint=$setpoint_impact migrate=$migrate_impact"
+            reason="image-impacting change ($changed)"
+          fi
+
+          echo "$reason"
+          {
+            echo "image_publish=$image_publish"
+            echo "api_impact=$api_impact"
+            echo "mcp_impact=$mcp_impact"
+            echo "ingestor_impact=$ingestor_impact"
+            echo "planner_impact=$planner_impact"
+            echo "setpoint_impact=$setpoint_impact"
+            echo "migrate_impact=$migrate_impact"
+            echo "reason=$reason"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### Image publish impact"
+            echo
+            echo "- image_publish: \`$image_publish\`"
+            echo "- api_impact: \`$api_impact\`"
+            echo "- mcp_impact: \`$mcp_impact\`"
+            echo "- ingestor_impact: \`$ingestor_impact\`"
+            echo "- planner_impact: \`$planner_impact\` (artifact-only; not deployed)"
+            echo "- setpoint_impact: \`$setpoint_impact\` (artifact-only; not deployed)"
+            echo "- migrate_impact: \`$migrate_impact\` (db/** schema-build image)"
+            echo "- reason: $reason"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ---------------------------------------------------------------------------
+  # Per-image build/publish jobs. The reusable workflow only publishes on the
+  # production/main branch; pull_request events always build without pushing for
+  # validation (push_allowed is false on pull_request inside the reusable flow).
+  #
+  # Image naming: ghcr.io/<owner>/verdify-<component>:sha-<12char>. <owner> is
+  # the repo owner (VerdifyConsultancy), lowercased by GHCR. We pass the owner
+  # via github.repository_owner so this is correct under either org.
+  # ---------------------------------------------------------------------------
+  api-image:
+    name: Build and publish api image
+    needs: image-impact
+    if: needs.image-impact.outputs.image_publish == 'true' && (needs.image-impact.outputs.api_impact == 'true' || github.event_name == 'workflow_dispatch')
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/reusable-container-build.yml
+    with:
+      # FastAPI must COPY verdify_schemas/ from the repo root, so the build
+      # context is the repo root (".") with the Dockerfile under ./api.
+      context: .
+      # Hardened, slim production image (FastAPI only; no agent toolchain) —
+      # mirrors gravity's Dockerfile.prod image-split security fix. The P3
+      # artifact shipped this as the multi-stage api/Dockerfile (it replaced the
+      # prior throwaway inline build), so the reference is the plain name, not
+      # the gravity .prod suffix. RECONCILED 2026-05-30; flag for coordinator.
+      dockerfile: api/Dockerfile
+      image-name: ${{ github.repository_owner }}/verdify-api
+      push: true
+      publish-branches: live/platform-main
+      build-args: |
+        GIT_SHA=${{ github.sha }}
+        GIT_REF=${{ github.ref_name }}
+      extra-tags: local-dev
+      # In-image pre-push proof (#26 residual): the shared alerts contract must
+      # import inside the built api image (WORKDIR /app, verdify_schemas/ COPYed
+      # to /app/verdify_schemas) before it can be pushed/digest-pinned.
+      smoke-import: verdify_schemas.alerts
+
+  mcp-image:
+    name: Build and publish mcp image
+    needs: image-impact
+    if: needs.image-impact.outputs.image_publish == 'true' && (needs.image-impact.outputs.mcp_impact == 'true' || github.event_name == 'workflow_dispatch')
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/reusable-container-build.yml
+    with:
+      # MCP also COPYs verdify_schemas/ + slack_config/slack_ops from the repo
+      # root, so the build context is the repo root. P3 shipped the hardened
+      # multi-stage image as the plain mcp/Dockerfile (DANGER surface: wraps
+      # mcp/server.py with zero tool-semantic change). RECONCILED 2026-05-30.
+      context: .
+      dockerfile: mcp/Dockerfile
+      image-name: ${{ github.repository_owner }}/verdify-mcp
+      push: true
+      publish-branches: live/platform-main
+      build-args: |
+        GIT_SHA=${{ github.sha }}
+        GIT_REF=${{ github.ref_name }}
+      extra-tags: local-dev
+      # In-image pre-push proof (#26 residual): WORKDIR /app, verdify_schemas/
+      # COPYed to /app/verdify_schemas — alerts must import before push.
+      smoke-import: verdify_schemas.alerts
+
+  ingestor-image:
+    name: Build and publish ingestor image
+    needs: image-impact
+    if: needs.image-impact.outputs.image_publish == 'true' && (needs.image-impact.outputs.ingestor_impact == 'true' || github.event_name == 'workflow_dispatch')
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/reusable-container-build.yml
+    with:
+      # Ingestor COPYs verdify_schemas/ + slack_config/slack_ops from the repo
+      # root, so the build context is the repo root.
+      context: .
+      dockerfile: ingestor/Dockerfile
+      image-name: ${{ github.repository_owner }}/verdify-ingestor
+      push: true
+      publish-branches: live/platform-main
+      build-args: |
+        GIT_SHA=${{ github.sha }}
+        GIT_REF=${{ github.ref_name }}
+      extra-tags: local-dev
+      # In-image pre-push proof (#26 residual): the ingestor image sets
+      # WORKDIR /app/ingestor but COPYs verdify_schemas/ to /app/verdify_schemas,
+      # so the smoke run is pinned to /app to keep the top-level import resolvable.
+      smoke-import: verdify_schemas.alerts
+      smoke-import-workdir: /app
+
+  planner-image:
+    name: Build and publish planner image
+    needs: image-impact
+    # ARTIFACT-ONLY (#102): build + publish the folded standalone planner image so
+    # planner_graph/ stops being an unbuilt blob. The planner is NOT pinned into
+    # overlays/staging and is NOT in the request-gitops-promotion dispatch — it is
+    # not a deployed k3s workload there. Publishing the artifact is not a deploy.
+    # The staging deploy-path images stay api/mcp/ingestor (+ migrate for the
+    # in-cluster schema build). The bump job DOES read this job's digest, but ONLY
+    # to repin the INERT dev overlay's placeholder planner pin (#127, no ArgoCD app).
+    if: needs.image-impact.outputs.image_publish == 'true' && (needs.image-impact.outputs.planner_impact == 'true' || github.event_name == 'workflow_dispatch')
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/reusable-container-build.yml
+    with:
+      # Build context = repo root (matches api/mcp/ingestor convention); the
+      # Dockerfile lives at planner_graph/Dockerfile and COPYs only planner_graph/**
+      # (its own pyproject.toml + uv.lock with langgraph etc.), NOT the repo-root
+      # pyproject or the shared verdify_schemas (the planner carries its own mirror).
+      context: .
+      dockerfile: planner_graph/Dockerfile
+      image-name: ${{ github.repository_owner }}/verdify-planner
+      push: true
+      publish-branches: live/platform-main
+      build-args: |
+        GIT_SHA=${{ github.sha }}
+        GIT_REF=${{ github.ref_name }}
+      extra-tags: local-dev
+
+  migrate-image:
+    name: Build and publish migrate image
+    needs: image-impact
+    # verdify-migrate (db/Dockerfile.migrate) carries db/schema.sql + migration
+    # 000; it is tiny and rebuilt on any publish so the staging schema stays
+    # current. A db/-only change (schema.sql / migrations / the inline migrate.sh /
+    # Dockerfile.migrate) now sets migrate_impact -> image_publish via the
+    # image-impact db/** path (#99), so migrations rebuild + republish the migrate
+    # image on a real push (not only via workflow_dispatch, where the
+    # bump-staging-digests write-back is skipped and staging strands on a phantom
+    # pin). The `if:` stays image_publish-gated (rebuild on ANY publish keeps the
+    # staging schema current); migrate_impact guarantees a db/-only push reaches it.
+    if: needs.image-impact.outputs.image_publish == 'true' || github.event_name == 'workflow_dispatch'
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/reusable-container-build.yml
+    with:
+      # Build context = repo root so the Dockerfile can COPY db/schema.sql +
+      # db/migrations/000-* + db/migrate.sh.
+      context: .
+      dockerfile: db/Dockerfile.migrate
+      image-name: ${{ github.repository_owner }}/verdify-migrate
+      push: true
+      publish-branches: live/platform-main
+      build-args: |
+        GIT_SHA=${{ github.sha }}
+        GIT_REF=${{ github.ref_name }}
+      extra-tags: local-dev
+
+  setpoint-server-image:
+    name: Build and publish setpoint-server image
+    needs: image-impact
+    # ARTIFACT-ONLY (#128): build + publish ghcr.io/<owner>/verdify-setpoint-server
+    # (scripts/Dockerfile.setpoint-server) so the containerized grow-light writer /
+    # setpoint-diagnostics service is a reviewable, repo-linked artifact. It is
+    # DELIBERATELY NOT consumed by bump-staging-digests or request-gitops-promotion:
+    # it has NO staging overlay (it is a prod-only, device-affecting writer) and
+    # prod is human-gated. Publishing the artifact is NOT a deploy — the
+    # setpoint-server workload stays scaled-to-0 / device-write-disabled. Same
+    # posture as planner-image (#102). Mirrors the migrate-image job pattern.
+    if: needs.image-impact.outputs.image_publish == 'true' && (needs.image-impact.outputs.setpoint_impact == 'true' || github.event_name == 'workflow_dispatch')
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/reusable-container-build.yml
+    with:
+      # Build context = repo root: setpoint-server.py inserts the repo root on
+      # sys.path and the Dockerfile COPYs scripts/setpoint-server.py + verdify_schemas/.
+      context: .
+      dockerfile: scripts/Dockerfile.setpoint-server
+      image-name: ${{ github.repository_owner }}/verdify-setpoint-server
+      push: true
+      publish-branches: live/platform-main
+      build-args: |
+        GIT_SHA=${{ github.sha }}
+        GIT_REF=${{ github.ref_name }}
+      extra-tags: local-dev
+      # In-image pre-push proof (#26 residual): WORKDIR /app, verdify_schemas/
+      # COPYed to /app/verdify_schemas — alerts must import before push (same
+      # contract closure the setpoint-server's tunable_registry import relies on).
+      smoke-import: verdify_schemas.alerts
+
+  # ---------------------------------------------------------------------------
+  # In-repo digest write-back into deploy/k8s/overlays/staging (LOCKED DECISION:
+  # the digest bump is an in-repo commit on live/platform-main — NO cross-repo
+  # PR, NO ArgoCD Image Updater). After the 4 verdify-* images publish to in-org
+  # GHCR, this job pins overlays/staging to the exact @sha256 digests of the
+  # images built from THIS commit and commits the bump back to
+  # live/platform-main. ArgoCD (repoint is jvallery/laptop-root's #65) then
+  # reconciles staging to the new digests. prod is promoted separately (gated),
+  # so it is intentionally NOT auto-bumped here.
+  #
+  # Only images that actually rebuilt this run carry a digest; skipped images
+  # (no path impact) leave an empty output, and we keep the existing pin for
+  # those — the bump is digest-by-digest, never blanking an unbuilt image.
+  # ---------------------------------------------------------------------------
+  bump-staging-digests:
+    name: Bump overlays/staging image digests
+    needs:
+      - image-impact
+      - api-image
+      - mcp-image
+      - ingestor-image
+      - migrate-image
+      - planner-image
+    # DECOUPLED FROM migrate (#78): the orphaned verdify-migrate package
+    # (repo:None -> permission_denied: write_package) failing must NOT block
+    # bumping api/mcp/ingestor. This job now runs with always() semantics gated
+    # ONLY on a production-branch push that intended to publish images; it no
+    # longer hard-requires ANY individual image job's result in the `if:`. The
+    # pin() helper below already no-ops on an empty digest, so a failed/skipped
+    # image simply keeps its current overlay pin and never blocks the others.
+    # migrate stays in `needs:` so its digest is readable for BOTH the staging
+    # pin (the staging overlay references verdify-migrate) and the overlays/dev
+    # migrate repin (#99 — dev self-heals its migrate pin off a phantom on each
+    # green migrate build, mirroring the staging pin), but it is dropped from the
+    # `if:` gate so its failure cannot block the bump.
+    # The planner image is in `needs:` ONLY to read its digest for the dev-overlay
+    # repin (#127); the planner is still absent from overlays/staging.
+    if: |
+      always() &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/live/platform-main' &&
+      needs.image-impact.outputs.image_publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout live/platform-main
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          ref: live/platform-main
+          # Need a writable token to push the digest bump back to the branch.
+          token: ${{ github.token }}
+
+      - name: Install kustomize
+        run: |
+          set -euo pipefail
+          curl -fsSL -o /tmp/kustomize.tar.gz \
+            https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.3/kustomize_v5.4.3_linux_amd64.tar.gz
+          tar -C /usr/local/bin -xzf /tmp/kustomize.tar.gz kustomize
+          kustomize version
+
+      - name: Pin published digests into overlays/staging
+        env:
+          API_DIGEST: ${{ needs.api-image.outputs.image_digest }}
+          MCP_DIGEST: ${{ needs.mcp-image.outputs.image_digest }}
+          INGESTOR_DIGEST: ${{ needs.ingestor-image.outputs.image_digest }}
+          MIGRATE_DIGEST: ${{ needs.migrate-image.outputs.image_digest }}
+        run: |
+          set -euo pipefail
+          cd deploy/k8s/overlays/staging
+
+          # ref is "ghcr.io/verdifyconsultancy/verdify-<c>@sha256:<hex>".
+          # `kustomize edit set image name@digest` rewrites the pin in place.
+          pin() {
+            local ref="$1"
+            if [ -z "$ref" ]; then return 0; fi
+            case "$ref" in
+              *@sha256:*) ;;
+              *) echo "refusing non-digest image ref: $ref" >&2; exit 1 ;;
+            esac
+            kustomize edit set image "$ref"
+            echo "pinned $ref"
+          }
+
+          pin "$API_DIGEST"
+          pin "$MCP_DIGEST"
+          pin "$INGESTOR_DIGEST"
+          pin "$MIGRATE_DIGEST"
+
+      - name: Repin planner + migrate digests into overlays/dev (#127, #99)
+        env:
+          PLANNER_DIGEST: ${{ needs.planner-image.outputs.image_digest }}
+          MIGRATE_DIGEST: ${{ needs.migrate-image.outputs.image_digest }}
+        run: |
+          set -euo pipefail
+          # AUTO-REPIN THE PLANNER + MIGRATE DIGESTS IN THE DEV OVERLAY (#127,
+          # #99). The dev overlay reuses the staging-verified app-image digests
+          # as a known-good baseline, but the planner and migrate pins can drift
+          # to a phantom (a placeholder @sha256:0000… for planner; a deleted
+          # digest for migrate). When either image publishes this run, write its
+          # real @sha256 digest into overlays/dev so neither stays a dead pin.
+          # The dev migrate repin MIRRORS the staging migrate pin above (same
+          # MIGRATE_DIGEST source), so a migrate-impacting (db/**) push now
+          # self-heals BOTH overlays' migrate pin in one bump. SAFE: dev is
+          # INERT — there is NO verdify-dev ArgoCD Application applied, so this
+          # bump deploys nothing. prod is NEVER touched here (human-gated). The
+          # push paths-ignore is extended to overlays/dev/** so this bump commit
+          # does not retrigger the workflow (same loop-break as overlays/staging).
+          cd deploy/k8s/overlays/dev
+          repin() {
+            local label="$1" ref="$2"
+            if [ -z "$ref" ]; then
+              echo "no $label digest published this run (job skipped/failed); keeping the existing dev pin."
+              return 0
+            fi
+            case "$ref" in
+              *@sha256:*) ;;
+              *) echo "refusing non-digest $label image ref: $ref" >&2; exit 1 ;;
+            esac
+            kustomize edit set image "$ref"
+            echo "repinned dev $label -> $ref"
+          }
+          repin planner "${PLANNER_DIGEST:-}"
+          repin migrate "${MIGRATE_DIGEST:-}"
+
+      - name: Validate digest-only render
+        run: |
+          set -euo pipefail
+          # Every verdify-* image must be @sha256-pinned (no mutable tag leaks).
+          rendered="$(kustomize build deploy/k8s/overlays/staging)"
+          if printf "%s" "$rendered" \
+              | grep -E '^\s+image: ghcr.io/verdifyconsultancy/verdify-' \
+              | grep -qv '@sha256:'; then
+            echo "a verdify-* image is not digest-pinned after bump" >&2
+            printf "%s" "$rendered" | grep -E '^\s+image: ghcr.io/verdifyconsultancy/verdify-' >&2
+            exit 1
+          fi
+
+      - name: Commit and push digest bump
+        run: |
+          set -euo pipefail
+          git config user.name "verdify-ci[bot]"
+          git config user.email "verdify-ci@users.noreply.github.com"
+          # Both overlays can change independently: staging on an api/mcp/ingestor/
+          # migrate digest bump, dev on a planner repin (#127). Commit if EITHER
+          # moved; exit clean if neither did.
+          staging_overlay="deploy/k8s/overlays/staging/kustomization.yaml"
+          dev_overlay="deploy/k8s/overlays/dev/kustomization.yaml"
+          if git diff --quiet -- "$staging_overlay" "$dev_overlay"; then
+            echo "no digest change to commit"
+            exit 0
+          fi
+          git add "$staging_overlay" "$dev_overlay"
+          # [skip ci] in the SUBJECT line (honored by GitHub Actions anywhere in
+          # the message, but placed first so it is unmissable) is the secondary
+          # loop-break; the primary is the on.push paths-ignore for
+          # deploy/k8s/overlays/{staging,dev}/** above. Bot author keeps the bump
+          # commits attributable + filterable.
+          git commit -m "ci: [skip ci] bump overlays staging+dev image digests to ${GITHUB_SHA:0:12}
+
+          In-repo digest write-back (locked decision, no cross-repo PR, no
+          ArgoCD Image Updater). Digests pin overlays/staging to the verdify-*
+          images built from ${GITHUB_SHA}; overlays/dev gets the verdify-planner
+          digest repinned (#127, dev is INERT — no ArgoCD app applied). ArgoCD
+          reconciles staging from here; prod is human-gated and never bumped."
+          git push origin HEAD:live/platform-main
+
+  # ---------------------------------------------------------------------------
+  # Request the Agent Fleet GitOps dev-to-test promotion. The api image SHA tag
+  # is the canonical deployable revision. This only runs on a real
+  # production-branch push that published images. The desired-state PR (and Argo
+  # CD reconcile) is owned by jvallery/agents.
+  #
+  # SAFE NO-OP UNTIL P5: the jvallery/agents
+  # `verdify-gitops-dev-test-promotion.yml` workflow and the
+  # AGENT_FLEET_PROJECT_TOKEN secret do not exist yet. When the token is unset
+  # the dispatch step exits 0 with a message instead of failing.
+  # ---------------------------------------------------------------------------
+  request-gitops-promotion:
+    name: Request Agent Fleet k3s deploy
+    needs:
+      - image-impact
+      - api-image
+      - mcp-image
+      - ingestor-image
+    # DECOUPLED FROM migrate (#78): this job only dispatches the api/mcp/ingestor
+    # image SHAs to the Agent Fleet promotion — migrate is NOT in the dispatch
+    # payload, so the orphaned verdify-migrate failing must not block the deploy
+    # request. migrate is therefore dropped from BOTH `needs:` and the `if:`.
+    # always() so a skipped optional image (no impact) does not block; we still
+    # gate on a production push that intended to publish images.
+    if: |
+      always() &&
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/live/platform-main' &&
+      needs.image-impact.outputs.image_publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Resolve immutable image metadata
+        id: image
+        env:
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
+          owner="$(printf '%s' "$OWNER" | tr '[:upper:]' '[:lower:]')"
+          short_sha="${GITHUB_SHA:0:12}"
+          {
+            echo "api_image=ghcr.io/${owner}/verdify-api:sha-${short_sha}"
+            echo "mcp_image=ghcr.io/${owner}/verdify-mcp:sha-${short_sha}"
+            echo "ingestor_image=ghcr.io/${owner}/verdify-ingestor:sha-${short_sha}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Dispatch Agent Fleet GitOps promotion
+        env:
+          GH_TOKEN: ${{ secrets.AGENT_FLEET_PROJECT_TOKEN }}
+          API_IMAGE: ${{ steps.image.outputs.api_image }}
+          MCP_IMAGE: ${{ steps.image.outputs.mcp_image }}
+          INGESTOR_IMAGE: ${{ steps.image.outputs.ingestor_image }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "AGENT_FLEET_PROJECT_TOKEN is not configured; skipping Agent Fleet GitOps promotion dispatch."
+            echo "This is expected until the P5 jvallery/agents promotion wiring lands." >&2
+            exit 0
+          fi
+
+          gh workflow run verdify-gitops-dev-test-promotion.yml \
+            --repo jvallery/agents \
+            --ref main \
+            -f mode=pull-request \
+            -f source_revision="$GITHUB_SHA" \
+            -f api_image="$API_IMAGE" \
+            -f mcp_image="$MCP_IMAGE" \
+            -f ingestor_image="$INGESTOR_IMAGE"
+
+          {
+            echo "### Agent Fleet GitOps promotion dispatch"
+            echo
+            echo "- Source revision: \`${GITHUB_SHA}\`"
+            echo "- api image: \`${API_IMAGE}\`"
+            echo "- mcp image: \`${MCP_IMAGE}\`"
+            echo "- ingestor image: \`${INGESTOR_IMAGE}\`"
+            echo "- Workflow: \`jvallery/agents/.github/workflows/verdify-gitops-dev-test-promotion.yml\`"
+            echo "- Target: \`local-dev\` then gated \`local-staging\` after dev health"
+          } >> "$GITHUB_STEP_SUMMARY"

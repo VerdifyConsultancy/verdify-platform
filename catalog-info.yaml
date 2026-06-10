@@ -1,0 +1,38 @@
+# Backstage catalog entity for the Verdify platform (the deployable APP).
+#
+# Golden-path repo-root descriptor (handoff §2.3 / §6 DoD #3). This is the
+# per-repo catalog-info.yaml that complements — and is kept consistent with —
+# the registry-rendered entities in
+# jvallery/agent-fleet-control/registry/catalog/. Keep owner/system here
+# byte-consistent with the registry projection (spec.owner group:james,
+# spec.system iris-verdify) so the two Backstage projections agree.
+#
+# Distinct from the DEV-AGENT entities (spec.type: agent, e.g. verdify-saas):
+# this describes the runtime platform service deployed via deploy/k8s/ ->
+# ghcr -> the ArgoCD Application verdify-local-staging in jvallery/agents.
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: verdify-platform
+  title: Verdify Platform
+  description: >-
+    AI-driven climate controller for a live greenhouse (Longmont, CO):
+    FastAPI api, MCP planner tool surface, ingestor + setpoint dispatcher,
+    TimescaleDB, and supporting site/grafana/traefik/mqtt services.
+  annotations:
+    github.com/project-slug: VerdifyConsultancy/verdify-platform
+    backstage.io/techdocs-ref: dir:.
+    agent-fleet.vallery.net/golden-path-type: app
+    agent-fleet.vallery.net/framework: python
+    agent-fleet.vallery.net/classification: work
+  tags:
+    - verdify
+    - greenhouse
+    - python
+    - fastapi
+    - timescaledb
+spec:
+  type: service
+  lifecycle: production
+  owner: group:james
+  system: iris-verdify

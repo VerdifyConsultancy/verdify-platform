@@ -1,0 +1,26 @@
+# DEVICE SAFETY — dev (device-dark layer 2 of 3; #115).
+#
+# The ingestor is the ONLY potentially device-touching workload. In dev it is
+# configured for #114 SUBSCRIBE mode (VERDIFY_INGEST_SOURCE=mqtt-subscribe, set
+# in env-configmap.yaml) and the #79 device-write gate
+# (VERDIFY_DEVICE_WRITE_ENABLED=0) bars any push regardless — but until the
+# Jason-gated M5 cutover, the WORKLOAD itself stays OFF.
+#
+# Pinned to replicas:0 so verdify-dev is PROVABLY device-dark: no ingestor pod
+# runs at all, so there is no second process anywhere that could hold an ESP32
+# native-API connection and no path by which an ArgoCD selfHeal reconcile could
+# stand one up. This MIRRORS overlays/staging/ingestor-replicas-zero.yaml and
+# upholds the single-writer invariant: prod is the ONE writer; dev/stage stay
+# replicas:0/device-dark until the gated, Jason-confirmed M5 flips them on.
+# A manual `kubectl scale` is NOT durable under selfHeal, which is exactly why
+# this pin lives in git. Flip to replicas:1 (subscribe mode) only at M5 with
+# explicit Jason sign-off.
+#
+# NOTE: filename kept (ingestor-replicas-zero.yaml) to avoid churn in the
+# kustomization patch list.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-ingestor
+spec:
+  replicas: 0

@@ -1,0 +1,69 @@
+# ArgoCD Application — verdify-prod-dark  (the LIVE greenhouse prod app)
+#
+# NAME IS A MISNOMER (kept for now): this App is NO LONGER device-dark. As of the
+# 2026-06-07 cutover it is the REAL prod — its source is deploy/k8s/overlays/prod
+# (the device-WRITER overlay: ingestor replicas:1, allow-ingestor-device-egress,
+# VERDIFY_DEVICE_WRITE_ENABLED=1), and its ingestor is the ONE live single writer
+# to the greenhouse ESP32 (192.168.10.111:6053) + the in-cluster TimescaleDB. This
+# CR is reconciled here to MATCH the live App (path overlays/prod). It is a
+# STANDALONE App (no app-of-apps owner) applied imperatively to the argocd ns.
+#
+# *** RENAME TO verdify-prod — SAFE, GATED PROCEDURE (NOT yet executed) ***
+# ArgoCD Application names are IMMUTABLE, so "rename" = create a new App named
+# verdify-prod + delete this one. The live App manages the SINGLE-WRITER ingestor,
+# so a naive delete (default cascade) would PRUNE every child incl. the ingestor.
+# Execute ONLY with this orphan-readopt sequence, operator-gated:
+#   1. kubectl -n argocd delete application verdify-prod-dark --cascade=orphan
+#      (orphan: leaves ALL live resources running, only removes the App object)
+#   2. kubectl apply -f this file with metadata.name: verdify-prod (same project,
+#      same source path overlays/prod, same destination ns verdify-prod, manual
+#      sync, prune:false) — ArgoCD ADOPTS the orphaned resources by tracking-id.
+#   3. Verify: the new verdify-prod App reports the SAME resource set, Synced/
+#      Healthy, and the ingestor pod UID is UNCHANGED (no restart).
+# Do NOT run this unattended; one mis-step prunes the live writer. The name is
+# cosmetic — leaving it as verdify-prod-dark is harmless; the rename is documented
+# and ready for a gated window.
+#
+# *** MANUAL SYNC ON PURPOSE *** — NO syncPolicy.automated block. prod sync is
+# operator-initiated (argocd app sync) so a device-writer reconcile is never
+# automatic. prune is FALSE — never auto-reap the verdify-db StatefulSet/PVC (the
+# live TimescaleDB) or the verdify-db-dumps backup PVC on a manifest reshuffle.
+#
+# verdify-db STORAGE: overlays/prod now restates the verdify-db volumeClaimTemplate
+# onto synology-iscsi-ssd to MATCH the already-migrated live DB (PR #204), so
+# adopting the running STS forces no immutable-field change and never triggers a
+# delete/recreate of the DB.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: verdify-prod-dark
+  namespace: argocd
+  labels:
+    agent-fleet.vallery.net/environment: prod
+    agent-fleet.vallery.net/project: iris-verdify
+    app.kubernetes.io/part-of: agent-fleet
+  annotations:
+    agent-fleet.vallery.net/app-repo: https://github.com/VerdifyConsultancy/verdify-platform.git
+    agent-fleet.vallery.net/environment: prod
+    agent-fleet.vallery.net/image-tag: ghcr.io/verdifyconsultancy/verdify-api@sha256-digest-pinned
+    agent-fleet.vallery.net/source-repo: https://github.com/VerdifyConsultancy/verdify-platform.git
+    agent-fleet.vallery.net/source-revision: live/platform-main
+    agent-fleet.vallery.net/url: https://www.verdify.ai
+spec:
+  project: app-test
+  source:
+    repoURL: https://github.com/VerdifyConsultancy/verdify-platform.git
+    targetRevision: live/platform-main
+    # LIVE prod overlay (device writer). Reconciled from the stale overlays/prod-dark
+    # to match the running App spec (verified live 2026-06-07).
+    path: deploy/k8s/overlays/prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: verdify-prod
+  # MANUAL SYNC: no automated block (prod adoption is operator-paced; see header).
+  # prune stays false at the app level; operator-initiated syncs must use the
+  # ArgoCD prune confirmation explicitly and NEVER prune the verdify-db
+  # StatefulSet/PVC or the verdify-db-dumps backup PVC.
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=false

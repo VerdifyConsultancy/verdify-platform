@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-config
+  labels:
+    app.kubernetes.io/part-of: verdify
+data:
+  # ---- Hardened, non-secret runtime config -------------------------------
+  # Security defaults are pinned HERE, not inherited from a mutable plaintext
+  # .env on the VM (the exact anti-pattern the gravity audit flagged). The live
+  # VM .env wired VERDIFY_ALLOW_UNAUTHENTICATED_WRITES through compose; this
+  # ConfigMap deliberately OMITS that key so api/main.py's require_write_access()
+  # fails CLOSED (mirrors gravity's AUTH_MODE=optional → required fix, handoff
+  # §3.1). Do NOT add VERDIFY_ALLOW_UNAUTHENTICATED_WRITES here.
+
+  # ---- Database (non-secret connection fields; password via Secret) -------
+  # The api reads DB_HOST/DB_NAME/DB_USER (api/main.py:192-195) and the ingestor
+  # reads the same (ingestor/config.py:20-23). The password is injected from the
+  # verdify-app-secrets Secret as POSTGRES_PASSWORD by each workload.
+  DB_HOST: "verdify-db"
+  DB_PORT: "5432"
+  DB_NAME: "verdify"
+  DB_USER: "verdify"
+
+  # ---- MCP transport ------------------------------------------------------
+  # mcp/server.py binds os.environ MCP_HTTP_HOST default 127.0.0.1 / MCP_HTTP_PORT
+  # default 8000 (mcp/server.py:248-249). In-cluster we bind 0.0.0.0 so the
+  # ClusterIP Service can reach it; the surface stays ClusterIP + NetworkPolicy
+  # (in-namespace only) — never a raw LB. (handoff §3.2)
+  MCP_HTTP_HOST: "0.0.0.0"
+  MCP_HTTP_PORT: "8000"
+
+  # ---- Device / local-service endpoints (egress targets, §3.4) -----------
+  # These are the VLAN-crossing endpoints the ingestor reaches. They are config,
+  # not secrets. Whether a k3s pod can actually reach them is the GATED §3.4
+  # device-VLAN spike (see networkpolicy.yaml egress placeholder) — declaring
+  # the endpoints here does NOT grant reachability and does NOT move the device
+  # loop off the VM. The ingestor is expected to stay VM-side initially.
+  ESP32_HOST: "192.168.10.111"
+  ESP32_PORT: "6053"
+  HA_URL: "http://192.168.30.107:8123"
+  MQTT_HOST: "192.168.30.107"
+  MQTT_PORT: "1883"
+  FRIGATE_URL: "http://192.168.30.142:5000"
+
+  # ---- HA-3.2 single-writer FENCE (#240) ---------------------------------
+  # The coordination.k8s.io Lease fence is DEFAULT-OFF here, exactly like the
+  # device-write gate (#79). The lease code is fully inert (is_held()→True,
+  # behaviour identical to the pre-fence ingestor) until this flag is "1". It is
+  # armed ONLY in the prod overlay, and ONLY via the gated live-arm runbook with
+  # Jason sign-off (see deploy/k8s/overlays/prod/STAGED-ha3-writer-fence-arm.md).
+  # Renew-or-die windows (15s lease / 10s renew / 2s retry) are the writer_lease
+  # defaults; overridable per-env via VERDIFY_WRITER_LEASE_* if ever needed.
+  VERDIFY_WRITER_LEASE_ENABLED: "0"

@@ -54,6 +54,14 @@ from entity_map import (
     normalize_feedback_value,
 )
 from esp32_push import push_to_esp32
+from mqtt_fanout import (
+    FanoutPublisher,
+    assert_modes_consistent,
+    decode_payload,
+    publish_all_enabled,
+    subscribe_mode_enabled,
+    subscribe_topic_filter,
+)
 from occupancy import refresh_latest_occupancy_state, sync_occupancy_state
 from pydantic import ValidationError
 from tasks import (
@@ -76,10 +84,12 @@ from tasks import (
     setpoint_confirmation_monitor,
     setpoint_dispatcher,
     shelly_sync,
+    site_content_refresh,
     slack_operator_briefs,
     tempest_sync,
     water_flowing_sync,
 )
+from writer_lease import WriterLease
 
 from verdify_schemas import (
     CLIMATE_INTENT_CONTRACT_VERSION,
@@ -89,6 +99,7 @@ from verdify_schemas import (
     Diagnostics,
     EquipmentStateEvent,
     ESP32LogRow,
+    HAEntityState,
     OverrideEvent,
     SetpointChange,
     SetpointSnapshot,
@@ -249,6 +260,29 @@ class State:
 
 state = State()
 
+# Telemetry fan-out publisher (#113). None unless VERDIFY_MQTT_PUBLISH_ALL=1
+# (prod-only). Set up in main(); used by the flush path to re-emit every flushed
+# row onto the cross-env bus. Never gates the local DB write.
+_fanout_publisher: FanoutPublisher | None = None
+
+# HA-3.2 single-writer fence (#240). The renew-or-die WriterLease. Constructed in
+# main(), published to shared.writer_lease so the push path can gate on it, and
+# acquired BEFORE the ESP32 connect in esp32_loop. INERT unless
+# VERDIFY_WRITER_LEASE_ENABLED is set (then is_held() is the real gate).
+_writer_lease: WriterLease | None = None
+
+
+def _fanout_publish(table: str, row: dict[str, Any]) -> None:
+    """Best-effort publish of one flushed row to the fan-out bus (#113).
+
+    No-op unless the prod publish-all publisher is active. Bus errors are
+    swallowed inside FanoutPublisher.publish_row — telemetry capture (the local
+    DB write) is Track A and must never be blocked by a bus outage.
+    """
+    if _fanout_publisher is None:
+        return
+    _fanout_publisher.publish_row(table, GREENHOUSE_ID, row)
+
 
 def _record_mqtt_feedback(topic: str, payload: str) -> bool:
     """Record a live MQTT feedback payload into the next climate flush."""
@@ -359,6 +393,9 @@ async def write_climate(pool: asyncpg.Pool, ts: datetime) -> None:
             *values,
         )
     log.debug(f"climate row written ({len(cols)} columns)")
+    # #113: re-emit the exact row we just persisted onto the fan-out bus so
+    # dev/stage subscribers write the same climate row to their own DB.
+    _fanout_publish("climate", {"ts": ts, **merged})
 
 
 async def write_equipment_events(pool: asyncpg.Pool, ts: datetime) -> None:
@@ -395,6 +432,9 @@ async def write_equipment_events(pool: asyncpg.Pool, ts: datetime) -> None:
             validated,
         )
     log.debug(f"equipment_state: {len(validated)} events written")
+    # #113: fan-out each equipment event to the bus.
+    for row_ts, equip, s in validated:
+        _fanout_publish("equipment_state", {"ts": row_ts, "equipment": equip, "state": s})
 
 
 async def write_state_transitions(pool: asyncpg.Pool, ts: datetime) -> set[str]:
@@ -419,17 +459,25 @@ async def write_state_transitions(pool: asyncpg.Pool, ts: datetime) -> set[str]:
             validated,
         )
     log.debug(f"system_state: {len(validated)} transitions written")
+    # #113: fan-out each transition to the bus.
+    for row_ts, entity, val in validated:
+        _fanout_publish("system_state", {"ts": row_ts, "entity": entity, "value": val})
     return {entity for _, entity, _ in validated}
 
 
-def _parse_float_state(value: str | None) -> float | None:
-    if value is None or value == "" or value == "none":
+def _finite_state_float(value: str | None) -> float | None:
+    """Parse a system_state string to a finite float, or None.
+
+    Routes the parse through the shared ``HAEntityState.as_float()`` contract
+    (handles unavailable / non-numeric values) and additionally rejects
+    non-finite results (inf/nan), which must never reach DB float columns.
+    """
+    if value is None:
         return None
-    try:
-        parsed = float(value)
-    except (TypeError, ValueError):
+    parsed = HAEntityState(entity_id="system_state", state=value).as_float()
+    if parsed is None or not math.isfinite(parsed):
         return None
-    return parsed if math.isfinite(parsed) else None
+    return parsed
 
 
 def _parse_json_object(value: str | None) -> dict[str, Any]:
@@ -516,8 +564,8 @@ async def write_climate_action_log(pool: asyncpg.Pool, ts: datetime) -> bool:
             greenhouse_id=GREENHOUSE_ID,
             climate_action=action,
             priority_axis=priority_axis,
-            temp_band_error_f=_parse_float_state(state.system.get("climate_temp_error_f")),
-            vpd_band_error_kpa=_parse_float_state(state.system.get("climate_vpd_error_kpa")),
+            temp_band_error_f=_finite_state_float(state.system.get("climate_temp_error_f")),
+            vpd_band_error_kpa=_finite_state_float(state.system.get("climate_vpd_error_kpa")),
             moisture_assist_state=moisture_state,
             moisture_zone=moisture_zone,
             wet_assist_allowed=wet_assist_allowed,
@@ -662,8 +710,8 @@ async def write_climate_action_log(pool: asyncpg.Pool, ts: datetime) -> bool:
             ts,
             action,
             priority_axis,
-            _parse_float_state(state.system.get("climate_temp_error_f")),
-            _parse_float_state(state.system.get("climate_vpd_error_kpa")),
+            _finite_state_float(state.system.get("climate_temp_error_f")),
+            _finite_state_float(state.system.get("climate_vpd_error_kpa")),
             moisture_state,
             moisture_zone,
             wet_assist_allowed,
@@ -800,6 +848,39 @@ async def write_diagnostics(pool: asyncpg.Pool, ts: datetime) -> None:
             diag.last_sntp_sync_age_s,
         )
     log.debug("diagnostics row written")
+    # #113: fan-out the diagnostics row. Use the explicit column list above so the
+    # subscriber's generic INSERT writes the same columns (greenhouse_id excluded —
+    # the subscriber stamps its own).
+    _fanout_publish(
+        "diagnostics",
+        {
+            "ts": ts,
+            "wifi_rssi": diag.wifi_rssi,
+            "heap_bytes": diag.heap_bytes,
+            "heap_min_free_kb": diag.heap_min_free_kb,
+            "heap_largest_free_block_kb": diag.heap_largest_free_block_kb,
+            "uptime_s": diag.uptime_s,
+            "probe_health": diag.probe_health,
+            "reset_reason": diag.reset_reason,
+            "firmware_version": diag.firmware_version,
+            "active_probe_count": diag.active_probe_count,
+            "relief_cycle_count": diag.relief_cycle_count,
+            "vent_latch_timer_s": diag.vent_latch_timer_s,
+            "sealed_timer_s": diag.sealed_timer_s,
+            "vpd_watch_timer_s": diag.vpd_watch_timer_s,
+            "mist_backoff_timer_s": diag.mist_backoff_timer_s,
+            "vent_mist_assist_active": diag.vent_mist_assist_active,
+            "effective_heat_target_f": diag.effective_heat_target_f,
+            "effective_cool_stage2_delta_f": diag.effective_cool_stage2_delta_f,
+            "effective_vpd_hysteresis_kpa": diag.effective_vpd_hysteresis_kpa,
+            "effective_dehum_aggressive_kpa": diag.effective_dehum_aggressive_kpa,
+            "controller_time_epoch": diag.controller_time_epoch,
+            "controller_local_hour": diag.controller_local_hour,
+            "sntp_valid": diag.sntp_valid,
+            "sntp_miss_count": diag.sntp_miss_count,
+            "last_sntp_sync_age_s": diag.last_sntp_sync_age_s,
+        },
+    )
 
 
 async def write_daily_summary(pool: asyncpg.Pool) -> None:
@@ -1426,6 +1507,12 @@ async def flush_loop(pool: asyncpg.Pool) -> None:
                             "INSERT INTO setpoint_snapshot (ts, parameter, value) VALUES ($1, $2, $3)",
                             snapshot_rows,
                         )
+                        # #113: fan-out each setpoint snapshot to the bus.
+                        for snap_ts, param, val in snapshot_rows:
+                            _fanout_publish(
+                                "setpoint_snapshot",
+                                {"ts": snap_ts, "parameter": param, "value": val},
+                            )
                         # FW-4 confirmation loop — one UPDATE per readback param
                         # (tiny batch; no worse than the INSERT above).
                         # Dead-band: abs(sc.value - cfg_val) / max(|cfg_val|, 1e-3) < 0.01
@@ -1535,6 +1622,16 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
     first_connect = True
 
     while True:
+        # HA-3.2 FENCE (#240): acquire the writer Lease BEFORE opening the ESP32
+        # connection. A standby pod blocks here until the active holder stops
+        # renewing for >= leaseDurationSeconds (15s) — so the two pods' device
+        # connections never overlap. No-op (returns immediately) when the fence
+        # is disabled/pre-arm. We poll in a bounded loop so a never-acquiring
+        # standby still logs progress rather than blocking silently forever.
+        if _writer_lease is not None and _writer_lease.enabled:
+            while not await _writer_lease.acquire(timeout=30):
+                log.info("Writer lease held by another writer — standing by (will not connect ESP32)")
+
         log.info(f"Connecting to ESP32 at {ESP32_HOST}:{ESP32_PORT}...")
         client = APIClient(
             address=ESP32_HOST,
@@ -1679,24 +1776,46 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
             except Exception as e:
                 log.error(f"Post-reconnect dispatch failed: {e}")
 
-            # Keepalive loop: ping every 60s via device_info()
-            # Also watches for on_stop callback via connection_lost event
+            # Keepalive loop: ping every 60s via device_info().
+            # Watches for: (a) on_stop callback via connection_lost; (b) silent
+            # TCP death via the keepalive ping; (c) HA-3.2 FENCE — loss of the
+            # writer Lease (renew-or-die). The fence is polled on a SHORT cadence
+            # (every keepalive_wait) so a lease loss disconnects the ESP32 within
+            # a couple seconds — well inside the 15s lease window — guaranteeing
+            # the OLD pod drops its device ESTAB before any replacement can
+            # acquire the lease and connect (never two, even under partition).
+            fenced = _writer_lease is not None and _writer_lease.enabled
+            keepalive_elapsed = 0.0
+            keepalive_wait = 2.0 if fenced else 60.0
             while not connection_lost.is_set():
+                # FENCE check FIRST: if we no longer hold the lease, self-fence
+                # immediately (disconnect + stop pushing). Telemetry-read could
+                # in principle continue, but the safe, simple action is a full
+                # disconnect-and-reacquire — the standby has already taken over.
+                if fenced and not _writer_lease.is_held():
+                    log.warning("Writer lease LOST — SELF-FENCING: disconnecting ESP32 immediately")
+                    if disconnected_at is None:
+                        disconnected_at = datetime.now(UTC)
+                    connection_lost.set()
+                    break
                 try:
-                    # Wait up to 60s — if connection_lost fires, we break immediately
-                    await asyncio.wait_for(connection_lost.wait(), timeout=60.0)
-                    # If we get here, connection_lost was set
+                    # Wait up to keepalive_wait — if connection_lost fires, break.
+                    await asyncio.wait_for(connection_lost.wait(), timeout=keepalive_wait)
                     break
                 except TimeoutError:
-                    # 60s passed without disconnect — send keepalive ping
-                    try:
-                        await asyncio.wait_for(client.device_info(), timeout=10.0)
-                    except (TimeoutError, Exception) as ping_err:
-                        log.warning(f"Keepalive ping failed: {ping_err}")
-                        if disconnected_at is None:
-                            disconnected_at = datetime.now(UTC)
-                        connection_lost.set()
-                        break
+                    keepalive_elapsed += keepalive_wait
+                    # Send the device keepalive ping only every ~60s, regardless
+                    # of the (shorter, fence-driven) poll cadence.
+                    if keepalive_elapsed >= 60.0:
+                        keepalive_elapsed = 0.0
+                        try:
+                            await asyncio.wait_for(client.device_info(), timeout=10.0)
+                        except (TimeoutError, Exception) as ping_err:
+                            log.warning(f"Keepalive ping failed: {ping_err}")
+                            if disconnected_at is None:
+                                disconnected_at = datetime.now(UTC)
+                            connection_lost.set()
+                            break
 
             log.warning("Connection lost — will reconnect")
             last_disconnected_at = disconnected_at or datetime.now(UTC)
@@ -1738,6 +1857,10 @@ async def task_loop(pool: asyncpg.Pool) -> None:
         ("ha_sensor_sync", 300, ha_sensor_sync),
         ("alert_monitor", 300, alert_monitor),
         ("planner_memory_ingest", 300, planner_memory_ingest_sync),
+        # Daily RAG-snapshot refresh: re-materialize the vault/docs corpus into
+        # site_content so Iris retrieval doesn't silently drift stale (#43).
+        # Read/embed side only — no device path. 86400s = daily cadence.
+        ("site_content_refresh", 86400, site_content_refresh),
         # reactive_planner removed in Sprint 5 P6 — replaced by forecast deviation monitor
         ("setpoint_dispatch", 300, setpoint_dispatcher),
         ("setpoint_confirmation", 300, setpoint_confirmation_monitor),
@@ -1786,6 +1909,109 @@ async def task_loop(pool: asyncpg.Pool) -> None:
                 finally:
                     if name == "setpoint_dispatch":
                         shared.setpoint_dispatch_in_progress = False
+
+
+# ──────────────────────────────────────────────────────────────
+# MQTT fan-out SUBSCRIBE mode (#114) — dev/stage ingest FROM prod's bus
+# ──────────────────────────────────────────────────────────────
+# Parse-time guard: timestamps arrive as ISO-8601 strings over MQTT.
+def _coerce_fanout_value(key: str, val: Any) -> Any:
+    if key.endswith("ts") or key == "ts":
+        if isinstance(val, str):
+            return datetime.fromisoformat(val)
+    return val
+
+
+async def write_fanout_row(pool: asyncpg.Pool, table: str, greenhouse_id: str, row: dict[str, Any]) -> None:
+    """Write one fan-out row into THIS env's DB (#114 subscribe mode).
+
+    The publisher already validated + persisted the row in prod; here we mirror
+    it into the local per-env DB with a generic column-driven INSERT (same shape
+    as write_climate). greenhouse_id comes from the envelope, not the row, so the
+    subscriber stamps it consistently. NEVER touches any device — subscribe mode
+    carries no ESP32 client.
+    """
+    cols = [c for c in row if c != "greenhouse_id"]
+    if not cols:
+        return
+    values = [_coerce_fanout_value(c, row[c]) for c in cols]
+    # All five fan-out tables carry greenhouse_id (migration 075). Stamp it.
+    all_cols = [*cols, "greenhouse_id"]
+    all_values = [*values, greenhouse_id]
+    cols_sql = ", ".join(all_cols)
+    placeholders = ", ".join(f"${i + 1}" for i in range(len(all_values)))
+    async with pool.acquire() as conn:
+        await conn.execute(
+            f"INSERT INTO {table} ({cols_sql}) VALUES ({placeholders})",
+            *all_values,
+        )
+    log.debug("fan-out subscribe: wrote %s row (%d cols) ghid=%s", table, len(cols), greenhouse_id)
+
+
+async def mqtt_subscribe_loop(pool: asyncpg.Pool) -> None:
+    """Subscribe to prod's fan-out bus and mirror rows into the local DB (#114).
+
+    dev/stage only. No ESP32, no Home Assistant, no occupancy bridge — this is
+    the entire ingest path for a subscriber env. Device writes are independently
+    barred by the #79 gate (VERDIFY_DEVICE_WRITE_ENABLED), which dev/stage leave
+    at 0; subscribe mode additionally carries no client capable of a write.
+    """
+    import paho.mqtt.client as paho_mqtt
+
+    from config import (
+        FANOUT_MQTT_HOST,
+        FANOUT_MQTT_PASS,
+        FANOUT_MQTT_PORT,
+        FANOUT_MQTT_USER,
+    )
+
+    topic_filter = subscribe_topic_filter()
+    event_loop = asyncio.get_event_loop()
+
+    async def _persist(table: str, ghid: str, row: dict[str, Any]) -> None:
+        try:
+            await write_fanout_row(pool, table, ghid, row)
+        except Exception as e:  # noqa: BLE001
+            log.error("fan-out subscribe write failed (%s): %s", table, e)
+
+    def on_connect(client, userdata, flags, rc):
+        if rc == 0:
+            client.subscribe(topic_filter, qos=0)
+            log.info("fan-out subscribe: connected, subscribed to %s", topic_filter)
+        else:
+            log.error("fan-out subscribe: connect failed rc=%d", rc)
+
+    def on_message(client, userdata, msg):
+        try:
+            table, ghid, row = decode_payload(msg.payload.decode(errors="replace"))
+        except (ValueError, json.JSONDecodeError) as e:
+            log.warning("fan-out subscribe: dropping malformed payload: %s", e)
+            return
+        asyncio.run_coroutine_threadsafe(_persist(table, ghid, row), event_loop)
+
+    client = paho_mqtt.Client(client_id="verdify-fanout-sub")
+    client.on_connect = on_connect
+    client.on_message = on_message
+    if FANOUT_MQTT_USER:
+        client.username_pw_set(FANOUT_MQTT_USER, FANOUT_MQTT_PASS)
+
+    while True:
+        try:
+            client.connect(FANOUT_MQTT_HOST, FANOUT_MQTT_PORT, 60)
+            client.loop_start()
+            log.info("fan-out subscribe: connected to %s:%d", FANOUT_MQTT_HOST, FANOUT_MQTT_PORT)
+            while True:
+                await asyncio.sleep(60)
+                if not client.is_connected():
+                    log.warning("fan-out subscribe: disconnected — reconnecting")
+                    client.reconnect()
+        except Exception as e:  # noqa: BLE001
+            log.error("fan-out subscribe: %s — retry in 30s", e)
+            try:
+                client.loop_stop()
+            except Exception:  # noqa: BLE001
+                pass
+            await asyncio.sleep(30)
 
 
 # ──────────────────────────────────────────────────────────────
@@ -1974,11 +2200,61 @@ async def backfill_gap(
 # Main
 # ──────────────────────────────────────────────────────────────
 async def main() -> None:
-    global ESP32_HOST, ESP32_PORT, ESP32_API_KEY, GREENHOUSE_ID
-    log.info("Verdify ingestor starting (greenhouse: %s)...", GREENHOUSE_ID)
+    global ESP32_HOST, ESP32_PORT, ESP32_API_KEY, GREENHOUSE_ID, _fanout_publisher, _writer_lease
+
+    # Fail loudly if both fan-out modes are set (publisher + subscriber in one
+    # process would re-emit what it consumes — a self-feeding topic storm).
+    assert_modes_consistent()
 
     pool = await asyncpg.create_pool(DB_DSN, min_size=2, max_size=10)
+    # SHADOW_MODE: wrap the pool so every acquired connection suppresses write
+    # SQL while still serving reads (freshness probe, config load). Default-off
+    # returns the pool unchanged — zero behavior change to the live writer.
+    pool = shared.wrap_pool_for_shadow(pool)
     log.info("DB connection pool ready")
+
+    # ── #114: subscribe mode (dev/stage) — ingest FROM prod's fan-out bus ─────
+    # NO ESP32 loop, NO Home Assistant, NO occupancy bridge, NO setpoint listener.
+    # The only ingest path is the fan-out subscriber writing into THIS env's DB.
+    if subscribe_mode_enabled():
+        log.info(
+            "Verdify ingestor starting in MQTT-SUBSCRIBE mode (greenhouse: %s) — "
+            "read-only telemetry mirror, no device/HA loops",
+            GREENHOUSE_ID,
+        )
+        await asyncio.gather(
+            mqtt_subscribe_loop(pool),
+        )
+        return
+
+    # ── Capture mode (prod, and the legacy VM single-writer) ──────────────────
+    log.info("Verdify ingestor starting (greenhouse: %s)...", GREENHOUSE_ID)
+
+    # #113: prod-only publish-all. Set up the bus publisher; the flush path
+    # re-emits every flushed row. Best-effort connect — a bus outage must never
+    # block telemetry capture, so a failed connect leaves _fanout_publisher None
+    # and the loop proceeds DB-only.
+    if publish_all_enabled():
+        from config import (
+            FANOUT_MQTT_HOST,
+            FANOUT_MQTT_PASS,
+            FANOUT_MQTT_PORT,
+            FANOUT_MQTT_USER,
+        )
+
+        pub = FanoutPublisher(
+            FANOUT_MQTT_HOST,
+            FANOUT_MQTT_PORT,
+            user=FANOUT_MQTT_USER,
+            password=FANOUT_MQTT_PASS,
+        )
+        try:
+            pub.connect()
+            _fanout_publisher = pub
+            log.info("Fan-out publish-all ENABLED (#113) — re-emitting flushed rows to the bus")
+        except Exception as e:  # noqa: BLE001
+            log.error("Fan-out publisher connect failed: %s — continuing DB-only", e)
+            _fanout_publisher = None
 
     # Load ESP32 config from greenhouses table (overrides .env)
     try:
@@ -1997,13 +2273,66 @@ async def main() -> None:
     except Exception as e:
         log.warning("Could not load greenhouse config from DB: %s (using .env)", e)
 
-    await asyncio.gather(
+    # HA-3.2 single-writer FENCE (#240). Construct the renew-or-die WriterLease
+    # and publish it to shared so the push path (esp32_push.push_to_esp32) and
+    # esp32_loop both gate on it. INERT unless VERDIFY_WRITER_LEASE_ENABLED is
+    # set — until armed, is_held() always returns True and behaviour is identical
+    # to the pre-fence ingestor. start() spawns the background renew loop (no-op
+    # when disabled/off-cluster).
+    _writer_lease = WriterLease()
+    shared.writer_lease = _writer_lease
+    await _writer_lease.start()
+
+    # SIGTERM handler: on graceful eviction / drain / rollout, RELEASE the lease
+    # (clears holderIdentity so a replacement acquires in seconds, not 15s) and
+    # let the process exit. This turns a planned-disruption zero-writer gap from
+    # ~15s into seconds. SIGTERM during a Recreate rollout: the old pod releases,
+    # the new pod (already blocked in esp32_loop.acquire) takes over immediately.
+    loop = asyncio.get_running_loop()
+    _shutdown = asyncio.Event()
+
+    async def _on_sigterm() -> None:
+        log.warning("SIGTERM received — releasing writer lease + shutting down")
+        try:
+            await _writer_lease.release()
+        except Exception as e:  # noqa: BLE001
+            log.warning("Lease release on SIGTERM failed: %s", e)
+        _shutdown.set()
+
+    try:
+        import signal as _signal
+
+        loop.add_signal_handler(_signal.SIGTERM, lambda: asyncio.create_task(_on_sigterm()))
+        loop.add_signal_handler(_signal.SIGINT, lambda: asyncio.create_task(_on_sigterm()))
+    except (NotImplementedError, RuntimeError):
+        # add_signal_handler unsupported (e.g. non-main thread / Windows) — the
+        # lease still expires within leaseDurationSeconds, so correctness holds;
+        # only the fast graceful-release optimization is unavailable.
+        log.info("Signal handlers unavailable; lease will expire on hard stop")
+
+    main_tasks = asyncio.gather(
         esp32_loop(pool),
         flush_loop(pool),
         task_loop(pool),
         mqtt_loop(pool),
         setpoint_listener(pool),
     )
+
+    # Race the worker gather against the shutdown signal so SIGTERM unwinds
+    # promptly (releasing the lease) instead of waiting on the never-returning
+    # loops. On shutdown, cancel the workers and return.
+    shutdown_wait = asyncio.ensure_future(_shutdown.wait())
+    done, pending = await asyncio.wait({main_tasks, shutdown_wait}, return_when=asyncio.FIRST_COMPLETED)
+    if _shutdown.is_set():
+        main_tasks.cancel()
+        try:
+            await main_tasks
+        except (asyncio.CancelledError, Exception):
+            pass
+        return
+    # If the gather itself returned/raised, propagate (surfaces fatal errors).
+    shutdown_wait.cancel()
+    await main_tasks
 
 
 if __name__ == "__main__":

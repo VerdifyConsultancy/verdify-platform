@@ -1,0 +1,109 @@
+# verdify *.vallery.net WAN/edge exposure via the shared apps Traefik (traefik-apps
+# on the apps VIP 192.168.7.10) — the ONE conformant front door (ADR-15 / Model B′).
+#
+# WHY (laptop-root, 2026-05-31, jvallery/agents#361): the cloudflared `vallery-edge`
+# tunnel ALREADY forwards `verdify.vallery.net` and `verdify-staging.vallery.net` to
+# https://192.168.7.10 (Host-preserving, noTLSVerify), but NO IngressRoute existed for
+# those Hosts in traefik-apps, so both returned **404** at the edge. This adds the
+# missing host-routes so the WAN edge (and, once the UDM split-horizon record points
+# *.vallery.net -> .7.10, the LAN) serves verdify through the shared VIP.
+#
+# This is the ADD half of the ADR-15 ADD-THEN-DROP convergence for verdify-api: route
+# THROUGH the shared .7.10 apps-ingress instead of the per-app .7.21 LoadBalancer.
+# Once these IngressRoutes are proven serving, the per-app `verdify-api` LoadBalancer
+# (api-loadbalancer.yaml, .7.21) is the documented anti-pattern to DROP (Jason-gated).
+#
+# AUTH INVARIANT (mirrors gravity-strip-identity-headers / pihole-strip-identity-headers):
+# cloudflared -> Traefik only. The strip-identity-headers Middleware clears any inbound
+# forward-auth identity headers so the api never trusts spoofed identity at the edge.
+#
+# tls: {} == use the Traefik default certificate (the wildcard-vallery-net cert served
+# via the traefik-apps TLSStore `default`; real public TLS is also terminated by
+# Cloudflare at the proxied tunnel edge). Same shape as gravity-ui / pihole-web.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: verdify-strip-identity-headers
+  namespace: verdify-staging
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: api
+spec:
+  headers:
+    customRequestHeaders:
+      X-Authentik-Email: ""
+      X-Authentik-Groups: ""
+      X-Authentik-Name: ""
+      X-Authentik-Uid: ""
+      X-Authentik-Username: ""
+      X-Forwarded-Email: ""
+      X-Forwarded-User: ""
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: verdify-api
+  namespace: verdify-staging
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: api
+spec:
+  entryPoints:
+    - websecure
+    - web
+  routes:
+    - kind: Rule
+      # Both the bare and the -staging host resolve to this staging instance for now
+      # (the only live k3s verdify instance). When a prod instance lands, prod will own
+      # Host(`verdify.vallery.net`) and this overlay keeps Host(`verdify-staging...`).
+      match: Host(`verdify.vallery.net`) || Host(`verdify-staging.vallery.net`)
+      middlewares:
+        - name: verdify-strip-identity-headers
+      services:
+        # Service PORT (not container port): the staging verdify-api Service is the
+        # apps-pool LoadBalancer overlay (api-loadbalancer.yaml) which exposes :80
+        # (name http -> targetPort http/8080). Traefik's kubernetescrd provider
+        # resolves against Service .spec.ports[].port, so this MUST be 80, not 8080
+        # (8080 -> Traefik "service port not found: 8080" -> 404 at the edge).
+        - name: verdify-api
+          port: 80
+    # --- *.verdify.ai : THE PRODUCT DOMAIN, same one-pattern as *.vallery.net ---
+    # api.verdify.ai is the anchor host — the ONLY *.verdify.ai host with a ready
+    # k8s backend (verdify-api). It routes THROUGH this same shared apps Traefik
+    # (.7.10), identically to the vallery.net rule above, so a single Traefik +
+    # single VIP fronts BOTH domains (the explicit "ONE solution, different domains"
+    # north star). The cloudflared vallery-edge tunnel gains matching api.verdify.ai
+    # ingress rules (no new connector) so the SAME tunnel serves verdify.ai for WAN.
+    # Before this rule, `curl -k -H 'Host: api.verdify.ai' https://192.168.7.10/`
+    # returned 404 (Traefik 404s the unknown Host); after it, the real verdify-api.
+    - kind: Rule
+      match: Host(`api.verdify.ai`)
+      middlewares:
+        - name: verdify-strip-identity-headers
+      services:
+        - name: verdify-api
+          port: 80   # Service port (see note above) — staging LB Service exposes :80
+  # tls: {} = Traefik default cert. The valid public wildcard that SHOULD be served
+  # here is *.verdify.ai, which does NOT exist yet (cert-manager letsencrypt-dns01
+  # solver selector is dnsZones:[vallery.net] only; no verdify.ai Cloudflare DNS-01
+  # token). Obtaining that token + a verdify.ai zone solver + a wildcard-verdify-ai
+  # Certificate is the residual TLS gate (handed off). HTTP routing is live now; over
+  # WAN the tunnel's noTLSVerify accepts the default cert, same as *.vallery.net.
+  tls: {}
+# ===========================================================================
+# BLOCKED-ON-BACKEND (staged shape, intentionally NOT active): the remaining
+# *.verdify.ai hosts still run as docker-compose on vm-docker-web with NO k8s
+# Service yet — lab/labs (verdify-site), graphs (grafana-proxy), www + apex
+# (redirect -> lab), analytics (umami), logs (goaccess). Un-comment each rule
+# only once its k8s Service exists, else .7.10 would route to a missing Service
+# (502/404). traefik.verdify.ai (ops dashboard) and mqtt.verdify.ai (Jason-owned
+# greenhouse lane, 192.168.30.150) are deliberately NEVER added to the WAN edge.
+#
+#   - kind: Rule
+#     match: Host(`lab.verdify.ai`) || Host(`labs.verdify.ai`)
+#     services: [{ name: verdify-site, port: 80 }]      # NEEDS k8s Service
+#   - kind: Rule
+#     match: Host(`graphs.verdify.ai`)
+#     services: [{ name: grafana-proxy, port: 80 }]     # NEEDS k8s Service
+#   www.verdify.ai + verdify.ai apex -> RedirectRegex Middleware -> lab.verdify.ai
+# ===========================================================================

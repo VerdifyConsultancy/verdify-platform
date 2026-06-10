@@ -1,0 +1,29 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+# Kustomize COMPONENT: OUR OWN Verdify Grafana (graphs.verdify.ai, #498). The
+# residual, independent observability tier reading the IN-CLUSTER prod
+# TimescaleDB (verdify-db:5432). DESIGNED-FOR overlays/prod ONLY (graphs is a
+# prod host) — NOT a base resource, so it can never render into overlays/staging
+# (the only overlay the live verdify-local-staging ArgoCD app syncs).
+#
+# Resources:
+#   - grafana.yaml            : Deployment (stateless, emptyDir) + Service +
+#                               NetworkPolicy
+#   - graphs-ingressroute.yaml: tier-2 verdify-traefik IngressRoute for
+#                               Host(graphs.verdify.ai) -> verdify-grafana:3000
+#   - generated/provisioning-cm.yaml: datasource (uid verdify-tsdb ->
+#                               verdify-db:5432) + dashboard provider ConfigMap
+#   - generated/dashboards-cm-{0,1}.yaml: all site-*.json dashboards (split into
+#                               two ConfigMaps to stay under the 1MiB limit)
+#
+# Upstream grafana-oss image (NOT transformer-rewritten — not a verdify-* name).
+# Secrets (verdify-grafana-secrets admin pw, verdify-app-secrets POSTGRES_PASSWORD)
+# come via secretKeyRef (optional so the Component renders standalone in CI).
+resources:
+  - grafana.yaml
+  - graphs-ingressroute.yaml
+  - generated/provisioning-cm.yaml
+  - generated/dashboards-cm-0.yaml
+  - generated/dashboards-cm-1.yaml
+  - generated/dashboards-cm-2.yaml

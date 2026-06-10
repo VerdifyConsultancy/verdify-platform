@@ -1,0 +1,47 @@
+# DEVICE-SAFETY EGRESS INTERLOCK (#80 / #115) — dev ONLY.
+#
+# dev is a read-only telemetry SUBSCRIBER (#114): its ingestor runs in
+# VERDIFY_INGEST_SOURCE=mqtt-subscribe mode, opens NO aioesphomeapi connection,
+# and the #79 device-write gate (VERDIFY_DEVICE_WRITE_ENABLED=0) bars any push.
+# This NetworkPolicy is the NETWORK-LAYER belt-and-suspenders half: it selects
+# the ingestor pod and DROPS all egress to the greenhouse device VLAN
+# 192.168.10.0/24 (where the live ESP32 192.168.10.111:6053 lives), so even a
+# misconfigured dev ingestor physically cannot reach the device.
+#
+# This MIRRORS overlays/staging/deny-esp32-egress.yaml. ONLY overlays/prod
+# carries the INVERSE (allow-ingestor-device-egress) — exactly one env ever grants
+# device egress, never dev/stage, never the base.
+#
+# Pattern: no per-port "deny" primitive exists, so "allow all egress except the
+# device VLAN" is expressed via ipBlock.except. The :6053 device-API port lives
+# inside 192.168.10.0/24, so excluding the whole /24 drops it. The subscribe-mode
+# ingestor's real egress need is the cross-namespace prod fan-out broker
+# (verdify-mqtt.verdify-prod.svc:1883) + its own in-namespace DB + DNS, all of
+# which 0.0.0.0/0-except-device-VLAN still permits.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-esp32-egress
+  labels:
+    app.kubernetes.io/part-of: verdify
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: ingestor
+  policyTypes: ["Egress"]
+  egress:
+    # Allow all egress EXCEPT the greenhouse device VLAN (drops 192.168.10.0/24,
+    # which contains the live ESP32 at .111:6053).
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 192.168.10.0/24
+    # Cluster DNS (CoreDNS) — keep name resolution working under the egress lock.
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

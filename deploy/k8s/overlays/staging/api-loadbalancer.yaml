@@ -1,0 +1,63 @@
+# Expose the Verdify api on the APPS subnet (VLAN 7) via the MetalLB apps-pool.
+# This is the only user-facing surface that gets an LB IP; mcp / db / ingestor
+# stay ClusterIP / connect-out. (handoff §2.5)
+#
+# ADR-15 (Model B′, accepted 2026-05-30): this per-app LoadBalancer is the INTERIM
+# path only and is the documented anti-pattern to retire (ADR-15 names
+# `verdify-api .7.21` explicitly). verdify-api converges to ClusterIP + a
+# host-routed IngressRoute + strip Middleware behind the ONE shared apps-ingress
+# VIP, ADD-THEN-DROP (add the IngressRoute, prove it serves, THEN drop this LB),
+# gated on the apps-Traefik/VIP existing (get-well-plan C1) and owned by
+# laptop-root/registry (reconciler-generated, never hand-mapped). The base
+# verdify-api Service is already ClusterIP, so it is ADR-15-ready. See
+# docs/runbooks/verdify-cutover-readiness.md "ADR-15 / Model B′ alignment".
+#
+# apps-pool has autoAssign:false, so the address-pool + loadBalancerIPs
+# annotations are REQUIRED. A fixed IP keeps DNS / Authentik stable.
+#
+# HARD RULES (handoff §2.5):
+#   - NEVER also set spec.loadBalancerIP alongside the annotation → MetalLB
+#     AllocationFailed (dual mechanism). Use the annotation ONLY.
+#   - Do NOT use Cilium lbipam.cilium.io/* annotations — the live cluster honors
+#     metallb.universe.tf/* only.
+#   - 192.168.7.21 is a PLACEHOLDER inside the apps-pool range
+#     (192.168.7.10-192.168.7.250). The real reservation is a laptop-root/Jason
+#     networking surface (propose → confirm → reserve in the registry, like
+#     gravity's .7.20). Do not assume this IP is allocated.
+apiVersion: v1
+kind: Service
+metadata:
+  name: verdify-api
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: api
+  annotations:
+    metallb.universe.tf/address-pool: apps-pool
+    metallb.universe.tf/loadBalancerIPs: 192.168.7.21   # PLACEHOLDER — reserve via registry, confirm with Jason
+spec:
+  type: LoadBalancer
+  # externalTrafficPolicy: Cluster — DURABLE off-cluster reachability fix (laptop-root,
+  # 2026-05-31, jvallery/agents#361). apps-pool is advertised to the UDM via MetalLB
+  # BGP (bgpadvertisement/apps-pool, peer "udm"). Under ETP=Local only the single node
+  # hosting the api pod advertises .7.21, so a resize-driven pod reschedule + a BGP/FIB
+  # re-advertise gap silently blackholes the VIP off-cluster (.7.21 -> 000). The two
+  # PROVEN-WORKING apps-pool VIPs behind the same BGP advertisement — traefik-apps
+  # (.7.10) and gravity-ui (.7.22) — both use ETP=Cluster, so every speaker advertises
+  # the VIP and kube-proxy hairpins to the pod regardless of which node it lands on.
+  # Match that pattern. (We lose client source-IP, acceptable: this is a staging api
+  # behind the edge; the ADR-15 convergence to a host-routed IngressRoute behind the
+  # shared .7.10 apps-ingress remains the end-state and supersedes this whole LB.)
+  externalTrafficPolicy: Cluster
+  selector:
+    app.kubernetes.io/component: api
+  # $patch: replace — the base verdify-api Service already exposes a port named
+  # "http" (8080). A strategic merge keys ports by port-NUMBER, so without this
+  # the patch's :80 and the base's :8080 would BOTH survive with name "http",
+  # producing a Service with a duplicate port name (rejected by the apiserver:
+  # "spec.ports[1].name: Duplicate value: http"). Replacing the list makes the LB
+  # expose exactly one port (80 -> container http/8080).
+  ports:
+    - $patch: replace
+    - name: http
+      port: 80
+      targetPort: http

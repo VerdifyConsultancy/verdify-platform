@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+# Kustomize COMPONENT: the verdify-planner workload (#117). Referenced by
+# overlays/dev + overlays/prod via `components:` — deliberately NOT a base
+# resource, so it never renders into overlays/staging (the only overlay the live
+# verdify-local-staging ArgoCD app syncs). See planner-deployment.yaml header for
+# the full rationale. The image (ghcr.io/verdifyconsultancy/verdify-planner) is
+# pinned to a @sha256 digest by each consuming overlay's images: transformer.
+resources:
+  - planner-deployment.yaml

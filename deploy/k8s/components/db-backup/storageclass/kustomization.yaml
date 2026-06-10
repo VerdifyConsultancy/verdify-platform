@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Reusable, CLUSTER-SCOPED synology-iscsi-ssd StorageClass (M3.3; refs
+# #84/#28/#130). Kept in its OWN kustomization (kind: Kustomization, not a
+# Component) because a StorageClass is cluster-scoped: it must be applied ONCE
+# per cluster, NOT once per namespace. If it were bundled into the namespaced
+# db-backup Component, every env that pulled that Component would re-render the
+# same cluster-scoped object and two ArgoCD apps would fight over ownership.
+#
+# CONSUME EXPLICITLY: Root applies this directly
+#   kustomize build deploy/k8s/components/db-backup/storageclass | kubectl apply -f -
+# (the platform-layer owner of cluster-scoped objects), OR a single env's
+# overlay lists ../../components/db-backup/storageclass in its resources: — but
+# only ONE consumer cluster-wide. No overlay references it today, so merging it
+# creates nothing on the live cluster.
+resources:
+  - synology-iscsi-ssd.yaml

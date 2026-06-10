@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import importlib.util
 import os
 import pathlib
 import re
 import subprocess
+import sys
 
 import pytest
 from pydantic import ValidationError
@@ -28,6 +30,27 @@ from verdify_schemas.tunable_registry import TIER1_REG, registry_value_error
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
 DESIGN_DOC = REPO_ROOT / "docs" / "firmware-climate-intent-controller-final-design-2026-05-24.md"
+
+# Path to the folded standalone planner's local ClimateIntent mirror (#102).
+PLANNER_CONTRACT_PATH = REPO_ROOT / "planner_graph" / "verdify_contract.py"
+
+
+def _load_planner_contract():
+    """Load planner_graph/verdify_contract.py as a bare module.
+
+    The planner is a standalone service: importing the `planner_graph` package
+    triggers its runtime `__init__` (langgraph etc.), which is not a dependency
+    of verdify_schemas. The contract mirror itself is stdlib-only, so we load the
+    file directly to keep this drift guard runnable in the monorepo venv.
+    """
+
+    if not PLANNER_CONTRACT_PATH.exists():
+        pytest.skip("planner_graph/verdify_contract.py is not present")
+    spec = importlib.util.spec_from_file_location("planner_verdify_contract_mirror", PLANNER_CONTRACT_PATH)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 def _section(text: str, start: str, end: str) -> str:
@@ -410,3 +433,54 @@ def test_fog_block_reasons_cover_stored_db_values() -> None:
             fog_block_reason=atom,
         )
         assert decision.fog_block_reason == atom
+
+
+def test_planner_mirror_emits_every_canonical_climate_intent_field() -> None:
+    """The folded standalone planner (#102) keeps a local ClimateIntent mirror in
+    planner_graph/verdify_contract.py. MCP's set_plan path requires every
+    canonical field, so build_climate_intent() must emit the full
+    CLIMATE_INTENT_FIELDS set. The residual drift was a missing
+    all_zone_vpd_excess_kpa; this guard fires if the mirror falls behind again."""
+    contract = _load_planner_contract()
+    intent = contract.build_climate_intent(
+        {
+            **contract.TIER1_PLAN_DEFAULTS,
+            "temp_low": 68.0,
+            "temp_high": 76.0,
+            "vpd_low": 0.7,
+            "vpd_high": 1.3,
+        }
+    )
+    emitted = set(intent)
+    missing = sorted(set(CLIMATE_INTENT_FIELDS) - emitted)
+    assert not missing, (
+        f"planner_graph.verdify_contract.build_climate_intent omits canonical "
+        f"ClimateIntent field(s): {missing}. The planner mirror has drifted from "
+        f"verdify_schemas.climate_intent.CLIMATE_INTENT_FIELDS; MCP set_plan would "
+        f"reject the payload with missing_fields."
+    )
+
+
+def test_planner_mirror_output_validates_against_canonical_climate_intent() -> None:
+    """The planner mirror carries extra band fields (temp/vpd target+band) that
+    MCP consumes separately; the canonical ClimateIntent surface is the
+    CLIMATE_INTENT_FIELDS subset. That subset must construct a valid
+    ClimateIntent, which also enforces the moisture ladder
+    all_zone_vpd_excess_kpa >= moisture_engage_vpd_excess_kpa."""
+    contract = _load_planner_contract()
+    intent = contract.build_climate_intent(
+        {
+            **contract.TIER1_PLAN_DEFAULTS,
+            "temp_low": 68.0,
+            "temp_high": 76.0,
+            "vpd_low": 0.7,
+            "vpd_high": 1.3,
+        }
+    )
+    canonical_payload = {k: intent[k] for k in CLIMATE_INTENT_FIELDS}
+    validated = ClimateIntent(**canonical_payload)
+    assert validated.all_zone_vpd_excess_kpa >= validated.moisture_engage_vpd_excess_kpa
+
+    # Defaults-only path (no Tier 1 context) must also stay valid.
+    default_intent = contract.build_climate_intent({"future_waypoints": 3})
+    ClimateIntent(**{k: default_intent[k] for k in CLIMATE_INTENT_FIELDS})

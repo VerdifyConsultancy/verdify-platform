@@ -1,0 +1,64 @@
+# dev WAN/edge exposure on the *.k3s.verdify.ai dev/stage domain (#115).
+#
+# CONFIRMED ARCHITECTURE: dev/stage URLs live on *.k3s.verdify.ai; prod owns the
+# bare www/lab/api/graphs.verdify.ai hosts. This routes the dev verdify-api
+# THROUGH the shared apps Traefik (traefik-apps on the .7.10 VIP) — the ONE
+# conformant front door, identical pattern to overlays/staging/ingressroute.yaml.
+#
+# INERT-ON-MERGE: there is no verdify-dev ArgoCD Application CR yet (laptop-root
+# gate). The live verdify-local-staging app syncs ONLY overlays/staging, so this
+# IngressRoute is never reconciled by merging to live/platform-main. It is the
+# reviewable target shape. The *.k3s.verdify.ai DNS + the traefik-apps host-route
+# acceptance are platform-layer prerequisites (same gate as the dev App CR).
+#
+# AUTH INVARIANT: cloudflared/edge -> Traefik only. The strip-identity-headers
+# Middleware clears any inbound forward-auth identity headers so the api never
+# trusts spoofed identity at the edge (mirrors staging + gravity/pihole).
+#
+# tls: {} == Traefik default cert. A real public *.k3s.verdify.ai wildcard
+# Certificate (cert-manager letsencrypt-dns01) is the residual TLS gate, same as
+# the *.verdify.ai gap documented in staging; HTTP routing is the shape here.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: verdify-strip-identity-headers
+  namespace: verdify-dev
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: api
+spec:
+  headers:
+    customRequestHeaders:
+      X-Authentik-Email: ""
+      X-Authentik-Groups: ""
+      X-Authentik-Name: ""
+      X-Authentik-Uid: ""
+      X-Authentik-Username: ""
+      X-Forwarded-Email: ""
+      X-Forwarded-User: ""
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: verdify-api
+  namespace: verdify-dev
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: api
+spec:
+  entryPoints:
+    - websecure
+    - web
+  routes:
+    # dev api on the dev/stage domain. The base verdify-api Service is ClusterIP
+    # :8080 (NO api-loadbalancer overlay patch in dev — only staging exposes the
+    # LB Service on :80). Traefik's kubernetescrd provider resolves against the
+    # Service .spec.ports[].port, which in dev is 8080.
+    - kind: Rule
+      match: Host(`api.k3s.verdify.ai`)
+      middlewares:
+        - name: verdify-strip-identity-headers
+      services:
+        - name: verdify-api
+          port: 8080
+  tls: {}

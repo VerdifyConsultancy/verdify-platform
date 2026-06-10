@@ -1,0 +1,125 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Instance: verdify-staging — the first k3s Verdify APP instance, deployed
+# ALONGSIDE the live VM stack for additive validation (the VM compose/systemd
+# stack is NOT stopped until a gated cutover). Track A > Track B always.
+#
+# The namespace string is PINNED. It MUST equal:
+#   - the Namespace object in this overlay (verdify-staging)
+#   - the ArgoCD Application destination.namespace
+#   - every registry/secrets/<id>.yaml target.namespace
+namespace: verdify-staging
+
+  # Placeholder Secret for local `kustomize build` validation ONLY. Remove this
+  # line (and the file) when rendering for a real apply; the SOPS backend
+  # provides the real verdify-app-secrets. See secrets.placeholder.yaml.
+  #
+  # REAL secret (#66): canonical sealed source is
+  # agent-fleet-control/secrets/encrypted/verdify-app-secrets.enc.yaml, applied
+  # OUT-OF-BAND by the fleet GitOps secret-delivery step BEFORE this app
+  # reconciles. As of 2026-05-31 it is ALREADY present in verdify-staging and
+  # decrypts byte-identical (POSTGRES_PASSWORD, VERDIFY_WRITE_API_KEY,
+  # ESP32_API_KEY, MQTT_USER/PASS) — re-applying is a no-op (avoid DB-auth drift).
+  # kustomize cannot decrypt SOPS, so it is NOT a `resources:` entry; the
+  # placeholder above only keeps `kustomize build` / kubeconform complete in CI.
+  # DEVICE-SAFETY: staging-only egress lock dropping all egress to the greenhouse
+  # device VLAN (192.168.10.0/24) from the ingestor pod — see deny-esp32-egress.yaml.
+  # EDGE/WAN: host-routed exposure of verdify-api through the shared apps Traefik on
+  # the .7.10 VIP for verdify.vallery.net / verdify-staging.vallery.net AND
+  # api.verdify.ai (the ONE pattern across BOTH domains; closes the tunnel-forwards-
+  # but-404 gap; ADR-15 ADD-THEN-DROP add-half). See ingressroute.yaml.
+  # CONTRACT: allow the SHARED apps-ingress (ns traefik-apps) to reach verdify-api:8080.
+  # The base allow-api-from-ingress only names the k3s built-in "traefik" ns + the
+  # apps VLAN ipBlock, neither of which matches the traefik-apps pod source IP. flannel
+  # does not enforce NetworkPolicy today, but this keeps the contract correct under the
+  # planned Cilium re-CNI (ADR-17). See allow-api-from-apps-ingress.yaml.
+  # WEB TIER (stateless, #116): host-route the staging verdify-www on
+  # www-staging.vallery.net through the shared apps Traefik (.7.10). Added to
+  # staging now that the edge is reliable; verdify-www is a real published image,
+  # stateless (no PVC), NO device path, so it cannot degrade the live staging app.
+  # See www-ingressroute.yaml.
+  # CONTRACT: allow the apps-ingress to reach verdify-www:8080 (base default-deny).
+  # See allow-www-from-ingress.yaml.
+resources:
+- namespace.yaml
+- ../../base
+- secrets.placeholder.yaml
+- deny-esp32-egress.yaml
+- ingressroute.yaml
+- allow-api-from-apps-ingress.yaml
+- www-ingressroute.yaml
+- allow-www-from-ingress.yaml
+
+# verdify-www (#116) — the stateless marketing site, referenced as a Component so
+# its Deployment+Service render into THIS overlay. SAFE for staging (real GHCR
+# image, no PVC, no device path); historically dev/prod-only purely for the
+# "no new staging workload" containment rule, which a stateless+pullable workload
+# does not violate. The planner/mqtt/setpoint/hermes Components stay OUT of staging
+# (planner image unpublished -> placeholder digest -> ImagePullBackOff; the others
+# are device-affecting or prod-anchored).
+#
+# db-backup (M3.3; refs #84/#28/#130) — the verdify-db-dumps NFS PVC + nightly
+# pg_dump -Fc CronJob + retention + allow-db-from-backup. pg_dump is SELECT-only
+# on the DB (NOT a second writer) and only writes the dumps PVC, so it is SAFE in
+# staging and gives a fresh <26h dump for restore drills. Renders per-namespace
+# (verdify-staging here; verdify-prod in overlays/prod + overlays/prod-dark).
+# Root binds verdify-db-dumps to a static NFS PV (dumps-pvc.yaml is
+# storageClassName:"" -> waits for that PV; see the file). The cluster-scoped
+# synology-iscsi-ssd StorageClass is NOT pulled here — Root applies it once via
+# components/db-backup/storageclass.
+components:
+- ../../components/www
+- ../../components/db-backup
+
+# Instance patches.
+  # Expose the user-facing api on the apps-pool LoadBalancer (VLAN 7). Everything
+  # else stays ClusterIP / connect-out.
+  # DEVICE SAFETY: pin the device-touching ingestor OFF in staging (replicas:0)
+  # so ArgoCD selfHeal cannot bring up a second live-ESP32 writer before the
+  # device-VLAN spike is proven + Jason confirms. See ingestor-replicas-zero.yaml.
+  # DEVICE-WRITE INTERLOCK (#79): explicit VERDIFY_DEVICE_WRITE_ENABLED=0 in
+  # staging (the only place it is NOT 1). See device-write-configmap.yaml.
+  # STORAGE MIGRATION (staging-only): move verdify-db off node-pinned local-path
+  # onto synology-iscsi-ssd so the DB lands on a WORKER and frees node1 to
+  # etcd-only isolation. STS volumeClaimTemplate.storageClassName is immutable,
+  # so committing this is paired with a STS+PVC+PV delete/recreate; data is
+  # preserved via the verified preflight pg_dump, not the volume. Prod stays on
+  # base local-path. See db-storageclass-iscsi.yaml.
+patches:
+- path: api-loadbalancer.yaml
+  target:
+    kind: Service
+    name: verdify-api
+- path: ingestor-replicas-zero.yaml
+- path: device-write-configmap.yaml
+- path: db-storageclass-iscsi.yaml
+
+# Image digest pins. Canonical namespace is
+# ghcr.io/verdifyconsultancy/verdify-{api,mcp,ingestor,migrate}, immutable @sha256
+# (NEVER a mutable :latest/:staging tag). These are the REAL published, repo-linked,
+# in-cluster-pullable (via ghcr-jvallery-readonly) digests verified 2026-05-31:
+#   api/mcp/ingestor = CI build of live/platform-main HEAD 352f299e (tag sha-352f299e9475)
+#   migrate          = tag sha-998afc149421 (rebuilds only on db/** changes)
+# When container-publish goes fully green (after the orphaned verdify-migrate
+# package is removed so CI can publish it repo-linked), the digest write-back job
+# (k8s-manifests.yml, no cross-repo PR / no ArgoCD Image Updater) will own these.
+  # verdify-www (#116): real GHCR digest of the marketing site image built from
+  # the upstream verdify-www repo at sha b33f4cd (see components/www/www.yaml).
+  # Published + repo-linked by verdify-www's own publish-image.yml workflow
+  # (GITHUB_TOKEN packages:write) and verified pullable via the org GHCR package
+  # API 2026-06-04 — this REPLACES the prior placeholder pin (sha256:5e00bc20…)
+  # whose package never existed (404). The ONLY non-app image pinned here; the
+  # env-agnostic static content matches dev/prod's identical pin (so the
+  # promote-diff-guard staging==prod equality holds for this staging-tracked image).
+images:
+- digest: sha256:005e1893d294d82949f7ed802ab790cdd53aba5ec02d179847e9e87bbd4f1c8e
+  name: ghcr.io/verdifyconsultancy/verdify-api
+- digest: sha256:d99f9a538dacf56d7309a34fbd5fbc031a0f539e3201861c2e97124ebd43ff62
+  name: ghcr.io/verdifyconsultancy/verdify-ingestor
+- digest: sha256:e15fc2874c1998bdce81034e58b666e169ddc56b7949cb6a809475ba7a2bee52
+  name: ghcr.io/verdifyconsultancy/verdify-mcp
+- digest: sha256:3d16d2e7c67fe6a5edcccd059d7c27a01f50caa711d3b935c553c904f48d8fa0
+  name: ghcr.io/verdifyconsultancy/verdify-migrate
+- digest: sha256:633fb18ab3c9a637693094917615c720a09baaef4877cce8dcea0568bca0b467
+  name: ghcr.io/verdifyconsultancy/verdify-www

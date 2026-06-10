@@ -1,0 +1,40 @@
+# PROD storage reconcile: the live prod verdify-db has been migrated off
+# Synology iSCSI and onto Longhorn NVMe RWO storage. The base
+# db-statefulset.yaml still pins local-path (shared with the dev/staging
+# pattern), so the prod overlay must restate the volumeClaimTemplate to match the
+# live cluster. Otherwise ArgoCD renders local-path, diffs the live STS, and
+# tries to patch the IMMUTABLE volumeClaimTemplates.storageClassName (the
+# StatefulSet "Forbidden: updates to spec for fields other than ..." sync
+# failure). This patch makes git == live so there is no immutable-field drift.
+#
+# This is a RECONCILE-TO-LIVE git change only; it does NOT touch or recreate the
+# live StatefulSet (git now equals the running spec). Mirrors the staging
+# db-storageclass-iscsi.yaml pattern. The whole volumeClaimTemplate element is
+# restated (kustomize keys volumeClaimTemplates by metadata.name and replaces the
+# matched element) so accessModes + size are preserved alongside the SC.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: verdify-db
+spec:
+  template:
+    spec:
+      nodeSelector:
+        storage.vallery.net/longhorn: "true"
+      containers:
+        - name: postgres
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              memory: "6Gi"
+  volumeClaimTemplates:
+    - metadata:
+        name: db-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: longhorn-nvme-rwo
+        resources:
+          requests:
+            storage: 50Gi

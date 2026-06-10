@@ -1,0 +1,36 @@
+# STAGING-ONLY storage migration: move verdify-db off the node-pinned local-path
+# PVC onto the proven synology-iscsi-ssd StorageClass (csi.san.synology.com,
+# /volume1 SSD, reclaim=Retain, WaitForFirstConsumer, expandable).
+#
+# WHY a staging-overlay patch and NOT a base edit: the base
+# db-statefulset.yaml volumeClaimTemplate (storageClassName: local-path) is
+# shared by BOTH overlays/staging AND overlays/prod. Editing the base would
+# silently retarget prod's DB storage too. Prod is OUT OF SCOPE for this
+# migration and MUST stay on its base local-path until its own gated cutover, so
+# the SC override lives here, in the staging overlay, only.
+#
+# volumeClaimTemplate.spec.storageClassName is IMMUTABLE on a live StatefulSet:
+# applying this patch is necessarily paired with a delete+recreate of the STS
+# (and its old PVC + released PV) so ArgoCD recreates verdify-db-0 with a fresh
+# synology-iscsi-ssd PVC that binds when the pod schedules onto a WORKER (node1
+# is cordoned to return it to etcd-only isolation). Data is preserved via the
+# verified preflight pg_dump on NAS-backed /mnt/jason and restored post-recreate
+# (timescaledb_pre/post_restore), NOT carried on the volume.
+#
+# The whole volumeClaimTemplate list element is restated (kustomize strategic
+# merge keys volumeClaimTemplates by metadata.name and replaces the matched
+# element) so accessModes + storage size are preserved alongside the new SC.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: verdify-db
+spec:
+  volumeClaimTemplates:
+    - metadata:
+        name: db-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: synology-iscsi-ssd
+        resources:
+          requests:
+            storage: 50Gi

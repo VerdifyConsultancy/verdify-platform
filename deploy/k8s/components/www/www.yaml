@@ -1,0 +1,145 @@
+# Verdify marketing site — www.verdify.ai (#116).
+#
+# BUILD SOURCE (NOT vendored into this monorepo): the image is built from the
+# SEPARATE upstream repo github.com/VerdifyConsultancy/verdify-www at a pinned
+# git sha, using THAT repo's own Dockerfile (Astro static build -> Node runtime).
+# We deliberately do NOT vendor the whole Astro app into /mnt/iris/verdify; the
+# only artifact this monorepo carries is the immutable @sha256 image digest pin
+# (overlays' images: transformer) + these manifests. The image now publishes
+# automatically: verdify-www's own .github/workflows/publish-image.yml builds +
+# pushes ghcr.io/verdifyconsultancy/verdify-www on push to its default branch
+# (GITHUB_TOKEN packages:write -> repo-linked). Manual rebuild recipe:
+#   gh repo clone VerdifyConsultancy/verdify-www && cd verdify-www
+#   docker build -t ghcr.io/verdifyconsultancy/verdify-www:sha-$(git rev-parse --short HEAD) .
+#   docker push  ghcr.io/verdifyconsultancy/verdify-www:sha-<sha>   # -> @sha256 digest
+# First REAL published image: repo sha b33f4cd -> ghcr.io/verdifyconsultancy/verdify-www
+#   @sha256:633fb18ab3c9a637693094917615c720a09baaef4877cce8dcea0568bca0b467
+# (this replaced an earlier placeholder pin sha256:5e00bc20… whose package 404'd —
+#  it had never actually been built/pushed to GHCR.)
+#
+# RUNTIME (load-bearing — why NOT a plain nginx static swap): astro.config.mjs is
+# output:"static", BUT the upstream Dockerfile serves dist/ via scripts/server.mjs
+# (Node http), which ALSO implements (a) the path redirects table
+# (/approach -> /method, /live-lab -> lab.verdify.ai, /plans/* -> lab data, etc.)
+# and (b) the contact-form POST handler (nodemailer LEAD_NOTIFICATION_TO). A bare
+# nginx image would silently drop the redirects + form delivery. So the upstream
+# Node runtime is preserved; the form mailer env (LEAD_NOTIFICATION_TO/SMTP) is a
+# residual prod-only Secret wire-up (handed off — the site renders + redirects
+# without it; only the POST /contact delivery needs it).
+#
+# WHY A KUSTOMIZE COMPONENT (not a base resource): #5 hard rule — anything added
+# to deploy/k8s/base renders into overlays/staging, which the live
+# verdify-local-staging ArgoCD app syncs; we must not add a new workload to
+# staging. This component is referenced ONLY by overlays/dev + overlays/prod
+# (same containment posture as the planner). It is NOT greenhouse-critical and
+# touches NO device path — pure web tier, stateless, no PVC.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-www
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: www
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: www
+  strategy:
+    # Stateless static site — a rolling replace is safe (no single-writer/device
+    # constraint; the api/mcp/ingestor safety posture does not apply here).
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: www
+    spec:
+      imagePullSecrets:
+        - name: ghcr-jvallery-readonly
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: www
+          # Pinned to an immutable @sha256 digest by each consuming overlay's
+          # images: transformer (NEVER a mutable :latest/:sha tag). Image name
+          # only here. Built from the upstream verdify-www repo (see header).
+          image: ghcr.io/verdifyconsultancy/verdify-www
+          # The upstream image CMD is `node scripts/server.mjs`; left to the image
+          # default (no command override) so the build source stays authoritative.
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            # server.mjs reads PORT (default 8080). Pin it explicitly so the
+            # container port + Service targetPort + probe stay in lockstep.
+            - name: PORT
+              value: "8080"
+            - name: NODE_ENV
+              value: "production"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: "25m"
+              memory: "64Mi"
+            limits:
+              memory: "256Mi"
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          # GRACEFUL DRAIN (HA #231, Lane C). preStop sleep so Traefik/kube-proxy
+          # drop this pod's endpoint before server.mjs stops accepting, avoiding a
+          # mid-rollout 503 (same drain contract as api/mcp/lab). Probes already
+          # hit the cheap static "/" homepage (no DB), so no liveness decoupling is
+          # needed here — only the drain hook + explicit grace.
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "5"]
+          # server.mjs serves the static dist/ from "/" — use the homepage as the
+          # liveness/readiness target (no dedicated /healthz in the upstream app).
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      # Endpoint-drain window for the preStop hook above (HA #231); 30s explicit.
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: verdify-www
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: www
+spec:
+  # ClusterIP — the public front door is the shared apps Traefik via the per-env
+  # IngressRoute (overlays/dev: www.k3s.verdify.ai; overlays/prod: www.verdify.ai).
+  # No per-app LoadBalancer (the ADR-15 anti-pattern); same as the planner/mcp.
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/component: www
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

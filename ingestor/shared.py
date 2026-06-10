@@ -1,6 +1,138 @@
 """shared.py — Shared mutable state between ingestor and tasks."""
 
 import asyncio
+import logging
+
+log = logging.getLogger("shadow")
+
+
+def is_shadow_mode() -> bool:
+    """True when VERDIFY_SHADOW_MODE is set — suppress ALL writes.
+
+    Read through config so the flag has a single source of truth and tests can
+    monkeypatch config.SHADOW_MODE without re-importing this module.
+    """
+    try:
+        import config
+
+        return bool(config.SHADOW_MODE)
+    except Exception:
+        return False
+
+
+# SQL statements that mutate the DB. Shadow mode no-ops these while letting
+# reads (SELECT / WITH ... SELECT, fetch*) pass straight through, so freshness
+# probes and config loads still work during a parallel telemetry run.
+_WRITE_PREFIXES = (
+    "insert",
+    "update",
+    "delete",
+    "merge",
+    "copy",
+    "truncate",
+    "drop",
+    "alter",
+    "create",
+)
+
+
+def _is_write_sql(query: str) -> bool:
+    """Classify a SQL string as a mutating statement.
+
+    Skips leading whitespace and SQL line comments so that e.g. an indented
+    ``INSERT`` or a ``WITH x AS (...) INSERT`` is still recognized as a write.
+    """
+    if not isinstance(query, str):
+        return True  # be conservative: unknown shape -> treat as a write
+    stripped = query.lstrip()
+    while stripped.startswith("--"):
+        nl = stripped.find("\n")
+        if nl == -1:
+            return False
+        stripped = stripped[nl + 1 :].lstrip()
+    lowered = stripped.lower()
+    if lowered.startswith(_WRITE_PREFIXES):
+        return True
+    # CTEs may wrap a writing statement: WITH ... INSERT/UPDATE/DELETE ...
+    if lowered.startswith("with "):
+        return any(f" {kw} " in lowered or f"\n{kw} " in lowered for kw in ("insert", "update", "delete"))
+    return False
+
+
+class _ShadowConnection:
+    """Wraps an asyncpg connection so write statements become no-ops.
+
+    Reads (fetch/fetchval/fetchrow/cursor) and connection lifecycle delegate to
+    the real connection unchanged. Only execute/executemany/copy* are gated.
+    """
+
+    def __init__(self, conn):
+        self._conn = conn
+
+    async def execute(self, query, *args, **kwargs):
+        if _is_write_sql(query):
+            log.debug("SHADOW_MODE: suppressed execute: %.60s", query.lstrip() if isinstance(query, str) else query)
+            return "SHADOW"
+        return await self._conn.execute(query, *args, **kwargs)
+
+    async def executemany(self, query, args, **kwargs):
+        if _is_write_sql(query):
+            log.debug("SHADOW_MODE: suppressed executemany: %.60s", query.lstrip() if isinstance(query, str) else query)
+            return None
+        return await self._conn.executemany(query, args, **kwargs)
+
+    async def copy_records_to_table(self, *args, **kwargs):
+        log.debug("SHADOW_MODE: suppressed copy_records_to_table")
+        return "SHADOW"
+
+    async def copy_to_table(self, *args, **kwargs):
+        log.debug("SHADOW_MODE: suppressed copy_to_table")
+        return "SHADOW"
+
+    def __getattr__(self, name):
+        # Everything else (fetch, fetchval, fetchrow, cursor, transaction,
+        # add_listener, prepare, set_type_codec, ...) passes through.
+        return getattr(self._conn, name)
+
+
+class _ShadowAcquireContext:
+    """Async-context wrapper around pool.acquire() yielding a _ShadowConnection."""
+
+    def __init__(self, acquire_ctx):
+        self._ctx = acquire_ctx
+
+    async def __aenter__(self):
+        conn = await self._ctx.__aenter__()
+        return _ShadowConnection(conn)
+
+    async def __aexit__(self, *exc):
+        return await self._ctx.__aexit__(*exc)
+
+
+class _ShadowPool:
+    """Wraps an asyncpg pool so every acquired connection is write-suppressed.
+
+    Single DB chokepoint for SHADOW_MODE: all ingestor writes go through
+    ``async with pool.acquire() as conn: await conn.execute(...)``.
+    """
+
+    def __init__(self, pool):
+        self._pool = pool
+
+    def acquire(self, *args, **kwargs):
+        return _ShadowAcquireContext(self._pool.acquire(*args, **kwargs))
+
+    def __getattr__(self, name):
+        return getattr(self._pool, name)
+
+
+def wrap_pool_for_shadow(pool):
+    """Return a write-suppressing proxy when SHADOW_MODE is on, else the pool."""
+    if is_shadow_mode():
+        log.warning("SHADOW_MODE active: ALL ingestor DB writes are suppressed (telemetry consume/parse only)")
+        return _ShadowPool(pool)
+    return pool
+
 
 # ESP32 client reference, set by esp32_loop in ingestor.py
 # Used by dispatcher in tasks.py for direct setpoint push
@@ -28,3 +160,29 @@ setpoint_dispatch_in_progress = False
 
 # Timestamp of last ESP32 connect (used for boot-window gating)
 esp32_connected_at: float = 0.0
+
+# ── HA-3.2 single-writer fence (#240) ────────────────────────────────────────
+# The active WriterLease holder, set by esp32_loop in main() once the lease is
+# constructed. esp32_push.push_to_esp32 consults writer_lease_held() BEFORE every
+# device command so a fenced/lease-lost pod can NEVER push — even if a stale
+# shared.esp32["client"] reference lingers. None until set; when None the gate is
+# OPEN (fence inert / pre-arm), preserving exact pre-fence behaviour.
+writer_lease = None
+
+
+def writer_lease_held() -> bool:
+    """True iff it is safe to push to the device right now.
+
+    Returns True when no lease is configured (fence disabled/pre-arm) so the
+    push path is unchanged until the gated arm; otherwise defers to the
+    renew-or-die WriterLease.is_held().
+    """
+    lease = writer_lease
+    if lease is None:
+        return True
+    try:
+        return bool(lease.is_held())
+    except Exception:
+        # A bug in the fence must FAIL SAFE: if we cannot determine lease state,
+        # do NOT push (better a bounded zero-writer gap than a split-brain push).
+        return False

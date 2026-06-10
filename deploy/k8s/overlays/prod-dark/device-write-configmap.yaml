@@ -1,0 +1,19 @@
+# DEVICE-WRITE INTERLOCK (#79) — prod-dark.
+#
+# VERDIFY_DEVICE_WRITE_ENABLED="0" is pinned HERE. prod-dark is the DEVICE-DARK
+# production shape: the writer path is OFF (the inverse of overlays/prod, which
+# sets it to "1"). This is the env-var half of the three device-dark layers:
+#   1. VERDIFY_DEVICE_WRITE_ENABLED=0  (this file)
+#   2. ingestor replicas:0             (ingestor-replicas-zero.yaml)
+#   3. deny-esp32-egress NetworkPolicy (deny-esp32-egress.yaml; NO allow-egress)
+# Together they guarantee the prod namespace runs read/serve-only for the M4 48h
+# proof and can NEVER become a second live-ESP32 writer while the VM remains the
+# one real writer (the MASTER single-writer gate).
+#
+# Patched onto the base verdify-config ConfigMap (strategic merge adds the key).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-config
+data:
+  VERDIFY_DEVICE_WRITE_ENABLED: "0"

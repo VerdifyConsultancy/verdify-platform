@@ -1,0 +1,18 @@
+# DEVICE SAFETY (handoff §3.3 single-writer + §3.4 device-VLAN + Track A).
+#
+# The ingestor is the ONLY device-touching workload: it opens the persistent
+# aioesphomeapi connection to the LIVE ESP32 (192.168.10.111:6053) and pushes
+# setpoints. In the staging instance it MUST stay at replicas:0 so an ArgoCD
+# selfHeal reconcile cannot bring up a SECOND writer to the live device before:
+#   (a) the §3.4 device-VLAN reachability spike is proven from a pod, AND
+#   (b) Jason confirms the first live setpoint push from k3s (device-affecting).
+# The base sets replicas:1 (the eventual single-writer target); this overlay
+# pins it OFF. A manual `kubectl scale` to 0 is NOT durable — selfHeal would
+# revert it to the manifest value, which is exactly why this lives in git.
+# Flip to 1 only at the gated P7/P9 cutover with explicit Jason sign-off.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-ingestor
+spec:
+  replicas: 0

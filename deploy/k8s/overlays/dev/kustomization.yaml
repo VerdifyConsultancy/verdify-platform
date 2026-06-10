@@ -1,0 +1,114 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+# Instance: verdify-dev — the dev k3s Verdify APP instance (read-only telemetry
+# SUBSCRIBER; never writes the ESP32). New env from milestone #5.
+#
+# INERT-ON-MERGE: there is NO verdify-dev ArgoCD Application CR and NO
+# synology-iscsi-ssd StorageClass yet (both created by laptop-root). The live
+# verdify-local-staging ArgoCD app syncs ONLY overlays/staging, so merging this
+# overlay to live/platform-main does NOT degrade staging and does NOT deploy
+# anything until those two prerequisites exist. This is the reviewable target
+# shape, validated by `kustomize build | kubeconform` + `apply --dry-run`.
+#
+# The namespace string is PINNED. It MUST equal:
+#   - the Namespace object in this overlay (verdify-dev)
+#   - the future ArgoCD Application destination.namespace
+#   - every registry/secrets/<id>.yaml target.namespace
+namespace: verdify-dev
+
+# Placeholder Secret for local `kustomize build` validation ONLY. The SOPS
+# backend provides the real verdify-app-secrets out-of-band. See the file.
+# DEVICE-SAFETY: dev-only egress lock dropping all egress to the greenhouse
+# device VLAN (192.168.10.0/24) from the ingestor pod. Mirrors staging; the
+# inverse allow lives ONLY in overlays/prod. See deny-esp32-egress.yaml.
+# EDGE/WAN: host-route the dev verdify-api on api.k3s.verdify.ai through the
+# shared apps Traefik (.7.10). dev/stage URLs live on *.k3s.verdify.ai (prod
+# owns the bare *.verdify.ai hosts). See ingressroute.yaml.
+# EDGE/WAN: host-route the dev verdify-www on www.k3s.verdify.ai through the
+# same shared apps Traefik (#116). See www-ingressroute.yaml.
+# EDGE/WAN: host-route the dev verdify-lab Quartz site on lab.k3s.verdify.ai
+# through the same shared apps Traefik (#124). See lab-ingressroute.yaml.
+resources:
+- namespace.yaml
+- ../../base
+- secrets.placeholder.yaml
+- deny-esp32-egress.yaml
+- allow-web-from-apps-ingress.yaml
+- ingressroute.yaml
+- www-ingressroute.yaml
+- lab-ingressroute.yaml
+
+# verdify-planner (#117) + verdify-www (#116) + verdify-lab (#124) — referenced as
+# Components, NOT added to base, so they never render into overlays/staging. Same
+# pattern in overlays/prod.
+components:
+- ../../components/planner
+- ../../components/www
+- ../../components/lab-site
+
+# APP_ENV=dev + VERDIFY_DEVICE_WRITE_ENABLED=0 + VERDIFY_INGEST_SOURCE=
+# mqtt-subscribe (dev is a read-only telemetry SUBSCRIBER, never writes the
+# device). See env-configmap.yaml.
+# DEVICE SAFETY (single-writer invariant): pin the ingestor workload OFF
+# (replicas:0), mirroring overlays/staging, so verdify-dev is PROVABLY
+# device-dark — no ingestor pod runs until the Jason-gated M5 cutover, and an
+# ArgoCD selfHeal reconcile cannot stand up a second writer. dev must never be a
+# 2nd writer. See ingestor-replicas-zero.yaml.
+# PER-ENV DB STORAGE (#115): retarget the verdify-db PVC from the base
+# local-path to Longhorn NVMe RWO storage. dev gets its OWN TimescaleDB
+# StatefulSet (NOT prod's DB), seeded by the gated copy-not-move pg_dump restore
+# runbook.
+patches:
+- path: env-configmap.yaml
+- path: ingestor-replicas-zero.yaml
+- path: db-storageclass.yaml
+  target:
+    kind: StatefulSet
+    name: verdify-db
+
+# Image digest pins. Canonical namespace ghcr.io/verdifyconsultancy/verdify-*,
+# immutable @sha256 (NEVER a mutable :latest/:dev tag). The app images reuse the
+# staging-verified digests as a known-good baseline; verdify-planner and
+# verdify-migrate now carry their real published GHCR digests (#99 — both images
+# are published + repo-linked; the bump-staging-digests job auto-repins BOTH the
+# planner (on each green planner build) and the migrate (on each green migrate
+# build) digest into this dev overlay, so neither self-heals away from a phantom
+# pin again). dev is INERT (no ArgoCD app), so this pin deploys nothing.
+  # verdify-www (#116): real GHCR digest of the marketing site image built from
+  # the upstream verdify-www repo at sha b33f4cd (see components/www/www.yaml).
+  # Published + repo-linked by verdify-www's publish-image.yml workflow and
+  # verified pullable 2026-06-04 — REPLACES the prior placeholder pin
+  # (sha256:5e00bc20…) whose package 404'd. dev pins the SAME env-agnostic digest
+  # as staging/prod (one-digest-across-envs static content).
+  # verdify-lab (#124): real GHCR digest of the Quartz research-site image built
+  # from the verdify-site-legacy repo's Dockerfile.k3s (Quartz `npx quartz build`
+  # -> static public/ -> nginx-unprivileged on :8080). Published + repo-linked by
+  # verdify-site-legacy's publish-lab-image.yml workflow (package repository.name
+  # == verdify-site-legacy) and verified pullable 2026-06-04 — REPLACES the prior
+  # all-zeros placeholder pin whose package 404'd (verdify-site was an orphan GHCR
+  # repo). lab is NOT in overlays/staging (it is a dev/prod-only Component), so it
+  # is EXEMPT from the promote-diff-guard staging-equality check; dev pins the SAME
+  # env-agnostic digest as prod (one-digest-across-envs static content).
+  #
+  # 2026-06-07 #263 CONVERGENCE (laptop-root): the prior 92ab47.. pin was the
+  # SYNTHETIC CI temp-vault build (stock "Welcome to Quartz 4" starter). Repointed
+  # to the SAME real vault-built digest overlays/prod already serves on
+  # lab.verdify.ai (bf71018, 121 .md -> 566 static files), so no overlay carries
+  # the synthetic placeholder and a sync can never seed the Quartz manual. The
+  # durable CI-from-real-vault fix is Iris #124 / PR #259.
+images:
+- digest: sha256:ce4ca79f9e6442c39558cbe02b1665c3cddc3e269c1867997d4f292f3a5ce8ff
+  name: ghcr.io/verdifyconsultancy/verdify-api
+- digest: sha256:4f141a5901f802e52b37b15a6a92b8d0bc906f3d854066e3ddd52911aa457d0d
+  name: ghcr.io/verdifyconsultancy/verdify-ingestor
+- digest: sha256:bf71018f181f4e37e585b8778852eb209875555525c425921663e7744891c973
+  name: ghcr.io/verdifyconsultancy/verdify-lab
+- digest: sha256:9824020a0d2fe77191b2c01ca2634c3bcec6031b79d2fef1c3334b2d5665768d
+  name: ghcr.io/verdifyconsultancy/verdify-mcp
+- digest: sha256:3d16d2e7c67fe6a5edcccd059d7c27a01f50caa711d3b935c553c904f48d8fa0
+  name: ghcr.io/verdifyconsultancy/verdify-migrate
+- digest: sha256:3e51abaec6372c0bed26ef9859a80008261fcd20a1e8ec1e37627304e1c6b637
+  name: ghcr.io/verdifyconsultancy/verdify-planner
+- digest: sha256:633fb18ab3c9a637693094917615c720a09baaef4877cce8dcea0568bca0b467
+  name: ghcr.io/verdifyconsultancy/verdify-www

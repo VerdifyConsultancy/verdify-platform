@@ -1,0 +1,44 @@
+# DEVICE-SAFETY EGRESS INTERLOCK (#80) — staging ONLY.
+#
+# This NetworkPolicy is the network-layer half of the staging two-writer pin
+# (the other halves are ingestor replicas:0 and VERDIFY_DEVICE_WRITE_ENABLED=0).
+# It selects the ingestor pod and applies an Egress policy that ALLOWS normal
+# egress (DB, MQTT/HA on the services VLAN, DNS, cluster) but DROPS all egress to
+# the greenhouse device VLAN 192.168.10.0/24 — where the live ESP32
+# (192.168.10.111:6053) lives. So even if staging ingestor were brought up, it
+# physically cannot open the ESPHome native-API connection to the live device.
+#
+# prod is the inverse: overlays/prod carries the SINGLE allow-egress to the
+# device so the production ingestor (the one real single writer) CAN reach it.
+#
+# Pattern: there is no per-port "deny" primitive, so we express "allow all egress
+# except the device VLAN" via ipBlock.except. The :6053 device-API port lives
+# inside 192.168.10.0/24, so excluding the whole /24 drops it. DNS is allowed
+# explicitly so name resolution still works.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: deny-esp32-egress
+  labels:
+    app.kubernetes.io/part-of: verdify
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: ingestor
+  policyTypes: ["Egress"]
+  egress:
+    # Allow all egress EXCEPT the greenhouse device VLAN (drops 192.168.10.0/24,
+    # which contains the live ESP32 at .111:6053).
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 192.168.10.0/24
+    # Cluster DNS (CoreDNS) — keep name resolution working under the egress lock.
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

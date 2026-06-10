@@ -31,7 +31,11 @@ done
 # a PG interval, which would flip now() - interval '5 min ago' into the future.
 SINCE="${SINCE% ago}"
 
-DB="docker exec verdify-timescaledb psql -U verdify -d verdify -t -A -c"
+# #24: DB access via the shared psql-verdify abstraction (docker-exec default
+# preserves prior VM argv). Build an argv array; call sites use "${DB[@]}".
+. "$(dirname "${BASH_SOURCE[0]}")/lib/psql-verdify.sh"
+mapfile -t DB < <(verdify_psql_cmd)
+DB+=(-t -A -c)
 PASS=0; FAIL=0; WARN=0
 
 pass() { echo "  ✓ $1"; ((PASS++)); }
@@ -62,7 +66,7 @@ CLIMATE_COLS=(
 )
 
 for col in "${CLIMATE_COLS[@]}"; do
-    v=$($DB "SELECT $col FROM climate WHERE ts > now() - interval '5 minutes' AND $col IS NOT NULL ORDER BY ts DESC LIMIT 1" 2>/dev/null | tr -d ' ')
+    v=$("${DB[@]}" "SELECT $col FROM climate WHERE ts > now() - interval '5 minutes' AND $col IS NOT NULL ORDER BY ts DESC LIMIT 1" 2>/dev/null | tr -d ' ')
     if [[ -n "$v" ]]; then
         pass "$col = $v"
     else
@@ -76,7 +80,7 @@ done
 # be healthy if only one address is affected.
 section "Modbus bus (timeout distribution, last 2 min)"
 
-MODBUS_ROWS=$($DB "SELECT regexp_replace(message, '.*from ([0-9]+) .*', '\1') AS addr, count(*) FROM esp32_logs WHERE ts > now() - interval '2 min' AND message ILIKE '%modbus:064%' GROUP BY 1 ORDER BY 1" 2>/dev/null)
+MODBUS_ROWS=$("${DB[@]}" "SELECT regexp_replace(message, '.*from ([0-9]+) .*', '\1') AS addr, count(*) FROM esp32_logs WHERE ts > now() - interval '2 min' AND message ILIKE '%modbus:064%' GROUP BY 1 ORDER BY 1" 2>/dev/null)
 
 if [[ -z "$MODBUS_ROWS" ]]; then
     pass "No Modbus timeouts on any address"
@@ -112,7 +116,7 @@ fi
 # but persistent < 4 is worth investigating.
 section "Active probe count (zone aggregation health)"
 
-PROBE_ROW=$($DB "SELECT active_probe_count || '|' || COALESCE(uptime_s::text, '?') FROM diagnostics WHERE active_probe_count IS NOT NULL AND ts > now() - interval '5 min' ORDER BY ts DESC LIMIT 1" 2>/dev/null | tr -d ' ')
+PROBE_ROW=$("${DB[@]}" "SELECT active_probe_count || '|' || COALESCE(uptime_s::text, '?') FROM diagnostics WHERE active_probe_count IS NOT NULL AND ts > now() - interval '5 min' ORDER BY ts DESC LIMIT 1" 2>/dev/null | tr -d ' ')
 if [[ -z "$PROBE_ROW" ]]; then
     warn "No active_probe_count reading in last 5 min (firmware may predate FW-10)"
 else
@@ -137,7 +141,7 @@ fi
 # Absence of diagnostics row in 5 min is itself a failure.
 section "ESP32 diagnostics"
 
-DIAG=$($DB "SELECT reset_reason || '|' || COALESCE(firmware_version, '?') || '|' || COALESCE(wifi_rssi::text, '?') || '|' || COALESCE(uptime_s::text, '?') FROM diagnostics WHERE ts > now() - interval '5 min' ORDER BY ts DESC LIMIT 1" 2>/dev/null)
+DIAG=$("${DB[@]}" "SELECT reset_reason || '|' || COALESCE(firmware_version, '?') || '|' || COALESCE(wifi_rssi::text, '?') || '|' || COALESCE(uptime_s::text, '?') FROM diagnostics WHERE ts > now() - interval '5 min' ORDER BY ts DESC LIMIT 1" 2>/dev/null)
 
 if [[ -z "$DIAG" ]]; then
     fail "No diagnostics row in last 5 min (ESP32 unreachable?)"
@@ -171,7 +175,7 @@ fi
 # regression — means a sensor went dark right around the deploy.
 section "Alerts opened during the deploy window ('$SINCE')"
 
-NEW_ALERTS=$($DB "SELECT alert_type || ' :: ' || COALESCE(sensor_id, '?') FROM alert_log WHERE ts >= now() - interval '$SINCE' AND disposition = 'open' AND alert_type IN ('sensor_offline', 'esp32_reboot', 'esp32_push_failed', 'band_fn_null', 'heap_pressure_critical')" 2>/dev/null)
+NEW_ALERTS=$("${DB[@]}" "SELECT alert_type || ' :: ' || COALESCE(sensor_id, '?') FROM alert_log WHERE ts >= now() - interval '$SINCE' AND disposition = 'open' AND alert_type IN ('sensor_offline', 'esp32_reboot', 'esp32_push_failed', 'band_fn_null', 'heap_pressure_critical')" 2>/dev/null)
 
 if [[ -z "$NEW_ALERTS" ]]; then
     pass "No new sensor_offline / esp32_reboot / push / band alerts opened in window"
@@ -187,10 +191,10 @@ fi
 # are expected during hot/dry VENTILATE windows and may be frequent.
 section "Override events ('$SINCE' window)"
 
-OV_COUNT=$($DB "SELECT count(*) FROM override_events WHERE ts >= now() - interval '$SINCE'" 2>/dev/null | tr -d ' ')
-OV_EXPECTED=$($DB "SELECT count(*) FROM override_events WHERE ts >= now() - interval '$SINCE' AND override_type IN ('vent_mist_assist', 'summer_vent')" 2>/dev/null | tr -d ' ')
-OV_UNEXPECTED=$($DB "SELECT count(*) FROM override_events WHERE ts >= now() - interval '$SINCE' AND override_type NOT IN ('vent_mist_assist', 'summer_vent')" 2>/dev/null | tr -d ' ')
-OV_TYPES=$($DB "SELECT override_type, count(*) FROM override_events WHERE ts >= now() - interval '$SINCE' GROUP BY 1 ORDER BY 2 DESC" 2>/dev/null)
+OV_COUNT=$("${DB[@]}" "SELECT count(*) FROM override_events WHERE ts >= now() - interval '$SINCE'" 2>/dev/null | tr -d ' ')
+OV_EXPECTED=$("${DB[@]}" "SELECT count(*) FROM override_events WHERE ts >= now() - interval '$SINCE' AND override_type IN ('vent_mist_assist', 'summer_vent')" 2>/dev/null | tr -d ' ')
+OV_UNEXPECTED=$("${DB[@]}" "SELECT count(*) FROM override_events WHERE ts >= now() - interval '$SINCE' AND override_type NOT IN ('vent_mist_assist', 'summer_vent')" 2>/dev/null | tr -d ' ')
+OV_TYPES=$("${DB[@]}" "SELECT override_type, count(*) FROM override_events WHERE ts >= now() - interval '$SINCE' GROUP BY 1 ORDER BY 2 DESC" 2>/dev/null)
 OV_COUNT=${OV_COUNT:-0}
 OV_EXPECTED=${OV_EXPECTED:-0}
 OV_UNEXPECTED=${OV_UNEXPECTED:-0}
