@@ -12,3 +12,6 @@ kind: Component
 # digest by the consuming overlay's images: transformer.
 resources:
   - setpoint-server.yaml
+  # #312: DB-ingress allow for the setpoint-server (base allow-db-from-app
+  # omits it; default-deny otherwise wedges its wait-for-db init forever).
+  - allow-db-from-setpoint.yaml

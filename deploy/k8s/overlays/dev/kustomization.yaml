@@ -2,14 +2,14 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 # Instance: verdify-dev — the dev k3s Verdify APP instance (read-only telemetry
-# SUBSCRIBER; never writes the ESP32). New env from milestone #5.
+# SUBSCRIBER; never writes the ESP32).
 #
-# INERT-ON-MERGE: there is NO verdify-dev ArgoCD Application CR and NO
-# synology-iscsi-ssd StorageClass yet (both created by laptop-root). The live
-# verdify-local-staging ArgoCD app syncs ONLY overlays/staging, so merging this
-# overlay to live/platform-main does NOT degrade staging and does NOT deploy
-# anything until those two prerequisites exist. This is the reviewable target
-# shape, validated by `kustomize build | kubeconform` + `apply --dry-run`.
+# LIVE + THE PROVING ENVIRONMENT (2026-06-10): the verdify-dev ArgoCD app syncs
+# this overlay from `main`; staging is RETIRED. The container-publish
+# bump-dev-digests job auto-pins freshly published image digests here, dev
+# reconciles them, and the gated prod-promote workflow copies proven-on-dev
+# digests to overlays/prod. Dev's database is a nightly prod-restored copy
+# (db-restore-from-prod.yaml); dev NEVER connects to the greenhouse device.
 #
 # The namespace string is PINNED. It MUST equal:
 #   - the Namespace object in this overlay (verdify-dev)
@@ -38,14 +38,20 @@ resources:
 - ingressroute.yaml
 - www-ingressroute.yaml
 - lab-ingressroute.yaml
+# Nightly prod->dev DB refresh: RO PV/PVC onto the prod dumps NFS subdir +
+# restore CronJob + the db-restore ingress allow. See file header.
+- db-restore-from-prod.yaml
 
-# verdify-planner (#117) + verdify-www (#116) + verdify-lab (#124) — referenced as
-# Components, NOT added to base, so they never render into overlays/staging. Same
-# pattern in overlays/prod.
+# verdify-planner (#117) + verdify-www (#116) + verdify-lab (#124) + grafana
+# (graphs-dev) — referenced as Components, NOT added to base. Same pattern as
+# overlays/prod. The grafana component is namespace-transformed into
+# verdify-dev, so its provisioned datasource (host verdify-db) reads the DEV
+# DB; two dev patches below fix its prod-hardcoded edge/env values.
 components:
 - ../../components/planner
 - ../../components/www
 - ../../components/lab-site
+- ../../components/grafana
 
 # APP_ENV=dev + VERDIFY_DEVICE_WRITE_ENABLED=0 + VERDIFY_INGEST_SOURCE=
 # mqtt-subscribe (dev is a read-only telemetry SUBSCRIBER, never writes the
@@ -66,6 +72,14 @@ patches:
   target:
     kind: StatefulSet
     name: verdify-db
+# graphs-dev: retarget the prod-authored grafana edge route to the dev edge
+# (apps Traefik web/websecure + graphs.k3s.verdify.ai) and fix the two
+# prod-hardcoded Deployment env values.
+- path: graphs-ingressroute-patch.yaml
+  target:
+    kind: IngressRoute
+    name: verdify-t2-graphs
+- path: grafana-dev-patch.yaml
 
 # Image digest pins. Canonical namespace ghcr.io/verdifyconsultancy/verdify-*,
 # immutable @sha256 (NEVER a mutable :latest/:dev tag). The app images reuse the

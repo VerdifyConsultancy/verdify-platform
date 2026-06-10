@@ -1,0 +1,28 @@
+# #312: the setpoint-server's wait-for-db init container (and the service
+# itself) must reach verdify-db:5432, but the base allow-db-from-app
+# NetworkPolicy only admits api/mcp/ingestor/migrate/planner and the base
+# default-deny-ingress drops everything else — so the pod wedged forever in
+# Init:0/1 (`pg_isready ... no response`) after its 2026-06-09 reschedule.
+# This component-scoped allow keeps the fix exactly as prod-only as the
+# workload: the component is referenced ONLY by overlays/prod.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-db-from-setpoint-server
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: db
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: db
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: setpoint-server
+      ports:
+        - port: 5432
+          protocol: TCP

@@ -1,0 +1,15 @@
+# graphs-dev edge wiring (Jason, 2026-06-10). The components/grafana
+# IngressRoute is authored for the prod two-tier edge (entryPoint verdify-web,
+# tier-2 verdify-traefik, Host graphs.verdify.ai). Dev has no tier-2 — its
+# routes attach straight to the shared apps Traefik (.7.10) on web/websecure
+# with *.k3s.verdify.ai hosts (same pattern as api/www/lab dev routes).
+- op: replace
+  path: /spec/entryPoints
+  value:
+    - websecure
+    - web
+- op: replace
+  path: /spec/routes/0/match
+  value: Host(`graphs.k3s.verdify.ai`)
+- op: remove
+  path: /metadata/labels/traefik-tier
