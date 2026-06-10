@@ -275,9 +275,12 @@ jobs:
           # present in the bumped render (so a future refactor can't silently drop
           # them and still pass the equality check on an already-broken baseline).
           rendered="$(kustomize build "$PROD_OVERLAY")"
-          echo "$rendered" | grep -q 'VERDIFY_DEVICE_WRITE_ENABLED' \
+          # Herestrings, NOT `echo | grep -q`: grep -q exits at first match,
+          # echo takes SIGPIPE, and under pipefail that false-fails the gate
+          # (hit live 2026-06-10 on the first real promotion run).
+          grep -q 'VERDIFY_DEVICE_WRITE_ENABLED' <<<"$rendered" \
             || { echo "::error::prod render lost the device-write interlock ConfigMap"; exit 1; }
-          echo "$rendered" | grep -q 'allow-ingestor-device-egress' \
+          grep -q 'allow-ingestor-device-egress' <<<"$rendered" \
             || { echo "::error::prod render lost the allow-ingestor-device-egress NetworkPolicy"; exit 1; }
           echo "Device-Write-Safety-Gate OK: non-image render byte-identical; interlock + egress-allow intact."
 
