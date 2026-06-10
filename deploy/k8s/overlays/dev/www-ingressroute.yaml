@@ -33,7 +33,8 @@ spec:
     # ClusterIP :8080 (no LoadBalancer overlay in dev). Traefik's kubernetescrd
     # provider resolves against the Service .spec.ports[].port, which is 8080.
     - kind: Rule
-      match: Host(`www.k3s.verdify.ai`)
+      match: Host(`www.k3s.verdify.ai`) || Host(`www-dev.verdify.ai`)
+      priority: 60
       services:
         - name: verdify-www
           port: 8080

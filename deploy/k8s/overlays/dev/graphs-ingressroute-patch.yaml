@@ -10,6 +10,9 @@
     - web
 - op: replace
   path: /spec/routes/0/match
-  value: Host(`graphs.k3s.verdify.ai`)
+  value: Host(`graphs.k3s.verdify.ai`) || Host(`graphs-dev.verdify.ai`)
+- op: add
+  path: /spec/routes/0/priority
+  value: 60
 - op: remove
   path: /metadata/labels/traefik-tier

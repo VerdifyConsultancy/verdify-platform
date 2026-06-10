@@ -55,7 +55,12 @@ spec:
     # LB Service on :80). Traefik's kubernetescrd provider resolves against the
     # Service .spec.ports[].port, which in dev is 8080.
     - kind: Rule
-      match: Host(`api.k3s.verdify.ai`)
+      # api-dev.verdify.ai is the PUBLIC dev host (single-level => covered by
+      # the *.verdify.ai universal cert + wildcard DNS); api.k3s.verdify.ai is
+      # the internal/split-horizon name. priority 60 beats the tier-1
+      # *.verdify.ai forward-to-prod-tier-2 regex (priority 50).
+      match: Host(`api.k3s.verdify.ai`) || Host(`api-dev.verdify.ai`)
+      priority: 60
       middlewares:
         - name: verdify-strip-identity-headers
       services:
