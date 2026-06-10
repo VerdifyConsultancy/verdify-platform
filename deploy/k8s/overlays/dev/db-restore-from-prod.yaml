@@ -165,11 +165,16 @@ spec:
                   psql -d verdify -v ON_ERROR_STOP=1 \
                     -c "CREATE EXTENSION IF NOT EXISTS timescaledb;" \
                     -c "SELECT timescaledb_pre_restore();"
-                  # Full-dump restore. pg_restore exits non-zero on harmless
-                  # already-exists noise (e.g. the timescaledb extension the
-                  # pre-restore flow requires us to create first), so the hard
-                  # success gate is the verification below, not the exit code.
-                  pg_restore -d verdify --no-owner --no-privileges --jobs=2 "$latest" || \
+                  # Full-dump restore. SERIAL on purpose: parallel pg_restore
+                  # (--jobs) breaks TimescaleDB catalog restore ordering (FK
+                  # violations on _timescaledb_catalog.chunk/dimension_slice,
+                  # then 'relation climate does not exist' — hit live
+                  # 2026-06-10 on the first seed). pg_restore exits non-zero
+                  # on harmless already-exists noise (the timescaledb
+                  # extension the pre-restore flow requires us to create
+                  # first), so the hard success gate is the verification
+                  # below, not the exit code.
+                  pg_restore -d verdify --no-owner --no-privileges "$latest" || \
                     echo "pg_restore exited non-zero (expected extension noise); verifying content"
                   psql -d verdify -v ON_ERROR_STOP=1 \
                     -c "SELECT timescaledb_post_restore();" \
