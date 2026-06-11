@@ -831,30 +831,6 @@ number:
           id(num_fog_min_temp).publish_state(x);
 
   - platform: template
-    id: num_fog_window_start
-    name: "Fog Window Start (hr)"
-    min_value: 5
-    max_value: 12
-    step: 1
-    lambda: "return id(fog_time_window_start);"
-    set_action:
-      - lambda: |
-          id(fog_time_window_start) = x;
-          id(num_fog_window_start).publish_state(x);
-
-  - platform: template
-    id: num_fog_window_end
-    name: "Fog Window End (hr)"
-    min_value: 14
-    max_value: 20
-    step: 1
-    lambda: "return id(fog_time_window_end);"
-    set_action:
-      - lambda: |
-          id(fog_time_window_end) = x;
-          id(num_fog_window_end).publish_state(x);
-
-  - platform: template
     id: num_mister_all_delay
     name: "Mister All Delay (s)"
     min_value: 60
@@ -1726,103 +1702,10 @@ number:
           id(direct_wet_stress_min_dew_margin_f) = x;
           id(num_direct_wet_stress_min_dew_margin_f).publish_state(x);
 
-  - platform: template
-    id: num_direct_wet_stress_latest_hour
-    name: "Direct Wet Stress Latest Hour"
-    min_value: 17
-    max_value: 24
-    step: 1
-    lambda: "return id(direct_wet_stress_latest_hour);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          if(val < 17) val = 17;
-          if(val > 24) val = 24;
-          id(direct_wet_stress_latest_hour) = val;
-          id(num_direct_wet_stress_latest_hour).publish_state(val);
-
-  - platform: template
-    id: num_fog_stress_window_latest_hour
-    name: "Fog Stress Window Latest Hour"
-    min_value: 17
-    max_value: 22
-    step: 1
-    lambda: "return id(fog_stress_window_latest_hour);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          if(val < 17) val = 17;
-          if(val > 22) val = 22;
-          id(fog_stress_window_latest_hour) = val;
-          id(num_fog_stress_window_latest_hour).publish_state(val);
-
-  - platform: template
-    id: num_fog_stress_min_dew_margin_f
-    name: "Fog Stress Min Dew Margin F"
-    min_value: 5
-    max_value: 15
-    step: 0.5
-    lambda: "return id(fog_stress_min_dew_margin_f);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          id(fog_stress_min_dew_margin_f) = x;
-          id(num_fog_stress_min_dew_margin_f).publish_state(x);
-
   # ─── Vanda band-compliance OTA tunables (cfg_* readbacks, CLAUDE.md rule 6) ───
-
-  # CYC-1/SAF-3: authoritative dusk cutoff hour (sunset−2h, dispatcher-pushed).
-  - platform: template
-    id: num_dusk_cutoff_hour
-    name: "Dusk Cutoff Hour"
-    min_value: 12
-    max_value: 23
-    step: 1
-    lambda: "return id(dusk_cutoff_hour);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          if(val < 0) val = 0;
-          if(val > 23) val = 23;
-          id(dusk_cutoff_hour) = val;
-          id(num_dusk_cutoff_hour).publish_state(val);
-
-  # ENV-2: night window start hour (econ-heat suppression begins).
-  - platform: template
-    id: num_night_start_hour
-    name: "Night Start Hour"
-    min_value: 12
-    max_value: 23
-    step: 1
-    lambda: "return id(night_start_hour);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          if(val < 0) val = 0;
-          if(val > 23) val = 23;
-          id(night_start_hour) = val;
-          id(num_night_start_hour).publish_state(val);
-
-  # ENV-2: night window end hour (econ-heat suppression ends / sunrise).
-  - platform: template
-    id: num_night_end_hour
-    name: "Night End Hour"
-    min_value: 0
-    max_value: 12
-    step: 1
-    lambda: "return id(night_end_hour);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          if(val < 0) val = 0;
-          if(val > 23) val = 23;
-          id(night_end_hour) = val;
-          id(num_night_end_hour).publish_state(val);
+  # (firmware-v2: dusk_cutoff_hour, night_start/end_hour, direct_wet_stress_*
+  # and fog_stress_window_* clock tunables retired — replaced by the solar
+  # taper + night-stress rules. See contract §B4.)
 
   # FRT-6: post-feed absorption hold minutes.
   - platform: template
@@ -1876,24 +1759,8 @@ number:
           id(num_mister_daily_volume_max).publish_state(val);
 
   # ─── IRR-3 (dawn rehydrate): CENTER-zone denser pulse cadence at sunrise ───
-  # Window START hour = dispatched sunrise (gl_sunrise_hour); these are the
-  # minute/duration/on/gap knobs. Each has a cfg_* readback in sensors.yaml.
-  - platform: template
-    id: num_dawn_rehydrate_start_minute
-    name: "Dawn Rehydrate Start Minute"
-    min_value: 0
-    max_value: 59
-    step: 1
-    lambda: "return id(dawn_rehydrate_start_minute);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          if(val < 0) val = 0;
-          if(val > 59) val = 59;
-          id(dawn_rehydrate_start_minute) = val;
-          id(num_dawn_rehydrate_start_minute).publish_state(val);
-
+  # Window START = sunrise + dawn_boost_offset_min (firmware-v2 solar anchor);
+  # these are the window/duration/on/gap knobs. Each has a cfg_* readback.
   - platform: template
     id: num_dawn_rehydrate_window_min
     name: "Dawn Rehydrate Window (min)"
@@ -1943,38 +1810,7 @@ number:
           id(num_dawn_rehydrate_gap_s).publish_state(val);
 
   # ─── IRR-4 (midday drench): CENTER-zone deeper soak at the solar peak ───
-  - platform: template
-    id: num_midday_drench_hour
-    name: "Midday Drench Hour"
-    min_value: 0
-    max_value: 23
-    step: 1
-    lambda: "return id(midday_drench_hour);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          if(val < 0) val = 0;
-          if(val > 23) val = 23;
-          id(midday_drench_hour) = val;
-          id(num_midday_drench_hour).publish_state(val);
-
-  - platform: template
-    id: num_midday_drench_start_minute
-    name: "Midday Drench Start Minute"
-    min_value: 0
-    max_value: 59
-    step: 1
-    lambda: "return id(midday_drench_start_minute);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          if(val < 0) val = 0;
-          if(val > 59) val = 59;
-          id(midday_drench_start_minute) = val;
-          id(num_midday_drench_start_minute).publish_state(val);
-
+  # Window START = solar noon + midday_boost_offset_min (firmware-v2 anchor).
   - platform: template
     id: num_midday_drench_window_min
     name: "Midday Drench Window (min)"
@@ -2022,6 +1858,155 @@ number:
           if(val > 600) val = 600;
           id(midday_drench_gap_s) = val;
           id(num_midday_drench_gap_s).publish_state(val);
+
+  # ─── FIRMWARE-V2 operator tunables (contract §B4/§B5; cfg_* readbacks) ───
+  # Wet taper window before sunset (minutes) — routine wetting blocked when
+  # minutes_to_sunset < this OR phase >= 2.
+  - platform: template
+    id: num_wet_taper_before_sunset_min
+    name: "Wet Taper Before Sunset (min)"
+    min_value: 0
+    max_value: 360
+    step: 15
+    lambda: "return id(wet_taper_before_sunset_min);"
+    set_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          int val = int(roundf(x));
+          if(val < 0) val = 0;
+          if(val > 360) val = 360;
+          id(wet_taper_before_sunset_min) = val;
+          id(num_wet_taper_before_sunset_min).publish_state(val);
+
+  # Night stress wetting min temp-dewpoint margin (°F) — no crown condensation.
+  - platform: template
+    id: num_night_stress_min_dew_margin_f
+    name: "Night Stress Min Dew Margin (°F)"
+    min_value: 3
+    max_value: 15
+    step: 0.5
+    lambda: "return id(night_stress_min_dew_margin_f);"
+    set_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(night_stress_min_dew_margin_f) = x;
+          id(num_night_stress_min_dew_margin_f).publish_state(x);
+
+  # Dawn boost offset from sunrise (minutes).
+  - platform: template
+    id: num_dawn_boost_offset_min
+    name: "Dawn Boost Offset (min)"
+    min_value: 0
+    max_value: 240
+    step: 5
+    lambda: "return id(dawn_boost_offset_min);"
+    set_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          int val = int(roundf(x));
+          if(val < 0) val = 0;
+          if(val > 240) val = 240;
+          id(dawn_boost_offset_min) = val;
+          id(num_dawn_boost_offset_min).publish_state(val);
+
+  # Midday boost offset from solar noon (minutes).
+  - platform: template
+    id: num_midday_boost_offset_min
+    name: "Midday Boost Offset (min)"
+    min_value: 0
+    max_value: 240
+    step: 5
+    lambda: "return id(midday_boost_offset_min);"
+    set_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          int val = int(roundf(x));
+          if(val < 0) val = 0;
+          if(val > 240) val = 240;
+          id(midday_boost_offset_min) = val;
+          id(num_midday_boost_offset_min).publish_state(val);
+
+  # B5: manual button latch timeout (minutes).
+  - platform: template
+    id: num_manual_override_timeout_min
+    name: "Manual Override Timeout (min)"
+    min_value: 1
+    max_value: 60
+    step: 1
+    lambda: "return id(manual_override_timeout_min);"
+    set_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          int val = int(roundf(x));
+          if(val < 1) val = 1;
+          if(val > 60) val = 60;
+          id(manual_override_timeout_min) = val;
+          id(num_manual_override_timeout_min).publish_state(val);
+
+  # ─── B2: per-zone priority rank (1 = highest) ───
+  - platform: template
+    id: num_zone_priority_center
+    name: "Zone Priority Center"
+    min_value: 1
+    max_value: 4
+    step: 1
+    lambda: "return id(zone_priority_center);"
+    set_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          int val = int(roundf(x));
+          if(val < 1) val = 1;
+          if(val > 4) val = 4;
+          id(zone_priority_center) = val;
+          id(num_zone_priority_center).publish_state(val);
+
+  - platform: template
+    id: num_zone_priority_south
+    name: "Zone Priority South"
+    min_value: 1
+    max_value: 4
+    step: 1
+    lambda: "return id(zone_priority_south);"
+    set_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          int val = int(roundf(x));
+          if(val < 1) val = 1;
+          if(val > 4) val = 4;
+          id(zone_priority_south) = val;
+          id(num_zone_priority_south).publish_state(val);
+
+  - platform: template
+    id: num_zone_priority_west
+    name: "Zone Priority West"
+    min_value: 1
+    max_value: 4
+    step: 1
+    lambda: "return id(zone_priority_west);"
+    set_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          int val = int(roundf(x));
+          if(val < 1) val = 1;
+          if(val > 4) val = 4;
+          id(zone_priority_west) = val;
+          id(num_zone_priority_west).publish_state(val);
+
+  - platform: template
+    id: num_zone_priority_east
+    name: "Zone Priority East"
+    min_value: 1
+    max_value: 4
+    step: 1
+    lambda: "return id(zone_priority_east);"
+    set_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          int val = int(roundf(x));
+          if(val < 1) val = 1;
+          if(val > 4) val = 4;
+          id(zone_priority_east) = val;
+          id(num_zone_priority_east).publish_state(val);
 
 # ─────────────────────────────── BOOL SWITCHES ────────────────────────────────
 # These template switches expose boolean configuration flags to Home Assistant.
@@ -2079,23 +2064,6 @@ switch:
           id(direct_wet_stress_override_enabled) = false;
           id(sw_direct_wet_stress_override_enabled).publish_state(false);
 
-  - platform: template
-    id: sw_fog_stress_window_extend_enabled
-    name: "Fog Stress Window Extend Enabled"
-    optimistic: false
-    restore_mode: RESTORE_DEFAULT_OFF
-    lambda: "return id(fog_stress_window_extend_enabled);"
-    turn_on_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          id(fog_stress_window_extend_enabled) = true;
-          id(sw_fog_stress_window_extend_enabled).publish_state(true);
-    turn_off_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          id(fog_stress_window_extend_enabled) = false;
-          id(sw_fog_stress_window_extend_enabled).publish_state(false);
-
   # ENV-2: night econ-heat suppression master enable (default ON).
   - platform: template
     id: sw_night_econ_heat_suppress_enabled_switch
@@ -2113,24 +2081,6 @@ switch:
           id(cfg_first_pull_ok) = true;
           id(sw_night_econ_heat_suppress_enabled) = false;
           id(sw_night_econ_heat_suppress_enabled_switch).publish_state(false);
-
-  # CYC-1/SAF-3: authoritative dusk cutoff master enable (default ON).
-  - platform: template
-    id: sw_dusk_cutoff_enabled_switch
-    name: "Dusk Cutoff Enabled"
-    optimistic: false
-    restore_mode: RESTORE_DEFAULT_ON
-    lambda: "return id(sw_dusk_cutoff_enabled);"
-    turn_on_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          id(sw_dusk_cutoff_enabled) = true;
-          id(sw_dusk_cutoff_enabled_switch).publish_state(true);
-    turn_off_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          id(sw_dusk_cutoff_enabled) = false;
-          id(sw_dusk_cutoff_enabled_switch).publish_state(false);
 
   # IRR-3: dawn rehydrate master enable (default ON — ships active in OTA).
   - platform: template
@@ -2398,6 +2348,64 @@ switch:
           id(sw_fsm_controller_enabled) = true;
           id(sw_fsm_controller_enabled_switch).publish_state(true);
           ESP_LOGW("tunables", "FSM Controller Enabled is locked ON by the unified controller contract");
+
+  # ─── FIRMWARE-V2 master enable switches (contract §B2/§B4) ───
+  # On-chip deterministic band engine master enable (default ON).
+  - platform: template
+    id: sw_onchip_band_enabled_switch
+    name: "On-Chip Band Enabled"
+    icon: "mdi:sine-wave"
+    optimistic: false
+    restore_mode: RESTORE_DEFAULT_ON
+    lambda: "return id(sw_onchip_band_enabled);"
+    turn_on_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(sw_onchip_band_enabled) = true;
+          id(sw_onchip_band_enabled_switch).publish_state(true);
+    turn_off_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(sw_onchip_band_enabled) = false;
+          id(sw_onchip_band_enabled_switch).publish_state(false);
+
+  # Wet taper master enable (default ON).
+  - platform: template
+    id: sw_wet_taper_enabled_switch
+    name: "Wet Taper Enabled"
+    icon: "mdi:weather-sunset-down"
+    optimistic: false
+    restore_mode: RESTORE_DEFAULT_ON
+    lambda: "return id(sw_wet_taper_enabled);"
+    turn_on_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(sw_wet_taper_enabled) = true;
+          id(sw_wet_taper_enabled_switch).publish_state(true);
+    turn_off_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(sw_wet_taper_enabled) = false;
+          id(sw_wet_taper_enabled_switch).publish_state(false);
+
+  # Night stress wetting master enable (default ON).
+  - platform: template
+    id: sw_night_stress_wet_enabled_switch
+    name: "Night Stress Wet Enabled"
+    icon: "mdi:weather-night"
+    optimistic: false
+    restore_mode: RESTORE_DEFAULT_ON
+    lambda: "return id(sw_night_stress_wet_enabled);"
+    turn_on_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(sw_night_stress_wet_enabled) = true;
+          id(sw_night_stress_wet_enabled_switch).publish_state(true);
+    turn_off_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(sw_night_stress_wet_enabled) = false;
+          id(sw_night_stress_wet_enabled_switch).publish_state(false);
 
 # ─── IRRIGATION MANUAL TRIGGER BUTTONS ────────────────────────────────────────
 button:
