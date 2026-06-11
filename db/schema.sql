@@ -8494,7 +8494,9 @@ CREATE TABLE public.diagnostics (
     effective_heat_target_f double precision,
     effective_cool_stage2_delta_f double precision,
     effective_vpd_hysteresis_kpa double precision,
-    effective_dehum_aggressive_kpa double precision
+    effective_dehum_aggressive_kpa double precision,
+    zone_wet_granted text,
+    band_source text
 );
 
 
