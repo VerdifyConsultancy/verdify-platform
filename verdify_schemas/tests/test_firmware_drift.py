@@ -240,9 +240,7 @@ KNOWN_PRE_EXISTING_DRIFT.setdefault("SETPOINT_MAP", set()).update(
     REGISTRY[name].esp_object_id for name in FIRMWARE_V2_STAGED_REG if REGISTRY[name].esp_object_id
 )
 KNOWN_PRE_EXISTING_DRIFT.setdefault("CFG_READBACK_MAP", set()).update(
-    REGISTRY[name].cfg_readback_object_id
-    for name in FIRMWARE_V2_STAGED_REG
-    if REGISTRY[name].cfg_readback_object_id
+    REGISTRY[name].cfg_readback_object_id for name in FIRMWARE_V2_STAGED_REG if REGISTRY[name].cfg_readback_object_id
 )
 
 

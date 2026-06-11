@@ -145,9 +145,7 @@ assert set(ANCHOR_SYNC_PARAMS) == set(FIRMWARE_V2_STAGED_REG), (
 
 # Sentinels that prove the connected firmware exposes the v2 anchor contract
 # (esp_object_id == param name). Mirrors _direct_wet_policy_supported().
-ANCHOR_REQUIRED_OBJECT_IDS = frozenset(
-    {"band_temp_target_sm", "zone_vpd_target_center_sm", "zone_priority_center"}
-)
+ANCHOR_REQUIRED_OBJECT_IDS = frozenset({"band_temp_target_sm", "zone_vpd_target_center_sm", "zone_priority_center"})
 
 
 # ── Flag / support / confirmation ────────────────────────────────────────────
