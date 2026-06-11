@@ -607,33 +607,35 @@ interval:
           if (id(manual_fans_until_ms) != 0 && !manual_fans_latched) id(manual_fans_until_ms) = 0;
           if (id(manual_fog_until_ms)  != 0 && !manual_fog_latched)  id(manual_fog_until_ms)  = 0;
           if (id(vent_bypass_until_ms) != 0 && !vent_bypass_latched) id(vent_bypass_until_ms) = 0;
-          // Mirror to the legacy active flags for downstream telemetry/UI.
-          id(manual_fan_active) = manual_fans_latched;
-          id(manual_fog_active) = manual_fog_latched;
-          id(vent_lock_active)  = vent_bypass_latched;
-          const bool manual_fog_requested = manual_fog_latched;
+          // EFFECTIVE manual state = the new deadline latch OR the legacy
+          // script flags (manual_*_active / vent_lock_active are still driven by
+          // the legacy timer scripts triggered elsewhere). We READ both so both
+          // trigger paths work; we never clobber the legacy flags here.
+          const bool manual_fans_eff   = manual_fans_latched || id(manual_fan_active);
+          const bool manual_fog_eff    = manual_fog_latched  || id(manual_fog_active);
+          const bool vent_bypass_eff   = vent_bypass_latched || id(vent_lock_active);
+          const bool manual_fog_requested = manual_fog_eff;
           const char* manual_fog_safety_block = fog_safety_block_reason();
 
-          // FANS latch: BOTH fans ON + vent OPEN for the timeout, superseding
-          // climate. force flags below bypass relay min-off so they engage now.
+          // FANS: BOTH fans ON + vent OPEN for the timeout, superseding climate.
+          // force flags below bypass relay min-off so they engage now.
           bool manual_fan_force = false, manual_fog_force = false, manual_vent_force_open = false;
-          if (manual_fans_latched && !sensor_fault_relay_lock) {
+          if (manual_fans_eff && !sensor_fault_relay_lock) {
             willFan1 = true; willFan2 = true;
             manual_fan_force = true;
-            // VENT-BYPASS: while bypass is latched, fans run with the vent
-            // CLOSED (winter house-air pull). Otherwise the fans open the vent
+            // VENT-BYPASS: while bypass is active, fans run with the vent CLOSED
+            // (winter house-air pull). Otherwise the fans open the vent
             // UNCONDITIONALLY for the timeout (the inverted-vent_lock bug fix:
             // bypass closes the vent, it does NOT kill the fans).
-            if (vent_bypass_latched) {
+            if (vent_bypass_eff) {
               willVent = false;
             } else {
               willVent = true; manual_vent_force_open = true;
             }
           }
-          // HUMID latch: FOGGER ONLY. Supersedes the climate fog gates; only a
-          // genuine safety block (temp/RH physical limits via fog_safety_block)
-          // interrupts it.
-          if (manual_fog_latched && !sensor_fault_relay_lock && manual_fog_safety_block[0] == '\0') {
+          // HUMID: FOGGER ONLY. Supersedes the climate fog gates; only a genuine
+          // safety block (temp/RH physical limits) interrupts it.
+          if (manual_fog_eff && !sensor_fault_relay_lock && manual_fog_safety_block[0] == '\0') {
             willFog = true; manual_fog_force = true;
           }
           if(sensor_fault_relay_lock) {
