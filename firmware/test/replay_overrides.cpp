@@ -194,6 +194,20 @@ int main(int argc, char* argv[]) {
         in.vpd_west = in.vpd_kpa;
         in.vpd_east = in.vpd_kpa;
         in.local_hour = parse_hour(ts);
+        // Firmware-v2: derive on-chip solar phase from the row timestamp so the
+        // override evaluator gates on real solar phase, not the fallback hour.
+        {
+            const uint64_t row_ts_unix = parse_ts_unix(ts);
+            if (row_ts_unix > 0) {
+                const int utc_off = infer_utc_offset_min(row_ts_unix, in.local_hour);
+                const SolarTimes st = solar_times_from_unix(row_ts_unix, utc_off);
+                in.now_minute     = local_minute_from_unix(row_ts_unix, utc_off);
+                in.sunrise_min    = st.sunrise_min;
+                in.solar_noon_min = st.solar_noon_min;
+                in.sunset_min     = st.sunset_min;
+                in.solar_phase    = solar_phase(in.now_minute, st);
+            }
+        }
         in.occupied = parse_bool(get("occupied"), false);
         in.outdoor_temp_f = parse_float(get("outdoor_temp_f"), NAN);
         in.outdoor_dewpoint_f = parse_float(get("outdoor_dewpoint_f"), NAN);
@@ -453,11 +467,15 @@ int main(int argc, char* argv[]) {
         auto f = evaluate_overrides(p.in, p.sp, p.st, p.mode);
         report("fog_gate_temp", f.fog_gate_temp);
     }
-    // fog_gate_window
+    // fog_gate_window — Firmware-v2: fog escalation blocked by the solar wet
+    // taper / night (no stress re-open). Fallback phase for local_hour 23 is
+    // the solar night; disable the stress override so it cannot re-open fog.
     {
         auto p = mk(); p.st.mist_stage = MIST_S2; p.st.vpd_watch_timer_ms = 60000;
         p.in.vpd_kpa = p.sp.vpd_high + p.sp.fog_escalation_kpa + 0.1f;
-        p.in.local_hour = p.sp.fog_window_end; p.mode = SEALED_MIST;
+        p.sp.direct_wet_stress_override_enabled = false;
+        p.in.local_hour = 23;          // fallback solar phase 2.6 → night
+        p.mode = SEALED_MIST;
         auto f = evaluate_overrides(p.in, p.sp, p.st, p.mode);
         report("fog_gate_window", f.fog_gate_window);
     }
@@ -516,7 +534,6 @@ int main(int argc, char* argv[]) {
         p.sp.direct_wet_stress_override_enabled = true;
         p.sp.direct_wet_stress_vpd_margin_kpa = 0.05f;
         p.sp.direct_wet_stress_min_dew_margin_f = 8.0f;
-        p.sp.direct_wet_stress_latest_hour = 22;
         p.st.vpd_watch_timer_ms = p.sp.vpd_watch_dwell_ms;
         p.in.temp_f = p.sp.temp_high + 4.0f;
         p.in.vpd_kpa = p.sp.vpd_high + 0.25f;
@@ -539,9 +556,7 @@ int main(int argc, char* argv[]) {
         p.mode = SEALED_MIST;
         p.st.mist_stage = MIST_FOG;
         p.st.heat2_latched = true;
-        p.sp.fog_stress_window_extend_enabled = true;
-        p.sp.fog_stress_window_latest_hour = 19;
-        p.sp.fog_stress_min_dew_margin_f = 10.0f;
+        // Firmware-v2: local_hour 12 (default) is the solar day → fog phase-permitted.
         p.in.temp_f = p.sp.temp_low + 1.0f;
         p.in.vpd_kpa = p.sp.vpd_high + 0.4f;
         p.in.rh_pct = 55.0f;

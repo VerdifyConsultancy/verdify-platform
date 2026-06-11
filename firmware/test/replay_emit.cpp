@@ -115,7 +115,7 @@ static const char* const EXPECTED_SP_COLUMNS[] = {
     // TWIN-3 additions
     "sp_heat_hysteresis", "sp_sealed_max_s", "sp_relief_duration_s",
     "sp_max_relief_cycles", "sp_fog_rh_ceiling", "sp_fog_min_temp",
-    "sp_fog_window_start", "sp_fog_window_end", "sp_dehum_aggressive_kpa",
+    "sp_dehum_aggressive_kpa",
     "sp_occupancy_inhibit", "sp_vent_latch_timeout_ms",
     "sp_safety_max_seal_margin_f", "sp_econ_heat_margin_f",
     "sp_sw_summer_vent_enabled", "sp_vent_prefer_temp_delta_f",
@@ -124,17 +124,17 @@ static const char* const EXPECTED_SP_COLUMNS[] = {
     "sp_cool_stage2_over_high_f", "sp_cool_exit_hysteresis_f",
     "sp_cold_vent_guard_delta_f", "sp_cool_all_fans_at_high_enabled",
     "sp_direct_wet_stress_override_enabled", "sp_direct_wet_stress_vpd_margin_kpa",
-    "sp_direct_wet_stress_min_dew_margin_f", "sp_direct_wet_stress_latest_hour",
-    "sp_fog_stress_window_extend_enabled", "sp_fog_stress_window_latest_hour",
-    "sp_fog_stress_min_dew_margin_f",
-    "sp_sw_dawn_rehydrate_enabled", "sp_dawn_rehydrate_start_minute",
+    "sp_direct_wet_stress_min_dew_margin_f",
+    // Firmware-v2: solar wet taper + night-stress emergency wetting (replaces
+    // the direct_wet_stress_latest_hour / fog_stress_window_* clock windows).
+    "sp_sw_wet_taper_enabled", "sp_wet_taper_before_sunset_min",
+    "sp_sw_night_stress_wet_enabled", "sp_night_stress_min_dew_margin_f",
+    // Firmware-v2: solar-anchored dawn/midday boost windows (offsets replace the
+    // dawn_rehydrate_start_hour / midday_drench_hour clock anchors).
+    "sp_sw_dawn_rehydrate_enabled", "sp_dawn_boost_offset_min",
     "sp_dawn_rehydrate_window_min", "sp_dawn_rehydrate_on_s", "sp_dawn_rehydrate_gap_s",
-    "sp_sw_midday_drench_enabled", "sp_midday_drench_hour",
-    "sp_midday_drench_start_minute", "sp_midday_drench_window_min",
-    "sp_midday_drench_on_s", "sp_midday_drench_gap_s",
-    "sp_sw_overnight_micropulse_enabled", "sp_sw_night_humidity_source_present",
-    "sp_micropulse_vpd_ceiling", "sp_micropulse_max_on_s",
-    "sp_micropulse_min_gap_s", "sp_micropulse_min_dew_margin_f",
+    "sp_sw_midday_drench_enabled", "sp_midday_boost_offset_min",
+    "sp_midday_drench_window_min", "sp_midday_drench_on_s", "sp_midday_drench_gap_s",
 };
 
 // Warns loudly (and, when REPLAY_EMIT_REQUIRE_FULL_SETPOINTS=1, aborts) if the
@@ -218,6 +218,23 @@ static void process_row(const Header& h,
         int hr = 12;
         if (ts.size() >= 13) { try { hr = std::stoi(ts.substr(11, 2)); } catch (...) {} }
         in.local_hour = hr;
+        // ── Firmware-v2: on-chip solar inputs from the row timestamp ──────────
+        // Every time-of-day rule now keys on SOLAR PHASE. Derive the per-cycle
+        // ephemeris (sunrise/solar-noon/sunset + phase + minute-of-day) from the
+        // row's unix time exactly as the on-chip ESP32 path would, so the replay
+        // twin gates on real solar phase instead of the fallback hour proxy.
+        {
+            const uint64_t row_ts_unix = parse_ts_unix(ts);
+            if (row_ts_unix > 0) {
+                const int utc_off = infer_utc_offset_min(row_ts_unix, hr);
+                const SolarTimes st = solar_times_from_unix(row_ts_unix, utc_off);
+                in.now_minute     = local_minute_from_unix(row_ts_unix, utc_off);
+                in.sunrise_min    = st.sunrise_min;
+                in.solar_noon_min = st.solar_noon_min;
+                in.sunset_min     = st.sunset_min;
+                in.solar_phase    = solar_phase(in.now_minute, st);
+            }
+        }
         in.occupied = parse_bool(get("occupied"), false);
         in.outdoor_temp_f = parse_float(get("outdoor_temp_f"), NAN);
         in.outdoor_dewpoint_f = parse_float(get("outdoor_dewpoint_f"), NAN);
@@ -294,8 +311,6 @@ static void process_row(const Header& h,
         assign_positive_u32("sp_max_relief_cycles", sp.max_relief_cycles);
         assign_positive_float("sp_fog_rh_ceiling", sp.fog_rh_ceiling);
         assign_positive_float("sp_fog_min_temp", sp.fog_min_temp);
-        assign_int("sp_fog_window_start", sp.fog_window_start);
-        assign_int("sp_fog_window_end", sp.fog_window_end);
         assign_positive_float("sp_dehum_aggressive_kpa", sp.dehum_aggressive_kpa);
         assign_switch("sp_occupancy_inhibit", sp.occupancy_inhibit);
         assign_positive_u32_ms("sp_vent_latch_timeout_ms", sp.vent_latch_timeout_ms);
@@ -315,27 +330,22 @@ static void process_row(const Header& h,
         assign_switch("sp_direct_wet_stress_override_enabled", sp.direct_wet_stress_override_enabled);
         assign_float("sp_direct_wet_stress_vpd_margin_kpa", sp.direct_wet_stress_vpd_margin_kpa);
         assign_positive_float("sp_direct_wet_stress_min_dew_margin_f", sp.direct_wet_stress_min_dew_margin_f);
-        assign_int("sp_direct_wet_stress_latest_hour", sp.direct_wet_stress_latest_hour);
-        assign_switch("sp_fog_stress_window_extend_enabled", sp.fog_stress_window_extend_enabled);
-        assign_int("sp_fog_stress_window_latest_hour", sp.fog_stress_window_latest_hour);
-        assign_positive_float("sp_fog_stress_min_dew_margin_f", sp.fog_stress_min_dew_margin_f);
+        // Firmware-v2: solar wet taper + night-stress emergency wetting.
+        assign_switch("sp_sw_wet_taper_enabled", sp.sw_wet_taper_enabled);
+        assign_int("sp_wet_taper_before_sunset_min", sp.wet_taper_before_sunset_min);
+        assign_switch("sp_sw_night_stress_wet_enabled", sp.sw_night_stress_wet_enabled);
+        assign_positive_float("sp_night_stress_min_dew_margin_f", sp.night_stress_min_dew_margin_f);
+        // Firmware-v2: solar-anchored dawn/midday boost windows.
         assign_switch("sp_sw_dawn_rehydrate_enabled", sp.sw_dawn_rehydrate_enabled);
-        assign_int("sp_dawn_rehydrate_start_minute", sp.dawn_rehydrate_start_minute);
+        assign_int("sp_dawn_boost_offset_min", sp.dawn_boost_offset_min);
         assign_int("sp_dawn_rehydrate_window_min", sp.dawn_rehydrate_window_min);
         assign_int("sp_dawn_rehydrate_on_s", sp.dawn_rehydrate_on_s);
         assign_int("sp_dawn_rehydrate_gap_s", sp.dawn_rehydrate_gap_s);
         assign_switch("sp_sw_midday_drench_enabled", sp.sw_midday_drench_enabled);
-        assign_int("sp_midday_drench_hour", sp.midday_drench_hour);
-        assign_int("sp_midday_drench_start_minute", sp.midday_drench_start_minute);
+        assign_int("sp_midday_boost_offset_min", sp.midday_boost_offset_min);
         assign_int("sp_midday_drench_window_min", sp.midday_drench_window_min);
         assign_int("sp_midday_drench_on_s", sp.midday_drench_on_s);
         assign_int("sp_midday_drench_gap_s", sp.midday_drench_gap_s);
-        assign_switch("sp_sw_overnight_micropulse_enabled", sp.sw_overnight_micropulse_enabled);
-        assign_switch("sp_sw_night_humidity_source_present", sp.sw_night_humidity_source_present);
-        assign_positive_float("sp_micropulse_vpd_ceiling", sp.micropulse_vpd_ceiling);
-        assign_int("sp_micropulse_max_on_s", sp.micropulse_max_on_s);
-        assign_int("sp_micropulse_min_gap_s", sp.micropulse_min_gap_s);
-        assign_positive_float("sp_micropulse_min_dew_margin_f", sp.micropulse_min_dew_margin_f);
 
         sp.sw_fsm_controller_enabled = parse_bool(
             get("sp_sw_fsm_controller_enabled"),

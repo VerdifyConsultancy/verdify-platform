@@ -24,6 +24,7 @@ esphome:
   includes:
     - lib/heap_diagnostics.h
     - lib/greenhouse_types.h
+    - lib/greenhouse_solar.h
     - lib/greenhouse_logic.h
   # Lutron LEAP TLS disabled (causes ESP32 crash — TLS heap exhaustion)
   # Grow lights use HA native service calls; no on-device HTTP client.

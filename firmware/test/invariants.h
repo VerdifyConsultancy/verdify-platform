@@ -274,13 +274,22 @@ inline bool check_19_feed_hold_no_clean_center(const TraceRow& r, ReportFn repor
 // populated (the dusk-cutoff, feed-hold, dew-margin, over-saturation, and
 // occupancy preconditions); the dawn/midday WINDOW config is intentionally
 // left at defaults because #21/#22 assert rails that are window-independent.
+// Firmware-v2: populate the on-chip solar inputs on a SensorInputs from a
+// replay row's unix timestamp (the same ephemeris the live firmware computes).
+inline void set_solar_inputs_from_row(const TraceRow& r, SensorInputs& in) {
+    const int utc_off = infer_utc_offset_min(r.ts_unix_s, r.local_hour);
+    const SolarTimes st = solar_times_from_unix(r.ts_unix_s, utc_off);
+    in.now_minute     = local_minute_from_unix(r.ts_unix_s, utc_off);
+    in.sunrise_min    = st.sunrise_min;
+    in.solar_noon_min = st.solar_noon_min;
+    in.sunset_min     = st.sunset_min;
+    in.solar_phase    = solar_phase(in.now_minute, st);
+}
+
 inline void irr_burst_rail_view(const TraceRow& r, SensorInputs& in, Setpoints& sp) {
     sp = default_setpoints();
     sp.vpd_high = r.vpd_high;
     sp.vpd_low  = r.vpd_low;
-    sp.dusk_cutoff_hour = r.dusk_cutoff_hour;
-    sp.sw_dusk_cutoff_enabled = r.dusk_cutoff_enabled;
-    sp.night_end_hour = (r.night_end_hour == 0 && r.night_start_hour == 0) ? 6 : r.night_end_hour;
     sp.feed_hold_active = r.feed_hold_active;
     in = SensorInputs{};
     in.temp_f = r.temp_f;
@@ -292,20 +301,21 @@ inline void irr_burst_rail_view(const TraceRow& r, SensorInputs& in, Setpoints& 
     in.outdoor_temp_f = NAN;
     in.outdoor_dewpoint_f = NAN;
     in.outdoor_data_age_s = 99999u;
+    set_solar_inputs_from_row(r, in);
 }
 
-// #21 (IRR-3/IRR-4): a CENTER-zone dawn/midday burst can NEVER be permitted
-// past the CYC-1 dusk cutoff. center_burst_rails_permit() must be false on any
-// row that is past_dusk_cutoff(), regardless of VPD. Pure single-row check
-// over the row's actual dusk config — proves the burst respects the dusk rail
-// across the full history.
+// #21 (firmware-v2): a CENTER-zone dawn/midday boost can NEVER be permitted
+// past the solar wet taper. center_burst_rails_permit() must be false on any
+// row that is past_wet_taper() (within taper of the on-chip sunset, or in the
+// solar night half), regardless of VPD. Proves the boost respects the
+// dry-before-dark rail across the full history, on solar time.
 inline bool check_21_center_burst_pre_dusk(const TraceRow& r, ReportFn report = default_report) {
     SensorInputs in; Setpoints sp;
     irr_burst_rail_view(r, in, sp);
     if (!sensors_plausible(in)) return true;             // SENSOR_FAULT handled elsewhere
-    if (past_dusk_cutoff(in, sp) && center_burst_rails_permit(in, sp)) {
-        report(21, "center_burst_pre_dusk", r,
-               "IRR-3/IRR-4 center-burst rails permitted past the dusk cutoff");
+    if (past_wet_taper(in, sp) && center_burst_rails_permit(in, sp)) {
+        report(21, "center_burst_pre_taper", r,
+               "center-boost rails permitted past the solar wet taper");
         return false;
     }
     return true;
@@ -380,21 +390,19 @@ inline bool check_23_min_dark(const LightingSetpoints& sp_in,
 // the per-minute replay corpus cannot measure sub-minute pulse length, so this
 // asserts the legality of fog being on at all overnight, which is the property
 // that matters for the dark-dry intent.)
+// #24 (firmware-v2): overnight fog is legal ONLY as a permitted STRESS-WET
+// response (VPD above the solar night band's high edge + margin, under the
+// night dew margin) or survival cooling. The dedicated CYC-4 micro-pulse path
+// is gone; the solar band itself defines the overnight emergency.
 inline bool check_24_overnight_fog_micropulse_only(const TraceRow& r,
                                                    ReportFn report = default_report) {
     if (!r.eq_fog) return true;
-    // Build the micro-pulse rail view from the row (reuse the dusk/feed-hold/
-    // dew/RH/temp fields). Defaults for the micro-pulse tunables come from
-    // default_setpoints() and are overridden where the row carries config.
     SensorInputs in; Setpoints sp;
     sp = default_setpoints();
     sp.vpd_high = r.vpd_high;
     sp.vpd_low  = r.vpd_low;
     sp.fog_rh_ceiling = r.fog_rh_ceiling;
     sp.fog_min_temp   = r.fog_min_temp;
-    sp.dusk_cutoff_hour = r.dusk_cutoff_hour;
-    sp.sw_dusk_cutoff_enabled = r.dusk_cutoff_enabled;
-    sp.night_end_hour = (r.night_end_hour == 0 && r.night_start_hour == 0) ? 6 : r.night_end_hour;
     sp.feed_hold_active = r.feed_hold_active;
     in = SensorInputs{};
     in.temp_f = r.temp_f;
@@ -406,14 +414,15 @@ inline bool check_24_overnight_fog_micropulse_only(const TraceRow& r,
     in.outdoor_temp_f = NAN;
     in.outdoor_dewpoint_f = NAN;
     in.outdoor_data_age_s = 99999u;
+    set_solar_inputs_from_row(r, in);
 
     if (!sensors_plausible(in)) return true;       // SENSOR_FAULT handled elsewhere
-    if (!past_dusk_cutoff(in, sp)) return true;    // daytime fog is the normal path
-    // Overnight fog is legal ONLY as a permitted micro-pulse or survival cooling.
+    if (!is_night_phase(in)) return true;          // daytime fog is the normal path
+    // Overnight fog is legal ONLY as a permitted stress-wet response or survival cooling.
     const bool safety_cooling = mode_is_safety_cool(r.greenhouse_state);
-    if (!overnight_micropulse_permitted(in, sp) && !safety_cooling) {
-        report(24, "overnight_fog_micropulse_only", r,
-               "fog ON past the dusk cutoff without a permitted micro-pulse or SAFETY_COOL");
+    if (!stress_wet_override_permitted(in, sp) && !safety_cooling) {
+        report(24, "overnight_fog_stress_only", r,
+               "fog ON during the solar night without a permitted stress-wet response or SAFETY_COOL");
         return false;
     }
     return true;
@@ -675,13 +684,12 @@ struct Ctx17 {
 };
 inline bool check_17_night_drop(Ctx17& c, const TraceRow& r, ReportFn report = default_report) {
     // FORWARD invariant. The ≥10°F day/night drop is a property of the NEW
-    // Vanda diurnal band (migration 145), not of the pre-fix telemetry. The
-    // historical replay corpus served the OLD broken band (night ~66.5 vs
-    // day-peak ~75 → only ~8.5°F) and is EXPECTED to violate this. So this
-    // check is gated on the new-band config being explicitly present
-    // (sp_night_start_hour/sp_night_end_hour columns) — it activates only
-    // once the corpus is refreshed under the Vanda band. The native unit
-    // test `night_drop_invariant_*` exercises it directly with that config.
+    // solar diurnal band, not of the pre-fix telemetry. The historical replay
+    // corpus served the OLD broken band (night ~66.5 vs day-peak ~75 → only
+    // ~8.5°F) and is EXPECTED to violate this. Gated on the new-band config
+    // being present (the night_*_hour columns survive in the corpus only when
+    // it was refreshed under the new band). Night is now derived from SOLAR
+    // PHASE, not a clock window. The native unit test exercises it directly.
     const bool new_band_config = !(r.night_start_hour == 0 && r.night_end_hour == 0);
     if (!new_band_config) return true;
 
@@ -691,7 +699,10 @@ inline bool check_17_night_drop(Ctx17& c, const TraceRow& r, ReportFn report = d
         c.day_peak_high = -1e9f;
         c.have_peak = false;
     }
-    const bool night = is_night_hour(r.local_hour, r.night_start_hour, r.night_end_hour);
+    SensorInputs nin{};
+    nin.local_hour = r.local_hour;
+    set_solar_inputs_from_row(r, nin);
+    const bool night = is_night_phase(nin);
     if (!night) {
         if (r.temp_high > c.day_peak_high) { c.day_peak_high = r.temp_high; c.have_peak = true; }
         return true;

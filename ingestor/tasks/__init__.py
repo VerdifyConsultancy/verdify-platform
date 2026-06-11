@@ -19,6 +19,7 @@ Behaviour is identical: function bodies are byte-for-byte the originals.
 from . import (  # noqa: F401
     _common,
     alerts,
+    band_anchors,
     confirmation,
     daily,
     dispatcher,
