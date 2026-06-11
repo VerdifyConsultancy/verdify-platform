@@ -11,6 +11,7 @@ existing CM→dashboard assignment (so a JSON edit re-renders without re-shardin
 Idempotent: run after editing any grafana/dashboards/*.json, then commit the CMs.
 Validates each source is parseable JSON and warns if a CM nears the 1 MiB limit.
 """
+
 from __future__ import annotations
 
 import json
@@ -69,7 +70,9 @@ def main() -> int:
         if out != cm_path.read_text():
             cm_path.write_text(out)
             changed += 1
-            print(f"regenerated {cm_path.name} ({size} bytes, {sum(1 for k in new_data if k.endswith('.json'))} dashboards)")
+            print(
+                f"regenerated {cm_path.name} ({size} bytes, {sum(1 for k in new_data if k.endswith('.json'))} dashboards)"
+            )
     print(f"done: {changed} ConfigMap(s) updated")
     return 0
 
