@@ -344,6 +344,24 @@ class ClimateActionLogRow(BaseModel):
     sensor_status: dict = Field(default_factory=dict)
     candidate_summary: str | None = None
     source_system_state: dict = Field(default_factory=dict)
+    # firmware-v2 on-chip telemetry (#327) — solar ephemeris + house targets +
+    # per-zone VPD targets/deltas the ESP32 computes on-chip and publishes.
+    solar_phase: float | None = None
+    solar_sunrise_min: int | None = None
+    solar_noon_min: int | None = None
+    solar_sunset_min: int | None = None
+    house_temp_target_f: float | None = None
+    house_temp_delta_f: float | None = None
+    house_vpd_target: float | None = None
+    house_vpd_delta: float | None = None
+    vpd_target_center: float | None = None
+    vpd_target_south: float | None = None
+    vpd_target_west: float | None = None
+    vpd_target_east: float | None = None
+    vpd_delta_center: float | None = None
+    vpd_delta_south: float | None = None
+    vpd_delta_west: float | None = None
+    vpd_delta_east: float | None = None
 
 
 class OverrideEvent(BaseModel):
