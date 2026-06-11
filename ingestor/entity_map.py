@@ -412,6 +412,12 @@ STATE_MAP: dict[str, str] = {
 # ──────────────────────────────────────────────────────────────
 # Setpoints (NumberInfo — write on change)
 # ──────────────────────────────────────────────────────────────
+# Derived from the registry. firmware-v2 (firmware/v2-solar-bands) dropped the
+# legacy fog-stress-window / direct-wet-stress-latest-hour NUMBER entities from
+# firmware, but their registry rows persist (the planner still pushes them as
+# dry-stress / fog-stress policy). Those become dead firmware routes here;
+# they're allow-listed in verdify_schemas/tests/test_firmware_drift.py until the
+# policy is retired from the registry/planner.
 SETPOINT_MAP: dict[str, str] = dict(SETPOINT_MAP_REG)
 
 # ──────────────────────────────────────────────────────────────
@@ -495,7 +501,25 @@ DAILY_ACCUM_MAP: dict[str, str] = {
 # Maps ESP32 object_id → canonical DB parameter name
 # Written to setpoint_snapshot table for ground-truth tracking
 # ──────────────────────────────────────────────────────────────
-CFG_READBACK_MAP: dict[str, str] = {**CFG_READBACK_MAP_REG, **CFG_READBACK_ALIASES_REG}
+# firmware-v2 (firmware/v2-solar-bands) added these cfg_* readback sensors
+# (firmware/greenhouse/sensors.yaml). The underlying number/switch entities live
+# only in firmware (no registry row), so route the readbacks here directly:
+# ESPHome sensor `id:` → canonical setpoint param name. The firmware-v2-dropped
+# fog-window / micropulse / dawn-rehydrate / midday-drench / overnight-micropulse
+# / night-humidity-source cfg_* readbacks remain in the registry-derived base
+# (their registry rows persist) but are now dead firmware routes — allow-listed
+# in verdify_schemas/tests/test_firmware_drift.py.
+_CFG_READBACK_ADDED_FW_V2 = {
+    "cfg_night_stress_min_dew_margin_f": "night_stress_min_dew_margin_f",
+    "cfg_sw_onchip_band_enabled": "sw_onchip_band_enabled",
+    "cfg_sw_wet_taper_enabled": "sw_wet_taper_enabled",
+    "cfg_sw_night_stress_wet_enabled": "sw_night_stress_wet_enabled",
+}
+CFG_READBACK_MAP: dict[str, str] = {
+    **CFG_READBACK_MAP_REG,
+    **CFG_READBACK_ALIASES_REG,
+    **_CFG_READBACK_ADDED_FW_V2,
+}
 
 # ──────────────────────────────────────────────────────────────
 # Inverse maps: DB parameter name → ESP32 object_id

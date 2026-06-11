@@ -226,21 +226,71 @@ KNOWN_PRE_EXISTING_DRIFT: dict[str, set[str]] = {
         "de_hum_cycles__today_",
         "safety_de_hum_cycles__today_",
     },
+    "SETPOINT_MAP": {
+        # firmware-v2 (firmware/v2-solar-bands) removed the legacy fog-stress-
+        # window and direct-wet-stress-latest-hour NUMBER entities — the OTA no
+        # longer emits them. The registry keeps the rows because the planner
+        # still pushes them as dry-stress / fog-stress policy params
+        # (ingestor/tasks/_common.py AI_MOISTURE_STRESS_POLICY_PARAMS), so the
+        # routes stay in the registry-derived SETPOINT_MAP. They are dead
+        # firmware routes (the ingestor simply never receives these object_ids):
+        # accepted drift until the policy is retired from the registry/planner.
+        "direct_wet_stress_latest_hour",
+        "fog_stress_min_dew_margin_f",
+        "fog_stress_window_extend_enabled",
+        "fog_stress_window_latest_hour",
+        "fog_window_end__hr_",
+        "fog_window_start__hr_",
+    },
+    "CFG_READBACK_MAP": {
+        # firmware-v2 (firmware/v2-solar-bands) removed the matching cfg_*
+        # readback sensors for the dropped fog-window / micropulse /
+        # dawn-rehydrate-start / midday-drench / overnight-micropulse /
+        # night-humidity-source entities. Registry rows persist (planner policy
+        # / schedule params), so the registry-derived CFG_READBACK_MAP keeps the
+        # routes. Dead firmware readbacks — accepted drift until the underlying
+        # registry rows are retired.
+        "cfg___fog_window_end__hour_",
+        "cfg___fog_window_start__hour_",
+        "cfg_dawn_rehydrate_start_minute",
+        "cfg_direct_wet_stress_latest_hour",
+        "cfg_fog_stress_min_dew_margin_f",
+        "cfg_fog_stress_window_extend_enabled",
+        "cfg_fog_stress_window_latest_hour",
+        "cfg_micropulse_max_on__s_",
+        "cfg_micropulse_min_dew_margin__f_",
+        "cfg_micropulse_min_gap__s_",
+        "cfg_micropulse_vpd_ceiling",
+        "cfg_midday_drench_hour",
+        "cfg_midday_drench_start_minute",
+        "cfg_night_humidity_source_present",
+        "cfg_overnight_micropulse_enabled",
+    },
 }
 
 # Firmware-v2 STAGED contract (docs/design/firmware-v2-contract-2026-06-10.md
 # §B2/§B7): the dispatcher-side band-anchor tunables are registered and routed
-# AHEAD of the firmware-v2 OTA that will expose the matching number entities
-# (object_id == param name) and cfg_* readbacks. Until that OTA lands these
-# ids are intentionally absent from firmware/. Derived from the registry — no
-# hand-maintained second list. test_known_drift_is_still_drifting will force
-# this allowlist to shrink (drop the staging block in tunable_registry.py)
-# the moment the firmware starts emitting the entities.
+# AHEAD of the firmware-v2 OTA that exposes the matching number entities
+# (object_id == param name) and cfg_* readbacks. Derived from the registry — no
+# hand-maintained second list.
+#
+# The firmware/v2-solar-bands OTA has now LANDED part of this contract: it emits
+# all the staged cfg_* readbacks plus the boost-offset / zone-priority /
+# wet-taper / manual-override number entities, while the per-band/zone VPD-anchor
+# *number* entities (band_*, zone_vpd_*) are still pending a later OTA. So the
+# staging allowlist must only cover the ids the firmware does NOT yet emit —
+# anything the firmware now publishes belongs in the REAL entity_map routes, not
+# the drift allowlist. We filter the staged ids against the live firmware id set
+# so the allowlist self-shrinks as the OTA catches up (test_known_drift_is_still_
+# drifting enforces that any firmware-emitted id is removed from here).
+_STAGED_FW_IDS = _firmware_entity_ids()
 KNOWN_PRE_EXISTING_DRIFT.setdefault("SETPOINT_MAP", set()).update(
-    REGISTRY[name].esp_object_id for name in FIRMWARE_V2_STAGED_REG if REGISTRY[name].esp_object_id
+    oid for name in FIRMWARE_V2_STAGED_REG if (oid := REGISTRY[name].esp_object_id) and oid not in _STAGED_FW_IDS
 )
 KNOWN_PRE_EXISTING_DRIFT.setdefault("CFG_READBACK_MAP", set()).update(
-    REGISTRY[name].cfg_readback_object_id for name in FIRMWARE_V2_STAGED_REG if REGISTRY[name].cfg_readback_object_id
+    oid
+    for name in FIRMWARE_V2_STAGED_REG
+    if (oid := REGISTRY[name].cfg_readback_object_id) and oid not in _STAGED_FW_IDS
 )
 
 

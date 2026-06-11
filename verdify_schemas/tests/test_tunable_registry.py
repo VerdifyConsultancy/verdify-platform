@@ -436,9 +436,16 @@ class TestActivityDirectWetGuards:
             "direct_wet_center_drydown_before_off_min",
             "direct_wet_stress_override",
             "wet_dew_margin_f",
-            # Dew-margin gate is now expressed as the explicit comparison that
-            # forbids stress wetting when the dew-point margin is too tight.
-            "wet_dew_margin_f >= id(direct_wet_stress_min_dew_margin_f)",
+            # firmware-v2 (firmware/v2-solar-bands) refactored the inline
+            # positive dew-margin gate (`wet_dew_margin_f >= id(...)`) into the
+            # header's single-source wet-assist gate. The dew-margin rule is now
+            # expressed as the explicit block-reason comparison plus the
+            # solar-band wet-taper / stress-override gate, all funnelled through
+            # climate_wet_assist_permitted(). These needles track the CURRENT
+            # gate, not the pre-refactor inline comparison.
+            "climate_wet_assist_permitted(sensor_in, setpts)",
+            "wet_dew_margin_f < id(direct_wet_stress_min_dew_margin_f)",
+            "past_wet_taper(sensor_in, setpts) && !stress_wet_override_permitted(sensor_in, setpts)",
         ]
         missing = [needle for needle in required if needle not in controls_yaml]
         assert not missing, f"Mister direct-wet gate coverage missing: {missing}"
