@@ -27,6 +27,35 @@
  */
 
 #include "greenhouse_types.h"
+#include "greenhouse_solar.h"
+
+// ── Firmware-v2 solar accessors ─────────────────────────────────────────
+// Every time-of-day rule keys on SOLAR PHASE (greenhouse_solar.h), computed
+// on-chip — never on wall-clock hours. Callers populate SensorInputs with the
+// per-cycle ephemeris; tests/replay derive it from row timestamps. Defaults
+// degrade gracefully (fallback phase from local_hour).
+inline int effective_now_minute(const SensorInputs& in) noexcept {
+    if (in.now_minute >= 0) return ((in.now_minute % 1440) + 1440) % 1440;
+    return std::max(0, std::min(23, in.local_hour)) * 60;
+}
+
+inline float effective_solar_phase(const SensorInputs& in) noexcept {
+    if (std::isfinite(in.solar_phase)) {
+        float p = in.solar_phase;
+        return (p >= 0.0f && p < 4.0f) ? p : fallback_solar_phase(in.local_hour);
+    }
+    return fallback_solar_phase(in.local_hour);
+}
+
+// Night = the solar night half (sunset → next sunrise).
+inline bool is_night_phase(const SensorInputs& in) noexcept {
+    return effective_solar_phase(in) >= 2.0f;
+}
+
+inline int effective_minutes_to_sunset(const SensorInputs& in) noexcept {
+    const SolarTimes st = {in.sunrise_min, in.solar_noon_min, in.sunset_min};
+    return minutes_to_sunset(effective_now_minute(in), st);
+}
 
 // ── R2-4: Plausibility validation — catches NaN, inf, and garbage ──
 inline bool sensors_plausible(const SensorInputs& in) noexcept {
@@ -87,79 +116,58 @@ inline float dew_margin_f(const SensorInputs& in) noexcept {
     return in.temp_f - in.dew_point_f;
 }
 
-inline bool fog_stress_hour_in_extension(int hour, int normal_end, int latest_hour) noexcept {
-    hour = std::max(0, std::min(23, hour));
-    normal_end = std::max(0, std::min(23, normal_end));
-    latest_hour = std::max(17, std::min(24, latest_hour));
-    if (latest_hour <= normal_end) return false;
-    return hour >= normal_end && hour < latest_hour;
-}
-
-// ── ENV-2: night-window test (wrap-aware) ──────────────────────────────
-// Returns true when `hour` is inside the night window [start, end). When
-// start > end the window crosses midnight (e.g. 20→6 means 20:00-05:59).
-// Mirrors fog_hour_in_window semantics so day/night phrasing is consistent.
-inline bool is_night_hour(int hour, int night_start, int night_end) noexcept {
-    hour = std::max(0, std::min(23, hour));
-    night_start = std::max(0, std::min(23, night_start));
-    night_end = std::max(0, std::min(23, night_end));
-    if (night_start == night_end) return false;  // degenerate → treat as no night window
-    return (night_start <= night_end)
-        ? (hour >= night_start && hour < night_end)
-        : (hour >= night_start || hour < night_end);
-}
-
-// ── ENV-2: suppress the IDLE econ VPD-rescue heat path overnight ───────
-// The econ-rescue heat (resolve_equipment IDLE: fires heat1 when
-// vpd < vpd_low_eff && econ_block) has NO time-of-day gate today. Raising
-// the night VPD floor makes it fire MORE overnight — heat-to-chase-humidity,
-// which collapses the day/night drop. Suppress it during the night window.
+// ── Firmware-v2: night econ-heat rule (generic, solar-phase) ────────────
+// Never heat to chase humidity at night. The econ-rescue heat
+// (resolve_equipment IDLE: fires heat1 when vpd < vpd_low_eff && econ_block)
+// is suppressed for the whole solar night half. Safety heat untouched.
 inline bool night_econ_heat_suppressed(const SensorInputs& in, const Setpoints& sp) noexcept {
-    return sp.sw_night_econ_heat_suppress_enabled
-        && is_night_hour(in.local_hour, sp.night_start_hour, sp.night_end_hour);
+    return sp.sw_night_econ_heat_suppress_enabled && is_night_phase(in);
 }
 
-// ── CYC-1 / SAF-3: authoritative VPD-independent dusk cutoff ───────────
-// The single hard rail. "After dusk" = the hour is in the dark window
-// [dusk_cutoff_hour, night_end_hour) (wrap-aware). When enabled, ALL fog
-// and climate-driven mister wetting must cease here, BEFORE any stress
-// extension. This is the firmware companion to the dispatcher pushing
-// sunset−2h into dusk_cutoff_hour. night_end_hour (sunrise) re-opens
-// wetting in the morning; the window therefore covers dusk→dawn.
-inline bool past_dusk_cutoff(const SensorInputs& in, const Setpoints& sp) noexcept {
-    if (!sp.sw_dusk_cutoff_enabled) return false;
-    return is_night_hour(in.local_hour, sp.dusk_cutoff_hour, sp.night_end_hour);
+// ── Firmware-v2: wet taper (replaces the dusk_cutoff_hour clock rail) ────
+// Routine (non-stress) wetting ceases wet_taper_before_sunset_min before the
+// ON-CHIP sunset and stays off through the night half, so foliage dries
+// before dark on every day of the year with zero network. Stress wetting has
+// its own gate below.
+inline bool past_wet_taper(const SensorInputs& in, const Setpoints& sp) noexcept {
+    if (!sp.sw_wet_taper_enabled) return false;
+    if (is_night_phase(in)) return true;
+    return effective_minutes_to_sunset(in) < sp.wet_taper_before_sunset_min;
 }
 
-// Cap a stress-window latest-hour at the dusk cutoff so no VPD-driven
-// stress extension can push wetting past the authoritative rail. When the
-// cutoff is disabled the original latest_hour is returned unchanged.
-inline int dusk_capped_latest_hour(int latest_hour, const Setpoints& sp) noexcept {
-    if (!sp.sw_dusk_cutoff_enabled) return latest_hour;
-    return std::min(latest_hour, sp.dusk_cutoff_hour);
+// ── Firmware-v2: ONE stress-wetting rule (replaces direct_wet_stress_* +
+// fog_stress_window_* clock windows AND the CYC-4 overnight micro-pulse).
+// Stress = VPD above the solar band's high edge by the margin. By day the
+// rule may extend wetting through the taper; at night it is the emergency
+// path (the night band edge is LOW, so exceeding it + margin is a genuine
+// spike) under a stricter dew margin. The normal SEALED_MIST machinery,
+// SAF-4 duty caps, daily-volume ceiling, and relay min-on/off bound the
+// actual water — no bespoke pulse path exists anymore.
+inline bool stress_wet_override_permitted(const SensorInputs& in, const Setpoints& sp) noexcept {
+    if (!sp.direct_wet_stress_override_enabled) return false;
+    if (in.vpd_kpa <= (sp.vpd_high + sp.direct_wet_stress_vpd_margin_kpa)) return false;
+    if (is_night_phase(in)) {
+        return sp.sw_night_stress_wet_enabled
+            && dew_margin_f(in) >= std::max(sp.night_stress_min_dew_margin_f,
+                                            sp.direct_wet_stress_min_dew_margin_f);
+    }
+    return dew_margin_f(in) >= sp.direct_wet_stress_min_dew_margin_f;
 }
 
+// Back-compat alias (tests/controls reference the historical name).
 inline bool direct_wet_stress_override_permitted(const SensorInputs& in, const Setpoints& sp) noexcept {
-    // SAF-3: the dry-stress wetting window is capped at the dusk cutoff so a
-    // high-VPD reading can never extend misting past dark.
-    return sp.direct_wet_stress_override_enabled
-        && !past_dusk_cutoff(in, sp)
-        && in.local_hour < dusk_capped_latest_hour(sp.direct_wet_stress_latest_hour, sp)
-        && in.vpd_kpa > (sp.vpd_high + sp.direct_wet_stress_vpd_margin_kpa)
-        && dew_margin_f(in) >= sp.direct_wet_stress_min_dew_margin_f;
+    return stress_wet_override_permitted(in, sp);
 }
 
 inline const char* climate_wet_assist_block_reason(const SensorInputs& in, const Setpoints& sp) noexcept {
     if (moisture_blocked_by_occupancy(in, sp)) return "occupancy";
     // FRT-6: absorption hold — block ALL clean wetting after a feed.
     if (sp.feed_hold_active) return "feed_hold";
-    // SAF-3: the dusk cutoff is a hard, VPD-independent rail evaluated
-    // BEFORE the below_threshold / stress checks so no high-VPD reading can
-    // keep misting alive past dark.
-    if (past_dusk_cutoff(in, sp)) return "dusk_cutoff";
     if (in.vpd_kpa <= (sp.vpd_high + sp.direct_wet_stress_vpd_margin_kpa)) return "below_threshold";
     if (dew_margin_f(in) < sp.direct_wet_stress_min_dew_margin_f) return "dew_margin";
-    if (in.local_hour >= dusk_capped_latest_hour(sp.direct_wet_stress_latest_hour, sp)) return "time_window";
+    // Taper/night: routine wetting is over for the day UNLESS the stress rule
+    // (band-high + margin, dew-margin-guarded, night switch) re-opens it.
+    if (past_wet_taper(in, sp) && !stress_wet_override_permitted(in, sp)) return "wet_taper";
     return "";
 }
 
@@ -167,23 +175,16 @@ inline bool climate_wet_assist_permitted(const SensorInputs& in, const Setpoints
     return climate_wet_assist_block_reason(in, sp)[0] == '\0';
 }
 
-inline bool fog_stress_window_permitted(const SensorInputs& in, const Setpoints& sp) noexcept {
-    // SAF-3: cap the fog stress extension at the dusk cutoff so high-VPD
-    // dry-stress cannot push fog past dark (today it extended to hour 22,
-    // ~2h past sunset). past_dusk_cutoff() is an additional hard rail in
-    // case the cutoff falls inside the [fog_window_end, latest) band.
-    if (past_dusk_cutoff(in, sp)) return false;
-    return sp.fog_stress_window_extend_enabled
-        && fog_stress_hour_in_extension(
-               in.local_hour, sp.fog_window_end,
-               dusk_capped_latest_hour(sp.fog_stress_window_latest_hour, sp))
-        && in.vpd_kpa > sp.vpd_high
-        && dew_margin_f(in) >= sp.fog_stress_min_dew_margin_f;
+// Fog is permitted during the solar day outside the taper, or whenever the
+// stress rule fires (day or night). Pure phase logic — no clock windows.
+inline bool fog_phase_permitted(const SensorInputs& in, const Setpoints& sp) noexcept {
+    if (!past_wet_taper(in, sp) && !is_night_phase(in)) return true;
+    return stress_wet_override_permitted(in, sp);
 }
 
+// Back-compat alias (historical name used by controls/tests).
 inline bool fog_hour_permitted(const SensorInputs& in, const Setpoints& sp) noexcept {
-    return fog_hour_in_window(in.local_hour, sp.fog_window_start, sp.fog_window_end)
-        || fog_stress_window_permitted(in, sp);
+    return fog_phase_permitted(in, sp);
 }
 
 inline int local_minute_of_day(int hour, int minute) noexcept {
@@ -265,21 +266,19 @@ inline bool fog_permitted(const SensorInputs& in, const Setpoints& sp) noexcept 
 inline const char* climate_fog_assist_block_reason(const SensorInputs& in, const Setpoints& sp) noexcept {
     if (moisture_blocked_by_occupancy(in, sp)) return "occupancy";
     // SAF-6: at/above the safety_max rail, evaporative fog is a survival
-    // cooling aid — neither the absorption hold nor the dusk cutoff may
+    // cooling aid — neither the absorption hold nor the wet taper may
     // suppress it. (SAFETY_COOL in resolve_equipment calls this gate.)
     const bool safety_cool_active = in.temp_f >= sp.safety_max;
     // FRT-6: fogger is clean-water-only; block it during the absorption hold
     // so a feed is not immediately rinsed/diluted at the canopy.
     if (!safety_cool_active && sp.feed_hold_active) return "feed_hold";
-    // SAF-3: dusk cutoff is the authoritative VPD-independent rail; evaluate
-    // it before below_threshold so no stress reading keeps fog past dark.
-    if (!safety_cool_active && past_dusk_cutoff(in, sp)) return "dusk_cutoff";
     if (in.vpd_kpa <= sp.vpd_high) return "below_threshold";
-    if (dew_margin_f(in) < sp.fog_stress_min_dew_margin_f) return "dew_margin";
-    // The time-window/dusk caps gate dry-down strategy, not survival cooling.
-    if (!safety_cool_active
-        && in.local_hour >= dusk_capped_latest_hour(sp.fog_stress_window_latest_hour, sp)) {
-        return "time_window";
+    if (dew_margin_f(in) < sp.direct_wet_stress_min_dew_margin_f) return "dew_margin";
+    // Firmware-v2: solar taper/night gates dry-down strategy, not survival
+    // cooling. The stress rule (inside fog_phase_permitted) may re-open fog
+    // day or night when VPD is genuinely above the band edge + margin.
+    if (!safety_cool_active && !fog_phase_permitted(in, sp)) {
+        return "wet_taper";
     }
     if (in.rh_pct > sp.fog_rh_ceiling) return "rh_ceiling";
     if (in.temp_f < sp.fog_min_temp) return "temp_low";
@@ -323,15 +322,15 @@ inline int midday_drench_window_minutes(const Setpoints& sp) noexcept {
     return clamp_day_minutes(sp.midday_drench_window_min);
 }
 
-// True iff `now_minute` (minutes from local midnight) is inside the dawn window
-// [start, start+window). Window start anchors to dawn_rehydrate_start_hour:minute
-// (the dispatched sunrise hour). Zero-length window ⇒ never.
-inline bool in_dawn_rehydrate_window(int now_minute, const Setpoints& sp) noexcept {
-    const int start = local_minute_of_day(sp.dawn_rehydrate_start_hour, sp.dawn_rehydrate_start_minute);
+// Firmware-v2: the boost windows anchor to the ON-CHIP solar times so they
+// track the sun all year. Dawn window opens sunrise + dawn_boost_offset_min;
+// midday window opens solar-noon + midday_boost_offset_min.
+inline bool in_dawn_rehydrate_window(int now_minute, const SensorInputs& in, const Setpoints& sp) noexcept {
+    const int start = (((in.sunrise_min + sp.dawn_boost_offset_min) % 1440) + 1440) % 1440;
     return minute_in_window(now_minute, start, dawn_rehydrate_window_minutes(sp));
 }
-inline bool in_midday_drench_window(int now_minute, const Setpoints& sp) noexcept {
-    const int start = local_minute_of_day(sp.midday_drench_hour, sp.midday_drench_start_minute);
+inline bool in_midday_drench_window(int now_minute, const SensorInputs& in, const Setpoints& sp) noexcept {
+    const int start = (((in.solar_noon_min + sp.midday_boost_offset_min) % 1440) + 1440) % 1440;
     return minute_in_window(now_minute, start, midday_drench_window_minutes(sp));
 }
 
@@ -341,7 +340,7 @@ inline bool center_burst_rails_permit(const SensorInputs& in, const Setpoints& s
     if (!sensors_plausible(in)) return false;
     if (moisture_blocked_by_occupancy(in, sp)) return false;
     if (sp.feed_hold_active) return false;        // FRT-6 absorption hold
-    if (past_dusk_cutoff(in, sp)) return false;   // CYC-1 dusk cutoff (assert pre-dusk)
+    if (past_wet_taper(in, sp)) return false;     // solar taper (boosts are routine wetting)
     if (dew_margin_f(in) < sp.direct_wet_stress_min_dew_margin_f) return false;
     // Over-saturation sanity gate: only burst when the air is drier than the
     // center band ceiling. If VPD <= vpd_high the canopy is already humid.
@@ -362,10 +361,10 @@ inline bool center_burst_rails_permit(const SensorInputs& in, const Setpoints& s
 // somehow overlap (a misconfiguration the clamps guard against).
 inline CenterBurst center_burst_decision(int now_minute, const SensorInputs& in, const Setpoints& sp) noexcept {
     if (!center_burst_rails_permit(in, sp)) return CENTER_BURST_NONE;
-    if (sp.sw_dawn_rehydrate_enabled && in_dawn_rehydrate_window(now_minute, sp)) {
+    if (sp.sw_dawn_rehydrate_enabled && in_dawn_rehydrate_window(now_minute, in, sp)) {
         return CENTER_BURST_DAWN;
     }
-    if (sp.sw_midday_drench_enabled && in_midday_drench_window(now_minute, sp)) {
+    if (sp.sw_midday_drench_enabled && in_midday_drench_window(now_minute, in, sp)) {
         return CENTER_BURST_MIDDAY;
     }
     return CENTER_BURST_NONE;
@@ -385,43 +384,11 @@ inline bool center_burst_cadence_s(CenterBurst burst, const Setpoints& sp, int& 
     }
 }
 
-// ── CYC-4 (NB7): overnight ≤5s fog micro-pulse (last resort) ─────────────
-// Returns the block reason ("" = permitted) for an overnight emergency fog
-// micro-pulse. This is the DELIBERATE, narrowly-scoped exception to the dusk
-// cutoff: a single ≤ micropulse_max_on_s pulse to arrest a dangerous overnight
-// VPD spike when there is no non-overhead night humidity source. Every gate is
-// hard:
-//   * master enable + NB5-not-present (auto-disable when night humidity HW lands)
-//   * sensors plausible (no pulsing on garbage)
-//   * OVERNIGHT only: must be past the dusk cutoff (the dark window). During the
-//     day the normal SEALED_MIST/fog path owns humidity; this path is dark-only.
-//   * VPD STRICTLY above micropulse_vpd_ceiling (default 1.25)
-//   * RH below fog ceiling, temp above fog min (fogger physical limits)
-//   * dew margin above micropulse_min_dew_margin_f (no crown condensation)
-//   * NOT during the FRT-6 absorption hold, NOT occupancy-blocked
-// The pulse-vs-lockout TIMING (≤5s ON then micropulse_min_gap_s lockout) is
-// owned by controls.yaml's dedicated timer — this gate only answers "may a
-// micro-pulse fire at all this cycle?".
-inline const char* overnight_micropulse_block_reason(const SensorInputs& in, const Setpoints& sp) noexcept {
-    if (!sp.sw_overnight_micropulse_enabled) return "disabled";
-    if (sp.sw_night_humidity_source_present) return "nb5_present";
-    if (!sensors_plausible(in)) return "sensor_fault";
-    if (moisture_blocked_by_occupancy(in, sp)) return "occupancy";
-    if (sp.feed_hold_active) return "feed_hold";
-    // Dark-window only. past_dusk_cutoff is wrap-aware over
-    // [dusk_cutoff_hour, night_end_hour); when the cutoff is disabled there is
-    // no defined overnight window, so the micro-pulse cannot run.
-    if (!past_dusk_cutoff(in, sp)) return "not_overnight";
-    if (in.vpd_kpa <= sp.micropulse_vpd_ceiling) return "below_ceiling";
-    if (dew_margin_f(in) < sp.micropulse_min_dew_margin_f) return "dew_margin";
-    if (in.rh_pct > sp.fog_rh_ceiling) return "rh_ceiling";
-    if (in.temp_f < sp.fog_min_temp) return "temp_low";
-    return "";
-}
-
-inline bool overnight_micropulse_permitted(const SensorInputs& in, const Setpoints& sp) noexcept {
-    return overnight_micropulse_block_reason(in, sp)[0] == '\0';
-}
+// (Firmware-v2: the CYC-4 overnight micro-pulse path is DELETED. Night
+// emergencies are governed by the solar band itself — VPD above the LOW night
+// band edge + stress margin fires the normal stress-wet rule under the night
+// dew margin, and the standard SEALED_MIST machinery + SAF-4 duty caps +
+// relay min-on/off bound the water. One wetting path, no bespoke timers.)
 
 // Unified band-first controller clamps VPD hysteresis against the actual band width. The
 // legacy cascade allows hyst_vpd_kpa=0.4 with a 0.8-1.2 band, which makes
@@ -689,6 +656,21 @@ inline ClimateActionDecision evaluate_climate_decision(
         climate_projection(CLIMATE_DEHUM_VENT, in, sp, vent_cooling_effect * 0.4f, 0.15f, 2.5f, 1.0f,
                            dehum_wanted ? "" : "vpd_not_low", prior_action)
     };
+
+    // ── Firmware-v2 normalized arbitration (owner's "equality statement") ──
+    // °F and kPa are incomparable; divide each error by its band half-width
+    // and let the axis with the LARGER current normalized delta lead the
+    // candidate ordering. Safety still preempts everything below.
+    {
+        const float temp_hw = std::max(1.0f, (sp.temp_high - sp.temp_low) * 0.5f);
+        const float vpd_hw  = std::max(0.05f, (sp.vpd_high - sp.vpd_low) * 0.5f);
+        const bool vpd_leads = (vpd_error / vpd_hw) > (temp_error / temp_hw);
+        for (auto& c : candidates) {
+            c.norm_temp_error = c.projected_temp_error_f / temp_hw;
+            c.norm_vpd_error  = c.projected_vpd_error_kpa / vpd_hw;
+            c.vpd_axis_leads  = vpd_leads;
+        }
+    }
 
     int selected_index = -1;
     if (sensor_fault) {
@@ -1356,7 +1338,7 @@ inline Mode determine_mode_band_first(
     if (mode == SAFETY_COOL || mode == SAFETY_HEAT || mode == SENSOR_FAULT) {
         state.center_burst = CENTER_BURST_NONE;
     } else {
-        state.center_burst = center_burst_decision(local_minute_of_day(in.local_hour, 0), in, sp);
+        state.center_burst = center_burst_decision(effective_now_minute(in), in, sp);
     }
 
     state.mode = mode;
@@ -1839,7 +1821,7 @@ inline Mode determine_mode(
     if (mode == SAFETY_COOL || mode == SAFETY_HEAT || mode == SENSOR_FAULT) {
         state.center_burst = CENTER_BURST_NONE;
     } else {
-        state.center_burst = center_burst_decision(local_minute_of_day(in.local_hour, 0), in, sp);
+        state.center_burst = center_burst_decision(effective_now_minute(in), in, sp);
     }
 
     state.mode = mode;

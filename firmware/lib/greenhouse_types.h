@@ -77,6 +77,19 @@ struct SensorInputs {
     // their calibrated volume) and temp-only safety/vent/heat control. Defaults
     // to false so existing call sites and tests are unaffected.
     bool     sensor_degraded;
+    // ── Firmware-v2 on-chip solar inputs (contract §B1) ──────────────────
+    // The caller (controls.yaml / tests / replay) computes these ONCE per
+    // cycle from the time source + compute_greenhouse_solar_times() and the
+    // controller gates every time-of-day rule on SOLAR PHASE instead of
+    // wall-clock hours, so the diurnal program tracks the drifting sun with
+    // zero network. Defaults keep legacy aggregate initializations valid:
+    // now_minute -1 → derive from local_hour; solar_phase NAN → crude
+    // fallback_solar_phase(local_hour).
+    int   now_minute = -1;        // minutes from local midnight
+    int   sunrise_min = 360;      // on-chip ephemeris, minutes local
+    int   solar_noon_min = 780;
+    int   sunset_min = 1200;
+    float solar_phase = NAN;      // [0,4): 0=SR 1=SM 2=SS 3=solar-midnight
 };
 
 // ── Setpoints (band + planner tunables + firmware config) ──
@@ -104,8 +117,6 @@ struct Setpoints {
     float fog_escalation_kpa;
     float fog_rh_ceiling;
     float fog_min_temp;
-    int   fog_window_start;
-    int   fog_window_end;
     float dehum_aggressive_kpa;
     bool  occupancy_inhibit;
     bool  econ_block;
@@ -151,38 +162,36 @@ struct Setpoints {
     float    cool_exit_hysteresis_f;        // VENTILATE exits at temp_high - this
     float    cold_vent_guard_delta_f;       // outdoor < temp_low - delta is cold-vent guarded
     bool     cool_all_fans_at_high_enabled; // run both fans immediately above high edge
-    bool     direct_wet_stress_override_enabled; // bypass drydown windows only during dry stress
-    float    direct_wet_stress_vpd_margin_kpa;   // VPD excess over vpd_high required for override
+    // ── Firmware-v2 stress-wetting rule (replaces direct_wet_stress_* +
+    // fog_stress_window_* clock windows; contract §B4). ONE generic rule:
+    // wetting past the routine taper is permitted only while VPD exceeds the
+    // band's stress-high edge by the margin AND the dew margin holds. The
+    // band edges themselves are solar-curved, so "how dry is too dry" already
+    // varies through the day — no clock caps needed.
+    bool     direct_wet_stress_override_enabled; // stress-wetting master enable
+    float    direct_wet_stress_vpd_margin_kpa;   // VPD excess over vpd_high required
     float    direct_wet_stress_min_dew_margin_f; // minimum temp-dewpoint spread for wetting
-    int      direct_wet_stress_latest_hour;      // local-hour cap for dry-stress wetting
-    bool     fog_stress_window_extend_enabled;   // extend fog time window during dry stress
-    int      fog_stress_window_latest_hour;      // local-hour cap for fog stress extension
-    float    fog_stress_min_dew_margin_f;        // minimum temp-dewpoint spread for fog extension
     uint32_t mist_backoff_ms;
-    // ── ENV-2 (Vanda night-drop companion to the DB diurnal curve) ──
-    // Raising the night VPD floor (DB curve §3/§5) makes the IDLE econ
-    // VPD-rescue heat path fire MORE overnight (it triggers on
-    // vpd_kpa < vpd_low_eff). That is heat-to-chase-humidity, which
-    // destroys the ≥10°F day/night drop the Vanda needs to silver its
-    // velamen. When sw_night_econ_heat_suppress_enabled is true and the
-    // local hour is in the night window [night_start_hour, night_end_hour)
-    // (wrap-aware, crosses midnight), the econ-rescue heat path is
-    // suppressed. Safety heat (safety_min) is NOT affected — only the
-    // economy/VPD-rescue heat in IDLE.
+    // ── Firmware-v2 night rule (generic; replaces the ENV-2 clock window) ──
+    // Never heat to chase humidity at night (solar phase >= 2.0). The rule is
+    // crop-agnostic: night heating for VPD wastes gas and collapses the
+    // day/night drop every crop in this house wants. Safety heat untouched.
     bool     sw_night_econ_heat_suppress_enabled; // default true
-    int      night_start_hour;                    // local hour night begins (default 20, ~sunset)
-    int      night_end_hour;                      // local hour night ends   (default 6,  ~sunrise)
-    // ── CYC-1 / SAF-3 (authoritative VPD-independent dusk cutoff) ──
-    // A single sunset-relative hard rail. The dispatcher pushes
-    // dusk_cutoff_hour (= sunset−2h floored to the hour). When
-    // sw_dusk_cutoff_enabled is true, ALL fog and ALL climate-driven
-    // mister/drip wetting ceases at/after dusk_cutoff_hour, BEFORE any
-    // stress-extension logic. This also caps both stress windows
-    // (fog_stress_window_latest_hour AND direct_wet_stress_latest_hour) at
-    // the cutoff so no stress path extends wetting past dark. dusk_cutoff
-    // wraps: hours in [dusk_cutoff_hour, night_end_hour) are "after dusk".
-    bool     sw_dusk_cutoff_enabled;              // default true
-    int      dusk_cutoff_hour;                     // local hour wetting must cease (default 18, sunset−2h)
+    // ── Firmware-v2 wet taper (replaces the dusk_cutoff_hour clock rail) ──
+    // Routine wetting ceases wet_taper_before_sunset_min before the ON-CHIP
+    // sunset and stays off through the night half (phase >= 2), so foliage
+    // dries before dark on every day of the year without a dispatcher push.
+    // Night emergencies are handled by sw_night_stress_wet_enabled below.
+    bool     sw_wet_taper_enabled;                // default true
+    int      wet_taper_before_sunset_min;         // default 120
+    // ── Firmware-v2 night emergency wetting (replaces the CYC-4 micropulse
+    // path). At night the solar band's VPD edges are the LOW night band, so
+    // "VPD above band-high + stress margin" IS the overnight emergency
+    // definition. When enabled, the stress-wet rule may fire at night under a
+    // stricter dew margin; the normal SEALED_MIST machinery + SAF-4 duty caps
+    // + relay min-on/off bound the actual water. No bespoke pulse path.
+    bool     sw_night_stress_wet_enabled;         // default true
+    float    night_stress_min_dew_margin_f;       // default 6.0
     // ── FRT-6 / FRT-7 (post-feed absorption hold) ──
     // Set true by controls.yaml while now_ms < feed_hold_until_ms (the
     // shared globals.yaml timestamp armed when a fertilizer feed completes).
@@ -203,47 +212,27 @@ struct Setpoints {
     // center target), so the SAF-4 duty cap, daily-volume ceiling, FRT-6
     // absorption hold, CYC-1 dusk cutoff, and SENSOR_FAULT all still bound it.
     //
-    // Anchors reuse dispatched hours: dawn = sunrise hour (gl_sunrise_hour),
-    // midday = midday_drench_hour (a dispatcher-overridable global, default 14
-    // ~= solar/thermal peak). on/gap/duration are the new tunables below.
-    bool     sw_dawn_rehydrate_enabled;            // default true; IRR-3 master enable
-    int      dawn_rehydrate_start_hour;            // local hour the dawn window opens (= dispatched sunrise hour)
-    int      dawn_rehydrate_start_minute;          // minute-of-hour the dawn window opens (default 0)
+    // Firmware-v2: the boost windows anchor to the ON-CHIP solar times via
+    // offsets (dawn = sunrise + dawn_boost_offset_min; midday = solar-noon +
+    // midday_boost_offset_min) so they track the sun all year with no
+    // dispatcher push. The cadence knobs are generic zone-boost parameters
+    // the planner can tune; nothing Vanda-specific remains in the firmware.
+    bool     sw_dawn_rehydrate_enabled;            // default true; dawn-boost master enable
+    int      dawn_boost_offset_min;                // window start = sunrise + this (default 0)
     int      dawn_rehydrate_window_min;            // dawn window duration, minutes (default 12)
-    int      dawn_rehydrate_on_s;                  // center pulse ON during dawn window (default 90s — longer than the 60s base)
-    int      dawn_rehydrate_gap_s;                 // center pulse GAP during dawn window (default 20s — shorter than the 45s base → denser)
-    bool     sw_midday_drench_enabled;             // default true; IRR-4 master enable
-    int      midday_drench_hour;                   // local hour the midday window opens (default 14 ~= solar peak; dispatcher-overridable)
-    int      midday_drench_start_minute;           // minute-of-hour the midday window opens (default 0)
+    int      dawn_rehydrate_on_s;                  // center pulse ON during dawn window (default 90s)
+    int      dawn_rehydrate_gap_s;                 // center pulse GAP during dawn window (default 20s)
+    bool     sw_midday_drench_enabled;             // default true; midday-boost master enable
+    int      midday_boost_offset_min;              // window start = solar-noon + this (default 60)
     int      midday_drench_window_min;             // midday window duration, minutes (default 11)
-    int      midday_drench_on_s;                   // center pulse ON during midday window (default 120s — deeper soak than dawn)
-    int      midday_drench_gap_s;                  // center pulse GAP during midday window (default 25s — still denser than base)
-    // ── CYC-4 (NB7): overnight ≤5s fog micro-pulse (last resort) ───────────
-    // The greenhouse has NO non-overhead night humidity source yet (NB5/OPN-2
-    // is operator HW), so the ONLY way to relieve a dangerously dry overnight
-    // canopy is a brief overhead fog pulse — which also lightly wets the bare
-    // roots. To minimize that wetting while still arresting a VPD spike, this is
-    // a DEDICATED short-pulse path SEPARATE from the SEALED_MIST/fog duty table:
-    // a single ≤ micropulse_max_on_s burst (default 5s, vs the 60s min_fog_on_s
-    // base) followed by a long lockout (micropulse_min_gap_s). It fires ONLY:
-    //   * when sw_overnight_micropulse_enabled (master) is true, AND
-    //   * NB5 night-humidity hardware is NOT present
-    //     (sw_night_humidity_source_present false — auto-disables CYC-4), AND
-    //   * the local hour is past the CYC-1 dusk cutoff (the overnight/dark
-    //     window), AND
-    //   * VPD strictly exceeds micropulse_vpd_ceiling (default 1.25 kPa), AND
-    //   * RH below the fog ceiling, temp above the fog min, dew margin above
-    //     micropulse_min_dew_margin_f (clean, no crown condensation), AND
-    //   * not feed-hold, not occupancy-blocked, sensors plausible.
-    // It is the deliberate exception to "no wetting past the dusk cutoff": a ≤5s
-    // emergency pulse, not the routine wetting the cutoff bars. The replay
-    // invariant #24 asserts any fog ON past the wet window is ≤ this max.
-    bool     sw_overnight_micropulse_enabled;      // default true; CYC-4 master enable
-    bool     sw_night_humidity_source_present;     // default false; true auto-disables CYC-4 (NB5 installed)
-    float    micropulse_vpd_ceiling;               // overnight VPD that triggers a pulse (default 1.25 kPa)
-    int      micropulse_max_on_s;                  // hard cap on a single pulse, seconds (default 5; clamp <=10)
-    int      micropulse_min_gap_s;                 // lockout between pulses, seconds (default 600 = 10 min)
-    float    micropulse_min_dew_margin_f;          // min temp-dewpoint spread to pulse (default 6°F; no condensation)
+    int      midday_drench_on_s;                   // center pulse ON during midday window (default 120s)
+    int      midday_drench_gap_s;                  // center pulse GAP during midday window (default 25s)
+    // ── Firmware-v2 served band targets (telemetry + delta tracking) ──────
+    // Computed each cycle from the on-chip anchor curves alongside the
+    // low/high edges above. The FSM still keys on the edges; the targets feed
+    // the house delta telemetry and the normalized temp-vs-VPD arbitration.
+    float    temp_target;
+    float    vpd_target;
 };
 
 static constexpr uint32_t STATE_SENTINEL = 0xBEEF0042;
@@ -408,6 +397,14 @@ struct ClimateCandidateProjection {
     float relay_churn_cost;
     float confidence;
     float prior_action_hold_preference;
+    // ── Firmware-v2 normalized arbitration (owner's "equality statement") ──
+    // Raw °F and kPa are incomparable units, so candidates are ordered by
+    // BAND-NORMALIZED error (error / band half-width). vpd_axis_leads is set
+    // per cycle from the CURRENT normalized deltas: whichever axis is further
+    // from its band (in band-widths) is compared first.
+    float norm_temp_error = 0.0f;
+    float norm_vpd_error = 0.0f;
+    bool  vpd_axis_leads = false;
 };
 
 struct ClimateResourceCostEstimate {
@@ -434,11 +431,27 @@ inline bool climate_candidate_precedes(
     const ClimateCandidateProjection& a,
     const ClimateCandidateProjection& b
 ) noexcept {
-    if (a.projected_temp_error_f != b.projected_temp_error_f) {
-        return a.projected_temp_error_f < b.projected_temp_error_f;
-    }
-    if (a.projected_vpd_error_kpa != b.projected_vpd_error_kpa) {
-        return a.projected_vpd_error_kpa < b.projected_vpd_error_kpa;
+    // Firmware-v2: order by band-normalized error, leading axis chosen by the
+    // larger CURRENT normalized delta (a and b carry the same vpd_axis_leads,
+    // set once per cycle in evaluate_climate_decision). Falls back to the raw
+    // lexicographic ordering when normalization was not populated (legacy
+    // callers/tests construct projections with zero norms).
+    const bool has_norms = (a.norm_temp_error != 0.0f || a.norm_vpd_error != 0.0f
+                         || b.norm_temp_error != 0.0f || b.norm_vpd_error != 0.0f);
+    if (has_norms) {
+        const float a1 = a.vpd_axis_leads ? a.norm_vpd_error  : a.norm_temp_error;
+        const float b1 = b.vpd_axis_leads ? b.norm_vpd_error  : b.norm_temp_error;
+        const float a2 = a.vpd_axis_leads ? a.norm_temp_error : a.norm_vpd_error;
+        const float b2 = b.vpd_axis_leads ? b.norm_temp_error : b.norm_vpd_error;
+        if (a1 != b1) return a1 < b1;
+        if (a2 != b2) return a2 < b2;
+    } else {
+        if (a.projected_temp_error_f != b.projected_temp_error_f) {
+            return a.projected_temp_error_f < b.projected_temp_error_f;
+        }
+        if (a.projected_vpd_error_kpa != b.projected_vpd_error_kpa) {
+            return a.projected_vpd_error_kpa < b.projected_vpd_error_kpa;
+        }
     }
     if (a.resource_cost != b.resource_cost) {
         return a.resource_cost < b.resource_cost;
@@ -574,7 +587,7 @@ inline Setpoints default_setpoints() {
         .vpd_watch_dwell_ms = 60000, .mist_s2_delay_ms = 300000,
         .max_relief_cycles = 3,
         .fog_escalation_kpa = 0.4f, .fog_rh_ceiling = 90.0f,
-        .fog_min_temp = 55.0f, .fog_window_start = 7, .fog_window_end = 17,
+        .fog_min_temp = 55.0f,
         .dehum_aggressive_kpa = 0.3f,              // must be < vpd_low
         .occupancy_inhibit = false, .econ_block = false,
         .vent_latch_timeout_ms = 1800000u,
@@ -605,59 +618,45 @@ inline Setpoints default_setpoints() {
         .cool_exit_hysteresis_f = 1.5f,
         .cold_vent_guard_delta_f = 10.0f,
         .cool_all_fans_at_high_enabled = false,
-        .direct_wet_stress_override_enabled = false,
+        // Firmware-v2 stress-wetting: ON by default — the band edges are now
+        // solar-curved, so "above band-high + margin" is a true stress signal
+        // at every hour. Dew margin keeps wetting off cold foliage.
+        .direct_wet_stress_override_enabled = true,
         .direct_wet_stress_vpd_margin_kpa = 0.05f,
         .direct_wet_stress_min_dew_margin_f = 8.0f,
-        .direct_wet_stress_latest_hour = 22,
-        .fog_stress_window_extend_enabled = false,
-        .fog_stress_window_latest_hour = 19,
-        .fog_stress_min_dew_margin_f = 10.0f,
         .mist_backoff_ms = 600000u,
-        // ENV-2: night econ-heat suppression. Default ON — never chase
-        // overnight humidity with heat (it kills the day/night drop).
-        // Default night window 20:00→06:00 local matches the Vanda curve's
-        // sunset≈20:18 / sunrise≈05:42 endpoints.
+        // Firmware-v2 night rule: never heat-to-chase-humidity at night
+        // (solar phase >= 2). Generic, crop-agnostic.
         .sw_night_econ_heat_suppress_enabled = true,
-        .night_start_hour = 20,
-        .night_end_hour = 6,
-        // CYC-1/SAF-3: dusk cutoff. Default ON; default hour 18 ≈ sunset−2h
-        // for today's ~20:18 sunset. Dispatcher pushes the sun-tracked value.
-        .sw_dusk_cutoff_enabled = true,
-        .dusk_cutoff_hour = 18,
+        // Firmware-v2 wet taper: routine wetting ceases 120 min before the
+        // ON-CHIP sunset and through the night half. Tracks the sun all year.
+        .sw_wet_taper_enabled = true,
+        .wet_taper_before_sunset_min = 120,
+        // Firmware-v2 night emergency wetting (replaces CYC-4): the night
+        // band's own high edge + stress margin defines the emergency; the
+        // normal SEALED_MIST machinery + duty caps bound the water.
+        .sw_night_stress_wet_enabled = true,
+        .night_stress_min_dew_margin_f = 6.0f,
         // FRT-6: absorption hold inactive until controls.yaml arms it.
         .feed_hold_active = false,
-        // IRR-3 dawn rehydrate: ON by default so it ships active in the OTA;
-        // operator-toggleable. Anchor (dawn_rehydrate_start_hour) is set from
-        // the dispatched sunrise hour at the call site; the 7h default mirrors
-        // gl_sunrise_hour. 12-min window with a 90s-ON / 20s-GAP cadence —
-        // denser than the 60/45 base so the velamen re-saturates quickly after
-        // the overnight dry-down without ever exceeding the SAF-4 duty cap.
+        // Dawn boost: window opens AT on-chip sunrise (offset 0), 12 min,
+        // 90s-ON/20s-GAP — denser than the 60/45 base. Generic zone boost.
         .sw_dawn_rehydrate_enabled = true,
-        .dawn_rehydrate_start_hour = 7,
-        .dawn_rehydrate_start_minute = 0,
+        .dawn_boost_offset_min = 0,
         .dawn_rehydrate_window_min = 12,
         .dawn_rehydrate_on_s = 90,
         .dawn_rehydrate_gap_s = 20,
-        // IRR-4 midday drench: ON by default, operator-toggleable. Default 14h
-        // ~= solar/thermal peak (dispatcher can override midday_drench_hour).
-        // 11-min window, deeper 120s-ON / 25s-GAP soak. Still pre-dusk (< the
-        // default dusk_cutoff_hour=18) and still bounded by the duty cap.
+        // Midday boost: window opens solar-noon + 60 min (the thermal peak
+        // lags solar max), 11 min, deeper 120s-ON/25s-GAP soak.
         .sw_midday_drench_enabled = true,
-        .midday_drench_hour = 14,
-        .midday_drench_start_minute = 0,
+        .midday_boost_offset_min = 60,
         .midday_drench_window_min = 11,
         .midday_drench_on_s = 120,
         .midday_drench_gap_s = 25,
-        // CYC-4 (NB7): overnight ≤5s fog micro-pulse. ON by default (the only
-        // overnight humidity relief until NB5 hardware lands); auto-disables
-        // when sw_night_humidity_source_present flips true. 1.25 kPa ceiling,
-        // 5s max pulse, 10-min lockout, 6°F dew margin.
-        .sw_overnight_micropulse_enabled = true,
-        .sw_night_humidity_source_present = false,
-        .micropulse_vpd_ceiling = 1.25f,
-        .micropulse_max_on_s = 5,
-        .micropulse_min_gap_s = 600,
-        .micropulse_min_dew_margin_f = 6.0f
+        // Served-band targets: neutral defaults; the on-chip curve overwrites
+        // these every cycle (they are telemetry/arbitration inputs, not knobs).
+        .temp_target = 75.0f,
+        .vpd_target = 1.0f
     };
 }
 
@@ -713,18 +712,6 @@ inline void validate_setpoints(Setpoints& sp) {
         if (sp.relief_duration_ms < 15000) sp.relief_duration_ms = 15000;
     }
 
-    // Fog window: if start == end the window is zero-width (fog always
-    // gated) or always-open depending on which comparison wins. Force
-    // the default 7-17 window as a recovery point.
-    if (sp.fog_window_start == sp.fog_window_end) {
-        sp.fog_window_start = 7;
-        sp.fog_window_end = 17;
-    }
-    // Clamp hours to [0, 23] individually (wrap-aware — start > end is
-    // valid for midnight-crossing windows).
-    sp.fog_window_start = std::max(0, std::min(23, sp.fog_window_start));
-    sp.fog_window_end   = std::max(0, std::min(23, sp.fog_window_end));
-
     // vpd_watch_dwell and mist_s2_delay need non-zero values; zero would
     // make the watchdog fire on every cycle and the S1→S2 promotion
     // happen instantly.
@@ -766,45 +753,27 @@ inline void validate_setpoints(Setpoints& sp) {
     sp.cold_vent_guard_delta_f = std::max(0.0f, std::min(15.0f, sp.cold_vent_guard_delta_f));
     sp.direct_wet_stress_vpd_margin_kpa = std::max(0.0f, std::min(0.5f, sp.direct_wet_stress_vpd_margin_kpa));
     sp.direct_wet_stress_min_dew_margin_f = std::max(3.0f, std::min(15.0f, sp.direct_wet_stress_min_dew_margin_f));
-    sp.direct_wet_stress_latest_hour = std::max(17, std::min(24, sp.direct_wet_stress_latest_hour));
-    sp.fog_stress_window_latest_hour = std::max(17, std::min(22, sp.fog_stress_window_latest_hour));
-    sp.fog_stress_min_dew_margin_f = std::max(5.0f, std::min(15.0f, sp.fog_stress_min_dew_margin_f));
     sp.mist_backoff_ms = std::max(uint32_t(60000), std::min(uint32_t(3600000), sp.mist_backoff_ms));
 
-    // --- ENV-2 night-window clamps (wrap-aware: start may be > end) ---
-    sp.night_start_hour = std::max(0, std::min(23, sp.night_start_hour));
-    sp.night_end_hour   = std::max(0, std::min(23, sp.night_end_hour));
-    // --- CYC-1/SAF-3 dusk-cutoff clamp ---
-    sp.dusk_cutoff_hour = std::max(0, std::min(23, sp.dusk_cutoff_hour));
-
-    // --- IRR-3/IRR-4 center-burst clamps ---
-    // Hours/minutes to valid clock ranges. Windows clamped to [0, 120] min so a
-    // bad dispatcher push can't open an all-day burst. ON >= 1s; the denser
-    // gap is floored at 5s (below that the relay would chatter). The on/gap
-    // values are CADENCE knobs only — the SAF-4 duty cap + daily-volume ceiling
-    // are the actual runtime/volume rails and are unaffected by these clamps.
-    sp.dawn_rehydrate_start_hour   = std::max(0, std::min(23, sp.dawn_rehydrate_start_hour));
-    sp.dawn_rehydrate_start_minute = std::max(0, std::min(59, sp.dawn_rehydrate_start_minute));
+    // --- Firmware-v2 solar-relative clamps ---
+    // Taper window: 0 (off at sunset exactly) to 6h before sunset.
+    sp.wet_taper_before_sunset_min = std::max(0, std::min(360, sp.wet_taper_before_sunset_min));
+    sp.night_stress_min_dew_margin_f = std::max(3.0f, std::min(15.0f, sp.night_stress_min_dew_margin_f));
+    // Boost-window offsets: dawn within [0, 4h] after sunrise; midday within
+    // [-2h, +4h] of solar noon. Windows to [0, 120] min so a bad push can't
+    // open an all-day burst. ON >= 1s; gap floored at 5s (relay chatter).
+    // Cadence knobs only — SAF-4 duty cap + daily-volume ceiling still rail.
+    sp.dawn_boost_offset_min       = std::max(0, std::min(240, sp.dawn_boost_offset_min));
     sp.dawn_rehydrate_window_min   = std::max(0, std::min(120, sp.dawn_rehydrate_window_min));
     sp.dawn_rehydrate_on_s         = std::max(1, std::min(600, sp.dawn_rehydrate_on_s));
     sp.dawn_rehydrate_gap_s        = std::max(5, std::min(600, sp.dawn_rehydrate_gap_s));
-    sp.midday_drench_hour          = std::max(0, std::min(23, sp.midday_drench_hour));
-    sp.midday_drench_start_minute  = std::max(0, std::min(59, sp.midday_drench_start_minute));
+    sp.midday_boost_offset_min     = std::max(-120, std::min(240, sp.midday_boost_offset_min));
     sp.midday_drench_window_min    = std::max(0, std::min(120, sp.midday_drench_window_min));
     sp.midday_drench_on_s          = std::max(1, std::min(600, sp.midday_drench_on_s));
     sp.midday_drench_gap_s         = std::max(5, std::min(600, sp.midday_drench_gap_s));
-
-    // --- CYC-4 (NB7) overnight micro-pulse clamps ---
-    // The ≤5s pulse is the load-bearing constraint: HARD-cap micropulse_max_on_s
-    // at 10s so a bad push can never turn the "micro" pulse into a real fog run
-    // (the invariant #24 and the ACC-2 "no overnight wetting" intent depend on
-    // it). Ceiling >= the typical day band high so it only fires on a genuine
-    // overnight spike. Lockout floored at 60s so pulses cannot chain into a
-    // continuous run. Dew margin in the same range as the other wetting gates.
-    sp.micropulse_vpd_ceiling      = std::max(0.8f, std::min(3.0f, sp.micropulse_vpd_ceiling));
-    sp.micropulse_max_on_s         = std::max(1, std::min(10, sp.micropulse_max_on_s));
-    sp.micropulse_min_gap_s        = std::max(60, std::min(3600, sp.micropulse_min_gap_s));
-    sp.micropulse_min_dew_margin_f = std::max(3.0f, std::min(15.0f, sp.micropulse_min_dew_margin_f));
+    // Served-band targets stay inside their band edges.
+    sp.temp_target = std::max(sp.temp_low, std::min(sp.temp_high, sp.temp_target));
+    sp.vpd_target  = std::max(sp.vpd_low,  std::min(sp.vpd_high,  sp.vpd_target));
 }
 
 inline ControlState initial_state() {
