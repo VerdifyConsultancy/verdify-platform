@@ -2140,7 +2140,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT g.ts AS time,\n    fn_crop_band_value('house','temp_low',  g.ts)::float AS \"Target Band Base\",\n    fn_crop_band_value('house','temp_high', g.ts)::float AS \"Target Band\",\n    fn_crop_band_value('house','temp_target', g.ts)::float AS \"Target\"\nFROM generate_series($__timeFrom()::timestamptz, $__timeTo()::timestamptz, interval '15 minutes') g(ts)\nORDER BY g.ts",
+          "rawSql": "SELECT ts AS time,\n    temp_low AS \"Target Band Base\",\n    temp_high AS \"Target Band\",\n    temp_target AS \"Target\"\nFROM v_band_curve WHERE $__timeFilter(ts) ORDER BY ts",
           "refId": "C",
           "sql": {
             "columns": [
@@ -3082,7 +3082,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT g.ts AS time,\n    fn_crop_band_value('house','vpd_low',   g.ts)::float AS \"Target Band Base\",\n    fn_crop_band_value('house','vpd_high',  g.ts)::float AS \"Target Band\",\n    fn_crop_band_value('house','vpd_target', g.ts)::float AS \"Target\"\nFROM generate_series($__timeFrom()::timestamptz, $__timeTo()::timestamptz, interval '15 minutes') g(ts)\nORDER BY g.ts",
+          "rawSql": "SELECT ts AS time,\n    vpd_low AS \"Target Band Base\",\n    vpd_high AS \"Target Band\",\n    vpd_target AS \"Target\"\nFROM v_band_curve WHERE $__timeFilter(ts) ORDER BY ts",
           "refId": "C",
           "sql": {
             "columns": [
@@ -5081,7 +5081,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT g.ts AS time,\n  fn_crop_band_value('house','temp_low',  g.ts)::float AS \"House Band Base\",\n  fn_crop_band_value('house','temp_high', g.ts)::float AS \"House Band\",\n  fn_crop_band_value('house','temp_target', g.ts)::float AS \"House Target\"\nFROM generate_series($__timeFrom()::timestamptz, $__timeTo()::timestamptz, interval '15 minutes') g(ts)\nORDER BY g.ts",
+          "rawSql": "SELECT ts AS time,\n    temp_low AS \"House Band Base\",\n    temp_high AS \"House Band\",\n    temp_target AS \"House Target\"\nFROM v_band_curve WHERE $__timeFilter(ts) ORDER BY ts",
           "refId": "A"
         },
         {
@@ -5548,7 +5548,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT g.ts AS time,\n  z.vpd_target_south  AS \"South Target\",\n  z.vpd_target_west   AS \"West Target\",\n  z.vpd_target_east   AS \"East Target\",\n  z.vpd_target_center AS \"Center Target\"\nFROM generate_series($__timeFrom()::timestamptz, $__timeTo()::timestamptz, interval '15 minutes') g(ts)\nCROSS JOIN LATERAL fn_zone_vpd_targets(g.ts) z\nORDER BY g.ts",
+          "rawSql": "SELECT ts AS time,\n    vpd_target_south AS \"South Target\",\n    vpd_target_west AS \"West Target\",\n    vpd_target_east AS \"East Target\",\n    vpd_target_center AS \"Center Target\"\nFROM v_band_curve WHERE $__timeFilter(ts) ORDER BY ts",
           "refId": "A"
         },
         {
@@ -6252,7 +6252,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ts AS time,\n  GREATEST(-2.5, LEAST(2.5, (temp_avg - fn_crop_band_value('house','temp_target',ts))\n    / GREATEST(0.5,(fn_crop_band_value('house','temp_high',ts)-fn_crop_band_value('house','temp_low',ts))/2)))::float AS \"Norm Temp \u0394\",\n  GREATEST(-2.5, LEAST(2.5, (vpd_avg - fn_crop_band_value('house','vpd_target',ts))\n    / GREATEST(0.05,(fn_crop_band_value('house','vpd_high',ts)-fn_crop_band_value('house','vpd_low',ts))/2)))::float AS \"Norm VPD \u0394\"\nFROM climate\nWHERE $__timeFilter(ts) AND ts <= now() AND temp_avg IS NOT NULL AND vpd_avg IS NOT NULL\nORDER BY ts",
+          "rawSql": "SELECT b.ts AS time,\n  GREATEST(-2.5, LEAST(2.5, (c.temp_avg - b.temp_target)/GREATEST(0.5,(b.temp_high-b.temp_low)/2)))::float AS \"Norm Temp \u0394\",\n  GREATEST(-2.5, LEAST(2.5, (c.vpd_avg - b.vpd_target)/GREATEST(0.05,(b.vpd_high-b.vpd_low)/2)))::float AS \"Norm VPD \u0394\"\nFROM v_band_curve b\nJOIN LATERAL (\n  SELECT avg(temp_avg) AS temp_avg, avg(vpd_avg) AS vpd_avg FROM climate\n  WHERE ts >= b.ts AND ts < b.ts + interval '15 minutes' AND temp_avg IS NOT NULL AND vpd_avg IS NOT NULL\n) c ON c.temp_avg IS NOT NULL\nWHERE $__timeFilter(b.ts) AND b.ts <= now()\nORDER BY b.ts",
           "refId": "A"
         },
         {

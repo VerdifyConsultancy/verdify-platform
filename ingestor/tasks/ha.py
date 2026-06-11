@@ -114,6 +114,14 @@ async def matview_refresh(pool: asyncpg.Pool) -> None:
         await conn.execute("SELECT refresh_relay_stuck(0, '{}'::jsonb)")
         await conn.execute("SELECT refresh_climate_merged(0, '{}'::jsonb)")
         await conn.execute("SELECT refresh_greenhouse_state(0, '{}'::jsonb)")
+        # mv_band_curve (migration 167) caches the deterministic solar band +
+        # per-zone VPD target curves for the graphs.verdify.ai compliance panels
+        # (slides now±4d). Guard on existence so this is a no-op before the
+        # migration lands. CONCURRENTLY needs the matview's unique index.
+        try:
+            await conn.execute("REFRESH MATERIALIZED VIEW CONCURRENTLY mv_band_curve")
+        except asyncpg.exceptions.UndefinedTableError:
+            pass
     log.debug("Materialized views refreshed")
 
 
