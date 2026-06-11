@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
-"""Regenerate the Grafana dashboard ConfigMaps from grafana/dashboards/*.json.
+"""Regenerate the Grafana dashboard ConfigMaps from dashboard JSON sources.
 
 The live graphs.verdify.ai Grafana provisions its dashboards from
 deploy/k8s/components/grafana/generated/dashboards-cm-{0,1,2}.yaml — each holds
-a subset of the site-*.json dashboards as ConfigMap data keys (split to stay
-under the 1 MiB ConfigMap limit). This script refreshes every existing .json
-data key from its source file under grafana/dashboards/, preserving the
-existing CM→dashboard assignment (so a JSON edit re-renders without re-sharding).
+a subset of the public dashboards as ConfigMap data keys (split to stay under
+the 1 MiB ConfigMap limit). This script refreshes every existing .json data key
+from its source file, preserving the existing CM→dashboard assignment (so a JSON
+edit re-renders without re-sharding).
 
-Idempotent: run after editing any grafana/dashboards/*.json, then commit the CMs.
-Validates each source is parseable JSON and warns if a CM nears the 1 MiB limit.
+Primary site dashboards come from grafana/dashboards/. A small set of legacy
+dashboard UIDs are still embedded by lab.verdify.ai and are sourced from
+grafana/provisioning/dashboards/json/.
+
+Idempotent: run after editing any provisioned dashboard JSON, then commit the
+CMs. Validates each source is parseable JSON and warns if a CM nears the 1 MiB
+limit.
 """
 
 from __future__ import annotations
@@ -22,6 +27,7 @@ import yaml
 
 REPO = Path(__file__).resolve().parent.parent
 SRC = REPO / "grafana" / "dashboards"
+LEGACY_SRC = REPO / "grafana" / "provisioning" / "dashboards" / "json"
 GEN = REPO / "deploy" / "k8s" / "components" / "grafana" / "generated"
 CM_LIMIT = 1024 * 1024
 
@@ -37,6 +43,14 @@ def _literal_representer(dumper, data):
 yaml.add_representer(LiteralStr, _literal_representer)
 
 
+def source_for_key(key: str) -> Path | None:
+    for root in (SRC, LEGACY_SRC):
+        src = root / key
+        if src.exists():
+            return src
+    return None
+
+
 def main() -> int:
     cms = sorted(GEN.glob("dashboards-cm-*.yaml"))
     if not cms:
@@ -49,9 +63,9 @@ def main() -> int:
         new_data: dict[str, str] = {}
         for key in data:
             if key.endswith(".json"):
-                src = SRC / key
-                if not src.exists():
-                    print(f"WARN: {cm_path.name} key {key} has no source {src} — keeping existing")
+                src = source_for_key(key)
+                if src is None:
+                    print(f"WARN: {cm_path.name} key {key} has no dashboard source — keeping existing")
                     new_data[key] = data[key]
                     continue
                 raw = src.read_text()

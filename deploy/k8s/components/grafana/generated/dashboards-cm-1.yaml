@@ -3,14 +3,12 @@ kind: ConfigMap
 metadata:
   name: verdify-grafana-dashboards-1
   annotations:
-    # Big CM: the client-side-apply last-applied annotation exceeds the 262144
-    # byte metadata limit, so ArgoCD must server-side-apply this resource.
     argocd.argoproj.io/sync-options: ServerSideApply=true
   labels:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: grafana
 data:
-  site-climate-controller.json: |-
+  site-climate-controller.json: |
     {
       "uid": "site-climate-controller",
       "title": "Site: Climate \u2014 Controller",
@@ -2487,7 +2485,7 @@ data:
       "timezone": "America/Denver",
       "style": "light"
     }
-  site-climate-lighting.json: |-
+  site-climate-lighting.json: |
     {
       "uid": "site-climate-lighting",
       "title": "Site: Climate \u2014 Lighting",
@@ -4192,7 +4190,7 @@ data:
       "timezone": "America/Denver",
       "style": "light"
     }
-  site-climate-water.json: |-
+  site-climate-water.json: |
     {
       "uid": "site-climate-water",
       "title": "Site: Climate \u2014 Water",
@@ -5587,7 +5585,7 @@ data:
       "version": 2,
       "style": "light"
     }
-  site-climate.json: |-
+  site-climate.json: |
     {
       "uid": "site-climate",
       "title": "Site: Climate",
@@ -8870,7 +8868,7 @@ data:
       "timezone": "America/Denver",
       "style": "light"
     }
-  site-evidence-dashboards.json: |-
+  site-evidence-dashboards.json: |
     {
       "uid": "site-evidence-dashboards",
       "title": "Site: Evidence \u2014 Dashboards",
@@ -13519,7 +13517,7 @@ data:
       "timezone": "America/Denver",
       "style": "light"
     }
-  site-evidence-operations.json: |-
+  site-evidence-operations.json: |
     {
       "uid": "site-evidence-operations",
       "title": "Site: Evidence \u2014 Operations",
@@ -15452,7 +15450,7 @@ data:
       "timezone": "America/Denver",
       "style": "light"
     }
-  site-greenhouse-equipment.json: |-
+  site-greenhouse-equipment.json: |
     {
       "uid": "site-greenhouse-equipment",
       "title": "Site: Greenhouse \u2014 Equipment",
@@ -16717,7 +16715,7 @@ data:
       "timezone": "America/Denver",
       "style": "light"
     }
-  site-inference-infra.json: |-
+  site-inference-infra.json: |
     {
       "uid": "site-inference-infra",
       "title": "Site: Inference Infrastructure",
@@ -17537,7 +17535,7 @@ data:
       ],
       "style": "light"
     }
-  site-intelligence-planning.json: |-
+  site-intelligence-planning.json: |
     {
       "uid": "site-intelligence-planning",
       "title": "Site: Intelligence \u2014 Planning",
@@ -19503,7 +19501,7 @@ data:
       "timezone": "America/Denver",
       "style": "light"
     }
-  site-intelligence.json: |-
+  site-intelligence.json: |
     {
       "uid": "site-intelligence",
       "title": "Site: Intelligence",

@@ -14,8 +14,8 @@ kind: Component
 #                               Host(graphs.verdify.ai) -> verdify-grafana:3000
 #   - generated/provisioning-cm.yaml: datasource (uid verdify-tsdb ->
 #                               verdify-db:5432) + dashboard provider ConfigMap
-#   - generated/dashboards-cm-{0,1}.yaml: all site-*.json dashboards (split into
-#                               two ConfigMaps to stay under the 1MiB limit)
+#   - generated/dashboards-cm-{0,1,2,3}.yaml: provisioned public dashboards
+#                               (split to stay under the 1MiB limit)
 #
 # Upstream grafana-oss image (NOT transformer-rewritten — not a verdify-* name).
 # Secrets (verdify-grafana-secrets admin pw, verdify-app-secrets POSTGRES_PASSWORD)
@@ -27,3 +27,4 @@ resources:
   - generated/dashboards-cm-0.yaml
   - generated/dashboards-cm-1.yaml
   - generated/dashboards-cm-2.yaml
+  - generated/dashboards-cm-3.yaml

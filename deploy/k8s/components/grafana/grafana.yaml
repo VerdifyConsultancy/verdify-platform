@@ -184,6 +184,10 @@ spec:
             - name: dashboards-2
               mountPath: /etc/grafana/provisioning/dashboards/json/bucket2
               readOnly: true
+            # bucket3: legacy dashboard UIDs still embedded by lab.verdify.ai.
+            - name: dashboards-3
+              mountPath: /etc/grafana/provisioning/dashboards/json/bucket3
+              readOnly: true
           livenessProbe:
             httpGet:
               path: /api/health
@@ -268,6 +272,9 @@ spec:
         - name: dashboards-2
           configMap:
             name: verdify-grafana-dashboards-2
+        - name: dashboards-3
+          configMap:
+            name: verdify-grafana-dashboards-3
 ---
 apiVersion: v1
 kind: Service
