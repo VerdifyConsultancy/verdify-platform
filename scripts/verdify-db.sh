@@ -51,6 +51,10 @@ if [ "${1:-}" = "--tunnel" ]; then
 fi
 
 TTY_FLAGS=()
-if [ -t 0 ] && [ -t 1 ]; then TTY_FLAGS=(-it); fi
+if [ -t 0 ] && [ -t 1 ]; then
+  TTY_FLAGS=(-it)
+elif [ ! -t 0 ]; then
+  TTY_FLAGS=(-i)
+fi
 exec kubectl exec "${TTY_FLAGS[@]+"${TTY_FLAGS[@]}"}" -n "$NS" verdify-db-0 -c postgres -- \
   psql -U verdify -d verdify "$@"

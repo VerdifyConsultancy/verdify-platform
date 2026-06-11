@@ -28,3 +28,4 @@ resources:
   - generated/dashboards-cm-1.yaml
   - generated/dashboards-cm-2.yaml
   - generated/dashboards-cm-3.yaml
+  - band-curve-refresh-cronjob.yaml
