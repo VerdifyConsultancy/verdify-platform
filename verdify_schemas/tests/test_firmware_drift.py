@@ -28,6 +28,7 @@ import pytest
 import yaml
 
 from verdify_schemas.telemetry import OVERRIDE_EVENT_TYPES
+from verdify_schemas.tunable_registry import FIRMWARE_V2_STAGED_REG, REGISTRY
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 YAML_DIRS = [
@@ -226,6 +227,23 @@ KNOWN_PRE_EXISTING_DRIFT: dict[str, set[str]] = {
         "safety_de_hum_cycles__today_",
     },
 }
+
+# Firmware-v2 STAGED contract (docs/design/firmware-v2-contract-2026-06-10.md
+# §B2/§B7): the dispatcher-side band-anchor tunables are registered and routed
+# AHEAD of the firmware-v2 OTA that will expose the matching number entities
+# (object_id == param name) and cfg_* readbacks. Until that OTA lands these
+# ids are intentionally absent from firmware/. Derived from the registry — no
+# hand-maintained second list. test_known_drift_is_still_drifting will force
+# this allowlist to shrink (drop the staging block in tunable_registry.py)
+# the moment the firmware starts emitting the entities.
+KNOWN_PRE_EXISTING_DRIFT.setdefault("SETPOINT_MAP", set()).update(
+    REGISTRY[name].esp_object_id for name in FIRMWARE_V2_STAGED_REG if REGISTRY[name].esp_object_id
+)
+KNOWN_PRE_EXISTING_DRIFT.setdefault("CFG_READBACK_MAP", set()).update(
+    REGISTRY[name].cfg_readback_object_id
+    for name in FIRMWARE_V2_STAGED_REG
+    if REGISTRY[name].cfg_readback_object_id
+)
 
 
 @pytest.mark.parametrize("map_name", MAP_NAMES)

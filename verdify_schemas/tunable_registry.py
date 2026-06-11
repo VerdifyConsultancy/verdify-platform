@@ -2707,6 +2707,120 @@ REGISTRY: dict[str, TunableDef] = {
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Firmware-v2 staged contract (docs/design/firmware-v2-contract-2026-06-10.md
+# §B2/§B3/§B4/§B5/§B7) — deterministic crop+solar band anchors, per-zone VPD
+# widths, zone priority ranks, and solar-anchored window/cadence params.
+#
+# STAGED: these rows are registered (and dispatcher-routed) AHEAD of the
+# firmware-v2 OTA that exposes the matching number entities. The wire contract
+# the firmware build targets:
+#   esp_object_id          == the canonical tunable name
+#   cfg_readback_object_id == "cfg_" + the canonical tunable name
+# fw_clamp_lo/hi stay None until the entities exist in
+# firmware/greenhouse/tunables.yaml (the clamp drift guard only checks rows
+# with explicit clamps). All rows are push_owner="band": the dispatcher emits
+# them from the `crop_band_anchors` table (ingestor/tasks/band_anchors.py) and
+# the planner has NO band-authoring path. Defaults are the contract-§B2 anchor
+# table so a missing DB table degrades to the researched envelopes.
+# ─────────────────────────────────────────────────────────────────────────────
+
+_FW2_ANCHOR_KEYS = ("sr", "sm", "ss", "mid")
+
+_FW2_HOUSE_SERIES: dict[str, tuple[tuple[float, float, float, float], float, float]] = {
+    # series → ((SR, SM, SS, MID) defaults, min, max)
+    "band_temp_low": ((60.0, 76.0, 66.0, 60.0), 40.0, 100.0),
+    "band_temp_target": ((66.0, 84.0, 73.0, 64.0), 40.0, 100.0),
+    "band_temp_high": ((72.0, 86.0, 80.0, 70.0), 40.0, 100.0),
+    "band_vpd_low": ((0.40, 0.60, 0.45, 0.42), 0.10, 3.0),
+    "band_vpd_target": ((0.60, 1.05, 0.60, 0.50), 0.10, 3.0),
+    "band_vpd_high": ((0.90, 1.40, 0.90, 0.75), 0.10, 3.0),
+}
+
+_FW2_ZONE_VPD_TARGETS: dict[str, tuple[float, float, float, float]] = {
+    "center": (0.60, 1.05, 0.60, 0.50),  # Vanda orchid (owner table)
+    "south": (0.85, 1.18, 0.95, 0.75),  # cannabis-veg (runs dry: bud-mold defense)
+    "west": (0.60, 1.10, 0.70, 0.57),  # citrus (lime)
+    "east": (0.80, 1.22, 0.90, 0.74),  # pepper
+}
+
+_FW2_ZONE_VPD_WIDTHS: dict[str, tuple[float, float]] = {
+    # zone → (below-target, above-target) half-widths (kPa)
+    "center": (0.20, 0.35),
+    "south": (0.18, 0.22),
+    "west": (0.16, 0.22),
+    "east": (0.15, 0.23),
+}
+
+_FW2_ZONE_PRIORITY: dict[str, float] = {"center": 1.0, "south": 2.0, "west": 3.0, "east": 4.0}
+
+_FW2_WINDOW_PARAMS: dict[str, tuple[float, float, float, str]] = {
+    # name → (default, min, max, note)
+    "wet_taper_before_sunset_min": (
+        120.0,
+        0.0,
+        480.0,
+        "routine wetting blocked when minutes-to-sunset < taper or phase >= 2 (§B4)",
+    ),
+    "dawn_boost_offset_min": (60.0, 0.0, 360.0, "zone-boost window anchor, minutes after sunrise (§B4)"),
+    "midday_boost_offset_min": (60.0, -240.0, 240.0, "zone-boost window anchor, minutes after solar noon (§B4)"),
+    "manual_override_timeout_min": (10.0, 1.0, 120.0, "manual FANS/HUMID/VENT-BYPASS latch timeout, minutes (§B5)"),
+}
+
+
+def _fw2_def(name: str, default: float, lo: float, hi: float, note: str) -> TunableDef:
+    return TunableDef(
+        name=name,
+        kind="numeric",
+        min=lo,
+        max=hi,
+        default=default,
+        fw_clamp_lo=None,
+        fw_clamp_hi=None,
+        esp_object_id=name,
+        cfg_readback_object_id=f"cfg_{name}",
+        push_owner="band",
+        planner_pushable=False,
+        tier=2,
+        notes=f"firmware-v2 staged contract — {note}",
+    )
+
+
+def _firmware_v2_staged_defs() -> dict[str, TunableDef]:
+    defs: dict[str, TunableDef] = {}
+    for series, (anchor_defaults, lo, hi) in _FW2_HOUSE_SERIES.items():
+        label = series.removeprefix("band_")
+        for anchor, default in zip(_FW2_ANCHOR_KEYS, anchor_defaults, strict=True):
+            name = f"{series}_{anchor}"
+            defs[name] = _fw2_def(name, default, lo, hi, f"house {label} anchor at {anchor.upper()} (§B2)")
+    for zone, anchor_defaults in _FW2_ZONE_VPD_TARGETS.items():
+        for anchor, default in zip(_FW2_ANCHOR_KEYS, anchor_defaults, strict=True):
+            name = f"zone_vpd_target_{zone}_{anchor}"
+            defs[name] = _fw2_def(name, default, 0.10, 3.0, f"{zone} VPD target anchor at {anchor.upper()} (§B2)")
+    for zone, (below, above) in _FW2_ZONE_VPD_WIDTHS.items():
+        name = f"zone_vpd_width_below_{zone}"
+        defs[name] = _fw2_def(name, below, 0.02, 1.0, f"{zone} VPD half-width below target, kPa (§B2)")
+        name = f"zone_vpd_width_above_{zone}"
+        defs[name] = _fw2_def(name, above, 0.02, 1.0, f"{zone} VPD half-width above target, kPa (§B2)")
+    for zone, rank in _FW2_ZONE_PRIORITY.items():
+        name = f"zone_priority_{zone}"
+        defs[name] = _fw2_def(name, rank, 1.0, 4.0, f"{zone} wetting-arbiter rank, 1=highest (§B3)")
+    for name, (default, lo, hi, note) in _FW2_WINDOW_PARAMS.items():
+        defs[name] = _fw2_def(name, default, lo, hi, note)
+    return defs
+
+
+_FW2_STAGED_DEFS = _firmware_v2_staged_defs()
+
+# 24 house anchors + 16 zone targets + 8 widths + 4 ranks + 4 window params.
+assert len(_FW2_STAGED_DEFS) == 56, f"firmware-v2 staged contract drifted: {len(_FW2_STAGED_DEFS)} != 56"
+assert not set(_FW2_STAGED_DEFS) & set(REGISTRY), "firmware-v2 staged names collide with existing registry rows"
+
+REGISTRY.update(_FW2_STAGED_DEFS)
+
+FIRMWARE_V2_STAGED_REG: frozenset[str] = frozenset(_FW2_STAGED_DEFS)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Derived views — ONE source of truth above, many consumers below.
 # ─────────────────────────────────────────────────────────────────────────────
 
