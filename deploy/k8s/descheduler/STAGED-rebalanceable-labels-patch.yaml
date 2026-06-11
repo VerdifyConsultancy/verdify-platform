@@ -1,10 +1,10 @@
 # ============================================================================
-# STAGED — HA-1.9 (#234): label the 6 multi-replica STATELESS deployments
+# STAGED — HA-1.9 (#234): label the multi-replica STATELESS deployments
 # `verdify.ai/rebalanceable: "true"` so the descheduler's L1 allowlist can ever
 # see them. DO NOT APPLY outside the gated runbook.
 # ============================================================================
 # Intentionally NOT referenced by descheduler/kustomization.yaml. Applying this
-# adds a pod-template label to www/lab/api/mcp/planner/traefik, which triggers ONE
+# adds a pod-template label to lab/api/mcp/planner/traefik, which triggers ONE
 # rolling restart of each (RollingUpdate, PDB-protected, no downtime). It touches
 # ONLY the multi-replica stateless surfaces — NEVER the ingestor (singleton,
 # Recreate), NEVER grafana/hermes/mqtt/db/CNPG.
@@ -18,17 +18,6 @@
 # (.spec.template.metadata.labels — so running pods carry it and the L1 evictor
 # allowlist matches) and is harmless on the controller. The ingestor is absent
 # from this list by construction → it can never become rebalanceable.
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: verdify-www
-  namespace: verdify-prod
-spec:
-  template:
-    metadata:
-      labels:
-        verdify.ai/rebalanceable: "true"
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:

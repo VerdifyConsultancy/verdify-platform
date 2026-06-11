@@ -19,7 +19,7 @@
 #      every future rollout never drops the ready-endpoint count below running.
 #
 # Selectors match each deployment's live spec.selector.matchLabels exactly
-# (www=www, lab=lab-site, api=api, mcp=mcp, planner=planner, traefik
+# (lab=lab-site, api=api, mcp=mcp, planner=planner, traefik
 # name=verdify-traefik).
 # NOT touched here: verdify-ingestor / verdify-setpoint-server (single-writer
 # device path — gated ha-3), grafana (RWO PVC singleton — stays replicas:1).
@@ -30,30 +30,6 @@
 # device writer, so 1->2 + hard hostname spread is the same safe posture as
 # www/lab/api/mcp. This patch matches the live cluster state applied at the
 # same time, so an ArgoCD sync REINFORCES it rather than reverting.
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: verdify-www
-spec:
-  replicas: 2
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 0
-      maxSurge: 1
-  template:
-    spec:
-      topologySpreadConstraints:
-        - maxSkew: 1
-          topologyKey: kubernetes.io/hostname
-          whenUnsatisfiable: DoNotSchedule
-          matchLabelKeys:
-            - pod-template-hash
-          labelSelector:
-            matchLabels:
-              app.kubernetes.io/component: www
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:

@@ -34,13 +34,6 @@ namespace: verdify-staging
   # apps VLAN ipBlock, neither of which matches the traefik-apps pod source IP. flannel
   # does not enforce NetworkPolicy today, but this keeps the contract correct under the
   # planned Cilium re-CNI (ADR-17). See allow-api-from-apps-ingress.yaml.
-  # WEB TIER (stateless, #116): host-route the staging verdify-www on
-  # www-staging.vallery.net through the shared apps Traefik (.7.10). Added to
-  # staging now that the edge is reliable; verdify-www is a real published image,
-  # stateless (no PVC), NO device path, so it cannot degrade the live staging app.
-  # See www-ingressroute.yaml.
-  # CONTRACT: allow the apps-ingress to reach verdify-www:8080 (base default-deny).
-  # See allow-www-from-ingress.yaml.
 resources:
 - namespace.yaml
 - ../../base
@@ -48,17 +41,7 @@ resources:
 - deny-esp32-egress.yaml
 - ingressroute.yaml
 - allow-api-from-apps-ingress.yaml
-- www-ingressroute.yaml
-- allow-www-from-ingress.yaml
 
-# verdify-www (#116) — the stateless marketing site, referenced as a Component so
-# its Deployment+Service render into THIS overlay. SAFE for staging (real GHCR
-# image, no PVC, no device path); historically dev/prod-only purely for the
-# "no new staging workload" containment rule, which a stateless+pullable workload
-# does not violate. The planner/mqtt/setpoint/hermes Components stay OUT of staging
-# (planner image unpublished -> placeholder digest -> ImagePullBackOff; the others
-# are device-affecting or prod-anchored).
-#
 # db-backup (M3.3; refs #84/#28/#130) — the verdify-db-dumps NFS PVC + nightly
 # pg_dump -Fc CronJob + retention + allow-db-from-backup. pg_dump is SELECT-only
 # on the DB (NOT a second writer) and only writes the dumps PVC, so it is SAFE in
@@ -69,7 +52,6 @@ resources:
 # synology-iscsi-ssd StorageClass is NOT pulled here — Root applies it once via
 # components/db-backup/storageclass.
 components:
-- ../../components/www
 - ../../components/db-backup
 
 # Instance patches.
@@ -104,14 +86,6 @@ patches:
 # When container-publish goes fully green (after the orphaned verdify-migrate
 # package is removed so CI can publish it repo-linked), the digest write-back job
 # (k8s-manifests.yml, no cross-repo PR / no ArgoCD Image Updater) will own these.
-  # verdify-www (#116): real GHCR digest of the marketing site image built from
-  # the upstream verdify-www repo at sha b33f4cd (see components/www/www.yaml).
-  # Published + repo-linked by verdify-www's own publish-image.yml workflow
-  # (GITHUB_TOKEN packages:write) and verified pullable via the org GHCR package
-  # API 2026-06-04 — this REPLACES the prior placeholder pin (sha256:5e00bc20…)
-  # whose package never existed (404). The ONLY non-app image pinned here; the
-  # env-agnostic static content matches dev/prod's identical pin (so the
-  # promote-diff-guard staging==prod equality holds for this staging-tracked image).
 images:
 - digest: sha256:005e1893d294d82949f7ed802ab790cdd53aba5ec02d179847e9e87bbd4f1c8e
   name: ghcr.io/verdifyconsultancy/verdify-api
@@ -121,5 +95,3 @@ images:
   name: ghcr.io/verdifyconsultancy/verdify-mcp
 - digest: sha256:3d16d2e7c67fe6a5edcccd059d7c27a01f50caa711d3b935c553c904f48d8fa0
   name: ghcr.io/verdifyconsultancy/verdify-migrate
-- digest: sha256:633fb18ab3c9a637693094917615c720a09baaef4877cce8dcea0568bca0b467
-  name: ghcr.io/verdifyconsultancy/verdify-www

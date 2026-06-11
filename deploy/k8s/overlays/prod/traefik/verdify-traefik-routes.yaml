@@ -8,7 +8,7 @@
 #
 # Each route targets the existing verdify-prod ClusterIP Service on its Service
 # .spec.ports[].port (Traefik kubernetescrd resolves against the Service port):
-#   verdify-www  :8080   verdify-lab :8080   verdify-api :8080   verdify-mcp :8000
+#   verdify-lab :8080   verdify-api :8080   verdify-mcp :8000
 #
 # AUTH INVARIANT (mirrors the staging api route + gravity/pihole strip-identity):
 # the outer edge is cloudflared -> apps Traefik -> here. strip-identity-headers
@@ -32,27 +32,6 @@ spec:
       X-Authentik-Username: ""
       X-Forwarded-Email: ""
       X-Forwarded-User: ""
----
-# www + apex marketing site (public, no identity trust).
-apiVersion: traefik.io/v1alpha1
-kind: IngressRoute
-metadata:
-  name: verdify-t2-www
-  namespace: verdify-prod
-  labels:
-    app.kubernetes.io/part-of: verdify
-    app.kubernetes.io/component: www
-    traefik-tier: verdify
-spec:
-  entryPoints: [verdify-web]
-  routes:
-    - kind: Rule
-      match: Host(`www.verdify.ai`) || Host(`verdify.ai`)
-      middlewares:
-        - name: verdify-strip-identity-headers
-      services:
-        - name: verdify-www
-          port: 8080
 ---
 # lab / labs site.
 apiVersion: traefik.io/v1alpha1

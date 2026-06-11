@@ -22,7 +22,7 @@ kind: Kustomization
 # READ/SERVE STACK (so the 48h proof can read + serve parity-restored data):
 #   - verdify-db (the EXISTING base StatefulSet — adopted, NOT recreated; prune:false)
 #   - api, mcp, migration-job (from ../../base)
-#   - planner, mqtt-broker, hermes-iris, www, lab (Components; NONE are device writers)
+#   - planner, mqtt-broker, hermes-iris, lab (Components; NONE are device writers)
 # All app images are pinned to the SAME real @sha256 digests as overlays/prod
 # (no sha256:0000 placeholders) so prod-dark runs the identical, pullable bits.
 #
@@ -54,17 +54,14 @@ resources:
   # VLAN. This REPLACES overlays/prod's allow-ingestor-device-egress — prod-dark
   # carries the DENY and never the allow. See deny-esp32-egress.yaml.
   - deny-esp32-egress.yaml
-  # EDGE/WAN: host-route prod verdify-www on www.verdify.ai + apex through the
-  # shared apps Traefik (.7.10). Same bare-host routing as overlays/prod (#116).
-  - www-ingressroute.yaml
   # EDGE/WAN: host-route prod verdify-lab Quartz site on lab.verdify.ai through
   # the same shared apps Traefik (#124). Same as overlays/prod.
   - lab-ingressroute.yaml
 
 # READ/SERVE Components only. verdify-planner (#117), mqtt fan-out broker (#113),
-# hermes-iris (#119), verdify-www (#116), verdify-lab (#124) — NONE is a device
-# writer. They are referenced as Components (NOT added to base) so they never
-# render into overlays/staging.
+# hermes-iris (#119), verdify-lab (#124) — NONE is a device writer. They are
+# referenced as Components (NOT added to base) so they never render into
+# overlays/staging.
 #
 # DELIBERATELY EXCLUDED: ../../components/setpoint-server — it is the SECOND
 # device writer (grow-light + HA setpoint push), so it has NO place in the
@@ -73,7 +70,6 @@ components:
   - ../../components/planner
   - ../../components/mqtt-broker
   - ../../components/hermes-iris
-  - ../../components/www
   - ../../components/lab-site
   # M3.3 backup substrate (refs #84/#28/#130): verdify-db-dumps NFS PVC + nightly
   # pg_dump -Fc CronJob + retention + allow-db-from-backup. pg_dump is SELECT-only
@@ -108,9 +104,6 @@ images:
   # verdify-planner (#117): SAME env-agnostic digest overlays/prod + dev pin.
   - name: ghcr.io/verdifyconsultancy/verdify-planner
     digest: sha256:3e51abaec6372c0bed26ef9859a80008261fcd20a1e8ec1e37627304e1c6b637
-  # verdify-www (#116): SAME env-agnostic static-content digest as dev/staging/prod.
-  - name: ghcr.io/verdifyconsultancy/verdify-www
-    digest: sha256:633fb18ab3c9a637693094917615c720a09baaef4877cce8dcea0568bca0b467
   # verdify-lab (#124): SAME env-agnostic Quartz digest overlays/prod + dev pin.
   # 2026-06-07 #263 CONVERGENCE (laptop-root): repointed off the SYNTHETIC 92ab47..
   # CI temp-vault build to the REAL vault-built bf71018 that overlays/prod serves

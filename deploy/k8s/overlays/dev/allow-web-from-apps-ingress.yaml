@@ -13,7 +13,6 @@ spec:
         values:
           - api
           - lab-site
-          - www
   policyTypes:
     - Ingress
   ingress:

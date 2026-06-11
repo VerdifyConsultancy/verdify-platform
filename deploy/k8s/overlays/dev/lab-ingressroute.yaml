@@ -2,8 +2,7 @@
 #
 # CONFIRMED ARCHITECTURE: dev/stage URLs live on *.k3s.verdify.ai; prod owns the
 # bare lab.verdify.ai host. This routes the dev verdify-lab THROUGH the shared
-# apps Traefik (traefik-apps on the .7.10 VIP) — the ONE conformant front door,
-# identical pattern to overlays/dev/www-ingressroute.yaml (www.k3s.verdify.ai).
+# apps Traefik (traefik-apps on the .7.10 VIP) — the ONE conformant front door.
 #
 # INERT-ON-MERGE: there is no verdify-dev ArgoCD Application CR yet (laptop-root
 # gate). The live verdify-local-staging app syncs ONLY overlays/staging, so this
@@ -11,7 +10,7 @@
 # reviewable target shape. The lab.k3s.verdify.ai DNS, the traefik-apps host-route
 # acceptance, and a public *.k3s.verdify.ai wildcard Certificate (cert-manager
 # letsencrypt-dns01) are platform-layer prerequisites (needs:nexus — same gate as
-# the dev www route / the api route's residual TLS gap). HTTP routing is the shape.
+# the api route's residual TLS gap). HTTP routing is the shape.
 #
 # No strip-identity Middleware here: the research site is fully public and trusts
 # no forward-auth identity (unlike the api). tls: {} == Traefik default cert.

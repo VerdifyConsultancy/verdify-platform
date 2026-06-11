@@ -1,6 +1,5 @@
 # staging verdify-lab edge exposure (#124) — the staging Quartz research site
-# routed THROUGH the shared apps Traefik (.7.10), same one-front-door pattern as
-# overlays/staging/www-ingressroute.yaml (www-staging.vallery.net).
+# routed THROUGH the shared apps Traefik (.7.10).
 #
 # NOT WIRED INTO overlays/staging/kustomization.yaml YET (deliberate): unlike
 # verdify-www — whose image is REAL + published + pullable, so it is safe in the
@@ -16,7 +15,7 @@
 # GHCR relink unblocks CI publish). Until then they live here unreferenced.
 #
 # HOST: staging owns *-staging on the vallery.net edge, same convention as the
-# www route (www-staging.vallery.net) and the api route (verdify-staging.vallery.net).
+# api route (verdify-staging.vallery.net).
 # The cloudflared vallery-edge host-forward for lab-staging.vallery.net + the
 # matching DNS record are platform-layer (laptop-root) prerequisites (needs:nexus).
 #

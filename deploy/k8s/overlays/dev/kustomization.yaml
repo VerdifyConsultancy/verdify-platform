@@ -25,8 +25,6 @@ namespace: verdify-dev
 # EDGE/WAN: host-route the dev verdify-api on api.k3s.verdify.ai through the
 # shared apps Traefik (.7.10). dev/stage URLs live on *.k3s.verdify.ai (prod
 # owns the bare *.verdify.ai hosts). See ingressroute.yaml.
-# EDGE/WAN: host-route the dev verdify-www on www.k3s.verdify.ai through the
-# same shared apps Traefik (#116). See www-ingressroute.yaml.
 # EDGE/WAN: host-route the dev verdify-lab Quartz site on lab.k3s.verdify.ai
 # through the same shared apps Traefik (#124). See lab-ingressroute.yaml.
 # Nightly prod->dev DB refresh: RO PV/PVC onto the prod dumps NFS subdir +
@@ -38,18 +36,16 @@ resources:
 - deny-esp32-egress.yaml
 - allow-web-from-apps-ingress.yaml
 - ingressroute.yaml
-- www-ingressroute.yaml
 - lab-ingressroute.yaml
 - db-restore-from-prod.yaml
 
-# verdify-planner (#117) + verdify-www (#116) + verdify-lab (#124) + grafana
-# (graphs-dev) — referenced as Components, NOT added to base. Same pattern as
-# overlays/prod. The grafana component is namespace-transformed into
-# verdify-dev, so its provisioned datasource (host verdify-db) reads the DEV
-# DB; two dev patches below fix its prod-hardcoded edge/env values.
+# verdify-planner (#117) + verdify-lab (#124) + grafana (graphs-dev) —
+# referenced as Components, NOT added to base. Same pattern as overlays/prod.
+# The grafana component is namespace-transformed into verdify-dev, so its
+# provisioned datasource (host verdify-db) reads the DEV DB; two dev patches
+# below fix its prod-hardcoded edge/env values.
 components:
 - ../../components/planner
-- ../../components/www
 - ../../components/lab-site
 - ../../components/grafana
 
@@ -89,12 +85,6 @@ patches:
 # planner (on each green planner build) and the migrate (on each green migrate
 # build) digest into this dev overlay, so neither self-heals away from a phantom
 # pin again). dev is INERT (no ArgoCD app), so this pin deploys nothing.
-  # verdify-www (#116): real GHCR digest of the marketing site image built from
-  # the upstream verdify-www repo at sha b33f4cd (see components/www/www.yaml).
-  # Published + repo-linked by verdify-www's publish-image.yml workflow and
-  # verified pullable 2026-06-04 — REPLACES the prior placeholder pin
-  # (sha256:5e00bc20…) whose package 404'd. dev pins the SAME env-agnostic digest
-  # as staging/prod (one-digest-across-envs static content).
   # verdify-lab (#124): real GHCR digest of the Quartz research-site image built
   # from the verdify-site-legacy repo's Dockerfile.k3s (Quartz `npx quartz build`
   # -> static public/ -> nginx-unprivileged on :8080). Published + repo-linked by
@@ -124,5 +114,3 @@ images:
   name: ghcr.io/verdifyconsultancy/verdify-migrate
 - digest: sha256:b149869996b2322fea26ad68a0d963dd607e0a93c626e136d0a8378d263e33c4
   name: ghcr.io/verdifyconsultancy/verdify-planner
-- digest: sha256:633fb18ab3c9a637693094917615c720a09baaef4877cce8dcea0568bca0b467
-  name: ghcr.io/verdifyconsultancy/verdify-www

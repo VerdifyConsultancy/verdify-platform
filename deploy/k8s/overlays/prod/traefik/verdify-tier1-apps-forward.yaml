@@ -17,12 +17,10 @@
 #   It uses entryPoints web/websecure (which the apps Traefik defines and the tier-2
 #   Traefik does NOT), so ONLY the apps Traefik claims this route.
 #
-# HOST SET: the apex + www + the bare product hosts, PLUS a catch-all HostRegexp for
-# any other *.verdify.ai host, EXCEPT the hosts that have their own non-verdify-prod
-# backends or are deliberately off-edge (auth/analytics/logs/botauth/mqtt/traefik).
-# This mirrors the exclusion list in the old network-infra verdify-sites route, so
-# the cutover is behaviour-preserving for the product surface while moving the
-# backend from the .150 VM to the k3s tier-2 Traefik.
+# HOST SET: a catch-all HostRegexp for product subdomains, EXCEPT the hosts that
+# have their own non-verdify-prod backends or are deliberately off-edge
+# (www/auth/analytics/logs/botauth/mqtt/traefik). Apex and www are owned by the
+# standalone VerdifyConsultancy/verdify-www repo.
 #
 # CUTOVER ORDER (so there is never a double-claim of verdify.ai on the apps Traefik):
 #   This route and the network-infra `verdify-sites` route both match verdify.ai on
@@ -45,12 +43,6 @@ spec:
     - websecure
     - web
   routes:
-    - kind: Rule
-      match: Host(`verdify.ai`) || Host(`www.verdify.ai`)
-      priority: 100
-      services:
-        - name: verdify-traefik
-          port: 80
     - kind: Rule
       match: >-
         HostRegexp(`^[a-z0-9-]+\.verdify\.ai$`)

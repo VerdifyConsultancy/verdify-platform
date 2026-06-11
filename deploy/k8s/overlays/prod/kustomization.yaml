@@ -76,10 +76,6 @@ components:
   # #119 hermes-iris — the sole planner gateway, ported from the compose `hermes`
   # profile. prod-anchored (run-state PVC + OpenAI key). Image digest preserved.
   - ../../components/hermes-iris
-  # #116 verdify-www — the public marketing site (www.verdify.ai). Pure web tier,
-  # stateless, NO device path; referenced by dev + prod, never staging. Built
-  # from the upstream verdify-www repo (see components/www/www.yaml).
-  - ../../components/www
   # #124 verdify-lab — the public Quartz research site (lab.verdify.ai). Pure web
   # tier, stateless (no PVC), NO device path; referenced by dev + prod. NOT yet in
   # staging because its image is unpublished (placeholder digest -> ImagePullBackOff
@@ -176,8 +172,8 @@ images:
   # (the `branch-live-platform-main` build of planner_graph/). The planner image is
   # env-agnostic (it carries its own planner_graph package; per-env DB/secrets come
   # from each overlay's verdify-config + sealed secret), so prod pins the SAME
-  # known-good digest dev already carries — same one-digest-across-envs pattern as
-  # verdify-www. prod is human-gated and is NOT auto-bumped by bump-staging-digests
+  # known-good digest dev already carries. prod is human-gated and is NOT
+  # auto-bumped by bump-staging-digests
   # (that job only repins overlays/staging + the INERT overlays/dev planner pin),
   # so this prod pin is a deliberate in-repo write-back, never CI-mutated.
   - name: ghcr.io/verdifyconsultancy/verdify-planner
@@ -194,17 +190,6 @@ images:
   # @sha256 is preserved inline in the component (NOT transformer-pinned).
   - name: ghcr.io/verdifyconsultancy/verdify-setpoint-server
     digest: sha256:5ada15b7834b178107c94c842cad9cd9ff1f6a910cda0faccdf29c4e9012e575
-  # verdify-www (#116): real GHCR digest of the marketing site image built from
-  # the upstream verdify-www repo at sha b33f4cd (see components/www/www.yaml).
-  # Published + repo-linked by verdify-www's publish-image.yml workflow and
-  # verified pullable 2026-06-04 — REPLACES the prior placeholder pin
-  # (sha256:5e00bc20…) whose package 404'd. The site is env-agnostic static
-  # content + Node runtime, so prod + dev + staging pin the SAME known-good
-  # digest; this keeps prod == the current staging www pin, so the
-  # promote-diff-guard staging-tracked equality check passes. The promotion flow
-  # advances it on a content rebuild.
-  - name: ghcr.io/verdifyconsultancy/verdify-www
-    digest: sha256:633fb18ab3c9a637693094917615c720a09baaef4877cce8dcea0568bca0b467
   # verdify-lab (#124): real GHCR digest of the Quartz research-site image built
   # from the verdify-site-legacy repo's Dockerfile.k3s (Quartz `npx quartz build`
   # -> static public/ -> nginx-unprivileged on :8080). Published + repo-linked by

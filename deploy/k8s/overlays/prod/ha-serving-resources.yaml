@@ -10,30 +10,11 @@
 # pod is NEVER throttled — it only caps pathological runaway.
 #
 # Observed steady CPU (kubectl top -n verdify-prod):
-#   www 1m | lab 1m | api 3m | mcp 3m | planner 19m | grafana 26m(+renderer)
+#   lab 1m | api 3m | mcp 3m | planner 19m | grafana 26m(+renderer)
 #   | traefik 2m. Requests are LEFT AS-IS (already sane for scheduling).
 #
 # NOT INCLUDED (device path, gated ha-3): verdify-ingestor, verdify-setpoint-server.
 # Those keep NO CPU limit on purpose (CFS throttling harms device keepalive).
----
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: verdify-www
-spec:
-  template:
-    spec:
-      priorityClassName: verdify-serving
-      containers:
-        - name: www
-          resources:
-            requests:
-              cpu: 25m
-              memory: 64Mi
-            limits:
-              cpu: 250m      # ~250x steady 1m; pure caps for a static Node site
-              memory: 256Mi
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
