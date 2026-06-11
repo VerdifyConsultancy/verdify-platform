@@ -5125,7 +5125,23 @@ CREATE TABLE public.climate (
     intake_rh double precision,
     intake_vpd double precision,
     outdoor_illuminance double precision,
-    greenhouse_id text DEFAULT 'vallery'::text
+    greenhouse_id text DEFAULT 'vallery'::text,
+    solar_phase double precision,
+    solar_sunrise_min integer,
+    solar_noon_min integer,
+    solar_sunset_min integer,
+    house_temp_target_f double precision,
+    house_temp_delta_f double precision,
+    house_vpd_target double precision,
+    house_vpd_delta double precision,
+    vpd_target_center double precision,
+    vpd_target_south double precision,
+    vpd_target_west double precision,
+    vpd_target_east double precision,
+    vpd_delta_center double precision,
+    vpd_delta_south double precision,
+    vpd_delta_west double precision,
+    vpd_delta_east double precision
 );
 
 
