@@ -9,9 +9,9 @@
 --
 -- mv_band_curve covers a WIDE window (now-4d .. now+4d) at 15-min resolution so
 -- it serves the dashboards' default now-72h..now+72h view plus zoom headroom.
--- A k8s CronJob (deploy/k8s/components/grafana/band-curve-refresh-cronjob.yaml)
--- runs REFRESH MATERIALIZED VIEW CONCURRENTLY every 10 min — independent of the
--- ingestor (whose mv_zone_band_grade refresh is unreliable on prod).
+-- The ingestor matview_refresh task runs REFRESH MATERIALIZED VIEW
+-- CONCURRENTLY every 5 min (ingestor/tasks/ha.py); it also adds the band
+-- refresh that mv_zone_band_grade was missing on prod.
 --
 -- v_band_curve is the stable read surface the panels query (time-filtered).
 --
