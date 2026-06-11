@@ -5,6 +5,7 @@ original module. The tasks package __init__ re-exports the public
 surface so every `from tasks import X` still resolves.
 """
 
+from . import band_anchors
 from ._common import (
     _PHYSICS_INVARIANTS,
     ACTIVITY_MIRROR_PARAMS,
@@ -576,6 +577,26 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             await _fetch_moisture_guard_context(conn) if control_band else None,
         )
 
+        # Firmware-v2 deterministic band (contract B2/B6/B7). The solar context
+        # and the per-zone band-audit emission are unconditional (compliance
+        # history accumulates before any flip); anchor pushes and the legacy
+        # band cutover are gated by VERDIFY_BAND_SOURCE (default: legacy).
+        anchors_mode = band_anchors.band_source() == band_anchors.BAND_SOURCE_ANCHORS
+        solar_ctx = band_anchors.local_solar_context()
+        anchor_values, anchor_origin = await band_anchors.crop_band_anchor_values(conn)
+        anchor_pushes = band_anchors.desired_anchor_pushes(anchor_values)
+        anchors_live = (
+            anchors_mode and band_anchors.anchors_supported() and band_anchors.anchors_confirmed(anchor_pushes)
+        )
+        audit_rows = await band_anchors.emit_band_audit(conn, anchor_values, solar_ctx)
+        if audit_rows:
+            log.info(
+                "Dispatcher: emitted %d per-zone band audit row(s) (source=%s phase=%.3f)",
+                audit_rows,
+                anchor_origin,
+                solar_ctx.phase,
+            )
+
         planned = await conn.fetch(
             "SELECT parameter, value, ts, plan_id, reason, trigger_id, planner_instance FROM v_active_plan"
         )
@@ -684,8 +705,13 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                 clean_val = guardrail_max
             planner_params[param] = clean_val
 
-        # Band-driven params: planner can tighten within band, clamped to edges
-        if band_row and control_band:
+        # Band-driven params: planner can tighten within band, clamped to edges.
+        # Once VERDIFY_BAND_SOURCE=anchors AND every anchor tunable is confirmed
+        # by its cfg_* readback (anchors_live), the on-chip curve owns these four
+        # values and the dispatcher stops pushing them (contract B2 — they become
+        # read-only readbacks of the computed band). Until confirmation, both
+        # paths run so the device never sees a band gap.
+        if band_row and control_band and not anchors_live:
             for param in ("temp_low", "temp_high", "vpd_low", "vpd_high"):
                 source_row = band_row if param.startswith("temp") else control_band
                 band_lo = float(source_row["temp_low" if param.startswith("temp") else "vpd_low"])
@@ -711,10 +737,27 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                     continue
                 changes.append((param, val))
 
-        # Per-zone VPD targets (from crop data per zone)
+        # Per-zone VPD targets (from crop data per zone). Still pushed in both
+        # band-source modes: firmware v2 recomputes its zone bands from the
+        # anchor curves, so these become informational under anchors mode.
         if zone_row:
             for param in ("vpd_target_south", "vpd_target_west", "vpd_target_east", "vpd_target_center"):
                 val = round(float(zone_row[param]), 2)
+                if _should_skip(_last_pushed.get(param), val) and not _readback_drift(param, val):
+                    continue
+                changes.append((param, val))
+
+        # Anchor-table sync (contract B7): push the 56 anchor/width/priority/
+        # window tunables only when a value differs from the last confirmed
+        # cfg_* readback. Anchors are NVS-persisted on the device, so steady
+        # state is zero pushes; a crop_band_anchors change re-syncs within one
+        # cycle. Gated on the firmware actually exposing the v2 entities so a
+        # pre-OTA flip cannot strand forever-unconfirmed setpoint_changes rows.
+        if anchors_mode and band_anchors.anchors_supported():
+            for param, val in anchor_pushes.items():
+                readback = shared.cfg_readback.get(param)
+                if readback is not None and readback_values_equivalent(param, readback, val):
+                    continue
                 if _should_skip(_last_pushed.get(param), val) and not _readback_drift(param, val):
                     continue
                 changes.append((param, val))
@@ -746,6 +789,11 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         # Per-circuit lighting state machines: crop policy + Tempest history
         # seed both circuits, but active planner rows are allowed to diverge
         # circuit targets, thresholds, windows, dwell, and auto enable.
+        # Under VERDIFY_BAND_SOURCE=anchors the circuits are DIFFERENTIATED
+        # (#294/#295: gl_main/Vanda 13 mol·13 h, gl_grow/pepper 21 mol·15 h)
+        # and their windows are sunrise-anchored from the ephemeris instead of
+        # the policy table's fixed hours; planner overrides still win below.
+        anchor_lighting = band_anchors.lighting_circuit_overrides(solar_ctx.times) if anchors_mode else {}
         for row in lighting_circuit_rows or []:
             if not lighting_circuit_supported:
                 continue
@@ -761,6 +809,9 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                 f"gl_{key}_min_off_s": float(int(row["min_off_s"])),
                 f"sw_gl_{key}_auto_mode": 1.0 if row["auto_enabled"] else 0.0,
             }
+            for param in circuit_defaults:
+                if param in anchor_lighting:
+                    circuit_defaults[param] = anchor_lighting[param]
             for param, val in circuit_defaults.items():
                 if param in LIGHTING_TARGET_MINUTE_PARAMS and not lighting_target_minutes_supported:
                     continue
@@ -775,8 +826,18 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         # policy that firmware uses for daily qualified light minutes; zones
         # then narrow the wettable portion with start/drydown offsets.
         if direct_wet_supported:
+            activity_defaults = _activity_defaults_from_lighting(lighting_row, lighting_circuit_rows)
+            if activity_defaults and anchor_lighting:
+                # Keep the biological-activity mirror tied to the same
+                # sunrise-anchored main-light window pushed above.
+                activity_defaults["activity_start_hour"] = float(
+                    max(0, min(23, int(anchor_lighting["gl_main_sunrise_hour"])))
+                )
+                activity_defaults["activity_duration_min"] = float(
+                    max(0, min(1440, int(anchor_lighting["gl_main_target_light_minutes"])))
+                )
             activity_defaults = _align_activity_defaults_with_planned_lighting(
-                _activity_defaults_from_lighting(lighting_row, lighting_circuit_rows),
+                activity_defaults,
                 planner_params,
             )
             for param, val in activity_defaults.items():
