@@ -103,6 +103,28 @@ CLIMATE_MAP: dict[str, str] = {
     "tempest_precipitation_rate": "precip_in",  # NOTE: arrives as mm/min, DB expects in
     "tempest_lightning_count": "lightning_count",
     "tempest_lightning_distance": "lightning_avg_dist_mi",  # NOTE: arrives as km, DB expects mi
+    # Firmware-v2 (#327) on-chip telemetry evidence surface (numeric). The chip
+    # publishes these as template sensors (hardware.yaml ids gh_solar_*,
+    # gh_house_*, gh_zone_vpd_*); keys here are the ESPHome object_ids derived
+    # from the friendly NAME via sanitize (lowercase, non-[a-z0-9]→'_', no
+    # collapse) — e.g. id gh_solar_sunrise_min / name "Solar Sunrise (min local)"
+    # → object_id "solar_sunrise__min_local_". Columns added in migration 166.
+    "solar_phase": "solar_phase",
+    "solar_sunrise__min_local_": "solar_sunrise_min",
+    "solar_noon__min_local_": "solar_noon_min",
+    "solar_sunset__min_local_": "solar_sunset_min",
+    "house_temp_target_f": "house_temp_target_f",
+    "house_temp_delta_f": "house_temp_delta_f",
+    "house_vpd_target_kpa": "house_vpd_target",
+    "house_vpd_delta_kpa": "house_vpd_delta",
+    "zone_vpd_target_center": "vpd_target_center",
+    "zone_vpd_target_south": "vpd_target_south",
+    "zone_vpd_target_west": "vpd_target_west",
+    "zone_vpd_target_east": "vpd_target_east",
+    "zone_vpd_delta_center": "vpd_delta_center",
+    "zone_vpd_delta_south": "vpd_delta_south",
+    "zone_vpd_delta_west": "vpd_delta_west",
+    "zone_vpd_delta_east": "vpd_delta_east",
 }
 
 # Optional ESPHome feedback aliases for center root-zone/runoff instrumentation.
@@ -458,6 +480,12 @@ DIAGNOSTIC_MAP: dict[str, str] = {
     "sntp_valid": "sntp_valid",
     "sntp_miss_count": "sntp_miss_count",
     "last_sntp_sync_age_s": "last_sntp_sync_age_s",
+    # Firmware-v2 (#327) on-chip text evidence surface. Chip ids
+    # gh_zone_wet_granted / gh_band_source; keys are the sanitized friendly
+    # NAMEs ("Zone Wet Granted" → "zone_wet_granted", "Band Source" →
+    # "band_source"). Columns added in migration 166.
+    "zone_wet_granted": "zone_wet_granted",  # TextSensorInfo
+    "band_source": "band_source",  # TextSensorInfo
 }
 
 # ──────────────────────────────────────────────────────────────
