@@ -61,6 +61,36 @@ def test_gap_tracking_uses_disconnect_timestamp():
     assert "last_connected_at" not in src
 
 
+def test_climate_db_failures_spool_before_retry():
+    src = Path(INGESTOR_PATH, "ingestor.py").read_text()
+    assert "CLIMATE_SPOOL_PATH" in src
+    assert 'STATE_DIR / "spool" / "climate.jsonl"' in src
+    assert "_spool_climate_row(row)" in src
+    assert "await _drain_climate_spool(pool)" in src
+
+
+def test_prod_db_watchdog_is_narrowly_scoped():
+    src = Path("deploy/k8s/overlays/prod/db-watchdog.yaml").read_text()
+    assert "name: verdify-db-watchdog" in src
+    assert 'resourceNames: ["verdify-db-0"]' in src
+    assert 'resourceNames: ["verdify-db"]' in src
+    assert 'verbs: ["get", "delete"]' in src
+    assert 'api("DELETE", f"/pods/{pod_name}")' in src
+    assert "CrashLoopBackOff" in src
+    assert "I/O error|could not open configuration file" in src
+
+
+def test_prod_ingestor_state_is_durable_pvc():
+    pvc_src = Path("deploy/k8s/overlays/prod/ingestor-state-pvc.yaml").read_text()
+    patch_src = Path("deploy/k8s/overlays/prod/ingestor-state-volume.yaml").read_text()
+    assert "kind: PersistentVolumeClaim" in pvc_src
+    assert "name: verdify-ingestor-state" in pvc_src
+    assert "storageClassName: longhorn-nvme-rwo" in pvc_src
+    assert "persistentVolumeClaim:" in patch_src
+    assert "claimName: verdify-ingestor-state" in patch_src
+    assert "emptyDir: {}" not in patch_src
+
+
 def test_echo_suppression_covers_delayed_esphome_state_publish():
     src = Path(INGESTOR_PATH, "ingestor.py").read_text()
     assert "_PUSH_ECHO_SUPPRESS_S = 900" in src

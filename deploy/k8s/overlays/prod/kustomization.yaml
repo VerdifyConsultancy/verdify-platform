@@ -33,6 +33,8 @@ resources:
   # DEVICE WRITE PATH: the SINGLE egress allow letting the prod ingestor reach the
   # live device VLAN. See allow-ingestor-device-egress.yaml.
   - allow-ingestor-device-egress.yaml
+  - db-watchdog.yaml
+  - ingestor-state-pvc.yaml
   # HA-3 (#239): ingestor PDB maxUnavailable:1 (singleton-may-be-disrupted intent;
   # correctness is the Lease fence, not the PDB). Additive — does NOT restart the
   # writer. The fast-failover podSpec patch (priority/tolerations/cpu) is the
@@ -135,9 +137,8 @@ patches:
   # that is a laptop-root guarded Recreate at the gated window, NOT an autonomous
   # action. See ingestor-gather-mount.patch.yaml header.
   - path: ingestor-gather-mount.patch.yaml
-  # #130 ingestor state volume: writable emptyDir at /srv/verdify/state so the
-  # live setpoint-dispatcher + MCP-restart logging stops thrashing post-cutover.
-  # emptyDir now; durable RWO PVC is the #130 follow-up. See ingestor-state-volume.yaml.
+  # #130 ingestor state volume: durable RWO PVC at /srv/verdify/state for
+  # dispatcher/MCP bookkeeping and DB-outage telemetry spooling.
   - path: ingestor-state-volume.yaml
   # HA Sprint ha-1 / Lane A (#226/#227/#229): add verdify-serving priorityClass +
   # a CPU LIMIT (burst containment, NOT a tight throttle) + tuned mem to the

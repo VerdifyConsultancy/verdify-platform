@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
 from conftest import db_query
 
 INGESTOR_PATH = str(Path(__file__).resolve().parent.parent / "ingestor")
@@ -47,6 +48,25 @@ class _FakeAcquire:
 class _FakePool:
     def __init__(self):
         self.conn = _FakeConn()
+
+    def acquire(self):
+        return _FakeAcquire(self.conn)
+
+
+class _ClimateConn:
+    def __init__(self, *, fail: bool = False):
+        self.fail = fail
+        self.execute_calls = []
+
+    async def execute(self, query, *args):
+        if self.fail:
+            raise OSError("database unavailable")
+        self.execute_calls.append((query, args))
+
+
+class _ClimatePool:
+    def __init__(self, *, fail: bool = False):
+        self.conn = _ClimateConn(fail=fail)
 
     def acquire(self):
         return _FakeAcquire(self.conn)
@@ -142,6 +162,44 @@ class TestIngestorTasks:
 
         ingestor.on_state_change(_entity_state(2, "occupancy_blocks_equipment,fog_gate_rh"))
         assert ingestor.state.pending_override_events == []
+
+    def test_climate_write_failure_spools_row(self, tmp_path, monkeypatch):
+        spool_path = tmp_path / "spool" / "climate.jsonl"
+        monkeypatch.setattr(ingestor, "CLIMATE_SPOOL_PATH", spool_path)
+        monkeypatch.setattr(ingestor, "CLIMATE_SPOOL_MAX_ROWS", 10)
+        monkeypatch.setattr(ingestor, "_fanout_publish", lambda *_args, **_kwargs: None)
+        ingestor.state.climate.clear()
+        ingestor.state.climate_latest.clear()
+        ingestor.state.climate["temp_avg"] = 71.5
+        ts = datetime(2026, 6, 12, 7, 5, tzinfo=UTC)
+
+        with pytest.raises(OSError):
+            asyncio.run(ingestor.write_climate(_ClimatePool(fail=True), ts))
+
+        rows = ingestor._read_climate_spool_rows()
+        assert len(rows) == 1
+        assert rows[0]["ts"] == ts
+        assert rows[0]["temp_avg"] == 71.5
+
+    def test_climate_write_drains_spooled_rows_after_recovery(self, tmp_path, monkeypatch):
+        spool_path = tmp_path / "spool" / "climate.jsonl"
+        monkeypatch.setattr(ingestor, "CLIMATE_SPOOL_PATH", spool_path)
+        monkeypatch.setattr(ingestor, "CLIMATE_SPOOL_MAX_ROWS", 10)
+        monkeypatch.setattr(ingestor, "_fanout_publish", lambda *_args, **_kwargs: None)
+        old_ts = datetime(2026, 6, 12, 7, 5, tzinfo=UTC)
+        new_ts = datetime(2026, 6, 12, 14, 38, tzinfo=UTC)
+        ingestor._write_climate_spool_rows([{"ts": old_ts, "temp_avg": 69.0}])
+        ingestor.state.climate.clear()
+        ingestor.state.climate_latest.clear()
+        ingestor.state.climate["temp_avg"] = 72.0
+        pool = _ClimatePool()
+
+        asyncio.run(ingestor.write_climate(pool, new_ts))
+
+        assert not spool_path.exists()
+        assert len(pool.conn.execute_calls) == 2
+        assert pool.conn.execute_calls[0][1][0] == old_ts
+        assert pool.conn.execute_calls[1][1][0] == new_ts
 
     def test_setpoint_dispatcher_recent(self):
         """Setpoint dispatcher must have produced recent write-side evidence."""

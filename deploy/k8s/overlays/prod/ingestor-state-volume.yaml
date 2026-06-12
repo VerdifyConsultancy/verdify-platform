@@ -5,6 +5,7 @@
 # FIXED path /srv/verdify/state (carried over from the VM host layout):
 #   - /srv/verdify/state/setpoint-dispatcher.log   (every setpoint_dispatch task)
 #   - /srv/verdify/state/mcp-server.log            (every MCP restart attempt)
+#   - /srv/verdify/state/spool/climate.jsonl       (DB-outage climate replay)
 # Without a writable mount there the live pod throws, observed post-cutover:
 #   ERROR Task setpoint_dispatch failed: [Errno 2] No such file or directory:
 #     '/srv/verdify/state/setpoint-dispatcher.log'
@@ -14,11 +15,9 @@
 # pushes themselves still land (direct-push to ESP32 succeeds) but the logging +
 # MCP-restart bookkeeping fails, so the dispatcher task is marked failed each run.
 #
-# FIX: mount a writable emptyDir at /srv/verdify/state. emptyDir is the MINIMUM
-# that clears the thrash (the logs are diagnostic, lost on pod restart — acceptable
-# for now). #130 tracks the DURABLE follow-up: a small RWO PVC (synology-iscsi-ssd)
-# so the dispatcher/MCP logs survive a restart. Modeled as a strategic-merge patch
-# onto the base ingestor Deployment (adds the volume + volumeMount, /tmp preserved).
+# FIX: mount a writable RWO PVC at /srv/verdify/state. The climate spool is
+# operational data, not just diagnostic log noise, so emptyDir is no longer
+# acceptable.
 #
 # laptop-root applies the restart that picks this up (single-writer Recreate: the
 # old writer pod is torn down fully before the new one starts — no double-writer).
@@ -36,4 +35,5 @@ spec:
               mountPath: /srv/verdify/state
       volumes:
         - name: state
-          emptyDir: {}
+          persistentVolumeClaim:
+            claimName: verdify-ingestor-state

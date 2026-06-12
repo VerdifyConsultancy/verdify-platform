@@ -113,6 +113,9 @@ from verdify_schemas.tunable_registry import get as get_tunable
 load_dotenv(Path(__file__).parent / ".env")
 
 GREENHOUSE_ID = os.environ.get("GREENHOUSE_ID", "vallery")
+STATE_DIR = Path(os.environ.get("STATE_DIR", "/srv/verdify/state"))
+CLIMATE_SPOOL_PATH = Path(os.environ.get("CLIMATE_SPOOL_PATH", str(STATE_DIR / "spool" / "climate.jsonl")))
+CLIMATE_SPOOL_MAX_ROWS = int(os.environ.get("CLIMATE_SPOOL_MAX_ROWS", "2880"))
 
 # ESP32 config: loaded from DB in main(), fallback to .env
 ESP32_HOST = os.environ.get("ESP32_HOST", "192.168.10.111")
@@ -323,6 +326,120 @@ def _parse_override_set(val: str) -> set[str]:
 # ──────────────────────────────────────────────────────────────
 # DB helpers
 # ──────────────────────────────────────────────────────────────
+def _json_safe_value(value: Any) -> Any:
+    if isinstance(value, datetime):
+        return value.isoformat()
+    if isinstance(value, Decimal):
+        return float(value)
+    return value
+
+
+def _coerce_spooled_ts(value: Any) -> datetime:
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=UTC)
+    if isinstance(value, str):
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
+    raise ValueError(f"invalid spooled climate timestamp: {value!r}")
+
+
+def _encode_climate_spool_row(row: dict[str, Any]) -> str:
+    return json.dumps({key: _json_safe_value(value) for key, value in row.items()}, sort_keys=True)
+
+
+def _decode_climate_spool_row(line: str) -> dict[str, Any]:
+    row = json.loads(line)
+    if not isinstance(row, dict):
+        raise ValueError("spooled climate row is not an object")
+    row["ts"] = _coerce_spooled_ts(row.get("ts"))
+    return row
+
+
+def _read_climate_spool_rows() -> list[dict[str, Any]]:
+    if not CLIMATE_SPOOL_PATH.exists():
+        return []
+    rows: list[dict[str, Any]] = []
+    for line_no, line in enumerate(CLIMATE_SPOOL_PATH.read_text().splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            rows.append(_decode_climate_spool_row(line))
+        except Exception as e:
+            log.error("dropping corrupt climate spool row %s:%s: %s", CLIMATE_SPOOL_PATH, line_no, e)
+    return rows
+
+
+def _write_climate_spool_rows(rows: list[dict[str, Any]]) -> None:
+    CLIMATE_SPOOL_PATH.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = CLIMATE_SPOOL_PATH.with_suffix(CLIMATE_SPOOL_PATH.suffix + ".tmp")
+    if rows:
+        tmp_path.write_text("".join(_encode_climate_spool_row(row) + "\n" for row in rows))
+        tmp_path.replace(CLIMATE_SPOOL_PATH)
+    else:
+        tmp_path.unlink(missing_ok=True)
+        CLIMATE_SPOOL_PATH.unlink(missing_ok=True)
+
+
+def _spool_climate_row(row: dict[str, Any]) -> None:
+    try:
+        rows = _read_climate_spool_rows()
+        rows.append(row)
+        if len(rows) > CLIMATE_SPOOL_MAX_ROWS:
+            dropped = len(rows) - CLIMATE_SPOOL_MAX_ROWS
+            rows = rows[dropped:]
+            log.error("climate spool exceeded %s rows; dropped %s oldest rows", CLIMATE_SPOOL_MAX_ROWS, dropped)
+        _write_climate_spool_rows(rows)
+        log.warning("spooled climate row at %s after DB write failure (spool_depth=%s)", row["ts"], len(rows))
+    except Exception as e:
+        log.error("failed to spool climate row at %s: %s", row.get("ts"), e)
+
+
+async def _insert_climate_row(pool: asyncpg.Pool, row: dict[str, Any]) -> None:
+    ts = _coerce_spooled_ts(row["ts"])
+    cols = [col for col in row if col != "ts"]
+    cols_sql = ", ".join(["ts"] + cols)
+    placeholders = ", ".join([f"${i + 1}" for i in range(len(cols) + 1)])
+    values = [ts] + [row.get(c) for c in cols]
+    async with pool.acquire() as conn:
+        await conn.execute(
+            f"INSERT INTO climate ({cols_sql}) VALUES ({placeholders})",
+            *values,
+        )
+    log.debug(f"climate row written ({len(cols)} columns)")
+    # #113: re-emit the exact row we just persisted onto the fan-out bus so
+    # dev/stage subscribers write the same climate row to their own DB.
+    _fanout_publish("climate", {"ts": ts, **{col: row.get(col) for col in cols}})
+
+
+async def _drain_climate_spool(pool: asyncpg.Pool) -> None:
+    try:
+        rows = _read_climate_spool_rows()
+    except Exception as e:
+        log.error("failed to read climate spool; live climate writes will continue: %s", e)
+        return
+    if not rows:
+        return
+    remaining: list[dict[str, Any]] = []
+    drained = 0
+    for idx, row in enumerate(rows):
+        try:
+            await _insert_climate_row(pool, row)
+            drained += 1
+        except Exception as e:
+            remaining = rows[idx:]
+            log.error("climate spool drain paused after %s/%s rows: %s", drained, len(rows), e)
+            break
+    else:
+        remaining = []
+    try:
+        _write_climate_spool_rows(remaining)
+    except Exception as e:
+        log.error("failed to update climate spool after draining %s row(s): %s", drained, e)
+        return
+    if drained:
+        log.warning("drained %s climate spool row(s); remaining=%s", drained, len(remaining))
+
+
 async def write_climate(pool: asyncpg.Pool, ts: datetime) -> None:
     """Write a climate row using two-tier buffer: fresh + last-known.
 
@@ -384,18 +501,13 @@ async def write_climate(pool: asyncpg.Pool, ts: datetime) -> None:
             # not a hard gate (yet). A future sprint will promote to fail-closed
             # once the known-false-positive-free baseline is proven.
 
-    cols_sql = ", ".join(["ts"] + cols)
-    placeholders = ", ".join([f"${i + 1}" for i in range(len(cols) + 1)])
-    values = [ts] + [merged.get(c) for c in cols]
-    async with pool.acquire() as conn:
-        await conn.execute(
-            f"INSERT INTO climate ({cols_sql}) VALUES ({placeholders})",
-            *values,
-        )
-    log.debug(f"climate row written ({len(cols)} columns)")
-    # #113: re-emit the exact row we just persisted onto the fan-out bus so
-    # dev/stage subscribers write the same climate row to their own DB.
-    _fanout_publish("climate", {"ts": ts, **merged})
+    await _drain_climate_spool(pool)
+    row = {"ts": ts, **merged}
+    try:
+        await _insert_climate_row(pool, row)
+    except Exception:
+        _spool_climate_row(row)
+        raise
 
 
 async def write_equipment_events(pool: asyncpg.Pool, ts: datetime) -> None:

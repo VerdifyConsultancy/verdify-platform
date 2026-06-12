@@ -1,0 +1,18 @@
+# Durable prod ingestor state.
+#
+# The ingestor writes dispatcher/MCP bookkeeping and the DB-outage climate spool
+# under /srv/verdify/state. This must survive ingestor pod restarts; otherwise a
+# DB outage plus a pod restart can still lose queued greenhouse telemetry.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: verdify-ingestor-state
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: ingestor
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: longhorn-nvme-rwo
+  resources:
+    requests:
+      storage: 2Gi
