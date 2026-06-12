@@ -65,6 +65,17 @@ make help              # List all targets
 **Tooling:** ruff (lint + format), pytest, pre-commit hooks, GitHub Actions CI.
 **Config:** `pyproject.toml` is the single source of truth for deps, lint rules, and test config.
 
+### Codex quickstart
+
+Codex sessions should start with `AGENTS.md` (symlinked to `CLAUDE.md`) and the
+living handoff in `docs/AGENT_STATE.md`. Reusable repo-specific prompts live in
+`docs/CODEX_WORKFLOW.md`.
+
+A safe orientation pass is: read those files plus `GOAL.md`, `README.md`,
+`docs/runbooks/laptop-operator.md`, `Makefile`, `pyproject.toml`, and
+`.github/workflows/ci.yml`; then report branch/worktree state, access
+assumptions, current goal, safety gates, and verification plan before editing.
+
 ## The Greenhouse
 
 The control system has three layers:

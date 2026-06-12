@@ -1,14 +1,107 @@
 # Verdify — Agent Working Guide
 
-This repo is worked by **one agent** (Claude, running on Jason's laptop with full
-project ownership) plus Jason as the human gate for device-affecting and
-outward-facing actions. Every session that edits code here should read this
-file first. (The earlier five-persistent-agents model is retired — Jason,
-2026-06-10.)
+This repo is worked by **one autonomous local agent** (Codex in current
+sessions; historically Claude, running on Jason's laptop with full project
+ownership) plus Jason as the human gate for device-affecting and outward-facing
+actions. Every session that edits code here should read this file first. (The
+earlier five-persistent-agents model is retired — Jason, 2026-06-10.)
 
 ## What Verdify is
 
 An AI-driven climate controller for a single 367 sq ft greenhouse in Longmont, CO. **Production** — plants are alive, the ESP32 is in the loop every 5 s, the planner runs on real data. Keeping the greenhouse operational ("Track A") always outranks SaaS/cloud refactor progress ("Track B"). See `README.md` for the architecture one-pager.
+
+## Codex operating protocol
+
+Goal: a future Codex session should be able to wake up from repo files, report
+the current operating constraints, and propose a safe plan before editing. Do
+not rely on chat history for project state.
+
+First-turn orientation, before editing:
+
+1. Read this file through `AGENTS.md` (symlink to `CLAUDE.md`), then
+   `README.md`, `docs/AGENT_STATE.md`, `GOAL.md`, and `CONTEXT.md`.
+2. Inspect repo state: `git status --short --branch`, `git log --oneline -n 10`,
+   and any visible `AGENTS.override.md` or local config such as `.codex/` /
+   `.claude/`.
+3. Inspect the authoritative discovery surfaces before choosing commands:
+   `Makefile`, `pyproject.toml`, `.github/workflows/`, `.pre-commit-config.yaml`,
+   and area manifests such as `site/package.json`, `planner_graph/pyproject.toml`,
+   and `*/requirements*.txt`.
+4. Read the relevant architecture and operation references for the touched
+   area: `docs/SYSTEM-ARCHITECTURE.md`, `docs/FOLDER-HIERARCHY.md`,
+   `docs/runbooks/laptop-operator.md`, `docs/RUNBOOK.md`,
+   `docs/BCDR-AND-OPERATIONS.md`, `docs/adr/`, and the matching
+   `docs/agents/*.md` subsystem note.
+5. Report a short access summary before risky work: filesystem scope, network
+   status, approval policy, current branch/worktree state, secrets policy, and
+   anything unavailable or unverified.
+6. State the plan and verification path before edits unless the task is a tiny
+   direct change. If production, device, migration, schema, or firmware behavior
+   may be affected, call that out explicitly.
+
+Discovery rules:
+
+- Use `rg --files`, `rg`, `make help`, and the CI workflows to discover
+  structure, entrypoints, tests, and dependency manifests.
+- Prefer references over duplicated instructions. README is the one-page
+  architecture summary; Makefile and CI define commands; runbooks define laptop,
+  deploy, DB, and OTA operations.
+- Treat GitHub issues on `VerdifyConsultancy/verdify-platform` as the live
+  tracker. `docs/BACKLOG.md` and `docs/backlog/*` are historical.
+- Older docs may predate the 2026-06-10 branch/deployment simplification. When
+  docs conflict, prefer this file, `docs/AGENT_STATE.md`,
+  `docs/runbooks/laptop-operator.md`, CI, and the current worktree.
+
+Safety and do-not rules:
+
+- No destructive git commands (`git reset --hard`, `git checkout --`, force
+  pushes, history rewrites) unless Jason explicitly asks for that operation.
+- No secret exposure: never print, paste, commit, log, or summarize raw tokens,
+  passwords, API keys, client secrets, private keys, or decrypted secret files.
+  Reference credential locations and auth modes only.
+- No broad rewrites or style churn. Keep changes scoped to the requested
+  behavior/docs and the touched ownership boundary.
+- No production-impacting changes without explicit approval: firmware OTA,
+  prod ArgoCD sync, device VLAN actions, destructive prod DB work, credential
+  rotation, public DNS/edge/org settings, or anything that can create a second
+  live device writer.
+- Do not wrap self-committing migrations in an outer transaction. Use the
+  migration safety tooling in this file.
+
+Definition of done:
+
+- The requested change is implemented with minimal product-code/config/docs
+  surface.
+- Relevant docs or `docs/AGENT_STATE.md` capture any handoff state a future
+  session needs.
+- The smallest safe verification has been run and the result is recorded. If a
+  required command cannot run, state why and what remains unverified.
+- `git status --short` is reviewed so unrelated user changes are not hidden.
+
+Verification order:
+
+1. For docs-only changes, run `git diff --check`. There is no repo-level
+   markdown lint configured as of 2026-06-12.
+2. For Python/runtime changes, run `make lint`, then `make test`.
+3. For schema or migration changes, also run `make migration-rollback-safety`
+   and the targeted rollback proof described by the migration.
+4. For firmware logic or ESPHome changes, run `make test-firmware`,
+   `make firmware-invariants`, the required replay diff
+   (`make firmware-replay OLD=<base> NEW=HEAD` or worktree variant), and
+   `make firmware-check`.
+5. For lighting changes, run `make lighting-audit-static` and the live/current
+   audit only when the task and access make live checks appropriate.
+6. For site/UI changes, run the relevant site command from `Makefile` or
+   `site/package.json` and verify render locally.
+
+Handoff protocol:
+
+- Update `docs/AGENT_STATE.md` at the end of any non-trivial session with the
+  current purpose, active plan pointer, known risks/blockers, last verified
+  commands, and the next recommended Codex prompt.
+- Put durable decisions, invariants, and runbook changes in `docs/`, not only in
+  chat. Keep `docs/AGENT_STATE.md` concise; link to deeper docs instead of
+  copying them.
 
 ## Branch & deployment model (Jason, 2026-06-10 — supersedes the live/platform-main split)
 

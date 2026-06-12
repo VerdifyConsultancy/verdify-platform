@@ -138,9 +138,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--end", help="inclusive local date YYYY-MM-DD; default yesterday, unless --include-today")
     parser.add_argument("--days", type=int, default=30, help="days to scan when --start/--all-history are omitted")
     parser.add_argument("--all-history", action="store_true", help="start at earliest climate day")
-    parser.add_argument("--include-today", action="store_true", help="include current local day; default stops at yesterday")
+    parser.add_argument(
+        "--include-today", action="store_true", help="include current local day; default stops at yesterday"
+    )
     parser.add_argument("--limit-days", type=int, default=0, help="cap processed day count; 0 means unlimited")
-    parser.add_argument("--refresh-matviews", action="store_true", help="refresh derived functions/materialized views after days")
+    parser.add_argument(
+        "--refresh-matviews", action="store_true", help="refresh derived functions/materialized views after days"
+    )
     parser.add_argument("--skip-daily", action="store_true", help="skip daily_summary/daily_zone_compliance")
     parser.add_argument("--skip-utility-cost", action="store_true", help="skip utility_cost monthly rollups")
     parser.add_argument("--log-level", default=os.environ.get("LOG_LEVEL", "INFO"))
@@ -486,7 +490,9 @@ def print_summary(results: list[DayResult], mode: str) -> None:
 
 async def async_main() -> int:
     args = parse_args()
-    logging.basicConfig(level=getattr(logging, args.log_level.upper(), logging.INFO), format="%(levelname)s %(message)s")
+    logging.basicConfig(
+        level=getattr(logging, args.log_level.upper(), logging.INFO), format="%(levelname)s %(message)s"
+    )
     mode = "APPLY" if args.apply else "DRY-RUN"
     conn = await asyncpg.connect(build_db_dsn(), timeout=15)
     try:
