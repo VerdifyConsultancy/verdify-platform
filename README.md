@@ -67,14 +67,16 @@ make help              # List all targets
 
 ### Codex quickstart
 
-Codex sessions should start with `AGENTS.md` (symlinked to `CLAUDE.md`) and the
-living handoff in `docs/AGENT_STATE.md`. Reusable repo-specific prompts live in
-`docs/CODEX_WORKFLOW.md`.
+Codex sessions should start with `AGENTS.md` (symlinked to `CLAUDE.md`) and
+`README.md`. Historical handoffs, repo-cleanup inventories, retired backlogs,
+and reusable prompt/context files live outside this repo in the local Orbit
+vault at `/Users/jason/Orbit/context_dump/verdify-platform/`.
 
-A safe orientation pass is: read those files plus `GOAL.md`, `README.md`,
-`docs/runbooks/laptop-operator.md`, `Makefile`, `pyproject.toml`, and
-`.github/workflows/ci.yml`; then report branch/worktree state, access
-assumptions, current goal, safety gates, and verification plan before editing.
+A safe orientation pass is: read `AGENTS.md`, `README.md`,
+`docs/runbooks/laptop-operator.md`, `Makefile`, `pyproject.toml`,
+`.github/workflows/ci.yml`, and the Orbit dump manifest if available; then
+report branch/worktree state, access assumptions, current goal, safety gates,
+and verification plan before editing.
 
 ## The Greenhouse
 

@@ -19,7 +19,9 @@ not rely on chat history for project state.
 First-turn orientation, before editing:
 
 1. Read this file through `AGENTS.md` (symlink to `CLAUDE.md`), then
-   `README.md`, `docs/AGENT_STATE.md`, `GOAL.md`, and `CONTEXT.md`.
+   `README.md`. If local Orbit context is available, also read
+   `/Users/jason/Orbit/context_dump/verdify-platform/MANIFEST.md` and any
+   moved file relevant to the task.
 2. Inspect repo state: `git status --short --branch`, `git log --oneline -n 10`,
    and any visible `AGENTS.override.md` or local config such as `.codex/` /
    `.claude/`.
@@ -47,10 +49,11 @@ Discovery rules:
   architecture summary; Makefile and CI define commands; runbooks define laptop,
   deploy, DB, and OTA operations.
 - Treat GitHub issues on `VerdifyConsultancy/verdify-platform` as the live
-  tracker. `docs/BACKLOG.md` and `docs/backlog/*` are historical.
+  tracker. Historical backlog, handoff, sprint, audit, evidence, and context
+  files were moved to `/Users/jason/Orbit/context_dump/verdify-platform/`.
 - Older docs may predate the 2026-06-10 branch/deployment simplification. When
-  docs conflict, prefer this file, `docs/AGENT_STATE.md`,
-  `docs/runbooks/laptop-operator.md`, CI, and the current worktree.
+  docs conflict, prefer this file, `docs/runbooks/laptop-operator.md`, CI, the
+  current worktree, and the Orbit context dump only as historical context.
 
 Safety and do-not rules:
 
@@ -72,8 +75,8 @@ Definition of done:
 
 - The requested change is implemented with minimal product-code/config/docs
   surface.
-- Relevant docs or `docs/AGENT_STATE.md` capture any handoff state a future
-  session needs.
+- Relevant repo docs or the Orbit context dump capture any handoff state a
+  future session needs.
 - The smallest safe verification has been run and the result is recorded. If a
   required command cannot run, state why and what remains unverified.
 - `git status --short` is reviewed so unrelated user changes are not hidden.
@@ -96,12 +99,13 @@ Verification order:
 
 Handoff protocol:
 
-- Update `docs/AGENT_STATE.md` at the end of any non-trivial session with the
-  current purpose, active plan pointer, known risks/blockers, last verified
-  commands, and the next recommended Codex prompt.
+- For repo-owned durable decisions, update the relevant file under `docs/`.
+- For out-of-lane context, historical tracking, handoff, cleanup inventory, or
+  one-off evidence artifacts, move/update files under
+  `/Users/jason/Orbit/context_dump/verdify-platform/`.
 - Put durable decisions, invariants, and runbook changes in `docs/`, not only in
-  chat. Keep `docs/AGENT_STATE.md` concise; link to deeper docs instead of
-  copying them.
+  chat. Keep context dumps concise; link to deeper docs instead of copying them
+  into multiple places.
 
 ## Branch & deployment model (Jason, 2026-06-10 — supersedes the live/platform-main split)
 
@@ -199,7 +203,9 @@ The guard is codified, not prose-only:
 ## Backlog
 
 GitHub issues on `VerdifyConsultancy/verdify-platform` are THE tracker.
-`docs/BACKLOG.md` / `docs/backlog/*` are historical; don't extend them.
+Historical `docs/BACKLOG.md` / `docs/backlog/*` files were moved to
+`/Users/jason/Orbit/context_dump/verdify-platform/`; don't recreate or extend
+them in this repo.
 
 ## Checks before commit
 

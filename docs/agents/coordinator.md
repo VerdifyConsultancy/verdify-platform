@@ -16,8 +16,11 @@ Human-in-the-loop role. No Claude agent is the coordinator; this doc describes w
 
 1. **Merge discipline.** One migration at a time. Schema changes land before their consumers. Dependent work across agents is staged, not interleaved.
 2. **Review queue.** All agent PRs get coordinator review before merge. Focus: contract breakage, migration safety, multi-tenant invariants.
-3. **Sprint kickoff.** Each agent's next sprint starts with coordinator agreeing on scope (ref `docs/backlog/{agent}.md`).
-4. **Cross-cutting work.** Anything that touches 2+ agents' scopes lives in `docs/backlog/cross-cutting.md` and is scheduled by coordinator.
+3. **Scope kickoff.** New work starts from GitHub issues on
+   `VerdifyConsultancy/verdify-platform`; the old `docs/backlog/{agent}.md`
+   files are archived in `/Users/jason/Orbit/context_dump/verdify-platform/`.
+4. **Cross-cutting work.** Anything that touches 2+ agents' scopes is
+   scheduled from GitHub issues and reviewed by coordinator.
 5. **Live-deploy authorization.** Restarting production services, force-pushing, force-merging — coordinator only.
 
 ## Decides

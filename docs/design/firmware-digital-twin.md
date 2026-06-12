@@ -287,7 +287,10 @@ Add `twin-dev` + the CI summary-fetch step (corpus diff blocking; live summary i
 
 ## 7. Proposed backlog items
 
-*Listed here only — the shared `docs/BACKLOG.md` / `docs/backlog/*.md` are NOT edited by this design (coordinator territory).*
+*Listed here only - the shared historical `docs/BACKLOG.md` /
+`docs/backlog/*.md` files are archived in
+`/Users/jason/Orbit/context_dump/verdify-platform/` and are not edited by this
+design.*
 
 | ID | Priority | Owner | Action |
 |---|---|---|---|

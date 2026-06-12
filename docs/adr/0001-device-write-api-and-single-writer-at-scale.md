@@ -106,7 +106,7 @@ This ADR adds a future contract; it removes nothing. The single greenhouse keeps
 | Network-layer single allow | one overlay carries `allow-ingestor-device-egress` (#80) | edge admits authenticated devices; **no platform-initiated device connect-out** in the default shape (devices pull) |
 | Misconfigured non-prod = no-op | staging `replicas:0` + `deny-esp32-egress` | a replica without a held lease, or with the fleet gate off, issues empty command sets |
 
-**Critical non-regression:** nothing in M7 may enable a *second* writer to the existing single greenhouse. During any transition, the device's command authority must be a single, explicit, lease-owned handoff — the same "stop the old writer in the same atomic window you start the new one" choreography as M5.1 (`docs/handover/verdify-migration-lanes-2026-06-04.md` §M5.1), expressed per-device via the lease rather than per-host via systemd stop. The ESTAB-count proof generalizes to "exactly one current lease holder per device."
+**Critical non-regression:** nothing in M7 may enable a *second* writer to the existing single greenhouse. During any transition, the device's command authority must be a single, explicit, lease-owned handoff — the same "stop the old writer in the same atomic window you start the new one" choreography as M5.1 (archived in `/Users/jason/Orbit/context_dump/verdify-platform/docs/handover/verdify-migration-lanes-2026-06-04.md` §M5.1), expressed per-device via the lease rather than per-host via systemd stop. The ESTAB-count proof generalizes to "exactly one current lease holder per device."
 
 ---
 

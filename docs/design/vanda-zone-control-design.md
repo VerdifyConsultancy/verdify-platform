@@ -3,7 +3,7 @@
 **Author role:** firmware / climate-control engineer (cross-cutting design, routes to coordinator for shared territory).
 **Date:** 2026-05-29 (America/Denver, MDT). **Status:** implementation-ready design. **Greenhouse:** Vallery, 367 sq ft, Longmont CO (5090 ft, ~15% RH, 95F+ solar peaks).
 
-This design is the single authoritative target for making Verdify serve the bare-root Vanda zone correctly. Every capability claim below has been verified against the live DB and source as of 2026-05-29; verification corrections from the recon (refuted/partial claims) are folded in. The companion backlog at `docs/backlog/verdify-unified-backlog-2026-05-29.md` is the work tracker derived from this design.
+This design is the single authoritative target for making Verdify serve the bare-root Vanda zone correctly. Every capability claim below has been verified against the live DB and source as of 2026-05-29; verification corrections from the recon (refuted/partial claims) are folded in. The companion backlog derived from this design is archived at `/Users/jason/Orbit/context_dump/verdify-platform/docs/backlog/verdify-unified-backlog-2026-05-29.md`.
 
 ---
 

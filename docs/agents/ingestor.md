@@ -48,4 +48,6 @@ Every write into TimescaleDB, every read from Home Assistant / Shelly / Tempest 
 - Sprint 21: Full-stack Pydantic coverage (added `verdify_schemas/` as the contract layer)
 - Sprint 23 (in flight): Rollout — every ingestor write path validates through a schema
 
-See `docs/backlog/ingestor.md` for next work.
+Use GitHub issues on `VerdifyConsultancy/verdify-platform` for next work; the
+old `docs/backlog/ingestor.md` file is archived in
+`/Users/jason/Orbit/context_dump/verdify-platform/`.

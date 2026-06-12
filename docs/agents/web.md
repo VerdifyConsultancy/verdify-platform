@@ -132,4 +132,6 @@ Audit snapshot from 2026-04-27/28:
 - Sprint 20-era: Site relaunch, planning page, hydroponics page
 - Sprint 22: 4 vault writers migrated to `verdify_schemas` models + yaml.safe_dump; 8 API endpoints gained `response_model=`
 
-See `docs/backlog/web.md` for next work.
+Use GitHub issues on `VerdifyConsultancy/verdify-platform` for next work; the
+old `docs/backlog/web.md` file is archived in
+`/Users/jason/Orbit/context_dump/verdify-platform/`.
