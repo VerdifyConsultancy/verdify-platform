@@ -838,6 +838,8 @@ async def _refresh_daily_summary_for_date(conn: asyncpg.Connection, target_day) 
         vl = _band_at("vpd_low", r["ts"])
         if th is None or tl is None or vh is None or vl is None:
             continue
+        if r["temp_avg"] is None or r["vpd_avg"] is None:
+            continue
         scored_readings += 1
         temp = float(r["temp_avg"])
         vpd = float(r["vpd_avg"])

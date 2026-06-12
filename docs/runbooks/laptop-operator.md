@@ -42,6 +42,10 @@ so the in-cluster default-deny NetworkPolicies don't apply.
 **Prefer `dev` for heavy analysis** — it's a nightly restored copy of prod
 (see §4); prod shares its box with the live greenhouse write path.
 
+Historical derived-data reconciliation lives in
+[`derived-history-reconcile.md`](./derived-history-reconcile.md). It dry-runs
+by default and should be run against dev first before any prod apply.
+
 ## 2. CI/CD: push → dev, button → prod
 
 - **Push to `main`** (or merge a PR): `container-publish.yml` builds the
