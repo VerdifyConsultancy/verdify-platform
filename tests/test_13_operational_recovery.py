@@ -80,6 +80,42 @@ def test_prod_db_watchdog_is_narrowly_scoped():
     assert "I/O error|could not open configuration file" in src
 
 
+def test_ha_gap_backfill_script_is_bounded_and_idempotent():
+    src = Path("deploy/k8s/components/ha-gap-backfill/backfill-ha-gaps.py").read_text()
+    assert 'parser.add_argument("--apply"' in src
+    assert "--since-earliest-ha" in src
+    assert "--full-scan" in src
+    assert "pg_try_advisory_lock(hashtext($1))" in src
+    assert "has_table_privilege(current_user" in src
+    assert "SetpointSnapshot.model_validate" in src
+    assert "EquipmentStateEvent(" in src
+    assert "SystemStateRow(" in src
+    assert "INSERT INTO climate_action_log" not in src
+
+
+def test_prod_ha_gap_backfill_cronjob_mounts_script_and_ha_token():
+    prod = Path("deploy/k8s/overlays/prod/kustomization.yaml").read_text()
+    component = Path("deploy/k8s/components/ha-gap-backfill/kustomization.yaml").read_text()
+    cron = Path("deploy/k8s/components/ha-gap-backfill/ha-gap-backfill-cronjob.yaml").read_text()
+    wrapper = Path("scripts/backfill-ha-gaps.py").read_text()
+
+    assert "../../components/ha-gap-backfill" in prod
+    assert "configMapGenerator:" in component
+    assert "backfill-ha-gaps.py" in component
+    assert "name: verdify-ha-gap-backfill" in cron
+    assert 'schedule: "23 * * * *"' in cron
+    assert "concurrencyPolicy: Forbid" in cron
+    assert "image: ghcr.io/verdifyconsultancy/verdify-ingestor" in cron
+    assert "verdify-ha-gap-backfill-script" in cron
+    assert "secretName: verdify-ha-token" in cron
+    assert "POSTGRES_PASSWORD" in cron
+    assert "--lookback-days=30" in cron
+    assert "--max-gap-minutes=10" in cron
+    assert "name: allow-db-from-ha-gap-backfill" in cron
+    assert "app.kubernetes.io/component: ha-gap-backfill" in cron
+    assert "deploy/k8s/components/ha-gap-backfill/backfill-ha-gaps.py" in wrapper
+
+
 def test_prod_ingestor_state_is_durable_pvc():
     pvc_src = Path("deploy/k8s/overlays/prod/ingestor-state-pvc.yaml").read_text()
     patch_src = Path("deploy/k8s/overlays/prod/ingestor-state-volume.yaml").read_text()

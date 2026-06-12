@@ -106,6 +106,10 @@ components:
   # ConfigMap does NOT touch the running ingestor; the mount + psql initContainer
   # ship in the gated ingestor patch (see PR / ingestor-gather-mount.patch.yaml).
   - ../../components/ingestor-gather-script
+  # HA gap backfill — hourly DB-first reconciliation from Home Assistant recorder
+  # history. Read-only against HA and writes only missing Verdify telemetry rows;
+  # mounted script means enabling the CronJob does NOT roll the live ingestor.
+  - ../../components/ha-gap-backfill
 
 patches:
   # PROD DB STORAGE RECONCILE: restate verdify-db's volumeClaimTemplate onto

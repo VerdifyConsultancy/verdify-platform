@@ -1,0 +1,132 @@
+# Verdify HA gap backfill reconciler.
+#
+# Read path: Home Assistant recorder history + Verdify DB SELECT.
+# Write path: missing telemetry rows only; no ESP32/HA service calls, no device
+# commands, and no planner/action synthesis.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: verdify-ha-gap-backfill
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: ha-gap-backfill
+spec:
+  # Hourly: DB-first gap detection is cheap; HA history is queried only when a
+  # gap exists. Full historical reconciliation is a manual script mode.
+  schedule: "23 * * * *"
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 900
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: ha-gap-backfill
+    spec:
+      activeDeadlineSeconds: 1800
+      backoffLimit: 0
+      ttlSecondsAfterFinished: 3600
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/part-of: verdify
+            app.kubernetes.io/component: ha-gap-backfill
+        spec:
+          restartPolicy: Never
+          imagePullSecrets:
+            - name: ghcr-jvallery-readonly
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: backfill
+              # Reuse the ingestor runtime for asyncpg + verdify_schemas +
+              # entity_map. The script itself is mounted from a ConfigMap so
+              # enabling this CronJob does not require rolling the live writer.
+              image: ghcr.io/verdifyconsultancy/verdify-ingestor
+              command:
+                - python
+                - /opt/verdify-ha-gap-backfill/backfill-ha-gaps.py
+              args:
+                - --apply
+                - --lookback-days=30
+                - --max-gap-minutes=10
+                - --max-backfill-minutes=720
+                - --max-windows=12
+              envFrom:
+                - configMapRef:
+                    name: verdify-config
+              env:
+                - name: POSTGRES_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: verdify-app-secrets
+                      key: POSTGRES_PASSWORD
+                - name: HA_TOKEN_FILE
+                  value: /mnt/agents/shared/credentials/ha_token.txt
+                - name: PYTHONPATH
+                  value: /app/ingestor:/app
+                - name: HOME
+                  value: /tmp
+              volumeMounts:
+                - name: script
+                  mountPath: /opt/verdify-ha-gap-backfill
+                  readOnly: true
+                - name: ha-token
+                  mountPath: /mnt/agents/shared/credentials
+                  readOnly: true
+                - name: tmp
+                  mountPath: /tmp
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  memory: 768Mi
+          volumes:
+            - name: script
+              configMap:
+                name: verdify-ha-gap-backfill-script
+                defaultMode: 0555
+            - name: ha-token
+              secret:
+                secretName: verdify-ha-token
+                items:
+                  - key: ha_token.txt
+                    path: ha_token.txt
+            - name: tmp
+              emptyDir: {}
+---
+# The base namespace default-denies DB ingress and only lists app components in
+# allow-db-from-app. This job is a separate DB client, so it gets a narrow
+# component-scoped ingress allow to verdify-db:5432.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-db-from-ha-gap-backfill
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: ha-gap-backfill
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: db
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: ha-gap-backfill
+      ports:
+        - protocol: TCP
+          port: 5432
