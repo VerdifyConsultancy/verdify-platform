@@ -32,8 +32,8 @@ runbook or architecture references before editing.
 - GitHub issues are the live tracker for `VerdifyConsultancy/verdify-platform`.
 - `EPICS.md`, `MILESTONES.md`, `SPRINTS.md`, and `PROJECT_BOARD.md` mirror the
   lane-level planning state.
-- Issue #331 is the API/service-map workstream; its durable artifact is
-  `docs/SERVICE_MAP.md`.
+- Issue #331 is closed as the API/service-map workstream; its durable artifact
+  is `docs/SERVICE_MAP.md`.
 - Issue #332 keeps the Fable workstream in clarification until in-repo code,
   docs, or issue evidence exists.
 
@@ -51,7 +51,8 @@ runbook or architecture references before editing.
 
 ## Last Verified Commands
 
-- 2026-06-13: `git diff --check` passed for lane-tracking and service-map docs.
+- 2026-06-13: `git diff --cached --check` passed for lane-tracking and
+  service-map docs.
 - 2026-06-13: GitHub CI and Container Publish were green on `main` at commit
   `d9f30c2`.
 
