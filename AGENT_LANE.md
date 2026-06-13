@@ -39,6 +39,15 @@ operational; Track B is platform and product evolution.
   `deploy/k8s/components/db-backup/`, `deploy/k8s/cnpg/`.
 - Web/app surfaces inside this repo: `site/`, lab/grafana/umami/setpoint-server
   components under `deploy/k8s/components/`.
+- Dashboards authored in this repo: Grafana manifests and generated dashboard
+  ConfigMaps under `deploy/k8s/components/grafana/` plus related catalog docs
+  such as `docs/grafana-panel-catalog.md`. Shared monitoring backends remain
+  `monitoring-stack` owned.
+- External systems referenced by app code or manifests: ESP32
+  `192.168.10.111`, Home Assistant, MQTT/Mosquitto, TimescaleDB/PostgreSQL,
+  Grafana, Hermes/OpenAI planner gateway, Slack alerts, Open-Meteo weather, GHCR,
+  Cloudflare/TLS/edge routes, and NAS-backed backup/storage paths. This lane owns
+  the app contracts and references, not the shared providers themselves.
 
 ## Non-Goals
 
