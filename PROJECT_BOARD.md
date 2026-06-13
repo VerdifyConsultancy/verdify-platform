@@ -9,7 +9,7 @@ Agent name: `verdify-platform`
 - Required board: `verdify-platform`.
 - Current board: `VerdifyConsultancy` project #5,
   <https://github.com/orgs/VerdifyConsultancy/projects/5>.
-- Current finding: the exact `verdify-platform` board now exists with 16
+- Current finding: the exact `verdify-platform` board now exists with 17
   EPIC-level issue cards and 22 fields.
 - Repository link: linked to `VerdifyConsultancy/verdify-platform`.
 - Visible Verdify organization boards:
@@ -74,7 +74,8 @@ issues were reused where they already owned the work; unclear ideas stay
 | Ready | #75 Observability, Data Hygiene, And Product Health |
 | In Progress | #287 Greenhouse Control Optimization |
 | In Progress | #225 HA Resilience |
-| Ready | #14 Compliance And Firmware Twins |
+| Ready | #13 Band And Compliance Rearchitecture |
+| Ready | #14 Firmware Digital Twins |
 | Ready | #337 Decommission, Auth, And Residual Product Plane |
 | Backlog | #16 Hardware And Seasonal Operations |
 | Backlog | #332 Fable Workstream Clarification |
@@ -89,7 +90,9 @@ Known existing issue anchors:
 | ArgoCD and cutover | #70, #73, #86, #216, #321 |
 | Data and storage | #72, #84, #129, #218, #233, #245 |
 | Device safety | #71, #79, #80, #89, #216, #317 |
-| Observability | #75, #89, #200, #241 |
+| Observability | #75, #89, #200, #241, #308 |
+| Band/compliance rearchitecture | #13, #17, #20, #31 |
+| Firmware twins | #14, #31, #324 |
 | Deploy enablement | #288, #301-#307 |
 | Lane board normalization | #334 |
 | CI/CD and promotion hardening | #335 |
@@ -100,6 +103,7 @@ Known existing issue anchors:
 | Fable clarification | #332 |
 | Historical lane roll-up | #333 |
 | Branch/repo cleanup | #330 |
+| Superseded old roll-ups | #286, #111, #112 |
 
 ## Access Notes
 

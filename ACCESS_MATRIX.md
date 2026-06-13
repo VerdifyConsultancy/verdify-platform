@@ -25,6 +25,18 @@ does not include raw secret values.
 | GPU/AI runtime | No direct dependency found in this pass | Coordination request only if needed | Shared AI compute | `cortex-ai-compute` | Out of scope |
 | ESP32 firmware OTA/device write | Source/validation only | Jason-approved operation only | Live greenhouse device | Jason | Hard gated |
 
+## GitHub Credential Notes
+
+- Local `gh` is authenticated as `jvallery` through the macOS keyring and has
+  `project`, `repo`, and `workflow` scopes for Project Board maintenance.
+- `~/Agents/root/secrets/github_pat.txt` exists but returned `Bad credentials`
+  during the 2026-06-13 validation pass.
+- `~/Agents/.github-token` validates as `jvallery` for repo/workflow/package
+  use but does not advertise the `project` scope. Do not replace the keyring
+  token with it for board maintenance.
+- `gh auth setup-git` is configured so HTTPS Git operations can use the local
+  credential helper without printing token values.
+
 ## Secrets Policy
 
 Never print, paste, commit, log, or summarize raw tokens, passwords, API keys,

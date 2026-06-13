@@ -36,6 +36,8 @@ runbook or architecture references before editing.
   is `docs/SERVICE_MAP.md`.
 - Issue #334 is closed as the lane board normalization workstream; its durable
   artifact is `PROJECT_BOARD.md`.
+- Issues #286, #111, and #112 are closed as superseded by the canonical
+  `verdify-platform` board and current two-environment operating model.
 - Issue #332 keeps the Fable workstream in clarification until in-repo code,
   docs, or issue evidence exists.
 
@@ -53,6 +55,9 @@ runbook or architecture references before editing.
 
 ## Last Verified Commands
 
+- 2026-06-13: GitHub Project #5 rechecked with 17 items and 22 fields; no open
+  EPIC issue was missing from the canonical board.
+- 2026-06-13: `git diff --check` passed for the board/issue audit docs.
 - 2026-06-13: `git diff --check` passed for lane board normalization docs.
 - 2026-06-13: `git diff --cached --check` passed for lane-tracking and
   service-map docs.

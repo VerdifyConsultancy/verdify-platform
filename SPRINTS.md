@@ -62,4 +62,4 @@ Status: `Backlog`
 Goal: align persistence, backup, CNPG/PITR, health checks, dashboards, and alert
 handoffs with dependency agents.
 
-Existing anchors: #75, #89, #218, #233, #241, #243-#245.
+Existing anchors: #13, #14, #75, #89, #218, #233, #241, #243-#245.

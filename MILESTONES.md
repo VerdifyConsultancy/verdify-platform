@@ -9,14 +9,14 @@ Agent name: `verdify-platform`
 | Milestone | Open | Closed | Notes |
 |---|---:|---:|---|
 | Cutover Complete (done) | 0 | 30 | Historical done bucket; do not add new active work. |
-| Enablement: Three-Env (dev/stage parity) | 5 | 0 | Contains older three-env language; staging is retired per `AGENTS.md`. Reconcile before adding work. |
+| Enablement: Three-Env (dev/stage parity) | 7 | 2 | Contains older three-env language; staging is retired per `AGENTS.md`. #111 and #112 are closed as superseded. |
 | Enablement: Compliance & Twins | 5 | 4 | Firmware/twin/compliance follow-ups. |
-| Enablement: Data Hygiene & Observability | 10 | 6 | Current product-plane and observability cleanup. |
-| Enablement: Decommission & Auth | 6 | 0 | VM/auth cleanup and Jason-gated decommission tasks. |
+| Enablement: Data Hygiene & Observability | 11 | 7 | Current product-plane and observability cleanup; old unified roll-up #286 is closed as superseded. |
+| Enablement: Decommission & Auth | 7 | 0 | VM/auth cleanup and Jason-gated decommission tasks. |
 | Hardware / Seasonal (operator-gated) | 6 | 0 | Hardware and seasonal changes; Jason-gated. |
-| M7 — HA: first-principles resilience | 9 | 15 | HA hardening after 2026-06-07 incident; storage-heavy dependencies. |
-| Greenhouse Control Optimization | 13 | 0 | Firmware/control optimization issue set from 2026-06-09 replan. |
-| Deploy Enablement (agent access + firmware CI/OTA) | 7 | 0 | Agent-pod access, CI, OTA secret sealing, safe shadow iteration. |
+| M7 — HA: first-principles resilience | 10 | 15 | HA hardening after 2026-06-07 incident; storage-heavy dependencies. |
+| Greenhouse Control Optimization | 17 | 0 | Firmware/control optimization issue set from 2026-06-09 replan. |
+| Deploy Enablement (agent access + firmware CI/OTA) | 12 | 0 | Agent-pod access, CI, OTA secret sealing, safe shadow iteration. |
 
 ## Historical Milestones
 

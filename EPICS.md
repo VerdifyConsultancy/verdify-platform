@@ -185,7 +185,7 @@ complete. The next sprint should be selected from the `Ready` epic cards on the
 - Milestone: Enablement: Data Hygiene & Observability
 - Sprint: S3 `data-storage-and-observability-requests`
 - Related files/issues/PRs/commits: issues #43, #49, #75, #89, #210, #214,
-  #215, #219, #315, `grafana/`, `docs/grafana-panel-catalog.md`.
+  #215, #219, #308, #315, `grafana/`, `docs/grafana-panel-catalog.md`.
 - Dependencies: `monitoring-stack`, `network-infra` for route visibility.
 - Risks: Shared telemetry gaps can be mistaken for app defects.
 - Evidence: Open issues in the Data Hygiene & Observability milestone.
@@ -235,25 +235,52 @@ complete. The next sprint should be selected from the `Ready` epic cards on the
 - Evidence: M7 milestone issue set and existing HA manifests under
   `deploy/k8s/overlays/prod/`.
 
-### Compliance And Firmware Twins
+### Band And Compliance Rearchitecture
 
-- User/value statement: Planner rewards and twin divergence metrics are
-  trustworthy before they influence live decisions.
-- Scope: Compliance reward re-baseline, migration 147 application, firmware
-  twin setpoint coverage, twin shadow behavior, and related schema extensions.
+- User/value statement: Planner scoring should reward controller-attributable
+  compliance instead of stale binary band compliance.
+- Scope: Migration 147 reward swap, ladder re-anchor, compliance-v2 backfill
+  evidence, planner/MCP prompt language, and restart documentation.
+- Non-goals: Firmware twin divergence alarms or live DB apply without the
+  migration safety gates.
+- Acceptance criteria: #17 and #20 close with replayed anchor evidence,
+  migration 147 applies under the correct transaction safety class, and required
+  service restarts are documented.
+- Status: `Ready`
+- Priority: P0
+- Milestone: Enablement: Compliance & Twins
+- Sprint: S3 `data-storage-and-observability-requests`
+- Related files/issues/PRs/commits: issues #13, #17, #20, #31, #14,
+  `db/migrations/147-reward-swap-and-ladder-reanchor.sql`,
+  `docs/design/band-compliance-architecture.md`.
+- Dependencies: Jason for live prod DB/schema/runtime gates; restart
+  documentation for `verdify-mcp` and `verdify-ingestor`.
+- Risks: A bad reward swap can make planner scores look better or worse than
+  the controller-attributable reality.
+- Evidence: Open issue #13 with Project Tracking metadata and Compliance &
+  Twins milestone evidence.
+
+### Firmware Digital Twins
+
+- User/value statement: Twin divergence metrics are trustworthy before they
+  influence live decisions or deployment gates.
+- Scope: Firmware twin setpoint coverage, twin shadow behavior, schema
+  extensions, and divergence dashboarding.
 - Non-goals: Treating current twin divergence as a control gate before coverage
-  closes.
-- Acceptance criteria: #31, #13/#17/#20, and twin schema work have proof, and
-  any live-prod twin enablement has Jason-gated DB/user changes.
+  closes, or applying live DB/user changes without Jason.
+- Acceptance criteria: #31 and twin schema work have proof, and any live-prod
+  twin enablement has Jason-gated DB/user changes.
 - Status: `Ready`
 - Priority: P1
 - Milestone: Enablement: Compliance & Twins
 - Sprint: S3 `data-storage-and-observability-requests`
-- Related files/issues/PRs/commits: issues #13, #14, #17, #20, #31, #324,
-  `deploy/k8s/components/firmware-twin/`, `twin/`, `firmware/`.
+- Related files/issues/PRs/commits: issues #14, #31, #13, #17, #20, #324,
+  `deploy/k8s/components/firmware-twin/`, `twin/`, `firmware/`,
+  `docs/design/firmware-digital-twin.md`.
 - Dependencies: Jason for live prod DB/schema/user gates.
 - Risks: Incomplete setpoint coverage creates false divergence signals.
-- Evidence: Open Compliance & Twins milestone and firmware-twin component notes.
+- Evidence: Open issue #14 with Project Tracking metadata and firmware-twin
+  component notes.
 
 ### Decommission, Auth, And Residual Product Plane
 
