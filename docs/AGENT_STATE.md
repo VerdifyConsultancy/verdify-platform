@@ -56,8 +56,8 @@ runbook or architecture references before editing.
 - 2026-06-13: `git diff --check` passed for lane board normalization docs.
 - 2026-06-13: `git diff --cached --check` passed for lane-tracking and
   service-map docs.
-- 2026-06-13: GitHub CI and Container Publish were green on `main` at commit
-  `4e968ea`.
+- 2026-06-13: GitHub CI and Container Publish were green on `main` after the
+  board-normalization docs push.
 
 ## Next Recommended Codex Prompt
 
