@@ -25,6 +25,7 @@ operational; Track B is platform and product evolution.
   `cnpg-image.yml`, and `lab-content-pipeline.yml`.
 - App secret contracts by name and key only: see `deploy/k8s/SECRETS.md`.
 - Service contracts and architecture pointers: `README.md`,
+  `docs/SERVICE_MAP.md`,
   `docs/runbooks/laptop-operator.md`, `docs/RUNBOOK.md`,
   `docs/BCDR-AND-OPERATIONS.md`, `docs/SYSTEM-ARCHITECTURE.md`,
   `docs/FOLDER-HIERARCHY.md`, `docs/adr/`, and `docs/agents/`.
@@ -32,7 +33,8 @@ operational; Track B is platform and product evolution.
 
 ## Components
 
-- APIs/services: `api/`, `mcp/`, `ingestor/`, `planner_graph/`, `scripts/`.
+- APIs/services: `api/`, `mcp/`, `ingestor/`, `planner_graph/`, `scripts/`;
+  current map: `docs/SERVICE_MAP.md`.
 - Controller/firmware source and validation: `firmware/`, `verdify_schemas/`,
   firmware replay and invariant tooling.
 - Data/storage app contracts: `db/`, `deploy/k8s/base/db-statefulset.yaml`,

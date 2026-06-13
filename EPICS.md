@@ -9,7 +9,7 @@ Agent name: `verdify-platform`
 | Epic | Status | Priority | Evidence / tracker |
 |---|---|---|---|
 | Platform architecture inventory | To Do | P1 | Needs a current k3s-era map that reconciles `README.md`, `docs/runbooks/laptop-operator.md`, `deploy/k8s/`, and older architecture docs. |
-| API/service map | To Do | P1 | Issue #331. Services live across `api/`, `mcp/`, `ingestor/`, `planner_graph/`, `scripts/`, `firmware/`, and `deploy/k8s/components/`. |
+| API/service map | Done | P1 | Issue #331 and `docs/SERVICE_MAP.md`. Services live across `api/`, `mcp/`, `ingestor/`, `planner_graph/`, `scripts/`, `firmware/`, and `deploy/k8s/components/`. |
 | Fable workstream | Backlog | P3 | Issue #332. No in-repo Fable surface found in this pass; keep as `Clarification Needed` until code or issues appear. |
 | CI/CD cleanup | In Progress | P1 | Existing anchors: #69, #78, #82, #99, #126, #127, #128, #319, #320, #322. |
 | ArgoCD deployment | In Progress | P1 | Existing anchors: #70, #73, #86, #216, #317, #318, #321. |
