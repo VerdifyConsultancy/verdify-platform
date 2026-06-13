@@ -13,6 +13,8 @@ operational; Track B is platform and product evolution.
 ## Owned Resources
 
 - Repository: `VerdifyConsultancy/verdify-platform`.
+- Canonical project board: `VerdifyConsultancy` project #5,
+  <https://github.com/orgs/VerdifyConsultancy/projects/5>.
 - Branch model: `main` is canonical; see `AGENTS.md` and `README.md`.
 - Application namespaces authored here: `verdify-dev`, `verdify-prod`.
 - Live production ArgoCD app name: `verdify-prod-dark` pointing at

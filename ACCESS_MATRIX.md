@@ -11,7 +11,7 @@ does not include raw secret values.
 |---|---|---|---|---|---|
 | `VerdifyConsultancy/verdify-platform` checkout | Local read/write | Read/write repo files | Single repo | Verdify repo admins | Granted locally |
 | GitHub issues/PRs | Auth via local Git credential helper for `jvallery`; connector available for issue writes | Repo-scoped issue/PR read/write | Single repo | Verdify repo admins | Available |
-| GitHub Project Board | Project scope token available; exact `Agent Command Center Kanban` board not visible | Owner/project number or board visibility | Project only | Board owner | Gap |
+| GitHub Project Board | Project scope token available; exact `verdify-platform` board created as VerdifyConsultancy project #5 | Maintain lane board and epic cards | Project only | Verdify org/project admins | Available |
 | GitHub Actions | Workflow files local; `gh` dispatch possible with token | Dispatch only when task calls for it | Single repo | Repo admins | Available/gated |
 | GHCR app packages | CI publishes; manifests reference digest pins | Package read/write through CI | Verdify packages | Repo/org admins | CI-owned |
 | `verdify-dev` namespace | Repo manifests; no live write used here | Read for diagnostics; GitOps for durable changes | Namespace | Platform/GitOps owners | Read not verified this pass |

@@ -9,7 +9,7 @@ action and create/update a GitHub issue when the request blocks delivery.
 
 | Requesting agent | Target agent | Needed action | Blocking? | Deadline | Minimal access/action |
 |---|---|---|---|---|---|
-| `verdify-platform` | Board owner | Expose or identify `Agent Command Center Kanban` owner/project number, or confirm Verdify should use `Verdify Platform` project #1. | Yes for Project field completion | Before claiming board setup complete | Project metadata/write access only |
+| `verdify-platform` | Board owner | No current board blocker. Exact `verdify-platform` org Project #5 exists; revisit only if field/view permissions drift. | No | As needed | Project metadata/write access only |
 | `verdify-platform` | `storage-infra` | Confirm current storage ownership for `synology-iscsi-ssd`, prod/dev DB PVCs, backup PVCs, and CNPG/PITR prerequisites. | Yes for storage readiness claims | Before data/storage epic closure | Read-only PVC/PV/StorageClass status and backup policy |
 | `verdify-platform` | `network-infra` | Confirm public route ownership for `*.verdify.ai`, `*.k3s.verdify.ai`, app Traefik routes, and ESP32/device VLAN egress gates. | Yes for route/device-path changes | Before ingress or device-network changes | Named route/firewall status only |
 | `verdify-platform` | `monitoring-stack` | Confirm which Grafana/Prometheus/alerting resources are shared-stack owned versus repo-owned app dashboards. | No for docs; yes for shared telemetry changes | Before observability epic closure | Dashboard/alert inventory for Verdify resources |

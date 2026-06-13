@@ -8,14 +8,13 @@ access and naming can drift.
 
 ## Board Source Of Truth
 
-- Preferred board: `Agent Command Center Kanban`.
-- Current access finding: that exact board is not visible from this checkout's
-  available GitHub account/project scope.
-- Visible Verdify boards: `VerdifyConsultancy` project `Verdify Platform` and
-  `Verdify Gravity Project`.
+- Preferred board: `verdify-platform`, owned by `VerdifyConsultancy`
+  (<https://github.com/orgs/VerdifyConsultancy/projects/5>).
+- Template/source board: `Agent Command Center Kanban` if copying field/view
+  shape is needed.
 - Fallback required by the lane objective: add a `## Project Tracking` block to
-  every new or materially updated issue for this lane until the preferred board
-  and fields are available.
+  every new or materially updated issue for this lane so issue bodies remain
+  self-describing if project field access drifts.
 
 ## Statuses
 
@@ -23,15 +22,13 @@ Use these status values in issue tracking blocks and Project Board fields when
 available:
 
 - `Backlog`
-- `To Do`
+- `Ready`
 - `In Progress`
-- `Review/QA`
+- `In Review`
 - `Done`
-- `Blocked`
 
-When using an existing Verdify board with different option names, map `Todo` or
-`Ready` to `To Do`, `In review` to `Review/QA`, and `In progress` to
-`In Progress`.
+When using an existing Verdify board with different option names, map `Todo` to
+`Ready`, `Review/QA` to `In Review`, and `In progress` to `In Progress`.
 
 ## Required Fields
 
@@ -45,10 +42,12 @@ Each new or materially updated issue for `verdify-platform` should include:
 - Effort: M
 - Component: deploy/k8s
 - Sprint: S0 lane-board-normalization
+- Milestone: Lane board normalization
 - Epic: ArgoCD deployment
 - Agent Lane: verdify-platform
-- Related Issue/PR: none
+- Related Issues/PRs: none
 - Dependencies: storage-infra, network-infra
+- Evidence: deploy/k8s/argocd/apps, ARGOCD.md
 ```
 
 Use `Dependencies: none` when the issue is entirely inside this repo. Use

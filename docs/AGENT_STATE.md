@@ -34,6 +34,8 @@ runbook or architecture references before editing.
   lane-level planning state.
 - Issue #331 is closed as the API/service-map workstream; its durable artifact
   is `docs/SERVICE_MAP.md`.
+- Issue #334 is closed as the lane board normalization workstream; its durable
+  artifact is `PROJECT_BOARD.md`.
 - Issue #332 keeps the Fable workstream in clarification until in-repo code,
   docs, or issue evidence exists.
 
@@ -43,18 +45,19 @@ runbook or architecture references before editing.
 - Jason is the human gate for firmware OTA, prod ArgoCD sync that can touch the
   live writer, device VLAN work, destructive prod DB work, credential rotation,
   and public DNS/edge/org changes.
-- The exact requested `Agent Command Center Kanban` project board is not visible;
-  use issue `## Project Tracking` blocks and the visible `Verdify Platform`
-  project as the fallback.
+- The exact required `verdify-platform` project board exists as
+  <https://github.com/orgs/VerdifyConsultancy/projects/5> with EPIC-level cards.
+  Keep issue `## Project Tracking` blocks as the durable fallback.
 - Some architecture docs predate the 2026-06-10 branch/deployment simplification
   and the k3s service-plane work.
 
 ## Last Verified Commands
 
+- 2026-06-13: `git diff --check` passed for lane board normalization docs.
 - 2026-06-13: `git diff --cached --check` passed for lane-tracking and
   service-map docs.
 - 2026-06-13: GitHub CI and Container Publish were green on `main` at commit
-  `d9f30c2`.
+  `4e968ea`.
 
 ## Next Recommended Codex Prompt
 
