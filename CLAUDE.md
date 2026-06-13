@@ -19,9 +19,13 @@ not rely on chat history for project state.
 First-turn orientation, before editing:
 
 1. Read this file through `AGENTS.md` (symlink to `CLAUDE.md`), then
-   `README.md`. If local Orbit context is available, also read
-   `/Users/jason/Orbit/context_dump/verdify-platform/MANIFEST.md` and any
-   moved file relevant to the task.
+   `README.md`. For lane, board, ArgoCD, access, or handoff work, also read the
+   current root lane docs: `AGENT_LANE.md`, `PROJECT_BOARD.md`, `EPICS.md`,
+   `MILESTONES.md`, `SPRINTS.md`, `HISTORY.md`, `ARGOCD.md`,
+   `ACCESS_MATRIX.md`, and `COORDINATION_REQUESTS.md`. If local Orbit context is
+   available, also read
+   `/Users/jason/Orbit/context_dump/verdify-platform/MANIFEST.md` and any moved
+   file relevant to the task.
 2. Inspect repo state: `git status --short --branch`, `git log --oneline -n 10`,
    and any visible `AGENTS.override.md` or local config such as `.codex/` /
    `.claude/`.
@@ -51,6 +55,10 @@ Discovery rules:
 - Treat GitHub issues on `VerdifyConsultancy/verdify-platform` as the live
   tracker. Historical backlog, handoff, sprint, audit, evidence, and context
   files were moved to `/Users/jason/Orbit/context_dump/verdify-platform/`.
+- Treat the root lane docs as current operating indexes for `verdify-platform`;
+  they summarize GitHub Project Board fallback tracking, active epics,
+  milestones, sprint labels, history, ArgoCD ownership, access boundaries, and
+  coordination requests.
 - Older docs may predate the 2026-06-10 branch/deployment simplification. When
   docs conflict, prefer this file, `docs/runbooks/laptop-operator.md`, CI, the
   current worktree, and the Orbit context dump only as historical context.

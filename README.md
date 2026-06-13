@@ -73,6 +73,9 @@ and reusable prompt/context files live outside this repo in the local Orbit
 vault at `/Users/jason/Orbit/context_dump/verdify-platform/`.
 
 A safe orientation pass is: read `AGENTS.md`, `README.md`,
+the root lane docs (`AGENT_LANE.md`, `PROJECT_BOARD.md`, `EPICS.md`,
+`MILESTONES.md`, `SPRINTS.md`, `HISTORY.md`, `ARGOCD.md`,
+`ACCESS_MATRIX.md`, `COORDINATION_REQUESTS.md`),
 `docs/runbooks/laptop-operator.md`, `Makefile`, `pyproject.toml`,
 `.github/workflows/ci.yml`, and the Orbit dump manifest if available; then
 report branch/worktree state, access assumptions, current goal, safety gates,
