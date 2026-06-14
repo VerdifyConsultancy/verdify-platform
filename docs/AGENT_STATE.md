@@ -139,6 +139,17 @@ runbook or architecture references before editing.
 - 2026-06-14: GitHub Actions `CI` and `Container Publish` were green on
   `df0fd1f`; the publish run proved `verdify-lab-publisher-k3s` is writable by
   the repository workflow token and pushed an overlays/dev digest bump.
+- 2026-06-14: `18aa498` switched k8s manifests to
+  `ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:5f734f8dac3bc08665445e8d09f5e9768f3f82d737962a890112628ee34f4a7b`.
+  GitHub Actions were green: CI `27515244921`, Container Publish `27515244935`,
+  K8s Manifests `27515244931`. Dev ArgoCD was refreshed and reached
+  Synced/Healthy at `18aa498`; prod app `verdify-prod-dark` was refreshed only
+  and stayed OutOfSync/Progressing at `18aa498` pending Jason-gated prod sync.
+- 2026-06-14: Public `https://lab.verdify.ai/` and
+  `/static/contentIndex.json` still lacked `Cache-Control` when checked after
+  `18aa498`, because prod had not been synced. The origin nginx cache-policy fix
+  is in main and active in dev; public prod needs the gated ArgoCD sync/rollout
+  before browsers see the new no-store headers.
 
 ## Next Recommended Codex Prompt
 
