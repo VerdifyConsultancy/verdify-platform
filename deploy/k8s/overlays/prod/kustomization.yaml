@@ -217,7 +217,7 @@ images:
   - name: ghcr.io/verdifyconsultancy/verdify-lab
     digest: sha256:bf71018f181f4e37e585b8778852eb209875555525c425921663e7744891c973
   # verdify-lab-publisher: k3s-owned generated-content and S3 sync workflow for
-  # lab.verdify.ai. Bootstrap digest built from this worktree on 2026-06-14;
-  # replace with CI-published digest after merge.
-  - name: ghcr.io/verdifyconsultancy/verdify-lab-publisher
-    digest: sha256:7dbb28f2aa95e28855e4cb642dc102d396ef5ab387fb5c86f69099e0485300d8
+  # lab.verdify.ai. The k3s-suffixed GHCR package is linked to this repo so
+  # GITHUB_TOKEN can publish immutable CI-built digests.
+  - name: ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s
+    digest: sha256:5f734f8dac3bc08665445e8d09f5e9768f3f82d737962a890112628ee34f4a7b

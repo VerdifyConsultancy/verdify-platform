@@ -110,7 +110,13 @@ runbook or architecture references before editing.
   `ghcr.io/verdifyconsultancy/verdify-lab-publisher:bootstrap-20260614222642-portable-lockfix`
   at digest `sha256:7dbb28f2aa95e28855e4cb642dc102d396ef5ab387fb5c86f69099e0485300d8`
   and pinned dev/prod/prod-dark overlays plus the live prod CronJob to that
-  digest. Replace with a CI-built digest after merge.
+  digest. Repo manifests now supersede it with the CI-built k3s package below;
+  live prod will not move until the gated prod sync applies the manifest.
+- 2026-06-14: CI published the repo-linked replacement image package
+  `ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s` at digest
+  `sha256:5f734f8dac3bc08665445e8d09f5e9768f3f82d737962a890112628ee34f4a7b`
+  after the historical `verdify-lab-publisher` package rejected `GITHUB_TOKEN`
+  pushes because it was not linked to this repository.
 - 2026-06-14: Verdify S3 target is bucket `verdify-platform` on
   `https://s3-hdd.vallery.net` with signing region `garage`. Seal/apply it as
   `verdify-lab-publisher-s3` via SOPS/age; prod uses prefix `lab`, dev uses
@@ -130,6 +136,9 @@ runbook or architecture references before editing.
   from `/usr/share/nginx/html/plans/2026-06-14.html`.
 - 2026-06-14: GitHub Actions `CI`, `Container Publish`, and `K8s Manifests`
   were green on `main` after the S3-backed publisher merge and format follow-up.
+- 2026-06-14: GitHub Actions `CI` and `Container Publish` were green on
+  `df0fd1f`; the publish run proved `verdify-lab-publisher-k3s` is writable by
+  the repository workflow token and pushed an overlays/dev digest bump.
 
 ## Next Recommended Codex Prompt
 

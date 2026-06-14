@@ -58,7 +58,7 @@ spec:
               type: RuntimeDefault
           containers:
             - name: publisher
-              image: ghcr.io/verdifyconsultancy/verdify-lab-publisher
+              image: ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s
               imagePullPolicy: IfNotPresent
               command: ["lab-publish-k3s"]
               envFrom:
