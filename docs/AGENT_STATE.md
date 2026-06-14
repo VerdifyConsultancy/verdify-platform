@@ -110,8 +110,7 @@ runbook or architecture references before editing.
   `ghcr.io/verdifyconsultancy/verdify-lab-publisher:bootstrap-20260614222642-portable-lockfix`
   at digest `sha256:7dbb28f2aa95e28855e4cb642dc102d396ef5ab387fb5c86f69099e0485300d8`
   and pinned dev/prod/prod-dark overlays plus the live prod CronJob to that
-  digest. Repo manifests now supersede it with the CI-built k3s package below;
-  live prod will not move until the gated prod sync applies the manifest.
+  digest. Repo manifests now supersede it with the CI-built k3s package below.
 - 2026-06-14: CI published the repo-linked replacement image package
   `ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s` at digest
   `sha256:5f734f8dac3bc08665445e8d09f5e9768f3f82d737962a890112628ee34f4a7b`
@@ -143,13 +142,19 @@ runbook or architecture references before editing.
   `ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:5f734f8dac3bc08665445e8d09f5e9768f3f82d737962a890112628ee34f4a7b`.
   GitHub Actions were green: CI `27515244921`, Container Publish `27515244935`,
   K8s Manifests `27515244931`. Dev ArgoCD was refreshed and reached
-  Synced/Healthy at `18aa498`; prod app `verdify-prod-dark` was refreshed only
-  and stayed OutOfSync/Progressing at `18aa498` pending Jason-gated prod sync.
-- 2026-06-14: Public `https://lab.verdify.ai/` and
-  `/static/contentIndex.json` still lacked `Cache-Control` when checked after
-  `18aa498`, because prod had not been synced. The origin nginx cache-policy fix
-  is in main and active in dev; public prod needs the gated ArgoCD sync/rollout
-  before browsers see the new no-store headers.
+  Synced/Healthy at `18aa498`.
+- 2026-06-14: Jason approved prod push for the lab site cache-policy fix. Full
+  `verdify-prod-dark` sync was not used because the app diff included unrelated
+  device-adjacent resources; instead only `verdify-lab-nginx-config`,
+  `Deployment/verdify-lab`, and `CronJob/verdify-lab-publisher` were applied
+  from the prod overlay. `kubectl diff -f /tmp/verdify-prod-lab-only.yaml`
+  returned clean after apply. Public `https://lab.verdify.ai/` and
+  `/static/contentIndex.json` now return
+  `Cache-Control: no-cache, no-store, must-revalidate`, `Pragma: no-cache`, and
+  `Expires: 0` from origin nginx. The live prod publisher CronJob uses
+  `ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:5f734f8dac3bc08665445e8d09f5e9768f3f82d737962a890112628ee34f4a7b`.
+  ArgoCD app `verdify-prod-dark` still reports OutOfSync/Progressing due to
+  broader unrelated drift; do not treat that as a failed lab cache rollout.
 
 ## Next Recommended Codex Prompt
 
