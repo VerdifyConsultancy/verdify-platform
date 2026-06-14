@@ -1,6 +1,6 @@
 # Agent State
 
-Last updated: 2026-06-13
+Last updated: 2026-06-14
 
 ## Current Purpose
 
@@ -23,6 +23,9 @@ runbook or architecture references before editing.
   define desired app state. Staging is retired.
 - `deploy/k8s/SECRETS.md` documents secret names and keys only; never expose raw
   secret values.
+- `docs/site-publishing-pipeline.md` is the current lab.verdify.ai publishing
+  path: k3s `verdify-lab-publisher`, S3-compatible object store as durable
+  content/public/state, and PVC as live cache only.
 - `docs/SYSTEM-ARCHITECTURE.md` and `docs/FOLDER-HIERARCHY.md` remain useful but
   include VM-era details; prefer `AGENTS.md`, this file, and the k3s manifests
   when docs conflict.
@@ -52,6 +55,20 @@ runbook or architecture references before editing.
   Keep issue `## Project Tracking` blocks as the durable fallback.
 - Some architecture docs predate the 2026-06-10 branch/deployment simplification
   and the k3s service-plane work.
+- 2026-06-14 planner recovery: Hermes storage remount, OpenAI credential repair,
+  and MCP `ClientIP` session affinity restored manual planning.
+- 2026-06-14 lab publishing cutover: `verdify-lab-publisher` now runs in k3s
+  and uses S3-compatible storage as durable source of truth. The
+  `verdify-lab-site-cache` PVC is only the build/serve cache; lab publishing no
+  longer depends on NAS/NFS content paths.
+- The DB NetworkPolicy includes a DB-port-only pod-CIDR fallback for publisher
+  pods because the CNI did not honor the narrower namespace/pod selector during
+  short-lived CronJob DB checks. Keep the fallback scoped to TCP/5432 and revisit
+  if CNI policy behavior is fixed.
+- The k3s ingestor still logs VM-era local MCP restart failures and a missing
+  `/mnt/agents/iris/skills/greenhouse-planner.md` playbook path. They did not
+  block the 2026-06-14 21:00Z trigger ack, but fixing either in prod would
+  restart the live ingestor/device writer and requires Jason's gate.
 
 ## Last Verified Commands
 
@@ -63,6 +80,53 @@ runbook or architecture references before editing.
   service-map docs.
 - 2026-06-13: GitHub CI and Container Publish were green on `main` after the
   board-normalization docs push.
+- 2026-06-14: Manual planner recovery wrote `plan_journal` row
+  `iris-20260614-1438` at `2026-06-14 20:39:48Z`; ack-only smoke row 1366
+  reached `acked`.
+- 2026-06-14: Live `verdify-mcp` Service patched to `sessionAffinity=ClientIP`
+  with 10800s timeout; durable manifest change is in
+  `deploy/k8s/base/mcp-deployment.yaml`.
+- 2026-06-14: SOPS/age encrypted S3 Secrets were added in
+  `/Users/jason/repos/agent-fleet-control` for `verdify-dev` and `verdify-prod`
+  as `verdify-lab-publisher-s3`; live Secrets were applied without storing raw
+  secret values in this repo.
+- 2026-06-14: Scheduled `TRANSITION` trigger at `2026-06-14 21:00:36Z`
+  reached `acked` in row 1370 with Hermes run
+  `run_20df11bb564c414f99da341f7efcc689`.
+- 2026-06-14: `bash -n scripts/lab-publish-k3s.sh
+  scripts/lab-publisher-docker-shim.sh scripts/rebuild-site.sh
+  scripts/publish-site-content.sh` passed.
+- 2026-06-14: `actionlint .github/workflows/container-publish.yml` passed.
+- 2026-06-14: `kubectl kustomize deploy/k8s/overlays/{dev,prod}` rendered the
+  lab publisher and MCP affinity, with zero `kind: Secret` objects emitted.
+- 2026-06-14: `docker build -f scripts/Dockerfile.lab-publisher -t
+  verdify-lab-publisher:codex-local .` passed using Colima with a temporary
+  Docker config that removed the broken Docker Desktop credential helper.
+- 2026-06-14: Local container smoke passed for `verdify-lab-publisher:codex-local`
+  (wrapper present, Quartz docs present, generator files present, firmware
+  tunable YAML present, Python imports ok, Quartz CLI starts).
+- 2026-06-14: `git diff --check` passed for the current doc/config/script diff.
+- 2026-06-14: Pushed final amd64 bootstrap publisher image
+  `ghcr.io/verdifyconsultancy/verdify-lab-publisher:bootstrap-20260614222642-portable-lockfix`
+  at digest `sha256:7dbb28f2aa95e28855e4cb642dc102d396ef5ab387fb5c86f69099e0485300d8`
+  and pinned dev/prod/prod-dark overlays plus the live prod CronJob to that
+  digest. Replace with a CI-built digest after merge.
+- 2026-06-14: Verdify S3 target is bucket `verdify-platform` on
+  `https://s3-hdd.vallery.net` with signing region `garage`. Seal/apply it as
+  `verdify-lab-publisher-s3` via SOPS/age; prod uses prefix `lab`, dev uses
+  `lab-dev`.
+- 2026-06-14: S3 content was seeded from the local website tree to
+  `lab/content` and `lab-dev/content` (372 objects, about 403 MB each).
+- 2026-06-14: Final-digest scheduled publish job `verdify-lab-publisher-29691270`
+  completed at `2026-06-14 22:33:19Z`: generated `plans/2026-06-14.md`, rebuilt
+  297 pages, uploaded content/public/state to S3, and served
+  `https://lab.verdify.ai/plans/2026-06-14` with HTTP 200. Live CronJob is
+  unsuspended and pinned to
+  `sha256:7dbb28f2aa95e28855e4cb642dc102d396ef5ab387fb5c86f69099e0485300d8`.
+- 2026-06-14: S3 `head-object` check confirmed
+  `lab/content/plans/2026-06-14.md` (35182 bytes) and
+  `lab/public/plans/2026-06-14.html` (59747 bytes); live lab pod served the HTML
+  from `/usr/share/nginx/html/plans/2026-06-14.html`.
 
 ## Next Recommended Codex Prompt
 

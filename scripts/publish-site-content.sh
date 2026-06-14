@@ -44,7 +44,9 @@ SCRIPT_ROOT=${VERDIFY_SCRIPT_ROOT:-/srv/verdify/scripts}
 PYTHON=${PYTHON:-/srv/greenhouse/.venv/bin/python}
 LOG=${VERDIFY_PUBLISH_LOG:-/srv/verdify/state/publish.log}
 LOCK=${VERDIFY_PUBLISH_LOCK:-/var/lock/verdify-site-content-publish.lock}
-PREV_DATE=$(date -d "${DATE} -1 day" +%Y-%m-%d)
+if ! PREV_DATE=$(date -d "${DATE} -1 day" +%Y-%m-%d 2>/dev/null); then
+  PREV_DATE=$(date -j -f "%Y-%m-%d" "$DATE" -v-1d +%Y-%m-%d)
+fi
 
 # Bounded retry/timeout guard (issue #59). The generators below make outbound
 # HTTPS calls (e.g. update-evidence-snapshots.py hits https://api.verdify.ai).
@@ -58,6 +60,7 @@ PREV_DATE=$(date -d "${DATE} -1 day" +%Y-%m-%d)
 STEP_TIMEOUT=${VERDIFY_PUBLISH_STEP_TIMEOUT:-120}   # seconds per attempt (0 disables)
 STEP_RETRIES=${VERDIFY_PUBLISH_STEP_RETRIES:-3}     # total attempts per step
 STEP_RETRY_DELAY=${VERDIFY_PUBLISH_STEP_RETRY_DELAY:-5} # seconds between attempts
+LOCKED_RC=${VERDIFY_PUBLISH_LOCKED_RC:-0}
 
 mkdir -p "$(dirname "$LOG")" "$(dirname "$LOCK")"
 
@@ -109,7 +112,7 @@ run_step() {
 {
   flock -n 9 || {
     echo "[$(date -Is)] publish already running; skipping ${REASON} refresh" | tee -a "$LOG"
-    exit 0
+    exit "$LOCKED_RC"
   }
 
   echo "[$(date -Is)] Starting site content publish: reason=${REASON}, date=${DATE}" | tee -a "$LOG"

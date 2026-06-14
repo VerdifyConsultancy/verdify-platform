@@ -17,11 +17,13 @@ spec:
   podSelector: {}
   policyTypes: ["Ingress"]
 ---
-# 2. DB accepts connections only from api, mcp, ingestor, the migration Job, and
-#    the planner in this namespace. Never from ingress. The planner's wait-for-db
-#    init (pg_isready) + its DATABASE_URL connect straight to verdify-db:5432, so
-#    it MUST be in this allow-set or it hangs at Init:0/1 (verified live in
-#    verdify-prod 2026-06-07 — this CNI DOES enforce ingress; see header note).
+# 2. DB accepts connections only from api, mcp, ingestor, the migration Job, the
+#    planner, and the lab publisher in this namespace. Never from ingress. The
+#    planner's wait-for-db init (pg_isready) + its DATABASE_URL connect straight
+#    to verdify-db:5432, so DB clients MUST be in this allow-set or they hang at
+#    Init:0/1 or get connection-refused (verified live in verdify-prod
+#    2026-06-07 and again for lab-publisher on 2026-06-14 — this CNI DOES
+#    enforce ingress; see header note).
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
@@ -39,7 +41,19 @@ spec:
             matchExpressions:
               - key: app.kubernetes.io/component
                 operator: In
-                values: ["api", "mcp", "ingestor", "migrate", "planner"]
+                values: ["api", "mcp", "ingestor", "migrate", "planner", "lab-publisher"]
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: verdify-prod
+          podSelector:
+            matchLabels:
+              app.kubernetes.io/component: lab-publisher
+        # CNI fallback for short-lived CronJob pods: live testing on 2026-06-14
+        # showed new Job pods still got connection-refused through the podSelector
+        # allow while long-running planner pods could connect. Keep this scoped to
+        # the cluster pod CIDR and DB port only; the DB password is still required.
+        - ipBlock:
+            cidr: 10.42.0.0/16
       ports:
         - protocol: TCP
           port: 5432

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-lab-publisher-config
+data:
+  # Dev auto-syncs from main; keep it out of prod's public lab prefix.
+  LAB_S3_PREFIX: lab-dev

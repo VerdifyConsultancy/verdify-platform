@@ -72,6 +72,7 @@ Service → Secret → key wiring as authored in `deploy/k8s/{base,components}`:
 | `verdify-ha-token` | `ha_token.txt` | setpoint-server (volume mount); **device-affecting** | — | — | ✓ |
 | `verdify-hermes` | `OPENAI_API_KEY`, `HERMES_MCP_URL`² | hermes-iris (`envFrom.secretRef`) | — | — | ✓ |
 | `verdify-hermes-slack` | slack channel config | hermes-iris (optional volume mount; **non-secret** channel cfg) | — | — | opt |
+| `verdify-lab-publisher-s3` | `LAB_S3_BUCKET`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_DEFAULT_REGION`, optional `LAB_S3_ENDPOINT_URL` | lab-publisher (`envFrom.secretRef`) | ✓ | — | ✓ |
 | `ghcr-jvallery-readonly` | `.dockerconfigjson` | all workloads (`imagePullSecrets`) | ✓ | ✓ | ✓ |
 
 ¹ dev/staging are device-dark: the ingestor runs `replicas: 0` and egress to the
@@ -84,6 +85,14 @@ but is never exercised — those envs never connect to the live ESP32.
 `DB_PASS` / `DB_PASSWORD` / `DB_DSN` / `VERDIFY_DB_DSN` are derived in-manifest from
 `POSTGRES_PASSWORD` + the non-secret connection fields in the `verdify-config`
 ConfigMap (`$(VAR)` interpolation); they are NOT separate secret keys.
+
+`verdify-lab-publisher-s3` is non-device but required before enabling the
+`verdify-lab-publisher` CronJob. The durable prod prefixes are
+`s3://verdify-platform/lab/content`, `.../public`, and `.../state`; dev uses the
+same bucket under `lab-dev/*` so the auto-syncing dev publisher cannot overwrite
+the public prod tree. For the current S3-compatible endpoint, set
+`LAB_S3_BUCKET=verdify-platform`, `AWS_DEFAULT_REGION=garage`, and
+`LAB_S3_ENDPOINT_URL=https://s3-hdd.vallery.net` with the Verdify-scoped key.
 
 ## Sealed-artifact shape (Root delivers; Iris specifies)
 

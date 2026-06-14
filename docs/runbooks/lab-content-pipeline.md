@@ -1,8 +1,14 @@
 # Runbook: vault -> lab.verdify.ai content/build pipeline (#124 / #219)
 
-Automates the previously-manual rebuild of the `lab.verdify.ai` Quartz research
-site from the **real** curated vault content, replacing the synthetic placeholder
-the CI image used to bake.
+Current production direction (2026-06-14): `lab.verdify.ai` content is published
+by the k3s `verdify-lab-publisher` CronJob with S3-compatible object storage as
+the durable content/public/state store. The `verdify-lab` image is now a serving
+runtime and bootstrap fallback; routine content changes should not require a new
+site image digest. See `docs/site-publishing-pipeline.md`.
+
+The older vault-snapshot/image-bake flow below is retained as historical context
+for the `verdify-site-legacy` image divergence and should not be extended unless
+we deliberately return to content-in-image publishing.
 
 ## Problem this fixes
 

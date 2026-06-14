@@ -11,3 +11,4 @@ kind: Component
 # (a PLACEHOLDER all-zeros digest until verdify-site is CI-published).
 resources:
   - lab-site.yaml
+  - lab-publisher.yaml

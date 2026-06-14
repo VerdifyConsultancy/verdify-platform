@@ -8,8 +8,10 @@ The FastAPI crop catalog, every vault markdown writer, every page generator, and
 - `scripts/generate-*.py` and public export generators — `generate-daily-plan.py`, `generate-forecast-page.py`, `generate-lessons-page.py`, `export-hourly-performance-dataset.py`, etc.
 - `scripts/vault-*.py` — `vault-daily-writer.py`, `vault-crop-writer.py`
 - `site/` — full Quartz source tree, docs, package lock, build config, and nginx config
-- `/mnt/iris/verdify-vault/` — Obsidian vault (source of site content; NOT in this git repo but owned by this agent's deploy pipeline)
-- Systemd units: `verdify-api.service`, `verdify-forecast-page.*`, `verdify-site-poll.*`, `verdify-site-build.service`, `verdify-setpoint-server.service`
+- S3-backed lab content store — source/public/state for the k3s lab publisher
+  (`deploy/k8s/components/lab-site/lab-publisher.yaml`)
+- Legacy `/mnt/iris/verdify-vault/` paths — compatibility paths for generators;
+  do not make new production dependencies on the NAS for lab publishing.
 
 ## Does not own
 
@@ -32,7 +34,9 @@ The FastAPI crop catalog, every vault markdown writer, every page generator, and
 - Quartz build must succeed (`make site-rebuild` or equivalent) before pushing to vault.
 - Run `make site-doctor` after site/Grafana/content changes; it validates generated-page markers, image refs, live Grafana iframe panel IDs, built output, and nginx bind-mount readability. For content audits, add `--semantic-report <path>` to `scripts/site-doctor.py` to write the iframe-to-heading-to-live-panel-title inventory.
 - Use `docs/site-content-map.md` as the route/content contract before reorganizing pages. It defines canonical route families, source type, data source, graph layer, and known gaps.
-- Site markdown edits must respect generated-page ownership. Check the generator list below before hand-editing pages under `/mnt/iris/verdify-vault/website`.
+- Site markdown edits must respect generated-page ownership. Check the generator
+  list below before hand-editing pages that will be synced into the S3 content
+  prefix.
 - Grafana iframe edits must be checked against live Grafana dashboard panel IDs; Quartz will happily build pages with stale `panelId=` values.
 
 ## Ask coordinator before
@@ -44,26 +48,31 @@ The FastAPI crop catalog, every vault markdown writer, every page generator, and
 
 ## Site operations reference
 
-`lab.verdify.ai` is a Quartz static site. The public serving path is:
+`lab.verdify.ai` is a Quartz static site. The current production serving path is:
 
-`/mnt/iris/verdify-vault/website` → `/srv/verdify/verdify-site/content` symlink → `npx quartz build` → `/srv/verdify/verdify-site/public` → `verdify-site` nginx → Traefik → `lab.verdify.ai`.
+`s3://$LAB_S3_BUCKET/$LAB_S3_PREFIX/content` → `verdify-lab-publisher` CronJob → `/work/content` → `npx quartz build` → `/work/public` → S3 public/state sync → `verdify-lab` nginx reads the lab cache PVC → Traefik → `lab.verdify.ai`.
 
-Do not edit `/srv/verdify/verdify-site/public`; it is build output. Hand-authored content lives in `/mnt/iris/verdify-vault/website`. Repo-owned Quartz/build code lives in `site/` and `scripts/`.
+Do not edit `/work/public` or `/srv/verdify/verdify-site/public`; they are build
+output. Hand-authored content should be seeded/synced to the S3 content prefix.
+Repo-owned Quartz/build code lives in `site/` and `scripts/`.
 
 Do not edit `/srv/verdify/verdify-site/quartz` for normal work. The web repo owns the full Quartz source tree under `site/quartz`, and `scripts/rebuild-site.sh` syncs `site/` into `/srv/verdify/verdify-site` before each build.
 
-Build/publish units:
+Build/publish unit:
 
-- `verdify-site-poll.timer` fires every 10 seconds because inotify is unreliable on the NFS/Syncthing vault.
-- `verdify-site-poll.service` runs `scripts/site-poll-and-rebuild.sh`. The poller compares a metadata signature for the website tree instead of using `find -newer`, because Syncthing can preserve Mac/Obsidian mtimes and otherwise hide real edits from an mtime-threshold check.
-- `verdify-site-build.service` runs `scripts/rebuild-site.sh`.
-- `verdify-forecast-page.timer` regenerates `/data/forecast/` every 30 minutes; `/forecast` is a compatibility alias.
-- `verdify-plan-publish.path` watches `/var/local/verdify/state/plan-publish-trigger`.
-- `verdify-plan-publish.service` writes today's plan markdown.
+- `verdify-lab-publisher` CronJob runs every 10 minutes in k3s. It calls
+  `scripts/lab-publish-k3s.sh`, which syncs S3 content, runs
+  `scripts/publish-site-content.sh`, builds Quartz, updates the cache PVC, and
+  syncs generated content/public/state back to S3.
 
-`scripts/rebuild-site.sh` syncs the repo-owned Quartz source into `/srv/verdify/verdify-site`, builds Quartz into `/srv/verdify/verdify-site/.builds/public.*`, verifies the staged `index.html`, then rsyncs the complete staged output into `/srv/verdify/verdify-site/public` with delayed deletes. Normal content rebuilds leave `verdify-site` nginx running; the script reloads nginx only when `site/nginx.conf` changes, with restart as the fallback. If `lab.verdify.ai` serves 404 while host `public/index.html` exists, check `docker logs verdify-site` for serving errors before restarting only `verdify-site`.
+`scripts/rebuild-site.sh` builds Quartz into a staged `public.*` directory,
+verifies the staged `index.html`, then rsyncs the complete staged output into
+the live public tree with delayed deletes. In k3s, nginx reload is skipped
+because the serving pod reads the PVC and has no Docker socket.
 
-Use `make site-publish-status` to trace the live path from Obsidian vault content through the last successful signature, Quartz output, timer state, and latest build log. The detailed operator doc is `docs/site-publishing-pipeline.md`.
+Use `docs/site-publishing-pipeline.md` for the current S3/k3s operator flow.
+`make site-publish-status` is VM-era and useful only when intentionally
+debugging the retired host path.
 
 ## Generated website pages
 

@@ -22,12 +22,37 @@
 **/.mypy_cache
 __pycache__
 
-# --- the heavy, image-irrelevant trees (firmware ~432M, site ~21M) ---
-# Firmware is ESP32 C++/ESPHome + a ~193k-row replay corpus; never shipped in a
-# python service image and never built/flashed by CI.
+# --- heavy trees, mostly image-irrelevant ---
+# Firmware is ESP32 C++/ESPHome + a ~193k-row replay corpus. Python service
+# images never ship it; the lab-publisher image needs only the public tunable
+# YAML contract read by scripts/generate-ai-tunables-page.py.
 firmware
+!firmware
+firmware/*
+!firmware/greenhouse
+firmware/greenhouse/*
+!firmware/greenhouse/controls.yaml
+!firmware/greenhouse/globals.yaml
+!firmware/greenhouse/sensors.yaml
+!firmware/greenhouse/tunables.yaml
 # Quartz static site + its build output.
 site
+!site
+site/*
+!site/package.json
+!site/package-lock.json
+!site/quartz.config.ts
+!site/quartz.layout.ts
+!site/tsconfig.json
+!site/globals.d.ts
+!site/index.d.ts
+!site/nginx.conf
+!site/quartz
+!site/quartz/**
+site/quartz/.quartz-cache
+site/node_modules
+!site/docs
+!site/docs/**
 # Long-form docs / design / audits — not runtime.
 docs
 
@@ -73,6 +98,10 @@ db/migrations/*
 
 # --- top-level docs the images don't need ---
 *.md
+# The lab-publisher image builds Quartz from site/docs Markdown; this negation
+# must remain after the repo-wide Markdown exclusion above.
+!site/docs
+!site/docs/**
 !verdify_schemas/README.md
 README.md
 GOAL.md

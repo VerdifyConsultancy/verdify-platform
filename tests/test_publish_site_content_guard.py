@@ -87,6 +87,17 @@ def harness(tmp_path: Path):
     """Build a fixture SCRIPT_ROOT + fake PYTHON and return a runner."""
     script_root = tmp_path / "scripts"
     script_root.mkdir()
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    fake_flock = bin_dir / "flock"
+    fake_flock.write_text(
+        "#!/usr/bin/env bash\n"
+        "set -euo pipefail\n"
+        "if [[ \"${FIXTURE_FLOCK_FAIL:-}\" == \"1\" ]]; then exit 1; fi\n"
+        "exit 0\n",
+        encoding="utf-8",
+    )
+    fake_flock.chmod(0o755)
     # Stub the bash-invoked helpers so the script's `bash "$SCRIPT_ROOT/x.sh"`
     # calls succeed without touching the real site tooling.
     for name in BASH_GENERATORS:
@@ -120,6 +131,7 @@ def harness(tmp_path: Path):
                 "VERDIFY_PUBLISH_STEP_RETRIES": "3",
                 "VERDIFY_PUBLISH_STEP_RETRY_DELAY": "0",
                 "FIXTURE_STATE_DIR": str(state_dir),
+                "PATH": f"{bin_dir}:{env['PATH']}",
             }
         )
         env.update(extra_env)
@@ -183,3 +195,15 @@ def test_hung_step_is_bounded_by_timeout_and_does_not_wedge_the_unit(harness):
     assert rc == 1, out
     assert "TIMEOUT after 2s" in out
     assert "GIVING UP after 3 attempts" in out
+
+
+def test_locked_publish_can_return_nonzero_without_running_generators(harness):
+    rc, out, state_dir = harness(
+        {
+            "FIXTURE_FLOCK_FAIL": "1",
+            "VERDIFY_PUBLISH_LOCKED_RC": "75",
+        }
+    )
+    assert rc == 75, out
+    assert "publish already running; skipping test refresh" in out
+    assert not list(state_dir.glob("*.attempts"))

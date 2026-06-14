@@ -1,6 +1,6 @@
 # Verdify Service Map
 
-Last updated: 2026-06-13
+Last updated: 2026-06-14
 
 This is the current k3s-era service map for the `verdify-platform` lane. Treat
 `deploy/k8s/`, `AGENTS.md`, `README.md`, and `docs/AGENT_STATE.md` as the
@@ -49,7 +49,8 @@ Dev routes are direct shared-apps-Traefik routes for `api.k3s.verdify.ai`,
 | `verdify-setpoint-server` | `scripts/setpoint-server.py` | `deploy/k8s/components/setpoint-server/setpoint-server.yaml` | `ghcr.io/verdifyconsultancy/verdify-setpoint-server` | `8200`, ClusterIP | Prod-only grow-light writer and diagnostics; HA token Secret mount; TimescaleDB. Device-affecting cutover is Jason-gated. |
 | `verdify-hermes-iris` | upstream Hermes gateway, args `gateway run` | `deploy/k8s/components/hermes-iris/hermes-iris.yaml` | `nousresearch/hermes-agent@sha256:...` | `8642`, ClusterIP | Secret `verdify-hermes`, optional `verdify-hermes-slack`, PVC `verdify-hermes-iris-data`, MCP URL to `verdify-mcp`. |
 | `verdify-mqtt` | Mosquitto fan-out broker | `deploy/k8s/components/mqtt-broker/mqtt-broker.yaml` | `eclipse-mosquitto:2` | `1883`, ClusterIP | In-cluster telemetry fan-out; separate from HAOS/Sentinel broker; no persistence. |
-| `verdify-lab` | static Quartz site image | `deploy/k8s/components/lab-site/lab-site.yaml` | `ghcr.io/verdifyconsultancy/verdify-lab` | `8080`, ClusterIP; prod lab hosts | Public research site. Runtime image is built from the separate `verdify-site` repo; this repo pins/deploys it. |
+| `verdify-lab` | static Quartz nginx runtime | `deploy/k8s/components/lab-site/lab-site.yaml` | `ghcr.io/verdifyconsultancy/verdify-lab` | `8080`, ClusterIP; prod lab hosts | Public research site. Serves the `verdify-lab-site-cache` PVC read-only; baked image content is bootstrap fallback. |
+| `verdify-lab-publisher` | `scripts/lab-publish-k3s.sh` | `deploy/k8s/components/lab-site/lab-publisher.yaml` | `ghcr.io/verdifyconsultancy/verdify-lab-publisher` | CronJob, no inbound service | S3 content/public/state store, TimescaleDB, Quartz build toolchain; writes only the lab cache PVC and S3 prefixes. |
 | `verdify-grafana` | Grafana plus image-renderer sidecar | `deploy/k8s/components/grafana/grafana.yaml` | `grafana/grafana-oss:11.6.0`, `grafana/grafana-image-renderer:3.12.6` | `3000`, ClusterIP; prod `graphs.verdify.ai` | Provisioned dashboards/config from git; TimescaleDB datasource; `verdify-grafana-secrets` admin password optional in render. |
 
 App Secret contracts are documented by name and key in `deploy/k8s/SECRETS.md`.
@@ -66,6 +67,7 @@ Do not print or commit raw secret values.
 | HA gap backfill | `deploy/k8s/components/ha-gap-backfill/ha-gap-backfill-cronjob.yaml` | Prod overlay | Hourly HA recorder gap reconciliation; writes missing telemetry rows only. |
 | Gather script mount | `deploy/k8s/components/ingestor-gather-script/` | Prod overlay | ConfigMap delivery for `scripts/gather-plan-context.sh` into the ingestor image. |
 | Grafana band curve refresh | `deploy/k8s/components/grafana/band-curve-refresh-cronjob.yaml` | Dev and prod overlays with Grafana | Refreshes `mv_band_curve` every 10 minutes. |
+| Lab site publisher | `deploy/k8s/components/lab-site/lab-publisher.yaml` | Dev and prod overlays with lab site | Regenerates lab.verdify.ai content every 10 minutes from S3-backed content and TimescaleDB, then updates the lab cache PVC and S3 public/state prefixes. |
 | Firmware twin | `deploy/k8s/components/firmware-twin/` | Component only; not referenced by current dev/prod overlays | Read-only shadow path with live-prod schema/user gates. |
 | Umami analytics | `deploy/k8s/components/umami/` | Component only; not referenced by current dev/prod overlays | Residual analytics tier, explicitly not wired into prod yet. |
 
@@ -95,6 +97,7 @@ the drift guards in `verdify_schemas/tests/`.
 | MQTT | Ingestor, fan-out broker | HAOS/Sentinel broker plus in-cluster `verdify-mqtt`; telemetry fan-out is not a device control path. |
 | OpenAI API | Planner, Hermes | Optional for planner manifest render, required for LLM-backed production planning. |
 | Open-Meteo | Ingestor forecast sync | Hourly weather forecast source. |
+| S3-compatible object storage | Lab publisher | Durable `lab/content`, `lab/public`, and `lab/state` prefixes; credentials come from `verdify-lab-publisher-s3`. |
 | Slack | Ingestor alerts, Hermes | Optional Slack config/secret references; alert emission only. |
 | GHCR | All app images | `ghcr-jvallery-readonly` pull secret; image digests are pinned by overlays/CI. |
 | NAS / storage platform | DB dumps, PVs/PVCs, backups | StorageClass/PV provision belongs to `storage-infra`/Jason, not this repo. |

@@ -13,9 +13,9 @@
 
 set -euo pipefail
 
-LOCK=/var/lock/verdify-site-build.lock
-LOG=/srv/verdify/state/site-build.log
-MARKER=/var/local/verdify/state/site-build-last-run
+LOCK=${VERDIFY_SITE_BUILD_LOCK:-/var/lock/verdify-site-build.lock}
+LOG=${VERDIFY_SITE_BUILD_LOG:-/srv/verdify/state/site-build.log}
+MARKER=${VERDIFY_SITE_BUILD_MARKER:-/var/local/verdify/state/site-build-last-run}
 SITE_SOURCE=${VERDIFY_SITE_SOURCE:-/srv/verdify/site}
 SITE_RUNTIME=${VERDIFY_SITE_RUNTIME:-/srv/verdify/verdify-site}
 LIVE_PUBLIC=${VERDIFY_SITE_PUBLIC:-"$SITE_RUNTIME/public"}
@@ -89,7 +89,7 @@ mkdir -p "$(dirname "$MARKER")"
 
         rsync -a --delete-delay --timeout="$RSYNC_IO_TIMEOUT" "$staging"/ "$LIVE_PUBLIC"/
 
-        if [ "$nginx_changed" = true ]; then
+        if [ "$nginx_changed" = true ] && [ -n "$SITE_CONTAINER" ]; then
             if docker exec "$SITE_CONTAINER" nginx -s reload > /dev/null 2>&1; then
                 nginx_action="nginx reloaded"
             elif docker restart "$SITE_CONTAINER" > /dev/null 2>&1; then
@@ -98,6 +98,8 @@ mkdir -p "$(dirname "$MARKER")"
                 echo "$(date -Is) quartz built but nginx reload/restart failed"
                 exit 1
             fi
+        elif [ "$nginx_changed" = true ]; then
+            nginx_action="nginx reload skipped (no VERDIFY_SITE_CONTAINER)"
         else
             nginx_action="nginx left running"
         fi

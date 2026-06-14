@@ -12,6 +12,7 @@ name: Container Publish
 #   - mcp       (MCP transport server, Iris/Hermes tools)  ./mcp
 #   - ingestor  (telemetry + single-writer setpoint dispatcher, device loop) ./ingestor
 #   - planner   (standalone LangGraph planner, folded from verdify-planner #102) ./planner_graph
+#   - lab-publisher (Quartz + generated lab content publisher) scripts/Dockerfile.lab-publisher
 #
 # ─── PLANNER IMAGE IS ARTIFACT-ONLY (#102) ───────────────────────────────────
 #  The planner-image job below builds + publishes ghcr.io/<owner>/verdify-planner
@@ -95,6 +96,7 @@ jobs:
       planner_impact: ${{ steps.impact.outputs.planner_impact }}
       setpoint_impact: ${{ steps.impact.outputs.setpoint_impact }}
       migrate_impact: ${{ steps.impact.outputs.migrate_impact }}
+      lab_publisher_impact: ${{ steps.impact.outputs.lab_publisher_impact }}
       reason: ${{ steps.impact.outputs.reason }}
     steps:
       - name: Checkout
@@ -148,6 +150,7 @@ jobs:
           planner_impact=false
           setpoint_impact=false
           migrate_impact=false
+          lab_publisher_impact=false
           doc_only=true
           any_changed=false
 
@@ -211,6 +214,26 @@ jobs:
             case "$f" in
               db/*) migrate_impact=true ;;
             esac
+            # lab-publisher image owns the in-cluster lab.verdify.ai publish
+            # workflow: Quartz toolchain, generated-content scripts, schemas,
+            # firmware tunable source docs, and the k3s publisher wrapper.
+            case "$f" in
+              site/*|scripts/Dockerfile.lab-publisher|scripts/lab-publish-k3s.sh|scripts/lab-publisher-docker-shim.sh)
+                lab_publisher_impact=true
+                ;;
+              scripts/publish-site-content.sh|scripts/rebuild-site.sh|scripts/generate-*.py|scripts/render-*.py)
+                lab_publisher_impact=true
+                ;;
+              scripts/update-evidence-snapshots.py|scripts/export-hourly-performance-dataset.py|scripts/export-public-sample-dataset.sh)
+                lab_publisher_impact=true
+                ;;
+              scripts/gather-static-context.sh|scripts/lib/psql-verdify.sh|verdify_schemas/*|firmware/greenhouse/*)
+                lab_publisher_impact=true
+                ;;
+              ingestor/config.py|slack_config.py|slack.yaml)
+                lab_publisher_impact=true
+                ;;
+            esac
           done < "$changed_files"
 
           if [ "$manual" = "true" ]; then
@@ -220,10 +243,11 @@ jobs:
             planner_impact=true
             setpoint_impact=true
             migrate_impact=true
+            lab_publisher_impact=true
           fi
 
           any_image=false
-          { [ "$api_impact" = "true" ] || [ "$mcp_impact" = "true" ] || [ "$ingestor_impact" = "true" ] || [ "$planner_impact" = "true" ] || [ "$setpoint_impact" = "true" ] || [ "$migrate_impact" = "true" ]; } && any_image=true
+          { [ "$api_impact" = "true" ] || [ "$mcp_impact" = "true" ] || [ "$ingestor_impact" = "true" ] || [ "$planner_impact" = "true" ] || [ "$setpoint_impact" = "true" ] || [ "$migrate_impact" = "true" ] || [ "$lab_publisher_impact" = "true" ]; } && any_image=true
 
           image_publish=false
           if [ "$manual" = "true" ]; then
@@ -237,7 +261,7 @@ jobs:
             reason="no image-impacting files changed; skipping image publish"
           else
             image_publish=true
-            changed="api=$api_impact mcp=$mcp_impact ingestor=$ingestor_impact planner=$planner_impact setpoint=$setpoint_impact migrate=$migrate_impact"
+            changed="api=$api_impact mcp=$mcp_impact ingestor=$ingestor_impact planner=$planner_impact setpoint=$setpoint_impact migrate=$migrate_impact lab_publisher=$lab_publisher_impact"
             reason="image-impacting change ($changed)"
           fi
 
@@ -250,6 +274,7 @@ jobs:
             echo "planner_impact=$planner_impact"
             echo "setpoint_impact=$setpoint_impact"
             echo "migrate_impact=$migrate_impact"
+            echo "lab_publisher_impact=$lab_publisher_impact"
             echo "reason=$reason"
           } >> "$GITHUB_OUTPUT"
 
@@ -263,6 +288,7 @@ jobs:
             echo "- planner_impact: \`$planner_impact\` (artifact-only; not deployed)"
             echo "- setpoint_impact: \`$setpoint_impact\` (artifact-only; not deployed)"
             echo "- migrate_impact: \`$migrate_impact\` (db/** schema-build image)"
+            echo "- lab_publisher_impact: \`$lab_publisher_impact\` (k3s lab publish workflow)"
             echo "- reason: $reason"
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -450,6 +476,28 @@ jobs:
       # contract closure the setpoint-server's tunable_registry import relies on).
       smoke-import: verdify_schemas.alerts
 
+  lab-publisher-image:
+    name: Build and publish lab-publisher image
+    needs: image-impact
+    # k3s lab publishing (# planner recovery): build the Quartz + Python
+    # generated-content image used by the verdify-lab-publisher CronJob. This is
+    # a deployed web/content workflow, not a device writer.
+    if: needs.image-impact.outputs.image_publish == 'true' && (needs.image-impact.outputs.lab_publisher_impact == 'true' || github.event_name == 'workflow_dispatch')
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/reusable-container-build.yml
+    with:
+      context: .
+      dockerfile: scripts/Dockerfile.lab-publisher
+      image-name: ${{ github.repository_owner }}/verdify-lab-publisher
+      push: true
+      publish-branches: main
+      build-args: |
+        GIT_SHA=${{ github.sha }}
+        GIT_REF=${{ github.ref_name }}
+      extra-tags: local-dev
+
   # ---------------------------------------------------------------------------
   # In-repo digest write-back into deploy/k8s/overlays/dev (LOCKED DECISION:
   # the digest bump is an in-repo commit on main — NO cross-repo PR, NO ArgoCD
@@ -473,6 +521,7 @@ jobs:
       - ingestor-image
       - migrate-image
       - planner-image
+      - lab-publisher-image
     # DECOUPLED FROM migrate (#78): a single failing image job must NOT block
     # bumping the others. This job runs with always() semantics gated ONLY on a
     # main-branch push that intended to publish images; the pin() helper below
@@ -516,6 +565,7 @@ jobs:
           INGESTOR_DIGEST: ${{ needs.ingestor-image.outputs.image_digest }}
           MIGRATE_DIGEST: ${{ needs.migrate-image.outputs.image_digest }}
           PLANNER_DIGEST: ${{ needs.planner-image.outputs.image_digest }}
+          LAB_PUBLISHER_DIGEST: ${{ needs.lab-publisher-image.outputs.image_digest }}
         run: |
           set -euo pipefail
           cd deploy/k8s/overlays/dev
@@ -538,6 +588,7 @@ jobs:
           pin "$INGESTOR_DIGEST"
           pin "$MIGRATE_DIGEST"
           pin "$PLANNER_DIGEST"
+          pin "$LAB_PUBLISHER_DIGEST"
 
       - name: Validate digest-only render
         run: |

@@ -365,7 +365,8 @@ async def run(args: argparse.Namespace) -> int:
                 print(f"  UNCHANGED  {filename}")
                 continue
             if args.dry_run:
-                print(f"  WOULD WRITE  {filename} ({mode}; {len(content)} chars, {content.count('\n')} lines)")
+                line_count = content.count("\n")
+                print(f"  WOULD WRITE  {filename} ({mode}; {len(content)} chars, {line_count} lines)")
             else:
                 target.write_text(content)
                 print(f"  WROTE  {filename} ({mode})")

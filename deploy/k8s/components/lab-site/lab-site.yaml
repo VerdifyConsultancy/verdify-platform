@@ -1,11 +1,9 @@
 # Verdify lab/research site — lab.verdify.ai (#124, part of #88 / #111 / #15).
 #
-# WHAT: the public Quartz static research garden ("the lab"). The site source is
-# the Quartz tree in this monorepo's site/ (quartz.config.ts), but the runtime
-# IMAGE is built/published SEPARATELY from the verdify-site repo's Dockerfile.k3s
-# (Quartz `npx quartz build` -> static public/ -> nginx serves it). This monorepo
-# carries ONLY the immutable @sha256 image digest pin (each consuming overlay's
-# images: transformer) + these manifests — same containment posture as #116 www.
+# WHAT: the public Quartz static research garden ("the lab"). The nginx runtime
+# still serves static HTML on :8080, but the live public tree now comes from the
+# `verdify-lab-site-cache` PVC populated by the in-cluster lab publisher. The
+# baked image remains a bootstrap fallback only.
 #
 # IMAGE — MUST BE BUILT/PUBLISHED SEPARATELY (not done by these manifests):
 #   ghcr.io/verdifyconsultancy/verdify-lab
@@ -33,8 +31,8 @@
 # to deploy/k8s/base renders into overlays/staging, which the live
 # verdify-local-staging ArgoCD app syncs. A Component is referenced explicitly per
 # overlay, so merging to live/platform-main keeps the live staging app's rendered
-# shape under the author's control. lab-site is pure web tier, STATELESS (no PVC,
-# emptyDir scratch only), NO device path — it never touches the ESP32.
+# shape under the author's control. lab-site is pure web tier, NO device path —
+# it never touches the ESP32. Generated content is owned by lab-publisher.yaml.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -90,9 +88,13 @@ spec:
             limits:
               memory: "128Mi"
           # nginx-unprivileged needs writable scratch under a read-only root FS.
-          # All emptyDir (ephemeral) — the served content is baked into the image
-          # layer, so NO PVC and NO synology-iscsi-ssd dependency (stateless).
+          # The served tree is a read-only mount from the lab cache PVC; all
+          # other writable paths stay ephemeral.
           volumeMounts:
+            - name: lab-cache
+              mountPath: /usr/share/nginx/html
+              subPath: public
+              readOnly: true
             - name: tmp
               mountPath: /tmp
             - name: nginx-cache
@@ -121,9 +123,34 @@ spec:
               port: http
             initialDelaySeconds: 5
             periodSeconds: 10
+      initContainers:
+        - name: seed-public-cache
+          # Same image as the serving container. If the lab cache PVC is empty,
+          # seed it from the baked static site so lab.verdify.ai stays available
+          # before the first S3-backed publisher run completes.
+          image: ghcr.io/verdifyconsultancy/verdify-lab
+          command:
+            - sh
+            - -lc
+            - |
+              set -eu
+              mkdir -p /lab-cache/public
+              if [ ! -f /lab-cache/public/index.html ]; then
+                cp -a /usr/share/nginx/html/. /lab-cache/public/
+              fi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: lab-cache
+              mountPath: /lab-cache
       # Endpoint-drain window for the preStop hook above (HA #231); 30s explicit.
       terminationGracePeriodSeconds: 30
       volumes:
+        - name: lab-cache
+          persistentVolumeClaim:
+            claimName: verdify-lab-site-cache
         - name: tmp
           emptyDir: {}
         - name: nginx-cache

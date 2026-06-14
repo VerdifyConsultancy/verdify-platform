@@ -1,20 +1,28 @@
 # Verdify Site Publishing Pipeline
 
-This is the operator trace for publishing `lab.verdify.ai` from Obsidian content.
+This is the operator trace for publishing `lab.verdify.ai` from curated
+Markdown/static content into the k3s-served Quartz site.
 
 ## Source of Truth
 
-Hand-authored website content lives in:
+As of 2026-06-14, durable lab content/public/state lives in S3-compatible object
+storage. The bucket is provided by Secret `verdify-lab-publisher-s3`; the
+default prefix is `lab`.
 
 ```text
-/mnt/iris/verdify-vault/website
+s3://$LAB_S3_BUCKET/$LAB_S3_PREFIX/content/  # Markdown + static source tree
+s3://$LAB_S3_BUCKET/$LAB_S3_PREFIX/public/   # generated Quartz public tree
+s3://$LAB_S3_BUCKET/$LAB_S3_PREFIX/state/    # publish/build logs and context
 ```
 
-Quartz reads that same tree through:
+The in-cluster publisher syncs content to the `verdify-lab-site-cache` PVC at
+`/work/content`, runs the existing generators, builds Quartz into `/work/public`,
+and syncs content/public/state back to S3. The PVC is a k3s cache and live serve
+surface, not durable source of truth.
 
-```text
-/srv/verdify/verdify-site/content -> /mnt/iris/verdify-vault/website
-```
+Legacy generator paths such as `/srv/verdify/verdify-site/content` and
+`/mnt/iris/verdify-vault/website` are compatibility symlinks inside the
+publisher container.
 
 Generated pages, such as `/data/forecast`, `/data/plans`, `/plans/index`,
 `/plans/YYYY-MM-DD`, `/reference/lessons`, crop profiles, zone pages, equipment
@@ -22,16 +30,16 @@ blocks, and public sample datasets are written into the same website tree by
 generator scripts. Do not hand-edit generated blocks or pages unless you expect
 the generator to overwrite them later.
 
-Production refreshes use one entry point:
+Production refreshes use one entry point inside the publisher image:
 
 ```bash
-/srv/verdify/scripts/publish-site-content.sh --reason manual
+lab-publish-k3s
 ```
 
-Planner publishes, forecast-page refreshes, and manual full refreshes all call
-that script. It regenerates the daily plan, forecast page, plan indexes,
-lessons, Baseline vs Iris, equipment blocks, zone pages, crop profiles, public
-sample CSVs, and planner static context before rebuilding the site.
+`lab-publish-k3s` wraps `scripts/publish-site-content.sh`. It regenerates the
+daily plan, forecast page, plan indexes, lessons, Baseline vs Iris, equipment
+blocks, zone pages, crop profiles, public sample CSVs, and planner static
+context before rebuilding the site and uploading the result to S3.
 
 Some public routes are aliases because the nav and story pages link to the
 `/data/...` route while older URLs still exist:
@@ -53,17 +61,15 @@ visual cleanup task.
 ## Publish Flow
 
 ```text
-Obsidian on Mac
-  -> Syncthing
-  -> /mnt/iris/verdify-vault/website
-  -> publish-site-content.sh for generated refreshes
-  -> verdify-site-poll.timer for hand-authored edits
-  -> scripts/site-poll-and-rebuild.sh
+Curated website content
+  -> S3 content prefix
+  -> verdify-lab-publisher CronJob in k3s
+  -> scripts/publish-site-content.sh for generated refreshes
   -> scripts/rebuild-site.sh
-  -> npx quartz build --output /srv/verdify/verdify-site/.builds/public.*
-  -> rsync staged output into /srv/verdify/verdify-site/public
-  -> /srv/verdify/verdify-site/public
-  -> verdify-site nginx stays running
+  -> npx quartz build --output /work/builds/public.*
+  -> rsync staged output into /work/public
+  -> sync /work/content, /work/public, /work/state back to S3
+  -> verdify-lab nginx reads /work/public through the lab cache PVC
   -> Traefik / Cloudflare / lab.verdify.ai
 ```
 
@@ -75,79 +81,85 @@ into the live `public/` directory creates a short window where nginx can serve
 staging directory under:
 
 ```text
-/srv/verdify/verdify-site/.builds/public.*
+/work/builds/public.*
 ```
 
 Only after Quartz succeeds and `index.html` exists does the rebuild script sync
 the staged output into the live public directory:
 
 ```text
-/srv/verdify/verdify-site/public
+/work/public
 ```
 
 The sync uses delayed deletes, so existing pages stay available while new files
-copy into place. The `verdify-site` nginx container is left running for normal
-content changes. It is reloaded only when `site/nginx.conf` changes, with a
-container restart as the fallback if reload fails.
+copy into place. The `verdify-lab` nginx container serves the PVC read-only and
+does not need S3 credentials.
 
 ## Change Detection
 
-The poll timer fires every 10 seconds:
+The k3s CronJob runs every 10 minutes:
 
 ```bash
-systemctl status verdify-site-poll.timer
+kubectl -n verdify-prod get cronjob verdify-lab-publisher
 ```
-
-The poller does **not** rely on `find -newer` anymore. Syncthing can preserve
-the source file modification time, which means a real Mac/Obsidian edit can
-arrive with an mtime older than the last build marker. The poller now compares a
-metadata signature for the whole website tree:
-
-- relative path;
-- file size;
-- mtime;
-- ctime.
-
-That catches additions, deletions, renames, and preserved-mtime Syncthing
-updates without hashing large image contents every 10 seconds.
 
 State files:
 
 ```text
-/var/local/verdify/state/site-content.signature  # last successfully built tree signature
-/var/local/verdify/state/site-build-last-run     # human-readable last successful build marker
-/srv/verdify/state/site-build.log                # Quartz build/publish log
-/srv/verdify/verdify-site/.builds/               # temporary staged build output
+/work/state/site-build-last-run  # last successful build marker
+/work/state/site-build.log       # Quartz build log
+/work/state/publish.log          # generator publish log
+/work/builds/                    # temporary staged build output
 ```
 
-The signature is updated only after a successful build. If Quartz fails, the old
-signature remains and the next poll retries.
+The CronJob has `concurrencyPolicy: Forbid`; if a build is still running, the
+next scheduled run is skipped by Kubernetes. The shell scripts also use flock
+locks under `/work/locks`.
+
+Manual jobs created with `kubectl create job --from=cronjob/...` are separate
+Jobs, so they can overlap a scheduled run. For a clean manual proof, first
+confirm no publisher pod is active or temporarily suspend the CronJob. In k3s,
+`lab-publish-k3s` sets `VERDIFY_PUBLISH_LOCKED_RC=75`; if the publish lock is
+held, the wrapper exits before syncing any cache content back to S3.
 
 ## Normal Checks
 
-Use this first when an Obsidian edit does not show up:
+Use this first when the public site is stale:
 
 ```bash
-make site-publish-status
+kubectl -n verdify-prod get cronjob/job/pod -l app.kubernetes.io/component=lab-publisher
 ```
 
-Then check the build log:
+Then check the latest publisher pod logs:
 
 ```bash
-tail -80 /srv/verdify/state/site-build.log
+POD=$(kubectl -n verdify-prod get pod -l app.kubernetes.io/component=lab-publisher \
+  --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1:].metadata.name}')
+kubectl -n verdify-prod logs "$POD"
 ```
 
-Run a manual rebuild:
+Run an immediate one-shot publish from the CronJob template:
 
 ```bash
-make site-rebuild
+kubectl -n verdify-prod create job --from=cronjob/verdify-lab-publisher \
+  "verdify-lab-publisher-manual-$(date +%Y%m%d%H%M%S)"
 ```
 
-Regenerate every generated public page and rebuild:
+The S3 Secret must provide:
 
-```bash
-/srv/verdify/scripts/publish-site-content.sh --reason manual
+```text
+LAB_S3_BUCKET
+AWS_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY
+AWS_DEFAULT_REGION
+LAB_S3_ENDPOINT_URL  # optional, for non-AWS S3-compatible stores
 ```
+
+For the current local S3-compatible object store, use bucket
+`verdify-platform`, signing region `garage`, and endpoint
+`https://s3-hdd.vallery.net`. Prod uses `LAB_S3_PREFIX=lab`; dev patches the same
+ConfigMap to `lab-dev` so dev cannot overwrite public prod output. Use the
+Verdify-scoped key, not another app's S3 credentials.
 
 Validate the built site:
 
@@ -158,39 +170,29 @@ make site-doctor
 For generated planning and forecast pages, also confirm the nav-facing routes:
 
 ```bash
-curl -fsSL https://lab.verdify.ai/data/forecast/ | rg '05-[0-9]{2} [0-9]{2}:00'
-curl -fsSL https://lab.verdify.ai/data/plans/ | rg "$(date +%Y-%m-%d)"
+curl -fsSL https://lab.verdify.ai/data/forecast/ | rg '[0-9]{2}-[0-9]{2} [0-9]{2}:00'
+curl -fsSL https://lab.verdify.ai/plans/"$(date +%Y-%m-%d)"
 ```
 
-## Debugging Mac/Syncthing Edits
+## Debugging Content Edits
 
-If `make site-publish-status` shows `pending rebuild: no` and the public site
-is still stale, first confirm the edit actually reached the VM:
+If a hand-authored edit does not show up, first confirm it reached the S3 content
+prefix:
 
 ```bash
-rg 'text you edited' /mnt/iris/verdify-vault/website
-stat /mnt/iris/verdify-vault/website/path/to/page.md
+aws s3 ls "s3://$LAB_S3_BUCKET/$LAB_S3_PREFIX/content/"
 ```
 
-If the text is missing from the VM, the issue is before Verdify publishing:
-Obsidian save, Syncthing folder mapping, Syncthing conflict resolution, or the
-NAS/NFS mount.
+If the text exists in S3 but not in `/work/public`, the issue is Quartz
+build/publish. Check the latest publisher pod logs and create a one-shot job from
+the CronJob template.
 
-If the text exists in the VM but not in `/srv/verdify/verdify-site/public`,
-the issue is Quartz build/publish. Run:
-
-```bash
-make site-rebuild
-make site-doctor
-```
-
-If the generated HTML is correct locally but `lab.verdify.ai` is stale, the issue is
-serving/cache. Check:
+If the generated HTML is correct in the PVC but `lab.verdify.ai` is stale, the
+issue is serving/cache. Check:
 
 ```bash
 curl -I https://lab.verdify.ai/
 ```
 
-Only restart `verdify-site` if nginx is serving errors while
-`/srv/verdify/verdify-site/public/index.html` exists, or if the build log reports
-that reload failed.
+Only restart `verdify-lab` if nginx is serving errors while
+`/usr/share/nginx/html/index.html` exists in the lab pod.
