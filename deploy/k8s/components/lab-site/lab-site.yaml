@@ -33,6 +33,82 @@
 # overlay, so merging to live/platform-main keeps the live staging app's rendered
 # shape under the author's control. lab-site is pure web tier, NO device path —
 # it never touches the ESP32. Generated content is owned by lab-publisher.yaml.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-lab-nginx-config
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: lab-site
+data:
+  default.conf: |
+    # nginx serve config for the Verdify Lab Quartz static site under k3s.
+    server {
+        listen 8080;
+        server_name _;
+        root /usr/share/nginx/html;
+        index index.html;
+        absolute_redirect off;
+
+        # Quartz emits <page>/index.html for folder notes; redirect a trailing
+        # slash to the clean path when the folder index exists.
+        location ~ ^(.+)/$ {
+            add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+            add_header Pragma "no-cache" always;
+            add_header Expires "0" always;
+            if (-f $document_root$uri/index.html) {
+                rewrite ^ $uri/index.html break;
+            }
+            return 301 $1$is_args$args;
+        }
+
+        # Extensionless Quartz routes usually resolve to $uri.html, so this
+        # location must carry the no-store headers for page/nav freshness.
+        location / {
+            add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+            add_header Pragma "no-cache" always;
+            add_header Expires "0" always;
+            try_files $uri $uri.html $uri/index.html =404;
+        }
+
+        # No caching for HTML, JSON indexes, JS, or CSS. Quartz SPA navigation
+        # fetches HTML and static/contentIndex.json, so stale browser caches can
+        # make nav look wrong even when the PVC has the newest generated site.
+        location ~* \.(html|json|xml|css|js)$ {
+            add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+            add_header Pragma "no-cache" always;
+            add_header Expires "0" always;
+        }
+
+        # Self-hosted launch video streams.
+        location ~* \.m3u8$ {
+            types { application/vnd.apple.mpegurl m3u8; }
+            default_type application/vnd.apple.mpegurl;
+            add_header Cache-Control "public, max-age=300, must-revalidate" always;
+        }
+
+        location ~* \.ts$ {
+            types { video/mp2t ts; }
+            default_type video/mp2t;
+            add_header Cache-Control "public, max-age=2592000, immutable" always;
+        }
+
+        location ~* \.(mp4|m4v)$ {
+            types { video/mp4 mp4 m4v; }
+            default_type video/mp4;
+            add_header Cache-Control "public, max-age=2592000, immutable" always;
+            add_header Accept-Ranges bytes always;
+        }
+
+        # Cache media briefly, but do not mark same-path assets immutable while
+        # the public site is iterating.
+        location ~* \.(png|jpg|jpeg|gif|ico|svg|woff|woff2|webp)$ {
+            add_header Cache-Control "public, max-age=300, must-revalidate" always;
+        }
+
+        error_page 404 /404.html;
+    }
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -101,6 +177,10 @@ spec:
               mountPath: /var/cache/nginx
             - name: nginx-run
               mountPath: /var/run
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: default.conf
+              readOnly: true
           # GRACEFUL DRAIN (HA #231, Lane C). preStop sleep so Traefik/kube-proxy
           # drop this pod's endpoint before nginx stops accepting, avoiding a
           # mid-rollout 503 (same drain contract as api/mcp/www). Static "/" probes
@@ -157,6 +237,9 @@ spec:
           emptyDir: {}
         - name: nginx-run
           emptyDir: {}
+        - name: nginx-config
+          configMap:
+            name: verdify-lab-nginx-config
 ---
 apiVersion: v1
 kind: Service

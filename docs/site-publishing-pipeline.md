@@ -192,7 +192,15 @@ issue is serving/cache. Check:
 
 ```bash
 curl -I https://lab.verdify.ai/
+curl -I https://lab.verdify.ai/static/contentIndex.json
 ```
+
+Expected freshness headers for HTML, Quartz extensionless routes, JSON indexes,
+CSS, and JS are `Cache-Control: no-cache, no-store, must-revalidate`. These are
+served by the `verdify-lab-nginx-config` ConfigMap mounted into the
+`verdify-lab` pod. From the in-cluster/LAN path, responses should show nginx
+headers; if a WAN path shows Cloudflare cache headers, investigate the
+Cloudflare tunnel/rules before changing the publisher.
 
 Only restart `verdify-lab` if nginx is serving errors while
 `/usr/share/nginx/html/index.html` exists in the lab pod.
