@@ -117,16 +117,19 @@ runbook or architecture references before editing.
   `lab-dev`.
 - 2026-06-14: S3 content was seeded from the local website tree to
   `lab/content` and `lab-dev/content` (372 objects, about 403 MB each).
-- 2026-06-14: Final-digest scheduled publish job `verdify-lab-publisher-29691270`
-  completed at `2026-06-14 22:33:19Z`: generated `plans/2026-06-14.md`, rebuilt
-  297 pages, uploaded content/public/state to S3, and served
-  `https://lab.verdify.ai/plans/2026-06-14` with HTTP 200. Live CronJob is
-  unsuspended and pinned to
+- 2026-06-14: Final-digest scheduled publisher run succeeded. Live CronJob
+  status recorded `lastScheduleTime=2026-06-14T22:40:00Z` and
+  `lastSuccessfulTime=2026-06-14T22:42:46Z`: the publisher generated
+  `plans/2026-06-14.md`, rebuilt 297 pages, uploaded content/public/state to S3,
+  and served `https://lab.verdify.ai/plans/2026-06-14` with HTTP 200. Live
+  CronJob is unsuspended and pinned to
   `sha256:7dbb28f2aa95e28855e4cb642dc102d396ef5ab387fb5c86f69099e0485300d8`.
 - 2026-06-14: S3 `head-object` check confirmed
   `lab/content/plans/2026-06-14.md` (35182 bytes) and
   `lab/public/plans/2026-06-14.html` (59747 bytes); live lab pod served the HTML
   from `/usr/share/nginx/html/plans/2026-06-14.html`.
+- 2026-06-14: GitHub Actions `CI`, `Container Publish`, and `K8s Manifests`
+  were green on `main` after the S3-backed publisher merge and format follow-up.
 
 ## Next Recommended Codex Prompt
 
