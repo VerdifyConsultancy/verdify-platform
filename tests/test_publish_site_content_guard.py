@@ -91,10 +91,7 @@ def harness(tmp_path: Path):
     bin_dir.mkdir()
     fake_flock = bin_dir / "flock"
     fake_flock.write_text(
-        "#!/usr/bin/env bash\n"
-        "set -euo pipefail\n"
-        "if [[ \"${FIXTURE_FLOCK_FAIL:-}\" == \"1\" ]]; then exit 1; fi\n"
-        "exit 0\n",
+        '#!/usr/bin/env bash\nset -euo pipefail\nif [[ "${FIXTURE_FLOCK_FAIL:-}" == "1" ]]; then exit 1; fi\nexit 0\n',
         encoding="utf-8",
     )
     fake_flock.chmod(0o755)
