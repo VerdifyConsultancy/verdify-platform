@@ -136,7 +136,7 @@ def wrap_pool_for_shadow(pool):
 
 # ESP32 client reference, set by esp32_loop in ingestor.py
 # Used by dispatcher in tasks.py for direct setpoint push
-esp32 = {"client": None, "keys": {}}
+esp32 = {"client": None, "keys": {}, "services": {}}
 
 # param -> monotonic timestamp/value of the last direct ESP32 push.
 # Shared between ingestor.py callbacks and tasks.py dispatcher so echo

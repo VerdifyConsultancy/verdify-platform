@@ -1094,6 +1094,12 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             if eid:
                 esp32_changes.append((eid, val, "switch"))
                 esp32_params.append(param)
+        elif param in band_anchors.ANCHOR_SYNC_PARAMS:
+            # firmware-v2 anchors-mode: band/zone anchors are NVS-persisted on
+            # the device and written via the set_band_anchor API service (one
+            # service, heap-safe vs 56 number entities). obj_id == param name.
+            esp32_changes.append((param, val, "service"))
+            esp32_params.append(param)
         else:
             eid = PARAM_TO_ENTITY.get(param)
             if eid:

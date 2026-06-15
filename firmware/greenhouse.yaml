@@ -135,6 +135,31 @@ esphome:
           if(fixes > 0){ ESP_LOGE("boot","Fixed %d corrupted globals", fixes); }
           else { ESP_LOGI("boot","All globals valid"); }
           ESP_LOGI("boot", "Firmware version: %s", "${fw_version}");
+          // Band curve v2 (dry-night, migration 168) one-shot NVS migration: force the
+          // smooth dry-night anchors ONCE over any stale pre-v2 NVS values, then mark
+          // applied. restore_value stays yes so dispatcher anchor syncs persist after.
+          if(id(band_curve_rev) < 2){
+            id(band_vpd_low_sr) = 0.90f;
+            id(band_vpd_low_sm) = 0.95f;
+            id(band_vpd_low_ss) = 0.90f;
+            id(band_vpd_low_mid) = 0.88f;
+            id(band_vpd_target_sr) = 1.05f;
+            id(band_vpd_target_sm) = 1.10f;
+            id(band_vpd_target_ss) = 1.05f;
+            id(band_vpd_target_mid) = 1.05f;
+            id(band_vpd_high_sr) = 1.25f;
+            id(band_vpd_high_sm) = 1.50f;
+            id(band_vpd_high_ss) = 1.25f;
+            id(band_vpd_high_mid) = 1.22f;
+            id(band_temp_low_mid) = 62.00f;
+            id(band_temp_target_mid) = 65.00f;
+            id(zone_vpd_target_center_sr) = 1.05f;
+            id(zone_vpd_target_center_sm) = 1.10f;
+            id(zone_vpd_target_center_ss) = 1.05f;
+            id(zone_vpd_target_center_mid) = 1.05f;
+            id(band_curve_rev) = 2;
+            ESP_LOGW("band","Applied band curve v2 (dry-night) NVS migration");
+          }
 
 esp32:
   board: esp32dev
@@ -197,6 +222,76 @@ api:
   max_connections: 20
   encryption:
     key: !secret api_encryption_key
+
+  # firmware-v2 anchors-mode: DB→on-chip band sync (docs/design/firmware-v2-settable-anchors-2026-06-15.md).
+  # ONE service (heap-safe vs 56 number entities) writes any NVS-persisted band/zone anchor
+  # global by name; the dispatcher calls it on crop_band_anchors change; cfg_<key> sensors confirm.
+  services:
+    - service: set_band_anchor
+      variables:
+        anchor_key: string
+        value: float
+      then:
+        - lambda: |-
+            bool ok = true;
+            if (anchor_key == "band_temp_low_sr") { id(band_temp_low_sr) = value; }
+            else if (anchor_key == "band_temp_low_sm") { id(band_temp_low_sm) = value; }
+            else if (anchor_key == "band_temp_low_ss") { id(band_temp_low_ss) = value; }
+            else if (anchor_key == "band_temp_low_mid") { id(band_temp_low_mid) = value; }
+            else if (anchor_key == "band_temp_target_sr") { id(band_temp_target_sr) = value; }
+            else if (anchor_key == "band_temp_target_sm") { id(band_temp_target_sm) = value; }
+            else if (anchor_key == "band_temp_target_ss") { id(band_temp_target_ss) = value; }
+            else if (anchor_key == "band_temp_target_mid") { id(band_temp_target_mid) = value; }
+            else if (anchor_key == "band_temp_high_sr") { id(band_temp_high_sr) = value; }
+            else if (anchor_key == "band_temp_high_sm") { id(band_temp_high_sm) = value; }
+            else if (anchor_key == "band_temp_high_ss") { id(band_temp_high_ss) = value; }
+            else if (anchor_key == "band_temp_high_mid") { id(band_temp_high_mid) = value; }
+            else if (anchor_key == "band_vpd_low_sr") { id(band_vpd_low_sr) = value; }
+            else if (anchor_key == "band_vpd_low_sm") { id(band_vpd_low_sm) = value; }
+            else if (anchor_key == "band_vpd_low_ss") { id(band_vpd_low_ss) = value; }
+            else if (anchor_key == "band_vpd_low_mid") { id(band_vpd_low_mid) = value; }
+            else if (anchor_key == "band_vpd_target_sr") { id(band_vpd_target_sr) = value; }
+            else if (anchor_key == "band_vpd_target_sm") { id(band_vpd_target_sm) = value; }
+            else if (anchor_key == "band_vpd_target_ss") { id(band_vpd_target_ss) = value; }
+            else if (anchor_key == "band_vpd_target_mid") { id(band_vpd_target_mid) = value; }
+            else if (anchor_key == "band_vpd_high_sr") { id(band_vpd_high_sr) = value; }
+            else if (anchor_key == "band_vpd_high_sm") { id(band_vpd_high_sm) = value; }
+            else if (anchor_key == "band_vpd_high_ss") { id(band_vpd_high_ss) = value; }
+            else if (anchor_key == "band_vpd_high_mid") { id(band_vpd_high_mid) = value; }
+            else if (anchor_key == "zone_vpd_target_center_sr") { id(zone_vpd_target_center_sr) = value; }
+            else if (anchor_key == "zone_vpd_target_center_sm") { id(zone_vpd_target_center_sm) = value; }
+            else if (anchor_key == "zone_vpd_target_center_ss") { id(zone_vpd_target_center_ss) = value; }
+            else if (anchor_key == "zone_vpd_target_center_mid") { id(zone_vpd_target_center_mid) = value; }
+            else if (anchor_key == "zone_vpd_target_south_sr") { id(zone_vpd_target_south_sr) = value; }
+            else if (anchor_key == "zone_vpd_target_south_sm") { id(zone_vpd_target_south_sm) = value; }
+            else if (anchor_key == "zone_vpd_target_south_ss") { id(zone_vpd_target_south_ss) = value; }
+            else if (anchor_key == "zone_vpd_target_south_mid") { id(zone_vpd_target_south_mid) = value; }
+            else if (anchor_key == "zone_vpd_target_west_sr") { id(zone_vpd_target_west_sr) = value; }
+            else if (anchor_key == "zone_vpd_target_west_sm") { id(zone_vpd_target_west_sm) = value; }
+            else if (anchor_key == "zone_vpd_target_west_ss") { id(zone_vpd_target_west_ss) = value; }
+            else if (anchor_key == "zone_vpd_target_west_mid") { id(zone_vpd_target_west_mid) = value; }
+            else if (anchor_key == "zone_vpd_target_east_sr") { id(zone_vpd_target_east_sr) = value; }
+            else if (anchor_key == "zone_vpd_target_east_sm") { id(zone_vpd_target_east_sm) = value; }
+            else if (anchor_key == "zone_vpd_target_east_ss") { id(zone_vpd_target_east_ss) = value; }
+            else if (anchor_key == "zone_vpd_target_east_mid") { id(zone_vpd_target_east_mid) = value; }
+            else if (anchor_key == "zone_vpd_width_below_center") { id(zone_vpd_width_below_center) = value; }
+            else if (anchor_key == "zone_vpd_width_below_south") { id(zone_vpd_width_below_south) = value; }
+            else if (anchor_key == "zone_vpd_width_below_west") { id(zone_vpd_width_below_west) = value; }
+            else if (anchor_key == "zone_vpd_width_below_east") { id(zone_vpd_width_below_east) = value; }
+            else if (anchor_key == "zone_vpd_width_above_center") { id(zone_vpd_width_above_center) = value; }
+            else if (anchor_key == "zone_vpd_width_above_south") { id(zone_vpd_width_above_south) = value; }
+            else if (anchor_key == "zone_vpd_width_above_west") { id(zone_vpd_width_above_west) = value; }
+            else if (anchor_key == "zone_vpd_width_above_east") { id(zone_vpd_width_above_east) = value; }
+            else if (anchor_key == "zone_priority_center") { id(zone_priority_center) = value; }
+            else if (anchor_key == "zone_priority_south") { id(zone_priority_south) = value; }
+            else if (anchor_key == "zone_priority_west") { id(zone_priority_west) = value; }
+            else if (anchor_key == "zone_priority_east") { id(zone_priority_east) = value; }
+            else if (anchor_key == "wet_taper_before_sunset_min") { id(wet_taper_before_sunset_min) = value; }
+            else if (anchor_key == "dawn_boost_offset_min") { id(dawn_boost_offset_min) = value; }
+            else if (anchor_key == "midday_boost_offset_min") { id(midday_boost_offset_min) = value; }
+            else if (anchor_key == "manual_override_timeout_min") { id(manual_override_timeout_min) = value; }
+            else { ok = false; ESP_LOGW("band", "set_band_anchor: unknown key '%s'", anchor_key.c_str()); }
+            if (ok) { ESP_LOGI("band", "set_band_anchor %s = %.3f", anchor_key.c_str(), value); }
 
 # MQTT is intentionally omitted on the ESP32. The global MQTT component creates
 # a publish wrapper for every public entity, which costs tens of KB of runtime

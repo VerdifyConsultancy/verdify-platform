@@ -645,7 +645,7 @@ globals:
   - id: band_temp_low_mid
     type: float
     restore_value: yes
-    initial_value: '60'
+    initial_value: '62'
 
   - id: band_temp_target_sr
     type: float
@@ -662,7 +662,7 @@ globals:
   - id: band_temp_target_mid
     type: float
     restore_value: yes
-    initial_value: '64'
+    initial_value: '65'
 
   - id: band_temp_high_sr
     type: float
@@ -681,76 +681,85 @@ globals:
     restore_value: yes
     initial_value: '70'
 
+  # firmware-v2 band curve NVS schema version. Bumped when the baked
+  # anchor defaults change so on_boot can one-shot-migrate stale NVS
+  # values (restore_value globals otherwise survive an OTA). See the
+  # on_boot migration in greenhouse.yaml.
+  - id: band_curve_rev
+    type: int
+    restore_value: yes
+    initial_value: '0'
+
   # ─── B2: house VPD band anchor curves (kPa) ───
   - id: band_vpd_low_sr
     type: float
     restore_value: yes
-    initial_value: '0.40'
+    initial_value: '0.90'
   - id: band_vpd_low_sm
     type: float
     restore_value: yes
-    initial_value: '0.60'
+    initial_value: '0.95'
   - id: band_vpd_low_ss
     type: float
     restore_value: yes
-    initial_value: '0.45'
+    initial_value: '0.90'
   - id: band_vpd_low_mid
     type: float
     restore_value: yes
-    initial_value: '0.42'
+    initial_value: '0.88'
 
   - id: band_vpd_target_sr
     type: float
     restore_value: yes
-    initial_value: '0.60'
+    initial_value: '1.05'
   - id: band_vpd_target_sm
     type: float
     restore_value: yes
-    initial_value: '1.05'
+    initial_value: '1.10'
   - id: band_vpd_target_ss
     type: float
     restore_value: yes
-    initial_value: '0.60'
+    initial_value: '1.05'
   - id: band_vpd_target_mid
     type: float
     restore_value: yes
-    initial_value: '0.50'
+    initial_value: '1.05'
 
   - id: band_vpd_high_sr
     type: float
     restore_value: yes
-    initial_value: '0.90'
+    initial_value: '1.25'
   - id: band_vpd_high_sm
     type: float
     restore_value: yes
-    initial_value: '1.40'
+    initial_value: '1.50'
   - id: band_vpd_high_ss
     type: float
     restore_value: yes
-    initial_value: '0.90'
+    initial_value: '1.25'
   - id: band_vpd_high_mid
     type: float
     restore_value: yes
-    initial_value: '0.75'
+    initial_value: '1.22'
 
   # ─── B2: per-zone VPD target anchor curves (kPa) ×4 zones ───
   # center / south / west / east; SR SM SS MID order.
   - id: zone_vpd_target_center_sr
     type: float
     restore_value: yes
-    initial_value: '0.60'
+    initial_value: '1.05'
   - id: zone_vpd_target_center_sm
     type: float
     restore_value: yes
-    initial_value: '1.05'
+    initial_value: '1.1'
   - id: zone_vpd_target_center_ss
     type: float
     restore_value: yes
-    initial_value: '0.60'
+    initial_value: '1.05'
   - id: zone_vpd_target_center_mid
     type: float
     restore_value: yes
-    initial_value: '0.50'
+    initial_value: '1.05'
 
   - id: zone_vpd_target_south_sr
     type: float

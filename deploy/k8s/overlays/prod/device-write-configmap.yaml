@@ -14,3 +14,14 @@ metadata:
   name: verdify-config
 data:
   VERDIFY_DEVICE_WRITE_ENABLED: "1"
+  # BAND AUTHORITY (firmware-v2 contract B2/B7) — prod only. The device runs in
+  # on-chip band mode (sw_onchip_band_enabled=true) and ignores the legacy
+  # dispatcher band push, so the deterministic crop_band_anchors curve only
+  # reaches the device when the dispatcher SYNCS the on-chip NVS anchors. That
+  # sync (ingestor/tasks/band_anchors.py) is gated on this flag. "anchors" makes
+  # the dispatcher push the band_*/zone_vpd_target_* anchors to the ESP32 via
+  # the setpoint_changes -> push_to_esp32 -> cfg_* confirm loop; the legacy
+  # temp_low/high/vpd_low/high band push keeps running until every anchor is
+  # cfg_*-confirmed (no band gap). It also activates the per-zone band audit.
+  # Rollback: set to "legacy" (or remove) + restart the ingestor.
+  VERDIFY_BAND_SOURCE: "anchors"

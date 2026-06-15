@@ -17,6 +17,11 @@ from entity_map import SETPOINT_MAP
 
 log = logging.getLogger("esp32_push")
 
+# firmware-v2 anchors-mode: the single on-chip API service that writes any
+# NVS-persisted band/zone anchor global by name (docs/design/
+# firmware-v2-settable-anchors-2026-06-15.md). Heap-safe vs 56 number entities.
+_BAND_ANCHOR_SERVICE = "set_band_anchor"
+
 # ── Device-write safety gate (#79) ──────────────────────────────────────────
 # Default-deny: the ingestor only writes to the physical ESP32 when
 # VERDIFY_DEVICE_WRITE_ENABLED is exactly '1'. Staging (and any env that
@@ -107,12 +112,34 @@ async def push_to_esp32(changes: list[tuple[str, float, str]]) -> int:
     pushed = 0
     async with _PUSH_LOCK:
         for idx, (obj_id, val, etype) in enumerate(changes, start=1):
-            key = keys.get(obj_id)
-            if not key:
-                log.warning("push_to_esp32: no key for '%s' (%d keys)", obj_id, len(keys))
-                continue
             try:
                 await _pace_command()
+                if etype == "service":
+                    # firmware-v2 anchors-mode: write an NVS-persisted band/zone
+                    # anchor via the set_band_anchor API service. obj_id == the
+                    # anchor param name; there is no per-anchor entity key.
+                    svc = (shared.esp32.get("services") or {}).get(_BAND_ANCHOR_SERVICE)
+                    if svc is None:
+                        log.warning(
+                            "push_to_esp32: '%s' service unavailable for anchor '%s'",
+                            _BAND_ANCHOR_SERVICE,
+                            obj_id,
+                        )
+                        continue
+                    result = client.execute_service(svc, {"anchor_key": obj_id, "value": float(val)})
+                    if asyncio.iscoroutine(result):
+                        await result
+                    pushed += 1
+                    shared.recently_pushed[obj_id] = time.time()
+                    shared.recently_pushed_values[obj_id] = float(val)
+                    if len(changes) > 1 and idx < len(changes) and pushed % _BATCH_PAUSE_EVERY == 0:
+                        await asyncio.sleep(_BATCH_PAUSE_S)
+                    continue
+
+                key = keys.get(obj_id)
+                if not key:
+                    log.warning("push_to_esp32: no key for '%s' (%d keys)", obj_id, len(keys))
+                    continue
                 if etype == "number":
                     result = client.number_command(key, val)
                     if asyncio.iscoroutine(result):

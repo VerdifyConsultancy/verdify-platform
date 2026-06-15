@@ -159,8 +159,24 @@ def band_source() -> str:
     return BAND_SOURCE_LEGACY
 
 
+# The on-chip API service that writes any band/zone anchor global by name
+# (firmware greenhouse.yaml api: services:). Contract string — keep in sync with
+# esp32_push._BAND_ANCHOR_SERVICE and the firmware service id.
+BAND_ANCHOR_SERVICE = "set_band_anchor"
+
+
 def anchors_supported() -> bool:
-    """True once the connected firmware exposes the v2 anchor entities."""
+    """True once the connected firmware can receive anchor writes.
+
+    Firmware-v2 exposes a single ``set_band_anchor`` API service (heap-safe vs 56
+    number entities); its presence in the device user-service list is the
+    canonical signal. Fall back to the legacy per-anchor number-entity check, then
+    to a cfg-readback heuristic, for older firmware / before the service list is
+    populated.
+    """
+    services = shared.esp32.get("services") or {}
+    if BAND_ANCHOR_SERVICE in services:
+        return True
     keys = shared.esp32.get("keys") or {}
     if keys:
         return ANCHOR_REQUIRED_OBJECT_IDS.issubset(set(keys))

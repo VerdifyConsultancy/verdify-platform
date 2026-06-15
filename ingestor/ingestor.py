@@ -1833,6 +1833,16 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
             shared.esp32["keys"] = {obj_id: key for key, obj_id in state.key_to_object_id.items()}
             log.info("ESP32 client shared: %d entity keys for direct push", len(shared.esp32["keys"]))
 
+            # firmware-v2 anchors-mode: cache the device's user-services so the
+            # dispatcher can sync band/zone anchors via the set_band_anchor API
+            # service (push_to_esp32 "service" etype). object_id == param name.
+            shared.esp32["services"] = {s.name: s for s in (services or [])}
+            log.info(
+                "ESP32 client shared: %d user service(s): %s",
+                len(shared.esp32["services"]),
+                ", ".join(sorted(shared.esp32["services"])) or "none",
+            )
+
             # Signal dispatcher to do a full re-push (clears _last_pushed cache)
             import time as _time_mod
 
