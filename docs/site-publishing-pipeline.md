@@ -171,8 +171,13 @@ For generated planning and forecast pages, also confirm the nav-facing routes:
 
 ```bash
 curl -fsSL https://lab.verdify.ai/data/forecast/ | rg '[0-9]{2}-[0-9]{2} [0-9]{2}:00'
-curl -fsSL https://lab.verdify.ai/plans/"$(date +%Y-%m-%d)"
+TZ=America/Denver curl -fsSL https://lab.verdify.ai/plans/"$(date +%Y-%m-%d)"
 ```
+
+The publisher pins `LAB_LOCAL_TIMEZONE`/`TZ` to `America/Denver` because public
+daily plan pages are greenhouse-local records. Scheduled k3s runs also remove
+auto-generated `/plans/YYYY-MM-DD.md` pages later than the local publish date so
+a UTC rollover cannot publish tomorrow's empty plan stub.
 
 ## Debugging Content Edits
 

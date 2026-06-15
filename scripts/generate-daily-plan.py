@@ -26,6 +26,7 @@ import sys
 from datetime import date, datetime, timedelta
 from html import escape
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import yaml
 
@@ -35,6 +36,11 @@ from verdify_schemas import DailyPlanVaultFrontmatter  # noqa: E402
 CONTENT_DIR = Path("/srv/verdify/verdify-site/content/plans")
 DB_CMD = "docker exec verdify-timescaledb psql -U verdify -d verdify -t -A"
 DB_TIMEOUT_S = int(os.environ.get("VERDIFY_DAILY_PLAN_DB_TIMEOUT_S", "60"))
+LOCAL_TZ = ZoneInfo(os.environ.get("LAB_LOCAL_TIMEZONE") or os.environ.get("TZ") or "America/Denver")
+
+
+def local_today() -> date:
+    return datetime.now(LOCAL_TZ).date()
 
 
 def _yaml_escape(val: str) -> str:
@@ -1382,7 +1388,7 @@ def generate_daily_summary_section(
             COUNT(*) AS obs_count,
             string_agg(DISTINCT o.notes, ' || ' ORDER BY o.notes) AS notes
         FROM observations o JOIN crops c ON o.crop_id = c.id
-        WHERE o.source = 'gemini-vision' AND o.ts::date = '{summary_date or date.today()}'
+        WHERE o.source = 'gemini-vision' AND o.ts::date = '{summary_date or local_today()}'
         GROUP BY c.name, c.zone ORDER BY c.name
     """)
     if crop_health:
@@ -1602,7 +1608,7 @@ def main():
     if args.backfill:
         backfill()
     elif args.today or args.date:
-        d = date.today() if args.today else date.fromisoformat(args.date)
+        d = local_today() if args.today else date.fromisoformat(args.date)
         content = generate_day(d)
         output = CONTENT_DIR / f"{d}.md"
         output.write_text(content)

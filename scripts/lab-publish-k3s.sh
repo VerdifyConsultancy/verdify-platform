@@ -18,6 +18,8 @@ export VERDIFY_DB_BACKEND="${VERDIFY_DB_BACKEND:-dsn}"
 export VERDIFY_PSQL_MODE="${VERDIFY_PSQL_MODE:-direct}"
 export VERDIFY_SCRIPT_ROOT="${VERDIFY_SCRIPT_ROOT:-/app/scripts}"
 export PYTHON="${PYTHON:-/opt/venv/bin/python}"
+export LAB_LOCAL_TIMEZONE="${LAB_LOCAL_TIMEZONE:-America/Denver}"
+export TZ="$LAB_LOCAL_TIMEZONE"
 
 LAB_S3_PREFIX="${LAB_S3_PREFIX:-lab}"
 LAB_S3_PREFIX="${LAB_S3_PREFIX#/}"

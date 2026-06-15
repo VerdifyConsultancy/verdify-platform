@@ -23,6 +23,8 @@ metadata:
 data:
   LAB_S3_PREFIX: lab
   LAB_PUBLISH_REASON: k3s-cron
+  LAB_LOCAL_TIMEZONE: America/Denver
+  TZ: America/Denver
 ---
 apiVersion: batch/v1
 kind: CronJob
