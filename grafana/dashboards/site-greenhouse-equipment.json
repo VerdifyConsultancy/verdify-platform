@@ -430,7 +430,7 @@
           "decimals": 1,
           "color": {
             "mode": "fixed",
-            "fixedColor": "#9CCC65"
+            "fixedColor": "#2196F3"
           },
           "custom": {
             "axisLabel": "Hours"
@@ -446,7 +446,7 @@
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "#9CCC65",
+                  "fixedColor": "#2196F3",
                   "mode": "fixed"
                 }
               }
@@ -804,7 +804,7 @@
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "#9CCC65",
+                  "fixedColor": "#2196F3",
                   "mode": "fixed"
                 }
               }
@@ -1182,7 +1182,7 @@
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "#9CCC65",
+                  "fixedColor": "#2196F3",
                   "mode": "fixed"
                 }
               }

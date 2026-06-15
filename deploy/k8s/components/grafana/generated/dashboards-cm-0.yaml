@@ -8253,7 +8253,7 @@ data:
               "editorMode": "code",
               "format": "time_series",
               "rawQuery": true,
-              "rawSql": "WITH bounds AS MATERIALIZED (\n  SELECT\n    $__timeFrom()::timestamptz AS from_ts,\n    LEAST($__timeTo()::timestamptz, now()) AS to_ts,\n    interval '5 minutes' AS step,\n    date_trunc('hour', $__timeFrom()::timestamptz) AS seed_start_ts\n),\nbuckets AS MATERIALIZED (\n  SELECT generate_series(time_bucket(b.step, b.seed_start_ts), b.to_ts, b.step) AS time\n  FROM bounds b\n),\nlane_metrics AS MATERIALIZED (\n  SELECT *\n  FROM (VALUES\n    ('heat2'::text, 'Heat 2 (Gas)'::text, 'Heat 2 (Gas) Base'::text, 54.5::double precision, 56.0::double precision),\n    ('heat1'::text, 'Heat 1 (Electric)'::text, 'Heat 1 (Electric) Base'::text, 56.5::double precision, 58.0::double precision),\n    ('fan1'::text, 'Fan 1'::text, 'Fan 1 Base'::text, 80.5::double precision, 82.0::double precision),\n    ('fan2'::text, 'Fan 2'::text, 'Fan 2 Base'::text, 82.5::double precision, 84.0::double precision),\n    ('fog'::text, 'Fog'::text, 'Fog Base'::text, 84.5::double precision, 86.0::double precision)\n  ) AS m(equipment, top_metric, base_metric, lane_low, lane_high)\n),\nstate_seed AS MATERIALIZED (\n  SELECT bd.seed_start_ts AS time, m.equipment, COALESCE(seed.state, false) AS state\n  FROM bounds bd\n  CROSS JOIN lane_metrics m\n  LEFT JOIN LATERAL (\n    SELECT e.state\n    FROM equipment_state e\n    WHERE e.greenhouse_id = 'vallery'\n      AND e.equipment = m.equipment\n      AND e.ts <= bd.seed_start_ts\n    ORDER BY e.ts DESC\n    LIMIT 1\n  ) seed ON true\n),\nstate_events AS MATERIALIZED (\n  SELECT e.ts AS time, e.equipment, e.state\n  FROM equipment_state e, bounds bd\n  WHERE e.greenhouse_id = 'vallery'\n    AND e.equipment IN ('heat2', 'heat1', 'fan1', 'fan2', 'fog')\n    AND e.ts >= bd.seed_start_ts\n    AND e.ts <= bd.to_ts\n),\nstate_timeline AS MATERIALIZED (\n  SELECT\n    e.time,\n    e.equipment,\n    e.state,\n    lead(e.time, 1, (SELECT to_ts FROM bounds)) OVER (PARTITION BY e.equipment ORDER BY e.time) AS next_time\n  FROM (\n    SELECT time, equipment, state FROM state_seed\n    UNION ALL\n    SELECT time, equipment, state FROM state_events\n  ) e\n),\nstate_segments AS MATERIALIZED (\n  SELECT\n    greatest(st.time, bd.seed_start_ts) AS start_time,\n    least(st.next_time, bd.to_ts) AS end_time,\n    st.equipment\n  FROM state_timeline st\n  CROSS JOIN bounds bd\n  WHERE st.state\n    AND st.time < bd.to_ts\n    AND st.next_time > bd.seed_start_ts\n),\nlanes AS (\n  SELECT\n    b.time,\n    m.top_metric AS metric,\n    CASE WHEN EXISTS (\n      SELECT 1\n      FROM state_segments s\n      WHERE s.equipment = m.equipment\n        AND s.start_time < b.time + bd.step\n        AND s.end_time > b.time\n    ) THEN m.lane_high ELSE NULL::double precision END AS value\n  FROM buckets b\n  CROSS JOIN bounds bd\n  CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts\n    AND b.time <= bd.to_ts\n  UNION ALL\n  SELECT b.time, m.base_metric, m.lane_low\n  FROM buckets b\n  CROSS JOIN bounds bd\n  CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts\n    AND b.time <= bd.to_ts\n)\nSELECT time, metric, value\nFROM lanes\nORDER BY time, metric",
+              "rawSql": "WITH bounds AS MATERIALIZED (\n  SELECT\n    $__timeFrom()::timestamptz AS from_ts,\n    LEAST($__timeTo()::timestamptz, now()) AS to_ts,\n    interval '5 minutes' AS step,\n    date_trunc('hour', $__timeFrom()::timestamptz) AS seed_start_ts\n),\nbuckets AS MATERIALIZED (\n  SELECT generate_series(time_bucket(b.step, b.seed_start_ts), b.to_ts, b.step) AS time\n  FROM bounds b\n),\nlane_metrics AS MATERIALIZED (\n  SELECT *\n  FROM (VALUES\n    ('heat2'::text, 'Heat 2 (Gas)'::text, 'Heat 2 (Gas) Base'::text, 56.0::double precision, 57.8::double precision),\n    ('heat1'::text, 'Heat 1 (Electric)'::text, 'Heat 1 (Electric) Base'::text, 58.2::double precision, 60.0::double precision),\n    ('fan1'::text, 'Fan 1'::text, 'Fan 1 Base'::text, 87.0::double precision, 88.8::double precision),\n    ('fan2'::text, 'Fan 2'::text, 'Fan 2 Base'::text, 89.2::double precision, 91.0::double precision),\n    ('fog'::text, 'Fog'::text, 'Fog Base'::text, 91.4::double precision, 93.2::double precision)\n  ) AS m(equipment, top_metric, base_metric, lane_low, lane_high)\n),\nstate_seed AS MATERIALIZED (\n  SELECT bd.seed_start_ts AS time, m.equipment, COALESCE(seed.state, false) AS state\n  FROM bounds bd\n  CROSS JOIN lane_metrics m\n  LEFT JOIN LATERAL (\n    SELECT e.state\n    FROM equipment_state e\n    WHERE e.greenhouse_id = 'vallery'\n      AND e.equipment = m.equipment\n      AND e.ts <= bd.seed_start_ts\n    ORDER BY e.ts DESC\n    LIMIT 1\n  ) seed ON true\n),\nstate_events AS MATERIALIZED (\n  SELECT e.ts AS time, e.equipment, e.state\n  FROM equipment_state e, bounds bd\n  WHERE e.greenhouse_id = 'vallery'\n    AND e.equipment IN ('heat2', 'heat1', 'fan1', 'fan2', 'fog')\n    AND e.ts >= bd.seed_start_ts\n    AND e.ts <= bd.to_ts\n),\nstate_timeline AS MATERIALIZED (\n  SELECT\n    e.time,\n    e.equipment,\n    e.state,\n    lead(e.time, 1, (SELECT to_ts FROM bounds)) OVER (PARTITION BY e.equipment ORDER BY e.time) AS next_time\n  FROM (\n    SELECT time, equipment, state FROM state_seed\n    UNION ALL\n    SELECT time, equipment, state FROM state_events\n  ) e\n),\nstate_segments AS MATERIALIZED (\n  SELECT\n    greatest(st.time, bd.seed_start_ts) AS start_time,\n    least(st.next_time, bd.to_ts) AS end_time,\n    st.equipment\n  FROM state_timeline st\n  CROSS JOIN bounds bd\n  WHERE st.state\n    AND st.time < bd.to_ts\n    AND st.next_time > bd.seed_start_ts\n),\nlanes AS (\n  SELECT\n    b.time,\n    m.top_metric AS metric,\n    CASE WHEN EXISTS (\n      SELECT 1\n      FROM state_segments s\n      WHERE s.equipment = m.equipment\n        AND s.start_time < b.time + bd.step\n        AND s.end_time > b.time\n    ) THEN m.lane_high ELSE NULL::double precision END AS value\n  FROM buckets b\n  CROSS JOIN bounds bd\n  CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts\n    AND b.time <= bd.to_ts\n  UNION ALL\n  SELECT b.time, m.base_metric, m.lane_low\n  FROM buckets b\n  CROSS JOIN bounds bd\n  CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts\n    AND b.time <= bd.to_ts\n)\nSELECT time, metric, value\nFROM lanes\nORDER BY time, metric",
               "refId": "E",
               "sql": {
                 "columns": [
@@ -8424,7 +8424,7 @@ data:
                   },
                   {
                     "id": "custom.pointSize",
-                    "value": 3
+                    "value": 0
                   },
                   {
                     "id": "custom.hideFrom",
@@ -8468,6 +8468,10 @@ data:
                   {
                     "id": "custom.spanNulls",
                     "value": false
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   }
                 ]
               },
@@ -8490,7 +8494,7 @@ data:
                   },
                   {
                     "id": "custom.pointSize",
-                    "value": 3
+                    "value": 0
                   },
                   {
                     "id": "custom.hideFrom",
@@ -8534,6 +8538,10 @@ data:
                   {
                     "id": "custom.spanNulls",
                     "value": false
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   }
                 ]
               },
@@ -8556,7 +8564,7 @@ data:
                   },
                   {
                     "id": "custom.pointSize",
-                    "value": 3
+                    "value": 0
                   },
                   {
                     "id": "custom.hideFrom",
@@ -8600,6 +8608,10 @@ data:
                   {
                     "id": "custom.spanNulls",
                     "value": false
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   }
                 ]
               },
@@ -8622,7 +8634,7 @@ data:
                   },
                   {
                     "id": "custom.pointSize",
-                    "value": 3
+                    "value": 0
                   },
                   {
                     "id": "custom.hideFrom",
@@ -8666,6 +8678,10 @@ data:
                   {
                     "id": "custom.spanNulls",
                     "value": false
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   }
                 ]
               },
@@ -8688,7 +8704,7 @@ data:
                   },
                   {
                     "id": "custom.pointSize",
-                    "value": 3
+                    "value": 0
                   },
                   {
                     "id": "custom.hideFrom",
@@ -8732,6 +8748,10 @@ data:
                   {
                     "id": "custom.spanNulls",
                     "value": false
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   }
                 ]
               },
@@ -8797,6 +8817,14 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -8832,6 +8860,14 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -8867,6 +8903,14 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -8902,6 +8946,14 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -8937,6 +8989,14 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               }
@@ -9013,7 +9073,7 @@ data:
               "editorMode": "code",
               "format": "time_series",
               "rawQuery": true,
-              "rawSql": "WITH bounds AS MATERIALIZED (\n  SELECT\n    $__timeFrom()::timestamptz AS from_ts,\n    LEAST($__timeTo()::timestamptz, now()) AS to_ts,\n    interval '5 minutes' AS step,\n    date_trunc('hour', $__timeFrom()::timestamptz) AS seed_start_ts\n),\nbuckets AS MATERIALIZED (\n  SELECT generate_series(time_bucket(b.step, b.seed_start_ts), b.to_ts, b.step) AS time\n  FROM bounds b\n),\nlane_metrics AS MATERIALIZED (\n  SELECT *\n  FROM (VALUES\n    ('mister_south'::text, 'Mister South'::text, 'Mister South Base'::text, 1.75::double precision, 1.8::double precision),\n    ('mister_west'::text, 'Mister West'::text, 'Mister West Base'::text, 1.85::double precision, 1.9::double precision),\n    ('mister_center'::text, 'Mister Center'::text, 'Mister Center Base'::text, 1.95::double precision, 2.0::double precision),\n    ('fog'::text, 'Fog'::text, 'Fog Base'::text, 2.05::double precision, 2.1::double precision)\n  ) AS m(equipment, top_metric, base_metric, lane_low, lane_high)\n),\nstate_seed AS MATERIALIZED (\n  SELECT bd.seed_start_ts AS time, m.equipment, COALESCE(seed.state, false) AS state\n  FROM bounds bd\n  CROSS JOIN lane_metrics m\n  LEFT JOIN LATERAL (\n    SELECT e.state\n    FROM equipment_state e\n    WHERE e.greenhouse_id = 'vallery'\n      AND e.equipment = m.equipment\n      AND e.ts <= bd.seed_start_ts\n    ORDER BY e.ts DESC\n    LIMIT 1\n  ) seed ON true\n),\nstate_events AS MATERIALIZED (\n  SELECT e.ts AS time, e.equipment, e.state\n  FROM equipment_state e, bounds bd\n  WHERE e.greenhouse_id = 'vallery'\n    AND e.equipment IN ('mister_south', 'mister_west', 'mister_center', 'fog')\n    AND e.ts >= bd.seed_start_ts\n    AND e.ts <= bd.to_ts\n),\nstate_timeline AS MATERIALIZED (\n  SELECT\n    e.time,\n    e.equipment,\n    e.state,\n    lead(e.time, 1, (SELECT to_ts FROM bounds)) OVER (PARTITION BY e.equipment ORDER BY e.time) AS next_time\n  FROM (\n    SELECT time, equipment, state FROM state_seed\n    UNION ALL\n    SELECT time, equipment, state FROM state_events\n  ) e\n),\nstate_segments AS MATERIALIZED (\n  SELECT\n    greatest(st.time, bd.seed_start_ts) AS start_time,\n    least(st.next_time, bd.to_ts) AS end_time,\n    st.equipment\n  FROM state_timeline st\n  CROSS JOIN bounds bd\n  WHERE st.state\n    AND st.time < bd.to_ts\n    AND st.next_time > bd.seed_start_ts\n),\nlanes AS (\n  SELECT\n    b.time,\n    m.top_metric AS metric,\n    CASE WHEN EXISTS (\n      SELECT 1\n      FROM state_segments s\n      WHERE s.equipment = m.equipment\n        AND s.start_time < b.time + bd.step\n        AND s.end_time > b.time\n    ) THEN m.lane_high ELSE NULL::double precision END AS value\n  FROM buckets b\n  CROSS JOIN bounds bd\n  CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts\n    AND b.time <= bd.to_ts\n  UNION ALL\n  SELECT b.time, m.base_metric, m.lane_low\n  FROM buckets b\n  CROSS JOIN bounds bd\n  CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts\n    AND b.time <= bd.to_ts\n)\nSELECT time, metric, value\nFROM lanes\nORDER BY time, metric",
+              "rawSql": "WITH bounds AS MATERIALIZED (\n  SELECT\n    $__timeFrom()::timestamptz AS from_ts,\n    LEAST($__timeTo()::timestamptz, now()) AS to_ts,\n    interval '5 minutes' AS step,\n    date_trunc('hour', $__timeFrom()::timestamptz) AS seed_start_ts\n),\nbuckets AS MATERIALIZED (\n  SELECT generate_series(time_bucket(b.step, b.seed_start_ts), b.to_ts, b.step) AS time\n  FROM bounds b\n),\nlane_metrics AS MATERIALIZED (\n  SELECT *\n  FROM (VALUES\n    ('heat2'::text, 'Heat 2 (Gas)'::text, 'Heat 2 (Gas) Base'::text, -0.46::double precision, -0.24::double precision),\n    ('heat1'::text, 'Heat 1 (Electric)'::text, 'Heat 1 (Electric) Base'::text, -0.18::double precision, 0.04::double precision),\n    ('mister_south'::text, 'Mister South'::text, 'Mister South Base'::text, 1.72::double precision, 2.0::double precision),\n    ('mister_west'::text, 'Mister West'::text, 'Mister West Base'::text, 2.06::double precision, 2.34::double precision),\n    ('mister_center'::text, 'Mister Center'::text, 'Mister Center Base'::text, 2.4::double precision, 2.68::double precision),\n    ('fog'::text, 'Fog'::text, 'Fog Base'::text, 2.74::double precision, 3.02::double precision)\n  ) AS m(equipment, top_metric, base_metric, lane_low, lane_high)\n),\nstate_seed AS MATERIALIZED (\n  SELECT bd.seed_start_ts AS time, m.equipment, COALESCE(seed.state, false) AS state\n  FROM bounds bd\n  CROSS JOIN lane_metrics m\n  LEFT JOIN LATERAL (\n    SELECT e.state\n    FROM equipment_state e\n    WHERE e.greenhouse_id = 'vallery'\n      AND e.equipment = m.equipment\n      AND e.ts <= bd.seed_start_ts\n    ORDER BY e.ts DESC\n    LIMIT 1\n  ) seed ON true\n),\nstate_events AS MATERIALIZED (\n  SELECT e.ts AS time, e.equipment, e.state\n  FROM equipment_state e, bounds bd\n  WHERE e.greenhouse_id = 'vallery'\n    AND e.equipment IN ('heat2', 'heat1', 'mister_south', 'mister_west', 'mister_center', 'fog')\n    AND e.ts >= bd.seed_start_ts\n    AND e.ts <= bd.to_ts\n),\nstate_timeline AS MATERIALIZED (\n  SELECT\n    e.time,\n    e.equipment,\n    e.state,\n    lead(e.time, 1, (SELECT to_ts FROM bounds)) OVER (PARTITION BY e.equipment ORDER BY e.time) AS next_time\n  FROM (\n    SELECT time, equipment, state FROM state_seed\n    UNION ALL\n    SELECT time, equipment, state FROM state_events\n  ) e\n),\nstate_segments AS MATERIALIZED (\n  SELECT\n    greatest(st.time, bd.seed_start_ts) AS start_time,\n    least(st.next_time, bd.to_ts) AS end_time,\n    st.equipment\n  FROM state_timeline st\n  CROSS JOIN bounds bd\n  WHERE st.state\n    AND st.time < bd.to_ts\n    AND st.next_time > bd.seed_start_ts\n),\nlanes AS (\n  SELECT\n    b.time,\n    m.top_metric AS metric,\n    CASE WHEN EXISTS (\n      SELECT 1\n      FROM state_segments s\n      WHERE s.equipment = m.equipment\n        AND s.start_time < b.time + bd.step\n        AND s.end_time > b.time\n    ) THEN m.lane_high ELSE NULL::double precision END AS value\n  FROM buckets b\n  CROSS JOIN bounds bd\n  CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts\n    AND b.time <= bd.to_ts\n  UNION ALL\n  SELECT b.time, m.base_metric, m.lane_low\n  FROM buckets b\n  CROSS JOIN bounds bd\n  CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts\n    AND b.time <= bd.to_ts\n)\nSELECT time, metric, value\nFROM lanes\nORDER BY time, metric",
               "refId": "E",
               "sql": {
                 "columns": [
@@ -9188,7 +9248,7 @@ data:
                   },
                   {
                     "id": "custom.pointSize",
-                    "value": 3
+                    "value": 0
                   },
                   {
                     "id": "custom.hideFrom",
@@ -9232,6 +9292,10 @@ data:
                   {
                     "id": "custom.spanNulls",
                     "value": false
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   }
                 ]
               },
@@ -9254,7 +9318,7 @@ data:
                   },
                   {
                     "id": "custom.pointSize",
-                    "value": 3
+                    "value": 0
                   },
                   {
                     "id": "custom.hideFrom",
@@ -9298,6 +9362,10 @@ data:
                   {
                     "id": "custom.spanNulls",
                     "value": false
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   }
                 ]
               },
@@ -9320,7 +9388,7 @@ data:
                   },
                   {
                     "id": "custom.pointSize",
-                    "value": 3
+                    "value": 0
                   },
                   {
                     "id": "custom.hideFrom",
@@ -9364,6 +9432,10 @@ data:
                   {
                     "id": "custom.spanNulls",
                     "value": false
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   }
                 ]
               },
@@ -9386,7 +9458,7 @@ data:
                   },
                   {
                     "id": "custom.pointSize",
-                    "value": 3
+                    "value": 0
                   },
                   {
                     "id": "custom.hideFrom",
@@ -9430,6 +9502,10 @@ data:
                   {
                     "id": "custom.spanNulls",
                     "value": false
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   }
                 ]
               },
@@ -9494,6 +9570,14 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -9529,6 +9613,14 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -9564,6 +9656,14 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -9599,6 +9699,210 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Heat 2 (Gas)"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "#F4511E",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.fillBelowTo",
+                    "value": "Heat 2 (Gas) Base"
+                  },
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 38
+                  },
+                  {
+                    "id": "custom.spanNulls",
+                    "value": false
+                  },
+                  {
+                    "id": "custom.hideFrom",
+                    "value": {
+                      "legend": false,
+                      "tooltip": true,
+                      "viz": false
+                    }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Heat 2 (Gas) Base"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "#F4511E",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.hideFrom",
+                    "value": {
+                      "legend": true,
+                      "tooltip": true,
+                      "viz": false
+                    }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Heat 1 (Electric)"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "#FF9800",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.fillBelowTo",
+                    "value": "Heat 1 (Electric) Base"
+                  },
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 38
+                  },
+                  {
+                    "id": "custom.spanNulls",
+                    "value": false
+                  },
+                  {
+                    "id": "custom.hideFrom",
+                    "value": {
+                      "legend": false,
+                      "tooltip": true,
+                      "viz": false
+                    }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Heat 1 (Electric) Base"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "#FF9800",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.hideFrom",
+                    "value": {
+                      "legend": true,
+                      "tooltip": true,
+                      "viz": false
+                    }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               }
@@ -11008,7 +11312,7 @@ data:
                   },
                   {
                     "id": "custom.pointSize",
-                    "value": 3
+                    "value": 0
                   },
                   {
                     "id": "custom.hideFrom",
@@ -11052,6 +11356,10 @@ data:
                   {
                     "id": "custom.spanNulls",
                     "value": false
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   }
                 ]
               },
@@ -11074,7 +11382,7 @@ data:
                   },
                   {
                     "id": "custom.pointSize",
-                    "value": 3
+                    "value": 0
                   },
                   {
                     "id": "custom.hideFrom",
@@ -11118,6 +11426,10 @@ data:
                   {
                     "id": "custom.spanNulls",
                     "value": false
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   }
                 ]
               },
@@ -11140,7 +11452,7 @@ data:
                   },
                   {
                     "id": "custom.pointSize",
-                    "value": 3
+                    "value": 0
                   },
                   {
                     "id": "custom.hideFrom",
@@ -11184,6 +11496,10 @@ data:
                   {
                     "id": "custom.spanNulls",
                     "value": false
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   }
                 ]
               },
@@ -11206,7 +11522,7 @@ data:
                   },
                   {
                     "id": "custom.pointSize",
-                    "value": 3
+                    "value": 0
                   },
                   {
                     "id": "custom.hideFrom",
@@ -11250,6 +11566,10 @@ data:
                   {
                     "id": "custom.spanNulls",
                     "value": false
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   }
                 ]
               },
@@ -11285,6 +11605,14 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -11320,6 +11648,14 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -11355,6 +11691,14 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -11390,6 +11734,210 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Heat 2 (Gas)"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "#F4511E",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.fillBelowTo",
+                    "value": "Heat 2 (Gas) Base"
+                  },
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 38
+                  },
+                  {
+                    "id": "custom.spanNulls",
+                    "value": false
+                  },
+                  {
+                    "id": "custom.hideFrom",
+                    "value": {
+                      "legend": false,
+                      "tooltip": true,
+                      "viz": false
+                    }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Heat 2 (Gas) Base"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "#F4511E",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.hideFrom",
+                    "value": {
+                      "legend": true,
+                      "tooltip": true,
+                      "viz": false
+                    }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Heat 1 (Electric)"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "#FF9800",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.fillBelowTo",
+                    "value": "Heat 1 (Electric) Base"
+                  },
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 38
+                  },
+                  {
+                    "id": "custom.spanNulls",
+                    "value": false
+                  },
+                  {
+                    "id": "custom.hideFrom",
+                    "value": {
+                      "legend": false,
+                      "tooltip": true,
+                      "viz": false
+                    }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Heat 1 (Electric) Base"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "#FF9800",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.hideFrom",
+                    "value": {
+                      "legend": true,
+                      "tooltip": true,
+                      "viz": false
+                    }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               }
@@ -11518,7 +12066,7 @@ data:
               "editorMode": "code",
               "format": "time_series",
               "rawQuery": true,
-              "rawSql": "WITH bounds AS MATERIALIZED (\n  SELECT\n    $__timeFrom()::timestamptz AS from_ts,\n    LEAST($__timeTo()::timestamptz, now()) AS to_ts,\n    interval '5 minutes' AS step,\n    date_trunc('hour', $__timeFrom()::timestamptz) AS seed_start_ts\n),\nbuckets AS MATERIALIZED (\n  SELECT generate_series(time_bucket(b.step, b.seed_start_ts), b.to_ts, b.step) AS time\n  FROM bounds b\n),\nlane_metrics AS MATERIALIZED (\n  SELECT *\n  FROM (VALUES\n    ('mister_south'::text, 'Mister South'::text, 'Mister South Base'::text, 1.75::double precision, 1.8::double precision),\n    ('mister_west'::text, 'Mister West'::text, 'Mister West Base'::text, 1.85::double precision, 1.9::double precision),\n    ('mister_center'::text, 'Mister Center'::text, 'Mister Center Base'::text, 1.95::double precision, 2.0::double precision),\n    ('fog'::text, 'Fog'::text, 'Fog Base'::text, 2.05::double precision, 2.1::double precision)\n  ) AS m(equipment, top_metric, base_metric, lane_low, lane_high)\n),\nstate_seed AS MATERIALIZED (\n  SELECT bd.seed_start_ts AS time, m.equipment, COALESCE(seed.state, false) AS state\n  FROM bounds bd\n  CROSS JOIN lane_metrics m\n  LEFT JOIN LATERAL (\n    SELECT e.state\n    FROM equipment_state e\n    WHERE e.greenhouse_id = 'vallery'\n      AND e.equipment = m.equipment\n      AND e.ts <= bd.seed_start_ts\n    ORDER BY e.ts DESC\n    LIMIT 1\n  ) seed ON true\n),\nstate_events AS MATERIALIZED (\n  SELECT e.ts AS time, e.equipment, e.state\n  FROM equipment_state e, bounds bd\n  WHERE e.greenhouse_id = 'vallery'\n    AND e.equipment IN ('mister_south', 'mister_west', 'mister_center', 'fog')\n    AND e.ts >= bd.seed_start_ts\n    AND e.ts <= bd.to_ts\n),\nstate_timeline AS MATERIALIZED (\n  SELECT\n    e.time,\n    e.equipment,\n    e.state,\n    lead(e.time, 1, (SELECT to_ts FROM bounds)) OVER (PARTITION BY e.equipment ORDER BY e.time) AS next_time\n  FROM (\n    SELECT time, equipment, state FROM state_seed\n    UNION ALL\n    SELECT time, equipment, state FROM state_events\n  ) e\n),\nstate_segments AS MATERIALIZED (\n  SELECT\n    greatest(st.time, bd.seed_start_ts) AS start_time,\n    least(st.next_time, bd.to_ts) AS end_time,\n    st.equipment\n  FROM state_timeline st\n  CROSS JOIN bounds bd\n  WHERE st.state\n    AND st.time < bd.to_ts\n    AND st.next_time > bd.seed_start_ts\n),\nlanes AS (\n  SELECT\n    b.time,\n    m.top_metric AS metric,\n    CASE WHEN EXISTS (\n      SELECT 1\n      FROM state_segments s\n      WHERE s.equipment = m.equipment\n        AND s.start_time < b.time + bd.step\n        AND s.end_time > b.time\n    ) THEN m.lane_high ELSE NULL::double precision END AS value\n  FROM buckets b\n  CROSS JOIN bounds bd\n  CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts\n    AND b.time <= bd.to_ts\n  UNION ALL\n  SELECT b.time, m.base_metric, m.lane_low\n  FROM buckets b\n  CROSS JOIN bounds bd\n  CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts\n    AND b.time <= bd.to_ts\n)\nSELECT time, metric, value\nFROM lanes\nORDER BY time, metric",
+              "rawSql": "WITH bounds AS MATERIALIZED (\n  SELECT\n    $__timeFrom()::timestamptz AS from_ts,\n    LEAST($__timeTo()::timestamptz, now()) AS to_ts,\n    interval '5 minutes' AS step,\n    date_trunc('hour', $__timeFrom()::timestamptz) AS seed_start_ts\n),\nbuckets AS MATERIALIZED (\n  SELECT generate_series(time_bucket(b.step, b.seed_start_ts), b.to_ts, b.step) AS time\n  FROM bounds b\n),\nlane_metrics AS MATERIALIZED (\n  SELECT *\n  FROM (VALUES\n    ('heat2'::text, 'Heat 2 (Gas)'::text, 'Heat 2 (Gas) Base'::text, -0.46::double precision, -0.24::double precision),\n    ('heat1'::text, 'Heat 1 (Electric)'::text, 'Heat 1 (Electric) Base'::text, -0.18::double precision, 0.04::double precision),\n    ('mister_south'::text, 'Mister South'::text, 'Mister South Base'::text, 1.72::double precision, 2.0::double precision),\n    ('mister_west'::text, 'Mister West'::text, 'Mister West Base'::text, 2.06::double precision, 2.34::double precision),\n    ('mister_center'::text, 'Mister Center'::text, 'Mister Center Base'::text, 2.4::double precision, 2.68::double precision),\n    ('fog'::text, 'Fog'::text, 'Fog Base'::text, 2.74::double precision, 3.02::double precision)\n  ) AS m(equipment, top_metric, base_metric, lane_low, lane_high)\n),\nstate_seed AS MATERIALIZED (\n  SELECT bd.seed_start_ts AS time, m.equipment, COALESCE(seed.state, false) AS state\n  FROM bounds bd\n  CROSS JOIN lane_metrics m\n  LEFT JOIN LATERAL (\n    SELECT e.state\n    FROM equipment_state e\n    WHERE e.greenhouse_id = 'vallery'\n      AND e.equipment = m.equipment\n      AND e.ts <= bd.seed_start_ts\n    ORDER BY e.ts DESC\n    LIMIT 1\n  ) seed ON true\n),\nstate_events AS MATERIALIZED (\n  SELECT e.ts AS time, e.equipment, e.state\n  FROM equipment_state e, bounds bd\n  WHERE e.greenhouse_id = 'vallery'\n    AND e.equipment IN ('heat2', 'heat1', 'mister_south', 'mister_west', 'mister_center', 'fog')\n    AND e.ts >= bd.seed_start_ts\n    AND e.ts <= bd.to_ts\n),\nstate_timeline AS MATERIALIZED (\n  SELECT\n    e.time,\n    e.equipment,\n    e.state,\n    lead(e.time, 1, (SELECT to_ts FROM bounds)) OVER (PARTITION BY e.equipment ORDER BY e.time) AS next_time\n  FROM (\n    SELECT time, equipment, state FROM state_seed\n    UNION ALL\n    SELECT time, equipment, state FROM state_events\n  ) e\n),\nstate_segments AS MATERIALIZED (\n  SELECT\n    greatest(st.time, bd.seed_start_ts) AS start_time,\n    least(st.next_time, bd.to_ts) AS end_time,\n    st.equipment\n  FROM state_timeline st\n  CROSS JOIN bounds bd\n  WHERE st.state\n    AND st.time < bd.to_ts\n    AND st.next_time > bd.seed_start_ts\n),\nlanes AS (\n  SELECT\n    b.time,\n    m.top_metric AS metric,\n    CASE WHEN EXISTS (\n      SELECT 1\n      FROM state_segments s\n      WHERE s.equipment = m.equipment\n        AND s.start_time < b.time + bd.step\n        AND s.end_time > b.time\n    ) THEN m.lane_high ELSE NULL::double precision END AS value\n  FROM buckets b\n  CROSS JOIN bounds bd\n  CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts\n    AND b.time <= bd.to_ts\n  UNION ALL\n  SELECT b.time, m.base_metric, m.lane_low\n  FROM buckets b\n  CROSS JOIN bounds bd\n  CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts\n    AND b.time <= bd.to_ts\n)\nSELECT time, metric, value\nFROM lanes\nORDER BY time, metric",
               "refId": "E",
               "sql": {
                 "columns": [
@@ -12462,7 +13010,7 @@ data:
                   },
                   {
                     "id": "custom.pointSize",
-                    "value": 3
+                    "value": 0
                   },
                   {
                     "id": "custom.hideFrom",
@@ -12506,6 +13054,10 @@ data:
                   {
                     "id": "custom.spanNulls",
                     "value": false
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   }
                 ]
               },
@@ -12528,7 +13080,7 @@ data:
                   },
                   {
                     "id": "custom.pointSize",
-                    "value": 3
+                    "value": 0
                   },
                   {
                     "id": "custom.hideFrom",
@@ -12572,6 +13124,10 @@ data:
                   {
                     "id": "custom.spanNulls",
                     "value": false
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   }
                 ]
               },
@@ -12594,7 +13150,7 @@ data:
                   },
                   {
                     "id": "custom.pointSize",
-                    "value": 3
+                    "value": 0
                   },
                   {
                     "id": "custom.hideFrom",
@@ -12638,6 +13194,10 @@ data:
                   {
                     "id": "custom.spanNulls",
                     "value": false
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   }
                 ]
               },
@@ -12660,7 +13220,7 @@ data:
                   },
                   {
                     "id": "custom.pointSize",
-                    "value": 3
+                    "value": 0
                   },
                   {
                     "id": "custom.hideFrom",
@@ -12704,6 +13264,10 @@ data:
                   {
                     "id": "custom.spanNulls",
                     "value": false
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   }
                 ]
               },
@@ -12726,7 +13290,7 @@ data:
                   },
                   {
                     "id": "custom.pointSize",
-                    "value": 3
+                    "value": 0
                   },
                   {
                     "id": "custom.hideFrom",
@@ -12770,6 +13334,10 @@ data:
                   {
                     "id": "custom.spanNulls",
                     "value": false
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   }
                 ]
               },
@@ -12805,6 +13373,14 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -12840,6 +13416,14 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -12875,6 +13459,14 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -12910,6 +13502,14 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -12945,6 +13545,14 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               }
@@ -13095,7 +13703,7 @@ data:
               "editorMode": "code",
               "format": "time_series",
               "rawQuery": true,
-              "rawSql": "WITH bounds AS MATERIALIZED (\n  SELECT\n    $__timeFrom()::timestamptz AS from_ts,\n    LEAST($__timeTo()::timestamptz, now()) AS to_ts,\n    interval '5 minutes' AS step,\n    date_trunc('hour', $__timeFrom()::timestamptz) AS seed_start_ts\n),\nbuckets AS MATERIALIZED (\n  SELECT generate_series(time_bucket(b.step, b.seed_start_ts), b.to_ts, b.step) AS time\n  FROM bounds b\n),\nlane_metrics AS MATERIALIZED (\n  SELECT *\n  FROM (VALUES\n    ('heat2'::text, 'Heat 2 (Gas)'::text, 'Heat 2 (Gas) Base'::text, 54.5::double precision, 56.0::double precision),\n    ('heat1'::text, 'Heat 1 (Electric)'::text, 'Heat 1 (Electric) Base'::text, 56.5::double precision, 58.0::double precision),\n    ('fan1'::text, 'Fan 1'::text, 'Fan 1 Base'::text, 80.5::double precision, 82.0::double precision),\n    ('fan2'::text, 'Fan 2'::text, 'Fan 2 Base'::text, 82.5::double precision, 84.0::double precision),\n    ('fog'::text, 'Fog'::text, 'Fog Base'::text, 84.5::double precision, 86.0::double precision)\n  ) AS m(equipment, top_metric, base_metric, lane_low, lane_high)\n),\nstate_seed AS MATERIALIZED (\n  SELECT bd.seed_start_ts AS time, m.equipment, COALESCE(seed.state, false) AS state\n  FROM bounds bd\n  CROSS JOIN lane_metrics m\n  LEFT JOIN LATERAL (\n    SELECT e.state\n    FROM equipment_state e\n    WHERE e.greenhouse_id = 'vallery'\n      AND e.equipment = m.equipment\n      AND e.ts <= bd.seed_start_ts\n    ORDER BY e.ts DESC\n    LIMIT 1\n  ) seed ON true\n),\nstate_events AS MATERIALIZED (\n  SELECT e.ts AS time, e.equipment, e.state\n  FROM equipment_state e, bounds bd\n  WHERE e.greenhouse_id = 'vallery'\n    AND e.equipment IN ('heat2', 'heat1', 'fan1', 'fan2', 'fog')\n    AND e.ts >= bd.seed_start_ts\n    AND e.ts <= bd.to_ts\n),\nstate_timeline AS MATERIALIZED (\n  SELECT\n    e.time,\n    e.equipment,\n    e.state,\n    lead(e.time, 1, (SELECT to_ts FROM bounds)) OVER (PARTITION BY e.equipment ORDER BY e.time) AS next_time\n  FROM (\n    SELECT time, equipment, state FROM state_seed\n    UNION ALL\n    SELECT time, equipment, state FROM state_events\n  ) e\n),\nstate_segments AS MATERIALIZED (\n  SELECT\n    greatest(st.time, bd.seed_start_ts) AS start_time,\n    least(st.next_time, bd.to_ts) AS end_time,\n    st.equipment\n  FROM state_timeline st\n  CROSS JOIN bounds bd\n  WHERE st.state\n    AND st.time < bd.to_ts\n    AND st.next_time > bd.seed_start_ts\n),\nlanes AS (\n  SELECT\n    b.time,\n    m.top_metric AS metric,\n    CASE WHEN EXISTS (\n      SELECT 1\n      FROM state_segments s\n      WHERE s.equipment = m.equipment\n        AND s.start_time < b.time + bd.step\n        AND s.end_time > b.time\n    ) THEN m.lane_high ELSE NULL::double precision END AS value\n  FROM buckets b\n  CROSS JOIN bounds bd\n  CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts\n    AND b.time <= bd.to_ts\n  UNION ALL\n  SELECT b.time, m.base_metric, m.lane_low\n  FROM buckets b\n  CROSS JOIN bounds bd\n  CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts\n    AND b.time <= bd.to_ts\n)\nSELECT time, metric, value\nFROM lanes\nORDER BY time, metric",
+              "rawSql": "WITH bounds AS MATERIALIZED (\n  SELECT\n    $__timeFrom()::timestamptz AS from_ts,\n    LEAST($__timeTo()::timestamptz, now()) AS to_ts,\n    interval '5 minutes' AS step,\n    date_trunc('hour', $__timeFrom()::timestamptz) AS seed_start_ts\n),\nbuckets AS MATERIALIZED (\n  SELECT generate_series(time_bucket(b.step, b.seed_start_ts), b.to_ts, b.step) AS time\n  FROM bounds b\n),\nlane_metrics AS MATERIALIZED (\n  SELECT *\n  FROM (VALUES\n    ('heat2'::text, 'Heat 2 (Gas)'::text, 'Heat 2 (Gas) Base'::text, 56.0::double precision, 57.8::double precision),\n    ('heat1'::text, 'Heat 1 (Electric)'::text, 'Heat 1 (Electric) Base'::text, 58.2::double precision, 60.0::double precision),\n    ('fan1'::text, 'Fan 1'::text, 'Fan 1 Base'::text, 87.0::double precision, 88.8::double precision),\n    ('fan2'::text, 'Fan 2'::text, 'Fan 2 Base'::text, 89.2::double precision, 91.0::double precision),\n    ('fog'::text, 'Fog'::text, 'Fog Base'::text, 91.4::double precision, 93.2::double precision)\n  ) AS m(equipment, top_metric, base_metric, lane_low, lane_high)\n),\nstate_seed AS MATERIALIZED (\n  SELECT bd.seed_start_ts AS time, m.equipment, COALESCE(seed.state, false) AS state\n  FROM bounds bd\n  CROSS JOIN lane_metrics m\n  LEFT JOIN LATERAL (\n    SELECT e.state\n    FROM equipment_state e\n    WHERE e.greenhouse_id = 'vallery'\n      AND e.equipment = m.equipment\n      AND e.ts <= bd.seed_start_ts\n    ORDER BY e.ts DESC\n    LIMIT 1\n  ) seed ON true\n),\nstate_events AS MATERIALIZED (\n  SELECT e.ts AS time, e.equipment, e.state\n  FROM equipment_state e, bounds bd\n  WHERE e.greenhouse_id = 'vallery'\n    AND e.equipment IN ('heat2', 'heat1', 'fan1', 'fan2', 'fog')\n    AND e.ts >= bd.seed_start_ts\n    AND e.ts <= bd.to_ts\n),\nstate_timeline AS MATERIALIZED (\n  SELECT\n    e.time,\n    e.equipment,\n    e.state,\n    lead(e.time, 1, (SELECT to_ts FROM bounds)) OVER (PARTITION BY e.equipment ORDER BY e.time) AS next_time\n  FROM (\n    SELECT time, equipment, state FROM state_seed\n    UNION ALL\n    SELECT time, equipment, state FROM state_events\n  ) e\n),\nstate_segments AS MATERIALIZED (\n  SELECT\n    greatest(st.time, bd.seed_start_ts) AS start_time,\n    least(st.next_time, bd.to_ts) AS end_time,\n    st.equipment\n  FROM state_timeline st\n  CROSS JOIN bounds bd\n  WHERE st.state\n    AND st.time < bd.to_ts\n    AND st.next_time > bd.seed_start_ts\n),\nlanes AS (\n  SELECT\n    b.time,\n    m.top_metric AS metric,\n    CASE WHEN EXISTS (\n      SELECT 1\n      FROM state_segments s\n      WHERE s.equipment = m.equipment\n        AND s.start_time < b.time + bd.step\n        AND s.end_time > b.time\n    ) THEN m.lane_high ELSE NULL::double precision END AS value\n  FROM buckets b\n  CROSS JOIN bounds bd\n  CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts\n    AND b.time <= bd.to_ts\n  UNION ALL\n  SELECT b.time, m.base_metric, m.lane_low\n  FROM buckets b\n  CROSS JOIN bounds bd\n  CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts\n    AND b.time <= bd.to_ts\n)\nSELECT time, metric, value\nFROM lanes\nORDER BY time, metric",
               "refId": "G",
               "sql": {
                 "columns": [
@@ -13326,7 +13934,7 @@ data:
                   },
                   {
                     "id": "custom.pointSize",
-                    "value": 3
+                    "value": 0
                   },
                   {
                     "id": "custom.hideFrom",
@@ -13370,6 +13978,10 @@ data:
                   {
                     "id": "custom.spanNulls",
                     "value": false
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   }
                 ]
               },
@@ -13392,7 +14004,7 @@ data:
                   },
                   {
                     "id": "custom.pointSize",
-                    "value": 3
+                    "value": 0
                   },
                   {
                     "id": "custom.hideFrom",
@@ -13436,6 +14048,10 @@ data:
                   {
                     "id": "custom.spanNulls",
                     "value": false
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   }
                 ]
               },
@@ -13458,7 +14074,7 @@ data:
                   },
                   {
                     "id": "custom.pointSize",
-                    "value": 3
+                    "value": 0
                   },
                   {
                     "id": "custom.hideFrom",
@@ -13502,6 +14118,10 @@ data:
                   {
                     "id": "custom.spanNulls",
                     "value": false
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   }
                 ]
               },
@@ -13524,7 +14144,7 @@ data:
                   },
                   {
                     "id": "custom.pointSize",
-                    "value": 3
+                    "value": 0
                   },
                   {
                     "id": "custom.hideFrom",
@@ -13568,6 +14188,10 @@ data:
                   {
                     "id": "custom.spanNulls",
                     "value": false
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   }
                 ]
               },
@@ -13603,6 +14227,14 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -13638,6 +14270,14 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -13673,6 +14313,14 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -13708,6 +14356,210 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Heat 2 (Gas)"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "#F4511E",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.fillBelowTo",
+                    "value": "Heat 2 (Gas) Base"
+                  },
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 38
+                  },
+                  {
+                    "id": "custom.spanNulls",
+                    "value": false
+                  },
+                  {
+                    "id": "custom.hideFrom",
+                    "value": {
+                      "legend": false,
+                      "tooltip": true,
+                      "viz": false
+                    }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Heat 2 (Gas) Base"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "#F4511E",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.hideFrom",
+                    "value": {
+                      "legend": true,
+                      "tooltip": true,
+                      "viz": false
+                    }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Heat 1 (Electric)"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "#FF9800",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.fillBelowTo",
+                    "value": "Heat 1 (Electric) Base"
+                  },
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 38
+                  },
+                  {
+                    "id": "custom.spanNulls",
+                    "value": false
+                  },
+                  {
+                    "id": "custom.hideFrom",
+                    "value": {
+                      "legend": false,
+                      "tooltip": true,
+                      "viz": false
+                    }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Heat 1 (Electric) Base"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "#FF9800",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.hideFrom",
+                    "value": {
+                      "legend": true,
+                      "tooltip": true,
+                      "viz": false
+                    }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               }
@@ -13836,7 +14688,7 @@ data:
               "editorMode": "code",
               "format": "time_series",
               "rawQuery": true,
-              "rawSql": "WITH bounds AS MATERIALIZED (\n  SELECT\n    $__timeFrom()::timestamptz AS from_ts,\n    LEAST($__timeTo()::timestamptz, now()) AS to_ts,\n    interval '5 minutes' AS step,\n    date_trunc('hour', $__timeFrom()::timestamptz) AS seed_start_ts\n),\nbuckets AS MATERIALIZED (\n  SELECT generate_series(time_bucket(b.step, b.seed_start_ts), b.to_ts, b.step) AS time\n  FROM bounds b\n),\nlane_metrics AS MATERIALIZED (\n  SELECT *\n  FROM (VALUES\n    ('mister_south'::text, 'Mister South'::text, 'Mister South Base'::text, 1.75::double precision, 1.8::double precision),\n    ('mister_west'::text, 'Mister West'::text, 'Mister West Base'::text, 1.85::double precision, 1.9::double precision),\n    ('mister_center'::text, 'Mister Center'::text, 'Mister Center Base'::text, 1.95::double precision, 2.0::double precision),\n    ('fog'::text, 'Fog'::text, 'Fog Base'::text, 2.05::double precision, 2.1::double precision)\n  ) AS m(equipment, top_metric, base_metric, lane_low, lane_high)\n),\nstate_seed AS MATERIALIZED (\n  SELECT bd.seed_start_ts AS time, m.equipment, COALESCE(seed.state, false) AS state\n  FROM bounds bd\n  CROSS JOIN lane_metrics m\n  LEFT JOIN LATERAL (\n    SELECT e.state\n    FROM equipment_state e\n    WHERE e.greenhouse_id = 'vallery'\n      AND e.equipment = m.equipment\n      AND e.ts <= bd.seed_start_ts\n    ORDER BY e.ts DESC\n    LIMIT 1\n  ) seed ON true\n),\nstate_events AS MATERIALIZED (\n  SELECT e.ts AS time, e.equipment, e.state\n  FROM equipment_state e, bounds bd\n  WHERE e.greenhouse_id = 'vallery'\n    AND e.equipment IN ('mister_south', 'mister_west', 'mister_center', 'fog')\n    AND e.ts >= bd.seed_start_ts\n    AND e.ts <= bd.to_ts\n),\nstate_timeline AS MATERIALIZED (\n  SELECT\n    e.time,\n    e.equipment,\n    e.state,\n    lead(e.time, 1, (SELECT to_ts FROM bounds)) OVER (PARTITION BY e.equipment ORDER BY e.time) AS next_time\n  FROM (\n    SELECT time, equipment, state FROM state_seed\n    UNION ALL\n    SELECT time, equipment, state FROM state_events\n  ) e\n),\nstate_segments AS MATERIALIZED (\n  SELECT\n    greatest(st.time, bd.seed_start_ts) AS start_time,\n    least(st.next_time, bd.to_ts) AS end_time,\n    st.equipment\n  FROM state_timeline st\n  CROSS JOIN bounds bd\n  WHERE st.state\n    AND st.time < bd.to_ts\n    AND st.next_time > bd.seed_start_ts\n),\nlanes AS (\n  SELECT\n    b.time,\n    m.top_metric AS metric,\n    CASE WHEN EXISTS (\n      SELECT 1\n      FROM state_segments s\n      WHERE s.equipment = m.equipment\n        AND s.start_time < b.time + bd.step\n        AND s.end_time > b.time\n    ) THEN m.lane_high ELSE NULL::double precision END AS value\n  FROM buckets b\n  CROSS JOIN bounds bd\n  CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts\n    AND b.time <= bd.to_ts\n  UNION ALL\n  SELECT b.time, m.base_metric, m.lane_low\n  FROM buckets b\n  CROSS JOIN bounds bd\n  CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts\n    AND b.time <= bd.to_ts\n)\nSELECT time, metric, value\nFROM lanes\nORDER BY time, metric",
+              "rawSql": "WITH bounds AS MATERIALIZED (\n  SELECT\n    $__timeFrom()::timestamptz AS from_ts,\n    LEAST($__timeTo()::timestamptz, now()) AS to_ts,\n    interval '5 minutes' AS step,\n    date_trunc('hour', $__timeFrom()::timestamptz) AS seed_start_ts\n),\nbuckets AS MATERIALIZED (\n  SELECT generate_series(time_bucket(b.step, b.seed_start_ts), b.to_ts, b.step) AS time\n  FROM bounds b\n),\nlane_metrics AS MATERIALIZED (\n  SELECT *\n  FROM (VALUES\n    ('heat2'::text, 'Heat 2 (Gas)'::text, 'Heat 2 (Gas) Base'::text, -0.46::double precision, -0.24::double precision),\n    ('heat1'::text, 'Heat 1 (Electric)'::text, 'Heat 1 (Electric) Base'::text, -0.18::double precision, 0.04::double precision),\n    ('mister_south'::text, 'Mister South'::text, 'Mister South Base'::text, 1.72::double precision, 2.0::double precision),\n    ('mister_west'::text, 'Mister West'::text, 'Mister West Base'::text, 2.06::double precision, 2.34::double precision),\n    ('mister_center'::text, 'Mister Center'::text, 'Mister Center Base'::text, 2.4::double precision, 2.68::double precision),\n    ('fog'::text, 'Fog'::text, 'Fog Base'::text, 2.74::double precision, 3.02::double precision)\n  ) AS m(equipment, top_metric, base_metric, lane_low, lane_high)\n),\nstate_seed AS MATERIALIZED (\n  SELECT bd.seed_start_ts AS time, m.equipment, COALESCE(seed.state, false) AS state\n  FROM bounds bd\n  CROSS JOIN lane_metrics m\n  LEFT JOIN LATERAL (\n    SELECT e.state\n    FROM equipment_state e\n    WHERE e.greenhouse_id = 'vallery'\n      AND e.equipment = m.equipment\n      AND e.ts <= bd.seed_start_ts\n    ORDER BY e.ts DESC\n    LIMIT 1\n  ) seed ON true\n),\nstate_events AS MATERIALIZED (\n  SELECT e.ts AS time, e.equipment, e.state\n  FROM equipment_state e, bounds bd\n  WHERE e.greenhouse_id = 'vallery'\n    AND e.equipment IN ('heat2', 'heat1', 'mister_south', 'mister_west', 'mister_center', 'fog')\n    AND e.ts >= bd.seed_start_ts\n    AND e.ts <= bd.to_ts\n),\nstate_timeline AS MATERIALIZED (\n  SELECT\n    e.time,\n    e.equipment,\n    e.state,\n    lead(e.time, 1, (SELECT to_ts FROM bounds)) OVER (PARTITION BY e.equipment ORDER BY e.time) AS next_time\n  FROM (\n    SELECT time, equipment, state FROM state_seed\n    UNION ALL\n    SELECT time, equipment, state FROM state_events\n  ) e\n),\nstate_segments AS MATERIALIZED (\n  SELECT\n    greatest(st.time, bd.seed_start_ts) AS start_time,\n    least(st.next_time, bd.to_ts) AS end_time,\n    st.equipment\n  FROM state_timeline st\n  CROSS JOIN bounds bd\n  WHERE st.state\n    AND st.time < bd.to_ts\n    AND st.next_time > bd.seed_start_ts\n),\nlanes AS (\n  SELECT\n    b.time,\n    m.top_metric AS metric,\n    CASE WHEN EXISTS (\n      SELECT 1\n      FROM state_segments s\n      WHERE s.equipment = m.equipment\n        AND s.start_time < b.time + bd.step\n        AND s.end_time > b.time\n    ) THEN m.lane_high ELSE NULL::double precision END AS value\n  FROM buckets b\n  CROSS JOIN bounds bd\n  CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts\n    AND b.time <= bd.to_ts\n  UNION ALL\n  SELECT b.time, m.base_metric, m.lane_low\n  FROM buckets b\n  CROSS JOIN bounds bd\n  CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts\n    AND b.time <= bd.to_ts\n)\nSELECT time, metric, value\nFROM lanes\nORDER BY time, metric",
               "refId": "E",
               "sql": {
                 "columns": [
@@ -15345,6 +16197,10 @@ data:
                   {
                     "id": "custom.showPoints",
                     "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -15379,7 +16235,7 @@ data:
                   },
                   {
                     "id": "custom.fillOpacity",
-                    "value": 100
+                    "value": 78
                   },
                   {
                     "id": "custom.spanNulls",
@@ -15396,6 +16252,10 @@ data:
                   {
                     "id": "custom.showPoints",
                     "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -15435,6 +16295,10 @@ data:
                   {
                     "id": "custom.showPoints",
                     "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -15469,7 +16333,7 @@ data:
                   },
                   {
                     "id": "custom.fillOpacity",
-                    "value": 100
+                    "value": 78
                   },
                   {
                     "id": "custom.spanNulls",
@@ -15486,6 +16350,10 @@ data:
                   {
                     "id": "custom.showPoints",
                     "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -15525,6 +16393,10 @@ data:
                   {
                     "id": "custom.showPoints",
                     "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -15559,7 +16431,7 @@ data:
                   },
                   {
                     "id": "custom.fillOpacity",
-                    "value": 100
+                    "value": 78
                   },
                   {
                     "id": "custom.spanNulls",
@@ -15576,6 +16448,10 @@ data:
                   {
                     "id": "custom.showPoints",
                     "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -15615,6 +16491,10 @@ data:
                   {
                     "id": "custom.showPoints",
                     "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -15649,7 +16529,7 @@ data:
                   },
                   {
                     "id": "custom.fillOpacity",
-                    "value": 100
+                    "value": 78
                   },
                   {
                     "id": "custom.spanNulls",
@@ -15666,6 +16546,10 @@ data:
                   {
                     "id": "custom.showPoints",
                     "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -15705,6 +16589,10 @@ data:
                   {
                     "id": "custom.showPoints",
                     "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -15739,7 +16627,7 @@ data:
                   },
                   {
                     "id": "custom.fillOpacity",
-                    "value": 100
+                    "value": 78
                   },
                   {
                     "id": "custom.spanNulls",
@@ -15756,6 +16644,10 @@ data:
                   {
                     "id": "custom.showPoints",
                     "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -15935,7 +16827,7 @@ data:
                   {
                     "id": "color",
                     "value": {
-                      "fixedColor": "#FF9830",
+                      "fixedColor": "rgba(46,125,50,0.34)",
                       "mode": "fixed"
                     }
                   },
@@ -15945,7 +16837,7 @@ data:
                   },
                   {
                     "id": "custom.lineWidth",
-                    "value": 2
+                    "value": 1
                   },
                   {
                     "id": "custom.lineInterpolation",
@@ -15958,6 +16850,16 @@ data:
                   {
                     "id": "custom.showPoints",
                     "value": "never"
+                  },
+                  {
+                    "id": "custom.lineStyle",
+                    "value": {
+                      "fill": "dash",
+                      "dash": [
+                        6,
+                        4
+                      ]
+                    }
                   }
                 ]
               }
@@ -16125,7 +17027,7 @@ data:
               "editorMode": "code",
               "format": "time_series",
               "rawQuery": true,
-              "rawSql": "WITH bounds AS MATERIALIZED (\n  SELECT\n    $__timeFrom()::timestamptz AS from_ts,\n    LEAST($__timeTo()::timestamptz, now()) AS to_ts,\n    interval '5 minutes' AS step,\n    date_trunc('hour', $__timeFrom()::timestamptz) AS seed_start_ts\n),\nbuckets AS MATERIALIZED (\n  SELECT generate_series(time_bucket(b.step, b.seed_start_ts), b.to_ts, b.step) AS time\n  FROM bounds b\n),\nlane_metrics AS MATERIALIZED (\n  SELECT *\n  FROM (VALUES\n    ('heat2'::text, 'Heat 2 (Gas)'::text, 'Heat 2 (Gas) Base'::text, 95.0::double precision, 96.0::double precision),\n    ('heat1'::text, 'Heat 1 (Electric)'::text, 'Heat 1 (Electric) Base'::text, 96.5::double precision, 97.5::double precision),\n    ('fan1'::text, 'Fan 1'::text, 'Fan 1 Base'::text, 98.0::double precision, 99.0::double precision),\n    ('fan2'::text, 'Fan 2'::text, 'Fan 2 Base'::text, 99.5::double precision, 100.5::double precision),\n    ('fog'::text, 'Fog'::text, 'Fog Base'::text, 101.0::double precision, 102.0::double precision)\n  ) AS m(equipment, top_metric, base_metric, lane_low, lane_high)\n),\nstate_seed AS MATERIALIZED (\n  SELECT bd.seed_start_ts AS time, m.equipment, COALESCE(seed.state, false) AS state\n  FROM bounds bd\n  CROSS JOIN lane_metrics m\n  LEFT JOIN LATERAL (\n    SELECT e.state\n    FROM equipment_state e\n    WHERE e.greenhouse_id = 'vallery'\n      AND e.equipment = m.equipment\n      AND e.ts <= bd.seed_start_ts\n    ORDER BY e.ts DESC\n    LIMIT 1\n  ) seed ON true\n),\nstate_events AS MATERIALIZED (\n  SELECT e.ts AS time, e.equipment, e.state\n  FROM equipment_state e, bounds bd\n  WHERE e.greenhouse_id = 'vallery'\n    AND e.equipment IN ('heat2', 'heat1', 'fan1', 'fan2', 'fog')\n    AND e.ts >= bd.seed_start_ts\n    AND e.ts <= bd.to_ts\n),\nstate_timeline AS MATERIALIZED (\n  SELECT\n    e.time,\n    e.equipment,\n    e.state,\n    lead(e.time, 1, (SELECT to_ts FROM bounds)) OVER (PARTITION BY e.equipment ORDER BY e.time) AS next_time\n  FROM (\n    SELECT time, equipment, state FROM state_seed\n    UNION ALL\n    SELECT time, equipment, state FROM state_events\n  ) e\n),\nstate_segments AS MATERIALIZED (\n  SELECT\n    greatest(st.time, bd.seed_start_ts) AS start_time,\n    least(st.next_time, bd.to_ts) AS end_time,\n    st.equipment\n  FROM state_timeline st\n  CROSS JOIN bounds bd\n  WHERE st.state\n    AND st.time < bd.to_ts\n    AND st.next_time > bd.seed_start_ts\n),\nlanes AS (\n  SELECT\n    b.time,\n    m.top_metric AS metric,\n    CASE WHEN EXISTS (\n      SELECT 1\n      FROM state_segments s\n      WHERE s.equipment = m.equipment\n        AND s.start_time < b.time + bd.step\n        AND s.end_time > b.time\n    ) THEN m.lane_high ELSE m.lane_low END AS value\n  FROM buckets b\n  CROSS JOIN bounds bd\n  CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts\n    AND b.time <= bd.to_ts\n  UNION ALL\n  SELECT b.time, m.base_metric, m.lane_low\n  FROM buckets b\n  CROSS JOIN bounds bd\n  CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts\n    AND b.time <= bd.to_ts\n)\nSELECT time, metric, value FROM lanes ORDER BY time, metric",
+              "rawSql": "WITH bounds AS MATERIALIZED (\n  SELECT\n    $__timeFrom()::timestamptz AS from_ts,\n    LEAST($__timeTo()::timestamptz, now()) AS to_ts,\n    interval '5 minutes' AS step,\n    date_trunc('hour', $__timeFrom()::timestamptz) AS seed_start_ts\n),\nbuckets AS MATERIALIZED (\n  SELECT generate_series(time_bucket(b.step, b.seed_start_ts), b.to_ts, b.step) AS time\n  FROM bounds b\n),\nlane_metrics AS MATERIALIZED (\n  SELECT *\n  FROM (VALUES\n    ('heat2'::text, 'Heat 2 (Gas)'::text, 'Heat 2 (Gas) Base'::text, 56.0::double precision, 57.8::double precision),\n    ('heat1'::text, 'Heat 1 (Electric)'::text, 'Heat 1 (Electric) Base'::text, 58.2::double precision, 60.0::double precision),\n    ('fan1'::text, 'Fan 1'::text, 'Fan 1 Base'::text, 87.0::double precision, 88.8::double precision),\n    ('fan2'::text, 'Fan 2'::text, 'Fan 2 Base'::text, 89.2::double precision, 91.0::double precision),\n    ('fog'::text, 'Fog'::text, 'Fog Base'::text, 91.4::double precision, 93.2::double precision)\n  ) AS m(equipment, top_metric, base_metric, lane_low, lane_high)\n),\nstate_seed AS MATERIALIZED (\n  SELECT bd.seed_start_ts AS time, m.equipment, COALESCE(seed.state, false) AS state\n  FROM bounds bd\n  CROSS JOIN lane_metrics m\n  LEFT JOIN LATERAL (\n    SELECT e.state\n    FROM equipment_state e\n    WHERE e.greenhouse_id = 'vallery'\n      AND e.equipment = m.equipment\n      AND e.ts <= bd.seed_start_ts\n    ORDER BY e.ts DESC\n    LIMIT 1\n  ) seed ON true\n),\nstate_events AS MATERIALIZED (\n  SELECT e.ts AS time, e.equipment, e.state\n  FROM equipment_state e, bounds bd\n  WHERE e.greenhouse_id = 'vallery'\n    AND e.equipment IN ('heat2', 'heat1', 'fan1', 'fan2', 'fog')\n    AND e.ts >= bd.seed_start_ts\n    AND e.ts <= bd.to_ts\n),\nstate_timeline AS MATERIALIZED (\n  SELECT\n    e.time,\n    e.equipment,\n    e.state,\n    lead(e.time, 1, (SELECT to_ts FROM bounds)) OVER (PARTITION BY e.equipment ORDER BY e.time) AS next_time\n  FROM (\n    SELECT time, equipment, state FROM state_seed\n    UNION ALL\n    SELECT time, equipment, state FROM state_events\n  ) e\n),\nstate_segments AS MATERIALIZED (\n  SELECT\n    greatest(st.time, bd.seed_start_ts) AS start_time,\n    least(st.next_time, bd.to_ts) AS end_time,\n    st.equipment\n  FROM state_timeline st\n  CROSS JOIN bounds bd\n  WHERE st.state\n    AND st.time < bd.to_ts\n    AND st.next_time > bd.seed_start_ts\n),\nlanes AS (\n  SELECT\n    b.time,\n    m.top_metric AS metric,\n    CASE WHEN EXISTS (\n      SELECT 1\n      FROM state_segments s\n      WHERE s.equipment = m.equipment\n        AND s.start_time < b.time + bd.step\n        AND s.end_time > b.time\n    ) THEN m.lane_high ELSE NULL::double precision END AS value\n  FROM buckets b\n  CROSS JOIN bounds bd\n  CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts\n    AND b.time <= bd.to_ts\n  UNION ALL\n  SELECT b.time, m.base_metric, m.lane_low\n  FROM buckets b\n  CROSS JOIN bounds bd\n  CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts\n    AND b.time <= bd.to_ts\n)\nSELECT time, metric, value\nFROM lanes\nORDER BY time, metric",
               "refId": "E"
             }
           ],
@@ -16327,6 +17229,10 @@ data:
                   {
                     "id": "custom.showPoints",
                     "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -16361,7 +17267,7 @@ data:
                   },
                   {
                     "id": "custom.fillOpacity",
-                    "value": 100
+                    "value": 78
                   },
                   {
                     "id": "custom.spanNulls",
@@ -16378,6 +17284,10 @@ data:
                   {
                     "id": "custom.showPoints",
                     "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -16417,6 +17327,10 @@ data:
                   {
                     "id": "custom.showPoints",
                     "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -16451,7 +17365,7 @@ data:
                   },
                   {
                     "id": "custom.fillOpacity",
-                    "value": 100
+                    "value": 78
                   },
                   {
                     "id": "custom.spanNulls",
@@ -16468,6 +17382,10 @@ data:
                   {
                     "id": "custom.showPoints",
                     "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -16507,6 +17425,10 @@ data:
                   {
                     "id": "custom.showPoints",
                     "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -16541,7 +17463,7 @@ data:
                   },
                   {
                     "id": "custom.fillOpacity",
-                    "value": 100
+                    "value": 78
                   },
                   {
                     "id": "custom.spanNulls",
@@ -16558,6 +17480,10 @@ data:
                   {
                     "id": "custom.showPoints",
                     "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -16597,6 +17523,10 @@ data:
                   {
                     "id": "custom.showPoints",
                     "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -16631,7 +17561,7 @@ data:
                   },
                   {
                     "id": "custom.fillOpacity",
-                    "value": 100
+                    "value": 78
                   },
                   {
                     "id": "custom.spanNulls",
@@ -16648,6 +17578,10 @@ data:
                   {
                     "id": "custom.showPoints",
                     "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -16883,7 +17817,7 @@ data:
                   {
                     "id": "color",
                     "value": {
-                      "fixedColor": "#FF9830",
+                      "fixedColor": "rgba(46,125,50,0.34)",
                       "mode": "fixed"
                     }
                   },
@@ -16893,7 +17827,7 @@ data:
                   },
                   {
                     "id": "custom.lineWidth",
-                    "value": 2
+                    "value": 1
                   },
                   {
                     "id": "custom.lineInterpolation",
@@ -16906,6 +17840,212 @@ data:
                   {
                     "id": "custom.showPoints",
                     "value": "never"
+                  },
+                  {
+                    "id": "custom.lineStyle",
+                    "value": {
+                      "fill": "dash",
+                      "dash": [
+                        6,
+                        4
+                      ]
+                    }
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Heat 2 (Gas)"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "#F4511E",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.fillBelowTo",
+                    "value": "Heat 2 (Gas) Base"
+                  },
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 78
+                  },
+                  {
+                    "id": "custom.spanNulls",
+                    "value": false
+                  },
+                  {
+                    "id": "custom.hideFrom",
+                    "value": {
+                      "legend": false,
+                      "tooltip": true,
+                      "viz": false
+                    }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Heat 2 (Gas) Base"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "#F4511E",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.hideFrom",
+                    "value": {
+                      "legend": true,
+                      "tooltip": true,
+                      "viz": false
+                    }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Heat 1 (Electric)"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "#FF9800",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.fillBelowTo",
+                    "value": "Heat 1 (Electric) Base"
+                  },
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 78
+                  },
+                  {
+                    "id": "custom.spanNulls",
+                    "value": false
+                  },
+                  {
+                    "id": "custom.hideFrom",
+                    "value": {
+                      "legend": false,
+                      "tooltip": true,
+                      "viz": false
+                    }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  }
+                ]
+              },
+              {
+                "matcher": {
+                  "id": "byName",
+                  "options": "Heat 1 (Electric) Base"
+                },
+                "properties": [
+                  {
+                    "id": "color",
+                    "value": {
+                      "fixedColor": "#FF9800",
+                      "mode": "fixed"
+                    }
+                  },
+                  {
+                    "id": "custom.drawStyle",
+                    "value": "line"
+                  },
+                  {
+                    "id": "custom.lineWidth",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.fillOpacity",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.hideFrom",
+                    "value": {
+                      "legend": true,
+                      "tooltip": true,
+                      "viz": false
+                    }
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               }
@@ -17067,7 +18207,7 @@ data:
               "editorMode": "code",
               "format": "time_series",
               "rawQuery": true,
-              "rawSql": "WITH bounds AS MATERIALIZED (\n  SELECT\n    $__timeFrom()::timestamptz AS from_ts,\n    LEAST($__timeTo()::timestamptz, now()) AS to_ts,\n    interval '5 minutes' AS step,\n    date_trunc('hour', $__timeFrom()::timestamptz) AS seed_start_ts\n),\nbuckets AS MATERIALIZED (\n  SELECT generate_series(time_bucket(b.step, b.seed_start_ts), b.to_ts, b.step) AS time\n  FROM bounds b\n),\nlane_metrics AS MATERIALIZED (\n  SELECT *\n  FROM (VALUES\n    ('mister_south'::text, 'Mister South'::text, 'Mister South Base'::text, 3.0::double precision, 3.2::double precision),\n    ('mister_west'::text, 'Mister West'::text, 'Mister West Base'::text, 3.3::double precision, 3.5::double precision),\n    ('mister_center'::text, 'Mister Center'::text, 'Mister Center Base'::text, 3.6::double precision, 3.8::double precision),\n    ('fog'::text, 'Fog'::text, 'Fog Base'::text, 3.9::double precision, 4.1::double precision)\n  ) AS m(equipment, top_metric, base_metric, lane_low, lane_high)\n),\nstate_seed AS MATERIALIZED (\n  SELECT bd.seed_start_ts AS time, m.equipment, COALESCE(seed.state, false) AS state\n  FROM bounds bd\n  CROSS JOIN lane_metrics m\n  LEFT JOIN LATERAL (\n    SELECT e.state\n    FROM equipment_state e\n    WHERE e.greenhouse_id = 'vallery'\n      AND e.equipment = m.equipment\n      AND e.ts <= bd.seed_start_ts\n    ORDER BY e.ts DESC\n    LIMIT 1\n  ) seed ON true\n),\nstate_events AS MATERIALIZED (\n  SELECT e.ts AS time, e.equipment, e.state\n  FROM equipment_state e, bounds bd\n  WHERE e.greenhouse_id = 'vallery'\n    AND e.equipment IN ('mister_south', 'mister_west', 'mister_center', 'fog')\n    AND e.ts >= bd.seed_start_ts\n    AND e.ts <= bd.to_ts\n),\nstate_timeline AS MATERIALIZED (\n  SELECT\n    e.time,\n    e.equipment,\n    e.state,\n    lead(e.time, 1, (SELECT to_ts FROM bounds)) OVER (PARTITION BY e.equipment ORDER BY e.time) AS next_time\n  FROM (\n    SELECT time, equipment, state FROM state_seed\n    UNION ALL\n    SELECT time, equipment, state FROM state_events\n  ) e\n),\nstate_segments AS MATERIALIZED (\n  SELECT\n    greatest(st.time, bd.seed_start_ts) AS start_time,\n    least(st.next_time, bd.to_ts) AS end_time,\n    st.equipment\n  FROM state_timeline st\n  CROSS JOIN bounds bd\n  WHERE st.state\n    AND st.time < bd.to_ts\n    AND st.next_time > bd.seed_start_ts\n),\nlanes AS (\n  SELECT\n    b.time,\n    m.top_metric AS metric,\n    CASE WHEN EXISTS (\n      SELECT 1\n      FROM state_segments s\n      WHERE s.equipment = m.equipment\n        AND s.start_time < b.time + bd.step\n        AND s.end_time > b.time\n    ) THEN m.lane_high ELSE m.lane_low END AS value\n  FROM buckets b\n  CROSS JOIN bounds bd\n  CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts\n    AND b.time <= bd.to_ts\n  UNION ALL\n  SELECT b.time, m.base_metric, m.lane_low\n  FROM buckets b\n  CROSS JOIN bounds bd\n  CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts\n    AND b.time <= bd.to_ts\n)\nSELECT time, metric, value FROM lanes ORDER BY time, metric",
+              "rawSql": "WITH bounds AS MATERIALIZED (\n  SELECT\n    $__timeFrom()::timestamptz AS from_ts,\n    LEAST($__timeTo()::timestamptz, now()) AS to_ts,\n    interval '5 minutes' AS step,\n    date_trunc('hour', $__timeFrom()::timestamptz) AS seed_start_ts\n),\nbuckets AS MATERIALIZED (\n  SELECT generate_series(time_bucket(b.step, b.seed_start_ts), b.to_ts, b.step) AS time\n  FROM bounds b\n),\nlane_metrics AS MATERIALIZED (\n  SELECT *\n  FROM (VALUES\n    ('heat2'::text, 'Heat 2 (Gas)'::text, 'Heat 2 (Gas) Base'::text, -0.46::double precision, -0.24::double precision),\n    ('heat1'::text, 'Heat 1 (Electric)'::text, 'Heat 1 (Electric) Base'::text, -0.18::double precision, 0.04::double precision),\n    ('mister_south'::text, 'Mister South'::text, 'Mister South Base'::text, 1.72::double precision, 2.0::double precision),\n    ('mister_west'::text, 'Mister West'::text, 'Mister West Base'::text, 2.06::double precision, 2.34::double precision),\n    ('mister_center'::text, 'Mister Center'::text, 'Mister Center Base'::text, 2.4::double precision, 2.68::double precision),\n    ('fog'::text, 'Fog'::text, 'Fog Base'::text, 2.74::double precision, 3.02::double precision)\n  ) AS m(equipment, top_metric, base_metric, lane_low, lane_high)\n),\nstate_seed AS MATERIALIZED (\n  SELECT bd.seed_start_ts AS time, m.equipment, COALESCE(seed.state, false) AS state\n  FROM bounds bd\n  CROSS JOIN lane_metrics m\n  LEFT JOIN LATERAL (\n    SELECT e.state\n    FROM equipment_state e\n    WHERE e.greenhouse_id = 'vallery'\n      AND e.equipment = m.equipment\n      AND e.ts <= bd.seed_start_ts\n    ORDER BY e.ts DESC\n    LIMIT 1\n  ) seed ON true\n),\nstate_events AS MATERIALIZED (\n  SELECT e.ts AS time, e.equipment, e.state\n  FROM equipment_state e, bounds bd\n  WHERE e.greenhouse_id = 'vallery'\n    AND e.equipment IN ('heat2', 'heat1', 'mister_south', 'mister_west', 'mister_center', 'fog')\n    AND e.ts >= bd.seed_start_ts\n    AND e.ts <= bd.to_ts\n),\nstate_timeline AS MATERIALIZED (\n  SELECT\n    e.time,\n    e.equipment,\n    e.state,\n    lead(e.time, 1, (SELECT to_ts FROM bounds)) OVER (PARTITION BY e.equipment ORDER BY e.time) AS next_time\n  FROM (\n    SELECT time, equipment, state FROM state_seed\n    UNION ALL\n    SELECT time, equipment, state FROM state_events\n  ) e\n),\nstate_segments AS MATERIALIZED (\n  SELECT\n    greatest(st.time, bd.seed_start_ts) AS start_time,\n    least(st.next_time, bd.to_ts) AS end_time,\n    st.equipment\n  FROM state_timeline st\n  CROSS JOIN bounds bd\n  WHERE st.state\n    AND st.time < bd.to_ts\n    AND st.next_time > bd.seed_start_ts\n),\nlanes AS (\n  SELECT\n    b.time,\n    m.top_metric AS metric,\n    CASE WHEN EXISTS (\n      SELECT 1\n      FROM state_segments s\n      WHERE s.equipment = m.equipment\n        AND s.start_time < b.time + bd.step\n        AND s.end_time > b.time\n    ) THEN m.lane_high ELSE NULL::double precision END AS value\n  FROM buckets b\n  CROSS JOIN bounds bd\n  CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts\n    AND b.time <= bd.to_ts\n  UNION ALL\n  SELECT b.time, m.base_metric, m.lane_low\n  FROM buckets b\n  CROSS JOIN bounds bd\n  CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts\n    AND b.time <= bd.to_ts\n)\nSELECT time, metric, value\nFROM lanes\nORDER BY time, metric",
               "refId": "E"
             }
           ],
@@ -18194,7 +19334,7 @@ data:
                   {
                     "id": "color",
                     "value": {
-                      "fixedColor": "#FFA600",
+                      "fixedColor": "#73BF69",
                       "mode": "fixed"
                     }
                   },
@@ -18233,7 +19373,7 @@ data:
                   {
                     "id": "color",
                     "value": {
-                      "fixedColor": "#FFA600",
+                      "fixedColor": "#73BF69",
                       "mode": "fixed"
                     }
                   },
@@ -18247,7 +19387,7 @@ data:
                   },
                   {
                     "id": "custom.fillOpacity",
-                    "value": 20
+                    "value": 22
                   },
                   {
                     "id": "custom.gradientMode",
@@ -18276,7 +19416,7 @@ data:
                   {
                     "id": "color",
                     "value": {
-                      "fixedColor": "#56A64B",
+                      "fixedColor": "#2196F3",
                       "mode": "fixed"
                     }
                   },
@@ -18315,7 +19455,7 @@ data:
                   {
                     "id": "color",
                     "value": {
-                      "fixedColor": "#56A64B",
+                      "fixedColor": "#2196F3",
                       "mode": "fixed"
                     }
                   },
@@ -18329,7 +19469,7 @@ data:
                   },
                   {
                     "id": "custom.fillOpacity",
-                    "value": 20
+                    "value": 22
                   },
                   {
                     "id": "custom.gradientMode",
@@ -18358,7 +19498,7 @@ data:
                   {
                     "id": "color",
                     "value": {
-                      "fixedColor": "#FFA600",
+                      "fixedColor": "#007A4D",
                       "mode": "fixed"
                     }
                   },
@@ -18385,6 +19525,10 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -18397,7 +19541,7 @@ data:
                   {
                     "id": "color",
                     "value": {
-                      "fixedColor": "#FFA600",
+                      "fixedColor": "#007A4D",
                       "mode": "fixed"
                     }
                   },
@@ -18419,7 +19563,7 @@ data:
                   },
                   {
                     "id": "custom.fillOpacity",
-                    "value": 100
+                    "value": 76
                   },
                   {
                     "id": "custom.spanNulls",
@@ -18436,6 +19580,14 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.gradientMode",
+                    "value": "opacity"
                   }
                 ]
               },
@@ -18448,7 +19600,7 @@ data:
                   {
                     "id": "color",
                     "value": {
-                      "fixedColor": "#56A64B",
+                      "fixedColor": "#0B5CAD",
                       "mode": "fixed"
                     }
                   },
@@ -18475,6 +19627,10 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -18487,7 +19643,7 @@ data:
                   {
                     "id": "color",
                     "value": {
-                      "fixedColor": "#56A64B",
+                      "fixedColor": "#0B5CAD",
                       "mode": "fixed"
                     }
                   },
@@ -18509,7 +19665,7 @@ data:
                   },
                   {
                     "id": "custom.fillOpacity",
-                    "value": 100
+                    "value": 76
                   },
                   {
                     "id": "custom.spanNulls",
@@ -18526,6 +19682,14 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
+                  },
+                  {
+                    "id": "custom.gradientMode",
+                    "value": "opacity"
                   }
                 ]
               }
@@ -18570,7 +19734,7 @@ data:
               "editorMode": "code",
               "format": "time_series",
               "rawQuery": true,
-              "rawSql": "WITH raw_bounds AS (\n  SELECT $__timeFrom()::timestamptz AS from_ts, $__timeTo()::timestamptz AS to_ts\n),\nbounds AS MATERIALIZED (\n  SELECT GREATEST(from_ts, to_ts - interval '7 days') AS from_ts, to_ts AS to_ts,\n    LEAST(to_ts, now()) AS state_to_ts,\n    date_trunc('hour', GREATEST(from_ts, to_ts - interval '7 days')) AS seed_start_ts,\n    interval '10 minutes' AS step\n  FROM raw_bounds\n),\nbuckets AS MATERIALIZED (\n  SELECT generate_series(time_bucket(b.step, b.seed_start_ts), LEAST(b.to_ts, now()), b.step) AS time FROM bounds b\n),\nlane_metrics AS MATERIALIZED (\n  SELECT * FROM (VALUES\n    ('grow_light_main'::text, 'Overhead Light'::text, 'Overhead Light Base'::text, 18000.0::double precision, 24000.0::double precision),\n    ('grow_light_grow'::text, 'Grow Light'::text,     'Grow Light Base'::text,     8000.0::double precision,  14000.0::double precision)\n  ) AS m(equipment, top_metric, base_metric, lane_low, lane_high)\n),\nstate_seed AS MATERIALIZED (\n  SELECT bd.seed_start_ts AS time, m.equipment, COALESCE(seed.state, false) AS state\n  FROM bounds bd CROSS JOIN lane_metrics m\n  LEFT JOIN LATERAL (SELECT e.state FROM equipment_state e WHERE e.greenhouse_id='vallery' AND e.equipment=m.equipment AND e.ts <= bd.seed_start_ts ORDER BY e.ts DESC LIMIT 1) seed ON true\n),\nstate_events AS MATERIALIZED (\n  SELECT e.ts AS time, e.equipment, e.state FROM equipment_state e, bounds bd\n  WHERE e.greenhouse_id='vallery' AND e.equipment IN ('grow_light_main','grow_light_grow') AND e.ts >= bd.seed_start_ts AND e.ts <= bd.state_to_ts\n),\nstate_timeline AS MATERIALIZED (\n  SELECT e.time, e.equipment, e.state, lead(e.time,1,(SELECT state_to_ts FROM bounds)) OVER (PARTITION BY e.equipment ORDER BY e.time) AS next_time\n  FROM (SELECT time,equipment,state FROM state_seed UNION ALL SELECT time,equipment,state FROM state_events) e\n),\nstate_segments AS MATERIALIZED (\n  SELECT greatest(st.time, bd.seed_start_ts) AS start_time, least(st.next_time, bd.state_to_ts) AS end_time, st.equipment\n  FROM state_timeline st CROSS JOIN bounds bd WHERE st.state AND st.time < bd.state_to_ts AND st.next_time > bd.seed_start_ts\n),\nlanes AS (\n  SELECT b.time, m.top_metric AS metric,\n    CASE WHEN EXISTS (SELECT 1 FROM state_segments s WHERE s.equipment=m.equipment AND s.start_time < b.time + bd.step AND s.end_time > b.time)\n      THEN m.lane_high ELSE m.lane_low END AS value\n  FROM buckets b CROSS JOIN bounds bd CROSS JOIN lane_metrics m WHERE b.time >= bd.from_ts AND b.time <= bd.state_to_ts\n  UNION ALL\n  SELECT b.time, m.base_metric, m.lane_low FROM buckets b CROSS JOIN bounds bd CROSS JOIN lane_metrics m WHERE b.time >= bd.from_ts AND b.time <= bd.state_to_ts\n)\nSELECT time, metric, value FROM lanes ORDER BY time, metric",
+              "rawSql": "WITH raw_bounds AS (\n  SELECT $__timeFrom()::timestamptz AS from_ts, $__timeTo()::timestamptz AS to_ts\n),\nbounds AS MATERIALIZED (\n  SELECT GREATEST(from_ts, to_ts - interval '7 days') AS from_ts, to_ts AS to_ts,\n    LEAST(to_ts, now()) AS state_to_ts,\n    date_trunc('hour', GREATEST(from_ts, to_ts - interval '7 days')) AS seed_start_ts,\n    interval '10 minutes' AS step\n  FROM raw_bounds\n),\ntracked_params AS MATERIALIZED (\n  SELECT * FROM (VALUES\n    ('gl_main_lux_threshold'),('gl_main_lux_hysteresis'),\n    ('gl_grow_lux_threshold'),('gl_grow_lux_hysteresis'),\n    ('gl_lux_threshold'),('gl_lux_hysteresis')\n  ) AS p(parameter)\n),\nlatest_values AS MATERIALIZED (\n  SELECT DISTINCT ON (tp.parameter) tp.parameter, ss.value::double precision AS value\n  FROM tracked_params tp\n  LEFT JOIN LATERAL (\n    SELECT value, ts\n    FROM setpoint_snapshot ss\n    WHERE ss.greenhouse_id='vallery' AND ss.parameter=tp.parameter\n    ORDER BY ss.ts DESC LIMIT 1\n  ) ss ON true\n  WHERE ss.value IS NOT NULL\n),\npolicy AS MATERIALIZED (\n  SELECT\n    greatest(100.0, least(100000.0, COALESCE(\n      (SELECT value FROM latest_values WHERE parameter='gl_main_lux_threshold'),\n      (SELECT value FROM latest_values WHERE parameter='gl_lux_threshold'),\n      40000.0))) AS main_on,\n    greatest(0.0, least(25000.0, COALESCE(\n      (SELECT value FROM latest_values WHERE parameter='gl_main_lux_hysteresis'),\n      (SELECT value FROM latest_values WHERE parameter='gl_lux_hysteresis'),\n      8000.0))) AS main_hyst,\n    greatest(100.0, least(100000.0, COALESCE(\n      (SELECT value FROM latest_values WHERE parameter='gl_grow_lux_threshold'),\n      40000.0))) AS grow_on,\n    greatest(0.0, least(25000.0, COALESCE(\n      (SELECT value FROM latest_values WHERE parameter='gl_grow_lux_hysteresis'),\n      8000.0))) AS grow_hyst\n),\npolicy_wide AS MATERIALIZED (\n  SELECT\n    main_on,\n    main_on + main_hyst AS main_off,\n    grow_on,\n    grow_on + grow_hyst AS grow_off\n  FROM policy\n),\nbuckets AS MATERIALIZED (\n  SELECT generate_series(time_bucket(b.step, b.seed_start_ts), LEAST(b.to_ts, now()), b.step) AS time FROM bounds b\n),\nlane_metrics AS MATERIALIZED (\n  SELECT *\n  FROM policy_wide p\n  CROSS JOIN LATERAL (VALUES\n    (\n      'grow_light_main'::text,\n      'Overhead Light'::text,\n      'Overhead Light Base'::text,\n      p.main_on,\n      p.main_on + GREATEST(250.0, (p.main_off - p.main_on) * 0.47)\n    ),\n    (\n      'grow_light_grow'::text,\n      'Grow Light'::text,\n      'Grow Light Base'::text,\n      p.grow_on + GREATEST(250.0, (p.grow_off - p.grow_on) * 0.53),\n      p.grow_off\n    )\n  ) AS m(equipment, top_metric, base_metric, lane_low, lane_high)\n),\nstate_seed AS MATERIALIZED (\n  SELECT bd.seed_start_ts AS time, m.equipment, COALESCE(seed.state, false) AS state\n  FROM bounds bd CROSS JOIN lane_metrics m\n  LEFT JOIN LATERAL (\n    SELECT e.state\n    FROM equipment_state e\n    WHERE e.greenhouse_id='vallery' AND e.equipment=m.equipment AND e.ts <= bd.seed_start_ts\n    ORDER BY e.ts DESC LIMIT 1\n  ) seed ON true\n),\nstate_events AS MATERIALIZED (\n  SELECT e.ts AS time, e.equipment, e.state\n  FROM equipment_state e, bounds bd\n  WHERE e.greenhouse_id='vallery'\n    AND e.equipment IN ('grow_light_main','grow_light_grow')\n    AND e.ts >= bd.seed_start_ts\n    AND e.ts <= bd.state_to_ts\n),\nstate_timeline AS MATERIALIZED (\n  SELECT e.time, e.equipment, e.state,\n    lead(e.time,1,(SELECT state_to_ts FROM bounds)) OVER (PARTITION BY e.equipment ORDER BY e.time) AS next_time\n  FROM (SELECT time,equipment,state FROM state_seed UNION ALL SELECT time,equipment,state FROM state_events) e\n),\nstate_segments AS MATERIALIZED (\n  SELECT greatest(st.time, bd.seed_start_ts) AS start_time, least(st.next_time, bd.state_to_ts) AS end_time, st.equipment\n  FROM state_timeline st CROSS JOIN bounds bd\n  WHERE st.state AND st.time < bd.state_to_ts AND st.next_time > bd.seed_start_ts\n),\nlanes AS (\n  SELECT b.time, m.top_metric AS metric,\n    CASE WHEN EXISTS (\n      SELECT 1\n      FROM state_segments s\n      WHERE s.equipment=m.equipment\n        AND s.start_time < b.time + bd.step\n        AND s.end_time > b.time\n    ) THEN m.lane_high ELSE NULL::double precision END AS value\n  FROM buckets b CROSS JOIN bounds bd CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts AND b.time <= bd.state_to_ts\n  UNION ALL\n  SELECT b.time, m.base_metric, 0.0::double precision\n  FROM buckets b CROSS JOIN bounds bd CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts AND b.time <= bd.state_to_ts\n)\nSELECT time, metric, value FROM lanes ORDER BY time, metric",
               "refId": "B"
             }
           ],
@@ -19771,6 +20935,10 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -19805,7 +20973,7 @@ data:
                   },
                   {
                     "id": "custom.fillOpacity",
-                    "value": 100
+                    "value": 78
                   },
                   {
                     "id": "custom.spanNulls",
@@ -19822,6 +20990,10 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -19861,6 +21033,10 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -19895,7 +21071,7 @@ data:
                   },
                   {
                     "id": "custom.fillOpacity",
-                    "value": 100
+                    "value": 78
                   },
                   {
                     "id": "custom.spanNulls",
@@ -19912,6 +21088,10 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -19951,6 +21131,10 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },
@@ -19985,7 +21169,7 @@ data:
                   },
                   {
                     "id": "custom.fillOpacity",
-                    "value": 100
+                    "value": 78
                   },
                   {
                     "id": "custom.spanNulls",
@@ -20002,6 +21186,10 @@ data:
                       "tooltip": true,
                       "viz": false
                     }
+                  },
+                  {
+                    "id": "custom.pointSize",
+                    "value": 0
                   }
                 ]
               },

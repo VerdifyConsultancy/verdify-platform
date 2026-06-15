@@ -1586,7 +1586,7 @@
               "options": {
                 "0": {
                   "text": "Off",
-                  "color": "rgba(253,216,53,0.3)",
+                  "color": "rgba(38,166,154,0.3)",
                   "index": 0
                 },
                 "1": {
@@ -1596,7 +1596,7 @@
                 },
                 "false": {
                   "text": "Off",
-                  "color": "rgba(253,216,53,0.3)",
+                  "color": "rgba(38,166,154,0.3)",
                   "index": 2
                 },
                 "true": {
@@ -1725,7 +1725,7 @@
                         "index": 0
                       },
                       "empty": {
-                        "color": "rgba(253,216,53,0.30)",
+                        "color": "rgba(38,166,154,0.30)",
                         "text": "",
                         "index": 1
                       }
@@ -1760,7 +1760,7 @@
                         "index": 0
                       },
                       "Night": {
-                        "color": "#112231",
+                        "color": "#FDD835",
                         "text": "Night",
                         "index": 1
                       }

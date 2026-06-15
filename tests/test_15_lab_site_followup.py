@@ -1,10 +1,26 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-VAULT_ROOT = Path("/mnt/iris/verdify-vault/website")
+
+
+def _vault_root() -> Path:
+    candidates = [
+        os.environ.get("VERDIFY_SITE_VAULT"),
+        "/mnt/iris/verdify-vault/website",
+        str(Path.home() / "Iris/verdify-vault/website"),
+        "/Users/jason/Iris/verdify-vault/website",
+    ]
+    for candidate in candidates:
+        if candidate and Path(candidate).exists():
+            return Path(candidate)
+    return Path("/mnt/iris/verdify-vault/website")
+
+
+VAULT_ROOT = _vault_root()
 
 
 def _dashboard(path: str) -> dict:

@@ -7238,7 +7238,7 @@ data:
                       {
                         "id": "color",
                         "value": {
-                          "fixedColor": "#9CCC65",
+                          "fixedColor": "#2196F3",
                           "mode": "fixed"
                         }
                       }
@@ -12360,7 +12360,7 @@ data:
                   "options": {
                     "0": {
                       "text": "Off",
-                      "color": "rgba(253,216,53,0.3)",
+                      "color": "rgba(38,166,154,0.3)",
                       "index": 0
                     },
                     "1": {
@@ -12370,7 +12370,7 @@ data:
                     },
                     "false": {
                       "text": "Off",
-                      "color": "rgba(253,216,53,0.3)",
+                      "color": "rgba(38,166,154,0.3)",
                       "index": 2
                     },
                     "true": {
@@ -12499,7 +12499,7 @@ data:
                             "index": 0
                           },
                           "empty": {
-                            "color": "rgba(253,216,53,0.30)",
+                            "color": "rgba(38,166,154,0.30)",
                             "text": "",
                             "index": 1
                           }
@@ -12534,7 +12534,7 @@ data:
                             "index": 0
                           },
                           "Night": {
-                            "color": "#112231",
+                            "color": "#FDD835",
                             "text": "Night",
                             "index": 1
                           }

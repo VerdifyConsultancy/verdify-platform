@@ -717,7 +717,7 @@
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "#9CCC65",
+                  "fixedColor": "#2196F3",
                   "mode": "fixed"
                 }
               },
@@ -737,7 +737,7 @@
                   {
                     "options": {
                       "OFF": {
-                        "color": "#9CCC65",
+                        "color": "#2196F3",
                         "index": 1,
                         "text": ""
                       }
