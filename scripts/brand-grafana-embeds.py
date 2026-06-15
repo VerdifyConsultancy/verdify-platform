@@ -2490,10 +2490,12 @@ def check_relay_state_lane_dashboard_data(label: str, dashboard: dict[str, Any])
         for series, base_series in relay_state_lane_pairs(panel):
             expected_state_props = dict(default_expected_state_props)
             expected_gradient = None
-            if (
-                str(panel.get("title") or "") == "Lighting: Overhead vs Grow Circuit — Lux, Thresholds & Switch State"
-                and series in {"Overhead Light", "Grow Light"}
-            ):
+            if str(
+                panel.get("title") or ""
+            ) == "Lighting: Overhead vs Grow Circuit — Lux, Thresholds & Switch State" and series in {
+                "Overhead Light",
+                "Grow Light",
+            }:
                 expected_state_props["custom.fillOpacity"] = HOMEPAGE_LIGHTING_STATE_FILL_OPACITY
                 expected_gradient = "opacity"
             props = override_props(panel, series)
