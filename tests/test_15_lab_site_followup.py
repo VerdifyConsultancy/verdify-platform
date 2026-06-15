@@ -89,13 +89,20 @@ def test_homepage_resource_graphs_follow_lighting_before_cameras():
     homepage = (VAULT_ROOT / "index.md").read_text(encoding="utf-8")
 
     lighting_index = homepage.index("panelId=36&theme=light&from=now-72h&to=now%2B72h")
+    electric_index = homepage.index("panelId=310&theme=light&from=now-7d&to=now")
+    gas_index = homepage.index("panelId=127&theme=light&from=now-7d&to=now")
     water_index = homepage.index("panelId=128&theme=light&from=now-7d&to=now")
     cost_index = homepage.index("panelId=312&theme=light&from=now-30d&to=now")
     cameras_index = homepage.index("## Live Greenhouse Cameras")
 
-    assert lighting_index < water_index < cost_index < cameras_index
+    assert lighting_index < electric_index < gas_index < water_index < cost_index < cameras_index
+    assert '<div class="media-grid media-grid-3 home-resource-panel-row">' in homepage
+    assert "site-evidence-economics/?orgId=1&panelId=310" in homepage
+    assert "site-home/?orgId=1&panelId=127" in homepage
     assert "site-home/?orgId=1&panelId=128" in homepage
     assert "site-evidence-economics/?orgId=1&panelId=312" in homepage
+    assert homepage.count('style="--home-panel-height: 300px;"') == 3
+    assert 'style="--home-panel-height: 320px;"' in homepage
 
 
 def test_resource_use_restores_individual_solar_alignment_panels():
