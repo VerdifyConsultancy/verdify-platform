@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -71,6 +72,17 @@ def test_overview_nav_promotes_greenhouse_evidence_pages():
     assert 'pageLink("Lighting", "greenhouse/lighting")' not in greenhouse
     assert 'pageLink("Hydroponics", "greenhouse/hydroponics")' not in greenhouse
     assert 'pageLink("Soil Sensors", "greenhouse/soil")' not in greenhouse
+
+
+def test_homepage_core_graphs_share_window_and_embed_scale():
+    homepage = (VAULT_ROOT / "index.md").read_text(encoding="utf-8")
+
+    for panel_id in (30, 31, 36):
+        match = re.search(
+            rf'<iframe[^>]+panelId={panel_id}[^>]+from=now-72h&to=now%2B72h[^>]+width="100%"[^>]+height="620"',
+            homepage,
+        )
+        assert match, f"homepage panel {panel_id} does not use the shared 72h/620px embed scale"
 
 
 def test_resource_use_restores_individual_solar_alignment_panels():
