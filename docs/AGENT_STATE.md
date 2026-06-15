@@ -61,6 +61,10 @@ runbook or architecture references before editing.
   and uses S3-compatible storage as durable source of truth. The
   `verdify-lab-site-cache` PVC is only the build/serve cache; lab publishing no
   longer depends on NAS/NFS content paths.
+- 2026-06-14/15 lab plan pages must use greenhouse-local dates
+  (`America/Denver`). A UTC rollover once published an incomplete future
+  `/plans/2026-06-15` page before the local day started; the publisher now pins
+  `LAB_LOCAL_TIMEZONE`/`TZ` and prunes future auto-generated plan pages.
 - The DB NetworkPolicy includes a DB-port-only pod-CIDR fallback for publisher
   pods because the CNI did not honor the narrower namespace/pod selector during
   short-lived CronJob DB checks. Keep the fallback scoped to TCP/5432 and revisit
@@ -155,6 +159,20 @@ runbook or architecture references before editing.
   `ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s@sha256:5f734f8dac3bc08665445e8d09f5e9768f3f82d737962a890112628ee34f4a7b`.
   ArgoCD app `verdify-prod-dark` still reports OutOfSync/Progressing due to
   broader unrelated drift; do not treat that as a failed lab cache rollout.
+- 2026-06-14: Local-date lab publisher repair passed. `bash -n
+  scripts/lab-publish-k3s.sh scripts/publish-site-content.sh`,
+  `python3 -m py_compile scripts/generate-daily-plan.py
+  scripts/generate-plans-index.py`, `git diff --check`, and kustomize renders
+  for dev/prod/prod-dark passed before push. GitHub Actions were green on
+  `4d7fb6c` and `de29acf` (`CI`, `Container Publish`, `K8s Manifests`). Prod
+  publisher-only resources were applied with repaired digest
+  `sha256:d4ae747ab31d28716aeea8858140a156fb9ee242ada9bd257f0f184f1915f4ea`;
+  one-shot job `verdify-lab-publisher-repair-20260614204457` completed,
+  deleted generated future `2026-06-15` content/public output, rebuilt June 14,
+  and uploaded content/public/state to S3. Public
+  `https://lab.verdify.ai/plans/2026-06-15` returned HTTP 404, `/plans/2026-06-14`
+  returned HTTP 200 with fresh no-store headers, and the live lab pod had no
+  `/usr/share/nginx/html/plans/2026-06-15.html`.
 
 ## Next Recommended Codex Prompt
 
