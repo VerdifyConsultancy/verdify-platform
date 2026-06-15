@@ -75,9 +75,7 @@ async def test_push_to_esp32_routes_service_via_execute_service(monkeypatch):
     pushed = await esp32_push.push_to_esp32([("band_vpd_target_mid", 1.05, "service")])
 
     assert pushed == 1
-    client.execute_service.assert_called_once_with(
-        svc, {"anchor_key": "band_vpd_target_mid", "value": 1.05}
-    )
+    client.execute_service.assert_called_once_with(svc, {"anchor_key": "band_vpd_target_mid", "value": 1.05})
     # never falls through to number_command for a service change
     client.number_command.assert_not_called()
     assert shared.recently_pushed_values["band_vpd_target_mid"] == 1.05
