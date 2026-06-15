@@ -70,6 +70,15 @@ COPY slack.yaml /app/slack.yaml
 COPY slack_ops/ /app/slack_ops/
 COPY verdify_schemas/ /app/verdify_schemas/
 
+# B4: the forecast-action engine is launched as a subprocess by
+# ingestor/tasks/forecast.py:forecast_action_engine() every 900s. It must exist
+# IN the image — the legacy code pointed at /srv/verdify/scripts/... (the iris VM)
+# which does not exist here, so it raised FileNotFoundError every cycle. The
+# engine resolves REPO_ROOT = Path(__file__).resolve().parents[1] == /app, where
+# slack_config.py and verdify_schemas/ (its only repo imports) already live, so
+# its imports resolve at this in-container location.
+COPY scripts/ /app/scripts/
+
 # slack.yaml is the NON-SECRET Slack config (channel IDs + credential FILE
 # PATHS, never tokens). slack_config.DEFAULT_CONFIG_PATH resolves it next to
 # slack_config.py, and ingestor/config.py:48 loads it at import — so it must be

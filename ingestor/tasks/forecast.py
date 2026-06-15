@@ -12,6 +12,7 @@ from ._common import (
     _FORECAST_DEVIATION_SIGMA_MULTIPLIER,
     _FORECAST_URL,
     GREENHOUSE_ID,
+    REPO_ROOT,
     UTC,
     AlertEnvelope,
     OpenMeteoForecastResponse,
@@ -25,8 +26,17 @@ from ._common import (
     json,
     log,
     math,
+    sys,
     urllib,
 )
+
+# The forecast-action engine is a standalone script COPYed into the image at
+# <repo root>/scripts/. REPO_ROOT resolves to /app in the container (and the
+# real repo root on a laptop), so this points at the in-image script without any
+# hardcoded /srv legacy iris-VM path. (B4: the old hardcoded
+# /srv/greenhouse/.venv/bin/python3 + /srv/verdify/scripts/... paths do not exist
+# in the k3s container and raised FileNotFoundError every cycle.)
+_FORECAST_ACTION_ENGINE = REPO_ROOT / "scripts" / "forecast-action-engine.py"
 
 
 def _fetch_forecast() -> list[dict] | None:
@@ -150,7 +160,7 @@ async def forecast_action_engine(pool: asyncpg.Pool) -> None:
     result = await loop.run_in_executor(
         None,
         lambda: _sp.run(
-            ["/srv/greenhouse/.venv/bin/python3", "/srv/verdify/scripts/forecast-action-engine.py"],
+            [sys.executable, str(_FORECAST_ACTION_ENGINE)],
             capture_output=True,
             text=True,
             timeout=60,

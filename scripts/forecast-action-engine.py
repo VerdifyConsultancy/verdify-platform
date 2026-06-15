@@ -78,6 +78,22 @@ HEAT_PRECOOL_RULES = {"heat_wave", "extreme_heat"}
 
 
 def get_db_url():
+    # In the k3s container the DB is reached via the same env vars the ingestor
+    # uses (DB_HOST=verdify-db, DB_PASSWORD/POSTGRES_PASSWORD from the secret) —
+    # NOT localhost and NOT /srv/verdify/.env (the legacy iris-VM path, absent in
+    # the image). Honor DATABASE_URL first, then the discrete DB_* env vars, and
+    # only fall back to the old single-host .env + localhost when no env is set.
+    if os.environ.get("DATABASE_URL"):
+        return os.environ["DATABASE_URL"]
+
+    host = os.environ.get("DB_HOST")
+    pw = os.environ.get("DB_PASSWORD") or os.environ.get("POSTGRES_PASSWORD")
+    if host or pw:
+        user = os.environ.get("DB_USER", "verdify")
+        port = os.environ.get("DB_PORT", "5432")
+        name = os.environ.get("DB_NAME", "verdify")
+        return f"postgresql://{user}:{pw or ''}@{host or 'localhost'}:{port}/{name}"
+
     pw = "verdify"
     if os.path.exists("/srv/verdify/.env"):
         with open("/srv/verdify/.env") as f:

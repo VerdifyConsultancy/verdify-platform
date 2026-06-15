@@ -1298,6 +1298,7 @@ __all__ = [
     "os",
     "re",
     "sys",
+    "REPO_ROOT",
     "time",
     "urllib",
     "uuid",

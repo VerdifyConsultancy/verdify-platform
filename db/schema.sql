@@ -27794,8 +27794,8 @@ COMMENT ON VIEW public.v_mister_effectiveness IS 'VPD before/after each misting 
 --
 
 CREATE VIEW public.v_mister_zone_effectiveness AS
- WITH starts AS (
-         SELECT equipment_state.ts AS on_ts,
+ WITH events AS (
+         SELECT equipment_state.ts,
             equipment_state.equipment,
                 CASE equipment_state.equipment
                     WHEN 'mister_south'::text THEN 'south'::text
@@ -27803,9 +27803,21 @@ CREATE VIEW public.v_mister_zone_effectiveness AS
                     WHEN 'mister_center'::text THEN 'center'::text
                     ELSE NULL::text
                 END AS zone,
-            lead(equipment_state.ts) OVER (PARTITION BY equipment_state.equipment ORDER BY equipment_state.ts) AS off_ts
+            equipment_state.state,
+            lead(equipment_state.ts) OVER w AS next_change_ts,
+            ( SELECT min(off_evt.ts) AS min
+                   FROM public.equipment_state off_evt
+                  WHERE ((off_evt.equipment = equipment_state.equipment) AND (off_evt.state = false) AND (off_evt.ts > equipment_state.ts))) AS next_off_ts
            FROM public.equipment_state
-          WHERE ((equipment_state.equipment = ANY (ARRAY['mister_south'::text, 'mister_west'::text, 'mister_center'::text])) AND (equipment_state.state = true) AND (equipment_state.ts > (now() - '30 days'::interval)))
+          WHERE ((equipment_state.equipment = ANY (ARRAY['mister_south'::text, 'mister_west'::text, 'mister_center'::text])) AND (equipment_state.ts > (now() - '30 days'::interval)))
+          WINDOW w AS (PARTITION BY equipment_state.equipment ORDER BY equipment_state.ts)
+        ), starts AS (
+         SELECT e.ts AS on_ts,
+            e.equipment,
+            e.zone,
+            LEAST(COALESCE(LEAST(e.next_change_ts, e.next_off_ts), e.next_off_ts, e.next_change_ts), (e.ts + '00:10:00'::interval)) AS off_ts
+           FROM events e
+          WHERE (e.state = true)
         )
  SELECT s.on_ts,
     s.equipment,
@@ -27844,7 +27856,7 @@ ALTER VIEW public.v_mister_zone_effectiveness OWNER TO verdify;
 -- Name: VIEW v_mister_zone_effectiveness; Type: COMMENT; Schema: public; Owner: verdify
 --
 
-COMMENT ON VIEW public.v_mister_zone_effectiveness IS 'Mister on-events with zone-local VPD before and after the pulse. Center uses greenhouse average until a center VPD sensor exists.';
+COMMENT ON VIEW public.v_mister_zone_effectiveness IS 'Mister on-events with TRUE relay on-time (duration_s = next state-change clamped to the matching OFF, capped at 600s) and zone-local VPD before/after the pulse. Center uses greenhouse average until a center VPD sensor exists. (B7: duration_s was previously gap-to-next-pulse, overcounting by ~100x.)';
 
 
 --

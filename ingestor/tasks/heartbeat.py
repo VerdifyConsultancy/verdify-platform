@@ -12,6 +12,7 @@ from ._common import (
     CONTEXT_GATHER_FAILED_SENTINEL,
     GREENHOUSE_ID,
     PLANNER_TRIGGER_MATRIX,
+    REPO_ROOT,
     SLACK_CHANNEL,
     SLACK_TOKEN_FILE,
     STATE_DIR,
@@ -38,6 +39,7 @@ from ._common import (
     prepare_delivery_result,
     send_to_iris,
     sla_for,
+    sys,
     urllib,
     uuid,
 )
@@ -1069,15 +1071,26 @@ async def planning_heartbeat(pool: asyncpg.Pool) -> None:
         pass  # Server is alive, just doesn't accept GET on /mcp — that's fine
     except Exception as e:
         log.error("MCP server unreachable: %s", e)
-        # Try to restart it
+        # Try to restart it. REPO_ROOT resolves to the in-container repo root
+        # (/app) — no hardcoded /srv legacy iris-VM path — and sys.executable is
+        # the interpreter actually running this process, not a vanished venv. The
+        # restart log goes under STATE_DIR (best-effort; the dir is created if
+        # missing). NOTE: in k3s the MCP server runs as a SEPARATE Deployment, so
+        # this in-process Popen is a no-op safety net for the legacy single-host
+        # layout; the path fix keeps it from raising FileNotFoundError.
         try:
             import subprocess as _sp_mcp
 
+            try:
+                STATE_DIR.mkdir(parents=True, exist_ok=True)
+            except OSError:
+                pass
+            _mcp_log = open(STATE_DIR / "mcp-server.log", "a")
             _sp_mcp.Popen(
-                ["/srv/greenhouse/.venv/bin/python", "mcp/server.py"],
-                cwd="/srv/verdify",
-                stdout=open("/srv/verdify/state/mcp-server.log", "a"),
-                stderr=open("/srv/verdify/state/mcp-server.log", "a"),
+                [sys.executable, str(REPO_ROOT / "mcp" / "server.py")],
+                cwd=str(REPO_ROOT),
+                stdout=_mcp_log,
+                stderr=_mcp_log,
             )
             log.warning("MCP server restarted")
             try:
