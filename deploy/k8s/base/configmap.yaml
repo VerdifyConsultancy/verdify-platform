@@ -41,7 +41,11 @@ data:
   HA_URL: "http://192.168.30.107:8123"
   MQTT_HOST: "192.168.30.107"
   MQTT_PORT: "1883"
-  FRIGATE_URL: "http://192.168.30.142:5000"
+  # Frigate moved into k3s on 2026-06-16. Use the in-cluster unauthenticated
+  # API port for public-safe camera snapshots; the UI port (8971) requires auth.
+  FRIGATE_URL: "http://frigate.frigate.svc.cluster.local:5000"
+  VERDIFY_FRIGATE_PUBLIC_BASE_URL: "http://frigate.frigate.svc.cluster.local:5000"
+  VERDIFY_GO2RTC_PUBLIC_BASE_URL: ""
 
   # ---- HA-3.2 single-writer FENCE (#240) ---------------------------------
   # The coordination.k8s.io Lease fence is DEFAULT-OFF here, exactly like the
