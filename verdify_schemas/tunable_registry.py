@@ -612,6 +612,17 @@ REGISTRY: dict[str, TunableDef] = {
         tier=1,
         notes="Item-4 night-dry lever: kPa added to the OVERNIGHT VPD band (smooth sin^2 weight peaking at solar midnight, 0 at sunset/sunrise). Raises the night dryness floor so the dryer keeps running on a humid-night forecast WITHOUT moving the crop_band_anchors curve. Clamped 0..0.25.",
     ),
+    "sw_arbiter_zone_enabled": TunableDef(
+        name="sw_arbiter_zone_enabled",
+        kind="switch",
+        default=0,
+        esp_object_id="arbiter_zone_enabled",
+        cfg_readback_object_id="cfg_arbiter_zone_enabled",
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        notes="Item-3 per-zone arbiter master enable. Default OFF — ships inert; the arbiter (select_arbiter_zone in controls.yaml) only drives select_zone_for_pulse when ON. The firmware publishes cfg_arbiter_zone_enabled (sensor name 'Cfg Arbiter Zone Enabled' → cfg_arbiter_zone_enabled); without this row the setpoint_snapshot rejected it every cycle. Flip after a corpus zone-distribution review.",
+    ),
     # ─────────────────────────────────────────────────────────────────────
     # Per-zone VPD targets (push_owner="band" — dispatcher pushes from crop
     # profile) + related scoring tunables. Tier=2: visible context, not

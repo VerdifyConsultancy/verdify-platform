@@ -542,9 +542,9 @@ _CFG_READBACK_ADDED_FW_V2 = {
     "cfg_sw_onchip_band_enabled": "sw_onchip_band_enabled",
     "cfg_sw_wet_taper_enabled": "sw_wet_taper_enabled",
     "cfg_sw_night_stress_wet_enabled": "sw_night_stress_wet_enabled",
-    # Item-3 arbiter switch readback. object_id is the sanitized sensor NAME
-    # ("Cfg Arbiter Zone Enabled" → cfg_arbiter_zone_enabled).
-    "cfg_arbiter_zone_enabled": "sw_arbiter_zone_enabled",
+    # Item-3 arbiter switch readback (cfg_arbiter_zone_enabled →
+    # sw_arbiter_zone_enabled) now flows from the registry's cfg_readback_object_id
+    # (CFG_READBACK_MAP_REG); the manual alias here was redundant and is removed.
 }
 CFG_READBACK_MAP: dict[str, str] = {
     **CFG_READBACK_MAP_REG,
