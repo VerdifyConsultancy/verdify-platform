@@ -185,13 +185,16 @@ class TestAnchorContract:
         }
 
     def test_contract_b2_defaults(self):
+        # Canonical band (verdify_schemas/band_defaults.yaml == live prod). The
+        # exact registry==YAML pin lives in test_band_defaults_single_source.py.
         values = band_anchors.registry_default_anchor_values()
-        assert values["band_temp_target_sm"] == 84.0
-        assert values["band_temp_low_sr"] == 60.0
-        assert values["band_temp_high_mid"] == 70.0
-        assert values["band_vpd_target_sm"] == 1.05
+        assert values["band_temp_target_sm"] == 82.0
+        assert values["band_temp_low_sr"] == 62.0
+        assert values["band_temp_high_mid"] == 72.0
+        assert values["band_vpd_target_sm"] == 1.10
         assert values["zone_vpd_target_south_sm"] == 1.18
         assert values["zone_vpd_target_east_mid"] == 0.74
+        assert values["zone_vpd_target_center_mid"] == 0.70  # the orchid dry-night value (was the wet 0.50)
         assert values["zone_vpd_width_below_center"] == 0.20
         assert values["zone_vpd_width_above_center"] == 0.35
         assert [values[f"zone_priority_{z}"] for z in ("center", "south", "west", "east")] == [1, 2, 3, 4]
@@ -213,12 +216,13 @@ class TestZoneBandAudit:
     def test_solar_noon_band(self):
         values = band_anchors.registry_default_anchor_values()
         bands = band_anchors.zone_band_values(values, phase=1.0)
-        assert bands[("house", "temp_target")] == pytest.approx(84.0)
-        assert bands[("house", "vpd_low")] == pytest.approx(0.60)
-        assert bands[("house", "vpd_high")] == pytest.approx(1.40)
-        assert bands[("center", "vpd_target")] == pytest.approx(1.05)
-        assert bands[("center", "vpd_low")] == pytest.approx(1.05 - 0.20)
-        assert bands[("center", "vpd_high")] == pytest.approx(1.05 + 0.35)
+        # Solar-noon (sm) anchors of the canonical band.
+        assert bands[("house", "temp_target")] == pytest.approx(82.0)
+        assert bands[("house", "vpd_low")] == pytest.approx(0.92)
+        assert bands[("house", "vpd_high")] == pytest.approx(1.35)
+        assert bands[("center", "vpd_target")] == pytest.approx(1.10)
+        assert bands[("center", "vpd_low")] == pytest.approx(1.10 - 0.20)
+        assert bands[("center", "vpd_high")] == pytest.approx(1.10 + 0.35)
         assert bands[("south", "vpd_target")] == pytest.approx(1.18)
         # Temperature is one house curve — every zone reports it (§3.1).
         for zone in ("center", "south", "west", "east"):

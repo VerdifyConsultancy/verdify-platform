@@ -633,8 +633,18 @@ globals:
   # offline-first: one push survives reboot indefinitely). Each cycle
   # controls.yaml reconstructs the served band via band_value_at_phase() from
   # the 4 anchors (SR / solar-noon / SS / solar-midnight) and writes them into
-  # the existing Setpoints.temp_low/high/vpd_low/high fields. Seed values from
-  # the researched envelopes + owner Vanda table + §3.1 house reconciliation.
+  # the existing Setpoints.temp_low/high/vpd_low/high fields.
+  #
+  # SINGLE SOURCE OF TRUTH for the band = verdify_schemas/band_defaults.yaml
+  # (loaded by the tunable registry, seeded into the DB by migration 177). These
+  # initial_values are NOT a third opinion: they are a deliberately DRIER, in-clamp
+  # cold-start FAIL-SAFE view of that canonical band (a factory-fresh chip seeds
+  # these, then the dispatcher reconciles to the live DB within one cycle). The
+  # 2026-06-15 wet-night regression came from a too-WET cold default, so the
+  # cold-start must fail to the dry side for the bare-root Vandas. The relationship
+  # (firmware vpd_target >= canonical, all anchors within clamps) is CI-enforced by
+  # verdify_schemas/tests/test_band_defaults_single_source.py — change the band in
+  # band_defaults.yaml, never by hand-editing one store.
 
   # ─── B2: house TEMPERATURE band anchor curves (°F) ───
   # low / target / high; SR SM SS MID order.

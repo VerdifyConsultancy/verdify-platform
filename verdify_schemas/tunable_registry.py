@@ -33,8 +33,10 @@ for the full roadmap.
 from __future__ import annotations
 
 import math
+from pathlib import Path
 from typing import Literal
 
+import yaml
 from pydantic import BaseModel
 
 
@@ -2742,32 +2744,51 @@ REGISTRY: dict[str, TunableDef] = {
 
 _FW2_ANCHOR_KEYS = ("sr", "sm", "ss", "mid")
 
+# ── Canonical band defaults: loaded from band_defaults.yaml (single source) ──
+# The default anchor VECTORS come from band_defaults.yaml; the min/max CLAMP
+# envelope stays here (it is policy, not band data). The drift guard
+# verdify_schemas/tests/test_band_defaults_single_source.py pins these to the
+# YAML so the registry fallback can never silently re-diverge from the live band
+# again (the 2026-06-15 wet-night orchid regression came in via that drift).
+_BAND_DEFAULTS_PATH = Path(__file__).with_name("band_defaults.yaml")
+
+
+def _load_band_defaults() -> dict:
+    with _BAND_DEFAULTS_PATH.open("r", encoding="utf-8") as fh:
+        data = yaml.safe_load(fh) or {}
+    if "house" not in data or "zones" not in data:
+        raise RuntimeError(f"band_defaults.yaml malformed or missing: {_BAND_DEFAULTS_PATH}")
+    return data
+
+
+BAND_DEFAULTS = _load_band_defaults()
+
+# series → (min, max) clamp envelope (policy, not band data — kept in code).
+_FW2_HOUSE_CLAMPS: dict[str, tuple[float, float]] = {
+    "band_temp_low": (40.0, 100.0),
+    "band_temp_target": (40.0, 100.0),
+    "band_temp_high": (40.0, 100.0),
+    "band_vpd_low": (0.10, 3.0),
+    "band_vpd_target": (0.10, 3.0),
+    "band_vpd_high": (0.10, 3.0),
+}
+
 _FW2_HOUSE_SERIES: dict[str, tuple[tuple[float, float, float, float], float, float]] = {
-    # series → ((SR, SM, SS, MID) defaults, min, max)
-    "band_temp_low": ((60.0, 76.0, 66.0, 60.0), 40.0, 100.0),
-    "band_temp_target": ((66.0, 84.0, 73.0, 64.0), 40.0, 100.0),
-    "band_temp_high": ((72.0, 86.0, 80.0, 70.0), 40.0, 100.0),
-    "band_vpd_low": ((0.40, 0.60, 0.45, 0.42), 0.10, 3.0),
-    "band_vpd_target": ((0.60, 1.05, 0.60, 0.50), 0.10, 3.0),
-    "band_vpd_high": ((0.90, 1.40, 0.90, 0.75), 0.10, 3.0),
+    # series → ((SR, SM, SS, MID) defaults from YAML, min, max)
+    series: (tuple(float(v) for v in BAND_DEFAULTS["house"][series.removeprefix("band_")]), lo, hi)
+    for series, (lo, hi) in _FW2_HOUSE_CLAMPS.items()
 }
 
 _FW2_ZONE_VPD_TARGETS: dict[str, tuple[float, float, float, float]] = {
-    "center": (0.60, 1.05, 0.60, 0.50),  # Vanda orchid (owner table)
-    "south": (0.85, 1.18, 0.95, 0.75),  # cannabis-veg (runs dry: bud-mold defense)
-    "west": (0.60, 1.10, 0.70, 0.57),  # citrus (lime)
-    "east": (0.80, 1.22, 0.90, 0.74),  # pepper
+    zone: tuple(float(v) for v in z["vpd_target"]) for zone, z in BAND_DEFAULTS["zones"].items()
 }
 
 _FW2_ZONE_VPD_WIDTHS: dict[str, tuple[float, float]] = {
     # zone → (below-target, above-target) half-widths (kPa)
-    "center": (0.20, 0.35),
-    "south": (0.18, 0.22),
-    "west": (0.16, 0.22),
-    "east": (0.15, 0.23),
+    zone: (float(z["width_below"]), float(z["width_above"])) for zone, z in BAND_DEFAULTS["zones"].items()
 }
 
-_FW2_ZONE_PRIORITY: dict[str, float] = {"center": 1.0, "south": 2.0, "west": 3.0, "east": 4.0}
+_FW2_ZONE_PRIORITY: dict[str, float] = {zone: float(z["priority"]) for zone, z in BAND_DEFAULTS["zones"].items()}
 
 _FW2_WINDOW_PARAMS: dict[str, tuple[float, float, float, str]] = {
     # name → (default, min, max, note)
