@@ -75,6 +75,7 @@ LIGHTING_THRESHOLD_BAND_FILL_OPACITY = 22
 RELAY_STATE_FILL_OPACITY = 38
 HOMEPAGE_RELAY_STATE_FILL_OPACITY = 78
 HOMEPAGE_LIGHTING_STATE_FILL_OPACITY = 90
+HOMEPAGE_LIGHTING_STATE_LINE_WIDTH = 2
 HOMEPAGE_LIGHTING_OVERHEAD_STATE_COLOR = "#007A4D"
 HOMEPAGE_LIGHTING_GROW_STATE_COLOR = "#0B5CAD"
 RELAY_STATE_LINE_WIDTH = 0
@@ -1381,6 +1382,31 @@ lanes AS (
 SELECT time, metric, value FROM lanes ORDER BY time, metric"""
 
 
+HOMEPAGE_LIGHTING_THRESHOLD_SQL_OVERLAP = """('Overhead Threshold Base'::text, p.main_on),
+    ('Overhead Threshold'::text,      p.main_off),
+    ('Grow Threshold Base'::text,     p.grow_on),
+    ('Grow Threshold'::text,          p.grow_off)"""
+
+HOMEPAGE_LIGHTING_THRESHOLD_SQL_SPLIT = """('Overhead Threshold Base'::text, p.main_on),
+    ('Overhead Threshold'::text,      p.main_on + GREATEST(250.0, (p.main_off - p.main_on) * 0.47)),
+    ('Grow Threshold Base'::text,     p.grow_on + GREATEST(250.0, (p.grow_off - p.grow_on) * 0.53)),
+    ('Grow Threshold'::text,          p.grow_off)"""
+
+
+def split_homepage_lighting_threshold_bands(panel: dict[str, Any]) -> None:
+    for target in panel.get("targets", []) or []:
+        if not isinstance(target, dict) or target.get("refId") != "A":
+            continue
+        raw_sql = target.get("rawSql")
+        if not isinstance(raw_sql, str):
+            continue
+        target["rawSql"] = raw_sql.replace(
+            HOMEPAGE_LIGHTING_THRESHOLD_SQL_OVERLAP,
+            HOMEPAGE_LIGHTING_THRESHOLD_SQL_SPLIT,
+        )
+        return
+
+
 def target_uses_equipment_state_lane(
     target: dict[str, Any], lanes: tuple[tuple[str, str, str, float, float], ...]
 ) -> bool:
@@ -1480,6 +1506,7 @@ def strengthen_homepage_lighting_lanes(panel: dict[str, Any]) -> None:
         return
 
     replace_target_sql(panel, "B", HOMEPAGE_LIGHTING_STATE_LANE_SQL)
+    split_homepage_lighting_threshold_bands(panel)
     for label, color in {
         "Overhead Threshold Base": BRAND["leaf"],
         "Overhead Threshold": BRAND["leaf"],
@@ -1495,6 +1522,7 @@ def strengthen_homepage_lighting_lanes(panel: dict[str, Any]) -> None:
 
     for label in ("Overhead Light", "Grow Light"):
         override = override_for_label(panel, label)
+        upsert_override_property(override, "custom.lineWidth", HOMEPAGE_LIGHTING_STATE_LINE_WIDTH)
         upsert_override_property(override, "custom.fillOpacity", HOMEPAGE_LIGHTING_STATE_FILL_OPACITY)
         upsert_override_property(override, "custom.gradientMode", "opacity")
 
@@ -2497,6 +2525,7 @@ def check_relay_state_lane_dashboard_data(label: str, dashboard: dict[str, Any])
                 "Grow Light",
             }:
                 expected_state_props["custom.fillOpacity"] = HOMEPAGE_LIGHTING_STATE_FILL_OPACITY
+                expected_state_props["custom.lineWidth"] = HOMEPAGE_LIGHTING_STATE_LINE_WIDTH
                 expected_gradient = "opacity"
             props = override_props(panel, series)
             base_props = override_props(panel, base_series)
