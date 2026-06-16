@@ -2785,7 +2785,8 @@ _FW2_ZONE_VPD_TARGETS: dict[str, tuple[float, float, float, float]] = {
 
 _FW2_ZONE_VPD_WIDTHS: dict[str, tuple[float, float]] = {
     # zone → (below-target, above-target) half-widths (kPa)
-    zone: (float(z["width_below"]), float(z["width_above"])) for zone, z in BAND_DEFAULTS["zones"].items()
+    zone: (float(z["width_below"]), float(z["width_above"]))
+    for zone, z in BAND_DEFAULTS["zones"].items()
 }
 
 _FW2_ZONE_PRIORITY: dict[str, float] = {zone: float(z["priority"]) for zone, z in BAND_DEFAULTS["zones"].items()}
