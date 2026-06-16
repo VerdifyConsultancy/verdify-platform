@@ -135,31 +135,16 @@ esphome:
           if(fixes > 0){ ESP_LOGE("boot","Fixed %d corrupted globals", fixes); }
           else { ESP_LOGI("boot","All globals valid"); }
           ESP_LOGI("boot", "Firmware version: %s", "${fw_version}");
-          // Band curve v2 (dry-night, migration 168) one-shot NVS migration: force the
-          // smooth dry-night anchors ONCE over any stale pre-v2 NVS values, then mark
-          // applied. restore_value stays yes so dispatcher anchor syncs persist after.
-          if(id(band_curve_rev) < 2){
-            id(band_vpd_low_sr) = 0.90f;
-            id(band_vpd_low_sm) = 0.95f;
-            id(band_vpd_low_ss) = 0.90f;
-            id(band_vpd_low_mid) = 0.88f;
-            id(band_vpd_target_sr) = 1.05f;
-            id(band_vpd_target_sm) = 1.10f;
-            id(band_vpd_target_ss) = 1.05f;
-            id(band_vpd_target_mid) = 1.05f;
-            id(band_vpd_high_sr) = 1.25f;
-            id(band_vpd_high_sm) = 1.50f;
-            id(band_vpd_high_ss) = 1.25f;
-            id(band_vpd_high_mid) = 1.22f;
-            id(band_temp_low_mid) = 62.00f;
-            id(band_temp_target_mid) = 65.00f;
-            id(zone_vpd_target_center_sr) = 1.05f;
-            id(zone_vpd_target_center_sm) = 1.10f;
-            id(zone_vpd_target_center_ss) = 1.05f;
-            id(zone_vpd_target_center_mid) = 1.05f;
-            id(band_curve_rev) = 2;
-            ESP_LOGW("band","Applied band curve v2 (dry-night) NVS migration");
-          }
+          // Band anchors: ONE source of truth = the DB table `crop_band_anchors`.
+          // The dispatcher reconciles it into NVS on every reconnect and corrects
+          // any readback drift (ingestor/tasks/band_anchors.py + dispatcher.py),
+          // so the device always converges to the DB while online. The band_*
+          // globals' restore_value NVS is the offline cache; their initial_value
+          // (globals.yaml) is the conservative DRY cold-start fallback for a
+          // factory-fresh boot only. The former `band_curve_rev` one-shot that
+          // force-wrote a hardcoded anchor snapshot here was a THIRD, competing
+          // source — retired 2026-06-15 (item 2: unify the band). To change the
+          // band, edit `crop_band_anchors`, NOT these globals.
 
 esp32:
   board: esp32dev

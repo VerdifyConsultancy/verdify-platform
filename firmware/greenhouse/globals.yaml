@@ -681,16 +681,14 @@ globals:
     restore_value: yes
     initial_value: '70'
 
-  # firmware-v2 band curve NVS schema version. Bumped when the baked
-  # anchor defaults change so on_boot can one-shot-migrate stale NVS
-  # values (restore_value globals otherwise survive an OTA). See the
-  # on_boot migration in greenhouse.yaml.
-  - id: band_curve_rev
-    type: int
-    restore_value: yes
-    initial_value: '0'
-
   # ─── B2: house VPD band anchor curves (kPa) ───
+  # SOURCE OF TRUTH = the DB table `crop_band_anchors` (item 2, 2026-06-15).
+  # The dispatcher reconciles it into these restore_value NVS globals on every
+  # reconnect and corrects readback drift, so the device converges to the DB
+  # while online. These initial_value defaults are the conservative DRY
+  # cold-start fallback (factory-fresh boot only). Change the band in the DB,
+  # not here. The old `band_curve_rev` one-shot NVS-migration global was retired
+  # with the unification — it was a third, competing source.
   - id: band_vpd_low_sr
     type: float
     restore_value: yes

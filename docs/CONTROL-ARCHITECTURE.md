@@ -221,9 +221,17 @@ ingestor's state PVC is being migrated to Synology — coordinate before touchin
 applied **by hand** (`kubectl exec -i … psql < file`) — the migrate job is
 fresh-DB-only. The `firmware-deploy` post-flash health sweep needs
 `VERDIFY_DB_BACKEND=kube`. A 2nd OTA/week needs `FIRMWARE_OTA_FREEZE_OVERRIDE_LOG`
-set to a writable path on macOS. `restore_value:yes` globals survive an OTA, so a
-new default needs a one-shot on_boot migration (a `*_rev` sentinel) or the
-dispatcher sync to actually change them.
+set to a writable path on macOS.
+
+**The band has ONE source of truth: the DB table `crop_band_anchors`** (unified
+2026-06-15, item 2). `restore_value:yes` band globals survive an OTA, but you do
+**not** force a new value with a firmware one-shot — the dispatcher reconciles
+`crop_band_anchors` into NVS on every reconnect and corrects readback drift, so
+the device converges to the DB while online. The band globals' `initial_value`
+in `globals.yaml` is the conservative DRY **cold-start fallback** only (factory-
+fresh boot before the first DB sync); NVS is the offline cache. The former
+`band_curve_rev` one-shot on_boot migration — a third, competing source — was
+retired. **To change the band, edit `crop_band_anchors`, not firmware globals.**
 
 ---
 
@@ -248,11 +256,11 @@ duty cuts (`mister_pulse_on_s`, `vpd_weight`) help but don't bound the total.
 reconnect → recurring benign `setpoint_unconfirmed` critical alerts. Prune them
 from the tracked/push set (and/or suppress the alert for stripped params).
 
-**(d) Make `cfg_*` readback confirmation reliable + fast.** Anchor confirmation
-lagged (sensors publish on a 30–60 s interval; some readback object_ids are
-mis-slugified, e.g. `cfg___mister_center_penalty`). Tighten the readback naming
-in the registry to match firmware, and/or publish on-change, so the confirm loop
-isn't a guessing game and live tuning is observable within seconds.
+**(d) Make `cfg_*` readback confirmation faster.** Anchor confirmation lags because
+the `cfg_*` sensors publish on a 30–60 s interval. (The naming is NOT broken —
+verified 2026-06-15: `cfg___mister_center_penalty` maps correctly and confirms;
+the `___` comes from the firmware name "Cfg • Mister Center Penalty".) Publishing
+on-change would make live tuning observable within seconds instead of cycles.
 
 **(e) Turn the forecast engine into a real overnight dry-air lever.** It's revived
 but the economizer/dewpoint-vent path is under-used. Outdoor air overnight is
@@ -279,11 +287,15 @@ two diverge with temperature. A thin authoring layer that lets you specify "nigh
 RH = 55%" and stores the implied VPD anchors would prevent the
 "why-is-it-soaking-at-VPD-0.5" class of mistakes.
 
-**(i) Close the observability loop.** The `gh_*` on-chip telemetry (band source,
-zone grants, heap) is emitted but **not ingested** (#327) — wire `entity_map`
-routes + DB columns so the *device's own* band/decisions are queryable, not just
-the server-side recomputation. Also: the band audit + the (now-fixed) mister-duty
-metric should be on the dashboards as first-class.
+**(i) Close the observability loop. [DONE 2026-06-15, item 1]** The `gh_*` on-chip
+telemetry is now ingested: the numeric climate `gh_*` (solar phase, house/zone
+targets) already landed; the two **text** decisions (`band_source`,
+`zone_wet_granted` = the arbiter's grant) were silently dropped by a hardcoded
+`write_diagnostics()` column list and are now written. A `house_band_drift`
+wet-night alert now fires when actual house VPD sits out of the commanded band —
+the detector that was missing when the house ran RH ~84% for four nights.
+Remaining: surface the band audit + mister-duty metric as first-class dashboard
+panels.
 
 **(j) Arm the single-writer Lease fence.** The renew-or-die Lease is built but
 inert. Arming it removes the last theoretical split-brain window (two ingestors
