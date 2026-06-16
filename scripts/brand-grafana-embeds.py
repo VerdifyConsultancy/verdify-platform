@@ -1373,11 +1373,11 @@ lanes AS (
       WHERE s.equipment=m.equipment
         AND s.start_time < b.time + bd.step
         AND s.end_time > b.time
-    ) THEN m.lane_high ELSE NULL::double precision END AS value
+    ) THEN m.lane_high ELSE m.lane_low END AS value
   FROM buckets b CROSS JOIN bounds bd CROSS JOIN lane_metrics m
   WHERE b.time >= bd.from_ts AND b.time <= bd.state_to_ts
   UNION ALL
-  SELECT b.time, m.base_metric, 0.0::double precision
+  SELECT b.time, m.base_metric, m.lane_low
   FROM buckets b CROSS JOIN bounds bd CROSS JOIN lane_metrics m
   WHERE b.time >= bd.from_ts AND b.time <= bd.state_to_ts
 )

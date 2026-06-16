@@ -109,6 +109,7 @@ def test_homepage_lighting_threshold_bands_use_actual_lux_policy():
     home = _dashboard("grafana/dashboards/site-home.json")
     lighting = _panel(home, 36)
     threshold_sql = next(target["rawSql"] for target in lighting["targets"] if target.get("refId") == "A")
+    state_sql = next(target["rawSql"] for target in lighting["targets"] if target.get("refId") == "B")
 
     assert "('Overhead Threshold Base'::text, p.main_on)" in threshold_sql
     assert "('Overhead Threshold'::text,      p.main_off)" in threshold_sql
@@ -120,6 +121,9 @@ def test_homepage_lighting_threshold_bands_use_actual_lux_policy():
     assert "custom.lineStyle" not in _override_props(lighting, "Overhead Threshold")
     assert _override_props(lighting, "Grow Threshold")["custom.lineWidth"] == 1
     assert _override_props(lighting, "Grow Threshold")["custom.lineStyle"] == {"fill": "dash", "dash": [6, 4]}
+    assert ") THEN m.lane_high ELSE m.lane_low END AS value" in state_sql
+    assert "SELECT b.time, m.base_metric, m.lane_low" in state_sql
+    assert "m.base_metric, 0.0" not in state_sql
 
 
 def test_resource_use_restores_individual_solar_alignment_panels():
