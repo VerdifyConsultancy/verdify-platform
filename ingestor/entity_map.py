@@ -542,6 +542,10 @@ _CFG_READBACK_ADDED_FW_V2 = {
     "cfg_sw_onchip_band_enabled": "sw_onchip_band_enabled",
     "cfg_sw_wet_taper_enabled": "sw_wet_taper_enabled",
     "cfg_sw_night_stress_wet_enabled": "sw_night_stress_wet_enabled",
+    # F9 (issue 5): night econ-heat suppression switch — was enforced firmware-side
+    # with no readback (fire-and-forget). sensors.yaml now publishes the cfg_*; map
+    # it so the ingestor can confirm the device holds the operator's value.
+    "cfg_sw_night_econ_heat_suppress_enabled": "sw_night_econ_heat_suppress_enabled",
     # Item-3 arbiter switch readback (cfg_arbiter_zone_enabled →
     # sw_arbiter_zone_enabled) now flows from the registry's cfg_readback_object_id
     # (CFG_READBACK_MAP_REG); the manual alias here was redundant and is removed.

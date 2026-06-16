@@ -388,10 +388,13 @@ inline bool center_burst_cadence_s(CenterBurst burst, const Setpoints& sp, int& 
 // legacy cascade allows hyst_vpd_kpa=0.4 with a 0.8-1.2 band, which makes
 // SEALED_MIST exit only below 0.7 kPa. That turns normal high-VPD periods
 // into timeout/backoff loops instead of band compliance.
+// Cap VPD hysteresis at this fraction of the band width so a wide hysteresis
+// can't push the SEALED_MIST exit below a narrow band (structural, not tunable).
+static constexpr float VPD_HYST_BAND_FRACTION = 0.33f;
 inline float band_vpd_hysteresis(const Setpoints& sp) noexcept {
     const float vpd_width = std::max(0.2f, sp.vpd_high - sp.vpd_low);
     const float requested = std::max(0.05f, sp.vpd_hysteresis);
-    const float cap = std::max(0.05f, vpd_width * 0.33f);
+    const float cap = std::max(0.05f, vpd_width * VPD_HYST_BAND_FRACTION);
     return std::min(requested, cap);
 }
 
@@ -400,6 +403,15 @@ inline float band_vpd_hysteresis(const Setpoints& sp) noexcept {
 // d_heat_stage_2 margin is left to the legacy cascade and should not allow this path
 // to sit several degrees below band before gas heat joins.
 static constexpr float BAND_HEAT_TARGET_FRACTION = 0.25f;
+// Cold-regime SAFETY floors (F6, issue 5): named, NOT per-crop tunables. When
+// outdoor air is cold enough to risk vent over-cooling, the vent cooling-exit
+// hysteresis is held at least this wide (anti-chatter / vent-motor protection),
+// and cold-dehum is only allowed once temp is at least this far above the band
+// floor. They FLOOR (never lower) the operator tunables in the cold-vent regime;
+// making them planner-pushable would over-parameterize a mechanical-protection
+// minimum. Previously bare 3.0f / 2.0f literals — now traceable.
+static constexpr float COLD_VENT_COOL_EXIT_HYST_MIN_F = 3.0f;
+static constexpr float COLD_DEHUM_TEMP_MARGIN_MIN_F = 2.0f;
 inline float band_heat_target_f(const Setpoints& sp) noexcept {
     const float band_width = std::max(2.0f, sp.temp_high - sp.temp_low);
     return sp.temp_low + band_width * BAND_HEAT_TARGET_FRACTION;
@@ -580,7 +592,8 @@ inline ClimateActionDecision evaluate_climate_decision(
     const bool outdoor_cold_for_vent =
         std::isfinite(in.outdoor_temp_f) && in.outdoor_temp_f < (sp.temp_low - sp.cold_vent_guard_delta_f);
     const float cooling_exit_hysteresis =
-        outdoor_cold_for_vent ? std::max(sp.cool_exit_hysteresis_f, 3.0f) : sp.cool_exit_hysteresis_f;
+        outdoor_cold_for_vent ? std::max(sp.cool_exit_hysteresis_f, COLD_VENT_COOL_EXIT_HYST_MIN_F)
+                              : sp.cool_exit_hysteresis_f;
     const float cooling_entry_margin =
         outdoor_cold_for_vent ? cold_vent_cooling_entry_margin_f(sp) : 0.0f;
     const bool needs_cooling = was_cooling
@@ -591,7 +604,7 @@ inline ClimateActionDecision evaluate_climate_decision(
     const bool humidify_ready = dry_excess > 0.0f && state.vpd_watch_timer_ms >= sp.vpd_watch_dwell_ms;
     const bool sealed_backoff = state.mist_backoff_timer_ms > 0;
     const bool cold_dehum_allowed =
-        !outdoor_cold_for_vent || in.temp_f > (sp.temp_low + std::max(2.0f, sp.temp_hysteresis));
+        !outdoor_cold_for_vent || in.temp_f > (sp.temp_low + std::max(COLD_DEHUM_TEMP_MARGIN_MIN_F, sp.temp_hysteresis));
     const float dehum_hysteresis = band_vpd_hysteresis(sp);
     const bool dehum_enter = in.vpd_kpa < (sp.vpd_low - dehum_hysteresis);
     const bool dehum_continue = state.mode_prev == DEHUM_VENT && in.vpd_kpa < sp.vpd_low;
@@ -1121,7 +1134,8 @@ inline Mode determine_mode_band_first(
     const bool outdoor_cold_for_vent =
         std::isfinite(in.outdoor_temp_f) && in.outdoor_temp_f < (sp.temp_low - sp.cold_vent_guard_delta_f);
     const float cooling_exit_hysteresis =
-        outdoor_cold_for_vent ? std::max(sp.cool_exit_hysteresis_f, 3.0f) : sp.cool_exit_hysteresis_f;
+        outdoor_cold_for_vent ? std::max(sp.cool_exit_hysteresis_f, COLD_VENT_COOL_EXIT_HYST_MIN_F)
+                              : sp.cool_exit_hysteresis_f;
     const float cooling_entry_margin =
         outdoor_cold_for_vent ? cold_vent_cooling_entry_margin_f(sp) : 0.0f;
     const bool needs_cooling = was_cooling
@@ -1132,7 +1146,7 @@ inline Mode determine_mode_band_first(
     const bool needs_heating_s1 = in.temp_f < (heat_target + sp.heat_hysteresis);
 
     const bool cold_dehum_allowed =
-        !outdoor_cold_for_vent || in.temp_f > (sp.temp_low + std::max(2.0f, sp.temp_hysteresis));
+        !outdoor_cold_for_vent || in.temp_f > (sp.temp_low + std::max(COLD_DEHUM_TEMP_MARGIN_MIN_F, sp.temp_hysteresis));
     const bool vpd_low_enter = in.vpd_kpa < (sp.vpd_low - HV) && !sp.econ_block && cold_dehum_allowed;
     const bool vpd_dehum_exit = in.vpd_kpa >= sp.vpd_low || !cold_dehum_allowed;
     const bool was_dehum = prev == DEHUM_VENT;
@@ -1198,6 +1212,42 @@ inline Mode determine_mode_band_first(
         case CLIMATE_SEALED_HUMIDIFY: state.last_mode_reason = prev == SEALED_MIST ? "humidify_continue" : "humidify_enter"; break;
         case CLIMATE_SEALED_FOG: state.last_mode_reason = prev == SEALED_MIST ? "fog_continue" : "fog_enter"; break;
         case CLIMATE_DEHUM_VENT: state.last_mode_reason = was_dehum && !vpd_dehum_exit ? "dehum_continue" : "vpd_low"; break;
+    }
+
+    // ── F7 (issue 5): VPD SAFETY-RAIL hard overrides ─────────────────────────
+    // Wire the operator VPD safety rails into the PRODUCTION band-first path.
+    // They were inert here (only the now-deleted legacy cascade consulted them):
+    // the band edges (vpd_high/vpd_low) drive normal humidify/dehum, but the
+    // WIDER rails (vpd_max_safe/vpd_min_safe) are the backstop for an EXTREME
+    // excursion and must preempt the dwell gate (a rail firing implies vpd_error
+    // > 0 ⇒ compliance_preempts_dwell below, so dwell never reverts it). VPD must
+    // be trusted so a fabricated reading cannot force a seal/dehum. Mirrors the
+    // legacy R2-3 dry override + vpd_min_safe rescue, now active in prod. Inserted
+    // before the sealed-state handling so the forced mode flows through the
+    // normal sealed_timer / mist_stage setup (no bespoke state seeding).
+    {
+        const bool can_seal_for_dryness =
+            (mode != SAFETY_COOL) && (mode != SAFETY_HEAT)
+            && (mode != THERMAL_RELIEF) && (mode != VENTILATE)
+            && !needs_cooling && !moisture_blocked
+            && (in.temp_f < (sp.temp_high - sp.temp_hysteresis));
+        if (vpd_trusted && in.vpd_kpa > sp.vpd_max_safe && can_seal_for_dryness) {
+            state.dry_override_active = (mode != SEALED_MIST);
+            selected_action = CLIMATE_SEALED_HUMIDIFY;
+            mode = SEALED_MIST;
+            state.last_mode_reason = "dry_override";
+        } else if (vpd_trusted && in.vpd_kpa < sp.vpd_min_safe
+                   && (mode == IDLE || mode == SEALED_MIST) && !sp.econ_block
+                   && cold_dehum_allowed) {
+            // cold_dehum_allowed mirrors the band-first cold-day dehum suppression:
+            // on a cold day the controller deliberately does NOT vent-dehum (cold
+            // air + vent thrash, invariant #14). The safety rescue respects that
+            // same policy, else it forces the vent open on a cold humid day and
+            // thrashes — so the rail only fires when cold-dehum is already allowed.
+            selected_action = CLIMATE_DEHUM_VENT;
+            mode = DEHUM_VENT;
+            state.last_mode_reason = "vpd_min_safe_rescue";
+        }
     }
 
     if (mode == SAFETY_COOL || mode == SAFETY_HEAT || mode == SENSOR_FAULT) {
