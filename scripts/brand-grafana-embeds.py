@@ -77,9 +77,13 @@ HOMEPAGE_LIGHTING_GROW_THRESHOLD_LINE_STYLE = {"fill": "dash", "dash": [6, 4]}
 RELAY_STATE_FILL_OPACITY = 38
 HOMEPAGE_RELAY_STATE_FILL_OPACITY = 78
 HOMEPAGE_LIGHTING_STATE_FILL_OPACITY = 90
-HOMEPAGE_LIGHTING_STATE_LINE_WIDTH = 2
+HOMEPAGE_LIGHTING_STATE_LINE_WIDTH = 0
 HOMEPAGE_LIGHTING_OVERHEAD_STATE_COLOR = "#007A4D"
 HOMEPAGE_LIGHTING_GROW_STATE_COLOR = "#0B5CAD"
+HOMEPAGE_LIGHTING_PANEL_TITLES = {
+    "Lighting: Overhead vs Grow Circuit — Lux, Thresholds & Switch State",
+    "Lighting: Overhead vs Grow Circuit — Lux & Switch State",
+}
 RELAY_STATE_LINE_WIDTH = 0
 HOMEPAGE_TARGET_LINE_COLOR = "rgba(46,125,50,0.34)"
 HOMEPAGE_TARGET_LINE_STYLE = {"fill": "dash", "dash": [6, 4]}
@@ -1306,18 +1310,14 @@ lane_metrics AS MATERIALIZED (
     (
       'grow_light_main'::text,
       'Overhead Light'::text,
-      'Overhead Light Base'::text,
-      p.main_on,
       p.main_on + GREATEST(250.0, (p.main_off - p.main_on) * 0.47)
     ),
     (
       'grow_light_grow'::text,
       'Grow Light'::text,
-      'Grow Light Base'::text,
-      p.grow_on + GREATEST(250.0, (p.grow_off - p.grow_on) * 0.53),
       p.grow_off
     )
-  ) AS m(equipment, top_metric, base_metric, lane_low, lane_high)
+  ) AS m(equipment, metric, value_when_on)
 ),
 state_seed AS MATERIALIZED (
   SELECT bd.seed_start_ts AS time, m.equipment, COALESCE(seed.state, false) AS state
@@ -1348,62 +1348,27 @@ state_segments AS MATERIALIZED (
   WHERE st.state AND st.time < bd.state_to_ts AND st.next_time > bd.seed_start_ts
 ),
 lanes AS (
-  SELECT b.time, m.top_metric AS metric,
+  SELECT b.time, m.metric,
     CASE WHEN EXISTS (
       SELECT 1
       FROM state_segments s
       WHERE s.equipment=m.equipment
         AND s.start_time < b.time + bd.step
         AND s.end_time > b.time
-    ) THEN m.lane_high ELSE m.lane_low END AS value
-  FROM buckets b CROSS JOIN bounds bd CROSS JOIN lane_metrics m
-  WHERE b.time >= bd.from_ts AND b.time <= bd.state_to_ts
-  UNION ALL
-  SELECT b.time, m.base_metric, m.lane_low
+    ) THEN m.value_when_on ELSE NULL::double precision END AS value
   FROM buckets b CROSS JOIN bounds bd CROSS JOIN lane_metrics m
   WHERE b.time >= bd.from_ts AND b.time <= bd.state_to_ts
 )
 SELECT time, metric, value FROM lanes ORDER BY time, metric"""
 
 
-HOMEPAGE_LIGHTING_THRESHOLD_SQL = """WITH raw_bounds AS (
+HOMEPAGE_LIGHTING_SOLAR_SQL = """WITH raw_bounds AS (
   SELECT $__timeFrom()::timestamptz AS from_ts, $__timeTo()::timestamptz AS to_ts
 ),
 bounds AS MATERIALIZED (
   SELECT GREATEST(from_ts, to_ts - interval '7 days') AS from_ts, to_ts AS to_ts,
     LEAST(to_ts, now()) AS state_to_ts, interval '10 minutes' AS step
   FROM raw_bounds
-),
-policy AS MATERIALIZED (
-  SELECT
-    greatest(100.0, least(100000.0, COALESCE(
-      max(p.lux_on_threshold) FILTER (WHERE p.light_key='main'),
-      40000.0))) AS main_on,
-    greatest(0.0, least(25000.0, COALESCE(
-      max(p.lux_hysteresis) FILTER (WHERE p.light_key='main'),
-      8000.0))) AS main_hyst,
-    greatest(100.0, least(100000.0, COALESCE(
-      max(p.lux_on_threshold) FILTER (WHERE p.light_key='grow'),
-      40000.0))) AS grow_on,
-    greatest(0.0, least(25000.0, COALESCE(
-      max(p.lux_hysteresis) FILTER (WHERE p.light_key='grow'),
-      8000.0))) AS grow_hyst
-  FROM bounds bd
-  CROSS JOIN LATERAL fn_lighting_circuit_policy(bd.state_to_ts, 'vallery') p
-),
-policy_wide AS MATERIALIZED (
-  SELECT main_on, main_on + main_hyst AS main_off, grow_on, grow_on + grow_hyst AS grow_off FROM policy
-),
-thresholds AS (
-  SELECT x.time, s.metric, s.value
-  FROM bounds bd CROSS JOIN policy_wide p
-  CROSS JOIN LATERAL (VALUES (bd.from_ts),(bd.to_ts)) AS x(time)
-  CROSS JOIN LATERAL (VALUES
-    ('Overhead Threshold Base'::text, p.main_on),
-    ('Overhead Threshold'::text,      p.main_off),
-    ('Grow Threshold Base'::text,     p.grow_on),
-    ('Grow Threshold'::text,          p.grow_off)
-  ) AS s(metric, value)
 ),
 solar_actual AS MATERIALIZED (
   SELECT time_bucket((SELECT step FROM bounds), c.ts) AS time, 'Solar'::text AS metric,
@@ -1432,19 +1397,17 @@ FROM (
   SELECT time, metric, value FROM solar_actual
   UNION ALL SELECT time, metric, value FROM solar_forecast_seed
   UNION ALL SELECT time, metric, value FROM solar_forecast
-  UNION ALL SELECT time, metric, value FROM thresholds
 ) series
 ORDER BY time,
   CASE metric WHEN 'Solar' THEN 0 WHEN 'Solar Forecast' THEN 1
-    WHEN 'Overhead Threshold Base' THEN 2 WHEN 'Overhead Threshold' THEN 3
-    WHEN 'Grow Threshold Base' THEN 4 WHEN 'Grow Threshold' THEN 5 ELSE 6 END, metric"""
+    ELSE 2 END, metric"""
 
 
-def align_homepage_lighting_threshold_bands(panel: dict[str, Any]) -> None:
+def simplify_homepage_lighting_solar_target(panel: dict[str, Any]) -> None:
     for target in panel.get("targets", []) or []:
         if not isinstance(target, dict) or target.get("refId") != "A":
             continue
-        target["rawSql"] = HOMEPAGE_LIGHTING_THRESHOLD_SQL
+        target["rawSql"] = HOMEPAGE_LIGHTING_SOLAR_SQL
         return
 
 
@@ -1543,39 +1506,43 @@ def strengthen_homepage_target_lines(panel: dict[str, Any]) -> None:
 def strengthen_homepage_lighting_lanes(panel: dict[str, Any]) -> None:
     if panel.get("type") != "timeseries":
         return
-    if str(panel.get("title") or "") != "Lighting: Overhead vs Grow Circuit — Lux, Thresholds & Switch State":
+    if str(panel.get("title") or "") not in HOMEPAGE_LIGHTING_PANEL_TITLES:
         return
 
+    panel["title"] = "Lighting: Overhead vs Grow Circuit — Lux & Switch State"
+    remove_override_labels(
+        panel,
+        {
+            "Overhead Threshold Base",
+            "Overhead Threshold",
+            "Grow Threshold Base",
+            "Grow Threshold",
+            "Overhead Light Base",
+            "Grow Light Base",
+        },
+    )
+    simplify_homepage_lighting_solar_target(panel)
     replace_target_sql(panel, "B", HOMEPAGE_LIGHTING_STATE_LANE_SQL)
-    align_homepage_lighting_threshold_bands(panel)
     for label, color in {
-        "Overhead Threshold Base": BRAND["leaf"],
-        "Overhead Threshold": BRAND["leaf"],
-        "Overhead Light Base": HOMEPAGE_LIGHTING_OVERHEAD_STATE_COLOR,
         "Overhead Light": HOMEPAGE_LIGHTING_OVERHEAD_STATE_COLOR,
-        "Grow Threshold Base": BRAND["water"],
-        "Grow Threshold": BRAND["water"],
-        "Grow Light Base": HOMEPAGE_LIGHTING_GROW_STATE_COLOR,
         "Grow Light": HOMEPAGE_LIGHTING_GROW_STATE_COLOR,
     }.items():
         override = override_for_label(panel, label)
         upsert_override_property(override, "color", {"fixedColor": color, "mode": "fixed"})
 
-    for label in ("Overhead Threshold Base", "Overhead Threshold"):
-        override = override_for_label(panel, label)
-        upsert_override_property(override, "custom.lineWidth", HOMEPAGE_LIGHTING_THRESHOLD_LINE_WIDTH)
-        remove_override_property(override, "custom.lineStyle")
-
-    for label in ("Grow Threshold Base", "Grow Threshold"):
-        override = override_for_label(panel, label)
-        upsert_override_property(override, "custom.lineWidth", HOMEPAGE_LIGHTING_THRESHOLD_LINE_WIDTH)
-        upsert_override_property(override, "custom.lineStyle", HOMEPAGE_LIGHTING_GROW_THRESHOLD_LINE_STYLE)
-
     for label in ("Overhead Light", "Grow Light"):
         override = override_for_label(panel, label)
+        upsert_override_property(override, "custom.drawStyle", "line")
+        upsert_override_property(override, "custom.lineInterpolation", "stepAfter")
         upsert_override_property(override, "custom.lineWidth", HOMEPAGE_LIGHTING_STATE_LINE_WIDTH)
         upsert_override_property(override, "custom.fillOpacity", HOMEPAGE_LIGHTING_STATE_FILL_OPACITY)
         upsert_override_property(override, "custom.gradientMode", "opacity")
+        upsert_override_property(override, "custom.spanNulls", False)
+        upsert_override_property(override, "custom.showPoints", "never")
+        upsert_override_property(override, "custom.pointSize", 0)
+        upsert_override_property(override, "custom.hideFrom", {"legend": False, "tooltip": True, "viz": False})
+        remove_override_property(override, "custom.fillBelowTo")
+        remove_override_property(override, "custom.lineStyle")
 
 
 def normalize_runtime_electric_sources(panel: dict[str, Any]) -> None:
@@ -1694,7 +1661,7 @@ def normalize_public_panel_schema(panel: dict[str, Any]) -> None:
             ensure_relay_state_lane_overrides(panel, VPD_RELAY_STATE_LANES)
         strengthen_homepage_target_lines(panel)
 
-    if title == "Lighting: Overhead vs Grow Circuit — Lux, Thresholds & Switch State":
+    if title in HOMEPAGE_LIGHTING_PANEL_TITLES:
         strengthen_homepage_lighting_lanes(panel)
 
     if title == "Lighting: Lux, Thresholds & Switch State" and panel.get("type") == "timeseries":

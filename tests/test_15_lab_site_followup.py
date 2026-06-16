@@ -105,31 +105,32 @@ def test_homepage_resource_graphs_follow_lighting_before_cameras():
     assert 'style="--home-panel-height: 320px;"' in homepage
 
 
-def test_homepage_lighting_threshold_bands_use_actual_lux_policy():
+def test_homepage_lighting_state_is_on_only_policy_placed_fill():
     home = _dashboard("grafana/dashboards/site-home.json")
     lighting = _panel(home, 36)
-    threshold_sql = next(target["rawSql"] for target in lighting["targets"] if target.get("refId") == "A")
+    solar_sql = next(target["rawSql"] for target in lighting["targets"] if target.get("refId") == "A")
     state_sql = next(target["rawSql"] for target in lighting["targets"] if target.get("refId") == "B")
 
-    assert "fn_lighting_circuit_policy" in threshold_sql
+    assert lighting["title"] == "Lighting: Overhead vs Grow Circuit — Lux & Switch State"
+    assert "Solar Forecast" in solar_sql
+    assert "Threshold" not in solar_sql
+    assert "fn_lighting_circuit_policy" not in solar_sql
     assert "fn_lighting_circuit_policy" in state_sql
-    assert "setpoint_snapshot" not in threshold_sql
     assert "setpoint_snapshot" not in state_sql
-    assert "max(p.lux_on_threshold) FILTER (WHERE p.light_key='main')" in threshold_sql
-    assert "max(p.lux_on_threshold) FILTER (WHERE p.light_key='grow')" in threshold_sql
-    assert "('Overhead Threshold Base'::text, p.main_on)" in threshold_sql
-    assert "('Overhead Threshold'::text,      p.main_off)" in threshold_sql
-    assert "('Grow Threshold Base'::text,     p.grow_on)" in threshold_sql
-    assert "('Grow Threshold'::text,          p.grow_off)" in threshold_sql
-    assert "p.main_on + GREATEST" not in threshold_sql
-    assert "p.grow_on + GREATEST" not in threshold_sql
-    assert _override_props(lighting, "Overhead Threshold")["custom.lineWidth"] == 1
-    assert "custom.lineStyle" not in _override_props(lighting, "Overhead Threshold")
-    assert _override_props(lighting, "Grow Threshold")["custom.lineWidth"] == 1
-    assert _override_props(lighting, "Grow Threshold")["custom.lineStyle"] == {"fill": "dash", "dash": [6, 4]}
-    assert ") THEN m.lane_high ELSE m.lane_low END AS value" in state_sql
-    assert "SELECT b.time, m.base_metric, m.lane_low" in state_sql
-    assert "m.base_metric, 0.0" not in state_sql
+    assert "max(p.lux_on_threshold) FILTER (WHERE p.light_key='main')" in state_sql
+    assert "max(p.lux_on_threshold) FILTER (WHERE p.light_key='grow')" in state_sql
+    assert ") THEN m.value_when_on ELSE NULL::double precision END AS value" in state_sql
+    assert "Base" not in state_sql
+    assert "fillBelowTo" not in _override_props(lighting, "Overhead Light")
+    assert "fillBelowTo" not in _override_props(lighting, "Grow Light")
+    for label in ("Overhead Threshold Base", "Overhead Threshold", "Grow Threshold Base", "Grow Threshold"):
+        assert not _override_props(lighting, label)
+    for label in ("Overhead Light", "Grow Light"):
+        props = _override_props(lighting, label)
+        assert props["custom.lineWidth"] == 0
+        assert props["custom.fillOpacity"] == 90
+        assert props["custom.gradientMode"] == "opacity"
+        assert props["custom.spanNulls"] is False
 
 
 def test_resource_use_restores_individual_solar_alignment_panels():
