@@ -129,10 +129,12 @@ inline bool night_econ_heat_suppressed(const SensorInputs& in, const Setpoints& 
 // ON-CHIP sunset and stays off through the night half, so foliage dries
 // before dark on every day of the year with zero network. Stress wetting has
 // its own gate below.
-inline bool past_wet_taper(const SensorInputs& in, const Setpoints& sp) noexcept {
-    if (!sp.sw_wet_taper_enabled) return false;
-    if (is_night_phase(in)) return true;
-    return effective_minutes_to_sunset(in) < sp.wet_taper_before_sunset_min;
+// CURVE-ONLY (gate removal): the dusk/night wet-taper INTENT-gate is gone. The
+// band curve is the schedule — a properly-shaped night band (high vpd_high) keeps
+// nights dry by NOT tripping the wet trigger, and only wets a genuinely too-dry
+// night. No-op shim retained so consumers compile until the field/switch cleanup.
+inline bool past_wet_taper(const SensorInputs&, const Setpoints&) noexcept {
+    return false;
 }
 
 // ── Firmware-v2: ONE stress-wetting rule (replaces direct_wet_stress_* +
@@ -143,15 +145,11 @@ inline bool past_wet_taper(const SensorInputs& in, const Setpoints& sp) noexcept
 // spike) under a stricter dew margin. The normal SEALED_MIST machinery,
 // SAF-4 duty caps, daily-volume ceiling, and relay min-on/off bound the
 // actual water — no bespoke pulse path exists anymore.
-inline bool stress_wet_override_permitted(const SensorInputs& in, const Setpoints& sp) noexcept {
-    if (!sp.direct_wet_stress_override_enabled) return false;
-    if (in.vpd_kpa <= (sp.vpd_high + sp.direct_wet_stress_vpd_margin_kpa)) return false;
-    if (is_night_phase(in)) {
-        return sp.sw_night_stress_wet_enabled
-            && dew_margin_f(in) >= std::max(sp.night_stress_min_dew_margin_f,
-                                            sp.direct_wet_stress_min_dew_margin_f);
-    }
-    return dew_margin_f(in) >= sp.direct_wet_stress_min_dew_margin_f;
+// CURVE-ONLY: the stress-override INTENT-gate is gone — there is no separate
+// "re-open wetting" path. Wetting follows VPD vs the band curve directly (see
+// climate_wet_assist_block_reason), physics-vetoed only. No-op shim.
+inline bool stress_wet_override_permitted(const SensorInputs&, const Setpoints&) noexcept {
+    return false;
 }
 
 // Back-compat alias (tests/controls reference the historical name).
@@ -159,15 +157,16 @@ inline bool direct_wet_stress_override_permitted(const SensorInputs& in, const S
     return stress_wet_override_permitted(in, sp);
 }
 
+// CURVE-ONLY wet-assist gate: wet when actual VPD is above the band's high edge
+// (the curve), vetoed only by STATE (occupancy, fertigation feed-hold) and
+// PHYSICS (condensation dew margin). No taper, no clock window, no override
+// switch, no extra threshold-margin — the band curve + its hysteresis are the
+// schedule and the anti-chatter.
 inline const char* climate_wet_assist_block_reason(const SensorInputs& in, const Setpoints& sp) noexcept {
-    if (moisture_blocked_by_occupancy(in, sp)) return "occupancy";
-    // FRT-6: absorption hold — block ALL clean wetting after a feed.
-    if (sp.feed_hold_active) return "feed_hold";
-    if (in.vpd_kpa <= (sp.vpd_high + sp.direct_wet_stress_vpd_margin_kpa)) return "below_threshold";
-    if (dew_margin_f(in) < sp.direct_wet_stress_min_dew_margin_f) return "dew_margin";
-    // Taper/night: routine wetting is over for the day UNLESS the stress rule
-    // (band-high + margin, dew-margin-guarded, night switch) re-opens it.
-    if (past_wet_taper(in, sp) && !stress_wet_override_permitted(in, sp)) return "wet_taper";
+    if (moisture_blocked_by_occupancy(in, sp)) return "occupancy";          // state
+    if (sp.feed_hold_active) return "feed_hold";                            // state: FRT-6 absorption hold
+    if (in.vpd_kpa <= sp.vpd_high) return "below_threshold";               // curve: only above the band high edge
+    if (dew_margin_f(in) < sp.direct_wet_stress_min_dew_margin_f) return "dew_margin";  // physics: condensation
     return "";
 }
 
@@ -175,11 +174,11 @@ inline bool climate_wet_assist_permitted(const SensorInputs& in, const Setpoints
     return climate_wet_assist_block_reason(in, sp)[0] == '\0';
 }
 
-// Fog is permitted during the solar day outside the taper, or whenever the
-// stress rule fires (day or night). Pure phase logic — no clock windows.
-inline bool fog_phase_permitted(const SensorInputs& in, const Setpoints& sp) noexcept {
-    if (!past_wet_taper(in, sp) && !is_night_phase(in)) return true;
-    return stress_wet_override_permitted(in, sp);
+// CURVE-ONLY: no phase/taper/clock gate on fog. Fog is decided by the band curve
+// (VPD above the high edge) and the PHYSICS vetoes (dew margin, RH saturation,
+// fog_min_temp, survival) in climate_fog_assist_block_reason. No-op shim.
+inline bool fog_phase_permitted(const SensorInputs&, const Setpoints&) noexcept {
+    return true;
 }
 
 // Back-compat alias (historical name used by controls/tests).
@@ -258,9 +257,8 @@ inline bool feed_window_open(int hour, int feed_start_hour, int feed_end_hour) n
 // True iff all of RH, temp, and hour-of-day permit fogging. Occupancy is
 // NOT checked here — see moisture_blocked_by_occupancy().
 inline bool fog_permitted(const SensorInputs& in, const Setpoints& sp) noexcept {
-    return (in.rh_pct  <= sp.fog_rh_ceiling)
-        && (in.temp_f  >= sp.fog_min_temp)
-        && fog_hour_permitted(in, sp);
+    return (in.rh_pct  <= sp.fog_rh_ceiling)   // physics: don't fog saturated air
+        && (in.temp_f  >= sp.fog_min_temp);    // physics: warm enough to evaporate
 }
 
 inline const char* climate_fog_assist_block_reason(const SensorInputs& in, const Setpoints& sp) noexcept {
@@ -272,14 +270,10 @@ inline const char* climate_fog_assist_block_reason(const SensorInputs& in, const
     // FRT-6: fogger is clean-water-only; block it during the absorption hold
     // so a feed is not immediately rinsed/diluted at the canopy.
     if (!safety_cool_active && sp.feed_hold_active) return "feed_hold";
-    if (in.vpd_kpa <= sp.vpd_high) return "below_threshold";
-    if (dew_margin_f(in) < sp.direct_wet_stress_min_dew_margin_f) return "dew_margin";
-    // Firmware-v2: solar taper/night gates dry-down strategy, not survival
-    // cooling. The stress rule (inside fog_phase_permitted) may re-open fog
-    // day or night when VPD is genuinely above the band edge + margin.
-    if (!safety_cool_active && !fog_phase_permitted(in, sp)) {
-        return "wet_taper";
-    }
+    if (in.vpd_kpa <= sp.vpd_high) return "below_threshold";  // curve: only above the band high edge
+    if (dew_margin_f(in) < sp.direct_wet_stress_min_dew_margin_f) return "dew_margin";  // physics
+    // CURVE-ONLY: the solar taper / night phase gate is removed — fog follows the
+    // band curve, not a dry-down clock. Only physics rails below remain.
     if (in.rh_pct > sp.fog_rh_ceiling) return "rh_ceiling";
     if (in.temp_f < sp.fog_min_temp) return "temp_low";
     return "";
