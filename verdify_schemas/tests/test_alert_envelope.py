@@ -13,6 +13,7 @@ from verdify_schemas.alerts import (
     ALERT_TYPES,
     AlertEnvelope,
     BandAnchorDbReadFailedAlert,
+    BandDeviceDbDivergenceAlert,
     BandFnNullAlert,
     ClimateActionProofStaleAlert,
     ESP32PushFailedAlert,
@@ -58,6 +59,10 @@ CASES = {
     "band_anchor_db_read_failed": (
         BandAnchorDbReadFailedAlert,
         {"origin": "defaults(table-error)"},
+    ),
+    "band_device_db_divergence": (
+        BandDeviceDbDivergenceAlert,
+        {"max_temp_abs_diff": 4.1, "max_vpd_abs_diff": 0.52, "device_age_s": 35.0},
     ),
     "band_fn_null": (
         BandFnNullAlert,
