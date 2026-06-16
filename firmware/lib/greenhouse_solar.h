@@ -96,17 +96,36 @@ inline float solar_phase(int now_minute, const SolarTimes& st) noexcept {
     if (ss < sm) ss += 1440;
     const int next_sr = sr + 1440;
     const int smid = ss + (next_sr - ss) / 2;
-    int m = now_minute;
-    if (m < sr) m += 1440;
+    float m = float(now_minute);
+    if (m < float(sr)) m += 1440.0f;
 
-    auto seg = [](int v, int a, int b) -> float {
-        if (b <= a) return 0.0f;
-        return float(v - a) / float(b - a);
+    // C1-smooth phase: piecewise cubic Hermite through the 4 solar anchors
+    // (SR=0, SM=1, SS=2, midnight=3), each anchor's tangent = the mean of its
+    // two adjacent segment rates. The old piecewise-LINEAR phase ran a
+    // different rate for the day half (SR->SS over ~15 h) and the night half
+    // (SS->SR over ~9 h), so the band slope JUMPED ~1.6x at sunrise & sunset —
+    // a visible corner on the high-amplitude temp band (invisible on VPD).
+    // Hermite makes dphase/dt continuous, so the band is smooth in time. Stays
+    // monotone for every day/night ratio this site sees (tangent/secant in
+    // ~[0.8,1.33], inside the [0,3] bound) and passes EXACTLY through 0/1/2/3.
+    const float fsr = float(sr), fsm = float(sm), fss = float(ss), fsmid = float(smid), fnsr = float(next_sr);
+    const float r0 = 1.0f / fmaxf(fsm - fsr, 1e-6f);
+    const float r1 = 1.0f / fmaxf(fss - fsm, 1e-6f);
+    const float r2 = 1.0f / fmaxf(fsmid - fss, 1e-6f);
+    const float r3 = 1.0f / fmaxf(fnsr - fsmid, 1e-6f);
+    const float d_sr = 0.5f * (r3 + r0), d_sm = 0.5f * (r0 + r1);
+    const float d_ss = 0.5f * (r1 + r2), d_mid = 0.5f * (r2 + r3);
+    auto herm = [](float v, float a, float b, float pa, float da, float db) -> float {
+        if (b <= a) return pa;
+        const float L = b - a, u = (v - a) / L, u2 = u * u, u3 = u2 * u;
+        return pa + (3.0f * u2 - 2.0f * u3) + da * L * (u3 - 2.0f * u2 + u) + db * L * (u3 - u2);
     };
-    if (m <= sm)  return 0.0f + seg(m, sr, sm);
-    if (m <= ss)  return 1.0f + seg(m, sm, ss);
-    if (m <= smid) return 2.0f + seg(m, ss, smid);
-    const float p = 3.0f + seg(m, smid, next_sr);
+    float p;
+    if (m <= fsm)        p = herm(m, fsr, fsm, 0.0f, d_sr, d_sm);
+    else if (m <= fss)   p = herm(m, fsm, fss, 1.0f, d_sm, d_ss);
+    else if (m <= fsmid) p = herm(m, fss, fsmid, 2.0f, d_ss, d_mid);
+    else                 p = herm(m, fsmid, fnsr, 3.0f, d_mid, d_sr);
+    if (p < 0.0f) p = 0.0f;
     return p >= 4.0f ? 0.0f : p;
 }
 

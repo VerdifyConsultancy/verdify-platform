@@ -3703,6 +3703,31 @@ TEST(band_value_at_phase_matches_canonical_harmonic_goldens) {
     PASS();
 }
 
+// solar_phase must be C1-smooth (no slope kink) at sunrise/sunset. The old
+// piecewise-LINEAR phase jumped ~1.6x in slope where the day rate (SR->SS over
+// ~15 h) met the night rate (SS->SR over ~9 h), corner-ing the high-amplitude
+// temp band. The Hermite phase must pass the anchors exactly AND join smoothly.
+// Same math as ingestor solar.py + DB fn_solar_phase (end-to-end alignment).
+TEST(solar_phase_c1_smooth_and_hits_anchors) {
+    SolarTimes st;
+    st.sunrise_min = 330;     // 05:30
+    st.solar_noon_min = 780;  // 13:00
+    st.sunset_min = 1230;     // 20:30  (15 h day, 9 h night)
+    // Exact anchor pass-through at SR/SM/SS (phase 0/1/2).
+    ASSERT_TRUE(std::fabs(solar_phase(330, st) - 0.0f) < 1e-3f);
+    ASSERT_TRUE(std::fabs(solar_phase(780, st) - 1.0f) < 1e-3f);
+    ASSERT_TRUE(std::fabs(solar_phase(1230, st) - 2.0f) < 1e-3f);
+    // Slope continuity across sunset (phase 2): the per-5-min slope just before
+    // and just after must agree closely (old design differed by ~67%).
+    const float before = solar_phase(1230, st) - solar_phase(1225, st);
+    const float after  = solar_phase(1235, st) - solar_phase(1230, st);
+    ASSERT_TRUE(before > 0.0f && after > 0.0f);                       // monotone up
+    ASSERT_TRUE(std::fabs(after - before) < 0.20f * before);          // <20% join (was ~67%)
+    // Monotone across the join overall.
+    ASSERT_TRUE(solar_phase(1235, st) > solar_phase(1225, st));
+    PASS();
+}
+
 int main() {
     printf("═══════════════════════════════════════════════════════\n");
     printf("  Greenhouse Logic Tests — 11-fix review synthesis + OBS-1e\n");

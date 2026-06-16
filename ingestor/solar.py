@@ -116,20 +116,46 @@ def solar_phase(now_minute: float, st: SolarTimes) -> float:
     sm = float(st.solar_noon_min)
     ss = float(st.sunset_min)
     next_sr = sr + 1440.0
-    midnight = (ss + next_sr) / 2.0
+    smid = ss + (next_sr - ss) / 2.0  # solar midnight = midpoint(SS, next SR)
 
     m = float(now_minute) % 1440.0
     if m < sr:
         m += 1440.0  # pre-dawn → continuation of the night half
 
+    # C1-smooth phase: piecewise cubic Hermite through the 4 solar anchors
+    # (SR=0, SM=1, SS=2, midnight=3), each anchor's tangent = the mean of its
+    # two adjacent segment rates. The old piecewise-LINEAR phase ran a different
+    # rate for the day half (SR→SS ~15 h) vs night half (SS→SR ~9 h), so the band
+    # slope jumped ~1.6× at sunrise & sunset (a visible corner on the high-
+    # amplitude temp band). Hermite makes dphase/dt continuous → smooth band.
+    # MUST stay identical to firmware greenhouse_solar.h::solar_phase and DB
+    # fn_solar_phase (the end-to-end band alignment guard).
+    r0 = 1.0 / max(sm - sr, 1e-6)
+    r1 = 1.0 / max(ss - sm, 1e-6)
+    r2 = 1.0 / max(smid - ss, 1e-6)
+    r3 = 1.0 / max(next_sr - smid, 1e-6)
+    d_sr = 0.5 * (r3 + r0)
+    d_sm = 0.5 * (r0 + r1)
+    d_ss = 0.5 * (r1 + r2)
+    d_mid = 0.5 * (r2 + r3)
+
+    def _herm(v: float, a: float, b: float, pa: float, da: float, db: float) -> float:
+        if b <= a:
+            return pa
+        length = b - a
+        u = (v - a) / length
+        u2 = u * u
+        u3 = u2 * u
+        return pa + (3.0 * u2 - 2.0 * u3) + da * length * (u3 - 2.0 * u2 + u) + db * length * (u3 - u2)
+
     if m <= sm:
-        phase = (m - sr) / max(sm - sr, 1e-9)
+        phase = _herm(m, sr, sm, 0.0, d_sr, d_sm)
     elif m <= ss:
-        phase = 1.0 + (m - sm) / max(ss - sm, 1e-9)
-    elif m <= midnight:
-        phase = 2.0 + (m - ss) / max(midnight - ss, 1e-9)
+        phase = _herm(m, sm, ss, 1.0, d_sm, d_ss)
+    elif m <= smid:
+        phase = _herm(m, ss, smid, 2.0, d_ss, d_mid)
     else:
-        phase = 3.0 + (m - midnight) / max(next_sr - midnight, 1e-9)
+        phase = _herm(m, smid, next_sr, 3.0, d_mid, d_sr)
     return min(max(phase, 0.0), 3.9999999)
 
 
