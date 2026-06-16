@@ -103,17 +103,17 @@ patches:
   # the synthetic placeholder and a sync can never seed the Quartz manual. The
   # durable CI-from-real-vault fix is Iris #124 / PR #259.
 images:
-- digest: sha256:11cbea9f583af83e29df84675271a5670dba06fdb55e5c1c1b5f7590447c3e39
+- digest: sha256:497f2253e6fa221695ce19ca273ee16cb7aaafa17f11cfbdbf8dae9099b95ece
   name: ghcr.io/verdifyconsultancy/verdify-api
-- digest: sha256:abfa29d79472bc5593c53b3bec15b7f820e1605c76fcf3ded9aad78880347fc2
+- digest: sha256:d163848fc0bb97f8a39632e1e8ae3dfddb43ba2ea811730af4ff9f23827622da
   name: ghcr.io/verdifyconsultancy/verdify-ingestor
 - digest: sha256:bf71018f181f4e37e585b8778852eb209875555525c425921663e7744891c973
   name: ghcr.io/verdifyconsultancy/verdify-lab
-- digest: sha256:d5fa78c129b0cc240687bad1ac1791cee4f861196a49c1786cfcfed68bb4574d
+- digest: sha256:5831f44d67d66e71c55af0a6e7212b35695dd0a6674211a95ac8eae471667c45
   name: ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s
-- digest: sha256:0e8ef20a5fdb8a57ae602edfd22c1b8be2fa476a93dd7b4095b197c08e5de05d
+- digest: sha256:b94f1c07581a187b03b18afa35a5c6b1968e9914d34289dc16b17e65ed4aba2b
   name: ghcr.io/verdifyconsultancy/verdify-mcp
-- digest: sha256:3527e49f463db8e544af7bb0276cd605e192f9d854798a9310dfa8a5a7653b6a
+- digest: sha256:22b9b916028cc256749a309431253a8b51bb8e7081a5861c3e3c33080dcfc3d1
   name: ghcr.io/verdifyconsultancy/verdify-migrate
 - digest: sha256:fa8b6e0a6a49dee1e6ba475d777a26472ab0dc3f4f19f5312eee17bf2bde8e44
   name: ghcr.io/verdifyconsultancy/verdify-planner
