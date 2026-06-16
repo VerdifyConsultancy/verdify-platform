@@ -89,9 +89,9 @@ def test_homepage_resource_graphs_follow_lighting_before_cameras():
     homepage = (VAULT_ROOT / "index.md").read_text(encoding="utf-8")
 
     lighting_index = homepage.index("panelId=36&theme=light&from=now-72h&to=now%2B72h")
-    electric_index = homepage.index("panelId=310&theme=light&from=now-7d&to=now")
-    gas_index = homepage.index("panelId=127&theme=light&from=now-7d&to=now")
-    water_index = homepage.index("panelId=128&theme=light&from=now-7d&to=now")
+    electric_index = homepage.index("panelId=310&theme=light&from=now-72h&to=now")
+    gas_index = homepage.index("panelId=127&theme=light&from=now-72h&to=now")
+    water_index = homepage.index("panelId=128&theme=light&from=now-72h&to=now")
     cost_index = homepage.index("panelId=312&theme=light&from=now-30d&to=now")
     cameras_index = homepage.index("## Live Greenhouse Cameras")
 
@@ -101,6 +101,8 @@ def test_homepage_resource_graphs_follow_lighting_before_cameras():
     assert "site-home/?orgId=1&panelId=127" in homepage
     assert "site-home/?orgId=1&panelId=128" in homepage
     assert "site-evidence-economics/?orgId=1&panelId=312" in homepage
+    assert "diurnal pressure" in homepage
+    assert "mitigating that sun-driven pressure" in homepage
     assert homepage.count('style="--home-panel-height: 300px;"') == 3
     assert 'style="--home-panel-height: 320px;"' in homepage
 
