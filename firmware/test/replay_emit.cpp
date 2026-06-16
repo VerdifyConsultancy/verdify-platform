@@ -370,6 +370,34 @@ static void process_row(const Header& h,
             sp.sw_dwell_gate_enabled = true;
             sp.temp_hysteresis = 2.0f;
         }
+        // ── Band-curve behavioral test mode (REPLAY_EMIT_BAND_DERIVE=1) ────────
+        // The corpus path above feeds the band from recorded sp_* columns, so it
+        // NEVER exercises band_value_at_phase() — a change to the band CURVE shows
+        // ZERO replay divergence (the exact gap that let the lumpy/wet-night curve
+        // ship blind). This mode DERIVES the band on-chip-style from
+        // band_value_at_phase() at each row's reconstructed solar phase, using
+        // fixed representative anchors, so a change to the curve math
+        // (cosine-ease → harmonic, an anchor-resolution change, etc.) produces a
+        // real mode/relay diff. Off by default → the stock replay-diff stays
+        // byte-identical at THRESHOLD_PCT=0.
+        static const bool band_derive = []{
+            const char* e = std::getenv("REPLAY_EMIT_BAND_DERIVE");
+            return e && *e && *e != '0';
+        }();
+        if (band_derive) {
+            // Fixed test-fixture anchors {SR, SM, SS, MID} spanning the realistic
+            // diurnal range. The VALUES are fixtures (stable across band edits);
+            // only the band_value_at_phase() math under test varies between refs.
+            const BandAnchors temp_low_a {60.0f, 76.0f, 66.0f, 62.0f};
+            const BandAnchors temp_high_a{72.0f, 86.0f, 80.0f, 70.0f};
+            const BandAnchors vpd_low_a  {0.90f, 0.95f, 0.90f, 0.88f};
+            const BandAnchors vpd_high_a {1.25f, 1.50f, 1.25f, 1.22f};
+            const float ph = in.solar_phase;
+            sp.temp_low  = band_value_at_phase(temp_low_a,  ph);
+            sp.temp_high = band_value_at_phase(temp_high_a, ph);
+            sp.vpd_low   = band_value_at_phase(vpd_low_a,   ph);
+            sp.vpd_high  = band_value_at_phase(vpd_high_a,  ph);
+        }
         // validate_setpoints applies firmware clamps
         validate_setpoints(sp);
 

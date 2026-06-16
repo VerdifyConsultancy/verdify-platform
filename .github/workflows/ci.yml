@@ -412,6 +412,26 @@ jobs:
           THRESHOLD_PCT="${OVERRIDE:-${THRESHOLD_PCT:-0}}"
           echo "Using THRESHOLD_PCT=$THRESHOLD_PCT"
           THRESHOLD_PCT="$THRESHOLD_PCT" bash scripts/firmware-replay-diff.sh "$BASE" HEAD
+      - name: Band-curve behavioral diff (REPORT)
+        # The corpus replay above feeds the band from the recorded sp_* columns and
+        # only triggers on logic.h/types.h/controls.yaml — so a change to the band
+        # CURVE itself (greenhouse_solar.h band_value_at_phase) is otherwise UNTESTED
+        # (it shows ZERO divergence — the exact gap that let the lumpy/wet-night curve
+        # ship blind). This derives the band on-chip-style from band_value_at_phase at
+        # each row's solar phase and reports the real behavioral diff. INFORMATIONAL
+        # (band changes are intentional) but VISIBLE. NOTE: until both refs carry the
+        # band-derive mode (i.e. for the PR that introduced it) the % is inflated.
+        run: |
+          set +e
+          BASE=$(git merge-base HEAD origin/${{ github.base_ref }})
+          [ -z "$BASE" ] && exit 0
+          CHANGED=$(git diff --name-only "$BASE" HEAD -- \
+            firmware/lib/greenhouse_solar.h firmware/lib/greenhouse_logic.h firmware/lib/greenhouse_types.h)
+          if [ -z "$CHANGED" ]; then echo "No band-curve/logic diff in PR; skipping band replay"; exit 0; fi
+          echo "::group::Band-curve behavioral diff (setpoints DERIVED from band_value_at_phase)"
+          REPLAY_EMIT_BAND_DERIVE=1 THRESHOLD_PCT=100 bash scripts/firmware-replay-diff.sh "$BASE" HEAD || true
+          echo "::endgroup::"
+          echo "NOTE: band-curve changes are intentional — review the divergence % + sample. This is the behavioral check the corpus-fed replay structurally cannot do."
 
   no-new-fire-and-forget:
     name: No new tunables without readback

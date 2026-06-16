@@ -99,7 +99,12 @@ Verification order:
 4. For firmware logic or ESPHome changes, run `make test-firmware`,
    `make firmware-invariants`, the required replay diff
    (`make firmware-replay OLD=<base> NEW=HEAD` or worktree variant), and
-   `make firmware-check`.
+   `make firmware-check`. For **band-CURVE** changes — `greenhouse_solar.h`
+   `band_value_at_phase()`, the anchor resolution, or anything that changes the
+   shape of the diurnal band — the stock replay is **corpus-fed and will show 0
+   divergence**, so ALSO run `make firmware-replay-band OLD=<base>` (derives
+   setpoints from the curve and reports the real behavioral diff). This is the
+   gap that let a lumpy/wet-night curve ship blind.
 5. For lighting changes, run `make lighting-audit-static` and the live/current
    audit only when the task and access make live checks appropriate.
 6. For site/UI changes, run the relevant site command from `Makefile` or

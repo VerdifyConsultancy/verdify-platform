@@ -142,6 +142,20 @@ firmware-replay: ## Phase-0: dual-ref diff of firmware mode/relay decisions betw
 firmware-replay-worktree: ## Compare firmware behavior from OLD=<ref> against current uncommitted worktree
 	bash scripts/firmware-replay-worktree-diff.sh "$(OLD)"
 
+firmware-replay-band: ## BAND-CURVE behavioral diff: replay with setpoints DERIVED from band_value_at_phase (catches band-curve changes the stock corpus-fed replay MISSES). OLD=<ref> [NEW=<ref>]
+	@# The stock replay feeds the band from the corpus sp_* columns, so a change
+	@# to the band CURVE math shows ZERO divergence. This mode (REPLAY_EMIT_BAND_DERIVE=1)
+	@# derives the band on-chip-style from band_value_at_phase at each row's solar
+	@# phase, so curve changes produce a real mode/relay diff. Band changes are
+	@# INTENTIONAL, so this is a REPORT (THRESHOLD_PCT defaults high) — review the %
+	@# and the sample diff; it must not be 0-by-accident like the corpus replay.
+	@if [ -z "$(OLD)" ]; then echo "Usage: make firmware-replay-band OLD=<ref> [NEW=<ref>]  (NEW omitted = current worktree)"; exit 2; fi
+	@if [ -n "$(NEW)" ]; then \
+	    REPLAY_EMIT_BAND_DERIVE=1 THRESHOLD_PCT=$${THRESHOLD_PCT:-100} bash scripts/firmware-replay-diff.sh "$(OLD)" "$(NEW)"; \
+	else \
+	    REPLAY_EMIT_BAND_DERIVE=1 THRESHOLD_PCT=$${THRESHOLD_PCT:-100} bash scripts/firmware-replay-worktree-diff.sh "$(OLD)"; \
+	fi
+
 firmware-audit-traceability-proof: ## Repeatable firmware audit proof across DB, registry, planner, docs, and generated site
 	bash scripts/firmware-audit-traceability-proof.sh
 
