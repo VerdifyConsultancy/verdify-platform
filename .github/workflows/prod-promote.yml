@@ -2,28 +2,26 @@ name: Prod Promote
 
 # #220 — ONE-CLICK / ONE-APPROVAL prod-promotion entry point.
 #
-# This is the top of the gated commit -> dev -> prod promotion flow.
-# The lower half lives on main (staging is RETIRED; dev is the proving env):
+# This is the top of the gated prod-promotion flow (single-environment model,
+# 2026-06-16 — dev/staging DECOMMISSIONED). The lower half lives on main:
 #
-#   container-publish.yml   push -> build+publish digest-pinned images ->
-#                           IN-REPO write-back bumps overlays/dev digests ->
-#                           ArgoCD AUTO-SYNCS verdify-dev.
-#                           (LOCKED decision: in-repo bump, no cross-repo PR,
-#                           no ArgoCD Image Updater.)
+#   container-publish.yml   push -> build+publish digest-pinned images to GHCR
+#                           (each gets an immutable sha-<sha> tag and a mutable
+#                           :branch-main tag). No environment write-back.
 #   k8s-manifests.yml       renders+kubeconform-validates every overlay.
 #   ci.yml                  the logic/schema/firmware/drift gates.
-#   promote-diff-guard.yml  the REQUIRED check on a prod-promote PR: asserts the
-#                           PR advances ONLY prod image digests, and only to the
-#                           digest dev is CURRENTLY running (no fabricated
-#                           pin, no manifest/replica/device-write/NetPol edit).
+#   promote-diff-guard.yml  asserts a prod-promote PR changes ONLY prod image
+#                           digest lines (no manifest/replica/device-write/NetPol
+#                           edit) — the change-surface / device-safety check.
 #
 # WHAT THIS FILE IS: a button that GENERATES the prod-promote PR so Jason
 # stops hand-editing overlays/prod digests. A maintainer clicks Run
-# workflow (mode=pull-request) -> this job reads the CURRENT dev digests,
-# runs the local promotion gates (Device-Write-Safety-Gate + change-surface
-# self-check), bumps overlays/prod/kustomization.yaml to exactly those digests,
-# and opens a `prod-promote`-labelled PR. promote-diff-guard.yml then enforces
-# the same invariants as a required status check, and a human reviews+merges.
+# workflow (mode=pull-request) -> this job resolves the latest PUBLISHED
+# :branch-main digest of each promotable image from GHCR, runs the local
+# promotion gates (Device-Write-Safety-Gate + change-surface self-check), bumps
+# overlays/prod/kustomization.yaml to exactly those digests, and opens a
+# `prod-promote`-labelled PR. promote-diff-guard.yml re-asserts the
+# change-surface containment on the PR, and a human reviews+merges.
 #
 # *** THE DEVICE-WRITE HUMAN GATE IS PRESERVED ***
 # Merging this PR only changes the prod overlay's image digests in git. It does
@@ -52,11 +50,11 @@ on:
           - pull-request
       images:
         description: >-
-          Comma-separated dev-tracked images to promote (e.g.
-          api,mcp,ingestor,migrate,www,lab,planner). Empty = promote EVERY
-          dev-tracked prod pin that currently lags dev. Prod-only images
-          (those absent from the dev render, e.g. setpoint-server) are NEVER
-          promoted here.
+          Comma-separated subset of promotable images (e.g.
+          api,mcp,ingestor,migrate,planner). Empty = promote EVERY promotable
+          prod pin that lags its latest published :branch-main digest. Prod-only
+          / externally-built images (setpoint-server, lab) are NEVER promoted
+          here — they stay hand-pinned in overlays/prod.
         required: false
         default: ""
         type: string
@@ -75,12 +73,20 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      packages: read
     env:
       MODE: ${{ github.event.inputs.mode }}
       IMAGES_INPUT: ${{ github.event.inputs.images }}
       PROMOTE_BRANCH: gitops/verdify-prod-promote
       PROD_OVERLAY: deploy/k8s/overlays/prod
-      DEV_OVERLAY: deploy/k8s/overlays/dev
+      # Single-environment model (dev/staging decommissioned): the promotion
+      # TARGET digests are resolved from the published `:branch-main` image in
+      # GHCR (the latest build from main), NOT from a dev overlay. This is the
+      # set of CI-built greenhouse services prod runs. setpoint-server (the 2nd
+      # device writer) and lab (built in a separate repo) are intentionally
+      # EXCLUDED — they are hand-pinned in overlays/prod, never auto-promoted.
+      PROMOTABLE_IMAGES: "verdify-api verdify-mcp verdify-ingestor verdify-migrate verdify-planner"
+      REGISTRY: ghcr.io
     steps:
       - name: Checkout main
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
@@ -98,9 +104,18 @@ jobs:
           sudo mv kustomize /usr/local/bin/
           kustomize version
 
+      - name: Log in to GHCR (read-only, for digest resolution)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          echo "$GH_TOKEN" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
       # ── Resolve the EFFECTIVE rendered digest maps (robust to formatting) ────
-      - name: Compute dev-tracked promotion delta
+      - name: Compute promotion delta (published :branch-main -> prod)
         id: delta
+        env:
+          OWNER: ${{ github.repository_owner }}
         run: |
           set -euo pipefail
 
@@ -113,7 +128,25 @@ jobs:
               | sort -u
           }
 
-          render_map "$DEV_OVERLAY" > /tmp/dev.map
+          # TARGET map (/tmp/dev.map, name kept for the unchanged downstream loop):
+          # for each promotable image, the digest of its published `:branch-main`
+          # tag = the latest image built+pushed from main by container-publish.yml.
+          # Resolved the SAME way reusable-container-build records image_digest
+          # ({{json .Manifest.Digest}}), so the digest form matches the prod pins
+          # exactly. An image with no published :branch-main tag is skipped (no-op),
+          # mirroring the old "prod already == dev / dev does not carry it" branch.
+          owner="$(printf '%s' "$OWNER" | tr '[:upper:]' '[:lower:]')"
+          : > /tmp/dev.map
+          for img in $PROMOTABLE_IMAGES; do
+            ref="${REGISTRY}/${owner}/${img}:branch-main"
+            digest="$(docker buildx imagetools inspect "$ref" --format '{{json .Manifest.Digest}}' 2>/dev/null | tr -d '"' || true)"
+            case "$digest" in
+              sha256:[0-9a-f]*) printf '%s\t%s\n' "$img" "$digest" >> /tmp/dev.map ;;
+              *) echo "skip ${img}: no published :branch-main digest at ${ref}" ;;
+            esac
+          done
+          sort -u -o /tmp/dev.map /tmp/dev.map
+
           render_map "$PROD_OVERLAY"    > /tmp/prod.map
 
           # Snapshot the prod render with image lines STRIPPED — this is the
@@ -124,17 +157,15 @@ jobs:
             | grep -vE '^\s+image: ghcr\.io/verdifyconsultancy/' \
             > /tmp/prod.render.base.noimg
 
-          echo "=== dev (current, source of truth for promotable digests) ==="
+          echo "=== published :branch-main (target digests to promote to) ==="
           cat /tmp/dev.map
           echo "=== prod (current pins) ==="
           cat /tmp/prod.map
 
-          # DEV-TRACKED set is DERIVED = exactly the images the dev
-          # overlay renders (NOT a hand-maintained allowlist). This is the same
-          # derivation promote-diff-guard.yml uses, so the two can never drift:
-          # only images dev actually runs are promotable; prod-only
-          # Components (those absent from the dev render, e.g. setpoint-server)
-          # are NEVER promoted by this workflow.
+          # PROMOTABLE set = the $PROMOTABLE_IMAGES env list (CI-built greenhouse
+          # services prod runs). Prod-only / externally-built images
+          # (setpoint-server the 2nd device writer, lab) are absent from that
+          # list and are NEVER promoted by this workflow — they stay hand-pinned.
           #
           # Optional subset filter from the `images` input (api,mcp,...). An
           # entry is matched against the verdify-<name> suffix.
@@ -162,7 +193,7 @@ jobs:
               continue
             fi
             if [ "$prod_digest" = "$dev_digest" ]; then
-              echo "noop ${img}: prod already == dev (${dev_digest})"
+              echo "noop ${img}: prod already == published :branch-main (${dev_digest})"
               continue
             fi
             echo "PROMOTE ${img}: ${prod_digest} -> ${dev_digest}"
@@ -172,12 +203,12 @@ jobs:
 
           echo "changes=${changes}" >> "$GITHUB_OUTPUT"
           {
-            echo "### Prod promotion delta (dev -> prod)"
+            echo "### Prod promotion delta (published :branch-main -> prod)"
             echo
             if [ "$changes" -eq 0 ]; then
-              echo "No dev-tracked prod pin lags dev — nothing to promote."
+              echo "No promotable prod pin lags the published :branch-main image — nothing to promote."
             else
-              echo "| image | prod (current) | -> | dev (promote to) |"
+              echo "| image | prod (current) | -> | published :branch-main (promote to) |"
               echo "|---|---|---|---|"
               while IFS="$(printf '\t')" read -r img sd; do
                 pd="$(awk -F'\t' -v i="$img" '$1==i{print $2}' /tmp/prod.map)"
@@ -327,13 +358,13 @@ jobs:
           # Build a human-readable promotion body.
           body_file="$(mktemp)"
           {
-            echo "## Prod promotion (dev -> prod digests)"
+            echo "## Prod promotion (published :branch-main -> prod digests)"
             echo
             echo "Generated by the **Prod Promote** workflow (#220). This PR advances"
-            echo "the \`overlays/prod\` image digests to **exactly the digests"
-            echo "\`overlays/dev\` is currently running** — the proven-on-dev set."
+            echo "the \`overlays/prod\` image digests to **the digests of the latest"
+            echo "\`:branch-main\` images published from main** by container-publish."
             echo
-            echo "| image | prod (was) | -> | dev (now) |"
+            echo "| image | prod (was) | -> | published (now) |"
             echo "|---|---|---|---|"
             while IFS="$(printf '\t')" read -r img sd; do
               pd="$(awk -F'\t' -v i="$img" '$1==i{print $2}' /tmp/prod.map)"
@@ -342,7 +373,7 @@ jobs:
             echo
             echo "### Gates"
             echo "- Device-Write-Safety-Gate: PASS (digests-only; interlock + egress-allow intact)."
-            echo "- \`promote-diff-guard\` will re-assert digest-equality + change-surface as the REQUIRED check."
+            echo "- \`promote-diff-guard\` re-asserts the change-surface (digests-only) containment on the PR."
             echo
             echo "### Device-write human gate is PRESERVED"
             echo "Merging this PR changes git only. The prod ArgoCD app (live name:"
@@ -356,14 +387,14 @@ jobs:
 
           commit_file="$(mktemp)"
           {
-            echo "ci: promote overlays/prod image digests to current dev (#220)"
+            echo "ci: promote overlays/prod image digests to latest published (#220)"
             echo
-            echo "In-repo dev->prod digest promotion (locked decision: no cross-repo PR,"
-            echo "no ArgoCD Image Updater). Advances each lagging dev-tracked prod pin to"
-            echo "the digest overlays/dev is currently running. Device-write posture"
-            echo "(interlock ConfigMap + allow-ingestor-device-egress NetPol + ingestor"
-            echo "replicas) is UNCHANGED — digests only. Prod stays manual-sync; this"
-            echo "is a git change only, gated by promote-diff-guard + the human device gate."
+            echo "Single-env digest promotion: advances each lagging promotable prod"
+            echo "pin to the digest of the latest :branch-main image published from main"
+            echo "(dev/staging decommissioned). Device-write posture (interlock ConfigMap"
+            echo "+ allow-ingestor-device-egress NetPol + ingestor replicas) is UNCHANGED"
+            echo "— digests only. Prod stays manual-sync; this is a git change only,"
+            echo "gated by promote-diff-guard + the human device gate."
           } > "$commit_file"
 
           git add "$PROD_OVERLAY/kustomization.yaml"
@@ -375,7 +406,7 @@ jobs:
             --repo "$GITHUB_REPOSITORY" \
             --base main \
             --head "$branch" \
-            --title "ci: prod-promote — advance overlays/prod digests to current dev (#220)" \
+            --title "ci: prod-promote — advance overlays/prod digests to latest published (#220)" \
             --label prod-promote \
             --body-file "$body_file")"
           echo "Opened prod-promote PR: $pr_url"
@@ -390,4 +421,4 @@ jobs:
 
       - name: Nothing to promote
         if: ${{ github.event.inputs.mode == 'pull-request' && steps.delta.outputs.changes == '0' }}
-        run: echo "No dev-tracked prod pin lags dev; no PR opened."
+        run: echo "No promotable prod pin lags its latest published :branch-main digest; no PR opened."

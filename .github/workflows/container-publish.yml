@@ -14,15 +14,12 @@ name: Container Publish
 #   - planner   (standalone LangGraph planner, folded from verdify-planner #102) ./planner_graph
 #   - lab-publisher (Quartz + generated lab content publisher) scripts/Dockerfile.lab-publisher
 #
-# ─── PLANNER IMAGE IS ARTIFACT-ONLY (#102) ───────────────────────────────────
+# ─── PLANNER IMAGE (#102) ─────────────────────────────────────────────────────
 #  The planner-image job below builds + publishes ghcr.io/<owner>/verdify-planner
-#  so the folded planner_graph package stops being an un-built blob, but it is
-#  DELIBERATELY NOT wired into the deploy path. It is absent from both
-#  bump-staging-digests (the overlays/staging @sha256 write-back) and
-#  request-gitops-promotion (the Agent Fleet GitOps dispatch). The planner is not
-#  yet a deployed k3s workload — this image is a build artifact only. Wiring it
-#  into the deploy path is a separate, gated change once a planner Deployment +
-#  overlay exists. NEVER add `planner-image` to those two jobs in this PR's scope.
+#  so the folded planner_graph package is a real published image. It IS a prod
+#  workload (verdify-planner in verdify-prod) and is in the prod-promote
+#  promotable set, so its :branch-main digest is advanced into overlays/prod by
+#  the gated prod-promote workflow like the other greenhouse services.
 #
 # Image publishing is gated by reusable-container-build.yml branch rules
 # (publish only from the production branch, never from a pull_request). Pull
@@ -38,17 +35,14 @@ name: Container Publish
 #    `live/platform-main` split is retired — `main` (the default branch, where
 #    PRs land) is the single source-of-truth / deploy branch and the ArgoCD
 #    targetRevision. This workflow publishes ONLY from `main`; pull requests
-#    build without publishing. ArgoCD reconciles `deploy/k8s/overlays/{dev,prod}`
-#    from `main`. The staging overlay/env is RETIRED (the verdify-local-staging
-#    app + verdify-staging ns were removed); `dev` is the proving environment.
+#    build without publishing. SINGLE ENVIRONMENT (2026-06-16): dev and staging
+#    are DECOMMISSIONED. ArgoCD reconciles only `deploy/k8s/overlays/prod`
+#    (verdify-prod, manual-sync) from `main`; prod is advanced by the gated
+#    prod-promote workflow off the published `:branch-main` image digests.
 #  * The Dockerfiles (./api/Dockerfile.prod, ./mcp/Dockerfile.prod,
 #    ./ingestor/Dockerfile) and the deploy/k8s tree are net-new (P3) and land in
 #    a SEPARATE PR. Until they exist these build jobs will fail at `docker build`
 #    — intentional: this workflow is the CI/CD wiring (P4), the images are P3.
-#  * The cross-repo promotion target (jvallery/agents
-#    verdify-gitops-dev-test-promotion.yml) + AGENT_FLEET_PROJECT_TOKEN secret
-#    are P5 jvallery-side wiring that does NOT exist yet; the
-#    request-gitops-promotion job below is a safe no-op until they land.
 #  * FIRMWARE / OTA: this workflow NEVER builds-and-flashes firmware. The ESP32
 #    OTA path stays on the human-gated `make firmware-deploy`. No firmware image
 #    context is published here.
@@ -57,20 +51,13 @@ on:
   push:
     branches:
       - main
-    # LOOP-BREAK (#78): the bump-dev-digests job below commits the new
-    # @sha256 digests back into deploy/k8s/overlays/dev/** on a push to
-    # main. Without this filter that bump commit would retrigger this same
-    # workflow (rebuild -> publish -> bump -> ...), an infinite loop. The bump
-    # commit ONLY touches overlays/dev/kustomization.yaml, so a push whose
-    # entire diff is under overlays/dev never rebuilds images.
-    # Defense-in-depth: the bump commit body also carries [skip ci]; this
-    # paths-ignore is the primary, deterministic guard (skip-ci only covers the
-    # exact-marker case, not e.g. a hand-edit to the overlay).
-    # overlays/staging stays listed while the retired staging overlay is still
-    # in-tree (hand-edits to it must never rebuild images either).
-    paths-ignore:
-      - "deploy/k8s/overlays/staging/**"
-      - "deploy/k8s/overlays/dev/**"
+    # No paths-ignore needed: the dev/staging environments are decommissioned,
+    # so nothing commits image digests back into an overlay on a push to main
+    # anymore (the old bump-dev-digests write-back + its loop are gone). Prod
+    # promotion is a separate human-gated workflow (prod-promote.yml) that
+    # touches only deploy/k8s/overlays/prod/kustomization.yaml — and that path
+    # is treated as doc-only by image-impact (is_doc_only covers deploy/k8s/*),
+    # so a prod-promote merge publishes nothing and cannot loop.
   pull_request:
     branches:
       - main
@@ -515,214 +502,3 @@ jobs:
         GIT_SHA=${{ github.sha }}
         GIT_REF=${{ github.ref_name }}
       extra-tags: local-dev
-
-  # ---------------------------------------------------------------------------
-  # In-repo digest write-back into deploy/k8s/overlays/dev (LOCKED DECISION:
-  # the digest bump is an in-repo commit on main — NO cross-repo PR, NO ArgoCD
-  # Image Updater). After the verdify-* images publish to in-org GHCR, this job
-  # pins overlays/dev to the exact @sha256 digests of the images built from
-  # THIS commit and commits the bump back to main. ArgoCD (verdify-dev app,
-  # auto-sync) then reconciles the dev environment to the new digests — dev is
-  # the proving environment (staging is RETIRED). prod is promoted separately
-  # via the gated prod-promote workflow, so it is intentionally NOT auto-bumped.
-  #
-  # Only images that actually rebuilt this run carry a digest; skipped images
-  # (no path impact) leave an empty output, and we keep the existing pin for
-  # those — the bump is digest-by-digest, never blanking an unbuilt image.
-  # ---------------------------------------------------------------------------
-  bump-dev-digests:
-    name: Bump overlays/dev image digests
-    needs:
-      - image-impact
-      - api-image
-      - mcp-image
-      - ingestor-image
-      - migrate-image
-      - planner-image
-      - lab-publisher-image
-    # DECOUPLED FROM migrate (#78): a single failing image job must NOT block
-    # bumping the others. This job runs with always() semantics gated ONLY on a
-    # main-branch push that intended to publish images; the pin() helper below
-    # no-ops on an empty digest, so a failed/skipped image simply keeps its
-    # current overlay pin and never blocks the rest. The planner IS a deployed
-    # dev workload (verdify-planner runs in verdify-dev), so its digest pins
-    # like the others here; it remains excluded from the prod-promote tracked
-    # set until its prod adoption is gated in.
-    # workflow_dispatch included (2026-06-10): a manual dispatch on main is the
-    # operator's full-pipeline button — build+publish ALL images, then bump the
-    # dev overlay digests so verdify-dev auto-deploys them. Historically the
-    # bump was push-only, which stranded dispatch-published digests unpinned.
-    if: |
-      always() &&
-      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
-      github.ref == 'refs/heads/main' &&
-      needs.image-impact.outputs.image_publish == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout main
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-        with:
-          ref: main
-          # Need a writable token to push the digest bump back to the branch.
-          token: ${{ github.token }}
-
-      - name: Install kustomize
-        run: |
-          set -euo pipefail
-          curl -fsSL -o /tmp/kustomize.tar.gz \
-            https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.3/kustomize_v5.4.3_linux_amd64.tar.gz
-          tar -C /usr/local/bin -xzf /tmp/kustomize.tar.gz kustomize
-          kustomize version
-
-      - name: Pin published digests into overlays/dev
-        env:
-          API_DIGEST: ${{ needs.api-image.outputs.image_digest }}
-          MCP_DIGEST: ${{ needs.mcp-image.outputs.image_digest }}
-          INGESTOR_DIGEST: ${{ needs.ingestor-image.outputs.image_digest }}
-          MIGRATE_DIGEST: ${{ needs.migrate-image.outputs.image_digest }}
-          PLANNER_DIGEST: ${{ needs.planner-image.outputs.image_digest }}
-          LAB_PUBLISHER_DIGEST: ${{ needs.lab-publisher-image.outputs.image_digest }}
-        run: |
-          set -euo pipefail
-          cd deploy/k8s/overlays/dev
-
-          # ref is "ghcr.io/verdifyconsultancy/verdify-<c>@sha256:<hex>".
-          # `kustomize edit set image name@digest` rewrites the pin in place.
-          pin() {
-            local ref="$1"
-            if [ -z "$ref" ]; then return 0; fi
-            case "$ref" in
-              *@sha256:*) ;;
-              *) echo "refusing non-digest image ref: $ref" >&2; exit 1 ;;
-            esac
-            kustomize edit set image "$ref"
-            echo "pinned $ref"
-          }
-
-          pin "$API_DIGEST"
-          pin "$MCP_DIGEST"
-          pin "$INGESTOR_DIGEST"
-          pin "$MIGRATE_DIGEST"
-          pin "$PLANNER_DIGEST"
-          pin "$LAB_PUBLISHER_DIGEST"
-
-      - name: Validate digest-only render
-        run: |
-          set -euo pipefail
-          # Every verdify-* image must be @sha256-pinned (no mutable tag leaks).
-          rendered="$(kustomize build deploy/k8s/overlays/dev)"
-          if printf "%s" "$rendered" \
-              | grep -E '^\s+image: ghcr.io/verdifyconsultancy/verdify-' \
-              | grep -qv '@sha256:'; then
-            echo "a verdify-* image is not digest-pinned after bump" >&2
-            printf "%s" "$rendered" | grep -E '^\s+image: ghcr.io/verdifyconsultancy/verdify-' >&2
-            exit 1
-          fi
-
-      - name: Commit and push digest bump
-        run: |
-          set -euo pipefail
-          git config user.name "verdify-ci[bot]"
-          git config user.email "verdify-ci@users.noreply.github.com"
-          dev_overlay="deploy/k8s/overlays/dev/kustomization.yaml"
-          if git diff --quiet -- "$dev_overlay"; then
-            echo "no digest change to commit"
-            exit 0
-          fi
-          git add "$dev_overlay"
-          # [skip ci] in the SUBJECT line (honored by GitHub Actions anywhere in
-          # the message, but placed first so it is unmissable) is the secondary
-          # loop-break; the primary is the on.push paths-ignore for
-          # deploy/k8s/overlays/{staging,dev}/** above. Bot author keeps the bump
-          # commits attributable + filterable.
-          git commit -m "ci: [skip ci] bump overlays/dev image digests to ${GITHUB_SHA:0:12}
-
-          In-repo digest write-back (locked decision, no cross-repo PR, no
-          ArgoCD Image Updater). Digests pin overlays/dev to the verdify-*
-          images built from ${GITHUB_SHA}. ArgoCD (verdify-dev, auto-sync)
-          reconciles the dev environment from here; prod is human-gated via
-          prod-promote and never auto-bumped."
-          git push origin HEAD:main
-
-  # ---------------------------------------------------------------------------
-  # Request the Agent Fleet GitOps dev-to-test promotion. The api image SHA tag
-  # is the canonical deployable revision. This only runs on a real
-  # production-branch push that published images. The desired-state PR (and Argo
-  # CD reconcile) is owned by jvallery/agents.
-  #
-  # SAFE NO-OP UNTIL P5: the jvallery/agents
-  # `verdify-gitops-dev-test-promotion.yml` workflow and the
-  # AGENT_FLEET_PROJECT_TOKEN secret do not exist yet. When the token is unset
-  # the dispatch step exits 0 with a message instead of failing.
-  # ---------------------------------------------------------------------------
-  request-gitops-promotion:
-    name: Request Agent Fleet k3s deploy
-    needs:
-      - image-impact
-      - api-image
-      - mcp-image
-      - ingestor-image
-    # DECOUPLED FROM migrate (#78): this job only dispatches the api/mcp/ingestor
-    # image SHAs to the Agent Fleet promotion — migrate is NOT in the dispatch
-    # payload, so the orphaned verdify-migrate failing must not block the deploy
-    # request. migrate is therefore dropped from BOTH `needs:` and the `if:`.
-    # always() so a skipped optional image (no impact) does not block; we still
-    # gate on a production push that intended to publish images.
-    if: |
-      always() &&
-      github.event_name == 'push' &&
-      github.ref == 'refs/heads/main' &&
-      needs.image-impact.outputs.image_publish == 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - name: Resolve immutable image metadata
-        id: image
-        env:
-          OWNER: ${{ github.repository_owner }}
-        run: |
-          set -euo pipefail
-          owner="$(printf '%s' "$OWNER" | tr '[:upper:]' '[:lower:]')"
-          short_sha="${GITHUB_SHA:0:12}"
-          {
-            echo "api_image=ghcr.io/${owner}/verdify-api:sha-${short_sha}"
-            echo "mcp_image=ghcr.io/${owner}/verdify-mcp:sha-${short_sha}"
-            echo "ingestor_image=ghcr.io/${owner}/verdify-ingestor:sha-${short_sha}"
-          } >> "$GITHUB_OUTPUT"
-
-      - name: Dispatch Agent Fleet GitOps promotion
-        env:
-          GH_TOKEN: ${{ secrets.AGENT_FLEET_PROJECT_TOKEN }}
-          API_IMAGE: ${{ steps.image.outputs.api_image }}
-          MCP_IMAGE: ${{ steps.image.outputs.mcp_image }}
-          INGESTOR_IMAGE: ${{ steps.image.outputs.ingestor_image }}
-        run: |
-          set -euo pipefail
-          if [ -z "${GH_TOKEN:-}" ]; then
-            echo "AGENT_FLEET_PROJECT_TOKEN is not configured; skipping Agent Fleet GitOps promotion dispatch."
-            echo "This is expected until the P5 jvallery/agents promotion wiring lands." >&2
-            exit 0
-          fi
-
-          gh workflow run verdify-gitops-dev-test-promotion.yml \
-            --repo jvallery/agents \
-            --ref main \
-            -f mode=pull-request \
-            -f source_revision="$GITHUB_SHA" \
-            -f api_image="$API_IMAGE" \
-            -f mcp_image="$MCP_IMAGE" \
-            -f ingestor_image="$INGESTOR_IMAGE"
-
-          {
-            echo "### Agent Fleet GitOps promotion dispatch"
-            echo
-            echo "- Source revision: \`${GITHUB_SHA}\`"
-            echo "- api image: \`${API_IMAGE}\`"
-            echo "- mcp image: \`${MCP_IMAGE}\`"
-            echo "- ingestor image: \`${INGESTOR_IMAGE}\`"
-            echo "- Workflow: \`jvallery/agents/.github/workflows/verdify-gitops-dev-test-promotion.yml\`"
-            echo "- Target: \`local-dev\` then gated \`local-staging\` after dev health"
-          } >> "$GITHUB_STEP_SUMMARY"
