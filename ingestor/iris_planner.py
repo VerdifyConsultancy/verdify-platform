@@ -427,6 +427,7 @@ Use tactical knobs below to shift behavior instead.
 - `mister_pulse_gap_s` s, [10-60], def 45 — evaporation dwell; use 18-22s hot/dry, 25-35s near edge, 45-60s humid, VPD-low, or condensation-risk periods.
 - `mister_water_budget_gal` gal/d, [100-300], def 300 — daily water cap
 - `mister_vpd_weight` ×, [0.5-3.0], def 1.5 — driest-zone-first weighting; changes zone selection, not total duty. Raise for one dry outlier, lower for whole-house dry stress.
+- `mister_center_penalty` ×, [0.0-1.0], def 0.5 — center-zone scoring penalty to avoid over-misting seedlings; lower only when center is the dry outlier and needs more pulse priority.
 
 **VPD state-machine + sealed-vent coordination (hot-dry-day oscillation):**
 - `vpd_watch_dwell_s` s, [15-120], def 60 — dwell in VPD_WATCH before sealing
