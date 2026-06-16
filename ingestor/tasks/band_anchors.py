@@ -203,6 +203,29 @@ def anchors_confirmed(desired: dict[str, float]) -> bool:
 
 
 # ── Anchor values: registry defaults overlaid with crop_band_anchors ─────────
+# Origin labels returned by crop_band_anchor_values(). The dispatcher keys its
+# fail-closed decision on these, so they are named constants (not bare string
+# literals) — a typo would otherwise silently defeat the guard.
+ANCHOR_ORIGIN_DB = "crop_band_anchors"  # live DB rows overlaid — authoritative
+ANCHOR_ORIGIN_TABLE_ABSENT = "defaults"  # table not created yet (cold-start seed)
+ANCHOR_ORIGIN_TABLE_ERROR = "defaults(table-error)"  # transient read failure — DO NOT push
+
+
+def anchor_push_allowed(anchors_mode: bool, supported: bool, origin: str) -> bool:
+    """Fail-closed gate for the anchor push (data-path review F1, 2026-06-16).
+
+    Never push the registry fallback envelope over the device's NVS band when the
+    `crop_band_anchors` read FAILED — the firmware is offline-first and already
+    holds the correct band, so a stale fallback push is strictly worse than
+    holding (the 2026-06-15 wet-night orchid regression came in via that lag). A
+    transient DB read error (ANCHOR_ORIGIN_TABLE_ERROR) holds; a successful read
+    or a cold-start table-absent seed pushes normally.
+    """
+    if not (anchors_mode and supported):
+        return False
+    return origin != ANCHOR_ORIGIN_TABLE_ERROR
+
+
 def registry_default_anchor_values() -> dict[str, float]:
     """Contract-§B2 researched envelopes, straight from the tunable registry."""
     return {name: float(REGISTRY[name].default) for name in ANCHOR_SYNC_PARAMS}
@@ -255,7 +278,7 @@ async def crop_band_anchor_values(conn: asyncpg.Connection) -> tuple[dict[str, f
     try:
         exists = await conn.fetchval("SELECT to_regclass('public.crop_band_anchors') IS NOT NULL")
         if not exists:
-            return values, "defaults"
+            return values, ANCHOR_ORIGIN_TABLE_ABSENT
         current_season: str | None
         try:
             current_season = await conn.fetchval("SELECT fn_current_season()")
@@ -265,7 +288,7 @@ async def crop_band_anchor_values(conn: asyncpg.Connection) -> tuple[dict[str, f
         rows = await conn.fetch("SELECT * FROM crop_band_anchors")
     except asyncpg.PostgresError as exc:
         log.warning("crop_band_anchors read failed; using contract defaults: %s", exc)
-        return values, "defaults(table-error)"
+        return values, ANCHOR_ORIGIN_TABLE_ERROR
 
     records = sorted(
         (dict(row) for row in rows),
@@ -274,7 +297,7 @@ async def crop_band_anchor_values(conn: asyncpg.Connection) -> tuple[dict[str, f
     for record in records:  # ascending score — best-matching season wins last
         if _row_season_score(record, current_season) > 0:
             _overlay_anchor_row(values, record)
-    return values, "crop_band_anchors"
+    return values, ANCHOR_ORIGIN_DB
 
 
 def _round_for_push(param: str, value: float) -> float:

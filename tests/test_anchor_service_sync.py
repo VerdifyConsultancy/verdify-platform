@@ -8,8 +8,9 @@ than 56 number entities. These tests need no DB or device.
 
 import sys
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
+import asyncpg
 import pytest
 
 INGESTOR_PATH = str(Path(__file__).resolve().parent.parent / "ingestor")
@@ -101,3 +102,56 @@ async def test_push_to_esp32_service_unavailable_is_skipped_not_fatal(monkeypatc
 
     assert pushed == 0
     client.execute_service.assert_not_called()
+
+
+# ── F1 fail-closed: never push the registry fallback over the NVS band on a DB
+#    read error (data-path review 2026-06-16) ─────────────────────────────────
+
+
+def test_anchor_origin_constants_are_distinct():
+    origins = {
+        band_anchors.ANCHOR_ORIGIN_DB,
+        band_anchors.ANCHOR_ORIGIN_TABLE_ABSENT,
+        band_anchors.ANCHOR_ORIGIN_TABLE_ERROR,
+    }
+    assert len(origins) == 3
+    assert band_anchors.ANCHOR_ORIGIN_TABLE_ERROR == "defaults(table-error)"
+
+
+def test_anchor_push_allowed_holds_on_db_read_error():
+    # The dangerous path: registry fallback must NOT be pushed over good NVS.
+    assert band_anchors.anchor_push_allowed(True, True, band_anchors.ANCHOR_ORIGIN_TABLE_ERROR) is False
+
+
+def test_anchor_push_allowed_pushes_on_db_success_and_cold_start():
+    assert band_anchors.anchor_push_allowed(True, True, band_anchors.ANCHOR_ORIGIN_DB) is True
+    assert band_anchors.anchor_push_allowed(True, True, band_anchors.ANCHOR_ORIGIN_TABLE_ABSENT) is True
+
+
+def test_anchor_push_allowed_false_when_not_anchors_mode_or_unsupported():
+    assert band_anchors.anchor_push_allowed(False, True, band_anchors.ANCHOR_ORIGIN_DB) is False
+    assert band_anchors.anchor_push_allowed(True, False, band_anchors.ANCHOR_ORIGIN_DB) is False
+
+
+@pytest.mark.asyncio
+async def test_crop_band_anchor_values_classifies_read_error_as_table_error():
+    conn = MagicMock()
+    conn.fetchval = AsyncMock(return_value=True)  # to_regclass(...) IS NOT NULL → table exists
+    conn.fetch = AsyncMock(side_effect=asyncpg.PostgresError("connection reset"))
+
+    values, origin = await band_anchors.crop_band_anchor_values(conn)
+
+    assert origin == band_anchors.ANCHOR_ORIGIN_TABLE_ERROR
+    # Falls back to the registry envelope (which is what we then REFUSE to push).
+    assert values == band_anchors.registry_default_anchor_values()
+
+
+@pytest.mark.asyncio
+async def test_crop_band_anchor_values_classifies_absent_table():
+    conn = MagicMock()
+    conn.fetchval = AsyncMock(return_value=False)  # to_regclass(...) IS NOT NULL → False
+
+    values, origin = await band_anchors.crop_band_anchor_values(conn)
+
+    assert origin == band_anchors.ANCHOR_ORIGIN_TABLE_ABSENT
+    assert values == band_anchors.registry_default_anchor_values()

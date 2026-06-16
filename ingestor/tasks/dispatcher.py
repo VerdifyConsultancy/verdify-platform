@@ -753,7 +753,32 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         # state is zero pushes; a crop_band_anchors change re-syncs within one
         # cycle. Gated on the firmware actually exposing the v2 entities so a
         # pre-OTA flip cannot strand forever-unconfirmed setpoint_changes rows.
-        if anchors_mode and band_anchors.anchors_supported():
+        #
+        # FAIL-CLOSED (data-path review F1, 2026-06-16): when the crop_band_anchors
+        # read FAILED (origin == table-error), `anchor_pushes` are the registry
+        # fallback envelope, which has historically lagged the live band (the
+        # 2026-06-15 wet-night orchid regression). The device is offline-first and
+        # already holds the correct band in NVS, so pushing a stale fallback over
+        # it is strictly worse than holding. Skip the anchor push this cycle and
+        # surface the held state as an alert instead of silently re-commanding a
+        # researched default. (table-absent cold-start still seeds normally.)
+        anchor_db_error = anchor_origin == band_anchors.ANCHOR_ORIGIN_TABLE_ERROR
+        if anchor_db_error and anchors_mode and band_anchors.anchors_supported():
+            log.warning(
+                "Dispatcher: crop_band_anchors read failed (origin=%s) — holding device NVS band, skipping anchor push",
+                anchor_origin,
+            )
+            existing_alert = await conn.fetchval(
+                "SELECT id FROM alert_log WHERE alert_type = 'band_anchor_db_read_failed' AND disposition = 'open' LIMIT 1"
+            )
+            if existing_alert is None:
+                await conn.execute(
+                    "INSERT INTO alert_log (alert_type, severity, category, message, details, source) "
+                    "VALUES ('band_anchor_db_read_failed', 'warning', 'system', $1, $2, 'dispatcher')",
+                    "crop_band_anchors unreadable; dispatcher held the device NVS band (no fallback push)",
+                    json.dumps({"origin": anchor_origin}),
+                )
+        if band_anchors.anchor_push_allowed(anchors_mode, band_anchors.anchors_supported(), anchor_origin):
             for param, val in anchor_pushes.items():
                 readback = shared.cfg_readback.get(param)
                 if readback is not None and readback_values_equivalent(param, readback, val):
