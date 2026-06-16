@@ -822,6 +822,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         # ephemeris instead of the policy table's fixed hours. Planner rows still
         # win below.
         anchor_lighting: dict[str, float] = {}
+        circuit_minutes: dict[str, float] = {}
         if anchors_mode and lighting_circuit_rows:
             circuit_minutes = {
                 row["light_key"]: float(int(row["target_light_minutes"])) for row in lighting_circuit_rows
@@ -866,9 +867,16 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                 activity_defaults["activity_start_hour"] = float(
                     max(0, min(23, int(anchor_lighting["gl_main_sunrise_hour"])))
                 )
-                activity_defaults["activity_duration_min"] = float(
-                    max(0, min(1440, int(anchor_lighting["gl_main_target_light_minutes"])))
-                )
+                # Photoperiod MINUTES come from the DB policy (circuit_minutes),
+                # NOT anchor_lighting: lighting_circuit_overrides() emits only the
+                # sunrise-anchored start/cutoff HOURS now — it deliberately stopped
+                # carrying minutes in the 2026-06-16 single-source change, so the
+                # old anchor_lighting["gl_main_target_light_minutes"] read KeyError'd
+                # and took down the whole setpoint_dispatch task. Keep the activity
+                # mirror's duration tied to the same main-light photoperiod.
+                main_minutes = circuit_minutes.get("main")
+                if main_minutes is not None:
+                    activity_defaults["activity_duration_min"] = float(max(0, min(1440, int(main_minutes))))
             activity_defaults = _align_activity_defaults_with_planned_lighting(
                 activity_defaults,
                 planner_params,
