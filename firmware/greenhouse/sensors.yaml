@@ -2211,6 +2211,17 @@ sensor:
       return id(mister_vpd_weight);
 
   - platform: template
+    id: cfg_night_vpd_bias_kpa
+    name: "Cfg Night VPD Bias kPa"
+    state_class: measurement
+    accuracy_decimals: 2
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(night_vpd_bias_kpa);
+
+  - platform: template
     id: cfg_mist_vent_close_lead_s
     name: "Cfg • Mist Vent Close Lead (s)"
     unit_of_measurement: "s"
@@ -3719,6 +3730,17 @@ sensor:
     lambda: |-
       if (!id(cfg_first_pull_ok)) return NAN;
       return id(sw_onchip_band_enabled) ? 1.0f : 0.0f;
+
+  - platform: template
+    id: cfg_sw_arbiter_zone_enabled
+    name: "Cfg Arbiter Zone Enabled"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(sw_arbiter_zone_enabled) ? 1.0f : 0.0f;
 
   - platform: template
     id: cfg_sw_wet_taper_enabled

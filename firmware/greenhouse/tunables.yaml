@@ -518,6 +518,19 @@ number:
           id(num_mister_vpd_weight).publish_state(x);
 
   - platform: template
+    id: num_night_vpd_bias_kpa
+    name: "Night VPD Bias kPa"
+    min_value: 0.0
+    max_value: 0.25
+    step: 0.01
+    lambda: "return id(night_vpd_bias_kpa);"
+    set_action:
+      - lambda: |
+          float c = x < 0.0f ? 0.0f : (x > 0.25f ? 0.25f : x);
+          id(night_vpd_bias_kpa) = c;
+          id(num_night_vpd_bias_kpa).publish_state(c);
+
+  - platform: template
     id: num_vpd_target_south
     name: "VPD Target South (kPa)"
     min_value: 0.3
@@ -2368,6 +2381,25 @@ switch:
           id(cfg_first_pull_ok) = true;
           id(sw_onchip_band_enabled) = false;
           id(sw_onchip_band_enabled_switch).publish_state(false);
+
+  # Item-3 per-zone arbiter master enable (default OFF — ships inert).
+  - platform: template
+    id: sw_arbiter_zone_enabled_switch
+    name: "Arbiter Zone Enabled"
+    icon: "mdi:scale-balance"
+    optimistic: false
+    restore_mode: RESTORE_DEFAULT_OFF
+    lambda: "return id(sw_arbiter_zone_enabled);"
+    turn_on_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(sw_arbiter_zone_enabled) = true;
+          id(sw_arbiter_zone_enabled_switch).publish_state(true);
+    turn_off_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(sw_arbiter_zone_enabled) = false;
+          id(sw_arbiter_zone_enabled_switch).publish_state(false);
 
   # Wet taper master enable (default ON).
   - platform: template

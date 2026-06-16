@@ -3728,6 +3728,43 @@ TEST(solar_phase_c1_smooth_and_hits_anchors) {
     PASS();
 }
 
+// Item-3 per-zone arbiter: lowest priority_rank among zones that want wetting AND
+// have an actuator wins; ties break on urgency; EAST (no relay) is excluded.
+TEST(arbiter_priority_then_urgency_then_actuator) {
+    const int prank[ZONE_COUNT] = {1, 2, 3, 4};  // center, south, west, east
+    const ZoneBand band = {1.0f, 0.8f, 1.2f};    // target/low/high
+    const bool act[ZONE_COUNT] = {true, true, true, false};  // EAST no relay
+    // Only west wants wet → west wins (sole candidate).
+    {
+        ZoneWetIntent zi[ZONE_COUNT] = {
+            zone_wet_intent(1.0f, band), zone_wet_intent(1.0f, band),
+            zone_wet_intent(1.3f, band), zone_wet_intent(1.0f, band)};
+        ASSERT_EQ(arbitrate_wet_zone(zi, prank, act), ZONE_WEST);
+    }
+    // Center + west both want wet (west more urgent) → center wins on priority.
+    {
+        ZoneWetIntent zi[ZONE_COUNT] = {
+            zone_wet_intent(1.3f, band), zone_wet_intent(1.0f, band),
+            zone_wet_intent(1.45f, band), zone_wet_intent(1.0f, band)};
+        ASSERT_EQ(arbitrate_wet_zone(zi, prank, act), ZONE_CENTER);
+    }
+    // No zone above target → none (-1).
+    {
+        ZoneWetIntent zi[ZONE_COUNT] = {
+            zone_wet_intent(0.9f, band), zone_wet_intent(0.9f, band),
+            zone_wet_intent(0.9f, band), zone_wet_intent(0.9f, band)};
+        ASSERT_EQ(arbitrate_wet_zone(zi, prank, act), -1);
+    }
+    // Only EAST wants wet but has no actuator → none (-1).
+    {
+        ZoneWetIntent zi[ZONE_COUNT] = {
+            zone_wet_intent(1.0f, band), zone_wet_intent(1.0f, band),
+            zone_wet_intent(1.0f, band), zone_wet_intent(1.5f, band)};
+        ASSERT_EQ(arbitrate_wet_zone(zi, prank, act), -1);
+    }
+    PASS();
+}
+
 int main() {
     printf("═══════════════════════════════════════════════════════\n");
     printf("  Greenhouse Logic Tests — 11-fix review synthesis + OBS-1e\n");

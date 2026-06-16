@@ -370,6 +370,14 @@ dispatcher-owned range.
 - `mister_vpd_weight` changes which zone receives pulses, not total moisture
   duty. Raise it toward 2.5-3.0 when one zone is the dry outlier; lower it when
   the house average is dry and all zones need similar help.
+- `night_vpd_bias_kpa` (0-0.25, the night-dry lever) ADDS kPa to the OVERNIGHT
+  VPD band only — a smooth bump peaking at solar midnight, zero by sunrise. Use
+  it to pre-empt a HUMID-NIGHT forecast (raise toward 0.10-0.20 when overnight
+  outdoor RH/dewpoint is high and the orchid zone risks staying wet), so the
+  vent/dehum dryer keeps running past the baseline floor. Return it to 0 when the
+  night runs dry. It biases the served band without moving the crop_band_anchors
+  curve, so it is the right knob for forecast-driven night dryness, not a
+  permanent band change.
 - If VPD stays high after normal wet windows close and dew margin is still
   healthy, prefer bounded `sw_direct_wet_stress_override_enabled` or
   `sw_fog_stress_window_extend_enabled` with latest-hour caps instead of

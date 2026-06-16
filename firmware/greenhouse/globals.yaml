@@ -873,6 +873,15 @@ globals:
     restore_value: yes
     initial_value: 'true'
 
+  # Item-3 per-zone arbiter master enable (default OFF). When true, the mister
+  # zone selector uses arbitrate_wet_zone (deterministic per-zone band + owner
+  # priority) instead of the legacy stress scoring. Ships inert; flip after a
+  # corpus zone-distribution review.
+  - id: sw_arbiter_zone_enabled
+    type: bool
+    restore_value: yes
+    initial_value: 'false'
+
   # Wet taper: routine wetting blocked when minutes_to_sunset < taper or
   # phase >= 2 (replaces the dusk_cutoff_hour / fog_window clock rails).
   - id: sw_wet_taper_enabled
@@ -1462,6 +1471,14 @@ globals:
     type: float
     restore_value: no
     initial_value: '1.5'
+
+  # Item-4 night-dry lever: planner-pushable VPD bias added to the overnight band
+  # (clamped 0..0.25 kPa, smooth sin^2 weight peaking at solar midnight). Lets the
+  # AI pre-empt a humid night without touching the crop_band_anchors curve.
+  - id: night_vpd_bias_kpa
+    type: float
+    restore_value: no
+    initial_value: '0.0'
 
   # ─── Per-zone VPD targets (set by band dispatcher from crop data) ───
   - id: vpd_target_south

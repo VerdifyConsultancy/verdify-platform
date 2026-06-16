@@ -426,6 +426,22 @@ interval:
               sv2_vpd_high  = sv2_curve(id(band_vpd_high_sr),   id(band_vpd_high_sm),   id(band_vpd_high_ss),   id(band_vpd_high_mid));
           }
 
+          // Item-4 night-dry lever (planner-pushable, clamped 0..0.25 kPa): raise
+          // the VPD band overnight so the dryer keeps running, weighted by a smooth
+          // sin^2 bump that PEAKS at solar midnight and is exactly 0 at sunset (phase
+          // 2) and sunrise (phase 4) — so it can never re-introduce a slope corner.
+          // Lets the planner pre-empt a humid night without touching the anchors.
+          {
+            const float nbias = id(night_vpd_bias_kpa);
+            if (nbias > 0.0f && sv2_phase >= 2.0f && sv2_phase <= 4.0f) {
+              const float s = sinf(3.14159265f * (sv2_phase - 2.0f) * 0.5f);
+              const float add = nbias * s * s;  // s^2: 0 at phase 2/4, 1 at phase 3
+              sv2_vpd_low  += add;
+              sv2_vpd_tgt  += add;
+              sv2_vpd_high += add;
+            }
+          }
+
           // Sprint-15: outdoor temp + dewpoint feed the summer-vent gate.
           // Sources:
           //   - ha_outdoor_temp/ha_outdoor_rh from direct Tempest UDP
@@ -1325,9 +1341,33 @@ interval:
                 return candidate;
               };
 
-              // Pulse-zone selector: watchdog first, stress scoring second.
-              // Caller must have already decided "fire a pulse now"; this only
-              // answers "which zone." Increments fairness counter when watchdog wins.
+              // Pulse-zone selector: watchdog first, then EITHER the per-zone band
+              // arbiter (item 3, when sw_arbiter_zone_enabled) OR the legacy stress
+              // scoring. Caller decided "fire a pulse now"; this answers "which zone."
+                // Item-3 arbiter: choose the wet zone from the deterministic per-zone
+                // VPD band + owner priority (center=rank 1) — the SAME math the diag
+                // block already publishes as gh_zone_wet_granted, now wired to relays.
+                // Gated by sw_arbiter_zone_enabled (default OFF) so it ships inert and
+                // replay-clean; flip on after a corpus zone-distribution review. Maps
+                // the solar.h ZoneId (center0/south1/west2/east3) → legacy misting
+                // numbering (none0/south1/west2/center3). EAST has no mister relay.
+                auto select_arbiter_zone = [&]() -> int {
+                  ZoneBand zb[ZONE_COUNT];
+                  zb[ZONE_CENTER] = zone_band_at_phase({id(zone_vpd_target_center_sr),id(zone_vpd_target_center_sm),id(zone_vpd_target_center_ss),id(zone_vpd_target_center_mid)}, id(zone_vpd_width_below_center), id(zone_vpd_width_above_center), sv2_phase);
+                  zb[ZONE_SOUTH]  = zone_band_at_phase({id(zone_vpd_target_south_sr),id(zone_vpd_target_south_sm),id(zone_vpd_target_south_ss),id(zone_vpd_target_south_mid)}, id(zone_vpd_width_below_south), id(zone_vpd_width_above_south), sv2_phase);
+                  zb[ZONE_WEST]   = zone_band_at_phase({id(zone_vpd_target_west_sr),id(zone_vpd_target_west_sm),id(zone_vpd_target_west_ss),id(zone_vpd_target_west_mid)}, id(zone_vpd_width_below_west), id(zone_vpd_width_above_west), sv2_phase);
+                  zb[ZONE_EAST]   = zone_band_at_phase({id(zone_vpd_target_east_sr),id(zone_vpd_target_east_sm),id(zone_vpd_target_east_ss),id(zone_vpd_target_east_mid)}, id(zone_vpd_width_below_east), id(zone_vpd_width_above_east), sv2_phase);
+                  const float zvpd[ZONE_COUNT] = { VPD, id(vpd_south).state, id(vpd_west).state, id(vpd_east).state };
+                  ZoneWetIntent zi[ZONE_COUNT];
+                  for (int z = 0; z < ZONE_COUNT; z++) zi[z] = zone_wet_intent(zvpd[z], zb[z]);
+                  const int prank[ZONE_COUNT] = { id(zone_priority_center), id(zone_priority_south), id(zone_priority_west), id(zone_priority_east) };
+                  const bool zact[ZONE_COUNT] = { center_wet_allowed, south_wet_allowed, west_wet_allowed, false };
+                  const int won = arbitrate_wet_zone(zi, prank, zact);
+                  if (won == ZONE_SOUTH)  return 1;
+                  if (won == ZONE_WEST)   return 2;
+                  if (won == ZONE_CENTER) return 3;
+                  return 0;  // none, or EAST (no relay)
+                };
                 auto select_zone_for_pulse = [&]() -> int {
                   int overdue = select_overdue_zone();
                   if(overdue > 0) {
@@ -1335,6 +1375,10 @@ interval:
                     ESP_LOGI("mister","FAIRNESS: zone=%s overdue — overriding scoring",
                              zone_names[overdue]);
                     return overdue;
+                  }
+                  if (id(sw_arbiter_zone_enabled)) {
+                    const int az = select_arbiter_zone();
+                    if (az > 0) return az;  // arbiter granted a zone; else fall through to legacy
                   }
                   return select_most_stressed_zone();
                 };

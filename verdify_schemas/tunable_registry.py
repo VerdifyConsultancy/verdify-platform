@@ -597,6 +597,21 @@ REGISTRY: dict[str, TunableDef] = {
         tier=1,
         notes="Weight on VPD gap in zone-selection scoring formula. Capped at 3.0 until replay proves higher values help.",
     ),
+    "night_vpd_bias_kpa": TunableDef(
+        name="night_vpd_bias_kpa",
+        kind="numeric",
+        min=0.0,
+        max=0.25,
+        default=0.0,
+        fw_clamp_lo=0.0,
+        fw_clamp_hi=0.25,
+        esp_object_id="night_vpd_bias_kpa",
+        cfg_readback_object_id="cfg_night_vpd_bias_kpa",
+        push_owner="planner",
+        planner_pushable=True,
+        tier=1,
+        notes="Item-4 night-dry lever: kPa added to the OVERNIGHT VPD band (smooth sin^2 weight peaking at solar midnight, 0 at sunset/sunrise). Raises the night dryness floor so the dryer keeps running on a humid-night forecast WITHOUT moving the crop_band_anchors curve. Clamped 0..0.25.",
+    ),
     # ─────────────────────────────────────────────────────────────────────
     # Per-zone VPD targets (push_owner="band" — dispatcher pushes from crop
     # profile) + related scoring tunables. Tier=2: visible context, not
