@@ -467,17 +467,22 @@ int main(int argc, char* argv[]) {
         auto f = evaluate_overrides(p.in, p.sp, p.st, p.mode);
         report("fog_gate_temp", f.fog_gate_temp);
     }
-    // fog_gate_window — Firmware-v2: fog escalation blocked by the solar wet
-    // taper / night (no stress re-open). Fallback phase for local_hour 23 is
-    // the solar night; disable the stress override so it cannot re-open fog.
+    // fog_gate_window — CURVE-ONLY: the solar-phase / clock fog WINDOW gate is
+    // REMOVED. fog_hour_permitted/fog_phase_permitted are no-op shims that always
+    // allow, so f.fog_gate_window can NEVER fire — fog is decided by the band
+    // curve + physics, not a clock/phase. The self-test now proves the inverse
+    // property the curve-only refactor guarantees: even in the deep solar night,
+    // with a row that WOULD escalate to MIST_FOG, no window block is reported.
+    // (Coverage of the surviving physics gates lives in fog_gate_rh/fog_gate_temp
+    // above.) This keeps the structural probe live without pinning a dead gate.
     {
         auto p = mk(); p.st.mist_stage = MIST_S2; p.st.vpd_watch_timer_ms = 60000;
         p.in.vpd_kpa = p.sp.vpd_high + p.sp.fog_escalation_kpa + 0.1f;
-        p.sp.direct_wet_stress_override_enabled = false;
-        p.in.local_hour = 23;          // fallback solar phase 2.6 → night
+        p.sp.direct_wet_stress_override_enabled = false;   // inert switch
+        p.in.local_hour = 23;          // fallback solar phase 2.6 → solar night
         p.mode = SEALED_MIST;
         auto f = evaluate_overrides(p.in, p.sp, p.st, p.mode);
-        report("fog_gate_window", f.fog_gate_window);
+        report("fog_gate_window inert (curve-only)", !f.fog_gate_window);
     }
     // relief_cycle_breaker
     {

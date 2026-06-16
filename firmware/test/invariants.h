@@ -380,30 +380,24 @@ inline bool check_23_min_dark(const LightingSetpoints& sp_in,
     return true;
 }
 
-// #24 (CYC-4 / NB7): OVERNIGHT FOG IS A MICRO-PULSE OR SAFETY ONLY. Any fog ON
-// past the CYC-1 dusk cutoff (the dark/overnight window) must be attributable to
-// either (a) a permitted ≤5s overnight micro-pulse, or (b) survival cooling
-// (SAFETY_COOL). A continuous/routine fog run past the cutoff is forbidden
-// (ACC-2: surfaces dry overnight). This is a single-row property over the row's
-// actual dusk config + the micro-pulse gate. (The ≤5s DURATION cap is enforced
-// in controls.yaml's dedicated timer + validate_setpoints' max_on_s<=10 clamp;
-// the per-minute replay corpus cannot measure sub-minute pulse length, so this
-// asserts the legality of fog being on at all overnight, which is the property
-// that matters for the dark-dry intent.)
-// #24 (firmware-v2): overnight fog is legal ONLY as a permitted STRESS-WET
-// response (VPD above the solar night band's high edge + margin, under the
-// night dew margin) or survival cooling. The dedicated CYC-4 micro-pulse path
-// is gone; the solar band itself defines the overnight emergency.
-inline bool check_24_overnight_fog_micropulse_only(const TraceRow& r,
-                                                   ReportFn report = default_report) {
+// #24 (CURVE-ONLY: replaces the deleted CYC-4 overnight-micro-pulse rule):
+// FOG NEVER FIRES BELOW THE BAND HIGH EDGE. With the dusk/night fog taper, the
+// clock window, and the dedicated overnight micro-pulse path all gone, the band
+// curve IS the schedule: routine fog is legal at ANY hour (day or night
+// identically) but ONLY when actual VPD is ABOVE the band's high edge (the curve
+// gate) — i.e. the air is genuinely too dry for the served band. Survival
+// cooling (SAFETY_COOL) is the only exception (evaporative fog as a heat-rail
+// aid). Fog firing at/below vpd_high is the regression this guards: a properly
+// shaped (high-vpd_high) night band keeps nights dry precisely BECAUSE this rule
+// holds, so a curve change that let fog run on already-humid air would breach
+// here. This is a single-row property; the per-minute corpus cannot see sub-
+// minute pulse length, so it asserts the legality of fog being on at all, which
+// is the dark-dry / curve-fidelity property that matters. Applies every hour,
+// not just overnight — the day/night symmetry is the whole point of curve-only.
+inline bool check_24_fog_requires_curve_gate(const TraceRow& r,
+                                             ReportFn report = default_report) {
     if (!r.eq_fog) return true;
-    SensorInputs in; Setpoints sp;
-    sp = default_setpoints();
-    sp.vpd_high = r.vpd_high;
-    sp.vpd_low  = r.vpd_low;
-    sp.fog_rh_ceiling = r.fog_rh_ceiling;
-    sp.fog_min_temp   = r.fog_min_temp;
-    sp.feed_hold_active = r.feed_hold_active;
+    SensorInputs in;
     in = SensorInputs{};
     in.temp_f = r.temp_f;
     in.rh_pct = r.rh_pct;
@@ -417,12 +411,17 @@ inline bool check_24_overnight_fog_micropulse_only(const TraceRow& r,
     set_solar_inputs_from_row(r, in);
 
     if (!sensors_plausible(in)) return true;       // SENSOR_FAULT handled elsewhere
-    if (!is_night_phase(in)) return true;          // daytime fog is the normal path
-    // Overnight fog is legal ONLY as a permitted stress-wet response or survival cooling.
+    // Survival cooling fog is exempt: at the safety_max rail evaporative fog is a
+    // heat-rail aid, not band humidity control, so it may run regardless of VPD.
     const bool safety_cooling = mode_is_safety_cool(r.greenhouse_state);
-    if (!stress_wet_override_permitted(in, sp) && !safety_cooling) {
-        report(24, "overnight_fog_stress_only", r,
-               "fog ON during the solar night without a permitted stress-wet response or SAFETY_COOL");
+    // The curve gate: fog is only legal when actual VPD is ABOVE the band high
+    // edge (climate_fog/wet_assist's "below_threshold" rail). At/below vpd_high
+    // the air is already inside the served band and no fog should fire.
+    const bool above_band_high = r.vpd_kpa > r.vpd_high;
+    if (!above_band_high && !safety_cooling) {
+        report(24, "fog_requires_curve_gate", r,
+               "fog ON with VPD at/below the band high edge outside SAFETY_COOL "
+               "(curve-only: fog must follow the band curve, not a clock/phase gate)");
         return false;
     }
     return true;
@@ -772,8 +771,8 @@ struct Runner {
         // ── IRR-3 / IRR-4 center-burst rail invariants ──
         if (!check_21_center_burst_pre_dusk(r, report))             { failures++; ok = false; }
         if (!check_22_center_burst_no_feed_hold(r, report))         { failures++; ok = false; }
-        // ── CYC-4 overnight micro-pulse invariant ──
-        if (!check_24_overnight_fog_micropulse_only(r, report))     { failures++; ok = false; }
+        // ── Curve-only fog gate (replaces the deleted CYC-4 micro-pulse rule) ──
+        if (!check_24_fog_requires_curve_gate(r, report))           { failures++; ok = false; }
         return ok;
     }
 };

@@ -137,11 +137,12 @@ TEST(direct_wet_window_uses_activity_offsets) {
     PASS();
 }
 
-TEST(stress_wet_override_requires_vpd_dew_and_night_margin) {
-    // Firmware-v2: the stress-wet rule replaces the direct_wet_stress_latest_hour
-    // clock cap. It fires whenever VPD exceeds band-high + margin AND the dew
-    // margin holds — by DAY at the day floor, by NIGHT (solar phase >= 2) at the
-    // stricter max(night_floor, day_floor) margin. No hour cap remains.
+TEST(stress_wet_override_inert_wetting_follows_curve_day_and_night) {
+    // CURVE-ONLY: the stress-wet "re-open" INTENT-gate is removed. The override
+    // functions are now inert no-op shims (always false) and the stress/night
+    // switches no longer gate wetting. Routine wetting instead follows the band
+    // curve directly via climate_wet_assist_block_reason: VPD above vpd_high +
+    // a holding dew margin → served, IDENTICALLY by day and by night.
     auto sp = band_setpoints();
     sp.direct_wet_stress_override_enabled = true;
     sp.direct_wet_stress_vpd_margin_kpa = 0.05f;
@@ -150,46 +151,57 @@ TEST(stress_wet_override_requires_vpd_dew_and_night_margin) {
     sp.night_stress_min_dew_margin_f = 6.0f;
     validate_setpoints(sp);
 
-    // Daytime, VPD above band-high + margin, dew margin 10°F >> 8°F floor → fires.
+    // The override functions are inert regardless of inputs/switches.
     auto in = make_inputs(74.0f, sp.vpd_high + 0.10f);
     set_solar_day(in, 12);
-    in.dew_point_f = 64.0f;
-    ASSERT_TRUE(direct_wet_stress_override_permitted(in, sp));
-
-    // VPD only just above band-high (below the +margin threshold) → no fire.
-    in.vpd_kpa = sp.vpd_high + 0.02f;
+    in.dew_point_f = 64.0f;                                   // 10°F dew margin
+    ASSERT_FALSE(stress_wet_override_permitted(in, sp));
+    ASSERT_FALSE(direct_wet_stress_override_permitted(in, sp));
+    set_solar_day(in, 22);                                    // night: still inert
+    ASSERT_FALSE(stress_wet_override_permitted(in, sp));
+    sp.sw_night_stress_wet_enabled = false;                  // switch is now inert too
     ASSERT_FALSE(direct_wet_stress_override_permitted(in, sp));
 
-    // Back above threshold but dew margin too small (5°F < 8°F day floor) → blocked.
-    in.vpd_kpa = sp.vpd_high + 0.10f;
-    in.dew_point_f = 69.0f;
-    ASSERT_FALSE(direct_wet_stress_override_permitted(in, sp));
-
-    // Night (solar phase >= 2): the same 10°F margin still clears the stricter
-    // night floor (max(6,8)=8) so the emergency wet path fires overnight too.
-    in.dew_point_f = 64.0f;
+    // Wetting now follows the curve directly. VPD above vpd_high + 10°F dew margin
+    // → served, and the verdict is the SAME by day (hour 12) and by night (hour 22).
+    set_solar_day(in, 12);
+    ASSERT_TRUE(climate_wet_assist_permitted(in, sp));
     set_solar_day(in, 22);
-    ASSERT_TRUE(direct_wet_stress_override_permitted(in, sp));
+    ASSERT_TRUE(climate_wet_assist_permitted(in, sp));        // no night taper anymore
 
-    // Night with the night switch OFF → night emergency wetting suppressed.
-    sp.sw_night_stress_wet_enabled = false;
-    ASSERT_FALSE(direct_wet_stress_override_permitted(in, sp));
+    // VPD at/below the band high edge → blocked on the curve ("below_threshold"),
+    // not by any clock/phase gate, day and night alike.
+    in.vpd_kpa = sp.vpd_high;
+    set_solar_day(in, 12);
+    ASSERT_FALSE(climate_wet_assist_permitted(in, sp));
+    ASSERT_TRUE(std::string(climate_wet_assist_block_reason(in, sp)) == "below_threshold");
+    set_solar_day(in, 22);
+    ASSERT_TRUE(std::string(climate_wet_assist_block_reason(in, sp)) == "below_threshold");
+
+    // Back above the edge but dew margin too small (5°F < 8°F floor) → physics
+    // veto "dew_margin", again identical day and night.
+    in.vpd_kpa = sp.vpd_high + 0.10f;
+    in.dew_point_f = in.temp_f - 5.0f;
+    set_solar_day(in, 12);
+    ASSERT_TRUE(std::string(climate_wet_assist_block_reason(in, sp)) == "dew_margin");
+    set_solar_day(in, 22);
+    ASSERT_TRUE(std::string(climate_wet_assist_block_reason(in, sp)) == "dew_margin");
     PASS();
 }
 
 TEST(climate_wet_assist_requires_safety_rails_not_ai_switch_or_crop_window) {
-    // Firmware-v2: routine wet-assist is gated by dew margin and the solar wet
-    // taper, not a crop time-window. With the stress override OFF, a daytime row
-    // with good dew margin is served; a small dew margin blocks; and a row past
-    // the taper / in the solar night blocks with reason "wet_taper".
+    // CURVE-ONLY: routine wet-assist is gated by the band curve (VPD above
+    // vpd_high) + PHYSICS (dew margin) + STATE (occupancy/feed-hold), NOT by a
+    // crop time-window, a solar taper, or the AI switches. The same VPD/dew is
+    // served identically by day and by night.
     auto sp = band_setpoints();
-    sp.direct_wet_stress_override_enabled = false;
+    sp.direct_wet_stress_override_enabled = false;   // inert switch
     sp.direct_wet_stress_vpd_margin_kpa = 0.05f;
     sp.direct_wet_stress_min_dew_margin_f = 8.0f;
-    sp.sw_wet_taper_enabled = true;
+    sp.sw_wet_taper_enabled = true;                  // inert switch
     validate_setpoints(sp);
 
-    // Midday, well inside the solar day, good dew margin → served.
+    // Midday, VPD above the band high edge, good dew margin → served.
     auto in = make_inputs(86.0f, sp.vpd_high + 0.20f);
     set_solar_day(in, 12);
     in.dew_point_f = in.temp_f - 12.0f;
@@ -200,54 +212,70 @@ TEST(climate_wet_assist_requires_safety_rails_not_ai_switch_or_crop_window) {
     ASSERT_FALSE(climate_wet_assist_permitted(in, sp));
     ASSERT_TRUE(std::string(climate_wet_assist_block_reason(in, sp)) == "dew_margin");
 
-    // Good dew margin again but the row is now in the solar night (hour 22) with
-    // the stress override OFF → routine wetting is over for the day: "wet_taper".
+    // Good dew margin again, now in the solar night (hour 22): there is NO night
+    // taper anymore — VPD above vpd_high + dew margin → PERMITTED, just like day.
     in.dew_point_f = in.temp_f - 12.0f;
     set_solar_day(in, 22);
+    ASSERT_TRUE(climate_wet_assist_permitted(in, sp));
+
+    // VPD at/below the band high edge → blocked on the curve, not a clock gate.
+    in.vpd_kpa = sp.vpd_high;
     ASSERT_FALSE(climate_wet_assist_permitted(in, sp));
-    ASSERT_TRUE(std::string(climate_wet_assist_block_reason(in, sp)) == "wet_taper");
+    ASSERT_TRUE(std::string(climate_wet_assist_block_reason(in, sp)) == "below_threshold");
     PASS();
 }
 
-TEST(fog_stress_reopens_during_taper_and_night) {
-    // Firmware-v2: the fog_stress_window_* clock extension is GONE. Fog past the
-    // routine taper (and through the solar night) is re-opened ONLY by the generic
-    // stress rule: VPD above band-high + margin AND dew margin holds (the stricter
-    // night floor applies at night). This replaces the latest_hour clock cap.
+TEST(fog_follows_curve_and_physics_at_any_hour) {
+    // CURVE-ONLY: there is no fog "re-open" / taper / clock window. fog_phase is
+    // always permitted; fog_permitted is PHYSICS-ONLY (rh <= ceiling && temp >=
+    // min); and the full climate_fog_assist gate adds the curve (VPD > vpd_high)
+    // + dew margin. The verdict is identical at any hour — day OR night.
     auto sp = band_setpoints();
-    sp.direct_wet_stress_override_enabled = true;
+    sp.direct_wet_stress_override_enabled = true;    // inert
     sp.direct_wet_stress_vpd_margin_kpa = 0.05f;
     sp.direct_wet_stress_min_dew_margin_f = 8.0f;
-    sp.sw_night_stress_wet_enabled = true;
+    sp.sw_night_stress_wet_enabled = true;           // inert
     sp.night_stress_min_dew_margin_f = 6.0f;
-    sp.sw_wet_taper_enabled = true;
+    sp.sw_wet_taper_enabled = true;                  // inert
     validate_setpoints(sp);
 
-    // Hour 20 is inside the pre-sunset taper. High VPD + 12°F dew margin → the
-    // stress rule re-opens fog past the taper.
+    // High VPD, 12°F dew margin, rh/temp within physics → fog served. Check the
+    // taper hour (20), the deep night (22), and midday (12) all behave the SAME.
     auto in = make_inputs(76.0f, sp.vpd_high + 0.10f, 60.0f);
-    set_solar_day(in, 20);
     in.dew_point_f = in.temp_f - 12.0f;
-    ASSERT_TRUE(fog_phase_permitted(in, sp));
-    ASSERT_TRUE(fog_permitted(in, sp));
+    for (int hour : {20, 22, 12, 3}) {
+        set_solar_day(in, hour);
+        ASSERT_TRUE(fog_phase_permitted(in, sp));            // always true now
+        ASSERT_TRUE(fog_permitted(in, sp));                  // physics ok
+        ASSERT_TRUE(climate_fog_assist_permitted(in, sp));   // curve + physics + state ok
+    }
 
-    // Same taper hour but dew margin only 6°F (< 8°F floor) → stress denied,
-    // routine taper rules → fog blocked.
+    // Dew margin only 6°F (< 8°F floor) → climate gate blocks on "dew_margin"
+    // identically by day and by night (physics, not a clock).
     in.dew_point_f = in.temp_f - 6.0f;
-    ASSERT_FALSE(fog_phase_permitted(in, sp));
-    ASSERT_FALSE(fog_permitted(in, sp));
-
-    // Solar night (hour 22), wide dew margin clears the night floor → still on.
-    in.dew_point_f = in.temp_f - 12.0f;
-    set_solar_day(in, 22);
-    ASSERT_TRUE(fog_phase_permitted(in, sp));
-    ASSERT_TRUE(fog_permitted(in, sp));
-
-    // VPD back below the stress threshold during the taper → no re-open.
     set_solar_day(in, 20);
-    in.vpd_kpa = sp.vpd_high - 0.01f;
-    ASSERT_FALSE(fog_phase_permitted(in, sp));
+    ASSERT_TRUE(std::string(climate_fog_assist_block_reason(in, sp)) == "dew_margin");
+    set_solar_day(in, 22);
+    ASSERT_TRUE(std::string(climate_fog_assist_block_reason(in, sp)) == "dew_margin");
+
+    // VPD at/below the band high edge → "below_threshold" (curve), not a phase gate.
+    in.dew_point_f = in.temp_f - 12.0f;
+    in.vpd_kpa = sp.vpd_high;
+    ASSERT_TRUE(std::string(climate_fog_assist_block_reason(in, sp)) == "below_threshold");
+
+    // Saturated air (rh above ceiling) → fog_permitted physics veto, any hour.
+    in.vpd_kpa = sp.vpd_high + 0.10f;
+    in.rh_pct = sp.fog_rh_ceiling + 1.0f;
+    set_solar_day(in, 12);
     ASSERT_FALSE(fog_permitted(in, sp));
+    ASSERT_TRUE(std::string(climate_fog_assist_block_reason(in, sp)) == "rh_ceiling");
+
+    // Too cold to evaporate (temp below fog_min_temp) → "temp_low" physics veto.
+    in.rh_pct = 60.0f;
+    in.temp_f = sp.fog_min_temp - 1.0f;
+    in.dew_point_f = in.temp_f - 12.0f;
+    ASSERT_FALSE(fog_permitted(in, sp));
+    ASSERT_TRUE(std::string(climate_fog_assist_block_reason(in, sp)) == "temp_low");
     PASS();
 }
 
@@ -346,61 +374,67 @@ TEST(night_econ_suppression_never_blocks_band_heating) {
     PASS();
 }
 
-// ── Firmware-v2 wet taper (replaces CYC-1 / SAF-3 dusk cutoff) ──
-TEST(wet_taper_blocks_routine_fog_and_mist_through_night) {
-    // The solar wet taper + night half is the authoritative VPD-independent
-    // dry-down rail. With the stress override OFF, routine wetting is over for
-    // the day inside the taper / at night regardless of how dry the air is.
+// ── CURVE-ONLY: the wet taper is gone; night behaves exactly like day ──
+TEST(routine_wet_and_fog_behave_identically_night_and_day) {
+    // The dusk/night wet-taper rail is REMOVED — past_wet_taper is a no-op shim
+    // and no longer blocks anything. Routine wetting/fogging follows the band
+    // curve + physics, so a dry night with a holding dew margin is wetted just
+    // like the equivalent daytime row.
     auto sp = band_setpoints();
-    sp.sw_wet_taper_enabled = true;
-    sp.direct_wet_stress_override_enabled = false;   // isolate the routine taper
+    sp.sw_wet_taper_enabled = true;                  // inert
+    sp.direct_wet_stress_override_enabled = false;   // inert
     sp.direct_wet_stress_min_dew_margin_f = 8.0f;
     sp.direct_wet_stress_vpd_margin_kpa = 0.05f;
     validate_setpoints(sp);
 
-    // Severe high-VPD dry stress at 21:00 (solar night) with good dew margin —
-    // with the stress override off, the taper must keep wetting off.
+    // High-VPD dry stress, 14°F dew margin, rh/temp within physics. The taper no
+    // longer engages, and the wet/fog verdict is the SAME across night and day.
     auto in = make_inputs(80.0f, sp.vpd_high + 0.6f, 50.0f);
-    set_solar_day(in, 21);
     in.dew_point_f = in.temp_f - 14.0f;
+    for (int hour : {21, 23, 3, 12}) {
+        set_solar_day(in, hour);
+        ASSERT_FALSE(past_wet_taper(in, sp));                // inert at every hour
+        ASSERT_TRUE(climate_wet_assist_permitted(in, sp));   // served day and night
+        ASSERT_TRUE(climate_fog_assist_permitted(in, sp));
+        ASSERT_TRUE(fog_phase_permitted(in, sp));
+    }
 
-    ASSERT_TRUE(past_wet_taper(in, sp));
-    ASSERT_FALSE(climate_wet_assist_permitted(in, sp));
-    ASSERT_TRUE(std::string(climate_wet_assist_block_reason(in, sp)) == "wet_taper");
-    ASSERT_FALSE(climate_fog_assist_permitted(in, sp));
-    ASSERT_TRUE(std::string(climate_fog_assist_block_reason(in, sp)) == "wet_taper");
-    ASSERT_FALSE(fog_phase_permitted(in, sp));
-
-    // Earlier in the solar day (12:00, well before the taper) the same stress is
-    // served by the routine wet/fog path.
+    // The block now comes ONLY from the curve/physics, not the hour: drop VPD to
+    // the band high edge and BOTH a night row and a day row block identically on
+    // "below_threshold".
+    in.vpd_kpa = sp.vpd_high;
+    set_solar_day(in, 21);
+    ASSERT_TRUE(std::string(climate_wet_assist_block_reason(in, sp)) == "below_threshold");
     set_solar_day(in, 12);
-    ASSERT_FALSE(past_wet_taper(in, sp));
-    ASSERT_TRUE(climate_wet_assist_permitted(in, sp));
-    ASSERT_TRUE(climate_fog_assist_permitted(in, sp));
+    ASSERT_TRUE(std::string(climate_wet_assist_block_reason(in, sp)) == "below_threshold");
     PASS();
 }
 
-TEST(wet_taper_engages_before_sunset_window) {
-    // The taper opens wet_taper_before_sunset_min before the on-chip sunset and
-    // stays closed through the solar night; outside it (and in daylight) routine
-    // wetting is open.
+TEST(wet_taper_is_inert_at_every_hour_and_switch_state) {
+    // CURVE-ONLY: past_wet_taper is a no-op shim — it NEVER engages, regardless of
+    // hour-of-day, proximity to sunset, or the (now inert) enable switch. The band
+    // curve, not a dusk clock, keeps nights dry. This pins that the taper no longer
+    // gates wetting at all (coverage of the "served day vs night" behavior lives in
+    // routine_wet_and_fog_behave_identically_night_and_day above).
     auto sp = band_setpoints();
     sp.sw_wet_taper_enabled = true;
     sp.wet_taper_before_sunset_min = 120;
     validate_setpoints(sp);
 
     auto in = make_inputs(76.0f, 1.0f, 50.0f);
-    set_solar_day(in, 18);   // ~155 min before sunset → not yet in taper
-    ASSERT_FALSE(past_wet_taper(in, sp));
-    set_solar_day(in, 20);   // ~33 min before sunset → inside the 120-min taper
-    ASSERT_TRUE(past_wet_taper(in, sp));
-    set_solar_day(in, 23);   // solar night
-    ASSERT_TRUE(past_wet_taper(in, sp));
+    // Pre-taper daylight, inside the old taper window, deep solar night, pre-dawn:
+    // all return false now.
+    for (int hour : {18, 20, 23, 3, 12, 6}) {
+        set_solar_day(in, hour);
+        ASSERT_FALSE(past_wet_taper(in, sp));
+    }
 
-    // Disabled → never tapers.
+    // Switch OFF makes no difference — still inert.
     sp.sw_wet_taper_enabled = false;
-    set_solar_day(in, 20);
-    ASSERT_FALSE(past_wet_taper(in, sp));
+    for (int hour : {20, 23}) {
+        set_solar_day(in, hour);
+        ASSERT_FALSE(past_wet_taper(in, sp));
+    }
     PASS();
 }
 
@@ -535,18 +569,8 @@ TEST(center_burst_blocked_by_each_rail) {
         auto sp = irr_setpoints(); sp.feed_hold_active = true;
         ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), irr_dry_inputs(7), sp), CENTER_BURST_NONE);
     }
-    // wet taper: a burst window that falls inside the pre-sunset taper never
-    // bursts (the default windows are pre-taper). Pull sunset in to 14:30 so the
-    // 14:00 midday window lands inside the 120-min taper.
-    {
-        auto sp = irr_setpoints();
-        auto in = irr_dry_inputs(14);
-        in.sunset_min  = 870;                                       // 14:30
-        in.solar_phase = solar_phase(in.now_minute,
-                                     {in.sunrise_min, in.solar_noon_min, in.sunset_min});
-        ASSERT_TRUE(past_wet_taper(in, sp));
-        ASSERT_EQ(center_burst_decision(local_minute_of_day(14, 5), in, sp), CENTER_BURST_NONE);
-    }
+    // CURVE-ONLY: the wet-taper rail is removed (past_wet_taper is inert), so it is
+    // no longer one of the burst rails. The remaining rails below still gate bursts.
     // dew margin below floor blocks (don't wet a cold leaf).
     {
         auto sp = irr_setpoints();
@@ -687,16 +711,30 @@ static SensorInputs stress_dry_overnight_inputs() {
     return in;
 }
 
-TEST(night_stress_wet_permitted_overnight_when_dry_and_clean) {
+TEST(overnight_wetting_follows_curve_when_dry_and_clean) {
+    // CURVE-ONLY: the dedicated overnight stress-wet override is inert; overnight
+    // wetting now follows the band curve directly. A genuinely dry, clean night
+    // (VPD above vpd_high + holding dew margin) is served via the SAME
+    // climate_wet_assist gate the daytime path uses — no special night rule.
     auto sp = irr_setpoints();   // band vpd_high 1.4
-    sp.direct_wet_stress_override_enabled = true;
-    sp.sw_night_stress_wet_enabled = true;
+    sp.direct_wet_stress_override_enabled = true;   // inert
+    sp.sw_night_stress_wet_enabled = true;          // inert
     sp.night_stress_min_dew_margin_f = 6.0f;
     sp.direct_wet_stress_min_dew_margin_f = 8.0f;
     validate_setpoints(sp);
-    auto in = stress_dry_overnight_inputs();
+    auto in = stress_dry_overnight_inputs();         // VPD 1.6 > 1.4, dew margin 14°F, night
     ASSERT_TRUE(is_night_phase(in));
-    ASSERT_TRUE(stress_wet_override_permitted(in, sp));   // night emergency fires
+    ASSERT_FALSE(stress_wet_override_permitted(in, sp));   // override is a no-op shim
+    ASSERT_TRUE(climate_wet_assist_permitted(in, sp));     // curve serves it overnight
+
+    // Drop VPD to the band high edge → blocked on the curve, not on a night gate.
+    in.vpd_kpa = sp.vpd_high;
+    ASSERT_TRUE(std::string(climate_wet_assist_block_reason(in, sp)) == "below_threshold");
+
+    // Restore the dry VPD but tighten dew margin below the floor → physics veto.
+    in.vpd_kpa = sp.vpd_high + 0.2f;
+    in.dew_point_f = in.temp_f - 5.0f;
+    ASSERT_TRUE(std::string(climate_wet_assist_block_reason(in, sp)) == "dew_margin");
     PASS();
 }
 
@@ -851,29 +889,46 @@ TEST(invariant_22_center_burst_no_feed_hold) {
     PASS();
 }
 
-TEST(invariant_24_overnight_fog_must_be_micropulse_or_safety) {
+TEST(invariant_24_fog_requires_curve_gate_day_and_night) {
+    // CURVE-ONLY: invariant 24 no longer encodes an overnight micro-pulse window.
+    // The band curve is the schedule: fog is legal at ANY hour ONLY when actual
+    // VPD is ABOVE the band high edge (the curve gate), or when survival-cooling.
+    // Fog at/below vpd_high outside SAFETY_COOL is the regression it now guards,
+    // and DAY and NIGHT are treated identically.
     invariants::TraceRow r{};
     r.vpd_high = 1.4f; r.vpd_low = 0.8f;
     r.fog_rh_ceiling = 90.0f; r.fog_min_temp = 55.0f;
-    r.dusk_cutoff_hour = 18; r.dusk_cutoff_enabled = true; r.night_end_hour = 6;
+    r.temp_f = 72.0f; r.rh_pct = 40.0f; r.dew_point_f = 58.0f;
+    r.greenhouse_state = "SEALED_MIST_FOG";
+
     // No fog → vacuously passes.
-    r.eq_fog = 0; r.local_hour = 23;
-    ASSERT_TRUE(invariants::check_24_overnight_fog_micropulse_only(r, silent_report));
-    // Daytime fog (hour 12, not overnight) → allowed (normal path).
-    r.eq_fog = 1; r.local_hour = 12; r.temp_f = 72.0f; r.vpd_kpa = 1.8f;
-    r.rh_pct = 40.0f; r.dew_point_f = 58.0f;
-    ASSERT_TRUE(invariants::check_24_overnight_fog_micropulse_only(r, silent_report));
-    // Overnight fog WITH a permitted micro-pulse condition (dry, clean) → allowed.
-    r.local_hour = 23; r.vpd_kpa = 1.8f; r.rh_pct = 40.0f; r.dew_point_f = 58.0f;
-    r.greenhouse_state = "IDLE";
-    ASSERT_TRUE(invariants::check_24_overnight_fog_micropulse_only(r, silent_report));
-    // Overnight fog with NO micro-pulse justification (VPD below ceiling) and not
-    // SAFETY_COOL → BREACH.
-    r.vpd_kpa = 1.0f;   // below the 1.25 default ceiling → micro-pulse not permitted
-    ASSERT_FALSE(invariants::check_24_overnight_fog_micropulse_only(r, silent_report));
-    // Same low-VPD overnight fog but in SAFETY_COOL → allowed (survival cooling).
+    r.eq_fog = 0; r.local_hour = 23; r.vpd_kpa = 1.0f;
+    ASSERT_TRUE(invariants::check_24_fog_requires_curve_gate(r, silent_report));
+
+    // Fog ON with VPD above the band high edge → curve gate satisfied, ALLOWED.
+    // Verify DAY and NIGHT behave identically (the curve-only symmetry).
+    r.eq_fog = 1; r.vpd_kpa = 1.8f;          // 1.8 > vpd_high 1.4
+    r.local_hour = 12;                        // day
+    ASSERT_TRUE(invariants::check_24_fog_requires_curve_gate(r, silent_report));
+    r.local_hour = 23;                        // night — same VPD, same verdict
+    ASSERT_TRUE(invariants::check_24_fog_requires_curve_gate(r, silent_report));
+
+    // Fog ON with VPD at/below the band high edge, NOT safety cooling → BREACH,
+    // and again identically by day and by night (no clock/phase exception either way).
+    r.vpd_kpa = 1.4f;                         // exactly at the high edge → not above
+    r.local_hour = 23;
+    ASSERT_FALSE(invariants::check_24_fog_requires_curve_gate(r, silent_report));
+    r.local_hour = 12;                        // day breaches the same way
+    ASSERT_FALSE(invariants::check_24_fog_requires_curve_gate(r, silent_report));
+    r.vpd_kpa = 1.0f;                         // well below the edge → still a breach
+    ASSERT_FALSE(invariants::check_24_fog_requires_curve_gate(r, silent_report));
+
+    // Same below-edge fog but in SAFETY_COOL → allowed (survival cooling exemption).
     r.greenhouse_state = "SAFETY_COOL";
-    ASSERT_TRUE(invariants::check_24_overnight_fog_micropulse_only(r, silent_report));
+    r.local_hour = 23;
+    ASSERT_TRUE(invariants::check_24_fog_requires_curve_gate(r, silent_report));
+    r.local_hour = 12;
+    ASSERT_TRUE(invariants::check_24_fog_requires_curve_gate(r, silent_report));
     PASS();
 }
 
@@ -1538,19 +1593,35 @@ TEST(r2_8_dehum_respects_econ_block_change) {
     PASS();
 }
 
-TEST(r2_9_fog_stage_blocked_by_solar_night_taper) {
-    // Firmware-v2: fog escalation is gated by the solar wet taper / night, not a
-    // clock window. VPD demands fog, but with the stress override OFF the night
-    // taper keeps the stage from climbing to MIST_FOG.
-    auto sp = band_setpoints(); auto s = initial_state();
-    sp.direct_wet_stress_override_enabled = false;   // no stress re-open at night
-    s.mode_prev = SEALED_MIST; s.sealed_timer_ms = 100000;
-    s.mist_stage = MIST_S2; s.mist_stage_timer_ms = 0;
-    SensorInputs in = make_inputs(72, 1.9, 60);
-    set_solar_day(in, 22);  // solar night → routine fog over for the day
-    determine_mode(in, sp, s, 5000);
-    // Should NOT escalate to MIST_FOG
-    ASSERT_EQ(s.mist_stage, MIST_S2);
+TEST(r2_9_fog_stage_reachable_at_night_gated_only_by_physics) {
+    // CURVE-ONLY: the MIST_S2→MIST_FOG escalation is gated by the physics fog
+    // rails (climate_fog_assist_permitted: curve VPD>vpd_high, dew margin, rh
+    // ceiling, fog_min_temp), NOT by a solar taper / night phase. So a dry night
+    // with good physics now CLIMBS to MIST_FOG exactly like the daytime path; a
+    // physics rail (rh saturated) is what holds the stage down — same day or night.
+    auto sp = band_setpoints();
+    sp.direct_wet_stress_override_enabled = false;   // inert switch
+    validate_setpoints(sp);
+
+    auto run_stage = [&](int hour, float rh) {
+        auto s = initial_state();
+        s.mode_prev = SEALED_MIST; s.sealed_timer_ms = 100000;
+        s.mist_stage = MIST_S2; s.mist_stage_timer_ms = 0;
+        SensorInputs in = make_inputs(72, 1.9, rh);   // VPD 1.9 > vpd_high 1.4 + fog_esc 0.4
+        in.dew_point_f = in.temp_f - 12.0f;           // dew margin clears the floor
+        set_solar_day(in, hour);
+        determine_mode(in, sp, s, 5000);
+        return s.mist_stage;
+    };
+
+    // Physics OK → escalates to MIST_FOG at NIGHT and by DAY, identically.
+    ASSERT_EQ(run_stage(22, 60.0f), MIST_FOG);   // solar night — no taper block anymore
+    ASSERT_EQ(run_stage(12, 60.0f), MIST_FOG);   // daytime — same outcome
+
+    // Saturated air (rh above fog_rh_ceiling 90) → physics veto holds the stage at
+    // MIST_S2, again identically at night and by day (it is physics, not the hour).
+    ASSERT_EQ(run_stage(22, sp.fog_rh_ceiling + 2.0f), MIST_S2);
+    ASSERT_EQ(run_stage(12, sp.fog_rh_ceiling + 2.0f), MIST_S2);
     PASS();
 }
 
@@ -1867,17 +1938,25 @@ TEST(obs1e_fog_gate_temp_fires) {
     PASS();
 }
 
-TEST(obs1e_fog_gate_window_fires) {
-    // Firmware-v2: fog_gate_window fires when the firmware wants to escalate to
-    // MIST_FOG but the solar phase gate (taper/night, no stress re-open) blocks
-    // it. Put the row in the solar night with the stress override OFF.
+TEST(obs1e_fog_gate_window_never_fires_curve_only) {
+    // CURVE-ONLY: the fog-gate WINDOW (solar-phase / clock) concept is gone —
+    // fog_hour_permitted/fog_phase_permitted are no-op shims that always allow,
+    // so f.fog_gate_window can NEVER fire. A hot/dry row that wants to escalate to
+    // MIST_FOG reports NO window block at ANY hour, including deep in the solar
+    // night (the exact case the old window flag used to flag). The physics gates
+    // (rh/temp) are unaffected and stay quiet when physics is satisfied.
     auto sp = default_setpoints();
-    sp.direct_wet_stress_override_enabled = false;   // no stress re-open at night
+    sp.direct_wet_stress_override_enabled = false;   // inert switch
     auto s = initial_state(); s.mist_stage = MIST_S2; s.vpd_watch_timer_ms = 60000;
+    // VPD high enough to want MIST_FOG, rh/temp within the fog physics rails.
     auto in = make_inputs(72.0f, sp.vpd_high + sp.fog_escalation_kpa + 0.1f, 50.0f);
-    set_solar_day(in, 23);              // solar night → fog phase-gated
-    auto f = evaluate_overrides(in, sp, s, SEALED_MIST);
-    ASSERT_TRUE(f.fog_gate_window);
+    for (int hour : {23, 3, 20, 12}) {       // night, pre-dawn, old-taper, midday
+        set_solar_day(in, hour);
+        auto f = evaluate_overrides(in, sp, s, SEALED_MIST);
+        ASSERT_FALSE(f.fog_gate_window);     // window gate retired → always quiet
+        ASSERT_FALSE(f.fog_gate_rh);         // rh 50 <= ceiling → no physics block
+        ASSERT_FALSE(f.fog_gate_temp);       // temp 72 >= min → no physics block
+    }
     PASS();
 }
 
@@ -2061,36 +2140,42 @@ TEST(s8_r23_still_forces_seal_from_idle) {
     PASS();
 }
 
-TEST(fog_gated_by_solar_phase_not_clock_window) {
-    // Firmware-v2: the configurable fog clock window is GONE. fog_permitted is
-    // gated by solar phase — permitted across the solar day (outside the taper),
-    // closed through the taper + solar night UNLESS the stress rule re-opens it.
+TEST(fog_permitted_depends_only_on_physics_not_phase_or_clock) {
+    // CURVE-ONLY: fog_permitted() is PHYSICS-ONLY — it is true iff
+    // rh <= fog_rh_ceiling && temp >= fog_min_temp. It does NOT depend on the
+    // hour-of-day, solar phase, a clock window, or the (inert) stress override.
     auto sp = band_setpoints();
     sp.fog_rh_ceiling = 90.0f;
     sp.fog_min_temp = 55.0f;
-    sp.direct_wet_stress_override_enabled = false;   // isolate the phase gate
+    sp.direct_wet_stress_override_enabled = false;
     validate_setpoints(sp);
-    auto in = make_inputs(72.0f, 1.7f, 50.0f);       // VPD above band-high
+    auto in = make_inputs(72.0f, 1.7f, 50.0f);       // rh 50 <= 90, temp 72 >= 55
     in.dew_point_f = in.temp_f - 12.0f;
 
-    // Solar day, before the taper → fog permitted.
+    // Physics satisfied → permitted at EVERY hour (day, old-taper, deep night),
+    // and the inert override switch never changes the answer.
+    for (int hour : {12, 9, 20, 23, 3}) {
+        set_solar_day(in, hour);
+        ASSERT_TRUE(fog_permitted(in, sp));
+        sp.direct_wet_stress_override_enabled = true;   // still no effect
+        ASSERT_TRUE(fog_permitted(in, sp));
+        sp.direct_wet_stress_override_enabled = false;
+    }
+
+    // Saturated air (rh > ceiling) → blocked by physics at ANY hour (incl. midday).
+    in.rh_pct = sp.fog_rh_ceiling + 1.0f;
     set_solar_day(in, 12);
-    ASSERT_TRUE(fog_permitted(in, sp));
-    set_solar_day(in, 9);
-    ASSERT_TRUE(fog_permitted(in, sp));
-
-    // Inside the pre-sunset taper and through the solar night → gated.
-    set_solar_day(in, 20);   // within the 120-min taper
     ASSERT_FALSE(fog_permitted(in, sp));
-    set_solar_day(in, 23);   // solar night
-    ASSERT_FALSE(fog_permitted(in, sp));
-    set_solar_day(in, 3);    // pre-dawn night
-    ASSERT_FALSE(fog_permitted(in, sp));
-
-    // With the stress override re-enabled, a genuine night spike re-opens fog.
-    sp.direct_wet_stress_override_enabled = true;
     set_solar_day(in, 23);
-    ASSERT_TRUE(fog_permitted(in, sp));
+    ASSERT_FALSE(fog_permitted(in, sp));
+
+    // Too cold (temp < fog_min_temp) → blocked by physics at ANY hour.
+    in.rh_pct = 50.0f;
+    in.temp_f = sp.fog_min_temp - 1.0f;
+    set_solar_day(in, 12);
+    ASSERT_FALSE(fog_permitted(in, sp));
+    set_solar_day(in, 3);
+    ASSERT_FALSE(fog_permitted(in, sp));
     PASS();
 }
 
@@ -3766,45 +3851,63 @@ TEST(arbiter_priority_then_urgency_then_actuator) {
 }
 
 // Gap 1 of the control test-catalog — the orchid wet-night fog gate, the single
-// highest-stakes coverage hole. In PRODUCTION DEFAULTS the night dry-fog is
-// SUPPRESSED (direct_wet_stress_override_enabled=false): a hot+dry night does NOT
-// fog, it vents on temp_high. Flipping the override ON re-opens night fog. The
-// daytime test above shows the switch is a no-op in daylight; THIS pins the night
-// behavior — the exact prod/test divergence class behind the firmware-v2 orchid
-// regression (overnight RH 39%→84%). Pair: blocked-in-prod vs allowed-when-enabled.
-TEST(night_dry_fog_blocked_in_prod_defaults) {
+// highest-stakes coverage hole. CURVE-ONLY: there is no longer a "night fog
+// block" or a stress-override re-open. At night, prod defaults serve fog by the
+// SAME curve+physics path as daytime: VPD above the band high edge + holding dew
+// margin + rh/temp physics → fog; otherwise blocked by a PHYSICS reason, never by
+// the hour. The control lever for keeping orchid nights dry is therefore the BAND
+// CURVE itself (a high night vpd_high keeps VPD below the trigger), not a clock
+// gate — which is exactly what the served band (fn_band_setpoints) now encodes.
+TEST(night_dry_fog_follows_curve_not_a_night_gate) {
     auto sp = band_setpoints();
-    sp.direct_wet_stress_override_enabled = false;     // PROD DEFAULT
+    sp.direct_wet_stress_override_enabled = false;     // PROD DEFAULT (now inert)
     sp.direct_wet_stress_min_dew_margin_f = 8.0f;
     validate_setpoints(sp);
-    auto in = make_inputs(84.0f, 1.9f, 52.0f);         // hot + dry: VPD well above vpd_high
+
+    // Deep solar night, VPD above the band high edge, healthy dew margin, rh/temp
+    // within physics → fog is PERMITTED (night behaves like day; no night gate).
+    auto in = make_inputs(78.0f, 1.9f, 52.0f);         // temp in band, VPD > vpd_high
     set_solar_day(in, 2);                              // 02:00 — deep solar night
-    in.dew_point_f = in.temp_f - 12.0f;                // healthy dew margin (NOT the blocker)
-    // Night phase blocks fog and the override is OFF → no re-open.
+    in.dew_point_f = in.temp_f - 12.0f;
+    ASSERT_TRUE(is_night_phase(in));
+    ASSERT_TRUE(climate_fog_assist_permitted(in, sp)); // curve+physics serve it overnight
+
+    // The ONLY way a properly-shaped night band keeps fog off is by keeping VPD at
+    // or below its high edge. Raise vpd_high above the reading → "below_threshold"
+    // (the curve, not the clock) blocks fog — same mechanism day or night.
+    sp.vpd_high = in.vpd_kpa + 0.2f;
+    validate_setpoints(sp);
     ASSERT_FALSE(climate_fog_assist_permitted(in, sp));
-    // Temp 84 > temp_high 82 → VENTILATE, fog relay stays OFF (no night assist).
-    ControlState st = initial_state();
-    Mode m = determine_mode(in, sp, st, 5000);
-    ASSERT_EQ(m, VENTILATE);
-    auto relays = resolve_equipment(m, in, sp, st, false);
-    ASSERT_FALSE(relays.fog);
+    ASSERT_TRUE(std::string(climate_fog_assist_block_reason(in, sp)) == "below_threshold");
+
+    // And a physics veto (saturated air) blocks it identically at night and by day.
+    sp.vpd_high = 1.4f; validate_setpoints(sp);
+    in.rh_pct = sp.fog_rh_ceiling + 2.0f;
+    set_solar_day(in, 2);
+    ASSERT_TRUE(std::string(climate_fog_assist_block_reason(in, sp)) == "rh_ceiling");
+    set_solar_day(in, 12);
+    ASSERT_TRUE(std::string(climate_fog_assist_block_reason(in, sp)) == "rh_ceiling");
     PASS();
 }
-TEST(night_dry_fog_allowed_when_stress_override_enabled) {
+TEST(night_dry_fog_served_by_curve_regardless_of_inert_override) {
+    // CURVE-ONLY pair: the stress override switch is INERT. Flipping it ON makes no
+    // difference — the SAME hot+dry night that the curve serves with the switch OFF
+    // (sibling test above) is served with it ON. Fog is decided by curve+physics,
+    // not the switch; the fog relay drives off VENTILATE's FW-9b assist.
     auto sp = band_setpoints();
-    sp.direct_wet_stress_override_enabled = true;      // operator/planner flips it ON
+    sp.direct_wet_stress_override_enabled = true;      // flipping it ON changes nothing
     sp.direct_wet_stress_min_dew_margin_f = 8.0f;
     validate_setpoints(sp);
     auto in = make_inputs(84.0f, 1.9f, 52.0f);
     set_solar_day(in, 2);
     in.dew_point_f = in.temp_f - 12.0f;
-    // Same hot+dry night — the stress override re-opens fog (VPD high + dew margin OK).
+    // Hot+dry night, VPD above the band high edge + dew margin OK → served by curve.
     ASSERT_TRUE(climate_fog_assist_permitted(in, sp));
     ControlState st = initial_state();
-    Mode m = determine_mode(in, sp, st, 5000);
+    Mode m = determine_mode(in, sp, st, 5000);         // temp 84 > temp_high 82 → VENTILATE
     ASSERT_EQ(m, VENTILATE);
     auto relays = resolve_equipment(m, in, sp, st, false);
-    ASSERT_TRUE(relays.fog);
+    ASSERT_TRUE(relays.fog);                            // FW-9b vent-cool fog assist fires
     PASS();
 }
 
