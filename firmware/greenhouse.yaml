@@ -411,6 +411,8 @@ binary_sensor:
       number: 6
       mode: INPUT
       inverted: true
+    filters:
+      - delayed_on_off: 30ms   # debounce the momentary PB (both edges); imperceptible
     on_press:
       then:
         - button.press: fan_burst_btn
@@ -423,6 +425,8 @@ binary_sensor:
       number: 7
       mode: INPUT
       inverted: true
+    filters:
+      - delayed_on_off: 30ms   # debounce the momentary PB (both edges); imperceptible
     on_press:
       then:
         - button.press: vent_bypass_btn
@@ -435,6 +439,8 @@ binary_sensor:
       number: 5
       mode: INPUT
       inverted: true
+    filters:
+      - delayed_on_off: 30ms   # debounce the momentary PB (both edges); imperceptible
     on_press:
       then:
         - button.press: fog_burst_btn

@@ -12,7 +12,14 @@
 ################################################################################
 
 interval:
-  - interval: 5s
+  # 1 s (was 5 s): the control loop is the ONLY relay actuator path (the mode
+  # table is the truth), so manual-override button presses become responsive only
+  # as fast as this loop ticks — at 5 s a press lagged the relay up to 5 s. The
+  # loop is fully dt_ms-based (accumulates real elapsed millis, self-correcting at
+  # any tick rate) and relay min-on/min-off dwell is millis-based, so faster
+  # ticking cannot rapid-cycle. Replay is unaffected (the harness calls the
+  # decision fns per corpus row, not via this interval).
+  - interval: 1s
     then:
       - lambda: |-
           /*************** CONFIG CONSTANTS **************************************/
@@ -37,11 +44,12 @@ interval:
           static uint32_t last_ms = millis();
           uint32_t now_ms = millis();
           uint32_t dt_ms  = (now_ms < last_ms) ? 0 : (now_ms - last_ms);
-          // Sprint-10 0.4a: clamp dt_ms. The interval is 5 s; anything
-          // larger is a hiccup (RTOS hang, OTA pause, debugger break).
-          // sat_add prevents overflow but not behavioral skipping — one
-          // huge dt_ms can leap through vpd_watch_dwell, sealed_max_ms,
-          // and mist_s2_delay_ms in a single tick.
+          // Sprint-10 0.4a: clamp dt_ms. The interval is 1 s; a gap of several
+          // seconds is a hiccup (RTOS hang, OTA pause, debugger break). The 5 s
+          // cap catches a multi-tick stall; normal 1 s ticks are far below it.
+          // sat_add prevents overflow but not behavioral skipping — one huge
+          // dt_ms can leap through vpd_watch_dwell, sealed_max_ms, and
+          // mist_s2_delay_ms in a single tick.
           if(dt_ms > 5000) dt_ms = 5000;
           last_ms = now_ms;
 
