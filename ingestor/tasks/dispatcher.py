@@ -580,7 +580,8 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         # Firmware-v2 deterministic band (contract B2/B6/B7). The solar context
         # and the per-zone band-audit emission are unconditional (compliance
         # history accumulates before any flip); anchor pushes and the legacy
-        # band cutover are gated by VERDIFY_BAND_SOURCE (default: legacy).
+        # band cutover are gated by VERDIFY_BAND_SOURCE (default: anchors;
+        # legacy is the rollback hatch).
         anchors_mode = band_anchors.band_source() == band_anchors.BAND_SOURCE_ANCHORS
         solar_ctx = band_anchors.local_solar_context()
         anchor_values, anchor_origin = await band_anchors.crop_band_anchor_values(conn)

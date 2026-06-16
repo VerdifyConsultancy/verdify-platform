@@ -20,32 +20,23 @@ The planner has NO band-authoring path: every param here is push_owner="band"
 (CROP_BAND_REG), so planner rows for them are dropped by the dispatcher and
 rejected by MCP.
 
-FLIP PROCEDURE — VERDIFY_BAND_SOURCE (default: legacy; the change is inert
-until firmware v2 is OTA'd):
+BAND SOURCE — VERDIFY_BAND_SOURCE (default: `anchors`; prod reality since the
+2026-06-15 firmware-v2 cutover). The on-chip anchor curve IS the live band; the
+code default now matches prod so reading it gives the true mental model.
 
-  1. Land the parallel workstreams: the `crop_band_anchors` migration (+ the
-     setpoint_snapshot zone/band_role/target_value columns) and the firmware
-     v2 OTA exposing one ESPHome number entity per tunable with
-     object_id == <param name> and a `cfg_<param name>` readback sensor.
-  2. While VERDIFY_BAND_SOURCE is unset/`legacy`, behaviour is unchanged: the
-     dispatcher keeps pushing the legacy temp_low/temp_high/vpd_low/vpd_high
-     band params and fixed-hour lighting policy. Band-audit emission (b)
-     activates on its own as soon as the snapshot columns exist — it is
-     flag-independent so compliance history accumulates before the flip.
-  3. Set VERDIFY_BAND_SOURCE=anchors on the ingestor (k3s: env on the
-     verdify-ingestor Deployment; prod is gated manual-sync) and restart the
-     pod. The dispatcher then pushes the anchor tunables through the normal
-     setpoint_changes → push_to_esp32 → cfg_* confirm loop.
-  4. Legacy temp_low/temp_high/vpd_low/vpd_high band pushes STOP automatically
-     only once every anchor param is CONFIRMED by its cfg_* readback (until
-     then both run, so the device never sees a band gap). Lighting flips to
-     the differentiated, sunrise-anchored windows immediately with the flag.
-  5. Rollback: set VERDIFY_BAND_SOURCE=legacy (or unset) and restart — the
-     legacy band push resumes on the next dispatcher cycle.
+  - Default / unset / `anchors`: the dispatcher syncs the 56 anchor tunables
+    through the normal setpoint_changes → push_to_esp32 → cfg_* confirm loop and
+    the device computes its band on-chip. The legacy temp_low/high+vpd_low/high
+    band pushes STOP automatically once every anchor param is CONFIRMED by its
+    cfg_* readback (until then both run, so the device never sees a band gap).
+  - `legacy`: the no-OTA ROLLBACK HATCH. Set VERDIFY_BAND_SOURCE=legacy and
+    restart and the dispatcher resumes pushing the legacy band params on the
+    next cycle. Kept as a safety escape only — not the default path.
 
-No DB table yet? The contract-§B2 researched envelopes (the registry defaults)
-are used, so audit emission and a dev flip remain possible before the
-migration lands. Table rows always override defaults.
+Band-audit emission (b) is flag-independent, so compliance history accumulates
+regardless of source. On a `crop_band_anchors` read error the dispatcher fails
+CLOSED — it HOLDS the device NVS band (raising band_anchor_db_read_failed)
+rather than push the registry fallback. Table rows always override defaults.
 """
 
 from __future__ import annotations
@@ -76,10 +67,6 @@ log = logging.getLogger("tasks")
 BAND_SOURCE_ENV = "VERDIFY_BAND_SOURCE"
 BAND_SOURCE_LEGACY = "legacy"
 BAND_SOURCE_ANCHORS = "anchors"
-
-# Legacy dispatcher-pushed band params that become read-only firmware
-# readbacks once the on-chip anchor curve is live (§B2 strip list).
-LEGACY_BAND_INSTANT_PARAMS = ("temp_low", "temp_high", "vpd_low", "vpd_high")
 
 # ── Zone / crop / series shape (§B2, §B7) ────────────────────────────────────
 ZONES = ("center", "south", "west", "east")
@@ -150,13 +137,17 @@ ANCHOR_REQUIRED_OBJECT_IDS = frozenset({"band_temp_target_sm", "zone_vpd_target_
 
 # ── Flag / support / confirmation ────────────────────────────────────────────
 def band_source() -> str:
-    """Read VERDIFY_BAND_SOURCE at call time (test- and restart-friendly)."""
-    raw = os.environ.get(BAND_SOURCE_ENV, BAND_SOURCE_LEGACY).strip().lower()
-    if raw == BAND_SOURCE_ANCHORS:
-        return BAND_SOURCE_ANCHORS
-    if raw not in ("", BAND_SOURCE_LEGACY):
-        log.warning("Unknown %s=%r — falling back to %s", BAND_SOURCE_ENV, raw, BAND_SOURCE_LEGACY)
-    return BAND_SOURCE_LEGACY
+    """Read VERDIFY_BAND_SOURCE at call time (test- and restart-friendly).
+
+    Default is anchors (prod reality); `legacy` is the explicit no-OTA rollback
+    hatch. Unknown values default to anchors with a warning.
+    """
+    raw = os.environ.get(BAND_SOURCE_ENV, BAND_SOURCE_ANCHORS).strip().lower()
+    if raw == BAND_SOURCE_LEGACY:
+        return BAND_SOURCE_LEGACY
+    if raw not in ("", BAND_SOURCE_ANCHORS):
+        log.warning("Unknown %s=%r — defaulting to %s", BAND_SOURCE_ENV, raw, BAND_SOURCE_ANCHORS)
+    return BAND_SOURCE_ANCHORS
 
 
 # The on-chip API service that writes any band/zone anchor global by name

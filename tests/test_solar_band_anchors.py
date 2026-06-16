@@ -244,17 +244,23 @@ class TestZoneBandAudit:
 
 
 class TestBandSourceFlag:
-    def test_default_is_legacy(self, monkeypatch):
+    def test_default_is_anchors(self, monkeypatch):
+        # Default now matches prod reality (anchors); legacy is the rollback hatch.
         monkeypatch.delenv(band_anchors.BAND_SOURCE_ENV, raising=False)
-        assert band_anchors.band_source() == band_anchors.BAND_SOURCE_LEGACY
+        assert band_anchors.band_source() == band_anchors.BAND_SOURCE_ANCHORS
 
-    def test_anchors_opt_in(self, monkeypatch):
+    def test_anchors_explicit(self, monkeypatch):
         monkeypatch.setenv(band_anchors.BAND_SOURCE_ENV, "anchors")
         assert band_anchors.band_source() == band_anchors.BAND_SOURCE_ANCHORS
 
-    def test_unknown_value_falls_back_to_legacy(self, monkeypatch):
-        monkeypatch.setenv(band_anchors.BAND_SOURCE_ENV, "yolo")
+    def test_legacy_rollback_hatch(self, monkeypatch):
+        # Explicit legacy is the no-OTA rollback escape and must still work.
+        monkeypatch.setenv(band_anchors.BAND_SOURCE_ENV, "legacy")
         assert band_anchors.band_source() == band_anchors.BAND_SOURCE_LEGACY
+
+    def test_unknown_value_falls_back_to_anchors(self, monkeypatch):
+        monkeypatch.setenv(band_anchors.BAND_SOURCE_ENV, "yolo")
+        assert band_anchors.band_source() == band_anchors.BAND_SOURCE_ANCHORS
 
 
 class TestLightingDifferentiation:
