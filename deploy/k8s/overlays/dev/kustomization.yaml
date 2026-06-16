@@ -105,7 +105,7 @@ patches:
 images:
 - digest: sha256:48442f3d040156203641e2e22d43c510eda0b9be3b727958da974b24a61c8ac3
   name: ghcr.io/verdifyconsultancy/verdify-api
-- digest: sha256:32b38720425110216a1aac8a2166c0ed2ecd35dcf10e7a4f32c56c7dea643e98
+- digest: sha256:4cc2ae31771e9b403d5352b924dd9b9d220bf7859110b958d26475ad0dd89688
   name: ghcr.io/verdifyconsultancy/verdify-ingestor
 - digest: sha256:bf71018f181f4e37e585b8778852eb209875555525c425921663e7744891c973
   name: ghcr.io/verdifyconsultancy/verdify-lab
@@ -113,7 +113,7 @@ images:
   name: ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s
 - digest: sha256:80d6256ffef1a01cf3b0a9369f7fcf909bca62d6e689860869cc25bb8da4362c
   name: ghcr.io/verdifyconsultancy/verdify-mcp
-- digest: sha256:6aa037c20b0adbffdd26455cf39bbf75cf84758c6fdb3a9c9c927c8ea4788a08
+- digest: sha256:686104db145883eaae34b753188ab4b075e49ff3ec10e1c46c63cd9bac09c31e
   name: ghcr.io/verdifyconsultancy/verdify-migrate
 - digest: sha256:fa8b6e0a6a49dee1e6ba475d777a26472ab0dc3f4f19f5312eee17bf2bde8e44
   name: ghcr.io/verdifyconsultancy/verdify-planner
