@@ -415,26 +415,21 @@ async def emit_band_audit(conn: asyncpg.Connection, values: dict[str, float], ct
 # ── Lighting differentiation (#294/#295) ─────────────────────────────────────
 # circuit → (dli_target mol/m²/day, target_light_minutes). gl_main = Vanda
 # (13 mol, 13 h); gl_grow = pepper hydro (21 mol, 15 h).
-GL_CIRCUIT_TARGETS: dict[str, tuple[float, float]] = {
-    "main": (13.0, 780.0),
-    "grow": (21.0, 900.0),
-}
+def lighting_circuit_overrides(times: SolarTimes, circuit_minutes: dict[str, float]) -> dict[str, float]:
+    """Sunrise-anchored window HOURS for each lighting circuit (#294/#295).
 
-
-def lighting_circuit_overrides(times: SolarTimes) -> dict[str, float]:
-    """Per-circuit lighting values with sunrise-anchored windows.
-
-    Replaces the fixed-hour `fn_lighting_minutes_policy` window values when
-    VERDIFY_BAND_SOURCE=anchors: the window opens at (rounded) real sunrise
-    and closes photoperiod-hours later, so the schedule tracks the sun across
-    the year instead of freezing at a clock hour.
+    The window OPENS at the (rounded) real sunrise and CLOSES photoperiod-minutes
+    later, so the schedule tracks the sun across the year instead of freezing at a
+    clock hour. The photoperiod MINUTES and DLI come from the DB lighting policy
+    (fn_lighting_minutes_policy — the single AI-tunable source), passed in as
+    `circuit_minutes`; this overrides ONLY the start/cutoff HOURS, never the
+    minutes/DLI. (2026-06-16: removed the hardcoded GL_CIRCUIT_TARGETS that used
+    to override the DB photoperiod — a third source of truth for the same value.)
     """
     start_hour = max(0, min(23, round(times.sunrise_min / 60)))
     overrides: dict[str, float] = {}
-    for key, (dli_target, minutes) in GL_CIRCUIT_TARGETS.items():
+    for key, minutes in circuit_minutes.items():
         cutoff_hour = max(0, min(23, start_hour + round(minutes / 60)))
-        overrides[f"gl_{key}_dli_target"] = dli_target
-        overrides[f"gl_{key}_target_light_minutes"] = minutes
         overrides[f"gl_{key}_sunrise_hour"] = float(start_hour)
         overrides[f"gl_{key}_sunset_hour"] = float(cutoff_hour)
     return overrides

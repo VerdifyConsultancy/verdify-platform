@@ -268,16 +268,24 @@ class TestBandSourceFlag:
 
 
 class TestLightingDifferentiation:
-    def test_circuit_targets(self):
-        overrides = band_anchors.lighting_circuit_overrides(_JUNE)
-        assert overrides["gl_main_dli_target"] == 13.0  # Vanda (#294)
-        assert overrides["gl_main_target_light_minutes"] == 780.0  # 13 h
-        assert overrides["gl_grow_dli_target"] == 21.0  # pepper hydro (#295)
-        assert overrides["gl_grow_target_light_minutes"] == 900.0  # 15 h
+    # Photoperiod minutes + DLI now come from the DB lighting policy (the single
+    # AI-tunable source, fn_lighting_minutes_policy); the override only
+    # sunrise-anchors the window HOURS. 780 min = 13 h (main/Vanda), 900 = 15 h (grow).
+    _CIRCUIT_MIN = {"main": 780.0, "grow": 900.0}
+
+    def test_overrides_only_window_hours(self):
+        overrides = band_anchors.lighting_circuit_overrides(_JUNE, self._CIRCUIT_MIN)
+        # No dli/minutes override — those flow from the DB policy unchanged.
+        assert set(overrides) == {
+            "gl_main_sunrise_hour",
+            "gl_main_sunset_hour",
+            "gl_grow_sunrise_hour",
+            "gl_grow_sunset_hour",
+        }
 
     def test_sunrise_anchored_window_tracks_season(self):
-        june = band_anchors.lighting_circuit_overrides(_JUNE)
-        dec = band_anchors.lighting_circuit_overrides(_DEC)
+        june = band_anchors.lighting_circuit_overrides(_JUNE, self._CIRCUIT_MIN)
+        dec = band_anchors.lighting_circuit_overrides(_DEC, self._CIRCUIT_MIN)
         assert june["gl_main_sunrise_hour"] == round(_JUNE.sunrise_min / 60)
         assert dec["gl_main_sunrise_hour"] == round(_DEC.sunrise_min / 60)
         assert june["gl_main_sunrise_hour"] != dec["gl_main_sunrise_hour"]
@@ -288,7 +296,7 @@ class TestLightingDifferentiation:
 
     def test_window_hours_within_registry_bounds(self):
         for st in (_JUNE, _DEC):
-            overrides = band_anchors.lighting_circuit_overrides(st)
+            overrides = band_anchors.lighting_circuit_overrides(st, self._CIRCUIT_MIN)
             for param, value in overrides.items():
                 spec = REGISTRY[param]
                 assert spec.min <= value <= spec.max, f"{param}={value} outside [{spec.min}, {spec.max}]"

@@ -815,11 +815,18 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         # Per-circuit lighting state machines: crop policy + Tempest history
         # seed both circuits, but active planner rows are allowed to diverge
         # circuit targets, thresholds, windows, dwell, and auto enable.
-        # Under VERDIFY_BAND_SOURCE=anchors the circuits are DIFFERENTIATED
-        # (#294/#295: gl_main/Vanda 13 mol·13 h, gl_grow/pepper 21 mol·15 h)
-        # and their windows are sunrise-anchored from the ephemeris instead of
-        # the policy table's fixed hours; planner overrides still win below.
-        anchor_lighting = band_anchors.lighting_circuit_overrides(solar_ctx.times) if anchors_mode else {}
+        # Under VERDIFY_BAND_SOURCE=anchors the per-circuit photoperiod minutes +
+        # DLI come from the DB lighting policy (fn_lighting_minutes_policy — the
+        # single AI-tunable source; gl_main and gl_grow are differentiated there),
+        # and ONLY the start/cutoff windows are sunrise-anchored from the
+        # ephemeris instead of the policy table's fixed hours. Planner rows still
+        # win below.
+        anchor_lighting: dict[str, float] = {}
+        if anchors_mode and lighting_circuit_rows:
+            circuit_minutes = {
+                row["light_key"]: float(int(row["target_light_minutes"])) for row in lighting_circuit_rows
+            }
+            anchor_lighting = band_anchors.lighting_circuit_overrides(solar_ctx.times, circuit_minutes)
         for row in lighting_circuit_rows or []:
             if not lighting_circuit_supported:
                 continue
