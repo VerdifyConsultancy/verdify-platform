@@ -1245,8 +1245,7 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                 for r in lux_drift_rows
             ]
             lux_sample = ", ".join(
-                f"{o['parameter']}: device {o['device_cfg']:g} != desired {o['desired']:g}"
-                for o in lux_offenders[:4]
+                f"{o['parameter']}: device {o['device_cfg']:g} != desired {o['desired']:g}" for o in lux_offenders[:4]
             )
             lux_worst = max(abs(o["device_cfg"] - o["desired"]) for o in lux_offenders)
             alerts.append(
