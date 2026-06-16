@@ -2,6 +2,11 @@
   "uid": "site-home",
   "title": "Site: Home",
   "editable": true,
+  "refresh": "1m",
+  "time": {
+    "from": "now-72h",
+    "to": "now+72h"
+  },
   "panels": [
     {
       "datasource": {

@@ -1,4 +1,5 @@
 {
+  "refresh": "5m",
   "uid": "site-intelligence-data",
   "title": "Site: Intelligence \u2014 Data",
   "editable": true,

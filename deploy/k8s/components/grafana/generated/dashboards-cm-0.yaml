@@ -10,6 +10,7 @@ metadata:
 data:
   site-climate-cooling.json: |
     {
+      "refresh": "1m",
       "uid": "site-climate-cooling",
       "title": "Site: Climate \u2014 Cooling",
       "editable": true,
@@ -2447,6 +2448,7 @@ data:
     }
   site-climate-heating.json: |
     {
+      "refresh": "1m",
       "uid": "site-climate-heating",
       "title": "Site: Climate \u2014 Heating",
       "editable": true,
@@ -4159,6 +4161,7 @@ data:
     }
   site-climate-humidity.json: |
     {
+      "refresh": "1m",
       "uid": "site-climate-humidity",
       "title": "Site: Climate \u2014 Humidity",
       "editable": true,
@@ -5516,6 +5519,7 @@ data:
     }
   site-evidence-economics.json: |
     {
+      "refresh": "5m",
       "uid": "site-evidence-economics",
       "title": "Site: Evidence \u2014 Economics",
       "editable": true,
@@ -10822,6 +10826,7 @@ data:
     }
   site-greenhouse-crops.json: |
     {
+      "refresh": "1m",
       "uid": "site-greenhouse-crops",
       "title": "Site: Greenhouse \u2014 Crops",
       "editable": true,
@@ -12704,6 +12709,7 @@ data:
     }
   site-greenhouse-zones.json: |
     {
+      "refresh": "1m",
       "uid": "site-greenhouse-zones",
       "title": "Site: Greenhouse \u2014 Zones",
       "editable": true,
@@ -14727,6 +14733,11 @@ data:
       "uid": "site-home",
       "title": "Site: Home",
       "editable": true,
+      "refresh": "1m",
+      "time": {
+        "from": "now-72h",
+        "to": "now+72h"
+      },
       "panels": [
         {
           "datasource": {
@@ -21268,6 +21279,7 @@ data:
     }
   site-intelligence-data.json: |
     {
+      "refresh": "5m",
       "uid": "site-intelligence-data",
       "title": "Site: Intelligence \u2014 Data",
       "editable": true,

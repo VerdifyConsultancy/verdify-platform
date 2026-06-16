@@ -8,9 +8,17 @@
   value:
     - websecure
     - web
+# DEV GRAPHS DELIBERATELY DISABLED (2026-06-16, triage). The dev DB is a
+# nightly device-dark restore of prod, so graphs-dev/graphs.k3s served data
+# that was hours-to-days stale — the recurring "the graphs don't match reality"
+# trap (an operator bookmark/DNS pins to the dev host and sees frozen telemetry).
+# graphs.verdify.ai (prod) is the sole greenhouse graph surface. This match is
+# parked on a non-resolving host so the route builds cleanly and ArgoCD
+# self-heal keeps it disabled, instead of being deleted and re-synced back.
+# To re-enable dev graphs, restore the real hosts below.
 - op: replace
   path: /spec/routes/0/match
-  value: Host(`graphs.k3s.verdify.ai`) || Host(`graphs-dev.verdify.ai`)
+  value: Host(`graphs-dev-disabled.invalid`)
 - op: add
   path: /spec/routes/0/priority
   value: 60

@@ -1,4 +1,5 @@
 {
+  "refresh": "1m",
   "uid": "site-climate-controller",
   "title": "Site: Climate \u2014 Controller",
   "editable": true,

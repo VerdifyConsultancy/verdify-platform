@@ -10,6 +10,7 @@ metadata:
 data:
   site-climate-controller.json: |
     {
+      "refresh": "1m",
       "uid": "site-climate-controller",
       "title": "Site: Climate \u2014 Controller",
       "editable": true,
@@ -2487,6 +2488,7 @@ data:
     }
   site-climate-lighting.json: |
     {
+      "refresh": "1m",
       "uid": "site-climate-lighting",
       "title": "Site: Climate \u2014 Lighting",
       "editable": true,
@@ -4192,6 +4194,7 @@ data:
     }
   site-climate-water.json: |
     {
+      "refresh": "1m",
       "uid": "site-climate-water",
       "title": "Site: Climate \u2014 Water",
       "editable": true,
@@ -5587,6 +5590,7 @@ data:
     }
   site-climate.json: |
     {
+      "refresh": "1m",
       "uid": "site-climate",
       "title": "Site: Climate",
       "editable": true,
@@ -8870,6 +8874,7 @@ data:
     }
   site-evidence-dashboards.json: |
     {
+      "refresh": "5m",
       "uid": "site-evidence-dashboards",
       "title": "Site: Evidence \u2014 Dashboards",
       "editable": true,
@@ -13519,6 +13524,7 @@ data:
     }
   site-evidence-operations.json: |
     {
+      "refresh": "5m",
       "uid": "site-evidence-operations",
       "title": "Site: Evidence \u2014 Operations",
       "editable": true,
@@ -15452,6 +15458,7 @@ data:
     }
   site-greenhouse-equipment.json: |
     {
+      "refresh": "1m",
       "uid": "site-greenhouse-equipment",
       "title": "Site: Greenhouse \u2014 Equipment",
       "editable": true,
@@ -17537,6 +17544,7 @@ data:
     }
   site-intelligence-planning.json: |
     {
+      "refresh": "5m",
       "uid": "site-intelligence-planning",
       "title": "Site: Intelligence \u2014 Planning",
       "editable": true,
@@ -19503,6 +19511,7 @@ data:
     }
   site-intelligence.json: |
     {
+      "refresh": "5m",
       "uid": "site-intelligence",
       "title": "Site: Intelligence",
       "editable": true,
