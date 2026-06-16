@@ -134,17 +134,19 @@ def solar_phase(now_minute: float, st: SolarTimes) -> float:
 
 
 def band_value_at_phase(anchors: BandAnchors, phase: float) -> float:
-    """Cosine interpolation between consecutive anchors (§B2).
+    """Smooth 4-anchor harmonic (Fourier) interpolation through SR/SM/SS/MID.
 
-    Segment k covers phase [k, k+1) between anchor k and anchor (k+1)%4 in
-    SR → SM → SS → MID → SR order. Cosine easing keeps the curve smooth and
-    flat at every anchor (zero slope), matching the on-chip engine exactly.
+    Anchors sit at solar phase 0/1/2/3 (SR → SM → SS → MID). The curve passes
+    EXACTLY through every anchor but is C-infinity smooth — unlike the old
+    piecewise cosine-ease, which had zero slope at every anchor and flattened
+    into four visible plateaus ("lumpy" bands). One curve, not four stitched
+    eases. Mirrors the on-chip greenhouse_solar.h band_value_at_phase and db
+    fn_crop_band_value (migration 170) exactly.
     """
-    values = (anchors.sr, anchors.sm, anchors.ss, anchors.mid)
     p = float(phase) % 4.0
-    seg = int(p)
-    t = p - seg
-    v0 = values[seg]
-    v1 = values[(seg + 1) % 4]
-    weight = 0.5 - 0.5 * math.cos(math.pi * t)
-    return v0 + (v1 - v0) * weight
+    theta = math.pi * p / 2.0  # 0..2π
+    c0 = (anchors.sr + anchors.sm + anchors.ss + anchors.mid) / 4.0
+    c1 = (anchors.sr - anchors.ss) / 2.0
+    s1 = (anchors.sm - anchors.mid) / 2.0
+    c2 = (anchors.sr - anchors.sm + anchors.ss - anchors.mid) / 4.0
+    return c0 + c1 * math.cos(theta) + s1 * math.sin(theta) + c2 * math.cos(2.0 * theta)

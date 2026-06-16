@@ -141,12 +141,18 @@ inline float band_value_at_phase(const BandAnchors& a, float phase) noexcept {
     constexpr float PI_F = 3.14159265358979f;
     if (!std::isfinite(phase)) phase = 1.0f;
     phase = phase - 4.0f * std::floor(phase / 4.0f);  // wrap to [0,4)
-    const int k = std::min(3, int(phase));
-    const float t = phase - float(k);
-    const float vals[5] = {a.sr, a.sm, a.ss, a.mid, a.sr};
-    const float lo = vals[k], hi = vals[k + 1];
-    const float w = (1.0f - std::cos(PI_F * t)) * 0.5f;  // smooth cosine ease
-    return lo + (hi - lo) * w;
+    // Smooth 4-anchor harmonic (discrete-Fourier) interpolation through
+    // SR/SM/SS/MID at phase 0/1/2/3. Passes EXACTLY through every anchor but is
+    // C-infinity smooth — unlike the old piecewise cosine-ease, which had zero
+    // slope at every anchor and so flattened into four visible plateaus ("lumpy"
+    // bands). One curve, not four stitched eases. Mirrors db fn_crop_band_value
+    // (migration 170) and ingestor/solar.py exactly.
+    const float theta = PI_F * phase * 0.5f;  // 0..2π
+    const float c0 = (a.sr + a.sm + a.ss + a.mid) * 0.25f;
+    const float c1 = (a.sr - a.ss) * 0.5f;
+    const float s1 = (a.sm - a.mid) * 0.5f;
+    const float c2 = (a.sr - a.sm + a.ss - a.mid) * 0.25f;
+    return c0 + c1 * std::cos(theta) + s1 * std::sin(theta) + c2 * std::cos(2.0f * theta);
 }
 
 // ── Per-zone VPD bands + priority arbitration (contract §B3) ────────────

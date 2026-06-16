@@ -108,21 +108,36 @@ class TestBandValueAtPhase:
         assert solar.band_value_at_phase(a, 2.0) == pytest.approx(73.0)
         assert solar.band_value_at_phase(a, 3.0) == pytest.approx(64.0)
 
-    def test_cosine_midpoint_is_segment_average(self):
+    def test_harmonic_interp_value_and_no_plateau_at_anchors(self):
+        # migration 170 / firmware: the band is a smooth 4-anchor HARMONIC
+        # interpolation, not a piecewise cosine-ease. Between anchors it is NOT
+        # the segment average (the old cosine behaviour) — it is the Fourier fit.
         a = self.ANCHORS
-        assert solar.band_value_at_phase(a, 0.5) == pytest.approx((66.0 + 84.0) / 2)
-        assert solar.band_value_at_phase(a, 3.5) == pytest.approx((64.0 + 66.0) / 2)
+        assert solar.band_value_at_phase(a, 0.5) == pytest.approx(76.3462, abs=1e-3)
+        # The defining fix: NON-ZERO slope AT an anchor (the cosine-ease had zero
+        # slope at every anchor, flattening into the "lumpy" plateaus).
+        eps = 1e-4
+        for anchor_phase in (0.0, 1.0, 2.0, 3.0):
+            slope = (
+                solar.band_value_at_phase(a, anchor_phase + eps) - solar.band_value_at_phase(a, anchor_phase - eps)
+            ) / (2 * eps)
+            assert abs(slope) > 0.5, f"plateau at phase {anchor_phase} (slope {slope})"
 
     def test_wraps_periodically(self):
         a = self.ANCHORS
         assert solar.band_value_at_phase(a, 4.0) == pytest.approx(solar.band_value_at_phase(a, 0.0))
 
-    def test_bounded_by_segment_anchors(self):
+    def test_bounded_with_small_harmonic_overshoot(self):
+        # A 2-harmonic fit through 4 anchors may overshoot the anchor range by a
+        # small, bounded amount between anchors; the firmware safety_* rails clamp
+        # the final setpoints regardless. Allow a margin of 15% of the spread.
         a = self.ANCHORS
+        lo = min(a.sr, a.sm, a.ss, a.mid)
+        hi = max(a.sr, a.sm, a.ss, a.mid)
+        margin = 0.15 * (hi - lo)
         for hundredth in range(0, 400, 3):
-            phase = hundredth / 100.0
-            value = solar.band_value_at_phase(a, phase)
-            assert min(a.sr, a.sm, a.ss, a.mid) <= value <= max(a.sr, a.sm, a.ss, a.mid)
+            value = solar.band_value_at_phase(a, hundredth / 100.0)
+            assert lo - margin <= value <= hi + margin
 
 
 def _expected_anchor_params() -> set[str]:
