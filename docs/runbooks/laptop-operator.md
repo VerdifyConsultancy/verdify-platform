@@ -1,11 +1,15 @@
 # Laptop operator runbook — iterate, deploy, query, OTA from the MacBook
 
 **Audience:** Jason / laptop-root (and any kubectl-equipped operator host).
-**Since:** 2026-06-10 (branch unification + dev-proving-environment rewire).
-**State of the world:** `main` is the single canonical branch; staging is
-RETIRED; `verdify-dev` (auto-sync) is the proving environment; the prod
-ArgoCD app is `verdify-prod-dark` (legacy name), manual-sync behind the
-device-write gate.
+**Since:** 2026-06-10 (branch unification); **SINGLE-ENV update 2026-06-16.**
+**State of the world:** `main` is the single canonical branch. **`verdify-dev`
+and staging are DECOMMISSIONED and DELETED — prod (`verdify-prod`, ArgoCD app
+`verdify-prod-dark`, manual-sync behind the device-write gate) is the ONLY
+environment** (serves lab/graphs/api.verdify.ai). Prod is advanced by the
+`prod-promote` workflow off the published `:branch-main` image digests in GHCR
+(no more `bump-dev-digests` / dev render / dev-equality guard). Any section
+below that mentions a dev environment, `overlays/dev`, dev DB restore, or the
+dev proving flow is HISTORICAL — those resources no longer exist.
 
 ## 0. One-time host setup
 

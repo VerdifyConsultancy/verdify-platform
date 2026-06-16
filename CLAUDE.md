@@ -120,27 +120,33 @@ Handoff protocol:
   chat. Keep context dumps concise; link to deeper docs instead of copying them
   into multiple places.
 
-## Branch & deployment model (Jason, 2026-06-10 — supersedes the live/platform-main split)
+## Branch & deployment model (Jason, 2026-06-10; SINGLE-ENV 2026-06-16)
 
 - **`main` is the single canonical branch.** PRs land on main; all CI
   (build/publish/validate) and every ArgoCD targetRevision point at main. The
-  2026-05-31 `live/platform-main` deploy branch is RETIRED (kept aligned as a
-  pointer during transition; do not push to it).
-- **Two environments, no staging.** `verdify-dev` (ns verdify-dev, auto-sync)
-  is the proving environment: every push to main publishes digest-pinned
-  images and the `bump-dev-digests` job pins them into `overlays/dev`, which
-  dev deploys automatically. Prod (ns verdify-prod, ArgoCD app
-  `verdify-prod-dark` — legacy name) is **manual-sync behind the device-write
-  gate**: the `prod-promote` workflow opens a dev-equality-guarded PR, a human
-  merges, and an operator-initiated sync applies it. The staging overlay in
-  this repo is retired dead weight pending removal.
-- **Dev is device-dark by construction** (ingestor replicas:0 +
-  deny-esp32-egress + VERDIFY_DEVICE_WRITE_ENABLED=0) and its database is a
-  **nightly restored copy of prod** (overlays/dev/db-restore-from-prod.yaml;
-  dev-written plans are wiped nightly and never replicate to prod). Firmware
-  is hot-staged direct to prod — there is no dev device.
+  2026-05-31 `live/platform-main` deploy branch is RETIRED.
+- **ONE environment — prod only.** The `verdify-dev` proving environment AND
+  the staging overlay are **DECOMMISSIONED and DELETED** (2026-06-16: ns / DB /
+  PVC / PV+Synology-LUN / ArgoCD app gone; `overlays/{dev,staging}` removed
+  here; `applications/local-dev/verdify.yaml` removed from `jvallery/agents`).
+  Prod (ns `verdify-prod`, ArgoCD app `verdify-prod-dark` — legacy name) is the
+  only env and serves lab/graphs/api.verdify.ai. It is **manual-sync behind the
+  device-write gate**. NOTE: `verdify-www` (verdify.ai/www marketing) and
+  `verdify-crm` are SEPARATE products in SEPARATE repos — unrelated to the
+  greenhouse, do not touch.
+- **Pipeline (single-env):** every push to main publishes digest-pinned images
+  to GHCR (immutable `sha-<sha>` + mutable `branch-main` tags). There is **no
+  environment write-back** — `bump-dev-digests` / `request-gitops-promotion` are
+  removed. Prod is advanced by the `prod-promote` workflow (dispatch), which
+  resolves each promotable image's `:branch-main` digest from GHCR (imagetools),
+  surgically bumps `overlays/prod`, and opens a `prod-promote` PR;
+  `promote-diff-guard` enforces a digests-only change-surface; a human merges and
+  an operator runs the gated `argocd app sync verdify-prod-dark`. Promotable set
+  = api/mcp/ingestor/migrate/planner (setpoint-server + lab are hand-pinned).
+- **No dev device / no dev DB.** Firmware is hot-staged direct to prod. There is
+  no nightly prod-restore copy anymore (it lived in dev).
 - **Operating from the laptop:** see `docs/runbooks/laptop-operator.md` for
-  DB access (`scripts/verdify-db.sh`), pipeline triggers, promotion, the
+  DB access (`scripts/verdify-db.sh prod`), pipeline triggers, promotion, the
   gated prod sync, and the firmware OTA procedure (all runnable from any
   kubectl host).
 
