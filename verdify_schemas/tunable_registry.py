@@ -671,7 +671,7 @@ REGISTRY: dict[str, TunableDef] = {
         esp_object_id="mister_center_penalty",
         cfg_readback_object_id="cfg___mister_center_penalty",
         push_owner="planner",
-        planner_pushable=False,
+        planner_pushable=True,
         tier=2,
         notes="Score penalty on center zone to discourage over-misting seedlings.",
     ),
