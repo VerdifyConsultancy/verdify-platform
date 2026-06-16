@@ -107,6 +107,20 @@ LIGHTING_TARGET_MINUTE_PARAMS = frozenset(
 )
 
 
+# Per-circuit lux ON/OFF thresholds. These are firmware-persisted (restore_value)
+# but revert to cold defaults on an ESP32 reboot/OTA. They must be FORCE-
+# reconciled on reconnect (not seeded from the device's possibly-reverted cfg),
+# so a reboot cannot strand the grow lights on a stale threshold and cut them at
+# dawn (the 2026-06-16 incident). Including them in BAND_DRIVEN_PARAMS makes the
+# reconnect reconcile re-push the dispatcher-resolved (AI-tunable) value
+# immediately instead of waiting for the next drift-detection cycle.
+LIGHTING_CIRCUIT_LUX_PARAMS = frozenset(
+    name
+    for name in LIGHTING_CIRCUIT_DEFAULT_PARAMS
+    if name.endswith("_lux_threshold") or name.endswith("_lux_hysteresis")
+)
+
+
 IRRIGATION_SCHEDULE_PARAMS = frozenset(
     {
         "irrig_wall_start_hour",
@@ -152,7 +166,7 @@ HOUSE_BAND_PARAMS = frozenset(
 )
 
 
-BAND_DRIVEN_PARAMS = CROP_BAND_REG | LIGHTING_POLICY_PARAMS
+BAND_DRIVEN_PARAMS = CROP_BAND_REG | LIGHTING_POLICY_PARAMS | LIGHTING_CIRCUIT_LUX_PARAMS
 
 
 SAFETY_RAIL_PARAMS = frozenset(name for name, spec in REGISTRY.items() if spec.push_owner == "safety")

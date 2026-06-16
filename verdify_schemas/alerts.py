@@ -32,6 +32,7 @@ AlertType = Literal[
     "house_band_drift",
     "irrigation_feedback_gap",
     "leak_detected",
+    "lighting_cfg_threshold_drift",
     "climate_action_proof_stale",
     "plan_context_failed",
     "planner_band_ownership_drift",
@@ -71,6 +72,7 @@ ALERT_TYPES: tuple[str, ...] = (
     "house_band_drift",
     "irrigation_feedback_gap",
     "leak_detected",
+    "lighting_cfg_threshold_drift",
     "climate_action_proof_stale",
     "plan_context_failed",
     "planner_band_ownership_drift",
@@ -272,6 +274,18 @@ class PlannerTunableRangeViolation(_DetailsBase):
 
 class PlannerTunableRangeDriftDetails(_DetailsBase):
     violations: list[PlannerTunableRangeViolation]
+
+
+class LightingCfgThresholdDriftOffender(_DetailsBase):
+    parameter: str
+    light_key: str
+    desired: float
+    device_cfg: float
+    observed_ts: str | None = None
+
+
+class LightingCfgThresholdDriftDetails(_DetailsBase):
+    offenders: list[LightingCfgThresholdDriftOffender]
 
 
 class SafetyInvalidDetails(_DetailsBase):
@@ -531,6 +545,11 @@ class PlannerTunableRangeDriftAlert(_AlertBase):
     details: PlannerTunableRangeDriftDetails
 
 
+class LightingCfgThresholdDriftAlert(_AlertBase):
+    alert_type: Literal["lighting_cfg_threshold_drift"]
+    details: LightingCfgThresholdDriftDetails
+
+
 class SafetyInvalidAlert(_AlertBase):
     alert_type: Literal["safety_invalid"]
     details: SafetyInvalidDetails
@@ -636,6 +655,7 @@ AlertEnvelopeUnion = Annotated[
     | HouseBandDriftAlert
     | IrrigationFeedbackGapAlert
     | LeakDetectedAlert
+    | LightingCfgThresholdDriftAlert
     | ClimateActionProofStaleAlert
     | PlanContextFailedAlert
     | PlannerBandOwnershipDriftAlert

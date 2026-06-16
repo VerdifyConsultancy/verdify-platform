@@ -27,6 +27,7 @@ from verdify_schemas.alerts import (
     HouseBandDriftAlert,
     IrrigationFeedbackGapAlert,
     LeakDetectedAlert,
+    LightingCfgThresholdDriftAlert,
     PlanContextFailedAlert,
     PlannerBandOwnershipDriftAlert,
     PlannerEvaluationMissedAlert,
@@ -269,6 +270,20 @@ CASES = {
     "planner_evaluation_missed": (
         PlannerEvaluationMissedAlert,
         {"plan_id": "iris-20260509-0551", "age_hours": 27},
+    ),
+    "lighting_cfg_threshold_drift": (
+        LightingCfgThresholdDriftAlert,
+        {
+            "offenders": [
+                {
+                    "parameter": "gl_main_lux_threshold",
+                    "light_key": "main",
+                    "desired": 40000.0,
+                    "device_cfg": 3000.0,
+                    "observed_ts": "2026-06-16T12:03:14-06:00",
+                }
+            ]
+        },
     ),
     "planner_tunable_range_drift": (
         PlannerTunableRangeDriftAlert,

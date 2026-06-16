@@ -1195,6 +1195,78 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                 }
             )
 
+        # 7f. Device lighting threshold drift. The per-circuit grow-light lux
+        # ON/OFF thresholds are dispatcher-owned but firmware-persisted, and a
+        # restore_value:no global reverts to a cold default on an ESP32
+        # reboot/OTA. On 2026-06-16 that revert (40000->3000) silently cut the
+        # grow lights at dawn for hours. This is an INDEPENDENT check (it does
+        # NOT rely on the dispatcher's own drift re-push, which is exactly what
+        # failed): desired = the single AI-tunable source of truth
+        # fn_lighting_circuit_policy; observed = setpoint_snapshot, the device's
+        # authoritative cfg mirror (NOT the sparse setpoint_changes esp32 rows).
+        # Self-clears the moment the dispatcher/operator re-asserts the policy
+        # value and the device snapshots it back.
+        lux_drift_rows = await conn.fetch(
+            """
+            WITH policy AS (
+                SELECT light_key, lux_on_threshold, lux_hysteresis
+                  FROM fn_lighting_circuit_policy(now(), 'vallery')
+            ),
+            desired(parameter, value, light_key) AS (
+                SELECT 'gl_' || light_key || '_lux_threshold',
+                       lux_on_threshold::double precision, light_key FROM policy
+                UNION ALL
+                SELECT 'gl_' || light_key || '_lux_hysteresis',
+                       lux_hysteresis::double precision, light_key FROM policy
+            ),
+            observed AS (
+                SELECT DISTINCT ON (parameter) parameter, value::double precision AS value, ts
+                  FROM setpoint_snapshot
+                 WHERE parameter IN (SELECT parameter FROM desired)
+                 ORDER BY parameter, ts DESC
+            )
+            SELECT d.parameter, d.light_key, d.value AS desired,
+                   o.value AS observed, o.ts AS observed_ts
+              FROM desired d
+              JOIN observed o ON o.parameter = d.parameter
+             WHERE abs(o.value - d.value) > 0.5
+             ORDER BY d.parameter
+            """
+        )
+        if lux_drift_rows:
+            lux_offenders = [
+                {
+                    "parameter": r["parameter"],
+                    "light_key": r["light_key"],
+                    "desired": float(r["desired"]),
+                    "device_cfg": float(r["observed"]),
+                    "observed_ts": r["observed_ts"].isoformat() if r["observed_ts"] else None,
+                }
+                for r in lux_drift_rows
+            ]
+            lux_sample = ", ".join(
+                f"{o['parameter']}: device {o['device_cfg']:g} != desired {o['desired']:g}"
+                for o in lux_offenders[:4]
+            )
+            lux_worst = max(abs(o["device_cfg"] - o["desired"]) for o in lux_offenders)
+            alerts.append(
+                {
+                    "alert_type": "lighting_cfg_threshold_drift",
+                    "severity": "critical",
+                    "category": "system",
+                    "sensor_id": "system.lighting_lux_threshold",
+                    "zone": None,
+                    "message": (
+                        f"{len(lux_offenders)} grow-light lux threshold(s) drifted on the device "
+                        f"vs the AI-tunable policy: {lux_sample}. A too-low ON threshold cuts the "
+                        f"grow lights at dawn."
+                    ),
+                    "details": {"offenders": lux_offenders},
+                    "metric_value": float(lux_worst),
+                    "threshold_value": 0.5,
+                }
+            )
+
         # 7e. Future plan horizon guard. Validation smoke must never leave the
         # production planner with only a current-past waypoint surface; SUNRISE /
         # SUNSET/MIDNIGHT are expected to maintain future non-oneshot waypoints.

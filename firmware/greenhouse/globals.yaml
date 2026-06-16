@@ -355,15 +355,21 @@ globals:
     restore_value: no
     initial_value: '19'
 
+  # Cold-start fallback ONLY — matches the registry default + fn_lighting_circuit_policy
+  # default (40000 ON / 8000 hyst => 48000 OFF). The live value is the AI-tunable
+  # policy, re-asserted by the dispatcher on every cycle/reconnect; this default
+  # just keeps the brief post-reboot window (before the dispatcher reconnects)
+  # from cutting grow lights at dawn (the 2026-06-16 incident, where the old
+  # 3000/1500 cold default ran for hours after a reboot).
   - id: gl_main_lux_threshold
     type: float
     restore_value: no
-    initial_value: '3000.0'
+    initial_value: '40000.0'
 
   - id: gl_main_lux_hysteresis
     type: float
     restore_value: no
-    initial_value: '1500.0'
+    initial_value: '8000.0'
 
   - id: gl_main_min_on_s
     type: int
@@ -400,15 +406,17 @@ globals:
     restore_value: no
     initial_value: '19'
 
+  # Cold-start fallback ONLY (see gl_main_lux_threshold above) — 40000 ON /
+  # 8000 hyst => 48000 OFF, matching the registry + policy default.
   - id: gl_grow_lux_threshold
     type: float
     restore_value: no
-    initial_value: '3000.0'
+    initial_value: '40000.0'
 
   - id: gl_grow_lux_hysteresis
     type: float
     restore_value: no
-    initial_value: '1500.0'
+    initial_value: '8000.0'
 
   - id: gl_grow_min_on_s
     type: int
