@@ -213,6 +213,12 @@ class Diagnostics(BaseModel):
     sntp_valid: int | None = Field(default=None, ge=0, le=1)
     sntp_miss_count: int | None = Field(default=None, ge=0)
     last_sntp_sync_age_s: int | None = Field(default=None, ge=0)
+    # Firmware-v2 (#327) text evidence surface — the device's own decision
+    # telemetry. `band_source` = which band the device actually obeys
+    # ("onchip_curve" | "dispatcher_legacy"); `zone_wet_granted` = which zone the
+    # priority arbiter granted wetting to this cycle ("none"|center|south|west|east).
+    band_source: str | None = Field(default=None)
+    zone_wet_granted: str | None = Field(default=None)
 
 
 # Every equipment_state row asserts one of these. Must cover every value in

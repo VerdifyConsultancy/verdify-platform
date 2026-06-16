@@ -140,6 +140,70 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                 }
             )
 
+        # 1b. House climate OUT of the commanded band — the wet-night detector.
+        # The 2026-06-15 regression ran the house at RH ~84% / VPD ~0.37 (far
+        # below its commanded dry band) for FOUR nights with NO alert, because
+        # nothing compared actual climate to the commanded band. Compare recent
+        # actual house VPD to the commanded vpd_low/high; fire when sustained
+        # out-of-band — too WET (below floor = the orchid-drying risk) or too DRY
+        # (above ceiling = over-drying risk). Auto-resolves on recovery.
+        band_drift = await conn.fetchrow(
+            """
+            WITH cmd AS (
+              SELECT fn_crop_band_value('house','vpd_low',  now()) AS vpd_low,
+                     fn_crop_band_value('house','vpd_high', now()) AS vpd_high,
+                     fn_crop_band_value('house','vpd_target', now()) AS vpd_target
+            ),
+            recent AS (
+              SELECT vpd_avg, rh_avg FROM climate
+               WHERE ts > now() - interval '45 minutes' AND vpd_avg IS NOT NULL
+            )
+            SELECT (SELECT vpd_low FROM cmd) AS band_low,
+                   (SELECT vpd_high FROM cmd) AS band_high,
+                   (SELECT vpd_target FROM cmd) AS band_target,
+                   round(avg(r.vpd_avg)::numeric, 2) AS actual_vpd,
+                   round(avg(r.rh_avg)::numeric, 0)  AS actual_rh,
+                   count(*) AS total,
+                   count(*) FILTER (WHERE r.vpd_avg < (SELECT vpd_low FROM cmd) - 0.12)  AS rows_wet,
+                   count(*) FILTER (WHERE r.vpd_avg > (SELECT vpd_high FROM cmd) + 0.12) AS rows_dry
+              FROM recent r
+            """
+        )
+        if band_drift and band_drift["band_low"] is not None and int(band_drift["total"] or 0) >= 15:
+            total = int(band_drift["total"])
+            wet_frac = int(band_drift["rows_wet"] or 0) / total
+            dry_frac = int(band_drift["rows_dry"] or 0) / total
+            if wet_frac > 0.8 or dry_frac > 0.8:
+                too_wet = wet_frac >= dry_frac
+                frac = wet_frac if too_wet else dry_frac
+                alerts.append(
+                    {
+                        "alert_type": "house_band_drift",
+                        "severity": "warning",
+                        "category": "climate",
+                        "sensor_id": None,
+                        "zone": "house",
+                        "message": (
+                            f"House {'TOO WET' if too_wet else 'TOO DRY'} vs commanded band "
+                            f"for {int(frac * 45)}+ of last 45min: actual VPD "
+                            f"{band_drift['actual_vpd']} kPa / RH {band_drift['actual_rh']}% vs band "
+                            f"[{round(float(band_drift['band_low']), 2)}-{round(float(band_drift['band_high']), 2)}]"
+                            + (" — ORCHID DRYING AT RISK" if too_wet else " — over-drying risk")
+                        ),
+                        "details": {
+                            "actual_vpd": float(band_drift["actual_vpd"]),
+                            "actual_rh": float(band_drift["actual_rh"]),
+                            "band_low": float(band_drift["band_low"]),
+                            "band_high": float(band_drift["band_high"]),
+                            "band_target": float(band_drift["band_target"]),
+                            "wet_frac": round(wet_frac, 2),
+                            "dry_frac": round(dry_frac, 2),
+                        },
+                        "metric_value": float(band_drift["actual_vpd"]),
+                        "threshold_value": float(band_drift["band_low"]) if too_wet else float(band_drift["band_high"]),
+                    }
+                )
+
         # 2. relay_stuck
         # v_relay_stuck is derived from commanded switch state, not independent
         # relay feedback. Treat long heater runtime as normal when current

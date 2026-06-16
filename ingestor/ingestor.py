@@ -929,10 +929,10 @@ async def write_diagnostics(pool: asyncpg.Pool, ts: datetime) -> None:
                    effective_heat_target_f, effective_cool_stage2_delta_f,
                    effective_vpd_hysteresis_kpa, effective_dehum_aggressive_kpa,
                    controller_time_epoch, controller_local_hour, sntp_valid, sntp_miss_count,
-                   last_sntp_sync_age_s
+                   last_sntp_sync_age_s, band_source, zone_wet_granted
                )
                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
-                       $17, $18, $19, $20, $21, $22, $23, $24, $25)""",
+                       $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)""",
             ts,
             diag.wifi_rssi,
             diag.heap_bytes,
@@ -958,6 +958,8 @@ async def write_diagnostics(pool: asyncpg.Pool, ts: datetime) -> None:
             diag.sntp_valid,
             diag.sntp_miss_count,
             diag.last_sntp_sync_age_s,
+            diag.band_source,
+            diag.zone_wet_granted,
         )
     log.debug("diagnostics row written")
     # #113: fan-out the diagnostics row. Use the explicit column list above so the
@@ -991,6 +993,8 @@ async def write_diagnostics(pool: asyncpg.Pool, ts: datetime) -> None:
             "sntp_valid": diag.sntp_valid,
             "sntp_miss_count": diag.sntp_miss_count,
             "last_sntp_sync_age_s": diag.last_sntp_sync_age_s,
+            "band_source": diag.band_source,
+            "zone_wet_granted": diag.zone_wet_granted,
         },
     )
 
