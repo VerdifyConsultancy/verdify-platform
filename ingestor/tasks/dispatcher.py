@@ -580,7 +580,8 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         # Firmware-v2 deterministic band (contract B2/B6/B7). The solar context
         # and the per-zone band-audit emission are unconditional (compliance
         # history accumulates before any flip); anchor pushes and the legacy
-        # band cutover are gated by VERDIFY_BAND_SOURCE (default: legacy).
+        # band cutover are gated by VERDIFY_BAND_SOURCE (default: anchors;
+        # legacy is the rollback hatch).
         anchors_mode = band_anchors.band_source() == band_anchors.BAND_SOURCE_ANCHORS
         solar_ctx = band_anchors.local_solar_context()
         anchor_values, anchor_origin = await band_anchors.crop_band_anchor_values(conn)
@@ -753,7 +754,32 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         # state is zero pushes; a crop_band_anchors change re-syncs within one
         # cycle. Gated on the firmware actually exposing the v2 entities so a
         # pre-OTA flip cannot strand forever-unconfirmed setpoint_changes rows.
-        if anchors_mode and band_anchors.anchors_supported():
+        #
+        # FAIL-CLOSED (data-path review F1, 2026-06-16): when the crop_band_anchors
+        # read FAILED (origin == table-error), `anchor_pushes` are the registry
+        # fallback envelope, which has historically lagged the live band (the
+        # 2026-06-15 wet-night orchid regression). The device is offline-first and
+        # already holds the correct band in NVS, so pushing a stale fallback over
+        # it is strictly worse than holding. Skip the anchor push this cycle and
+        # surface the held state as an alert instead of silently re-commanding a
+        # researched default. (table-absent cold-start still seeds normally.)
+        anchor_db_error = anchor_origin == band_anchors.ANCHOR_ORIGIN_TABLE_ERROR
+        if anchor_db_error and anchors_mode and band_anchors.anchors_supported():
+            log.warning(
+                "Dispatcher: crop_band_anchors read failed (origin=%s) — holding device NVS band, skipping anchor push",
+                anchor_origin,
+            )
+            existing_alert = await conn.fetchval(
+                "SELECT id FROM alert_log WHERE alert_type = 'band_anchor_db_read_failed' AND disposition = 'open' LIMIT 1"
+            )
+            if existing_alert is None:
+                await conn.execute(
+                    "INSERT INTO alert_log (alert_type, severity, category, message, details, source) "
+                    "VALUES ('band_anchor_db_read_failed', 'warning', 'system', $1, $2, 'dispatcher')",
+                    "crop_band_anchors unreadable; dispatcher held the device NVS band (no fallback push)",
+                    json.dumps({"origin": anchor_origin}),
+                )
+        if band_anchors.anchor_push_allowed(anchors_mode, band_anchors.anchors_supported(), anchor_origin):
             for param, val in anchor_pushes.items():
                 readback = shared.cfg_readback.get(param)
                 if readback is not None and readback_values_equivalent(param, readback, val):
@@ -789,11 +815,18 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         # Per-circuit lighting state machines: crop policy + Tempest history
         # seed both circuits, but active planner rows are allowed to diverge
         # circuit targets, thresholds, windows, dwell, and auto enable.
-        # Under VERDIFY_BAND_SOURCE=anchors the circuits are DIFFERENTIATED
-        # (#294/#295: gl_main/Vanda 13 mol·13 h, gl_grow/pepper 21 mol·15 h)
-        # and their windows are sunrise-anchored from the ephemeris instead of
-        # the policy table's fixed hours; planner overrides still win below.
-        anchor_lighting = band_anchors.lighting_circuit_overrides(solar_ctx.times) if anchors_mode else {}
+        # Under VERDIFY_BAND_SOURCE=anchors the per-circuit photoperiod minutes +
+        # DLI come from the DB lighting policy (fn_lighting_minutes_policy — the
+        # single AI-tunable source; gl_main and gl_grow are differentiated there),
+        # and ONLY the start/cutoff windows are sunrise-anchored from the
+        # ephemeris instead of the policy table's fixed hours. Planner rows still
+        # win below.
+        anchor_lighting: dict[str, float] = {}
+        if anchors_mode and lighting_circuit_rows:
+            circuit_minutes = {
+                row["light_key"]: float(int(row["target_light_minutes"])) for row in lighting_circuit_rows
+            }
+            anchor_lighting = band_anchors.lighting_circuit_overrides(solar_ctx.times, circuit_minutes)
         for row in lighting_circuit_rows or []:
             if not lighting_circuit_supported:
                 continue

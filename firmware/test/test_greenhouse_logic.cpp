@@ -3911,6 +3911,39 @@ TEST(night_dry_fog_served_by_curve_regardless_of_inert_override) {
     PASS();
 }
 
+// ── F7 (issue 5): VPD safety rails wired into the production band-first path ──
+TEST(f7_dry_override_seals_above_vpd_max_safe) {
+    // Extreme dryness (vpd > vpd_max_safe) forces SEALED_MIST immediately,
+    // bypassing the vpd_watch dwell. With a fresh state the dwell is NOT
+    // satisfied, so without the rail the band-first path would sit in IDLE.
+    auto sp = band_setpoints();
+    sp.sw_fsm_controller_enabled = true;
+    validate_setpoints(sp);
+    sp.sw_fsm_controller_enabled = true;
+    auto s = initial_state();  // vpd_watch_timer = 0 → dwell unmet
+    auto in = make_inputs(72.0f, sp.vpd_max_safe + 0.20f);  // temp in band, vpd above the rail
+    Mode m = determine_mode(in, sp, s, 5000);
+    ASSERT_EQ(m, SEALED_MIST);
+    ASSERT_TRUE(std::string(s.last_mode_reason) == "dry_override");
+    PASS();
+}
+
+TEST(f7_vpd_min_safe_rescue_suppressed_on_cold_day) {
+    // The vpd_min_safe rescue must NOT force DEHUM_VENT on a cold day
+    // (cold_dehum_allowed false) — that thrashes the vent (invariant #14). It is
+    // gated on the same cold-day policy as the band-first dehum.
+    auto sp = band_setpoints();
+    sp.sw_fsm_controller_enabled = true;
+    validate_setpoints(sp);
+    sp.sw_fsm_controller_enabled = true;
+    auto s = initial_state();
+    auto in = make_inputs(sp.temp_low + 0.5f, sp.vpd_min_safe - 0.05f);  // very humid, temp at band floor
+    in.outdoor_temp_f = sp.temp_low - sp.cold_vent_guard_delta_f - 5.0f;  // outdoor COLD
+    determine_mode(in, sp, s, 5000);
+    ASSERT_TRUE(std::string(s.last_mode_reason) != "vpd_min_safe_rescue");
+    PASS();
+}
+
 int main() {
     printf("═══════════════════════════════════════════════════════\n");
     printf("  Greenhouse Logic Tests — 11-fix review synthesis + OBS-1e\n");

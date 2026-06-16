@@ -1,0 +1,58 @@
+# band_defaults.yaml — THE single canonical declaration of the greenhouse band
+# defaults. Edit the band HERE (and regenerate the seed migration), not in the
+# four places it used to live independently.
+#
+# Why it lives in verdify_schemas/ (not config/): the tunable registry loads it
+# at import, and verdify_schemas/ is the one directory copied into every
+# container/CI/test that imports the registry (the ingestor Dockerfile copies
+# verdify_schemas/ but NOT config/). Keeping it beside the registry guarantees
+# it ships everywhere the defaults are needed.
+#
+# Derivation contract (enforced by verdify_schemas/tests/test_band_defaults_single_source.py):
+#   - tunable_registry _FW2_* defaults      == these values  (EXACT)
+#   - db/migrations/177 seed                 == gen_band_seed_sql.py over this file (EXACT)
+#   - crop_band_anchors (CI-seeded)          == these values for every declared row (EXACT)
+#   - firmware globals.yaml cold-start band  == a deliberately DRIER fail-safe view
+#                                               (within registry clamps; see globals.yaml header)
+#
+# Anchor order is ALWAYS [sr, sm, ss, mid] = [sunrise, solar-noon, sunset, solar-midnight].
+# Values are the live researched band (verified against prod crop_band_anchors 2026-06-16).
+
+# ── House air band (seeds crop_band_anchors crop_type='house') ──────────────
+house:
+  temp_low:    [62, 77, 68, 62]
+  temp_target: [67, 82, 73, 67]
+  temp_high:   [72, 87, 78, 72]
+  vpd_low:     [0.74, 0.92, 0.77, 0.77]
+  vpd_target:  [0.92, 1.10, 0.95, 0.95]
+  vpd_high:    [1.17, 1.35, 1.20, 1.20]
+
+# ── Per-zone VPD-target band (seeds crop_band_anchors per crop_type) ────────
+# zone -> crop_type: center=orchid, south=cannabis, west=citrus, east=pepper.
+# width_below/above define the per-zone band edges (min=target-below, max=target+above).
+# priority: 1=highest (drives the wetting arbiter); lower number wins.
+zones:
+  center:
+    crop: orchid
+    vpd_target: [0.90, 1.10, 0.90, 0.70]
+    width_below: 0.20
+    width_above: 0.35
+    priority: 1
+  south:
+    crop: cannabis
+    vpd_target: [0.85, 1.18, 0.95, 0.75]
+    width_below: 0.18
+    width_above: 0.22
+    priority: 2
+  west:
+    crop: citrus
+    vpd_target: [0.60, 1.10, 0.70, 0.57]
+    width_below: 0.16
+    width_above: 0.22
+    priority: 3
+  east:
+    crop: pepper
+    vpd_target: [0.80, 1.22, 0.90, 0.74]
+    width_below: 0.15
+    width_above: 0.23
+    priority: 4

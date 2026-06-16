@@ -185,13 +185,16 @@ class TestAnchorContract:
         }
 
     def test_contract_b2_defaults(self):
+        # Canonical band (verdify_schemas/band_defaults.yaml == live prod). The
+        # exact registry==YAML pin lives in test_band_defaults_single_source.py.
         values = band_anchors.registry_default_anchor_values()
-        assert values["band_temp_target_sm"] == 84.0
-        assert values["band_temp_low_sr"] == 60.0
-        assert values["band_temp_high_mid"] == 70.0
-        assert values["band_vpd_target_sm"] == 1.05
+        assert values["band_temp_target_sm"] == 82.0
+        assert values["band_temp_low_sr"] == 62.0
+        assert values["band_temp_high_mid"] == 72.0
+        assert values["band_vpd_target_sm"] == 1.10
         assert values["zone_vpd_target_south_sm"] == 1.18
         assert values["zone_vpd_target_east_mid"] == 0.74
+        assert values["zone_vpd_target_center_mid"] == 0.70  # the orchid dry-night value (was the wet 0.50)
         assert values["zone_vpd_width_below_center"] == 0.20
         assert values["zone_vpd_width_above_center"] == 0.35
         assert [values[f"zone_priority_{z}"] for z in ("center", "south", "west", "east")] == [1, 2, 3, 4]
@@ -213,12 +216,13 @@ class TestZoneBandAudit:
     def test_solar_noon_band(self):
         values = band_anchors.registry_default_anchor_values()
         bands = band_anchors.zone_band_values(values, phase=1.0)
-        assert bands[("house", "temp_target")] == pytest.approx(84.0)
-        assert bands[("house", "vpd_low")] == pytest.approx(0.60)
-        assert bands[("house", "vpd_high")] == pytest.approx(1.40)
-        assert bands[("center", "vpd_target")] == pytest.approx(1.05)
-        assert bands[("center", "vpd_low")] == pytest.approx(1.05 - 0.20)
-        assert bands[("center", "vpd_high")] == pytest.approx(1.05 + 0.35)
+        # Solar-noon (sm) anchors of the canonical band.
+        assert bands[("house", "temp_target")] == pytest.approx(82.0)
+        assert bands[("house", "vpd_low")] == pytest.approx(0.92)
+        assert bands[("house", "vpd_high")] == pytest.approx(1.35)
+        assert bands[("center", "vpd_target")] == pytest.approx(1.10)
+        assert bands[("center", "vpd_low")] == pytest.approx(1.10 - 0.20)
+        assert bands[("center", "vpd_high")] == pytest.approx(1.10 + 0.35)
         assert bands[("south", "vpd_target")] == pytest.approx(1.18)
         # Temperature is one house curve — every zone reports it (§3.1).
         for zone in ("center", "south", "west", "east"):
@@ -244,30 +248,44 @@ class TestZoneBandAudit:
 
 
 class TestBandSourceFlag:
-    def test_default_is_legacy(self, monkeypatch):
+    def test_default_is_anchors(self, monkeypatch):
+        # Default now matches prod reality (anchors); legacy is the rollback hatch.
         monkeypatch.delenv(band_anchors.BAND_SOURCE_ENV, raising=False)
-        assert band_anchors.band_source() == band_anchors.BAND_SOURCE_LEGACY
+        assert band_anchors.band_source() == band_anchors.BAND_SOURCE_ANCHORS
 
-    def test_anchors_opt_in(self, monkeypatch):
+    def test_anchors_explicit(self, monkeypatch):
         monkeypatch.setenv(band_anchors.BAND_SOURCE_ENV, "anchors")
         assert band_anchors.band_source() == band_anchors.BAND_SOURCE_ANCHORS
 
-    def test_unknown_value_falls_back_to_legacy(self, monkeypatch):
-        monkeypatch.setenv(band_anchors.BAND_SOURCE_ENV, "yolo")
+    def test_legacy_rollback_hatch(self, monkeypatch):
+        # Explicit legacy is the no-OTA rollback escape and must still work.
+        monkeypatch.setenv(band_anchors.BAND_SOURCE_ENV, "legacy")
         assert band_anchors.band_source() == band_anchors.BAND_SOURCE_LEGACY
+
+    def test_unknown_value_falls_back_to_anchors(self, monkeypatch):
+        monkeypatch.setenv(band_anchors.BAND_SOURCE_ENV, "yolo")
+        assert band_anchors.band_source() == band_anchors.BAND_SOURCE_ANCHORS
 
 
 class TestLightingDifferentiation:
-    def test_circuit_targets(self):
-        overrides = band_anchors.lighting_circuit_overrides(_JUNE)
-        assert overrides["gl_main_dli_target"] == 13.0  # Vanda (#294)
-        assert overrides["gl_main_target_light_minutes"] == 780.0  # 13 h
-        assert overrides["gl_grow_dli_target"] == 21.0  # pepper hydro (#295)
-        assert overrides["gl_grow_target_light_minutes"] == 900.0  # 15 h
+    # Photoperiod minutes + DLI now come from the DB lighting policy (the single
+    # AI-tunable source, fn_lighting_minutes_policy); the override only
+    # sunrise-anchors the window HOURS. 780 min = 13 h (main/Vanda), 900 = 15 h (grow).
+    _CIRCUIT_MIN = {"main": 780.0, "grow": 900.0}
+
+    def test_overrides_only_window_hours(self):
+        overrides = band_anchors.lighting_circuit_overrides(_JUNE, self._CIRCUIT_MIN)
+        # No dli/minutes override — those flow from the DB policy unchanged.
+        assert set(overrides) == {
+            "gl_main_sunrise_hour",
+            "gl_main_sunset_hour",
+            "gl_grow_sunrise_hour",
+            "gl_grow_sunset_hour",
+        }
 
     def test_sunrise_anchored_window_tracks_season(self):
-        june = band_anchors.lighting_circuit_overrides(_JUNE)
-        dec = band_anchors.lighting_circuit_overrides(_DEC)
+        june = band_anchors.lighting_circuit_overrides(_JUNE, self._CIRCUIT_MIN)
+        dec = band_anchors.lighting_circuit_overrides(_DEC, self._CIRCUIT_MIN)
         assert june["gl_main_sunrise_hour"] == round(_JUNE.sunrise_min / 60)
         assert dec["gl_main_sunrise_hour"] == round(_DEC.sunrise_min / 60)
         assert june["gl_main_sunrise_hour"] != dec["gl_main_sunrise_hour"]
@@ -278,7 +296,7 @@ class TestLightingDifferentiation:
 
     def test_window_hours_within_registry_bounds(self):
         for st in (_JUNE, _DEC):
-            overrides = band_anchors.lighting_circuit_overrides(st)
+            overrides = band_anchors.lighting_circuit_overrides(st, self._CIRCUIT_MIN)
             for param, value in overrides.items():
                 spec = REGISTRY[param]
                 assert spec.min <= value <= spec.max, f"{param}={value} outside [{spec.min}, {spec.max}]"

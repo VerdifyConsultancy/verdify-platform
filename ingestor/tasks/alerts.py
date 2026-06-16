@@ -204,6 +204,50 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                     }
                 )
 
+        # 1b. band_device_db_divergence — the device's resolved on-chip band vs
+        # the DB-served band (issue 2). Catches a silent firmware-vs-DB curve skew,
+        # a frozen/unsynced on-chip band, or sw_onchip_band_enabled flipped off —
+        # all of which the compliance panels (which read the DB band) would HIDE.
+        bdd = await conn.fetchrow(
+            """
+            SELECT max_temp_abs_diff, max_vpd_abs_diff,
+                   EXTRACT(EPOCH FROM device_age) AS device_age_s
+              FROM v_band_device_divergence
+            """
+        )
+        if bdd and bdd["max_temp_abs_diff"] is not None:
+            temp_d = float(bdd["max_temp_abs_diff"])
+            vpd_d = float(bdd["max_vpd_abs_diff"])
+            age_s = float(bdd["device_age_s"] or 0.0)
+            # Thresholds sit ABOVE the expected firmware harmonic-approximation
+            # noise (~0.05-0.25 kPa between anchors): they catch a GROSS drift
+            # (band off, anchors unsynced, on-chip curve frozen) or a stale device
+            # readback — not the normal small curve approximation.
+            temp_thr, vpd_thr, age_thr = 3.0, 0.40, 900.0
+            if temp_d > temp_thr or vpd_d > vpd_thr or age_s > age_thr:
+                reason = "device band readback stale" if age_s > age_thr else "device band drifted from DB band"
+                alerts.append(
+                    {
+                        "alert_type": "band_device_db_divergence",
+                        "severity": "warning",
+                        "category": "climate",
+                        "sensor_id": None,
+                        "zone": "house",
+                        "message": (
+                            f"Band {reason}: device-vs-DB max ΔT {round(temp_d, 2)}°F / "
+                            f"ΔVPD {round(vpd_d, 3)} kPa, device readback {int(age_s)}s old "
+                            f"(compliance panels read the DB band and would not show this)"
+                        ),
+                        "details": {
+                            "max_temp_abs_diff": round(temp_d, 3),
+                            "max_vpd_abs_diff": round(vpd_d, 3),
+                            "device_age_s": round(age_s, 1),
+                        },
+                        "metric_value": round(max(temp_d / temp_thr, vpd_d / vpd_thr), 3),
+                        "threshold_value": 1.0,
+                    }
+                )
+
         # 2. relay_stuck
         # v_relay_stuck is derived from commanded switch state, not independent
         # relay feedback. Treat long heater runtime as normal when current

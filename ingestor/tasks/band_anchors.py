@@ -20,32 +20,23 @@ The planner has NO band-authoring path: every param here is push_owner="band"
 (CROP_BAND_REG), so planner rows for them are dropped by the dispatcher and
 rejected by MCP.
 
-FLIP PROCEDURE — VERDIFY_BAND_SOURCE (default: legacy; the change is inert
-until firmware v2 is OTA'd):
+BAND SOURCE — VERDIFY_BAND_SOURCE (default: `anchors`; prod reality since the
+2026-06-15 firmware-v2 cutover). The on-chip anchor curve IS the live band; the
+code default now matches prod so reading it gives the true mental model.
 
-  1. Land the parallel workstreams: the `crop_band_anchors` migration (+ the
-     setpoint_snapshot zone/band_role/target_value columns) and the firmware
-     v2 OTA exposing one ESPHome number entity per tunable with
-     object_id == <param name> and a `cfg_<param name>` readback sensor.
-  2. While VERDIFY_BAND_SOURCE is unset/`legacy`, behaviour is unchanged: the
-     dispatcher keeps pushing the legacy temp_low/temp_high/vpd_low/vpd_high
-     band params and fixed-hour lighting policy. Band-audit emission (b)
-     activates on its own as soon as the snapshot columns exist — it is
-     flag-independent so compliance history accumulates before the flip.
-  3. Set VERDIFY_BAND_SOURCE=anchors on the ingestor (k3s: env on the
-     verdify-ingestor Deployment; prod is gated manual-sync) and restart the
-     pod. The dispatcher then pushes the anchor tunables through the normal
-     setpoint_changes → push_to_esp32 → cfg_* confirm loop.
-  4. Legacy temp_low/temp_high/vpd_low/vpd_high band pushes STOP automatically
-     only once every anchor param is CONFIRMED by its cfg_* readback (until
-     then both run, so the device never sees a band gap). Lighting flips to
-     the differentiated, sunrise-anchored windows immediately with the flag.
-  5. Rollback: set VERDIFY_BAND_SOURCE=legacy (or unset) and restart — the
-     legacy band push resumes on the next dispatcher cycle.
+  - Default / unset / `anchors`: the dispatcher syncs the 56 anchor tunables
+    through the normal setpoint_changes → push_to_esp32 → cfg_* confirm loop and
+    the device computes its band on-chip. The legacy temp_low/high+vpd_low/high
+    band pushes STOP automatically once every anchor param is CONFIRMED by its
+    cfg_* readback (until then both run, so the device never sees a band gap).
+  - `legacy`: the no-OTA ROLLBACK HATCH. Set VERDIFY_BAND_SOURCE=legacy and
+    restart and the dispatcher resumes pushing the legacy band params on the
+    next cycle. Kept as a safety escape only — not the default path.
 
-No DB table yet? The contract-§B2 researched envelopes (the registry defaults)
-are used, so audit emission and a dev flip remain possible before the
-migration lands. Table rows always override defaults.
+Band-audit emission (b) is flag-independent, so compliance history accumulates
+regardless of source. On a `crop_band_anchors` read error the dispatcher fails
+CLOSED — it HOLDS the device NVS band (raising band_anchor_db_read_failed)
+rather than push the registry fallback. Table rows always override defaults.
 """
 
 from __future__ import annotations
@@ -76,10 +67,6 @@ log = logging.getLogger("tasks")
 BAND_SOURCE_ENV = "VERDIFY_BAND_SOURCE"
 BAND_SOURCE_LEGACY = "legacy"
 BAND_SOURCE_ANCHORS = "anchors"
-
-# Legacy dispatcher-pushed band params that become read-only firmware
-# readbacks once the on-chip anchor curve is live (§B2 strip list).
-LEGACY_BAND_INSTANT_PARAMS = ("temp_low", "temp_high", "vpd_low", "vpd_high")
 
 # ── Zone / crop / series shape (§B2, §B7) ────────────────────────────────────
 ZONES = ("center", "south", "west", "east")
@@ -150,13 +137,17 @@ ANCHOR_REQUIRED_OBJECT_IDS = frozenset({"band_temp_target_sm", "zone_vpd_target_
 
 # ── Flag / support / confirmation ────────────────────────────────────────────
 def band_source() -> str:
-    """Read VERDIFY_BAND_SOURCE at call time (test- and restart-friendly)."""
-    raw = os.environ.get(BAND_SOURCE_ENV, BAND_SOURCE_LEGACY).strip().lower()
-    if raw == BAND_SOURCE_ANCHORS:
-        return BAND_SOURCE_ANCHORS
-    if raw not in ("", BAND_SOURCE_LEGACY):
-        log.warning("Unknown %s=%r — falling back to %s", BAND_SOURCE_ENV, raw, BAND_SOURCE_LEGACY)
-    return BAND_SOURCE_LEGACY
+    """Read VERDIFY_BAND_SOURCE at call time (test- and restart-friendly).
+
+    Default is anchors (prod reality); `legacy` is the explicit no-OTA rollback
+    hatch. Unknown values default to anchors with a warning.
+    """
+    raw = os.environ.get(BAND_SOURCE_ENV, BAND_SOURCE_ANCHORS).strip().lower()
+    if raw == BAND_SOURCE_LEGACY:
+        return BAND_SOURCE_LEGACY
+    if raw not in ("", BAND_SOURCE_ANCHORS):
+        log.warning("Unknown %s=%r — defaulting to %s", BAND_SOURCE_ENV, raw, BAND_SOURCE_ANCHORS)
+    return BAND_SOURCE_ANCHORS
 
 
 # The on-chip API service that writes any band/zone anchor global by name
@@ -203,6 +194,29 @@ def anchors_confirmed(desired: dict[str, float]) -> bool:
 
 
 # ── Anchor values: registry defaults overlaid with crop_band_anchors ─────────
+# Origin labels returned by crop_band_anchor_values(). The dispatcher keys its
+# fail-closed decision on these, so they are named constants (not bare string
+# literals) — a typo would otherwise silently defeat the guard.
+ANCHOR_ORIGIN_DB = "crop_band_anchors"  # live DB rows overlaid — authoritative
+ANCHOR_ORIGIN_TABLE_ABSENT = "defaults"  # table not created yet (cold-start seed)
+ANCHOR_ORIGIN_TABLE_ERROR = "defaults(table-error)"  # transient read failure — DO NOT push
+
+
+def anchor_push_allowed(anchors_mode: bool, supported: bool, origin: str) -> bool:
+    """Fail-closed gate for the anchor push (data-path review F1, 2026-06-16).
+
+    Never push the registry fallback envelope over the device's NVS band when the
+    `crop_band_anchors` read FAILED — the firmware is offline-first and already
+    holds the correct band, so a stale fallback push is strictly worse than
+    holding (the 2026-06-15 wet-night orchid regression came in via that lag). A
+    transient DB read error (ANCHOR_ORIGIN_TABLE_ERROR) holds; a successful read
+    or a cold-start table-absent seed pushes normally.
+    """
+    if not (anchors_mode and supported):
+        return False
+    return origin != ANCHOR_ORIGIN_TABLE_ERROR
+
+
 def registry_default_anchor_values() -> dict[str, float]:
     """Contract-§B2 researched envelopes, straight from the tunable registry."""
     return {name: float(REGISTRY[name].default) for name in ANCHOR_SYNC_PARAMS}
@@ -255,7 +269,7 @@ async def crop_band_anchor_values(conn: asyncpg.Connection) -> tuple[dict[str, f
     try:
         exists = await conn.fetchval("SELECT to_regclass('public.crop_band_anchors') IS NOT NULL")
         if not exists:
-            return values, "defaults"
+            return values, ANCHOR_ORIGIN_TABLE_ABSENT
         current_season: str | None
         try:
             current_season = await conn.fetchval("SELECT fn_current_season()")
@@ -265,7 +279,7 @@ async def crop_band_anchor_values(conn: asyncpg.Connection) -> tuple[dict[str, f
         rows = await conn.fetch("SELECT * FROM crop_band_anchors")
     except asyncpg.PostgresError as exc:
         log.warning("crop_band_anchors read failed; using contract defaults: %s", exc)
-        return values, "defaults(table-error)"
+        return values, ANCHOR_ORIGIN_TABLE_ERROR
 
     records = sorted(
         (dict(row) for row in rows),
@@ -274,7 +288,7 @@ async def crop_band_anchor_values(conn: asyncpg.Connection) -> tuple[dict[str, f
     for record in records:  # ascending score — best-matching season wins last
         if _row_season_score(record, current_season) > 0:
             _overlay_anchor_row(values, record)
-    return values, "crop_band_anchors"
+    return values, ANCHOR_ORIGIN_DB
 
 
 def _round_for_push(param: str, value: float) -> float:
@@ -401,26 +415,21 @@ async def emit_band_audit(conn: asyncpg.Connection, values: dict[str, float], ct
 # ── Lighting differentiation (#294/#295) ─────────────────────────────────────
 # circuit → (dli_target mol/m²/day, target_light_minutes). gl_main = Vanda
 # (13 mol, 13 h); gl_grow = pepper hydro (21 mol, 15 h).
-GL_CIRCUIT_TARGETS: dict[str, tuple[float, float]] = {
-    "main": (13.0, 780.0),
-    "grow": (21.0, 900.0),
-}
+def lighting_circuit_overrides(times: SolarTimes, circuit_minutes: dict[str, float]) -> dict[str, float]:
+    """Sunrise-anchored window HOURS for each lighting circuit (#294/#295).
 
-
-def lighting_circuit_overrides(times: SolarTimes) -> dict[str, float]:
-    """Per-circuit lighting values with sunrise-anchored windows.
-
-    Replaces the fixed-hour `fn_lighting_minutes_policy` window values when
-    VERDIFY_BAND_SOURCE=anchors: the window opens at (rounded) real sunrise
-    and closes photoperiod-hours later, so the schedule tracks the sun across
-    the year instead of freezing at a clock hour.
+    The window OPENS at the (rounded) real sunrise and CLOSES photoperiod-minutes
+    later, so the schedule tracks the sun across the year instead of freezing at a
+    clock hour. The photoperiod MINUTES and DLI come from the DB lighting policy
+    (fn_lighting_minutes_policy — the single AI-tunable source), passed in as
+    `circuit_minutes`; this overrides ONLY the start/cutoff HOURS, never the
+    minutes/DLI. (2026-06-16: removed the hardcoded GL_CIRCUIT_TARGETS that used
+    to override the DB photoperiod — a third source of truth for the same value.)
     """
     start_hour = max(0, min(23, round(times.sunrise_min / 60)))
     overrides: dict[str, float] = {}
-    for key, (dli_target, minutes) in GL_CIRCUIT_TARGETS.items():
+    for key, minutes in circuit_minutes.items():
         cutoff_hour = max(0, min(23, start_hour + round(minutes / 60)))
-        overrides[f"gl_{key}_dli_target"] = dli_target
-        overrides[f"gl_{key}_target_light_minutes"] = minutes
         overrides[f"gl_{key}_sunrise_hour"] = float(start_hour)
         overrides[f"gl_{key}_sunset_hour"] = float(cutoff_hour)
     return overrides

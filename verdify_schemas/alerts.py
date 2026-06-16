@@ -18,6 +18,8 @@ AlertSeverity = Literal["info", "warning", "critical"]
 AlertCategory = Literal["sensor", "equipment", "climate", "water", "system"]
 AlertDisposition = Literal["open", "acknowledged", "resolved", "suppressed"]
 AlertType = Literal[
+    "band_anchor_db_read_failed",
+    "band_device_db_divergence",
     "band_fn_null",
     "esp32_push_failed",
     "esp32_reboot",
@@ -58,6 +60,8 @@ AlertType = Literal[
 ]
 
 ALERT_TYPES: tuple[str, ...] = (
+    "band_anchor_db_read_failed",
+    "band_device_db_divergence",
     "band_fn_null",
     "esp32_push_failed",
     "esp32_reboot",
@@ -429,6 +433,21 @@ class ESP32PushFailedDetails(_DetailsBase):
     change_count: int = Field(..., ge=0)
 
 
+class BandAnchorDbReadFailedDetails(_DetailsBase):
+    # crop_band_anchors read failed; the dispatcher HELD the device NVS band
+    # rather than push the registry fallback envelope (data-path review F1).
+    origin: str
+
+
+class BandDeviceDbDivergenceDetails(_DetailsBase):
+    # The device's resolved on-chip band drifted from the DB-served band beyond
+    # the firmware-approximation tolerance, or the device band readback is stale
+    # (data-path review issue 2; from v_band_device_divergence).
+    max_temp_abs_diff: float = Field(..., ge=0)
+    max_vpd_abs_diff: float = Field(..., ge=0)
+    device_age_s: float = Field(..., ge=0)
+
+
 class PlanContextFailedDetails(_DetailsBase):
     reason: str
     stderr: str = ""
@@ -630,6 +649,16 @@ class ESP32PushFailedAlert(_AlertBase):
     details: ESP32PushFailedDetails
 
 
+class BandAnchorDbReadFailedAlert(_AlertBase):
+    alert_type: Literal["band_anchor_db_read_failed"]
+    details: BandAnchorDbReadFailedDetails
+
+
+class BandDeviceDbDivergenceAlert(_AlertBase):
+    alert_type: Literal["band_device_db_divergence"]
+    details: BandDeviceDbDivergenceDetails
+
+
 class PlanContextFailedAlert(_AlertBase):
     alert_type: Literal["plan_context_failed"]
     details: PlanContextFailedDetails
@@ -641,7 +670,9 @@ class BandFnNullAlert(_AlertBase):
 
 
 AlertEnvelopeUnion = Annotated[
-    BandFnNullAlert
+    BandAnchorDbReadFailedAlert
+    | BandDeviceDbDivergenceAlert
+    | BandFnNullAlert
     | ESP32PushFailedAlert
     | ESP32RebootAlert
     | FirmwareReliefCeilingAlert

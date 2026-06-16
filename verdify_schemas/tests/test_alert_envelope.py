@@ -12,6 +12,8 @@ from verdify_schemas.alerts import (
     ALERT_ENVELOPE_ADAPTER,
     ALERT_TYPES,
     AlertEnvelope,
+    BandAnchorDbReadFailedAlert,
+    BandDeviceDbDivergenceAlert,
     BandFnNullAlert,
     ClimateActionProofStaleAlert,
     ESP32PushFailedAlert,
@@ -54,6 +56,14 @@ from verdify_schemas.alerts import (
 NOW = "2026-05-01T12:00:00+00:00"
 
 CASES = {
+    "band_anchor_db_read_failed": (
+        BandAnchorDbReadFailedAlert,
+        {"origin": "defaults(table-error)"},
+    ),
+    "band_device_db_divergence": (
+        BandDeviceDbDivergenceAlert,
+        {"max_temp_abs_diff": 4.1, "max_vpd_abs_diff": 0.52, "device_age_s": 35.0},
+    ),
     "band_fn_null": (
         BandFnNullAlert,
         {"band_row_null": True, "zone_row_null": False, "house_row_null": True},
