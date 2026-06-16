@@ -29,6 +29,7 @@ AlertType = Literal[
     "heap_pressure_warning",
     "heat_manual_override",
     "heat_staging_inversion",
+    "house_band_drift",
     "irrigation_feedback_gap",
     "leak_detected",
     "climate_action_proof_stale",
@@ -67,6 +68,7 @@ ALERT_TYPES: tuple[str, ...] = (
     "heap_pressure_warning",
     "heat_manual_override",
     "heat_staging_inversion",
+    "house_band_drift",
     "irrigation_feedback_gap",
     "leak_detected",
     "climate_action_proof_stale",
@@ -319,6 +321,16 @@ class HeatStagingInversionDetails(_DetailsBase):
     d_heat_stage_2: float | None = None
 
 
+class HouseBandDriftDetails(_DetailsBase):
+    actual_vpd: float = Field(..., ge=0)
+    actual_rh: float = Field(..., ge=0, le=100)
+    band_low: float = Field(..., ge=0)
+    band_high: float = Field(..., ge=0)
+    band_target: float = Field(..., ge=0)
+    wet_frac: float = Field(..., ge=0, le=1)
+    dry_frac: float = Field(..., ge=0, le=1)
+
+
 class FirmwareReliefCeilingDetails(_DetailsBase):
     relief_cycle_count: int = Field(..., ge=0)
     ceiling_default: int = Field(..., ge=1)
@@ -544,6 +556,11 @@ class HeatStagingInversionAlert(_AlertBase):
     details: HeatStagingInversionDetails
 
 
+class HouseBandDriftAlert(_AlertBase):
+    alert_type: Literal["house_band_drift"]
+    details: HouseBandDriftDetails
+
+
 class IrrigationFeedbackGapAlert(_AlertBase):
     alert_type: Literal["irrigation_feedback_gap"]
     details: IrrigationFeedbackGapDetails
@@ -616,6 +633,7 @@ AlertEnvelopeUnion = Annotated[
     | HeapPressureWarningAlert
     | HeatManualOverrideAlert
     | HeatStagingInversionAlert
+    | HouseBandDriftAlert
     | IrrigationFeedbackGapAlert
     | LeakDetectedAlert
     | ClimateActionProofStaleAlert

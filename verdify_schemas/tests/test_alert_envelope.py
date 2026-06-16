@@ -24,6 +24,7 @@ from verdify_schemas.alerts import (
     HeapPressureWarningAlert,
     HeatManualOverrideAlert,
     HeatStagingInversionAlert,
+    HouseBandDriftAlert,
     IrrigationFeedbackGapAlert,
     LeakDetectedAlert,
     PlanContextFailedAlert,
@@ -157,6 +158,18 @@ CASES = {
             "temp_avg": 61.2,
             "temp_low": 62.0,
             "d_heat_stage_2": 3.0,
+        },
+    ),
+    "house_band_drift": (
+        HouseBandDriftAlert,
+        {
+            "actual_vpd": 0.74,
+            "actual_rh": 86.0,
+            "band_low": 0.9,
+            "band_high": 1.25,
+            "band_target": 1.05,
+            "wet_frac": 0.84,
+            "dry_frac": 0.0,
         },
     ),
     "irrigation_feedback_gap": (
