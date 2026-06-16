@@ -1271,40 +1271,22 @@ bounds AS MATERIALIZED (
     interval '10 minutes' AS step
   FROM raw_bounds
 ),
-tracked_params AS MATERIALIZED (
-  SELECT * FROM (VALUES
-    ('gl_main_lux_threshold'),('gl_main_lux_hysteresis'),
-    ('gl_grow_lux_threshold'),('gl_grow_lux_hysteresis'),
-    ('gl_lux_threshold'),('gl_lux_hysteresis')
-  ) AS p(parameter)
-),
-latest_values AS MATERIALIZED (
-  SELECT DISTINCT ON (tp.parameter) tp.parameter, ss.value::double precision AS value
-  FROM tracked_params tp
-  LEFT JOIN LATERAL (
-    SELECT value, ts
-    FROM setpoint_snapshot ss
-    WHERE ss.greenhouse_id='vallery' AND ss.parameter=tp.parameter
-    ORDER BY ss.ts DESC LIMIT 1
-  ) ss ON true
-  WHERE ss.value IS NOT NULL
-),
 policy AS MATERIALIZED (
   SELECT
     greatest(100.0, least(100000.0, COALESCE(
-      (SELECT value FROM latest_values WHERE parameter='gl_main_lux_threshold'),
-      (SELECT value FROM latest_values WHERE parameter='gl_lux_threshold'),
+      max(p.lux_on_threshold) FILTER (WHERE p.light_key='main'),
       40000.0))) AS main_on,
     greatest(0.0, least(25000.0, COALESCE(
-      (SELECT value FROM latest_values WHERE parameter='gl_main_lux_hysteresis'),
-      (SELECT value FROM latest_values WHERE parameter='gl_lux_hysteresis'),
+      max(p.lux_hysteresis) FILTER (WHERE p.light_key='main'),
       8000.0))) AS main_hyst,
     greatest(100.0, least(100000.0, COALESCE(
-      (SELECT value FROM latest_values WHERE parameter='gl_grow_lux_threshold'),
+      max(p.lux_on_threshold) FILTER (WHERE p.light_key='grow'),
       40000.0))) AS grow_on,
     greatest(0.0, least(25000.0, COALESCE(
-      (SELECT value FROM latest_values WHERE parameter='gl_grow_lux_hysteresis'),
+      max(p.lux_hysteresis) FILTER (WHERE p.light_key='grow'),
       8000.0))) AS grow_hyst
+  FROM bounds bd
+  CROSS JOIN LATERAL fn_lighting_circuit_policy(bd.state_to_ts, 'vallery') p
 ),
 policy_wide AS MATERIALIZED (
   SELECT
@@ -1384,28 +1366,85 @@ lanes AS (
 SELECT time, metric, value FROM lanes ORDER BY time, metric"""
 
 
-HOMEPAGE_LIGHTING_THRESHOLD_SQL_ACTUAL = """('Overhead Threshold Base'::text, p.main_on),
+HOMEPAGE_LIGHTING_THRESHOLD_SQL = """WITH raw_bounds AS (
+  SELECT $__timeFrom()::timestamptz AS from_ts, $__timeTo()::timestamptz AS to_ts
+),
+bounds AS MATERIALIZED (
+  SELECT GREATEST(from_ts, to_ts - interval '7 days') AS from_ts, to_ts AS to_ts,
+    LEAST(to_ts, now()) AS state_to_ts, interval '10 minutes' AS step
+  FROM raw_bounds
+),
+policy AS MATERIALIZED (
+  SELECT
+    greatest(100.0, least(100000.0, COALESCE(
+      max(p.lux_on_threshold) FILTER (WHERE p.light_key='main'),
+      40000.0))) AS main_on,
+    greatest(0.0, least(25000.0, COALESCE(
+      max(p.lux_hysteresis) FILTER (WHERE p.light_key='main'),
+      8000.0))) AS main_hyst,
+    greatest(100.0, least(100000.0, COALESCE(
+      max(p.lux_on_threshold) FILTER (WHERE p.light_key='grow'),
+      40000.0))) AS grow_on,
+    greatest(0.0, least(25000.0, COALESCE(
+      max(p.lux_hysteresis) FILTER (WHERE p.light_key='grow'),
+      8000.0))) AS grow_hyst
+  FROM bounds bd
+  CROSS JOIN LATERAL fn_lighting_circuit_policy(bd.state_to_ts, 'vallery') p
+),
+policy_wide AS MATERIALIZED (
+  SELECT main_on, main_on + main_hyst AS main_off, grow_on, grow_on + grow_hyst AS grow_off FROM policy
+),
+thresholds AS (
+  SELECT x.time, s.metric, s.value
+  FROM bounds bd CROSS JOIN policy_wide p
+  CROSS JOIN LATERAL (VALUES (bd.from_ts),(bd.to_ts)) AS x(time)
+  CROSS JOIN LATERAL (VALUES
+    ('Overhead Threshold Base'::text, p.main_on),
     ('Overhead Threshold'::text,      p.main_off),
     ('Grow Threshold Base'::text,     p.grow_on),
-    ('Grow Threshold'::text,          p.grow_off)"""
-
-HOMEPAGE_LIGHTING_THRESHOLD_SQL_SPLIT = """('Overhead Threshold Base'::text, p.main_on),
-    ('Overhead Threshold'::text,      p.main_on + GREATEST(250.0, (p.main_off - p.main_on) * 0.47)),
-    ('Grow Threshold Base'::text,     p.grow_on + GREATEST(250.0, (p.grow_off - p.grow_on) * 0.53)),
-    ('Grow Threshold'::text,          p.grow_off)"""
+    ('Grow Threshold'::text,          p.grow_off)
+  ) AS s(metric, value)
+),
+solar_actual AS MATERIALIZED (
+  SELECT time_bucket((SELECT step FROM bounds), c.ts) AS time, 'Solar'::text AS metric,
+    avg(COALESCE(c.outdoor_lux, c.lux))::double precision AS value
+  FROM climate c
+  WHERE c.ts >= (SELECT from_ts FROM bounds) AND c.ts <= (SELECT state_to_ts FROM bounds)
+    AND COALESCE(c.outdoor_lux, c.lux) IS NOT NULL
+  GROUP BY 1
+),
+solar_forecast_seed AS MATERIALIZED (
+  SELECT time, 'Solar Forecast'::text AS metric, value FROM solar_actual
+  WHERE (SELECT to_ts FROM bounds) > (SELECT state_to_ts FROM bounds)
+  ORDER BY time DESC LIMIT 1
+),
+solar_forecast AS MATERIALIZED (
+  SELECT DISTINCT ON (time_bucket((SELECT step FROM bounds), wf.ts))
+    time_bucket((SELECT step FROM bounds), wf.ts) AS time, 'Solar Forecast'::text AS metric,
+    (wf.solar_w_m2 * 120.0)::double precision AS value
+  FROM weather_forecast wf
+  WHERE wf.ts > (SELECT state_to_ts FROM bounds) AND wf.ts >= (SELECT from_ts FROM bounds)
+    AND wf.ts <= (SELECT to_ts FROM bounds) AND wf.solar_w_m2 IS NOT NULL
+  ORDER BY time_bucket((SELECT step FROM bounds), wf.ts), wf.fetched_at DESC
+)
+SELECT time, metric, value
+FROM (
+  SELECT time, metric, value FROM solar_actual
+  UNION ALL SELECT time, metric, value FROM solar_forecast_seed
+  UNION ALL SELECT time, metric, value FROM solar_forecast
+  UNION ALL SELECT time, metric, value FROM thresholds
+) series
+ORDER BY time,
+  CASE metric WHEN 'Solar' THEN 0 WHEN 'Solar Forecast' THEN 1
+    WHEN 'Overhead Threshold Base' THEN 2 WHEN 'Overhead Threshold' THEN 3
+    WHEN 'Grow Threshold Base' THEN 4 WHEN 'Grow Threshold' THEN 5 ELSE 6 END, metric"""
 
 
 def align_homepage_lighting_threshold_bands(panel: dict[str, Any]) -> None:
     for target in panel.get("targets", []) or []:
         if not isinstance(target, dict) or target.get("refId") != "A":
             continue
-        raw_sql = target.get("rawSql")
-        if not isinstance(raw_sql, str):
-            continue
-        target["rawSql"] = raw_sql.replace(
-            HOMEPAGE_LIGHTING_THRESHOLD_SQL_SPLIT,
-            HOMEPAGE_LIGHTING_THRESHOLD_SQL_ACTUAL,
-        )
+        target["rawSql"] = HOMEPAGE_LIGHTING_THRESHOLD_SQL
         return
 
 

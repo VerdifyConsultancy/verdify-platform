@@ -111,6 +111,12 @@ def test_homepage_lighting_threshold_bands_use_actual_lux_policy():
     threshold_sql = next(target["rawSql"] for target in lighting["targets"] if target.get("refId") == "A")
     state_sql = next(target["rawSql"] for target in lighting["targets"] if target.get("refId") == "B")
 
+    assert "fn_lighting_circuit_policy" in threshold_sql
+    assert "fn_lighting_circuit_policy" in state_sql
+    assert "setpoint_snapshot" not in threshold_sql
+    assert "setpoint_snapshot" not in state_sql
+    assert "max(p.lux_on_threshold) FILTER (WHERE p.light_key='main')" in threshold_sql
+    assert "max(p.lux_on_threshold) FILTER (WHERE p.light_key='grow')" in threshold_sql
     assert "('Overhead Threshold Base'::text, p.main_on)" in threshold_sql
     assert "('Overhead Threshold'::text,      p.main_off)" in threshold_sql
     assert "('Grow Threshold Base'::text,     p.grow_on)" in threshold_sql
