@@ -3765,6 +3765,49 @@ TEST(arbiter_priority_then_urgency_then_actuator) {
     PASS();
 }
 
+// Gap 1 of the control test-catalog — the orchid wet-night fog gate, the single
+// highest-stakes coverage hole. In PRODUCTION DEFAULTS the night dry-fog is
+// SUPPRESSED (direct_wet_stress_override_enabled=false): a hot+dry night does NOT
+// fog, it vents on temp_high. Flipping the override ON re-opens night fog. The
+// daytime test above shows the switch is a no-op in daylight; THIS pins the night
+// behavior — the exact prod/test divergence class behind the firmware-v2 orchid
+// regression (overnight RH 39%→84%). Pair: blocked-in-prod vs allowed-when-enabled.
+TEST(night_dry_fog_blocked_in_prod_defaults) {
+    auto sp = band_setpoints();
+    sp.direct_wet_stress_override_enabled = false;     // PROD DEFAULT
+    sp.direct_wet_stress_min_dew_margin_f = 8.0f;
+    validate_setpoints(sp);
+    auto in = make_inputs(84.0f, 1.9f, 52.0f);         // hot + dry: VPD well above vpd_high
+    set_solar_day(in, 2);                              // 02:00 — deep solar night
+    in.dew_point_f = in.temp_f - 12.0f;                // healthy dew margin (NOT the blocker)
+    // Night phase blocks fog and the override is OFF → no re-open.
+    ASSERT_FALSE(climate_fog_assist_permitted(in, sp));
+    // Temp 84 > temp_high 82 → VENTILATE, fog relay stays OFF (no night assist).
+    ControlState st = initial_state();
+    Mode m = determine_mode(in, sp, st, 5000);
+    ASSERT_EQ(m, VENTILATE);
+    auto relays = resolve_equipment(m, in, sp, st, false);
+    ASSERT_FALSE(relays.fog);
+    PASS();
+}
+TEST(night_dry_fog_allowed_when_stress_override_enabled) {
+    auto sp = band_setpoints();
+    sp.direct_wet_stress_override_enabled = true;      // operator/planner flips it ON
+    sp.direct_wet_stress_min_dew_margin_f = 8.0f;
+    validate_setpoints(sp);
+    auto in = make_inputs(84.0f, 1.9f, 52.0f);
+    set_solar_day(in, 2);
+    in.dew_point_f = in.temp_f - 12.0f;
+    // Same hot+dry night — the stress override re-opens fog (VPD high + dew margin OK).
+    ASSERT_TRUE(climate_fog_assist_permitted(in, sp));
+    ControlState st = initial_state();
+    Mode m = determine_mode(in, sp, st, 5000);
+    ASSERT_EQ(m, VENTILATE);
+    auto relays = resolve_equipment(m, in, sp, st, false);
+    ASSERT_TRUE(relays.fog);
+    PASS();
+}
+
 int main() {
     printf("═══════════════════════════════════════════════════════\n");
     printf("  Greenhouse Logic Tests — 11-fix review synthesis + OBS-1e\n");
