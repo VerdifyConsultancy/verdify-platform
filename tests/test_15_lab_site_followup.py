@@ -105,6 +105,23 @@ def test_homepage_resource_graphs_follow_lighting_before_cameras():
     assert 'style="--home-panel-height: 320px;"' in homepage
 
 
+def test_homepage_lighting_threshold_bands_use_actual_lux_policy():
+    home = _dashboard("grafana/dashboards/site-home.json")
+    lighting = _panel(home, 36)
+    threshold_sql = next(target["rawSql"] for target in lighting["targets"] if target.get("refId") == "A")
+
+    assert "('Overhead Threshold Base'::text, p.main_on)" in threshold_sql
+    assert "('Overhead Threshold'::text,      p.main_off)" in threshold_sql
+    assert "('Grow Threshold Base'::text,     p.grow_on)" in threshold_sql
+    assert "('Grow Threshold'::text,          p.grow_off)" in threshold_sql
+    assert "p.main_on + GREATEST" not in threshold_sql
+    assert "p.grow_on + GREATEST" not in threshold_sql
+    assert _override_props(lighting, "Overhead Threshold")["custom.lineWidth"] == 1
+    assert "custom.lineStyle" not in _override_props(lighting, "Overhead Threshold")
+    assert _override_props(lighting, "Grow Threshold")["custom.lineWidth"] == 1
+    assert _override_props(lighting, "Grow Threshold")["custom.lineStyle"] == {"fill": "dash", "dash": [6, 4]}
+
+
 def test_resource_use_restores_individual_solar_alignment_panels():
     page = (VAULT_ROOT / "start/resource-use.md").read_text(encoding="utf-8")
 

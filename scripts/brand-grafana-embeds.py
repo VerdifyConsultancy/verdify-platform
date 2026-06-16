@@ -72,6 +72,8 @@ HOMEPAGE_SOLAR_PANEL_IDS = {30, 31, 36}
 COMPLIANCE_BAND_COLOR = BRAND["leaf"]
 COMPLIANCE_BAND_FILL_OPACITY = 22
 LIGHTING_THRESHOLD_BAND_FILL_OPACITY = 22
+HOMEPAGE_LIGHTING_THRESHOLD_LINE_WIDTH = 1
+HOMEPAGE_LIGHTING_GROW_THRESHOLD_LINE_STYLE = {"fill": "dash", "dash": [6, 4]}
 RELAY_STATE_FILL_OPACITY = 38
 HOMEPAGE_RELAY_STATE_FILL_OPACITY = 78
 HOMEPAGE_LIGHTING_STATE_FILL_OPACITY = 90
@@ -1382,7 +1384,7 @@ lanes AS (
 SELECT time, metric, value FROM lanes ORDER BY time, metric"""
 
 
-HOMEPAGE_LIGHTING_THRESHOLD_SQL_OVERLAP = """('Overhead Threshold Base'::text, p.main_on),
+HOMEPAGE_LIGHTING_THRESHOLD_SQL_ACTUAL = """('Overhead Threshold Base'::text, p.main_on),
     ('Overhead Threshold'::text,      p.main_off),
     ('Grow Threshold Base'::text,     p.grow_on),
     ('Grow Threshold'::text,          p.grow_off)"""
@@ -1393,7 +1395,7 @@ HOMEPAGE_LIGHTING_THRESHOLD_SQL_SPLIT = """('Overhead Threshold Base'::text, p.m
     ('Grow Threshold'::text,          p.grow_off)"""
 
 
-def split_homepage_lighting_threshold_bands(panel: dict[str, Any]) -> None:
+def align_homepage_lighting_threshold_bands(panel: dict[str, Any]) -> None:
     for target in panel.get("targets", []) or []:
         if not isinstance(target, dict) or target.get("refId") != "A":
             continue
@@ -1401,8 +1403,8 @@ def split_homepage_lighting_threshold_bands(panel: dict[str, Any]) -> None:
         if not isinstance(raw_sql, str):
             continue
         target["rawSql"] = raw_sql.replace(
-            HOMEPAGE_LIGHTING_THRESHOLD_SQL_OVERLAP,
             HOMEPAGE_LIGHTING_THRESHOLD_SQL_SPLIT,
+            HOMEPAGE_LIGHTING_THRESHOLD_SQL_ACTUAL,
         )
         return
 
@@ -1506,7 +1508,7 @@ def strengthen_homepage_lighting_lanes(panel: dict[str, Any]) -> None:
         return
 
     replace_target_sql(panel, "B", HOMEPAGE_LIGHTING_STATE_LANE_SQL)
-    split_homepage_lighting_threshold_bands(panel)
+    align_homepage_lighting_threshold_bands(panel)
     for label, color in {
         "Overhead Threshold Base": BRAND["leaf"],
         "Overhead Threshold": BRAND["leaf"],
@@ -1519,6 +1521,16 @@ def strengthen_homepage_lighting_lanes(panel: dict[str, Any]) -> None:
     }.items():
         override = override_for_label(panel, label)
         upsert_override_property(override, "color", {"fixedColor": color, "mode": "fixed"})
+
+    for label in ("Overhead Threshold Base", "Overhead Threshold"):
+        override = override_for_label(panel, label)
+        upsert_override_property(override, "custom.lineWidth", HOMEPAGE_LIGHTING_THRESHOLD_LINE_WIDTH)
+        remove_override_property(override, "custom.lineStyle")
+
+    for label in ("Grow Threshold Base", "Grow Threshold"):
+        override = override_for_label(panel, label)
+        upsert_override_property(override, "custom.lineWidth", HOMEPAGE_LIGHTING_THRESHOLD_LINE_WIDTH)
+        upsert_override_property(override, "custom.lineStyle", HOMEPAGE_LIGHTING_GROW_THRESHOLD_LINE_STYLE)
 
     for label in ("Overhead Light", "Grow Light"):
         override = override_for_label(panel, label)
@@ -2456,15 +2468,29 @@ def check_lighting_threshold_dashboard_data(label: str, dashboard: dict[str, Any
             has_high = high_label in aliases or bool(override_props(panel, high_label))
             if not (has_low and has_high):
                 continue
+            homepage_lighting_threshold = str(
+                panel.get("title") or ""
+            ) == "Lighting: Overhead vs Grow Circuit — Lux, Thresholds & Switch State" and {low_label, high_label} <= {
+                "Overhead Threshold Base",
+                "Overhead Threshold",
+                "Grow Threshold Base",
+                "Grow Threshold",
+            }
+            expected_line_width = HOMEPAGE_LIGHTING_THRESHOLD_LINE_WIDTH if homepage_lighting_threshold else 0
+            expected_line_style = (
+                HOMEPAGE_LIGHTING_GROW_THRESHOLD_LINE_STYLE
+                if homepage_lighting_threshold and low_label == "Grow Threshold Base"
+                else None
+            )
             expected = {
                 high_label: {
-                    "custom.lineWidth": 0,
+                    "custom.lineWidth": expected_line_width,
                     "custom.fillBelowTo": low_label,
                     "custom.fillOpacity": LIGHTING_THRESHOLD_BAND_FILL_OPACITY,
                     "custom.gradientMode": "none",
                 },
                 low_label: {
-                    "custom.lineWidth": 0,
+                    "custom.lineWidth": expected_line_width,
                     "custom.fillOpacity": 0,
                     "custom.gradientMode": "none",
                 },
@@ -2478,10 +2504,10 @@ def check_lighting_threshold_dashboard_data(label: str, dashboard: dict[str, Any
                         f"{label}: panel {panel.get('id')} {panel.get('title')!r} lighting threshold "
                         f"{series!r} color is {fixed_color}, expected {expected_color}"
                     )
-                if props.get("custom.lineStyle") is not None:
+                if props.get("custom.lineStyle") != expected_line_style:
                     findings.append(
                         f"{label}: panel {panel.get('id')} {panel.get('title')!r} lighting threshold "
-                        f"{series!r} still has lineStyle {props.get('custom.lineStyle')}"
+                        f"{series!r} lineStyle is {props.get('custom.lineStyle')}, expected {expected_line_style}"
                     )
                 for prop_id, expected_value in expected_props.items():
                     if props.get(prop_id) != expected_value:
