@@ -8,6 +8,7 @@ surface so every `from tasks import X` still resolves.
 from ._common import (
     _READBACKABLE_PARAMS,
     FIRMWARE_HAS_PER_CIRCUIT_LIGHTING,
+    FIRMWARE_V2_STAGED_REG,
     LIGHTING_POLICY_PARAMS,
     SWITCH_CONFIRM_EQUIPMENT,
     AlertEnvelope,
@@ -275,6 +276,39 @@ async def setpoint_confirmation_monitor(pool: asyncpg.Pool) -> None:
         )
         if terminal:
             log.info("setpoint_unconfirmed: auto-resolved %d terminal alert(s)", len(terminal))
+
+        # Pass 1c (data-path review, 2026-06-16): resolve any open
+        # setpoint_unconfirmed alert for a firmware-v2 band-anchor param.
+        # These confirm as a GROUP via the resolved-band device readback +
+        # the v_band_device_divergence view, never per-param (their
+        # cfg_<anchor> sensors are NAN-gated and never publish), so the
+        # per-param monitor must not hold them open. Pass 2 below already
+        # excludes the anchor set from *new* alerts (_READBACKABLE_PARAMS no
+        # longer contains FIRMWARE_V2_STAGED_REG); this clears the ones a
+        # prior build (or a dispatcher reconnect force-push) already opened.
+        anchor_resolved = await conn.fetch(
+            """
+            UPDATE alert_log al
+               SET disposition = 'resolved',
+                   resolved_at = now(),
+                   resolved_by = 'system',
+                   resolution  = 'auto-resolved: band-anchor confirmed as a '
+                                 'group via resolved-band readback / divergence '
+                                 'view (per-param cfg readback never publishes)'
+             WHERE al.alert_type = 'setpoint_unconfirmed'
+               AND al.resolved_at IS NULL
+               AND al.disposition IN ('open', 'acknowledged')
+               AND al.source = 'ingestor'
+               AND replace(al.sensor_id, 'setpoint.', '') = ANY($1::text[])
+            RETURNING al.id
+            """,
+            list(FIRMWARE_V2_STAGED_REG),
+        )
+        if anchor_resolved:
+            log.info(
+                "setpoint_unconfirmed: auto-resolved %d band-anchor alert(s) (group-confirmed via divergence view)",
+                len(anchor_resolved),
+            )
 
         # Pass 2: scan for still-unconfirmed rows that need alerting.
         rows = await conn.fetch(
