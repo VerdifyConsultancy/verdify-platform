@@ -3675,6 +3675,34 @@ TEST(lighting_dli_increment_counts_supplemental_light_runtime) {
     PASS();
 }
 
+// Cross-implementation band-curve ALIGNMENT guard. The harmonic band math lives
+// in THREE places kept in sync by hand: this firmware band_value_at_phase, the
+// ingestor's solar.py band_value_at_phase, and the DB's fn_crop_band_value. These
+// golden values are the SAME ones the Python suite asserts
+// (tests/test_solar_band_anchors.py uses the house temp_target anchors
+// {66,84,73,64}); the live device==DB equality is verified separately. If the
+// firmware curve ever drifts from the canonical harmonic — or the Python golden
+// changes without this one — one of the two suites fails. This is what keeps the
+// end-to-end band aligned.
+TEST(band_value_at_phase_matches_canonical_harmonic_goldens) {
+    const BandAnchors a {66.0f, 84.0f, 73.0f, 64.0f};
+    // Anchors are passed through exactly at sr/sm/ss/mid (phase 0/1/2/3).
+    ASSERT_TRUE(std::fabs(band_value_at_phase(a, 0.0f) - 66.0f) < 1e-3f);
+    ASSERT_TRUE(std::fabs(band_value_at_phase(a, 1.0f) - 84.0f) < 1e-3f);
+    ASSERT_TRUE(std::fabs(band_value_at_phase(a, 2.0f) - 73.0f) < 1e-3f);
+    ASSERT_TRUE(std::fabs(band_value_at_phase(a, 3.0f) - 64.0f) < 1e-3f);
+    // Harmonic interpolant between sr and sm — the Python suite's golden.
+    ASSERT_TRUE(std::fabs(band_value_at_phase(a, 0.5f) - 76.3462f) < 1e-3f);
+    // Periodic: phase 4.0 wraps to phase 0.0.
+    ASSERT_TRUE(std::fabs(band_value_at_phase(a, 4.0f) - band_value_at_phase(a, 0.0f)) < 1e-3f);
+    // Smooth (not the old cosine-ease): nonzero slope THROUGH an anchor — the
+    // property that killed the lumpy plateaus.
+    const float eps = 1e-3f;
+    const float slope = band_value_at_phase(a, 1.0f + eps) - band_value_at_phase(a, 1.0f - eps);
+    ASSERT_TRUE(std::fabs(slope) > 1e-5f);
+    PASS();
+}
+
 int main() {
     printf("═══════════════════════════════════════════════════════\n");
     printf("  Greenhouse Logic Tests — 11-fix review synthesis + OBS-1e\n");
