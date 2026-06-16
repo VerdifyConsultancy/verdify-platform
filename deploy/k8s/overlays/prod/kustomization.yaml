@@ -169,7 +169,7 @@ images:
   - name: ghcr.io/verdifyconsultancy/verdify-mcp
     digest: sha256:24ca85ebff5fe74f968ca6df469f1d0e30979fee0cb909522f0d90c497af4ac8
   - name: ghcr.io/verdifyconsultancy/verdify-ingestor
-    digest: sha256:89194c046ad8fdf1fcc1c3a1d5318df4a0b094124d25d0bf4eef11eac242274b
+    digest: sha256:62037be223110cc43f501c8dcb4a7bb49e2e9fedf8a57b609e5a60183cee6ece
   - name: ghcr.io/verdifyconsultancy/verdify-migrate
     digest: sha256:6c754b09c2e7eafd8d28fc8cee56f1d9366a86105fd77f16548e096dbc5d2c9a
   # verdify-planner (#117): real published GHCR digest, resolved read-only via
