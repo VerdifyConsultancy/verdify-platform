@@ -680,7 +680,15 @@ inline bool check_12_mist_progression(Ctx12& c, const TraceRow& r, ReportFn repo
     return true;
 }
 
-// #14: vent open/close cycles ≤ 12/day on days outdoor_temp_f < temp_low - 10 continuously
+// #14: vent open/close cycles ≤ VENT_COLD_DAY_CAP/day on days outdoor_temp_f < temp_low - 10
+// continuously. The cap was 12 under the legacy efficiency regime (minimize cold-day
+// venting). BC-13/ADR0003 §6.4+§3 (Jason 2026-06-17) RAISED it to 24: the band-compliance
+// regime tracks the VPD target 24/7, and warm-house/cool-dry-outdoor dehum legitimately
+// vents more on cold days. The ADR explicitly "accepts more cycling, bounded by per-relay
+// min-on/min-off dwell" — the vent relay 30s/30s dwell is the real RATE/wear guard; this
+// per-day count just catches gross thrash. (Frigid days route to heat-to-dry, not vent —
+// the estimator's over-cool guard — so the cap is not a license for cold-air dumping.)
+static constexpr int VENT_COLD_DAY_CAP = 24;
 struct Ctx14 {
     uint64_t day_bucket = 0;
     int vent_open_cycles = 0;
@@ -693,7 +701,7 @@ inline bool check_14_vent_cold_day_cap(Ctx14& c, const TraceRow& r, ReportFn rep
     if (day != c.day_bucket) {
         // day transition: emit check for completed day, reset
         bool ok = true;
-        if (c.day_has_outdoor && c.day_was_cold && c.vent_open_cycles > 12) {
+        if (c.day_has_outdoor && c.day_was_cold && c.vent_open_cycles > VENT_COLD_DAY_CAP) {
             char detail[120];
             std::snprintf(detail, sizeof(detail),
                 "%d vent open cycles on cold day", c.vent_open_cycles);
