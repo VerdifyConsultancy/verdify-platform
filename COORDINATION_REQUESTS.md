@@ -17,6 +17,7 @@ action and create/update a GitHub issue when the request blocks delivery.
 | L7 Lighting/Occupancy (#349) | Jason / integration owners | Choose/confirm the occupancy event path to firmware: MQTT, Home Assistant API, direct Frigate, or Kubernetes-local bridge. | Yes for L7 implementation | Before occupancy firmware/service changes | Contract review; no credential values |
 | L9 Lab Notebook (#351) | Secret-delivery owner | Verify S3 lab publisher Secret presence by name/key only and document which repo/system owns content/public/state prefixes. | Yes before L9 publish-path closure | Before lab publishing audit closure | Secret metadata/status only |
 | L1/L5 | Secret-delivery owner | Verify prod Secret presence by name/key in `verdify-prod` without exposing values. | Yes before live readiness claims | Before secret audit closure | Secret metadata/status only |
+| L1 Architecture Audit (#343) | `monitoring-stack` | Add (or confirm the split-brain alarm #241 already covers) an OUT-OF-BAND alert on `sum(verdify_esp32_writer_estab) == 0` (writer absent) and on `time() - max(climate.ts)` (telemetry stall), Slack-routed independently of the ingestor. The audit's P0: the in-repo staleness monitor runs INSIDE the writer, so a dead writer self-silences. This repo ships no PrometheusRules; the rule belongs in monitoring-stack. | Yes — P0 reliability gap | Before G2 observability closure | Add/confirm a PrometheusRule + Alertmanager route; share the rule name/expr |
 
 ## Resolved / No Current Blocker
 

@@ -144,6 +144,10 @@ patches:
   # #130 ingestor state volume: durable RWO PVC at /srv/verdify/state for
   # dispatcher/MCP bookkeeping and DB-outage telemetry spooling.
   - path: ingestor-state-volume.yaml
+  # L1 Phase 2 resilience: liveness probe (DB-outage-tolerant — restarts only a
+  # wedged writer, never during a DB outage) + soft anti-affinity off the
+  # storage-flaky node6. Applying RESTARTS the single ESP32 writer (gated).
+  - path: ingestor-resilience.patch.yaml
   # HA Sprint ha-1 / Lane A (#226/#227/#229): add verdify-serving priorityClass +
   # a CPU LIMIT (burst containment, NOT a tight throttle) + tuned mem to the
   # STATELESS surfaces (www/lab/api/mcp/planner/grafana). Strategic-merge by
