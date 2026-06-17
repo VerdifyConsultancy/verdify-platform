@@ -415,11 +415,13 @@ Use tactical knobs below to shift behavior instead.
 
 **Band-adjacent tactical knob:**
 - `vpd_hysteresis` kPa, [0.05-0.5], def 0.3 — larger = fewer mist cycles
+- `band_track_fraction` fraction, [0-1], def 0.50 — pinches the control band toward the served target; higher tracks tighter
 
 **Staging:**
 - `heat_hysteresis` °F, [0-3], def 1 — heat-stage clear margin above the interior heating target; higher holds heat longer
 - `temp_hysteresis` °F, [0.5-3], def 1.5 — temp transition deadband; lower tightens band compliance, higher reduces churn
 - `cool_stage2_over_high_f` °F, [0-3], def 1 — fan2 engages this far above `temp_high`
+- `cool_stage2_exit_hysteresis_f` °F, [0.3-3], def 1 — fan2 de-escalates after this much recovery below its entry threshold
 - `cool_exit_hysteresis_f` °F, [0.3-3], def 1.5 — VENTILATE exits at `temp_high - this`
 - `cold_vent_guard_delta_f` °F, [0-15], def 10 — cold-outdoor vent guard; lower allows earlier outdoor exchange, higher avoids cold slugs
 - `sw_cool_all_fans_at_high_enabled` switch, def off — when on, VENTILATE runs both fans immediately above `temp_high`
@@ -726,7 +728,7 @@ and set the overnight posture.
 2. **Check lessons** — call `lessons`. Did today validate or invalidate any?
    - If a lesson was validated: `lessons_manage(action="validate", lesson_id=ID)`
    - If something new was learned: `lessons_manage(action="create", data=...)`
-   - If a newer lesson replaces an older one: `lessons_manage(action="supersede", lesson_id=OLD, data={"new_id": NEW})`
+   - If a newer lesson replaces an older one: `lessons_manage(action="supersede", lesson_id=OLD, data={{"new_id": NEW}})`
      (lessons move proposed→validated→superseded/retired; superseding/retiring is terminal)
 3. **Check current conditions** — call `climate` for dew point margin and outdoor forecast.
 4. **Review overnight forecast** — call `forecast` for the next 12 hours.

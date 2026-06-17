@@ -3446,16 +3446,24 @@ TEST(band_first_dehum_enters_below_vpd_low_hysteresis_and_exits_at_low_edge) {
     auto sp = band_first_setpoints();
     auto s = initial_state();
     const float HV = band_vpd_hysteresis(sp);
+    // BC-13/§6.4: DEHUM_VENT now requires an EFFECTIVE vent (estimator). Give fresh,
+    // cool-but-not-frigid, drier outdoor so venting dries without over-cooling — then
+    // the vpd_low entry/exit hysteresis (the actual subject of this test) is exercised.
+    auto mk = [&](float vpd) {
+        auto i = make_inputs(75.0f, vpd, 70.0f);
+        i.outdoor_temp_f = 74.0f; i.outdoor_rh_pct = 30.0f; i.outdoor_data_age_s = 10;
+        return i;
+    };
 
-    Mode m1 = determine_mode(make_inputs(75.0f, sp.vpd_low - HV - 0.01f), sp, s, 5000);
+    Mode m1 = determine_mode(mk(sp.vpd_low - HV - 0.01f), sp, s, 5000);
     ASSERT_EQ(m1, DEHUM_VENT);
     ASSERT_TRUE(std::string(s.last_mode_reason) == "vpd_low");
 
-    Mode m2 = determine_mode(make_inputs(75.0f, sp.vpd_low - 0.01f), sp, s, 5000);
+    Mode m2 = determine_mode(mk(sp.vpd_low - 0.01f), sp, s, 5000);
     ASSERT_EQ(m2, DEHUM_VENT);
     ASSERT_TRUE(std::string(s.last_mode_reason) == "dehum_continue");
 
-    Mode m3 = determine_mode(make_inputs(75.0f, sp.vpd_low + 0.01f), sp, s, 5000);
+    Mode m3 = determine_mode(mk(sp.vpd_low + 0.01f), sp, s, 5000);
     ASSERT_EQ(m3, IDLE);
     PASS();
 }
@@ -3589,39 +3597,99 @@ TEST(band_first_retries_after_backoff_window) {
     PASS();
 }
 
-TEST(band_first_cold_dehum_requires_temp_headroom) {
-    // The cold-dehum brake is RETAINED (it is invariant #14's vent-thrash
-    // protection — it triggers on exactly the #14 cold-day condition). On an
-    // extreme-cold day (outdoor far below temp_low) with the house just above
-    // temp_low and VPD below the band, the controller suppresses vent-dehum and
-    // idles/heats rather than thrashing the vent in frigid air.
+TEST(band_first_cold_wet_night_heats_not_vents) {
+    // BC-13/§6.4: on a FRIGID wet night, venting would over-cool below the band floor,
+    // so the estimator returns MX_HEAT_ASSIST (not MX_VENT_DEHUM): the controller's
+    // cold-heat path warms the air (raising VPD = drying) WITHOUT thrashing the vent
+    // (invariant #14). This fixes the orchid wet-night regression (VPD no longer
+    // drifts wet) by HEATING, and replaces the old cold_dehum brake.
     auto sp = band_first_setpoints();
     auto s = initial_state();
-    auto in = make_inputs(sp.temp_low + 1.0f, sp.vpd_low - 0.3f);
-    in.outdoor_temp_f = sp.temp_low - 20.0f;
+    auto in = make_inputs(sp.temp_low + 1.0f, sp.vpd_low - 0.3f, 88.0f);  // cold-ish, too wet
+    in.outdoor_temp_f = sp.temp_low - 20.0f;   // frigid
 
     Mode m = determine_mode(in, sp, s, 60000);
-    ASSERT_EQ(m, IDLE);
-    ASSERT_TRUE(std::string(s.last_mode_reason) == "heat_stage1");
+    ASSERT_TRUE(m != DEHUM_VENT);              // no frigid-day vent thrash
+    auto out = resolve_equipment(m, in, sp, s, true);
+    ASSERT_TRUE(out.heat1);                    // warms to dry (VPD rises toward target)
+    ASSERT_FALSE(out.vent);                    // vent stays shut
     PASS();
 }
 
-TEST(bc5_dehum_vent_heat_assist_holds_floor) {
-    // BC-5: when DEHUM_VENT runs while the house is at/below the heat target (and
-    // the brake allows it — outdoor not extreme-cold), the lead heater co-runs to
-    // hold the temperature floor. The one sanctioned heat+vent state: heat1 with
-    // the vent, never heat2.
+TEST(dehum_heat_assist_respects_min_dwell) {
+    // BC-13/§6.4: heat1 co-runs in DEHUM_VENT only AFTER the min-dwell, and only when
+    // the estimator proved vent+heat BOTH move VPD toward target (heat1, never heat2).
+    // Replaces BC-5's unconditional co-run. Outdoor cold+dry+fresh -> vent_plus_heat.
     auto sp = band_first_setpoints();
+    sp.dehum_heat_assist_min_dwell_ms = 300000u;  // 5 min
     auto s = initial_state();
-    auto in = make_inputs(sp.temp_low + 1.0f, sp.vpd_low - 0.3f);
-    in.outdoor_temp_f = sp.temp_low;   // not extreme-cold → cold_dehum_allowed true
+    auto in = make_inputs(sp.temp_low + 1.0f, sp.vpd_low - 0.3f, 88.0f);  // too wet
+    // Moderately COOL outdoor (just below indoor) + dry: venting dries WITHOUT over-
+    // cooling below the band floor (T_mix >= temp_low), so the estimator returns
+    // MX_VENT_DEHUM + heat_assist_corun (vent dries, heat holds the floor). A FRIGID
+    // outdoor would route to MX_HEAT_ASSIST (no vent) instead.
+    in.outdoor_temp_f = sp.temp_low - 1.0f;    // ~71F vs indoor 73F: cool, no over-cool
+    in.outdoor_rh_pct = 35.0f;                 // outdoor lower ABS humidity -> vent helps
+    in.outdoor_data_age_s = 10;                // fresh
 
-    Mode m = determine_mode(in, sp, s, 60000);
-    ASSERT_EQ(m, DEHUM_VENT);
-    auto out = resolve_equipment(m, in, sp, s, true);
+    // First cycle (below dwell): DEHUM_VENT but heat-assist NOT yet armed.
+    Mode m1 = determine_mode(in, sp, s, 60000);
+    ASSERT_EQ(m1, DEHUM_VENT);
+    auto out1 = resolve_equipment(m1, in, sp, s, true);
+    ASSERT_TRUE(out1.vent);
+    ASSERT_FALSE(out1.heat1);   // min-dwell not yet satisfied
+
+    // Accrue past the min-dwell -> heat1 co-runs (never heat2).
+    determine_mode(in, sp, s, 300000);
+    Mode m2 = determine_mode(in, sp, s, 60000);
+    ASSERT_EQ(m2, DEHUM_VENT);
+    auto out2 = resolve_equipment(m2, in, sp, s, true);
+    ASSERT_TRUE(out2.vent);
+    ASSERT_TRUE(out2.heat1);
+    ASSERT_FALSE(out2.heat2);   // heat2 never co-runs with the vent (invariant #27)
+    PASS();
+}
+
+TEST(estimator_psychrometrics_sane) {
+    // es monotonic + sane bands; mixing ratio rises with RH; VPD-at-state rises with temp.
+    ASSERT_TRUE(sat_vapor_pressure_kpa(86.0f) > sat_vapor_pressure_kpa(50.0f));
+    ASSERT_TRUE(sat_vapor_pressure_kpa(86.0f) > 4.0f && sat_vapor_pressure_kpa(86.0f) < 4.5f);
+    ASSERT_TRUE(sat_vapor_pressure_kpa(50.0f) > 1.0f && sat_vapor_pressure_kpa(50.0f) < 1.6f);
+    ASSERT_TRUE(mixing_ratio_g_kg(75.0f, 80.0f) > mixing_ratio_g_kg(75.0f, 40.0f));
+    ASSERT_TRUE(vpd_at_state_kpa(80.0f, 1.0f) > vpd_at_state_kpa(70.0f, 1.0f));
+    PASS();
+}
+
+TEST(estimator_humidify_by_vent_when_outdoor_more_humid) {
+    // BC-13 bidirectional: too DRY indoor + outdoor MORE humid (abs) + fresh -> import
+    // moisture by venting (MX_VENT_HUMIDIFY); resolve sets vent+fan, NO heat, NO fog.
+    auto sp = band_first_setpoints();
+    sp.vpd_target = 1.0f;
+    auto s = initial_state();
+    auto in = make_inputs(80.0f, 1.8f, 30.0f);   // hot-ish, very dry (VPD >> target)
+    in.outdoor_temp_f = 78.0f;
+    in.outdoor_rh_pct = 85.0f;                   // wetter outdoor (higher abs humidity)
+    in.outdoor_data_age_s = 10;                  // fresh
+    auto mx = estimate_moisture_exchange(in, sp);
+    ASSERT_EQ(mx.action, MX_VENT_HUMIDIFY);
+    auto out = resolve_equipment(DEHUM_VENT, in, sp, s, true);
     ASSERT_TRUE(out.vent);
-    ASSERT_TRUE(out.heat1);    // BC-5 heat-assist: indoor below the heat target
-    ASSERT_FALSE(out.heat2);   // heat2 never co-runs with the vent
+    ASSERT_FALSE(out.heat1);
+    ASSERT_FALSE(out.fog);
+    PASS();
+}
+
+TEST(estimator_no_humidify_import_when_outdoor_drier) {
+    // too DRY indoor but outdoor abs-humidity LOWER -> MX_NONE (must NOT vent into dry
+    // outdoor air, which would make it drier). Falls through to the fog/SEALED path.
+    auto sp = band_first_setpoints();
+    sp.vpd_target = 1.0f;
+    auto in = make_inputs(80.0f, 1.8f, 30.0f);   // too dry
+    in.outdoor_temp_f = 60.0f;
+    in.outdoor_rh_pct = 20.0f;                   // drier outdoor (lower abs)
+    in.outdoor_data_age_s = 10;
+    auto mx = estimate_moisture_exchange(in, sp);
+    ASSERT_TRUE(mx.action != MX_VENT_HUMIDIFY);
     PASS();
 }
 
@@ -3718,15 +3786,20 @@ TEST(bc3_pinch_flows_through_resolve_equipment) {
     PASS();
 }
 
-TEST(band_first_cold_dehum_allowed_with_temp_headroom) {
+TEST(band_first_cool_day_vent_dehum_when_effective) {
+    // BC-13/§6.4: on a COOL (not frigid) day with the house wet and outdoor drier,
+    // venting dries WITHOUT over-cooling below the band floor, so the estimator
+    // returns MX_VENT_DEHUM and the controller dehums by venting. (A frigid outdoor
+    // would route to heat instead — see band_first_cold_wet_night_heats_not_vents.)
     auto sp = band_first_setpoints();
     auto s = initial_state();
-    auto in = make_inputs(sp.temp_low + 3.0f, sp.vpd_low - 0.3f);
-    in.outdoor_temp_f = sp.temp_low - 20.0f;
+    auto in = make_inputs(sp.temp_low + 3.0f, sp.vpd_low - 0.3f, 88.0f);
+    in.outdoor_temp_f = sp.temp_low - 1.0f;    // cool, not frigid (vent doesn't over-cool)
+    in.outdoor_rh_pct = 35.0f;                 // outdoor drier (abs) -> venting dries
+    in.outdoor_data_age_s = 10;                // fresh
 
     Mode m = determine_mode(in, sp, s, 60000);
     ASSERT_EQ(m, DEHUM_VENT);
-    ASSERT_TRUE(std::string(s.last_mode_reason) == "vpd_low");
     PASS();
 }
 
@@ -4386,10 +4459,11 @@ TEST(f7_dry_override_seals_above_vpd_max_safe) {
     PASS();
 }
 
-TEST(f7_vpd_min_safe_rescue_suppressed_on_cold_day) {
-    // The vpd_min_safe rescue must NOT force DEHUM_VENT on a cold day
-    // (cold_dehum_allowed false) — that thrashes the vent (invariant #14). It is
-    // gated on the same cold-day policy as the band-first dehum.
+TEST(f7_vpd_min_safe_rescue_heats_on_cold_day) {
+    // BC-13/§6.4 (Jason 2026-06-17): the vpd_min_safe rescue is a SAFETY RAIL — it
+    // ALWAYS acts on an extreme too-wet excursion. On cold days where the estimator
+    // proves heat is the effective drying actuator, the rail heats instead of forcing
+    // a cold vent cycle (invariant #14).
     auto sp = band_setpoints();
     sp.sw_fsm_controller_enabled = true;
     validate_setpoints(sp);
@@ -4397,8 +4471,12 @@ TEST(f7_vpd_min_safe_rescue_suppressed_on_cold_day) {
     auto s = initial_state();
     auto in = make_inputs(sp.temp_low + 0.5f, sp.vpd_min_safe - 0.05f);  // very humid, temp at band floor
     in.outdoor_temp_f = sp.temp_low - sp.cold_vent_guard_delta_f - 5.0f;  // outdoor COLD
-    determine_mode(in, sp, s, 5000);
-    ASSERT_TRUE(std::string(s.last_mode_reason) != "vpd_min_safe_rescue");
+    Mode m = determine_mode(in, sp, s, 5000);
+    ASSERT_EQ(m, IDLE);
+    ASSERT_TRUE(std::string(s.last_mode_reason) == "vpd_min_safe_heat_rescue");
+    auto out = resolve_equipment(m, in, sp, s, true);
+    ASSERT_TRUE(out.heat1);
+    ASSERT_FALSE(out.vent);
     PASS();
 }
 

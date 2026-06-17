@@ -116,6 +116,118 @@ inline float dew_margin_f(const SensorInputs& in) noexcept {
     return in.temp_f - in.dew_point_f;
 }
 
+// Forward decl: the moisture-exchange estimator's humid-import dew guard uses this
+// (defined just below, after the psychrometrics block).
+inline float min_dew_margin_for_wetting(const SensorInputs& in, const Setpoints& sp) noexcept;
+
+// ── Psychrometrics (pure; °F/RH% in, kPa/g·kg⁻¹ out). Single-precision, ESP32-FPU-safe.
+// CRITICAL: the Magnus b-constant here is 237.3 — it MUST match the device's
+// authoritative VPD `es` (controls.yaml:167 `0.6108*expf(17.27*tc/(tc+237.3))`).
+// Do NOT "correct" it to the 237.7 used by the separate dewpoint INVERSION
+// (controls.yaml:458) — that would silently shift every VPD-gain threshold here.
+inline float sat_vapor_pressure_kpa(float temp_f) noexcept {
+    const float Tc = (temp_f - 32.0f) * (5.0f / 9.0f);
+    return 0.6108f * std::exp((17.27f * Tc) / (Tc + 237.3f));   // kPa
+}
+inline float vapor_pressure_kpa(float temp_f, float rh_pct) noexcept {
+    const float rh = std::max(0.0f, std::min(100.0f, rh_pct));
+    return sat_vapor_pressure_kpa(temp_f) * (rh * 0.01f);
+}
+// Station pressure at Longmont (~1500 m ≈ 85 kPa). The estimator decides on
+// vapor-pressure VPD (pressure-independent) and on the SIGN of w_out−w_in (where
+// P cancels), so this constant does not bias the decision — it is named/correct
+// for any future absolute-mixing-ratio telemetry use.
+static constexpr float GH_STATION_PRESSURE_KPA = 85.0f;
+inline float mixing_ratio_g_kg(float temp_f, float rh_pct) noexcept {
+    const float e = vapor_pressure_kpa(temp_f, rh_pct);
+    return 621.97f * e / std::max(1e-3f, (GH_STATION_PRESSURE_KPA - e));
+}
+// VPD at a hypothetical (temp, conserved-vapor) state: sensible-only heating adds
+// no moisture, so VPD' = es(T') − e_current.
+inline float vpd_at_state_kpa(float temp_f, float vapor_e_kpa) noexcept {
+    return std::max(0.0f, sat_vapor_pressure_kpa(temp_f) - vapor_e_kpa);
+}
+// Per-cycle temperature rise the gas heater realistically delivers — a PROBE for
+// the heat candidate's VPD gain. Named (NOT heat_hysteresis, which is a band not a
+// rate — using it would understate heat and mis-select vent on marginal cold rows).
+static constexpr float GH_HEAT_ASSIST_PROBE_DF = 1.5f;
+
+// ── ADR0003 §6.4 moisture-exchange selector ─────────────────────────────────
+// Deterministic per-cycle estimate of which action moves VPD toward target.
+enum MoistureExchangeAction { MX_NONE, MX_VENT_DEHUM, MX_HEAT_ASSIST, MX_VENT_HUMIDIFY };
+struct MoistureExchangeEstimate {
+    MoistureExchangeAction action;
+    bool   heat_assist_corun;   // heat1+vent both proven to move VPD toward target
+    float  vent_vpd_gain_kpa;   // signed, + = toward target
+    float  heat_vpd_gain_kpa;
+    bool   outdoor_fresh;
+    const char* reason;
+};
+inline MoistureExchangeEstimate estimate_moisture_exchange(
+    const SensorInputs& in, const Setpoints& sp) noexcept {
+    MoistureExchangeEstimate r{MX_NONE, false, 0.0f, 0.0f, false, "in_band"};
+    if (!vpd_control_trusted(in)) { r.reason = "vpd_untrusted"; return r; }  // SAF-1/SF1
+    const bool fresh = std::isfinite(in.outdoor_temp_f) && std::isfinite(in.outdoor_rh_pct)
+                     && in.outdoor_data_age_s < sp.outdoor_staleness_max_s;
+    r.outdoor_fresh = fresh;
+    const float e_in   = vapor_pressure_kpa(in.temp_f, in.rh_pct);
+    // Use the RH-consistent current VPD as the gain BASELINE (es(T) − e). On-device
+    // this equals in.vpd_kpa (both come from the same temp+RH reading); using it keeps
+    // the gain projections self-consistent with the candidate VPDs (also computed from
+    // es/e). DIRECTION (too-wet vs too-dry) still uses the authoritative sensor in.vpd_kpa.
+    const float vpd_now = std::max(0.0f, sat_vapor_pressure_kpa(in.temp_f) - e_in);
+    const float margin = sp.dehum_vent_gain_margin_kpa;
+    const float k = sp.vent_exchange_fraction;   // AI-tunable single-cycle exchange fraction
+
+    // ── too WET (VPD below target): dehum direction ──
+    if (in.vpd_kpa < sp.vpd_target) {
+        // heat candidate: sensible warm by the named probe step (vapor conserved).
+        r.heat_vpd_gain_kpa = vpd_at_state_kpa(in.temp_f + GH_HEAT_ASSIST_PROBE_DF, e_in) - vpd_now;
+        bool vent_overcools = false;
+        if (fresh) {  // vent candidate: exchange toward outdoor (only helps if outdoor drier in abs)
+            const float e_out = vapor_pressure_kpa(in.outdoor_temp_f, in.outdoor_rh_pct);
+            const float e_mix = e_in + k * (e_out - e_in);
+            const float T_mix = in.temp_f + k * (in.outdoor_temp_f - in.temp_f);
+            r.vent_vpd_gain_kpa = vpd_at_state_kpa(T_mix, e_mix) - vpd_now;
+            // Venting frigid air to dehumidify OVER-COOLS the house below the band
+            // floor — counterproductive (you then need heat to recover) and it thrashes
+            // the vent on a continuously-cold day (invariant #14). When venting would
+            // drop below temp_low, prefer the HEAT candidate (which dries AND warms) —
+            // physics, NOT a cost-brake (heat-assist still dehumidifies, regime goal met).
+            vent_overcools = T_mix < sp.temp_low;
+        }
+        const bool vent_helps = fresh && r.vent_vpd_gain_kpa > margin && !vent_overcools;
+        const bool heat_helps = r.heat_vpd_gain_kpa > margin;
+        if (vent_helps && heat_helps) { r.action = MX_VENT_DEHUM; r.heat_assist_corun = true; r.reason = "vent_plus_heat"; }
+        else if (vent_helps && r.vent_vpd_gain_kpa >= r.heat_vpd_gain_kpa) { r.action = MX_VENT_DEHUM; r.reason = "vent_dehum"; }
+        else if (heat_helps) { r.action = MX_HEAT_ASSIST; r.reason = "heat_assist"; }
+        else if (vent_helps) { r.action = MX_VENT_DEHUM; r.reason = "vent_dehum"; }
+        else { r.reason = "no_effective_action"; }
+        return r;
+    }
+
+    // ── too DRY (VPD above target) AND outdoor MORE humid: import moisture by vent ──
+    // Jason 2026-06-17: cap at target (no overshoot) + dew-margin guard (no condensation).
+    if (in.vpd_kpa > sp.vpd_target && fresh) {
+        const float w_in  = mixing_ratio_g_kg(in.temp_f, in.rh_pct);
+        const float w_out = mixing_ratio_g_kg(in.outdoor_temp_f, in.outdoor_rh_pct);
+        const bool dew_safe = dew_margin_f(in) >= min_dew_margin_for_wetting(in, sp);
+        // Don't import air much colder than indoor: it over-cools the house (fogging
+        // is the better humidifier on a cold day) and its row-to-row marginal w_out>w_in
+        // flips thrash the vent (invariant #14). A physics sanity limit on the IMPORT
+        // direction only — NOT a cost-brake on dehum (the too-wet dehum still runs cold).
+        const bool not_too_cold = in.outdoor_temp_f >= (in.temp_f - sp.cold_vent_guard_delta_f);
+        if (w_out > w_in && dew_safe && not_too_cold) {
+            const float e_out = vapor_pressure_kpa(in.outdoor_temp_f, in.outdoor_rh_pct);
+            const float e_mix = e_in + k * (e_out - e_in);
+            const float T_mix = in.temp_f + k * (in.outdoor_temp_f - in.temp_f);
+            r.vent_vpd_gain_kpa = vpd_now - vpd_at_state_kpa(T_mix, e_mix);  // + = VPD drops toward target
+            if (r.vent_vpd_gain_kpa > margin) { r.action = MX_VENT_HUMIDIFY; r.reason = "vent_humidify"; }
+        }
+    }
+    return r;
+}
+
 // BC-7 (band-compliance): the dew-margin veto that blocks wetting/fog to prevent
 // condensation is STRICTER AT NIGHT. After dark there is no solar load, so leaf
 // surfaces sit closest to the dewpoint and a wider temp-dewpoint spread is
@@ -685,14 +797,21 @@ inline ClimateActionDecision evaluate_climate_decision(
     // extreme-continuous-cold-day vent-dehum is restrained (a wear/temp/VPD trade
     // needing a replay-tuned long dehum min-dwell + a crop-priority call — tracked
     // under BC-4, deferred from this OTA so invariant #14 stays green).
-    const bool cold_dehum_allowed =
-        !outdoor_cold_for_vent || in.temp_f > (sp.temp_low + std::max(COLD_DEHUM_TEMP_MARGIN_MIN_F, sp.temp_hysteresis));
+    // BC-13 (ADR0003 §6.4): DEHUM_VENT fires only when VENTING is the effective dehum
+    // action (MX_VENT_DEHUM). The estimator returns MX_HEAT_ASSIST instead when venting
+    // would over-cool (frigid outdoor) — in that case the controller's normal cold-heat
+    // path warms the air, which raises VPD (dries) WITHOUT opening the vent, so frigid
+    // days do not thrash the vent (invariant #14). Replaces the cold_dehum_allowed brake:
+    // a moderately-cool effective vent-dehum is no longer blocked; a frigid over-cooling
+    // vent is routed to heat instead of being forced.
+    const MoistureExchangeEstimate mx = estimate_moisture_exchange(in, sp);
+    const bool dehum_effective = (mx.action == MX_VENT_DEHUM);
     const float dehum_hysteresis = band_vpd_hysteresis(sp);
     const bool dehum_enter = in.vpd_kpa < (sp.vpd_low - dehum_hysteresis);
     const bool dehum_continue = state.mode_prev == DEHUM_VENT && in.vpd_kpa < sp.vpd_low;
     const bool dehum_wanted = vpd_trusted
         && !sp.econ_block
-        && cold_dehum_allowed
+        && dehum_effective
         && (dehum_enter || dehum_continue);
 
     const char* wet_block_reason = climate_wet_assist_block_reason(in, sp);
@@ -1226,10 +1345,15 @@ inline Mode determine_mode_band_first(
     const float heat_target = band_heat_target_f(sp);
     const bool needs_heating_s1 = in.temp_f < (heat_target + sp.heat_hysteresis);
 
-    const bool cold_dehum_allowed =
-        !outdoor_cold_for_vent || in.temp_f > (sp.temp_low + std::max(COLD_DEHUM_TEMP_MARGIN_MIN_F, sp.temp_hysteresis));
-    const bool vpd_low_enter = in.vpd_kpa < (sp.vpd_low - HV) && !sp.econ_block && cold_dehum_allowed;
-    const bool vpd_dehum_exit = in.vpd_kpa >= sp.vpd_low || !cold_dehum_allowed;
+    // BC-13 (ADR0003 §6.4): the cold-day dehum decision is the deterministic
+    // outdoor-aware moisture-exchange estimator, NOT the cold_dehum_allowed brake.
+    // Cold nights now dehum WHEN venting or heat-assist physically moves VPD toward
+    // target (the orchid wet-night fix); an ineffective vent (outdoor wetter) is not
+    // chosen. mx also drives the humidify-by-vent import override + the heat-assist
+    // min-dwell below.
+    const MoistureExchangeEstimate mx = estimate_moisture_exchange(in, sp);
+    const bool dehum_effective = (mx.action == MX_VENT_DEHUM);
+    const bool vpd_dehum_exit = in.vpd_kpa >= sp.vpd_low || !dehum_effective;
     const bool was_dehum = prev == DEHUM_VENT;
     const bool moisture_blocked = moisture_blocked_by_occupancy(in, sp);
 
@@ -1330,17 +1454,49 @@ inline Mode determine_mode_band_first(
             mode = SEALED_MIST;
             state.last_mode_reason = "dry_override";
         } else if (vpd_trusted && in.vpd_kpa < sp.vpd_min_safe
-                   && (mode == IDLE || mode == SEALED_MIST) && !sp.econ_block
-                   && cold_dehum_allowed) {
-            // cold_dehum_allowed mirrors the band-first cold-day dehum suppression:
-            // on a cold day the controller deliberately does NOT vent-dehum (cold
-            // air + vent thrash, invariant #14). The safety rescue respects that
-            // same policy, else it forces the vent open on a cold humid day and
-            // thrashes — so the rail only fires when cold-dehum is already allowed.
-            selected_action = CLIMATE_DEHUM_VENT;
-            mode = DEHUM_VENT;
-            state.last_mode_reason = "vpd_min_safe_rescue";
+                   && (mode == IDLE || mode == SEALED_MIST) && !sp.econ_block) {
+            // BC-13 (ADR0003 §6.4, Jason 2026-06-17): the vpd_min_safe rescue is a
+            // SAFETY RAIL — it ALWAYS acts on an extreme too-wet excursion. When the
+            // estimator proves sensible heat is the effective drying actuator, route
+            // through the normal heat path instead of forcing cold-day vent cycling
+            // (invariant #14). Otherwise keep the forced DEHUM_VENT rescue.
+            if (mx.action == MX_HEAT_ASSIST) {
+                selected_action = CLIMATE_HEAT;
+                mode = climate_action_to_mode(selected_action);
+                state.last_mode_reason = "vpd_min_safe_heat_rescue";
+            } else {
+                selected_action = CLIMATE_DEHUM_VENT;
+                mode = DEHUM_VENT;
+                state.last_mode_reason = "vpd_min_safe_rescue";
+            }
         }
+    }
+
+    // BC-13 (ADR0003 §6.4): humid-outside / dry-inside — when the controller would
+    // humidify (too dry) but the estimator proves importing moist outdoor air by
+    // venting beats fogging, redirect SEALED_MIST -> DEHUM_VENT(import). Vent-only, NO
+    // heat (heat raises VPD, the wrong direction). Capped at vpd_target + dew-margin
+    // guard inside the estimator (Jason 2026-06-17). Post-selection override, like F7.
+    if (mode == SEALED_MIST && mx.action == MX_VENT_HUMIDIFY
+        && !needs_cooling && !moisture_blocked) {
+        selected_action = CLIMATE_DEHUM_VENT;
+        mode = DEHUM_VENT;
+        state.last_mode_reason = "vent_humidify";
+    }
+
+    // BC-13: DEHUM_VENT heat-assist min-dwell. The timer accrues only while continuously
+    // in the too-wet dehum direction; resets on exit / when the estimate flips. heat1
+    // co-run arms once the dwell is satisfied AND the estimator proved heat+vent both help.
+    if (mode == DEHUM_VENT && mx.action == MX_VENT_DEHUM) {
+        state.dehum_heat_assist_timer_ms = sat_add(state.dehum_heat_assist_timer_ms, dt_ms);
+    } else {
+        state.dehum_heat_assist_timer_ms = 0;
+    }
+    state.dehum_heat_assist_active =
+        (mode == DEHUM_VENT) && mx.heat_assist_corun
+        && state.dehum_heat_assist_timer_ms >= sp.dehum_heat_assist_min_dwell_ms;
+    if (mode == DEHUM_VENT && state.dehum_heat_assist_active) {
+        state.last_mode_reason = "dehum_vent_heat";
     }
 
     if (mode == SAFETY_COOL || mode == SAFETY_HEAT || mode == SENSOR_FAULT) {
@@ -2179,28 +2335,32 @@ inline RelayOutputs resolve_equipment(
             break;
         }
 
-        case DEHUM_VENT:
+        case DEHUM_VENT: {
             out.vent = true;
-            // BC-5 (band-compliance): bounded heat-assist. With the cold-dehum
-            // brake removed (BC-4), DEHUM_VENT now runs on cold nights to hold the
-            // VPD target; venting would otherwise drag temp down. When the house is
-            // at/below the heat target, co-run the LEAD heater (stage-1, gentle) to
-            // hold the temperature floor — the ONE sanctioned heat+vent state (ADR
-            // 0003 §3). The controls.yaml heat<->air interlock exempts DEHUM_VENT so
-            // this is not suppressed; heat2 is never co-run with the vent, and
-            // SAFETY_HEAT still owns the hard cold rail.
-            if (needs_heating_s1) { out.heat1 = true; }
-            // Aggressive dehum (both fans) kicks in if vpd is below the
-            // INTERIOR target minus the aggressive margin — keeps the
-            // trigger consistent with the rest of the interior-targeting
-            // logic. dehum_aggressive_kpa remains the margin from the
-            // (now interior) target at which we open both fans.
+            const MoistureExchangeEstimate mx = estimate_moisture_exchange(in, sp);
+            if (mx.action == MX_VENT_HUMIDIFY) {
+                // BC-13 (ADR0003 §6.4) humid-import: too-dry indoor + wetter outdoor —
+                // vent only, lead fan to move air; NO heat (heat raises VPD, the wrong
+                // direction when importing moisture to LOWER it). No aggressive both-fans.
+                if (lead_is_fan1) out.fan1 = true; else out.fan2 = true;
+                break;
+            }
+            // BC-13: estimator-gated stage-1 heat-assist (heat1 only, NEVER heat2) —
+            // replaces BC-5's unconditional co-run. Arms only after the min-dwell
+            // (state.dehum_heat_assist_active, set in determine_mode once the estimator
+            // proved heat+vent BOTH move VPD toward target) AND a real heating demand.
+            // controls.yaml exempts DEHUM_VENT from the heat<->air interlock so this
+            // co-runs with the vent (the sanctioned exception); SAFETY_HEAT owns the rail.
+            if (state.dehum_heat_assist_active && needs_heating_s1) { out.heat1 = true; }
+            // Aggressive dehum (both fans) when vpd is below the interior target minus
+            // the aggressive margin; else the lead fan only.
             if (in.vpd_kpa < vpd_low_eff - sp.dehum_aggressive_kpa) {
                 out.fan1 = true; out.fan2 = true;
             } else {
                 if (lead_is_fan1) out.fan1 = true; else out.fan2 = true;
             }
             break;
+        }
 
         case IDLE:
             if (needs_heating_s2) { out.heat1 = true; out.heat2 = true; }

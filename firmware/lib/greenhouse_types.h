@@ -242,6 +242,10 @@ struct Setpoints {
     // only where the controller chooses to act tightens. Planner-pushable; ramp
     // live (default 0 ships a behavior-neutral binary).
     float    band_track_fraction;
+    // BC-13 (ADR0003 §6.4): deterministic outdoor-aware moisture-exchange selector.
+    float    dehum_vent_gain_margin_kpa;     // min projected VPD-toward-target gain to act (anti-thrash)
+    uint32_t dehum_heat_assist_min_dwell_ms; // min continuous DEHUM_VENT dwell before heat1 co-run arms
+    float    vent_exchange_fraction;         // AI-tunable single-cycle air-exchange fraction toward outdoor
 };
 
 static constexpr uint32_t STATE_SENTINEL = 0xBEEF0042;
@@ -279,6 +283,11 @@ struct ControlState {
     // is a time dwell, not a temperature hysteresis). Managed by determine_mode;
     // read by resolve_equipment (const) — same contract as heat2_latched.
     bool fan2_latched;
+    // BC-13 (ADR0003 §6.4): DEHUM_VENT heat-assist min-dwell timer (accrues only
+    // while continuously in the too-wet dehum direction) + the resolve_equipment-
+    // visible armed flag. Managed by determine_mode; read by resolve_equipment (const).
+    uint32_t dehum_heat_assist_timer_ms;
+    bool dehum_heat_assist_active;
     // Sprint-15: telemetry flag — set true on each cycle the summer-vent
     // gate is actively suppressing a VPD-seal entry. Read by
     // evaluate_overrides() and surfaced via OverrideFlags. No persisted
@@ -703,7 +712,11 @@ inline Setpoints default_setpoints() {
         // setpts initializer sets the live device value (id(band_track_fraction))
         // to match this so replay_emit (which starts from default_setpoints) and the
         // device agree.
-        .band_track_fraction = 0.50f
+        .band_track_fraction = 0.50f,
+        // BC-13 (ADR0003 §6.4): moisture-exchange selector defaults.
+        .dehum_vent_gain_margin_kpa = 0.02f,
+        .dehum_heat_assist_min_dwell_ms = 300000u,   // 5 min
+        .vent_exchange_fraction = 0.30f
     };
 }
 
@@ -823,6 +836,11 @@ inline void validate_setpoints(Setpoints& sp) {
     sp.temp_target = std::max(sp.temp_low, std::min(sp.temp_high, sp.temp_target));
     sp.vpd_target  = std::max(sp.vpd_low,  std::min(sp.vpd_high,  sp.vpd_target));
     sp.band_track_fraction = std::max(0.0f, std::min(1.0f, sp.band_track_fraction));
+    // BC-13: moisture-exchange selector clamps.
+    sp.dehum_vent_gain_margin_kpa = std::max(0.0f, std::min(0.2f, sp.dehum_vent_gain_margin_kpa));
+    sp.dehum_heat_assist_min_dwell_ms = std::max<uint32_t>(
+        60000u, std::min<uint32_t>(1800000u, sp.dehum_heat_assist_min_dwell_ms));
+    sp.vent_exchange_fraction = std::max(0.1f, std::min(0.6f, sp.vent_exchange_fraction));
 }
 
 inline ControlState initial_state() {
@@ -836,6 +854,8 @@ inline ControlState initial_state() {
         .dry_override_active = false,
         .heat2_latched = false,
         .fan2_latched = false,
+        .dehum_heat_assist_timer_ms = 0,
+        .dehum_heat_assist_active = false,
         .override_summer_vent = false,
         .last_mode_reason = "init",
         .last_transition_tick_ms = 0,
