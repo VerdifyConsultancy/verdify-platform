@@ -135,7 +135,40 @@ vpd_min_safe_rescue, mist_backoff, moisture_blocked, seal_enter/continue/exit,
 relief_cycle_breaker, thermal_relief(_forced), dwell_hold` (`greenhouse_logic.h`;
 the full set is enumerated in `firmware/test/invariants.h` check #10).
 
-## 4. (reserved — see §3 for the FSM)
+## 4. Manual button-override layer (FANS / HUMID / VENT-BYPASS)
+
+Three momentary panel buttons (PCF8574 `pcf_in_2`) each arm a deadline latch
+(`manual_fans_until_ms` / `manual_fog_until_ms` / `vent_bypass_until_ms`, set in
+`hardware.yaml`). Each cycle, `controls.yaml` builds a `ManualOverrides` from the
+effective latch state + whether a real fog safety block is up, and applies the
+override through the **pure, unit-tested `apply_manual_overrides()`**
+(`greenhouse_logic.h`) on top of the resolved relay table:
+
+| Button | Effect | Forced (bypasses min-off dwell) |
+|---|---|---|
+| **FANS** | both fans ON, vent OPEN | fans, vent |
+| **VENT-BYPASS** | both fans ON, vent **CLOSED** (winter house-air pull); *implies fans* | fans |
+| **HUMID** | fogger ON, unless a genuine fog safety block (dew/RH/temp/time/leak) | fog |
+
+**Precedence: absolute safety wins.** `apply_manual_overrides()` is a no-op in
+`SENSOR_FAULT` / `SAFETY_COOL` / `SAFETY_HEAT` — a press never fights a safety rail
+(a FANS press cannot throw the vent open and dump heat during a cold-rail
+SAFETY_HEAT). Below the rails it supersedes all climate automation; only a
+re-press, the deadline timeout, or a safety rail interrupts it.
+
+The returned `ManualForce` flags feed `set_relay`'s `force_on=` so a press engages
+within one loop tick — **the #289 fix** (the force flag was previously computed but
+never wired to the fan relays, so a FANS press stuck behind the fan min-off dwell
+while the vent moved — the "pressed fans, nothing happened" signature).
+`fan_requires_open_vent()` carves out VENT-BYPASS (and SAFETY_HEAT) from the
+fan→vent interlock so bypass can actually hold the vent shut — **the #290 fix**.
+
+**Pinned by** 8 native tests (`test_greenhouse_logic.cpp`): per-button relay
+outcomes, the safety-rail no-op, the fog-safety block, and the interlock carve-out.
+The replay corpus never presses a button, so a replay-diff is **0** (automatic
+control is unchanged) — these native tests are the required positive evidence.
+**Live status:** OTA-deployed 2026-06-17 (firmware `2026.6.17.0134.6a3b35a`);
+post-deploy sensor-health sweep 27/0/0. Closes #289, #290.
 
 ## 5. Safety rails — the AI cannot override them (L2 #344 AC4)
 
