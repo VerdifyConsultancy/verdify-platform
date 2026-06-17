@@ -1,6 +1,6 @@
 # Verdify Platform Epics
 
-Last updated: 2026-06-16
+Last updated: 2026-06-17
 
 Agent name: `verdify-platform`
 
@@ -36,17 +36,28 @@ infra actions remain Jason-gated.
   - Single-env prod promotion and manual sync gates are documented.
   - Home Assistant fallback/backfill is documented as fallback/backfill, not a
     duplicate source of truth.
-- Status: `In Progress`
+- Status: `Done` (2026-06-17 — audit delivered; drift remediated; CI/CD hardened;
+  prod deploy executed under Jason authorization). Acceptance criteria all met:
+  actual-vs-intended map ✓, component authority classification ✓, single-env
+  promotion/sync gates documented ✓, HA fallback documented as fallback-only ✓.
 - Priority: P1
 - Effort: L
 - Milestone: G0 - Controller Architecture Audit
 - Sprint: S4 `controller-architecture-audit`
-- Related files/issues/PRs: #207, #335, #336, #339, #341, #342,
-  `docs/SERVICE_MAP.md`, `docs/reviews/data-path-adversarial-review-2026-06-16.md`.
+- Related files/issues/PRs: #207, #335, #336, #339, #341, #342; delivered PRs
+  #353 (VM-era purge), #354 (schema regen + mig 180), #355 (dead dashboards),
+  #356 (CI gates), #357 (ingestor reliability), #358 (prod promote);
+  `docs/reviews/lane1-architecture-audit-2026-06-16.md`, `docs/RELEASE-CHECKLIST.md`,
+  `docs/handoff/monitoring-writer-absent-alert.md`, `docs/SERVICE_MAP.md`,
+  `docs/reviews/data-path-adversarial-review-2026-06-16.md`.
 - Dependencies: Jason, `monitoring-stack`, `network-infra`, `storage-infra`.
 - Risks: stale docs can look authoritative; old dev/staging language can cause
   operators to reason about environments that no longer exist.
-- Evidence: Project #5 cards #343-#352 and root tracking docs.
+- Evidence: Project #5 cards #343-#352, the merged PRs above, and root tracking docs.
+- Residual (tracked elsewhere, not L1-audit-incomplete): gated `argocd sync` to
+  revert the ingestor emptyDir stopgap → durable PVC (storage recovered);
+  monitoring-stack to implement the writer-absent alert; `#240` writer-lease arm +
+  DB PITR (gated); storage lane to clear orphaned `/volume1` LUNs.
 
 ### L2 Firmware Core
 

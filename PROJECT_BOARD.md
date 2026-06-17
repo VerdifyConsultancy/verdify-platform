@@ -1,6 +1,6 @@
 # Verdify Platform Project Board
 
-Last updated: 2026-06-16
+Last updated: 2026-06-17
 
 Agent name: `verdify-platform`
 
@@ -52,7 +52,7 @@ happen at the lane-epic level unless a child issue is explicitly operator-gated.
 
 | Status | Priority | Epic card | Sprint | Milestone |
 |---|---|---|---|---|
-| In Progress | P1 | #343 L1 Architecture Audit, Drift Check, and CI/CD | S4 controller-architecture-audit | G0 - Controller Architecture Audit |
+| Done | P1 | #343 L1 Architecture Audit, Drift Check, and CI/CD | S4 controller-architecture-audit | G0 - Controller Architecture Audit |
 | In Progress | P1 | #344 L2 Firmware Core | S5 firmware-first-climate-core | G1 - Firmware-First Determinism |
 | Ready | P1 | #345 L3 Climate Control | S5 firmware-first-climate-core | G1 - Firmware-First Determinism |
 | Ready | P1 | #346 L4 AI Planner and Tunables | S6 data-observability-planner-contracts | G3 - Planner, Irrigation, Lab, and Research |

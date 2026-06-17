@@ -1,6 +1,6 @@
 # Verdify Platform Sprints
 
-Last updated: 2026-06-16
+Last updated: 2026-06-17
 
 Agent name: `verdify-platform`
 
@@ -50,7 +50,7 @@ Existing anchors: #13, #14, #75, #89, #218, #233, #241, #243-#245.
 
 ### S4: Controller Architecture Audit
 
-Status: `In Progress`
+Status: `Done` (2026-06-17)
 
 Goal: determine what is real, stale, broken, duplicated, dead, authoritative,
 fallback-only, or delete/rewrite candidate across firmware, Kubernetes,
@@ -60,6 +60,13 @@ S3, Cloudflare, and CI/CD.
 Primary lane:
 
 - #343 L1 Architecture Audit, Drift Check, and CI/CD.
+
+Evidence: `docs/reviews/lane1-architecture-audit-2026-06-16.md`,
+`docs/RELEASE-CHECKLIST.md`, `docs/handoff/monitoring-writer-absent-alert.md`;
+PRs #353-#358 (dead-weight purge, schema regen + mig 180, dead dashboards, CI
+gates, ingestor reliability, prod promote); prod deploy executed (mig 180 live,
+images promoted/synced). Note: the original audit-only non-goal was superseded
+when Jason authorized the prod sync/deploy in-session.
 
 Verification:
 

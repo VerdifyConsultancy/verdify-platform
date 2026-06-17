@@ -1,6 +1,6 @@
 # Verdify Platform Agent Lane
 
-Last updated: 2026-06-16
+Last updated: 2026-06-17
 
 Agent name: `verdify-platform`
 
@@ -46,7 +46,7 @@ product evolution. Track A wins whenever they conflict.
 
 | Lane | Canonical issue | Status | Milestone |
 |---|---:|---|---|
-| L1 Architecture Audit, Drift Check, and CI/CD | #343 | In Progress | G0 - Controller Architecture Audit |
+| L1 Architecture Audit, Drift Check, and CI/CD | #343 | Done (2026-06-17) | G0 - Controller Architecture Audit |
 | L2 Firmware Core | #344 | In Progress | G1 - Firmware-First Determinism |
 | L3 Climate Control | #345 | Ready | G1 - Firmware-First Determinism |
 | L4 AI Planner and Tunables | #346 | Ready | G3 - Planner, Irrigation, Lab, and Research |

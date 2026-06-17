@@ -1,6 +1,6 @@
 # Verdify Platform Milestones
 
-Last updated: 2026-06-16
+Last updated: 2026-06-17
 
 Agent name: `verdify-platform`
 
@@ -8,7 +8,7 @@ Agent name: `verdify-platform`
 
 | Milestone | Open | Closed | Purpose |
 |---|---:|---:|---|
-| G0 - Controller Architecture Audit | 1 | 0 | L1 actual-vs-intended architecture, dead/stale path inventory, CI/CD/release checklist, and failure-mode docs. |
+| G0 - Controller Architecture Audit | 0 | 1 | **DONE 2026-06-17.** L1 actual-vs-intended architecture, dead/stale path inventory, CI/CD/release checklist, and failure-mode docs — delivered + drift remediated (PRs #353-#358) + prod deploy executed. |
 | G1 - Firmware-First Determinism | 3 | 0 | L2/L3/L7 firmware core, deterministic climate, lighting/occupancy, safety rails, disconnected behavior, and firmware release gates. |
 | G2 - Data Contracts and Observability | 2 | 0 | L5/L6 schema authority, source-of-truth/readback contracts, drift detection, green-band compliance, and dashboard/KPI rebuild. |
 | G3 - Planner, Irrigation, Lab, and Research | 4 | 0 | L4/L8/L9/L10 planner boundary, irrigation/fertilization decisions, lab notebook publishing, and all-year/extreme-weather test harness. |
@@ -49,7 +49,13 @@ child anchors. Do not use them as the primary current planning decomposition.
 
 ## Next Milestone Recommendation
 
-Work G0 first until the actual-vs-intended map, stale path inventory, and
-release/failure-mode checklist are clear enough to prevent accidental work on
-dead architecture. Pull urgent L2/L5/L6 safety/data issues forward only when the
-architecture audit identifies a plant-safety or data-hole risk.
+**G0 is DONE (2026-06-17).** The audit's actual-vs-intended map, stale-path
+inventory, and release/failure-mode checklist exist, drift was remediated, and
+CI/CD was hardened. The audit flagged specific risks to pull forward into the
+next milestones (see `docs/reviews/lane1-architecture-audit-2026-06-16.md` §8):
+- **G2 (L5/L6):** DB PITR / replica (P0 — single-replica StatefulSet, RPO ≤24h);
+  out-of-band writer-absent alert (P0 — spec handed to monitoring-stack); repoint
+  compliance dashboards to device-truth (`setpoint_snapshot`).
+- **G1 (L2):** the band-curve replay gate is now blocking (Phase 1) — firmware
+  curve changes are guarded.
+Proceed to G1/G2 next; pull urgent L2/L5/L6 safety/data items forward per the audit.
