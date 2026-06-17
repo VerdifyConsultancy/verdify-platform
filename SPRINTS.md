@@ -76,7 +76,7 @@ Verification:
 
 ### S5: Firmware-First Climate Core
 
-Status: `Ready`
+Status: `In Progress` (L2 #344 + L3 #345 **Done 2026-06-17**; L7 #349 remains)
 
 Goal: simplify and prove firmware-first deterministic control for climate,
 lighting/occupancy, safety rails, relay transitions, disconnected behavior, and
@@ -84,9 +84,13 @@ diurnal target curves.
 
 Primary lanes:
 
-- #344 L2 Firmware Core.
-- #345 L3 Climate Control.
-- #349 L7 Lighting and Occupancy.
+- #344 L2 Firmware Core — **Done 2026-06-17** (`docs/firmware-fsm-spec.md` +
+  safety-rail/72h/crop-agnostic test rails; proven offline, 222/0 + 193,525-row
+  invariants).
+- #345 L3 Climate Control — **Done 2026-06-17** (curve math + bands/hysteresis +
+  energy-waste/outdoor-air guards + graded feasibility-aware compliance; offline
+  + live-prod confirmed).
+- #349 L7 Lighting and Occupancy — Ready (next in S5).
 
 Verification:
 

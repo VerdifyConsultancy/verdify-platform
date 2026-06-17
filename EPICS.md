@@ -76,14 +76,29 @@ infra actions remain Jason-gated.
   - 72-hour disconnected behavior is defined and tested.
   - AI tunables cannot override hard rails or core FSM logic.
   - Crop-specific assumptions are removed or isolated above firmware.
-- Status: `In Progress`
+- Status: `Done` (2026-06-17 — all 5 acceptance criteria met. The control core
+  was already correct (8-mode band-first FSM, offline-first, AI-bounded); this
+  lane closed the documentation + test-rail gaps and proved them OFFLINE. The
+  authoritative spec is `docs/firmware-fsm-spec.md` (§11 = AC traceability):
+  AC1/AC2 responsibilities + relay-transition + safety-override spec ✓;
+  AC3 72h-disconnected defined AND tested (`disconnected_72h_*`,
+  `no_time_source_fallback_*`, `reboot_persisted_anchors_*` native tests) ✓;
+  AC4 rails + the 5-layer AI-can't-override defense, newly pinned by invariants
+  #25 (SAFETY_HEAT) / #26 (SENSOR_FAULT) ✓; AC5 crop-agnostic guard test ✓.
+  Verified: 222/0 native firmware tests, 193,525-row invariant suite green.
+  Firmware OTA arming of the new rails stays Jason-gated — NOT an acceptance
+  gate (OTA-without-Jason is an explicit non-goal).)
 - Priority: P1
 - Effort: XL
 - Milestone: G1 - Firmware-First Determinism
 - Sprint: S5 `firmware-first-climate-core`
 - Related files/issues/PRs: #287, #289, #290, #292, #299, #300, #323, #324,
   #327, #340, `firmware/`, `verdify_schemas/`,
-  `docs/design/firmware-v2-simplification-2026-06-10.md`.
+  `docs/design/firmware-v2-simplification-2026-06-10.md`; delivered
+  `docs/firmware-fsm-spec.md`, `firmware/test/invariants.h` (#25/#26),
+  `firmware/test/test_greenhouse_logic.cpp` (72h tests),
+  `tests/test_firmware_crop_agnostic_guard.py`; commits d8ed531, 417531e,
+  38c6e08, ffc89b9.
 - Dependencies: Jason for OTA; schema-first sequencing for emitted fields and
   tunables.
 - Risks: production firmware controls live relays; regressions can harm plants
@@ -108,14 +123,26 @@ infra actions remain Jason-gated.
   - Mechanical transition rules avoid energy-waste contradictions by default.
   - Outdoor air use is explicit.
   - Compliance can distinguish controller misses from physical impossibility.
-- Status: `Ready`
+- Status: `Done` (2026-06-17 — all 5 acceptance criteria met, proven offline +
+  live-prod confirmation. AC1 diurnal harmonic curve math formalized
+  (`docs/firmware-fsm-spec.md` §6) + cross-impl goldens (firmware==solar.py==DB,
+  `fn_crop_band_value` verified LIVE in prod); AC2 bands + hysteresis +
+  dwell tables (§7); AC3 energy-waste contradictions avoided by default (fog/heat
+  + fog/vent exclusivity invariants #1/#11, night-econ-heat suppression) (§8.1);
+  AC4 outdoor-air economizer gate explicit + staleness-guarded (§8.2, invariant
+  #9); AC5 graded + feasibility-aware compliance (`fn_zone_band_grade`,
+  migration 146) distinguishes controller-miss vs physically-unachievable —
+  VERIFIED LIVE in prod (emitting controller/none labels on real data) and pinned
+  offline by `tests/test_compliance_feasibility_classifier.py`.)
 - Priority: P1
 - Effort: XL
 - Milestone: G1 - Firmware-First Determinism
 - Sprint: S5 `firmware-first-climate-core`
 - Related files/issues/PRs: #13, #17, #20, #287, #291, #292, #293, #323,
   #324, #328, #341, `docs/design/band-compliance-architecture.md`,
-  `docs/GREENHOUSE-CONTROL-TEST-CATALOG.md`.
+  `docs/GREENHOUSE-CONTROL-TEST-CATALOG.md`; delivered `docs/firmware-fsm-spec.md`
+  §6-§10, `tests/test_compliance_feasibility_classifier.py`; commits 38c6e08,
+  417531e, ffc89b9.
 - Dependencies: L5 schema authority, L6 dashboards, Jason gates for OTA/live DB.
 - Risks: band/content bugs can look like firmware bugs unless readbacks and
   service projections are compared.

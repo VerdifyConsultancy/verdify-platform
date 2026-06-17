@@ -105,4 +105,25 @@ Progress + the work plan are appended below as the run proceeds.
 
 ## 5. Run log
 - **T0** — orientation, cluster access (ctx `vallery`), storage hazard triaged + fixed
-  (`6ed1c24`), L2/L3 mapping workflow launched. _(this section updated as work lands)_
+  (`6ed1c24`), L2/L3 mapping workflow launched.
+- **T1 — L2 #344 + L3 #345 COMPLETE.** The map (9 parallel investigators, adversarially
+  verified) found the control core already correct; the gaps were docs + test rails, all
+  offline-provable, zero firmware-logic change, zero device-gated work to reach acceptance.
+  Delivered 9 work items:
+  - **W3** invariants #25 (SAFETY_HEAT cold rail) / #26 (SENSOR_FAULT all-off) — `d8ed531`.
+  - **W4** native 72h-disconnected determinism + fallback-phase + reboot-idempotence tests — `d8ed531`.
+  - **W6** crop-agnostic firmware guard test; **W9** compliance-feasibility classifier test — `417531e`.
+  - **W1/W8/W5/W6d/W7d** `docs/firmware-fsm-spec.md` (authoritative spec + AC traceability);
+    **W2** 5s→~1s doc fix — `38c6e08`.
+  - **CI** wired the two new contract tests into the `logic-tests` allow-list — `ffc89b9`.
+  - **Validation (offline + live):** `make lint` clean; `make test-firmware` 222/0;
+    `make firmware-invariants` 193,525 rows all pass; 13 new contract tests pass;
+    `kustomize build overlays/prod` OK; `migration-rollback-safety` clean. Live prod
+    read-only confirm: `fn_zone_band_grade` (L3-AC5) + `fn_crop_band_value` (L3-AC1)
+    present and emitting feasibility labels on real data. `firmware-check` is
+    env-limited locally (esphome CLI not in the laptop venv) — N/A, no firmware config changed.
+  - **Tracking:** AGENT_LANE / EPICS / MILESTONES / SPRINTS / PROJECT_BOARD / HISTORY updated;
+    issues #344/#345 closed with evidence; project memory updated.
+  - **Gated remainder (NOT acceptance gates):** arming the new test rails on the live ESP32
+    is a future Jason-gated OTA; the live SQL compliance eval over full history is DB-gated;
+    the storage-infra iSCSI target-cap fix + gated DB-retier are filed in `COORDINATION_REQUESTS.md`.

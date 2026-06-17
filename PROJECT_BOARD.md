@@ -53,8 +53,8 @@ happen at the lane-epic level unless a child issue is explicitly operator-gated.
 | Status | Priority | Epic card | Sprint | Milestone |
 |---|---|---|---|---|
 | Done | P1 | #343 L1 Architecture Audit, Drift Check, and CI/CD | S4 controller-architecture-audit | G0 - Controller Architecture Audit |
-| In Progress | P1 | #344 L2 Firmware Core | S5 firmware-first-climate-core | G1 - Firmware-First Determinism |
-| Ready | P1 | #345 L3 Climate Control | S5 firmware-first-climate-core | G1 - Firmware-First Determinism |
+| Done (2026-06-17) | P1 | #344 L2 Firmware Core | S5 firmware-first-climate-core | G1 - Firmware-First Determinism |
+| Done (2026-06-17) | P1 | #345 L3 Climate Control | S5 firmware-first-climate-core | G1 - Firmware-First Determinism |
 | Ready | P1 | #346 L4 AI Planner and Tunables | S6 data-observability-planner-contracts | G3 - Planner, Irrigation, Lab, and Research |
 | Ready | P1 | #347 L5 Data, Schema, and Source of Truth | S6 data-observability-planner-contracts | G2 - Data Contracts and Observability |
 | Ready | P1 | #348 L6 Observability, Dashboards, and KPIs | S6 data-observability-planner-contracts | G2 - Data Contracts and Observability |

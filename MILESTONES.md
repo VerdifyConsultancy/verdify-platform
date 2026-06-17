@@ -9,7 +9,7 @@ Agent name: `verdify-platform`
 | Milestone | Open | Closed | Purpose |
 |---|---:|---:|---|
 | G0 - Controller Architecture Audit | 0 | 1 | **DONE 2026-06-17.** L1 actual-vs-intended architecture, dead/stale path inventory, CI/CD/release checklist, and failure-mode docs — delivered + drift remediated (PRs #353-#358) + prod deploy executed. |
-| G1 - Firmware-First Determinism | 3 | 0 | L2/L3/L7 firmware core, deterministic climate, lighting/occupancy, safety rails, disconnected behavior, and firmware release gates. |
+| G1 - Firmware-First Determinism | 1 | 2 | **L2 #344 + L3 #345 DONE 2026-06-17** — firmware-internals FSM/relay/safety/bands/72h spec (`docs/firmware-fsm-spec.md`) + safety-rail + 72h-disconnected + crop-agnostic + compliance-feasibility test rails, proven offline (222/0 native, 193,525-row invariants) + live-prod compliance confirmation. **L7 #349** lighting/occupancy remains open. |
 | G2 - Data Contracts and Observability | 2 | 0 | L5/L6 schema authority, source-of-truth/readback contracts, drift detection, green-band compliance, and dashboard/KPI rebuild. |
 | G3 - Planner, Irrigation, Lab, and Research | 4 | 0 | L4/L8/L9/L10 planner boundary, irrigation/fertilization decisions, lab notebook publishing, and all-year/extreme-weather test harness. |
 
@@ -56,6 +56,11 @@ next milestones (see `docs/reviews/lane1-architecture-audit-2026-06-16.md` §8):
 - **G2 (L5/L6):** DB PITR / replica (P0 — single-replica StatefulSet, RPO ≤24h);
   out-of-band writer-absent alert (P0 — spec handed to monitoring-stack); repoint
   compliance dashboards to device-truth (`setpoint_snapshot`).
-- **G1 (L2):** the band-curve replay gate is now blocking (Phase 1) — firmware
-  curve changes are guarded.
-Proceed to G1/G2 next; pull urgent L2/L5/L6 safety/data items forward per the audit.
+- **G1 (L2/L3): DONE 2026-06-17.** L2 #344 + L3 #345 closed — the firmware
+  control core was already correct; this work delivered the authoritative
+  `docs/firmware-fsm-spec.md` and closed the test-rail gaps (safety-heat +
+  sensor-fault invariants #25/#26, the 72h-disconnected determinism tests, the
+  crop-agnostic guard, the compliance-feasibility classifier), proven offline +
+  confirmed live in prod. The band-curve replay gate is blocking (Phase 1).
+  **G1 remainder: L7 #349** (lighting/occupancy).
+Proceed to L7 (G1) + G2/G3 next; pull urgent L5/L6 safety/data items forward per the audit.

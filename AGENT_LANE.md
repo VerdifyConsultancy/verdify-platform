@@ -47,8 +47,8 @@ product evolution. Track A wins whenever they conflict.
 | Lane | Canonical issue | Status | Milestone |
 |---|---:|---|---|
 | L1 Architecture Audit, Drift Check, and CI/CD | #343 | Done (2026-06-17) | G0 - Controller Architecture Audit |
-| L2 Firmware Core | #344 | In Progress | G1 - Firmware-First Determinism |
-| L3 Climate Control | #345 | Ready | G1 - Firmware-First Determinism |
+| L2 Firmware Core | #344 | Done (2026-06-17) | G1 - Firmware-First Determinism |
+| L3 Climate Control | #345 | Done (2026-06-17) | G1 - Firmware-First Determinism |
 | L4 AI Planner and Tunables | #346 | Ready | G3 - Planner, Irrigation, Lab, and Research |
 | L5 Data, Schema, and Source of Truth | #347 | Ready | G2 - Data Contracts and Observability |
 | L6 Observability, Dashboards, and KPIs | #348 | Ready | G2 - Data Contracts and Observability |
