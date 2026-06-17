@@ -687,7 +687,14 @@ inline Setpoints default_setpoints() {
         // these every cycle (they are telemetry/arbitration inputs, not knobs).
         .temp_target = 75.0f,
         .vpd_target = 1.0f,
-        .band_track_fraction = 0.0f
+        // BC-3 (ADR0003 §6.1): pinch is the DEFAULT. 0.50 narrows the control band
+        // halfway toward temp_target/vpd_target so the controller strives ONTO the
+        // target curve on every axis. Float-envelope (0) is no longer the default;
+        // the planner may modulate [0,1] but not float to 0. The controls.yaml
+        // setpts initializer sets the live device value (id(band_track_fraction))
+        // to match this so replay_emit (which starts from default_setpoints) and the
+        // device agree.
+        .band_track_fraction = 0.50f
     };
 }
 

@@ -583,7 +583,11 @@ interval:
               .midday_drench_gap_s = id(midday_drench_gap_s),
               // Firmware-v2 served-band targets (telemetry + normalized arbitration).
               .temp_target = id(sw_onchip_band_enabled) ? sv2_temp_tgt : (sv2_temp_low + sv2_temp_high) * 0.5f,
-              .vpd_target = id(sw_onchip_band_enabled) ? sv2_vpd_tgt : (VPDlo + VPDhi) * 0.5f
+              .vpd_target = id(sw_onchip_band_enabled) ? sv2_vpd_tgt : (VPDlo + VPDhi) * 0.5f,
+              // BC-3 (ADR0003 §6.1): pinch the control band toward the served target
+              // by this fraction. Planner-pushable [0,1]; default 0.50 from the global.
+              // This is the authoritative DEVICE default (C++ default_setpoints matches).
+              .band_track_fraction = id(band_track_fraction)
           };
 
           validate_setpoints(setpts);

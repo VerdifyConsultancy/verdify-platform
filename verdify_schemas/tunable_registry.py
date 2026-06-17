@@ -199,6 +199,26 @@ REGISTRY: dict[str, TunableDef] = {
         tier=1,
         notes="Cooling hold exits at temp_high minus this margin in the live band-first controller.",
     ),
+    "band_track_fraction": TunableDef(
+        name="band_track_fraction",
+        kind="numeric",
+        min=0.0,
+        max=1.0,
+        default=0.50,
+        fw_clamp_lo=0.0,
+        fw_clamp_hi=1.0,
+        esp_object_id="band_track_fraction",
+        cfg_readback_object_id="cfg___band_track_fraction",
+        push_owner="planner",
+        planner_pushable=True,
+        tier=1,
+        notes=(
+            "BC-3 (ADR0003 §6.1): control-band tracking tightness. Pinches the band "
+            "toward temp_target/vpd_target; 0=float-envelope (no longer the default), "
+            "1=track target exactly. Default 0.50. Bounded planner knob — may modulate "
+            "tracking tightness, may not float to 0 as policy. Safety rails untouched."
+        ),
+    ),
     "cold_vent_guard_delta_f": TunableDef(
         name="cold_vent_guard_delta_f",
         kind="numeric",

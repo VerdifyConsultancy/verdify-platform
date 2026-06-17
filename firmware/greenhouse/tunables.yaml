@@ -83,6 +83,21 @@ number:
           id(cool_exit_hysteresis_f) = x;
           id(num_cool_exit_hysteresis).publish_state(x);
 
+  # BC-3 (ADR0003 §6.1): control-band tracking tightness. 0 = float-envelope (no
+  # longer the default), 1 = track target exactly; default 0.50. Bounded planner knob.
+  - platform: template
+    id: num_band_track_fraction
+    name: "Band Track Fraction"
+    min_value: 0
+    max_value: 1
+    step: 0.05
+    lambda: "return id(band_track_fraction);"
+    set_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(band_track_fraction) = x;
+          id(num_band_track_fraction).publish_state(x);
+
   - platform: template
     id: num_cold_vent_guard_delta
     name: "Cold Vent Guard Delta °F"

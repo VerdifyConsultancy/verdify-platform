@@ -242,6 +242,13 @@ static void process_row(const Header& h,
         in.outdoor_data_age_s = (age < 0) ? 99999u : (uint32_t)age;
 
         Setpoints sp = default_setpoints();
+        // BC-3 (ADR0003 §6.1): stock-corpus re-sim is un-pinched (the corpus has band
+        // edges but no temp_target column, so the pinch toward the neutral 75/1.0
+        // default would be unrepresentative). The band-DERIVE block below sets a real
+        // target AND re-arms the pinch (0.50 / env override) — that is where the pinch
+        // is exercised and proven (make firmware-replay-band). Keeping stock mode at 0
+        // means `make firmware-replay OLD=main` stays a clean un-pinched A/B.
+        sp.band_track_fraction = 0.0f;
         auto assign_positive_float = [&](const std::string& name, float& field) {
             float value = parse_float(get(name), NAN);
             if (!std::isnan(value) && value > 0.0f) field = value;
@@ -392,11 +399,29 @@ static void process_row(const Header& h,
             const BandAnchors temp_high_a{72.0f, 86.0f, 80.0f, 70.0f};
             const BandAnchors vpd_low_a  {0.90f, 0.95f, 0.90f, 0.88f};
             const BandAnchors vpd_high_a {1.25f, 1.50f, 1.25f, 1.22f};
+            // BC-3 (ADR0003 §6.1): derive the served TARGET so the pinch tracks the
+            // curve target, not the neutral 75/1.0 default. The DEVICE target is its
+            // own on-chip harmonic — NOT the band midpoint (critic must-fix). temp
+            // uses the real house temp_target anchors (mig 161; they fit this temp
+            // band and carry the real noon-high asymmetry: 84 ≈ 0.8 of the noon band,
+            // not the 81 midpoint). vpd maps the real house target/band ratio
+            // (~0.40/0.56/0.33/0.24) onto these tighter/higher synthetic vpd fixtures.
+            const BandAnchors temp_tgt_a {66.0f, 84.0f, 73.0f, 64.0f};
+            const BandAnchors vpd_tgt_a  {1.04f, 1.26f, 1.02f, 0.96f};
             const float ph = in.solar_phase;
             sp.temp_low  = band_value_at_phase(temp_low_a,  ph);
             sp.temp_high = band_value_at_phase(temp_high_a, ph);
             sp.vpd_low   = band_value_at_phase(vpd_low_a,   ph);
             sp.vpd_high  = band_value_at_phase(vpd_high_a,  ph);
+            sp.temp_target = band_value_at_phase(temp_tgt_a, ph);
+            sp.vpd_target  = band_value_at_phase(vpd_tgt_a,  ph);
+            // Re-arm the pinch here (the common path above zeroes it for stock mode):
+            // band-derive is the ONE place with a real target, so it is where the
+            // pinch is exercised. Default = the shipped BC-3 default (0.50); the
+            // calibration sweep overrides it with REPLAY_EMIT_BAND_TRACK=<f>.
+            sp.band_track_fraction = 0.50f;
+            if (const char* btf = std::getenv("REPLAY_EMIT_BAND_TRACK"))
+                if (*btf) sp.band_track_fraction = (float)std::atof(btf);
         }
         // validate_setpoints applies firmware clamps
         validate_setpoints(sp);

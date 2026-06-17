@@ -558,7 +558,13 @@ class TestActivityDirectWetGuards:
 # safety rails, the FSM switch) AND proves set_plan enforces it at the write path
 # (drops band-owned params before the setpoint_plan INSERT, rejects any non-policy
 # param, force-rewrites the FSM switch on). See docs/adr/0002 §5.
-_BAND_CURVE_ANCHOR_RE = re.compile(r"^(?:band_|zone_vpd_target_|zone_vpd_width_|zone_priority_)")
+# band-CURVE anchors are band_<series>_<sr|sm|ss|mid> (the 24 four-anchor harmonic
+# control points) + the per-zone vpd/priority cuts. band_track_fraction is NOT an
+# anchor — it is the control-band tracking-tightness knob (BC-3/ADR0003 §6.1), a
+# legitimately planner-pushable lever — so the band_ branch requires a phase suffix.
+_BAND_CURVE_ANCHOR_RE = re.compile(
+    r"^(?:band_\w+_(?:sr|sm|ss|mid)|zone_vpd_target_|zone_vpd_width_|zone_priority_)"
+)
 
 
 class TestPlannerWriteContractLockout:

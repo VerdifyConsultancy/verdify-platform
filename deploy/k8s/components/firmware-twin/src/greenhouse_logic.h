@@ -410,21 +410,44 @@ inline float band_vpd_hysteresis(const Setpoints& sp) noexcept {
     return std::min(requested, cap);
 }
 
-// BC-3 (band-compliance): pinch the CONTROL band toward the served target by
-// band_track_fraction so the controller tracks the target curve, not merely
-// stays inside the envelope. Returns a copy with temp_low/high and vpd_low/high
-// moved toward temp_target/vpd_target (which the on-chip curve sets each cycle);
-// safety rails (safety_min/max, vpd_*_safe) and the served band are untouched.
-// fraction = 0 returns the band unchanged (legacy float-envelope) so the OTA
-// binary is behavior-neutral until the tunable is ramped live.
+// BC-3 (band-compliance, ADR0003 §6.1): pinch the CONTROL band toward the served
+// target by band_track_fraction so the controller TRACKS the target curve, not
+// merely stays inside the envelope. Returns a copy with temp_low/high and
+// vpd_low/high moved toward temp_target/vpd_target (which the on-chip curve sets
+// each cycle); safety rails (safety_min/max, vpd_*_safe) and the served band are
+// untouched. fraction = 0 returns the band unchanged (legacy float-envelope).
+//
+// Pinch geometry: the low edge moves up by f·(target−low) and the high edge down
+// by f·(high−target), so the pinched width = served_width·(1−f) regardless of
+// where the target sits between the edges.
+//
+// DEMAND-OVERLAP FLOOR (critic must-fix): the heat-stage-1 trigger is
+// band_heat_target_f + heat_hysteresis; the cooling trigger is temp_high. If the
+// pinched temp band narrows so far that band_heat_target_f(pinched)+heat_hysteresis
+// meets/exceeds the pinched temp_high, the heater and the vent/fans get demanded at
+// the SAME temperature → thrash. band_heat_target_f = low + 0.25·max(2,W), so the
+// smallest safe width is heat_hysteresis/0.75 (when ≥2) else 0.5+heat_hysteresis.
+// We cap the EFFECTIVE temp fraction so pinched_temp_width ≥ that floor (and a small
+// positive floor on VPD so the relative vpd-hysteresis cap stays sane). If the
+// served band is already narrower than the floor, the axis simply does not pinch.
 inline Setpoints apply_band_track_pinch(const Setpoints& sp) noexcept {
     const float f = std::max(0.0f, std::min(1.0f, sp.band_track_fraction));
     if (f <= 0.0f) return sp;
+
+    const float temp_w = std::max(0.01f, sp.temp_high - sp.temp_low);
+    const float vpd_w  = std::max(0.01f, sp.vpd_high  - sp.vpd_low);
+    const float hyst   = std::max(0.0f, sp.heat_hysteresis);
+    const float min_temp_w = (hyst / 0.75f >= 2.0f) ? (hyst / 0.75f) : (0.5f + hyst);
+    const float min_vpd_w  = 0.20f;
+    // pinched_width = width·(1−f_eff); keep it ≥ floor → f_eff ≤ 1 − floor/width.
+    const float f_temp = std::min(f, std::max(0.0f, 1.0f - min_temp_w / temp_w));
+    const float f_vpd  = std::min(f, std::max(0.0f, 1.0f - min_vpd_w  / vpd_w));
+
     Setpoints out = sp;
-    out.temp_low  = sp.temp_low  + f * (sp.temp_target - sp.temp_low);
-    out.temp_high = sp.temp_high - f * (sp.temp_high   - sp.temp_target);
-    out.vpd_low   = sp.vpd_low   + f * (sp.vpd_target  - sp.vpd_low);
-    out.vpd_high  = sp.vpd_high  - f * (sp.vpd_high    - sp.vpd_target);
+    out.temp_low  = sp.temp_low  + f_temp * (sp.temp_target - sp.temp_low);
+    out.temp_high = sp.temp_high - f_temp * (sp.temp_high   - sp.temp_target);
+    out.vpd_low   = sp.vpd_low   + f_vpd  * (sp.vpd_target  - sp.vpd_low);
+    out.vpd_high  = sp.vpd_high  - f_vpd  * (sp.vpd_high    - sp.vpd_target);
     return out;
 }
 

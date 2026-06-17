@@ -265,6 +265,37 @@ Defaults from `default_setpoints()` (`greenhouse_types.h`) / `globals.yaml`:
 | `fog_escalation_kpa` | 0.4 kPa | MIST_FOG entry; VENTILATE fog assist | threshold only |
 | `dehum_aggressive_kpa` | 0.3 kPa | DEHUM both-fans entry | threshold only |
 | `bias_heat` / `bias_cool` | 0.0 °F | symmetric target offset (planner-tunable) | no hysteresis |
+| `band_track_fraction` | **0.50** | pinches the CONTROL band toward `temp_target`/`vpd_target` (BC-3) | per-axis width floor (see §7.4) |
+
+### 7.4 Band-tracking pinch — strive toward target, do not float (BC-3, ADR0003 §6.1)
+
+`climate_band_error()` (`greenhouse_logic.h`) is a **do-nothing envelope**: it returns
+`0.0` for any value inside `[low, high]`. By itself that means the controller *floats*
+anywhere in the band. **`apply_band_track_pinch()`** closes that gap: at the controller
+entry (`determine_mode`) and in `resolve_equipment` it moves the **control** band toward
+the served target by `band_track_fraction` — `low += f·(target−low)`, `high −= f·(high−target)`
+— so the pinched width is `served_width·(1−f)` and every non-safety axis is driven *onto*
+the target curve, not merely kept inside the band. The **served band and the safety rails
+(`safety_min/max`, `vpd_*_safe`) are untouched** — the wide band stays the safety bound.
+
+- **Default 0.50, and it is the DEFAULT (float is retired).** The authoritative device
+  value is set in the `controls.yaml` setpts initializer (`.band_track_fraction =
+  id(band_track_fraction)`, global default `0.50`); `default_setpoints()` matches so the
+  native tests and replay exercise the real behavior. It is a **bounded planner knob**
+  ([0,1], registry `planner_pushable`); the planner may modulate tracking tightness but
+  the float-envelope (0) is no longer the operating default.
+- **Demand-overlap width floor.** Because `band_heat_target_f = low + 0.25·max(2,W)` and
+  heat-stage-1 fires at `+ heat_hysteresis`, a too-narrow pinched band could make the heat
+  trigger meet the cooling edge (heat+cool demanded at one temp → thrash). The pinch caps
+  the per-axis effective fraction so the pinched temp width never drops below
+  `heat_hysteresis/0.75` (≥2) or `0.5+heat_hysteresis` — provably keeping
+  `band_heat_target_f(pinched)+heat_hysteresis ≤ pinched.temp_high` (pinned by
+  `bc3_pinch_never_inverts_or_overlaps_demand`).
+- **Proving a change.** The stock corpus has no per-row target column, so the stock replay
+  and `make firmware-invariants` re-sim **un-pinched** (they record historical float
+  operation); the pinch is exercised and proven by **`make firmware-replay-band`** (which
+  derives a real target curve) plus the native `bc3_*` tests. Arming 0.50 diverges ~43 % of
+  band-derive replay rows from float — the behavioral proof the stock corpus is blind to.
 
 Hysteresis behavior is tested directly (`test_greenhouse_logic.cpp` fix3 temp/heat,
 fix4 dehum-sticky) and bounded so a planner push cannot invert an entry/exit pair.

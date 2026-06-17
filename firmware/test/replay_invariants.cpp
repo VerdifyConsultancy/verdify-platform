@@ -196,6 +196,18 @@ int main(int argc, char** argv) {
         r.occupied = parse_bool(get("occupied"), false);
 
         Setpoints sp = default_setpoints();
+        // BC-3 (ADR0003 §6.1): the stock corpus records historical (fraction=0,
+        // float-envelope) operation and carries band EDGES but NO temp_target/
+        // vpd_target column. With the pinch as the new default_setpoints() value
+        // (0.50), re-simulating the corpus would pinch the recorded band toward the
+        // neutral 75/1.0 default (clamped to an edge) — an UNREPRESENTATIVE band that
+        // fabricates fog/vent + cold-vent violations against the recorded edges. The
+        // stock corpus cannot represent the pinch without a per-row target, so the
+        // un-pinched safety properties are verified here; the pinch's behavioral +
+        // safety proof is `make firmware-replay-band` (real target curve) plus the
+        // native bc3_* tests. (Follow-up: add temp_target/vpd_target to the corpus
+        // export so this run can verify the pinch on real recorded targets.)
+        sp.band_track_fraction = 0.0f;
         auto assign_positive_float = [&](const std::string& name, float& field) {
             float value = parse_float(get(name), NAN);
             if (!std::isnan(value) && value > 0.0f) field = value;

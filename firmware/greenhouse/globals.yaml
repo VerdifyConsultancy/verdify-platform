@@ -52,6 +52,13 @@ globals:
     type: float
     restore_value: no
     initial_value: '1.0'
+  # BC-3 (ADR0003 §6.1): control-band tracking tightness [0,1]. Pinch is the default
+  # (0.50); planner re-pushes each cycle. restore_value:no so a boot before the first
+  # push uses the calibrated default, not a stale NVS value.
+  - id: band_track_fraction
+    type: float
+    restore_value: no
+    initial_value: '0.50'
 
   # ─── Humidity / VPD (kPa) ───
   # Wide defaults — see comment on target_temp_low_f.

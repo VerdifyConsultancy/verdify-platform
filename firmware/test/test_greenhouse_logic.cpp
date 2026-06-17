@@ -87,6 +87,10 @@ static Setpoints band_setpoints() {
     sp.vpd_max_safe = 2.5f;
     sp.vpd_min_safe = 0.3f;
     sp.dehum_aggressive_kpa = 0.6f;
+    // BC-3: these mechanism tests assert behavior against the EXACT band they set.
+    // The pinch (default 0.50) is an orthogonal band-narrowing transform tested
+    // separately by the bc3_* tests, so pin float-envelope here.
+    sp.band_track_fraction = 0.0f;
     return sp;
 }
 
@@ -1382,6 +1386,7 @@ TEST(fix3_ventilate_exit_hysteresis) {
     // target. With temp_low=74, temp_high=78 (band=4), Thigh_interior =
     // 78 - 4*0.25 = 77°F. Enter VENT at >77, exit at <(77 - 1.5) = 75.5.
     auto sp = default_setpoints();
+    sp.band_track_fraction = 0.0f;  // BC-3: assert against the set band; pinch tested separately
     sp.temp_low = 74; sp.temp_high = 78; sp.temp_hysteresis = 1.5;
     auto s = initial_state();
     // 78°F > Thigh(77) → enter VENTILATE
@@ -1880,6 +1885,7 @@ TEST(fw9b_ventilate_fog_on_vpd_emergency) {
     // the PR-A change matters only when band is narrowed via dispatcher push
     // (see fw9b_ventilate_fog_production_band test below).
     auto sp = default_setpoints();
+    sp.band_track_fraction = 0.0f;  // BC-3: assert against the set band; pinch tested separately
     sp.vpd_max_safe = 3.0f;
     sp.fog_rh_ceiling = 90.0f;
     sp.fog_min_temp = 55.0f;
@@ -2247,6 +2253,7 @@ TEST(s9_heat2_latches_through_minor_fluctuation) {
     // Sprint-12: pin both band edges so interior Tlow lands at 58°F —
     // keeps the original threshold shape (S2 set at <53, release at >=59).
     auto sp = default_setpoints();
+    sp.band_track_fraction = 0.0f;  // BC-3: assert against the set band; pinch tested separately
     sp.temp_low = 56.0f; sp.temp_high = 64.0f;  // band=8, Tlow_interior=58
     sp.dH2 = 5.0f;
     sp.heat_hysteresis = 1.0f;  // S1 exit = 59°F
@@ -2270,6 +2277,7 @@ TEST(s9_heat2_latch_does_not_re_set_in_hysteresis_band) {
     // Only a drop below S2 threshold re-latches.
     // Sprint-12: same narrow band as s9_heat2_latches_through_minor_fluctuation.
     auto sp = default_setpoints();
+    sp.band_track_fraction = 0.0f;  // BC-3: assert against the set band; pinch tested separately
     sp.temp_low = 56.0f; sp.temp_high = 64.0f;  // band=8, Tlow_interior=58
     sp.dH2 = 5.0f;
     sp.heat_hysteresis = 1.0f;
@@ -2569,6 +2577,7 @@ TEST(s12_heating_targets_band_interior) {
     // Pre-sprint-12 would have fired below 63 and held temp pinned near
     // temp_low=62. Post-sprint-12 stabilizes near 65-66°F (band interior).
     auto sp = default_setpoints();
+    sp.band_track_fraction = 0.0f;  // BC-3: assert against the set band; pinch tested separately
     sp.temp_low = 62.0f; sp.temp_high = 75.0f;
     sp.bias_heat = 0.0f; sp.heat_hysteresis = 1.0f;
     auto s = initial_state();
@@ -2591,6 +2600,7 @@ TEST(s12_cooling_targets_band_interior) {
     //   Cooling enters at temp > 71.75 (not > 75)
     //   Cooling exit (was_ventilating) at temp <= 70.25
     auto sp = default_setpoints();
+    sp.band_track_fraction = 0.0f;  // BC-3: assert against the set band; pinch tested separately
     sp.temp_low = 62.0f; sp.temp_high = 75.0f;
     sp.bias_cool = 0.0f; sp.temp_hysteresis = 1.5f;
     auto s = initial_state();
@@ -3107,6 +3117,11 @@ static Setpoints band_first_setpoints() {
     sp.direct_wet_stress_min_dew_margin_f = 8.0f;
     sp.sw_night_stress_wet_enabled = true;
     sp.night_stress_min_dew_margin_f = 6.0f;
+    // BC-3: band-first MECHANISM tests (heat2 latch, dehum hysteresis, fan2
+    // escalation, cooling exit) assert behavior against the exact 72-78°F band
+    // they set. The pinch (default 0.50) is orthogonal and tested by the bc3_*
+    // tests, so pin float-envelope here.
+    sp.band_track_fraction = 0.0f;
     return sp;
 }
 
@@ -3570,6 +3585,75 @@ TEST(bc3_band_track_pinch_tightens_cooling_toward_target) {
     auto s1 = initial_state();
     Mode m1 = determine_mode(in, sp, s1, 5000);
     ASSERT_EQ(m1, VENTILATE);              // tracks: 82 > pinched high edge → cool
+    PASS();
+}
+
+// BC-3 (ADR0003 §6.1): the pinch is now the DEFAULT, not an off-by-default knob.
+TEST(bc3_pinch_is_the_default_not_float) {
+    ASSERT_TRUE(default_setpoints().band_track_fraction > 0.0f);
+    PASS();
+}
+
+// BC-3: under the default pinch the control band is strictly inside the served
+// band on BOTH axes, and the target stays inside the pinched band (so the
+// controller strives toward target on every axis, not just heat).
+TEST(bc3_default_pinch_drives_toward_target_both_axes) {
+    auto sp = band_first_setpoints();
+    sp.temp_low = 70.0f; sp.temp_high = 82.0f; sp.temp_target = 76.0f;
+    sp.vpd_low = 0.7f; sp.vpd_high = 1.5f; sp.vpd_target = 1.0f;
+    sp.band_track_fraction = default_setpoints().band_track_fraction;
+    validate_setpoints(sp);
+    auto p = apply_band_track_pinch(sp);
+    ASSERT_TRUE(p.temp_low > sp.temp_low && p.temp_high < sp.temp_high);
+    ASSERT_TRUE(p.vpd_low  > sp.vpd_low  && p.vpd_high  < sp.vpd_high);
+    ASSERT_TRUE(p.temp_low <= sp.temp_target && sp.temp_target <= p.temp_high);
+    ASSERT_TRUE(p.vpd_low  <= sp.vpd_target  && sp.vpd_target  <= p.vpd_high);
+    PASS();
+}
+
+// BC-3 (critic must-fix): even at the extreme fraction on a narrow band the pinch
+// must NOT invert the band, must NOT touch the safety rails, and must NOT push the
+// heat-stage-1 trigger (band_heat_target_f + heat_hysteresis) up to/over the cooling
+// edge (temp_high) — otherwise heat and cooling would be demanded at one temp (thrash).
+// The per-axis width floor in apply_band_track_pinch guarantees this.
+TEST(bc3_pinch_never_inverts_or_overlaps_demand) {
+    const float bands[][2] = {{74.0f, 76.0f}, {72.0f, 78.0f}, {40.0f, 95.0f}};
+    for (const auto& b : bands) {
+        auto sp = band_first_setpoints();
+        sp.temp_low = b[0]; sp.temp_high = b[1];
+        sp.temp_target = (b[0] + b[1]) * 0.5f;
+        sp.vpd_low = 0.8f; sp.vpd_high = 1.2f; sp.vpd_target = 1.0f;
+        sp.heat_hysteresis = 1.0f;
+        sp.band_track_fraction = 1.0f;          // extreme
+        validate_setpoints(sp);
+        auto p = apply_band_track_pinch(sp);
+        ASSERT_TRUE(p.temp_low < p.temp_high && p.vpd_low < p.vpd_high);        // no inversion
+        ASSERT_TRUE(p.safety_min == sp.safety_min && p.safety_max == sp.safety_max);
+        ASSERT_TRUE(p.vpd_min_safe == sp.vpd_min_safe && p.vpd_max_safe == sp.vpd_max_safe);
+        // demand-overlap floor: heat trigger never reaches the cooling edge
+        ASSERT_TRUE(band_heat_target_f(p) + sp.heat_hysteresis <= p.temp_high + 1e-4f);
+    }
+    PASS();
+}
+
+// BC-3: the pinch flows through resolve_equipment too — at a temp that is in-band
+// but below the pinched heat target, the relay map calls for heat where the float
+// envelope would not. (resolve_equipment applies the same pinch internally.)
+TEST(bc3_pinch_flows_through_resolve_equipment) {
+    auto sp = band_first_setpoints();
+    sp.temp_low = 72.0f; sp.temp_high = 85.0f; sp.temp_target = 80.0f;
+    sp.vpd_low = 0.8f; sp.vpd_high = 1.4f; sp.vpd_target = 1.0f;
+    sp.heat_hysteresis = 1.0f;
+    auto in = make_inputs(77.0f, 1.0f);   // float heat trigger ~76.25 (no heat); pinched ~79.1 (heat)
+    auto st = initial_state();
+
+    sp.band_track_fraction = 0.0f; validate_setpoints(sp);
+    auto out_float = resolve_equipment(IDLE, in, sp, st, true);
+    ASSERT_TRUE(!out_float.heat1);         // float envelope: 77 above the float heat target → no heat
+
+    sp.band_track_fraction = 0.6f; validate_setpoints(sp);
+    auto out_pinch = resolve_equipment(IDLE, in, sp, st, true);
+    ASSERT_TRUE(out_pinch.heat1);          // pinched: 77 below the pinched heat target → strive up
     PASS();
 }
 
