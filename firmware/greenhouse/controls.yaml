@@ -705,10 +705,15 @@ interval:
           }
 
           const bool vent_is_open = id(vent_rly)->state;
+          // BC-5/BC-11: DEHUM_VENT is the ONE sanctioned heat+vent state — a bounded
+          // stage-1 heat-assist holds the temperature floor while dehumidifying — so
+          // it is exempt from the heat<->air suppression exactly like SAFETY_HEAT.
+          // (resolve_equipment only ever sets heat1, never heat2, in DEHUM_VENT.)
+          const bool heat_air_exchange_exempt = (mode == SAFETY_HEAT) || (mode == DEHUM_VENT);
           const bool heat_vent_interlock_active =
-              mode != SAFETY_HEAT && (willHeat1 || willHeat2) && (vent_is_open || willVent);
+              !heat_air_exchange_exempt && (willHeat1 || willHeat2) && (vent_is_open || willVent);
           const bool heat_fan_interlock_active =
-              mode != SAFETY_HEAT && (willHeat1 || willHeat2) && (fan_physically_on || fan_wanted);
+              !heat_air_exchange_exempt && (willHeat1 || willHeat2) && (fan_physically_on || fan_wanted);
           const bool heat_air_exchange_interlock_active =
               heat_vent_interlock_active || heat_fan_interlock_active;
           static bool heat_vent_interlock_prev = false;

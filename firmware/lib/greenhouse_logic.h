@@ -116,6 +116,18 @@ inline float dew_margin_f(const SensorInputs& in) noexcept {
     return in.temp_f - in.dew_point_f;
 }
 
+// BC-7 (band-compliance): the dew-margin veto that blocks wetting/fog to prevent
+// condensation is STRICTER AT NIGHT. After dark there is no solar load, so leaf
+// surfaces sit closest to the dewpoint and a wider temp-dewpoint spread is
+// required before any wetting is allowed. Day uses direct_wet_stress_min_dew_margin_f;
+// night requires at least night_stress_min_dew_margin_f (defaulted >= the day
+// margin) — never looser than day. One generic helper, all wetting gates share it.
+inline float min_dew_margin_for_wetting(const SensorInputs& in, const Setpoints& sp) noexcept {
+    return is_night_phase(in)
+        ? std::max(sp.direct_wet_stress_min_dew_margin_f, sp.night_stress_min_dew_margin_f)
+        : sp.direct_wet_stress_min_dew_margin_f;
+}
+
 // ── Firmware-v2: night econ-heat rule (generic, solar-phase) ────────────
 // Never heat to chase humidity at night. The econ-rescue heat
 // (resolve_equipment IDLE: fires heat1 when vpd < vpd_low_eff && econ_block)
@@ -166,7 +178,7 @@ inline const char* climate_wet_assist_block_reason(const SensorInputs& in, const
     if (moisture_blocked_by_occupancy(in, sp)) return "occupancy";          // state
     if (sp.feed_hold_active) return "feed_hold";                            // state: FRT-6 absorption hold
     if (in.vpd_kpa <= sp.vpd_high) return "below_threshold";               // curve: only above the band high edge
-    if (dew_margin_f(in) < sp.direct_wet_stress_min_dew_margin_f) return "dew_margin";  // physics: condensation
+    if (dew_margin_f(in) < min_dew_margin_for_wetting(in, sp)) return "dew_margin";  // physics: condensation
     return "";
 }
 
@@ -271,7 +283,7 @@ inline const char* climate_fog_assist_block_reason(const SensorInputs& in, const
     // so a feed is not immediately rinsed/diluted at the canopy.
     if (!safety_cool_active && sp.feed_hold_active) return "feed_hold";
     if (in.vpd_kpa <= sp.vpd_high) return "below_threshold";  // curve: only above the band high edge
-    if (dew_margin_f(in) < sp.direct_wet_stress_min_dew_margin_f) return "dew_margin";  // physics
+    if (dew_margin_f(in) < min_dew_margin_for_wetting(in, sp)) return "dew_margin";  // physics
     // CURVE-ONLY: the solar taper / night phase gate is removed — fog follows the
     // band curve, not a dry-down clock. Only physics rails below remain.
     if (in.rh_pct > sp.fog_rh_ceiling) return "rh_ceiling";
@@ -335,7 +347,7 @@ inline bool center_burst_rails_permit(const SensorInputs& in, const Setpoints& s
     if (moisture_blocked_by_occupancy(in, sp)) return false;
     if (sp.feed_hold_active) return false;        // FRT-6 absorption hold
     if (past_wet_taper(in, sp)) return false;     // solar taper (boosts are routine wetting)
-    if (dew_margin_f(in) < sp.direct_wet_stress_min_dew_margin_f) return false;
+    if (dew_margin_f(in) < min_dew_margin_for_wetting(in, sp)) return false;
     // Over-saturation sanity gate: only burst when the air is drier than the
     // center band ceiling. If VPD <= vpd_high the canopy is already humid.
     // SAF-1 / SF1: when the VPD reading is degraded (fabricated) this gate is
@@ -603,6 +615,13 @@ inline ClimateActionDecision evaluate_climate_decision(
         state.heat2_latched || in.temp_f < (band_heat_target_f(sp) + sp.heat_hysteresis);
     const bool humidify_ready = dry_excess > 0.0f && state.vpd_watch_timer_ms >= sp.vpd_watch_dwell_ms;
     const bool sealed_backoff = state.mist_backoff_timer_ms > 0;
+    // The cold-dehum brake is RETAINED: it triggers on exactly invariant #14's
+    // condition (outdoor < temp_low - cold_vent_guard_delta_f), so it IS the
+    // cold-day vent-thrash protection, not a cost-brake. On non-extreme nights it
+    // does not trigger, so dehum already runs to hold the VPD target; only
+    // extreme-continuous-cold-day vent-dehum is restrained (a wear/temp/VPD trade
+    // needing a replay-tuned long dehum min-dwell + a crop-priority call — tracked
+    // under BC-4, deferred from this OTA so invariant #14 stays green).
     const bool cold_dehum_allowed =
         !outdoor_cold_for_vent || in.temp_f > (sp.temp_low + std::max(COLD_DEHUM_TEMP_MARGIN_MIN_F, sp.temp_hysteresis));
     const float dehum_hysteresis = band_vpd_hysteresis(sp);
@@ -2071,6 +2090,15 @@ inline RelayOutputs resolve_equipment(
 
         case DEHUM_VENT:
             out.vent = true;
+            // BC-5 (band-compliance): bounded heat-assist. With the cold-dehum
+            // brake removed (BC-4), DEHUM_VENT now runs on cold nights to hold the
+            // VPD target; venting would otherwise drag temp down. When the house is
+            // at/below the heat target, co-run the LEAD heater (stage-1, gentle) to
+            // hold the temperature floor — the ONE sanctioned heat+vent state (ADR
+            // 0003 §3). The controls.yaml heat<->air interlock exempts DEHUM_VENT so
+            // this is not suppressed; heat2 is never co-run with the vent, and
+            // SAFETY_HEAT still owns the hard cold rail.
+            if (needs_heating_s1) { out.heat1 = true; }
             // Aggressive dehum (both fans) kicks in if vpd is below the
             // INTERIOR target minus the aggressive margin — keeps the
             // trigger consistent with the rest of the interior-targeting

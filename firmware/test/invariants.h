@@ -469,6 +469,24 @@ inline bool check_26_sensor_fault_all_off(const TraceRow& r, ReportFn report = d
     return true;
 }
 
+// #27: heat <-> air-exchange exclusivity. The deterministic controller must never
+// run a heater together with the vent or a fan EXCEPT in two sanctioned states:
+// SAFETY_HEAT (lead fan for canopy circulation, vent closed) and DEHUM_VENT (BC-5
+// bounded stage-1 heat-assist holding the temp floor while dehumidifying). This is
+// the pure-replay codification of the controls.yaml heat<->air interlock (BC-11),
+// so a regression that re-opens heater-vs-vent/fan fighting fails CI offline, not
+// only on-device. heat2 with the vent is never allowed (DEHUM_VENT runs heat1 only).
+inline bool check_27_heat_air_exchange_exclusive(const TraceRow& r, ReportFn report = default_report) {
+    const bool heating = r.eq_heat1 || r.eq_heat2;
+    const bool air_exchange = r.eq_vent || r.eq_fan1 || r.eq_fan2;
+    if (!heating || !air_exchange) return true;
+    if (r.greenhouse_state == "SAFETY_HEAT") return true;                  // circulation fan, vent closed
+    if (r.greenhouse_state == "DEHUM_VENT" && !r.eq_heat2) return true;    // BC-5 stage-1 heat-assist
+    report(27, "heat_air_exchange_exclusive", r,
+           "heater ON with vent/fan outside SAFETY_HEAT / DEHUM_VENT-stage1");
+    return false;
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // Windowed invariants — evaluated over rolling windows. Helpers maintain
 // per-check state via a small context struct. Caller iterates rows and
@@ -818,6 +836,7 @@ struct Runner {
         // ── Cold-rail + sensor-fault safety rails (L2 #344 AC4 test-rail) ──
         if (!check_25_safety_heat_engaged(r, report))               { failures++; ok = false; }
         if (!check_26_sensor_fault_all_off(r, report))              { failures++; ok = false; }
+        if (!check_27_heat_air_exchange_exclusive(r, report))       { failures++; ok = false; }
         return ok;
     }
 };

@@ -191,7 +191,7 @@ struct Setpoints {
     // stricter dew margin; the normal SEALED_MIST machinery + SAF-4 duty caps
     // + relay min-on/off bound the actual water. No bespoke pulse path.
     bool     sw_night_stress_wet_enabled;         // default true
-    float    night_stress_min_dew_margin_f;       // default 6.0
+    float    night_stress_min_dew_margin_f;       // BC-7: night wetting dew-margin (>= day); default 10.0
     // ── FRT-6 / FRT-7 (post-feed absorption hold) ──
     // Set true by controls.yaml while now_ms < feed_hold_until_ms (the
     // shared globals.yaml timestamp armed when a fertilizer feed completes).
@@ -475,12 +475,12 @@ inline bool climate_candidate_precedes(
             return a.projected_vpd_error_kpa < b.projected_vpd_error_kpa;
         }
     }
-    if (a.resource_cost != b.resource_cost) {
-        return a.resource_cost < b.resource_cost;
-    }
-    if (a.relay_churn_cost != b.relay_churn_cost) {
-        return a.relay_churn_cost < b.relay_churn_cost;
-    }
+    // BC-4 (band-compliance regime): resource_cost / relay_churn_cost are NO
+    // LONGER arbitration tiebreakers — cost/energy is not a driver here, band
+    // tracking is. After band-normalized error, the only tiebreak is the
+    // hold-preference (prefer the prior action), which is anti-chatter, not
+    // cost. Relay wear is bounded by per-relay min-on/off dwell, not by biasing
+    // the climate decision toward cheaper/idler actions.
     return a.prior_action_hold_preference > b.prior_action_hold_preference;
 }
 
@@ -658,7 +658,7 @@ inline Setpoints default_setpoints() {
         // band's own high edge + stress margin defines the emergency; the
         // normal SEALED_MIST machinery + duty caps bound the water.
         .sw_night_stress_wet_enabled = true,
-        .night_stress_min_dew_margin_f = 6.0f,
+        .night_stress_min_dew_margin_f = 10.0f,
         // FRT-6: absorption hold inactive until controls.yaml arms it.
         .feed_hold_active = false,
         // Dawn boost: window opens AT on-chip sunrise (offset 0), 12 min,

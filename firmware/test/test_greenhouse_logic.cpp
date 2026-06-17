@@ -189,6 +189,38 @@ TEST(stress_wet_override_inert_wetting_follows_curve_day_and_night) {
     PASS();
 }
 
+// BC-7: the dew-margin wetting/fog veto is STRICTER AT NIGHT when the night
+// floor exceeds the day floor. A 9°F margin clears the 8°F day floor (wetting
+// allowed by day) but not the 10°F night floor (blocked at night) — the design's
+// "dewpoint margin as a hard nighttime constraint".
+TEST(bc7_night_dew_margin_is_stricter_than_day) {
+    auto sp = band_setpoints();
+    sp.direct_wet_stress_min_dew_margin_f = 8.0f;    // day floor
+    sp.night_stress_min_dew_margin_f = 10.0f;        // night floor (stricter)
+    validate_setpoints(sp);
+
+    auto in = make_inputs(74.0f, sp.vpd_high + 0.10f);  // VPD above band → wetting wanted
+    in.dew_point_f = in.temp_f - 9.0f;                  // 9°F margin: between day(8) and night(10)
+
+    set_solar_day(in, 12);                              // DAY: 9 >= 8 → allowed
+    ASSERT_TRUE(climate_wet_assist_permitted(in, sp));
+    ASSERT_TRUE(climate_fog_assist_permitted(in, sp));
+    ASSERT_TRUE(min_dew_margin_for_wetting(in, sp) == 8.0f);
+
+    set_solar_day(in, 22);                              // NIGHT: 9 < 10 → blocked by dew_margin
+    ASSERT_FALSE(climate_wet_assist_permitted(in, sp));
+    ASSERT_TRUE(std::string(climate_wet_assist_block_reason(in, sp)) == "dew_margin");
+    ASSERT_TRUE(std::string(climate_fog_assist_block_reason(in, sp)) == "dew_margin");
+    ASSERT_TRUE(min_dew_margin_for_wetting(in, sp) == 10.0f);
+
+    // Never looser than day: a night floor below the day floor cannot relax it.
+    sp.night_stress_min_dew_margin_f = 4.0f;
+    validate_setpoints(sp);
+    set_solar_day(in, 22);
+    ASSERT_TRUE(min_dew_margin_for_wetting(in, sp) == 8.0f);  // max(day=8, night=4)
+    PASS();
+}
+
 TEST(climate_wet_assist_requires_safety_rails_not_ai_switch_or_crop_window) {
     // CURVE-ONLY: routine wet-assist is gated by the band curve (VPD above
     // vpd_high) + PHYSICS (dew margin) + STATE (occupancy/feed-hold), NOT by a
@@ -1118,7 +1150,7 @@ TEST(climate_candidate_selector_prefers_temperature_before_vpd_and_resource) {
     PASS();
 }
 
-TEST(climate_candidate_selector_uses_vpd_then_resource_as_tie_breakers) {
+TEST(climate_candidate_selector_ignores_resource_cost_after_band_error) {
     ClimateCandidateProjection candidates[] = {
         {
             .action = CLIMATE_VENT_COOL,
@@ -1154,7 +1186,11 @@ TEST(climate_candidate_selector_uses_vpd_then_resource_as_tie_breakers) {
             .prior_action_hold_preference = 0.0f
         }
     };
-    ASSERT_EQ(choose_climate_candidate_index(candidates, 3), 2);
+    // BC-4: resource_cost is no longer a tiebreaker. idx1 (MIST_ASSIST) and idx2
+    // (IDLE) tie on band error (vpd 0.1); idx2 is CHEAPER (resource 1 < 5) but no
+    // longer wins for it — the earlier equally-band-good candidate is kept and
+    // cost is ignored. Pre-BC-4 this selected idx2 on the cost tiebreak.
+    ASSERT_EQ(choose_climate_candidate_index(candidates, 3), 1);
     PASS();
 }
 
@@ -1707,15 +1743,21 @@ TEST(sealed_mist_never_opens_vent_or_fans) {
 }
 
 TEST(no_heater_with_vent) {
-    auto sp = default_setpoints(); int v = 0;
+    auto sp = default_setpoints(); int v = 0; int dehum_heat2 = 0;
     for (float t = 40; t <= 100; t += 2)
         for (float vpd = 0.1f; vpd <= 3.5f; vpd += 0.1f) {
             auto s = initial_state(); s.vpd_watch_timer_ms = 60000;
             Mode m = determine_mode(make_inputs(t, vpd), sp, s, 5000);
             auto out = resolve_equipment(m, make_inputs(t, vpd), sp, s, true);
-            if (out.vent && (out.heat1 || out.heat2)) v++;
+            // BC-5: DEHUM_VENT may co-run the LEAD heater (stage-1) with the vent to
+            // hold the temperature floor while dehumidifying — the ONE sanctioned
+            // heat+vent state. heat2 is still never co-run with the vent ANYWHERE.
+            if (out.vent && (out.heat1 || out.heat2) && m != DEHUM_VENT) v++;
+            if (out.vent && out.heat2 && m == DEHUM_VENT) dehum_heat2++;
         }
-    ASSERT_EQ(v, 0); PASS();
+    ASSERT_EQ(v, 0);
+    ASSERT_EQ(dehum_heat2, 0);
+    PASS();
 }
 
 TEST(no_fan_without_vent) {
@@ -3472,6 +3514,11 @@ TEST(band_first_retries_after_backoff_window) {
 }
 
 TEST(band_first_cold_dehum_requires_temp_headroom) {
+    // The cold-dehum brake is RETAINED (it is invariant #14's vent-thrash
+    // protection — it triggers on exactly the #14 cold-day condition). On an
+    // extreme-cold day (outdoor far below temp_low) with the house just above
+    // temp_low and VPD below the band, the controller suppresses vent-dehum and
+    // idles/heats rather than thrashing the vent in frigid air.
     auto sp = band_first_setpoints();
     auto s = initial_state();
     auto in = make_inputs(sp.temp_low + 1.0f, sp.vpd_low - 0.3f);
@@ -3480,6 +3527,25 @@ TEST(band_first_cold_dehum_requires_temp_headroom) {
     Mode m = determine_mode(in, sp, s, 60000);
     ASSERT_EQ(m, IDLE);
     ASSERT_TRUE(std::string(s.last_mode_reason) == "heat_stage1");
+    PASS();
+}
+
+TEST(bc5_dehum_vent_heat_assist_holds_floor) {
+    // BC-5: when DEHUM_VENT runs while the house is at/below the heat target (and
+    // the brake allows it — outdoor not extreme-cold), the lead heater co-runs to
+    // hold the temperature floor. The one sanctioned heat+vent state: heat1 with
+    // the vent, never heat2.
+    auto sp = band_first_setpoints();
+    auto s = initial_state();
+    auto in = make_inputs(sp.temp_low + 1.0f, sp.vpd_low - 0.3f);
+    in.outdoor_temp_f = sp.temp_low;   // not extreme-cold → cold_dehum_allowed true
+
+    Mode m = determine_mode(in, sp, s, 60000);
+    ASSERT_EQ(m, DEHUM_VENT);
+    auto out = resolve_equipment(m, in, sp, s, true);
+    ASSERT_TRUE(out.vent);
+    ASSERT_TRUE(out.heat1);    // BC-5 heat-assist: indoor below the heat target
+    ASSERT_FALSE(out.heat2);   // heat2 never co-runs with the vent
     PASS();
 }
 
