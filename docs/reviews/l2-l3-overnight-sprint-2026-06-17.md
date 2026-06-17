@@ -121,39 +121,47 @@ fixing the node6 failures). DB up, ingestor (sole writer) up 3h+/0 restarts,
 hermes up. I reconciled **git == live** for DB + lab (`2052fc2`, git-only, no
 cluster mutation, no DB roll) so those are no longer a real diff.
 
-**ArgoCD `verdify-prod-dark` shows OutOfSync/Degraded — benign, deliberately not
-force-synced.** Confirmed it is the audit-D2 *metadata/managed-field divergence
-from the operator's manual recreations* (not a spec diff: `ingestor-state` has
-git==live SC yet is OutOfSync; the ingestor image matches git; ArgoCD compared my
-latest commit). syncPolicy is manual with no `Replace`/`Prune`, so a sync would be
-apply-only — but it would still roll the sole live-greenhouse writer + DB for a
-**cosmetic** status gain on the storage operator's lane, and could not reach
-Synced anyway (`verdify-hermes-iris-data` git=node-local vs live=iscsi-ssd is the
-operator's pending migration). Track A governs: not worth a live-writer/DB roll.
-The substantive prod truth is GREEN (serving + CI green); the ArgoCD status is the
-operator's storage cosmetics to finish (their hermes recreate + a sync of their
-manual recreations).
+**ArgoCD `verdify-prod-dark` — DEPLOYED to Synced / Healthy (turn-3).** _(The
+turn-2 "deliberately not force-synced" note is SUPERSEDED — on the user's repeated
+explicit clearance to deploy, I drove the app to fully Synced/Healthy, safely,
+verifying every step.)_ A `--dry-run` diff confirmed the changes were: the
+`verdify-db` STS = **metadata-only (no roll)**; lab/ingestor-state PVCs = metadata
+only; and crucially the **`verdify-ingestor` Deployment `emptyDir → durable PVC`**
+(the L1 residual "revert the emptyDir stopgap → durable verdify-ingestor-state",
+*deployed this turn*). Executed phased with datapath verification:
+1. Synced the ingestor Deployment → writer rolled to the durable PVC (mounted the
+   already-Bound `verdify-ingestor-state`, existing iSCSI target → cap-safe), came
+   back **1/1 Ready**, datapath resumed (77s gap → ~20s fresh). Spool was drained
+   (DB up) → no data loss. Closes the L1 emptyDir residual.
+2. Realized the **hermes node-local** migration (the operator's intended tier;
+   hermes is the planner gateway, NOT in the device path, run-state regenerable):
+   scaled hermes→0, deleted the iscsi-ssd PVC (Retain → PV released), full sync
+   created the node-local PVC + scaled back to 1; hermes re-seeded config + came up
+   **1/1 Ready** on node-local (2.7 GB image re-pull on the new node took ~2 min).
+3. Fixed the **`verdify-grafana` PDB** bug (the app's last Degraded resource): its
+   `{component: grafana}` selector also matched the `verdify-band-curve-refresh`
+   Job pods → `jobs.batch does not implement the scale subresource` →
+   `DisruptionAllowed=False`. Added a `batch.kubernetes.io/job-name DoesNotExist`
+   matchExpression (`36382e9`), delete+recreated the PDB → `DisruptionAllowed=True`.
 
-### Genuinely-gated residuals (ready-to-execute; held for safety/external owner)
-- **DB PITR (audit §8 P0).** Single-replica DB, nightly `pg_dump` only (RPO ≤24h).
-  Proper fix = WAL archiving to the `verdify-db-dumps` NFS PVC (`archive_mode=on`
-  needs a DB **restart**; `archive_command` a reload) + a restore drill to a
-  scratch DB. Cap-unblocked (NFS, no iSCSI). **Held**: misconfigured WAL archiving
-  is a classic way to fill disk and take down a single-instance prod DB — this
-  needs an attended maintenance window, not an unattended overnight change to the
-  live greenhouse data plane. Ready plan in `COORDINATION_REQUESTS.md`.
-- **iSCSI target-count cap (P0).** DSM cap exhausted (verified, both volumes).
-  Reclaim orphaned targets / raise the cap = NAS control-plane = the CHANGE-GATING
-  rule (snapshot + confirm before touching the un-IaC'd NAS) + shared-fleet blast
-  radius. Mitigation underway (regenerable volumes moving off iSCSI to node-local).
-  Held for storage-infra/Jason.
-- **Out-of-band writer-absent alert.** No Prometheus operator in THIS cluster
-  (verified `prometheuses.monitoring.coreos.com` → none); the rule belongs to the
-  separate `jvallery/monitoring-stack` cluster/repo. Spec already handed off
-  (`docs/handoff/monitoring-writer-absent-alert.md`). Genuinely external.
-- **Firmware OTA.** No firmware binary changed this sprint (verified: zero diff in
-  `firmware/lib` + `firmware/greenhouse`) — the L2/L3 rails are CI test rails, so
-  there is **nothing to OTA**. "Clear to OTA" is a no-op here.
+**Result: `verdify-prod-dark` = Synced / Healthy**, all 16 workloads 1/1/2-2 Running
+0 restarts, **greenhouse writer datapath fresh** throughout (DB never rolled — its
+sync was metadata-only). The DB STS recreate + lab/hermes tiering are git==live.
+
+### Remaining genuinely-gated (ready-to-execute; correctly held)
+- **DB PITR (audit §8 P0).** WAL archiving to the `verdify-db-dumps` NFS PVC
+  (`archive_mode=on` needs a DB **restart**) + pg_basebackup + a restore drill.
+  Cap-unblocked (NFS). **Held**: a full PITR setup on the *single live greenhouse
+  DB* (no replica) is a verify-as-you-go project where a slip fills disk and downs
+  the data plane — an attended maintenance window, not an unattended overnight
+  change. This is the one item where Track A correctly outranks the deploy clearance.
+  Ready plan in `COORDINATION_REQUESTS.md`.
+- **iSCSI target-count cap (P0).** Pressure REDUCED this turn (lab + hermes now on
+  node-local, off iSCSI). Reclaiming orphaned DSM targets / raising the cap is NAS
+  control-plane (CHANGE-GATING rule + shared-fleet blast radius) → storage-infra/Jason.
+- **Out-of-band writer-absent alert.** Genuinely external — no Prometheus operator
+  in THIS cluster; belongs to `jvallery/monitoring-stack`. Spec handed off.
+- **Firmware OTA.** N/A — zero firmware-binary diff this sprint; nothing to OTA.
 
 ## 5. Run log
 - **T0** — orientation, cluster access (ctx `vallery`), storage hazard triaged + fixed

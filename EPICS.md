@@ -54,10 +54,13 @@ infra actions remain Jason-gated.
 - Risks: stale docs can look authoritative; old dev/staging language can cause
   operators to reason about environments that no longer exist.
 - Evidence: Project #5 cards #343-#352, the merged PRs above, and root tracking docs.
-- Residual (tracked elsewhere, not L1-audit-incomplete): gated `argocd sync` to
-  revert the ingestor emptyDir stopgap → durable PVC (storage recovered);
-  monitoring-stack to implement the writer-absent alert; `#240` writer-lease arm +
-  DB PITR (gated); storage lane to clear orphaned `/volume1` LUNs.
+- Residual: **DEPLOYED 2026-06-17** — the ingestor `emptyDir → durable PVC` revert
+  was synced to prod (`argocd app sync verdify-prod-dark` → Synced/Healthy), the
+  hermes node-local migration realized, and the grafana PDB bug fixed (`36382e9`).
+  Still genuinely gated: monitoring-stack writer-absent alert (external cluster);
+  DB PITR (attended maintenance — single live DB); `#240` writer-lease arm (gated);
+  DSM iSCSI target-cap reclaim (NAS control-plane; pressure reduced now that lab +
+  hermes moved off iSCSI to node-local).
 
 ### L2 Firmware Core
 
