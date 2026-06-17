@@ -838,7 +838,8 @@ inline void validate_setpoints(Setpoints& sp) {
     sp.band_track_fraction = std::max(0.0f, std::min(1.0f, sp.band_track_fraction));
     // BC-13: moisture-exchange selector clamps.
     sp.dehum_vent_gain_margin_kpa = std::max(0.0f, std::min(0.2f, sp.dehum_vent_gain_margin_kpa));
-    sp.dehum_heat_assist_min_dwell_ms = std::max(60000u, std::min(1800000u, sp.dehum_heat_assist_min_dwell_ms));
+    sp.dehum_heat_assist_min_dwell_ms = std::max<uint32_t>(
+        60000u, std::min<uint32_t>(1800000u, sp.dehum_heat_assist_min_dwell_ms));
     sp.vent_exchange_fraction = std::max(0.1f, std::min(0.6f, sp.vent_exchange_fraction));
 }
 
