@@ -19,6 +19,7 @@ if _INGESTOR_PATH not in sys.path:
     sys.path.insert(0, _INGESTOR_PATH)
 
 import tasks  # noqa: E402
+from tasks import heartbeat  # noqa: E402
 
 DENVER = ZoneInfo("America/Denver")
 
@@ -35,7 +36,9 @@ SCHEDULED_MILESTONES = {
     "TRANSITION:decline",
     "SUNSET",
 }
-OPTIONAL_MILESTONES = {"MIDNIGHT"}  # only inside the midnight catch-up window
+# Conditionally-present milestones: MIDNIGHT only inside its catch-up window;
+# WEEKLY only on the deep-review weekday (heartbeat._WEEKLY_REVIEW_WEEKDAY).
+OPTIONAL_MILESTONES = {"MIDNIGHT", "WEEKLY"}
 
 RETIRED_MILESTONES = {
     "TRANSITION:fixed_midnight",
@@ -105,3 +108,31 @@ def test_milestones_ordered_sensibly_through_day():
     assert m["SOLAR_MAX"] < m["TRANSITION:peak_stress"]
     assert m["TRANSITION:peak_stress"] < m["TRANSITION:decline"]
     assert m["TRANSITION:decline"] < m["SUNSET"]
+
+
+def test_weekly_review_trigger_in_matrix():
+    """L4 #346 AC6: a weekly deep-review trigger exists, expects a strategy
+    set_plan, and rides the local.weekly_review cadence."""
+    spec = heartbeat.PLANNER_TRIGGER_MATRIX["WEEKLY"]
+    assert spec.event_type == "WEEKLY"
+    assert spec.due_source == "local.weekly_review"
+    assert spec.expected_action == "set_plan"
+    assert spec.materialize_expected is True
+
+
+def test_weekly_review_materialized_only_on_review_weekday():
+    """WEEKLY is in the per-day milestone cache iff today is the review weekday —
+    an unconditional entry would fire daily, defeating 'weekly'."""
+    milestones = tasks._compute_milestones()
+    is_review_day = datetime.now(DENVER).date().weekday() == heartbeat._WEEKLY_REVIEW_WEEKDAY
+    assert ("WEEKLY" in milestones) == is_review_day
+
+
+def test_weekly_review_due_time_is_review_hour():
+    """When materialized, WEEKLY is due at the configured local review hour on
+    today's date, so it fires once within the matrix catch-up window."""
+    today = datetime.now(DENVER).date()
+    due = heartbeat._milestone_due_at("WEEKLY", {}, today)
+    assert (due.hour, due.minute) == (heartbeat._WEEKLY_REVIEW_HOUR, 0)
+    assert due.date() == today
+    assert due.tzinfo is not None

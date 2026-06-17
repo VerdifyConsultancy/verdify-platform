@@ -1196,6 +1196,24 @@ PLANNER_TRIGGER_MATRIX: dict[str, PlannerTriggerSpec] = {
         catchup_seconds=7200,
         materialize_expected=True,
     ),
+    # Weekly deep performance review (L4 #346 AC6). Fires once per week on the
+    # review weekday (heartbeat._WEEKLY_REVIEW_WEEKDAY, default Monday) at a
+    # quiet local hour, asking the planner for a strategy-level review of the
+    # prior week's outcome scores / lessons / trends rather than a tactical
+    # daily plan. It is materialized only on the review weekday (gated in
+    # _compute_milestones, since the milestone cache is rebuilt per-day);
+    # required_plan=False keeps it off the hard daily-cycle SLA paging while
+    # still expecting a set_plan and recording it in the trigger ledger.
+    "WEEKLY": PlannerTriggerSpec(
+        event_type="WEEKLY",
+        event_label="Weekly deep performance review and strategy adjustment",
+        due_source="local.weekly_review",
+        expected_action="set_plan",
+        required_plan=False,
+        normal_window_seconds=300,
+        catchup_seconds=14400,
+        materialize_expected=True,
+    ),
     "SOLAR_MAX": PlannerTriggerSpec(
         event_type="SOLAR_MAX",
         event_label="Solar peak planning checkpoint",

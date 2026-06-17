@@ -5,6 +5,12 @@
 > (`hermes-iris`) with OpenAI GPT-5.5 high-reasoning and the MCP-only tool
 > allowlist in `hermes/iris/config.yaml`. Use `plan_delivery_log.hermes_run_id`
 > as the active gateway correlation field.
+>
+> **For the current planner I/O schema, allowed-tunables/bounds, write-contract
+> lockout, and decision ledger, see `docs/planner/planner-io-schema.md`** (the L4
+> #346 source-of-truth). The orchestration decision is `docs/adr/0002-planner-hermes-vs-direct-gpt5.md`.
+> The ledger / exact-trigger-correlation / registry-validation semantics in *this*
+> doc remain active; the gateway/model details below are historical.
 
 **Status:** historical v1.5 by coordinator, 2026-05-04. It ratified the local-first OpenClaw/Gemma path that was superseded on 2026-05-11 by Hermes `hermes-iris` with OpenAI GPT-5.5 high-reasoning. The trigger-ledger, exact-correlation, lifecycle-status, and registry-validation rules remain active; the gateway/model details below are historical.
 

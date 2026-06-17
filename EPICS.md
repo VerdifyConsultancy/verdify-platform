@@ -162,12 +162,13 @@ infra actions remain Jason-gated.
 - Non-goals: planner writes to deterministic target temperature, stress
   thresholds, hard rails, emergency override, or FSM code.
 - Acceptance criteria:
-  - Planner architecture decision is documented.
-  - Input/output schema exists.
-  - Allowed tunables and bounds are explicit and firmware-supported.
-  - Planner writes are durable, auditable, and cannot exceed bounds.
-  - Decision ledger connects planner changes to outcomes.
-- Status: `Ready`
+  - Planner architecture decision is documented. → `docs/adr/0002-planner-hermes-vs-direct-gpt5.md`
+  - Input/output schema exists. → `docs/planner/planner-io-schema.md`
+  - Allowed tunables and bounds are explicit and firmware-supported. → I/O doc §3 + `tunable_registry.py`
+  - Planner writes are durable, auditable, and cannot exceed bounds. → I/O doc §4 + `test_tunable_registry.py::TestPlannerWriteContractLockout`
+  - Decision ledger connects planner changes to outcomes. → I/O doc §5 (`plan_journal`/`plan_evaluate`)
+  - Weekly deep-review trigger exists. → `PLANNER_TRIGGER_MATRIX["WEEKLY"]` + `test_11_planner_milestones.py`
+- Status: `Done` (2026-06-17)
 - Priority: P1
 - Effort: L
 - Milestone: G3 - Planner, Irrigation, Lab, and Research

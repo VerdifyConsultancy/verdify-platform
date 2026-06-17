@@ -549,3 +549,84 @@ class TestActivityDirectWetGuards:
         assert "DIRECT_WET_REQUIRED_OBJECT_IDS" in tasks_py
         assert "direct_wet_supported" in tasks_py
         assert "_activity_policy_values" in api_main_py
+
+
+# L4 #346 AC4 — the AI planner CANNOT control deterministic target curves, hard
+# safety rails, or FSM logic. The existing TestDriftGuard spot-checks one of each
+# (temp_low / safety_min); this class closes the assertion hole by pinning the
+# WHOLE locked-out surface (all 52 band-curve anchors, the full crop-band set, the
+# safety rails, the FSM switch) AND proves set_plan enforces it at the write path
+# (drops band-owned params before the setpoint_plan INSERT, rejects any non-policy
+# param, force-rewrites the FSM switch on). See docs/adr/0002 §5.
+_BAND_CURVE_ANCHOR_RE = re.compile(r"^(?:band_|zone_vpd_target_|zone_vpd_width_|zone_priority_)")
+
+
+class TestPlannerWriteContractLockout:
+    def test_all_band_curve_anchors_non_pushable_crop_band(self) -> None:
+        """Every band-CURVE anchor (band_*_{sr,sm,ss,mid}, zone_vpd_*, zone_priority_*)
+        is deterministic crop-band geometry the firmware/curve owns — never a planner
+        lever. Closes the 52-anchor hole the temp_low spot-check left open."""
+        from verdify_schemas.tunable_registry import BAND_OWNED_REG, CROP_BAND_REG
+
+        anchors = sorted(n for n in REGISTRY if _BAND_CURVE_ANCHOR_RE.match(n))
+        assert len(anchors) >= 52, f"expected >=52 band-curve anchors, found {len(anchors)}"
+        offenders = [
+            n
+            for n in anchors
+            if REGISTRY[n].planner_pushable
+            or REGISTRY[n].control_class != "crop_band"
+            or n not in CROP_BAND_REG
+            or n not in BAND_OWNED_REG
+            or n in PLANNER_PUSHABLE_REG
+        ]
+        assert not offenders, f"band-curve anchors leaked into the planner-writable surface: {offenders}"
+
+    def test_entire_crop_band_surface_locked_out(self) -> None:
+        """No crop-band target (the daytime band + per-zone cuts included) may be
+        planner-pushable; the served band is curve/firmware-owned."""
+        from verdify_schemas.tunable_registry import CROP_BAND_REG
+
+        leaked = sorted(n for n in CROP_BAND_REG if REGISTRY[n].planner_pushable or n in PLANNER_PUSHABLE_REG)
+        assert not leaked, f"crop-band params leaked into PLANNER_PUSHABLE_REG: {leaked}"
+
+    def test_hard_safety_rails_locked_out(self) -> None:
+        """The hard rails (push_owner='safety') and the whole controller_safety
+        class are non-pushable and absent from the planner-writable surface."""
+        rails = sorted(n for n, d in REGISTRY.items() if d.push_owner == "safety")
+        assert {"safety_min", "safety_max", "safety_vpd_min", "safety_vpd_max"} <= set(rails)
+        for n in rails:
+            assert not REGISTRY[n].planner_pushable
+            assert REGISTRY[n].control_class == "controller_safety"
+            assert n not in PLANNER_PUSHABLE_REG
+        safety_class = [n for n, d in REGISTRY.items() if d.control_class == "controller_safety"]
+        leaked = [n for n in safety_class if n in PLANNER_PUSHABLE_REG]
+        assert not leaked, f"controller_safety params leaked into PLANNER_PUSHABLE_REG: {leaked}"
+
+    def test_fsm_controller_switch_locked_out(self) -> None:
+        """The FSM master switch is non-pushable and force-rewritten ON by set_plan,
+        so the planner can never disable the deterministic controller."""
+        row = REGISTRY["sw_fsm_controller_enabled"]
+        assert not row.planner_pushable
+        assert "sw_fsm_controller_enabled" not in PLANNER_PUSHABLE_REG
+        mcp_text = (REPO_ROOT / "mcp" / "server.py").read_text()
+        assert 'FORCED_ON_SWITCH_PARAMS = frozenset({"sw_fsm_controller_enabled"})' in mcp_text
+
+    def test_set_plan_drops_band_owned_before_insert_and_rejects_non_policy(self) -> None:
+        """set_plan's write path enforces the contract: band-owned params are
+        dropped (band_params_dropped) BEFORE the setpoint_plan INSERT, any param
+        outside BAND_OWNED∪PLANNER_PUSHABLE rejects the whole plan, and the FSM
+        switch is force-rewritten on."""
+        text = (REPO_ROOT / "mcp" / "server.py").read_text()
+        # Non-policy rejection keyed on the registry sets.
+        assert "param not in BAND_OWNED_PARAMS and param not in PLANNER_PUSHABLE_REG" in text
+        assert '"non_policy_params"' in text
+        # Band-owned drop happens inside the waypoint loop, before the INSERT.
+        drop_at = text.index("if param in BAND_OWNED_PARAMS:")
+        dropped_counter_at = text.index("band_params_dropped += 1", drop_at)
+        insert_at = text.index("INSERT INTO setpoint_plan", drop_at)
+        assert drop_at < dropped_counter_at < insert_at, (
+            "band-owned params must be dropped before the setpoint_plan INSERT"
+        )
+        # FSM switch force-on rewrite.
+        assert "if param in FORCED_ON_SWITCH_PARAMS and float(value) < 0.5:" in text
+        assert "value = 1.0" in text

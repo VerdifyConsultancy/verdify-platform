@@ -60,10 +60,21 @@ def _trigger_spec_for_event(event_type: str, label: str | None = None) -> Planne
     return matches[0] if matches else None
 
 
+# Weekly deep-review cadence (L4 #346 AC6). The milestone cache is rebuilt
+# per-day, so the WEEKLY trigger is materialized only when today.weekday()
+# matches this weekday (0 = Monday) — see _compute_milestones — and fires once
+# at the quiet review hour with a generous catch-up so a brief restart does not
+# skip the week. Monday review looks back over the just-finished week.
+_WEEKLY_REVIEW_WEEKDAY = 0  # Monday
+_WEEKLY_REVIEW_HOUR = 2  # 02:00 local — after the midnight review, before sunrise
+
+
 def _milestone_due_at(key: str, solar: dict[str, datetime], today) -> datetime:
     spec = PLANNER_TRIGGER_MATRIX[key]
     if spec.due_source == "local.midnight_review":
         return datetime(today.year, today.month, today.day, 0, 15, tzinfo=_DENVER)
+    if spec.due_source == "local.weekly_review":
+        return datetime(today.year, today.month, today.day, _WEEKLY_REVIEW_HOUR, 0, tzinfo=_DENVER)
     if spec.due_source == "solar.sunrise":
         return solar["sunrise"]
     if spec.due_source == "solar.noon":
@@ -124,6 +135,10 @@ def _compute_milestones() -> dict[str, datetime]:
     _milestones_cache = {}
     for key, spec in PLANNER_TRIGGER_MATRIX.items():
         if not spec.materialize_expected or key == "MIDNIGHT":
+            continue
+        # WEEKLY deep review is materialized only on the review weekday; the
+        # per-day cache rebuild means an unconditional entry would fire daily.
+        if spec.due_source == "local.weekly_review" and today.weekday() != _WEEKLY_REVIEW_WEEKDAY:
             continue
         _milestones_cache[key] = _milestone_due_at(key, s, today)
 

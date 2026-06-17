@@ -1355,6 +1355,7 @@ def test_planning_milestones_use_phase4_trigger_set():
     assert scheduled == {
         "MIDNIGHT",
         "SUNRISE",
+        "WEEKLY",
         "SOLAR_MAX",
         "TRANSITION:peak_stress",
         "TRANSITION:decline",
@@ -1363,6 +1364,11 @@ def test_planning_milestones_use_phase4_trigger_set():
     assert matrix["FORECAST_DEVIATION"].due_source == "forecast_deviation_check"
     assert matrix["FORECAST_DEVIATION"].severity_event_type == "DEVIATION"
     assert matrix["MANUAL"].due_source == "mcp.plan_run"
+    # WEEKLY deep-review (L4 #346 AC6): materialized once per week, expects a
+    # strategy set_plan but is not a hard daily-cycle SLA (required_plan=False).
+    assert matrix["WEEKLY"].due_source == "local.weekly_review"
+    assert matrix["WEEKLY"].expected_action == "set_plan"
+    assert matrix["WEEKLY"].required_plan is False
     assert {matrix[key].hermes_route for key in matrix} == {"hermes-iris"}
     for key in ("SUNRISE", "SUNSET", "MIDNIGHT"):
         assert matrix[key].required_plan is True
@@ -1411,7 +1417,16 @@ def test_planning_milestones_are_derived_from_trigger_matrix(monkeypatch):
     hb._milestones_fired = {}
 
     milestones = tasks._compute_milestones()
-    assert list(milestones) == [key for key, spec in tasks.PLANNER_TRIGGER_MATRIX.items() if spec.materialize_expected]
+    # WEEKLY is materialize_expected but weekday-gated (only on the review
+    # weekday); the fake date (2026-05-19) is not it, so it is absent here.
+    review_day = EarlyDatetime(2026, 5, 19).date().weekday() == hb._WEEKLY_REVIEW_WEEKDAY
+    expected = [
+        key
+        for key, spec in tasks.PLANNER_TRIGGER_MATRIX.items()
+        if spec.materialize_expected and not (spec.due_source == "local.weekly_review" and not review_day)
+    ]
+    assert list(milestones) == expected
+    assert "WEEKLY" not in milestones  # 2026-05-19 is a Tuesday
     assert milestones["MIDNIGHT"].hour == 0
     assert milestones["MIDNIGHT"].minute == 15
     assert milestones["SUNRISE"].hour == 5

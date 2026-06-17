@@ -29,8 +29,8 @@ TimescaleDB (telemetry, views, scorecards, lessons)
   ├── MCP Server (typed tools for Iris)
   └── Quartz (static site with embedded panels)
 
-Planner (Hermes or direct GPT planner path under review)
-  └── Event-driven or scheduled 72h horizon
+Planner (Hermes hermes-iris → GPT-5.5 → MCP; decision: docs/adr/0002)
+  └── Event-driven + scheduled (incl. weekly deep review) 72h horizon
       → MCP/tools → bounded tunables + decision ledger
 ```
 

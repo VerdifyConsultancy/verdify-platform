@@ -270,12 +270,19 @@ enthalpy gradient is the cheapest dryer we have. Add forecast-gated overnight
 vent rules (the `climate_intent.economizer_dewpoint_advantage_f` →
 `vent_prefer_dp_delta_f` materialization already exists).
 
-**(f) Give the planner an overnight-drying objective/lever.** Today the planner is
-**structurally blind** to the night VPD floor and to per-zone cuts — none of its
-~40 pushable tunables can move them, and a SUNSET prompt even biased toward
-humidity *retention*. Either add a bounded, planner-pushable "night-dry bias" or
-let it author the night-floor anchor within a clamped range, so the AI can
-actually help the thing that matters most.
+**(f) Give the planner an overnight-drying objective/lever. — SHIPPED.** This was
+done: `night_vpd_bias_kpa` (commit 564cf5c) is a bounded, planner-pushable tier-1
+lever (registry bounds 0–0.25 kPa, `cfg_night_vpd_bias_kpa` readback) that adds to
+the OVERNIGHT VPD band on a smooth sin² weight peaking at solar midnight, raising
+the night dryness floor so the dryer keeps running on a humid-night forecast
+*without* moving the `crop_band_anchors` curve. It is live and the planner has
+pushed it tens of times. The narrower residual is still true and intentional: the
+planner has **no heat-TARGET lever** and **cannot author the daytime band /
+`crop_band_anchors` / per-zone cuts** — that geometry is curve/firmware-owned by
+design (see `docs/adr/0002` §5 and the L4 planner I/O schema). A directional
+heat/cool *target* bias would require firmware-v2 work (the band-first controller
+has no bias term in `band_heat_target_f`), so `bias_heat`/`bias_cool` stay retired
+and non-pushable rather than exposed as dead knobs.
 
 **(g) Reparameterize the band as {night_floor, day_peak} (+ widths).** Four free
 anchors per series invite "lumpy"/inconsistent values. Deriving the anchors from
