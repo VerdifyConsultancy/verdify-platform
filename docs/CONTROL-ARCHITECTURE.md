@@ -32,7 +32,7 @@ safety rails**. Everything else is tuning.
             • tunables / active plan → device via number/switch entities
             • clamps the planner to the band; heap-guards; writer-lease fence
                               ▼
-            FIRMWARE (ESP32)  ── offline-first, recomputes every ~5 s, no WiFi
+            FIRMWARE (ESP32)  ── offline-first, recomputes every ~1 s, no WiFi
             • computes the band ON-CHIP (NOAA solar → smooth harmonic curve)
             • per-zone VPD FSM + house temp FSM → relays
             • SAFETY RAILS clamp every setpoint (the last word)
@@ -115,7 +115,8 @@ The system was deliberately rebuilt (firmware-v2, 2026-06) around a single idea:
 
 ### 2.4 Firmware — the deterministic controller (ESP32)
 - ESPHome + pure-C++ libs (`firmware/lib/greenhouse_*.h`). Recomputes every
-  control loop (~5 s).
+  control loop (~1 s; `dt_ms`-based timer accrual, so behavior is invariant to
+  the tick rate — it was 5 s historically).
 - Computes solar times on-chip (NOAA ephemeris, `greenhouse_solar.h`), maps clock
   → continuous **solar phase [0,4)**, evaluates the band via
   `band_value_at_phase()`, and runs the FSM: a band-first mode selector
@@ -311,6 +312,9 @@ baffles), not software.
 
 ## 9. Pointers
 
+- **Firmware FSM + relay-transition + safety-rail + bands/hysteresis + 72h-offline
+  + compliance spec: `docs/firmware-fsm-spec.md`** (the authoritative firmware-internals
+  doc; L2 #344 / L3 #345 acceptance traceability in its §11).
 - Firmware: `firmware/lib/greenhouse_{solar,logic,types}.h`, `firmware/greenhouse/`.
 - Dispatcher/anchors-mode: `ingestor/tasks/{dispatcher,band_anchors}.py`,
   `ingestor/{esp32_push,solar}.py`.

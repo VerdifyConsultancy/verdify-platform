@@ -5,7 +5,8 @@
 367 sq ft. Longmont, Colorado. 5,090 feet. 15% humidity. 95°F solar peaks. Mixed crops. One deterministic controller.
 
 About 172 ESPHome entities feed a firmware controller that evaluates conditions
-every 5 seconds. The current controller replan is firmware-first,
+about once a second (a `dt_ms`-based loop invariant to tick rate — it was 5 s
+historically). The current controller replan is firmware-first,
 deterministic, crop-agnostic at the firmware layer, and AI-bounded: firmware
 owns sensors, relays, local target curves, safety rails, disconnected behavior,
 and climate/lighting/irrigation control; AI may tune bounded parameters over a
@@ -17,7 +18,7 @@ target calculation.
 ## Architecture
 
 ```
-ESP32 Controller (greenhouse_logic.h, 5s loop)
+ESP32 Controller (greenhouse_logic.h, ~1s dt_ms-based loop)
   ├── aioesphomeapi ──→ Ingestor ──→ TimescaleDB (2.5M+ rows)
   ├── MQTT ──→ Mosquitto (state publishing + occupancy)
   └── local deterministic control surfaces (climate, lighting, irrigation)
