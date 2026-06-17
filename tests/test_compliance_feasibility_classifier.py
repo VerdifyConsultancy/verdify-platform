@@ -94,45 +94,98 @@ BAND = dict(temp_low=60.0, temp_high=85.0, vpd_low=0.6, vpd_high=1.5, served_tem
 
 def test_hot_miss_unachievable_primary_rail_cannot_beat_ambient():
     f = classify_feasibility(
-        g_temp=0.4, g_vpd=1.0, reading_temp=90.0, reading_vpd=1.0,
-        outdoor_temp_f=88.0, have_relay=True, vent_on=True, **BAND)
+        g_temp=0.4,
+        g_vpd=1.0,
+        reading_temp=90.0,
+        reading_vpd=1.0,
+        outdoor_temp_f=88.0,
+        have_relay=True,
+        vent_on=True,
+        **BAND,
+    )
     assert f == "unachievable"
 
 
 def test_hot_miss_unachievable_full_stack_second_fan_futile():
     f = classify_feasibility(
-        g_temp=0.4, g_vpd=1.0, reading_temp=90.0, reading_vpd=1.0,
-        outdoor_temp_f=91.0, have_relay=True, vent_on=True, fan1_on=True, fan2_on=True, **BAND)
+        g_temp=0.4,
+        g_vpd=1.0,
+        reading_temp=90.0,
+        reading_vpd=1.0,
+        outdoor_temp_f=91.0,
+        have_relay=True,
+        vent_on=True,
+        fan1_on=True,
+        fan2_on=True,
+        **BAND,
+    )
     assert f == "unachievable"
 
 
 def test_hot_miss_controller_when_cooling_idle_and_outdoor_cooler():
     # outdoor (80) < served_temp_high (86) and < indoor: there WAS cooling headroom.
     f = classify_feasibility(
-        g_temp=0.4, g_vpd=1.0, reading_temp=90.0, reading_vpd=1.0,
-        outdoor_temp_f=80.0, have_relay=True, vent_on=False, **BAND)
+        g_temp=0.4,
+        g_vpd=1.0,
+        reading_temp=90.0,
+        reading_vpd=1.0,
+        outdoor_temp_f=80.0,
+        have_relay=True,
+        vent_on=False,
+        **BAND,
+    )
     assert f == "controller"
 
 
 def test_cold_miss_unachievable_when_both_heaters_maxed_else_controller():
     maxed = classify_feasibility(
-        g_temp=0.2, g_vpd=1.0, reading_temp=45.0, reading_vpd=1.0,
-        outdoor_temp_f=20.0, have_relay=True, heat1_on=True, heat2_on=True, **BAND)
+        g_temp=0.2,
+        g_vpd=1.0,
+        reading_temp=45.0,
+        reading_vpd=1.0,
+        outdoor_temp_f=20.0,
+        have_relay=True,
+        heat1_on=True,
+        heat2_on=True,
+        **BAND,
+    )
     assert maxed == "unachievable"
     idle = classify_feasibility(
-        g_temp=0.2, g_vpd=1.0, reading_temp=45.0, reading_vpd=1.0,
-        outdoor_temp_f=20.0, have_relay=True, heat1_on=True, heat2_on=False, **BAND)
+        g_temp=0.2,
+        g_vpd=1.0,
+        reading_temp=45.0,
+        reading_vpd=1.0,
+        outdoor_temp_f=20.0,
+        have_relay=True,
+        heat1_on=True,
+        heat2_on=False,
+        **BAND,
+    )
     assert idle == "controller"
 
 
 def test_vpd_high_unachievable_when_vent_forced_or_humidifying():
     forced_vent = classify_feasibility(
-        g_temp=1.0, g_vpd=0.3, reading_temp=90.0, reading_vpd=2.6,  # temp > temp_high forces vent
-        outdoor_temp_f=70.0, have_relay=True, vent_on=True, **BAND)
+        g_temp=1.0,
+        g_vpd=0.3,
+        reading_temp=90.0,
+        reading_vpd=2.6,  # temp > temp_high forces vent
+        outdoor_temp_f=70.0,
+        have_relay=True,
+        vent_on=True,
+        **BAND,
+    )
     assert forced_vent == "unachievable"
     humidifying = classify_feasibility(
-        g_temp=1.0, g_vpd=0.3, reading_temp=80.0, reading_vpd=2.6,
-        outdoor_temp_f=70.0, have_relay=True, fog_on=True, **BAND)
+        g_temp=1.0,
+        g_vpd=0.3,
+        reading_temp=80.0,
+        reading_vpd=2.6,
+        outdoor_temp_f=70.0,
+        have_relay=True,
+        fog_on=True,
+        **BAND,
+    )
     assert humidifying == "unachievable"
 
 
@@ -140,26 +193,40 @@ def test_vpd_high_controller_anti_gaming_vent_while_temp_ok():
     # Tightened §6.2 rule: venting while temp is already in band is NOT credited
     # as unachievable (a controller could otherwise harvest free credit by venting).
     f = classify_feasibility(
-        g_temp=1.0, g_vpd=0.3, reading_temp=80.0, reading_vpd=2.6,  # temp in band
-        outdoor_temp_f=70.0, have_relay=True, vent_on=True, **BAND)
+        g_temp=1.0,
+        g_vpd=0.3,
+        reading_temp=80.0,
+        reading_vpd=2.6,  # temp in band
+        outdoor_temp_f=70.0,
+        have_relay=True,
+        vent_on=True,
+        **BAND,
+    )
     assert f == "controller"
 
 
 def test_vpd_low_is_always_controller():
     f = classify_feasibility(
-        g_temp=1.0, g_vpd=0.3, reading_temp=75.0, reading_vpd=0.2,
-        outdoor_temp_f=60.0, have_relay=True, **BAND)
+        g_temp=1.0, g_vpd=0.3, reading_temp=75.0, reading_vpd=0.2, outdoor_temp_f=60.0, have_relay=True, **BAND
+    )
     assert f == "controller"
 
 
 def test_feasibility_unknown_before_relay_coverage_and_none_in_band():
     unknown = classify_feasibility(
-        g_temp=0.4, g_vpd=1.0, reading_temp=90.0, reading_vpd=1.0,
-        outdoor_temp_f=88.0, have_relay=False, vent_on=True, **BAND)
+        g_temp=0.4,
+        g_vpd=1.0,
+        reading_temp=90.0,
+        reading_vpd=1.0,
+        outdoor_temp_f=88.0,
+        have_relay=False,
+        vent_on=True,
+        **BAND,
+    )
     assert unknown == "feasibility_unknown"
     none = classify_feasibility(
-        g_temp=1.0, g_vpd=1.0, reading_temp=75.0, reading_vpd=1.0,
-        outdoor_temp_f=70.0, have_relay=True, **BAND)
+        g_temp=1.0, g_vpd=1.0, reading_temp=75.0, reading_vpd=1.0, outdoor_temp_f=70.0, have_relay=True, **BAND
+    )
     assert none == "none"
 
 
@@ -167,8 +234,15 @@ def test_null_outdoor_does_not_credit_unachievable():
     # SQL: `outdoor_temp_f >= served_temp_high` is NULL when outdoor is NULL ->
     # the WHEN is skipped -> controller. The Python ge() mirrors that.
     f = classify_feasibility(
-        g_temp=0.4, g_vpd=1.0, reading_temp=90.0, reading_vpd=1.0,
-        outdoor_temp_f=None, have_relay=True, vent_on=True, **BAND)
+        g_temp=0.4,
+        g_vpd=1.0,
+        reading_temp=90.0,
+        reading_vpd=1.0,
+        outdoor_temp_f=None,
+        have_relay=True,
+        vent_on=True,
+        **BAND,
+    )
     assert f == "controller"
 
 
@@ -178,15 +252,15 @@ def test_migration_146_sql_still_carries_the_documented_rule():
     assert MIG_146.exists(), f"missing {MIG_146}"
     sql = MIG_146.read_text(encoding="utf-8")
     required = [
-        "feasibility classifier",                     # the labelled block
+        "feasibility classifier",  # the labelled block
         "'unachievable'",
         "'controller'",
         "'feasibility_unknown'",
-        "g.outdoor_temp_f >= g.served_temp_high",     # HOT primary rail
-        "g.outdoor_temp_f >= g.reading_temp",         # HOT full-stack rail
-        "g.heat1_on",                                 # COLD rail
+        "g.outdoor_temp_f >= g.served_temp_high",  # HOT primary rail
+        "g.outdoor_temp_f >= g.reading_temp",  # HOT full-stack rail
+        "g.heat1_on",  # COLD rail
         "g.heat2_on",
-        "g.reading_temp > g.temp_high",               # VPD-high tightened rail
+        "g.reading_temp > g.temp_high",  # VPD-high tightened rail
     ]
     missing = [needle for needle in required if needle not in sql]
     assert not missing, (

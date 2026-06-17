@@ -22,13 +22,20 @@ import tasks  # noqa: E402
 
 DENVER = ZoneInfo("America/Denver")
 
-EXPECTED_MILESTONES = {
+# The five always-scheduled solar milestones. MIDNIGHT is a sixth REQUIRED
+# planner trigger (SUNRISE/SUNSET/MIDNIGHT) but _compute_milestones only surfaces
+# it during its early-day catch-up window (heartbeat.py:130-135), so it is
+# present-or-absent depending on the time of day. The assertion below is
+# therefore deliberately time-independent (it was a flaky exact-set check that
+# failed whenever the suite ran shortly after local midnight).
+SCHEDULED_MILESTONES = {
     "SUNRISE",
     "SOLAR_MAX",
     "TRANSITION:peak_stress",
     "TRANSITION:decline",
     "SUNSET",
 }
+OPTIONAL_MILESTONES = {"MIDNIGHT"}  # only inside the midnight catch-up window
 
 RETIRED_MILESTONES = {
     "TRANSITION:fixed_midnight",
@@ -51,9 +58,16 @@ def reset_milestone_cache():
 
 
 def test_all_planning_milestones_present():
-    milestones = tasks._compute_milestones()
-    assert set(milestones.keys()) == EXPECTED_MILESTONES, (
-        f"Expected {len(EXPECTED_MILESTONES)} milestones, got {set(milestones.keys())}"
+    milestones = set(tasks._compute_milestones().keys())
+    # The scheduled set must always be exactly the five (MIDNIGHT excluded — it is
+    # only present inside its catch-up window).
+    assert milestones - OPTIONAL_MILESTONES == SCHEDULED_MILESTONES, (
+        f"scheduled milestones drifted: got {milestones}, expected "
+        f"{SCHEDULED_MILESTONES} (+ optional {OPTIONAL_MILESTONES})"
+    )
+    # Nothing outside the known scheduled + optional set may appear.
+    assert milestones <= SCHEDULED_MILESTONES | OPTIONAL_MILESTONES, (
+        f"unexpected milestone(s): {milestones - SCHEDULED_MILESTONES - OPTIONAL_MILESTONES}"
     )
 
 

@@ -24,17 +24,29 @@ REPO = Path(__file__).resolve().parents[1]
 # identity is baked into the controller. The generic word "crop" is intentionally
 # excluded — it is allowed in identifiers like crop_band_anchors references.
 CROP_TERMS = [
-    "orchid", "vanda", "phalaenopsis", "cattleya", "dendrobium", "paphiopedilum",
-    "cannabis", "lettuce", "strawberry", "pepper", "jalapeno", "tomato", "basil",
-    "lime", "citrus", "seedling",
+    "orchid",
+    "vanda",
+    "phalaenopsis",
+    "cattleya",
+    "dendrobium",
+    "paphiopedilum",
+    "cannabis",
+    "lettuce",
+    "strawberry",
+    "pepper",
+    "jalapeno",
+    "tomato",
+    "basil",
+    "lime",
+    "citrus",
+    "seedling",
 ]
 CROP_RE = re.compile(r"(?i)\b(" + "|".join(CROP_TERMS) + r")\b")
 
 # Shipped firmware only. firmware/test/* is the off-device test harness (its
 # comments legitimately name crops) and is not flashed to the ESP32.
 FIRMWARE_SOURCES = sorted(
-    [*(REPO / "firmware" / "lib").glob("*.h"),
-     *(REPO / "firmware" / "greenhouse").glob("*.yaml")]
+    [*(REPO / "firmware" / "lib").glob("*.h"), *(REPO / "firmware" / "greenhouse").glob("*.yaml")]
 )
 
 
@@ -139,8 +151,7 @@ def test_shipped_firmware_has_no_crop_identity():
             offenders.append(f"{path.relative_to(REPO)}:{lineno}: crop term '{term}' in non-comment firmware")
     assert not offenders, (
         "Crop identity leaked into the shipped firmware (AC5 violation). Crop "
-        "strategy must live above firmware as numeric band anchors:\n  "
-        + "\n  ".join(offenders)
+        "strategy must live above firmware as numeric band anchors:\n  " + "\n  ".join(offenders)
     )
 
 
@@ -151,7 +162,7 @@ def test_comment_stripper_still_detects_a_planted_crop_token():
     stripped = _strip_c_comments(sample_h)
     assert "orchid" not in stripped, "comment crop term should be stripped"
     assert "vanda" in stripped, "string-literal crop term must survive (it is crop identity)"
-    sample_yaml = 'key: value  # orchid comment\nname: vanda\n'
+    sample_yaml = "key: value  # orchid comment\nname: vanda\n"
     stripped_y = _strip_yaml_comments(sample_yaml)
     assert "orchid" not in stripped_y
     assert "vanda" in stripped_y
