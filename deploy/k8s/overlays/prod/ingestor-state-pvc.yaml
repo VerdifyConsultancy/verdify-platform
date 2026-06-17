@@ -5,15 +5,18 @@
 # DB outage plus a pod restart can still lose queued greenhouse telemetry.
 #
 # Storage tier: synology-iscsi (csi.san.synology.com iSCSI on DSM /volume2).
-# 2026-06-17 storage incident: DSM /volume1 (the SSD-backed storage tier) DIED. The prior
-# ingestor-state LUN lived on /volume1 and wedged on the deploy's Recreate
-# (MountVolume + then CreateVolume DeadlineExceeded), stranding the sole ESP32
-# writer. /volume1 still times out on provision; /volume2 is healthy (provisions
-# fine for other namespaces). Jason directed reprovision on the Synology SSD
-# tier, but that tier (/volume1) is exactly the dead one — so this lands on the
-# healthy /volume2 iSCSI tier to restore the writer now. The state is small
-# (~2Gi: spool + bookkeeping) and NOT perf-critical, so /volume2 is fine.
-# MIGRATE BACK to synology-iscsi-ssd (/volume1) once the SSD tier is restored.
+# 2026-06-17 storage incident — VERIFIED ROOT CAUSE (synology-csi-controller-0
+# logs): the Synology DSM hit its iSCSI *target-count* limit — "Failed to create
+# target ... Number of target reach limit". That fails NEW iSCSI volume
+# provisioning on BOTH /volume1 AND /volume2; it is NOT a per-volume / SSD-tier
+# hardware failure (the earlier "/volume1 DIED" note was a misdiagnosis). The
+# prior ingestor-state LUN wedged on the deploy's Recreate because CreateVolume
+# kept failing until a target freed up, stranding the sole ESP32 writer. This PVC
+# lives on synology-iscsi (/volume2); it bound once targets freed. The DURABLE
+# fix is storage-infra: reclaim orphaned iSCSI targets from deleted PVCs and curb
+# ephemeral CI iSCSI churn (e.g. agent-fleet-ci *-workdir PVCs) — see
+# COORDINATION_REQUESTS.md. Moving to synology-iscsi-ssd (/volume1) does NOT
+# help: same DSM target cap. State is small (~2Gi: spool + bookkeeping).
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:

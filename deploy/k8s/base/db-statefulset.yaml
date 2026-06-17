@@ -105,8 +105,10 @@ spec:
         name: db-data
       spec:
         accessModes: ["ReadWriteOnce"]
-        # Durable database state belongs on Synology iSCSI SSD block storage.
-        storageClassName: synology-iscsi-ssd
+        # local-path provisioner; reclaim policy Retain is set on the
+        # StorageClass at the platform layer so the data survives PVC churn
+        # (handoff §2.6 / §3.6 copy-not-move).
+        storageClassName: local-path
         resources:
           requests:
             storage: 50Gi

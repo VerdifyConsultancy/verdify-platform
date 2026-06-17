@@ -102,7 +102,7 @@ Storage class is chosen by durability need, not convenience:
 
 | PVC / VCT | Mode | Class | Tier rationale |
 |---|---|---|---|
-| `verdify-db` (StatefulSet VCT) | RWO | Synology (`longhorn-nvme-rwo`, prod patch) | **Database** — durable. Immutable VCT; do not retier in place. |
+| `verdify-db` (StatefulSet VCT) | RWO | Synology (`longhorn-nvme-rwo`, prod patch) | **Database** — durable. Immutable VCT; do not retier in place. **Live drift:** the bound PVC `db-data-verdify-db-0` was manually swapped to `synology-iscsi-ssd` (/volume1) while the STS VCT stays frozen at `longhorn-nvme-rwo` — git must keep `longhorn-nvme-rwo` so ArgoCD does not try to patch the immutable field. Retiering needs a gated STS delete/recreate (handoff §3.6). |
 | umami DB (StatefulSet VCT) | RWO | Synology (`synology-iscsi-ssd`) | **Database** — durable (component-only). |
 | `verdify-ingestor-state` | RWO | Synology (`synology-iscsi`) | Dispatcher/MCP **logs** + DB-outage **climate spool** — durable. |
 | `verdify-db-dumps` | RWX | static NFS PV (`""`) | **DB backups** — durable + off-cluster; RWX (writer + readers). |
@@ -110,6 +110,19 @@ Storage class is chosen by durability need, not convenience:
 | `verdify-lab-site-cache` | RWX | NFS RWX (`longhorn-nvme-agent-rwx`) | Regenerable cache, but **RWX** (publisher + nginx replicas) → can't use RWO node-local. |
 
 Grafana/MQTT use `emptyDir` (no PVC). When adding a PVC, follow this tiering.
+
+> **2026-06-17 iSCSI incident — verified root cause.** `synology-csi-controller-0`
+> logs show `Failed to create target ... Number of target reach limit`: the
+> Synology DSM iSCSI **target-count cap is exhausted**, so NEW iSCSI volume
+> provisioning fails on **both** `/volume1` (`synology-iscsi-ssd`) and `/volume2`
+> (`synology-iscsi`) — it is **not** a per-volume / SSD-tier hardware failure.
+> Aggravated by ephemeral CI iSCSI churn (`agent-fleet-ci` `*-workdir` PVCs) and
+> orphaned targets from deleted PVCs. **Operational consequence:** the live
+> `verdify-db` runs only because its iSCSI target/session was established before
+> the cap was hit; a DB **reschedule/Recreate could wedge** if it must create a
+> new target. Do **not** trigger a `verdify-db` reschedule (or a gated
+> `argocd sync` that would) until storage-infra reclaims target budget. This is
+> the audit §8-P0 DB-reliability risk made acute. See `COORDINATION_REQUESTS.md`.
 
 ## External Dependencies
 

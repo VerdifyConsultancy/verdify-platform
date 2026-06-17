@@ -7,8 +7,8 @@ metadata:
     app.kubernetes.io/component: lab-site
 spec:
   accessModes:
-    - ReadWriteOnce
-  storageClassName: node-local-temp-rwo
+    - ReadWriteMany
+  storageClassName: longhorn-nvme-agent-rwx
   resources:
     requests:
       storage: 5Gi
