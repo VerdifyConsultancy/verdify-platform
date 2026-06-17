@@ -588,7 +588,14 @@ interval:
               // BC-3 (ADR0003 §6.1): pinch the control band toward the served target
               // by this fraction. Planner-pushable [0,1]; default 0.50 from the global.
               // This is the authoritative DEVICE default (C++ default_setpoints matches).
-              .band_track_fraction = id(band_track_fraction)
+              .band_track_fraction = id(band_track_fraction),
+              // BC-13 (ADR0003 §6.4): moisture-exchange selector. vent_exchange_fraction
+              // is the AI-tunable single-cycle exchange fraction (Jason 2026-06-17, from
+              // the global/number). The gain margin + heat-assist min-dwell are device-side
+              // globals (match default_setpoints; not planner-pushable this sprint).
+              .dehum_vent_gain_margin_kpa = id(dehum_vent_gain_margin_kpa),
+              .dehum_heat_assist_min_dwell_ms = id(dehum_heat_assist_min_dwell_ms),
+              .vent_exchange_fraction = id(vent_exchange_fraction)
           };
 
           validate_setpoints(setpts);

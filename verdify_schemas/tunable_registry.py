@@ -218,6 +218,25 @@ REGISTRY: dict[str, TunableDef] = {
             "this, so stage 2 cannot chatter at the threshold (mirrors the heat2 latch)."
         ),
     ),
+    "vent_exchange_fraction": TunableDef(
+        name="vent_exchange_fraction",
+        kind="numeric",
+        min=0.1,
+        max=0.6,
+        default=0.30,
+        fw_clamp_lo=0.1,
+        fw_clamp_hi=0.6,
+        esp_object_id="vent_exchange_fraction",
+        cfg_readback_object_id="cfg___vent_exchange_fraction",
+        push_owner="planner",
+        planner_pushable=True,
+        tier=1,
+        notes=(
+            "BC-13 (ADR0003 §6.4, Jason 2026-06-17): single-cycle air-exchange fraction "
+            "toward outdoor used by the moisture-exchange estimator's vent VPD-gain "
+            "projection. AI-tunable; structural proxy for the house air-change rate."
+        ),
+    ),
     "band_track_fraction": TunableDef(
         name="band_track_fraction",
         kind="numeric",

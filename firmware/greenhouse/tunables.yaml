@@ -113,6 +113,21 @@ number:
           id(band_track_fraction) = x;
           id(num_band_track_fraction).publish_state(x);
 
+  # BC-13 (ADR0003 §6.4): AI-tunable air-exchange fraction for the moisture-exchange
+  # estimator's vent VPD-gain projection. Default 0.30; rails [0.1,0.6].
+  - platform: template
+    id: num_vent_exchange_fraction
+    name: "Vent Exchange Fraction"
+    min_value: 0.1
+    max_value: 0.6
+    step: 0.05
+    lambda: "return id(vent_exchange_fraction);"
+    set_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(vent_exchange_fraction) = x;
+          id(num_vent_exchange_fraction).publish_state(x);
+
   - platform: template
     id: num_cold_vent_guard_delta
     name: "Cold Vent Guard Delta °F"

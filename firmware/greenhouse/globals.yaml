@@ -65,6 +65,23 @@ globals:
     type: float
     restore_value: no
     initial_value: '0.50'
+  # BC-13 (ADR0003 §6.4): AI-tunable single-cycle air-exchange fraction toward outdoor
+  # for the moisture-exchange estimator (Jason 2026-06-17). Default 0.30; rails [0.1,0.6].
+  - id: vent_exchange_fraction
+    type: float
+    restore_value: no
+    initial_value: '0.30'
+  # BC-13 (ADR0003 §6.4): device-side constants for the moisture-exchange selector.
+  # Kept as globals so live Setpoints initialization has readback-visible policy values
+  # instead of hardcoded literals.
+  - id: dehum_vent_gain_margin_kpa
+    type: float
+    restore_value: no
+    initial_value: '0.02'
+  - id: dehum_heat_assist_min_dwell_ms
+    type: uint32_t
+    restore_value: no
+    initial_value: '300000'
 
   # ─── Humidity / VPD (kPa) ───
   # Wide defaults — see comment on target_temp_low_f.
