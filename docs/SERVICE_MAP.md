@@ -88,6 +88,29 @@ the drift guards in `verdify_schemas/tests/`.
 | HA gap backfill | `setpoint_snapshot`, `equipment_state`, `system_state` and HA recorder-derived telemetry windows. |
 | Firmware twin | `twin_decisions` through INSERT-only `twin`/`twin_ro` role when the component is enabled. |
 
+### PVC storage tiers (policy)
+
+Storage class is chosen by durability need, not convenience:
+
+- **Synology iSCSI (`synology-iscsi` /volume2, `synology-iscsi-ssd` /volume1)** — ONLY for
+  **databases and durable logs/spool**. Survives node loss.
+- **`node-local-temp-rwo`** (rancher.io/local-path NVMe, RWO) — for **non-durable, regenerable**
+  volumes. Fast node-local capacity; lost on node failure by design. Default for anything that
+  is not a DB or a durable log.
+- **NFS RWX (`*-rwx`, `""`+static PV)** — for volumes that need **ReadWriteMany** (multi-pod
+  share); `node-local-temp-rwo` is RWO-only so RWX volumes cannot use it.
+
+| PVC / VCT | Mode | Class | Tier rationale |
+|---|---|---|---|
+| `verdify-db` (StatefulSet VCT) | RWO | Synology (`longhorn-nvme-rwo`, prod patch) | **Database** — durable. Immutable VCT; do not retier in place. |
+| umami DB (StatefulSet VCT) | RWO | Synology (`synology-iscsi-ssd`) | **Database** — durable (component-only). |
+| `verdify-ingestor-state` | RWO | Synology (`synology-iscsi`) | Dispatcher/MCP **logs** + DB-outage **climate spool** — durable. |
+| `verdify-db-dumps` | RWX | static NFS PV (`""`) | **DB backups** — durable + off-cluster; RWX (writer + readers). |
+| `verdify-hermes-iris-data` | RWO | **`node-local-temp-rwo`** | Gateway run-state — regenerable, not DB/logs → node-local. |
+| `verdify-lab-site-cache` | RWX | NFS RWX (`longhorn-nvme-agent-rwx`) | Regenerable cache, but **RWX** (publisher + nginx replicas) → can't use RWO node-local. |
+
+Grafana/MQTT use `emptyDir` (no PVC). When adding a PVC, follow this tiering.
+
 ## External Dependencies
 
 | Dependency | Used by | Contract |

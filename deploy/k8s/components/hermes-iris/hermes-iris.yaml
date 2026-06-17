@@ -43,8 +43,12 @@ metadata:
     app.kubernetes.io/component: hermes-iris
 spec:
   accessModes: ["ReadWriteOnce"]
-  # Longhorn NVMe RWO storage. Same platform gate as the per-env DB StatefulSets.
-  storageClassName: longhorn-nvme-rwo
+  # node-local-temp-rwo (rancher.io/local-path NVMe). Hermes gateway run-state is
+  # regenerable working state — NOT a database and NOT durable logs — so per the
+  # storage-tiering policy it uses fast node-local capacity, not Synology iSCSI.
+  # (Bonus: this also gets the gateway off the dead /volume1 SSD tier from the
+  # 2026-06-17 incident.) Durable planner memory lives in the DB, not here.
+  storageClassName: node-local-temp-rwo
   resources:
     requests:
       storage: 5Gi
