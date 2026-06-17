@@ -641,27 +641,31 @@ interval:
           const bool manual_fog_requested = manual_fog_eff;
           const char* manual_fog_safety_block = fog_safety_block_reason();
 
-          // FANS: BOTH fans ON + vent OPEN for the timeout, superseding climate.
-          // force flags below bypass relay min-off so they engage now.
-          bool manual_fan_force = false, manual_fog_force = false, manual_vent_force_open = false;
-          if (manual_fans_eff && !sensor_fault_relay_lock) {
-            willFan1 = true; willFan2 = true;
-            manual_fan_force = true;
-            // VENT-BYPASS: while bypass is active, fans run with the vent CLOSED
-            // (winter house-air pull). Otherwise the fans open the vent
-            // UNCONDITIONALLY for the timeout (the inverted-vent_lock bug fix:
-            // bypass closes the vent, it does NOT kill the fans).
-            if (vent_bypass_eff) {
-              willVent = false;
-            } else {
-              willVent = true; manual_vent_force_open = true;
-            }
-          }
-          // HUMID: FOGGER ONLY. Supersedes the climate fog gates; only a genuine
-          // safety block (temp/RH physical limits) interrupts it.
-          if (manual_fog_eff && !sensor_fault_relay_lock && manual_fog_safety_block[0] == '\0') {
-            willFog = true; manual_fog_force = true;
-          }
+          // Resolve the absolute-priority override through the pure, unit-tested
+          // apply_manual_overrides() (greenhouse_logic.h) so this relay table
+          // matches the native tests exactly. Safety modes (SENSOR_FAULT /
+          // SAFETY_COOL / SAFETY_HEAT) are a no-op there — a manual press never
+          // fights a safety rail. Otherwise FANS/VENT-BYPASS force BOTH fans
+          // (vent OPEN, or CLOSED under bypass — the winter house-air pull) and
+          // HUMID forces the fogger unless a genuine fog safety block is up.
+          // ManualForce.fans/.fog feed set_relay's force_on below so a press
+          // bypasses relay min-off dwell and engages within one tick — the #289
+          // fix (manual_fan_force was previously computed but NEVER passed to the
+          // fan set_relay calls, so the FANS button stuck behind the fan min-off
+          // timer while the vent moved: the exact "pressed fans, nothing happened"
+          // signature).
+          RelayOutputs ov_out = {willHeat1, willHeat2, willFan1, willFan2, willFog, willVent};
+          const ManualOverrides manual_ov = {
+              manual_fans_eff,                     // fans_active
+              vent_bypass_eff,                     // vent_bypass_active
+              manual_fog_eff,                      // humid_active
+              manual_fog_safety_block[0] != '\0'   // fog_safety_blocked
+          };
+          const ManualForce manual_force = apply_manual_overrides(ov_out, manual_ov, mode);
+          willFan1 = ov_out.fan1; willFan2 = ov_out.fan2;
+          willFog  = ov_out.fog;  willVent = ov_out.vent;
+          const bool manual_fan_force = manual_force.fans;
+          const bool manual_fog_force = manual_force.fog;
           if(sensor_fault_relay_lock) {
             willHeat1 = false;
             willHeat2 = false;
@@ -669,7 +673,6 @@ interval:
             willFan2 = false;
             willFog = false;
             willVent = false;
-            manual_fan_force = manual_fog_force = manual_vent_force_open = false;
           }
 
           /**************** 11a — FAN/VENT + VENT-CLOSE INTERLOCKS ***************/
@@ -681,7 +684,12 @@ interval:
           // it runs the lead fan with vent closed to keep heat in.
           const bool fan_physically_on = id(fan1_rly)->state || id(fan2_rly)->state;
           const bool fan_wanted = willFan1 || willFan2;
-          const bool fan_requires_vent = !sensor_fault_relay_lock && mode != SAFETY_HEAT && (fan_physically_on || fan_wanted);
+          // VENT-BYPASS carve-out (#290): normally fans force the vent open so a
+          // running fan never works against a shut vent, but bypass is the
+          // deliberate fans-on / vent-CLOSED winter house-air mode — so it must
+          // NOT re-open the vent. fan_requires_open_vent() encodes that carve-out
+          // (and the SAFETY_HEAT/SENSOR_FAULT exceptions) as a pure, tested rule.
+          const bool fan_requires_vent = fan_requires_open_vent(mode, fan_physically_on || fan_wanted, vent_bypass_eff);
           const bool fan_vent_interlock_active = fan_requires_vent && !willVent;
           static bool fan_vent_interlock_prev = false;
           if (fan_requires_vent) {
@@ -855,8 +863,11 @@ interval:
           set_relay(R[0], willHeat1, false, force_heat_off);
           set_relay(R[1], willHeat2, false, force_heat2_off);
           set_relay(R[5], willVent, fan_requires_vent, sensor_fault_relay_lock);
-          set_relay(R[2], willFan1, false, sensor_fault_relay_lock);
-          set_relay(R[3], willFan2, false, sensor_fault_relay_lock);
+          // #289 fix: pass manual_fan_force so a FANS / VENT-BYPASS press forces
+          // the fans on THIS tick, bypassing the fan min-off dwell that silently
+          // swallowed manual presses before.
+          set_relay(R[2], willFan1, manual_fan_force, sensor_fault_relay_lock);
+          set_relay(R[3], willFan2, manual_fan_force, sensor_fault_relay_lock);
           set_relay(
               R[4],
               willFog,

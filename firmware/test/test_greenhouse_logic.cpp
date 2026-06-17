@@ -3940,6 +3940,102 @@ TEST(reboot_persisted_anchors_reproduce_identical_band) {
     PASS();
 }
 
+// ═══════════════════════════════════════════════════════════════
+// #289 / #290 — MANUAL BUTTON OVERRIDE LAYER (FANS / HUMID / VENT-BYPASS)
+// ═══════════════════════════════════════════════════════════════
+// The override layer lives in controls.yaml and the replay corpus NEVER presses
+// a button, so a replay-diff is trivially clean — these native tests are the
+// REQUIRED positive evidence (#289). They pin apply_manual_overrides() +
+// fan_requires_open_vent() (greenhouse_logic.h).
+static RelayOutputs relays_off() { return RelayOutputs{false, false, false, false, false, false}; }
+
+TEST(manual_fans_forces_both_fans_and_opens_vent) {
+    RelayOutputs out = relays_off();
+    ManualOverrides ov = {true, false, false, false};  // FANS only
+    ManualForce f = apply_manual_overrides(out, ov, IDLE);
+    ASSERT_TRUE(out.fan1 && out.fan2);
+    ASSERT_TRUE(out.vent);
+    ASSERT_TRUE(f.fans && f.vent_open);
+    ASSERT_FALSE(f.fog);
+    PASS();
+}
+
+TEST(manual_humid_forces_fogger_only) {
+    RelayOutputs out = relays_off();
+    ManualOverrides ov = {false, false, true, false};  // HUMID only, no safety block
+    ManualForce f = apply_manual_overrides(out, ov, IDLE);
+    ASSERT_TRUE(out.fog && f.fog);
+    ASSERT_FALSE(out.fan1 || out.fan2 || out.vent);   // fogger ONLY (R1/R2 fix)
+    ASSERT_FALSE(f.fans || f.vent_open);
+    PASS();
+}
+
+TEST(manual_humid_blocked_by_real_fog_safety) {
+    RelayOutputs out = relays_off();
+    ManualOverrides ov = {false, false, true, true};   // HUMID, but a real fog safety block
+    ManualForce f = apply_manual_overrides(out, ov, IDLE);
+    ASSERT_FALSE(out.fog || f.fog);   // physical safety (dew/RH/temp) beats the button
+    PASS();
+}
+
+TEST(vent_bypass_runs_fans_with_vent_closed) {
+    RelayOutputs out = relays_off();
+    out.vent = true;                                   // pretend climate wanted the vent open
+    ManualOverrides ov = {false, true, false, false};  // VENT-BYPASS only (implies fans)
+    ManualForce f = apply_manual_overrides(out, ov, VENTILATE);
+    ASSERT_TRUE(out.fan1 && out.fan2);    // fans ON — bypass implies fans (#290)
+    ASSERT_FALSE(out.vent);               // vent CLOSED — the winter house-air pull
+    ASSERT_TRUE(f.fans);
+    ASSERT_FALSE(f.vent_open);            // vent is NOT force-opened under bypass
+    PASS();
+}
+
+TEST(manual_overrides_never_fight_safety_rails) {
+    // All buttons pressed; in every safety mode the relay table is untouched and
+    // no force is asserted (a FANS press must not throw the vent open and dump
+    // heat during a cold-rail SAFETY_HEAT).
+    for (Mode m : {SENSOR_FAULT, SAFETY_COOL, SAFETY_HEAT}) {
+        RelayOutputs out = {true, true, false, false, false, false};  // heaters on
+        const RelayOutputs before = out;
+        ManualOverrides ov = {true, true, true, false};
+        ManualForce f = apply_manual_overrides(out, ov, m);
+        ASSERT_TRUE(out.heat1 == before.heat1 && out.heat2 == before.heat2);
+        ASSERT_TRUE(out.fan1 == before.fan1 && out.fan2 == before.fan2);
+        ASSERT_TRUE(out.fog == before.fog && out.vent == before.vent);
+        ASSERT_FALSE(f.fans || f.fog || f.vent_open);
+    }
+    PASS();
+}
+
+TEST(no_buttons_pressed_is_a_no_op) {
+    RelayOutputs out = {false, true, true, false, false, true};
+    const RelayOutputs before = out;
+    ManualOverrides ov = {false, false, false, false};
+    ManualForce f = apply_manual_overrides(out, ov, VENTILATE);
+    ASSERT_TRUE(out.heat1 == before.heat1 && out.heat2 == before.heat2 && out.fan1 == before.fan1
+                && out.fan2 == before.fan2 && out.fog == before.fog && out.vent == before.vent);
+    ASSERT_FALSE(f.fans || f.fog || f.vent_open);
+    PASS();
+}
+
+TEST(manual_fans_plus_humid_force_fans_vent_and_fog) {
+    RelayOutputs out = relays_off();
+    ManualOverrides ov = {true, false, true, false};   // FANS + HUMID together
+    ManualForce f = apply_manual_overrides(out, ov, IDLE);
+    ASSERT_TRUE(out.fan1 && out.fan2 && out.vent && out.fog);
+    ASSERT_TRUE(f.fans && f.vent_open && f.fog);
+    PASS();
+}
+
+TEST(fan_requires_open_vent_carves_out_bypass_and_safety) {
+    ASSERT_TRUE(fan_requires_open_vent(VENTILATE, true, false));    // normal: vent forced open
+    ASSERT_FALSE(fan_requires_open_vent(VENTILATE, true, true));    // bypass carve-out (#290)
+    ASSERT_FALSE(fan_requires_open_vent(SAFETY_HEAT, true, false)); // lead-fan, vent shut to keep heat
+    ASSERT_FALSE(fan_requires_open_vent(SENSOR_FAULT, true, false));// all off elsewhere
+    ASSERT_FALSE(fan_requires_open_vent(IDLE, false, false));       // no fan wanted
+    PASS();
+}
+
 // Item-3 per-zone arbiter: lowest priority_rank among zones that want wetting AND
 // have an actuator wins; ties break on urgency; EAST (no relay) is excluded.
 TEST(arbiter_priority_then_urgency_then_actuator) {
