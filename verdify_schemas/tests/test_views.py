@@ -255,3 +255,27 @@ class TestLiveProjection:
         rows = _psql_json("SELECT * FROM mv_zone_band_grade ORDER BY bucket DESC LIMIT 3")
         for r in rows:
             ZoneBandGradeRollup.model_validate(r)
+
+    def test_fn_band_setpoints_serves_device_target(self):
+        # ADR0003 §6.3 / mig 181 (BC-9): the served band TARGET IS the device curve.
+        # fn_band_setpoints.temp_target/vpd_target must equal fn_crop_band_value('house',
+        # 'temp_target'/'vpd_target', now()) — the single-source invariant. Asserts
+        # IS NOT NULL first so a missing 'house' target anchor set can't pass vacuously
+        # (NULL==NULL). Skips on a pre-mig-181 DB (the target columns don't exist yet).
+        try:
+            rows = _psql_json(
+                "SELECT b.temp_target, b.vpd_target, "
+                "fn_crop_band_value('house','temp_target',now()) AS tt, "
+                "fn_crop_band_value('house','vpd_target', now()) AS vt "
+                "FROM fn_band_setpoints(now()) b"
+            )
+        except subprocess.CalledProcessError:
+            pytest.skip("fn_band_setpoints target columns absent (pre-mig-181 DB)")
+        assert rows, "fn_band_setpoints returned no row"
+        r = rows[0]
+        assert r["temp_target"] is not None and r["vpd_target"] is not None, (
+            "served target is NULL — crop_band_anchors is missing the house "
+            "temp_target/vpd_target anchor set (fn_crop_band_value returned NULL)"
+        )
+        assert abs(r["temp_target"] - r["tt"]) < 1e-9  # served target == device curve
+        assert abs(r["vpd_target"] - r["vt"]) < 1e-9

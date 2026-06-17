@@ -711,7 +711,13 @@ async def write_climate_action_log(pool: asyncpg.Pool, ts: datetime) -> bool:
                     fn_setpoint_at($1, 'temp_low', COALESCE((SELECT ts FROM latest_climate), $2)) AS temp_low_f,
                     fn_setpoint_at($1, 'temp_high', COALESCE((SELECT ts FROM latest_climate), $2)) AS temp_high_f,
                     fn_setpoint_at($1, 'vpd_low', COALESCE((SELECT ts FROM latest_climate), $2)) AS vpd_low_kpa,
-                    fn_setpoint_at($1, 'vpd_high', COALESCE((SELECT ts FROM latest_climate), $2)) AS vpd_high_kpa
+                    fn_setpoint_at($1, 'vpd_high', COALESCE((SELECT ts FROM latest_climate), $2)) AS vpd_high_kpa,
+                    -- ADR0003 §6.3 (BC-9): the band TARGET is the served device-truth curve
+                    -- (fn_band_setpoints, mig 181) — NOT the (low+high)/2 midpoint, which is
+                    -- wrong on the asymmetric house band (temp_target sm=84 vs midpoint 81).
+                    bs.temp_target AS temp_target_f,
+                    bs.vpd_target  AS vpd_target_kpa
+                FROM fn_band_setpoints(COALESCE((SELECT ts FROM latest_climate), $2)) AS bs
             ),
             plan_context AS (
                 SELECT sp.plan_id, sp.trigger_id, sp.planner_instance
@@ -760,17 +766,15 @@ async def write_climate_action_log(pool: asyncpg.Pool, ts: datetime) -> bool:
                 $3,
                 $4,
                 band.temp_low_f,
-                CASE WHEN band.temp_low_f IS NULL OR band.temp_high_f IS NULL
-                     THEN NULL ELSE (band.temp_low_f + band.temp_high_f) / 2.0 END,
+                band.temp_target_f,
                 band.temp_high_f,
                 band.vpd_low_kpa,
-                CASE WHEN band.vpd_low_kpa IS NULL OR band.vpd_high_kpa IS NULL
-                     THEN NULL ELSE (band.vpd_low_kpa + band.vpd_high_kpa) / 2.0 END,
+                band.vpd_target_kpa,
                 band.vpd_high_kpa,
-                CASE WHEN lc.temp_avg IS NULL OR band.temp_low_f IS NULL OR band.temp_high_f IS NULL
-                     THEN NULL ELSE lc.temp_avg - ((band.temp_low_f + band.temp_high_f) / 2.0) END,
-                CASE WHEN lc.vpd_avg IS NULL OR band.vpd_low_kpa IS NULL OR band.vpd_high_kpa IS NULL
-                     THEN NULL ELSE lc.vpd_avg - ((band.vpd_low_kpa + band.vpd_high_kpa) / 2.0) END,
+                CASE WHEN lc.temp_avg IS NULL OR band.temp_target_f IS NULL
+                     THEN NULL ELSE lc.temp_avg - band.temp_target_f END,
+                CASE WHEN lc.vpd_avg IS NULL OR band.vpd_target_kpa IS NULL
+                     THEN NULL ELSE lc.vpd_avg - band.vpd_target_kpa END,
                 CASE
                     WHEN lc.temp_avg IS NULL OR band.temp_low_f IS NULL OR band.temp_high_f IS NULL THEN $5
                     WHEN lc.temp_avg < band.temp_low_f THEN lc.temp_avg - band.temp_low_f
