@@ -1,390 +1,332 @@
 # Verdify Platform Epics
 
-Last updated: 2026-06-13
+Last updated: 2026-06-16
 
 Agent name: `verdify-platform`
 
-These are the EPIC-level board cards for the `verdify-platform` lane. Board
-statuses use the lane contract vocabulary: `Backlog`, `Ready`, `In Progress`,
-`In Review`, and `Done`.
+These are the current EPIC-level board cards for the `verdify-platform` lane.
+The 2026-06-16 controller replan supersedes the older three-env/product-plane
+decomposition as the active planning surface. Older cards remain as child
+anchors and evidence; do not delete their history.
 
 ## Current Sprint Proposal
 
-S0 `lane-board-normalization` and S1 `platform-inventory-and-service-map` are
-complete. The next sprint should be selected from the `Ready` epic cards on the
-`verdify-platform` project board.
+Start with S4 `controller-architecture-audit`, then pull the highest-risk
+schema/firmware/dashboard contract work forward into S5/S6. Firmware OTA,
+prod sync, device VLAN, prod-destructive DB, credential, and outward-facing
+infra actions remain Jason-gated.
 
-## Epics
+## Current Epics
 
-### Lane Board Normalization
+### L1 Architecture Audit, Drift Check, and CI/CD
 
-- User/value statement: Future agents and Jason can make board-level decisions
-  from one canonical `verdify-platform` Project Board instead of scattered docs.
-- Scope: Exact board creation/reuse, field/status contract, epic cards,
-  fallback issue tracking blocks, root planning docs, and project-access gaps.
-- Non-goals: Product-code work, live cluster changes, or cross-lane board edits.
-- Acceptance criteria: Board named exactly `verdify-platform`; statuses
-  `Backlog`, `Ready`, `In Progress`, `In Review`, `Done`; root docs updated;
-  epic cards attached or a documented blocker issue exists.
-- Status: `Done`
+- Canonical issue: #343.
+- User/value statement: A future session can say what is actually deployed,
+  what is intended, what is stale, and which component owns each write path.
+- Scope: firmware, Kubernetes services, ingestor, database, Grafana, planner,
+  Hermes, lab notebook, Home Assistant, Tempest, Open-Meteo, S3, Cloudflare,
+  CI/CD, release checklists, and failure-mode docs.
+- Non-goals: production sync, firmware OTA, device VLAN changes, credential
+  rotation, public DNS/edge changes, or broad architecture rewrites in this
+  tracking pass.
+- Acceptance criteria:
+  - Actual-vs-intended architecture map exists.
+  - Every deployed/referenced component is classified as authoritative,
+    reader, fallback-only, stale, dead, delete, or rewrite candidate.
+  - Single-env prod promotion and manual sync gates are documented.
+  - Home Assistant fallback/backfill is documented as fallback/backfill, not a
+    duplicate source of truth.
+- Status: `In Progress`
 - Priority: P1
-- Milestone: Lane board normalization
-- Sprint: S0 `lane-board-normalization`
-- Related files/issues/PRs/commits: issue #334, `PROJECT_BOARD.md`,
-  `docs/PROJECT_BOARD_WORKFLOW.md`, `AGENT_LANE.md`,
-  `COORDINATION_REQUESTS.md`, issues #330-#333, commits `713fa2d`, `d9f30c2`,
-  `34bca46`, `4e968ea`.
-- Dependencies: None active; project write access was available.
-- Risks: Project field writes can drift from issue-body metadata; broad issue
-  import can blur epic versus task cards.
-- Evidence: GitHub Project #5, 16 epic cards, exact status vocabulary, closed
-  #331 and #333, open #332, and current root lane docs.
+- Effort: L
+- Milestone: G0 - Controller Architecture Audit
+- Sprint: S4 `controller-architecture-audit`
+- Related files/issues/PRs: #207, #335, #336, #339, #341, #342,
+  `docs/SERVICE_MAP.md`, `docs/reviews/data-path-adversarial-review-2026-06-16.md`.
+- Dependencies: Jason, `monitoring-stack`, `network-infra`, `storage-infra`.
+- Risks: stale docs can look authoritative; old dev/staging language can cause
+  operators to reason about environments that no longer exist.
+- Evidence: Project #5 cards #343-#352 and root tracking docs.
 
-### Platform Architecture Inventory
+### L2 Firmware Core
 
-- User/value statement: Agents can orient safely in the current k3s-era stack
-  without trusting stale VM-era architecture claims.
-- Scope: Reconcile `README.md`, `docs/SERVICE_MAP.md`,
-  `docs/SYSTEM-ARCHITECTURE.md`, `docs/FOLDER-HIERARCHY.md`,
-  `docs/runbooks/laptop-operator.md`, manifests, CI, and Orbit context dump.
-- Non-goals: Large architecture rewrite or changing runtime behavior.
-- Acceptance criteria: Current docs distinguish k3s dev/prod, retired staging,
-  historical VM references, service ownership, verification paths, and
-  dependency-agent boundaries.
+- Canonical issue: #344.
+- User/value statement: Firmware is a deterministic local physics engine that
+  keeps the greenhouse safe without cloud dependency.
+- Scope: five-second state machine, climate/lighting/irrigation separation,
+  relay states, safety rails, disconnected operation, local fallback, relay
+  dwell/wear, override precedence, and crop-specific logic removal.
+- Non-goals: firmware OTA without Jason, AI-controlled safety/target curves, or
+  crop strategy embedded in firmware.
+- Acceptance criteria:
+  - Firmware responsibilities are documented around climate, lighting, and
+    irrigation only.
+  - Relay transitions and safety override behavior are explicit.
+  - 72-hour disconnected behavior is defined and tested.
+  - AI tunables cannot override hard rails or core FSM logic.
+  - Crop-specific assumptions are removed or isolated above firmware.
+- Status: `In Progress`
+- Priority: P1
+- Effort: XL
+- Milestone: G1 - Firmware-First Determinism
+- Sprint: S5 `firmware-first-climate-core`
+- Related files/issues/PRs: #287, #289, #290, #292, #299, #300, #323, #324,
+  #327, #340, `firmware/`, `verdify_schemas/`,
+  `docs/design/firmware-v2-simplification-2026-06-10.md`.
+- Dependencies: Jason for OTA; schema-first sequencing for emitted fields and
+  tunables.
+- Risks: production firmware controls live relays; regressions can harm plants
+  or hardware.
+- Evidence: firmware gates in `AGENTS.md` and latest firmware/control PRs.
+
+### L3 Climate Control
+
+- Canonical issue: #345.
+- User/value statement: Climate follows a smooth deterministic diurnal target
+  curve and avoids contradictory device behavior unless the state machine has a
+  deliberate reason.
+- Scope: target temperature and VPD math, sunrise/sunset/solar peak/seasonal
+  alignment, hysteresis, heating/ventilation/fogging/misting/cooling
+  transitions, outdoor-air-aware strategies, green-band compliance model, and
+  mechanical-limit interpretation.
+- Non-goals: AI-authored target temperature, plant-stress limits, or emergency
+  behavior.
+- Acceptance criteria:
+  - Diurnal target curve math is formalized and tested.
+  - Target bands and hysteresis are documented.
+  - Mechanical transition rules avoid energy-waste contradictions by default.
+  - Outdoor air use is explicit.
+  - Compliance can distinguish controller misses from physical impossibility.
 - Status: `Ready`
 - Priority: P1
-- Milestone: Enablement: Data Hygiene & Observability
-- Sprint: S1 `platform-inventory-and-service-map`
-- Related files/issues/PRs/commits: `README.md`, `docs/SERVICE_MAP.md`,
-  `docs/SYSTEM-ARCHITECTURE.md`, `docs/FOLDER-HIERARCHY.md`, issue #207.
-- Dependencies: `network-infra`, `storage-infra`, and `monitoring-stack` for
-  shared route/storage/telemetry truth.
-- Risks: Older docs still contain valid historical details next to stale
-  deployment facts.
-- Evidence: `docs/SERVICE_MAP.md`, `AGENTS.md`, Orbit context dump manifest.
+- Effort: XL
+- Milestone: G1 - Firmware-First Determinism
+- Sprint: S5 `firmware-first-climate-core`
+- Related files/issues/PRs: #13, #17, #20, #287, #291, #292, #293, #323,
+  #324, #328, #341, `docs/design/band-compliance-architecture.md`,
+  `docs/GREENHOUSE-CONTROL-TEST-CATALOG.md`.
+- Dependencies: L5 schema authority, L6 dashboards, Jason gates for OTA/live DB.
+- Risks: band/content bugs can look like firmware bugs unless readbacks and
+  service projections are compared.
+- Evidence: data-path review findings F1/F2/F6/F7/F12/F20.
 
-### API/Service Map
+### L4 AI Planner And Tunables
 
-- User/value statement: Agents can identify service entrypoints, manifests,
-  ports, data stores, and verification commands before editing runtime code.
-- Scope: API, MCP, ingestor, planner, setpoint server, Hermes, MQTT, lab,
-  Grafana, DB, migration, backup, restore, shadow, and residual components.
-- Non-goals: Full SQL lineage parser or live cluster validation.
-- Acceptance criteria: Current service map exists, links source and manifest
-  paths, names secret contracts by key only, and records uncertainty as
-  boundary/dependency notes.
-- Status: `Done`
+- Canonical issue: #346.
+- User/value statement: AI helps tune bounded parameters over 72 hours without
+  owning safety, target curves, emergency behavior, or firmware logic.
+- Scope: Hermes-vs-direct-GPT-5 decision, planner input/output schema,
+  allowed tunables and bounds, write contract, planner decision ledger,
+  outcome scoring, sunrise/sunset/solar-maximum/deviation/weekly triggers.
+- Non-goals: planner writes to deterministic target temperature, stress
+  thresholds, hard rails, emergency override, or FSM code.
+- Acceptance criteria:
+  - Planner architecture decision is documented.
+  - Input/output schema exists.
+  - Allowed tunables and bounds are explicit and firmware-supported.
+  - Planner writes are durable, auditable, and cannot exceed bounds.
+  - Decision ledger connects planner changes to outcomes.
+- Status: `Ready`
 - Priority: P1
-- Milestone: Lane board normalization
-- Sprint: S1 `platform-inventory-and-service-map`
-- Related files/issues/PRs/commits: `docs/SERVICE_MAP.md`, issue #331, commits
-  `34bca46`, `4e968ea`.
-- Dependencies: None for docs; shared providers remain out of lane.
-- Risks: Route/storage/monitoring details can change outside this repo.
-- Evidence: Closed issue #331 and green CI/Container Publish on `4e968ea`.
+- Effort: L
+- Milestone: G3 - Planner, Irrigation, Lab, and Research
+- Sprint: S6 `data-observability-planner-contracts`
+- Related files/issues/PRs: #214, #315, #287, #293, #300, `planner_graph/`,
+  `mcp/`, `templates/`, `verdify_schemas/`.
+- Dependencies: L2 firmware tunables and readbacks, L5 write contract, model
+  credential health without secret exposure.
+- Risks: stale prompt language can imply real-time or band authority that does
+  not exist.
+- Evidence: data-path review F8 and genai subsystem docs.
 
-### CI/CD And Promotion Hardening
+### L5 Data, Schema, And Source Of Truth
 
-- User/value statement: Every merge and promotion should prove the same
-  source/image/manifest state that will run in dev and prod.
-- Scope: CI gates, manifest validation, digest write-back, prod-promote race
-  fixes, Actions PR creation, and k3s-era test cleanup.
-- Non-goals: Direct prod ArgoCD sync or changing org settings without Jason.
-- Acceptance criteria: CI is green, k3s-era tests replace destroyed VM asserts,
-  prod-promote cannot race the dev-equality guard, and PR creation blockers are
-  resolved or clearly Jason-gated.
-- Status: `In Progress`
+- Canonical issue: #347.
+- User/value statement: Every greenhouse value has one known authority, known
+  readers, known fallback behavior, and a drift-detection strategy.
+- Scope: schema authority matrix, firmware state, Tempest observed weather,
+  Open-Meteo forecast, Home Assistant fallback/backfill, planner tunables, DB
+  projections, Grafana/lab usage, firmware/service setpoint drift detection,
+  and Mountain-time alignment.
+- Non-goals: destructive prod DB operations or schema changes without migration
+  safety and restart documentation.
+- Acceptance criteria:
+  - Full read/write authority matrix exists.
+  - Firmware is canonical for greenhouse-side state where possible.
+  - Home Assistant is fallback/backfill only.
+  - Firmware-calculated and service-calculated setpoints are stored and compared.
+  - Divergence alerts exist.
+  - Tempest/Open-Meteo timezone handling is documented.
+- Status: `Ready`
 - Priority: P1
-- Milestone: Deploy Enablement (agent access + firmware CI/OTA)
-- Sprint: S2 `gitops-and-access-hardening`
-- Related files/issues/PRs/commits: issue #335, `.github/workflows/`,
-  `Makefile`, issues #319, #320, #322, #303, #307.
-- Dependencies: Jason/org settings for #320; CI environment.
-- Risks: CI can be green while test semantics still assume retired topology.
-- Evidence: Latest `main` CI green at `4e968ea`; open issues #319, #320, #322.
+- Effort: XL
+- Milestone: G2 - Data Contracts and Observability
+- Sprint: S6 `data-observability-planner-contracts`
+- Related files/issues/PRs: #13, #14, #31, #207, #324, #327, #341,
+  `verdify_schemas/`, `db/`, `ingestor/entity_map.py`, `mcp/server.py`.
+- Dependencies: L1 architecture map, L2 firmware surfaces, Jason for live DB
+  gates.
+- Risks: duplicated defaults and stale schema dumps can silently mislead future
+  reviewers.
+- Evidence: data-path review findings F1-F20.
 
-### ArgoCD Deployment And GitOps Cleanup
+### L6 Observability, Dashboards, And KPIs
 
-- User/value statement: Kubernetes desired state stays durable, reviewable, and
-  safe for the live greenhouse writer.
-- Scope: Dev/prod Application manifests, retired staging removal,
-  `live/platform-main` retirement, prod app rename, selective sync bugs,
-  ServerSideApply behavior, and prod promotion mechanics.
-- Non-goals: Direct durable `kubectl` changes, cluster-wide ArgoCD/CRD policy,
-  or prod sync without Jason.
-- Acceptance criteria: App names and target revisions match `main`, staging is
-  removed or explicitly historical, prod rename has a safe orphan/readopt plan,
-  and ArgoCD sync bugs have issue evidence.
-- Status: `In Progress`
+- Canonical issue: #348.
+- User/value statement: Operators can tell whether the greenhouse is doing the
+  right thing, not merely whether relays are on.
+- Scope: 72-hour historical viewer, forecast-vs-observed drift, relay
+  timeline/runtime/flapping, target-vs-actual temp/VPD, green-band compliance,
+  normalized score, mechanical-limit-adjusted interpretation, planner outcome,
+  firmware/service drift alerts, and data-hole/backfill status.
+- Non-goals: owning the shared monitoring stack outside app-local dashboards and
+  repo-authored alert manifests.
+- Acceptance criteria:
+  - 72-hour viewer is repaired or rebuilt.
+  - Green-band compliance score exists.
+  - Forecast drift, relay runtime, and flapping views exist.
+  - Firmware/service drift alerting exists.
+  - Physical-limit-aware interpretation is documented.
+- Status: `Ready`
 - Priority: P1
-- Milestone: Enablement: Three-Env (dev/stage parity)
-- Sprint: S2 `gitops-and-access-hardening`
-- Related files/issues/PRs/commits: issue #336, `ARGOCD.md`,
-  `deploy/k8s/argocd/apps/`,
-  `deploy/k8s/overlays/`, issues #207, #220, #317, #318, #321.
-- Dependencies: Jason for live prod app operations; `network-infra` for shared
-  ingress where routes cross lanes.
-- Risks: App deletion or bad sync scope can prune live resources.
-- Evidence: `ARGOCD.md`, app manifests, open issues #317, #318, #321.
+- Effort: L
+- Milestone: G2 - Data Contracts and Observability
+- Sprint: S6 `data-observability-planner-contracts`
+- Related files/issues/PRs: #75, #89, #200, #241, #308, #328, #341,
+  `grafana/`, `deploy/k8s/components/grafana/`,
+  `docs/grafana-panel-catalog.md`.
+- Dependencies: L5 source-of-truth matrix, `monitoring-stack`,
+  `network-infra`.
+- Risks: DB-derived curves can show green while device readback diverges unless
+  both are plotted/alerted.
+- Evidence: data-path review F2/F17 and dashboard catalog.
 
-### Deploy Enablement And Agent Access
+### L7 Lighting And Occupancy
 
-- User/value statement: Agents can validate and prepare live-safe work without
-  overbroad credentials or unreviewed device impact.
-- Scope: Live DB read path, firmware compile CI, OTA secret shape, agent tooling
-  image, admin-token review, safe shadow loop, and branch-protection constraints.
-- Non-goals: Unattended firmware OTA, credential rotation, or raw secret custody.
-- Acceptance criteria: Epic #288 children #301-#307 are closed or explicitly
-  gated; secret references are name/key only; deploy tooling works through
-  least-privilege paths.
-- Status: `In Progress`
-- Priority: P1
-- Milestone: Deploy Enablement (agent access + firmware CI/OTA)
-- Sprint: S2 `gitops-and-access-hardening`
-- Related files/issues/PRs/commits: issues #288 and #301-#307,
-  `deploy/k8s/SECRETS.md`, `.github/workflows/ci.yml`.
-- Dependencies: Jason, secret-delivery owner, and org settings.
-- Risks: Too much access increases blast radius; too little access blocks
-  verification and safe OTA prep.
-- Evidence: Open deploy-enablement milestone and issues #301-#307.
-
-### Data/Storage Durability And DB HA/PITR
-
-- User/value statement: The live TimescaleDB has recoverable backups, verified
-  restore paths, and a clear HA/PITR migration plan.
-- Scope: DB backups, backup freshness, dev restore, CNPG/PITR, prod cutover
-  runbooks, storage class/PV dependencies, and migration rollback safety.
-- Non-goals: StorageClass/PV administration or destructive prod DB work without
+- Canonical issue: #349.
+- User/value statement: Occupancy and lighting behavior is low-latency,
+  deterministic, and safe for people in the greenhouse.
+- Scope: Frigate/Home Assistant/MQTT/direct event path decision, push-enabled
+  occupancy to firmware, fogger/mister suppression while occupied, lux-based
+  overhead lighting, and Lutron/Home Assistant vs firmware responsibility.
+- Non-goals: ambiguous second device writer paths or live device changes without
   Jason.
-- Acceptance criteria: Backup RPO is monitored, restore proof exists, CNPG gates
-  are explicit, and any live DB cutover has a gated issue/runbook.
-- Status: `In Progress`
-- Priority: P1
-- Milestone: M7 - HA: first-principles resilience
-- Sprint: S3 `data-storage-and-observability-requests`
-- Related files/issues/PRs/commits: `deploy/k8s/components/db-backup/`,
-  `deploy/k8s/overlays/dev/db-restore-from-prod.yaml`, `deploy/k8s/cnpg/`,
-  `docs/runbooks/db-copy-not-move.md`, issues #218, #243-#245.
-- Dependencies: `storage-infra`, Jason for live DB cutover.
-- Risks: CNPG/restore work can affect the production system of record.
-- Evidence: Open #218 and #245; backup and restore manifests in repo.
-
-### Observability, Data Hygiene, And Product Health
-
-- User/value statement: Operators can see whether the greenhouse, planner, data
-  pipeline, public lab site, and supporting telemetry are healthy.
-- Scope: Health/smoke checks, stale host polls, planner dark-cycle verification,
-  lab content freshness, site RAG refresh, Grafana panels, alerts, and public
-  data hygiene.
-- Non-goals: Owning the shared Prometheus/Loki/Grafana platform outside app-local
-  dashboards.
-- Acceptance criteria: Open health/data issues have owners and verification;
-  shared monitoring requests are in `COORDINATION_REQUESTS.md`.
-- Status: `Ready`
-- Priority: P2
-- Milestone: Enablement: Data Hygiene & Observability
-- Sprint: S3 `data-storage-and-observability-requests`
-- Related files/issues/PRs/commits: issues #43, #49, #75, #89, #210, #214,
-  #215, #219, #308, #315, `grafana/`, `docs/grafana-panel-catalog.md`.
-- Dependencies: `monitoring-stack`, `network-infra` for route visibility.
-- Risks: Shared telemetry gaps can be mistaken for app defects.
-- Evidence: Open issues in the Data Hygiene & Observability milestone.
-
-### Greenhouse Control Optimization
-
-- User/value statement: Climate control keeps plants safer through better
-  deterministic firmware, setpoint, lighting, and irrigation behavior.
-- Scope: Firmware-v2 requirements A-E, dispatcher solar anchoring, button
-  override precedence, two-zone lighting, irrigation feedback, actuator-wear
-  limits, schemas, and drift cleanup.
-- Non-goals: Firmware OTA without Jason, hardware installation by the agent, or
-  bypassing replay/invariant gates.
-- Acceptance criteria: Epic #287 and children close with firmware replay diff,
-  invariants, unit tests, schema drift guards, and Jason-gated OTA evidence when
-  required.
-- Status: `In Progress`
-- Priority: P1
-- Milestone: Greenhouse Control Optimization
-- Sprint: S2 `gitops-and-access-hardening`
-- Related files/issues/PRs/commits: issues #287, #289-#300, #323-#327,
-  `firmware/`, `ingestor/`, `verdify_schemas/`, `docs/design/firmware-v2-simplification-2026-06-10.md`.
-- Dependencies: Jason for OTA/hardware, `storage-infra` or `network-infra` only
-  if runtime dependencies appear.
-- Risks: Production firmware controls live relays; regressions can harm plants.
-- Evidence: Open Greenhouse Control Optimization milestone and firmware gates in
-  `AGENTS.md`.
-
-### HA Resilience
-
-- User/value statement: The greenhouse stack should survive common node, pod,
-  network, and storage failures without unsafe writer duplication.
-- Scope: Resource governance, PDBs/spread, edge HA, singleton-writer fencing,
-  chaos acceptance, CNPG/PITR groundwork, and HA incident follow-ups.
-- Non-goals: Cluster-wide networking/storage administration outside repo-owned
-  manifests.
-- Acceptance criteria: M7 open issues close or move to dependency-agent
-  requests; live writer fencing is dev-proven and Jason-gated before prod arm.
-- Status: `In Progress`
-- Priority: P1
-- Milestone: M7 - HA: first-principles resilience
-- Sprint: S3 `data-storage-and-observability-requests`
-- Related files/issues/PRs/commits: issues #225, #232, #235, #237-#242, #245,
-  #316, prod overlay HA manifests.
-- Dependencies: `network-infra`, `storage-infra`, Jason.
-- Risks: HA changes can accidentally increase device-writer or DB risk.
-- Evidence: M7 milestone issue set and existing HA manifests under
-  `deploy/k8s/overlays/prod/`.
-
-### Band And Compliance Rearchitecture
-
-- User/value statement: Planner scoring should reward controller-attributable
-  compliance instead of stale binary band compliance.
-- Scope: Migration 147 reward swap, ladder re-anchor, compliance-v2 backfill
-  evidence, planner/MCP prompt language, and restart documentation.
-- Non-goals: Firmware twin divergence alarms or live DB apply without the
-  migration safety gates.
-- Acceptance criteria: #17 and #20 close with replayed anchor evidence,
-  migration 147 applies under the correct transaction safety class, and required
-  service restarts are documented.
-- Status: `Ready`
-- Priority: P0
-- Milestone: Enablement: Compliance & Twins
-- Sprint: S3 `data-storage-and-observability-requests`
-- Related files/issues/PRs/commits: issues #13, #17, #20, #31, #14,
-  `db/migrations/147-reward-swap-and-ladder-reanchor.sql`,
-  `docs/design/band-compliance-architecture.md`.
-- Dependencies: Jason for live prod DB/schema/runtime gates; restart
-  documentation for `verdify-mcp` and `verdify-ingestor`.
-- Risks: A bad reward swap can make planner scores look better or worse than
-  the controller-attributable reality.
-- Evidence: Open issue #13 with Project Tracking metadata and Compliance &
-  Twins milestone evidence.
-
-### Firmware Digital Twins
-
-- User/value statement: Twin divergence metrics are trustworthy before they
-  influence live decisions or deployment gates.
-- Scope: Firmware twin setpoint coverage, twin shadow behavior, schema
-  extensions, and divergence dashboarding.
-- Non-goals: Treating current twin divergence as a control gate before coverage
-  closes, or applying live DB/user changes without Jason.
-- Acceptance criteria: #31 and twin schema work have proof, and any live-prod
-  twin enablement has Jason-gated DB/user changes.
+- Acceptance criteria:
+  - Occupancy reaches firmware quickly and reliably.
+  - Fogger/misters are suppressed when occupied.
+  - Overhead lights respond to occupancy and lux thresholds without jarring
+    daytime behavior.
+  - Lutron/Home Assistant responsibilities are documented.
 - Status: `Ready`
 - Priority: P1
-- Milestone: Enablement: Compliance & Twins
-- Sprint: S3 `data-storage-and-observability-requests`
-- Related files/issues/PRs/commits: issues #14, #31, #13, #17, #20, #324,
-  `deploy/k8s/components/firmware-twin/`, `twin/`, `firmware/`,
-  `docs/design/firmware-digital-twin.md`.
-- Dependencies: Jason for live prod DB/schema/user gates.
-- Risks: Incomplete setpoint coverage creates false divergence signals.
-- Evidence: Open issue #14 with Project Tracking metadata and firmware-twin
-  component notes.
+- Effort: L
+- Milestone: G1 - Firmware-First Determinism
+- Sprint: S5 `firmware-first-climate-core`
+- Related files/issues/PRs: #118, #294, #295, #300, #341,
+  `scripts/setpoint-server.py`, lighting audit targets.
+- Dependencies: Home Assistant, Frigate, Lutron, Jason for device-affecting
+  validation.
+- Risks: lighting paths can become accidental duplicate writers if ownership is
+  unclear.
+- Evidence: Makefile lighting audits and data-path review F4/F5.
 
-### Decommission, Auth, And Residual Product Plane
+### L8 Irrigation, Fertilization, And Orchids
 
-- User/value statement: Retired VM/auth/edge leftovers are either removed safely
-  or represented as explicit future product-plane work.
-- Scope: Iris VM decommission follow-through, vault commit/data-loss gates,
-  admin auth rehome, dead botauth backend, setpoint-server cutover, and
-  internet-friendly future device channel.
-- Non-goals: DNS/Auth/Cloudflare changes by this lane without coordination.
-- Acceptance criteria: Residual issues are closed, reassigned, or converted to
-  coordination requests with owner and evidence.
+- Canonical issue: #350.
+- User/value statement: Climate wetting and plant irrigation/fertigation are
+  separate, auditable loops with explicit horticultural choices.
+- Scope: fertilizer-tank routing decision, wall driphead irrigation, soil
+  moisture/EC sensor strategy, reduced west/south climate misting, orchid
+  manual fertilization/inspection routine, fertilizer material decision, and
+  three-sensor averaging/offset strategy.
+- Non-goals: physical install by the agent or horticultural automation without
+  Jason's decision.
+- Acceptance criteria:
+  - Fertilizer tank routing is decided.
+  - Wall irrigation loop is defined from soil moisture/EC.
+  - West/south misters are no longer primary climate irrigation.
+  - Orchid manual routine or automation is explicit.
+  - Sensor averaging/offset logic is documented.
+- Status: `Ready`
+- Priority: P1
+- Effort: L
+- Milestone: G3 - Planner, Irrigation, Lab, and Research
+- Sprint: S7 `irrigation-lab-testing-hardening`
+- Related files/issues/PRs: #16, #37, #45, #296, #297, #298, Makefile
+  irrigation targets.
+- Dependencies: Jason/horticulture and physical driphead/sensor work.
+- Risks: software assumptions can be invalid if physical sensor placement or
+  fertilizer routing changes.
+- Evidence: Hardware / Seasonal milestone and firmware-v2 req:D issues.
+
+### L9 Lab Notebook, Website, And Publishing
+
+- Canonical issue: #351.
+- User/value statement: The public lab notebook reflects the actual greenhouse
+  architecture, data, dashboards, releases, and lessons instead of stale
+  implementation assumptions.
+- Scope: lab notebook generation pipeline, S3/proxy/Cloudflare publish path,
+  architecture redocumentation after stabilization, release notes, and lessons
+  learned.
+- Non-goals: marketing site (`verdify-www`), CRM, DNS/Cloudflare changes, or raw
+  S3 credential handling.
+- Acceptance criteria:
+  - Lab generation pipeline is audited.
+  - S3/proxy/Cloudflare publishing path is documented with repo-owned vs
+    network-owned boundaries.
+  - Architecture docs/lab content are refreshed after implementation stabilizes.
+  - Release notes and lessons learned are represented.
 - Status: `Ready`
 - Priority: P2
-- Milestone: Enablement: Decommission & Auth
-- Sprint: S3 `data-storage-and-observability-requests`
-- Related files/issues/PRs/commits: issue #337, issues #91, #104, #118, #174,
-  #175, #177.
-- Dependencies: Jason, `network-infra`, secret/auth owners.
-- Risks: Retired-system cleanup can delete still-referenced state if evidence is
-  incomplete.
-- Evidence: Open Decommission & Auth milestone.
+- Effort: M
+- Milestone: G3 - Planner, Irrigation, Lab, and Research
+- Sprint: S7 `irrigation-lab-testing-hardening`
+- Related files/issues/PRs: #43, #219, #308, #337, `site/`,
+  `lab-content-pipeline.yml`, `scripts/lab-publish-k3s.sh`.
+- Dependencies: network-infra for route truth; secret locations by name/key
+  only.
+- Risks: generated content can become a stale parallel architecture if not tied
+  back to L1/L5/L6.
+- Evidence: web subsystem docs and service map.
 
-### Hardware And Seasonal Operations
+### L10 Testing And Research
 
-- User/value statement: Operator-gated hardware, seasonal, and crop-safety work
-  stays visible without being confused with autonomous software tasks.
-- Scope: Sensor repairs, irrigation feedback bring-up, OTA bake promotion,
-  calibration, seasonal orchid/lighting policy, and hardware-gated control
-  changes.
-- Non-goals: Physical work, field calibration, or OTA execution by the agent
-  without Jason.
-- Acceptance criteria: Each item has a Jason gate, required evidence, and no
-  autonomous live-device action.
-- Status: `Backlog`
-- Priority: P2
-- Milestone: Hardware / Seasonal (operator-gated)
-- Sprint: none
-- Related files/issues/PRs/commits: issues #16, #35, #37, #45, #51, #52, #298.
-- Dependencies: Jason and physical greenhouse work.
-- Risks: Hardware assumptions can invalidate software acceptance.
-- Evidence: Open Hardware / Seasonal milestone.
-
-### Fable Workstream Clarification
-
-- User/value statement: Fable-related work is either explicitly owned by
-  `verdify-platform` or routed to the correct repo/agent.
-- Scope: Search repo/docs/issues for Fable evidence, record ownership decision,
-  and create a concrete epic only if in-repo work exists.
-- Non-goals: Inventing Fable scope without code, docs, or issue evidence.
-- Acceptance criteria: Issue #332 either closes with no in-repo ownership or
-  points to exact Fable files/issues and follow-up epics.
-- Status: `Backlog`
-- Priority: P3
-- Milestone: none
-- Sprint: S0 `lane-board-normalization`
-- Related files/issues/PRs/commits: issue #332.
-- Dependencies: Jason or Orbit if Fable ownership is external.
-- Risks: Phantom work can pollute the lane board.
-- Evidence: No in-repo Fable surface found in the current lane pass.
-
-### Repo Cleanup And Branch Review
-
-- User/value statement: Archived and stale branches do not hide active lane work
-  or confuse future agents about the canonical source.
-- Scope: Review remote branches, archived worktree branches, open PR branches,
-  historical context moved to Orbit, and any remaining repo cleanup issues.
-- Non-goals: Destructive branch deletion without owner approval.
-- Acceptance criteria: Issue #330 records branch decisions; live/platform-main
-  and archived branches are classified; active PR branches are tied to epics.
+- Canonical issue: #352.
+- User/value statement: Firmware releases are proven across all days of the
+  year and representative extreme-weather futures, not just historical replay.
+- Scope: 365/366-day checkout, sunrise/sunset validation, target curve
+  validation, 72-hour forecast scenarios, historical weather replay, extreme
+  heat/cold replay, runtime forecast by equipment, compliance score output,
+  safety rail tests, and firmware/service setpoint agreement tests.
+- Non-goals: replacing firmware replay/invariant gates; OTA execution without
+  Jason.
+- Acceptance criteria:
+  - 365/366-day firmware checkout exists.
+  - Every firmware release can run 72-hour forecast scenarios.
+  - Extreme cold and heat scenarios exist.
+  - Firmware/service target drift tests exist.
+  - Runtime forecast and physical-limit model are started.
 - Status: `Ready`
-- Priority: P2
-- Milestone: Lane board normalization
-- Sprint: S0 `lane-board-normalization`
-- Related files/issues/PRs/commits: issue #330, remote branch inventory,
-  `HISTORY.md`, Orbit context dump.
-- Dependencies: Jason or repo admins for branch deletion.
-- Risks: Deleting a branch can discard evidence for an open PR or staged plan.
-- Evidence: `git branch -a` inventory and issue #330.
-
-### Historical Completed Milestones
-
-- User/value statement: Completed work remains discoverable with evidence but
-  does not clutter active planning.
-- Scope: M1-M6, cutover, VM retirement, HA incident response work already done,
-  and closed issue/PR evidence.
-- Non-goals: Reopening completed work without a new active issue.
-- Acceptance criteria: Historical milestones and major completed work are in
-  `HISTORY.md` and closed issue #333.
-- Status: `Done`
-- Priority: P2
-- Milestone: historical
-- Sprint: S0 `lane-board-normalization`
-- Related files/issues/PRs/commits: `HISTORY.md`, `MILESTONES.md`, issue #333,
-  issues #69-#73, #216, #217, PRs #270, #325, #328, #329.
-- Dependencies: None.
-- Risks: Historical docs can imply obsolete branch or staging models.
-- Evidence: Closed issue #333 and `HISTORY.md`.
+- Priority: P1
+- Effort: XL
+- Milestone: G3 - Planner, Irrigation, Lab, and Research
+- Sprint: S7 `irrigation-lab-testing-hardening`
+- Related files/issues/PRs: #14, #31, #303, #322, #335, #340,
+  `firmware/test/`, `scripts/firmware-replay-diff.sh`.
+- Dependencies: L2/L3 deterministic model, CI capacity, Jason for OTA evidence.
+- Risks: current replay can miss band-curve changes unless
+  `make firmware-replay-band` is used.
+- Evidence: `AGENTS.md` verification order, Makefile firmware targets, and
+  `docs/GREENHOUSE-CONTROL-TEST-CATALOG.md`.
 
 ## Rules
 
-- One issue has one primary owning agent.
+- One issue has one primary owning lane.
 - Board cards are EPICS. Child issues/tasks may exist, but planning happens at
-  the epic level.
-- If work depends on another lane, record the dependency in
+  the lane-epic level.
+- If work depends on another lane or external owner, record the dependency in
   `COORDINATION_REQUESTS.md` and the issue `## Project Tracking` block.
 - Historical work must be `Done` only when linked to closed issues, merged PRs,
   commits, or durable runbook evidence.
+- Firmware OTA, prod sync, device VLAN, destructive prod DB, credential
+  rotation, and public DNS/edge actions require Jason.

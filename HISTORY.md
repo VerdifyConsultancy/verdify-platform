@@ -1,6 +1,6 @@
 # Verdify Platform History
 
-Last updated: 2026-06-13
+Last updated: 2026-06-16
 
 Agent name: `verdify-platform`
 
@@ -19,7 +19,9 @@ links. Detailed historical handoffs and evidence artifacts live in
 | 2026-06-07 to 2026-06-08 | HA incident response: resource governance, spread/PDBs, backups, edge HA, descheduler, CNPG groundwork. | GitHub milestone #14; issues #226-#234, #236, #241, #243, #244, #264. |
 | 2026-06-08 to 2026-06-11 | Firmware/control optimization wave and dashboard work. | GitHub issues #249-#256, #281-#285; PRs #270, #325, #328, #329. |
 | 2026-06-12 | Repo cleanup archived historical context to Orbit and codified Codex operating docs. | Commits `ecad3dd` and `7a48a0b`; GitHub issue #330. |
-| 2026-06-13 | Lane board normalization created current repo docs and GitHub fallback tracking blocks. | GitHub issues #331, #332, #333. |
+| 2026-06-13 | Lane board normalization created current repo docs and GitHub fallback tracking blocks. | GitHub issues #331, #332, #333, #334. |
+| 2026-06-16 | Single-env model codified: `verdify-dev` proving environment and staging overlay are decommissioned/deleted; prod is the only environment and remains manual-sync behind the device-write gate. | `AGENTS.md`, `docs/runbooks/laptop-operator.md`, prod-promote workflow, overlay removal history. |
+| 2026-06-16 | Controller replan created four new GitHub milestones and ten canonical lane epics for architecture, firmware, climate, planner, data, dashboards, lighting, irrigation, lab, and testing. | GitHub milestones G0-G3; issues #343-#352; Project #5 now 27 cards; `AGENT_LANE.md`, `PROJECT_BOARD.md`, `EPICS.md`, `MILESTONES.md`, `SPRINTS.md`. |
 
 ## Important Incidents And Decisions
 
@@ -27,8 +29,13 @@ links. Detailed historical handoffs and evidence artifacts live in
   incident; see `AGENTS.md` and CI job `migration-rollback-safety`.
 - `main` is the single canonical branch as of 2026-06-10; `live/platform-main`
   is retired.
+- `verdify-dev` and staging are decommissioned/deleted as of 2026-06-16. Prod is
+  the only environment.
 - `verdify-prod-dark` is a legacy live App name; it currently points at the real
   prod writer overlay. Rename is cosmetic but gated because App deletion can
   prune live resources if done wrong.
-- Staging is retired; `verdify-dev` is the proving environment and
-  `verdify-prod` is manually synced behind the device-write gate.
+- Firmware is the local deterministic safety layer. AI may tune bounded
+  parameters but does not own hard safety rails, emergency behavior, target
+  temperature calculation, or firmware state-machine logic.
+- GitHub issues are the live tracker; local docs are the durable orientation and
+  fallback index.

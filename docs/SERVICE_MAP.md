@@ -1,21 +1,21 @@
 # Verdify Service Map
 
-Last updated: 2026-06-14
+Last updated: 2026-06-16
 
 This is the current k3s-era service map for the `verdify-platform` lane. Treat
-`deploy/k8s/`, `AGENTS.md`, `README.md`, and `docs/AGENT_STATE.md` as the
-current orientation surfaces. Older VM-era architecture docs remain useful for
-history and operational context, but may describe services that have since moved
-or been retired.
+`AGENTS.md`, `docs/runbooks/laptop-operator.md`, `deploy/k8s/`, this file, and
+the root lane docs as the current orientation surfaces. Older VM-era and
+three-env architecture docs remain useful for history and operational context,
+but may describe services or overlays that have since moved or been retired.
 
 ## Environments
 
 | Environment | ArgoCD app | Namespace | Desired state | Sync model | Device posture |
 |---|---|---|---|---|---|
-| Dev | `verdify-dev` | `verdify-dev` | `deploy/k8s/overlays/dev` | Automated | Device-dark: ingestor replicas `0`, ESP32 egress denied, nightly restored copy of prod DB. |
 | Prod | `verdify-prod-dark` | `verdify-prod` | `deploy/k8s/overlays/prod` | Manual, behind device-write gate | Single live writer; `VERDIFY_DEVICE_WRITE_ENABLED=1`; prod sync requires Jason. |
-| Prod rename target | `verdify-prod` | `verdify-prod` | `deploy/k8s/overlays/prod` | Manual | Intended replacement name for the legacy `verdify-prod-dark` app. |
-| Staging | Historical | `verdify-staging` | `deploy/k8s/overlays/staging` | Retired | Retired dead weight pending removal; do not add new work here. |
+| Prod rename target | `verdify-prod` | `verdify-prod` | `deploy/k8s/overlays/prod` | Manual | Intended replacement name for the legacy `verdify-prod-dark` app; only through a gated orphan/readopt plan. |
+| Dev | Historical/deleted | `verdify-dev` | removed | n/a | Decommissioned/deleted 2026-06-16; do not add new work here. |
+| Staging | Historical/deleted | `verdify-staging` | removed | n/a | Decommissioned/deleted; do not add new work here. |
 
 ArgoCD application manifests live in `deploy/k8s/argocd/apps/`. Promotion and
 operator commands live in `docs/runbooks/laptop-operator.md`.
@@ -32,9 +32,9 @@ Prod public HTTP enters Cloudflare/tier-1 apps Traefik, then the prod tier-2
 | `mcp.verdify.ai` | `deploy/k8s/overlays/prod/traefik/verdify-traefik-routes.yaml` | `verdify-mcp:8000` |
 | `graphs.verdify.ai` | `deploy/k8s/components/grafana/graphs-ingressroute.yaml` | `verdify-grafana:3000` |
 
-Dev routes are direct shared-apps-Traefik routes for `api.k3s.verdify.ai`,
-`api-dev.verdify.ai`, `lab.k3s.verdify.ai`, `lab-dev.verdify.ai`,
-`graphs.k3s.verdify.ai`, and `graphs-dev.verdify.ai`.
+Former dev routes such as `*.k3s.verdify.ai` / `*-dev.verdify.ai` are
+historical after the 2026-06-16 single-env decommission unless reintroduced by a
+new approved issue.
 
 ## Core Workloads
 
@@ -62,14 +62,14 @@ Do not print or commit raw secret values.
 |---|---|---|---|
 | Prod DB backup | `deploy/k8s/components/db-backup/backup-cronjob.yaml` | Prod overlay | Nightly `pg_dump -Fc` to `verdify-db-dumps` NFS PVC; read-only against `verdify-db`. |
 | Backup freshness exporter | `deploy/k8s/components/db-backup/backup-freshness-exporter.yaml` | Prod overlay | Exposes backup RPO metrics on `:8080/metrics` for observability scrape. |
-| Dev DB restore | `deploy/k8s/overlays/dev/db-restore-from-prod.yaml` | Dev overlay | Nightly prod dump restore into dev; wipes dev-written plans and rows by design. |
+| Dev DB restore | Historical | Removed with the deleted dev environment; no nightly prod copy exists. |
 | DB watchdog | `deploy/k8s/overlays/prod/db-watchdog.yaml` | Prod overlay | Narrow CronJob that can delete only `verdify-db-0` after a specific DB mount/config CrashLoop signature. |
 | HA gap backfill | `deploy/k8s/components/ha-gap-backfill/ha-gap-backfill-cronjob.yaml` | Prod overlay | Hourly HA recorder gap reconciliation; writes missing telemetry rows only. |
 | Gather script mount | `deploy/k8s/components/ingestor-gather-script/` | Prod overlay | ConfigMap delivery for `scripts/gather-plan-context.sh` into the ingestor image. |
-| Grafana band curve refresh | `deploy/k8s/components/grafana/band-curve-refresh-cronjob.yaml` | Dev and prod overlays with Grafana | Refreshes `mv_band_curve` every 10 minutes. |
-| Lab site publisher | `deploy/k8s/components/lab-site/lab-publisher.yaml` | Dev and prod overlays with lab site | Regenerates lab.verdify.ai content every 10 minutes from S3-backed content and TimescaleDB, then updates the lab cache PVC and S3 public/state prefixes. |
-| Firmware twin | `deploy/k8s/components/firmware-twin/` | Component only; not referenced by current dev/prod overlays | Read-only shadow path with live-prod schema/user gates. |
-| Umami analytics | `deploy/k8s/components/umami/` | Component only; not referenced by current dev/prod overlays | Residual analytics tier, explicitly not wired into prod yet. |
+| Grafana band curve refresh | Historical/retired | Dropped by PR #329; do not recreate without a new L6 issue. |
+| Lab site publisher | `deploy/k8s/components/lab-site/lab-publisher.yaml` | Prod overlay with lab site | Regenerates lab.verdify.ai content every 10 minutes from S3-backed content and TimescaleDB, then updates the lab cache PVC and S3 public/state prefixes. |
+| Firmware twin | `deploy/k8s/components/firmware-twin/` | Component only; not referenced by current prod overlay | Read-only shadow path with live-prod schema/user gates. |
+| Umami analytics | `deploy/k8s/components/umami/` | Component only; not referenced by current prod overlay | Residual analytics tier, explicitly not wired into prod yet. |
 
 ## Storage Touchpoints
 
@@ -114,4 +114,4 @@ Use `AGENTS.md` for the full command order.
 | Schema or migration | `make migration-rollback-safety`, plus the targeted rollback proof |
 | Firmware | `make test-firmware`, `make firmware-invariants`, `make firmware-replay OLD=<base> NEW=HEAD`, `make firmware-check` |
 | Site/UI | Relevant `Makefile` or `site/package.json` command plus local render check |
-| Kustomize shape | CI validates rendered manifests; local candidate checks are `kubectl kustomize deploy/k8s/overlays/dev` and `kubectl kustomize deploy/k8s/overlays/prod` when `kubectl` has the needed plugins/CRDs available. |
+| Kustomize shape | CI validates rendered manifests; local candidate check is `kubectl kustomize deploy/k8s/overlays/prod` when `kubectl` has the needed plugins/CRDs available. |

@@ -1,6 +1,6 @@
 # Verdify Project Board Workflow
 
-Last updated: 2026-06-13
+Last updated: 2026-06-16
 
 This repo tracks work in GitHub issues first. Project Board fields are useful
 for views, but issue bodies must remain self-describing because project field
@@ -10,6 +10,7 @@ access and naming can drift.
 
 - Preferred board: `verdify-platform`, owned by `VerdifyConsultancy`
   (<https://github.com/orgs/VerdifyConsultancy/projects/5>).
+- Current canonical lane epic cards: #343-#352.
 - Template/source board: `Agent Command Center Kanban` if copying field/view
   shape is needed.
 - Fallback required by the lane objective: add a `## Project Tracking` block to
@@ -37,17 +38,17 @@ Each new or materially updated issue for `verdify-platform` should include:
 ```markdown
 ## Project Tracking
 
-- Status: Backlog
-- Priority: P2
-- Effort: M
-- Component: deploy/k8s
-- Sprint: S0 lane-board-normalization
-- Milestone: Lane board normalization
-- Epic: ArgoCD deployment
+- Status: Ready
+- Priority: P1
+- Effort: L
+- Component: firmware/ingestor/db/grafana/docs
+- Sprint: S5 firmware-first-climate-core
+- Milestone: G1 - Firmware-First Determinism
+- Epic: L2 Firmware Core
 - Agent Lane: verdify-platform
-- Related Issues/PRs: none
-- Dependencies: storage-infra, network-infra
-- Evidence: deploy/k8s/argocd/apps, ARGOCD.md
+- Related Issues/PRs: #287, #344
+- Dependencies: Jason OTA gate; schema-first sequencing
+- Evidence: AGENTS.md, EPICS.md
 ```
 
 Use `Dependencies: none` when the issue is entirely inside this repo. Use
@@ -59,8 +60,8 @@ Use `Dependencies: none` when the issue is entirely inside this repo. Use
 1. Mine repo evidence first: `AGENTS.md`, `README.md`, `docs/`, `Makefile`,
    `pyproject.toml`, `.github/workflows/`, `deploy/k8s/`, open and recently
    closed issues, PRs, milestones, and recent commits.
-2. Convert findings into epics before milestones, milestones before sprints, and
-   sprints before granular issues.
+2. Convert findings into lanes/epics before milestones, milestones before
+   sprints, and sprints before granular issues.
 3. Prefer updating an existing issue when it already owns the work. Create a new
    issue only when there is no primary owner.
 4. Add historical work as `Done` with evidence links to merged PRs, commits, or

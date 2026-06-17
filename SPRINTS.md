@@ -1,65 +1,128 @@
 # Verdify Platform Sprints
 
-Last updated: 2026-06-13
+Last updated: 2026-06-16
 
 Agent name: `verdify-platform`
 
-The repo retired sprint-number-driven agent routing in favor of GitHub issues and
-PR-scoped work. These sprint names are planning labels for Project Tracking
-blocks, not durable branch names.
+Sprint names are planning labels for Project Tracking blocks, not branch names.
+Sprint-number-driven agent routing is retired. Current work lands through GitHub
+issues and PR-scoped verification.
 
-## S0: Lane Board Normalization
+## Historical Sprints
 
-Status: `Done`
-
-Goal: make `verdify-platform` discoverable as a least-privilege operating lane
-with a lane-specific GitHub Project Board named exactly `verdify-platform`,
-epic-level cards, project tracking blocks, ArgoCD enforcement rules, and
-dependency requests.
-
-Candidate issues:
-
-- Lane Board Normalization.
-- Platform Architecture Inventory.
-- Fable Workstream Clarification (#332).
-- Repo Cleanup And Branch Review (#330).
-- ArgoCD Deployment And GitOps Cleanup.
-- Historical Completed Milestones (#333).
-
-Verification:
-
-- `git diff --check` for docs-only changes.
-- The `verdify-platform` Project Board exists with epic-level cards.
-- GitHub issues contain `## Project Tracking` blocks where new or materially
-  updated.
-
-## S1: Platform Inventory And Service Map
+### S0: Lane Board Normalization
 
 Status: `Done`
 
-Goal: produce current k3s-era inventory for services, entrypoints, ports, data
-stores, external dependencies, and verification commands without relying on old
-VM-era architecture claims.
+Goal: create the exact `verdify-platform` Project Board, epic-level cards,
+fallback issue blocks, root lane docs, and dependency requests.
 
-Dependency agents: `network-infra` for route truth, `storage-infra` for PVC and
-backup truth, `monitoring-stack` for telemetry truth.
+Evidence: #334, #331, #333, `PROJECT_BOARD.md`, `docs/PROJECT_BOARD_WORKFLOW.md`.
 
-Evidence: issue #331 and `docs/SERVICE_MAP.md`.
+### S1: Platform Inventory And Service Map
 
-## S2: GitOps And Access Hardening
+Status: `Done`
 
-Status: `Ready`
+Goal: produce a current service map for entrypoints, ports, data stores,
+external dependencies, and verification commands.
 
-Goal: close least-privilege gaps for ArgoCD app ownership, secret metadata,
+Evidence: #331 and `docs/SERVICE_MAP.md`.
+
+### S2: GitOps And Access Hardening
+
+Status: `Legacy/In Progress`
+
+Goal: close least-privilege gaps for ArgoCD ownership, secret metadata,
 namespace-local access, prod promotion, and direct-cluster-change exceptions.
 
-Existing anchors: #301-#307, #317, #318, #320, #321.
+Existing anchors: #301-#307, #317, #318, #320, #321, #335, #336.
 
-## S3: Data/Storage And Observability Requests
+### S3: Data/Storage And Observability Requests
 
-Status: `Backlog`
+Status: `Legacy/Backlog`
 
 Goal: align persistence, backup, CNPG/PITR, health checks, dashboards, and alert
 handoffs with dependency agents.
 
 Existing anchors: #13, #14, #75, #89, #218, #233, #241, #243-#245.
+
+## Current Controller-Replan Sprints
+
+### S4: Controller Architecture Audit
+
+Status: `In Progress`
+
+Goal: determine what is real, stale, broken, duplicated, dead, authoritative,
+fallback-only, or delete/rewrite candidate across firmware, Kubernetes,
+ingestor, database, dashboards, planner, lab notebook, Home Assistant, weather,
+S3, Cloudflare, and CI/CD.
+
+Primary lane:
+
+- #343 L1 Architecture Audit, Drift Check, and CI/CD.
+
+Verification:
+
+- Docs-only changes: `git diff --check`.
+- Live diagnostics are read-only unless a later issue explicitly gates them.
+- No prod sync, OTA, device VLAN, destructive DB, credential, or edge actions.
+
+### S5: Firmware-First Climate Core
+
+Status: `Ready`
+
+Goal: simplify and prove firmware-first deterministic control for climate,
+lighting/occupancy, safety rails, relay transitions, disconnected behavior, and
+diurnal target curves.
+
+Primary lanes:
+
+- #344 L2 Firmware Core.
+- #345 L3 Climate Control.
+- #349 L7 Lighting and Occupancy.
+
+Verification:
+
+- Firmware: `make test-firmware`, `make firmware-invariants`, firmware replay,
+  `make firmware-replay-band` for band-curve changes, and `make firmware-check`.
+- Lighting: `make lighting-audit-static`; live/current audit only when the
+  issue calls for it and access/gates are satisfied.
+
+### S6: Data, Observability, And Planner Contracts
+
+Status: `Ready`
+
+Goal: define source-of-truth contracts, read/write authority, drift detection,
+dashboard/KPI truth, and the bounded planner tunable contract.
+
+Primary lanes:
+
+- #347 L5 Data, Schema, and Source of Truth.
+- #348 L6 Observability, Dashboards, and KPIs.
+- #346 L4 AI Planner and Tunables.
+
+Verification:
+
+- Schema/migration changes: `make migration-rollback-safety` plus targeted proof.
+- Python/runtime changes: `make lint`, then `make test`.
+- Dashboard/site changes: relevant Makefile/site command and render check.
+
+### S7: Irrigation, Lab, And Testing Hardening
+
+Status: `Ready`
+
+Goal: make irrigation/fertilization decisions explicit, repair lab notebook
+truth, and build all-year/extreme-weather firmware confidence beyond the replay
+corpus.
+
+Primary lanes:
+
+- #350 L8 Irrigation, Fertilization, and Orchids.
+- #351 L9 Lab Notebook, Website, and Publishing.
+- #352 L10 Testing and Research.
+
+Verification:
+
+- Irrigation: targeted Makefile irrigation checks from the issue.
+- Lab/site: `make site-lint`, `make site-doctor`, or relevant site command.
+- Firmware/test harness: firmware gates plus all-year/extreme scenario outputs.
