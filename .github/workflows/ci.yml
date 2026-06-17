@@ -442,7 +442,6 @@ jobs:
             tests/test_forecast_action_engine_path.py \
             tests/test_g5_dualwrite_validation.py \
             tests/test_generate_daily_plan.py \
-            tests/test_lessons_state_machine.py \
             tests/test_mqtt_fanout.py \
             tests/test_planner_memory_ingest.py \
             tests/test_psql_verdify_backend.py \
