@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict P0OKck9gdxJJ8BfPkeLTSgWhhRnfbcYTXGhpfrWteJwiU6BxhKyMBP0HtiiZKro
+\restrict VO0YucjG1HoNrXxRq4krB6mHkgyuZT8e4zrMtk5nln3jyJNfUjenzdP535wxCYq
 
 -- Dumped from database version 16.11
 -- Dumped by pg_dump version 16.11
@@ -288,102 +288,6 @@ $$;
 
 
 ALTER FUNCTION public.crops_log_stage_change() OWNER TO verdify;
-
---
--- Name: fn_achievable_envelope(text, text, timestamp with time zone, text); Type: FUNCTION; Schema: public; Owner: verdify
---
-
-CREATE FUNCTION public.fn_achievable_envelope(p_zone text, p_season text, p_ts timestamp with time zone, p_greenhouse_id text DEFAULT 'vallery'::text) RETURNS TABLE(env_temp_low_floor double precision, env_temp_hi_cap double precision, env_temp_achievable_p50 double precision, env_vpd_lo_floor double precision, env_vpd_hi_cap double precision, cap_source text)
-    LANGUAGE plpgsql STABLE ROWS 1
-    AS $$
-DECLARE
-    h0 int;
-    h1 int;
-    frac double precision;
-    v_season text := p_season;
-    r0 record;
-    r1 record;
-BEGIN
-    h0 := EXTRACT(hour FROM p_ts AT TIME ZONE 'America/Denver')::int;
-    frac := EXTRACT(minute FROM p_ts AT TIME ZONE 'America/Denver') / 60.0;
-    h1 := (h0 + 1) % 24;
-
-    -- nearest-season fallback if requested season absent
-    IF NOT EXISTS (SELECT 1 FROM achievable_envelope
-                    WHERE greenhouse_id = p_greenhouse_id AND zone = p_zone
-                      AND season = v_season AND is_active) THEN
-        v_season := 'spring';
-    END IF;
-
-    SELECT * INTO r0 FROM achievable_envelope
-     WHERE greenhouse_id = p_greenhouse_id AND zone = p_zone
-       AND season = v_season AND hour_of_day = h0 AND is_active;
-    SELECT * INTO r1 FROM achievable_envelope
-     WHERE greenhouse_id = p_greenhouse_id AND zone = p_zone
-       AND season = v_season AND hour_of_day = h1 AND is_active;
-
-    IF r0 IS NULL THEN
-        -- never NULL: open-to-achievable conservative fallback
-        env_temp_low_floor := 55.0;
-        env_temp_hi_cap := 90.0;
-        env_temp_achievable_p50 := 88.0;
-        env_vpd_lo_floor := 0.30;
-        env_vpd_hi_cap := 1.80;
-        cap_source := 'fallback';
-        RETURN NEXT;
-        RETURN;
-    END IF;
-
-    IF r1 IS NULL THEN r1 := r0; END IF;
-
-    env_temp_low_floor := r0.env_temp_lo_floor + frac * (r1.env_temp_lo_floor - r0.env_temp_lo_floor);
-    env_temp_hi_cap := r0.env_temp_hi_cap + frac * (r1.env_temp_hi_cap - r0.env_temp_hi_cap);
-    env_temp_achievable_p50 := COALESCE(r0.env_temp_achievable_p50, r0.env_temp_hi_cap)
-        + frac * (COALESCE(r1.env_temp_achievable_p50, r1.env_temp_hi_cap)
-                  - COALESCE(r0.env_temp_achievable_p50, r0.env_temp_hi_cap));
-    env_vpd_lo_floor := COALESCE(r0.env_vpd_lo_floor, 0.30);
-    env_vpd_hi_cap := COALESCE(r0.env_vpd_hi_cap, 1.80);
-    cap_source := r0.cap_source;
-    RETURN NEXT;
-END;
-$$;
-
-
-ALTER FUNCTION public.fn_achievable_envelope(p_zone text, p_season text, p_ts timestamp with time zone, p_greenhouse_id text) OWNER TO verdify;
-
---
--- Name: fn_active_noncenter_stress(timestamp with time zone); Type: FUNCTION; Schema: public; Owner: verdify
---
-
-CREATE FUNCTION public.fn_active_noncenter_stress(target_ts timestamp with time zone) RETURNS TABLE(crop_type text, temp_stress_low double precision, temp_stress_high double precision, vpd_stress_low double precision, vpd_stress_high double precision)
-    LANGUAGE plpgsql STABLE
-    AS $$
-DECLARE
-    v_season text := fn_current_season();
-    v_hour int := EXTRACT(hour FROM target_ts AT TIME ZONE 'America/Denver')::int;
-BEGIN
-    RETURN QUERY
-    SELECT p.crop_type, p.temp_stress_low, p.temp_stress_high,
-           p.vpd_stress_low, p.vpd_stress_high
-      FROM crop_target_profiles p
-      JOIN crops c ON c.crop_catalog_id = p.crop_catalog_id
-                  AND c.is_active
-                  AND c.greenhouse_id = p.greenhouse_id
-     WHERE p.greenhouse_id = 'vallery'
-       AND p.hour_of_day = v_hour
-       AND p.season = COALESCE(
-             (SELECT v_season WHERE EXISTS (
-                 SELECT 1 FROM crop_target_profiles p2
-                  WHERE p2.greenhouse_id = 'vallery' AND p2.season = v_season
-                    AND p2.crop_catalog_id IS NOT NULL)),
-             'spring')
-       AND p.crop_catalog_id IS DISTINCT FROM 9   -- exclude center/orchid
-       AND p.crop_catalog_id IS NOT NULL;         -- exclude _default
-END;
-$$;
-
-
-ALTER FUNCTION public.fn_active_noncenter_stress(target_ts timestamp with time zone) OWNER TO verdify;
 
 --
 -- Name: fn_band_setpoint_provenance(timestamp with time zone, text); Type: FUNCTION; Schema: public; Owner: verdify
@@ -57937,5 +57841,5 @@ GRANT INSERT ON TABLE public.twin_decisions TO twin_ro;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict P0OKck9gdxJJ8BfPkeLTSgWhhRnfbcYTXGhpfrWteJwiU6BxhKyMBP0HtiiZKro
+\unrestrict VO0YucjG1HoNrXxRq4krB6mHkgyuZT8e4zrMtk5nln3jyJNfUjenzdP535wxCYq
 

@@ -3,6 +3,18 @@
 # The ingestor writes dispatcher/MCP bookkeeping and the DB-outage climate spool
 # under /srv/verdify/state. This must survive ingestor pod restarts; otherwise a
 # DB outage plus a pod restart can still lose queued greenhouse telemetry.
+#
+# Storage tier: synology-iscsi (csi.san.synology.com iSCSI on DSM /volume2).
+# 2026-06-17 storage incident: DSM /volume1 (the SSD tier — backs
+# synology-iscsi-ssd AND longhorn-nvme-rwo/-critical-rwo) DIED. The prior
+# ingestor-state LUN lived on /volume1 and wedged on the deploy's Recreate
+# (MountVolume + then CreateVolume DeadlineExceeded), stranding the sole ESP32
+# writer. /volume1 still times out on provision; /volume2 is healthy (provisions
+# fine for other namespaces). Jason directed reprovision on the Synology SSD
+# tier, but that tier (/volume1) is exactly the dead one — so this lands on the
+# healthy /volume2 iSCSI tier to restore the writer now. The state is small
+# (~2Gi: spool + bookkeeping) and NOT perf-critical, so /volume2 is fine.
+# MIGRATE BACK to synology-iscsi-ssd (/volume1) once the SSD tier is restored.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -12,7 +24,7 @@ metadata:
     app.kubernetes.io/component: ingestor
 spec:
   accessModes: ["ReadWriteOnce"]
-  storageClassName: longhorn-nvme-rwo
+  storageClassName: synology-iscsi
   resources:
     requests:
       storage: 2Gi
