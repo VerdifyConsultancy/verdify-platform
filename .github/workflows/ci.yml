@@ -513,8 +513,13 @@ jobs:
           if [ -z "$BASE" ] || [ "$BASE" = "$(git rev-parse HEAD)" ]; then
             echo "No merge-base change; skipping band replay"; exit 0
           fi
-          CHANGED=$(git diff --name-only "$BASE" HEAD -- firmware/lib/greenhouse_solar.h)
-          if [ -z "$CHANGED" ]; then echo "No band-curve (greenhouse_solar.h) diff in PR; skipping band replay"; exit 0; fi
+          # Band-DERIVE behavior depends on the curve (greenhouse_solar.h) AND on the
+          # control-band shaping that consumes it: apply_band_track_pinch + the
+          # escalation/ladder logic live in greenhouse_logic.h / greenhouse_types.h /
+          # controls.yaml. The stock corpus-fed replay is blind to all of these, so the
+          # band-DERIVE gate must fire when ANY of them change (the wet-night-shipped-blind trap).
+          CHANGED=$(git diff --name-only "$BASE" HEAD -- firmware/lib/greenhouse_solar.h firmware/lib/greenhouse_logic.h firmware/lib/greenhouse_types.h firmware/greenhouse/controls.yaml)
+          if [ -z "$CHANGED" ]; then echo "No band-curve / control-band diff (solar.h, logic.h, types.h, controls.yaml) in PR; skipping band replay"; exit 0; fi
           PR_BODY=$(jq -r '.pull_request.body // ""' "$GITHUB_EVENT_PATH")
           OVERRIDE=$(printf '%s' "$PR_BODY" | grep -oE '^BAND_REPLAY_THRESHOLD_PCT:[[:space:]]*[0-9]+' | awk -F: '{gsub(/[[:space:]]/,"",$2); print $2}' | head -1)
           THRESHOLD_PCT="${OVERRIDE:-0}"
@@ -537,8 +542,13 @@ jobs:
       - name: Check for new tunables without cfg_* readback
         run: |
           BASE=$(git merge-base HEAD origin/${{ github.base_ref }})
+          # tunables.yaml number entities are `- platform: template` then `id: num_<base>`
+          # (the `id:` is NOT a sequence item, so the old `/^\+ - id:/` awk matched nothing
+          # and this gate passed vacuously — freeze rule 6 was unenforced). Extract the
+          # added `id: num_<base>` lines and reduce to the <base> name the readback uses.
           NEW_IDS=$(git diff "$BASE" HEAD -- firmware/greenhouse/tunables.yaml 2>/dev/null \
-            | awk '/^\+[[:space:]]+- id:/ {print $3}' | sort -u || true)
+            | grep -oE '^\+[[:space:]]+id:[[:space:]]+num_[a-z0-9_]+' \
+            | sed -E 's/.*id:[[:space:]]+num_//' | sort -u || true)
           if [ -z "$NEW_IDS" ]; then
             echo "No new tunable entities in PR"
             exit 0
