@@ -5480,12 +5480,11 @@ def test_irrigation_relay_visual_check_reads_png_without_external_image_dependen
 
 
 def test_irrigation_relay_state_panel_uses_dense_timeline():
+    # The provisioning/json/ site-* shadow copies were retired (L1 Phase 0); the
+    # live source is grafana/dashboards/ (preferred by gen-grafana-dashboard-cms.py).
     dashboard_path = Path("grafana/dashboards/site-irrigation.json")
-    provisioned_path = Path("grafana/provisioning/dashboards/json/site-irrigation.json")
     dashboard = json.loads(dashboard_path.read_text())
-    provisioned = json.loads(provisioned_path.read_text())
 
-    assert dashboard == provisioned
     relay_panel = next(panel for panel in dashboard["panels"] if panel["title"] == "Relay State")
     relay_panel_json = json.dumps(relay_panel)
     raw_sql = relay_panel["targets"][0]["rawSql"]
