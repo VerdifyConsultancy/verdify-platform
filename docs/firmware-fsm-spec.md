@@ -321,9 +321,27 @@ cannot stale-latch into a later VENTILATE entry. `cool_all_fans_at_high_enabled`
 explicit operator override that still forces both fans immediately above the band edge,
 bypassing the latch. Pinned by `fan2_latches_and_does_not_chatter`,
 `stage2_escalation_latch_is_symmetric`, `cool_all_fans_at_high_overrides_fan2_latch`; the
-heat2 refactor is replay-identical (0 divergence). **Remaining bare-threshold edge:** the
-mist S2↔FOG step (`fog_escalation_kpa`, entry==exit) — reconciled in the fog-first wetting
-work (§6.6 / BC-14), which rewrites that region.
+heat2 refactor is replay-identical (0 divergence).
+
+### 7.6 Fog-first wetting ladder (BC-14, ADR0003 §6.6)
+
+Humidification is **fog-first, ordered by water GPM** (AquaFog ≈ 0.26 GPM is the lowest
+water; misters ≈ 1 GPM/zone). The `MistStage` enum is inverted to
+`WATCH → FOG(entry) → S1(misters) → S2(all-zone)` (the string literals WATCH/FOG/S1/S2
+are unchanged so replay/grafana keep parsing; `static_assert(MIST_S2==3)` locks it). On
+sealed entry the ladder seeds **MIST_FOG** — fog leads as the gentle evaporative touch —
+and escalates **up to the misters** only when fog can't hold: `vpd > vpd_high +
+fog_escalation_kpa` sustained for the planner-pushable fog-only dwell (`mist_s2_delay_ms`),
+or immediately if fog is physically gated (RH ceiling / dew / time). De-escalation uses a
+symmetric hysteresis (`MISTER_DEESCALATE_KPA`, WS-B style) so the fog↔mister boundary can't
+chatter (rewritten invariant #12 enforces no-skip: misters reachable only after fog).
+**LAYERED** (Jason 2026-06-17): fog **persists** through the mister stages — `resolve_equipment`
+drives `out.fog` at FOG/S1/S2, and the `controls.yaml` zone-mister machine engages only once
+the FSM has escalated past fog (`mist_stage >= MIST_S1`). Invariant #11 broadened so fog+heat
+is legal across the active humidification stages. The mister **zone arbiter, fertigation,
+fairness, and feed-hold/salt-fogger interlocks (inv #18–22) are untouched** — only the
+climate-humidification escalation ORDER changed. Proven by 5 native `band_first_*` fog-first
+tests + `make firmware-replay-band` (11.6% behavioral diff vs the old misters-first ladder).
 
 ### 7.3 Dwell / timer mechanics
 

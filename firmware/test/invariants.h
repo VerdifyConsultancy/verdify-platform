@@ -193,14 +193,19 @@ inline bool check_9_summer_vent_requires_fresh_outdoor(const TraceRow& r, Report
 }
 
 // #11: fog + heat is allowed only as a sealed cold/dry assist. The useful
-// overlap is: SEALED_MIST_FOG, high VPD demand still present, below the upper
-// temp band, and under the configured fog RH ceiling. Anything outside that
-// envelope is contradictory actuator output.
+// overlap is: an active SEALED_MIST humidification stage, high VPD demand still
+// present, below the upper temp band, and under the configured fog RH ceiling.
+// BC-14 (ADR0003 §6.6, LAYERED): fog-first makes fog the gentle ENTRY humidifier
+// that PERSISTS through the mister escalation stages, so fog+heat is legal at
+// SEALED_MIST_FOG/S1/S2 (any active humidification stage), not only the old
+// terminal FOG. Anything outside that envelope is contradictory actuator output.
 inline bool check_11_fog_heat_exclusive(const TraceRow& r, ReportFn report = default_report) {
     if (r.eq_fog && (r.eq_heat1 || r.eq_heat2)) {
         const float vpd_width = std::max(0.2f, r.vpd_high - r.vpd_low);
         const float vpd_high_eff = r.vpd_high - vpd_width * 0.25f;
-        const bool sealed_fog_stage = r.greenhouse_state == "SEALED_MIST_FOG";
+        const bool sealed_fog_stage = r.greenhouse_state == "SEALED_MIST_FOG"
+                                   || r.greenhouse_state == "SEALED_MIST_S1"
+                                   || r.greenhouse_state == "SEALED_MIST_S2";
         const bool assist_envelope =
             mode_is_sealed(r.greenhouse_state)
             && sealed_fog_stage
@@ -664,15 +669,23 @@ inline bool check_10_equipment_toggle_auditable(Ctx10& c, const TraceRow& r, Rep
     return true;
 }
 
-// #12: MIST_S2 only reachable from MIST_S1 (no level-skipping)
+// #12: FOG-FIRST no-level-skip (BC-14, ADR0003 §6.6). The humidification ladder
+// leads with fog and escalates upward by GPM: FOG → S1(misters) → S2(all-zone). So
+// the misters (S1) may be entered only after fog (from FOG/S1/S2), and S2 only from
+// S1/S2. Entering S1 straight from IDLE/VENT (no fog first), or S2 without passing
+// S1, is level-skipping.
 struct Ctx12 { std::string prev_state; };
 inline bool check_12_mist_progression(Ctx12& c, const TraceRow& r, ReportFn report = default_report) {
+    if (r.greenhouse_state == "SEALED_MIST_S1"
+        && c.prev_state != "SEALED_MIST_FOG"
+        && c.prev_state != "SEALED_MIST_S1"
+        && c.prev_state != "SEALED_MIST_S2") {
+        report(12, "mist_level_skip", r, "entered mister escalation (S1) without passing fog");
+        return false;
+    }
     if (r.greenhouse_state == "SEALED_MIST_S2"
         && c.prev_state != "SEALED_MIST_S1"
-        && c.prev_state != "SEALED_MIST_S2"
-        && c.prev_state != "SEALED_MIST_FOG") {
-        // Allow entering S2 only via S1, or by staying at S2/FOG. Other
-        // entries (IDLE→S2, VENTILATE→S2) indicate level-skipping.
+        && c.prev_state != "SEALED_MIST_S2") {
         report(12, "mist_level_skip", r, "entered SEALED_MIST_S2 without passing S1");
         return false;
     }

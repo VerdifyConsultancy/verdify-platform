@@ -67,6 +67,14 @@ Key thresholds:
 
 - 1 GPM per zone (water pressure limits to one zone at a time)
 - Warm water (86°F from Rinnai tankless) aids evaporation
+
+**Climate-humidification escalation order (BC-14, ADR0003 §6.6, Jason 2026-06-17):**
+ordered by **water GPM, lowest-first** — fog (AquaFog ~0.26 GPM) is the gentle ENTRY
+humidifier; the zone misters (~1 GPM/zone) ESCALATE above it only when fog can't hold the
+VPD target. Fog is the higher *electrical*-power device (~1.6 kW) but the lowest *water*
+device, so it leads. LAYERED: fog persists through the mister stages. (This records the
+ordering rationale-of-record the 2026-06-17 audit found missing — it is now GPM-based, not
+energy/intensity-based. The mister zone-targeting / fertigation duties are unchanged.)
 - At 15% outdoor RH, evaporation is near-instant (gap can be very short)
 
 ## Key Physics

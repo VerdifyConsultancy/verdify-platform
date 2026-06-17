@@ -577,6 +577,11 @@ static constexpr float BAND_HEAT_TARGET_FRACTION = 0.25f;
 // minimum. Previously bare 3.0f / 2.0f literals — now traceable.
 static constexpr float COLD_VENT_COOL_EXIT_HYST_MIN_F = 3.0f;
 static constexpr float COLD_DEHUM_TEMP_MARGIN_MIN_F = 2.0f;
+// BC-14 (ADR0003 §6.6): fog->mister de-escalation hysteresis. Misters drop back to
+// fog-only when VPD recovers to (vpd_high + fog_escalation_kpa - this), giving a
+// symmetric non-chattering gap (WS-B style) at the fog/mister boundary. Named
+// mechanical anti-chatter minimum (not a tunable); the fog-only DWELL is the tunable.
+static constexpr float MISTER_DEESCALATE_KPA = 0.15f;
 inline float band_heat_target_f(const Setpoints& sp) noexcept {
     const float band_width = std::max(2.0f, sp.temp_high - sp.temp_low);
     return sp.temp_low + band_width * BAND_HEAT_TARGET_FRACTION;
@@ -1515,7 +1520,7 @@ inline Mode determine_mode_band_first(
         } else {
             entered_sealed_this_cycle = true;
             state.sealed_timer_ms = dt_ms;
-            state.mist_stage = MIST_S1;
+            state.mist_stage = MIST_FOG;   // BC-14 fog-first: FOG is the entry humidifier
             state.mist_stage_timer_ms = 0;
             state.vent_latch_timer_ms = 0;
         }
@@ -1570,36 +1575,49 @@ inline Mode determine_mode_band_first(
         }
     }
 
-    if (mode == SEALED_MIST && selected_action == CLIMATE_SEALED_FOG && climate_fog_assist_permitted(in, sp) && !moisture_blocked) {
-        state.mist_stage = MIST_FOG;
-        state.mist_stage_timer_ms = 0;
-    } else if (mode == SEALED_MIST && !entered_sealed_this_cycle) {
+    // BC-14 (ADR0003 §6.6): FOG-FIRST escalation ladder (lowest-GPM-first). Fog
+    // (~0.26 GPM) LEADS as the gentle entry; misters (~1 GPM/zone) ESCALATE above it
+    // only when fog can't hold the VPD target. LAYERED (Jason 2026-06-17): fog stays
+    // ON through the mister stages (resolve_equipment drives out.fog for FOG/S1/S2).
+    //   escalate: vpd > vpd_high + fog_escalation_kpa, sustained >= mist_s2_delay_ms (the
+    //     existing planner-pushable stage-dwell tunable, now also the fog-only window — the
+    //     AI tunes fog-escalation aggressiveness via it; a dedicated knob is a follow-up).
+    //   de-escalate: vpd <= vpd_high + fog_escalation_kpa - MISTER_DEESCALATE_KPA (symmetric
+    //   hysteresis, WS-B style, so the fog<->mister boundary cannot chatter).
+    if (mode == SEALED_MIST && !entered_sealed_this_cycle) {
         state.mist_stage_timer_ms = sat_add(state.mist_stage_timer_ms, dt_ms);
+        const float escalate_at   = sp.vpd_high + sp.fog_escalation_kpa;
+        const float deescalate_at = escalate_at - MISTER_DEESCALATE_KPA;
+        const bool  too_dry_for_misters = in.vpd_kpa > escalate_at;
+        const bool  recovered = in.vpd_kpa <= deescalate_at || vpd_high_resolved;
+        const bool  fog_gated = !climate_fog_assist_permitted(in, sp) || moisture_blocked;
         switch (state.mist_stage) {
             case MIST_WATCH:
-                state.mist_stage = MIST_S1;
+                state.mist_stage = MIST_FOG;   // re-seed the entry if we somehow idled while sealed
                 state.mist_stage_timer_ms = 0;
                 break;
-            case MIST_S1:
-                if (state.mist_stage_timer_ms >= sp.mist_s2_delay_ms && in.vpd_kpa > sp.vpd_high) {
-                    state.mist_stage = MIST_S2;
-                    state.mist_stage_timer_ms = 0;
-                }
-                break;
-            case MIST_S2: {
-                const bool fog_gated = !climate_fog_assist_permitted(in, sp) || moisture_blocked;
-                if (in.vpd_kpa > sp.vpd_high + sp.fog_escalation_kpa && !fog_gated) {
-                    state.mist_stage = MIST_FOG;
-                    state.mist_stage_timer_ms = 0;
-                } else if (vpd_high_resolved) {
+            case MIST_FOG:   // ENTRY — fog leads; misters join only if fog can't hold
+                // Escalate after a fog-only dwell, OR immediately if fog is physically
+                // gated (RH ceiling / dew / time) while still too dry — then misters are
+                // the only humidifier available.
+                if (too_dry_for_misters
+                    && (state.mist_stage_timer_ms >= sp.mist_s2_delay_ms || fog_gated)) {
                     state.mist_stage = MIST_S1;
                     state.mist_stage_timer_ms = 0;
                 }
                 break;
-            }
-            case MIST_FOG:
-                if (in.vpd_kpa <= sp.vpd_high + sp.fog_escalation_kpa) {
+            case MIST_S1:    // ESCALATE-1 misters single-zone
+                if (too_dry_for_misters && state.mist_stage_timer_ms >= sp.mist_s2_delay_ms) {
                     state.mist_stage = MIST_S2;
+                    state.mist_stage_timer_ms = 0;
+                } else if (recovered) {
+                    state.mist_stage = MIST_FOG;   // symmetric de-escalation back to fog-only
+                    state.mist_stage_timer_ms = 0;
+                }
+                break;
+            case MIST_S2:    // ESCALATE-2 all-zone rotation (heaviest water)
+                if (recovered) {
+                    state.mist_stage = MIST_S1;
                     state.mist_stage_timer_ms = 0;
                 }
                 break;
@@ -1608,7 +1626,7 @@ inline Mode determine_mode_band_first(
                 state.mist_stage_timer_ms = 0;
                 break;
         }
-    } else if (state.mist_stage != MIST_WATCH) {
+    } else if (mode != SEALED_MIST && state.mist_stage != MIST_WATCH) {
         state.mist_stage = MIST_WATCH;
         state.mist_stage_timer_ms = 0;
     }
@@ -2286,7 +2304,14 @@ inline RelayOutputs resolve_equipment(
         case SEALED_MIST:
             if (needs_heating_s2) { out.heat1 = true; out.heat2 = true; }
             else if (needs_heating_s1) { out.heat1 = true; }
-            out.fog = (state.mist_stage == MIST_FOG)
+            // BC-14 fog-first (LAYERED, Jason 2026-06-17): fog is the gentle ENTRY
+            // humidifier and PERSISTS through the mister escalation stages (it adds to,
+            // not replaces, the misters). So fog runs at any active humidification stage
+            // (FOG/S1/S2), still gated by the curve-only fog permit (RH ceiling / dew /
+            // time / feed-hold). Misters are driven in controls.yaml off mist_stage>=MIST_S1.
+            out.fog = (state.mist_stage == MIST_FOG
+                       || state.mist_stage == MIST_S1
+                       || state.mist_stage == MIST_S2)
                    && climate_fog_assist_permitted(in, sp);
             break;
 

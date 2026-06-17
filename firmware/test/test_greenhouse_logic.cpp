@@ -3693,6 +3693,68 @@ TEST(estimator_no_humidify_import_when_outdoor_drier) {
     PASS();
 }
 
+// ── BC-14 (ADR0003 §6.6): fog-first wetting ladder (band-first path) ──────────
+// Fog (0.26 GPM) leads as the gentle entry; misters (~1 GPM) escalate above it.
+// LAYERED: fog persists through the mister stages. These exercise the band-first
+// ladder (sw_fsm_controller_enabled=true via band_first_setpoints).
+TEST(band_first_sealed_entry_seeds_fog) {
+    auto sp = band_first_setpoints();              // vpd_high=1.2, fog_escalation_kpa=0.4
+    auto s = initial_state();
+    s.vpd_watch_timer_ms = sp.vpd_watch_dwell_ms;  // humidify ready
+    auto in = make_inputs(74.0f, 1.4f);            // too dry, but < escalate (1.2+0.4=1.6)
+    Mode m = determine_mode(in, sp, s, 5000);
+    ASSERT_EQ(m, SEALED_MIST);
+    ASSERT_EQ(s.mist_stage, MIST_FOG);             // fog-first: entry seeds FOG, not misters
+    auto out = resolve_equipment(SEALED_MIST, in, sp, s, true);
+    ASSERT_TRUE(out.fog);                          // fog leads
+    PASS();
+}
+
+TEST(band_first_fog_holds_no_mister_escalation) {
+    auto sp = band_first_setpoints();
+    auto s = initial_state();
+    s.mode_prev = SEALED_MIST; s.mist_stage = MIST_FOG;
+    s.vpd_watch_timer_ms = sp.vpd_watch_dwell_ms;
+    s.mist_stage_timer_ms = sp.mist_s2_delay_ms + 1;   // fog-only dwell elapsed
+    determine_mode(make_inputs(74.0f, 1.4f), sp, s, 5000);  // 1.4 < escalate 1.6
+    ASSERT_EQ(s.mist_stage, MIST_FOG);             // fog holds, misters do NOT engage
+    PASS();
+}
+
+TEST(band_first_fog_escalates_to_misters_when_fog_cant_hold) {
+    auto sp = band_first_setpoints();
+    auto s = initial_state();
+    s.mode_prev = SEALED_MIST; s.mist_stage = MIST_FOG;
+    s.vpd_watch_timer_ms = sp.vpd_watch_dwell_ms;
+    s.mist_stage_timer_ms = sp.mist_s2_delay_ms + 1;   // fog-only dwell elapsed
+    determine_mode(make_inputs(74.0f, 1.8f), sp, s, 5000);  // 1.8 > escalate 1.6
+    ASSERT_EQ(s.mist_stage, MIST_S1);              // escalated FOG -> misters
+    PASS();
+}
+
+TEST(band_first_misters_deescalate_to_fog_on_recovery) {
+    auto sp = band_first_setpoints();
+    auto s = initial_state();
+    s.mode_prev = SEALED_MIST; s.mist_stage = MIST_S1;
+    s.vpd_watch_timer_ms = sp.vpd_watch_dwell_ms;
+    // recovered below deescalate (1.6 - MISTER_DEESCALATE_KPA 0.15 = 1.45) but still > vpd_high
+    determine_mode(make_inputs(74.0f, 1.3f), sp, s, 5000);
+    ASSERT_EQ(s.mist_stage, MIST_FOG);             // symmetric de-escalation S1 -> fog
+    PASS();
+}
+
+TEST(band_first_fog_gated_escalates_to_misters_immediately) {
+    auto sp = band_first_setpoints();
+    sp.fog_rh_ceiling = 50.0f;                     // force fog physically gated (rh 60 > 50)
+    auto s = initial_state();
+    s.mode_prev = SEALED_MIST; s.mist_stage = MIST_FOG;
+    s.vpd_watch_timer_ms = sp.vpd_watch_dwell_ms;
+    s.mist_stage_timer_ms = 0;                     // dwell NOT elapsed
+    determine_mode(make_inputs(74.0f, 1.8f, 60.0f), sp, s, 5000);  // too dry + fog gated
+    ASSERT_EQ(s.mist_stage, MIST_S1);              // fog can't run -> misters escalate immediately
+    PASS();
+}
+
 TEST(bc3_band_track_pinch_tightens_cooling_toward_target) {
     // BC-3: at fraction 0 the controller floats inside [low,high]; raising the
     // tracking fraction pinches the CONTROL band toward temp_target so the same

@@ -928,7 +928,15 @@ interval:
             // fans/vent must remain open, and the planner/firmware are asking
             // for bounded evaporative support rather than sealed humidifying.
               const bool mister_vent_ok = open_vent_mister_assist || !id(mister_closes_vent) || !vent_is_open;
-              const bool climate_wet_assist_demand = (mode == SEALED_MIST) || ctl_state.vent_mist_assist_active;
+              // BC-14 (ADR0003 §6.6) FOG-FIRST: the zone misters engage only when the
+              // FSM ladder has ESCALATED PAST the fog entry stage (mist_stage >= MIST_S1).
+              // Fog itself is driven by the FSM out.fog/willFog (it leads at MIST_FOG and
+              // persists, LAYERED). So misters must NOT run while the ladder is still at
+              // MIST_FOG — fog gets its window first; misters add only when fog can't hold.
+              const bool fsm_escalated_to_misters =
+                  (ctl_state.mist_stage == MIST_S1) || (ctl_state.mist_stage == MIST_S2);
+              const bool climate_wet_assist_demand =
+                  ((mode == SEALED_MIST) && fsm_escalated_to_misters) || ctl_state.vent_mist_assist_active;
               bool humidity_demand = climate_wet_assist_demand && mister_vent_ok;
 
             auto now_for_wet_gate = id(sntp_time).now();
@@ -1208,10 +1216,14 @@ interval:
                 id(humid_idle_holdoff_ms) = 0;
               }
 
-              // ═══════════ INVERTED HIERARCHY: MISTERS → FOG ═══════════
-              // S1: Pulse-rotation misters (cheap, targeted, zone-specific)
-              // S2: Aggressive misters (all zones rotating, shorter gaps)
-              // S3: FOG (~800W heavy artillery — misters couldn't handle it)
+              // ═══════════ FOG → MISTERS ESCALATION (lowest-GPM-first; ADR0003 §6.6) ═══════════
+              // ENTRY: FOG (AquaFog ~0.26 GPM — gentlest, lowest WATER; driven by the FSM
+              //        out.fog/willFog, runs BEFORE these misters and persists under them).
+              // S1: Pulse-rotation misters (~1 GPM/zone, targeted) — fog couldn't hold the target.
+              // S2: Aggressive misters (all zones rotating, heaviest water) — last resort.
+              // (Ordered by WATER GPM per Jason 2026-06-17; fog is higher electrical-power but
+              //  lowest water, so it leads. The mister_state machine below only RUNS once the FSM
+              //  has escalated past fog — see fsm_escalated_to_misters at the humidity_demand gate.)
 
               const uint32_t PULSE_ON_MS  = uint32_t(id(mister_pulse_on_s)) * 1000UL;
               const uint32_t PULSE_GAP_MS = uint32_t(id(mister_pulse_gap_s)) * 1000UL;

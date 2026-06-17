@@ -27,8 +27,15 @@ enum Mode {
 
 static_assert(IDLE == 7, "Mode enum ordering changed — update MODE_NAMES and switch statements");
 
-// Mister sub-stages within SEALED_MIST (owned by this code, not ESPHome)
-enum MistStage { MIST_WATCH, MIST_S1, MIST_S2, MIST_FOG };
+// Mister sub-stages within SEALED_MIST (owned by this code, not ESPHome).
+// BC-14 (ADR0003 §6.6): FOG-FIRST ladder — humidification leads with fog (AquaFog
+// ~0.26 GPM, gentlest, lowest water) and ESCALATES UP to the misters (~1 GPM/zone)
+// when fog can't hold the VPD target, ordered by water GPM. So the integer order is
+// WATCH(idle) → FOG(entry) → S1(misters single-zone) → S2(all-zone, heaviest water).
+// The string LITERALS (WATCH/FOG/S1/S2) are unchanged so replay/grafana keep parsing;
+// only the enum INTEGER order inverted vs the old misters-first ladder.
+enum MistStage { MIST_WATCH, MIST_FOG, MIST_S1, MIST_S2 };
+static_assert(MIST_S2 == 3, "MistStage order changed — update MIST_NAMES, invariant #12, controls.yaml mister_state gating");
 
 // IRR-3/IRR-4 center-zone time-anchored cadence override. NONE = use the
 // normal center pulse cadence; DAWN/MIDDAY = the controls.yaml center pulse
@@ -42,7 +49,7 @@ inline constexpr const char* MODE_NAMES[] = {
     "SENSOR_FAULT", "SAFETY_COOL", "SAFETY_HEAT", "SEALED_MIST",
     "THERMAL_RELIEF", "VENTILATE", "DEHUM_VENT", "IDLE"
 };
-inline constexpr const char* MIST_NAMES[] = {"WATCH", "S1", "S2", "FOG"};
+inline constexpr const char* MIST_NAMES[] = {"WATCH", "FOG", "S1", "S2"};
 
 // ── Sensor inputs (ONLY actual sensor readings, no config) ──
 struct SensorInputs {
