@@ -306,6 +306,28 @@ struct RelayOutputs {
     bool vent;
 };
 
+// ── Manual button-override layer (FANS / HUMID / VENT-BYPASS) ────────────
+// The three momentary panel buttons each arm a deadline latch (handled in
+// controls.yaml). ManualOverrides is the per-cycle EFFECTIVE latch state +
+// whether a genuine fog safety block is active; apply_manual_overrides() turns
+// it into forced relay outputs. The pure function makes the override precedence
+// unit-testable (the replay corpus never exercises button presses).
+struct ManualOverrides {
+    bool fans_active;        // FANS button (or legacy manual_fan_active)
+    bool vent_bypass_active; // VENT-BYPASS button (or legacy vent_lock_active)
+    bool humid_active;       // HUMID button (or legacy manual_fog_active)
+    bool fog_safety_blocked; // a real fog safety block (dew/RH/temp/time/leak) is up
+};
+
+// Which relays the override FORCE-applies (force_on bypasses relay min-off dwell
+// so a press engages within one loop tick — the #289 fix). Returned by
+// apply_manual_overrides() so the caller wires force_on= on exactly those relays.
+struct ManualForce {
+    bool fans;       // force both fans on
+    bool fog;        // force fogger on
+    bool vent_open;  // force vent open (normal FANS); NOT set during VENT-BYPASS
+};
+
 // ── ClimateIntent candidate-action controller contract ────────────────
 // These types mirror verdify_schemas.climate_intent. Firmware uses them as the
 // single climate decision surface; relay mechanics and interlocks remain local.

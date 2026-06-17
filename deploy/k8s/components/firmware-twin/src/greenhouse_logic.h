@@ -2120,3 +2120,59 @@ inline RelayOutputs resolve_equipment(
 
     return out;
 }
+
+// ── Manual button-override layer (FANS / HUMID / VENT-BYPASS) ────────────
+// Applies the absolute-priority manual override on top of the resolved relay
+// table. PRECEDENCE: the hard safety rails win — SENSOR_FAULT / SAFETY_COOL /
+// SAFETY_HEAT are never overridden (a FANS press during a cold-rail SAFETY_HEAT
+// must NOT throw both fans + the vent open and dump the heat). In every other
+// mode the override SUPERSEDES climate automation:
+//   FANS        → both fans ON, vent OPEN.
+//   VENT-BYPASS → both fans ON, vent CLOSED (winter house-air pull). It implies
+//                 fans, so the button alone produces the documented behavior.
+//   HUMID       → fogger ON, unless a genuine fog safety block (dew margin / RH
+//                 ceiling / temp floor / time window / leak) is active.
+// Returns the ManualForce flags identifying which relays are force-applied so
+// the caller passes force_on= and the press engages within one loop tick,
+// bypassing relay min-off dwell (the #289 root-cause fix: a FANS press was
+// applied with force_on=false and got stuck behind the fan min-off timer).
+inline ManualForce apply_manual_overrides(RelayOutputs& out,
+                                          const ManualOverrides& ov,
+                                          Mode mode) noexcept {
+    ManualForce f = {false, false, false};
+    if (mode == SENSOR_FAULT || mode == SAFETY_COOL || mode == SAFETY_HEAT) {
+        return f;  // safety rails are absolute — no manual override
+    }
+    const bool fans_requested = ov.fans_active || ov.vent_bypass_active;
+    if (fans_requested) {
+        out.fan1 = true;
+        out.fan2 = true;
+        f.fans = true;
+        if (ov.vent_bypass_active) {
+            out.vent = false;            // VENT-BYPASS: vent CLOSED, fans pull house air
+        } else {
+            out.vent = true;             // FANS: vent OPEN
+            f.vent_open = true;
+        }
+    }
+    if (ov.humid_active && !ov.fog_safety_blocked) {
+        out.fog = true;
+        f.fog = true;
+    }
+    return f;
+}
+
+// Whether the fan->vent interlock should force the vent OPEN this cycle. The
+// interlock holds the vent open while fans run so a closed-vent fan does not
+// leave the vent shut against the fan's airflow — EXCEPT (a) SAFETY_HEAT
+// (lead-fan circulation with the vent shut to keep heat in) and (b) an active
+// VENT-BYPASS (the deliberate fans-on / vent-closed carve-out, #290).
+// SENSOR_FAULT drives every relay off elsewhere.
+inline bool fan_requires_open_vent(Mode mode,
+                                   bool fan_on_or_wanted,
+                                   bool vent_bypass_active) noexcept {
+    return mode != SENSOR_FAULT
+        && mode != SAFETY_HEAT
+        && !vent_bypass_active
+        && fan_on_or_wanted;
+}
