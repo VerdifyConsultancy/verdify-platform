@@ -1,0 +1,34 @@
+-- 180-drop-orphaned-band-functions.sql
+-- Drop two genuinely-orphaned band helper functions from the 145/146 era.
+--
+-- Lane 1 audit (docs/reviews/lane1-architecture-audit-2026-06-16.md §4.4) flagged
+-- a whole "deprecated band-function family" as dead. A LIVE prod dependency check
+-- (read-only, 2026-06-16) CORRECTED that static analysis — only two are real
+-- leaf-orphans; the rest are either already gone or still in the live band chain:
+--
+--   DROP (0 referencing functions/views/matviews, no app/Grafana caller):
+--     - fn_achievable_envelope(text, text, timestamptz, text)
+--     - fn_active_noncenter_stress(timestamptz)
+--
+--   KEPT — still LIVE per pg_get_functiondef dependency scan (do NOT drop):
+--     - fn_house_vpd_control_band  <- fn_band_timeline, fn_band_trace,
+--                                     fn_setpoint_at, fn_band_setpoint_provenance
+--     - fn_center_band_setpoints   <- fn_house_vpd_control_band (transitively live)
+--     - fn_diurnal_interp          <- fn_center_band_setpoints (transitively live)
+--
+--   ALREADY ABSENT in prod (no-op, listed for the record):
+--     - fn_target_band, fn_target_band_smooth, v_target_curve
+--
+-- The audit doc §4.4 is corrected accordingly: the band-timeline/trace path
+-- depends on fn_house_vpd_control_band -> fn_center_band_setpoints ->
+-- fn_diurnal_interp; those are NOT dead.
+--
+-- Idempotent (IF EXISTS) per the verify-not-rebuild runner model. After this
+-- migration applies to prod (gated argocd sync), regenerate db/schema.sql so the
+-- fresh-DB bootstrap snapshot no longer defines the dropped functions.
+--
+-- Non-self-transactional (only DROP ... IF EXISTS; no top-level COMMIT, no
+-- CONCURRENTLY): safe to rollback-validate by wrapping in BEGIN; ... ROLLBACK;.
+
+DROP FUNCTION IF EXISTS public.fn_achievable_envelope(text, text, timestamp with time zone, text);
+DROP FUNCTION IF EXISTS public.fn_active_noncenter_stress(timestamp with time zone);

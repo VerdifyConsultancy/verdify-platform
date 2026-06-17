@@ -267,14 +267,27 @@ Deployment has **no probe configured** — see §8). Drift-guard-protected schem
 blindly** — `test_drift_guards.py` covers them.
 
 ### 4.4 DB orphan objects (extending the prior review)
-The **145/146 deprecated band-function family is now orphaned by migration 171**:
-`fn_center_band_setpoints`, `fn_achievable_envelope`, `fn_active_noncenter_stress`,
-`fn_target_band`, `fn_target_band_smooth`, `v_target_curve` — zero live consumers. Also:
-`v_band_trace_latest`/`v_band_trace_recent` (API uses the function directly), `v_daily_oscillation*`
-(retained, no reader), `crops.target_vpd_low/high` (stale 3rd band copy), and the never-applied
-`160-orchid-vpd-band-realign-PROPOSAL.sql`. **Dangling reference:** `v_setpoint_compliance` was
-DROPped by mig 149 but `grafana/provisioning/dashboards/json/greenhouse-hvac-climate.json` still
-queries it (it is a dead dashboard, so harmless, but fix on cleanup).
+> **CORRECTED 2026-06-16 by a live prod dependency scan** (`pg_get_functiondef` ~ name match,
+> read-only). The static dead-list below over-reached. Only **two** of the 145/146 band-function
+> family are real leaf-orphans; the rest are either already gone or **still in the live band chain**
+> — `fn_band_timeline`/`fn_band_trace`/`fn_setpoint_at`/`fn_band_setpoint_provenance` →
+> `fn_house_vpd_control_band` → `fn_center_band_setpoints` → `fn_diurnal_interp`. Dropping those
+> would have broken the band the dashboards + API compute (a P0 averted by verifying first).
+
+| Object | Live-DB verdict |
+|---|---|
+| `fn_achievable_envelope`, `fn_active_noncenter_stress` | **0 refs, no app/Grafana caller → DROPPED in migration 180** |
+| `fn_house_vpd_control_band` | **LIVE** (4 referencing fns incl. fn_band_timeline/trace) — keep |
+| `fn_center_band_setpoints`, `fn_diurnal_interp` | **transitively LIVE** (in the band chain) — keep |
+| `fn_target_band`, `fn_target_band_smooth`, `v_target_curve` | already absent in prod (no-op) |
+
+Still worth a (separately-verified) look: `v_band_trace_latest`/`v_band_trace_recent` (API uses the
+function directly), `v_daily_oscillation*` (retained, no reader), `crops.target_vpd_low/high` (stale
+3rd band copy), and the never-applied `160-orchid-vpd-band-realign-PROPOSAL.sql`. **Dangling
+reference:** `v_setpoint_compliance` was DROPped by mig 149 but
+`grafana/provisioning/dashboards/json/greenhouse-hvac-climate.json` still queries it (a dead
+dashboard, harmless, fix on cleanup). **Lesson:** verify DB-object liveness against the running DB,
+not static grep — the band chain is more connected than the call sites suggest.
 
 > Correction to the prior review: **`mv_band_curve` (F15) is NOT orphaned** — it is refreshed every
 > 10 min by `band-curve-refresh-cronjob.yaml` and read live via `v_band_curve` by the live
