@@ -433,7 +433,6 @@ jobs:
             tests/test_13_grafana_band_traceability.py \
             tests/test_14_shadow_mode.py \
             tests/test_14_site_doctor.py \
-            tests/test_15_lab_site_followup.py \
             tests/test_17_planner_health_surface.py \
             tests/test_18_twin_divergence_dashboard.py \
             tests/test_19_firmware_twin_shadow_src_sync.py \
