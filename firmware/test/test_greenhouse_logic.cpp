@@ -3549,6 +3549,30 @@ TEST(bc5_dehum_vent_heat_assist_holds_floor) {
     PASS();
 }
 
+TEST(bc3_band_track_pinch_tightens_cooling_toward_target) {
+    // BC-3: at fraction 0 the controller floats inside [low,high]; raising the
+    // tracking fraction pinches the CONTROL band toward temp_target so the same
+    // temperature now triggers cooling — the climate is driven onto the target
+    // curve instead of merely staying in the band. Behaviour-neutral at 0.
+    auto sp = band_first_setpoints();
+    sp.temp_low = 65.0f; sp.temp_high = 85.0f; sp.temp_target = 75.0f;
+    sp.vpd_low = 0.8f; sp.vpd_high = 1.4f; sp.vpd_target = 1.1f;
+    auto in = make_inputs(82.0f, 1.1f);   // inside the float band, VPD on target
+
+    sp.band_track_fraction = 0.0f;
+    validate_setpoints(sp);
+    auto s0 = initial_state();
+    Mode m0 = determine_mode(in, sp, s0, 5000);
+    ASSERT_TRUE(m0 != VENTILATE);          // floats: 82 < temp_high 85 → no cooling
+
+    sp.band_track_fraction = 0.6f;         // temp_high_eff = 85 - 0.6*(85-75) = 79 < 82
+    validate_setpoints(sp);
+    auto s1 = initial_state();
+    Mode m1 = determine_mode(in, sp, s1, 5000);
+    ASSERT_EQ(m1, VENTILATE);              // tracks: 82 > pinched high edge → cool
+    PASS();
+}
+
 TEST(band_first_cold_dehum_allowed_with_temp_headroom) {
     auto sp = band_first_setpoints();
     auto s = initial_state();

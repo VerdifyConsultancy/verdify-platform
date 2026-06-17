@@ -233,6 +233,14 @@ struct Setpoints {
     // the house delta telemetry and the normalized temp-vs-VPD arbitration.
     float    temp_target;
     float    vpd_target;
+    // BC-3 (band-compliance): control-band tracking tightness in [0,1]. 0 = the
+    // legacy float-envelope (act only at temp_low/high, vpd_low/high). As it
+    // rises, the CONTROL band is pinched toward temp_target/vpd_target so the
+    // controller drives the climate ONTO the target curve instead of merely
+    // staying inside the band. Safety rails and the served band are unchanged —
+    // only where the controller chooses to act tightens. Planner-pushable; ramp
+    // live (default 0 ships a behavior-neutral binary).
+    float    band_track_fraction;
 };
 
 static constexpr uint32_t STATE_SENTINEL = 0xBEEF0042;
@@ -630,7 +638,7 @@ inline Setpoints default_setpoints() {
         .summer_vent_min_runtime_s = 180u,
         // Phase-2 dwell gate. Default OFF until replay validation and
         // operator approval. 5-min dwell projected to reduce whipsaw 80%.
-        .sw_dwell_gate_enabled = false,
+        .sw_dwell_gate_enabled = false,  // BC-8: armed LIVE via the dispatcher tunable (registry sw_dwell_gate_enabled), not the boot default
         .dwell_gate_ms = 300000u,
         // Library fallback remains legacy so old unit tests/replay rows can
         // still cover the rollback cascade directly. The ESPHome production
@@ -678,7 +686,8 @@ inline Setpoints default_setpoints() {
         // Served-band targets: neutral defaults; the on-chip curve overwrites
         // these every cycle (they are telemetry/arbitration inputs, not knobs).
         .temp_target = 75.0f,
-        .vpd_target = 1.0f
+        .vpd_target = 1.0f,
+        .band_track_fraction = 0.0f
     };
 }
 
@@ -796,6 +805,7 @@ inline void validate_setpoints(Setpoints& sp) {
     // Served-band targets stay inside their band edges.
     sp.temp_target = std::max(sp.temp_low, std::min(sp.temp_high, sp.temp_target));
     sp.vpd_target  = std::max(sp.vpd_low,  std::min(sp.vpd_high,  sp.vpd_target));
+    sp.band_track_fraction = std::max(0.0f, std::min(1.0f, sp.band_track_fraction));
 }
 
 inline ControlState initial_state() {

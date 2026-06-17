@@ -410,6 +410,24 @@ inline float band_vpd_hysteresis(const Setpoints& sp) noexcept {
     return std::min(requested, cap);
 }
 
+// BC-3 (band-compliance): pinch the CONTROL band toward the served target by
+// band_track_fraction so the controller tracks the target curve, not merely
+// stays inside the envelope. Returns a copy with temp_low/high and vpd_low/high
+// moved toward temp_target/vpd_target (which the on-chip curve sets each cycle);
+// safety rails (safety_min/max, vpd_*_safe) and the served band are untouched.
+// fraction = 0 returns the band unchanged (legacy float-envelope) so the OTA
+// binary is behavior-neutral until the tunable is ramped live.
+inline Setpoints apply_band_track_pinch(const Setpoints& sp) noexcept {
+    const float f = std::max(0.0f, std::min(1.0f, sp.band_track_fraction));
+    if (f <= 0.0f) return sp;
+    Setpoints out = sp;
+    out.temp_low  = sp.temp_low  + f * (sp.temp_target - sp.temp_low);
+    out.temp_high = sp.temp_high - f * (sp.temp_high   - sp.temp_target);
+    out.vpd_low   = sp.vpd_low   + f * (sp.vpd_target  - sp.vpd_low);
+    out.vpd_high  = sp.vpd_high  - f * (sp.vpd_high    - sp.vpd_target);
+    return out;
+}
+
 // Unified band-first controller uses the crop/planner band itself as the temperature contract.
 // Heat1 protects the lower quartile; heat2 protects the lower edge. The older
 // d_heat_stage_2 margin is left to the legacy cascade and should not allow this path
@@ -1414,10 +1432,14 @@ inline Mode determine_mode_band_first(
 // ═══════════════════════════════════════════════════════════════════
 inline Mode determine_mode(
     const SensorInputs& in,
-    const Setpoints& sp,
+    const Setpoints& sp_raw,
     ControlState& state,
     uint32_t dt_ms
 ) {
+    // BC-3: pinch the control band toward the target ONCE at the controller entry;
+    // every downstream decision (band-first or legacy, and the evaluate call
+    // inside it) then sees the tracking band. resolve_equipment pinches the same.
+    const Setpoints sp = apply_band_track_pinch(sp_raw);
     if (sp.sw_fsm_controller_enabled) {
         return determine_mode_band_first(in, sp, state, dt_ms);
     }
@@ -1994,10 +2016,13 @@ inline OverrideFlags evaluate_overrides(
 inline RelayOutputs resolve_equipment(
     Mode mode,
     const SensorInputs& in,
-    const Setpoints& sp,
+    const Setpoints& sp_raw,
     const ControlState& state,
     bool lead_is_fan1
 ) {
+    // BC-3: pinch the control band toward the target (matches determine_mode) so
+    // the relay staging tracks the target curve too. fraction = 0 → unchanged.
+    const Setpoints sp = apply_band_track_pinch(sp_raw);
     // Sprint-12 legacy: interior targets (25% inside band). band-first controller
     // uses the same lower-quartile heat target while cooling at the raw high
     // edge; heat2 still protects the lower edge.
