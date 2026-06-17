@@ -149,6 +149,33 @@ def _align_activity_defaults_with_planned_lighting(
     return aligned
 
 
+def _mirror_activity_to_anchored_window(
+    activity_defaults: dict[str, float],
+    anchor_lighting: dict[str, float],
+    circuit_minutes: dict[str, float],
+) -> dict[str, float]:
+    """Tie the biological-activity mirror to the sunrise-anchored main-light window.
+
+    The start HOUR comes from the anchored window (``anchor_lighting``), but the
+    duration MINUTES come from the DB photoperiod policy (``circuit_minutes``) —
+    NOT ``anchor_lighting``. After the 2026-06-16 lighting single-source change,
+    ``lighting_circuit_overrides()`` emits only the window HOURS
+    (``gl_<key>_sunrise_hour``/``gl_<key>_sunset_hour``) and deliberately no
+    longer carries a ``gl_main_target_light_minutes`` key. Reading that missing
+    key off ``anchor_lighting`` raised KeyError and took down the entire
+    ``setpoint_dispatch`` task (no pushes reached the device). Keeping the source
+    boundary in one pure, unit-tested helper prevents that regression class.
+    """
+    if not (activity_defaults and anchor_lighting):
+        return activity_defaults
+    mirrored = dict(activity_defaults)
+    mirrored["activity_start_hour"] = float(max(0, min(23, int(anchor_lighting["gl_main_sunrise_hour"]))))
+    main_minutes = circuit_minutes.get("main")
+    if main_minutes is not None:
+        mirrored["activity_duration_min"] = float(max(0, min(1440, int(main_minutes))))
+    return mirrored
+
+
 def _dispatch_source(param: str, planner_params: dict[str, float], quiet_params: set[str]) -> str:
     """Return the setpoint_changes source for a dispatcher write."""
     if param in quiet_params:
@@ -861,22 +888,10 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         # then narrow the wettable portion with start/drydown offsets.
         if direct_wet_supported:
             activity_defaults = _activity_defaults_from_lighting(lighting_row, lighting_circuit_rows)
-            if activity_defaults and anchor_lighting:
-                # Keep the biological-activity mirror tied to the same
-                # sunrise-anchored main-light window pushed above.
-                activity_defaults["activity_start_hour"] = float(
-                    max(0, min(23, int(anchor_lighting["gl_main_sunrise_hour"])))
-                )
-                # Photoperiod MINUTES come from the DB policy (circuit_minutes),
-                # NOT anchor_lighting: lighting_circuit_overrides() emits only the
-                # sunrise-anchored start/cutoff HOURS now — it deliberately stopped
-                # carrying minutes in the 2026-06-16 single-source change, so the
-                # old anchor_lighting["gl_main_target_light_minutes"] read KeyError'd
-                # and took down the whole setpoint_dispatch task. Keep the activity
-                # mirror's duration tied to the same main-light photoperiod.
-                main_minutes = circuit_minutes.get("main")
-                if main_minutes is not None:
-                    activity_defaults["activity_duration_min"] = float(max(0, min(1440, int(main_minutes))))
+            # Keep the biological-activity mirror tied to the same sunrise-anchored
+            # main-light window pushed above (start HOUR from the anchored window,
+            # duration MINUTES from the DB photoperiod policy).
+            activity_defaults = _mirror_activity_to_anchored_window(activity_defaults, anchor_lighting, circuit_minutes)
             activity_defaults = _align_activity_defaults_with_planned_lighting(
                 activity_defaults,
                 planner_params,
