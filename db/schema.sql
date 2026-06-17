@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 2zTADqAyGl8X5jSb5VZDFlmVeVilcNuoXbNsk5BhG3wkdNvFco150g58RmH3Itn
+\restrict P0OKck9gdxJJ8BfPkeLTSgWhhRnfbcYTXGhpfrWteJwiU6BxhKyMBP0HtiiZKro
 
 -- Dumped from database version 16.11
 -- Dumped by pg_dump version 16.11
@@ -26,7 +26,7 @@ CREATE EXTENSION IF NOT EXISTS timescaledb WITH SCHEMA public;
 
 
 --
--- Name: EXTENSION timescaledb; Type: COMMENT; Schema: -; Owner:
+-- Name: EXTENSION timescaledb; Type: COMMENT; Schema: -; Owner: 
 --
 
 COMMENT ON EXTENSION timescaledb IS 'Enables scalable inserts and complex queries for time-series data (Community Edition)';
@@ -40,7 +40,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA public;
 
 
 --
--- Name: EXTENSION pgcrypto; Type: COMMENT; Schema: -; Owner:
+-- Name: EXTENSION pgcrypto; Type: COMMENT; Schema: -; Owner: 
 --
 
 COMMENT ON EXTENSION pgcrypto IS 'cryptographic functions';
@@ -54,7 +54,7 @@ CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;
 
 
 --
--- Name: EXTENSION vector; Type: COMMENT; Schema: -; Owner:
+-- Name: EXTENSION vector; Type: COMMENT; Schema: -; Owner: 
 --
 
 COMMENT ON EXTENSION vector IS 'vector data type and ivfflat and hnsw access methods';
@@ -67,10 +67,10 @@ COMMENT ON EXTENSION vector IS 'vector data type and ivfflat and hnsw access met
 CREATE FUNCTION public.compute_enthalpy(temp_f double precision, rh_pct double precision, pressure_hpa double precision) RETURNS double precision
     LANGUAGE sql IMMUTABLE
     AS $$
-  SELECT CASE
+  SELECT CASE 
     WHEN temp_f IS NULL OR rh_pct IS NULL THEN NULL
     ELSE
-      1.006 * ((temp_f - 32) * 5.0/9.0) +
+      1.006 * ((temp_f - 32) * 5.0/9.0) + 
       (0.622 * (0.6108 * exp(17.27 * ((temp_f-32)*5.0/9.0) / (((temp_f-32)*5.0/9.0) + 237.3)) * rh_pct / 100.0 * 10.0)
        / (COALESCE(pressure_hpa, 840) - 0.6108 * exp(17.27 * ((temp_f-32)*5.0/9.0) / (((temp_f-32)*5.0/9.0) + 237.3)) * rh_pct / 100.0 * 10.0))
       * (2501.0 + 1.84 * ((temp_f-32)*5.0/9.0))
@@ -482,52 +482,26 @@ COMMENT ON FUNCTION public.fn_band_setpoint_provenance(p_ts timestamp with time 
 --
 
 CREATE FUNCTION public.fn_band_setpoints(target_ts timestamp with time zone) RETURNS TABLE(temp_low double precision, temp_high double precision, vpd_low double precision, vpd_high double precision)
-    LANGUAGE plpgsql STABLE ROWS 1
+    LANGUAGE sql STABLE ROWS 1
     AS $$
-DECLARE
-    c record;
-    env record;
-    v_floor double precision;
-    v_ceil double precision;
-    v_vlow double precision;
-    v_vhigh double precision;
-BEGIN
-    SELECT * INTO c FROM fn_center_band_setpoints(target_ts);          -- orchid smooth band (145)
-    SELECT * INTO env FROM fn_achievable_envelope('center', fn_current_season(), target_ts);
-
-    -- decision #1 safety: never serve a ceiling above any active non-center
-    -- crop's temp_stress_high, nor a floor below its temp_stress_low.
-    SELECT MAX(s.temp_stress_low), MIN(s.temp_stress_high)
-      INTO v_floor, v_ceil
-      FROM fn_active_noncenter_stress(target_ts) s;
-
-    -- temp_low  = max(center, non-center safety floor, envelope floor)
-    -- temp_high = min(center, envelope cap, non-center safety ceiling)
-    temp_low  := GREATEST(c.temp_low,
-                          COALESCE(v_floor, c.temp_low),
-                          COALESCE(env.env_temp_low_floor, c.temp_low));
-    temp_high := LEAST(c.temp_high,
-                       COALESCE(env.env_temp_hi_cap, c.temp_high),
-                       COALESCE(v_ceil, c.temp_high));
-    IF temp_low > temp_high THEN temp_low := temp_high; END IF;
-
-    -- VPD served line = house control band (non-orchid), inversion-clamped.
-    SELECT h.house_vpd_low, h.house_vpd_high
-      INTO v_vlow, v_vhigh
-      FROM fn_house_vpd_control_band(target_ts) h;
-    IF v_vlow IS NULL OR v_vhigh IS NULL THEN
-        v_vlow := c.vpd_low; v_vhigh := c.vpd_high;
-    END IF;
-    IF v_vlow > v_vhigh THEN v_vlow := v_vhigh; END IF;
-
-    vpd_low := v_vlow;
-    vpd_high := v_vhigh;
-    RETURN NEXT;
-END;
+  -- The device's curve: harmonic over the 'house' crop_band_anchors at the solar
+  -- phase of target_ts. Identical to mv_band_curve's house columns and to the
+  -- on-chip band_value_at_phase the ESP32 computes. One source of truth.
+  SELECT fn_crop_band_value('house', 'temp_low',  target_ts) AS temp_low,
+         fn_crop_band_value('house', 'temp_high', target_ts) AS temp_high,
+         fn_crop_band_value('house', 'vpd_low',   target_ts) AS vpd_low,
+         fn_crop_band_value('house', 'vpd_high',  target_ts) AS vpd_high;
 $$;
 
 
 ALTER FUNCTION public.fn_band_setpoints(target_ts timestamp with time zone) OWNER TO verdify;
+
+--
+-- Name: FUNCTION fn_band_setpoints(target_ts timestamp with time zone); Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON FUNCTION public.fn_band_setpoints(target_ts timestamp with time zone) IS 'Served house band = the device''s harmonic curve (fn_crop_band_value house). Realigned 2026-06-15 (migration 171) to match what the ESP32 calculates on-chip; the prior crop_target_profiles non-center/envelope clamps now live only on the compliance-grading surface (fn_band_trace), not the served target band.';
+
 
 --
 -- Name: fn_band_timeline(timestamp with time zone, timestamp with time zone, interval, text); Type: FUNCTION; Schema: public; Owner: verdify
@@ -1118,30 +1092,23 @@ DECLARE
     v_season text;
     night_tl double precision; night_th double precision; night_vl double precision; night_vh double precision;
     day_tl double precision; day_th double precision; day_vl double precision; day_vh double precision;
+    -- firmware-v2 deterministic band (solar-noon-anchored, fn_crop_band_value)
+    band_tl double precision; band_th double precision; band_vl double precision; band_vh double precision;
 BEGIN
     v_season := fn_current_season();
 
-    -- endpoints from the active orchid (center) profile rows, catalog+is_active join
-    SELECT avg(p.temp_ideal_min) FILTER (WHERE p.hour_of_day BETWEEN 0 AND 5),
-           avg(p.temp_ideal_max) FILTER (WHERE p.hour_of_day BETWEEN 0 AND 5),
-           avg(p.vpd_ideal_min)  FILTER (WHERE p.hour_of_day BETWEEN 0 AND 5),
-           avg(p.vpd_ideal_max)  FILTER (WHERE p.hour_of_day BETWEEN 0 AND 5),
-           avg(p.temp_ideal_min) FILTER (WHERE p.hour_of_day BETWEEN 13 AND 15),
-           avg(p.temp_ideal_max) FILTER (WHERE p.hour_of_day BETWEEN 13 AND 15),
-           avg(p.vpd_ideal_min)  FILTER (WHERE p.hour_of_day BETWEEN 13 AND 15),
-           avg(p.vpd_ideal_max)  FILTER (WHERE p.hour_of_day BETWEEN 13 AND 15)
-      INTO night_tl, night_th, night_vl, night_vh, day_tl, day_th, day_vl, day_vh
-      FROM crop_target_profiles p
-      JOIN crops c ON c.crop_catalog_id = p.crop_catalog_id
-                  AND c.is_active
-                  AND c.greenhouse_id = p.greenhouse_id
-     WHERE p.crop_catalog_id = 9            -- orchid
-       AND p.greenhouse_id = 'vallery'
-       AND p.season = v_season;
+    -- ── PRIMARY: the firmware-v2 deterministic house band (solar-phase) ──────
+    -- Exact mirror of the on-chip band the ESP32 enforces. Peaks at solar noon.
+    band_tl := fn_crop_band_value('house', 'temp_low',  target_ts);
+    band_th := fn_crop_band_value('house', 'temp_high', target_ts);
+    band_vl := fn_crop_band_value('house', 'vpd_low',   target_ts);
+    band_vh := fn_crop_band_value('house', 'vpd_high',  target_ts);
 
-    -- nearest-season fallback: if the current season has no rows, use spring
-    -- (the authored active-season baseline) so no hour ever returns NULL.
-    IF night_tl IS NULL OR day_tl IS NULL THEN
+    -- ── FALLBACK endpoints from the active orchid (center) profile rows ──────
+    -- Only used if the house anchors are missing (band_* NULL). Keeps the
+    -- legacy day/night-endpoint + fn_diurnal_interp shape as a safety net so no
+    -- hour ever returns NULL.
+    IF band_tl IS NULL OR band_th IS NULL OR band_vl IS NULL OR band_vh IS NULL THEN
         SELECT avg(p.temp_ideal_min) FILTER (WHERE p.hour_of_day BETWEEN 0 AND 5),
                avg(p.temp_ideal_max) FILTER (WHERE p.hour_of_day BETWEEN 0 AND 5),
                avg(p.vpd_ideal_min)  FILTER (WHERE p.hour_of_day BETWEEN 0 AND 5),
@@ -1155,22 +1122,44 @@ BEGIN
           JOIN crops c ON c.crop_catalog_id = p.crop_catalog_id
                       AND c.is_active
                       AND c.greenhouse_id = p.greenhouse_id
-         WHERE p.crop_catalog_id = 9
+         WHERE p.crop_catalog_id = 9            -- orchid
            AND p.greenhouse_id = 'vallery'
-           AND p.season = 'spring';
+           AND p.season = v_season;
+
+        IF night_tl IS NULL OR day_tl IS NULL THEN
+            SELECT avg(p.temp_ideal_min) FILTER (WHERE p.hour_of_day BETWEEN 0 AND 5),
+                   avg(p.temp_ideal_max) FILTER (WHERE p.hour_of_day BETWEEN 0 AND 5),
+                   avg(p.vpd_ideal_min)  FILTER (WHERE p.hour_of_day BETWEEN 0 AND 5),
+                   avg(p.vpd_ideal_max)  FILTER (WHERE p.hour_of_day BETWEEN 0 AND 5),
+                   avg(p.temp_ideal_min) FILTER (WHERE p.hour_of_day BETWEEN 13 AND 15),
+                   avg(p.temp_ideal_max) FILTER (WHERE p.hour_of_day BETWEEN 13 AND 15),
+                   avg(p.vpd_ideal_min)  FILTER (WHERE p.hour_of_day BETWEEN 13 AND 15),
+                   avg(p.vpd_ideal_max)  FILTER (WHERE p.hour_of_day BETWEEN 13 AND 15)
+              INTO night_tl, night_th, night_vl, night_vh, day_tl, day_th, day_vl, day_vh
+              FROM crop_target_profiles p
+              JOIN crops c ON c.crop_catalog_id = p.crop_catalog_id
+                          AND c.is_active
+                          AND c.greenhouse_id = p.greenhouse_id
+             WHERE p.crop_catalog_id = 9
+               AND p.greenhouse_id = 'vallery'
+               AND p.season = 'spring';
+        END IF;
+
+        night_tl := COALESCE(night_tl, 61.0); night_th := COALESCE(night_th, 67.0);
+        night_vl := COALESCE(night_vl, 0.75);  night_vh := COALESCE(night_vh, 0.85);
+        day_tl   := COALESCE(day_tl, 77.4);    day_th   := COALESCE(day_th, 87.3);
+        day_vl   := COALESCE(day_vl, 0.94);    day_vh   := COALESCE(day_vh, 1.19);
+
+        band_tl := COALESCE(band_tl, fn_diurnal_interp(target_ts, night_tl, day_tl));
+        band_th := COALESCE(band_th, fn_diurnal_interp(target_ts, night_th, day_th));
+        band_vl := COALESCE(band_vl, fn_diurnal_interp(target_ts, night_vl, day_vl));
+        band_vh := COALESCE(band_vh, fn_diurnal_interp(target_ts, night_vh, day_vh));
     END IF;
 
-    -- final defensive fallback to the design anchors if the profile is missing
-    -- entirely (e.g. orchid de-activated) so the served band is never NULL.
-    night_tl := COALESCE(night_tl, 61.0); night_th := COALESCE(night_th, 67.0);
-    night_vl := COALESCE(night_vl, 0.75);  night_vh := COALESCE(night_vh, 0.85);
-    day_tl   := COALESCE(day_tl, 77.4);    day_th   := COALESCE(day_th, 87.3);
-    day_vl   := COALESCE(day_vl, 0.94);    day_vh   := COALESCE(day_vh, 1.19);
-
-    temp_low  := fn_diurnal_interp(target_ts, night_tl, day_tl);
-    temp_high := fn_diurnal_interp(target_ts, night_th, day_th);
-    vpd_low   := fn_diurnal_interp(target_ts, night_vl, day_vl);
-    vpd_high  := fn_diurnal_interp(target_ts, night_vh, day_vh);
+    temp_low  := band_tl;
+    temp_high := band_th;
+    vpd_low   := band_vl;
+    vpd_high  := band_vh;
     RETURN NEXT;
 END;
 $$;
@@ -1407,6 +1396,70 @@ ALTER FUNCTION public.fn_compliance_v2(lookback interval) OWNER TO verdify;
 --
 
 COMMENT ON FUNCTION public.fn_compliance_v2(lookback interval) IS 'Per-zone compliance rollup over fn_zone_band_grade. Cols 1-5 preserve the legacy fn_compliance_pct shape (zone, temp_pct, rh_pct=NULL, vpd_pct, overall_pct) for the shim; then graded temp/vpd/overall, controller-attributable, and unachievable_frac (band-compliance design §6.4).';
+
+
+--
+-- Name: fn_crop_band_value(text, text, timestamp with time zone, text, text, text); Type: FUNCTION; Schema: public; Owner: verdify
+--
+
+CREATE FUNCTION public.fn_crop_band_value(p_crop_type text, p_series text, p_ts timestamp with time zone, p_season text DEFAULT NULL::text, p_growth_stage text DEFAULT 'default'::text, p_greenhouse_id text DEFAULT 'vallery'::text) RETURNS double precision
+    LANGUAGE plpgsql STABLE
+    AS $$
+DECLARE
+    v_season text := COALESCE(p_season, fn_current_season());
+    v_stage  text := COALESCE(p_growth_stage, 'default');
+    v_sr     double precision;
+    v_sm     double precision;
+    v_ss     double precision;
+    v_mid    double precision;
+    phase    double precision;
+    theta    double precision;
+    c0 double precision; c1 double precision; s1 double precision; c2 double precision;
+BEGIN
+    -- Resolve one row per anchor, preferring exact growth_stage/season matches
+    -- over the 'default'/'all' fallbacks.
+    SELECT max(value) FILTER (WHERE anchor = 'sr'),
+           max(value) FILTER (WHERE anchor = 'sm'),
+           max(value) FILTER (WHERE anchor = 'ss'),
+           max(value) FILTER (WHERE anchor = 'mid')
+      INTO v_sr, v_sm, v_ss, v_mid
+      FROM (
+        SELECT DISTINCT ON (anchor) anchor, value
+          FROM public.crop_band_anchors
+         WHERE crop_type     = p_crop_type
+           AND series        = p_series
+           AND greenhouse_id = p_greenhouse_id
+           AND growth_stage IN (v_stage, 'default')
+           AND season       IN (v_season, 'all')
+         ORDER BY anchor,
+                  (growth_stage = v_stage) DESC,
+                  (season = v_season) DESC
+      ) resolved;
+
+    IF v_sr IS NULL OR v_sm IS NULL OR v_ss IS NULL OR v_mid IS NULL THEN
+        RETURN NULL;  -- incomplete anchor set -> caller falls back
+    END IF;
+
+    -- Smooth 4-anchor harmonic interpolation (no plateaus). Passes through
+    -- SR/SM/SS/MID at solar phase 0/1/2/3; mirrors greenhouse_solar.h.
+    phase := fn_solar_phase(p_ts);          -- continuous 0..4
+    theta := pi() * phase / 2.0;            -- 0..2π
+    c0 := (v_sr + v_sm + v_ss + v_mid) / 4.0;
+    c1 := (v_sr - v_ss) / 2.0;
+    s1 := (v_sm - v_mid) / 2.0;
+    c2 := (v_sr - v_sm + v_ss - v_mid) / 4.0;
+    RETURN c0 + c1 * cos(theta) + s1 * sin(theta) + c2 * cos(2.0 * theta);
+END;
+$$;
+
+
+ALTER FUNCTION public.fn_crop_band_value(p_crop_type text, p_series text, p_ts timestamp with time zone, p_season text, p_growth_stage text, p_greenhouse_id text) OWNER TO verdify;
+
+--
+-- Name: FUNCTION fn_crop_band_value(p_crop_type text, p_series text, p_ts timestamp with time zone, p_season text, p_growth_stage text, p_greenhouse_id text); Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON FUNCTION public.fn_crop_band_value(p_crop_type text, p_series text, p_ts timestamp with time zone, p_season text, p_growth_stage text, p_greenhouse_id text) IS 'Deterministic crop+solar band value. Smooth 4-anchor harmonic (Fourier) interpolation through SR/SM/SS/MID (migration 170) — passes through every anchor, C-infinity smooth (no cosine-ease plateaus). Mirrors firmware greenhouse_solar.h band_value_at_phase.';
 
 
 --
@@ -1738,6 +1791,25 @@ $$;
 
 
 ALTER FUNCTION public.fn_heat_staging_inversion() OWNER TO verdify;
+
+--
+-- Name: fn_hermite_phase(double precision, double precision, double precision, double precision, double precision, double precision); Type: FUNCTION; Schema: public; Owner: verdify
+--
+
+CREATE FUNCTION public.fn_hermite_phase(v double precision, a double precision, b double precision, pa double precision, da double precision, db double precision) RETURNS double precision
+    LANGUAGE sql IMMUTABLE
+    AS $$
+  SELECT CASE
+    WHEN b <= a THEN pa
+    ELSE pa + (3.0*u*u - 2.0*u*u*u)
+            + da*len*(u*u*u - 2.0*u*u + u)
+            + db*len*(u*u*u - u*u)
+  END
+  FROM (SELECT (b - a) AS len, (v - a) / NULLIF(b - a, 0) AS u) q;
+$$;
+
+
+ALTER FUNCTION public.fn_hermite_phase(v double precision, a double precision, b double precision, pa double precision, da double precision, db double precision) OWNER TO verdify;
 
 --
 -- Name: fn_house_compliance(interval); Type: FUNCTION; Schema: public; Owner: verdify
@@ -2169,7 +2241,7 @@ latest_snapshot AS (
         ss.parameter,
         ss.value::double precision AS value,
         ss.ts,
-        1 AS source_rank
+        2 AS source_rank
     FROM setpoint_snapshot ss
     JOIN tracked_params tp ON tp.parameter = ss.parameter
     WHERE COALESCE(ss.greenhouse_id, p_greenhouse_id) = p_greenhouse_id
@@ -2180,7 +2252,7 @@ latest_confirmed_changes AS (
         sc.parameter,
         sc.value::double precision AS value,
         COALESCE(sc.confirmed_at, sc.ts) AS ts,
-        2 AS source_rank
+        1 AS source_rank
     FROM setpoint_changes sc
     JOIN tracked_params tp ON tp.parameter = sc.parameter
     WHERE COALESCE(sc.greenhouse_id, p_greenhouse_id) = p_greenhouse_id
@@ -2271,19 +2343,29 @@ SELECT
     greatest(0, least(1080, round(r.target_light_minutes)::integer)) AS target_light_minutes,
     greatest(0, least(23, r.start_hour)) AS start_hour,
     greatest(0, least(23, r.cutoff_hour)) AS cutoff_hour,
-    greatest(100.0, least(100000.0, r.lux_on_threshold)) AS lux_on_threshold,
-    greatest(0.0, least(25000.0, r.lux_hysteresis)) AS lux_hysteresis,
-    greatest(100.0, least(100000.0, r.lux_on_threshold))
-        + greatest(0.0, least(25000.0, r.lux_hysteresis)) AS lux_off_threshold,
+    -- SINGLE SOURCE OF TRUTH (176): lux thresholds come from
+    -- fn_lighting_circuit_policy (planner-setpoint -> AI recommendation ->
+    -- default; device cfg readback EXCLUDED), so a post-reboot firmware revert
+    -- cannot feedback-poison the dispatcher push. Fallback to the local resolve
+    -- only if the circuit policy somehow returns NULL (it never does).
+    greatest(100.0, least(100000.0, COALESCE(cp.lux_on_threshold, r.lux_on_threshold))) AS lux_on_threshold,
+    greatest(0.0, least(25000.0, COALESCE(cp.lux_hysteresis, r.lux_hysteresis))) AS lux_hysteresis,
+    greatest(100.0, least(100000.0, COALESCE(cp.lux_on_threshold, r.lux_on_threshold)))
+        + greatest(0.0, least(25000.0, COALESCE(cp.lux_hysteresis, r.lux_hysteresis))) AS lux_off_threshold,
     greatest(0, least(3600, r.min_on_s)) AS min_on_s,
     greatest(0, least(3600, r.min_off_s)) AS min_off_s,
     r.auto_enabled,
     greatest(1.0, least(50.0, r.legacy_dli_target)) AS legacy_dli_target,
-    'confirmed cfg/readback policy -> dispatcher/API -> ESP32 per-circuit qualified-minutes state machines -> Lutron switches -> equipment_state'::text
+    'AI-tunable lux source (fn_lighting_circuit_policy: planner/recommendation/default, device-readback excluded) -> dispatcher/API -> ESP32 per-circuit qualified-minutes state machines -> Lutron switches -> equipment_state'::text
         AS source_chain,
-    'Each circuit starts counting at sunrise. A minute qualifies once when natural lux is at or above the ON threshold OR the actual switch is ON. The circuit turns ON below threshold until target_light_minutes is met, with ON+hysteresis as the OFF threshold.'::text
+    'Each circuit starts counting at sunrise. A minute qualifies once when natural lux is at or above the ON threshold OR the actual switch is ON. The circuit turns ON below threshold until target_light_minutes is met, with ON+hysteresis as the OFF threshold. Lux thresholds are the single AI-tunable source (fn_lighting_circuit_policy), not the device snapshot.'::text
         AS controller_contract
-FROM resolved r;
+FROM resolved r
+LEFT JOIN LATERAL (
+    SELECT cpp.lux_on_threshold, cpp.lux_hysteresis
+    FROM fn_lighting_circuit_policy(p_ts, p_greenhouse_id) cpp
+    WHERE cpp.light_key = r.light_key
+) cp ON true;
 $$;
 
 
@@ -3376,12 +3458,12 @@ DECLARE
     hour_angle float;
 BEGIN
     doy := EXTRACT(doy FROM target_ts AT TIME ZONE 'America/Denver');
-    local_hour := EXTRACT(hour FROM target_ts AT TIME ZONE 'America/Denver')
+    local_hour := EXTRACT(hour FROM target_ts AT TIME ZONE 'America/Denver') 
                 + EXTRACT(minute FROM target_ts AT TIME ZONE 'America/Denver') / 60.0;
     decl := ASIN(0.39795 * COS(RADIANS(0.98563 * (doy - 173))));
     hour_angle := RADIANS(15.0 * (local_hour - 13.0));
     RETURN DEGREES(ASIN(
-        SIN(lat_rad) * SIN(decl) +
+        SIN(lat_rad) * SIN(decl) + 
         COS(lat_rad) * COS(decl) * COS(hour_angle)
     ));
 END;
@@ -3389,6 +3471,64 @@ $$;
 
 
 ALTER FUNCTION public.fn_solar_altitude(target_ts timestamp with time zone) OWNER TO verdify;
+
+--
+-- Name: fn_solar_phase(timestamp with time zone); Type: FUNCTION; Schema: public; Owner: verdify
+--
+
+CREATE FUNCTION public.fn_solar_phase(target_ts timestamp with time zone) RETURNS double precision
+    LANGUAGE plpgsql STABLE
+    AS $$
+DECLARE
+    h     double precision;  -- local decimal hour of target_ts
+    sr    double precision;  -- sunrise, local decimal hours
+    ss    double precision;  -- sunset
+    sm    double precision;  -- solar noon ~ midpoint(SR, SS)
+    nsr   double precision;  -- next sunrise = SR + 24
+    smid  double precision;  -- solar midnight ~ midpoint(SS, next SR)
+    hh    double precision;  -- h unwrapped onto the monotonic solar day
+    r0 double precision; r1 double precision; r2 double precision; r3 double precision;
+    d_sr double precision; d_sm double precision; d_ss double precision; d_mid double precision;
+BEGIN
+    h  := EXTRACT(epoch FROM (target_ts AT TIME ZONE 'America/Denver')
+                          - date_trunc('day', target_ts AT TIME ZONE 'America/Denver')) / 3600.0;
+    sr := fn_solar_sunrise_hour(target_ts);
+    ss := fn_solar_sunset_hour(target_ts);
+    sm := (sr + ss) / 2.0;
+    nsr := sr + 24.0;
+    smid := (ss + nsr) / 2.0;
+    hh := CASE WHEN h < sr THEN h + 24.0 ELSE h END;  -- pre-dawn → night half
+
+    -- Segment rates (phase per hour) and C1 anchor tangents (mean of adjacent).
+    r0 := 1.0 / GREATEST(sm - sr, 1e-6);
+    r1 := 1.0 / GREATEST(ss - sm, 1e-6);
+    r2 := 1.0 / GREATEST(smid - ss, 1e-6);
+    r3 := 1.0 / GREATEST(nsr - smid, 1e-6);
+    d_sr  := 0.5 * (r3 + r0);
+    d_sm  := 0.5 * (r0 + r1);
+    d_ss  := 0.5 * (r1 + r2);
+    d_mid := 0.5 * (r2 + r3);
+
+    IF hh <= sm THEN
+        RETURN fn_hermite_phase(hh, sr,  sm,   0.0, d_sr,  d_sm);
+    ELSIF hh <= ss THEN
+        RETURN fn_hermite_phase(hh, sm,  ss,   1.0, d_sm,  d_ss);
+    ELSIF hh <= smid THEN
+        RETURN fn_hermite_phase(hh, ss,  smid, 2.0, d_ss,  d_mid);
+    END IF;
+    RETURN LEAST(fn_hermite_phase(hh, smid, nsr, 3.0, d_mid, d_sr), 3.9999999);
+END;
+$$;
+
+
+ALTER FUNCTION public.fn_solar_phase(target_ts timestamp with time zone) OWNER TO verdify;
+
+--
+-- Name: FUNCTION fn_solar_phase(target_ts timestamp with time zone); Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON FUNCTION public.fn_solar_phase(target_ts timestamp with time zone) IS 'Contract-B1 solar phase in [0,4): 0=sunrise, 1=solar noon, 2=sunset, 3=solar midnight (migration 164). DB mirror of the ESP32 solar_phase(); reuses the migration-145 sunrise/sunset bisection helpers (lat 40.167, lon -105.102).';
+
 
 --
 -- Name: fn_solar_sunrise_hour(timestamp with time zone); Type: FUNCTION; Schema: public; Owner: verdify
@@ -3780,57 +3920,36 @@ CREATE FUNCTION public.fn_zone_vpd_targets(target_ts timestamp with time zone) R
     LANGUAGE plpgsql STABLE ROWS 1
     AS $$
 DECLARE
-    local_hour int;
-    frac float;
-    next_hour int;
-    v_season text;
+    -- Season resolved ONCE via fn_current_season() and passed down — no
+    -- hardcoded season literal anywhere (migration-159 #253 tripwire).
+    v_season text := fn_current_season();
+    v_house  double precision;
 BEGIN
-    local_hour := EXTRACT(hour FROM target_ts AT TIME ZONE 'America/Denver');
-    frac := EXTRACT(minute FROM target_ts AT TIME ZONE 'America/Denver') / 60.0;
-    next_hour := (local_hour + 1) % 24;
-    v_season := fn_current_season();
-    IF NOT EXISTS (SELECT 1 FROM crop_target_profiles
-                    WHERE season = v_season AND greenhouse_id = 'vallery'
-                      AND crop_catalog_id IS NOT NULL) THEN
-        v_season := 'spring';
-    END IF;
+    -- House vpd_target curve = deterministic fallback for any zone whose crop
+    -- lacks a complete anchor set; the trailing literals are a last-resort
+    -- safety net only (kept from the pre-164 definition).
+    v_house := fn_crop_band_value('house', 'vpd_target', target_ts, v_season);
 
-    RETURN QUERY
-    WITH zone_crops AS (
-        SELECT zone,
-            CASE name
-                WHEN 'Vanda Orchids' THEN 'orchid'
-                WHEN 'Canna Lilies' THEN 'canna'
-                ELSE lower(name)
-            END AS crop_type
-        FROM crops WHERE is_active = true AND greenhouse_id = 'vallery'
-    ),
-    h0 AS (
-        SELECT zc.zone, MIN(p.vpd_ideal_max) AS vpd_max
-        FROM zone_crops zc
-        JOIN crop_target_profiles p ON p.crop_type = zc.crop_type
-            AND p.hour_of_day = local_hour AND p.season = v_season
-            AND p.greenhouse_id = 'vallery'
-        GROUP BY zc.zone
-    ),
-    h1 AS (
-        SELECT zc.zone, MIN(p.vpd_ideal_max) AS vpd_max
-        FROM zone_crops zc
-        JOIN crop_target_profiles p ON p.crop_type = zc.crop_type
-            AND p.hour_of_day = next_hour AND p.season = v_season
-            AND p.greenhouse_id = 'vallery'
-        GROUP BY zc.zone
-    )
-    SELECT
-        COALESCE((SELECT h0.vpd_max + frac * (h1.vpd_max - h0.vpd_max) FROM h0 JOIN h1 ON h0.zone = h1.zone WHERE h0.zone = 'south'), 1.5),
-        COALESCE((SELECT h0.vpd_max + frac * (h1.vpd_max - h0.vpd_max) FROM h0 JOIN h1 ON h0.zone = h1.zone WHERE h0.zone = 'west'), 1.5),
-        COALESCE((SELECT h0.vpd_max + frac * (h1.vpd_max - h0.vpd_max) FROM h0 JOIN h1 ON h0.zone = h1.zone WHERE h0.zone = 'east'), 1.0),
-        COALESCE((SELECT h0.vpd_max + frac * (h1.vpd_max - h0.vpd_max) FROM h0 JOIN h1 ON h0.zone = h1.zone WHERE h0.zone = 'center'), 0.85);
+    -- Zone -> crop wiring per contract B7 (design §3.4: re-point by editing
+    -- this mapping): south→cannabis, west→citrus(lime), east→pepper,
+    -- center→orchid(Vanda).
+    RETURN QUERY SELECT
+        COALESCE(fn_crop_band_value('cannabis', 'vpd_target', target_ts, v_season), v_house, 1.5),
+        COALESCE(fn_crop_band_value('citrus',   'vpd_target', target_ts, v_season), v_house, 1.5),
+        COALESCE(fn_crop_band_value('pepper',   'vpd_target', target_ts, v_season), v_house, 1.0),
+        COALESCE(fn_crop_band_value('orchid',   'vpd_target', target_ts, v_season), v_house, 0.85);
 END;
 $$;
 
 
 ALTER FUNCTION public.fn_zone_vpd_targets(target_ts timestamp with time zone) OWNER TO verdify;
+
+--
+-- Name: FUNCTION fn_zone_vpd_targets(target_ts timestamp with time zone); Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON FUNCTION public.fn_zone_vpd_targets(target_ts timestamp with time zone) IS 'Per-zone deterministic VPD targets (migration 164, contract B7): cosine-interpolated crop_band_anchors vpd_target curves at the solar phase. Wiring: south=cannabis, west=citrus(lime), east=pepper, center=orchid; house curve fallback. Min/max reconstruct as target -/+ crop_band_anchors widths. Supersedes the crops x crop_target_profiles vpd_ideal_max resolution (crop_target_profiles remains the compliance GRADING source).';
+
 
 --
 -- Name: normalize_changes_param(); Type: FUNCTION; Schema: public; Owner: verdify
@@ -4274,6 +4393,42 @@ INHERITS (public.setpoint_plan);
 ALTER TABLE _timescaledb_internal._hyper_10_708_chunk OWNER TO verdify;
 
 --
+-- Name: _hyper_10_739_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_10_739_chunk (
+    CONSTRAINT constraint_628 CHECK (((ts >= '2026-06-04 00:00:00+00'::timestamp with time zone) AND (ts < '2026-06-11 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.setpoint_plan);
+
+
+ALTER TABLE _timescaledb_internal._hyper_10_739_chunk OWNER TO verdify;
+
+--
+-- Name: _hyper_10_774_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_10_774_chunk (
+    CONSTRAINT constraint_655 CHECK (((ts >= '2026-06-11 00:00:00+00'::timestamp with time zone) AND (ts < '2026-06-18 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.setpoint_plan);
+
+
+ALTER TABLE _timescaledb_internal._hyper_10_774_chunk OWNER TO verdify;
+
+--
+-- Name: _hyper_10_775_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_10_775_chunk (
+    CONSTRAINT constraint_656 CHECK (((ts >= '2026-06-18 00:00:00+00'::timestamp with time zone) AND (ts < '2026-06-25 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.setpoint_plan);
+
+
+ALTER TABLE _timescaledb_internal._hyper_10_775_chunk OWNER TO verdify;
+
+--
 -- Name: irrigation_log; Type: TABLE; Schema: public; Owner: verdify
 --
 
@@ -4591,7 +4746,10 @@ CREATE TABLE public.setpoint_snapshot (
     ts timestamp with time zone NOT NULL,
     parameter text NOT NULL,
     value double precision NOT NULL,
-    greenhouse_id text DEFAULT 'vallery'::text
+    greenhouse_id text DEFAULT 'vallery'::text,
+    zone text,
+    band_role text,
+    target_value double precision
 );
 
 
@@ -4605,6 +4763,27 @@ COMMENT ON TABLE public.setpoint_snapshot IS 'Per-parameter setpoint snapshots. 
 
 
 --
+-- Name: COLUMN setpoint_snapshot.zone; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.setpoint_snapshot.zone IS 'Zone attribution for per-zone band audit rows (contract B7): center|south|west|east, or house for the single-air-mass thermal band. NULL on plain cfg_* readback rows.';
+
+
+--
+-- Name: COLUMN setpoint_snapshot.band_role; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.setpoint_snapshot.band_role IS 'Role of the emitted band row within its series: target|low|high (low/high reconstructed as target -/+ the crop_band_anchors half-widths). NULL on plain cfg_* readback rows.';
+
+
+--
+-- Name: COLUMN setpoint_snapshot.target_value; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.setpoint_snapshot.target_value IS 'The deterministic crop+solar curve value (fn_crop_band_value) at emission time, recorded alongside the served value for compliance scoring. NULL on plain cfg_* readback rows.';
+
+
+--
 -- Name: _hyper_16_321_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -4615,30 +4794,6 @@ INHERITS (public.setpoint_snapshot);
 
 
 ALTER TABLE _timescaledb_internal._hyper_16_321_chunk OWNER TO verdify;
-
---
--- Name: _hyper_16_352_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
---
-
-CREATE TABLE _timescaledb_internal._hyper_16_352_chunk (
-    CONSTRAINT constraint_280 CHECK (((ts >= '2026-02-26 00:00:00+00'::timestamp with time zone) AND (ts < '2026-03-05 00:00:00+00'::timestamp with time zone)))
-)
-INHERITS (public.setpoint_snapshot);
-
-
-ALTER TABLE _timescaledb_internal._hyper_16_352_chunk OWNER TO verdify;
-
---
--- Name: _hyper_16_353_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
---
-
-CREATE TABLE _timescaledb_internal._hyper_16_353_chunk (
-    CONSTRAINT constraint_281 CHECK (((ts >= '2026-03-05 00:00:00+00'::timestamp with time zone) AND (ts < '2026-03-12 00:00:00+00'::timestamp with time zone)))
-)
-INHERITS (public.setpoint_snapshot);
-
-
-ALTER TABLE _timescaledb_internal._hyper_16_353_chunk OWNER TO verdify;
 
 --
 -- Name: _hyper_16_354_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
@@ -4771,6 +4926,30 @@ INHERITS (public.setpoint_snapshot);
 
 
 ALTER TABLE _timescaledb_internal._hyper_16_714_chunk OWNER TO verdify;
+
+--
+-- Name: _hyper_16_747_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_16_747_chunk (
+    CONSTRAINT constraint_636 CHECK (((ts >= '2026-06-04 00:00:00+00'::timestamp with time zone) AND (ts < '2026-06-11 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.setpoint_snapshot);
+
+
+ALTER TABLE _timescaledb_internal._hyper_16_747_chunk OWNER TO verdify;
+
+--
+-- Name: _hyper_16_763_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_16_763_chunk (
+    CONSTRAINT constraint_648 CHECK (((ts >= '2026-06-11 00:00:00+00'::timestamp with time zone) AND (ts < '2026-06-18 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.setpoint_snapshot);
+
+
+ALTER TABLE _timescaledb_internal._hyper_16_763_chunk OWNER TO verdify;
 
 --
 -- Name: forecast_deviation_log; Type: TABLE; Schema: public; Owner: verdify
@@ -4911,6 +5090,30 @@ INHERITS (public.forecast_deviation_log);
 ALTER TABLE _timescaledb_internal._hyper_17_720_chunk OWNER TO verdify;
 
 --
+-- Name: _hyper_17_752_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_17_752_chunk (
+    CONSTRAINT constraint_641 CHECK (((ts >= '2026-06-04 00:00:00+00'::timestamp with time zone) AND (ts < '2026-06-11 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.forecast_deviation_log);
+
+
+ALTER TABLE _timescaledb_internal._hyper_17_752_chunk OWNER TO verdify;
+
+--
+-- Name: _hyper_17_768_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_17_768_chunk (
+    CONSTRAINT constraint_653 CHECK (((ts >= '2026-06-11 00:00:00+00'::timestamp with time zone) AND (ts < '2026-06-18 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.forecast_deviation_log);
+
+
+ALTER TABLE _timescaledb_internal._hyper_17_768_chunk OWNER TO verdify;
+
+--
 -- Name: override_events; Type: TABLE; Schema: public; Owner: verdify
 --
 
@@ -5038,6 +5241,30 @@ INHERITS (public.override_events);
 ALTER TABLE _timescaledb_internal._hyper_19_721_chunk OWNER TO verdify;
 
 --
+-- Name: _hyper_19_751_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_19_751_chunk (
+    CONSTRAINT constraint_640 CHECK (((ts >= '2026-06-04 00:00:00+00'::timestamp with time zone) AND (ts < '2026-06-11 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.override_events);
+
+
+ALTER TABLE _timescaledb_internal._hyper_19_751_chunk OWNER TO verdify;
+
+--
+-- Name: _hyper_19_769_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_19_769_chunk (
+    CONSTRAINT constraint_654 CHECK (((ts >= '2026-06-11 00:00:00+00'::timestamp with time zone) AND (ts < '2026-06-18 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.override_events);
+
+
+ALTER TABLE _timescaledb_internal._hyper_19_769_chunk OWNER TO verdify;
+
+--
 -- Name: climate; Type: TABLE; Schema: public; Owner: verdify
 --
 
@@ -5159,6 +5386,118 @@ COMMENT ON COLUMN public.climate.solar_altitude_deg IS 'Sun angle above horizon 
 --
 
 COMMENT ON COLUMN public.climate.solar_azimuth_deg IS 'Compass bearing of sun in degrees. 0=N, 90=E, 180=S, 270=W.';
+
+
+--
+-- Name: COLUMN climate.solar_phase; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.climate.solar_phase IS 'Firmware-v2 on-chip solar phase in [0,4): 0=sunrise, 1=solar noon, 2=sunset, 3=solar midnight (contract B1). Mirror of fn_solar_phase().';
+
+
+--
+-- Name: COLUMN climate.solar_sunrise_min; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.climate.solar_sunrise_min IS 'Firmware-v2 sunrise time, minutes after local midnight (America/Denver).';
+
+
+--
+-- Name: COLUMN climate.solar_noon_min; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.climate.solar_noon_min IS 'Firmware-v2 solar-noon time, minutes after local midnight (America/Denver).';
+
+
+--
+-- Name: COLUMN climate.solar_sunset_min; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.climate.solar_sunset_min IS 'Firmware-v2 sunset time, minutes after local midnight (America/Denver).';
+
+
+--
+-- Name: COLUMN climate.house_temp_target_f; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.climate.house_temp_target_f IS 'Firmware-v2 on-chip house thermal band target (°F) at the current solar phase.';
+
+
+--
+-- Name: COLUMN climate.house_temp_delta_f; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.climate.house_temp_delta_f IS 'Firmware-v2 on-chip house thermal band half-width (°F): band = target -/+ delta.';
+
+
+--
+-- Name: COLUMN climate.house_vpd_target; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.climate.house_vpd_target IS 'Firmware-v2 on-chip house VPD band target (kPa) at the current solar phase.';
+
+
+--
+-- Name: COLUMN climate.house_vpd_delta; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.climate.house_vpd_delta IS 'Firmware-v2 on-chip house VPD band half-width (kPa): band = target -/+ delta.';
+
+
+--
+-- Name: COLUMN climate.vpd_target_center; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.climate.vpd_target_center IS 'Firmware-v2 on-chip center-zone VPD target (kPa) at the current solar phase.';
+
+
+--
+-- Name: COLUMN climate.vpd_target_south; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.climate.vpd_target_south IS 'Firmware-v2 on-chip south-zone VPD target (kPa) at the current solar phase.';
+
+
+--
+-- Name: COLUMN climate.vpd_target_west; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.climate.vpd_target_west IS 'Firmware-v2 on-chip west-zone VPD target (kPa) at the current solar phase.';
+
+
+--
+-- Name: COLUMN climate.vpd_target_east; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.climate.vpd_target_east IS 'Firmware-v2 on-chip east-zone VPD target (kPa) at the current solar phase.';
+
+
+--
+-- Name: COLUMN climate.vpd_delta_center; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.climate.vpd_delta_center IS 'Firmware-v2 on-chip center-zone VPD band half-width (kPa).';
+
+
+--
+-- Name: COLUMN climate.vpd_delta_south; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.climate.vpd_delta_south IS 'Firmware-v2 on-chip south-zone VPD band half-width (kPa).';
+
+
+--
+-- Name: COLUMN climate.vpd_delta_west; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.climate.vpd_delta_west IS 'Firmware-v2 on-chip west-zone VPD band half-width (kPa).';
+
+
+--
+-- Name: COLUMN climate.vpd_delta_east; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.climate.vpd_delta_east IS 'Firmware-v2 on-chip east-zone VPD band half-width (kPa).';
 
 
 --
@@ -5594,6 +5933,18 @@ INHERITS (public.climate);
 ALTER TABLE _timescaledb_internal._hyper_1_72_chunk OWNER TO verdify;
 
 --
+-- Name: _hyper_1_745_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_1_745_chunk (
+    CONSTRAINT constraint_634 CHECK (((ts >= '2026-06-04 00:00:00+00'::timestamp with time zone) AND (ts < '2026-06-11 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.climate);
+
+
+ALTER TABLE _timescaledb_internal._hyper_1_745_chunk OWNER TO verdify;
+
+--
 -- Name: _hyper_1_74_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -5604,6 +5955,18 @@ INHERITS (public.climate);
 
 
 ALTER TABLE _timescaledb_internal._hyper_1_74_chunk OWNER TO verdify;
+
+--
+-- Name: _hyper_1_761_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_1_761_chunk (
+    CONSTRAINT constraint_646 CHECK (((ts >= '2026-06-11 00:00:00+00'::timestamp with time zone) AND (ts < '2026-06-18 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.climate);
+
+
+ALTER TABLE _timescaledb_internal._hyper_1_761_chunk OWNER TO verdify;
 
 --
 -- Name: _hyper_1_76_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
@@ -5830,6 +6193,30 @@ INHERITS (public.setpoint_clamps);
 
 
 ALTER TABLE _timescaledb_internal._hyper_20_722_chunk OWNER TO verdify;
+
+--
+-- Name: _hyper_20_749_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_20_749_chunk (
+    CONSTRAINT constraint_638 CHECK (((ts >= '2026-06-04 00:00:00+00'::timestamp with time zone) AND (ts < '2026-06-11 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.setpoint_clamps);
+
+
+ALTER TABLE _timescaledb_internal._hyper_20_749_chunk OWNER TO verdify;
+
+--
+-- Name: _hyper_20_766_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_20_766_chunk (
+    CONSTRAINT constraint_651 CHECK (((ts >= '2026-06-11 00:00:00+00'::timestamp with time zone) AND (ts < '2026-06-18 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.setpoint_clamps);
+
+
+ALTER TABLE _timescaledb_internal._hyper_20_766_chunk OWNER TO verdify;
 
 --
 -- Name: gpu_power; Type: TABLE; Schema: public; Owner: verdify
@@ -6082,6 +6469,18 @@ INHERITS (public.gpu_power);
 ALTER TABLE _timescaledb_internal._hyper_21_718_chunk OWNER TO verdify;
 
 --
+-- Name: _hyper_21_750_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_21_750_chunk (
+    CONSTRAINT constraint_639 CHECK (((ts >= '2026-06-04 00:00:00+00'::timestamp with time zone) AND (ts < '2026-06-11 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.gpu_power);
+
+
+ALTER TABLE _timescaledb_internal._hyper_21_750_chunk OWNER TO verdify;
+
+--
 -- Name: infra_cpu; Type: TABLE; Schema: public; Owner: verdify
 --
 
@@ -6305,6 +6704,30 @@ INHERITS (public.infra_cpu);
 ALTER TABLE _timescaledb_internal._hyper_23_719_chunk OWNER TO verdify;
 
 --
+-- Name: _hyper_23_740_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_23_740_chunk (
+    CONSTRAINT constraint_629 CHECK (((ts >= '2026-06-04 00:00:00+00'::timestamp with time zone) AND (ts < '2026-06-11 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.infra_cpu);
+
+
+ALTER TABLE _timescaledb_internal._hyper_23_740_chunk OWNER TO verdify;
+
+--
+-- Name: _hyper_23_767_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_23_767_chunk (
+    CONSTRAINT constraint_652 CHECK (((ts >= '2026-06-11 00:00:00+00'::timestamp with time zone) AND (ts < '2026-06-18 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.infra_cpu);
+
+
+ALTER TABLE _timescaledb_internal._hyper_23_767_chunk OWNER TO verdify;
+
+--
 -- Name: climate_action_log; Type: TABLE; Schema: public; Owner: verdify
 --
 
@@ -6403,6 +6826,30 @@ INHERITS (public.climate_action_log);
 
 
 ALTER TABLE _timescaledb_internal._hyper_26_712_chunk OWNER TO verdify;
+
+--
+-- Name: _hyper_26_743_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_26_743_chunk (
+    CONSTRAINT constraint_632 CHECK (((ts >= '2026-06-04 00:00:00+00'::timestamp with time zone) AND (ts < '2026-06-11 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.climate_action_log);
+
+
+ALTER TABLE _timescaledb_internal._hyper_26_743_chunk OWNER TO verdify;
+
+--
+-- Name: _hyper_26_759_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_26_759_chunk (
+    CONSTRAINT constraint_644 CHECK (((ts >= '2026-06-11 00:00:00+00'::timestamp with time zone) AND (ts < '2026-06-18 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.climate_action_log);
+
+
+ALTER TABLE _timescaledb_internal._hyper_26_759_chunk OWNER TO verdify;
 
 --
 -- Name: equipment_state; Type: TABLE; Schema: public; Owner: verdify
@@ -7331,6 +7778,18 @@ INHERITS (public.equipment_state);
 ALTER TABLE _timescaledb_internal._hyper_2_73_chunk OWNER TO verdify;
 
 --
+-- Name: _hyper_2_742_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_2_742_chunk (
+    CONSTRAINT constraint_631 CHECK (((ts >= '2026-06-04 00:00:00+00'::timestamp with time zone) AND (ts < '2026-06-11 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.equipment_state);
+
+
+ALTER TABLE _timescaledb_internal._hyper_2_742_chunk OWNER TO verdify;
+
+--
 -- Name: _hyper_2_75_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -7341,6 +7800,18 @@ INHERITS (public.equipment_state);
 
 
 ALTER TABLE _timescaledb_internal._hyper_2_75_chunk OWNER TO verdify;
+
+--
+-- Name: _hyper_2_760_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_2_760_chunk (
+    CONSTRAINT constraint_645 CHECK (((ts >= '2026-06-11 00:00:00+00'::timestamp with time zone) AND (ts < '2026-06-18 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.equipment_state);
+
+
+ALTER TABLE _timescaledb_internal._hyper_2_760_chunk OWNER TO verdify;
 
 --
 -- Name: _hyper_2_77_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
@@ -7777,6 +8248,30 @@ INHERITS (public.system_state);
 ALTER TABLE _timescaledb_internal._hyper_3_710_chunk OWNER TO verdify;
 
 --
+-- Name: _hyper_3_741_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_3_741_chunk (
+    CONSTRAINT constraint_630 CHECK (((ts >= '2026-06-04 00:00:00+00'::timestamp with time zone) AND (ts < '2026-06-11 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.system_state);
+
+
+ALTER TABLE _timescaledb_internal._hyper_3_741_chunk OWNER TO verdify;
+
+--
+-- Name: _hyper_3_758_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_3_758_chunk (
+    CONSTRAINT constraint_643 CHECK (((ts >= '2026-06-11 00:00:00+00'::timestamp with time zone) AND (ts < '2026-06-18 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.system_state);
+
+
+ALTER TABLE _timescaledb_internal._hyper_3_758_chunk OWNER TO verdify;
+
+--
 -- Name: _hyper_3_84_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -7923,7 +8418,8 @@ CREATE TABLE public.setpoint_changes (
     trigger_id uuid,
     delivery_status text,
     expired_at timestamp with time zone,
-    superseded_by_ts timestamp with time zone
+    superseded_by_ts timestamp with time zone,
+    zone text
 );
 
 
@@ -7934,6 +8430,13 @@ ALTER TABLE public.setpoint_changes OWNER TO verdify;
 --
 
 COMMENT ON COLUMN public.setpoint_changes.confirmed_at IS 'FW-4 (Sprint 20): set when ingestor setpoint_snapshot sees a matching cfg_* readback from ESP32 within 1% dead-band. NULL = unconfirmed; after 5 min the setpoint_confirmation_monitor task opens a setpoint_unconfirmed alert.';
+
+
+--
+-- Name: COLUMN setpoint_changes.zone; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.setpoint_changes.zone IS 'Zone attribution for per-zone anchor-tunable pushes (contract B7): center|south|west|east, or house. NULL on non-zone-scoped pushes.';
 
 
 --
@@ -8405,6 +8908,30 @@ INHERITS (public.setpoint_changes);
 ALTER TABLE _timescaledb_internal._hyper_4_717_chunk OWNER TO verdify;
 
 --
+-- Name: _hyper_4_744_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_4_744_chunk (
+    CONSTRAINT constraint_633 CHECK (((ts >= '2026-06-04 00:00:00+00'::timestamp with time zone) AND (ts < '2026-06-11 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.setpoint_changes);
+
+
+ALTER TABLE _timescaledb_internal._hyper_4_744_chunk OWNER TO verdify;
+
+--
+-- Name: _hyper_4_765_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_4_765_chunk (
+    CONSTRAINT constraint_650 CHECK (((ts >= '2026-06-11 00:00:00+00'::timestamp with time zone) AND (ts < '2026-06-18 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.setpoint_changes);
+
+
+ALTER TABLE _timescaledb_internal._hyper_4_765_chunk OWNER TO verdify;
+
+--
 -- Name: _hyper_4_89_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -8591,6 +9118,20 @@ COMMENT ON COLUMN public.diagnostics.effective_vpd_hysteresis_kpa IS 'Controller
 --
 
 COMMENT ON COLUMN public.diagnostics.effective_dehum_aggressive_kpa IS 'Controller diagnostic: validated dehumidification aggressive margin in kPa after house-band clamps.';
+
+
+--
+-- Name: COLUMN diagnostics.zone_wet_granted; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.diagnostics.zone_wet_granted IS 'Firmware-v2 evidence surface: which zone the priority arbiter granted wetting to this cycle (or none).';
+
+
+--
+-- Name: COLUMN diagnostics.band_source; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.diagnostics.band_source IS 'Firmware-v2 evidence surface: source of the served band (on-chip solar curve vs other).';
 
 
 --
@@ -8796,6 +9337,30 @@ INHERITS (public.diagnostics);
 
 
 ALTER TABLE _timescaledb_internal._hyper_5_713_chunk OWNER TO verdify;
+
+--
+-- Name: _hyper_5_746_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_5_746_chunk (
+    CONSTRAINT constraint_635 CHECK (((ts >= '2026-06-04 00:00:00+00'::timestamp with time zone) AND (ts < '2026-06-11 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.diagnostics);
+
+
+ALTER TABLE _timescaledb_internal._hyper_5_746_chunk OWNER TO verdify;
+
+--
+-- Name: _hyper_5_762_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_5_762_chunk (
+    CONSTRAINT constraint_647 CHECK (((ts >= '2026-06-11 00:00:00+00'::timestamp with time zone) AND (ts < '2026-06-18 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.diagnostics);
+
+
+ALTER TABLE _timescaledb_internal._hyper_5_762_chunk OWNER TO verdify;
 
 --
 -- Name: energy; Type: TABLE; Schema: public; Owner: verdify
@@ -9343,6 +9908,30 @@ INHERITS (public.energy);
 ALTER TABLE _timescaledb_internal._hyper_6_715_chunk OWNER TO verdify;
 
 --
+-- Name: _hyper_6_748_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_6_748_chunk (
+    CONSTRAINT constraint_637 CHECK (((ts >= '2026-06-04 00:00:00+00'::timestamp with time zone) AND (ts < '2026-06-11 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.energy);
+
+
+ALTER TABLE _timescaledb_internal._hyper_6_748_chunk OWNER TO verdify;
+
+--
+-- Name: _hyper_6_764_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_6_764_chunk (
+    CONSTRAINT constraint_649 CHECK (((ts >= '2026-06-11 00:00:00+00'::timestamp with time zone) AND (ts < '2026-06-18 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.energy);
+
+
+ALTER TABLE _timescaledb_internal._hyper_6_764_chunk OWNER TO verdify;
+
+--
 -- Name: weather_forecast; Type: TABLE; Schema: public; Owner: verdify
 --
 
@@ -9544,6 +10133,42 @@ INHERITS (public.weather_forecast);
 ALTER TABLE _timescaledb_internal._hyper_7_709_chunk OWNER TO verdify;
 
 --
+-- Name: _hyper_7_738_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_7_738_chunk (
+    CONSTRAINT constraint_627 CHECK (((ts >= '2026-06-18 00:00:00+00'::timestamp with time zone) AND (ts < '2026-06-25 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.weather_forecast);
+
+
+ALTER TABLE _timescaledb_internal._hyper_7_738_chunk OWNER TO verdify;
+
+--
+-- Name: _hyper_7_757_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_7_757_chunk (
+    CONSTRAINT constraint_642 CHECK (((ts >= '2026-06-25 00:00:00+00'::timestamp with time zone) AND (ts < '2026-07-02 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.weather_forecast);
+
+
+ALTER TABLE _timescaledb_internal._hyper_7_757_chunk OWNER TO verdify;
+
+--
+-- Name: _hyper_7_776_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal._hyper_7_776_chunk (
+    CONSTRAINT constraint_657 CHECK (((ts >= '2026-07-02 00:00:00+00'::timestamp with time zone) AND (ts < '2026-07-09 00:00:00+00'::timestamp with time zone)))
+)
+INHERITS (public.weather_forecast);
+
+
+ALTER TABLE _timescaledb_internal._hyper_7_776_chunk OWNER TO verdify;
+
+--
 -- Name: esp32_logs; Type: TABLE; Schema: public; Owner: verdify
 --
 
@@ -9556,30 +10181,6 @@ CREATE TABLE public.esp32_logs (
 
 
 ALTER TABLE public.esp32_logs OWNER TO verdify;
-
---
--- Name: _hyper_8_420_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
---
-
-CREATE TABLE _timescaledb_internal._hyper_8_420_chunk (
-    CONSTRAINT constraint_336 CHECK (((ts >= '2026-04-30 00:00:00+00'::timestamp with time zone) AND (ts < '2026-05-07 00:00:00+00'::timestamp with time zone)))
-)
-INHERITS (public.esp32_logs);
-
-
-ALTER TABLE _timescaledb_internal._hyper_8_420_chunk OWNER TO verdify;
-
---
--- Name: _hyper_8_450_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
---
-
-CREATE TABLE _timescaledb_internal._hyper_8_450_chunk (
-    CONSTRAINT constraint_363 CHECK (((ts >= '2026-05-07 00:00:00+00'::timestamp with time zone) AND (ts < '2026-05-14 00:00:00+00'::timestamp with time zone)))
-)
-INHERITS (public.esp32_logs);
-
-
-ALTER TABLE _timescaledb_internal._hyper_8_450_chunk OWNER TO verdify;
 
 --
 -- Name: _hyper_8_470_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
@@ -9760,7 +10361,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_242_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_242_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -9935,7 +10552,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_249_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_249_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -10110,7 +10743,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_253_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_253_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -10285,7 +10934,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_256_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_256_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -10460,7 +11125,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_260_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_260_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -10635,7 +11316,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_263_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_263_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -10810,7 +11507,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_267_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_267_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -10985,7 +11698,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_271_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_271_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -11160,7 +11889,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_275_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_275_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -11335,7 +12080,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_278_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_278_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -11510,7 +12271,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_282_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_282_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -11685,7 +12462,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_285_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_285_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -11860,7 +12653,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_288_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_288_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -12035,7 +12844,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_291_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_291_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -12210,7 +13035,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_292_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_292_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -12385,7 +13226,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_293_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_293_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -12560,7 +13417,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_294_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_294_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -12735,7 +13608,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_295_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_295_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -12910,7 +13799,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_296_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_296_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -13085,7 +13990,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_297_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_297_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -13260,7 +14181,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_298_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_298_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -13435,7 +14372,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_299_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_299_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -13610,7 +14563,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_300_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_300_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -13785,7 +14754,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_301_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_301_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -13960,7 +14945,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_302_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_302_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -14135,7 +15136,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_303_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_303_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -14310,7 +15327,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_304_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_304_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -14485,7 +15518,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_305_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_305_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -14660,7 +15709,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_306_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_306_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -14835,7 +15900,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_307_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_307_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -15010,7 +16091,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_308_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_308_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -15185,7 +16282,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_309_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_309_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -15360,7 +16473,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_320_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_320_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -15535,7 +16664,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_369_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_369_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -15720,7 +16865,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_384_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_384_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -15906,7 +17067,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_399_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_399_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -16092,7 +17269,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_416_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_416_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -16278,7 +17471,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_431_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_431_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -16464,7 +17673,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_458_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_458_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -16650,7 +17875,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_476_chunk (
     intake_rh _timescaledb_internal.compressed_data,
     intake_vpd _timescaledb_internal.compressed_data,
     outdoor_illuminance _timescaledb_internal.compressed_data,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_476_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -16838,7 +18079,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_522_chunk (
     outdoor_illuminance _timescaledb_internal.compressed_data,
     _ts_meta_min_2 text,
     _ts_meta_max_2 text,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_522_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -17030,7 +18287,23 @@ CREATE TABLE _timescaledb_internal.compress_hyper_12_725_chunk (
     outdoor_illuminance _timescaledb_internal.compressed_data,
     _ts_meta_min_2 text,
     _ts_meta_max_2 text,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_725_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -17128,6 +18401,431 @@ ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_725_chunk ALTER COLUMN 
 
 
 ALTER TABLE _timescaledb_internal.compress_hyper_12_725_chunk OWNER TO verdify;
+
+--
+-- Name: compress_hyper_12_755_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal.compress_hyper_12_755_chunk (
+    _ts_meta_count integer,
+    lightning_avg_dist_mi double precision,
+    _ts_meta_min_1 timestamp with time zone,
+    _ts_meta_max_1 timestamp with time zone,
+    ts _timescaledb_internal.compressed_data,
+    temp_avg _timescaledb_internal.compressed_data,
+    temp_north _timescaledb_internal.compressed_data,
+    temp_south _timescaledb_internal.compressed_data,
+    temp_east _timescaledb_internal.compressed_data,
+    temp_west _timescaledb_internal.compressed_data,
+    temp_case _timescaledb_internal.compressed_data,
+    temp_control _timescaledb_internal.compressed_data,
+    temp_intake _timescaledb_internal.compressed_data,
+    rh_avg _timescaledb_internal.compressed_data,
+    rh_north _timescaledb_internal.compressed_data,
+    rh_south _timescaledb_internal.compressed_data,
+    rh_east _timescaledb_internal.compressed_data,
+    rh_west _timescaledb_internal.compressed_data,
+    rh_case _timescaledb_internal.compressed_data,
+    vpd_avg _timescaledb_internal.compressed_data,
+    vpd_north _timescaledb_internal.compressed_data,
+    vpd_south _timescaledb_internal.compressed_data,
+    vpd_east _timescaledb_internal.compressed_data,
+    vpd_west _timescaledb_internal.compressed_data,
+    vpd_control _timescaledb_internal.compressed_data,
+    dew_point _timescaledb_internal.compressed_data,
+    abs_humidity _timescaledb_internal.compressed_data,
+    enthalpy_delta _timescaledb_internal.compressed_data,
+    co2_ppm _timescaledb_internal.compressed_data,
+    lux _timescaledb_internal.compressed_data,
+    dli_today _timescaledb_internal.compressed_data,
+    flow_gpm _timescaledb_internal.compressed_data,
+    water_total_gal _timescaledb_internal.compressed_data,
+    mister_water_today _timescaledb_internal.compressed_data,
+    outdoor_temp_f _timescaledb_internal.compressed_data,
+    outdoor_rh_pct _timescaledb_internal.compressed_data,
+    ph_input _timescaledb_internal.compressed_data,
+    ec_input _timescaledb_internal.compressed_data,
+    ph_runoff_wall _timescaledb_internal.compressed_data,
+    ec_runoff_wall _timescaledb_internal.compressed_data,
+    ph_runoff_center _timescaledb_internal.compressed_data,
+    ec_runoff_center _timescaledb_internal.compressed_data,
+    moisture_north _timescaledb_internal.compressed_data,
+    moisture_south _timescaledb_internal.compressed_data,
+    moisture_center _timescaledb_internal.compressed_data,
+    ppfd _timescaledb_internal.compressed_data,
+    dli_par_today _timescaledb_internal.compressed_data,
+    pressure_hpa _timescaledb_internal.compressed_data,
+    leaf_temp_north _timescaledb_internal.compressed_data,
+    leaf_temp_south _timescaledb_internal.compressed_data,
+    leaf_wetness_north _timescaledb_internal.compressed_data,
+    leaf_wetness_south _timescaledb_internal.compressed_data,
+    wind_speed_mph _timescaledb_internal.compressed_data,
+    wind_direction_deg _timescaledb_internal.compressed_data,
+    outdoor_lux _timescaledb_internal.compressed_data,
+    solar_irradiance_w_m2 _timescaledb_internal.compressed_data,
+    precip_in _timescaledb_internal.compressed_data,
+    uv_index _timescaledb_internal.compressed_data,
+    hydro_tds_ppm _timescaledb_internal.compressed_data,
+    hydro_water_temp_f _timescaledb_internal.compressed_data,
+    wind_gust_mph _timescaledb_internal.compressed_data,
+    wind_lull_mph _timescaledb_internal.compressed_data,
+    wind_speed_avg_mph _timescaledb_internal.compressed_data,
+    wind_direction_avg_deg _timescaledb_internal.compressed_data,
+    feels_like_f _timescaledb_internal.compressed_data,
+    wet_bulb_temp_f _timescaledb_internal.compressed_data,
+    vapor_pressure_inhg _timescaledb_internal.compressed_data,
+    air_density_kg_m3 _timescaledb_internal.compressed_data,
+    precip_intensity_in_h _timescaledb_internal.compressed_data,
+    lightning_count _timescaledb_internal.compressed_data,
+    solar_altitude_deg _timescaledb_internal.compressed_data,
+    solar_azimuth_deg _timescaledb_internal.compressed_data,
+    hydro_ec_us_cm _timescaledb_internal.compressed_data,
+    hydro_orp_mv _timescaledb_internal.compressed_data,
+    hydro_ph _timescaledb_internal.compressed_data,
+    hydro_battery_pct _timescaledb_internal.compressed_data,
+    soil_moisture_south_1 _timescaledb_internal.compressed_data,
+    soil_temp_south_1 _timescaledb_internal.compressed_data,
+    soil_ec_south_1 _timescaledb_internal.compressed_data,
+    soil_moisture_south_2 _timescaledb_internal.compressed_data,
+    soil_temp_south_2 _timescaledb_internal.compressed_data,
+    soil_moisture_west _timescaledb_internal.compressed_data,
+    soil_temp_west _timescaledb_internal.compressed_data,
+    intake_rh _timescaledb_internal.compressed_data,
+    intake_vpd _timescaledb_internal.compressed_data,
+    outdoor_illuminance _timescaledb_internal.compressed_data,
+    _ts_meta_min_2 text,
+    _ts_meta_max_2 text,
+    greenhouse_id _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
+)
+WITH (toast_tuple_target='128');
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN lightning_avg_dist_mi SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN _ts_meta_min_1 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN _ts_meta_max_1 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN ts SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN temp_avg SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN temp_north SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN temp_south SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN temp_east SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN temp_west SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN temp_case SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN temp_control SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN temp_intake SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN rh_avg SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN rh_north SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN rh_south SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN rh_east SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN rh_west SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN rh_case SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN vpd_avg SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN vpd_north SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN vpd_south SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN vpd_east SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN vpd_west SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN vpd_control SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN dew_point SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN abs_humidity SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN enthalpy_delta SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN co2_ppm SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN lux SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN dli_today SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN flow_gpm SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN water_total_gal SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN mister_water_today SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN outdoor_temp_f SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN outdoor_rh_pct SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN ph_input SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN ec_input SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN ph_runoff_wall SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN ec_runoff_wall SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN ph_runoff_center SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN ec_runoff_center SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN moisture_north SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN moisture_south SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN moisture_center SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN ppfd SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN dli_par_today SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN pressure_hpa SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN leaf_temp_north SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN leaf_temp_south SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN leaf_wetness_north SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN leaf_wetness_south SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN wind_speed_mph SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN wind_direction_deg SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN outdoor_lux SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN solar_irradiance_w_m2 SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN precip_in SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN uv_index SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN hydro_tds_ppm SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN hydro_water_temp_f SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN wind_gust_mph SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN wind_lull_mph SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN wind_speed_avg_mph SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN wind_direction_avg_deg SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN feels_like_f SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN wet_bulb_temp_f SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN vapor_pressure_inhg SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN air_density_kg_m3 SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN precip_intensity_in_h SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN lightning_count SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN solar_altitude_deg SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN solar_azimuth_deg SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN hydro_ec_us_cm SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN hydro_orp_mv SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN hydro_ph SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN hydro_battery_pct SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN soil_moisture_south_1 SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN soil_temp_south_1 SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN soil_ec_south_1 SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN soil_moisture_south_2 SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN soil_temp_south_2 SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN soil_moisture_west SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN soil_temp_west SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN intake_rh SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN intake_vpd SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN outdoor_illuminance SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN _ts_meta_min_2 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN _ts_meta_min_2 SET STORAGE PLAIN;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN _ts_meta_max_2 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN _ts_meta_max_2 SET STORAGE PLAIN;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN greenhouse_id SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_755_chunk ALTER COLUMN greenhouse_id SET STORAGE EXTENDED;
+
+
+ALTER TABLE _timescaledb_internal.compress_hyper_12_755_chunk OWNER TO verdify;
+
+--
+-- Name: compress_hyper_12_772_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal.compress_hyper_12_772_chunk (
+    _ts_meta_count integer,
+    greenhouse_id text,
+    _ts_meta_min_1 timestamp with time zone,
+    _ts_meta_max_1 timestamp with time zone,
+    ts _timescaledb_internal.compressed_data,
+    temp_avg _timescaledb_internal.compressed_data,
+    temp_north _timescaledb_internal.compressed_data,
+    temp_south _timescaledb_internal.compressed_data,
+    temp_east _timescaledb_internal.compressed_data,
+    temp_west _timescaledb_internal.compressed_data,
+    temp_case _timescaledb_internal.compressed_data,
+    temp_control _timescaledb_internal.compressed_data,
+    temp_intake _timescaledb_internal.compressed_data,
+    rh_avg _timescaledb_internal.compressed_data,
+    rh_north _timescaledb_internal.compressed_data,
+    rh_south _timescaledb_internal.compressed_data,
+    rh_east _timescaledb_internal.compressed_data,
+    rh_west _timescaledb_internal.compressed_data,
+    rh_case _timescaledb_internal.compressed_data,
+    vpd_avg _timescaledb_internal.compressed_data,
+    vpd_north _timescaledb_internal.compressed_data,
+    vpd_south _timescaledb_internal.compressed_data,
+    vpd_east _timescaledb_internal.compressed_data,
+    vpd_west _timescaledb_internal.compressed_data,
+    vpd_control _timescaledb_internal.compressed_data,
+    dew_point _timescaledb_internal.compressed_data,
+    abs_humidity _timescaledb_internal.compressed_data,
+    enthalpy_delta _timescaledb_internal.compressed_data,
+    co2_ppm _timescaledb_internal.compressed_data,
+    lux _timescaledb_internal.compressed_data,
+    dli_today _timescaledb_internal.compressed_data,
+    flow_gpm _timescaledb_internal.compressed_data,
+    water_total_gal _timescaledb_internal.compressed_data,
+    mister_water_today _timescaledb_internal.compressed_data,
+    outdoor_temp_f _timescaledb_internal.compressed_data,
+    outdoor_rh_pct _timescaledb_internal.compressed_data,
+    ph_input _timescaledb_internal.compressed_data,
+    ec_input _timescaledb_internal.compressed_data,
+    ph_runoff_wall _timescaledb_internal.compressed_data,
+    ec_runoff_wall _timescaledb_internal.compressed_data,
+    ph_runoff_center _timescaledb_internal.compressed_data,
+    ec_runoff_center _timescaledb_internal.compressed_data,
+    moisture_north _timescaledb_internal.compressed_data,
+    moisture_south _timescaledb_internal.compressed_data,
+    moisture_center _timescaledb_internal.compressed_data,
+    ppfd _timescaledb_internal.compressed_data,
+    dli_par_today _timescaledb_internal.compressed_data,
+    pressure_hpa _timescaledb_internal.compressed_data,
+    leaf_temp_north _timescaledb_internal.compressed_data,
+    leaf_temp_south _timescaledb_internal.compressed_data,
+    leaf_wetness_north _timescaledb_internal.compressed_data,
+    leaf_wetness_south _timescaledb_internal.compressed_data,
+    wind_speed_mph _timescaledb_internal.compressed_data,
+    wind_direction_deg _timescaledb_internal.compressed_data,
+    outdoor_lux _timescaledb_internal.compressed_data,
+    solar_irradiance_w_m2 _timescaledb_internal.compressed_data,
+    precip_in _timescaledb_internal.compressed_data,
+    uv_index _timescaledb_internal.compressed_data,
+    hydro_tds_ppm _timescaledb_internal.compressed_data,
+    hydro_water_temp_f _timescaledb_internal.compressed_data,
+    wind_gust_mph _timescaledb_internal.compressed_data,
+    wind_lull_mph _timescaledb_internal.compressed_data,
+    wind_speed_avg_mph _timescaledb_internal.compressed_data,
+    wind_direction_avg_deg _timescaledb_internal.compressed_data,
+    feels_like_f _timescaledb_internal.compressed_data,
+    wet_bulb_temp_f _timescaledb_internal.compressed_data,
+    vapor_pressure_inhg _timescaledb_internal.compressed_data,
+    air_density_kg_m3 _timescaledb_internal.compressed_data,
+    precip_intensity_in_h _timescaledb_internal.compressed_data,
+    lightning_count _timescaledb_internal.compressed_data,
+    lightning_avg_dist_mi _timescaledb_internal.compressed_data,
+    solar_altitude_deg _timescaledb_internal.compressed_data,
+    solar_azimuth_deg _timescaledb_internal.compressed_data,
+    hydro_ec_us_cm _timescaledb_internal.compressed_data,
+    hydro_orp_mv _timescaledb_internal.compressed_data,
+    hydro_ph _timescaledb_internal.compressed_data,
+    hydro_battery_pct _timescaledb_internal.compressed_data,
+    soil_moisture_south_1 _timescaledb_internal.compressed_data,
+    soil_temp_south_1 _timescaledb_internal.compressed_data,
+    soil_ec_south_1 _timescaledb_internal.compressed_data,
+    soil_moisture_south_2 _timescaledb_internal.compressed_data,
+    soil_temp_south_2 _timescaledb_internal.compressed_data,
+    soil_moisture_west _timescaledb_internal.compressed_data,
+    soil_temp_west _timescaledb_internal.compressed_data,
+    intake_rh _timescaledb_internal.compressed_data,
+    intake_vpd _timescaledb_internal.compressed_data,
+    outdoor_illuminance _timescaledb_internal.compressed_data,
+    solar_phase _timescaledb_internal.compressed_data,
+    solar_sunrise_min _timescaledb_internal.compressed_data,
+    solar_noon_min _timescaledb_internal.compressed_data,
+    solar_sunset_min _timescaledb_internal.compressed_data,
+    house_temp_target_f _timescaledb_internal.compressed_data,
+    house_temp_delta_f _timescaledb_internal.compressed_data,
+    house_vpd_target _timescaledb_internal.compressed_data,
+    house_vpd_delta _timescaledb_internal.compressed_data,
+    vpd_target_center _timescaledb_internal.compressed_data,
+    vpd_target_south _timescaledb_internal.compressed_data,
+    vpd_target_west _timescaledb_internal.compressed_data,
+    vpd_target_east _timescaledb_internal.compressed_data,
+    vpd_delta_center _timescaledb_internal.compressed_data,
+    vpd_delta_south _timescaledb_internal.compressed_data,
+    vpd_delta_west _timescaledb_internal.compressed_data,
+    vpd_delta_east _timescaledb_internal.compressed_data
+)
+WITH (toast_tuple_target='128');
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN greenhouse_id SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN _ts_meta_min_1 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN _ts_meta_max_1 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN ts SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN temp_avg SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN temp_north SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN temp_south SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN temp_east SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN temp_west SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN temp_case SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN temp_control SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN temp_intake SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN rh_avg SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN rh_north SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN rh_south SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN rh_east SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN rh_west SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN rh_case SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN vpd_avg SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN vpd_north SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN vpd_south SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN vpd_east SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN vpd_west SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN vpd_control SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN dew_point SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN abs_humidity SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN enthalpy_delta SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN co2_ppm SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN lux SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN dli_today SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN flow_gpm SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN water_total_gal SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN mister_water_today SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN outdoor_temp_f SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN outdoor_rh_pct SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN ph_input SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN ec_input SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN ph_runoff_wall SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN ec_runoff_wall SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN ph_runoff_center SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN ec_runoff_center SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN moisture_north SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN moisture_south SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN moisture_center SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN ppfd SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN dli_par_today SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN pressure_hpa SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN leaf_temp_north SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN leaf_temp_south SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN leaf_wetness_north SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN leaf_wetness_south SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN wind_speed_mph SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN wind_direction_deg SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN outdoor_lux SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN solar_irradiance_w_m2 SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN precip_in SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN uv_index SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN hydro_tds_ppm SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN hydro_water_temp_f SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN wind_gust_mph SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN wind_lull_mph SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN wind_speed_avg_mph SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN wind_direction_avg_deg SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN feels_like_f SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN wet_bulb_temp_f SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN vapor_pressure_inhg SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN air_density_kg_m3 SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN precip_intensity_in_h SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN lightning_count SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN lightning_avg_dist_mi SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN solar_altitude_deg SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN solar_azimuth_deg SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN hydro_ec_us_cm SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN hydro_orp_mv SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN hydro_ph SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN hydro_battery_pct SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN soil_moisture_south_1 SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN soil_temp_south_1 SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN soil_ec_south_1 SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN soil_moisture_south_2 SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN soil_temp_south_2 SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN soil_moisture_west SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN soil_temp_west SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN intake_rh SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN intake_vpd SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN outdoor_illuminance SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN solar_phase SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN solar_sunrise_min SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN solar_noon_min SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN solar_sunset_min SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN house_temp_target_f SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN house_temp_delta_f SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN house_vpd_target SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN house_vpd_delta SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN vpd_target_center SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN vpd_target_south SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN vpd_target_west SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN vpd_target_east SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN vpd_delta_center SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN vpd_delta_south SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN vpd_delta_west SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_12_772_chunk ALTER COLUMN vpd_delta_east SET STATISTICS 0;
+
+
+ALTER TABLE _timescaledb_internal.compress_hyper_12_772_chunk OWNER TO verdify;
 
 --
 -- Name: compress_hyper_13_243_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
@@ -18440,6 +20138,70 @@ ALTER TABLE ONLY _timescaledb_internal.compress_hyper_13_724_chunk ALTER COLUMN 
 ALTER TABLE _timescaledb_internal.compress_hyper_13_724_chunk OWNER TO verdify;
 
 --
+-- Name: compress_hyper_13_753_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal.compress_hyper_13_753_chunk (
+    _ts_meta_count integer,
+    _ts_meta_min_1 timestamp with time zone,
+    _ts_meta_max_1 timestamp with time zone,
+    ts _timescaledb_internal.compressed_data,
+    watts_total _timescaledb_internal.compressed_data,
+    watts_heat _timescaledb_internal.compressed_data,
+    watts_fans _timescaledb_internal.compressed_data,
+    watts_other _timescaledb_internal.compressed_data,
+    kwh_today _timescaledb_internal.compressed_data,
+    greenhouse_id _timescaledb_internal.compressed_data
+)
+WITH (toast_tuple_target='128');
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_13_753_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_13_753_chunk ALTER COLUMN _ts_meta_min_1 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_13_753_chunk ALTER COLUMN _ts_meta_max_1 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_13_753_chunk ALTER COLUMN ts SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_13_753_chunk ALTER COLUMN watts_total SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_13_753_chunk ALTER COLUMN watts_heat SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_13_753_chunk ALTER COLUMN watts_fans SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_13_753_chunk ALTER COLUMN watts_other SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_13_753_chunk ALTER COLUMN kwh_today SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_13_753_chunk ALTER COLUMN greenhouse_id SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_13_753_chunk ALTER COLUMN greenhouse_id SET STORAGE EXTENDED;
+
+
+ALTER TABLE _timescaledb_internal.compress_hyper_13_753_chunk OWNER TO verdify;
+
+--
+-- Name: compress_hyper_13_773_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal.compress_hyper_13_773_chunk (
+    _ts_meta_count integer,
+    _ts_meta_min_1 timestamp with time zone,
+    _ts_meta_max_1 timestamp with time zone,
+    ts _timescaledb_internal.compressed_data,
+    watts_total _timescaledb_internal.compressed_data,
+    watts_heat _timescaledb_internal.compressed_data,
+    watts_fans _timescaledb_internal.compressed_data,
+    watts_other _timescaledb_internal.compressed_data,
+    kwh_today _timescaledb_internal.compressed_data,
+    greenhouse_id _timescaledb_internal.compressed_data
+)
+WITH (toast_tuple_target='128');
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_13_773_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_13_773_chunk ALTER COLUMN _ts_meta_min_1 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_13_773_chunk ALTER COLUMN _ts_meta_max_1 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_13_773_chunk ALTER COLUMN ts SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_13_773_chunk ALTER COLUMN watts_total SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_13_773_chunk ALTER COLUMN watts_heat SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_13_773_chunk ALTER COLUMN watts_fans SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_13_773_chunk ALTER COLUMN watts_other SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_13_773_chunk ALTER COLUMN kwh_today SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_13_773_chunk ALTER COLUMN greenhouse_id SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_13_773_chunk ALTER COLUMN greenhouse_id SET STORAGE EXTENDED;
+
+
+ALTER TABLE _timescaledb_internal.compress_hyper_13_773_chunk OWNER TO verdify;
+
+--
 -- Name: compress_hyper_14_241_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -18472,7 +20234,9 @@ CREATE TABLE _timescaledb_internal.compress_hyper_14_241_chunk (
     effective_heat_target_f _timescaledb_internal.compressed_data,
     effective_cool_stage2_delta_f _timescaledb_internal.compressed_data,
     effective_vpd_hysteresis_kpa _timescaledb_internal.compressed_data,
-    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data
+    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data,
+    zone_wet_granted _timescaledb_internal.compressed_data,
+    band_source _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_241_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -18488,6 +20252,8 @@ ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_241_chunk ALTER COLUMN 
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_241_chunk ALTER COLUMN reset_reason SET STORAGE EXTENDED;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_241_chunk ALTER COLUMN greenhouse_id SET STORAGE EXTENDED;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_241_chunk ALTER COLUMN firmware_version SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_241_chunk ALTER COLUMN zone_wet_granted SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_241_chunk ALTER COLUMN band_source SET STORAGE EXTENDED;
 
 
 ALTER TABLE _timescaledb_internal.compress_hyper_14_241_chunk OWNER TO verdify;
@@ -18525,7 +20291,9 @@ CREATE TABLE _timescaledb_internal.compress_hyper_14_244_chunk (
     effective_heat_target_f _timescaledb_internal.compressed_data,
     effective_cool_stage2_delta_f _timescaledb_internal.compressed_data,
     effective_vpd_hysteresis_kpa _timescaledb_internal.compressed_data,
-    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data
+    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data,
+    zone_wet_granted _timescaledb_internal.compressed_data,
+    band_source _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_244_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -18541,6 +20309,8 @@ ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_244_chunk ALTER COLUMN 
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_244_chunk ALTER COLUMN reset_reason SET STORAGE EXTENDED;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_244_chunk ALTER COLUMN greenhouse_id SET STORAGE EXTENDED;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_244_chunk ALTER COLUMN firmware_version SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_244_chunk ALTER COLUMN zone_wet_granted SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_244_chunk ALTER COLUMN band_source SET STORAGE EXTENDED;
 
 
 ALTER TABLE _timescaledb_internal.compress_hyper_14_244_chunk OWNER TO verdify;
@@ -18578,7 +20348,9 @@ CREATE TABLE _timescaledb_internal.compress_hyper_14_246_chunk (
     effective_heat_target_f _timescaledb_internal.compressed_data,
     effective_cool_stage2_delta_f _timescaledb_internal.compressed_data,
     effective_vpd_hysteresis_kpa _timescaledb_internal.compressed_data,
-    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data
+    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data,
+    zone_wet_granted _timescaledb_internal.compressed_data,
+    band_source _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_246_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -18594,6 +20366,8 @@ ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_246_chunk ALTER COLUMN 
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_246_chunk ALTER COLUMN reset_reason SET STORAGE EXTENDED;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_246_chunk ALTER COLUMN greenhouse_id SET STORAGE EXTENDED;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_246_chunk ALTER COLUMN firmware_version SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_246_chunk ALTER COLUMN zone_wet_granted SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_246_chunk ALTER COLUMN band_source SET STORAGE EXTENDED;
 
 
 ALTER TABLE _timescaledb_internal.compress_hyper_14_246_chunk OWNER TO verdify;
@@ -18631,7 +20405,9 @@ CREATE TABLE _timescaledb_internal.compress_hyper_14_247_chunk (
     effective_heat_target_f _timescaledb_internal.compressed_data,
     effective_cool_stage2_delta_f _timescaledb_internal.compressed_data,
     effective_vpd_hysteresis_kpa _timescaledb_internal.compressed_data,
-    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data
+    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data,
+    zone_wet_granted _timescaledb_internal.compressed_data,
+    band_source _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_247_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -18647,6 +20423,8 @@ ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_247_chunk ALTER COLUMN 
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_247_chunk ALTER COLUMN reset_reason SET STORAGE EXTENDED;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_247_chunk ALTER COLUMN greenhouse_id SET STORAGE EXTENDED;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_247_chunk ALTER COLUMN firmware_version SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_247_chunk ALTER COLUMN zone_wet_granted SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_247_chunk ALTER COLUMN band_source SET STORAGE EXTENDED;
 
 
 ALTER TABLE _timescaledb_internal.compress_hyper_14_247_chunk OWNER TO verdify;
@@ -18684,7 +20462,9 @@ CREATE TABLE _timescaledb_internal.compress_hyper_14_250_chunk (
     effective_heat_target_f _timescaledb_internal.compressed_data,
     effective_cool_stage2_delta_f _timescaledb_internal.compressed_data,
     effective_vpd_hysteresis_kpa _timescaledb_internal.compressed_data,
-    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data
+    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data,
+    zone_wet_granted _timescaledb_internal.compressed_data,
+    band_source _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_250_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -18700,6 +20480,8 @@ ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_250_chunk ALTER COLUMN 
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_250_chunk ALTER COLUMN reset_reason SET STORAGE EXTENDED;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_250_chunk ALTER COLUMN greenhouse_id SET STORAGE EXTENDED;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_250_chunk ALTER COLUMN firmware_version SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_250_chunk ALTER COLUMN zone_wet_granted SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_250_chunk ALTER COLUMN band_source SET STORAGE EXTENDED;
 
 
 ALTER TABLE _timescaledb_internal.compress_hyper_14_250_chunk OWNER TO verdify;
@@ -18737,7 +20519,9 @@ CREATE TABLE _timescaledb_internal.compress_hyper_14_318_chunk (
     effective_heat_target_f _timescaledb_internal.compressed_data,
     effective_cool_stage2_delta_f _timescaledb_internal.compressed_data,
     effective_vpd_hysteresis_kpa _timescaledb_internal.compressed_data,
-    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data
+    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data,
+    zone_wet_granted _timescaledb_internal.compressed_data,
+    band_source _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_318_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -18753,6 +20537,8 @@ ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_318_chunk ALTER COLUMN 
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_318_chunk ALTER COLUMN reset_reason SET STORAGE EXTENDED;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_318_chunk ALTER COLUMN greenhouse_id SET STORAGE EXTENDED;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_318_chunk ALTER COLUMN firmware_version SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_318_chunk ALTER COLUMN zone_wet_granted SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_318_chunk ALTER COLUMN band_source SET STORAGE EXTENDED;
 
 
 ALTER TABLE _timescaledb_internal.compress_hyper_14_318_chunk OWNER TO verdify;
@@ -18790,7 +20576,9 @@ CREATE TABLE _timescaledb_internal.compress_hyper_14_367_chunk (
     effective_heat_target_f _timescaledb_internal.compressed_data,
     effective_cool_stage2_delta_f _timescaledb_internal.compressed_data,
     effective_vpd_hysteresis_kpa _timescaledb_internal.compressed_data,
-    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data
+    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data,
+    zone_wet_granted _timescaledb_internal.compressed_data,
+    band_source _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_367_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -18806,6 +20594,8 @@ ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_367_chunk ALTER COLUMN 
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_367_chunk ALTER COLUMN reset_reason SET STORAGE EXTENDED;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_367_chunk ALTER COLUMN greenhouse_id SET STORAGE EXTENDED;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_367_chunk ALTER COLUMN firmware_version SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_367_chunk ALTER COLUMN zone_wet_granted SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_367_chunk ALTER COLUMN band_source SET STORAGE EXTENDED;
 
 
 ALTER TABLE _timescaledb_internal.compress_hyper_14_367_chunk OWNER TO verdify;
@@ -18843,7 +20633,9 @@ CREATE TABLE _timescaledb_internal.compress_hyper_14_382_chunk (
     effective_heat_target_f _timescaledb_internal.compressed_data,
     effective_cool_stage2_delta_f _timescaledb_internal.compressed_data,
     effective_vpd_hysteresis_kpa _timescaledb_internal.compressed_data,
-    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data
+    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data,
+    zone_wet_granted _timescaledb_internal.compressed_data,
+    band_source _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_382_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -18860,6 +20652,8 @@ ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_382_chunk ALTER COLUMN 
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_382_chunk ALTER COLUMN greenhouse_id SET STATISTICS 0;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_382_chunk ALTER COLUMN greenhouse_id SET STORAGE EXTENDED;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_382_chunk ALTER COLUMN firmware_version SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_382_chunk ALTER COLUMN zone_wet_granted SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_382_chunk ALTER COLUMN band_source SET STORAGE EXTENDED;
 
 
 ALTER TABLE _timescaledb_internal.compress_hyper_14_382_chunk OWNER TO verdify;
@@ -18899,7 +20693,9 @@ CREATE TABLE _timescaledb_internal.compress_hyper_14_397_chunk (
     effective_heat_target_f _timescaledb_internal.compressed_data,
     effective_cool_stage2_delta_f _timescaledb_internal.compressed_data,
     effective_vpd_hysteresis_kpa _timescaledb_internal.compressed_data,
-    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data
+    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data,
+    zone_wet_granted _timescaledb_internal.compressed_data,
+    band_source _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_397_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -18921,6 +20717,8 @@ ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_397_chunk ALTER COLUMN 
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_397_chunk ALTER COLUMN _ts_meta_max_2 SET STORAGE PLAIN;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_397_chunk ALTER COLUMN firmware_version SET STATISTICS 0;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_397_chunk ALTER COLUMN firmware_version SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_397_chunk ALTER COLUMN zone_wet_granted SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_397_chunk ALTER COLUMN band_source SET STORAGE EXTENDED;
 
 
 ALTER TABLE _timescaledb_internal.compress_hyper_14_397_chunk OWNER TO verdify;
@@ -18964,7 +20762,9 @@ CREATE TABLE _timescaledb_internal.compress_hyper_14_414_chunk (
     effective_heat_target_f _timescaledb_internal.compressed_data,
     effective_cool_stage2_delta_f _timescaledb_internal.compressed_data,
     effective_vpd_hysteresis_kpa _timescaledb_internal.compressed_data,
-    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data
+    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data,
+    zone_wet_granted _timescaledb_internal.compressed_data,
+    band_source _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_414_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -18993,6 +20793,8 @@ ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_414_chunk ALTER COLUMN 
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_414_chunk ALTER COLUMN _ts_meta_max_4 SET STATISTICS 1000;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_414_chunk ALTER COLUMN relief_cycle_count SET STATISTICS 0;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_414_chunk ALTER COLUMN vent_latch_timer_s SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_414_chunk ALTER COLUMN zone_wet_granted SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_414_chunk ALTER COLUMN band_source SET STORAGE EXTENDED;
 
 
 ALTER TABLE _timescaledb_internal.compress_hyper_14_414_chunk OWNER TO verdify;
@@ -19040,7 +20842,9 @@ CREATE TABLE _timescaledb_internal.compress_hyper_14_429_chunk (
     effective_heat_target_f _timescaledb_internal.compressed_data,
     effective_cool_stage2_delta_f _timescaledb_internal.compressed_data,
     effective_vpd_hysteresis_kpa _timescaledb_internal.compressed_data,
-    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data
+    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data,
+    zone_wet_granted _timescaledb_internal.compressed_data,
+    band_source _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_429_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -19077,6 +20881,8 @@ ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_429_chunk ALTER COLUMN 
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_429_chunk ALTER COLUMN _ts_meta_min_6 SET STATISTICS 1000;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_429_chunk ALTER COLUMN _ts_meta_max_6 SET STATISTICS 1000;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_429_chunk ALTER COLUMN vent_mist_assist_active SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_429_chunk ALTER COLUMN zone_wet_granted SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_429_chunk ALTER COLUMN band_source SET STORAGE EXTENDED;
 
 
 ALTER TABLE _timescaledb_internal.compress_hyper_14_429_chunk OWNER TO verdify;
@@ -19128,7 +20934,9 @@ CREATE TABLE _timescaledb_internal.compress_hyper_14_456_chunk (
     effective_heat_target_f _timescaledb_internal.compressed_data,
     effective_cool_stage2_delta_f _timescaledb_internal.compressed_data,
     effective_vpd_hysteresis_kpa _timescaledb_internal.compressed_data,
-    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data
+    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data,
+    zone_wet_granted _timescaledb_internal.compressed_data,
+    band_source _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_456_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -19171,6 +20979,8 @@ ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_456_chunk ALTER COLUMN 
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_456_chunk ALTER COLUMN _ts_meta_min_8 SET STATISTICS 1000;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_456_chunk ALTER COLUMN _ts_meta_max_8 SET STATISTICS 1000;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_456_chunk ALTER COLUMN heap_largest_free_block_kb SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_456_chunk ALTER COLUMN zone_wet_granted SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_456_chunk ALTER COLUMN band_source SET STORAGE EXTENDED;
 
 
 ALTER TABLE _timescaledb_internal.compress_hyper_14_456_chunk OWNER TO verdify;
@@ -19222,7 +21032,9 @@ CREATE TABLE _timescaledb_internal.compress_hyper_14_474_chunk (
     effective_heat_target_f _timescaledb_internal.compressed_data,
     effective_cool_stage2_delta_f _timescaledb_internal.compressed_data,
     effective_vpd_hysteresis_kpa _timescaledb_internal.compressed_data,
-    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data
+    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data,
+    zone_wet_granted _timescaledb_internal.compressed_data,
+    band_source _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_474_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -19265,6 +21077,8 @@ ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_474_chunk ALTER COLUMN 
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_474_chunk ALTER COLUMN _ts_meta_min_8 SET STATISTICS 1000;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_474_chunk ALTER COLUMN _ts_meta_max_8 SET STATISTICS 1000;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_474_chunk ALTER COLUMN heap_largest_free_block_kb SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_474_chunk ALTER COLUMN zone_wet_granted SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_474_chunk ALTER COLUMN band_source SET STORAGE EXTENDED;
 
 
 ALTER TABLE _timescaledb_internal.compress_hyper_14_474_chunk OWNER TO verdify;
@@ -19316,7 +21130,9 @@ CREATE TABLE _timescaledb_internal.compress_hyper_14_520_chunk (
     effective_heat_target_f _timescaledb_internal.compressed_data,
     effective_cool_stage2_delta_f _timescaledb_internal.compressed_data,
     effective_vpd_hysteresis_kpa _timescaledb_internal.compressed_data,
-    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data
+    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data,
+    zone_wet_granted _timescaledb_internal.compressed_data,
+    band_source _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_520_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -19364,6 +21180,8 @@ ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_520_chunk ALTER COLUMN 
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_520_chunk ALTER COLUMN sntp_valid SET STATISTICS 0;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_520_chunk ALTER COLUMN sntp_miss_count SET STATISTICS 0;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_520_chunk ALTER COLUMN last_sntp_sync_age_s SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_520_chunk ALTER COLUMN zone_wet_granted SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_520_chunk ALTER COLUMN band_source SET STORAGE EXTENDED;
 
 
 ALTER TABLE _timescaledb_internal.compress_hyper_14_520_chunk OWNER TO verdify;
@@ -19415,7 +21233,9 @@ CREATE TABLE _timescaledb_internal.compress_hyper_14_723_chunk (
     effective_heat_target_f _timescaledb_internal.compressed_data,
     effective_cool_stage2_delta_f _timescaledb_internal.compressed_data,
     effective_vpd_hysteresis_kpa _timescaledb_internal.compressed_data,
-    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data
+    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data,
+    zone_wet_granted _timescaledb_internal.compressed_data,
+    band_source _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_723_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -19467,9 +21287,227 @@ ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_723_chunk ALTER COLUMN 
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_723_chunk ALTER COLUMN effective_cool_stage2_delta_f SET STATISTICS 0;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_723_chunk ALTER COLUMN effective_vpd_hysteresis_kpa SET STATISTICS 0;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_723_chunk ALTER COLUMN effective_dehum_aggressive_kpa SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_723_chunk ALTER COLUMN zone_wet_granted SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_723_chunk ALTER COLUMN band_source SET STORAGE EXTENDED;
 
 
 ALTER TABLE _timescaledb_internal.compress_hyper_14_723_chunk OWNER TO verdify;
+
+--
+-- Name: compress_hyper_14_754_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal.compress_hyper_14_754_chunk (
+    _ts_meta_count integer,
+    _ts_meta_min_1 timestamp with time zone,
+    _ts_meta_max_1 timestamp with time zone,
+    ts _timescaledb_internal.compressed_data,
+    wifi_rssi _timescaledb_internal.compressed_data,
+    heap_bytes _timescaledb_internal.compressed_data,
+    uptime_s _timescaledb_internal.compressed_data,
+    probe_health _timescaledb_internal.compressed_data,
+    reset_reason _timescaledb_internal.compressed_data,
+    greenhouse_id _timescaledb_internal.compressed_data,
+    _ts_meta_min_2 text,
+    _ts_meta_max_2 text,
+    firmware_version _timescaledb_internal.compressed_data,
+    _ts_meta_min_3 integer,
+    _ts_meta_max_3 integer,
+    active_probe_count _timescaledb_internal.compressed_data,
+    _ts_meta_min_4 integer,
+    _ts_meta_max_4 integer,
+    relief_cycle_count _timescaledb_internal.compressed_data,
+    vent_latch_timer_s _timescaledb_internal.compressed_data,
+    sealed_timer_s _timescaledb_internal.compressed_data,
+    vpd_watch_timer_s _timescaledb_internal.compressed_data,
+    _ts_meta_min_5 integer,
+    _ts_meta_max_5 integer,
+    mist_backoff_timer_s _timescaledb_internal.compressed_data,
+    _ts_meta_min_6 integer,
+    _ts_meta_max_6 integer,
+    vent_mist_assist_active _timescaledb_internal.compressed_data,
+    _ts_meta_min_7 double precision,
+    _ts_meta_max_7 double precision,
+    heap_min_free_kb _timescaledb_internal.compressed_data,
+    _ts_meta_min_8 double precision,
+    _ts_meta_max_8 double precision,
+    heap_largest_free_block_kb _timescaledb_internal.compressed_data,
+    controller_time_epoch _timescaledb_internal.compressed_data,
+    controller_local_hour _timescaledb_internal.compressed_data,
+    sntp_valid _timescaledb_internal.compressed_data,
+    sntp_miss_count _timescaledb_internal.compressed_data,
+    last_sntp_sync_age_s _timescaledb_internal.compressed_data,
+    effective_heat_target_f _timescaledb_internal.compressed_data,
+    effective_cool_stage2_delta_f _timescaledb_internal.compressed_data,
+    effective_vpd_hysteresis_kpa _timescaledb_internal.compressed_data,
+    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data,
+    zone_wet_granted _timescaledb_internal.compressed_data,
+    band_source _timescaledb_internal.compressed_data
+)
+WITH (toast_tuple_target='128');
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN _ts_meta_min_1 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN _ts_meta_max_1 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN ts SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN wifi_rssi SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN heap_bytes SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN uptime_s SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN probe_health SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN probe_health SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN reset_reason SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN reset_reason SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN greenhouse_id SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN greenhouse_id SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN _ts_meta_min_2 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN _ts_meta_min_2 SET STORAGE PLAIN;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN _ts_meta_max_2 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN _ts_meta_max_2 SET STORAGE PLAIN;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN firmware_version SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN firmware_version SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN _ts_meta_min_3 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN _ts_meta_max_3 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN active_probe_count SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN _ts_meta_min_4 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN _ts_meta_max_4 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN relief_cycle_count SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN vent_latch_timer_s SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN sealed_timer_s SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN vpd_watch_timer_s SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN _ts_meta_min_5 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN _ts_meta_max_5 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN mist_backoff_timer_s SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN _ts_meta_min_6 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN _ts_meta_max_6 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN vent_mist_assist_active SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN _ts_meta_min_7 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN _ts_meta_max_7 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN heap_min_free_kb SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN _ts_meta_min_8 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN _ts_meta_max_8 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN heap_largest_free_block_kb SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN controller_time_epoch SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN controller_local_hour SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN sntp_valid SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN sntp_miss_count SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN last_sntp_sync_age_s SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN effective_heat_target_f SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN effective_cool_stage2_delta_f SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN effective_vpd_hysteresis_kpa SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN effective_dehum_aggressive_kpa SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN zone_wet_granted SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_754_chunk ALTER COLUMN band_source SET STORAGE EXTENDED;
+
+
+ALTER TABLE _timescaledb_internal.compress_hyper_14_754_chunk OWNER TO verdify;
+
+--
+-- Name: compress_hyper_14_771_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal.compress_hyper_14_771_chunk (
+    _ts_meta_count integer,
+    _ts_meta_min_1 timestamp with time zone,
+    _ts_meta_max_1 timestamp with time zone,
+    ts _timescaledb_internal.compressed_data,
+    wifi_rssi _timescaledb_internal.compressed_data,
+    heap_bytes _timescaledb_internal.compressed_data,
+    uptime_s _timescaledb_internal.compressed_data,
+    probe_health _timescaledb_internal.compressed_data,
+    reset_reason _timescaledb_internal.compressed_data,
+    greenhouse_id _timescaledb_internal.compressed_data,
+    _ts_meta_min_2 text,
+    _ts_meta_max_2 text,
+    firmware_version _timescaledb_internal.compressed_data,
+    _ts_meta_min_4 integer,
+    _ts_meta_max_4 integer,
+    active_probe_count _timescaledb_internal.compressed_data,
+    _ts_meta_min_3 integer,
+    _ts_meta_max_3 integer,
+    relief_cycle_count _timescaledb_internal.compressed_data,
+    vent_latch_timer_s _timescaledb_internal.compressed_data,
+    sealed_timer_s _timescaledb_internal.compressed_data,
+    vpd_watch_timer_s _timescaledb_internal.compressed_data,
+    _ts_meta_min_7 integer,
+    _ts_meta_max_7 integer,
+    mist_backoff_timer_s _timescaledb_internal.compressed_data,
+    _ts_meta_min_5 integer,
+    _ts_meta_max_5 integer,
+    vent_mist_assist_active _timescaledb_internal.compressed_data,
+    _ts_meta_min_6 double precision,
+    _ts_meta_max_6 double precision,
+    heap_min_free_kb _timescaledb_internal.compressed_data,
+    _ts_meta_min_8 double precision,
+    _ts_meta_max_8 double precision,
+    heap_largest_free_block_kb _timescaledb_internal.compressed_data,
+    controller_time_epoch _timescaledb_internal.compressed_data,
+    controller_local_hour _timescaledb_internal.compressed_data,
+    sntp_valid _timescaledb_internal.compressed_data,
+    sntp_miss_count _timescaledb_internal.compressed_data,
+    last_sntp_sync_age_s _timescaledb_internal.compressed_data,
+    effective_heat_target_f _timescaledb_internal.compressed_data,
+    effective_cool_stage2_delta_f _timescaledb_internal.compressed_data,
+    effective_vpd_hysteresis_kpa _timescaledb_internal.compressed_data,
+    effective_dehum_aggressive_kpa _timescaledb_internal.compressed_data,
+    zone_wet_granted _timescaledb_internal.compressed_data,
+    band_source _timescaledb_internal.compressed_data
+)
+WITH (toast_tuple_target='128');
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN _ts_meta_min_1 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN _ts_meta_max_1 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN ts SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN wifi_rssi SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN heap_bytes SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN uptime_s SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN probe_health SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN probe_health SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN reset_reason SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN reset_reason SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN greenhouse_id SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN greenhouse_id SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN _ts_meta_min_2 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN _ts_meta_min_2 SET STORAGE PLAIN;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN _ts_meta_max_2 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN _ts_meta_max_2 SET STORAGE PLAIN;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN firmware_version SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN firmware_version SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN _ts_meta_min_4 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN _ts_meta_max_4 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN active_probe_count SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN _ts_meta_min_3 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN _ts_meta_max_3 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN relief_cycle_count SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN vent_latch_timer_s SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN sealed_timer_s SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN vpd_watch_timer_s SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN _ts_meta_min_7 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN _ts_meta_max_7 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN mist_backoff_timer_s SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN _ts_meta_min_5 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN _ts_meta_max_5 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN vent_mist_assist_active SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN _ts_meta_min_6 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN _ts_meta_max_6 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN heap_min_free_kb SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN _ts_meta_min_8 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN _ts_meta_max_8 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN heap_largest_free_block_kb SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN controller_time_epoch SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN controller_local_hour SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN sntp_valid SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN sntp_miss_count SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN last_sntp_sync_age_s SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN effective_heat_target_f SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN effective_cool_stage2_delta_f SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN effective_vpd_hysteresis_kpa SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN effective_dehum_aggressive_kpa SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN zone_wet_granted SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN zone_wet_granted SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN band_source SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_14_771_chunk ALTER COLUMN band_source SET STORAGE EXTENDED;
+
+
+ALTER TABLE _timescaledb_internal.compress_hyper_14_771_chunk OWNER TO verdify;
 
 --
 -- Name: compress_hyper_32_726_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
@@ -19483,7 +21521,10 @@ CREATE TABLE _timescaledb_internal.compress_hyper_32_726_chunk (
     ts _timescaledb_internal.compressed_data,
     value _timescaledb_internal.compressed_data,
     _ts_meta_v2_bloomh_greenhouse_id _timescaledb_internal.bloom1,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    zone _timescaledb_internal.compressed_data,
+    band_role _timescaledb_internal.compressed_data,
+    target_value _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_726_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -19496,67 +21537,11 @@ ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_726_chunk ALTER COLUMN 
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_726_chunk ALTER COLUMN _ts_meta_v2_bloomh_greenhouse_id SET STORAGE EXTERNAL;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_726_chunk ALTER COLUMN greenhouse_id SET STATISTICS 0;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_726_chunk ALTER COLUMN greenhouse_id SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_726_chunk ALTER COLUMN zone SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_726_chunk ALTER COLUMN band_role SET STORAGE EXTENDED;
 
 
 ALTER TABLE _timescaledb_internal.compress_hyper_32_726_chunk OWNER TO verdify;
-
---
--- Name: compress_hyper_32_727_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
---
-
-CREATE TABLE _timescaledb_internal.compress_hyper_32_727_chunk (
-    _ts_meta_count integer,
-    parameter text,
-    _ts_meta_min_1 timestamp with time zone,
-    _ts_meta_max_1 timestamp with time zone,
-    ts _timescaledb_internal.compressed_data,
-    value _timescaledb_internal.compressed_data,
-    _ts_meta_v2_bloomh_greenhouse_id _timescaledb_internal.bloom1,
-    greenhouse_id _timescaledb_internal.compressed_data
-)
-WITH (toast_tuple_target='128');
-ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_727_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
-ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_727_chunk ALTER COLUMN parameter SET STATISTICS 1000;
-ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_727_chunk ALTER COLUMN _ts_meta_min_1 SET STATISTICS 1000;
-ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_727_chunk ALTER COLUMN _ts_meta_max_1 SET STATISTICS 1000;
-ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_727_chunk ALTER COLUMN ts SET STATISTICS 0;
-ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_727_chunk ALTER COLUMN value SET STATISTICS 0;
-ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_727_chunk ALTER COLUMN _ts_meta_v2_bloomh_greenhouse_id SET STATISTICS 1000;
-ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_727_chunk ALTER COLUMN _ts_meta_v2_bloomh_greenhouse_id SET STORAGE EXTERNAL;
-ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_727_chunk ALTER COLUMN greenhouse_id SET STATISTICS 0;
-ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_727_chunk ALTER COLUMN greenhouse_id SET STORAGE EXTENDED;
-
-
-ALTER TABLE _timescaledb_internal.compress_hyper_32_727_chunk OWNER TO verdify;
-
---
--- Name: compress_hyper_32_728_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
---
-
-CREATE TABLE _timescaledb_internal.compress_hyper_32_728_chunk (
-    _ts_meta_count integer,
-    parameter text,
-    _ts_meta_min_1 timestamp with time zone,
-    _ts_meta_max_1 timestamp with time zone,
-    ts _timescaledb_internal.compressed_data,
-    value _timescaledb_internal.compressed_data,
-    _ts_meta_v2_bloomh_greenhouse_id _timescaledb_internal.bloom1,
-    greenhouse_id _timescaledb_internal.compressed_data
-)
-WITH (toast_tuple_target='128');
-ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_728_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
-ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_728_chunk ALTER COLUMN parameter SET STATISTICS 1000;
-ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_728_chunk ALTER COLUMN _ts_meta_min_1 SET STATISTICS 1000;
-ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_728_chunk ALTER COLUMN _ts_meta_max_1 SET STATISTICS 1000;
-ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_728_chunk ALTER COLUMN ts SET STATISTICS 0;
-ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_728_chunk ALTER COLUMN value SET STATISTICS 0;
-ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_728_chunk ALTER COLUMN _ts_meta_v2_bloomh_greenhouse_id SET STATISTICS 1000;
-ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_728_chunk ALTER COLUMN _ts_meta_v2_bloomh_greenhouse_id SET STORAGE EXTERNAL;
-ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_728_chunk ALTER COLUMN greenhouse_id SET STATISTICS 0;
-ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_728_chunk ALTER COLUMN greenhouse_id SET STORAGE EXTENDED;
-
-
-ALTER TABLE _timescaledb_internal.compress_hyper_32_728_chunk OWNER TO verdify;
 
 --
 -- Name: compress_hyper_32_729_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
@@ -19570,7 +21555,10 @@ CREATE TABLE _timescaledb_internal.compress_hyper_32_729_chunk (
     ts _timescaledb_internal.compressed_data,
     value _timescaledb_internal.compressed_data,
     _ts_meta_v2_bloomh_greenhouse_id _timescaledb_internal.bloom1,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    zone _timescaledb_internal.compressed_data,
+    band_role _timescaledb_internal.compressed_data,
+    target_value _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_729_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -19583,6 +21571,8 @@ ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_729_chunk ALTER COLUMN 
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_729_chunk ALTER COLUMN _ts_meta_v2_bloomh_greenhouse_id SET STORAGE EXTERNAL;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_729_chunk ALTER COLUMN greenhouse_id SET STATISTICS 0;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_729_chunk ALTER COLUMN greenhouse_id SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_729_chunk ALTER COLUMN zone SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_729_chunk ALTER COLUMN band_role SET STORAGE EXTENDED;
 
 
 ALTER TABLE _timescaledb_internal.compress_hyper_32_729_chunk OWNER TO verdify;
@@ -19599,7 +21589,10 @@ CREATE TABLE _timescaledb_internal.compress_hyper_32_730_chunk (
     ts _timescaledb_internal.compressed_data,
     value _timescaledb_internal.compressed_data,
     _ts_meta_v2_bloomh_greenhouse_id _timescaledb_internal.bloom1,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    zone _timescaledb_internal.compressed_data,
+    band_role _timescaledb_internal.compressed_data,
+    target_value _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_730_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -19612,6 +21605,8 @@ ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_730_chunk ALTER COLUMN 
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_730_chunk ALTER COLUMN _ts_meta_v2_bloomh_greenhouse_id SET STORAGE EXTERNAL;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_730_chunk ALTER COLUMN greenhouse_id SET STATISTICS 0;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_730_chunk ALTER COLUMN greenhouse_id SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_730_chunk ALTER COLUMN zone SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_730_chunk ALTER COLUMN band_role SET STORAGE EXTENDED;
 
 
 ALTER TABLE _timescaledb_internal.compress_hyper_32_730_chunk OWNER TO verdify;
@@ -19628,7 +21623,10 @@ CREATE TABLE _timescaledb_internal.compress_hyper_32_731_chunk (
     ts _timescaledb_internal.compressed_data,
     value _timescaledb_internal.compressed_data,
     _ts_meta_v2_bloomh_greenhouse_id _timescaledb_internal.bloom1,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    zone _timescaledb_internal.compressed_data,
+    band_role _timescaledb_internal.compressed_data,
+    target_value _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_731_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -19641,6 +21639,8 @@ ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_731_chunk ALTER COLUMN 
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_731_chunk ALTER COLUMN _ts_meta_v2_bloomh_greenhouse_id SET STORAGE EXTERNAL;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_731_chunk ALTER COLUMN greenhouse_id SET STATISTICS 0;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_731_chunk ALTER COLUMN greenhouse_id SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_731_chunk ALTER COLUMN zone SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_731_chunk ALTER COLUMN band_role SET STORAGE EXTENDED;
 
 
 ALTER TABLE _timescaledb_internal.compress_hyper_32_731_chunk OWNER TO verdify;
@@ -19657,7 +21657,10 @@ CREATE TABLE _timescaledb_internal.compress_hyper_32_732_chunk (
     ts _timescaledb_internal.compressed_data,
     value _timescaledb_internal.compressed_data,
     _ts_meta_v2_bloomh_greenhouse_id _timescaledb_internal.bloom1,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    zone _timescaledb_internal.compressed_data,
+    band_role _timescaledb_internal.compressed_data,
+    target_value _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_732_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -19670,6 +21673,8 @@ ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_732_chunk ALTER COLUMN 
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_732_chunk ALTER COLUMN _ts_meta_v2_bloomh_greenhouse_id SET STORAGE EXTERNAL;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_732_chunk ALTER COLUMN greenhouse_id SET STATISTICS 0;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_732_chunk ALTER COLUMN greenhouse_id SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_732_chunk ALTER COLUMN zone SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_732_chunk ALTER COLUMN band_role SET STORAGE EXTENDED;
 
 
 ALTER TABLE _timescaledb_internal.compress_hyper_32_732_chunk OWNER TO verdify;
@@ -19686,7 +21691,10 @@ CREATE TABLE _timescaledb_internal.compress_hyper_32_733_chunk (
     ts _timescaledb_internal.compressed_data,
     value _timescaledb_internal.compressed_data,
     _ts_meta_v2_bloomh_greenhouse_id _timescaledb_internal.bloom1,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    zone _timescaledb_internal.compressed_data,
+    band_role _timescaledb_internal.compressed_data,
+    target_value _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_733_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -19699,6 +21707,8 @@ ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_733_chunk ALTER COLUMN 
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_733_chunk ALTER COLUMN _ts_meta_v2_bloomh_greenhouse_id SET STORAGE EXTERNAL;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_733_chunk ALTER COLUMN greenhouse_id SET STATISTICS 0;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_733_chunk ALTER COLUMN greenhouse_id SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_733_chunk ALTER COLUMN zone SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_733_chunk ALTER COLUMN band_role SET STORAGE EXTENDED;
 
 
 ALTER TABLE _timescaledb_internal.compress_hyper_32_733_chunk OWNER TO verdify;
@@ -19715,7 +21725,10 @@ CREATE TABLE _timescaledb_internal.compress_hyper_32_734_chunk (
     ts _timescaledb_internal.compressed_data,
     value _timescaledb_internal.compressed_data,
     _ts_meta_v2_bloomh_greenhouse_id _timescaledb_internal.bloom1,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    zone _timescaledb_internal.compressed_data,
+    band_role _timescaledb_internal.compressed_data,
+    target_value _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_734_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -19728,6 +21741,8 @@ ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_734_chunk ALTER COLUMN 
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_734_chunk ALTER COLUMN _ts_meta_v2_bloomh_greenhouse_id SET STORAGE EXTERNAL;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_734_chunk ALTER COLUMN greenhouse_id SET STATISTICS 0;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_734_chunk ALTER COLUMN greenhouse_id SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_734_chunk ALTER COLUMN zone SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_734_chunk ALTER COLUMN band_role SET STORAGE EXTENDED;
 
 
 ALTER TABLE _timescaledb_internal.compress_hyper_32_734_chunk OWNER TO verdify;
@@ -19744,7 +21759,10 @@ CREATE TABLE _timescaledb_internal.compress_hyper_32_735_chunk (
     ts _timescaledb_internal.compressed_data,
     value _timescaledb_internal.compressed_data,
     _ts_meta_v2_bloomh_greenhouse_id _timescaledb_internal.bloom1,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    zone _timescaledb_internal.compressed_data,
+    band_role _timescaledb_internal.compressed_data,
+    target_value _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_735_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -19757,6 +21775,8 @@ ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_735_chunk ALTER COLUMN 
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_735_chunk ALTER COLUMN _ts_meta_v2_bloomh_greenhouse_id SET STORAGE EXTERNAL;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_735_chunk ALTER COLUMN greenhouse_id SET STATISTICS 0;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_735_chunk ALTER COLUMN greenhouse_id SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_735_chunk ALTER COLUMN zone SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_735_chunk ALTER COLUMN band_role SET STORAGE EXTENDED;
 
 
 ALTER TABLE _timescaledb_internal.compress_hyper_32_735_chunk OWNER TO verdify;
@@ -19773,7 +21793,10 @@ CREATE TABLE _timescaledb_internal.compress_hyper_32_736_chunk (
     ts _timescaledb_internal.compressed_data,
     value _timescaledb_internal.compressed_data,
     _ts_meta_v2_bloomh_greenhouse_id _timescaledb_internal.bloom1,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    zone _timescaledb_internal.compressed_data,
+    band_role _timescaledb_internal.compressed_data,
+    target_value _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_736_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -19786,6 +21809,8 @@ ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_736_chunk ALTER COLUMN 
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_736_chunk ALTER COLUMN _ts_meta_v2_bloomh_greenhouse_id SET STORAGE EXTERNAL;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_736_chunk ALTER COLUMN greenhouse_id SET STATISTICS 0;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_736_chunk ALTER COLUMN greenhouse_id SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_736_chunk ALTER COLUMN zone SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_736_chunk ALTER COLUMN band_role SET STORAGE EXTENDED;
 
 
 ALTER TABLE _timescaledb_internal.compress_hyper_32_736_chunk OWNER TO verdify;
@@ -19802,7 +21827,10 @@ CREATE TABLE _timescaledb_internal.compress_hyper_32_737_chunk (
     ts _timescaledb_internal.compressed_data,
     value _timescaledb_internal.compressed_data,
     _ts_meta_v2_bloomh_greenhouse_id _timescaledb_internal.bloom1,
-    greenhouse_id _timescaledb_internal.compressed_data
+    greenhouse_id _timescaledb_internal.compressed_data,
+    zone _timescaledb_internal.compressed_data,
+    band_role _timescaledb_internal.compressed_data,
+    target_value _timescaledb_internal.compressed_data
 )
 WITH (toast_tuple_target='128');
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_737_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
@@ -19815,9 +21843,82 @@ ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_737_chunk ALTER COLUMN 
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_737_chunk ALTER COLUMN _ts_meta_v2_bloomh_greenhouse_id SET STORAGE EXTERNAL;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_737_chunk ALTER COLUMN greenhouse_id SET STATISTICS 0;
 ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_737_chunk ALTER COLUMN greenhouse_id SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_737_chunk ALTER COLUMN zone SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_737_chunk ALTER COLUMN band_role SET STORAGE EXTENDED;
 
 
 ALTER TABLE _timescaledb_internal.compress_hyper_32_737_chunk OWNER TO verdify;
+
+--
+-- Name: compress_hyper_32_756_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal.compress_hyper_32_756_chunk (
+    _ts_meta_count integer,
+    parameter text,
+    _ts_meta_min_1 timestamp with time zone,
+    _ts_meta_max_1 timestamp with time zone,
+    ts _timescaledb_internal.compressed_data,
+    value _timescaledb_internal.compressed_data,
+    _ts_meta_v2_bloomh_greenhouse_id _timescaledb_internal.bloom1,
+    greenhouse_id _timescaledb_internal.compressed_data,
+    zone _timescaledb_internal.compressed_data,
+    band_role _timescaledb_internal.compressed_data,
+    target_value _timescaledb_internal.compressed_data
+)
+WITH (toast_tuple_target='128');
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_756_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_756_chunk ALTER COLUMN parameter SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_756_chunk ALTER COLUMN _ts_meta_min_1 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_756_chunk ALTER COLUMN _ts_meta_max_1 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_756_chunk ALTER COLUMN ts SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_756_chunk ALTER COLUMN value SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_756_chunk ALTER COLUMN _ts_meta_v2_bloomh_greenhouse_id SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_756_chunk ALTER COLUMN _ts_meta_v2_bloomh_greenhouse_id SET STORAGE EXTERNAL;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_756_chunk ALTER COLUMN greenhouse_id SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_756_chunk ALTER COLUMN greenhouse_id SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_756_chunk ALTER COLUMN zone SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_756_chunk ALTER COLUMN band_role SET STORAGE EXTENDED;
+
+
+ALTER TABLE _timescaledb_internal.compress_hyper_32_756_chunk OWNER TO verdify;
+
+--
+-- Name: compress_hyper_32_770_chunk; Type: TABLE; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TABLE _timescaledb_internal.compress_hyper_32_770_chunk (
+    _ts_meta_count integer,
+    parameter text,
+    _ts_meta_min_1 timestamp with time zone,
+    _ts_meta_max_1 timestamp with time zone,
+    ts _timescaledb_internal.compressed_data,
+    value _timescaledb_internal.compressed_data,
+    _ts_meta_v2_bloomh_greenhouse_id _timescaledb_internal.bloom1,
+    greenhouse_id _timescaledb_internal.compressed_data,
+    zone _timescaledb_internal.compressed_data,
+    band_role _timescaledb_internal.compressed_data,
+    target_value _timescaledb_internal.compressed_data
+)
+WITH (toast_tuple_target='128');
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_770_chunk ALTER COLUMN _ts_meta_count SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_770_chunk ALTER COLUMN parameter SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_770_chunk ALTER COLUMN _ts_meta_min_1 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_770_chunk ALTER COLUMN _ts_meta_max_1 SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_770_chunk ALTER COLUMN ts SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_770_chunk ALTER COLUMN value SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_770_chunk ALTER COLUMN _ts_meta_v2_bloomh_greenhouse_id SET STATISTICS 1000;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_770_chunk ALTER COLUMN _ts_meta_v2_bloomh_greenhouse_id SET STORAGE EXTERNAL;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_770_chunk ALTER COLUMN greenhouse_id SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_770_chunk ALTER COLUMN greenhouse_id SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_770_chunk ALTER COLUMN zone SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_770_chunk ALTER COLUMN zone SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_770_chunk ALTER COLUMN band_role SET STATISTICS 0;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_770_chunk ALTER COLUMN band_role SET STORAGE EXTENDED;
+ALTER TABLE ONLY _timescaledb_internal.compress_hyper_32_770_chunk ALTER COLUMN target_value SET STATISTICS 0;
+
+
+ALTER TABLE _timescaledb_internal.compress_hyper_32_770_chunk OWNER TO verdify;
 
 --
 -- Name: achievable_envelope; Type: TABLE; Schema: public; Owner: verdify
@@ -20006,6 +22107,87 @@ ALTER SEQUENCE public.consumables_log_id_seq OWNER TO verdify;
 --
 
 ALTER SEQUENCE public.consumables_log_id_seq OWNED BY public.consumables_log.id;
+
+
+--
+-- Name: crop_band_anchors; Type: TABLE; Schema: public; Owner: verdify
+--
+
+CREATE TABLE public.crop_band_anchors (
+    id integer NOT NULL,
+    crop_type text NOT NULL,
+    growth_stage text DEFAULT 'default'::text NOT NULL,
+    season text DEFAULT 'all'::text NOT NULL,
+    series text NOT NULL,
+    anchor text NOT NULL,
+    value double precision NOT NULL,
+    width_below double precision,
+    width_above double precision,
+    greenhouse_id text DEFAULT 'vallery'::text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT crop_band_anchors_anchor_check CHECK ((anchor = ANY (ARRAY['sr'::text, 'sm'::text, 'ss'::text, 'mid'::text]))),
+    CONSTRAINT crop_band_anchors_series_check CHECK ((series = ANY (ARRAY['temp_low'::text, 'temp_target'::text, 'temp_high'::text, 'vpd_low'::text, 'vpd_target'::text, 'vpd_high'::text])))
+);
+
+
+ALTER TABLE public.crop_band_anchors OWNER TO verdify;
+
+--
+-- Name: TABLE crop_band_anchors; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON TABLE public.crop_band_anchors IS 'Canonical deterministic band source (firmware-v2 contract B2/B7, migration 161). 4-point solar-anchored curves per (crop, series): value at sunrise(sr) / solar noon(sm) / sunset(ss) / solar midnight(mid). Cosine-interpolated by fn_crop_band_value (DB) and band_value_at_phase (ESP32). The dispatcher pushes these as NVS-persisted anchor tunables on change only.';
+
+
+--
+-- Name: COLUMN crop_band_anchors.season; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.crop_band_anchors.season IS '''all'' (default) or a fn_current_season() value for season-specific overrides.';
+
+
+--
+-- Name: COLUMN crop_band_anchors.anchor; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.crop_band_anchors.anchor IS 'Solar anchor: sr=sunrise(phase 0), sm=solar noon(1), ss=sunset(2), mid=solar midnight(3).';
+
+
+--
+-- Name: COLUMN crop_band_anchors.width_below; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.crop_band_anchors.width_below IS 'Half-width below a *_target series value (min = target - width_below). NULL on non-target series.';
+
+
+--
+-- Name: COLUMN crop_band_anchors.width_above; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.crop_band_anchors.width_above IS 'Half-width above a *_target series value (max = target + width_above). NULL on non-target series.';
+
+
+--
+-- Name: crop_band_anchors_id_seq; Type: SEQUENCE; Schema: public; Owner: verdify
+--
+
+CREATE SEQUENCE public.crop_band_anchors_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.crop_band_anchors_id_seq OWNER TO verdify;
+
+--
+-- Name: crop_band_anchors_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: verdify
+--
+
+ALTER SEQUENCE public.crop_band_anchors_id_seq OWNED BY public.crop_band_anchors.id;
 
 
 --
@@ -20867,6 +23049,69 @@ ALTER SEQUENCE public.equipment_id_seq OWNED BY public.equipment.id;
 
 
 --
+-- Name: firmware_twin_divergence; Type: TABLE; Schema: public; Owner: verdify
+--
+
+CREATE TABLE public.firmware_twin_divergence (
+    ts timestamp with time zone NOT NULL,
+    comparison text NOT NULL,
+    window_start timestamp with time zone NOT NULL,
+    window_end timestamp with time zone NOT NULL,
+    ref_twin_ref text,
+    cmp_twin_ref text,
+    samples integer NOT NULL,
+    disagree_count integer NOT NULL,
+    relay_disagree_pct double precision NOT NULL,
+    mode_disagree_pct double precision,
+    per_relay jsonb DEFAULT '{}'::jsonb NOT NULL,
+    by_mode jsonb DEFAULT '{}'::jsonb NOT NULL,
+    by_daypart jsonb DEFAULT '{}'::jsonb NOT NULL,
+    by_outdoor_band jsonb DEFAULT '{}'::jsonb NOT NULL,
+    worst_examples jsonb DEFAULT '[]'::jsonb NOT NULL,
+    greenhouse_id text DEFAULT 'vallery'::text,
+    CONSTRAINT firmware_twin_divergence_pct_chk CHECK (((relay_disagree_pct >= (0)::double precision) AND (relay_disagree_pct <= (100)::double precision))),
+    CONSTRAINT firmware_twin_divergence_window_chk CHECK ((window_end >= window_start))
+);
+
+
+ALTER TABLE public.firmware_twin_divergence OWNER TO verdify;
+
+--
+-- Name: TABLE firmware_twin_divergence; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON TABLE public.firmware_twin_divergence IS 'Windowed firmware-twin disagreement summary (TWIN-6). One row per (comparison, window): rolling relay-disagreement counts/pcts, per-relay breakdown, by_mode/by_daypart/by_outdoor_band jsonb conditioning, and worst_examples. Feeds the live agreement gate (rule 8), the 48h bake clock (rule 3), and the alert_monitor rows that plug into firmware-deploy-preflight (rule 1). Design: firmware-digital-twin.md §5.2/§5.3. Written by twin_ro (INSERT-only).';
+
+
+--
+-- Name: COLUMN firmware_twin_divergence.comparison; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.firmware_twin_divergence.comparison IS 'stage_vs_prod (bake agreement) | prod_vs_reality (deployed drift) | dev_vs_corpus etc.';
+
+
+--
+-- Name: COLUMN firmware_twin_divergence.relay_disagree_pct; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.firmware_twin_divergence.relay_disagree_pct IS 'Percent of samples in the window where any relay output differed between the two sides (0..100); the gated quantity for THRESHOLD_PCT.';
+
+
+--
+-- Name: COLUMN firmware_twin_divergence.per_relay; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.firmware_twin_divergence.per_relay IS 'Per-relay disagreement pct: {"fog":0.0,"vent":1.2,"fan1":0.0,"fan2":0.0,"heat1":0.0,"heat2":0.0}.';
+
+
+--
+-- Name: COLUMN firmware_twin_divergence.worst_examples; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.firmware_twin_divergence.worst_examples IS 'Array of the highest-divergence input rows for triage: [{"input_ts":..., "ref":..., "cmp":..., "relays":...}].';
+
+
+--
 -- Name: forecast_action_log; Type: TABLE; Schema: public; Owner: verdify
 --
 
@@ -21362,6 +23607,31 @@ CREATE TABLE public.model_predictions (
 ALTER TABLE public.model_predictions OWNER TO verdify;
 
 --
+-- Name: mv_band_curve; Type: MATERIALIZED VIEW; Schema: public; Owner: verdify
+--
+
+CREATE MATERIALIZED VIEW public.mv_band_curve AS
+ SELECT g.ts,
+    'vallery'::text AS greenhouse_id,
+    public.fn_crop_band_value('house'::text, 'temp_low'::text, g.ts) AS temp_low,
+    public.fn_crop_band_value('house'::text, 'temp_target'::text, g.ts) AS temp_target,
+    public.fn_crop_band_value('house'::text, 'temp_high'::text, g.ts) AS temp_high,
+    public.fn_crop_band_value('house'::text, 'vpd_low'::text, g.ts) AS vpd_low,
+    public.fn_crop_band_value('house'::text, 'vpd_target'::text, g.ts) AS vpd_target,
+    public.fn_crop_band_value('house'::text, 'vpd_high'::text, g.ts) AS vpd_high,
+    z.vpd_target_center,
+    z.vpd_target_south,
+    z.vpd_target_west,
+    z.vpd_target_east,
+    public.fn_solar_phase(g.ts) AS solar_phase
+   FROM (generate_series((date_trunc('hour'::text, now()) - '4 days'::interval), (date_trunc('hour'::text, now()) + '4 days'::interval), '00:15:00'::interval) g(ts)
+     CROSS JOIN LATERAL public.fn_zone_vpd_targets(g.ts) z(vpd_target_south, vpd_target_west, vpd_target_east, vpd_target_center))
+  WITH NO DATA;
+
+
+ALTER MATERIALIZED VIEW public.mv_band_curve OWNER TO verdify;
+
+--
 -- Name: mv_zone_band_grade; Type: MATERIALIZED VIEW; Schema: public; Owner: verdify
 --
 
@@ -21750,6 +24020,32 @@ COMMENT ON COLUMN public.plan_journal.climate_intent_version IS 'ClimateIntent c
 
 COMMENT ON COLUMN public.plan_journal.guardrail_penalty IS 'Per-plan guardrail penalty (from v_plan_guardrail_scorecard) persisted alongside outcome_score/anchor_score by the planner-learning-loop. NULL for plans scored before this column existed or not yet penalized. Added in migration 148.';
 
+
+--
+-- Name: planner_graph_runs; Type: TABLE; Schema: public; Owner: verdify
+--
+
+CREATE TABLE public.planner_graph_runs (
+    trigger_id uuid NOT NULL,
+    thread_id uuid NOT NULL,
+    status text NOT NULL,
+    run_mode text NOT NULL,
+    current_step text,
+    terminal_status text,
+    execution_owner text,
+    last_error text,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    queued boolean DEFAULT true NOT NULL,
+    submission_count integer DEFAULT 1 NOT NULL,
+    state jsonb DEFAULT '{}'::jsonb NOT NULL,
+    lease_owner text,
+    lease_expires_at timestamp with time zone,
+    started_at timestamp with time zone,
+    completed_at timestamp with time zone
+);
+
+
+ALTER TABLE public.planner_graph_runs OWNER TO verdify;
 
 --
 -- Name: planner_lessons; Type: TABLE; Schema: public; Owner: verdify
@@ -22766,6 +25062,76 @@ ALTER SEQUENCE public.treatments_id_seq OWNED BY public.treatments.id;
 
 
 --
+-- Name: twin_decisions; Type: TABLE; Schema: public; Owner: verdify
+--
+
+CREATE TABLE public.twin_decisions (
+    ts timestamp with time zone NOT NULL,
+    twin_env text NOT NULL,
+    twin_ref text NOT NULL,
+    input_ts timestamp with time zone NOT NULL,
+    mode text NOT NULL,
+    climate_action text,
+    mist_stage integer NOT NULL,
+    relay_fog boolean NOT NULL,
+    relay_vent boolean NOT NULL,
+    relay_fan1 boolean NOT NULL,
+    relay_fan2 boolean NOT NULL,
+    relay_heat1 boolean NOT NULL,
+    relay_heat2 boolean NOT NULL,
+    mode_reason text,
+    override_bits integer NOT NULL,
+    twin_metadata jsonb,
+    greenhouse_id text DEFAULT 'vallery'::text,
+    CONSTRAINT twin_decisions_env_chk CHECK ((twin_env = ANY (ARRAY['dev'::text, 'stage'::text, 'prod'::text])))
+);
+
+
+ALTER TABLE public.twin_decisions OWNER TO verdify;
+
+--
+-- Name: TABLE twin_decisions; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON TABLE public.twin_decisions IS 'Firmware digital-twin per-tick FSM output (TWIN-6). 1:1 map of replay_emit''s TSV row plus climate_action and twin_metadata, so the live driver does no semantic translation. One row per twin (dev/stage/prod) per settled input tick. Written by the twin via the read-only twin_ro role (INSERT-only). Design: firmware-digital-twin.md §5.2.';
+
+
+--
+-- Name: COLUMN twin_decisions.twin_env; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.twin_decisions.twin_env IS 'Which twin produced the row: dev (CI candidate), stage (bake candidate), prod (last-good shadow).';
+
+
+--
+-- Name: COLUMN twin_decisions.twin_ref; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.twin_decisions.twin_ref IS 'git sha / fw_version the twin image was pinned to; lets the bake/agreement gates confirm the twin ran the intended SHA.';
+
+
+--
+-- Name: COLUMN twin_decisions.input_ts; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.twin_decisions.input_ts IS 'The climate telemetry row timestamp that drove this decision (the twin lags live by the settling window).';
+
+
+--
+-- Name: COLUMN twin_decisions.climate_action; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.twin_decisions.climate_action IS 'Effective climate action via describe_effective_climate_decision() (greenhouse_logic.h); not a separate translation table.';
+
+
+--
+-- Name: COLUMN twin_decisions.twin_metadata; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.twin_decisions.twin_metadata IS 'Free-form per-row context: vpd_zone_inputs, warm-up flags, econ_block reconstruction notes, etc.';
+
+
+--
 -- Name: utility_cost; Type: TABLE; Schema: public; Owner: verdify
 --
 
@@ -22866,6 +25232,83 @@ ALTER VIEW public.v_alert_lifecycle_quality OWNER TO verdify;
 --
 
 COMMENT ON VIEW public.v_alert_lifecycle_quality IS 'Alert lifecycle health: open/ack/suppressed counts and mean time to resolution by alert type.';
+
+
+--
+-- Name: v_band_curve; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_band_curve AS
+ SELECT ts,
+    greenhouse_id,
+    temp_low,
+    temp_target,
+    temp_high,
+    vpd_low,
+    vpd_target,
+    vpd_high,
+    vpd_target_center,
+    vpd_target_south,
+    vpd_target_west,
+    vpd_target_east,
+    solar_phase
+   FROM public.mv_band_curve;
+
+
+ALTER VIEW public.v_band_curve OWNER TO verdify;
+
+--
+-- Name: v_band_device_divergence; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_band_device_divergence AS
+ WITH dev AS (
+         SELECT max(s.value) FILTER (WHERE (s.parameter = 'temp_low'::text)) AS temp_low,
+            max(s.value) FILTER (WHERE (s.parameter = 'temp_high'::text)) AS temp_high,
+            max(s.value) FILTER (WHERE (s.parameter = 'vpd_low'::text)) AS vpd_low,
+            max(s.value) FILTER (WHERE (s.parameter = 'vpd_high'::text)) AS vpd_high,
+            max(s.ts) AS device_ts
+           FROM ( SELECT DISTINCT ON (setpoint_snapshot.parameter) setpoint_snapshot.parameter,
+                    setpoint_snapshot.value,
+                    setpoint_snapshot.ts
+                   FROM public.setpoint_snapshot
+                  WHERE ((setpoint_snapshot.parameter = ANY (ARRAY['temp_low'::text, 'temp_high'::text, 'vpd_low'::text, 'vpd_high'::text])) AND (setpoint_snapshot.greenhouse_id = 'vallery'::text))
+                  ORDER BY setpoint_snapshot.parameter, setpoint_snapshot.ts DESC) s
+        ), db AS (
+         SELECT fn_band_setpoints.temp_low,
+            fn_band_setpoints.temp_high,
+            fn_band_setpoints.vpd_low,
+            fn_band_setpoints.vpd_high
+           FROM public.fn_band_setpoints(now()) fn_band_setpoints(temp_low, temp_high, vpd_low, vpd_high)
+        )
+ SELECT now() AS ts,
+    dev.device_ts,
+    age(now(), dev.device_ts) AS device_age,
+    dev.temp_low AS device_temp_low,
+    db.temp_low AS db_temp_low,
+    (dev.temp_low - db.temp_low) AS temp_low_diff,
+    dev.temp_high AS device_temp_high,
+    db.temp_high AS db_temp_high,
+    (dev.temp_high - db.temp_high) AS temp_high_diff,
+    dev.vpd_low AS device_vpd_low,
+    db.vpd_low AS db_vpd_low,
+    (dev.vpd_low - db.vpd_low) AS vpd_low_diff,
+    dev.vpd_high AS device_vpd_high,
+    db.vpd_high AS db_vpd_high,
+    (dev.vpd_high - db.vpd_high) AS vpd_high_diff,
+    GREATEST(abs((dev.temp_low - db.temp_low)), abs((dev.temp_high - db.temp_high))) AS max_temp_abs_diff,
+    GREATEST(abs((dev.vpd_low - db.vpd_low)), abs((dev.vpd_high - db.vpd_high))) AS max_vpd_abs_diff
+   FROM (dev
+     CROSS JOIN db);
+
+
+ALTER VIEW public.v_band_device_divergence OWNER TO verdify;
+
+--
+-- Name: VIEW v_band_device_divergence; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_band_device_divergence IS 'Device-measured resolved band (latest setpoint_snapshot edges) vs DB-served band (fn_band_setpoints(now())). diff = device - db; ~0 when on-chip curve agrees with the DB. Read by the band_device_db_divergence alert and the device-vs-DB Grafana panel.';
 
 
 --
@@ -23536,22 +25979,22 @@ CREATE VIEW public.v_cycle_count_audit AS
            FROM public.daily_summary
         UNION ALL
          SELECT daily_summary.date,
-            'mister_west'::text,
+            'mister_west'::text AS text,
             daily_summary.cycles_mister_west
            FROM public.daily_summary
         UNION ALL
          SELECT daily_summary.date,
-            'mister_center'::text,
+            'mister_center'::text AS text,
             daily_summary.cycles_mister_center
            FROM public.daily_summary
         UNION ALL
          SELECT daily_summary.date,
-            'drip_wall'::text,
+            'drip_wall'::text AS text,
             daily_summary.cycles_drip_wall
            FROM public.daily_summary
         UNION ALL
          SELECT daily_summary.date,
-            'drip_center'::text,
+            'drip_center'::text AS text,
             daily_summary.cycles_drip_center
            FROM public.daily_summary
         )
@@ -29121,7 +31564,7 @@ CREATE VIEW public.v_soil_status AS
            FROM latest l,
             trend t_1
         UNION ALL
-         SELECT 'south_2'::text,
+         SELECT 'south_2'::text AS text,
             l.soil_moisture_south_2,
             l.soil_temp_south_2,
             NULL::double precision AS float8,
@@ -29134,7 +31577,7 @@ CREATE VIEW public.v_soil_status AS
            FROM latest l,
             trend t_1
         UNION ALL
-         SELECT 'west'::text,
+         SELECT 'west'::text AS text,
             l.soil_moisture_west,
             l.soil_temp_west,
             NULL::double precision AS float8,
@@ -29768,7 +32211,7 @@ CREATE VIEW public.v_zone_disease_risk AS
           WHERE ((c.ts >= (now() - '24:00:00'::interval)) AND (c.temp_avg IS NOT NULL) AND (c.rh_avg IS NOT NULL))
         UNION ALL
          SELECT c.ts,
-            'east'::text,
+            'east'::text AS text,
             c.temp_east,
             c.rh_east,
             c.vpd_east,
@@ -29777,7 +32220,7 @@ CREATE VIEW public.v_zone_disease_risk AS
           WHERE ((c.ts >= (now() - '24:00:00'::interval)) AND (c.temp_east IS NOT NULL) AND (c.rh_east IS NOT NULL))
         UNION ALL
          SELECT c.ts,
-            'north'::text,
+            'north'::text AS text,
             c.temp_north,
             c.rh_north,
             c.vpd_north,
@@ -29786,7 +32229,7 @@ CREATE VIEW public.v_zone_disease_risk AS
           WHERE ((c.ts >= (now() - '24:00:00'::interval)) AND (c.temp_north IS NOT NULL) AND (c.rh_north IS NOT NULL))
         UNION ALL
          SELECT c.ts,
-            'south'::text,
+            'south'::text AS text,
             c.temp_south,
             c.rh_south,
             c.vpd_south,
@@ -29795,7 +32238,7 @@ CREATE VIEW public.v_zone_disease_risk AS
           WHERE ((c.ts >= (now() - '24:00:00'::interval)) AND (c.temp_south IS NOT NULL) AND (c.rh_south IS NOT NULL))
         UNION ALL
          SELECT c.ts,
-            'west'::text,
+            'west'::text AS text,
             c.temp_west,
             c.rh_west,
             c.vpd_west,
@@ -30344,6 +32787,90 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_10_708_chunk ALTER COLUMN is_activ
 --
 
 ALTER TABLE ONLY _timescaledb_internal._hyper_10_708_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
+-- Name: _hyper_10_739_chunk source; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_739_chunk ALTER COLUMN source SET DEFAULT 'iris'::text;
+
+
+--
+-- Name: _hyper_10_739_chunk created_at; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_739_chunk ALTER COLUMN created_at SET DEFAULT now();
+
+
+--
+-- Name: _hyper_10_739_chunk is_active; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_739_chunk ALTER COLUMN is_active SET DEFAULT true;
+
+
+--
+-- Name: _hyper_10_739_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_739_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
+-- Name: _hyper_10_774_chunk source; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_774_chunk ALTER COLUMN source SET DEFAULT 'iris'::text;
+
+
+--
+-- Name: _hyper_10_774_chunk created_at; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_774_chunk ALTER COLUMN created_at SET DEFAULT now();
+
+
+--
+-- Name: _hyper_10_774_chunk is_active; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_774_chunk ALTER COLUMN is_active SET DEFAULT true;
+
+
+--
+-- Name: _hyper_10_774_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_774_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
+-- Name: _hyper_10_775_chunk source; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_775_chunk ALTER COLUMN source SET DEFAULT 'iris'::text;
+
+
+--
+-- Name: _hyper_10_775_chunk created_at; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_775_chunk ALTER COLUMN created_at SET DEFAULT now();
+
+
+--
+-- Name: _hyper_10_775_chunk is_active; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_775_chunk ALTER COLUMN is_active SET DEFAULT true;
+
+
+--
+-- Name: _hyper_10_775_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_775_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
 
 
 --
@@ -31320,20 +33847,6 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_16_321_chunk ALTER COLUMN greenhou
 
 
 --
--- Name: _hyper_16_352_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
---
-
-ALTER TABLE ONLY _timescaledb_internal._hyper_16_352_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
-
-
---
--- Name: _hyper_16_353_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
---
-
-ALTER TABLE ONLY _timescaledb_internal._hyper_16_353_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
-
-
---
 -- Name: _hyper_16_354_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -31408,6 +33921,20 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_16_511_chunk ALTER COLUMN greenhou
 --
 
 ALTER TABLE ONLY _timescaledb_internal._hyper_16_714_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
+-- Name: _hyper_16_747_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_16_747_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
+-- Name: _hyper_16_763_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_16_763_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
 
 
 --
@@ -31621,6 +34148,48 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_17_720_chunk ALTER COLUMN greenhou
 
 
 --
+-- Name: _hyper_17_752_chunk ts; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_17_752_chunk ALTER COLUMN ts SET DEFAULT now();
+
+
+--
+-- Name: _hyper_17_752_chunk triggered; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_17_752_chunk ALTER COLUMN triggered SET DEFAULT true;
+
+
+--
+-- Name: _hyper_17_752_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_17_752_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
+-- Name: _hyper_17_768_chunk ts; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_17_768_chunk ALTER COLUMN ts SET DEFAULT now();
+
+
+--
+-- Name: _hyper_17_768_chunk triggered; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_17_768_chunk ALTER COLUMN triggered SET DEFAULT true;
+
+
+--
+-- Name: _hyper_17_768_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_17_768_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
 -- Name: _hyper_19_401_chunk ts; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -31716,6 +34285,34 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_19_721_chunk ALTER COLUMN ts SET D
 --
 
 ALTER TABLE ONLY _timescaledb_internal._hyper_19_721_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
+-- Name: _hyper_19_751_chunk ts; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_19_751_chunk ALTER COLUMN ts SET DEFAULT now();
+
+
+--
+-- Name: _hyper_19_751_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_19_751_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
+-- Name: _hyper_19_769_chunk ts; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_19_769_chunk ALTER COLUMN ts SET DEFAULT now();
+
+
+--
+-- Name: _hyper_19_769_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_19_769_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
 
 
 --
@@ -31971,10 +34568,24 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_1_72_chunk ALTER COLUMN greenhouse
 
 
 --
+-- Name: _hyper_1_745_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_1_745_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
 -- Name: _hyper_1_74_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
 --
 
 ALTER TABLE ONLY _timescaledb_internal._hyper_1_74_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
+-- Name: _hyper_1_761_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_1_761_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
 
 
 --
@@ -32171,6 +34782,48 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_20_722_chunk ALTER COLUMN greenhou
 --
 
 ALTER TABLE ONLY _timescaledb_internal._hyper_20_722_chunk ALTER COLUMN status SET DEFAULT 'clamped'::text;
+
+
+--
+-- Name: _hyper_20_749_chunk ts; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_20_749_chunk ALTER COLUMN ts SET DEFAULT now();
+
+
+--
+-- Name: _hyper_20_749_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_20_749_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
+-- Name: _hyper_20_749_chunk status; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_20_749_chunk ALTER COLUMN status SET DEFAULT 'clamped'::text;
+
+
+--
+-- Name: _hyper_20_766_chunk ts; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_20_766_chunk ALTER COLUMN ts SET DEFAULT now();
+
+
+--
+-- Name: _hyper_20_766_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_20_766_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
+-- Name: _hyper_20_766_chunk status; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_20_766_chunk ALTER COLUMN status SET DEFAULT 'clamped'::text;
 
 
 --
@@ -32622,6 +35275,34 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_21_718_chunk ALTER COLUMN greenhou
 
 
 --
+-- Name: _hyper_21_750_chunk host; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_21_750_chunk ALTER COLUMN host SET DEFAULT 'cortex'::text;
+
+
+--
+-- Name: _hyper_21_750_chunk source; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_21_750_chunk ALTER COLUMN source SET DEFAULT 'dcgm'::text;
+
+
+--
+-- Name: _hyper_21_750_chunk raw; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_21_750_chunk ALTER COLUMN raw SET DEFAULT '{}'::jsonb;
+
+
+--
+-- Name: _hyper_21_750_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_21_750_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
 -- Name: _hyper_23_479_chunk source; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -32958,6 +35639,48 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_23_719_chunk ALTER COLUMN greenhou
 
 
 --
+-- Name: _hyper_23_740_chunk source; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_23_740_chunk ALTER COLUMN source SET DEFAULT 'node_exporter'::text;
+
+
+--
+-- Name: _hyper_23_740_chunk raw; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_23_740_chunk ALTER COLUMN raw SET DEFAULT '{}'::jsonb;
+
+
+--
+-- Name: _hyper_23_740_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_23_740_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
+-- Name: _hyper_23_767_chunk source; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_23_767_chunk ALTER COLUMN source SET DEFAULT 'node_exporter'::text;
+
+
+--
+-- Name: _hyper_23_767_chunk raw; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_23_767_chunk ALTER COLUMN raw SET DEFAULT '{}'::jsonb;
+
+
+--
+-- Name: _hyper_23_767_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_23_767_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
 -- Name: _hyper_26_707_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -33067,6 +35790,118 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_26_712_chunk ALTER COLUMN sensor_s
 --
 
 ALTER TABLE ONLY _timescaledb_internal._hyper_26_712_chunk ALTER COLUMN source_system_state SET DEFAULT '{}'::jsonb;
+
+
+--
+-- Name: _hyper_26_743_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_26_743_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
+-- Name: _hyper_26_743_chunk moisture_zone; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_26_743_chunk ALTER COLUMN moisture_zone SET DEFAULT 'none'::text;
+
+
+--
+-- Name: _hyper_26_743_chunk wet_assist_allowed; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_26_743_chunk ALTER COLUMN wet_assist_allowed SET DEFAULT false;
+
+
+--
+-- Name: _hyper_26_743_chunk fog_allowed; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_26_743_chunk ALTER COLUMN fog_allowed SET DEFAULT false;
+
+
+--
+-- Name: _hyper_26_743_chunk relay_truth; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_26_743_chunk ALTER COLUMN relay_truth SET DEFAULT '{}'::jsonb;
+
+
+--
+-- Name: _hyper_26_743_chunk resource_cost_estimate; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_26_743_chunk ALTER COLUMN resource_cost_estimate SET DEFAULT '{}'::jsonb;
+
+
+--
+-- Name: _hyper_26_743_chunk sensor_status; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_26_743_chunk ALTER COLUMN sensor_status SET DEFAULT '{}'::jsonb;
+
+
+--
+-- Name: _hyper_26_743_chunk source_system_state; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_26_743_chunk ALTER COLUMN source_system_state SET DEFAULT '{}'::jsonb;
+
+
+--
+-- Name: _hyper_26_759_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_26_759_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
+-- Name: _hyper_26_759_chunk moisture_zone; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_26_759_chunk ALTER COLUMN moisture_zone SET DEFAULT 'none'::text;
+
+
+--
+-- Name: _hyper_26_759_chunk wet_assist_allowed; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_26_759_chunk ALTER COLUMN wet_assist_allowed SET DEFAULT false;
+
+
+--
+-- Name: _hyper_26_759_chunk fog_allowed; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_26_759_chunk ALTER COLUMN fog_allowed SET DEFAULT false;
+
+
+--
+-- Name: _hyper_26_759_chunk relay_truth; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_26_759_chunk ALTER COLUMN relay_truth SET DEFAULT '{}'::jsonb;
+
+
+--
+-- Name: _hyper_26_759_chunk resource_cost_estimate; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_26_759_chunk ALTER COLUMN resource_cost_estimate SET DEFAULT '{}'::jsonb;
+
+
+--
+-- Name: _hyper_26_759_chunk sensor_status; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_26_759_chunk ALTER COLUMN sensor_status SET DEFAULT '{}'::jsonb;
+
+
+--
+-- Name: _hyper_26_759_chunk source_system_state; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_26_759_chunk ALTER COLUMN source_system_state SET DEFAULT '{}'::jsonb;
 
 
 --
@@ -33602,10 +36437,24 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_2_73_chunk ALTER COLUMN greenhouse
 
 
 --
+-- Name: _hyper_2_742_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_2_742_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
 -- Name: _hyper_2_75_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
 --
 
 ALTER TABLE ONLY _timescaledb_internal._hyper_2_75_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
+-- Name: _hyper_2_760_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_2_760_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
 
 
 --
@@ -33851,6 +36700,20 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_3_512_chunk ALTER COLUMN greenhous
 --
 
 ALTER TABLE ONLY _timescaledb_internal._hyper_3_710_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
+-- Name: _hyper_3_741_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_3_741_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
+-- Name: _hyper_3_758_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_3_758_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
 
 
 --
@@ -34477,6 +37340,34 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_4_717_chunk ALTER COLUMN greenhous
 
 
 --
+-- Name: _hyper_4_744_chunk source; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_4_744_chunk ALTER COLUMN source SET DEFAULT 'esp32'::text;
+
+
+--
+-- Name: _hyper_4_744_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_4_744_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
+-- Name: _hyper_4_765_chunk source; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_4_765_chunk ALTER COLUMN source SET DEFAULT 'esp32'::text;
+
+
+--
+-- Name: _hyper_4_765_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_4_765_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
 -- Name: _hyper_4_89_chunk source; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -34663,6 +37554,20 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_5_510_chunk ALTER COLUMN greenhous
 --
 
 ALTER TABLE ONLY _timescaledb_internal._hyper_5_713_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
+-- Name: _hyper_5_746_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_5_746_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
+-- Name: _hyper_5_762_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_5_762_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
 
 
 --
@@ -34974,6 +37879,20 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_6_715_chunk ALTER COLUMN greenhous
 
 
 --
+-- Name: _hyper_6_748_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_6_748_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
+-- Name: _hyper_6_764_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_6_764_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
 -- Name: _hyper_7_129_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -35065,6 +37984,27 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_7_709_chunk ALTER COLUMN greenhous
 
 
 --
+-- Name: _hyper_7_738_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_7_738_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
+-- Name: _hyper_7_757_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_7_757_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
+-- Name: _hyper_7_776_chunk greenhouse_id; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_7_776_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
 -- Name: _hyper_9_145_chunk source; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -35097,6 +38037,13 @@ ALTER TABLE ONLY public.alert_log ALTER COLUMN id SET DEFAULT nextval('public.al
 --
 
 ALTER TABLE ONLY public.consumables_log ALTER COLUMN id SET DEFAULT nextval('public.consumables_log_id_seq'::regclass);
+
+
+--
+-- Name: crop_band_anchors id; Type: DEFAULT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.crop_band_anchors ALTER COLUMN id SET DEFAULT nextval('public.crop_band_anchors_id_seq'::regclass);
 
 
 --
@@ -35760,6 +38707,54 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_23_719_chunk
 
 
 --
+-- Name: _hyper_10_739_chunk 739_763_setpoint_plan_pkey; Type: CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_739_chunk
+    ADD CONSTRAINT "739_763_setpoint_plan_pkey" PRIMARY KEY (ts, parameter, plan_id);
+
+
+--
+-- Name: _hyper_23_740_chunk 740_765_infra_cpu_pkey; Type: CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_23_740_chunk
+    ADD CONSTRAINT "740_765_infra_cpu_pkey" PRIMARY KEY (greenhouse_id, ts, host);
+
+
+--
+-- Name: _hyper_21_750_chunk 750_772_gpu_power_pkey; Type: CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_21_750_chunk
+    ADD CONSTRAINT "750_772_gpu_power_pkey" PRIMARY KEY (greenhouse_id, ts, host, gpu);
+
+
+--
+-- Name: _hyper_23_767_chunk 767_781_infra_cpu_pkey; Type: CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_23_767_chunk
+    ADD CONSTRAINT "767_781_infra_cpu_pkey" PRIMARY KEY (greenhouse_id, ts, host);
+
+
+--
+-- Name: _hyper_10_774_chunk 774_784_setpoint_plan_pkey; Type: CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_774_chunk
+    ADD CONSTRAINT "774_784_setpoint_plan_pkey" PRIMARY KEY (ts, parameter, plan_id);
+
+
+--
+-- Name: _hyper_10_775_chunk 775_786_setpoint_plan_pkey; Type: CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_775_chunk
+    ADD CONSTRAINT "775_786_setpoint_plan_pkey" PRIMARY KEY (ts, parameter, plan_id);
+
+
+--
 -- Name: achievable_envelope achievable_envelope_pkey; Type: CONSTRAINT; Schema: public; Owner: verdify
 --
 
@@ -35797,6 +38792,22 @@ ALTER TABLE ONLY public.compliance_zone_weights
 
 ALTER TABLE ONLY public.consumables_log
     ADD CONSTRAINT consumables_log_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: crop_band_anchors crop_band_anchors_crop_type_growth_stage_season_series_anch_key; Type: CONSTRAINT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.crop_band_anchors
+    ADD CONSTRAINT crop_band_anchors_crop_type_growth_stage_season_series_anch_key UNIQUE (crop_type, growth_stage, season, series, anchor, greenhouse_id);
+
+
+--
+-- Name: crop_band_anchors crop_band_anchors_pkey; Type: CONSTRAINT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.crop_band_anchors
+    ADD CONSTRAINT crop_band_anchors_pkey PRIMARY KEY (id);
 
 
 --
@@ -36101,6 +39112,14 @@ ALTER TABLE ONLY public.plan_delivery_log
 
 ALTER TABLE ONLY public.plan_journal
     ADD CONSTRAINT plan_journal_pkey PRIMARY KEY (plan_id);
+
+
+--
+-- Name: planner_graph_runs planner_graph_runs_pkey; Type: CONSTRAINT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.planner_graph_runs
+    ADD CONSTRAINT planner_graph_runs_pkey PRIMARY KEY (trigger_id);
 
 
 --
@@ -36852,6 +39871,111 @@ CREATE INDEX _hyper_10_708_chunk_setpoint_plan_ts_idx ON _timescaledb_internal._
 
 
 --
+-- Name: _hyper_10_739_chunk_idx_setplan_param; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_10_739_chunk_idx_setplan_param ON _timescaledb_internal._hyper_10_739_chunk USING btree (parameter, ts);
+
+
+--
+-- Name: _hyper_10_739_chunk_idx_setplan_planid; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_10_739_chunk_idx_setplan_planid ON _timescaledb_internal._hyper_10_739_chunk USING btree (plan_id, ts);
+
+
+--
+-- Name: _hyper_10_739_chunk_idx_setpoint_plan_instance; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_10_739_chunk_idx_setpoint_plan_instance ON _timescaledb_internal._hyper_10_739_chunk USING btree (planner_instance, created_at DESC) WHERE (planner_instance IS NOT NULL);
+
+
+--
+-- Name: _hyper_10_739_chunk_idx_setpoint_plan_trigger_id; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_10_739_chunk_idx_setpoint_plan_trigger_id ON _timescaledb_internal._hyper_10_739_chunk USING btree (trigger_id) WHERE (trigger_id IS NOT NULL);
+
+
+--
+-- Name: _hyper_10_739_chunk_setpoint_plan_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_10_739_chunk_setpoint_plan_ts_idx ON _timescaledb_internal._hyper_10_739_chunk USING btree (ts DESC);
+
+
+--
+-- Name: _hyper_10_774_chunk_idx_setplan_param; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_10_774_chunk_idx_setplan_param ON _timescaledb_internal._hyper_10_774_chunk USING btree (parameter, ts);
+
+
+--
+-- Name: _hyper_10_774_chunk_idx_setplan_planid; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_10_774_chunk_idx_setplan_planid ON _timescaledb_internal._hyper_10_774_chunk USING btree (plan_id, ts);
+
+
+--
+-- Name: _hyper_10_774_chunk_idx_setpoint_plan_instance; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_10_774_chunk_idx_setpoint_plan_instance ON _timescaledb_internal._hyper_10_774_chunk USING btree (planner_instance, created_at DESC) WHERE (planner_instance IS NOT NULL);
+
+
+--
+-- Name: _hyper_10_774_chunk_idx_setpoint_plan_trigger_id; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_10_774_chunk_idx_setpoint_plan_trigger_id ON _timescaledb_internal._hyper_10_774_chunk USING btree (trigger_id) WHERE (trigger_id IS NOT NULL);
+
+
+--
+-- Name: _hyper_10_774_chunk_setpoint_plan_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_10_774_chunk_setpoint_plan_ts_idx ON _timescaledb_internal._hyper_10_774_chunk USING btree (ts DESC);
+
+
+--
+-- Name: _hyper_10_775_chunk_idx_setplan_param; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_10_775_chunk_idx_setplan_param ON _timescaledb_internal._hyper_10_775_chunk USING btree (parameter, ts);
+
+
+--
+-- Name: _hyper_10_775_chunk_idx_setplan_planid; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_10_775_chunk_idx_setplan_planid ON _timescaledb_internal._hyper_10_775_chunk USING btree (plan_id, ts);
+
+
+--
+-- Name: _hyper_10_775_chunk_idx_setpoint_plan_instance; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_10_775_chunk_idx_setpoint_plan_instance ON _timescaledb_internal._hyper_10_775_chunk USING btree (planner_instance, created_at DESC) WHERE (planner_instance IS NOT NULL);
+
+
+--
+-- Name: _hyper_10_775_chunk_idx_setpoint_plan_trigger_id; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_10_775_chunk_idx_setpoint_plan_trigger_id ON _timescaledb_internal._hyper_10_775_chunk USING btree (trigger_id) WHERE (trigger_id IS NOT NULL);
+
+
+--
+-- Name: _hyper_10_775_chunk_setpoint_plan_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_10_775_chunk_setpoint_plan_ts_idx ON _timescaledb_internal._hyper_10_775_chunk USING btree (ts DESC);
+
+
+--
 -- Name: _hyper_11_218_chunk_idx_irrigation_log_ghid; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -37517,48 +40641,6 @@ CREATE INDEX _hyper_16_321_chunk_setpoint_snapshot_ts_idx ON _timescaledb_intern
 
 
 --
--- Name: _hyper_16_352_chunk_idx_setpoint_snapshot_ghid_param_ts; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
---
-
-CREATE INDEX _hyper_16_352_chunk_idx_setpoint_snapshot_ghid_param_ts ON _timescaledb_internal._hyper_16_352_chunk USING btree (greenhouse_id, parameter, ts DESC);
-
-
---
--- Name: _hyper_16_352_chunk_idx_snapshot_param; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
---
-
-CREATE INDEX _hyper_16_352_chunk_idx_snapshot_param ON _timescaledb_internal._hyper_16_352_chunk USING btree (parameter, ts DESC);
-
-
---
--- Name: _hyper_16_352_chunk_setpoint_snapshot_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
---
-
-CREATE INDEX _hyper_16_352_chunk_setpoint_snapshot_ts_idx ON _timescaledb_internal._hyper_16_352_chunk USING btree (ts DESC);
-
-
---
--- Name: _hyper_16_353_chunk_idx_setpoint_snapshot_ghid_param_ts; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
---
-
-CREATE INDEX _hyper_16_353_chunk_idx_setpoint_snapshot_ghid_param_ts ON _timescaledb_internal._hyper_16_353_chunk USING btree (greenhouse_id, parameter, ts DESC);
-
-
---
--- Name: _hyper_16_353_chunk_idx_snapshot_param; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
---
-
-CREATE INDEX _hyper_16_353_chunk_idx_snapshot_param ON _timescaledb_internal._hyper_16_353_chunk USING btree (parameter, ts DESC);
-
-
---
--- Name: _hyper_16_353_chunk_setpoint_snapshot_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
---
-
-CREATE INDEX _hyper_16_353_chunk_setpoint_snapshot_ts_idx ON _timescaledb_internal._hyper_16_353_chunk USING btree (ts DESC);
-
-
---
 -- Name: _hyper_16_354_chunk_idx_setpoint_snapshot_ghid_param_ts; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -37790,6 +40872,48 @@ CREATE INDEX _hyper_16_714_chunk_setpoint_snapshot_ts_idx ON _timescaledb_intern
 
 
 --
+-- Name: _hyper_16_747_chunk_idx_setpoint_snapshot_ghid_param_ts; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_16_747_chunk_idx_setpoint_snapshot_ghid_param_ts ON _timescaledb_internal._hyper_16_747_chunk USING btree (greenhouse_id, parameter, ts DESC);
+
+
+--
+-- Name: _hyper_16_747_chunk_idx_snapshot_param; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_16_747_chunk_idx_snapshot_param ON _timescaledb_internal._hyper_16_747_chunk USING btree (parameter, ts DESC);
+
+
+--
+-- Name: _hyper_16_747_chunk_setpoint_snapshot_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_16_747_chunk_setpoint_snapshot_ts_idx ON _timescaledb_internal._hyper_16_747_chunk USING btree (ts DESC);
+
+
+--
+-- Name: _hyper_16_763_chunk_idx_setpoint_snapshot_ghid_param_ts; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_16_763_chunk_idx_setpoint_snapshot_ghid_param_ts ON _timescaledb_internal._hyper_16_763_chunk USING btree (greenhouse_id, parameter, ts DESC);
+
+
+--
+-- Name: _hyper_16_763_chunk_idx_snapshot_param; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_16_763_chunk_idx_snapshot_param ON _timescaledb_internal._hyper_16_763_chunk USING btree (parameter, ts DESC);
+
+
+--
+-- Name: _hyper_16_763_chunk_setpoint_snapshot_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_16_763_chunk_setpoint_snapshot_ts_idx ON _timescaledb_internal._hyper_16_763_chunk USING btree (ts DESC);
+
+
+--
 -- Name: _hyper_17_356_chunk_forecast_deviation_log_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -37857,6 +40981,20 @@ CREATE INDEX _hyper_17_523_chunk_forecast_deviation_log_ts_idx ON _timescaledb_i
 --
 
 CREATE INDEX _hyper_17_720_chunk_forecast_deviation_log_ts_idx ON _timescaledb_internal._hyper_17_720_chunk USING btree (ts DESC);
+
+
+--
+-- Name: _hyper_17_752_chunk_forecast_deviation_log_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_17_752_chunk_forecast_deviation_log_ts_idx ON _timescaledb_internal._hyper_17_752_chunk USING btree (ts DESC);
+
+
+--
+-- Name: _hyper_17_768_chunk_forecast_deviation_log_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_17_768_chunk_forecast_deviation_log_ts_idx ON _timescaledb_internal._hyper_17_768_chunk USING btree (ts DESC);
 
 
 --
@@ -37955,6 +41093,34 @@ CREATE INDEX _hyper_19_721_chunk_idx_override_events_type ON _timescaledb_intern
 --
 
 CREATE INDEX _hyper_19_721_chunk_override_events_ts_idx ON _timescaledb_internal._hyper_19_721_chunk USING btree (ts DESC);
+
+
+--
+-- Name: _hyper_19_751_chunk_idx_override_events_type; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_19_751_chunk_idx_override_events_type ON _timescaledb_internal._hyper_19_751_chunk USING btree (override_type, ts DESC);
+
+
+--
+-- Name: _hyper_19_751_chunk_override_events_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_19_751_chunk_override_events_ts_idx ON _timescaledb_internal._hyper_19_751_chunk USING btree (ts DESC);
+
+
+--
+-- Name: _hyper_19_769_chunk_idx_override_events_ts; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_19_769_chunk_idx_override_events_ts ON _timescaledb_internal._hyper_19_769_chunk USING btree (ts DESC);
+
+
+--
+-- Name: _hyper_19_769_chunk_idx_override_events_type; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_19_769_chunk_idx_override_events_type ON _timescaledb_internal._hyper_19_769_chunk USING btree (override_type, ts DESC);
 
 
 --
@@ -38966,6 +42132,34 @@ CREATE INDEX _hyper_1_72_chunk_idx_climate_ts_vpd_avg ON _timescaledb_internal._
 
 
 --
+-- Name: _hyper_1_745_chunk_climate_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_1_745_chunk_climate_ts_idx ON _timescaledb_internal._hyper_1_745_chunk USING btree (ts DESC);
+
+
+--
+-- Name: _hyper_1_745_chunk_idx_climate_ghid_ts_not_null; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_1_745_chunk_idx_climate_ghid_ts_not_null ON _timescaledb_internal._hyper_1_745_chunk USING btree (greenhouse_id, ts DESC) WHERE ((temp_avg IS NOT NULL) AND (vpd_avg IS NOT NULL));
+
+
+--
+-- Name: _hyper_1_745_chunk_idx_climate_ts_temp_avg; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_1_745_chunk_idx_climate_ts_temp_avg ON _timescaledb_internal._hyper_1_745_chunk USING btree (ts) WHERE (temp_avg IS NOT NULL);
+
+
+--
+-- Name: _hyper_1_745_chunk_idx_climate_ts_vpd_avg; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_1_745_chunk_idx_climate_ts_vpd_avg ON _timescaledb_internal._hyper_1_745_chunk USING btree (ts) WHERE (vpd_avg IS NOT NULL);
+
+
+--
 -- Name: _hyper_1_74_chunk_climate_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -38991,6 +42185,34 @@ CREATE INDEX _hyper_1_74_chunk_idx_climate_ts_temp_avg ON _timescaledb_internal.
 --
 
 CREATE INDEX _hyper_1_74_chunk_idx_climate_ts_vpd_avg ON _timescaledb_internal._hyper_1_74_chunk USING btree (ts) WHERE (vpd_avg IS NOT NULL);
+
+
+--
+-- Name: _hyper_1_761_chunk_climate_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_1_761_chunk_climate_ts_idx ON _timescaledb_internal._hyper_1_761_chunk USING btree (ts DESC);
+
+
+--
+-- Name: _hyper_1_761_chunk_idx_climate_ghid_ts_not_null; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_1_761_chunk_idx_climate_ghid_ts_not_null ON _timescaledb_internal._hyper_1_761_chunk USING btree (greenhouse_id, ts DESC) WHERE ((temp_avg IS NOT NULL) AND (vpd_avg IS NOT NULL));
+
+
+--
+-- Name: _hyper_1_761_chunk_idx_climate_ts_temp_avg; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_1_761_chunk_idx_climate_ts_temp_avg ON _timescaledb_internal._hyper_1_761_chunk USING btree (ts) WHERE (temp_avg IS NOT NULL);
+
+
+--
+-- Name: _hyper_1_761_chunk_idx_climate_ts_vpd_avg; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_1_761_chunk_idx_climate_ts_vpd_avg ON _timescaledb_internal._hyper_1_761_chunk USING btree (ts) WHERE (vpd_avg IS NOT NULL);
 
 
 --
@@ -39386,6 +42608,62 @@ CREATE INDEX _hyper_20_722_chunk_setpoint_clamps_ts_idx ON _timescaledb_internal
 
 
 --
+-- Name: _hyper_20_749_chunk_idx_setpoint_clamps_param; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_20_749_chunk_idx_setpoint_clamps_param ON _timescaledb_internal._hyper_20_749_chunk USING btree (parameter, ts DESC);
+
+
+--
+-- Name: _hyper_20_749_chunk_idx_setpoint_clamps_plan; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_20_749_chunk_idx_setpoint_clamps_plan ON _timescaledb_internal._hyper_20_749_chunk USING btree (plan_id, plan_ts DESC) WHERE (plan_id IS NOT NULL);
+
+
+--
+-- Name: _hyper_20_749_chunk_idx_setpoint_clamps_status_ts; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_20_749_chunk_idx_setpoint_clamps_status_ts ON _timescaledb_internal._hyper_20_749_chunk USING btree (status, ts DESC);
+
+
+--
+-- Name: _hyper_20_749_chunk_setpoint_clamps_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_20_749_chunk_setpoint_clamps_ts_idx ON _timescaledb_internal._hyper_20_749_chunk USING btree (ts DESC);
+
+
+--
+-- Name: _hyper_20_766_chunk_idx_setpoint_clamps_param; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_20_766_chunk_idx_setpoint_clamps_param ON _timescaledb_internal._hyper_20_766_chunk USING btree (parameter, ts DESC);
+
+
+--
+-- Name: _hyper_20_766_chunk_idx_setpoint_clamps_plan; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_20_766_chunk_idx_setpoint_clamps_plan ON _timescaledb_internal._hyper_20_766_chunk USING btree (plan_id, plan_ts DESC) WHERE (plan_id IS NOT NULL);
+
+
+--
+-- Name: _hyper_20_766_chunk_idx_setpoint_clamps_status_ts; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_20_766_chunk_idx_setpoint_clamps_status_ts ON _timescaledb_internal._hyper_20_766_chunk USING btree (status, ts DESC);
+
+
+--
+-- Name: _hyper_20_766_chunk_idx_setpoint_clamps_ts; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_20_766_chunk_idx_setpoint_clamps_ts ON _timescaledb_internal._hyper_20_766_chunk USING btree (ts DESC);
+
+
+--
 -- Name: _hyper_21_478_chunk_gpu_power_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -39722,6 +43000,27 @@ CREATE INDEX _hyper_21_718_chunk_idx_gpu_power_host_ts ON _timescaledb_internal.
 
 
 --
+-- Name: _hyper_21_750_chunk_gpu_power_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_21_750_chunk_gpu_power_ts_idx ON _timescaledb_internal._hyper_21_750_chunk USING btree (ts DESC);
+
+
+--
+-- Name: _hyper_21_750_chunk_idx_gpu_power_gpu_ts; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_21_750_chunk_idx_gpu_power_gpu_ts ON _timescaledb_internal._hyper_21_750_chunk USING btree (gpu, ts DESC);
+
+
+--
+-- Name: _hyper_21_750_chunk_idx_gpu_power_host_ts; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_21_750_chunk_idx_gpu_power_host_ts ON _timescaledb_internal._hyper_21_750_chunk USING btree (host, ts DESC);
+
+
+--
 -- Name: _hyper_23_479_chunk_idx_infra_cpu_host_ts; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -39946,6 +43245,34 @@ CREATE INDEX _hyper_23_719_chunk_infra_cpu_ts_idx ON _timescaledb_internal._hype
 
 
 --
+-- Name: _hyper_23_740_chunk_idx_infra_cpu_host_ts; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_23_740_chunk_idx_infra_cpu_host_ts ON _timescaledb_internal._hyper_23_740_chunk USING btree (host, ts DESC);
+
+
+--
+-- Name: _hyper_23_740_chunk_infra_cpu_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_23_740_chunk_infra_cpu_ts_idx ON _timescaledb_internal._hyper_23_740_chunk USING btree (ts DESC);
+
+
+--
+-- Name: _hyper_23_767_chunk_idx_infra_cpu_host_ts; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_23_767_chunk_idx_infra_cpu_host_ts ON _timescaledb_internal._hyper_23_767_chunk USING btree (host, ts DESC);
+
+
+--
+-- Name: _hyper_23_767_chunk_infra_cpu_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_23_767_chunk_infra_cpu_ts_idx ON _timescaledb_internal._hyper_23_767_chunk USING btree (ts DESC);
+
+
+--
 -- Name: _hyper_26_707_chunk_climate_action_log_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -40013,6 +43340,76 @@ CREATE INDEX _hyper_26_712_chunk_idx_climate_action_log_plan ON _timescaledb_int
 --
 
 CREATE INDEX _hyper_26_712_chunk_idx_climate_action_log_trigger ON _timescaledb_internal._hyper_26_712_chunk USING btree (trigger_id) WHERE (trigger_id IS NOT NULL);
+
+
+--
+-- Name: _hyper_26_743_chunk_climate_action_log_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_26_743_chunk_climate_action_log_ts_idx ON _timescaledb_internal._hyper_26_743_chunk USING btree (ts DESC);
+
+
+--
+-- Name: _hyper_26_743_chunk_idx_climate_action_log_action_ts; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_26_743_chunk_idx_climate_action_log_action_ts ON _timescaledb_internal._hyper_26_743_chunk USING btree (climate_action, ts DESC);
+
+
+--
+-- Name: _hyper_26_743_chunk_idx_climate_action_log_greenhouse_ts; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_26_743_chunk_idx_climate_action_log_greenhouse_ts ON _timescaledb_internal._hyper_26_743_chunk USING btree (greenhouse_id, ts DESC);
+
+
+--
+-- Name: _hyper_26_743_chunk_idx_climate_action_log_plan; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_26_743_chunk_idx_climate_action_log_plan ON _timescaledb_internal._hyper_26_743_chunk USING btree (plan_id, ts DESC) WHERE (plan_id IS NOT NULL);
+
+
+--
+-- Name: _hyper_26_743_chunk_idx_climate_action_log_trigger; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_26_743_chunk_idx_climate_action_log_trigger ON _timescaledb_internal._hyper_26_743_chunk USING btree (trigger_id) WHERE (trigger_id IS NOT NULL);
+
+
+--
+-- Name: _hyper_26_759_chunk_climate_action_log_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_26_759_chunk_climate_action_log_ts_idx ON _timescaledb_internal._hyper_26_759_chunk USING btree (ts DESC);
+
+
+--
+-- Name: _hyper_26_759_chunk_idx_climate_action_log_action_ts; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_26_759_chunk_idx_climate_action_log_action_ts ON _timescaledb_internal._hyper_26_759_chunk USING btree (climate_action, ts DESC);
+
+
+--
+-- Name: _hyper_26_759_chunk_idx_climate_action_log_greenhouse_ts; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_26_759_chunk_idx_climate_action_log_greenhouse_ts ON _timescaledb_internal._hyper_26_759_chunk USING btree (greenhouse_id, ts DESC);
+
+
+--
+-- Name: _hyper_26_759_chunk_idx_climate_action_log_plan; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_26_759_chunk_idx_climate_action_log_plan ON _timescaledb_internal._hyper_26_759_chunk USING btree (plan_id, ts DESC) WHERE (plan_id IS NOT NULL);
+
+
+--
+-- Name: _hyper_26_759_chunk_idx_climate_action_log_trigger; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_26_759_chunk_idx_climate_action_log_trigger ON _timescaledb_internal._hyper_26_759_chunk USING btree (trigger_id) WHERE (trigger_id IS NOT NULL);
 
 
 --
@@ -41612,6 +45009,27 @@ CREATE INDEX _hyper_2_73_chunk_idx_equipment_state_equip ON _timescaledb_interna
 
 
 --
+-- Name: _hyper_2_742_chunk_equipment_state_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_2_742_chunk_equipment_state_ts_idx ON _timescaledb_internal._hyper_2_742_chunk USING btree (ts DESC);
+
+
+--
+-- Name: _hyper_2_742_chunk_idx_equipment_ghid; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_2_742_chunk_idx_equipment_ghid ON _timescaledb_internal._hyper_2_742_chunk USING btree (greenhouse_id, ts DESC);
+
+
+--
+-- Name: _hyper_2_742_chunk_idx_equipment_state_equip; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_2_742_chunk_idx_equipment_state_equip ON _timescaledb_internal._hyper_2_742_chunk USING btree (equipment, ts DESC);
+
+
+--
 -- Name: _hyper_2_75_chunk_equipment_state_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -41630,6 +45048,27 @@ CREATE INDEX _hyper_2_75_chunk_idx_equipment_ghid ON _timescaledb_internal._hype
 --
 
 CREATE INDEX _hyper_2_75_chunk_idx_equipment_state_equip ON _timescaledb_internal._hyper_2_75_chunk USING btree (equipment, ts DESC);
+
+
+--
+-- Name: _hyper_2_760_chunk_equipment_state_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_2_760_chunk_equipment_state_ts_idx ON _timescaledb_internal._hyper_2_760_chunk USING btree (ts DESC);
+
+
+--
+-- Name: _hyper_2_760_chunk_idx_equipment_ghid; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_2_760_chunk_idx_equipment_ghid ON _timescaledb_internal._hyper_2_760_chunk USING btree (greenhouse_id, ts DESC);
+
+
+--
+-- Name: _hyper_2_760_chunk_idx_equipment_state_equip; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_2_760_chunk_idx_equipment_state_equip ON _timescaledb_internal._hyper_2_760_chunk USING btree (equipment, ts DESC);
 
 
 --
@@ -42148,6 +45587,34 @@ CREATE INDEX _hyper_3_710_chunk_idx_system_state_entity ON _timescaledb_internal
 --
 
 CREATE INDEX _hyper_3_710_chunk_system_state_ts_idx ON _timescaledb_internal._hyper_3_710_chunk USING btree (ts DESC);
+
+
+--
+-- Name: _hyper_3_741_chunk_idx_system_state_entity; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_3_741_chunk_idx_system_state_entity ON _timescaledb_internal._hyper_3_741_chunk USING btree (entity, ts DESC);
+
+
+--
+-- Name: _hyper_3_741_chunk_system_state_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_3_741_chunk_system_state_ts_idx ON _timescaledb_internal._hyper_3_741_chunk USING btree (ts DESC);
+
+
+--
+-- Name: _hyper_3_758_chunk_idx_system_state_entity; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_3_758_chunk_idx_system_state_entity ON _timescaledb_internal._hyper_3_758_chunk USING btree (entity, ts DESC);
+
+
+--
+-- Name: _hyper_3_758_chunk_idx_system_state_ts; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_3_758_chunk_idx_system_state_ts ON _timescaledb_internal._hyper_3_758_chunk USING btree (ts DESC);
 
 
 --
@@ -43670,6 +47137,76 @@ CREATE INDEX _hyper_4_717_chunk_setpoint_changes_ts_idx ON _timescaledb_internal
 
 
 --
+-- Name: _hyper_4_744_chunk_idx_setpoint_changes_ghid; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_4_744_chunk_idx_setpoint_changes_ghid ON _timescaledb_internal._hyper_4_744_chunk USING btree (greenhouse_id, ts DESC);
+
+
+--
+-- Name: _hyper_4_744_chunk_idx_setpoint_changes_ghid_param_ts; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_4_744_chunk_idx_setpoint_changes_ghid_param_ts ON _timescaledb_internal._hyper_4_744_chunk USING btree (greenhouse_id, parameter, ts DESC);
+
+
+--
+-- Name: _hyper_4_744_chunk_idx_setpoint_changes_unconfirmed; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_4_744_chunk_idx_setpoint_changes_unconfirmed ON _timescaledb_internal._hyper_4_744_chunk USING btree (ts DESC) WHERE (confirmed_at IS NULL);
+
+
+--
+-- Name: _hyper_4_744_chunk_idx_setpoints_param; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_4_744_chunk_idx_setpoints_param ON _timescaledb_internal._hyper_4_744_chunk USING btree (parameter, ts DESC);
+
+
+--
+-- Name: _hyper_4_744_chunk_setpoint_changes_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_4_744_chunk_setpoint_changes_ts_idx ON _timescaledb_internal._hyper_4_744_chunk USING btree (ts DESC);
+
+
+--
+-- Name: _hyper_4_765_chunk_idx_setpoint_changes_ghid; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_4_765_chunk_idx_setpoint_changes_ghid ON _timescaledb_internal._hyper_4_765_chunk USING btree (greenhouse_id, ts DESC);
+
+
+--
+-- Name: _hyper_4_765_chunk_idx_setpoint_changes_ghid_param_ts; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_4_765_chunk_idx_setpoint_changes_ghid_param_ts ON _timescaledb_internal._hyper_4_765_chunk USING btree (greenhouse_id, parameter, ts DESC);
+
+
+--
+-- Name: _hyper_4_765_chunk_idx_setpoint_changes_unconfirmed; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_4_765_chunk_idx_setpoint_changes_unconfirmed ON _timescaledb_internal._hyper_4_765_chunk USING btree (ts DESC) WHERE (confirmed_at IS NULL);
+
+
+--
+-- Name: _hyper_4_765_chunk_idx_setpoints_param; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_4_765_chunk_idx_setpoints_param ON _timescaledb_internal._hyper_4_765_chunk USING btree (parameter, ts DESC);
+
+
+--
+-- Name: _hyper_4_765_chunk_idx_setpoints_ts; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_4_765_chunk_idx_setpoints_ts ON _timescaledb_internal._hyper_4_765_chunk USING btree (ts DESC);
+
+
+--
 -- Name: _hyper_4_89_chunk_idx_setpoint_changes_ghid; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -44797,6 +48334,118 @@ CREATE INDEX _hyper_5_713_chunk_idx_diagnostics_v2_vent_mist_assist ON _timescal
 
 
 --
+-- Name: _hyper_5_746_chunk_diagnostics_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_5_746_chunk_diagnostics_ts_idx ON _timescaledb_internal._hyper_5_746_chunk USING btree (ts DESC);
+
+
+--
+-- Name: _hyper_5_746_chunk_idx_diagnostics_fw_version; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_5_746_chunk_idx_diagnostics_fw_version ON _timescaledb_internal._hyper_5_746_chunk USING btree (firmware_version, ts DESC) WHERE (firmware_version IS NOT NULL);
+
+
+--
+-- Name: _hyper_5_746_chunk_idx_diagnostics_heap_largest_block_low; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_5_746_chunk_idx_diagnostics_heap_largest_block_low ON _timescaledb_internal._hyper_5_746_chunk USING btree (heap_largest_free_block_kb, ts DESC) WHERE ((heap_largest_free_block_kb IS NOT NULL) AND (heap_largest_free_block_kb < '18'::double precision));
+
+
+--
+-- Name: _hyper_5_746_chunk_idx_diagnostics_heap_min_free_low; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_5_746_chunk_idx_diagnostics_heap_min_free_low ON _timescaledb_internal._hyper_5_746_chunk USING btree (heap_min_free_kb, ts DESC) WHERE ((heap_min_free_kb IS NOT NULL) AND (heap_min_free_kb < '20'::double precision));
+
+
+--
+-- Name: _hyper_5_746_chunk_idx_diagnostics_probe_count; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_5_746_chunk_idx_diagnostics_probe_count ON _timescaledb_internal._hyper_5_746_chunk USING btree (active_probe_count, ts DESC) WHERE (active_probe_count < 4);
+
+
+--
+-- Name: _hyper_5_746_chunk_idx_diagnostics_relief_active; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_5_746_chunk_idx_diagnostics_relief_active ON _timescaledb_internal._hyper_5_746_chunk USING btree (relief_cycle_count, ts DESC) WHERE (relief_cycle_count > 0);
+
+
+--
+-- Name: _hyper_5_746_chunk_idx_diagnostics_v2_backoff; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_5_746_chunk_idx_diagnostics_v2_backoff ON _timescaledb_internal._hyper_5_746_chunk USING btree (mist_backoff_timer_s, ts DESC) WHERE (mist_backoff_timer_s > 0);
+
+
+--
+-- Name: _hyper_5_746_chunk_idx_diagnostics_v2_vent_mist_assist; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_5_746_chunk_idx_diagnostics_v2_vent_mist_assist ON _timescaledb_internal._hyper_5_746_chunk USING btree (vent_mist_assist_active, ts DESC) WHERE (vent_mist_assist_active = 1);
+
+
+--
+-- Name: _hyper_5_762_chunk_diagnostics_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_5_762_chunk_diagnostics_ts_idx ON _timescaledb_internal._hyper_5_762_chunk USING btree (ts DESC);
+
+
+--
+-- Name: _hyper_5_762_chunk_idx_diagnostics_fw_version; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_5_762_chunk_idx_diagnostics_fw_version ON _timescaledb_internal._hyper_5_762_chunk USING btree (firmware_version, ts DESC) WHERE (firmware_version IS NOT NULL);
+
+
+--
+-- Name: _hyper_5_762_chunk_idx_diagnostics_heap_largest_block_low; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_5_762_chunk_idx_diagnostics_heap_largest_block_low ON _timescaledb_internal._hyper_5_762_chunk USING btree (heap_largest_free_block_kb, ts DESC) WHERE ((heap_largest_free_block_kb IS NOT NULL) AND (heap_largest_free_block_kb < '18'::double precision));
+
+
+--
+-- Name: _hyper_5_762_chunk_idx_diagnostics_heap_min_free_low; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_5_762_chunk_idx_diagnostics_heap_min_free_low ON _timescaledb_internal._hyper_5_762_chunk USING btree (heap_min_free_kb, ts DESC) WHERE ((heap_min_free_kb IS NOT NULL) AND (heap_min_free_kb < '20'::double precision));
+
+
+--
+-- Name: _hyper_5_762_chunk_idx_diagnostics_probe_count; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_5_762_chunk_idx_diagnostics_probe_count ON _timescaledb_internal._hyper_5_762_chunk USING btree (active_probe_count, ts DESC) WHERE (active_probe_count < 4);
+
+
+--
+-- Name: _hyper_5_762_chunk_idx_diagnostics_relief_active; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_5_762_chunk_idx_diagnostics_relief_active ON _timescaledb_internal._hyper_5_762_chunk USING btree (relief_cycle_count, ts DESC) WHERE (relief_cycle_count > 0);
+
+
+--
+-- Name: _hyper_5_762_chunk_idx_diagnostics_v2_backoff; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_5_762_chunk_idx_diagnostics_v2_backoff ON _timescaledb_internal._hyper_5_762_chunk USING btree (mist_backoff_timer_s, ts DESC) WHERE (mist_backoff_timer_s > 0);
+
+
+--
+-- Name: _hyper_5_762_chunk_idx_diagnostics_v2_vent_mist_assist; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_5_762_chunk_idx_diagnostics_v2_vent_mist_assist ON _timescaledb_internal._hyper_5_762_chunk USING btree (vent_mist_assist_active, ts DESC) WHERE (vent_mist_assist_active = 1);
+
+
+--
 -- Name: _hyper_6_146_chunk_energy_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -45105,6 +48754,20 @@ CREATE INDEX _hyper_6_715_chunk_energy_ts_idx ON _timescaledb_internal._hyper_6_
 
 
 --
+-- Name: _hyper_6_748_chunk_energy_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_6_748_chunk_energy_ts_idx ON _timescaledb_internal._hyper_6_748_chunk USING btree (ts DESC);
+
+
+--
+-- Name: _hyper_6_764_chunk_energy_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_6_764_chunk_energy_ts_idx ON _timescaledb_internal._hyper_6_764_chunk USING btree (ts DESC);
+
+
+--
 -- Name: _hyper_7_129_chunk_idx_forecast_ts_fetched; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -45378,45 +49041,66 @@ CREATE INDEX _hyper_7_709_chunk_weather_forecast_ts_idx ON _timescaledb_internal
 
 
 --
--- Name: _hyper_8_420_chunk_esp32_logs_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+-- Name: _hyper_7_738_chunk_idx_forecast_ts_fetched; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
 --
 
-CREATE INDEX _hyper_8_420_chunk_esp32_logs_ts_idx ON _timescaledb_internal._hyper_8_420_chunk USING btree (ts DESC);
-
-
---
--- Name: _hyper_8_420_chunk_idx_esp32_logs_level; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
---
-
-CREATE INDEX _hyper_8_420_chunk_idx_esp32_logs_level ON _timescaledb_internal._hyper_8_420_chunk USING btree (level, ts DESC);
+CREATE INDEX _hyper_7_738_chunk_idx_forecast_ts_fetched ON _timescaledb_internal._hyper_7_738_chunk USING btree (ts, fetched_at DESC);
 
 
 --
--- Name: _hyper_8_420_chunk_idx_esp32_logs_tag; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+-- Name: _hyper_7_738_chunk_idx_weather_forecast_ghid_ts_fetched; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
 --
 
-CREATE INDEX _hyper_8_420_chunk_idx_esp32_logs_tag ON _timescaledb_internal._hyper_8_420_chunk USING btree (tag, ts DESC);
-
-
---
--- Name: _hyper_8_450_chunk_esp32_logs_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
---
-
-CREATE INDEX _hyper_8_450_chunk_esp32_logs_ts_idx ON _timescaledb_internal._hyper_8_450_chunk USING btree (ts DESC);
+CREATE INDEX _hyper_7_738_chunk_idx_weather_forecast_ghid_ts_fetched ON _timescaledb_internal._hyper_7_738_chunk USING btree (greenhouse_id, ts, fetched_at DESC);
 
 
 --
--- Name: _hyper_8_450_chunk_idx_esp32_logs_level; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+-- Name: _hyper_7_738_chunk_weather_forecast_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
 --
 
-CREATE INDEX _hyper_8_450_chunk_idx_esp32_logs_level ON _timescaledb_internal._hyper_8_450_chunk USING btree (level, ts DESC);
+CREATE INDEX _hyper_7_738_chunk_weather_forecast_ts_idx ON _timescaledb_internal._hyper_7_738_chunk USING btree (ts DESC);
 
 
 --
--- Name: _hyper_8_450_chunk_idx_esp32_logs_tag; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+-- Name: _hyper_7_757_chunk_idx_forecast_ts_fetched; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
 --
 
-CREATE INDEX _hyper_8_450_chunk_idx_esp32_logs_tag ON _timescaledb_internal._hyper_8_450_chunk USING btree (tag, ts DESC);
+CREATE INDEX _hyper_7_757_chunk_idx_forecast_ts_fetched ON _timescaledb_internal._hyper_7_757_chunk USING btree (ts, fetched_at DESC);
+
+
+--
+-- Name: _hyper_7_757_chunk_idx_weather_forecast_ghid_ts_fetched; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_7_757_chunk_idx_weather_forecast_ghid_ts_fetched ON _timescaledb_internal._hyper_7_757_chunk USING btree (greenhouse_id, ts, fetched_at DESC);
+
+
+--
+-- Name: _hyper_7_757_chunk_weather_forecast_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_7_757_chunk_weather_forecast_ts_idx ON _timescaledb_internal._hyper_7_757_chunk USING btree (ts DESC);
+
+
+--
+-- Name: _hyper_7_776_chunk_idx_forecast_ts_fetched; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_7_776_chunk_idx_forecast_ts_fetched ON _timescaledb_internal._hyper_7_776_chunk USING btree (ts, fetched_at DESC);
+
+
+--
+-- Name: _hyper_7_776_chunk_idx_weather_forecast_ghid_ts_fetched; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_7_776_chunk_idx_weather_forecast_ghid_ts_fetched ON _timescaledb_internal._hyper_7_776_chunk USING btree (greenhouse_id, ts, fetched_at DESC);
+
+
+--
+-- Name: _hyper_7_776_chunk_weather_forecast_ts_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX _hyper_7_776_chunk_weather_forecast_ts_idx ON _timescaledb_internal._hyper_7_776_chunk USING btree (ts DESC);
 
 
 --
@@ -45777,6 +49461,20 @@ CREATE INDEX compress_hyper_12_725_chunk_lightning_avg_dist_mi__ts_meta__idx ON 
 
 
 --
+-- Name: compress_hyper_12_755_chunk_lightning_avg_dist_mi__ts_meta__idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX compress_hyper_12_755_chunk_lightning_avg_dist_mi__ts_meta__idx ON _timescaledb_internal.compress_hyper_12_755_chunk USING btree (lightning_avg_dist_mi, _ts_meta_min_1 DESC, _ts_meta_max_1 DESC, _ts_meta_min_2, _ts_meta_max_2);
+
+
+--
+-- Name: compress_hyper_12_772_chunk_greenhouse_id__ts_meta_min_1__t_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX compress_hyper_12_772_chunk_greenhouse_id__ts_meta_min_1__t_idx ON _timescaledb_internal.compress_hyper_12_772_chunk USING btree (greenhouse_id, _ts_meta_min_1 DESC, _ts_meta_max_1 DESC);
+
+
+--
 -- Name: compress_hyper_13_243_chunk__ts_meta_min_1__ts_meta_max_1_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -46071,6 +49769,20 @@ CREATE INDEX compress_hyper_13_724_chunk__ts_meta_min_1__ts_meta_max_1_idx ON _t
 
 
 --
+-- Name: compress_hyper_13_753_chunk__ts_meta_min_1__ts_meta_max_1_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX compress_hyper_13_753_chunk__ts_meta_min_1__ts_meta_max_1_idx ON _timescaledb_internal.compress_hyper_13_753_chunk USING btree (_ts_meta_min_1 DESC, _ts_meta_max_1 DESC);
+
+
+--
+-- Name: compress_hyper_13_773_chunk__ts_meta_min_1__ts_meta_max_1_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX compress_hyper_13_773_chunk__ts_meta_min_1__ts_meta_max_1_idx ON _timescaledb_internal.compress_hyper_13_773_chunk USING btree (_ts_meta_min_1 DESC, _ts_meta_max_1 DESC);
+
+
+--
 -- Name: compress_hyper_14_241_chunk__ts_meta_min_1__ts_meta_max_1_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -46176,24 +49888,24 @@ CREATE INDEX compress_hyper_14_723_chunk__ts_meta_min_1__ts_meta_max_1___idx ON 
 
 
 --
+-- Name: compress_hyper_14_754_chunk__ts_meta_min_1__ts_meta_max_1___idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX compress_hyper_14_754_chunk__ts_meta_min_1__ts_meta_max_1___idx ON _timescaledb_internal.compress_hyper_14_754_chunk USING btree (_ts_meta_min_1 DESC, _ts_meta_max_1 DESC, _ts_meta_min_2, _ts_meta_max_2, _ts_meta_min_3, _ts_meta_max_3, _ts_meta_min_4, _ts_meta_max_4, _ts_meta_min_5, _ts_meta_max_5, _ts_meta_min_6, _ts_meta_max_6, _ts_meta_min_7, _ts_meta_max_7, _ts_meta_min_8, _ts_meta_max_8);
+
+
+--
+-- Name: compress_hyper_14_771_chunk__ts_meta_min_1__ts_meta_max_1___idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX compress_hyper_14_771_chunk__ts_meta_min_1__ts_meta_max_1___idx ON _timescaledb_internal.compress_hyper_14_771_chunk USING btree (_ts_meta_min_1 DESC, _ts_meta_max_1 DESC, _ts_meta_min_2, _ts_meta_max_2, _ts_meta_min_3, _ts_meta_max_3, _ts_meta_min_4, _ts_meta_max_4, _ts_meta_min_5, _ts_meta_max_5, _ts_meta_min_6, _ts_meta_max_6, _ts_meta_min_7, _ts_meta_max_7, _ts_meta_min_8, _ts_meta_max_8);
+
+
+--
 -- Name: compress_hyper_32_726_chunk_parameter__ts_meta_min_1__ts_me_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
 --
 
 CREATE INDEX compress_hyper_32_726_chunk_parameter__ts_meta_min_1__ts_me_idx ON _timescaledb_internal.compress_hyper_32_726_chunk USING btree (parameter, _ts_meta_min_1 DESC, _ts_meta_max_1 DESC);
-
-
---
--- Name: compress_hyper_32_727_chunk_parameter__ts_meta_min_1__ts_me_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
---
-
-CREATE INDEX compress_hyper_32_727_chunk_parameter__ts_meta_min_1__ts_me_idx ON _timescaledb_internal.compress_hyper_32_727_chunk USING btree (parameter, _ts_meta_min_1 DESC, _ts_meta_max_1 DESC);
-
-
---
--- Name: compress_hyper_32_728_chunk_parameter__ts_meta_min_1__ts_me_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
---
-
-CREATE INDEX compress_hyper_32_728_chunk_parameter__ts_meta_min_1__ts_me_idx ON _timescaledb_internal.compress_hyper_32_728_chunk USING btree (parameter, _ts_meta_min_1 DESC, _ts_meta_max_1 DESC);
 
 
 --
@@ -46260,6 +49972,20 @@ CREATE INDEX compress_hyper_32_737_chunk_parameter__ts_meta_min_1__ts_me_idx ON 
 
 
 --
+-- Name: compress_hyper_32_756_chunk_parameter__ts_meta_min_1__ts_me_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX compress_hyper_32_756_chunk_parameter__ts_meta_min_1__ts_me_idx ON _timescaledb_internal.compress_hyper_32_756_chunk USING btree (parameter, _ts_meta_min_1 DESC, _ts_meta_max_1 DESC);
+
+
+--
+-- Name: compress_hyper_32_770_chunk_parameter__ts_meta_min_1__ts_me_idx; Type: INDEX; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE INDEX compress_hyper_32_770_chunk_parameter__ts_meta_min_1__ts_me_idx ON _timescaledb_internal.compress_hyper_32_770_chunk USING btree (parameter, _ts_meta_min_1 DESC, _ts_meta_max_1 DESC);
+
+
+--
 -- Name: climate_action_log_ts_idx; Type: INDEX; Schema: public; Owner: verdify
 --
 
@@ -46299,6 +50025,13 @@ CREATE INDEX equipment_state_ts_idx ON public.equipment_state USING btree (ts DE
 --
 
 CREATE INDEX esp32_logs_ts_idx ON public.esp32_logs USING btree (ts DESC);
+
+
+--
+-- Name: firmware_twin_divergence_ts_idx; Type: INDEX; Schema: public; Owner: verdify
+--
+
+CREATE INDEX firmware_twin_divergence_ts_idx ON public.firmware_twin_divergence USING btree (ts DESC);
 
 
 --
@@ -46656,6 +50389,13 @@ CREATE INDEX idx_esp32_logs_level ON public.esp32_logs USING btree (level, ts DE
 --
 
 CREATE INDEX idx_esp32_logs_tag ON public.esp32_logs USING btree (tag, ts DESC);
+
+
+--
+-- Name: idx_firmware_twin_divergence_cmp_ts; Type: INDEX; Schema: public; Owner: verdify
+--
+
+CREATE INDEX idx_firmware_twin_divergence_cmp_ts ON public.firmware_twin_divergence USING btree (comparison, ts DESC);
 
 
 --
@@ -47156,6 +50896,20 @@ CREATE INDEX idx_treatments_ts ON public.treatments USING btree (ts DESC);
 
 
 --
+-- Name: idx_twin_decisions_env_ts; Type: INDEX; Schema: public; Owner: verdify
+--
+
+CREATE INDEX idx_twin_decisions_env_ts ON public.twin_decisions USING btree (twin_env, ts DESC);
+
+
+--
+-- Name: idx_twin_decisions_input_ts; Type: INDEX; Schema: public; Owner: verdify
+--
+
+CREATE INDEX idx_twin_decisions_input_ts ON public.twin_decisions USING btree (twin_env, input_ts DESC);
+
+
+--
 -- Name: idx_utility_cost_month; Type: INDEX; Schema: public; Owner: verdify
 --
 
@@ -47240,6 +50994,13 @@ CREATE INDEX model_predictions_ts_idx ON public.model_predictions USING btree (t
 
 
 --
+-- Name: mv_band_curve_ts_uidx; Type: INDEX; Schema: public; Owner: verdify
+--
+
+CREATE UNIQUE INDEX mv_band_curve_ts_uidx ON public.mv_band_curve USING btree (ts, greenhouse_id);
+
+
+--
 -- Name: mv_zone_band_grade_pk; Type: INDEX; Schema: public; Owner: verdify
 --
 
@@ -47286,6 +51047,13 @@ CREATE INDEX plan_delivery_log_trigger_id_idx ON public.plan_delivery_log USING 
 --
 
 CREATE INDEX plan_delivery_log_unresolved_idx ON public.plan_delivery_log USING btree (delivered_at) WHERE (resulting_plan_id IS NULL);
+
+
+--
+-- Name: planner_graph_runs_status_idx; Type: INDEX; Schema: public; Owner: verdify
+--
+
+CREATE INDEX planner_graph_runs_status_idx ON public.planner_graph_runs USING btree (status, queued, updated_at);
 
 
 --
@@ -47363,6 +51131,13 @@ CREATE INDEX setpoint_snapshot_ts_idx ON public.setpoint_snapshot USING btree (t
 --
 
 CREATE INDEX system_state_ts_idx ON public.system_state USING btree (ts DESC);
+
+
+--
+-- Name: twin_decisions_ts_idx; Type: INDEX; Schema: public; Owner: verdify
+--
+
+CREATE INDEX twin_decisions_ts_idx ON public.twin_decisions USING btree (ts DESC);
 
 
 --
@@ -47828,10 +51603,24 @@ CREATE TRIGGER trg_climate_solar_position BEFORE INSERT ON _timescaledb_internal
 
 
 --
+-- Name: _hyper_1_745_chunk trg_climate_solar_position; Type: TRIGGER; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TRIGGER trg_climate_solar_position BEFORE INSERT ON _timescaledb_internal._hyper_1_745_chunk FOR EACH ROW WHEN ((new.solar_altitude_deg IS NULL)) EXECUTE FUNCTION public.compute_solar_position();
+
+
+--
 -- Name: _hyper_1_74_chunk trg_climate_solar_position; Type: TRIGGER; Schema: _timescaledb_internal; Owner: verdify
 --
 
 CREATE TRIGGER trg_climate_solar_position BEFORE INSERT ON _timescaledb_internal._hyper_1_74_chunk FOR EACH ROW WHEN ((new.solar_altitude_deg IS NULL)) EXECUTE FUNCTION public.compute_solar_position();
+
+
+--
+-- Name: _hyper_1_761_chunk trg_climate_solar_position; Type: TRIGGER; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TRIGGER trg_climate_solar_position BEFORE INSERT ON _timescaledb_internal._hyper_1_761_chunk FOR EACH ROW WHEN ((new.solar_altitude_deg IS NULL)) EXECUTE FUNCTION public.compute_solar_position();
 
 
 --
@@ -48157,6 +51946,20 @@ CREATE TRIGGER trg_normalize_changes_param BEFORE INSERT ON _timescaledb_interna
 
 
 --
+-- Name: _hyper_4_744_chunk trg_normalize_changes_param; Type: TRIGGER; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TRIGGER trg_normalize_changes_param BEFORE INSERT ON _timescaledb_internal._hyper_4_744_chunk FOR EACH ROW EXECUTE FUNCTION public.normalize_changes_param();
+
+
+--
+-- Name: _hyper_4_765_chunk trg_normalize_changes_param; Type: TRIGGER; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TRIGGER trg_normalize_changes_param BEFORE INSERT ON _timescaledb_internal._hyper_4_765_chunk FOR EACH ROW EXECUTE FUNCTION public.normalize_changes_param();
+
+
+--
 -- Name: _hyper_4_89_chunk trg_normalize_changes_param; Type: TRIGGER; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -48273,6 +52076,27 @@ CREATE TRIGGER trg_normalize_plan_param BEFORE INSERT ON _timescaledb_internal._
 --
 
 CREATE TRIGGER trg_normalize_plan_param BEFORE INSERT ON _timescaledb_internal._hyper_10_708_chunk FOR EACH ROW EXECUTE FUNCTION public.normalize_plan_param();
+
+
+--
+-- Name: _hyper_10_739_chunk trg_normalize_plan_param; Type: TRIGGER; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TRIGGER trg_normalize_plan_param BEFORE INSERT ON _timescaledb_internal._hyper_10_739_chunk FOR EACH ROW EXECUTE FUNCTION public.normalize_plan_param();
+
+
+--
+-- Name: _hyper_10_774_chunk trg_normalize_plan_param; Type: TRIGGER; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TRIGGER trg_normalize_plan_param BEFORE INSERT ON _timescaledb_internal._hyper_10_774_chunk FOR EACH ROW EXECUTE FUNCTION public.normalize_plan_param();
+
+
+--
+-- Name: _hyper_10_775_chunk trg_normalize_plan_param; Type: TRIGGER; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TRIGGER trg_normalize_plan_param BEFORE INSERT ON _timescaledb_internal._hyper_10_775_chunk FOR EACH ROW EXECUTE FUNCTION public.normalize_plan_param();
 
 
 --
@@ -48549,6 +52373,20 @@ CREATE TRIGGER trg_setpoint_notify AFTER INSERT ON _timescaledb_internal._hyper_
 
 
 --
+-- Name: _hyper_4_744_chunk trg_setpoint_notify; Type: TRIGGER; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TRIGGER trg_setpoint_notify AFTER INSERT ON _timescaledb_internal._hyper_4_744_chunk FOR EACH ROW EXECUTE FUNCTION public.notify_setpoint_change();
+
+
+--
+-- Name: _hyper_4_765_chunk trg_setpoint_notify; Type: TRIGGER; Schema: _timescaledb_internal; Owner: verdify
+--
+
+CREATE TRIGGER trg_setpoint_notify AFTER INSERT ON _timescaledb_internal._hyper_4_765_chunk FOR EACH ROW EXECUTE FUNCTION public.notify_setpoint_change();
+
+
+--
 -- Name: _hyper_4_89_chunk trg_setpoint_notify; Type: TRIGGER; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -48609,6 +52447,13 @@ CREATE TRIGGER trg_alert_log_updated_at BEFORE UPDATE ON public.alert_log FOR EA
 --
 
 CREATE TRIGGER trg_climate_solar_position BEFORE INSERT ON public.climate FOR EACH ROW WHEN ((new.solar_altitude_deg IS NULL)) EXECUTE FUNCTION public.compute_solar_position();
+
+
+--
+-- Name: crop_band_anchors trg_crop_band_anchors_updated_at; Type: TRIGGER; Schema: public; Owner: verdify
+--
+
+CREATE TRIGGER trg_crop_band_anchors_updated_at BEFORE UPDATE ON public.crop_band_anchors FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
 
 
 --
@@ -49864,22 +53709,6 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_3_33_chunk
 
 
 --
--- Name: _hyper_16_352_chunk 352_181_setpoint_snapshot_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
---
-
-ALTER TABLE ONLY _timescaledb_internal._hyper_16_352_chunk
-    ADD CONSTRAINT "352_181_setpoint_snapshot_greenhouse_id_fkey" FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
-
-
---
--- Name: _hyper_16_353_chunk 353_182_setpoint_snapshot_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
---
-
-ALTER TABLE ONLY _timescaledb_internal._hyper_16_353_chunk
-    ADD CONSTRAINT "353_182_setpoint_snapshot_greenhouse_id_fkey" FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
-
-
---
 -- Name: _hyper_16_354_chunk 354_183_setpoint_snapshot_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -50888,6 +54717,22 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_17_720_chunk
 
 
 --
+-- Name: _hyper_7_738_chunk 738_761_weather_forecast_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_7_738_chunk
+    ADD CONSTRAINT "738_761_weather_forecast_greenhouse_id_fkey" FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
+
+
+--
+-- Name: _hyper_10_739_chunk 739_762_setpoint_plan_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_739_chunk
+    ADD CONSTRAINT "739_762_setpoint_plan_greenhouse_id_fkey" FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
+
+
+--
 -- Name: _hyper_2_73_chunk 73_53_equipment_state_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -50896,11 +54741,163 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_2_73_chunk
 
 
 --
+-- Name: _hyper_23_740_chunk 740_764_infra_cpu_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_23_740_chunk
+    ADD CONSTRAINT "740_764_infra_cpu_greenhouse_id_fkey" FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
+
+
+--
+-- Name: _hyper_3_741_chunk 741_766_system_state_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_3_741_chunk
+    ADD CONSTRAINT "741_766_system_state_greenhouse_id_fkey" FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
+
+
+--
+-- Name: _hyper_2_742_chunk 742_767_equipment_state_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_2_742_chunk
+    ADD CONSTRAINT "742_767_equipment_state_greenhouse_id_fkey" FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
+
+
+--
+-- Name: _hyper_26_743_chunk 743_768_climate_action_log_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_26_743_chunk
+    ADD CONSTRAINT "743_768_climate_action_log_greenhouse_id_fkey" FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
+
+
+--
+-- Name: _hyper_4_744_chunk 744_769_setpoint_changes_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_4_744_chunk
+    ADD CONSTRAINT "744_769_setpoint_changes_greenhouse_id_fkey" FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
+
+
+--
+-- Name: _hyper_16_747_chunk 747_770_setpoint_snapshot_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_16_747_chunk
+    ADD CONSTRAINT "747_770_setpoint_snapshot_greenhouse_id_fkey" FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
+
+
+--
+-- Name: _hyper_21_750_chunk 750_771_gpu_power_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_21_750_chunk
+    ADD CONSTRAINT "750_771_gpu_power_greenhouse_id_fkey" FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
+
+
+--
+-- Name: _hyper_17_752_chunk 752_773_forecast_deviation_log_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_17_752_chunk
+    ADD CONSTRAINT "752_773_forecast_deviation_log_greenhouse_id_fkey" FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
+
+
+--
+-- Name: _hyper_7_757_chunk 757_774_weather_forecast_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_7_757_chunk
+    ADD CONSTRAINT "757_774_weather_forecast_greenhouse_id_fkey" FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
+
+
+--
+-- Name: _hyper_3_758_chunk 758_775_system_state_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_3_758_chunk
+    ADD CONSTRAINT "758_775_system_state_greenhouse_id_fkey" FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
+
+
+--
+-- Name: _hyper_26_759_chunk 759_776_climate_action_log_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_26_759_chunk
+    ADD CONSTRAINT "759_776_climate_action_log_greenhouse_id_fkey" FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
+
+
+--
 -- Name: _hyper_2_75_chunk 75_54_equipment_state_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
 --
 
 ALTER TABLE ONLY _timescaledb_internal._hyper_2_75_chunk
     ADD CONSTRAINT "75_54_equipment_state_greenhouse_id_fkey" FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
+
+
+--
+-- Name: _hyper_2_760_chunk 760_777_equipment_state_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_2_760_chunk
+    ADD CONSTRAINT "760_777_equipment_state_greenhouse_id_fkey" FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
+
+
+--
+-- Name: _hyper_16_763_chunk 763_778_setpoint_snapshot_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_16_763_chunk
+    ADD CONSTRAINT "763_778_setpoint_snapshot_greenhouse_id_fkey" FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
+
+
+--
+-- Name: _hyper_4_765_chunk 765_779_setpoint_changes_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_4_765_chunk
+    ADD CONSTRAINT "765_779_setpoint_changes_greenhouse_id_fkey" FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
+
+
+--
+-- Name: _hyper_23_767_chunk 767_780_infra_cpu_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_23_767_chunk
+    ADD CONSTRAINT "767_780_infra_cpu_greenhouse_id_fkey" FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
+
+
+--
+-- Name: _hyper_17_768_chunk 768_782_forecast_deviation_log_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_17_768_chunk
+    ADD CONSTRAINT "768_782_forecast_deviation_log_greenhouse_id_fkey" FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
+
+
+--
+-- Name: _hyper_10_774_chunk 774_783_setpoint_plan_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_774_chunk
+    ADD CONSTRAINT "774_783_setpoint_plan_greenhouse_id_fkey" FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
+
+
+--
+-- Name: _hyper_10_775_chunk 775_785_setpoint_plan_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_775_chunk
+    ADD CONSTRAINT "775_785_setpoint_plan_greenhouse_id_fkey" FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
+
+
+--
+-- Name: _hyper_7_776_chunk 776_787_weather_forecast_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_7_776_chunk
+    ADD CONSTRAINT "776_787_weather_forecast_greenhouse_id_fkey" FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
 
 
 --
@@ -51104,6 +55101,14 @@ ALTER TABLE ONLY public.consumables_log
 
 
 --
+-- Name: crop_band_anchors crop_band_anchors_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.crop_band_anchors
+    ADD CONSTRAINT crop_band_anchors_greenhouse_id_fkey FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
+
+
+--
 -- Name: crop_events crop_events_crop_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: verdify
 --
 
@@ -51261,6 +55266,14 @@ ALTER TABLE ONLY public.equipment_state
 
 ALTER TABLE ONLY public.equipment
     ADD CONSTRAINT equipment_zone_id_fkey FOREIGN KEY (zone_id) REFERENCES public.zones(id) ON DELETE SET NULL;
+
+
+--
+-- Name: firmware_twin_divergence firmware_twin_divergence_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.firmware_twin_divergence
+    ADD CONSTRAINT firmware_twin_divergence_greenhouse_id_fkey FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
 
 
 --
@@ -51736,6 +55749,14 @@ ALTER TABLE ONLY public.treatments
 
 
 --
+-- Name: twin_decisions twin_decisions_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: verdify
+--
+
+ALTER TABLE ONLY public.twin_decisions
+    ADD CONSTRAINT twin_decisions_greenhouse_id_fkey FOREIGN KEY (greenhouse_id) REFERENCES public.greenhouses(id);
+
+
+--
 -- Name: water_meter_events water_meter_events_greenhouse_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: verdify
 --
 
@@ -51792,7 +55813,2129 @@ ALTER TABLE ONLY public.zones
 
 
 --
+-- Name: TABLE _compressed_hypertable_12; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._compressed_hypertable_12 TO twin_ro;
+
+
+--
+-- Name: TABLE _compressed_hypertable_32; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._compressed_hypertable_32 TO twin_ro;
+
+
+--
+-- Name: TABLE setpoint_snapshot; Type: ACL; Schema: public; Owner: verdify
+--
+
+GRANT SELECT ON TABLE public.setpoint_snapshot TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_16_321_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_16_321_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_16_354_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_16_354_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_16_355_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_16_355_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_16_362_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_16_362_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_16_376_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_16_376_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_16_393_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_16_393_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_16_408_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_16_408_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_16_423_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_16_423_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_16_449_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_16_449_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_16_468_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_16_468_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_16_511_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_16_511_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_16_714_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_16_714_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_16_747_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_16_747_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_16_763_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_16_763_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE climate; Type: ACL; Schema: public; Owner: verdify
+--
+
+GRANT SELECT ON TABLE public.climate TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_10_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_10_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_11_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_11_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_12_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_12_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_13_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_13_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_14_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_14_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_15_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_15_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_16_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_16_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_1_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_1_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_314_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_314_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_360_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_360_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_374_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_374_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_391_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_391_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_406_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_406_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_40_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_40_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_41_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_41_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_421_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_421_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_43_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_43_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_447_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_447_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_466_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_466_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_47_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_47_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_49_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_49_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_509_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_509_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_51_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_51_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_53_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_53_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_55_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_55_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_56_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_56_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_58_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_58_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_60_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_60_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_62_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_62_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_64_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_64_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_66_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_66_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_68_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_68_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_6_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_6_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_70_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_70_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_711_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_711_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_72_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_72_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_745_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_745_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_74_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_74_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_761_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_761_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_76_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_76_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_78_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_78_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_7_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_7_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_80_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_80_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_82_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_82_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_8_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_8_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_1_9_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_1_9_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE climate_action_log; Type: ACL; Schema: public; Owner: verdify
+--
+
+GRANT SELECT ON TABLE public.climate_action_log TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_26_707_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_26_707_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_26_712_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_26_712_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_26_743_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_26_743_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_26_759_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_26_759_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE equipment_state; Type: ACL; Schema: public; Owner: verdify
+--
+
+GRANT SELECT ON TABLE public.equipment_state TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_17_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_17_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_180_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_180_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_181_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_181_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_182_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_182_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_183_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_183_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_184_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_184_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_185_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_185_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_186_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_186_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_187_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_187_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_188_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_188_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_189_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_189_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_18_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_18_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_190_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_190_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_191_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_191_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_192_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_192_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_193_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_193_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_194_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_194_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_195_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_195_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_196_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_196_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_197_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_197_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_198_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_198_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_199_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_199_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_19_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_19_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_200_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_200_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_201_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_201_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_202_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_202_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_203_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_203_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_204_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_204_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_205_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_205_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_206_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_206_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_207_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_207_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_208_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_208_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_209_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_209_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_20_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_20_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_210_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_210_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_211_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_211_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_212_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_212_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_213_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_213_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_214_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_214_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_215_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_215_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_216_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_216_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_21_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_21_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_22_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_22_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_23_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_23_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_24_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_24_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_25_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_25_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_26_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_26_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_27_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_27_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_316_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_316_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_370_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_370_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_380_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_380_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_395_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_395_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_3_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_3_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_405_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_405_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_427_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_427_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_42_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_42_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_44_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_44_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_454_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_454_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_45_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_45_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_469_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_469_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_46_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_46_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_48_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_48_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_50_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_50_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_513_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_513_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_52_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_52_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_54_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_54_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_57_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_57_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_59_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_59_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_61_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_61_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_63_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_63_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_65_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_65_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_67_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_67_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_69_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_69_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_716_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_716_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_71_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_71_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_73_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_73_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_742_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_742_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_75_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_75_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_760_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_760_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_77_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_77_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_79_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_79_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_81_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_81_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_2_83_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_2_83_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE system_state; Type: ACL; Schema: public; Owner: verdify
+--
+
+GRANT SELECT ON TABLE public.system_state TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_131_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_131_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_132_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_132_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_133_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_133_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_134_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_134_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_135_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_135_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_136_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_136_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_137_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_137_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_138_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_138_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_139_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_139_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_140_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_140_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_141_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_141_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_142_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_142_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_143_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_143_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_144_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_144_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_28_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_28_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_29_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_29_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_30_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_30_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_317_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_317_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_31_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_31_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_32_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_32_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_33_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_33_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_364_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_364_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_379_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_379_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_394_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_394_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_409_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_409_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_424_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_424_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_453_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_453_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_471_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_471_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_4_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_4_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_512_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_512_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_710_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_710_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_741_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_741_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_758_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_758_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_84_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_84_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_85_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_85_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_86_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_86_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_87_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_87_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_88_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_88_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_90_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_90_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_91_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_91_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_92_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_92_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_93_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_93_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_94_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_94_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_3_95_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_3_95_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE setpoint_changes; Type: ACL; Schema: public; Owner: verdify
+--
+
+GRANT SELECT ON TABLE public.setpoint_changes TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_100_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_100_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_101_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_101_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_102_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_102_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_103_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_103_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_104_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_104_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_105_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_105_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_106_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_106_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_107_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_107_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_108_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_108_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_109_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_109_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_110_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_110_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_111_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_111_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_112_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_112_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_113_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_113_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_114_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_114_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_115_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_115_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_116_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_116_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_117_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_117_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_118_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_118_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_119_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_119_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_120_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_120_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_121_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_121_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_122_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_122_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_123_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_123_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_124_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_124_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_125_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_125_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_126_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_126_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_127_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_127_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_313_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_313_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_366_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_366_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_378_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_378_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_390_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_390_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_412_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_412_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_426_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_426_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_452_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_452_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_465_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_465_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_516_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_516_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_5_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_5_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_717_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_717_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_744_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_744_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_765_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_765_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_89_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_89_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_96_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_96_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_97_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_97_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_98_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_98_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE _hyper_4_99_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal._hyper_4_99_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_242_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_242_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_249_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_249_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_253_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_253_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_256_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_256_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_260_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_260_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_263_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_263_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_267_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_267_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_271_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_271_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_275_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_275_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_278_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_278_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_282_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_282_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_285_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_285_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_288_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_288_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_291_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_291_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_292_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_292_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_293_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_293_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_294_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_294_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_295_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_295_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_296_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_296_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_297_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_297_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_298_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_298_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_299_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_299_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_300_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_300_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_301_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_301_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_302_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_302_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_303_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_303_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_304_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_304_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_305_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_305_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_306_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_306_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_307_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_307_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_308_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_308_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_309_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_309_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_320_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_320_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_369_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_369_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_384_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_384_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_399_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_399_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_416_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_416_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_431_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_431_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_458_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_458_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_476_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_476_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_522_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_522_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_725_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_725_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_755_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_755_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_12_772_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_12_772_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_32_726_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_32_726_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_32_729_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_32_729_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_32_730_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_32_730_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_32_731_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_32_731_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_32_732_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_32_732_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_32_733_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_32_733_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_32_734_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_32_734_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_32_735_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_32_735_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_32_736_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_32_736_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_32_737_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_32_737_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_32_756_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_32_756_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE compress_hyper_32_770_chunk; Type: ACL; Schema: _timescaledb_internal; Owner: verdify
+--
+
+GRANT SELECT ON TABLE _timescaledb_internal.compress_hyper_32_770_chunk TO twin_ro;
+
+
+--
+-- Name: TABLE firmware_twin_divergence; Type: ACL; Schema: public; Owner: verdify
+--
+
+GRANT INSERT ON TABLE public.firmware_twin_divergence TO twin_ro;
+
+
+--
+-- Name: TABLE twin_decisions; Type: ACL; Schema: public; Owner: verdify
+--
+
+GRANT INSERT ON TABLE public.twin_decisions TO twin_ro;
+
+
+--
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 2zTADqAyGl8X5jSb5VZDFlmVeVilcNuoXbNsk5BhG3wkdNvFco150g58RmH3Itn
+\unrestrict P0OKck9gdxJJ8BfPkeLTSgWhhRnfbcYTXGhpfrWteJwiU6BxhKyMBP0HtiiZKro
+
