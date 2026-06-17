@@ -562,9 +562,7 @@ class TestActivityDirectWetGuards:
 # control points) + the per-zone vpd/priority cuts. band_track_fraction is NOT an
 # anchor — it is the control-band tracking-tightness knob (BC-3/ADR0003 §6.1), a
 # legitimately planner-pushable lever — so the band_ branch requires a phase suffix.
-_BAND_CURVE_ANCHOR_RE = re.compile(
-    r"^(?:band_\w+_(?:sr|sm|ss|mid)|zone_vpd_target_|zone_vpd_width_|zone_priority_)"
-)
+_BAND_CURVE_ANCHOR_RE = re.compile(r"^(?:band_\w+_(?:sr|sm|ss|mid)|zone_vpd_target_|zone_vpd_width_|zone_priority_)")
 
 
 class TestPlannerWriteContractLockout:
