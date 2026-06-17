@@ -159,6 +159,7 @@ struct Setpoints {
     // behavior explicit instead of deriving it from the legacy dC2/temp
     // hysteresis fields.
     float    cool_stage2_over_high_f;       // fan2 engages this far over temp_high
+    float    cool_stage2_exit_hysteresis_f; // BC-8: fan2 de-escalation gap below the stage-2 entry (latch hold band)
     float    cool_exit_hysteresis_f;        // VENTILATE exits at temp_high - this
     float    cold_vent_guard_delta_f;       // outdoor < temp_low - delta is cold-vent guarded
     bool     cool_all_fans_at_high_enabled; // run both fans immediately above high edge
@@ -271,6 +272,13 @@ struct ControlState {
     // gas-valve rapid cycling in the hysteresis band between the two
     // thresholds. Managed by determine_mode; read by resolve_equipment.
     bool heat2_latched;
+    // BC-8 (ADR0003 §6.5): cooling-fan stage-2 latch, symmetric twin of
+    // heat2_latched. Set when temp ≥ temp_high + cool_stage2_over_high_f; cleared
+    // when temp drops below that minus cool_stage2_exit_hysteresis_f. Holds in the
+    // hysteresis band so the second fan cannot chatter (the 90s relay min-off floor
+    // is a time dwell, not a temperature hysteresis). Managed by determine_mode;
+    // read by resolve_equipment (const) — same contract as heat2_latched.
+    bool fan2_latched;
     // Sprint-15: telemetry flag — set true on each cycle the summer-vent
     // gate is actively suppressing a VPD-seal entry. Read by
     // evaluate_overrides() and surfaced via OverrideFlags. No persisted
@@ -645,6 +653,7 @@ inline Setpoints default_setpoints() {
         // control loop forces the unified band-first path ON.
         .sw_fsm_controller_enabled = false,
         .cool_stage2_over_high_f = 1.0f,
+        .cool_stage2_exit_hysteresis_f = 1.0f,
         .cool_exit_hysteresis_f = 1.5f,
         .cold_vent_guard_delta_f = 10.0f,
         .cool_all_fans_at_high_enabled = false,
@@ -787,6 +796,7 @@ inline void validate_setpoints(Setpoints& sp) {
 
     // --- band-first controller timing/cooling clamps ---
     sp.cool_stage2_over_high_f = std::max(0.0f, std::min(3.0f, sp.cool_stage2_over_high_f));
+    sp.cool_stage2_exit_hysteresis_f = std::max(0.3f, std::min(3.0f, sp.cool_stage2_exit_hysteresis_f));
     sp.cool_exit_hysteresis_f = std::max(0.3f, std::min(3.0f, sp.cool_exit_hysteresis_f));
     sp.cold_vent_guard_delta_f = std::max(0.0f, std::min(15.0f, sp.cold_vent_guard_delta_f));
     sp.direct_wet_stress_vpd_margin_kpa = std::max(0.0f, std::min(0.5f, sp.direct_wet_stress_vpd_margin_kpa));
@@ -825,6 +835,7 @@ inline ControlState initial_state() {
         .relief_cycle_count = 0, .vent_latch_timer_ms = 0,
         .dry_override_active = false,
         .heat2_latched = false,
+        .fan2_latched = false,
         .override_summer_vent = false,
         .last_mode_reason = "init",
         .last_transition_tick_ms = 0,

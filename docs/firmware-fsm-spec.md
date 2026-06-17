@@ -261,7 +261,8 @@ Defaults from `default_setpoints()` (`greenhouse_types.h`) / `globals.yaml`:
 | `heat_hysteresis` | 1.0 °F | IDLE/sealed heat-stage 1 entry; heat2-latch clear | clears the heat2 latch at `Tlow + heat_hysteresis` |
 | `vpd_hysteresis` | 0.3 kPa | SEALED exit / DEHUM entry | structurally capped at 33 % of band width (no entry/exit inversion) |
 | `dH2` | 5.0 °F | heat-stage-2 latch entry (`temp < Tlow − dH2`) | latched; clears via `heat_hysteresis` |
-| `cool_stage2_over_high_f` | 1.0 °F | VENTILATE 2nd-fan escalation (band-first) | threshold only |
+| `cool_stage2_over_high_f` | 1.0 °F | fan1→fan2 escalation **entry** (`temp_high + this`) | **latched** (BC-8) — see §7.5 |
+| `cool_stage2_exit_hysteresis_f` | 1.0 °F | fan1→fan2 de-escalation: latch clears at `entry − this` | symmetric twin of heat2 |
 | `fog_escalation_kpa` | 0.4 kPa | MIST_FOG entry; VENTILATE fog assist | threshold only |
 | `dehum_aggressive_kpa` | 0.3 kPa | DEHUM both-fans entry | threshold only |
 | `bias_heat` / `bias_cool` | 0.0 °F | symmetric target offset (planner-tunable) | no hysteresis |
@@ -299,6 +300,30 @@ the target curve, not merely kept inside the band. The **served band and the saf
 
 Hysteresis behavior is tested directly (`test_greenhouse_logic.cpp` fix3 temp/heat,
 fix4 dehum-sticky) and bounded so a planner push cannot invert an entry/exit pair.
+
+### 7.5 Symmetric two-stage escalation (BC-8, ADR0003 §6.5)
+
+Every two-stage actuator escalates through **one shared, two-sided latch**
+(`stage2_escalation_latch`, direction-parameterized) so stage 2 cannot chatter at its
+threshold — the per-relay min-on/min-off dwell is a *time* floor, not a temperature
+hysteresis, so a bare threshold whipsaws stage 2 when the value parks near it.
+
+| Stage | Latch (entry → exit) | Tunables |
+|---|---|---|
+| heat1→**heat2** (low side) | set `temp < temp_low`; clear `temp ≥ band_heat_target_f` | (geometry preserved; was the only latched stage) |
+| fan1→**fan2** (high side) | set `temp ≥ temp_high + cool_stage2_over_high_f`; clear at `entry − cool_stage2_exit_hysteresis_f` | `cool_stage2_over_high_f`, `cool_stage2_exit_hysteresis_f` |
+
+`fan2_latched` lives in `ControlState` next to `heat2_latched`, is **set in
+`determine_mode`** and **read (const) in `resolve_equipment`** — identical contract to
+heat2. It is evaluated on the **pinched** band edge (so §7.4 tighter tracking preserves the
+hysteresis *width*) and reset whenever the controller leaves the cooling context, so it
+cannot stale-latch into a later VENTILATE entry. `cool_all_fans_at_high_enabled` is an
+explicit operator override that still forces both fans immediately above the band edge,
+bypassing the latch. Pinned by `fan2_latches_and_does_not_chatter`,
+`stage2_escalation_latch_is_symmetric`, `cool_all_fans_at_high_overrides_fan2_latch`; the
+heat2 refactor is replay-identical (0 divergence). **Remaining bare-threshold edge:** the
+mist S2↔FOG step (`fog_escalation_kpa`, entry==exit) — reconciled in the fog-first wetting
+work (§6.6 / BC-14), which rewrites that region.
 
 ### 7.3 Dwell / timer mechanics
 

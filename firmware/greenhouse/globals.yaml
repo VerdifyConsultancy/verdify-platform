@@ -36,6 +36,12 @@ globals:
     type: float
     restore_value: no
     initial_value: '1.5'
+  # BC-8 (ADR0003 §6.5): fan2 de-escalation hysteresis (latch hold band below the
+  # stage-2 entry) — the symmetric twin of the heat2 latch so fan2 cannot chatter.
+  - id: cool_stage2_exit_hysteresis_f
+    type: float
+    restore_value: no
+    initial_value: '1.0'
   - id: cold_vent_guard_delta_f
     type: float
     restore_value: no

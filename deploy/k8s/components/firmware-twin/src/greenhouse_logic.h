@@ -478,6 +478,28 @@ inline float band_cool_stage2_delta_f(const Setpoints& sp) noexcept {
     return sp.cool_stage2_over_high_f;
 }
 
+// BC-8 (ADR0003 §6.5): ONE shared two-stage escalation latch for every two-stage
+// actuator (heat1→heat2, fan1→fan2). `value` crossing ENTRY latches stage 2; it
+// only drops once `value` passes EXIT (the de-escalation hysteresis), so stage 2
+// cannot chatter at the threshold regardless of how tight the (pinched) band is.
+//  • high_side (cooling fans): latch when value ≥ entry, clear when value < exit
+//    (entry > exit; entry = temp_high + over_high, exit = entry − exit_hyst).
+//  • low_side (heaters): latch when value < entry, clear when value ≥ exit
+//    (entry < exit; entry = temp_low, exit = heat_target) — exactly the prior
+//    heat2 geometry, so the heat path is replay-band-identical.
+// In the hysteresis band the prior latch state holds.
+inline bool stage2_escalation_latch(float value, float entry_thr, float exit_thr,
+                                    bool latched, bool high_side) noexcept {
+    if (high_side) {
+        if (value >= entry_thr) return true;
+        if (value <  exit_thr)  return false;
+    } else {
+        if (value <  entry_thr) return true;
+        if (value >= exit_thr)  return false;
+    }
+    return latched;
+}
+
 inline float cold_vent_cooling_entry_margin_f(const Setpoints& sp) noexcept {
     const float band_width = std::max(2.0f, sp.temp_high - sp.temp_low);
     const float legacy_cold_margin = std::max(1.0f, band_width * 0.25f);
@@ -1202,7 +1224,6 @@ inline Mode determine_mode_band_first(
         ? in.temp_f > (temp_high - cooling_exit_hysteresis)
         : in.temp_f > (temp_high + cooling_entry_margin);
     const float heat_target = band_heat_target_f(sp);
-    const bool temp_below_band = in.temp_f < sp.temp_low;
     const bool needs_heating_s1 = in.temp_f < (heat_target + sp.heat_hysteresis);
 
     const bool cold_dehum_allowed =
@@ -1213,11 +1234,23 @@ inline Mode determine_mode_band_first(
     const bool moisture_blocked = moisture_blocked_by_occupancy(in, sp);
 
     {
-        if (temp_below_band) {
-            state.heat2_latched = true;
-        } else if (in.temp_f >= heat_target) {
-            state.heat2_latched = false;
-        }
+        // BC-8 (ADR0003 §6.5): heat2 and fan2 share ONE two-stage escalation latch
+        // so neither can chatter at the stage-2 threshold.
+        // heat2 = LOW side — latch when temp < temp_low, clear at temp ≥ heat_target.
+        // Geometry preserved EXACTLY (was: if temp<temp_low set; elif temp≥heat_target
+        // clear; else hold) so the heat path is replay-band-identical.
+        state.heat2_latched = stage2_escalation_latch(
+            in.temp_f, sp.temp_low, heat_target, state.heat2_latched, /*high_side=*/false);
+        // fan2 = HIGH side — latch when temp ≥ temp_high + cool_stage2_over_high_f,
+        // clear at that minus cool_stage2_exit_hysteresis_f (the de-escalation gap
+        // heat2 always had and fan2 lacked). Evaluated on the PINCHED band edge
+        // (temp_high), so tighter tracking preserves the hysteresis WIDTH. Reset out
+        // of any cooling context so it cannot stale-latch into a later VENTILATE entry.
+        const float fan2_entry = temp_high + sp.cool_stage2_over_high_f;
+        const float fan2_exit  = fan2_entry - sp.cool_stage2_exit_hysteresis_f;
+        state.fan2_latched = (needs_cooling || was_cooling)
+            ? stage2_escalation_latch(in.temp_f, fan2_entry, fan2_exit, state.fan2_latched, /*high_side=*/true)
+            : false;
     }
 
     if (vpd_high && !safety_cool && !safety_heat) {
@@ -2116,7 +2149,17 @@ inline RelayOutputs resolve_equipment(
             const float stage2_delta = sp.sw_fsm_controller_enabled
                 ? band_cool_stage2_delta_f(sp)
                 : sp.dC2;
-            bool needs_both = in.temp_f > (Thigh + stage2_delta)
+            // BC-8 (ADR0003 §6.5): in band-first control fan2 is LATCHED in
+            // determine_mode (state.fan2_latched) — a two-sided hysteresis twin of
+            // heat2_latched, so it cannot chatter at the stage-2 edge (the 90s relay
+            // min-off floor is a time dwell, not a temperature hysteresis). resolve_
+            // equipment takes a const ControlState&, so it READS the latch (never
+            // writes). Legacy path (fsm off, the test default) keeps the bare dC2
+            // threshold. cool_all_fans_at_high is an explicit operator override that
+            // still forces both fans immediately above the band edge, bypassing the latch.
+            bool needs_both = (sp.sw_fsm_controller_enabled
+                                   ? state.fan2_latched
+                                   : in.temp_f > (Thigh + stage2_delta))
                            || (sp.cool_all_fans_at_high_enabled && in.temp_f > Thigh);
             if (lead_is_fan1) { out.fan1 = true; out.fan2 = needs_both; }
             else              { out.fan2 = true; out.fan1 = needs_both; }

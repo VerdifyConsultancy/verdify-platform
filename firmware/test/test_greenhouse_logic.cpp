@@ -3341,15 +3341,76 @@ TEST(band_first_cooling_stage2_uses_explicit_ai_delta) {
     sp.cool_stage2_over_high_f = 1.0f;
     auto s = initial_state();
 
+    // BC-8: fan2 is LATCHED in determine_mode, not recomputed in resolve_equipment.
+    // resolve_equipment READS state.fan2_latched (the relay-staging concern); the
+    // latch SET/CLEAR threshold geometry is covered by fan2_latches_and_does_not_chatter.
+    s.fan2_latched = false;  // below the stage-2 entry -> single fan
     auto one = resolve_equipment(VENTILATE, make_inputs(sp.temp_high + 0.9f, 1.4f), sp, s, true);
     ASSERT_TRUE(one.vent);
     ASSERT_TRUE(one.fan1);
     ASSERT_FALSE(one.fan2);
 
+    s.fan2_latched = true;   // determine_mode latched it above temp_high+cool_stage2_over_high_f
     auto out = resolve_equipment(VENTILATE, make_inputs(sp.temp_high + 1.1f, 1.4f), sp, s, true);
     ASSERT_TRUE(out.vent);
     ASSERT_TRUE(out.fan1);
     ASSERT_TRUE(out.fan2);
+    PASS();
+}
+
+// BC-8 (ADR0003 §6.5): fan2 now has a two-sided hysteresis latch (the de-escalation
+// gap heat2 always had and fan2 lacked) so it cannot chatter at the stage-2 edge.
+TEST(fan2_latches_and_does_not_chatter) {
+    auto sp = band_first_setpoints();          // temp_high=78, fsm=true, no pinch
+    sp.cool_stage2_over_high_f = 1.0f;         // fan2 entry = 79
+    sp.cool_stage2_exit_hysteresis_f = 1.0f;   // fan2 exit  = 78
+    auto s = initial_state();
+
+    // Climb above the stage-2 entry -> fan2 latches.
+    determine_mode(make_inputs(80.0f, 1.0f), sp, s, 5000);
+    ASSERT_TRUE(s.fan2_latched);
+    auto hot = resolve_equipment(VENTILATE, make_inputs(80.0f, 1.0f), sp, s, true);
+    ASSERT_TRUE(hot.fan2);
+
+    // Drop INTO the hysteresis band [78,79): the OLD bare threshold dropped fan2 here;
+    // the latch HOLDS it (no chatter).
+    determine_mode(make_inputs(78.5f, 1.0f), sp, s, 5000);
+    ASSERT_TRUE(s.fan2_latched);
+    auto mid = resolve_equipment(VENTILATE, make_inputs(78.5f, 1.0f), sp, s, true);
+    ASSERT_TRUE(mid.fan2);
+
+    // Drop below the exit -> latch clears.
+    determine_mode(make_inputs(77.5f, 1.0f), sp, s, 5000);
+    ASSERT_FALSE(s.fan2_latched);
+    PASS();
+}
+
+// BC-8: the shared two-stage latch is symmetric — high side (fan2) and low side (heat2).
+TEST(stage2_escalation_latch_is_symmetric) {
+    // high side (fan2): entry 79 > exit 78
+    ASSERT_TRUE(stage2_escalation_latch(80.0f, 79.0f, 78.0f, false, true));   // >= entry -> set
+    ASSERT_TRUE(stage2_escalation_latch(78.5f, 79.0f, 78.0f, true,  true));   // hold band -> keep set
+    ASSERT_FALSE(stage2_escalation_latch(78.5f, 79.0f, 78.0f, false, true));  // hold band -> keep clear
+    ASSERT_FALSE(stage2_escalation_latch(77.0f, 79.0f, 78.0f, true,  true));  // < exit -> clear
+    // low side (heat2): entry 60 < exit 64 (latch when cold, clear when warm)
+    ASSERT_TRUE(stage2_escalation_latch(59.0f, 60.0f, 64.0f, false, false));  // < entry -> set
+    ASSERT_TRUE(stage2_escalation_latch(62.0f, 60.0f, 64.0f, true,  false));  // hold band -> keep set
+    ASSERT_FALSE(stage2_escalation_latch(62.0f, 60.0f, 64.0f, false, false)); // hold band -> keep clear
+    ASSERT_FALSE(stage2_escalation_latch(65.0f, 60.0f, 64.0f, true,  false)); // >= exit -> clear
+    PASS();
+}
+
+// BC-8: the cool_all_fans_at_high operator override still forces both fans immediately
+// above the band edge, bypassing the latch (regression guard for the override).
+TEST(cool_all_fans_at_high_overrides_fan2_latch) {
+    auto sp = band_first_setpoints();
+    sp.cool_all_fans_at_high_enabled = true;
+    sp.cool_stage2_over_high_f = 3.0f;   // stage-2 entry = 81, so the latch would NOT set at 78.5
+    auto s = initial_state();
+    s.fan2_latched = false;
+    auto out = resolve_equipment(VENTILATE, make_inputs(sp.temp_high + 0.5f, 1.0f), sp, s, true);
+    ASSERT_TRUE(out.fan1);
+    ASSERT_TRUE(out.fan2);   // operator override forces both even with the latch clear
     PASS();
 }
 

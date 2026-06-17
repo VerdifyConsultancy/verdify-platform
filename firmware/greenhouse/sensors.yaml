@@ -1205,6 +1205,21 @@ sensor:
       if (!id(cfg_first_pull_ok)) return NAN;
       return id(cool_exit_hysteresis_f);
 
+  # BC-8 (ADR0003 §6.5): on-device readback of the fan2 de-escalation hysteresis
+  # (freeze rule 6). NAN until the first push confirms cfg_first_pull_ok.
+  - platform: template
+    id: cfg_cool_stage2_exit_hysteresis_f
+    name: "Cfg • Cool S2 Exit Hyst (°F)"
+    device_class: temperature
+    unit_of_measurement: "°F"
+    state_class: measurement
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(cool_stage2_exit_hysteresis_f);
+
   # BC-3 (ADR0003 §6.1): on-device readback of the live control-band tracking
   # tightness (freeze rule 6). NAN until the first push confirms cfg_first_pull_ok.
   - platform: template

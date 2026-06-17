@@ -549,6 +549,7 @@ interval:
               // and ESP32 share one live control path.
               .sw_fsm_controller_enabled = id(sw_fsm_controller_enabled),
               .cool_stage2_over_high_f = id(cool_stage2_over_high_f),
+              .cool_stage2_exit_hysteresis_f = id(cool_stage2_exit_hysteresis_f),
               .cool_exit_hysteresis_f = id(cool_exit_hysteresis_f),
               .cold_vent_guard_delta_f = id(cold_vent_guard_delta_f),
               .cool_all_fans_at_high_enabled = id(cool_all_fans_at_high_enabled),

@@ -83,6 +83,21 @@ number:
           id(cool_exit_hysteresis_f) = x;
           id(num_cool_exit_hysteresis).publish_state(x);
 
+  # BC-8 (ADR0003 §6.5): fan1->fan2 de-escalation hysteresis (latch hold band below
+  # the stage-2 entry) — symmetric twin of the heat2 latch so fan2 cannot chatter.
+  - platform: template
+    id: num_cool_stage2_exit_hyst
+    name: "Cool Stage 2 Exit Hyst °F"
+    min_value: 0.3
+    max_value: 3
+    step: 0.1
+    lambda: "return id(cool_stage2_exit_hysteresis_f);"
+    set_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(cool_stage2_exit_hysteresis_f) = x;
+          id(num_cool_stage2_exit_hyst).publish_state(x);
+
   # BC-3 (ADR0003 §6.1): control-band tracking tightness. 0 = float-envelope (no
   # longer the default), 1 = track target exactly; default 0.50. Bounded planner knob.
   - platform: template

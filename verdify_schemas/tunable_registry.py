@@ -199,6 +199,25 @@ REGISTRY: dict[str, TunableDef] = {
         tier=1,
         notes="Cooling hold exits at temp_high minus this margin in the live band-first controller.",
     ),
+    "cool_stage2_exit_hysteresis_f": TunableDef(
+        name="cool_stage2_exit_hysteresis_f",
+        kind="numeric",
+        min=0.3,
+        max=3.0,
+        default=1.0,
+        fw_clamp_lo=0.3,
+        fw_clamp_hi=3.0,
+        esp_object_id="cool_stage_2_exit_hyst__f",
+        cfg_readback_object_id="cfg___cool_s2_exit_hyst___f_",
+        push_owner="planner",
+        planner_pushable=True,
+        tier=1,
+        notes=(
+            "BC-8 (ADR0003 §6.5): de-escalation hysteresis for the fan1->fan2 stage. "
+            "fan2 latches at temp_high+cool_stage2_over_high_f and clears at that minus "
+            "this, so stage 2 cannot chatter at the threshold (mirrors the heat2 latch)."
+        ),
+    ),
     "band_track_fraction": TunableDef(
         name="band_track_fraction",
         kind="numeric",
