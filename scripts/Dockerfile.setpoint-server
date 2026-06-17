@@ -47,11 +47,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential gcc \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-# Third-party needs: asyncpg (DB) + pydantic (verdify_schemas.tunable_registry
-# and the verdify_schemas package __init__ import-closure both require it). Pinned
-# major to keep the image reproducible without dragging in the full ingestor
+# Third-party needs: asyncpg (DB) + pydantic/PyYAML (verdify_schemas.tunable_registry
+# and the verdify_schemas package __init__ import-closure require them). Pinned
+# majors keep the image reproducible without dragging in the full ingestor
 # requirements closure.
-RUN pip install --no-cache-dir --prefix=/install asyncpg "pydantic>=2,<3"
+RUN pip install --no-cache-dir --prefix=/install asyncpg "pydantic>=2,<3" "PyYAML>=6,<7"
 
 FROM base AS final
 WORKDIR /app
