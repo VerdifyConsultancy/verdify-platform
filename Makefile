@@ -463,24 +463,15 @@ hermes-deploy-config: ## Sync versioned Hermes config/SOUL into the host runtime
 	HERMES_IRIS_RUNTIME_DIR='$(HERMES_IRIS_RUNTIME_DIR)' HERMES_IRIS_ENV_FILE='$(HERMES_IRIS_ENV_FILE)' bash scripts/hermes-deploy-config.sh
 
 hermes-restart: hermes-deploy-config ## Recreate Hermes after config changes
-	docker compose --profile hermes up -d --force-recreate hermes-iris
+	kubectl -n verdify-prod rollout restart deployment/verdify-hermes-iris
 
 hermes-smoke: ## Check the local Hermes gateway health endpoint
 	curl -fsS http://127.0.0.1:8642/health
 
 # ── Stack ───────────────────────────────────────────────────────────
-
-up: ## Start all Docker services
-	docker compose up -d
-
-down: ## Stop all Docker services
-	docker compose down
-
-ps: ## Show running containers
-	docker compose ps
-
-logs: ## Tail all container logs
-	docker compose logs -f --tail=50
+# The VM-era `docker compose` lifecycle targets (up/down/ps/logs) were removed
+# with the docker-compose.yml stack on the k3s single-env migration. Use
+# `kubectl -n verdify-prod ...` / ArgoCD for the live stack.
 
 ingestor-restart: ## Restart the ingestor service
 	sudo systemctl restart verdify-ingestor
@@ -491,11 +482,11 @@ ingestor-logs: ## Tail ingestor logs
 
 # ── Database ────────────────────────────────────────────────────────
 
-db-shell: ## Open psql shell
-	docker exec -it verdify-timescaledb psql -U verdify -d verdify
+db-shell: ## Open psql shell (k3s prod verdify-db)
+	scripts/verdify-db.sh prod
 
-db-dump: ## Dump schema to db/schema.sql
-	docker exec verdify-timescaledb pg_dump -U verdify -d verdify --schema-only > db/schema.sql
+db-dump: ## Dump schema to db/schema.sql (k3s prod verdify-db, read-only)
+	kubectl exec -n verdify-prod verdify-db-0 -c postgres -- pg_dump -U verdify -d verdify --schema-only > db/schema.sql
 
 db-scorecard: ## Show today's planner scorecard
 	@. scripts/lib/psql-verdify.sh; verdify_psql -c "SELECT * FROM fn_planner_scorecard(CURRENT_DATE);"

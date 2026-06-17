@@ -168,9 +168,6 @@ def main() -> None:
     ):
         if marker not in generator:
             _fail(f"AI tunables page generator missing marker: {marker}")
-    compose = (REPO_ROOT / "docker-compose.yml").read_text()
-    if "hermes-iris-shadow" in compose or "server_shadow.py" in compose:
-        _fail("docker-compose must not expose a runtime shadow planner profile")
 
     print(f"climate_intent_fields={len(CLIMATE_INTENT_FIELDS)}")
     print(f"climate_actions={len(CLIMATE_ACTIONS)}")

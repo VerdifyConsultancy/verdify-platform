@@ -6,7 +6,7 @@
 # runs a thin OFFLINE driver that replays a telemetry CSV through it. Read-only
 # by construction: the image carries NO actuation credential and has NO route to
 # the ESP32; the only egress is INSERT-only into the two observability tables via
-# the twin_ro role (see docker-compose.twins.yml).
+# the twin_ro role (the prod twin runs as the firmware-twin k8s component).
 #
 # This is the LOCAL OFFLINE harness (Phase-1 deliverable). The real PROD twin
 # shadowing live telemetry needs the prod DB / applied migration 155 (Root/prod
