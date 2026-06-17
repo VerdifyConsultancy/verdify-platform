@@ -456,6 +456,7 @@ Use tactical knobs below to shift behavior instead.
 **Economiser (outdoor-air coupling):**
 - `enthalpy_open` kJ/kg Δ, [-5-0], def -2 — vent opens when outdoor enthalpy better by this much
 - `enthalpy_close` kJ/kg Δ, [-5-20], def 1 — vent closes when outdoor enthalpy worse
+- `vent_exchange_fraction` fraction, [0.1-0.6], def 0.30 — single-cycle air-exchange estimate used by the moisture-exchange vent VPD-gain projection; raise only when observed venting moves house VPD faster than modeled, lower when estimated exchange overstates outdoor-air drying or rehumidification
 
 **Summer thermal-driven vent gate (sprint-15 — short-circuits VPD-seal when outdoor is cooler+drier):**
 - `sw_summer_vent_enabled` — master switch; default ON
