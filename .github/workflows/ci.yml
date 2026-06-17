@@ -438,6 +438,8 @@ jobs:
             tests/test_19_firmware_twin_shadow_src_sync.py \
             tests/test_anchor_service_sync.py \
             tests/test_climate_intent_replay_evaluator.py \
+            tests/test_compliance_feasibility_classifier.py \
+            tests/test_firmware_crop_agnostic_guard.py \
             tests/test_forecast_action_engine_path.py \
             tests/test_g5_dualwrite_validation.py \
             tests/test_generate_daily_plan.py \
