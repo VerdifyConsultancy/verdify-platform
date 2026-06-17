@@ -426,9 +426,9 @@ A draft **release checklist** for firmware + services + dashboards + docs is in
 |---|---|---|---|---|
 | ESP32 disconnects | keepalive/on_stop clears client; pushes no-op; firmware runs on-chip | ≤60 s (keepalive) | auto-reconnect | ≤60 s silent TCP death window |
 | ESP32 reconnects | re-enumerates, force-push reconciles drift, immediate dispatch, logs `data_gaps` | yes | auto | gap telemetry not reconstructed here (HA job's job) |
-| DB unreadable | writes try/except + continue; telemetry buffered in-memory (lost on restart); ESP32 keeps running on-chip | partial (the monitor needs the DB) | DB self-heal / watchdog | **no bounded buffer/WAL → permanent telemetry loss for the window**; `setpoint_listener` conn has **no reconnect** |
+| DB unreadable | writes try/except + continue; telemetry **spooled to disk** (`/srv/verdify/state/spool/climate.jsonl` on the state PVC) and replayed on recovery; ESP32 keeps running on-chip | partial (the monitor needs the DB) | DB self-heal / watchdog | the climate spool IS the bounded buffer (corrects the earlier "no buffer" claim); `setpoint_listener` conn still has **no reconnect** |
 | Push partial/failed | `push_to_esp32` breaks on first exception, returns short count; dispatcher retries 3× then 1 warning alert | `esp32_push_failed` + `setpoint_unconfirmed` 5/15 min | auto next cycle | later params unpushed until next 300 s cycle |
-| Ingestor pod rescheduled (Recreate) | mandatory zero-writer window; **RWO Longhorn PVC detach/reattach race amplifies to minutes** (observed FailedMount on node6) | `sensor_offline` 2× interval | auto, slow | **no liveness probe → wedged pod never restarted**; STATE_DIR is non-critical regenerable cache |
+| Ingestor pod rescheduled (Recreate) | mandatory zero-writer window; **RWO Longhorn PVC detach/reattach race amplifies to minutes** (observed FailedMount on node6) | `sensor_offline` 2× interval | auto, slow | liveness probe + soft anti-affinity-off-node6 landed (L1 Phase 2, ready-to-sync). NOTE: STATE_DIR is NOT disposable — it holds the climate spool — so emptyDir is not an option; the real node6 fix is storage-infra |
 | MQTT down | reconnect loop | log only | auto | no dedicated alert |
 | Open-Meteo down | timeout → None → no-op | `sensor_offline`(forecast) ≤300 s | auto hourly | degrades planner only |
 
@@ -484,9 +484,11 @@ the monitor that detects a dead writer runs *in* the writer. The only out-of-ban
    of the ingestor.
 
 **P1**
-3. **Ingestor on node6 + RWO Longhorn PVC = recurring multi-minute write-gaps.** → pin ingestor off
-   node6 (affinity) and replace the RWO state PVC with `emptyDir` (STATE_DIR is regenerable cache)
-   to kill the detach/reattach race. (k8s manifest; the sync is the Jason device-write gate)
+3. **Ingestor on node6 + RWO Longhorn PVC = recurring multi-minute write-gaps.** → **landed (L1 Phase 2):**
+   a soft nodeAffinity off node6 + a DB-outage-tolerant liveness probe (`ingestor-resilience.patch.yaml`,
+   ready-to-sync). **Correction:** do NOT `emptyDir` the state PVC — `/srv/verdify/state/spool/climate.jsonl`
+   is the DB-outage replay buffer (operational data), so the PVC stays. The durable node6 storage fix is
+   a `storage-infra` item (coordination request filed). (Applying the patch restarts the writer — Jason gate.)
 4. **Writer-lease fence inert** (`VERDIFY_WRITER_LEASE_ENABLED=0`); firmware `max_connections:20`
    means two pods *could* both connect. → arm `#240` (also buys SIGTERM fast-release). (Jason-gated)
 5. **No liveness/readiness probe on the single writer** — `ingestor-healthz.py` exists but is wired
@@ -517,9 +519,12 @@ the monitor that detects a dead writer runs *in* the writer. The only out-of-ban
 add the corpus-freshness gate, remove the soft-skip, run the broad test suite in CI, add the
 registry↔firmware↔anchors guards (D7), strengthen the two weak guards, seal the OTA password.
 
-**Phase 2 — reliability (mix; cluster syncs are Jason-gated)** — pin ingestor off node6 +
-`emptyDir` state, out-of-band writer-absent alert, liveness probe, arm the writer lease (#240),
-DB PITR via CNPG re-arm or WAL archiving + restore drill.
+**Phase 2 — reliability (mix; cluster syncs are Jason-gated)** — DONE/landed ready-to-sync: soft
+anti-affinity off node6 + DB-outage-tolerant liveness probe (keep the state PVC — it holds the
+climate spool, NOT emptyDir). Filed as coordination requests: out-of-band writer-absent +
+telemetry-stall alert (`monitoring-stack`), durable node6 storage fix (`storage-infra`). Gated
+(already STAGED / dependency): arm the writer lease (#240, `overlays/prod/STAGED-ha3-*`), DB PITR
+via CNPG re-arm or WAL archiving + restore drill (`storage-infra`/Jason).
 
 **Phase 3 — single-source-of-truth (larger, confirm scope)** — generate firmware `globals.yaml`
 band defaults + registry `_FW2_*` from the `crop_band_anchors` seed; repoint compliance dashboards

@@ -1,0 +1,50 @@
+# INGESTOR RESILIENCE (L1 Phase 2) — liveness probe + soft node anti-affinity.
+#
+# Strategic-merge onto the single-writer verdify-ingestor Deployment. Applying
+# this RESTARTS the sole ESP32 writer (Recreate tears the old pod down first —
+# no double-writer) and is therefore a laptop-root/Jason GATED action at the
+# device-write window, NOT autonomous. Landed here ready-to-sync.
+#
+# 1. LIVENESS (audit §8 P1.5): the single writer has had NO probe, so a wedged
+#    event loop (stalled setpoint_listener / hung task loop) never self-heals.
+#    This wires ingestor-healthz.py (climate-freshness) but TOLERATES exit 2
+#    (DB unreachable) — so a DB outage NEVER restarts the writer. It restarts
+#    ONLY on exit 1 (climate stale despite a REACHABLE DB = genuinely wedged).
+#    During a DB outage the loop keeps reconnecting and spooling telemetry to
+#    /srv/verdify/state/spool/climate.jsonl, so a restart there would only widen
+#    the write gap — hence the exit-2 tolerance. Generous thresholds: ~120 s
+#    warmup, then 5 × 30 s of reachable-but-stale before a restart.
+#
+# 2. SOFT nodeAffinity AWAY from the storage-flaky node6 (audit D3: node6
+#    iSCSI/NFS FailedMount churned the writer twice in ~50 min and timed out the
+#    lab-publisher). PREFERRED, not required: the writer must stay on a
+#    device-VLAN-reachable node, and the real fix is storage-infra repairing
+#    node6 (coordination request filed). This is a stopgap scheduling nudge.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-ingestor
+spec:
+  template:
+    spec:
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: NotIn
+                    values: ["vm-k3s-node6"]
+      containers:
+        - name: ingestor
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - 'python ingestor-healthz.py; rc=$?; [ "$rc" = 0 ] || [ "$rc" = 2 ]'
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
