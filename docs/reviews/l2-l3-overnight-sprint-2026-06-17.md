@@ -103,6 +103,58 @@ Progress + the work plan are appended below as the run proceeds.
 
 ---
 
+## 4b. Turn-2 closeout (CI green + prod state) — 2026-06-17
+
+**CI is GREEN on `main`.** Two failures (one mine, one pre-existing) were fixed
+(`28a3050`): ruff-formatted the new contract tests, and de-flaked
+`test_11_planner_milestones` (a time-dependent exact-set assertion that failed
+near local midnight because `_compute_milestones` surfaces the `MIDNIGHT` trigger
+only in its catch-up window — fixed to MIDNIGHT-optional). Verified
+`success` on HEAD (`2052fc2`, `28a3050`).
+
+**Prod is healthy and serving.** The concurrent storage operator COMPLETED their
+live tiering migration (verified): `verdify-db` STS recreated onto
+`synology-iscsi-ssd` (reusing the existing Bound PV — no new iSCSI target), lab
+cache → `node-local-temp-rwo` RWO with the 2 nginx replicas co-locating (soft
+spread) and **lab-publisher now succeeding** (3 recent jobs Complete ~2 min,
+fixing the node6 failures). DB up, ingestor (sole writer) up 3h+/0 restarts,
+hermes up. I reconciled **git == live** for DB + lab (`2052fc2`, git-only, no
+cluster mutation, no DB roll) so those are no longer a real diff.
+
+**ArgoCD `verdify-prod-dark` shows OutOfSync/Degraded — benign, deliberately not
+force-synced.** Confirmed it is the audit-D2 *metadata/managed-field divergence
+from the operator's manual recreations* (not a spec diff: `ingestor-state` has
+git==live SC yet is OutOfSync; the ingestor image matches git; ArgoCD compared my
+latest commit). syncPolicy is manual with no `Replace`/`Prune`, so a sync would be
+apply-only — but it would still roll the sole live-greenhouse writer + DB for a
+**cosmetic** status gain on the storage operator's lane, and could not reach
+Synced anyway (`verdify-hermes-iris-data` git=node-local vs live=iscsi-ssd is the
+operator's pending migration). Track A governs: not worth a live-writer/DB roll.
+The substantive prod truth is GREEN (serving + CI green); the ArgoCD status is the
+operator's storage cosmetics to finish (their hermes recreate + a sync of their
+manual recreations).
+
+### Genuinely-gated residuals (ready-to-execute; held for safety/external owner)
+- **DB PITR (audit §8 P0).** Single-replica DB, nightly `pg_dump` only (RPO ≤24h).
+  Proper fix = WAL archiving to the `verdify-db-dumps` NFS PVC (`archive_mode=on`
+  needs a DB **restart**; `archive_command` a reload) + a restore drill to a
+  scratch DB. Cap-unblocked (NFS, no iSCSI). **Held**: misconfigured WAL archiving
+  is a classic way to fill disk and take down a single-instance prod DB — this
+  needs an attended maintenance window, not an unattended overnight change to the
+  live greenhouse data plane. Ready plan in `COORDINATION_REQUESTS.md`.
+- **iSCSI target-count cap (P0).** DSM cap exhausted (verified, both volumes).
+  Reclaim orphaned targets / raise the cap = NAS control-plane = the CHANGE-GATING
+  rule (snapshot + confirm before touching the un-IaC'd NAS) + shared-fleet blast
+  radius. Mitigation underway (regenerable volumes moving off iSCSI to node-local).
+  Held for storage-infra/Jason.
+- **Out-of-band writer-absent alert.** No Prometheus operator in THIS cluster
+  (verified `prometheuses.monitoring.coreos.com` → none); the rule belongs to the
+  separate `jvallery/monitoring-stack` cluster/repo. Spec already handed off
+  (`docs/handoff/monitoring-writer-absent-alert.md`). Genuinely external.
+- **Firmware OTA.** No firmware binary changed this sprint (verified: zero diff in
+  `firmware/lib` + `firmware/greenhouse`) — the L2/L3 rails are CI test rails, so
+  there is **nothing to OTA**. "Clear to OTA" is a no-op here.
+
 ## 5. Run log
 - **T0** — orientation, cluster access (ctx `vallery`), storage hazard triaged + fixed
   (`6ed1c24`), L2/L3 mapping workflow launched.
