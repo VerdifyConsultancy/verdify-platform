@@ -350,6 +350,31 @@ jobs:
         run: |
           test -f firmware/test/data/replay_overrides.csv \
             || gunzip -k firmware/test/data/replay_overrides.csv.gz
+      - name: Replay corpus freshness
+        # The corpus is the ONLY thing the firmware replay/invariant gates validate
+        # against; a stale corpus means new seasonal regimes + any band/firmware
+        # change after its last row are untested. Visible WARNING past 21 days;
+        # hard FAIL past 120 days (refresh via `make replay-corpus-refresh`).
+        run: |
+          python3 - <<'PY'
+          import datetime, gzip, sys
+          p = "firmware/test/data/replay_overrides.csv.gz"
+          last = None
+          with gzip.open(p, "rt") as f:
+              next(f)  # header
+              for line in f:
+                  if line.strip():
+                      last = line
+          ts = last.split("\t")[0][:10]
+          age = (datetime.date.today() - datetime.date.fromisoformat(ts)).days
+          print(f"replay corpus newest row: {ts} ({age} days old)")
+          WARN, FAIL = 21, 120
+          if age > FAIL:
+              print(f"::error::replay corpus is {age}d old (> {FAIL}d) — run `make replay-corpus-refresh`")
+              sys.exit(1)
+          if age > WARN:
+              print(f"::warning::replay corpus is {age}d old (> {WARN}d) — refresh soon via `make replay-corpus-refresh`")
+          PY
       - name: Replay (OBS-1e evaluate_overrides validation)
         run: |
           cd firmware
@@ -370,6 +395,63 @@ jobs:
             exit 0
           fi
           exit $rc
+
+  logic-tests:
+    name: Logic & contract tests (no live stack)
+    runs-on: ubuntu-latest
+    # Audit L1: CI previously ran only 3 narrow tests/ selections; the bulk of the
+    # pure-logic / static-contract suite (twin src parity, planner routing, anchor
+    # service sync, forecast engine, writer-lease fence, etc.) never gated a PR.
+    # This job runs the DB-free / device-free / network-free tests/ set with the
+    # full project deps installed (so local-import behaviour matches). It has NO
+    # Postgres service on purpose — these tests must not depend on a live stack.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install project + test deps
+        # No editable install (pyproject has no build-system); pytest resolves the
+        # local packages from the repo root, like the other CI jobs. Pull the dep
+        # lists straight from pyproject so this never drifts.
+        run: |
+          python - <<'PY' > /tmp/reqs.txt
+          import tomllib
+          d = tomllib.load(open("pyproject.toml", "rb"))
+          reqs = list(d["project"]["dependencies"])
+          opt = d["project"].get("optional-dependencies", {})
+          for grp in ("planner", "api"):
+              reqs += opt.get(grp, [])
+          print("\n".join(reqs))
+          PY
+          pip install -r /tmp/reqs.txt paho-mqtt pytest pytest-asyncio
+      - name: Run pure-logic / contract tests
+        run: |
+          pytest -q \
+            tests/test_10_planner_routing.py \
+            tests/test_11_planner_milestones.py \
+            tests/test_13_grafana_band_traceability.py \
+            tests/test_14_shadow_mode.py \
+            tests/test_14_site_doctor.py \
+            tests/test_17_planner_health_surface.py \
+            tests/test_18_twin_divergence_dashboard.py \
+            tests/test_19_firmware_twin_shadow_src_sync.py \
+            tests/test_anchor_service_sync.py \
+            tests/test_climate_intent_replay_evaluator.py \
+            tests/test_forecast_action_engine_path.py \
+            tests/test_g5_dualwrite_validation.py \
+            tests/test_generate_daily_plan.py \
+            tests/test_mqtt_fanout.py \
+            tests/test_planner_memory_ingest.py \
+            tests/test_psql_verdify_backend.py \
+            tests/test_publish_site_content_guard.py \
+            tests/test_site_content_refresh.py \
+            tests/test_slack_config.py \
+            tests/test_slack_ops.py \
+            tests/test_soil_dryout_alert.py \
+            tests/test_solar_band_anchors.py \
+            tests/test_tempest_sync.py \
+            tests/test_writer_lease_fence.py
 
   firmware-replay-diff:
     name: Firmware Replay Diff (behavioral regression gate)
@@ -412,26 +494,35 @@ jobs:
           THRESHOLD_PCT="${OVERRIDE:-${THRESHOLD_PCT:-0}}"
           echo "Using THRESHOLD_PCT=$THRESHOLD_PCT"
           THRESHOLD_PCT="$THRESHOLD_PCT" bash scripts/firmware-replay-diff.sh "$BASE" HEAD
-      - name: Band-curve behavioral diff (REPORT)
-        # The corpus replay above feeds the band from the recorded sp_* columns and
-        # only triggers on logic.h/types.h/controls.yaml — so a change to the band
-        # CURVE itself (greenhouse_solar.h band_value_at_phase) is otherwise UNTESTED
-        # (it shows ZERO divergence — the exact gap that let the lumpy/wet-night curve
-        # ship blind). This derives the band on-chip-style from band_value_at_phase at
-        # each row's solar phase and reports the real behavioral diff. INFORMATIONAL
-        # (band changes are intentional) but VISIBLE. NOTE: until both refs carry the
-        # band-derive mode (i.e. for the PR that introduced it) the % is inflated.
+      - name: Band-curve behavioral diff (blocking gate)
+        # The stock replay above feeds the band from recorded sp_* columns and only
+        # triggers on logic.h/types.h/controls.yaml — so a change to the band CURVE
+        # itself (greenhouse_solar.h band_value_at_phase) shows ZERO divergence there
+        # (the exact gap that let the lumpy/wet-night curve ship blind, per CLAUDE.md
+        # verification order step 4). This DERIVES the band on-chip-style from
+        # band_value_at_phase at each row's solar phase and diffs the real behavior.
+        # BLOCKING when greenhouse_solar.h changes: default THRESHOLD_PCT=0 (any
+        # divergence fails). An intentional band-curve change must carry
+        # `BAND_REPLAY_THRESHOLD_PCT: <N>` on its own line in the PR body (reviewed,
+        # mirroring the rule-8 REPLAY_DIFF_THRESHOLD_PCT override).
         run: |
           set +e
           BASE=$(git merge-base HEAD origin/${{ github.base_ref }})
-          [ -z "$BASE" ] && exit 0
-          CHANGED=$(git diff --name-only "$BASE" HEAD -- \
-            firmware/lib/greenhouse_solar.h firmware/lib/greenhouse_logic.h firmware/lib/greenhouse_types.h)
-          if [ -z "$CHANGED" ]; then echo "No band-curve/logic diff in PR; skipping band replay"; exit 0; fi
-          echo "::group::Band-curve behavioral diff (setpoints DERIVED from band_value_at_phase)"
-          REPLAY_EMIT_BAND_DERIVE=1 THRESHOLD_PCT=100 bash scripts/firmware-replay-diff.sh "$BASE" HEAD || true
-          echo "::endgroup::"
-          echo "NOTE: band-curve changes are intentional — review the divergence % + sample. This is the behavioral check the corpus-fed replay structurally cannot do."
+          if [ -z "$BASE" ] || [ "$BASE" = "$(git rev-parse HEAD)" ]; then
+            echo "No merge-base change; skipping band replay"; exit 0
+          fi
+          CHANGED=$(git diff --name-only "$BASE" HEAD -- firmware/lib/greenhouse_solar.h)
+          if [ -z "$CHANGED" ]; then echo "No band-curve (greenhouse_solar.h) diff in PR; skipping band replay"; exit 0; fi
+          PR_BODY=$(jq -r '.pull_request.body // ""' "$GITHUB_EVENT_PATH")
+          OVERRIDE=$(printf '%s' "$PR_BODY" | grep -oE '^BAND_REPLAY_THRESHOLD_PCT:[[:space:]]*[0-9]+' | awk -F: '{gsub(/[[:space:]]/,"",$2); print $2}' | head -1)
+          THRESHOLD_PCT="${OVERRIDE:-0}"
+          echo "Band-curve gate: THRESHOLD_PCT=$THRESHOLD_PCT (setpoints DERIVED from band_value_at_phase)"
+          REPLAY_EMIT_BAND_DERIVE=1 THRESHOLD_PCT="$THRESHOLD_PCT" bash scripts/firmware-replay-diff.sh "$BASE" HEAD
+          rc=$?
+          if [ "$rc" -ne 0 ]; then
+            echo "::error::band-curve behavioral divergence exceeds ${THRESHOLD_PCT}%. If intentional, add 'BAND_REPLAY_THRESHOLD_PCT: <N>' to the PR body and have it reviewed."
+          fi
+          exit $rc
 
   no-new-fire-and-forget:
     name: No new tunables without readback

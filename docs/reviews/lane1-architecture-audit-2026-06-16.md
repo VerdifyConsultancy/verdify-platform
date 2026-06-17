@@ -368,14 +368,14 @@ FIRMWARE (separate, never in the image pipeline): local `make firmware-deploy` �
 | `device-write-gate` | mocked aioesphomeapi → zero device writes when gate off | **strong** |
 | drift guards | layer-boundary wire protocol vs CI Postgres | **strong** |
 | `firmware-replay-diff` | THRESHOLD_PCT=0 mode/relay divergence | present, **path-scoped** — triggers only on `logic.h`/`types.h`/`controls.yaml`; a `greenhouse_solar.h` band-curve change does **not** trip it |
-| band-curve behavioral diff (`firmware-replay-band`) | derives setpoints from the curve | **informational only** (`THRESHOLD_PCT=100 … \|\| true`) — the documented blind spot is **not gated** |
+| band-curve behavioral diff (`firmware-replay-band`) | derives setpoints from the curve | **BLOCKING (fixed L1 Phase 1)** — on `greenhouse_solar.h` change, default `THRESHOLD_PCT=0`; intentional curve changes need `BAND_REPLAY_THRESHOLD_PCT:` in the PR body |
 | firmware compile | `esphome config` (YAML validate, not a full ESP-IDF build) | **weak** |
 | firmware invariants | 18+ invariants over the checked-in corpus; rc=2 → warning, exit 0 | present; **soft-skip** silently disables on a schema-mismatched corpus |
 | `no-new-fire-and-forget` | new tunables need a `cfg_*` readback | present; **weak** (indentation-sensitive awk) |
 | `service-restart-drift-guard` | schema-touch PR must mention restart | present; **weak** (keyword grep, PR-only — push-to-main bypasses) |
-| corpus-freshness gate | — | **MISSING** (corpus ~7 weeks stale) |
-| full `tests/` suite (incl. twin src-sync `test_19`) in CI | — | **MISSING** — CI runs only `test_02`, `device_write_gate`, `migration_rollback_safety` |
-| registry↔firmware↔anchors default guards | — | **MISSING** (D7 / prior review F20) |
+| corpus-freshness gate | firmware-logic job | **ADDED (L1 Phase 1)** — `::warning` >21 d, hard-fail >120 d |
+| pure-logic `tests/` suite in CI | new `logic-tests` job | **ADDED (L1 Phase 1)** — 26 DB-free `tests/` files (incl. twin src-sync `test_19`) now gate PRs; live-stack tests still excluded (need a marker — follow-up) |
+| registry↔firmware↔anchors default guards | `test_band_defaults_single_source.py` | **PRESENT (already landed)** — `band_defaults.yaml` is the single seed; registry `_FW2_*`==YAML, migration 177==generator(YAML), firmware globals drier-or-equal + in-clamp. The audit/prior-review "F20 MISSING" was stale. (The DB anchors==YAML check is low-value: trivially true in CI, and prod anchors are intentionally live-tuned.) |
 
 ### 6.3 Hardware-in-the-loop assessment
 **There is no automated HIL test.** Firmware validation is 100% offline replay against a recorded
