@@ -5,8 +5,7 @@
 # DB outage plus a pod restart can still lose queued greenhouse telemetry.
 #
 # Storage tier: synology-iscsi (csi.san.synology.com iSCSI on DSM /volume2).
-# 2026-06-17 storage incident: DSM /volume1 (the SSD tier — backs
-# synology-iscsi-ssd AND longhorn-nvme-rwo/-critical-rwo) DIED. The prior
+# 2026-06-17 storage incident: DSM /volume1 (the SSD-backed storage tier) DIED. The prior
 # ingestor-state LUN lived on /volume1 and wedged on the deploy's Recreate
 # (MountVolume + then CreateVolume DeadlineExceeded), stranding the sole ESP32
 # writer. /volume1 still times out on provision; /volume2 is healthy (provisions

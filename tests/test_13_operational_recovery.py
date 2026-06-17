@@ -147,7 +147,7 @@ def test_prod_ingestor_state_is_durable_pvc():
     patch_src = Path("deploy/k8s/overlays/prod/ingestor-state-volume.yaml").read_text()
     assert "kind: PersistentVolumeClaim" in pvc_src
     assert "name: verdify-ingestor-state" in pvc_src
-    assert "storageClassName: longhorn-nvme-rwo" in pvc_src
+    assert "storageClassName: synology-iscsi" in pvc_src
     assert "persistentVolumeClaim:" in patch_src
     assert "claimName: verdify-ingestor-state" in patch_src
     assert "emptyDir: {}" not in patch_src
