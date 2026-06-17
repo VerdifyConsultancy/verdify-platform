@@ -24,6 +24,11 @@
 # NOT touched here: verdify-ingestor / verdify-setpoint-server (single-writer
 # device path — gated ha-3), grafana (RWO PVC singleton — stays replicas:1).
 #
+# 2026-06-17 storage exception: lab-site now uses the rebuildable
+# verdify-lab-site-cache PVC on node-local-temp-rwo. It keeps two replicas, but
+# uses ScheduleAnyway so both pods may co-locate on the cache PV node; hard
+# hostname spread conflicts with a shared node-local RWO cache.
+#
 # ha-5 (#230, this commit): verdify-planner added — the last replicas:1
 # stateless serving surface. It is a stateless HTTP service (run state lives in
 # Postgres via PostgresRunStore) reached in-cluster via Hermes/Iris, NOT a
@@ -46,7 +51,7 @@ spec:
       topologySpreadConstraints:
         - maxSkew: 1
           topologyKey: kubernetes.io/hostname
-          whenUnsatisfiable: DoNotSchedule
+          whenUnsatisfiable: ScheduleAnyway
           matchLabelKeys:
             - pod-template-hash
           labelSelector:
