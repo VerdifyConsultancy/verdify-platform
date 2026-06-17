@@ -56,12 +56,8 @@ site/node_modules
 # Long-form docs / design / audits — not runtime.
 docs
 
-# --- other compose/infra dirs not needed by the api/mcp/ingestor images ---
+# --- other infra dirs not needed by the api/mcp/ingestor images ---
 grafana
-goaccess
-mqtt
-promtail
-traefik
 launch
 templates
 config

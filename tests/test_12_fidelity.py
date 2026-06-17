@@ -1823,10 +1823,9 @@ def test_single_path_removes_runtime_shadow_surfaces():
     assert not (REPO_ROOT / "scripts" / "planner-graph-shadow-smoke.py").exists()
     assert not (REPO_ROOT / "scripts" / "planner-graph-shadow-report.py").exists()
 
-    compose = (REPO_ROOT / "docker-compose.yml").read_text()
-    assert "hermes-iris-shadow" not in compose
-    assert "server_shadow.py" not in compose
-    assert "--profile shadow" not in compose
+    # docker-compose.yml was removed with the VM-era stack on the k3s single-env
+    # migration; the runtime-shadow-profile concern it guarded is now covered by
+    # the shadow-file absence assertions above.
 
     schema = (REPO_ROOT / "db" / "schema.sql").read_text()
     assert "plan_delivery_log_shadow" not in schema

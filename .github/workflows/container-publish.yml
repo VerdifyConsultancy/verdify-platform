@@ -125,9 +125,8 @@ jobs:
           #     scripts/resolve-deploy-impact.rb but self-contained so this
           #     workflow needs no net-new Ruby helper script). ──────────────────
           #
-          # Per-image path prefixes. A change to verdify_schemas/ or
-          # docker-compose.yml impacts every Python image (all three COPY the
-          # shared schemas; compose defines the shared runtime contract).
+          # Per-image path prefixes. A change to verdify_schemas/ impacts every
+          # Python image (all three COPY the shared schemas).
           manual=false
           [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ] && manual=true
 
@@ -176,13 +175,13 @@ jobs:
                 ;;
             esac
             case "$f" in
-              api/*|verdify_schemas/*|docker-compose.yml|pyproject.toml) api_impact=true ;;
+              api/*|verdify_schemas/*|pyproject.toml) api_impact=true ;;
             esac
             case "$f" in
-              mcp/*|slack_config.py|slack_ops/*|verdify_schemas/*|docker-compose.yml|pyproject.toml) mcp_impact=true ;;
+              mcp/*|slack_config.py|slack_ops/*|verdify_schemas/*|pyproject.toml) mcp_impact=true ;;
             esac
             case "$f" in
-              ingestor/*|slack_config.py|slack_ops/*|verdify_schemas/*|docker-compose.yml|pyproject.toml) ingestor_impact=true ;;
+              ingestor/*|slack_config.py|slack_ops/*|verdify_schemas/*|pyproject.toml) ingestor_impact=true ;;
             esac
             # planner image is built from the repo root with planner_graph/Dockerfile
             # but COPYs ONLY planner_graph/** (its own pyproject.toml + uv.lock); it
