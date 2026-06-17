@@ -1,9 +1,10 @@
 #pragma once
 /*
- * invariants.h — 18+ firmware behavioral invariants enforced against replay
+ * invariants.h — firmware behavioral invariants enforced against replay
  * traces (originally 16; +#17-#20 Vanda band-compliance, +#21-#22 IRR-3/IRR-4
- * center-burst rails). Each invariant is a pure function over a stream of
- * per-minute TraceRow records. First breach fails the replay run.
+ * center-burst rails, +#24 curve-only fog gate, +#25 SAFETY_HEAT cold rail,
+ * +#26 SENSOR_FAULT all-off). Each invariant is a pure function over a stream
+ * of per-minute TraceRow records. First breach fails the replay run.
  *
  * See plan file at .claude-agents/iris-dev/plans/yo-iris-dev-you-help-humming-stonebraker.md
  * Appendix A for the canonical list + rationale.
@@ -427,6 +428,47 @@ inline bool check_24_fog_requires_curve_gate(const TraceRow& r,
     return true;
 }
 
+// #25: SAFETY_HEAT always engaged when temp <= safety_min — the cold-rail
+// symmetric twin of #7. The determine_mode rail preempt
+// (greenhouse_logic.h:683-691) is a strict ladder:
+//   SENSOR_FAULT  >  SAFETY_COOL (temp >= safety_max)  >
+//   SAFETY_HEAT (temp <= safety_min)  >  climate candidate.
+// So below the cold rail — when sensors are trustworthy and we are not already
+// at/above the hot rail — the mode MUST be SAFETY_HEAT. Excludes SENSOR_FAULT
+// (higher-precedence rail; relays all-off by design) and the degenerate
+// safety_min >= safety_max misconfig (the `temp_f < safety_max` guard). Light
+// on the spring corpus (the house is heated) but a standing guard so a future
+// edit can never silently demote the cold rail below climate arbitration.
+inline bool check_25_safety_heat_engaged(const TraceRow& r, ReportFn report = default_report) {
+    if (r.greenhouse_state == "SENSOR_FAULT") return true;   // higher-precedence rail
+    if (!std::isfinite(r.temp_f) || !std::isfinite(r.safety_min)) return true;
+    if (r.temp_f <= r.safety_min && r.temp_f < r.safety_max
+        && r.greenhouse_state != "SAFETY_HEAT") {
+        report(25, "safety_heat_must_engage", r,
+               "temp <= safety_min but mode != SAFETY_HEAT");
+        return false;
+    }
+    return true;
+}
+
+// #26: SENSOR_FAULT means ALL relays OFF. With no trustworthy sensor feedback
+// the controller drives nothing (greenhouse_logic.h:2007-2010); freeze
+// protection is an out-of-band hardware thermostat wired in parallel, never
+// blind software. Any relay ON while the recorded mode is SENSOR_FAULT is a
+// fault. (Vacuous on corpora with no SENSOR_FAULT rows — a standing guard like
+// #18/#19; it pins the all-off contract so a future executor change cannot let
+// an actuator run during a sensor blackout.)
+inline bool check_26_sensor_fault_all_off(const TraceRow& r, ReportFn report = default_report) {
+    if (r.greenhouse_state != "SENSOR_FAULT") return true;
+    if (r.eq_fog || r.eq_vent || r.eq_fan1 || r.eq_fan2 || r.eq_heat1 || r.eq_heat2
+        || r.eq_mister_south || r.eq_mister_west || r.eq_mister_center) {
+        report(26, "sensor_fault_all_off", r,
+               "relay ON while mode == SENSOR_FAULT (must be all-off)");
+        return false;
+    }
+    return true;
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // Windowed invariants — evaluated over rolling windows. Helpers maintain
 // per-check state via a small context struct. Caller iterates rows and
@@ -773,6 +815,9 @@ struct Runner {
         if (!check_22_center_burst_no_feed_hold(r, report))         { failures++; ok = false; }
         // ── Curve-only fog gate (replaces the deleted CYC-4 micro-pulse rule) ──
         if (!check_24_fog_requires_curve_gate(r, report))           { failures++; ok = false; }
+        // ── Cold-rail + sensor-fault safety rails (L2 #344 AC4 test-rail) ──
+        if (!check_25_safety_heat_engaged(r, report))               { failures++; ok = false; }
+        if (!check_26_sensor_fault_all_off(r, report))              { failures++; ok = false; }
         return ok;
     }
 };

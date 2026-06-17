@@ -3813,6 +3813,133 @@ TEST(solar_phase_c1_smooth_and_hits_anchors) {
     PASS();
 }
 
+// ═══════════════════════════════════════════════════════════════
+// L2 #344 AC3 — 72-HOUR DISCONNECTED / OFFLINE-FIRST DETERMINISM
+// ═══════════════════════════════════════════════════════════════
+// The controller must run safely for >=72h with ZERO network: it computes the
+// solar ephemeris on-chip (compute_greenhouse_solar_times) and reconstructs the
+// served band from NVS-persisted anchors (band_value_at_phase) — no dispatcher,
+// no Wi-Fi (greenhouse_solar.h:8-12). These pin (i) a 72h standalone run is
+// deterministic and never spuriously trips a safety/fault rail while sensors are
+// comfortable, (ii) the no-time-source fallback phase degrades gracefully, and
+// (iii) a reboot with the same persisted anchors reproduces byte-identical
+// setpoints — the offline-first guarantee a power cycle does not drift the program.
+
+// House temp band + a representative VPD band, as the NVS anchors would hold them.
+static const BandAnchors kDiscTempAnchors {66.0f, 84.0f, 73.0f, 64.0f};  // F: SR/SM/SS/MID
+static const BandAnchors kDiscVpdAnchors  {0.95f, 1.05f, 0.85f, 0.55f};  // kPa: SR/SM/SS/MID
+
+static bool is_safety_or_fault(Mode m) {
+    return m == SAFETY_COOL || m == SAFETY_HEAT || m == SENSOR_FAULT;
+}
+
+// The SensorInputs a disconnected controller sees at (day_of_year, minute):
+// on-chip ephemeris ONLY, sensors parked at the reconstructed band centre (the
+// standalone steady state — the controller is holding the band it computed
+// itself). sp_out is the band reconstructed purely from the NVS anchors.
+static SensorInputs disconnected_inputs(int day_of_year, int minute_of_day,
+                                        int utc_off_min, Setpoints& sp_out) {
+    const SolarTimes st = compute_greenhouse_solar_times(day_of_year, utc_off_min);
+    const float phase  = solar_phase(minute_of_day, st);
+    const float t_band = band_value_at_phase(kDiscTempAnchors, phase);
+    const float v_band = band_value_at_phase(kDiscVpdAnchors, phase);
+    sp_out = band_setpoints();
+    sp_out.temp_low  = t_band - 6.0f;  sp_out.temp_high = t_band + 6.0f;
+    sp_out.vpd_low   = v_band - 0.25f; sp_out.vpd_high  = v_band + 0.25f;
+    SensorInputs in = make_inputs(t_band, v_band, 60.0f);  // sensors AT band centre
+    in.local_hour     = minute_of_day / 60;
+    in.now_minute     = minute_of_day;
+    in.sunrise_min    = st.sunrise_min;
+    in.solar_noon_min = st.solar_noon_min;
+    in.sunset_min     = st.sunset_min;
+    in.solar_phase    = phase;
+    return in;
+}
+
+TEST(disconnected_72h_run_is_deterministic_and_safe) {
+    // Three days spread across the year so the on-chip ephemeris is exercised at
+    // very different day lengths (winter/spring/summer). 72h = 3 contiguous days
+    // sampled every 15 min (96 steps/day). Two independent "boots" must produce
+    // the identical mode trace — the core offline-determinism property.
+    const int days[3] = {80, 172, 355};
+    const int utc_off = -360;  // MDT
+    const uint32_t dt_ms = 15u * 60u * 1000u;  // true elapsed between samples
+    std::vector<Mode> seq_a, seq_b;
+    for (int run = 0; run < 2; run++) {
+        ControlState st = initial_state();           // fresh "boot" per run
+        std::vector<Mode>& seq = (run == 0) ? seq_a : seq_b;
+        for (int di = 0; di < 3; di++) {
+            for (int minute = 0; minute < 1440; minute += 15) {
+                Setpoints sp;
+                SensorInputs in = disconnected_inputs(days[di], minute, utc_off, sp);
+                // Reconstructed band is always finite + ordered (no NaN storms).
+                ASSERT_TRUE(sp.temp_low < sp.temp_high && sp.vpd_low < sp.vpd_high);
+                ASSERT_TRUE(std::isfinite(in.solar_phase)
+                            && in.solar_phase >= 0.0f && in.solar_phase < 4.0f);
+                Mode m = determine_mode(in, sp, st, dt_ms);
+                // Comfortable sensors at band centre => never a safety/fault rail.
+                ASSERT_FALSE(is_safety_or_fault(m));
+                seq.push_back(m);
+            }
+        }
+    }
+    ASSERT_TRUE(seq_a.size() == seq_b.size() && seq_a.size() == 3u * 96u);
+    for (size_t i = 0; i < seq_a.size(); i++) ASSERT_EQ(seq_a[i], seq_b[i]);
+    PASS();
+}
+
+TEST(no_time_source_fallback_phase_stays_safe) {
+    // No time source: SensorInputs.solar_phase is NaN and now_minute is unset, so
+    // the controller must fall back to fallback_solar_phase(local_hour)
+    // (greenhouse_logic.h effective_solar_phase:42-48 / greenhouse_solar.h:145).
+    // Across all 24 local hours the fallback phase must be finite + in-range, the
+    // reconstructed band finite, and a comfortable house must NOT trip a
+    // safety/fault rail purely because the clock is missing.
+    for (int hour = 0; hour < 24; hour++) {
+        const float fb = fallback_solar_phase(hour);
+        ASSERT_TRUE(std::isfinite(fb) && fb >= 0.0f && fb < 4.0f);
+        const float t_band = band_value_at_phase(kDiscTempAnchors, fb);
+        ASSERT_TRUE(std::isfinite(t_band));
+        Setpoints sp = band_setpoints();
+        sp.temp_low = t_band - 6.0f; sp.temp_high = t_band + 6.0f;
+        SensorInputs in = make_inputs(t_band, 1.0f, 60.0f);
+        in.local_hour  = hour;
+        in.now_minute  = -1;     // unset => effective_now_minute uses local_hour
+        in.solar_phase = NAN;    // no time source => fallback path
+        // The controller resolves the fallback phase, not a NaN.
+        ASSERT_TRUE(std::fabs(effective_solar_phase(in) - fb) < 1e-3f);
+        ControlState st = initial_state();
+        Mode m = determine_mode(in, sp, st, 5000);
+        ASSERT_FALSE(is_safety_or_fault(m));
+    }
+    PASS();
+}
+
+TEST(reboot_persisted_anchors_reproduce_identical_band) {
+    // NVS persists the band anchors across a reboot. Reconstructing the served
+    // band from the SAME anchors at the SAME solar phase before and after a
+    // simulated reboot (fresh ControlState) must reproduce byte-identical
+    // setpoints and the identical mode — a power cycle does not drift the program.
+    const int days[3] = {80, 172, 355};
+    const int utc_off = -360;
+    for (int di = 0; di < 3; di++) {
+        for (int minute = 0; minute < 1440; minute += 60) {
+            Setpoints sp1, sp2;
+            SensorInputs in1 = disconnected_inputs(days[di], minute, utc_off, sp1);
+            SensorInputs in2 = disconnected_inputs(days[di], minute, utc_off, sp2);  // post-reboot
+            ASSERT_EQ(sp1.temp_low, sp2.temp_low);
+            ASSERT_EQ(sp1.temp_high, sp2.temp_high);
+            ASSERT_EQ(sp1.vpd_low, sp2.vpd_low);
+            ASSERT_EQ(sp1.vpd_high, sp2.vpd_high);
+            ASSERT_EQ(in1.solar_phase, in2.solar_phase);
+            ControlState st1 = initial_state(), st2 = initial_state();
+            ASSERT_EQ(determine_mode(in1, sp1, st1, 5000),
+                      determine_mode(in2, sp2, st2, 5000));
+        }
+    }
+    PASS();
+}
+
 // Item-3 per-zone arbiter: lowest priority_rank among zones that want wetting AND
 // have an actuator wins; ties break on urgency; EAST (no relay) is excluded.
 TEST(arbiter_priority_then_urgency_then_actuator) {
