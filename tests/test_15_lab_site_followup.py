@@ -217,7 +217,9 @@ def test_site_grafana_k3s_configmaps_match_source_dashboards():
         REPO_ROOT / "grafana" / "dashboards",
         REPO_ROOT / "grafana" / "provisioning" / "dashboards" / "json",
     ]
-    generated = sorted((REPO_ROOT / "deploy" / "k8s" / "components" / "grafana" / "generated").glob("dashboards-cm-*.yaml"))
+    generated = sorted(
+        (REPO_ROOT / "deploy" / "k8s" / "components" / "grafana" / "generated").glob("dashboards-cm-*.yaml")
+    )
     assert generated
 
     for cm_path in generated:
