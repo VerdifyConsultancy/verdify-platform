@@ -116,28 +116,26 @@ consistent.
 - **Outdoor** + **Outdoor Forecast** (grey solid/dashed), **Solar** + **Solar
   Forecast** (yellow fill on a *hidden* 0–1200 axis).
 
-**The graphed pinched band is the planner's control-TARGET corridor — NOT (yet)
-the running device's actuation boundary.** Be precise about HEAD vs the device:
-- **At repo HEAD** the firmware *does* wire the pinch into band-first actuation
-  (`apply_band_track_pinch` feeds `determine_mode_band_first` +
-  `resolve_equipment`: `firmware/lib/greenhouse_logic.h` ~1326/1338/1350/1672/2255).
-- **The device currently runs `cc1bb19` (2026.6.16, "curve-only-fog-gates"),
-  where the pinch is UNWIRED** (`band_track_fraction` inert, "byte-identical to
-  main"). It **floats within the RAW `[low, high]` crop-tolerance band** and acts
-  only at the raw edges. The band-compliance firmware (pinch armed) is **staged,
-  not flashed** — OTA is Jason's gate (`docs/reviews/band-compliance-ota-signoff-2026-06-17.md`).
+**The graphed pinched band IS the running device's control band.** The device
+runs `2026.6.17.2042.dcc6078` (band-compliance, verified from
+`diagnostics.firmware_version`) where the pinch is **wired** into band-first
+actuation (`apply_band_track_pinch` feeds `determine_mode_band_first` +
+`resolve_equipment`: `firmware/lib/greenhouse_logic.h` ~1326/1338/1350/1672/2255)
+with `band_track_fraction = 0.25` live — so the controller actively tracks the
+pinched band toward the target. (Don't be fooled by `firmware/artifacts/last-good.version`
+= `cc1bb19`: that's the rollback floor, which lags the running binary through the
+48 h bake.)
 
-So the device tolerates excursions out to the **wider raw band**; that is why
-climate can sit outside the (narrower) graphed pinched band with no actuator
-firing. The two converge when either (a) the band-compliance fw is OTA'd (pinch
-wired → device tracks the pinched band) **or** (b) **#377** flips
-`band_track_fraction → 0` (pinched == raw == the device's *current* actuation —
-the ADR-0004 floating-corridor direction). Change the band itself by editing
-`crop_band_anchors` / `band_track_fraction` (the dispatcher pushes the value to
-the device NVS — no OTA — but on `cc1bb19` the pinch fraction is inert), not by
-editing the dashboard. See `docs/band-traceability-contract.md`,
-`docs/adr/0004-floating-corridor-control.md`, and project memory
-`band-single-source-of-truth`.
+When climate sits *outside* the pinched band with actuators idle, it's the
+**cooling-priority arbitration** (can't seal-and-mist while venting for heat),
+not a wider tolerance — visible on the temp panel firing at the same timestamps.
+Change the band itself by editing `crop_band_anchors` / `band_track_fraction`
+(the dispatcher pushes to device NVS — no OTA), not the dashboard. The ADR-0004
+direction is `band_track_fraction → 0` (#377); the graph reads it live, so a flip
+to 0 auto-widens the shaded band to the full crop-tolerance corridor (and the
+device floats it). See `docs/band-traceability-contract.md`,
+`docs/adr/0004-floating-corridor-control.md`, project memory
+`band-single-source-of-truth`, and `docs/reviews/control-and-graphs-state-2026-06-18.md`.
 
 ### Equipment overlay
 Every climate actuator is drawn as a **fixed-y wide stripe** that blinks on/off —
