@@ -45,6 +45,11 @@
             ]
           }
         }
+      },
+      "transparent": true,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none"
       }
     },
     {
@@ -88,6 +93,11 @@
             ]
           }
         }
+      },
+      "transparent": true,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none"
       }
     },
     {
@@ -115,6 +125,11 @@
         "defaults": {
           "unit": "s"
         }
+      },
+      "transparent": true,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none"
       }
     },
     {
@@ -158,6 +173,11 @@
             ]
           }
         }
+      },
+      "transparent": true,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none"
       }
     },
     {
@@ -201,6 +221,11 @@
           },
           "unit": "short"
         }
+      },
+      "transparent": true,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none"
       }
     },
     {
@@ -226,7 +251,8 @@
       ],
       "options": {
         "showHeader": true
-      }
+      },
+      "transparent": true
     },
     {
       "id": 16,
@@ -293,7 +319,8 @@
           "placement": "bottom",
           "showLegend": true
         }
-      }
+      },
+      "transparent": true
     },
     {
       "id": 17,
@@ -365,7 +392,8 @@
           "placement": "bottom",
           "showLegend": true
         }
-      }
+      },
+      "transparent": true
     },
     {
       "id": 24,
@@ -411,7 +439,8 @@
           "placement": "bottom",
           "showLegend": true
         }
-      }
+      },
+      "transparent": true
     },
     {
       "id": 25,
@@ -433,7 +462,8 @@
             "type": "grafana-postgresql-datasource"
           }
         }
-      ]
+      ],
+      "transparent": true
     },
     {
       "id": 45,
@@ -464,7 +494,8 @@
           "scheme": "RdYlGn",
           "reverse": true
         }
-      }
+      },
+      "transparent": true
     },
     {
       "description": "Shows the sequence of controller states over the last 24 hours.",
@@ -650,7 +681,8 @@
         }
       ],
       "title": "Controller State Timeline",
-      "type": "state-timeline"
+      "type": "state-timeline",
+      "transparent": true
     },
     {
       "datasource": {
@@ -1455,7 +1487,8 @@
         }
       ],
       "title": "Temperature Compliance Band",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "description": "Indoor VPD against the green firmware compliance band, with only the dehumidify/fan entry and fog entry thresholds rendered. Crop/planner provenance, dispatcher math, cfg readbacks, and padding details remain in the band traceability SQL contract.",
@@ -1996,7 +2029,8 @@
         }
       ],
       "title": "VPD Compliance Band",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "id": 210,
@@ -2058,7 +2092,8 @@
           "placement": "bottom",
           "showLegend": true
         }
-      }
+      },
+      "transparent": true
     },
     {
       "id": 211,
@@ -2113,7 +2148,8 @@
             ]
           }
         ]
-      }
+      },
+      "transparent": true
     },
     {
       "datasource": {
@@ -2294,7 +2330,8 @@
         }
       ],
       "title": "Plan Score Trend & Planning Volume",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "description": "Shows temperature behavior over time for this part of the greenhouse system.",
@@ -2326,7 +2363,9 @@
         "tooltip": {
           "mode": "multi",
           "sort": "desc"
-        }
+        },
+        "colorMode": "value",
+        "graphMode": "none"
       },
       "targets": [
         {
@@ -2340,7 +2379,8 @@
         }
       ],
       "title": "Forecast Bias (temp)",
-      "type": "stat"
+      "type": "stat",
+      "transparent": true
     },
     {
       "description": "Shows planning behavior, compliance, or planning outcomes over time.",
@@ -2366,7 +2406,8 @@
         }
       ],
       "title": "Last 10 Plans",
-      "type": "table"
+      "type": "table",
+      "transparent": true
     },
     {
       "description": "Shows hourly write activity alongside oscillation counts.",
@@ -2464,7 +2505,8 @@
         }
       ],
       "title": "Write Rate + Oscillations",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "id": 415,
@@ -2514,7 +2556,8 @@
           "placement": "bottom",
           "showLegend": true
         }
-      }
+      },
+      "transparent": true
     }
   ],
   "annotations": {

@@ -757,7 +757,8 @@
       ],
       "title": "Multi-Axis Controller Timeline",
       "type": "state-timeline",
-      "maxDataPoints": 10000
+      "maxDataPoints": 10000,
+      "transparent": true
     },
     {
       "datasource": {
@@ -938,7 +939,8 @@
         }
       ],
       "title": "Plan Compliance",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "description": "Shows how many setpoint writes were issued over the last 24 hours.",
@@ -973,7 +975,10 @@
         "y": 13
       },
       "id": 11,
-      "options": {},
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none"
+      },
       "targets": [
         {
           "datasource": {
@@ -986,7 +991,8 @@
         }
       ],
       "title": "Writes (24h)",
-      "type": "stat"
+      "type": "stat",
+      "transparent": true
     },
     {
       "description": "Shows where controller writes came from, split by source.",
@@ -1010,7 +1016,8 @@
         }
       ],
       "title": "Write Source Split",
-      "type": "piechart"
+      "type": "piechart",
+      "transparent": true
     },
     {
       "collapsed": false,
@@ -1066,7 +1073,8 @@
         }
       ],
       "title": "Active Plan",
-      "type": "table"
+      "type": "table",
+      "transparent": true
     },
     {
       "description": "Shows planning behavior, compliance, or planning outcomes over time.",
@@ -1149,7 +1157,8 @@
         }
       ],
       "title": "Last 10 Plans",
-      "type": "table"
+      "type": "table",
+      "transparent": true
     },
     {
       "datasource": {

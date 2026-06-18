@@ -5,6 +5,8 @@ import os
 import re
 from pathlib import Path
 
+import yaml
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -26,6 +28,10 @@ VAULT_ROOT = _vault_root()
 
 def _dashboard(path: str) -> dict:
     return json.loads((REPO_ROOT / path).read_text(encoding="utf-8"))
+
+
+def _site_dashboard_paths() -> list[Path]:
+    return sorted((REPO_ROOT / "grafana" / "dashboards").glob("site-*.json"))
 
 
 def _panel(dashboard: dict, panel_id: int) -> dict:
@@ -186,6 +192,57 @@ def test_lighting_dashboard_visual_contract():
     assert _mapped_color(decision_panel, "Sun", "Day") == "#FDD835"
     assert _mapped_color(decision_panel, "Sun", "Night") == "#112231"
     assert "panelId=10&theme=light&from=now-30d&to=now" in lighting_page
+
+
+def test_site_grafana_panels_use_transparent_chrome():
+    for path in _site_dashboard_paths():
+        dashboard = json.loads(path.read_text(encoding="utf-8"))
+        for panel in dashboard.get("panels", []):
+            if panel.get("type") != "row":
+                assert panel.get("transparent") is True, f"{path.name} panel {panel.get('id')} is not transparent"
+
+
+def test_site_grafana_stat_panels_do_not_use_background_color_mode():
+    for path in _site_dashboard_paths():
+        dashboard = json.loads(path.read_text(encoding="utf-8"))
+        for panel in dashboard.get("panels", []):
+            if panel.get("type") == "stat":
+                options = panel.get("options", {})
+                assert options.get("colorMode") == "value", f"{path.name} panel {panel.get('id')} uses {options}"
+                assert options.get("graphMode") in {None, "none"}, f"{path.name} panel {panel.get('id')} uses {options}"
+
+
+def test_site_grafana_k3s_configmaps_match_source_dashboards():
+    source_roots = [
+        REPO_ROOT / "grafana" / "dashboards",
+        REPO_ROOT / "grafana" / "provisioning" / "dashboards" / "json",
+    ]
+    generated = sorted((REPO_ROOT / "deploy" / "k8s" / "components" / "grafana" / "generated").glob("dashboards-cm-*.yaml"))
+    assert generated
+
+    for cm_path in generated:
+        doc = yaml.safe_load(cm_path.read_text(encoding="utf-8"))
+        for name, raw in (doc.get("data") or {}).items():
+            if not name.endswith(".json"):
+                continue
+            source = next((root / name for root in source_roots if (root / name).exists()), None)
+            assert source is not None, f"{cm_path.name} data key {name} has no source dashboard"
+            assert json.loads(raw) == json.loads(source.read_text(encoding="utf-8"))
+
+
+def test_quartz_dark_mode_contract_is_user_theme_driven():
+    config = (REPO_ROOT / "site/quartz.config.ts").read_text(encoding="utf-8")
+    head = (REPO_ROOT / "site/quartz/components/Head.tsx").read_text(encoding="utf-8")
+    darkmode = (REPO_ROOT / "site/quartz/components/scripts/darkmode.inline.ts").read_text(encoding="utf-8")
+    embeds = (REPO_ROOT / "site/quartz/components/GrafanaEmbeds.tsx").read_text(encoding="utf-8")
+
+    assert 'light: "#071512"' in config
+    assert "__verdifyLightThemeOnly" not in head
+    assert 'localStorage.getItem("theme")' in darkmode
+    assert "prefers-color-scheme: dark" in darkmode
+    assert 'new CustomEvent("themechange"' in darkmode
+    assert "function themedUrl" in embeds
+    assert "themechange" in embeds
 
 
 def test_architecture_page_removes_stale_sections_and_svg_return_path_is_behind_ingestor():

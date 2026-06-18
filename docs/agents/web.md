@@ -56,7 +56,11 @@ Do not edit `/work/public` or `/srv/verdify/verdify-site/public`; they are build
 output. Hand-authored content should be seeded/synced to the S3 content prefix.
 Repo-owned Quartz/build code lives in `site/` and `scripts/`.
 
-Do not edit `/srv/verdify/verdify-site/quartz` for normal work. The web repo owns the full Quartz source tree under `site/quartz`, and `scripts/rebuild-site.sh` syncs `site/` into `/srv/verdify/verdify-site` before each build.
+Do not edit `/srv/verdify/verdify-site/quartz` for normal work. The normal
+deploy path is GitHub CI/CD into k3s: source changes land in Git, the lab image
+is published from `VerdifyConsultancy/verdify-site-legacy@v4`, and
+`verdify-platform` pins the resulting GHCR digest for ArgoCD. Treat `/srv`
+paths as historical/break-glass context only.
 
 Build/publish unit:
 

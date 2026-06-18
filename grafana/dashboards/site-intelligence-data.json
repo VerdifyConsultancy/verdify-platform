@@ -183,7 +183,8 @@
         }
       ],
       "title": "Plan Score Trend & Planning Volume",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "description": "Shows hourly write activity alongside oscillation counts.",
@@ -281,7 +282,8 @@
         }
       ],
       "title": "Write Rate + Oscillations",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "description": "Current ESP32 controller state rendered through numeric value mappings so Grafana static images do not drop string-only stats.",
@@ -442,7 +444,7 @@
           "values": false
         },
         "textMode": "value_and_name",
-        "colorMode": "background_solid",
+        "colorMode": "value",
         "graphMode": "none"
       },
       "targets": [
@@ -457,7 +459,8 @@
         }
       ],
       "title": "Current Controller State",
-      "type": "stat"
+      "type": "stat",
+      "transparent": true
     },
     {
       "id": 202,
@@ -501,8 +504,8 @@
             "lastNotNull"
           ]
         },
-        "colorMode": "background",
-        "graphMode": "area"
+        "colorMode": "value",
+        "graphMode": "none"
       },
       "targets": [
         {
@@ -514,7 +517,8 @@
             "type": "grafana-postgresql-datasource"
           }
         }
-      ]
+      ],
+      "transparent": true
     },
     {
       "id": 203,
@@ -558,7 +562,7 @@
             "lastNotNull"
           ]
         },
-        "colorMode": "background",
+        "colorMode": "value",
         "graphMode": "none"
       },
       "targets": [
@@ -571,7 +575,8 @@
             "type": "grafana-postgresql-datasource"
           }
         }
-      ]
+      ],
+      "transparent": true
     }
   ],
   "annotations": {

@@ -56,6 +56,11 @@ data:
                 ]
               }
             }
+          },
+          "transparent": true,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none"
           }
         },
         {
@@ -99,6 +104,11 @@ data:
                 ]
               }
             }
+          },
+          "transparent": true,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none"
           }
         },
         {
@@ -126,6 +136,11 @@ data:
             "defaults": {
               "unit": "s"
             }
+          },
+          "transparent": true,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none"
           }
         },
         {
@@ -169,6 +184,11 @@ data:
                 ]
               }
             }
+          },
+          "transparent": true,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none"
           }
         },
         {
@@ -212,6 +232,11 @@ data:
               },
               "unit": "short"
             }
+          },
+          "transparent": true,
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none"
           }
         },
         {
@@ -237,7 +262,8 @@ data:
           ],
           "options": {
             "showHeader": true
-          }
+          },
+          "transparent": true
         },
         {
           "id": 16,
@@ -304,7 +330,8 @@ data:
               "placement": "bottom",
               "showLegend": true
             }
-          }
+          },
+          "transparent": true
         },
         {
           "id": 17,
@@ -376,7 +403,8 @@ data:
               "placement": "bottom",
               "showLegend": true
             }
-          }
+          },
+          "transparent": true
         },
         {
           "id": 24,
@@ -422,7 +450,8 @@ data:
               "placement": "bottom",
               "showLegend": true
             }
-          }
+          },
+          "transparent": true
         },
         {
           "id": 25,
@@ -444,7 +473,8 @@ data:
                 "type": "grafana-postgresql-datasource"
               }
             }
-          ]
+          ],
+          "transparent": true
         },
         {
           "id": 45,
@@ -475,7 +505,8 @@ data:
               "scheme": "RdYlGn",
               "reverse": true
             }
-          }
+          },
+          "transparent": true
         },
         {
           "description": "Shows the sequence of controller states over the last 24 hours.",
@@ -661,7 +692,8 @@ data:
             }
           ],
           "title": "Controller State Timeline",
-          "type": "state-timeline"
+          "type": "state-timeline",
+          "transparent": true
         },
         {
           "datasource": {
@@ -1466,7 +1498,8 @@ data:
             }
           ],
           "title": "Temperature Compliance Band",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "description": "Indoor VPD against the green firmware compliance band, with only the dehumidify/fan entry and fog entry thresholds rendered. Crop/planner provenance, dispatcher math, cfg readbacks, and padding details remain in the band traceability SQL contract.",
@@ -2007,7 +2040,8 @@ data:
             }
           ],
           "title": "VPD Compliance Band",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "id": 210,
@@ -2069,7 +2103,8 @@ data:
               "placement": "bottom",
               "showLegend": true
             }
-          }
+          },
+          "transparent": true
         },
         {
           "id": 211,
@@ -2124,7 +2159,8 @@ data:
                 ]
               }
             ]
-          }
+          },
+          "transparent": true
         },
         {
           "datasource": {
@@ -2305,7 +2341,8 @@ data:
             }
           ],
           "title": "Plan Score Trend & Planning Volume",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "description": "Shows temperature behavior over time for this part of the greenhouse system.",
@@ -2337,7 +2374,9 @@ data:
             "tooltip": {
               "mode": "multi",
               "sort": "desc"
-            }
+            },
+            "colorMode": "value",
+            "graphMode": "none"
           },
           "targets": [
             {
@@ -2351,7 +2390,8 @@ data:
             }
           ],
           "title": "Forecast Bias (temp)",
-          "type": "stat"
+          "type": "stat",
+          "transparent": true
         },
         {
           "description": "Shows planning behavior, compliance, or planning outcomes over time.",
@@ -2377,7 +2417,8 @@ data:
             }
           ],
           "title": "Last 10 Plans",
-          "type": "table"
+          "type": "table",
+          "transparent": true
         },
         {
           "description": "Shows hourly write activity alongside oscillation counts.",
@@ -2475,7 +2516,8 @@ data:
             }
           ],
           "title": "Write Rate + Oscillations",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "id": 415,
@@ -2525,7 +2567,8 @@ data:
               "placement": "bottom",
               "showLegend": true
             }
-          }
+          },
+          "transparent": true
         }
       ],
       "annotations": {
@@ -2865,7 +2908,8 @@ data:
             }
           ],
           "title": "Daily DLI Trend",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "datasource": {
@@ -3010,7 +3054,8 @@ data:
             }
           ],
           "title": "Forecast vs Actual Solar Radiation",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "datasource": {
@@ -3570,7 +3615,8 @@ data:
             "colorMode": "value",
             "graphMode": "none"
           },
-          "description": "Electric cost = \u03a3(equipment runtime \u00d7 watts \u00d7 $0.111/kWh)"
+          "description": "Electric cost = \u03a3(equipment runtime \u00d7 watts \u00d7 $0.111/kWh)",
+          "transparent": true
         },
         {
           "description": "Runtime-modeled electric load from published device wattage and observed on-time overlaid with available solar radiation.",
@@ -3706,7 +3752,8 @@ data:
               "placement": "bottom",
               "showLegend": true
             }
-          }
+          },
+          "transparent": true
         },
         {
           "datasource": {
@@ -4293,7 +4340,8 @@ data:
             "colorMode": "value",
             "graphMode": "none"
           },
-          "description": "Water cost = gallons used \u00d7 $0.00484/gal"
+          "description": "Water cost = gallons used \u00d7 $0.00484/gal",
+          "transparent": true
         },
         {
           "id": 7,
@@ -4338,7 +4386,8 @@ data:
             },
             "colorMode": "value",
             "graphMode": "none"
-          }
+          },
+          "transparent": true
         },
         {
           "id": 8,
@@ -4384,7 +4433,8 @@ data:
             "colorMode": "value",
             "graphMode": "none"
           },
-          "description": "Average daily total cost across the last 30 completed daily summaries."
+          "description": "Average daily total cost across the last 30 completed daily summaries.",
+          "transparent": true
         },
         {
           "description": "Shows water use or irrigation behavior over time.",
@@ -4427,7 +4477,8 @@ data:
             }
           ],
           "title": "Daily Water Use",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "datasource": {
@@ -4989,7 +5040,8 @@ data:
             }
           ],
           "title": "VPD Compliance Band",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "datasource": {
@@ -5075,7 +5127,8 @@ data:
             }
           ],
           "title": "Mister Effectiveness by Zone",
-          "type": "barchart"
+          "type": "barchart",
+          "transparent": true
         },
         {
           "description": "Shows daily runtime totals for the misting zones.",
@@ -5131,7 +5184,8 @@ data:
             }
           ],
           "title": "Mister Zone Runtimes",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "description": "Shows current soil moisture conditions across the monitored zones.",
@@ -5234,7 +5288,8 @@ data:
             }
           ],
           "title": "Soil Moisture by Zone",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "description": "Shows current soil moisture conditions across the monitored greenhouse zones.",
@@ -5337,7 +5392,8 @@ data:
             }
           ],
           "title": "Soil Moisture by Zone",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "description": "Shows soil EC from the south-zone probe that includes conductivity sensing.",
@@ -5403,7 +5459,8 @@ data:
             }
           ],
           "title": "Soil EC \u2014 South 1",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "description": "Shows soil moisture from the first south-zone probe.",
@@ -5441,7 +5498,10 @@ data:
             "y": 38
           },
           "id": 217,
-          "options": {},
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none"
+          },
           "targets": [
             {
               "datasource": {
@@ -5452,7 +5512,8 @@ data:
             }
           ],
           "title": "South 1 Moisture",
-          "type": "stat"
+          "type": "stat",
+          "transparent": true
         },
         {
           "id": 218,
@@ -5626,7 +5687,8 @@ data:
               "mode": "multi",
               "sort": "desc"
             }
-          }
+          },
+          "transparent": true
         }
       ],
       "annotations": {
@@ -6411,7 +6473,8 @@ data:
             }
           ],
           "title": "Temperature Compliance Band",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "datasource": {
@@ -7037,7 +7100,8 @@ data:
             }
           ],
           "title": "VPD Compliance Band",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "datasource": {
@@ -7083,7 +7147,7 @@ data:
           },
           "id": 2,
           "options": {
-            "colorMode": "background_solid",
+            "colorMode": "value",
             "graphMode": "none",
             "justifyMode": "auto",
             "reduceOptions": {
@@ -7107,7 +7171,8 @@ data:
             }
           ],
           "title": "Indoor Avg Temp",
-          "type": "stat"
+          "type": "stat",
+          "transparent": true
         },
         {
           "id": 108,
@@ -7153,7 +7218,8 @@ data:
             "colorMode": "value",
             "graphMode": "none"
           },
-          "description": "Average daily total cost across the last 30 completed daily summaries."
+          "description": "Average daily total cost across the last 30 completed daily summaries.",
+          "transparent": true
         },
         {
           "datasource": {
@@ -7349,7 +7415,8 @@ data:
             "colorMode": "value",
             "graphMode": "none"
           },
-          "description": "Average estimated electric use per completed day across the last 30 days, computed from equipment runtimes and rated/observed wattages."
+          "description": "Average estimated electric use per completed day across the last 30 days, computed from equipment runtimes and rated/observed wattages.",
+          "transparent": true
         },
         {
           "id": 106,
@@ -7395,7 +7462,8 @@ data:
             "colorMode": "value",
             "graphMode": "none"
           },
-          "description": "Average estimated gas furnace consumption per completed day across the last 30 days."
+          "description": "Average estimated gas furnace consumption per completed day across the last 30 days.",
+          "transparent": true
         },
         {
           "id": 107,
@@ -7441,7 +7509,8 @@ data:
             "colorMode": "value",
             "graphMode": "none"
           },
-          "description": "Average water use per completed day across the last 30 days."
+          "description": "Average water use per completed day across the last 30 days.",
+          "transparent": true
         },
         {
           "description": "Latest controller, mister, fan, occupancy, and override state values with 24-hour change counts.",
@@ -7708,7 +7777,8 @@ data:
             }
           ],
           "title": "Indoor vs Outdoor Temperature",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "datasource": {
@@ -7825,7 +7895,8 @@ data:
             }
           ],
           "title": "Indoor vs Outdoor Humidity",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "datasource": {
@@ -7876,7 +7947,8 @@ data:
             }
           ],
           "title": "VPD Heatmap (Hour \u00d7 Day)",
-          "type": "heatmap"
+          "type": "heatmap",
+          "transparent": true
         },
         {
           "datasource": {
@@ -8973,7 +9045,7 @@ data:
           },
           "id": 839,
           "options": {
-            "colorMode": "background_solid",
+            "colorMode": "value",
             "graphMode": "none",
             "justifyMode": "auto",
             "reduceOptions": {
@@ -8997,7 +9069,8 @@ data:
             }
           ],
           "title": "Indoor Temp",
-          "type": "stat"
+          "type": "stat",
+          "transparent": true
         },
         {
           "datasource": {
@@ -9792,7 +9865,8 @@ data:
             }
           ],
           "title": "Temperature Compliance Band",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "description": "Shows current or recent botrytis disease risk based on greenhouse conditions.",
@@ -9857,7 +9931,8 @@ data:
             }
           ],
           "title": "Botrytis Risk",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "description": "Shows current soil moisture conditions across the monitored zones.",
@@ -9960,7 +10035,8 @@ data:
             }
           ],
           "title": "Soil Moisture by Zone",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "datasource": {
@@ -10563,7 +10639,8 @@ data:
             }
           ],
           "title": "VPD Compliance Band",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "description": "Shows current or recent botrytis disease risk based on greenhouse conditions.",
@@ -10628,7 +10705,8 @@ data:
             }
           ],
           "title": "Botrytis Risk",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "datasource": {
@@ -11433,7 +11511,8 @@ data:
             }
           ],
           "title": "Temperature Compliance Band",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "description": "Indoor VPD against the green firmware compliance band, with only the dehumidify/fan entry and fog entry thresholds rendered. Crop/planner provenance, dispatcher math, cfg readbacks, and padding details remain in the band traceability SQL contract.",
@@ -11974,7 +12053,8 @@ data:
             }
           ],
           "title": "VPD Compliance Band",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "datasource": {
@@ -12155,7 +12235,8 @@ data:
             }
           ],
           "title": "Plan Compliance",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "datasource": {
@@ -12360,7 +12441,8 @@ data:
             }
           ],
           "title": "Indoor vs Outdoor Temperature",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "datasource": {
@@ -13025,7 +13107,8 @@ data:
             }
           ],
           "title": "Temperature Compliance Band",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "datasource": {
@@ -13067,7 +13150,7 @@ data:
           },
           "id": 814,
           "options": {
-            "colorMode": "background_solid",
+            "colorMode": "value",
             "graphMode": "none",
             "justifyMode": "auto",
             "reduceOptions": {
@@ -13091,7 +13174,8 @@ data:
             }
           ],
           "title": "Cost Today",
-          "type": "stat"
+          "type": "stat",
+          "transparent": true
         },
         {
           "datasource": {
@@ -13150,7 +13234,8 @@ data:
             }
           ],
           "title": "$/Day (30-Day Average)",
-          "type": "stat"
+          "type": "stat",
+          "transparent": true
         },
         {
           "datasource": {
@@ -13196,7 +13281,7 @@ data:
           },
           "id": 817,
           "options": {
-            "colorMode": "background_solid",
+            "colorMode": "value",
             "graphMode": "none",
             "justifyMode": "auto",
             "reduceOptions": {
@@ -13220,7 +13305,8 @@ data:
             }
           ],
           "title": "Indoor Temp",
-          "type": "stat"
+          "type": "stat",
+          "transparent": true
         },
         {
           "datasource": {
@@ -13340,7 +13426,8 @@ data:
             }
           ],
           "title": "Monthly Cost by Category",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "datasource": {
@@ -13561,7 +13648,8 @@ data:
             }
           ],
           "title": "Seasonal Arc",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         }
       ],
       "annotations": {
@@ -14332,7 +14420,8 @@ data:
           ],
           "title": "Multi-Axis Controller Timeline",
           "type": "state-timeline",
-          "maxDataPoints": 10000
+          "maxDataPoints": 10000,
+          "transparent": true
         },
         {
           "datasource": {
@@ -14513,7 +14602,8 @@ data:
             }
           ],
           "title": "Plan Compliance",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "description": "Shows how many setpoint writes were issued over the last 24 hours.",
@@ -14548,7 +14638,10 @@ data:
             "y": 13
           },
           "id": 11,
-          "options": {},
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none"
+          },
           "targets": [
             {
               "datasource": {
@@ -14561,7 +14654,8 @@ data:
             }
           ],
           "title": "Writes (24h)",
-          "type": "stat"
+          "type": "stat",
+          "transparent": true
         },
         {
           "description": "Shows where controller writes came from, split by source.",
@@ -14585,7 +14679,8 @@ data:
             }
           ],
           "title": "Write Source Split",
-          "type": "piechart"
+          "type": "piechart",
+          "transparent": true
         },
         {
           "collapsed": false,
@@ -14641,7 +14736,8 @@ data:
             }
           ],
           "title": "Active Plan",
-          "type": "table"
+          "type": "table",
+          "transparent": true
         },
         {
           "description": "Shows planning behavior, compliance, or planning outcomes over time.",
@@ -14724,7 +14820,8 @@ data:
             }
           ],
           "title": "Last 10 Plans",
-          "type": "table"
+          "type": "table",
+          "transparent": true
         },
         {
           "datasource": {
@@ -16830,8 +16927,8 @@ data:
           },
           "id": 10,
           "options": {
-            "colorMode": "none",
-            "graphMode": "area",
+            "colorMode": "value",
+            "graphMode": "none",
             "justifyMode": "auto",
             "reduceOptions": {
               "calcs": [
@@ -16854,7 +16951,8 @@ data:
             }
           ],
           "title": "GPU Watts Now",
-          "type": "stat"
+          "type": "stat",
+          "transparent": true
         },
         {
           "datasource": {
@@ -16889,8 +16987,8 @@ data:
           },
           "id": 11,
           "options": {
-            "colorMode": "none",
-            "graphMode": "area",
+            "colorMode": "value",
+            "graphMode": "none",
             "justifyMode": "auto",
             "reduceOptions": {
               "calcs": [
@@ -16913,7 +17011,8 @@ data:
             }
           ],
           "title": "GPUs Streaming",
-          "type": "stat"
+          "type": "stat",
+          "transparent": true
         },
         {
           "datasource": {
@@ -16948,8 +17047,8 @@ data:
           },
           "id": 12,
           "options": {
-            "colorMode": "none",
-            "graphMode": "area",
+            "colorMode": "value",
+            "graphMode": "none",
             "justifyMode": "auto",
             "reduceOptions": {
               "calcs": [
@@ -16972,7 +17071,8 @@ data:
             }
           ],
           "title": "Average GPU Utilization",
-          "type": "stat"
+          "type": "stat",
+          "transparent": true
         },
         {
           "datasource": {
@@ -17007,8 +17107,8 @@ data:
           },
           "id": 13,
           "options": {
-            "colorMode": "none",
-            "graphMode": "area",
+            "colorMode": "value",
+            "graphMode": "none",
             "justifyMode": "auto",
             "reduceOptions": {
               "calcs": [
@@ -17031,7 +17131,8 @@ data:
             }
           ],
           "title": "Average CPU Utilization",
-          "type": "stat"
+          "type": "stat",
+          "transparent": true
         },
         {
           "datasource": {
@@ -17272,7 +17373,8 @@ data:
             }
           ],
           "title": "GPU Utilization by Host",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "datasource": {
@@ -17533,7 +17635,8 @@ data:
             }
           ],
           "title": "CPU Utilization by Host",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "datasource": {
@@ -17587,7 +17690,8 @@ data:
             }
           ],
           "title": "Latest Compute by Host",
-          "type": "table"
+          "type": "table",
+          "transparent": true
         }
       ],
       "style": "light"
@@ -18506,7 +18610,8 @@ data:
             }
           ],
           "title": "Temperature Compliance Band",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "datasource": {
@@ -19097,7 +19202,8 @@ data:
             }
           ],
           "title": "VPD Compliance Band",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "description": "Shows temperature behavior over time for this part of the greenhouse system.",
@@ -19375,7 +19481,8 @@ data:
                 "format": "multi"
               }
             }
-          ]
+          ],
+          "transparent": true
         },
         {
           "id": 116,
@@ -19420,7 +19527,7 @@ data:
           },
           "options": {
             "colorMode": "value",
-            "graphMode": "area",
+            "graphMode": "none",
             "justifyMode": "auto",
             "orientation": "auto",
             "reduceOptions": {
@@ -19463,7 +19570,8 @@ data:
                 "limit": 50
               }
             }
-          ]
+          ],
+          "transparent": true
         },
         {
           "id": 117,
@@ -19548,7 +19656,8 @@ data:
                 "limit": 500
               }
             }
-          ]
+          ],
+          "transparent": true
         }
       ],
       "annotations": {
@@ -19752,7 +19861,10 @@ data:
             "y": 1
           },
           "id": 4,
-          "options": {},
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none"
+          },
           "targets": [
             {
               "datasource": {
@@ -19765,7 +19877,8 @@ data:
             }
           ],
           "title": "Plan Age",
-          "type": "stat"
+          "type": "stat",
+          "transparent": true
         },
         {
           "datasource": {
@@ -20651,7 +20764,8 @@ data:
             }
           ],
           "title": "Temperature Compliance Band",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "datasource": {
@@ -21277,7 +21391,8 @@ data:
             }
           ],
           "title": "VPD Compliance Band",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         }
       ],
       "annotations": {

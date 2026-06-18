@@ -1465,7 +1465,8 @@
         }
       ],
       "title": "Soil Moisture by Zone",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "description": "Shows soil EC from the south-zone probe that includes conductivity sensing.",
@@ -1531,7 +1532,8 @@
         }
       ],
       "title": "Soil EC \u2014 South 1",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "description": "Shows soil moisture from the first south-zone probe.",
@@ -1569,7 +1571,10 @@
         "y": 38
       },
       "id": 17,
-      "options": {},
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none"
+      },
       "targets": [
         {
           "datasource": {
@@ -1580,7 +1585,8 @@
         }
       ],
       "title": "South 1 Moisture",
-      "type": "stat"
+      "type": "stat",
+      "transparent": true
     },
     {
       "datasource": {
@@ -1812,7 +1818,8 @@
         }
       ],
       "title": "Sensor DLI vs Estimated Actual DLI",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -1869,7 +1876,8 @@
         }
       ],
       "title": "Grow Light Runtime (24h)",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     }
   ],
   "annotations": {

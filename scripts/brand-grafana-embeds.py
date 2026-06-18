@@ -21,6 +21,7 @@ import argparse
 import json
 import re
 import subprocess
+import urllib.request
 from collections import defaultdict
 from copy import deepcopy
 from pathlib import Path
@@ -981,8 +982,8 @@ def check_site_embed_contract(vault_root: Path) -> list[str]:
     for path, line, _uid, _panel_id, query in site_embeds(vault_root):
         embed_count += 1
         theme = query.get("theme", [""])[0]
-        if theme != "light":
-            findings.append(f"{path}: line {line} Grafana embed theme is {theme or '<missing>'}, expected light")
+        if theme not in {"light", "dark"}:
+            findings.append(f"{path}: line {line} Grafana embed theme is {theme or '<missing>'}, expected light/dark")
     if embed_count == 0:
         findings.append(f"{vault_root}: no Grafana /d-solo embeds found")
 
@@ -2809,8 +2810,8 @@ def check_explicit_graph_series_colors(label: str, panel: dict[str, Any]) -> lis
 
 def check_dashboard_data(label: str, dashboard: dict[str, Any], embedded_ids: set[int]) -> list[str]:
     findings: list[str] = []
-    if dashboard.get("style") != "light":
-        findings.append(f"{label}: dashboard style is not light")
+    if dashboard.get("style") not in {"light", "dark"}:
+        findings.append(f"{label}: dashboard style is not light/dark")
     findings.extend(check_daylight_dashboard_data(label, dashboard))
     findings.extend(check_compliance_dashboard_data(label, dashboard))
     findings.extend(check_lighting_threshold_dashboard_data(label, dashboard))
@@ -3118,6 +3119,15 @@ def live_dashboard_from_docker(uid: str, container: str) -> dict[str, Any]:
     return parse_live_dashboard_payload(uid, result.stdout)
 
 
+def live_dashboard_from_public_api(uid: str) -> dict[str, Any]:
+    request = urllib.request.Request(
+        f"https://graphs.verdify.ai/api/dashboards/uid/{uid}",
+        headers={"User-Agent": "verdify-brand-check/1.0"},
+    )
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return parse_live_dashboard_payload(uid, response.read().decode("utf-8"))
+
+
 def live_dashboard(uid: str, container: str) -> dict[str, Any]:
     kubectl_error: RuntimeError | None = None
     try:
@@ -3128,7 +3138,31 @@ def live_dashboard(uid: str, container: str) -> dict[str, Any]:
     try:
         return live_dashboard_from_docker(uid, container)
     except (FileNotFoundError, subprocess.TimeoutExpired, RuntimeError) as exc:
-        raise RuntimeError(f"{kubectl_error}; legacy Docker fallback failed: {exc}") from exc
+        docker_error = RuntimeError(str(exc))
+
+    try:
+        return live_dashboard_from_public_api(uid)
+    except Exception as exc:
+        raise RuntimeError(
+            f"{kubectl_error}; legacy Docker fallback failed: {docker_error}; public API fallback failed: {exc}"
+        ) from exc
+
+
+def source_site_dashboard_refs() -> dict[str, set[int]]:
+    refs: dict[str, set[int]] = {}
+    for path in sorted((REPO_ROOT / "grafana" / "dashboards").glob("site-*.json")):
+        dashboard = load_json(path)
+        uid = dashboard.get("uid")
+        if not isinstance(uid, str) or not uid:
+            continue
+        panel_ids = {
+            int(panel["id"])
+            for panel in iter_panels(dashboard.get("panels", []))
+            if panel.get("type") != "row" and isinstance(panel.get("id"), int)
+        }
+        if panel_ids:
+            refs[uid] = panel_ids
+    return refs
 
 
 def main() -> int:
@@ -3140,6 +3174,8 @@ def main() -> int:
     args = parser.parse_args()
 
     embedded = embedded_panels(args.vault_root)
+    if args.live and not embedded:
+        embedded = source_site_dashboard_refs()
     paths_by_uid = dashboard_paths(embedded)
     missing_source_uids = sorted(set(embedded) - set(paths_by_uid))
     if missing_source_uids and not args.live:

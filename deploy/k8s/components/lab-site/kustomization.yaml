@@ -5,10 +5,10 @@ kind: Component
 # Referenced explicitly by overlays/dev + overlays/prod + overlays/staging via
 # `components:` — deliberately NOT a base resource so it never auto-renders into
 # every overlay. See lab-site.yaml header for the full rationale (build source =
-# the separate verdify-site repo Dockerfile.k3s; nginx static serve on :8080;
-# stateless, no device path). The image (ghcr.io/verdifyconsultancy/verdify-lab)
-# is pinned to a @sha256 digest by each consuming overlay's images: transformer
-# (a PLACEHOLDER all-zeros digest until verdify-site is CI-published).
+# VerdifyConsultancy/verdify-site-legacy@v4 Dockerfile.k3s; nginx static serve
+# on :8080; stateless, no device path). The image
+# (ghcr.io/verdifyconsultancy/verdify-lab) is pinned to a @sha256 digest by each
+# consuming overlay's images: transformer after GitHub CI publishes it.
 resources:
   - lab-site.yaml
   - lab-publisher.yaml

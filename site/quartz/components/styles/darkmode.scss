@@ -2,21 +2,31 @@
   cursor: pointer;
   padding: 0;
   position: relative;
-  background: none;
-  border: none;
-  width: 20px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  width: 32px;
   height: 32px;
   margin: 0;
   text-align: inherit;
   flex-shrink: 0;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease;
 
   & svg {
     position: absolute;
     width: 20px;
     height: 20px;
+    left: calc(50% - 10px);
     top: calc(50% - 10px);
     fill: var(--darkgray);
     transition: opacity 0.1s ease;
+  }
+
+  &:hover {
+    background: var(--highlight);
+    border-color: color-mix(in srgb, var(--secondary) 34%, var(--lightgray));
   }
 }
 

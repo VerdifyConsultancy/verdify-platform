@@ -911,7 +911,8 @@
         }
       ],
       "title": "Temperature Compliance Band",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -1502,7 +1503,8 @@
         }
       ],
       "title": "VPD Compliance Band",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "description": "Shows temperature behavior over time for this part of the greenhouse system.",
@@ -1780,7 +1782,8 @@
             "format": "multi"
           }
         }
-      ]
+      ],
+      "transparent": true
     },
     {
       "id": 116,
@@ -1825,7 +1828,7 @@
       },
       "options": {
         "colorMode": "value",
-        "graphMode": "area",
+        "graphMode": "none",
         "justifyMode": "auto",
         "orientation": "auto",
         "reduceOptions": {
@@ -1868,7 +1871,8 @@
             "limit": 50
           }
         }
-      ]
+      ],
+      "transparent": true
     },
     {
       "id": 117,
@@ -1953,7 +1957,8 @@
             "limit": 500
           }
         }
-      ]
+      ],
+      "transparent": true
     }
   ],
   "annotations": {

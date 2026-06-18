@@ -7,10 +7,12 @@ const PageTitle: QuartzComponent = ({ fileData, cfg, displayClass }: QuartzCompo
   const title = cfg?.pageTitle ?? i18n(cfg.locale).propertyDefaults.title
   const baseDir = pathToRoot(fileData.slug!)
   const logoPath = joinSegments(baseDir, "static/brand/verdify-wordmark.svg")
+  const darkLogoPath = joinSegments(baseDir, "static/brand/verdify-wordmark-dark.svg")
   return (
     <h2 class={classNames(displayClass, "page-title")}>
       <a href={baseDir} aria-label={title}>
-        <img class="page-title__logo" src={logoPath} alt="Verdify" />
+        <img class="page-title__logo page-title__logo--light" src={logoPath} alt="Verdify" />
+        <img class="page-title__logo page-title__logo--dark" src={darkLogoPath} alt="" />
         <span class="page-title__label">Lab</span>
       </a>
     </h2>
@@ -41,6 +43,18 @@ PageTitle.css = `
   max-width: 9.5rem;
   object-fit: contain;
   width: auto;
+}
+
+.page-title__logo--dark {
+  display: none;
+}
+
+:root[saved-theme="dark"] .page-title__logo--light {
+  display: none;
+}
+
+:root[saved-theme="dark"] .page-title__logo--dark {
+  display: block;
 }
 
 .page-title__label {

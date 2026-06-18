@@ -48,7 +48,7 @@
       },
       "id": 839,
       "options": {
-        "colorMode": "background_solid",
+        "colorMode": "value",
         "graphMode": "none",
         "justifyMode": "auto",
         "reduceOptions": {
@@ -72,7 +72,8 @@
         }
       ],
       "title": "Indoor Temp",
-      "type": "stat"
+      "type": "stat",
+      "transparent": true
     },
     {
       "datasource": {
@@ -867,7 +868,8 @@
         }
       ],
       "title": "Temperature Compliance Band",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "description": "Shows current or recent botrytis disease risk based on greenhouse conditions.",
@@ -932,7 +934,8 @@
         }
       ],
       "title": "Botrytis Risk",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "description": "Shows current soil moisture conditions across the monitored zones.",
@@ -1035,7 +1038,8 @@
         }
       ],
       "title": "Soil Moisture by Zone",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -1638,7 +1642,8 @@
         }
       ],
       "title": "VPD Compliance Band",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "description": "Shows current or recent botrytis disease risk based on greenhouse conditions.",
@@ -1703,7 +1708,8 @@
         }
       ],
       "title": "Botrytis Risk",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -2508,7 +2514,8 @@
         }
       ],
       "title": "Temperature Compliance Band",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "description": "Indoor VPD against the green firmware compliance band, with only the dehumidify/fan entry and fog entry thresholds rendered. Crop/planner provenance, dispatcher math, cfg readbacks, and padding details remain in the band traceability SQL contract.",
@@ -3049,7 +3056,8 @@
         }
       ],
       "title": "VPD Compliance Band",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -3230,7 +3238,8 @@
         }
       ],
       "title": "Plan Compliance",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -3435,7 +3444,8 @@
         }
       ],
       "title": "Indoor vs Outdoor Temperature",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -4100,7 +4110,8 @@
         }
       ],
       "title": "Temperature Compliance Band",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -4142,7 +4153,7 @@
       },
       "id": 814,
       "options": {
-        "colorMode": "background_solid",
+        "colorMode": "value",
         "graphMode": "none",
         "justifyMode": "auto",
         "reduceOptions": {
@@ -4166,7 +4177,8 @@
         }
       ],
       "title": "Cost Today",
-      "type": "stat"
+      "type": "stat",
+      "transparent": true
     },
     {
       "datasource": {
@@ -4225,7 +4237,8 @@
         }
       ],
       "title": "$/Day (30-Day Average)",
-      "type": "stat"
+      "type": "stat",
+      "transparent": true
     },
     {
       "datasource": {
@@ -4271,7 +4284,7 @@
       },
       "id": 817,
       "options": {
-        "colorMode": "background_solid",
+        "colorMode": "value",
         "graphMode": "none",
         "justifyMode": "auto",
         "reduceOptions": {
@@ -4295,7 +4308,8 @@
         }
       ],
       "title": "Indoor Temp",
-      "type": "stat"
+      "type": "stat",
+      "transparent": true
     },
     {
       "datasource": {
@@ -4415,7 +4429,8 @@
         }
       ],
       "title": "Monthly Cost by Category",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -4636,7 +4651,8 @@
         }
       ],
       "title": "Seasonal Arc",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     }
   ],
   "annotations": {

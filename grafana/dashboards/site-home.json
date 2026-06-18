@@ -52,7 +52,7 @@
       },
       "id": 2,
       "options": {
-        "colorMode": "background_solid",
+        "colorMode": "value",
         "graphMode": "none",
         "justifyMode": "auto",
         "reduceOptions": {
@@ -76,7 +76,8 @@
         }
       ],
       "title": "Indoor Avg Temp",
-      "type": "stat"
+      "type": "stat",
+      "transparent": true
     },
     {
       "datasource": {
@@ -122,7 +123,7 @@
       },
       "id": 4,
       "options": {
-        "colorMode": "background_solid",
+        "colorMode": "value",
         "graphMode": "none",
         "justifyMode": "auto",
         "reduceOptions": {
@@ -146,7 +147,8 @@
         }
       ],
       "title": "Indoor VPD",
-      "type": "stat"
+      "type": "stat",
+      "transparent": true
     },
     {
       "id": 118,
@@ -322,12 +324,13 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "background_solid",
+        "colorMode": "value",
         "graphMode": "none",
         "justifyMode": "auto",
         "textMode": "value_and_name"
       },
-      "description": "Current ESP32 controller state from the live greenhouse snapshot, rendered through numeric value mappings so Grafana static images do not drop string-only stats."
+      "description": "Current ESP32 controller state from the live greenhouse snapshot, rendered through numeric value mappings so Grafana static images do not drop string-only stats.",
+      "transparent": true
     },
     {
       "id": 108,
@@ -373,7 +376,8 @@
         "colorMode": "value",
         "graphMode": "none"
       },
-      "description": "Average daily total cost across the last 30 completed daily summaries."
+      "description": "Average daily total cost across the last 30 completed daily summaries.",
+      "transparent": true
     },
     {
       "id": 113,
@@ -419,7 +423,8 @@
         "colorMode": "value",
         "graphMode": "none"
       },
-      "description": "Current local-day greenhouse utility cost from the live greenhouse snapshot."
+      "description": "Current local-day greenhouse utility cost from the live greenhouse snapshot.",
+      "transparent": true
     },
     {
       "id": 114,
@@ -465,7 +470,8 @@
         "colorMode": "value",
         "graphMode": "none"
       },
-      "description": "Rolling total cost across the last 30 completed daily summaries."
+      "description": "Rolling total cost across the last 30 completed daily summaries.",
+      "transparent": true
     },
     {
       "id": 115,
@@ -511,7 +517,8 @@
         "colorMode": "value",
         "graphMode": "none"
       },
-      "description": "Average metered electric use per completed day across the last 30 days, falling back to runtime estimate only when meter data is missing."
+      "description": "Average metered electric use per completed day across the last 30 days, falling back to runtime estimate only when meter data is missing.",
+      "transparent": true
     },
     {
       "id": 116,
@@ -571,7 +578,8 @@
         "colorMode": "value",
         "graphMode": "none"
       },
-      "description": "Average estimated gas furnace consumption per completed day across the last 30 days."
+      "description": "Average estimated gas furnace consumption per completed day across the last 30 days.",
+      "transparent": true
     },
     {
       "id": 117,
@@ -631,7 +639,8 @@
         "colorMode": "value",
         "graphMode": "none"
       },
-      "description": "Average water use per completed day across the last 30 days."
+      "description": "Average water use per completed day across the last 30 days.",
+      "transparent": true
     },
     {
       "datasource": {
@@ -751,7 +760,8 @@
         }
       ],
       "title": "Daily Cost by Type",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "description": "Measured greenhouse electrical load overlaid with available solar radiation, showing when electric work lands during solar-rich windows.",
@@ -1033,7 +1043,8 @@
         }
       ],
       "title": "Firmware Band Compliance \u2014 Temp, VPD, Both",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -1225,7 +1236,8 @@
         }
       ],
       "title": "Planner Stress-Category Hours \u2014 Temp, VPD, Total",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -4257,7 +4269,8 @@
         }
       ],
       "title": "Light & DLI vs Target",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -4303,7 +4316,8 @@
         }
       ],
       "title": "30-Day Metered kWh",
-      "type": "stat"
+      "type": "stat",
+      "transparent": true
     },
     {
       "datasource": {
@@ -4349,7 +4363,8 @@
         }
       ],
       "title": "30-Day Total Therms",
-      "type": "stat"
+      "type": "stat",
+      "transparent": true
     },
     {
       "datasource": {
@@ -4395,7 +4410,8 @@
         }
       ],
       "title": "30-Day Total Water gal",
-      "type": "stat"
+      "type": "stat",
+      "transparent": true
     },
     {
       "datasource": {
@@ -4442,7 +4458,8 @@
         }
       ],
       "title": "30-Day Electric Cost",
-      "type": "stat"
+      "type": "stat",
+      "transparent": true
     },
     {
       "datasource": {
@@ -4489,7 +4506,8 @@
         }
       ],
       "title": "30-Day Gas Cost",
-      "type": "stat"
+      "type": "stat",
+      "transparent": true
     },
     {
       "datasource": {
@@ -4536,7 +4554,8 @@
         }
       ],
       "title": "30-Day Water Cost",
-      "type": "stat"
+      "type": "stat",
+      "transparent": true
     },
     {
       "description": "Heat 2 relay runtime converted to therms per minute with a 30-minute trailing average, overlaid with 30-minute average solar radiation.",

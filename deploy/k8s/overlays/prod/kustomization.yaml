@@ -219,7 +219,7 @@ images:
   # durable fix (CI sourcing the real vault) is Iris #124; this only advances the
   # pin so ArgoCD serves the real lab site now.
   - name: ghcr.io/verdifyconsultancy/verdify-lab
-    digest: sha256:bf71018f181f4e37e585b8778852eb209875555525c425921663e7744891c973
+    digest: sha256:98ac23b6affa3b8af3ebb5c7f1c7abe31d00e2379c070f4d61b409130dae9845
   # verdify-lab-publisher: k3s-owned generated-content and S3 sync workflow for
   # lab.verdify.ai. The k3s-suffixed GHCR package is linked to this repo so
   # GITHUB_TOKEN can publish immutable CI-built digests.

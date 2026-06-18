@@ -5,24 +5,19 @@
 # `verdify-lab-site-cache` PVC populated by the in-cluster lab publisher. The
 # baked image remains a bootstrap fallback only.
 #
-# IMAGE — MUST BE BUILT/PUBLISHED SEPARATELY (not done by these manifests):
+# IMAGE — BUILT/PUBLISHED BY GITHUB CI, THEN PINNED BY PLATFORM GITOPS:
 #   ghcr.io/verdifyconsultancy/verdify-lab
-# As of authoring the image is NOT published yet — the issue notes verdify-site is
-# an orphan (repo:None) so CI cannot publish it until a #99-class GHCR repo relink
-# (and the IRIS-011 host matrix). So every consuming overlay pins a PLACEHOLDER
-# all-zeros @sha256 digest (identical posture to verdify-planner). The digest
-# write-back flow (k8s-manifests.yml) advances it to the real GHCR digest once
-# container-publish for verdify-lab is green. Rebuild recipe (verdify-site repo):
-#   gh repo clone VerdifyConsultancy/verdify-site && cd verdify-site
-#   docker build -f Dockerfile.k3s \
-#     -t ghcr.io/verdifyconsultancy/verdify-lab:sha-$(git rev-parse --short HEAD) .
-#   docker push ghcr.io/verdifyconsultancy/verdify-lab:sha-<sha>   # -> @sha256 digest
+# Runtime/source changes land in VerdifyConsultancy/verdify-site-legacy@v4,
+# whose publish-lab-image workflow builds Dockerfile.k3s and pushes an immutable
+# GHCR digest. verdify-platform overlays pin that digest under
+# deploy/k8s/overlays/{dev,prod,prod-dark}; ArgoCD syncs the rendered k3s
+# manifests. Do not rebuild or patch this workload by hand on the cluster.
 #
 # RUNTIME / PORT (load-bearing): the Quartz output is plain static HTML served by
 # nginx. To preserve the non-root posture used across the web tier (runAsNonRoot,
 # readOnlyRootFilesystem, drop ALL caps) the image MUST run nginx-unprivileged and
 # LISTEN ON 8080 — NOT the privileged :80 the in-repo site/nginx.conf currently
-# uses. The separate Dockerfile.k3s owns that nginx listen-port + the static-site
+# uses. The verdify-site-legacy Dockerfile.k3s owns that nginx listen-port + the static-site
 # location/try_files rules (mirroring site/nginx.conf, adjusted to :8080). The
 # container :8080 + Service targetPort + probe all stay in lockstep on 8080, the
 # same contract Traefik's kubernetescrd provider resolves against (Service port).

@@ -19,6 +19,25 @@
   --site-shadow: 0 16px 38px rgba(17, 34, 49, 0.08);
 }
 
+:root[saved-theme="dark"] {
+  --canopy-green: #7de2b8;
+  --deep-navy: #071512;
+  --leaf-green: #a6ebcf;
+  --telemetry-mint: #7de2b8;
+  --fog-white: #0b1c18;
+  --glass-green: #17352d;
+  --slate: #d6e7e0;
+  --graph-gray: #90a79f;
+  --harvest-gold: #e5bf5b;
+  --fault-red: #ff6f61;
+  --panel-border: color-mix(in srgb, var(--secondary) 26%, transparent);
+  --surface-fill: color-mix(in srgb, var(--light) 84%, #0f2822);
+  --panel-fill: color-mix(in srgb, var(--lightgray) 52%, #0b1c18);
+  --panel-fill-soft: color-mix(in srgb, var(--lightgray) 34%, #081713);
+  --decision-fill: color-mix(in srgb, var(--harvest-gold) 14%, #0b1c18);
+  --site-shadow: 0 18px 46px rgba(0, 0, 0, 0.34);
+}
+
 body {
   background: var(--light);
   color: var(--darkgray);
@@ -46,6 +65,17 @@ body {
   background: var(--surface-fill);
 }
 
+:root[saved-theme="dark"] .page > #quartz-body .sidebar.left {
+  border-right-color: color-mix(in srgb, var(--secondary) 18%, transparent);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--lightgray) 18%, transparent),
+      transparent 36rem
+    ),
+    var(--surface-fill);
+}
+
 .page > #quartz-body .page-header {
   margin-top: 2rem;
 }
@@ -65,6 +95,10 @@ article a:not(:has(img)) {
 article a:not(:has(img)):hover {
   color: var(--tertiary);
   text-decoration-color: currentColor;
+}
+
+:root[saved-theme="dark"] article a:not(:has(img)) {
+  text-decoration-color: color-mix(in srgb, var(--secondary) 48%, transparent);
 }
 
 article > h1:first-child {
@@ -156,6 +190,10 @@ article {
     background: var(--surface-fill);
   }
 
+  :root[saved-theme="dark"] & table {
+    background: color-mix(in srgb, var(--lightgray) 18%, #071512);
+  }
+
   th,
   td {
     padding: 0.65rem 0.75rem;
@@ -170,6 +208,10 @@ article {
     color: var(--dark);
     background: var(--panel-fill);
     white-space: normal;
+  }
+
+  :root[saved-theme="dark"] & th {
+    background: color-mix(in srgb, var(--secondary) 12%, var(--lightgray));
   }
 
   td code,
@@ -194,6 +236,11 @@ article {
     border: 1px solid var(--panel-border);
     border-radius: 8px;
     background: var(--panel-fill);
+    box-shadow: var(--site-shadow);
+  }
+
+  :root[saved-theme="dark"] & img {
+    background: color-mix(in srgb, var(--lightgray) 30%, #071512);
     box-shadow: var(--site-shadow);
   }
 
@@ -324,6 +371,11 @@ article {
     box-shadow: var(--site-shadow);
   }
 
+  :root[saved-theme="dark"] & .home-launch-video__player {
+    border-color: color-mix(in srgb, var(--secondary) 22%, #000);
+    background: #030807;
+  }
+
   .home-launch-video figcaption {
     max-width: none;
     margin-top: 0.55rem;
@@ -377,6 +429,11 @@ article {
     letter-spacing: 0;
   }
 
+  :root[saved-theme="dark"] & .home-hero__copy h1 {
+    color: var(--dark);
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.22);
+  }
+
   .home-hero__copy p {
     max-width: none;
     margin: 0.75rem 0 0;
@@ -400,6 +457,10 @@ article {
     margin: 2rem 0;
     padding-top: 1.4rem;
     border-top: 1px solid var(--panel-border);
+  }
+
+  :root[saved-theme="dark"] & .home-live {
+    border-top-color: color-mix(in srgb, var(--secondary) 28%, transparent);
   }
 
   .home-live__copy {
@@ -570,6 +631,10 @@ article {
     line-height: 1.42;
   }
 
+  :root[saved-theme="dark"] & .home-live__trace-note {
+    background: color-mix(in srgb, var(--secondary) 10%, #071512);
+  }
+
   .home-hero__safety {
     max-width: none;
     margin: 1.8rem 0 2.2rem;
@@ -578,6 +643,10 @@ article {
     padding: 0.95rem 1rem;
     background: var(--decision-fill);
     color: var(--dark);
+  }
+
+  :root[saved-theme="dark"] & .home-hero__safety {
+    background: color-mix(in srgb, var(--harvest-gold) 13%, #071512);
   }
 
   .flow-steps,
@@ -797,8 +866,16 @@ article {
     white-space: nowrap;
   }
 
+  :root[saved-theme="dark"] & .lab-table th {
+    background: color-mix(in srgb, var(--secondary) 10%, var(--lightgray));
+  }
+
   .lab-table tbody tr:nth-child(even) {
     background: color-mix(in srgb, var(--glass-green) 18%, white);
+  }
+
+  :root[saved-theme="dark"] & .lab-table tbody tr:nth-child(even) {
+    background: color-mix(in srgb, var(--secondary) 5%, var(--lightgray));
   }
 
   .lab-table tbody tr:last-child td {

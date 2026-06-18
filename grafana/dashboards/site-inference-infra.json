@@ -55,8 +55,8 @@
       },
       "id": 10,
       "options": {
-        "colorMode": "none",
-        "graphMode": "area",
+        "colorMode": "value",
+        "graphMode": "none",
         "justifyMode": "auto",
         "reduceOptions": {
           "calcs": [
@@ -79,7 +79,8 @@
         }
       ],
       "title": "GPU Watts Now",
-      "type": "stat"
+      "type": "stat",
+      "transparent": true
     },
     {
       "datasource": {
@@ -114,8 +115,8 @@
       },
       "id": 11,
       "options": {
-        "colorMode": "none",
-        "graphMode": "area",
+        "colorMode": "value",
+        "graphMode": "none",
         "justifyMode": "auto",
         "reduceOptions": {
           "calcs": [
@@ -138,7 +139,8 @@
         }
       ],
       "title": "GPUs Streaming",
-      "type": "stat"
+      "type": "stat",
+      "transparent": true
     },
     {
       "datasource": {
@@ -173,8 +175,8 @@
       },
       "id": 12,
       "options": {
-        "colorMode": "none",
-        "graphMode": "area",
+        "colorMode": "value",
+        "graphMode": "none",
         "justifyMode": "auto",
         "reduceOptions": {
           "calcs": [
@@ -197,7 +199,8 @@
         }
       ],
       "title": "Average GPU Utilization",
-      "type": "stat"
+      "type": "stat",
+      "transparent": true
     },
     {
       "datasource": {
@@ -232,8 +235,8 @@
       },
       "id": 13,
       "options": {
-        "colorMode": "none",
-        "graphMode": "area",
+        "colorMode": "value",
+        "graphMode": "none",
         "justifyMode": "auto",
         "reduceOptions": {
           "calcs": [
@@ -256,7 +259,8 @@
         }
       ],
       "title": "Average CPU Utilization",
-      "type": "stat"
+      "type": "stat",
+      "transparent": true
     },
     {
       "datasource": {
@@ -497,7 +501,8 @@
         }
       ],
       "title": "GPU Utilization by Host",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -758,7 +763,8 @@
         }
       ],
       "title": "CPU Utilization by Host",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -812,7 +818,8 @@
         }
       ],
       "title": "Latest Compute by Host",
-      "type": "table"
+      "type": "table",
+      "transparent": true
     }
   ],
   "style": "light"

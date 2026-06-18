@@ -135,7 +135,7 @@ export default (() => {
         {noindex && <meta name="robots" content="noindex, follow" />}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(()=>{const apply=()=>{document.documentElement.setAttribute("saved-theme","light");try{localStorage.setItem("theme","light")}catch{}};apply();if(!window.__verdifyLightThemeOnly){window.__verdifyLightThemeOnly=true;document.addEventListener("nav",apply)}})();`,
+            __html: `(()=>{let theme="light";try{const saved=localStorage.getItem("theme");theme=saved==="dark"||saved==="light"?saved:(window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")}catch{}document.documentElement.setAttribute("saved-theme",theme);})();`,
           }}
         />
         <script

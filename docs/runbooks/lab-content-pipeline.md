@@ -76,6 +76,10 @@ the `verdify-platform` **Lab Content Pipeline** workflow with `trigger_image_reb
 proves the Quartz toolchain + lab config still build a valid site (and, when the
 snapshot is present, asserts the build is the REAL Verdify site, not the Quartz manual).
 
+Quartz runtime/source changes, such as components, styles, scripts, or static
+brand assets, must also land in `verdify-site-legacy@v4` before publishing the
+image. A content snapshot update alone does not move runtime behavior.
+
 ## Stage 3 — overlay digest write-back  [GATED: Jason / prod-promotion]
 
 **Do NOT auto-merge.** Once Stage 2 publishes `verdify-lab@sha256:<new>`:

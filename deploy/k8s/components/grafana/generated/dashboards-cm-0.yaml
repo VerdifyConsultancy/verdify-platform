@@ -59,7 +59,8 @@ data:
             "colorMode": "value",
             "graphMode": "none"
           },
-          "description": "Electric cost = \u03a3(equipment runtime \u00d7 watts \u00d7 $0.111/kWh)"
+          "description": "Electric cost = \u03a3(equipment runtime \u00d7 watts \u00d7 $0.111/kWh)",
+          "transparent": true
         },
         {
           "id": 5,
@@ -105,7 +106,8 @@ data:
             "colorMode": "value",
             "graphMode": "none"
           },
-          "description": "Estimated kWh from equipment runtimes \u00d7 rated wattages"
+          "description": "Estimated kWh from equipment runtimes \u00d7 rated wattages",
+          "transparent": true
         },
         {
           "id": 8,
@@ -151,7 +153,8 @@ data:
             "colorMode": "value",
             "graphMode": "none"
           },
-          "description": "Average daily total cost across the last 30 completed daily summaries."
+          "description": "Average daily total cost across the last 30 completed daily summaries.",
+          "transparent": true
         },
         {
           "datasource": {
@@ -296,7 +299,8 @@ data:
             }
           ],
           "title": "Forecast vs Actual Solar Radiation",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "datasource": {
@@ -1091,7 +1095,8 @@ data:
             }
           ],
           "title": "Temperature Compliance Band",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "datasource": {
@@ -1314,7 +1319,8 @@ data:
             }
           ],
           "title": "Indoor vs Outdoor Temperature",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "id": 937,
@@ -2115,7 +2121,8 @@ data:
               "sort": "desc"
             }
           },
-          "description": "Indoor temperature against the green firmware compliance band, with only the heat entry and fan/cooling entry thresholds rendered. Crop/planner provenance, dispatcher math, cfg readbacks, and padding details remain in the band traceability SQL contract."
+          "description": "Indoor temperature against the green firmware compliance band, with only the heat entry and fan/cooling entry thresholds rendered. Crop/planner provenance, dispatcher math, cfg readbacks, and padding details remain in the band traceability SQL contract.",
+          "transparent": true
         },
         {
           "id": 938,
@@ -2275,7 +2282,8 @@ data:
               "mode": "multi",
               "sort": "desc"
             }
-          }
+          },
+          "transparent": true
         },
         {
           "id": 939,
@@ -2434,7 +2442,8 @@ data:
               "mode": "multi",
               "sort": "desc"
             }
-          }
+          },
+          "transparent": true
         }
       ],
       "annotations": {
@@ -2497,7 +2506,8 @@ data:
             "colorMode": "value",
             "graphMode": "none"
           },
-          "description": "Gas cost = heat2 runtime \u00d7 75K BTU \u00d7 $0.83/therm"
+          "description": "Gas cost = heat2 runtime \u00d7 75K BTU \u00d7 $0.83/therm",
+          "transparent": true
         },
         {
           "id": 6,
@@ -2542,7 +2552,8 @@ data:
             },
             "colorMode": "value",
             "graphMode": "none"
-          }
+          },
+          "transparent": true
         },
         {
           "id": 8,
@@ -2588,7 +2599,8 @@ data:
             "colorMode": "value",
             "graphMode": "none"
           },
-          "description": "Average daily total cost across the last 30 completed daily summaries."
+          "description": "Average daily total cost across the last 30 completed daily summaries.",
+          "transparent": true
         },
         {
           "id": 19,
@@ -2792,7 +2804,8 @@ data:
               "sort": "desc"
             }
           },
-          "description": "Daily runtime hours per equipment. Stacked bars show total utilization."
+          "description": "Daily runtime hours per equipment. Stacked bars show total utilization.",
+          "transparent": true
         },
         {
           "id": 21,
@@ -2891,7 +2904,8 @@ data:
               "mode": "multi"
             }
           },
-          "description": "Gas heating demand inversely correlates with outdoor temperature."
+          "description": "Gas heating demand inversely correlates with outdoor temperature.",
+          "transparent": true
         },
         {
           "id": 920,
@@ -3692,7 +3706,8 @@ data:
               "sort": "desc"
             }
           },
-          "description": "Indoor temperature against the green firmware compliance band, with only the heat entry and fan/cooling entry thresholds rendered. Crop/planner provenance, dispatcher math, cfg readbacks, and padding details remain in the band traceability SQL contract."
+          "description": "Indoor temperature against the green firmware compliance band, with only the heat entry and fan/cooling entry thresholds rendered. Crop/planner provenance, dispatcher math, cfg readbacks, and padding details remain in the band traceability SQL contract.",
+          "transparent": true
         },
         {
           "datasource": {
@@ -3915,7 +3930,8 @@ data:
             }
           ],
           "title": "Indoor vs Outdoor Temperature",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "datasource": {
@@ -4023,7 +4039,8 @@ data:
             }
           ],
           "title": "DIF \u2014 Day/Night Temperature Differential",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "datasource": {
@@ -4148,7 +4165,8 @@ data:
             }
           ],
           "title": "Monthly Cost by Category",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         }
       ],
       "annotations": {
@@ -4705,7 +4723,8 @@ data:
             }
           ],
           "title": "VPD Compliance Band",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "datasource": {
@@ -4756,7 +4775,8 @@ data:
             }
           ],
           "title": "VPD Heatmap (Hour \u00d7 Day)",
-          "type": "heatmap"
+          "type": "heatmap",
+          "transparent": true
         },
         {
           "datasource": {
@@ -5359,7 +5379,8 @@ data:
             }
           ],
           "title": "VPD Compliance Band",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "datasource": {
@@ -5445,7 +5466,8 @@ data:
             }
           ],
           "title": "Mister Effectiveness by Zone",
-          "type": "barchart"
+          "type": "barchart",
+          "transparent": true
         },
         {
           "description": "Shows daily runtime totals for the misting zones.",
@@ -5506,7 +5528,8 @@ data:
             }
           ],
           "title": "Mister Zone Runtimes",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         }
       ],
       "annotations": {
@@ -5564,7 +5587,7 @@ data:
           },
           "id": 2,
           "options": {
-            "colorMode": "background_solid",
+            "colorMode": "value",
             "graphMode": "none",
             "justifyMode": "auto",
             "reduceOptions": {
@@ -5588,7 +5611,8 @@ data:
             }
           ],
           "title": "Cost Today",
-          "type": "stat"
+          "type": "stat",
+          "transparent": true
         },
         {
           "datasource": {
@@ -5647,7 +5671,8 @@ data:
             }
           ],
           "title": "Runtime Electric $/Day (30-Day Avg)",
-          "type": "stat"
+          "type": "stat",
+          "transparent": true
         },
         {
           "datasource": {
@@ -5706,7 +5731,8 @@ data:
             }
           ],
           "title": "Gas $/Day (30-Day Average)",
-          "type": "stat"
+          "type": "stat",
+          "transparent": true
         },
         {
           "datasource": {
@@ -5765,7 +5791,8 @@ data:
             }
           ],
           "title": "Water $/Day (30-Day Average)",
-          "type": "stat"
+          "type": "stat",
+          "transparent": true
         },
         {
           "datasource": {
@@ -5824,7 +5851,8 @@ data:
             }
           ],
           "title": "Total $/Day (30-Day Average)",
-          "type": "stat"
+          "type": "stat",
+          "transparent": true
         },
         {
           "datasource": {
@@ -5943,7 +5971,8 @@ data:
             }
           ],
           "title": "Daily Cost by Type",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "datasource": {
@@ -6218,7 +6247,8 @@ data:
             }
           ],
           "title": "Utility Split",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "datasource": {
@@ -6296,7 +6326,8 @@ data:
             }
           ],
           "title": "Cost of One Action",
-          "type": "barchart"
+          "type": "barchart",
+          "transparent": true
         },
         {
           "id": 219,
@@ -6612,7 +6643,8 @@ data:
               "sort": "desc"
             }
           },
-          "description": "Gas heating demand inversely correlates with outdoor temperature."
+          "description": "Gas heating demand inversely correlates with outdoor temperature.",
+          "transparent": true
         },
         {
           "description": "Runtime-modeled electric load from published device wattage and observed on-time overlaid with available solar radiation.",
@@ -7150,7 +7182,8 @@ data:
               "placement": "bottom",
               "showLegend": true
             }
-          }
+          },
+          "transparent": true
         },
         {
           "fieldConfig": {
@@ -12292,7 +12325,8 @@ data:
             }
           ],
           "title": "Soil Moisture by Zone",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "description": "Shows soil EC from the south-zone probe that includes conductivity sensing.",
@@ -12358,7 +12392,8 @@ data:
             }
           ],
           "title": "Soil EC \u2014 South 1",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "description": "Shows soil moisture from the first south-zone probe.",
@@ -12396,7 +12431,10 @@ data:
             "y": 38
           },
           "id": 17,
-          "options": {},
+          "options": {
+            "colorMode": "value",
+            "graphMode": "none"
+          },
           "targets": [
             {
               "datasource": {
@@ -12407,7 +12445,8 @@ data:
             }
           ],
           "title": "South 1 Moisture",
-          "type": "stat"
+          "type": "stat",
+          "transparent": true
         },
         {
           "datasource": {
@@ -12639,7 +12678,8 @@ data:
             }
           ],
           "title": "Sensor DLI vs Estimated Actual DLI",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "datasource": {
@@ -12696,7 +12736,8 @@ data:
             }
           ],
           "title": "Grow Light Runtime (24h)",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         }
       ],
       "annotations": {
@@ -14783,7 +14824,7 @@ data:
           },
           "id": 2,
           "options": {
-            "colorMode": "background_solid",
+            "colorMode": "value",
             "graphMode": "none",
             "justifyMode": "auto",
             "reduceOptions": {
@@ -14807,7 +14848,8 @@ data:
             }
           ],
           "title": "Indoor Avg Temp",
-          "type": "stat"
+          "type": "stat",
+          "transparent": true
         },
         {
           "datasource": {
@@ -14853,7 +14895,7 @@ data:
           },
           "id": 4,
           "options": {
-            "colorMode": "background_solid",
+            "colorMode": "value",
             "graphMode": "none",
             "justifyMode": "auto",
             "reduceOptions": {
@@ -14877,7 +14919,8 @@ data:
             }
           ],
           "title": "Indoor VPD",
-          "type": "stat"
+          "type": "stat",
+          "transparent": true
         },
         {
           "id": 118,
@@ -15053,12 +15096,13 @@ data:
               "fields": "",
               "values": false
             },
-            "colorMode": "background_solid",
+            "colorMode": "value",
             "graphMode": "none",
             "justifyMode": "auto",
             "textMode": "value_and_name"
           },
-          "description": "Current ESP32 controller state from the live greenhouse snapshot, rendered through numeric value mappings so Grafana static images do not drop string-only stats."
+          "description": "Current ESP32 controller state from the live greenhouse snapshot, rendered through numeric value mappings so Grafana static images do not drop string-only stats.",
+          "transparent": true
         },
         {
           "id": 108,
@@ -15104,7 +15148,8 @@ data:
             "colorMode": "value",
             "graphMode": "none"
           },
-          "description": "Average daily total cost across the last 30 completed daily summaries."
+          "description": "Average daily total cost across the last 30 completed daily summaries.",
+          "transparent": true
         },
         {
           "id": 113,
@@ -15150,7 +15195,8 @@ data:
             "colorMode": "value",
             "graphMode": "none"
           },
-          "description": "Current local-day greenhouse utility cost from the live greenhouse snapshot."
+          "description": "Current local-day greenhouse utility cost from the live greenhouse snapshot.",
+          "transparent": true
         },
         {
           "id": 114,
@@ -15196,7 +15242,8 @@ data:
             "colorMode": "value",
             "graphMode": "none"
           },
-          "description": "Rolling total cost across the last 30 completed daily summaries."
+          "description": "Rolling total cost across the last 30 completed daily summaries.",
+          "transparent": true
         },
         {
           "id": 115,
@@ -15242,7 +15289,8 @@ data:
             "colorMode": "value",
             "graphMode": "none"
           },
-          "description": "Average metered electric use per completed day across the last 30 days, falling back to runtime estimate only when meter data is missing."
+          "description": "Average metered electric use per completed day across the last 30 days, falling back to runtime estimate only when meter data is missing.",
+          "transparent": true
         },
         {
           "id": 116,
@@ -15302,7 +15350,8 @@ data:
             "colorMode": "value",
             "graphMode": "none"
           },
-          "description": "Average estimated gas furnace consumption per completed day across the last 30 days."
+          "description": "Average estimated gas furnace consumption per completed day across the last 30 days.",
+          "transparent": true
         },
         {
           "id": 117,
@@ -15362,7 +15411,8 @@ data:
             "colorMode": "value",
             "graphMode": "none"
           },
-          "description": "Average water use per completed day across the last 30 days."
+          "description": "Average water use per completed day across the last 30 days.",
+          "transparent": true
         },
         {
           "datasource": {
@@ -15482,7 +15532,8 @@ data:
             }
           ],
           "title": "Daily Cost by Type",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "description": "Measured greenhouse electrical load overlaid with available solar radiation, showing when electric work lands during solar-rich windows.",
@@ -15764,7 +15815,8 @@ data:
             }
           ],
           "title": "Firmware Band Compliance \u2014 Temp, VPD, Both",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "datasource": {
@@ -15956,7 +16008,8 @@ data:
             }
           ],
           "title": "Planner Stress-Category Hours \u2014 Temp, VPD, Total",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "datasource": {
@@ -18988,7 +19041,8 @@ data:
             }
           ],
           "title": "Light & DLI vs Target",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "datasource": {
@@ -19034,7 +19088,8 @@ data:
             }
           ],
           "title": "30-Day Metered kWh",
-          "type": "stat"
+          "type": "stat",
+          "transparent": true
         },
         {
           "datasource": {
@@ -19080,7 +19135,8 @@ data:
             }
           ],
           "title": "30-Day Total Therms",
-          "type": "stat"
+          "type": "stat",
+          "transparent": true
         },
         {
           "datasource": {
@@ -19126,7 +19182,8 @@ data:
             }
           ],
           "title": "30-Day Total Water gal",
-          "type": "stat"
+          "type": "stat",
+          "transparent": true
         },
         {
           "datasource": {
@@ -19173,7 +19230,8 @@ data:
             }
           ],
           "title": "30-Day Electric Cost",
-          "type": "stat"
+          "type": "stat",
+          "transparent": true
         },
         {
           "datasource": {
@@ -19220,7 +19278,8 @@ data:
             }
           ],
           "title": "30-Day Gas Cost",
-          "type": "stat"
+          "type": "stat",
+          "transparent": true
         },
         {
           "datasource": {
@@ -19267,7 +19326,8 @@ data:
             }
           ],
           "title": "30-Day Water Cost",
-          "type": "stat"
+          "type": "stat",
+          "transparent": true
         },
         {
           "description": "Heat 2 relay runtime converted to therms per minute with a 30-minute trailing average, overlaid with 30-minute average solar radiation.",
@@ -21815,7 +21875,8 @@ data:
             }
           ],
           "title": "Plan Score Trend & Planning Volume",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "description": "Shows hourly write activity alongside oscillation counts.",
@@ -21913,7 +21974,8 @@ data:
             }
           ],
           "title": "Write Rate + Oscillations",
-          "type": "timeseries"
+          "type": "timeseries",
+          "transparent": true
         },
         {
           "description": "Current ESP32 controller state rendered through numeric value mappings so Grafana static images do not drop string-only stats.",
@@ -22074,7 +22136,7 @@ data:
               "values": false
             },
             "textMode": "value_and_name",
-            "colorMode": "background_solid",
+            "colorMode": "value",
             "graphMode": "none"
           },
           "targets": [
@@ -22089,7 +22151,8 @@ data:
             }
           ],
           "title": "Current Controller State",
-          "type": "stat"
+          "type": "stat",
+          "transparent": true
         },
         {
           "id": 202,
@@ -22133,8 +22196,8 @@ data:
                 "lastNotNull"
               ]
             },
-            "colorMode": "background",
-            "graphMode": "area"
+            "colorMode": "value",
+            "graphMode": "none"
           },
           "targets": [
             {
@@ -22146,7 +22209,8 @@ data:
                 "type": "grafana-postgresql-datasource"
               }
             }
-          ]
+          ],
+          "transparent": true
         },
         {
           "id": 203,
@@ -22190,7 +22254,7 @@ data:
                 "lastNotNull"
               ]
             },
-            "colorMode": "background",
+            "colorMode": "value",
             "graphMode": "none"
           },
           "targets": [
@@ -22203,7 +22267,8 @@ data:
                 "type": "grafana-postgresql-datasource"
               }
             }
-          ]
+          ],
+          "transparent": true
         }
       ],
       "annotations": {

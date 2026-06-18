@@ -111,7 +111,7 @@ images:
   # ArgoCD app targets overlays/prod-dark today, but keeping it byte-aligned with
   # overlays/prod means a later (gated) prod-dark adopt can't regress the lab site.
   - name: ghcr.io/verdifyconsultancy/verdify-lab
-    digest: sha256:bf71018f181f4e37e585b8778852eb209875555525c425921663e7744891c973
+    digest: sha256:98ac23b6affa3b8af3ebb5c7f1c7abe31d00e2379c070f4d61b409130dae9845
   - name: ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s
     digest: sha256:d4ae747ab31d28716aeea8858140a156fb9ee242ada9bd257f0f184f1915f4ea
   # NO verdify-setpoint-server pin: the setpoint-server Component is excluded, so
