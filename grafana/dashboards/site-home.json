@@ -1656,6 +1656,14 @@
               {
                 "id": "custom.spanNulls",
                 "value": false
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": true,
+                  "viz": false
+                }
               }
             ]
           },
@@ -1734,6 +1742,14 @@
               {
                 "id": "custom.spanNulls",
                 "value": false
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": true,
+                  "viz": false
+                }
               }
             ]
           },
@@ -1812,6 +1828,14 @@
               {
                 "id": "custom.spanNulls",
                 "value": false
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": true,
+                  "viz": false
+                }
               }
             ]
           },
@@ -1890,6 +1914,14 @@
               {
                 "id": "custom.spanNulls",
                 "value": false
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": true,
+                  "viz": false
+                }
               }
             ]
           },
@@ -1968,6 +2000,14 @@
               {
                 "id": "custom.spanNulls",
                 "value": false
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": true,
+                  "viz": false
+                }
               }
             ]
           },
@@ -2046,6 +2086,14 @@
               {
                 "id": "custom.spanNulls",
                 "value": false
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": true,
+                  "viz": false
+                }
               }
             ]
           },
@@ -2124,6 +2172,14 @@
               {
                 "id": "custom.spanNulls",
                 "value": false
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": true,
+                  "viz": false
+                }
               }
             ]
           }
@@ -2913,6 +2969,14 @@
               {
                 "id": "custom.spanNulls",
                 "value": false
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": true,
+                  "viz": false
+                }
               }
             ]
           },
@@ -2991,6 +3055,14 @@
               {
                 "id": "custom.spanNulls",
                 "value": false
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": true,
+                  "viz": false
+                }
               }
             ]
           },
@@ -3069,6 +3141,14 @@
               {
                 "id": "custom.spanNulls",
                 "value": false
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": true,
+                  "viz": false
+                }
               }
             ]
           },
@@ -3147,6 +3227,14 @@
               {
                 "id": "custom.spanNulls",
                 "value": false
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": true,
+                  "viz": false
+                }
               }
             ]
           },
@@ -3225,6 +3313,14 @@
               {
                 "id": "custom.spanNulls",
                 "value": false
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": true,
+                  "viz": false
+                }
               }
             ]
           },
@@ -3303,6 +3399,14 @@
               {
                 "id": "custom.spanNulls",
                 "value": false
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": true,
+                  "viz": false
+                }
               }
             ]
           },
@@ -3381,6 +3485,14 @@
               {
                 "id": "custom.spanNulls",
                 "value": false
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": true,
+                  "viz": false
+                }
               }
             ]
           }
