@@ -2107,7 +2107,7 @@
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "rgba(46,125,50,0.34)",
+                  "fixedColor": "#2E7D32",
                   "mode": "fixed"
                 }
               },
@@ -2117,7 +2117,7 @@
               },
               {
                 "id": "custom.lineWidth",
-                "value": 1
+                "value": 2
               },
               {
                 "id": "custom.lineInterpolation",
@@ -3097,7 +3097,7 @@
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "rgba(46,125,50,0.34)",
+                  "fixedColor": "#2E7D32",
                   "mode": "fixed"
                 }
               },
@@ -3107,7 +3107,7 @@
               },
               {
                 "id": "custom.lineWidth",
-                "value": 1
+                "value": 2
               },
               {
                 "id": "custom.lineInterpolation",

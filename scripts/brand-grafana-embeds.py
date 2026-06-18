@@ -85,7 +85,7 @@ HOMEPAGE_LIGHTING_PANEL_TITLES = {
     "Lighting: Overhead vs Grow Circuit — Lux & Switch State",
 }
 RELAY_STATE_LINE_WIDTH = 0
-HOMEPAGE_TARGET_LINE_COLOR = "rgba(46,125,50,0.34)"
+HOMEPAGE_TARGET_LINE_COLOR = "#2E7D32"
 HOMEPAGE_TARGET_LINE_STYLE = {"fill": "dash", "dash": [6, 4]}
 LIGHTING_THRESHOLD_BANDS = (
     ("Overhead Threshold Base", "Overhead Threshold", BRAND["leaf"]),
@@ -1496,7 +1496,7 @@ def strengthen_homepage_target_lines(panel: dict[str, Any]) -> None:
     target_override = override_for_label(panel, "Target")
     upsert_override_property(target_override, "color", {"fixedColor": HOMEPAGE_TARGET_LINE_COLOR, "mode": "fixed"})
     upsert_override_property(target_override, "custom.drawStyle", "line")
-    upsert_override_property(target_override, "custom.lineWidth", 1)
+    upsert_override_property(target_override, "custom.lineWidth", 2)
     upsert_override_property(target_override, "custom.lineInterpolation", "smooth")
     upsert_override_property(target_override, "custom.lineStyle", HOMEPAGE_TARGET_LINE_STYLE)
     upsert_override_property(target_override, "custom.fillOpacity", 0)
