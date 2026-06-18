@@ -32,6 +32,19 @@
 -- RESTARTS: touches no verdify_schemas/**, ingestor/entity_map.py, or mcp/server.py
 -- from THIS file. (The companion ingestor.py writer change requires a verdify-ingestor
 -- restart — see that file / the PR body.)
+--
+-- VIEW-DEPENDENCY (added 2026-06-17 at live-apply): adding the target OUT params changes
+-- fn_band_setpoints' return type, which CREATE OR REPLACE cannot do (ERROR: cannot change
+-- return type of existing function). Two views hard-depend on the function —
+-- v_target_curve and v_band_device_divergence — so a bare CREATE OR REPLACE fails. Fix:
+-- DROP both views + the function, CREATE the new 6-col function, recreate v_target_curve
+-- verbatim here (it consumes only the 4 EDGE columns by name, so it is behaviorally
+-- unchanged), and recreate v_band_device_divergence in the companion mig 182. Apply
+-- 181 + 182 in ONE transaction so the divergence view is never missing mid-swap.
+
+DROP VIEW IF EXISTS public.v_band_device_divergence;   -- recreated (target-aware) by mig 182
+DROP VIEW IF EXISTS public.v_target_curve;             -- recreated verbatim at the end of this file
+DROP FUNCTION IF EXISTS public.fn_band_setpoints(timestamp with time zone);
 
 CREATE OR REPLACE FUNCTION public.fn_band_setpoints(target_ts timestamp with time zone)
  RETURNS TABLE(temp_low double precision, temp_high double precision,
@@ -55,3 +68,19 @@ COMMENT ON FUNCTION public.fn_band_setpoints(timestamp with time zone) IS
   'the device on-chip sv2_*_tgt curve; the (low+high)/2 midpoint derivations on the '
   'served surface are retired. night_vpd_bias_kpa device bump is NOT modelled here '
   '(see mig 182 divergence tolerance).';
+
+-- Recreate v_target_curve verbatim (captured from prod pg_get_viewdef). It consumes only
+-- the 4 EDGE columns of fn_band_setpoints by name, so it is byte-unchanged by the target
+-- addition — recreated solely because the function DROP above cascaded it.
+CREATE OR REPLACE VIEW public.v_target_curve AS
+ SELECT gs AS ts,
+    (fn_band_setpoints(gs)).temp_low AS target_temp_min,
+    (fn_band_setpoints(gs)).temp_high AS target_temp_max,
+    (fn_zone_band('center'::text, gs)).temp_stress_low AS stress_temp_low,
+    (fn_zone_band('center'::text, gs)).temp_stress_high AS stress_temp_high,
+    (fn_band_setpoints(gs)).vpd_low AS target_vpd_min,
+    (fn_band_setpoints(gs)).vpd_high AS target_vpd_max,
+    (fn_zone_band('center'::text, gs)).vpd_stress_low AS stress_vpd_low,
+    (fn_zone_band('center'::text, gs)).vpd_stress_high AS stress_vpd_high,
+    12.0::double precision AS target_dli
+   FROM generate_series((date_trunc('day'::text, (now() AT TIME ZONE 'America/Denver'::text)) AT TIME ZONE 'America/Denver'::text), (date_trunc('day'::text, (now() AT TIME ZONE 'America/Denver'::text)) AT TIME ZONE 'America/Denver'::text) + '24:00:00'::interval, '00:05:00'::interval) gs(gs);
