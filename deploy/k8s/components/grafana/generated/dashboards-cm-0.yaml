@@ -16719,72 +16719,6 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Served High"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "rgba(115,191,105,0.32)",
-                      "mode": "fixed"
-                    }
-                  },
-                  {
-                    "id": "custom.lineStyle",
-                    "value": {
-                      "fill": "dash",
-                      "dash": [
-                        4,
-                        4
-                      ]
-                    }
-                  },
-                  {
-                    "id": "custom.hideFrom",
-                    "value": {
-                      "legend": false,
-                      "tooltip": true,
-                      "viz": false
-                    }
-                  }
-                ]
-              },
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Served Low"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "rgba(115,191,105,0.32)",
-                      "mode": "fixed"
-                    }
-                  },
-                  {
-                    "id": "custom.lineStyle",
-                    "value": {
-                      "fill": "dash",
-                      "dash": [
-                        4,
-                        4
-                      ]
-                    }
-                  },
-                  {
-                    "id": "custom.hideFrom",
-                    "value": {
-                      "legend": false,
-                      "tooltip": true,
-                      "viz": false
-                    }
-                  }
-                ]
-              },
-              {
-                "matcher": {
-                  "id": "byName",
                   "options": "Target Band"
                 },
                 "properties": [
@@ -16992,7 +16926,7 @@ data:
               "editorMode": "code",
               "format": "table",
               "rawQuery": true,
-              "rawSql": "SELECT ts AS time,\n    temp_low + f.frac * (temp_target - temp_low) AS \"Target Band Base\",\n    temp_high - f.frac * (temp_high - temp_target) AS \"Target Band\",\n    temp_target AS \"Target\",\n    temp_low AS \"Served Low\",\n    temp_high AS \"Served High\"\nFROM v_band_curve,\n     (SELECT COALESCE((SELECT value FROM setpoint_snapshot WHERE parameter='band_track_fraction' AND greenhouse_id='vallery' ORDER BY ts DESC LIMIT 1), 0.25) AS frac) f\nWHERE $__timeFilter(ts) ORDER BY ts",
+              "rawSql": "SELECT ts AS time,\n    temp_low + f.frac * (temp_target - temp_low) AS \"Target Band Base\",\n    temp_high - f.frac * (temp_high - temp_target) AS \"Target Band\",\n    temp_target AS \"Target\"\nFROM v_band_curve,\n     (SELECT COALESCE((SELECT value FROM setpoint_snapshot WHERE parameter='band_track_fraction' AND greenhouse_id='vallery' ORDER BY ts DESC LIMIT 1), 0.25) AS frac) f\nWHERE $__timeFilter(ts) ORDER BY ts",
               "refId": "C",
               "sql": {
                 "columns": [
@@ -17775,72 +17709,6 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Served High"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "rgba(115,191,105,0.32)",
-                      "mode": "fixed"
-                    }
-                  },
-                  {
-                    "id": "custom.lineStyle",
-                    "value": {
-                      "fill": "dash",
-                      "dash": [
-                        4,
-                        4
-                      ]
-                    }
-                  },
-                  {
-                    "id": "custom.hideFrom",
-                    "value": {
-                      "legend": false,
-                      "tooltip": true,
-                      "viz": false
-                    }
-                  }
-                ]
-              },
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "Served Low"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "rgba(115,191,105,0.32)",
-                      "mode": "fixed"
-                    }
-                  },
-                  {
-                    "id": "custom.lineStyle",
-                    "value": {
-                      "fill": "dash",
-                      "dash": [
-                        4,
-                        4
-                      ]
-                    }
-                  },
-                  {
-                    "id": "custom.hideFrom",
-                    "value": {
-                      "legend": false,
-                      "tooltip": true,
-                      "viz": false
-                    }
-                  }
-                ]
-              },
-              {
-                "matcher": {
-                  "id": "byName",
                   "options": "Target Band"
                 },
                 "properties": [
@@ -18238,7 +18106,7 @@ data:
               "editorMode": "code",
               "format": "table",
               "rawQuery": true,
-              "rawSql": "SELECT ts AS time,\n    vpd_low + f.frac * (vpd_target - vpd_low) AS \"Target Band Base\",\n    vpd_high - f.frac * (vpd_high - vpd_target) AS \"Target Band\",\n    vpd_target AS \"Target\",\n    vpd_low AS \"Served Low\",\n    vpd_high AS \"Served High\"\nFROM v_band_curve,\n     (SELECT COALESCE((SELECT value FROM setpoint_snapshot WHERE parameter='band_track_fraction' AND greenhouse_id='vallery' ORDER BY ts DESC LIMIT 1), 0.25) AS frac) f\nWHERE $__timeFilter(ts) ORDER BY ts",
+              "rawSql": "SELECT ts AS time,\n    vpd_low + f.frac * (vpd_target - vpd_low) AS \"Target Band Base\",\n    vpd_high - f.frac * (vpd_high - vpd_target) AS \"Target Band\",\n    vpd_target AS \"Target\"\nFROM v_band_curve,\n     (SELECT COALESCE((SELECT value FROM setpoint_snapshot WHERE parameter='band_track_fraction' AND greenhouse_id='vallery' ORDER BY ts DESC LIMIT 1), 0.25) AS frac) f\nWHERE $__timeFilter(ts) ORDER BY ts",
               "refId": "C",
               "sql": {
                 "columns": [
@@ -19723,72 +19591,6 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "House Served High"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "rgba(115,191,105,0.32)",
-                      "mode": "fixed"
-                    }
-                  },
-                  {
-                    "id": "custom.lineStyle",
-                    "value": {
-                      "fill": "dash",
-                      "dash": [
-                        4,
-                        4
-                      ]
-                    }
-                  },
-                  {
-                    "id": "custom.hideFrom",
-                    "value": {
-                      "legend": false,
-                      "tooltip": true,
-                      "viz": false
-                    }
-                  }
-                ]
-              },
-              {
-                "matcher": {
-                  "id": "byName",
-                  "options": "House Served Low"
-                },
-                "properties": [
-                  {
-                    "id": "color",
-                    "value": {
-                      "fixedColor": "rgba(115,191,105,0.32)",
-                      "mode": "fixed"
-                    }
-                  },
-                  {
-                    "id": "custom.lineStyle",
-                    "value": {
-                      "fill": "dash",
-                      "dash": [
-                        4,
-                        4
-                      ]
-                    }
-                  },
-                  {
-                    "id": "custom.hideFrom",
-                    "value": {
-                      "legend": false,
-                      "tooltip": true,
-                      "viz": false
-                    }
-                  }
-                ]
-              },
-              {
-                "matcher": {
-                  "id": "byName",
                   "options": "House Band"
                 },
                 "properties": [
@@ -20069,7 +19871,7 @@ data:
               "editorMode": "code",
               "format": "table",
               "rawQuery": true,
-              "rawSql": "SELECT ts AS time,\n    temp_low + f.frac * (temp_target - temp_low) AS \"House Band Base\",\n    temp_high - f.frac * (temp_high - temp_target) AS \"House Band\",\n    temp_target AS \"House Target\",\n    temp_low AS \"House Served Low\",\n    temp_high AS \"House Served High\"\nFROM v_band_curve,\n     (SELECT COALESCE((SELECT value FROM setpoint_snapshot WHERE parameter='band_track_fraction' AND greenhouse_id='vallery' ORDER BY ts DESC LIMIT 1), 0.25) AS frac) f\nWHERE $__timeFilter(ts) ORDER BY ts",
+              "rawSql": "SELECT ts AS time,\n    temp_low + f.frac * (temp_target - temp_low) AS \"House Band Base\",\n    temp_high - f.frac * (temp_high - temp_target) AS \"House Band\",\n    temp_target AS \"House Target\"\nFROM v_band_curve,\n     (SELECT COALESCE((SELECT value FROM setpoint_snapshot WHERE parameter='band_track_fraction' AND greenhouse_id='vallery' ORDER BY ts DESC LIMIT 1), 0.25) AS frac) f\nWHERE $__timeFilter(ts) ORDER BY ts",
               "refId": "A"
             },
             {
