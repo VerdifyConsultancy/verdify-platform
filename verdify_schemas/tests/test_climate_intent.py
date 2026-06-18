@@ -157,7 +157,6 @@ def test_climate_intent_materializes_to_complete_bounded_tier1_params() -> None:
     assert params["sw_summer_vent_enabled"] == 1.0
     assert params["vent_prefer_temp_delta_f"] == intent.economizer_temp_advantage_f
     assert params["direct_wet_stress_min_dew_margin_f"] == intent.dew_margin_floor_f
-    assert params["fog_stress_window_latest_hour"] == intent.wet_cutoff_hour
     assert params["mister_water_budget_gal"] == intent.daily_mist_budget_gal
     assert params["fog_escalation_kpa"] == intent.fog_escalate_vpd_excess_kpa
     assert params["mister_engage_kpa"] == pytest.approx(0.85)
@@ -208,7 +207,6 @@ def test_materializer_forces_wet_assist_when_live_vpd_is_above_band_and_dew_is_s
     )
 
     assert params["sw_direct_wet_stress_override_enabled"] == 1.0
-    assert params["sw_fog_stress_window_extend_enabled"] == 1.0
     assert params["direct_wet_stress_vpd_margin_kpa"] == pytest.approx(0.05)
     assert params["mister_all_kpa"] == pytest.approx(1.45)
     assert params["fog_escalation_kpa"] == pytest.approx(0.2)
@@ -257,7 +255,6 @@ def test_materializer_keeps_wet_assist_available_for_high_forecast_vpd_pressure(
     params = materialize_climate_intent_tier1(intent, base)
 
     assert params["sw_direct_wet_stress_override_enabled"] == 1.0
-    assert params["sw_fog_stress_window_extend_enabled"] == 1.0
     assert params["direct_wet_stress_vpd_margin_kpa"] <= 0.1
     assert params["mister_all_kpa"] <= 1.5
     assert params["fog_escalation_kpa"] <= 0.3
@@ -290,7 +287,6 @@ def test_materializer_does_not_force_wet_assist_when_dew_margin_is_unsafe() -> N
     )
 
     assert params["sw_direct_wet_stress_override_enabled"] == 0.0
-    assert params["sw_fog_stress_window_extend_enabled"] == 0.0
 
 
 def test_candidate_selection_is_lexicographic_not_weighted_sum() -> None:

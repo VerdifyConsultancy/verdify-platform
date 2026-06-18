@@ -36,11 +36,11 @@ SL, IL, IH, SH = 60.0, 70.0, 80.0, 90.0
 
 
 def test_grade_credit_peaks_at_target_and_floors_at_ideal_edge():
-    assert _grade_credit(75, SL, IL, IH, SH) == 1.0           # peak AT target
-    assert _grade_credit(70, SL, IL, IH, SH) == 0.5           # IDEAL_EDGE_CREDIT at the low ideal edge
-    assert _grade_credit(80, SL, IL, IH, SH) == 0.5           # ... and the high ideal edge
-    assert _grade_credit(60, SL, IL, IH, SH) == 0.0           # stress edge -> 0
-    assert _grade_credit(95, SL, IL, IH, SH) == 0.0           # beyond stress -> 0
+    assert _grade_credit(75, SL, IL, IH, SH) == 1.0  # peak AT target
+    assert _grade_credit(70, SL, IL, IH, SH) == 0.5  # IDEAL_EDGE_CREDIT at the low ideal edge
+    assert _grade_credit(80, SL, IL, IH, SH) == 0.5  # ... and the high ideal edge
+    assert _grade_credit(60, SL, IL, IH, SH) == 0.0  # stress edge -> 0
+    assert _grade_credit(95, SL, IL, IH, SH) == 0.0  # beyond stress -> 0
     assert _grade_credit(None, SL, IL, IH, SH) is None
 
 
@@ -49,19 +49,11 @@ def test_grade_credit_kills_in_band_saturation():
     off = _grade_credit(78, SL, IL, IH, SH)
     assert 0.0 < off < 1.0
     # Monotonic decline from the target toward each ideal edge.
-    assert (
-        _grade_credit(76, SL, IL, IH, SH)
-        > _grade_credit(78, SL, IL, IH, SH)
-        > _grade_credit(80, SL, IL, IH, SH)
-    )
-    assert (
-        _grade_credit(74, SL, IL, IH, SH)
-        > _grade_credit(72, SL, IL, IH, SH)
-        > _grade_credit(70, SL, IL, IH, SH)
-    )
+    assert _grade_credit(76, SL, IL, IH, SH) > _grade_credit(78, SL, IL, IH, SH) > _grade_credit(80, SL, IL, IH, SH)
+    assert _grade_credit(74, SL, IL, IH, SH) > _grade_credit(72, SL, IL, IH, SH) > _grade_credit(70, SL, IL, IH, SH)
 
 
 def test_grade_credit_stress_shoulder_is_continuous():
     # Shoulder runs linearly from 0.5 at the ideal edge to 0 at the stress edge.
-    assert _grade_credit(65, SL, IL, IH, SH) == 0.25          # halfway up the lower shoulder
-    assert _grade_credit(85, SL, IL, IH, SH) == 0.25          # halfway up the upper shoulder
+    assert _grade_credit(65, SL, IL, IH, SH) == 0.25  # halfway up the lower shoulder
+    assert _grade_credit(85, SL, IL, IH, SH) == 0.25  # halfway up the upper shoulder
