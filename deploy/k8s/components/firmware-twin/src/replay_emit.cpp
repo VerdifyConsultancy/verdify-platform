@@ -417,9 +417,10 @@ static void process_row(const Header& h,
             sp.vpd_target  = band_value_at_phase(vpd_tgt_a,  ph);
             // Re-arm the pinch here (the common path above zeroes it for stock mode):
             // band-derive is the ONE place with a real target, so it is where the
-            // pinch is exercised. Default = the shipped BC-3 default (0.50); the
-            // calibration sweep overrides it with REPLAY_EMIT_BAND_TRACK=<f>.
-            sp.band_track_fraction = 0.50f;
+            // pinch is exercised. Default = the shipped BC-3 default (0.30 — the gentle
+            // first-night ship value); the calibration/ramp sweep overrides it with
+            // REPLAY_EMIT_BAND_TRACK=<f> (e.g. 0.50 to preview the ramp target).
+            sp.band_track_fraction = 0.30f;
             if (const char* btf = std::getenv("REPLAY_EMIT_BAND_TRACK"))
                 if (*btf) sp.band_track_fraction = (float)std::atof(btf);
         }

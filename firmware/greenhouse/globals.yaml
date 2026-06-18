@@ -58,13 +58,14 @@ globals:
     type: float
     restore_value: no
     initial_value: '1.0'
-  # BC-3 (ADR0003 §6.1): control-band tracking tightness [0,1]. Pinch is the default
-  # (0.50); planner re-pushes each cycle. restore_value:no so a boot before the first
-  # push uses the calibrated default, not a stale NVS value.
+  # BC-3 (ADR0003 §6.1): control-band tracking tightness [0,1]. Pinch is the default;
+  # planner re-pushes each cycle. restore_value:no so a boot before the first push uses
+  # this default. SHIP VALUE 0.30 (gentle first unattended night, uncalibrated pinch +
+  # no continuous auto-rollback); RAMP toward 0.50 via the planner knob after a clean night.
   - id: band_track_fraction
     type: float
     restore_value: no
-    initial_value: '0.50'
+    initial_value: '0.30'
   # BC-13 (ADR0003 §6.4): AI-tunable single-cycle air-exchange fraction toward outdoor
   # for the moisture-exchange estimator (Jason 2026-06-17). Default 0.30; rails [0.1,0.6].
   - id: vent_exchange_fraction

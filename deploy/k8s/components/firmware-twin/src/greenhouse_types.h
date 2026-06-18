@@ -712,14 +712,16 @@ inline Setpoints default_setpoints() {
         // these every cycle (they are telemetry/arbitration inputs, not knobs).
         .temp_target = 75.0f,
         .vpd_target = 1.0f,
-        // BC-3 (ADR0003 §6.1): pinch is the DEFAULT. 0.50 narrows the control band
-        // halfway toward temp_target/vpd_target so the controller strives ONTO the
-        // target curve on every axis. Float-envelope (0) is no longer the default;
-        // the planner may modulate [0,1] but not float to 0. The controls.yaml
-        // setpts initializer sets the live device value (id(band_track_fraction))
-        // to match this so replay_emit (which starts from default_setpoints) and the
-        // device agree.
-        .band_track_fraction = 0.50f,
+        // BC-3 (ADR0003 §6.1): pinch is the DEFAULT — narrows the control band toward
+        // temp_target/vpd_target so the controller strives ONTO the target curve on
+        // every axis. Float-envelope (0) is no longer the default; the planner may
+        // modulate [0,1] but not float to 0. SHIP VALUE 0.30 (not 0.50): the first
+        // unattended overnight runs gentle since the pinch was never calibrated and
+        // there is no continuous auto-rollback; RAMP toward 0.50 via the planner knob
+        // (band_track_fraction) once a clean night is observed. The controls.yaml
+        // setpts initializer sets the live device value (id(band_track_fraction)) to
+        // match so replay_emit (which starts from default_setpoints) and the device agree.
+        .band_track_fraction = 0.30f,
         // BC-13 (ADR0003 §6.4): moisture-exchange selector defaults.
         .dehum_vent_gain_margin_kpa = 0.02f,
         .dehum_heat_assist_min_dwell_ms = 300000u,   // 5 min
