@@ -28,7 +28,13 @@ if _INGESTOR_PATH not in sys.path:
 
 import solar  # noqa: E402
 
-from verdify_schemas.tunable_registry import FIRMWARE_V2_STAGED_REG, REGISTRY  # noqa: E402
+from verdify_schemas.tunable_registry import BAND_DEFAULTS, FIRMWARE_V2_STAGED_REG, REGISTRY  # noqa: E402
+
+# [sr, sm, ss, mid] index helpers so these assertions track the canonical
+# band_defaults.yaml (the single source) instead of hardcoding values that
+# drift when the band is re-tuned (e.g. the 2026-06-18 nature-alignment).
+_SR, _SM, _SS, _MID = 0, 1, 2, 3
+_HOUSE = BAND_DEFAULTS["house"]
 
 
 def _load_band_anchors():
@@ -188,10 +194,10 @@ class TestAnchorContract:
         # Canonical band (verdify_schemas/band_defaults.yaml == live prod). The
         # exact registry==YAML pin lives in test_band_defaults_single_source.py.
         values = band_anchors.registry_default_anchor_values()
-        assert values["band_temp_target_sm"] == 82.0
-        assert values["band_temp_low_sr"] == 62.0
-        assert values["band_temp_high_mid"] == 72.0
-        assert values["band_vpd_target_sm"] == 1.10
+        assert values["band_temp_target_sm"] == _HOUSE["temp_target"][_SM]
+        assert values["band_temp_low_sr"] == _HOUSE["temp_low"][_SR]
+        assert values["band_temp_high_mid"] == _HOUSE["temp_high"][_MID]
+        assert values["band_vpd_target_sm"] == _HOUSE["vpd_target"][_SM]
         assert values["zone_vpd_target_south_sm"] == 1.18
         assert values["zone_vpd_target_east_mid"] == 0.74
         assert values["zone_vpd_target_center_mid"] == 0.70  # the orchid dry-night value (was the wet 0.50)
@@ -216,10 +222,12 @@ class TestZoneBandAudit:
     def test_solar_noon_band(self):
         values = band_anchors.registry_default_anchor_values()
         bands = band_anchors.zone_band_values(values, phase=1.0)
-        # Solar-noon (sm) anchors of the canonical band.
-        assert bands[("house", "temp_target")] == pytest.approx(82.0)
-        assert bands[("house", "vpd_low")] == pytest.approx(0.92)
-        assert bands[("house", "vpd_high")] == pytest.approx(1.35)
+        # Solar-noon (sm, phase 1.0) anchors of the canonical band. NOTE: post
+        # nature-alignment (2026-06-18) the curve PEAKS at phase ~1.40 (~16:00),
+        # so sm is on the rising shoulder, not the daily max.
+        assert bands[("house", "temp_target")] == pytest.approx(_HOUSE["temp_target"][_SM])
+        assert bands[("house", "vpd_low")] == pytest.approx(_HOUSE["vpd_low"][_SM])
+        assert bands[("house", "vpd_high")] == pytest.approx(_HOUSE["vpd_high"][_SM])
         assert bands[("center", "vpd_target")] == pytest.approx(1.10)
         assert bands[("center", "vpd_low")] == pytest.approx(1.10 - 0.20)
         assert bands[("center", "vpd_high")] == pytest.approx(1.10 + 0.35)

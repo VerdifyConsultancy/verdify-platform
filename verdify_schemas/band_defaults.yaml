@@ -19,13 +19,25 @@
 # Values are the live researched band (verified against prod crop_band_anchors 2026-06-16).
 
 # ── House air band (seeds crop_band_anchors crop_type='house') ──────────────
+# NATURE-ALIGNED (2026-06-18): the band rides the real diurnal cycle. A 28-day
+# harmonic fit of outdoor temp/VPD (binned by solar phase) shows the natural
+# thermal peak lags solar noon by ~3h (peak ~16:00 MDT, phase ~1.40), with a
+# gentle near-fundamental shape. The old anchors peaked AT solar noon (phase 1)
+# and carried an oversized 2nd harmonic (A2/A1≈0.28) that overshot between
+# anchors ("lumpy" + ~3h early — the controller fought the thermal mass every
+# afternoon). These anchors are a pure-fundamental sinusoid (peak phase 1.40,
+# the thermal lag; zero overshoot — extrema=2) scaled to the SAME crop mean
+# (72.25°F / 0.98 kPa) and amplitude, so the crop's thermal budget is unchanged;
+# only the phase + shape ride nature. fn_solar_phase re-derives the clock peak
+# daily from the ephemeris, so the curve adapts to the solar cycle year-round.
+# Derivation: docs/reviews/ band-nature-alignment; harmonic fit in session log.
 house:
-  temp_low:    [62, 77, 68, 62]
-  temp_target: [67, 82, 73, 67]
-  temp_high:   [72, 87, 78, 72]
-  vpd_low:     [0.74, 0.92, 0.77, 0.77]
-  vpd_target:  [0.92, 1.10, 0.95, 0.95]
-  vpd_high:    [1.17, 1.35, 1.20, 1.20]
+  temp_low:    [62.50, 73.79, 72.00, 60.71]
+  temp_target: [67.50, 78.79, 77.00, 65.71]
+  temp_high:   [72.50, 83.79, 82.00, 70.71]
+  vpd_low:     [0.755, 0.862, 0.845, 0.738]
+  vpd_target:  [0.935, 1.042, 1.025, 0.918]
+  vpd_high:    [1.185, 1.292, 1.275, 1.168]
 
 # ── Per-zone VPD-target band (seeds crop_band_anchors per crop_type) ────────
 # zone -> crop_type: center=orchid, south=cannabis, west=citrus, east=pepper.
