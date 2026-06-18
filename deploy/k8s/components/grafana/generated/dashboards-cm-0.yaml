@@ -16326,16 +16326,20 @@ data:
                     }
                   },
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.lineWidth",
                     "value": 0
                   },
                   {
                     "id": "custom.fillOpacity",
                     "value": 0
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   },
                   {
                     "id": "custom.hideFrom",
@@ -16361,10 +16365,6 @@ data:
                     }
                   },
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.lineWidth",
                     "value": 0
                   },
@@ -16375,6 +16375,14 @@ data:
                   {
                     "id": "custom.fillOpacity",
                     "value": 80
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   },
                   {
                     "id": "custom.spanNulls",
@@ -16396,16 +16404,20 @@ data:
                     }
                   },
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.lineWidth",
                     "value": 0
                   },
                   {
                     "id": "custom.fillOpacity",
                     "value": 0
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   },
                   {
                     "id": "custom.hideFrom",
@@ -16431,10 +16443,6 @@ data:
                     }
                   },
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.lineWidth",
                     "value": 0
                   },
@@ -16445,6 +16453,14 @@ data:
                   {
                     "id": "custom.fillOpacity",
                     "value": 80
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   },
                   {
                     "id": "custom.spanNulls",
@@ -16466,16 +16482,20 @@ data:
                     }
                   },
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.lineWidth",
                     "value": 0
                   },
                   {
                     "id": "custom.fillOpacity",
                     "value": 0
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   },
                   {
                     "id": "custom.hideFrom",
@@ -16501,10 +16521,6 @@ data:
                     }
                   },
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.lineWidth",
                     "value": 0
                   },
@@ -16515,6 +16531,14 @@ data:
                   {
                     "id": "custom.fillOpacity",
                     "value": 80
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   },
                   {
                     "id": "custom.spanNulls",
@@ -16536,16 +16560,20 @@ data:
                     }
                   },
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.lineWidth",
                     "value": 0
                   },
                   {
                     "id": "custom.fillOpacity",
                     "value": 0
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   },
                   {
                     "id": "custom.hideFrom",
@@ -16571,10 +16599,6 @@ data:
                     }
                   },
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.lineWidth",
                     "value": 0
                   },
@@ -16585,6 +16609,14 @@ data:
                   {
                     "id": "custom.fillOpacity",
                     "value": 80
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   },
                   {
                     "id": "custom.spanNulls",
@@ -16606,16 +16638,20 @@ data:
                     }
                   },
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.lineWidth",
                     "value": 0
                   },
                   {
                     "id": "custom.fillOpacity",
                     "value": 0
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   },
                   {
                     "id": "custom.hideFrom",
@@ -16641,10 +16677,6 @@ data:
                     }
                   },
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.lineWidth",
                     "value": 0
                   },
@@ -16655,6 +16687,14 @@ data:
                   {
                     "id": "custom.fillOpacity",
                     "value": 80
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   },
                   {
                     "id": "custom.spanNulls",
@@ -16676,16 +16716,20 @@ data:
                     }
                   },
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.lineWidth",
                     "value": 0
                   },
                   {
                     "id": "custom.fillOpacity",
                     "value": 0
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   },
                   {
                     "id": "custom.hideFrom",
@@ -16711,10 +16755,6 @@ data:
                     }
                   },
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.lineWidth",
                     "value": 0
                   },
@@ -16725,6 +16765,14 @@ data:
                   {
                     "id": "custom.fillOpacity",
                     "value": 80
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   },
                   {
                     "id": "custom.spanNulls",
@@ -16746,16 +16794,20 @@ data:
                     }
                   },
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.lineWidth",
                     "value": 0
                   },
                   {
                     "id": "custom.fillOpacity",
                     "value": 0
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   },
                   {
                     "id": "custom.hideFrom",
@@ -16781,10 +16833,6 @@ data:
                     }
                   },
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.lineWidth",
                     "value": 0
                   },
@@ -16795,6 +16843,14 @@ data:
                   {
                     "id": "custom.fillOpacity",
                     "value": 80
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   },
                   {
                     "id": "custom.spanNulls",
@@ -16960,14 +17016,199 @@ data:
             },
             {
               "datasource": {
-                "type": "postgres",
-                "uid": "P44368ADAD746BC27"
+                "type": "grafana-postgresql-datasource",
+                "uid": "verdify-tsdb"
               },
               "editorMode": "code",
-              "format": "time_series",
+              "format": "table",
               "rawQuery": true,
-              "rawSql": "WITH bounds AS MATERIALIZED (\n  SELECT\n    $__timeFrom()::timestamptz AS from_ts,\n    LEAST($__timeTo()::timestamptz, now()) AS to_ts,\n    interval '5 minutes' AS step,\n    date_trunc('hour', $__timeFrom()::timestamptz) AS seed_start_ts\n),\nbuckets AS MATERIALIZED (\n  SELECT generate_series(time_bucket(b.step, b.seed_start_ts), b.to_ts, b.step) AS time\n  FROM bounds b\n),\nkeys AS MATERIALIZED (\n  SELECT k AS equipment FROM unnest(ARRAY['fan1', 'fan2', 'fog', 'heat1', 'heat2', 'mister_center', 'mister_south', 'mister_west', 'vent']::text[]) AS k\n),\nlane_metrics AS MATERIALIZED (\n  SELECT * FROM (VALUES\n    ('Vent'::text, 'Vent Base'::text, ARRAY['vent']::text[], 90.6::double precision, 93.0::double precision),\n    ('Fan 1'::text, 'Fan 1 Base'::text, ARRAY['fan1']::text[], 93.4::double precision, 95.8::double precision),\n    ('Fan 2'::text, 'Fan 2 Base'::text, ARRAY['fan2']::text[], 96.2::double precision, 98.6::double precision),\n    ('Fog'::text, 'Fog Base'::text, ARRAY['fog']::text[], 99.0::double precision, 101.4::double precision),\n    ('Misters'::text, 'Misters Base'::text, ARRAY['mister_center', 'mister_south', 'mister_west']::text[], 101.8::double precision, 104.2::double precision),\n    ('Heat 1 (Electric)'::text, 'Heat 1 (Electric) Base'::text, ARRAY['heat1']::text[], 52.0::double precision, 54.4::double precision),\n    ('Heat 2 (Gas)'::text, 'Heat 2 (Gas) Base'::text, ARRAY['heat2']::text[], 48.4::double precision, 50.8::double precision)\n  ) AS m(top_metric, base_metric, keys, lane_low, lane_high)\n),\nstate_seed AS MATERIALIZED (\n  SELECT bd.seed_start_ts AS time, k.equipment, COALESCE(seed.state, false) AS state\n  FROM bounds bd CROSS JOIN keys k\n  LEFT JOIN LATERAL (\n    SELECT e.state FROM equipment_state e\n    WHERE e.greenhouse_id='vallery' AND e.equipment=k.equipment AND e.ts <= bd.seed_start_ts\n    ORDER BY e.ts DESC LIMIT 1\n  ) seed ON true\n),\nstate_events AS MATERIALIZED (\n  SELECT e.ts AS time, e.equipment, e.state\n  FROM equipment_state e, bounds bd\n  WHERE e.greenhouse_id='vallery' AND e.equipment IN ('fan1', 'fan2', 'fog', 'heat1', 'heat2', 'mister_center', 'mister_south', 'mister_west', 'vent')\n    AND e.ts >= bd.seed_start_ts AND e.ts <= bd.to_ts\n),\nstate_timeline AS MATERIALIZED (\n  SELECT e.time, e.equipment, e.state,\n    lead(e.time, 1, (SELECT to_ts FROM bounds)) OVER (PARTITION BY e.equipment ORDER BY e.time) AS next_time\n  FROM (SELECT time,equipment,state FROM state_seed UNION ALL SELECT time,equipment,state FROM state_events) e\n),\nstate_segments AS MATERIALIZED (\n  SELECT greatest(st.time, bd.seed_start_ts) AS start_time, least(st.next_time, bd.to_ts) AS end_time, st.equipment\n  FROM state_timeline st CROSS JOIN bounds bd\n  WHERE st.state AND st.time < bd.to_ts AND st.next_time > bd.seed_start_ts\n),\nlanes AS (\n  SELECT b.time, m.top_metric AS metric,\n    CASE WHEN EXISTS (\n      SELECT 1 FROM state_segments s\n      WHERE s.equipment = ANY(m.keys) AND s.start_time < b.time + bd.step AND s.end_time > b.time\n    ) THEN m.lane_high ELSE NULL::double precision END AS value\n  FROM buckets b CROSS JOIN bounds bd CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts AND b.time <= bd.to_ts\n  UNION ALL\n  SELECT b.time, m.base_metric, m.lane_low\n  FROM buckets b CROSS JOIN bounds bd CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts AND b.time <= bd.to_ts\n)\nSELECT time, metric, value FROM lanes ORDER BY time, metric",
-              "refId": "E"
+              "sql": {
+                "columns": [
+                  {
+                    "parameters": [],
+                    "type": "function"
+                  }
+                ],
+                "groupBy": [
+                  {
+                    "property": {
+                      "type": "string"
+                    },
+                    "type": "groupBy"
+                  }
+                ],
+                "limit": 50
+              },
+              "refId": "E",
+              "rawSql": "SELECT $__time(ts), CASE WHEN state THEN 93.0::float8 ELSE 90.6::float8 END AS \"Vent\", 90.6::float8 AS \"Vent Base\" FROM equipment_state WHERE greenhouse_id='vallery' AND equipment='vent' AND $__timeFilter(ts) ORDER BY ts"
+            },
+            {
+              "datasource": {
+                "type": "grafana-postgresql-datasource",
+                "uid": "verdify-tsdb"
+              },
+              "editorMode": "code",
+              "format": "table",
+              "rawQuery": true,
+              "sql": {
+                "columns": [
+                  {
+                    "parameters": [],
+                    "type": "function"
+                  }
+                ],
+                "groupBy": [
+                  {
+                    "property": {
+                      "type": "string"
+                    },
+                    "type": "groupBy"
+                  }
+                ],
+                "limit": 50
+              },
+              "refId": "F",
+              "rawSql": "SELECT $__time(ts), CASE WHEN state THEN 95.8::float8 ELSE 93.4::float8 END AS \"Fan 1\", 93.4::float8 AS \"Fan 1 Base\" FROM equipment_state WHERE greenhouse_id='vallery' AND equipment='fan1' AND $__timeFilter(ts) ORDER BY ts"
+            },
+            {
+              "datasource": {
+                "type": "grafana-postgresql-datasource",
+                "uid": "verdify-tsdb"
+              },
+              "editorMode": "code",
+              "format": "table",
+              "rawQuery": true,
+              "sql": {
+                "columns": [
+                  {
+                    "parameters": [],
+                    "type": "function"
+                  }
+                ],
+                "groupBy": [
+                  {
+                    "property": {
+                      "type": "string"
+                    },
+                    "type": "groupBy"
+                  }
+                ],
+                "limit": 50
+              },
+              "refId": "G",
+              "rawSql": "SELECT $__time(ts), CASE WHEN state THEN 98.6::float8 ELSE 96.2::float8 END AS \"Fan 2\", 96.2::float8 AS \"Fan 2 Base\" FROM equipment_state WHERE greenhouse_id='vallery' AND equipment='fan2' AND $__timeFilter(ts) ORDER BY ts"
+            },
+            {
+              "datasource": {
+                "type": "grafana-postgresql-datasource",
+                "uid": "verdify-tsdb"
+              },
+              "editorMode": "code",
+              "format": "table",
+              "rawQuery": true,
+              "sql": {
+                "columns": [
+                  {
+                    "parameters": [],
+                    "type": "function"
+                  }
+                ],
+                "groupBy": [
+                  {
+                    "property": {
+                      "type": "string"
+                    },
+                    "type": "groupBy"
+                  }
+                ],
+                "limit": 50
+              },
+              "refId": "H",
+              "rawSql": "SELECT $__time(ts), CASE WHEN state THEN 101.4::float8 ELSE 99.0::float8 END AS \"Fog\", 99.0::float8 AS \"Fog Base\" FROM equipment_state WHERE greenhouse_id='vallery' AND equipment='fog' AND $__timeFilter(ts) ORDER BY ts"
+            },
+            {
+              "datasource": {
+                "type": "grafana-postgresql-datasource",
+                "uid": "verdify-tsdb"
+              },
+              "editorMode": "code",
+              "format": "table",
+              "rawQuery": true,
+              "sql": {
+                "columns": [
+                  {
+                    "parameters": [],
+                    "type": "function"
+                  }
+                ],
+                "groupBy": [
+                  {
+                    "property": {
+                      "type": "string"
+                    },
+                    "type": "groupBy"
+                  }
+                ],
+                "limit": 50
+              },
+              "refId": "I",
+              "rawSql": "WITH ev AS (SELECT ts, equipment, state FROM equipment_state WHERE greenhouse_id='vallery' AND equipment IN ('mister_center', 'mister_south', 'mister_west') AND $__timeFilter(ts)), pts AS (SELECT DISTINCT ts FROM ev), merged AS (SELECT p.ts AS ts, bool_or(COALESCE(l.state,false)) AS on FROM pts p CROSS JOIN (VALUES ('mister_center'), ('mister_south'), ('mister_west')) k(key) LEFT JOIN LATERAL (SELECT e.state FROM ev e WHERE e.equipment=k.key AND e.ts<=p.ts ORDER BY e.ts DESC LIMIT 1) l ON true GROUP BY p.ts) SELECT $__time(m.ts), CASE WHEN m.on THEN 104.2::float8 ELSE 101.8::float8 END AS \"Misters\", 101.8::float8 AS \"Misters Base\" FROM merged m ORDER BY m.ts"
+            },
+            {
+              "datasource": {
+                "type": "grafana-postgresql-datasource",
+                "uid": "verdify-tsdb"
+              },
+              "editorMode": "code",
+              "format": "table",
+              "rawQuery": true,
+              "sql": {
+                "columns": [
+                  {
+                    "parameters": [],
+                    "type": "function"
+                  }
+                ],
+                "groupBy": [
+                  {
+                    "property": {
+                      "type": "string"
+                    },
+                    "type": "groupBy"
+                  }
+                ],
+                "limit": 50
+              },
+              "refId": "L",
+              "rawSql": "SELECT $__time(ts), CASE WHEN state THEN 54.4::float8 ELSE 52.0::float8 END AS \"Heat 1 (Electric)\", 52.0::float8 AS \"Heat 1 (Electric) Base\" FROM equipment_state WHERE greenhouse_id='vallery' AND equipment='heat1' AND $__timeFilter(ts) ORDER BY ts"
+            },
+            {
+              "datasource": {
+                "type": "grafana-postgresql-datasource",
+                "uid": "verdify-tsdb"
+              },
+              "editorMode": "code",
+              "format": "table",
+              "rawQuery": true,
+              "sql": {
+                "columns": [
+                  {
+                    "parameters": [],
+                    "type": "function"
+                  }
+                ],
+                "groupBy": [
+                  {
+                    "property": {
+                      "type": "string"
+                    },
+                    "type": "groupBy"
+                  }
+                ],
+                "limit": 50
+              },
+              "refId": "M",
+              "rawSql": "SELECT $__time(ts), CASE WHEN state THEN 50.8::float8 ELSE 48.4::float8 END AS \"Heat 2 (Gas)\", 48.4::float8 AS \"Heat 2 (Gas) Base\" FROM equipment_state WHERE greenhouse_id='vallery' AND equipment='heat2' AND $__timeFilter(ts) ORDER BY ts"
             }
           ],
           "title": "Temperature Compliance Band",
@@ -17342,16 +17583,20 @@ data:
                     }
                   },
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.lineWidth",
                     "value": 0
                   },
                   {
                     "id": "custom.fillOpacity",
                     "value": 0
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   },
                   {
                     "id": "custom.hideFrom",
@@ -17377,10 +17622,6 @@ data:
                     }
                   },
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.lineWidth",
                     "value": 0
                   },
@@ -17391,6 +17632,14 @@ data:
                   {
                     "id": "custom.fillOpacity",
                     "value": 80
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   },
                   {
                     "id": "custom.spanNulls",
@@ -17412,16 +17661,20 @@ data:
                     }
                   },
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.lineWidth",
                     "value": 0
                   },
                   {
                     "id": "custom.fillOpacity",
                     "value": 0
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   },
                   {
                     "id": "custom.hideFrom",
@@ -17447,10 +17700,6 @@ data:
                     }
                   },
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.lineWidth",
                     "value": 0
                   },
@@ -17461,6 +17710,14 @@ data:
                   {
                     "id": "custom.fillOpacity",
                     "value": 80
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   },
                   {
                     "id": "custom.spanNulls",
@@ -17482,16 +17739,20 @@ data:
                     }
                   },
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.lineWidth",
                     "value": 0
                   },
                   {
                     "id": "custom.fillOpacity",
                     "value": 0
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   },
                   {
                     "id": "custom.hideFrom",
@@ -17517,10 +17778,6 @@ data:
                     }
                   },
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.lineWidth",
                     "value": 0
                   },
@@ -17531,6 +17788,14 @@ data:
                   {
                     "id": "custom.fillOpacity",
                     "value": 80
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   },
                   {
                     "id": "custom.spanNulls",
@@ -17552,16 +17817,20 @@ data:
                     }
                   },
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.lineWidth",
                     "value": 0
                   },
                   {
                     "id": "custom.fillOpacity",
                     "value": 0
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   },
                   {
                     "id": "custom.hideFrom",
@@ -17587,10 +17856,6 @@ data:
                     }
                   },
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.lineWidth",
                     "value": 0
                   },
@@ -17601,6 +17866,14 @@ data:
                   {
                     "id": "custom.fillOpacity",
                     "value": 80
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   },
                   {
                     "id": "custom.spanNulls",
@@ -17622,16 +17895,20 @@ data:
                     }
                   },
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.lineWidth",
                     "value": 0
                   },
                   {
                     "id": "custom.fillOpacity",
                     "value": 0
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   },
                   {
                     "id": "custom.hideFrom",
@@ -17657,10 +17934,6 @@ data:
                     }
                   },
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.lineWidth",
                     "value": 0
                   },
@@ -17671,6 +17944,14 @@ data:
                   {
                     "id": "custom.fillOpacity",
                     "value": 80
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   },
                   {
                     "id": "custom.spanNulls",
@@ -17692,16 +17973,20 @@ data:
                     }
                   },
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.lineWidth",
                     "value": 0
                   },
                   {
                     "id": "custom.fillOpacity",
                     "value": 0
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   },
                   {
                     "id": "custom.hideFrom",
@@ -17727,10 +18012,6 @@ data:
                     }
                   },
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.lineWidth",
                     "value": 0
                   },
@@ -17741,6 +18022,14 @@ data:
                   {
                     "id": "custom.fillOpacity",
                     "value": 80
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   },
                   {
                     "id": "custom.spanNulls",
@@ -17762,16 +18051,20 @@ data:
                     }
                   },
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.lineWidth",
                     "value": 0
                   },
                   {
                     "id": "custom.fillOpacity",
                     "value": 0
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   },
                   {
                     "id": "custom.hideFrom",
@@ -17797,10 +18090,6 @@ data:
                     }
                   },
                   {
-                    "id": "custom.drawStyle",
-                    "value": "line"
-                  },
-                  {
                     "id": "custom.lineWidth",
                     "value": 0
                   },
@@ -17811,6 +18100,14 @@ data:
                   {
                     "id": "custom.fillOpacity",
                     "value": 80
+                  },
+                  {
+                    "id": "custom.lineInterpolation",
+                    "value": "stepAfter"
+                  },
+                  {
+                    "id": "custom.showPoints",
+                    "value": "never"
                   },
                   {
                     "id": "custom.spanNulls",
@@ -17970,14 +18267,199 @@ data:
             },
             {
               "datasource": {
-                "type": "postgres",
-                "uid": "P44368ADAD746BC27"
+                "type": "grafana-postgresql-datasource",
+                "uid": "verdify-tsdb"
               },
               "editorMode": "code",
-              "format": "time_series",
+              "format": "table",
               "rawQuery": true,
-              "rawSql": "WITH bounds AS MATERIALIZED (\n  SELECT\n    $__timeFrom()::timestamptz AS from_ts,\n    LEAST($__timeTo()::timestamptz, now()) AS to_ts,\n    interval '5 minutes' AS step,\n    date_trunc('hour', $__timeFrom()::timestamptz) AS seed_start_ts\n),\nbuckets AS MATERIALIZED (\n  SELECT generate_series(time_bucket(b.step, b.seed_start_ts), b.to_ts, b.step) AS time\n  FROM bounds b\n),\nkeys AS MATERIALIZED (\n  SELECT k AS equipment FROM unnest(ARRAY['fan1', 'fan2', 'fog', 'heat1', 'heat2', 'mister_center', 'mister_south', 'mister_west', 'vent']::text[]) AS k\n),\nlane_metrics AS MATERIALIZED (\n  SELECT * FROM (VALUES\n    ('Fog'::text, 'Fog Base'::text, ARRAY['fog']::text[], 4.2::double precision, 4.36::double precision),\n    ('Misters'::text, 'Misters Base'::text, ARRAY['mister_center', 'mister_south', 'mister_west']::text[], 4.39::double precision, 4.55::double precision),\n    ('Vent'::text, 'Vent Base'::text, ARRAY['vent']::text[], -0.16::double precision, 0.0::double precision),\n    ('Fan 1'::text, 'Fan 1 Base'::text, ARRAY['fan1']::text[], -0.36::double precision, -0.2::double precision),\n    ('Fan 2'::text, 'Fan 2 Base'::text, ARRAY['fan2']::text[], -0.56::double precision, -0.4::double precision),\n    ('Heat 1 (Electric)'::text, 'Heat 1 (Electric) Base'::text, ARRAY['heat1']::text[], -0.76::double precision, -0.6::double precision),\n    ('Heat 2 (Gas)'::text, 'Heat 2 (Gas) Base'::text, ARRAY['heat2']::text[], -0.96::double precision, -0.8::double precision)\n  ) AS m(top_metric, base_metric, keys, lane_low, lane_high)\n),\nstate_seed AS MATERIALIZED (\n  SELECT bd.seed_start_ts AS time, k.equipment, COALESCE(seed.state, false) AS state\n  FROM bounds bd CROSS JOIN keys k\n  LEFT JOIN LATERAL (\n    SELECT e.state FROM equipment_state e\n    WHERE e.greenhouse_id='vallery' AND e.equipment=k.equipment AND e.ts <= bd.seed_start_ts\n    ORDER BY e.ts DESC LIMIT 1\n  ) seed ON true\n),\nstate_events AS MATERIALIZED (\n  SELECT e.ts AS time, e.equipment, e.state\n  FROM equipment_state e, bounds bd\n  WHERE e.greenhouse_id='vallery' AND e.equipment IN ('fan1', 'fan2', 'fog', 'heat1', 'heat2', 'mister_center', 'mister_south', 'mister_west', 'vent')\n    AND e.ts >= bd.seed_start_ts AND e.ts <= bd.to_ts\n),\nstate_timeline AS MATERIALIZED (\n  SELECT e.time, e.equipment, e.state,\n    lead(e.time, 1, (SELECT to_ts FROM bounds)) OVER (PARTITION BY e.equipment ORDER BY e.time) AS next_time\n  FROM (SELECT time,equipment,state FROM state_seed UNION ALL SELECT time,equipment,state FROM state_events) e\n),\nstate_segments AS MATERIALIZED (\n  SELECT greatest(st.time, bd.seed_start_ts) AS start_time, least(st.next_time, bd.to_ts) AS end_time, st.equipment\n  FROM state_timeline st CROSS JOIN bounds bd\n  WHERE st.state AND st.time < bd.to_ts AND st.next_time > bd.seed_start_ts\n),\nlanes AS (\n  SELECT b.time, m.top_metric AS metric,\n    CASE WHEN EXISTS (\n      SELECT 1 FROM state_segments s\n      WHERE s.equipment = ANY(m.keys) AND s.start_time < b.time + bd.step AND s.end_time > b.time\n    ) THEN m.lane_high ELSE NULL::double precision END AS value\n  FROM buckets b CROSS JOIN bounds bd CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts AND b.time <= bd.to_ts\n  UNION ALL\n  SELECT b.time, m.base_metric, m.lane_low\n  FROM buckets b CROSS JOIN bounds bd CROSS JOIN lane_metrics m\n  WHERE b.time >= bd.from_ts AND b.time <= bd.to_ts\n)\nSELECT time, metric, value FROM lanes ORDER BY time, metric",
-              "refId": "E"
+              "sql": {
+                "columns": [
+                  {
+                    "parameters": [],
+                    "type": "function"
+                  }
+                ],
+                "groupBy": [
+                  {
+                    "property": {
+                      "type": "string"
+                    },
+                    "type": "groupBy"
+                  }
+                ],
+                "limit": 50
+              },
+              "refId": "E",
+              "rawSql": "SELECT $__time(ts), CASE WHEN state THEN 4.36::float8 ELSE 4.2::float8 END AS \"Fog\", 4.2::float8 AS \"Fog Base\" FROM equipment_state WHERE greenhouse_id='vallery' AND equipment='fog' AND $__timeFilter(ts) ORDER BY ts"
+            },
+            {
+              "datasource": {
+                "type": "grafana-postgresql-datasource",
+                "uid": "verdify-tsdb"
+              },
+              "editorMode": "code",
+              "format": "table",
+              "rawQuery": true,
+              "sql": {
+                "columns": [
+                  {
+                    "parameters": [],
+                    "type": "function"
+                  }
+                ],
+                "groupBy": [
+                  {
+                    "property": {
+                      "type": "string"
+                    },
+                    "type": "groupBy"
+                  }
+                ],
+                "limit": 50
+              },
+              "refId": "F",
+              "rawSql": "WITH ev AS (SELECT ts, equipment, state FROM equipment_state WHERE greenhouse_id='vallery' AND equipment IN ('mister_center', 'mister_south', 'mister_west') AND $__timeFilter(ts)), pts AS (SELECT DISTINCT ts FROM ev), merged AS (SELECT p.ts AS ts, bool_or(COALESCE(l.state,false)) AS on FROM pts p CROSS JOIN (VALUES ('mister_center'), ('mister_south'), ('mister_west')) k(key) LEFT JOIN LATERAL (SELECT e.state FROM ev e WHERE e.equipment=k.key AND e.ts<=p.ts ORDER BY e.ts DESC LIMIT 1) l ON true GROUP BY p.ts) SELECT $__time(m.ts), CASE WHEN m.on THEN 4.55::float8 ELSE 4.39::float8 END AS \"Misters\", 4.39::float8 AS \"Misters Base\" FROM merged m ORDER BY m.ts"
+            },
+            {
+              "datasource": {
+                "type": "grafana-postgresql-datasource",
+                "uid": "verdify-tsdb"
+              },
+              "editorMode": "code",
+              "format": "table",
+              "rawQuery": true,
+              "sql": {
+                "columns": [
+                  {
+                    "parameters": [],
+                    "type": "function"
+                  }
+                ],
+                "groupBy": [
+                  {
+                    "property": {
+                      "type": "string"
+                    },
+                    "type": "groupBy"
+                  }
+                ],
+                "limit": 50
+              },
+              "refId": "G",
+              "rawSql": "SELECT $__time(ts), CASE WHEN state THEN 0.0::float8 ELSE -0.16::float8 END AS \"Vent\", -0.16::float8 AS \"Vent Base\" FROM equipment_state WHERE greenhouse_id='vallery' AND equipment='vent' AND $__timeFilter(ts) ORDER BY ts"
+            },
+            {
+              "datasource": {
+                "type": "grafana-postgresql-datasource",
+                "uid": "verdify-tsdb"
+              },
+              "editorMode": "code",
+              "format": "table",
+              "rawQuery": true,
+              "sql": {
+                "columns": [
+                  {
+                    "parameters": [],
+                    "type": "function"
+                  }
+                ],
+                "groupBy": [
+                  {
+                    "property": {
+                      "type": "string"
+                    },
+                    "type": "groupBy"
+                  }
+                ],
+                "limit": 50
+              },
+              "refId": "H",
+              "rawSql": "SELECT $__time(ts), CASE WHEN state THEN -0.2::float8 ELSE -0.36::float8 END AS \"Fan 1\", -0.36::float8 AS \"Fan 1 Base\" FROM equipment_state WHERE greenhouse_id='vallery' AND equipment='fan1' AND $__timeFilter(ts) ORDER BY ts"
+            },
+            {
+              "datasource": {
+                "type": "grafana-postgresql-datasource",
+                "uid": "verdify-tsdb"
+              },
+              "editorMode": "code",
+              "format": "table",
+              "rawQuery": true,
+              "sql": {
+                "columns": [
+                  {
+                    "parameters": [],
+                    "type": "function"
+                  }
+                ],
+                "groupBy": [
+                  {
+                    "property": {
+                      "type": "string"
+                    },
+                    "type": "groupBy"
+                  }
+                ],
+                "limit": 50
+              },
+              "refId": "I",
+              "rawSql": "SELECT $__time(ts), CASE WHEN state THEN -0.4::float8 ELSE -0.56::float8 END AS \"Fan 2\", -0.56::float8 AS \"Fan 2 Base\" FROM equipment_state WHERE greenhouse_id='vallery' AND equipment='fan2' AND $__timeFilter(ts) ORDER BY ts"
+            },
+            {
+              "datasource": {
+                "type": "grafana-postgresql-datasource",
+                "uid": "verdify-tsdb"
+              },
+              "editorMode": "code",
+              "format": "table",
+              "rawQuery": true,
+              "sql": {
+                "columns": [
+                  {
+                    "parameters": [],
+                    "type": "function"
+                  }
+                ],
+                "groupBy": [
+                  {
+                    "property": {
+                      "type": "string"
+                    },
+                    "type": "groupBy"
+                  }
+                ],
+                "limit": 50
+              },
+              "refId": "L",
+              "rawSql": "SELECT $__time(ts), CASE WHEN state THEN -0.6::float8 ELSE -0.76::float8 END AS \"Heat 1 (Electric)\", -0.76::float8 AS \"Heat 1 (Electric) Base\" FROM equipment_state WHERE greenhouse_id='vallery' AND equipment='heat1' AND $__timeFilter(ts) ORDER BY ts"
+            },
+            {
+              "datasource": {
+                "type": "grafana-postgresql-datasource",
+                "uid": "verdify-tsdb"
+              },
+              "editorMode": "code",
+              "format": "table",
+              "rawQuery": true,
+              "sql": {
+                "columns": [
+                  {
+                    "parameters": [],
+                    "type": "function"
+                  }
+                ],
+                "groupBy": [
+                  {
+                    "property": {
+                      "type": "string"
+                    },
+                    "type": "groupBy"
+                  }
+                ],
+                "limit": 50
+              },
+              "refId": "M",
+              "rawSql": "SELECT $__time(ts), CASE WHEN state THEN -0.8::float8 ELSE -0.96::float8 END AS \"Heat 2 (Gas)\", -0.96::float8 AS \"Heat 2 (Gas) Base\" FROM equipment_state WHERE greenhouse_id='vallery' AND equipment='heat2' AND $__timeFilter(ts) ORDER BY ts"
             }
           ],
           "title": "VPD Compliance Band",
