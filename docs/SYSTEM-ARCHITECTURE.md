@@ -1,5 +1,13 @@
 # Verdify System Architecture
 
+> ⚠️ **STALE / VM-era (2026-05-23).** This describes the retired
+> `vm-docker-iris` docker-compose stack. The platform now runs on **k3s**
+> (ns `verdify-prod`, ArgoCD app `verdify-prod-dark`, single-env). For the
+> current operating reality see **`docs/handoff/k3s-agent-handoff.md`**,
+> `docs/runbooks/laptop-operator.md`, and
+> `docs/reviews/control-and-graphs-state-2026-06-18.md`. Kept for historical
+> architecture/schema reference; k3s cleanup tracked in #322/#339.
+
 **Last Updated:** 2026-05-23
 **Host:** vm-docker-iris (192.168.30.150)
 **Platform:** Debian 13, Docker 28, Python 3.13

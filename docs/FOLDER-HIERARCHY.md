@@ -1,5 +1,12 @@
 # Verdify + Iris — folder hierarchy reference
 
+> ⚠️ **STALE / VM-era (2026-05-23).** Describes the retired `/mnt/iris/verdify/`
+> NFS layout + VM systemd/crontab, not the current **k3s** deployment. For where
+> things live now (repo == source of truth, k8s overlays, GHCR digests, the
+> in-cluster DB) see **`docs/handoff/k3s-agent-handoff.md`** and
+> `docs/runbooks/laptop-operator.md`. Kept for historical reference; k3s cleanup
+> tracked in #322/#339.
+
 > Authoritative map of where every file lives across the stack. When something moves, update this doc.
 
 Last updated: 2026-05-23

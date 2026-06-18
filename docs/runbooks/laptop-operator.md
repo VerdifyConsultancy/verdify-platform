@@ -11,6 +11,13 @@ environment** (serves lab/graphs/api.verdify.ai). Prod is advanced by the
 below that mentions a dev environment, `overlays/dev`, dev DB restore, or the
 dev proving flow is HISTORICAL — those resources no longer exist.
 
+> **2026-06-18 handoff:** development moved off the laptop to k3s-resident
+> agents. **Every command below is runnable from any kubectl-equipped host** (the
+> title is historical). The k3s-agent operating model, the portable dev loop, and
+> the firmware-OTA tribal knowledge are consolidated in
+> [`../handoff/k3s-agent-handoff.md`](../handoff/k3s-agent-handoff.md) — read that
+> first. The only laptop-bound workflow is the firmware OTA toolchain itself (§3).
+
 ## 0. One-time host setup
 
 ```bash
@@ -50,23 +57,23 @@ Historical derived-data reconciliation lives in
 [`derived-history-reconcile.md`](./derived-history-reconcile.md). It dry-runs
 by default and should be run against dev first before any prod apply.
 
-## 2. CI/CD: push → dev, button → prod
+## 2. CI/CD: push publishes, dispatch promotes to prod (single-env)
 
 - **Push to `main`** (or merge a PR): `container-publish.yml` builds the
   impacted images (api/mcp/ingestor/migrate/planner + artifact-only
-  setpoint-server), publishes digest-pinned to GHCR, then `bump-dev-digests`
-  commits the new `@sha256` pins into `overlays/dev` → **verdify-dev
-  auto-syncs them** (automated{selfHeal}, prune:false). `ci.yml` (all gates),
-  `k8s-manifests.yml` (kubeconform) and `cnpg-image.yml` fire on `main` too.
+  setpoint-server) and publishes them **digest-pinned to GHCR** (immutable
+  `:sha-<sha>` + mutable `:branch-main`). There is **no environment write-back**
+  — `bump-dev-digests` / dev auto-sync are removed (dev is gone). `ci.yml` (all
+  gates), `k8s-manifests.yml` (kubeconform) and `cnpg-image.yml` fire on `main` too.
 - **Full-pipeline button:** `gh workflow run container-publish.yml --ref main`
-  — a manual dispatch builds + publishes ALL images and bumps overlays/dev.
+  — a manual dispatch builds + publishes ALL images.
 - **Promote to prod:**
   `gh workflow run prod-promote.yml --ref main -f mode=pull-request`
-  (or `mode=dry-run`). Computes the dev→prod digest delta (derived from the
-  dev render; prod-only images like setpoint-server are exempt), surgically
-  bumps `overlays/prod/kustomization.yaml`, runs the Device-Write-Safety-Gate,
-  opens a `prod-promote` PR. `promote-diff-guard` (required check) re-asserts
-  digest-only surface + dev-equality. Merge = git change only.
+  (or `mode=dry-run`). Resolves each promotable image's `:branch-main` digest
+  from GHCR (imagetools), surgically bumps `overlays/prod/kustomization.yaml`,
+  runs the Device-Write-Safety-Gate, opens a `prod-promote` PR.
+  `promote-diff-guard` (required check) re-asserts a **digests-only** change
+  surface. Merge = git change only; then the gated sync below.
   - Known race: `verdify-migrate` rebuilds on every publish, so a push that
     lands while a promote PR is open advances dev's migrate digest and fails
     the guard. Re-run prod-promote after the pipeline settles.
@@ -84,11 +91,16 @@ by default and should be run against dev first before any prod apply.
 
 ## 3. Firmware OTA from the laptop
 
-Device: ESP32 at `192.168.10.111` (OTA :3232, native API :6053 — both
-reachable from the laptop, verified 2026-06-10). Running firmware
-2026.5.17.1849 (last-good artifacts restored to `firmware/artifacts/` from
-the NAS `/volume2/iris/verdify/firmware/artifacts`, mtimes preserved for the
-48h-bake gate).
+Device: ESP32 at `192.168.10.111` (OTA :3232, native API :6053). **Running
+firmware `2026.6.17.2042.dcc6078`** (band-compliance; pinch wired, live
+`band_track_fraction=0.25`). **Verify the running version from
+`diagnostics.firmware_version`, NOT `firmware/artifacts/last-good.version`**
+(last-good is the rollback floor — it lags through the 48 h bake). The secrets
+reconstruction (k3s sources) and the **false-rollback gotcha** (the post-OTA
+checks default to the wrong DB backend off-laptop and can auto-rollback a
+healthy OTA) are documented in
+[`../handoff/k3s-agent-handoff.md`](../handoff/k3s-agent-handoff.md) §4 — read it
+before flashing.
 
 ```bash
 # Validate + compile (laptop venv esphome 2026.5.x):

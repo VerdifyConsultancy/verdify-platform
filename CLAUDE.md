@@ -1,10 +1,15 @@
 # Verdify — Agent Working Guide
 
-This repo is worked by **one autonomous local agent** (Codex in current
-sessions; historically Claude, running on Jason's laptop with full project
-ownership) plus Jason as the human gate for device-affecting and outward-facing
-actions. Every session that edits code here should read this file first. (The
-earlier five-persistent-agents model is retired — Jason, 2026-06-10.)
+This repo is worked by **autonomous agent(s) running in the k3s cluster**
+(Codex/Claude with kubectl, the in-cluster DB, and prod secrets) plus Jason as
+the human gate for device-affecting and outward-facing actions. **As of
+2026-06-18 development moved off Jason's laptop** to k3s-resident agents — **read
+[`docs/handoff/k3s-agent-handoff.md`](docs/handoff/k3s-agent-handoff.md) first**
+for the operating model, the kubectl-host-portable dev loop (build/test/DB/deploy),
+repo-as-source-of-truth, the gated firmware-OTA procedure, and the known autonomy
+blockers. Every session that edits code here should read this file (via
+`AGENTS.md`), the handoff doc, and `README.md` first. (Retired: the laptop
+single-agent model and the earlier five-persistent-agents model.)
 
 ## What Verdify is
 
@@ -47,8 +52,10 @@ First-turn orientation, before editing:
 
 Discovery rules:
 
-- Use `rg --files`, `rg`, `make help`, and the CI workflows to discover
-  structure, entrypoints, tests, and dependency manifests.
+- Use `grep -rnE` (or Python globs), `make help`, and the CI workflows to
+  discover structure, entrypoints, tests, and dependency manifests. **`rg`/
+  ripgrep is unreliable in this repo** — it silently returns empty/misses,
+  especially in `.sql` files; cross-check any "zero hits" with `grep`.
 - Prefer references over duplicated instructions. README is the one-page
   architecture summary; Makefile and CI define commands; runbooks define laptop,
   deploy, DB, and OTA operations.
