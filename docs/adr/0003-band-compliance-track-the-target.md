@@ -1,6 +1,15 @@
 # ADR 0003 — Band compliance: track the target diurnal curve, do not float for efficiency
 
-- **Status:** Accepted — 2026-06-17. Sets the control objective for the band-compliance reconcile sprint.
+> **⚠ SUPERSEDED by [ADR-0004](0004-floating-corridor-control.md) (2026-06-18).** A
+> first-principles physics review reversed the core stance: the plant has a tolerance
+> *envelope*, not a setpoint, and the smooth diurnal curve emerges for free from the thermal
+> mass if you don't fight it — so the correct regime is to **float within the crop's tolerance
+> corridor and act only at the edges** (cost IS a driver), not track/pinch a target line. The
+> single-source band, nature-aligned anchors, dehum selector, fog-first, anti-chatter and
+> sensor-integrity work below all carry over; the target-tracking / pinch / "cost-not-a-driver"
+> / band-grade-metric stance does not. See ADR-0004 §"what carries over" / §"what this reverses".
+
+- **Status:** SUPERSEDED by ADR-0004 (was Accepted 2026-06-17). Sets the control objective for the band-compliance reconcile sprint.
 - **Owner lane:** verdify-platform (firmware + planner + data + web). **Epic:** band-compliance reconcile (see `docs/reviews/band-compliance-reconcile-sprint-2026-06-17.md`).
 - **Refs:** `firmware/lib/greenhouse_logic.h`, `firmware/lib/greenhouse_types.h`, `firmware/lib/greenhouse_solar.h`, `verdify_schemas/tunable_registry.py`, `db/migrations/{146,147,171,178}`, `docs/adr/0002-planner-hermes-vs-direct-gpt5.md`, the 2026-06-17 end-to-end control review.
 
