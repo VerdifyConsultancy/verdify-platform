@@ -169,13 +169,13 @@ patches:
 # GHCR digests in-repo.
 images:
   - name: ghcr.io/verdifyconsultancy/verdify-api
-    digest: sha256:d17579724206176e6343d629de5333b320403813653ad6cbf6fedef097ae4b11
+    digest: sha256:95111ef843c225a6261c1791582198c3b91d1fbb9eb766c96b426187ba8c25d0
   - name: ghcr.io/verdifyconsultancy/verdify-mcp
-    digest: sha256:5a39c0e3cbb8652210c285f5a389d4e18e108047249923855cb5feedb46d58a3
+    digest: sha256:14c608bb932c06fde30fdccec1019f3b6dbc0e6183d6cce24d34241f64f5e524
   - name: ghcr.io/verdifyconsultancy/verdify-ingestor
-    digest: sha256:4598d5e923e70a67d66b07b88cc7b32f0d7b5f0793dc676a8c6be45f60d8c35c
+    digest: sha256:22184ccae85d4c107d6011ff0324a3750b56cf2e74ea2add43a5eded42856b5a
   - name: ghcr.io/verdifyconsultancy/verdify-migrate
-    digest: sha256:f17ef31563290b7e88d67c96d0ab78f45818be6e77e36f82e623a6612bb76198
+    digest: sha256:900fed0dea328274c1675b35c1deadebdeba2d6cb40be3bd8d764717ff0a7f57
   # verdify-planner (#117): real published GHCR digest, resolved read-only via
   # `gh api orgs/VerdifyConsultancy/packages/container/verdify-planner/versions`
   # (the `branch-live-platform-main` build of planner_graph/). The planner image is
