@@ -170,8 +170,9 @@ are infra work, gated and tracked — do **not** try to fix them in a code sessi
    repo-relevant bits are captured in this doc + the `docs/` set; k3s agents
    should build their working memory from the repo.
 
-A tracking issue consolidates these on GitHub (see the EPICs #335 CI/CD
-hardening, #336 ArgoCD/GitOps cleanup, #337 decommission/residual).
+**Tracking issue #381** consolidates these on GitHub, linked to the EPICs #335
+(CI/CD hardening), #336 (ArgoCD/GitOps cleanup), #337 (decommission/residual),
+and #322/#339 (retired-VM doc/test cleanup).
 
 ---
 
