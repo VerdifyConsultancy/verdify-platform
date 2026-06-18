@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """
 alert-monitor.py — Check alert conditions, write to alert_log, post to Slack.
 

@@ -11,7 +11,7 @@
 #     socket, no script-logic change — only the connection transport.
 #
 #   PYTHON=python3  — the gather script's registry block (gather-plan-context.sh
-#     :27) runs ${PYTHON:-/srv/greenhouse/.venv/bin/python} to emit the
+#     :27) runs ${PYTHON:-python3} to emit the
 #     ACTIVE_CONTEXT_PARAMS / PLAN_COMPARE_EXCLUDED SQL IN-lists from
 #     verdify_schemas.tunable_registry. The VM venv path is absent in-pod; this
 #     points it at the image's python3 so those two SQL filters resolve (else the

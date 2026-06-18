@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """
 vault-crop-writer.py — Write per-crop markdown files to Obsidian vault.
 

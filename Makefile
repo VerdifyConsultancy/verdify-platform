@@ -1,14 +1,18 @@
 # Verdify — Development Commands
 # Usage: make <target>
 SHELL := /bin/bash
-# Tooling venv: prefer a repo-local .venv (laptop / agent-pod hosts) and fall
-# back to the legacy greenhouse-VM path so existing hosts keep working.
+# Tooling venv: prefer a repo-local .venv (laptop / agent-pod hosts), fall back
+# to the legacy greenhouse-VM path only if it exists, and otherwise fail with a
+# clear `make setup` hint instead of trying a dead absolute path.
 # Override explicitly with `make VENV=/path/to/venv <target>`.
-VENV ?= $(if $(wildcard .venv/bin/python),.venv,/srv/greenhouse/.venv)
+LEGACY_VENV := /srv/greenhouse/.venv
+VENV ?= $(if $(wildcard .venv/bin/python),.venv,$(if $(wildcard $(LEGACY_VENV)/bin/python),$(LEGACY_VENV),.venv))
 PYTHON := $(VENV)/bin/python
 PYTEST := $(PYTHON) -m pytest
 RUFF := $(VENV)/bin/ruff
 ESPHOME := $(VENV)/bin/esphome
+BOOTSTRAP_PYTHON ?=
+BOOTSTRAP_EXTRAS ?= dev,api,planner
 ESP32_DEVICE ?= 192.168.10.111
 QUIET_MINUTES ?= 30
 IRRIGATION_FEEDBACK_TIMEOUT ?= 1800
@@ -44,17 +48,33 @@ REPLAY_CORPUS_TMP ?= /tmp/verdify-replay-overrides.csv
 HERMES_IRIS_RUNTIME_DIR ?= /var/lib/verdify/hermes/iris
 HERMES_IRIS_ENV_FILE ?= /etc/verdify/hermes-iris.env
 
-.PHONY: help test lint format check lighting-audit-static lighting-audit-current lighting-audit-live lighting-audit-complete climate-intent-replay-report climate-authority-post-deploy-proof-plan climate-authority-post-deploy-proof firmware-check firmware-check-worktree firmware-check-all firmware-invariants firmware-replay firmware-replay-worktree firmware-replay-stream-check firmware-audit-traceability-proof firmware-audit-worktree-proof firmware-dwell-preview firmware-deploy firmware-archive-artifacts firmware-promote-last-good smoke hermes-deploy-config hermes-restart hermes-smoke clean migration-rollback-safety irrigation-migration-check irrigation-migration-proof irrigation-field-diagnostics irrigation-field-sensor-health-proof irrigation-stack-software-check irrigation-stack-check irrigation-feedback-check irrigation-feedback-discover irrigation-feedback-discovery-proof irrigation-feedback-work-order irrigation-feedback-work-order-proof irrigation-feedback-clear-stale-retained irrigation-feedback-clear-stale-near-misses irrigation-feedback-watch irrigation-feedback-watch-field irrigation-feedback-watch-field-proof irrigation-feedback-finalize-dry-run irrigation-feedback-finalize-dry-run-proof irrigation-feedback-finalize irrigation-feedback-finalize-proof irrigation-feedback-proof-json irrigation-sensor-health-proof irrigation-stack-proof irrigation-completion-audit irrigation-completion-audit-proof irrigation-acceptance irrigation-full-acceptance irrigation-post-deploy-acceptance-plan irrigation-post-deploy-acceptance
+.PHONY: help setup venv-check tool-check test lint format check lighting-audit-static lighting-audit-current lighting-audit-live lighting-audit-complete climate-intent-replay-report climate-authority-post-deploy-proof-plan climate-authority-post-deploy-proof firmware-check firmware-check-worktree firmware-check-all firmware-invariants firmware-replay firmware-replay-worktree firmware-replay-stream-check firmware-audit-traceability-proof firmware-audit-worktree-proof firmware-dwell-preview firmware-deploy firmware-archive-artifacts firmware-promote-last-good smoke hermes-deploy-config hermes-restart hermes-smoke clean migration-rollback-safety irrigation-migration-check irrigation-migration-proof irrigation-field-diagnostics irrigation-field-sensor-health-proof irrigation-stack-software-check irrigation-stack-check irrigation-feedback-check irrigation-feedback-discover irrigation-feedback-discovery-proof irrigation-feedback-work-order irrigation-feedback-work-order-proof irrigation-feedback-clear-stale-retained irrigation-feedback-clear-stale-near-misses irrigation-feedback-watch irrigation-feedback-watch-field irrigation-feedback-watch-field-proof irrigation-feedback-finalize-dry-run irrigation-feedback-finalize-dry-run-proof irrigation-feedback-finalize irrigation-feedback-finalize-proof irrigation-feedback-proof-json irrigation-sensor-health-proof irrigation-stack-proof irrigation-completion-audit irrigation-completion-audit-proof irrigation-acceptance irrigation-full-acceptance irrigation-post-deploy-acceptance-plan irrigation-post-deploy-acceptance
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
+setup: ## Create/update the repo-local Python tooling venv
+	BOOTSTRAP_PYTHON="$(BOOTSTRAP_PYTHON)" BOOTSTRAP_EXTRAS="$(BOOTSTRAP_EXTRAS)" VENV="$(VENV)" bash scripts/bootstrap-venv.sh
+
+venv-check:
+	@if [ ! -x "$(PYTHON)" ]; then \
+		echo "Missing Python venv at $(VENV). Run: make setup"; \
+		echo "Override with: make VENV=/path/to/venv <target>"; \
+		exit 127; \
+	fi
+
+tool-check: venv-check
+	@if [ ! -x "$(RUFF)" ]; then \
+		echo "Missing ruff at $(RUFF). Run: make setup"; \
+		exit 127; \
+	fi
+
 # ── Quality ─────────────────────────────────────────────────────────
 
-lint: ## Run ruff linter on all Python files
+lint: tool-check ## Run ruff linter on all Python files
 	$(RUFF) check ingestor/ api/ mcp/ scripts/*.py tests/ verdify_schemas/
 
-format: ## Auto-format Python files with ruff
+format: tool-check ## Auto-format Python files with ruff
 	$(RUFF) format ingestor/ api/ mcp/ scripts/*.py tests/ verdify_schemas/
 	$(RUFF) check --fix ingestor/ api/ mcp/ scripts/*.py tests/ verdify_schemas/
 
@@ -76,10 +96,10 @@ lighting-audit-complete: ## Final lighting audit; requires OTA/post-OTA proof wi
 
 # ── Testing ─────────────────────────────────────────────────────────
 
-test: ## Run full smoke test suite against live stack
+test: venv-check ## Run full smoke test suite against live stack
 	$(PYTEST) tests/
 
-test-fast: ## Run tests excluding slow planner tests
+test-fast: venv-check ## Run tests excluding slow planner tests
 	$(PYTEST) tests/ -k "not Planner and not Context"
 
 climate-intent-replay-report: ## Replay ClimateIntent actions over the firmware corpus

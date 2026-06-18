@@ -57,7 +57,10 @@ weather, optional heavyweight reasoning, and public delivery support.
 ## Development
 
 ```bash
-# Prerequisites: Docker, Python 3.13+, shared venv at /srv/greenhouse/.venv
+# Prerequisites: Docker, Python 3.12+ (3.13 preferred for parity with CI/runtime)
+
+# Create/update repo-local tooling environment (.venv)
+make setup
 
 # Run all checks (lint + test + firmware compile)
 make check
@@ -72,7 +75,7 @@ make help              # List all targets
 ```
 
 **Tooling:** ruff (lint + format), pytest, pre-commit hooks, GitHub Actions CI.
-**Config:** `pyproject.toml` is the single source of truth for deps, lint rules, and test config.
+**Config:** `pyproject.toml` is the single source of truth for deps, lint rules, and test config. `make setup` reads it directly; there is no checked-in duplicate requirements file for local tooling.
 
 ### Codex quickstart
 

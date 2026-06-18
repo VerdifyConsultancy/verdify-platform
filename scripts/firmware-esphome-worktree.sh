@@ -12,13 +12,22 @@ set -euo pipefail
 REPO_ROOT=$(git rev-parse --show-toplevel)
 cd "$REPO_ROOT"
 
-ESPHOME_BIN="${ESPHOME_BIN:-/srv/greenhouse/.venv/bin/esphome}"
+if [[ -z "${ESPHOME_BIN:-}" ]]; then
+    if [[ -x "$REPO_ROOT/.venv/bin/esphome" ]]; then
+        ESPHOME_BIN="$REPO_ROOT/.venv/bin/esphome"
+    elif [[ -x /srv/greenhouse/.venv/bin/esphome ]]; then
+        ESPHOME_BIN="/srv/greenhouse/.venv/bin/esphome"
+    else
+        ESPHOME_BIN="$(command -v esphome || true)"
+    fi
+fi
 SECRETS_SRC="${SECRETS_SRC:-/srv/greenhouse/esphome/secrets.yaml}"
 CONFIG="firmware/greenhouse.yaml"
 SECRET_LINK="firmware/secrets.yaml"
 
 if [[ ! -x "$ESPHOME_BIN" ]]; then
-    echo "ESPHome binary not found or not executable: $ESPHOME_BIN" >&2
+    echo "ESPHome binary not found or not executable: ${ESPHOME_BIN:-<unset>}" >&2
+    echo "Install tooling with: make setup BOOTSTRAP_EXTRAS=dev" >&2
     exit 2
 fi
 if [[ ! -f "$SECRETS_SRC" ]]; then

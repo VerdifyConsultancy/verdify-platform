@@ -65,12 +65,14 @@ fi
 
 echo "  Flashing previous binary via ESPHome OTA protocol..."
 # #254 re-home: the .150 venv path is gone. Use an esphome-capable interpreter:
-# FIRMWARE_PYTHON env (the OTA tooling host's esphome venv), else the legacy
-# /srv/greenhouse/.venv path, else PATH `python3`.
+# FIRMWARE_PYTHON env (the OTA tooling host's esphome venv), else repo-local
+# .venv, else PATH `python3`.
 FIRMWARE_PYTHON="${FIRMWARE_PYTHON:-}"
 if [[ -z "$FIRMWARE_PYTHON" ]]; then
-    if [[ -x /srv/greenhouse/.venv/bin/python ]]; then
-        FIRMWARE_PYTHON=/srv/greenhouse/.venv/bin/python
+    if [[ -x .venv/bin/python ]]; then
+        FIRMWARE_PYTHON=.venv/bin/python
+    elif command -v python3 >/dev/null 2>&1; then
+        FIRMWARE_PYTHON=python3
     else
         FIRMWARE_PYTHON="$(command -v python3 || command -v python)"
     fi

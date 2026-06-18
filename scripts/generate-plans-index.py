@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """Regenerate data/plans/index.md and the short plans/index.md alias."""
 
 from __future__ import annotations

@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """
 forecast-action-engine.py — Evaluate forecast data against rules, trigger preemptive adjustments.
 

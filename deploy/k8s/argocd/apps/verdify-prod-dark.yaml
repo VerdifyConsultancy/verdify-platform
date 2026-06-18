@@ -47,15 +47,15 @@ metadata:
     agent-fleet.vallery.net/environment: prod
     agent-fleet.vallery.net/image-tag: ghcr.io/verdifyconsultancy/verdify-api@sha256-digest-pinned
     agent-fleet.vallery.net/source-repo: https://github.com/VerdifyConsultancy/verdify-platform.git
-    agent-fleet.vallery.net/source-revision: live/platform-main
+    agent-fleet.vallery.net/source-revision: main
     agent-fleet.vallery.net/url: https://www.verdify.ai
 spec:
   project: app-test
   source:
     repoURL: https://github.com/VerdifyConsultancy/verdify-platform.git
     targetRevision: main
-    # LIVE prod overlay (device writer). Reconciled from the stale overlays/prod-dark
-    # to match the running App spec (verified live 2026-06-07).
+    # LIVE prod overlay (device writer). The ArgoCD app name is still
+    # verdify-prod-dark for historical reasons; source-of-truth is main.
     path: deploy/k8s/overlays/prod
   destination:
     server: https://kubernetes.default.svc

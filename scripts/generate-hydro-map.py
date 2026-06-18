@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """
 generate-hydro-map.py — Generate 60-position hydroponic layout HTML map.
 

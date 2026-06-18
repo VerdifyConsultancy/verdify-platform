@@ -1,13 +1,10 @@
 # MQTT fan-out env-contract (#113 publish-all / #114 subscribe)
 
-**Status:** DESIGN / authored — NOT deployed. The broker workload, the prod
-publish-all ConfigMap, and the dev subscribe ConfigMap all live in-tree and
-render green, but no env beyond prod publishes and only `overlays/dev` carries
-the subscribe contract today. DEPLOY is M3, gated on prod being a real cluster
-instance plus Nexus cross-VLAN / cross-namespace `1883` flow validation
-(`needs:nexus`). This doc is the authoritative env-key contract between the
-publisher and the subscribers so a future stage subscribe-overlay (or a second
-dev env) can be wired without re-deriving it.
+**Status:** prod publisher authored; subscriber overlays are future-only. The
+old dev/staging overlays are retired, so this doc is now the env-key contract
+for the prod publisher plus any future telemetry subscriber overlay that may be
+introduced later. DEPLOY remains gated on Nexus cross-namespace `1883` flow
+validation (`needs:nexus`).
 
 This bus carries **telemetry only**. It does **not** change the single-writer
 posture: only the prod ingestor talks to the ESP32, and the `#79`
@@ -28,7 +25,7 @@ here is a device writer.
               └────────────────────────────┘
                           ▲                ▲
                           │ subscribe      │ subscribe
-                 dev ingestor       (future) stage ingestor
+              future subscriber ingestor(s)
                  VERDIFY_INGEST_SOURCE=mqtt-subscribe
                  mirrors into its OWN per-env DB; opens NO ESP32 / HA / occupancy loop
 ```
@@ -64,10 +61,9 @@ A bus outage NEVER blocks the prod DB write: `FanoutPublisher.publish_row()`
 swallows transport errors (telemetry capture is Track A; the prod DB is the
 source of truth).
 
-### Subscriber (dev / stage)
+### Subscriber (future overlay only)
 
-Set in `deploy/k8s/overlays/dev/env-configmap.yaml` (and the same shape in a
-future stage subscribe-overlay):
+If a future subscriber overlay is added, set:
 
 | Key | Subscriber value | Meaning |
 |---|---|---|
@@ -93,10 +89,10 @@ not a manifest reshape.
 `assert_modes_consistent()` (called at ingestor startup) fails loudly if a
 single process has BOTH `VERDIFY_MQTT_PUBLISH_ALL=1` AND
 `VERDIFY_INGEST_SOURCE=mqtt-subscribe`. An ingestor is either the prod publisher
-OR a dev/stage subscriber, never both — running both would re-publish what it
+OR a subscriber, never both — running both would re-publish what it
 just consumed (a self-feeding topic storm). The overlays enforce this by
-construction: only prod patches `publish-all-configmap.yaml`; only the
-subscribe overlays set `VERDIFY_INGEST_SOURCE=mqtt-subscribe`.
+construction: only prod patches `publish-all-configmap.yaml`; any future
+subscriber overlay must set only `VERDIFY_INGEST_SOURCE=mqtt-subscribe`.
 
 ## Topic + payload layout
 
@@ -114,15 +110,12 @@ e.g. verdify/fanout/climate/vallery
   be added to the allow-list. Subscribers drop any payload for a
   non-allow-listed table (`decode_payload` raises `ValueError`).
 
-## Why staging is not a subscriber yet
+## Why there is no subscriber today
 
-`overlays/staging` is the only overlay the live `verdify-local-staging` ArgoCD
-app syncs. It stays inert for the fan-out bus: `ingestor` at `replicas:0`,
-`VERDIFY_DEVICE_WRITE_ENABLED=0`, and the broker excluded (it is a kustomize
-Component referenced only by `overlays/dev` + `overlays/prod`). Wiring staging
-as a subscriber means copying the dev subscriber key block above into a staging
-env patch and lifting `replicas` to `1` — a separate, gated change, not part of
-this DESIGN pass.
+The old dev/staging overlays are decommissioned. Today prod is the only
+environment; it publishes telemetry and remains the only device writer. Adding a
+subscriber is a separate, gated overlay design and must keep
+`VERDIFY_DEVICE_WRITE_ENABLED=0`.
 
 ## Deploy gates (for the M3 DEPLOY pass — NOT this PR)
 
@@ -131,14 +124,13 @@ this DESIGN pass.
 2. Nexus cross-VLAN / cross-namespace `1883` flow validated from a pod
    (`needs:nexus`).
 3. No device contact is introduced by any deploy of this component — verify the
-   render still excludes the broker from `overlays/staging` and that no
-   subscriber overlay carries `VERDIFY_DEVICE_WRITE_ENABLED=1`.
+   render has no subscriber overlay carrying `VERDIFY_DEVICE_WRITE_ENABLED=1`.
 
 ## Source of truth
 
 - Broker workload: `deploy/k8s/components/mqtt-broker/mqtt-broker.yaml`
 - Component wiring: `deploy/k8s/components/mqtt-broker/kustomization.yaml`
 - Prod publish-all patch: `deploy/k8s/overlays/prod/publish-all-configmap.yaml`
-- Dev subscribe patch: `deploy/k8s/overlays/dev/env-configmap.yaml`
+- Future subscribe patch: not present today; add in a separate gated overlay.
 - Ingestor fan-out code (gating + topic + publisher/subscriber):
   `ingestor/mqtt_fanout.py`, `ingestor/ingestor.py`, `ingestor/config.py`

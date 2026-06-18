@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """Planner feedback loop end-to-end smoke test.
 
 Exercises the unified plan schema + feedback loop + manifestation surface

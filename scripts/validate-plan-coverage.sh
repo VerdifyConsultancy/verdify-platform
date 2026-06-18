@@ -2,7 +2,7 @@
 # validate-plan-coverage.sh — Verify tactical Tier 1 params present at every transition
 set -euo pipefail
 
-PYTHON_BIN="${PYTHON:-/srv/greenhouse/.venv/bin/python}"
+PYTHON_BIN="${PYTHON:-python3}"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # #24: DB access via the shared psql-verdify abstraction (docker-exec default
 # preserves prior VM argv). Build an argv array; call sites use "${DB[@]}".

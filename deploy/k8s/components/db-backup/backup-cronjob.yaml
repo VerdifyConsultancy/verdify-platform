@@ -10,7 +10,7 @@
 #
 # NOT AUTO-ENABLED: referenced by no overlay. Root opts an env in (or applies
 # this component standalone) once the synology-iscsi-ssd class + the NFS PV
-# behind verdify-db-dumps exist. Merging it to live/platform-main schedules
+# behind verdify-db-dumps exist. Merging it to main and manually syncing prod schedules
 # nothing on the live staging app.
 #
 # IMAGE: the SAME pinned timescaledb image as the DB StatefulSet + migration Job

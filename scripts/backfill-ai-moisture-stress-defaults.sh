@@ -14,7 +14,7 @@ DB_USER="${DB_USER:-verdify}"
 DB_NAME="${DB_NAME:-verdify}"
 GREENHOUSE_ID="${GREENHOUSE_ID:-vallery}"
 APPLY="${APPLY:-0}"
-PYTHON_BIN="${PYTHON:-/srv/greenhouse/.venv/bin/python}"
+PYTHON_BIN="${PYTHON:-python3}"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 # #24: DB access via the shared psql-verdify abstraction. The script's existing

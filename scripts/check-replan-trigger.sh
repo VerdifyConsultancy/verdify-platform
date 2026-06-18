@@ -10,7 +10,7 @@ set -euo pipefail
 TRIGGER="/srv/verdify/state/replan-needed.json"
 LOG="/srv/verdify/state/replan.log"
 COOLDOWN="/srv/verdify/state/replan-cooldown"
-PYTHON="${PYTHON:-/srv/greenhouse/.venv/bin/python3}"
+PYTHON="${PYTHON:-python3}"
 HERMES_TRIGGER="${HERMES_TRIGGER:-/srv/verdify/scripts/hermes-trigger.py}"
 
 [ -f "$TRIGGER" ] || exit 0

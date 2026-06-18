@@ -21,7 +21,7 @@ DB+=(-t -A)
 HA_TOKEN=$(cat /mnt/agents/shared/credentials/ha_token.txt 2>/dev/null || echo "")
 HA_URL="http://192.168.30.107:8123"
 SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PYTHON_BIN="${PYTHON:-/srv/greenhouse/.venv/bin/python}"
+PYTHON_BIN="${PYTHON:-python3}"
 STATIC_CONTEXT_FILE="${VERDIFY_PLANNER_STATIC_CONTEXT:-/srv/verdify/state/planner-static-context.md}"
 
 mapfile -t REGISTRY_SQL < <("$PYTHON_BIN" - "$SCRIPT_ROOT/.." <<'PY'

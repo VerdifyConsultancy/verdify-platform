@@ -44,7 +44,7 @@ EOF
 done
 
 SCRIPT_ROOT=${VERDIFY_SCRIPT_ROOT:-/srv/verdify/scripts}
-PYTHON=${PYTHON:-/srv/greenhouse/.venv/bin/python}
+PYTHON=${PYTHON:-python3}
 LOG=${VERDIFY_PUBLISH_LOG:-/srv/verdify/state/publish.log}
 LOCK=${VERDIFY_PUBLISH_LOCK:-/var/lock/verdify-site-content-publish.lock}
 if ! PREV_DATE=$(date -d "${DATE} -1 day" +%Y-%m-%d 2>/dev/null); then

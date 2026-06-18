@@ -22,12 +22,11 @@
 # container :8080 + Service targetPort + probe all stay in lockstep on 8080, the
 # same contract Traefik's kubernetescrd provider resolves against (Service port).
 #
-# WHY A KUSTOMIZE COMPONENT (not a base resource): #5 hard rule — anything added
-# to deploy/k8s/base renders into overlays/staging, which the live
-# verdify-local-staging ArgoCD app syncs. A Component is referenced explicitly per
-# overlay, so merging to live/platform-main keeps the live staging app's rendered
-# shape under the author's control. lab-site is pure web tier, NO device path —
-# it never touches the ESP32. Generated content is owned by lab-publisher.yaml.
+# WHY A KUSTOMIZE COMPONENT (not a base resource): lab-site is an optional prod
+# web surface, not part of every base workload. A Component keeps the workload
+# explicit in the single live overlay and avoids accidental future fan-out.
+# lab-site is pure web tier, NO device path — it never touches the ESP32.
+# Generated content is owned by lab-publisher.yaml.
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -139,7 +138,7 @@ spec:
         - name: lab-site
           # Pinned to an immutable @sha256 digest by each consuming overlay's
           # images: transformer (NEVER a mutable :latest/:sha tag). Image name
-          # only here. Built from the verdify-site repo Dockerfile.k3s (see header).
+          # only here. Built from the verdify-site-legacy Dockerfile.k3s (see header).
           image: ghcr.io/verdifyconsultancy/verdify-lab
           # No command override: the verdify-site Dockerfile.k3s CMD (nginx -g
           # 'daemon off;') stays authoritative, so the build source owns the

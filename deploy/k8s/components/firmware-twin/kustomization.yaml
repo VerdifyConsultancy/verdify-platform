@@ -5,9 +5,9 @@ kind: Component
 #
 # Stands up the merged-but-not-deployed twin as a read-only / INSERT-only shadow
 # (see twin-shadow-deployment.yaml for the four-layer safety model and the #31
-# divergence-trust gate). Designed for verdify-dev (the safe shadow); the prod
-# shadow additionally needs migration 155 on the prod DB + a prod twin login
-# user — GATED on Jason (live-prod schema change).
+# divergence-trust gate). The old verdify-dev safe-shadow environment is
+# retired; any future prod shadow needs migration 155 on the prod DB + a prod
+# twin login user — GATED on Jason (live-prod schema change).
 #
 # The source ConfigMap carries the exact firmware sources the rule-8 replay gate
 # compiles (greenhouse_logic.h / greenhouse_types.h / replay_emit.cpp) plus the

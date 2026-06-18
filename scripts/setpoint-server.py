@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """
 setpoint-server.py — HTTP setpoint delivery server for ESP32 + grow light control.
 

@@ -34,7 +34,7 @@ OutOfSync/extra, harmless; laptop-root removes `deny-esp32-egress` explicitly at
 time (it is already functionally a no-op: live it is the broad-egress allow). The new
 `allow-ingestor-device-egress` is created additively.
 
-Exact live patch (laptop-root runs, AFTER this PR merges to live/platform-main):
+Exact live patch (laptop-root runs, AFTER this PR merges to main):
 
 ```
 ssh jason@192.168.30.32 sudo k3s kubectl -n argocd patch application verdify-prod-dark \
@@ -77,7 +77,7 @@ RISK: the `--cascade=orphan` + re-adopt window is fiddlier than Option A's singl
 patch. Prefer Option A unless Jason wants the clean `verdify-prod` name now.
 
 ## HARD pre-checks before EITHER flip (laptop-root)
-1. This PR is merged into `live/platform-main` (ArgoCD reads that ref).
+1. This PR is merged into `main` (ArgoCD reads that ref).
 2. `argocd app diff` reviewed: confirms ADD allow-ingestor-device-egress + state
    volume; confirms NO ingestor→0, NO except:192.168.10.0/24 re-added, NO DB prune.
 3. Single-writer Recreate means the ingestor pod restarts ONCE (state volume) — the

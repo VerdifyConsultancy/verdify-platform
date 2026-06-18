@@ -11,7 +11,7 @@
 #
 # It is an env-only override read from verdify-config — NO ingestor image rebuild.
 # prod ONLY: the hermes-iris gateway is a prod-anchored Component (ABSENT from
-# overlays/dev and overlays/staging), so its Service name only resolves here.
+# retired dev/staging overlays), so its Service name only resolves here.
 #
 # Patched onto the base verdify-config ConfigMap (strategic merge adds the key).
 # NOTE: applying this ConfigMap does NOT by itself restart the ingestor; the new

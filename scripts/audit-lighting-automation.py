@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """Audit lighting automation traceability from planner policy to public graphs.
 
 This script is intentionally stricter than a unit test. Static checks prove the

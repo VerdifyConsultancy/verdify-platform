@@ -64,25 +64,21 @@ resources:
   - limitrange.yaml
 
 # verdify-planner (#117) + verdify-mqtt fan-out broker (#113) — referenced as
-# Components, NOT added to base, so they never render into overlays/staging (the
-# only overlay the live ArgoCD app syncs). Same pattern in overlays/dev. The
-# fan-out broker runs in PROD ONLY: prod publishes the bus, dev/stage subscribe
-# to it cross-namespace. The planner is NOT a device writer.
+# Components, NOT added to base, so future overlays must opt in explicitly. The
+# fan-out broker runs in PROD ONLY. The planner is NOT a device writer.
 components:
   - ../../components/planner
   - ../../components/mqtt-broker
   # #118 verdify-setpoint-server — the grow-light writer + setpoint diagnostics.
   # PROD-ONLY: it is a DEVICE-AFFECTING writer (toggles the live grow lights via
-  # HA), so it is never referenced by overlays/dev or overlays/staging.
+  # HA), so it must stay prod-only.
   - ../../components/setpoint-server
   # #119 hermes-iris — the sole planner gateway, ported from the compose `hermes`
   # profile. prod-anchored (run-state PVC + OpenAI key). Image digest preserved.
   - ../../components/hermes-iris
   # #124 verdify-lab — the public Quartz research site (lab.verdify.ai). Pure web
-  # tier, stateless (no PVC), NO device path; referenced by dev + prod. NOT yet in
-  # staging because its image is unpublished (placeholder digest -> ImagePullBackOff
-  # would degrade the live staging app). Built from the verdify-site repo
-  # Dockerfile.k3s (see components/lab-site/lab-site.yaml).
+  # tier, stateless (no PVC), NO device path. Built from the
+  # verdify-site-legacy Dockerfile.k3s (see components/lab-site/lab-site.yaml).
   - ../../components/lab-site
   # db-backup (M3.3; refs #84/#28/#130) — the verdify-db-dumps NFS PVC + nightly
   # pg_dump -Fc CronJob + retention + allow-db-from-backup. pg_dump is SELECT-only
@@ -183,7 +179,7 @@ images:
   # from each overlay's verdify-config + sealed secret), so prod pins the SAME
   # known-good digest dev already carries. prod is human-gated and is NOT
   # auto-bumped by bump-staging-digests
-  # (that job only repins overlays/staging + the INERT overlays/dev planner pin),
+  # (that job only repins CI-built greenhouse service image pins),
   # so this prod pin is a deliberate in-repo write-back, never CI-mutated.
   - name: ghcr.io/verdifyconsultancy/verdify-planner
     digest: sha256:ce1d8271e344b8e9cb3af2f8dde933116db56cc5159dbb8e0da710526bc20b0d
@@ -205,10 +201,8 @@ images:
   # verdify-site-legacy's publish-lab-image.yml workflow (package repository.name
   # == verdify-site-legacy) and verified pullable 2026-06-04 — REPLACES the prior
   # all-zeros placeholder pin whose package 404'd (verdify-site was an orphan GHCR
-  # repo). lab is a dev/prod-only Component that is ABSENT from overlays/staging,
-  # so it is EXEMPT from the promote-diff-guard staging-equality check (per the
-  # guard's own derived-exemption set); prod pins the SAME env-agnostic digest as
-  # dev (one-digest-across-envs static content). A content rebuild advances it.
+  # repo). lab is externally built and hand-pinned here; prod-promote excludes it.
+  # A content/runtime rebuild in verdify-site-legacy advances this digest.
   #
   # 2026-06-07 ONE-OFF VAULT RESTORE (laptop-root): the prior 92ab47.. image was
   # built from a synthetic CI temp-vault (docs/ fallback in Dockerfile.k3s), so it

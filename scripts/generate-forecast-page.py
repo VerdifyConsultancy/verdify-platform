@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """Sprint 20 Phase 7: generate forecast archive pages from
 weather_forecast + fn_forecast_correction + forecast_deviation_log.
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """Requirement-level audit for irrigation/fertigation completion.
 
 Default exit status is intentionally strict:

@@ -34,7 +34,7 @@
 # trustworthy as a gate until #31 (setpoint coverage) closes. This shadow proves
 # the pipeline + dashboard render; it does NOT yet license acting on divergence.
 #
-# This component is designed for verdify-dev (the safe shadow). The verdify-prod
+# The old verdify-dev safe-shadow environment is retired. Any future verdify-prod
 # shadow additionally needs migration 155 applied to the prod DB + a prod `twin`
 # login user — GATED on Jason (live-prod schema change), see the runbook.
 apiVersion: apps/v1

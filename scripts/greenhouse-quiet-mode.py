@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """Operator recording quiet mode metadata for the greenhouse.
 
 This command no longer writes target/band overlays. Routine quiet behavior is

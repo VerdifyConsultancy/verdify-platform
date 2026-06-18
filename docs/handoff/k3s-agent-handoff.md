@@ -35,12 +35,15 @@ Everything below works from a kubectl-equipped pod/host; none of it needs the
 laptop. (Firmware OTA is the exception — see §4.)
 
 - **Build / test / lint:**
+  - `make setup` creates/updates the repo-local `.venv` from `pyproject.toml`
+    (Python 3.12+ required; 3.13 preferred for parity).
   - `make lint` (ruff) — required.
   - `make test` (pytest) — required; 1 pre-existing flaky timeout
     (`test_dew_point_risk_computes`) is tolerated, everything else must pass.
   - DB-backed targets default to `VERDIFY_DB_BACKEND=kube` (Makefile) → they hit
-    the in-cluster DB. Python runs from the repo `.venv` or `python3` on PATH
-    (the legacy `/srv/greenhouse/.venv` fallback is dead; ensure a usable venv).
+    the in-cluster DB. Python tooling runs from the repo `.venv` by default;
+    the legacy `/srv/greenhouse/.venv` is used only if it exists or `VENV=...`
+    is passed explicitly.
 - **Database access** (read-only is safe; destructive prod is Jason-gated):
   ```bash
   scripts/verdify-db.sh prod -c "SELECT count(*) FROM climate;"   # one-shot

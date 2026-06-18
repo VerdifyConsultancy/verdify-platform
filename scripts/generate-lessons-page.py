@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """Generate the public Lessons Learned page from planner_lessons table.
 
 Output: /srv/verdify/verdify-site/content/reference/lessons.md

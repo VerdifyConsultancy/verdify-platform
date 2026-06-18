@@ -6,7 +6,10 @@ firmware-twin-divergence Grafana dashboard) stood up in k3s as a **read-only,
 INSERT-only SHADOW**. Design: `docs/design/firmware-digital-twin.md` §2.1, §5.3,
 §6.
 
-## Deployed (verdify-dev — the safe shadow, DONE)
+## Historical dev shadow proof (retired environment)
+
+The `verdify-dev` namespace/overlay is now retired. The record below is kept as
+historical proof of the shadow pipeline, not as a current deployment target.
 
 1. `db/migrations/155-twin-observability-tables.sql` applied to the dev DB
    (additive: net-new `twin_decisions` + `firmware_twin_divergence` hypertables
@@ -48,7 +51,7 @@ here), all buildable-now but NOT built (design §6 Phase-1 / TWIN-5):
 - the local-hour MDT correction (`AT TIME ZONE 'America/Denver'`) + `dt_ms`
   5 s cap in a live driver (the offline corpus already carries UTC ts).
 
-## GATED ON JASON — the prod-DB shadow
+## GATED ON JASON — any future prod-DB shadow
 
 Standing up the shadow in **verdify-prod** is a **live-prod schema change**
 (migration 155 on the prod DB) + a prod `twin` login user. It is additive /

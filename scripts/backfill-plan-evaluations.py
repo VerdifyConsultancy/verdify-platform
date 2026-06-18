@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """PL-1 (Sprint 20): backfill plan_journal.outcome_score for historical plans
 that were never evaluated via the MCP plan_evaluate tool.
 

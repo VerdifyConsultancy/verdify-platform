@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """Resolve irrigation feedback alerts after physical feedback validates.
 
 This is deliberately narrower than running the whole alert monitor. It only

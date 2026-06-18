@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """Generate the public AI tunables traceability page and planner brief.
 
 The output deliberately combines three evidence classes:

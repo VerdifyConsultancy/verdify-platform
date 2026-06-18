@@ -2,7 +2,7 @@
 # STAGED — HA-3.1 ingestor fast UNPINNED failover patch (#239). DO NOT APPLY.
 # ============================================================================
 # This file is INTENTIONALLY NOT referenced by overlays/prod/kustomization.yaml.
-# Merging it to live/platform-main therefore changes NOTHING — ArgoCD does not
+# Merging it to main therefore changes NOTHING — ArgoCD does not
 # render it. It is the reviewable, ready-to-apply patch the GATED live-arm
 # runbook (STAGED-ha3-writer-fence-arm.md, step F) appends to the kustomization
 # under a Jason-confirmed maintenance window.

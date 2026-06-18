@@ -4,13 +4,10 @@
 # via `python -m planner_graph.server`, listens on $PORT=8080, exposes GET /health
 # at planner_graph/api.py:35).
 #
-# WHY A KUSTOMIZE COMPONENT (not a base resource): #5 hard rule — adding the
-# planner to deploy/k8s/base would render it into overlays/staging too, and the
-# live verdify-staging ArgoCD app (verdify-local-staging) syncs overlays/staging.
-# We must NOT add a new workload to staging. A Component is referenced ONLY by
-# overlays/dev + overlays/prod, so merging to live/platform-main keeps the live
-# staging app byte-identical. dev/prod are INERT until laptop-root creates their
-# ArgoCD Application CRs + the synology-iscsi-ssd StorageClass.
+# WHY A KUSTOMIZE COMPONENT (not a base resource): the planner is a prod-serving
+# workload that should be opted into explicitly by the live overlay, not added to
+# every base render. The old dev/staging overlays are retired; keep this as a
+# component so future overlays must choose it deliberately.
 #
 # DB: the planner reads DB_DSN first (planner_graph/config.py:_build_postgres_dsn),
 # falling back to POSTGRES_* / localhost. We construct DB_DSN from the shared

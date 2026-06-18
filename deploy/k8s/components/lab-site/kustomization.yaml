@@ -2,9 +2,9 @@ apiVersion: kustomize.config.k8s.io/v1alpha1
 kind: Component
 
 # Kustomize COMPONENT: the verdify-lab Quartz research-site workload (#124).
-# Referenced explicitly by overlays/dev + overlays/prod + overlays/staging via
-# `components:` — deliberately NOT a base resource so it never auto-renders into
-# every overlay. See lab-site.yaml header for the full rationale (build source =
+# Referenced explicitly by the live prod overlay via `components:` —
+# deliberately NOT a base resource so it never auto-renders into every future
+# overlay. See lab-site.yaml header for the full rationale (build source =
 # VerdifyConsultancy/verdify-site-legacy@v4 Dockerfile.k3s; nginx static serve
 # on :8080; stateless, no device path). The image
 # (ghcr.io/verdifyconsultancy/verdify-lab) is pinned to a @sha256 digest by each

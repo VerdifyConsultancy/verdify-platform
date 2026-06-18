@@ -3,7 +3,7 @@
 # Cron: 0 13 * * * (7:00 AM MDT = 13:00 UTC)
 set -uo pipefail
 
-PYTHON="/srv/greenhouse/.venv/bin/python3"
+PYTHON="python3"
 REPO="/srv/verdify"
 SCRIPTS="/srv/verdify/scripts"
 export PYTHONPATH="$REPO${PYTHONPATH:+:$PYTHONPATH}"

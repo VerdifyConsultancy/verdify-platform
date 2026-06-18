@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """One-shot Hermes/planner validation monitor.
 
 Designed to be run from cron/systemd/nohup every two hours. It prints one JSON

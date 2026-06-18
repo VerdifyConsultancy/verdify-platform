@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """
 vault-daily-writer.py — Write daily_summary to Obsidian vault as markdown.
 

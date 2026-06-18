@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """
 tempest-sync.py — Sync Tempest/Panorama weather station data into Verdify.
 

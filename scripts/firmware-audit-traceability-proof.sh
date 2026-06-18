@@ -6,7 +6,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PYTHON_BIN="${PYTHON:-/srv/greenhouse/.venv/bin/python}"
+PYTHON_BIN="${PYTHON:-python3}"
 # #24: DB access via the shared psql-verdify abstraction (docker-exec default
 # preserves prior VM argv). Heredoc SQL needs stdin -> VERDIFY_DOCKER_STDIN=1.
 . "$REPO_ROOT/scripts/lib/psql-verdify.sh"
