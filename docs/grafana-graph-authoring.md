@@ -116,13 +116,27 @@ consistent.
 - **Outdoor** + **Outdoor Forecast** (grey solid/dashed), **Solar** + **Solar
   Forecast** (yellow fill on a *hidden* 0–1200 axis).
 
-The pinched band is **not cosmetic — it is the real actuation boundary.**
-Production firmware actuates at the pinched edges (`apply_band_track_pinch`
-feeds `determine_mode_band_first` and `resolve_equipment`:
-`firmware/lib/greenhouse_logic.h` ~1326/1338/1350/1672/2255). Change the band by
-editing `crop_band_anchors` / `band_track_fraction` (the dispatcher pushes it to
-the device — **no OTA**), not by editing the dashboard. See
-`docs/band-traceability-contract.md` and project memory
+**The graphed pinched band is the planner's control-TARGET corridor — NOT (yet)
+the running device's actuation boundary.** Be precise about HEAD vs the device:
+- **At repo HEAD** the firmware *does* wire the pinch into band-first actuation
+  (`apply_band_track_pinch` feeds `determine_mode_band_first` +
+  `resolve_equipment`: `firmware/lib/greenhouse_logic.h` ~1326/1338/1350/1672/2255).
+- **The device currently runs `cc1bb19` (2026.6.16, "curve-only-fog-gates"),
+  where the pinch is UNWIRED** (`band_track_fraction` inert, "byte-identical to
+  main"). It **floats within the RAW `[low, high]` crop-tolerance band** and acts
+  only at the raw edges. The band-compliance firmware (pinch armed) is **staged,
+  not flashed** — OTA is Jason's gate (`docs/reviews/band-compliance-ota-signoff-2026-06-17.md`).
+
+So the device tolerates excursions out to the **wider raw band**; that is why
+climate can sit outside the (narrower) graphed pinched band with no actuator
+firing. The two converge when either (a) the band-compliance fw is OTA'd (pinch
+wired → device tracks the pinched band) **or** (b) **#377** flips
+`band_track_fraction → 0` (pinched == raw == the device's *current* actuation —
+the ADR-0004 floating-corridor direction). Change the band itself by editing
+`crop_band_anchors` / `band_track_fraction` (the dispatcher pushes the value to
+the device NVS — no OTA — but on `cc1bb19` the pinch fraction is inert), not by
+editing the dashboard. See `docs/band-traceability-contract.md`,
+`docs/adr/0004-floating-corridor-control.md`, and project memory
 `band-single-source-of-truth`.
 
 ### Equipment overlay
