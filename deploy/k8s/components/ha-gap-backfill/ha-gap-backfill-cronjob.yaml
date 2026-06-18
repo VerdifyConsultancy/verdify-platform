@@ -14,6 +14,9 @@ spec:
   # Hourly: DB-first gap detection is cheap; HA history is queried only when a
   # gap exists. Full historical reconciliation is a manual script mode.
   schedule: "23 * * * *"
+  # Explicit (matches the K8s default the cluster sets) so ArgoCD does not report
+  # a phantom suspend:false-vs-absent diff. The job must run; never suspended.
+  suspend: false
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 900
   successfulJobsHistoryLimit: 2
