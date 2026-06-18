@@ -242,7 +242,7 @@ REGISTRY: dict[str, TunableDef] = {
         kind="numeric",
         min=0.0,
         max=1.0,
-        default=0.50,
+        default=0.25,
         fw_clamp_lo=0.0,
         fw_clamp_hi=1.0,
         esp_object_id="band_track_fraction",
@@ -251,10 +251,13 @@ REGISTRY: dict[str, TunableDef] = {
         planner_pushable=True,
         tier=1,
         notes=(
-            "BC-3 (ADR0003 §6.1): control-band tracking tightness. Pinches the band "
-            "toward temp_target/vpd_target; 0=float-envelope (no longer the default), "
-            "1=track target exactly. Default 0.50. Bounded planner knob — may modulate "
-            "tracking tightness, may not float to 0 as policy. Safety rails untouched."
+            "Control-band tracking tightness. Pinches the band toward "
+            "temp_target/vpd_target; 0=float within the corridor (the ADR-0004 goal), "
+            "1=track target exactly. **Baseline 0.25** (relaxed from 0.50 — ADR-0004 "
+            "floating-corridor supersedes ADR-0003 track-the-target). The planner may "
+            "relax FURTHER toward 0 (float) but should NOT crank it tighter: cost is a "
+            "driver, the plant gains nothing from pinning to the line. #377 takes it to "
+            "0 (full float). Safety rails untouched."
         ),
     ),
     "cold_vent_guard_delta_f": TunableDef(

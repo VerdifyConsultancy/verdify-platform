@@ -58,14 +58,15 @@ globals:
     type: float
     restore_value: no
     initial_value: '1.0'
-  # BC-3 (ADR0003 §6.1): control-band tracking tightness [0,1]. Pinch is the default;
-  # planner re-pushes each cycle. restore_value:no so a boot before the first push uses
-  # this default. SHIP VALUE 0.30 (gentle first unattended night, uncalibrated pinch +
-  # no continuous auto-rollback); RAMP toward 0.50 via the planner knob after a clean night.
+  # Control-band tracking tightness [0,1]. restore_value:no so a boot before the first
+  # planner push uses this cold-start default. ADR-0004 (floating-corridor, supersedes
+  # ADR-0003 track-the-target): baseline 0.25 — the climate FLOATS within the corridor and
+  # acts at the edges; relax toward 0 (full float, #377), do NOT ramp tighter. Matches the
+  # registry default. (Takes effect on the next firmware OTA; the live value is planner-pushed.)
   - id: band_track_fraction
     type: float
     restore_value: no
-    initial_value: '0.30'
+    initial_value: '0.25'
   # BC-13 (ADR0003 §6.4): AI-tunable single-cycle air-exchange fraction toward outdoor
   # for the moisture-exchange estimator (Jason 2026-06-17). Default 0.30; rails [0.1,0.6].
   - id: vent_exchange_fraction

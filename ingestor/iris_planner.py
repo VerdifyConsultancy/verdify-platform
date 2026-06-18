@@ -423,7 +423,7 @@ Use tactical knobs below to shift behavior instead.
 
 **Band-adjacent tactical knob:**
 - `vpd_hysteresis` kPa, [0.05-0.5], def 0.3 — larger = fewer mist cycles
-- `band_track_fraction` fraction, [0-1], def 0.50 — pinches the control band toward the served target; higher tracks tighter
+- `band_track_fraction` fraction, [0-1], **def 0.25** — pinches the control band toward the served target. ADR-0004 (floating): the climate should FLOAT within the corridor and act at the edges — 0 = full float (the goal). RELAX toward 0; do NOT crank it tighter (cost is a driver, the plant gains nothing from pinning to the line).
 
 **Staging:**
 - `heat_hysteresis` °F, [0-3], def 1 — heat-stage clear margin above the interior heating target; higher holds heat longer
