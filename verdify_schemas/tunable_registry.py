@@ -1003,50 +1003,10 @@ REGISTRY: dict[str, TunableDef] = {
         tier=2,
         notes="End hour for fog eligibility window.",
     ),
-    "sw_fog_stress_window_extend_enabled": TunableDef(
-        name="sw_fog_stress_window_extend_enabled",
-        kind="switch",
-        min=0,
-        max=1,
-        default=0,
-        fw_clamp_lo=None,
-        fw_clamp_hi=None,
-        esp_object_id="fog_stress_window_extend_enabled",
-        cfg_readback_object_id="cfg_fog_stress_window_extend_enabled",
-        push_owner="planner",
-        planner_pushable=True,
-        tier=1,
-        notes=(
-            "Allows fog after the normal fog window during VPD-high stress. "
-            "Firmware still enforces RH, temperature, latest-hour, and dew-margin gates."
-        ),
-    ),
-    "fog_stress_window_latest_hour": TunableDef(
-        name="fog_stress_window_latest_hour",
-        kind="numeric",
-        min=17,
-        max=22,
-        default=19,
-        esp_object_id="fog_stress_window_latest_hour",
-        cfg_readback_object_id="cfg_fog_stress_window_latest_hour",
-        push_owner="planner",
-        planner_pushable=True,
-        tier=1,
-        notes="Latest local hour for the bounded VPD-high fog stress extension.",
-    ),
-    "fog_stress_min_dew_margin_f": TunableDef(
-        name="fog_stress_min_dew_margin_f",
-        kind="numeric",
-        min=5,
-        max=15,
-        default=10,
-        esp_object_id="fog_stress_min_dew_margin_f",
-        cfg_readback_object_id="cfg_fog_stress_min_dew_margin_f",
-        push_owner="planner",
-        planner_pushable=True,
-        tier=1,
-        notes="Minimum indoor temp-minus-dewpoint margin required for fog stress extension.",
-    ),
+    # BC-11 (ADR0003 §6.7): the fog_stress_* clock-window tunables are RETIRED dead
+    # registry rows — replaced by the solar-phase curve-only fog gate (no firmware
+    # entity, no ESPHome surface, no live read; only retirement comments + old build
+    # artifacts mention them). Deleted to shrink the planner-pushable surface.
     "max_relief_cycles": TunableDef(
         name="max_relief_cycles",
         kind="numeric",
