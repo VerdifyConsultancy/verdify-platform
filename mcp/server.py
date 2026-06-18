@@ -386,7 +386,12 @@ async def climate() -> str:
 @mcp.tool()
 async def scorecard(target_date: str = "") -> str:
     """Get the planner scorecard — 25 KPI metrics for a given day.
-    Includes: planner_score, compliance_v2_attributable_pct (the scored compliance),
+    Includes: planner_score, compliance_v2_attributable_pct (the scored compliance —
+    now PEAKS at the target per BC-12/ADR0003 §6.2: 1.0 only AT target, declining to
+    the band edges, so a high number means actual is HUGGING the target curve, not
+    merely in-band), the HEADLINE tracking metric dev_temp_norm_median_day/night +
+    dev_temp_norm_p95 (+ dev_vpd_*): median/p95 normalized |actual − device target|,
+    0 = on target / 1 = at band edge (drive toward 0 day AND night, both axes),
     compliance_v2_raw_pct, compliance_v2_unachievable_frac, the legacy binary
     compliance_pct / temp_compliance_pct / vpd_compliance_pct, stress hours
     (heat/cold/vpd_high/vpd_low), utility usage (kwh, therms, water_gal,

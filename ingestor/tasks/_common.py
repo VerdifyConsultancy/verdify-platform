@@ -989,9 +989,7 @@ AI_MOISTURE_STRESS_POLICY_PARAMS = frozenset(
         "direct_wet_stress_vpd_margin_kpa",
         "direct_wet_stress_min_dew_margin_f",
         "direct_wet_stress_latest_hour",
-        "sw_fog_stress_window_extend_enabled",
-        "fog_stress_window_latest_hour",
-        "fog_stress_min_dew_margin_f",
+        # fog_stress_* removed (BC-11/ADR0003 §6.7): retired dead registry rows.
     }
 )
 

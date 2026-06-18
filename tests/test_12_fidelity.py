@@ -1607,23 +1607,18 @@ def test_dispatcher_gates_ai_moisture_stress_until_firmware_supports_entities():
     """PR3 plan rows may exist before the OTA exposes matching ESPHome entities."""
     import tasks
 
+    # fog_stress_* removed (BC-11/ADR0003 §6.7): retired dead registry rows.
     assert {
         "sw_direct_wet_stress_override_enabled",
         "direct_wet_stress_vpd_margin_kpa",
         "direct_wet_stress_min_dew_margin_f",
         "direct_wet_stress_latest_hour",
-        "sw_fog_stress_window_extend_enabled",
-        "fog_stress_window_latest_hour",
-        "fog_stress_min_dew_margin_f",
     } == tasks.AI_MOISTURE_STRESS_POLICY_PARAMS
     assert {
         "direct_wet_stress_override_enabled",
         "direct_wet_stress_vpd_margin_kpa",
         "direct_wet_stress_min_dew_margin_f",
         "direct_wet_stress_latest_hour",
-        "fog_stress_window_extend_enabled",
-        "fog_stress_window_latest_hour",
-        "fog_stress_min_dew_margin_f",
     } == tasks.AI_MOISTURE_STRESS_REQUIRED_OBJECT_IDS
 
     src = _tasks_src()

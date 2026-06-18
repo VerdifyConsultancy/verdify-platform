@@ -132,22 +132,30 @@ def _grade_credit(
     ideal_hi: float,
     stress_hi: float,
 ) -> float | None:
-    """Python mirror of fn_grade_credit (band-compliance §6.1).
+    """Python mirror of fn_grade_credit (BC-12/ADR0003 §6.2).
 
-    Graded credit g in [0,1]: 1.0 inside the ideal band, linear partial credit
-    in the stress shoulders, 0 beyond the stress edges. Denominators guarded.
+    TENT peaking 1.0 at the ideal MIDPOINT (the target), declining to 0.5
+    (IDEAL_EDGE_CREDIT) at each ideal edge, then to 0 at the stress edge — so
+    in-band off-target drift is penalized (kills the old flat-1.0-in-band
+    saturation). Continuous at all edges. MUST stay byte-identical to the SQL
+    mirror db/migrations/183 fn_grade_credit (parity-tested). Denominators guarded.
     """
     if x is None:
         return None
-    if ideal_lo <= x <= ideal_hi:
-        return 1.0
     if x < stress_lo or x > stress_hi:
         return 0.0
+    tgt = (ideal_lo + ideal_hi) / 2.0
+    edge = 0.5  # IDEAL_EDGE_CREDIT — keep identical to mig-183 fn_grade_credit
+    half = (ideal_hi - ideal_lo) / 2.0
+    if ideal_lo <= x <= tgt:
+        return 1.0 - (1.0 - edge) * ((tgt - x) / half) if half > 0 else 1.0
+    if tgt < x <= ideal_hi:
+        return 1.0 - (1.0 - edge) * ((x - tgt) / half) if half > 0 else 1.0
     if x < ideal_lo:
         denom = ideal_lo - stress_lo
-        return max(0.0, (x - stress_lo) / denom) if denom > 0 else 0.0
+        return max(0.0, edge * (x - stress_lo) / denom) if denom > 0 else 0.0
     denom = stress_hi - ideal_hi
-    return max(0.0, (stress_hi - x) / denom) if denom > 0 else 0.0
+    return max(0.0, edge * (stress_hi - x) / denom) if denom > 0 else 0.0
 
 
 def _zone_score(g_temp: float | None, g_vpd: float | None) -> float | None:

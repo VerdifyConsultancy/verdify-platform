@@ -204,9 +204,17 @@ about pre-change behavior.
 
 - **80% Compliance** — the scored number is **`compliance_v2_attributable_pct`**:
   graded, per-zone, controller-attributable band compliance, aggregated to a house
-  number (center=Vanda 0.60, east=food 0.40). Target: >90%. It is **graded** (full
-  credit in the ideal band, linear partial credit through the stress band, zero
-  beyond — 0.1F out no longer scores like 15F out), **per-zone** (each zone graded
+  number (center=Vanda 0.60, east=food 0.40). Target: >90%. It is **graded — and now
+  PEAKS AT THE TARGET** (BC-12/ADR0003 §6.2): the credit is 1.0 only AT the band
+  midpoint (the target curve) and declines toward each band edge (0.5 at the ideal
+  edge, 0 at the stress edge). So a high compliance number means actual is HUGGING the
+  target line, not merely inside the band — off-target-but-in-band no longer scores
+  1.0. (NOTE: numbers stepped DOWN at the cutover vs the old flat-in-band metric — that
+  is the harder metric, not a control regression.) The headline diagnostic of HOW far
+  off-target is `dev_temp_norm_median_day/night`, `dev_temp_norm_p95` (+ `dev_vpd_*`):
+  median/p95 of normalized |actual − device target| (0 = on target, 1 = at band edge).
+  Drive deviation toward 0 day AND night, both axes. It is **graded** (zero beyond the
+  stress band — 0.1F out no longer scores like 15F out), **per-zone** (each zone graded
   against what is planted there, not one house average), and **controller-attributable**:
   misses that are physically unachievable (vent saturated and outdoor hotter than the
   served target — an exhaust-only box cannot cool below ambient) are NOT scored against
@@ -379,9 +387,9 @@ dispatcher-owned range.
   curve, so it is the right knob for forecast-driven night dryness, not a
   permanent band change.
 - If VPD stays high after normal wet windows close and dew margin is still
-  healthy, prefer bounded `sw_direct_wet_stress_override_enabled` or
-  `sw_fog_stress_window_extend_enabled` with latest-hour caps instead of
-  widening crop bands, raising VPD thresholds, or disabling moisture assist.
+  healthy, prefer the bounded `sw_direct_wet_stress_override_enabled` path
+  instead of widening crop bands, raising VPD thresholds, or disabling moisture
+  assist. (Fog now follows the solar-phase curve gate, not a clock window.)
 
 Use `set_tunable(parameter=..., value=..., reason=..., trigger_id=..., planner_instance=...)`
 only for narrow tactical overrides. Ranges are executable registry bounds; MCP
@@ -449,9 +457,6 @@ Use tactical knobs below to shift behavior instead.
 - `fog_escalation_kpa` kPa Δ, [0.1-0.5], def 0.4 — VPD above `vpd_high_eff` to trigger fog inside VENTILATE; lower = more fog. Post-PR-A (2026-04-25), fog escalates at `vpd_high_eff + fog_escalation_kpa`, no longer at the safety ceiling. During VPD-high or near-edge `VENTILATE` stress, use 0.15-0.20 for hot/dry venting with healthy dew margin, 0.25-0.30 for mild dry stress, and 0.35-0.50 only when VPD-low overshoot, condensation risk, or resource limits are active; concurrent vent-fog is intended for hot-dry stress and firmware still enforces the RH/temp/time window.
 - `min_fog_on_s` s, [15-300], def 60 — min fog on-time per cycle; 60-90s is usually enough to see effect without flooding the house.
 - `min_fog_off_s` s, [15-300], def 60 — min gap between fog cycles; 30-45s is for persistent hot/dry stress, longer is for recovery, VPD-low, or dew-risk conditions.
-- `sw_fog_stress_window_extend_enabled` switch, def off — allows fog after the normal time window only during VPD-high stress when RH/temp gates and dew margin pass
-- `fog_stress_window_latest_hour` local hour, [17-22], def 19 — latest hour for fog stress extension
-- `fog_stress_min_dew_margin_f` °F, [5-15], def 10 — minimum temp-dewpoint margin for fog stress extension
 
 **Economiser (outdoor-air coupling):**
 - `enthalpy_open` kJ/kg Δ, [-5-0], def -2 — vent opens when outdoor enthalpy better by this much

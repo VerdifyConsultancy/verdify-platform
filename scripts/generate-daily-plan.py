@@ -431,8 +431,7 @@ CORE_PARAMS = [
     "sw_cool_all_fans_at_high_enabled",
     "sw_direct_wet_stress_override_enabled",
     "direct_wet_stress_latest_hour",
-    "sw_fog_stress_window_extend_enabled",
-    "fog_stress_window_latest_hour",
+    # fog_stress_* removed (BC-11/ADR0003 §6.7): retired dead registry rows.
     "mister_engage_kpa",
     "mister_all_kpa",
     "mister_pulse_on_s",
@@ -451,8 +450,7 @@ TACTICAL_TUNABLE_PARAMS = [
     "sw_cool_all_fans_at_high_enabled",
     "sw_direct_wet_stress_override_enabled",
     "direct_wet_stress_latest_hour",
-    "sw_fog_stress_window_extend_enabled",
-    "fog_stress_window_latest_hour",
+    # fog_stress_* removed (BC-11/ADR0003 §6.7): retired dead registry rows.
     "mister_engage_kpa",
     "mister_all_kpa",
     "mister_pulse_on_s",
