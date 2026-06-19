@@ -1276,7 +1276,7 @@
             "thresholdsStyle": {
               "mode": "off"
             },
-            "axisSoftMax": 104,
+            "axisSoftMax": 112,
             "axisSoftMin": 44
           },
           "decimals": 1,
@@ -1292,7 +1292,7 @@
           },
           "unit": "fahrenheit",
           "min": null,
-          "max": null
+          "max": 112
         },
         "overrides": [
           {
@@ -1940,92 +1940,6 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Misters Base"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#E040FB"
-                }
-              },
-              {
-                "id": "custom.lineWidth",
-                "value": 0
-              },
-              {
-                "id": "custom.fillOpacity",
-                "value": 0
-              },
-              {
-                "id": "custom.lineInterpolation",
-                "value": "stepAfter"
-              },
-              {
-                "id": "custom.showPoints",
-                "value": "never"
-              },
-              {
-                "id": "custom.hideFrom",
-                "value": {
-                  "legend": true,
-                  "tooltip": true,
-                  "viz": false
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Misters"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#E040FB"
-                }
-              },
-              {
-                "id": "custom.lineWidth",
-                "value": 0
-              },
-              {
-                "id": "custom.fillBelowTo",
-                "value": "Misters Base"
-              },
-              {
-                "id": "custom.fillOpacity",
-                "value": 80
-              },
-              {
-                "id": "custom.lineInterpolation",
-                "value": "stepAfter"
-              },
-              {
-                "id": "custom.showPoints",
-                "value": "never"
-              },
-              {
-                "id": "custom.spanNulls",
-                "value": false
-              },
-              {
-                "id": "custom.hideFrom",
-                "value": {
-                  "legend": false,
-                  "tooltip": true,
-                  "viz": false
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
               "options": "Heat 1 (Electric) Base"
             },
             "properties": [
@@ -2168,6 +2082,276 @@
               {
                 "id": "custom.fillBelowTo",
                 "value": "Heat 2 (Gas) Base"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 80
+              },
+              {
+                "id": "custom.lineInterpolation",
+                "value": "stepAfter"
+              },
+              {
+                "id": "custom.showPoints",
+                "value": "never"
+              },
+              {
+                "id": "custom.spanNulls",
+                "value": false
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mister South Base"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#BA68C8"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.lineInterpolation",
+                "value": "stepAfter"
+              },
+              {
+                "id": "custom.showPoints",
+                "value": "never"
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              },
+              {
+                "id": "custom.spanNulls",
+                "value": false
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mister South"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#BA68C8"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "Mister South Base"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 80
+              },
+              {
+                "id": "custom.lineInterpolation",
+                "value": "stepAfter"
+              },
+              {
+                "id": "custom.showPoints",
+                "value": "never"
+              },
+              {
+                "id": "custom.spanNulls",
+                "value": false
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mister West Base"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#D500F9"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.lineInterpolation",
+                "value": "stepAfter"
+              },
+              {
+                "id": "custom.showPoints",
+                "value": "never"
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              },
+              {
+                "id": "custom.spanNulls",
+                "value": false
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mister West"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#D500F9"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "Mister West Base"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 80
+              },
+              {
+                "id": "custom.lineInterpolation",
+                "value": "stepAfter"
+              },
+              {
+                "id": "custom.showPoints",
+                "value": "never"
+              },
+              {
+                "id": "custom.spanNulls",
+                "value": false
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mister Center Base"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#7B1FA2"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.lineInterpolation",
+                "value": "stepAfter"
+              },
+              {
+                "id": "custom.showPoints",
+                "value": "never"
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              },
+              {
+                "id": "custom.spanNulls",
+                "value": false
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mister Center"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#7B1FA2"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "Mister Center Base"
               },
               {
                 "id": "custom.fillOpacity",
@@ -2489,7 +2673,63 @@
             "limit": 50
           },
           "refId": "I",
-          "rawSql": "WITH ev AS (SELECT ts, equipment, state FROM equipment_state WHERE greenhouse_id='vallery' AND equipment IN ('mister_center', 'mister_south', 'mister_west') AND $__timeFilter(ts)), pts AS (SELECT DISTINCT ts FROM ev), merged AS (SELECT p.ts AS ts, bool_or(COALESCE(l.state,false)) AS on FROM pts p CROSS JOIN (VALUES ('mister_center'), ('mister_south'), ('mister_west')) k(key) LEFT JOIN LATERAL (SELECT e.state FROM ev e WHERE e.equipment=k.key AND e.ts<=p.ts ORDER BY e.ts DESC LIMIT 1) l ON true GROUP BY p.ts) SELECT $__time(m.ts), CASE WHEN m.on THEN 104.2::float8 ELSE 101.8::float8 END AS \"Misters\", 101.8::float8 AS \"Misters Base\" FROM merged m ORDER BY m.ts"
+          "rawSql": "SELECT $__time(ts), CASE WHEN state THEN 104.2::float8 ELSE 101.8::float8 END AS \"Mister South\", 101.8::float8 AS \"Mister South Base\" FROM equipment_state WHERE greenhouse_id='vallery' AND equipment='mister_south' AND $__timeFilter(ts) ORDER BY ts"
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "verdify-tsdb"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
+          "refId": "N",
+          "rawSql": "SELECT $__time(ts), CASE WHEN state THEN 107.0::float8 ELSE 104.6::float8 END AS \"Mister West\", 104.6::float8 AS \"Mister West Base\" FROM equipment_state WHERE greenhouse_id='vallery' AND equipment='mister_west' AND $__timeFilter(ts) ORDER BY ts"
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "verdify-tsdb"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
+          "refId": "O",
+          "rawSql": "SELECT $__time(ts), CASE WHEN state THEN 109.8::float8 ELSE 107.4::float8 END AS \"Mister Center\", 107.4::float8 AS \"Mister Center Base\" FROM equipment_state WHERE greenhouse_id='vallery' AND equipment='mister_center' AND $__timeFilter(ts) ORDER BY ts"
         },
         {
           "datasource": {
@@ -2589,7 +2829,7 @@
             "thresholdsStyle": {
               "mode": "off"
             },
-            "axisSoftMax": 4.2,
+            "axisSoftMax": 5.05,
             "axisSoftMin": 0.0
           },
           "decimals": 2,
@@ -2605,7 +2845,7 @@
           },
           "unit": "pressurekpa",
           "min": -1.0,
-          "max": 4.6
+          "max": 5.05
         },
         "overrides": [
           {
@@ -2721,7 +2961,7 @@
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "#AB47BC",
+                  "fixedColor": "#73BF69",
                   "mode": "fixed"
                 }
               },
@@ -2965,92 +3205,6 @@
               {
                 "id": "custom.fillBelowTo",
                 "value": "Fog Base"
-              },
-              {
-                "id": "custom.fillOpacity",
-                "value": 80
-              },
-              {
-                "id": "custom.lineInterpolation",
-                "value": "stepAfter"
-              },
-              {
-                "id": "custom.showPoints",
-                "value": "never"
-              },
-              {
-                "id": "custom.spanNulls",
-                "value": false
-              },
-              {
-                "id": "custom.hideFrom",
-                "value": {
-                  "legend": false,
-                  "tooltip": true,
-                  "viz": false
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Misters Base"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#E040FB"
-                }
-              },
-              {
-                "id": "custom.lineWidth",
-                "value": 0
-              },
-              {
-                "id": "custom.fillOpacity",
-                "value": 0
-              },
-              {
-                "id": "custom.lineInterpolation",
-                "value": "stepAfter"
-              },
-              {
-                "id": "custom.showPoints",
-                "value": "never"
-              },
-              {
-                "id": "custom.hideFrom",
-                "value": {
-                  "legend": true,
-                  "tooltip": true,
-                  "viz": false
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "Misters"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "mode": "fixed",
-                  "fixedColor": "#E040FB"
-                }
-              },
-              {
-                "id": "custom.lineWidth",
-                "value": 0
-              },
-              {
-                "id": "custom.fillBelowTo",
-                "value": "Misters Base"
               },
               {
                 "id": "custom.fillOpacity",
@@ -3507,6 +3661,276 @@
                 }
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mister South Base"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#BA68C8"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.lineInterpolation",
+                "value": "stepAfter"
+              },
+              {
+                "id": "custom.showPoints",
+                "value": "never"
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              },
+              {
+                "id": "custom.spanNulls",
+                "value": false
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mister South"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#BA68C8"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "Mister South Base"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 80
+              },
+              {
+                "id": "custom.lineInterpolation",
+                "value": "stepAfter"
+              },
+              {
+                "id": "custom.showPoints",
+                "value": "never"
+              },
+              {
+                "id": "custom.spanNulls",
+                "value": false
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mister West Base"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#D500F9"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.lineInterpolation",
+                "value": "stepAfter"
+              },
+              {
+                "id": "custom.showPoints",
+                "value": "never"
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              },
+              {
+                "id": "custom.spanNulls",
+                "value": false
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mister West"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#D500F9"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "Mister West Base"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 80
+              },
+              {
+                "id": "custom.lineInterpolation",
+                "value": "stepAfter"
+              },
+              {
+                "id": "custom.showPoints",
+                "value": "never"
+              },
+              {
+                "id": "custom.spanNulls",
+                "value": false
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mister Center Base"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#7B1FA2"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.lineInterpolation",
+                "value": "stepAfter"
+              },
+              {
+                "id": "custom.showPoints",
+                "value": "never"
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": true,
+                  "tooltip": true,
+                  "viz": false
+                }
+              },
+              {
+                "id": "custom.spanNulls",
+                "value": false
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Mister Center"
+            },
+            "properties": [
+              {
+                "id": "color",
+                "value": {
+                  "mode": "fixed",
+                  "fixedColor": "#7B1FA2"
+                }
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 0
+              },
+              {
+                "id": "custom.fillBelowTo",
+                "value": "Mister Center Base"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 80
+              },
+              {
+                "id": "custom.lineInterpolation",
+                "value": "stepAfter"
+              },
+              {
+                "id": "custom.showPoints",
+                "value": "never"
+              },
+              {
+                "id": "custom.spanNulls",
+                "value": false
+              },
+              {
+                "id": "custom.hideFrom",
+                "value": {
+                  "legend": false,
+                  "tooltip": true,
+                  "viz": false
+                }
+              }
+            ]
           }
         ]
       },
@@ -3712,7 +4136,63 @@
             "limit": 50
           },
           "refId": "F",
-          "rawSql": "WITH ev AS (SELECT ts, equipment, state FROM equipment_state WHERE greenhouse_id='vallery' AND equipment IN ('mister_center', 'mister_south', 'mister_west') AND $__timeFilter(ts)), pts AS (SELECT DISTINCT ts FROM ev), merged AS (SELECT p.ts AS ts, bool_or(COALESCE(l.state,false)) AS on FROM pts p CROSS JOIN (VALUES ('mister_center'), ('mister_south'), ('mister_west')) k(key) LEFT JOIN LATERAL (SELECT e.state FROM ev e WHERE e.equipment=k.key AND e.ts<=p.ts ORDER BY e.ts DESC LIMIT 1) l ON true GROUP BY p.ts) SELECT $__time(m.ts), CASE WHEN m.on THEN 4.55::float8 ELSE 4.39::float8 END AS \"Misters\", 4.39::float8 AS \"Misters Base\" FROM merged m ORDER BY m.ts"
+          "rawSql": "SELECT $__time(ts), CASE WHEN state THEN 4.56::float8 ELSE 4.40::float8 END AS \"Mister South\", 4.40::float8 AS \"Mister South Base\" FROM equipment_state WHERE greenhouse_id='vallery' AND equipment='mister_south' AND $__timeFilter(ts) ORDER BY ts"
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "verdify-tsdb"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
+          "refId": "N",
+          "rawSql": "SELECT $__time(ts), CASE WHEN state THEN 4.76::float8 ELSE 4.60::float8 END AS \"Mister West\", 4.60::float8 AS \"Mister West Base\" FROM equipment_state WHERE greenhouse_id='vallery' AND equipment='mister_west' AND $__timeFilter(ts) ORDER BY ts"
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "verdify-tsdb"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "sql": {
+            "columns": [
+              {
+                "parameters": [],
+                "type": "function"
+              }
+            ],
+            "groupBy": [
+              {
+                "property": {
+                  "type": "string"
+                },
+                "type": "groupBy"
+              }
+            ],
+            "limit": 50
+          },
+          "refId": "O",
+          "rawSql": "SELECT $__time(ts), CASE WHEN state THEN 4.96::float8 ELSE 4.80::float8 END AS \"Mister Center\", 4.80::float8 AS \"Mister Center Base\" FROM equipment_state WHERE greenhouse_id='vallery' AND equipment='mister_center' AND $__timeFilter(ts) ORDER BY ts"
         },
         {
           "datasource": {
