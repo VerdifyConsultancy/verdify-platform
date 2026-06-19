@@ -4,8 +4,7 @@ kind: Component
 # Kustomize COMPONENT: OUR OWN Verdify Grafana (graphs.verdify.ai, #498). The
 # residual, independent observability tier reading the IN-CLUSTER prod
 # TimescaleDB (verdify-db:5432). DESIGNED-FOR overlays/prod ONLY (graphs is a
-# prod host) — NOT a base resource, so it can never render into overlays/staging
-# (the only overlay the live verdify-local-staging ArgoCD app syncs).
+# prod host) — NOT a base resource, so each overlay must opt in explicitly.
 #
 # Resources:
 #   - grafana.yaml            : Deployment (stateless, emptyDir) + Service +

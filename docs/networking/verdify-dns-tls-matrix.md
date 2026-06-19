@@ -1,5 +1,10 @@
 # Verdify DNS / TLS / firewall matrix — Iris → Nexus contract
 
+> **Obsolete under the 2026-06-19 single-environment model.** This matrix was
+> derived from retired dev/staging overlays and should not be used as the current
+> networking source of truth. Current live routing should be verified from
+> `deploy/k8s/overlays/prod`, `deploy/k8s/overlays/prod-dark`, and the cluster.
+
 > The single source of truth Nexus implements against for Verdify edge DNS,
 > certificates, and cross-zone flow. Derived strictly from the live
 > `IngressRoute` manifests under `deploy/k8s/overlays/{dev,staging,prod}/` and

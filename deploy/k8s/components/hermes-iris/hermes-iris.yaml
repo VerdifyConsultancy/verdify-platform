@@ -1,12 +1,11 @@
 # Verdify hermes-iris — the sole planner gateway (#119).
 # Ported from docker-compose.yml:357 (the `hermes` profile service).
 #
-# WHY A KUSTOMIZE COMPONENT (not a base resource): #5 hard rule — adding this to
-# deploy/k8s/base would render it into overlays/staging, which the live
-# verdify-local-staging ArgoCD app syncs; we must not add a new workload to
-# staging. Referenced ONLY by overlays/prod (and optionally dev). hermes is NOT a
-# device writer (it reaches the MCP tool surface in-cluster), but its run state +
-# OpenAI key make it a prod-anchored gateway; prod is its canonical home.
+# WHY A KUSTOMIZE COMPONENT (not a base resource): components are opt-in so
+# prod/prod-dark control exactly which workloads render. Referenced by prod
+# overlays only. hermes is NOT a device writer (it reaches the MCP tool surface
+# in-cluster), but its run state + OpenAI key make it a prod-anchored gateway;
+# prod is its canonical home.
 #
 # IMAGE DIGEST PRESERVED (NOT transformer-rewritten): the image is the upstream
 # nousresearch/hermes-agent pinned to the EXACT @sha256 from compose

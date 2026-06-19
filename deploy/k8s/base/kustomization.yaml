@@ -2,11 +2,11 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 # Verdify APP base. One instance = one overlay of this base
-# (overlays/staging, overlays/prod).
+# (currently overlays/prod and overlays/prod-dark).
 #
 # NAMESPACE: the base intentionally does NOT carry a Namespace object or a
-# `namespace:` directive. Each overlay owns its namespace (verdify-staging /
-# verdify-prod) so a single base feeds both instances without a hardcoded name.
+# `namespace:` directive. Each overlay owns its namespace (verdify-prod today)
+# so a single base feeds each instance without a hardcoded name.
 # The namespace string is PINNED per overlay and MUST be byte-identical to the
 # ArgoCD Application destination.namespace and every sealed-secret target.
 #
@@ -42,8 +42,7 @@ resources:
 # ghcr.io/verdifyconsultancy/verdify-{api,mcp,ingestor,migrate} (NEVER
 # jvallery/*). The base leaves these UNPINNED (image name only, no tag); the
 # overlays' `images:` transformer pins each to an immutable @sha256 digest.
-# A later stage writes the real digests into overlays/staging (in-repo digest
-# write-back; no cross-repo PR, no ArgoCD Image Updater). No mutable
+# prod-promote updates overlays/prod by reviewed digest-only PR. No mutable
 # :latest/:staging tag is ever rendered.
 images:
   - name: ghcr.io/verdifyconsultancy/verdify-api

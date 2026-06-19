@@ -1,5 +1,9 @@
 # Verdify Secret Inventory + SOPS/age Sealing Plan (k3s cutover prep)
 
+> **Obsolete under the 2026-06-19 single-environment model.** This prep plan
+> targets the retired staging namespace and old secret-delivery flow. Do not use
+> its `verdify-staging` namespace instructions for current prod operations.
+
 **Status:** PREP / DESIGN ONLY. Nothing in this doc has been sealed or applied.
 **Author:** firmware agent, 2026-05-30. Branch `firmware/cicd-golden-path` @ `f350bcd` (PR #55).
 **Scope:** the complete Verdify secret inventory the k3s stack needs, cross-checked against the

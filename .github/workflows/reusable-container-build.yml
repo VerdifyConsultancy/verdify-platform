@@ -19,7 +19,9 @@ on:
         description: >-
           The immutable repo@sha256:<hex> digest of the published image. Empty
           when the build did not publish (e.g. pull_request validation builds).
-          Consumed by the in-repo overlays/staging digest write-back.
+          Consumed by callers that need to report or promote immutable GHCR
+          digests. Verdify's prod promotion flow resolves published
+          `:branch-main` digests directly from GHCR.
         value: ${{ jobs.publish.outputs.image_digest }}
     inputs:
       context:
@@ -358,8 +360,7 @@ jobs:
       # push. This is the pre-push proof the issue's last open AC asks for: the
       # shared-contract module must import inside the actual runtime image (catches
       # a missing COPY, a broken sys.path, or an unsatisfied dep) so a broken image
-      # never reaches GHCR — and therefore never gets digest-pinned into
-      # overlays/staging. Skipped (no-op) when smoke-import is empty, e.g. for the
+      # never reaches GHCR. Skipped (no-op) when smoke-import is empty, e.g. for the
       # planner image (carries its own contract mirror, not verdify_schemas) and
       # the migrate image (no Python package). Runs against the primary tag, which
       # is one of the local tags built above.

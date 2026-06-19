@@ -5,13 +5,13 @@
 # WHAT THIS IS
 #   A READ-ONLY, idempotent post-deploy verifier for the k3s Verdify app
 #   instance. Run it AFTER ArgoCD reports the app green, to assert that what is
-#   actually running matches what we deployed and that the staging device-write
-#   interlocks are physically holding. It NEVER mutates the cluster, NEVER
+#   actually running matches what we deployed and that the prod service surfaces
+#   are healthy. It NEVER mutates the cluster, NEVER
 #   touches the live VM / ESP32 / docker-compose, and NEVER scales anything.
 #
 #   Two modes:
 #     smoke   (default)  — full post-green smoke of an instance (default ns
-#                          verdify-staging). Asserts:
+#                          verdify-prod). Asserts:
 #                            1. api /health/detailed is reachable and the baked
 #                               VERDIFY_GIT_SHA matches the SHA derived from the
 #                               deployed api image digest/tag.
@@ -20,11 +20,8 @@
 #                               read-only tool-list round-trips.
 #                            3. the database is reachable (api reports
 #                               checks.db_reachable=true).
-#                            4. STAGING ONLY: ingestor Deployment replicas == 0.
-#                            5. STAGING ONLY: ZERO established TCP connections
-#                               from any verdify-staging pod to the greenhouse
-#                               device VLAN 192.168.10.0/24:6053 (no second
-#                               writer can reach the live ESP32).
+#                            4. In prod, use device-monitor for the separate
+#                               single-writer socket invariant.
 #
 #     device-monitor      — prod exactly-one-writer monitor STUB. Counts the
 #                          number of distinct pods in the target namespace
@@ -51,8 +48,7 @@
 #
 #   Environment / flags:
 #     KUBECONFIG            (required) path to the scoped kubeconfig.
-#     --namespace NS        target namespace (default: verdify-staging for
-#                           smoke, verdify-prod for device-monitor).
+#     --namespace NS        target namespace (default: verdify-prod).
 #     --mode MODE           same as the positional MODE arg.
 #     --api-port PORT       localhost port for the api port-forward (default 18080).
 #     --mcp-port PORT       localhost port for the mcp port-forward (default 18000).
@@ -95,7 +91,7 @@ while [ $# -gt 0 ]; do
 done
 
 if [ -z "${NAMESPACE}" ]; then
-  if [ "${MODE}" = "device-monitor" ]; then NAMESPACE="verdify-prod"; else NAMESPACE="verdify-staging"; fi
+  NAMESPACE="verdify-prod"
 fi
 
 if [ -z "${KUBECONFIG:-}" ]; then
@@ -260,80 +256,10 @@ run_smoke() {
   fi
   echo ""
 
-  # 4 + 5. STAGING-ONLY device-safety interlocks.
-  if [ "${NAMESPACE}" = "verdify-staging" ]; then
-    echo "[4] ingestor replicas == 0 (staging device-write pin)"
-    local repl
-    repl="$("${KC[@]}" get deploy verdify-ingestor \
-      -o jsonpath='{.spec.replicas}' 2>/dev/null || true)"
-    if [ "${repl}" = "0" ]; then
-      pass "ingestor: spec.replicas == 0 (single-writer pin holds)"
-    else
-      fail "ingestor: spec.replicas == '${repl:-<none>}' (MUST be 0 in staging)"
-    fi
-
-    echo "[5] ZERO device-VLAN writes from staging pods (${DEVICE_VLAN_CIDR}:${DEVICE_PORT})"
-    check_no_device_connections
-  else
-    info "namespace is not verdify-staging — skipping staging-only interlock checks [4],[5]"
-  fi
+  info "smoke mode covers service health only; run device-monitor for the prod single-writer socket invariant"
   echo ""
 
   print_summary
-}
-
-# Inspect every running pod in the namespace and assert NONE holds an
-# established TCP connection into the device VLAN. Read-only: `ss`/`netstat`
-# only LIST the pod's own sockets; no connection is opened.
-check_no_device_connections() {
-  local pods pod offenders=0 tool_found=0
-  pods="$("${KC[@]}" get pods --field-selector=status.phase=Running \
-    -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null || true)"
-  if [ -z "${pods}" ]; then
-    info "no Running pods found in ${NAMESPACE} (vacuously zero device writes)"
-    pass "device-egress: no Running pods => zero device-VLAN connections"
-    return
-  fi
-  while IFS= read -r pod; do
-    [ -z "${pod}" ] && continue
-    # Try ss first, then netstat; either lists sockets read-only. If neither is
-    # present in the container, we cannot inspect from inside — report as info,
-    # not a false pass.
-    local out rc
-    out="$("${KC[@]}" exec "${pod}" -- sh -c \
-      "command -v ss >/dev/null 2>&1 && ss -tnp 2>/dev/null || (command -v netstat >/dev/null 2>&1 && netstat -tnp 2>/dev/null) || echo __NO_SOCKET_TOOL__" \
-      2>/dev/null || true)"
-    rc=$?
-    if echo "${out}" | grep -q '__NO_SOCKET_TOOL__'; then
-      info "pod ${pod}: no ss/netstat in container — socket inspection unavailable from inside"
-      continue
-    fi
-    if [ ${rc} -ne 0 ] && [ -z "${out}" ]; then
-      info "pod ${pod}: exec for socket listing returned nothing (skipping)"
-      continue
-    fi
-    tool_found=1
-    # Match an established connection whose peer is in the device VLAN.
-    # Device IPs are 192.168.10.x; match the /24 prefix + the :6053 port too.
-    local hits
-    hits="$(echo "${out}" \
-      | grep -E 'ESTAB|ESTABLISHED' \
-      | grep -E '192\.168\.10\.[0-9]+:('"${DEVICE_PORT}"'|[0-9]+)' || true)"
-    if [ -n "${hits}" ]; then
-      offenders=$((offenders+1))
-      fail "device-egress: pod ${pod} has ESTABLISHED connection(s) to the device VLAN:"
-      echo "${hits}" | sed 's/^/        /'
-    fi
-  done <<< "${pods}"
-
-  if [ "${tool_found}" -eq 0 ]; then
-    # No pod could be inspected from inside. The NetworkPolicy + replicas:0 are
-    # the durable guarantees; flag that the live socket cross-check was a no-op.
-    info "no pod exposed ss/netstat — relied on manifest interlocks (NetPol + replicas:0); live socket cross-check skipped"
-    pass "device-egress: no in-pod socket evidence of device-VLAN writes (manifest interlocks authoritative)"
-  elif [ "${offenders}" -eq 0 ]; then
-    pass "device-egress: ZERO established connections from staging pods to ${DEVICE_VLAN_CIDR}"
-  fi
 }
 
 # ── Mode: device-monitor (prod exactly-one-writer STUB) ─────────────────────

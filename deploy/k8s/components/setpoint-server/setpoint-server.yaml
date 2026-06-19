@@ -1,12 +1,10 @@
 # Verdify setpoint-server — grow-light writer + setpoint diagnostics (#118).
 # Built from scripts/Dockerfile.setpoint-server (scripts/setpoint-server.py).
 #
-# WHY A KUSTOMIZE COMPONENT (not a base resource): #5 hard rule — adding this to
-# deploy/k8s/base would render it into overlays/staging, which the live
-# verdify-local-staging ArgoCD app syncs; we must not add a new workload to
-# staging. This component is referenced ONLY by overlays/prod. It is a
-# DEVICE-AFFECTING writer (toggles the live grow lights via HA), so unlike the
-# planner it is PROD-ONLY — never dev/stage. Same containment posture as the
+# WHY A KUSTOMIZE COMPONENT (not a base resource): components are opt-in so the
+# prod overlay controls exactly which workloads render. This component is
+# referenced ONLY by overlays/prod. It is a DEVICE-AFFECTING writer (toggles the
+# live grow lights via HA), so it is PROD-ONLY. Same containment posture as the
 # prod-only fan-out mqtt-broker.
 #
 # DEVICE SAFETY: the grow-light write reaches Home Assistant (192.168.30.107:8123)

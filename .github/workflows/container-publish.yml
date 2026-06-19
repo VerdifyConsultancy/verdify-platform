@@ -193,11 +193,10 @@ jobs:
             esac
             # setpoint-server image (#128) is built from scripts/setpoint-server.py
             # with scripts/Dockerfile.setpoint-server (repo-root context, COPYs
-            # verdify_schemas/). It is ARTIFACT-ONLY — published but never wired into
-            # bump-staging-digests or request-gitops-promotion (no staging overlay;
-            # prod is human-gated; the workload stays scaled-to-0/device-write-disabled).
-            # A verdify_schemas/ change does impact it (it COPYs the package), matching
-            # the api/mcp/ingestor closure.
+            # verdify_schemas/). It is published for prod but is never auto-promoted:
+            # setpoint-server is a device-affecting writer and stays hand-pinned in
+            # overlays/prod. A verdify_schemas/ change does impact it (it COPYs the
+            # package), matching the api/mcp/ingestor closure.
             case "$f" in
               scripts/setpoint-server.py|scripts/Dockerfile.setpoint-server|verdify_schemas/*) setpoint_impact=true ;;
             esac
@@ -205,12 +204,9 @@ jobs:
             # (the production pg_dump --schema-only snapshot) + migration 000 + the
             # inline migrate.sh. A db/-only change (schema.sql / migrations / the
             # migrate.sh inline script / Dockerfile.migrate) MUST rebuild it so the
-            # staging schema-build hook stays current — historically a db/-only
-            # change left image_publish=false (only api/mcp/ingestor/setpoint paths
-            # set it) so migrations never rebuilt the migrate image and its digest
-            # only ever published via manual workflow_dispatch (where the
-            # bump-staging-digests write-back is skipped, stranding staging on a
-            # phantom pin). This db/** path closes that gap. (#99)
+            # published prod promotion candidate stays current. Historically a
+            # db/-only change left image_publish=false, so migrations never rebuilt
+            # the migrate image. This db/** path closes that gap. (#99)
             case "$f" in
               db/*) migrate_impact=true ;;
             esac
@@ -386,13 +382,10 @@ jobs:
   planner-image:
     name: Build and publish planner image
     needs: image-impact
-    # ARTIFACT-ONLY (#102): build + publish the folded standalone planner image so
-    # planner_graph/ stops being an unbuilt blob. The planner is NOT pinned into
-    # overlays/staging and is NOT in the request-gitops-promotion dispatch — it is
-    # not a deployed k3s workload there. Publishing the artifact is not a deploy.
-    # The staging deploy-path images stay api/mcp/ingestor (+ migrate for the
-    # in-cluster schema build). The bump job DOES read this job's digest, but ONLY
-    # to repin the INERT dev overlay's placeholder planner pin (#127, no ArgoCD app).
+    # Build + publish the folded standalone planner image so planner_graph/ is a
+    # real prod promotion candidate. Publishing the artifact is not a deploy:
+    # prod-promote later opens a reviewed digest-only PR, and the prod ArgoCD app
+    # remains manual-sync.
     if: needs.image-impact.outputs.image_publish == 'true' && (needs.image-impact.outputs.planner_impact == 'true' || github.event_name == 'workflow_dispatch')
     permissions:
       contents: read
@@ -417,14 +410,10 @@ jobs:
     name: Build and publish migrate image
     needs: image-impact
     # verdify-migrate (db/Dockerfile.migrate) carries db/schema.sql + migration
-    # 000; it is tiny and rebuilt on any publish so the staging schema stays
-    # current. A db/-only change (schema.sql / migrations / the inline migrate.sh /
+    # 000. A db/-only change (schema.sql / migrations / the inline migrate.sh /
     # Dockerfile.migrate) now sets migrate_impact -> image_publish via the
     # image-impact db/** path (#99), so migrations rebuild + republish the migrate
-    # image on a real push (not only via workflow_dispatch, where the
-    # bump-staging-digests write-back is skipped and staging strands on a phantom
-    # pin). The `if:` stays image_publish-gated (rebuild on ANY publish keeps the
-    # staging schema current); migrate_impact guarantees a db/-only push reaches it.
+    # image on a real push.
     if: needs.image-impact.outputs.image_publish == 'true' || github.event_name == 'workflow_dispatch'
     permissions:
       contents: read
@@ -449,11 +438,9 @@ jobs:
     # ARTIFACT-ONLY (#128): build + publish ghcr.io/<owner>/verdify-setpoint-server
     # (scripts/Dockerfile.setpoint-server) so the containerized grow-light writer /
     # setpoint-diagnostics service is a reviewable, repo-linked artifact. It is
-    # DELIBERATELY NOT consumed by bump-staging-digests or request-gitops-promotion:
-    # it has NO staging overlay (it is a prod-only, device-affecting writer) and
-    # prod is human-gated. Publishing the artifact is NOT a deploy — the
-    # setpoint-server workload stays scaled-to-0 / device-write-disabled. Same
-    # posture as planner-image (#102). Mirrors the migrate-image job pattern.
+    # DELIBERATELY NOT consumed by prod-promote: it is a prod-only,
+    # device-affecting writer and must stay hand-pinned. Publishing the artifact
+    # is NOT a deploy; a reviewed prod overlay pin is still required.
     if: needs.image-impact.outputs.image_publish == 'true' && (needs.image-impact.outputs.setpoint_impact == 'true' || github.event_name == 'workflow_dispatch')
     permissions:
       contents: read

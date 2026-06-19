@@ -176,11 +176,8 @@ images:
   # `gh api orgs/VerdifyConsultancy/packages/container/verdify-planner/versions`
   # (the `branch-live-platform-main` build of planner_graph/). The planner image is
   # env-agnostic (it carries its own planner_graph package; per-env DB/secrets come
-  # from each overlay's verdify-config + sealed secret), so prod pins the SAME
-  # known-good digest dev already carries. prod is human-gated and is NOT
-  # auto-bumped by bump-staging-digests
-  # (that job only repins CI-built greenhouse service image pins),
-  # so this prod pin is a deliberate in-repo write-back, never CI-mutated.
+  # from each overlay's verdify-config + sealed secret). prod is human-gated and
+  # its digest is advanced only by a reviewed prod-promote PR.
   - name: ghcr.io/verdifyconsultancy/verdify-planner
     digest: sha256:ce1d8271e344b8e9cb3af2f8dde933116db56cc5159dbb8e0da710526bc20b0d
   # verdify-setpoint-server (#118): real GHCR digest of the grow-light writer +
@@ -188,9 +185,8 @@ images:
   # `branch-live-platform-main` build is published + repo-linked to
   # VerdifyConsultancy/verdify-platform and verified pullable 2026-06-04 (GHCR
   # manifest HEAD -> 200) — REPLACES the prior all-zeros placeholder pin.
-  # setpoint-server is a PROD-ONLY device-affecting Component (ABSENT from
-  # overlays/staging), so it is EXEMPT from the promote-diff-guard staging-equality
-  # check per the guard's derived prod-only exemption set. A rebuild advances it.
+  # setpoint-server is a PROD-ONLY device-affecting Component, so it is excluded
+  # from prod-promote and remains hand-pinned. A rebuild alone does not advance it.
   # hermes-agent is deliberately ABSENT from this transformer — its upstream
   # @sha256 is preserved inline in the component (NOT transformer-pinned).
   - name: ghcr.io/verdifyconsultancy/verdify-setpoint-server

@@ -4,8 +4,7 @@ kind: Component
 # Kustomize COMPONENT: the residual Umami analytics tier (#130 M6.2 / #88 Phase
 # 4) — umami app + its own umami-db Postgres StatefulSet. DESIGNED-FOR
 # overlays/prod ONLY (analytics.verdify.ai is a prod host) — NOT a base resource,
-# so it can never render into overlays/staging (the only overlay the live
-# verdify-local-staging ArgoCD app syncs).
+# so each overlay must opt in explicitly.
 #
 # NOT YET WIRED into overlays/prod: the prod-promote diff guard (#82) treats any
 # edit to overlays/prod as a digest-only promotion, so the overlay `components:`

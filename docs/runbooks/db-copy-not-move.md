@@ -1,5 +1,10 @@
 # Runbook: TimescaleDB copy-not-move (live VM → in-cluster verdify-db)
 
+> **Obsolete under the 2026-06-19 single-environment model.** This runbook
+> targets the retired staging cutover path and contains `verdify-staging`
+> commands. Do not execute it as an operational procedure. Use current prod DB
+> backup/restore and ArgoCD runbooks instead.
+
 **Status:** DESIGN / PREP. Execution is GATED — see the gate column on every step.
 **Track:** firmware-agent prep for the k3s cutover (handoff §3.6).
 **Authored:** 2026-05-30. Ground truth captured read-only from the live DB the same day.

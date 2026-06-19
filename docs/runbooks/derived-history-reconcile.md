@@ -1,5 +1,9 @@
 # Derived history reconcile
 
+> **Current environment note:** older examples in this document may reference the
+> retired `verdify-dev` namespace. Use current prod DB access patterns and keep
+> the script dry-run unless an explicit prod apply has been approved.
+
 Use `scripts/reconcile-derived-history.py` when schema or scoring logic has
 evolved and Verdify needs historical derived rows recalculated from canonical
 raw history.
@@ -28,25 +32,21 @@ Not recomputed:
 
 ## Safe Operator Flow
 
-Prefer dev for the first full-history pass. Dev is a nightly prod-restored copy,
-so this shows the likely blast radius without touching the live writer DB.
+Prefer a dump-restored disposable DB for the first full-history pass. The retired
+dev namespace no longer exists, so do not use old `verdify-dev` examples for
+current operations.
 
 ```bash
-# Terminal 1
-scripts/verdify-db.sh dev --tunnel
-
-# Terminal 2
-export PGPASSWORD="$(kubectl -n verdify-dev get secret verdify-app-secrets \
-  -o jsonpath='{.data.POSTGRES_PASSWORD}' | base64 -d)"
-DB_HOST=127.0.0.1 DB_PORT=5434 DB_NAME=verdify DB_USER=verdify \
+# Point these at a disposable copy restored from a current prod dump.
+DB_HOST=127.0.0.1 DB_PORT=5434 DB_NAME=verdify_copy DB_USER=verdify \
   .venv/bin/python scripts/reconcile-derived-history.py \
   --all-history --limit-days=14 --log-level=INFO
 ```
 
-If the sample looks sane, run a full dev dry-run:
+If the sample looks sane, run a full disposable-copy dry-run:
 
 ```bash
-DB_HOST=127.0.0.1 DB_PORT=5434 DB_NAME=verdify DB_USER=verdify \
+DB_HOST=127.0.0.1 DB_PORT=5434 DB_NAME=verdify_copy DB_USER=verdify \
   .venv/bin/python scripts/reconcile-derived-history.py \
   --all-history --log-level=INFO
 ```

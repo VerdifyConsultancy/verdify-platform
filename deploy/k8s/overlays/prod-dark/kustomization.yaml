@@ -60,8 +60,8 @@ resources:
 
 # READ/SERVE Components only. verdify-planner (#117), mqtt fan-out broker (#113),
 # hermes-iris (#119), verdify-lab (#124) — NONE is a device writer. They are
-# referenced as Components (NOT added to base) so they never render into
-# overlays/staging.
+# referenced as Components (NOT added to base) so each overlay must opt in
+# explicitly.
 #
 # DELIBERATELY EXCLUDED: ../../components/setpoint-server — it is the SECOND
 # device writer (grow-light + HA setpoint push), so it has NO place in the
@@ -75,7 +75,7 @@ components:
   # pg_dump -Fc CronJob + retention + allow-db-from-backup. pg_dump is SELECT-only
   # on the DB (NOT a second writer) and only writes the dumps PVC, so it is SAFE
   # in the device-dark shape and gives the M4 proof a fresh <26h dump before any
-  # restore. Wired identically into overlays/staging + overlays/prod.
+  # restore. Wired identically into prod-dark + prod.
   - ../../components/db-backup
 
 patches:

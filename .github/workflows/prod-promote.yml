@@ -68,7 +68,7 @@ concurrency:
 
 jobs:
   promote:
-    name: Compute dev->prod digest promotion and open PR
+    name: Compute published->prod digest promotion and open PR
     runs-on: ubuntu-latest
     permissions:
       contents: write

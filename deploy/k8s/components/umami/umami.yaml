@@ -10,11 +10,10 @@
 # umami DB -> pg_restore into this StatefulSet) is documented in
 # docs/runbooks/iris-state-preservation.md.
 #
-# WHY A KUSTOMIZE COMPONENT (not a base resource): #5 hard rule — anything added
-# to deploy/k8s/base renders into overlays/staging, which the live
-# verdify-local-staging ArgoCD app syncs; we must not add a new workload to
-# staging. DESIGNED-FOR overlays/prod ONLY (analytics.verdify.ai is a prod host).
-# NO device path — pure web-analytics tier.
+# WHY A KUSTOMIZE COMPONENT (not a base resource): components are opt-in so each
+# overlay controls exactly which workloads render. DESIGNED-FOR overlays/prod
+# ONLY (analytics.verdify.ai is a prod host). NO device path — pure
+# web-analytics tier.
 #
 # NOT YET WIRED into overlays/prod (the prod-promote diff guard, #82, treats a
 # prod-overlay edit as a digest-only promotion). The overlay `components:` entry +

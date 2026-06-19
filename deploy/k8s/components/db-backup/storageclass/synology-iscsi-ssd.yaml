@@ -1,23 +1,19 @@
 # Reusable in-repo definition of the volume1 'synology-iscsi-ssd' StorageClass
 # (M3.3 prod DB substrate; refs #84/#28/#130).
 #
-# WHY THIS EXISTS: every overlay (overlays/{dev,staging,prod}) retargets the
-# verdify-db volumeClaimTemplate onto storageClassName: synology-iscsi-ssd, but
-# the class itself was never defined in this repo — it was hand-applied by
-# laptop-root at the platform layer, so the manifests reference a name with no
-# in-repo source of truth. This file makes that class a reusable, reviewable
-# artifact ROOT can apply (or that an env can opt into via the db-backup
-# component) instead of a side-channel kubectl apply.
+# WHY THIS EXISTS: the prod overlay retargets the verdify-db
+# volumeClaimTemplate onto storageClassName: synology-iscsi-ssd, but the class
+# itself was never defined in this repo — it was hand-applied by laptop-root at
+# the platform layer, so the manifests reference a name with no in-repo source
+# of truth. This file makes that class a reusable, reviewable artifact ROOT can
+# apply deliberately instead of a side-channel kubectl apply.
 #
 # NOT AUTO-ENABLED: this component is referenced by NO overlay. Adding it to a
-# StorageClass tree is cluster-scoped + Root-gated — the live ArgoCD app syncs
-# only overlays/staging, and overlays/staging does NOT pull this component, so
-# merging it provisions nothing and cannot create a duplicate/conflicting class
-# on the live cluster. Root applies it (or an overlay opts in) deliberately.
+# StorageClass tree is cluster-scoped + Root-gated. Root applies it, or an
+# overlay opts in, deliberately.
 #
 # PROVISIONER: the Synology CSI driver (csi.san.synology.com), volume1 SSD pool,
-# matching the class dev/staging/prod already name and the staging migration
-# (commit 4024f4d) already proved against a real worker-bound PVC.
+# matching the class prod already names.
 #
 # reclaimPolicy: Retain is the whole point for a DB volume — when the bound PVC
 # is deleted (e.g. an immutable volumeClaimTemplate retarget forces a STS

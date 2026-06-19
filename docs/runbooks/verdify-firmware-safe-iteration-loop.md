@@ -1,5 +1,9 @@
 # Verdify Firmware / Band Safe-Iteration Loop
 
+> **Obsolete under the 2026-06-19 single-environment model.** This runbook
+> depends on the retired `verdify-dev` shadow environment. Keep it as historical
+> context only; do not use its dev/shadow commands for current firmware work.
+
 **Status:** Runbook (lane VerdifyConsultancy/verdify-platform#221). SHADOW-first, device-write=0.
 **Author:** laptop-root. **Date:** 2026-06-07.
 **Audience:** Jason + the `verdify-firmware` dev agent.

@@ -36,26 +36,24 @@ The Makefile auto-prefers a repo-local `.venv` (falls back to the legacy
 backup 2026-06-10; also sealed into k3s as
 `verdify-prod/verdify-firmware-ota`). `kubectl` uses the default context.
 
-## 1. Database access (prod + dev)
+## 1. Database access (prod only)
 
 ```bash
 scripts/verdify-db.sh prod -c "SELECT count(*) FROM climate;"   # one-shot
 scripts/verdify-db.sh prod                                      # interactive psql
-scripts/verdify-db.sh dev  -c "..."                             # the nightly prod copy
 scripts/verdify-db.sh prod --tunnel        # localhost:5433 for asyncpg/psycopg/DBeaver
-scripts/verdify-db.sh dev  --tunnel        # localhost:5434
 ```
 
-Creds: k8s Secret `verdify-app-secrets/POSTGRES_PASSWORD` per namespace (the
+Creds: k8s Secret `verdify-app-secrets/POSTGRES_PASSWORD` in `verdify-prod` (the
 script never prints it; `--tunnel` prints the kubectl one-liner to export
 `PGPASSWORD` yourself). kubectl exec/port-forward ride the API-server channel,
-so the in-cluster default-deny NetworkPolicies don't apply.
-**Prefer `dev` for heavy analysis** — it's a nightly restored copy of prod
-(see §4); prod shares its box with the live greenhouse write path.
+so the in-cluster default-deny NetworkPolicies don't apply. There is no dev DB;
+heavy analysis should use a dump/snapshot or an explicitly provisioned
+disposable copy, not the live prod writer database.
 
 Historical derived-data reconciliation lives in
 [`derived-history-reconcile.md`](./derived-history-reconcile.md). It dry-runs
-by default and should be run against dev first before any prod apply.
+by default; any prod apply requires an explicit operator gate.
 
 ## 2. CI/CD: push publishes, dispatch promotes to prod (single-env)
 
@@ -75,8 +73,8 @@ by default and should be run against dev first before any prod apply.
   `promote-diff-guard` (required check) re-asserts a **digests-only** change
   surface. Merge = git change only; then the gated sync below.
   - Known race: `verdify-migrate` rebuilds on every publish, so a push that
-    lands while a promote PR is open advances dev's migrate digest and fails
-    the guard. Re-run prod-promote after the pipeline settles.
+    lands while a promote PR is open can advance the published `:branch-main`
+    migrate digest. Re-run prod-promote after the pipeline settles.
 - **The gated prod sync (the ONLY step that touches the live writer):**
   ```bash
   kubectl patch application verdify-prod-dark -n argocd --type merge \
@@ -126,28 +124,26 @@ sign-off envs (see `scripts/firmware-deploy-preflight.sh`). Firmware policy:
 hot-staged direct-to-prod (there is no dev device; dev never connects to any
 device).
 
-## 4. Environments
+## 4. Environment
 
-| | prod | dev |
-|---|---|---|
-| Namespace | `verdify-prod` | `verdify-dev` |
-| ArgoCD app | `verdify-prod-dark` (manual-sync, gated) | `verdify-dev` (auto-sync) |
-| Public URLs | verdify.ai, www, lab, labs, graphs, api, mcp (.verdify.ai) | lab/api/www/graphs **.k3s.verdify.ai** (via the `*.verdify.ai` wildcard DNS + the `*.k3s.verdify.ai` tunnel rule) |
-| Database | live TimescaleDB (single writer: ingestor) | **nightly restored copy of prod** — CronJob `verdify-db-restore-from-prod` 03:47 UTC (after the 02:17 UTC prod pg_dump), full -Fc restore + freshness gate |
-| Device | THE writer (ingestor replicas:1 + allow-ingestor-device-egress; setpoint-server = 2nd writer via HA) | **never** — ingestor replicas:0 + deny-esp32-egress + device-write=0; dev plans are wiped nightly and never replicate to prod |
-| Grafana | graphs.verdify.ai | graphs.k3s.verdify.ai (same dashboards, dev datasource) |
+| Surface | Current value |
+|---|---|
+| Namespace | `verdify-prod` |
+| ArgoCD app | `verdify-prod-dark` (manual-sync, gated) |
+| Public URLs | verdify.ai, www, lab, labs, graphs, api, mcp (.verdify.ai) |
+| Database | live TimescaleDB (single writer: ingestor) |
+| Device | THE writer (ingestor replicas:1 + allow-ingestor-device-egress; setpoint-server = second HA writer) |
+| Grafana | graphs.verdify.ai |
 
-Edge path for both: Cloudflare tunnel (`cloudflared` ns `cloudflare`, config
-SoT `jvallery/agents platform/kubernetes/cloudflare/cloudflared-config.yaml`)
-→ apps-Traefik VIP `192.168.7.10` → (prod: tier-2 `verdify-traefik`; dev:
-tier-1 IngressRoutes).
+Edge path: Cloudflare tunnel (`cloudflared` ns `cloudflare`, config SoT
+`jvallery/agents platform/kubernetes/cloudflare/cloudflared-config.yaml`)
+→ apps-Traefik VIP `192.168.7.10` → tier-2 `verdify-traefik`.
 
 ## 5. Where things are
 
-- ArgoCD app CRs: `verdify-dev` + `verdify-local-staging`(retired) in
-  `jvallery/agents platform/gitops/applications/`; `verdify-prod-dark` is
-  hand-applied (mirror in `deploy/k8s/argocd/apps/`). AppProject `app-test`
-  (whitelists live in jvallery/agents `platform/gitops/projects/app-test.yaml`).
+- ArgoCD app CRs: `verdify-prod-dark` is mirrored in
+  `deploy/k8s/argocd/apps/`; retired `verdify-dev` / `verdify-local-staging`
+  records may still exist in historical agent-fleet-control state.
 - Dumps NFS: NAS `192.168.30.126:/volume2/verdify` subDir `db-dumps/prod`
   (prod PV `verdify-db-dumps-prod` RWX; dev RO PV
   `verdify-db-dumps-prod-ro-dev` — both platform-applied, not ArgoCD-managed).

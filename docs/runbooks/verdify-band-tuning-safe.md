@@ -1,5 +1,9 @@
 # How to Tune a Band Safely (VPD / Temperature / Orchid Time-of-Day)
 
+> **Obsolete under the 2026-06-19 single-environment model.** This runbook
+> references the retired dev DB. Do not follow its `verdify-dev` apply/test
+> commands against the current cluster.
+
 **Status:** Runbook (lane VerdifyConsultancy/verdify-platform#221). DB-driven; **no firmware flash**.
 **Author:** laptop-root. **Date:** 2026-06-07.
 
