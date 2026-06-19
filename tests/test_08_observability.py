@@ -17,9 +17,8 @@ from pathlib import Path
 import pytest
 from conftest import db_query
 
-sys.path.insert(0, "/srv/verdify/ingestor")
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT / "ingestor"))
 
 
 def _tasks_source() -> str:
@@ -135,7 +134,7 @@ class TestSchema:
 class TestDispatcherWiring:
     """Dispatcher code must contain the Tier 1 audit hooks."""
 
-    TASKS_PATH = "/srv/verdify/ingestor/tasks.py"
+    TASKS_PATH = REPO_ROOT / "ingestor" / "tasks.py"
 
     def _read(self) -> str:
         # #46: tasks.py is now the ingestor/tasks/ package — read it as a whole.
@@ -756,19 +755,18 @@ class TestFirmwareCheckTargets:
 class TestSprint18Wiring:
     """Sprint 18: deterministic dispatch — DI-1, PL-5, FW-2, FW-3, OBS-3."""
 
-    TASKS_PATH = "/srv/verdify/ingestor/tasks.py"
-    SENSORS_PATH = "/srv/verdify/firmware/greenhouse/sensors.yaml"
-    CONTROLS_PATH = "/srv/verdify/firmware/greenhouse/controls.yaml"
-    ENTITY_MAP_PATH = "/srv/verdify/ingestor/entity_map.py"
-    INGESTOR_PATH = "/srv/verdify/ingestor/ingestor.py"
+    TASKS_PATH = REPO_ROOT / "ingestor" / "tasks.py"
+    SENSORS_PATH = REPO_ROOT / "firmware" / "greenhouse" / "sensors.yaml"
+    CONTROLS_PATH = REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml"
+    ENTITY_MAP_PATH = REPO_ROOT / "ingestor" / "entity_map.py"
+    INGESTOR_PATH = REPO_ROOT / "ingestor" / "ingestor.py"
 
     @staticmethod
-    def _read(path: str) -> str:
+    def _read(path: Path) -> str:
         # #46: the tasks.py path now resolves to the ingestor/tasks/ package.
         if str(path).endswith("ingestor/tasks.py"):
             return _tasks_source()
-        with open(path) as f:
-            return f.read()
+        return path.read_text()
 
     # ── DI-1: proportional dead-bands ──
     def test_di1_proportional_dead_band_helper_defined(self):
@@ -869,17 +867,16 @@ class TestSprint18Wiring:
 class TestProbeStalenessWiring:
     """FW-10 (Sprint 17): active_probe_count column + ingestor routing."""
 
-    SENSORS_PATH = "/srv/verdify/firmware/greenhouse/sensors.yaml"
-    ENTITY_MAP_PATH = "/srv/verdify/ingestor/entity_map.py"
-    INGESTOR_PATH = "/srv/verdify/ingestor/ingestor.py"
+    SENSORS_PATH = REPO_ROOT / "firmware" / "greenhouse" / "sensors.yaml"
+    ENTITY_MAP_PATH = REPO_ROOT / "ingestor" / "entity_map.py"
+    INGESTOR_PATH = REPO_ROOT / "ingestor" / "ingestor.py"
 
     @staticmethod
-    def _read(path: str) -> str:
+    def _read(path: Path) -> str:
         # #46: the tasks.py path now resolves to the ingestor/tasks/ package.
         if str(path).endswith("ingestor/tasks.py"):
             return _tasks_source()
-        with open(path) as f:
-            return f.read()
+        return path.read_text()
 
     def test_migration_081_applied(self):
         from conftest import db_query
@@ -1061,7 +1058,7 @@ class TestSetpointConfirmation:
         import subprocess
 
         result2 = subprocess.run(
-            ["grep", "-c", "setpoint_confirmation", "/srv/verdify/ingestor/ingestor.py"],
+            ["grep", "-c", "setpoint_confirmation", str(REPO_ROOT / "ingestor" / "ingestor.py")],
             capture_output=True,
             text=True,
             check=False,

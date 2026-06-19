@@ -100,14 +100,15 @@ Migration `db/migrations/143-slack-ops.sql` adds:
 Local deterministic tests:
 
 ```bash
-/srv/greenhouse/.venv/bin/python -m pytest tests/test_slack_config.py tests/test_slack_ops.py verdify_schemas/tests/test_slack_ops.py
+make setup
+python3 -m pytest tests/test_slack_config.py tests/test_slack_ops.py verdify_schemas/tests/test_slack_ops.py
 ```
 
 Live smoke without posting:
 
 ```bash
-/srv/greenhouse/.venv/bin/python scripts/slack-ops.py status --json
-/srv/greenhouse/.venv/bin/python scripts/slack-ops.py "brief morning" --json
+python3 scripts/slack-ops.py status --json
+python3 scripts/slack-ops.py "brief morning" --json
 ```
 
 Live Slack post smoke requires the Iris bot token to be present at the configured token path. Use a clearly marked test message and record the Slack timestamp in `slack_notification_events`.

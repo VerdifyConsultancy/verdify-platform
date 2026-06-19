@@ -868,9 +868,10 @@ def test_lighting_automation_audit_static_passes():
     services or an ESP32 OTA.
     """
     import subprocess
+    import sys
 
     result = subprocess.run(
-        ["/srv/greenhouse/.venv/bin/python", "scripts/audit-lighting-automation.py", "--static-only"],
+        [sys.executable, "scripts/audit-lighting-automation.py", "--static-only"],
         capture_output=True,
         text=True,
         timeout=20,

@@ -221,10 +221,10 @@ It should support:
 Examples:
 
 ```bash
-/srv/greenhouse/.venv/bin/python scripts/backfill-planner-memory.py \
+python3 scripts/backfill-planner-memory.py \
   --mode outcomes --since 2026-03-01 --limit 25 --dry-run
 
-/srv/greenhouse/.venv/bin/python scripts/backfill-planner-memory.py \
+python3 scripts/backfill-planner-memory.py \
   --mode support-docs \
   --support-doc-file docs/planner/support_docs.example.json \
   --dry-run

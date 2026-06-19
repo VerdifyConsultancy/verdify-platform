@@ -10,10 +10,12 @@ import re
 import subprocess
 import sys
 from datetime import date
+from pathlib import Path
 
 import yaml
 
-sys.path.insert(0, "/mnt/iris/verdify")
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
 from verdify_schemas import LessonsVaultFrontmatter  # noqa: E402
 
 DB_CONTAINER = "verdify-timescaledb"

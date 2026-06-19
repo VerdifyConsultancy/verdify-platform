@@ -18,7 +18,8 @@ from pathlib import Path
 import asyncpg
 import yaml
 
-sys.path.insert(0, "/mnt/iris/verdify")
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
 from verdify_schemas import DailyVaultFrontmatter  # noqa: E402
 
 logging.basicConfig(

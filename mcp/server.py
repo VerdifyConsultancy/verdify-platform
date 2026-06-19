@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """
 Verdify MCP Server — Greenhouse control tools for Agent Iris.
 
@@ -714,9 +714,7 @@ async def set_tunable(
 @mcp.tool()
 async def plan_run(mode: str = "normal") -> str:
     """Trigger an ad-hoc MANUAL planning cycle through the same audited path as scheduled triggers."""
-    import sys
-
-    sys.path.insert(0, "/srv/verdify/ingestor")
+    sys.path.insert(0, str(REPO_ROOT / "ingestor"))
     try:
         from iris_planner import CONTEXT_GATHER_FAILED_SENTINEL, gather_context, prepare_delivery_result, send_to_iris
 

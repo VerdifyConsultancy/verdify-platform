@@ -32,8 +32,9 @@ from pathlib import Path
 
 import asyncpg
 
-sys.path.insert(0, "/mnt/iris/verdify")
-sys.path.insert(0, "/srv/verdify/ingestor")
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
+sys.path.insert(0, str(REPO_ROOT / "ingestor"))
 from pydantic import ValidationError  # noqa: E402
 
 from verdify_schemas import (  # noqa: E402

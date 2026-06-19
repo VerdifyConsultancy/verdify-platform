@@ -4,6 +4,7 @@ Test 07: Cron Jobs & Replan Flow — Scheduled tasks and deviation-triggered rep
 
 import os
 import subprocess
+from pathlib import Path
 
 import pytest
 from conftest import db_query
@@ -75,7 +76,8 @@ class TestPlannerConfig:
     def test_ai_config_loads(self):
         import sys
 
-        sys.path.insert(0, "/srv/verdify/ingestor")
+        repo_root = Path(__file__).resolve().parents[1]
+        sys.path.insert(0, str(repo_root / "ingestor"))
         from ai_config import ai
 
         assert ai.model_name("planner") == "gpt-5.5"

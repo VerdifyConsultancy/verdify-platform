@@ -24,7 +24,8 @@ from pathlib import Path
 
 import asyncpg
 
-sys.path.insert(0, "/mnt/iris/verdify")
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
 from verdify_schemas import PlanEvaluation  # noqa: E402
 
 
