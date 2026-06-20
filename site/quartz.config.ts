@@ -38,10 +38,7 @@ const config: QuartzConfig = {
           textHighlight: "#DCEDE799",
         },
         darkMode: {
-          // page background matched to Grafana's dark canvas (#111217) so the
-          // transparent-panel graph embeds blend seamlessly in dark mode
-          // (Grafana OSS bakes a solid page bg; true transparency isn't possible).
-          light: "#111217",
+          light: "#071512",
           lightgray: "#17352D",
           gray: "#90A79F",
           darkgray: "#D6E7E0",
