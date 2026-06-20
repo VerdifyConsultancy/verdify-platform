@@ -426,6 +426,12 @@ firmware-deploy: ## Compile + OTA deploy to ESP32 + post-deploy sensor-health sw
 	FW_VERSION="$$(date +%Y.%-m.%-d.%H%M).$$(git rev-parse --short HEAD)$$DIRTY"; \
 	echo "$$FW_VERSION" > firmware/artifacts/pending-fw-version.txt; \
 	echo "─── Deploying fw_version=$$FW_VERSION ───"; \
+	: "#301 — auto-source the OTA password from k3s when unset, and export it so the"; \
+	: "auto-rollback path (scripts/firmware-rollback.sh) inherits it. Runs only here,"; \
+	: "no parse-time kubectl. The ESPHome upload still reads ota_password from the"; \
+	: "reconstructed secrets.yaml (SECRETS_SRC); see docs/runbooks/laptop-operator.md."; \
+	: "$${OTA_PW:=$$(kubectl -n verdify-prod get secret verdify-firmware-ota -o jsonpath='{.data.ota_password}' 2>/dev/null | base64 -d)}"; \
+	export OTA_PW; \
 	$(FIRMWARE_ESPHOME) -s fw_version "$$FW_VERSION" compile && \
 	$(FIRMWARE_ESPHOME) -s fw_version "$$FW_VERSION" upload --device "$(ESP32_DEVICE)"
 	@echo ""
