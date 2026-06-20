@@ -214,4 +214,4 @@ images:
   # lab.verdify.ai. The k3s-suffixed GHCR package is linked to this repo so
   # GITHUB_TOKEN can publish immutable CI-built digests.
   - name: ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s
-    digest: sha256:460847d95ac4c6714e9a28be768fc971c3b6cb2dfcb1373eedbe3e9a6883f1f3
+    digest: sha256:2019c5145d545040228009609bb3f3312828145c678cc47bec1cacf7a96d3709
