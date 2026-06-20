@@ -1847,18 +1847,16 @@ COMMENT ON FUNCTION public.fn_house_vpd_control_band(target_ts timestamp with ti
 CREATE FUNCTION public.fn_lighting_circuit_policy(p_ts timestamp with time zone DEFAULT now(), p_greenhouse_id text DEFAULT 'vallery'::text) RETURNS TABLE(greenhouse_id text, ts timestamp with time zone, light_key text, equipment text, dli_target double precision, start_hour integer, cutoff_hour integer, lux_on_threshold double precision, lux_hysteresis double precision, lux_off_threshold double precision, min_on_s integer, min_off_s integer, auto_enabled boolean, source_chain text, controller_contract text)
     LANGUAGE sql STABLE
     AS $$
-WITH base AS (
-    SELECT * FROM fn_lighting_policy(p_ts, p_greenhouse_id)
-),
-recommendation AS (
+WITH recommendation AS (
     SELECT * FROM fn_lighting_lux_threshold_recommendation(p_ts, p_greenhouse_id)
 ),
 circuits AS (
+    -- light_key, equipment, crop_type, base_dli (mol), base_start_hour, base_cutoff_hour
     SELECT *
     FROM (VALUES
-        ('main'::text, 'grow_light_main'::text),
-        ('grow'::text, 'grow_light_grow'::text)
-    ) AS v(light_key, equipment)
+        ('main'::text, 'grow_light_main'::text, 'orchid'::text,   12.0::double precision, 6, 18),
+        ('grow'::text, 'grow_light_grow'::text, 'jalapeno'::text, 22.0::double precision, 6, 22)
+    ) AS v(light_key, equipment, crop_type, base_dli, base_start, base_cutoff)
 ),
 latest_changes AS (
     SELECT DISTINCT ON (parameter)
@@ -1873,9 +1871,9 @@ resolved AS (
     SELECT
         c.light_key,
         c.equipment,
-        COALESCE(dli.value, legacy_dli.value, b.target_dli)::double precision AS dli_target,
-        COALESCE(start_h.value, legacy_start.value, b.sunrise_hour)::integer AS start_hour,
-        COALESCE(cutoff_h.value, legacy_cutoff.value, b.cutoff_hour)::integer AS cutoff_hour,
+        COALESCE(dli.value, legacy_dli.value, c.base_dli)::double precision AS dli_target,
+        COALESCE(start_h.value, legacy_start.value, c.base_start)::integer AS start_hour,
+        COALESCE(cutoff_h.value, legacy_cutoff.value, c.base_cutoff)::integer AS cutoff_hour,
         COALESCE(
             lux_on.value,
             legacy_lux.value,
@@ -1894,7 +1892,6 @@ resolved AS (
         COALESCE(min_off.value, 60.0)::integer AS min_off_s,
         COALESCE(auto_mode.value, legacy_auto.value, 1.0) >= 0.5 AS auto_enabled
     FROM circuits c
-    CROSS JOIN base b
     CROSS JOIN recommendation r
     LEFT JOIN latest_changes legacy_dli ON legacy_dli.parameter = 'gl_dli_target'
     LEFT JOIN latest_changes legacy_start ON legacy_start.parameter = 'gl_sunrise_hour'
@@ -1926,9 +1923,9 @@ SELECT
     greatest(0, least(3600, r.min_on_s)) AS min_on_s,
     greatest(0, least(3600, r.min_off_s)) AS min_off_s,
     r.auto_enabled,
-    'active crops.target_dli + Tempest lux history -> fn_lighting_circuit_policy() -> planner/default setpoints -> dispatcher/API -> ESP32 per-circuit lighting state machines -> Lutron switches -> equipment_state'::text
+    'per-circuit crop base (main=orchid 12h, grow=jalapeno 16h) + gl_<key>_* overrides + Tempest lux history -> fn_lighting_circuit_policy() -> planner/default setpoints -> dispatcher/API -> ESP32 per-circuit lighting state machines -> Lutron switches -> equipment_state'::text
         AS source_chain,
-    'Each circuit turns on independently inside its window when DLI is below its goal and Tempest outdoor lux is below its ON threshold; each circuit holds until lux reaches ON+hysteresis or the window/DLI/auto gate exits.'::text
+    'Each circuit turns on independently inside its own crop photoperiod window when DLI is below its goal and Tempest outdoor lux is below its ON threshold; each circuit holds until lux reaches ON+hysteresis or the window/DLI/auto gate exits.'::text
         AS controller_contract
 FROM resolved r;
 $$;

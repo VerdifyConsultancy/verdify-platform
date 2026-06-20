@@ -101,11 +101,19 @@ def _ai_moisture_stress_policy_supported() -> bool:
 
 
 def _activity_defaults_from_lighting(lighting_row, lighting_circuit_rows) -> dict[str, float]:
-    """Derive biological activity from the same main-light runtime policy."""
-    main_lighting = next((row for row in lighting_circuit_rows or [] if row["light_key"] == "main"), None)
-    if main_lighting:
-        activity_start_hour = int(main_lighting["start_hour"])
-        activity_duration_min = int(main_lighting["target_light_minutes"])
+    """Derive the biological-activity window (which gates ALL direct-wet irrigation)
+    from the LONGEST per-circuit lighting day, NOT the MAIN circuit. With per-circuit
+    crop policy (#294) MAIN is a short orchid photoperiod, so keying activity off MAIN
+    would silently shrink every irrigation window; the jalapeno/GROW day is the longer
+    one and is what plants are biologically active across."""
+    governing = max(
+        (lighting_circuit_rows or []),
+        key=lambda row: int(row["target_light_minutes"]),
+        default=None,
+    )
+    if governing:
+        activity_start_hour = int(governing["start_hour"])
+        activity_duration_min = int(governing["target_light_minutes"])
     elif lighting_row:
         activity_start_hour = int(lighting_row["sunrise_hour"])
         activity_duration_min = int(lighting_row["target_light_hours"]) * 60
@@ -138,14 +146,16 @@ def _align_activity_defaults_with_planned_lighting(
     defaults: dict[str, float],
     planner_params: dict[str, float],
 ) -> dict[str, float]:
-    """Keep activity defaults tied to active main-light plan overrides."""
+    """Keep activity defaults tied to the GROW (jalapeno, longest-day) circuit's plan
+    overrides — decoupled from MAIN so a short orchid photoperiod can't shrink the
+    irrigation activity window (#294)."""
     if not defaults:
         return defaults
     aligned = dict(defaults)
-    if "gl_main_sunrise_hour" in planner_params:
-        aligned["activity_start_hour"] = float(max(0, min(23, int(planner_params["gl_main_sunrise_hour"]))))
-    if "gl_main_target_light_minutes" in planner_params:
-        aligned["activity_duration_min"] = float(max(0, min(1440, int(planner_params["gl_main_target_light_minutes"]))))
+    if "gl_grow_sunrise_hour" in planner_params:
+        aligned["activity_start_hour"] = float(max(0, min(23, int(planner_params["gl_grow_sunrise_hour"]))))
+    if "gl_grow_target_light_minutes" in planner_params:
+        aligned["activity_duration_min"] = float(max(0, min(1440, int(planner_params["gl_grow_target_light_minutes"]))))
     return aligned
 
 

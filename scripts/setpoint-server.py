@@ -111,9 +111,11 @@ def _int_param(params: dict[str, str], key: str, default: int) -> int:
 
 
 def _overlay_activity_direct_wet_defaults(params: dict[str, str], plan_params: set[str]) -> None:
-    """Keep the compatibility endpoint aligned with dispatcher-owned activity policy."""
-    activity_start_hour = max(0, min(23, _int_param(params, "gl_main_sunrise_hour", 6)))
-    activity_duration_min = max(0, min(1440, _int_param(params, "gl_main_target_light_minutes", 960)))
+    """Keep the compatibility endpoint aligned with dispatcher-owned activity policy.
+    Keyed off the GROW (jalapeno, longest-day) circuit, NOT MAIN — a short orchid
+    photoperiod on MAIN must not shrink the irrigation activity window (#294)."""
+    activity_start_hour = max(0, min(23, _int_param(params, "gl_grow_sunrise_hour", 6)))
+    activity_duration_min = max(0, min(1440, _int_param(params, "gl_grow_target_light_minutes", 960)))
     params["activity_start_hour"] = str(activity_start_hour)
     params["activity_start_minute"] = "0"
     params["activity_duration_min"] = str(activity_duration_min)

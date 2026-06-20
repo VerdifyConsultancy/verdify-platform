@@ -504,7 +504,9 @@ def test_setpoint_server_fallback_does_not_overlay_band_owned_plan_rows():
     assert "_overlay_activity_direct_wet_defaults(params, plan_params)" in script
     assert "_overlay_dispatcher_owned_defaults(params, plan_params)" in script
 
-    params = {"gl_main_sunrise_hour": "7", "gl_main_target_light_minutes": "780"}
+    # #294: the activity window follows the GROW (jalapeno, longest-day) circuit, not
+    # MAIN — a short orchid MAIN photoperiod must not shrink direct-wet irrigation.
+    params = {"gl_grow_sunrise_hour": "7", "gl_grow_target_light_minutes": "780"}
     module["_overlay_activity_direct_wet_defaults"](params, set())
     module["_overlay_dispatcher_owned_defaults"](params, set())
     assert params["activity_start_hour"] == "7"
