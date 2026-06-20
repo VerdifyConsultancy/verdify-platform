@@ -1562,6 +1562,62 @@ number:
           id(gl_grow_min_off_s) = (int)x;
           id(num_gl_grow_min_off_s).publish_state(x);
 
+  # ─── #295: per-circuit solar-phase window offsets ───
+  # When the circuit's solar_phasing switch is ON the photoperiod opens at
+  # sunrise+sunrise_offset and closes at sunset+sunset_offset (on-chip
+  # ephemeris). Offsets are minutes (negative = before the solar event).
+  - platform: template
+    id: num_gl_main_sunrise_offset_min
+    name: "GL Main Sunrise Offset Min"
+    min_value: -1440
+    max_value: 1440
+    step: 15
+    lambda: "return id(gl_main_sunrise_offset_min);"
+    set_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(gl_main_sunrise_offset_min) = (int)x;
+          id(num_gl_main_sunrise_offset_min).publish_state(x);
+
+  - platform: template
+    id: num_gl_main_sunset_offset_min
+    name: "GL Main Sunset Offset Min"
+    min_value: -1440
+    max_value: 1440
+    step: 15
+    lambda: "return id(gl_main_sunset_offset_min);"
+    set_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(gl_main_sunset_offset_min) = (int)x;
+          id(num_gl_main_sunset_offset_min).publish_state(x);
+
+  - platform: template
+    id: num_gl_grow_sunrise_offset_min
+    name: "GL Grow Sunrise Offset Min"
+    min_value: -1440
+    max_value: 1440
+    step: 15
+    lambda: "return id(gl_grow_sunrise_offset_min);"
+    set_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(gl_grow_sunrise_offset_min) = (int)x;
+          id(num_gl_grow_sunrise_offset_min).publish_state(x);
+
+  - platform: template
+    id: num_gl_grow_sunset_offset_min
+    name: "GL Grow Sunset Offset Min"
+    min_value: -1440
+    max_value: 1440
+    step: 15
+    lambda: "return id(gl_grow_sunset_offset_min);"
+    set_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(gl_grow_sunset_offset_min) = (int)x;
+          id(num_gl_grow_sunset_offset_min).publish_state(x);
+
   # ─── Biological activity / direct-wet gate tunables ───
   - platform: template
     id: num_activity_start_hour
@@ -2230,6 +2286,79 @@ switch:
           id(cfg_first_pull_ok) = true;
           id(gl_grow_auto_enabled) = false;
           id(sw_gl_grow_auto).publish_state(false);
+
+  # ─── #295: per-circuit solar-phasing enable + dead-fixture flag ───
+  - platform: template
+    id: sw_gl_main_solar_phasing
+    name: "GL Main Solar Phasing"
+    icon: mdi:weather-sunset
+    optimistic: false
+    restore_mode: RESTORE_DEFAULT_OFF
+    lambda: "return id(gl_main_solar_phasing);"
+    turn_on_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(gl_main_solar_phasing) = true;
+          id(sw_gl_main_solar_phasing).publish_state(true);
+    turn_off_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(gl_main_solar_phasing) = false;
+          id(sw_gl_main_solar_phasing).publish_state(false);
+
+  - platform: template
+    id: sw_gl_grow_solar_phasing
+    name: "GL Grow Solar Phasing"
+    icon: mdi:weather-sunset
+    optimistic: false
+    restore_mode: RESTORE_DEFAULT_OFF
+    lambda: "return id(gl_grow_solar_phasing);"
+    turn_on_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(gl_grow_solar_phasing) = true;
+          id(sw_gl_grow_solar_phasing).publish_state(true);
+    turn_off_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(gl_grow_solar_phasing) = false;
+          id(sw_gl_grow_solar_phasing).publish_state(false);
+
+  - platform: template
+    id: sw_gl_main_out_of_service
+    name: "GL Main Out Of Service"
+    icon: mdi:lightbulb-alert
+    optimistic: false
+    restore_mode: RESTORE_DEFAULT_OFF
+    lambda: "return id(gl_main_out_of_service);"
+    turn_on_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(gl_main_out_of_service) = true;
+          id(sw_gl_main_out_of_service).publish_state(true);
+    turn_off_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(gl_main_out_of_service) = false;
+          id(sw_gl_main_out_of_service).publish_state(false);
+
+  - platform: template
+    id: sw_gl_grow_out_of_service
+    name: "GL Grow Out Of Service"
+    icon: mdi:lightbulb-alert
+    optimistic: false
+    restore_mode: RESTORE_DEFAULT_OFF
+    lambda: "return id(gl_grow_out_of_service);"
+    turn_on_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(gl_grow_out_of_service) = true;
+          id(sw_gl_grow_out_of_service).publish_state(true);
+    turn_off_action:
+      - lambda: |
+          id(cfg_first_pull_ok) = true;
+          id(gl_grow_out_of_service) = false;
+          id(sw_gl_grow_out_of_service).publish_state(false);
 
   # Close vent during fog pulses to prevent dry air infiltration
   - platform: template
