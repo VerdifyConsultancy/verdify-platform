@@ -193,3 +193,32 @@ spec:
 #         - protocol: TCP
 #           port: 1984
 # ============================================================================
+---
+# allow-db-from-agent (#302): admit an in-cluster dev/coding agent pod to the DB
+# for READ-ONLY queries (it logs in as the `agent` user — member of agent_ro /
+# pg_read_all_data, SELECT-only; DSN in verdify-agent-secrets, migration 184).
+# NOTE: today the agent reads prod via `kubectl exec` + scripts/verdify-db.sh,
+# which rides the API-server channel and BYPASSES NetworkPolicy — so this rule is
+# forward-looking for a future in-namespace agent pod (label
+# app.kubernetes.io/component=agent). Mirrors allow-db-from-grafana. A cross-namespace
+# agent (e.g. agent-fleet-runners) would need its own namespaceSelector rule.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-db-from-agent
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: agent
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: db
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: agent
+      ports:
+        - protocol: TCP
+          port: 5432
