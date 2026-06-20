@@ -59,6 +59,47 @@ spec:
         fsGroup: 472
         seccompProfile:
           type: RuntimeDefault
+      initContainers:
+        # CANVAS RECOLOR (brand dark green): Grafana's stock dark canvas is
+        # #111217; the lab.verdify.ai homepage embeds are transparent-panel
+        # /d-solo views, so that canvas shows as a lighter box on the dark-green
+        # (#071512) site. Grafana OSS has no theme/CSS lever, so inject a tiny
+        # <style> override into a COPY of public/views (the root FS is
+        # read-only) that the main container mounts. The panels are transparent,
+        # so recoloring the canvas makes the graphs render in the brand green and
+        # blend into the site. FAILS SAFE: if a Grafana upgrade changes
+        # index.html the override simply won't apply and graphs revert to the
+        # stock canvas — nothing breaks. CSS lives in verdify-grafana-canvas-css
+        # (iterate there + rollout restart).
+        - name: inject-canvas-css
+          image: grafana/grafana-oss:11.6.0
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              cp -a /usr/share/grafana/public/views/. /views/
+              STYLE="$(printf '<style>%s</style>' "$(tr '\n' ' ' < /css/canvas.css)")"
+              awk -v st="$STYLE" '{ if (index($0,"</head>")>0 && !d){ sub(/<\/head>/, st "</head>"); d=1 } print }' \
+                /usr/share/grafana/public/views/index.html > /views/index.html
+              echo "canvas CSS injected: /views/index.html = $(wc -c < /views/index.html) bytes"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: "10m"
+              memory: "32Mi"
+            limits:
+              memory: "64Mi"
+          volumeMounts:
+            - name: views
+              mountPath: /views
+            - name: css-inject
+              mountPath: /css
+              readOnly: true
       containers:
         - name: grafana
           image: grafana/grafana-oss:11.6.0
@@ -162,6 +203,12 @@ spec:
               mountPath: /var/lib/grafana
             - name: tmp
               mountPath: /tmp
+            # Canvas-recolor: serve the initContainer-patched public/views
+            # (index.html with the brand dark-green canvas <style>) instead of
+            # the stock image copy. Overlays only views/ (index/error/swagger).
+            - name: views
+              mountPath: /usr/share/grafana/public/views
+              readOnly: true
             # Grafana only scans provisioning/datasources/*.y*ml and
             # provisioning/dashboards/*.y*ml — mount each config via subPath into
             # its expected subdir.
@@ -254,6 +301,13 @@ spec:
           emptyDir: {}
         - name: tmp
           emptyDir: {}
+        # Writable copy of public/views the initContainer patches with the
+        # canvas-recolor <style> (root FS is read-only, can't patch in place).
+        - name: views
+          emptyDir: {}
+        - name: css-inject
+          configMap:
+            name: verdify-grafana-canvas-css
         - name: renderer-tmp
           emptyDir: {}
         - name: renderer-shm
@@ -345,3 +399,22 @@ spec:
       ports:
         - protocol: TCP
           port: 5432
+---
+# Canvas-recolor CSS (see the inject-canvas-css initContainer). Brand dark-green
+# (#071512) canvas so the transparent-panel /d-solo embeds on lab.verdify.ai
+# blend into the dark-green site instead of showing Grafana's stock #111217 box.
+# Iterate the selectors here, then `kubectl rollout restart deploy/verdify-grafana`.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-grafana-canvas-css
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: grafana
+data:
+  canvas.css: |
+    body.theme-dark.app-grafana { background-color: #071512 !important; }
+    .theme-dark #reactRoot { background-color: #071512 !important; }
+    .theme-dark .main-view { background-color: #071512 !important; }
+    .theme-dark [class*=dashboard] { background-color: #071512 !important; }
+    .theme-dark [class*=canvas] { background-color: #071512 !important; }
