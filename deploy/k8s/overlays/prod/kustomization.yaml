@@ -115,6 +115,16 @@ patches:
   - path: db-storageclass-iscsi.yaml
   # DEVICE-WRITE INTERLOCK (#79): VERDIFY_DEVICE_WRITE_ENABLED=1 — prod only.
   - path: device-write-configmap.yaml
+  # HA-3.1 FAST FAILOVER (#239, Jason-approved 2026-06-20): pin the ingestor to
+  # priorityClassName verdify-device-writer + 20s NoExecute tolerations + a cpu
+  # request (no cpu LIMIT) + terminationGracePeriodSeconds:15, so the sole writer
+  # reschedules fast on node loss and is never preempted. GATED LIVE-APPLY: this
+  # mutates the podSpec -> a Recreate rollout of the live writer. ArgoCD is
+  # manual-sync, so committing this does NOT restart the writer; the restart
+  # happens only on the next explicit `argocd app sync verdify-prod-dark`. Do that
+  # sync in a window when the iSCSI/Longhorn storage is healthy — a writer restart
+  # can hit the known PVC-attach wedge (~minutes of writer gap) (observed 2026-06-20).
+  - path: STAGED-ha3-fast-failover-patch.yaml
   # #113 publish-all: prod re-emits every flushed telemetry row onto the fan-out
   # bus (verdify-mqtt) so dev/stage subscribers mirror it. prod-only env.
   - path: publish-all-configmap.yaml
