@@ -72,7 +72,7 @@ export default (() => {
   cursor: pointer;
 }
 :root[saved-theme="dark"] .grafana-embed__actions {
-  background: color-mix(in srgb, var(--lightgray, #17352D) 48%, #071512);
+  background: color-mix(in srgb, var(--lightgray, #17352D) 48%, #111217);
   border-top-color: color-mix(in srgb, var(--secondary, #7DE2B8) 24%, transparent);
 }
 `
