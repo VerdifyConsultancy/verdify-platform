@@ -513,6 +513,16 @@ async def run(args: argparse.Namespace) -> int:
         out_dir = Path(args.out)
         out_dir.mkdir(parents=True, exist_ok=True)
 
+        # Actively DELETE any stale page for a redacted slug (#308) — skipping the
+        # write alone would leave a previously-published page on the site, which
+        # Quartz then keeps in the folder index, search index, and sitemap.
+        if not args.dry_run:
+            for slug in excluded:
+                stale = out_dir / f"{slug.replace('_', '-')}.md"
+                if stale.exists():
+                    stale.unlink()
+                    print(f"  DELETED stale redacted page: {stale.name}")
+
         changes = 0
         expected_vision_assets: set[Path] = set()
         for slug in slugs:
