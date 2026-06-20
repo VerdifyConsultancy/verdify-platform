@@ -418,6 +418,35 @@ globals:
     restore_value: no
     initial_value: 'true'
 
+  # #295: solar-phase the MAIN circuit photoperiod. When enabled, the window
+  # anchors to the on-chip sunrise/sunset (sunrise+offset .. sunset+offset)
+  # instead of the static gl_main_sunrise_hour/gl_main_sunset_hour. Default OFF
+  # ⇒ byte-identical fixed-hour behavior (backward-safe; legacy clock window).
+  - id: gl_main_solar_phasing
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
+  - id: gl_main_sunrise_offset_min
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  - id: gl_main_sunset_offset_min
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  # #295: dead-fixture / phantom-DLI suppression for the MAIN circuit. When the
+  # operator flags the fixture dead (shorted/unplugged), the circuit's switch-ON
+  # state no longer credits supplemental DLI or accrues qualified light minutes.
+  # Default OFF ⇒ unchanged accounting. (Hardware lux/Shelly-PM plausibility
+  # check is OUT OF SCOPE — needs hardware; this is the software half of #295.)
+  - id: gl_main_out_of_service
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
   - id: gl_grow_dli_target
     type: float
     restore_value: no
@@ -464,6 +493,32 @@ globals:
     type: bool
     restore_value: no
     initial_value: 'true'
+
+  # #295: solar-phasing for the GROW circuit (see gl_main_solar_phasing). OFF by
+  # default ⇒ legacy fixed-hour window.
+  - id: gl_grow_solar_phasing
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
+  - id: gl_grow_sunrise_offset_min
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  - id: gl_grow_sunset_offset_min
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  # #295: dead-fixture / phantom-DLI suppression for the GROW (west) circuit —
+  # the dead circuit this issue was filed about. Set this while the west grow
+  # lights are shorted/unplugged so the dark fixture stops crediting phantom DLI
+  # (0.4515 mol/m²/h) and qualified light minutes. Default OFF.
+  - id: gl_grow_out_of_service
+    type: bool
+    restore_value: no
+    initial_value: 'false'
 
   # ─── Greenhouse biological activity / direct-wet policy ───
   # Defaults preserve legacy behavior until the dispatcher/AI tunables push a

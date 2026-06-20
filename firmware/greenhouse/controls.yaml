@@ -1973,12 +1973,18 @@ interval:
 
           /*** B5 — DLI accumulation (every 5s) ***/
           {
+            // #295: a circuit flagged out_of_service emits no light, so its
+            // switch-ON state must NOT credit supplemental DLI (phantom-DLI
+            // suppression — the dead west grow circuit was self-deceivingly
+            // crediting 0.4515 mol/m²/h with dark fixtures).
             id(dli_accumulator) += lighting_dli_increment(
               id(greenhouse_light_lux).state,
               id(tempest_lux),
               id(grow_light_main).state,
               id(grow_light_grow).state,
-              5.0f);
+              5.0f,
+              id(gl_main_out_of_service),
+              id(gl_grow_out_of_service));
           }
 
           /*** B6 — Per-circuit lighting state machines (evaluate 5s; publish 60s/change) ***/
@@ -2036,12 +2042,18 @@ interval:
               if(isnan(cur_lux)) cur_lux = 0.0f;
               const float lighting_dt_s = dt_ms > 0 ? ((float)dt_ms / 1000.0f) : 0.0f;
 
+              // #295: wire the on-chip solar minute fields so each circuit can
+              // solar-phase its photoperiod (sv2_solar is computed earlier in
+              // this same 1s lambda). minute-of-day = time.hour:time.minute.
               LightingInputs light_in = {
                 .natural_lux = cur_lux,
                 .exterior_lux = exterior_lux,
                 .exterior_lux_fresh = exterior_lux_fresh,
                 .local_hour = time.hour,
-                .occupied = id(greenhouse_occupied)
+                .occupied = id(greenhouse_occupied),
+                .local_minute = time.minute,
+                .sunrise_min = sv2_solar.sunrise_min,
+                .sunset_min = sv2_solar.sunset_min
               };
               LightingSetpoints main_sp = {
                 .target_light_minutes = (uint32_t)id(gl_main_target_light_minutes),
@@ -2051,7 +2063,11 @@ interval:
                 .cutoff_hour = id(gl_main_sunset_hour),
                 .min_on_ms = (uint32_t)id(gl_main_min_on_s) * 1000UL,
                 .min_off_ms = (uint32_t)id(gl_main_min_off_s) * 1000UL,
-                .auto_enabled = id(gl_main_auto_enabled)
+                .auto_enabled = id(gl_main_auto_enabled),
+                .solar_phasing = id(gl_main_solar_phasing),
+                .sunrise_offset_min = id(gl_main_sunrise_offset_min),
+                .sunset_offset_min = id(gl_main_sunset_offset_min),
+                .out_of_service = id(gl_main_out_of_service)
               };
               LightingSetpoints grow_sp = {
                 .target_light_minutes = (uint32_t)id(gl_grow_target_light_minutes),
@@ -2061,7 +2077,11 @@ interval:
                 .cutoff_hour = id(gl_grow_sunset_hour),
                 .min_on_ms = (uint32_t)id(gl_grow_min_on_s) * 1000UL,
                 .min_off_ms = (uint32_t)id(gl_grow_min_off_s) * 1000UL,
-                .auto_enabled = id(gl_grow_auto_enabled)
+                .auto_enabled = id(gl_grow_auto_enabled),
+                .solar_phasing = id(gl_grow_solar_phasing),
+                .sunrise_offset_min = id(gl_grow_sunrise_offset_min),
+                .sunset_offset_min = id(gl_grow_sunset_offset_min),
+                .out_of_service = id(gl_grow_out_of_service)
               };
 
               LightingDecision main_dec = evaluate_lighting(

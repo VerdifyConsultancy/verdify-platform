@@ -1112,6 +1112,28 @@ inline bool lighting_hour_in_window(int hour, int start, int end) noexcept {
                           : (hour >= start || hour < end);
 }
 
+// #295: solar-phased per-circuit photoperiod membership. Mirrors the
+// in_dawn_rehydrate_window() pattern — the window anchors to the ON-CHIP solar
+// minute fields so each circuit tracks real sunrise/sunset all year instead of
+// a static clock hour. Backward-safe: if solar phasing is OFF or the caller did
+// not wire the solar minute fields (sunrise_min/sunset_min still 0), it falls
+// back EXACTLY to the legacy integer-hour lighting_hour_in_window().
+inline bool lighting_in_window(const LightingInputs& in, const LightingSetpoints& sp) noexcept {
+    const bool solar_available =
+        sp.solar_phasing && (in.sunrise_min != 0 || in.sunset_min != 0);
+    if (!solar_available) {
+        return lighting_hour_in_window(in.local_hour, sp.start_hour, sp.cutoff_hour);
+    }
+    const int now_minute = local_minute_of_day(in.local_hour, in.local_minute);
+    const int start = (((in.sunrise_min + sp.sunrise_offset_min) % 1440) + 1440) % 1440;
+    const int end = (((in.sunset_min + sp.sunset_offset_min) % 1440) + 1440) % 1440;
+    // Reuse the wrap-safe minute window: duration = (end - start) mod 1440. A
+    // zero/degenerate span (start == end) means no photoperiod → never in window.
+    int duration = ((end - start) % 1440 + 1440) % 1440;
+    if (duration == 0) return false;
+    return minute_in_window(now_minute, start, duration);
+}
+
 inline void validate_lighting_setpoints(LightingSetpoints& sp) noexcept {
     sp.target_light_minutes = std::max(uint32_t(0), std::min(uint32_t(1080), sp.target_light_minutes));
     sp.lux_on_threshold = std::max(100.0f, std::min(100000.0f, sp.lux_on_threshold));
@@ -1120,14 +1142,25 @@ inline void validate_lighting_setpoints(LightingSetpoints& sp) noexcept {
     sp.cutoff_hour = std::max(0, std::min(23, sp.cutoff_hour));
     sp.min_on_ms = std::max(uint32_t(0), std::min(uint32_t(3600000), sp.min_on_ms));
     sp.min_off_ms = std::max(uint32_t(0), std::min(uint32_t(3600000), sp.min_off_ms));
+    // #295: bound the solar-phase offsets to +/- one day so a corrupt push
+    // cannot make the window math diverge wildly; minute_in_window wraps anyway.
+    sp.sunrise_offset_min = std::max(-1440, std::min(1440, sp.sunrise_offset_min));
+    sp.sunset_offset_min = std::max(-1440, std::min(1440, sp.sunset_offset_min));
 }
 
+// #295: per-circuit dead-fixture / phantom-DLI suppression. When a circuit is
+// flagged out_of_service (its physical fixture is shorted/unplugged), its
+// switch-ON state must NOT credit supplemental DLI — the dark fixture was
+// otherwise self-deceivingly "meeting" the photoperiod on paper. main/grow
+// out_of_service default to false so legacy call sites are byte-identical.
 inline float lighting_dli_increment(
     float indoor_lux,
     float tempest_lux,
     bool main_light_on,
     bool grow_light_on,
-    float dt_s
+    float dt_s,
+    bool main_out_of_service = false,
+    bool grow_out_of_service = false
 ) noexcept {
     constexpr float LUX_TO_PPFD = 0.0185f;
     constexpr float INDOOR_LDR_CORRECTION = 3.5f;
@@ -1143,9 +1176,11 @@ inline float lighting_dli_increment(
         : 0.0f;
     const float natural_lux_equiv = std::max(indoor_equiv, tempest_equiv);
     const float natural_dli = natural_lux_equiv * LUX_TO_PPFD * std::max(0.0f, dt_s) / 1000000.0f;
+    const bool main_credits = main_light_on && !main_out_of_service;
+    const bool grow_credits = grow_light_on && !grow_out_of_service;
     const float supplemental_dli_per_hour =
-        (main_light_on ? MAIN_LIGHT_DLI_PER_HOUR : 0.0f)
-        + (grow_light_on ? GROW_LIGHT_DLI_PER_HOUR : 0.0f);
+        (main_credits ? MAIN_LIGHT_DLI_PER_HOUR : 0.0f)
+        + (grow_credits ? GROW_LIGHT_DLI_PER_HOUR : 0.0f);
     return natural_dli + supplemental_dli_per_hour * std::max(0.0f, dt_s) / 3600.0f;
 }
 
@@ -1171,7 +1206,9 @@ inline LightingDecision evaluate_lighting(
     const float exterior_lux = std::isfinite(in.exterior_lux) ? std::max(0.0f, in.exterior_lux) : 0.0f;
     const bool exterior_lux_available = in.exterior_lux_fresh && std::isfinite(in.exterior_lux);
     const float lux_off_threshold = sp.lux_on_threshold + sp.lux_hysteresis;
-    const bool in_window = sp.auto_enabled && lighting_hour_in_window(in.local_hour, sp.start_hour, sp.cutoff_hour);
+    // #295: window membership is now solar-phased when enabled+wired; otherwise
+    // it is byte-identical to the legacy integer-hour window.
+    const bool in_window = sp.auto_enabled && lighting_in_window(in, sp);
     const bool crossed_midnight = state.last_count_hour >= 0 && in.local_hour < state.last_count_hour;
     const bool reached_start_hour = in.local_hour == sp.start_hour && state.last_count_hour != sp.start_hour;
     if (crossed_midnight || reached_start_hour) {
@@ -1182,18 +1219,24 @@ inline LightingDecision evaluate_lighting(
     }
 
     const bool natural_qualified = natural_lux >= sp.lux_on_threshold;
+    // #295: a dead/out-of-service fixture emits NO light, so its switch-ON state
+    // must not be credited as delivered light. switch_on_qualifies gates every
+    // place the physical switch state would otherwise count toward DLI/minutes;
+    // natural lux (which is real, fixture-independent) still counts. This stops
+    // the dark west grow circuit from "meeting" its photoperiod on paper.
+    const bool switch_on_qualifies = current_on && !sp.out_of_service;
     const float count_dt_s = std::isfinite(dt_s) ? std::max(0.0f, dt_s) : 0.0f;
     if (in_window && count_dt_s > 0.0f) {
         if (natural_qualified) {
             state.natural_qualified_s += count_dt_s;
         }
-        if (current_on) {
+        if (switch_on_qualifies) {
             state.switch_on_s += count_dt_s;
         }
-        if (natural_qualified && current_on) {
+        if (natural_qualified && switch_on_qualifies) {
             state.overlap_s += count_dt_s;
         }
-        if (natural_qualified || current_on) {
+        if (natural_qualified || switch_on_qualifies) {
             state.qualified_light_s += count_dt_s;
         }
     }
@@ -1281,6 +1324,7 @@ inline LightingDecision evaluate_lighting(
         .exterior_lux_available = exterior_lux_available,
         .occupancy_task_light_demand = occupancy_task_light_demand,
         .plant_supplement_demand = plant_supplement_demand,
+        .out_of_service = sp.out_of_service,
         .lux_off_threshold = lux_off_threshold,
         .qualified_light_minutes = state.qualified_light_s / 60.0f,
         .target_light_minutes = float(sp.target_light_minutes),

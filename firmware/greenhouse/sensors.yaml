@@ -2920,6 +2920,101 @@ sensor:
       if (!id(cfg_first_pull_ok)) return NAN;
       return id(gl_grow_auto_enabled) ? 1.0f : 0.0f;
 
+  # ─── #295: per-circuit solar-phasing + dead-fixture config readbacks ───
+  # One cfg_* diagnostic per new tunable (CLAUDE.md freeze rule 6 + CI
+  # no-new-fire-and-forget). A silent push corruption surfaces here.
+  - platform: template
+    id: cfg_gl_main_solar_phasing
+    name: "Cfg GL Main Solar Phasing"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(gl_main_solar_phasing) ? 1.0f : 0.0f;
+
+  - platform: template
+    id: cfg_gl_main_sunrise_offset_min
+    name: "Cfg GL Main Sunrise Offset Min"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(gl_main_sunrise_offset_min);
+
+  - platform: template
+    id: cfg_gl_main_sunset_offset_min
+    name: "Cfg GL Main Sunset Offset Min"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(gl_main_sunset_offset_min);
+
+  - platform: template
+    id: cfg_gl_main_out_of_service
+    name: "Cfg GL Main Out Of Service"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(gl_main_out_of_service) ? 1.0f : 0.0f;
+
+  - platform: template
+    id: cfg_gl_grow_solar_phasing
+    name: "Cfg GL Grow Solar Phasing"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(gl_grow_solar_phasing) ? 1.0f : 0.0f;
+
+  - platform: template
+    id: cfg_gl_grow_sunrise_offset_min
+    name: "Cfg GL Grow Sunrise Offset Min"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(gl_grow_sunrise_offset_min);
+
+  - platform: template
+    id: cfg_gl_grow_sunset_offset_min
+    name: "Cfg GL Grow Sunset Offset Min"
+    unit_of_measurement: "min"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(gl_grow_sunset_offset_min);
+
+  - platform: template
+    id: cfg_gl_grow_out_of_service
+    name: "Cfg GL Grow Out Of Service"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(gl_grow_out_of_service) ? 1.0f : 0.0f;
+
   # ─── IRR-3 (dawn rehydrate) / IRR-4 (midday drench) config readbacks ───
   # One cfg_* diagnostic per new tunable (CLAUDE.md rule 6 + CI
   # no-new-fire-and-forget). Each reads the underlying global back so a silent

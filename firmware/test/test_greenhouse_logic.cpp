@@ -4130,6 +4130,158 @@ TEST(lighting_dli_increment_counts_supplemental_light_runtime) {
     PASS();
 }
 
+// #295: a circuit flagged out_of_service must not credit supplemental DLI even
+// while its switch reads ON — the dead west grow circuit was self-deceivingly
+// crediting 0.4515 mol/m²/h with dark fixtures.
+TEST(lighting_dli_increment_out_of_service_suppresses_supplemental) {
+    // Both circuits switch-ON but both flagged dead → zero supplemental DLI.
+    float none = lighting_dli_increment(0.0f, 0.0f, true, true, 3600.0f, true, true);
+    ASSERT_TRUE(std::fabs(none - 0.0f) < 1e-6f);
+
+    // Only the GROW (west) circuit dead: MAIN still credits its 0.3485, GROW 0.
+    float main_only = lighting_dli_increment(0.0f, 0.0f, true, true, 3600.0f, false, true);
+    ASSERT_TRUE(std::fabs(main_only - 0.3485f) < 0.001f);
+
+    // Only MAIN dead: GROW still credits its 0.4515.
+    float grow_only = lighting_dli_increment(0.0f, 0.0f, true, true, 3600.0f, true, false);
+    ASSERT_TRUE(std::fabs(grow_only - 0.4515f) < 0.001f);
+
+    // Natural light is fixture-independent and still credits when a circuit is
+    // out of service (indoor 10000 lux * 3.5 corr path, no supplemental).
+    float natural = lighting_dli_increment(10000.0f, 1000.0f, true, true, 3600.0f, true, true);
+    ASSERT_TRUE(std::fabs(natural - 2.331f) < 0.01f);
+    PASS();
+}
+
+// #295: an out_of_service circuit's switch-ON time must NOT accrue qualified
+// light minutes (so a dark fixture cannot "meet" the photoperiod on paper).
+// Natural lux above threshold still counts — it is real, fixture-independent.
+TEST(lighting_out_of_service_suppresses_switch_qualified_minutes) {
+    auto sp = lighting_setpoints();
+    sp.out_of_service = true;
+    auto s = initial_lighting_state();
+    // Switch ON, but natural lux well BELOW threshold → only the (suppressed)
+    // switch state could have counted. Expect zero qualified accrual.
+    evaluate_lighting(lighting_inputs(1000.0f, 10), sp, s, true, 120000, 60.0f);
+    ASSERT_TRUE(std::fabs(s.switch_on_s - 0.0f) < 1e-3f);
+    ASSERT_TRUE(std::fabs(s.qualified_light_s - 0.0f) < 1e-3f);
+    ASSERT_TRUE(std::fabs(s.overlap_s - 0.0f) < 1e-3f);
+
+    // Natural lux above threshold still qualifies even while out of service.
+    auto s2 = initial_lighting_state();
+    evaluate_lighting(lighting_inputs(45000.0f, 10), sp, s2, true, 120000, 60.0f);
+    ASSERT_TRUE(std::fabs(s2.natural_qualified_s - 60.0f) < 1e-3f);
+    ASSERT_TRUE(std::fabs(s2.switch_on_s - 0.0f) < 1e-3f);  // switch still suppressed
+    ASSERT_TRUE(std::fabs(s2.overlap_s - 0.0f) < 1e-3f);
+    ASSERT_TRUE(std::fabs(s2.qualified_light_s - 60.0f) < 1e-3f);  // natural-only
+    PASS();
+}
+
+// #295: the out_of_service flag is surfaced on the decision for auditing, and a
+// dead circuit's switch-ON no longer reports a plant supplement being delivered
+// past target (its minutes never accrue, so demand persists honestly).
+TEST(lighting_decision_surfaces_out_of_service) {
+    auto sp = lighting_setpoints();
+    sp.out_of_service = true;
+    auto s = initial_lighting_state();
+    auto d = evaluate_lighting(lighting_inputs(30000.0f, 10), sp, s, true, 120000, 60.0f);
+    ASSERT_TRUE(d.out_of_service);
+    ASSERT_TRUE(std::fabs(d.qualified_light_minutes - 0.0f) < 1e-3f);
+    PASS();
+}
+
+// #295: solar-phasing. With solar_phasing ON and on-chip sunrise/sunset wired,
+// the window tracks the solar minutes, not the static start_hour/cutoff_hour.
+// Sunrise 06:00 (360) .. sunset 20:00 (1200): hour 10 (600min) is inside;
+// hour 22 (1320min) is outside even though the legacy [6,22) clock window would
+// also exclude it — we pin a case the clock window would DISAGREE on below.
+TEST(lighting_solar_phasing_window_tracks_solar_minutes) {
+    auto sp = lighting_setpoints();
+    sp.solar_phasing = true;
+    sp.sunrise_offset_min = 0;
+    sp.sunset_offset_min = 0;
+    // start_hour/cutoff_hour deliberately set to a NARROW clock window [9,11)
+    // that DISAGREES with the solar window so we prove the solar path is used.
+    sp.start_hour = 9;
+    sp.cutoff_hour = 11;
+
+    LightingInputs in{};
+    in.natural_lux = 1000.0f;        // below threshold → plant demand if in window
+    in.exterior_lux = 1000.0f;
+    in.exterior_lux_fresh = true;
+    in.occupied = false;
+    in.sunrise_min = 360;            // 06:00
+    in.sunset_min = 1200;            // 20:00
+    // Hour 18 (1080min): OUTSIDE the [9,11) clock window but INSIDE the solar
+    // [360,1200) window → solar phasing must report in_window + plant demand.
+    in.local_hour = 18;
+    in.local_minute = 0;
+    auto s = initial_lighting_state();
+    auto d = evaluate_lighting(in, sp, s, false, 120000, 60.0f);
+    ASSERT_TRUE(d.in_window);
+    ASSERT_TRUE(d.plant_supplement_demand);
+
+    // Hour 22 (1320min): OUTSIDE the solar [360,1200) window → not in window.
+    in.local_hour = 22;
+    auto s2 = initial_lighting_state();
+    auto d2 = evaluate_lighting(in, sp, s2, false, 120000, 60.0f);
+    ASSERT_FALSE(d2.in_window);
+    ASSERT_TRUE(std::string(d2.reason) == "outside_window");
+    PASS();
+}
+
+// #295: backward-safe fallback. solar_phasing ON but the caller left the solar
+// minute fields zero (unwired) → the window falls back EXACTLY to the legacy
+// integer-hour window. Hour 23 is outside [6,22) and must NOT light.
+TEST(lighting_solar_phasing_falls_back_to_fixed_hours_when_unwired) {
+    auto sp = lighting_setpoints();   // [6,22) clock window
+    sp.solar_phasing = true;          // requested, but...
+    LightingInputs in{};
+    in.natural_lux = 1000.0f;
+    in.exterior_lux = 1000.0f;
+    in.exterior_lux_fresh = true;
+    in.occupied = false;
+    in.sunrise_min = 0;               // ...solar fields UNWIRED (zero)
+    in.sunset_min = 0;
+    in.local_hour = 23;               // outside the legacy [6,22)
+    in.local_minute = 0;
+    auto s = initial_lighting_state();
+    auto d = evaluate_lighting(in, sp, s, false, 120000, 60.0f);
+    ASSERT_FALSE(d.in_window);
+    ASSERT_TRUE(std::string(d.reason) == "outside_window");
+
+    // And a fixed-hour in-window hour (10) still lights → fallback is the legacy
+    // path, not a degenerate always-off.
+    in.local_hour = 10;
+    auto s2 = initial_lighting_state();
+    auto d2 = evaluate_lighting(in, sp, s2, false, 120000, 60.0f);
+    ASSERT_TRUE(d2.in_window);
+    ASSERT_TRUE(d2.plant_supplement_demand);
+    PASS();
+}
+
+// #295: solar phasing OFF (default) must be byte-identical to the legacy
+// integer-hour window even when solar minute fields ARE present — the flag, not
+// the field presence, switches behavior. Vanda dark-block safety depends on
+// this not silently changing the window for existing deployments.
+TEST(lighting_solar_phasing_off_ignores_solar_fields) {
+    auto sp = lighting_setpoints();   // [6,22), solar_phasing default false
+    LightingInputs in{};
+    in.natural_lux = 1000.0f;
+    in.exterior_lux = 1000.0f;
+    in.exterior_lux_fresh = true;
+    in.occupied = false;
+    in.sunrise_min = 360;             // present but must be IGNORED
+    in.sunset_min = 1200;
+    in.local_hour = 23;               // outside legacy [6,22)
+    in.local_minute = 0;
+    auto s = initial_lighting_state();
+    auto d = evaluate_lighting(in, sp, s, false, 120000, 60.0f);
+    ASSERT_FALSE(d.in_window);
+    ASSERT_TRUE(std::string(d.reason) == "outside_window");
+    PASS();
+}
+
 // Cross-implementation band-curve ALIGNMENT guard. The harmonic band math lives
 // in THREE places kept in sync by hand: this firmware band_value_at_phase, the
 // ingestor's solar.py band_value_at_phase, and the DB's fn_crop_band_value. These

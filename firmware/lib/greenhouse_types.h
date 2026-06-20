@@ -541,6 +541,13 @@ struct LightingInputs {
     bool exterior_lux_fresh;
     int local_hour;         // 0-23, from SNTP
     bool occupied;          // Occupancy enables lux-gated task-light demand.
+    // #295: on-chip ephemeris (minutes local). When solar_phasing is enabled
+    // (LightingSetpoints.solar_phasing) the photoperiod window is anchored to
+    // these instead of the static start_hour/cutoff_hour. Default 0 → caller did
+    // not wire the solar fields → the window falls back to the fixed clock hours.
+    int local_minute = 0;   // 0-59, from SNTP (with local_hour gives minute-of-day)
+    int sunrise_min = 0;    // on-chip sunrise, minutes local; 0 ⇒ unavailable
+    int sunset_min = 0;     // on-chip sunset, minutes local; 0 ⇒ unavailable
 };
 
 struct LightingSetpoints {
@@ -552,6 +559,18 @@ struct LightingSetpoints {
     uint32_t min_on_ms;
     uint32_t min_off_ms;
     bool auto_enabled;
+    // #295: solar-phase the per-circuit photoperiod. When true AND the caller
+    // supplied non-zero sunrise/sunset minute fields, the window tracks real
+    // sunrise+start_offset_min .. sunset+cutoff_offset_min instead of the static
+    // clock hours. Backward-safe: false (or zero solar fields) ⇒ fixed-hour path.
+    bool solar_phasing = false;
+    int sunrise_offset_min = 0;  // window opens sunrise + this (may be negative)
+    int sunset_offset_min = 0;   // window closes sunset + this (may be negative)
+    // #295: dead-fixture / phantom-DLI suppression. When a circuit's physical
+    // fixture is known-dead (shorted/unplugged), the operator sets this so the
+    // circuit no longer credits supplemental DLI or accrues qualified-light
+    // minutes — the dark fixture can no longer "meet" the photoperiod on paper.
+    bool out_of_service = false;
 };
 
 static constexpr uint32_t LIGHT_STATE_SENTINEL = 0xBEEF0043;
@@ -578,6 +597,7 @@ struct LightingDecision {
     bool exterior_lux_available;
     bool occupancy_task_light_demand;
     bool plant_supplement_demand;
+    bool out_of_service;        // #295: circuit flagged dead → switch-ON credits no light
     float lux_off_threshold;
     float qualified_light_minutes;
     float target_light_minutes;
