@@ -1,6 +1,8 @@
 # Verdify Migration — Authoritative Document (VM → 3-env k3s)
 Prepared for Jason · 2026-06-07 · Owner model: **four swim lanes** (Cluster / Application / Observability / Networking). Old Iris/Root/Nexus/Jason agent owners are retired; human-only calls are consolidated in §5.
 
+> **STATUS 2026-06-20 — MIGRATION COMPLETE · THIS DOC IS HISTORICAL.** The VM→k3s migration is done: Verdify runs fully on k3s (ns `verdify-prod`), the M5 single-writer cutover happened, and the **iris VM (VMID 306 / Proxmox `onyx` / `.150`) is decommissioned and destroyed** — M6 complete (#91). #104 (commit the VM's vault working tree pre-decom) is moot: the lab site content is now rendered in-cluster from the DB by the lab-publisher, not committed off the VM. The **3-env model below is superseded by single-env prod-only** (dev/staging decommissioned 2026-06-16). Retained as the historical migration record; for current state read the repo `CLAUDE.md` and `docs/handoff/k3s-agent-handoff.md`.
+
 ---
 
 ## 1. Executive status
