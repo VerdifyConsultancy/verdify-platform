@@ -115,6 +115,12 @@ patches:
   - path: db-storageclass-iscsi.yaml
   # DEVICE-WRITE INTERLOCK (#79): VERDIFY_DEVICE_WRITE_ENABLED=1 — prod only.
   - path: device-write-configmap.yaml
+  # ⚠️ TEMPORARY (2026-06-20): ingestor state on emptyDir, not the iSCSI PVC — the
+  # Synology iSCSI target-cap is exhausted and the PVC won't remount on restart
+  # (writer was down ~10min). Keeps git==live so a sync won't re-wedge the writer.
+  # REVERT (remove this line + TEMP-ingestor-state-emptydir.patch.yaml) once the
+  # iSCSI cap is fixed. See the storage-wedge tracking issue.
+  - path: TEMP-ingestor-state-emptydir.patch.yaml
   # HA-3.1 FAST FAILOVER (#239, Jason-approved 2026-06-20): pin the ingestor to
   # priorityClassName verdify-device-writer + 20s NoExecute tolerations + a cpu
   # request (no cpu LIMIT) + terminationGracePeriodSeconds:15, so the sole writer

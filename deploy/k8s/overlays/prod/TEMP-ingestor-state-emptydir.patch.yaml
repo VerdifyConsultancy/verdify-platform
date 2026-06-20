@@ -1,0 +1,25 @@
+# ⚠️ TEMPORARY INCIDENT PATCH (2026-06-20) — REVERT WHEN THE iSCSI CAP IS FIXED.
+#
+# The ingestor's RWO state PVC (verdify-ingestor-state, synology-iscsi) could not
+# remount on a writer restart: the Synology iSCSI target-count cap is exhausted, so
+# MountDevice times out (DeadlineExceeded). During the #239 fast-failover apply the
+# writer was DOWN ~10min and did NOT self-resolve. To restore the live ESP32 writer,
+# the `state` volume was swapped to emptyDir — the ingestor re-seeds /srv/verdify/state
+# from the DB + device on reconnect, so this is safe but EPHEMERAL (state is lost on
+# each restart).
+#
+# This patch makes git==live so a `argocd app sync` does NOT revert to the iSCSI PVC
+# and re-wedge the live writer. RESTORE the PVC (delete this patch + its kustomization
+# line) ONLY after the iSCSI target-cap is fixed on the NAS (storage-infra). Tracked
+# as the storage-wedge issue.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-ingestor
+spec:
+  template:
+    spec:
+      volumes:
+        - $patch: replace
+          name: state
+          emptyDir: {}
