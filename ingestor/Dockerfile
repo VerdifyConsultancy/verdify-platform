@@ -79,6 +79,12 @@ COPY verdify_schemas/ /app/verdify_schemas/
 # its imports resolve at this in-container location.
 COPY scripts/ /app/scripts/
 
+# k3s cleanup (#339/#210): the Iris planner playbook moved off the decommissioned
+# iris-VM mount (/mnt/agents). Package the canonical repo copy into the image so
+# iris_planner.PLANNER_PLAYBOOK_PATH resolves /app/docs/planner/greenhouse-playbook.md
+# at runtime instead of silently degrading without tuning guidance.
+COPY docs/planner/greenhouse-playbook.md /app/docs/planner/greenhouse-playbook.md
+
 # slack.yaml is the NON-SECRET Slack config (channel IDs + credential FILE
 # PATHS, never tokens). slack_config.DEFAULT_CONFIG_PATH resolves it next to
 # slack_config.py, and ingestor/config.py:48 loads it at import — so it must be
