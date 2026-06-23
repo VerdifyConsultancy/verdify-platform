@@ -1336,6 +1336,22 @@ globals:
     restore_value: no
     initial_value: '0'
 
+  # Per-zone last turn-OFF stamp (ms). Powers the mister re-fire dwell fence
+  # (mister_min_off_s): a zone may not re-energize within mister_min_off_s of
+  # its own last off, collapsing sub-gap chatter without touching zone choice.
+  - id: last_off_south_ms
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+  - id: last_off_west_ms
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+  - id: last_off_center_ms
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+
   # Daily counter of fairness-watchdog overrides (reset at midnight).
   - id: cnt_mister_fairness_overrides_today
     type: int
@@ -1568,6 +1584,17 @@ globals:
     initial_value: '60'
 
   - id: mister_pulse_gap_s
+    type: int
+    restore_value: no
+    initial_value: '45'
+
+  # Mister re-fire dwell floor (s). A zone may not re-energize within this of
+  # its own last turn-off — suppresses the sub-gap on/off chatter the misters
+  # (uniquely among relays) had no min-on/off protection against. Default 45s
+  # == the designed pulse gap, so it only fences re-fires FASTER than the
+  # intended cadence (never extends a normal pulse / never over-waters).
+  # Planner-tunable for cycling reduction; firmware-clamped to a sane minimum.
+  - id: mister_min_off_s
     type: int
     restore_value: no
     initial_value: '45'
