@@ -384,6 +384,13 @@ dispatcher-owned range.
   25-35s near the edge, and 45-60s after VPD-low overshoot or condensation
   risk. Keep `mister_pulse_on_s` around 60s unless cycles visibly fail to move
   VPD.
+- `mister_min_off_s` s, [30-120], def 45 — re-fire dwell floor: a mister zone
+  cannot re-energize within this of its own last off, so it collapses sub-gap
+  on/off chatter (the misters lack the relay min-on/off protection the climate
+  relays have). Default 45s == the designed pulse gap (only fences chatter,
+  never normal misting). Raise toward 60-90s to cut mister cycling/wear when
+  the transition log shows a zone re-firing faster than the climate needs; it
+  never reduces intended misting above the gap. Confirmed by `cfg_mister_min_off_s`.
 - Escalate with fog when misters are pulsing but VPD is still above band. Fog is
   the heavy 7x wet-assist path: use `fog_escalation_kpa` 0.15-0.20 for hot/dry
   venting with healthy dew margin, 0.25-0.30 for mild dry stress, and 0.35-0.50

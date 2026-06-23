@@ -645,6 +645,24 @@ REGISTRY: dict[str, TunableDef] = {
         tier=1,
         notes="Pulse-rotation OFF (evap dwell) between zones.",
     ),
+    "mister_min_off_s": TunableDef(
+        name="mister_min_off_s",
+        kind="numeric",
+        min=30,
+        max=120,
+        default=45,
+        fw_clamp_lo=30,
+        fw_clamp_hi=120,
+        esp_object_id="mister_min_off__s_",
+        cfg_readback_object_id="cfg___mister_min_off__s_",
+        push_owner="planner",
+        planner_pushable=True,
+        tier=2,
+        notes="Mister re-fire dwell floor: a zone may not re-energize within "
+        "this of its own last off. Default 45s == the designed pulse gap, so it "
+        "only fences sub-gap chatter (never extends a pulse / over-waters). "
+        "Raise to cut mister cycling/wear when re-fires are faster than needed.",
+    ),
     "mister_vpd_weight": TunableDef(
         name="mister_vpd_weight",
         kind="numeric",

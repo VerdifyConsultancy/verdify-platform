@@ -551,6 +551,18 @@ number:
           id(num_mister_pulse_gap).publish_state(x);
 
   - platform: template
+    id: num_mister_min_off
+    name: "Mister Min Off (s)"
+    min_value: 30
+    max_value: 120
+    step: 5
+    lambda: "return id(mister_min_off_s);"
+    set_action:
+      - lambda: |
+          id(mister_min_off_s) = (int)x;
+          id(num_mister_min_off).publish_state(x);
+
+  - platform: template
     id: num_mister_vpd_weight
     name: "Mister VPD Weight"
     min_value: 0.5

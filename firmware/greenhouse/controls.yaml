@@ -153,6 +153,11 @@ interval:
                   id(runtime_mister_south_ms)  = 0;
                   id(runtime_mister_west_ms)   = 0;
                   id(runtime_mister_center_ms) = 0;
+                  // Clear the dwell-fence last-off stamps so a day rollover
+                  // never leaves a stale stamp that wrongly fences a zone.
+                  id(last_off_south_ms)  = 0;
+                  id(last_off_west_ms)   = 0;
+                  id(last_off_center_ms) = 0;
                   id(mister_water_today) = 0.0f;
                   // B5: reset DLI accumulator at midnight
                   id(dli_accumulator) = 0.0f;
@@ -1261,6 +1266,23 @@ interval:
               auto pulse_on_ms_for  = [&](int zone) -> uint32_t { return zone == 3 ? CENTER_PULSE_ON_MS  : PULSE_ON_MS;  };
               auto pulse_gap_ms_for = [&](int zone) -> uint32_t { return zone == 3 ? CENTER_PULSE_GAP_MS : PULSE_GAP_MS; };
 
+              // Mister re-fire dwell fence: a zone may not re-energize within
+              // mister_min_off_s of its own last off. The misters bypass the
+              // RelayMeta R[] min-on/off machinery (they're a multi-zone pulse
+              // FSM), so this is their per-zone equivalent. Suppression only
+              // DELAYS a re-fire (never forces a relay on / never over-waters),
+              // so the failure mode is benign. Returns true if energizing is
+              // allowed now.
+              const uint32_t MISTER_MIN_OFF_MS = (uint32_t)id(mister_min_off_s) * 1000UL;
+              auto mister_zone_last_off = [&](int z) -> uint32_t {
+                return z == 1 ? id(last_off_south_ms)
+                     : z == 2 ? id(last_off_west_ms)
+                     : id(last_off_center_ms);
+              };
+              auto mister_zone_can_on = [&](int z) -> bool {
+                return z <= 0 || (now_ms - mister_zone_last_off(z)) >= MISTER_MIN_OFF_MS;
+              };
+
               // IRR-2: raise the hysteresis floor from the legacy 0.05 to the
               // operator-tunable mister_hysteresis_kpa (default 0.10) so the
               // mister state machine cannot chatter inside a tight band. Still
@@ -1327,7 +1349,25 @@ interval:
                 if(zone == 1 && !south_wet_allowed) zone = first_allowed_mister_zone();
                 if(zone == 2 && !west_wet_allowed) zone = first_allowed_mister_zone();
                 if(zone == 3 && !center_wet_allowed) zone = first_allowed_mister_zone();
-                if(zone == 0) return;
+                if(zone == 0) { id(mister_pulse_zone) = 0; return; }
+                // Mister re-fire dwell fence (mister_min_off_s): if the chosen
+                // zone is still inside its min-off hold, try the other eligible
+                // zone; if none is ready, hold this cycle (all misters stay off,
+                // mister_pulse_zone=0). The caller arms mister_pulse_timer_ms =
+                // pulse_on_ms_for(0) = PULSE_ON_MS, so the FSM re-evaluates ~one
+                // gap later — by which point min_off has elapsed and it fires.
+                // Suppression only DELAYS a re-fire; it never forces a relay on
+                // and never extends a normal pulse, so the failure mode is benign.
+                if(!mister_zone_can_on(zone)) {
+                  int alt = first_allowed_mister_zone();
+                  if(alt > 0 && alt != zone && mister_zone_can_on(alt)) {
+                    zone = alt;
+                  } else {
+                    ESP_LOGI("mister","DWELL-HOLD zone=%d (min_off %us)", zone, (unsigned)id(mister_min_off_s));
+                    id(mister_pulse_zone) = 0;
+                    return;
+                  }
+                }
                 // sprint-2: last-fire ms for fairness watchdog.
                 // sprint-7: per-zone cycle counters at the rising edge
                 //          (turn_on_zone is always preceded by all-off,
@@ -1342,6 +1382,14 @@ interval:
               };
 
               auto turn_off_all_misters = [&]() {
+                // Stamp the just-energized zone's last-off BEFORE clearing
+                // mister_pulse_zone so the dwell fence can suppress a too-fast
+                // re-fire of that zone. All off-paths (pulse expiry, de-escalate,
+                // blocked, safety) funnel through here, so the stamp is complete.
+                const int off_z = id(mister_pulse_zone);
+                if(off_z == 1)      id(last_off_south_ms)  = now_ms;
+                else if(off_z == 2) id(last_off_west_ms)   = now_ms;
+                else if(off_z == 3) id(last_off_center_ms) = now_ms;
                 id(south_wall_mister).turn_off();
                 id(south_wall_mister_fertilized).turn_off();
                 id(west_wall_mister).turn_off();
