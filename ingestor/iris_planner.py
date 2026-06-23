@@ -521,11 +521,23 @@ short-term climate stress. Both circuits share the same parameter shape:
 - `sw_dwell_gate_enabled` — master switch; firmware default OFF, planner may enable for oscillation control. THERMAL_RELIEF, SAFETY_COOL, SAFETY_HEAT, SENSOR_FAULT, dehum→humidify overshoot, and sealed-mist temp preemption bypass the gate.
 - `dwell_gate_ms` ms, [60000-1800000], def 300000 — hold duration for ordinary non-safety mode transitions only. Revert if it hides real stress or increases relief cycling.
 
+**Climate-relay protection dwell (cut actuator cycling + relay wear):**
+Raise these to lengthen the minimum a relay stays on/off, collapsing rapid
+on/off chatter into fewer, longer actuations — lower wear and runtime — without
+touching the band. They are firmware-clamped to a sane minimum (the listed `[lo`)
+so you can never drive a relay into chatter; raise toward the high end only when
+the current hour's transition log shows a relay cycling more than the climate
+needs. Each is confirmed by its `cfg_*` readback. Leave at default unless cycling
+is the diagnosed problem; over-long dwell can make a relay sluggish to real demand.
+- `min_heat_on_s` s, [30-300], def 120 / `min_heat_off_s` s, [60-600], def 180 — heater min on/off; off-floor honors the igniter cooldown. Raise to stop heat short-cycling on marginal nights.
+- `min_fan_on_s` s, [30-300], def — / `min_fan_off_s` s, [30-300], def — — circulation/exhaust fan min on/off. Raise to damp fan whipsaw near a cooling edge.
+- `min_vent_on_s` s, [10-300], def — / `min_vent_off_s` s, [10-300], def — — vent actuator min on/off. Raise to stop the vent hunting around the temp/VPD edge.
+
 ### Non-Policy Tunables
 
 Per-zone VPD rebalance, legacy irrigation start/duration changes, safety rail adjustments,
 occupancy inhibit, fog window shifts, economiser site pressure, fan-lead
-rotation, relay min-on/off protection dwell, crop bands, readbacks, retired
+rotation, crop bands, readbacks, retired
 aliases (`bias_heat`, `bias_cool`, `d_heat_stage_2`, `d_cool_stage_2`,
 `sw_fsm_controller_enabled`),
 and compatibility switches are not planner write targets. Treat them as explanatory context. If one must become planner-writable,
