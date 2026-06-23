@@ -175,8 +175,7 @@ def test_scorecard_docstring_drops_target_hugging_framing() -> None:
     lowered = _scorecard_docstring().lower()
     offenders = [p for p in _FORBIDDEN_TARGET_HUGGING_FRAMINGS if p.lower() in lowered]
     assert not offenders, (
-        f"scorecard() docstring still carries ADR-0003 target-hugging framing {offenders} "
-        f"({MCP_SERVER_PATH})."
+        f"scorecard() docstring still carries ADR-0003 target-hugging framing {offenders} ({MCP_SERVER_PATH})."
     )
 
 
@@ -237,6 +236,5 @@ def test_outcome_kpi_docstring_drops_target_hugging_framing() -> None:
     lowered = _outcome_kpi_docstring().lower()
     offenders = [p for p in _FORBIDDEN_TARGET_HUGGING_FRAMINGS if p.lower() in lowered]
     assert not offenders, (
-        f"outcome_kpi() docstring still carries ADR-0003 target-hugging framing {offenders} "
-        f"({MCP_SERVER_PATH})."
+        f"outcome_kpi() docstring still carries ADR-0003 target-hugging framing {offenders} ({MCP_SERVER_PATH})."
     )

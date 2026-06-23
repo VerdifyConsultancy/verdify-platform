@@ -2445,7 +2445,9 @@ def test_climate_wet_assist_is_separate_from_crop_direct_wet_windows():
         controls.index("} else if(!any_mister_wet_allowed)") : controls.index("} else if(irrigation_block)")
     ]
     climate_reason = block_reason[
-        block_reason.index("if(climate_wet_assist_demand)") : block_reason.index("} else if(!id(direct_wet_gate_enabled))")
+        block_reason.index("if(climate_wet_assist_demand)") : block_reason.index(
+            "} else if(!id(direct_wet_gate_enabled))"
+        )
     ]
     assert "if(climate_wet_assist_demand)" in block_reason
     assert "direct_wet_window" not in climate_reason
@@ -2860,7 +2862,9 @@ def test_manual_fan_cannot_open_vent_during_safety_heat():
     assert "const ManualForce manual_force = apply_manual_overrides(ov_out, manual_ov, mode);" in manual_block
     assert "const bool manual_fan_force = manual_force.fans;" in manual_block
     interlock_block = controls[
-        controls.index("const bool fan_requires_vent", manual_end) : controls.index("const bool fan_vent_interlock_active", manual_end)
+        controls.index("const bool fan_requires_vent", manual_end) : controls.index(
+            "const bool fan_vent_interlock_active", manual_end
+        )
     ]
     assert "fan_requires_open_vent(mode, fan_physically_on || fan_wanted, vent_bypass_eff)" in interlock_block
 
@@ -2933,7 +2937,10 @@ def test_sensor_fault_is_final_relay_lock_above_manual_overrides():
     assert "const ManualForce manual_force = apply_manual_overrides(ov_out, manual_ov, mode);" in controls
     assert "const bool manual_fan_force = manual_force.fans;" in controls
     assert "const bool manual_fog_force = manual_force.fog;" in controls
-    assert "const bool fan_requires_vent = fan_requires_open_vent(mode, fan_physically_on || fan_wanted, vent_bypass_eff);" in controls
+    assert (
+        "const bool fan_requires_vent = fan_requires_open_vent(mode, fan_physically_on || fan_wanted, vent_bypass_eff);"
+        in controls
+    )
     assert "const bool force_heat_off = heat_air_exchange_interlock_active || sensor_fault_relay_lock;" in controls
 
     assert controls.index("const ManualForce manual_force") < controls.index("if(sensor_fault_relay_lock) {")

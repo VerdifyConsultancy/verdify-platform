@@ -1078,9 +1078,7 @@ async def outcome_kpi(target_date: str = "") -> str:
             vpd_policy["transition_window_min"] = 30
         pending_metrics = []
         if not moisture_sample_count:
-            pending_metrics.append(
-                "moisture_estimator: source path wired; waiting for OTA/deploy/live rows"
-            )
+            pending_metrics.append("moisture_estimator: source path wired; waiting for OTA/deploy/live rows")
         try:
             actions = [OutcomeKpiActionRow.model_validate(dict(row)) for row in action_rows]
             response = OutcomeKpiResponse(
@@ -1090,9 +1088,7 @@ async def outcome_kpi(target_date: str = "") -> str:
                     "ADR-0004 outcome view: float inside the crop corridor, act at "
                     "edges, and use resource cost/wear as first-class guardrails."
                 ),
-                coverage=OutcomeKpiCoverage(
-                    moisture_estimator="available" if moisture_sample_count else "pending"
-                ),
+                coverage=OutcomeKpiCoverage(moisture_estimator="available" if moisture_sample_count else "pending"),
                 served_corridor={
                     "attributable_pct": summary.get("compliance_v2_attributable_pct"),
                     "raw_pct": summary.get("compliance_v2_raw_pct"),
