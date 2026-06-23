@@ -34,6 +34,20 @@ spec:
             - name: state
               mountPath: /srv/verdify/state
       volumes:
+        # ⚠️ TEMPORARY (#382, 2026-06-20): emptyDir, NOT the iSCSI PVC below. The
+        # Synology iSCSI target-cap is exhausted and verdify-ingestor-state won't
+        # remount on restart (writer was down ~10min). The LIVE writer runs emptyDir,
+        # so this keeps git==live and a sync won't re-wedge the writer. The
+        # dispatcher re-seeds /srv/verdify/state on boot (146 cfg readbacks + band
+        # setpoints), so losing the prior spool is bounded. The separate broken
+        # TEMP-ingestor-state-emptydir.patch.yaml `$patch: replace` never overrode
+        # this PVC in the render (it left git=PVC vs live=emptyDir → ArgoCD
+        # OutOfSync); defining emptyDir here directly is the reliable fix.
+        # REVERT to the persistentVolumeClaim below (and drop this block) once the
+        # iSCSI cap is fixed.
         - name: state
-          persistentVolumeClaim:
-            claimName: verdify-ingestor-state
+          emptyDir: {}
+        # PVC (restore when #382/iSCSI is fixed):
+        # - name: state
+        #   persistentVolumeClaim:
+        #     claimName: verdify-ingestor-state
