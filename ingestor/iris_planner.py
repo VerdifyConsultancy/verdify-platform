@@ -44,7 +44,24 @@ CONTEXT_GATHER_TIMEOUT = int(os.getenv("IRIS_CONTEXT_GATHER_TIMEOUT", "120"))
 # means Iris silently loses detailed tuning guidance — so we check at send
 # time and (a) log critical, (b) flag the outgoing prompt so Iris knows to
 # degrade gracefully instead of referencing a file she can't open.
-PLANNER_PLAYBOOK_PATH = Path("/mnt/agents/iris/skills/greenhouse-planner.md")
+# k3s cleanup (#339/#210): the playbook moved off the decommissioned iris-VM
+# mount (/mnt/agents). Resolve the first readable candidate: an explicit
+# PLANNER_PLAYBOOK_PATH env override, the in-image repo copy
+# (docs/planner/greenhouse-playbook.md, packaged with the ingestor image), then
+# the legacy VM mount for backward-compat. The repo source is canonical.
+_PLAYBOOK_CANDIDATES = [
+    p
+    for p in (
+        os.environ.get("PLANNER_PLAYBOOK_PATH"),
+        str(Path(__file__).resolve().parent.parent / "docs" / "planner" / "greenhouse-playbook.md"),
+        "/mnt/agents/iris/skills/greenhouse-planner.md",
+    )
+    if p
+]
+PLANNER_PLAYBOOK_PATH = next(
+    (Path(p) for p in _PLAYBOOK_CANDIDATES if Path(p).exists()),
+    Path(_PLAYBOOK_CANDIDATES[-1]),
+)
 try:
     _planner_playbook_available = PLANNER_PLAYBOOK_PATH.exists()
 except OSError as exc:  # pragma: no cover — host-path check
