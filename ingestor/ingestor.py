@@ -180,6 +180,7 @@ CLIMATE_ACTION_LOG_ENTITIES = frozenset(
         "climate_fog_block_reason",
         "climate_resource_cost_estimate",
         "climate_next_mist_eligible_s",
+        "climate_moisture_exchange",
         "moisture_block_reason",
         "vent_mist_assist_status",
         "direct_wet_zone_mask",
@@ -668,6 +669,9 @@ async def write_climate_action_log(pool: asyncpg.Pool, ts: datetime) -> bool:
     wet_assist_allowed, wet_block_reason = _climate_wet_assist_status(action, moisture_state, fog_allowed)
     relay_truth = {equipment: bool(state.equipment.get(equipment, False)) for equipment in CLIMATE_RELAY_EQUIPMENT}
     source_system_state = {entity: state.system.get(entity) for entity in sorted(CLIMATE_ACTION_LOG_ENTITIES)}
+    moisture_exchange = _parse_json_object(state.system.get("climate_moisture_exchange"))
+    if moisture_exchange:
+        source_system_state["climate_moisture_exchange"] = moisture_exchange
     resource_cost = _parse_json_object(state.system.get("climate_resource_cost_estimate"))
 
     try:

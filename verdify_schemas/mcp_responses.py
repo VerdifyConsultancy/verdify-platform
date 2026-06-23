@@ -1,11 +1,11 @@
 """MCP read-tool response envelopes.
 
-The 8 read-only MCP tools (climate, scorecard, equipment_state, forecast,
-history, get_setpoints, plan_status, lessons) all return JSON strings. Until
-Sprint 23 these were free-form dicts — Iris received whatever the SQL
-happened to project. Now each tool builds its response through the matching
-model below + `.model_dump_json()`, so a future SQL refactor that drops a
-column fails at the boundary instead of silently returning a smaller shape.
+The typed read-only MCP tools (climate, scorecard, outcome_kpi, equipment_state,
+forecast, history, get_setpoints, plan_status, lessons) all return JSON strings.
+Until Sprint 23 these were free-form dicts — Iris received whatever the SQL
+happened to project. Now each tool builds its response through the matching model
+below + `.model_dump_json()`, so a future SQL refactor that drops a column fails
+at the boundary instead of silently returning a smaller shape.
 
 Skipped intentionally:
 - `query` — generic SELECT escape hatch; cannot be typed.
@@ -162,6 +162,72 @@ class ScorecardResponse(BaseModel):
         for field_name, field in cls.model_fields.items():
             names.add(field.alias or field_name)
         return frozenset(names)
+
+
+OutcomeMetricStatus = Literal["available", "pending"]
+
+
+class OutcomeKpiCoverage(BaseModel):
+    """Coverage map for `outcome_kpi()` so missing metrics are explicit."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    served_corridor: OutcomeMetricStatus = "available"
+    pinched_corridor: OutcomeMetricStatus = "available"
+    vpd_misses: OutcomeMetricStatus = "available"
+    actuator_cycles_runtime: OutcomeMetricStatus = "available"
+    dew_margin: OutcomeMetricStatus = "available"
+    water_use: OutcomeMetricStatus = "available"
+    dli: OutcomeMetricStatus = "available"
+    dif: OutcomeMetricStatus = "available"
+    solar_phase_buckets: OutcomeMetricStatus = "available"
+    moisture_estimator: OutcomeMetricStatus = "pending"
+    vpd_policy_sequences: OutcomeMetricStatus = "available"
+
+
+class OutcomeKpiActionRow(BaseModel):
+    """One action row from `v_climate_action_daily_scorecard`."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    climate_action: str
+    decisions: int = Field(..., ge=0)
+    avg_abs_temp_error_before_f: float | None = None
+    avg_abs_vpd_error_before_kpa: float | None = None
+    avg_temp_abs_error_delta_15m_f: float | None = None
+    avg_vpd_abs_error_delta_15m_kpa: float | None = None
+    avg_wet_relay_duty_pct: float | None = None
+    avg_vent_fan_duty_pct: float | None = None
+    mister_water_delta_gal: float | None = None
+    wet_blocked_decisions: int = Field(0, ge=0)
+    fog_blocked_decisions: int = Field(0, ge=0)
+
+
+class OutcomeKpiResponse(BaseModel):
+    """`outcome_kpi(target_date)` response — ADR-0004 outcome evidence."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    date: DateType
+    greenhouse_id: str
+    semantics: str
+    coverage: OutcomeKpiCoverage = Field(default_factory=OutcomeKpiCoverage)
+    served_corridor: dict[str, float | None] = Field(default_factory=dict)
+    pinched_corridor: dict[str, float | int | None] = Field(default_factory=dict)
+    vpd_misses_h: dict[str, float | None] = Field(default_factory=dict)
+    actuator_cycles: dict[str, int | None] = Field(default_factory=dict)
+    actuator_runtime: dict[str, float | None] = Field(default_factory=dict)
+    water_use_gal: dict[str, float | None] = Field(default_factory=dict)
+    dli: dict[str, float | int | None] = Field(default_factory=dict)
+    dif: dict[str, float | int | None] = Field(default_factory=dict)
+    dew_margin: dict[str, float | None] = Field(default_factory=dict)
+    energy_cost: dict[str, float | None] = Field(default_factory=dict)
+    action_scorecard: list[OutcomeKpiActionRow] = Field(default_factory=list)
+    solar_phase_buckets: list[dict[str, float | int | str | None]] = Field(default_factory=list)
+    moisture_estimator: dict[str, Any] = Field(default_factory=dict)
+    vpd_policy: dict[str, Any] = Field(default_factory=dict)
+    pending_metrics: list[str] = Field(default_factory=list)
+    source_tables: list[str] = Field(default_factory=list)
 
 
 class EquipmentStateRow(BaseModel):

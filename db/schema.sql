@@ -3352,26 +3352,70 @@ CREATE FUNCTION public.fn_solar_altitude(target_ts timestamp with time zone) RET
     LANGUAGE plpgsql IMMUTABLE
     AS $$
 DECLARE
-    lat_rad float := RADIANS(40.1672);
-    doy float;
-    local_hour float;
-    decl float;
-    hour_angle float;
+    lat_rad double precision := RADIANS(40.167);
+    lon_deg double precision := -105.102;
+    local_ts timestamp without time zone;
+    utc_ts timestamp without time zone;
+    local_date date;
+    local_hour double precision;
+    utc_minutes double precision;
+    year_int integer;
+    doy double precision;
+    days_in_year double precision;
+    gamma double precision;
+    eqtime double precision;
+    decl double precision;
+    true_solar_time double precision;
+    hour_angle double precision;
 BEGIN
-    doy := EXTRACT(doy FROM target_ts AT TIME ZONE 'America/Denver');
-    local_hour := EXTRACT(hour FROM target_ts AT TIME ZONE 'America/Denver') 
-                + EXTRACT(minute FROM target_ts AT TIME ZONE 'America/Denver') / 60.0;
-    decl := ASIN(0.39795 * COS(RADIANS(0.98563 * (doy - 173))));
-    hour_angle := RADIANS(15.0 * (local_hour - 13.0));
+    local_ts := target_ts AT TIME ZONE 'America/Denver';
+    utc_ts := target_ts AT TIME ZONE 'UTC';
+    local_date := local_ts::date;
+    year_int := EXTRACT(year FROM local_date)::integer;
+    doy := EXTRACT(doy FROM local_date)::double precision;
+    local_hour := EXTRACT(hour FROM local_ts)
+                + EXTRACT(minute FROM local_ts) / 60.0
+                + EXTRACT(second FROM local_ts) / 3600.0;
+    utc_minutes := EXTRACT(hour FROM utc_ts) * 60.0
+                 + EXTRACT(minute FROM utc_ts)
+                 + EXTRACT(second FROM utc_ts) / 60.0;
+    days_in_year := CASE
+        WHEN year_int % 4 = 0 AND (year_int % 100 <> 0 OR year_int % 400 = 0) THEN 366.0
+        ELSE 365.0
+    END;
+    gamma := 2.0 * pi() / days_in_year * (doy - 1.0 + (local_hour - 12.0) / 24.0);
+    eqtime := 229.18 * (
+          0.000075
+        + 0.001868 * COS(gamma)
+        - 0.032077 * SIN(gamma)
+        - 0.014615 * COS(2.0 * gamma)
+        - 0.040849 * SIN(2.0 * gamma)
+    );
+    decl := 0.006918
+          - 0.399912 * COS(gamma)
+          + 0.070257 * SIN(gamma)
+          - 0.006758 * COS(2.0 * gamma)
+          + 0.000907 * SIN(2.0 * gamma)
+          - 0.002697 * COS(3.0 * gamma)
+          + 0.001480 * SIN(3.0 * gamma);
+    true_solar_time := utc_minutes + eqtime + 4.0 * lon_deg;
+    true_solar_time := true_solar_time - FLOOR(true_solar_time / 1440.0) * 1440.0;
+    hour_angle := true_solar_time / 4.0 - 180.0;
     RETURN DEGREES(ASIN(
-        SIN(lat_rad) * SIN(decl) + 
-        COS(lat_rad) * COS(decl) * COS(hour_angle)
+        SIN(lat_rad) * SIN(decl) +
+        COS(lat_rad) * COS(decl) * COS(RADIANS(hour_angle))
     ));
 END;
 $$;
 
 
 ALTER FUNCTION public.fn_solar_altitude(target_ts timestamp with time zone) OWNER TO verdify;
+
+--
+-- Name: FUNCTION fn_solar_altitude(target_ts timestamp with time zone); Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON FUNCTION public.fn_solar_altitude(target_ts timestamp with time zone) IS 'NOAA solar altitude for the Longmont greenhouse. Uses equation-of-time, longitude, DST-aware timestamp handling, and no hardcoded local solar noon; mirrors the firmware/ingestor solar contract closely enough for band phase and lighting analysis.';
 
 --
 -- Name: fn_solar_phase(timestamp with time zone); Type: FUNCTION; Schema: public; Owner: verdify
@@ -3428,7 +3472,7 @@ ALTER FUNCTION public.fn_solar_phase(target_ts timestamp with time zone) OWNER T
 -- Name: FUNCTION fn_solar_phase(target_ts timestamp with time zone); Type: COMMENT; Schema: public; Owner: verdify
 --
 
-COMMENT ON FUNCTION public.fn_solar_phase(target_ts timestamp with time zone) IS 'Contract-B1 solar phase in [0,4): 0=sunrise, 1=solar noon, 2=sunset, 3=solar midnight (migration 164). DB mirror of the ESP32 solar_phase(); reuses the migration-145 sunrise/sunset bisection helpers (lat 40.167, lon -105.102).';
+COMMENT ON FUNCTION public.fn_solar_phase(target_ts timestamp with time zone) IS 'Contract-B1 solar phase in [0,4): 0=sunrise, 1=solar noon, 2=sunset, 3=solar midnight. DB mirror of the ESP32 solar_phase(); uses NOAA sunrise/sunset helpers with equation-of-time, longitude, and DST-aware America/Denver offset handling.';
 
 
 --
@@ -3439,31 +3483,64 @@ CREATE FUNCTION public.fn_solar_sunrise_hour(target_ts timestamp with time zone)
     LANGUAGE plpgsql IMMUTABLE
     AS $$
 DECLARE
-    day_start timestamptz;
-    lo double precision := 0.0;
-    hi double precision := 12.0;
-    mid double precision;
-    i int;
-    a_lo double precision;
-    a_mid double precision;
+    lat_rad double precision := RADIANS(40.167);
+    lon_deg double precision := -105.102;
+    zenith_rad double precision := RADIANS(90.833);
+    local_ts timestamp without time zone;
+    utc_ts timestamp without time zone;
+    local_date date;
+    year_int integer;
+    doy double precision;
+    days_in_year double precision;
+    utc_offset_min double precision;
+    gamma double precision;
+    eqtime double precision;
+    decl double precision;
+    cos_ha double precision;
+    ha_deg double precision;
+    sunrise_min double precision;
 BEGIN
-    -- midnight local for the target day, expressed as a timestamptz
-    day_start := date_trunc('day', target_ts AT TIME ZONE 'America/Denver') AT TIME ZONE 'America/Denver';
-    a_lo := fn_solar_altitude(day_start + (lo || ' hours')::interval);
-    -- If the sun is already up at local midnight (polar edge case / bad input),
-    -- fall back to a sane default.
-    IF a_lo > 0 THEN RETURN 6.0; END IF;
-    FOR i IN 1..30 LOOP
-        mid := (lo + hi) / 2.0;
-        a_mid := fn_solar_altitude(day_start + (mid || ' hours')::interval);
-        IF a_mid > 0 THEN hi := mid; ELSE lo := mid; END IF;
-    END LOOP;
-    RETURN (lo + hi) / 2.0;
+    local_ts := target_ts AT TIME ZONE 'America/Denver';
+    utc_ts := target_ts AT TIME ZONE 'UTC';
+    local_date := local_ts::date;
+    year_int := EXTRACT(year FROM local_date)::integer;
+    doy := EXTRACT(doy FROM local_date)::double precision;
+    days_in_year := CASE
+        WHEN year_int % 4 = 0 AND (year_int % 100 <> 0 OR year_int % 400 = 0) THEN 366.0
+        ELSE 365.0
+    END;
+    utc_offset_min := EXTRACT(epoch FROM (local_ts - utc_ts)) / 60.0;
+    gamma := 2.0 * pi() / days_in_year * (doy - 1.0 + 0.5);
+    eqtime := 229.18 * (
+          0.000075
+        + 0.001868 * COS(gamma)
+        - 0.032077 * SIN(gamma)
+        - 0.014615 * COS(2.0 * gamma)
+        - 0.040849 * SIN(2.0 * gamma)
+    );
+    decl := 0.006918
+          - 0.399912 * COS(gamma)
+          + 0.070257 * SIN(gamma)
+          - 0.006758 * COS(2.0 * gamma)
+          + 0.000907 * SIN(2.0 * gamma)
+          - 0.002697 * COS(3.0 * gamma)
+          + 0.001480 * SIN(3.0 * gamma);
+    cos_ha := COS(zenith_rad) / (COS(lat_rad) * COS(decl)) - TAN(lat_rad) * TAN(decl);
+    cos_ha := GREATEST(-1.0, LEAST(1.0, cos_ha));
+    ha_deg := DEGREES(ACOS(cos_ha));
+    sunrise_min := 720.0 - 4.0 * (lon_deg + ha_deg) - eqtime + utc_offset_min;
+    RETURN sunrise_min / 60.0;
 END;
 $$;
 
 
 ALTER FUNCTION public.fn_solar_sunrise_hour(target_ts timestamp with time zone) OWNER TO verdify;
+
+--
+-- Name: FUNCTION fn_solar_sunrise_hour(target_ts timestamp with time zone); Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON FUNCTION public.fn_solar_sunrise_hour(target_ts timestamp with time zone) IS 'NOAA sunrise hour after local midnight for the Longmont greenhouse, using zenith 90.833 degrees and the timestamp''s America/Denver UTC offset. Mirrors ingestor/solar.py compute_solar_times().';
 
 --
 -- Name: fn_solar_sunset_hour(timestamp with time zone); Type: FUNCTION; Schema: public; Owner: verdify
@@ -3473,29 +3550,64 @@ CREATE FUNCTION public.fn_solar_sunset_hour(target_ts timestamp with time zone) 
     LANGUAGE plpgsql IMMUTABLE
     AS $$
 DECLARE
-    day_start timestamptz;
-    lo double precision := 12.0;
-    hi double precision := 24.0;
-    mid double precision;
-    i int;
-    a_lo double precision;
-    a_mid double precision;
+    lat_rad double precision := RADIANS(40.167);
+    lon_deg double precision := -105.102;
+    zenith_rad double precision := RADIANS(90.833);
+    local_ts timestamp without time zone;
+    utc_ts timestamp without time zone;
+    local_date date;
+    year_int integer;
+    doy double precision;
+    days_in_year double precision;
+    utc_offset_min double precision;
+    gamma double precision;
+    eqtime double precision;
+    decl double precision;
+    cos_ha double precision;
+    ha_deg double precision;
+    sunset_min double precision;
 BEGIN
-    day_start := date_trunc('day', target_ts AT TIME ZONE 'America/Denver') AT TIME ZONE 'America/Denver';
-    a_lo := fn_solar_altitude(day_start + (lo || ' hours')::interval);
-    -- If sun already down at local noon (bad input), fall back.
-    IF a_lo < 0 THEN RETURN 20.0; END IF;
-    FOR i IN 1..30 LOOP
-        mid := (lo + hi) / 2.0;
-        a_mid := fn_solar_altitude(day_start + (mid || ' hours')::interval);
-        IF a_mid > 0 THEN lo := mid; ELSE hi := mid; END IF;
-    END LOOP;
-    RETURN (lo + hi) / 2.0;
+    local_ts := target_ts AT TIME ZONE 'America/Denver';
+    utc_ts := target_ts AT TIME ZONE 'UTC';
+    local_date := local_ts::date;
+    year_int := EXTRACT(year FROM local_date)::integer;
+    doy := EXTRACT(doy FROM local_date)::double precision;
+    days_in_year := CASE
+        WHEN year_int % 4 = 0 AND (year_int % 100 <> 0 OR year_int % 400 = 0) THEN 366.0
+        ELSE 365.0
+    END;
+    utc_offset_min := EXTRACT(epoch FROM (local_ts - utc_ts)) / 60.0;
+    gamma := 2.0 * pi() / days_in_year * (doy - 1.0 + 0.5);
+    eqtime := 229.18 * (
+          0.000075
+        + 0.001868 * COS(gamma)
+        - 0.032077 * SIN(gamma)
+        - 0.014615 * COS(2.0 * gamma)
+        - 0.040849 * SIN(2.0 * gamma)
+    );
+    decl := 0.006918
+          - 0.399912 * COS(gamma)
+          + 0.070257 * SIN(gamma)
+          - 0.006758 * COS(2.0 * gamma)
+          + 0.000907 * SIN(2.0 * gamma)
+          - 0.002697 * COS(3.0 * gamma)
+          + 0.001480 * SIN(3.0 * gamma);
+    cos_ha := COS(zenith_rad) / (COS(lat_rad) * COS(decl)) - TAN(lat_rad) * TAN(decl);
+    cos_ha := GREATEST(-1.0, LEAST(1.0, cos_ha));
+    ha_deg := DEGREES(ACOS(cos_ha));
+    sunset_min := 720.0 - 4.0 * (lon_deg - ha_deg) - eqtime + utc_offset_min;
+    RETURN sunset_min / 60.0;
 END;
 $$;
 
 
 ALTER FUNCTION public.fn_solar_sunset_hour(target_ts timestamp with time zone) OWNER TO verdify;
+
+--
+-- Name: FUNCTION fn_solar_sunset_hour(target_ts timestamp with time zone); Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON FUNCTION public.fn_solar_sunset_hour(target_ts timestamp with time zone) IS 'NOAA sunset hour after local midnight for the Longmont greenhouse, using zenith 90.833 degrees and the timestamp''s America/Denver UTC offset. Mirrors ingestor/solar.py compute_solar_times().';
 
 --
 -- Name: fn_stress_summary(date); Type: FUNCTION; Schema: public; Owner: verdify
@@ -57839,4 +57951,3 @@ GRANT INSERT ON TABLE public.twin_decisions TO twin_ro;
 --
 
 \unrestrict VO0YucjG1HoNrXxRq4krB6mHkgyuZT8e4zrMtk5nln3jyJNfUjenzdP535wxCYq
-

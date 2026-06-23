@@ -241,13 +241,11 @@ struct Setpoints {
     // the house delta telemetry and the normalized temp-vs-VPD arbitration.
     float    temp_target;
     float    vpd_target;
-    // BC-3 (band-compliance): control-band tracking tightness in [0,1]. 0 = the
-    // legacy float-envelope (act only at temp_low/high, vpd_low/high). As it
-    // rises, the CONTROL band is pinched toward temp_target/vpd_target so the
-    // controller drives the climate ONTO the target curve instead of merely
-    // staying inside the band. Safety rails and the served band are unchanged —
-    // only where the controller chooses to act tightens. Planner-pushable; ramp
-    // live (default 0 ships a behavior-neutral binary).
+    // ADR-0004: control-band tracking tightness in [0,1]. 0 = float inside the
+    // served crop corridor and act only at temp_low/high and vpd_low/high. Nonzero
+    // pinches the CONTROL band toward temp_target/vpd_target for explicit operator
+    // diagnostics. Safety rails and the served band are unchanged; only where the
+    // controller chooses to act tightens.
     float    band_track_fraction;
     // BC-13 (ADR0003 §6.4): deterministic outdoor-aware moisture-exchange selector.
     float    dehum_vent_gain_margin_kpa;     // min projected VPD-toward-target gain to act (anti-thrash)
@@ -479,6 +477,15 @@ struct ClimateActionDecision {
     float fog_margin_kpa;
     const char* fog_block_reason;
     ClimateResourceCostEstimate resource_cost_estimate;
+    const char* moisture_exchange_action;
+    const char* moisture_exchange_reason;
+    float moisture_vent_vpd_gain_kpa;
+    float moisture_heat_vpd_gain_kpa;
+    bool moisture_outdoor_fresh;
+    bool moisture_vent_overcools;
+    bool moisture_heat_assist_corun;
+    bool moisture_heat_assist_active;
+    uint32_t moisture_heat_assist_timer_ms;
 };
 
 inline bool climate_candidate_precedes(
@@ -732,16 +739,10 @@ inline Setpoints default_setpoints() {
         // these every cycle (they are telemetry/arbitration inputs, not knobs).
         .temp_target = 75.0f,
         .vpd_target = 1.0f,
-        // BC-3 (ADR0003 §6.1): pinch is the DEFAULT — narrows the control band toward
-        // temp_target/vpd_target so the controller strives ONTO the target curve on
-        // every axis. Float-envelope (0) is no longer the default; the planner may
-        // modulate [0,1] but not float to 0. SHIP VALUE 0.30 (not 0.50): the first
-        // unattended overnight runs gentle since the pinch was never calibrated and
-        // there is no continuous auto-rollback; RAMP toward 0.50 via the planner knob
-        // (band_track_fraction) once a clean night is observed. The controls.yaml
-        // setpts initializer sets the live device value (id(band_track_fraction)) to
-        // match so replay_emit (which starts from default_setpoints) and the device agree.
-        .band_track_fraction = 0.30f,
+        // ADR-0004: default float. The target line is a telemetry/arbitration
+        // reference, not a control objective. Nonzero tracking remains a deliberate
+        // operator/diagnostic escape hatch, but source defaults must not chase the line.
+        .band_track_fraction = 0.0f,
         // BC-13 (ADR0003 §6.4): moisture-exchange selector defaults.
         .dehum_vent_gain_margin_kpa = 0.02f,
         .dehum_heat_assist_min_dwell_ms = 300000u,   // 5 min

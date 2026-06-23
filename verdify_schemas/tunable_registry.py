@@ -241,8 +241,8 @@ REGISTRY: dict[str, TunableDef] = {
         name="band_track_fraction",
         kind="numeric",
         min=0.0,
-        max=1.0,
-        default=0.25,
+        max=0.0,
+        default=0.0,
         fw_clamp_lo=0.0,
         fw_clamp_hi=1.0,
         esp_object_id="band_track_fraction",
@@ -252,12 +252,11 @@ REGISTRY: dict[str, TunableDef] = {
         tier=1,
         notes=(
             "Control-band tracking tightness. Pinches the band toward "
-            "temp_target/vpd_target; 0=float within the corridor (the ADR-0004 goal), "
-            "1=track target exactly. **Baseline 0.25** (relaxed from 0.50 — ADR-0004 "
-            "floating-corridor supersedes ADR-0003 track-the-target). The planner may "
-            "relax FURTHER toward 0 (float) but should NOT crank it tighter: cost is a "
-            "driver, the plant gains nothing from pinning to the line. #377 takes it to "
-            "0 (full float). Safety rails untouched."
+            "temp_target/vpd_target when nonzero, but ADR-0004 makes 0 the only "
+            "planner-valid value: float within the served crop corridor and act at "
+            "the edges. Firmware still clamps [0,1] for operator diagnostics and "
+            "readback continuity; MCP/plan validation rejects planner values above 0 "
+            "so AI cannot reintroduce target hugging. Safety rails untouched."
         ),
     ),
     "cold_vent_guard_delta_f": TunableDef(

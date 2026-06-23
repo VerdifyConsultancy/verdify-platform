@@ -558,12 +558,25 @@ class TestActivityDirectWetGuards:
 # param, force-rewrites the FSM switch on). See docs/adr/0002 §5.
 # band-CURVE anchors are band_<series>_<sr|sm|ss|mid> (the 24 four-anchor harmonic
 # control points) + the per-zone vpd/priority cuts. band_track_fraction is NOT an
-# anchor — it is the control-band tracking-tightness knob (BC-3/ADR0003 §6.1), a
-# legitimately planner-pushable lever — so the band_ branch requires a phase suffix.
+# anchor; ADR-0004 keeps it as the planner-writable float-flip lever, but the only
+# valid planner value is 0 so the planner cannot reintroduce target hugging.
 _BAND_CURVE_ANCHOR_RE = re.compile(r"^(?:band_\w+_(?:sr|sm|ss|mid)|zone_vpd_target_|zone_vpd_width_|zone_priority_)")
 
 
 class TestPlannerWriteContractLockout:
+    def test_band_track_fraction_is_planner_float_only(self) -> None:
+        """ADR-0004: planner may set the reversible float flip to 0, but not
+        re-tighten the control band toward the target line."""
+        row = REGISTRY["band_track_fraction"]
+        assert row.planner_pushable
+        assert row.default == 0.0
+        assert row.min == 0.0
+        assert row.max == 0.0
+        assert registry_value_error("band_track_fraction", 0.0) is None
+        err = registry_value_error("band_track_fraction", 0.25)
+        assert err is not None
+        assert "nearest_safe=0" in err
+
     def test_all_band_curve_anchors_non_pushable_crop_band(self) -> None:
         """Every band-CURVE anchor (band_*_{sr,sm,ss,mid}, zone_vpd_*, zone_priority_*)
         is deterministic crop-band geometry the firmware/curve owns — never a planner

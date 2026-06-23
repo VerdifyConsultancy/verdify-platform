@@ -155,7 +155,7 @@ class TestSplitInvariants:
             "the heavy 7x wet-assist path",
             "`mister_vpd_weight` changes which zone receives pulses",
             "not total moisture",
-            "prefer bounded `sw_direct_wet_stress_override_enabled` or",
+            "prefer the bounded `sw_direct_wet_stress_override_enabled` path",
         ]
         missing = [text for text in expected if text not in core]
         assert not missing, missing

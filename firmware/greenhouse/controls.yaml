@@ -585,9 +585,9 @@ interval:
               // Firmware-v2 served-band targets (telemetry + normalized arbitration).
               .temp_target = id(sw_onchip_band_enabled) ? sv2_temp_tgt : (sv2_temp_low + sv2_temp_high) * 0.5f,
               .vpd_target = id(sw_onchip_band_enabled) ? sv2_vpd_tgt : (VPDlo + VPDhi) * 0.5f,
-              // BC-3 (ADR0003 §6.1): pinch the control band toward the served target
-              // by this fraction. Planner-pushable [0,1]; default 0.50 from the global.
-              // This is the authoritative DEVICE default (C++ default_setpoints matches).
+              // ADR-0004: default 0 floats inside the served crop corridor and acts
+              // only at the edges. Nonzero pinches toward the served target only for
+              // explicit operator diagnostics; C++ default_setpoints matches.
               .band_track_fraction = id(band_track_fraction),
               // BC-13 (ADR0003 §6.4): moisture-exchange selector. vent_exchange_fraction
               // is the AI-tunable single-cycle exchange fraction (Jason 2026-06-17, from
@@ -1670,6 +1670,7 @@ interval:
             char fog_margin[24];
             char next_mist[24];
             char resource_cost[112];
+            char moisture_exchange[320];
             snprintf(temp_error, sizeof(temp_error), "%.2f", climate_decision.temp_error_f);
             snprintf(vpd_error, sizeof(vpd_error), "%.3f", climate_decision.vpd_error_kpa);
             snprintf(fog_margin, sizeof(fog_margin), "%.3f", climate_decision.fog_margin_kpa);
@@ -1683,6 +1684,20 @@ interval:
                      climate_decision.resource_cost_estimate.water_gal,
                      climate_decision.resource_cost_estimate.electric_kwh,
                      climate_decision.resource_cost_estimate.gas_therm);
+            snprintf(moisture_exchange, sizeof(moisture_exchange),
+                     "{\"action\":\"%s\",\"reason\":\"%s\",\"vent_vpd_gain_kpa\":%.3f,"
+                     "\"heat_vpd_gain_kpa\":%.3f,\"outdoor_fresh\":%s,"
+                     "\"vent_overcools\":%s,\"heat_assist_corun\":%s,"
+                     "\"heat_assist_active\":%s,\"heat_assist_timer_s\":%.0f}",
+                     climate_decision.moisture_exchange_action,
+                     climate_decision.moisture_exchange_reason,
+                     climate_decision.moisture_vent_vpd_gain_kpa,
+                     climate_decision.moisture_heat_vpd_gain_kpa,
+                     climate_decision.moisture_outdoor_fresh ? "true" : "false",
+                     climate_decision.moisture_vent_overcools ? "true" : "false",
+                     climate_decision.moisture_heat_assist_corun ? "true" : "false",
+                     climate_decision.moisture_heat_assist_active ? "true" : "false",
+                     float(climate_decision.moisture_heat_assist_timer_ms) / 1000.0f);
             const uint32_t climate_diag_now_ms = millis();
             static uint32_t last_climate_diag_publish_ms = 0;
             const bool climate_diag_republish = (climate_diag_now_ms - last_climate_diag_publish_ms) >= 60000UL;
@@ -1796,6 +1811,12 @@ interval:
             if(strcmp(last_climate_next_mist, next_mist) != 0 || climate_diag_republish){
               id(gh_climate_next_mist_eligible_s).publish_state(next_mist);
               snprintf(last_climate_next_mist, sizeof(last_climate_next_mist), "%s", next_mist);
+              climate_diag_published = true;
+            }
+            static char last_climate_moisture_exchange[320] = "";
+            if(strcmp(last_climate_moisture_exchange, moisture_exchange) != 0 || climate_diag_republish){
+              id(gh_climate_moisture_exchange).publish_state(moisture_exchange);
+              snprintf(last_climate_moisture_exchange, sizeof(last_climate_moisture_exchange), "%s", moisture_exchange);
               climate_diag_published = true;
             }
             if(climate_diag_published){
