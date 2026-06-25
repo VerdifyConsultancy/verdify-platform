@@ -1,0 +1,6 @@
+interface:
+  display_name: "Verdify North Star Planning"
+  short_description: "Run the self-improving North Star planning loop"
+  default_prompt: "Use $northstar-planning to distill evidence, answer or queue planning questions, propose research, update NORTHSTAR_PRODUCT.md and NORTHSTAR_ARCHITECTURE.md, stage learning-capture proposals when reusable lessons appear, handle feedback, and request final approval only when the North Star is ready to lock."
+policy:
+  allow_implicit_invocation: true

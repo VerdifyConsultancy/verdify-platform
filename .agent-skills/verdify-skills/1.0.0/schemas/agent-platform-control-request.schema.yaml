@@ -1,0 +1,113 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://verdify.example/schemas/agent-platform-control-request.schema.yaml
+title: Verdify Agent Platform Control Request
+type: object
+additionalProperties: false
+required: [schema_ref, kind, schema_version, request_id, status, requested_at, requester, operation, target, authorization, policy, inputs, expected_effects, result, review, handoff]
+properties:
+  schema_ref: {const: agent-platform-control-request.schema.yaml}
+  kind: {const: AgentPlatformControlRequest}
+  schema_version: {const: "1.0"}
+  request_id: {type: string, pattern: '^apc-[a-z0-9][a-z0-9-]*$'}
+  status: {type: string, enum: [draft, proposed, authorized, executing, complete, blocked, rejected, superseded]}
+  requested_at: {type: string, minLength: 1}
+  requester:
+    type: object
+    additionalProperties: false
+    required: [actor, role, session_id, reason]
+    properties:
+      actor: {type: string, minLength: 1}
+      role: {type: string, minLength: 1}
+      session_id: {type: [string, 'null']}
+      reason: {type: string, minLength: 1}
+  operation:
+    type: object
+    additionalProperties: false
+    required: [surface, operation_id, method, tool_name, api_ref, mutation_level, idempotency_key]
+    properties:
+      surface: {type: string, enum: [repo, session, worktree, github, ci, kubernetes, gitops, review, telemetry, browser_terminal, secret_reference, other]}
+      operation_id: {type: string, minLength: 1}
+      method: {type: [string, 'null']}
+      tool_name: {type: [string, 'null']}
+      api_ref: {type: [string, 'null']}
+      mutation_level: {type: string, enum: [read_only, dev_write, protected_write, production_write]}
+      idempotency_key: {type: [string, 'null']}
+  target:
+    type: object
+    additionalProperties: false
+    required: [repository, environment, namespace, branch, issue_ids, lane_ids, pr_refs, deployment_ids]
+    properties:
+      repository: {type: [string, 'null']}
+      environment: {type: [string, 'null']}
+      namespace: {type: [string, 'null']}
+      branch: {type: [string, 'null']}
+      issue_ids: {type: array, items: {type: integer, minimum: 1}}
+      lane_ids: {type: array, items: {type: string}}
+      pr_refs: {type: array, items: {type: string}}
+      deployment_ids: {type: array, items: {type: string}}
+  authorization:
+    type: object
+    additionalProperties: false
+    required: [auth_mode, subject, scopes, service_account, subject_access_review_required, approved_by, approved_at]
+    properties:
+      auth_mode: {type: string, enum: [none, oauth2, oidc, github_token, kubernetes_service_account, mcp_session, local_operator, other]}
+      subject: {type: [string, 'null']}
+      scopes: {type: array, items: {type: string}}
+      service_account: {type: [string, 'null']}
+      subject_access_review_required: {type: boolean}
+      approved_by: {type: [string, 'null']}
+      approved_at: {type: [string, 'null']}
+  policy:
+    type: object
+    additionalProperties: false
+    required: [decision, policy_decision_id, rules, constraints, reason]
+    properties:
+      decision: {type: string, enum: [not_evaluated, allow, deny, needs_human_review, blocked]}
+      policy_decision_id: {type: [string, 'null']}
+      rules: {type: array, items: {type: string}}
+      constraints: {type: array, items: {type: string}}
+      reason: {type: string, minLength: 1}
+  inputs:
+    type: object
+    additionalProperties: false
+    required: [artifact_refs, evidence_refs, parameters_summary, redacted_payload_ref]
+    properties:
+      artifact_refs: {type: array, items: {type: string}}
+      evidence_refs: {type: array, items: {type: string}}
+      parameters_summary: {type: string, minLength: 1}
+      redacted_payload_ref: {type: [string, 'null']}
+  expected_effects:
+    type: object
+    additionalProperties: false
+    required: [state_changes, external_refs_expected, rollback_or_recovery]
+    properties:
+      state_changes: {type: array, items: {type: string}}
+      external_refs_expected: {type: array, items: {type: string}}
+      rollback_or_recovery: {type: string, minLength: 1}
+  result:
+    type: object
+    additionalProperties: false
+    required: [status, executed_at, executor, observed_refs, errors]
+    properties:
+      status: {type: string, enum: [not_started, skipped, succeeded, failed, blocked, rolled_back]}
+      executed_at: {type: [string, 'null']}
+      executor: {type: [string, 'null']}
+      observed_refs: {type: array, items: {type: string}}
+      errors: {type: array, items: {type: string}}
+  review:
+    type: object
+    additionalProperties: false
+    required: [human_gate_required, reviewers, decision, decided_at]
+    properties:
+      human_gate_required: {type: boolean}
+      reviewers: {type: array, items: {type: string}}
+      decision: {type: string, enum: [pending, approved, rejected, not_required]}
+      decided_at: {type: [string, 'null']}
+  handoff:
+    type: object
+    additionalProperties: false
+    required: [next_skill, next_mode, reason]
+    properties:
+      next_skill: {type: string}
+      next_mode: {type: string}
+      reason: {type: string}

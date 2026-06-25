@@ -1,0 +1,25 @@
+schema_ref: module-contract.schema.yaml
+kind: ModuleContract
+schema_version: "1.0"
+module_id: replace-me
+contract_version: "1.0"
+status: draft
+purpose: ""
+requirement_ids: []
+owned_paths: []
+prohibited_paths: []
+inputs: []
+outputs: []
+public_interfaces: []
+dependencies:
+  hard: []
+  soft: []
+invariants: []
+runtime_resources: []
+validation_commands: []
+required_evidence: []
+definition_of_done: []
+approval:
+  status: pending
+  approver: null
+  approved_at: null

@@ -1,0 +1,172 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://verdify.example/schemas/sprint-execution-runbook.schema.yaml
+title: Verdify Sprint Execution Runbook
+type: object
+additionalProperties: false
+required: [schema_ref, kind, schema_version, runbook_id, status, sprint_id, wave_id, repository, prepared_at, controller, prerequisites, platform, cadence, lanes, coordination, ci_cd, deployment, review, ledger, stop_conditions, handoff]
+properties:
+  schema_ref: {const: sprint-execution-runbook.schema.yaml}
+  kind: {const: SprintExecutionRunbook}
+  schema_version: {const: "1.0"}
+  runbook_id: {type: string, pattern: '^exec-[a-z0-9][a-z0-9-]*$'}
+  status: {type: string, enum: [draft, ready, active, blocked, complete, superseded]}
+  sprint_id: {type: string, minLength: 1}
+  wave_id: {type: [string, 'null']}
+  repository: {type: string, minLength: 1}
+  prepared_at: {type: string, minLength: 1}
+  controller:
+    type: object
+    additionalProperties: false
+    required: [session_id, owner, authority, interfaces, poll_interval_minutes, delegation_policy]
+    properties:
+      session_id: {type: string, minLength: 1}
+      owner: {type: string, minLength: 1}
+      authority: {type: string, minLength: 1}
+      interfaces:
+        type: array
+        minItems: 1
+        items: {type: string, enum: [agent_platform_mcp, tmux_terminal, browser_terminal, github, ci, kubernetes, gitops, telemetry, other]}
+      poll_interval_minutes: {type: integer, minimum: 1}
+      delegation_policy: {type: string, minLength: 1}
+  prerequisites:
+    type: object
+    additionalProperties: false
+    required: [approved_sprint_plan, approved_lane_contracts, wave_release_plan, platform_readiness, open_blockers]
+    properties:
+      approved_sprint_plan: {type: string, minLength: 1}
+      approved_lane_contracts: {type: array, items: {type: string}}
+      wave_release_plan: {type: [string, 'null']}
+      platform_readiness: {type: [string, 'null']}
+      open_blockers: {type: array, items: {type: string}}
+  platform:
+    type: object
+    additionalProperties: false
+    required: [mcp_server, api_ref, auth_mode, required_tools, terminal_access, fallback_policy]
+    properties:
+      mcp_server: {type: [string, 'null']}
+      api_ref: {type: [string, 'null']}
+      auth_mode: {type: string, enum: [mcp_session, oauth2, oidc, github_token, kubernetes_service_account, local_operator, none, other]}
+      required_tools:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [name, purpose, required]
+          properties:
+            name: {type: string, minLength: 1}
+            purpose: {type: string, minLength: 1}
+            required: {type: boolean}
+      terminal_access:
+        type: object
+        additionalProperties: false
+        required: [mode, operator_visible, attach_refs]
+        properties:
+          mode: {type: string, enum: [tmux, browser_terminal, both, none, other]}
+          operator_visible: {type: boolean}
+          attach_refs: {type: array, items: {type: string}}
+      fallback_policy: {type: string, minLength: 1}
+  cadence:
+    type: object
+    additionalProperties: false
+    required: [poll_interval_minutes, heartbeat_timeout_minutes, loop_until]
+    properties:
+      poll_interval_minutes: {type: integer, minimum: 1}
+      heartbeat_timeout_minutes: {type: integer, minimum: 1}
+      loop_until: {type: array, minItems: 1, items: {type: string}}
+  lanes:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [lane_id, issue_ids, contract_path, branch, owner, dependency_state, platform_session, prompt, terminal, status]
+      properties:
+        lane_id: {type: string, minLength: 1}
+        issue_ids: {type: array, minItems: 1, items: {type: integer, minimum: 1}}
+        contract_path: {type: string, minLength: 1}
+        branch: {type: string, minLength: 1}
+        owner: {type: string, minLength: 1}
+        dependency_state: {type: string, enum: [ready, waiting, blocked, complete]}
+        platform_session:
+          type: object
+          additionalProperties: false
+          required: [create_operation_ref, session_id, executor, model, effort, status]
+          properties:
+            create_operation_ref: {type: [string, 'null']}
+            session_id: {type: [string, 'null']}
+            executor: {type: string, minLength: 1}
+            model: {type: [string, 'null']}
+            effort: {type: [string, 'null']}
+            status: {type: string, enum: [planned, requested, active, paused, blocked, complete, failed, abandoned]}
+        prompt:
+          type: object
+          additionalProperties: false
+          required: [prompt_path, manifest_path, contract_hash]
+          properties:
+            prompt_path: {type: string, minLength: 1}
+            manifest_path: {type: [string, 'null']}
+            contract_hash: {type: [string, 'null'], pattern: '^[a-f0-9]{64}$'}
+        terminal:
+          type: object
+          additionalProperties: false
+          required: [tmux_session, browser_terminal_url, operator_attach_required]
+          properties:
+            tmux_session: {type: [string, 'null']}
+            browser_terminal_url: {type: [string, 'null']}
+            operator_attach_required: {type: boolean}
+        status: {type: string, enum: [planned, dispatched, implementing, validating, blocked, ready_for_critic, changes_requested, ready_for_review, complete, cancelled]}
+  coordination:
+    type: object
+    additionalProperties: false
+    required: [poll_steps, controller_responses, coordination_request_policy, escalation_paths]
+    properties:
+      poll_steps: {type: array, minItems: 1, items: {type: string}}
+      controller_responses: {type: array, minItems: 1, items: {type: string}}
+      coordination_request_policy: {type: string, minLength: 1}
+      escalation_paths: {type: array, items: {type: string}}
+  ci_cd:
+    type: object
+    additionalProperties: false
+    required: [required_checks, workflows, merge_policy, deployment_trigger, evidence_refs]
+    properties:
+      required_checks: {type: array, items: {type: string}}
+      workflows: {type: array, items: {type: string}}
+      merge_policy: {type: string, minLength: 1}
+      deployment_trigger: {type: string, minLength: 1}
+      evidence_refs: {type: array, items: {type: string}}
+  deployment:
+    type: object
+    additionalProperties: false
+    required: [target_environment, namespace, strategy, approval_required, rollout_refs, rollback_refs]
+    properties:
+      target_environment: {type: [string, 'null']}
+      namespace: {type: [string, 'null']}
+      strategy: {type: string, minLength: 1}
+      approval_required: {type: boolean}
+      rollout_refs: {type: array, items: {type: string}}
+      rollback_refs: {type: array, items: {type: string}}
+  review:
+    type: object
+    additionalProperties: false
+    required: [review_packet_path, human_review_trigger, reviewer_visibility]
+    properties:
+      review_packet_path: {type: string, minLength: 1}
+      human_review_trigger: {type: string, minLength: 1}
+      reviewer_visibility: {type: array, items: {type: string}}
+  ledger:
+    type: object
+    additionalProperties: false
+    required: [controller_state_path, session_ledger_path, required_events]
+    properties:
+      controller_state_path: {type: string, minLength: 1}
+      session_ledger_path: {type: string, minLength: 1}
+      required_events: {type: array, minItems: 1, items: {type: string}}
+  stop_conditions: {type: array, minItems: 1, items: {type: string}}
+  handoff:
+    type: object
+    additionalProperties: false
+    required: [next_skill, next_mode, reason]
+    properties:
+      next_skill: {type: string}
+      next_mode: {type: string}
+      reason: {type: string}

@@ -1,0 +1,215 @@
+schema_ref: session-ledger.schema.yaml
+kind: SessionLedger
+schema_version: "1.0"
+project_id: minimal-project
+ledger_id: ledger-2026-06-22-a
+status: active
+generated_at: "2026-06-22T10:55:00Z"
+updated_at: "2026-06-22T12:12:00Z"
+retention:
+  source_policy: Link GitHub, CI, deployment, and .agent-workflow artifacts; do not copy raw logs.
+  redaction_policy: Redact secrets, credentials, personal data, and private payloads before recording.
+  raw_payload_policy: Store summaries and artifact refs only for this example ledger.
+  checksum_algorithm: sha256
+sessions:
+- session_id: controller-20260622-001
+  parent_session_id: null
+  role: controller
+  executor: verdify-controller
+  repository: example/minimal-project
+  status: active
+  started_at: "2026-06-22T10:55:00Z"
+  ended_at: null
+  issue_ids: [123]
+  lane_id: null
+  wave_id: wave-2026-06-22-a-health
+  branch: main
+  worktree: null
+  pr_refs: ["#123"]
+  artifact_refs:
+  - .agent-workflow/sprints/2026-06-22-a/sprint-plan.yaml
+- session_id: worker-20260622-001
+  parent_session_id: controller-20260622-001
+  role: worker
+  executor: example-agent
+  repository: example/minimal-project
+  status: complete
+  started_at: "2026-06-22T11:10:00Z"
+  ended_at: "2026-06-22T11:50:00Z"
+  issue_ids: [123]
+  lane_id: issue-123-api
+  wave_id: wave-2026-06-22-a-health
+  branch: lane/123-health-api
+  worktree: /tmp/minimal-project-issue-123-api
+  pr_refs: ["#123"]
+  artifact_refs:
+  - .agent-workflow/sprints/2026-06-22-a/lanes/contracts/issue-123-api.contract.yaml
+- session_id: critic-20260622-001
+  parent_session_id: controller-20260622-001
+  role: critic
+  executor: critic-agent
+  repository: example/minimal-project
+  status: complete
+  started_at: "2026-06-22T11:52:00Z"
+  ended_at: "2026-06-22T12:00:00Z"
+  issue_ids: [123]
+  lane_id: issue-123-api
+  wave_id: wave-2026-06-22-a-health
+  branch: lane/123-health-api
+  worktree: /tmp/minimal-project-issue-123-api-review
+  pr_refs: ["#123"]
+  artifact_refs:
+  - .agent-workflow/sprints/2026-06-22-a/critic/issue-123-api.critic.yaml
+- session_id: release-20260622-001
+  parent_session_id: controller-20260622-001
+  role: release_verifier
+  executor: release-verifier
+  repository: example/minimal-project
+  status: active
+  started_at: "2026-06-22T12:02:00Z"
+  ended_at: null
+  issue_ids: [123]
+  lane_id: issue-123-api
+  wave_id: wave-2026-06-22-a-health
+  branch: lane/123-health-api
+  worktree: null
+  pr_refs: ["#123"]
+  artifact_refs:
+  - .agent-workflow/sprints/2026-06-22-a/review/review-inbox-packet.yaml
+  - .agent-workflow/sprints/2026-06-22-a/release/observability-diagnostic-packet.yaml
+events:
+- id: LEDGER-EVT-0001
+  sequence: 1
+  occurred_at: "2026-06-22T11:00:00Z"
+  event_type: sprint_planned
+  source: verdify/sprint-planning
+  subject: sprint/2026-06-22-a
+  actor:
+    role: planner
+    name: sprint-planner
+  session_id: controller-20260622-001
+  correlation:
+    trace_id: null
+    wave_id: wave-2026-06-22-a-health
+    session_ids: [controller-20260622-001]
+    issue_ids: [123]
+    lane_ids: [issue-123-api]
+    pr_ids: []
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs:
+    - .agent-workflow/sprints/2026-06-22-a/sprint-plan.yaml
+    evidence_refs: []
+    external_refs:
+    - type: github_issue
+      identifier: "123"
+      url: https://github.com/example/minimal-project/issues/123
+  result: approved
+  summary: Sprint plan approved for the health endpoint lane.
+  data_summary: Plan approval recorded by delivery owner.
+  redacted_payload_ref: null
+  previous_event_id: null
+  content_sha256: null
+- id: LEDGER-EVT-0002
+  sequence: 2
+  occurred_at: "2026-06-22T11:05:00Z"
+  event_type: wave_release_planned
+  source: verdify/sprint-planning
+  subject: wave/wave-2026-06-22-a-health
+  actor:
+    role: planner
+    name: sprint-planner
+  session_id: controller-20260622-001
+  correlation:
+    trace_id: null
+    wave_id: wave-2026-06-22-a-health
+    session_ids: [controller-20260622-001]
+    issue_ids: [123]
+    lane_ids: [issue-123-api]
+    pr_ids: []
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs:
+    - .agent-workflow/sprints/2026-06-22-a/release/wave-release-plan.yaml
+    evidence_refs: []
+    external_refs: []
+  result: approved
+  summary: Wave release plan recorded required checks, review environment, rollback, and review handoff.
+  data_summary: Review environment and release-health expectations are explicit.
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0001
+  content_sha256: null
+- id: LEDGER-EVT-0003
+  sequence: 3
+  occurred_at: "2026-06-22T12:00:00Z"
+  event_type: critic_reviewed
+  source: verdify/independent-critic
+  subject: lane/issue-123-api
+  actor:
+    role: critic
+    name: critic-agent
+  session_id: critic-20260622-001
+  correlation:
+    trace_id: null
+    wave_id: wave-2026-06-22-a-health
+    session_ids: [controller-20260622-001, critic-20260622-001]
+    issue_ids: [123]
+    lane_ids: [issue-123-api]
+    pr_ids: ["#123"]
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs:
+    - .agent-workflow/sprints/2026-06-22-a/critic/issue-123-api.critic.yaml
+    evidence_refs: []
+    external_refs:
+    - type: github_pr
+      identifier: "#123"
+      url: https://github.com/example/minimal-project/pull/123
+  result: approved
+  summary: Fresh critic approved the lane for review packet assembly.
+  data_summary: Critic evidence references the current PR head.
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0002
+  content_sha256: null
+- id: LEDGER-EVT-0004
+  sequence: 4
+  occurred_at: "2026-06-22T12:10:00Z"
+  event_type: review_packet_created
+  source: verdify/release-verification
+  subject: review/review-2026-06-22-a-api
+  actor:
+    role: release_verifier
+    name: release-verifier
+  session_id: release-20260622-001
+  correlation:
+    trace_id: null
+    wave_id: wave-2026-06-22-a-health
+    session_ids: [controller-20260622-001, release-20260622-001]
+    issue_ids: [123]
+    lane_ids: [issue-123-api]
+    pr_ids: ["#123"]
+    deployment_ids: [deploy-123]
+    policy_decision_ids: []
+  refs:
+    artifact_refs:
+    - .agent-workflow/sprints/2026-06-22-a/review/review-inbox-packet.yaml
+    - .agent-workflow/sprints/2026-06-22-a/release/observability-diagnostic-packet.yaml
+    evidence_refs: []
+    external_refs:
+    - type: github_deployment
+      identifier: deploy-123
+      url: https://github.com/example/minimal-project/deployments/activity_log
+  result: passed
+  summary: Review inbox packet and diagnostic packet are ready for human review.
+  data_summary: Runtime evidence and review environment are linked.
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0003
+  content_sha256: null
+exceptions: []
+handoff:
+  next_skill: release-verification
+  next_mode: outcome-review
+  reason: Human review can proceed from review and diagnostic packets without hidden chat context.

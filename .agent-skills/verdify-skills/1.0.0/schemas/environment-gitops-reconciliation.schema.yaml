@@ -1,0 +1,136 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://verdify.example/schemas/environment-gitops-reconciliation.schema.yaml
+title: Verdify Environment GitOps Reconciliation
+type: object
+additionalProperties: false
+required: [schema_ref, kind, schema_version, reconciliation_id, status, assessed_at, repository, environment, desired_state, controller, namespace, deployment, health, drift, remediation, review, handoff]
+properties:
+  schema_ref: {const: environment-gitops-reconciliation.schema.yaml}
+  kind: {const: EnvironmentGitOpsReconciliation}
+  schema_version: {const: "1.0"}
+  reconciliation_id: {type: string, pattern: '^eg-[a-z0-9][a-z0-9-]*$'}
+  status: {type: string, enum: [draft, reconciled, blocked, degraded, stale, superseded]}
+  assessed_at: {type: string, minLength: 1}
+  repository: {type: string, minLength: 1}
+  environment:
+    type: object
+    additionalProperties: false
+    required: [name, type, cluster, namespace, url, protected, ttl]
+    properties:
+      name: {type: string, minLength: 1}
+      type: {type: string, enum: [dev, preview, review, staging, production, other]}
+      cluster: {type: [string, 'null']}
+      namespace: {type: [string, 'null']}
+      url: {type: [string, 'null']}
+      protected: {type: boolean}
+      ttl: {type: [string, 'null']}
+  desired_state:
+    type: object
+    additionalProperties: false
+    required: [source_of_truth, desired_revision, refs, sync_order]
+    properties:
+      source_of_truth: {type: string, enum: [gitops_repo, app_repo, helm_repo, oci_artifact, github_environment, manual, other]}
+      desired_revision: {type: [string, 'null']}
+      refs:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [type, ref, revision]
+          properties:
+            type: {type: string, enum: [git_commit, pull_request, helm_chart, kustomization, manifest, image, deployment, workflow_run, other]}
+            ref: {type: string, minLength: 1}
+            revision: {type: [string, 'null']}
+      sync_order: {type: array, items: {type: string}}
+  controller:
+    type: object
+    additionalProperties: false
+    required: [kind, app_refs, sync_status, health_status, observed_at, evidence_refs]
+    properties:
+      kind: {type: string, enum: [argocd, flux, github_actions, manual, other, none]}
+      app_refs: {type: array, items: {type: string}}
+      sync_status: {type: string, enum: [synced, out_of_sync, progressing, suspended, missing, unknown, not_applicable]}
+      health_status: {type: string, enum: [healthy, progressing, degraded, suspended, missing, unknown, not_applicable]}
+      observed_at: {type: [string, 'null']}
+      evidence_refs: {type: array, items: {type: string}}
+  namespace:
+    type: object
+    additionalProperties: false
+    required: [resource_quotas, limit_ranges, network_policies, service_accounts, secrets_model, rbac_summary, policy_findings]
+    properties:
+      resource_quotas: {type: array, items: {type: string}}
+      limit_ranges: {type: array, items: {type: string}}
+      network_policies: {type: array, items: {type: string}}
+      service_accounts: {type: array, items: {type: string}}
+      secrets_model: {type: string}
+      rbac_summary: {type: string}
+      policy_findings: {type: array, items: {type: string}}
+  deployment:
+    type: object
+    additionalProperties: false
+    required: [github_environment, deployment_ids, workflow_runs, checks, observed_revision, image_refs, endpoint_refs, migration_refs]
+    properties:
+      github_environment: {type: [string, 'null']}
+      deployment_ids: {type: array, items: {type: string}}
+      workflow_runs: {type: array, items: {type: string}}
+      checks: {type: array, items: {type: string}}
+      observed_revision: {type: [string, 'null']}
+      image_refs: {type: array, items: {type: string}}
+      endpoint_refs: {type: array, items: {type: string}}
+      migration_refs: {type: array, items: {type: string}}
+  health:
+    type: object
+    additionalProperties: false
+    required: [endpoint_status, probes, smoke_tests, telemetry_refs, log_refs, missing_signals]
+    properties:
+      endpoint_status: {type: string, enum: [pass, fail, pending, missing, unknown, not_applicable]}
+      probes: {type: array, items: {type: string}}
+      smoke_tests: {type: array, items: {type: string}}
+      telemetry_refs: {type: array, items: {type: string}}
+      log_refs: {type: array, items: {type: string}}
+      missing_signals: {type: array, items: {type: string}}
+  drift:
+    type: object
+    additionalProperties: false
+    required: [unresolved, findings]
+    properties:
+      unresolved: {type: boolean}
+      findings:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [id, severity, type, statement, evidence_refs, required_action]
+          properties:
+            id: {type: string, pattern: '^EGD-[0-9]{3,}$'}
+            severity: {type: string, enum: [info, warn, fail, blocked]}
+            type: {type: string, enum: [desired_state, sync, health, namespace, quota, network, secret, rbac, deployment, endpoint, telemetry, cleanup, other]}
+            statement: {type: string, minLength: 1}
+            evidence_refs: {type: array, items: {type: string}}
+            required_action: {type: string}
+  remediation:
+    type: object
+    additionalProperties: false
+    required: [rollback_refs, remediation_policy, cleanup_policy, approved_mutation_required]
+    properties:
+      rollback_refs: {type: array, items: {type: string}}
+      remediation_policy: {type: string}
+      cleanup_policy: {type: string}
+      approved_mutation_required: {type: boolean}
+  review:
+    type: object
+    additionalProperties: false
+    required: [human_gate_required, reviewers, decision, decided_at]
+    properties:
+      human_gate_required: {type: boolean}
+      reviewers: {type: array, items: {type: string}}
+      decision: {type: string, enum: [pending, approved, rejected, not_required]}
+      decided_at: {type: [string, 'null']}
+  handoff:
+    type: object
+    additionalProperties: false
+    required: [next_skill, next_mode, reason]
+    properties:
+      next_skill: {type: string}
+      next_mode: {type: string}
+      reason: {type: string}

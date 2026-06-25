@@ -1,0 +1,42 @@
+schema_ref: architecture.schema.yaml
+kind: ArchitectureDefinition
+schema_version: "1.0"
+architecture_id: example-service-v1
+status: approved
+baseline_sha: "1111111111111111111111111111111111111111"
+requirement_ids: [FR-001, NFR-001]
+system_context: A stateless HTTP service is deployed behind the platform ingress and queried by operators and health automation.
+components:
+  - id: CMP-001
+    name: API adapter
+    responsibility: Expose HTTP routes and map internal health state to a stable response.
+    requirement_ids: [FR-001, NFR-001]
+runtime_topology:
+  - One application process per deployment replica.
+  - Platform ingress routes /health to the application.
+data_flows:
+  - from: deployment-platform
+    to: CMP-001
+    data: HTTP health request
+    transport: HTTPS
+  - from: CMP-001
+    to: deployment-platform
+    data: JSON health and revision response
+    transport: HTTPS
+storage: []
+security_boundaries:
+  - The public health response contains no secrets or customer data.
+integrations:
+  - Deployment platform health probing.
+deployment:
+  - Build an immutable artifact from the reviewed revision.
+  - Deploy through an approved GitHub environment.
+observability:
+  - Log health failures with revision and environment context.
+risks:
+  - Health logic must not claim healthy when required dependencies fail.
+decision_ids: [DEC-001]
+approval:
+  status: approved
+  approver: architecture-owner
+  approved_at: "2026-06-22T10:30:00Z"

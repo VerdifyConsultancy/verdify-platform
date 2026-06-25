@@ -1,0 +1,6 @@
+interface:
+  display_name: "Verdify Issue Triage"
+  short_description: "Research and create GitHub issues"
+  default_prompt: "Use $issue-triage to research these reported problems, find related GitHub issues, and create or update issue-template records."
+policy:
+  allow_implicit_invocation: true

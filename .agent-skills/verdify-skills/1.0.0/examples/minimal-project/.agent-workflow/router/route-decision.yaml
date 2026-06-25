@@ -1,0 +1,16 @@
+schema_ref: route-decision.schema.yaml
+kind: RouteDecision
+schema_version: "1.0"
+generated_at: "2026-06-22T14:05:00Z"
+repository: example/example-service
+current_state: SPRINT_COMPLETE
+next_skill: project-router
+next_mode: next-outcome
+reason: The current sprint has accepted runtime evidence and no active lanes.
+evidence:
+  - source: .agent-workflow/sprints/2026-06-22-a/status.yaml
+    finding: state is COMPLETE
+  - source: .agent-workflow/sprints/2026-06-22-a/outcome/outcome-review.yaml
+    finding: decision is accepted_with_risks
+missing_artifacts: []
+open_gates: []

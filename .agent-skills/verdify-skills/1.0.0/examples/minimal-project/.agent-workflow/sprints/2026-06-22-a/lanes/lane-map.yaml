@@ -1,0 +1,12 @@
+schema_ref: lane-map.schema.yaml
+kind: LaneMap
+schema_version: "1.0"
+sprint_id: 2026-06-22-a
+lanes:
+  - lane_id: issue-123-api
+    issue_ids: [123]
+    module_contracts: [.agent-workflow/modules/contracts/api-adapter.contract.yaml]
+    contract_path: .agent-workflow/sprints/2026-06-22-a/lanes/contracts/issue-123-api.contract.yaml
+    parallel_group: 1
+dependency_order:
+  - [issue-123-api]

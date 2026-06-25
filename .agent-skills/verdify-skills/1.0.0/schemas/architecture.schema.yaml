@@ -1,0 +1,54 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://verdify.example/schemas/architecture.schema.yaml
+title: Verdify Architecture Definition
+type: object
+additionalProperties: false
+required: [schema_ref, kind, schema_version, architecture_id, status, baseline_sha, requirement_ids, system_context, components, runtime_topology, data_flows, storage, security_boundaries, integrations, deployment, observability, risks, decision_ids, approval]
+properties:
+  schema_ref: {const: architecture.schema.yaml}
+  kind: {const: ArchitectureDefinition}
+  schema_version: {const: "1.0"}
+  architecture_id: {type: string, pattern: '^[a-z0-9][a-z0-9-]*$'}
+  status: {type: string, enum: [draft, blocked, approved, superseded]}
+  baseline_sha: {type: string, minLength: 1}
+  requirement_ids: {type: array, minItems: 1, uniqueItems: true, items: {type: string}}
+  system_context: {type: string, minLength: 1}
+  components:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, name, responsibility, requirement_ids]
+      properties:
+        id: {type: string, pattern: '^CMP-[0-9]{3,}$'}
+        name: {type: string}
+        responsibility: {type: string}
+        requirement_ids: {type: array, minItems: 1, items: {type: string}}
+  runtime_topology: {type: array, minItems: 1, items: {type: string}}
+  data_flows:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [from, to, data, transport]
+      properties:
+        from: {type: string}
+        to: {type: string}
+        data: {type: string}
+        transport: {type: string}
+  storage: {type: array, items: {type: string}}
+  security_boundaries: {type: array, items: {type: string}}
+  integrations: {type: array, items: {type: string}}
+  deployment: {type: array, minItems: 1, items: {type: string}}
+  observability: {type: array, items: {type: string}}
+  risks: {type: array, items: {type: string}}
+  decision_ids: {type: array, items: {type: string}}
+  approval:
+    type: object
+    additionalProperties: false
+    required: [status, approver, approved_at]
+    properties:
+      status: {type: string, enum: [pending, approved, rejected]}
+      approver: {type: [string, 'null']}
+      approved_at: {type: [string, 'null']}

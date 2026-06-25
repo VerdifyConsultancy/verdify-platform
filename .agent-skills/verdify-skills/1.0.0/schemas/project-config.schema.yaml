@@ -1,0 +1,22 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://verdify.example/schemas/project-config.schema.yaml
+title: Verdify Project Configuration
+type: object
+additionalProperties: false
+required: [schema_ref, kind, schema_version, initialized_at, default_branch, github_repository, policy]
+properties:
+  schema_ref: {const: project-config.schema.yaml}
+  kind: {const: VerdifyProjectConfig}
+  schema_version: {const: "1.0"}
+  initialized_at: {type: string, minLength: 1}
+  default_branch: {type: string, minLength: 1}
+  github_repository: {type: [string, 'null']}
+  policy:
+    type: object
+    additionalProperties: false
+    required: [one_issue_per_lane, one_coding_session_per_worktree, fresh_critic_required, runtime_verification_required]
+    properties:
+      one_issue_per_lane: {const: true}
+      one_coding_session_per_worktree: {const: true}
+      fresh_critic_required: {const: true}
+      runtime_verification_required: {const: true}

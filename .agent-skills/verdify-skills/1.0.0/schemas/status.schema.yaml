@@ -1,0 +1,18 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://verdify.example/schemas/status.schema.yaml
+title: Verdify Sprint Status
+type: object
+additionalProperties: false
+required: [schema_ref, kind, schema_version, sprint_id, state, updated_at, active_lanes, blockers, next_action]
+properties:
+  schema_ref: {const: status.schema.yaml}
+  kind: {const: SprintStatus}
+  schema_version: {const: "1.0"}
+  sprint_id: {type: string}
+  state:
+    type: string
+    enum: [NOT_STARTED, ORIENTING, DEFINING, ARCHITECTING, PLANNING, AWAITING_APPROVAL, READY, IMPLEMENTING, VALIDATING, BLOCKED, DECISION_REQUIRED, READY_FOR_CRITIC, CHANGES_REQUESTED, READY_FOR_INTEGRATION, INTEGRATING, READY_FOR_DEPLOYMENT, DEPLOYING, VERIFYING_DEPLOYMENT, AWAITING_OUTCOME_ACCEPTANCE, COMPLETE, FAILED, CANCELLED]
+  updated_at: {type: string}
+  active_lanes: {type: array, items: {type: string}}
+  blockers: {type: array, items: {type: string}}
+  next_action: {type: string}

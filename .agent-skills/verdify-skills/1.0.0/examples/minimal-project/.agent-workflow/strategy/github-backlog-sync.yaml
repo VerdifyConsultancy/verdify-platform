@@ -1,0 +1,110 @@
+schema_ref: github-backlog-sync.schema.yaml
+kind: GitHubBacklogSync
+schema_version: "1.0"
+sync_id: gbs-minimal-project-20260622
+status: reconciled
+repository: example/minimal-project
+captured_at: "2026-06-22T13:05:00Z"
+source_authority:
+  github_is_authoritative: true
+  snapshot_is_cache: true
+  live_access: cached
+  snapshot_ref: .agent-workflow/github/snapshot.example.json
+  limitations:
+  - Cached example omits Projects, dependencies, sub-issues, deployment statuses, and timeline events.
+snapshot:
+  snapshot_ref: .agent-workflow/github/snapshot.example.json
+  captured_at: "2026-06-22T13:00:00Z"
+  freshness: fresh
+  api_sources:
+  - surface: issues
+    source_ref: GitHub REST Issues
+    captured: true
+    limitation: Example snapshot includes only number, title, state, and URL.
+  - surface: pulls
+    source_ref: GitHub REST Pull Requests
+    captured: true
+    limitation: Example snapshot includes branch and PR state only.
+  - surface: checks
+    source_ref: GitHub REST Check Runs
+    captured: false
+    limitation: Check evidence is recorded in review/release artifacts for this example.
+  - surface: deployments
+    source_ref: GitHub REST Deployments
+    captured: false
+    limitation: Deployment evidence is recorded in release-verification for this example.
+issue_findings:
+- issue: 123
+  title: Expose auditable health endpoint
+  state: OPEN
+  classification: candidate
+  labels: [sprint, api]
+  assignees: [worker-agent]
+  milestone: "2026-06-22-a"
+  dependencies: []
+  sub_issues: []
+  linked_prs: ["#456"]
+  project_refs: []
+  evidence_refs:
+  - .agent-workflow/sprints/2026-06-22-a/lanes/contracts/issue-123-api.contract.yaml
+  github_refs:
+  - https://github.com/example/minimal-project/issues/123
+  required_action: Keep issue in candidate set for sprint planning.
+- issue: 124
+  title: Standardize revision identity
+  state: OPEN
+  classification: deferred
+  labels: [platform]
+  assignees: []
+  milestone: null
+  dependencies: []
+  sub_issues: []
+  linked_prs: []
+  project_refs: []
+  evidence_refs: []
+  github_refs:
+  - https://github.com/example/minimal-project/issues/124
+  required_action: Defer until the health endpoint lane closes.
+pr_findings:
+- pr: 456
+  branch: lane/123-health-api
+  base_branch: main
+  state: MERGED
+  draft: false
+  linked_issues: [123]
+  head_sha: abc123example
+  checks_status: pass
+  deployment_status: success
+  finding: PR links the issue and matches the lane branch; deployment proof remains separate from merge.
+  evidence_refs:
+  - .agent-workflow/sprints/2026-06-22-a/review/review-inbox-packet.yaml
+  - .agent-workflow/sprints/2026-06-22-a/release/release-verification.yaml
+lane_findings:
+- lane_id: issue-123-api
+  contract_ref: .agent-workflow/sprints/2026-06-22-a/lanes/contracts/issue-123-api.contract.yaml
+  issue_ids: [123]
+  branch: lane/123-health-api
+  pr_refs: ["#456"]
+  status: aligned
+  findings:
+  - Lane contract, branch, issue, and PR are aligned.
+delivery_findings:
+- ref: "#456"
+  type: deployment
+  status: pass
+  evidence_refs:
+  - .agent-workflow/sprints/2026-06-22-a/release/release-verification.yaml
+  finding: Deployment verification is recorded outside the PR merge state.
+actions:
+- id: GBSA-001
+  type: no_op
+  target: issue-123-api
+  owner: state-of-union
+  status: not_applicable
+  apply_through: none
+  evidence_refs:
+  - .agent-workflow/sprints/2026-06-22-a/strategy/state-of-union.yaml
+handoff:
+  next_skill: sprint-planning
+  next_mode: plan-sprint
+  reason: Backlog and lane evidence are aligned for the selected issue.

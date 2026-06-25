@@ -1,0 +1,115 @@
+schema_ref: review-inbox-packet.schema.yaml
+kind: ReviewInboxPacket
+schema_version: "1.0"
+packet_id: review-2026-06-22-a-api
+status: ready
+scope:
+  review_unit: lane
+  sprint_id: 2026-06-22-a
+  lane_ids: [issue-123-api]
+  issue_ids: [123]
+  northstar_ids: [PRQ-004, SURF-004, ARCH-008, ARCH-009]
+  summary: Review the API health endpoint lane before release verification.
+traceability:
+  repository: example/minimal-project
+  base_ref: main
+  head_ref: lane/issue-123-api
+  reviewed_head_sha: abcdef1234567890abcdef1234567890abcdef12
+  artifact_paths:
+  - .agent-workflow/sprints/2026-06-22-a/critic/issue-123-api.critic.yaml
+  - .agent-workflow/sprints/2026-06-22-a/evidence/evidence-manifest.yaml
+  source_refs:
+  - northstar://evidence/example-review-inbox
+pull_requests:
+- provider: github
+  identifier: "#123"
+  url: https://github.com/example/minimal-project/pull/123
+  state: open
+  author: example-agent
+  requested_reviewers: [human-reviewer]
+  latest_review_state: pending
+checks:
+- name: validate
+  provider: github_actions
+  status: completed
+  conclusion: success
+  url: https://github.com/example/minimal-project/actions/runs/123
+  observed_at: "2026-06-22T12:00:00Z"
+deployments:
+- environment: review/issue-123-api
+  environment_type: review
+  required: true
+  state: active
+  url: https://issue-123-api.example.test
+  deployment_id: deploy-123
+  observed_revision: abcdef1234567890abcdef1234567890abcdef12
+  desired_state_ref: gitops://minimal-project/review/issue-123-api
+  reconciliation_evidence:
+  - Argo CD application minimal-project-issue-123-api is synced and healthy.
+  log_url: https://logs.example.test/minimal-project/issue-123-api
+  observed_at: "2026-06-22T12:05:00Z"
+reviewer_guidance:
+  human_test_steps:
+  - Open the review URL and confirm `/healthz` returns ok.
+  - Confirm the PR description links issue 123 and the critic report.
+  review_urls:
+  - https://issue-123-api.example.test/healthz
+  route_maps:
+  - source_path: app/health.py
+    review_url: https://issue-123-api.example.test/healthz
+telemetry:
+  dashboards:
+  - https://grafana.example.test/d/minimal-project
+  logs:
+  - https://logs.example.test/minimal-project/issue-123-api
+  metrics:
+  - https://metrics.example.test/minimal-project/issue-123-api
+  traces: []
+  runtime_checks:
+  - name: health endpoint
+    result: passed
+    evidence: https://issue-123-api.example.test/healthz
+  missing_telemetry: []
+security:
+  privileged_access_required: false
+  secret_exposure_reviewed: true
+  preview_generator_controls:
+  - Preview namespace uses non-production secrets.
+  - GitOps project is fixed for the review environment.
+  unresolved_findings: []
+rollback:
+  ready: true
+  known_good_revision: "0123456789abcdef0123456789abcdef01234567"
+  procedure: Revert the PR branch or resync the previous review environment revision.
+  evidence:
+  - Previous review environment revision is recorded.
+risks:
+- id: RISK-01
+  severity: low
+  statement: Health endpoint change is narrow and isolated.
+  disposition: Accept for review with runtime check evidence.
+questions:
+- id: Q-01
+  question: Should the reviewer require an additional smoke test after merge?
+  owner: release-verifier
+  blocking: false
+  status: answered
+evidence_completeness:
+  verdict: complete
+  satisfied_required:
+  - PR identity and exact reviewed head SHA are present.
+  - Required CI check passed.
+  - Review deployment and observed revision are present.
+  - Rollback readiness is recorded.
+  missing_required: []
+  blockers: []
+recommendation:
+  outcome: approve
+  rationale: Required review evidence is complete for this example lane.
+feedback_route:
+  route: release_verification
+  instructions: Proceed to release verification after human approval is recorded.
+  target_refs:
+  - .agent-workflow/sprints/2026-06-22-a/release/release-verification.yaml
+prepared_at: "2026-06-22T12:10:00Z"
+preparer: release-verifier

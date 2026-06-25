@@ -1,0 +1,37 @@
+schema_ref: release-verification.schema.yaml
+kind: ReleaseVerification
+schema_version: "1.0"
+sprint_id: 2026-06-22-a
+status: verified
+integrated_sha: "3333333333333333333333333333333333333333"
+release:
+  tag: v1.2.3
+  url: https://github.com/example/example-service/releases/tag/v1.2.3
+artifact_identity:
+  - type: container-image
+    identifier: registry.example.test/example-service@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+integration_results:
+  - name: full test suite
+    result: passed
+    evidence: GitHub check validate at integrated SHA
+deployment:
+  environment: staging
+  deployment_id: deploy-789
+  deployed_at: "2026-06-22T13:30:00Z"
+  observed_revision: "3333333333333333333333333333333333333333"
+runtime_checks:
+  - name: GET /health
+    result: passed
+    observed_at: "2026-06-22T13:40:00Z"
+    evidence: EV-003
+migrations:
+  - name: database migration
+    result: not_applicable
+    evidence: No persistence changes in the sprint.
+rollback:
+  ready: true
+  known_good_revision: "1111111111111111111111111111111111111111"
+  procedure: Redeploy the prior immutable image through the staging environment workflow.
+incidents: []
+verified_at: "2026-06-22T13:45:00Z"
+verifier: release-verifier

@@ -1,0 +1,198 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://verdify.example/schemas/wave-release-plan.schema.yaml
+title: Verdify Wave Release Plan
+type: object
+additionalProperties: false
+required: [schema_ref, kind, schema_version, wave_id, status, scope, branch_model, github, ci, environments, gitops, deployment_strategy, observability, rollback, release_health, review_handoff, risks, approval, prepared_at, planner]
+properties:
+  schema_ref: {const: wave-release-plan.schema.yaml}
+  kind: {const: WaveReleasePlan}
+  schema_version: {const: "1.0"}
+  wave_id: {type: string, pattern: '^wave-[a-z0-9][a-z0-9-]*$'}
+  status: {type: string, enum: [draft, ready, blocked, approved, superseded]}
+  scope:
+    type: object
+    additionalProperties: false
+    required: [sprint_id, issue_ids, lane_ids, northstar_ids, summary, non_goals]
+    properties:
+      sprint_id: {type: string, minLength: 1}
+      issue_ids: {type: array, items: {type: integer, minimum: 1}}
+      lane_ids: {type: array, items: {type: string}}
+      northstar_ids: {type: array, items: {type: string}}
+      summary: {type: string, minLength: 1}
+      non_goals: {type: array, items: {type: string}}
+  branch_model:
+    type: object
+    additionalProperties: false
+    required: [model, base_ref, release_ref, merge_queue_required, concurrency_group, decision_notes]
+    properties:
+      model: {type: string, enum: [per_lane_branches, wave_branch, merge_queue, manual, other]}
+      base_ref: {type: string, minLength: 1}
+      release_ref: {type: [string, 'null']}
+      merge_queue_required: {type: boolean}
+      concurrency_group: {type: [string, 'null']}
+      decision_notes: {type: string, minLength: 1}
+  github:
+    type: object
+    additionalProperties: false
+    required: [repository, milestone, project, required_checks, merge_group_checks_required, environment_protection_required]
+    properties:
+      repository: {type: string, minLength: 1}
+      milestone: {type: [string, 'null']}
+      project: {type: [string, 'null']}
+      required_checks: {type: array, minItems: 1, items: {type: string}}
+      merge_group_checks_required: {type: boolean}
+      environment_protection_required: {type: boolean}
+  ci:
+    type: object
+    additionalProperties: false
+    required: [workflows, artifacts, required_events]
+    properties:
+      workflows:
+        type: array
+        minItems: 1
+        items:
+          type: object
+          additionalProperties: false
+          required: [name, required, event_triggers, timeout_minutes, evidence_expected]
+          properties:
+            name: {type: string, minLength: 1}
+            required: {type: boolean}
+            event_triggers:
+              type: array
+              minItems: 1
+              items: {type: string, enum: [pull_request, push, merge_group, workflow_dispatch, schedule, other]}
+            timeout_minutes: {type: integer, minimum: 1}
+            evidence_expected: {type: array, items: {type: string}}
+      artifacts: {type: array, items: {type: string}}
+      required_events:
+        type: array
+        items: {type: string, enum: [pull_request, push, merge_group, deployment, workflow_dispatch, other]}
+  environments:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [name, environment_type, required, namespace, url, quota_policy, limit_policy, network_policy, ttl, secrets_scope, protection_rules, expected_revision_source]
+      properties:
+        name: {type: string, minLength: 1}
+        environment_type: {type: string, enum: [preview, review, dev, staging, production, none]}
+        required: {type: boolean}
+        namespace: {type: [string, 'null']}
+        url: {type: [string, 'null']}
+        quota_policy: {type: [string, 'null']}
+        limit_policy: {type: [string, 'null']}
+        network_policy: {type: [string, 'null']}
+        ttl: {type: [string, 'null']}
+        secrets_scope: {type: string, minLength: 1}
+        protection_rules: {type: array, items: {type: string}}
+        expected_revision_source: {type: [string, 'null']}
+  gitops:
+    type: object
+    additionalProperties: false
+    required: [controller, desired_state_refs, sync_order, reconciliation_checks, remediation_policy]
+    properties:
+      controller: {type: string, enum: [none, argo_cd, flux, other]}
+      desired_state_refs: {type: array, items: {type: string}}
+      sync_order:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [phase, wave, resource, purpose]
+          properties:
+            phase: {type: string}
+            wave: {type: integer}
+            resource: {type: string}
+            purpose: {type: string}
+      reconciliation_checks: {type: array, items: {type: string}}
+      remediation_policy: {type: string, minLength: 1}
+  deployment_strategy:
+    type: object
+    additionalProperties: false
+    required: [type, progressive_delivery, traffic_policy, steps]
+    properties:
+      type: {type: string, enum: [none, rolling, blue_green, canary, manual, other]}
+      progressive_delivery: {type: boolean}
+      traffic_policy: {type: [string, 'null']}
+      steps:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [id, action, success_criteria, rollback_trigger]
+          properties:
+            id: {type: string, pattern: '^STEP-[0-9]{2,}$'}
+            action: {type: string, minLength: 1}
+            success_criteria: {type: string, minLength: 1}
+            rollback_trigger: {type: string, minLength: 1}
+  observability:
+    type: object
+    additionalProperties: false
+    required: [dashboards, logs, metrics, traces, runtime_checks, missing_telemetry]
+    properties:
+      dashboards: {type: array, items: {type: string}}
+      logs: {type: array, items: {type: string}}
+      metrics: {type: array, items: {type: string}}
+      traces: {type: array, items: {type: string}}
+      runtime_checks: {type: array, items: {type: string}}
+      missing_telemetry: {type: array, items: {type: string}}
+  rollback:
+    type: object
+    additionalProperties: false
+    required: [ready, strategy, known_good_ref, procedure, validation_steps]
+    properties:
+      ready: {type: boolean}
+      strategy: {type: string, minLength: 1}
+      known_good_ref: {type: [string, 'null']}
+      procedure: {type: string, minLength: 1}
+      validation_steps: {type: array, items: {type: string}}
+  release_health:
+    type: object
+    additionalProperties: false
+    required: [stabilization_window, signals]
+    properties:
+      stabilization_window: {type: [string, 'null']}
+      signals:
+        type: array
+        minItems: 1
+        items:
+          type: object
+          additionalProperties: false
+          required: [name, source, threshold, blocking]
+          properties:
+            name: {type: string, minLength: 1}
+            source: {type: string, minLength: 1}
+            threshold: {type: string, minLength: 1}
+            blocking: {type: boolean}
+  review_handoff:
+    type: object
+    additionalProperties: false
+    required: [review_inbox_packet_required, expected_review_packet_path, human_test_steps, approval_gate]
+    properties:
+      review_inbox_packet_required: {type: boolean}
+      expected_review_packet_path: {type: string, minLength: 1}
+      human_test_steps: {type: array, minItems: 1, items: {type: string}}
+      approval_gate: {type: string, minLength: 1}
+  risks:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, severity, statement, mitigation]
+      properties:
+        id: {type: string, pattern: '^RISK-[0-9]{2,}$'}
+        severity: {type: string, enum: [low, medium, high, critical]}
+        statement: {type: string, minLength: 1}
+        mitigation: {type: string, minLength: 1}
+  approval:
+    type: object
+    additionalProperties: false
+    required: [status, approver, approved_at]
+    properties:
+      status: {type: string, enum: [pending, approved, rejected]}
+      approver: {type: [string, 'null']}
+      approved_at: {type: [string, 'null']}
+  prepared_at: {type: string, minLength: 1}
+  planner: {type: string, minLength: 1}

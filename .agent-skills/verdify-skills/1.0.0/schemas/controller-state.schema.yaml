@@ -1,0 +1,65 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://verdify.example/schemas/controller-state.schema.yaml
+title: Verdify Controller State
+type: object
+additionalProperties: false
+required: [schema_ref, kind, schema_version, project_id, controller_id, status, state, updated_at, current_wave, sessions, events, open_gates, next_actions, handoff, approval]
+properties:
+  schema_ref: {const: controller-state.schema.yaml}
+  kind: {const: ControllerState}
+  schema_version: {const: "1.0"}
+  project_id: {type: string}
+  controller_id: {type: string}
+  status: {type: string, enum: [draft, active, paused, blocked, complete, superseded]}
+  state: {type: string}
+  updated_at: {type: string}
+  current_wave: {type: [string, 'null']}
+  sessions:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, role, executor, repository, status]
+      properties:
+        id: {type: string}
+        role: {type: string}
+        executor: {type: string}
+        repository: {type: string}
+        issue: {type: [integer, 'null']}
+        lane_id: {type: [string, 'null']}
+        branch: {type: [string, 'null']}
+        worktree: {type: [string, 'null']}
+        status: {type: string}
+  events:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, occurred_at, event_type, summary]
+      properties:
+        id: {type: string}
+        occurred_at: {type: string}
+        event_type: {type: string}
+        summary: {type: string}
+  open_gates:
+    type: array
+    items: {type: string}
+  next_actions:
+    type: array
+    items: {type: string}
+  handoff:
+    type: object
+    additionalProperties: false
+    required: [next_skill, next_mode, reason]
+    properties:
+      next_skill: {type: string}
+      next_mode: {type: string}
+      reason: {type: string}
+  approval:
+    type: object
+    additionalProperties: false
+    required: [status, approver, approved_at]
+    properties:
+      status: {type: string, enum: [pending, approved, rejected]}
+      approver: {type: [string, 'null']}
+      approved_at: {type: [string, 'null']}
