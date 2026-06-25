@@ -1,0 +1,20 @@
+schema_ref: transcript-replan.schema.yaml
+kind: TranscriptReplan
+schema_version: "1.0"
+source_id: SRC-000
+status: draft
+generated_at: ""
+repositories: []
+items: []
+conflicts: []
+proposed_artifact_changes: []
+issue_recommendations: []
+gate_recommendations: []
+handoff:
+  next_skill: project-definition
+  next_mode: discovery
+  reason: ""
+approval:
+  status: pending
+  approver: null
+  approved_at: null

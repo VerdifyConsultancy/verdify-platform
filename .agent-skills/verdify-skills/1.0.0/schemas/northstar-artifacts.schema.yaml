@@ -1,0 +1,116 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://verdify.example/schemas/northstar-artifacts.schema.yaml
+title: Verdify North Star Product and Architecture Artifacts
+type: object
+additionalProperties: false
+required: [schema_ref, kind, schema_version, project_id, status, iteration, generated_at, updated_at, product, architecture, evidence_references, cross_links, open_questions, review, handoff]
+properties:
+  schema_ref: {const: northstar-artifacts.schema.yaml}
+  kind: {const: NorthStarArtifacts}
+  schema_version: {const: "1.0"}
+  project_id: {type: string}
+  status: {type: string, enum: [draft, iterating, questions_open, review_requested, approved, blocked, superseded]}
+  iteration: {type: integer, minimum: 0}
+  generated_at: {type: string, minLength: 1}
+  updated_at: {type: string, minLength: 1}
+  product:
+    type: object
+    additionalProperties: false
+    required: [path, status, summary, section_ids, source_ids, open_question_ids]
+    properties:
+      path: {const: .agent-workflow/northstar/NORTHSTAR_PRODUCT.md}
+      status: {type: string, enum: [missing, draft, review_requested, approved, blocked]}
+      summary: {type: string}
+      section_ids: {type: array, items: {type: string}}
+      source_ids: {type: array, items: {type: string}}
+      open_question_ids: {type: array, items: {type: string}}
+  architecture:
+    type: object
+    additionalProperties: false
+    required: [path, status, summary, section_ids, source_ids, open_question_ids]
+    properties:
+      path: {const: .agent-workflow/northstar/NORTHSTAR_ARCHITECTURE.md}
+      status: {type: string, enum: [missing, draft, review_requested, approved, blocked]}
+      summary: {type: string}
+      section_ids: {type: array, items: {type: string}}
+      source_ids: {type: array, items: {type: string}}
+      open_question_ids: {type: array, items: {type: string}}
+  evidence_references:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, reference, title, evidence_status, used_in]
+      properties:
+        id: {type: string}
+        reference: {type: string}
+        title: {type: string}
+        evidence_status: {type: string, enum: [verified, observed, reported, inferred, unknown]}
+        used_in:
+          type: array
+          items: {type: string, enum: [product, architecture, both, question, deferred]}
+  cross_links:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [from_id, to_id, relationship]
+      properties:
+        from_id: {type: string}
+        to_id: {type: string}
+        relationship: {type: string}
+  open_questions:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, artifact, question, owner, blocking, status, source_ids]
+      properties:
+        id: {type: string, pattern: '^NSQ-[0-9]{3,}$'}
+        artifact: {type: string, enum: [product, architecture, both]}
+        question: {type: string}
+        owner: {type: string}
+        blocking: {type: boolean}
+        status: {type: string, enum: [open, answered, resolved, deferred]}
+        source_ids: {type: array, items: {type: string}}
+        proposed_resolution: {type: [string, 'null']}
+  learning_capture:
+    type: object
+    additionalProperties: false
+    required: [status, proposal_paths, open_proposal_ids]
+    properties:
+      status: {type: string, enum: [none, staged, review_requested, accepted, deferred]}
+      proposal_paths:
+        type: array
+        items: {type: string}
+      open_proposal_ids:
+        type: array
+        items: {type: string, pattern: '^NLP-[0-9]{3,}$'}
+  review:
+    type: object
+    additionalProperties: false
+    required: [requested_at, reviewers, status, approvals, signoff_required_for_downstream]
+    properties:
+      requested_at: {type: [string, 'null']}
+      reviewers: {type: array, items: {type: string}}
+      status: {type: string, enum: [not_requested, requested, changes_requested, approved, rejected]}
+      approvals:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [reviewer, decision, decided_at, notes]
+          properties:
+            reviewer: {type: string}
+            decision: {type: string, enum: [approved, rejected, changes_requested]}
+            decided_at: {type: string}
+            notes: {type: string}
+      signoff_required_for_downstream: {type: boolean}
+  handoff:
+    type: object
+    additionalProperties: false
+    required: [next_skill, next_mode, reason]
+    properties:
+      next_skill: {type: string}
+      next_mode: {type: string}
+      reason: {type: string}

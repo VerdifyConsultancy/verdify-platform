@@ -1,0 +1,285 @@
+schema_ref: project-definition.schema.yaml
+kind: ProjectDefinition
+schema_version: "1.0"
+project_id: example-service
+status: approved
+stage_status:
+  discovery: approved
+  requirements: approved
+  product: approved
+  design_surface: approved
+sources:
+  - id: SRC-001
+    type: repository-documentation
+    location: README.md
+    summary: The service must expose a health endpoint and retain auditable evidence.
+    evidence_status: verified
+decisions:
+  - id: DEC-001
+    statement: Expose health information through an HTTP API.
+    status: approved
+    rationale: The deployment platform and operators require an HTTP probe.
+    source_ids: [SRC-001]
+assumptions: []
+contradictions: []
+requirements:
+  functional:
+    - id: FR-001
+      statement: The service shall return a machine-readable health response.
+      source_ids: [SRC-001]
+      acceptance_ids: [AC-001]
+  non_functional:
+    - id: NFR-001
+      category: auditability
+      statement: Validation and deployment evidence shall identify the tested revision.
+      source_ids: [SRC-001]
+      acceptance_ids: [AC-002]
+  constraints:
+    - id: CST-001
+      statement: Implementation work must be delivered through a linked GitHub issue and pull request.
+      source_ids: [SRC-001]
+  acceptance_criteria:
+    - id: AC-001
+      statement: GET /health returns HTTP 200 and a JSON status of ok.
+      evidence_expected: [automated API test, runtime probe]
+    - id: AC-002
+      statement: Test and runtime evidence identify the exact Git revision.
+      evidence_expected: [CI check, deployment record]
+product:
+  primary_users:
+    - id: USR-001
+      name: service operator
+      needs: [determine whether the service is healthy, identify the running revision]
+  problem_statement: Operators need a reliable and auditable way to determine service health.
+  jobs_to_be_done:
+    - Check service health from deployment automation.
+    - Correlate a running service with a reviewed revision.
+  scope:
+    - Health endpoint and tests.
+    - Runtime verification of the deployed revision.
+  non_goals:
+    - Full observability dashboard.
+    - Automated remediation.
+  success_metrics:
+    - id: MET-001
+      measure: Required health checks pass for the deployed revision.
+      target: 100 percent during release verification.
+  risks:
+    - A static health response could hide dependency failure.
+design:
+  surfaces:
+    - id: SURF-001
+      type: HTTP API
+      actor: deployment platform and operator
+      purpose: Read service health and revision.
+      inputs: [GET /health]
+      outputs: [HTTP status, JSON health payload]
+      requirement_ids: [FR-001, NFR-001]
+  flows:
+    - id: FLOW-001
+      name: Verify deployed health
+      steps:
+        - Send GET /health to the target environment.
+        - Confirm HTTP 200 and status ok.
+        - Confirm the reported revision matches the release.
+      acceptance_ids: [AC-001, AC-002]
+  human_gates:
+    - Production deployment requires environment approval.
+  error_states:
+    - Dependency failure returns a non-healthy response.
+    - Revision mismatch blocks outcome acceptance.
+lifecycle:
+  coverage:
+    - id: COV-001
+      area: product_outcome
+      status: covered
+      summary: Operators can verify service health and release identity.
+      source_ids: [SRC-001]
+      requirement_ids: [FR-001, NFR-001]
+      decision_ids: [DEC-001]
+    - id: COV-002
+      area: users_stakeholders_relationships
+      status: covered
+      summary: The service operator consumes health and revision evidence through deployment automation.
+      source_ids: [SRC-001]
+      requirement_ids: [FR-001, NFR-001]
+      decision_ids: []
+    - id: COV-003
+      area: domain_data_model
+      status: covered
+      summary: The domain is limited to health status and immutable revision identity; no customer data is involved.
+      source_ids: [SRC-001]
+      requirement_ids: [FR-001, NFR-001]
+      decision_ids: []
+    - id: COV-004
+      area: scope_non_goals
+      status: covered
+      summary: Health endpoint and runtime verification are in scope; dashboards and remediation are not.
+      source_ids: [SRC-001]
+      requirement_ids: []
+      decision_ids: []
+    - id: COV-005
+      area: design_surfaces
+      status: covered
+      summary: GET /health is the only project surface for this slice.
+      source_ids: [SRC-001]
+      requirement_ids: [FR-001, NFR-001]
+      decision_ids: [DEC-001]
+    - id: COV-006
+      area: security_privacy_compliance
+      status: covered
+      summary: The health response must not expose secrets or customer data.
+      source_ids: [SRC-001]
+      requirement_ids: [NFR-001]
+      decision_ids: []
+    - id: COV-007
+      area: infrastructure_hosting
+      status: covered
+      summary: The deployment platform hosts the stateless HTTP service behind platform ingress.
+      source_ids: [SRC-001]
+      requirement_ids: [FR-001]
+      decision_ids: []
+    - id: COV-008
+      area: environments_configuration
+      status: covered
+      summary: Staging runtime verification is required; production deployment remains a separate approval.
+      source_ids: [SRC-001]
+      requirement_ids: [NFR-001]
+      decision_ids: []
+    - id: COV-009
+      area: integrations_dependencies
+      status: covered
+      summary: The deployment platform and operators are the only declared consumers.
+      source_ids: [SRC-001]
+      requirement_ids: [FR-001]
+      decision_ids: []
+    - id: COV-010
+      area: deployment_release_rollback
+      status: covered
+      summary: Release evidence must bind tests and runtime probes to the exact reviewed revision.
+      source_ids: [SRC-001]
+      requirement_ids: [NFR-001]
+      decision_ids: []
+    - id: COV-011
+      area: operations_observability_support
+      status: covered
+      summary: Operators use health response and revision evidence during release verification.
+      source_ids: [SRC-001]
+      requirement_ids: [FR-001, NFR-001]
+      decision_ids: []
+    - id: COV-012
+      area: quality_testing_evidence
+      status: covered
+      summary: Automated API tests, CI checks, and runtime probes provide acceptance evidence.
+      source_ids: [SRC-001]
+      requirement_ids: [FR-001, NFR-001]
+      decision_ids: []
+    - id: COV-013
+      area: governance_ownership_approvals
+      status: covered
+      summary: Work must flow through GitHub issue, PR, review, and deployment approval gates.
+      source_ids: [SRC-001]
+      requirement_ids: [CST-001]
+      decision_ids: []
+    - id: COV-014
+      area: documentation_enablement
+      status: not_applicable
+      summary: This minimal slice creates a machine-consumed health contract; no user docs are required.
+      source_ids: [SRC-001]
+      requirement_ids: []
+      decision_ids: []
+    - id: COV-015
+      area: cost_procurement_risk
+      status: not_applicable
+      summary: No new paid service, procurement path, or licensing change is introduced.
+      source_ids: [SRC-001]
+      requirement_ids: []
+      decision_ids: []
+    - id: COV-016
+      area: migration_legacy
+      status: not_applicable
+      summary: No persisted data, legacy system, or migration path is involved.
+      source_ids: [SRC-001]
+      requirement_ids: []
+      decision_ids: []
+    - id: COV-017
+      area: accessibility_localization
+      status: not_applicable
+      summary: The slice exposes a machine-readable HTTP health response, not a human UI.
+      source_ids: [SRC-001]
+      requirement_ids: []
+      decision_ids: []
+  relationships:
+    - id: REL-001
+      type: consumer
+      parties: [deployment platform, service operator]
+      nature: Deployment automation and operators consume the health endpoint during release verification.
+      owner: delivery-owner
+      source_ids: [SRC-001]
+  architecture_inputs:
+    system_context:
+      - A stateless HTTP service is queried by deployment automation and operators.
+    architecture_decision_areas:
+      - How the runtime reads immutable revision identity.
+      - How dependency failure affects reported health.
+    quality_attributes:
+      - Auditability of tested and deployed revision identity.
+      - No secrets or customer data in the health response.
+    constraints:
+      - Health must be exposed through HTTP.
+      - Implementation must flow through linked GitHub issue and pull request.
+    assumptions: []
+  delivery_operations:
+    environments:
+      - Staging verification is required before outcome acceptance.
+      - Production deployment requires separate approval.
+    infrastructure:
+      - Platform ingress routes health requests to the service.
+    configuration:
+      - Revision identity must come from build or deployment metadata.
+    deployment:
+      - Deploy the exact integrated artifact before runtime verification.
+    rollback:
+      - Revert to the prior immutable artifact if runtime revision or health verification fails.
+    migrations:
+      - No data migration is required.
+    observability:
+      - Runtime probe evidence records health status and revision.
+    support:
+      - Operators use the health response to diagnose release identity.
+    incident_response:
+      - Revision mismatch blocks outcome acceptance and requires release investigation.
+    documentation:
+      - The health contract is captured in project, architecture, and module artifacts.
+  open_gaps: []
+  handoff_readiness:
+    architecture_contracts:
+      - Architecture must define the API adapter and revision source.
+      - Architecture must preserve the no-secrets health response constraint.
+    sprint_planning:
+      - Sprint planning can create a single issue lane for the health endpoint.
+    release_verification:
+      - Runtime verification must compare observed revision with the integrated SHA.
+traceability:
+  - from: SRC-001
+    to: FR-001
+    relationship: supports
+  - from: FR-001
+    to: SURF-001
+    relationship: realized_by
+  - from: AC-001
+    to: FLOW-001
+    relationship: verified_by
+  - from: SRC-001
+    to: COV-001
+    relationship: supports
+  - from: COV-010
+    to: NFR-001
+    relationship: clarifies
+  - from: REL-001
+    to: SURF-001
+    relationship: consumes
+approval:
+  status: approved
+  approver: product-owner
+  approved_at: "2026-06-22T10:00:00Z"

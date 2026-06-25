@@ -1,0 +1,142 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://verdify.example/schemas/observability-diagnostic-packet.schema.yaml
+title: Verdify Observability Diagnostic Packet
+type: object
+additionalProperties: false
+required: [schema_ref, kind, schema_version, packet_id, status, scope, correlation, hypotheses, telemetry_links, signal_assessments, runtime_checks, deployment_markers, findings, missing_instrumentation, recommendation, feedback_route, prepared_at, diagnostician]
+properties:
+  schema_ref: {const: observability-diagnostic-packet.schema.yaml}
+  kind: {const: ObservabilityDiagnosticPacket}
+  schema_version: {const: "1.0"}
+  packet_id: {type: string, pattern: '^diag-[a-z0-9][a-z0-9-]*$'}
+  status: {type: string, enum: [draft, incomplete, ready, blocked, resolved, superseded]}
+  scope:
+    type: object
+    additionalProperties: false
+    required: [diagnostic_unit, repository, sprint_id, lane_ids, issue_ids, environment, namespace, northstar_ids, summary]
+    properties:
+      diagnostic_unit: {type: string, enum: [readiness, review, release, incident, feedback]}
+      repository: {type: string, minLength: 1}
+      sprint_id: {type: [string, 'null']}
+      lane_ids: {type: array, items: {type: string}}
+      issue_ids: {type: array, items: {type: integer, minimum: 1}}
+      environment: {type: string, minLength: 1}
+      namespace: {type: [string, 'null']}
+      northstar_ids: {type: array, items: {type: string}}
+      summary: {type: string, minLength: 1}
+  correlation:
+    type: object
+    additionalProperties: false
+    required: [wave_id, session_ids, pr_ids, commit_sha, image_digest, deployment_ids, trace_ids, policy_decision_ids]
+    properties:
+      wave_id: {type: [string, 'null']}
+      session_ids: {type: array, items: {type: string}}
+      pr_ids: {type: array, items: {type: string}}
+      commit_sha: {type: [string, 'null'], pattern: '^[a-f0-9]{7,40}$'}
+      image_digest: {type: [string, 'null']}
+      deployment_ids: {type: array, items: {type: string}}
+      trace_ids: {type: array, items: {type: string}}
+      policy_decision_ids: {type: array, items: {type: string}}
+  hypotheses:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, statement, confidence, status, evidence]
+      properties:
+        id: {type: string, pattern: '^HYP-[0-9]{3,}$'}
+        statement: {type: string, minLength: 1}
+        confidence: {type: string, enum: [low, medium, high]}
+        status: {type: string, enum: [open, supported, rejected, inconclusive]}
+        evidence: {type: array, items: {type: string}}
+  telemetry_links:
+    type: object
+    additionalProperties: false
+    required: [dashboards, logs, metrics, traces, alerts, events]
+    properties:
+      dashboards: {type: array, items: {type: string}}
+      logs: {type: array, items: {type: string}}
+      metrics: {type: array, items: {type: string}}
+      traces: {type: array, items: {type: string}}
+      alerts: {type: array, items: {type: string}}
+      events: {type: array, items: {type: string}}
+  signal_assessments:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, kind, name, source, observed_state, evidence, blocking]
+      properties:
+        id: {type: string, pattern: '^SIG-[0-9]{3,}$'}
+        kind: {type: string, enum: [metric, log, trace, event, alert, check, deployment, probe]}
+        name: {type: string, minLength: 1}
+        source: {type: string, minLength: 1}
+        observed_state: {type: string, enum: [normal, degraded, failing, missing, unknown, not_applicable]}
+        evidence: {type: string}
+        blocking: {type: boolean}
+  runtime_checks:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [name, result, observed_at, evidence]
+      properties:
+        name: {type: string, minLength: 1}
+        result: {type: string, enum: [passed, failed, skipped, not_applicable, unknown]}
+        observed_at: {type: string, minLength: 1}
+        evidence: {type: string}
+  deployment_markers:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [environment, deployment_id, observed_revision, observed_at, evidence]
+      properties:
+        environment: {type: string, minLength: 1}
+        deployment_id: {type: [string, integer, 'null']}
+        observed_revision: {type: [string, 'null']}
+        observed_at: {type: [string, 'null']}
+        evidence: {type: string}
+  findings:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, severity, statement, evidence, requested_action]
+      properties:
+        id: {type: string, pattern: '^FIND-[0-9]{3,}$'}
+        severity: {type: string, enum: [critical, high, medium, low, note]}
+        statement: {type: string, minLength: 1}
+        evidence: {type: array, items: {type: string}}
+        requested_action: {type: string, minLength: 1}
+  missing_instrumentation:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, gap, impact, owner, required_before]
+      properties:
+        id: {type: string, pattern: '^OBS-GAP-[0-9]{3,}$'}
+        gap: {type: string, minLength: 1}
+        impact: {type: string, minLength: 1}
+        owner: {type: string, minLength: 1}
+        required_before: {type: string, enum: [review_ready, release_ready, production, future_hardening]}
+  recommendation:
+    type: object
+    additionalProperties: false
+    required: [outcome, rationale]
+    properties:
+      outcome: {type: string, enum: [proceed, request_changes, rollback, hold, escalate, instrument_first]}
+      rationale: {type: string, minLength: 1}
+  feedback_route:
+    type: object
+    additionalProperties: false
+    required: [route, instructions, target_refs]
+    properties:
+      route: {type: string, enum: [state_of_union, review_inbox, release_verification, platform_readiness, lane_delivery, sprint_planning, incident, no_action]}
+      instructions: {type: string, minLength: 1}
+      target_refs: {type: array, items: {type: string}}
+  prepared_at: {type: string, minLength: 1}
+  diagnostician: {type: string, minLength: 1}

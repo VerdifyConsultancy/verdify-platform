@@ -1,0 +1,39 @@
+schema_ref: gravity-core-extraction-plan.schema.yaml
+kind: GravityCoreExtractionPlan
+schema_version: "1.0"
+plan_id: gce-replace-me
+status: draft
+assessed_at: replace-me
+repository: replace-me
+source_system:
+  name: replace-me
+  repository: replace-me
+  ref: null
+  current_boundary: ""
+  evidence_refs: []
+target_boundaries:
+  core_package: replace-me
+  core_boundary: []
+  pack_boundary: []
+  non_goals: []
+source_objects: []
+reuse_matrix: []
+pack_assumptions: []
+contracts: []
+migration_risks: []
+pilot:
+  story: ""
+  scope: []
+  entry_criteria: []
+  exit_criteria: []
+  human_test_steps: []
+  evidence_refs: []
+readiness_updates: []
+handoff:
+  next_skill: gravity-readiness
+  next_mode: gravity-core-extraction
+  reason: Gravity core extraction plan is a draft.
+approval:
+  status: pending
+  approvers: []
+  approved_at: null

@@ -1,0 +1,6 @@
+interface:
+  display_name: "North Star Interview"
+  short_description: "Interview to refine North Star decisions"
+  default_prompt: "Use $northstar-interview to review the North Star and prepare prioritized Q&A."
+policy:
+  allow_implicit_invocation: true

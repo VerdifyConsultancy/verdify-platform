@@ -1,0 +1,19 @@
+schema_ref: northstar-evidence-item.schema.yaml
+kind: NorthStarEvidenceItem
+schema_version: "1.0"
+id: NSE-YYYYMMDD-example
+reference: northstar://evidence/NSE-YYYYMMDD-example
+title: ""
+evidence_type: research_note
+evidence_status: observed
+ingested_at: ""
+source:
+  uri: null
+  original_path: null
+  copied_path: null
+  sha256: ""
+summary: ""
+tags: []
+claims: []
+planning_relevance: []
+limitations: []

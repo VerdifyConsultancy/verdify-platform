@@ -1,0 +1,44 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://verdify.example/schemas/northstar-evidence-registry.schema.yaml
+title: Verdify North Star Evidence Registry
+type: object
+additionalProperties: false
+required: [schema_ref, kind, schema_version, project_id, generated_at, updated_at, evidence]
+properties:
+  schema_ref: {const: northstar-evidence-registry.schema.yaml}
+  kind: {const: NorthStarEvidenceRegistry}
+  schema_version: {const: "1.0"}
+  project_id: {type: string}
+  generated_at: {type: string, minLength: 1}
+  updated_at: {type: string, minLength: 1}
+  evidence:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, reference, title, evidence_type, evidence_status, ingested_at, item_path, copied_source_path, source_uri, source_sha256, summary, tags, claims, planning_relevance]
+      properties:
+        id: {type: string, pattern: '^NSE-[0-9]{8}-[a-z0-9][a-z0-9-]*$'}
+        reference: {type: string, pattern: '^northstar://evidence/NSE-[0-9]{8}-[a-z0-9][a-z0-9-]*$'}
+        title: {type: string, minLength: 1}
+        evidence_type:
+          type: string
+          enum: [research_note, research_report, source_doc, benchmark, external_reference, adversarial_review, transcript, observation]
+        evidence_status:
+          type: string
+          enum: [verified, observed, reported, inferred, unknown]
+        ingested_at: {type: string, minLength: 1}
+        item_path: {type: string, minLength: 1}
+        copied_source_path: {type: string, minLength: 1}
+        source_uri: {type: [string, 'null']}
+        source_sha256: {type: string, pattern: '^[a-f0-9]{64}$'}
+        summary: {type: string, minLength: 1}
+        tags:
+          type: array
+          items: {type: string}
+        claims:
+          type: array
+          items: {type: string}
+        planning_relevance:
+          type: array
+          items: {type: string}

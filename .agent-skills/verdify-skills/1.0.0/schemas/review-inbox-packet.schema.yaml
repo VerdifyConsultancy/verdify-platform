@@ -1,0 +1,185 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://verdify.example/schemas/review-inbox-packet.schema.yaml
+title: Verdify Review Inbox Packet
+type: object
+additionalProperties: false
+required: [schema_ref, kind, schema_version, packet_id, status, scope, traceability, pull_requests, checks, deployments, reviewer_guidance, telemetry, security, rollback, risks, questions, evidence_completeness, recommendation, feedback_route, prepared_at, preparer]
+properties:
+  schema_ref: {const: review-inbox-packet.schema.yaml}
+  kind: {const: ReviewInboxPacket}
+  schema_version: {const: "1.0"}
+  packet_id: {type: string, pattern: '^review-[a-z0-9][a-z0-9-]*$'}
+  status: {type: string, enum: [draft, incomplete, ready, approved, changes_requested, rejected, escalated]}
+  scope:
+    type: object
+    additionalProperties: false
+    required: [review_unit, sprint_id, lane_ids, issue_ids, northstar_ids, summary]
+    properties:
+      review_unit: {type: string, enum: [lane, wave, release, hotfix, planning]}
+      sprint_id: {type: [string, 'null']}
+      lane_ids: {type: array, items: {type: string}}
+      issue_ids: {type: array, items: {type: integer, minimum: 1}}
+      northstar_ids: {type: array, items: {type: string}}
+      summary: {type: string, minLength: 1}
+  traceability:
+    type: object
+    additionalProperties: false
+    required: [repository, base_ref, head_ref, reviewed_head_sha, artifact_paths, source_refs]
+    properties:
+      repository: {type: string, minLength: 1}
+      base_ref: {type: string, minLength: 1}
+      head_ref: {type: string, minLength: 1}
+      reviewed_head_sha: {type: string, pattern: '^[a-f0-9]{7,40}$'}
+      artifact_paths: {type: array, items: {type: string}}
+      source_refs: {type: array, items: {type: string}}
+  pull_requests:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [provider, identifier, url, state, author, requested_reviewers, latest_review_state]
+      properties:
+        provider: {type: string, enum: [github, gitlab, other]}
+        identifier: {type: string, minLength: 1}
+        url: {type: string, minLength: 1}
+        state: {type: string, enum: [draft, open, merged, closed, unknown]}
+        author: {type: [string, 'null']}
+        requested_reviewers: {type: array, items: {type: string}}
+        latest_review_state: {type: string, enum: [approved, changes_requested, comment, pending, not_applicable, unknown]}
+  checks:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [name, provider, status, conclusion, url, observed_at]
+      properties:
+        name: {type: string, minLength: 1}
+        provider: {type: string, enum: [github_actions, github_checks, gitlab_ci, local, other]}
+        status: {type: string, enum: [queued, in_progress, completed, skipped, unknown]}
+        conclusion: {type: string, enum: [success, failure, cancelled, neutral, skipped, timed_out, action_required, not_applicable, unknown]}
+        url: {type: [string, 'null']}
+        observed_at: {type: string, minLength: 1}
+  deployments:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [environment, environment_type, required, state, url, deployment_id, observed_revision, desired_state_ref, reconciliation_evidence, log_url, observed_at]
+      properties:
+        environment: {type: string, minLength: 1}
+        environment_type: {type: string, enum: [preview, review, staging, production, none]}
+        required: {type: boolean}
+        state: {type: string, enum: [not_applicable, requested, queued, in_progress, active, failed, stopped, unknown]}
+        url: {type: [string, 'null']}
+        deployment_id: {type: [string, integer, 'null']}
+        observed_revision: {type: [string, 'null']}
+        desired_state_ref: {type: [string, 'null']}
+        reconciliation_evidence: {type: array, items: {type: string}}
+        log_url: {type: [string, 'null']}
+        observed_at: {type: [string, 'null']}
+  reviewer_guidance:
+    type: object
+    additionalProperties: false
+    required: [human_test_steps, review_urls, route_maps]
+    properties:
+      human_test_steps: {type: array, minItems: 1, items: {type: string}}
+      review_urls: {type: array, items: {type: string}}
+      route_maps:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [source_path, review_url]
+          properties:
+            source_path: {type: string, minLength: 1}
+            review_url: {type: string, minLength: 1}
+  telemetry:
+    type: object
+    additionalProperties: false
+    required: [dashboards, logs, metrics, traces, runtime_checks, missing_telemetry]
+    properties:
+      dashboards: {type: array, items: {type: string}}
+      logs: {type: array, items: {type: string}}
+      metrics: {type: array, items: {type: string}}
+      traces: {type: array, items: {type: string}}
+      runtime_checks:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [name, result, evidence]
+          properties:
+            name: {type: string, minLength: 1}
+            result: {type: string, enum: [passed, failed, skipped, not_applicable, unknown]}
+            evidence: {type: string}
+      missing_telemetry: {type: array, items: {type: string}}
+  security:
+    type: object
+    additionalProperties: false
+    required: [privileged_access_required, secret_exposure_reviewed, preview_generator_controls, unresolved_findings]
+    properties:
+      privileged_access_required: {type: boolean}
+      secret_exposure_reviewed: {type: boolean}
+      preview_generator_controls: {type: array, items: {type: string}}
+      unresolved_findings: {type: array, items: {type: string}}
+  rollback:
+    type: object
+    additionalProperties: false
+    required: [ready, known_good_revision, procedure, evidence]
+    properties:
+      ready: {type: boolean}
+      known_good_revision: {type: [string, 'null']}
+      procedure: {type: string, minLength: 1}
+      evidence: {type: array, items: {type: string}}
+  risks:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, severity, statement, disposition]
+      properties:
+        id: {type: string, pattern: '^RISK-[0-9]{2,}$'}
+        severity: {type: string, enum: [low, medium, high, critical]}
+        statement: {type: string, minLength: 1}
+        disposition: {type: string, minLength: 1}
+  questions:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, question, owner, blocking, status]
+      properties:
+        id: {type: string, pattern: '^Q-[0-9]{2,}$'}
+        question: {type: string, minLength: 1}
+        owner: {type: string, minLength: 1}
+        blocking: {type: boolean}
+        status: {type: string, enum: [open, answered, deferred, escalated]}
+  evidence_completeness:
+    type: object
+    additionalProperties: false
+    required: [verdict, satisfied_required, missing_required, blockers]
+    properties:
+      verdict: {type: string, enum: [complete, incomplete, blocked]}
+      satisfied_required: {type: array, items: {type: string}}
+      missing_required: {type: array, items: {type: string}}
+      blockers: {type: array, items: {type: string}}
+  recommendation:
+    type: object
+    additionalProperties: false
+    required: [outcome, rationale]
+    properties:
+      outcome: {type: string, enum: [approve, request_changes, reject, escalate]}
+      rationale: {type: string, minLength: 1}
+  feedback_route:
+    type: object
+    additionalProperties: false
+    required: [route, instructions, target_refs]
+    properties:
+      route: {type: string, enum: [fix_lane, replan, architecture_review, release_verification, human_signoff, open_issue, hold]}
+      instructions: {type: string, minLength: 1}
+      target_refs: {type: array, items: {type: string}}
+  prepared_at: {type: string, minLength: 1}
+  preparer: {type: string, minLength: 1}

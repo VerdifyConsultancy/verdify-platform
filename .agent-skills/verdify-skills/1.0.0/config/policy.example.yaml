@@ -1,0 +1,32 @@
+version: "1.0"
+project:
+  default_branch: main
+  require_github_issue: true
+  one_issue_per_lane: true
+  allow_multi_issue_lane: true
+  multi_issue_lane_requires:
+    - coupling_justification
+    - explicit_plan_approval
+worktrees:
+  lock_required: true
+  one_coding_session_per_worktree: true
+  worker_lease_ttl_hours: 24
+  critic_lease_ttl_hours: 8
+  default_parent_directory: ../.worktrees
+review:
+  fresh_critic_required: true
+  critic_may_edit_worker_branch: false
+  required_approvals: 1
+deployment:
+  worker_credentials_allowed: false
+  approval_required_for: [production, destructive_change, data_migration]
+  runtime_verification_required: true
+human_gates:
+  - unresolved_product_intent
+  - public_interface_change
+  - database_migration
+  - security_boundary_change
+  - destructive_operation
+  - new_privileged_dependency
+  - production_deployment
+  - policy_exception

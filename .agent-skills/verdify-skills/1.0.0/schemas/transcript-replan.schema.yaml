@@ -1,0 +1,94 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://verdify.example/schemas/transcript-replan.schema.yaml
+title: Verdify Transcript Replan
+type: object
+additionalProperties: false
+required: [schema_ref, kind, schema_version, source_id, status, generated_at, repositories, items, conflicts, proposed_artifact_changes, issue_recommendations, gate_recommendations, handoff, approval]
+properties:
+  schema_ref: {const: transcript-replan.schema.yaml}
+  kind: {const: TranscriptReplan}
+  schema_version: {const: "1.0"}
+  source_id: {type: string, minLength: 1}
+  status: {type: string, enum: [draft, routed, blocked, superseded, approved]}
+  generated_at: {type: string}
+  repositories:
+    type: array
+    items: {type: string}
+  items:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, category, statement, evidence_status, target_repository, lifecycle_phase, next_action, protected_artifact_impact]
+      properties:
+        id: {type: string, pattern: '^TR-[0-9]{3,}$'}
+        category: {type: string, enum: [decision, direction, requirement, user_story, architecture_input, idea, question, conflict, memory]}
+        statement: {type: string, minLength: 1}
+        original_phrase: {type: string}
+        evidence_status: {type: string, enum: [verified, observed, reported, inferred, unknown]}
+        target_repository: {type: string, minLength: 1}
+        lifecycle_phase: {type: string, minLength: 1}
+        next_action: {type: string, minLength: 1}
+        protected_artifact_impact: {type: string, enum: [none, proposed_change, approval_required]}
+  conflicts:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, statement, existing_authority, proposed_change, owner, blocking]
+      properties:
+        id: {type: string, pattern: '^CON-[0-9]{3,}$'}
+        statement: {type: string, minLength: 1}
+        existing_authority: {type: string}
+        proposed_change: {type: string}
+        owner: {type: string}
+        blocking: {type: boolean}
+  proposed_artifact_changes:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [path, change_type, summary, approval_required]
+      properties:
+        path: {type: string}
+        change_type: {type: string, enum: [create, update, delete, protect]}
+        summary: {type: string}
+        approval_required: {type: boolean}
+  issue_recommendations:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [title, repository, body_summary, labels]
+      properties:
+        title: {type: string}
+        repository: {type: string}
+        body_summary: {type: string}
+        labels: {type: array, items: {type: string}}
+  gate_recommendations:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [type, owner, reason, blocking]
+      properties:
+        type: {type: string}
+        owner: {type: string}
+        reason: {type: string}
+        blocking: {type: boolean}
+  handoff:
+    type: object
+    additionalProperties: false
+    required: [next_skill, next_mode, reason]
+    properties:
+      next_skill: {type: string}
+      next_mode: {type: string}
+      reason: {type: string}
+  approval:
+    type: object
+    additionalProperties: false
+    required: [status, approver, approved_at]
+    properties:
+      status: {type: string, enum: [pending, approved, rejected]}
+      approver: {type: [string, 'null']}
+      approved_at: {type: [string, 'null']}

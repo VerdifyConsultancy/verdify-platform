@@ -1,0 +1,77 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://verdify.example/schemas/module-contract.schema.yaml
+title: Verdify Module Contract
+type: object
+additionalProperties: false
+required: [schema_ref, kind, schema_version, module_id, contract_version, status, purpose, requirement_ids, owned_paths, prohibited_paths, inputs, outputs, public_interfaces, dependencies, invariants, runtime_resources, validation_commands, required_evidence, definition_of_done, approval]
+properties:
+  schema_ref: {const: module-contract.schema.yaml}
+  kind: {const: ModuleContract}
+  schema_version: {const: "1.0"}
+  module_id: {type: string, pattern: '^[a-z0-9][a-z0-9-]*$'}
+  contract_version: {type: string, minLength: 1}
+  status: {type: string, enum: [draft, blocked, approved, superseded]}
+  purpose: {type: string, minLength: 1}
+  requirement_ids: {type: array, minItems: 1, uniqueItems: true, items: {type: string}}
+  owned_paths: {type: array, minItems: 1, uniqueItems: true, items: {type: string}}
+  prohibited_paths: {type: array, uniqueItems: true, items: {type: string}}
+  inputs:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [name, schema, producer]
+      properties:
+        name: {type: string}
+        schema: {type: string}
+        producer: {type: string}
+  outputs:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [name, schema, consumers]
+      properties:
+        name: {type: string}
+        schema: {type: string}
+        consumers: {type: array, items: {type: string}}
+  public_interfaces:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [name, location, compatibility]
+      properties:
+        name: {type: string}
+        location: {type: string}
+        compatibility: {type: string}
+  dependencies:
+    type: object
+    additionalProperties: false
+    required: [hard, soft]
+    properties:
+      hard: {type: array, uniqueItems: true, items: {type: string}}
+      soft: {type: array, uniqueItems: true, items: {type: string}}
+  invariants: {type: array, minItems: 1, items: {type: string}}
+  runtime_resources: {type: array, items: {type: string}}
+  validation_commands:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, command, purpose]
+      properties:
+        id: {type: string}
+        command: {type: string, minLength: 1}
+        purpose: {type: string}
+  required_evidence: {type: array, minItems: 1, items: {type: string}}
+  definition_of_done: {type: array, minItems: 1, items: {type: string}}
+  approval:
+    type: object
+    additionalProperties: false
+    required: [status, approver, approved_at]
+    properties:
+      status: {type: string, enum: [pending, approved, rejected]}
+      approver: {type: [string, 'null']}
+      approved_at: {type: [string, 'null']}

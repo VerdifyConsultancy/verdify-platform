@@ -1,0 +1,55 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://verdify.example/schemas/gravity-readiness.schema.yaml
+title: Verdify Gravity Readiness
+type: object
+additionalProperties: false
+required: [schema_ref, kind, schema_version, repository, status, assessed_at, onyx_status, checklist, pilot_wave, gates_to_open, handoff, approval]
+properties:
+  schema_ref: {const: gravity-readiness.schema.yaml}
+  kind: {const: GravityReadiness}
+  schema_version: {const: "1.0"}
+  repository: {type: string}
+  status: {type: string, enum: [draft, ready, not_ready, blocked, superseded]}
+  assessed_at: {type: string}
+  onyx_status: {type: string, enum: [required, not_required, unknown]}
+  checklist:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, area, status, evidence, blocker]
+      properties:
+        id: {type: string, pattern: '^GRAV-[0-9]{3,}$'}
+        area: {type: string}
+        status: {type: string, enum: [pass, fail, blocked]}
+        evidence: {type: array, items: {type: string}}
+        blocker: {type: [string, 'null']}
+  pilot_wave:
+    type: object
+    additionalProperties: false
+    required: [id, summary, entry_criteria, exit_criteria, human_test_steps]
+    properties:
+      id: {type: string}
+      summary: {type: string}
+      entry_criteria: {type: array, items: {type: string}}
+      exit_criteria: {type: array, items: {type: string}}
+      human_test_steps: {type: array, items: {type: string}}
+  gates_to_open:
+    type: array
+    items: {type: string}
+  handoff:
+    type: object
+    additionalProperties: false
+    required: [next_skill, next_mode, reason]
+    properties:
+      next_skill: {type: string}
+      next_mode: {type: string}
+      reason: {type: string}
+  approval:
+    type: object
+    additionalProperties: false
+    required: [status, approver, approved_at]
+    properties:
+      status: {type: string, enum: [pending, approved, rejected]}
+      approver: {type: [string, 'null']}
+      approved_at: {type: [string, 'null']}

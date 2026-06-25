@@ -1,0 +1,77 @@
+version: "1.0"
+entrypoint: project-router
+skills:
+  - name: project-router
+    order: 1
+    modes: [route, resume, gap-detection]
+  - name: transcript-replan
+    order: 2
+    modes: [ingest, route-proposals, conflict-disposition]
+  - name: northstar-research-ingest
+    order: 3
+    modes: [ingest-research, evidence-list]
+  - name: northstar-planning
+    order: 4
+    modes: [intake, synthesis, artifact-loop, research-loop, adversarial-review, decision-pack, human-review, review-feedback, signoff]
+  - name: northstar-interview
+    order: 5
+    modes: [review, question-pack, answer-capture, feedback-routing]
+  - name: northstar-question-resolution
+    order: 6
+    modes: [inventory, cluster, research, answer, planning-handoff]
+  - name: project-definition
+    order: 7
+    modes: [discovery, requirements, product, design-surface]
+  - name: architecture-contracts
+    order: 8
+    modes: [north-star-architecture, module-contracts]
+  - name: state-of-union
+    order: 9
+    modes: [strategy-review, comprehensive-replan, strategy-refresh, health-triage, gate-resolution]
+  - name: repo-hygiene
+    order: 10
+    modes: [assess, safe-cleanup, compliance-gate]
+  - name: sprint-planning
+    order: 11
+    modes: [issue-readiness, sprint-plan, lane-transaction, review-plan, wave-release-plan, plan-approval]
+  - name: sprint-orchestrator
+    order: 12
+    modes: [execution-runbook, platform-dispatch, monitor, reconcile, gate-management]
+  - name: controller-loop
+    order: 13
+    modes: [state-machine, session-ledger, wave-supervision]
+  - name: platform-readiness
+    order: 14
+    modes: [inventory, target-contract, readiness-gate, pilot-plan]
+  - name: gravity-readiness
+    order: 15
+    modes: [inventory, readiness-checklist, pilot-design]
+  - name: lane-delivery
+    order: 16
+    modes: [implementation, closeout, fix-forward]
+  - name: independent-critic
+    order: 17
+    modes: [lane-review, evidence-review, risk-review]
+  - name: release-verification
+    order: 18
+    modes: [review-inbox, observability-diagnostics, integration, deployment-verification, outcome-review]
+default_cycle:
+  - project-router
+  - transcript-replan
+  - northstar-research-ingest
+  - northstar-planning
+  - northstar-interview
+  - northstar-question-resolution
+  - project-definition
+  - architecture-contracts
+  - state-of-union
+  - repo-hygiene
+  - sprint-planning
+  - sprint-orchestrator
+  - controller-loop
+  - platform-readiness
+  - gravity-readiness
+  - lane-delivery
+  - independent-critic
+  - release-verification
+  - project-router

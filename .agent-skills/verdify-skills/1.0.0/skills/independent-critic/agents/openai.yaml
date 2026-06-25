@@ -1,0 +1,6 @@
+interface:
+  display_name: "Verdify Independent Critic"
+  short_description: "Fresh review of lane scope, code, and evidence"
+  default_prompt: "Independently review the assigned lane at its current PR head using a separate review worktree. Produce an evidence-backed critic decision and do not edit the worker branch."
+policy:
+  allow_implicit_invocation: false

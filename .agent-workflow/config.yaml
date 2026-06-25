@@ -1,0 +1,12 @@
+---
+schema_ref: project-config.schema.yaml
+kind: VerdifyProjectConfig
+schema_version: '1.0'
+initialized_at: '2026-06-25T16:39:30Z'
+default_branch: main
+github_repository: VerdifyConsultancy/verdify-platform
+policy:
+  one_issue_per_lane: true
+  one_coding_session_per_worktree: true
+  fresh_critic_required: true
+  runtime_verification_required: true

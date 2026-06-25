@@ -1,0 +1,6 @@
+interface:
+  display_name: "Verdify Controller Loop"
+  short_description: "Persist lifecycle state and session ledger"
+  default_prompt: "Use $controller-loop to reconstruct durable lifecycle state, supervise child sessions and waves, enforce gates, and persist typed controller/session ledger updates."
+policy:
+  allow_implicit_invocation: true

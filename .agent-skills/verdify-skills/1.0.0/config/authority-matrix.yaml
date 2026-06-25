@@ -1,0 +1,52 @@
+version: "1.0"
+control_plane: GitHub
+principle: "One authoritative owner per information type; caches and views never override their owner."
+authorities:
+  backlog_problem:
+    owner: github_issue
+    notes: "Problem, desired outcome, discussion, acceptance intent, dependencies, and discovered work."
+  backlog_hierarchy:
+    owner: github_sub_issues_and_dependencies
+    notes: "Do not recreate native parent/blocking relationships in a competing graph."
+  sprint_grouping:
+    owner: github_milestone_or_project
+    notes: "The versioned sprint plan records the approved execution snapshot and links back to GitHub."
+  approved_project_definition:
+    owner: default_branch:.agent-workflow/project/project-definition.yaml
+  approved_architecture:
+    owner: default_branch:.agent-workflow/architecture/architecture.yaml
+  architecture_decisions:
+    owner: default_branch:.agent-workflow/architecture/decisions
+  module_boundaries:
+    owner: default_branch:.agent-workflow/modules/contracts
+  approved_strategy:
+    owner: default_branch:.agent-workflow/strategy/state-of-union.yaml
+    notes: "Backlog alignment, recommended execution sequence, proposed issue/gate actions, and next lifecycle handoff."
+  executable_lane_scope:
+    owner: default_branch:.agent-workflow/sprints/<sprint-id>/lanes/contracts/<lane-id>.contract.yaml
+  local_worktree_ownership:
+    owner: git_common_dir:verdify/leases/<lease-id>.json
+    notes: "Machine-local coordination only; never committed and never authoritative for backlog state."
+  proposed_code:
+    owner: github_pull_request_branch
+  accepted_code:
+    owner: git_default_branch
+  quality_evidence:
+    owner: github_checks_and_linked_evidence
+  review_decision:
+    owner: github_pull_request_review_and_critic_report
+  release_identity:
+    owner: git_tag_and_github_release
+  deployment_state:
+    owner: github_deployment_or_platform_deployment_record
+  verified_runtime_outcome:
+    owner: deployment_evidence_plus_outcome_acceptance
+  local_github_snapshot:
+    owner: none
+    notes: "Ignored cache. Refresh rather than resolving conflicts in favor of it."
+conflict_resolution:
+  - "Stop the transition when two authoritative owners appear to disagree."
+  - "Refresh caches and reconstruct GitHub/Git state before changing records."
+  - "Never overwrite an approved contract merely to match an out-of-scope implementation."
+  - "Use an explicit scope-change or decision gate for material intent changes."
+  - "After approval, update the authoritative artifact first, then reconcile derived views."

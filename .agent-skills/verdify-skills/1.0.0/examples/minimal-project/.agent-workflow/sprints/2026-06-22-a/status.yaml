@@ -1,0 +1,9 @@
+schema_ref: status.schema.yaml
+kind: SprintStatus
+schema_version: "1.0"
+sprint_id: 2026-06-22-a
+state: COMPLETE
+updated_at: "2026-06-22T14:05:00Z"
+active_lanes: []
+blockers: []
+next_action: Return to project-router for the next outcome.

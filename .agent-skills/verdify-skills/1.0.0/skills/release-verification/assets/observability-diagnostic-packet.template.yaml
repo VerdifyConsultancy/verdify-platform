@@ -1,0 +1,58 @@
+schema_ref: observability-diagnostic-packet.schema.yaml
+kind: ObservabilityDiagnosticPacket
+schema_version: "1.0"
+packet_id: diag-replace-me
+status: draft
+scope:
+  diagnostic_unit: review
+  repository: owner/repo
+  sprint_id: null
+  lane_ids: []
+  issue_ids: []
+  environment: not-applicable
+  namespace: null
+  northstar_ids: []
+  summary: Replace with the diagnostic scope and question.
+correlation:
+  wave_id: null
+  session_ids: []
+  pr_ids: []
+  commit_sha: null
+  image_digest: null
+  deployment_ids: []
+  trace_ids: []
+  policy_decision_ids: []
+hypotheses:
+- id: HYP-001
+  statement: Replace with the diagnostic hypothesis.
+  confidence: low
+  status: open
+  evidence: []
+telemetry_links:
+  dashboards: []
+  logs: []
+  metrics: []
+  traces: []
+  alerts: []
+  events: []
+signal_assessments:
+- id: SIG-001
+  kind: check
+  name: replace-me
+  source: replace-me
+  observed_state: unknown
+  evidence: ""
+  blocking: false
+runtime_checks: []
+deployment_markers: []
+findings: []
+missing_instrumentation: []
+recommendation:
+  outcome: hold
+  rationale: Packet is a template and is not diagnostic-ready.
+feedback_route:
+  route: no_action
+  instructions: Complete the packet from durable evidence.
+  target_refs: []
+prepared_at: "1970-01-01T00:00:00Z"
+diagnostician: replace-me

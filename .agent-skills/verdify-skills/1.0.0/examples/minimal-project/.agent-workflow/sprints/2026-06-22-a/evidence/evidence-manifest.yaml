@@ -1,0 +1,34 @@
+schema_ref: evidence-manifest.schema.yaml
+kind: EvidenceManifest
+schema_version: "1.0"
+manifest_id: evidence-2026-06-22-a
+sprint_id: 2026-06-22-a
+lane_id: issue-123-api
+revision: "2222222222222222222222222222222222222222"
+environment: staging
+generated_at: "2026-06-22T13:45:00Z"
+items:
+  - id: EV-001
+    type: test
+    source: ruby -Itest tests/api/health_test.rb
+    observed_at: "2026-06-22T12:15:00Z"
+    result: passed
+    artifact: artifacts/api-test.log
+    interpretation: The health endpoint returns the expected status and injected revision.
+    limitations: [Does not prove staging configuration.]
+  - id: EV-002
+    type: diff_review
+    source: Pull request #456 at reviewed head SHA
+    observed_at: "2026-06-22T12:40:00Z"
+    result: passed
+    artifact: https://github.com/example/example-service/pull/456
+    interpretation: Changed paths remain inside the lane contract.
+    limitations: []
+  - id: EV-003
+    type: runtime_probe
+    source: curl https://staging.example.test/health
+    observed_at: "2026-06-22T13:40:00Z"
+    result: passed
+    artifact: artifacts/staging-health.json
+    interpretation: Staging reports healthy and the integrated revision.
+    limitations: [Single post-deployment observation.]

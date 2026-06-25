@@ -1,0 +1,21 @@
+schema_ref: controller-state.schema.yaml
+kind: ControllerState
+schema_version: "1.0"
+project_id: ""
+controller_id: ""
+status: draft
+state: INTAKE
+updated_at: ""
+current_wave: null
+sessions: []
+events: []
+open_gates: []
+next_actions: []
+handoff:
+  next_skill: project-router
+  next_mode: route
+  reason: ""
+approval:
+  status: pending
+  approver: null
+  approved_at: null
