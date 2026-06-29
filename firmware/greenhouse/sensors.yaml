@@ -1220,8 +1220,8 @@ sensor:
       if (!id(cfg_first_pull_ok)) return NAN;
       return id(cool_stage2_exit_hysteresis_f);
 
-  # BC-3 (ADR0003 §6.1): on-device readback of the live control-band tracking
-  # tightness (freeze rule 6). NAN until the first push confirms cfg_first_pull_ok.
+  # ADR-0004: on-device readback of the live control-band tracking tightness.
+  # Expected planner value is 0; NAN until the first push confirms cfg_first_pull_ok.
   - platform: template
     id: cfg_band_track_fraction
     name: "Cfg • Band Track Fraction"

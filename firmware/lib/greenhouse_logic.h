@@ -161,11 +161,23 @@ struct MoistureExchangeEstimate {
     float  vent_vpd_gain_kpa;   // signed, + = toward target
     float  heat_vpd_gain_kpa;
     bool   outdoor_fresh;
+    bool   vent_overcools;
     const char* reason;
 };
+
+inline const char* moisture_exchange_action_name(MoistureExchangeAction action) noexcept {
+    switch (action) {
+        case MX_VENT_DEHUM: return "vent_dehum";
+        case MX_HEAT_ASSIST: return "heat_assist";
+        case MX_VENT_HUMIDIFY: return "vent_humidify";
+        case MX_NONE:
+        default: return "none";
+    }
+}
+
 inline MoistureExchangeEstimate estimate_moisture_exchange(
     const SensorInputs& in, const Setpoints& sp) noexcept {
-    MoistureExchangeEstimate r{MX_NONE, false, 0.0f, 0.0f, false, "in_band"};
+    MoistureExchangeEstimate r{MX_NONE, false, 0.0f, 0.0f, false, false, "in_band"};
     if (!vpd_control_trusted(in)) { r.reason = "vpd_untrusted"; return r; }  // SAF-1/SF1
     const bool fresh = std::isfinite(in.outdoor_temp_f) && std::isfinite(in.outdoor_rh_pct)
                      && in.outdoor_data_age_s < sp.outdoor_staleness_max_s;
@@ -196,6 +208,7 @@ inline MoistureExchangeEstimate estimate_moisture_exchange(
             // physics, NOT a cost-brake (heat-assist still dehumidifies, regime goal met).
             vent_overcools = T_mix < sp.temp_low;
         }
+        r.vent_overcools = vent_overcools;
         const bool vent_helps = fresh && r.vent_vpd_gain_kpa > margin && !vent_overcools;
         const bool heat_helps = r.heat_vpd_gain_kpa > margin;
         if (vent_helps && heat_helps) { r.action = MX_VENT_DEHUM; r.heat_assist_corun = true; r.reason = "vent_plus_heat"; }
@@ -522,12 +535,11 @@ inline float band_vpd_hysteresis(const Setpoints& sp) noexcept {
     return std::min(requested, cap);
 }
 
-// BC-3 (band-compliance, ADR0003 §6.1): pinch the CONTROL band toward the served
-// target by band_track_fraction so the controller TRACKS the target curve, not
-// merely stays inside the envelope. Returns a copy with temp_low/high and
-// vpd_low/high moved toward temp_target/vpd_target (which the on-chip curve sets
-// each cycle); safety rails (safety_min/max, vpd_*_safe) and the served band are
-// untouched. fraction = 0 returns the band unchanged (legacy float-envelope).
+// ADR-0004 floating corridor: the normal value is 0, which leaves the served
+// crop corridor unchanged and lets the controller act only at the edges. Nonzero
+// values are an explicit operator/diagnostic escape hatch that pinches the
+// CONTROL band toward temp_target/vpd_target. Safety rails and the served band
+// are untouched.
 //
 // Pinch geometry: the low edge moves up by f·(target−low) and the high edge down
 // by f·(high−target), so the pinched width = served_width·(1−f) regardless of
@@ -702,7 +714,7 @@ inline const char* climate_summary_for_action(ClimateAction action) noexcept {
         case CLIMATE_SENSOR_FAULT: return "SENSOR_FAULT selected; sensor plausibility failed";
         case CLIMATE_SAFETY_HEAT: return "SAFETY_HEAT selected; hard low-temperature rail";
         case CLIMATE_SAFETY_COOL: return "SAFETY_COOL selected; hard high-temperature rail";
-        case CLIMATE_HEAT: return "HEAT selected; temperature below band";
+        case CLIMATE_HEAT: return "HEAT selected; temperature recovery or heat-assist dehum";
         case CLIMATE_IDLE: return "IDLE selected; band satisfied or resource tie-break";
         case CLIMATE_VENT_COOL: return "VENT_COOL selected; temperature priority";
         case CLIMATE_VENT_COOL_MIST_ASSIST: return "VENT_COOL_MIST_ASSIST selected; temp priority with VPD assist";
@@ -930,7 +942,16 @@ inline ClimateActionDecision evaluate_climate_decision(
         .next_mist_eligible_s = climate_next_mist_eligible_seconds(selected_wet, dry_excess, wet_block_reason, state, sp),
         .fog_margin_kpa = dry_excess - sp.fog_escalation_kpa,
         .fog_block_reason = fog_block_reason,
-        .resource_cost_estimate = climate_resource_estimate(action)
+        .resource_cost_estimate = climate_resource_estimate(action),
+        .moisture_exchange_action = moisture_exchange_action_name(mx.action),
+        .moisture_exchange_reason = mx.reason,
+        .moisture_vent_vpd_gain_kpa = mx.vent_vpd_gain_kpa,
+        .moisture_heat_vpd_gain_kpa = mx.heat_vpd_gain_kpa,
+        .moisture_outdoor_fresh = mx.outdoor_fresh,
+        .moisture_vent_overcools = mx.vent_overcools,
+        .moisture_heat_assist_corun = mx.heat_assist_corun,
+        .moisture_heat_assist_active = state.dehum_heat_assist_active,
+        .moisture_heat_assist_timer_ms = state.dehum_heat_assist_timer_ms
     };
 }
 
@@ -1018,6 +1039,9 @@ inline const char* climate_summary_for_effective_action(
     ClimateAction action,
     const ControlState& state
 ) noexcept {
+    if (action == CLIMATE_HEAT && climate_reason_is(state.last_mode_reason, "heat_dehum")) {
+        return "HEAT selected; closed-vent heat-assist dehum";
+    }
     if (action == CLIMATE_IDLE && climate_reason_is(state.last_mode_reason, "dwell_hold")) {
         return "IDLE selected; dwell gate holding prior mode";
     }
@@ -1055,10 +1079,16 @@ inline ClimateActionDecision describe_effective_climate_decision(
     const ClimateMoistureZone moisture_zone = (action == CLIMATE_VENT_COOL_MIST_ASSIST || action == CLIMATE_SEALED_HUMIDIFY)
         ? CLIMATE_ZONE_CENTER
         : CLIMATE_ZONE_NONE;
+    const MoistureExchangeEstimate mx = estimate_moisture_exchange(in, sp);
+
+    ClimatePriorityAxis priority_axis = climate_priority_axis_for_effective_action(action, temp_error, vpd_error);
+    if (action == CLIMATE_HEAT && climate_reason_is(state.last_mode_reason, "heat_dehum")) {
+        priority_axis = CLIMATE_PRIORITY_VPD;
+    }
 
     return {
         .climate_action = action,
-        .priority_axis = climate_priority_axis_for_effective_action(action, temp_error, vpd_error),
+        .priority_axis = priority_axis,
         .temp_error_f = temp_error,
         .vpd_error_kpa = vpd_error,
         .candidate_summary = climate_summary_for_effective_action(action, state),
@@ -1067,7 +1097,16 @@ inline ClimateActionDecision describe_effective_climate_decision(
         .next_mist_eligible_s = climate_next_mist_eligible_seconds(selected_wet, dry_excess, wet_block_reason, state, sp),
         .fog_margin_kpa = dry_excess - sp.fog_escalation_kpa,
         .fog_block_reason = fog_block_reason,
-        .resource_cost_estimate = climate_resource_estimate(action)
+        .resource_cost_estimate = climate_resource_estimate(action),
+        .moisture_exchange_action = moisture_exchange_action_name(mx.action),
+        .moisture_exchange_reason = mx.reason,
+        .moisture_vent_vpd_gain_kpa = mx.vent_vpd_gain_kpa,
+        .moisture_heat_vpd_gain_kpa = mx.heat_vpd_gain_kpa,
+        .moisture_outdoor_fresh = mx.outdoor_fresh,
+        .moisture_vent_overcools = mx.vent_overcools,
+        .moisture_heat_assist_corun = mx.heat_assist_corun,
+        .moisture_heat_assist_active = state.dehum_heat_assist_active,
+        .moisture_heat_assist_timer_ms = state.dehum_heat_assist_timer_ms
     };
 }
 
@@ -1405,6 +1444,18 @@ inline Mode determine_mode_band_first(
     const bool vpd_dehum_exit = in.vpd_kpa >= sp.vpd_low || !dehum_effective;
     const bool was_dehum = prev == DEHUM_VENT;
     const bool moisture_blocked = moisture_blocked_by_occupancy(in, sp);
+    const bool closed_heat_dehum_wanted =
+        vpd_trusted
+        && !sp.econ_block
+        && mx.action == MX_HEAT_ASSIST
+        && is_night_phase(in)
+        && in.vpd_kpa < (sp.vpd_low - HV)
+        && in.temp_f >= sp.temp_low
+        && (in.temp_f + GH_HEAT_ASSIST_PROBE_DF) <= (sp.temp_high - sp.temp_hysteresis)
+        && !needs_cooling
+        && !needs_heating_s1
+        && !safety_cool
+        && !safety_heat;
 
     {
         // BC-8 (ADR0003 §6.5): heat2 and fan2 share ONE two-stage escalation latch
@@ -1521,6 +1572,17 @@ inline Mode determine_mode_band_first(
         }
     }
 
+    // ADR-0004 / #383: ordinary low-wet nights can otherwise idle when the
+    // estimator proves closed-vent heat is the effective dehumidifier. Allow a
+    // bounded heat1-only nudge while still inside the served temperature band;
+    // vent remains closed, heat2 remains reserved for temperature recovery, and
+    // the 1.5F probe must stay below the high edge.
+    if (mode == IDLE && closed_heat_dehum_wanted) {
+        selected_action = CLIMATE_HEAT;
+        mode = IDLE;
+        state.last_mode_reason = "heat_dehum";
+    }
+
     // BC-13 (ADR0003 §6.4): humid-outside / dry-inside — when the controller would
     // humidify (too dry) but the estimator proves importing moist outdoor air by
     // venting beats fogging, redirect SEALED_MIST -> DEHUM_VENT(import). Vent-only, NO
@@ -1536,14 +1598,17 @@ inline Mode determine_mode_band_first(
     // BC-13: DEHUM_VENT heat-assist min-dwell. The timer accrues only while continuously
     // in the too-wet dehum direction; resets on exit / when the estimate flips. heat1
     // co-run arms once the dwell is satisfied AND the estimator proved heat+vent both help.
+    const bool closed_heat_dehum_active =
+        (mode == IDLE) && climate_reason_is(state.last_mode_reason, "heat_dehum");
     if (mode == DEHUM_VENT && mx.action == MX_VENT_DEHUM) {
         state.dehum_heat_assist_timer_ms = sat_add(state.dehum_heat_assist_timer_ms, dt_ms);
     } else {
         state.dehum_heat_assist_timer_ms = 0;
     }
     state.dehum_heat_assist_active =
-        (mode == DEHUM_VENT) && mx.heat_assist_corun
-        && state.dehum_heat_assist_timer_ms >= sp.dehum_heat_assist_min_dwell_ms;
+        closed_heat_dehum_active
+        || ((mode == DEHUM_VENT) && mx.heat_assist_corun
+            && state.dehum_heat_assist_timer_ms >= sp.dehum_heat_assist_min_dwell_ms);
     if (mode == DEHUM_VENT && state.dehum_heat_assist_active) {
         state.last_mode_reason = "dehum_vent_heat";
     }
@@ -1710,9 +1775,9 @@ inline Mode determine_mode(
     ControlState& state,
     uint32_t dt_ms
 ) {
-    // BC-3: pinch the control band toward the target ONCE at the controller entry;
-    // every downstream decision (band-first or legacy, and the evaluate call
-    // inside it) then sees the tracking band. resolve_equipment pinches the same.
+    // Apply the optional control-band pinch once at controller entry. At the
+    // ADR-0004 default (fraction 0) this is a no-op, so downstream decisions see
+    // the served crop corridor.
     const Setpoints sp = apply_band_track_pinch(sp_raw);
     if (sp.sw_fsm_controller_enabled) {
         return determine_mode_band_first(in, sp, state, dt_ms);
@@ -2294,8 +2359,8 @@ inline RelayOutputs resolve_equipment(
     const ControlState& state,
     bool lead_is_fan1
 ) {
-    // BC-3: pinch the control band toward the target (matches determine_mode) so
-    // the relay staging tracks the target curve too. fraction = 0 → unchanged.
+    // Match determine_mode's optional pinch. At the ADR-0004 default this is a
+    // no-op and relay staging uses the served crop corridor.
     const Setpoints sp = apply_band_track_pinch(sp_raw);
     // Sprint-12 legacy: interior targets (25% inside band). band-first controller
     // uses the same lower-quartile heat target while cooling at the raw high
@@ -2434,6 +2499,10 @@ inline RelayOutputs resolve_equipment(
         case IDLE:
             if (needs_heating_s2) { out.heat1 = true; out.heat2 = true; }
             else if (needs_heating_s1) { out.heat1 = true; }
+            else if (state.dehum_heat_assist_active
+                     && climate_reason_is(state.last_mode_reason, "heat_dehum")) {
+                out.heat1 = true;
+            }
             // Econ-block VPD rescue: electric heat if VPD is below the
             // interior target AND temp is below the interior cooling
             // target minus econ_heat_margin_f. Same semantics as before,

@@ -1,6 +1,6 @@
 # Verdify Platform Epics
 
-Last updated: 2026-06-17
+Last updated: 2026-06-23
 
 Agent name: `verdify-platform`
 
@@ -15,6 +15,13 @@ Start with S4 `controller-architecture-audit`, then pull the highest-risk
 schema/firmware/dashboard contract work forward into S5/S6. Firmware OTA,
 prod sync, device VLAN, prod-destructive DB, credential, and outward-facing
 infra actions remain Jason-gated.
+
+2026-06-23 overlay: use
+`docs/reviews/adversarial-audit-backlog-replan-2026-06-23.md` for the current
+climate-control replan. ADR-0004 supersedes ADR-0003 target hugging; the next
+priority is DB solar phase parity, then the Jason-gated `band_track_fraction -> 0`
+float trial, then outcome KPIs and moisture-estimator telemetry before the
+focused VPD/dehum policy lane (#383).
 
 ## Current Epics
 
@@ -45,8 +52,9 @@ infra actions remain Jason-gated.
 - Milestone: G0 - Controller Architecture Audit
 - Sprint: S4 `controller-architecture-audit`
 - Related files/issues/PRs: #207, #335, #336, #339, #341, #342; delivered PRs
-  #353 (VM-era purge), #354 (schema regen + mig 180), #355 (dead dashboards),
-  #356 (CI gates), #357 (ingestor reliability), #358 (prod promote);
+  include VM-era purge (#353), schema regen plus migration 180 (#354),
+  dead dashboards (#355), CI gates (#356), ingestor reliability (#357), and
+  prod promote (#358);
   `docs/reviews/lane1-architecture-audit-2026-06-16.md`, `docs/RELEASE-CHECKLIST.md`,
   `docs/handoff/monitoring-writer-absent-alert.md`, `docs/SERVICE_MAP.md`,
   `docs/reviews/data-path-adversarial-review-2026-06-16.md`.
@@ -86,8 +94,9 @@ infra actions remain Jason-gated.
   AC1/AC2 responsibilities + relay-transition + safety-override spec ✓;
   AC3 72h-disconnected defined AND tested (`disconnected_72h_*`,
   `no_time_source_fallback_*`, `reboot_persisted_anchors_*` native tests) ✓;
-  AC4 rails + the 5-layer AI-can't-override defense, newly pinned by invariants
-  #25 (SAFETY_HEAT) / #26 (SENSOR_FAULT) ✓; AC5 crop-agnostic guard test ✓.
+  AC4 rails + the 5-layer AI-can't-override defense, newly pinned by firmware
+  invariants #25 (SAFETY_HEAT) / #26 (SENSOR_FAULT) ✓; AC5 crop-agnostic guard
+  test ✓.
   Verified: 222/0 native firmware tests, 193,525-row invariant suite green.
   Firmware OTA arming of the new rails stays Jason-gated — NOT an acceptance
   gate (OTA-without-Jason is an explicit non-goal).)
@@ -96,7 +105,7 @@ infra actions remain Jason-gated.
 - Milestone: G1 - Firmware-First Determinism
 - Sprint: S5 `firmware-first-climate-core`
 - Related files/issues/PRs: #287, #289, #290, #292, #299, #300, #323, #324,
-  #327, #340, `firmware/`, `verdify_schemas/`,
+  plus #327, #340, `firmware/`, `verdify_schemas/`,
   `docs/design/firmware-v2-simplification-2026-06-10.md`; delivered
   `docs/firmware-fsm-spec.md`, `firmware/test/invariants.h` (#25/#26),
   `firmware/test/test_greenhouse_logic.cpp` (72h tests),
@@ -133,16 +142,23 @@ infra actions remain Jason-gated.
   dwell tables (§7); AC3 energy-waste contradictions avoided by default (fog/heat
   + fog/vent exclusivity invariants #1/#11, night-econ-heat suppression) (§8.1);
   AC4 outdoor-air economizer gate explicit + staleness-guarded (§8.2, invariant
-  #9); AC5 graded + feasibility-aware compliance (`fn_zone_band_grade`,
+  number #9); AC5 graded + feasibility-aware compliance (`fn_zone_band_grade`,
   migration 146) distinguishes controller-miss vs physically-unachievable —
   VERIFIED LIVE in prod (emitting controller/none labels on real data) and pinned
   offline by `tests/test_compliance_feasibility_classifier.py`.)
+- 2026-06-23 qualification: the base L3 firmware/control acceptance remains
+  closed, but the DB/service solar mirror was later found seasonally wrong
+  (`fn_solar_altitude()` hardcodes solar noon at 13:00 local). Treat DB solar
+  parity, #377 float follow-through, and VPD outcome telemetry as active
+  follow-through under #359/#293/#327/#347/#348/#371/#383, not as evidence that
+  the firmware core is incomplete.
 - Priority: P1
 - Effort: XL
 - Milestone: G1 - Firmware-First Determinism
 - Sprint: S5 `firmware-first-climate-core`
 - Related files/issues/PRs: #13, #17, #20, #287, #291, #292, #293, #323,
-  #324, #328, #341, `docs/design/band-compliance-architecture.md`,
+  plus #324, #328, #341, #359, #361, #377, #378, #383,
+  `docs/design/band-compliance-architecture.md`,
   `docs/GREENHOUSE-CONTROL-TEST-CATALOG.md`; delivered `docs/firmware-fsm-spec.md`
   §6-§10, `tests/test_compliance_feasibility_classifier.py`; commits 38c6e08,
   417531e, ffc89b9.
@@ -200,11 +216,17 @@ infra actions remain Jason-gated.
   - Divergence alerts exist.
   - Tempest/Open-Meteo timezone handling is documented.
 - Status: `Ready`
+- 2026-06-23 pull-forward: fix DB solar phase parity before seasonal anchor
+  tuning. Acceptance should compare DB sunrise/noon/sunset/phase to the
+  firmware/Python NOAA contract on March equinox, June solstice, September
+  equinox, and December solstice within the existing +/-5 minute tolerance.
+  Local implementation exists as migration 186 + schema/tests; production apply
+  and dependent surface refresh remain pending.
 - Priority: P1
 - Effort: XL
 - Milestone: G2 - Data Contracts and Observability
 - Sprint: S6 `data-observability-planner-contracts`
-- Related files/issues/PRs: #13, #14, #31, #207, #324, #327, #341,
+- Related files/issues/PRs: #13, #14, #31, #207, #293, #324, #327, #341,
   `verdify_schemas/`, `db/`, `ingestor/entity_map.py`, `mcp/server.py`.
 - Dependencies: L1 architecture map, L2 firmware surfaces, Jason for live DB
   gates.
@@ -230,11 +252,36 @@ infra actions remain Jason-gated.
   - Firmware/service drift alerting exists.
   - Physical-limit-aware interpretation is documented.
 - Status: `Ready`
+- 2026-06-23 pull-forward: add daily pinched-vs-served corridor KPIs,
+  nature-alignment rollups, actuator runtime/cycle budgets, and outcome grading
+  for time-in-corridor, DLI, DIF, wet/dry completion, energy, water, and cycling.
+  This is the score surface for #377/#378, #327 moisture telemetry, and #383 VPD
+  policy work.
+- 2026-06-23 local progress: MCP `outcome_kpi(target_date)` now computes the
+  read-only served/pinched, DIF, solar-phase, resource, and action-effectiveness
+  surface from existing telemetry. It also reports VPD policy sequence counters:
+  wetting episodes, vent-dehum episodes, heat-dehum episodes, and 30-minute
+  wet->dehum / dehum->wet transitions for fog/dehum ping-pong review.
+  #327 moisture-estimator telemetry is source-wired without a new migration:
+  firmware emits `climate_moisture_exchange`, the ingestor persists it under
+  `climate_action_log.source_system_state`, and `outcome_kpi()` summarizes the
+  JSON payload when live rows exist. Still needed: the Jason-gated OTA, service
+  deploy, live-data verification, and any durable DB/dashboard rollups for
+  long-term reporting.
+- 2026-06-23 #383 source-policy progress: low-wet night rows now have a bounded
+  closed-vent heat-assist dehum path in firmware source when `MX_HEAT_ASSIST`
+  is the estimator result, VPD is below the corridor, temperature is inside the
+  served band, and a 1.5 F heat probe stays below the high edge. This remains
+  offline/source-only until the OTA/deploy/live KPI gates are run. Offline
+  proof: native firmware tests and invariants passed; the stock replay produced
+  only the intended heat1-only divergence and passed with an explicit threshold;
+  ESPHome compile passed.
 - Priority: P1
 - Effort: L
 - Milestone: G2 - Data Contracts and Observability
 - Sprint: S6 `data-observability-planner-contracts`
-- Related files/issues/PRs: #75, #89, #200, #241, #308, #328, #341,
+- Related files/issues/PRs: #75, #89, #200, #241, #308, #327, #328, #341,
+  plus #371, #383,
   `grafana/`, `deploy/k8s/components/grafana/`,
   `docs/grafana-panel-catalog.md`.
 - Dependencies: L5 source-of-truth matrix, `monitoring-stack`,

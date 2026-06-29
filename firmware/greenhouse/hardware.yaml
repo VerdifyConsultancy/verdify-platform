@@ -181,6 +181,12 @@ text_sensor:
     update_interval: 5s
 
   - platform: template
+    id: gh_climate_moisture_exchange
+    name: "Climate Moisture Exchange"
+    entity_category: diagnostic
+    update_interval: 5s
+
+  - platform: template
     id: gl_main_state_text
     name: "GL Main State"
     entity_category: diagnostic

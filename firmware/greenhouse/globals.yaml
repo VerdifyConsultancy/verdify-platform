@@ -58,15 +58,15 @@ globals:
     type: float
     restore_value: no
     initial_value: '1.0'
-  # Control-band tracking tightness [0,1]. restore_value:no so a boot before the first
-  # planner push uses this cold-start default. ADR-0004 (floating-corridor, supersedes
-  # ADR-0003 track-the-target): baseline 0.25 — the climate FLOATS within the corridor and
-  # acts at the edges; relax toward 0 (full float, #377), do NOT ramp tighter. Matches the
-  # registry default. (Takes effect on the next firmware OTA; the live value is planner-pushed.)
+  # ADR-0004 floating-corridor tracking tightness [0,1]. restore_value:no so a boot
+  # before the first planner push uses this cold-start default. Default 0.0 = float
+  # inside the served crop corridor and act at the edges. Nonzero values remain an
+  # explicit operator/diagnostic escape hatch only; planner registry accepts 0.
+  # Takes effect on the next firmware OTA; the live no-OTA value remains operator-gated.
   - id: band_track_fraction
     type: float
     restore_value: no
-    initial_value: '0.25'
+    initial_value: '0.0'
   # BC-13 (ADR0003 §6.4): AI-tunable single-cycle air-exchange fraction toward outdoor
   # for the moisture-exchange estimator (Jason 2026-06-17). Default 0.30; rails [0.1,0.6].
   - id: vent_exchange_fraction
