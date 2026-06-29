@@ -46,4 +46,7 @@ The pre-agent-org operational stream (Sprints 15–23) retires with the agent sp
 - OBS-3 control-state exposure: `ctl_relief_cycle_count`, `ctl_vent_latch_timer_s`
 - 8-month historical replay gate (`make test-firmware`)
 
-Sprint counter starts fresh under this agent. See `docs/backlog/firmware.md` for the current queue.
+Sprint counters are retired. Use GitHub issues on
+`VerdifyConsultancy/verdify-platform` for the current queue; the old
+`docs/backlog/firmware.md` file is archived in
+`/Users/jason/Orbit/context_dump/verdify-platform/`.

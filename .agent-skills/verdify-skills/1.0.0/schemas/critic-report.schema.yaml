@@ -1,0 +1,43 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://verdify.example/schemas/critic-report.schema.yaml
+title: Verdify Critic Report
+type: object
+additionalProperties: false
+required: [schema_ref, kind, schema_version, sprint_id, lane_id, reviewed_head_sha, critic_session_id, review_worktree, outcome, findings, acceptance_assessment, evidence_assessment, integration_risks, residual_risks, reviewed_at]
+properties:
+  schema_ref: {const: critic-report.schema.yaml}
+  kind: {const: CriticReport}
+  schema_version: {const: "1.0"}
+  sprint_id: {type: string}
+  lane_id: {type: string}
+  reviewed_head_sha: {type: string, minLength: 1}
+  critic_session_id: {type: string, minLength: 1}
+  review_worktree: {type: string, minLength: 1}
+  outcome: {type: string, enum: [approve, approve_with_risks, request_fixes, block_integration, needs_human_review]}
+  findings:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, severity, statement, evidence, requested_action]
+      properties:
+        id: {type: string, pattern: '^FIND-[0-9]{3,}$'}
+        severity: {type: string, enum: [critical, high, medium, low, note]}
+        statement: {type: string}
+        evidence: {type: array, minItems: 1, items: {type: string}}
+        requested_action: {type: string}
+  acceptance_assessment:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [criterion_id, assessment, evidence]
+      properties:
+        criterion_id: {type: string}
+        assessment: {type: string, enum: [satisfied, not_satisfied, uncertain]}
+        evidence: {type: array, minItems: 1, items: {type: string}}
+  evidence_assessment: {type: array, items: {type: string}}
+  integration_risks: {type: array, items: {type: string}}
+  residual_risks: {type: array, items: {type: string}}
+  reviewed_at: {type: string, minLength: 1}

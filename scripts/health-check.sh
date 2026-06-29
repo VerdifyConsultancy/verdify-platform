@@ -10,7 +10,7 @@ db() {
     verdify-timescaledb psql -U verdify -d verdify -t -c "$1"
 }
 API_HEALTH_URL="${API_HEALTH_URL:-http://127.0.0.1:8300/health}"
-PYTHON_BIN="${PYTHON:-/srv/greenhouse/.venv/bin/python}"
+PYTHON_BIN="${PYTHON:-python3}"
 PASS=0; FAIL=0; WARN=0
 
 check() {

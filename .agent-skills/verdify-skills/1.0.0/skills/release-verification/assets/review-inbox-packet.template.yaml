@@ -1,0 +1,85 @@
+schema_ref: review-inbox-packet.schema.yaml
+kind: ReviewInboxPacket
+schema_version: "1.0"
+packet_id: review-replace-me
+status: draft
+scope:
+  review_unit: lane
+  sprint_id: replace-me
+  lane_ids: []
+  issue_ids: []
+  northstar_ids: []
+  summary: Replace with the review scope and intended outcome.
+traceability:
+  repository: owner/repo
+  base_ref: main
+  head_ref: feature/replace-me
+  reviewed_head_sha: abcdef1
+  artifact_paths: []
+  source_refs: []
+pull_requests:
+- provider: github
+  identifier: "#0"
+  url: https://github.com/OWNER/REPO/pull/0
+  state: open
+  author: null
+  requested_reviewers: []
+  latest_review_state: pending
+checks:
+- name: replace-me
+  provider: github_actions
+  status: unknown
+  conclusion: unknown
+  url: null
+  observed_at: "1970-01-01T00:00:00Z"
+deployments:
+- environment: not-applicable
+  environment_type: none
+  required: false
+  state: not_applicable
+  url: null
+  deployment_id: null
+  observed_revision: null
+  desired_state_ref: null
+  reconciliation_evidence: []
+  log_url: null
+  observed_at: null
+reviewer_guidance:
+  human_test_steps:
+  - Replace with a concrete reviewer action.
+  review_urls: []
+  route_maps: []
+telemetry:
+  dashboards: []
+  logs: []
+  metrics: []
+  traces: []
+  runtime_checks: []
+  missing_telemetry: []
+security:
+  privileged_access_required: false
+  secret_exposure_reviewed: false
+  preview_generator_controls: []
+  unresolved_findings: []
+rollback:
+  ready: false
+  known_good_revision: null
+  procedure: Not yet defined.
+  evidence: []
+risks: []
+questions: []
+evidence_completeness:
+  verdict: incomplete
+  satisfied_required: []
+  missing_required:
+  - Replace with missing evidence.
+  blockers: []
+recommendation:
+  outcome: request_changes
+  rationale: Packet is a template and is not review-ready.
+feedback_route:
+  route: hold
+  instructions: Complete the packet from durable evidence before review.
+  target_refs: []
+prepared_at: "1970-01-01T00:00:00Z"
+preparer: replace-me

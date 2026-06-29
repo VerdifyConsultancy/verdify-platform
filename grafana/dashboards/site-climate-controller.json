@@ -1,4 +1,5 @@
 {
+  "refresh": "1m",
   "uid": "site-climate-controller",
   "title": "Site: Climate \u2014 Controller",
   "editable": true,
@@ -44,6 +45,11 @@
             ]
           }
         }
+      },
+      "transparent": true,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none"
       }
     },
     {
@@ -87,6 +93,11 @@
             ]
           }
         }
+      },
+      "transparent": true,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none"
       }
     },
     {
@@ -114,6 +125,11 @@
         "defaults": {
           "unit": "s"
         }
+      },
+      "transparent": true,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none"
       }
     },
     {
@@ -157,6 +173,11 @@
             ]
           }
         }
+      },
+      "transparent": true,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none"
       }
     },
     {
@@ -200,6 +221,11 @@
           },
           "unit": "short"
         }
+      },
+      "transparent": true,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none"
       }
     },
     {
@@ -225,7 +251,8 @@
       ],
       "options": {
         "showHeader": true
-      }
+      },
+      "transparent": true
     },
     {
       "id": 16,
@@ -292,7 +319,8 @@
           "placement": "bottom",
           "showLegend": true
         }
-      }
+      },
+      "transparent": true
     },
     {
       "id": 17,
@@ -364,7 +392,8 @@
           "placement": "bottom",
           "showLegend": true
         }
-      }
+      },
+      "transparent": true
     },
     {
       "id": 24,
@@ -410,7 +439,8 @@
           "placement": "bottom",
           "showLegend": true
         }
-      }
+      },
+      "transparent": true
     },
     {
       "id": 25,
@@ -432,7 +462,8 @@
             "type": "grafana-postgresql-datasource"
           }
         }
-      ]
+      ],
+      "transparent": true
     },
     {
       "id": 45,
@@ -463,7 +494,8 @@
           "scheme": "RdYlGn",
           "reverse": true
         }
-      }
+      },
+      "transparent": true
     },
     {
       "description": "Shows the sequence of controller states over the last 24 hours.",
@@ -649,7 +681,8 @@
         }
       ],
       "title": "Controller State Timeline",
-      "type": "state-timeline"
+      "type": "state-timeline",
+      "transparent": true
     },
     {
       "datasource": {
@@ -1454,7 +1487,8 @@
         }
       ],
       "title": "Temperature Compliance Band",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "description": "Indoor VPD against the green firmware compliance band, with only the dehumidify/fan entry and fog entry thresholds rendered. Crop/planner provenance, dispatcher math, cfg readbacks, and padding details remain in the band traceability SQL contract.",
@@ -1995,7 +2029,8 @@
         }
       ],
       "title": "VPD Compliance Band",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "id": 210,
@@ -2057,7 +2092,8 @@
           "placement": "bottom",
           "showLegend": true
         }
-      }
+      },
+      "transparent": true
     },
     {
       "id": 211,
@@ -2112,7 +2148,8 @@
             ]
           }
         ]
-      }
+      },
+      "transparent": true
     },
     {
       "datasource": {
@@ -2293,7 +2330,8 @@
         }
       ],
       "title": "Plan Score Trend & Planning Volume",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "description": "Shows temperature behavior over time for this part of the greenhouse system.",
@@ -2325,7 +2363,9 @@
         "tooltip": {
           "mode": "multi",
           "sort": "desc"
-        }
+        },
+        "colorMode": "value",
+        "graphMode": "none"
       },
       "targets": [
         {
@@ -2339,7 +2379,8 @@
         }
       ],
       "title": "Forecast Bias (temp)",
-      "type": "stat"
+      "type": "stat",
+      "transparent": true
     },
     {
       "description": "Shows planning behavior, compliance, or planning outcomes over time.",
@@ -2365,7 +2406,8 @@
         }
       ],
       "title": "Last 10 Plans",
-      "type": "table"
+      "type": "table",
+      "transparent": true
     },
     {
       "description": "Shows hourly write activity alongside oscillation counts.",
@@ -2463,7 +2505,59 @@
         }
       ],
       "title": "Write Rate + Oscillations",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
+    },
+    {
+      "id": 415,
+      "title": "Band: Device (on-chip) vs DB (served) \u2014 VPD  [issue 2: device truth, not just DB intent]",
+      "type": "timeseries",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 66
+      },
+      "datasource": {
+        "uid": "verdify-tsdb",
+        "type": "grafana-postgresql-datasource"
+      },
+      "description": "The DEVICE's resolved on-chip VPD band (setpoint_snapshot readback) overlaid on the DB-served band (fn_band_setpoints). Every other compliance panel plots only the DB band; this one shows what the ESP32 is actually enforcing, so a firmware-vs-DB curve skew or unsynced anchor is VISIBLE (and alarmed via band_device_db_divergence) instead of showing false GREEN. device==db means the on-chip curve matches the DB.",
+      "targets": [
+        {
+          "refId": "A",
+          "format": "time_series",
+          "rawSql": "SELECT\n  h.ts AS time,\n  h.value AS \"device vpd_high (on-chip)\",\n  (SELECT vpd_high FROM fn_band_setpoints(h.ts)) AS \"db vpd_high (served)\",\n  l.value AS \"device vpd_low (on-chip)\",\n  (SELECT vpd_low FROM fn_band_setpoints(h.ts)) AS \"db vpd_low (served)\"\nFROM setpoint_snapshot h\nJOIN setpoint_snapshot l ON l.ts=h.ts AND l.parameter='vpd_low' AND l.greenhouse_id='vallery'\nWHERE h.parameter='vpd_high' AND h.greenhouse_id='vallery' AND $__timeFilter(h.ts)\nORDER BY h.ts",
+          "datasource": {
+            "uid": "verdify-tsdb",
+            "type": "grafana-postgresql-datasource"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "lineInterpolation": "smooth",
+            "showPoints": "never",
+            "spanNulls": true,
+            "lineWidth": 1
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "options": {
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        },
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        }
+      },
+      "transparent": true
     }
   ],
   "annotations": {

@@ -1,0 +1,25 @@
+schema_ref: release-verification.schema.yaml
+kind: ReleaseVerification
+schema_version: "1.0"
+sprint_id: replace-me
+status: pending
+integrated_sha: ""
+release:
+  tag: null
+  url: null
+artifact_identity: []
+integration_results: []
+deployment:
+  environment: ""
+  deployment_id: null
+  deployed_at: null
+  observed_revision: null
+runtime_checks: []
+migrations: []
+rollback:
+  ready: false
+  known_good_revision: null
+  procedure: ""
+incidents: []
+verified_at: null
+verifier: null

@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """
 populate-site-content.py — Materialize website/docs Markdown plus planner
 playbook and skills into the site_content + playbook_content tables.

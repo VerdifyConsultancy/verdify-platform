@@ -1,0 +1,18 @@
+schema_ref: platform-readiness.schema.yaml
+kind: PlatformReadiness
+schema_version: "1.0"
+project_id: ""
+status: draft
+assessed_at: ""
+domains: []
+minimum_pilot: []
+gates_to_open: []
+risks: []
+handoff:
+  next_skill: controller-loop
+  next_mode: state-machine
+  reason: ""
+approval:
+  status: pending
+  approver: null
+  approved_at: null

@@ -1,0 +1,224 @@
+# Nightly pg_dump -Fc of verdify-db -> the verdify-db-dumps PVC, with retention
+# (M3.3 prod DB substrate; refs #84/#28/#130).
+#
+# READ-ONLY-ON-THE-DB: this is a BACKUP reader, NOT a second writer. It runs
+# pg_dump (SELECT-only against the live DB) — it NEVER writes the verdify DB and
+# therefore does NOT violate the single-writer invariant. It is the dumps-PVC's
+# only writer (it drops .dump files + prunes), but the verdify DB itself is read
+# exclusively. Safe to enable in ANY env (prod stays replicas:0/device-dark on
+# the ingestor regardless; a backup job is orthogonal to the device path).
+#
+# NOT AUTO-ENABLED: referenced by no overlay. Root opts an env in (or applies
+# this component standalone) once the synology-iscsi-ssd class + the NFS PV
+# behind verdify-db-dumps exist. Merging it to main and manually syncing prod schedules
+# nothing on the live staging app.
+#
+# IMAGE: the SAME pinned timescaledb image as the DB StatefulSet + migration Job
+# (timescale/timescaledb:2.25.2-pg16). pg_dump must be >= the server version, so
+# pinning the identical image guarantees the dump client never trails the engine
+# (same reasoning as db-statefulset.yaml). This is an upstream image, not an app
+# image, so the kustomization images: transformer leaves it untouched.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: verdify-db-backup
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: db-backup
+spec:
+  # 02:17 every day. Off-peak; the planner/ingestor cadence is unaffected by a
+  # SELECT-only dump.
+  schedule: "17 2 * * *"
+  # Never stack backups: if a prior dump is still running, skip this tick.
+  concurrencyPolicy: Forbid
+  # Don't fire a storm of missed runs if the cluster was down for a while.
+  startingDeadlineSeconds: 3600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: db-backup
+    spec:
+      backoffLimit: 2
+      # Reap the Job 24h after it finishes so completed backups don't pile up.
+      ttlSecondsAfterFinished: 86400
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/part-of: verdify
+            app.kubernetes.io/component: db-backup
+        spec:
+          restartPolicy: Never
+          # The timescaledb image is public, but reference the namespace pull
+          # secret for parity with the DB/migrate pods (a future private mirror
+          # swap then needs no manifest change). Same secret as the rest of the
+          # workloads.
+          imagePullSecrets:
+            - name: ghcr-jvallery-readonly
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 999          # postgres uid in the timescaledb image
+            runAsGroup: 999
+            fsGroup: 999            # so the NFS dumps mount is group-writable
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: pg-dump
+              image: timescale/timescaledb:2.25.2-pg16
+              # bash (present in the Debian-based timescaledb image): the script
+              # uses `set -o pipefail`, which is NOT POSIX and is unreliable
+              # under a dash /bin/sh, so invoke bash explicitly.
+              command:
+                - /bin/bash
+                - -c
+                - |
+                  set -euo pipefail
+                  # NETPOL-RACE: the CNI (kube-router) programs the
+                  # allow-db-from-backup ingress rule for a freshly-scheduled pod
+                  # ASYNCHRONOUSLY. For the first seconds of a new pod's life the
+                  # rule is not yet in the dataplane, so a connection to the DB is
+                  # REJECTed (Connection refused).
+                  #
+                  # A `pg_isready` gate is NOT sufficient (proven #273): pg_isready
+                  # can return rc=0 on one short probe while the very NEXT
+                  # connection — the pg_dump — still races a not-yet-fully-programmed
+                  # dataplane and gets `Connection refused`, leaving a 0-byte
+                  # .partial. Every nightly run did exactly that. The only reliable
+                  # readiness signal is a SUCCESSFUL pg_dump itself, so RETRY THE
+                  # DUMP (not just a probe) until it connects, with the same
+                  # write-partial-then-atomic-rename safety.
+                  ts="$(date -u +%Y%m%dT%H%M%SZ)"
+                  out="${BACKUP_DIR}/verdify-${ts}.dump"
+                  # -Fc custom format (compressed, restorable with pg_restore;
+                  # preserves the TimescaleDB hypertable/compression catalog when
+                  # paired with timescaledb_pre/post_restore at restore time).
+                  echo "[backup] pg_dump -Fc ${DB_NAME}@${DB_HOST} -> ${out} (with netpol-race retry)"
+                  dumped=0
+                  for attempt in $(seq 1 30); do
+                    # cheap pre-probe just to log progress; the dump is the gate.
+                    pg_isready -h "${DB_HOST}" -p "${DB_PORT}" -U "${DB_USER}" -d "${DB_NAME}" -t 3 >/dev/null 2>&1 || true
+                    # A fresh .partial each attempt; a refused connection leaves a
+                    # 0-byte file we overwrite next loop, never a truncated good name.
+                    if pg_dump -Fc -h "${DB_HOST}" -p "${DB_PORT}" -U "${DB_USER}" \
+                         -d "${DB_NAME}" -f "${out}.partial" 2> /tmp/pg_dump.err; then
+                      dumped=1
+                      echo "[backup] pg_dump succeeded on attempt ${attempt}"
+                      break
+                    fi
+                    # Only swallow the transient connection-refused race; any other
+                    # pg_dump error (auth, disk, corruption) must fail loudly.
+                    if grep -qiE 'connection.*(refused|reset|timed out)|could not connect|server closed the connection' /tmp/pg_dump.err; then
+                      echo "[backup] attempt ${attempt}: DB not reachable yet (netpol race), retrying in 2s"
+                      sleep 2
+                      continue
+                    fi
+                    echo "[backup] FATAL: pg_dump failed with a non-transient error:" >&2
+                    cat /tmp/pg_dump.err >&2
+                    exit 1
+                  done
+                  if [ "${dumped}" -ne 1 ]; then
+                    echo "[backup] FATAL: pg_dump never connected after 30 attempts (~60s+):" >&2
+                    cat /tmp/pg_dump.err >&2
+                    rm -f "${out}.partial" || true
+                    exit 1
+                  fi
+                  # Atomic publish: rename the completed .partial to its final name
+                  # so the prune / a restore never sees a truncated file.
+                  mv "${out}.partial" "${out}"
+                  echo "[backup] wrote ${out} ($(du -h "${out}" | cut -f1))"
+                  # RETENTION: keep the newest ${RETENTION_DAYS} days of dumps;
+                  # delete older ones. Also sweep any stale *.partial from a
+                  # crashed prior run. Pruning never touches the live DB.
+                  echo "[backup] pruning dumps older than ${RETENTION_DAYS}d in ${BACKUP_DIR}"
+                  find "${BACKUP_DIR}" -maxdepth 1 -type f -name 'verdify-*.dump' \
+                    -mtime "+${RETENTION_DAYS}" -print -delete || true
+                  find "${BACKUP_DIR}" -maxdepth 1 -type f -name 'verdify-*.dump.partial' \
+                    -mtime +1 -print -delete || true
+                  echo "[backup] done"
+              env:
+                # Non-secret connection fields from the shared verdify-config
+                # ConfigMap (same source the api/ingestor/migrate use).
+                - name: DB_HOST
+                  valueFrom:
+                    configMapKeyRef:
+                      name: verdify-config
+                      key: DB_HOST
+                - name: DB_PORT
+                  valueFrom:
+                    configMapKeyRef:
+                      name: verdify-config
+                      key: DB_PORT
+                - name: DB_NAME
+                  valueFrom:
+                    configMapKeyRef:
+                      name: verdify-config
+                      key: DB_NAME
+                - name: DB_USER
+                  valueFrom:
+                    configMapKeyRef:
+                      name: verdify-config
+                      key: DB_USER
+                # libpq picks PGPASSWORD up automatically; sourced from the same
+                # Secret key the DB/migrate pods use. Read-only use (pg_dump).
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: verdify-app-secrets
+                      key: POSTGRES_PASSWORD
+                - name: BACKUP_DIR
+                  value: /backups
+                # Retention window in days (find -mtime). Tunable by Root per
+                # env without touching the dump logic.
+                - name: RETENTION_DAYS
+                  value: "14"
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                requests:
+                  cpu: "100m"
+                  memory: "256Mi"
+                limits:
+                  memory: "1Gi"
+              volumeMounts:
+                - name: dumps
+                  mountPath: /backups
+                # pg_dump scratch (TLS, libpq tmp); root FS is read-only.
+                - name: tmp
+                  mountPath: /tmp
+          volumes:
+            - name: dumps
+              persistentVolumeClaim:
+                claimName: verdify-db-dumps
+            - name: tmp
+              emptyDir: {}
+---
+# Let the backup pod reach the DB on 5432. The base allow-db-from-app policy
+# only names api/mcp/ingestor/migrate as DB clients; this adds db-backup so the
+# pg_dump connection is allowed under a NetworkPolicy-enforcing CNI (Cilium,
+# ADR-17). It is INGRESS-to-the-DB only (label db-backup -> db:5432); it grants
+# the backup pod NO other reachability and touches no device VLAN.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-db-from-backup
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: db-backup
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: db
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: db-backup
+      ports:
+        - protocol: TCP
+          port: 5432

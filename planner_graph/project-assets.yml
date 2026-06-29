@@ -1,0 +1,47 @@
+project:
+  id: iris-verdify
+  canonical_owner: VerdifyConsultancy
+  repo_id: verdify-planner
+  repo_class: source
+  repo_status: active
+  visibility: private
+  control_plane_manifest: /Volumes/agents/agents.json
+
+canonical_repos:
+  platform: https://github.com/VerdifyConsultancy/verdify-platform
+  planner: https://github.com/VerdifyConsultancy/verdify-planner
+  agent_context: https://github.com/VerdifyConsultancy/verdify-agent-context
+
+source_scopes:
+  - planner
+
+components:
+  - id: planner
+    runtime_instances:
+      - verdify-labs-planner
+
+asset_paths:
+  - id: verdify-planner-source
+    source_path: /mnt/iris/planner
+    target_path: .
+    class: source
+    component_id: planner
+    sync_mode: copy
+    privacy: private
+
+tracking_policy:
+  summary: Private canonical Verdify planner source and planner_graph package repository.
+  notes:
+    - Repo was mirrored from legacy jrvallery/planner.
+    - Agent runbooks and private operational handoffs belong in VerdifyConsultancy/verdify-agent-context.
+    - Keep package/import renames separate from repository taxonomy cleanup.
+
+excluded_by_default:
+  - ".env*"
+  - ".credentials/**"
+  - "secrets/**"
+  - "**/*secret*"
+  - "**/*token*"
+  - "**/*.pem"
+  - "**/*.key"
+  - "**/.DS_Store"

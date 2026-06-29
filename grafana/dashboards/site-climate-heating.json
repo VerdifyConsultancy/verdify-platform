@@ -1,4 +1,5 @@
 {
+  "refresh": "1m",
   "uid": "site-climate-heating",
   "title": "Site: Climate \u2014 Heating",
   "editable": true,
@@ -47,7 +48,8 @@
         "colorMode": "value",
         "graphMode": "none"
       },
-      "description": "Gas cost = heat2 runtime \u00d7 75K BTU \u00d7 $0.83/therm"
+      "description": "Gas cost = heat2 runtime \u00d7 75K BTU \u00d7 $0.83/therm",
+      "transparent": true
     },
     {
       "id": 6,
@@ -92,7 +94,8 @@
         },
         "colorMode": "value",
         "graphMode": "none"
-      }
+      },
+      "transparent": true
     },
     {
       "id": 8,
@@ -138,7 +141,8 @@
         "colorMode": "value",
         "graphMode": "none"
       },
-      "description": "Average daily total cost across the last 30 completed daily summaries."
+      "description": "Average daily total cost across the last 30 completed daily summaries.",
+      "transparent": true
     },
     {
       "id": 19,
@@ -342,7 +346,8 @@
           "sort": "desc"
         }
       },
-      "description": "Daily runtime hours per equipment. Stacked bars show total utilization."
+      "description": "Daily runtime hours per equipment. Stacked bars show total utilization.",
+      "transparent": true
     },
     {
       "id": 21,
@@ -441,7 +446,8 @@
           "mode": "multi"
         }
       },
-      "description": "Gas heating demand inversely correlates with outdoor temperature."
+      "description": "Gas heating demand inversely correlates with outdoor temperature.",
+      "transparent": true
     },
     {
       "id": 920,
@@ -1242,7 +1248,8 @@
           "sort": "desc"
         }
       },
-      "description": "Indoor temperature against the green firmware compliance band, with only the heat entry and fan/cooling entry thresholds rendered. Crop/planner provenance, dispatcher math, cfg readbacks, and padding details remain in the band traceability SQL contract."
+      "description": "Indoor temperature against the green firmware compliance band, with only the heat entry and fan/cooling entry thresholds rendered. Crop/planner provenance, dispatcher math, cfg readbacks, and padding details remain in the band traceability SQL contract.",
+      "transparent": true
     },
     {
       "datasource": {
@@ -1465,7 +1472,8 @@
         }
       ],
       "title": "Indoor vs Outdoor Temperature",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -1573,7 +1581,8 @@
         }
       ],
       "title": "DIF \u2014 Day/Night Temperature Differential",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -1698,7 +1707,8 @@
         }
       ],
       "title": "Monthly Cost by Category",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     }
   ],
   "annotations": {

@@ -75,7 +75,7 @@ fi
     if [[ -n "${FIRMWARE_DEPLOYED_AT:-}" ]]; then
         echo "deployed_at=$FIRMWARE_DEPLOYED_AT"
     fi
-    echo "esphome_bin=${ESPHOME_BIN:-/srv/greenhouse/.venv/bin/esphome}"
+    echo "esphome_bin=${ESPHOME_BIN:-${VENV:-.venv}/bin/esphome}"
     echo "build_dir=$BUILD_DIR"
     echo "artifact_dir=$DEST"
     echo "source_provenance_dir=$PROVENANCE_DIR"

@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """Send a single audited planning trigger through Hermes.
 
 Fallback path for cron/operator scripts when the ingestor heartbeat is down.

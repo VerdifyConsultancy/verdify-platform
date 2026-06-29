@@ -16,8 +16,14 @@ REPO_ROOT="${REPO_ROOT:-$(git rev-parse --show-toplevel 2>/dev/null || pwd)}"
 ROLLBACK_BIN="${1:-$REPO_ROOT/firmware/artifacts/last-good.ota.bin}"
 ESP32_HOST="${ESP32_HOST:-192.168.10.111}"
 ESP32_OTA_PORT="${ESP32_OTA_PORT:-3232}"
+# #254 re-home: prefer an env-provided OTA_PW (fed on the tooling host from a k3s
+# secret once `ota_password` is sealed — GATED on Jason, it is device-affecting
+# like ESP32_API_KEY). Fall back to the legacy /srv/greenhouse/esphome/
+# secrets.yaml that lived on the now-powered-off .150 VM, so a host that still
+# carries it keeps working. The OTA password is NOT yet in any k3s secret.
+OTA_PW="${OTA_PW:-}"
 SECRETS_YAML="${SECRETS_YAML:-/srv/greenhouse/esphome/secrets.yaml}"
-LOG=/var/local/verdify/state/firmware-rollback.log
+LOG="${FIRMWARE_ROLLBACK_LOG:-/var/local/verdify/state/firmware-rollback.log}"
 mkdir -p "$(dirname "$LOG")"
 
 exec > >(tee -a "$LOG") 2>&1
@@ -36,23 +42,42 @@ if [[ ! -f "$ROLLBACK_BIN" ]]; then
     exit 1
 fi
 
-# Extract OTA password from secrets.yaml. Runtime password — not committed.
-if [[ ! -f "$SECRETS_YAML" ]]; then
-    echo "  ✗ secrets.yaml not found at $SECRETS_YAML"
-    exit 1
-fi
-OTA_PW=$(grep -E "^ota_password:" "$SECRETS_YAML" | cut -d'"' -f2)
+# OTA password: env-provided OTA_PW wins (re-homed feed). Otherwise fall back to
+# parsing the legacy secrets.yaml. Runtime password — never committed/printed.
 if [[ -z "$OTA_PW" ]]; then
-    # Try unquoted form
-    OTA_PW=$(awk '/^ota_password:/ {print $2; exit}' "$SECRETS_YAML" | tr -d '"'"'")
+    if [[ ! -f "$SECRETS_YAML" ]]; then
+        echo "  ✗ No OTA_PW env and secrets.yaml not found at $SECRETS_YAML"
+        echo "    (#254) The .150 esphome secrets are gone. Provide OTA_PW from a"
+        echo "    k3s-sealed ota_password (GATED on Jason) or a host that still"
+        echo "    holds secrets.yaml. Cannot auto-roll-back without it."
+        exit 1
+    fi
+    OTA_PW=$(grep -E "^ota_password:" "$SECRETS_YAML" | cut -d'"' -f2)
+    if [[ -z "$OTA_PW" ]]; then
+        # Try unquoted form
+        OTA_PW=$(awk '/^ota_password:/ {print $2; exit}' "$SECRETS_YAML" | tr -d '"'"'")
+    fi
 fi
 if [[ -z "$OTA_PW" ]]; then
-    echo "  ✗ Could not parse ota_password from $SECRETS_YAML"
+    echo "  ✗ Could not resolve ota_password (OTA_PW env or $SECRETS_YAML)"
     exit 1
 fi
 
 echo "  Flashing previous binary via ESPHome OTA protocol..."
-/srv/greenhouse/.venv/bin/python - <<PYEOF
+# #254 re-home: the .150 venv path is gone. Use an esphome-capable interpreter:
+# FIRMWARE_PYTHON env (the OTA tooling host's esphome venv), else repo-local
+# .venv, else PATH `python3`.
+FIRMWARE_PYTHON="${FIRMWARE_PYTHON:-}"
+if [[ -z "$FIRMWARE_PYTHON" ]]; then
+    if [[ -x .venv/bin/python ]]; then
+        FIRMWARE_PYTHON=.venv/bin/python
+    elif command -v python3 >/dev/null 2>&1; then
+        FIRMWARE_PYTHON=python3
+    else
+        FIRMWARE_PYTHON="$(command -v python3 || command -v python)"
+    fi
+fi
+"$FIRMWARE_PYTHON" - <<PYEOF
 import sys
 from pathlib import Path
 from esphome import espota2

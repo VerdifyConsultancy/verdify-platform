@@ -1,0 +1,20 @@
+# Scheduled base backup for the dev CNPG cluster (HA-4.1 #243 / mirrors the
+# prod weekly restore-test discipline in #244). A base backup + continuous WAL
+# = the PITR window. CNPG schedule is a 6-field cron (seconds first).
+apiVersion: postgresql.cnpg.io/v1
+kind: ScheduledBackup
+metadata:
+  name: verdify-db-cnpg-daily
+  namespace: verdify-dev
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: db-cnpg
+spec:
+  # 02:30 daily (sec min hour dom mon dow). Dev cadence; prod #244 tightens to
+  # the RPO/restore-test SLA.
+  schedule: "0 30 2 * * *"
+  backupOwnerReference: self
+  cluster:
+    name: verdify-db-cnpg
+  # Prefer taking the backup from a standby so the primary's IO is undisturbed.
+  target: prefer-standby

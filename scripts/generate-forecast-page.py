@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """Sprint 20 Phase 7: generate forecast archive pages from
 weather_forecast + fn_forecast_correction + forecast_deviation_log.
 
@@ -20,7 +20,8 @@ from datetime import UTC, datetime
 from html import escape
 from pathlib import Path
 
-sys.path.insert(0, "/mnt/iris/verdify")
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
 import yaml  # noqa: E402
 
 from verdify_schemas import ForecastHour, ForecastVaultFrontmatter  # noqa: E402

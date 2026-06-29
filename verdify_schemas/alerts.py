@@ -18,6 +18,8 @@ AlertSeverity = Literal["info", "warning", "critical"]
 AlertCategory = Literal["sensor", "equipment", "climate", "water", "system"]
 AlertDisposition = Literal["open", "acknowledged", "resolved", "suppressed"]
 AlertType = Literal[
+    "band_anchor_db_read_failed",
+    "band_device_db_divergence",
     "band_fn_null",
     "esp32_push_failed",
     "esp32_reboot",
@@ -29,8 +31,10 @@ AlertType = Literal[
     "heap_pressure_warning",
     "heat_manual_override",
     "heat_staging_inversion",
+    "house_band_drift",
     "irrigation_feedback_gap",
     "leak_detected",
+    "lighting_cfg_threshold_drift",
     "climate_action_proof_stale",
     "plan_context_failed",
     "planner_band_ownership_drift",
@@ -45,6 +49,7 @@ AlertType = Literal[
     "safety_invalid",
     "sensor_offline",
     "setpoint_unconfirmed",
+    "soil_dryout",
     "soil_sensor_offline",
     "temp_safety",
     "tunable_zero_variance",
@@ -55,6 +60,8 @@ AlertType = Literal[
 ]
 
 ALERT_TYPES: tuple[str, ...] = (
+    "band_anchor_db_read_failed",
+    "band_device_db_divergence",
     "band_fn_null",
     "esp32_push_failed",
     "esp32_reboot",
@@ -66,8 +73,10 @@ ALERT_TYPES: tuple[str, ...] = (
     "heap_pressure_warning",
     "heat_manual_override",
     "heat_staging_inversion",
+    "house_band_drift",
     "irrigation_feedback_gap",
     "leak_detected",
+    "lighting_cfg_threshold_drift",
     "climate_action_proof_stale",
     "plan_context_failed",
     "planner_band_ownership_drift",
@@ -82,6 +91,7 @@ ALERT_TYPES: tuple[str, ...] = (
     "safety_invalid",
     "sensor_offline",
     "setpoint_unconfirmed",
+    "soil_dryout",
     "soil_sensor_offline",
     "temp_safety",
     "tunable_zero_variance",
@@ -270,6 +280,18 @@ class PlannerTunableRangeDriftDetails(_DetailsBase):
     violations: list[PlannerTunableRangeViolation]
 
 
+class LightingCfgThresholdDriftOffender(_DetailsBase):
+    parameter: str
+    light_key: str
+    desired: float
+    device_cfg: float
+    observed_ts: str | None = None
+
+
+class LightingCfgThresholdDriftDetails(_DetailsBase):
+    offenders: list[LightingCfgThresholdDriftOffender]
+
+
 class SafetyInvalidDetails(_DetailsBase):
     parameter: TunableParameter
     value: float | None = None
@@ -288,12 +310,43 @@ class SoilSensorOfflineDetails(_DetailsBase):
     occupancy: Literal["occupied", "unpotted"] | None = None
 
 
+class SoilDryoutDetails(_DetailsBase):
+    # A LIVE root-zone probe (non-stuck, non-missing) that has read continuously
+    # below its zone wilt threshold for > duration_h hours. Read-side paging only:
+    # this never actuates irrigation, it pages an operator (audit §7-#1, the west
+    # probe that crashed 11 days with no value-below-wilt rule to catch it).
+    column: str
+    sensor: str
+    zone: str
+    wilt_pct: float = Field(..., ge=0)
+    latest_pct: float = Field(..., ge=0)
+    min_pct: float = Field(..., ge=0)
+    max_pct: float = Field(..., ge=0)
+    duration_h: float = Field(..., ge=0)
+    samples: int = Field(..., ge=0)
+    # 'occupied' = zone has an active crop -> genuine dryout, page critical. The
+    # rule is suppressed entirely for unpotted/empty zones (mirrors
+    # soil_sensor_offline occupancy semantics), so this is always 'occupied' on a
+    # fired alert; carried for symmetry + dashboard context.
+    occupancy: Literal["occupied"] | None = None
+
+
 class HeatStagingInversionDetails(_DetailsBase):
     heat2_on_since: AwareDatetime
     duration_s: float = Field(..., ge=0)
     temp_avg: float | None = None
     temp_low: float | None = None
     d_heat_stage_2: float | None = None
+
+
+class HouseBandDriftDetails(_DetailsBase):
+    actual_vpd: float = Field(..., ge=0)
+    actual_rh: float = Field(..., ge=0, le=100)
+    band_low: float = Field(..., ge=0)
+    band_high: float = Field(..., ge=0)
+    band_target: float = Field(..., ge=0)
+    wet_frac: float = Field(..., ge=0, le=1)
+    dry_frac: float = Field(..., ge=0, le=1)
 
 
 class FirmwareReliefCeilingDetails(_DetailsBase):
@@ -378,6 +431,21 @@ class SetpointUnconfirmedDetails(_DetailsBase):
 class ESP32PushFailedDetails(_DetailsBase):
     error: str
     change_count: int = Field(..., ge=0)
+
+
+class BandAnchorDbReadFailedDetails(_DetailsBase):
+    # crop_band_anchors read failed; the dispatcher HELD the device NVS band
+    # rather than push the registry fallback envelope (data-path review F1).
+    origin: str
+
+
+class BandDeviceDbDivergenceDetails(_DetailsBase):
+    # The device's resolved on-chip band drifted from the DB-served band beyond
+    # the firmware-approximation tolerance, or the device band readback is stale
+    # (data-path review issue 2; from v_band_device_divergence).
+    max_temp_abs_diff: float = Field(..., ge=0)
+    max_vpd_abs_diff: float = Field(..., ge=0)
+    device_age_s: float = Field(..., ge=0)
 
 
 class PlanContextFailedDetails(_DetailsBase):
@@ -496,6 +564,11 @@ class PlannerTunableRangeDriftAlert(_AlertBase):
     details: PlannerTunableRangeDriftDetails
 
 
+class LightingCfgThresholdDriftAlert(_AlertBase):
+    alert_type: Literal["lighting_cfg_threshold_drift"]
+    details: LightingCfgThresholdDriftDetails
+
+
 class SafetyInvalidAlert(_AlertBase):
     alert_type: Literal["safety_invalid"]
     details: SafetyInvalidDetails
@@ -511,9 +584,19 @@ class SoilSensorOfflineAlert(_AlertBase):
     details: SoilSensorOfflineDetails
 
 
+class SoilDryoutAlert(_AlertBase):
+    alert_type: Literal["soil_dryout"]
+    details: SoilDryoutDetails
+
+
 class HeatStagingInversionAlert(_AlertBase):
     alert_type: Literal["heat_staging_inversion"]
     details: HeatStagingInversionDetails
+
+
+class HouseBandDriftAlert(_AlertBase):
+    alert_type: Literal["house_band_drift"]
+    details: HouseBandDriftDetails
 
 
 class IrrigationFeedbackGapAlert(_AlertBase):
@@ -566,6 +649,16 @@ class ESP32PushFailedAlert(_AlertBase):
     details: ESP32PushFailedDetails
 
 
+class BandAnchorDbReadFailedAlert(_AlertBase):
+    alert_type: Literal["band_anchor_db_read_failed"]
+    details: BandAnchorDbReadFailedDetails
+
+
+class BandDeviceDbDivergenceAlert(_AlertBase):
+    alert_type: Literal["band_device_db_divergence"]
+    details: BandDeviceDbDivergenceDetails
+
+
 class PlanContextFailedAlert(_AlertBase):
     alert_type: Literal["plan_context_failed"]
     details: PlanContextFailedDetails
@@ -577,7 +670,9 @@ class BandFnNullAlert(_AlertBase):
 
 
 AlertEnvelopeUnion = Annotated[
-    BandFnNullAlert
+    BandAnchorDbReadFailedAlert
+    | BandDeviceDbDivergenceAlert
+    | BandFnNullAlert
     | ESP32PushFailedAlert
     | ESP32RebootAlert
     | FirmwareReliefCeilingAlert
@@ -588,8 +683,10 @@ AlertEnvelopeUnion = Annotated[
     | HeapPressureWarningAlert
     | HeatManualOverrideAlert
     | HeatStagingInversionAlert
+    | HouseBandDriftAlert
     | IrrigationFeedbackGapAlert
     | LeakDetectedAlert
+    | LightingCfgThresholdDriftAlert
     | ClimateActionProofStaleAlert
     | PlanContextFailedAlert
     | PlannerBandOwnershipDriftAlert
@@ -604,6 +701,7 @@ AlertEnvelopeUnion = Annotated[
     | SafetyInvalidAlert
     | SensorOfflineAlert
     | SetpointUnconfirmedAlert
+    | SoilDryoutAlert
     | SoilSensorOfflineAlert
     | TempSafetyAlert
     | TunableZeroVarianceAlert

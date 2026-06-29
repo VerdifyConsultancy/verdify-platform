@@ -1,4 +1,5 @@
 {
+  "refresh": "1m",
   "uid": "site-climate-humidity",
   "title": "Site: Climate \u2014 Humidity",
   "editable": true,
@@ -542,7 +543,8 @@
         }
       ],
       "title": "VPD Compliance Band",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -593,7 +595,8 @@
         }
       ],
       "title": "VPD Heatmap (Hour \u00d7 Day)",
-      "type": "heatmap"
+      "type": "heatmap",
+      "transparent": true
     },
     {
       "datasource": {
@@ -1196,7 +1199,8 @@
         }
       ],
       "title": "VPD Compliance Band",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -1282,7 +1286,8 @@
         }
       ],
       "title": "Mister Effectiveness by Zone",
-      "type": "barchart"
+      "type": "barchart",
+      "transparent": true
     },
     {
       "description": "Shows daily runtime totals for the misting zones.",
@@ -1343,7 +1348,8 @@
         }
       ],
       "title": "Mister Zone Runtimes",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     }
   ],
   "annotations": {

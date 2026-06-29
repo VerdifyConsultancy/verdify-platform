@@ -44,6 +44,29 @@ MQTT_PORT = int(os.environ.get("MQTT_PORT", "1883"))
 MQTT_USER = os.environ.get("MQTT_USER", "")
 MQTT_PASS = os.environ.get("MQTT_PASS", "")
 
+# ── MQTT telemetry fan-out bus (#113 / #114) ──────────────────────
+# The fan-out bus is a SEPARATE broker from the Sentinel/HAOS occupancy bridge
+# above. In the k3s topology prod's ingestor publishes ALL ingested telemetry to
+# this broker (publish-all mode, #113); dev/stage ingestors subscribe to it and
+# write their OWN per-env DB (subscribe mode, #114). No env reaches Home
+# Assistant except prod, and only prod writes the ESP32.
+#
+# VERDIFY_MQTT_PUBLISH_ALL=1   -> prod publishes every flushed source to the bus.
+# VERDIFY_INGEST_SOURCE=mqtt-subscribe -> dev/stage ingest FROM the bus only
+#                              (no ESP32 connect-out, no HA, no occupancy bridge).
+# Default (unset) preserves today's behaviour: device-side ingest, no fan-out.
+#
+# Bus connection. Defaults point at the in-cluster broker Service name (#113).
+# The fan-out broker creds are separate keys so the occupancy-bridge creds are
+# never reused for the cross-env bus.
+FANOUT_MQTT_HOST = os.environ.get("FANOUT_MQTT_HOST", "verdify-mqtt")
+FANOUT_MQTT_PORT = int(os.environ.get("FANOUT_MQTT_PORT", "1883"))
+FANOUT_MQTT_USER = os.environ.get("FANOUT_MQTT_USER", "")
+FANOUT_MQTT_PASS = os.environ.get("FANOUT_MQTT_PASS", "")
+# Topic root. Per-table, per-greenhouse topics hang off this:
+#   {root}/{table}/{greenhouse_id}
+FANOUT_MQTT_TOPIC_ROOT = os.environ.get("FANOUT_MQTT_TOPIC_ROOT", "verdify/fanout")
+
 # ── Slack ─────────────────────────────────────────────────────────
 SLACK_SETTINGS = load_slack_settings()
 SLACK_TOKEN_FILE = os.environ.get("SLACK_TOKEN_FILE", SLACK_SETTINGS.bot_token_file)
@@ -58,6 +81,15 @@ GEMINI_API_KEY_FILE = os.environ.get("GEMINI_API_KEY_FILE", "/mnt/agents/shared/
 HERMES_URL = os.environ.get("HERMES_URL", "http://127.0.0.1:8642")
 HERMES_API_KEY = os.environ.get("HERMES_IRIS_API_KEY", "")
 HERMES_SESSION_PREFIX = os.environ.get("HERMES_SESSION_PREFIX", "hermes:iris:main")
+
+# ── Shadow mode (safe parallel-run guard) ─────────────────────────
+# When ON, the ingestor still consumes and parses all telemetry but suppresses
+# EVERY write: all DB INSERT/UPDATE/DELETE, all aioesphomeapi number/switch
+# device commands, and any state publish. Default OFF == zero behavior change
+# to the live single-writer. This is the hard pre-condition for running a
+# second (cluster) ingestor against the live DB/ESP32 without double-writing
+# telemetry or double-actuating the device. See K3S-2 / design §4.2.
+SHADOW_MODE = os.environ.get("VERDIFY_SHADOW_MODE", "").strip().lower() in {"1", "true", "yes", "on"}
 
 # ── Greenhouse ────────────────────────────────────────────────────
 GREENHOUSE_ID = os.environ.get("GREENHOUSE_ID", "vallery")

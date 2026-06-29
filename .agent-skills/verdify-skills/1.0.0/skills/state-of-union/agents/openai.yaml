@@ -1,0 +1,6 @@
+interface:
+  display_name: "Verdify State of Union"
+  short_description: "Triage backlog, health, and strategy"
+  default_prompt: "Use $state-of-union to reconstruct source freshness, planning artifacts, GitHub backlog, delivery health, gaps, and candidate sprint sequence, then name one next lifecycle handoff."
+policy:
+  allow_implicit_invocation: true

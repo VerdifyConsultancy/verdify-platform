@@ -1,0 +1,43 @@
+schema_ref: northstar-learning-proposals.schema.yaml
+kind: NorthStarLearningProposals
+schema_version: "1.0"
+project_id: replace-me
+status: draft
+generated_at: replace-me
+updated_at: replace-me
+source_ids: []
+redaction_policy:
+  secrets_handling: Do not copy raw secrets, tokens, keys, passwords, private credentials, or credential values into proposals.
+  sensitive_data_handling: Prefer evidence IDs, artifact paths, hashes, and summarized findings over raw logs or personal data.
+  retained_source_scope: Retain only reviewable references and distilled findings needed for the proposal.
+proposals:
+- id: NLP-001
+  title: replace-me
+  source_refs: []
+  observed_issue_or_opportunity: replace-me
+  verification: replace-me
+  proposed_destination: no_op
+  proposed_change: replace-me
+  expected_benefit: replace-me
+  risk_class: low
+  approval_required: true
+  routing_decision: stage
+  affected_artifacts: []
+  loop_readiness:
+    recurs: replace-me
+    verifier: replace-me
+    durable_state: replace-me
+    stop_condition: replace-me
+    budget: replace-me
+    objective_done_criteria: replace-me
+    permissions: replace-me
+    manual_run_evidence: replace-me
+    ready_for_scheduling: false
+review:
+  status: not_requested
+  reviewers: []
+  approvals: []
+handoff:
+  next_skill: northstar-planning
+  next_mode: learning-capture
+  reason: Learning proposal packet is a draft.

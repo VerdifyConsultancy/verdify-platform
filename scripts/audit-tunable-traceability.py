@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """Audit planner tunable traceability across schema, MCP, dispatcher, and firmware.
 
 This is intentionally static. It catches the drift class where Hermes can plan

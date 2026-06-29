@@ -1,0 +1,93 @@
+schema_ref: wave-release-plan.schema.yaml
+kind: WaveReleasePlan
+schema_version: "1.0"
+wave_id: wave-replace-me
+status: draft
+scope:
+  sprint_id: replace-me
+  issue_ids: []
+  lane_ids: []
+  northstar_ids: []
+  summary: Replace with the CI/CD and review/release scope.
+  non_goals: []
+branch_model:
+  model: per_lane_branches
+  base_ref: main
+  release_ref: null
+  merge_queue_required: false
+  concurrency_group: null
+  decision_notes: Replace with branch, queue, and concurrency decision evidence.
+github:
+  repository: owner/repo
+  milestone: null
+  project: null
+  required_checks:
+  - replace-me
+  merge_group_checks_required: false
+  environment_protection_required: false
+ci:
+  workflows:
+  - name: replace-me
+    required: true
+    event_triggers: [pull_request]
+    timeout_minutes: 30
+    evidence_expected: []
+  artifacts: []
+  required_events: [pull_request]
+environments:
+- name: not-applicable
+  environment_type: none
+  required: false
+  namespace: null
+  url: null
+  quota_policy: null
+  limit_policy: null
+  network_policy: null
+  ttl: null
+  secrets_scope: none
+  protection_rules: []
+  expected_revision_source: null
+gitops:
+  controller: none
+  desired_state_refs: []
+  sync_order: []
+  reconciliation_checks: []
+  remediation_policy: Not applicable.
+deployment_strategy:
+  type: none
+  progressive_delivery: false
+  traffic_policy: null
+  steps: []
+observability:
+  dashboards: []
+  logs: []
+  metrics: []
+  traces: []
+  runtime_checks: []
+  missing_telemetry: []
+rollback:
+  ready: false
+  strategy: Not yet defined.
+  known_good_ref: null
+  procedure: Not yet defined.
+  validation_steps: []
+release_health:
+  stabilization_window: null
+  signals:
+  - name: replace-me
+    source: replace-me
+    threshold: replace-me
+    blocking: true
+review_handoff:
+  review_inbox_packet_required: true
+  expected_review_packet_path: .agent-workflow/sprints/replace-me/review/review-inbox-packet.yaml
+  human_test_steps:
+  - Replace with a concrete reviewer step.
+  approval_gate: Replace with approval owner or gate.
+risks: []
+approval:
+  status: pending
+  approver: null
+  approved_at: null
+prepared_at: "1970-01-01T00:00:00Z"
+planner: replace-me

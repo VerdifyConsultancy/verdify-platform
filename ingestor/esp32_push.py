@@ -9,12 +9,45 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import time
 
 import shared
 from entity_map import SETPOINT_MAP
 
 log = logging.getLogger("esp32_push")
+
+# firmware-v2 anchors-mode: the single on-chip API service that writes any
+# NVS-persisted band/zone anchor global by name (docs/design/
+# firmware-v2-settable-anchors-2026-06-15.md). Heap-safe vs 56 number entities.
+_BAND_ANCHOR_SERVICE = "set_band_anchor"
+
+# ── Device-write safety gate (#79) ──────────────────────────────────────────
+# Default-deny: the ingestor only writes to the physical ESP32 when
+# VERDIFY_DEVICE_WRITE_ENABLED is exactly '1'. Staging (and any env that
+# forgets to set it) is therefore a no-op against the device — the k3s staging
+# overlay deliberately leaves this unset/0 so a staged ingestor can never drive
+# the live greenhouse. Prod sets it to '1'. The check is import-safe (reads env
+# at call time, not import time, so a test can toggle it) and cheap.
+_DEVICE_WRITE_DISABLED_LOGGED = False
+
+
+def _device_writes_enabled() -> bool:
+    """True only when VERDIFY_DEVICE_WRITE_ENABLED == '1' (default-deny)."""
+    return os.environ.get("VERDIFY_DEVICE_WRITE_ENABLED", "") == "1"
+
+
+def _log_device_writes_disabled_once(where: str) -> None:
+    """Emit a single WARNING the first time a device write is gated off."""
+    global _DEVICE_WRITE_DISABLED_LOGGED
+    if not _DEVICE_WRITE_DISABLED_LOGGED:
+        _DEVICE_WRITE_DISABLED_LOGGED = True
+        log.warning(
+            "Device writes DISABLED (VERDIFY_DEVICE_WRITE_ENABLED != '1'); "
+            "%s and all subsequent ESP32 writes are no-ops",
+            where,
+        )
+
 
 # Large reconnect reconciliations can push dozens of values immediately after
 # OTA, while ESPHome is also rebuilding API/MQTT state. Pace conservatively to
@@ -44,6 +77,33 @@ async def push_to_esp32(changes: list[tuple[str, float, str]]) -> int:
     Returns:
         Count of successfully pushed changes. Returns 0 when disconnected.
     """
+    if shared.is_shadow_mode():
+        # SHADOW_MODE: never touch the device. This is the single chokepoint for
+        # all aioesphomeapi number_command/switch_command writes (RT setpoint
+        # listener, occupancy, dispatcher, reconnect reconcile all route here).
+        log.info("SHADOW_MODE: suppressed ESP32 push of %d change(s)", len(changes))
+        return 0
+
+    # Device-write gate (#79): default-deny. No-op without a physical write when
+    # VERDIFY_DEVICE_WRITE_ENABLED != '1'.
+    if not _device_writes_enabled():
+        _log_device_writes_disabled_once("push_to_esp32")
+        return 0
+
+    # HA-3.2 single-writer FENCE gate (#240): the LAST gate before any device
+    # command. No push may leave this process unless we hold a fresh writer
+    # Lease (renew-or-die). Disabled/pre-arm → writer_lease_held() returns True
+    # (unchanged behaviour). Once armed, a lease-lost / API-partitioned pod is
+    # blocked here even if a stale shared.esp32["client"] reference survives —
+    # the same self-fence the esp32_loop enforces by disconnecting, applied to
+    # the dispatcher/RT-listener/occupancy push paths that call this directly.
+    if not shared.writer_lease_held():
+        log.warning(
+            "push_to_esp32: BLOCKED by writer-lease fence (not held); %d change(s) suppressed",
+            len(changes),
+        )
+        return 0
+
     client = shared.esp32["client"]
     keys = shared.esp32["keys"]
     if client is None:
@@ -52,12 +112,34 @@ async def push_to_esp32(changes: list[tuple[str, float, str]]) -> int:
     pushed = 0
     async with _PUSH_LOCK:
         for idx, (obj_id, val, etype) in enumerate(changes, start=1):
-            key = keys.get(obj_id)
-            if not key:
-                log.warning("push_to_esp32: no key for '%s' (%d keys)", obj_id, len(keys))
-                continue
             try:
                 await _pace_command()
+                if etype == "service":
+                    # firmware-v2 anchors-mode: write an NVS-persisted band/zone
+                    # anchor via the set_band_anchor API service. obj_id == the
+                    # anchor param name; there is no per-anchor entity key.
+                    svc = (shared.esp32.get("services") or {}).get(_BAND_ANCHOR_SERVICE)
+                    if svc is None:
+                        log.warning(
+                            "push_to_esp32: '%s' service unavailable for anchor '%s'",
+                            _BAND_ANCHOR_SERVICE,
+                            obj_id,
+                        )
+                        continue
+                    result = client.execute_service(svc, {"anchor_key": obj_id, "value": float(val)})
+                    if asyncio.iscoroutine(result):
+                        await result
+                    pushed += 1
+                    shared.recently_pushed[obj_id] = time.time()
+                    shared.recently_pushed_values[obj_id] = float(val)
+                    if len(changes) > 1 and idx < len(changes) and pushed % _BATCH_PAUSE_EVERY == 0:
+                        await asyncio.sleep(_BATCH_PAUSE_S)
+                    continue
+
+                key = keys.get(obj_id)
+                if not key:
+                    log.warning("push_to_esp32: no key for '%s' (%d keys)", obj_id, len(keys))
+                    continue
                 if etype == "number":
                     result = client.number_command(key, val)
                     if asyncio.iscoroutine(result):
@@ -86,6 +168,12 @@ async def push_to_esp32(changes: list[tuple[str, float, str]]) -> int:
 
 async def push_occupancy_to_esp32(occupied: bool, source: str) -> int:
     """Push greenhouse occupancy state through the native ESPHome API."""
+    # Device-write gate (#79): default-deny. Guarded here too (defense in depth)
+    # even though push_to_esp32 below is the true chokepoint.
+    if not _device_writes_enabled():
+        _log_device_writes_disabled_once("push_occupancy_to_esp32")
+        return 0
+
     label = "occupied" if occupied else "empty"
     if "greenhouse_occupied" not in shared.esp32["keys"]:
         log.debug("Occupancy ESP32 push skipped via %s: greenhouse_occupied API switch unavailable", source)

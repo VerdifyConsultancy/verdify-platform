@@ -1,61 +1,237 @@
 # Verdify — Agent Working Guide
 
-This repo is worked by several Claude agents in parallel plus a human coordinator (Jason). Every session that edits code here should read this file first.
+This repo is worked by **autonomous agent(s) running in the k3s cluster**
+(Codex/Claude with kubectl, the in-cluster DB, and prod secrets) plus Jason as
+the human gate for device-affecting and outward-facing actions. **As of
+2026-06-18 development moved off Jason's laptop** to k3s-resident agents — **read
+[`docs/handoff/k3s-agent-handoff.md`](docs/handoff/k3s-agent-handoff.md) first**
+for the operating model, the kubectl-host-portable dev loop (build/test/DB/deploy),
+repo-as-source-of-truth, the gated firmware-OTA procedure, and the known autonomy
+blockers. Every session that edits code here should read this file (via
+`AGENTS.md`), the handoff doc, and `README.md` first. (Retired: the laptop
+single-agent model and the earlier five-persistent-agents model.)
 
 ## What Verdify is
 
 An AI-driven climate controller for a single 367 sq ft greenhouse in Longmont, CO. **Production** — plants are alive, the ESP32 is in the loop every 5 s, the planner runs on real data. Keeping the greenhouse operational ("Track A") always outranks SaaS/cloud refactor progress ("Track B"). See `README.md` for the architecture one-pager.
 
-## Agents
+## Codex operating protocol
 
-Five persistent agents, each owning one scope. Branches are prefixed by agent name; worktrees live at `/mnt/iris/verdify-worktrees/{agent}/`. Per-agent scope docs live in `docs/agents/`.
+Goal: a future Codex session should be able to wake up from repo files, report
+the current operating constraints, and propose a safe plan before editing. Do
+not rely on chat history for project state.
 
-| Agent | Owns | Branch prefix | Scope doc |
-|---|---|---|---|
-| [`firmware`](docs/agents/firmware.md) | ESP32 C++ (`greenhouse_logic.h`), ESPHome YAML, firmware replay, OTA, sensor health | `firmware/*` | `docs/agents/firmware.md` |
-| [`ingestor`](docs/agents/ingestor.md) | `ingestor/*.py`, setpoint dispatcher, HA/Shelly/Tempest sync, `alert_monitor`, daily snapshot | `ingestor/*` | `docs/agents/ingestor.md` |
-| [`genai`](docs/agents/genai.md) | `iris_planner.py`, `mcp/server.py`, `templates/`, prompts, scorecard/lessons/plan-evaluation | `genai/*` | `docs/agents/genai.md` |
-| [`web`](docs/agents/web.md) | `api/main.py`, `scripts/generate-*`, `scripts/vault-*`, Quartz `site/` | `web/*` | `docs/agents/web.md` |
-| [`saas`](docs/agents/saas.md) | Cloud Run, Cloud SQL, GCE MQTT, Firebase Auth, future React app | `saas/*` | `docs/agents/saas.md` |
-| [`coordinator`](docs/agents/coordinator.md) | Schemas, migrations, CI, infra, cross-cutting refactors, review + merge | `coordinator/*` or direct to main | `docs/agents/coordinator.md` |
+First-turn orientation, before editing:
 
-**Find your scope doc and read it before touching files.** Scope docs name what's yours, what adjacent agents touch, and what to route through coordinator.
+1. Read this file through `AGENTS.md` (symlink to `CLAUDE.md`), then
+   `README.md`. For lane, board, ArgoCD, access, or handoff work, also read the
+   current root lane docs: `AGENT_LANE.md`, `PROJECT_BOARD.md`, `EPICS.md`,
+   `MILESTONES.md`, `SPRINTS.md`, `HISTORY.md`, `ARGOCD.md`,
+   `ACCESS_MATRIX.md`, and `COORDINATION_REQUESTS.md`. If local Orbit context is
+   available, also read
+   `/Users/jason/Orbit/context_dump/verdify-platform/MANIFEST.md` and any moved
+   file relevant to the task.
+2. Inspect repo state: `git status --short --branch`, `git log --oneline -n 10`,
+   and any visible `AGENTS.override.md` or local config such as `.codex/` /
+   `.claude/`.
+3. Inspect the authoritative discovery surfaces before choosing commands:
+   `Makefile`, `pyproject.toml`, `.github/workflows/`, `.pre-commit-config.yaml`,
+   and area manifests such as `site/package.json`, `planner_graph/pyproject.toml`,
+   and `*/requirements*.txt`.
+4. Read the relevant architecture and operation references for the touched
+   area: `docs/SYSTEM-ARCHITECTURE.md`, `docs/FOLDER-HIERARCHY.md`,
+   `docs/runbooks/laptop-operator.md`, `docs/RUNBOOK.md`,
+   `docs/BCDR-AND-OPERATIONS.md`, `docs/adr/`, and the matching
+   `docs/agents/*.md` subsystem note.
+5. Report a short access summary before risky work: filesystem scope, network
+   status, approval policy, current branch/worktree state, secrets policy, and
+   anything unavailable or unverified.
+6. State the plan and verification path before edits unless the task is a tiny
+   direct change. If production, device, migration, schema, or firmware behavior
+   may be affected, call that out explicitly.
 
-## Shared territory
+Discovery rules:
 
-No agent owns these. Changes here go through coordinator (Jason) — file a focused PR, don't edit autonomously:
+- Use `grep -rnE` (or Python globs), `make help`, and the CI workflows to
+  discover structure, entrypoints, tests, and dependency manifests. **`rg`/
+  ripgrep is unreliable in this repo** — it silently returns empty/misses,
+  especially in `.sql` files; cross-check any "zero hits" with `grep`.
+- Prefer references over duplicated instructions. README is the one-page
+  architecture summary; Makefile and CI define commands; runbooks define laptop,
+  deploy, DB, and OTA operations.
+- Treat GitHub issues on `VerdifyConsultancy/verdify-platform` as the live
+  tracker. Historical backlog, handoff, sprint, audit, evidence, and context
+  files were moved to `/Users/jason/Orbit/context_dump/verdify-platform/`.
+- Treat the root lane docs as current operating indexes for `verdify-platform`;
+  they summarize GitHub Project Board fallback tracking, active epics,
+  milestones, sprint labels, history, ArgoCD ownership, access boundaries, and
+  coordination requests.
+- Older docs may predate the 2026-06-10 branch/deployment simplification. When
+  docs conflict, prefer this file, `docs/runbooks/laptop-operator.md`, CI, the
+  current worktree, and the Orbit context dump only as historical context.
 
-- `verdify_schemas/` — cross-layer Pydantic contracts; touched by every agent
-- `db/migrations/` — schema migrations; serialized, reviewed holistically
-- `docker-compose.yml`, `systemd/`, `traefik/`, `mqtt/`, `.github/workflows/` — infra
-- `CLAUDE.md` (this file), `README.md`, `docs/agents/**` — organizational docs
-- `pyproject.toml` — tool config
+Safety and do-not rules:
 
-Rule: if the file listed here is in your diff, pause and ask coordinator.
+- No destructive git commands (`git reset --hard`, `git checkout --`, force
+  pushes, history rewrites) unless Jason explicitly asks for that operation.
+- No secret exposure: never print, paste, commit, log, or summarize raw tokens,
+  passwords, API keys, client secrets, private keys, or decrypted secret files.
+  Reference credential locations and auth modes only.
+- No broad rewrites or style churn. Keep changes scoped to the requested
+  behavior/docs and the touched ownership boundary.
+- No production-impacting changes without explicit approval: firmware OTA,
+  prod ArgoCD sync, device VLAN actions, destructive prod DB work, credential
+  rotation, public DNS/edge/org settings, or anything that can create a second
+  live device writer.
+- Do not wrap self-committing migrations in an outer transaction. Use the
+  migration safety tooling in this file.
 
-## How agents coordinate
+Definition of done:
 
-1. **Schema changes land first.** If your work needs a new `verdify_schemas/` model or a field addition, land that in a schema-only PR (coordinator reviews). Next cycle, the consumer PR (yours) lands against the new schema.
-2. **Migrations are serialized.** One migration PR at a time across the whole repo. Coordinator approves the sequence.
-3. **When you need another agent's territory**, file a focused PR into their scope, don't reach across. Label it `requested-by: {your-agent}` in the PR body. The owning agent reviews on their next cycle.
-4. **Drift guards are the wire protocol.** If `verdify_schemas/tests/test_drift_guards.py` passes, two agents can merge independently — the boundary is intact.
-5. **Hand off by doc, not by DM.** Anything a future session of any agent needs to know goes into that agent's `docs/agents/{name}.md` or a memory file, not into chat.
+- The requested change is implemented with minimal product-code/config/docs
+  surface.
+- Relevant repo docs or the Orbit context dump capture any handoff state a
+  future session needs.
+- The smallest safe verification has been run and the result is recorded. If a
+  required command cannot run, state why and what remains unverified.
+- `git status --short` is reviewed so unrelated user changes are not hidden.
 
-## Branches & sprints
+Verification order:
 
-- Each agent has its own sprint counter. Example: `ingestor/sprint-5-...`, `firmware/sprint-7-...`, `saas/sprint-11-...`.
-- The old dual-stream numbering retires. The prior operational sprints (17–23) are documented in each agent's scope doc where they overlap.
-- Sprints land as **one commit per sprint** with a detailed multi-section message (see `e96f9ba`, `47f8154` for examples).
+1. For docs-only changes, run `git diff --check`. There is no repo-level
+   markdown lint configured as of 2026-06-12.
+2. For Python/runtime changes, run `make lint`, then `make test`.
+3. For schema or migration changes, also run `make migration-rollback-safety`
+   and the targeted rollback proof described by the migration.
+4. For firmware logic or ESPHome changes, run `make test-firmware`,
+   `make firmware-invariants`, the required replay diff
+   (`make firmware-replay OLD=<base> NEW=HEAD` or worktree variant), and
+   `make firmware-check`. For **band-CURVE** changes — `greenhouse_solar.h`
+   `band_value_at_phase()`, the anchor resolution, or anything that changes the
+   shape of the diurnal band — the stock replay is **corpus-fed and will show 0
+   divergence**, so ALSO run `make firmware-replay-band OLD=<base>` (derives
+   setpoints from the curve and reports the real behavioral diff). This is the
+   gap that let a lumpy/wet-night curve ship blind.
+5. For lighting changes, run `make lighting-audit-static` and the live/current
+   audit only when the task and access make live checks appropriate.
+6. For site/UI changes, run the relevant site command from `Makefile` or
+   `site/package.json` and verify render locally.
 
-## Worktrees & memory
+Handoff protocol:
 
-- Worktrees: `/mnt/iris/verdify-worktrees/{firmware,ingestor,genai,web,saas}/`. The `main` worktree at `/mnt/iris/verdify` is coordinator-only.
-- Persistent agent memory: `~/.claude-agents/verdify-{agent}/projects/-mnt-iris-verdify-worktrees-{agent}/memory/`.
-- User-level and feedback memories (about Jason, how he likes to work) are shared across all agent dirs — duplicate them at the start of each agent's life.
+- For repo-owned durable decisions, update the relevant file under `docs/`.
+- For out-of-lane context, historical tracking, handoff, cleanup inventory, or
+  one-off evidence artifacts, move/update files under
+  `/Users/jason/Orbit/context_dump/verdify-platform/`.
+- Put durable decisions, invariants, and runbook changes in `docs/`, not only in
+  chat. Keep context dumps concise; link to deeper docs instead of copying them
+  into multiple places.
+
+## Branch & deployment model (Jason, 2026-06-10; SINGLE-ENV 2026-06-16)
+
+- **`main` is the single canonical branch.** PRs land on main; all CI
+  (build/publish/validate) and every ArgoCD targetRevision point at main. The
+  2026-05-31 `live/platform-main` deploy branch is RETIRED.
+- **ONE environment — prod only.** The `verdify-dev` proving environment AND
+  the staging overlay are **DECOMMISSIONED and DELETED** (2026-06-16: ns / DB /
+  PVC / PV+Synology-LUN / ArgoCD app gone; `overlays/{dev,staging}` removed
+  here; `applications/local-dev/verdify.yaml` removed from `jvallery/agents`).
+  Prod (ns `verdify-prod`, ArgoCD app `verdify-prod-dark` — legacy name) is the
+  only env and serves lab/graphs/api.verdify.ai. It is **manual-sync behind the
+  device-write gate**. NOTE: `verdify-www` (verdify.ai/www marketing) and
+  `verdify-crm` are SEPARATE products in SEPARATE repos — unrelated to the
+  greenhouse, do not touch.
+- **Pipeline (single-env):** every push to main publishes digest-pinned images
+  to GHCR (immutable `sha-<sha>` + mutable `branch-main` tags). There is **no
+  environment write-back** — `bump-dev-digests` / `request-gitops-promotion` are
+  removed. Prod is advanced by the `prod-promote` workflow (dispatch), which
+  resolves each promotable image's `:branch-main` digest from GHCR (imagetools),
+  surgically bumps `overlays/prod`, and opens a `prod-promote` PR;
+  `promote-diff-guard` enforces a digests-only change-surface; a human merges and
+  an operator runs the gated `argocd app sync verdify-prod-dark`. Promotable set
+  = api/mcp/ingestor/migrate/planner (setpoint-server + lab are hand-pinned).
+- **No dev device / no dev DB.** Firmware is hot-staged direct to prod. There is
+  no nightly prod-restore copy anymore (it lived in dev).
+- **Operating from the laptop:** see `docs/runbooks/laptop-operator.md` for
+  DB access (`scripts/verdify-db.sh prod`), pipeline triggers, promotion, the
+  gated prod sync, and the firmware OTA procedure (all runnable from any
+  kubectl host).
+
+## Ownership
+
+**One agent owns the whole project** — firmware (ESP32 C++ / ESPHome / OTA),
+ingestor, planner/genai (iris_planner, mcp, prompts), web (api, site
+generators, Quartz lab site), deploy/k8s + CI, schemas, and migrations. The
+per-subsystem docs under `docs/agents/` survive as **subsystem reference
+docs** (what each layer does, its invariants, its gotchas) — read the
+relevant one before deep work in that layer; ignore their multi-agent
+routing/handoff language.
+
+**Jason is the human gate** for: device-affecting actions (firmware OTA, the
+prod ArgoCD sync that touches the live writer, anything on the device VLAN),
+DB-destructive operations on prod, credential rotation, and outward-facing
+infra (public DNS/edge, org settings). Everything else — code, schemas,
+migrations (with the safety rules below), CI, k8s manifests, docs — the agent
+lands autonomously on `main`, keeping CI green.
+
+Discipline that stays (it was never about the org chart):
+
+1. **Schema changes land first**, consumers next — keeps drift guards meaningful.
+2. **Migrations are serialized** — one migration change at a time, classified
+   by the rollback-safety tooling below.
+3. **Drift guards are the wire protocol** — `verdify_schemas/tests/test_drift_guards.py`
+   green means layer boundaries are intact.
+4. **Hand off by doc** — anything a future session needs goes into docs/
+   (or project memory), not chat history.
+
+## Migration safety: never wrap a self-committing migration
+
+**Lesson from the 2026-05-30 live-commit incident (#23).** A migration that owns
+its own top-level `COMMIT;` — or contains a *commit-forcing* statement that
+cannot run inside a transaction block (`CREATE INDEX CONCURRENTLY`, `DROP INDEX
+CONCURRENTLY`, `REINDEX ... CONCURRENTLY`, `VACUUM`, `CREATE/DROP DATABASE`,
+`CREATE/DROP TABLESPACE`, `ALTER SYSTEM`) — must **never** be replayed under an
+outer `BEGIN; … ROLLBACK;` dry-run. The inner `COMMIT` (or commit-forcing
+statement) commits to the **live** database the instant psql reaches it,
+silently defeating the rollback. On 2026-05-30 exactly this happened.
+
+The two shapes (per `docs/runbooks/backlog-closeout-deploy-2026-05-30.md`):
+
+- **Self-transactional** (e.g. 149, 150): own top-level `BEGIN;`/`COMMIT;`.
+  Apply as-is; rollback-validate by swapping the trailing `COMMIT;` for
+  `ROLLBACK;`. **Do NOT wrap in an outer `BEGIN..ROLLBACK`.**
+- **Non-self-transactional** (e.g. 134, 146, 147, 151–155): no top-level
+  `COMMIT`; only DO-block `BEGIN`s. Safe to rollback-validate by wrapping in an
+  outer `BEGIN; … ROLLBACK;`.
+
+The guard is codified, not prose-only:
+
+- `scripts/check_migration_rollback_safety.py` classifies each migration
+  (stripping comments, string literals, and dollar-quoted bodies, so a
+  `CONCURRENTLY` mentioned only in a `--` comment never trips it).
+  `--rollback-wrap FILE` is the preflight `make irrigation-migration-check` /
+  `irrigation-migration-proof` run before piping into psql; it refuses to wrap a
+  self-committing migration. `make migration-rollback-safety` lists the full
+  classification.
+- CI job `migration-rollback-safety` (`.github/workflows/ci.yml`) flags any
+  self-committing migration touched in a PR.
+
+## Branches, working copy & memory
+
+- Work lands on `main` (direct commits for routine work, PRs when review is
+  useful or a workflow generates them, e.g. prod-promote). Topic branches are
+  free-form; no sprint counters (retired with the multi-agent model — the
+  iris-VM worktrees at `/mnt/iris/...` are gone with the .150 VM).
+- The working copy is `~/repos/verdify-platform` on Jason's laptop; persistent
+  agent memory lives in the laptop project-memory directory and survives
+  sessions.
 
 ## Backlog
 
-See `docs/BACKLOG.md` for the cycle index. Per-agent backlogs in `docs/backlog/{agent}.md`. Cross-cutting work (schemas, infra, Grafana, deps) in `docs/backlog/cross-cutting.md`.
+GitHub issues on `VerdifyConsultancy/verdify-platform` are THE tracker.
+Historical `docs/BACKLOG.md` / `docs/backlog/*` files were moved to
+`/Users/jason/Orbit/context_dump/verdify-platform/`; don't recreate or extend
+them in this repo.
 
 ## Checks before commit
 
@@ -84,14 +260,14 @@ Post-2026-04-21 incident (sprint-15/15.1 fix-it-forward spiral producing repeate
 
 8. **Every firmware PR must show a replay-diff.** CI job `firmware-replay-diff` runs `scripts/firmware-replay-diff.sh` against merge-base. Default `THRESHOLD_PCT=0` means zero mode/relay divergence allowed. Intentional divergence (e.g. Phase 2 dwell-gate rollout) requires coordinator approval + explicit `THRESHOLD_PCT` override in the PR.
 
-9. **Required PR artifacts** for firmware changes:
+9. **Required artifacts** for firmware changes (PR body or commit message):
    - Replay diff output (`make firmware-replay OLD=<base> NEW=HEAD`)
    - Invariant-suite output (`make firmware-invariants`)
    - Unit-test delta (`make test-firmware`)
-   - Coordinator (iris-dev) independent replay reproduction
-   - Iris planner concurrence brief for any interface-level change
 
-Coordinator approves merge only when all three reviewers (firmware agent, coordinator, iris) agree. Then 48-hour wait before OTA.
+Single-agent model: the CI gates (replay-diff, invariants, unit tests) are
+the reviewers; Jason is the human gate for the OTA itself. The 48-hour bake
+between OTAs stays.
 
 ## Testing infrastructure (phase-0 deliverables)
 
@@ -99,3 +275,58 @@ Coordinator approves merge only when all three reviewers (firmware agent, coordi
 - `make firmware-replay OLD=<ref> NEW=<ref>` — dual-worktree diff of firmware mode/relay decisions. Default THRESHOLD_PCT=0.
 - `make replay-corpus-refresh` — pulls a fresh CSV from live DB, archives the prior corpus, validates no >5% size regression.
 - `scripts/export-replay-overrides.sh` — CSV export includes outdoor sensors, equipment_state, mode_reason (sprint-15.1+).
+
+<!-- BEGIN VERDIFY AGENT WORKFLOW -->
+## Fleet Standard Shape
+
+This repository is part of the Verdify / Agent Fleet control plane and follows
+the fleet standard shape. Everything above this marker remains authoritative for
+how `verdify-platform` is built, verified, and (gated) deployed; this section
+adds the Verdify lifecycle wiring on top of it. It was added by the
+fleet-standardize lane and must not be clobbered — append between the BEGIN/END
+markers only. (`AGENTS.md` is a symlink to this file, so this section is what
+both names resolve to.)
+
+### Repo purpose
+
+`VerdifyConsultancy/verdify-platform` is the **core Verdify product** — the
+AI-driven climate controller for the live 367 sq ft Longmont greenhouse and the
+SaaS surfaces around it. It owns the end-to-end stack: ESP32/ESPHome firmware
+and the gated OTA path, the `ingestor`, the `planner_graph`/`iris_planner`
+genai planner and `mcp` server, the `api`, the MQTT ingestion path, the Quartz
+`lab`/`graphs` site, and `verdify.ai` (lab/graphs/api subdomains), plus the
+`deploy/k8s` manifests, schemas, and migrations. Production is real and
+device-affecting: plants are alive, the ESP32 is in the loop every 5 s, and the
+planner runs on live data. Track A (keeping the greenhouse safe and
+operational) always outranks Track B (platform/product evolution).
+
+### Fleet placement
+
+- **Owning pod:** `repo-verdifyconsultancy-verdify-platform-0` (pod-per-repo
+  StatefulSet in k3s namespace `agent-fleet-runners`).
+- **ServiceAccount:** `repo-verdifyconsultancy-verdify-platform-sa`.
+- **Declared k8s namespace for this product's workloads:** `verdify-prod`
+  (single-env prod only; the ArgoCD app `verdify-prod-dark` — legacy name —
+  serves lab/graphs/api.verdify.ai, manual-sync behind the device-write gate).
+  `verdify-dev` and the staging overlay are decommissioned. Note: `verdify-www`
+  (marketing) and `verdify-crm` are SEPARATE products in SEPARATE repos and are
+  out of scope here.
+
+### Verdify lifecycle wiring
+
+- Use the Verdify lifecycle skills linked in `.agents/skills` (and
+  `.claude/skills`). Start or resume lifecycle work through `$project-router`
+  unless the user explicitly names another lifecycle skill and its prerequisites
+  are present.
+- GitHub Issues on `VerdifyConsultancy/verdify-platform` are the backlog source
+  of truth, and GitHub is the delivery control plane.
+- Durable workflow artifacts live in `.agent-workflow/` (North Star, project
+  definition, architecture, sprints, router state).
+- The installed skill package lives in `.agent-skills/verdify-skills/1.0.0`.
+  Follow the vendored operating contract and authority matrix:
+  - `.agent-skills/verdify-skills/1.0.0/COMMON_OPERATING_CONTRACT.md`
+  - `.agent-skills/verdify-skills/1.0.0/config/authority-matrix.yaml`
+- The existing CI in `.github/workflows/` is unchanged by standardization; the
+  deferred wiring of Verdify lifecycle gates as required checks is tracked in
+  `.agent-workflow/CICD_VERDIFY_GATES_TODO.md`.
+<!-- END VERDIFY AGENT WORKFLOW -->

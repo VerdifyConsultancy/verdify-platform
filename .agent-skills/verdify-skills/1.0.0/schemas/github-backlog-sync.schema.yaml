@@ -1,0 +1,130 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://verdify.example/schemas/github-backlog-sync.schema.yaml
+title: Verdify GitHub Backlog Sync
+type: object
+additionalProperties: false
+required: [schema_ref, kind, schema_version, sync_id, status, repository, captured_at, source_authority, snapshot, issue_findings, pr_findings, lane_findings, delivery_findings, actions, handoff]
+properties:
+  schema_ref: {const: github-backlog-sync.schema.yaml}
+  kind: {const: GitHubBacklogSync}
+  schema_version: {const: "1.0"}
+  sync_id: {type: string, pattern: '^gbs-[a-z0-9][a-z0-9-]*$'}
+  status: {type: string, enum: [draft, reconciled, blocked, stale, superseded]}
+  repository: {type: string, minLength: 1}
+  captured_at: {type: string, minLength: 1}
+  source_authority:
+    type: object
+    additionalProperties: false
+    required: [github_is_authoritative, snapshot_is_cache, live_access, snapshot_ref, limitations]
+    properties:
+      github_is_authoritative: {type: boolean}
+      snapshot_is_cache: {type: boolean}
+      live_access: {type: string, enum: [live, cached, unavailable, mixed]}
+      snapshot_ref: {type: [string, 'null']}
+      limitations: {type: array, items: {type: string}}
+  snapshot:
+    type: object
+    additionalProperties: false
+    required: [snapshot_ref, captured_at, freshness, api_sources]
+    properties:
+      snapshot_ref: {type: [string, 'null']}
+      captured_at: {type: [string, 'null']}
+      freshness: {type: string, enum: [fresh, stale, missing, live_only, unknown]}
+      api_sources:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [surface, source_ref, captured, limitation]
+          properties:
+            surface: {type: string, enum: [issues, pulls, checks, workflow_runs, deployments, deployment_statuses, environments, projects, sub_issues, dependencies, timeline, search, local_artifacts, git]}
+            source_ref: {type: string, minLength: 1}
+            captured: {type: boolean}
+            limitation: {type: string}
+  issue_findings:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [issue, title, state, classification, labels, assignees, milestone, dependencies, sub_issues, linked_prs, project_refs, evidence_refs, github_refs, required_action]
+      properties:
+        issue: {type: [integer, 'null'], minimum: 1}
+        title: {type: string}
+        state: {type: string}
+        classification: {type: string, enum: [candidate, underspecified, stale, duplicate, blocked, missing, deferred, in_progress, done]}
+        labels: {type: array, items: {type: string}}
+        assignees: {type: array, items: {type: string}}
+        milestone: {type: [string, 'null']}
+        dependencies: {type: array, items: {type: string}}
+        sub_issues: {type: array, items: {type: string}}
+        linked_prs: {type: array, items: {type: string}}
+        project_refs: {type: array, items: {type: string}}
+        evidence_refs: {type: array, items: {type: string}}
+        github_refs: {type: array, items: {type: string}}
+        required_action: {type: string}
+  pr_findings:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [pr, branch, base_branch, state, draft, linked_issues, head_sha, checks_status, deployment_status, finding, evidence_refs]
+      properties:
+        pr: {type: [integer, 'null'], minimum: 1}
+        branch: {type: string}
+        base_branch: {type: string}
+        state: {type: string}
+        draft: {type: boolean}
+        linked_issues: {type: array, items: {type: integer, minimum: 1}}
+        head_sha: {type: [string, 'null']}
+        checks_status: {type: string, enum: [pass, fail, pending, missing, unknown, not_applicable]}
+        deployment_status: {type: string, enum: [success, failure, pending, inactive, missing, unknown, not_applicable]}
+        finding: {type: string}
+        evidence_refs: {type: array, items: {type: string}}
+  lane_findings:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [lane_id, contract_ref, issue_ids, branch, pr_refs, status, findings]
+      properties:
+        lane_id: {type: string}
+        contract_ref: {type: [string, 'null']}
+        issue_ids: {type: array, items: {type: integer, minimum: 1}}
+        branch: {type: [string, 'null']}
+        pr_refs: {type: array, items: {type: string}}
+        status: {type: string, enum: [aligned, warning, error, not_started, not_applicable]}
+        findings: {type: array, items: {type: string}}
+  delivery_findings:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [ref, type, status, evidence_refs, finding]
+      properties:
+        ref: {type: string}
+        type: {type: string, enum: [check, workflow_run, deployment, deployment_status, environment, release, branch_rule, project_field, other]}
+        status: {type: string, enum: [pass, fail, pending, missing, unknown, not_applicable]}
+        evidence_refs: {type: array, items: {type: string}}
+        finding: {type: string}
+  actions:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, type, target, owner, status, apply_through, evidence_refs]
+      properties:
+        id: {type: string, pattern: '^GBSA-[0-9]{3,}$'}
+        type: {type: string, enum: [create_issue, update_issue, close_duplicate, set_dependency, update_project, open_gate, refresh_snapshot, reconcile_lane, route, no_op]}
+        target: {type: string}
+        owner: {type: string}
+        status: {type: string, enum: [proposed, applied, blocked, not_applicable]}
+        apply_through: {type: string, enum: [github_issue, github_dependency, github_project, pull_request, durable_gate, state_of_union, sprint_orchestrator, release_verification, none]}
+        evidence_refs: {type: array, items: {type: string}}
+  handoff:
+    type: object
+    additionalProperties: false
+    required: [next_skill, next_mode, reason]
+    properties:
+      next_skill: {type: string}
+      next_mode: {type: string}
+      reason: {type: string}

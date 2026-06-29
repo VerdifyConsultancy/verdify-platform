@@ -4,37 +4,46 @@
 
 367 sq ft. Longmont, Colorado. 5,090 feet. 15% humidity. 95°F solar peaks. Mixed crops. One deterministic controller.
 
-About 172 ESPHome entities feed an 8-state firmware controller that evaluates conditions every 5 seconds. Crop profiles define what each zone needs at each hour. Iris runs through Hermes with OpenAI GPT-5.5 high-reasoning as the sole planner gateway. It reads telemetry, forecasts, prior plans, scorecards, site context, and validated lessons through typed MCP tools before writing bounded tactical plans. The system measures outcomes, scores plans, and feeds validated lessons into future planning.
+About 172 ESPHome entities feed a firmware controller that evaluates conditions
+about once a second (a `dt_ms`-based loop invariant to tick rate — it was 5 s
+historically). The current controller replan is firmware-first,
+deterministic, crop-agnostic at the firmware layer, and AI-bounded: firmware
+owns sensors, relays, local target curves, safety rails, disconnected behavior,
+and climate/lighting/irrigation control; AI may tune bounded parameters over a
+72-hour horizon but must not own hard safety limits, emergency behavior, or core
+target calculation.
 
 **[verdify.ai](https://verdify.ai)**
 
 ## Architecture
 
 ```
-ESP32 Controller (8-state, greenhouse_logic.h, 5s loop)
+ESP32 Controller (greenhouse_logic.h, ~1s dt_ms-based loop)
   ├── aioesphomeapi ──→ Ingestor ──→ TimescaleDB (2.5M+ rows)
   ├── MQTT ──→ Mosquitto (state publishing + occupancy)
-  └── HTTPS ──→ API (band-driven setpoints every 5 min)
+  └── local deterministic control surfaces (climate, lighting, irrigation)
 
 TimescaleDB (telemetry, views, scorecards, lessons)
   ├── Grafana (public and private dashboards)
-  ├── FastAPI (crop catalog + ESP32 setpoints)
+  ├── FastAPI (catalog/status + compatibility setpoint surfaces)
   ├── MCP Server (typed tools for Iris)
   └── Quartz (static site with embedded panels)
 
-Iris Planner (Hermes + GPT-5.5, MCP-only tool surface)
-  └── Event-driven: sunrise, transitions, sunset, forecast, deviation
-      → MCP tools → set_tunable() → Slack #greenhouse
+Planner (Hermes hermes-iris → GPT-5.5 → MCP; decision: docs/adr/0002)
+  └── Event-driven + scheduled (incl. weekly deep review) 72h horizon
+      → MCP/tools → bounded tunables + decision ledger
 ```
 
-The greenhouse control core runs on a single VM. Local GPU inference handles routine Iris reasoning; external APIs provide weather, optional heavyweight reasoning, and public delivery support. Real-time relay control stays local on the ESP32.
+The greenhouse control core runs in the single prod k3s environment, with
+real-time relay control staying local on the ESP32. External APIs provide
+weather, optional heavyweight reasoning, and public delivery support.
 
 ## Components
 
 | Directory | What |
 |-----------|------|
 | `ingestor/` | Python async service — ESP32 data capture, 15 periodic tasks, entity routing |
-| `api/` | FastAPI crop catalog + compatibility `/setpoints` export |
+| `api/` | FastAPI catalog/status surfaces + compatibility `/setpoints` export |
 | `firmware/` | ESPHome YAML + C++ headers — 8-state climate controller (greenhouse_logic.h) |
 | `mcp/` | FastMCP server — typed tools for Iris agent (climate, scorecard, set_tunable, etc.) |
 | `scripts/` | Operational scripts — planner, vision analysis, forecast sync, monitoring |
@@ -48,7 +57,10 @@ The greenhouse control core runs on a single VM. Local GPU inference handles rou
 ## Development
 
 ```bash
-# Prerequisites: Docker, Python 3.13+, shared venv at /srv/greenhouse/.venv
+# Prerequisites: Docker, Python 3.12+ (3.13 preferred for parity with CI/runtime)
+
+# Create/update repo-local tooling environment (.venv)
+make setup
 
 # Run all checks (lint + test + firmware compile)
 make check
@@ -63,17 +75,39 @@ make help              # List all targets
 ```
 
 **Tooling:** ruff (lint + format), pytest, pre-commit hooks, GitHub Actions CI.
-**Config:** `pyproject.toml` is the single source of truth for deps, lint rules, and test config.
+**Config:** `pyproject.toml` is the single source of truth for deps, lint rules, and test config. `make setup` reads it directly; there is no checked-in duplicate requirements file for local tooling.
+
+### Codex quickstart
+
+Codex sessions should start with `AGENTS.md` (symlinked to `CLAUDE.md`) and
+`README.md`. Historical handoffs, repo-cleanup inventories, retired backlogs,
+and reusable prompt/context files live outside this repo in the local Orbit
+vault at `/Users/jason/Orbit/context_dump/verdify-platform/`.
+
+A safe orientation pass is: read `AGENTS.md`, `README.md`,
+the root lane docs (`AGENT_LANE.md`, `PROJECT_BOARD.md`, `EPICS.md`,
+`MILESTONES.md`, `SPRINTS.md`, `HISTORY.md`, `ARGOCD.md`,
+`ACCESS_MATRIX.md`, `COORDINATION_REQUESTS.md`),
+`docs/runbooks/laptop-operator.md`, `Makefile`, `pyproject.toml`,
+`.github/workflows/ci.yml`, and the Orbit dump manifest if available; then
+report branch/worktree state, access assumptions, current goal, safety gates,
+and verification plan before editing.
 
 ## The Greenhouse
 
 The control system has three layers:
 
-1. **Crop target band** — diurnal VPD/temperature profiles for active crops, computed from `fn_band_setpoints()` every 5 minutes
-2. **AI planner** — Iris reads live context (scorecard, forecast, lessons, sensors), plan memory, and static greenhouse documentation, then writes 72h tactical setpoint plans with performance targets
-3. **ESP32 state machine** — 8 priority-ordered states evaluated every 5 seconds, enforcing the band with fans, heaters, misters, and fog
+1. **Deterministic target band** — diurnal VPD/temperature curves tied to
+   location, solar phase, season, configured min/max values, hysteresis, and
+   mechanical limits.
+2. **AI planner** — bounded 72-hour tactical tuning over firmware-supported
+   parameters, with no authority over safety rails, emergency behavior, or core
+   target calculation.
+3. **ESP32 state machine** — local five-second control of climate, lighting,
+   and irrigation under hard safety rails and disconnected fallback behavior.
 
-The crops set the targets. The AI tunes the tactics. The controller enforces them. The telemetry proves what happened.
+Firmware enforces the deterministic local contract. AI tunes bounded tactics.
+Telemetry, readbacks, dashboards, and the lab notebook prove what happened.
 
 ## KPIs
 

@@ -1,0 +1,151 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://verdify.example/schemas/session-ledger.schema.yaml
+title: Verdify Session Ledger
+type: object
+additionalProperties: false
+required: [schema_ref, kind, schema_version, project_id, ledger_id, status, generated_at, updated_at, retention, sessions, events, exceptions, handoff]
+properties:
+  schema_ref: {const: session-ledger.schema.yaml}
+  kind: {const: SessionLedger}
+  schema_version: {const: "1.0"}
+  project_id: {type: string, minLength: 1}
+  ledger_id: {type: string, pattern: '^ledger-[a-z0-9][a-z0-9-]*$'}
+  status: {type: string, enum: [draft, active, complete, blocked, superseded]}
+  generated_at: {type: string, minLength: 1}
+  updated_at: {type: string, minLength: 1}
+  retention:
+    type: object
+    additionalProperties: false
+    required: [source_policy, redaction_policy, raw_payload_policy, checksum_algorithm]
+    properties:
+      source_policy: {type: string, minLength: 1}
+      redaction_policy: {type: string, minLength: 1}
+      raw_payload_policy: {type: string, minLength: 1}
+      checksum_algorithm: {type: string, enum: [sha256, none]}
+  sessions:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [session_id, parent_session_id, role, executor, repository, status, started_at, ended_at, issue_ids, lane_id, wave_id, branch, worktree, pr_refs, artifact_refs]
+      properties:
+        session_id: {type: string, minLength: 1}
+        parent_session_id: {type: [string, 'null']}
+        role: {type: string, enum: [controller, planner, researcher, orchestrator, worker, critic, release_verifier, readiness, human, tool, other]}
+        executor: {type: string, minLength: 1}
+        repository: {type: string, minLength: 1}
+        status: {type: string, enum: [planned, active, paused, blocked, complete, failed, abandoned, superseded]}
+        started_at: {type: [string, 'null']}
+        ended_at: {type: [string, 'null']}
+        issue_ids: {type: array, items: {type: integer, minimum: 1}}
+        lane_id: {type: [string, 'null']}
+        wave_id: {type: [string, 'null']}
+        branch: {type: [string, 'null']}
+        worktree: {type: [string, 'null']}
+        pr_refs: {type: array, items: {type: string}}
+        artifact_refs: {type: array, items: {type: string}}
+  events:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, sequence, occurred_at, event_type, source, subject, actor, session_id, correlation, refs, result, summary, previous_event_id, content_sha256]
+      properties:
+        id: {type: string, pattern: '^LEDGER-EVT-[0-9]{4,}$'}
+        sequence: {type: integer, minimum: 1}
+        occurred_at: {type: string, minLength: 1}
+        event_type:
+          type: string
+          enum:
+          - route_decision
+          - research_ingested
+          - planning_updated
+          - sprint_planned
+          - wave_release_planned
+          - lane_dispatched
+          - lease_created
+          - prompt_compiled
+          - worker_status
+          - worker_closeout
+          - critic_reviewed
+          - review_packet_created
+          - diagnostic_created
+          - gate_decision
+          - ci_observed
+          - deployment_observed
+          - release_verified
+          - outcome_reviewed
+          - handoff
+          - session_lost
+          - exception_recorded
+          - learning_proposed
+          - other
+        source: {type: string, minLength: 1}
+        subject: {type: string, minLength: 1}
+        actor:
+          type: object
+          additionalProperties: false
+          required: [role, name]
+          properties:
+            role: {type: string}
+            name: {type: string}
+        session_id: {type: string, minLength: 1}
+        correlation:
+          type: object
+          additionalProperties: false
+          required: [trace_id, wave_id, session_ids, issue_ids, lane_ids, pr_ids, deployment_ids, policy_decision_ids]
+          properties:
+            trace_id: {type: [string, 'null']}
+            wave_id: {type: [string, 'null']}
+            session_ids: {type: array, items: {type: string}}
+            issue_ids: {type: array, items: {type: integer, minimum: 1}}
+            lane_ids: {type: array, items: {type: string}}
+            pr_ids: {type: array, items: {type: string}}
+            deployment_ids: {type: array, items: {type: string}}
+            policy_decision_ids: {type: array, items: {type: string}}
+        refs:
+          type: object
+          additionalProperties: false
+          required: [artifact_refs, evidence_refs, external_refs]
+          properties:
+            artifact_refs: {type: array, items: {type: string}}
+            evidence_refs: {type: array, items: {type: string}}
+            external_refs:
+              type: array
+              items:
+                type: object
+                additionalProperties: false
+                required: [type, identifier, url]
+                properties:
+                  type: {type: string, enum: [github_issue, github_pr, github_check, github_workflow_run, github_deployment, git_commit, worktree, lease, ci, deployment, trace, provenance, transparency_log, other]}
+                  identifier: {type: string, minLength: 1}
+                  url: {type: [string, 'null']}
+        result: {type: string, enum: [planned, observed, passed, failed, blocked, approved, rejected, changes_requested, superseded, not_applicable]}
+        summary: {type: string, minLength: 1}
+        data_summary: {type: [string, 'null']}
+        redacted_payload_ref: {type: [string, 'null']}
+        previous_event_id: {type: [string, 'null']}
+        content_sha256: {type: [string, 'null'], pattern: '^[a-f0-9]{64}$'}
+  exceptions:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, severity, statement, owner, status, event_ids]
+      properties:
+        id: {type: string, pattern: '^LEDGER-EXC-[0-9]{3,}$'}
+        severity: {type: string, enum: [low, medium, high, critical]}
+        statement: {type: string, minLength: 1}
+        owner: {type: string, minLength: 1}
+        status: {type: string, enum: [open, accepted, resolved, deferred]}
+        event_ids: {type: array, items: {type: string, pattern: '^LEDGER-EVT-[0-9]{4,}$'}}
+  handoff:
+    type: object
+    additionalProperties: false
+    required: [next_skill, next_mode, reason]
+    properties:
+      next_skill: {type: string}
+      next_mode: {type: string}
+      reason: {type: string}

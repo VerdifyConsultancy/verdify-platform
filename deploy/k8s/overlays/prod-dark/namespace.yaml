@@ -1,0 +1,29 @@
+# verdify-prod Namespace — ADOPTED by overlays/prod-dark (NOT recreated).
+#
+# prod-dark targets the SAME namespace as overlays/prod (verdify-prod). It is the
+# DEVICE-DARK production shape for the M4 48h read/serve proof: the full read +
+# serve stack (db, api, mcp, planner, www, lab, mqtt, hermes) runs against the
+# parity-restored prod TimescaleDB, but NO device writer exists (ingestor
+# replicas:0, no allow-ingestor-device-egress, setpoint-server excluded,
+# VERDIFY_DEVICE_WRITE_ENABLED=0). Adopting it via a manual-sync, prune:false
+# ArgoCD App lets laptop-root bring the prod namespace + the EXISTING verdify-db
+# StatefulSet under GitOps WITHOUT ever standing up a second live-ESP32 writer
+# (the MASTER single-writer gate: exactly ONE device writer, the VM, today).
+#
+# This Namespace object is byte-identical to overlays/prod/namespace.yaml so a
+# prod-dark apply and a later (gated) prod apply describe the SAME namespace with
+# no drift. The PINNED namespace string MUST equal:
+#   - the ArgoCD Application destination.namespace (verdify-prod-dark.yaml)
+#   - every registry/secrets/<id>.yaml target.namespace
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: verdify-prod
+  labels:
+    app.kubernetes.io/part-of: verdify
+    # PodSecurity: enforce the restricted profile. All Verdify workloads run
+    # non-root with dropped capabilities, so this passes cleanly and catches any
+    # future regression toward privileged pods.
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/warn: restricted

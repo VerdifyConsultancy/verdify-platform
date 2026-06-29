@@ -33,8 +33,10 @@ for the full roadmap.
 from __future__ import annotations
 
 import math
+from pathlib import Path
 from typing import Literal
 
+import yaml
 from pydantic import BaseModel
 
 
@@ -196,6 +198,66 @@ REGISTRY: dict[str, TunableDef] = {
         planner_pushable=True,
         tier=1,
         notes="Cooling hold exits at temp_high minus this margin in the live band-first controller.",
+    ),
+    "cool_stage2_exit_hysteresis_f": TunableDef(
+        name="cool_stage2_exit_hysteresis_f",
+        kind="numeric",
+        min=0.3,
+        max=3.0,
+        default=1.0,
+        fw_clamp_lo=0.3,
+        fw_clamp_hi=3.0,
+        esp_object_id="cool_stage_2_exit_hyst__f",
+        cfg_readback_object_id="cfg___cool_s2_exit_hyst___f_",
+        push_owner="planner",
+        planner_pushable=True,
+        tier=1,
+        notes=(
+            "BC-8 (ADR0003 §6.5): de-escalation hysteresis for the fan1->fan2 stage. "
+            "fan2 latches at temp_high+cool_stage2_over_high_f and clears at that minus "
+            "this, so stage 2 cannot chatter at the threshold (mirrors the heat2 latch)."
+        ),
+    ),
+    "vent_exchange_fraction": TunableDef(
+        name="vent_exchange_fraction",
+        kind="numeric",
+        min=0.1,
+        max=0.6,
+        default=0.30,
+        fw_clamp_lo=0.1,
+        fw_clamp_hi=0.6,
+        esp_object_id="vent_exchange_fraction",
+        cfg_readback_object_id="cfg___vent_exchange_fraction",
+        push_owner="planner",
+        planner_pushable=True,
+        tier=1,
+        notes=(
+            "BC-13 (ADR0003 §6.4, Jason 2026-06-17): single-cycle air-exchange fraction "
+            "toward outdoor used by the moisture-exchange estimator's vent VPD-gain "
+            "projection. AI-tunable; structural proxy for the house air-change rate."
+        ),
+    ),
+    "band_track_fraction": TunableDef(
+        name="band_track_fraction",
+        kind="numeric",
+        min=0.0,
+        max=0.0,
+        default=0.0,
+        fw_clamp_lo=0.0,
+        fw_clamp_hi=1.0,
+        esp_object_id="band_track_fraction",
+        cfg_readback_object_id="cfg___band_track_fraction",
+        push_owner="planner",
+        planner_pushable=True,
+        tier=1,
+        notes=(
+            "Control-band tracking tightness. Pinches the band toward "
+            "temp_target/vpd_target when nonzero, but ADR-0004 makes 0 the only "
+            "planner-valid value: float within the served crop corridor and act at "
+            "the edges. Firmware still clamps [0,1] for operator diagnostics and "
+            "readback continuity; MCP/plan validation rejects planner values above 0 "
+            "so AI cannot reintroduce target hugging. Safety rails untouched."
+        ),
     ),
     "cold_vent_guard_delta_f": TunableDef(
         name="cold_vent_guard_delta_f",
@@ -582,6 +644,24 @@ REGISTRY: dict[str, TunableDef] = {
         tier=1,
         notes="Pulse-rotation OFF (evap dwell) between zones.",
     ),
+    "mister_min_off_s": TunableDef(
+        name="mister_min_off_s",
+        kind="numeric",
+        min=30,
+        max=120,
+        default=45,
+        fw_clamp_lo=30,
+        fw_clamp_hi=120,
+        esp_object_id="mister_min_off__s_",
+        cfg_readback_object_id="cfg___mister_min_off__s_",
+        push_owner="planner",
+        planner_pushable=True,
+        tier=2,
+        notes="Mister re-fire dwell floor: a zone may not re-energize within "
+        "this of its own last off. Default 45s == the designed pulse gap, so it "
+        "only fences sub-gap chatter (never extends a pulse / over-waters). "
+        "Raise to cut mister cycling/wear when re-fires are faster than needed.",
+    ),
     "mister_vpd_weight": TunableDef(
         name="mister_vpd_weight",
         kind="numeric",
@@ -596,6 +676,32 @@ REGISTRY: dict[str, TunableDef] = {
         planner_pushable=True,
         tier=1,
         notes="Weight on VPD gap in zone-selection scoring formula. Capped at 3.0 until replay proves higher values help.",
+    ),
+    "night_vpd_bias_kpa": TunableDef(
+        name="night_vpd_bias_kpa",
+        kind="numeric",
+        min=0.0,
+        max=0.25,
+        default=0.0,
+        fw_clamp_lo=0.0,
+        fw_clamp_hi=0.25,
+        esp_object_id="night_vpd_bias_kpa",
+        cfg_readback_object_id="cfg_night_vpd_bias_kpa",
+        push_owner="planner",
+        planner_pushable=True,
+        tier=1,
+        notes="Item-4 night-dry lever: kPa added to the OVERNIGHT VPD band (smooth sin^2 weight peaking at solar midnight, 0 at sunset/sunrise). Raises the night dryness floor so the dryer keeps running on a humid-night forecast WITHOUT moving the crop_band_anchors curve. Clamped 0..0.25.",
+    ),
+    "sw_arbiter_zone_enabled": TunableDef(
+        name="sw_arbiter_zone_enabled",
+        kind="switch",
+        default=0,
+        esp_object_id="arbiter_zone_enabled",
+        cfg_readback_object_id="cfg_arbiter_zone_enabled",
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        notes="Item-3 per-zone arbiter master enable. Default OFF — ships inert; the arbiter (select_arbiter_zone in controls.yaml) only drives select_zone_for_pulse when ON. The firmware publishes cfg_arbiter_zone_enabled (sensor name 'Cfg Arbiter Zone Enabled' → cfg_arbiter_zone_enabled); without this row the setpoint_snapshot rejected it every cycle. Flip after a corpus zone-distribution review.",
     ),
     # ─────────────────────────────────────────────────────────────────────
     # Per-zone VPD targets (push_owner="band" — dispatcher pushes from crop
@@ -671,7 +777,7 @@ REGISTRY: dict[str, TunableDef] = {
         esp_object_id="mister_center_penalty",
         cfg_readback_object_id="cfg___mister_center_penalty",
         push_owner="planner",
-        planner_pushable=False,
+        planner_pushable=True,
         tier=2,
         notes="Score penalty on center zone to discourage over-misting seedlings.",
     ),
@@ -734,7 +840,7 @@ REGISTRY: dict[str, TunableDef] = {
         esp_object_id="min_heat_on__s_",
         cfg_readback_object_id="cfg___min_heat_on__s_",
         push_owner="operator",
-        planner_pushable=False,
+        planner_pushable=True,
         tier=2,
         notes="Heater relay protection dwell. Operator/firmware policy, not routine planner policy.",
     ),
@@ -749,7 +855,7 @@ REGISTRY: dict[str, TunableDef] = {
         esp_object_id="min_fan_on__s_",
         cfg_readback_object_id="cfg___min_fan_on__s_",
         push_owner="operator",
-        planner_pushable=False,
+        planner_pushable=True,
         tier=2,
         notes="Fan relay protection dwell. Operator/firmware policy.",
     ),
@@ -764,7 +870,7 @@ REGISTRY: dict[str, TunableDef] = {
         esp_object_id="min_fan_off__s_",
         cfg_readback_object_id="cfg___min_fan_off__s_",
         push_owner="operator",
-        planner_pushable=False,
+        planner_pushable=True,
         tier=2,
         notes="Fan relay protection dwell. Operator/firmware policy.",
     ),
@@ -779,7 +885,7 @@ REGISTRY: dict[str, TunableDef] = {
         esp_object_id="min_vent_on__s_",
         cfg_readback_object_id="cfg___min_vent_on__s_",
         push_owner="operator",
-        planner_pushable=False,
+        planner_pushable=True,
         tier=2,
         notes="Vent actuator protection dwell. Operator/firmware policy, not routine planner policy.",
     ),
@@ -794,7 +900,7 @@ REGISTRY: dict[str, TunableDef] = {
         esp_object_id="min_vent_off__s_",
         cfg_readback_object_id="cfg___min_vent_off__s_",
         push_owner="operator",
-        planner_pushable=False,
+        planner_pushable=True,
         tier=2,
         notes="Vent actuator protection dwell. Operator/firmware policy, not routine planner policy.",
     ),
@@ -897,8 +1003,6 @@ REGISTRY: dict[str, TunableDef] = {
         min=5,
         max=12,
         default=6,
-        fw_clamp_lo=5,
-        fw_clamp_hi=12,
         esp_object_id="fog_window_start__hr_",
         cfg_readback_object_id="cfg___fog_window_start__hour_",
         push_owner="planner",
@@ -912,8 +1016,6 @@ REGISTRY: dict[str, TunableDef] = {
         min=14,
         max=20,
         default=18,
-        fw_clamp_lo=14,
-        fw_clamp_hi=20,
         esp_object_id="fog_window_end__hr_",
         cfg_readback_object_id="cfg___fog_window_end__hour_",
         push_owner="planner",
@@ -921,54 +1023,10 @@ REGISTRY: dict[str, TunableDef] = {
         tier=2,
         notes="End hour for fog eligibility window.",
     ),
-    "sw_fog_stress_window_extend_enabled": TunableDef(
-        name="sw_fog_stress_window_extend_enabled",
-        kind="switch",
-        min=0,
-        max=1,
-        default=0,
-        fw_clamp_lo=None,
-        fw_clamp_hi=None,
-        esp_object_id="fog_stress_window_extend_enabled",
-        cfg_readback_object_id="cfg_fog_stress_window_extend_enabled",
-        push_owner="planner",
-        planner_pushable=True,
-        tier=1,
-        notes=(
-            "Allows fog after the normal fog window during VPD-high stress. "
-            "Firmware still enforces RH, temperature, latest-hour, and dew-margin gates."
-        ),
-    ),
-    "fog_stress_window_latest_hour": TunableDef(
-        name="fog_stress_window_latest_hour",
-        kind="numeric",
-        min=17,
-        max=22,
-        default=19,
-        fw_clamp_lo=17,
-        fw_clamp_hi=22,
-        esp_object_id="fog_stress_window_latest_hour",
-        cfg_readback_object_id="cfg_fog_stress_window_latest_hour",
-        push_owner="planner",
-        planner_pushable=True,
-        tier=1,
-        notes="Latest local hour for the bounded VPD-high fog stress extension.",
-    ),
-    "fog_stress_min_dew_margin_f": TunableDef(
-        name="fog_stress_min_dew_margin_f",
-        kind="numeric",
-        min=5,
-        max=15,
-        default=10,
-        fw_clamp_lo=5,
-        fw_clamp_hi=15,
-        esp_object_id="fog_stress_min_dew_margin_f",
-        cfg_readback_object_id="cfg_fog_stress_min_dew_margin_f",
-        push_owner="planner",
-        planner_pushable=True,
-        tier=1,
-        notes="Minimum indoor temp-minus-dewpoint margin required for fog stress extension.",
-    ),
+    # BC-11 (ADR0003 §6.7): the fog_stress_* clock-window tunables are RETIRED dead
+    # registry rows — replaced by the solar-phase curve-only fog gate (no firmware
+    # entity, no ESPHome surface, no live read; only retirement comments + old build
+    # artifacts mention them). Deleted to shrink the planner-pushable surface.
     "max_relief_cycles": TunableDef(
         name="max_relief_cycles",
         kind="numeric",
@@ -1329,8 +1387,6 @@ REGISTRY: dict[str, TunableDef] = {
         min=17,
         max=24,
         default=22,
-        fw_clamp_lo=17,
-        fw_clamp_hi=24,
         esp_object_id="direct_wet_stress_latest_hour",
         cfg_readback_object_id="cfg_direct_wet_stress_latest_hour",
         push_owner="planner",
@@ -1798,6 +1854,58 @@ REGISTRY: dict[str, TunableDef] = {
         tier=2,
         notes="Latest local hour the main/overhead circuit may remain on.",
     ),
+    "sw_gl_main_solar_phasing": TunableDef(
+        name="sw_gl_main_solar_phasing",
+        kind="switch",
+        default=0,
+        esp_object_id="gl_main_solar_phasing",
+        cfg_readback_object_id="cfg_gl_main_solar_phasing",
+        push_owner="schedule",
+        planner_pushable=False,
+        tier=2,
+        notes="Main/overhead circuit uses sunrise/sunset plus offset minutes instead of fixed hour anchors when enabled.",
+    ),
+    "gl_main_sunrise_offset_min": TunableDef(
+        name="gl_main_sunrise_offset_min",
+        kind="numeric",
+        min=-1440,
+        max=1440,
+        default=0,
+        fw_clamp_lo=-1440,
+        fw_clamp_hi=1440,
+        esp_object_id="gl_main_sunrise_offset_min",
+        cfg_readback_object_id="cfg_gl_main_sunrise_offset_min",
+        push_owner="schedule",
+        planner_pushable=False,
+        tier=2,
+        notes="Main/overhead solar-phased window opens this many minutes from computed sunrise.",
+    ),
+    "gl_main_sunset_offset_min": TunableDef(
+        name="gl_main_sunset_offset_min",
+        kind="numeric",
+        min=-1440,
+        max=1440,
+        default=0,
+        fw_clamp_lo=-1440,
+        fw_clamp_hi=1440,
+        esp_object_id="gl_main_sunset_offset_min",
+        cfg_readback_object_id="cfg_gl_main_sunset_offset_min",
+        push_owner="schedule",
+        planner_pushable=False,
+        tier=2,
+        notes="Main/overhead solar-phased window closes this many minutes from computed sunset.",
+    ),
+    "sw_gl_main_out_of_service": TunableDef(
+        name="sw_gl_main_out_of_service",
+        kind="switch",
+        default=0,
+        esp_object_id="gl_main_out_of_service",
+        cfg_readback_object_id="cfg_gl_main_out_of_service",
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        notes="Operator dead-fixture flag for main/overhead lighting; suppresses phantom supplemental light credit.",
+    ),
     "gl_main_min_on_s": TunableDef(
         name="gl_main_min_on_s",
         kind="numeric",
@@ -1917,6 +2025,58 @@ REGISTRY: dict[str, TunableDef] = {
         planner_pushable=False,
         tier=2,
         notes="Latest local hour the grow/secondary circuit may remain on.",
+    ),
+    "sw_gl_grow_solar_phasing": TunableDef(
+        name="sw_gl_grow_solar_phasing",
+        kind="switch",
+        default=0,
+        esp_object_id="gl_grow_solar_phasing",
+        cfg_readback_object_id="cfg_gl_grow_solar_phasing",
+        push_owner="schedule",
+        planner_pushable=False,
+        tier=2,
+        notes="Grow/secondary circuit uses sunrise/sunset plus offset minutes instead of fixed hour anchors when enabled.",
+    ),
+    "gl_grow_sunrise_offset_min": TunableDef(
+        name="gl_grow_sunrise_offset_min",
+        kind="numeric",
+        min=-1440,
+        max=1440,
+        default=0,
+        fw_clamp_lo=-1440,
+        fw_clamp_hi=1440,
+        esp_object_id="gl_grow_sunrise_offset_min",
+        cfg_readback_object_id="cfg_gl_grow_sunrise_offset_min",
+        push_owner="schedule",
+        planner_pushable=False,
+        tier=2,
+        notes="Grow/secondary solar-phased window opens this many minutes from computed sunrise.",
+    ),
+    "gl_grow_sunset_offset_min": TunableDef(
+        name="gl_grow_sunset_offset_min",
+        kind="numeric",
+        min=-1440,
+        max=1440,
+        default=0,
+        fw_clamp_lo=-1440,
+        fw_clamp_hi=1440,
+        esp_object_id="gl_grow_sunset_offset_min",
+        cfg_readback_object_id="cfg_gl_grow_sunset_offset_min",
+        push_owner="schedule",
+        planner_pushable=False,
+        tier=2,
+        notes="Grow/secondary solar-phased window closes this many minutes from computed sunset.",
+    ),
+    "sw_gl_grow_out_of_service": TunableDef(
+        name="sw_gl_grow_out_of_service",
+        kind="switch",
+        default=0,
+        esp_object_id="gl_grow_out_of_service",
+        cfg_readback_object_id="cfg_gl_grow_out_of_service",
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        notes="Operator dead-fixture flag for grow/secondary lighting; suppresses phantom supplemental light credit.",
     ),
     "gl_grow_min_on_s": TunableDef(
         name="gl_grow_min_on_s",
@@ -2186,7 +2346,7 @@ REGISTRY: dict[str, TunableDef] = {
         esp_object_id="summer_vent_min_runtime__s_",
         cfg_readback_object_id="cfg___summer_vent_min_runtime__s_",
         push_owner="planner",
-        planner_pushable=False,
+        planner_pushable=True,
         tier=2,
         notes="Reserved/no-op in current firmware. Setpoints field is clamped but not consumed by the gate.",
     ),
@@ -2272,7 +2432,7 @@ REGISTRY: dict[str, TunableDef] = {
         esp_object_id="min_heat_off__s_",
         cfg_readback_object_id="cfg___min_heat_off__s_",
         push_owner="operator",
-        planner_pushable=False,
+        planner_pushable=True,
         tier=2,
         notes="Heater relay protection dwell. Default 180s from Sprint-15.1; operator/firmware policy.",
     ),
@@ -2704,6 +2864,140 @@ REGISTRY: dict[str, TunableDef] = {
         notes="CYC-4 min temp-dewpoint spread (°F) to micro-pulse — no crown condensation.",
     ),
 }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Firmware-v2 staged contract (docs/design/firmware-v2-contract-2026-06-10.md
+# §B2/§B3/§B4/§B5/§B7) — deterministic crop+solar band anchors, per-zone VPD
+# widths, zone priority ranks, and solar-anchored window/cadence params.
+#
+# STAGED: these rows are registered (and dispatcher-routed) AHEAD of the
+# firmware-v2 OTA that exposes the matching number entities. The wire contract
+# the firmware build targets:
+#   esp_object_id          == the canonical tunable name
+#   cfg_readback_object_id == "cfg_" + the canonical tunable name
+# fw_clamp_lo/hi stay None until the entities exist in
+# firmware/greenhouse/tunables.yaml (the clamp drift guard only checks rows
+# with explicit clamps). All rows are push_owner="band": the dispatcher emits
+# them from the `crop_band_anchors` table (ingestor/tasks/band_anchors.py) and
+# the planner has NO band-authoring path. Defaults are the contract-§B2 anchor
+# table so a missing DB table degrades to the researched envelopes.
+# ─────────────────────────────────────────────────────────────────────────────
+
+_FW2_ANCHOR_KEYS = ("sr", "sm", "ss", "mid")
+
+# ── Canonical band defaults: loaded from band_defaults.yaml (single source) ──
+# The default anchor VECTORS come from band_defaults.yaml; the min/max CLAMP
+# envelope stays here (it is policy, not band data). The drift guard
+# verdify_schemas/tests/test_band_defaults_single_source.py pins these to the
+# YAML so the registry fallback can never silently re-diverge from the live band
+# again (the 2026-06-15 wet-night orchid regression came in via that drift).
+_BAND_DEFAULTS_PATH = Path(__file__).with_name("band_defaults.yaml")
+
+
+def _load_band_defaults() -> dict:
+    with _BAND_DEFAULTS_PATH.open("r", encoding="utf-8") as fh:
+        data = yaml.safe_load(fh) or {}
+    if "house" not in data or "zones" not in data:
+        raise RuntimeError(f"band_defaults.yaml malformed or missing: {_BAND_DEFAULTS_PATH}")
+    return data
+
+
+BAND_DEFAULTS = _load_band_defaults()
+
+# series → (min, max) clamp envelope (policy, not band data — kept in code).
+_FW2_HOUSE_CLAMPS: dict[str, tuple[float, float]] = {
+    "band_temp_low": (40.0, 100.0),
+    "band_temp_target": (40.0, 100.0),
+    "band_temp_high": (40.0, 100.0),
+    "band_vpd_low": (0.10, 3.0),
+    "band_vpd_target": (0.10, 3.0),
+    "band_vpd_high": (0.10, 3.0),
+}
+
+_FW2_HOUSE_SERIES: dict[str, tuple[tuple[float, float, float, float], float, float]] = {
+    # series → ((SR, SM, SS, MID) defaults from YAML, min, max)
+    series: (tuple(float(v) for v in BAND_DEFAULTS["house"][series.removeprefix("band_")]), lo, hi)
+    for series, (lo, hi) in _FW2_HOUSE_CLAMPS.items()
+}
+
+_FW2_ZONE_VPD_TARGETS: dict[str, tuple[float, float, float, float]] = {
+    zone: tuple(float(v) for v in z["vpd_target"]) for zone, z in BAND_DEFAULTS["zones"].items()
+}
+
+_FW2_ZONE_VPD_WIDTHS: dict[str, tuple[float, float]] = {
+    # zone → (below-target, above-target) half-widths (kPa)
+    zone: (float(z["width_below"]), float(z["width_above"]))
+    for zone, z in BAND_DEFAULTS["zones"].items()
+}
+
+_FW2_ZONE_PRIORITY: dict[str, float] = {zone: float(z["priority"]) for zone, z in BAND_DEFAULTS["zones"].items()}
+
+_FW2_WINDOW_PARAMS: dict[str, tuple[float, float, float, str]] = {
+    # name → (default, min, max, note)
+    "wet_taper_before_sunset_min": (
+        120.0,
+        0.0,
+        480.0,
+        "routine wetting blocked when minutes-to-sunset < taper or phase >= 2 (§B4)",
+    ),
+    "dawn_boost_offset_min": (60.0, 0.0, 360.0, "zone-boost window anchor, minutes after sunrise (§B4)"),
+    "midday_boost_offset_min": (60.0, -240.0, 240.0, "zone-boost window anchor, minutes after solar noon (§B4)"),
+    "manual_override_timeout_min": (10.0, 1.0, 120.0, "manual FANS/HUMID/VENT-BYPASS latch timeout, minutes (§B5)"),
+}
+
+
+def _fw2_def(name: str, default: float, lo: float, hi: float, note: str) -> TunableDef:
+    return TunableDef(
+        name=name,
+        kind="numeric",
+        min=lo,
+        max=hi,
+        default=default,
+        fw_clamp_lo=None,
+        fw_clamp_hi=None,
+        esp_object_id=name,
+        cfg_readback_object_id=f"cfg_{name}",
+        push_owner="band",
+        planner_pushable=False,
+        tier=2,
+        notes=f"firmware-v2 staged contract — {note}",
+    )
+
+
+def _firmware_v2_staged_defs() -> dict[str, TunableDef]:
+    defs: dict[str, TunableDef] = {}
+    for series, (anchor_defaults, lo, hi) in _FW2_HOUSE_SERIES.items():
+        label = series.removeprefix("band_")
+        for anchor, default in zip(_FW2_ANCHOR_KEYS, anchor_defaults, strict=True):
+            name = f"{series}_{anchor}"
+            defs[name] = _fw2_def(name, default, lo, hi, f"house {label} anchor at {anchor.upper()} (§B2)")
+    for zone, anchor_defaults in _FW2_ZONE_VPD_TARGETS.items():
+        for anchor, default in zip(_FW2_ANCHOR_KEYS, anchor_defaults, strict=True):
+            name = f"zone_vpd_target_{zone}_{anchor}"
+            defs[name] = _fw2_def(name, default, 0.10, 3.0, f"{zone} VPD target anchor at {anchor.upper()} (§B2)")
+    for zone, (below, above) in _FW2_ZONE_VPD_WIDTHS.items():
+        name = f"zone_vpd_width_below_{zone}"
+        defs[name] = _fw2_def(name, below, 0.02, 1.0, f"{zone} VPD half-width below target, kPa (§B2)")
+        name = f"zone_vpd_width_above_{zone}"
+        defs[name] = _fw2_def(name, above, 0.02, 1.0, f"{zone} VPD half-width above target, kPa (§B2)")
+    for zone, rank in _FW2_ZONE_PRIORITY.items():
+        name = f"zone_priority_{zone}"
+        defs[name] = _fw2_def(name, rank, 1.0, 4.0, f"{zone} wetting-arbiter rank, 1=highest (§B3)")
+    for name, (default, lo, hi, note) in _FW2_WINDOW_PARAMS.items():
+        defs[name] = _fw2_def(name, default, lo, hi, note)
+    return defs
+
+
+_FW2_STAGED_DEFS = _firmware_v2_staged_defs()
+
+# 24 house anchors + 16 zone targets + 8 widths + 4 ranks + 4 window params.
+assert len(_FW2_STAGED_DEFS) == 56, f"firmware-v2 staged contract drifted: {len(_FW2_STAGED_DEFS)} != 56"
+assert not set(_FW2_STAGED_DEFS) & set(REGISTRY), "firmware-v2 staged names collide with existing registry rows"
+
+REGISTRY.update(_FW2_STAGED_DEFS)
+
+FIRMWARE_V2_STAGED_REG: frozenset[str] = frozenset(_FW2_STAGED_DEFS)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

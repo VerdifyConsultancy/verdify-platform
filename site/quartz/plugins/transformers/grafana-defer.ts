@@ -20,8 +20,9 @@ import { Root } from "hast"
 // The image-src is computed from the iframe-src by injecting `/render`
 // before `/d-solo` and appending `width`/`height` query params sized
 // to the panel. Other query params (orgId, panelId, theme, from, to,
-// var-*) are preserved verbatim — no URL rewriting beyond the path
-// prefix and width/height additions.
+// var-*) are preserved here apart from the path prefix and
+// width/height additions. The client runtime rewrites `theme` to
+// match the active Quartz theme.
 
 interface Options {
   /** URL prefix that identifies a Grafana embed for deferral. */
@@ -59,9 +60,9 @@ function toRenderUrl(src: string, panelHeight: number, widthMultiplier: number):
 }
 
 // Convert a single-panel iframe URL like
-//   /d-solo/<uid>/<slug>?orgId=1&panelId=N&theme=light&from=...
+//   /d-solo/<uid>/<slug>?orgId=1&panelId=N&theme={light|dark}&from=...
 // to the full-dashboard "view this panel" URL
-//   /d/<uid>/<slug>?orgId=1&viewPanel=N&theme=light&from=...
+//   /d/<uid>/<slug>?orgId=1&viewPanel=N&theme={light|dark}&from=...
 // which gives the user the time picker, refresh interval, fullscreen,
 // and inspect controls.
 function toLiveDashboardUrl(src: string): string {

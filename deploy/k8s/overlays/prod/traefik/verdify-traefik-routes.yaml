@@ -1,0 +1,113 @@
+# Tier-2 Verdify Traefik — the Verdify routing table (D7 two-tier edge).
+#
+# These IngressRoutes are claimed ONLY by the dedicated verdify-traefik instance:
+#   - label traefik-tier=verdify        -> matches its --labelselector
+#   - entryPoints: [verdify-web]        -> an entryPoint only IT defines
+# The shared apps Traefik never builds routers for these (it has no `verdify-web`
+# entryPoint), so there is no double-claim with the tier-1 forwarder below.
+#
+# Each route targets the existing verdify-prod ClusterIP Service on its Service
+# .spec.ports[].port (Traefik kubernetescrd resolves against the Service port):
+#   verdify-lab :8080   verdify-api :8080   verdify-mcp :8000
+#
+# AUTH INVARIANT (mirrors the staging api route + gravity/pihole strip-identity):
+# the outer edge is cloudflared -> apps Traefik -> here. strip-identity-headers
+# clears any inbound forward-auth identity so backends never trust spoofed identity.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: verdify-strip-identity-headers
+  namespace: verdify-prod
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: edge-traefik
+    traefik-tier: verdify
+spec:
+  headers:
+    customRequestHeaders:
+      X-Authentik-Email: ""
+      X-Authentik-Groups: ""
+      X-Authentik-Name: ""
+      X-Authentik-Uid: ""
+      X-Authentik-Username: ""
+      X-Forwarded-Email: ""
+      X-Forwarded-User: ""
+---
+# lab / labs site.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: verdify-t2-lab
+  namespace: verdify-prod
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: lab-site
+    traefik-tier: verdify
+spec:
+  entryPoints: [verdify-web]
+  routes:
+    - kind: Rule
+      match: Host(`lab.verdify.ai`) || Host(`labs.verdify.ai`)
+      middlewares:
+        - name: verdify-strip-identity-headers
+      services:
+        - name: verdify-lab
+          port: 8080
+---
+# api.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: verdify-t2-api
+  namespace: verdify-prod
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: api
+    traefik-tier: verdify
+spec:
+  entryPoints: [verdify-web]
+  routes:
+    - kind: Rule
+      match: Host(`api.verdify.ai`)
+      middlewares:
+        - name: verdify-strip-identity-headers
+      services:
+        - name: verdify-api
+          port: 8080
+---
+# mcp (Model Context Protocol endpoint).
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: verdify-t2-mcp
+  namespace: verdify-prod
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: mcp
+    traefik-tier: verdify
+spec:
+  entryPoints: [verdify-web]
+  routes:
+    - kind: Rule
+      match: Host(`mcp.verdify.ai`)
+      middlewares:
+        - name: verdify-strip-identity-headers
+      services:
+        - name: verdify-mcp
+          port: 8000
+# ===========================================================================
+# BLOCKED-ON-BACKEND (staged shape, intentionally NOT active until a k8s Service
+# exists in verdify-prod, else the tier-2 Traefik would 404/502 the Host):
+#
+#   graphs.verdify.ai -> the INDEPENDENT Verdify Grafana + time-series graphs DB
+#   (D8: kept independent from the fleet obs stack). No verdify-prod `graphs`
+#   Service exists yet; add the rule below once that Grafana lands in-cluster:
+#
+#   - kind: Rule
+#     match: Host(`graphs.verdify.ai`)
+#     services: [{ name: verdify-graphs, port: 80 }]   # NEEDS k8s Service
+#
+# DELIBERATELY EXCLUDED from the WAN/k3s edge (unchanged from the prior model):
+#   mqtt.verdify.ai (greenhouse device lane, Jason-owned), traefik.verdify.ai
+#   (ops dashboard), auth/analytics/logs/botauth (own backends / .100 lane).
+# ===========================================================================

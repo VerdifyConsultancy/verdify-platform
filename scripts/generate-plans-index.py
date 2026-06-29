@@ -1,18 +1,25 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """Regenerate data/plans/index.md and the short plans/index.md alias."""
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 CONTENT_ROOT = Path("/srv/verdify/verdify-site/content")
 INDEX_ALIAS = CONTENT_ROOT / "plans" / "index.md"
 DATA_INDEX = CONTENT_ROOT / "data" / "plans" / "index.md"
 DB_CMD = ["docker", "exec", "verdify-timescaledb", "psql", "-U", "verdify", "-d", "verdify", "-t", "-A", "-F", "|"]
 PLAN_PAGE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}\.md$")
+LOCAL_TZ = ZoneInfo(os.environ.get("LAB_LOCAL_TIMEZONE") or os.environ.get("TZ") or "America/Denver")
+
+
+def local_today() -> date:
+    return datetime.now(LOCAL_TZ).date()
 
 
 def public_text(value: object) -> str:
@@ -198,11 +205,12 @@ def main() -> None:
         """
     )
     rows = merge_plan_page_dates(rows)
-    output = render(rows, date.today())
+    today = local_today()
+    output = render(rows, today)
     DATA_INDEX.parent.mkdir(parents=True, exist_ok=True)
     DATA_INDEX.write_text(output, encoding="utf-8")
     INDEX_ALIAS.parent.mkdir(parents=True, exist_ok=True)
-    INDEX_ALIAS.write_text(render_alias(date.today()), encoding="utf-8")
+    INDEX_ALIAS.write_text(render_alias(today), encoding="utf-8")
     print(f"Plans index: {len(rows)} days -> data/plans/index.md; plans/index.md is a short alias")
 
 

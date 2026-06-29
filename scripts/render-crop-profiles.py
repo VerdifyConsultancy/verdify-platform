@@ -36,6 +36,12 @@ DSN = os.environ.get(
     f"postgresql://verdify:{os.environ.get('POSTGRES_PASSWORD', 'verdify_tsdb_2026')}@127.0.0.1:5432/verdify",
 )
 ACTIVE_CONTROL_SLUGS = {"canna", "lettuce", "orchid", "peppers", "strawberries"}
+
+# Crop slugs that are load-bearing for control (kept in crop_catalog / band anchors)
+# but MUST NOT be rendered to the public lab.verdify.ai site. The DB rows stay; the
+# renderer simply never emits a page for these (Jason 2026-06-20, #308 — cannabis
+# planting is not for public exposure). Mirrored in render-zone-pages.py.
+PUBLISH_EXCLUDE_SLUGS = {"cannabis"}
 STALE_SEEDLING_AFTER_DAYS = 35
 CROP_TAXONOMY = {
     "basil": (
@@ -497,9 +503,25 @@ async def run(args: argparse.Namespace) -> int:
         else:
             rows = await conn.fetch("SELECT slug FROM crop_catalog ORDER BY slug")
             slugs = [r["slug"] for r in rows]
+        # Never publish redacted crops (#308). DB rows are kept for control; the
+        # public site simply omits the page (and thus the URL + search index entry).
+        excluded = [s for s in slugs if s in PUBLISH_EXCLUDE_SLUGS]
+        if excluded:
+            print(f"  REDACT (not published): {', '.join(sorted(excluded))}")
+        slugs = [s for s in slugs if s not in PUBLISH_EXCLUDE_SLUGS]
 
         out_dir = Path(args.out)
         out_dir.mkdir(parents=True, exist_ok=True)
+
+        # Actively DELETE any stale page for a redacted slug (#308) — skipping the
+        # write alone would leave a previously-published page on the site, which
+        # Quartz then keeps in the folder index, search index, and sitemap.
+        if not args.dry_run:
+            for slug in excluded:
+                stale = out_dir / f"{slug.replace('_', '-')}.md"
+                if stale.exists():
+                    stale.unlink()
+                    print(f"  DELETED stale redacted page: {stale.name}")
 
         changes = 0
         expected_vision_assets: set[Path] = set()

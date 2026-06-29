@@ -1,0 +1,39 @@
+schema_ref: northstar-artifacts.schema.yaml
+kind: NorthStarArtifacts
+schema_version: "1.0"
+project_id: ""
+status: iterating
+iteration: 0
+generated_at: ""
+updated_at: ""
+product:
+  path: .agent-workflow/northstar/NORTHSTAR_PRODUCT.md
+  status: draft
+  summary: ""
+  section_ids: []
+  source_ids: []
+  open_question_ids: []
+architecture:
+  path: .agent-workflow/northstar/NORTHSTAR_ARCHITECTURE.md
+  status: draft
+  summary: ""
+  section_ids: []
+  source_ids: []
+  open_question_ids: []
+evidence_references: []
+cross_links: []
+open_questions: []
+learning_capture:
+  status: none
+  proposal_paths: []
+  open_proposal_ids: []
+review:
+  requested_at: null
+  reviewers: []
+  status: not_requested
+  approvals: []
+  signoff_required_for_downstream: true
+handoff:
+  next_skill: northstar-planning
+  next_mode: artifact-loop
+  reason: Continue the self-improving North Star loop until artifacts are ready for final lock approval.

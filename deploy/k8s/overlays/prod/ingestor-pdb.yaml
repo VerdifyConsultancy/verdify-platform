@@ -1,0 +1,21 @@
+# HA-3 ingestor PodDisruptionBudget (#239, design §2.3).
+#
+# maxUnavailable: 1 — NOT minAvailable: 1. On a 1-replica singleton,
+# minAvailable:1 would block EVERY node drain forever (the lone pod can never be
+# voluntarily evicted), which is the opposite of what a fast-failover singleton
+# needs. maxUnavailable:1 documents the intent "this singleton MAY be disrupted"
+# and lets a drain proceed; CORRECTNESS (never-two) is the Lease fence's job, not
+# the PDB's. Additive — creating a PDB does not restart the pod, so this is safe
+# to ship to the live prod overlay ahead of the gated fence arm.
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: verdify-ingestor
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: ingestor
+spec:
+  maxUnavailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: ingestor

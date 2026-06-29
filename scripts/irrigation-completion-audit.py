@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """Map the irrigation/fertigation objective to current proof and blockers.
 
 Exit status is strict:

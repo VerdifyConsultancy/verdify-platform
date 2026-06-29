@@ -7,7 +7,11 @@
 set -euo pipefail
 
 OUT_DIR=${1:-/mnt/iris/verdify-vault/website/static/data}
-DB=(docker exec -i verdify-timescaledb psql -U verdify -d verdify -q -v ON_ERROR_STOP=1)
+# #24: DB access via the shared psql-verdify abstraction (docker-exec default
+# preserves prior VM argv). Heredoc SQL needs stdin -> VERDIFY_DOCKER_STDIN=1.
+. "$(dirname "${BASH_SOURCE[0]}")/lib/psql-verdify.sh"
+mapfile -t DB < <(VERDIFY_DOCKER_STDIN=1 verdify_psql_cmd)
+DB+=(-q -v ON_ERROR_STOP=1)
 
 mkdir -p "$OUT_DIR"
 
@@ -15,7 +19,7 @@ mkdir -p "$OUT_DIR"
 # dual-written into daily_summary.compliance_v2_attributable_pct once migration
 # 146/147 land. Probe for the column so the public dataset gains a graded column
 # automatically post-migration, and stays valid (column absent -> omitted) today.
-GRADED_COL_PRESENT=$(docker exec -i verdify-timescaledb psql -U verdify -d verdify -tAc \
+GRADED_COL_PRESENT=$(verdify_psql_stdin -tAc \
   "SELECT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema='public' AND table_name='daily_summary' AND column_name='compliance_v2_attributable_pct');")
 if [ "$GRADED_COL_PRESENT" = "t" ]; then
   GRADED_SELECT="    round(ds.compliance_v2_attributable_pct::numeric, 1) AS graded_compliance_attributable_pct,"

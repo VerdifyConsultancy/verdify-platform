@@ -1,0 +1,70 @@
+# band_defaults.yaml — THE single canonical declaration of the greenhouse band
+# defaults. Edit the band HERE (and regenerate the seed migration), not in the
+# four places it used to live independently.
+#
+# Why it lives in verdify_schemas/ (not config/): the tunable registry loads it
+# at import, and verdify_schemas/ is the one directory copied into every
+# container/CI/test that imports the registry (the ingestor Dockerfile copies
+# verdify_schemas/ but NOT config/). Keeping it beside the registry guarantees
+# it ships everywhere the defaults are needed.
+#
+# Derivation contract (enforced by verdify_schemas/tests/test_band_defaults_single_source.py):
+#   - tunable_registry _FW2_* defaults      == these values  (EXACT)
+#   - db/migrations/177 seed                 == gen_band_seed_sql.py over this file (EXACT)
+#   - crop_band_anchors (CI-seeded)          == these values for every declared row (EXACT)
+#   - firmware globals.yaml cold-start band  == a deliberately DRIER fail-safe view
+#                                               (within registry clamps; see globals.yaml header)
+#
+# Anchor order is ALWAYS [sr, sm, ss, mid] = [sunrise, solar-noon, sunset, solar-midnight].
+# Values are the live researched band (verified against prod crop_band_anchors 2026-06-16).
+
+# ── House air band (seeds crop_band_anchors crop_type='house') ──────────────
+# NATURE-ALIGNED (2026-06-18): the band rides the real diurnal cycle. A 28-day
+# harmonic fit of outdoor temp/VPD (binned by solar phase) shows the natural
+# thermal peak lags solar noon by ~3h (peak ~16:00 MDT, phase ~1.40), with a
+# gentle near-fundamental shape. The old anchors peaked AT solar noon (phase 1)
+# and carried an oversized 2nd harmonic (A2/A1≈0.28) that overshot between
+# anchors ("lumpy" + ~3h early — the controller fought the thermal mass every
+# afternoon). These anchors are a pure-fundamental sinusoid (peak phase 1.40,
+# the thermal lag; zero overshoot — extrema=2) scaled to the SAME crop mean
+# (72.25°F / 0.98 kPa) and amplitude, so the crop's thermal budget is unchanged;
+# only the phase + shape ride nature. fn_solar_phase re-derives the clock peak
+# daily from the ephemeris, so the curve adapts to the solar cycle year-round.
+# Derivation: docs/reviews/ band-nature-alignment; harmonic fit in session log.
+house:
+  temp_low:    [62.50, 73.79, 72.00, 60.71]
+  temp_target: [67.50, 78.79, 77.00, 65.71]
+  temp_high:   [72.50, 83.79, 82.00, 70.71]
+  vpd_low:     [0.755, 0.862, 0.845, 0.738]
+  vpd_target:  [0.935, 1.042, 1.025, 0.918]
+  vpd_high:    [1.185, 1.292, 1.275, 1.168]
+
+# ── Per-zone VPD-target band (seeds crop_band_anchors per crop_type) ────────
+# zone -> crop_type: center=orchid, south=cannabis, west=citrus, east=pepper.
+# width_below/above define the per-zone band edges (min=target-below, max=target+above).
+# priority: 1=highest (drives the wetting arbiter); lower number wins.
+zones:
+  center:
+    crop: orchid
+    vpd_target: [0.90, 1.10, 0.90, 0.70]
+    width_below: 0.20
+    width_above: 0.35
+    priority: 1
+  south:
+    crop: cannabis
+    vpd_target: [0.85, 1.18, 0.95, 0.75]
+    width_below: 0.18
+    width_above: 0.22
+    priority: 2
+  west:
+    crop: citrus
+    vpd_target: [0.60, 1.10, 0.70, 0.57]
+    width_below: 0.16
+    width_above: 0.22
+    priority: 3
+  east:
+    crop: pepper
+    vpd_target: [0.80, 1.22, 0.90, 0.74]
+    width_below: 0.15
+    width_above: 0.23
+    priority: 4

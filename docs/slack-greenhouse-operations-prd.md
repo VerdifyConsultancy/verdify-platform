@@ -40,25 +40,25 @@ Status legend: `active` is implemented in deterministic Python, MCP, or OpenClaw
 1. Run focused tests:
 
    ```bash
-   /srv/greenhouse/.venv/bin/python -m pytest tests/test_slack_config.py tests/test_slack_ops.py verdify_schemas/tests/test_slack_ops.py
+   python3 -m pytest tests/test_slack_config.py tests/test_slack_ops.py verdify_schemas/tests/test_slack_ops.py
    ```
 
 2. Run drift guard against live DB:
 
    ```bash
-   /srv/greenhouse/.venv/bin/python -m pytest verdify_schemas/tests/test_drift_guards.py
+   python3 -m pytest verdify_schemas/tests/test_drift_guards.py
    ```
 
 3. Smoke deterministic command path:
 
    ```bash
-   /srv/greenhouse/.venv/bin/python scripts/slack-ops.py status --json
-   /srv/greenhouse/.venv/bin/python scripts/slack-ops.py "brief morning" --json
-   /srv/greenhouse/.venv/bin/python scripts/slack-ops.py "runbook temp_safety" --json
-   /srv/greenhouse/.venv/bin/python scripts/slack-ops.py "forecast triage" --json
-   /srv/greenhouse/.venv/bin/python scripts/slack-ops.py "guardrail summary" --json
-   /srv/greenhouse/.venv/bin/python scripts/slack-ops.py "ops log" --json
-   /srv/greenhouse/.venv/bin/python scripts/slack-ops.py "extract lessons" --json
+   python3 scripts/slack-ops.py status --json
+   python3 scripts/slack-ops.py "brief morning" --json
+   python3 scripts/slack-ops.py "runbook temp_safety" --json
+   python3 scripts/slack-ops.py "forecast triage" --json
+   python3 scripts/slack-ops.py "guardrail summary" --json
+   python3 scripts/slack-ops.py "ops log" --json
+   python3 scripts/slack-ops.py "extract lessons" --json
    ```
 
 4. Deploy/restart:

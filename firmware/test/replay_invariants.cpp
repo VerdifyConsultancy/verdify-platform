@@ -196,6 +196,11 @@ int main(int argc, char** argv) {
         r.occupied = parse_bool(get("occupied"), false);
 
         Setpoints sp = default_setpoints();
+        // ADR-0004 default float keeps the recorded served band intact. The stock
+        // corpus carries band edges but no temp_target/vpd_target columns, so
+        // nonzero pinch behavior is exercised only by native tests and the
+        // band-derived replay override with real derived targets.
+        sp.band_track_fraction = 0.0f;
         auto assign_positive_float = [&](const std::string& name, float& field) {
             float value = parse_float(get(name), NAN);
             if (!std::isnan(value) && value > 0.0f) field = value;

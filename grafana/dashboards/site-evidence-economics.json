@@ -1,4 +1,5 @@
 {
+  "refresh": "5m",
   "uid": "site-evidence-economics",
   "title": "Site: Evidence \u2014 Economics",
   "editable": true,
@@ -43,7 +44,7 @@
       },
       "id": 2,
       "options": {
-        "colorMode": "background_solid",
+        "colorMode": "value",
         "graphMode": "none",
         "justifyMode": "auto",
         "reduceOptions": {
@@ -67,7 +68,8 @@
         }
       ],
       "title": "Cost Today",
-      "type": "stat"
+      "type": "stat",
+      "transparent": true
     },
     {
       "datasource": {
@@ -126,7 +128,8 @@
         }
       ],
       "title": "Runtime Electric $/Day (30-Day Avg)",
-      "type": "stat"
+      "type": "stat",
+      "transparent": true
     },
     {
       "datasource": {
@@ -185,7 +188,8 @@
         }
       ],
       "title": "Gas $/Day (30-Day Average)",
-      "type": "stat"
+      "type": "stat",
+      "transparent": true
     },
     {
       "datasource": {
@@ -244,7 +248,8 @@
         }
       ],
       "title": "Water $/Day (30-Day Average)",
-      "type": "stat"
+      "type": "stat",
+      "transparent": true
     },
     {
       "datasource": {
@@ -303,7 +308,8 @@
         }
       ],
       "title": "Total $/Day (30-Day Average)",
-      "type": "stat"
+      "type": "stat",
+      "transparent": true
     },
     {
       "datasource": {
@@ -422,7 +428,8 @@
         }
       ],
       "title": "Daily Cost by Type",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -697,7 +704,8 @@
         }
       ],
       "title": "Utility Split",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -775,7 +783,8 @@
         }
       ],
       "title": "Cost of One Action",
-      "type": "barchart"
+      "type": "barchart",
+      "transparent": true
     },
     {
       "id": 219,
@@ -1091,7 +1100,8 @@
           "sort": "desc"
         }
       },
-      "description": "Gas heating demand inversely correlates with outdoor temperature."
+      "description": "Gas heating demand inversely correlates with outdoor temperature.",
+      "transparent": true
     },
     {
       "description": "Runtime-modeled electric load from published device wattage and observed on-time overlaid with available solar radiation.",
@@ -1629,7 +1639,8 @@
           "placement": "bottom",
           "showLegend": true
         }
-      }
+      },
+      "transparent": true
     },
     {
       "fieldConfig": {

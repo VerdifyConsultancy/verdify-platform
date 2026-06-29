@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """
 setpoint-server.py — HTTP setpoint delivery server for ESP32 + grow light control.
 
@@ -111,9 +111,11 @@ def _int_param(params: dict[str, str], key: str, default: int) -> int:
 
 
 def _overlay_activity_direct_wet_defaults(params: dict[str, str], plan_params: set[str]) -> None:
-    """Keep the compatibility endpoint aligned with dispatcher-owned activity policy."""
-    activity_start_hour = max(0, min(23, _int_param(params, "gl_main_sunrise_hour", 6)))
-    activity_duration_min = max(0, min(1440, _int_param(params, "gl_main_target_light_minutes", 960)))
+    """Keep the compatibility endpoint aligned with dispatcher-owned activity policy.
+    Keyed off the GROW (jalapeno, longest-day) circuit, NOT MAIN — a short orchid
+    photoperiod on MAIN must not shrink the irrigation activity window (#294)."""
+    activity_start_hour = max(0, min(23, _int_param(params, "gl_grow_sunrise_hour", 6)))
+    activity_duration_min = max(0, min(1440, _int_param(params, "gl_grow_target_light_minutes", 960)))
     params["activity_start_hour"] = str(activity_start_hour)
     params["activity_start_minute"] = "0"
     params["activity_duration_min"] = str(activity_duration_min)
@@ -231,6 +233,24 @@ def record_state_change_sync(equipment: str, is_on: bool) -> bool:
 
 
 def get_db_url() -> str:
+    # Env-first DSN (#118 §A1 code gate — the k3s prerequisite). Order:
+    #   1. VERDIFY_DB_DSN / DATABASE_URL (a full DSN; ignored if it still
+    #      carries unexpanded $(VAR) k8s references — envFrom vars are not
+    #      available to $() expansion, so a composed spec value arrives raw)
+    #   2. DB_HOST + friends (the verdify-config ConfigMap via envFrom +
+    #      POSTGRES_PASSWORD via secretKeyRef — the in-cluster shape)
+    #   3. legacy VM fallback: /srv/verdify/.env + localhost
+    for var in ("VERDIFY_DB_DSN", "DATABASE_URL"):
+        dsn = os.environ.get(var, "")
+        if dsn and "$(" not in dsn:
+            return dsn
+    host = os.environ.get("DB_HOST")
+    if host:
+        user = os.environ.get("DB_USER", "verdify")
+        pw = os.environ.get("POSTGRES_PASSWORD") or os.environ.get("DB_PASSWORD", "verdify")
+        port = os.environ.get("DB_PORT", "5432")
+        name = os.environ.get("DB_NAME", "verdify")
+        return f"postgresql://{user}:{pw}@{host}:{port}/{name}"
     pw = "verdify"
     env_file = "/srv/verdify/.env"
     if os.path.exists(env_file):
@@ -241,25 +261,43 @@ def get_db_url() -> str:
     return f"postgresql://verdify:{pw}@localhost:5432/verdify"
 
 
+def _resolve_psql_prefix() -> list[str]:
+    """Resolve the psql connection-prefix argv via the shared psql-verdify.sh
+    abstraction (#24) so in-cluster/DSN modes work without a code change.
+
+    The VERDIFY_DB_BACKEND knob (docker|dsn, default docker) selects the backend
+    in the lib. Falls back to the historical docker-exec argv if the lib is
+    unavailable, so behavior on the live VM is byte-identical.
+    """
+    import shlex
+    import subprocess
+
+    fallback = ["docker", "exec", "verdify-timescaledb", "psql", "-U", "verdify", "-d", "verdify"]
+    lib = Path(__file__).resolve().parent / "lib" / "psql-verdify.sh"
+    if not lib.exists():
+        return fallback
+    try:
+        out = subprocess.run(
+            ["bash", "-c", f'. "{lib}"; verdify_psql_cmd'],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=True,
+        )
+    except (subprocess.SubprocessError, OSError):
+        return fallback
+    prefix = shlex.split(out.stdout)
+    return prefix or fallback
+
+
 def get_setpoint_text_sync() -> str:
     """Query setpoint_plan for current active values. Synchronous for HTTP thread."""
     import subprocess
 
-    db_cmd = [
-        "docker",
-        "exec",
-        "verdify-timescaledb",
-        "psql",
-        "-U",
-        "verdify",
-        "-d",
-        "verdify",
-        "-t",
-        "-A",
-        "-F",
-        "=",
-        "-c",
-    ]
+    # #24: connection prefix via the shared psql-verdify abstraction (docker-exec
+    # default preserves the exact prior argv on the VM). Formatting flags
+    # (-t -A -F = -c) are unchanged so the parsed output is byte-identical.
+    db_cmd = _resolve_psql_prefix() + ["-t", "-A", "-F", "=", "-c"]
 
     # Planner/dispatcher param names → firmware-compatible param names.
     # The current ESP32 firmware receives values through ESPHome native API

@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """
 generate-observation-embeddings.py — Generate vector embeddings for image observations
 using Gemini Embedding 2. Stores 3072-dim vectors in pgvector for similarity search.

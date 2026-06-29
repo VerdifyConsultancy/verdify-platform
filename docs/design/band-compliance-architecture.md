@@ -8,7 +8,9 @@ This document is a clean, canonical replacement for how Verdify computes its **t
 
 Every load-bearing claim is backed by a query or `file:line` read. Where the source recon or an earlier track draft asserted a number that did not reproduce against the live DB, the **verified** value is used and the discrepancy is called out inline. This is the rule: do not present a flawed or contradictory item as settled.
 
-The companion work tracker is `docs/backlog/verdify-unified-backlog-2026-05-29.md` (workstream "Band + Compliance Rearchitecture", items D4–D8 and G1–G9).
+The historical companion work tracker is archived at
+`/Users/jason/Orbit/context_dump/verdify-platform/docs/backlog/verdify-unified-backlog-2026-05-29.md`
+(workstream "Band + Compliance Rearchitecture", items D4-D8 and G1-G9).
 
 ---
 
@@ -593,7 +595,7 @@ Re-point `v_daily_kpi`/`v_planner_performance`/`fn_plan_anchor_score` to `compli
 ## 10. Files / lines that ground this design (absolute)
 
 - `/mnt/iris/verdify-worktrees/firmware/docs/design/vanda-zone-control-design.md` §3.2–3.4, §5.1 — the served-line engine, join fix, migration-145 ordering (reused).
-- `/mnt/iris/verdify-worktrees/firmware/docs/backlog/verdify-unified-backlog-2026-05-29.md` — T1, B0a/B0b, D1/D2/D3, N1, P1a, M9, M11 (prerequisites/related).
+- `/Users/jason/Orbit/context_dump/verdify-platform/docs/backlog/verdify-unified-backlog-2026-05-29.md` - T1, B0a/B0b, D1/D2/D3, N1, P1a, M9, M11 (prerequisites/related).
 - `/mnt/iris/verdify-worktrees/firmware/scripts/setpoint-server.py:309-311` — the only live band consumers; proof the rewrite is DB-only.
 - `/mnt/iris/verdify-worktrees/firmware/ingestor/tasks.py` — binary writer (L4960 `_band_at`, L4983–5019 loop, L5050–5108 relay forward-fill, L5165–5195 UPDATE, L130–132 HOUSE_BAND_PARAMS); 2nd stress check L1271.
 - `/mnt/iris/verdify-worktrees/firmware/api/main.py:1409-1437` — `fn_band_trace` crop/fw split (the precedent `fn_zone_band_grade` extends); `:1388-1396`/`:2282`/`:2436` scorecard endpoints.

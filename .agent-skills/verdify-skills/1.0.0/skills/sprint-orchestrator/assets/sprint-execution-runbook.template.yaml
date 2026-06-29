@@ -1,0 +1,103 @@
+schema_ref: sprint-execution-runbook.schema.yaml
+kind: SprintExecutionRunbook
+schema_version: "1.0"
+runbook_id: exec-replace-me
+status: draft
+sprint_id: replace-me
+wave_id: null
+repository: owner/repo
+prepared_at: "1970-01-01T00:00:00Z"
+controller:
+  session_id: controller-replace-me
+  owner: sprint-orchestrator
+  authority: Coordinate lane sessions, answer delegated lane questions, reconcile CI/CD, and stop at protected gates.
+  interfaces: [agent_platform_mcp, tmux_terminal, browser_terminal, github, ci]
+  poll_interval_minutes: 5
+  delegation_policy: Full delegated authority inside approved lane contracts; protected decisions remain gated.
+prerequisites:
+  approved_sprint_plan: .agent-workflow/sprints/replace-me/sprint-plan.yaml
+  approved_lane_contracts: []
+  wave_release_plan: null
+  platform_readiness: null
+  open_blockers: []
+platform:
+  mcp_server: agents.vallery.net
+  api_ref: null
+  auth_mode: mcp_session
+  required_tools:
+    - name: agent_platform.session.create
+      purpose: Create one lane worker session per approved lane.
+      required: true
+    - name: agent_platform.session.poll
+      purpose: Read lane status, questions, closeout, and coordination requests.
+      required: true
+    - name: agent_platform.terminal.attach
+      purpose: Attach operator-visible tmux or browser terminal views.
+      required: true
+    - name: agent_platform.session.send
+      purpose: Answer worker questions and coordination requests.
+      required: true
+  terminal_access:
+    mode: both
+    operator_visible: true
+    attach_refs: []
+  fallback_policy: If Agent Platform MCP is unavailable, stop and route to platform-readiness or a gate instead of launching local workers ad hoc.
+cadence:
+  poll_interval_minutes: 5
+  heartbeat_timeout_minutes: 15
+  loop_until:
+    - All required lanes have closeout artifacts.
+    - Independent critics approve current heads.
+    - Review packet, CI/CD, deployment, and outcome gates are ready for the next role.
+lanes: []
+coordination:
+  poll_steps:
+    - Refresh GitHub, lease, session, PR, and check state.
+    - Poll each Agent Platform lane session.
+    - Capture questions, blockers, closeout, and coordination requests.
+    - Answer delegated questions or open gates for protected decisions.
+    - Record ledger events and update sprint status.
+  controller_responses:
+    - Answer contract-scoped worker questions.
+    - Reconcile dependency-ready lanes and dispatch only one session per lane.
+    - Route scope changes to sprint-planning or architecture-contracts.
+  coordination_request_policy: Resolve only within approved lane contracts and delegation; route protected changes to gates.
+  escalation_paths: []
+ci_cd:
+  required_checks: []
+  workflows: []
+  merge_policy: Merge or queue only after critic approval, review packet readiness, and required checks.
+  deployment_trigger: Trigger review deployment only from approved release plan and authorized environment policy.
+  evidence_refs: []
+deployment:
+  target_environment: null
+  namespace: null
+  strategy: Follow the approved wave release plan.
+  approval_required: true
+  rollout_refs: []
+  rollback_refs: []
+review:
+  review_packet_path: .agent-workflow/sprints/replace-me/review/review-inbox-packet.yaml
+  human_review_trigger: Review packet complete with exact revision, checks, deployment evidence, telemetry, rollback, and open questions.
+  reviewer_visibility: []
+ledger:
+  controller_state_path: .agent-workflow/controller/controller-state.yaml
+  session_ledger_path: .agent-workflow/controller/session-ledger.yaml
+  required_events:
+    - lane_dispatched
+    - prompt_compiled
+    - worker_status
+    - worker_closeout
+    - critic_reviewed
+    - review_packet_created
+    - ci_observed
+    - deployment_observed
+stop_conditions:
+  - Platform MCP operation identity is missing or unavailable.
+  - A lane session, issue, branch, PR, lease, or contract identity conflicts.
+  - A worker asks for protected production, schema, security, migration, or destructive authority.
+  - Required CI/CD, review, deployment, telemetry, or rollback evidence cannot be obtained.
+handoff:
+  next_skill: sprint-orchestrator
+  next_mode: platform-dispatch
+  reason: Complete the execution runbook and dispatch dependency-ready lane sessions.

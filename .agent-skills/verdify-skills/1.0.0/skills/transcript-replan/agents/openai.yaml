@@ -1,0 +1,6 @@
+interface:
+  display_name: "Verdify Transcript Replan"
+  short_description: "Route transcripts into proposed lifecycle changes"
+  default_prompt: "Use $transcript-replan to ingest new planning transcript evidence, route items to repositories and lifecycle phases, flag conflicts, and recommend issues or gates without rewriting protected artifacts."
+policy:
+  allow_implicit_invocation: true

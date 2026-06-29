@@ -1,6 +1,0 @@
-gzip -cd firmware/test/data/replay_overrides.csv.gz > /tmp/verdify-replay-overrides.csv
-cd firmware && g++ -std=c++17 -O2 -I lib -o test/replay_invariants test/replay_invariants.cpp
-./firmware/test/replay_invariants /tmp/verdify-replay-overrides.csv
-
-═══ Invariant summary — 193525 rows ═══
-  ✓ All invariants passed.

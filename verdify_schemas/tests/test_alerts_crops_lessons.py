@@ -26,11 +26,16 @@ from verdify_schemas.crops import (
     ObservationCreate,
 )
 from verdify_schemas.lessons import (
+    LESSON_TRANSITIONS,
     LessonAction,
     LessonCreate,
+    LessonState,
+    LessonSupersede,
     LessonUpdate,
     LessonValidate,
     PlannerLesson,
+    derive_lesson_state,
+    is_legal_lesson_transition,
 )
 from verdify_schemas.operations import HarvestCreate, TreatmentCreate
 
@@ -279,9 +284,98 @@ class TestLessonAction:
         a = LessonAction(action="deactivate", lesson_id=12)
         assert a.data is None
 
+    def test_supersede(self):
+        a = LessonAction(action="supersede", lesson_id=12, data=LessonSupersede(new_id=15))
+        assert a.action == "supersede"
+        assert isinstance(a.data, LessonSupersede)
+        assert a.data.new_id == 15
+
+    def test_supersede_rejects_nonpositive_new_id(self):
+        with pytest.raises(ValidationError):
+            LessonSupersede(new_id=0)
+
+    def test_rejects_unknown_action(self):
+        with pytest.raises(ValidationError):
+            LessonAction(action="archive")
+
     def test_rejects_bad_confidence(self):
         with pytest.raises(ValidationError):
             LessonCreate(category="x", condition="x", lesson="x", confidence="maybe")
+
+
+class TestLessonStateMachine:
+    """G8 lessons state machine: derive_lesson_state + transition guards."""
+
+    def test_derive_proposed_fresh(self):
+        # active, never superseded, single validation count, no independent validation
+        assert derive_lesson_state(is_active=True, superseded_by=None, times_validated=1) == "proposed"
+
+    def test_derive_validated_by_count(self):
+        assert derive_lesson_state(is_active=True, superseded_by=None, times_validated=3) == "validated"
+
+    def test_derive_validated_by_independent_flag(self):
+        # times_validated still 1, but last_validated > created_at observed
+        assert (
+            derive_lesson_state(is_active=True, superseded_by=None, times_validated=1, has_independent_validation=True)
+            == "validated"
+        )
+
+    def test_derive_retired(self):
+        assert derive_lesson_state(is_active=False, superseded_by=None, times_validated=2) == "retired"
+
+    def test_derive_superseded_takes_precedence(self):
+        # superseded_by set wins even if is_active somehow still true
+        assert derive_lesson_state(is_active=True, superseded_by=99, times_validated=5) == "superseded"
+        assert derive_lesson_state(is_active=False, superseded_by=99, times_validated=5) == "superseded"
+
+    # ── legal transitions ───────────────────────────────────────────────
+    @pytest.mark.parametrize(
+        "current,target",
+        [
+            ("proposed", "validated"),
+            ("proposed", "superseded"),
+            ("proposed", "retired"),
+            ("validated", "superseded"),
+            ("validated", "retired"),
+            # idempotent self-transitions are legal only for non-terminal states
+            ("proposed", "proposed"),
+            ("validated", "validated"),
+        ],
+    )
+    def test_legal_transitions(self, current, target):
+        assert is_legal_lesson_transition(current, target) is True
+
+    # ── illegal transitions ─────────────────────────────────────────────
+    @pytest.mark.parametrize(
+        "current,target",
+        [
+            # cannot go backwards
+            ("validated", "proposed"),
+            # terminal states accept no onward transitions
+            ("superseded", "validated"),
+            ("superseded", "retired"),
+            ("superseded", "proposed"),
+            ("retired", "validated"),
+            ("retired", "superseded"),
+            ("retired", "proposed"),
+            # terminal states are absorbing: no idempotent self-transition
+            ("superseded", "superseded"),
+            ("retired", "retired"),
+        ],
+    )
+    def test_illegal_transitions_rejected(self, current, target):
+        assert is_legal_lesson_transition(current, target) is False
+
+    def test_transition_map_covers_all_states(self):
+        states = set(LessonState.__args__)
+        assert set(LESSON_TRANSITIONS.keys()) == states
+        # every declared target is itself a valid state
+        for targets in LESSON_TRANSITIONS.values():
+            assert targets <= states
+
+    def test_terminal_states_have_no_forward_transitions(self):
+        assert LESSON_TRANSITIONS["superseded"] == frozenset()
+        assert LESSON_TRANSITIONS["retired"] == frozenset()
 
 
 class TestPlannerLesson:

@@ -1,0 +1,184 @@
+# TimescaleDB-on-CloudNativePG cluster — verdify-dev validation (HA-4.1 #243).
+#
+# This is the dev operand for the DB-HA program. It validates everything the
+# prod cutover (#245) depends on, with ZERO prod risk:
+#   * the custom TimescaleDB-2.25.2-pg16 operand image boots under CNPG;
+#   * the timescaledb extension loads (shared_preload_libraries) and hypertables
+#     + native compression survive a pg_dump/restore of the live schema;
+#   * synchronous replication gives RPO=0 (sync standby);
+#   * Barman WAL archiving + base backups ship to MinIO and PITR restores work;
+#   * kill-primary failover promotes a standby in < RTO with no committed-row
+#     loss.
+#
+# IT IS NAMED verdify-db-cnpg (NOT verdify-db) so it stands ALONGSIDE the
+# existing dev StatefulSet `verdify-db` without colliding on the service name —
+# CNPG owns the -rw/-ro/-r service names under the cluster name.
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: verdify-db-cnpg
+  namespace: verdify-dev
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: db-cnpg
+spec:
+  # DEV: instance count is capacity-gated TODAY (see the report). The 4 workers:
+  # node4 (~770Mi free) + node5 (~1.9Gi free) are memory-saturated, node6 is
+  # disk-pressure NoSchedule-tainted (66Gi local-path PVC), and node7 was
+  # CORDONED mid-build after its 30GiB image fs hit ~93% (ImageGCFailed). So only
+  # node5 reliably fits a DB pod right now. instances:1 gets the cluster HEALTHY
+  # to prove the operand image + timescale 2.25.2 + restore + WAL/PITR (the bulk
+  # of Gate G0). The 2-node sync-standby FAILOVER proof (#243 core) is STAGED as
+  # a re-run gated on capacity (node7 uncordon, or node4/5 headroom) — flip this
+  # to 2 and re-apply. The failover MECHANISM is identical at 1+1 and 1+2.
+  instances: 1
+
+  # The custom operand image with timescaledb 2.25.2. Imported into every
+  # worker's containerd as localhost/...; imagePullPolicy IfNotPresent so CNPG
+  # never tries to pull localhost/ from a registry. (Prod #244 repoints this to
+  # the GHCR-published, digest-pinned image built by CI from cnpg/image/.)
+  # Tag MUST start with the PG major (CNPG parses the version from the tag):
+  # 16.13-ts2.25.2 → CNPG reads major 16. The 2.25.2-pg16 form is rejected
+  # ("Unsupported PostgreSQL version") because CNPG can't find a leading 13+.
+  imageName: localhost/verdify-timescaledb-cnpg:16.13-ts2.25.2
+  imagePullPolicy: IfNotPresent
+
+  # --- PostgreSQL configuration -------------------------------------------
+  postgresql:
+    # shared_preload_libraries MUST include timescaledb (it installs hooks at
+    # postmaster start). pg_stat_statements mirrors the live StatefulSet args.
+    shared_preload_libraries:
+      - timescaledb
+      - pg_stat_statements
+    parameters:
+      # DEV sizing: shared_buffers trimmed to fit the constrained dev workers
+      # (node4/5 are memory-saturated; the dev cluster packs onto node6/7). The
+      # live tuning is shared_buffers=2GB — PROD #244 restores that. The 1.2GB
+      # dataset does not need 2GB of buffers for the failover/PITR drills.
+      shared_buffers: "256MB"
+      work_mem: "16MB"
+      track_io_timing: "on"
+      log_min_duration_statement: "1000"
+      # TimescaleDB recommends >= number of background workers + parallelism
+      # headroom. The CNPG default of 8 is low for a busy hypertable workload;
+      # bump modestly. (timescaledb.max_background_workers is set via the
+      # extension's own GUC below.)
+      max_worker_processes: "32"
+
+  # --- Storage ------------------------------------------------------------
+  # DEV: local-path. The synology-iscsi provisioner was timing out
+  # (DeadlineExceeded creating new LUNs) under NAS contention at build time, and
+  # the storage backend is ORTHOGONAL to what this dev cluster validates (CNPG
+  # failover + Timescale-on-CNPG + WAL/PITR). local-path is fast and
+  # NAS-independent. NOTE: local-path is node-local, so a CNPG instance's PVC is
+  # pinned to the node that first provisioned it — fine for the dev failover
+  # drill (the standby has its OWN local-path PVC on its own node; promotion does
+  # NOT need shared storage, CNPG replicates via streaming WAL). PROD #244/#245
+  # uses synology-iscsi-ssd (>= the live 50Gi), matching the live StatefulSet.
+  storage:
+    size: 20Gi
+    storageClass: local-path
+  walStorage:
+    # Separate WAL volume is a CNPG best practice (isolates WAL IO + fill).
+    size: 10Gi
+    storageClass: local-path
+
+  # --- Replication / RPO --------------------------------------------------
+  # Synchronous replication: at least 1 standby must ACK each commit → RPO=0 for
+  # committed transactions even on an instant primary loss. With 3 instances and
+  # minSyncReplicas:1/maxSyncReplicas:1, one standby is sync (RPO=0) and one is
+  # async spare; if the sync standby is the one lost, the spare is promoted to
+  # sync and commits continue (no write stall with maxSyncReplicas:1 < 2).
+  # NOTE: sync replicas require instances > syncReplicas. With the capacity-gated
+  # instances:1 (above) these MUST be 0/absent. For the 2-instance failover
+  # re-run, restore: minSyncReplicas: 1 / maxSyncReplicas: 1 (RPO=0 sync standby).
+  minSyncReplicas: 0
+  maxSyncReplicas: 0
+
+  # Primary/standby switchover + failover tuning. Fast failover for the < RTO
+  # target. (CNPG default failover is already prompt; these make it explicit.)
+  primaryUpdateStrategy: unsupervised
+  primaryUpdateMethod: switchover
+
+  # --- Bootstrap ----------------------------------------------------------
+  # Fresh-init bootstrap (NOT restore): create the verdify db + owner role, then
+  # CREATE EXTENSION timescaledb at the pinned version. The live schema + data
+  # are loaded by the separate restore Job (20-restore-job.yaml) via pg_restore,
+  # mirroring the copy-NOT-move discipline (handoff §3.6) — exactly how the
+  # existing StatefulSet path works.
+  bootstrap:
+    initdb:
+      database: verdify
+      owner: verdify
+      secret:
+        name: verdify-db-cnpg-app
+      # Run AFTER the database is created, connected to `verdify`. Create the
+      # extensions present in the live DB at their live versions so a subsequent
+      # data-only restore lands cleanly. timescaledb FIRST (it must exist before
+      # any hypertable DDL); pgcrypto + vector match the live pg_extension list.
+      postInitApplicationSQL:
+        - CREATE EXTENSION IF NOT EXISTS timescaledb VERSION '2.25.2';
+        - CREATE EXTENSION IF NOT EXISTS pgcrypto;
+        - CREATE EXTENSION IF NOT EXISTS vector;
+
+  # --- Backup / WAL archiving / PITR --------------------------------------
+  # In-tree Barman object store (CNPG 1.29.1 still supports it). archive_mode is
+  # turned ON automatically by CNPG when backup.barmanObjectStore is present →
+  # continuous WAL shipping to MinIO = the PITR foundation. Base backups are
+  # taken by the ScheduledBackup (30-scheduledbackup.yaml) and on demand.
+  backup:
+    retentionPolicy: "7d"
+    barmanObjectStore:
+      destinationPath: s3://verdify-wal/
+      endpointURL: http://minio-dev:9000
+      s3Credentials:
+        accessKeyId:
+          name: minio-dev-creds
+          key: AWS_ACCESS_KEY_ID
+        secretAccessKey:
+          name: minio-dev-creds
+          key: AWS_SECRET_ACCESS_KEY
+      wal:
+        compression: gzip
+        maxParallel: 4
+      data:
+        compression: gzip
+        jobs: 2
+
+  # DEV resources sized to fit node6/node7 (node4/5 are memory-saturated). PROD
+  # #244 sizes these to >= the live StatefulSet (cpu 500m / mem 2Gi req, 6Gi
+  # limit). The CPU limit is deliberately OMITTED (per the HA design: the DB,
+  # like the device path, must not be CFS-throttled).
+  # DEV ONLY: pin to node5, the single worker with memory headroom right now
+  # (node4 ~770Mi free, node6 disk-tainted, node7 cordoned). This is a CAPACITY
+  # workaround, NOT the HA design — pinning is explicitly rejected for real HA.
+  # Remove this affinity (and set instances:2) for the failover-proof re-run.
+  affinity:
+    nodeSelector:
+      kubernetes.io/hostname: vm-k3s-node5
+
+  resources:
+    requests:
+      cpu: "250m"
+      memory: "640Mi"
+    limits:
+      memory: "1536Mi"
+---
+# App-role credentials for the CNPG-managed `verdify` owner. CNPG reads
+# username/password from this Secret at initdb. Dev-only throwaway value; the
+# prod path (#245) seeds the role with the LIVE password (from the SOPS-managed
+# verdify-app-secrets POSTGRES_PASSWORD) so the app's DB_HOST flip needs no
+# credential change.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: verdify-db-cnpg-app
+  namespace: verdify-dev
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: db-cnpg
+    cnpg.io/reload: "true"
+type: kubernetes.io/basic-auth
+stringData:
+  username: verdify
+  password: dev-cnpg-verdify-CHANGE-ME-not-prod

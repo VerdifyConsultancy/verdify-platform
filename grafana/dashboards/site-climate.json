@@ -1,4 +1,5 @@
 {
+  "refresh": "1m",
   "uid": "site-climate",
   "title": "Site: Climate",
   "editable": true,
@@ -769,7 +770,8 @@
         }
       ],
       "title": "Temperature Compliance Band",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -1395,7 +1397,8 @@
         }
       ],
       "title": "VPD Compliance Band",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -1441,7 +1444,7 @@
       },
       "id": 2,
       "options": {
-        "colorMode": "background_solid",
+        "colorMode": "value",
         "graphMode": "none",
         "justifyMode": "auto",
         "reduceOptions": {
@@ -1465,7 +1468,8 @@
         }
       ],
       "title": "Indoor Avg Temp",
-      "type": "stat"
+      "type": "stat",
+      "transparent": true
     },
     {
       "id": 108,
@@ -1511,7 +1515,8 @@
         "colorMode": "value",
         "graphMode": "none"
       },
-      "description": "Average daily total cost across the last 30 completed daily summaries."
+      "description": "Average daily total cost across the last 30 completed daily summaries.",
+      "transparent": true
     },
     {
       "datasource": {
@@ -1707,7 +1712,8 @@
         "colorMode": "value",
         "graphMode": "none"
       },
-      "description": "Average estimated electric use per completed day across the last 30 days, computed from equipment runtimes and rated/observed wattages."
+      "description": "Average estimated electric use per completed day across the last 30 days, computed from equipment runtimes and rated/observed wattages.",
+      "transparent": true
     },
     {
       "id": 106,
@@ -1753,7 +1759,8 @@
         "colorMode": "value",
         "graphMode": "none"
       },
-      "description": "Average estimated gas furnace consumption per completed day across the last 30 days."
+      "description": "Average estimated gas furnace consumption per completed day across the last 30 days.",
+      "transparent": true
     },
     {
       "id": 107,
@@ -1799,7 +1806,8 @@
         "colorMode": "value",
         "graphMode": "none"
       },
-      "description": "Average water use per completed day across the last 30 days."
+      "description": "Average water use per completed day across the last 30 days.",
+      "transparent": true
     },
     {
       "description": "Latest controller, mister, fan, occupancy, and override state values with 24-hour change counts.",
@@ -2066,7 +2074,8 @@
         }
       ],
       "title": "Indoor vs Outdoor Temperature",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -2183,7 +2192,8 @@
         }
       ],
       "title": "Indoor vs Outdoor Humidity",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -2234,7 +2244,8 @@
         }
       ],
       "title": "VPD Heatmap (Hour \u00d7 Day)",
-      "type": "heatmap"
+      "type": "heatmap",
+      "transparent": true
     },
     {
       "datasource": {
@@ -2882,7 +2893,7 @@
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "#5794F2",
+                  "fixedColor": "#8C8C8C",
                   "mode": "fixed"
                 }
               }
@@ -3057,7 +3068,7 @@
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "#AB47BC",
+                  "fixedColor": "#8C8C8C",
                   "mode": "fixed"
                 }
               }
@@ -3201,7 +3212,7 @@
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "#73BF69",
+                  "fixedColor": "#26A69A",
                   "mode": "fixed"
                 }
               }

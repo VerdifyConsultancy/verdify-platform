@@ -1,0 +1,9 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+# Kustomize COMPONENT: the verdify-mqtt fan-out broker (#113). Referenced by the
+# live prod overlay via `components:` — deliberately NOT a base resource, so
+# future overlays must opt in explicitly. emptyDir storage only
+# (no PVC, no volume1 dependency) — see mqtt-broker.yaml header.
+resources:
+  - mqtt-broker.yaml

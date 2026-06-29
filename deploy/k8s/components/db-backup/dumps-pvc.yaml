@@ -1,0 +1,49 @@
+# verdify-db-dumps — the pg_dump landing volume for the nightly backup CronJob
+# (M3.3 prod DB substrate; refs #84/#28/#130).
+#
+# BACKING STORE: an NFS export on the Synology (the NAS-backed /mnt/jason share
+# the staging-migration preflight pg_dump already used as the off-box dump
+# target). NFS, not iSCSI/local-path, because backups want a SHARED,
+# many-reader, host-mountable volume that survives the cluster entirely — a
+# human (or a restore Job) reads the .dump file straight off the NAS without a
+# pod. iSCSI SSD is the live-DB hot path; backups belong on cheap shared NFS.
+#
+# storageClassName: "" + a matching PV is the contract Root completes. This PVC
+# binds to a STATICALLY PROVISIONED NFS PersistentVolume that Root applies at
+# the platform layer (the NFS server IP + export path are platform facts, not
+# repo facts, so they live in Root's PV, not here). Setting storageClassName to
+# the empty string opts OUT of dynamic provisioning so this never accidentally
+# carves a new dynamic volume — it waits for Root's named PV.
+#
+# READ-ONLY INTENT: the dumps volume is the system-of-record for backups. The
+# nightly CronJob is the ONLY writer (it mounts this RW to drop new .dump files
+# and prune old ones); every OTHER consumer (a human, a restore Job, an audit)
+# mounts it readOnly. The accessMode is ReadWriteMany so the single writer +
+# many readers can coexist (NFS supports RWX); the CronJob volumeMount is the
+# sole readOnly:false mount in this component. "read-only NFS PVC" in the M3.3
+# spec = read-only to everyone EXCEPT the backup writer.
+#
+# NOT AUTO-ENABLED: referenced by no overlay; Root opts an env in. Merging this
+# provisions nothing on the live staging app.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: verdify-db-dumps
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: db-backup
+spec:
+  accessModes: ["ReadWriteMany"]
+  # Empty string -> bind to a pre-provisioned (static) NFS PV by selector/size,
+  # never dynamically provision. Root supplies the matching PV.
+  storageClassName: ""
+  selector:
+    matchLabels:
+      app.kubernetes.io/part-of: verdify
+      app.kubernetes.io/component: db-backup
+  resources:
+    requests:
+      # Sized for many nightly -Fc dumps of the verdify TimescaleDB plus the
+      # retention headroom the CronJob's prune keeps. Root can grow the backing
+      # NFS PV without touching the workloads.
+      storage: 100Gi

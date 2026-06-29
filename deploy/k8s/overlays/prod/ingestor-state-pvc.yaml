@@ -1,0 +1,32 @@
+# Durable prod ingestor state.
+#
+# The ingestor writes dispatcher/MCP bookkeeping and the DB-outage climate spool
+# under /srv/verdify/state. This must survive ingestor pod restarts; otherwise a
+# DB outage plus a pod restart can still lose queued greenhouse telemetry.
+#
+# Storage tier: synology-iscsi (csi.san.synology.com iSCSI on DSM /volume2).
+# 2026-06-17 storage incident — VERIFIED ROOT CAUSE (synology-csi-controller-0
+# logs): the Synology DSM hit its iSCSI *target-count* limit — "Failed to create
+# target ... Number of target reach limit". That fails NEW iSCSI volume
+# provisioning on BOTH /volume1 AND /volume2; it is NOT a per-volume / SSD-tier
+# hardware failure (the earlier "/volume1 DIED" note was a misdiagnosis). The
+# prior ingestor-state LUN wedged on the deploy's Recreate because CreateVolume
+# kept failing until a target freed up, stranding the sole ESP32 writer. This PVC
+# lives on synology-iscsi (/volume2); it bound once targets freed. The DURABLE
+# fix is storage-infra: reclaim orphaned iSCSI targets from deleted PVCs and curb
+# ephemeral CI iSCSI churn (e.g. agent-fleet-ci *-workdir PVCs) — see
+# COORDINATION_REQUESTS.md. Moving to synology-iscsi-ssd (/volume1) does NOT
+# help: same DSM target cap. State is small (~2Gi: spool + bookkeeping).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: verdify-ingestor-state
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: ingestor
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: synology-iscsi
+  resources:
+    requests:
+      storage: 2Gi

@@ -1,0 +1,58 @@
+# ArgoCD Application — verdify-prod  (HANDOVER: author here, laptop-root applies)
+#
+# The coordinator agent AUTHORS this manifest; laptop-root APPLIES it to the
+# argocd ns (drop it into the canonical agent-fleet gitops repo). overlays/prod
+# is INERT until this CR exists.
+#
+# *** DEVICE-WRITE GATE — MANUAL SYNC ON PURPOSE ***
+# overlays/prod is the ONE real ESP32 writer: VERDIFY_DEVICE_WRITE_ENABLED=1 +
+# the allow-ingestor-device-egress NetworkPolicy + the prod ingestor running.
+# Therefore prod is DELIBERATELY a MANUAL-SYNC env: NO syncPolicy.automated block.
+# An automated selfHeal would bring the prod ingestor up as a second live-device
+# writer the moment its image+secrets resolve — before the device-VLAN spike
+# sign-off and the live VM control-loop cutover are explicitly approved by Jason.
+# Sync is operator-initiated (argocd app sync verdify-prod) only.
+#
+# prune is FALSE — the verdify-db StatefulSet + its iSCSI PVC hold restored
+# TimescaleDB data; auto-prune must NEVER reap the DB on a manifest reshuffle.
+# (Mirrors the live staging policy's prune:false for the same data-safety reason.)
+#
+# HARD PREREQUISITES before laptop-root/operator sync:
+#   1. SOPS verdify-app-secrets + verdify-ha-token + device PSK delivered to
+#      verdify-prod BEFORE first reconcile.
+#   2. synology-iscsi-ssd StorageClass present; prod gets its OWN TimescaleDB STS.
+#   3. The §3.4 device-VLAN reachability/latency spike signed off AND the live VM
+#      control-loop cutover explicitly approved — BOTH are separate Jason gates.
+#   4. Image digests are real/pullable; container-publish or external image
+#      workflows have completed before the operator syncs prod.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: verdify-prod
+  namespace: argocd
+  labels:
+    agent-fleet.vallery.net/environment: prod
+    agent-fleet.vallery.net/project: iris-verdify
+    app.kubernetes.io/part-of: agent-fleet
+  annotations:
+    agent-fleet.vallery.net/app-repo: https://github.com/VerdifyConsultancy/verdify-platform.git
+    agent-fleet.vallery.net/environment: prod
+    agent-fleet.vallery.net/image-tag: ghcr.io/verdifyconsultancy/verdify-api@sha256-digest-pinned
+    agent-fleet.vallery.net/source-repo: https://github.com/VerdifyConsultancy/verdify-platform.git
+    agent-fleet.vallery.net/source-revision: main
+    agent-fleet.vallery.net/url: https://verdify.vallery.net
+spec:
+  project: app-test
+  source:
+    repoURL: https://github.com/VerdifyConsultancy/verdify-platform.git
+    targetRevision: main
+    path: deploy/k8s/overlays/prod
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: verdify-prod
+  # MANUAL SYNC: no automated block (device-write gate, see header). prune stays
+  # false at the app level; operator-initiated syncs must use the ArgoCD prune
+  # confirmation explicitly and NEVER prune the verdify-db StatefulSet/PVC.
+  syncPolicy:
+    syncOptions:
+      - CreateNamespace=false

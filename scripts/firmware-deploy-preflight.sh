@@ -7,7 +7,12 @@
 set -euo pipefail
 
 DB_STATEMENT_TIMEOUT_MS="${VERDIFY_DB_STATEMENT_TIMEOUT_MS:-5000}"
-DB=(docker exec -e "PGOPTIONS=-c statement_timeout=${DB_STATEMENT_TIMEOUT_MS}" verdify-timescaledb psql -U verdify -d verdify -t -A -F '|' -c)
+# #24: DB access via the shared psql-verdify abstraction (docker-exec default
+# preserves the exact prior argv on the VM). The PGOPTIONS statement-timeout is
+# injected as a docker-exec extra flag in docker-exec mode.
+. "$(dirname "${BASH_SOURCE[0]}")/lib/psql-verdify.sh"
+mapfile -t DB < <(verdify_psql_cmd -e "PGOPTIONS=-c statement_timeout=${DB_STATEMENT_TIMEOUT_MS}")
+DB+=(-t -A -F '|' -c)
 
 fail() { echo "✗ $1" >&2; exit 1; }
 pass() { echo "✓ $1"; }
@@ -30,6 +35,9 @@ guard_or_fail() {
     fi
 }
 
+# Portable file mtime (epoch seconds): BSD/macOS `stat -f %m`, GNU/Linux `stat -c %Y`.
+mtime_of() { stat -f %m "$1" 2>/dev/null || stat -c %Y "$1" 2>/dev/null; }
+
 override_reason="${FIRMWARE_OTA_FREEZE_OVERRIDE_REASON:-}"
 override_log="${FIRMWARE_OTA_FREEZE_OVERRIDE_LOG:-/var/local/verdify/state/firmware-ota-freeze-overrides.log}"
 
@@ -43,7 +51,12 @@ require_override_reason() {
 record_override() {
     local gate="$1"
     local detail="$2"
-    mkdir -p "$(dirname "$override_log")"
+    # Audit log defaults to /var/local (the VM path); fall back to a writable
+    # location (e.g. macOS laptop operator) so the override is still recorded.
+    if ! mkdir -p "$(dirname "$override_log")" 2>/dev/null; then
+        override_log="${HOME}/.verdify/state/firmware-ota-freeze-overrides.log"
+        mkdir -p "$(dirname "$override_log")"
+    fi
     printf '%s\tgate=%s\treason=%s\tdetail=%s\tworktree=%s\tsha=%s\n' \
         "$(date -Is)" \
         "$gate" \
@@ -128,7 +141,7 @@ fi
 
 last_good="firmware/artifacts/last-good.ota.bin"
 if [[ -f "$last_good" ]]; then
-    age_s=$(( $(date +%s) - $(stat -c %Y "$last_good") ))
+    age_s=$(( $(date +%s) - $(mtime_of "$last_good") ))
     if (( age_s < 172800 )); then
         require_override_reason "48-hour bake"
         record_override "48-hour bake" "last-good artifact age is ${age_s}s"

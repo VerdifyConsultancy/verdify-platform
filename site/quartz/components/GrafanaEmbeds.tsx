@@ -71,6 +71,10 @@ export default (() => {
   text-decoration: underline;
   cursor: pointer;
 }
+:root[saved-theme="dark"] .grafana-embed__actions {
+  background: color-mix(in srgb, var(--lightgray, #17352D) 48%, #071512);
+  border-top-color: color-mix(in srgb, var(--secondary, #7DE2B8) 24%, transparent);
+}
 `
 
   GrafanaEmbeds.afterDOMLoaded = `
@@ -105,6 +109,21 @@ export default (() => {
     }
   }
 
+  function currentTheme() {
+    return document.documentElement.getAttribute('saved-theme') === 'dark' ? 'dark' : 'light';
+  }
+
+  function themedUrl(url) {
+    if (!url) return url;
+    try {
+      var u = new URL(url, window.location.href);
+      u.searchParams.set('theme', currentTheme());
+      return u.toString();
+    } catch (_) {
+      return url;
+    }
+  }
+
   function appendActions(el, liveSrc, loadInteractive) {
     if (!liveSrc) return;
     var actions = document.createElement('div');
@@ -119,7 +138,7 @@ export default (() => {
       actions.appendChild(b);
     }
     var a = document.createElement('a');
-    a.href = liveSrc;
+    a.href = themedUrl(liveSrc);
     a.target = '_blank';
     a.rel = 'noopener noreferrer';
     a.textContent = 'Open in Grafana';
@@ -132,8 +151,9 @@ export default (() => {
     if (!embeds.length) return;
 
     var staticImages = shouldUseStaticImages();
-    var loaded = new WeakSet();
+    var loaded = new WeakMap();
     var timers = [];
+    var elementTimers = new WeakMap();
     var observer = null;
 
     // Client-side concurrency cap on PNG fetches. The grafana-image-
@@ -175,7 +195,22 @@ export default (() => {
       dequeueImg();
     }
 
+    function trackTimer(el, timer) {
+      timers.push(timer);
+      var elementTimerList = elementTimers.get(el) || [];
+      elementTimerList.push(timer);
+      elementTimers.set(el, elementTimerList);
+      return timer;
+    }
+
+    function clearElementTimers(el) {
+      var elementTimerList = elementTimers.get(el) || [];
+      for (var i = 0; i < elementTimerList.length; i++) window.clearInterval(elementTimerList[i]);
+      elementTimers.delete(el);
+    }
+
     function renderImage(el, imgSrc, iframeSrc, liveSrc, title, height, refreshMs) {
+      clearElementTimers(el);
       el.innerHTML = '';
       el.style.minHeight = height + 'px';
 
@@ -188,7 +223,7 @@ export default (() => {
       img.height = height;
       img.style.height = height + 'px';
       var cssWidth = img.width;
-      var sizedSrc = sizedRenderUrl(imgSrc, cssWidth, height);
+      var sizedSrc = sizedRenderUrl(themedUrl(imgSrc), cssWidth, height);
 
       // The renderer can still 429/timeout under load even with the
       // nginx cache and concurrency cap. Retry up to 3 times with
@@ -204,7 +239,7 @@ export default (() => {
           var backoff = 3000 * Math.pow(2, attempts - 1); // 3s, 6s, 12s
           window.setTimeout(function () {
             if (document.body.contains(el)) {
-              enqueueImg(img, sizedSrc);
+              enqueueImg(img, sizedRenderUrl(themedUrl(imgSrc), el.clientWidth || cssWidth, height));
             }
           }, backoff);
         } else {
@@ -225,14 +260,15 @@ export default (() => {
       if (refreshMs > 0) {
         var t = window.setInterval(function () {
           if (document.body.contains(el)) {
-            enqueueImg(img, sizedRenderUrl(imgSrc, el.clientWidth || cssWidth, height));
+            enqueueImg(img, sizedRenderUrl(themedUrl(imgSrc), el.clientWidth || cssWidth, height));
           }
         }, refreshMs);
-        timers.push(t);
+        trackTimer(el, t);
       }
     }
 
     function renderIframe(el, iframeSrc, liveSrc, title, height, imageSrc, refreshMs) {
+      clearElementTimers(el);
       el.innerHTML = '';
       el.style.minHeight = height + 'px';
 
@@ -256,7 +292,7 @@ export default (() => {
 
       if (imageSrc) {
         fallbackTimer = window.setTimeout(fallBackToStatic, 12000);
-        timers.push(fallbackTimer);
+        trackTimer(el, fallbackTimer);
         f.addEventListener('load', function () {
           settled = true;
           if (fallbackTimer) window.clearTimeout(fallbackTimer);
@@ -264,15 +300,16 @@ export default (() => {
         f.addEventListener('error', fallBackToStatic, { once: true });
       }
 
-      f.src = iframeSrc;
+      f.src = themedUrl(iframeSrc);
       el.appendChild(f);
 
       appendActions(el, liveSrc, null);
     }
 
     function load(el) {
-      if (loaded.has(el)) return;
-      loaded.add(el);
+      var theme = currentTheme();
+      if (loaded.get(el) === theme) return;
+      loaded.set(el, theme);
 
       var iframeSrc = el.getAttribute('data-iframe-src') || '';
       var imageSrc = el.getAttribute('data-image-src') || '';
@@ -318,10 +355,19 @@ export default (() => {
       embeds.forEach(load);
     }
 
+    function reloadForThemeChange() {
+      Array.from(document.querySelectorAll('.grafana-embed[data-grafana-enhanced]')).forEach(function (el) {
+        loaded.delete(el);
+        load(el);
+      });
+    }
+    document.addEventListener('themechange', reloadForThemeChange);
+
     if (window.addCleanup) {
       window.addCleanup(function () {
         if (observer) observer.disconnect();
         for (var i = 0; i < timers.length; i++) window.clearInterval(timers[i]);
+        document.removeEventListener('themechange', reloadForThemeChange);
       });
     }
   }

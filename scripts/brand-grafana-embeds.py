@@ -21,6 +21,7 @@ import argparse
 import json
 import re
 import subprocess
+import urllib.request
 from collections import defaultdict
 from copy import deepcopy
 from pathlib import Path
@@ -72,27 +73,47 @@ HOMEPAGE_SOLAR_PANEL_IDS = {30, 31, 36}
 COMPLIANCE_BAND_COLOR = BRAND["leaf"]
 COMPLIANCE_BAND_FILL_OPACITY = 22
 LIGHTING_THRESHOLD_BAND_FILL_OPACITY = 22
+HOMEPAGE_LIGHTING_THRESHOLD_LINE_WIDTH = 1
+HOMEPAGE_LIGHTING_GROW_THRESHOLD_LINE_STYLE = {"fill": "dash", "dash": [6, 4]}
 RELAY_STATE_FILL_OPACITY = 38
-HOMEPAGE_RELAY_STATE_FILL_OPACITY = 100
+HOMEPAGE_RELAY_STATE_FILL_OPACITY = 78
+HOMEPAGE_LIGHTING_STATE_FILL_OPACITY = 90
+HOMEPAGE_LIGHTING_STATE_LINE_WIDTH = 0
+HOMEPAGE_LIGHTING_OVERHEAD_STATE_COLOR = "#007A4D"
+HOMEPAGE_LIGHTING_GROW_STATE_COLOR = "#0B5CAD"
+HOMEPAGE_LIGHTING_PANEL_TITLES = {
+    "Lighting: Overhead vs Grow Circuit — Lux, Thresholds & Switch State",
+    "Lighting: Overhead vs Grow Circuit — Lux & Switch State",
+}
 RELAY_STATE_LINE_WIDTH = 0
+# Faint, semi-transparent canopy green — a subtle reference line, not a bold one
+# (Jason 2026-06-19: the full-opacity #2E7D32 lw2 read too dark/bold on the
+# dark-green canvas). Keep the green hue; just soften it.
+HOMEPAGE_TARGET_LINE_COLOR = "rgba(46, 125, 50, 0.4)"
+HOMEPAGE_TARGET_LINE_WIDTH = 1
+HOMEPAGE_TARGET_LINE_STYLE = {"fill": "dash", "dash": [6, 4]}
 LIGHTING_THRESHOLD_BANDS = (
+    ("Overhead Threshold Base", "Overhead Threshold", BRAND["leaf"]),
+    ("Grow Threshold Base", "Grow Threshold", BRAND["water"]),
     ("Grow Light Threshold Base", "Grow Light Threshold", BRAND["leaf"]),
     ("Main/Grow ON Threshold", "Main/Grow OFF Threshold", BRAND["leaf"]),
     ("Main ON Threshold", "Main OFF Threshold", BRAND["leaf"]),
     ("Grow ON Threshold", "Grow OFF Threshold", "#5794F2"),
 )
 TEMPERATURE_RELAY_STATE_LANES = (
-    ("heat2", "Heat 2 (Gas)", "Heat 2 (Gas) Base", 54.5, 56.0),
-    ("heat1", "Heat 1 (Electric)", "Heat 1 (Electric) Base", 56.5, 58.0),
-    ("fan1", "Fan 1", "Fan 1 Base", 80.5, 82.0),
-    ("fan2", "Fan 2", "Fan 2 Base", 82.5, 84.0),
-    ("fog", "Fog", "Fog Base", 84.5, 86.0),
+    ("heat2", "Heat 2 (Gas)", "Heat 2 (Gas) Base", 56.0, 57.8),
+    ("heat1", "Heat 1 (Electric)", "Heat 1 (Electric) Base", 58.2, 60.0),
+    ("fan1", "Fan 1", "Fan 1 Base", 87.0, 88.8),
+    ("fan2", "Fan 2", "Fan 2 Base", 89.2, 91.0),
+    ("fog", "Fog", "Fog Base", 91.4, 93.2),
 )
 VPD_RELAY_STATE_LANES = (
-    ("mister_south", "Mister South", "Mister South Base", 1.75, 1.8),
-    ("mister_west", "Mister West", "Mister West Base", 1.85, 1.9),
-    ("mister_center", "Mister Center", "Mister Center Base", 1.95, 2.0),
-    ("fog", "Fog", "Fog Base", 2.05, 2.1),
+    ("heat2", "Heat 2 (Gas)", "Heat 2 (Gas) Base", -0.46, -0.24),
+    ("heat1", "Heat 1 (Electric)", "Heat 1 (Electric) Base", -0.18, 0.04),
+    ("mister_south", "Mister South", "Mister South Base", 1.72, 2.00),
+    ("mister_west", "Mister West", "Mister West Base", 2.06, 2.34),
+    ("mister_center", "Mister Center", "Mister Center Base", 2.40, 2.68),
+    ("fog", "Fog", "Fog Base", 2.74, 3.02),
 )
 EXPECTED_STAT_COLORS = {
     "Runtime Electric $/Day (30-Day Avg)": "#66BB6A",
@@ -580,6 +601,10 @@ def semantic_color(label: str, current: Any = None, context: str = "") -> str:
         return maybe_alpha("#F4511E")
     if "heat 1" in label_text:
         return maybe_alpha("#FF9800")
+    if label_text in {"overhead light", "overhead light base"}:
+        return maybe_alpha(BRAND["leaf"])
+    if label_text in {"grow light", "grow light base"}:
+        return maybe_alpha(BRAND["water"])
     if label_text == "grow light on":
         return maybe_alpha("#5794F2")
     if "grow light grow" in label_text:
@@ -874,6 +899,7 @@ def is_relay_state_label(label: str) -> bool:
             "vent",
             "irrigation",
             "grow light",
+            "overhead light",
         )
     )
 
@@ -960,8 +986,8 @@ def check_site_embed_contract(vault_root: Path) -> list[str]:
     for path, line, _uid, _panel_id, query in site_embeds(vault_root):
         embed_count += 1
         theme = query.get("theme", [""])[0]
-        if theme != "light":
-            findings.append(f"{path}: line {line} Grafana embed theme is {theme or '<missing>'}, expected light")
+        if theme not in {"light", "dark"}:
+            findings.append(f"{path}: line {line} Grafana embed theme is {theme or '<missing>'}, expected light/dark")
     if embed_count == 0:
         findings.append(f"{vault_root}: no Grafana /d-solo embeds found")
 
@@ -1244,6 +1270,152 @@ FROM lanes
 ORDER BY time, metric"""
 
 
+HOMEPAGE_LIGHTING_STATE_LANE_SQL = """WITH raw_bounds AS (
+  SELECT $__timeFrom()::timestamptz AS from_ts, $__timeTo()::timestamptz AS to_ts
+),
+bounds AS MATERIALIZED (
+  SELECT GREATEST(from_ts, to_ts - interval '7 days') AS from_ts, to_ts AS to_ts,
+    LEAST(to_ts, now()) AS state_to_ts,
+    date_trunc('hour', GREATEST(from_ts, to_ts - interval '7 days')) AS seed_start_ts,
+    interval '10 minutes' AS step
+  FROM raw_bounds
+),
+policy AS MATERIALIZED (
+  SELECT
+    greatest(100.0, least(100000.0, COALESCE(
+      max(p.lux_on_threshold) FILTER (WHERE p.light_key='main'),
+      40000.0))) AS main_on,
+    greatest(0.0, least(25000.0, COALESCE(
+      max(p.lux_hysteresis) FILTER (WHERE p.light_key='main'),
+      8000.0))) AS main_hyst,
+    greatest(100.0, least(100000.0, COALESCE(
+      max(p.lux_on_threshold) FILTER (WHERE p.light_key='grow'),
+      40000.0))) AS grow_on,
+    greatest(0.0, least(25000.0, COALESCE(
+      max(p.lux_hysteresis) FILTER (WHERE p.light_key='grow'),
+      8000.0))) AS grow_hyst
+  FROM bounds bd
+  CROSS JOIN LATERAL fn_lighting_circuit_policy(bd.state_to_ts, 'vallery') p
+),
+policy_wide AS MATERIALIZED (
+  SELECT
+    main_on,
+    main_on + main_hyst AS main_off,
+    grow_on,
+    grow_on + grow_hyst AS grow_off
+  FROM policy
+),
+buckets AS MATERIALIZED (
+  SELECT generate_series(time_bucket(b.step, b.seed_start_ts), LEAST(b.to_ts, now()), b.step) AS time FROM bounds b
+),
+lane_metrics AS MATERIALIZED (
+  SELECT *
+  FROM policy_wide p
+  CROSS JOIN LATERAL (VALUES
+    (
+      'grow_light_main'::text,
+      'Overhead Light'::text,
+      p.main_on + GREATEST(250.0, (p.main_off - p.main_on) * 0.47)
+    ),
+    (
+      'grow_light_grow'::text,
+      'Grow Light'::text,
+      p.grow_off
+    )
+  ) AS m(equipment, metric, value_when_on)
+),
+state_seed AS MATERIALIZED (
+  SELECT bd.seed_start_ts AS time, m.equipment, COALESCE(seed.state, false) AS state
+  FROM bounds bd CROSS JOIN lane_metrics m
+  LEFT JOIN LATERAL (
+    SELECT e.state
+    FROM equipment_state e
+    WHERE e.greenhouse_id='vallery' AND e.equipment=m.equipment AND e.ts <= bd.seed_start_ts
+    ORDER BY e.ts DESC LIMIT 1
+  ) seed ON true
+),
+state_events AS MATERIALIZED (
+  SELECT e.ts AS time, e.equipment, e.state
+  FROM equipment_state e, bounds bd
+  WHERE e.greenhouse_id='vallery'
+    AND e.equipment IN ('grow_light_main','grow_light_grow')
+    AND e.ts >= bd.seed_start_ts
+    AND e.ts <= bd.state_to_ts
+),
+state_timeline AS MATERIALIZED (
+  SELECT e.time, e.equipment, e.state,
+    lead(e.time,1,(SELECT state_to_ts FROM bounds)) OVER (PARTITION BY e.equipment ORDER BY e.time) AS next_time
+  FROM (SELECT time,equipment,state FROM state_seed UNION ALL SELECT time,equipment,state FROM state_events) e
+),
+state_segments AS MATERIALIZED (
+  SELECT greatest(st.time, bd.seed_start_ts) AS start_time, least(st.next_time, bd.state_to_ts) AS end_time, st.equipment
+  FROM state_timeline st CROSS JOIN bounds bd
+  WHERE st.state AND st.time < bd.state_to_ts AND st.next_time > bd.seed_start_ts
+),
+lanes AS (
+  SELECT b.time, m.metric,
+    CASE WHEN EXISTS (
+      SELECT 1
+      FROM state_segments s
+      WHERE s.equipment=m.equipment
+        AND s.start_time < b.time + bd.step
+        AND s.end_time > b.time
+    ) THEN m.value_when_on ELSE NULL::double precision END AS value
+  FROM buckets b CROSS JOIN bounds bd CROSS JOIN lane_metrics m
+  WHERE b.time >= bd.from_ts AND b.time <= bd.state_to_ts
+)
+SELECT time, metric, value FROM lanes ORDER BY time, metric"""
+
+
+HOMEPAGE_LIGHTING_SOLAR_SQL = """WITH raw_bounds AS (
+  SELECT $__timeFrom()::timestamptz AS from_ts, $__timeTo()::timestamptz AS to_ts
+),
+bounds AS MATERIALIZED (
+  SELECT GREATEST(from_ts, to_ts - interval '7 days') AS from_ts, to_ts AS to_ts,
+    LEAST(to_ts, now()) AS state_to_ts, interval '10 minutes' AS step
+  FROM raw_bounds
+),
+solar_actual AS MATERIALIZED (
+  SELECT time_bucket((SELECT step FROM bounds), c.ts) AS time, 'Solar'::text AS metric,
+    avg(COALESCE(c.outdoor_lux, c.lux))::double precision AS value
+  FROM climate c
+  WHERE c.ts >= (SELECT from_ts FROM bounds) AND c.ts <= (SELECT state_to_ts FROM bounds)
+    AND COALESCE(c.outdoor_lux, c.lux) IS NOT NULL
+  GROUP BY 1
+),
+solar_forecast_seed AS MATERIALIZED (
+  SELECT time, 'Solar Forecast'::text AS metric, value FROM solar_actual
+  WHERE (SELECT to_ts FROM bounds) > (SELECT state_to_ts FROM bounds)
+  ORDER BY time DESC LIMIT 1
+),
+solar_forecast AS MATERIALIZED (
+  SELECT DISTINCT ON (time_bucket((SELECT step FROM bounds), wf.ts))
+    time_bucket((SELECT step FROM bounds), wf.ts) AS time, 'Solar Forecast'::text AS metric,
+    (wf.solar_w_m2 * 120.0)::double precision AS value
+  FROM weather_forecast wf
+  WHERE wf.ts > (SELECT state_to_ts FROM bounds) AND wf.ts >= (SELECT from_ts FROM bounds)
+    AND wf.ts <= (SELECT to_ts FROM bounds) AND wf.solar_w_m2 IS NOT NULL
+  ORDER BY time_bucket((SELECT step FROM bounds), wf.ts), wf.fetched_at DESC
+)
+SELECT time, metric, value
+FROM (
+  SELECT time, metric, value FROM solar_actual
+  UNION ALL SELECT time, metric, value FROM solar_forecast_seed
+  UNION ALL SELECT time, metric, value FROM solar_forecast
+) series
+ORDER BY time,
+  CASE metric WHEN 'Solar' THEN 0 WHEN 'Solar Forecast' THEN 1
+    ELSE 2 END, metric"""
+
+
+def simplify_homepage_lighting_solar_target(panel: dict[str, Any]) -> None:
+    for target in panel.get("targets", []) or []:
+        if not isinstance(target, dict) or target.get("refId") != "A":
+            continue
+        target["rawSql"] = HOMEPAGE_LIGHTING_SOLAR_SQL
+        return
+
+
 def target_uses_equipment_state_lane(
     target: dict[str, Any], lanes: tuple[tuple[str, str, str, float, float], ...]
 ) -> bool:
@@ -1251,7 +1423,12 @@ def target_uses_equipment_state_lane(
     if not isinstance(raw_sql, str) or "equipment_state" not in raw_sql:
         return False
     return any(
-        f"equipment='{equipment}'" in raw_sql or f"equipment = '{equipment}'" in raw_sql for equipment, *_ in lanes
+        f"equipment='{equipment}'" in raw_sql
+        or f"equipment = '{equipment}'" in raw_sql
+        or f"'{equipment}'" in raw_sql
+        or f"'{top_label}'" in raw_sql
+        or f'"{top_label}"' in raw_sql
+        for equipment, top_label, *_ in lanes
     )
 
 
@@ -1259,8 +1436,6 @@ def replace_equipment_state_targets_with_lanes(
     panel: dict[str, Any],
     lanes: tuple[tuple[str, str, str, float, float], ...],
 ) -> None:
-    if relay_state_lane_pairs(panel):
-        return
     targets = panel.get("targets", []) or []
     first_state_target = next(
         (target for target in targets if isinstance(target, dict) and target_uses_equipment_state_lane(target, lanes)),
@@ -1313,6 +1488,66 @@ def ensure_relay_state_lane_overrides(
 
         base_override = override_for_label(panel, base_label)
         upsert_override_property(base_override, "color", {"fixedColor": color, "mode": "fixed"})
+
+
+def strengthen_homepage_target_lines(panel: dict[str, Any]) -> None:
+    if panel.get("type") != "timeseries":
+        return
+    if str(panel.get("title") or "") not in {"Temperature Compliance Band", "VPD Compliance Band"}:
+        return
+    if "Target" not in target_aliases(panel) and not override_props(panel, "Target"):
+        return
+
+    target_override = override_for_label(panel, "Target")
+    upsert_override_property(target_override, "color", {"fixedColor": HOMEPAGE_TARGET_LINE_COLOR, "mode": "fixed"})
+    upsert_override_property(target_override, "custom.drawStyle", "line")
+    upsert_override_property(target_override, "custom.lineWidth", HOMEPAGE_TARGET_LINE_WIDTH)
+    upsert_override_property(target_override, "custom.lineInterpolation", "smooth")
+    upsert_override_property(target_override, "custom.lineStyle", HOMEPAGE_TARGET_LINE_STYLE)
+    upsert_override_property(target_override, "custom.fillOpacity", 0)
+    upsert_override_property(target_override, "custom.showPoints", "never")
+
+
+def strengthen_homepage_lighting_lanes(panel: dict[str, Any]) -> None:
+    if panel.get("type") != "timeseries":
+        return
+    if str(panel.get("title") or "") not in HOMEPAGE_LIGHTING_PANEL_TITLES:
+        return
+
+    panel["title"] = "Lighting: Overhead vs Grow Circuit — Lux & Switch State"
+    remove_override_labels(
+        panel,
+        {
+            "Overhead Threshold Base",
+            "Overhead Threshold",
+            "Grow Threshold Base",
+            "Grow Threshold",
+            "Overhead Light Base",
+            "Grow Light Base",
+        },
+    )
+    simplify_homepage_lighting_solar_target(panel)
+    replace_target_sql(panel, "B", HOMEPAGE_LIGHTING_STATE_LANE_SQL)
+    for label, color in {
+        "Overhead Light": HOMEPAGE_LIGHTING_OVERHEAD_STATE_COLOR,
+        "Grow Light": HOMEPAGE_LIGHTING_GROW_STATE_COLOR,
+    }.items():
+        override = override_for_label(panel, label)
+        upsert_override_property(override, "color", {"fixedColor": color, "mode": "fixed"})
+
+    for label in ("Overhead Light", "Grow Light"):
+        override = override_for_label(panel, label)
+        upsert_override_property(override, "custom.drawStyle", "line")
+        upsert_override_property(override, "custom.lineInterpolation", "stepAfter")
+        upsert_override_property(override, "custom.lineWidth", HOMEPAGE_LIGHTING_STATE_LINE_WIDTH)
+        upsert_override_property(override, "custom.fillOpacity", HOMEPAGE_LIGHTING_STATE_FILL_OPACITY)
+        upsert_override_property(override, "custom.gradientMode", "opacity")
+        upsert_override_property(override, "custom.spanNulls", False)
+        upsert_override_property(override, "custom.showPoints", "never")
+        upsert_override_property(override, "custom.pointSize", 0)
+        upsert_override_property(override, "custom.hideFrom", {"legend": False, "tooltip": True, "viz": False})
+        remove_override_property(override, "custom.fillBelowTo")
+        remove_override_property(override, "custom.lineStyle")
 
 
 def normalize_runtime_electric_sources(panel: dict[str, Any]) -> None:
@@ -1423,11 +1658,16 @@ def normalize_public_panel_schema(panel: dict[str, Any]) -> None:
         if panel_has_relay_state_lanes(panel, TEMPERATURE_RELAY_STATE_LANES):
             replace_equipment_state_targets_with_lanes(panel, TEMPERATURE_RELAY_STATE_LANES)
             ensure_relay_state_lane_overrides(panel, TEMPERATURE_RELAY_STATE_LANES)
+        strengthen_homepage_target_lines(panel)
 
     if title == "VPD Compliance Band" and panel.get("type") == "timeseries":
         if panel_has_relay_state_lanes(panel, VPD_RELAY_STATE_LANES):
             replace_equipment_state_targets_with_lanes(panel, VPD_RELAY_STATE_LANES)
             ensure_relay_state_lane_overrides(panel, VPD_RELAY_STATE_LANES)
+        strengthen_homepage_target_lines(panel)
+
+    if title in HOMEPAGE_LIGHTING_PANEL_TITLES:
+        strengthen_homepage_lighting_lanes(panel)
 
     if title == "Lighting: Lux, Thresholds & Switch State" and panel.get("type") == "timeseries":
         lux_label = "Solar"
@@ -1956,6 +2196,8 @@ def strengthen_relay_state_lanes(panel: dict[str, Any], dashboard_uid: str = "")
         upsert_override_property(state_override, "custom.fillBelowTo", base_label)
         upsert_override_property(state_override, "custom.fillOpacity", fill_opacity)
         upsert_override_property(state_override, "custom.spanNulls", False)
+        upsert_override_property(state_override, "custom.showPoints", "never")
+        upsert_override_property(state_override, "custom.pointSize", 0)
         upsert_override_property(state_override, "custom.hideFrom", {"legend": False, "tooltip": True, "viz": False})
         remove_override_property(state_override, "custom.gradientMode")
         remove_override_property(state_override, "custom.lineStyle")
@@ -1964,6 +2206,8 @@ def strengthen_relay_state_lanes(panel: dict[str, Any], dashboard_uid: str = "")
         upsert_override_property(base_override, "custom.drawStyle", "line")
         upsert_override_property(base_override, "custom.lineWidth", 0)
         upsert_override_property(base_override, "custom.fillOpacity", 0)
+        upsert_override_property(base_override, "custom.showPoints", "never")
+        upsert_override_property(base_override, "custom.pointSize", 0)
         upsert_override_property(base_override, "custom.hideFrom", {"legend": True, "tooltip": True, "viz": False})
         remove_override_property(base_override, "custom.gradientMode")
         remove_override_property(base_override, "custom.lineStyle")
@@ -2058,6 +2302,8 @@ def brand_field_config(panel: dict[str, Any], dashboard_uid: str = "") -> None:
     strengthen_compliance_band(panel)
     strengthen_lighting_threshold_bands(panel)
     strengthen_relay_state_lanes(panel, dashboard_uid)
+    strengthen_homepage_lighting_lanes(panel)
+    strengthen_homepage_target_lines(panel)
     if panel.get("type") == "state-timeline" and title in {
         "Lighting Circuit State",
         "Lighting Decision Context",
@@ -2233,15 +2479,29 @@ def check_lighting_threshold_dashboard_data(label: str, dashboard: dict[str, Any
             has_high = high_label in aliases or bool(override_props(panel, high_label))
             if not (has_low and has_high):
                 continue
+            homepage_lighting_threshold = str(
+                panel.get("title") or ""
+            ) == "Lighting: Overhead vs Grow Circuit — Lux, Thresholds & Switch State" and {low_label, high_label} <= {
+                "Overhead Threshold Base",
+                "Overhead Threshold",
+                "Grow Threshold Base",
+                "Grow Threshold",
+            }
+            expected_line_width = HOMEPAGE_LIGHTING_THRESHOLD_LINE_WIDTH if homepage_lighting_threshold else 0
+            expected_line_style = (
+                HOMEPAGE_LIGHTING_GROW_THRESHOLD_LINE_STYLE
+                if homepage_lighting_threshold and low_label == "Grow Threshold Base"
+                else None
+            )
             expected = {
                 high_label: {
-                    "custom.lineWidth": 0,
+                    "custom.lineWidth": expected_line_width,
                     "custom.fillBelowTo": low_label,
                     "custom.fillOpacity": LIGHTING_THRESHOLD_BAND_FILL_OPACITY,
                     "custom.gradientMode": "none",
                 },
                 low_label: {
-                    "custom.lineWidth": 0,
+                    "custom.lineWidth": expected_line_width,
                     "custom.fillOpacity": 0,
                     "custom.gradientMode": "none",
                 },
@@ -2255,10 +2515,10 @@ def check_lighting_threshold_dashboard_data(label: str, dashboard: dict[str, Any
                         f"{label}: panel {panel.get('id')} {panel.get('title')!r} lighting threshold "
                         f"{series!r} color is {fixed_color}, expected {expected_color}"
                     )
-                if props.get("custom.lineStyle") is not None:
+                if props.get("custom.lineStyle") != expected_line_style:
                     findings.append(
                         f"{label}: panel {panel.get('id')} {panel.get('title')!r} lighting threshold "
-                        f"{series!r} still has lineStyle {props.get('custom.lineStyle')}"
+                        f"{series!r} lineStyle is {props.get('custom.lineStyle')}, expected {expected_line_style}"
                     )
                 for prop_id, expected_value in expected_props.items():
                     if props.get(prop_id) != expected_value:
@@ -2272,23 +2532,38 @@ def check_lighting_threshold_dashboard_data(label: str, dashboard: dict[str, Any
 def check_relay_state_lane_dashboard_data(label: str, dashboard: dict[str, Any]) -> list[str]:
     findings: list[str] = []
     fill_opacity = relay_state_fill_opacity(str(dashboard.get("uid") or ""))
-    expected_state_props = {
+    default_expected_state_props = {
         "custom.drawStyle": "line",
         "custom.lineInterpolation": "stepAfter",
         "custom.lineWidth": RELAY_STATE_LINE_WIDTH,
         "custom.fillOpacity": fill_opacity,
         "custom.spanNulls": False,
+        "custom.showPoints": "never",
+        "custom.pointSize": 0,
         "custom.hideFrom": {"legend": False, "tooltip": True, "viz": False},
     }
     expected_base_props = {
         "custom.drawStyle": "line",
         "custom.lineWidth": 0,
         "custom.fillOpacity": 0,
+        "custom.showPoints": "never",
+        "custom.pointSize": 0,
         "custom.hideFrom": {"legend": True, "tooltip": True, "viz": False},
     }
 
     for panel in iter_panels(dashboard.get("panels", [])):
         for series, base_series in relay_state_lane_pairs(panel):
+            expected_state_props = dict(default_expected_state_props)
+            expected_gradient = None
+            if str(
+                panel.get("title") or ""
+            ) == "Lighting: Overhead vs Grow Circuit — Lux, Thresholds & Switch State" and series in {
+                "Overhead Light",
+                "Grow Light",
+            }:
+                expected_state_props["custom.fillOpacity"] = HOMEPAGE_LIGHTING_STATE_FILL_OPACITY
+                expected_state_props["custom.lineWidth"] = HOMEPAGE_LIGHTING_STATE_LINE_WIDTH
+                expected_gradient = "opacity"
             props = override_props(panel, series)
             base_props = override_props(panel, base_series)
             if props.get("custom.fillBelowTo") != base_series:
@@ -2296,10 +2571,10 @@ def check_relay_state_lane_dashboard_data(label: str, dashboard: dict[str, Any])
                     f"{label}: panel {panel.get('id')} {panel.get('title')!r} relay state "
                     f"{series!r} fillBelowTo is {props.get('custom.fillBelowTo')}, expected {base_series!r}"
                 )
-            if props.get("custom.gradientMode") is not None:
+            if props.get("custom.gradientMode") != expected_gradient:
                 findings.append(
                     f"{label}: panel {panel.get('id')} {panel.get('title')!r} relay state "
-                    f"{series!r} still has gradientMode {props.get('custom.gradientMode')}"
+                    f"{series!r} gradientMode is {props.get('custom.gradientMode')}, expected {expected_gradient}"
                 )
             if props.get("custom.lineStyle") is not None:
                 findings.append(
@@ -2539,8 +2814,8 @@ def check_explicit_graph_series_colors(label: str, panel: dict[str, Any]) -> lis
 
 def check_dashboard_data(label: str, dashboard: dict[str, Any], embedded_ids: set[int]) -> list[str]:
     findings: list[str] = []
-    if dashboard.get("style") != "light":
-        findings.append(f"{label}: dashboard style is not light")
+    if dashboard.get("style") not in {"light", "dark"}:
+        findings.append(f"{label}: dashboard style is not light/dark")
     findings.extend(check_daylight_dashboard_data(label, dashboard))
     findings.extend(check_compliance_dashboard_data(label, dashboard))
     findings.extend(check_lighting_threshold_dashboard_data(label, dashboard))
@@ -2793,7 +3068,41 @@ def check_dashboard(path: Path, embedded_ids: set[int]) -> list[str]:
     return check_dashboard_data(str(path), load_json(path), embedded_ids)
 
 
-def live_dashboard(uid: str, container: str) -> dict[str, Any]:
+def parse_live_dashboard_payload(uid: str, stdout: str) -> dict[str, Any]:
+    payload = json.loads(stdout)
+    dashboard = payload.get("dashboard") if isinstance(payload, dict) else None
+    if not isinstance(dashboard, dict):
+        raise RuntimeError(f"live dashboard {uid} returned no dashboard payload")
+    return dashboard
+
+
+def live_dashboard_from_kubectl(uid: str) -> dict[str, Any]:
+    result = subprocess.run(
+        [
+            "kubectl",
+            "-n",
+            "verdify-prod",
+            "exec",
+            "deploy/verdify-grafana",
+            "-c",
+            "grafana",
+            "--",
+            "wget",
+            "-qO-",
+            f"http://127.0.0.1:3000/api/dashboards/uid/{uid}",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    if result.returncode != 0:
+        stderr = result.stderr.strip() or result.stdout.strip()
+        raise RuntimeError(f"kubectl exec verdify-grafana wget {uid} failed: {stderr}")
+    return parse_live_dashboard_payload(uid, result.stdout)
+
+
+def live_dashboard_from_docker(uid: str, container: str) -> dict[str, Any]:
     result = subprocess.run(
         [
             "docker",
@@ -2811,11 +3120,53 @@ def live_dashboard(uid: str, container: str) -> dict[str, Any]:
     if result.returncode != 0:
         stderr = result.stderr.strip() or result.stdout.strip()
         raise RuntimeError(f"docker exec {container} curl {uid} failed: {stderr}")
-    payload = json.loads(result.stdout)
-    dashboard = payload.get("dashboard") if isinstance(payload, dict) else None
-    if not isinstance(dashboard, dict):
-        raise RuntimeError(f"live dashboard {uid} returned no dashboard payload")
-    return dashboard
+    return parse_live_dashboard_payload(uid, result.stdout)
+
+
+def live_dashboard_from_public_api(uid: str) -> dict[str, Any]:
+    request = urllib.request.Request(
+        f"https://graphs.verdify.ai/api/dashboards/uid/{uid}",
+        headers={"User-Agent": "verdify-brand-check/1.0"},
+    )
+    with urllib.request.urlopen(request, timeout=30) as response:
+        return parse_live_dashboard_payload(uid, response.read().decode("utf-8"))
+
+
+def live_dashboard(uid: str, container: str) -> dict[str, Any]:
+    kubectl_error: RuntimeError | None = None
+    try:
+        return live_dashboard_from_kubectl(uid)
+    except (FileNotFoundError, subprocess.TimeoutExpired, RuntimeError) as exc:
+        kubectl_error = RuntimeError(str(exc))
+
+    try:
+        return live_dashboard_from_docker(uid, container)
+    except (FileNotFoundError, subprocess.TimeoutExpired, RuntimeError) as exc:
+        docker_error = RuntimeError(str(exc))
+
+    try:
+        return live_dashboard_from_public_api(uid)
+    except Exception as exc:
+        raise RuntimeError(
+            f"{kubectl_error}; legacy Docker fallback failed: {docker_error}; public API fallback failed: {exc}"
+        ) from exc
+
+
+def source_site_dashboard_refs() -> dict[str, set[int]]:
+    refs: dict[str, set[int]] = {}
+    for path in sorted((REPO_ROOT / "grafana" / "dashboards").glob("site-*.json")):
+        dashboard = load_json(path)
+        uid = dashboard.get("uid")
+        if not isinstance(uid, str) or not uid:
+            continue
+        panel_ids = {
+            int(panel["id"])
+            for panel in iter_panels(dashboard.get("panels", []))
+            if panel.get("type") != "row" and isinstance(panel.get("id"), int)
+        }
+        if panel_ids:
+            refs[uid] = panel_ids
+    return refs
 
 
 def main() -> int:
@@ -2827,6 +3178,8 @@ def main() -> int:
     args = parser.parse_args()
 
     embedded = embedded_panels(args.vault_root)
+    if args.live and not embedded:
+        embedded = source_site_dashboard_refs()
     paths_by_uid = dashboard_paths(embedded)
     missing_source_uids = sorted(set(embedded) - set(paths_by_uid))
     if missing_source_uids and not args.live:

@@ -22,6 +22,11 @@
     white-space: nowrap;
     width: 100%;
 
+    &:hover {
+      background: var(--highlight);
+      border-color: color-mix(in srgb, var(--secondary) 32%, var(--lightgray));
+    }
+
     & > p {
       display: inline;
       color: var(--gray);
@@ -53,6 +58,10 @@
     overflow-y: auto;
     display: none;
     backdrop-filter: blur(4px);
+
+    :root[saved-theme="dark"] & {
+      background: rgba(3, 8, 7, 0.52);
+    }
 
     &.active {
       display: inline-block;

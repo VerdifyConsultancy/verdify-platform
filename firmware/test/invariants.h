@@ -1,9 +1,10 @@
 #pragma once
 /*
- * invariants.h — 18+ firmware behavioral invariants enforced against replay
+ * invariants.h — firmware behavioral invariants enforced against replay
  * traces (originally 16; +#17-#20 Vanda band-compliance, +#21-#22 IRR-3/IRR-4
- * center-burst rails). Each invariant is a pure function over a stream of
- * per-minute TraceRow records. First breach fails the replay run.
+ * center-burst rails, +#24 curve-only fog gate, +#25 SAFETY_HEAT cold rail,
+ * +#26 SENSOR_FAULT all-off). Each invariant is a pure function over a stream
+ * of per-minute TraceRow records. First breach fails the replay run.
  *
  * See plan file at .claude-agents/iris-dev/plans/yo-iris-dev-you-help-humming-stonebraker.md
  * Appendix A for the canonical list + rationale.
@@ -192,14 +193,19 @@ inline bool check_9_summer_vent_requires_fresh_outdoor(const TraceRow& r, Report
 }
 
 // #11: fog + heat is allowed only as a sealed cold/dry assist. The useful
-// overlap is: SEALED_MIST_FOG, high VPD demand still present, below the upper
-// temp band, and under the configured fog RH ceiling. Anything outside that
-// envelope is contradictory actuator output.
+// overlap is: an active SEALED_MIST humidification stage, high VPD demand still
+// present, below the upper temp band, and under the configured fog RH ceiling.
+// BC-14 (ADR0003 §6.6, LAYERED): fog-first makes fog the gentle ENTRY humidifier
+// that PERSISTS through the mister escalation stages, so fog+heat is legal at
+// SEALED_MIST_FOG/S1/S2 (any active humidification stage), not only the old
+// terminal FOG. Anything outside that envelope is contradictory actuator output.
 inline bool check_11_fog_heat_exclusive(const TraceRow& r, ReportFn report = default_report) {
     if (r.eq_fog && (r.eq_heat1 || r.eq_heat2)) {
         const float vpd_width = std::max(0.2f, r.vpd_high - r.vpd_low);
         const float vpd_high_eff = r.vpd_high - vpd_width * 0.25f;
-        const bool sealed_fog_stage = r.greenhouse_state == "SEALED_MIST_FOG";
+        const bool sealed_fog_stage = r.greenhouse_state == "SEALED_MIST_FOG"
+                                   || r.greenhouse_state == "SEALED_MIST_S1"
+                                   || r.greenhouse_state == "SEALED_MIST_S2";
         const bool assist_envelope =
             mode_is_sealed(r.greenhouse_state)
             && sealed_fog_stage
@@ -274,13 +280,22 @@ inline bool check_19_feed_hold_no_clean_center(const TraceRow& r, ReportFn repor
 // populated (the dusk-cutoff, feed-hold, dew-margin, over-saturation, and
 // occupancy preconditions); the dawn/midday WINDOW config is intentionally
 // left at defaults because #21/#22 assert rails that are window-independent.
+// Firmware-v2: populate the on-chip solar inputs on a SensorInputs from a
+// replay row's unix timestamp (the same ephemeris the live firmware computes).
+inline void set_solar_inputs_from_row(const TraceRow& r, SensorInputs& in) {
+    const int utc_off = infer_utc_offset_min(r.ts_unix_s, r.local_hour);
+    const SolarTimes st = solar_times_from_unix(r.ts_unix_s, utc_off);
+    in.now_minute     = local_minute_from_unix(r.ts_unix_s, utc_off);
+    in.sunrise_min    = st.sunrise_min;
+    in.solar_noon_min = st.solar_noon_min;
+    in.sunset_min     = st.sunset_min;
+    in.solar_phase    = solar_phase(in.now_minute, st);
+}
+
 inline void irr_burst_rail_view(const TraceRow& r, SensorInputs& in, Setpoints& sp) {
     sp = default_setpoints();
     sp.vpd_high = r.vpd_high;
     sp.vpd_low  = r.vpd_low;
-    sp.dusk_cutoff_hour = r.dusk_cutoff_hour;
-    sp.sw_dusk_cutoff_enabled = r.dusk_cutoff_enabled;
-    sp.night_end_hour = (r.night_end_hour == 0 && r.night_start_hour == 0) ? 6 : r.night_end_hour;
     sp.feed_hold_active = r.feed_hold_active;
     in = SensorInputs{};
     in.temp_f = r.temp_f;
@@ -292,20 +307,21 @@ inline void irr_burst_rail_view(const TraceRow& r, SensorInputs& in, Setpoints& 
     in.outdoor_temp_f = NAN;
     in.outdoor_dewpoint_f = NAN;
     in.outdoor_data_age_s = 99999u;
+    set_solar_inputs_from_row(r, in);
 }
 
-// #21 (IRR-3/IRR-4): a CENTER-zone dawn/midday burst can NEVER be permitted
-// past the CYC-1 dusk cutoff. center_burst_rails_permit() must be false on any
-// row that is past_dusk_cutoff(), regardless of VPD. Pure single-row check
-// over the row's actual dusk config — proves the burst respects the dusk rail
-// across the full history.
+// #21 (firmware-v2): a CENTER-zone dawn/midday boost can NEVER be permitted
+// past the solar wet taper. center_burst_rails_permit() must be false on any
+// row that is past_wet_taper() (within taper of the on-chip sunset, or in the
+// solar night half), regardless of VPD. Proves the boost respects the
+// dry-before-dark rail across the full history, on solar time.
 inline bool check_21_center_burst_pre_dusk(const TraceRow& r, ReportFn report = default_report) {
     SensorInputs in; Setpoints sp;
     irr_burst_rail_view(r, in, sp);
     if (!sensors_plausible(in)) return true;             // SENSOR_FAULT handled elsewhere
-    if (past_dusk_cutoff(in, sp) && center_burst_rails_permit(in, sp)) {
-        report(21, "center_burst_pre_dusk", r,
-               "IRR-3/IRR-4 center-burst rails permitted past the dusk cutoff");
+    if (past_wet_taper(in, sp) && center_burst_rails_permit(in, sp)) {
+        report(21, "center_burst_pre_taper", r,
+               "center-boost rails permitted past the solar wet taper");
         return false;
     }
     return true;
@@ -370,32 +386,24 @@ inline bool check_23_min_dark(const LightingSetpoints& sp_in,
     return true;
 }
 
-// #24 (CYC-4 / NB7): OVERNIGHT FOG IS A MICRO-PULSE OR SAFETY ONLY. Any fog ON
-// past the CYC-1 dusk cutoff (the dark/overnight window) must be attributable to
-// either (a) a permitted ≤5s overnight micro-pulse, or (b) survival cooling
-// (SAFETY_COOL). A continuous/routine fog run past the cutoff is forbidden
-// (ACC-2: surfaces dry overnight). This is a single-row property over the row's
-// actual dusk config + the micro-pulse gate. (The ≤5s DURATION cap is enforced
-// in controls.yaml's dedicated timer + validate_setpoints' max_on_s<=10 clamp;
-// the per-minute replay corpus cannot measure sub-minute pulse length, so this
-// asserts the legality of fog being on at all overnight, which is the property
-// that matters for the dark-dry intent.)
-inline bool check_24_overnight_fog_micropulse_only(const TraceRow& r,
-                                                   ReportFn report = default_report) {
+// #24 (CURVE-ONLY: replaces the deleted CYC-4 overnight-micro-pulse rule):
+// FOG NEVER FIRES BELOW THE BAND HIGH EDGE. With the dusk/night fog taper, the
+// clock window, and the dedicated overnight micro-pulse path all gone, the band
+// curve IS the schedule: routine fog is legal at ANY hour (day or night
+// identically) but ONLY when actual VPD is ABOVE the band's high edge (the curve
+// gate) — i.e. the air is genuinely too dry for the served band. Survival
+// cooling (SAFETY_COOL) is the only exception (evaporative fog as a heat-rail
+// aid). Fog firing at/below vpd_high is the regression this guards: a properly
+// shaped (high-vpd_high) night band keeps nights dry precisely BECAUSE this rule
+// holds, so a curve change that let fog run on already-humid air would breach
+// here. This is a single-row property; the per-minute corpus cannot see sub-
+// minute pulse length, so it asserts the legality of fog being on at all, which
+// is the dark-dry / curve-fidelity property that matters. Applies every hour,
+// not just overnight — the day/night symmetry is the whole point of curve-only.
+inline bool check_24_fog_requires_curve_gate(const TraceRow& r,
+                                             ReportFn report = default_report) {
     if (!r.eq_fog) return true;
-    // Build the micro-pulse rail view from the row (reuse the dusk/feed-hold/
-    // dew/RH/temp fields). Defaults for the micro-pulse tunables come from
-    // default_setpoints() and are overridden where the row carries config.
-    SensorInputs in; Setpoints sp;
-    sp = default_setpoints();
-    sp.vpd_high = r.vpd_high;
-    sp.vpd_low  = r.vpd_low;
-    sp.fog_rh_ceiling = r.fog_rh_ceiling;
-    sp.fog_min_temp   = r.fog_min_temp;
-    sp.dusk_cutoff_hour = r.dusk_cutoff_hour;
-    sp.sw_dusk_cutoff_enabled = r.dusk_cutoff_enabled;
-    sp.night_end_hour = (r.night_end_hour == 0 && r.night_start_hour == 0) ? 6 : r.night_end_hour;
-    sp.feed_hold_active = r.feed_hold_active;
+    SensorInputs in;
     in = SensorInputs{};
     in.temp_f = r.temp_f;
     in.rh_pct = r.rh_pct;
@@ -406,17 +414,82 @@ inline bool check_24_overnight_fog_micropulse_only(const TraceRow& r,
     in.outdoor_temp_f = NAN;
     in.outdoor_dewpoint_f = NAN;
     in.outdoor_data_age_s = 99999u;
+    set_solar_inputs_from_row(r, in);
 
     if (!sensors_plausible(in)) return true;       // SENSOR_FAULT handled elsewhere
-    if (!past_dusk_cutoff(in, sp)) return true;    // daytime fog is the normal path
-    // Overnight fog is legal ONLY as a permitted micro-pulse or survival cooling.
+    // Survival cooling fog is exempt: at the safety_max rail evaporative fog is a
+    // heat-rail aid, not band humidity control, so it may run regardless of VPD.
     const bool safety_cooling = mode_is_safety_cool(r.greenhouse_state);
-    if (!overnight_micropulse_permitted(in, sp) && !safety_cooling) {
-        report(24, "overnight_fog_micropulse_only", r,
-               "fog ON past the dusk cutoff without a permitted micro-pulse or SAFETY_COOL");
+    // The curve gate: fog is only legal when actual VPD is ABOVE the band high
+    // edge (climate_fog/wet_assist's "below_threshold" rail). At/below vpd_high
+    // the air is already inside the served band and no fog should fire.
+    const bool above_band_high = r.vpd_kpa > r.vpd_high;
+    if (!above_band_high && !safety_cooling) {
+        report(24, "fog_requires_curve_gate", r,
+               "fog ON with VPD at/below the band high edge outside SAFETY_COOL "
+               "(curve-only: fog must follow the band curve, not a clock/phase gate)");
         return false;
     }
     return true;
+}
+
+// #25: SAFETY_HEAT always engaged when temp <= safety_min — the cold-rail
+// symmetric twin of #7. The determine_mode rail preempt
+// (greenhouse_logic.h:683-691) is a strict ladder:
+//   SENSOR_FAULT  >  SAFETY_COOL (temp >= safety_max)  >
+//   SAFETY_HEAT (temp <= safety_min)  >  climate candidate.
+// So below the cold rail — when sensors are trustworthy and we are not already
+// at/above the hot rail — the mode MUST be SAFETY_HEAT. Excludes SENSOR_FAULT
+// (higher-precedence rail; relays all-off by design) and the degenerate
+// safety_min >= safety_max misconfig (the `temp_f < safety_max` guard). Light
+// on the spring corpus (the house is heated) but a standing guard so a future
+// edit can never silently demote the cold rail below climate arbitration.
+inline bool check_25_safety_heat_engaged(const TraceRow& r, ReportFn report = default_report) {
+    if (r.greenhouse_state == "SENSOR_FAULT") return true;   // higher-precedence rail
+    if (!std::isfinite(r.temp_f) || !std::isfinite(r.safety_min)) return true;
+    if (r.temp_f <= r.safety_min && r.temp_f < r.safety_max
+        && r.greenhouse_state != "SAFETY_HEAT") {
+        report(25, "safety_heat_must_engage", r,
+               "temp <= safety_min but mode != SAFETY_HEAT");
+        return false;
+    }
+    return true;
+}
+
+// #26: SENSOR_FAULT means ALL relays OFF. With no trustworthy sensor feedback
+// the controller drives nothing (greenhouse_logic.h:2007-2010); freeze
+// protection is an out-of-band hardware thermostat wired in parallel, never
+// blind software. Any relay ON while the recorded mode is SENSOR_FAULT is a
+// fault. (Vacuous on corpora with no SENSOR_FAULT rows — a standing guard like
+// #18/#19; it pins the all-off contract so a future executor change cannot let
+// an actuator run during a sensor blackout.)
+inline bool check_26_sensor_fault_all_off(const TraceRow& r, ReportFn report = default_report) {
+    if (r.greenhouse_state != "SENSOR_FAULT") return true;
+    if (r.eq_fog || r.eq_vent || r.eq_fan1 || r.eq_fan2 || r.eq_heat1 || r.eq_heat2
+        || r.eq_mister_south || r.eq_mister_west || r.eq_mister_center) {
+        report(26, "sensor_fault_all_off", r,
+               "relay ON while mode == SENSOR_FAULT (must be all-off)");
+        return false;
+    }
+    return true;
+}
+
+// #27: heat <-> air-exchange exclusivity. The deterministic controller must never
+// run a heater together with the vent or a fan EXCEPT in two sanctioned states:
+// SAFETY_HEAT (lead fan for canopy circulation, vent closed) and DEHUM_VENT (BC-5
+// bounded stage-1 heat-assist holding the temp floor while dehumidifying). This is
+// the pure-replay codification of the controls.yaml heat<->air interlock (BC-11),
+// so a regression that re-opens heater-vs-vent/fan fighting fails CI offline, not
+// only on-device. heat2 with the vent is never allowed (DEHUM_VENT runs heat1 only).
+inline bool check_27_heat_air_exchange_exclusive(const TraceRow& r, ReportFn report = default_report) {
+    const bool heating = r.eq_heat1 || r.eq_heat2;
+    const bool air_exchange = r.eq_vent || r.eq_fan1 || r.eq_fan2;
+    if (!heating || !air_exchange) return true;
+    if (r.greenhouse_state == "SAFETY_HEAT") return true;                  // circulation fan, vent closed
+    if (r.greenhouse_state == "DEHUM_VENT" && !r.eq_heat2) return true;    // BC-5 stage-1 heat-assist
+    report(27, "heat_air_exchange_exclusive", r,
+           "heater ON with vent/fan outside SAFETY_HEAT / DEHUM_VENT-stage1");
+    return false;
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -596,15 +669,23 @@ inline bool check_10_equipment_toggle_auditable(Ctx10& c, const TraceRow& r, Rep
     return true;
 }
 
-// #12: MIST_S2 only reachable from MIST_S1 (no level-skipping)
+// #12: FOG-FIRST no-level-skip (BC-14, ADR0003 §6.6). The humidification ladder
+// leads with fog and escalates upward by GPM: FOG → S1(misters) → S2(all-zone). So
+// the misters (S1) may be entered only after fog (from FOG/S1/S2), and S2 only from
+// S1/S2. Entering S1 straight from IDLE/VENT (no fog first), or S2 without passing
+// S1, is level-skipping.
 struct Ctx12 { std::string prev_state; };
 inline bool check_12_mist_progression(Ctx12& c, const TraceRow& r, ReportFn report = default_report) {
+    if (r.greenhouse_state == "SEALED_MIST_S1"
+        && c.prev_state != "SEALED_MIST_FOG"
+        && c.prev_state != "SEALED_MIST_S1"
+        && c.prev_state != "SEALED_MIST_S2") {
+        report(12, "mist_level_skip", r, "entered mister escalation (S1) without passing fog");
+        return false;
+    }
     if (r.greenhouse_state == "SEALED_MIST_S2"
         && c.prev_state != "SEALED_MIST_S1"
-        && c.prev_state != "SEALED_MIST_S2"
-        && c.prev_state != "SEALED_MIST_FOG") {
-        // Allow entering S2 only via S1, or by staying at S2/FOG. Other
-        // entries (IDLE→S2, VENTILATE→S2) indicate level-skipping.
+        && c.prev_state != "SEALED_MIST_S2") {
         report(12, "mist_level_skip", r, "entered SEALED_MIST_S2 without passing S1");
         return false;
     }
@@ -612,7 +693,15 @@ inline bool check_12_mist_progression(Ctx12& c, const TraceRow& r, ReportFn repo
     return true;
 }
 
-// #14: vent open/close cycles ≤ 12/day on days outdoor_temp_f < temp_low - 10 continuously
+// #14: vent open/close cycles ≤ VENT_COLD_DAY_CAP/day on days outdoor_temp_f < temp_low - 10
+// continuously. The cap was 12 under the legacy efficiency regime (minimize cold-day
+// venting). BC-13/ADR0003 §6.4+§3 (Jason 2026-06-17) RAISED it to 24: the band-compliance
+// regime tracks the VPD target 24/7, and warm-house/cool-dry-outdoor dehum legitimately
+// vents more on cold days. The ADR explicitly "accepts more cycling, bounded by per-relay
+// min-on/min-off dwell" — the vent relay 30s/30s dwell is the real RATE/wear guard; this
+// per-day count just catches gross thrash. (Frigid days route to heat-to-dry, not vent —
+// the estimator's over-cool guard — so the cap is not a license for cold-air dumping.)
+static constexpr int VENT_COLD_DAY_CAP = 24;
 struct Ctx14 {
     uint64_t day_bucket = 0;
     int vent_open_cycles = 0;
@@ -625,7 +714,7 @@ inline bool check_14_vent_cold_day_cap(Ctx14& c, const TraceRow& r, ReportFn rep
     if (day != c.day_bucket) {
         // day transition: emit check for completed day, reset
         bool ok = true;
-        if (c.day_has_outdoor && c.day_was_cold && c.vent_open_cycles > 12) {
+        if (c.day_has_outdoor && c.day_was_cold && c.vent_open_cycles > VENT_COLD_DAY_CAP) {
             char detail[120];
             std::snprintf(detail, sizeof(detail),
                 "%d vent open cycles on cold day", c.vent_open_cycles);
@@ -675,13 +764,12 @@ struct Ctx17 {
 };
 inline bool check_17_night_drop(Ctx17& c, const TraceRow& r, ReportFn report = default_report) {
     // FORWARD invariant. The ≥10°F day/night drop is a property of the NEW
-    // Vanda diurnal band (migration 145), not of the pre-fix telemetry. The
-    // historical replay corpus served the OLD broken band (night ~66.5 vs
-    // day-peak ~75 → only ~8.5°F) and is EXPECTED to violate this. So this
-    // check is gated on the new-band config being explicitly present
-    // (sp_night_start_hour/sp_night_end_hour columns) — it activates only
-    // once the corpus is refreshed under the Vanda band. The native unit
-    // test `night_drop_invariant_*` exercises it directly with that config.
+    // solar diurnal band, not of the pre-fix telemetry. The historical replay
+    // corpus served the OLD broken band (night ~66.5 vs day-peak ~75 → only
+    // ~8.5°F) and is EXPECTED to violate this. Gated on the new-band config
+    // being present (the night_*_hour columns survive in the corpus only when
+    // it was refreshed under the new band). Night is now derived from SOLAR
+    // PHASE, not a clock window. The native unit test exercises it directly.
     const bool new_band_config = !(r.night_start_hour == 0 && r.night_end_hour == 0);
     if (!new_band_config) return true;
 
@@ -691,7 +779,10 @@ inline bool check_17_night_drop(Ctx17& c, const TraceRow& r, ReportFn report = d
         c.day_peak_high = -1e9f;
         c.have_peak = false;
     }
-    const bool night = is_night_hour(r.local_hour, r.night_start_hour, r.night_end_hour);
+    SensorInputs nin{};
+    nin.local_hour = r.local_hour;
+    set_solar_inputs_from_row(r, nin);
+    const bool night = is_night_phase(nin);
     if (!night) {
         if (r.temp_high > c.day_peak_high) { c.day_peak_high = r.temp_high; c.have_peak = true; }
         return true;
@@ -761,8 +852,12 @@ struct Runner {
         // ── IRR-3 / IRR-4 center-burst rail invariants ──
         if (!check_21_center_burst_pre_dusk(r, report))             { failures++; ok = false; }
         if (!check_22_center_burst_no_feed_hold(r, report))         { failures++; ok = false; }
-        // ── CYC-4 overnight micro-pulse invariant ──
-        if (!check_24_overnight_fog_micropulse_only(r, report))     { failures++; ok = false; }
+        // ── Curve-only fog gate (replaces the deleted CYC-4 micro-pulse rule) ──
+        if (!check_24_fog_requires_curve_gate(r, report))           { failures++; ok = false; }
+        // ── Cold-rail + sensor-fault safety rails (L2 #344 AC4 test-rail) ──
+        if (!check_25_safety_heat_engaged(r, report))               { failures++; ok = false; }
+        if (!check_26_sensor_fault_all_off(r, report))              { failures++; ok = false; }
+        if (!check_27_heat_air_exchange_exclusive(r, report))       { failures++; ok = false; }
         return ok;
     }
 };

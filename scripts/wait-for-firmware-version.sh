@@ -26,7 +26,11 @@ if [[ -z "$EXPECTED_FW" ]]; then
     exit 2
 fi
 
-DB=(docker exec verdify-timescaledb psql -U verdify -d verdify -t -A -F '|' -c)
+# #24: DB access via the shared psql-verdify abstraction (docker-exec default
+# preserves prior VM argv).
+. "$(dirname "${BASH_SOURCE[0]}")/lib/psql-verdify.sh"
+mapfile -t DB < <(verdify_psql_cmd)
+DB+=(-t -A -F '|' -c)
 deadline=$((SECONDS + TIMEOUT_S))
 latest=""
 

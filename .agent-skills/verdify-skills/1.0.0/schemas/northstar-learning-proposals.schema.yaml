@@ -1,0 +1,92 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://verdify.example/schemas/northstar-learning-proposals.schema.yaml
+title: Verdify North Star Learning Proposals
+type: object
+additionalProperties: false
+required: [schema_ref, kind, schema_version, project_id, status, generated_at, updated_at, source_ids, redaction_policy, proposals, review, handoff]
+properties:
+  schema_ref: {const: northstar-learning-proposals.schema.yaml}
+  kind: {const: NorthStarLearningProposals}
+  schema_version: {const: "1.0"}
+  project_id: {type: string}
+  status: {type: string, enum: [draft, staged, review_requested, accepted, rejected, superseded]}
+  generated_at: {type: string, minLength: 1}
+  updated_at: {type: string, minLength: 1}
+  source_ids:
+    type: array
+    items: {type: string}
+  redaction_policy:
+    type: object
+    additionalProperties: false
+    required: [secrets_handling, sensitive_data_handling, retained_source_scope]
+    properties:
+      secrets_handling: {type: string}
+      sensitive_data_handling: {type: string}
+      retained_source_scope: {type: string}
+  proposals:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, title, source_refs, observed_issue_or_opportunity, verification, proposed_destination, proposed_change, expected_benefit, risk_class, approval_required, routing_decision, affected_artifacts, loop_readiness]
+      properties:
+        id: {type: string, pattern: '^NLP-[0-9]{3,}$'}
+        title: {type: string}
+        source_refs:
+          type: array
+          items: {type: string}
+        observed_issue_or_opportunity: {type: string}
+        verification: {type: string}
+        proposed_destination:
+          type: string
+          enum: [content_idea, context_file, slash_command, skill_update, hook, tool_cli_fix, config_change, backlog_issue, no_op, product_shape_update, architecture_update, artifact_schema]
+        proposed_change: {type: string}
+        expected_benefit: {type: string}
+        risk_class: {type: string, enum: [low, medium, high, protected]}
+        approval_required: {type: boolean}
+        routing_decision: {type: string, enum: [stage, apply_now, request_review, defer, reject, no_op]}
+        affected_artifacts:
+          type: array
+          items: {type: string}
+        loop_readiness:
+          type: object
+          additionalProperties: false
+          required: [recurs, verifier, durable_state, stop_condition, budget, objective_done_criteria, permissions, manual_run_evidence, ready_for_scheduling]
+          properties:
+            recurs: {type: string}
+            verifier: {type: string}
+            durable_state: {type: string}
+            stop_condition: {type: string}
+            budget: {type: string}
+            objective_done_criteria: {type: string}
+            permissions: {type: string}
+            manual_run_evidence: {type: string}
+            ready_for_scheduling: {type: boolean}
+  review:
+    type: object
+    additionalProperties: false
+    required: [status, reviewers, approvals]
+    properties:
+      status: {type: string, enum: [not_requested, requested, accepted, rejected, changes_requested]}
+      reviewers:
+        type: array
+        items: {type: string}
+      approvals:
+        type: array
+        items:
+          type: object
+          additionalProperties: false
+          required: [reviewer, decision, decided_at, notes]
+          properties:
+            reviewer: {type: string}
+            decision: {type: string, enum: [accepted, rejected, changes_requested]}
+            decided_at: {type: string}
+            notes: {type: string}
+  handoff:
+    type: object
+    additionalProperties: false
+    required: [next_skill, next_mode, reason]
+    properties:
+      next_skill: {type: string}
+      next_mode: {type: string}
+      reason: {type: string}

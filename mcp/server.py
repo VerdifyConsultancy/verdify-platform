@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """
 Verdify MCP Server — Greenhouse control tools for Agent Iris.
 
@@ -39,9 +39,13 @@ from verdify_schemas import (  # noqa: E402
     HarvestCreate,
     LessonCreate,
     LessonSummary,
+    LessonSupersede,
     LessonUpdate,
     LessonValidate,
     ObservationCreate,
+    OutcomeKpiActionRow,
+    OutcomeKpiCoverage,
+    OutcomeKpiResponse,
     Plan,
     PlanDeliveryLogRow,
     PlanEvaluation,
@@ -54,6 +58,8 @@ from verdify_schemas import (  # noqa: E402
     SetpointSummary,
     SlackCommandRequest,
     TreatmentCreate,
+    derive_lesson_state,
+    is_legal_lesson_transition,
 )
 from verdify_schemas.climate_intent import (  # noqa: E402
     CLIMATE_INTENT_CONTRACT_VERSION,
@@ -78,6 +84,11 @@ if _env_path.exists():
     for line in _env_path.read_text().splitlines():
         if line.startswith("POSTGRES_PASSWORD="):
             _db_pass = line.split("=", 1)[1].strip().strip('"').strip("'")
+# #24: the MCP server is already DSN-native — it connects via asyncpg against
+# DB_DSN, never `docker exec psql`. This IS the VERDIFY_DB_BACKEND=dsn path of
+# the shared scripts/lib/psql-verdify.sh contract: setting DB_DSN to an
+# in-cluster Postgres endpoint moves this service off the VM with no code change.
+# Default below preserves the live VM connection (localhost:5432).
 DB_DSN = os.environ.get("DB_DSN", f"postgresql://verdify:{_db_pass}@localhost:5432/verdify")
 # Legacy planner.py removed — planning runs via iris_planner.py → Hermes /v1/runs
 BAND_OWNED_PARAMS = BAND_OWNED_REG
@@ -378,30 +389,36 @@ async def climate() -> str:
 @mcp.tool()
 async def scorecard(target_date: str = "") -> str:
     """Get the planner scorecard — 25 KPI metrics for a given day.
-    Includes: planner_score, compliance_pct, temp_compliance_pct,
-    vpd_compliance_pct, stress hours (heat/cold/vpd_high/vpd_low), utility usage
-    (kwh, therms, water_gal, mister_water_gal), costs (electric/gas/water/total),
-    dew point safety, and 7-day averages. Pass date as YYYY-MM-DD or omit for today.
+    Includes: planner_score, compliance_v2_attributable_pct (the current scored
+    compliance field), dev_temp_norm_median_day/night + dev_temp_norm_p95
+    (+ dev_vpd_*) as target-reference diagnostics only, compliance_v2_raw_pct,
+    compliance_v2_unachievable_frac, the legacy binary compliance_pct /
+    temp_compliance_pct / vpd_compliance_pct, stress hours (heat/cold/vpd_high/
+    vpd_low), utility usage (kwh, therms, water_gal, mister_water_gal), costs
+    (electric/gas/water/total), dew point safety, and 7-day averages. Pass date
+    as YYYY-MM-DD or omit for today.
 
-    Compliance is moving from a single binary house metric to GRADED + PER-ZONE +
-    FEASIBILITY-AWARE scoring (band-compliance rearchitecture, migrations 146-147).
-    GRADED: full credit inside the ideal band, linear partial credit through the
-    stress band, zero beyond — a reading 0.1F out of band no longer scores the same
-    as one 15F out. PER-ZONE: each zone graded against what is actually planted there
+    Compliance is GRADED + PER-ZONE + CONTROLLER-ATTRIBUTABLE (band-compliance
+    rearchitecture, migrations 146-147), and the scored compliance number is
+    compliance_v2_attributable_pct. ADR-0004 supersedes target hugging: use this
+    as a corridor/outcome guard, not as permission to spend water/energy/wear
+    reducing target-reference deviation while readings are already inside the
+    crop corridor. GRADED severity still distinguishes small edge misses from large
+    stress. PER-ZONE: each zone graded against what is actually planted there
     (center = Vanda orchid; east = lettuce/strawberry/pepper), aggregated to a house
-    number (center weight 0.60, east 0.40). FEASIBILITY-AWARE: every miss is split
-    into controller-error (a cooling/heating stage was idle with authority available)
-    vs physically-unachievable (e.g. vent saturated and outdoor >= the served target —
-    an exhaust-only box cannot beat ambient). The reward becomes the
-    CONTROLLER-ATTRIBUTABLE compliance so weather Iris cannot change is not scored
-    against her; unachievable_frac is reported context that should cue WIDENING the
-    served envelope, not working the actuators harder.
+    number (center weight 0.60, east 0.40). CONTROLLER-ATTRIBUTABLE: every miss is
+    split into controller-error (a cooling/heating stage was idle with authority
+    available) vs physically-unachievable (e.g. vent saturated and outdoor >= the
+    served high edge — an exhaust-only box cannot beat ambient); the unachievable
+    misses are credited back so weather Iris cannot change is not scored against her.
+    compliance_v2_raw_pct and compliance_v2_unachievable_frac are reported context — a
+    high unachievable_frac should cue WIDENING the served envelope, not working the
+    actuators harder.
 
-    Until migration 147 lands, the live planner_score still uses the binary
-    compliance_pct (% of readings with BOTH temp and VPD in the served band); the
-    graded compliance_v2_* / controller-attributable columns dual-write alongside it
-    first, so treat the graded framing above as the target semantics, not yet the
-    live reward.
+    The scorecard still reads compliance_v2_attributable_pct per day and falls back
+    to the legacy binary compliance_pct (% of readings with BOTH temp and VPD in the
+    served band) only for days before the graded column was populated. Treat binary
+    compliance_pct as transitional/diagnostic context only.
 
     Response is validated through verdify_schemas.ScorecardResponse — partial
     days emit a subset of metrics as null. DB drift (new metric) surfaces as a
@@ -424,6 +441,766 @@ async def scorecard(target_date: str = "") -> str:
                 }
             )
         return sc.model_dump_json(by_alias=True)
+    finally:
+        await conn.close()
+
+
+@mcp.tool()
+async def outcome_kpi(target_date: str = "") -> str:
+    """Get ADR-0004 outcome KPIs for a day.
+
+    This is the read-only outcome surface for floating-corridor control: served
+    corridor compliance, VPD misses, actuator cycles/runtime, dew margin, water
+    use, DLI, moisture-estimator decisions, fog/dehum ping-pong sequences,
+    heat-dehum episodes, and per-action effectiveness from the daily climate-
+    action scorecard. ADR-0004 means these are outcome and resource guardrails,
+    not an instruction to target-hug while the crop is already inside the
+    served corridor.
+
+    Pinched corridor compliance, DIF, and solar-phase buckets are computed on
+    demand from one-minute climate samples plus the active setpoint/readback
+    state. Moisture-estimator buckets are computed from
+    climate_action_log.source_system_state->climate_moisture_exchange when the
+    OTA/deploy path has produced rows. Pass date as YYYY-MM-DD or omit for today."""
+    greenhouse_id = "vallery"
+    conn = await _db()
+    try:
+        if target_date:
+            try:
+                d = datetime.strptime(target_date, "%Y-%m-%d").date()
+            except ValueError:
+                return _json({"error": "target_date must be YYYY-MM-DD"})
+        else:
+            d = await conn.fetchval("SELECT (now() AT TIME ZONE 'America/Denver')::date")
+
+        summary_row = await conn.fetchrow(
+            """
+            SELECT date, greenhouse_id,
+                   compliance_v2_attributable_pct,
+                   compliance_v2_raw_pct,
+                   compliance_v2_unachievable_frac,
+                   compliance_pct,
+                   temp_compliance_pct,
+                   vpd_compliance_pct,
+                   graded_temp_compliance_pct,
+                   graded_vpd_compliance_pct,
+                   feasibility_unknown_min,
+                   stress_hours_vpd_high,
+                   stress_hours_vpd_low,
+                   graded_stress_hours_vpd_high,
+                   graded_stress_hours_vpd_low,
+                   cycles_fan1,
+                   cycles_fan2,
+                   cycles_heat1,
+                   cycles_heat2,
+                   cycles_fog,
+                   cycles_vent,
+                   cycles_dehum,
+                   cycles_safety_dehum,
+                   cycles_mister_south,
+                   cycles_mister_west,
+                   cycles_mister_center,
+                   cycles_grow_light,
+                   runtime_fan1_min,
+                   runtime_fan2_min,
+                   runtime_heat1_min,
+                   runtime_heat2_min,
+                   runtime_fog_min,
+                   runtime_vent_min,
+                   runtime_mister_south_h,
+                   runtime_mister_west_h,
+                   runtime_mister_center_h,
+                   runtime_grow_light_min,
+                   water_used_gal,
+                   mister_water_gal,
+                   irrigation_water_gal,
+                   fertigation_water_gal,
+                   dli_final,
+                   min_dp_margin_f,
+                   dp_risk_hours,
+                   kwh_estimated,
+                   therms_estimated,
+                   cost_electric,
+                   cost_gas,
+                   cost_water,
+                   cost_total
+            FROM daily_summary
+            WHERE date = $1::date AND greenhouse_id = $2
+            """,
+            d,
+            greenhouse_id,
+        )
+        summary = dict(summary_row) if summary_row else {}
+
+        action_rows = await conn.fetch(
+            """
+            SELECT climate_action,
+                   decisions,
+                   avg_abs_temp_error_before_f,
+                   avg_abs_vpd_error_before_kpa,
+                   avg_temp_abs_error_delta_15m_f,
+                   avg_vpd_abs_error_delta_15m_kpa,
+                   avg_wet_relay_duty_pct,
+                   avg_vent_fan_duty_pct,
+                   mister_water_delta_gal,
+                   wet_blocked_decisions,
+                   fog_blocked_decisions
+            FROM v_climate_action_daily_scorecard
+            WHERE date = $1::date AND greenhouse_id = $2
+            ORDER BY decisions DESC, climate_action
+            """,
+            d,
+            greenhouse_id,
+        )
+
+        pinched_row = await conn.fetchrow(
+            """
+            WITH bounds AS (
+                SELECT
+                    ($1::date::timestamp AT TIME ZONE 'America/Denver') AS start_ts,
+                    (($1::date + 1)::timestamp AT TIME ZONE 'America/Denver') AS end_ts
+            ),
+            samples AS (
+                SELECT
+                    time_bucket('1 minute', c.ts) AS bucket,
+                    avg(c.temp_avg)::double precision AS temp_avg,
+                    avg(c.vpd_avg)::double precision AS vpd_avg,
+                    avg(c.house_temp_target_f)::double precision AS temp_target_f,
+                    avg(c.house_vpd_target)::double precision AS vpd_target_kpa,
+                    avg(c.solar_phase)::double precision AS solar_phase
+                FROM climate c
+                CROSS JOIN bounds b
+                WHERE c.greenhouse_id = $2
+                  AND c.ts >= b.start_ts
+                  AND c.ts < b.end_ts
+                  AND c.temp_avg IS NOT NULL
+                  AND c.vpd_avg IS NOT NULL
+                GROUP BY 1
+            ),
+            resolved AS (
+                SELECT
+                    s.*,
+                    COALESCE(temp_low.value, band.temp_low) AS temp_low_f,
+                    COALESCE(temp_high.value, band.temp_high) AS temp_high_f,
+                    COALESCE(vpd_low.value, house.house_vpd_low) AS vpd_low_kpa,
+                    COALESCE(vpd_high.value, house.house_vpd_high) AS vpd_high_kpa,
+                    GREATEST(
+                        0.0,
+                        LEAST(
+                            1.0,
+                            COALESCE(btf_readback.value, btf_change.value, 0.0)
+                        )
+                    ) AS band_track_fraction,
+                    btf_readback.value IS NOT NULL AS has_fraction_readback
+                FROM samples s
+                CROSS JOIN LATERAL fn_band_setpoints(s.bucket) AS band
+                CROSS JOIN LATERAL fn_house_vpd_control_band(s.bucket) AS house
+                LEFT JOIN LATERAL (
+                    SELECT value FROM setpoint_snapshot
+                    WHERE greenhouse_id = $2 AND parameter = 'temp_low' AND ts <= s.bucket
+                    ORDER BY ts DESC LIMIT 1
+                ) temp_low ON true
+                LEFT JOIN LATERAL (
+                    SELECT value FROM setpoint_snapshot
+                    WHERE greenhouse_id = $2 AND parameter = 'temp_high' AND ts <= s.bucket
+                    ORDER BY ts DESC LIMIT 1
+                ) temp_high ON true
+                LEFT JOIN LATERAL (
+                    SELECT value FROM setpoint_snapshot
+                    WHERE greenhouse_id = $2 AND parameter = 'vpd_low' AND ts <= s.bucket
+                    ORDER BY ts DESC LIMIT 1
+                ) vpd_low ON true
+                LEFT JOIN LATERAL (
+                    SELECT value FROM setpoint_snapshot
+                    WHERE greenhouse_id = $2 AND parameter = 'vpd_high' AND ts <= s.bucket
+                    ORDER BY ts DESC LIMIT 1
+                ) vpd_high ON true
+                LEFT JOIN LATERAL (
+                    SELECT value FROM setpoint_snapshot
+                    WHERE greenhouse_id = $2
+                      AND parameter = 'band_track_fraction'
+                      AND ts <= s.bucket
+                    ORDER BY ts DESC LIMIT 1
+                ) btf_readback ON true
+                LEFT JOIN LATERAL (
+                    SELECT value FROM setpoint_changes
+                    WHERE greenhouse_id = $2
+                      AND parameter = 'band_track_fraction'
+                      AND ts <= s.bucket
+                      AND (expired_at IS NULL OR expired_at > s.bucket)
+                    ORDER BY ts DESC LIMIT 1
+                ) btf_change ON true
+            ),
+            eligible AS (
+                SELECT
+                    *,
+                    temp_low_f + band_track_fraction
+                        * (LEAST(GREATEST(temp_target_f, temp_low_f), temp_high_f) - temp_low_f)
+                        AS pinched_temp_low_f,
+                    temp_high_f - band_track_fraction
+                        * (temp_high_f - LEAST(GREATEST(temp_target_f, temp_low_f), temp_high_f))
+                        AS pinched_temp_high_f,
+                    vpd_low_kpa + band_track_fraction
+                        * (LEAST(GREATEST(vpd_target_kpa, vpd_low_kpa), vpd_high_kpa) - vpd_low_kpa)
+                        AS pinched_vpd_low_kpa,
+                    vpd_high_kpa - band_track_fraction
+                        * (vpd_high_kpa - LEAST(GREATEST(vpd_target_kpa, vpd_low_kpa), vpd_high_kpa))
+                        AS pinched_vpd_high_kpa
+                FROM resolved
+                WHERE temp_target_f IS NOT NULL
+                  AND vpd_target_kpa IS NOT NULL
+                  AND temp_low_f IS NOT NULL
+                  AND temp_high_f IS NOT NULL
+                  AND vpd_low_kpa IS NOT NULL
+                  AND vpd_high_kpa IS NOT NULL
+            ),
+            scored AS (
+                SELECT
+                    *,
+                    GREATEST(pinched_temp_low_f - temp_avg, temp_avg - pinched_temp_high_f, 0.0)
+                        AS temp_pinched_miss_f,
+                    GREATEST(pinched_vpd_low_kpa - vpd_avg, vpd_avg - pinched_vpd_high_kpa, 0.0)
+                        AS vpd_pinched_miss_kpa,
+                    temp_avg BETWEEN pinched_temp_low_f AND pinched_temp_high_f AS temp_pinched_in_band,
+                    vpd_avg BETWEEN pinched_vpd_low_kpa AND pinched_vpd_high_kpa AS vpd_pinched_in_band
+                FROM eligible
+            )
+            SELECT
+                count(*)::int AS sample_min,
+                count(*) FILTER (WHERE has_fraction_readback)::int AS samples_with_fraction_readback,
+                round(avg(band_track_fraction)::numeric, 3)::double precision
+                    AS avg_band_track_fraction,
+                round(min(band_track_fraction)::numeric, 3)::double precision
+                    AS min_band_track_fraction,
+                round(max(band_track_fraction)::numeric, 3)::double precision
+                    AS max_band_track_fraction,
+                round((100.0 * count(*) FILTER (WHERE temp_pinched_in_band)
+                    / NULLIF(count(*), 0))::numeric, 2)::double precision AS temp_pct,
+                round((100.0 * count(*) FILTER (WHERE vpd_pinched_in_band)
+                    / NULLIF(count(*), 0))::numeric, 2)::double precision AS vpd_pct,
+                round((100.0 * count(*) FILTER (WHERE temp_pinched_in_band AND vpd_pinched_in_band)
+                    / NULLIF(count(*), 0))::numeric, 2)::double precision AS both_pct,
+                round((100.0 * count(*) FILTER (
+                        WHERE solar_phase < 2.0 AND temp_pinched_in_band AND vpd_pinched_in_band
+                    ) / NULLIF(count(*) FILTER (WHERE solar_phase < 2.0), 0))::numeric, 2)::double precision
+                    AS day_pct,
+                round((100.0 * count(*) FILTER (
+                        WHERE solar_phase >= 2.0 AND temp_pinched_in_band AND vpd_pinched_in_band
+                    ) / NULLIF(count(*) FILTER (WHERE solar_phase >= 2.0), 0))::numeric, 2)::double precision
+                    AS night_pct,
+                round((percentile_cont(0.95) WITHIN GROUP (
+                    ORDER BY temp_pinched_miss_f
+                ))::numeric, 2)::double precision AS p95_temp_miss_f,
+                round((percentile_cont(0.95) WITHIN GROUP (
+                    ORDER BY vpd_pinched_miss_kpa
+                ))::numeric, 3)::double precision AS p95_vpd_miss_kpa
+            FROM scored
+            """,
+            d,
+            greenhouse_id,
+        )
+        pinched = dict(pinched_row) if pinched_row else {}
+
+        dif_row = await conn.fetchrow(
+            """
+            WITH bounds AS (
+                SELECT
+                    ($1::date::timestamp AT TIME ZONE 'America/Denver') AS start_ts,
+                    (($1::date + 1)::timestamp AT TIME ZONE 'America/Denver') AS end_ts
+            ),
+            samples AS (
+                SELECT
+                    time_bucket('1 minute', c.ts) AS bucket,
+                    avg(c.temp_avg)::double precision AS temp_avg,
+                    avg(c.solar_phase)::double precision AS solar_phase
+                FROM climate c
+                CROSS JOIN bounds b
+                WHERE c.greenhouse_id = $2
+                  AND c.ts >= b.start_ts
+                  AND c.ts < b.end_ts
+                  AND c.temp_avg IS NOT NULL
+                  AND c.solar_phase IS NOT NULL
+                GROUP BY 1
+            )
+            SELECT
+                count(*) FILTER (WHERE solar_phase < 2.0)::int AS day_sample_min,
+                count(*) FILTER (WHERE solar_phase >= 2.0)::int AS night_sample_min,
+                round((avg(temp_avg) FILTER (WHERE solar_phase < 2.0))::numeric, 2)::double precision
+                    AS day_temp_avg_f,
+                round((avg(temp_avg) FILTER (WHERE solar_phase >= 2.0))::numeric, 2)::double precision
+                    AS night_temp_avg_f,
+                round((
+                    avg(temp_avg) FILTER (WHERE solar_phase < 2.0)
+                    - avg(temp_avg) FILTER (WHERE solar_phase >= 2.0)
+                )::numeric, 2)::double precision AS day_night_temp_delta_f
+            FROM samples
+            """,
+            d,
+            greenhouse_id,
+        )
+        dif = dict(dif_row) if dif_row else {}
+
+        phase_rows = await conn.fetch(
+            """
+            WITH bounds AS (
+                SELECT
+                    ($1::date::timestamp AT TIME ZONE 'America/Denver') AS start_ts,
+                    (($1::date + 1)::timestamp AT TIME ZONE 'America/Denver') AS end_ts
+            ),
+            samples AS (
+                SELECT
+                    time_bucket('1 minute', c.ts) AS bucket,
+                    avg(c.temp_avg)::double precision AS temp_avg,
+                    avg(c.vpd_avg)::double precision AS vpd_avg,
+                    avg(c.dew_point)::double precision AS dew_point,
+                    avg(c.solar_irradiance_w_m2)::double precision AS solar_w_m2,
+                    avg(c.solar_phase)::double precision AS solar_phase,
+                    avg(c.house_temp_target_f)::double precision AS temp_target_f,
+                    avg(c.house_vpd_target)::double precision AS vpd_target_kpa
+                FROM climate c
+                CROSS JOIN bounds b
+                WHERE c.greenhouse_id = $2
+                  AND c.ts >= b.start_ts
+                  AND c.ts < b.end_ts
+                  AND c.temp_avg IS NOT NULL
+                  AND c.vpd_avg IS NOT NULL
+                  AND c.solar_phase IS NOT NULL
+                GROUP BY 1
+            ),
+            resolved AS (
+                SELECT
+                    s.*,
+                    CASE
+                        WHEN s.solar_phase < 1.0 THEN 'sunrise_to_noon'
+                        WHEN s.solar_phase < 2.0 THEN 'noon_to_sunset'
+                        WHEN s.solar_phase < 3.0 THEN 'sunset_to_midnight'
+                        ELSE 'midnight_to_sunrise'
+                    END AS phase_bucket,
+                    CASE
+                        WHEN s.solar_phase < 1.0 THEN 0
+                        WHEN s.solar_phase < 2.0 THEN 1
+                        WHEN s.solar_phase < 3.0 THEN 2
+                        ELSE 3
+                    END AS phase_order,
+                    COALESCE(temp_low.value, band.temp_low) AS temp_low_f,
+                    COALESCE(temp_high.value, band.temp_high) AS temp_high_f,
+                    COALESCE(vpd_low.value, house.house_vpd_low) AS vpd_low_kpa,
+                    COALESCE(vpd_high.value, house.house_vpd_high) AS vpd_high_kpa,
+                    GREATEST(
+                        0.0,
+                        LEAST(
+                            1.0,
+                            COALESCE(btf_readback.value, btf_change.value, 0.0)
+                        )
+                    ) AS band_track_fraction
+                FROM samples s
+                CROSS JOIN LATERAL fn_band_setpoints(s.bucket) AS band
+                CROSS JOIN LATERAL fn_house_vpd_control_band(s.bucket) AS house
+                LEFT JOIN LATERAL (
+                    SELECT value FROM setpoint_snapshot
+                    WHERE greenhouse_id = $2 AND parameter = 'temp_low' AND ts <= s.bucket
+                    ORDER BY ts DESC LIMIT 1
+                ) temp_low ON true
+                LEFT JOIN LATERAL (
+                    SELECT value FROM setpoint_snapshot
+                    WHERE greenhouse_id = $2 AND parameter = 'temp_high' AND ts <= s.bucket
+                    ORDER BY ts DESC LIMIT 1
+                ) temp_high ON true
+                LEFT JOIN LATERAL (
+                    SELECT value FROM setpoint_snapshot
+                    WHERE greenhouse_id = $2 AND parameter = 'vpd_low' AND ts <= s.bucket
+                    ORDER BY ts DESC LIMIT 1
+                ) vpd_low ON true
+                LEFT JOIN LATERAL (
+                    SELECT value FROM setpoint_snapshot
+                    WHERE greenhouse_id = $2 AND parameter = 'vpd_high' AND ts <= s.bucket
+                    ORDER BY ts DESC LIMIT 1
+                ) vpd_high ON true
+                LEFT JOIN LATERAL (
+                    SELECT value FROM setpoint_snapshot
+                    WHERE greenhouse_id = $2
+                      AND parameter = 'band_track_fraction'
+                      AND ts <= s.bucket
+                    ORDER BY ts DESC LIMIT 1
+                ) btf_readback ON true
+                LEFT JOIN LATERAL (
+                    SELECT value FROM setpoint_changes
+                    WHERE greenhouse_id = $2
+                      AND parameter = 'band_track_fraction'
+                      AND ts <= s.bucket
+                      AND (expired_at IS NULL OR expired_at > s.bucket)
+                    ORDER BY ts DESC LIMIT 1
+                ) btf_change ON true
+            ),
+            scored AS (
+                SELECT
+                    *,
+                    temp_low_f + band_track_fraction
+                        * (LEAST(GREATEST(temp_target_f, temp_low_f), temp_high_f) - temp_low_f)
+                        AS pinched_temp_low_f,
+                    temp_high_f - band_track_fraction
+                        * (temp_high_f - LEAST(GREATEST(temp_target_f, temp_low_f), temp_high_f))
+                        AS pinched_temp_high_f,
+                    vpd_low_kpa + band_track_fraction
+                        * (LEAST(GREATEST(vpd_target_kpa, vpd_low_kpa), vpd_high_kpa) - vpd_low_kpa)
+                        AS pinched_vpd_low_kpa,
+                    vpd_high_kpa - band_track_fraction
+                        * (vpd_high_kpa - LEAST(GREATEST(vpd_target_kpa, vpd_low_kpa), vpd_high_kpa))
+                        AS pinched_vpd_high_kpa
+                FROM resolved
+                WHERE temp_target_f IS NOT NULL
+                  AND vpd_target_kpa IS NOT NULL
+                  AND temp_low_f IS NOT NULL
+                  AND temp_high_f IS NOT NULL
+                  AND vpd_low_kpa IS NOT NULL
+                  AND vpd_high_kpa IS NOT NULL
+            )
+            SELECT
+                phase_bucket,
+                count(*)::int AS sample_min,
+                round(min(solar_phase)::numeric, 2)::double precision AS phase_min,
+                round(max(solar_phase)::numeric, 2)::double precision AS phase_max,
+                round(avg(temp_avg)::numeric, 2)::double precision AS temp_avg_f,
+                round(avg(vpd_avg)::numeric, 3)::double precision AS vpd_avg_kpa,
+                round(min(temp_avg - dew_point)::numeric, 2)::double precision AS min_dp_margin_f,
+                round(avg(solar_w_m2)::numeric, 1)::double precision AS avg_solar_w_m2,
+                round((100.0 * count(*) FILTER (
+                        WHERE temp_avg BETWEEN temp_low_f AND temp_high_f
+                          AND vpd_avg BETWEEN vpd_low_kpa AND vpd_high_kpa
+                    ) / NULLIF(count(*), 0))::numeric, 2)::double precision AS served_both_pct,
+                round((100.0 * count(*) FILTER (
+                        WHERE temp_avg BETWEEN pinched_temp_low_f AND pinched_temp_high_f
+                          AND vpd_avg BETWEEN pinched_vpd_low_kpa AND pinched_vpd_high_kpa
+                    ) / NULLIF(count(*), 0))::numeric, 2)::double precision AS pinched_both_pct,
+                round((100.0 * count(*) FILTER (
+                        WHERE vpd_avg > vpd_high_kpa
+                    ) / NULLIF(count(*), 0))::numeric, 2)::double precision AS vpd_high_miss_pct,
+                round((100.0 * count(*) FILTER (
+                        WHERE vpd_avg < vpd_low_kpa
+                    ) / NULLIF(count(*), 0))::numeric, 2)::double precision AS vpd_low_miss_pct
+            FROM scored
+            GROUP BY phase_order, phase_bucket
+            ORDER BY phase_order
+            """,
+            d,
+            greenhouse_id,
+        )
+
+        moisture_rows = await conn.fetch(
+            """
+            WITH bounds AS (
+                SELECT
+                    ($1::date::timestamp AT TIME ZONE 'America/Denver') AS start_ts,
+                    (($1::date + 1)::timestamp AT TIME ZONE 'America/Denver') AS end_ts
+            ),
+            estimator AS (
+                SELECT
+                    source_system_state -> 'climate_moisture_exchange' AS mx
+                FROM climate_action_log
+                CROSS JOIN bounds b
+                WHERE greenhouse_id = $2
+                  AND ts >= b.start_ts
+                  AND ts < b.end_ts
+                  AND jsonb_typeof(source_system_state -> 'climate_moisture_exchange') = 'object'
+            ),
+            parsed AS (
+                SELECT
+                    COALESCE(NULLIF(mx ->> 'action', ''), 'unknown') AS action,
+                    COALESCE(NULLIF(mx ->> 'reason', ''), 'unknown') AS reason,
+                    NULLIF(mx ->> 'vent_vpd_gain_kpa', '')::double precision
+                        AS vent_vpd_gain_kpa,
+                    NULLIF(mx ->> 'heat_vpd_gain_kpa', '')::double precision
+                        AS heat_vpd_gain_kpa,
+                    CASE WHEN mx ->> 'outdoor_fresh' IN ('true', 'false')
+                        THEN (mx ->> 'outdoor_fresh')::boolean
+                    END AS outdoor_fresh,
+                    CASE WHEN mx ->> 'vent_overcools' IN ('true', 'false')
+                        THEN (mx ->> 'vent_overcools')::boolean
+                    END AS vent_overcools,
+                    CASE WHEN mx ->> 'heat_assist_corun' IN ('true', 'false')
+                        THEN (mx ->> 'heat_assist_corun')::boolean
+                    END AS heat_assist_corun,
+                    CASE WHEN mx ->> 'heat_assist_active' IN ('true', 'false')
+                        THEN (mx ->> 'heat_assist_active')::boolean
+                    END AS heat_assist_active,
+                    NULLIF(mx ->> 'heat_assist_timer_s', '')::double precision
+                        AS heat_assist_timer_s
+                FROM estimator
+            )
+            SELECT
+                action,
+                reason,
+                count(*)::int AS decisions,
+                round(avg(vent_vpd_gain_kpa)::numeric, 3)::double precision
+                    AS avg_vent_vpd_gain_kpa,
+                round(avg(heat_vpd_gain_kpa)::numeric, 3)::double precision
+                    AS avg_heat_vpd_gain_kpa,
+                count(*) FILTER (WHERE outdoor_fresh)::int AS outdoor_fresh_decisions,
+                count(*) FILTER (WHERE vent_overcools)::int AS vent_overcool_decisions,
+                count(*) FILTER (WHERE heat_assist_corun)::int AS heat_assist_corun_decisions,
+                count(*) FILTER (WHERE heat_assist_active)::int AS heat_assist_active_decisions,
+                round(avg(heat_assist_timer_s)::numeric, 0)::double precision
+                    AS avg_heat_assist_timer_s
+            FROM parsed
+            GROUP BY action, reason
+            ORDER BY decisions DESC, action, reason
+            """,
+            d,
+            greenhouse_id,
+        )
+
+        vpd_policy_row = await conn.fetchrow(
+            """
+            WITH bounds AS (
+                SELECT
+                    ($1::date::timestamp AT TIME ZONE 'America/Denver') AS start_ts,
+                    (($1::date + 1)::timestamp AT TIME ZONE 'America/Denver') AS end_ts
+            ),
+            ordered AS (
+                SELECT
+                    l.ts,
+                    l.climate_action,
+                    l.priority_axis,
+                    l.candidate_summary,
+                    l.source_system_state,
+                    lag(l.climate_action) OVER (ORDER BY l.ts) AS prev_action
+                FROM climate_action_log l
+                CROSS JOIN bounds b
+                WHERE l.greenhouse_id = $2
+                  AND l.ts >= b.start_ts
+                  AND l.ts < b.end_ts
+            ),
+            tagged AS (
+                SELECT
+                    *,
+                    sum(CASE WHEN prev_action IS DISTINCT FROM climate_action THEN 1 ELSE 0 END)
+                        OVER (ORDER BY ts ROWS UNBOUNDED PRECEDING) AS episode_id
+                FROM ordered
+            ),
+            episodes AS (
+                SELECT
+                    episode_id,
+                    min(ts) AS started_at,
+                    max(ts) AS ended_at,
+                    climate_action,
+                    count(*)::int AS sample_count,
+                    bool_or(priority_axis = 'vpd') AS vpd_priority,
+                    bool_or(COALESCE(candidate_summary, '') ILIKE '%heat-assist dehum%')
+                        AS heat_dehum_summary,
+                    bool_or(
+                        source_system_state -> 'climate_moisture_exchange' ->> 'action'
+                            = 'heat_assist'
+                    ) AS mx_heat_assist,
+                    bool_or(
+                        source_system_state -> 'climate_moisture_exchange' ->> 'heat_assist_active'
+                            = 'true'
+                    ) AS mx_heat_assist_active
+                FROM tagged
+                GROUP BY episode_id, climate_action
+            ),
+            sequenced AS (
+                SELECT
+                    *,
+                    lag(climate_action) OVER (ORDER BY started_at) AS prev_episode_action,
+                    lag(ended_at) OVER (ORDER BY started_at) AS prev_episode_ended_at
+                FROM episodes
+            ),
+            classified AS (
+                SELECT
+                    *,
+                    climate_action IN (
+                        'SEALED_HUMIDIFY',
+                        'SEALED_FOG',
+                        'VENT_COOL_MIST_ASSIST',
+                        'VENT_COOL_FOG_ASSIST'
+                    ) AS is_wetting,
+                    climate_action = 'DEHUM_VENT' AS is_dehum,
+                    climate_action = 'HEAT'
+                        AND (vpd_priority OR heat_dehum_summary OR mx_heat_assist OR mx_heat_assist_active)
+                        AS is_heat_dehum,
+                    started_at - prev_episode_ended_at AS prev_gap
+                FROM sequenced
+            )
+            SELECT
+                count(*)::int AS total_episodes,
+                COALESCE(sum(sample_count), 0)::int AS total_samples,
+                count(*) FILTER (WHERE is_wetting)::int AS wetting_episodes,
+                count(*) FILTER (WHERE is_dehum)::int AS vent_dehum_episodes,
+                count(*) FILTER (WHERE is_heat_dehum)::int AS heat_dehum_episodes,
+                count(*) FILTER (
+                    WHERE is_dehum
+                      AND prev_episode_action IN (
+                          'SEALED_HUMIDIFY',
+                          'SEALED_FOG',
+                          'VENT_COOL_MIST_ASSIST',
+                          'VENT_COOL_FOG_ASSIST'
+                      )
+                      AND prev_gap <= interval '30 minutes'
+                )::int AS wet_to_dehum_episodes_30m,
+                count(*) FILTER (
+                    WHERE is_wetting
+                      AND prev_episode_action = 'DEHUM_VENT'
+                      AND prev_gap <= interval '30 minutes'
+                )::int AS dehum_to_wet_episodes_30m,
+                round((
+                    avg(extract(epoch FROM prev_gap) / 60.0) FILTER (
+                        WHERE is_dehum
+                          AND prev_episode_action IN (
+                              'SEALED_HUMIDIFY',
+                              'SEALED_FOG',
+                              'VENT_COOL_MIST_ASSIST',
+                              'VENT_COOL_FOG_ASSIST'
+                          )
+                          AND prev_gap <= interval '30 minutes'
+                    )
+                )::numeric, 1)::double precision AS avg_wet_to_dehum_gap_min,
+                round((
+                    avg(extract(epoch FROM prev_gap) / 60.0) FILTER (
+                        WHERE is_wetting
+                          AND prev_episode_action = 'DEHUM_VENT'
+                          AND prev_gap <= interval '30 minutes'
+                    )
+                )::numeric, 1)::double precision AS avg_dehum_to_wet_gap_min
+            FROM classified
+            """,
+            d,
+            greenhouse_id,
+        )
+
+        moisture_sample_count = sum(row["decisions"] for row in moisture_rows)
+        moisture_estimator = {
+            "sample_count": moisture_sample_count,
+            "coverage": "available" if moisture_sample_count else "pending_live_rows",
+            "by_action_reason": [dict(row) for row in moisture_rows],
+        }
+        vpd_policy = dict(vpd_policy_row) if vpd_policy_row else {}
+        if vpd_policy:
+            vpd_policy["transition_window_min"] = 30
+        pending_metrics = []
+        if not moisture_sample_count:
+            pending_metrics.append("moisture_estimator: source path wired; waiting for OTA/deploy/live rows")
+        try:
+            actions = [OutcomeKpiActionRow.model_validate(dict(row)) for row in action_rows]
+            response = OutcomeKpiResponse(
+                date=summary.get("date", d),
+                greenhouse_id=summary.get("greenhouse_id", greenhouse_id),
+                semantics=(
+                    "ADR-0004 outcome view: float inside the crop corridor, act at "
+                    "edges, and use resource cost/wear as first-class guardrails."
+                ),
+                coverage=OutcomeKpiCoverage(moisture_estimator="available" if moisture_sample_count else "pending"),
+                served_corridor={
+                    "attributable_pct": summary.get("compliance_v2_attributable_pct"),
+                    "raw_pct": summary.get("compliance_v2_raw_pct"),
+                    "unachievable_frac": summary.get("compliance_v2_unachievable_frac"),
+                    "binary_both_pct": summary.get("compliance_pct"),
+                    "binary_temp_pct": summary.get("temp_compliance_pct"),
+                    "binary_vpd_pct": summary.get("vpd_compliance_pct"),
+                    "graded_temp_pct": summary.get("graded_temp_compliance_pct"),
+                    "graded_vpd_pct": summary.get("graded_vpd_compliance_pct"),
+                    "feasibility_unknown_min": summary.get("feasibility_unknown_min"),
+                },
+                pinched_corridor={
+                    "sample_min": pinched.get("sample_min"),
+                    "samples_with_fraction_readback": pinched.get("samples_with_fraction_readback"),
+                    "avg_band_track_fraction": pinched.get("avg_band_track_fraction"),
+                    "min_band_track_fraction": pinched.get("min_band_track_fraction"),
+                    "max_band_track_fraction": pinched.get("max_band_track_fraction"),
+                    "both_pct": pinched.get("both_pct"),
+                    "temp_pct": pinched.get("temp_pct"),
+                    "vpd_pct": pinched.get("vpd_pct"),
+                    "p95_temp_miss_f": pinched.get("p95_temp_miss_f"),
+                    "p95_vpd_miss_kpa": pinched.get("p95_vpd_miss_kpa"),
+                    "day_pct": pinched.get("day_pct"),
+                    "night_pct": pinched.get("night_pct"),
+                },
+                vpd_misses_h={
+                    "high_stress_h": summary.get("stress_hours_vpd_high"),
+                    "low_stress_h": summary.get("stress_hours_vpd_low"),
+                    "graded_high_stress_h": summary.get("graded_stress_hours_vpd_high"),
+                    "graded_low_stress_h": summary.get("graded_stress_hours_vpd_low"),
+                },
+                actuator_cycles={
+                    "fan1": summary.get("cycles_fan1"),
+                    "fan2": summary.get("cycles_fan2"),
+                    "heat1": summary.get("cycles_heat1"),
+                    "heat2": summary.get("cycles_heat2"),
+                    "fog": summary.get("cycles_fog"),
+                    "vent": summary.get("cycles_vent"),
+                    "dehum": summary.get("cycles_dehum"),
+                    "safety_dehum": summary.get("cycles_safety_dehum"),
+                    "mister_south": summary.get("cycles_mister_south"),
+                    "mister_west": summary.get("cycles_mister_west"),
+                    "mister_center": summary.get("cycles_mister_center"),
+                    "grow_light": summary.get("cycles_grow_light"),
+                },
+                actuator_runtime={
+                    "fan1_min": summary.get("runtime_fan1_min"),
+                    "fan2_min": summary.get("runtime_fan2_min"),
+                    "heat1_min": summary.get("runtime_heat1_min"),
+                    "heat2_min": summary.get("runtime_heat2_min"),
+                    "fog_min": summary.get("runtime_fog_min"),
+                    "vent_min": summary.get("runtime_vent_min"),
+                    "mister_south_h": summary.get("runtime_mister_south_h"),
+                    "mister_west_h": summary.get("runtime_mister_west_h"),
+                    "mister_center_h": summary.get("runtime_mister_center_h"),
+                    "grow_light_min": summary.get("runtime_grow_light_min"),
+                },
+                water_use_gal={
+                    "total": summary.get("water_used_gal"),
+                    "mister": summary.get("mister_water_gal"),
+                    "irrigation": summary.get("irrigation_water_gal"),
+                    "fertigation": summary.get("fertigation_water_gal"),
+                },
+                dli={"sensor_mol_m2_d": summary.get("dli_final")},
+                dif={
+                    "day_night_temp_delta_f": dif.get("day_night_temp_delta_f"),
+                    "day_temp_avg_f": dif.get("day_temp_avg_f"),
+                    "night_temp_avg_f": dif.get("night_temp_avg_f"),
+                    "day_sample_min": dif.get("day_sample_min"),
+                    "night_sample_min": dif.get("night_sample_min"),
+                },
+                dew_margin={
+                    "min_f": summary.get("min_dp_margin_f"),
+                    "risk_h": summary.get("dp_risk_hours"),
+                },
+                energy_cost={
+                    "kwh_estimated": summary.get("kwh_estimated"),
+                    "therms_estimated": summary.get("therms_estimated"),
+                    "electric_usd": summary.get("cost_electric"),
+                    "gas_usd": summary.get("cost_gas"),
+                    "water_usd": summary.get("cost_water"),
+                    "total_usd": summary.get("cost_total"),
+                },
+                action_scorecard=actions,
+                solar_phase_buckets=[dict(row) for row in phase_rows],
+                moisture_estimator=moisture_estimator,
+                vpd_policy=vpd_policy,
+                pending_metrics=pending_metrics,
+                source_tables=[
+                    "daily_summary",
+                    "v_climate_action_daily_scorecard",
+                    "climate",
+                    "climate_action_log",
+                    "setpoint_snapshot",
+                    "setpoint_changes",
+                ],
+            )
+        except ValidationError as e:
+            return _json(
+                {
+                    "error": "OutcomeKpiResponse validation failed",
+                    "details": json.loads(e.json()),
+                    "raw": {
+                        "summary": summary,
+                        "pinched_corridor": pinched,
+                        "dif": dif,
+                        "solar_phase_buckets": [dict(row) for row in phase_rows],
+                        "action_scorecard": [dict(row) for row in action_rows],
+                    },
+                }
+            )
+        return response.model_dump_json()
     finally:
         await conn.close()
 
@@ -697,9 +1474,7 @@ async def set_tunable(
 @mcp.tool()
 async def plan_run(mode: str = "normal") -> str:
     """Trigger an ad-hoc MANUAL planning cycle through the same audited path as scheduled triggers."""
-    import sys
-
-    sys.path.insert(0, "/srv/verdify/ingestor")
+    sys.path.insert(0, str(REPO_ROOT / "ingestor"))
     try:
         from iris_planner import CONTEXT_GATHER_FAILED_SENTINEL, gather_context, prepare_delivery_result, send_to_iris
 
@@ -2052,14 +2827,39 @@ async def alerts(action: str = "list", alert_id: int = 0, data: str = "") -> str
 # ═══════════════════════════════════════════════════════════════
 
 
+async def _lesson_state_row(conn, lesson_id: int) -> dict | None:
+    """Fetch the columns needed to derive a lesson's lifecycle state.
+
+    `last_validated > created_at` is the authoritative "validated beyond
+    creation" signal; `times_validated` is the fallback the derive helper uses
+    when that flag is unavailable. Returns None if the lesson doesn't exist.
+    """
+    return await conn.fetchrow(
+        """
+        SELECT id, is_active, superseded_by, times_validated,
+               (last_validated IS NOT NULL AND created_at IS NOT NULL
+                AND last_validated > created_at) AS has_independent_validation
+          FROM planner_lessons WHERE id = $1
+        """,
+        lesson_id,
+    )
+
+
 @mcp.tool()
 async def lessons_manage(action: str, lesson_id: int = 0, data: str = "") -> str:
     """Manage planner lessons (accumulated operational knowledge).
-    Actions: create, update, deactivate, validate.
+
+    Actions: create, update, deactivate, validate, supersede.
+    Lifecycle state machine (G8): proposed -> validated -> superseded/retired.
+    State is derived from is_active/superseded_by/validation history; illegal
+    transitions (e.g. validating a superseded or retired lesson) are rejected.
+
     create: data = {"category", "condition", "lesson", "confidence": "low|medium|high"}
     update: data = {"lesson"?, "condition"?, "confidence"?}
-    deactivate: mark lesson as inactive
-    validate: increment times_validated, optionally upgrade confidence"""
+    validate: proposed/validated -> validated; increment times_validated, optionally upgrade confidence
+    deactivate: proposed/validated -> retired (terminal)
+    supersede: proposed/validated -> superseded by a newer lesson;
+        data = {"new_id": <existing lesson id>} (terminal)"""
     d = json.loads(data) if data else {}
     conn = await _db()
     try:
@@ -2093,14 +2893,42 @@ async def lessons_manage(action: str, lesson_id: int = 0, data: str = "") -> str
             return _json(dict(row)) if row else json.dumps({"error": "Lesson not found"})
 
         elif action == "deactivate" and lesson_id:
+            cur = await _lesson_state_row(conn, lesson_id)
+            if cur is None:
+                return json.dumps({"error": "Lesson not found"})
+            state = derive_lesson_state(
+                is_active=cur["is_active"],
+                superseded_by=cur["superseded_by"],
+                times_validated=cur["times_validated"] or 1,
+                has_independent_validation=bool(cur["has_independent_validation"]),
+            )
+            if not is_legal_lesson_transition(state, "retired"):
+                return json.dumps(
+                    {"error": f"Illegal transition {state} -> retired", "lesson_id": lesson_id, "state": state}
+                )
+            if state == "retired":  # idempotent
+                return json.dumps({"ok": True, "lesson_id": lesson_id, "action": "deactivated", "state": "retired"})
             await conn.execute("UPDATE planner_lessons SET is_active = false WHERE id = $1", lesson_id)
-            return json.dumps({"ok": True, "lesson_id": lesson_id, "action": "deactivated"})
+            return json.dumps({"ok": True, "lesson_id": lesson_id, "action": "deactivated", "state": "retired"})
 
         elif action == "validate" and lesson_id:
             try:
                 val = LessonValidate.model_validate(d) if d else LessonValidate()
             except ValidationError as e:
                 return json.dumps({"error": "LessonValidate validation failed", "details": json.loads(e.json())})
+            cur = await _lesson_state_row(conn, lesson_id)
+            if cur is None:
+                return json.dumps({"error": "Lesson not found"})
+            state = derive_lesson_state(
+                is_active=cur["is_active"],
+                superseded_by=cur["superseded_by"],
+                times_validated=cur["times_validated"] or 1,
+                has_independent_validation=bool(cur["has_independent_validation"]),
+            )
+            if not is_legal_lesson_transition(state, "validated"):
+                return json.dumps(
+                    {"error": f"Illegal transition {state} -> validated", "lesson_id": lesson_id, "state": state}
+                )
             if val.confidence:
                 await conn.execute(
                     "UPDATE planner_lessons SET times_validated = times_validated + 1, "
@@ -2113,9 +2941,49 @@ async def lessons_manage(action: str, lesson_id: int = 0, data: str = "") -> str
                     "UPDATE planner_lessons SET times_validated = times_validated + 1, last_validated = now() WHERE id = $1",
                     lesson_id,
                 )
-            return json.dumps({"ok": True, "lesson_id": lesson_id, "action": "validated"})
+            return json.dumps({"ok": True, "lesson_id": lesson_id, "action": "validated", "state": "validated"})
 
-        return json.dumps({"error": f"Unknown action '{action}'. Use: create, update, deactivate, validate"})
+        elif action == "supersede" and lesson_id:
+            try:
+                sup = LessonSupersede.model_validate(d)
+            except ValidationError as e:
+                return json.dumps({"error": "LessonSupersede validation failed", "details": json.loads(e.json())})
+            if sup.new_id == lesson_id:
+                return json.dumps({"error": "A lesson cannot supersede itself", "lesson_id": lesson_id})
+            cur = await _lesson_state_row(conn, lesson_id)
+            if cur is None:
+                return json.dumps({"error": "Lesson not found", "lesson_id": lesson_id})
+            new_exists = await conn.fetchval("SELECT 1 FROM planner_lessons WHERE id = $1", sup.new_id)
+            if new_exists is None:
+                return json.dumps({"error": f"Superseding lesson {sup.new_id} not found", "new_id": sup.new_id})
+            state = derive_lesson_state(
+                is_active=cur["is_active"],
+                superseded_by=cur["superseded_by"],
+                times_validated=cur["times_validated"] or 1,
+                has_independent_validation=bool(cur["has_independent_validation"]),
+            )
+            if not is_legal_lesson_transition(state, "superseded"):
+                return json.dumps(
+                    {"error": f"Illegal transition {state} -> superseded", "lesson_id": lesson_id, "state": state}
+                )
+            # superseded lessons drop out of the live set (is_active=true AND
+            # superseded_by IS NULL); also flip is_active=false for clarity.
+            await conn.execute(
+                "UPDATE planner_lessons SET superseded_by = $2, is_active = false WHERE id = $1",
+                lesson_id,
+                sup.new_id,
+            )
+            return json.dumps(
+                {
+                    "ok": True,
+                    "lesson_id": lesson_id,
+                    "action": "superseded",
+                    "superseded_by": sup.new_id,
+                    "state": "superseded",
+                }
+            )
+
+        return json.dumps({"error": f"Unknown action '{action}'. Use: create, update, deactivate, validate, supersede"})
     finally:
         await conn.close()
 

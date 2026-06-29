@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """Validate irrigation feedback instrumentation after physical bring-up.
 
 Exit status is intentionally operational:

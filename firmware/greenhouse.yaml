@@ -24,6 +24,7 @@ esphome:
   includes:
     - lib/heap_diagnostics.h
     - lib/greenhouse_types.h
+    - lib/greenhouse_solar.h
     - lib/greenhouse_logic.h
   # Lutron LEAP TLS disabled (causes ESP32 crash — TLS heap exhaustion)
   # Grow lights use HA native service calls; no on-device HTTP client.
@@ -134,6 +135,16 @@ esphome:
           if(fixes > 0){ ESP_LOGE("boot","Fixed %d corrupted globals", fixes); }
           else { ESP_LOGI("boot","All globals valid"); }
           ESP_LOGI("boot", "Firmware version: %s", "${fw_version}");
+          // Band anchors: ONE source of truth = the DB table `crop_band_anchors`.
+          // The dispatcher reconciles it into NVS on every reconnect and corrects
+          // any readback drift (ingestor/tasks/band_anchors.py + dispatcher.py),
+          // so the device always converges to the DB while online. The band_*
+          // globals' restore_value NVS is the offline cache; their initial_value
+          // (globals.yaml) is the conservative DRY cold-start fallback for a
+          // factory-fresh boot only. The former `band_curve_rev` one-shot that
+          // force-wrote a hardcoded anchor snapshot here was a THIRD, competing
+          // source — retired 2026-06-15 (item 2: unify the band). To change the
+          // band, edit `crop_band_anchors`, NOT these globals.
 
 esp32:
   board: esp32dev
@@ -196,6 +207,76 @@ api:
   max_connections: 20
   encryption:
     key: !secret api_encryption_key
+
+  # firmware-v2 anchors-mode: DB→on-chip band sync (docs/design/firmware-v2-settable-anchors-2026-06-15.md).
+  # ONE service (heap-safe vs 56 number entities) writes any NVS-persisted band/zone anchor
+  # global by name; the dispatcher calls it on crop_band_anchors change; cfg_<key> sensors confirm.
+  services:
+    - service: set_band_anchor
+      variables:
+        anchor_key: string
+        value: float
+      then:
+        - lambda: |-
+            bool ok = true;
+            if (anchor_key == "band_temp_low_sr") { id(band_temp_low_sr) = value; }
+            else if (anchor_key == "band_temp_low_sm") { id(band_temp_low_sm) = value; }
+            else if (anchor_key == "band_temp_low_ss") { id(band_temp_low_ss) = value; }
+            else if (anchor_key == "band_temp_low_mid") { id(band_temp_low_mid) = value; }
+            else if (anchor_key == "band_temp_target_sr") { id(band_temp_target_sr) = value; }
+            else if (anchor_key == "band_temp_target_sm") { id(band_temp_target_sm) = value; }
+            else if (anchor_key == "band_temp_target_ss") { id(band_temp_target_ss) = value; }
+            else if (anchor_key == "band_temp_target_mid") { id(band_temp_target_mid) = value; }
+            else if (anchor_key == "band_temp_high_sr") { id(band_temp_high_sr) = value; }
+            else if (anchor_key == "band_temp_high_sm") { id(band_temp_high_sm) = value; }
+            else if (anchor_key == "band_temp_high_ss") { id(band_temp_high_ss) = value; }
+            else if (anchor_key == "band_temp_high_mid") { id(band_temp_high_mid) = value; }
+            else if (anchor_key == "band_vpd_low_sr") { id(band_vpd_low_sr) = value; }
+            else if (anchor_key == "band_vpd_low_sm") { id(band_vpd_low_sm) = value; }
+            else if (anchor_key == "band_vpd_low_ss") { id(band_vpd_low_ss) = value; }
+            else if (anchor_key == "band_vpd_low_mid") { id(band_vpd_low_mid) = value; }
+            else if (anchor_key == "band_vpd_target_sr") { id(band_vpd_target_sr) = value; }
+            else if (anchor_key == "band_vpd_target_sm") { id(band_vpd_target_sm) = value; }
+            else if (anchor_key == "band_vpd_target_ss") { id(band_vpd_target_ss) = value; }
+            else if (anchor_key == "band_vpd_target_mid") { id(band_vpd_target_mid) = value; }
+            else if (anchor_key == "band_vpd_high_sr") { id(band_vpd_high_sr) = value; }
+            else if (anchor_key == "band_vpd_high_sm") { id(band_vpd_high_sm) = value; }
+            else if (anchor_key == "band_vpd_high_ss") { id(band_vpd_high_ss) = value; }
+            else if (anchor_key == "band_vpd_high_mid") { id(band_vpd_high_mid) = value; }
+            else if (anchor_key == "zone_vpd_target_center_sr") { id(zone_vpd_target_center_sr) = value; }
+            else if (anchor_key == "zone_vpd_target_center_sm") { id(zone_vpd_target_center_sm) = value; }
+            else if (anchor_key == "zone_vpd_target_center_ss") { id(zone_vpd_target_center_ss) = value; }
+            else if (anchor_key == "zone_vpd_target_center_mid") { id(zone_vpd_target_center_mid) = value; }
+            else if (anchor_key == "zone_vpd_target_south_sr") { id(zone_vpd_target_south_sr) = value; }
+            else if (anchor_key == "zone_vpd_target_south_sm") { id(zone_vpd_target_south_sm) = value; }
+            else if (anchor_key == "zone_vpd_target_south_ss") { id(zone_vpd_target_south_ss) = value; }
+            else if (anchor_key == "zone_vpd_target_south_mid") { id(zone_vpd_target_south_mid) = value; }
+            else if (anchor_key == "zone_vpd_target_west_sr") { id(zone_vpd_target_west_sr) = value; }
+            else if (anchor_key == "zone_vpd_target_west_sm") { id(zone_vpd_target_west_sm) = value; }
+            else if (anchor_key == "zone_vpd_target_west_ss") { id(zone_vpd_target_west_ss) = value; }
+            else if (anchor_key == "zone_vpd_target_west_mid") { id(zone_vpd_target_west_mid) = value; }
+            else if (anchor_key == "zone_vpd_target_east_sr") { id(zone_vpd_target_east_sr) = value; }
+            else if (anchor_key == "zone_vpd_target_east_sm") { id(zone_vpd_target_east_sm) = value; }
+            else if (anchor_key == "zone_vpd_target_east_ss") { id(zone_vpd_target_east_ss) = value; }
+            else if (anchor_key == "zone_vpd_target_east_mid") { id(zone_vpd_target_east_mid) = value; }
+            else if (anchor_key == "zone_vpd_width_below_center") { id(zone_vpd_width_below_center) = value; }
+            else if (anchor_key == "zone_vpd_width_below_south") { id(zone_vpd_width_below_south) = value; }
+            else if (anchor_key == "zone_vpd_width_below_west") { id(zone_vpd_width_below_west) = value; }
+            else if (anchor_key == "zone_vpd_width_below_east") { id(zone_vpd_width_below_east) = value; }
+            else if (anchor_key == "zone_vpd_width_above_center") { id(zone_vpd_width_above_center) = value; }
+            else if (anchor_key == "zone_vpd_width_above_south") { id(zone_vpd_width_above_south) = value; }
+            else if (anchor_key == "zone_vpd_width_above_west") { id(zone_vpd_width_above_west) = value; }
+            else if (anchor_key == "zone_vpd_width_above_east") { id(zone_vpd_width_above_east) = value; }
+            else if (anchor_key == "zone_priority_center") { id(zone_priority_center) = value; }
+            else if (anchor_key == "zone_priority_south") { id(zone_priority_south) = value; }
+            else if (anchor_key == "zone_priority_west") { id(zone_priority_west) = value; }
+            else if (anchor_key == "zone_priority_east") { id(zone_priority_east) = value; }
+            else if (anchor_key == "wet_taper_before_sunset_min") { id(wet_taper_before_sunset_min) = value; }
+            else if (anchor_key == "dawn_boost_offset_min") { id(dawn_boost_offset_min) = value; }
+            else if (anchor_key == "midday_boost_offset_min") { id(midday_boost_offset_min) = value; }
+            else if (anchor_key == "manual_override_timeout_min") { id(manual_override_timeout_min) = value; }
+            else { ok = false; ESP_LOGW("band", "set_band_anchor: unknown key '%s'", anchor_key.c_str()); }
+            if (ok) { ESP_LOGI("band", "set_band_anchor %s = %.3f", anchor_key.c_str(), value); }
 
 # MQTT is intentionally omitted on the ESP32. The global MQTT component creates
 # a publish wrapper for every public entity, which costs tens of KB of runtime
@@ -330,6 +411,8 @@ binary_sensor:
       number: 6
       mode: INPUT
       inverted: true
+    filters:
+      - delayed_on_off: 30ms   # debounce the momentary PB (both edges); imperceptible
     on_press:
       then:
         - button.press: fan_burst_btn
@@ -342,6 +425,8 @@ binary_sensor:
       number: 7
       mode: INPUT
       inverted: true
+    filters:
+      - delayed_on_off: 30ms   # debounce the momentary PB (both edges); imperceptible
     on_press:
       then:
         - button.press: vent_bypass_btn
@@ -354,6 +439,8 @@ binary_sensor:
       number: 5
       mode: INPUT
       inverted: true
+    filters:
+      - delayed_on_off: 30ms   # debounce the momentary PB (both edges); imperceptible
     on_press:
       then:
         - button.press: fog_burst_btn

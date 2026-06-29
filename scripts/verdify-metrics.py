@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """
 verdify-metrics.py — Generate Prometheus textfile metrics for node-exporter.
 

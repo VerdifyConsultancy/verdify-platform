@@ -1,0 +1,117 @@
+{
+  "expectations": {
+    "max_confidence": 0.6,
+    "min_confidence": 0.2,
+    "rationale_contains": [
+      "ALERT"
+    ],
+    "required_payload_fields": [
+      "tunable_changes.fog_escalation_kpa"
+    ],
+    "selected_action": "set_tunable"
+  },
+  "request": {
+    "context": {
+      "active_plan_summary": {
+        "cold_vent_guard_delta_f": 10.0,
+        "cool_exit_hysteresis_f": 1.5,
+        "cool_stage2_over_high_f": 1.0,
+        "direct_wet_stress_latest_hour": 22.0,
+        "direct_wet_stress_min_dew_margin_f": 8.0,
+        "direct_wet_stress_vpd_margin_kpa": 0.05,
+        "dwell_gate_ms": 300000.0,
+        "enthalpy_close": 1.0,
+        "enthalpy_open": -2.0,
+        "fog_escalation_kpa": 0.4,
+        "fog_stress_min_dew_margin_f": 10.0,
+        "fog_stress_window_latest_hour": 19.0,
+        "heat_hysteresis": 1.0,
+        "min_fog_off_s": 60.0,
+        "min_fog_on_s": 60.0,
+        "mist_backoff_s": 600.0,
+        "mist_max_closed_vent_s": 600.0,
+        "mist_thermal_relief_s": 90.0,
+        "mister_all_delay_s": 300.0,
+        "mister_all_kpa": 1.9,
+        "mister_engage_delay_s": 45.0,
+        "mister_engage_kpa": 1.6,
+        "mister_pulse_gap_s": 45.0,
+        "mister_pulse_on_s": 60.0,
+        "mister_vpd_weight": 1.5,
+        "mister_water_budget_gal": 300.0,
+        "outdoor_staleness_max_s": 600.0,
+        "sw_cool_all_fans_at_high_enabled": 0.0,
+        "sw_direct_wet_stress_override_enabled": 0.0,
+        "sw_dwell_gate_enabled": 0.0,
+        "sw_fog_closes_vent": 1.0,
+        "sw_fog_stress_window_extend_enabled": 0.0,
+        "sw_mister_closes_vent": 0.0,
+        "sw_summer_vent_enabled": 1.0,
+        "temp_hysteresis": 1.5,
+        "vent_prefer_dp_delta_f": 5.0,
+        "vent_prefer_temp_delta_f": 5.0,
+        "vpd_hysteresis": 0.3,
+        "vpd_watch_dwell_s": 60.0,
+        "future_waypoints": 2
+      },
+      "alerts_summary": [
+        "critical: short dry excursion after repeated clamp activity"
+      ],
+      "clamp_summary": {
+        "active_clamps_24h": 3
+      },
+      "climate_snapshot": {
+        "rh_pct": 43,
+        "temp_f": 87.0,
+        "vpd_kpa": 2.05
+      },
+      "forecast_summary": {
+        "headline": "Dry pulse may persist through the next fog window",
+        "max_vpd_kpa": 2.3
+      },
+      "guardrail_audit_summary": {
+        "readback_freshness_seconds": 50
+      },
+      "operator_notes": [
+        "Planner should stay narrow because clamps were already active."
+      ],
+      "recent_delivery_summary": {
+        "recent_ack_count": 0,
+        "recent_clamp_resolutions": 2
+      },
+      "retrieval_refs": [
+        {
+          "id": "lesson-clamp-1",
+          "snippet": "Repeated clamp activity should reduce confidence in an aggressive tunable move."
+        }
+      ],
+      "scorecard_summary": {
+        "compliance_pct": 78.0,
+        "planner_score": 60.0
+      },
+      "site_refs": [
+        {
+          "id": "playbook-clamp-1",
+          "snippet": "Keep critical dry interventions narrow when clamps are already active."
+        }
+      ]
+    },
+    "planner": {
+      "context_version": "v1",
+      "contract_version": "2026-05-24",
+      "request_id": "eval-clamp-001",
+      "run_mode": "production",
+      "trace_id": "trace-eval-clamp-001"
+    },
+    "trigger": {
+      "event_label": "Critical alert with recent clamps",
+      "event_type": "ALERT",
+      "expected_action": "set_tunable",
+      "greenhouse_id": "vallery",
+      "planner_instance": "planner_graph",
+      "source": "fixture",
+      "trigger_id": "dddddddd-dddd-dddd-dddd-dddddddddddd",
+      "triggered_at": "2026-05-19T15:45:00-06:00"
+    }
+  }
+}

@@ -1,0 +1,256 @@
+# Verdify lab/research site — lab.verdify.ai (#124, part of #88 / #111 / #15).
+#
+# WHAT: the public Quartz static research garden ("the lab"). The nginx runtime
+# still serves static HTML on :8080, but the live public tree now comes from the
+# `verdify-lab-site-cache` PVC populated by the in-cluster lab publisher. The
+# baked image remains a bootstrap fallback only.
+#
+# IMAGE — BUILT/PUBLISHED BY GITHUB CI, THEN PINNED BY PLATFORM GITOPS:
+#   ghcr.io/verdifyconsultancy/verdify-lab
+# Runtime/source changes land in VerdifyConsultancy/verdify-site-legacy@v4,
+# whose publish-lab-image workflow builds Dockerfile.k3s and pushes an immutable
+# GHCR digest. verdify-platform overlays pin that digest under
+# deploy/k8s/overlays/{dev,prod,prod-dark}; ArgoCD syncs the rendered k3s
+# manifests. Do not rebuild or patch this workload by hand on the cluster.
+#
+# RUNTIME / PORT (load-bearing): the Quartz output is plain static HTML served by
+# nginx. To preserve the non-root posture used across the web tier (runAsNonRoot,
+# readOnlyRootFilesystem, drop ALL caps) the image MUST run nginx-unprivileged and
+# LISTEN ON 8080 — NOT the privileged :80 the in-repo site/nginx.conf currently
+# uses. The verdify-site-legacy Dockerfile.k3s owns that nginx listen-port + the static-site
+# location/try_files rules (mirroring site/nginx.conf, adjusted to :8080). The
+# container :8080 + Service targetPort + probe all stay in lockstep on 8080, the
+# same contract Traefik's kubernetescrd provider resolves against (Service port).
+#
+# WHY A KUSTOMIZE COMPONENT (not a base resource): lab-site is an optional prod
+# web surface, not part of every base workload. A Component keeps the workload
+# explicit in the single live overlay and avoids accidental future fan-out.
+# lab-site is pure web tier, NO device path — it never touches the ESP32.
+# Generated content is owned by lab-publisher.yaml.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-lab-nginx-config
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: lab-site
+data:
+  default.conf: |
+    # nginx serve config for the Verdify Lab Quartz static site under k3s.
+    server {
+        listen 8080;
+        server_name _;
+        root /usr/share/nginx/html;
+        index index.html;
+        absolute_redirect off;
+
+        # Quartz emits <page>/index.html for folder notes; redirect a trailing
+        # slash to the clean path when the folder index exists.
+        location ~ ^(.+)/$ {
+            add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+            add_header Pragma "no-cache" always;
+            add_header Expires "0" always;
+            if (-f $document_root$uri/index.html) {
+                rewrite ^ $uri/index.html break;
+            }
+            return 301 $1$is_args$args;
+        }
+
+        # Extensionless Quartz routes usually resolve to $uri.html, so this
+        # location must carry the no-store headers for page/nav freshness.
+        location / {
+            add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+            add_header Pragma "no-cache" always;
+            add_header Expires "0" always;
+            try_files $uri $uri.html $uri/index.html =404;
+        }
+
+        # No caching for HTML, JSON indexes, JS, or CSS. Quartz SPA navigation
+        # fetches HTML and static/contentIndex.json, so stale browser caches can
+        # make nav look wrong even when the PVC has the newest generated site.
+        location ~* \.(html|json|xml|css|js)$ {
+            add_header Cache-Control "no-cache, no-store, must-revalidate" always;
+            add_header Pragma "no-cache" always;
+            add_header Expires "0" always;
+        }
+
+        # Self-hosted launch video streams.
+        location ~* \.m3u8$ {
+            types { application/vnd.apple.mpegurl m3u8; }
+            default_type application/vnd.apple.mpegurl;
+            add_header Cache-Control "public, max-age=300, must-revalidate" always;
+        }
+
+        location ~* \.ts$ {
+            types { video/mp2t ts; }
+            default_type video/mp2t;
+            add_header Cache-Control "public, max-age=2592000, immutable" always;
+        }
+
+        location ~* \.(mp4|m4v)$ {
+            types { video/mp4 mp4 m4v; }
+            default_type video/mp4;
+            add_header Cache-Control "public, max-age=2592000, immutable" always;
+            add_header Accept-Ranges bytes always;
+        }
+
+        # Cache media briefly, but do not mark same-path assets immutable while
+        # the public site is iterating.
+        location ~* \.(png|jpg|jpeg|gif|ico|svg|woff|woff2|webp)$ {
+            add_header Cache-Control "public, max-age=300, must-revalidate" always;
+        }
+
+        error_page 404 /404.html;
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-lab
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: lab-site
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: lab-site
+  strategy:
+    # Stateless static site — a rolling replace is safe (no single-writer/device
+    # constraint; the api/mcp/ingestor safety posture does not apply here).
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: lab-site
+    spec:
+      imagePullSecrets:
+        - name: ghcr-jvallery-readonly
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: lab-site
+          # Pinned to an immutable @sha256 digest by each consuming overlay's
+          # images: transformer (NEVER a mutable :latest/:sha tag). Image name
+          # only here. Built from the verdify-site-legacy Dockerfile.k3s (see header).
+          image: ghcr.io/verdifyconsultancy/verdify-lab
+          # No command override: the verdify-site Dockerfile.k3s CMD (nginx -g
+          # 'daemon off;') stays authoritative, so the build source owns the
+          # serve config (nginx-unprivileged listening on :8080 — see header).
+          ports:
+            - name: http
+              containerPort: 8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: "25m"
+              memory: "32Mi"
+            limits:
+              memory: "128Mi"
+          # nginx-unprivileged needs writable scratch under a read-only root FS.
+          # The served tree is a read-only mount from the lab cache PVC; all
+          # other writable paths stay ephemeral.
+          volumeMounts:
+            - name: lab-cache
+              mountPath: /usr/share/nginx/html
+              subPath: public
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
+            - name: nginx-run
+              mountPath: /var/run
+            - name: nginx-config
+              mountPath: /etc/nginx/conf.d/default.conf
+              subPath: default.conf
+              readOnly: true
+          # GRACEFUL DRAIN (HA #231, Lane C). preStop sleep so Traefik/kube-proxy
+          # drop this pod's endpoint before nginx stops accepting, avoiding a
+          # mid-rollout 503 (same drain contract as api/mcp/www). Static "/" probes
+          # are DB-free already, so only the drain hook + explicit grace are added.
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "5"]
+          # Static site served at "/"; use the homepage as the probe target (no
+          # dedicated /healthz in a Quartz static build).
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      initContainers:
+        - name: seed-public-cache
+          # Same image as the serving container. If the lab cache PVC is empty,
+          # seed it from the baked static site so lab.verdify.ai stays available
+          # before the first S3-backed publisher run completes.
+          image: ghcr.io/verdifyconsultancy/verdify-lab
+          command:
+            - sh
+            - -lc
+            - |
+              set -eu
+              mkdir -p /lab-cache/public
+              if [ ! -f /lab-cache/public/index.html ]; then
+                cp -a /usr/share/nginx/html/. /lab-cache/public/
+              fi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: lab-cache
+              mountPath: /lab-cache
+      # Endpoint-drain window for the preStop hook above (HA #231); 30s explicit.
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: lab-cache
+          persistentVolumeClaim:
+            claimName: verdify-lab-site-cache
+        - name: tmp
+          emptyDir: {}
+        - name: nginx-cache
+          emptyDir: {}
+        - name: nginx-run
+          emptyDir: {}
+        - name: nginx-config
+          configMap:
+            name: verdify-lab-nginx-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: verdify-lab
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: lab-site
+spec:
+  # ClusterIP — the public front door is the shared apps Traefik via the per-env
+  # IngressRoute (dev: lab.k3s.verdify.ai; prod: lab.verdify.ai; staging:
+  # lab-staging.vallery.net). No per-app LoadBalancer (the ADR-15 anti-pattern);
+  # same as www/planner/mcp.
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/component: lab-site
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

@@ -18,6 +18,8 @@ from verdify_schemas.views import (
     PlanAccuracy,
     PlannerPerformance,
     WaterBudgetRow,
+    ZoneBandGradeRollup,
+    ZoneBandRow,
 )
 
 
@@ -131,6 +133,52 @@ class TestBandTraceBasic:
         assert row.greenhouse_id == "vallery"
 
 
+class TestZoneBandRowBasic:
+    def test_valid_minimal(self):
+        row = ZoneBandRow(
+            zone="center",
+            temp_low=70.0,
+            temp_high=88.0,
+            vpd_low=0.6,
+            vpd_high=1.2,
+            crop_basis="orchid",
+            is_proxy=True,
+        )
+        assert row.zone == "center"
+        assert row.is_proxy is True
+
+    def test_empty_zone_nullable_band(self):
+        # Empty zones (_default basis) may emit NULL band edges.
+        row = ZoneBandRow(zone="south", crop_basis="_default")
+        assert row.temp_low is None
+        assert row.crop_basis == "_default"
+
+    def test_tolerates_extra_columns(self):
+        # extra='ignore' so a future fn_zone_band column does not break readers.
+        row = ZoneBandRow.model_validate({"zone": "east", "temp_low": 65, "future_col": 1})
+        assert row.zone == "east"
+
+
+class TestZoneBandGradeRollupBasic:
+    def test_valid_minimal(self):
+        row = ZoneBandGradeRollup(
+            bucket="2026-05-28T13:00:00-06:00",
+            zone="center",
+            n=60,
+            sum_zone_score=42,
+            n_unachievable=44,
+            n_controller=10,
+            n_unknown=6,
+            proxy_center=True,
+        )
+        assert row.n == 60
+        assert row.zone == "center"
+
+    def test_rejects_negative_minute_count(self):
+        with pytest.raises(ValidationError):
+            ZoneBandGradeRollup(bucket="2026-05-28T13:00:00-06:00", zone="center", n=-1)
+
+
 # ── Live-DB drift guards (integration tests) ──
 # If the DB view drops / renames a column we depend on, these fail.
 
@@ -190,3 +238,44 @@ class TestLiveProjection:
         assert rows, "fn_band_trace returned no recent rows"
         for r in rows:
             BandTraceRow.model_validate(r)
+
+    def test_zone_band_live_rows(self):
+        # v_zone_band emits one row per zone (CROSS JOIN over 5 zones). If the
+        # view drops/renames a column ZoneBandRow depends on, model_validate
+        # fires here instead of producing None/KeyError in dashboards.
+        rows = _psql_json("SELECT * FROM v_zone_band ORDER BY zone")
+        assert rows, "v_zone_band returned no rows"
+        for r in rows:
+            ZoneBandRow.model_validate(r)
+
+    def test_zone_band_grade_rollup_live_rows(self):
+        # mv_zone_band_grade is a plain matview refreshed by verdify-ingestor;
+        # it may legitimately be empty (WITH NO DATA before first refresh), so
+        # only validate shape when rows are present.
+        rows = _psql_json("SELECT * FROM mv_zone_band_grade ORDER BY bucket DESC LIMIT 3")
+        for r in rows:
+            ZoneBandGradeRollup.model_validate(r)
+
+    def test_fn_band_setpoints_serves_device_target(self):
+        # ADR0003 §6.3 / mig 181 (BC-9): the served band TARGET IS the device curve.
+        # fn_band_setpoints.temp_target/vpd_target must equal fn_crop_band_value('house',
+        # 'temp_target'/'vpd_target', now()) — the single-source invariant. Asserts
+        # IS NOT NULL first so a missing 'house' target anchor set can't pass vacuously
+        # (NULL==NULL). Skips on a pre-mig-181 DB (the target columns don't exist yet).
+        try:
+            rows = _psql_json(
+                "SELECT b.temp_target, b.vpd_target, "
+                "fn_crop_band_value('house','temp_target',now()) AS tt, "
+                "fn_crop_band_value('house','vpd_target', now()) AS vt "
+                "FROM fn_band_setpoints(now()) b"
+            )
+        except subprocess.CalledProcessError:
+            pytest.skip("fn_band_setpoints target columns absent (pre-mig-181 DB)")
+        assert rows, "fn_band_setpoints returned no row"
+        r = rows[0]
+        assert r["temp_target"] is not None and r["vpd_target"] is not None, (
+            "served target is NULL — crop_band_anchors is missing the house "
+            "temp_target/vpd_target anchor set (fn_crop_band_value returned NULL)"
+        )
+        assert abs(r["temp_target"] - r["tt"]) < 1e-9  # served target == device curve
+        assert abs(r["vpd_target"] - r["vt"]) < 1e-9

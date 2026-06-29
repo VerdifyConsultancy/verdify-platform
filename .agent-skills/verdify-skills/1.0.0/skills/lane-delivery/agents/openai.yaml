@@ -1,0 +1,6 @@
+interface:
+  display_name: "Verdify Lane Delivery"
+  short_description: "Implement and close one leased lane"
+  default_prompt: "Implement only the assigned approved lane in its leased worktree, run required validation, update the linked PR, and write worker closeout for fresh criticism."
+policy:
+  allow_implicit_invocation: false

@@ -1,0 +1,18 @@
+schema_ref: outcome-review.schema.yaml
+kind: OutcomeReview
+schema_version: "1.0"
+sprint_id: 2026-06-22-a
+decision: accepted_with_risks
+reviewed_at: "2026-06-22T14:00:00Z"
+reviewer: product-owner
+intended_outcome: Operators can verify service health and running revision.
+delivered_outcomes:
+  - GET /health returns healthy status and the integrated revision in staging.
+evidence_links: ["EV-001", "EV-002", "EV-003", "pull request #456", "deployment deploy-789"]
+incomplete_items: []
+residual_risks:
+  - Production deployment requires its own environment approval and verification.
+follow_up_issues: [124]
+lessons_learned:
+  - Revision identity should be standardized across service templates.
+rationale: The staging outcome satisfies the sprint criteria; production remains a separate authorized release decision.

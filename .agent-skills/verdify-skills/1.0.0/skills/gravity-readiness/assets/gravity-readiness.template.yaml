@@ -1,0 +1,23 @@
+schema_ref: gravity-readiness.schema.yaml
+kind: GravityReadiness
+schema_version: "1.0"
+repository: VerdifyConsultancy/gravity
+status: draft
+assessed_at: ""
+onyx_status: unknown
+checklist: []
+pilot_wave:
+  id: ""
+  summary: ""
+  entry_criteria: []
+  exit_criteria: []
+  human_test_steps: []
+gates_to_open: []
+handoff:
+  next_skill: platform-readiness
+  next_mode: readiness-gate
+  reason: ""
+approval:
+  status: pending
+  approver: null
+  approved_at: null

@@ -42,6 +42,8 @@ Cloud migration: Cloud Run services, Cloud SQL, GCE Mosquitto, Cloud Scheduler, 
 
 ## Current state
 
-Full cloud mirror shipped 2026-04-07 (Sprint 9). Cloud planner is in dry-run. Next up per existing backlog: Sprint 10 cloud hardening (Secret Manager, monitoring, ESP32 cloud fallback), then Sprint 11 multi-tenant MVP.
+Full cloud mirror shipped 2026-04-07 (Sprint 9). Cloud planner is in dry-run.
+Use GitHub issues for current SaaS/platform work.
 
-See `docs/backlog/saas.md` (formerly `docs/BACKLOG-SAAS-ALIGNED.md`) for the full roadmap.
+The old `docs/backlog/saas.md` roadmap is archived in
+`/Users/jason/Orbit/context_dump/verdify-platform/`.

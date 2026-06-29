@@ -17,9 +17,45 @@ from pathlib import Path
 import pytest
 from conftest import db_query
 
-sys.path.insert(0, "/srv/verdify/ingestor")
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT / "ingestor"))
+
+
+def _tasks_source() -> str:
+    """Full source of the tasks implementation.
+
+    Issue #46 split the former single-file ``ingestor/tasks.py`` into the
+    ``ingestor/tasks/`` package. These source-string contract tests read every
+    submodule (concatenated) so the same literal assertions still enforce the
+    same invariant wherever the code now lives. Falls back to the legacy single
+    file if it is ever present.
+    """
+    pkg = REPO_ROOT / "ingestor" / "tasks"
+    if pkg.is_dir():
+        return "\n".join(p.read_text() for p in sorted(pkg.glob("*.py")))
+    return _tasks_source()
+
+
+def _tasks_assign_path(name: str) -> Path:
+    """Path to the tasks submodule (or legacy file) that defines ``name``.
+
+    Used by AST assignment extraction so it parses the one module that owns a
+    top-level assignment instead of the whole package.
+    """
+    pkg = REPO_ROOT / "ingestor" / "tasks"
+    if not pkg.is_dir():
+        return REPO_ROOT / "ingestor" / "tasks.py"
+    for p in sorted(pkg.glob("*.py")):
+        tree = ast.parse(p.read_text())
+        for node in tree.body:
+            targets = []
+            if isinstance(node, ast.Assign):
+                targets = [t.id for t in node.targets if isinstance(t, ast.Name)]
+            elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+                targets = [node.target.id]
+            if name in targets:
+                return p
+    raise AssertionError(f"{name} assignment not found in tasks package")
 
 
 def _assigned_frozenset(path: Path, name: str) -> set[str]:
@@ -98,11 +134,11 @@ class TestSchema:
 class TestDispatcherWiring:
     """Dispatcher code must contain the Tier 1 audit hooks."""
 
-    TASKS_PATH = "/srv/verdify/ingestor/tasks.py"
+    TASKS_PATH = REPO_ROOT / "ingestor" / "tasks.py"
 
     def _read(self) -> str:
-        with open(self.TASKS_PATH) as f:
-            return f.read()
+        # #46: tasks.py is now the ingestor/tasks/ package — read it as a whole.
+        return _tasks_source()
 
     def test_dispatcher_inserts_clamp_rows(self):
         body = self._read()
@@ -272,7 +308,7 @@ class TestHeapPressureObservability:
         assert "ADD COLUMN IF NOT EXISTS heap_largest_free_block_kb" in body
 
     def test_alert_monitor_checks_heap_pressure_state(self):
-        body = (REPO_ROOT / "ingestor/tasks.py").read_text()
+        body = _tasks_source()
         assert "'heap_pressure_warning', 'heap_pressure_critical'" in body
         assert "recent_true" in body
         assert "latest_state" in body
@@ -314,7 +350,7 @@ class TestHeapPressureObservability:
         assert "SOURCE_SHA256SUMS" in script
 
     def test_alert_monitor_does_not_call_demanded_heat_a_stuck_relay(self):
-        body = (REPO_ROOT / "ingestor/tasks.py").read_text()
+        body = _tasks_source()
         assert "state_source" in body
         assert "commanded_equipment_state" in body
         assert "float(temp_avg) <= float(sp_temp_high) + 0.5" in body
@@ -345,7 +381,7 @@ class TestHeapPressureObservability:
         assert "open_vent_mister_assist || !id(mister_closes_vent) || !vent_is_open" in body
 
     def test_greenhouse_state_refresh_registered(self):
-        body = (REPO_ROOT / "ingestor/tasks.py").read_text()
+        body = _tasks_source()
         migration = (REPO_ROOT / "db/migrations/098-greenhouse-state-refresh.sql").read_text()
         assert "refresh_greenhouse_state" in body
         assert "CREATE OR REPLACE FUNCTION refresh_greenhouse_state" in migration
@@ -355,20 +391,20 @@ class TestHeapPressureObservability:
         assert "ORDER BY equipment, ts DESC, state ASC" in migration
 
     def test_alert_monitor_refreshes_existing_alert_payloads(self):
-        body = (REPO_ROOT / "ingestor/tasks.py").read_text()
+        body = _tasks_source()
         assert "alert refresh skipped" in body
         assert "threshold_value=$5" in body
         assert "Same-severity updates intentionally stay quiet" in body
         assert "disposition IN ('open', 'acknowledged')" in body
 
     def test_vpd_stress_alert_requires_recent_active_stress(self):
-        body = (REPO_ROOT / "ingestor/tasks.py").read_text()
+        body = _tasks_source()
         assert "recent_high_fraction" in body
         assert "last 15m" in body
         assert 'float(row["recent_high_fraction"] or 0.0) >= 0.5' in body
 
     def test_alert_monitor_separates_vent_moisture_gap_from_capacity_limit(self):
-        body = (REPO_ROOT / "ingestor/tasks.py").read_text()
+        body = _tasks_source()
         assert "vent_vpd_moisture_gap" in body
         assert "vent_moisture_capacity_limit" in body
         assert "high_no_moisture_samples" in body
@@ -453,15 +489,15 @@ class TestContractDriftGuardrails:
     """Static checks for firmware/planner contracts that have drifted before."""
 
     def test_dispatcher_declares_vpd_low_band_owned(self):
-        band_params = _assigned_frozenset(REPO_ROOT / "ingestor" / "tasks.py", "BAND_DRIVEN_PARAMS")
+        band_params = _assigned_frozenset(_tasks_assign_path("BAND_DRIVEN_PARAMS"), "BAND_DRIVEN_PARAMS")
         assert {"temp_low", "temp_high", "vpd_low", "vpd_high"} <= band_params
 
-        tasks_source = (REPO_ROOT / "ingestor" / "tasks.py").read_text()
+        tasks_source = _tasks_source()
         assert "fn_band_setpoints(now())" in tasks_source
         assert "param in BAND_DRIVEN_PARAMS" in tasks_source
 
     def test_alert_monitor_covers_obs3_relief_and_latch(self):
-        tasks_source = (REPO_ROOT / "ingestor" / "tasks.py").read_text()
+        tasks_source = _tasks_source()
         assert '"alert_type": "firmware_relief_ceiling"' in tasks_source
         assert '"alert_type": "firmware_vent_latched"' in tasks_source
         assert 'sensor_id": "diag.relief_cycle_count"' in tasks_source
@@ -473,7 +509,7 @@ class TestContractDriftGuardrails:
 
     def test_alert_monitor_checks_expected_firmware_pin(self):
         config_source = (REPO_ROOT / "ingestor" / "config.py").read_text()
-        tasks_source = (REPO_ROOT / "ingestor" / "tasks.py").read_text()
+        tasks_source = _tasks_source()
         makefile = (REPO_ROOT / "Makefile").read_text()
 
         assert "EXPECTED_FIRMWARE_VERSION" in config_source
@@ -544,7 +580,7 @@ class TestContractDriftGuardrails:
 
     def test_post_boot_readback_repair_covers_static_and_planner_paths(self):
         ingestor_source = (REPO_ROOT / "ingestor" / "ingestor.py").read_text()
-        tasks_source = (REPO_ROOT / "ingestor" / "tasks.py").read_text()
+        tasks_source = _tasks_source()
         assert "shared.force_setpoint_push.set()" in ingestor_source
         assert "prev is not None and not math.isclose" in ingestor_source
         assert "if shared.force_setpoint_push.is_set():" in tasks_source
@@ -569,7 +605,7 @@ class TestContractDriftGuardrails:
         assert 'failures.append("open_alerts")' not in monitor_source
 
     def test_alert_monitor_tracks_climate_action_proof_freshness(self):
-        tasks_source = (REPO_ROOT / "ingestor" / "tasks.py").read_text()
+        tasks_source = _tasks_source()
         alerts_source = (REPO_ROOT / "verdify_schemas" / "alerts.py").read_text()
         assert '"climate_action_proof_stale"' in alerts_source
         assert "class ClimateActionProofStaleDetails" in alerts_source
@@ -624,7 +660,8 @@ class TestContractDriftGuardrails:
         )
         proof_surfaces = {
             "api": REPO_ROOT / "api" / "main.py",
-            "alert_monitor": REPO_ROOT / "ingestor" / "tasks.py",
+            # #46: alert_monitor lives in the ingestor/tasks/ package (alerts submodule).
+            "alert_monitor": REPO_ROOT / "ingestor" / "tasks" / "alerts.py",
             "firmware_preflight": REPO_ROOT / "scripts" / "firmware-deploy-preflight.sh",
             "health_check": REPO_ROOT / "scripts" / "health-check.sh",
             "liveness_check": REPO_ROOT / "scripts" / "liveness-check.sh",
@@ -718,16 +755,18 @@ class TestFirmwareCheckTargets:
 class TestSprint18Wiring:
     """Sprint 18: deterministic dispatch — DI-1, PL-5, FW-2, FW-3, OBS-3."""
 
-    TASKS_PATH = "/srv/verdify/ingestor/tasks.py"
-    SENSORS_PATH = "/srv/verdify/firmware/greenhouse/sensors.yaml"
-    CONTROLS_PATH = "/srv/verdify/firmware/greenhouse/controls.yaml"
-    ENTITY_MAP_PATH = "/srv/verdify/ingestor/entity_map.py"
-    INGESTOR_PATH = "/srv/verdify/ingestor/ingestor.py"
+    TASKS_PATH = REPO_ROOT / "ingestor" / "tasks.py"
+    SENSORS_PATH = REPO_ROOT / "firmware" / "greenhouse" / "sensors.yaml"
+    CONTROLS_PATH = REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml"
+    ENTITY_MAP_PATH = REPO_ROOT / "ingestor" / "entity_map.py"
+    INGESTOR_PATH = REPO_ROOT / "ingestor" / "ingestor.py"
 
     @staticmethod
-    def _read(path: str) -> str:
-        with open(path) as f:
-            return f.read()
+    def _read(path: Path) -> str:
+        # #46: the tasks.py path now resolves to the ingestor/tasks/ package.
+        if str(path).endswith("ingestor/tasks.py"):
+            return _tasks_source()
+        return path.read_text()
 
     # ── DI-1: proportional dead-bands ──
     def test_di1_proportional_dead_band_helper_defined(self):
@@ -828,14 +867,16 @@ class TestSprint18Wiring:
 class TestProbeStalenessWiring:
     """FW-10 (Sprint 17): active_probe_count column + ingestor routing."""
 
-    SENSORS_PATH = "/srv/verdify/firmware/greenhouse/sensors.yaml"
-    ENTITY_MAP_PATH = "/srv/verdify/ingestor/entity_map.py"
-    INGESTOR_PATH = "/srv/verdify/ingestor/ingestor.py"
+    SENSORS_PATH = REPO_ROOT / "firmware" / "greenhouse" / "sensors.yaml"
+    ENTITY_MAP_PATH = REPO_ROOT / "ingestor" / "entity_map.py"
+    INGESTOR_PATH = REPO_ROOT / "ingestor" / "ingestor.py"
 
     @staticmethod
-    def _read(path: str) -> str:
-        with open(path) as f:
-            return f.read()
+    def _read(path: Path) -> str:
+        # #46: the tasks.py path now resolves to the ingestor/tasks/ package.
+        if str(path).endswith("ingestor/tasks.py"):
+            return _tasks_source()
+        return path.read_text()
 
     def test_migration_081_applied(self):
         from conftest import db_query
@@ -1009,18 +1050,15 @@ class TestSetpointConfirmation:
         )
 
     def test_confirmation_monitor_task_wired(self):
+        # #46: setpoint_confirmation_monitor lives in the ingestor/tasks/ package
+        # (confirmation submodule). Assert the function still exists in the source.
+        assert "async def setpoint_confirmation_monitor" in _tasks_source(), (
+            "tasks package missing setpoint_confirmation_monitor function"
+        )
         import subprocess
 
-        # tasks.py registers setpoint_confirmation_monitor
-        result = subprocess.run(
-            ["grep", "-c", "setpoint_confirmation_monitor", "/srv/verdify/ingestor/tasks.py"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        assert int(result.stdout.strip() or "0") >= 1, "tasks.py missing setpoint_confirmation_monitor function"
         result2 = subprocess.run(
-            ["grep", "-c", "setpoint_confirmation", "/srv/verdify/ingestor/ingestor.py"],
+            ["grep", "-c", "setpoint_confirmation", str(REPO_ROOT / "ingestor" / "ingestor.py")],
             capture_output=True,
             text=True,
             check=False,
@@ -1067,7 +1105,7 @@ class TestSetpointConfirmation:
         assert "id(mister_engage_kpa) - MISTER_HYST" in controls_source
 
     def test_confirmation_monitor_ignores_superseded_rows(self):
-        body = Path("/srv/verdify/ingestor/tasks.py").read_text()
+        body = _tasks_source()
         assert "auto-resolved: superseded by newer setpoint" in body
         assert "marked %d stale pending row(s) superseded" in body
         assert "delivery_status = 'superseded'" in body
@@ -1161,8 +1199,8 @@ class TestEntityMapCoverage:
 
     def test_dispatcher_still_emits_the_static_set(self):
         """If the dispatcher renames/removes a param, force re-review of this list."""
-        with open("/srv/verdify/ingestor/tasks.py") as f:
-            body = f.read()
+        # #46: dispatcher source now lives in the ingestor/tasks/ package.
+        body = _tasks_source()
         stale = sorted(p for p in self.STATIC_PARAMS if f'"{p}"' not in body)
         assert not stale, (
             f"TE-1 claims these are dispatched but they're not in tasks.py: {stale}. "

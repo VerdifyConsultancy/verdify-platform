@@ -1,0 +1,74 @@
+# ============================================================================
+# STAGED — HA-1.9 (#234): label the multi-replica STATELESS deployments
+# `verdify.ai/rebalanceable: "true"` so the descheduler's L1 allowlist can ever
+# see them. DO NOT APPLY outside the gated runbook.
+# ============================================================================
+# Intentionally NOT referenced by descheduler/kustomization.yaml. Applying this
+# adds a pod-template label to lab/api/mcp/planner/traefik, which triggers ONE
+# rolling restart of each (RollingUpdate, PDB-protected, no downtime). It touches
+# ONLY the multi-replica stateless surfaces — NEVER the ingestor (singleton,
+# Recreate), NEVER grafana/hermes/mqtt/db/CNPG.
+#
+# WHY STAGED: even a stateless rolling restart is a live mutation; it is applied
+# under the gated runbook in the same window as the enforce flip, AFTER the
+# dry-run proof. Apply with:
+#   ssh jason@192.168.30.32 sudo k3s kubectl apply -f STAGED-rebalanceable-labels-patch.yaml
+#
+# Selector note: the label goes on BOTH the deployment's pod template
+# (.spec.template.metadata.labels — so running pods carry it and the L1 evictor
+# allowlist matches) and is harmless on the controller. The ingestor is absent
+# from this list by construction → it can never become rebalanceable.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-lab
+  namespace: verdify-prod
+spec:
+  template:
+    metadata:
+      labels:
+        verdify.ai/rebalanceable: "true"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-api
+  namespace: verdify-prod
+spec:
+  template:
+    metadata:
+      labels:
+        verdify.ai/rebalanceable: "true"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-mcp
+  namespace: verdify-prod
+spec:
+  template:
+    metadata:
+      labels:
+        verdify.ai/rebalanceable: "true"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-planner
+  namespace: verdify-prod
+spec:
+  template:
+    metadata:
+      labels:
+        verdify.ai/rebalanceable: "true"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-traefik
+  namespace: verdify-prod
+spec:
+  template:
+    metadata:
+      labels:
+        verdify.ai/rebalanceable: "true"

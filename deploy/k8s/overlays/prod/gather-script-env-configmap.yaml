@@ -1,0 +1,39 @@
+# GATHER-SCRIPT RUNTIME ENV (#211) — prod ONLY.
+#
+# Three env keys consumed ONLY by the mounted gather-plan-context.sh +
+# lib/psql-verdify.sh subprocess (NOT by the ingestor app, which talks to
+# Postgres via asyncpg directly):
+#
+#   VERDIFY_DB_BACKEND=dsn  — flips lib/psql-verdify.sh (#24) from its VM-era
+#     docker-exec default to the in-cluster DIRECT mode: a bare `psql` that reads
+#     PGHOST/PGPORT/PGDATABASE/PGUSER from DB_HOST/DB_PORT/DB_NAME/DB_USER and
+#     PGPASSWORD from the ingestor's existing $POSTGRES_PASSWORD. No docker
+#     socket, no script-logic change — only the connection transport.
+#
+#   PYTHON=python3  — the gather script's registry block (gather-plan-context.sh
+#     :27) runs ${PYTHON:-python3} to emit the
+#     ACTIVE_CONTEXT_PARAMS / PLAN_COMPARE_EXCLUDED SQL IN-lists from
+#     verdify_schemas.tunable_registry. The VM venv path is absent in-pod; this
+#     points it at the image's python3 so those two SQL filters resolve (else the
+#     IN() lists go EMPTY and break two context queries — the one real
+#     output-affecting risk, closed here).
+#
+#   PYTHONPATH=/app  — that same registry block imports verdify_schemas after
+#     inserting $SCRIPT_ROOT/.. (=/srv/verdify) on sys.path, where the module is
+#     NOT present in-cluster (it lives at /app/verdify_schemas). PYTHONPATH=/app
+#     makes the import resolve WITHOUT editing the script. Verified in-pod:
+#     `PYTHONPATH=/app python3 -c 'import verdify_schemas.tunable_registry'` OK
+#     (14 + 40 registry entries). Additive for the ingestor app (its cwd is
+#     /app/ingestor); it does not shadow the app's own imports.
+#
+# Patched onto the base verdify-config ConfigMap (strategic merge adds the keys).
+# Picked up by the gather subprocess on the next ingestor pod start (gated
+# restart — see PR). NONE of these are read by the live device-write path.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-config
+data:
+  VERDIFY_DB_BACKEND: "dsn"
+  PYTHON: "python3"
+  PYTHONPATH: "/app"

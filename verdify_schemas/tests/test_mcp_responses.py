@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+from datetime import date
 from decimal import Decimal
 
 import pytest
@@ -15,6 +16,9 @@ from verdify_schemas.mcp_responses import (
     ForecastSummaryRow,
     HistoryRow,
     LessonSummary,
+    OutcomeKpiActionRow,
+    OutcomeKpiCoverage,
+    OutcomeKpiResponse,
     PlanRunResponse,
     PlanStatusJournal,
     PlanStatusResponse,
@@ -125,11 +129,103 @@ class TestScorecard:
         assert "graded_vpd_high_stress_h" in names
 
 
+class TestOutcomeKpi:
+    def test_roundtrip_with_pending_metric_coverage(self):
+        r = OutcomeKpiResponse(
+            date=date(2026, 6, 23),
+            greenhouse_id="vallery",
+            semantics="ADR-0004 outcome view",
+            coverage=OutcomeKpiCoverage(moisture_estimator="available", vpd_policy_sequences="available"),
+            served_corridor={"attributable_pct": 91.2, "raw_pct": 84.0},
+            pinched_corridor={"both_pct": None},
+            vpd_misses_h={"high_stress_h": 2.4, "low_stress_h": 0.0},
+            actuator_cycles={"fan1": 14, "fog": 3},
+            actuator_runtime={"fan1_min": 185.5, "fog_min": 8.0},
+            water_use_gal={"total": 12.2, "mister": 3.4},
+            dli={"sensor_mol_m2_d": 18.6},
+            dif={"day_night_temp_delta_f": None},
+            dew_margin={"min_f": 6.2, "risk_h": 0.0},
+            energy_cost={"total_usd": 4.85},
+            action_scorecard=[
+                OutcomeKpiActionRow(
+                    climate_action="VENT_DRY",
+                    decisions=7,
+                    avg_abs_temp_error_before_f=1.2,
+                    avg_abs_vpd_error_before_kpa=0.13,
+                    avg_temp_abs_error_delta_15m_f=-0.4,
+                    avg_vpd_abs_error_delta_15m_kpa=-0.02,
+                    avg_wet_relay_duty_pct=0.0,
+                    avg_vent_fan_duty_pct=88.0,
+                    mister_water_delta_gal=0.0,
+                    wet_blocked_decisions=2,
+                    fog_blocked_decisions=1,
+                )
+            ],
+            moisture_estimator={
+                "sample_count": 7,
+                "coverage": "available",
+                "by_action_reason": [
+                    {
+                        "action": "vent_dehum",
+                        "reason": "vent_plus_heat",
+                        "decisions": 7,
+                        "avg_vent_vpd_gain_kpa": 0.12,
+                        "avg_heat_vpd_gain_kpa": 0.2,
+                        "outdoor_fresh_decisions": 7,
+                        "vent_overcool_decisions": 0,
+                        "heat_assist_corun_decisions": 7,
+                        "heat_assist_active_decisions": 3,
+                        "avg_heat_assist_timer_s": 180.0,
+                    }
+                ],
+            },
+            vpd_policy={
+                "total_episodes": 42,
+                "wetting_episodes": 6,
+                "vent_dehum_episodes": 4,
+                "heat_dehum_episodes": 2,
+                "wet_to_dehum_episodes_30m": 3,
+                "dehum_to_wet_episodes_30m": 1,
+                "transition_window_min": 30,
+            },
+            source_tables=["daily_summary", "v_climate_action_daily_scorecard", "climate_action_log"],
+        )
+
+        dumped = r.model_dump()
+        assert dumped["coverage"]["served_corridor"] == "available"
+        assert dumped["coverage"]["pinched_corridor"] == "available"
+        assert dumped["coverage"]["dif"] == "available"
+        assert dumped["coverage"]["solar_phase_buckets"] == "available"
+        assert dumped["coverage"]["moisture_estimator"] == "available"
+        assert dumped["coverage"]["vpd_policy_sequences"] == "available"
+        assert dumped["served_corridor"]["attributable_pct"] == 91.2
+        assert dumped["action_scorecard"][0]["decisions"] == 7
+        assert dumped["moisture_estimator"]["sample_count"] == 7
+        assert dumped["moisture_estimator"]["by_action_reason"][0]["action"] == "vent_dehum"
+        assert dumped["vpd_policy"]["wet_to_dehum_episodes_30m"] == 3
+        assert '"date":"2026-06-23"' in r.model_dump_json()
+
+    def test_action_row_rejects_extra_fields(self):
+        with pytest.raises(ValidationError):
+            OutcomeKpiActionRow.model_validate(
+                {
+                    "climate_action": "VENT_DRY",
+                    "decisions": 1,
+                    "unknown_metric": 42,
+                }
+            )
+
+
 # ── Drift guard: live fn_planner_scorecard() metric names must be a subset of
 #    ScorecardResponse.metric_names(). Skips if no DB is reachable. ─────
-def _docker_available() -> bool:
-    r = subprocess.run(["docker", "ps"], capture_output=True, text=True, check=False)
-    return r.returncode == 0
+def _docker_timescaledb_reachable() -> bool:
+    r = subprocess.run(
+        ["docker", "inspect", "-f", "{{.State.Running}}", "verdify-timescaledb"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return r.returncode == 0 and r.stdout.strip() == "true"
 
 
 def _ci_postgres_reachable() -> bool:
@@ -137,7 +233,7 @@ def _ci_postgres_reachable() -> bool:
 
 
 @pytest.mark.skipif(
-    not (_ci_postgres_reachable() or _docker_available()),
+    not (_ci_postgres_reachable() or _docker_timescaledb_reachable()),
     reason="no DB backend available",
 )
 def test_scorecard_metric_names_match_live_function():

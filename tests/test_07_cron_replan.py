@@ -4,6 +4,7 @@ Test 07: Cron Jobs & Replan Flow — Scheduled tasks and deviation-triggered rep
 
 import os
 import subprocess
+from pathlib import Path
 
 import pytest
 from conftest import db_query
@@ -75,7 +76,8 @@ class TestPlannerConfig:
     def test_ai_config_loads(self):
         import sys
 
-        sys.path.insert(0, "/srv/verdify/ingestor")
+        repo_root = Path(__file__).resolve().parents[1]
+        sys.path.insert(0, str(repo_root / "ingestor"))
         from ai_config import ai
 
         assert ai.model_name("planner") == "gpt-5.5"
@@ -89,6 +91,14 @@ class TestPlannerConfig:
         assert key.startswith("sk-ant-"), "Anthropic key doesn't start with sk-ant-"
 
     def test_planner_lessons_not_excessive(self):
-        """Active lessons should be <= 25 (query caps at 10, but DB may have more)."""
-        count = db_query("SELECT count(*) FROM planner_lessons WHERE is_active = true")
-        assert int(count) <= 50, f"{count} active lessons (>25 = needs cleanup)"
+        """Active lessons should be <= 25 (query caps at 10, but DB may have more).
+
+        Counts the canonical LIVE set (``is_active = true AND superseded_by IS
+        NULL``) — the exact predicate the planner read path uses. Migration 156
+        (issue #38) canonicalizes that set from 57 down to <=25 via
+        supersede/retire (provenance preserved, no hard delete). This asserts
+        the migration's <=25 contract instead of the prior <=50 relaxation, so
+        it goes green only once migration 156 has been APPLIED to the DB.
+        """
+        count = db_query("SELECT count(*) FROM planner_lessons WHERE is_active = true AND superseded_by IS NULL")
+        assert int(count) <= 25, f"{count} active lessons (>25 = needs cleanup; apply migration 156)"

@@ -181,6 +181,12 @@ text_sensor:
     update_interval: 5s
 
   - platform: template
+    id: gh_climate_moisture_exchange
+    name: "Climate Moisture Exchange"
+    entity_category: diagnostic
+    update_interval: 5s
+
+  - platform: template
     id: gl_main_state_text
     name: "GL Main State"
     entity_category: diagnostic
@@ -209,6 +215,19 @@ text_sensor:
     name: "Lead Fan"
     entity_category: diagnostic
     update_interval: 30s
+
+  # Firmware-v2 evidence surface (text): which zone the priority arbiter
+  # granted wetting to, and whether the band is the on-chip solar curve.
+  - platform: template
+    id: gh_zone_wet_granted
+    name: "Zone Wet Granted"
+    entity_category: diagnostic
+    update_interval: never
+  - platform: template
+    id: gh_band_source
+    name: "Band Source"
+    entity_category: diagnostic
+    update_interval: never
     lambda: |-
       return { id(fan_lead_is_fan1) ? "Fan 1" : "Fan 2" };
 
@@ -643,6 +662,172 @@ switch:
           data:
             entity_id: switch.greenhouse_grow
       - lambda: 'ESP_LOGI("lights", "Grow lights OFF via HA service");'
+
+###############################################################################
+# Firmware-v2 EVIDENCE SURFACE (numeric) — on-chip solar + per-zone bands.
+# Published by controls.yaml every 60s so the dispatcher/DB can verify the
+# new-architecture data is flowing (solar phase, house target/delta, per-zone
+# VPD target/delta). All publish-on-demand (update_interval: never).
+###############################################################################
+sensor:
+  - platform: template
+    id: gh_solar_phase
+    name: "Solar Phase"
+    accuracy_decimals: 3
+    entity_category: diagnostic
+    update_interval: never
+  - platform: template
+    id: gh_solar_sunrise_min
+    name: "Solar Sunrise (min local)"
+    entity_category: diagnostic
+    update_interval: never
+  - platform: template
+    id: gh_solar_noon_min
+    name: "Solar Noon (min local)"
+    entity_category: diagnostic
+    update_interval: never
+  - platform: template
+    id: gh_solar_sunset_min
+    name: "Solar Sunset (min local)"
+    entity_category: diagnostic
+    update_interval: never
+  - platform: template
+    id: gh_house_temp_target
+    name: "House Temp Target F"
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: never
+  - platform: template
+    id: gh_house_temp_delta
+    name: "House Temp Delta F"
+    accuracy_decimals: 1
+    entity_category: diagnostic
+    update_interval: never
+  - platform: template
+    id: gh_house_vpd_target
+    name: "House VPD Target kPa"
+    accuracy_decimals: 3
+    entity_category: diagnostic
+    update_interval: never
+  - platform: template
+    id: gh_house_vpd_delta
+    name: "House VPD Delta kPa"
+    accuracy_decimals: 3
+    entity_category: diagnostic
+    update_interval: never
+  - platform: template
+    id: gh_zone_vpd_target_center
+    name: "Zone VPD Target Center"
+    accuracy_decimals: 3
+    entity_category: diagnostic
+    update_interval: never
+  - platform: template
+    id: gh_zone_vpd_target_south
+    name: "Zone VPD Target South"
+    accuracy_decimals: 3
+    entity_category: diagnostic
+    update_interval: never
+  - platform: template
+    id: gh_zone_vpd_target_west
+    name: "Zone VPD Target West"
+    accuracy_decimals: 3
+    entity_category: diagnostic
+    update_interval: never
+  - platform: template
+    id: gh_zone_vpd_target_east
+    name: "Zone VPD Target East"
+    accuracy_decimals: 3
+    entity_category: diagnostic
+    update_interval: never
+  - platform: template
+    id: gh_zone_vpd_delta_center
+    name: "Zone VPD Delta Center"
+    accuracy_decimals: 3
+    entity_category: diagnostic
+    update_interval: never
+  - platform: template
+    id: gh_zone_vpd_delta_south
+    name: "Zone VPD Delta South"
+    accuracy_decimals: 3
+    entity_category: diagnostic
+    update_interval: never
+  - platform: template
+    id: gh_zone_vpd_delta_west
+    name: "Zone VPD Delta West"
+    accuracy_decimals: 3
+    entity_category: diagnostic
+    update_interval: never
+  - platform: template
+    id: gh_zone_vpd_delta_east
+    name: "Zone VPD Delta East"
+    accuracy_decimals: 3
+    entity_category: diagnostic
+    update_interval: never
+
+###############################################################################
+# Firmware-v2 MANUAL OVERRIDE BUTTONS (momentary toggle + deadline latch)
+# ---------------------------------------------------------------------------
+# Each press TOGGLES a latch that runs for manual_override_timeout_min minutes
+# (default 10) and SUPERSEDES all climate automation (only a re-press, the
+# timeout, or a true safety rail interrupts it). The deadline globals
+# (manual_*_until_ms) are consumed in controls.yaml's override layer. These
+# are template buttons (HA-pressable now; a physical GPIO binary_sensor can
+# call them via on_press). Fixes the inverted vent_lock that killed the fans.
+###############################################################################
+button:
+  - platform: template
+    id: btn_manual_fans
+    name: "Manual FANS (both + vent, 10min)"
+    on_press:
+      - lambda: |-
+          const uint32_t now_ms = millis();
+          const bool latched = id(manual_fans_until_ms) != 0
+              && (int32_t)(id(manual_fans_until_ms) - now_ms) > 0;
+          if (latched) {
+            id(manual_fans_until_ms) = 0;
+            ESP_LOGI("manual","FANS latch CLEARED by re-press");
+          } else {
+            uint32_t hold = (uint32_t)id(manual_override_timeout_min) * 60000UL;
+            id(manual_fans_until_ms) = now_ms + hold;
+            if (id(manual_fans_until_ms) == 0) id(manual_fans_until_ms) = 1;
+            ESP_LOGW("manual","FANS latched ON for %d min (both fans + vent)", id(manual_override_timeout_min));
+          }
+
+  - platform: template
+    id: btn_manual_humidify
+    name: "Manual HUMIDIFY (fogger, 10min)"
+    on_press:
+      - lambda: |-
+          const uint32_t now_ms = millis();
+          const bool latched = id(manual_fog_until_ms) != 0
+              && (int32_t)(id(manual_fog_until_ms) - now_ms) > 0;
+          if (latched) {
+            id(manual_fog_until_ms) = 0;
+            ESP_LOGI("manual","HUMIDIFY latch CLEARED by re-press");
+          } else {
+            uint32_t hold = (uint32_t)id(manual_override_timeout_min) * 60000UL;
+            id(manual_fog_until_ms) = now_ms + hold;
+            if (id(manual_fog_until_ms) == 0) id(manual_fog_until_ms) = 1;
+            ESP_LOGW("manual","HUMIDIFY latched ON for %d min (fogger only)", id(manual_override_timeout_min));
+          }
+
+  - platform: template
+    id: btn_vent_bypass
+    name: "Manual VENT-BYPASS (fans, vent closed)"
+    on_press:
+      - lambda: |-
+          const uint32_t now_ms = millis();
+          const bool latched = id(vent_bypass_until_ms) != 0
+              && (int32_t)(id(vent_bypass_until_ms) - now_ms) > 0;
+          if (latched) {
+            id(vent_bypass_until_ms) = 0;
+            ESP_LOGI("manual","VENT-BYPASS latch CLEARED by re-press");
+          } else {
+            uint32_t hold = (uint32_t)id(manual_override_timeout_min) * 60000UL;
+            id(vent_bypass_until_ms) = now_ms + hold;
+            if (id(vent_bypass_until_ms) == 0) id(vent_bypass_until_ms) = 1;
+            ESP_LOGW("manual","VENT-BYPASS latched ON for %d min (fans run, vent stays closed)", id(manual_override_timeout_min));
+          }
 
 ###############################################################################
 # END OF FILE

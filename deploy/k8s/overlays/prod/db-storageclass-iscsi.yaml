@@ -1,0 +1,36 @@
+# PROD storage reconcile: the live prod verdify-db is durable database state and
+# belongs on Synology iSCSI SSD RWO block storage. The prod overlay restates the
+# full volumeClaimTemplate so git stays equal to the live StatefulSet template
+# and ArgoCD does not try to patch the immutable field piecemeal.
+#
+# This is a RECONCILE-TO-LIVE git change only; it does NOT touch or recreate the
+# live StatefulSet (git now equals the running spec). Mirrors the staging
+# db-storageclass-iscsi.yaml pattern. The whole volumeClaimTemplate element is
+# restated (kustomize keys volumeClaimTemplates by metadata.name and replaces the
+# matched element) so accessModes + size are preserved alongside the SC.
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: verdify-db
+spec:
+  template:
+    spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+      containers:
+        - name: postgres
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              memory: "6Gi"
+  volumeClaimTemplates:
+    - metadata:
+        name: db-data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        storageClassName: synology-iscsi-ssd
+        resources:
+          requests:
+            storage: 50Gi

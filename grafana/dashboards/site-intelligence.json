@@ -1,4 +1,5 @@
 {
+  "refresh": "5m",
   "uid": "site-intelligence",
   "title": "Site: Intelligence",
   "editable": true,
@@ -189,7 +190,10 @@
         "y": 1
       },
       "id": 4,
-      "options": {},
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none"
+      },
       "targets": [
         {
           "datasource": {
@@ -202,7 +206,8 @@
         }
       ],
       "title": "Plan Age",
-      "type": "stat"
+      "type": "stat",
+      "transparent": true
     },
     {
       "datasource": {
@@ -1088,7 +1093,8 @@
         }
       ],
       "title": "Temperature Compliance Band",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -1714,7 +1720,8 @@
         }
       ],
       "title": "VPD Compliance Band",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     }
   ],
   "annotations": {

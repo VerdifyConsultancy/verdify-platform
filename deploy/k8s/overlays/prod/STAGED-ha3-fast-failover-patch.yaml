@@ -1,0 +1,62 @@
+# ============================================================================
+# STAGED — HA-3.1 ingestor fast UNPINNED failover patch (#239). DO NOT APPLY.
+# ============================================================================
+# This file is INTENTIONALLY NOT referenced by overlays/prod/kustomization.yaml.
+# Merging it to main therefore changes NOTHING — ArgoCD does not
+# render it. It is the reviewable, ready-to-apply patch the GATED live-arm
+# runbook (STAGED-ha3-writer-fence-arm.md, step F) appends to the kustomization
+# under a Jason-confirmed maintenance window.
+#
+# WHY GATED: applying this patch mutates the live ingestor Deployment podSpec
+# (priorityClassName + tolerations + terminationGracePeriod + cpu request),
+# which triggers a Recreate rollout that RESTARTS the sole live device writer.
+# Per the HARD GATE, the live writer's scheduling/push path is never restarted
+# without laptop-root + Jason. It PAIRS WITH the §HA-3.2 Lease fence — never ship
+# the short tolerations without the fence (a faster reschedule with no fence
+# would widen, not close, the split-brain window).
+#
+# Design §2.3 / §3 rationale:
+#   - priorityClassName verdify-device-writer (900000000, LIVE in-cluster): the
+#     writer is never the pod preempted/evicted under node pressure (defends the
+#     oversubscription root cause WITHOUT pinning).
+#   - cpu request 500m, NO cpu limit: guarantees a CPU floor; the limit is left
+#     OFF deliberately so CFS throttling never harms ESP32 keepalive/push timing
+#     (design §2.1 "edge + device path omit the limit on purpose").
+#   - tolerationSeconds 20 on not-ready/unreachable: evict + reschedule the sole
+#     writer in ~60s instead of the default ~340s, while riding out normal
+#     kubelet jitter (NOT 5s — that would bounce the writer on every transient).
+#   - terminationGracePeriodSeconds 15: matches leaseDurationSeconds so the
+#     SIGTERM lease-release + ESP32 disconnect completes before SIGKILL.
+#   - NO node-affinity / nodeSelector: pinning is anti-HA (a pinned writer dies
+#     with its node). Fast unpinned reschedule + the Lease fence give exactly-one
+#     AND fast failover.
+#
+# Keeps replicas:1 + strategy:Recreate from base (single-writer invariant). This
+# is a strategic-merge patch — only the listed fields change.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-ingestor
+spec:
+  template:
+    spec:
+      priorityClassName: verdify-device-writer
+      terminationGracePeriodSeconds: 15
+      tolerations:
+        - key: node.kubernetes.io/not-ready
+          operator: Exists
+          effect: NoExecute
+          tolerationSeconds: 20
+        - key: node.kubernetes.io/unreachable
+          operator: Exists
+          effect: NoExecute
+          tolerationSeconds: 20
+      containers:
+        - name: ingestor
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "256Mi"
+            limits:
+              # NO cpu limit (intentional — see header). Memory limit kept.
+              memory: "1Gi"

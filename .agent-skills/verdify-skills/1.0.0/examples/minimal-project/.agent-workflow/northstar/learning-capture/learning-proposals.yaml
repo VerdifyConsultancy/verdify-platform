@@ -1,0 +1,48 @@
+schema_ref: northstar-learning-proposals.schema.yaml
+kind: NorthStarLearningProposals
+schema_version: "1.0"
+project_id: minimal-project
+status: staged
+generated_at: "2026-06-22T14:00:00Z"
+updated_at: "2026-06-22T14:00:00Z"
+source_ids:
+- northstar://evidence/NSE-20260623-learning-capture-implementation-best-pra
+redaction_policy:
+  secrets_handling: Raw secrets, private tokens, credential values, and secret file contents are never copied into the packet.
+  sensitive_data_handling: Session and tool output are summarized with artifact paths and verifier results only.
+  retained_source_scope: Retain evidence IDs, route artifact paths, validation command names, and distilled lesson text.
+proposals:
+- id: NLP-001
+  title: Require reviewer packet evidence before claiming review-ready.
+  source_refs:
+  - northstar://evidence/NSE-20260623-learning-capture-implementation-best-pra
+  - .agent-workflow/sprints/2026-06-22-a/review/review-inbox-packet.yaml
+  observed_issue_or_opportunity: A manual sprint review found that review-ready claims are easier to verify when the packet path and validation result are recorded together.
+  verification: Reviewed the validating review inbox packet example and confirmed schema validation was part of the manual closeout.
+  proposed_destination: content_idea
+  proposed_change: Add a future checklist reminder that review-ready closeout should cite the packet path and validator result.
+  expected_benefit: Reduces repeated reviewer reconstruction work without changing authority or approval rules.
+  risk_class: low
+  approval_required: false
+  routing_decision: stage
+  affected_artifacts:
+  - skills/release-verification/references/review-inbox.md
+  loop_readiness:
+    recurs: Similar review friction may recur after sprint closeout or release verification.
+    verifier: Validate the proposal packet and confirm the target review packet exists.
+    durable_state: Store staged proposals under .agent-workflow/northstar/learning-capture/.
+    stop_condition: Stop after one source window and one staged proposal packet.
+    budget: Manual run only; no recurring token or time budget is approved.
+    objective_done_criteria: Packet validates and routes the proposal without applying it.
+    permissions: Read-only artifact inspection and proposal staging only.
+    manual_run_evidence: Minimal-project packet demonstrates proposal staging without scheduling recurring scans.
+    ready_for_scheduling: false
+review:
+  status: not_requested
+  reviewers:
+  - Skills maintainer
+  approvals: []
+handoff:
+  next_skill: northstar-planning
+  next_mode: artifact-loop
+  reason: Learning proposal is staged and can feed the next North Star artifact loop.

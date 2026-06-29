@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """Export one public-safe forecast -> plan -> outcome lifecycle bundle.
 
 The bundle is meant for launch readers who want receipts beyond dashboards.

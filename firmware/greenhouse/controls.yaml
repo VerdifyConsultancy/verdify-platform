@@ -12,7 +12,14 @@
 ################################################################################
 
 interval:
-  - interval: 5s
+  # 1 s (was 5 s): the control loop is the ONLY relay actuator path (the mode
+  # table is the truth), so manual-override button presses become responsive only
+  # as fast as this loop ticks — at 5 s a press lagged the relay up to 5 s. The
+  # loop is fully dt_ms-based (accumulates real elapsed millis, self-correcting at
+  # any tick rate) and relay min-on/min-off dwell is millis-based, so faster
+  # ticking cannot rapid-cycle. Replay is unaffected (the harness calls the
+  # decision fns per corpus row, not via this interval).
+  - interval: 1s
     then:
       - lambda: |-
           /*************** CONFIG CONSTANTS **************************************/
@@ -37,11 +44,12 @@ interval:
           static uint32_t last_ms = millis();
           uint32_t now_ms = millis();
           uint32_t dt_ms  = (now_ms < last_ms) ? 0 : (now_ms - last_ms);
-          // Sprint-10 0.4a: clamp dt_ms. The interval is 5 s; anything
-          // larger is a hiccup (RTOS hang, OTA pause, debugger break).
-          // sat_add prevents overflow but not behavioral skipping — one
-          // huge dt_ms can leap through vpd_watch_dwell, sealed_max_ms,
-          // and mist_s2_delay_ms in a single tick.
+          // Sprint-10 0.4a: clamp dt_ms. The interval is 1 s; a gap of several
+          // seconds is a hiccup (RTOS hang, OTA pause, debugger break). The 5 s
+          // cap catches a multi-tick stall; normal 1 s ticks are far below it.
+          // sat_add prevents overflow but not behavioral skipping — one huge
+          // dt_ms can leap through vpd_watch_dwell, sealed_max_ms, and
+          // mist_s2_delay_ms in a single tick.
           if(dt_ms > 5000) dt_ms = 5000;
           last_ms = now_ms;
 
@@ -145,9 +153,12 @@ interval:
                   id(runtime_mister_south_ms)  = 0;
                   id(runtime_mister_west_ms)   = 0;
                   id(runtime_mister_center_ms) = 0;
+                  // Clear the dwell-fence last-off stamps so a day rollover
+                  // never leaves a stale stamp that wrongly fences a zone.
+                  id(last_off_south_ms)  = 0;
+                  id(last_off_west_ms)   = 0;
+                  id(last_off_center_ms) = 0;
                   id(mister_water_today) = 0.0f;
-                  // CYC-4: reset the overnight micro-pulse daily count.
-                  id(cnt_micropulse_today) = 0;
                   // B5: reset DLI accumulator at midnight
                   id(dli_accumulator) = 0.0f;
                   last_doy = doy;
@@ -373,6 +384,69 @@ interval:
           const bool controller_time_valid = sntp_now.is_valid() && !id(sntp_failed);
           int local_hour = controller_time_valid ? sntp_now.hour : 12;
 
+          // ── Firmware-v2: ON-CHIP solar ephemeris (offline-first) ──────────
+          // Compute sunrise / solar-noon / sunset locally from the calendar
+          // date so the diurnal program tracks the drifting sun with ZERO
+          // network. utc_offset is derived from the time component, so DST is
+          // correct by construction. When time is invalid we fall back to a
+          // representative day and the header's fallback phase keeps control
+          // sane (degraded, not wrong).
+          int sv2_now_minute = controller_time_valid ? (sntp_now.hour * 60 + sntp_now.minute) : (local_hour * 60);
+          int sv2_doy = controller_time_valid ? sntp_now.day_of_year : 172;
+          int sv2_utc_off = -360;  // MST/MDT fallback
+          if (controller_time_valid) {
+              auto utc_now = id(sntp_time).utcnow();
+              if (utc_now.is_valid()) {
+                  int local_tod = sntp_now.hour * 60 + sntp_now.minute;
+                  int utc_tod = utc_now.hour * 60 + utc_now.minute;
+                  int diff = local_tod - utc_tod;
+                  if (diff > 720) diff -= 1440; else if (diff < -720) diff += 1440;
+                  sv2_utc_off = diff;
+              }
+          }
+          SolarTimes sv2_solar = compute_greenhouse_solar_times(sv2_doy, sv2_utc_off);
+          float sv2_phase = solar_phase(sv2_now_minute, sv2_solar);
+
+          // ── Firmware-v2: deterministic band curve from NVS anchors ────────
+          // The served band is a pure function of (crop anchors, solar phase),
+          // computed on-chip. When sw_onchip_band_enabled is true these
+          // OVERRIDE any dispatcher-pushed target_temp_*/vpd_* so the box runs
+          // the full program offline; legacy mode keeps the pushed scalars.
+          auto sv2_curve = [&](float sr, float sm, float ss, float mid) -> float {
+              BandAnchors a = {sr, sm, ss, mid};
+              return band_value_at_phase(a, sv2_phase);
+          };
+          float sv2_temp_low  = id(target_temp_low_f);
+          float sv2_temp_high = id(target_temp_high_f);
+          float sv2_temp_tgt  = (sv2_temp_low + sv2_temp_high) * 0.5f;
+          float sv2_vpd_low   = id(target_vpd_low);
+          float sv2_vpd_high  = id(target_vpd_high);
+          float sv2_vpd_tgt   = (sv2_vpd_low + sv2_vpd_high) * 0.5f;
+          if (id(sw_onchip_band_enabled)) {
+              sv2_temp_low  = sv2_curve(id(band_temp_low_sr),   id(band_temp_low_sm),   id(band_temp_low_ss),   id(band_temp_low_mid));
+              sv2_temp_tgt  = sv2_curve(id(band_temp_target_sr),id(band_temp_target_sm),id(band_temp_target_ss),id(band_temp_target_mid));
+              sv2_temp_high = sv2_curve(id(band_temp_high_sr),  id(band_temp_high_sm),  id(band_temp_high_ss),  id(band_temp_high_mid));
+              sv2_vpd_low   = sv2_curve(id(band_vpd_low_sr),    id(band_vpd_low_sm),    id(band_vpd_low_ss),    id(band_vpd_low_mid));
+              sv2_vpd_tgt   = sv2_curve(id(band_vpd_target_sr), id(band_vpd_target_sm), id(band_vpd_target_ss), id(band_vpd_target_mid));
+              sv2_vpd_high  = sv2_curve(id(band_vpd_high_sr),   id(band_vpd_high_sm),   id(band_vpd_high_ss),   id(band_vpd_high_mid));
+          }
+
+          // Item-4 night-dry lever (planner-pushable, clamped 0..0.25 kPa): raise
+          // the VPD band overnight so the dryer keeps running, weighted by a smooth
+          // sin^2 bump that PEAKS at solar midnight and is exactly 0 at sunset (phase
+          // 2) and sunrise (phase 4) — so it can never re-introduce a slope corner.
+          // Lets the planner pre-empt a humid night without touching the anchors.
+          {
+            const float nbias = id(night_vpd_bias_kpa);
+            if (nbias > 0.0f && sv2_phase >= 2.0f && sv2_phase <= 4.0f) {
+              const float s = sinf(3.14159265f * (sv2_phase - 2.0f) * 0.5f);
+              const float add = nbias * s * s;  // s^2: 0 at phase 2/4, 1 at phase 3
+              sv2_vpd_low  += add;
+              sv2_vpd_tgt  += add;
+              sv2_vpd_high += add;
+            }
+          }
+
           // Sprint-15: outdoor temp + dewpoint feed the summer-vent gate.
           // Sources:
           //   - ha_outdoor_temp/ha_outdoor_rh from direct Tempest UDP
@@ -421,7 +495,13 @@ interval:
               // bursts + temp control remain. SENSOR_FAULT (inf/garbage) still
               // takes over via sensors_plausible() when even the fabricated
               // value is implausible.
-              .sensor_degraded = !avg_ok
+              .sensor_degraded = !avg_ok,
+              // Firmware-v2 on-chip solar inputs (offline-first time-of-day).
+              .now_minute = sv2_now_minute,
+              .sunrise_min = sv2_solar.sunrise_min,
+              .solar_noon_min = sv2_solar.solar_noon_min,
+              .sunset_min = sv2_solar.sunset_min,
+              .solar_phase = sv2_phase
           };
 
           // FRT-6: absorption hold active while now_ms is before the armed
@@ -433,9 +513,12 @@ interval:
               && (int32_t)(id(feed_hold_until_ms) - now_ms) > 0;
 
           Setpoints setpts = {
-              .temp_high = id(target_temp_high_f),
-              .temp_low = id(target_temp_low_f),
-              .vpd_high = VPDhi, .vpd_low = VPDlo,
+              // Firmware-v2: band edges come from the ON-CHIP solar curve
+              // (sv2_*) when sw_onchip_band_enabled, else the pushed scalars.
+              .temp_high = sv2_temp_high,
+              .temp_low = sv2_temp_low,
+              .vpd_high = id(sw_onchip_band_enabled) ? sv2_vpd_high : VPDhi,
+              .vpd_low = id(sw_onchip_band_enabled) ? sv2_vpd_low : VPDlo,
               .bias_cool = id(bias_cool_f), .bias_heat = id(bias_heat_f),
               .vpd_hysteresis = HV,
               .temp_hysteresis = id(hyst_temp_f),
@@ -451,8 +534,6 @@ interval:
               .fog_escalation_kpa = id(fog_escalation_kpa),
               .fog_rh_ceiling = (float)id(fog_rh_ceiling_pct),
               .fog_min_temp = (float)id(fog_min_temp_f),
-              .fog_window_start = id(fog_time_window_start),
-              .fog_window_end = id(fog_time_window_end),
               .dehum_aggressive_kpa = id(dehum_aggressive_kpa),
               .occupancy_inhibit = id(occupancy_inhibit_enabled) && id(greenhouse_occupied),
               .econ_block = econ_block,
@@ -473,51 +554,53 @@ interval:
               // and ESP32 share one live control path.
               .sw_fsm_controller_enabled = id(sw_fsm_controller_enabled),
               .cool_stage2_over_high_f = id(cool_stage2_over_high_f),
+              .cool_stage2_exit_hysteresis_f = id(cool_stage2_exit_hysteresis_f),
               .cool_exit_hysteresis_f = id(cool_exit_hysteresis_f),
               .cold_vent_guard_delta_f = id(cold_vent_guard_delta_f),
               .cool_all_fans_at_high_enabled = id(cool_all_fans_at_high_enabled),
+              // Firmware-v2: ONE stress-wetting rule (band-high + margin, dew-
+              // gated, solar-night-aware). Replaces the clock-window stress paths.
               .direct_wet_stress_override_enabled = id(direct_wet_stress_override_enabled),
               .direct_wet_stress_vpd_margin_kpa = id(direct_wet_stress_vpd_margin_kpa),
               .direct_wet_stress_min_dew_margin_f = id(direct_wet_stress_min_dew_margin_f),
-              .direct_wet_stress_latest_hour = id(direct_wet_stress_latest_hour),
-              .fog_stress_window_extend_enabled = id(fog_stress_window_extend_enabled),
-              .fog_stress_window_latest_hour = id(fog_stress_window_latest_hour),
-              .fog_stress_min_dew_margin_f = id(fog_stress_min_dew_margin_f),
               .mist_backoff_ms = (uint32_t)id(mist_backoff_s) * 1000UL,
-              // ENV-2 night econ-heat suppression.
+              // Firmware-v2: never heat-to-chase-humidity in the solar night.
               .sw_night_econ_heat_suppress_enabled = id(sw_night_econ_heat_suppress_enabled),
-              .night_start_hour = id(night_start_hour),
-              .night_end_hour = id(night_end_hour),
-              // CYC-1/SAF-3 authoritative dusk cutoff.
-              .sw_dusk_cutoff_enabled = id(sw_dusk_cutoff_enabled),
-              .dusk_cutoff_hour = id(dusk_cutoff_hour),
+              // Firmware-v2: solar wet taper (replaces the dusk_cutoff clock rail).
+              .sw_wet_taper_enabled = id(sw_wet_taper_enabled),
+              .wet_taper_before_sunset_min = id(wet_taper_before_sunset_min),
+              // Firmware-v2: night emergency wetting (replaces CYC-4 micropulse).
+              .sw_night_stress_wet_enabled = id(sw_night_stress_wet_enabled),
+              .night_stress_min_dew_margin_f = id(night_stress_min_dew_margin_f),
               // FRT-6 absorption hold (computed above from feed_hold_until_ms).
               .feed_hold_active = feed_hold_active,
-              // IRR-3 dawn rehydrate: anchor the window start to the DISPATCHED
-              // sunrise hour (gl_sunrise_hour) so it tracks the season; the
-              // dispatcher can refine it later. Minute/duration/on/gap are the
-              // new operator tunables.
+              // Firmware-v2: dawn/midday boosts anchor to the ON-CHIP solar
+              // times via offsets (sunrise+dawn_boost_offset_min / solar-noon+
+              // midday_boost_offset_min). Cadence knobs unchanged.
               .sw_dawn_rehydrate_enabled = id(sw_dawn_rehydrate_enabled),
-              .dawn_rehydrate_start_hour = id(gl_sunrise_hour),
-              .dawn_rehydrate_start_minute = id(dawn_rehydrate_start_minute),
+              .dawn_boost_offset_min = id(dawn_boost_offset_min),
               .dawn_rehydrate_window_min = id(dawn_rehydrate_window_min),
               .dawn_rehydrate_on_s = id(dawn_rehydrate_on_s),
               .dawn_rehydrate_gap_s = id(dawn_rehydrate_gap_s),
-              // IRR-4 midday drench: anchored to midday_drench_hour (default 14
-              // ~= solar/thermal peak; dispatcher-overridable global).
               .sw_midday_drench_enabled = id(sw_midday_drench_enabled),
-              .midday_drench_hour = id(midday_drench_hour),
-              .midday_drench_start_minute = id(midday_drench_start_minute),
+              .midday_boost_offset_min = id(midday_boost_offset_min),
               .midday_drench_window_min = id(midday_drench_window_min),
               .midday_drench_on_s = id(midday_drench_on_s),
               .midday_drench_gap_s = id(midday_drench_gap_s),
-              // CYC-4 (NB7): overnight ≤5s fog micro-pulse.
-              .sw_overnight_micropulse_enabled = id(sw_overnight_micropulse_enabled),
-              .sw_night_humidity_source_present = id(sw_night_humidity_source_present),
-              .micropulse_vpd_ceiling = id(micropulse_vpd_ceiling),
-              .micropulse_max_on_s = id(micropulse_max_on_s),
-              .micropulse_min_gap_s = id(micropulse_min_gap_s),
-              .micropulse_min_dew_margin_f = id(micropulse_min_dew_margin_f)
+              // Firmware-v2 served-band targets (telemetry + normalized arbitration).
+              .temp_target = id(sw_onchip_band_enabled) ? sv2_temp_tgt : (sv2_temp_low + sv2_temp_high) * 0.5f,
+              .vpd_target = id(sw_onchip_band_enabled) ? sv2_vpd_tgt : (VPDlo + VPDhi) * 0.5f,
+              // ADR-0004: default 0 floats inside the served crop corridor and acts
+              // only at the edges. Nonzero pinches toward the served target only for
+              // explicit operator diagnostics; C++ default_setpoints matches.
+              .band_track_fraction = id(band_track_fraction),
+              // BC-13 (ADR0003 §6.4): moisture-exchange selector. vent_exchange_fraction
+              // is the AI-tunable single-cycle exchange fraction (Jason 2026-06-17, from
+              // the global/number). The gain margin + heat-assist min-dwell are device-side
+              // globals (match default_setpoints; not planner-pushable this sprint).
+              .dehum_vent_gain_margin_kpa = id(dehum_vent_gain_margin_kpa),
+              .dehum_heat_assist_min_dwell_ms = id(dehum_heat_assist_min_dwell_ms),
+              .vent_exchange_fraction = id(vent_exchange_fraction)
           };
 
           validate_setpoints(setpts);
@@ -537,30 +620,69 @@ interval:
 
           auto fog_safety_block_reason = [&]() -> const char* {
             if(!controller_time_valid) return "time_invalid";
-            if(dew_margin_f(sensor_in) < setpts.fog_stress_min_dew_margin_f) return "dew_margin";
+            if(dew_margin_f(sensor_in) < setpts.direct_wet_stress_min_dew_margin_f) return "dew_margin";
             if(!fog_hour_permitted(sensor_in, setpts)) return "time_window";
             if(sensor_in.rh_pct > setpts.fog_rh_ceiling) return "rh_ceiling";
             if(sensor_in.temp_f < setpts.fog_min_temp) return "temp_low";
             return "";
           };
-          const bool manual_fog_requested = id(manual_fog_active);
+          // ── Firmware-v2 BUTTON OVERRIDE LAYER (deadline latches) ──────────
+          // FANS / HUMID / VENT-BYPASS are momentary buttons; each press
+          // toggles a LATCH with a deadline (manual_*_until_ms, set in the
+          // button on_press handlers). While latched the relays are FORCED and
+          // SUPERSEDE all climate automation — only a re-press, the timeout, or
+          // a true safety rail interrupts them. This is the absolute-priority
+          // override layer; it sits ABOVE the mode table and below only safety.
+          // Deadlines are wrap-safe signed-difference tests (millis wraps).
+          const bool manual_fans_latched =
+              id(manual_fans_until_ms) != 0
+              && (int32_t)(id(manual_fans_until_ms) - now_ms) > 0;
+          const bool manual_fog_latched =
+              id(manual_fog_until_ms) != 0
+              && (int32_t)(id(manual_fog_until_ms) - now_ms) > 0;
+          const bool vent_bypass_latched =
+              id(vent_bypass_until_ms) != 0
+              && (int32_t)(id(vent_bypass_until_ms) - now_ms) > 0;
+          // Expire latches: clear the deadline once elapsed so telemetry/UI
+          // reflect the real state and the next press re-arms cleanly.
+          if (id(manual_fans_until_ms) != 0 && !manual_fans_latched) id(manual_fans_until_ms) = 0;
+          if (id(manual_fog_until_ms)  != 0 && !manual_fog_latched)  id(manual_fog_until_ms)  = 0;
+          if (id(vent_bypass_until_ms) != 0 && !vent_bypass_latched) id(vent_bypass_until_ms) = 0;
+          // EFFECTIVE manual state = the new deadline latch OR the legacy
+          // script flags (manual_*_active / vent_lock_active are still driven by
+          // the legacy timer scripts triggered elsewhere). We READ both so both
+          // trigger paths work; we never clobber the legacy flags here.
+          const bool manual_fans_eff   = manual_fans_latched || id(manual_fan_active);
+          const bool manual_fog_eff    = manual_fog_latched  || id(manual_fog_active);
+          const bool vent_bypass_eff   = vent_bypass_latched || id(vent_lock_active);
+          const bool manual_fog_requested = manual_fog_eff;
           const char* manual_fog_safety_block = fog_safety_block_reason();
 
-          // Manual overrides (ESP32-only, not in header). They are still
-          // below the sensor-fault, safety-heat, and fog-safety rails:
-          // fog/fan/vent need plausible control inputs unless a separate
-          // hardwired safety fallback owns the load.
-          if(id(manual_fan_active) && !sensor_fault_relay_lock){
-            willFan1 = true;
-            willFan2 = true;
-            if(mode != SAFETY_HEAT){ willVent = true; }
-          }
-          if(manual_fog_requested && !sensor_fault_relay_lock && manual_fog_safety_block[0] == '\0'){ willFog = true; }
-          if(id(vent_lock_active) && !id(manual_fan_active) && mode != SAFETY_COOL){
-            willFan1 = false;
-            willFan2 = false;
-            willVent = false;
-          }
+          // Resolve the absolute-priority override through the pure, unit-tested
+          // apply_manual_overrides() (greenhouse_logic.h) so this relay table
+          // matches the native tests exactly. Safety modes (SENSOR_FAULT /
+          // SAFETY_COOL / SAFETY_HEAT) are a no-op there — a manual press never
+          // fights a safety rail. Otherwise FANS/VENT-BYPASS force BOTH fans
+          // (vent OPEN, or CLOSED under bypass — the winter house-air pull) and
+          // HUMID forces the fogger unless a genuine fog safety block is up.
+          // ManualForce.fans/.fog feed set_relay's force_on below so a press
+          // bypasses relay min-off dwell and engages within one tick — the #289
+          // fix (manual_fan_force was previously computed but NEVER passed to the
+          // fan set_relay calls, so the FANS button stuck behind the fan min-off
+          // timer while the vent moved: the exact "pressed fans, nothing happened"
+          // signature).
+          RelayOutputs ov_out = {willHeat1, willHeat2, willFan1, willFan2, willFog, willVent};
+          const ManualOverrides manual_ov = {
+              manual_fans_eff,                     // fans_active
+              vent_bypass_eff,                     // vent_bypass_active
+              manual_fog_eff,                      // humid_active
+              manual_fog_safety_block[0] != '\0'   // fog_safety_blocked
+          };
+          const ManualForce manual_force = apply_manual_overrides(ov_out, manual_ov, mode);
+          willFan1 = ov_out.fan1; willFan2 = ov_out.fan2;
+          willFog  = ov_out.fog;  willVent = ov_out.vent;
+          const bool manual_fan_force = manual_force.fans;
+          const bool manual_fog_force = manual_force.fog;
           if(sensor_fault_relay_lock) {
             willHeat1 = false;
             willHeat2 = false;
@@ -579,7 +701,12 @@ interval:
           // it runs the lead fan with vent closed to keep heat in.
           const bool fan_physically_on = id(fan1_rly)->state || id(fan2_rly)->state;
           const bool fan_wanted = willFan1 || willFan2;
-          const bool fan_requires_vent = !sensor_fault_relay_lock && mode != SAFETY_HEAT && (fan_physically_on || fan_wanted);
+          // VENT-BYPASS carve-out (#290): normally fans force the vent open so a
+          // running fan never works against a shut vent, but bypass is the
+          // deliberate fans-on / vent-CLOSED winter house-air mode — so it must
+          // NOT re-open the vent. fan_requires_open_vent() encodes that carve-out
+          // (and the SAFETY_HEAT/SENSOR_FAULT exceptions) as a pure, tested rule.
+          const bool fan_requires_vent = fan_requires_open_vent(mode, fan_physically_on || fan_wanted, vent_bypass_eff);
           const bool fan_vent_interlock_active = fan_requires_vent && !willVent;
           static bool fan_vent_interlock_prev = false;
           if (fan_requires_vent) {
@@ -595,10 +722,15 @@ interval:
           }
 
           const bool vent_is_open = id(vent_rly)->state;
+          // BC-5/BC-11: DEHUM_VENT is the ONE sanctioned heat+vent state — a bounded
+          // stage-1 heat-assist holds the temperature floor while dehumidifying — so
+          // it is exempt from the heat<->air suppression exactly like SAFETY_HEAT.
+          // (resolve_equipment only ever sets heat1, never heat2, in DEHUM_VENT.)
+          const bool heat_air_exchange_exempt = (mode == SAFETY_HEAT) || (mode == DEHUM_VENT);
           const bool heat_vent_interlock_active =
-              mode != SAFETY_HEAT && (willHeat1 || willHeat2) && (vent_is_open || willVent);
+              !heat_air_exchange_exempt && (willHeat1 || willHeat2) && (vent_is_open || willVent);
           const bool heat_fan_interlock_active =
-              mode != SAFETY_HEAT && (willHeat1 || willHeat2) && (fan_physically_on || fan_wanted);
+              !heat_air_exchange_exempt && (willHeat1 || willHeat2) && (fan_physically_on || fan_wanted);
           const bool heat_air_exchange_interlock_active =
               heat_vent_interlock_active || heat_fan_interlock_active;
           static bool heat_vent_interlock_prev = false;
@@ -697,64 +829,12 @@ interval:
               mister_volume_hard_block_prev = mister_volume_hard_block;
           }
 
-          // CYC-4 (NB7): overnight ≤5s fog micro-pulse. A DEDICATED short-pulse
-          // path SEPARATE from the SEALED_MIST/fog duty table: its own ON timer
-          // (≤micropulse_max_on_s) + lockout (micropulse_min_gap_s), using the
-          // relay force_on/force_off args to BYPASS MIN_FOG_ON_MS/MIN_FOG_OFF_MS
-          // so the pulse is genuinely ≤5s (the standard 60s min-on would defeat
-          // the "micro" cap). The header gate overnight_micropulse_permitted()
-          // owns ALL the conditions (dark window, VPD>ceiling, dew/RH/temp,
-          // feed-hold, occupancy, plausibility, NB5-absent). Here we only run
-          // the timer + counter and surface force flags. The downstream
-          // willFog interlocks (leak / fert / budget / hard-ceiling / time)
-          // still apply and can force the pulse off mid-burst.
-          bool micropulse_force_on = false;
-          bool micropulse_force_off = false;
-          bool micropulse_fog_request = false;
-          {
-            const uint32_t mp_max_on_ms = uint32_t(setpts.micropulse_max_on_s) * 1000UL;
-            const uint32_t mp_gap_ms    = uint32_t(setpts.micropulse_min_gap_s) * 1000UL;
-            const bool mp_pulse_active =
-                id(micropulse_on_until_ms) != 0
-                && (int32_t)(id(micropulse_on_until_ms) - now_ms) > 0;
-            const bool mp_locked_out =
-                id(micropulse_lockout_until_ms) != 0
-                && (int32_t)(id(micropulse_lockout_until_ms) - now_ms) > 0;
-            const bool mp_permitted = overnight_micropulse_permitted(sensor_in, setpts);
-            if (mp_pulse_active) {
-              // Mid-pulse: keep fog ON (bypass min-off if the relay just toggled)
-              // unless the gate dropped (e.g. VPD relieved) — then end it early.
-              if (mp_permitted) {
-                micropulse_fog_request = true;
-                micropulse_force_on = true;
-              } else {
-                id(micropulse_on_until_ms) = 0;
-                micropulse_force_off = true;  // end the pulse now, bypass min-on
-              }
-            } else if (id(micropulse_on_until_ms) != 0) {
-              // Pulse window just elapsed → force OFF (bypass min-on so the ≤5s
-              // cap is HARD) and arm the lockout.
-              id(micropulse_on_until_ms) = 0;
-              micropulse_force_off = true;
-            } else if (mp_permitted && !mp_locked_out
-                       && !leak_block && !occupancy_moisture_block
-                       && !id(fertilizer_master_valve).state
-                       && !climate_water_budget_block && !mister_volume_hard_block) {
-              // Start a fresh pulse.
-              id(micropulse_on_until_ms)      = now_ms + mp_max_on_ms;
-              id(micropulse_lockout_until_ms) = now_ms + mp_max_on_ms + mp_gap_ms;
-              id(cnt_micropulse_today) += 1;
-              micropulse_fog_request = true;
-              micropulse_force_on = true;
-              ESP_LOGW("micropulse","CYC-4 overnight fog micro-pulse %ds (VPD %.2f > %.2f ceiling)",
-                       setpts.micropulse_max_on_s, sensor_in.vpd_kpa, setpts.micropulse_vpd_ceiling);
-            }
-          }
-          // Fold the micro-pulse request into willFog so the SAME safety
-          // interlocks below (leak / fert / occupancy / budget / vent / time)
-          // still gate it. The force flags only bypass the relay min-on/off
-          // duty timing, never the safety interlocks.
-          if (micropulse_fog_request) willFog = true;
+          // (Firmware-v2: the CYC-4 overnight micro-pulse timer/lockout block is
+          // DELETED. Overnight humidity emergencies are handled by the normal
+          // SEALED_MIST/fog path under the solar night band — when VPD exceeds
+          // the LOW night band edge + stress margin the header's stress-wet rule
+          // permits fog, bounded by the standard relay min-on/off + duty caps.
+          // The HUMID button (manual_fog_force, above) is the operator path.)
 
           // SAF-5: the AquaFog is clean-water-only by plumbing (there is no
           // fog_fert relay). Positive interlock: fog NEVER co-fires with the
@@ -805,8 +885,11 @@ interval:
           set_relay(R[0], willHeat1, false, force_heat_off);
           set_relay(R[1], willHeat2, false, force_heat2_off);
           set_relay(R[5], willVent, fan_requires_vent, sensor_fault_relay_lock);
-          set_relay(R[2], willFan1, false, sensor_fault_relay_lock);
-          set_relay(R[3], willFan2, false, sensor_fault_relay_lock);
+          // #289 fix: pass manual_fan_force so a FANS / VENT-BYPASS press forces
+          // the fans on THIS tick, bypassing the fan min-off dwell that silently
+          // swallowed manual presses before.
+          set_relay(R[2], willFan1, manual_fan_force, sensor_fault_relay_lock);
+          set_relay(R[3], willFan2, manual_fan_force, sensor_fault_relay_lock);
           set_relay(
               R[4],
               willFog,
@@ -814,9 +897,8 @@ interval:
               // start even if the fogger toggled recently; force_off bypasses
               // MIN_FOG_ON_MS so the pulse is cut at its ≤5s cap (and on any
               // safety interlock). The safety disjunction below is unchanged.
-              micropulse_force_on,
-              micropulse_force_off
-                  || sensor_fault_relay_lock
+              manual_fog_force,
+              sensor_fault_relay_lock
                   || leak_block
                   || occupancy_moisture_block
                   || irrigation_water_conflict
@@ -851,7 +933,15 @@ interval:
             // fans/vent must remain open, and the planner/firmware are asking
             // for bounded evaporative support rather than sealed humidifying.
               const bool mister_vent_ok = open_vent_mister_assist || !id(mister_closes_vent) || !vent_is_open;
-              const bool climate_wet_assist_demand = (mode == SEALED_MIST) || ctl_state.vent_mist_assist_active;
+              // BC-14 (ADR0003 §6.6) FOG-FIRST: the zone misters engage only when the
+              // FSM ladder has ESCALATED PAST the fog entry stage (mist_stage >= MIST_S1).
+              // Fog itself is driven by the FSM out.fog/willFog (it leads at MIST_FOG and
+              // persists, LAYERED). So misters must NOT run while the ladder is still at
+              // MIST_FOG — fog gets its window first; misters add only when fog can't hold.
+              const bool fsm_escalated_to_misters =
+                  (ctl_state.mist_stage == MIST_S1) || (ctl_state.mist_stage == MIST_S2);
+              const bool climate_wet_assist_demand =
+                  ((mode == SEALED_MIST) && fsm_escalated_to_misters) || ctl_state.vent_mist_assist_active;
               bool humidity_demand = climate_wet_assist_demand && mister_vent_ok;
 
             auto now_for_wet_gate = id(sntp_time).now();
@@ -862,19 +952,11 @@ interval:
             const float wet_dew_margin_f = (!isnan(Tin) && !isnan(id(dewpoint_avg).state))
               ? Tin - id(dewpoint_avg).state
               : -999.0f;
-            // CYC-1/SAF-3: the climate stress-wetting latest hour is capped at
-            // the authoritative dusk cutoff (matches the C++ gate), and FRT-6:
-            // climate wetting is blocked during the post-feed absorption hold.
-            const int climate_wet_latest_hour =
-              id(sw_dusk_cutoff_enabled)
-                ? min((int)id(direct_wet_stress_latest_hour), (int)id(dusk_cutoff_hour))
-                : (int)id(direct_wet_stress_latest_hour);
+            // Firmware-v2: defer to the header's single-source wet-assist gate
+            // (solar wet taper + stress rule + feed-hold + dew margin). No
+            // controls.yaml-side wall-clock recompute — same code as the FSM.
             const bool climate_wet_assist_safety_ok =
-              wet_time_valid
-              && !feed_hold_active
-              && now_for_wet_gate.hour < climate_wet_latest_hour
-              && VPD > (VPDhi + id(direct_wet_stress_vpd_margin_kpa))
-              && wet_dew_margin_f >= id(direct_wet_stress_min_dew_margin_f);
+              wet_time_valid && climate_wet_assist_permitted(sensor_in, setpts);
             auto crop_direct_wet_allowed = [&](int zone) -> bool {
               if(!id(direct_wet_gate_enabled)) return true;
               if(!wet_time_valid) return false;
@@ -1080,8 +1162,8 @@ interval:
                       snprintf(moisture_block_reason, sizeof(moisture_block_reason), "below_threshold");
                     } else if(wet_dew_margin_f < id(direct_wet_stress_min_dew_margin_f)) {
                       snprintf(moisture_block_reason, sizeof(moisture_block_reason), "dew_margin");
-                    } else if(now_for_wet_gate.hour >= id(direct_wet_stress_latest_hour)) {
-                      snprintf(moisture_block_reason, sizeof(moisture_block_reason), "time_window");
+                    } else if(past_wet_taper(sensor_in, setpts) && !stress_wet_override_permitted(sensor_in, setpts)) {
+                      snprintf(moisture_block_reason, sizeof(moisture_block_reason), "wet_taper");
                     } else {
                       snprintf(moisture_block_reason, sizeof(moisture_block_reason), "no_zone_available");
                     }
@@ -1139,10 +1221,14 @@ interval:
                 id(humid_idle_holdoff_ms) = 0;
               }
 
-              // ═══════════ INVERTED HIERARCHY: MISTERS → FOG ═══════════
-              // S1: Pulse-rotation misters (cheap, targeted, zone-specific)
-              // S2: Aggressive misters (all zones rotating, shorter gaps)
-              // S3: FOG (~800W heavy artillery — misters couldn't handle it)
+              // ═══════════ FOG → MISTERS ESCALATION (lowest-GPM-first; ADR0003 §6.6) ═══════════
+              // ENTRY: FOG (AquaFog ~0.26 GPM — gentlest, lowest WATER; driven by the FSM
+              //        out.fog/willFog, runs BEFORE these misters and persists under them).
+              // S1: Pulse-rotation misters (~1 GPM/zone, targeted) — fog couldn't hold the target.
+              // S2: Aggressive misters (all zones rotating, heaviest water) — last resort.
+              // (Ordered by WATER GPM per Jason 2026-06-17; fog is higher electrical-power but
+              //  lowest water, so it leads. The mister_state machine below only RUNS once the FSM
+              //  has escalated past fog — see fsm_escalated_to_misters at the humidity_demand gate.)
 
               const uint32_t PULSE_ON_MS  = uint32_t(id(mister_pulse_on_s)) * 1000UL;
               const uint32_t PULSE_GAP_MS = uint32_t(id(mister_pulse_gap_s)) * 1000UL;
@@ -1179,6 +1265,23 @@ interval:
               // Per-zone cadence: ONLY zone 3 (center) gets the burst override.
               auto pulse_on_ms_for  = [&](int zone) -> uint32_t { return zone == 3 ? CENTER_PULSE_ON_MS  : PULSE_ON_MS;  };
               auto pulse_gap_ms_for = [&](int zone) -> uint32_t { return zone == 3 ? CENTER_PULSE_GAP_MS : PULSE_GAP_MS; };
+
+              // Mister re-fire dwell fence: a zone may not re-energize within
+              // mister_min_off_s of its own last off. The misters bypass the
+              // RelayMeta R[] min-on/off machinery (they're a multi-zone pulse
+              // FSM), so this is their per-zone equivalent. Suppression only
+              // DELAYS a re-fire (never forces a relay on / never over-waters),
+              // so the failure mode is benign. Returns true if energizing is
+              // allowed now.
+              const uint32_t MISTER_MIN_OFF_MS = (uint32_t)id(mister_min_off_s) * 1000UL;
+              auto mister_zone_last_off = [&](int z) -> uint32_t {
+                return z == 1 ? id(last_off_south_ms)
+                     : z == 2 ? id(last_off_west_ms)
+                     : id(last_off_center_ms);
+              };
+              auto mister_zone_can_on = [&](int z) -> bool {
+                return z <= 0 || (now_ms - mister_zone_last_off(z)) >= MISTER_MIN_OFF_MS;
+              };
 
               // IRR-2: raise the hysteresis floor from the legacy 0.05 to the
               // operator-tunable mister_hysteresis_kpa (default 0.10) so the
@@ -1246,7 +1349,25 @@ interval:
                 if(zone == 1 && !south_wet_allowed) zone = first_allowed_mister_zone();
                 if(zone == 2 && !west_wet_allowed) zone = first_allowed_mister_zone();
                 if(zone == 3 && !center_wet_allowed) zone = first_allowed_mister_zone();
-                if(zone == 0) return;
+                if(zone == 0) { id(mister_pulse_zone) = 0; return; }
+                // Mister re-fire dwell fence (mister_min_off_s): if the chosen
+                // zone is still inside its min-off hold, try the other eligible
+                // zone; if none is ready, hold this cycle (all misters stay off,
+                // mister_pulse_zone=0). The caller arms mister_pulse_timer_ms =
+                // pulse_on_ms_for(0) = PULSE_ON_MS, so the FSM re-evaluates ~one
+                // gap later — by which point min_off has elapsed and it fires.
+                // Suppression only DELAYS a re-fire; it never forces a relay on
+                // and never extends a normal pulse, so the failure mode is benign.
+                if(!mister_zone_can_on(zone)) {
+                  int alt = first_allowed_mister_zone();
+                  if(alt > 0 && alt != zone && mister_zone_can_on(alt)) {
+                    zone = alt;
+                  } else {
+                    ESP_LOGI("mister","DWELL-HOLD zone=%d (min_off %us)", zone, (unsigned)id(mister_min_off_s));
+                    id(mister_pulse_zone) = 0;
+                    return;
+                  }
+                }
                 // sprint-2: last-fire ms for fairness watchdog.
                 // sprint-7: per-zone cycle counters at the rising edge
                 //          (turn_on_zone is always preceded by all-off,
@@ -1261,6 +1382,14 @@ interval:
               };
 
               auto turn_off_all_misters = [&]() {
+                // Stamp the just-energized zone's last-off BEFORE clearing
+                // mister_pulse_zone so the dwell fence can suppress a too-fast
+                // re-fire of that zone. All off-paths (pulse expiry, de-escalate,
+                // blocked, safety) funnel through here, so the stamp is complete.
+                const int off_z = id(mister_pulse_zone);
+                if(off_z == 1)      id(last_off_south_ms)  = now_ms;
+                else if(off_z == 2) id(last_off_west_ms)   = now_ms;
+                else if(off_z == 3) id(last_off_center_ms) = now_ms;
                 id(south_wall_mister).turn_off();
                 id(south_wall_mister_fertilized).turn_off();
                 id(west_wall_mister).turn_off();
@@ -1300,9 +1429,33 @@ interval:
                 return candidate;
               };
 
-              // Pulse-zone selector: watchdog first, stress scoring second.
-              // Caller must have already decided "fire a pulse now"; this only
-              // answers "which zone." Increments fairness counter when watchdog wins.
+              // Pulse-zone selector: watchdog first, then EITHER the per-zone band
+              // arbiter (item 3, when sw_arbiter_zone_enabled) OR the legacy stress
+              // scoring. Caller decided "fire a pulse now"; this answers "which zone."
+                // Item-3 arbiter: choose the wet zone from the deterministic per-zone
+                // VPD band + owner priority (center=rank 1) — the SAME math the diag
+                // block already publishes as gh_zone_wet_granted, now wired to relays.
+                // Gated by sw_arbiter_zone_enabled (default OFF) so it ships inert and
+                // replay-clean; flip on after a corpus zone-distribution review. Maps
+                // the solar.h ZoneId (center0/south1/west2/east3) → legacy misting
+                // numbering (none0/south1/west2/center3). EAST has no mister relay.
+                auto select_arbiter_zone = [&]() -> int {
+                  ZoneBand zb[ZONE_COUNT];
+                  zb[ZONE_CENTER] = zone_band_at_phase({id(zone_vpd_target_center_sr),id(zone_vpd_target_center_sm),id(zone_vpd_target_center_ss),id(zone_vpd_target_center_mid)}, id(zone_vpd_width_below_center), id(zone_vpd_width_above_center), sv2_phase);
+                  zb[ZONE_SOUTH]  = zone_band_at_phase({id(zone_vpd_target_south_sr),id(zone_vpd_target_south_sm),id(zone_vpd_target_south_ss),id(zone_vpd_target_south_mid)}, id(zone_vpd_width_below_south), id(zone_vpd_width_above_south), sv2_phase);
+                  zb[ZONE_WEST]   = zone_band_at_phase({id(zone_vpd_target_west_sr),id(zone_vpd_target_west_sm),id(zone_vpd_target_west_ss),id(zone_vpd_target_west_mid)}, id(zone_vpd_width_below_west), id(zone_vpd_width_above_west), sv2_phase);
+                  zb[ZONE_EAST]   = zone_band_at_phase({id(zone_vpd_target_east_sr),id(zone_vpd_target_east_sm),id(zone_vpd_target_east_ss),id(zone_vpd_target_east_mid)}, id(zone_vpd_width_below_east), id(zone_vpd_width_above_east), sv2_phase);
+                  const float zvpd[ZONE_COUNT] = { VPD, id(vpd_south).state, id(vpd_west).state, id(vpd_east).state };
+                  ZoneWetIntent zi[ZONE_COUNT];
+                  for (int z = 0; z < ZONE_COUNT; z++) zi[z] = zone_wet_intent(zvpd[z], zb[z]);
+                  const int prank[ZONE_COUNT] = { id(zone_priority_center), id(zone_priority_south), id(zone_priority_west), id(zone_priority_east) };
+                  const bool zact[ZONE_COUNT] = { center_wet_allowed, south_wet_allowed, west_wet_allowed, false };
+                  const int won = arbitrate_wet_zone(zi, prank, zact);
+                  if (won == ZONE_SOUTH)  return 1;
+                  if (won == ZONE_WEST)   return 2;
+                  if (won == ZONE_CENTER) return 3;
+                  return 0;  // none, or EAST (no relay)
+                };
                 auto select_zone_for_pulse = [&]() -> int {
                   int overdue = select_overdue_zone();
                   if(overdue > 0) {
@@ -1310,6 +1463,10 @@ interval:
                     ESP_LOGI("mister","FAIRNESS: zone=%s overdue — overriding scoring",
                              zone_names[overdue]);
                     return overdue;
+                  }
+                  if (id(sw_arbiter_zone_enabled)) {
+                    const int az = select_arbiter_zone();
+                    if (az > 0) return az;  // arbiter granted a zone; else fall through to legacy
                   }
                   return select_most_stressed_zone();
                 };
@@ -1561,6 +1718,7 @@ interval:
             char fog_margin[24];
             char next_mist[24];
             char resource_cost[112];
+            char moisture_exchange[320];
             snprintf(temp_error, sizeof(temp_error), "%.2f", climate_decision.temp_error_f);
             snprintf(vpd_error, sizeof(vpd_error), "%.3f", climate_decision.vpd_error_kpa);
             snprintf(fog_margin, sizeof(fog_margin), "%.3f", climate_decision.fog_margin_kpa);
@@ -1574,10 +1732,68 @@ interval:
                      climate_decision.resource_cost_estimate.water_gal,
                      climate_decision.resource_cost_estimate.electric_kwh,
                      climate_decision.resource_cost_estimate.gas_therm);
+            snprintf(moisture_exchange, sizeof(moisture_exchange),
+                     "{\"action\":\"%s\",\"reason\":\"%s\",\"vent_vpd_gain_kpa\":%.3f,"
+                     "\"heat_vpd_gain_kpa\":%.3f,\"outdoor_fresh\":%s,"
+                     "\"vent_overcools\":%s,\"heat_assist_corun\":%s,"
+                     "\"heat_assist_active\":%s,\"heat_assist_timer_s\":%.0f}",
+                     climate_decision.moisture_exchange_action,
+                     climate_decision.moisture_exchange_reason,
+                     climate_decision.moisture_vent_vpd_gain_kpa,
+                     climate_decision.moisture_heat_vpd_gain_kpa,
+                     climate_decision.moisture_outdoor_fresh ? "true" : "false",
+                     climate_decision.moisture_vent_overcools ? "true" : "false",
+                     climate_decision.moisture_heat_assist_corun ? "true" : "false",
+                     climate_decision.moisture_heat_assist_active ? "true" : "false",
+                     float(climate_decision.moisture_heat_assist_timer_ms) / 1000.0f);
             const uint32_t climate_diag_now_ms = millis();
             static uint32_t last_climate_diag_publish_ms = 0;
             const bool climate_diag_republish = (climate_diag_now_ms - last_climate_diag_publish_ms) >= 60000UL;
             bool climate_diag_published = false;
+
+            // ── Firmware-v2 EVIDENCE SURFACE (per-zone bands + solar) ─────────
+            // Compute the per-zone VPD bands on-chip from the NVS anchor curves
+            // at the current solar phase, score each zone's delta-to-target,
+            // run the priority arbiter, and publish the new-architecture
+            // telemetry so the dispatcher/DB can verify the data is flowing.
+            // Throttled to the 60s diag cadence.
+            if (climate_diag_republish) {
+              auto zcurve = [&](float sr, float sm, float ss, float mid) -> float {
+                BandAnchors a = {sr, sm, ss, mid};
+                return band_value_at_phase(a, sv2_phase);
+              };
+              ZoneBand zb[ZONE_COUNT];
+              zb[ZONE_CENTER] = zone_band_at_phase({id(zone_vpd_target_center_sr),id(zone_vpd_target_center_sm),id(zone_vpd_target_center_ss),id(zone_vpd_target_center_mid)}, id(zone_vpd_width_below_center), id(zone_vpd_width_above_center), sv2_phase);
+              zb[ZONE_SOUTH]  = zone_band_at_phase({id(zone_vpd_target_south_sr),id(zone_vpd_target_south_sm),id(zone_vpd_target_south_ss),id(zone_vpd_target_south_mid)}, id(zone_vpd_width_below_south), id(zone_vpd_width_above_south), sv2_phase);
+              zb[ZONE_WEST]   = zone_band_at_phase({id(zone_vpd_target_west_sr),id(zone_vpd_target_west_sm),id(zone_vpd_target_west_ss),id(zone_vpd_target_west_mid)}, id(zone_vpd_width_below_west), id(zone_vpd_width_above_west), sv2_phase);
+              zb[ZONE_EAST]   = zone_band_at_phase({id(zone_vpd_target_east_sr),id(zone_vpd_target_east_sm),id(zone_vpd_target_east_ss),id(zone_vpd_target_east_mid)}, id(zone_vpd_width_below_east), id(zone_vpd_width_above_east), sv2_phase);
+              // Zone VPD readings: center has no dedicated sensor → house proxy.
+              float zvpd[ZONE_COUNT] = { VPD, id(vpd_south).state, id(vpd_west).state, id(vpd_east).state };
+              ZoneWetIntent zi[ZONE_COUNT];
+              for (int z = 0; z < ZONE_COUNT; z++) zi[z] = zone_wet_intent(zvpd[z], zb[z]);
+              const int prank[ZONE_COUNT] = { id(zone_priority_center), id(zone_priority_south), id(zone_priority_west), id(zone_priority_east) };
+              const bool zact[ZONE_COUNT] = { true, true, true, false };  // EAST has no mister relay
+              const int won = arbitrate_wet_zone(zi, prank, zact);
+              // Publish solar + house targets/deltas + per-zone target/delta.
+              id(gh_solar_phase).publish_state(sv2_phase);
+              id(gh_solar_sunrise_min).publish_state(sv2_solar.sunrise_min);
+              id(gh_solar_noon_min).publish_state(sv2_solar.solar_noon_min);
+              id(gh_solar_sunset_min).publish_state(sv2_solar.sunset_min);
+              id(gh_house_temp_target).publish_state(setpts.temp_target);
+              id(gh_house_temp_delta).publish_state(Tin - setpts.temp_target);
+              id(gh_house_vpd_target).publish_state(setpts.vpd_target);
+              id(gh_house_vpd_delta).publish_state(VPD - setpts.vpd_target);
+              id(gh_zone_vpd_target_center).publish_state(zb[ZONE_CENTER].target);
+              id(gh_zone_vpd_target_south).publish_state(zb[ZONE_SOUTH].target);
+              id(gh_zone_vpd_target_west).publish_state(zb[ZONE_WEST].target);
+              id(gh_zone_vpd_target_east).publish_state(zb[ZONE_EAST].target);
+              id(gh_zone_vpd_delta_center).publish_state(zvpd[ZONE_CENTER] - zb[ZONE_CENTER].target);
+              id(gh_zone_vpd_delta_south).publish_state(std::isfinite(zvpd[ZONE_SOUTH]) ? zvpd[ZONE_SOUTH] - zb[ZONE_SOUTH].target : NAN);
+              id(gh_zone_vpd_delta_west).publish_state(std::isfinite(zvpd[ZONE_WEST]) ? zvpd[ZONE_WEST] - zb[ZONE_WEST].target : NAN);
+              id(gh_zone_vpd_delta_east).publish_state(std::isfinite(zvpd[ZONE_EAST]) ? zvpd[ZONE_EAST] - zb[ZONE_EAST].target : NAN);
+              id(gh_zone_wet_granted).publish_state(won < 0 ? "none" : ZONE_NAMES[won]);
+              id(gh_band_source).publish_state(id(sw_onchip_band_enabled) ? "onchip_curve" : "dispatcher_legacy");
+            }
 
             static char last_climate_action[48] = "";
             if(strcmp(last_climate_action, climate_action) != 0 || climate_diag_republish){
@@ -1645,6 +1861,12 @@ interval:
               snprintf(last_climate_next_mist, sizeof(last_climate_next_mist), "%s", next_mist);
               climate_diag_published = true;
             }
+            static char last_climate_moisture_exchange[320] = "";
+            if(strcmp(last_climate_moisture_exchange, moisture_exchange) != 0 || climate_diag_republish){
+              id(gh_climate_moisture_exchange).publish_state(moisture_exchange);
+              snprintf(last_climate_moisture_exchange, sizeof(last_climate_moisture_exchange), "%s", moisture_exchange);
+              climate_diag_published = true;
+            }
             if(climate_diag_published){
               last_climate_diag_publish_ms = climate_diag_now_ms;
             }
@@ -1681,11 +1903,6 @@ interval:
               snprintf(last_overrides, sizeof(last_overrides), "%s", overrides);
             }
 
-            const float fog_dew_margin_f = (!isnan(Tin) && !isnan(id(dewpoint_avg).state))
-              ? Tin - id(dewpoint_avg).state
-              : -999.0f;
-            const bool fog_stress_extension_hour =
-              fog_stress_hour_in_extension(local_hour, id(fog_time_window_end), id(fog_stress_window_latest_hour));
             char fog_block_reason[64];
             if(leak_block) {
               snprintf(fog_block_reason, sizeof(fog_block_reason), "leak_detected");
@@ -1701,15 +1918,9 @@ interval:
               snprintf(fog_block_reason, sizeof(fog_block_reason), "%s", manual_fog_safety_block);
             } else if(id(fog_rly)->state) {
               snprintf(fog_block_reason, sizeof(fog_block_reason), "served");
-            } else if(of.fog_gate_window) {
-              if(id(fog_stress_window_extend_enabled)
-                 && fog_stress_extension_hour
-                 && VPD > VPDhi
-                 && fog_dew_margin_f < id(fog_stress_min_dew_margin_f)) {
-                snprintf(fog_block_reason, sizeof(fog_block_reason), "dew_margin");
-              } else {
-                snprintf(fog_block_reason, sizeof(fog_block_reason), "time_window");
-              }
+            } else if(!fog_phase_permitted(sensor_in, setpts)) {
+              // Firmware-v2: solar wet taper / night without a stress-wet pass.
+              snprintf(fog_block_reason, sizeof(fog_block_reason), "wet_taper");
             } else if(of.fog_gate_rh) {
               snprintf(fog_block_reason, sizeof(fog_block_reason), "rh_ceiling");
             } else if(of.fog_gate_temp) {
@@ -1831,12 +2042,18 @@ interval:
 
           /*** B5 — DLI accumulation (every 5s) ***/
           {
+            // #295: a circuit flagged out_of_service emits no light, so its
+            // switch-ON state must NOT credit supplemental DLI (phantom-DLI
+            // suppression — the dead west grow circuit was self-deceivingly
+            // crediting 0.4515 mol/m²/h with dark fixtures).
             id(dli_accumulator) += lighting_dli_increment(
               id(greenhouse_light_lux).state,
               id(tempest_lux),
               id(grow_light_main).state,
               id(grow_light_grow).state,
-              5.0f);
+              5.0f,
+              id(gl_main_out_of_service),
+              id(gl_grow_out_of_service));
           }
 
           /*** B6 — Per-circuit lighting state machines (evaluate 5s; publish 60s/change) ***/
@@ -1894,12 +2111,18 @@ interval:
               if(isnan(cur_lux)) cur_lux = 0.0f;
               const float lighting_dt_s = dt_ms > 0 ? ((float)dt_ms / 1000.0f) : 0.0f;
 
+              // #295: wire the on-chip solar minute fields so each circuit can
+              // solar-phase its photoperiod (sv2_solar is computed earlier in
+              // this same 1s lambda). minute-of-day = time.hour:time.minute.
               LightingInputs light_in = {
                 .natural_lux = cur_lux,
                 .exterior_lux = exterior_lux,
                 .exterior_lux_fresh = exterior_lux_fresh,
                 .local_hour = time.hour,
-                .occupied = id(greenhouse_occupied)
+                .occupied = id(greenhouse_occupied),
+                .local_minute = time.minute,
+                .sunrise_min = sv2_solar.sunrise_min,
+                .sunset_min = sv2_solar.sunset_min
               };
               LightingSetpoints main_sp = {
                 .target_light_minutes = (uint32_t)id(gl_main_target_light_minutes),
@@ -1909,7 +2132,11 @@ interval:
                 .cutoff_hour = id(gl_main_sunset_hour),
                 .min_on_ms = (uint32_t)id(gl_main_min_on_s) * 1000UL,
                 .min_off_ms = (uint32_t)id(gl_main_min_off_s) * 1000UL,
-                .auto_enabled = id(gl_main_auto_enabled)
+                .auto_enabled = id(gl_main_auto_enabled),
+                .solar_phasing = id(gl_main_solar_phasing),
+                .sunrise_offset_min = id(gl_main_sunrise_offset_min),
+                .sunset_offset_min = id(gl_main_sunset_offset_min),
+                .out_of_service = id(gl_main_out_of_service)
               };
               LightingSetpoints grow_sp = {
                 .target_light_minutes = (uint32_t)id(gl_grow_target_light_minutes),
@@ -1919,7 +2146,11 @@ interval:
                 .cutoff_hour = id(gl_grow_sunset_hour),
                 .min_on_ms = (uint32_t)id(gl_grow_min_on_s) * 1000UL,
                 .min_off_ms = (uint32_t)id(gl_grow_min_off_s) * 1000UL,
-                .auto_enabled = id(gl_grow_auto_enabled)
+                .auto_enabled = id(gl_grow_auto_enabled),
+                .solar_phasing = id(gl_grow_solar_phasing),
+                .sunrise_offset_min = id(gl_grow_sunrise_offset_min),
+                .sunset_offset_min = id(gl_grow_sunset_offset_min),
+                .out_of_service = id(gl_grow_out_of_service)
               };
 
               LightingDecision main_dec = evaluate_lighting(

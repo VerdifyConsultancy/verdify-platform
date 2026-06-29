@@ -1,0 +1,52 @@
+schema_ref: northstar-question-resolution-register.v1
+kind: NorthStarQuestionResolutionRegister
+schema_version: "1.0"
+run_id: "YYYY-MM-DD-target"
+target_repository: "OWNER/REPOSITORY"
+target_corpus:
+  root: "docs"
+  inventory_path: ".agent-workflow/northstar/question-resolution/YYYY-MM-DD-target/inventory.yaml"
+status: inventory
+generated_at: "YYYY-MM-DDTHH:MM:SSZ"
+updated_at: "YYYY-MM-DDTHH:MM:SSZ"
+delegation:
+  delegated_authority: true
+  authority_source: "user request or issue reference"
+  protected_decision_policy: "escalate unless evidence and delegation explicitly allow a safe default"
+summary:
+  total_questions: 0
+  clusters: 0
+  answered: 0
+  research_needed: 0
+  human_escalations: 0
+themes: []
+clusters:
+  - cluster_id: NQR-001
+    theme: example-theme
+    decision_class: architecture
+    protected_decision: false
+    status: researching
+    question_ids: []
+    affected_artifacts: []
+    research_queries: []
+    evidence_refs: []
+    options:
+      - option_id: A
+        summary: ""
+        tradeoffs: []
+    selected_answer:
+      summary: ""
+      rationale: ""
+      confidence: medium
+      delegated_authority_rationale: ""
+      human_escalation: false
+      escalation_reason: null
+    planning_handoff:
+      northstar_question_ids: []
+      proposed_artifact_updates: []
+      issue_recommendations: []
+remaining_human_questions: []
+validation:
+  commands: []
+  evidence_queries: []
+  notes: []

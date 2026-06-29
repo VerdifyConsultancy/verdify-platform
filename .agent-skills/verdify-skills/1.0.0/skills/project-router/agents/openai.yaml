@@ -1,0 +1,6 @@
+interface:
+  display_name: "Verdify Project Router"
+  short_description: "Choose the next Verdify lifecycle skill"
+  default_prompt: "Inspect this repository and route it to exactly one next Verdify skill and mode. Write the route decision and do not perform the next skill's work."
+policy:
+  allow_implicit_invocation: true

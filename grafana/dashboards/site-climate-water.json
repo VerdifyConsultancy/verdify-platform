@@ -1,4 +1,5 @@
 {
+  "refresh": "1m",
   "uid": "site-climate-water",
   "title": "Site: Climate \u2014 Water",
   "editable": true,
@@ -47,7 +48,8 @@
         "colorMode": "value",
         "graphMode": "none"
       },
-      "description": "Water cost = gallons used \u00d7 $0.00484/gal"
+      "description": "Water cost = gallons used \u00d7 $0.00484/gal",
+      "transparent": true
     },
     {
       "id": 7,
@@ -92,7 +94,8 @@
         },
         "colorMode": "value",
         "graphMode": "none"
-      }
+      },
+      "transparent": true
     },
     {
       "id": 8,
@@ -138,7 +141,8 @@
         "colorMode": "value",
         "graphMode": "none"
       },
-      "description": "Average daily total cost across the last 30 completed daily summaries."
+      "description": "Average daily total cost across the last 30 completed daily summaries.",
+      "transparent": true
     },
     {
       "description": "Shows water use or irrigation behavior over time.",
@@ -181,7 +185,8 @@
         }
       ],
       "title": "Daily Water Use",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -743,7 +748,8 @@
         }
       ],
       "title": "VPD Compliance Band",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -829,7 +835,8 @@
         }
       ],
       "title": "Mister Effectiveness by Zone",
-      "type": "barchart"
+      "type": "barchart",
+      "transparent": true
     },
     {
       "description": "Shows daily runtime totals for the misting zones.",
@@ -885,7 +892,8 @@
         }
       ],
       "title": "Mister Zone Runtimes",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "description": "Shows current soil moisture conditions across the monitored zones.",
@@ -988,7 +996,8 @@
         }
       ],
       "title": "Soil Moisture by Zone",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "description": "Shows current soil moisture conditions across the monitored greenhouse zones.",
@@ -1091,7 +1100,8 @@
         }
       ],
       "title": "Soil Moisture by Zone",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "description": "Shows soil EC from the south-zone probe that includes conductivity sensing.",
@@ -1157,7 +1167,8 @@
         }
       ],
       "title": "Soil EC \u2014 South 1",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "description": "Shows soil moisture from the first south-zone probe.",
@@ -1195,7 +1206,10 @@
         "y": 38
       },
       "id": 217,
-      "options": {},
+      "options": {
+        "colorMode": "value",
+        "graphMode": "none"
+      },
       "targets": [
         {
           "datasource": {
@@ -1206,7 +1220,8 @@
         }
       ],
       "title": "South 1 Moisture",
-      "type": "stat"
+      "type": "stat",
+      "transparent": true
     },
     {
       "id": 218,
@@ -1380,7 +1395,8 @@
           "mode": "multi",
           "sort": "desc"
         }
-      }
+      },
+      "transparent": true
     }
   ],
   "annotations": {

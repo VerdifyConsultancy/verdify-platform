@@ -1,0 +1,15 @@
+schema_ref: critic-report.schema.yaml
+kind: CriticReport
+schema_version: "1.0"
+sprint_id: replace-me
+lane_id: replace-me
+reviewed_head_sha: ""
+critic_session_id: ""
+review_worktree: ""
+outcome: request_fixes
+findings: []
+acceptance_assessment: []
+evidence_assessment: []
+integration_risks: []
+residual_risks: []
+reviewed_at: ""

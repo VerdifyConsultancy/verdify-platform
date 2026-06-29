@@ -13,6 +13,11 @@ dependencies = [
     "jinja2>=3.1",
     "httpx>=0.27",
     "pydantic>=2.8",
+    # astral (solar position) is imported by core ingestor code
+    # (ingestor/tasks/_common.py, forecast.py) and shipped in
+    # ingestor/requirements-image.txt, but was missing from this list (L1 audit
+    # — pyproject is meant to be the single dep source of truth).
+    "astral>=3.2,<4",
 ]
 
 [project.optional-dependencies]
@@ -29,6 +34,18 @@ api = [
     "fastapi>=0.115",
     "uvicorn>=0.34",
 ]
+# planner_graph/ runtime deps (folded from VerdifyConsultancy/verdify-planner, #102).
+# These mirror planner_graph/pyproject.toml. The k3s planner image
+# (planner_graph/Dockerfile) installs from the standalone pyproject+uv.lock — this
+# extra exists so the monorepo venv can `pip install -e .[planner-graph]` and run
+# the planner_graph/tests suite locally.
+planner-graph = [
+    "fastapi>=0.115.0",
+    "langgraph>=0.2.60",
+    "pydantic>=2.9.0",
+    "psycopg[binary]>=3.2.0",
+    "uvicorn>=0.32.0",
+]
 dev = [
     "pytest>=9.0",
     "pytest-asyncio>=0.24",
@@ -40,6 +57,15 @@ dev = [
 [tool.ruff]
 target-version = "py312"
 line-length = 120
+
+# planner_graph/ was folded in from the standalone VerdifyConsultancy/verdify-planner
+# repo (#102). It carries its OWN tooling contract (pyright via
+# planner_graph/pyproject.toml, not this repo's ruff ruleset) and its
+# own test+CI lineage. We deliberately do NOT reformat the imported tree (would
+# diverge from upstream history and risk a tested, production planner package);
+# it is excluded from this repo's ruff so `make lint`/broad scans stay green. Its
+# k3s image builds from planner_graph/Dockerfile + planner_graph/pyproject.toml.
+extend-exclude = ["planner_graph"]
 
 [tool.ruff.lint]
 select = [

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Verdify Architecture Contracts"
+  short_description: "Define architecture and black-box modules"
+  default_prompt: "Create or update the earliest incomplete architecture-contracts mode. Trace decisions to approved requirements and do not create sprint lanes."
+policy:
+  allow_implicit_invocation: true

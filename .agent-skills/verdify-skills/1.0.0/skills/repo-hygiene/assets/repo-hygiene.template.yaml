@@ -1,0 +1,20 @@
+schema_ref: repo-hygiene.schema.yaml
+kind: RepoHygieneReport
+schema_version: "1.0"
+repository: ""
+status: draft
+assessed_at: ""
+baseline_sha: ""
+areas: []
+safe_cleanup: []
+issues_to_open: []
+gates_to_open: []
+completion_criteria: []
+handoff:
+  next_skill: state-of-union
+  next_mode: strategy-review
+  reason: ""
+approval:
+  status: pending
+  approver: null
+  approved_at: null

@@ -967,6 +967,45 @@ async def health():
     return {"status": overall, "checks": checks}
 
 
+@app.get("/health/detailed")
+async def health_detailed():
+    """Image-provenance + readiness probe (#58).
+
+    Surfaces the git SHA baked into the image at build time (Dockerfile
+    ARG/ENV VERDIFY_GIT_SHA) so a running pod is verifiably traceable to a
+    commit — the k3s/CD equivalent of "what's actually deployed right now".
+    Also reports baked build metadata and a basic DB-reachability check so a
+    readiness probe can distinguish "process up" from "ready to serve".
+
+    Distinct from /health (which grades live greenhouse data freshness): this
+    endpoint is about the SERVICE/IMAGE, not the plants. It never touches the
+    device loop.
+    """
+    git_sha = os.environ.get("VERDIFY_GIT_SHA", "unknown")
+    build_time = os.environ.get("VERDIFY_BUILD_TIME", "unknown")
+    git_ref = os.environ.get("VERDIFY_GIT_REF", "unknown")
+
+    db_ok = False
+    db_error = None
+    try:
+        async with pool.acquire() as conn:
+            db_ok = (await conn.fetchval("SELECT 1")) == 1
+    except Exception as e:  # readiness must not raise — report the failure
+        db_error = str(e)
+
+    ready = db_ok
+    result = {
+        "status": "ready" if ready else "not_ready",
+        "git_sha": git_sha,
+        "git_ref": git_ref,
+        "build_time": build_time,
+        "checks": {"db_reachable": db_ok},
+    }
+    if db_error is not None:
+        result["checks"]["db_error"] = db_error
+    return result
+
+
 # ── Greenhouse ──
 
 

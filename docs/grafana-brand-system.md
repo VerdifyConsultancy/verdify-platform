@@ -43,7 +43,7 @@ Series colors are not forced into the site palette. They stay domain-coded:
 
 - Site markdown is the source of truth for embedded panel IDs: `/mnt/iris/verdify-vault/website/**/*.md`.
 - Only panels embedded with `https://graphs.verdify.ai/d-solo/...panelId=...` are automatically branded.
-- Embedded panels use transparent Grafana panel chrome on the light Grafana theme. Quartz `.grafana-embed` / `.pg` wrappers are layout only.
+- Embedded panels use transparent Grafana panel chrome on the active light/dark Grafana theme. Quartz `.grafana-embed` / `.pg` wrappers are layout only.
 - Any embedded panel whose SQL uses Grafana's `$__timeFilter` must carry an explicit `from=...&to=...` range in the site URL. Do not rely on the dashboard default range for public embeds.
 - The site must not add its own border, radius, background, or shadow around the iframe. Grafana owns the single visible panel boundary; Quartz wrappers are layout only.
 - Homepage explanatory panel wrappers are also layout only: no outer card border, stripe, fill, padding, or shadow around the Grafana embed.
@@ -93,3 +93,8 @@ make grafana-brand-check-live
 ```
 
 `make site-doctor` also runs the brand check after the normal site/Grafana embed audit.
+
+For k3s/GitOps deploys, edit `grafana/dashboards/site-*.json`, run
+`python3 scripts/gen-grafana-dashboard-cms.py`, and commit the regenerated
+`deploy/k8s/components/grafana/generated/dashboards-cm-*.yaml` files. ArgoCD
+applies those ConfigMaps; do not patch live Grafana dashboards by hand.

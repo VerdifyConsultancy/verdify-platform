@@ -36,6 +36,12 @@ globals:
     type: float
     restore_value: no
     initial_value: '1.5'
+  # BC-8 (ADR0003 §6.5): fan2 de-escalation hysteresis (latch hold band below the
+  # stage-2 entry) — the symmetric twin of the heat2 latch so fan2 cannot chatter.
+  - id: cool_stage2_exit_hysteresis_f
+    type: float
+    restore_value: no
+    initial_value: '1.0'
   - id: cold_vent_guard_delta_f
     type: float
     restore_value: no
@@ -52,6 +58,32 @@ globals:
     type: float
     restore_value: no
     initial_value: '1.0'
+  # ADR-0004 floating-corridor tracking tightness [0,1]. restore_value:no so a boot
+  # before the first planner push uses this cold-start default. Default 0.0 = float
+  # inside the served crop corridor and act at the edges. Nonzero values remain an
+  # explicit operator/diagnostic escape hatch only; planner registry accepts 0.
+  # Takes effect on the next firmware OTA; the live no-OTA value remains operator-gated.
+  - id: band_track_fraction
+    type: float
+    restore_value: no
+    initial_value: '0.0'
+  # BC-13 (ADR0003 §6.4): AI-tunable single-cycle air-exchange fraction toward outdoor
+  # for the moisture-exchange estimator (Jason 2026-06-17). Default 0.30; rails [0.1,0.6].
+  - id: vent_exchange_fraction
+    type: float
+    restore_value: no
+    initial_value: '0.30'
+  # BC-13 (ADR0003 §6.4): device-side constants for the moisture-exchange selector.
+  # Kept as globals so live Setpoints initialization has readback-visible policy values
+  # instead of hardcoded literals.
+  - id: dehum_vent_gain_margin_kpa
+    type: float
+    restore_value: no
+    initial_value: '0.02'
+  - id: dehum_heat_assist_min_dwell_ms
+    type: uint32_t
+    restore_value: no
+    initial_value: '300000'
 
   # ─── Humidity / VPD (kPa) ───
   # Wide defaults — see comment on target_temp_low_f.
@@ -67,6 +99,19 @@ globals:
     type: float
     restore_value: no
     initial_value: '0.30'
+
+  # Dispatcher legacy fallback band fields. controls.yaml references
+  # id(target_vpd_low)/id(target_vpd_high) directly (alongside the _kpa
+  # twins) as the SV2 VPD band inputs. restore_value: no — the on-chip band
+  # curve / dispatcher reasserts them every cycle.
+  - id: target_vpd_low
+    type: float
+    restore_value: no
+    initial_value: '0.6'
+  - id: target_vpd_high
+    type: float
+    restore_value: no
+    initial_value: '1.2'
 
   # ─── Feed-forward biases & safety rails (°F & kPa) ───
   - id: bias_heat_f
@@ -342,15 +387,21 @@ globals:
     restore_value: no
     initial_value: '19'
 
+  # Cold-start fallback ONLY — matches the registry default + fn_lighting_circuit_policy
+  # default (40000 ON / 8000 hyst => 48000 OFF). The live value is the AI-tunable
+  # policy, re-asserted by the dispatcher on every cycle/reconnect; this default
+  # just keeps the brief post-reboot window (before the dispatcher reconnects)
+  # from cutting grow lights at dawn (the 2026-06-16 incident, where the old
+  # 3000/1500 cold default ran for hours after a reboot).
   - id: gl_main_lux_threshold
     type: float
     restore_value: no
-    initial_value: '3000.0'
+    initial_value: '40000.0'
 
   - id: gl_main_lux_hysteresis
     type: float
     restore_value: no
-    initial_value: '1500.0'
+    initial_value: '8000.0'
 
   - id: gl_main_min_on_s
     type: int
@@ -366,6 +417,35 @@ globals:
     type: bool
     restore_value: no
     initial_value: 'true'
+
+  # #295: solar-phase the MAIN circuit photoperiod. When enabled, the window
+  # anchors to the on-chip sunrise/sunset (sunrise+offset .. sunset+offset)
+  # instead of the static gl_main_sunrise_hour/gl_main_sunset_hour. Default OFF
+  # ⇒ byte-identical fixed-hour behavior (backward-safe; legacy clock window).
+  - id: gl_main_solar_phasing
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
+  - id: gl_main_sunrise_offset_min
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  - id: gl_main_sunset_offset_min
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  # #295: dead-fixture / phantom-DLI suppression for the MAIN circuit. When the
+  # operator flags the fixture dead (shorted/unplugged), the circuit's switch-ON
+  # state no longer credits supplemental DLI or accrues qualified light minutes.
+  # Default OFF ⇒ unchanged accounting. (Hardware lux/Shelly-PM plausibility
+  # check is OUT OF SCOPE — needs hardware; this is the software half of #295.)
+  - id: gl_main_out_of_service
+    type: bool
+    restore_value: no
+    initial_value: 'false'
 
   - id: gl_grow_dli_target
     type: float
@@ -387,15 +467,17 @@ globals:
     restore_value: no
     initial_value: '19'
 
+  # Cold-start fallback ONLY (see gl_main_lux_threshold above) — 40000 ON /
+  # 8000 hyst => 48000 OFF, matching the registry + policy default.
   - id: gl_grow_lux_threshold
     type: float
     restore_value: no
-    initial_value: '3000.0'
+    initial_value: '40000.0'
 
   - id: gl_grow_lux_hysteresis
     type: float
     restore_value: no
-    initial_value: '1500.0'
+    initial_value: '8000.0'
 
   - id: gl_grow_min_on_s
     type: int
@@ -411,6 +493,32 @@ globals:
     type: bool
     restore_value: no
     initial_value: 'true'
+
+  # #295: solar-phasing for the GROW circuit (see gl_main_solar_phasing). OFF by
+  # default ⇒ legacy fixed-hour window.
+  - id: gl_grow_solar_phasing
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
+  - id: gl_grow_sunrise_offset_min
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  - id: gl_grow_sunset_offset_min
+    type: int
+    restore_value: no
+    initial_value: '0'
+
+  # #295: dead-fixture / phantom-DLI suppression for the GROW (west) circuit —
+  # the dead circuit this issue was filed about. Set this while the west grow
+  # lights are shorted/unplugged so the dark fixture stops crediting phantom DLI
+  # (0.4515 mol/m²/h) and qualified light minutes. Default OFF.
+  - id: gl_grow_out_of_service
+    type: bool
+    restore_value: no
+    initial_value: 'false'
 
   # ─── Greenhouse biological activity / direct-wet policy ───
   # Defaults preserve legacy behavior until the dispatcher/AI tunables push a
@@ -496,60 +604,15 @@ globals:
     restore_value: no
     initial_value: '8.0'
 
-  - id: direct_wet_stress_latest_hour
-    type: int
-    restore_value: no
-    initial_value: '22'
-
-  - id: fog_stress_window_extend_enabled
-    type: bool
-    restore_value: no
-    initial_value: 'false'
-
-  - id: fog_stress_window_latest_hour
-    type: int
-    restore_value: no
-    initial_value: '19'
-
-  - id: fog_stress_min_dew_margin_f
-    type: float
-    restore_value: no
-    initial_value: '10.0'
-
   # ─── ENV-2: night econ-heat suppression (Vanda day/night-drop companion) ───
-  # When enabled, the IDLE econ VPD-rescue heat path is suppressed during the
-  # night window [night_start_hour, night_end_hour) so we never chase overnight
-  # humidity with heat (which would erase the >=10F diurnal drop). Default night
-  # 20:00->06:00 matches the Vanda curve's sunset~20:18 / sunrise~05:42.
+  # When enabled, the IDLE econ VPD-rescue heat path is suppressed at night so
+  # we never chase overnight humidity with heat (which would erase the >=10F
+  # diurnal drop). v2: "night" = solar phase >= 2.0 (on-chip ephemeris); the
+  # fixed night_start_hour/night_end_hour clock window is retired.
   - id: sw_night_econ_heat_suppress_enabled
     type: bool
     restore_value: no
     initial_value: 'true'
-
-  - id: night_start_hour
-    type: int
-    restore_value: no
-    initial_value: '20'
-
-  - id: night_end_hour
-    type: int
-    restore_value: no
-    initial_value: '6'
-
-  # ─── CYC-1 / SAF-3: authoritative VPD-independent dusk cutoff ───
-  # Dispatcher pushes dusk_cutoff_hour = floor(sunset - dusk_offset). When
-  # enabled, ALL fog + climate mister/drip wetting ceases at/after this hour,
-  # before any VPD stress-extension logic, and both stress latest-hours are
-  # capped here. Default 18 ~= sunset(20:18) - 2h.
-  - id: sw_dusk_cutoff_enabled
-    type: bool
-    restore_value: no
-    initial_value: 'true'
-
-  - id: dusk_cutoff_hour
-    type: int
-    restore_value: no
-    initial_value: '18'
 
   # ─── FRT-6 / FRT-7: post-feed absorption hold ───
   # feed_hold_until_ms is the millis() deadline (uint32, wrap-aware compare)
@@ -607,11 +670,6 @@ globals:
     restore_value: no
     initial_value: 'true'
 
-  - id: dawn_rehydrate_start_minute
-    type: int
-    restore_value: no
-    initial_value: '0'        # minute-of-hour the dawn window opens (anchor hour = gl_sunrise_hour)
-
   - id: dawn_rehydrate_window_min
     type: int
     restore_value: no
@@ -627,23 +685,13 @@ globals:
     restore_value: no
     initial_value: '20'       # center pulse GAP during dawn window (s) — shorter than 45s base → denser
 
-  # IRR-4 midday: anchored to midday_drench_hour (default 14 ~= solar/thermal
-  # peak; the dispatcher can override this hour). 11-min window, deeper
-  # 120s-ON / 25s-GAP soak. Still pre-dusk (< default dusk_cutoff_hour 18).
+  # IRR-4 midday: firmware-v2 anchors the window START to solar-noon +
+  # midday_boost_offset_min (on-chip ephemeris). 11-min window, deeper
+  # 120s-ON / 25s-GAP soak. Still pre-taper (blocked by the wet-taper rule).
   - id: sw_midday_drench_enabled
     type: bool
     restore_value: no
     initial_value: 'true'
-
-  - id: midday_drench_hour
-    type: int
-    restore_value: no
-    initial_value: '14'       # local hour the midday window opens (~solar peak; dispatcher-overridable)
-
-  - id: midday_drench_start_minute
-    type: int
-    restore_value: no
-    initial_value: '0'        # minute-of-hour the midday window opens
 
   - id: midday_drench_window_min
     type: int
@@ -660,57 +708,345 @@ globals:
     restore_value: no
     initial_value: '25'       # center pulse GAP during midday window (s) — still denser than 45s base
 
-  # ─── CYC-4 (NB7): overnight ≤5s fog micro-pulse ───
-  # Dedicated short-pulse path SEPARATE from the SEALED_MIST/fog duty table. A
-  # single ≤micropulse_max_on_s pulse (default 5s) relieves a dangerous overnight
-  # VPD spike, then a micropulse_min_gap_s lockout (default 10 min). Auto-disabled
-  # when sw_night_humidity_source_present flips true (NB5 HW installed). Switches
-  # ship ON; the gate (overnight_micropulse_permitted) is dark+dew+RH+temp gated.
-  - id: sw_overnight_micropulse_enabled
+  # (CYC-4 overnight micro-pulse path DELETED in firmware-v2: night emergency
+  # is now `vpd > band_high` via the normal SEALED_MIST path under existing
+  # interlocks — the night band edges govern. See contract §B4.)
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # FIRMWARE-V2: deterministic solar band engine (contract §B2)
+  # ══════════════════════════════════════════════════════════════════════════
+  # The dispatcher STOPS pushing temp_low/high & vpd_low/high as control inputs;
+  # instead it pushes these NVS-persisted anchors (restore_value: yes →
+  # offline-first: one push survives reboot indefinitely). Each cycle
+  # controls.yaml reconstructs the served band via band_value_at_phase() from
+  # the 4 anchors (SR / solar-noon / SS / solar-midnight) and writes them into
+  # the existing Setpoints.temp_low/high/vpd_low/high fields.
+  #
+  # SINGLE SOURCE OF TRUTH for the band = verdify_schemas/band_defaults.yaml
+  # (loaded by the tunable registry, seeded into the DB by migration 177). These
+  # initial_values are NOT a third opinion: they are a deliberately DRIER, in-clamp
+  # cold-start FAIL-SAFE view of that canonical band (a factory-fresh chip seeds
+  # these, then the dispatcher reconciles to the live DB within one cycle). The
+  # 2026-06-15 wet-night regression came from a too-WET cold default, so the
+  # cold-start must fail to the dry side for the bare-root Vandas. The relationship
+  # (firmware vpd_target >= canonical, all anchors within clamps) is CI-enforced by
+  # verdify_schemas/tests/test_band_defaults_single_source.py — change the band in
+  # band_defaults.yaml, never by hand-editing one store.
+
+  # ─── B2: house TEMPERATURE band anchor curves (°F) ───
+  # low / target / high; SR SM SS MID order.
+  - id: band_temp_low_sr
+    type: float
+    restore_value: yes
+    initial_value: '60'
+  - id: band_temp_low_sm
+    type: float
+    restore_value: yes
+    initial_value: '76'
+  - id: band_temp_low_ss
+    type: float
+    restore_value: yes
+    initial_value: '66'
+  - id: band_temp_low_mid
+    type: float
+    restore_value: yes
+    initial_value: '62'
+
+  - id: band_temp_target_sr
+    type: float
+    restore_value: yes
+    initial_value: '66'
+  - id: band_temp_target_sm
+    type: float
+    restore_value: yes
+    initial_value: '84'
+  - id: band_temp_target_ss
+    type: float
+    restore_value: yes
+    initial_value: '73'
+  - id: band_temp_target_mid
+    type: float
+    restore_value: yes
+    initial_value: '65'
+
+  - id: band_temp_high_sr
+    type: float
+    restore_value: yes
+    initial_value: '72'
+  - id: band_temp_high_sm
+    type: float
+    restore_value: yes
+    initial_value: '86'
+  - id: band_temp_high_ss
+    type: float
+    restore_value: yes
+    initial_value: '80'
+  - id: band_temp_high_mid
+    type: float
+    restore_value: yes
+    initial_value: '70'
+
+  # ─── B2: house VPD band anchor curves (kPa) ───
+  # SOURCE OF TRUTH = the DB table `crop_band_anchors` (item 2, 2026-06-15).
+  # The dispatcher reconciles it into these restore_value NVS globals on every
+  # reconnect and corrects readback drift, so the device converges to the DB
+  # while online. These initial_value defaults are the conservative DRY
+  # cold-start fallback (factory-fresh boot only). Change the band in the DB,
+  # not here. The old `band_curve_rev` one-shot NVS-migration global was retired
+  # with the unification — it was a third, competing source.
+  - id: band_vpd_low_sr
+    type: float
+    restore_value: yes
+    initial_value: '0.90'
+  - id: band_vpd_low_sm
+    type: float
+    restore_value: yes
+    initial_value: '0.95'
+  - id: band_vpd_low_ss
+    type: float
+    restore_value: yes
+    initial_value: '0.90'
+  - id: band_vpd_low_mid
+    type: float
+    restore_value: yes
+    initial_value: '0.88'
+
+  - id: band_vpd_target_sr
+    type: float
+    restore_value: yes
+    initial_value: '1.05'
+  - id: band_vpd_target_sm
+    type: float
+    restore_value: yes
+    initial_value: '1.10'
+  - id: band_vpd_target_ss
+    type: float
+    restore_value: yes
+    initial_value: '1.05'
+  - id: band_vpd_target_mid
+    type: float
+    restore_value: yes
+    initial_value: '1.05'
+
+  - id: band_vpd_high_sr
+    type: float
+    restore_value: yes
+    initial_value: '1.25'
+  - id: band_vpd_high_sm
+    type: float
+    restore_value: yes
+    initial_value: '1.50'
+  - id: band_vpd_high_ss
+    type: float
+    restore_value: yes
+    initial_value: '1.25'
+  - id: band_vpd_high_mid
+    type: float
+    restore_value: yes
+    initial_value: '1.22'
+
+  # ─── B2: per-zone VPD target anchor curves (kPa) ×4 zones ───
+  # center / south / west / east; SR SM SS MID order.
+  - id: zone_vpd_target_center_sr
+    type: float
+    restore_value: yes
+    initial_value: '1.05'
+  - id: zone_vpd_target_center_sm
+    type: float
+    restore_value: yes
+    initial_value: '1.1'
+  - id: zone_vpd_target_center_ss
+    type: float
+    restore_value: yes
+    initial_value: '1.05'
+  - id: zone_vpd_target_center_mid
+    type: float
+    restore_value: yes
+    initial_value: '1.05'
+
+  - id: zone_vpd_target_south_sr
+    type: float
+    restore_value: yes
+    initial_value: '0.85'
+  - id: zone_vpd_target_south_sm
+    type: float
+    restore_value: yes
+    initial_value: '1.18'
+  - id: zone_vpd_target_south_ss
+    type: float
+    restore_value: yes
+    initial_value: '0.95'
+  - id: zone_vpd_target_south_mid
+    type: float
+    restore_value: yes
+    initial_value: '0.75'
+
+  - id: zone_vpd_target_west_sr
+    type: float
+    restore_value: yes
+    initial_value: '0.60'
+  - id: zone_vpd_target_west_sm
+    type: float
+    restore_value: yes
+    initial_value: '1.10'
+  - id: zone_vpd_target_west_ss
+    type: float
+    restore_value: yes
+    initial_value: '0.70'
+  - id: zone_vpd_target_west_mid
+    type: float
+    restore_value: yes
+    initial_value: '0.57'
+
+  - id: zone_vpd_target_east_sr
+    type: float
+    restore_value: yes
+    initial_value: '0.80'
+  - id: zone_vpd_target_east_sm
+    type: float
+    restore_value: yes
+    initial_value: '1.22'
+  - id: zone_vpd_target_east_ss
+    type: float
+    restore_value: yes
+    initial_value: '0.90'
+  - id: zone_vpd_target_east_mid
+    type: float
+    restore_value: yes
+    initial_value: '0.74'
+
+  # ─── B2: per-zone VPD half-widths (below / above target) ×4 zones ───
+  - id: zone_vpd_width_below_center
+    type: float
+    restore_value: yes
+    initial_value: '0.20'
+  - id: zone_vpd_width_below_south
+    type: float
+    restore_value: yes
+    initial_value: '0.18'
+  - id: zone_vpd_width_below_west
+    type: float
+    restore_value: yes
+    initial_value: '0.16'
+  - id: zone_vpd_width_below_east
+    type: float
+    restore_value: yes
+    initial_value: '0.15'
+
+  - id: zone_vpd_width_above_center
+    type: float
+    restore_value: yes
+    initial_value: '0.35'
+  - id: zone_vpd_width_above_south
+    type: float
+    restore_value: yes
+    initial_value: '0.22'
+  - id: zone_vpd_width_above_west
+    type: float
+    restore_value: yes
+    initial_value: '0.22'
+  - id: zone_vpd_width_above_east
+    type: float
+    restore_value: yes
+    initial_value: '0.23'
+
+  # ─── B2: per-zone priority rank (1 = highest) ───
+  # Vanda(center) > Cannabis(south) > Lime(west) > Pepper(east).
+  - id: zone_priority_center
+    type: int
+    restore_value: yes
+    initial_value: '1'
+  - id: zone_priority_south
+    type: int
+    restore_value: yes
+    initial_value: '2'
+  - id: zone_priority_west
+    type: int
+    restore_value: yes
+    initial_value: '3'
+  - id: zone_priority_east
+    type: int
+    restore_value: yes
+    initial_value: '4'
+
+  # ─── FIRMWARE-V2 new control globals (contract §B4/§B5) ───
+  # Master enable for the on-chip deterministic band engine. When ON,
+  # controls.yaml drives the band from the anchors above; when OFF, falls back
+  # to the dispatcher-pushed target_* fields.
+  - id: sw_onchip_band_enabled
     type: bool
-    restore_value: no
+    restore_value: yes
     initial_value: 'true'
 
-  - id: sw_night_humidity_source_present
+  # Item-3 per-zone arbiter master enable (default OFF). When true, the mister
+  # zone selector uses arbitrate_wet_zone (deterministic per-zone band + owner
+  # priority) instead of the legacy stress scoring. Ships inert; flip after a
+  # corpus zone-distribution review.
+  - id: sw_arbiter_zone_enabled
     type: bool
-    restore_value: no
-    initial_value: 'false'    # true once a non-overhead night humidity source (NB5/OPN-2) lands → auto-disables CYC-4
+    restore_value: yes
+    initial_value: 'false'
 
-  - id: micropulse_vpd_ceiling
-    type: float
-    restore_value: no
-    initial_value: '1.25'     # overnight VPD (kPa) above which a pulse may fire
+  # Wet taper: routine wetting blocked when minutes_to_sunset < taper or
+  # phase >= 2 (replaces the dusk_cutoff_hour / fog_window clock rails).
+  - id: sw_wet_taper_enabled
+    type: bool
+    restore_value: yes
+    initial_value: 'true'
 
-  - id: micropulse_max_on_s
+  - id: wet_taper_before_sunset_min
     type: int
-    restore_value: no
-    initial_value: '5'        # HARD cap on a single pulse (s); validate_setpoints clamps <=10
+    restore_value: yes
+    initial_value: '120'
 
-  - id: micropulse_min_gap_s
-    type: int
-    restore_value: no
-    initial_value: '600'      # lockout between pulses (s) — pulses can never chain into a run
+  # Night stress wetting: the single replacement rule for direct_wet_stress_*
+  # and fog_stress_window_* — stress wetting past taper allowed while
+  # vpd > band_high + dew margin, never past sunset (phase < 2).
+  - id: sw_night_stress_wet_enabled
+    type: bool
+    restore_value: yes
+    initial_value: 'true'
 
-  - id: micropulse_min_dew_margin_f
+  - id: night_stress_min_dew_margin_f
     type: float
-    restore_value: no
-    initial_value: '6.0'      # min temp-dewpoint spread (°F) to pulse — no crown condensation
+    restore_value: yes
+    initial_value: '6.0'
 
-  # Micro-pulse timer state (millis() deadlines; wrap-aware signed compares).
-  - id: micropulse_on_until_ms
+  # Generic zone-boost offsets (minutes from solar event); replace the fixed
+  # dawn_rehydrate_start_hour / midday_drench_hour clocks.
+  - id: dawn_boost_offset_min
+    type: int
+    restore_value: yes
+    initial_value: '0'        # offset from sunrise (SR)
+
+  - id: midday_boost_offset_min
+    type: int
+    restore_value: yes
+    initial_value: '60'       # offset from solar noon (SM)
+
+  # Manual button latch timeout (minutes) for the deadline latches below.
+  - id: manual_override_timeout_min
+    type: int
+    restore_value: yes
+    initial_value: '10'
+
+  # ─── B5: manual button deadline latches (epoch-ms deadlines) ───
+  # While now_ms < <x>_until_ms the latch is active. restore_value: no — a
+  # manual override must NOT survive a reboot. 0 = no latch. controls.yaml
+  # mirrors the active state into the existing manual_fan_active /
+  # manual_fog_active / vent_lock_active bools (kept above).
+  - id: manual_fans_until_ms
     type: uint32_t
     restore_value: no
-    initial_value: '0'        # while now < this, the current pulse is ON (0 = no pulse active)
-
-  - id: micropulse_lockout_until_ms
+    initial_value: '0'
+  - id: manual_fog_until_ms
     type: uint32_t
     restore_value: no
-    initial_value: '0'        # while now < this, no new pulse may start
-
-  - id: cnt_micropulse_today
-    type: int
+    initial_value: '0'
+  - id: vent_bypass_until_ms
+    type: uint32_t
     restore_value: no
-    initial_value: '0'        # daily count of overnight micro-pulses (reset at midnight)
+    initial_value: '0'
 
   # ─── Daily ON-cycle counters (reset at midnight) ───
   - id: cnt_fan1_today
@@ -1000,6 +1336,22 @@ globals:
     restore_value: no
     initial_value: '0'
 
+  # Per-zone last turn-OFF stamp (ms). Powers the mister re-fire dwell fence
+  # (mister_min_off_s): a zone may not re-energize within mister_min_off_s of
+  # its own last off, collapsing sub-gap chatter without touching zone choice.
+  - id: last_off_south_ms
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+  - id: last_off_west_ms
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+  - id: last_off_center_ms
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+
   # Daily counter of fairness-watchdog overrides (reset at midnight).
   - id: cnt_mister_fairness_overrides_today
     type: int
@@ -1236,10 +1588,29 @@ globals:
     restore_value: no
     initial_value: '45'
 
+  # Mister re-fire dwell floor (s). A zone may not re-energize within this of
+  # its own last turn-off — suppresses the sub-gap on/off chatter the misters
+  # (uniquely among relays) had no min-on/off protection against. Default 45s
+  # == the designed pulse gap, so it only fences re-fires FASTER than the
+  # intended cadence (never extends a normal pulse / never over-waters).
+  # Planner-tunable for cycling reduction; firmware-clamped to a sane minimum.
+  - id: mister_min_off_s
+    type: int
+    restore_value: no
+    initial_value: '45'
+
   - id: mister_vpd_weight
     type: float
     restore_value: no
     initial_value: '1.5'
+
+  # Item-4 night-dry lever: planner-pushable VPD bias added to the overnight band
+  # (clamped 0..0.25 kPa, smooth sin^2 weight peaking at solar midnight). Lets the
+  # AI pre-empt a humid night without touching the crop_band_anchors curve.
+  - id: night_vpd_bias_kpa
+    type: float
+    restore_value: no
+    initial_value: '0.0'
 
   # ─── Per-zone VPD targets (set by band dispatcher from crop data) ───
   - id: vpd_target_south
@@ -1327,16 +1698,6 @@ globals:
     type: int
     restore_value: no
     initial_value: '55'
-
-  - id: fog_time_window_start
-    type: int
-    restore_value: no
-    initial_value: '7'
-
-  - id: fog_time_window_end
-    type: int
-    restore_value: no
-    initial_value: '17'
 
   - id: mister_closes_vent
     type: bool

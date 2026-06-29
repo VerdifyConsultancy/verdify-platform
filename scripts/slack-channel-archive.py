@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """
 slack-channel-archive.py — Export #greenhouse Slack channel to searchable markdown files.
 

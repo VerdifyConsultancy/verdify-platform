@@ -17,7 +17,7 @@ make greenhouse-quiet-off
 If the recording also needs the grow lights turned off:
 
 ```bash
-/srv/greenhouse/.venv/bin/python scripts/greenhouse-quiet-mode.py enable --minutes 30 --lights-off
+python3 scripts/greenhouse-quiet-mode.py enable --minutes 30 --lights-off
 ```
 
 ## What It Suppresses

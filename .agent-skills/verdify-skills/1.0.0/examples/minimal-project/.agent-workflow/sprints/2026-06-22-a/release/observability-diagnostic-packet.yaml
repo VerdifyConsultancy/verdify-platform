@@ -1,0 +1,87 @@
+schema_ref: observability-diagnostic-packet.schema.yaml
+kind: ObservabilityDiagnosticPacket
+schema_version: "1.0"
+packet_id: diag-2026-06-22-a-health
+status: ready
+scope:
+  diagnostic_unit: review
+  repository: example/minimal-project
+  sprint_id: 2026-06-22-a
+  lane_ids: [issue-123-api]
+  issue_ids: [123]
+  environment: review/issue-123-api
+  namespace: minimal-project-issue-123-api
+  northstar_ids: [ARQ-004, ARCH-008, PRQ-004]
+  summary: Diagnose review-environment health for the health endpoint lane.
+correlation:
+  wave_id: wave-2026-06-22-a-health
+  session_ids: [critic-20260622-001]
+  pr_ids: ["#123"]
+  commit_sha: abcdef1234567890abcdef1234567890abcdef12
+  image_digest: service-image:abcdef1234567890abcdef1234567890abcdef12
+  deployment_ids: [deploy-123]
+  trace_ids: []
+  policy_decision_ids: []
+hypotheses:
+- id: HYP-001
+  statement: The review deployment is healthy and serves the reviewed revision.
+  confidence: high
+  status: supported
+  evidence:
+  - https://issue-123-api.example.test/healthz
+  - https://logs.example.test/minimal-project/issue-123-api
+telemetry_links:
+  dashboards:
+  - https://grafana.example.test/d/minimal-project
+  logs:
+  - https://logs.example.test/minimal-project/issue-123-api
+  metrics:
+  - https://metrics.example.test/minimal-project/issue-123-api
+  traces: []
+  alerts: []
+  events:
+  - kubernetes://minimal-project-issue-123-api/events
+signal_assessments:
+- id: SIG-001
+  kind: probe
+  name: health endpoint
+  source: review URL
+  observed_state: normal
+  evidence: https://issue-123-api.example.test/healthz
+  blocking: true
+- id: SIG-002
+  kind: deployment
+  name: observed revision
+  source: Argo CD application
+  observed_state: normal
+  evidence: gitops://minimal-project/review/issue-123-api
+  blocking: true
+runtime_checks:
+- name: GET /healthz
+  result: passed
+  observed_at: "2026-06-22T12:08:00Z"
+  evidence: https://issue-123-api.example.test/healthz
+deployment_markers:
+- environment: review/issue-123-api
+  deployment_id: deploy-123
+  observed_revision: abcdef1234567890abcdef1234567890abcdef12
+  observed_at: "2026-06-22T12:05:00Z"
+  evidence: gitops://minimal-project/review/issue-123-api
+findings:
+- id: FIND-001
+  severity: note
+  statement: Review deployment reports the expected health endpoint and revision.
+  evidence:
+  - https://issue-123-api.example.test/healthz
+  requested_action: Include this packet in the review inbox.
+missing_instrumentation: []
+recommendation:
+  outcome: proceed
+  rationale: Runtime signals support review-ready status for this example lane.
+feedback_route:
+  route: review_inbox
+  instructions: Attach this packet to the review inbox packet.
+  target_refs:
+  - .agent-workflow/sprints/2026-06-22-a/review/review-inbox-packet.yaml
+prepared_at: "2026-06-22T12:09:00Z"
+diagnostician: release-verifier

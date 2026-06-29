@@ -15,8 +15,10 @@ out to the agent host.
 A module-level assertion in `ingestor/iris_planner.py` checks the agent-host
 path exists at planner-import time; if it's missing or stale, Iris loses
 her operational playbook at runtime and planning quality drops silently.
-Sync is currently manual. See `docs/backlog/genai.md` G4 for the
-deploy-time automation follow-up.
+Sync is currently manual. The old G4 deploy-time automation follow-up is
+archived in
+`/Users/jason/Orbit/context_dump/verdify-platform/docs/backlog/genai.md`;
+current tracking lives in GitHub issues.
 -->
 
 # Greenhouse Planner — Operational Playbook

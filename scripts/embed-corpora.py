@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """
 embed-corpora.py — Generate OpenAI text-embedding-3-large embeddings for the
 Iris knowledge corpora (lesson / plan / site_doc / playbook / observation) and

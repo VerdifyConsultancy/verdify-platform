@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """CLI smoke path for deterministic Iris Slack operations."""
 
 from __future__ import annotations

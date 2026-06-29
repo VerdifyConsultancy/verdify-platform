@@ -1,0 +1,14 @@
+# Component: ingestor-gather-script (#211) — the planner context-gather
+# ConfigMap (gather-plan-context.sh + lib/psql-verdify.sh).
+#
+# A COMPONENT (not a base resource) so it renders ONLY into the overlays that
+# reference it — prod (the planner-bearing instance). It does NOT add a workload;
+# it is a ConfigMap the ingestor mounts at /srv/verdify/scripts/ (the mount +
+# initContainer that provides psql live in the ingestor patch, applied via the
+# gated ingestor restart — NOT in this component, so referencing the component
+# does not by itself touch the running device-writer pod).
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+resources:
+  - gather-script-configmap.yaml

@@ -1,4 +1,5 @@
 {
+  "refresh": "1m",
   "uid": "site-climate-lighting",
   "title": "Site: Climate \u2014 Lighting",
   "editable": true,
@@ -325,7 +326,8 @@
         }
       ],
       "title": "Daily DLI Trend",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -470,7 +472,8 @@
         }
       ],
       "title": "Forecast vs Actual Solar Radiation",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -717,7 +720,7 @@
               {
                 "id": "color",
                 "value": {
-                  "fixedColor": "#9CCC65",
+                  "fixedColor": "#2196F3",
                   "mode": "fixed"
                 }
               },
@@ -737,7 +740,7 @@
                   {
                     "options": {
                       "OFF": {
-                        "color": "#9CCC65",
+                        "color": "#2196F3",
                         "index": 1,
                         "text": ""
                       }
@@ -1030,7 +1033,8 @@
         "colorMode": "value",
         "graphMode": "none"
       },
-      "description": "Electric cost = \u03a3(equipment runtime \u00d7 watts \u00d7 $0.111/kWh)"
+      "description": "Electric cost = \u03a3(equipment runtime \u00d7 watts \u00d7 $0.111/kWh)",
+      "transparent": true
     },
     {
       "description": "Runtime-modeled electric load from published device wattage and observed on-time overlaid with available solar radiation.",
@@ -1166,7 +1170,8 @@
           "placement": "bottom",
           "showLegend": true
         }
-      }
+      },
+      "transparent": true
     },
     {
       "datasource": {

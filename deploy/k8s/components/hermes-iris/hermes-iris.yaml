@@ -1,0 +1,232 @@
+# Verdify hermes-iris — the sole planner gateway (#119).
+# Ported from docker-compose.yml:357 (the `hermes` profile service).
+#
+# WHY A KUSTOMIZE COMPONENT (not a base resource): components are opt-in so
+# prod/prod-dark control exactly which workloads render. Referenced by prod
+# overlays only. hermes is NOT a device writer (it reaches the MCP tool surface
+# in-cluster), but its run state + OpenAI key make it a prod-anchored gateway;
+# prod is its canonical home.
+#
+# IMAGE DIGEST PRESERVED (NOT transformer-rewritten): the image is the upstream
+# nousresearch/hermes-agent pinned to the EXACT @sha256 from compose
+# (a7111ab1...aec72e). It is NOT a ghcr.io/verdifyconsultancy/* app image, so the
+# overlay images: transformer (which only matches the verdify-* names) leaves it
+# untouched — the digest stays byte-identical to the live VM gateway. No mutable
+# tag is ever rendered.
+#
+# LOOPBACK -> CLUSTERIP: on the VM hermes binds 127.0.0.1:8642 and reaches MCP via
+# the `host.docker.internal:host-gateway` hack (compose:381). In-cluster both
+# become ClusterIP DNS: this Service is verdify-hermes-iris.<ns>.svc:8642 (the
+# ingestor's HERMES_URL repoints to it via verdify-config), and hermes reaches MCP
+# at verdify-mcp.<ns>.svc:8000. The container still binds 0.0.0.0 inside the pod;
+# the surface is ClusterIP + NetworkPolicy (never an LB, never WAN) — same posture
+# as the loopback bind it replaces.
+#
+# MCP-URL GATE (migration doc R7): the MCP URL hermes calls lives in the
+# out-of-band /etc/verdify/hermes-iris.env (verdify-hermes Secret), NOT in this
+# repo. It MUST be repointed to verdify-mcp.<ns>.svc:8000 in that sealed env
+# BEFORE the systemd MCP is stopped, or hermes fails at tool-call time (not
+# startup). This manifest is the reviewable target shape; the env repoint is a
+# gated handoff step.
+#
+# STATE PVC: compose mounts host /var/lib/verdify/hermes/iris -> /opt/data. In
+# k3s this is a PVC on Longhorn NVMe RWO storage. The slack.yaml referenced by
+# VERDIFY_SLACK_CONFIG=/opt/data/slack.yaml lives on that PVC; the NON-SECRET
+# slack channel config is also available from the verdify-hermes-slack mount.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: verdify-hermes-iris-data
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: hermes-iris
+spec:
+  accessModes: ["ReadWriteOnce"]
+  # node-local-temp-rwo (rancher.io/local-path NVMe). Hermes gateway run-state is
+  # regenerable working state — NOT a database and NOT durable logs — so per the
+  # storage-tiering policy it uses fast node-local capacity, not Synology iSCSI.
+  # (Bonus: this also gets the gateway off the dead /volume1 SSD tier from the
+  # 2026-06-17 incident.) Durable planner memory lives in the DB, not here.
+  storageClassName: node-local-temp-rwo
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-hermes-iris
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: hermes-iris
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: hermes-iris
+  strategy:
+    # Recreate: single gateway holding the RWO state PVC; no two pods mount it.
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: hermes-iris
+    spec:
+      imagePullSecrets:
+        - name: ghcr-jvallery-readonly
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      initContainers:
+        # SEED CONFIG (#213): install the IaC profile onto the RWO state PVC at
+        # /opt/data/config.yaml (= $HERMES_HOME/config.yaml) on EVERY pod start.
+        # Idempotent: it overwrites the PVC copy from the verdify-hermes-iris-config
+        # ConfigMap so the profile can NEVER silently drift back to the stock
+        # hermes-agent template (the openrouter/anthropic default that 401'd every
+        # planner LLM call). The PVC stays the writable HERMES_HOME for run state;
+        # only config.yaml is reconciled here. Uses the SAME upstream image (no
+        # extra pull) just to get a shell; it only does a file copy.
+        - name: seed-config
+          image: nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e
+          command: ["sh", "-c", "cp -f /etc/verdify/hermes-config/config.yaml /opt/data/config.yaml && echo 'seeded /opt/data/config.yaml from verdify-hermes-iris-config'"]
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+            - name: data
+              mountPath: /opt/data
+            - name: hermes-config
+              mountPath: /etc/verdify/hermes-config
+              readOnly: true
+      containers:
+        - name: hermes-iris
+          # UPSTREAM image, digest PRESERVED from compose:363 (NOT rewritten by
+          # the overlay images: transformer — name does not match verdify-*).
+          image: nousresearch/hermes-agent@sha256:a7111ab1cc43b5a1bc76090a505d6462aa1af4b43f603f0113bf5eb121aec72e
+          # MUST be `args:`, NOT `command:`. The image ENTRYPOINT is
+          # `tini -g -- /opt/hermes/docker/entrypoint.sh` (verified on the live VM
+          # container 2026-06-07), and that entrypoint script is what resolves the
+          # `gateway` binary onto PATH. Setting k8s `command:` OVERRIDES the
+          # ENTRYPOINT, so the kubelet exec'd `gateway` directly and crashed with
+          # `exec: "gateway": executable file not found in $PATH`
+          # (CrashLoopBackOff, verified verdify-prod 2026-06-07). `args:` maps to
+          # Docker CMD (compose had Cmd=`gateway run`), preserving the entrypoint.
+          # Lane-3 fix — this is NOT a NetworkPolicy/DB issue (hermes has no DB dep).
+          args: ["gateway", "run"]
+          ports:
+            - name: gateway
+              containerPort: 8642
+          envFrom:
+            # The OpenAI key + any HERMES_* runtime env (compose env_file
+            # /etc/verdify/hermes-iris.env) come from this Secret. Provided
+            # out-of-band by the SOPS backend; referenced BY NAME only. The MCP
+            # URL inside it MUST point at verdify-mcp.<ns>.svc:8000 (R7 gate).
+            - secretRef:
+                name: verdify-hermes
+          env:
+            # compose:375 VERDIFY_SLACK_CONFIG=/opt/data/slack.yaml (on the PVC).
+            - name: VERDIFY_SLACK_CONFIG
+              value: /opt/data/slack.yaml
+          securityContext:
+            allowPrivilegeEscalation: false
+            # hermes writes run state under /opt/data (PVC); root FS can stay RO.
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            # From compose deploy.resources.limits (4G / 2 cpu).
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "2"
+              memory: "4Gi"
+          volumeMounts:
+            - name: data
+              mountPath: /opt/data
+            # NON-SECRET slack channel config (compose:371 /etc/verdify/slack RO).
+            - name: slack-config
+              mountPath: /etc/verdify/slack
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+          livenessProbe:
+            tcpSocket:
+              port: gateway
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          readinessProbe:
+            tcpSocket:
+              port: gateway
+            initialDelaySeconds: 15
+            periodSeconds: 10
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: verdify-hermes-iris-data
+        - name: slack-config
+          secret:
+            secretName: verdify-hermes-slack
+            optional: true
+        - name: tmp
+          emptyDir: {}
+        # #213 IaC Hermes profile, seeded onto the PVC by the seed-config init.
+        - name: hermes-config
+          configMap:
+            name: verdify-hermes-iris-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: verdify-hermes-iris
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: hermes-iris
+spec:
+  # ClusterIP only — replaces the VM loopback 127.0.0.1:8642 bind. The ingestor
+  # reaches it via HERMES_URL=http://verdify-hermes-iris.<ns>.svc:8642. Never an
+  # LB, never WAN.
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/component: hermes-iris
+  ports:
+    - name: gateway
+      port: 8642
+      targetPort: gateway
+---
+# Ingress allow: the base default-deny-ingress otherwise drops all inbound. Accept
+# 8642 only from the in-namespace ingestor (the sole caller of /v1/runs). hermes
+# itself reaches MCP via plain egress (in-namespace ClusterIP), covered by the
+# namespace's egress posture.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-hermes-from-ingestor
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: hermes-iris
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: hermes-iris
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: ingestor
+      ports:
+        - protocol: TCP
+          port: 8642

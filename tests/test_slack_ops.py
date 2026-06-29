@@ -170,7 +170,6 @@ def test_no_legacy_slack_token_path_in_runtime_files():
     paths = [
         Path("slack.yaml"),
         Path("ingestor/config.py"),
-        Path("ingestor/tasks.py"),
         Path("scripts/alert-monitor.py"),
         Path("scripts/forecast-action-engine.py"),
         Path("scripts/slack-channel-archive.py"),
@@ -178,4 +177,10 @@ def test_no_legacy_slack_token_path_in_runtime_files():
     ]
 
     for path in paths:
+        assert legacy not in path.read_text(encoding="utf-8")
+
+    # #46: ingestor/tasks.py is now the ingestor/tasks/ package — scan every module.
+    tasks_pkg = Path("ingestor/tasks")
+    tasks_files = sorted(tasks_pkg.glob("*.py")) if tasks_pkg.is_dir() else [Path("ingestor/tasks.py")]
+    for path in tasks_files:
         assert legacy not in path.read_text(encoding="utf-8")

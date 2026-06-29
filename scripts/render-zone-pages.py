@@ -33,6 +33,11 @@ DSN = os.environ.get(
     "VERDIFY_DSN",
     f"postgresql://verdify:{os.environ.get('POSTGRES_PASSWORD', 'verdify_tsdb_2026')}@127.0.0.1:5432/verdify",
 )
+
+# Crops whose plantings must never be named on the public zone pages (#308,
+# Jason 2026-06-20). DB rows stay (control needs them); the renderer drops the
+# planting from the public table. Keep in sync with render-crop-profiles.py.
+PUBLISH_EXCLUDE_SLUGS = {"cannabis"}
 AUTO_BLOCK_RE = re.compile(
     r"(?P<start>(?:\[//\]: # \(auto-render:start (?P<markdown_name>[-a-z0-9_]+)\)|"
     r"<!-- auto-render:start (?P<html_name>[-a-z0-9_]+) -->|"
@@ -268,6 +273,11 @@ async def render_zone(conn: asyncpg.Connection, zone_slug: str) -> tuple[str, st
         zone_slug,
     )
     plantings_list = [dict(r) for r in plantings]
+    # Redact non-publishable crops from the public zone page (#308). The position
+    # stays occupied in the DB; it just isn't named on the public site.
+    plantings_list = [
+        p for p in plantings_list if (p.get("crop_catalog_slug") or "").lower() not in PUBLISH_EXCLUDE_SLUGS
+    ]
 
     status = d.get("zone_status") or "active"
     position_scheme = ", ".join(s.get("position_scheme") for s in d["shelves"] if s.get("position_scheme")) or None
@@ -365,7 +375,8 @@ async def run(args: argparse.Namespace) -> int:
                 print(f"  UNCHANGED  {filename}")
                 continue
             if args.dry_run:
-                print(f"  WOULD WRITE  {filename} ({mode}; {len(content)} chars, {content.count('\n')} lines)")
+                line_count = content.count("\n")
+                print(f"  WOULD WRITE  {filename} ({mode}; {len(content)} chars, {line_count} lines)")
             else:
                 target.write_text(content)
                 print(f"  WROTE  {filename} ({mode})")

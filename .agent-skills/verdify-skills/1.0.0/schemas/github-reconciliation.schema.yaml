@@ -1,0 +1,29 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://verdify.example/schemas/github-reconciliation.schema.yaml
+title: Verdify GitHub Reconciliation
+type: object
+additionalProperties: false
+required: [schema_ref, kind, schema_version, sprint_id, repository, snapshot_captured_at, reconciled_at, lanes, errors, warnings, ok]
+properties:
+  schema_ref: {const: github-reconciliation.schema.yaml}
+  kind: {const: GitHubReconciliation}
+  schema_version: {const: "1.0"}
+  sprint_id: {type: string, minLength: 1}
+  repository: {type: string, minLength: 1}
+  snapshot_captured_at: {type: string, minLength: 1}
+  reconciled_at: {type: string, minLength: 1}
+  lanes:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [lane_id, contract, issue_ids, branch, pull_requests]
+      properties:
+        lane_id: {type: string, minLength: 1}
+        contract: {type: string, minLength: 1}
+        issue_ids: {type: array, minItems: 1, items: {type: integer}}
+        branch: {type: string, minLength: 1}
+        pull_requests: {type: array, items: {type: integer}}
+  errors: {type: array, items: {type: string}}
+  warnings: {type: array, items: {type: string}}
+  ok: {type: boolean}

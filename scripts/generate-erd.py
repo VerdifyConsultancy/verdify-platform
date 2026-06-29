@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """Sprint 23+ Phase 5: auto-generate the Mermaid ERD block in
 verdify_schemas/RELATIONSHIPS.md from information_schema.
 

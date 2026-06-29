@@ -1,4 +1,5 @@
 {
+  "refresh": "1m",
   "uid": "site-climate-cooling",
   "title": "Site: Climate \u2014 Cooling",
   "editable": true,
@@ -47,7 +48,8 @@
         "colorMode": "value",
         "graphMode": "none"
       },
-      "description": "Electric cost = \u03a3(equipment runtime \u00d7 watts \u00d7 $0.111/kWh)"
+      "description": "Electric cost = \u03a3(equipment runtime \u00d7 watts \u00d7 $0.111/kWh)",
+      "transparent": true
     },
     {
       "id": 5,
@@ -93,7 +95,8 @@
         "colorMode": "value",
         "graphMode": "none"
       },
-      "description": "Estimated kWh from equipment runtimes \u00d7 rated wattages"
+      "description": "Estimated kWh from equipment runtimes \u00d7 rated wattages",
+      "transparent": true
     },
     {
       "id": 8,
@@ -139,7 +142,8 @@
         "colorMode": "value",
         "graphMode": "none"
       },
-      "description": "Average daily total cost across the last 30 completed daily summaries."
+      "description": "Average daily total cost across the last 30 completed daily summaries.",
+      "transparent": true
     },
     {
       "datasource": {
@@ -284,7 +288,8 @@
         }
       ],
       "title": "Forecast vs Actual Solar Radiation",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -1079,7 +1084,8 @@
         }
       ],
       "title": "Temperature Compliance Band",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "datasource": {
@@ -1302,7 +1308,8 @@
         }
       ],
       "title": "Indoor vs Outdoor Temperature",
-      "type": "timeseries"
+      "type": "timeseries",
+      "transparent": true
     },
     {
       "id": 937,
@@ -2103,7 +2110,8 @@
           "sort": "desc"
         }
       },
-      "description": "Indoor temperature against the green firmware compliance band, with only the heat entry and fan/cooling entry thresholds rendered. Crop/planner provenance, dispatcher math, cfg readbacks, and padding details remain in the band traceability SQL contract."
+      "description": "Indoor temperature against the green firmware compliance band, with only the heat entry and fan/cooling entry thresholds rendered. Crop/planner provenance, dispatcher math, cfg readbacks, and padding details remain in the band traceability SQL contract.",
+      "transparent": true
     },
     {
       "id": 938,
@@ -2263,7 +2271,8 @@
           "mode": "multi",
           "sort": "desc"
         }
-      }
+      },
+      "transparent": true
     },
     {
       "id": 939,
@@ -2422,7 +2431,8 @@
           "mode": "multi",
           "sort": "desc"
         }
-      }
+      },
+      "transparent": true
     }
   ],
   "annotations": {

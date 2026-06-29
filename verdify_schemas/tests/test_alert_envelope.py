@@ -12,6 +12,8 @@ from verdify_schemas.alerts import (
     ALERT_ENVELOPE_ADAPTER,
     ALERT_TYPES,
     AlertEnvelope,
+    BandAnchorDbReadFailedAlert,
+    BandDeviceDbDivergenceAlert,
     BandFnNullAlert,
     ClimateActionProofStaleAlert,
     ESP32PushFailedAlert,
@@ -24,8 +26,10 @@ from verdify_schemas.alerts import (
     HeapPressureWarningAlert,
     HeatManualOverrideAlert,
     HeatStagingInversionAlert,
+    HouseBandDriftAlert,
     IrrigationFeedbackGapAlert,
     LeakDetectedAlert,
+    LightingCfgThresholdDriftAlert,
     PlanContextFailedAlert,
     PlannerBandOwnershipDriftAlert,
     PlannerEvaluationMissedAlert,
@@ -39,6 +43,7 @@ from verdify_schemas.alerts import (
     SafetyInvalidAlert,
     SensorOfflineAlert,
     SetpointUnconfirmedAlert,
+    SoilDryoutAlert,
     SoilSensorOfflineAlert,
     TempSafetyAlert,
     TunableZeroVarianceAlert,
@@ -51,6 +56,14 @@ from verdify_schemas.alerts import (
 NOW = "2026-05-01T12:00:00+00:00"
 
 CASES = {
+    "band_anchor_db_read_failed": (
+        BandAnchorDbReadFailedAlert,
+        {"origin": "defaults(table-error)"},
+    ),
+    "band_device_db_divergence": (
+        BandDeviceDbDivergenceAlert,
+        {"max_temp_abs_diff": 4.1, "max_vpd_abs_diff": 0.52, "device_age_s": 35.0},
+    ),
     "band_fn_null": (
         BandFnNullAlert,
         {"band_row_null": True, "zone_row_null": False, "house_row_null": True},
@@ -158,6 +171,18 @@ CASES = {
             "d_heat_stage_2": 3.0,
         },
     ),
+    "house_band_drift": (
+        HouseBandDriftAlert,
+        {
+            "actual_vpd": 0.74,
+            "actual_rh": 86.0,
+            "band_low": 0.9,
+            "band_high": 1.25,
+            "band_target": 1.05,
+            "wet_frac": 0.84,
+            "dry_frac": 0.0,
+        },
+    ),
     "irrigation_feedback_gap": (
         IrrigationFeedbackGapAlert,
         {
@@ -256,6 +281,20 @@ CASES = {
         PlannerEvaluationMissedAlert,
         {"plan_id": "iris-20260509-0551", "age_hours": 27},
     ),
+    "lighting_cfg_threshold_drift": (
+        LightingCfgThresholdDriftAlert,
+        {
+            "offenders": [
+                {
+                    "parameter": "gl_main_lux_threshold",
+                    "light_key": "main",
+                    "desired": 40000.0,
+                    "device_cfg": 3000.0,
+                    "observed_ts": "2026-06-16T12:03:14-06:00",
+                }
+            ]
+        },
+    ),
     "planner_tunable_range_drift": (
         PlannerTunableRangeDriftAlert,
         {
@@ -300,6 +339,21 @@ CASES = {
             "last_cfg_readback": 1.2,
             "age_s": 360,
             "pushed_at": NOW,
+        },
+    ),
+    "soil_dryout": (
+        SoilDryoutAlert,
+        {
+            "column": "soil_moisture_west",
+            "sensor": "soil.west",
+            "zone": "west",
+            "wilt_pct": 18.0,
+            "latest_pct": 12.4,
+            "min_pct": 11.0,
+            "max_pct": 14.9,
+            "duration_h": 2.4,
+            "samples": 1700,
+            "occupancy": "occupied",
         },
     ),
     "soil_sensor_offline": (
@@ -411,8 +465,12 @@ def test_every_alert_type_has_a_case():
 
 def test_schema_covers_alert_types_in_write_paths():
     root = Path(__file__).resolve().parents[2]
+    # Issue #46 split ingestor/tasks.py into the ingestor/tasks/ package; expand
+    # it to every submodule so the alert-type write-path scan still covers it.
+    tasks_pkg = root / "ingestor" / "tasks"
+    tasks_sources = sorted(tasks_pkg.glob("*.py")) if tasks_pkg.is_dir() else [root / "ingestor" / "tasks.py"]
     sources = [
-        root / "ingestor" / "tasks.py",
+        *tasks_sources,
         root / "ingestor" / "iris_planner.py",
         root / "api" / "main.py",
     ]

@@ -1,0 +1,32 @@
+{
+  "schema_ref": "github-snapshot.schema.yaml",
+  "kind": "GitHubSnapshot",
+  "schema_version": "1.0",
+  "repository": "example/example-service",
+  "captured_at": "2026-06-22T13:00:00Z",
+  "default_branch": "main",
+  "capture_method": "manual",
+  "api_version": "2026-03-10",
+  "source_queries": [
+    {"surface": "issues", "query": "GET /repos/example/example-service/issues?state=all", "captured": true, "limitation": "Example omits sub-issues, dependencies, and timeline events."},
+    {"surface": "pull_requests", "query": "GET /repos/example/example-service/pulls?state=all", "captured": true, "limitation": "Example omits review and check details."}
+  ],
+  "issues": [
+    {"number": 123, "title": "Expose auditable health endpoint", "state": "OPEN", "url": "https://github.com/example/example-service/issues/123"},
+    {"number": 124, "title": "Standardize revision identity", "state": "OPEN", "url": "https://github.com/example/example-service/issues/124"}
+  ],
+  "pull_requests": [
+    {"number": 456, "title": "Issue #123: health endpoint", "state": "MERGED", "headRefName": "lane/123-health-api", "baseRefName": "main", "url": "https://github.com/example/example-service/pull/456"}
+  ],
+  "checks": [],
+  "workflow_runs": [],
+  "deployments": [],
+  "deployment_statuses": [],
+  "environments": [],
+  "project_items": [],
+  "issue_dependencies": [],
+  "sub_issues": [],
+  "limitations": [
+    "Manual example snapshot is a cache for docs/tests and does not replace live GitHub."
+  ]
+}

@@ -1,0 +1,149 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://verdify.example/schemas/gravity-core-extraction-plan.schema.yaml
+title: Verdify Gravity Core Extraction Plan
+type: object
+additionalProperties: false
+required: [schema_ref, kind, schema_version, plan_id, status, assessed_at, repository, source_system, target_boundaries, source_objects, reuse_matrix, pack_assumptions, contracts, migration_risks, pilot, readiness_updates, handoff, approval]
+properties:
+  schema_ref: {const: gravity-core-extraction-plan.schema.yaml}
+  kind: {const: GravityCoreExtractionPlan}
+  schema_version: {const: "1.0"}
+  plan_id: {type: string, pattern: '^gce-[a-z0-9][a-z0-9-]*$'}
+  status: {type: string, enum: [draft, ready, approved, blocked, superseded]}
+  assessed_at: {type: string}
+  repository: {type: string}
+  source_system:
+    type: object
+    additionalProperties: false
+    required: [name, repository, ref, current_boundary, evidence_refs]
+    properties:
+      name: {type: string}
+      repository: {type: string}
+      ref: {type: [string, 'null']}
+      current_boundary: {type: string}
+      evidence_refs: {type: array, items: {type: string}}
+  target_boundaries:
+    type: object
+    additionalProperties: false
+    required: [core_package, core_boundary, pack_boundary, non_goals]
+    properties:
+      core_package: {type: string}
+      core_boundary: {type: array, items: {type: string}}
+      pack_boundary: {type: array, items: {type: string}}
+      non_goals: {type: array, items: {type: string}}
+  source_objects:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, source_path, object_type, purpose, content_identity, checksum_strategy, provenance_refs, reuse_class, boundary_decision, notes]
+      properties:
+        id: {type: string, pattern: '^GCO-[0-9]{3,}$'}
+        source_path: {type: string}
+        object_type: {type: string, enum: [package, module, file, schema, prompt, test, migration, kubernetes_resource, config, doc, workflow, other]}
+        purpose: {type: string}
+        content_identity:
+          type: object
+          additionalProperties: false
+          required: [method, digest, size_bytes, media_type]
+          properties:
+            method: {type: string, enum: [sha256, git_sha, path_only, not_collected, other]}
+            digest: {type: [string, 'null']}
+            size_bytes: {type: [integer, 'null']}
+            media_type: {type: [string, 'null']}
+        checksum_strategy: {type: string, enum: [computed_sha256, git_blob_sha, pending, not_applicable, other]}
+        provenance_refs: {type: array, items: {type: string}}
+        reuse_class: {type: string, enum: [core_candidate, pack_specific, adapter, reference_only, discard, unknown]}
+        boundary_decision: {type: string, enum: [move_to_core, keep_in_pack, wrap_with_adapter, document_only, discard, defer]}
+        notes: {type: [string, 'null']}
+  reuse_matrix:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [component, source_object_ids, target_boundary, decision, rationale, risks, evidence_refs]
+      properties:
+        component: {type: string}
+        source_object_ids: {type: array, items: {type: string, pattern: '^GCO-[0-9]{3,}$'}}
+        target_boundary: {type: string, enum: [gravity_core, client_pack, adapter, docs, discard, unknown]}
+        decision: {type: string, enum: [reuse, adapt, rewrite, discard, defer]}
+        rationale: {type: string}
+        risks: {type: array, items: {type: string}}
+        evidence_refs: {type: array, items: {type: string}}
+  pack_assumptions:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, pack, assumption, source_refs, leakage_risk, migration_action]
+      properties:
+        id: {type: string, pattern: '^GPA-[0-9]{3,}$'}
+        pack: {type: string}
+        assumption: {type: string}
+        source_refs: {type: array, items: {type: string}}
+        leakage_risk: {type: string, enum: [low, medium, high, blocked]}
+        migration_action: {type: string}
+  contracts:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [name, type, status, target_path, owner, evidence_refs]
+      properties:
+        name: {type: string}
+        type: {type: string, enum: [schema, api, mcp_tool, file_contract, pack_interface, readiness_check, test, other]}
+        status: {type: string, enum: [existing, planned, draft, blocked, superseded]}
+        target_path: {type: [string, 'null']}
+        owner: {type: string}
+        evidence_refs: {type: array, items: {type: string}}
+  migration_risks:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, severity, statement, mitigation, owner, blocking]
+      properties:
+        id: {type: string, pattern: '^GMR-[0-9]{3,}$'}
+        severity: {type: string, enum: [info, warn, fail, blocked]}
+        statement: {type: string}
+        mitigation: {type: string}
+        owner: {type: string}
+        blocking: {type: boolean}
+  pilot:
+    type: object
+    additionalProperties: false
+    required: [story, scope, entry_criteria, exit_criteria, human_test_steps, evidence_refs]
+    properties:
+      story: {type: string}
+      scope: {type: array, items: {type: string}}
+      entry_criteria: {type: array, items: {type: string}}
+      exit_criteria: {type: array, items: {type: string}}
+      human_test_steps: {type: array, items: {type: string}}
+      evidence_refs: {type: array, items: {type: string}}
+  readiness_updates:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [check_id, status, update, evidence_refs]
+      properties:
+        check_id: {type: string}
+        status: {type: string, enum: [pass, fail, blocked, pending]}
+        update: {type: string}
+        evidence_refs: {type: array, items: {type: string}}
+  handoff:
+    type: object
+    additionalProperties: false
+    required: [next_skill, next_mode, reason]
+    properties:
+      next_skill: {type: string}
+      next_mode: {type: string}
+      reason: {type: string}
+  approval:
+    type: object
+    additionalProperties: false
+    required: [status, approvers, approved_at]
+    properties:
+      status: {type: string, enum: [pending, approved, rejected]}
+      approvers: {type: array, items: {type: string}}
+      approved_at: {type: [string, 'null']}

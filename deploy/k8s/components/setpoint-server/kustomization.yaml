@@ -1,0 +1,16 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+# Kustomize COMPONENT: the verdify-setpoint-server workload (#118). Referenced
+# ONLY by overlays/prod via `components:` — NOT a base resource, so it never
+# renders into any future base overlay. It is a DEVICE-AFFECTING
+# grow-light writer, so it is PROD-ONLY (same posture that keeps the device-write
+# path single + prod-scoped). See setpoint-server.yaml header for the full
+# rationale + the §A1 code-change gate. The image
+# (ghcr.io/verdifyconsultancy/verdify-setpoint-server) is pinned to a @sha256
+# digest by the consuming overlay's images: transformer.
+resources:
+  - setpoint-server.yaml
+  # #312: DB-ingress allow for the setpoint-server (base allow-db-from-app
+  # omits it; default-deny otherwise wedges its wait-for-db init forever).
+  - allow-db-from-setpoint.yaml

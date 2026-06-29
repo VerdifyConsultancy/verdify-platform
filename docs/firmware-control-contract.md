@@ -28,6 +28,30 @@ equal to the canonical planner-policy surface. Non-policy rows are visible
 context only; they are not planner write targets. Safety rails and operator/fallback
 values remain outside planner control.
 
+## Crop-agnostic boundary
+
+The shipped firmware (`firmware/lib/*.h`, `firmware/greenhouse/*.yaml`) knows
+sensors, relays, thresholds, setpoints, and numeric bands **as numbers only** —
+never crops. The sole crop knowledge on-chip is the served band, expressed as four
+plain floats (`BandAnchors{sr,sm,ss,mid}`, `greenhouse_solar.h`). Crop strategy is
+isolated **above** firmware: `band_defaults.yaml` (zone→crop map) → DB
+`crop_band_anchors` → dispatcher anchor-sync → NVS anchors. The guard
+`tests/test_firmware_crop_agnostic_guard.py` fails CI if any crop name appears in
+non-comment firmware code/config. (L2 #344 AC5.)
+
+## Disconnected / standalone operation (72 hours)
+
+Firmware is **offline-first**: it computes the solar ephemeris on-chip and
+reconstructs the band from NVS anchors, so the full diurnal program and every
+safety rail keep enforcing for **≥72 hours with zero network**. A dispatcher
+anchor-sync is an *update*, not a control-loop dependency; with no time source at
+all it degrades to a fixed-day fallback phase rather than mis-gating. Full
+mechanism, degradation list, and the offline-determinism tests are in
+`docs/firmware-fsm-spec.md` §9. (L2 #344 AC3.)
+
+> The authoritative FSM / relay-transition / safety-rail / bands-and-hysteresis /
+> compliance specification is **`docs/firmware-fsm-spec.md`**.
+
 ## Ownership Classes
 
 | Class | Examples | Planner access |

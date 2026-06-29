@@ -1,0 +1,41 @@
+# Verdify ingestor — FULL container image dependency closure (k3s image).
+#
+# NOTE: this is intentionally SEPARATE from ingestor/requirements.txt, which is
+# a minimal host-venv hint (aioesphomeapi/asyncpg/python-dotenv only) and is
+# INCOMPLETE for a from-scratch image. The container has no shared /srv venv to
+# fall back on, so every module imported at load time must be installable here.
+#
+# Import-closure reconstructed from the live process (ingestor.py -> tasks.py ->
+# iris_planner / planner_routing / slack_ops, verified against the live
+# /srv/greenhouse/.venv on python3.13):
+#
+#   ingestor.py            : aioesphomeapi, asyncpg, paho.mqtt, dotenv, pydantic, httpx (urllib stdlib)
+#   tasks.py  (top-level)  : astral, jinja2, pyyaml  + iris_planner/planner_routing
+#   iris_planner.py (lazy) : anthropic, openai, google-genai  (called by the planner path)
+#   slack_config.py        : pyyaml
+#
+# paho-mqtt is NOT in pyproject.toml nor ingestor/requirements.txt today — it
+# lives ambiently in the shared venv. Declaring it here is REQUIRED or the
+# container crashes at `import paho.mqtt.client`.
+#
+# Floors track pyproject.toml [project] + [project.optional-dependencies].planner;
+# upper bounds match the majors in the live venv so image==live-runtime holds.
+
+# --- base (pyproject [project]) ---
+aioesphomeapi>=24.0,<45
+asyncpg>=0.29,<1
+python-dotenv>=1.0,<2
+pyyaml>=6.0,<7
+jinja2>=3.1,<4
+httpx>=0.27,<1
+pydantic>=2.8,<3
+
+# --- net-new vs pyproject: ambient-in-venv runtime deps the closure needs ---
+paho-mqtt>=1.6,<2
+astral>=3.2,<4
+
+# --- planner extra (pyproject [project.optional-dependencies].planner) ---
+# Pulled in transitively because tasks.py imports iris_planner at module load.
+anthropic>=0.90,<1
+google-genai>=0.5,<2
+openai>=1.50,<3

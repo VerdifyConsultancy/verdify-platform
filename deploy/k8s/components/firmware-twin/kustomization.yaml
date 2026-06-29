@@ -1,0 +1,40 @@
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+
+# Kustomize COMPONENT: firmware digital-twin PROD-SHADOW (#34 / #255 / FW-OPT-6).
+#
+# Stands up the merged-but-not-deployed twin as a read-only / INSERT-only shadow
+# (see twin-shadow-deployment.yaml for the four-layer safety model and the #31
+# divergence-trust gate). The old verdify-dev safe-shadow environment is
+# retired; any future prod shadow needs migration 155 on the prod DB + a prod
+# twin login user — GATED on Jason (live-prod schema change).
+#
+# The source ConfigMap carries the exact firmware sources the rule-8 replay gate
+# compiles (greenhouse_logic.h / greenhouse_types.h / replay_emit.cpp) plus the
+# offline driver; the corpus ConfigMap carries a trimmed replay sample. Both
+# stay well under the 1MiB ConfigMap limit. The verdify-twin-secrets Secret
+# (TWIN_DSN_BASE + TWIN_DB_PASSWORD for the INSERT-only twin login user) is
+# provisioned out-of-band (never in a manifest/migration), exactly like the
+# grafana-admin / obs by-name secrets.
+resources:
+  - twin-shadow-deployment.yaml
+
+configMapGenerator:
+  # src/ holds COPIES of the canonical firmware sources (kustomize's
+  # LoadRestrictionsRootOnly forbids referencing files outside this dir, and
+  # ArgoCD runs with that restrictor). They MUST stay identical to
+  # firmware/lib/{greenhouse_logic,greenhouse_types}.h, firmware/test/
+  # replay_emit.cpp and twin/offline_driver.py — tests/test_19_firmware_twin_
+  # shadow_src_sync.py enforces byte-identity so a drift fails CI.
+  - name: verdify-twin-src
+    files:
+      - src/greenhouse_logic.h
+      - src/greenhouse_types.h
+      - src/replay_emit.cpp
+      - src/offline_driver.py
+  - name: verdify-twin-corpus
+    files:
+      - corpus/replay_sample.csv
+
+generatorOptions:
+  disableNameSuffixHash: true

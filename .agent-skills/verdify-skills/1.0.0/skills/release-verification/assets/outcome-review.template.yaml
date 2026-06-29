@@ -1,0 +1,15 @@
+schema_ref: outcome-review.schema.yaml
+kind: OutcomeReview
+schema_version: "1.0"
+sprint_id: replace-me
+decision: incomplete
+reviewed_at: ""
+reviewer: ""
+intended_outcome: ""
+delivered_outcomes: []
+evidence_links: []
+incomplete_items: []
+residual_risks: []
+follow_up_issues: []
+lessons_learned: []
+rationale: ""

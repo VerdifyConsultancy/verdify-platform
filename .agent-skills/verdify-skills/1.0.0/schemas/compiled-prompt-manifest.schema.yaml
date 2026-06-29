@@ -1,0 +1,31 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://verdify.example/schemas/compiled-prompt-manifest.schema.yaml
+title: Verdify Compiled Prompt Manifest
+type: object
+additionalProperties: false
+required: [schema_ref, kind, schema_version, generated_at, role, sprint_id, lane_id, output, inputs, sha256]
+properties:
+  schema_ref: {const: compiled-prompt-manifest.schema.yaml}
+  kind: {const: CompiledPromptManifest}
+  schema_version: {const: "1.0"}
+  generated_at: {type: string, minLength: 1}
+  role: {type: string, enum: [worker, critic]}
+  sprint_id: {type: string, minLength: 1}
+  lane_id: {type: string, minLength: 1}
+  output: {type: string, minLength: 1}
+  inputs:
+    type: object
+    additionalProperties: false
+    required: [common_operating_contract, role_skill, lane_contract]
+    properties:
+      common_operating_contract: {type: string, minLength: 1}
+      role_skill: {type: string, minLength: 1}
+      lane_contract: {type: string, minLength: 1}
+  sha256:
+    type: object
+    additionalProperties: false
+    required: [common_operating_contract, role_skill, lane_contract]
+    properties:
+      common_operating_contract: {type: string, pattern: '^[0-9a-f]{64}$'}
+      role_skill: {type: string, pattern: '^[0-9a-f]{64}$'}
+      lane_contract: {type: string, pattern: '^[0-9a-f]{64}$'}

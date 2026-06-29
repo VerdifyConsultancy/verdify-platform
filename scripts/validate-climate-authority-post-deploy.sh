@@ -8,7 +8,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PYTHON_BIN="${PYTHON:-/srv/greenhouse/.venv/bin/python}"
+PYTHON_BIN="${PYTHON:-python3}"
 API_HEALTH_URL="${API_HEALTH_URL:-http://127.0.0.1:8300/health}"
 
 cd "$REPO_ROOT"

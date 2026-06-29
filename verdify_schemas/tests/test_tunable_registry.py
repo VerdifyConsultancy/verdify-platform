@@ -86,8 +86,12 @@ def greenhouse_yaml() -> str:
 
 @pytest.fixture(scope="module")
 def tasks_py() -> str:
-    path = REPO_ROOT / "ingestor" / "tasks.py"
-    return path.read_text()
+    # Issue #46 split ingestor/tasks.py into the ingestor/tasks/ package; read
+    # the whole package so the source-string drift guards still match.
+    pkg = REPO_ROOT / "ingestor" / "tasks"
+    if pkg.is_dir():
+        return "\n".join(p.read_text() for p in sorted(pkg.glob("*.py")))
+    return (REPO_ROOT / "ingestor" / "tasks.py").read_text()
 
 
 @pytest.fixture(scope="module")
@@ -330,9 +334,7 @@ class TestDriftGuard:
             "direct_wet_stress_vpd_margin_kpa",
             "direct_wet_stress_min_dew_margin_f",
             "direct_wet_stress_latest_hour",
-            "sw_fog_stress_window_extend_enabled",
-            "fog_stress_window_latest_hour",
-            "fog_stress_min_dew_margin_f",
+            # fog_stress_* removed (BC-11/ADR0003 §6.7): retired dead registry rows.
         ):
             assert param in TIER1_REG
             assert param in PLANNER_PUSHABLE_REG
@@ -432,9 +434,16 @@ class TestActivityDirectWetGuards:
             "direct_wet_center_drydown_before_off_min",
             "direct_wet_stress_override",
             "wet_dew_margin_f",
-            # Dew-margin gate is now expressed as the explicit comparison that
-            # forbids stress wetting when the dew-point margin is too tight.
-            "wet_dew_margin_f >= id(direct_wet_stress_min_dew_margin_f)",
+            # firmware-v2 (firmware/v2-solar-bands) refactored the inline
+            # positive dew-margin gate (`wet_dew_margin_f >= id(...)`) into the
+            # header's single-source wet-assist gate. The dew-margin rule is now
+            # expressed as the explicit block-reason comparison plus the
+            # solar-band wet-taper / stress-override gate, all funnelled through
+            # climate_wet_assist_permitted(). These needles track the CURRENT
+            # gate, not the pre-refactor inline comparison.
+            "climate_wet_assist_permitted(sensor_in, setpts)",
+            "wet_dew_margin_f < id(direct_wet_stress_min_dew_margin_f)",
+            "past_wet_taper(sensor_in, setpts) && !stress_wet_override_permitted(sensor_in, setpts)",
         ]
         missing = [needle for needle in required if needle not in controls_yaml]
         assert not missing, f"Mister direct-wet gate coverage missing: {missing}"
@@ -538,3 +547,101 @@ class TestActivityDirectWetGuards:
         assert "DIRECT_WET_REQUIRED_OBJECT_IDS" in tasks_py
         assert "direct_wet_supported" in tasks_py
         assert "_activity_policy_values" in api_main_py
+
+
+# L4 #346 AC4 — the AI planner CANNOT control deterministic target curves, hard
+# safety rails, or FSM logic. The existing TestDriftGuard spot-checks one of each
+# (temp_low / safety_min); this class closes the assertion hole by pinning the
+# WHOLE locked-out surface (all 52 band-curve anchors, the full crop-band set, the
+# safety rails, the FSM switch) AND proves set_plan enforces it at the write path
+# (drops band-owned params before the setpoint_plan INSERT, rejects any non-policy
+# param, force-rewrites the FSM switch on). See docs/adr/0002 §5.
+# band-CURVE anchors are band_<series>_<sr|sm|ss|mid> (the 24 four-anchor harmonic
+# control points) + the per-zone vpd/priority cuts. band_track_fraction is NOT an
+# anchor; ADR-0004 keeps it as the planner-writable float-flip lever, but the only
+# valid planner value is 0 so the planner cannot reintroduce target hugging.
+_BAND_CURVE_ANCHOR_RE = re.compile(r"^(?:band_\w+_(?:sr|sm|ss|mid)|zone_vpd_target_|zone_vpd_width_|zone_priority_)")
+
+
+class TestPlannerWriteContractLockout:
+    def test_band_track_fraction_is_planner_float_only(self) -> None:
+        """ADR-0004: planner may set the reversible float flip to 0, but not
+        re-tighten the control band toward the target line."""
+        row = REGISTRY["band_track_fraction"]
+        assert row.planner_pushable
+        assert row.default == 0.0
+        assert row.min == 0.0
+        assert row.max == 0.0
+        assert registry_value_error("band_track_fraction", 0.0) is None
+        err = registry_value_error("band_track_fraction", 0.25)
+        assert err is not None
+        assert "nearest_safe=0" in err
+
+    def test_all_band_curve_anchors_non_pushable_crop_band(self) -> None:
+        """Every band-CURVE anchor (band_*_{sr,sm,ss,mid}, zone_vpd_*, zone_priority_*)
+        is deterministic crop-band geometry the firmware/curve owns — never a planner
+        lever. Closes the 52-anchor hole the temp_low spot-check left open."""
+        from verdify_schemas.tunable_registry import BAND_OWNED_REG, CROP_BAND_REG
+
+        anchors = sorted(n for n in REGISTRY if _BAND_CURVE_ANCHOR_RE.match(n))
+        assert len(anchors) >= 52, f"expected >=52 band-curve anchors, found {len(anchors)}"
+        offenders = [
+            n
+            for n in anchors
+            if REGISTRY[n].planner_pushable
+            or REGISTRY[n].control_class != "crop_band"
+            or n not in CROP_BAND_REG
+            or n not in BAND_OWNED_REG
+            or n in PLANNER_PUSHABLE_REG
+        ]
+        assert not offenders, f"band-curve anchors leaked into the planner-writable surface: {offenders}"
+
+    def test_entire_crop_band_surface_locked_out(self) -> None:
+        """No crop-band target (the daytime band + per-zone cuts included) may be
+        planner-pushable; the served band is curve/firmware-owned."""
+        from verdify_schemas.tunable_registry import CROP_BAND_REG
+
+        leaked = sorted(n for n in CROP_BAND_REG if REGISTRY[n].planner_pushable or n in PLANNER_PUSHABLE_REG)
+        assert not leaked, f"crop-band params leaked into PLANNER_PUSHABLE_REG: {leaked}"
+
+    def test_hard_safety_rails_locked_out(self) -> None:
+        """The hard rails (push_owner='safety') and the whole controller_safety
+        class are non-pushable and absent from the planner-writable surface."""
+        rails = sorted(n for n, d in REGISTRY.items() if d.push_owner == "safety")
+        assert {"safety_min", "safety_max", "safety_vpd_min", "safety_vpd_max"} <= set(rails)
+        for n in rails:
+            assert not REGISTRY[n].planner_pushable
+            assert REGISTRY[n].control_class == "controller_safety"
+            assert n not in PLANNER_PUSHABLE_REG
+        safety_class = [n for n, d in REGISTRY.items() if d.control_class == "controller_safety"]
+        leaked = [n for n in safety_class if n in PLANNER_PUSHABLE_REG]
+        assert not leaked, f"controller_safety params leaked into PLANNER_PUSHABLE_REG: {leaked}"
+
+    def test_fsm_controller_switch_locked_out(self) -> None:
+        """The FSM master switch is non-pushable and force-rewritten ON by set_plan,
+        so the planner can never disable the deterministic controller."""
+        row = REGISTRY["sw_fsm_controller_enabled"]
+        assert not row.planner_pushable
+        assert "sw_fsm_controller_enabled" not in PLANNER_PUSHABLE_REG
+        mcp_text = (REPO_ROOT / "mcp" / "server.py").read_text()
+        assert 'FORCED_ON_SWITCH_PARAMS = frozenset({"sw_fsm_controller_enabled"})' in mcp_text
+
+    def test_set_plan_drops_band_owned_before_insert_and_rejects_non_policy(self) -> None:
+        """set_plan's write path enforces the contract: band-owned params are
+        dropped (band_params_dropped) BEFORE the setpoint_plan INSERT, any param
+        outside BAND_OWNED∪PLANNER_PUSHABLE rejects the whole plan, and the FSM
+        switch is force-rewritten on."""
+        text = (REPO_ROOT / "mcp" / "server.py").read_text()
+        # Non-policy rejection keyed on the registry sets.
+        assert "param not in BAND_OWNED_PARAMS and param not in PLANNER_PUSHABLE_REG" in text
+        assert '"non_policy_params"' in text
+        # Band-owned drop happens inside the waypoint loop, before the INSERT.
+        drop_at = text.index("if param in BAND_OWNED_PARAMS:")
+        dropped_counter_at = text.index("band_params_dropped += 1", drop_at)
+        insert_at = text.index("INSERT INTO setpoint_plan", drop_at)
+        assert drop_at < dropped_counter_at < insert_at, (
+            "band-owned params must be dropped before the setpoint_plan INSERT"
+        )
+        # FSM switch force-on rewrite.
+        assert "if param in FORCED_ON_SWITCH_PARAMS and float(value) < 0.5:" in text
+        assert "value = 1.0" in text

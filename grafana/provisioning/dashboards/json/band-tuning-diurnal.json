@@ -1,0 +1,416 @@
+{
+  "uid": "band-tuning-diurnal",
+  "title": "Band Tuning \u2014 Diurnal Adjustment",
+  "editable": true,
+  "schemaVersion": 39,
+  "timezone": "America/Denver",
+  "style": "light",
+  "tags": [
+    "greenhouse",
+    "bands",
+    "tuning",
+    "agronomy"
+  ],
+  "annotations": {
+    "list": []
+  },
+  "links": [],
+  "templating": {
+    "list": [
+      {
+        "name": "crop",
+        "label": "Crop",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "verdify-tsdb"
+        },
+        "query": "SELECT DISTINCT crop_type FROM crop_target_profiles ORDER BY 1",
+        "current": {
+          "text": "orchid",
+          "value": "orchid"
+        },
+        "refresh": 1,
+        "includeAll": false
+      },
+      {
+        "name": "season",
+        "label": "Season",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "verdify-tsdb"
+        },
+        "query": "SELECT DISTINCT season FROM crop_target_profiles ORDER BY 1",
+        "current": {
+          "text": "spring",
+          "value": "spring"
+        },
+        "refresh": 1,
+        "includeAll": false
+      }
+    ]
+  },
+  "time": {
+    "from": "now/d",
+    "to": "now/d+1d"
+  },
+  "panels": [
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "verdify-tsdb"
+      },
+      "description": "Diurnal temperature band (temp_ideal_min/max) per hour for $crop / $season. The orchid 'time-of-day' swing is this curve. Authored in crop_target_profiles; resolved to setpoints by fn_band_setpoints.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "axisPlacement": "auto"
+          },
+          "unit": "fahrenheit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "type": "timeseries",
+      "title": "Temperature ideal band across the day (\u00b0F)",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "verdify-tsdb"
+          },
+          "format": "time_series",
+          "rawSql": "SELECT timestamp '2026-01-01 00:00:00' + (hour_of_day * interval '1 hour') AS time, temp_ideal_min AS \"temp_lo\", temp_ideal_max AS \"temp_hi\" FROM crop_target_profiles WHERE crop_type = '$crop' AND season = '$season' ORDER BY hour_of_day",
+          "refId": "temp"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "min",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "verdify-tsdb"
+      },
+      "description": "Diurnal VPD band (vpd_ideal_min/max) per hour for $crop / $season. Align the VPD shoulders with the temperature shoulders above for a coherent band.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "axisPlacement": "auto"
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 2,
+      "type": "timeseries",
+      "title": "VPD ideal band across the day (kPa)",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "verdify-tsdb"
+          },
+          "format": "time_series",
+          "rawSql": "SELECT timestamp '2026-01-01 00:00:00' + (hour_of_day * interval '1 hour') AS time, vpd_ideal_min AS \"vpd_lo\", vpd_ideal_max AS \"vpd_hi\" FROM crop_target_profiles WHERE crop_type = '$crop' AND season = '$season' ORDER BY hour_of_day",
+          "refId": "vpd"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "min",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "verdify-tsdb"
+      },
+      "description": "temp_ideal_max - temp_ideal_min per hour. Width < ~6\u00b0F (red threshold) risks unachievable-compliance churn. Watch where the band is too tight to hold.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "axisPlacement": "auto"
+          },
+          "unit": "fahrenheit"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "temp_width"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "green",
+                      "value": 6
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.thresholdsStyle",
+                "value": {
+                  "mode": "line"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
+      "id": 3,
+      "type": "timeseries",
+      "title": "Temperature band WIDTH across the day (\u00b0F)",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "verdify-tsdb"
+          },
+          "format": "time_series",
+          "rawSql": "SELECT timestamp '2026-01-01 00:00:00' + (hour_of_day * interval '1 hour') AS time, (temp_ideal_max - temp_ideal_min) AS \"temp_width\" FROM crop_target_profiles WHERE crop_type = '$crop' AND season = '$season' ORDER BY hour_of_day",
+          "refId": "tw"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "min",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "verdify-tsdb"
+      },
+      "description": "vpd_ideal_max - vpd_ideal_min per hour. Width < ~0.30 kPa (red threshold) risks churn.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "showPoints": "never",
+            "spanNulls": true,
+            "axisPlacement": "auto"
+          },
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "vpd_width"
+            },
+            "properties": [
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "green",
+                      "value": 0.3
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.thresholdsStyle",
+                "value": {
+                  "mode": "line"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "id": 4,
+      "type": "timeseries",
+      "title": "VPD band WIDTH across the day (kPa)",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "verdify-tsdb"
+          },
+          "format": "time_series",
+          "rawSql": "SELECT timestamp '2026-01-01 00:00:00' + (hour_of_day * interval '1 hour') AS time, (vpd_ideal_max - vpd_ideal_min) AS \"vpd_width\" FROM crop_target_profiles WHERE crop_type = '$crop' AND season = '$season' ORDER BY hour_of_day",
+          "refId": "vw"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "min",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "verdify-tsdb"
+      },
+      "description": "What fn_band_setpoints actually resolves hour-by-hour for the next 24h \u2014 the SERVED band = intersection (MAX(min)/MIN(max)) across ALL active crops, smooth-interpolated. If this differs from the $crop curve above, another active crop is the binding constraint that hour.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "fillOpacity": 8,
+            "showPoints": "never",
+            "spanNulls": true
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 17
+      },
+      "id": 5,
+      "type": "timeseries",
+      "title": "Resolved SERVED setpoints fn_band_setpoints() \u2014 next 24h (all active crops)",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "verdify-tsdb"
+          },
+          "format": "time_series",
+          "rawSql": "SELECT g.h AS time, b.temp_low, b.temp_high, b.vpd_low, b.vpd_high FROM generate_series(date_trunc('day', now()), date_trunc('day', now()) + interval '23 hours', interval '1 hour') AS g(h), LATERAL fn_band_setpoints(g.h) AS b ORDER BY g.h",
+          "refId": "served"
+        }
+      ],
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "bottom",
+          "calcs": [
+            "min",
+            "max"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      }
+    }
+  ]
+}

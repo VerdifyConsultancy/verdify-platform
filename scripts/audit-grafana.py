@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """Audit live Grafana dashboards and panels.
 
 The audit uses live Grafana as the source of truth, because provisioned JSON can

@@ -1,0 +1,62 @@
+# Tier-1 forwarder — on the SHARED apps Traefik (traefik-apps, .7.10 VIP).
+#
+# This is the D7 replacement for the network-infra `verdify-sites` IngressRoute
+# whose backend today points at the .150 VM (verdify-iris-dot150 ExternalName).
+# Instead of fanning out to per-host VM backends, the apps Traefik forwards ALL
+# *.verdify.ai product hosts to the in-cluster tier-2 verdify-traefik Service,
+# which owns the verdify routing table (verdify-traefik-routes.yaml).
+#
+#   CF tunnel (vallery-edge) -> apps Traefik (.7.10, entryPoints web/websecure)
+#       -> THIS route -> verdify-traefik.verdify-prod ClusterIP :80
+#       -> tier-2 routes -> www/lab/api/mcp ClusterIP services
+#
+# WHY this lives on the apps Traefik even though it routes to verdify-prod:
+#   the apps Traefik runs with --providers.kubernetescrd.allowCrossNamespace=true
+#   (verified live 2026-06-07), so an IngressRoute in verdify-prod may reference the
+#   verdify-traefik Service in verdify-prod and be served on the .7.10 entryPoints.
+#   It uses entryPoints web/websecure (which the apps Traefik defines and the tier-2
+#   Traefik does NOT), so ONLY the apps Traefik claims this route.
+#
+# HOST SET: a catch-all HostRegexp for product subdomains, EXCEPT the hosts that
+# have their own non-verdify-prod backends or are deliberately off-edge
+# (www/auth/analytics/logs/botauth/mqtt/traefik) plus crm.verdify.ai, which is
+# reserved for the separate Verdify CRM/Twenty rollout. Apex and www are owned
+# by the standalone VerdifyConsultancy/verdify-www repo.
+#
+# CUTOVER ORDER (so there is never a double-claim of verdify.ai on the apps Traefik):
+#   This route and the network-infra `verdify-sites` route both match verdify.ai on
+#   the same apps Traefik. They MUST NOT be live simultaneously. The controlled flip
+#   (laptop-root-performed): apply tier-2 + this route with the network-infra route
+#   STILL pointing at .150 is UNSAFE (two routers, same Host, lower-priority race).
+#   => This tier-1 route is applied as the ATOMIC swap for the network-infra
+#      verdify-sites route: delete/retire verdify-sites in network-infra in the same
+#      step. Until then this file is the reviewable target shape (see PR notes).
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: verdify-tier1-forward
+  namespace: verdify-prod
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: edge-forward
+spec:
+  entryPoints:
+    - websecure
+    - web
+  routes:
+    - kind: Rule
+      match: >-
+        HostRegexp(`^[a-z0-9-]+\.verdify\.ai$`)
+        && !Host(`www.verdify.ai`)
+        && !Host(`auth.verdify.ai`)
+        && !Host(`analytics.verdify.ai`)
+        && !Host(`logs.verdify.ai`)
+        && !Host(`botauth.verdify.ai`)
+        && !Host(`crm.verdify.ai`)
+        && !Host(`mqtt.verdify.ai`)
+        && !Host(`traefik.verdify.ai`)
+      priority: 50
+      services:
+        - name: verdify-traefik
+          port: 80
+  tls: {}

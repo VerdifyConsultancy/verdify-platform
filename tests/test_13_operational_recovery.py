@@ -27,17 +27,29 @@ if INGESTOR_PATH not in sys.path:
     sys.path.insert(0, INGESTOR_PATH)
 
 
+def _tasks_src() -> str:
+    """Full source of the tasks implementation.
+
+    Issue #46 split ingestor/tasks.py into the ingestor/tasks/ package; read the
+    whole package so the source-string invariants still hold.
+    """
+    pkg = Path(INGESTOR_PATH, "tasks")
+    if pkg.is_dir():
+        return "\n".join(p.read_text() for p in sorted(pkg.glob("*.py")))
+    return Path(INGESTOR_PATH, "tasks.py").read_text()
+
+
 def test_tasks_does_not_import_ingestor_entrypoint_for_push():
     """Importing ingestor.py from tasks.py creates split module state under
     systemd because the service entrypoint is __main__."""
-    src = Path(INGESTOR_PATH, "tasks.py").read_text()
+    src = _tasks_src()
     assert "from ingestor import push_to_esp32" not in src
     assert "from esp32_push import push_to_esp32" in src
 
 
 def test_service_modules_use_repo_relative_schema_path():
-    for filename in ("ingestor.py", "tasks.py"):
-        src = Path(INGESTOR_PATH, filename).read_text()
+    sources = (Path(INGESTOR_PATH, "ingestor.py").read_text(), _tasks_src())
+    for src in sources:
         assert 'sys.path.insert(0, "/mnt/iris/verdify")' not in src
         assert "Path(__file__).resolve().parent.parent" in src
 
@@ -49,6 +61,98 @@ def test_gap_tracking_uses_disconnect_timestamp():
     assert "last_connected_at" not in src
 
 
+def test_climate_db_failures_spool_before_retry():
+    src = Path(INGESTOR_PATH, "ingestor.py").read_text()
+    assert "CLIMATE_SPOOL_PATH" in src
+    assert 'STATE_DIR / "spool" / "climate.jsonl"' in src
+    assert "_spool_climate_row(row)" in src
+    assert "await _drain_climate_spool(pool)" in src
+
+
+def test_prod_db_watchdog_is_narrowly_scoped():
+    src = Path("deploy/k8s/overlays/prod/db-watchdog.yaml").read_text()
+    assert "name: verdify-db-watchdog" in src
+    assert 'resourceNames: ["verdify-db-0"]' in src
+    assert 'resourceNames: ["verdify-db"]' in src
+    assert 'verbs: ["get", "delete"]' in src
+    assert 'api("DELETE", f"/pods/{pod_name}")' in src
+    assert "CrashLoopBackOff" in src
+    assert "I/O error|could not open configuration file" in src
+
+
+def test_ha_gap_backfill_script_is_bounded_and_idempotent():
+    src = Path("deploy/k8s/components/ha-gap-backfill/backfill-ha-gaps.py").read_text()
+    assert 'parser.add_argument("--apply"' in src
+    assert "--since-earliest-ha" in src
+    assert "--full-scan" in src
+    assert "pg_try_advisory_lock(hashtext($1))" in src
+    assert "has_table_privilege(current_user" in src
+    assert "SetpointSnapshot.model_validate" in src
+    assert "EquipmentStateEvent(" in src
+    assert "SystemStateRow(" in src
+    assert "INSERT INTO climate_action_log" not in src
+
+
+def test_prod_ha_gap_backfill_cronjob_mounts_script_and_ha_token():
+    prod = Path("deploy/k8s/overlays/prod/kustomization.yaml").read_text()
+    component = Path("deploy/k8s/components/ha-gap-backfill/kustomization.yaml").read_text()
+    cron = Path("deploy/k8s/components/ha-gap-backfill/ha-gap-backfill-cronjob.yaml").read_text()
+    wrapper = Path("scripts/backfill-ha-gaps.py").read_text()
+
+    assert "../../components/ha-gap-backfill" in prod
+    assert "configMapGenerator:" in component
+    assert "backfill-ha-gaps.py" in component
+    assert "name: verdify-ha-gap-backfill" in cron
+    assert 'schedule: "23 * * * *"' in cron
+    assert "concurrencyPolicy: Forbid" in cron
+    assert "image: ghcr.io/verdifyconsultancy/verdify-ingestor" in cron
+    assert "verdify-ha-gap-backfill-script" in cron
+    assert "secretName: verdify-ha-token" in cron
+    assert "POSTGRES_PASSWORD" in cron
+    assert "--lookback-days=30" in cron
+    assert "--max-gap-minutes=10" in cron
+    assert "name: allow-db-from-ha-gap-backfill" in cron
+    assert "app.kubernetes.io/component: ha-gap-backfill" in cron
+    assert "deploy/k8s/components/ha-gap-backfill/backfill-ha-gaps.py" in wrapper
+
+
+def test_derived_history_reconcile_script_uses_canonical_daily_refresh():
+    src = Path("scripts/reconcile-derived-history.py").read_text()
+
+    assert "from tasks.daily import _refresh_daily_summary_for_date" in src
+    assert "await daily_refresh_func()(conn, day)" in src
+    assert 'parser.add_argument("--apply"' in src
+    assert "--all-history" in src
+    assert "--refresh-matviews" in src
+    assert "pg_try_advisory_lock(hashtext($1))" in src
+    assert "has_table_privilege(current_user" in src
+    assert "daily_zone_compliance" in src
+    assert "INSERT INTO utility_cost" in src
+    assert "mv_zone_band_grade" in src
+    assert "mv_band_curve" in src
+    assert "await tx.rollback()" in src
+    assert "UPDATE plan_journal" not in src
+    assert "INSERT INTO climate_action_log" not in src
+
+
+def test_daily_summary_refresh_skips_incomplete_compliance_rows():
+    src = Path(INGESTOR_PATH, "tasks", "daily.py").read_text()
+    guard = 'if r["temp_avg"] is None or r["vpd_avg"] is None:\n            continue'
+    assert guard in src
+    assert src.index(guard) < src.index('vpd = float(r["vpd_avg"])')
+
+
+def test_prod_ingestor_state_is_durable_pvc():
+    pvc_src = Path("deploy/k8s/overlays/prod/ingestor-state-pvc.yaml").read_text()
+    patch_src = Path("deploy/k8s/overlays/prod/ingestor-state-volume.yaml").read_text()
+    assert "kind: PersistentVolumeClaim" in pvc_src
+    assert "name: verdify-ingestor-state" in pvc_src
+    assert "storageClassName: synology-iscsi" in pvc_src
+    assert "persistentVolumeClaim:" in patch_src
+    assert "claimName: verdify-ingestor-state" in patch_src
+    assert "emptyDir: {}" not in patch_src
+
+
 def test_echo_suppression_covers_delayed_esphome_state_publish():
     src = Path(INGESTOR_PATH, "ingestor.py").read_text()
     assert "_PUSH_ECHO_SUPPRESS_S = 900" in src
@@ -56,7 +160,10 @@ def test_echo_suppression_covers_delayed_esphome_state_publish():
     assert "RT push suppressed for recently pushed" in src
 
 
-def test_esp32_push_marks_shared_recently_pushed():
+def test_esp32_push_marks_shared_recently_pushed(monkeypatch):
+    # Device-write gate (#79) is default-deny; this test exercises the actual
+    # push mechanics, so enable the interlock.
+    monkeypatch.setenv("VERDIFY_DEVICE_WRITE_ENABLED", "1")
     import esp32_push
     import shared
 
@@ -76,7 +183,9 @@ def test_esp32_push_marks_shared_recently_pushed():
     assert shared.recently_pushed_values["temp_low"] == 64.0
 
 
-def test_occupancy_push_targets_presence_state_not_inhibit_tunable():
+def test_occupancy_push_targets_presence_state_not_inhibit_tunable(monkeypatch):
+    # Device-write gate (#79) is default-deny; enable it to exercise the push.
+    monkeypatch.setenv("VERDIFY_DEVICE_WRITE_ENABLED", "1")
     import esp32_push
     import shared
     from entity_map import EQUIPMENT_SWITCH_MAP

@@ -1,0 +1,195 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://verdify.example/schemas/northstar-plan.schema.yaml
+title: Verdify North Star Plan
+type: object
+additionalProperties: false
+required: [schema_ref, kind, schema_version, project_id, status, generated_at, sources, goals, requirements, user_stories, architecture_principles, milestones, risks, adversarial_findings, open_questions, conflicts, traceability, proposed_artifact_changes, issue_recommendations, gate_recommendations, handoff, approval]
+properties:
+  schema_ref: {const: northstar-plan.schema.yaml}
+  kind: {const: NorthStarPlan}
+  schema_version: {const: "1.0"}
+  project_id: {type: string}
+  status: {type: string, enum: [draft, proposed, approved, blocked, superseded]}
+  generated_at: {type: string}
+  sources:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, type, location, summary, evidence_status]
+      properties:
+        id: {type: string, pattern: '^SRC-[0-9]{3,}$'}
+        type: {type: string}
+        location: {type: string}
+        summary: {type: string}
+        evidence_status: {type: string, enum: [verified, observed, reported, inferred, unknown]}
+  goals:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, statement, priority, source_ids, success_signals]
+      properties:
+        id: {type: string, pattern: '^NSG-[0-9]{3,}$'}
+        statement: {type: string}
+        priority: {type: string, enum: [must, should, could, defer]}
+        source_ids: {type: array, items: {type: string}}
+        success_signals: {type: array, items: {type: string}}
+  requirements:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, kind, statement, source_ids, acceptance_signals]
+      properties:
+        id: {type: string, pattern: '^NSR-[0-9]{3,}$'}
+        kind: {type: string, enum: [functional, non_functional, constraint]}
+        statement: {type: string}
+        source_ids: {type: array, items: {type: string}}
+        acceptance_signals: {type: array, items: {type: string}}
+  user_stories:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, actor, story, acceptance_signal, requirement_ids, source_ids]
+      properties:
+        id: {type: string, pattern: '^NSS-[0-9]{3,}$'}
+        actor: {type: string}
+        story: {type: string}
+        acceptance_signal: {type: string}
+        requirement_ids: {type: array, items: {type: string}}
+        source_ids: {type: array, items: {type: string}}
+  architecture_principles:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, statement, purpose, linked_goal_ids, linked_requirement_ids, source_ids]
+      properties:
+        id: {type: string, pattern: '^NSP-[0-9]{3,}$'}
+        statement: {type: string}
+        purpose: {type: string}
+        linked_goal_ids: {type: array, items: {type: string}}
+        linked_requirement_ids: {type: array, items: {type: string}}
+        source_ids: {type: array, items: {type: string}}
+  milestones:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, name, outcome, entry_criteria, exit_criteria, requirement_ids]
+      properties:
+        id: {type: string, pattern: '^NSM-[0-9]{3,}$'}
+        name: {type: string}
+        outcome: {type: string}
+        entry_criteria: {type: array, items: {type: string}}
+        exit_criteria: {type: array, items: {type: string}}
+        requirement_ids: {type: array, items: {type: string}}
+  risks:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, statement, impact, mitigation, source_ids]
+      properties:
+        id: {type: string, pattern: '^NSK-[0-9]{3,}$'}
+        statement: {type: string}
+        impact: {type: string}
+        mitigation: {type: string}
+        source_ids: {type: array, items: {type: string}}
+  adversarial_findings:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, perspective, finding, disposition, owner]
+      properties:
+        id: {type: string, pattern: '^ADV-[0-9]{3,}$'}
+        perspective: {type: string}
+        finding: {type: string}
+        disposition: {type: string, enum: [accepted, rejected, deferred, needs_research, gate_required]}
+        owner: {type: string}
+  open_questions:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, question, owner, blocking, source_ids]
+      properties:
+        id: {type: string, pattern: '^NSQ-[0-9]{3,}$'}
+        question: {type: string}
+        owner: {type: string}
+        blocking: {type: boolean}
+        source_ids: {type: array, items: {type: string}}
+  conflicts:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, statement, existing_authority, proposed_direction, blocking]
+      properties:
+        id: {type: string, pattern: '^CON-[0-9]{3,}$'}
+        statement: {type: string}
+        existing_authority: {type: string}
+        proposed_direction: {type: string}
+        blocking: {type: boolean}
+  traceability:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [from, to, relationship]
+      properties:
+        from: {type: string}
+        to: {type: string}
+        relationship: {type: string}
+  proposed_artifact_changes:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [path, change_type, summary, approval_required]
+      properties:
+        path: {type: string}
+        change_type: {type: string, enum: [create, update, delete, protect]}
+        summary: {type: string}
+        approval_required: {type: boolean}
+  issue_recommendations:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [title, repository, body_summary, labels]
+      properties:
+        title: {type: string}
+        repository: {type: string}
+        body_summary: {type: string}
+        labels: {type: array, items: {type: string}}
+  gate_recommendations:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [type, owner, reason, blocking]
+      properties:
+        type: {type: string}
+        owner: {type: string}
+        reason: {type: string}
+        blocking: {type: boolean}
+  handoff:
+    type: object
+    additionalProperties: false
+    required: [next_skill, next_mode, reason]
+    properties:
+      next_skill: {type: string}
+      next_mode: {type: string}
+      reason: {type: string}
+  approval:
+    type: object
+    additionalProperties: false
+    required: [status, approver, approved_at]
+    properties:
+      status: {type: string, enum: [pending, approved, rejected]}
+      approver: {type: [string, 'null']}
+      approved_at: {type: [string, 'null']}

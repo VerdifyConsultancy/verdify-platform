@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """
 analyze-greenhouse-snapshot.py — Analyze greenhouse camera snapshots via Gemini Vision.
 

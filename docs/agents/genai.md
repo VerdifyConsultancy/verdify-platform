@@ -52,4 +52,6 @@ Iris the planner agent, the MCP tool surface, prompt templates, plan scoring and
 - Sprint 22: API response_model, RELATIONSHIPS.md
 - Sprint 23 (in flight): MCP record_harvest/record_treatment column bug fix + `HarvestCreate`/`TreatmentCreate` input envelopes
 
-See `docs/backlog/genai.md` for next work.
+Use GitHub issues on `VerdifyConsultancy/verdify-platform` for next work; the
+old `docs/backlog/genai.md` file is archived in
+`/Users/jason/Orbit/context_dump/verdify-platform/`.

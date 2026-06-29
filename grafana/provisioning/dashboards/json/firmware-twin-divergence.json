@@ -1,0 +1,484 @@
+{
+  "id": null,
+  "uid": "firmware-twin-divergence",
+  "title": "Firmware Twin — Prod vs Reality Divergence",
+  "tags": ["greenhouse", "firmware", "twin", "divergence", "validation"],
+  "timezone": "America/Denver",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "60s",
+  "time": { "from": "now-24h", "to": "now" },
+  "fiscalYearStartMonth": 0,
+  "liveNow": false,
+  "editable": true,
+  "graphTooltip": 2,
+  "style": "light",
+  "templating": { "list": [] },
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": { "type": "grafana", "uid": "-- Grafana --" },
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "text",
+      "title": "What this board shows",
+      "gridPos": { "h": 4, "w": 24, "x": 0, "y": 0 },
+      "options": {
+        "mode": "markdown",
+        "content": "**Prod-vs-reality** is the novel firmware-twin signal: the `prod` twin (pinned to `last-good`, fed the same telemetry the ESP32 saw, **never actuating**) predicts what the deployed firmware *should* decide, and that prediction is compared against what the relays *actually did* (`equipment_state`). A sustained gap means a firmware bug, sensor/telemetry skew, or a stale/corrupted setpoint push — the class behind the 2026-04-21 MCP staleness incident. Twin-vs-twin is blind to a latent bug the twin faithfully reproduces; prod-vs-reality is not.\n\nThe twin predicts **FSM relay intent** (Tier 1), not post-dwell physical relay state, so disagreement is only trustworthy when **sustained beyond the relay min-off window** (several minutes) and after manual-override rows are suppressed. See `docs/design/firmware-digital-twin.md` §4 / §6 Phase 1. Grafana unified alerting is off — alarms are written to `alert_log` by ingestor's `alert_monitor`, not here."
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Latest prod-vs-reality relay disagreement %",
+      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 4 },
+      "datasource": { "uid": "verdify-tsdb", "type": "grafana-postgresql-datasource" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 2,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "#73BF69", "value": null },
+              { "color": "#FDD835", "value": 1 },
+              { "color": "#EF5350", "value": 5 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "graphMode": "area",
+        "colorMode": "background_solid",
+        "textMode": "value",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "verdify-tsdb", "type": "grafana-postgresql-datasource" },
+          "rawSql": "SELECT ts AS time, relay_disagree_pct AS \"Relay disagree %\" FROM firmware_twin_divergence WHERE comparison = 'prod_vs_reality' AND $__timeFilter(ts) ORDER BY ts DESC LIMIT 1",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Latest mode disagreement %",
+      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 4 },
+      "datasource": { "uid": "verdify-tsdb", "type": "grafana-postgresql-datasource" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 2,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "#73BF69", "value": null },
+              { "color": "#FDD835", "value": 1 },
+              { "color": "#EF5350", "value": 5 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "graphMode": "none",
+        "colorMode": "background_solid",
+        "textMode": "value",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "verdify-tsdb", "type": "grafana-postgresql-datasource" },
+          "rawSql": "SELECT ts AS time, mode_disagree_pct AS \"Mode disagree %\" FROM firmware_twin_divergence WHERE comparison = 'prod_vs_reality' AND $__timeFilter(ts) ORDER BY ts DESC LIMIT 1",
+          "format": "table",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Twin freshness (since last prod tick)",
+      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 4 },
+      "description": "Seconds since the prod twin last wrote a twin_decisions row. A dark twin silently disables the live gates, so this is itself a high-severity alert input.",
+      "datasource": { "uid": "verdify-tsdb", "type": "grafana-postgresql-datasource" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "decimals": 0,
+          "color": { "mode": "thresholds" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "#73BF69", "value": null },
+              { "color": "#FDD835", "value": 600 },
+              { "color": "#EF5350", "value": 1800 }
+            ]
+          }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "graphMode": "none",
+        "colorMode": "background_solid",
+        "textMode": "value_and_name",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "verdify-tsdb", "type": "grafana-postgresql-datasource" },
+          "rawSql": "SELECT now() AS time, EXTRACT(EPOCH FROM (now() - MAX(ts)))::int AS \"Twin staleness\" FROM twin_decisions WHERE twin_env = 'prod'",
+          "format": "table",
+          "refId": "C"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Pinned twin_ref (prod last-good)",
+      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 4 },
+      "datasource": { "uid": "verdify-tsdb", "type": "grafana-postgresql-datasource" },
+      "fieldConfig": {
+        "defaults": {
+          "color": { "mode": "fixed", "fixedColor": "#5794F2" }
+        }
+      },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"], "fields": "", "values": false },
+        "graphMode": "none",
+        "colorMode": "value",
+        "textMode": "value",
+        "justifyMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "verdify-tsdb", "type": "grafana-postgresql-datasource" },
+          "rawSql": "SELECT ts AS time, twin_ref AS \"twin_ref\" FROM twin_decisions WHERE twin_env = 'prod' ORDER BY ts DESC LIMIT 1",
+          "format": "table",
+          "refId": "D"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Prod-vs-reality relay disagreement % (windowed) — threshold = relay min-off window",
+      "description": "From firmware_twin_divergence (comparison='prod_vs_reality'). The threshold line at 5% is a placeholder for the relay min-off window: prod-vs-reality is only trustworthy when SUSTAINED beyond MAX(MIN_HEAT_OFF_MS, MIN_FAN_OFF_MS) (§2.2), since Tier 1 predicts FSM intent, not post-dwell relay state.",
+      "gridPos": { "h": 8, "w": 16, "x": 0, "y": 9 },
+      "datasource": { "uid": "verdify-tsdb", "type": "grafana-postgresql-datasource" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 10,
+            "pointSize": 5,
+            "showPoints": "auto",
+            "spanNulls": false,
+            "thresholdsStyle": { "mode": "line+area" }
+          },
+          "color": { "mode": "palette-classic" },
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "#FDD835", "value": 1 },
+              { "color": "red", "value": 5 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": [] },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "verdify-tsdb", "type": "grafana-postgresql-datasource" },
+          "rawSql": "SELECT $__time(ts), relay_disagree_pct AS \"Relay disagree %\", mode_disagree_pct AS \"Mode disagree %\" FROM firmware_twin_divergence WHERE comparison = 'prod_vs_reality' AND $__timeFilter(ts) ORDER BY ts",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Twin samples vs disagreements per window",
+      "description": "From firmware_twin_divergence (comparison='prod_vs_reality'). Low sample counts make the % noisy — read alongside the % panel.",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 9 },
+      "datasource": { "uid": "verdify-tsdb", "type": "grafana-postgresql-datasource" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "custom": {
+            "drawStyle": "bars",
+            "lineWidth": 1,
+            "fillOpacity": 40,
+            "spanNulls": false
+          },
+          "color": { "mode": "palette-classic" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": [] },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "verdify-tsdb", "type": "grafana-postgresql-datasource" },
+          "rawSql": "SELECT $__time(ts), samples AS \"Samples\", disagree_count AS \"Disagreements\" FROM firmware_twin_divergence WHERE comparison = 'prod_vs_reality' AND $__timeFilter(ts) ORDER BY ts",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Per-relay disagreement % (prod-vs-reality)",
+      "description": "Per-relay breakdown from firmware_twin_divergence.per_relay jsonb. Isolates 'only fog differs' (suspect fog-gate / YAML override) from 'heat differs' (plant-safety triage). Heat min-off is minutes, so brief heat divergence is expected dwell lag, not a bug.",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 17 },
+      "datasource": { "uid": "verdify-tsdb", "type": "grafana-postgresql-datasource" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 2,
+            "fillOpacity": 5,
+            "spanNulls": false
+          },
+          "color": { "mode": "palette-classic" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["lastNotNull", "max"] },
+        "tooltip": { "mode": "multi", "sort": "desc" }
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "verdify-tsdb", "type": "grafana-postgresql-datasource" },
+          "rawSql": "SELECT $__time(ts), (per_relay->>'fog')::float AS \"fog\", (per_relay->>'vent')::float AS \"vent\", (per_relay->>'fan1')::float AS \"fan1\", (per_relay->>'fan2')::float AS \"fan2\", (per_relay->>'heat1')::float AS \"heat1\", (per_relay->>'heat2')::float AS \"heat2\" FROM firmware_twin_divergence WHERE comparison = 'prod_vs_reality' AND $__timeFilter(ts) ORDER BY ts",
+          "format": "time_series",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "barchart",
+      "title": "Latest disagreement % by mode",
+      "description": "firmware_twin_divergence.by_mode jsonb on the most recent prod-vs-reality window. Disagreement concentrated in one mode (e.g. SEALED_MIST) narrows the cause class.",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 25 },
+      "datasource": { "uid": "verdify-tsdb", "type": "grafana-postgresql-datasource" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": { "mode": "continuous-GrYlRd" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "xTickLabelRotation": 0,
+        "showValue": "auto",
+        "stacking": "none",
+        "legend": { "showLegend": false }
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "verdify-tsdb", "type": "grafana-postgresql-datasource" },
+          "rawSql": "SELECT kv.key AS \"mode\", kv.value::float AS \"disagree %\" FROM (SELECT by_mode FROM firmware_twin_divergence WHERE comparison = 'prod_vs_reality' AND $__timeFilter(ts) ORDER BY ts DESC LIMIT 1) d, jsonb_each_text(d.by_mode) kv ORDER BY kv.value::float DESC",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "barchart",
+      "title": "Latest disagreement % by daypart",
+      "description": "firmware_twin_divergence.by_daypart jsonb (MDT-corrected local_hour buckets). Disagreement keyed to fog-window / night-suppression / dusk-cutoff hours points at the local-hour timezone path.",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 25 },
+      "datasource": { "uid": "verdify-tsdb", "type": "grafana-postgresql-datasource" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": { "mode": "continuous-GrYlRd" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "xTickLabelRotation": 0,
+        "showValue": "auto",
+        "stacking": "none",
+        "legend": { "showLegend": false }
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "verdify-tsdb", "type": "grafana-postgresql-datasource" },
+          "rawSql": "SELECT kv.key AS \"daypart\", kv.value::float AS \"disagree %\" FROM (SELECT by_daypart FROM firmware_twin_divergence WHERE comparison = 'prod_vs_reality' AND $__timeFilter(ts) ORDER BY ts DESC LIMIT 1) d, jsonb_each_text(d.by_daypart) kv ORDER BY kv.key",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "barchart",
+      "title": "Latest disagreement % by outdoor band",
+      "description": "firmware_twin_divergence.by_outdoor_band jsonb (<32 / 32-85 / >85 F, tied to stress-window rule 5).",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 25 },
+      "datasource": { "uid": "verdify-tsdb", "type": "grafana-postgresql-datasource" },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "color": { "mode": "continuous-GrYlRd" }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "xTickLabelRotation": 0,
+        "showValue": "auto",
+        "stacking": "none",
+        "legend": { "showLegend": false }
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "verdify-tsdb", "type": "grafana-postgresql-datasource" },
+          "rawSql": "SELECT kv.key AS \"outdoor band\", kv.value::float AS \"disagree %\" FROM (SELECT by_outdoor_band FROM firmware_twin_divergence WHERE comparison = 'prod_vs_reality' AND $__timeFilter(ts) ORDER BY ts DESC LIMIT 1) d, jsonb_each_text(d.by_outdoor_band) kv ORDER BY kv.key",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 12,
+      "type": "state-timeline",
+      "title": "Twin-predicted relay intent vs device actual — fog",
+      "description": "prod twin twin_decisions.relay_fog (predicted FSM intent) vs the device's actual fog relay from equipment_state (forward-filled to twin tick). Visual prod-vs-reality at the relay level; gaps shorter than the fog min-off window are expected dwell lag.",
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 33 },
+      "datasource": { "uid": "verdify-tsdb", "type": "grafana-postgresql-datasource" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "fillOpacity": 80, "lineWidth": 0 },
+          "color": { "mode": "thresholds" },
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "off", "color": "#5a6b7a" }, "1": { "text": "ON", "color": "#5794F2" } } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "#5a6b7a", "value": null }, { "color": "#5794F2", "value": 1 } ] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "mergeValues": true,
+        "showValue": "never",
+        "alignValue": "left",
+        "rowHeight": 0.9,
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "verdify-tsdb", "type": "grafana-postgresql-datasource" },
+          "rawSql": "SELECT $__time(ts), CASE WHEN relay_fog THEN 1 ELSE 0 END AS \"Twin predicted (fog)\" FROM twin_decisions WHERE twin_env = 'prod' AND $__timeFilter(ts) ORDER BY ts",
+          "format": "time_series",
+          "refId": "A"
+        },
+        {
+          "datasource": { "uid": "verdify-tsdb", "type": "grafana-postgresql-datasource" },
+          "rawSql": "WITH twin_ticks AS (SELECT ts FROM twin_decisions WHERE twin_env = 'prod' AND $__timeFilter(ts)) SELECT t.ts AS time, (SELECT CASE WHEN es.state THEN 1 ELSE 0 END FROM equipment_state es WHERE es.equipment = 'fog' AND es.ts <= t.ts ORDER BY es.ts DESC LIMIT 1) AS \"Device actual (fog)\" FROM twin_ticks t ORDER BY t.ts",
+          "format": "time_series",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 13,
+      "type": "state-timeline",
+      "title": "Twin-predicted relay intent vs device actual — heat1",
+      "description": "prod twin twin_decisions.relay_heat1 vs the device's actual heat1 relay from equipment_state. Heat min-off is on the order of minutes, so the twin's intent legitimately leads the device's relay by up to that window — only sustained disagreement is a signal.",
+      "gridPos": { "h": 7, "w": 24, "x": 0, "y": 40 },
+      "datasource": { "uid": "verdify-tsdb", "type": "grafana-postgresql-datasource" },
+      "fieldConfig": {
+        "defaults": {
+          "custom": { "fillOpacity": 80, "lineWidth": 0 },
+          "color": { "mode": "thresholds" },
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "off", "color": "#5a6b7a" }, "1": { "text": "ON", "color": "#FF9830" } } }
+          ],
+          "thresholds": { "mode": "absolute", "steps": [ { "color": "#5a6b7a", "value": null }, { "color": "#FF9830", "value": 1 } ] }
+        },
+        "overrides": []
+      },
+      "options": {
+        "mergeValues": true,
+        "showValue": "never",
+        "alignValue": "left",
+        "rowHeight": 0.9,
+        "legend": { "displayMode": "list", "placement": "bottom" },
+        "tooltip": { "mode": "multi", "sort": "none" }
+      },
+      "targets": [
+        {
+          "datasource": { "uid": "verdify-tsdb", "type": "grafana-postgresql-datasource" },
+          "rawSql": "SELECT $__time(ts), CASE WHEN relay_heat1 THEN 1 ELSE 0 END AS \"Twin predicted (heat1)\" FROM twin_decisions WHERE twin_env = 'prod' AND $__timeFilter(ts) ORDER BY ts",
+          "format": "time_series",
+          "refId": "A"
+        },
+        {
+          "datasource": { "uid": "verdify-tsdb", "type": "grafana-postgresql-datasource" },
+          "rawSql": "WITH twin_ticks AS (SELECT ts FROM twin_decisions WHERE twin_env = 'prod' AND $__timeFilter(ts)) SELECT t.ts AS time, (SELECT CASE WHEN es.state THEN 1 ELSE 0 END FROM equipment_state es WHERE es.equipment = 'heat1' AND es.ts <= t.ts ORDER BY es.ts DESC LIMIT 1) AS \"Device actual (heat1)\" FROM twin_ticks t ORDER BY t.ts",
+          "format": "time_series",
+          "refId": "B"
+        }
+      ]
+    },
+    {
+      "id": 14,
+      "type": "table",
+      "title": "Worst-divergence examples (latest window) — triage",
+      "description": "firmware_twin_divergence.worst_examples jsonb on the most recent prod-vs-reality window: the highest-divergence input rows for triage (input_ts, reference vs candidate relays).",
+      "gridPos": { "h": 9, "w": 24, "x": 0, "y": 47 },
+      "datasource": { "uid": "verdify-tsdb", "type": "grafana-postgresql-datasource" },
+      "fieldConfig": {
+        "defaults": { "custom": { "align": "left" } },
+        "overrides": []
+      },
+      "options": { "showHeader": true },
+      "targets": [
+        {
+          "datasource": { "uid": "verdify-tsdb", "type": "grafana-postgresql-datasource" },
+          "rawSql": "SELECT ex->>'input_ts' AS \"input_ts\", ex->>'ref' AS \"ref (predicted)\", ex->>'cmp' AS \"cmp (actual)\", ex->>'relays' AS \"diverging relays\" FROM (SELECT worst_examples FROM firmware_twin_divergence WHERE comparison = 'prod_vs_reality' AND $__timeFilter(ts) ORDER BY ts DESC LIMIT 1) d, jsonb_array_elements(d.worst_examples) ex",
+          "format": "table",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}

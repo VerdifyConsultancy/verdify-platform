@@ -1,0 +1,153 @@
+# Verdify MQTT fan-out broker (#113) — eclipse-mosquitto:2.
+#
+# This broker is the cross-env telemetry bus: prod's ingestor (publish-all mode,
+# VERDIFY_MQTT_PUBLISH_ALL=1) publishes every flushed row here; dev/stage
+# ingestors (VERDIFY_INGEST_SOURCE=mqtt-subscribe) subscribe and mirror into
+# their own per-env DB. It is SEPARATE from the HAOS/Sentinel occupancy broker.
+#
+# STORAGE: ephemeral emptyDir ONLY. The bus carries a transient telemetry stream
+# (QoS 0, retain false); persistence is intentionally OFF so there is NO PVC and
+# therefore NO dependency on the volume1 'synology-iscsi-ssd' StorageClass. A
+# broker restart loses only in-flight messages — the source of truth is prod's
+# DB, and dev/stage tolerate gaps (they are non-device, non-authoritative).
+#
+# SURFACE: ClusterIP only. The broker is reachable cross-namespace inside the
+# cluster as verdify-mqtt.<prod-ns>.svc — dev/stage subscribers point
+# FANOUT_MQTT_HOST at the prod broker's FQDN. No LoadBalancer, no IngressRoute.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: verdify-mqtt-config
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: mqtt-broker
+data:
+  mosquitto.conf: |
+    listener 1883
+    # Anonymous is acceptable on the in-cluster bus: it is ClusterIP-only and
+    # firewalled by NetworkPolicy. Real creds (FANOUT_MQTT_USER/PASS) can be
+    # layered later via a password_file mounted from a Secret without changing
+    # this manifest's shape. Telemetry-only; no device control crosses it.
+    allow_anonymous true
+    # Ephemeral: no persistence (emptyDir, no PVC, no volume1 dependency).
+    persistence false
+    log_dest stdout
+    log_type warning
+    log_type error
+    log_type notice
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-mqtt
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: mqtt-broker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: mqtt-broker
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/part-of: verdify
+        app.kubernetes.io/component: mqtt-broker
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1883
+        runAsGroup: 1883
+        fsGroup: 1883
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: mosquitto
+          image: eclipse-mosquitto:2
+          args: ["mosquitto", "-c", "/mosquitto/config/mosquitto.conf"]
+          ports:
+            - name: mqtt
+              containerPort: 1883
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "32Mi"
+            limits:
+              memory: "128Mi"
+          livenessProbe:
+            tcpSocket:
+              port: mqtt
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            tcpSocket:
+              port: mqtt
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: config
+              mountPath: /mosquitto/config
+              readOnly: true
+            - name: data
+              mountPath: /mosquitto/data
+      volumes:
+        - name: config
+          configMap:
+            name: verdify-mqtt-config
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: verdify-mqtt
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: mqtt-broker
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/component: mqtt-broker
+  ports:
+    - name: mqtt
+      port: 1883
+      targetPort: mqtt
+---
+# Ingress allow for the broker (base default-deny-ingress otherwise drops it).
+# Accepts 1883 from:
+#   - the in-namespace prod ingestor (the publisher), and
+#   - any verdify env namespace (dev/stage subscribers), matched by the
+#     app.kubernetes.io/part-of=verdify namespace label so a new subscriber env
+#     does not need a policy edit. Telemetry-only bus, ClusterIP, never ingress.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-mqtt-fanout
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: mqtt-broker
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: mqtt-broker
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        # In-namespace publisher (prod ingestor).
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/component: ingestor
+        # Cross-namespace subscribers: any verdify env namespace.
+        - namespaceSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: verdify
+      ports:
+        - protocol: TCP
+          port: 1883

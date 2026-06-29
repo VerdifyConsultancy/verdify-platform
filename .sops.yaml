@@ -1,0 +1,21 @@
+# SOPS ruleset for the Verdify repo (#66).
+#
+# Scope: SOPS-encrypted Kubernetes Secret manifests that live in-repo (the
+# digest-bump / overlay tree is in-repo per the locked Sprint-1 decisions; the
+# sealed app-secrets follow the same in-repo SOPS+age model the fleet uses for
+# the verdify-agent kubeconfig).
+#
+# RECIPIENT: the fleet age public key
+#   age1jd6c7lm7vhj56gve6dvj59mepwpukhnyyh8wyca9y7mrjfeyqs8qjvqd5k
+# The matching private key lives ONLY in the fleet secret store
+# (/mnt/agents/root/secrets/age/keys.txt, root-readable) and in the GitOps
+# secret-delivery runner. It is NEVER committed to this repo.
+#
+# encrypted_regex: encrypt ONLY the secret VALUES (data / stringData), leaving
+# apiVersion/kind/metadata/type in cleartext so kustomize + kubeconform can still
+# parse the manifest shape, and so reviewers can see WHICH keys exist without
+# seeing their values.
+creation_rules:
+  - path_regex: deploy/k8s/.*\.sops\.ya?ml$
+    encrypted_regex: "^(data|stringData)$"
+    age: age1jd6c7lm7vhj56gve6dvj59mepwpukhnyyh8wyca9y7mrjfeyqs8qjvqd5k

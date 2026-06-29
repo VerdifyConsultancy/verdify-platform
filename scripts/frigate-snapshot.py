@@ -1,4 +1,4 @@
-#!/usr/bin/env /srv/greenhouse/.venv/bin/python3
+#!/usr/bin/env python3
 """
 frigate-snapshot.py — Capture greenhouse camera snapshots from Frigate.
 
@@ -11,6 +11,7 @@ Usage:
 
 import logging
 import os
+import subprocess
 import sys
 import urllib.error
 import urllib.parse
@@ -87,10 +88,13 @@ def main():
     if success > 0 and "--no-analyze" not in sys.argv:
         log.info("Triggering crop health analysis...")
         try:
-            import subprocess
-
             result = subprocess.run(
-                ["/srv/greenhouse/.venv/bin/python3", "/srv/verdify/scripts/analyze-greenhouse-snapshot.py"],
+                [
+                    sys.executable,
+                    os.environ.get(
+                        "VERDIFY_ANALYZE_SNAPSHOT_SCRIPT", "/srv/verdify/scripts/analyze-greenhouse-snapshot.py"
+                    ),
+                ],
                 capture_output=True,
                 text=True,
                 timeout=120,

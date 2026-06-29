@@ -1,0 +1,44 @@
+schema_ref: module-contract.schema.yaml
+kind: ModuleContract
+schema_version: "1.0"
+module_id: api-adapter
+contract_version: "1.0"
+status: approved
+purpose: Expose stable HTTP surfaces for service health.
+requirement_ids: [FR-001, NFR-001]
+owned_paths: [src/api/**, tests/api/**]
+prohibited_paths: [src/storage/**, deploy/**]
+inputs:
+  - name: service_health
+    schema: ServiceHealth
+    producer: application-core
+outputs:
+  - name: health_response
+    schema: HealthResponse
+    consumers: [deployment-platform, operator]
+public_interfaces:
+  - name: GET /health
+    location: src/api/health.rb
+    compatibility: Additive response changes only within contract version 1.x.
+dependencies:
+  hard: [application-core]
+  soft: []
+invariants:
+  - The response never exposes secrets.
+  - The reported revision matches the running artifact.
+runtime_resources:
+  - HTTP port allocated through the lane lease.
+validation_commands:
+  - id: module-api-test
+    command: ruby -Itest tests/api/health_test.rb
+    purpose: Verify the public health contract.
+required_evidence:
+  - Passing API contract test at the lane head SHA.
+  - Runtime probe at the deployed SHA.
+definition_of_done:
+  - Public interface and contract tests pass.
+  - Downstream deployment probe can consume the response.
+approval:
+  status: approved
+  approver: architecture-owner
+  approved_at: "2026-06-22T10:45:00Z"

@@ -1,14 +1,37 @@
 from __future__ import annotations
 
 import json
+import os
+import re
 from pathlib import Path
 
+import yaml
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
-VAULT_ROOT = Path("/mnt/iris/verdify-vault/website")
+
+
+def _vault_root() -> Path:
+    candidates = [
+        os.environ.get("VERDIFY_SITE_VAULT"),
+        "/mnt/iris/verdify-vault/website",
+        str(Path.home() / "Iris/verdify-vault/website"),
+        "/Users/jason/Iris/verdify-vault/website",
+    ]
+    for candidate in candidates:
+        if candidate and Path(candidate).exists():
+            return Path(candidate)
+    return Path("/mnt/iris/verdify-vault/website")
+
+
+VAULT_ROOT = _vault_root()
 
 
 def _dashboard(path: str) -> dict:
     return json.loads((REPO_ROOT / path).read_text(encoding="utf-8"))
+
+
+def _site_dashboard_paths() -> list[Path]:
+    return sorted((REPO_ROOT / "grafana" / "dashboards").glob("site-*.json"))
 
 
 def _panel(dashboard: dict, panel_id: int) -> dict:
@@ -55,6 +78,67 @@ def test_overview_nav_promotes_greenhouse_evidence_pages():
     assert 'pageLink("Lighting", "greenhouse/lighting")' not in greenhouse
     assert 'pageLink("Hydroponics", "greenhouse/hydroponics")' not in greenhouse
     assert 'pageLink("Soil Sensors", "greenhouse/soil")' not in greenhouse
+
+
+def test_homepage_core_graphs_share_window_and_embed_scale():
+    homepage = (VAULT_ROOT / "index.md").read_text(encoding="utf-8")
+
+    for panel_id in (30, 31, 36):
+        match = re.search(
+            rf'<iframe[^>]+panelId={panel_id}[^>]+from=now-72h&to=now%2B72h[^>]+width="100%"[^>]+height="620"',
+            homepage,
+        )
+        assert match, f"homepage panel {panel_id} does not use the shared 72h/620px embed scale"
+
+
+def test_homepage_resource_graphs_follow_lighting_before_cameras():
+    homepage = (VAULT_ROOT / "index.md").read_text(encoding="utf-8")
+
+    lighting_index = homepage.index("panelId=36&theme=light&from=now-72h&to=now%2B72h")
+    electric_index = homepage.index("panelId=310&theme=light&from=now-72h&to=now")
+    gas_index = homepage.index("panelId=127&theme=light&from=now-72h&to=now")
+    water_index = homepage.index("panelId=128&theme=light&from=now-72h&to=now")
+    cost_index = homepage.index("panelId=312&theme=light&from=now-30d&to=now")
+    cameras_index = homepage.index("## Live Greenhouse Cameras")
+
+    assert lighting_index < electric_index < gas_index < water_index < cost_index < cameras_index
+    assert '<div class="media-grid media-grid-3 home-resource-panel-row">' in homepage
+    assert "site-evidence-economics/?orgId=1&panelId=310" in homepage
+    assert "site-home/?orgId=1&panelId=127" in homepage
+    assert "site-home/?orgId=1&panelId=128" in homepage
+    assert "site-evidence-economics/?orgId=1&panelId=312" in homepage
+    assert "diurnal pressure" in homepage
+    assert "mitigating that sun-driven pressure" in homepage
+    assert homepage.count('style="--home-panel-height: 300px;"') == 3
+    assert 'style="--home-panel-height: 320px;"' in homepage
+
+
+def test_homepage_lighting_state_is_on_only_policy_placed_fill():
+    home = _dashboard("grafana/dashboards/site-home.json")
+    lighting = _panel(home, 36)
+    solar_sql = next(target["rawSql"] for target in lighting["targets"] if target.get("refId") == "A")
+    state_sql = next(target["rawSql"] for target in lighting["targets"] if target.get("refId") == "B")
+
+    assert lighting["title"] == "Lighting: Overhead vs Grow Circuit — Lux & Switch State"
+    assert "Solar Forecast" in solar_sql
+    assert "Threshold" not in solar_sql
+    assert "fn_lighting_circuit_policy" not in solar_sql
+    assert "fn_lighting_circuit_policy" in state_sql
+    assert "setpoint_snapshot" not in state_sql
+    assert "max(p.lux_on_threshold) FILTER (WHERE p.light_key='main')" in state_sql
+    assert "max(p.lux_on_threshold) FILTER (WHERE p.light_key='grow')" in state_sql
+    assert ") THEN m.value_when_on ELSE NULL::double precision END AS value" in state_sql
+    assert "Base" not in state_sql
+    assert "fillBelowTo" not in _override_props(lighting, "Overhead Light")
+    assert "fillBelowTo" not in _override_props(lighting, "Grow Light")
+    for label in ("Overhead Threshold Base", "Overhead Threshold", "Grow Threshold Base", "Grow Threshold"):
+        assert not _override_props(lighting, label)
+    for label in ("Overhead Light", "Grow Light"):
+        props = _override_props(lighting, label)
+        assert props["custom.lineWidth"] == 0
+        assert props["custom.fillOpacity"] == 90
+        assert props["custom.gradientMode"] == "opacity"
+        assert props["custom.spanNulls"] is False
 
 
 def test_resource_use_restores_individual_solar_alignment_panels():
@@ -108,6 +192,59 @@ def test_lighting_dashboard_visual_contract():
     assert _mapped_color(decision_panel, "Sun", "Day") == "#FDD835"
     assert _mapped_color(decision_panel, "Sun", "Night") == "#112231"
     assert "panelId=10&theme=light&from=now-30d&to=now" in lighting_page
+
+
+def test_site_grafana_panels_use_transparent_chrome():
+    for path in _site_dashboard_paths():
+        dashboard = json.loads(path.read_text(encoding="utf-8"))
+        for panel in dashboard.get("panels", []):
+            if panel.get("type") != "row":
+                assert panel.get("transparent") is True, f"{path.name} panel {panel.get('id')} is not transparent"
+
+
+def test_site_grafana_stat_panels_do_not_use_background_color_mode():
+    for path in _site_dashboard_paths():
+        dashboard = json.loads(path.read_text(encoding="utf-8"))
+        for panel in dashboard.get("panels", []):
+            if panel.get("type") == "stat":
+                options = panel.get("options", {})
+                assert options.get("colorMode") == "value", f"{path.name} panel {panel.get('id')} uses {options}"
+                assert options.get("graphMode") in {None, "none"}, f"{path.name} panel {panel.get('id')} uses {options}"
+
+
+def test_site_grafana_k3s_configmaps_match_source_dashboards():
+    source_roots = [
+        REPO_ROOT / "grafana" / "dashboards",
+        REPO_ROOT / "grafana" / "provisioning" / "dashboards" / "json",
+    ]
+    generated = sorted(
+        (REPO_ROOT / "deploy" / "k8s" / "components" / "grafana" / "generated").glob("dashboards-cm-*.yaml")
+    )
+    assert generated
+
+    for cm_path in generated:
+        doc = yaml.safe_load(cm_path.read_text(encoding="utf-8"))
+        for name, raw in (doc.get("data") or {}).items():
+            if not name.endswith(".json"):
+                continue
+            source = next((root / name for root in source_roots if (root / name).exists()), None)
+            assert source is not None, f"{cm_path.name} data key {name} has no source dashboard"
+            assert json.loads(raw) == json.loads(source.read_text(encoding="utf-8"))
+
+
+def test_quartz_dark_mode_contract_is_user_theme_driven():
+    config = (REPO_ROOT / "site/quartz.config.ts").read_text(encoding="utf-8")
+    head = (REPO_ROOT / "site/quartz/components/Head.tsx").read_text(encoding="utf-8")
+    darkmode = (REPO_ROOT / "site/quartz/components/scripts/darkmode.inline.ts").read_text(encoding="utf-8")
+    embeds = (REPO_ROOT / "site/quartz/components/GrafanaEmbeds.tsx").read_text(encoding="utf-8")
+
+    assert 'light: "#071512"' in config
+    assert "__verdifyLightThemeOnly" not in head
+    assert 'localStorage.getItem("theme")' in darkmode
+    assert "prefers-color-scheme: dark" in darkmode
+    assert 'new CustomEvent("themechange"' in darkmode
+    assert "function themedUrl" in embeds
+    assert "themechange" in embeds
 
 
 def test_architecture_page_removes_stale_sections_and_svg_return_path_is_behind_ingestor():

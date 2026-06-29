@@ -923,8 +923,9 @@ def check_generation_entrypoint(repo_root: Path | None = None) -> list[Finding]:
     findings: list[Finding] = []
     expected_refs = {
         "scripts/publish-daily-plan.sh": "publish-site-content.sh",
-        "systemd/verdify-forecast-page.service": "publish-site-content.sh",
-        "systemd/verdify-plan-publish.service": "publish-site-content.sh",
+        # k3s single-env: the VM-era systemd publisher units were retired; the
+        # live trigger is the verdify-lab-publisher CronJob via lab-publish-k3s.sh.
+        "scripts/lab-publish-k3s.sh": "publish-site-content.sh",
     }
     for rel, needle in expected_refs.items():
         path = repo_root / rel

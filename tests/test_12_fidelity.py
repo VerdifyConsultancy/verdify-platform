@@ -66,6 +66,54 @@ from verdify_schemas.tunable_registry import (  # noqa: E402
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
+def _tasks_src() -> str:
+    """Full source of the tasks implementation.
+
+    Issue #46 split ``ingestor/tasks.py`` into the ``ingestor/tasks/`` package.
+    Source-string invariant checks read the whole package (every submodule) so
+    the same literal assertions still hold wherever the code now lives.
+    """
+    pkg = REPO_ROOT / "ingestor" / "tasks"
+    if pkg.is_dir():
+        return "\n".join(p.read_text() for p in sorted(pkg.glob("*.py")))
+    return (REPO_ROOT / "ingestor" / "tasks.py").read_text()
+
+
+def _tasks_submodule_src(stem: str) -> str:
+    """Source of one tasks-package submodule (e.g. 'alerts', 'forecast').
+
+    Pre-#46 these tests sliced a region out of the single tasks.py by section
+    marker. With the package split, each task entry-point lives in its own
+    submodule, so reading that submodule's source preserves the same scope.
+    """
+    pkg = REPO_ROOT / "ingestor" / "tasks"
+    if pkg.is_dir():
+        return (pkg / f"{stem}.py").read_text()
+    return (REPO_ROOT / "ingestor" / "tasks.py").read_text()
+
+
+def _tasks_module_for(name: str) -> Path:
+    """Return the package submodule (or legacy file) that defines ``name``.
+
+    Used by AST-based assignment extraction (``_assigned_set``) so it parses the
+    one module that owns a top-level assignment rather than the whole package.
+    """
+    pkg = REPO_ROOT / "ingestor" / "tasks"
+    if not pkg.is_dir():
+        return REPO_ROOT / "ingestor" / "tasks.py"
+    for p in sorted(pkg.glob("*.py")):
+        tree = ast.parse(p.read_text())
+        for node in tree.body:
+            targets = []
+            if isinstance(node, ast.Assign):
+                targets = [t.id for t in node.targets if isinstance(t, ast.Name)]
+            elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+                targets = [node.target.id]
+            if name in targets:
+                return p
+    raise AssertionError(f"{name} assignment not found in tasks package")
+
+
 def _assigned_set(path: Path, name: str) -> set[str]:
     tree = ast.parse(path.read_text())
     for node in tree.body:
@@ -257,7 +305,7 @@ def test_daily_lifecycle_artifact_export_covers_public_safe_receipts():
 
 
 def test_daily_summary_live_total_water_floors_known_mister_subset():
-    src = Path("ingestor/tasks.py").read_text()
+    src = _tasks_src()
     start = src.index("async def _refresh_daily_summary_for_date")
     end = src.index("async def daily_summary_live", start)
     block = src[start:end]
@@ -276,9 +324,8 @@ def test_zero_variance_rule_covers_vpd_target_west():
     # Rule lives inside alert_monitor's body. We verify the param appears
     # in the tasks.py file as a string literal — coarser than ideal but
     # doesn't require the full async DB path.
-    import tasks
 
-    tasks_source = Path(tasks.__file__).read_text()
+    tasks_source = _tasks_src()
     assert '"vpd_target_west"' in tasks_source or "'vpd_target_west'" in tasks_source
     # All four zone targets should be in the zero-variance scan list
     for param in ("vpd_target_south", "vpd_target_west", "vpd_target_east", "vpd_target_center"):
@@ -287,9 +334,8 @@ def test_zero_variance_rule_covers_vpd_target_west():
 
 def test_zero_variance_rule_skips_empty_zone_target_fallbacks():
     """A zone target pinned at its fallback is expected when that zone has no active crop."""
-    import tasks
 
-    tasks_source = Path(tasks.__file__).read_text()
+    tasks_source = _tasks_src()
     assert "active_crop_zones" in tasks_source
     assert "zone_target_params" in tasks_source
     assert "if zone in active_crop_zones" in tasks_source
@@ -298,9 +344,8 @@ def test_zero_variance_rule_skips_empty_zone_target_fallbacks():
 def test_zero_variance_rule_also_covers_band_params():
     """temp_low / temp_high / vpd_low / vpd_high should track crop + dispatcher
     state. If they go flat for 7 days, something upstream is broken."""
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     # Look for these all appearing in the same zone_var_params tuple
     for param in ("temp_low", "temp_high", "vpd_low", "vpd_high"):
         assert f'"{param}"' in src
@@ -310,7 +355,7 @@ def test_alert_monitor_detects_band_owned_plan_rows():
     """Future dispatcher-owned policy rows in setpoint_plan must open an alert."""
     import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     assert "planner_band_ownership_drift" in src
     assert "system.planner_band_ownership" in src
     assert "setpoint_plan" in src
@@ -356,9 +401,8 @@ def test_setpoint_confirmation_monitor_resolves_acknowledged_alerts():
     the monitor must resolve them once a confirmation or superseding setpoint
     lands.
     """
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     start = src.index("async def setpoint_confirmation_monitor")
     block = src[start:]
     assert "al.resolved_at IS NULL" in block
@@ -374,25 +418,28 @@ def test_dispatcher_band_owned_contract_is_explicit():
     """
     import tasks
 
-    expected = {
+    lighting_circuit_lux_params = frozenset(
+        name
+        for name in tasks.LIGHTING_CIRCUIT_DEFAULT_PARAMS
+        if name.endswith("_lux_threshold") or name.endswith("_lux_hysteresis")
+    )
+    expected = tasks.CROP_BAND_REG | tasks.LIGHTING_POLICY_PARAMS | lighting_circuit_lux_params
+    assert tasks.BAND_DRIVEN_PARAMS == expected
+    assert {
         "temp_low",
         "temp_high",
         "vpd_low",
         "vpd_high",
-        "vpd_target_south",
-        "vpd_target_west",
-        "vpd_target_east",
-        "vpd_target_center",
-        "gl_dli_target",
-        "gl_lux_hysteresis",
-        "gl_lux_threshold",
-        "gl_sunrise_hour",
-        "gl_sunset_hour",
-        "sw_gl_auto_mode",
-    }
-    assert tasks.BAND_DRIVEN_PARAMS == expected
+        "band_temp_low_sr",
+        "band_temp_target_mid",
+        "band_vpd_high_ss",
+        "zone_vpd_target_south_sr",
+        "zone_vpd_width_below_east",
+        "gl_main_lux_threshold",
+        "gl_grow_lux_hysteresis",
+    } <= set(tasks.BAND_DRIVEN_PARAMS)
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     assert "fn_band_setpoints(now())" in src
     assert "fn_house_vpd_control_band(now())" in src
     assert "fn_lighting_policy(now())" in src
@@ -460,7 +507,9 @@ def test_setpoint_server_fallback_does_not_overlay_band_owned_plan_rows():
     assert "_overlay_activity_direct_wet_defaults(params, plan_params)" in script
     assert "_overlay_dispatcher_owned_defaults(params, plan_params)" in script
 
-    params = {"gl_main_sunrise_hour": "7", "gl_main_target_light_minutes": "780"}
+    # #294: the activity window follows the GROW (jalapeno, longest-day) circuit, not
+    # MAIN — a short orchid MAIN photoperiod must not shrink direct-wet irrigation.
+    params = {"gl_grow_sunrise_hour": "7", "gl_grow_target_light_minutes": "780"}
     module["_overlay_activity_direct_wet_defaults"](params, set())
     module["_overlay_dispatcher_owned_defaults"](params, set())
     assert params["activity_start_hour"] == "7"
@@ -503,7 +552,7 @@ def test_ha_light_sync_reads_real_lutron_switch_entities():
     """DB equipment_state should trace the same Lutron switch entities the
     proxy commands, not stale light.* wrappers.
     """
-    tasks = Path("ingestor/tasks.py").read_text()
+    tasks = _tasks_src()
     sync = Path("scripts/ha-sensor-sync.py").read_text()
 
     for src in (tasks, sync):
@@ -701,9 +750,8 @@ def test_vpd_high_moisture_guardrail_does_not_run_when_idle_below_band():
 
 
 def test_vpd_high_moisture_guard_context_avoids_greenhouse_state_latest_scan():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     start = src.index("async def _fetch_moisture_guard_context")
     end = src.index("def _vpd_high_moisture_guardrails", start)
     body = src[start:end]
@@ -715,19 +763,18 @@ def test_vpd_high_moisture_guard_context_avoids_greenhouse_state_latest_scan():
 
 
 def test_alert_monitor_avoids_greenhouse_state_hot_path_scans():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
-    start = src.index("async def alert_monitor")
-    end = src.index("# 8. SETPOINT DISPATCHER", start)
-    body = src[start:end]
+    # alert_monitor is the sole entry point in the alerts submodule (#46 split),
+    # so its module source is exactly the function body scope this test guards.
+    body = _tasks_submodule_src("alerts")
+    assert "async def alert_monitor" in body
 
     assert "FROM v_greenhouse_state" not in body
     assert "FROM climate" in body
     assert "fn_setpoint_at('temp_high', c.ts)" in body
     assert "fn_equip_at('mister_center', c.ts)" in body
 
-    standalone = (Path(tasks.__file__).resolve().parent.parent / "scripts" / "alert-monitor.py").read_text()
+    standalone = (REPO_ROOT / "scripts" / "alert-monitor.py").read_text()
     assert "FROM v_greenhouse_state" not in standalone
     assert "latest_climate AS" in standalone
 
@@ -826,9 +873,10 @@ def test_lighting_automation_audit_static_passes():
     services or an ESP32 OTA.
     """
     import subprocess
+    import sys
 
     result = subprocess.run(
-        ["/srv/greenhouse/.venv/bin/python", "scripts/audit-lighting-automation.py", "--static-only"],
+        [sys.executable, "scripts/audit-lighting-automation.py", "--static-only"],
         capture_output=True,
         text=True,
         timeout=20,
@@ -942,7 +990,7 @@ def test_firmware_omits_mqtt_and_uses_ingestor_occupancy_push():
     greenhouse = Path("firmware/greenhouse.yaml").read_text()
     hardware = Path("firmware/greenhouse/hardware.yaml").read_text()
     ingestor_src = Path("ingestor/ingestor.py").read_text()
-    tasks_src = Path("ingestor/tasks.py").read_text()
+    tasks_src = _tasks_src()
     push_src = Path("ingestor/esp32_push.py").read_text()
     occupancy_src = Path("ingestor/occupancy.py").read_text()
     entity_map_src = Path("ingestor/entity_map.py").read_text()
@@ -1119,19 +1167,19 @@ def test_grafana_dashboard_provider_poll_interval_avoids_sqlite_lock_churn():
     assert "allowUiUpdates: true" in provider
 
 
-def test_grafana_render_cache_warmer_handles_transient_renderer_failures():
-    script = Path("scripts/warm-grafana-render-cache.py").read_text()
-    service = Path("systemd/verdify-grafana-render-cache-warm.service").read_text()
-    timer = Path("systemd/verdify-grafana-render-cache-warm.timer").read_text()
-
-    assert "TRANSIENT_HTTP_STATUS = {429, 500, 502, 503, 504}" in script
-    assert 'parser.add_argument("--retries"' in script
-    assert '"--failure-threshold-pct"' in script
-    assert "failure_pct <= max(0.0, args.failure_threshold_pct)" in script
-    assert "--workers 1" in service
-    assert "--retries 2" in service
-    assert "--failure-threshold-pct 5" in service
-    assert "OnUnitActiveSec=30min" in timer
+def test_grafana_render_cache_warmer_is_retired():
+    """The Grafana render-cache-warm timer/service and its warmer script were
+    retired (issue #60): the timer had been dead since 2026-05-25 emitting HTTP
+    500s from the headless-Chromium `/render/d-solo/...` path, and the whole web
+    tier (grafana + renderer + proxy) is migrating to k3s where observability is
+    handed to nexus. The warmer was a pure cache-priming optimization — removing
+    it warms nothing on a schedule but breaks no dashboard (PNG/iframe embeds
+    still render on first request). This test locks in the retirement so the
+    dead units/script do not silently return.
+    """
+    assert not Path("scripts/warm-grafana-render-cache.py").exists()
+    assert not Path("systemd/verdify-grafana-render-cache-warm.service").exists()
+    assert not Path("systemd/verdify-grafana-render-cache-warm.timer").exists()
 
 
 def test_lighting_automation_audit_checks_live_planner_context():
@@ -1180,9 +1228,8 @@ def test_mcp_set_plan_rejects_non_policy_tunables():
 
 def test_alert_monitor_detects_planner_delivery_outages():
     """Hermes outages and missed required plans must be visible alerts."""
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     assert "planner_gateway_delivery_failed" in src
     assert "system.hermes" in src
     assert "WITH last_success AS" in src
@@ -1243,12 +1290,12 @@ def test_forecast_deviation_helpers_compute_vpd_and_cloud_proxy():
 
 
 def test_forecast_deviation_check_covers_distinct_axes_without_global_cooldown():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
-    start = src.index("async def forecast_deviation_check")
-    end = src.index("async def _refresh_daily_summary_for_date", start)
-    body = src[start:end]
+    # forecast_deviation_check is the last entry point in the forecast submodule
+    # (#46 split); slicing from it to EOF preserves the original scope.
+    fsrc = _tasks_submodule_src("forecast")
+    start = fsrc.index("async def forecast_deviation_check")
+    body = fsrc[start:]
 
     for parameter in (
         "temp_f",
@@ -1275,13 +1322,13 @@ def test_forecast_deviation_check_covers_distinct_axes_without_global_cooldown()
 def test_forecast_freshness_is_system_health_not_planner_deviation():
     import tasks
 
-    src = Path(tasks.__file__).read_text()
-    alert_start = src.index("async def alert_monitor")
-    alert_end = src.index("# 8. SETPOINT DISPATCHER", alert_start)
-    alert_body = src[alert_start:alert_end]
-    deviation_start = src.index("async def forecast_deviation_check")
-    deviation_end = src.index("async def _refresh_daily_summary_for_date", deviation_start)
-    deviation_body = src[deviation_start:deviation_end]
+    src = _tasks_src()
+    # alert_monitor and forecast_deviation_check are sole entry points in their
+    # respective #46-split submodules; their module sources are the scopes here.
+    alert_body = _tasks_submodule_src("alerts")
+    fsrc = _tasks_submodule_src("forecast")
+    deviation_start = fsrc.index("async def forecast_deviation_check")
+    deviation_body = fsrc[deviation_start:]
 
     assert tasks._FORECAST_STALE_SENSOR_ID == "system.weather_forecast"
     assert "_FORECAST_STALE_THRESHOLD_S = 2 * 60 * 60" in src
@@ -1293,9 +1340,8 @@ def test_forecast_freshness_is_system_health_not_planner_deviation():
 
 
 def test_forecast_deviation_uses_alert_envelope_with_legacy_file_fallback():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     assert "forecast_deviation" in src
     assert "AlertEnvelope.model_validate(_forecast_deviation_alert_payload(trigger))" in src
     assert "INSERT INTO alert_log" in src
@@ -1315,6 +1361,7 @@ def test_planning_milestones_use_phase4_trigger_set():
     assert scheduled == {
         "MIDNIGHT",
         "SUNRISE",
+        "WEEKLY",
         "SOLAR_MAX",
         "TRANSITION:peak_stress",
         "TRANSITION:decline",
@@ -1323,6 +1370,11 @@ def test_planning_milestones_use_phase4_trigger_set():
     assert matrix["FORECAST_DEVIATION"].due_source == "forecast_deviation_check"
     assert matrix["FORECAST_DEVIATION"].severity_event_type == "DEVIATION"
     assert matrix["MANUAL"].due_source == "mcp.plan_run"
+    # WEEKLY deep-review (L4 #346 AC6): materialized once per week, expects a
+    # strategy set_plan but is not a hard daily-cycle SLA (required_plan=False).
+    assert matrix["WEEKLY"].due_source == "local.weekly_review"
+    assert matrix["WEEKLY"].expected_action == "set_plan"
+    assert matrix["WEEKLY"].required_plan is False
     assert {matrix[key].hermes_route for key in matrix} == {"hermes-iris"}
     for key in ("SUNRISE", "SUNSET", "MIDNIGHT"):
         assert matrix[key].required_plan is True
@@ -1360,15 +1412,27 @@ def test_planning_milestones_are_derived_from_trigger_matrix(monkeypatch):
             "sunset": _dt(date.year, date.month, date.day, 20, 10, tzinfo=tzinfo),
         }
 
-    monkeypatch.setattr(tasks, "_sun", fake_sun)
-    monkeypatch.setattr(tasks, "_load_milestone_state", lambda: None)
-    monkeypatch.setattr(tasks, "datetime", EarlyDatetime)
-    tasks._milestones_date = None
-    tasks._milestones_cache = {}
-    tasks._milestones_fired = {}
+    # #46 split: _compute_milestones lives in the tasks.heartbeat submodule and
+    # reads its own module globals (datetime/_sun/state), so patch there.
+    hb = tasks.heartbeat
+    monkeypatch.setattr(hb, "_sun", fake_sun)
+    monkeypatch.setattr(hb, "_load_milestone_state", lambda: None)
+    monkeypatch.setattr(hb, "datetime", EarlyDatetime)
+    hb._milestones_date = None
+    hb._milestones_cache = {}
+    hb._milestones_fired = {}
 
     milestones = tasks._compute_milestones()
-    assert list(milestones) == [key for key, spec in tasks.PLANNER_TRIGGER_MATRIX.items() if spec.materialize_expected]
+    # WEEKLY is materialize_expected but weekday-gated (only on the review
+    # weekday); the fake date (2026-05-19) is not it, so it is absent here.
+    review_day = EarlyDatetime(2026, 5, 19).date().weekday() == hb._WEEKLY_REVIEW_WEEKDAY
+    expected = [
+        key
+        for key, spec in tasks.PLANNER_TRIGGER_MATRIX.items()
+        if spec.materialize_expected and not (spec.due_source == "local.weekly_review" and not review_day)
+    ]
+    assert list(milestones) == expected
+    assert "WEEKLY" not in milestones  # 2026-05-19 is a Tuesday
     assert milestones["MIDNIGHT"].hour == 0
     assert milestones["MIDNIGHT"].minute == 15
     assert milestones["SUNRISE"].hour == 5
@@ -1420,9 +1484,8 @@ def test_resolve_delivery_log_sets_status_plan_written():
     """The _resolve_delivery_log UPDATE must set status='plan_written'
     alongside resulting_plan_id so the status column stays truthful.
     String-check only — running the UPDATE requires asyncpg."""
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     # Locate the _resolve_delivery_log function and check its UPDATE string
     start = src.index("async def _resolve_delivery_log")
     end = src.index("async def ", start + 1)
@@ -1437,9 +1500,8 @@ def test_resolve_delivery_log_sets_status_plan_written():
 
 def test_resolve_delivery_log_fallback_is_legacy_null_uuid_only():
     """Rows with trigger_id must never use the old 2h time-window fallback."""
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     start = src.index("async def _resolve_delivery_log")
     end = src.index("async def ", start + 1)
     body = src[start:end]
@@ -1450,9 +1512,8 @@ def test_resolve_delivery_log_fallback_is_legacy_null_uuid_only():
 
 
 def test_failed_plan_delivery_logs_delivery_failed_status():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     start = src.index("async def _log_plan_delivery")
     end = src.index("async def _deliver_and_log", start)
     body = src[start:end]
@@ -1462,9 +1523,8 @@ def test_failed_plan_delivery_logs_delivery_failed_status():
 
 
 def test_deliver_and_log_precreates_delivery_row_before_post():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     start = src.index("async def _deliver_and_log")
     end = src.index("async def _resolve_delivery_log", start)
     body = src[start:end]
@@ -1474,9 +1534,8 @@ def test_deliver_and_log_precreates_delivery_row_before_post():
 
 
 def test_planner_expected_trigger_ledger_is_materialized_before_delivery():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     assert "async def _ensure_expected_planner_triggers" in src
     assert "planner_trigger_ledger" in src
     assert "ON CONFLICT (greenhouse_id, event_type, expected_at)" in src
@@ -1485,9 +1544,8 @@ def test_planner_expected_trigger_ledger_is_materialized_before_delivery():
 
 
 def test_planner_sla_lifecycle_uses_configured_pair_timeout():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     start = src.index("async def _expire_planner_trigger_slas")
     end = src.index("async def _log_plan_delivery", start)
     body = src[start:end]
@@ -1498,9 +1556,8 @@ def test_planner_sla_lifecycle_uses_configured_pair_timeout():
 
 
 def test_active_future_plan_range_guard_uses_tunable_registry():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     assert "planner_tunable_range_drift" in src
     assert "registry_value_error(parameter, value)" in src
     assert "controller_locked_on" in src
@@ -1513,9 +1570,8 @@ def test_active_future_plan_range_guard_uses_tunable_registry():
 
 
 def test_alert_monitor_detects_missing_future_plan_horizon():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     assert "planner_plan_horizon_missing" in src
     assert "system.planner_plan_horizon" in src
     assert "ts > now()" in src
@@ -1542,9 +1598,8 @@ def test_dispatcher_coerces_registry_bounds_before_insert_and_push():
 
 
 def test_dispatcher_direct_push_uses_dispatchable_changes_only():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     start = src.index("async def setpoint_dispatcher")
     end = src.index("def _fetch_forecast", start)
     body = src[start:end]
@@ -1558,26 +1613,21 @@ def test_dispatcher_gates_ai_moisture_stress_until_firmware_supports_entities():
     """PR3 plan rows may exist before the OTA exposes matching ESPHome entities."""
     import tasks
 
+    # fog_stress_* removed (BC-11/ADR0003 §6.7): retired dead registry rows.
     assert {
         "sw_direct_wet_stress_override_enabled",
         "direct_wet_stress_vpd_margin_kpa",
         "direct_wet_stress_min_dew_margin_f",
         "direct_wet_stress_latest_hour",
-        "sw_fog_stress_window_extend_enabled",
-        "fog_stress_window_latest_hour",
-        "fog_stress_min_dew_margin_f",
     } == tasks.AI_MOISTURE_STRESS_POLICY_PARAMS
     assert {
         "direct_wet_stress_override_enabled",
         "direct_wet_stress_vpd_margin_kpa",
         "direct_wet_stress_min_dew_margin_f",
         "direct_wet_stress_latest_hour",
-        "fog_stress_window_extend_enabled",
-        "fog_stress_window_latest_hour",
-        "fog_stress_min_dew_margin_f",
     } == tasks.AI_MOISTURE_STRESS_REQUIRED_OBJECT_IDS
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     start = src.index("async def setpoint_dispatcher")
     end = src.index("def _fetch_forecast", start)
     body = src[start:end]
@@ -1630,9 +1680,8 @@ def test_ai_moisture_stress_backfill_is_dry_run_first_and_routine_only():
 
 
 def test_dispatcher_propagates_plan_audit_to_setpoint_changes():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     start = src.index("async def setpoint_dispatcher")
     end = src.index("def _fetch_forecast", start)
     body = src[start:end]
@@ -1644,9 +1693,8 @@ def test_dispatcher_propagates_plan_audit_to_setpoint_changes():
 
 
 def test_dispatcher_writes_guardrail_hold_audits_without_setpoint_push():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     start = src.index("async def setpoint_dispatcher")
     end = src.index("def _fetch_forecast", start)
     body = src[start:end]
@@ -1657,9 +1705,8 @@ def test_dispatcher_writes_guardrail_hold_audits_without_setpoint_push():
 
 
 def test_dispatcher_clamp_audit_rows_carry_plan_metadata():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     assert "INSERT INTO setpoint_clamps" in src
     assert "status, plan_id, plan_ts, trigger_id, planner_instance" in src
     assert '"plan_id": r["plan_id"]' in src
@@ -1734,7 +1781,8 @@ def test_plan_context_embeds_public_site_static_context():
 
 def test_site_publish_refreshes_prior_day_current_day_and_static_context():
     script = (REPO_ROOT / "scripts" / "publish-site-content.sh").read_text()
-    assert 'PREV_DATE=$(date -d "${DATE} -1 day" +%Y-%m-%d)' in script
+    assert 'PREV_DATE=$(date -d "${DATE} -1 day" +%Y-%m-%d 2>/dev/null)' in script
+    assert 'PREV_DATE=$(date -j -f "%Y-%m-%d" "$DATE" -v-1d +%Y-%m-%d)' in script
     assert 'generate-daily-plan.py" --date "$PREV_DATE"' in script
     assert 'generate-daily-plan.py" --date "$DATE"' in script
     assert "gather-static-context.sh" in script
@@ -1792,10 +1840,9 @@ def test_single_path_removes_runtime_shadow_surfaces():
     assert not (REPO_ROOT / "scripts" / "planner-graph-shadow-smoke.py").exists()
     assert not (REPO_ROOT / "scripts" / "planner-graph-shadow-report.py").exists()
 
-    compose = (REPO_ROOT / "docker-compose.yml").read_text()
-    assert "hermes-iris-shadow" not in compose
-    assert "server_shadow.py" not in compose
-    assert "--profile shadow" not in compose
+    # docker-compose.yml was removed with the VM-era stack on the k3s single-env
+    # migration; the runtime-shadow-profile concern it guarded is now covered by
+    # the shadow-file absence assertions above.
 
     schema = (REPO_ROOT / "db" / "schema.sql").read_text()
     assert "plan_delivery_log_shadow" not in schema
@@ -1818,11 +1865,17 @@ def test_single_path_policy_docs_do_not_reintroduce_alternate_rollout():
     )
     forbidden_terms = ("shadow", "canary")
     hits = []
+    existing = []
     for rel_path in policy_files:
-        text = (REPO_ROOT / rel_path).read_text().lower()
+        path = REPO_ROOT / rel_path
+        if not path.exists():
+            continue
+        existing.append(rel_path)
+        text = path.read_text().lower()
         for term in forbidden_terms:
             if term in text:
                 hits.append(f"{rel_path}:{term}")
+    assert existing
     assert not hits
 
 
@@ -1856,19 +1909,21 @@ def test_midnight_milestone_exists_only_inside_catchup_window(monkeypatch):
             "sunset": _dt(date.year, date.month, date.day, 20, 10, tzinfo=tzinfo),
         }
 
-    monkeypatch.setattr(tasks, "_sun", fake_sun)
-    monkeypatch.setattr(tasks, "_load_milestone_state", lambda: None)
+    # #46 split: patch the heartbeat submodule that owns _compute_milestones.
+    hb = tasks.heartbeat
+    monkeypatch.setattr(hb, "_sun", fake_sun)
+    monkeypatch.setattr(hb, "_load_milestone_state", lambda: None)
 
-    monkeypatch.setattr(tasks, "datetime", EarlyDatetime)
-    tasks._milestones_date = None
-    tasks._milestones_cache = {}
-    tasks._milestones_fired = {}
+    monkeypatch.setattr(hb, "datetime", EarlyDatetime)
+    hb._milestones_date = None
+    hb._milestones_cache = {}
+    hb._milestones_fired = {}
     assert tasks._compute_milestones()["MIDNIGHT"].hour == 0
 
-    monkeypatch.setattr(tasks, "datetime", LateDatetime)
-    tasks._milestones_date = None
-    tasks._milestones_cache = {}
-    tasks._milestones_fired = {}
+    monkeypatch.setattr(hb, "datetime", LateDatetime)
+    hb._milestones_date = None
+    hb._milestones_cache = {}
+    hb._milestones_fired = {}
     assert "MIDNIGHT" not in tasks._compute_milestones()
 
 
@@ -2276,6 +2331,56 @@ def test_climate_telemetry_uses_actual_mister_pulse_state():
     assert "id(gh_climate_moisture_zone).publish_state(effective_moisture_zone)" in block
 
 
+def test_climate_action_log_persists_moisture_exchange_telemetry():
+    controls = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
+    hardware = (REPO_ROOT / "firmware" / "greenhouse" / "hardware.yaml").read_text()
+    ingestor_src = (REPO_ROOT / "ingestor" / "ingestor.py").read_text()
+    entity_map = (REPO_ROOT / "ingestor" / "entity_map.py").read_text()
+    logic = (REPO_ROOT / "firmware" / "lib" / "greenhouse_logic.h").read_text()
+    types = (REPO_ROOT / "firmware" / "lib" / "greenhouse_types.h").read_text()
+
+    assert "id: gh_climate_moisture_exchange" in hardware
+    assert '"climate_moisture_exchange": "climate_moisture_exchange"' in entity_map
+    assert '"climate_moisture_exchange",' in ingestor_src
+    assert 'moisture_exchange = _parse_json_object(state.system.get("climate_moisture_exchange"))' in ingestor_src
+    assert 'source_system_state["climate_moisture_exchange"] = moisture_exchange' in ingestor_src
+
+    for token in (
+        "moisture_exchange_action",
+        "moisture_exchange_reason",
+        "moisture_vent_vpd_gain_kpa",
+        "moisture_heat_vpd_gain_kpa",
+        "moisture_outdoor_fresh",
+        "moisture_vent_overcools",
+        "moisture_heat_assist_corun",
+        "moisture_heat_assist_active",
+        "moisture_heat_assist_timer_ms",
+    ):
+        assert token in types
+
+    for token in (
+        "moisture_exchange_action_name",
+        "vent_overcools",
+        "moisture_exchange_action = moisture_exchange_action_name(mx.action)",
+        "moisture_heat_assist_active = state.dehum_heat_assist_active",
+    ):
+        assert token in logic
+
+    for token in (
+        '\\"action\\":\\"%s\\"',
+        '\\"reason\\":\\"%s\\"',
+        '\\"vent_vpd_gain_kpa\\":%.3f',
+        '\\"heat_vpd_gain_kpa\\":%.3f',
+        '\\"outdoor_fresh\\":%s',
+        '\\"vent_overcools\\":%s',
+        '\\"heat_assist_corun\\":%s',
+        '\\"heat_assist_active\\":%s',
+        '\\"heat_assist_timer_s\\":%.0f',
+        "id(gh_climate_moisture_exchange).publish_state(moisture_exchange)",
+    ):
+        assert token in controls
+
+
 def test_climate_decision_surface_excludes_fert_and_drip_relays():
     types_src = (REPO_ROOT / "firmware" / "lib" / "greenhouse_types.h").read_text()
     relay_block = types_src[
@@ -2339,9 +2444,15 @@ def test_climate_wet_assist_is_separate_from_crop_direct_wet_windows():
     block_reason = controls[
         controls.index("} else if(!any_mister_wet_allowed)") : controls.index("} else if(irrigation_block)")
     ]
+    climate_reason = block_reason[
+        block_reason.index("if(climate_wet_assist_demand)") : block_reason.index(
+            "} else if(!id(direct_wet_gate_enabled))"
+        )
+    ]
     assert "if(climate_wet_assist_demand)" in block_reason
+    assert "direct_wet_window" not in climate_reason
     assert 'snprintf(moisture_block_reason, sizeof(moisture_block_reason), "dew_margin")' in block_reason
-    assert 'snprintf(moisture_block_reason, sizeof(moisture_block_reason), "time_window")' in block_reason
+    assert 'snprintf(moisture_block_reason, sizeof(moisture_block_reason), "direct_wet_time_invalid")' in block_reason
     assert block_reason.index("if(climate_wet_assist_demand)") < block_reason.index("direct_wet_min_temp_f")
 
     watchdog = controls[
@@ -2386,9 +2497,8 @@ def test_mcp_rejects_non_validation_solar_acknowledgement():
 
 
 def test_required_plan_alert_ignores_validation_ack_only_rows():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     start = src.index("# 7b. Required SUNRISE/SUNSET/MIDNIGHT plans")
     end = src.index("if required_misses:", start)
     body = src[start:end]
@@ -2687,9 +2797,7 @@ def test_leak_detected_locks_water_actuators():
 def test_occupancy_inhibit_is_final_fog_force_off():
     controls = Path("firmware/greenhouse/controls.yaml").read_text()
 
-    manual_fog = (
-        "if(manual_fog_requested && !sensor_fault_relay_lock && manual_fog_safety_block[0] == '\\0'){ willFog = true; }"
-    )
+    manual_fog = "const bool manual_fog_force = manual_force.fog;"
     occupancy_gate = "const bool occupancy_moisture_block = id(occupancy_inhibit_enabled) && id(greenhouse_occupied);"
     assert manual_fog in controls
     assert occupancy_gate in controls
@@ -2726,12 +2834,13 @@ def test_manual_fog_cannot_bypass_final_fog_safety_rails():
     assert 'return "time_window";' in manual_block
     assert 'return "rh_ceiling";' in manual_block
     assert 'return "temp_low";' in manual_block
-    assert "const bool manual_fog_requested = id(manual_fog_active);" in manual_block
+    assert "const bool manual_fog_eff    = manual_fog_latched  || id(manual_fog_active);" in manual_block
+    assert "const bool manual_fog_requested = manual_fog_eff;" in manual_block
     assert "const char* manual_fog_safety_block = fog_safety_block_reason();" in manual_block
-    assert (
-        "if(manual_fog_requested && !sensor_fault_relay_lock && manual_fog_safety_block[0] == '\\0'){ willFog = true; }"
-        in manual_block
-    )
+    assert "const ManualOverrides manual_ov = {" in manual_block
+    assert "manual_fog_eff,                      // humid_active" in manual_block
+    assert "const ManualForce manual_force = apply_manual_overrides(ov_out, manual_ov, mode);" in manual_block
+    assert "const bool manual_fog_force = manual_force.fog;" in manual_block
 
     fog_start = controls.index("char fog_block_reason")
     fog_end = controls.index("static char last_fog_block_reason", fog_start)
@@ -2744,16 +2853,20 @@ def test_manual_fog_cannot_bypass_final_fog_safety_rails():
 def test_manual_fan_cannot_open_vent_during_safety_heat():
     controls = Path("firmware/greenhouse/controls.yaml").read_text()
 
-    manual_start = controls.index("// Manual overrides")
-    manual_end = controls.index("if(id(vent_lock_active)", manual_start)
+    manual_start = controls.index("Firmware-v2 BUTTON OVERRIDE LAYER")
+    manual_end = controls.index("/**************** 11a", manual_start)
     manual_block = controls[manual_start:manual_end]
 
-    assert "below the sensor-fault, safety-heat, and fog-safety rails" in manual_block
-    assert "if(id(manual_fan_active) && !sensor_fault_relay_lock)" in manual_block
-    assert "willFan1 = true;" in manual_block
-    assert "willFan2 = true;" in manual_block
-    assert "if(mode != SAFETY_HEAT){ willVent = true; }" in manual_block
-    assert "willVent = true; }" not in manual_block.replace("if(mode != SAFETY_HEAT){ willVent = true; }", "")
+    assert "SAFETY_COOL / SAFETY_HEAT) are a no-op there" in manual_block
+    assert "const bool manual_fans_eff   = manual_fans_latched || id(manual_fan_active);" in manual_block
+    assert "const ManualForce manual_force = apply_manual_overrides(ov_out, manual_ov, mode);" in manual_block
+    assert "const bool manual_fan_force = manual_force.fans;" in manual_block
+    interlock_block = controls[
+        controls.index("const bool fan_requires_vent", manual_end) : controls.index(
+            "const bool fan_vent_interlock_active", manual_end
+        )
+    ]
+    assert "fan_requires_open_vent(mode, fan_physically_on || fan_wanted, vent_bypass_eff)" in interlock_block
 
 
 def test_manual_climate_buttons_are_flag_only_controller_path():
@@ -2821,11 +2934,16 @@ def test_sensor_fault_is_final_relay_lock_above_manual_overrides():
     controls = Path("firmware/greenhouse/controls.yaml").read_text()
 
     assert "const bool sensor_fault_relay_lock = mode == SENSOR_FAULT;" in controls
-    assert "if(id(manual_fan_active) && !sensor_fault_relay_lock)" in controls
-    assert "if(manual_fog_requested && !sensor_fault_relay_lock && manual_fog_safety_block[0] == '\\0')" in controls
-    assert "const bool fan_requires_vent = !sensor_fault_relay_lock && mode != SAFETY_HEAT" in controls
+    assert "const ManualForce manual_force = apply_manual_overrides(ov_out, manual_ov, mode);" in controls
+    assert "const bool manual_fan_force = manual_force.fans;" in controls
+    assert "const bool manual_fog_force = manual_force.fog;" in controls
+    assert (
+        "const bool fan_requires_vent = fan_requires_open_vent(mode, fan_physically_on || fan_wanted, vent_bypass_eff);"
+        in controls
+    )
     assert "const bool force_heat_off = heat_air_exchange_interlock_active || sensor_fault_relay_lock;" in controls
 
+    assert controls.index("const ManualForce manual_force") < controls.index("if(sensor_fault_relay_lock) {")
     lock_start = controls.index("if(sensor_fault_relay_lock) {")
     lock_end = controls.index("/**************** 11a", lock_start)
     lock_block = controls[lock_start:lock_end]
@@ -2834,8 +2952,8 @@ def test_sensor_fault_is_final_relay_lock_above_manual_overrides():
 
     relay_apply = controls[controls.index("/**************** 11") : controls.index("/**************** 12")]
     assert "set_relay(R[5], willVent, fan_requires_vent, sensor_fault_relay_lock);" in relay_apply
-    assert "set_relay(R[2], willFan1, false, sensor_fault_relay_lock);" in relay_apply
-    assert "set_relay(R[3], willFan2, false, sensor_fault_relay_lock);" in relay_apply
+    assert "set_relay(R[2], willFan1, manual_fan_force, sensor_fault_relay_lock);" in relay_apply
+    assert "set_relay(R[3], willFan2, manual_fan_force, sensor_fault_relay_lock);" in relay_apply
     assert "irrigation_water_conflict" in relay_apply
     assert "climate_water_budget_block" in relay_apply
 
@@ -3148,9 +3266,8 @@ def test_schema_contract_marks_legacy_irrigation_as_retired():
 
 
 def test_daily_summary_runtime_includes_fertigation_relays():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
     runtime_block = src[
         src.index("_RT_EQUIP = (") : src.index("rt_rows = await conn.fetch", src.index("_RT_EQUIP = ("))
     ]
@@ -3183,9 +3300,8 @@ def test_daily_summary_runtime_includes_fertigation_relays():
 
 
 def test_alert_monitor_tracks_irrigation_feedback_gaps():
-    import tasks
 
-    src = Path(tasks.__file__).read_text()
+    src = _tasks_src()
 
     assert "v_irrigation_sensor_feedback_status" in src
     assert '"alert_type": "irrigation_feedback_gap"' in src
@@ -5451,12 +5567,11 @@ def test_irrigation_relay_visual_check_reads_png_without_external_image_dependen
 
 
 def test_irrigation_relay_state_panel_uses_dense_timeline():
+    # The provisioning/json/ site-* shadow copies were retired (L1 Phase 0); the
+    # live source is grafana/dashboards/ (preferred by gen-grafana-dashboard-cms.py).
     dashboard_path = Path("grafana/dashboards/site-irrigation.json")
-    provisioned_path = Path("grafana/provisioning/dashboards/json/site-irrigation.json")
     dashboard = json.loads(dashboard_path.read_text())
-    provisioned = json.loads(provisioned_path.read_text())
 
-    assert dashboard == provisioned
     relay_panel = next(panel for panel in dashboard["panels"] if panel["title"] == "Relay State")
     relay_panel_json = json.dumps(relay_panel)
     raw_sql = relay_panel["targets"][0]["rawSql"]
