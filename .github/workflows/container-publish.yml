@@ -214,7 +214,7 @@ jobs:
             # workflow: Quartz toolchain, generated-content scripts, schemas,
             # firmware tunable source docs, and the k3s publisher wrapper.
             case "$f" in
-              site/*|scripts/Dockerfile.lab-publisher|scripts/lab-publish-k3s.sh|scripts/lab-publisher-docker-shim.sh)
+              site/*|scripts/Dockerfile.lab-publisher|scripts/lab-publish-k3s.sh|scripts/lab-publisher-docker-shim.sh|scripts/s3-delta-sync.py)
                 lab_publisher_impact=true
                 ;;
               scripts/publish-site-content.sh|scripts/rebuild-site.sh|scripts/generate-*.py|scripts/render-*.py)
