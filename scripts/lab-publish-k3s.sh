@@ -2,11 +2,17 @@
 # lab-publish-k3s.sh - in-cluster lab.verdify.ai publisher.
 #
 # S3/object storage is the durable store:
-#   s3://$LAB_S3_BUCKET/$LAB_S3_PREFIX/content/  Markdown + static source tree
-#   s3://$LAB_S3_BUCKET/$LAB_S3_PREFIX/public/   built Quartz output
-#   s3://$LAB_S3_BUCKET/$LAB_S3_PREFIX/state/    publish/build logs and context
+#   s3://$LAB_S3_BUCKET/$LAB_S3_PREFIX/content/    Markdown + static source tree
+#   s3://$LAB_S3_BUCKET/$LAB_S3_PREFIX/public/     built Quartz output
+#   s3://$LAB_S3_BUCKET/$LAB_S3_PREFIX/state/      publish/build logs and context
+#   s3://$LAB_S3_BUCKET/$LAB_S3_PREFIX/manifests/  per-tree content-hash manifests
 #
 # The RWX PVC mounted at /work is only the local build/serve cache.
+#
+# Uploads go through scripts/s3-delta-sync.py: a per-file SHA-256 manifest gates
+# the upload so an unchanged tree pushes nothing, and a changed tree pushes only
+# the files whose content actually changed (NOT the whole ~400 MiB tree every run
+# just because Quartz refreshed every mtime). See docs/site-publishing-pipeline.md.
 set -euo pipefail
 
 : "${LAB_S3_BUCKET:?set LAB_S3_BUCKET in the verdify-lab-publisher-s3 Secret}"
@@ -28,6 +34,9 @@ LAB_S3_PREFIX="${LAB_S3_PREFIX%/}"
 CONTENT_URI="${LAB_S3_CONTENT_URI:-s3://${LAB_S3_BUCKET}/${LAB_S3_PREFIX}/content}"
 PUBLIC_URI="${LAB_S3_PUBLIC_URI:-s3://${LAB_S3_BUCKET}/${LAB_S3_PREFIX}/public}"
 STATE_URI="${LAB_S3_STATE_URI:-s3://${LAB_S3_BUCKET}/${LAB_S3_PREFIX}/state}"
+# Per-tree content-hash manifests live OUTSIDE content/public/state so they never
+# feed back into the delta walk; see scripts/s3-delta-sync.py.
+MANIFEST_URI="${LAB_S3_MANIFEST_URI:-s3://${LAB_S3_BUCKET}/${LAB_S3_PREFIX}/manifests}"
 ENDPOINT_URL="${LAB_S3_ENDPOINT_URL:-${AWS_ENDPOINT_URL:-}}"
 
 WORK_ROOT="${LAB_WORK_ROOT:-/work}"
@@ -36,6 +45,7 @@ PUBLIC_DIR="${WORK_ROOT}/public"
 STATE_DIR="${WORK_ROOT}/state"
 BUILD_ROOT="${WORK_ROOT}/builds"
 LOCK_DIR="${WORK_ROOT}/locks"
+MANIFEST_DIR="${WORK_ROOT}/manifests"
 SITE_RUNTIME="${LAB_SITE_RUNTIME:-/opt/verdify-site}"
 
 DATE_ARG="${1:-${LAB_PUBLISH_DATE:-$(date +%Y-%m-%d)}}"
@@ -49,7 +59,22 @@ aws_s3() {
   fi
 }
 
-mkdir -p "$CONTENT_DIR" "$PUBLIC_DIR" "$STATE_DIR" "$BUILD_ROOT" "$LOCK_DIR"
+# delta_sync LABEL LOCAL_DIR REMOTE_URI — content-hash, change-gated upload.
+# Uploads only files whose SHA-256 changed and skips entirely when nothing
+# changed, so the every-10-min rebuild no longer re-pushes the whole tree to the
+# (HDD-backed) endpoint just because Quartz refreshed every mtime.
+delta_sync() {
+  "$PYTHON" "${VERDIFY_SCRIPT_ROOT}/s3-delta-sync.py" \
+    --label "$1" \
+    --local "$2" \
+    --remote "$3" \
+    --manifest "${MANIFEST_URI}/$1.json" \
+    --local-manifest "${MANIFEST_DIR}/$1.json" \
+    --endpoint "$ENDPOINT_URL" \
+    --delete
+}
+
+mkdir -p "$CONTENT_DIR" "$PUBLIC_DIR" "$STATE_DIR" "$BUILD_ROOT" "$LOCK_DIR" "$MANIFEST_DIR"
 
 CONTENT_LIST="${STATE_DIR}/s3-content-list.tmp"
 if aws_s3 ls "${CONTENT_URI}/" >"$CONTENT_LIST" 2>/dev/null && [[ -s "$CONTENT_LIST" ]]; then
@@ -110,11 +135,9 @@ export VERDIFY_DAILY_PLAN_DB_CMD="${VERDIFY_DAILY_PLAN_DB_CMD:-psql -U ${PGUSER}
 echo "Starting k3s lab publish: date=${DATE_ARG} reason=${REASON}"
 /app/scripts/publish-site-content.sh --date "$DATE_ARG" --reason "$REASON"
 
-echo "Uploading generated content to ${CONTENT_URI}/"
-aws_s3 sync "${CONTENT_DIR}/" "${CONTENT_URI}/" --delete
-echo "Uploading built public site to ${PUBLIC_URI}/"
-aws_s3 sync "${PUBLIC_DIR}/" "${PUBLIC_URI}/" --delete
-echo "Uploading publish state to ${STATE_URI}/"
-aws_s3 sync "${STATE_DIR}/" "${STATE_URI}/" --delete
+echo "Publishing content-hash deltas to object storage (skips unchanged trees)"
+delta_sync content "$CONTENT_DIR" "$CONTENT_URI"
+delta_sync public "$PUBLIC_DIR" "$PUBLIC_URI"
+delta_sync state "$STATE_DIR" "$STATE_URI"
 
 echo "k3s lab publish complete: date=${DATE_ARG} reason=${REASON}"
