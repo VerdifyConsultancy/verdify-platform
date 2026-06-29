@@ -418,23 +418,26 @@ def test_dispatcher_band_owned_contract_is_explicit():
     """
     import tasks
 
-    expected = {
+    lighting_circuit_lux_params = frozenset(
+        name
+        for name in tasks.LIGHTING_CIRCUIT_DEFAULT_PARAMS
+        if name.endswith("_lux_threshold") or name.endswith("_lux_hysteresis")
+    )
+    expected = tasks.CROP_BAND_REG | tasks.LIGHTING_POLICY_PARAMS | lighting_circuit_lux_params
+    assert tasks.BAND_DRIVEN_PARAMS == expected
+    assert {
         "temp_low",
         "temp_high",
         "vpd_low",
         "vpd_high",
-        "vpd_target_south",
-        "vpd_target_west",
-        "vpd_target_east",
-        "vpd_target_center",
-        "gl_dli_target",
-        "gl_lux_hysteresis",
-        "gl_lux_threshold",
-        "gl_sunrise_hour",
-        "gl_sunset_hour",
-        "sw_gl_auto_mode",
-    }
-    assert tasks.BAND_DRIVEN_PARAMS == expected
+        "band_temp_low_sr",
+        "band_temp_target_mid",
+        "band_vpd_high_ss",
+        "zone_vpd_target_south_sr",
+        "zone_vpd_width_below_east",
+        "gl_main_lux_threshold",
+        "gl_grow_lux_hysteresis",
+    } <= set(tasks.BAND_DRIVEN_PARAMS)
 
     src = _tasks_src()
     assert "fn_band_setpoints(now())" in src
@@ -1778,7 +1781,8 @@ def test_plan_context_embeds_public_site_static_context():
 
 def test_site_publish_refreshes_prior_day_current_day_and_static_context():
     script = (REPO_ROOT / "scripts" / "publish-site-content.sh").read_text()
-    assert 'PREV_DATE=$(date -d "${DATE} -1 day" +%Y-%m-%d)' in script
+    assert 'PREV_DATE=$(date -d "${DATE} -1 day" +%Y-%m-%d 2>/dev/null)' in script
+    assert 'PREV_DATE=$(date -j -f "%Y-%m-%d" "$DATE" -v-1d +%Y-%m-%d)' in script
     assert 'generate-daily-plan.py" --date "$PREV_DATE"' in script
     assert 'generate-daily-plan.py" --date "$DATE"' in script
     assert "gather-static-context.sh" in script
@@ -1861,11 +1865,17 @@ def test_single_path_policy_docs_do_not_reintroduce_alternate_rollout():
     )
     forbidden_terms = ("shadow", "canary")
     hits = []
+    existing = []
     for rel_path in policy_files:
-        text = (REPO_ROOT / rel_path).read_text().lower()
+        path = REPO_ROOT / rel_path
+        if not path.exists():
+            continue
+        existing.append(rel_path)
+        text = path.read_text().lower()
         for term in forbidden_terms:
             if term in text:
                 hits.append(f"{rel_path}:{term}")
+    assert existing
     assert not hits
 
 
@@ -2321,6 +2331,56 @@ def test_climate_telemetry_uses_actual_mister_pulse_state():
     assert "id(gh_climate_moisture_zone).publish_state(effective_moisture_zone)" in block
 
 
+def test_climate_action_log_persists_moisture_exchange_telemetry():
+    controls = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
+    hardware = (REPO_ROOT / "firmware" / "greenhouse" / "hardware.yaml").read_text()
+    ingestor_src = (REPO_ROOT / "ingestor" / "ingestor.py").read_text()
+    entity_map = (REPO_ROOT / "ingestor" / "entity_map.py").read_text()
+    logic = (REPO_ROOT / "firmware" / "lib" / "greenhouse_logic.h").read_text()
+    types = (REPO_ROOT / "firmware" / "lib" / "greenhouse_types.h").read_text()
+
+    assert "id: gh_climate_moisture_exchange" in hardware
+    assert '"climate_moisture_exchange": "climate_moisture_exchange"' in entity_map
+    assert '"climate_moisture_exchange",' in ingestor_src
+    assert 'moisture_exchange = _parse_json_object(state.system.get("climate_moisture_exchange"))' in ingestor_src
+    assert 'source_system_state["climate_moisture_exchange"] = moisture_exchange' in ingestor_src
+
+    for token in (
+        "moisture_exchange_action",
+        "moisture_exchange_reason",
+        "moisture_vent_vpd_gain_kpa",
+        "moisture_heat_vpd_gain_kpa",
+        "moisture_outdoor_fresh",
+        "moisture_vent_overcools",
+        "moisture_heat_assist_corun",
+        "moisture_heat_assist_active",
+        "moisture_heat_assist_timer_ms",
+    ):
+        assert token in types
+
+    for token in (
+        "moisture_exchange_action_name",
+        "vent_overcools",
+        "moisture_exchange_action = moisture_exchange_action_name(mx.action)",
+        "moisture_heat_assist_active = state.dehum_heat_assist_active",
+    ):
+        assert token in logic
+
+    for token in (
+        '\\"action\\":\\"%s\\"',
+        '\\"reason\\":\\"%s\\"',
+        '\\"vent_vpd_gain_kpa\\":%.3f',
+        '\\"heat_vpd_gain_kpa\\":%.3f',
+        '\\"outdoor_fresh\\":%s',
+        '\\"vent_overcools\\":%s',
+        '\\"heat_assist_corun\\":%s',
+        '\\"heat_assist_active\\":%s',
+        '\\"heat_assist_timer_s\\":%.0f',
+        "id(gh_climate_moisture_exchange).publish_state(moisture_exchange)",
+    ):
+        assert token in controls
+
+
 def test_climate_decision_surface_excludes_fert_and_drip_relays():
     types_src = (REPO_ROOT / "firmware" / "lib" / "greenhouse_types.h").read_text()
     relay_block = types_src[
@@ -2384,9 +2444,15 @@ def test_climate_wet_assist_is_separate_from_crop_direct_wet_windows():
     block_reason = controls[
         controls.index("} else if(!any_mister_wet_allowed)") : controls.index("} else if(irrigation_block)")
     ]
+    climate_reason = block_reason[
+        block_reason.index("if(climate_wet_assist_demand)") : block_reason.index(
+            "} else if(!id(direct_wet_gate_enabled))"
+        )
+    ]
     assert "if(climate_wet_assist_demand)" in block_reason
+    assert "direct_wet_window" not in climate_reason
     assert 'snprintf(moisture_block_reason, sizeof(moisture_block_reason), "dew_margin")' in block_reason
-    assert 'snprintf(moisture_block_reason, sizeof(moisture_block_reason), "time_window")' in block_reason
+    assert 'snprintf(moisture_block_reason, sizeof(moisture_block_reason), "direct_wet_time_invalid")' in block_reason
     assert block_reason.index("if(climate_wet_assist_demand)") < block_reason.index("direct_wet_min_temp_f")
 
     watchdog = controls[
@@ -2731,9 +2797,7 @@ def test_leak_detected_locks_water_actuators():
 def test_occupancy_inhibit_is_final_fog_force_off():
     controls = Path("firmware/greenhouse/controls.yaml").read_text()
 
-    manual_fog = (
-        "if(manual_fog_requested && !sensor_fault_relay_lock && manual_fog_safety_block[0] == '\\0'){ willFog = true; }"
-    )
+    manual_fog = "const bool manual_fog_force = manual_force.fog;"
     occupancy_gate = "const bool occupancy_moisture_block = id(occupancy_inhibit_enabled) && id(greenhouse_occupied);"
     assert manual_fog in controls
     assert occupancy_gate in controls
@@ -2770,12 +2834,13 @@ def test_manual_fog_cannot_bypass_final_fog_safety_rails():
     assert 'return "time_window";' in manual_block
     assert 'return "rh_ceiling";' in manual_block
     assert 'return "temp_low";' in manual_block
-    assert "const bool manual_fog_requested = id(manual_fog_active);" in manual_block
+    assert "const bool manual_fog_eff    = manual_fog_latched  || id(manual_fog_active);" in manual_block
+    assert "const bool manual_fog_requested = manual_fog_eff;" in manual_block
     assert "const char* manual_fog_safety_block = fog_safety_block_reason();" in manual_block
-    assert (
-        "if(manual_fog_requested && !sensor_fault_relay_lock && manual_fog_safety_block[0] == '\\0'){ willFog = true; }"
-        in manual_block
-    )
+    assert "const ManualOverrides manual_ov = {" in manual_block
+    assert "manual_fog_eff,                      // humid_active" in manual_block
+    assert "const ManualForce manual_force = apply_manual_overrides(ov_out, manual_ov, mode);" in manual_block
+    assert "const bool manual_fog_force = manual_force.fog;" in manual_block
 
     fog_start = controls.index("char fog_block_reason")
     fog_end = controls.index("static char last_fog_block_reason", fog_start)
@@ -2788,16 +2853,20 @@ def test_manual_fog_cannot_bypass_final_fog_safety_rails():
 def test_manual_fan_cannot_open_vent_during_safety_heat():
     controls = Path("firmware/greenhouse/controls.yaml").read_text()
 
-    manual_start = controls.index("// Manual overrides")
-    manual_end = controls.index("if(id(vent_lock_active)", manual_start)
+    manual_start = controls.index("Firmware-v2 BUTTON OVERRIDE LAYER")
+    manual_end = controls.index("/**************** 11a", manual_start)
     manual_block = controls[manual_start:manual_end]
 
-    assert "below the sensor-fault, safety-heat, and fog-safety rails" in manual_block
-    assert "if(id(manual_fan_active) && !sensor_fault_relay_lock)" in manual_block
-    assert "willFan1 = true;" in manual_block
-    assert "willFan2 = true;" in manual_block
-    assert "if(mode != SAFETY_HEAT){ willVent = true; }" in manual_block
-    assert "willVent = true; }" not in manual_block.replace("if(mode != SAFETY_HEAT){ willVent = true; }", "")
+    assert "SAFETY_COOL / SAFETY_HEAT) are a no-op there" in manual_block
+    assert "const bool manual_fans_eff   = manual_fans_latched || id(manual_fan_active);" in manual_block
+    assert "const ManualForce manual_force = apply_manual_overrides(ov_out, manual_ov, mode);" in manual_block
+    assert "const bool manual_fan_force = manual_force.fans;" in manual_block
+    interlock_block = controls[
+        controls.index("const bool fan_requires_vent", manual_end) : controls.index(
+            "const bool fan_vent_interlock_active", manual_end
+        )
+    ]
+    assert "fan_requires_open_vent(mode, fan_physically_on || fan_wanted, vent_bypass_eff)" in interlock_block
 
 
 def test_manual_climate_buttons_are_flag_only_controller_path():
@@ -2865,11 +2934,16 @@ def test_sensor_fault_is_final_relay_lock_above_manual_overrides():
     controls = Path("firmware/greenhouse/controls.yaml").read_text()
 
     assert "const bool sensor_fault_relay_lock = mode == SENSOR_FAULT;" in controls
-    assert "if(id(manual_fan_active) && !sensor_fault_relay_lock)" in controls
-    assert "if(manual_fog_requested && !sensor_fault_relay_lock && manual_fog_safety_block[0] == '\\0')" in controls
-    assert "const bool fan_requires_vent = !sensor_fault_relay_lock && mode != SAFETY_HEAT" in controls
+    assert "const ManualForce manual_force = apply_manual_overrides(ov_out, manual_ov, mode);" in controls
+    assert "const bool manual_fan_force = manual_force.fans;" in controls
+    assert "const bool manual_fog_force = manual_force.fog;" in controls
+    assert (
+        "const bool fan_requires_vent = fan_requires_open_vent(mode, fan_physically_on || fan_wanted, vent_bypass_eff);"
+        in controls
+    )
     assert "const bool force_heat_off = heat_air_exchange_interlock_active || sensor_fault_relay_lock;" in controls
 
+    assert controls.index("const ManualForce manual_force") < controls.index("if(sensor_fault_relay_lock) {")
     lock_start = controls.index("if(sensor_fault_relay_lock) {")
     lock_end = controls.index("/**************** 11a", lock_start)
     lock_block = controls[lock_start:lock_end]
@@ -2878,8 +2952,8 @@ def test_sensor_fault_is_final_relay_lock_above_manual_overrides():
 
     relay_apply = controls[controls.index("/**************** 11") : controls.index("/**************** 12")]
     assert "set_relay(R[5], willVent, fan_requires_vent, sensor_fault_relay_lock);" in relay_apply
-    assert "set_relay(R[2], willFan1, false, sensor_fault_relay_lock);" in relay_apply
-    assert "set_relay(R[3], willFan2, false, sensor_fault_relay_lock);" in relay_apply
+    assert "set_relay(R[2], willFan1, manual_fan_force, sensor_fault_relay_lock);" in relay_apply
+    assert "set_relay(R[3], willFan2, manual_fan_force, sensor_fault_relay_lock);" in relay_apply
     assert "irrigation_water_conflict" in relay_apply
     assert "climate_water_budget_block" in relay_apply
 

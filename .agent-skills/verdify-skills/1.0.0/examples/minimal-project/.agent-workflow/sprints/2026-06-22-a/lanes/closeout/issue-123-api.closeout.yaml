@@ -1,0 +1,30 @@
+schema_ref: lane-closeout.schema.yaml
+kind: LaneCloseout
+schema_version: "1.0"
+sprint_id: 2026-06-22-a
+lane_id: issue-123-api
+status: ready_for_critic
+issue_ids: [123]
+pull_request: 456
+baseline_sha: "1111111111111111111111111111111111111111"
+head_sha: "2222222222222222222222222222222222222222"
+contract_hash: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+changed_paths: [src/api/health.rb, tests/api/health_test.rb]
+validation_results:
+  - id: api-test
+    command: ruby -Itest tests/api/health_test.rb
+    exit_status: 0
+    result: passed
+    executed_at: "2026-06-22T12:15:00Z"
+    artifact: artifacts/api-test.log
+acceptance_evidence:
+  - criterion_id: LANE-AC-01
+    evidence_ids: [EV-001, EV-002]
+    assessment: satisfied
+discovered_issues: [124]
+residual_risks:
+  - Runtime revision injection still requires deployment verification.
+worktree_clean: true
+worker_session_id: codex-20260622-001
+completed_at: "2026-06-22T12:20:00Z"
+limitations: []

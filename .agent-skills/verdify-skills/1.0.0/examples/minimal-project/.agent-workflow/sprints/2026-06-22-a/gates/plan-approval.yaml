@@ -1,0 +1,17 @@
+schema_ref: human-gate.schema.yaml
+kind: HumanGate
+schema_version: "1.0"
+gate_id: plan-approval-2026-06-22-a
+sprint_id: 2026-06-22-a
+lane_id: null
+type: plan_approval
+status: approved
+question: Approve issue #123 as one lane with the attached contract and risks?
+owner: delivery-owner
+evidence_required: [sprint plan, lane contract, module contract, risk map]
+allowed_decisions: [approve, revise, reject]
+decision: approve
+rationale: The sprint is bounded and the lane has exclusive ownership.
+opened_at: "2026-06-22T10:50:00Z"
+resolved_at: "2026-06-22T11:00:00Z"
+resume_state: READY

@@ -58,15 +58,15 @@ globals:
     type: float
     restore_value: no
     initial_value: '1.0'
-  # Control-band tracking tightness [0,1]. restore_value:no so a boot before the first
-  # planner push uses this cold-start default. ADR-0004 (floating-corridor, supersedes
-  # ADR-0003 track-the-target): baseline 0.25 — the climate FLOATS within the corridor and
-  # acts at the edges; relax toward 0 (full float, #377), do NOT ramp tighter. Matches the
-  # registry default. (Takes effect on the next firmware OTA; the live value is planner-pushed.)
+  # ADR-0004 floating-corridor tracking tightness [0,1]. restore_value:no so a boot
+  # before the first planner push uses this cold-start default. Default 0.0 = float
+  # inside the served crop corridor and act at the edges. Nonzero values remain an
+  # explicit operator/diagnostic escape hatch only; planner registry accepts 0.
+  # Takes effect on the next firmware OTA; the live no-OTA value remains operator-gated.
   - id: band_track_fraction
     type: float
     restore_value: no
-    initial_value: '0.25'
+    initial_value: '0.0'
   # BC-13 (ADR0003 §6.4): AI-tunable single-cycle air-exchange fraction toward outdoor
   # for the moisture-exchange estimator (Jason 2026-06-17). Default 0.30; rails [0.1,0.6].
   - id: vent_exchange_fraction
@@ -1336,6 +1336,22 @@ globals:
     restore_value: no
     initial_value: '0'
 
+  # Per-zone last turn-OFF stamp (ms). Powers the mister re-fire dwell fence
+  # (mister_min_off_s): a zone may not re-energize within mister_min_off_s of
+  # its own last off, collapsing sub-gap chatter without touching zone choice.
+  - id: last_off_south_ms
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+  - id: last_off_west_ms
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+  - id: last_off_center_ms
+    type: uint32_t
+    restore_value: no
+    initial_value: '0'
+
   # Daily counter of fairness-watchdog overrides (reset at midnight).
   - id: cnt_mister_fairness_overrides_today
     type: int
@@ -1568,6 +1584,17 @@ globals:
     initial_value: '60'
 
   - id: mister_pulse_gap_s
+    type: int
+    restore_value: no
+    initial_value: '45'
+
+  # Mister re-fire dwell floor (s). A zone may not re-energize within this of
+  # its own last turn-off — suppresses the sub-gap on/off chatter the misters
+  # (uniquely among relays) had no min-on/off protection against. Default 45s
+  # == the designed pulse gap, so it only fences re-fires FASTER than the
+  # intended cadence (never extends a normal pulse / never over-waters).
+  # Planner-tunable for cycling reduction; firmware-clamped to a sane minimum.
+  - id: mister_min_off_s
     type: int
     restore_value: no
     initial_value: '45'

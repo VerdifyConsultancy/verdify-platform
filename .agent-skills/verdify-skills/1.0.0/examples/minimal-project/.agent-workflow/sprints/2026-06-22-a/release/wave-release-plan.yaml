@@ -1,0 +1,123 @@
+schema_ref: wave-release-plan.schema.yaml
+kind: WaveReleasePlan
+schema_version: "1.0"
+wave_id: wave-2026-06-22-a-health
+status: approved
+scope:
+  sprint_id: 2026-06-22-a
+  issue_ids: [123]
+  lane_ids: [issue-123-api]
+  northstar_ids: [PRQ-006, ARQ-006, ARCH-009]
+  summary: Plan the CI, review environment, and release evidence for the health endpoint lane.
+  non_goals:
+  - Production mutation.
+branch_model:
+  model: per_lane_branches
+  base_ref: main
+  release_ref: null
+  merge_queue_required: false
+  concurrency_group: minimal-project-health
+  decision_notes: One issue and one lane use one PR branch for this example sprint.
+github:
+  repository: example/minimal-project
+  milestone: Sprint 2026-06-22-a
+  project: Verdify delivery
+  required_checks:
+  - validate
+  merge_group_checks_required: false
+  environment_protection_required: true
+ci:
+  workflows:
+  - name: validate
+    required: true
+    event_triggers: [pull_request]
+    timeout_minutes: 30
+    evidence_expected:
+    - Unit tests pass.
+    - Schema validation passes.
+  artifacts:
+  - service-image:abcdef1234567890abcdef1234567890abcdef12
+  required_events: [pull_request, deployment]
+environments:
+- name: review/issue-123-api
+  environment_type: review
+  required: true
+  namespace: minimal-project-issue-123-api
+  url: https://issue-123-api.example.test
+  quota_policy: small-review-quota
+  limit_policy: default-review-limits
+  network_policy: default-deny-with-ingress
+  ttl: 7 days
+  secrets_scope: non-production review secrets only
+  protection_rules:
+  - Required reviewer before protected promotion rehearsal.
+  expected_revision_source: PR head SHA
+gitops:
+  controller: argo_cd
+  desired_state_refs:
+  - gitops://minimal-project/review/issue-123-api
+  sync_order:
+  - phase: Sync
+    wave: 0
+    resource: Namespace/minimal-project-issue-123-api
+    purpose: Create the review namespace before app resources.
+  - phase: Sync
+    wave: 1
+    resource: Deployment/minimal-project-api
+    purpose: Deploy the reviewed API revision.
+  reconciliation_checks:
+  - Argo CD application is synced and healthy.
+  - Observed image revision matches PR head artifact.
+  remediation_policy: Resync desired state or delete the review namespace on failure.
+deployment_strategy:
+  type: rolling
+  progressive_delivery: false
+  traffic_policy: review URL only
+  steps:
+  - id: STEP-01
+    action: Deploy the PR artifact to the review namespace.
+    success_criteria: Health endpoint responds with the reviewed revision.
+    rollback_trigger: Health endpoint fails or observed revision does not match.
+observability:
+  dashboards:
+  - https://grafana.example.test/d/minimal-project
+  logs:
+  - https://logs.example.test/minimal-project/issue-123-api
+  metrics:
+  - https://metrics.example.test/minimal-project/issue-123-api
+  traces: []
+  runtime_checks:
+  - GET /healthz returns ok.
+  missing_telemetry: []
+rollback:
+  ready: true
+  strategy: Revert to the previous review environment revision or delete the review namespace.
+  known_good_ref: "0123456789abcdef0123456789abcdef01234567"
+  procedure: Resync the prior GitOps ref or remove the temporary review namespace.
+  validation_steps:
+  - Confirm prior revision responds at /healthz or environment is stopped.
+release_health:
+  stabilization_window: 5 minutes
+  signals:
+  - name: health endpoint
+    source: review URL
+    threshold: HTTP 200 with expected revision
+    blocking: true
+review_handoff:
+  review_inbox_packet_required: true
+  expected_review_packet_path: .agent-workflow/sprints/2026-06-22-a/review/review-inbox-packet.yaml
+  human_test_steps:
+  - Open the review URL and confirm `/healthz` returns ok.
+  - Confirm the observed revision matches the PR head artifact.
+  approval_gate: Human reviewer approval before release verification.
+risks:
+- id: RISK-01
+  severity: low
+  statement: Review environment may not reflect the exact PR artifact.
+  mitigation: Review packet must compare observed revision to the PR head artifact.
+approval:
+  status: approved
+  approver: delivery-owner
+  approved_at: "2026-06-22T11:05:00Z"
+prepared_at: "2026-06-22T11:02:00Z"
+planner: sprint-planner

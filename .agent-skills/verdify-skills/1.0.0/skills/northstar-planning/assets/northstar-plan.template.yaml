@@ -1,0 +1,28 @@
+schema_ref: northstar-plan.schema.yaml
+kind: NorthStarPlan
+schema_version: "1.0"
+project_id: ""
+status: draft
+generated_at: ""
+sources: []
+goals: []
+requirements: []
+user_stories: []
+architecture_principles: []
+milestones: []
+risks: []
+adversarial_findings: []
+open_questions: []
+conflicts: []
+traceability: []
+proposed_artifact_changes: []
+issue_recommendations: []
+gate_recommendations: []
+handoff:
+  next_skill: project-definition
+  next_mode: discovery
+  reason: ""
+approval:
+  status: pending
+  approver: null
+  approved_at: null

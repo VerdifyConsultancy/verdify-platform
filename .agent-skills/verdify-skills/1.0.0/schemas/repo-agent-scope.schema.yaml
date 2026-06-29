@@ -1,0 +1,123 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://verdify.example/schemas/repo-agent-scope.schema.yaml
+title: Verdify Repo Agent Scope
+type: object
+additionalProperties: false
+required: [schema_ref, kind, schema_version, agent_id, repository, status, updated_at, scope, ownership, responsibilities, authority_boundaries, discovery_inputs, runtime_context, escalation_paths, review, handoff, approval]
+properties:
+  schema_ref: {const: repo-agent-scope.schema.yaml}
+  kind: {const: RepoAgentScope}
+  schema_version: {const: "1.0"}
+  agent_id: {type: string}
+  status: {type: string, enum: [draft, proposed, active, blocked, superseded]}
+  updated_at: {type: string}
+  repository:
+    type: object
+    additionalProperties: false
+    required: [owner, name, full_name]
+    properties:
+      owner: {type: string}
+      name: {type: string}
+      full_name: {type: string}
+      default_branch: {type: [string, 'null']}
+      github_url: {type: [string, 'null']}
+      local_path: {type: [string, 'null']}
+  scope:
+    type: object
+    additionalProperties: false
+    required: [purpose, in_scope, out_of_scope, owned_paths, protected_paths, stakeholders]
+    properties:
+      purpose: {type: string}
+      in_scope: {type: array, items: {type: string}}
+      out_of_scope: {type: array, items: {type: string}}
+      owned_paths: {type: array, items: {type: string}}
+      protected_paths: {type: array, items: {type: string}}
+      stakeholders: {type: array, items: {type: string}}
+  ownership:
+    type: object
+    additionalProperties: false
+    required: [primary_owner, reviewers, upstream_authorities, downstream_consumers]
+    properties:
+      primary_owner: {type: string}
+      reviewers: {type: array, items: {type: string}}
+      upstream_authorities: {type: array, items: {type: string}}
+      downstream_consumers: {type: array, items: {type: string}}
+  responsibilities:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, description, lifecycle_skill, acceptance_signal, evidence_refs]
+      properties:
+        id: {type: string, pattern: '^RAS-[0-9]{3,}$'}
+        description: {type: string}
+        lifecycle_skill: {type: string}
+        acceptance_signal: {type: string}
+        evidence_refs: {type: array, items: {type: string}}
+  authority_boundaries:
+    type: object
+    additionalProperties: false
+    required: [allowed_operations, prohibited_operations, approval_required_for, credential_rules, environment_limits]
+    properties:
+      allowed_operations: {type: array, items: {type: string}}
+      prohibited_operations: {type: array, items: {type: string}}
+      approval_required_for: {type: array, items: {type: string}}
+      credential_rules: {type: array, items: {type: string}}
+      environment_limits: {type: array, items: {type: string}}
+  discovery_inputs:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, source, evidence_status, summary]
+      properties:
+        id: {type: string}
+        source: {type: string}
+        evidence_status: {type: string, enum: [verified, observed, reported, inferred, unknown]}
+        summary: {type: string}
+  runtime_context:
+    type: object
+    additionalProperties: false
+    required: [namespaces, storage_mounts, routes, credential_refs, observability_refs]
+    properties:
+      namespaces: {type: array, items: {type: string}}
+      storage_mounts: {type: array, items: {type: string}}
+      routes: {type: array, items: {type: string}}
+      credential_refs: {type: array, items: {type: string}}
+      observability_refs: {type: array, items: {type: string}}
+  escalation_paths:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [trigger, owner, route, blocking]
+      properties:
+        trigger: {type: string}
+        owner: {type: string}
+        route: {type: string}
+        blocking: {type: boolean}
+  review:
+    type: object
+    additionalProperties: false
+    required: [status, reviewers, last_reviewed_at, notes]
+    properties:
+      status: {type: string, enum: [not_requested, requested, accepted, changes_requested, rejected]}
+      reviewers: {type: array, items: {type: string}}
+      last_reviewed_at: {type: [string, 'null']}
+      notes: {type: string}
+  handoff:
+    type: object
+    additionalProperties: false
+    required: [next_skill, next_mode, reason]
+    properties:
+      next_skill: {type: string}
+      next_mode: {type: string}
+      reason: {type: string}
+  approval:
+    type: object
+    additionalProperties: false
+    required: [status, approver, approved_at]
+    properties:
+      status: {type: string, enum: [pending, approved, rejected]}
+      approver: {type: [string, 'null']}
+      approved_at: {type: [string, 'null']}

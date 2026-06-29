@@ -1,0 +1,62 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://verdify.example/schemas/repo-hygiene.schema.yaml
+title: Verdify Repo Hygiene Report
+type: object
+additionalProperties: false
+required: [schema_ref, kind, schema_version, repository, status, assessed_at, baseline_sha, areas, safe_cleanup, issues_to_open, gates_to_open, completion_criteria, handoff, approval]
+properties:
+  schema_ref: {const: repo-hygiene.schema.yaml}
+  kind: {const: RepoHygieneReport}
+  schema_version: {const: "1.0"}
+  repository: {type: string}
+  status: {type: string, enum: [draft, complete, blocked, superseded]}
+  assessed_at: {type: string}
+  baseline_sha: {type: string}
+  areas:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, area, status, summary, evidence, blockers]
+      properties:
+        id: {type: string, pattern: '^HY-[0-9]{3,}$'}
+        area: {type: string}
+        status: {type: string, enum: [pass, warn, fail, blocked]}
+        summary: {type: string}
+        evidence: {type: array, items: {type: string}}
+        blockers: {type: array, items: {type: string}}
+  safe_cleanup:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [path, action, status]
+      properties:
+        path: {type: string}
+        action: {type: string}
+        status: {type: string, enum: [proposed, applied, skipped]}
+  issues_to_open:
+    type: array
+    items: {type: string}
+  gates_to_open:
+    type: array
+    items: {type: string}
+  completion_criteria:
+    type: array
+    items: {type: string}
+  handoff:
+    type: object
+    additionalProperties: false
+    required: [next_skill, next_mode, reason]
+    properties:
+      next_skill: {type: string}
+      next_mode: {type: string}
+      reason: {type: string}
+  approval:
+    type: object
+    additionalProperties: false
+    required: [status, approver, approved_at]
+    properties:
+      status: {type: string, enum: [pending, approved, rejected]}
+      approver: {type: [string, 'null']}
+      approved_at: {type: [string, 'null']}

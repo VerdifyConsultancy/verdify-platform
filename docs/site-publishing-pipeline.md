@@ -10,9 +10,10 @@ storage. The bucket is provided by Secret `verdify-lab-publisher-s3`; the
 default prefix is `lab`.
 
 ```text
-s3://$LAB_S3_BUCKET/$LAB_S3_PREFIX/content/  # Markdown + static source tree
-s3://$LAB_S3_BUCKET/$LAB_S3_PREFIX/public/   # generated Quartz public tree
-s3://$LAB_S3_BUCKET/$LAB_S3_PREFIX/state/    # publish/build logs and context
+s3://$LAB_S3_BUCKET/$LAB_S3_PREFIX/content/    # Markdown + static source tree
+s3://$LAB_S3_BUCKET/$LAB_S3_PREFIX/public/     # generated Quartz public tree
+s3://$LAB_S3_BUCKET/$LAB_S3_PREFIX/state/      # publish/build logs and context
+s3://$LAB_S3_BUCKET/$LAB_S3_PREFIX/manifests/  # per-tree content-hash manifests (delta-sync bookkeeping)
 ```
 
 The in-cluster publisher syncs content to the `verdify-lab-site-cache` PVC at
@@ -68,7 +69,7 @@ Curated website content
   -> scripts/rebuild-site.sh
   -> npx quartz build --output /work/builds/public.*
   -> rsync staged output into /work/public
-  -> sync /work/content, /work/public, /work/state back to S3
+  -> delta-sync /work/content, /work/public, /work/state back to S3 (content-hash gated)
   -> verdify-lab nginx reads /work/public through the lab cache PVC
   -> Traefik / Cloudflare / lab.verdify.ai
 ```
@@ -94,6 +95,37 @@ the staged output into the live public directory:
 The sync uses delayed deletes, so existing pages stay available while new files
 copy into place. The `verdify-lab` nginx container serves the PVC read-only and
 does not need S3 credentials.
+
+## Delta Uploads to S3 (content-hash, change-gated)
+
+The S3 `public/` tree is a **durable mirror only** — nginx serves the PVC, and
+the publisher only ever downloads `content/` (never `public/`) to hydrate a cold
+PVC. That mirror used to be written with `aws s3 sync … --delete`, which decides
+what to upload by comparing **size + mtime**. Because the Quartz rebuild
+regenerates the whole `public/` tree every run, every file got a fresh mtime and
+the full ~400 MiB site re-uploaded to the (HDD-backed) endpoint every 10 minutes
+even when the rendered bytes were identical — pure write pressure on a saturated
+endpoint.
+
+`lab-publish-k3s` now uploads through `scripts/s3-delta-sync.py`, which drives
+uploads off a per-file **SHA-256 manifest** instead of mtime:
+
+- Walks the local tree → `{relpath: sha256}` and compares against the manifest of
+  what was last uploaded (PVC cache `/work/manifests/<tree>.json`, else the S3
+  copy under the `manifests/` prefix, else cold).
+- **Change gate:** if nothing differs, it uploads **zero** objects (the common
+  every-10-minutes no-op case).
+- Otherwise it uploads **only** the changed/new files (one
+  `aws s3 cp --recursive` over a hardlink staging tree of just those files) and,
+  with `--delete`, prunes keys whose local file vanished.
+- Persists the new manifest to the PVC and S3 so the next run is a true delta. A
+  rescheduled (wiped) PVC falls back to the S3 manifest, so it still deltas
+  instead of re-uploading the whole tree.
+
+The manifests live under their own `manifests/` prefix (outside
+content/public/state) so they never feed back into the walk. Steady-state runs
+now move only the handful of HTML pages whose content actually changed (e.g. a
+regenerated `generated at` timestamp) instead of the entire tree.
 
 ## Change Detection
 

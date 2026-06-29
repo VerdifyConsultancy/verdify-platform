@@ -1,0 +1,6 @@
+interface:
+  display_name: "Verdify Sprint Orchestrator"
+  short_description: "Dispatch Agent Platform lane sessions and reconcile sprint execution"
+  default_prompt: "Reconstruct the approved sprint, refresh the execution runbook, reconcile GitHub and Agent Platform state, then perform only the next orchestration transition. Do not implement or self-review lane code."
+policy:
+  allow_implicit_invocation: true

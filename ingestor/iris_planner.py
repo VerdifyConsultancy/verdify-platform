@@ -44,7 +44,24 @@ CONTEXT_GATHER_TIMEOUT = int(os.getenv("IRIS_CONTEXT_GATHER_TIMEOUT", "120"))
 # means Iris silently loses detailed tuning guidance — so we check at send
 # time and (a) log critical, (b) flag the outgoing prompt so Iris knows to
 # degrade gracefully instead of referencing a file she can't open.
-PLANNER_PLAYBOOK_PATH = Path("/mnt/agents/iris/skills/greenhouse-planner.md")
+# k3s cleanup (#339/#210): the playbook moved off the decommissioned iris-VM
+# mount (/mnt/agents). Resolve the first readable candidate: an explicit
+# PLANNER_PLAYBOOK_PATH env override, the in-image repo copy
+# (docs/planner/greenhouse-playbook.md, packaged with the ingestor image), then
+# the legacy VM mount for backward-compat. The repo source is canonical.
+_PLAYBOOK_CANDIDATES = [
+    p
+    for p in (
+        os.environ.get("PLANNER_PLAYBOOK_PATH"),
+        str(Path(__file__).resolve().parent.parent / "docs" / "planner" / "greenhouse-playbook.md"),
+        "/mnt/agents/iris/skills/greenhouse-planner.md",
+    )
+    if p
+]
+PLANNER_PLAYBOOK_PATH = next(
+    (Path(p) for p in _PLAYBOOK_CANDIDATES if Path(p).exists()),
+    Path(_PLAYBOOK_CANDIDATES[-1]),
+)
 try:
     _planner_playbook_available = PLANNER_PLAYBOOK_PATH.exists()
 except OSError as exc:  # pragma: no cover — host-path check
@@ -186,44 +203,40 @@ about pre-change behavior.
 ### Decision Precedence
 
 1. **Safety** — never zero safety rails, respect condensation/disease gates
-2. **Band compliance** — keep each zone's temp AND VPD inside its agronomic band. PRIMARY objective.
-   Compliance is GRADED (full credit in the ideal band, partial credit through the
-   stress band, zero beyond), PER-ZONE (center=Vanda orchid, east=lettuce/strawberry/
-   pepper — each graded against what is planted there, not one house average), and
-   FEASIBILITY-AWARE (a miss you cannot fix — vent saturated, outdoor hotter than the
-   served target — is not held against you). Every tuning decision should first ask:
-   "does this move a CONTROLLER-attributable miss toward its ideal band?" Do not chase
-   a physically-unachievable miss with more actuator effort — widen the served envelope
-   instead (the dispatcher owns that) and spend effort where you have authority.
+2. **Band compliance / corridor outcomes** — keep each zone's temp AND VPD inside
+   its agronomic corridor. PRIMARY objective. ADR-0004 supersedes target-hugging:
+   the target line is a centering/diagnostic reference, not something to chase while
+   readings are already inside the crop corridor. Compliance is PER-ZONE (center=Vanda
+   orchid, east=lettuce/strawberry/pepper — each graded against what is planted there,
+   not one house average) and FEASIBILITY-AWARE (a miss you cannot fix — vent saturated,
+   outdoor hotter than the served high edge — is not held against you). Every tuning
+   decision should first ask: "is there a controller-attributable edge miss, forecast
+   edge risk, or daily-integral miss worth spending water/energy/wear on?" Do not spend
+   effort merely to reduce distance to the target line inside the corridor.
 3. **Lessons** — high-confidence validated lessons override forecast reasoning
 4. **Forecast/conditions** — weather drives tactical posture
-5. **Cost** — gas over electric heating, minimize water waste. Optimize cost only AFTER compliance.
+5. **Cost / water / wear** — first-class constraints. Use the cheapest effective
+   actuator and the smallest dose that preserves corridor outcomes; do not spend
+   resources to make in-corridor air hug the target line.
 6. **Experiment** — one testable hypothesis when appropriate
 
 ### KPI: Planner Score (0-100)
 
-- **80% Compliance** — the scored number is **`compliance_v2_attributable_pct`**:
-  graded, per-zone, controller-attributable band compliance, aggregated to a house
-  number (center=Vanda 0.60, east=food 0.40). Target: >90%. It is **graded — and now
-  PEAKS AT THE TARGET** (BC-12/ADR0003 §6.2): the credit is 1.0 only AT the band
-  midpoint (the target curve) and declines toward each band edge (0.5 at the ideal
-  edge, 0 at the stress edge). So a high compliance number means actual is HUGGING the
-  target line, not merely inside the band — off-target-but-in-band no longer scores
-  1.0. (NOTE: numbers stepped DOWN at the cutover vs the old flat-in-band metric — that
-  is the harder metric, not a control regression.) The headline diagnostic of HOW far
-  off-target is `dev_temp_norm_median_day/night`, `dev_temp_norm_p95` (+ `dev_vpd_*`):
-  median/p95 of normalized |actual − device target| (0 = on target, 1 = at band edge).
-  Drive deviation toward 0 day AND night, both axes. It is **graded** (zero beyond the
-  stress band — 0.1F out no longer scores like 15F out), **per-zone** (each zone graded
-  against what is planted there, not one house average), and **controller-attributable**:
-  misses that are physically unachievable (vent saturated and outdoor hotter than the
-  served target — an exhaust-only box cannot cool below ambient) are NOT scored against
-  you; only misses where a stage was idle while you had cooling/heating authority count.
-  *(Transitional: the live reward swap is migration 147's apply. The scorecard reward
-  column reads `compliance_v2_attributable_pct` per day and falls back to the legacy
-  binary `compliance_pct` only for days before the graded column was populated — so
-  plan to, and read, the graded controller-attributable number as your score.)*
-- **20% Cost efficiency** — daily utility spend. <$5/day = full marks, $15+ = zero.
+- **80% Compliance** — the current scored field is still
+  **`compliance_v2_attributable_pct`**: graded, per-zone,
+  controller-attributable band compliance, aggregated to a house number
+  (center=Vanda 0.60, east=food 0.40). ADR-0004 changes how to use it: treat it as
+  a corridor/outcome guard, not as permission to chase the target line. A good day
+  is high served-corridor time, low controller-attributable edge misses, acceptable
+  dew margin, and stable daily integrals. `dev_temp_norm_*` and `dev_vpd_*` remain
+  diagnostics of where the air sat relative to the target reference; do **not**
+  drive them toward 0 when temp/VPD are inside the crop corridor. The outcome/KPI
+  lane will replace this with served-vs-pinched compliance, DLI/DIF, water, runtime,
+  cycle, dew-margin, and solar-phase buckets; until then, read the existing score
+  through ADR-0004.
+- **20% Cost efficiency** — daily utility spend plus water/wear context. <$5/day =
+  full marks, $15+ = zero, but do not add cost to make in-corridor air hug the
+  target line.
 - Call `scorecard()` to check current and historical scores (25 metrics).
 
 **Utility metrics** (all in `scorecard()` output):
@@ -251,7 +264,8 @@ Use the breakdown to understand resource shifts:
 - `compliance_v2_attributable_pct` — **the scored compliance number**: graded,
   per-zone, controller-attributable. Physically-unachievable misses are credited
   back, so it rewards exactly the lever you own. This is what `planner_score`'s 80%
-  compliance half reads.
+  compliance half reads today; interpret it through ADR-0004 as a corridor/outcome
+  guard, not a target-distance mandate.
 - `compliance_v2_raw_pct` — graded, per-zone compliance with the weather and all
   (no feasibility credit). Reported context: a low raw with a high attributable means
   the band is structurally out of reach, not that you are failing.
@@ -267,11 +281,11 @@ Use the breakdown to understand resource shifts:
 - `vpd_compliance_pct` — % of readings where VPD alone is in the served band (legacy,
   binary, diagnostic only).
 
-**Graded compliance (decision #2).** A reading scores full credit (1.0) inside the
-ideal band, **linear partial credit** through the stress band, and 0 only beyond the
-stress edge — so severity is visible (0.1F out != 15F out). Temp and VPD are graded
-independently, then combined per zone as the geometric mean (a zone is only fully
-compliant when BOTH axes are good; one-axis collapse is punished hard).
+**Graded compliance (decision #2).** Use graded severity to tell small edge misses
+from large stress, but ADR-0004 does not reward target hugging inside the corridor.
+Temp and VPD are graded independently, then combined per zone as the geometric mean
+(a zone is only fully compliant when BOTH axes are good; one-axis collapse is
+punished hard).
 
 **Per-zone (decision #1).** Each zone is graded against its own crop band: center =
 Vanda orchid; east = lettuce/strawberry/pepper (ideal = the intersection where all
@@ -367,6 +381,13 @@ dispatcher-owned range.
   25-35s near the edge, and 45-60s after VPD-low overshoot or condensation
   risk. Keep `mister_pulse_on_s` around 60s unless cycles visibly fail to move
   VPD.
+- `mister_min_off_s` s, [30-120], def 45 — re-fire dwell floor: a mister zone
+  cannot re-energize within this of its own last off, so it collapses sub-gap
+  on/off chatter (the misters lack the relay min-on/off protection the climate
+  relays have). Default 45s == the designed pulse gap (only fences chatter,
+  never normal misting). Raise toward 60-90s to cut mister cycling/wear when
+  the transition log shows a zone re-firing faster than the climate needs; it
+  never reduces intended misting above the gap. Confirmed by `cfg_mister_min_off_s`.
 - Escalate with fog when misters are pulsing but VPD is still above band. Fog is
   the heavy 7x wet-assist path: use `fog_escalation_kpa` 0.15-0.20 for hot/dry
   venting with healthy dew margin, 0.25-0.30 for mild dry stress, and 0.35-0.50
@@ -423,7 +444,7 @@ Use tactical knobs below to shift behavior instead.
 
 **Band-adjacent tactical knob:**
 - `vpd_hysteresis` kPa, [0.05-0.5], def 0.3 — larger = fewer mist cycles
-- `band_track_fraction` fraction, [0-1], **def 0.25** — pinches the control band toward the served target. ADR-0004 (floating): the climate should FLOAT within the corridor and act at the edges — 0 = full float (the goal). RELAX toward 0; do NOT crank it tighter (cost is a driver, the plant gains nothing from pinning to the line).
+- `band_track_fraction` fraction, [0-0], **def 0** — ADR-0004 floating-corridor flip. Emit only `0` so the controller floats inside the served crop corridor and acts at the edges. Nonzero target-hugging is rejected for planner writes.
 
 **Staging:**
 - `heat_hysteresis` °F, [0-3], def 1 — heat-stage clear margin above the interior heating target; higher holds heat longer
@@ -504,11 +525,23 @@ short-term climate stress. Both circuits share the same parameter shape:
 - `sw_dwell_gate_enabled` — master switch; firmware default OFF, planner may enable for oscillation control. THERMAL_RELIEF, SAFETY_COOL, SAFETY_HEAT, SENSOR_FAULT, dehum→humidify overshoot, and sealed-mist temp preemption bypass the gate.
 - `dwell_gate_ms` ms, [60000-1800000], def 300000 — hold duration for ordinary non-safety mode transitions only. Revert if it hides real stress or increases relief cycling.
 
+**Climate-relay protection dwell (cut actuator cycling + relay wear):**
+Raise these to lengthen the minimum a relay stays on/off, collapsing rapid
+on/off chatter into fewer, longer actuations — lower wear and runtime — without
+touching the band. They are firmware-clamped to a sane minimum (the listed `[lo`)
+so you can never drive a relay into chatter; raise toward the high end only when
+the current hour's transition log shows a relay cycling more than the climate
+needs. Each is confirmed by its `cfg_*` readback. Leave at default unless cycling
+is the diagnosed problem; over-long dwell can make a relay sluggish to real demand.
+- `min_heat_on_s` s, [30-300], def 120 / `min_heat_off_s` s, [60-600], def 180 — heater min on/off; off-floor honors the igniter cooldown. Raise to stop heat short-cycling on marginal nights.
+- `min_fan_on_s` s, [30-300], def — / `min_fan_off_s` s, [30-300], def — — circulation/exhaust fan min on/off. Raise to damp fan whipsaw near a cooling edge.
+- `min_vent_on_s` s, [10-300], def — / `min_vent_off_s` s, [10-300], def — — vent actuator min on/off. Raise to stop the vent hunting around the temp/VPD edge.
+
 ### Non-Policy Tunables
 
 Per-zone VPD rebalance, legacy irrigation start/duration changes, safety rail adjustments,
 occupancy inhibit, fog window shifts, economiser site pressure, fan-lead
-rotation, relay min-on/off protection dwell, crop bands, readbacks, retired
+rotation, crop bands, readbacks, retired
 aliases (`bias_heat`, `bias_cool`, `d_heat_stage_2`, `d_cool_stage_2`,
 `sw_fsm_controller_enabled`),
 and compatibility switches are not planner write targets. Treat them as explanatory context. If one must become planner-writable,

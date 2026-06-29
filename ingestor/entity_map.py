@@ -423,6 +423,7 @@ STATE_MAP: dict[str, str] = {
     "climate_fog_block_reason": "climate_fog_block_reason",
     "climate_resource_cost_estimate": "climate_resource_cost_estimate",
     "climate_next_mist_eligible_s": "climate_next_mist_eligible_s",
+    "climate_moisture_exchange": "climate_moisture_exchange",
     "gl_main_state": "gl_main_state",
     "gl_main_reason": "gl_main_reason",
     "gl_main_decision_epoch": "gl_main_decision_epoch",  # TextSensorInfo exact epoch string

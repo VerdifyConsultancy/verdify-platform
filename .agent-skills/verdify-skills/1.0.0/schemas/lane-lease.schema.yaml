@@ -1,0 +1,36 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://verdify.example/schemas/lane-lease.schema.yaml
+title: Verdify Lane Lease
+type: object
+additionalProperties: false
+required: [schema_ref, kind, schema_version, lease_id, sprint_id, lane_id, issue_ids, role, agent, session_id, branch, baseline_sha, contract_path, contract_hash, worktree_path, created_at, expires_at, released_at, status, runtime_namespace]
+properties:
+  schema_ref: {const: lane-lease.schema.yaml}
+  kind: {const: LaneLease}
+  schema_version: {const: "1.0"}
+  lease_id: {type: string, minLength: 1}
+  sprint_id: {type: string}
+  lane_id: {type: string}
+  issue_ids: {type: array, minItems: 1, items: {type: integer}}
+  role: {type: string, enum: [worker, critic, integrator]}
+  agent: {type: string, minLength: 1}
+  session_id: {type: string, minLength: 1}
+  branch: {type: string, minLength: 1}
+  baseline_sha: {type: string, minLength: 1}
+  contract_path: {type: string, minLength: 1}
+  contract_hash: {type: string, minLength: 1}
+  worktree_path: {type: string, minLength: 1}
+  created_at: {type: string, minLength: 1}
+  expires_at: {type: string, minLength: 1}
+  released_at: {type: [string, 'null']}
+  status: {type: string, enum: [active, released, expired, abandoned]}
+  runtime_namespace:
+    type: object
+    additionalProperties: false
+    required: [compose_project, database_suffix, kubernetes_namespace, port_offset, cache_prefix]
+    properties:
+      compose_project: {type: string}
+      database_suffix: {type: string}
+      kubernetes_namespace: {type: string}
+      port_offset: {type: integer, minimum: 0}
+      cache_prefix: {type: string}

@@ -1,0 +1,33 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://verdify.example/schemas/route-decision.schema.yaml
+title: Verdify Route Decision
+type: object
+additionalProperties: false
+required: [schema_ref, kind, schema_version, generated_at, repository, current_state, next_skill, next_mode, reason, evidence, missing_artifacts, open_gates]
+properties:
+  schema_ref: {const: route-decision.schema.yaml}
+  kind: {const: RouteDecision}
+  schema_version: {const: "1.0"}
+  generated_at: {type: string, minLength: 1}
+  repository: {type: string, minLength: 1}
+  current_state: {type: string, minLength: 1}
+  next_skill:
+    type: string
+    enum: [project-router, transcript-replan, northstar-research-ingest, northstar-planning, project-definition, architecture-contracts, state-of-union, repo-hygiene, sprint-planning, sprint-orchestrator, controller-loop, platform-readiness, gravity-readiness, lane-delivery, independent-critic, release-verification]
+  next_mode: {type: string, minLength: 1}
+  reason: {type: string, minLength: 1}
+  evidence:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [source, finding]
+      properties:
+        source: {type: string, minLength: 1}
+        finding: {type: string, minLength: 1}
+  missing_artifacts:
+    type: array
+    items: {type: string}
+  open_gates:
+    type: array
+    items: {type: string}

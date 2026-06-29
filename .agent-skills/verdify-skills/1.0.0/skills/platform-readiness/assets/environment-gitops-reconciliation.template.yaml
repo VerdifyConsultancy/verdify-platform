@@ -1,0 +1,68 @@
+schema_ref: environment-gitops-reconciliation.schema.yaml
+kind: EnvironmentGitOpsReconciliation
+schema_version: "1.0"
+reconciliation_id: eg-replace-me
+status: draft
+assessed_at: replace-me
+repository: replace-me
+environment:
+  name: replace-me
+  type: other
+  cluster: null
+  namespace: null
+  url: null
+  protected: false
+  ttl: null
+desired_state:
+  source_of_truth: other
+  desired_revision: null
+  refs: []
+  sync_order: []
+controller:
+  kind: none
+  app_refs: []
+  sync_status: unknown
+  health_status: unknown
+  observed_at: null
+  evidence_refs: []
+namespace:
+  resource_quotas: []
+  limit_ranges: []
+  network_policies: []
+  service_accounts: []
+  secrets_model: ""
+  rbac_summary: ""
+  policy_findings: []
+deployment:
+  github_environment: null
+  deployment_ids: []
+  workflow_runs: []
+  checks: []
+  observed_revision: null
+  image_refs: []
+  endpoint_refs: []
+  migration_refs: []
+health:
+  endpoint_status: unknown
+  probes: []
+  smoke_tests: []
+  telemetry_refs: []
+  log_refs: []
+  missing_signals: []
+drift:
+  unresolved: false
+  findings: []
+remediation:
+  rollback_refs: []
+  remediation_policy: ""
+  cleanup_policy: ""
+  approved_mutation_required: false
+review:
+  human_gate_required: false
+  reviewers: []
+  decision: pending
+  decided_at: null
+handoff:
+  next_skill: platform-readiness
+  next_mode: environment-gitops
+  reason: Environment GitOps reconciliation is a draft.

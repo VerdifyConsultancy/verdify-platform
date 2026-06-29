@@ -1,0 +1,82 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://verdify.example/schemas/release-verification.schema.yaml
+title: Verdify Release Verification
+type: object
+additionalProperties: false
+required: [schema_ref, kind, schema_version, sprint_id, status, integrated_sha, release, artifact_identity, integration_results, deployment, runtime_checks, migrations, rollback, incidents, verified_at, verifier]
+properties:
+  schema_ref: {const: release-verification.schema.yaml}
+  kind: {const: ReleaseVerification}
+  schema_version: {const: "1.0"}
+  sprint_id: {type: string}
+  status: {type: string, enum: [pending, integration_failed, ready_for_deployment, deployment_failed, rolled_back, verified]}
+  integrated_sha: {type: string, minLength: 1}
+  release:
+    type: object
+    additionalProperties: false
+    required: [tag, url]
+    properties:
+      tag: {type: [string, 'null']}
+      url: {type: [string, 'null']}
+  artifact_identity:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [type, identifier]
+      properties:
+        type: {type: string}
+        identifier: {type: string}
+  integration_results:
+    type: array
+    minItems: 1
+    items:
+      type: object
+      additionalProperties: false
+      required: [name, result, evidence]
+      properties:
+        name: {type: string}
+        result: {type: string, enum: [passed, failed, skipped]}
+        evidence: {type: string}
+  deployment:
+    type: object
+    additionalProperties: false
+    required: [environment, deployment_id, deployed_at, observed_revision]
+    properties:
+      environment: {type: string, minLength: 1}
+      deployment_id: {type: [string, integer, 'null']}
+      deployed_at: {type: [string, 'null']}
+      observed_revision: {type: [string, 'null']}
+  runtime_checks:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [name, result, observed_at, evidence]
+      properties:
+        name: {type: string}
+        result: {type: string, enum: [passed, failed, skipped]}
+        observed_at: {type: string}
+        evidence: {type: string}
+  migrations:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [name, result, evidence]
+      properties:
+        name: {type: string}
+        result: {type: string, enum: [not_applicable, passed, failed]}
+        evidence: {type: string}
+  rollback:
+    type: object
+    additionalProperties: false
+    required: [ready, known_good_revision, procedure]
+    properties:
+      ready: {type: boolean}
+      known_good_revision: {type: [string, 'null']}
+      procedure: {type: string}
+  incidents: {type: array, items: {type: string}}
+  verified_at: {type: [string, 'null']}
+  verifier: {type: [string, 'null']}

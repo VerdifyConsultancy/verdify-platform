@@ -153,6 +153,11 @@ interval:
                   id(runtime_mister_south_ms)  = 0;
                   id(runtime_mister_west_ms)   = 0;
                   id(runtime_mister_center_ms) = 0;
+                  // Clear the dwell-fence last-off stamps so a day rollover
+                  // never leaves a stale stamp that wrongly fences a zone.
+                  id(last_off_south_ms)  = 0;
+                  id(last_off_west_ms)   = 0;
+                  id(last_off_center_ms) = 0;
                   id(mister_water_today) = 0.0f;
                   // B5: reset DLI accumulator at midnight
                   id(dli_accumulator) = 0.0f;
@@ -585,9 +590,9 @@ interval:
               // Firmware-v2 served-band targets (telemetry + normalized arbitration).
               .temp_target = id(sw_onchip_band_enabled) ? sv2_temp_tgt : (sv2_temp_low + sv2_temp_high) * 0.5f,
               .vpd_target = id(sw_onchip_band_enabled) ? sv2_vpd_tgt : (VPDlo + VPDhi) * 0.5f,
-              // BC-3 (ADR0003 §6.1): pinch the control band toward the served target
-              // by this fraction. Planner-pushable [0,1]; default 0.50 from the global.
-              // This is the authoritative DEVICE default (C++ default_setpoints matches).
+              // ADR-0004: default 0 floats inside the served crop corridor and acts
+              // only at the edges. Nonzero pinches toward the served target only for
+              // explicit operator diagnostics; C++ default_setpoints matches.
               .band_track_fraction = id(band_track_fraction),
               // BC-13 (ADR0003 §6.4): moisture-exchange selector. vent_exchange_fraction
               // is the AI-tunable single-cycle exchange fraction (Jason 2026-06-17, from
@@ -1261,6 +1266,23 @@ interval:
               auto pulse_on_ms_for  = [&](int zone) -> uint32_t { return zone == 3 ? CENTER_PULSE_ON_MS  : PULSE_ON_MS;  };
               auto pulse_gap_ms_for = [&](int zone) -> uint32_t { return zone == 3 ? CENTER_PULSE_GAP_MS : PULSE_GAP_MS; };
 
+              // Mister re-fire dwell fence: a zone may not re-energize within
+              // mister_min_off_s of its own last off. The misters bypass the
+              // RelayMeta R[] min-on/off machinery (they're a multi-zone pulse
+              // FSM), so this is their per-zone equivalent. Suppression only
+              // DELAYS a re-fire (never forces a relay on / never over-waters),
+              // so the failure mode is benign. Returns true if energizing is
+              // allowed now.
+              const uint32_t MISTER_MIN_OFF_MS = (uint32_t)id(mister_min_off_s) * 1000UL;
+              auto mister_zone_last_off = [&](int z) -> uint32_t {
+                return z == 1 ? id(last_off_south_ms)
+                     : z == 2 ? id(last_off_west_ms)
+                     : id(last_off_center_ms);
+              };
+              auto mister_zone_can_on = [&](int z) -> bool {
+                return z <= 0 || (now_ms - mister_zone_last_off(z)) >= MISTER_MIN_OFF_MS;
+              };
+
               // IRR-2: raise the hysteresis floor from the legacy 0.05 to the
               // operator-tunable mister_hysteresis_kpa (default 0.10) so the
               // mister state machine cannot chatter inside a tight band. Still
@@ -1327,7 +1349,25 @@ interval:
                 if(zone == 1 && !south_wet_allowed) zone = first_allowed_mister_zone();
                 if(zone == 2 && !west_wet_allowed) zone = first_allowed_mister_zone();
                 if(zone == 3 && !center_wet_allowed) zone = first_allowed_mister_zone();
-                if(zone == 0) return;
+                if(zone == 0) { id(mister_pulse_zone) = 0; return; }
+                // Mister re-fire dwell fence (mister_min_off_s): if the chosen
+                // zone is still inside its min-off hold, try the other eligible
+                // zone; if none is ready, hold this cycle (all misters stay off,
+                // mister_pulse_zone=0). The caller arms mister_pulse_timer_ms =
+                // pulse_on_ms_for(0) = PULSE_ON_MS, so the FSM re-evaluates ~one
+                // gap later — by which point min_off has elapsed and it fires.
+                // Suppression only DELAYS a re-fire; it never forces a relay on
+                // and never extends a normal pulse, so the failure mode is benign.
+                if(!mister_zone_can_on(zone)) {
+                  int alt = first_allowed_mister_zone();
+                  if(alt > 0 && alt != zone && mister_zone_can_on(alt)) {
+                    zone = alt;
+                  } else {
+                    ESP_LOGI("mister","DWELL-HOLD zone=%d (min_off %us)", zone, (unsigned)id(mister_min_off_s));
+                    id(mister_pulse_zone) = 0;
+                    return;
+                  }
+                }
                 // sprint-2: last-fire ms for fairness watchdog.
                 // sprint-7: per-zone cycle counters at the rising edge
                 //          (turn_on_zone is always preceded by all-off,
@@ -1342,6 +1382,14 @@ interval:
               };
 
               auto turn_off_all_misters = [&]() {
+                // Stamp the just-energized zone's last-off BEFORE clearing
+                // mister_pulse_zone so the dwell fence can suppress a too-fast
+                // re-fire of that zone. All off-paths (pulse expiry, de-escalate,
+                // blocked, safety) funnel through here, so the stamp is complete.
+                const int off_z = id(mister_pulse_zone);
+                if(off_z == 1)      id(last_off_south_ms)  = now_ms;
+                else if(off_z == 2) id(last_off_west_ms)   = now_ms;
+                else if(off_z == 3) id(last_off_center_ms) = now_ms;
                 id(south_wall_mister).turn_off();
                 id(south_wall_mister_fertilized).turn_off();
                 id(west_wall_mister).turn_off();
@@ -1670,6 +1718,7 @@ interval:
             char fog_margin[24];
             char next_mist[24];
             char resource_cost[112];
+            char moisture_exchange[320];
             snprintf(temp_error, sizeof(temp_error), "%.2f", climate_decision.temp_error_f);
             snprintf(vpd_error, sizeof(vpd_error), "%.3f", climate_decision.vpd_error_kpa);
             snprintf(fog_margin, sizeof(fog_margin), "%.3f", climate_decision.fog_margin_kpa);
@@ -1683,6 +1732,20 @@ interval:
                      climate_decision.resource_cost_estimate.water_gal,
                      climate_decision.resource_cost_estimate.electric_kwh,
                      climate_decision.resource_cost_estimate.gas_therm);
+            snprintf(moisture_exchange, sizeof(moisture_exchange),
+                     "{\"action\":\"%s\",\"reason\":\"%s\",\"vent_vpd_gain_kpa\":%.3f,"
+                     "\"heat_vpd_gain_kpa\":%.3f,\"outdoor_fresh\":%s,"
+                     "\"vent_overcools\":%s,\"heat_assist_corun\":%s,"
+                     "\"heat_assist_active\":%s,\"heat_assist_timer_s\":%.0f}",
+                     climate_decision.moisture_exchange_action,
+                     climate_decision.moisture_exchange_reason,
+                     climate_decision.moisture_vent_vpd_gain_kpa,
+                     climate_decision.moisture_heat_vpd_gain_kpa,
+                     climate_decision.moisture_outdoor_fresh ? "true" : "false",
+                     climate_decision.moisture_vent_overcools ? "true" : "false",
+                     climate_decision.moisture_heat_assist_corun ? "true" : "false",
+                     climate_decision.moisture_heat_assist_active ? "true" : "false",
+                     float(climate_decision.moisture_heat_assist_timer_ms) / 1000.0f);
             const uint32_t climate_diag_now_ms = millis();
             static uint32_t last_climate_diag_publish_ms = 0;
             const bool climate_diag_republish = (climate_diag_now_ms - last_climate_diag_publish_ms) >= 60000UL;
@@ -1796,6 +1859,12 @@ interval:
             if(strcmp(last_climate_next_mist, next_mist) != 0 || climate_diag_republish){
               id(gh_climate_next_mist_eligible_s).publish_state(next_mist);
               snprintf(last_climate_next_mist, sizeof(last_climate_next_mist), "%s", next_mist);
+              climate_diag_published = true;
+            }
+            static char last_climate_moisture_exchange[320] = "";
+            if(strcmp(last_climate_moisture_exchange, moisture_exchange) != 0 || climate_diag_republish){
+              id(gh_climate_moisture_exchange).publish_state(moisture_exchange);
+              snprintf(last_climate_moisture_exchange, sizeof(last_climate_moisture_exchange), "%s", moisture_exchange);
               climate_diag_published = true;
             }
             if(climate_diag_published){

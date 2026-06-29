@@ -55,6 +55,9 @@ site/node_modules
 !site/docs/**
 # Long-form docs / design / audits — not runtime.
 docs
+# Exception: the Iris planner playbook IS runtime (packaged into the ingestor
+# image; iris_planner.PLANNER_PLAYBOOK_PATH reads it). #339/#210.
+!docs/planner/greenhouse-playbook.md
 
 # --- other infra dirs not needed by the api/mcp/ingestor images ---
 grafana

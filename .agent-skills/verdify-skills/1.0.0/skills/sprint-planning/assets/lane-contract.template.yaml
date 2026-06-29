@@ -1,0 +1,46 @@
+schema_ref: lane-contract.schema.yaml
+kind: LaneContract
+schema_version: "1.0"
+sprint_id: replace-me
+lane_id: replace-me
+title: ""
+status: draft
+issue_ids: []
+coupling_justification: null
+objective: ""
+desired_outcome: ""
+non_goals: []
+baseline_sha: ""
+branch: ""
+module_contracts: []
+worktree_policy:
+  one_coding_session_per_worktree: true
+  lock_required: true
+lease_policy:
+  worker_ttl_hours: 24
+  critic_ttl_hours: 8
+runtime_namespace:
+  strategy: derived_at_dispatch
+ownership:
+  domains: []
+  owned_paths: []
+  prohibited_paths: []
+  coordination_required_paths: []
+  owned_interfaces: []
+dependencies:
+  hard: []
+  soft: []
+acceptance_criteria: []
+validation_commands: []
+required_evidence: []
+git_policy:
+  pull_request_required: true
+  github_checks_required: true
+  self_merge_allowed: false
+  clean_worktree_required: true
+escalation_conditions: []
+definition_of_done: []
+approval:
+  status: pending
+  approver: null
+  approved_at: null

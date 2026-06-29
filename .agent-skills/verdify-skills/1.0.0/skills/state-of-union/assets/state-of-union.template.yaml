@@ -1,0 +1,42 @@
+schema_ref: state-of-union.schema.yaml
+kind: StateOfUnion
+schema_version: "1.0"
+strategy_id: replace-me
+status: draft
+repository: replace-me
+baseline_sha: replace-me
+assessed_at: replace-me
+inputs: []
+source_freshness: []
+planning_inventory: []
+north_star:
+  goal: ""
+  alignment_status: unknown
+  source_refs: []
+current_state:
+  summary: ""
+  lifecycle_state: unknown
+  active_sprint: null
+  open_gates: []
+  delivery_risks: []
+delivery_health:
+  status: unknown
+  diagnostic_refs: []
+  deployment_refs: []
+  log_refs: []
+  telemetry_refs: []
+  discovered_health_issues: []
+issue_inventory: []
+gaps: []
+recommended_sequence: []
+next_sprint_candidates: []
+actions: []
+handoff:
+  next_skill: state-of-union
+  next_mode: strategy-review
+  reason: ""
+  required_before_handoff: []
+approval:
+  status: pending
+  approver: null
+  approved_at: null

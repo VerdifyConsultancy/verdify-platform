@@ -1220,8 +1220,8 @@ sensor:
       if (!id(cfg_first_pull_ok)) return NAN;
       return id(cool_stage2_exit_hysteresis_f);
 
-  # BC-3 (ADR0003 §6.1): on-device readback of the live control-band tracking
-  # tightness (freeze rule 6). NAN until the first push confirms cfg_first_pull_ok.
+  # ADR-0004: on-device readback of the live control-band tracking tightness.
+  # Expected planner value is 0; NAN until the first push confirms cfg_first_pull_ok.
   - platform: template
     id: cfg_band_track_fraction
     name: "Cfg • Band Track Fraction"
@@ -2227,6 +2227,18 @@ sensor:
     lambda: |-
       if (!id(cfg_first_pull_ok)) return NAN;
       return (float)id(mister_pulse_gap_s);
+
+  - platform: template
+    id: cfg_mister_min_off_s
+    name: "Cfg • Mister Min Off (s)"
+    unit_of_measurement: "s"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return (float)id(mister_min_off_s);
 
   - platform: template
     id: cfg_mister_water_budget_gal

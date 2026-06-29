@@ -1,0 +1,22 @@
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: https://verdify.example/schemas/outcome-review.schema.yaml
+title: Verdify Outcome Review
+type: object
+additionalProperties: false
+required: [schema_ref, kind, schema_version, sprint_id, decision, reviewed_at, reviewer, intended_outcome, delivered_outcomes, evidence_links, incomplete_items, residual_risks, follow_up_issues, lessons_learned, rationale]
+properties:
+  schema_ref: {const: outcome-review.schema.yaml}
+  kind: {const: OutcomeReview}
+  schema_version: {const: "1.0"}
+  sprint_id: {type: string}
+  decision: {type: string, enum: [accepted, accepted_with_risks, rejected, incomplete]}
+  reviewed_at: {type: string, minLength: 1}
+  reviewer: {type: string, minLength: 1}
+  intended_outcome: {type: string, minLength: 1}
+  delivered_outcomes: {type: array, items: {type: string}}
+  evidence_links: {type: array, items: {type: string}}
+  incomplete_items: {type: array, items: {type: string}}
+  residual_risks: {type: array, items: {type: string}}
+  follow_up_issues: {type: array, items: {type: integer}}
+  lessons_learned: {type: array, items: {type: string}}
+  rationale: {type: string, minLength: 1}

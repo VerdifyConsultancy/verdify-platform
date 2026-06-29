@@ -1,0 +1,66 @@
+schema_ref: agent-platform-control-request.schema.yaml
+kind: AgentPlatformControlRequest
+schema_version: "1.0"
+request_id: apc-replace-me
+status: draft
+requested_at: "1970-01-01T00:00:00Z"
+requester:
+  actor: replace-me
+  role: planner
+  session_id: null
+  reason: Replace with the requested platform operation reason.
+operation:
+  surface: other
+  operation_id: replace-me
+  method: null
+  tool_name: null
+  api_ref: null
+  mutation_level: read_only
+  idempotency_key: null
+target:
+  repository: null
+  environment: null
+  namespace: null
+  branch: null
+  issue_ids: []
+  lane_ids: []
+  pr_refs: []
+  deployment_ids: []
+authorization:
+  auth_mode: none
+  subject: null
+  scopes: []
+  service_account: null
+  subject_access_review_required: false
+  approved_by: null
+  approved_at: null
+policy:
+  decision: not_evaluated
+  policy_decision_id: null
+  rules: []
+  constraints: []
+  reason: Policy has not been evaluated.
+inputs:
+  artifact_refs: []
+  evidence_refs: []
+  parameters_summary: Replace with redacted parameter summary.
+  redacted_payload_ref: null
+expected_effects:
+  state_changes: []
+  external_refs_expected: []
+  rollback_or_recovery: Replace with rollback or recovery path.
+result:
+  status: not_started
+  executed_at: null
+  executor: null
+  observed_refs: []
+  errors: []
+review:
+  human_gate_required: false
+  reviewers: []
+  decision: pending
+  decided_at: null
+handoff:
+  next_skill: platform-readiness
+  next_mode: agent-platform-control
+  reason: Complete authorization and policy evaluation before execution.

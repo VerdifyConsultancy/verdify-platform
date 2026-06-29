@@ -1,0 +1,96 @@
+schema_ref: environment-gitops-reconciliation.schema.yaml
+kind: EnvironmentGitOpsReconciliation
+schema_version: "1.0"
+reconciliation_id: eg-minimal-review-123
+status: reconciled
+assessed_at: "2026-06-22T12:20:00Z"
+repository: example/minimal-project
+environment:
+  name: review/issue-123-api
+  type: review
+  cluster: dev-k3s
+  namespace: review-issue-123-api
+  url: https://issue-123-api.review.example.invalid
+  protected: false
+  ttl: 24h
+desired_state:
+  source_of_truth: gitops_repo
+  desired_revision: abc123example
+  refs:
+  - type: git_commit
+    ref: example/minimal-project@abc123example
+    revision: abc123example
+  - type: manifest
+    ref: gitops/apps/minimal-project/review/issue-123-api
+    revision: abc123example
+  sync_order:
+  - namespace
+  - config
+  - deployment
+  - service
+  - ingress
+controller:
+  kind: argocd
+  app_refs:
+  - argocd:minimal-project-review-issue-123-api
+  sync_status: synced
+  health_status: healthy
+  observed_at: "2026-06-22T12:18:30Z"
+  evidence_refs:
+  - .agent-workflow/sprints/2026-06-22-a/release/wave-release-plan.yaml
+namespace:
+  resource_quotas:
+  - cpu=2,memory=4Gi
+  limit_ranges:
+  - default cpu=250m,memory=256Mi
+  network_policies:
+  - default-deny
+  - allow-ingress-from-traefik
+  service_accounts:
+  - minimal-project-review
+  secrets_model: Runtime-injected references only; no raw secrets in artifacts.
+  rbac_summary: Review service account has namespace-scoped read/write for app resources only.
+  policy_findings: []
+deployment:
+  github_environment: review/issue-123-api
+  deployment_ids: [deploy-123]
+  workflow_runs:
+  - https://github.com/example/minimal-project/actions/runs/123
+  checks:
+  - ci/build
+  - ci/smoke
+  observed_revision: abc123example
+  image_refs:
+  - registry.example.invalid/minimal-project:abc123example
+  endpoint_refs:
+  - https://issue-123-api.review.example.invalid/health
+  migration_refs: []
+health:
+  endpoint_status: pass
+  probes:
+  - readiness probe passed for deployment/minimal-project
+  smoke_tests:
+  - GET /health returned 200
+  telemetry_refs:
+  - grafana:minimal-project-review
+  log_refs:
+  - loki:namespace=review-issue-123-api
+  missing_signals: []
+drift:
+  unresolved: false
+  findings: []
+remediation:
+  rollback_refs:
+  - gitops/apps/minimal-project/review/issue-123-api@previous
+  remediation_policy: Revert desired-state commit or delete preview environment if health degrades.
+  cleanup_policy: Delete review namespace after 24h or PR closure.
+  approved_mutation_required: false
+review:
+  human_gate_required: false
+  reviewers: [platform-owner]
+  decision: not_required
+  decided_at: null
+handoff:
+  next_skill: release-verification
+  next_mode: review-inbox
+  reason: Review environment is reconciled and can feed review packet evidence.

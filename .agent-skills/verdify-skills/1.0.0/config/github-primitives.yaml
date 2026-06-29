@@ -1,0 +1,46 @@
+version: "1.0"
+issue_model:
+  backlog_owner: github_issues
+  default_lane_cardinality: one_issue_per_lane
+  use_native_sub_issues: true
+  use_native_dependencies: true
+  close_issue_after: verified_outcome_or_explicit_policy
+labels:
+  - {name: "type:problem", color: "1D76DB", description: "Backlog problem or desired outcome"}
+  - {name: "type:decision", color: "5319E7", description: "Material decision requiring durable resolution"}
+  - {name: "verdify:sprint", color: "0E8A16", description: "Included in an approved Verdify sprint"}
+  - {name: "verdify:lane", color: "006B75", description: "Bounded lane with a versioned contract"}
+  - {name: "verdify:discovered-work", color: "FBCA04", description: "Found during execution; not silently added to scope"}
+  - {name: "verdify:blocker", color: "B60205", description: "Execution cannot continue within the contract"}
+  - {name: "verdify:decision-required", color: "D93F0B", description: "Material decision gate is open"}
+  - {name: "verdify:ready-for-critic", color: "7057FF", description: "Worker closeout is ready for fresh review"}
+  - {name: "verdify:changes-requested", color: "E99695", description: "Critic or reviewer requested contract-scoped changes"}
+  - {name: "verdify:ready-for-integration", color: "2CBE4E", description: "Critic and required checks passed"}
+  - {name: "verdify:deployment-ready", color: "0052CC", description: "Integrated revision is ready for authorized deployment"}
+  - {name: "verdify:verified", color: "0E8A16", description: "Runtime outcome was independently verified"}
+  - {name: "verdify:policy-exempt", color: "C5DEF5", description: "Explicitly approved repository-policy exception"}
+  - {name: "risk:high", color: "D93F0B", description: "High delivery or operational risk"}
+  - {name: "risk:critical", color: "B60205", description: "Critical risk requiring explicit human control"}
+project_fields:
+  - {name: Sprint, type: text}
+  - {name: Lane, type: text}
+  - {name: Workflow state, type: single_select}
+  - {name: Risk, type: single_select}
+  - {name: Target environment, type: text}
+  - {name: Evidence, type: text}
+required_pull_request_sections:
+  - Backlog issue
+  - Lane contract
+  - Outcome
+  - Scope proof
+  - Evidence
+  - Risk and deployment impact
+recommended_default_branch_rules:
+  required_checks: [validate, policy]
+  approving_reviews: 1
+  dismiss_stale_reviews: true
+  require_code_owner_review: true
+  require_conversation_resolution: true
+  block_force_pushes: true
+  block_deletions: true
+  merge_queue_for_busy_repositories: true

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Verdify Gravity Readiness"
+  short_description: "Gate Gravity before autonomous build"
+  default_prompt: "Use $gravity-readiness to inventory Gravity, confirm Onyx and platform dependencies, produce a binary readiness checklist, and design a pilot without implementing Gravity features."
+policy:
+  allow_implicit_invocation: true

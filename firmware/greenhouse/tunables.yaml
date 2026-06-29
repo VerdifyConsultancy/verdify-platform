@@ -98,8 +98,10 @@ number:
           id(cool_stage2_exit_hysteresis_f) = x;
           id(num_cool_stage2_exit_hyst).publish_state(x);
 
-  # BC-3 (ADR0003 §6.1): control-band tracking tightness. 0 = float-envelope (no
-  # longer the default), 1 = track target exactly; default 0.50. Bounded planner knob.
+  # ADR-0004 floating-corridor control-band tracking tightness. 0 = float inside
+  # the served crop corridor and act at the edges. Nonzero pinches toward the
+  # target only for explicit operator diagnostics; planner writes are constrained
+  # to 0 by the registry.
   - platform: template
     id: num_band_track_fraction
     name: "Band Track Fraction"
@@ -549,6 +551,18 @@ number:
       - lambda: |
           id(mister_pulse_gap_s) = (int)x;
           id(num_mister_pulse_gap).publish_state(x);
+
+  - platform: template
+    id: num_mister_min_off
+    name: "Mister Min Off (s)"
+    min_value: 30
+    max_value: 120
+    step: 5
+    lambda: "return id(mister_min_off_s);"
+    set_action:
+      - lambda: |
+          id(mister_min_off_s) = (int)x;
+          id(num_mister_min_off).publish_state(x);
 
   - platform: template
     id: num_mister_vpd_weight

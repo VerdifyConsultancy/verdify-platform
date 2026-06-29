@@ -115,12 +115,12 @@ patches:
   - path: db-storageclass-iscsi.yaml
   # DEVICE-WRITE INTERLOCK (#79): VERDIFY_DEVICE_WRITE_ENABLED=1 — prod only.
   - path: device-write-configmap.yaml
-  # ⚠️ TEMPORARY (2026-06-20): ingestor state on emptyDir, not the iSCSI PVC — the
-  # Synology iSCSI target-cap is exhausted and the PVC won't remount on restart
-  # (writer was down ~10min). Keeps git==live so a sync won't re-wedge the writer.
-  # REVERT (remove this line + TEMP-ingestor-state-emptydir.patch.yaml) once the
-  # iSCSI cap is fixed. See the storage-wedge tracking issue.
-  - path: TEMP-ingestor-state-emptydir.patch.yaml
+  # ⚠️ TEMPORARY (#382, 2026-06-20): the ingestor `state` volume is emptyDir, not the
+  # iSCSI PVC — defined DIRECTLY in ingestor-state-volume.yaml. (The old
+  # TEMP-ingestor-state-emptydir.patch.yaml `$patch: replace` here never overrode the
+  # PVC in the render, leaving git=PVC vs live=emptyDir → ArgoCD OutOfSync; the
+  # emptyDir now lives in ingestor-state-volume.yaml so git==live.) REVERT that file
+  # to the PVC once the iSCSI cap is fixed. See the storage-wedge tracking issue.
   # HA-3.1 FAST FAILOVER (#239, Jason-approved 2026-06-20): pin the ingestor to
   # priorityClassName verdify-device-writer + 20s NoExecute tolerations + a cpu
   # request (no cpu LIMIT) + terminationGracePeriodSeconds:15, so the sole writer
@@ -181,13 +181,13 @@ patches:
 # GHCR digests in-repo.
 images:
   - name: ghcr.io/verdifyconsultancy/verdify-api
-    digest: sha256:380c8ae717e9cc5761c3c599959eb0161741c2adc72b9f0b2628fd4799a8bc2b
+    digest: sha256:8b7b34f6adcd33353e0f34d06c85cfd821e00e7ec5beff02b3b49aae46768015
   - name: ghcr.io/verdifyconsultancy/verdify-mcp
-    digest: sha256:6b084eb7c28f0ec3ceed2b999a710a832644c9dfbf9ea5f615638d4c045650a4
+    digest: sha256:23f1076ad4d3428d0b151c8ef09be062daff3e01bab881ab70984573694fce76
   - name: ghcr.io/verdifyconsultancy/verdify-ingestor
-    digest: sha256:836e08248ceaf8a8556df6ab6d297e709ae0c9400d9ea545b00c3831533ee2a2
+    digest: sha256:f4bb0bdf65c5fcaf920df2347b8c1784f722f3f2dc73d2bd6a66866d1f3d9a1a
   - name: ghcr.io/verdifyconsultancy/verdify-migrate
-    digest: sha256:aca5138e6a525b9214becb6b685f30a8b9f167f8a60197a593ba892b74ad7741
+    digest: sha256:3f822d9ed7cd108761881d399a0eb177a012c914e97afc196427cb495bff5970
   # verdify-planner (#117): real published GHCR digest, resolved read-only via
   # `gh api orgs/VerdifyConsultancy/packages/container/verdify-planner/versions`
   # (the `branch-live-platform-main` build of planner_graph/). The planner image is
@@ -195,7 +195,7 @@ images:
   # from each overlay's verdify-config + sealed secret). prod is human-gated and
   # its digest is advanced only by a reviewed prod-promote PR.
   - name: ghcr.io/verdifyconsultancy/verdify-planner
-    digest: sha256:ce1d8271e344b8e9cb3af2f8dde933116db56cc5159dbb8e0da710526bc20b0d
+    digest: sha256:41d057d7b7c1f369b9c72f847417333a43ffdcbac956e1d49f9c9e9b1abdc2c7
   # verdify-setpoint-server (#118): real GHCR digest of the grow-light writer +
   # setpoint-diagnostics image built from scripts/Dockerfile.setpoint-server. The
   # `branch-live-platform-main` build is published + repo-linked to
@@ -230,4 +230,4 @@ images:
   # lab.verdify.ai. The k3s-suffixed GHCR package is linked to this repo so
   # GITHUB_TOKEN can publish immutable CI-built digests.
   - name: ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s
-    digest: sha256:0f31c222450c55f88111d1b132e58483deb2a63145275d557d7c3b8f085b63da
+    digest: sha256:acda76c6c99ae6a8ff2acacc47d3dfba9b0084ec34e27c84c2367aedd7c6a2ab

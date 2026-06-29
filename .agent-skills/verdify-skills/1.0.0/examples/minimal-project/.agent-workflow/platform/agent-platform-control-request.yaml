@@ -1,0 +1,72 @@
+schema_ref: agent-platform-control-request.schema.yaml
+kind: AgentPlatformControlRequest
+schema_version: "1.0"
+request_id: apc-minimal-project-read-checks
+status: authorized
+requested_at: "2026-06-22T12:11:00Z"
+requester:
+  actor: release-verifier
+  role: release_verifier
+  session_id: release-20260622-001
+  reason: Read GitHub workflow and check status for the review packet.
+operation:
+  surface: github
+  operation_id: actions.workflow_runs.list
+  method: GET
+  tool_name: github-rest
+  api_ref: https://docs.github.com/en/rest/actions/workflow-runs
+  mutation_level: read_only
+  idempotency_key: null
+target:
+  repository: example/minimal-project
+  environment: review/issue-123-api
+  namespace: null
+  branch: lane/123-health-api
+  issue_ids: [123]
+  lane_ids: [issue-123-api]
+  pr_refs: ["#123"]
+  deployment_ids: [deploy-123]
+authorization:
+  auth_mode: github_token
+  subject: release-verifier
+  scopes: ["actions:read", "checks:read", "deployments:read"]
+  service_account: null
+  subject_access_review_required: false
+  approved_by: platform-owner
+  approved_at: "2026-06-22T12:10:30Z"
+policy:
+  decision: allow
+  policy_decision_id: policy-20260622-001
+  rules:
+  - read-only GitHub checks are allowed for release verification.
+  constraints:
+  - Do not mutate checks, deployments, environments, or repository settings.
+  reason: Request is read-only and scoped to review evidence collection.
+inputs:
+  artifact_refs:
+  - .agent-workflow/sprints/2026-06-22-a/review/review-inbox-packet.yaml
+  - .agent-workflow/controller/session-ledger.yaml
+  evidence_refs: []
+  parameters_summary: Read workflow runs and check runs for PR 123.
+  redacted_payload_ref: null
+expected_effects:
+  state_changes: []
+  external_refs_expected:
+  - GitHub workflow run URL
+  - GitHub check run URL
+  rollback_or_recovery: No rollback needed for read-only request.
+result:
+  status: not_started
+  executed_at: null
+  executor: null
+  observed_refs: []
+  errors: []
+review:
+  human_gate_required: false
+  reviewers: [platform-owner]
+  decision: approved
+  decided_at: "2026-06-22T12:10:30Z"
+handoff:
+  next_skill: release-verification
+  next_mode: review-inbox
+  reason: Authorized read-only evidence collection can feed the review packet.

@@ -1,0 +1,27 @@
+schema_ref: github-backlog-sync.schema.yaml
+kind: GitHubBacklogSync
+schema_version: "1.0"
+sync_id: gbs-replace-me
+status: draft
+repository: replace-me
+captured_at: replace-me
+source_authority:
+  github_is_authoritative: true
+  snapshot_is_cache: true
+  live_access: unavailable
+  snapshot_ref: null
+  limitations: []
+snapshot:
+  snapshot_ref: null
+  captured_at: null
+  freshness: unknown
+  api_sources: []
+issue_findings: []
+pr_findings: []
+lane_findings: []
+delivery_findings: []
+actions: []
+handoff:
+  next_skill: state-of-union
+  next_mode: strategy-review
+  reason: Backlog sync is a draft and needs strategy review.

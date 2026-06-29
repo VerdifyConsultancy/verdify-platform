@@ -1,0 +1,184 @@
+schema_ref: gravity-core-extraction-plan.schema.yaml
+kind: GravityCoreExtractionPlan
+schema_version: "1.0"
+plan_id: gce-sunshine-local-evidence
+status: ready
+assessed_at: "2026-06-22T13:00:00Z"
+repository: VerdifyConsultancy/verdify-gravity
+source_system:
+  name: Sunshine Club Gravity substrate
+  repository: VerdifyConsultancy/sunshine_club
+  ref: origin/main
+  current_boundary: Sunshine-specific package with reusable file evidence pipeline concepts and client-specific taxonomy, prompts, and vault assumptions.
+  evidence_refs:
+  - northstar://evidence/NSE-20260623-sunshine-gravity-extraction-architecture-audit
+  - northstar://evidence/NSE-20260623-gravity-core-extraction-implementation-b
+target_boundaries:
+  core_package: verdify_gravity
+  core_boundary:
+  - Hashable local/NFS source discovery
+  - Managed source-object staging
+  - Extraction and enrichment pipeline
+  - Read-only search and MCP access with citations
+  - Review queue primitives
+  pack_boundary:
+  - Sunshine-specific schemas, prompts, personas, taxonomy, and business stories
+  - Sunshine source mount defaults and vault projection rules
+  - Client-specific visibility and acceptance criteria
+  non_goals:
+  - Implementing Gravity features before readiness approval
+  - Copying Sunshine package names or client defaults into generic core
+source_objects:
+- id: GCO-001
+  source_path: sunshine_gravity/scanner.py
+  object_type: module
+  purpose: Discover local filesystem source files and prepare source-object records.
+  content_identity:
+    method: git_sha
+    digest: pending-inventory
+    size_bytes: null
+    media_type: text/x-python
+  checksum_strategy: git_blob_sha
+  provenance_refs:
+  - northstar://evidence/NSE-20260623-sunshine-gravity-extraction-architecture-audit
+  reuse_class: core_candidate
+  boundary_decision: move_to_core
+  notes: Rename package references and strip Sunshine defaults before reuse.
+- id: GCO-002
+  source_path: sunshine_gravity/mcp_server.py
+  object_type: module
+  purpose: Expose governed search and file retrieval tools with citations.
+  content_identity:
+    method: git_sha
+    digest: pending-inventory
+    size_bytes: null
+    media_type: text/x-python
+  checksum_strategy: git_blob_sha
+  provenance_refs:
+  - northstar://evidence/NSE-20260623-sunshine-gravity-extraction-architecture-audit
+  reuse_class: adapter
+  boundary_decision: wrap_with_adapter
+  notes: Generic read-only MCP tool shape belongs in core; Sunshine wording and corpus rules belong in the pack.
+- id: GCO-003
+  source_path: sunshine_gravity/prompts/
+  object_type: prompt
+  purpose: Sunshine-specific enrichment and story generation behavior.
+  content_identity:
+    method: path_only
+    digest: null
+    size_bytes: null
+    media_type: null
+  checksum_strategy: pending
+  provenance_refs:
+  - northstar://evidence/NSE-20260623-sunshine-gravity-extraction-architecture-audit
+  reuse_class: pack_specific
+  boundary_decision: keep_in_pack
+  notes: Prompt taxonomy can inform pack interface tests but must not become generic core behavior.
+reuse_matrix:
+- component: Local source scanner
+  source_object_ids: [GCO-001]
+  target_boundary: gravity_core
+  decision: adapt
+  rationale: File discovery and content identity are generic Gravity core behavior.
+  risks:
+  - Sunshine path defaults could leak into generic configuration.
+  evidence_refs:
+  - northstar://evidence/NSE-20260623-gravity-core-extraction-implementation-b
+- component: Read-only MCP access
+  source_object_ids: [GCO-002]
+  target_boundary: adapter
+  decision: adapt
+  rationale: Governed file access is reusable, but the Sunshine corpus contract must be isolated behind a pack adapter.
+  risks:
+  - Pack-specific visibility rules could be mistaken for global authorization policy.
+  evidence_refs:
+  - northstar://evidence/NSE-20260623-gravity-core-extraction-implementation-b
+- component: Sunshine prompts
+  source_object_ids: [GCO-003]
+  target_boundary: client_pack
+  decision: reuse
+  rationale: Prompts are customer behavior and should live in the Sunshine pack.
+  risks:
+  - Generic extraction tests may accidentally depend on Sunshine taxonomy.
+  evidence_refs:
+  - northstar://evidence/NSE-20260623-sunshine-gravity-extraction-architecture-audit
+pack_assumptions:
+- id: GPA-001
+  pack: sunshine
+  assumption: Sunshine source files are mounted through a client-specific NFS/source path.
+  source_refs:
+  - GCO-001
+  leakage_risk: high
+  migration_action: Move mount defaults into clients/sunshine configuration and require core to accept a neutral source root.
+- id: GPA-002
+  pack: sunshine
+  assumption: Sunshine taxonomy and business-story language define enrichment acceptance.
+  source_refs:
+  - GCO-003
+  leakage_risk: medium
+  migration_action: Keep taxonomy and acceptance rules in the pack with explicit pack-interface tests.
+contracts:
+- name: Gravity source object contract
+  type: file_contract
+  status: planned
+  target_path: docs/contracts/source-object.md
+  owner: gravity-readiness
+  evidence_refs:
+  - northstar://evidence/NSE-20260623-gravity-core-extraction-implementation-b
+- name: Gravity read-only MCP tool contract
+  type: mcp_tool
+  status: planned
+  target_path: docs/contracts/mcp-readonly-tools.md
+  owner: gravity-readiness
+  evidence_refs:
+  - northstar://evidence/NSE-20260623-sunshine-gravity-extraction-architecture-audit
+migration_risks:
+- id: GMR-001
+  severity: fail
+  statement: Sunshine-specific package names, paths, and vocabulary may enter generic Gravity core.
+  mitigation: Require reuse matrix approval before code movement and add pack-boundary tests.
+  owner: gravity-readiness
+  blocking: true
+- id: GMR-002
+  severity: warn
+  statement: Source-object checksums are not yet collected for every candidate file.
+  mitigation: Run repository inventory before implementation and replace pending digests with Git or SHA-256 identities.
+  owner: gravity-readiness
+  blocking: false
+pilot:
+  story: Local filesystem evidence ingestion from a mounted sample source root into managed source objects with searchable citations.
+  scope:
+  - Discover a bounded local sample tree
+  - Compute or capture content identity
+  - Stage immutable managed source objects
+  - Extract Markdown text
+  - Expose read-only cited search result
+  entry_criteria:
+  - Platform readiness and Gravity readiness are approved for the pilot environment.
+  - Source-object inventory has no blocking migration risk without owner.
+  - Sunshine pack assumptions are isolated from core configuration.
+  exit_criteria:
+  - Source object, managed object, extraction record, and search citation are traceable to one sample file.
+  - Review evidence proves no raw secrets or pack-specific behavior leaked into core.
+  human_test_steps:
+  - Inspect the source-object record for path, digest, provenance, and pack boundary.
+  - Search for the sample file and verify the citation points to the managed object.
+  - Confirm Sunshine-specific prompt and taxonomy behavior is disabled in generic core mode.
+  evidence_refs:
+  - northstar://evidence/NSE-20260623-gravity-core-extraction-implementation-b
+readiness_updates:
+- check_id: GRAV-CORE-EXTRACTION
+  status: pending
+  update: Gravity readiness must require an approved core extraction plan before implementation lanes are opened.
+  evidence_refs:
+  - northstar://evidence/NSE-20260623-gravity-core-extraction-implementation-b
+handoff:
+  next_skill: gravity-readiness
+  next_mode: readiness-checklist
+  reason: Core extraction plan is ready to feed the Gravity readiness gate, but implementation remains blocked until readiness approval.
+approval:
+  status: pending
+  approvers:
+  - Jason
+  - James
+  approved_at: null

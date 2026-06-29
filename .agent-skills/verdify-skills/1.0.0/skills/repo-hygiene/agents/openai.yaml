@@ -1,0 +1,6 @@
+interface:
+  display_name: "Verdify Repo Hygiene"
+  short_description: "Run Wave 0 repository compliance"
+  default_prompt: "Use $repo-hygiene to assess a repository before feature work, perform only safe cleanup, record blockers, and define the criteria for REPO_HYGIENE_COMPLETE."
+policy:
+  allow_implicit_invocation: true

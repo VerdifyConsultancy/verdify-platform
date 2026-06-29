@@ -1,0 +1,6 @@
+interface:
+  display_name: "Verdify Research Ingest"
+  short_description: "Register North Star research evidence"
+  default_prompt: "Use $northstar-research-ingest to add research files to the North Star collateral folder, update the evidence registry, and make evidence referenceable and queryable before planning synthesis."
+policy:
+  allow_implicit_invocation: true

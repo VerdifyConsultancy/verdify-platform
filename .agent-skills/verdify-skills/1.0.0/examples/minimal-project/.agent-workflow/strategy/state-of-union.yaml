@@ -1,0 +1,130 @@
+schema_ref: state-of-union.schema.yaml
+kind: StateOfUnion
+schema_version: "1.0"
+strategy_id: example-service-health
+status: approved
+repository: example/example-service
+baseline_sha: "1111111111111111111111111111111111111111"
+assessed_at: "2026-06-22T10:40:00Z"
+inputs:
+  - id: IN-001
+    type: project-definition
+    location: .agent-workflow/project/project-definition.yaml
+    summary: Defines operator need for machine-readable health and revision evidence.
+    evidence_status: verified
+  - id: IN-002
+    type: architecture
+    location: .agent-workflow/architecture/architecture.yaml
+    summary: Defines the API adapter and runtime revision expectations.
+    evidence_status: verified
+  - id: IN-003
+    type: github-issue
+    location: https://github.com/example/example-service/issues/123
+    summary: Issue #123 requests an auditable health endpoint.
+    evidence_status: reported
+source_freshness:
+  - surface: git
+    source_ref: main
+    status: fresh
+    captured_at: "2026-06-22T10:40:00Z"
+    limitation: Example baseline is synthetic.
+  - surface: github_issues
+    source_ref: https://github.com/example/example-service/issues/123
+    status: fresh
+    captured_at: "2026-06-22T10:40:00Z"
+    limitation: Example issue state is illustrative.
+  - surface: deployment_runtime
+    source_ref: .agent-workflow/sprints/2026-06-22-a/release/release-verification.yaml
+    status: not_applicable
+    captured_at: null
+    limitation: No sprint has been planned at this strategy point.
+planning_inventory:
+  - artifact_type: project_definition
+    location: .agent-workflow/project/project-definition.yaml
+    status: current
+    finding: Approved project definition covers operator-visible health evidence.
+    action: Use as an input to strategy.
+  - artifact_type: architecture
+    location: .agent-workflow/architecture/architecture.yaml
+    status: current
+    finding: Approved architecture defines the API adapter runtime revision expectation.
+    action: Use as an input to strategy.
+  - artifact_type: sprint_plan
+    location: .agent-workflow/sprints/2026-06-22-a/sprint-plan.yaml
+    status: not_applicable
+    finding: Sprint planning has not yet started for this strategy.
+    action: Hand off to sprint-planning after approval.
+north_star:
+  goal: Operators can verify service health and running revision through auditable runtime evidence.
+  alignment_status: aligned
+  source_refs: [IN-001, IN-002, IN-003]
+current_state:
+  summary: Foundations are approved and the health endpoint issue is the next coherent delivery outcome.
+  lifecycle_state: READY
+  active_sprint: null
+  open_gates: []
+  delivery_risks:
+    - Runtime revision injection must be verified after deployment.
+delivery_health:
+  status: not_applicable
+  diagnostic_refs: []
+  deployment_refs: []
+  log_refs: []
+  telemetry_refs: []
+  discovered_health_issues: []
+issue_inventory:
+  - issue: 123
+    title: Expose auditable health endpoint
+    state: OPEN
+    classification: candidate
+    rationale: The issue directly implements the approved health and revision outcome.
+    dependencies: []
+    action: Include in the next sprint candidate set.
+  - issue: 124
+    title: Standardize revision identity
+    state: OPEN
+    classification: deferred
+    rationale: Follow-up standardization is useful after the first endpoint proves the contract.
+    dependencies: ["issue #123"]
+    action: Keep open as follow-up work.
+gaps: []
+recommended_sequence:
+  - id: SEQ-001
+    outcome: Deliver and verify the auditable health endpoint.
+    issue_ids: [123]
+    prerequisites:
+      - Approved project definition.
+      - Approved architecture and API adapter module contract.
+    risks:
+      - Build metadata may not reach the runtime response.
+    depends_on: []
+  - id: SEQ-002
+    outcome: Standardize revision identity across service templates.
+    issue_ids: [124]
+    prerequisites:
+      - Runtime evidence from issue #123.
+    risks:
+      - Follow-up may touch shared service scaffolding.
+    depends_on: [SEQ-001]
+next_sprint_candidates:
+  - outcome: Deliver and verify the auditable health endpoint.
+    issue_ids: [123]
+    readiness: ready
+    rationale: The issue is aligned with approved requirements, architecture, and module boundaries.
+    required_actions:
+      - Create the sprint transaction and lane contract in sprint-planning.
+actions:
+  - id: ACT-001
+    type: plan_sprint
+    target: "issue #123"
+    owner: delivery-owner
+    status: proposed
+handoff:
+  next_skill: sprint-planning
+  next_mode: issue-readiness
+  reason: "Issue #123 is the next ready backlog outcome toward the north-star health goal."
+  required_before_handoff: []
+approval:
+  status: approved
+  approver: delivery-owner
+  approved_at: "2026-06-22T10:42:00Z"

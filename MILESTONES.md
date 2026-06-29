@@ -1,6 +1,6 @@
 # Verdify Platform Milestones
 
-Last updated: 2026-06-17
+Last updated: 2026-06-23
 
 Agent name: `verdify-platform`
 
@@ -9,8 +9,8 @@ Agent name: `verdify-platform`
 | Milestone | Open | Closed | Purpose |
 |---|---:|---:|---|
 | G0 - Controller Architecture Audit | 0 | 1 | **DONE 2026-06-17.** L1 actual-vs-intended architecture, dead/stale path inventory, CI/CD/release checklist, and failure-mode docs — delivered + drift remediated (PRs #353-#358) + prod deploy executed. |
-| G1 - Firmware-First Determinism | 1 | 2 | **L2 #344 + L3 #345 DONE 2026-06-17** — firmware-internals FSM/relay/safety/bands/72h spec (`docs/firmware-fsm-spec.md`) + safety-rail + 72h-disconnected + crop-agnostic + compliance-feasibility test rails, proven offline (222/0 native, 193,525-row invariants) + live-prod compliance confirmation. **L7 #349** lighting/occupancy remains open. |
-| G2 - Data Contracts and Observability | 2 | 0 | L5/L6 schema authority, source-of-truth/readback contracts, drift detection, green-band compliance, and dashboard/KPI rebuild. |
+| G1 - Firmware-First Determinism | 1 | 2 | **L2 #344 + L3 #345 DONE 2026-06-17** for the firmware/control base: firmware-internals FSM/relay/safety/bands/72h spec (`docs/firmware-fsm-spec.md`) + safety-rail + 72h-disconnected + crop-agnostic + compliance-feasibility test rails, proven offline (222/0 native, 193,525-row invariants) + live-prod confirmation. **L7 #349** lighting/occupancy remains open. June 23 follow-through now lives under G2/#359/#293/#347/#348. |
+| G2 - Data Contracts and Observability | 2 | 0 | L5/L6 schema authority, source-of-truth/readback contracts, drift detection, DB solar phase parity, floating-corridor outcome KPIs, moisture-estimator telemetry, and the evidence-gated VPD/dehum policy lane. |
 | G3 - Planner, Irrigation, Lab, and Research | 4 | 0 | L4/L8/L9/L10 planner boundary, irrigation/fertilization decisions, lab notebook publishing, and all-year/extreme-weather test harness. |
 
 ## Legacy/Open Milestones
@@ -63,4 +63,10 @@ next milestones (see `docs/reviews/lane1-architecture-audit-2026-06-16.md` §8):
   crop-agnostic guard, the compliance-feasibility classifier), proven offline +
   confirmed live in prod. The band-curve replay gate is blocking (Phase 1).
   **G1 remainder: L7 #349** (lighting/occupancy).
-Proceed to L7 (G1) + G2/G3 next; pull urgent L5/L6 safety/data items forward per the audit.
+- **2026-06-23 G2 pull-forward:** DB solar phase parity is now the top data/SOT
+  fix because `fn_solar_altitude()` hardcodes solar noon at 13:00 local. After
+  that, run the Jason-gated #377 float trial and verify the locally implemented
+  outcome/moisture telemetry through the OTA/deploy path before deeper VPD
+  policy changes (#383). See
+  `docs/reviews/adversarial-audit-backlog-replan-2026-06-23.md`.
+Proceed to L7 (G1) + G2/G3 next; pull urgent L5/L6 safety/data items forward per the audits.
