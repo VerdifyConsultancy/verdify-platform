@@ -5,7 +5,7 @@ schema_version: '1.0'
 sprint_id: s8-vanda-night-dehum
 lane_id: db-411-night-anchors
 title: '#411 night-anchor migration 188 (BLOCKED on gate g-411-night-temp-priority)'
-status: draft
+status: approved
 issue_ids: [411]
 coupling_justification: null
 objective: >-
@@ -107,6 +107,6 @@ escalation_conditions:
 definition_of_done:
   - 'PR open only AFTER g-411 is resolved; validation green; critic approval; merged; NOT applied (release wave applies it).'
 approval:
-  status: pending
-  approver: null
-  approved_at: null
+  status: approved
+  approver: jason
+  approved_at: '2026-07-03T20:14:19Z'

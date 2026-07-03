@@ -5,7 +5,7 @@ schema_version: '1.0'
 sprint_id: s8-vanda-night-dehum
 lane_id: data-327-moisture-telemetry
 title: '#327 moisture-estimator telemetry: migration 187 + ingestor + MCP exposure'
-status: draft
+status: approved
 issue_ids: [327]
 coupling_justification: null
 objective: >-
@@ -138,6 +138,6 @@ definition_of_done:
   - 'Independent critic approval on head SHA.'
   - 'Merged to main; migration NOT applied; #327 left open for the release wave (apply + prod verification).'
 approval:
-  status: pending
-  approver: null
-  approved_at: null
+  status: approved
+  approver: jason
+  approved_at: '2026-07-03T20:14:19Z'

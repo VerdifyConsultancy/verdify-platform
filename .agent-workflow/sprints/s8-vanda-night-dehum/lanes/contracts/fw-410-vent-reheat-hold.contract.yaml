@@ -5,7 +5,7 @@ schema_version: '1.0'
 sprint_id: s8-vanda-night-dehum
 lane_id: fw-410-vent-reheat-hold
 title: '#410 vent+reheat held-temp dehum (flag-OFF) per the 2026-07-03 design review'
-status: draft
+status: approved
 issue_ids: [410]
 coupling_justification: null
 objective: >-
@@ -178,6 +178,6 @@ definition_of_done:
   - 'Independent critic approval on the head SHA.'
   - 'Merged to main with checks; NO OTA performed; #410 left open for the release wave.'
 approval:
-  status: pending
-  approver: null
-  approved_at: null
+  status: approved
+  approver: jason
+  approved_at: '2026-07-03T20:14:19Z'
