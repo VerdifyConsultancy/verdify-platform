@@ -13,6 +13,8 @@
 #include <vector>
 #include <cmath>
 #include <string>
+#include <fstream>
+#include <sstream>
 
 static int tests_passed = 0;
 static int tests_failed = 0;
@@ -3742,6 +3744,318 @@ TEST(estimator_no_humidify_import_when_outdoor_drier) {
     in.outdoor_data_age_s = 10;
     auto mx = estimate_moisture_exchange(in, sp);
     ASSERT_TRUE(mx.action != MX_VENT_HUMIDIFY);
+    PASS();
+}
+
+// ── #410: vent+reheat HELD-TEMP dehum (dehum_vent_hold_enabled, ships OFF) ────
+// The summer-night lever: the COOLED-mix vent gain is ~0 (cooling cancels
+// drying) but the gain at the heat1-HELD current temp is large. Behind the
+// flag: ladder vent_cooled -> vent_plus_heat_hold -> heat_assist; actual-temp
+// floor can_hold = temp >= band_heat_target_f + heat_hysteresis; entry
+// re-hysteresis GH_DEHUM_HOLD_REENTRY_F; corun dwell bypass; reheat to
+// temp_target in resolve_equipment.
+
+// The #410 corridor: 62-75°F -> band_heat_target_f = 65.25, hold floor
+// 66.25 (= +heat_hysteresis), re-entry line 67.25 (= +GH_DEHUM_HOLD_REENTRY_F).
+static Setpoints hold_dehum_setpoints(bool flag_on = true) {
+    auto sp = band_first_setpoints();
+    sp.temp_low = 62.0f;
+    sp.temp_high = 75.0f;
+    sp.heat_hysteresis = 1.0f;
+    sp.vpd_low = 0.8f;
+    sp.vpd_high = 1.4f;
+    sp.vpd_target = 0.92f;
+    sp.temp_target = 70.0f;
+    sp.vpd_min_safe = 0.3f;
+    sp.dehum_vent_gain_margin_kpa = 0.02f;
+    sp.vent_exchange_fraction = 0.30f;
+    sp.dehum_vent_hold_enabled = flag_on;
+    return sp;
+}
+
+// The VERIFIED night numbers from the #410 design review (2026-07-03 prod
+// re-verification): indoor 66.7°F/72.6%RH, outdoor 61.1°F/65.9%RH, k=0.30,
+// margin 0.02 -> cooled gain ~-0.003 (below margin: cooling cancels drying),
+// HELD gain ~+0.124 -> vent_plus_heat_hold.
+static SensorInputs hold_dehum_night_inputs() {
+    auto in = make_inputs(66.7f, 0.613f, 72.6f);
+    set_solar_day(in, 23);            // solar night
+    in.outdoor_temp_f = 61.1f;
+    in.outdoor_rh_pct = 65.9f;
+    in.outdoor_data_age_s = 10;       // fresh
+    return in;
+}
+
+TEST(estimator_held_gain_selects_vent_plus_heat_hold_on_night_numbers) {
+    auto sp = hold_dehum_setpoints(true);
+    auto in = hold_dehum_night_inputs();
+    auto mx = estimate_moisture_exchange(in, sp);
+    // Cooled candidate fails on GAIN (not overcool: T_mix ~65.0 >= temp_low 62).
+    ASSERT_FALSE(mx.vent_overcools);
+    ASSERT_TRUE(mx.vent_vpd_gain_kpa < sp.dehum_vent_gain_margin_kpa);
+    // Held candidate carries the real drying benefit (~+0.12 kPa).
+    ASSERT_TRUE(mx.vent_held_vpd_gain_kpa > 0.11f && mx.vent_held_vpd_gain_kpa < 0.14f);
+    ASSERT_TRUE(std::fabs(mx.vent_held_vpd_gain_kpa - 0.124f) < 0.01f);
+    ASSERT_EQ(mx.action, MX_VENT_DEHUM);
+    ASSERT_TRUE(mx.heat_assist_corun);
+    ASSERT_TRUE(mx.hold_required);
+    ASSERT_TRUE(std::string(mx.reason) == "vent_plus_heat_hold");
+    PASS();
+}
+
+TEST(estimator_flag_off_is_legacy_and_still_reports_held_gain) {
+    // Flag OFF must degenerate to the exact pre-#410 ladder: the cooled vent
+    // candidate fails, heat helps -> MX_HEAT_ASSIST, never hold_required. The
+    // held gain stays REPORTED (diagnostic/telemetry for the #327 bake read).
+    auto sp = hold_dehum_setpoints(false);
+    auto in = hold_dehum_night_inputs();
+    auto mx = estimate_moisture_exchange(in, sp);
+    ASSERT_EQ(mx.action, MX_HEAT_ASSIST);
+    ASSERT_FALSE(mx.heat_assist_corun);
+    ASSERT_FALSE(mx.hold_required);
+    ASSERT_TRUE(std::string(mx.reason) == "heat_assist");
+    ASSERT_TRUE(mx.vent_held_vpd_gain_kpa > 0.11f);   // telemetry still flows
+    PASS();
+}
+
+TEST(estimator_can_hold_flips_at_the_heat_demand_floor) {
+    // can_hold floor = band_heat_target_f(65.25) + heat_hysteresis(1.0) = 66.25.
+    auto sp = hold_dehum_setpoints(true);
+    auto in = hold_dehum_night_inputs();
+    in.temp_f = 66.15f;                          // just BELOW the floor
+    auto mx_below = estimate_moisture_exchange(in, sp);
+    ASSERT_EQ(mx_below.action, MX_HEAT_ASSIST);  // routes to closed heat
+    ASSERT_FALSE(mx_below.hold_required);
+    in.temp_f = 66.35f;                          // just ABOVE the floor
+    auto mx_above = estimate_moisture_exchange(in, sp);
+    ASSERT_EQ(mx_above.action, MX_VENT_DEHUM);
+    ASSERT_TRUE(mx_above.hold_required);
+    ASSERT_TRUE(std::string(mx_above.reason) == "vent_plus_heat_hold");
+    PASS();
+}
+
+TEST(hold_dehum_reheat_gate_follows_temp_target) {
+    // resolve_equipment DEHUM_VENT: hold-flavor reheat runs heat1 while
+    // temp < temp_target and stops at/above it. heat2 NEVER.
+    auto sp = hold_dehum_setpoints(true);
+    auto in = hold_dehum_night_inputs();         // 66.7°F
+    auto st = initial_state();
+    st.dehum_heat_assist_active = true;
+    // Below the served target (70): reheat holds while venting.
+    auto out_below = resolve_equipment(DEHUM_VENT, in, sp, st, true);
+    ASSERT_TRUE(out_below.vent);
+    ASSERT_TRUE(out_below.heat1);
+    ASSERT_FALSE(out_below.heat2);
+    // At/above the served target: reheat off (vent continues).
+    sp.temp_target = 66.0f;
+    auto out_above = resolve_equipment(DEHUM_VENT, in, sp, st, true);
+    ASSERT_TRUE(out_above.vent);
+    ASSERT_FALSE(out_above.heat1);               // 66.7 >= 66.0, no s1 demand
+    ASSERT_FALSE(out_above.heat2);
+    PASS();
+}
+
+TEST(hold_dehum_corun_bypasses_min_dwell_on_entry) {
+    // BC-13's 5-min corun dwell would vent UNHEATED for the whole dwell on a
+    // hold-flavor entry (the over-cool bug in miniature). hold_required arms
+    // the co-run on the FIRST cycle.
+    auto sp = hold_dehum_setpoints(true);
+    sp.dehum_heat_assist_min_dwell_ms = 300000u;
+    auto in = hold_dehum_night_inputs();
+    in.outdoor_temp_f = 28.0f;                   // frigid+dry: cooled candidate
+    in.outdoor_rh_pct = 55.0f;                   // over-cools -> HOLD is selected
+    in.temp_f = 67.5f;                           // above the re-entry line
+    in.vpd_kpa = 0.41f;                          // wet (enter: < vpd_low - HV)
+    in.rh_pct = 82.2f;
+    auto s = initial_state();
+    Mode m = determine_mode(in, sp, s, 60000);   // one cycle, timer << dwell
+    ASSERT_EQ(m, DEHUM_VENT);
+    ASSERT_TRUE(s.dehum_heat_assist_active);     // armed immediately
+    ASSERT_TRUE(std::string(s.last_mode_reason) == "dehum_vent_heat");
+    auto out = resolve_equipment(m, in, sp, s, true);
+    ASSERT_TRUE(out.vent);
+    ASSERT_TRUE(out.heat1);                      // no 5-min unheated vent
+    ASSERT_FALSE(out.heat2);
+    PASS();
+}
+
+TEST(hold_dehum_entry_blocked_until_reentry_recovery) {
+    // Entry re-hysteresis: a hold-flavor candidate may only ENTER at/above
+    // floor + GH_DEHUM_HOLD_REENTRY_F (66.25 + 1.0 = 67.25); continuation of
+    // an in-flight hold is exempt (both sides of the margin).
+    auto sp = hold_dehum_setpoints(true);
+    auto in = hold_dehum_night_inputs();
+    in.outdoor_temp_f = 28.0f;                   // frigid+dry -> hold flavor
+    in.outdoor_rh_pct = 55.0f;
+    in.vpd_kpa = 0.41f;
+    in.rh_pct = 81.7f;
+    // ENTRY side: in the re-entry gap -> blocked.
+    in.temp_f = 66.7f;                           // floor(66.25) <= T < 67.25
+    auto s1 = initial_state();
+    Mode m1 = determine_mode(in, sp, s1, 60000);
+    ASSERT_TRUE(m1 != DEHUM_VENT);
+    auto out1 = resolve_equipment(m1, in, sp, s1, true);
+    ASSERT_FALSE(out1.vent);
+    // ENTRY side: recovered past the re-entry line -> allowed.
+    in.temp_f = 67.3f;
+    auto s2 = initial_state();
+    Mode m2 = determine_mode(in, sp, s2, 60000);
+    ASSERT_EQ(m2, DEHUM_VENT);
+    // CONTINUE side: an in-flight hold at the same 66.7 keeps running.
+    in.temp_f = 66.7f;
+    auto s3 = initial_state();
+    s3.mode = DEHUM_VENT;
+    s3.mode_prev = DEHUM_VENT;
+    Mode m3 = determine_mode(in, sp, s3, 60000);
+    ASSERT_EQ(m3, DEHUM_VENT);
+    PASS();
+}
+
+TEST(hold_dehum_vpd_min_safe_rescue_arms_reheat_same_cycle) {
+    // The vpd_min_safe rescue is exempt from the entry re-hysteresis (safety
+    // rail) and must arm the hold-reheat on the SAME cycle it forces the vent.
+    auto sp = hold_dehum_setpoints(true);
+    auto in = hold_dehum_night_inputs();
+    in.outdoor_temp_f = 28.0f;                   // frigid+dry -> hold flavor
+    in.outdoor_rh_pct = 55.0f;
+    in.temp_f = 66.9f;                           // inside the re-entry gap
+    in.vpd_kpa = 0.28f;                          // < vpd_min_safe (0.3)
+    in.rh_pct = 87.6f;
+    auto s = initial_state();
+    Mode m = determine_mode(in, sp, s, 60000);
+    ASSERT_EQ(m, DEHUM_VENT);                    // rescue forced the vent
+    ASSERT_TRUE(s.dehum_heat_assist_active);     // hold-reheat armed same cycle
+    auto out = resolve_equipment(m, in, sp, s, true);
+    ASSERT_TRUE(out.vent);
+    ASSERT_TRUE(out.heat1);
+    ASSERT_FALSE(out.heat2);
+    PASS();
+}
+
+TEST(hold_dehum_decision_surfaces_new_telemetry_fields) {
+    // The two additive telemetry fields (names coordinated with data-327):
+    // vent_held_vpd_gain_kpa + hold_required flow through both decision builders.
+    auto sp = hold_dehum_setpoints(true);
+    auto in = hold_dehum_night_inputs();
+    auto s = initial_state();
+    ClimateActionDecision d = evaluate_climate_decision(in, sp, s);
+    ASSERT_TRUE(d.moisture_hold_required);
+    ASSERT_TRUE(d.moisture_vent_held_vpd_gain_kpa > 0.11f);
+    const RelayOutputs relays = {false, true, true, false, false, true};
+    ClimateActionDecision de = describe_effective_climate_decision(DEHUM_VENT, in, sp, s, relays);
+    ASSERT_TRUE(de.moisture_hold_required);
+    ASSERT_TRUE(de.moisture_vent_held_vpd_gain_kpa > 0.11f);
+    ASSERT_TRUE(std::string(de.moisture_exchange_reason) == "vent_plus_heat_hold");
+    PASS();
+}
+
+// ── #410 synthetic cold-night fixture (firmware/test/data/cold_night_hold.csv)
+// Outdoor 28°F/55% (frigid+dry: T_mix ~55.7 < temp_low -> vent_overcools TRUE on
+// every row; the held gain is ~+0.48). Proves on one open-loop trace: hold
+// entry/duty, floor exit at the heat-demand line, +1.0°F re-entry spacing, the
+// same-cycle rescue reheat, heat2-never, and the invariant-#14 vent-cycle cap.
+struct HoldFixtureRow {
+    std::string phase;
+    int minute;
+    SensorInputs in;
+};
+
+static bool load_cold_night_fixture(std::vector<HoldFixtureRow>& rows) {
+    const char* candidates[] = { "test/data/cold_night_hold.csv", "data/cold_night_hold.csv" };
+    std::ifstream f;
+    for (const char* p : candidates) {
+        f.open(p);
+        if (f) break;
+        f.clear();
+    }
+    if (!f) return false;
+    std::string line;
+    std::getline(f, line);                        // header
+    while (std::getline(f, line)) {
+        if (line.empty()) continue;
+        std::istringstream ss(line);
+        std::string phase, tok;
+        std::getline(ss, phase, ',');
+        HoldFixtureRow r;
+        r.phase = phase;
+        std::getline(ss, tok, ','); r.minute = std::stoi(tok);
+        std::getline(ss, tok, ','); const float temp = std::stof(tok);
+        std::getline(ss, tok, ','); const float rh = std::stof(tok);
+        std::getline(ss, tok, ','); const float vpd = std::stof(tok);
+        r.in = make_inputs(temp, vpd, rh);
+        std::getline(ss, tok, ','); r.in.outdoor_temp_f = std::stof(tok);
+        std::getline(ss, tok, ','); r.in.outdoor_rh_pct = std::stof(tok);
+        std::getline(ss, tok, ','); r.in.outdoor_data_age_s = (uint32_t)std::stoi(tok);
+        set_solar_day(r.in, 23, r.minute);        // deep solar night
+        rows.push_back(r);
+    }
+    return rows.size() >= 20;
+}
+
+TEST(cold_night_hold_fixture_flag_on_trace) {
+    std::vector<HoldFixtureRow> rows;
+    ASSERT_TRUE(load_cold_night_fixture(rows));
+    auto sp = hold_dehum_setpoints(true);
+    auto s = initial_state();
+    int vent_open_cycles = 0;
+    bool prev_vent = false;
+    for (const auto& r : rows) {
+        Mode m = determine_mode(r.in, sp, s, 60000);
+        auto out = resolve_equipment(m, r.in, sp, s, true);
+        // Global rails: heat2 NEVER (with or without heat1); no fog at night dehum.
+        ASSERT_FALSE(out.heat2);
+        ASSERT_FALSE(out.fog);
+        if (out.vent && !prev_vent) vent_open_cycles++;
+        prev_vent = out.vent;
+        if (r.phase == "hold_entry" || r.phase == "reentry") {
+            ASSERT_EQ(m, DEHUM_VENT);
+            ASSERT_TRUE(out.vent);
+            ASSERT_TRUE(out.heat1);                       // co-run from cycle 1
+            ASSERT_TRUE(s.dehum_heat_assist_active);
+        } else if (r.phase == "hold" || r.phase == "rescue_hold" || r.phase == "recovery") {
+            ASSERT_EQ(m, DEHUM_VENT);
+            ASSERT_TRUE(out.vent);
+            ASSERT_TRUE(out.heat1);                       // held, not unheated
+        } else if (r.phase == "floor_exit" || r.phase == "heat_floor") {
+            // Floor exit at the heat-demand line: vent CLOSES, closed heat takes
+            // over (vent_overcools routes to heat when can_hold is false).
+            ASSERT_TRUE(m != DEHUM_VENT);
+            ASSERT_FALSE(out.vent);
+            ASSERT_TRUE(out.heat1);
+        } else if (r.phase == "gap") {
+            // Re-entry blocked until +1.0°F above the floor: no vent chatter.
+            ASSERT_TRUE(m != DEHUM_VENT);
+            ASSERT_FALSE(out.vent);
+        } else if (r.phase == "rescue") {
+            // vpd_min_safe rescue: forced vent + reheat on the SAME cycle.
+            ASSERT_EQ(m, DEHUM_VENT);
+            ASSERT_TRUE(out.vent);
+            ASSERT_TRUE(out.heat1);
+        } else if (r.phase == "recovered") {
+            ASSERT_TRUE(m != DEHUM_VENT);
+            ASSERT_FALSE(out.vent);
+        }
+    }
+    // Invariant-#14 shape: bounded distinct vent cycles, far under the cold-day
+    // cap (24) — entry, re-entry, rescue = 3. No thrash.
+    ASSERT_EQ(vent_open_cycles, 3);
+    PASS();
+}
+
+TEST(cold_night_hold_fixture_flag_off_never_vents) {
+    // Flag OFF over the SAME trace: today's behavior — vent_overcools routes
+    // every wet row to closed heat; the vent NEVER opens, DEHUM_VENT never fires.
+    std::vector<HoldFixtureRow> rows;
+    ASSERT_TRUE(load_cold_night_fixture(rows));
+    auto sp = hold_dehum_setpoints(false);
+    auto s = initial_state();
+    for (const auto& r : rows) {
+        Mode m = determine_mode(r.in, sp, s, 60000);
+        auto out = resolve_equipment(m, r.in, sp, s, true);
+        ASSERT_TRUE(m != DEHUM_VENT);
+        ASSERT_FALSE(out.vent);
+        ASSERT_FALSE(out.heat2);
+    }
     PASS();
 }
 

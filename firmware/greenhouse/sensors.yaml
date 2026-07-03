@@ -1246,6 +1246,20 @@ sensor:
       if (!id(cfg_first_pull_ok)) return NAN;
       return id(vent_exchange_fraction);
 
+  # #410 (freeze rule 6): readback for the vent+reheat held-temp dehum enable
+  # (sw_dehum_vent_hold in tunables.yaml). Ships OFF; NAN until the first push
+  # confirms cfg_first_pull_ok.
+  - platform: template
+    id: cfg_dehum_vent_hold_enabled
+    name: "Cfg • Dehum Vent Hold Enabled"
+    state_class: measurement
+    accuracy_decimals: 0
+    entity_category: diagnostic
+    update_interval: 30s
+    lambda: |-
+      if (!id(cfg_first_pull_ok)) return NAN;
+      return id(dehum_vent_hold_enabled) ? 1.0f : 0.0f;
+
   - platform: template
     id: cfg_cold_vent_guard_delta_f
     name: "Cfg • Cold Vent Guard Delta (°F)"

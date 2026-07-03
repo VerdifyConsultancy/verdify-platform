@@ -84,6 +84,14 @@ globals:
     type: uint32_t
     restore_value: no
     initial_value: '300000'
+  # #410 (ADR0003 §6.4 addendum): vent+reheat HELD-TEMP dehum candidate master
+  # enable. Ships OFF — the OTA is behavior-identical until an operator/planner
+  # enables it by a logged tunable push (revert needs no OTA). restore_value: no
+  # so a reboot before the first push always boots the safe OFF default.
+  - id: dehum_vent_hold_enabled
+    type: bool
+    restore_value: no
+    initial_value: 'false'
 
   # ─── Humidity / VPD (kPa) ───
   # Wide defaults — see comment on target_temp_low_f.

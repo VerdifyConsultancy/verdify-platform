@@ -600,7 +600,10 @@ interval:
               // globals (match default_setpoints; not planner-pushable this sprint).
               .dehum_vent_gain_margin_kpa = id(dehum_vent_gain_margin_kpa),
               .dehum_heat_assist_min_dwell_ms = id(dehum_heat_assist_min_dwell_ms),
-              .vent_exchange_fraction = id(vent_exchange_fraction)
+              .vent_exchange_fraction = id(vent_exchange_fraction),
+              // #410: vent+reheat held-temp dehum enable (ships OFF; armed by a
+              // logged tunable push, readback cfg_dehum_vent_hold_enabled).
+              .dehum_vent_hold_enabled = id(dehum_vent_hold_enabled)
           };
 
           validate_setpoints(setpts);
@@ -1718,7 +1721,7 @@ interval:
             char fog_margin[24];
             char next_mist[24];
             char resource_cost[112];
-            char moisture_exchange[320];
+            char moisture_exchange[384];
             snprintf(temp_error, sizeof(temp_error), "%.2f", climate_decision.temp_error_f);
             snprintf(vpd_error, sizeof(vpd_error), "%.3f", climate_decision.vpd_error_kpa);
             snprintf(fog_margin, sizeof(fog_margin), "%.3f", climate_decision.fog_margin_kpa);
@@ -1732,18 +1735,24 @@ interval:
                      climate_decision.resource_cost_estimate.water_gal,
                      climate_decision.resource_cost_estimate.electric_kwh,
                      climate_decision.resource_cost_estimate.gas_therm);
+            // #410: additive fields vent_held_vpd_gain_kpa + hold_required
+            // (names coordinated with data-327 / migration 187 — do not rename).
             snprintf(moisture_exchange, sizeof(moisture_exchange),
                      "{\"action\":\"%s\",\"reason\":\"%s\",\"vent_vpd_gain_kpa\":%.3f,"
+                     "\"vent_held_vpd_gain_kpa\":%.3f,"
                      "\"heat_vpd_gain_kpa\":%.3f,\"outdoor_fresh\":%s,"
                      "\"vent_overcools\":%s,\"heat_assist_corun\":%s,"
+                     "\"hold_required\":%s,"
                      "\"heat_assist_active\":%s,\"heat_assist_timer_s\":%.0f}",
                      climate_decision.moisture_exchange_action,
                      climate_decision.moisture_exchange_reason,
                      climate_decision.moisture_vent_vpd_gain_kpa,
+                     climate_decision.moisture_vent_held_vpd_gain_kpa,
                      climate_decision.moisture_heat_vpd_gain_kpa,
                      climate_decision.moisture_outdoor_fresh ? "true" : "false",
                      climate_decision.moisture_vent_overcools ? "true" : "false",
                      climate_decision.moisture_heat_assist_corun ? "true" : "false",
+                     climate_decision.moisture_hold_required ? "true" : "false",
                      climate_decision.moisture_heat_assist_active ? "true" : "false",
                      float(climate_decision.moisture_heat_assist_timer_ms) / 1000.0f);
             const uint32_t climate_diag_now_ms = millis();
@@ -1861,7 +1870,7 @@ interval:
               snprintf(last_climate_next_mist, sizeof(last_climate_next_mist), "%s", next_mist);
               climate_diag_published = true;
             }
-            static char last_climate_moisture_exchange[320] = "";
+            static char last_climate_moisture_exchange[384] = "";
             if(strcmp(last_climate_moisture_exchange, moisture_exchange) != 0 || climate_diag_republish){
               id(gh_climate_moisture_exchange).publish_state(moisture_exchange);
               snprintf(last_climate_moisture_exchange, sizeof(last_climate_moisture_exchange), "%s", moisture_exchange);

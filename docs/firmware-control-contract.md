@@ -105,9 +105,18 @@ The live controller must now satisfy these cross-layer invariants:
 - `DEHUM_VENT` cannot remain active after VPD crosses above `vpd_high`. The
   firmware exits dehumidification immediately, seeding humidification readiness
   so VENTILATE can use vent-mist assist or SEALED_MIST can recover dry stress.
+  In addition (#410), a HOLD-flavor `DEHUM_VENT` (estimator
+  `vent_plus_heat_hold`, behind `dehum_vent_hold_enabled`) exits when the
+  measured temp falls below the heat-demand line
+  (`band_heat_target_f + heat_hysteresis`) and may not re-enter until temp
+  recovers `GH_DEHUM_HOLD_REENTRY_F` (1.0 °F) above that line (the
+  `vpd_min_safe` rescue is exempt and arms the hold-reheat on the same cycle).
 - Non-safety heat cannot overlap physical vent/fan air exchange. Relay min-on
   timers may hold fans/vent briefly, but heat is suppressed until that air
-  exchange clears.
+  exchange clears. Sanctioned exception: the estimator-gated `DEHUM_VENT`
+  heat1 co-run (BC-13, extended by the #410 hold flavor, where heat1 — the
+  ELECTRIC stage — reheats up to the served `temp_target` while venting;
+  `heat2`, the gas stage, never participates).
 - `heat2` cannot run unless `heat1` is available or physically held on. The
   executor and replay invariant suite both treat heat2-without-heat1 as a
   staging fault.
