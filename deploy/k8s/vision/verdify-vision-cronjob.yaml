@@ -1,0 +1,51 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: verdify-vision
+  namespace: verdify-prod
+  labels: { app.kubernetes.io/part-of: verdify, app.kubernetes.io/component: vision }
+spec:
+  schedule: "0 15,18,21,0 * * *"   # ~4x/day daytime MDT (UTC 15,18,21,00)
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      ttlSecondsAfterFinished: 86400
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: vision
+              image: ghcr.io/verdifyconsultancy/verdify-ingestor@sha256:f4bb0bdf65c5fcaf920df2347b8c1784f722f3f2dc73d2bd6a66866d1f3d9a1a
+              command: ["sh", "-c"]
+              args:
+                - |
+                  set -e
+                  cd /app/ingestor
+                  python3 /vsrc/frigate-snapshot.py
+              env:
+                - { name: PYTHONPATH, value: "/app/ingestor" }
+                - { name: AI_CONFIG, value: "/vsrc/ai.yaml" }
+                - { name: TEMPLATES_DIR, value: "/vsrc" }
+                - { name: GEMINI_API_KEY_FILE, value: "/vkey/gemini_api_key.txt" }
+                - { name: VERDIFY_FRIGATE_URL, value: "http://frigate.frigate.svc.cluster.local:5000" }
+                - { name: VERDIFY_GO2RTC_PUBLIC_BASE_URL, value: "http://frigate.frigate.svc.cluster.local:1984" }
+                - { name: VERDIFY_SNAPSHOT_DIR, value: "/snap" }
+                - { name: VERDIFY_ZONES_CONFIG, value: "/vsrc/zones.yaml" }
+                - { name: VERDIFY_ANALYZE_SNAPSHOT_SCRIPT, value: "/vsrc/analyze-greenhouse-snapshot.py" }
+                - name: POSTGRES_PASSWORD
+                  valueFrom: { secretKeyRef: { name: verdify-app-secrets, key: POSTGRES_PASSWORD } }
+                - { name: VERDIFY_DB_DSN, value: "postgresql://verdify:$(POSTGRES_PASSWORD)@verdify-db:5432/verdify" }
+              volumeMounts:
+                - { name: vsrc, mountPath: /vsrc }
+                - { name: vkey, mountPath: /vkey, readOnly: true }
+                - { name: snap, mountPath: /snap }
+              resources:
+                requests: { cpu: "100m", memory: "256Mi" }
+                limits: { cpu: "1", memory: "1Gi" }
+          volumes:
+            - { name: vsrc, configMap: { name: verdify-vision-src } }
+            - { name: vkey, secret: { secretName: verdify-vision-key } }
+            - { name: snap, emptyDir: {} }

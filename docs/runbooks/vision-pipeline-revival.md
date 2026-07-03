@@ -1,9 +1,13 @@
 # Vision / Observation Pipeline — Revival Runbook
 
-**Status (2026-07-03):** the greenhouse "eyes" went dark **2026-06-07** and stayed
-dark ~26 days undetected. Root cause + the (now small) remaining step are below.
-A watchdog (`system.vision_pipeline` sensor_offline alert, `ingestor/tasks/alerts.py`)
-now pages within 24 h if observations stop, so this can't recur silently.
+**Status (2026-07-03): REVIVED + LIVE.** The greenhouse "eyes" went dark
+**2026-06-07** and stayed dark ~26 days undetected; they are now **running again**
+as a k3s CronJob (`deploy/k8s/vision/`, `verdify-vision`, 4x/day). First fresh
+run confirmed the Vandas: center health **0.9 — "vibrant purple blooms, extensive
+healthy root system."** A watchdog (`system.vision_pipeline` sensor_offline alert,
+`ingestor/tasks/alerts.py`) pages within 24 h if observations stop, so this can't
+recur silently. The sections below are the original diagnosis + the IaC follow-ups
+(`deploy/k8s/vision/README.md` has the live wiring).
 
 ## What the pipeline is
 
