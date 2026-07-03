@@ -1115,6 +1115,17 @@ _FORECAST_STALE_SENSOR_ID = "system.weather_forecast"
 _FORECAST_STALE_THRESHOLD_S = 2 * 60 * 60
 
 
+# Plant vision/observation pipeline watchdog. The greenhouse "eyes" (Gemini
+# vision → image_observations/observations) went dark undetected for ~26 days
+# (last obs 2026-06-07) because nothing alerted on the absence of observations.
+# This threshold pages when no plant observation has landed within a day, so a
+# silent camera/vision outage can't persist unnoticed again.
+_OBSERVATION_STALE_SENSOR_ID = "system.vision_pipeline"
+
+
+_OBSERVATION_STALE_THRESHOLD_S = 24 * 60 * 60
+
+
 _FORECAST_DEVIATION_SIGMA_MULTIPLIER = 1.5
 
 
@@ -1507,6 +1518,8 @@ __all__ = [
     "_FORECAST_DEVIATION_DEFAULTS",
     "_FORECAST_STALE_SENSOR_ID",
     "_FORECAST_STALE_THRESHOLD_S",
+    "_OBSERVATION_STALE_SENSOR_ID",
+    "_OBSERVATION_STALE_THRESHOLD_S",
     "_FORECAST_DEVIATION_SIGMA_MULTIPLIER",
     "_FORECAST_DEVIATION_SIGMA_HISTORY_DAYS",
     "LocationInfo",

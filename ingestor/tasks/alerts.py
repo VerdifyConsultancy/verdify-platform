@@ -8,6 +8,8 @@ surface so every `from tasks import X` still resolves.
 from ._common import (
     _FORECAST_STALE_SENSOR_ID,
     _FORECAST_STALE_THRESHOLD_S,
+    _OBSERVATION_STALE_SENSOR_ID,
+    _OBSERVATION_STALE_THRESHOLD_S,
     AIR_EXCHANGE_RELAY_STUCK_MODES,
     BAND_DRIVEN_PARAMS,
     EXPECTED_FIRMWARE_VERSION,
@@ -137,6 +139,46 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                     },
                     "metric_value": float(forecast_age_s) if forecast_age_s is not None else None,
                     "threshold_value": float(_FORECAST_STALE_THRESHOLD_S),
+                }
+            )
+
+        # 1a2. observation_stale — plant vision/observation pipeline watchdog.
+        # The greenhouse "eyes" (Gemini vision -> image_observations) went dark
+        # UNDETECTED for ~26 days (last capture 2026-06-07) because nothing
+        # alerted on the *absence* of observations. Page when no vision capture
+        # has landed within a day so a silent camera/vision outage surfaces fast.
+        # Reuses sensor_offline (the forecast-staleness precedent) with a
+        # dedicated sensor_id, so no schema/enum change is needed.
+        obs_health = await conn.fetchrow(
+            "SELECT max(ts) AS last_obs, EXTRACT(EPOCH FROM now() - max(ts))::int AS age_s "
+            "FROM image_observations"
+        )
+        obs_last = obs_health["last_obs"] if obs_health else None
+        obs_age_s = obs_health["age_s"] if obs_health else None
+        if obs_last is None or obs_age_s is None or obs_age_s > _OBSERVATION_STALE_THRESHOLD_S:
+            obs_hours = (obs_age_s // 3600) if obs_age_s is not None else None
+            alerts.append(
+                {
+                    "alert_type": "sensor_offline",
+                    "severity": "warning",
+                    "category": "system",
+                    "sensor_id": _OBSERVATION_STALE_SENSOR_ID,
+                    "zone": None,
+                    "message": (
+                        f"Plant vision pipeline dark: no observation in {obs_hours}h "
+                        "(camera/vision pipeline may be down)"
+                        if obs_hours is not None
+                        else "Plant vision pipeline dark: no observations on record"
+                    ),
+                    "details": {
+                        "type": "observation_pipeline",
+                        "last_observation": obs_last.isoformat() if obs_last else None,
+                        "staleness_ratio": round(float(obs_age_s) / float(_OBSERVATION_STALE_THRESHOLD_S), 2)
+                        if obs_age_s is not None
+                        else None,
+                    },
+                    "metric_value": float(obs_age_s) if obs_age_s is not None else None,
+                    "threshold_value": float(_OBSERVATION_STALE_THRESHOLD_S),
                 }
             )
 

@@ -18,9 +18,9 @@
 
 -- House air band (value-only; widths are NULL on house rows).
 INSERT INTO public.crop_band_anchors (crop_type, series, anchor, value) VALUES
-  ('house','temp_low','sr',62.5), ('house','temp_low','sm',73.79), ('house','temp_low','ss',72), ('house','temp_low','mid',60.71),
-  ('house','temp_target','sr',67.5), ('house','temp_target','sm',78.79), ('house','temp_target','ss',77), ('house','temp_target','mid',65.71),
-  ('house','temp_high','sr',72.5), ('house','temp_high','sm',83.79), ('house','temp_high','ss',82), ('house','temp_high','mid',70.71),
+  ('house','temp_low','sr',62.5), ('house','temp_low','sm',73.79), ('house','temp_low','ss',72), ('house','temp_low','mid',58),
+  ('house','temp_target','sr',67.5), ('house','temp_target','sm',78.79), ('house','temp_target','ss',77), ('house','temp_target','mid',62),
+  ('house','temp_high','sr',72.5), ('house','temp_high','sm',83.79), ('house','temp_high','ss',82), ('house','temp_high','mid',66),
   ('house','vpd_low','sr',0.755), ('house','vpd_low','sm',0.862), ('house','vpd_low','ss',0.845), ('house','vpd_low','mid',0.738),
   ('house','vpd_target','sr',0.935), ('house','vpd_target','sm',1.042), ('house','vpd_target','ss',1.025), ('house','vpd_target','mid',0.918),
   ('house','vpd_high','sr',1.185), ('house','vpd_high','sm',1.292), ('house','vpd_high','ss',1.275), ('house','vpd_high','mid',1.168)
@@ -50,15 +50,15 @@ BEGIN
       ('house','temp_low','sr',62.5::double precision),
       ('house','temp_low','sm',73.79::double precision),
       ('house','temp_low','ss',72::double precision),
-      ('house','temp_low','mid',60.71::double precision),
+      ('house','temp_low','mid',58::double precision),
       ('house','temp_target','sr',67.5::double precision),
       ('house','temp_target','sm',78.79::double precision),
       ('house','temp_target','ss',77::double precision),
-      ('house','temp_target','mid',65.71::double precision),
+      ('house','temp_target','mid',62::double precision),
       ('house','temp_high','sr',72.5::double precision),
       ('house','temp_high','sm',83.79::double precision),
       ('house','temp_high','ss',82::double precision),
-      ('house','temp_high','mid',70.71::double precision),
+      ('house','temp_high','mid',66::double precision),
       ('house','vpd_low','sr',0.755::double precision),
       ('house','vpd_low','sm',0.862::double precision),
       ('house','vpd_low','ss',0.845::double precision),

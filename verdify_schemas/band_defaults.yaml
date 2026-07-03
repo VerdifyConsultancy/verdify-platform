@@ -32,9 +32,17 @@
 # daily from the ephemeris, so the curve adapts to the solar cycle year-round.
 # Derivation: docs/reviews/ band-nature-alignment; harmonic fit in session log.
 house:
-  temp_low:    [62.50, 73.79, 72.00, 60.71]
-  temp_target: [67.50, 78.79, 77.00, 65.71]
-  temp_high:   [72.50, 83.79, 82.00, 70.71]
+  # DEEP-NIGHT CHILL (2026-07-03): the solar-midnight (mid) temp anchor was
+  # lowered ~3.7°F (target 65.71→62, vent-high 70.71→66, heat-floor 60.71→58)
+  # to sharpen the day/night DIF toward the 20-25°F that strap-leaf Vandas want
+  # for firm growth + flower initiation. The ~66°F night floor was retained
+  # thermal mass (heat1 fires at dawn, not deep night), so this is "vent the
+  # retained heat, don't heat" — nearly free, and cooling toward the ~60-64°F
+  # outdoor night (RH ~65%) RAISES night RH. Heat floor 58°F protects the
+  # mixed crops. Stage 1 of the move toward a 60-62°F night; re-probe overnight.
+  temp_low:    [62.50, 73.79, 72.00, 58.00]
+  temp_target: [67.50, 78.79, 77.00, 62.00]
+  temp_high:   [72.50, 83.79, 82.00, 66.00]
   vpd_low:     [0.755, 0.862, 0.845, 0.738]
   vpd_target:  [0.935, 1.042, 1.025, 0.918]
   vpd_high:    [1.185, 1.292, 1.275, 1.168]

@@ -31,11 +31,18 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [vision] %(levelname
 log = logging.getLogger(__name__)
 
 DENVER = ZoneInfo("America/Denver")
-VAULT_DIR = Path("/mnt/iris/verdify-vault/snapshots")
-ZONES_CONFIG = Path("/srv/verdify/config/zones.yaml")
+# k3s-portable: snapshot dir shared with frigate-snapshot.py (emptyDir/PVC);
+# zones config from the repo; legacy /mnt/iris + /srv/verdify are retired.
+VAULT_DIR = Path(os.environ.get("VERDIFY_SNAPSHOT_DIR", "/mnt/iris/verdify-vault/snapshots"))
+ZONES_CONFIG = Path(os.environ.get("VERDIFY_ZONES_CONFIG", "/srv/verdify/config/zones.yaml"))
 
 
 def get_db_url():
+    # Prefer an explicit DSN (k3s: in-cluster verdify-db); fall back to the
+    # legacy /srv/verdify/.env password + localhost for laptop/VM runs.
+    dsn = os.environ.get("VERDIFY_DB_DSN") or os.environ.get("DATABASE_URL")
+    if dsn:
+        return dsn
     pw = "verdify"
     if os.path.exists("/srv/verdify/.env"):
         with open("/srv/verdify/.env") as f:

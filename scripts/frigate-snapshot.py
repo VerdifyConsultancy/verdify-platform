@@ -27,10 +27,15 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-FRIGATE_URL = "http://192.168.30.142:5000"  # Frigate detect-frame fallback.
+# Frigate NVR now runs IN k3s (svc frigate.frigate.svc.cluster.local:5000);
+# the old operator-LAN host 192.168.30.142 is retired. Overridable by env so the
+# same script works from a k3s CronJob (in-cluster svc) or a laptop (LAN/host).
+FRIGATE_URL = os.environ.get("VERDIFY_FRIGATE_URL", "http://192.168.30.142:5000")
 GO2RTC_URL = os.environ.get("VERDIFY_GO2RTC_PUBLIC_BASE_URL", "http://192.168.30.142:1984")
 CAMERAS = ["greenhouse_1", "greenhouse_2"]
-VAULT_DIR = Path("/mnt/iris/verdify-vault/snapshots")
+# Snapshot sink: the Syncthing vault (/mnt/iris) is gone with the iris-VM; in
+# k3s point this at an emptyDir/PVC shared with the analyze step.
+VAULT_DIR = Path(os.environ.get("VERDIFY_SNAPSHOT_DIR", "/mnt/iris/verdify-vault/snapshots"))
 DENVER = ZoneInfo("America/Denver")
 
 
