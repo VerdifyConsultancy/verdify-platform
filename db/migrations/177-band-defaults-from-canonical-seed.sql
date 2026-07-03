@@ -22,7 +22,7 @@ INSERT INTO public.crop_band_anchors (crop_type, series, anchor, value) VALUES
   ('house','temp_target','sr',67.5), ('house','temp_target','sm',78.79), ('house','temp_target','ss',77), ('house','temp_target','mid',65.71),
   ('house','temp_high','sr',72.5), ('house','temp_high','sm',83.79), ('house','temp_high','ss',82), ('house','temp_high','mid',70.71),
   ('house','vpd_low','sr',0.755), ('house','vpd_low','sm',0.862), ('house','vpd_low','ss',0.845), ('house','vpd_low','mid',0.738),
-  ('house','vpd_target','sr',0.935), ('house','vpd_target','sm',1.042), ('house','vpd_target','ss',1.025), ('house','vpd_target','mid',0.918),
+  ('house','vpd_target','sr',0.935), ('house','vpd_target','sm',1.042), ('house','vpd_target','ss',1.025), ('house','vpd_target','mid',0.83),
   ('house','vpd_high','sr',1.185), ('house','vpd_high','sm',1.292), ('house','vpd_high','ss',1.275), ('house','vpd_high','mid',1.168)
 ON CONFLICT (crop_type, growth_stage, season, series, anchor, greenhouse_id) DO UPDATE SET value = EXCLUDED.value
   WHERE public.crop_band_anchors.value IS DISTINCT FROM EXCLUDED.value;
@@ -66,7 +66,7 @@ BEGIN
       ('house','vpd_target','sr',0.935::double precision),
       ('house','vpd_target','sm',1.042::double precision),
       ('house','vpd_target','ss',1.025::double precision),
-      ('house','vpd_target','mid',0.918::double precision),
+      ('house','vpd_target','mid',0.83::double precision),
       ('house','vpd_high','sr',1.185::double precision),
       ('house','vpd_high','sm',1.292::double precision),
       ('house','vpd_high','ss',1.275::double precision),
