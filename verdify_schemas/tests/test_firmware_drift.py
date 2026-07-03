@@ -293,6 +293,23 @@ KNOWN_PRE_EXISTING_DRIFT.setdefault("CFG_READBACK_MAP", set()).update(
     if (oid := REGISTRY[name].cfg_readback_object_id) and oid not in _STAGED_FW_IDS
 )
 
+# #410 staging (data-327 follow-up, PR #418 coordination): the
+# cfg___dehum_vent_hold_enabled readback route in _CFG_READBACK_ADDED_FW_V2
+# lands one cycle AHEAD of the fw-410 merge that adds the sensor to
+# firmware/greenhouse/sensors.yaml (freeze rule 6 readback for the
+# sw_dehum_vent_hold switch). The key is the WIRE object_id — the name slug of
+# "Cfg • Dehum Vent Hold Enabled" (loose per-char slugify), which is what
+# aioesphomeapi actually delivers; the YAML id form would satisfy this guard's
+# id∪slug candidate set yet never match at runtime (wire-dead). Same
+# self-shrinking shape as the registry-staged set above: allow-listed ONLY
+# while the firmware YAML does not yet define the sensor, so the moment #418
+# merges the entry vanishes and both directions
+# (test_entity_map_keys_exist_in_firmware and test_known_drift_is_still_drifting)
+# enforce it as a real route with zero manual cleanup.
+KNOWN_PRE_EXISTING_DRIFT.setdefault("CFG_READBACK_MAP", set()).update(
+    oid for oid in ("cfg___dehum_vent_hold_enabled",) if oid not in _STAGED_FW_IDS
+)
+
 
 @pytest.mark.parametrize("map_name", MAP_NAMES)
 def test_entity_map_keys_exist_in_firmware(map_name, fw_ids, entity_map):
