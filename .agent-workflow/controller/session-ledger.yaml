@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-s8-vanda-night-dehum
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-03T21:30:00Z'
+updated_at: '2026-07-03T21:45:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -37,16 +37,17 @@ sessions:
   role: worker
   executor: claude-local-subagent
   repository: VerdifyConsultancy/verdify-platform
-  status: active
+  status: complete
   started_at: '2026-07-03T20:30:00Z'
-  ended_at: null
+  ended_at: '2026-07-03T21:45:00Z'
   issue_ids:
   - 410
   lane_id: fw-410-vent-reheat-hold
   wave_id: wave-s8-night-dehum
   branch: fw-410-vent-reheat-hold
   worktree: /private/tmp/claude-501/-Users-jason-repos-verdify-platform/17f4b1c3-9d61-4639-90f5-62fb219addce/scratchpad/.worktrees/s8-ctl/fw-410-vent-reheat-hold
-  pr_refs: []
+  pr_refs:
+  - '#418'
   artifact_refs: []
 - session_id: s8-data327-w1
   parent_session_id: s8-outer-loop-2026-07-03
@@ -115,6 +116,23 @@ sessions:
   worktree: /private/tmp/claude-501/-Users-jason-repos-verdify-platform/17f4b1c3-9d61-4639-90f5-62fb219addce/scratchpad/.reviews/s8-ctl/data-327-moisture-telemetry-s8-data327-c1
   pr_refs:
   - '#417'
+  artifact_refs: []
+- session_id: s8-fw410-c1
+  parent_session_id: s8-outer-loop-2026-07-03
+  role: critic
+  executor: claude-local-subagent
+  repository: VerdifyConsultancy/verdify-platform
+  status: active
+  started_at: '2026-07-03T21:45:00Z'
+  ended_at: null
+  issue_ids:
+  - 410
+  lane_id: fw-410-vent-reheat-hold
+  wave_id: wave-s8-night-dehum
+  branch: fw-410-vent-reheat-hold
+  worktree: /private/tmp/claude-501/-Users-jason-repos-verdify-platform/17f4b1c3-9d61-4639-90f5-62fb219addce/scratchpad/.reviews/s8-ctl/fw-410-vent-reheat-hold-s8-fw410-c1
+  pr_refs:
+  - '#418'
   artifact_refs: []
 events:
 - id: LEDGER-EVT-0001
@@ -541,6 +559,90 @@ events:
   data_summary: null
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0011
+  content_sha256: null
+- id: LEDGER-EVT-0013
+  sequence: 13
+  occurred_at: '2026-07-03T21:45:00Z'
+  event_type: worker_closeout
+  source: sprint-orchestrator
+  subject: fw-410-vent-reheat-hold closeout
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids:
+    - s8-fw410-w1
+    - s8-fw410-c1
+    issue_ids:
+    - 410
+    - 419
+    lane_ids:
+    - fw-410-vent-reheat-hold
+    pr_ids:
+    - '#418'
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs:
+    - .agent-workflow/sprints/s8-vanda-night-dehum/lanes/closeout/fw-410-vent-reheat-hold.closeout.yaml
+    evidence_refs: []
+    external_refs:
+    - type: github_pr
+      identifier: VerdifyConsultancy/verdify-platform#418
+      url: https://github.com/VerdifyConsultancy/verdify-platform/pull/418
+  result: passed
+  summary: 'Worker s8-fw410-w1 ready-for-critic: PR #418 head 98e3b50. Flag-OFF 0-divergence @193,525
+    rows (probed+re-probed), 267 tests, cold-night fixture, flag-ON forced-fresh self-diff 10 rows bucket-(b)
+    only. Discovered: corpus outdoor_data_age_s never populated -> estimator replay-blind (#419 filed).
+    Escalation: cfg readback needs 1-line entity_map route (data-327 ownership) -> the only red CI check
+    (drift guards). Watch-items: hold is phase-agnostic; 1.0F re-entry idle sliver.'
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0012
+  content_sha256: null
+- id: LEDGER-EVT-0014
+  sequence: 14
+  occurred_at: '2026-07-03T21:45:00Z'
+  event_type: critic_reviewed
+  source: sprint-orchestrator
+  subject: fw-410 critic dispatched
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids:
+    - s8-fw410-w1
+    - s8-fw410-c1
+    issue_ids:
+    - 410
+    lane_ids:
+    - fw-410-vent-reheat-hold
+    pr_ids:
+    - '#418'
+    - '#417'
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs:
+    - .agent-workflow/sprints/s8-vanda-night-dehum/lanes/closeout/fw-410-vent-reheat-hold.closeout.yaml
+    evidence_refs: []
+    external_refs:
+    - type: github_pr
+      identifier: VerdifyConsultancy/verdify-platform#418
+      url: https://github.com/VerdifyConsultancy/verdify-platform/pull/418
+  result: planned
+  summary: 'Fresh critic s8-fw410-c1 dispatched (adversarial firmware review incl. OFF-path code equivalence,
+    flag-ON reproduction, phase-agnostic ruling, entity_map root-cause). Merge sequencing: #417 (+entity_map
+    one-liner) before #418.'
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0013
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001

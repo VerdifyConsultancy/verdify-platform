@@ -1,0 +1,20 @@
+{
+  "schema_ref": "compiled-prompt-manifest.schema.yaml",
+  "kind": "CompiledPromptManifest",
+  "schema_version": "1.0",
+  "generated_at": "2026-07-03T21:05:36Z",
+  "role": "critic",
+  "sprint_id": "s8-vanda-night-dehum",
+  "lane_id": "fw-410-vent-reheat-hold",
+  "output": "/private/tmp/claude-501/-Users-jason-repos-verdify-platform/17f4b1c3-9d61-4639-90f5-62fb219addce/scratchpad/s8-ctl/.agent-workflow/sprints/s8-vanda-night-dehum/prompts/fw-410-vent-reheat-hold.critic.md",
+  "inputs": {
+    "common_operating_contract": "/Users/jason/repos/verdify-platform/.agent-skills/verdify-skills/1.0.0/COMMON_OPERATING_CONTRACT.md",
+    "role_skill": "/Users/jason/repos/verdify-platform/.agent-skills/verdify-skills/1.0.0/skills/independent-critic/SKILL.md",
+    "lane_contract": "/private/tmp/claude-501/-Users-jason-repos-verdify-platform/17f4b1c3-9d61-4639-90f5-62fb219addce/scratchpad/s8-ctl/.agent-workflow/sprints/s8-vanda-night-dehum/lanes/contracts/fw-410-vent-reheat-hold.contract.yaml"
+  },
+  "sha256": {
+    "common_operating_contract": "026f8cd1b9431066cd1f775b62eb566e65fc3c1518af64bb2cec84b40d2ae3eb",
+    "role_skill": "9da3e917d91afa4841e07983126f5c9e8d6f11811d2a20d29b26ab7092ac0f6c",
+    "lane_contract": "03695cc17d083eed4b07233043d0e80e800bc72d3eabf940eeafbe9c591aab3f"
+  }
+}
