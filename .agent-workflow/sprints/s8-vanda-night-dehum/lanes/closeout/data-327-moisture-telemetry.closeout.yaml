@@ -1,0 +1,131 @@
+schema_ref: lane-closeout.schema.yaml
+kind: LaneCloseout
+schema_version: '1.0'
+sprint_id: s8-vanda-night-dehum
+lane_id: data-327-moisture-telemetry
+status: ready_for_critic
+issue_ids: [327]
+pull_request: 417
+baseline_sha: 0efdb2f59a8600130cd9521696e395423c86e910
+head_sha: 06f6153808e49916a2db0d9ae1395713e8aff395
+contract_hash: 7200b7dd47eb1af475345334313e1adf2fd2aac22e9b7db40862063dfeec3c29
+changed_paths:
+  - db/migrations/187-moisture-estimator-telemetry.sql
+  - db/migrations/tests/test-187-moisture-estimator-telemetry.sql
+  - ingestor/entity_map.py
+  - ingestor/ingestor.py
+  - mcp/server.py
+  - verdify_schemas/__init__.py
+  - verdify_schemas/telemetry.py
+  - verdify_schemas/tests/test_drift_guards.py
+  - verdify_schemas/tests/test_mcp_responses.py
+  - verdify_schemas/tests/test_moisture_telemetry.py
+validation_results:
+  - id: V1
+    command: make lint
+    exit_status: 0
+    result: passed
+    executed_at: '2026-07-03T20:50:03Z'
+    artifact: null
+  - id: V2
+    command: make test
+    exit_status: 2
+    result: failed
+    executed_at: '2026-07-03T20:33:00Z'
+    artifact: >-
+      90 failed / 684 passed / 6 skipped / 10 errors — failure set
+      byte-identical to a baseline-0efdb2f run on the same host (diff of
+      sorted FAILED/ERROR lists empty): all pre-existing retired
+      Docker/systemd/live-stack assumptions on this Mac plus the tolerated
+      flaky test_dew_point_risk_computes. Targeted suites + GitHub CI are the
+      broad gate per lane contract. Targeted: verdify_schemas/tests (CI-parity
+      --ignore=test_views.py) 130 passed/4 skipped; test_drift_guards.py 139
+      passed vs migrated disposable DB; tests/test_12_fidelity.py +
+      tests/test_db_solar_sql_contract.py 174 passed;
+      test_02_database.py::TestSchemaIntegrity 5 passed (re-probed
+      2026-07-03T20:50:03Z).
+  - id: V3
+    command: make migration-rollback-safety
+    exit_status: 0
+    result: passed
+    executed_at: '2026-07-03T20:50:03Z'
+    artifact: 'safe-to-wrap : 187-moisture-estimator-telemetry.sql'
+  - id: V4
+    command: >-
+      .venv/bin/python scripts/check_migration_rollback_safety.py
+      --rollback-wrap db/migrations/187-moisture-estimator-telemetry.sql
+    exit_status: 0
+    result: passed
+    executed_at: '2026-07-03T20:50:03Z'
+    artifact: 'OK to wrap in BEGIN..ROLLBACK (non-self-transactional): 187-moisture-estimator-telemetry.sql'
+acceptance_evidence:
+  - criterion_id: LANE-AC-01
+    evidence_ids:
+      - 'V3: safe-to-wrap classification'
+      - 'V4: rollback-wrap preflight OK'
+      - >-
+        Rollback proof per classification (disposable timescaledb, CI-parity
+        schema.sql + all migrations): BEGIN; \i 187; ROLLBACK replayed cleanly;
+        view count after rollback = 0, after apply = 1; fixture
+        db/migrations/tests/test-187-moisture-estimator-telemetry.sql PASS
+        (transcript in PR #417 body)
+    assessment: satisfied
+  - criterion_id: LANE-AC-02
+    evidence_ids:
+      - >-
+        verdify_schemas/tests/test_drift_guards.py: 139 passed against the
+        migrated disposable DB incl. new MoistureEstimatorTelemetryRow <->
+        v_moisture_estimator_telemetry guard
+      - >-
+        verdify_schemas/tests/test_moisture_telemetry.py: 19 passed —
+        normalization tolerance (absent fields, #385-era, #410-era, raw
+        fallback) + firmware/migration/MCP key-agreement guards
+      - >-
+        tests/test_12_fidelity.py::test_climate_action_log_persists_moisture_exchange_telemetry
+        passed (existing consumer source-literal assertions intact); broad
+        failure set identical to baseline (no consumer regression)
+    assessment: satisfied
+  - criterion_id: LANE-AC-03
+    evidence_ids:
+      - >-
+        Explain-query documented in migration 187 comment block + PR #417 body
+        with fixture-fed sample output (6 buckets incl. estimator_absent /
+        vent_plus_heat_hold / confirmed-vs-diverged direction counts);
+        referenced from #327 via issue comment
+    assessment: satisfied
+  - criterion_id: LANE-AC-04
+    evidence_ids:
+      - >-
+        PR #417 body section "Post-merge restart (rule 7 — required)" names
+        verdify-mcp + verdify-ingestor; service-restart-drift-guard runs on
+        the PR (GitHub CI)
+    assessment: satisfied
+discovered_issues: []
+residual_risks:
+  - >-
+    fw-410 emitter not merged yet: if its JSON keys deviate from the settled
+    names (vent_held_vpd_gain_kpa, hold_required) the key-agreement guard in
+    verdify_schemas/tests/test_moisture_telemetry.py fails loud on the first
+    CI run containing both changes — resolve by coordinating the contract,
+    not by renaming unilaterally.
+  - >-
+    Release wave must apply migration 187 before operators/graders read
+    v_moisture_estimator_telemetry; outcome_kpi() itself does not depend on
+    the view (queries the JSONB directly) so MCP restart ordering is safe
+    either way.
+  - >-
+    outdoor_age_s / expected_vpd_gain_kpa are accepted-if-emitted (COALESCE
+    aliases documented in MX_ACCEPTED_KEY_ALIASES); current emitters do not
+    send them — the columns stay NULL until firmware adds them.
+worktree_clean: true
+worker_session_id: s8-data327-w1
+completed_at: '2026-07-03T20:56:00Z'
+limitations:
+  - >-
+    make test cannot go green on this host (retired Docker/systemd/live-stack
+    assumptions); parity-vs-baseline diff recorded in V2 artifact. GitHub CI
+    on PR #417 is the authoritative broad gate.
+  - >-
+    Drift-guard/fixture proofs ran against a disposable local timescaledb
+    (container created and removed for this lane), not prod; prod was touched
+    read-only (SELECT counts) only.

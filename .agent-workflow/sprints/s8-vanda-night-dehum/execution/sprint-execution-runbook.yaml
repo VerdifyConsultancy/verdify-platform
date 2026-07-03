@@ -115,7 +115,7 @@ lanes:
     tmux_session:
     browser_terminal_url:
     operator_attach_required: false
-  status: implementing
+  status: ready_for_critic
 - lane_id: docs-413-freeze-drift
   issue_ids:
   - 413

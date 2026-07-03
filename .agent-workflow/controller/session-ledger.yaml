@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-s8-vanda-night-dehum
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-03T21:00:00Z'
+updated_at: '2026-07-03T21:30:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -53,16 +53,17 @@ sessions:
   role: worker
   executor: claude-local-subagent
   repository: VerdifyConsultancy/verdify-platform
-  status: active
+  status: complete
   started_at: '2026-07-03T20:30:00Z'
-  ended_at: null
+  ended_at: '2026-07-03T21:30:00Z'
   issue_ids:
   - 327
   lane_id: data-327-moisture-telemetry
   wave_id: wave-s8-night-dehum
   branch: data-327-moisture-telemetry
   worktree: /private/tmp/claude-501/-Users-jason-repos-verdify-platform/17f4b1c3-9d61-4639-90f5-62fb219addce/scratchpad/.worktrees/s8-ctl/data-327-moisture-telemetry
-  pr_refs: []
+  pr_refs:
+  - '#417'
   artifact_refs: []
 - session_id: s8-docs413-w1
   parent_session_id: s8-outer-loop-2026-07-03
@@ -97,6 +98,23 @@ sessions:
   worktree: /private/tmp/claude-501/-Users-jason-repos-verdify-platform/17f4b1c3-9d61-4639-90f5-62fb219addce/scratchpad/.reviews/s8-ctl/docs-413-freeze-drift-s8-docs413-c1
   pr_refs:
   - '#415'
+  artifact_refs: []
+- session_id: s8-data327-c1
+  parent_session_id: s8-outer-loop-2026-07-03
+  role: critic
+  executor: claude-local-subagent
+  repository: VerdifyConsultancy/verdify-platform
+  status: active
+  started_at: '2026-07-03T21:30:00Z'
+  ended_at: null
+  issue_ids:
+  - 327
+  lane_id: data-327-moisture-telemetry
+  wave_id: wave-s8-night-dehum
+  branch: data-327-moisture-telemetry
+  worktree: /private/tmp/claude-501/-Users-jason-repos-verdify-platform/17f4b1c3-9d61-4639-90f5-62fb219addce/scratchpad/.reviews/s8-ctl/data-327-moisture-telemetry-s8-data327-c1
+  pr_refs:
+  - '#417'
   artifact_refs: []
 events:
 - id: LEDGER-EVT-0001
@@ -443,6 +461,86 @@ events:
   data_summary: null
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0009
+  content_sha256: null
+- id: LEDGER-EVT-0011
+  sequence: 11
+  occurred_at: '2026-07-03T21:30:00Z'
+  event_type: worker_closeout
+  source: sprint-orchestrator
+  subject: data-327-moisture-telemetry closeout
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids:
+    - s8-data327-w1
+    - s8-data327-c1
+    issue_ids:
+    - 327
+    lane_ids:
+    - data-327-moisture-telemetry
+    pr_ids:
+    - '#417'
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs:
+    - .agent-workflow/sprints/s8-vanda-night-dehum/lanes/closeout/data-327-moisture-telemetry.closeout.yaml
+    evidence_refs: []
+    external_refs:
+    - type: github_pr
+      identifier: VerdifyConsultancy/verdify-platform#417
+      url: https://github.com/VerdifyConsultancy/verdify-platform/pull/417
+  result: passed
+  summary: 'Worker s8-data327-w1 ready-for-critic: PR #417 head 06f6153, CI fully green. Migration 187
+    = typed view v_moisture_estimator_telemetry over source_system_state (safe-to-wrap, rollback=DROP
+    VIEW, proven on disposable DB); 3-era tolerance fixture; shared MoistureExchangeTelemetry contract
+    + key-agreement guards; outcome_kpi estimator buckets. Prod read-only verified (0 estimator rows,
+    expected pre-OTA). NOT applied to prod.'
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0010
+  content_sha256: null
+- id: LEDGER-EVT-0012
+  sequence: 12
+  occurred_at: '2026-07-03T21:30:00Z'
+  event_type: critic_reviewed
+  source: sprint-orchestrator
+  subject: data-327 critic dispatched
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids:
+    - s8-data327-w1
+    - s8-data327-c1
+    issue_ids:
+    - 327
+    lane_ids:
+    - data-327-moisture-telemetry
+    pr_ids:
+    - '#417'
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs:
+    - .agent-workflow/sprints/s8-vanda-night-dehum/lanes/closeout/data-327-moisture-telemetry.closeout.yaml
+    evidence_refs: []
+    external_refs:
+    - type: github_pr
+      identifier: VerdifyConsultancy/verdify-platform#417
+      url: https://github.com/VerdifyConsultancy/verdify-platform/pull/417
+  result: planned
+  summary: Fresh critic s8-data327-c1 dispatched in detached review worktree; verdict pending.
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0011
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
