@@ -3961,7 +3961,11 @@ struct HoldFixtureRow {
 };
 
 static bool load_cold_night_fixture(std::vector<HoldFixtureRow>& rows) {
-    const char* candidates[] = { "test/data/cold_night_hold.csv", "data/cold_night_hold.csv" };
+    // Candidate paths cover every CWD the suite is launched from: firmware/
+    // (make test-firmware), firmware/test/, and the repo root.
+    const char* candidates[] = { "test/data/cold_night_hold.csv",
+                                 "data/cold_night_hold.csv",
+                                 "firmware/test/data/cold_night_hold.csv" };
     std::ifstream f;
     for (const char* p : candidates) {
         f.open(p);
