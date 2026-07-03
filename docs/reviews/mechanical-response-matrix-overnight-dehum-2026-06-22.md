@@ -32,6 +32,19 @@ Primary data window:
 The companion before/after architecture review is
 `docs/reviews/firmware-band-performance-review-2026-06-22.md`.
 
+> **2026-07-03 envelope note (#412, added by #413):** the door screen-window opened
+> ~2026-06-19 — i.e. **inside this review's evidence window** — and stays open until
+> fall. It ~3×'d passive night air exchange (the standing indoor−outdoor moisture
+> surplus stepped **+5.7 → +1.9 g/m³** at flat fog/mister source duty ~22%→~20%,
+> with no heat1 night-duty increase), so the night baselines observed here blend
+> pre- and post-open regimes. The estimator's closed-vent assumption — that indoor
+> air mixes toward outdoor only when `DEHUM_VENT` opens the vent by
+> `vent_exchange_fraction` (below) — is weakened while the window is open: a large
+> passive exchange path exists even with the vent closed. Re-read the projected
+> vent-gain and vent-selection conclusions with that in mind. Every bake/KPI
+> comparison window must record the envelope config; never change the window state
+> mid-bake.
+
 ## Current Firmware Behavior
 
 The current controller does not simply compare against the served low/high band.

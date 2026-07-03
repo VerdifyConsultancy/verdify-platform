@@ -1,6 +1,6 @@
 # Verdify Release Checklist
 
-Last updated: 2026-06-16. Companion to `docs/runbooks/laptop-operator.md` (the how-to) and
+Last updated: 2026-07-03 (#413: §B pinch-decision + bake-record steps). Companion to `docs/runbooks/laptop-operator.md` (the how-to) and
 `docs/reviews/lane1-architecture-audit-2026-06-16.md` (the why). Single-env-prod model: `main`
 is the only branch; prod is ArgoCD app `verdify-prod-dark` (ns `verdify-prod`), manual-sync
 behind the device-write gate.
@@ -68,6 +68,31 @@ prod `argocd app sync`, device-VLAN actions, destructive prod DB work, and outwa
 **Deploy + post:**
 - [ ] `make firmware-deploy` → confirm post-OTA `sensor-health` PASS; expected-firmware pin bumped.
       (Fail → auto-rollback to last-good; investigate before retry.)
+- [ ] **Pinch state — execute the g-377 decision (#377, Jason gate; mechanics per #413).**
+      `band_track_fraction` is `restore_value: no` with `initial_value: '0.0'`
+      (`firmware/greenhouse/globals.yaml`), so the flash just **cold-started the pinch to 0.0**
+      regardless of what was live (as of 2026-07-03 the live pre-#385 binary boots 0.25 and runs
+      planner-pushed 0.25). The `crop_band_anchors`→NVS reconcile does **NOT** re-assert it — that
+      path only protects `restore_value: yes` band globals (`docs/CONTROL-ARCHITECTURE.md` §7).
+      Execute ONE of the two g-377 outcomes:
+      - **Accept float 0.0** (the ADR-0004 planner default): nothing to push — confirm the readback:
+        `scripts/verdify-db.sh prod -c "SELECT ts, value FROM setpoint_snapshot WHERE parameter='band_track_fraction' ORDER BY ts DESC LIMIT 1;"`
+      - **Re-pin 0.25:** there is **no push-only command on current `main`** — ADR-0004 pinned the
+        registry bounds to `[0.0, 0.0]` (`verdify_schemas/tunable_registry.py`), so MCP
+        `set_tunable` rejects 0.25, the dispatcher clamps a direct `setpoint_plan` row back to 0.0
+        (`ingestor/tasks/dispatcher.py::_coerce_registry_value`), and the RT listener rejects it
+        (`ingestor/ingestor.py::_accept_outbound_setpoint`). Re-pinning therefore means:
+        (1) widen the `band_track_fraction` registry `min`/`max` (schema change; bounce
+        `verdify-mcp` + `verdify-ingestor` per freeze rule 7); (2) push
+        `set_tunable('band_track_fraction', 0.25, reason=…, trigger_id=<audited MANUAL trigger>,
+        planner_instance=…)` via MCP (or insert one `setpoint_plan` row) — dispatcher applies
+        within ~5 min; (3) confirm the readback query above returns 0.25. **Never** push a raw
+        ESPHome `number_command` from an operator host — that is a second device writer.
+- [ ] **Bake report records the config** (required for every bake/KPI comparison window): the
+      executed `band_track_fraction` state (+ readback proof), `dehum_vent_hold_enabled` state
+      (`cfg_*` readback; OFF-default flag from #410), and the **envelope config** — door
+      screen-window OPEN/CLOSED (open ~2026-06-19 → fall per #412; ~3× passive night air exchange
+      while open). **Never change the window state mid-bake.**
 - [ ] PR body / commit carries the **required artifacts**: replay-diff output, invariant-suite
       output, unit-test delta (CLAUDE.md firmware rule 9).
 - [ ] **Bake 48 h** with no critical alert, then `make firmware-promote-last-good FW_VERSION=<v>`.

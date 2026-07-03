@@ -25,6 +25,16 @@ The greenhouse controller now implements Jason's control story end-to-end:
 | WS-G | **Metric reshape** (data) | `fn_grade_credit` is a tent peaking AT target — killed the flat-1.0-in-band saturation; `|actual−target|` headline metric (`fn_band_deviation`). (`0ed898c`) |
 | PR-9 | **CI gate fixes** | Band-derive gate widened; the no-op `no-new-fire-and-forget` guard fixed. (`cf9a1e6`) |
 
+> **2026-07-03 envelope note (#412, added by #413):** WS-C's moisture-exchange
+> estimator (and its `vent_exchange_fraction` tunable) models air exchange as
+> vent-driven mixing against an otherwise closed envelope — true when this was
+> signed off. Since ~2026-06-19 the door screen-window is OPEN (and stays open
+> until fall), ~3×-ing passive night air exchange (indoor−outdoor moisture surplus
+> stepped +5.7 → +1.9 g/m³ at flat fog/mister source duty), so the closed-vent
+> baseline this sign-off assumed is weakened while it is open. Record the envelope
+> config in every bake/KPI comparison window; never change the window state
+> mid-bake.
+
 **Net device behavior:** the homepage band-trace will show actual *tracking* the diurnal
 target curve 24/7 instead of floating, with the night VPD wet-drift eliminated.
 
