@@ -31,12 +31,18 @@
 # only the phase + shape ride nature. fn_solar_phase re-derives the clock peak
 # daily from the ephemeris, so the curve adapts to the solar cycle year-round.
 # Derivation: docs/reviews/ band-nature-alignment; harmonic fit in session log.
+# DRY-ROOTS NIGHT (2026-07-03, #411 / gate g-411): night (mid) vpd_target
+# 0.918 -> 0.83 — the achievable dry-night ceiling with the measured +3 g/m³
+# indoor moisture source, so the bare-root Vandas' roots dry overnight. The
+# night temp anchors stay these researched values: the #409 Item-4 deep-DIF
+# edit (62/58/66) was a prod-only out-of-band change (PR #409 unmerged) and is
+# reverted back to canonical by migration 188. DIF goal deferred to fall (#412).
 house:
   temp_low:    [62.50, 73.79, 72.00, 60.71]
   temp_target: [67.50, 78.79, 77.00, 65.71]
   temp_high:   [72.50, 83.79, 82.00, 70.71]
   vpd_low:     [0.755, 0.862, 0.845, 0.738]
-  vpd_target:  [0.935, 1.042, 1.025, 0.918]
+  vpd_target:  [0.935, 1.042, 1.025, 0.83]
   vpd_high:    [1.185, 1.292, 1.275, 1.168]
 
 # ── Per-zone VPD-target band (seeds crop_band_anchors per crop_type) ────────
