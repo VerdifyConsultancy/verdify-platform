@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-s8-vanda-night-dehum
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-03T22:50:00Z'
+updated_at: '2026-07-03T23:00:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -929,6 +929,45 @@ events:
   data_summary: null
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0020
+  content_sha256: null
+- id: LEDGER-EVT-0022
+  sequence: 22
+  occurred_at: '2026-07-03T23:00:00Z'
+  event_type: worker_status
+  source: sprint-orchestrator
+  subject: '#421 rev-2 fix-forward pushed'
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids:
+    - s8-data327-w1
+    - s8-data327-c2
+    issue_ids:
+    - 327
+    - 410
+    - 420
+    lane_ids:
+    - data-327-moisture-telemetry
+    pr_ids:
+    - '#421'
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs:
+    - .agent-workflow/sprints/s8-vanda-night-dehum/lanes/closeout/data-327-cfg-readback-410.closeout.yaml
+    evidence_refs: []
+    external_refs: []
+  result: passed
+  summary: 'Worker applied the wire-key fix: cfg___dehum_vent_hold_enabled in entity_map + allowlist;
+    comments/PR body truthed-up; #420 extended (two breaks in series + guard id-union-slug hole). New
+    head f3c5064, CI fully green, both firmware states re-validated. Critic c2 resumed for delta confirmation.'
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0021
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001

@@ -7,7 +7,7 @@ status: ready_for_critic
 issue_ids: [327, 410]
 pull_request: 421
 baseline_sha: 087ab45cddd0057c9f9d2c6ac1a80e88f47e3b12
-head_sha: 5b1250255aa8f606aa322ac9fbd1a4a614290a08
+head_sha: f3c50644b247070eb096209558f15ef6536b1b4b
 contract_hash: 7200b7dd47eb1af475345334313e1adf2fd2aac22e9b7db40862063dfeec3c29
 changed_paths:
   - db/migrations/187-moisture-estimator-telemetry.sql
@@ -57,20 +57,26 @@ validation_results:
     artifact: >-
       Merge-order proof: (a) origin/main entity_map + #418 YAMLs reproduces
       #418's exact red (test_cfg_readback_sensors_are_routed_to_entity_map
-      FAILS: missing route cfg_dehum_vent_hold_enabled); (b) this branch +
-      #418 YAMLs: 12/12 pass (route live, staged allowlist self-shrunk,
-      inverse guard green); (c) this branch at main-state firmware: 12/12
-      pass (allowlist active). Overlay restored; no firmware files in diff.
+      FAILS: missing route); (b) this branch + #418 YAMLs: 12/12 pass (route
+      live, staged allowlist self-shrunk, inverse guard green); (c) this
+      branch at main-state firmware: 12/12 pass (allowlist active). Overlay
+      restored; no firmware files in diff. REV 2 (critic fix, f3c5064,
+      re-run 2026-07-03T21:38:32Z): key corrected to the WIRE object_id
+      cfg___dehum_vent_hold_enabled (name slug of "Cfg - Dehum Vent Hold
+      Enabled"; rev-1 id-form key satisfied the guard's id-or-slug candidate
+      set but was wire-dead); slug math verified against the guard's own
+      _slugify; lint + 65 targeted tests (main-state) + 12/12 drift tests
+      (#418 overlay) green in both firmware states.
 acceptance_evidence:
   - criterion_id: FOLLOWUP-1-required-route
     evidence_ids:
       - >-
-        Route "cfg_dehum_vent_hold_enabled": "dehum_vent_hold_enabled" added
-        to _CFG_READBACK_ADDED_FW_V2, verified against the #418 diff (sensor
-        id/name, sw_dehum_vent_hold switch, numeric 0/1 BOOL-switch shape
-        matching existing cfg_sw_*_enabled readbacks;
+        Route "cfg___dehum_vent_hold_enabled": "dehum_vent_hold_enabled"
+        (WIRE object_id = name slug, per critic fix rev 2) in
+        _CFG_READBACK_ADDED_FW_V2, verified against the #418 diff (sensor
+        id/name, sw_dehum_vent_hold switch, numeric 0/1 BOOL-switch shape;
         _record_cfg_readback float()-coerces, NAN-gated) — V4 proof both
-        merge orders.
+        merge orders, both key states.
     assessment: satisfied
   - criterion_id: FOLLOWUP-2-doc-only-187-comment
     evidence_ids:
@@ -82,17 +88,19 @@ acceptance_evidence:
 discovered_issues: [420]
 residual_risks:
   - >-
-    Pre-existing (now tracked as #420): manual _CFG_READBACK_ADDED_FW_V2
-    params incl. dehum_vent_hold_enabled are not in ALL_TUNABLES, so their
-    setpoint_snapshot writes are rejected (0 prod rows for
-    sw_onchip_band_enabled et al., verified read-only) — readback confirmation
-    for these switches is in-memory only until registry rows land.
+    Pre-existing (tracked as #420, extended with the critic's findings —
+    comment 4879460451): manual CFG readbacks have TWO breaks in series (the
+    5 older routes are wire-dead on name-slug key mismatch AND
+    SetpointSnapshot's registry-derived TunableParameter rejects them), plus
+    the drift guard's id-or-slug candidate matching lets wire-dead id-form
+    keys pass CI (guard-tightening candidate). The #410 route in this PR is
+    keyed on the wire form and unaffected by break (a).
   - >-
     PR #421 must merge before #418 re-runs checks for the routed-guard to go
     green there; both merge orders are guard-safe (self-shrinking allowlist).
 worktree_clean: true
 worker_session_id: s8-data327-w1
-completed_at: '2026-07-03T21:22:00Z'
+completed_at: '2026-07-03T21:48:00Z'
 limitations:
   - >-
     Broad make test not re-run for this follow-up (diff = one map line, one
