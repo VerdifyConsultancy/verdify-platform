@@ -131,7 +131,7 @@ deployment_strategy:
       rollback_trigger: 'n/a (tunable push, instantly revertible)'
     - id: STEP-06
       action: '48h flag-OFF soak (freeze-rule bake), then Jason-approved flag-ON: logged set_tunable dehum_vent_hold_enabled=true'
-      success_criteria: 'cfg_dehum_vent_hold_enabled readback true; first night shows DEHUM_VENT+heat1 episodes with mx_reason=vent_plus_heat_hold in telemetry'
+      success_criteria: 'cfg_dehum_vent_hold_enabled ENTITY readback true (live entity state / device API — not setpoint_snapshot, see #420); first night shows DEHUM_VENT+heat1 episodes with mx_reason=vent_plus_heat_hold in telemetry'
       rollback_trigger: 'Any release-health blocking signal -> set_tunable false (NO OTA needed)'
     - id: STEP-07
       action: '48h flag-ON canary window; then re-probe per durability gate and write docs/reviews/s8-vanda-night-dehum-bake-report.md'
@@ -146,7 +146,8 @@ observability:
   metrics:
     - 'outcome_kpi(target_date): vpd misses, actuator cycles/runtime, DIF, dew margin'
     - 'climate_action_log mx_action/mx_reason distribution 02-06h'
-    - 'setpoint_snapshot band_track_fraction + cfg_dehum_vent_hold_enabled readbacks'
+    - 'setpoint_snapshot band_track_fraction readback'
+    - 'cfg_dehum_vent_hold_enabled: verify via the live entity readback, NOT setpoint_snapshot — #420: manual CFG_READBACK params are rejected by SetpointSnapshot (0 rows in prod for that class), confirmation loop is in-memory only'
   traces: []
   runtime_checks:
     - "scripts/verdify-db.sh prod -c \"SELECT firmware_version, max(ts) FROM diagnostics GROUP BY 1 ORDER BY 2 DESC LIMIT 1\""
@@ -154,7 +155,7 @@ observability:
     - 'Critic watch-item: flag-ON morning vent+reheat episodes — heat1 runtime/cycles KPI (phase-agnostic by design, fw critic ruling)'
     - 'Critic watch-item: cold-night vent duty-cycle count vs invariant-14 cap 24 (corpus-blind path #419 — live-only evidence)'
     - 'Critic watch-item: re-entry-gap idle sliver (floor..floor+1.0F) — material wet dwell there = spec-level ladder change, escalate not patch'
-    - 'Critic watch-item: climate_moisture_exchange JSON ~290 chars — confirm no downstream 255-char truncation on first live rows'""
+    - 'Critic watch-item: climate_moisture_exchange JSON ~290 chars — confirm no downstream 255-char truncation on first live rows'
   missing_telemetry:
     - 'mx estimator fields are EMPTY in prod until STEP-02 (consumers) + STEP-04 (emitter) complete — the reason #327 precedes the OTA'
     - 'Replay corpus never populates outdoor_data_age_s (#419) — flag-ON behavior is invisible to the stock corpus; live bake is the only outdoor-aware evidence'
