@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-s8-vanda-night-dehum
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-03T22:55:00Z'
+updated_at: '2026-07-03T23:20:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -157,16 +157,34 @@ sessions:
   role: worker
   executor: claude-local-subagent
   repository: VerdifyConsultancy/verdify-platform
-  status: active
+  status: complete
   started_at: '2026-07-04T00:20:00Z'
-  ended_at: null
+  ended_at: '2026-07-03T23:20:00Z'
   issue_ids:
   - 411
   lane_id: db-411-night-anchors
   wave_id: wave-s8-night-dehum
   branch: db-411-night-anchors
   worktree: /private/tmp/claude-501/-Users-jason-repos-verdify-platform/17f4b1c3-9d61-4639-90f5-62fb219addce/scratchpad/.worktrees/s8-ctl/db-411-night-anchors
-  pr_refs: []
+  pr_refs:
+  - '#423'
+  artifact_refs: []
+- session_id: s8-db411-c1
+  parent_session_id: s8-outer-loop-2026-07-03
+  role: critic
+  executor: claude-local-subagent
+  repository: VerdifyConsultancy/verdify-platform
+  status: active
+  started_at: '2026-07-03T23:20:00Z'
+  ended_at: null
+  issue_ids:
+  - 411
+  lane_id: db-411-night-anchors
+  wave_id: wave-s8-night-dehum
+  branch: db-411-night-anchors
+  worktree: /private/tmp/claude-501/-Users-jason-repos-verdify-platform/17f4b1c3-9d61-4639-90f5-62fb219addce/scratchpad/.reviews/s8-ctl/db-411-night-anchors-s8-db411-c1
+  pr_refs:
+  - '#423'
   artifact_refs: []
 events:
 - id: LEDGER-EVT-0001
@@ -1246,6 +1264,85 @@ events:
   data_summary: null
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0028
+  content_sha256: null
+- id: LEDGER-EVT-0030
+  sequence: 30
+  occurred_at: '2026-07-03T23:20:00Z'
+  event_type: worker_closeout
+  source: sprint-orchestrator
+  subject: db-411-night-anchors closeout
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids:
+    - s8-db411-w1
+    - s8-db411-c1
+    issue_ids:
+    - 411
+    - 409
+    lane_ids:
+    - db-411-night-anchors
+    pr_ids:
+    - '#423'
+    - '#409'
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs:
+    - .agent-workflow/sprints/s8-vanda-night-dehum/lanes/closeout/db-411-night-anchors.closeout.yaml
+    evidence_refs: []
+    external_refs: []
+  result: passed
+  summary: "Worker s8-db411-w1 ready-for-critic: PR #423 head 3ce5131, CI green. Migration 188 = exactly\
+    \ the 4 decided values via canonical seed; 177 regen mandated by byte-coupling test; rollback proof\
+    \ on disposable DB. DISCOVERY: PR #409 was never merged \u2014 its Item-4 anchors hit prod out-of-band;\
+    \ main already carried the revert temps; 188 is the prod-reconcile vehicle. #409 fenced with a controller\
+    \ comment (drop Item-4 hunks before merge)."
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0029
+  content_sha256: null
+- id: LEDGER-EVT-0031
+  sequence: 31
+  occurred_at: '2026-07-03T23:20:00Z'
+  event_type: critic_reviewed
+  source: sprint-orchestrator
+  subject: db-411 critic dispatched
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids:
+    - s8-db411-w1
+    - s8-db411-c1
+    issue_ids:
+    - 411
+    - 409
+    lane_ids:
+    - db-411-night-anchors
+    pr_ids:
+    - '#423'
+    - '#409'
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs:
+    - .agent-workflow/sprints/s8-vanda-night-dehum/lanes/closeout/db-411-night-anchors.closeout.yaml
+    evidence_refs: []
+    external_refs: []
+  result: planned
+  summary: "Fresh critic s8-db411-c1 dispatched; crux = what 188 does to EXISTING prod rows (58/62/66/0.918)\
+    \ \u2014 reconcile must UPDATE, not no-op."
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0030
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
