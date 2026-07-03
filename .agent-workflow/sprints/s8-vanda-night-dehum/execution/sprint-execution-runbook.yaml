@@ -138,7 +138,7 @@ lanes:
     tmux_session:
     browser_terminal_url:
     operator_attach_required: false
-  status: implementing
+  status: ready_for_critic
 - lane_id: db-411-night-anchors
   issue_ids:
   - 411

@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-s8-vanda-night-dehum
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-03T20:30:00Z'
+updated_at: '2026-07-03T20:45:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -69,16 +69,34 @@ sessions:
   role: worker
   executor: claude-local-subagent
   repository: VerdifyConsultancy/verdify-platform
-  status: active
+  status: complete
   started_at: '2026-07-03T20:30:00Z'
-  ended_at: null
+  ended_at: '2026-07-03T20:45:00Z'
   issue_ids:
   - 413
   lane_id: docs-413-freeze-drift
   wave_id: wave-s8-night-dehum
   branch: docs-413-freeze-drift
   worktree: /private/tmp/claude-501/-Users-jason-repos-verdify-platform/17f4b1c3-9d61-4639-90f5-62fb219addce/scratchpad/.worktrees/s8-ctl/docs-413-freeze-drift
-  pr_refs: []
+  pr_refs:
+  - '#415'
+  artifact_refs: []
+- session_id: s8-docs413-c1
+  parent_session_id: s8-outer-loop-2026-07-03
+  role: critic
+  executor: claude-local-subagent
+  repository: VerdifyConsultancy/verdify-platform
+  status: active
+  started_at: '2026-07-03T20:45:00Z'
+  ended_at: null
+  issue_ids:
+  - 413
+  lane_id: docs-413-freeze-drift
+  wave_id: wave-s8-night-dehum
+  branch: docs-413-freeze-drift
+  worktree: /private/tmp/claude-501/-Users-jason-repos-verdify-platform/17f4b1c3-9d61-4639-90f5-62fb219addce/scratchpad/.reviews/s8-ctl/docs-413-freeze-drift-s8-docs413-c1
+  pr_refs:
+  - '#415'
   artifact_refs: []
 events:
 - id: LEDGER-EVT-0001
@@ -240,6 +258,121 @@ events:
   data_summary: null
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0004
+  content_sha256: null
+- id: LEDGER-EVT-0006
+  sequence: 6
+  occurred_at: '2026-07-03T20:45:00Z'
+  event_type: worker_closeout
+  source: sprint-orchestrator
+  subject: docs-413-freeze-drift closeout
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids:
+    - s8-docs413-w1
+    - s8-docs413-c1
+    issue_ids:
+    - 413
+    lane_ids:
+    - docs-413-freeze-drift
+    pr_ids:
+    - '#415'
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs:
+    - type: github_pr
+      identifier: VerdifyConsultancy/verdify-platform#415
+      url: https://github.com/VerdifyConsultancy/verdify-platform/pull/415
+  result: passed
+  summary: "Worker s8-docs413-w1 ready-for-critic: PR #415, 6 files +94/-1, all ACs claimed with evidence.\
+    \ Load-bearing finding: re-pin 0.25 has NO push path on main (registry pinned 0.0 in tunable_registry\
+    \ + mcp set_tunable + dispatcher coerce + RT listener) \u2014 re-pin = registry-bounds change + bounce;\
+    \ dispatcher does not auto-re-push. Informs gate g-377."
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0005
+  content_sha256: null
+- id: LEDGER-EVT-0007
+  sequence: 7
+  occurred_at: '2026-07-03T20:45:00Z'
+  event_type: ci_observed
+  source: sprint-orchestrator
+  subject: 'PR #415 checks'
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids:
+    - s8-docs413-w1
+    - s8-docs413-c1
+    issue_ids:
+    - 413
+    lane_ids:
+    - docs-413-freeze-drift
+    pr_ids:
+    - '#415'
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs:
+    - type: github_pr
+      identifier: VerdifyConsultancy/verdify-platform#415
+      url: https://github.com/VerdifyConsultancy/verdify-platform/pull/415
+  result: passed
+  summary: All required checks green (lint, logic/contract tests, firmware compile, replay-diff/device-gate/migration-safety/restart-hygiene
+    paths pass or expected-skip on docs-only diff).
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0006
+  content_sha256: null
+- id: LEDGER-EVT-0008
+  sequence: 8
+  occurred_at: '2026-07-03T20:45:00Z'
+  event_type: critic_reviewed
+  source: sprint-orchestrator
+  subject: docs-413 critic dispatched
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids:
+    - s8-docs413-w1
+    - s8-docs413-c1
+    issue_ids:
+    - 413
+    lane_ids:
+    - docs-413-freeze-drift
+    pr_ids:
+    - '#415'
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs:
+    - type: github_pr
+      identifier: VerdifyConsultancy/verdify-platform#415
+      url: https://github.com/VerdifyConsultancy/verdify-platform/pull/415
+  result: planned
+  summary: Fresh critic s8-docs413-c1 dispatched in detached review worktree; verdict pending.
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0007
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
