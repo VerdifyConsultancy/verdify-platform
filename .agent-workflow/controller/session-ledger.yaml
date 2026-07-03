@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-s8-vanda-night-dehum
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-03T20:45:00Z'
+updated_at: '2026-07-03T21:00:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -86,9 +86,9 @@ sessions:
   role: critic
   executor: claude-local-subagent
   repository: VerdifyConsultancy/verdify-platform
-  status: active
+  status: complete
   started_at: '2026-07-03T20:45:00Z'
-  ended_at: null
+  ended_at: '2026-07-03T21:00:00Z'
   issue_ids:
   - 413
   lane_id: docs-413-freeze-drift
@@ -373,6 +373,76 @@ events:
   data_summary: null
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0007
+  content_sha256: null
+- id: LEDGER-EVT-0009
+  sequence: 9
+  occurred_at: '2026-07-03T21:00:00Z'
+  event_type: critic_reviewed
+  source: sprint-orchestrator
+  subject: docs-413 critic verdict
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids:
+    - s8-docs413-c1
+    issue_ids:
+    - 413
+    lane_ids:
+    - docs-413-freeze-drift
+    pr_ids:
+    - '#415'
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs: []
+  result: approved
+  summary: 'Fresh critic s8-docs413-c1 APPROVED PR #415 at efbd4aa: scope exact (6 files, additive), all
+    4 ACs verified, the no-push-path-for-0.25 claim confirmed per file (registry/mcp/dispatcher/RT listener),
+    no auto-re-push. Residuals: stale dcc6078 version strings (filed #416); re-check dehum_vent_hold_enabled
+    name at fw-410 integration.'
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0008
+  content_sha256: null
+- id: LEDGER-EVT-0010
+  sequence: 10
+  occurred_at: '2026-07-03T21:00:00Z'
+  event_type: handoff
+  source: sprint-orchestrator
+  subject: docs-413 integrated
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids:
+    - s8-docs413-c1
+    issue_ids:
+    - 413
+    lane_ids:
+    - docs-413-freeze-drift
+    pr_ids:
+    - '#415'
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs: []
+  result: passed
+  summary: 'PR #415 squash-merged as bb93b29 (closes #413); worker+critic leases released, worktrees removed;
+    g-377 verified input posted to #377; follow-up #416 filed.'
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0009
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
