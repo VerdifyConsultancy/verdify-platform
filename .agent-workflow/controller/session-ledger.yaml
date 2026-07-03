@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-s8-vanda-night-dehum
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-03T23:20:00Z'
+updated_at: '2026-07-03T23:45:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -174,9 +174,9 @@ sessions:
   role: critic
   executor: claude-local-subagent
   repository: VerdifyConsultancy/verdify-platform
-  status: active
+  status: complete
   started_at: '2026-07-03T23:20:00Z'
-  ended_at: null
+  ended_at: '2026-07-03T23:45:00Z'
   issue_ids:
   - 411
   lane_id: db-411-night-anchors
@@ -1343,6 +1343,84 @@ events:
   data_summary: null
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0030
+  content_sha256: null
+- id: LEDGER-EVT-0032
+  sequence: 32
+  occurred_at: '2026-07-03T23:45:00Z'
+  event_type: critic_reviewed
+  source: sprint-orchestrator
+  subject: db-411 critic verdict
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids:
+    - s8-db411-c1
+    issue_ids:
+    - 411
+    - 410
+    lane_ids:
+    - db-411-night-anchors
+    pr_ids:
+    - '#423'
+    deployment_ids:
+    - verdify-prod-dark
+    policy_decision_ids: []
+  refs:
+    artifact_refs:
+    - .agent-workflow/sprints/s8-vanda-night-dehum/lanes/closeout/db-411-night-anchors.closeout.yaml
+    evidence_refs: []
+    external_refs: []
+  result: approved
+  summary: 'Critic s8-db411-c1 APPROVED PR #423 at 3ce5131: 4-value exactness, 177 byte-coupling mandated,
+    ON CONFLICT DO UPDATE prod-reconcile path reproduced, safe-to-wrap re-proven. Nuances: no schema_migrations
+    ledger on prod (migrate runner verify-not-rebuild); apply with psql -1 ON_ERROR_STOP; closeout YAML
+    backfilled by controller.'
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0031
+  content_sha256: null
+- id: LEDGER-EVT-0033
+  sequence: 33
+  occurred_at: '2026-07-03T23:45:00Z'
+  event_type: deployment_observed
+  source: sprint-orchestrator
+  subject: 'STEP-03 EXECUTED: migration 188 live on prod'
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids:
+    - s8-db411-c1
+    issue_ids:
+    - 411
+    - 410
+    lane_ids:
+    - db-411-night-anchors
+    pr_ids:
+    - '#423'
+    deployment_ids:
+    - verdify-prod-dark
+    policy_decision_ids: []
+  refs:
+    artifact_refs:
+    - .agent-workflow/sprints/s8-vanda-night-dehum/lanes/closeout/db-411-night-anchors.closeout.yaml
+    evidence_refs: []
+    external_refs: []
+  result: passed
+  summary: 'PR #423 merged b320e3b; rule-7 bounces (ingestor+mcp) rolled clean; prod pre-state 58/62/66/0.918
+    verified; wrapped rollback proof clean; real apply psql -1 ON_ERROR_STOP: INSERT 0 4 + assert NOTICE
+    at 23:00:03Z; post-apply re-probe = 60.71/65.71/70.71/0.83; re-apply INSERT 0 0 (idempotent). Device
+    divergence convergence watcher armed; durability re-probe due at the next heartbeat (>=60min).'
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0032
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001

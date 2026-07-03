@@ -5,11 +5,10 @@ schema_version: '1.0'
 sprint_id: s8-vanda-night-dehum
 state: IMPLEMENTING
 updated_at: '2026-07-03T23:35:00Z'
-active_lanes:
-  - db-411-night-anchors
+active_lanes: []
 blockers:
   - 'STEP-02 COMPLETE (containers + 187 live, verified). STEP-04 OTA blocked by alert 7482 (planner SLA miss, pre-S8) — auto-resolves on tonight SUNSET plan_written; Hermes restarted post-MCP-rotation'
-  - 'db-411 lane authoring migration 188 (g-411 decided: dry-roots full revert + vpd_target 0.83)'
+  - 'STEP-03 COMPLETE: 188 live (60.71/65.71/70.71/0.83 verified 23:00Z, idempotence proven); divergence convergence + >=60min durability re-probe pending'
 next_action: >-
   GROUP 1 MERGED (#415/#417/#421/#418). Awaiting Jason: g-411 night-priority
   decision (unblocks db-411 lane), g-377 pinch decision, then the release wave
