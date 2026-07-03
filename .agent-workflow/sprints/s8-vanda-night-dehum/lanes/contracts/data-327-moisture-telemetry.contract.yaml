@@ -1,0 +1,143 @@
+---
+schema_ref: lane-contract.schema.yaml
+kind: LaneContract
+schema_version: '1.0'
+sprint_id: s8-vanda-night-dehum
+lane_id: data-327-moisture-telemetry
+title: '#327 moisture-estimator telemetry: migration 187 + ingestor + MCP exposure'
+status: draft
+issue_ids: [327]
+coupling_justification: null
+objective: >-
+  Make every VPD/dehum decision explainable from the DB: persist mx_action,
+  mx_reason, vent_vpd_gain_kpa, heat_vpd_gain_kpa, selected/expected gain,
+  outdoor_fresh, outdoor staleness, vent_overcools, heat_assist_corun and dwell
+  state — PLUS the two fields #410 adds (vent_held_vpd_gain_kpa, hold_required)
+  — via schema-first migration 187, the ingestor write path, and MCP/outcome_kpi
+  read surfaces used by #371 grading.
+desired_outcome: >-
+  After container promotion + rule-7 restarts, a single documented SQL query
+  classifies each overnight action row by estimator reason (vent_dehum /
+  vent_plus_heat / vent_plus_heat_hold / heat_assist / no_effective_action), so
+  the #410 activation bake is evaluated from telemetry instead of psychrometric
+  reconstruction. This lane is the bake-evaluation prerequisite (promoted W3->W1).
+non_goals:
+  - 'No firmware changes (fw-410 owns the emitter; JSON shape is additive and coordinated).'
+  - 'No dashboard/Grafana panels (follow-up under #371 if needed).'
+  - 'No second migration; 188 belongs to db-411-night-anchors.'
+  - 'No prod apply: migration 187 is applied only in the release wave.'
+baseline_sha: 0efdb2f59a8600130cd9521696e395423c86e910
+branch: data-327-moisture-telemetry
+module_contracts:
+  - verdify_schemas/tests/test_drift_guards.py
+  - docs/planner/planner-io-schema.md
+  - docs/firmware-control-contract.md
+worktree_policy:
+  one_coding_session_per_worktree: true
+  lock_required: true
+lease_policy:
+  worker_ttl_hours: 24
+  critic_ttl_hours: 8
+runtime_namespace:
+  strategy: derived_at_dispatch
+ownership:
+  domains: [db-schema, ingestor, mcp]
+  owned_paths:
+    - db/migrations/187-moisture-estimator-telemetry.sql
+    - db/migrations/tests/
+    - verdify_schemas/
+    - ingestor/entity_map.py
+    - ingestor/ingestor.py
+    - mcp/server.py
+  prohibited_paths:
+    - firmware/
+    - docs/firmware-fsm-spec.md
+    - docs/adr/
+    - docs/RELEASE-CHECKLIST.md
+    - docs/handoff/
+    - docs/runbooks/
+  coordination_required_paths:
+    - docs/planner/
+  owned_interfaces:
+    - 'climate_action_log estimator columns / source_system_state JSON contract (additive)'
+    - 'outcome_kpi() + scorecard estimator-reason fields'
+dependencies:
+  hard: []
+  soft:
+    - lane_id: fw-410-vent-reheat-hold
+      coordination: >-
+        Field-name agreement for vent_held_vpd_gain_kpa + hold_required before
+        either PR merges; the parser must tolerate their ABSENCE (live fw
+        995c9b3 predates even #385's emitter).
+acceptance_criteria:
+  - id: LANE-AC-01
+    statement: >-
+      Migration 187 lands schema-first, classified by
+      scripts/check_migration_rollback_safety.py, with a rollback-wrap (or
+      swap-COMMIT) proof recorded per its classification; no outer-transaction
+      wrap if self-committing.
+    sprint_acceptance_ids: [SPR-AC-03]
+    evidence_required:
+      - 'make migration-rollback-safety output + the rollback proof transcript'
+  - id: LANE-AC-02
+    statement: >-
+      Ingestor stores the estimator fields without breaking existing action-log
+      consumers (absent fields tolerated for pre-#410 firmware); drift guards
+      prove schema, entity map, and MCP surfaces agree.
+    sprint_acceptance_ids: [SPR-AC-03]
+    evidence_required:
+      - 'make test output (verdify_schemas drift guards + ingestor tests)'
+  - id: LANE-AC-03
+    statement: >-
+      A documented explain-query classifies each VPD/dehum action bucket by
+      mx_reason and expected-vs-observed VPD direction; recorded in the PR and
+      referenced from #327.
+    sprint_acceptance_ids: [SPR-AC-03]
+    evidence_required:
+      - 'Query text + sample output (against local/test fixture) in the PR'
+  - id: LANE-AC-04
+    statement: >-
+      Rule-7 restart documentation: PR body names verdify-ingestor + verdify-mcp
+      as post-merge bounces; service-restart-drift-guard green.
+    sprint_acceptance_ids: [SPR-AC-03, SPR-AC-06]
+    evidence_required:
+      - 'PR body restart section + CI check'
+validation_commands:
+  - id: V1
+    command: make lint
+    purpose: repo lint gate
+    required: true
+  - id: V2
+    command: make test
+    purpose: python tests incl. drift guards (known flaky test_dew_point_risk_computes tolerated)
+    required: true
+  - id: V3
+    command: make migration-rollback-safety
+    purpose: classify 187 and every migration touched
+    required: true
+  - id: V4
+    command: '.venv/bin/python scripts/check_migration_rollback_safety.py --rollback-wrap db/migrations/187-moisture-estimator-telemetry.sql'
+    purpose: preflight the rollback-validation shape before any psql use
+    required: true
+required_evidence:
+  - 'Rollback classification + proof for 187'
+  - 'Drift-guard green run'
+  - 'Explain-query with sample output'
+git_policy:
+  pull_request_required: true
+  github_checks_required: true
+  self_merge_allowed: false
+  clean_worktree_required: true
+escalation_conditions:
+  - 'Migration 187 turns out self-committing (contains a commit-forcing statement) — stop and re-plan the rollback proof per CLAUDE.md before touching any DB.'
+  - 'Any consumer break in existing action-log readers.'
+  - 'Field-name disagreement with fw-410 that cannot be resolved additively.'
+  - 'Any temptation to apply 187 to prod from the lane — forbidden.'
+definition_of_done:
+  - 'PR open, validation green, restart list in body.'
+  - 'Independent critic approval on head SHA.'
+  - 'Merged to main; migration NOT applied; #327 left open for the release wave (apply + prod verification).'
+approval:
+  status: pending
+  approver: null
+  approved_at: null

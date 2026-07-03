@@ -1,0 +1,230 @@
+---
+schema_ref: wave-release-plan.schema.yaml
+kind: WaveReleasePlan
+schema_version: '1.0'
+wave_id: wave-s8-night-dehum
+status: draft
+scope:
+  sprint_id: s8-vanda-night-dehum
+  issue_ids: [410, 327, 413, 411, 377]
+  lane_ids: [fw-410-vent-reheat-hold, data-327-moisture-telemetry, docs-413-freeze-drift, db-411-night-anchors]
+  northstar_ids: []
+  summary: >-
+    Single-prod release of the S8 night-dehum slice: containers + migration 187
+    (telemetry) first, then the gated sequence — migration 188 (after g-411),
+    flag-OFF firmware OTA (Jason), pinch decision (g-377), flag-ON tunable
+    activation, and a 48h canary window. Track A rules throughout: the
+    greenhouse stays operational at every step, and every step is individually
+    revertible.
+  non_goals:
+    - 'No dev/staging environments exist (decommissioned 2026-06-16); prod is the only target.'
+    - '#383 remainder and any second estimator change are NOT in this wave.'
+branch_model:
+  model: per_lane_branches
+  base_ref: main
+  release_ref: null
+  merge_queue_required: false
+  concurrency_group: null
+  decision_notes: >-
+    Repo standard: PRs land on main; every push publishes digest-pinned images;
+    prod advances only via the prod-promote dispatch workflow (digests-only PR,
+    promote-diff-guard) + manual gated ArgoCD sync. Firmware is NOT deployed by
+    CI at all — hot-staged OTA behind Jason.
+github:
+  repository: VerdifyConsultancy/verdify-platform
+  milestone: Greenhouse Control Optimization
+  project: 'GitHub Project #5'
+  required_checks:
+    - lint
+    - test
+    - firmware-replay-diff
+    - migration-rollback-safety
+    - no-new-fire-and-forget
+    - service-restart-drift-guard
+  merge_group_checks_required: false
+  environment_protection_required: true
+ci:
+  workflows:
+    - name: ci.yml
+      required: true
+      event_triggers: [pull_request, push]
+      timeout_minutes: 60
+      evidence_expected:
+        - 'firmware-replay-diff vs merge-base (THRESHOLD_PCT=0 flag-OFF)'
+        - 'migration-rollback-safety classification for 187/188'
+        - 'no-new-fire-and-forget for dehum_vent_hold_enabled readback'
+        - 'service-restart-drift-guard restart list'
+    - name: prod-promote
+      required: true
+      event_triggers: [workflow_dispatch]
+      timeout_minutes: 30
+      evidence_expected:
+        - 'digests-only prod-promote PR (promote-diff-guard green) for ingestor/mcp/migrate'
+  artifacts:
+    - 'PR rule-9 blocks: replay diff, invariant suite, unit-test delta'
+    - 'Flag-ON replay bucket report'
+    - 'GHCR digest-pinned images (sha-<sha> + branch-main)'
+  required_events: [pull_request, push, workflow_dispatch]
+environments:
+  - name: verdify-prod
+    environment_type: production
+    required: true
+    namespace: verdify-prod
+    url: https://api.verdify.ai
+    quota_policy: null
+    limit_policy: null
+    network_policy: 'device VLAN isolated; ESP32 write path is single-writer (Lease-fenced)'
+    ttl: null
+    secrets_scope: 'SOPS/ksops in-repo + k3s secrets; OTA secrets via ~/.verdify/esphome-secrets.yaml — never printed'
+    protection_rules:
+      - 'ArgoCD app verdify-prod-dark is manual-sync behind the device-write gate'
+      - 'Firmware OTA is Jason-only (freeze rules: no critical alerts, <=1/week, 48h bake spacing)'
+      - 'Destructive mutations go through change-gate'
+    expected_revision_source: 'overlays/prod on main (digest-pinned)'
+gitops:
+  controller: argo_cd
+  desired_state_refs:
+    - 'deploy/k8s overlays/prod @ main (app verdify-prod-dark)'
+  sync_order:
+    - phase: containers
+      wave: 1
+      resource: 'verdify-migrate job (migration 187)'
+      purpose: 'schema-first: estimator telemetry columns before consumers'
+    - phase: containers
+      wave: 2
+      resource: 'verdify-ingestor + verdify-mcp (bounce after sync)'
+      purpose: 'rule-7 restarts so entity map + MCP read the new fields'
+    - phase: device
+      wave: 3
+      resource: 'ESP32 firmware OTA (OUTSIDE gitops; Jason hand-gate)'
+      purpose: 'flag-OFF binary; behavior-identical until activation'
+  reconciliation_checks:
+    - 'argocd app diff verdify-prod-dark empty post-sync'
+    - 'SELECT count(*) FROM climate_action_log WHERE mx-fields IS NOT NULL AND ts > sync-time (post-restart, pre-OTA: 0 rows expected until OTA; post-OTA: rows appear)'
+  remediation_policy: >-
+    Manual only. No auto-sync, no self-heal on verdify-prod-dark; any drift is
+    investigated before re-sync (2026-06-24 stale-scope gotcha #317 applies).
+deployment_strategy:
+  type: manual
+  progressive_delivery: false
+  traffic_policy: null
+  steps:
+    - id: STEP-01
+      action: 'Merge lanes fw-410, data-327, docs-413 (parallel group 1) with critic approval + checks'
+      success_criteria: 'All required checks green on main; rule-9 artifacts in PR bodies'
+      rollback_trigger: 'Any red check -> lane fix cycle, no deploy'
+    - id: STEP-02
+      action: 'prod-promote dispatch -> digests-only PR -> human merge -> gated argocd app sync verdify-prod-dark (scoped); apply migration 187 via the migrate path; bounce verdify-ingestor + verdify-mcp'
+      success_criteria: 'Sync healthy; 187 applied with recorded rollback classification; services up; drift guards unaffected'
+      rollback_trigger: '187 apply failure -> rollback per its classification; service crashloop -> repin previous digests'
+    - id: STEP-03
+      action: 'Gate g-411 decision (Jason) -> if dry-roots-wins: dispatch db-411-night-anchors, merge, apply migration 188, verify v_band_device_divergence converges'
+      success_criteria: 'Served band matches decision; divergence < 0.1F/0.01kPa'
+      rollback_trigger: '188 rollback proof; anchors are DB-only (no OTA needed to revert)'
+    - id: STEP-04
+      action: 'Jason OTA of the flag-OFF binary (make firmware-deploy preflights: no critical alerts, bake spacing, weekly cap; wait-for-version on the CORRECT backend)'
+      success_criteria: 'diagnostics.firmware_version reports the new build; sensor-health sweep clean; behavior unchanged (flag OFF)'
+      rollback_trigger: 'Re-flash firmware/artifacts/last-good.ota.bin (known-good 995c9b3 lineage)'
+    - id: STEP-05
+      action: 'Execute gate g-377 pinch decision: re-pin band_track_fraction=0.25 OR accept float 0.0; record envelope (window OPEN, #412) + pinch + flag states per the new checklist step'
+      success_criteria: 'setpoint_snapshot readback matches the decided value; states recorded in the bake-report skeleton'
+      rollback_trigger: 'n/a (tunable push, instantly revertible)'
+    - id: STEP-06
+      action: '48h flag-OFF soak (freeze-rule bake), then Jason-approved flag-ON: logged set_tunable dehum_vent_hold_enabled=true'
+      success_criteria: 'cfg_dehum_vent_hold_enabled readback true; first night shows DEHUM_VENT+heat1 episodes with mx_reason=vent_plus_heat_hold in telemetry'
+      rollback_trigger: 'Any release-health blocking signal -> set_tunable false (NO OTA needed)'
+    - id: STEP-07
+      action: '48h flag-ON canary window; then re-probe per durability gate and write docs/reviews/s8-vanda-night-dehum-bake-report.md'
+      success_criteria: '02-06h median VPD >= 0.78; RH>70% night count falls; night_min >= 64F; DIF <= 22F; invariant-14 style vent cycling <= ~10 open-cycles/night; heat2 never without heat1'
+      rollback_trigger: 'night_min < 64F at any point -> flag OFF immediately (the design-review rollback canary)'
+observability:
+  dashboards:
+    - 'graphs.verdify.ai homepage corridor/state overlay'
+    - 'graphs.verdify.ai equipment stripes (heat1/vent/fan lanes)'
+  logs:
+    - 'verdify-ingestor + verdify-mcp pod logs post-restart'
+  metrics:
+    - 'outcome_kpi(target_date): vpd misses, actuator cycles/runtime, DIF, dew margin'
+    - 'climate_action_log mx_action/mx_reason distribution 02-06h'
+    - 'setpoint_snapshot band_track_fraction + cfg_dehum_vent_hold_enabled readbacks'
+  traces: []
+  runtime_checks:
+    - "scripts/verdify-db.sh prod -c \"SELECT firmware_version, max(ts) FROM diagnostics GROUP BY 1 ORDER BY 2 DESC LIMIT 1\""
+    - "scripts/verdify-db.sh prod -c \"02-06h median VPD / RH / night_min query (bake-report canonical form)\""
+  missing_telemetry:
+    - 'mx estimator fields are EMPTY in prod until STEP-02 (consumers) + STEP-04 (emitter) complete — the reason #327 precedes the OTA'
+rollback:
+  ready: true
+  strategy: >-
+    Layered: (1) activation rollback = set_tunable dehum_vent_hold_enabled=false
+    (seconds, no OTA); (2) pinch rollback = re-push band_track_fraction
+    (seconds); (3) anchor rollback = migration 188 rollback proof (DB-only); (4)
+    firmware rollback = re-flash last-good OTA artifact; (5) container rollback
+    = repin previous digests in overlays/prod + gated sync.
+  known_good_ref: '995c9b3 (live 2026.6.23.0146) + firmware/artifacts/last-good.ota.bin'
+  procedure: >-
+    On a blocking release-health signal: flag OFF first (STEP-06 trigger), then
+    evaluate whether deeper layers are implicated before touching them; every
+    rollback action + timestamp goes in the bake report. night_min < 64F is an
+    IMMEDIATE flag-off, no discussion needed.
+  validation_steps:
+    - 'cfg_dehum_vent_hold_enabled readback false after rollback'
+    - 'Next-night 02-06h behavior matches pre-activation baseline'
+release_health:
+  stabilization_window: '48h per phase (freeze-rule bake), canaries re-probed >=60min apart per the durability gate'
+  signals:
+    - name: night-min-temp
+      source: 'climate.temp_avg 02-06h min'
+      threshold: '>= 64F'
+      blocking: true
+    - name: night-median-vpd
+      source: 'climate.vpd_avg 02-06h median'
+      threshold: '>= 0.78 kPa (acceptance; not a rollback trigger by itself)'
+      blocking: false
+    - name: dif
+      source: 'daily max - night min temp'
+      threshold: '<= 22F'
+      blocking: false
+    - name: vent-cycling
+      source: 'climate_action_log relay_truth vent open-cycles per night'
+      threshold: '<= ~10/night (gross-thrash guard; invariant-14 analogue)'
+      blocking: true
+    - name: heat2-discipline
+      source: 'relay_truth: heat2 never without heat1'
+      threshold: '0 violations'
+      blocking: true
+    - name: sensor-health-critical-alerts
+      source: 'alerts table severity=critical'
+      threshold: '0 open'
+      blocking: true
+    - name: heat1-runtime-delta
+      source: 'outcome_kpi actuator runtime vs pre-activation baseline'
+      threshold: 'watched (electric coil; report, no fixed cap this wave)'
+      blocking: false
+review_handoff:
+  review_inbox_packet_required: true
+  expected_review_packet_path: docs/reviews/s8-vanda-night-dehum-bake-report.md
+  human_test_steps:
+    - 'Run the bake-report canonical night query and compare to the 0.61/73% baseline'
+    - 'Spot-check one overnight episode end-to-end: mx_reason=vent_plus_heat_hold row -> relay_truth shows vent+heat1 -> temp held near target -> VPD rose'
+    - 'Verify recorded envelope=OPEN, pinch value, and flag state match the decisions in g-377/g-411'
+  approval_gate: 'HR-03 outcome acceptance (Jason) after the 48h flag-ON window, re-probed per the durability gate'
+risks:
+  - id: RISK-01
+    severity: high
+    statement: 'OTA resets band_track_fraction to 0.0 invisibly (float flip rides along).'
+    mitigation: 'STEP-05 executes the explicit g-377 decision and records the state; checklist step from docs-413.'
+  - id: RISK-02
+    severity: medium
+    statement: 'Wrong-backend wait-for-version false-rollback gotcha during OTA (seen 2026-06-17).'
+    mitigation: 'STEP-04 names the correct-backend check; firmware-ota-from-laptop memory/runbook procedure applies.'
+  - id: RISK-03
+    severity: medium
+    statement: 'ArgoCD stale-scope sync rewrite (#317) could partially sync the promote.'
+    mitigation: 'Scoped sync per the #408 pattern; argocd app diff must be empty post-sync (reconciliation check).'
+approval:
+  status: pending
+  approver: null
+  approved_at: null
+prepared_at: '2026-07-03T20:05:00Z'
+planner: 'claude-fable-5 (s8 sprint-planning session, 2026-07-03)'

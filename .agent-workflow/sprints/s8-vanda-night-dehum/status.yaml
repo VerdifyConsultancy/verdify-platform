@@ -1,0 +1,16 @@
+---
+schema_ref: status.schema.yaml
+kind: SprintStatus
+schema_version: '1.0'
+sprint_id: s8-vanda-night-dehum
+state: AWAITING_APPROVAL
+updated_at: '2026-07-03T20:10:00Z'
+active_lanes: []
+blockers:
+  - 'plan-approval-s8-vanda-night-dehum open (Jason; the plan PR is the approval vehicle)'
+  - 'g-411-night-temp-priority open (blocks db-411-night-anchors + activation)'
+  - 'g-377-pinch-repin open (blocks wave STEP-05 execution semantics)'
+next_action: >-
+  Jason reviews the plan PR (HR-01). On merge, hand off to sprint-orchestrator:
+  dispatch fw-410-vent-reheat-hold, data-327-moisture-telemetry,
+  docs-413-freeze-drift in parallel; db-411-night-anchors stays parked on g-411.
