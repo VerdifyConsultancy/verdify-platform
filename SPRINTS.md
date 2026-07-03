@@ -137,3 +137,29 @@ Verification:
 - Irrigation: targeted Makefile irrigation checks from the issue.
 - Lab/site: `make site-lint`, `make site-doctor`, or relevant site command.
 - Firmware/test harness: firmware gates plus all-year/extreme scenario outputs.
+
+### S8: Vanda Night Dehum (vent+reheat + telemetry + gated activation)
+
+Status: `Awaiting approval`
+
+Goal: dry the overnight center-zone air per #410 (02-06h median VPD 0.61 ->
+>=0.78) via the design-reviewed vent+reheat held-temp path, shipped flag-OFF and
+activated behind the #411/#377 Jason gates with a 48h canary bake
+(night_min >= 64F rollback trigger).
+
+First structured sprint transaction: plan, lane contracts, gates, and the wave
+release plan live in `.agent-workflow/sprints/s8-vanda-night-dehum/`.
+
+Primary lanes:
+
+- #410 firmware vent+reheat hold (flag OFF, replay-identical).
+- #327 moisture-estimator telemetry (migration 187) — bake prerequisite.
+- #413 doc drift: pinch re-pin step, OTA-reset mechanics, envelope notes.
+- #411 night-anchor migration 188 — blocked on the gate:jason decision.
+
+Verification:
+
+- Firmware: replay (flag-OFF zero-divergence), invariants, cold-night fixture,
+  `make firmware-check`; migrations: `make migration-rollback-safety` + proofs;
+  docs: `git diff --check`; activation evidence: `outcome_kpi()` + the bake
+  report with recorded envelope + band_track_fraction + flag state.

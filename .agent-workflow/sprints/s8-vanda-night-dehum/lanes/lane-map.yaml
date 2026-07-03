@@ -1,0 +1,40 @@
+---
+schema_ref: lane-map.schema.yaml
+kind: LaneMap
+schema_version: '1.0'
+sprint_id: s8-vanda-night-dehum
+lanes:
+  - lane_id: fw-410-vent-reheat-hold
+    issue_ids: [410]
+    module_contracts:
+      - docs/firmware-fsm-spec.md
+      - docs/adr/0003-band-compliance-track-the-target.md
+      - docs/adr/0004-floating-corridor-control.md
+      - docs/firmware-control-contract.md
+    contract_path: lanes/contracts/fw-410-vent-reheat-hold.contract.yaml
+    parallel_group: 1
+  - lane_id: data-327-moisture-telemetry
+    issue_ids: [327]
+    module_contracts:
+      - verdify_schemas/tests/test_drift_guards.py
+      - docs/planner/planner-io-schema.md
+      - docs/firmware-control-contract.md
+    contract_path: lanes/contracts/data-327-moisture-telemetry.contract.yaml
+    parallel_group: 1
+  - lane_id: docs-413-freeze-drift
+    issue_ids: [413]
+    module_contracts:
+      - docs/RELEASE-CHECKLIST.md
+      - docs/handoff/k3s-agent-handoff.md
+    contract_path: lanes/contracts/docs-413-freeze-drift.contract.yaml
+    parallel_group: 1
+  - lane_id: db-411-night-anchors
+    issue_ids: [411]
+    module_contracts:
+      - docs/adr/0004-floating-corridor-control.md
+      - db/migrations/177-band-defaults-from-canonical-seed.sql
+    contract_path: lanes/contracts/db-411-night-anchors.contract.yaml
+    parallel_group: 2
+dependency_order:
+  - [fw-410-vent-reheat-hold, data-327-moisture-telemetry, docs-413-freeze-drift]
+  - [db-411-night-anchors]

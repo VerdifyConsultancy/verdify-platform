@@ -1,0 +1,310 @@
+---
+schema_ref: sprint-plan.schema.yaml
+kind: SprintPlan
+schema_version: '1.0'
+sprint_id: s8-vanda-night-dehum
+status: awaiting_approval
+goal: >-
+  Make the overnight center-zone (bare-root Vanda) climate dryable per the
+  converged #410 analysis and the 2026-07-03 adversarial design review: land the
+  vent+reheat held-temp dehum firmware change flag-OFF (replay-identical until
+  enabled), land the moisture-estimator telemetry chain (#327, migration 187) so
+  the activation bake is observable, correct the freeze-rule-adjacent doc drift
+  (band_track_fraction OTA-reset/re-pin, stale FSM defaults, open-envelope
+  notes), and pre-stage the #411-gated night-anchor migration (188) — so that a
+  single Jason-gated OTA + tunable-push activation sequence with a 48h canary
+  bake can raise 02-06h median VPD from 0.61 to >=0.78 without a night_min
+  below 64F.
+baseline_sha: 0efdb2f59a8600130cd9521696e395423c86e910
+github:
+  repository: VerdifyConsultancy/verdify-platform
+  milestone: Greenhouse Control Optimization
+  project: 'GitHub Project #5'
+issue_ids: [410, 327, 413, 411]
+scope:
+  - 'fw-410-vent-reheat-hold: implement #410 per the design-review required changes
+    A/B/C — estimator ladder (vent_cooled -> vent_plus_heat_hold -> heat_assist)
+    with can_hold actual-temp floor and GH_DEHUM_HOLD_REENTRY_F entry hysteresis;
+    resolve_equipment:2488 hold-reheat gate (needs_heating_s1 OR hold_required &&
+    temp < temp_target) with corun-dwell bypass for hold-flavor; OFF-default
+    dehum_vent_hold_enabled tunable + cfg readback; synthetic cold-night replay
+    fixture; heat1-is-electric comment fixes (greenhouse_logic.h:14,:150,
+    greenhouse_types.h:185); behavior-coupled doc updates (firmware-fsm-spec incl.
+    stale 0.50 default + DEHUM relay map, ADR-0003 s6.4, ADR-0004:55,
+    firmware-control-contract).'
+  - 'data-327-moisture-telemetry: migration 187 (schema-first, serialized after
+    186) + ingestor entity map + MCP/outcome_kpi exposure of mx_action, mx_reason,
+    vent/heat gains, outdoor_fresh, vent_overcools, heat_assist_corun, and the NEW
+    #410 fields vent_held_vpd_gain_kpa + hold_required; drift guards green;
+    rule-7 restart list (verdify-ingestor, verdify-mcp) in the PR body.'
+  - 'docs-413-freeze-drift: RELEASE-CHECKLIST s.B post-OTA re-pin + envelope/pinch
+    record steps; k3s-agent-handoff + laptop-operator OTA notes on the
+    band_track_fraction restore_value:no reset; dated open-envelope notes on the
+    physics-model, mechanical-response-matrix, and ota-signoff review docs.'
+  - 'db-411-night-anchors (BLOCKED on gate g-411): migration 188 regenerating the
+    house night band anchors per the #411 decision + vpd_target retune to ~0.83 in
+    the SAME migration; registry/band_defaults kept in sync; rollback proof.'
+non_goals:
+  - '#383 remainder (closed_heat_dehum OFF-default flag + fog/mister post-wet
+    anti-ping-pong): ships AFTER the #410 OTA so one estimator change surface is
+    baked at a time (replay baseline stays clean).'
+  - '#378 corridor widths, #379 grey-box ID/MPC, daytime dry-side (+0.2,
+    cooling-limited) issue — out of scope.'
+  - '#412 execution (closing the door screen-window) — seasonal, fall; this
+    sprint only encodes the record-and-freeze rules around it.'
+  - 'Any production apply within lanes: NO migration apply, NO ArgoCD sync, NO
+    OTA, NO tunable push happens inside a lane; every deploy step lives in the
+    wave release plan behind its gate.'
+  - 'verdify-www / verdify-crm (separate products, separate repos).'
+acceptance_criteria:
+  - id: SPR-AC-01
+    statement: >-
+      #410 firmware change merged with dehum_vent_hold_enabled defaulting OFF and
+      proven behavior-identical when OFF: make firmware-replay-worktree
+      OLD=origin/main shows 0 divergent rows at THRESHOLD_PCT=0, full invariant
+      suite green, native test delta green, firmware-check compiles.
+    lane_ids: [fw-410-vent-reheat-hold]
+    evidence_expected:
+      - 'PR body rule-9 artifacts: replay diff output, invariant suite output, unit-test delta'
+      - 'CI: firmware-replay-diff, no-new-fire-and-forget, service-restart-drift-guard green'
+  - id: SPR-AC-02
+    statement: >-
+      Flag-ON behavior is characterized before any OTA: a flag-ON replay run
+      documents the divergence buckets (redirect of #385 heat_dehum rows +
+      new night DEHUM_VENT+heat1 episodes), and a synthetic cold-night fixture
+      proves the can_hold floor exit, closed-heat fallback, and invariant #14
+      compliance on frigid traces the summer corpus cannot exercise.
+    lane_ids: [fw-410-vent-reheat-hold]
+    evidence_expected:
+      - 'Flag-ON replay report with divergence bucket classification in the PR'
+      - 'Cold-night fixture test in make test-firmware output'
+  - id: SPR-AC-03
+    statement: >-
+      Moisture-estimator telemetry is queryable end-to-end: migration 187 lands
+      schema-first with rollback-safety classification, ingestor persists the
+      estimator fields (including vent_held_vpd_gain_kpa and hold_required),
+      MCP/outcome_kpi expose them, and a documented SQL query explains each
+      VPD/dehum action row by mx_reason.
+    lane_ids: [data-327-moisture-telemetry]
+    evidence_expected:
+      - 'make migration-rollback-safety output + rollback-wrap proof for 187'
+      - 'verdify_schemas drift guards green (make test)'
+      - 'Example explain-query recorded in the PR/issue'
+  - id: SPR-AC-04
+    statement: >-
+      An operator following the OTA checklist cannot miss the pinch decision:
+      RELEASE-CHECKLIST s.B contains the band_track_fraction re-pin/record step
+      and the envelope-config record step; handoff + laptop-operator docs state
+      the restore_value:no OTA reset; the three review docs carry dated
+      open-envelope notes.
+    lane_ids: [docs-413-freeze-drift]
+    evidence_expected:
+      - 'git diff of the four doc groups + git diff --check clean'
+  - id: SPR-AC-05
+    statement: >-
+      The #411 decision is executable the day it lands: migration 188 exists on
+      its lane branch implementing the decided night anchors + vpd_target ~0.83,
+      passes rollback-safety + band single-source tests, and is NOT applied.
+    lane_ids: [db-411-night-anchors]
+    evidence_expected:
+      - 'migration 188 + make migration-rollback-safety + test_band_defaults_single_source output'
+  - id: SPR-AC-06
+    statement: >-
+      Activation is fully gated and observable: the wave release plan sequences
+      containers -> migration 187 -> restarts -> (gate) migration 188 -> (gate)
+      flag-OFF OTA -> pinch decision -> flag-ON push -> 48h canary window with
+      night_min>=64F as a blocking rollback trigger, and every step records
+      envelope + band_track_fraction state.
+    lane_ids: [fw-410-vent-reheat-hold, data-327-moisture-telemetry]
+    evidence_expected:
+      - 'release/wave-release-plan.yaml validated; bake report at docs/reviews/s8-vanda-night-dehum-bake-report.md after HR-03'
+risks:
+  - id: RISK-01
+    severity: high
+    statement: >-
+      The OTA silently resets band_track_fraction 0.25 -> 0.0 (restore_value: no;
+      planner now emits only 0), shipping the #377 float flip invisibly to the
+      corpus-fed replay and confounding the bake.
+    mitigation: >-
+      Gate g-377-pinch-repin forces an explicit Jason decision (re-pin 0.25 vs
+      joint float bake) before the OTA; docs-413 adds the re-pin/record step to
+      the checklist; the bake report must state the pinch value.
+  - id: RISK-02
+    severity: high
+    statement: >-
+      #411 unresolved: under live #409 night anchors + pinch, the house (66.7F)
+      sits above pinched temp_high (~65F), heat_suppressed_by_upper_band vetoes
+      reheat, and the #410 hold cannot mechanically engage.
+    mitigation: >-
+      Flag ships OFF; activation blocked on gate g-411; lane db-411-night-anchors
+      pre-stages the migration so the decision is executable immediately.
+  - id: RISK-03
+    severity: medium
+    statement: >-
+      Vent+reheat thrash or invariant-#14 breach on cold nights; parts 1+2 of the
+      original spec would have deleted the only dehum floor exit.
+    mitigation: >-
+      Design-review change A (can_hold actual-temp floor + 1.0F re-entry
+      hysteresis) is a lane acceptance criterion; synthetic cold-night fixture
+      proves floor exit + closed-heat fallback + #14 before merge.
+  - id: RISK-04
+    severity: medium
+    statement: >-
+      heat1 (electric) offsets only ~half of continuous-vent loss (measured
+      +0.017 vs -0.034 F/min), so the flag-ON equilibrium may land below the 0.83
+      aspiration on cool nights.
+    mitigation: >-
+      Acceptance is median >=0.78 (not 0.83); the design duty-cycles against the
+      hold floor instead of promising a hold; heat1 runtime/cycles are a watched
+      outcome_kpi signal during the bake.
+  - id: RISK-05
+    severity: medium
+    statement: Two migrations in flight (187 telemetry, 188 anchors) risk numbering/ordering collisions.
+    mitigation: >-
+      Hard serialization: db-411-night-anchors depends on data-327 landing 187;
+      migration-rollback-safety CI classifies both; one-migration-at-a-time rule
+      in both lane contracts.
+  - id: RISK-06
+    severity: low
+    statement: Envelope state change (window closed) mid-bake would invalidate every canary baseline.
+    mitigation: '#412 records the stays-open-until-fall decision and the never-change-mid-bake rule; checklist records envelope state at OTA and at bake read.'
+  - id: RISK-07
+    severity: medium
+    statement: '#327 schema/consumer drift or missed rule-7 restarts leave the bake blind (mx fields absent in prod).'
+    mitigation: >-
+      Schema-first ordering, drift guards, service-restart-drift-guard CI, and
+      wave STEP verification that mx_action rows appear in prod before the OTA
+      step is offered to Jason.
+lanes:
+  - lane_id: fw-410-vent-reheat-hold
+    issue_ids: [410]
+    contract_path: lanes/contracts/fw-410-vent-reheat-hold.contract.yaml
+    branch: fw-410-vent-reheat-hold
+    owner: verdify-platform-worker
+    reviewer: independent-critic
+    summary: >-
+      Firmware: held-temp dehum estimator ladder + hold-reheat gate + OFF-default
+      flag + cold-night fixture + behavior-coupled docs (fsm-spec, ADR-0003 s6.4,
+      ADR-0004, control contract) + heat1-electric comment fixes.
+  - lane_id: data-327-moisture-telemetry
+    issue_ids: [327]
+    contract_path: lanes/contracts/data-327-moisture-telemetry.contract.yaml
+    branch: data-327-moisture-telemetry
+    owner: verdify-platform-worker
+    reviewer: independent-critic
+    summary: >-
+      Schema-first migration 187 + ingestor/MCP persistence and exposure of the
+      moisture-estimator decision context, including the two new #410 fields.
+  - lane_id: docs-413-freeze-drift
+    issue_ids: [413]
+    contract_path: lanes/contracts/docs-413-freeze-drift.contract.yaml
+    branch: docs-413-freeze-drift
+    owner: verdify-platform-worker
+    reviewer: independent-critic
+    summary: >-
+      Docs-only: OTA re-pin/record steps in the release checklist + handoff +
+      operator runbook; dated open-envelope notes on the three review docs.
+  - lane_id: db-411-night-anchors
+    issue_ids: [411]
+    contract_path: lanes/contracts/db-411-night-anchors.contract.yaml
+    branch: db-411-night-anchors
+    owner: verdify-platform-worker
+    reviewer: independent-critic
+    summary: >-
+      BLOCKED on gate g-411: migration 188 implementing the decided night temp
+      anchors + vpd_target ~0.83 in one migration, with registry/band_defaults
+      sync and rollback proof. Prepared, not applied.
+dependency_order:
+  - [fw-410-vent-reheat-hold, data-327-moisture-telemetry, docs-413-freeze-drift]
+  - [db-411-night-anchors]
+deployment_expectations:
+  - 'No lane deploys anything. All deployment lives in release/wave-release-plan.yaml.'
+  - 'Container path: prod-promote (digests-only PR) -> human merge -> gated argocd app sync verdify-prod-dark; bounce verdify-ingestor + verdify-mcp after 187 (rule 7).'
+  - 'Migration 187 applied via the gated migrate path before the OTA; 188 only after gate g-411.'
+  - 'Firmware OTA: Jason-only, flag-OFF binary, freeze rules enforced (no critical alerts, <=1 OTA/week, 48h bake spacing); activation later via logged set_tunable push, revert without OTA.'
+  - 'Post-OTA: execute the g-377 pinch decision (re-pin 0.25 or float) and record envelope + pinch state in the bake report.'
+review_plan:
+  qa_milestones:
+    - id: QA-01
+      name: All four lane PRs green on required checks
+      due: null
+      evidence_expected:
+        - 'ci.yml checks incl. firmware-replay-diff, migration-rollback-safety, no-new-fire-and-forget, service-restart-drift-guard'
+    - id: QA-02
+      name: Flag-ON characterization complete pre-OTA
+      due: null
+      evidence_expected:
+        - 'Flag-ON replay divergence report + cold-night fixture output attached to the #410 PR'
+    - id: QA-03
+      name: Telemetry live in prod pre-OTA
+      due: null
+      evidence_expected:
+        - 'SQL evidence that climate_action_log rows carry mx_action/mx_reason after 187 + restarts'
+  human_review_milestones:
+    - id: HR-01
+      name: Sprint plan approval
+      owner: jason
+      trigger: 'This plan PR opened; gates/plan-approval.yaml open'
+      review_packet_path: .agent-workflow/sprints/s8-vanda-night-dehum/sprint-plan.md
+    - id: HR-02
+      name: OTA + activation approval (deployment gate)
+      owner: jason
+      trigger: 'Lanes merged; QA-01..03 done; gates g-411 and g-377 decided'
+      review_packet_path: .agent-workflow/sprints/s8-vanda-night-dehum/release/wave-release-plan.yaml
+    - id: HR-03
+      name: Outcome acceptance after the 48h flag-ON canary window
+      owner: jason
+      trigger: '48h flag-ON window elapsed with canaries recorded (re-probed per durability gate)'
+      review_packet_path: docs/reviews/s8-vanda-night-dehum-bake-report.md
+  user_stories_for_review:
+    - id: US-01
+      statement: >-
+        As the grower, overnight center-zone VPD reaches a >=0.78 median (02-06h)
+        so bare Vanda roots dry, while night_min stays >=64F and DIF <=22F.
+      issue_ids: [410, 411]
+      lane_ids: [fw-410-vent-reheat-hold, db-411-night-anchors]
+      acceptance_refs: [SPR-AC-01, SPR-AC-02, SPR-AC-05, SPR-AC-06]
+    - id: US-02
+      statement: >-
+        As the operator, I can query WHY the controller chose vent-hold vs
+        warm-to-dry for any overnight cycle (mx_reason per action row).
+      issue_ids: [327]
+      lane_ids: [data-327-moisture-telemetry]
+      acceptance_refs: [SPR-AC-03]
+    - id: US-03
+      statement: >-
+        As the operator running an OTA, the checklist forces the pinch re-pin
+        decision and records envelope + pinch state so no bake is silently
+        confounded again.
+      issue_ids: [413, 377]
+      lane_ids: [docs-413-freeze-drift]
+      acceptance_refs: [SPR-AC-04]
+  reporting_summary:
+    included:
+      - '#410 firmware implementation (flag-OFF) with the three design-review required changes'
+      - '#327 telemetry chain (migration 187 + ingestor + MCP) promoted W3->W1 as bake prerequisite'
+      - '#413 doc-drift bundle (re-pin step, stale defaults context, envelope notes, bake record)'
+      - '#411 anchor migration 188 pre-staged behind the Jason decision gate'
+    deferred:
+      - '#383 remainder (after the #410 OTA bake)'
+      - '#378 corridor widths, #379 MPC (need float/bake evidence first)'
+      - '#412 window closure (fall, seasonal)'
+      - 'Daytime dry-side VPD issue (separate, minor)'
+    ownership:
+      - lane_id: fw-410-vent-reheat-hold
+        owner: verdify-platform-worker
+        responsibility: 'Firmware estimator/relay change, tests, fixtures, behavior-coupled docs'
+      - lane_id: data-327-moisture-telemetry
+        owner: verdify-platform-worker
+        responsibility: 'Migration 187, ingestor entity map, MCP exposure, drift guards'
+      - lane_id: docs-413-freeze-drift
+        owner: verdify-platform-worker
+        responsibility: 'Operator-facing checklist/runbook/handoff + review-doc envelope notes'
+      - lane_id: db-411-night-anchors
+        owner: verdify-platform-worker
+        responsibility: 'Migration 188 implementing the g-411 decision; prepared not applied'
+    next_review: 'HR-01: Jason approves/revises this plan (the plan PR is the approval vehicle).'
+approval:
+  status: pending
+  approver: null
+  approved_at: null
