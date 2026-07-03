@@ -3,7 +3,7 @@ schema_ref: sprint-execution-runbook.schema.yaml
 kind: SprintExecutionRunbook
 schema_version: '1.0'
 runbook_id: exec-s8-vanda-night-dehum
-status: ready
+status: active
 sprint_id: s8-vanda-night-dehum
 wave_id: wave-s8-night-dehum
 repository: VerdifyConsultancy/verdify-platform
@@ -79,11 +79,11 @@ lanes:
   dependency_state: ready
   platform_session:
     create_operation_ref: ".agent-workflow/sprints/s8-vanda-night-dehum/execution/control-requests/fw-410-vent-reheat-hold-session-create.yaml"
-    session_id:
+    session_id: s8-fw410-w1
     executor: claude-local-subagent
-    model:
+    model: claude-fable-5
     effort:
-    status: planned
+    status: active
   prompt:
     prompt_path: ".agent-workflow/sprints/s8-vanda-night-dehum/prompts/fw-410-vent-reheat-hold.worker.md"
     manifest_path: ".agent-workflow/sprints/s8-vanda-night-dehum/prompts/fw-410-vent-reheat-hold.worker.manifest.json"
@@ -92,7 +92,7 @@ lanes:
     tmux_session:
     browser_terminal_url:
     operator_attach_required: false
-  status: planned
+  status: implementing
 - lane_id: data-327-moisture-telemetry
   issue_ids:
   - 327
@@ -102,11 +102,11 @@ lanes:
   dependency_state: ready
   platform_session:
     create_operation_ref: ".agent-workflow/sprints/s8-vanda-night-dehum/execution/control-requests/data-327-moisture-telemetry-session-create.yaml"
-    session_id:
+    session_id: s8-data327-w1
     executor: claude-local-subagent
-    model:
+    model: claude-fable-5
     effort:
-    status: planned
+    status: active
   prompt:
     prompt_path: ".agent-workflow/sprints/s8-vanda-night-dehum/prompts/data-327-moisture-telemetry.worker.md"
     manifest_path: ".agent-workflow/sprints/s8-vanda-night-dehum/prompts/data-327-moisture-telemetry.worker.manifest.json"
@@ -115,7 +115,7 @@ lanes:
     tmux_session:
     browser_terminal_url:
     operator_attach_required: false
-  status: planned
+  status: implementing
 - lane_id: docs-413-freeze-drift
   issue_ids:
   - 413
@@ -125,11 +125,11 @@ lanes:
   dependency_state: ready
   platform_session:
     create_operation_ref: ".agent-workflow/sprints/s8-vanda-night-dehum/execution/control-requests/docs-413-freeze-drift-session-create.yaml"
-    session_id:
+    session_id: s8-docs413-w1
     executor: claude-local-subagent
-    model:
+    model: claude-fable-5
     effort:
-    status: planned
+    status: active
   prompt:
     prompt_path: ".agent-workflow/sprints/s8-vanda-night-dehum/prompts/docs-413-freeze-drift.worker.md"
     manifest_path: ".agent-workflow/sprints/s8-vanda-night-dehum/prompts/docs-413-freeze-drift.worker.manifest.json"
@@ -138,7 +138,7 @@ lanes:
     tmux_session:
     browser_terminal_url:
     operator_attach_required: false
-  status: planned
+  status: implementing
 - lane_id: db-411-night-anchors
   issue_ids:
   - 411

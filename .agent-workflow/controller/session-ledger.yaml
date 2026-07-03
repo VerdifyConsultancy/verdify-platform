@@ -1,0 +1,257 @@
+---
+schema_ref: session-ledger.schema.yaml
+kind: SessionLedger
+schema_version: '1.0'
+project_id: verdify-platform
+ledger_id: ledger-s8-vanda-night-dehum
+status: active
+generated_at: '2026-07-03T20:30:00Z'
+updated_at: '2026-07-03T20:30:00Z'
+retention:
+  source_policy: durable artifacts + GitHub only; no raw session logs copied
+  redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
+  raw_payload_policy: raw worker transcripts stay in local task files, never committed
+  checksum_algorithm: none
+sessions:
+- session_id: s8-outer-loop-2026-07-03
+  parent_session_id: null
+  role: controller
+  executor: claude-fable-5
+  repository: VerdifyConsultancy/verdify-platform
+  status: active
+  started_at: '2026-07-03T20:30:00Z'
+  ended_at: null
+  issue_ids:
+  - 410
+  - 327
+  - 413
+  - 411
+  lane_id: null
+  wave_id: wave-s8-night-dehum
+  branch: main
+  worktree: null
+  pr_refs: []
+  artifact_refs: []
+- session_id: s8-fw410-w1
+  parent_session_id: s8-outer-loop-2026-07-03
+  role: worker
+  executor: claude-local-subagent
+  repository: VerdifyConsultancy/verdify-platform
+  status: active
+  started_at: '2026-07-03T20:30:00Z'
+  ended_at: null
+  issue_ids:
+  - 410
+  lane_id: fw-410-vent-reheat-hold
+  wave_id: wave-s8-night-dehum
+  branch: fw-410-vent-reheat-hold
+  worktree: /private/tmp/claude-501/-Users-jason-repos-verdify-platform/17f4b1c3-9d61-4639-90f5-62fb219addce/scratchpad/.worktrees/s8-ctl/fw-410-vent-reheat-hold
+  pr_refs: []
+  artifact_refs: []
+- session_id: s8-data327-w1
+  parent_session_id: s8-outer-loop-2026-07-03
+  role: worker
+  executor: claude-local-subagent
+  repository: VerdifyConsultancy/verdify-platform
+  status: active
+  started_at: '2026-07-03T20:30:00Z'
+  ended_at: null
+  issue_ids:
+  - 327
+  lane_id: data-327-moisture-telemetry
+  wave_id: wave-s8-night-dehum
+  branch: data-327-moisture-telemetry
+  worktree: /private/tmp/claude-501/-Users-jason-repos-verdify-platform/17f4b1c3-9d61-4639-90f5-62fb219addce/scratchpad/.worktrees/s8-ctl/data-327-moisture-telemetry
+  pr_refs: []
+  artifact_refs: []
+- session_id: s8-docs413-w1
+  parent_session_id: s8-outer-loop-2026-07-03
+  role: worker
+  executor: claude-local-subagent
+  repository: VerdifyConsultancy/verdify-platform
+  status: active
+  started_at: '2026-07-03T20:30:00Z'
+  ended_at: null
+  issue_ids:
+  - 413
+  lane_id: docs-413-freeze-drift
+  wave_id: wave-s8-night-dehum
+  branch: docs-413-freeze-drift
+  worktree: /private/tmp/claude-501/-Users-jason-repos-verdify-platform/17f4b1c3-9d61-4639-90f5-62fb219addce/scratchpad/.worktrees/s8-ctl/docs-413-freeze-drift
+  pr_refs: []
+  artifact_refs: []
+events:
+- id: LEDGER-EVT-0001
+  sequence: 1
+  occurred_at: '2026-07-03T20:30:00Z'
+  event_type: sprint_planned
+  source: sprint-orchestrator
+  subject: 'S8 plan PR #414 merged b876e091d'
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids: []
+    issue_ids:
+    - 410
+    - 327
+    - 413
+    - 411
+    lane_ids:
+    - fw-410-vent-reheat-hold
+    - data-327-moisture-telemetry
+    - docs-413-freeze-drift
+    - db-411-night-anchors
+    pr_ids: []
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs: []
+  result: approved
+  summary: 'Sprint plan approved (HR-01) via PR #414 merge; contracts marked approved under the single
+    plan gate.'
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: null
+  content_sha256: null
+- id: LEDGER-EVT-0002
+  sequence: 2
+  occurred_at: '2026-07-03T20:30:00Z'
+  event_type: gate_decision
+  source: sprint-orchestrator
+  subject: g-local-dispatch-fallback
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids: []
+    issue_ids: []
+    lane_ids: []
+    pr_ids: []
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs: []
+  result: approved
+  summary: Jason authorized local Claude subagent dispatch (Agent Platform MCP absent in controller session).
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0001
+  content_sha256: null
+- id: LEDGER-EVT-0003
+  sequence: 3
+  occurred_at: '2026-07-03T20:30:00Z'
+  event_type: lane_dispatched
+  source: sprint-orchestrator
+  subject: fw-410-vent-reheat-hold / s8-fw410-w1
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids: []
+    issue_ids:
+    - 410
+    lane_ids:
+    - fw-410-vent-reheat-hold
+    pr_ids: []
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs: []
+  result: observed
+  summary: Worker dispatched into leased worktree at baseline 0efdb2f.
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0002
+  content_sha256: null
+- id: LEDGER-EVT-0004
+  sequence: 4
+  occurred_at: '2026-07-03T20:30:00Z'
+  event_type: lane_dispatched
+  source: sprint-orchestrator
+  subject: data-327-moisture-telemetry / s8-data327-w1
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids: []
+    issue_ids:
+    - 327
+    lane_ids:
+    - data-327-moisture-telemetry
+    pr_ids: []
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs: []
+  result: observed
+  summary: Worker dispatched; migration number 187 reserved; field names settled with fw lane.
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0003
+  content_sha256: null
+- id: LEDGER-EVT-0005
+  sequence: 5
+  occurred_at: '2026-07-03T20:30:00Z'
+  event_type: lane_dispatched
+  source: sprint-orchestrator
+  subject: docs-413-freeze-drift / s8-docs413-w1
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids: []
+    issue_ids:
+    - 413
+    lane_ids:
+    - docs-413-freeze-drift
+    pr_ids: []
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs: []
+  result: observed
+  summary: Worker dispatched (docs-only, six owned files).
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0004
+  content_sha256: null
+exceptions:
+- id: LEDGER-EXC-001
+  severity: low
+  statement: CLI has no 'github reconcile' subcommand despite the skill referencing it; snapshot-only
+    reconciliation used.
+  owner: claude-fable-5
+  status: accepted
+  event_ids:
+  - LEDGER-EVT-0001
+handoff:
+  next_skill: sprint-orchestrator
+  next_mode: monitor
+  reason: Group-1 workers active; controller polls for closeouts, routes to fresh critics, merges on approval;
+    db-411 parked on g-411.
