@@ -106,7 +106,7 @@ lanes:
     executor: claude-local-subagent
     model: claude-fable-5
     effort:
-    status: active
+    status: complete
   prompt:
     prompt_path: ".agent-workflow/sprints/s8-vanda-night-dehum/prompts/data-327-moisture-telemetry.worker.md"
     manifest_path: ".agent-workflow/sprints/s8-vanda-night-dehum/prompts/data-327-moisture-telemetry.worker.manifest.json"
@@ -115,7 +115,7 @@ lanes:
     tmux_session:
     browser_terminal_url:
     operator_attach_required: false
-  status: validating
+  status: complete
 - lane_id: docs-413-freeze-drift
   issue_ids:
   - 413

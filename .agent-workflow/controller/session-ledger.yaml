@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-s8-vanda-night-dehum
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-03T23:00:00Z'
+updated_at: '2026-07-03T23:15:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -54,9 +54,9 @@ sessions:
   role: worker
   executor: claude-local-subagent
   repository: VerdifyConsultancy/verdify-platform
-  status: active
+  status: complete
   started_at: '2026-07-03T20:30:00Z'
-  ended_at: null
+  ended_at: '2026-07-03T23:15:00Z'
   issue_ids:
   - 327
   lane_id: data-327-moisture-telemetry
@@ -139,9 +139,9 @@ sessions:
   role: critic
   executor: claude-local-subagent
   repository: VerdifyConsultancy/verdify-platform
-  status: active
+  status: complete
   started_at: '2026-07-03T22:30:00Z'
-  ended_at: null
+  ended_at: '2026-07-03T23:15:00Z'
   issue_ids:
   - 327
   - 410
@@ -968,6 +968,79 @@ events:
   data_summary: null
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0021
+  content_sha256: null
+- id: LEDGER-EVT-0023
+  sequence: 23
+  occurred_at: '2026-07-03T23:15:00Z'
+  event_type: critic_reviewed
+  source: sprint-orchestrator
+  subject: '#421 rev-2 delta verdict'
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids:
+    - s8-data327-c2
+    issue_ids:
+    - 327
+    - 410
+    lane_ids:
+    - data-327-moisture-telemetry
+    pr_ids:
+    - '#421'
+    - '#418'
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs: []
+  result: approved
+  summary: 'Critic s8-data327-c2 APPROVED at f3c5064: delta exact, slug key confirmed, 12/12 both firmware
+    states, CI green, PR body accurate, #420 extension faithful.'
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0022
+  content_sha256: null
+- id: LEDGER-EVT-0024
+  sequence: 24
+  occurred_at: '2026-07-03T23:15:00Z'
+  event_type: handoff
+  source: sprint-orchestrator
+  subject: '#421 integrated; #418 CI re-triggered'
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids:
+    - s8-data327-c2
+    issue_ids:
+    - 327
+    - 410
+    lane_ids:
+    - data-327-moisture-telemetry
+    pr_ids:
+    - '#421'
+    - '#418'
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs: []
+  result: passed
+  summary: 'PR #421 squash-merged as 0fde2a7 (entity_map wire-route on main). PR #418 closed/reopened
+    to rebuild the merge ref against updated main (plain rerun would reuse the stale merge commit); head
+    unchanged 98e3b50 so the fw critic approval stands. data-327 worker + c2 leases released.'
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0023
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
