@@ -83,7 +83,7 @@ lanes:
     executor: claude-local-subagent
     model: claude-fable-5
     effort:
-    status: active
+    status: complete
   prompt:
     prompt_path: ".agent-workflow/sprints/s8-vanda-night-dehum/prompts/fw-410-vent-reheat-hold.worker.md"
     manifest_path: ".agent-workflow/sprints/s8-vanda-night-dehum/prompts/fw-410-vent-reheat-hold.worker.manifest.json"
@@ -92,7 +92,7 @@ lanes:
     tmux_session:
     browser_terminal_url:
     operator_attach_required: false
-  status: ready_for_critic
+  status: complete
 - lane_id: data-327-moisture-telemetry
   issue_ids:
   - 327

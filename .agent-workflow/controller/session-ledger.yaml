@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-s8-vanda-night-dehum
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-03T23:15:00Z'
+updated_at: '2026-07-03T23:35:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -1042,6 +1042,85 @@ events:
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0023
   content_sha256: null
+- id: LEDGER-EVT-0025
+  sequence: 25
+  occurred_at: '2026-07-03T23:35:00Z'
+  event_type: ci_observed
+  source: sprint-orchestrator
+  subject: '#418 re-run vs post-#421 main'
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids: []
+    issue_ids:
+    - 410
+    lane_ids:
+    - fw-410-vent-reheat-hold
+    pr_ids:
+    - '#418'
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs: []
+  result: passed
+  summary: All 38 checks green incl. the formerly-red Pydantic Schemas + Drift Guards; head verified unchanged
+    at 98e3b50 pre-merge.
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0024
+  content_sha256: null
+- id: LEDGER-EVT-0026
+  sequence: 26
+  occurred_at: '2026-07-03T23:35:00Z'
+  event_type: handoff
+  source: sprint-orchestrator
+  subject: GROUP 1 COMPLETE
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids: []
+    issue_ids:
+    - 410
+    - 327
+    - 413
+    - 411
+    lane_ids:
+    - fw-410-vent-reheat-hold
+    - data-327-moisture-telemetry
+    - docs-413-freeze-drift
+    - db-411-night-anchors
+    pr_ids:
+    - '#415'
+    - '#417'
+    - '#421'
+    - '#418'
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs: []
+  result: passed
+  summary: 'PR #418 squash-merged adbb772 at the critic-approved head. All group-1 lanes integrated: #415
+    (docs, bb93b29), #417 (telemetry, 7a67436), #421 (wire-route, 0fde2a7), #418 (firmware flag-OFF, adbb772).
+    fw worker lease released. Sprint now DECISION_REQUIRED: g-411 (night priority), g-377 (pinch), then
+    HR-02 OTA gate per the wave release plan. db-411-night-anchors parked. #410/#327 open for the release
+    wave; discovered issues this sprint: #419 (corpus outdoor-blind), #420 (CFG readback double-break),
+    #416 (stale version strings).'
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0025
+  content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
   severity: low
@@ -1052,7 +1131,8 @@ exceptions:
   event_ids:
   - LEDGER-EVT-0001
 handoff:
-  next_skill: sprint-orchestrator
-  next_mode: monitor
-  reason: Group-1 workers active; controller polls for closeouts, routes to fresh critics, merges on approval;
-    db-411 parked on g-411.
+  next_skill: release-verification
+  next_mode: awaiting_gates
+  reason: 'Group-1 merged. Next transitions are human gates: g-411 night-temp priority (unblocks db-411
+    lane + migration 188), g-377 pinch decision, HR-02 OTA+activation approval. Wave STEP-02 (containers/187/restarts)
+    may be prepared once Jason schedules the gated sync.'

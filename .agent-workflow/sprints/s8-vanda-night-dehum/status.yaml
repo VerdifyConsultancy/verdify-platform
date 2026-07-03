@@ -3,14 +3,14 @@ schema_ref: status.schema.yaml
 kind: SprintStatus
 schema_version: '1.0'
 sprint_id: s8-vanda-night-dehum
-state: IMPLEMENTING
-updated_at: '2026-07-03T21:00:00Z'
-active_lanes:
-  - fw-410-vent-reheat-hold
-  - data-327-moisture-telemetry
+state: DECISION_REQUIRED
+updated_at: '2026-07-03T23:35:00Z'
+active_lanes: []
 blockers:
-  - 'g-411-night-temp-priority open (blocks db-411-night-anchors + activation)'
-  - 'g-377-pinch-repin open (blocks wave STEP-05 execution semantics)'
+  - 'g-411-night-temp-priority open (Jason; blocks db-411-night-anchors + activation)'
+  - 'g-377-pinch-repin open (Jason; note: re-pin now requires a registry-bounds change, see #377 comment)'
+  - 'HR-02 OTA + activation approval (wave release plan) — after gates + STEP-02'
 next_action: >-
-  Controller loop supervises group-1 workers to closeout -> fresh critic ->
-  merge; db-411-night-anchors parked on g-411; wave steps stay behind HR-02.
+  GROUP 1 MERGED (#415/#417/#421/#418). Awaiting Jason: g-411 night-priority
+  decision (unblocks db-411 lane), g-377 pinch decision, then the release wave
+  (STEP-02 containers + migration 187 + rule-7 bounces; STEP-04 flag-OFF OTA).
