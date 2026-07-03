@@ -1,0 +1,100 @@
+schema_ref: lane-closeout.schema.yaml
+kind: LaneCloseout
+schema_version: '1.0'
+sprint_id: s8-vanda-night-dehum
+lane_id: data-327-moisture-telemetry
+status: ready_for_critic
+issue_ids: [327, 410]
+pull_request: 421
+baseline_sha: 087ab45cddd0057c9f9d2c6ac1a80e88f47e3b12
+head_sha: 5b1250255aa8f606aa322ac9fbd1a4a614290a08
+contract_hash: 7200b7dd47eb1af475345334313e1adf2fd2aac22e9b7db40862063dfeec3c29
+changed_paths:
+  - db/migrations/187-moisture-estimator-telemetry.sql
+  - ingestor/entity_map.py
+  - verdify_schemas/tests/test_firmware_drift.py
+validation_results:
+  - id: V1
+    command: make lint
+    exit_status: 0
+    result: passed
+    executed_at: '2026-07-03T21:14:00Z'
+    artifact: null
+  - id: V2
+    command: >-
+      .venv/bin/python -m pytest verdify_schemas/tests/ -q
+      --ignore=verdify_schemas/tests/test_views.py
+    exit_status: 0
+    result: passed
+    executed_at: '2026-07-03T21:16:38Z'
+    artifact: >-
+      All passed (4 skips) against a rebuilt disposable timescaledb
+      (schema.sql + all migrations incl. 187): drift guards,
+      test_firmware_drift.py (12), test_tunable_registry.py, test_tunables.py,
+      test_moisture_telemetry.py. GitHub CI on PR #421 re-executed green
+      (25 pass / 8 skipping publish jobs, 2026-07-03T21:20:42Z) incl.
+      Pydantic Schemas + Drift Guards, Migration rollback-safety guard,
+      Service restart hygiene.
+  - id: V3
+    command: >-
+      .venv/bin/python scripts/check_migration_rollback_safety.py
+      --rollback-wrap db/migrations/187-moisture-estimator-telemetry.sql
+    exit_status: 0
+    result: passed
+    executed_at: '2026-07-03T21:17:30Z'
+    artifact: >-
+      Comment-only edit preserved classification: OK to wrap in
+      BEGIN..ROLLBACK (non-self-transactional); fixture
+      test-187-moisture-estimator-telemetry re-run post-edit: PASS (rolled
+      back).
+  - id: V4
+    command: >-
+      pytest verdify_schemas/tests/test_firmware_drift.py with
+      firmware/greenhouse/{sensors,tunables}.yaml overlaid from pull/418/head
+    exit_status: 0
+    result: passed
+    executed_at: '2026-07-03T21:18:30Z'
+    artifact: >-
+      Merge-order proof: (a) origin/main entity_map + #418 YAMLs reproduces
+      #418's exact red (test_cfg_readback_sensors_are_routed_to_entity_map
+      FAILS: missing route cfg_dehum_vent_hold_enabled); (b) this branch +
+      #418 YAMLs: 12/12 pass (route live, staged allowlist self-shrunk,
+      inverse guard green); (c) this branch at main-state firmware: 12/12
+      pass (allowlist active). Overlay restored; no firmware files in diff.
+acceptance_evidence:
+  - criterion_id: FOLLOWUP-1-required-route
+    evidence_ids:
+      - >-
+        Route "cfg_dehum_vent_hold_enabled": "dehum_vent_hold_enabled" added
+        to _CFG_READBACK_ADDED_FW_V2, verified against the #418 diff (sensor
+        id/name, sw_dehum_vent_hold switch, numeric 0/1 BOOL-switch shape
+        matching existing cfg_sw_*_enabled readbacks;
+        _record_cfg_readback float()-coerces, NAN-gated) — V4 proof both
+        merge orders.
+    assessment: satisfied
+  - criterion_id: FOLLOWUP-2-doc-only-187-comment
+    evidence_ids:
+      - >-
+        mx_present COMMENT now states the {"raw": ...} fallback IS an object
+        (mx_present=true, contract fields NULL — fixture case C) and points
+        at mx_action/mx_reason for usable-row counting — V3 fixture re-pass.
+    assessment: satisfied
+discovered_issues: [420]
+residual_risks:
+  - >-
+    Pre-existing (now tracked as #420): manual _CFG_READBACK_ADDED_FW_V2
+    params incl. dehum_vent_hold_enabled are not in ALL_TUNABLES, so their
+    setpoint_snapshot writes are rejected (0 prod rows for
+    sw_onchip_band_enabled et al., verified read-only) — readback confirmation
+    for these switches is in-memory only until registry rows land.
+  - >-
+    PR #421 must merge before #418 re-runs checks for the routed-guard to go
+    green there; both merge orders are guard-safe (self-shrinking allowlist).
+worktree_clean: true
+worker_session_id: s8-data327-w1
+completed_at: '2026-07-03T21:22:00Z'
+limitations:
+  - >-
+    Broad make test not re-run for this follow-up (diff = one map line, one
+    test-staging block, one SQL comment; no runtime code paths beyond the
+    map); CI on PR #421 is fully green and is the broad gate.

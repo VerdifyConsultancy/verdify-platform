@@ -151,8 +151,14 @@ observability:
   runtime_checks:
     - "scripts/verdify-db.sh prod -c \"SELECT firmware_version, max(ts) FROM diagnostics GROUP BY 1 ORDER BY 2 DESC LIMIT 1\""
     - "scripts/verdify-db.sh prod -c \"02-06h median VPD / RH / night_min query (bake-report canonical form)\""
+    - 'Critic watch-item: flag-ON morning vent+reheat episodes — heat1 runtime/cycles KPI (phase-agnostic by design, fw critic ruling)'
+    - 'Critic watch-item: cold-night vent duty-cycle count vs invariant-14 cap 24 (corpus-blind path #419 — live-only evidence)'
+    - 'Critic watch-item: re-entry-gap idle sliver (floor..floor+1.0F) — material wet dwell there = spec-level ladder change, escalate not patch'
+    - 'Critic watch-item: climate_moisture_exchange JSON ~290 chars — confirm no downstream 255-char truncation on first live rows'""
   missing_telemetry:
     - 'mx estimator fields are EMPTY in prod until STEP-02 (consumers) + STEP-04 (emitter) complete — the reason #327 precedes the OTA'
+    - 'Replay corpus never populates outdoor_data_age_s (#419) — flag-ON behavior is invisible to the stock corpus; live bake is the only outdoor-aware evidence'
+
 rollback:
   ready: true
   strategy: >-
