@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-s8-vanda-night-dehum
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-03T22:15:00Z'
+updated_at: '2026-07-03T22:30:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -133,6 +133,24 @@ sessions:
   worktree: /private/tmp/claude-501/-Users-jason-repos-verdify-platform/17f4b1c3-9d61-4639-90f5-62fb219addce/scratchpad/.reviews/s8-ctl/fw-410-vent-reheat-hold-s8-fw410-c1
   pr_refs:
   - '#418'
+  artifact_refs: []
+- session_id: s8-data327-c2
+  parent_session_id: s8-outer-loop-2026-07-03
+  role: critic
+  executor: claude-local-subagent
+  repository: VerdifyConsultancy/verdify-platform
+  status: active
+  started_at: '2026-07-03T22:30:00Z'
+  ended_at: null
+  issue_ids:
+  - 327
+  - 410
+  lane_id: data-327-moisture-telemetry
+  wave_id: wave-s8-night-dehum
+  branch: data-327-cfg-readback-410
+  worktree: /private/tmp/claude-501/-Users-jason-repos-verdify-platform/17f4b1c3-9d61-4639-90f5-62fb219addce/scratchpad/.reviews/s8-ctl/data-327-moisture-telemetry-s8-data327-c2
+  pr_refs:
+  - '#421'
   artifact_refs: []
 events:
 - id: LEDGER-EVT-0001
@@ -791,6 +809,85 @@ events:
   data_summary: null
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0017
+  content_sha256: null
+- id: LEDGER-EVT-0019
+  sequence: 19
+  occurred_at: '2026-07-03T22:30:00Z'
+  event_type: worker_closeout
+  source: sprint-orchestrator
+  subject: 'data-327 follow-up closeout (PR #421)'
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids:
+    - s8-data327-w1
+    - s8-data327-c2
+    issue_ids:
+    - 327
+    - 410
+    - 420
+    lane_ids:
+    - data-327-moisture-telemetry
+    pr_ids:
+    - '#421'
+    - '#418'
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs:
+    - .agent-workflow/sprints/s8-vanda-night-dehum/lanes/closeout/data-327-cfg-readback-410.closeout.yaml
+    evidence_refs: []
+    external_refs: []
+  result: passed
+  summary: 'Micro-PR #421 head 5b12502 ready-for-critic: entity_map route for cfg_dehum_vent_hold_enabled
+    with self-shrinking allowlist making BOTH merge orders guard-safe (reproduced #418 red + green with
+    route); 187 mx_present comment fix (still safe-to-wrap); CI fully green; rule-7 = verdify-ingestor
+    only. Discovered #420: manual CFG_READBACK params rejected by SetpointSnapshot -> flag-ON transition
+    invisible in setpoint_snapshot; wave-plan STEP-06 verification amended to live entity readback.'
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0018
+  content_sha256: null
+- id: LEDGER-EVT-0020
+  sequence: 20
+  occurred_at: '2026-07-03T22:30:00Z'
+  event_type: critic_reviewed
+  source: sprint-orchestrator
+  subject: 'micro-PR #421 critic dispatched'
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids:
+    - s8-data327-w1
+    - s8-data327-c2
+    issue_ids:
+    - 327
+    - 410
+    lane_ids:
+    - data-327-moisture-telemetry
+    pr_ids:
+    - '#421'
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs:
+    - .agent-workflow/sprints/s8-vanda-night-dehum/lanes/closeout/data-327-cfg-readback-410.closeout.yaml
+    evidence_refs: []
+    external_refs: []
+  result: planned
+  summary: 'Fresh critic s8-data327-c2 dispatched; crux = independent reproduction of the both-merge-orders-safe
+    allowlist claim. Sequencing on approval: merge #421 -> rerun #418 drift-guard -> merge #418 at 98e3b50.'
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0019
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
