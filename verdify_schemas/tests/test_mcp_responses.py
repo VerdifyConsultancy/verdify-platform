@@ -167,11 +167,17 @@ class TestOutcomeKpi:
                 "by_action_reason": [
                     {
                         "action": "vent_dehum",
-                        "reason": "vent_plus_heat",
+                        "reason": "vent_plus_heat_hold",
                         "decisions": 7,
                         "avg_vent_vpd_gain_kpa": 0.12,
                         "avg_heat_vpd_gain_kpa": 0.2,
+                        # #327/#410: held-temp co-run fields + selected gain
+                        # + outdoor age (NULL-tolerant for pre-#410 emitters).
+                        "avg_vent_held_vpd_gain_kpa": 0.16,
+                        "avg_expected_vpd_gain_kpa": 0.16,
+                        "hold_required_decisions": 7,
                         "outdoor_fresh_decisions": 7,
+                        "avg_outdoor_age_s": None,
                         "vent_overcool_decisions": 0,
                         "heat_assist_corun_decisions": 7,
                         "heat_assist_active_decisions": 3,
@@ -187,6 +193,26 @@ class TestOutcomeKpi:
                 "wet_to_dehum_episodes_30m": 3,
                 "dehum_to_wet_episodes_30m": 1,
                 "transition_window_min": 30,
+                # #327: episode counters by estimator reason; pre-#385 rows
+                # bucket as estimator_absent.
+                "episodes_by_mx_reason": [
+                    {
+                        "mx_reason": "vent_plus_heat_hold",
+                        "episodes": 4,
+                        "samples": 120,
+                        "vent_dehum_episodes": 4,
+                        "heat_dehum_episodes": 0,
+                        "wetting_episodes": 0,
+                    },
+                    {
+                        "mx_reason": "estimator_absent",
+                        "episodes": 38,
+                        "samples": 900,
+                        "vent_dehum_episodes": 0,
+                        "heat_dehum_episodes": 2,
+                        "wetting_episodes": 6,
+                    },
+                ],
             },
             source_tables=["daily_summary", "v_climate_action_daily_scorecard", "climate_action_log"],
         )
@@ -202,7 +228,11 @@ class TestOutcomeKpi:
         assert dumped["action_scorecard"][0]["decisions"] == 7
         assert dumped["moisture_estimator"]["sample_count"] == 7
         assert dumped["moisture_estimator"]["by_action_reason"][0]["action"] == "vent_dehum"
+        assert dumped["moisture_estimator"]["by_action_reason"][0]["hold_required_decisions"] == 7
+        assert dumped["moisture_estimator"]["by_action_reason"][0]["avg_vent_held_vpd_gain_kpa"] == 0.16
         assert dumped["vpd_policy"]["wet_to_dehum_episodes_30m"] == 3
+        assert dumped["vpd_policy"]["episodes_by_mx_reason"][0]["mx_reason"] == "vent_plus_heat_hold"
+        assert dumped["vpd_policy"]["episodes_by_mx_reason"][1]["mx_reason"] == "estimator_absent"
         assert '"date":"2026-06-23"' in r.model_dump_json()
 
     def test_action_row_rejects_extra_fields(self):

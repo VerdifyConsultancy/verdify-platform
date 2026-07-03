@@ -17,9 +17,10 @@ Principles:
 
 from __future__ import annotations
 
+import math
 from typing import Literal
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, field_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from .climate_intent import ClimateAction, ClimatePriorityAxis, MoistureAssistState, MoistureZone
 
@@ -369,6 +370,140 @@ class ClimateActionLogRow(BaseModel):
     sensor_status: dict = Field(default_factory=dict)
     candidate_summary: str | None = None
     source_system_state: dict = Field(default_factory=dict)
+
+
+# ── #327 moisture-estimator telemetry (ADR-0003 §6.4 / ADR-0004) ────────────
+#
+# The firmware publishes the moisture-exchange estimator as ONE JSON text
+# sensor (climate_moisture_exchange, #385); the ingestor parses it and stores
+# the object under climate_action_log.source_system_state; migration 187's
+# v_moisture_estimator_telemetry view promotes it to typed columns.
+# These constants document the values the firmware emits today — consumers
+# must NOT enum-constrain on them (a new firmware reason has to flow through
+# ingest/queries unchanged; see MoistureExchangeTelemetry tolerance notes).
+
+MX_ACTIONS: frozenset[str] = frozenset({"none", "vent_dehum", "heat_assist", "vent_humidify"})
+
+MX_REASONS: frozenset[str] = frozenset(
+    {
+        "in_band",
+        "vpd_untrusted",
+        "vent_dehum",
+        "vent_plus_heat",
+        "vent_plus_heat_hold",  # 410 vent+heat-hold co-run
+        "heat_assist",
+        "vent_humidify",
+        "no_effective_action",
+    }
+)
+
+# Alternate emitter spellings the SQL surfaces (migration 187 view, mcp
+# outcome_kpi()) accept via COALESCE, mapped to the canonical contract field.
+# Firmware names the input `outdoor_data_age_s` internally; either spelling
+# lands in `outdoor_age_s`.
+MX_ACCEPTED_KEY_ALIASES: dict[str, str] = {"outdoor_data_age_s": "outdoor_age_s"}
+
+
+class MoistureExchangeTelemetry(BaseModel):
+    """JSON contract of the firmware `climate_moisture_exchange` text sensor.
+
+    Single source of truth for the estimator-payload key names shared by the
+    firmware emitter (firmware/greenhouse/controls.yaml), the ingestor write
+    path (climate_action_log.source_system_state), migration 187's
+    v_moisture_estimator_telemetry view, and the mcp outcome_kpi() parser.
+
+    TOLERANCE (binding for #327/#410):
+    - Every field is optional: live fw 995c9b3 predates even the #385 emitter
+      (all fields absent), and the #385-era emitter lacks the two #410 fields.
+    - `extra="allow"`: unknown keys from newer firmware pass through unchanged.
+    - Non-finite floats normalize to None so the stored JSONB stays castable.
+    - `vent_held_vpd_gain_kpa` and `hold_required` names are SETTLED with the
+      fw-410 lane — do not rename.
+    """
+
+    model_config = ConfigDict(extra="allow")
+
+    action: str | None = None  # MX_ACTIONS values today; permissive by design
+    reason: str | None = None  # MX_REASONS values today; permissive by design
+    vent_vpd_gain_kpa: float | None = None
+    heat_vpd_gain_kpa: float | None = None
+    vent_held_vpd_gain_kpa: float | None = None  # 410 (settled name)
+    hold_required: bool | None = None  # 410 (settled name)
+    expected_vpd_gain_kpa: float | None = None  # optional explicit emitter value
+    outdoor_fresh: bool | None = None
+    outdoor_age_s: float | None = None  # optional; outdoor_fresh is the verdict
+    vent_overcools: bool | None = None
+    heat_assist_corun: bool | None = None
+    heat_assist_active: bool | None = None
+    heat_assist_timer_s: float | None = None
+
+    @field_validator(
+        "vent_vpd_gain_kpa",
+        "heat_vpd_gain_kpa",
+        "vent_held_vpd_gain_kpa",
+        "expected_vpd_gain_kpa",
+        "outdoor_age_s",
+        "heat_assist_timer_s",
+    )
+    @classmethod
+    def finite_or_none(cls, v: float | None) -> float | None:
+        if v is not None and not math.isfinite(v):
+            return None
+        return v
+
+
+def normalize_moisture_exchange_telemetry(payload: dict) -> dict:
+    """Normalize a parsed climate_moisture_exchange payload for storage.
+
+    Coerces known fields to their contract types (numeric strings → float,
+    "true"/"false" → bool), drops non-finite numbers, and preserves unknown
+    keys verbatim. Absent stays absent: None fields are omitted rather than
+    written as JSON nulls, so a pre-#385/#410 payload never grows keys its
+    emitter did not send (this is what keeps the tolerance contract visible in
+    the stored rows). NEVER raises: a payload that does not validate
+    (wrong-typed field, {"raw": ...}-style oddities) is returned unchanged —
+    migration 187's view degrades it to NULL columns via its typeof guards.
+    """
+
+    try:
+        model = MoistureExchangeTelemetry.model_validate(payload)
+    except ValidationError:
+        return payload
+    return model.model_dump(mode="json", exclude_none=True)
+
+
+class MoistureEstimatorTelemetryRow(BaseModel):
+    """v_moisture_estimator_telemetry row (migration 187, #327).
+
+    Typed per-action-row projection of the estimator context used by #371
+    grading and the #410 bake evaluation. mx_* columns are NULL-tolerant by
+    construction: mx_present=False rows (pre-#385 firmware) carry no estimator
+    context at all; #385-era rows lack the two #410 fields.
+    """
+
+    model_config = ConfigDict(extra="ignore")
+
+    ts: AwareDatetime
+    greenhouse_id: str = "vallery"
+    climate_action: ClimateAction
+    priority_axis: ClimatePriorityAxis
+    vpd_target_kpa: float | None = None
+    vpd_target_delta_kpa: float | None = None
+    vpd_band_error_kpa: float | None = None
+    mx_present: bool = False
+    mx_action: str | None = None
+    mx_reason: str | None = None
+    vent_vpd_gain_kpa: float | None = None
+    heat_vpd_gain_kpa: float | None = None
+    vent_held_vpd_gain_kpa: float | None = None
+    hold_required: bool | None = None
+    expected_vpd_gain_kpa: float | None = None
+    outdoor_fresh: bool | None = None
+    outdoor_age_s: float | None = None
+    vent_overcools: bool | None = None
+    heat_assist_corun: bool | None = None
+    heat_assist_active: bool | None = None
+    heat_assist_timer_s: float | None = None
 
 
 class OverrideEvent(BaseModel):

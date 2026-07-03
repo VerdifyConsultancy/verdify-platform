@@ -423,6 +423,10 @@ STATE_MAP: dict[str, str] = {
     "climate_fog_block_reason": "climate_fog_block_reason",
     "climate_resource_cost_estimate": "climate_resource_cost_estimate",
     "climate_next_mist_eligible_s": "climate_next_mist_eligible_s",
+    # JSON estimator payload; contract = verdify_schemas.MoistureExchangeTelemetry
+    # (#327/#385/#410) — stored parsed+normalized under
+    # climate_action_log.source_system_state, promoted to typed columns by
+    # migration 187's v_moisture_estimator_telemetry view.
     "climate_moisture_exchange": "climate_moisture_exchange",
     "gl_main_state": "gl_main_state",
     "gl_main_reason": "gl_main_reason",

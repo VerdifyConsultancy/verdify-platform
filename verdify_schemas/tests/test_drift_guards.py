@@ -74,6 +74,7 @@ from verdify_schemas.telemetry import (
     Diagnostics,
     EnergySample,
     EquipmentStateEvent,
+    MoistureEstimatorTelemetryRow,
     OverrideEvent,
     SystemStateRow,
 )
@@ -164,6 +165,10 @@ DB_BACKED = [
     # Sprint 20/21 — telemetry + plan + setpoint + crops + lessons
     (ClimateRow, "climate"),
     (ClimateActionLogRow, "climate_action_log"),
+    # Migration 187 (#327): typed VIEW over climate_action_log's estimator
+    # JSONB. information_schema.columns covers views, so the same subset guard
+    # applies; until 187 lands the guard skips (view not found), then enforces.
+    (MoistureEstimatorTelemetryRow, "v_moisture_estimator_telemetry"),
     (Diagnostics, "diagnostics"),
     (EquipmentStateEvent, "equipment_state"),
     (EnergySample, "energy"),
