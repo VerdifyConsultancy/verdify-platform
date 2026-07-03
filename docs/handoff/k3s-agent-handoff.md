@@ -111,6 +111,18 @@ flash. The procedure and its traps:
 - **Device:** ESP32 `192.168.10.111` (OTA `:3232`, native API `:6053`). It
   currently runs **`2026.6.17.2042.dcc6078`** (the band-compliance firmware; pinch
   wired, `band_track_fraction=0.25` live).
+- **Pinch resets on every flash (#413/#377, verified 2026-07-03):**
+  `band_track_fraction` is `restore_value: no` in `firmware/greenhouse/globals.yaml`
+  — an OTA/reboot **cold-starts it to the compiled `initial_value`, `0.0` on
+  current `main`** (the ADR-0004 float flip), silently dropping the live
+  planner-pushed 0.25. The `crop_band_anchors`→NVS reconcile does **NOT** cover it
+  (it only re-asserts `restore_value: yes` band globals —
+  `docs/CONTROL-ARCHITECTURE.md` §7), and no dispatcher path re-pushes it: the
+  registry pins its bounds to `[0.0, 0.0]`, so MCP `set_tunable` rejects a nonzero
+  value and the dispatcher clamps a direct `setpoint_plan` row back to 0.0.
+  Post-OTA, execute the g-377 pinch decision (re-pin 0.25 — which first requires a
+  registry-bounds change — vs accept float 0.0) per the checklist step in
+  `docs/RELEASE-CHECKLIST.md` §B "Deploy + post".
 - **VERIFY the running firmware from telemetry — `diagnostics.firmware_version`
   — NEVER from `firmware/artifacts/last-good.version`.** `last-good` is the
   **rollback floor**, which deliberately lags the running binary through the 48 h
@@ -136,6 +148,13 @@ flash. The procedure and its traps:
   3. `ESPHOME_BIN=<esphome> SECRETS_SRC=<secrets.yaml> scripts/firmware-esphome-worktree.sh -s fw_version "$FW_VERSION" compile && … upload --device 192.168.10.111`
   4. `VERDIFY_DB_BACKEND=kube bash scripts/wait-for-firmware-version.sh "$FW_VERSION" --timeout 180` then `VERDIFY_DB_BACKEND=kube EXPECTED_FW_VERSION="$FW_VERSION" make sensor-health SINCE='5 minutes'`
   5. `bash scripts/archive-firmware-artifacts.sh "$FW_VERSION"` — **NOT** `--promote-last-good` (last-good stays on the prior baked binary through the 48 h bake; promote only after).
+  6. **Pinch decision + bake record (#413):** the flash just cold-started
+     `band_track_fraction` to `0.0` (see the pinch-reset bullet above). Execute the
+     g-377 decision, then record in the bake report: `band_track_fraction`
+     (readback proof from `setpoint_snapshot`), `dehum_vent_hold_enabled`
+     (`cfg_*` readback; OFF-default flag from #410), and the **envelope config**
+     (door screen-window open/closed — open ~2026-06-19 → fall per #412; never
+     change it mid-bake). Full step: `docs/RELEASE-CHECKLIST.md` §B "Deploy + post".
 - **The gates are real** (`scripts/firmware-deploy-preflight.sh`): no OTA while
   `alert_log` has unresolved critical/legacy-high rows; 48 h bake on
   `last-good.ota.bin` mtime; ≤1 OTA/calendar week; telemetry <300 s; action-log

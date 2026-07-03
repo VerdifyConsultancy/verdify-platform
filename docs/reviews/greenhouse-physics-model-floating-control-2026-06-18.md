@@ -5,6 +5,19 @@ the environment the crop actually experiences*, while respecting the floating pr
 (let the air roam, intervene minimally). Companion to the nature-alignment work
 (`band-single-source-of-truth`, `docs/adr/0003`).
 
+> **2026-07-03 envelope note (#412, added by #413):** the door screen-window has been
+> OPEN since ~2026-06-19 and **stays open until fall** (Jason, 2026-07-03). Until it
+> closes, the envelope exchange terms below — `U·A·(T_air − T_out)` in the energy
+> balance and the `infiltration` term in the moisture balance — include a large
+> **fixed open-window leak**, not the tight-envelope values this model assumed:
+> passive night air exchange is ~3× higher (the standing indoor−outdoor moisture
+> surplus stepped **+5.7 → +1.9 g/m³** at ~06-19/20 with flat fog/mister source duty
+> ~22%→~20% and no heat1 night-duty increase). Any parameter identification of
+> `U·A` / `k_vent` / infiltration over post-06-19 data reflects the open-window
+> regime, and closed-vent exchange assumptions are weakened while it is open.
+> **Never change the window state mid-bake/mid-experiment**; every bake/KPI
+> comparison window must record the envelope config (window open/closed).
+
 ## 0. The resolution in one line
 
 > **Float the air; constrain the plant.** Consistency is enforced on the crop's

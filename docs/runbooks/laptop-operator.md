@@ -100,6 +100,19 @@ healthy OTA) are documented in
 [`../handoff/k3s-agent-handoff.md`](../handoff/k3s-agent-handoff.md) §4 — read it
 before flashing.
 
+**Pinch resets on every flash (#413/#377):** `band_track_fraction` is
+`restore_value: no` in `firmware/greenhouse/globals.yaml`, so an OTA/reboot
+cold-starts it to the compiled `initial_value` — **`0.0` on current `main`**
+(ADR-0004) — regardless of the live planner-pushed 0.25. The
+`crop_band_anchors`→NVS reconcile does **NOT** re-assert it (that path only
+protects `restore_value: yes` band globals — `docs/CONTROL-ARCHITECTURE.md` §7),
+and the registry pins its bounds to `[0.0, 0.0]`, so no current push path can
+restore 0.25 without a registry-bounds change first. Post-flash, execute the
+g-377 pinch decision (re-pin vs accept float) and record `band_track_fraction` +
+`dehum_vent_hold_enabled` (#410) + the envelope config (door screen-window
+open/closed, #412) in the bake report — step-by-step in
+`docs/RELEASE-CHECKLIST.md` §B "Deploy + post".
+
 ```bash
 # Validate + compile (laptop venv esphome 2026.5.x):
 SECRETS_SRC=$HOME/.verdify/esphome-secrets.yaml \
