@@ -461,7 +461,13 @@ async def outcome_kpi(target_date: str = "") -> str:
     demand from one-minute climate samples plus the active setpoint/readback
     state. Moisture-estimator buckets are computed from
     climate_action_log.source_system_state->climate_moisture_exchange when the
-    OTA/deploy path has produced rows. Pass date as YYYY-MM-DD or omit for today."""
+    OTA/deploy path has produced rows; #327 makes that context first-class:
+    per-(action, reason) buckets now include the #410 held-temp fields
+    (vent_held_vpd_gain_kpa, hold_required), the selected/expected VPD gain,
+    and outdoor age, and vpd_policy carries episode counters by estimator
+    reason (episodes_by_mx_reason; pre-#385 rows bucket as estimator_absent).
+    Migration 187's v_moisture_estimator_telemetry view is the equivalent
+    typed SQL surface. Pass date as YYYY-MM-DD or omit for today."""
     greenhouse_id = "vallery"
     conn = await _db()
     try:
@@ -911,6 +917,27 @@ async def outcome_kpi(target_date: str = "") -> str:
                         AS vent_vpd_gain_kpa,
                     NULLIF(mx ->> 'heat_vpd_gain_kpa', '')::double precision
                         AS heat_vpd_gain_kpa,
+                    -- #327/#410 fields (settled names; NULL from pre-#410
+                    -- emitters). typeof-guarded like migration 187's
+                    -- v_moisture_estimator_telemetry so raw/odd payloads
+                    -- degrade to NULL instead of erroring.
+                    CASE WHEN jsonb_typeof(mx -> 'vent_held_vpd_gain_kpa') = 'number'
+                        THEN (mx ->> 'vent_held_vpd_gain_kpa')::double precision
+                    END AS vent_held_vpd_gain_kpa,
+                    CASE WHEN mx ->> 'hold_required' IN ('true', 'false')
+                        THEN (mx ->> 'hold_required')::boolean
+                    END AS hold_required,
+                    CASE WHEN jsonb_typeof(mx -> 'expected_vpd_gain_kpa') = 'number'
+                        THEN (mx ->> 'expected_vpd_gain_kpa')::double precision
+                    END AS expected_vpd_gain_kpa_raw,
+                    COALESCE(
+                        CASE WHEN jsonb_typeof(mx -> 'outdoor_age_s') = 'number'
+                            THEN (mx ->> 'outdoor_age_s')::double precision
+                        END,
+                        CASE WHEN jsonb_typeof(mx -> 'outdoor_data_age_s') = 'number'
+                            THEN (mx ->> 'outdoor_data_age_s')::double precision
+                        END
+                    ) AS outdoor_age_s,
                     CASE WHEN mx ->> 'outdoor_fresh' IN ('true', 'false')
                         THEN (mx ->> 'outdoor_fresh')::boolean
                     END AS outdoor_fresh,
@@ -926,6 +953,24 @@ async def outcome_kpi(target_date: str = "") -> str:
                     NULLIF(mx ->> 'heat_assist_timer_s', '')::double precision
                         AS heat_assist_timer_s
                 FROM estimator
+            ),
+            enriched AS (
+                -- Selected/expected gain: explicit emitter value if present,
+                -- else the selected path's own projection (held-temp gain for
+                -- the #410 vent_plus_heat_hold / hold_required co-run).
+                SELECT parsed.*,
+                    COALESCE(
+                        expected_vpd_gain_kpa_raw,
+                        CASE
+                            WHEN reason = 'vent_plus_heat_hold'
+                                 OR COALESCE(hold_required, false)
+                                THEN COALESCE(vent_held_vpd_gain_kpa, vent_vpd_gain_kpa)
+                            WHEN action IN ('vent_dehum', 'vent_humidify')
+                                THEN vent_vpd_gain_kpa
+                            WHEN action = 'heat_assist' THEN heat_vpd_gain_kpa
+                        END
+                    ) AS expected_vpd_gain_kpa
+                FROM parsed
             )
             SELECT
                 action,
@@ -935,13 +980,20 @@ async def outcome_kpi(target_date: str = "") -> str:
                     AS avg_vent_vpd_gain_kpa,
                 round(avg(heat_vpd_gain_kpa)::numeric, 3)::double precision
                     AS avg_heat_vpd_gain_kpa,
+                round(avg(vent_held_vpd_gain_kpa)::numeric, 3)::double precision
+                    AS avg_vent_held_vpd_gain_kpa,
+                round(avg(expected_vpd_gain_kpa)::numeric, 3)::double precision
+                    AS avg_expected_vpd_gain_kpa,
+                count(*) FILTER (WHERE hold_required)::int AS hold_required_decisions,
                 count(*) FILTER (WHERE outdoor_fresh)::int AS outdoor_fresh_decisions,
+                round(avg(outdoor_age_s)::numeric, 0)::double precision
+                    AS avg_outdoor_age_s,
                 count(*) FILTER (WHERE vent_overcools)::int AS vent_overcool_decisions,
                 count(*) FILTER (WHERE heat_assist_corun)::int AS heat_assist_corun_decisions,
                 count(*) FILTER (WHERE heat_assist_active)::int AS heat_assist_active_decisions,
                 round(avg(heat_assist_timer_s)::numeric, 0)::double precision
                     AS avg_heat_assist_timer_s
-            FROM parsed
+            FROM enriched
             GROUP BY action, reason
             ORDER BY decisions DESC, action, reason
             """,
@@ -1067,6 +1119,83 @@ async def outcome_kpi(target_date: str = "") -> str:
             greenhouse_id,
         )
 
+        # #327: VPD-policy episode counters by estimator reason (mx_reason).
+        # One row per modal estimator reason across the day's action episodes;
+        # pre-#385 rows (no parsed object) land in 'estimator_absent' so the
+        # counters stay meaningful across the fw 995c9b3 -> #385 -> #410
+        # rollout. This is the #371 grading surface for "did the cycle take
+        # vent_plus_heat_hold or heat_assist?".
+        vpd_policy_reason_rows = await conn.fetch(
+            """
+            WITH bounds AS (
+                SELECT
+                    ($1::date::timestamp AT TIME ZONE 'America/Denver') AS start_ts,
+                    (($1::date + 1)::timestamp AT TIME ZONE 'America/Denver') AS end_ts
+            ),
+            ordered AS (
+                SELECT
+                    l.ts,
+                    l.climate_action,
+                    l.priority_axis,
+                    lag(l.climate_action) OVER (ORDER BY l.ts) AS prev_action,
+                    CASE WHEN jsonb_typeof(
+                             l.source_system_state -> 'climate_moisture_exchange'
+                         ) = 'object'
+                        THEN NULLIF(
+                            l.source_system_state -> 'climate_moisture_exchange' ->> 'reason',
+                            ''
+                        )
+                    END AS mx_reason
+                FROM climate_action_log l
+                CROSS JOIN bounds b
+                WHERE l.greenhouse_id = $2
+                  AND l.ts >= b.start_ts
+                  AND l.ts < b.end_ts
+            ),
+            tagged AS (
+                SELECT
+                    *,
+                    sum(CASE WHEN prev_action IS DISTINCT FROM climate_action THEN 1 ELSE 0 END)
+                        OVER (ORDER BY ts ROWS UNBOUNDED PRECEDING) AS episode_id
+                FROM ordered
+            ),
+            episodes AS (
+                SELECT
+                    episode_id,
+                    climate_action,
+                    count(*)::int AS sample_count,
+                    bool_or(priority_axis = 'vpd') AS vpd_priority,
+                    COALESCE(
+                        mode() WITHIN GROUP (ORDER BY mx_reason),
+                        'estimator_absent'
+                    ) AS mx_reason
+                FROM tagged
+                GROUP BY episode_id, climate_action
+            )
+            SELECT
+                mx_reason,
+                count(*)::int AS episodes,
+                COALESCE(sum(sample_count), 0)::int AS samples,
+                count(*) FILTER (WHERE climate_action = 'DEHUM_VENT')::int
+                    AS vent_dehum_episodes,
+                count(*) FILTER (WHERE climate_action = 'HEAT' AND vpd_priority)::int
+                    AS heat_dehum_episodes,
+                count(*) FILTER (
+                    WHERE climate_action IN (
+                        'SEALED_HUMIDIFY',
+                        'SEALED_FOG',
+                        'VENT_COOL_MIST_ASSIST',
+                        'VENT_COOL_FOG_ASSIST'
+                    )
+                )::int AS wetting_episodes
+            FROM episodes
+            GROUP BY mx_reason
+            ORDER BY episodes DESC, mx_reason
+            """,
+            d,
+            greenhouse_id,
+        )
+
         moisture_sample_count = sum(row["decisions"] for row in moisture_rows)
         moisture_estimator = {
             "sample_count": moisture_sample_count,
@@ -1076,6 +1205,7 @@ async def outcome_kpi(target_date: str = "") -> str:
         vpd_policy = dict(vpd_policy_row) if vpd_policy_row else {}
         if vpd_policy:
             vpd_policy["transition_window_min"] = 30
+            vpd_policy["episodes_by_mx_reason"] = [dict(row) for row in vpd_policy_reason_rows]
         pending_metrics = []
         if not moisture_sample_count:
             pending_metrics.append("moisture_estimator: source path wired; waiting for OTA/deploy/live rows")

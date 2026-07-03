@@ -187,6 +187,8 @@ from .system_infra import (
     UtilityCost,
 )
 from .telemetry import (
+    MX_ACTIONS,
+    MX_REASONS,
     OVERRIDE_EVENT_TYPES,
     ClimateActionLogRow,
     ClimateRow,
@@ -194,8 +196,11 @@ from .telemetry import (
     EnergySample,
     EquipmentId,
     EquipmentStateEvent,
+    MoistureEstimatorTelemetryRow,
+    MoistureExchangeTelemetry,
     OverrideEvent,
     SystemStateRow,
+    normalize_moisture_exchange_telemetry,
 )
 from .topology import (
     Equipment,
@@ -375,7 +380,12 @@ __all__ = [
     "MaintenanceLog",
     "MountType",
     "MoistureAssistState",
+    "MoistureEstimatorTelemetryRow",
+    "MoistureExchangeTelemetry",
     "MoistureZone",
+    "MX_ACTIONS",
+    "MX_REASONS",
+    "normalize_moisture_exchange_telemetry",
     "NUMERIC_TUNABLES",
     "NutrientRecipe",
     "Observation",

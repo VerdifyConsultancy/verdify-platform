@@ -104,6 +104,7 @@ from verdify_schemas import (
     SetpointChange,
     SetpointSnapshot,
     SystemStateRow,
+    normalize_moisture_exchange_telemetry,
 )
 from verdify_schemas.tunable_registry import get as get_tunable
 
@@ -671,6 +672,17 @@ async def write_climate_action_log(pool: asyncpg.Pool, ts: datetime) -> bool:
     source_system_state = {entity: state.system.get(entity) for entity in sorted(CLIMATE_ACTION_LOG_ENTITIES)}
     moisture_exchange = _parse_json_object(state.system.get("climate_moisture_exchange"))
     if moisture_exchange:
+        # #327: normalize through the shared JSON contract
+        # (verdify_schemas.MoistureExchangeTelemetry) so migration 187's
+        # v_moisture_estimator_telemetry view and the MCP outcome_kpi() parser
+        # read consistent types. Tolerant by contract: normalization never
+        # raises — payloads that don't validate (e.g. the {"raw": ...}
+        # parse-failure fallback) pass through unchanged, unknown keys are
+        # preserved (only non-finite numbers are dropped, keeping JSONB
+        # castable), and the two #410 fields (vent_held_vpd_gain_kpa,
+        # hold_required) are optional like everything else (live fw 995c9b3
+        # emits none of these fields).
+        moisture_exchange = normalize_moisture_exchange_telemetry(moisture_exchange)
         source_system_state["climate_moisture_exchange"] = moisture_exchange
     resource_cost = _parse_json_object(state.system.get("climate_resource_cost_estimate"))
 
