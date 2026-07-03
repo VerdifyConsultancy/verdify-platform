@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-s8-vanda-night-dehum
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-03T23:45:00Z'
+updated_at: '2026-07-04T00:30:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -1421,6 +1421,77 @@ events:
   data_summary: null
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0032
+  content_sha256: null
+- id: LEDGER-EVT-0034
+  sequence: 34
+  occurred_at: '2026-07-04T00:30:00Z'
+  event_type: deployment_observed
+  source: sprint-orchestrator
+  subject: STEP-03 convergence verified + alert hygiene
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids: []
+    issue_ids:
+    - 410
+    - 411
+    lane_ids: []
+    pr_ids: []
+    deployment_ids:
+    - verdify-prod-dark
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs: []
+  result: passed
+  summary: 'Band divergence post-188: temps <=0.067F, vpd_target -0.005 kPa = CONVERGED (criterion met).
+    Pre-existing vpd_low/high device gap (-0.32/-0.20 kPa) filed as #424 (bake-relevant; post-OTA reconcile
+    may repair). Alert 7483 root-caused to 45 stale June band_track_fraction plan rows -> deactivated
+    surgically (UPDATE 45) -> auto-resolved. Alert 7482 remains the only OTA blocker.'
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0033
+  content_sha256: null
+- id: LEDGER-EVT-0035
+  sequence: 35
+  occurred_at: '2026-07-04T00:30:00Z'
+  event_type: gate_decision
+  source: sprint-orchestrator
+  subject: HR-02 OTA delegation
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids: []
+    issue_ids:
+    - 410
+    - 411
+    lane_ids: []
+    pr_ids: []
+    deployment_ids:
+    - verdify-prod-dark
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs: []
+  result: approved
+  summary: "Jason: 'Approved to OTA at your readiness' + 'do it now?'. Controller policy: no hard-gate\
+    \ override on inferred approval \u2014 flash proceeds automatically when blocking alerts hit zero\
+    \ (SUNSET plan_written auto-resolves 7482, due ~03:03Z); explicit 'override approved' flashes immediately.\
+    \ Binary pre-compiled from main; secrets/esphome/OTA-pw verified; readiness watcher armed. Flag-ON\
+    \ (STEP-06) remains a separate approval after the 48h soak."
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0034
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
