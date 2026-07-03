@@ -11,7 +11,8 @@
  *
  * HARDWARE DEPENDENCIES (enforced by caller, not here):
  *   - Relay min on/off times (ESPHome set_relay with min_on_ms/min_off_ms)
- *   - Gas heater min off time (MIN_HEAT_OFF_MS, typically 300s)
+ *   - Heater relay min off time, both stages (MIN_HEAT_OFF_MS, typically 300s;
+ *     heat1 is the ELECTRIC coil, heat2 is the gas stage)
  *   - Vent actuator travel time (ESPHome min_vent_on_s/min_vent_off_s)
  *
  * SENSOR_FAULT: ALL relays off. Freeze protection must be handled by a
@@ -147,10 +148,23 @@ inline float mixing_ratio_g_kg(float temp_f, float rh_pct) noexcept {
 inline float vpd_at_state_kpa(float temp_f, float vapor_e_kpa) noexcept {
     return std::max(0.0f, sat_vapor_pressure_kpa(temp_f) - vapor_e_kpa);
 }
-// Per-cycle temperature rise the gas heater realistically delivers — a PROBE for
-// the heat candidate's VPD gain. Named (NOT heat_hysteresis, which is a band not a
-// rate — using it would understate heat and mis-select vent on marginal cold rows).
+// Per-cycle temperature rise the stage-1 ELECTRIC heater (heat1) realistically
+// delivers — a PROBE for the heat candidate's VPD gain. Named (NOT heat_hysteresis,
+// which is a band not a rate — using it would understate heat and mis-select vent
+// on marginal cold rows). heat2 (the gas stage) never participates in dehum.
 static constexpr float GH_HEAT_ASSIST_PROBE_DF = 1.5f;
+
+// #410: hold-flavor dehum ENTRY re-hysteresis. After a hold-flavor DEHUM_VENT
+// exits at the heat-demand floor (band_heat_target_f + heat_hysteresis), re-ENTRY
+// requires the measured temp to recover this far ABOVE the floor, so a house that
+// sags to the floor cannot chatter the vent at the arming edge. Mechanical
+// anti-chatter minimum, NOT a tunable (precedent: COLD_VENT_COOL_EXIT_HYST_MIN_F).
+// Continuation of an in-flight hold and the vpd_min_safe rescue are exempt.
+static constexpr float GH_DEHUM_HOLD_REENTRY_F = 1.0f;
+
+// Forward decl: the #410 held-temp dehum candidate's actual-temp floor uses the
+// heat-stage-1 target (defined below with the band geometry helpers).
+inline float band_heat_target_f(const Setpoints& sp) noexcept;
 
 // ── ADR0003 §6.4 moisture-exchange selector ─────────────────────────────────
 // Deterministic per-cycle estimate of which action moves VPD toward target.
@@ -158,7 +172,16 @@ enum MoistureExchangeAction { MX_NONE, MX_VENT_DEHUM, MX_HEAT_ASSIST, MX_VENT_HU
 struct MoistureExchangeEstimate {
     MoistureExchangeAction action;
     bool   heat_assist_corun;   // heat1+vent both proven to move VPD toward target
-    float  vent_vpd_gain_kpa;   // signed, + = toward target
+    // #410: hold-flavor co-run — the vent candidate only helps if heat1 HOLDS the
+    // current temp while venting (the cooled-mix candidate failed). Selected only
+    // when sp.dehum_vent_hold_enabled; arms the co-run without the min-dwell and
+    // adds the reheat-to-temp_target demand in resolve_equipment.
+    bool   hold_required;
+    float  vent_vpd_gain_kpa;   // signed, + = toward target (at the cooled mix temp T_mix)
+    // #410: projected gain if heat1 holds the CURRENT temp while vapor exchanges
+    // toward outdoor: VPD' = es(T_now) − e_mix. Diagnostic/telemetry even when the
+    // hold candidate is disabled (feeds the #327 moisture telemetry).
+    float  vent_held_vpd_gain_kpa;
     float  heat_vpd_gain_kpa;
     bool   outdoor_fresh;
     bool   vent_overcools;
@@ -177,7 +200,7 @@ inline const char* moisture_exchange_action_name(MoistureExchangeAction action) 
 
 inline MoistureExchangeEstimate estimate_moisture_exchange(
     const SensorInputs& in, const Setpoints& sp) noexcept {
-    MoistureExchangeEstimate r{MX_NONE, false, 0.0f, 0.0f, false, false, "in_band"};
+    MoistureExchangeEstimate r{MX_NONE, false, false, 0.0f, 0.0f, 0.0f, false, false, "in_band"};
     if (!vpd_control_trusted(in)) { r.reason = "vpd_untrusted"; return r; }  // SAF-1/SF1
     const bool fresh = std::isfinite(in.outdoor_temp_f) && std::isfinite(in.outdoor_rh_pct)
                      && in.outdoor_data_age_s < sp.outdoor_staleness_max_s;
@@ -201,6 +224,12 @@ inline MoistureExchangeEstimate estimate_moisture_exchange(
             const float e_mix = e_in + k * (e_out - e_in);
             const float T_mix = in.temp_f + k * (in.outdoor_temp_f - in.temp_f);
             r.vent_vpd_gain_kpa = vpd_at_state_kpa(T_mix, e_mix) - vpd_now;
+            // #410 held-temp candidate: vapor exchanges toward outdoor but heat1
+            // HOLDS the current temperature, so VPD' = es(T_now) − e_mix. This is
+            // the summer-night lever (cooled gain ~0 because cooling cancels
+            // drying; held gain is the real drying benefit). Always computed for
+            // telemetry; only SELECTED under the flag + floor gate below.
+            r.vent_held_vpd_gain_kpa = vpd_at_state_kpa(in.temp_f, e_mix) - vpd_now;
             // Venting frigid air to dehumidify OVER-COOLS the house below the band
             // floor — counterproductive (you then need heat to recover) and it thrashes
             // the vent on a continuously-cold day (invariant #14). When venting would
@@ -209,12 +238,26 @@ inline MoistureExchangeEstimate estimate_moisture_exchange(
             vent_overcools = T_mix < sp.temp_low;
         }
         r.vent_overcools = vent_overcools;
-        const bool vent_helps = fresh && r.vent_vpd_gain_kpa > margin && !vent_overcools;
+        const bool vent_helps_cooled = fresh && r.vent_vpd_gain_kpa > margin && !vent_overcools;
         const bool heat_helps = r.heat_vpd_gain_kpa > margin;
-        if (vent_helps && heat_helps) { r.action = MX_VENT_DEHUM; r.heat_assist_corun = true; r.reason = "vent_plus_heat"; }
-        else if (vent_helps && r.vent_vpd_gain_kpa >= r.heat_vpd_gain_kpa) { r.action = MX_VENT_DEHUM; r.reason = "vent_dehum"; }
+        // #410 hold candidate gate: flag-enabled AND the MEASURED temp is at/above
+        // the heat-demand line (band_heat_target_f + heat_hysteresis) — the actual-
+        // temp floor that replaces the vent_overcools veto FOR THE HOLD CANDIDATE
+        // only (vent_overcools above is still computed/reported and still vetoes
+        // the cooled candidate). Flag OFF ⇒ can_hold==false ⇒ vent_helps_held==false
+        // ⇒ the ladder below degenerates to the exact pre-#410 selection.
+        const bool can_hold = sp.dehum_vent_hold_enabled
+            && in.temp_f >= (band_heat_target_f(sp) + sp.heat_hysteresis);
+        const bool vent_helps_held = fresh && r.vent_held_vpd_gain_kpa > margin && can_hold;
+        // Selection ladder (#410 / ADR0003 §6.4 addendum):
+        //   (1) cooled vent candidate — legacy semantics, bit-identical flag-OFF;
+        //   (2) held vent candidate — vent + heat1 hold co-run (hold_required);
+        //   (3) closed-vent heat assist;
+        //   (4) nothing effective.
+        if (vent_helps_cooled && heat_helps) { r.action = MX_VENT_DEHUM; r.heat_assist_corun = true; r.reason = "vent_plus_heat"; }
+        else if (vent_helps_cooled) { r.action = MX_VENT_DEHUM; r.reason = "vent_dehum"; }
+        else if (vent_helps_held) { r.action = MX_VENT_DEHUM; r.heat_assist_corun = true; r.hold_required = true; r.reason = "vent_plus_heat_hold"; }
         else if (heat_helps) { r.action = MX_HEAT_ASSIST; r.reason = "heat_assist"; }
-        else if (vent_helps) { r.action = MX_VENT_DEHUM; r.reason = "vent_dehum"; }
         else { r.reason = "no_effective_action"; }
         return r;
     }
@@ -826,10 +869,18 @@ inline ClimateActionDecision evaluate_climate_decision(
     const float dehum_hysteresis = band_vpd_hysteresis(sp);
     const bool dehum_enter = in.vpd_kpa < (sp.vpd_low - dehum_hysteresis);
     const bool dehum_continue = state.mode_prev == DEHUM_VENT && in.vpd_kpa < sp.vpd_low;
+    // #410: hold-flavor dehum ENTRY re-hysteresis. A hold-flavor candidate
+    // (mx.hold_required) may only ENTER once the measured temp has recovered
+    // GH_DEHUM_HOLD_REENTRY_F above the arming floor, so a floor exit cannot
+    // re-enter (vent-chatter) at the same edge. Continuation is exempt; the
+    // vpd_min_safe rescue (determine_mode) is exempt by construction (it forces
+    // the mode after this gate). Flag OFF ⇒ hold_required==false ⇒ gate is true.
+    const bool dehum_hold_entry_ok = !mx.hold_required
+        || in.temp_f >= (band_heat_target_f(sp) + sp.heat_hysteresis + GH_DEHUM_HOLD_REENTRY_F);
     const bool dehum_wanted = vpd_trusted
         && !sp.econ_block
         && dehum_effective
-        && (dehum_enter || dehum_continue);
+        && (dehum_continue || (dehum_enter && dehum_hold_entry_ok));
 
     const char* wet_block_reason = climate_wet_assist_block_reason(in, sp);
     const char* fog_block_reason = "none";
@@ -946,10 +997,12 @@ inline ClimateActionDecision evaluate_climate_decision(
         .moisture_exchange_action = moisture_exchange_action_name(mx.action),
         .moisture_exchange_reason = mx.reason,
         .moisture_vent_vpd_gain_kpa = mx.vent_vpd_gain_kpa,
+        .moisture_vent_held_vpd_gain_kpa = mx.vent_held_vpd_gain_kpa,
         .moisture_heat_vpd_gain_kpa = mx.heat_vpd_gain_kpa,
         .moisture_outdoor_fresh = mx.outdoor_fresh,
         .moisture_vent_overcools = mx.vent_overcools,
         .moisture_heat_assist_corun = mx.heat_assist_corun,
+        .moisture_hold_required = mx.hold_required,
         .moisture_heat_assist_active = state.dehum_heat_assist_active,
         .moisture_heat_assist_timer_ms = state.dehum_heat_assist_timer_ms
     };
@@ -1101,10 +1154,12 @@ inline ClimateActionDecision describe_effective_climate_decision(
         .moisture_exchange_action = moisture_exchange_action_name(mx.action),
         .moisture_exchange_reason = mx.reason,
         .moisture_vent_vpd_gain_kpa = mx.vent_vpd_gain_kpa,
+        .moisture_vent_held_vpd_gain_kpa = mx.vent_held_vpd_gain_kpa,
         .moisture_heat_vpd_gain_kpa = mx.heat_vpd_gain_kpa,
         .moisture_outdoor_fresh = mx.outdoor_fresh,
         .moisture_vent_overcools = mx.vent_overcools,
         .moisture_heat_assist_corun = mx.heat_assist_corun,
+        .moisture_hold_required = mx.hold_required,
         .moisture_heat_assist_active = state.dehum_heat_assist_active,
         .moisture_heat_assist_timer_ms = state.dehum_heat_assist_timer_ms
     };
@@ -1598,6 +1653,10 @@ inline Mode determine_mode_band_first(
     // BC-13: DEHUM_VENT heat-assist min-dwell. The timer accrues only while continuously
     // in the too-wet dehum direction; resets on exit / when the estimate flips. heat1
     // co-run arms once the dwell is satisfied AND the estimator proved heat+vent both help.
+    // #410: a HOLD-flavor entry (mx.hold_required) bypasses the min-dwell — the hold
+    // candidate is only viable WITH the reheat, so a dwell-delayed co-run would vent
+    // unheated for the whole dwell (the over-cool bug in miniature; the vpd_min_safe
+    // rescue would otherwise vent unheated for 5 min).
     const bool closed_heat_dehum_active =
         (mode == IDLE) && climate_reason_is(state.last_mode_reason, "heat_dehum");
     if (mode == DEHUM_VENT && mx.action == MX_VENT_DEHUM) {
@@ -1608,7 +1667,8 @@ inline Mode determine_mode_band_first(
     state.dehum_heat_assist_active =
         closed_heat_dehum_active
         || ((mode == DEHUM_VENT) && mx.heat_assist_corun
-            && state.dehum_heat_assist_timer_ms >= sp.dehum_heat_assist_min_dwell_ms);
+            && (mx.hold_required
+                || state.dehum_heat_assist_timer_ms >= sp.dehum_heat_assist_min_dwell_ms));
     if (mode == DEHUM_VENT && state.dehum_heat_assist_active) {
         state.last_mode_reason = "dehum_vent_heat";
     }
@@ -2483,9 +2543,19 @@ inline RelayOutputs resolve_equipment(
             // replaces BC-5's unconditional co-run. Arms only after the min-dwell
             // (state.dehum_heat_assist_active, set in determine_mode once the estimator
             // proved heat+vent BOTH move VPD toward target) AND a real heating demand.
+            // #410: for a HOLD-flavor co-run (mx.hold_required) the reheat demand is
+            // "hold the served temp_target while venting" — heat1 runs up to
+            // temp_target (not just the band_heat_target_f heating line), because
+            // deep-night temp sits above needs_heating_s1 ~99% of the time and an
+            // unheated vent over-cools toward outdoor, cancelling the drying gain.
+            // heat1 is the ELECTRIC coil (cycling is fine); heat2 (gas) NEVER co-runs.
             // controls.yaml exempts DEHUM_VENT from the heat<->air interlock so this
             // co-runs with the vent (the sanctioned exception); SAFETY_HEAT owns the rail.
-            if (state.dehum_heat_assist_active && needs_heating_s1) { out.heat1 = true; }
+            if (state.dehum_heat_assist_active
+                && (needs_heating_s1
+                    || (mx.hold_required && in.temp_f < sp.temp_target))) {
+                out.heat1 = true;
+            }
             // Aggressive dehum (both fans) when vpd is below the interior target minus
             // the aggressive margin; else the lead fan only.
             if (in.vpd_kpa < vpd_low_eff - sp.dehum_aggressive_kpa) {

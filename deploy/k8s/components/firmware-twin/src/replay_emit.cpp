@@ -237,6 +237,12 @@ static void process_row(const Header& h,
         }
         in.occupied = parse_bool(get("occupied"), false);
         in.outdoor_temp_f = parse_float(get("outdoor_temp_f"), NAN);
+        // #410: wire the exported outdoor RH (the BC-13 estimator's e_out input).
+        // Stock-invisible: every consumer sits behind the outdoor-freshness gate
+        // and the corpus never populates outdoor_data_age_s (fresh stays false);
+        // without this the zero-initialized 0% RH would fabricate a bone-dry
+        // outdoor whenever freshness IS forced (REPLAY_EMIT_OUTDOOR_FRESH below).
+        in.outdoor_rh_pct = parse_float(get("outdoor_rh_pct"), NAN);
         in.outdoor_dewpoint_f = parse_float(get("outdoor_dewpoint_f"), NAN);
         int age = parse_int(get("outdoor_data_age_s"), -1);
         in.outdoor_data_age_s = (age < 0) ? 99999u : (uint32_t)age;
@@ -373,6 +379,38 @@ static void process_row(const Header& h,
         if (dwell_preview_on) {
             sp.sw_dwell_gate_enabled = true;
             sp.temp_hysteresis = 2.0f;
+        }
+        // #410 flag-ON characterization hook (DWELL_ENABLED precedent):
+        // REPLAY_EMIT_DEHUM_VENT_HOLD=1 forces the dehum_vent_hold_enabled
+        // global ON for THIS build only. An OLD ref that predates the field
+        // simply ignores the env var (there is no sp_* corpus column for a
+        // default-only global). Default off — the stock rule-8 replay-diff
+        // stays byte-identical at THRESHOLD_PCT=0.
+        static const bool dehum_hold_preview_on = []{
+            const char* e = std::getenv("REPLAY_EMIT_DEHUM_VENT_HOLD");
+            return e && *e && *e != '0';
+        }();
+        if (dehum_hold_preview_on) {
+            sp.dehum_vent_hold_enabled = true;
+        }
+        // #410 characterization companion: the checked-in corpus carries
+        // outdoor_temp_f/outdoor_rh_pct on ~98k rows but NEVER populates
+        // outdoor_data_age_s, so `fresh` is false on every corpus row and the
+        // entire outdoor-aware vent-dehum estimator path is invisible to the
+        // stock replay. REPLAY_EMIT_OUTDOOR_FRESH=1 treats rows that HAVE both
+        // outdoor readings as fresh (age 10 s) so an enable-gated candidate can
+        // be characterized by SELF-diffing one binary (flag OFF vs ON) — never
+        // by OLD-vs-NEW across refs, which would conflate the freshness
+        // assumption with the change under test. Default off — stock replay
+        // byte-identical.
+        static const bool outdoor_fresh_preview_on = []{
+            const char* e = std::getenv("REPLAY_EMIT_OUTDOOR_FRESH");
+            return e && *e && *e != '0';
+        }();
+        if (outdoor_fresh_preview_on
+            && std::isfinite(in.outdoor_temp_f)
+            && std::isfinite(in.outdoor_rh_pct)) {
+            in.outdoor_data_age_s = 10u;
         }
         // ── Band-curve behavioral test mode (REPLAY_EMIT_BAND_DERIVE=1) ────────
         // The corpus path above feeds the band from recorded sp_* columns, so it
