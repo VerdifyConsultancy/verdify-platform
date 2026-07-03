@@ -3,7 +3,7 @@ schema_ref: wave-release-plan.schema.yaml
 kind: WaveReleasePlan
 schema_version: '1.0'
 wave_id: wave-s8-night-dehum
-status: draft
+status: approved
 scope:
   sprint_id: s8-vanda-night-dehum
   issue_ids: [410, 327, 413, 411, 377]
@@ -230,8 +230,8 @@ risks:
     statement: 'ArgoCD stale-scope sync rewrite (#317) could partially sync the promote.'
     mitigation: 'Scoped sync per the #408 pattern; argocd app diff must be empty post-sync (reconciliation check).'
 approval:
-  status: pending
-  approver: null
-  approved_at: null
+  status: approved
+  approver: jason
+  approved_at: '2026-07-03T23:59:00Z'
 prepared_at: '2026-07-03T20:05:00Z'
 planner: 'claude-fable-5 (s8 sprint-planning session, 2026-07-03)'

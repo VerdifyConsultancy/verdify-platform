@@ -8,8 +8,7 @@ updated_at: '2026-07-03T23:35:00Z'
 active_lanes: []
 blockers:
   - 'g-411-night-temp-priority open (Jason; blocks db-411-night-anchors + activation)'
-  - 'g-377-pinch-repin open (Jason; note: re-pin now requires a registry-bounds change, see #377 comment)'
-  - 'HR-02 OTA + activation approval (wave release plan) — after gates + STEP-02'
+  - 'g-377 DECIDED (float-joint-bake); wave APPROVED by jason — STEP-02 in motion; STEP-04 OTA remains a Jason hand-gate'
 next_action: >-
   GROUP 1 MERGED (#415/#417/#421/#418). Awaiting Jason: g-411 night-priority
   decision (unblocks db-411 lane), g-377 pinch decision, then the release wave
