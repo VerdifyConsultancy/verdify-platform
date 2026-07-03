@@ -151,8 +151,12 @@ COMMENT ON VIEW public.v_moisture_estimator_telemetry IS
 'mirror: verdify_schemas.MoistureExchangeTelemetry.';
 
 COMMENT ON COLUMN public.v_moisture_estimator_telemetry.mx_present IS
-'True when the row carries a parsed moisture-exchange estimator object. False '
-'for pre-#385 firmware rows and for raw/unparseable payloads.';
+'True when the row carries a moisture-exchange JSONB OBJECT. False for '
+'pre-#385 firmware rows (no key at all) and for payloads stored as a raw '
+'STRING (never JSON-parsed). NOTE: the ingestor''s parse-failure fallback '
+'{"raw": ...} IS an object, so those rows have mx_present = true with every '
+'contract field NULL -- check mx_action/mx_reason, not just mx_present, when '
+'counting usable estimator rows.';
 
 COMMENT ON COLUMN public.v_moisture_estimator_telemetry.mx_action IS
 'Estimator-selected exchange action: none | vent_dehum | heat_assist | '
