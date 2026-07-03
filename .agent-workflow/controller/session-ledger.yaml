@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-s8-vanda-night-dehum
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-03T21:45:00Z'
+updated_at: '2026-07-03T22:00:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -54,9 +54,9 @@ sessions:
   role: worker
   executor: claude-local-subagent
   repository: VerdifyConsultancy/verdify-platform
-  status: complete
+  status: active
   started_at: '2026-07-03T20:30:00Z'
-  ended_at: '2026-07-03T21:30:00Z'
+  ended_at: null
   issue_ids:
   - 327
   lane_id: data-327-moisture-telemetry
@@ -105,9 +105,9 @@ sessions:
   role: critic
   executor: claude-local-subagent
   repository: VerdifyConsultancy/verdify-platform
-  status: active
+  status: complete
   started_at: '2026-07-03T21:30:00Z'
-  ended_at: null
+  ended_at: '2026-07-03T22:00:00Z'
   issue_ids:
   - 327
   lane_id: data-327-moisture-telemetry
@@ -643,6 +643,116 @@ events:
   data_summary: null
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0013
+  content_sha256: null
+- id: LEDGER-EVT-0015
+  sequence: 15
+  occurred_at: '2026-07-03T22:00:00Z'
+  event_type: critic_reviewed
+  source: sprint-orchestrator
+  subject: data-327 critic verdict
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids:
+    - s8-data327-w1
+    - s8-data327-c1
+    issue_ids:
+    - 327
+    - 410
+    lane_ids:
+    - data-327-moisture-telemetry
+    pr_ids:
+    - '#417'
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs: []
+  result: approved
+  summary: 'Critic s8-data327-c1 APPROVED PR #417 at 06f6153: scope exact, 187 safe-to-wrap re-proven,
+    5-era tolerance verified, firmware emitter key-agreement confirmed against controls.yaml:1735-1748,
+    CI raw log shows 187 applied + drift guards 139/0 skips, prod probe confirms view absent. Residuals:
+    mx_present comment nit, SQL fixture not CI-wired, contract-hash bookkeeping nit.'
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0014
+  content_sha256: null
+- id: LEDGER-EVT-0016
+  sequence: 16
+  occurred_at: '2026-07-03T22:00:00Z'
+  event_type: handoff
+  source: sprint-orchestrator
+  subject: data-327 integrated
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids:
+    - s8-data327-w1
+    - s8-data327-c1
+    issue_ids:
+    - 327
+    - 410
+    lane_ids:
+    - data-327-moisture-telemetry
+    pr_ids:
+    - '#417'
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs: []
+  result: passed
+  summary: 'PR #417 squash-merged as 7a67436; #327 left open for the release wave; critic lease released.'
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0015
+  content_sha256: null
+- id: LEDGER-EVT-0017
+  sequence: 17
+  occurred_at: '2026-07-03T22:00:00Z'
+  event_type: worker_status
+  source: sprint-orchestrator
+  subject: data-327 scoped follow-up dispatched
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids:
+    - s8-data327-w1
+    - s8-data327-c1
+    issue_ids:
+    - 327
+    - 410
+    lane_ids:
+    - data-327-moisture-telemetry
+    pr_ids:
+    - '#418'
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs: []
+  result: planned
+  summary: 'Worker session s8-data327-w1 resumed for coordination follow-up on branch data-327-cfg-readback-410:
+    entity_map route for cfg_dehum_vent_hold_enabled (unblocks #418 drift-guard check) + 187 mx_present
+    comment fix. Within lane owned paths.'
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0016
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
