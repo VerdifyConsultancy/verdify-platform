@@ -7,6 +7,9 @@ data/*.csv
 data/replay_overrides.prev.csv.gz
 # Golden fixtures (tracked) — see Makefile test-firmware target
 !data/replay_overrides.csv.gz
+# #410 synthetic cold-night vent+reheat-hold fixture (tracked) — consumed by
+# cold_night_hold_fixture_* tests in test_greenhouse_logic.cpp
+!data/cold_night_hold.csv
 replay_emit
 replay_emit_follow
 replay_invariants

@@ -182,7 +182,8 @@ struct Setpoints {
     uint32_t mist_backoff_ms;
     // ── Firmware-v2 night rule (generic; replaces the ENV-2 clock window) ──
     // Never heat to chase humidity at night (solar phase >= 2.0). The rule is
-    // crop-agnostic: night heating for VPD wastes gas and collapses the
+    // crop-agnostic: night heating for VPD wastes energy (heat1 is the
+    // ELECTRIC stage; heat2 is the gas stage) and collapses the
     // day/night drop every crop in this house wants. Safety heat untouched.
     bool     sw_night_econ_heat_suppress_enabled; // default true
     // ── Firmware-v2 wet taper (replaces the dusk_cutoff_hour clock rail) ──
@@ -251,6 +252,13 @@ struct Setpoints {
     float    dehum_vent_gain_margin_kpa;     // min projected VPD-toward-target gain to act (anti-thrash)
     uint32_t dehum_heat_assist_min_dwell_ms; // min continuous DEHUM_VENT dwell before heat1 co-run arms
     float    vent_exchange_fraction;         // AI-tunable single-cycle air-exchange fraction toward outdoor
+    // #410 (ADR0003 §6.4 addendum): vent+reheat HELD-TEMP dehum candidate master
+    // enable. OFF (the shipped default) keeps the estimator ladder bit-identical
+    // to the pre-#410 logic; ON allows MX_VENT_DEHUM with hold_required when
+    // venting at the CURRENT (heat1-held) temperature moves VPD toward target
+    // even though the cooled-mix candidate cannot. Enabled later by a logged
+    // tunable push (decouples the OTA from the #411 night-temp decision).
+    bool     dehum_vent_hold_enabled;
 };
 
 static constexpr uint32_t STATE_SENTINEL = 0xBEEF0042;
@@ -480,10 +488,15 @@ struct ClimateActionDecision {
     const char* moisture_exchange_action;
     const char* moisture_exchange_reason;
     float moisture_vent_vpd_gain_kpa;
+    // #410: projected gain if heat1 HOLDS the current temp while venting
+    // (telemetry field name coordinated with data-327: vent_held_vpd_gain_kpa).
+    float moisture_vent_held_vpd_gain_kpa;
     float moisture_heat_vpd_gain_kpa;
     bool moisture_outdoor_fresh;
     bool moisture_vent_overcools;
     bool moisture_heat_assist_corun;
+    // #410: hold-flavor co-run selected (telemetry name: hold_required).
+    bool moisture_hold_required;
     bool moisture_heat_assist_active;
     uint32_t moisture_heat_assist_timer_ms;
 };
@@ -746,7 +759,10 @@ inline Setpoints default_setpoints() {
         // BC-13 (ADR0003 §6.4): moisture-exchange selector defaults.
         .dehum_vent_gain_margin_kpa = 0.02f,
         .dehum_heat_assist_min_dwell_ms = 300000u,   // 5 min
-        .vent_exchange_fraction = 0.30f
+        .vent_exchange_fraction = 0.30f,
+        // #410: vent+reheat held-temp dehum ships OFF (matches globals.yaml
+        // initial_value 'false'); flag-OFF behavior is bit-identical to pre-#410.
+        .dehum_vent_hold_enabled = false
     };
 }
 

@@ -53,7 +53,12 @@ plus air temp, broadband solar, and equipment state — enough to implement floa
 - The **edge-acting hysteresis FSM** — correct *as a corridor-keeper*; it must stop *chasing a
   target line*.
 - The **bidirectional dehum selector** (vent-vs-heat by outdoor moisture) and **fog-first
-  wetting** — these *are* cheapest-actuator-first.
+  wetting** — these *are* cheapest-actuator-first. (#410 adds a flag-gated **held-temp
+  vent candidate** to the selector — `vent_plus_heat_hold`, ADR-0003 §6.4 addendum:
+  vent while heat1 holds the current temp, duty-cycled off a measured-temp floor exit
+  at the heat-demand line. Selector-compatible with floating: it fires only on a
+  too-wet excursion at the corridor edge and holds the *measured* temp, not a target
+  line; `dehum_vent_hold_enabled` ships OFF.)
 - **Anti-chatter / dwell**, **sensor-input integrity**, and **dead-code purge** — all still
   needed (more so: floating acts at edges, so edge cleanliness + sensor trust matter).
 - **Single-arbitration FSM** (no dual PID).

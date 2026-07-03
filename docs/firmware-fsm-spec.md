@@ -68,7 +68,7 @@ Priority/precedence order = enum order. `IDLE == 7` is `static_assert`-pinned.
 | 3 | `SEALED_MIST` | VPD too high → humidify | closed | off | stage if cold | misters/fog |
 | 4 | `THERMAL_RELIEF` | sealed too long → purge | open | both | — | — |
 | 5 | `VENTILATE` | too hot → cool | open | lead (+2nd if hot) | — | fog assist if dry |
-| 6 | `DEHUM_VENT` | VPD too low → dump humidity | open | lead (+both if very wet) | — | — |
+| 6 | `DEHUM_VENT` | VPD too low → dump humidity | open | lead (+both if very wet) | h1 co-run iff estimator-armed (BC-13/#410; never h2) | — |
 | 7 | `IDLE` | in band | closed | off | stage if cold | econ-rescue heat |
 
 Mist sub-stages: `MIST_WATCH → MIST_S1 (targeted) → MIST_S2 (rotating) → MIST_FOG
@@ -95,6 +95,25 @@ After the climate pick, two **VPD safety rails** can still override:
 (reason `vpd_min_safe_rescue`). Then sealed entry/exit, the optional dwell gate
 (§7.3), and mist-stage escalation resolve.
 
+**Dehum candidate selection (BC-13 estimator + #410 hold flavor).** The
+`DEHUM_VENT` candidate only arms when `estimate_moisture_exchange()` returns
+`MX_VENT_DEHUM`. Its too-wet ladder (ADR-0003 §6.4 + addendum) is:
+(1) **cooled** vent candidate — projected gain at the mixed temperature `T_mix`
+clears the margin and does not over-cool below `temp_low` (legacy semantics,
+including the heat1 co-run after the min-dwell);
+(2) **held** vent candidate (`vent_plus_heat_hold`, gated on the
+`dehum_vent_hold_enabled` tunable, ships OFF) — the gain at the heat1-HELD
+current temperature clears the margin AND the measured temp is at/above the
+heat-demand line (`band_heat_target_f + heat_hysteresis`). Selecting it sets
+`hold_required`: the heat1 co-run arms **without** the min-dwell and reheats up
+to the served `temp_target` while venting (heat1 is the electric stage; heat2
+never participates);
+(3) closed-vent **heat assist** (`MX_HEAT_ASSIST`); (4) nothing effective.
+A hold-flavor candidate may only **enter** `DEHUM_VENT` once temp has recovered
+`GH_DEHUM_HOLD_REENTRY_F` (1.0 °F) above the heat-demand line (anti-chatter;
+continuation and the `vpd_min_safe` rescue are exempt — the rescue arms the
+hold-reheat on the same cycle it forces the vent).
+
 ### 3.3 Per-mode relay map (`resolve_equipment`, `greenhouse_logic.h:2006-2122`)
 
 `resolve_equipment` is pure: `(mode, inputs, setpoints, state, lead_is_fan1) →
@@ -109,7 +128,7 @@ RelayOutputs{vent, fan1, fan2, fog, heat1, heat2}`. Misters are driven from
 | `SEALED_MIST` | off | off / off | on iff `mist_stage==MIST_FOG ∧ permitted` | s1 iff cold; s1+s2 iff `heat2_latched` |
 | `THERMAL_RELIEF` | **on** | on / on | off | off / off |
 | `VENTILATE` | **on** | lead on / 2nd on iff `temp>Thigh+stage2_delta` | on iff `vpd>vpd_high_eff+fog_escalation_kpa ∧ permitted` | off / off |
-| `DEHUM_VENT` | **on** | lead on / both iff `vpd<vpd_low_eff−dehum_aggressive_kpa` | off | off / off |
+| `DEHUM_VENT` | **on** | lead on / both iff `vpd<vpd_low_eff−dehum_aggressive_kpa` | off | h1 iff `dehum_heat_assist_active ∧ (needs_heating_s1 ∨ (hold_required ∧ temp<temp_target))` (BC-13 co-run; #410 hold, flag-gated); h2 **never** |
 | `IDLE` | off | off / off | off | s1 iff cold; s1+s2 iff `heat2_latched`; econ-rescue s1 (§8.1) |
 
 **Safety/override overlays (applied after the per-mode map):**
@@ -266,9 +285,9 @@ Defaults from `default_setpoints()` (`greenhouse_types.h`) / `globals.yaml`:
 | `fog_escalation_kpa` | 0.4 kPa | MIST_FOG entry; VENTILATE fog assist | threshold only |
 | `dehum_aggressive_kpa` | 0.3 kPa | DEHUM both-fans entry | threshold only |
 | `bias_heat` / `bias_cool` | 0.0 °F | symmetric target offset (planner-tunable) | no hysteresis |
-| `band_track_fraction` | **0.50** | pinches the CONTROL band toward `temp_target`/`vpd_target` (BC-3) | per-axis width floor (see §7.4) |
+| `band_track_fraction` | **0.0** (float — ADR-0004) | pinches the CONTROL band toward `temp_target`/`vpd_target` when pushed non-zero | per-axis width floor (see §7.4) |
 
-### 7.4 Band-tracking pinch — strive toward target, do not float (BC-3, ADR0003 §6.1)
+### 7.4 Band-tracking pinch — optional diagnostic transform (float is the default, ADR-0004; reverses BC-3/ADR0003 §6.1)
 
 `climate_band_error()` (`greenhouse_logic.h`) is a **do-nothing envelope**: it returns
 `0.0` for any value inside `[low, high]`. By itself that means the controller *floats*
@@ -279,12 +298,16 @@ the served target by `band_track_fraction` — `low += f·(target−low)`, `high
 the target curve, not merely kept inside the band. The **served band and the safety rails
 (`safety_min/max`, `vpd_*_safe`) are untouched** — the wide band stays the safety bound.
 
-- **Default 0.50, and it is the DEFAULT (float is retired).** The authoritative device
-  value is set in the `controls.yaml` setpts initializer (`.band_track_fraction =
-  id(band_track_fraction)`, global default `0.50`); `default_setpoints()` matches so the
-  native tests and replay exercise the real behavior. It is a **bounded planner knob**
-  ([0,1], registry `planner_pushable`); the planner may modulate tracking tightness but
-  the float-envelope (0) is no longer the operating default.
+- **Default 0.0 — FLOAT is the default (ADR-0004; supersedes the BC-3 "pinch by
+  default" claim that stood here).** The authoritative device value is set in the
+  `controls.yaml` setpts initializer (`.band_track_fraction =
+  id(band_track_fraction)`, global default `0.0`, `restore_value: no`);
+  `default_setpoints()` matches (0.0) so the native tests and replay exercise the
+  float corridor. It remains a **bounded planner knob** ([0,1], registry
+  `planner_pushable`): the live device value is whatever the planner last pushed
+  (0.25 as of 2026-07-03 — a #377 trial value; ADR-0004's direction is 0), so a
+  reboot/OTA boots 0.0 until the next push. Nonzero is an explicit
+  operator/diagnostic escape hatch, not the operating default.
 - **Demand-overlap width floor.** Because `band_heat_target_f = low + 0.25·max(2,W)` and
   heat-stage-1 fires at `+ heat_hysteresis`, a too-narrow pinched band could make the heat
   trigger meet the cooling edge (heat+cool demanded at one temp → thrash). The pinch caps
