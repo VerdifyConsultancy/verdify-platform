@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-s8-vanda-night-dehum
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-03T23:35:00Z'
+updated_at: '2026-07-03T22:55:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -151,6 +151,22 @@ sessions:
   worktree: /private/tmp/claude-501/-Users-jason-repos-verdify-platform/17f4b1c3-9d61-4639-90f5-62fb219addce/scratchpad/.reviews/s8-ctl/data-327-moisture-telemetry-s8-data327-c2
   pr_refs:
   - '#421'
+  artifact_refs: []
+- session_id: s8-db411-w1
+  parent_session_id: s8-outer-loop-2026-07-03
+  role: worker
+  executor: claude-local-subagent
+  repository: VerdifyConsultancy/verdify-platform
+  status: active
+  started_at: '2026-07-04T00:20:00Z'
+  ended_at: null
+  issue_ids:
+  - 411
+  lane_id: db-411-night-anchors
+  wave_id: wave-s8-night-dehum
+  branch: db-411-night-anchors
+  worktree: /private/tmp/claude-501/-Users-jason-repos-verdify-platform/17f4b1c3-9d61-4639-90f5-62fb219addce/scratchpad/.worktrees/s8-ctl/db-411-night-anchors
+  pr_refs: []
   artifact_refs: []
 events:
 - id: LEDGER-EVT-0001
@@ -1120,6 +1136,116 @@ events:
   data_summary: null
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0025
+  content_sha256: null
+- id: LEDGER-EVT-0027
+  sequence: 27
+  occurred_at: '2026-07-03T22:55:00Z'
+  event_type: gate_decision
+  source: sprint-orchestrator
+  subject: g-411 + g-377 decided; wave approved
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids: []
+    issue_ids:
+    - 411
+    - 377
+    lane_ids: []
+    pr_ids: []
+    deployment_ids:
+    - verdify-prod-dark
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs: []
+  result: approved
+  summary: 'Jason 2026-07-03: g-411=dry-roots (full revert 65.71/60.71/70.71 + vpd_target 0.83, DIF deferred
+    to fall); g-377=accept float; wave-s8-night-dehum APPROVED (''Agree on wave. Go''). db-411 lane dispatched
+    (s8-db411-w1) to author migration 188.'
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0026
+  content_sha256: null
+- id: LEDGER-EVT-0028
+  sequence: 28
+  occurred_at: '2026-07-03T22:55:00Z'
+  event_type: deployment_observed
+  source: sprint-orchestrator
+  subject: 'STEP-02 EXECUTED: containers + migration 187 live'
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids: []
+    issue_ids:
+    - 410
+    - 327
+    lane_ids: []
+    pr_ids:
+    - '#422'
+    deployment_ids:
+    - verdify-prod-dark
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs: []
+  result: passed
+  summary: 'Prod Promote: dry-run default found, re-dispatched mode=pull-request, #320 org block hit ->
+    PR #422 opened by operator fallback, digests-only surface verified, merged 4ecbdcb. First gated sync
+    hit the #317 stale-scope rewrite (3 resources, deployments unrolled); migrate PreSync job ran at new
+    digest but is verify-not-rebuild (no-op on existing schema) -> migration 187 applied via psql tooling
+    per CLAUDE.md: rollback-wrap proof clean on prod, real apply verified (view live; 217 rows/h all mx_present=false
+    = tolerance case). Remediation selective sync (explicit 5-resource list, prune:false) Succeeded: api/ingestor/mcp/planner
+    on new digests, all ready; rule-7 bounces inherent (Recreate/rollout). Residual OutOfSync: grafana
+    CM + Namespace (PRE-EXISTING drift, excluded from wave scope, investigate separately).'
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0027
+  content_sha256: null
+- id: LEDGER-EVT-0029
+  sequence: 29
+  occurred_at: '2026-07-03T22:55:00Z'
+  event_type: diagnostic_created
+  source: sprint-orchestrator
+  subject: 'OTA preflight blocker: critical alert 7482'
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids: []
+    issue_ids:
+    - 410
+    - 327
+    lane_ids: []
+    pr_ids: []
+    deployment_ids:
+    - verdify-prod-dark
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs: []
+  result: observed
+  summary: "alert_log 7482 planner_required_plan_missed (SUNRISE timed_out, due 12:06Z \u2014 PRE-DATES\
+    \ all S8 execution). Auto-resolves when a later required trigger reaches plan_written (SUNSET due\
+    \ 2026-07-04T03:03Z). Peak-Stress trigger acked 21:12Z (planner worked pre-rollout); MCP rotation\
+    \ at 22:35Z risked the 06-23 stale-client mode -> verdify-hermes-iris restarted (documented fix),\
+    \ rolled clean, 0 errors. STEP-04 OTA blocked until 7482 resolves (freeze rule 1)."
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0028
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001

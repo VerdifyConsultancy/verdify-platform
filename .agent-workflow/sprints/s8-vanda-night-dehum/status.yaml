@@ -8,7 +8,8 @@ updated_at: '2026-07-03T23:35:00Z'
 active_lanes:
   - db-411-night-anchors
 blockers:
-  - 'g-377 DECIDED (float-joint-bake); wave APPROVED by jason — STEP-02 in motion; STEP-04 OTA remains a Jason hand-gate'
+  - 'STEP-02 COMPLETE (containers + 187 live, verified). STEP-04 OTA blocked by alert 7482 (planner SLA miss, pre-S8) — auto-resolves on tonight SUNSET plan_written; Hermes restarted post-MCP-rotation'
+  - 'db-411 lane authoring migration 188 (g-411 decided: dry-roots full revert + vpd_target 0.83)'
 next_action: >-
   GROUP 1 MERGED (#415/#417/#421/#418). Awaiting Jason: g-411 night-priority
   decision (unblocks db-411 lane), g-377 pinch decision, then the release wave
