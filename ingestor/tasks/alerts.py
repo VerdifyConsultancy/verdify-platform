@@ -150,8 +150,7 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
         # Reuses sensor_offline (the forecast-staleness precedent) with a
         # dedicated sensor_id, so no schema/enum change is needed.
         obs_health = await conn.fetchrow(
-            "SELECT max(ts) AS last_obs, EXTRACT(EPOCH FROM now() - max(ts))::int AS age_s "
-            "FROM image_observations"
+            "SELECT max(ts) AS last_obs, EXTRACT(EPOCH FROM now() - max(ts))::int AS age_s FROM image_observations"
         )
         obs_last = obs_health["last_obs"] if obs_health else None
         obs_age_s = obs_health["age_s"] if obs_health else None
