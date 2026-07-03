@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-s8-vanda-night-dehum
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-03T22:30:00Z'
+updated_at: '2026-07-03T22:50:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -888,6 +888,47 @@ events:
   data_summary: null
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0019
+  content_sha256: null
+- id: LEDGER-EVT-0021
+  sequence: 21
+  occurred_at: '2026-07-03T22:50:00Z'
+  event_type: critic_reviewed
+  source: sprint-orchestrator
+  subject: 'micro-PR #421 critic verdict'
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids:
+    - s8-data327-w1
+    - s8-data327-c2
+    issue_ids:
+    - 327
+    - 410
+    - 420
+    lane_ids:
+    - data-327-moisture-telemetry
+    pr_ids:
+    - '#421'
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs: []
+  result: changes_requested
+  summary: "Critic s8-data327-c2: CHANGES_REQUESTED \u2014 entity_map key must be the NAME-slug object_id\
+    \ cfg___dehum_vent_hold_enabled (bullet -> 3 underscores), not the ESPHome id form; id-form route\
+    \ is wire-dead and CI-invisible (guard candidate set = id UNION slug). Bonus finding: all 5 existing\
+    \ manual CFG_READBACK routes are wire-dead by the same defect; #420 understates (two breaks in series).\
+    \ Merge-order-safety mechanism itself CONFIRMED by full reproduction. Fix validated in critic scratch\
+    \ (12/12 both firmware states). Routed back to worker s8-data327-w1."
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0020
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
