@@ -3,7 +3,7 @@ schema_ref: sprint-plan.schema.yaml
 kind: SprintPlan
 schema_version: '1.0'
 sprint_id: s8-vanda-night-dehum
-status: awaiting_approval
+status: active
 goal: >-
   Make the overnight center-zone (bare-root Vanda) climate dryable per the
   converged #410 analysis and the 2026-07-03 adversarial design review: land the
@@ -305,6 +305,6 @@ review_plan:
         responsibility: 'Migration 188 implementing the g-411 decision; prepared not applied'
     next_review: 'HR-01: Jason approves/revises this plan (the plan PR is the approval vehicle).'
 approval:
-  status: pending
-  approver: null
-  approved_at: null
+  status: approved
+  approver: jason
+  approved_at: '2026-07-03T20:14:19Z'

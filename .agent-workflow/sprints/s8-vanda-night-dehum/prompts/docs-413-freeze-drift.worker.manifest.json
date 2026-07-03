@@ -1,0 +1,20 @@
+{
+  "schema_ref": "compiled-prompt-manifest.schema.yaml",
+  "kind": "CompiledPromptManifest",
+  "schema_version": "1.0",
+  "generated_at": "2026-07-03T20:16:51Z",
+  "role": "worker",
+  "sprint_id": "s8-vanda-night-dehum",
+  "lane_id": "docs-413-freeze-drift",
+  "output": "/private/tmp/claude-501/-Users-jason-repos-verdify-platform/17f4b1c3-9d61-4639-90f5-62fb219addce/scratchpad/s8-ctl/.agent-workflow/sprints/s8-vanda-night-dehum/prompts/docs-413-freeze-drift.worker.md",
+  "inputs": {
+    "common_operating_contract": "/Users/jason/repos/verdify-platform/.agent-skills/verdify-skills/1.0.0/COMMON_OPERATING_CONTRACT.md",
+    "role_skill": "/Users/jason/repos/verdify-platform/.agent-skills/verdify-skills/1.0.0/skills/lane-delivery/SKILL.md",
+    "lane_contract": "/private/tmp/claude-501/-Users-jason-repos-verdify-platform/17f4b1c3-9d61-4639-90f5-62fb219addce/scratchpad/s8-ctl/.agent-workflow/sprints/s8-vanda-night-dehum/lanes/contracts/docs-413-freeze-drift.contract.yaml"
+  },
+  "sha256": {
+    "common_operating_contract": "026f8cd1b9431066cd1f775b62eb566e65fc3c1518af64bb2cec84b40d2ae3eb",
+    "role_skill": "4710ee7a1f71cefef867dc02f4bebc80d581da77ce30c6a892c1bf8ca1d9ebf9",
+    "lane_contract": "22b136c62c8c89a3899d85e615c81751e94894788969e0b65530442c1c4c076d"
+  }
+}
