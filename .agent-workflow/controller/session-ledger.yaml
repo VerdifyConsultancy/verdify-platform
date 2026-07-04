@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-s8-vanda-night-dehum
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-04T00:30:00Z'
+updated_at: '2026-07-04T01:45:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -1492,6 +1492,48 @@ events:
   data_summary: null
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0034
+  content_sha256: null
+- id: LEDGER-EVT-0036
+  sequence: 36
+  occurred_at: '2026-07-04T01:45:00Z'
+  event_type: deployment_observed
+  source: sprint-orchestrator
+  subject: 'STEP-04 EXECUTED: flag-OFF firmware OTA ACCEPTED'
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids: []
+    issue_ids:
+    - 410
+    - 420
+    - 424
+    lane_ids:
+    - fw-410-vent-reheat-hold
+    pr_ids: []
+    deployment_ids:
+    - esp32-ota-2026.7.3.1931.ab18fe8
+    policy_decision_ids: []
+  refs:
+    artifact_refs:
+    - firmware/artifacts/2026.7.3.1931.ab18fe8
+    evidence_refs: []
+    external_refs: []
+  result: passed
+  summary: "OTA'd 2026.7.3.1931.ab18fe8 (main, flag-OFF) at 01:33:20Z with Jason's explicit sign-off overriding\
+    \ only alert 7482 (reason documented). Sensor-health 27/0/0; clean SW reset; wifi -52dBm. Post-OTA\
+    \ battery: band_track_fraction 0.25->0.0 on reboot (g-377 float EXECUTED, snapshot-recorded); mx telemetry\
+    \ LIVE (first mx_present=true row); cfg_dehum_vent_hold_enabled wire route delivers 0.0 (flag OFF\
+    \ confirmed; snapshot write rejected exactly per #420 \u2014 entity-readback verification per wave\
+    \ plan); temps/vpd_target converged; #424 vpd_low/high gap persists post-reboot (soak-window investigation).\
+    \ Envelope=OPEN (#412) recorded. 48h flag-OFF soak starts 01:33Z -> flag-ON eligible ~2026-07-06T01:33Z\
+    \ pending Jason + canaries. Rollback floor unchanged (last-good)."
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0035
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
