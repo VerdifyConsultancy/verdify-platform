@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-s8-vanda-night-dehum
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-04T02:40:00Z'
+updated_at: '2026-07-04T03:20:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -1568,6 +1568,43 @@ events:
   data_summary: null
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0036
+  content_sha256: null
+- id: LEDGER-EVT-0038
+  sequence: 38
+  occurred_at: '2026-07-04T03:20:00Z'
+  event_type: diagnostic_created
+  source: sprint-orchestrator
+  subject: 'Planner recovered: SUNSET plan_written; alert 7482 auto-resolved; E2E surface validation'
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids: []
+    issue_ids:
+    - 410
+    - 424
+    lane_ids: []
+    pr_ids: []
+    deployment_ids:
+    - esp32-ota-2026.7.3.1931.ab18fe8
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs: []
+  result: passed
+  summary: 'SUNSET reached plan_written (delivered 02:33Z, resolved pre-SLA); alert 7482 AUTO-RESOLVED
+    -> 0 blocking alerts; the override-bypassed condition cleared naturally within ~2h of the OTA. E2E
+    surface validation: fn_band_setpoints @ solar midnight = 65.59F/0.829; mv_band_curve (graphs source,
+    10-min refresh) carries the new corridor (65.72/0.830 @ 07:00Z); graphs/lab/api all HTTP 200. Caveats
+    logged: graphs draw DB-derived band while #424 device vpd_low/high gap persists; mx telemetry has
+    no Grafana panel yet (#371-family follow-up candidate).'
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0037
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
