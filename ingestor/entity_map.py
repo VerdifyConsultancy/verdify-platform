@@ -551,19 +551,16 @@ _CFG_READBACK_ADDED_FW_V2 = {
     # with no readback (fire-and-forget). sensors.yaml now publishes the cfg_*; map
     # it so the ingestor can confirm the device holds the operator's value.
     "cfg_sw_night_econ_heat_suppress_enabled": "sw_night_econ_heat_suppress_enabled",
-    # #410: vent+reheat held-temp dehum enable readback (freeze rule 6). BOOL
-    # switch (fw switch sw_dehum_vent_hold over global dehum_vent_hold_enabled),
-    # published like the other cfg_* switch readbacks as a numeric 0/1 template
-    # sensor (NAN until cfg_first_pull_ok). KEY IS THE WIRE OBJECT_ID — the
-    # NAME slug of "Cfg • Dehum Vent Hold Enabled" (ESPHome per-char slugify:
-    # space•space → three underscores), NOT the YAML id
-    # cfg_dehum_vent_hold_enabled. aioesphomeapi delivers the name slug, so an
-    # id-form key never matches on the wire (the vent_latch_timer incident in
-    # firmware/greenhouse/sensors.yaml; #420 tracks the 5 older manual routes
-    # below that are wire-dead this way). Route lands one cycle AHEAD of the
-    # fw-410 OTA/merge (PR #418) — staged in test_firmware_drift.py's
-    # self-shrinking allowlist until the sensor exists in firmware YAML.
-    "cfg___dehum_vent_hold_enabled": "dehum_vent_hold_enabled",
+    # #410/#420: the vent+reheat held-temp dehum enable readback
+    # (cfg___dehum_vent_hold_enabled → sw_dehum_vent_hold_enabled) now flows
+    # from the registry's cfg_readback_object_id (CFG_READBACK_MAP_REG). The
+    # PR #421 manual route here was retired when the registry row landed —
+    # this dict merges LAST into CFG_READBACK_MAP, so keeping it would have
+    # shadowed the registry-derived route with a conflicting canonical name
+    # (dehum_vent_hold_enabled has no registry row; SetpointSnapshot would
+    # keep rejecting it — issue #420 break (b)). The 5 manual routes above
+    # remain #420 scope (their keys are id-form and wire-dead as documented
+    # in the issue).
     # Item-3 arbiter switch readback (cfg_arbiter_zone_enabled →
     # sw_arbiter_zone_enabled) now flows from the registry's cfg_readback_object_id
     # (CFG_READBACK_MAP_REG); the manual alias here was redundant and is removed.

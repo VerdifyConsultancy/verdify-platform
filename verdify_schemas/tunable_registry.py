@@ -1057,6 +1057,27 @@ REGISTRY: dict[str, TunableDef] = {
         tier=2,
         notes="Margin below vpd_low that upgrades dehumidification demand; validate_setpoints also caps it below vpd_low.",
     ),
+    "sw_dehum_vent_hold_enabled": TunableDef(
+        name="sw_dehum_vent_hold_enabled",
+        kind="switch",
+        default=0,
+        esp_object_id="dehum_vent_hold_enabled",
+        cfg_readback_object_id="cfg___dehum_vent_hold_enabled",
+        push_owner="operator",
+        planner_pushable=False,
+        tier=2,
+        notes="#410/#420: OFF-default activation flag for the S8 vent+reheat "
+        "held-temp dehum hold. Activation is Jason-gated (wave STEP-06) via the "
+        "sanctioned logged push path; iris must never toggle it "
+        "(controller_safety — MCP set_tunable rejects non-planner_policy rows). "
+        "Wire object_ids are the aioesphomeapi NAME slugs (the #421 wire-slug "
+        "lesson): switch 'Dehum Vent Hold Enabled' → dehum_vent_hold_enabled "
+        "(YAML id sw_dehum_vent_hold), sensor 'Cfg • Dehum Vent Hold Enabled' → "
+        "cfg___dehum_vent_hold_enabled. Canonical name is sw_-prefixed because "
+        "the dispatcher/RT-listener push paths route switch_command by that "
+        "prefix (entity_map SWITCH_TO_ENTITY); an unprefixed name would push a "
+        "wire-dead number_command at the switch entity.",
+    ),
     "vent_latch_timeout_ms": TunableDef(
         name="vent_latch_timeout_ms",
         kind="numeric",
