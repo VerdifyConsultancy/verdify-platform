@@ -13,7 +13,7 @@ every claim carries probe timestamps; canaries re-probed ≥60 min apart.
 | `sw_dehum_vent_hold_enabled` | **0 (OFF)** — flip pending PR #425 promote (Jason directed early activation 2026-07-04, superseding the 48h soak; freeze rules exempt tunable pushes) | — | cfg readback 0.0 via wire route |
 | Night band anchors | 60.71 / 65.71 / 70.71 °F, vpd_target 0.83 (migration 188, g-411 dry-roots) | 2026-07-03T23:00Z | prod re-probes 23:00Z + 02:38Z identical |
 | Envelope | **door screen-window OPEN** (#412; open since ~06-19, until fall; NEVER change mid-bake) | — | Jason 2026-07-03 |
-| Known bake-floor caveat | #424: device vpd_low/high ≈0.3/0.2 kPa BELOW served curve (pre-existing; dehum entries arm later than intended) | under investigation | v_band_device_divergence |
+| Known bake-floor caveat | #424 RESOLVED as view artifact — device is CORRECT and enforces the control envelope (`fn_house_vpd_control_band`: night floor ≈0.5 kPa, not the crop curve ≈0.74 the design assumed). CONSEQUENCE: hold episodes arm only on quite-wet excursions; a ~0.70 night may see few/none. Tuning lever if under-delivery: `night_vpd_bias_kpa` (planner-pushable 0–0.25, no OTA). View fix = migration 189 (queued) | 2026-07-04 trace | #424 comment |
 
 ## Baselines
 

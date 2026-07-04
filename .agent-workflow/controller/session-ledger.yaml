@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-s8-vanda-night-dehum
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-04T14:30:00Z'
+updated_at: '2026-07-04T15:10:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -209,9 +209,9 @@ sessions:
   role: critic
   executor: claude-local-subagent
   repository: VerdifyConsultancy/verdify-platform
-  status: active
+  status: complete
   started_at: '2026-07-04T14:30:00Z'
-  ended_at: null
+  ended_at: '2026-07-04T15:10:00Z'
   issue_ids:
   - 420
   lane_id: data-420-flag-registry
@@ -1724,6 +1724,47 @@ events:
   data_summary: null
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0039
+  content_sha256: null
+- id: LEDGER-EVT-0041
+  sequence: 41
+  occurred_at: '2026-07-04T15:10:00Z'
+  event_type: critic_reviewed
+  source: sprint-orchestrator
+  subject: '#425 critic verdict + #424 root cause'
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids:
+    - s8-data420-c1
+    issue_ids:
+    - 420
+    - 424
+    - 410
+    lane_ids:
+    - data-420-flag-registry
+    pr_ids:
+    - '#425'
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs: []
+  result: approved
+  summary: "#425 APPROVED at 8d63f88 + merged fbae876: sw_ prefix wire-trap verified (3rd wire-bug class),\
+    \ shadowing removal mandatory, planner lockout proven; CRITICAL procedural correction: MCP set_tunable\
+    \ REJECTS the operator-locked class \u2014 flip = INSERT INTO setpoint_changes source=manual -> RT\
+    \ listener -> switch_command; rule-7 restarts REQUIRED first (else silent no-op); reboot reverts flag\
+    \ OFF. #424 root-caused: VIEW artifact (device enforces fn_house_vpd_control_band exactly; view compares\
+    \ vpd vs the raw anchor curve); fix = mig 189 view CTE; policy note: night dehum floor is the control\
+    \ envelope (~0.5) not the crop curve (~0.74) -> hold episodes rarer than designed; lever = night_vpd_bias_kpa."
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0040
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
