@@ -1,0 +1,71 @@
+---
+schema_ref: lane-contract.schema.yaml
+kind: LaneContract
+schema_version: '1.0'
+sprint_id: s8-vanda-night-dehum
+lane_id: data-420-flag-registry
+title: '#420 (partial): registry row for dehum_vent_hold_enabled so the sanctioned push path can flip it'
+status: approved
+issue_ids: [420]
+coupling_justification: null
+objective: >-
+  Register dehum_vent_hold_enabled in verdify_schemas/tunable_registry.py as an
+  OPERATOR-owned, NOT-planner-pushable switch (kind=switch, default=0, follow the
+  sw_summer_vent_enabled TunableDef shape; esp entity is switch sw_dehum_vent_hold,
+  readback sensor cfg_dehum_vent_hold_enabled) so MCP set_tunable + the RT listener
+  + SetpointSnapshot accept it — enabling the Jason-approved STEP-06 flag-ON via
+  the sanctioned logged path instead of an out-of-band device write.
+desired_outcome: >-
+  set_tunable('dehum_vent_hold_enabled', 1, ...) validates; snapshot rows persist;
+  no planner exposure (iris cannot toggle it); the manual _CFG_READBACK_ADDED_FW_V2
+  route from PR #421 reconciled with the registry-derived route (no double-route,
+  drift guards green).
+non_goals:
+  - 'No firmware changes; no other #420 params (the remaining 4 manual routes stay for the full #420 fix).'
+  - 'No prod apply/push from the lane; the controller executes the flip after promote.'
+baseline_sha: 217f74b5ba2700ac016b2ea9d5d2dc07030664ab
+branch: data-420-flag-registry
+module_contracts:
+  - verdify_schemas/tests/test_tunable_registry.py
+  - verdify_schemas/tests/test_drift_guards.py
+worktree_policy: {one_coding_session_per_worktree: true, lock_required: true}
+lease_policy: {worker_ttl_hours: 6, critic_ttl_hours: 3}
+runtime_namespace: {strategy: derived_at_dispatch}
+ownership:
+  domains: [db-schema, ingestor, mcp]
+  owned_paths:
+    - verdify_schemas/
+    - ingestor/entity_map.py
+  prohibited_paths: [firmware/, db/migrations/, mcp/, docs/]
+  coordination_required_paths: []
+  owned_interfaces:
+    - 'tunable registry row dehum_vent_hold_enabled (operator-owned, planner_pushable=false)'
+dependencies: {hard: [], soft: []}
+acceptance_criteria:
+  - id: LANE-AC-01
+    statement: >-
+      Registry row exists with kind=switch, default=0, planner_pushable=false,
+      operator ownership; registry_value_error('dehum_vent_hold_enabled', 1.0)
+      returns None; planner prompt/registry surfaces do NOT expose it to iris
+      (prove via the registry tier/tests).
+    sprint_acceptance_ids: [SPR-AC-06]
+    evidence_required: ['test output + grep proof of planner non-exposure']
+  - id: LANE-AC-02
+    statement: >-
+      No double-route: the manual #421 CFG map entry and the registry-derived
+      readback route reconciled (one authoritative route; wire object_id
+      cfg___dehum_vent_hold_enabled preserved per the #421 critic finding);
+      test_firmware_drift + drift guards green.
+    sprint_acceptance_ids: [SPR-AC-06]
+    evidence_required: ['drift suite output']
+validation_commands:
+  - {id: V1, command: make lint, purpose: lint, required: true}
+  - {id: V2, command: '.venv/bin/pytest verdify_schemas/tests/ --ignore=verdify_schemas/tests/test_views.py -q', purpose: schema+registry+drift suites, required: true}
+required_evidence: ['registry diff', 'suite outputs', 'rule-7 restart list in PR body (verdify-mcp + verdify-ingestor)']
+git_policy: {pull_request_required: true, github_checks_required: true, self_merge_allowed: false, clean_worktree_required: true}
+escalation_conditions:
+  - 'Registry exposure model cannot express operator-only (would leak to iris) — stop and report.'
+  - 'Any needed edit outside verdify_schemas/ + ingestor/entity_map.py.'
+definition_of_done:
+  - 'PR open, checks green, critic approval, merged; NO pushes to prod/device from the lane.'
+approval: {status: approved, approver: jason, approved_at: '2026-07-04T13:50:00Z'}
