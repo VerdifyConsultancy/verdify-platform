@@ -37,9 +37,7 @@ idle dwell, morning hold episodes, mx JSON truncation.
 
 ## Flag-ON nights (to be appended)
 
-_(pending: flip via `set_tunable('sw_dehum_vent_hold_enabled', 1, ...)` after PR #425
-promote + bounces; then nightly rows here with median VPD / RH / night_min / DIF /
-vent cycles / heat1 duty / mx_reason episode counts / canary verdicts)_
+_(pending: flip via `INSERT INTO setpoint_changes (parameter,value,source) VALUES ('sw_dehum_vent_hold_enabled',1,'manual')` after PR #425 promote + rule-7 bounces — MCP set_tunable rejects the operator-locked class by design; flag reverts OFF on any device reboot (restore_value:no), re-check readback after reboots. Then nightly rows: median VPD / RH / night_min / DIF / vent cycles / heat1 duty / mx_reason episodes / canary verdicts)_
 
 ## Verdict
 

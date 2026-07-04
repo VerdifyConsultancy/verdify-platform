@@ -130,7 +130,7 @@ deployment_strategy:
       success_criteria: 'setpoint_snapshot readback matches the decided value; states recorded in the bake-report skeleton'
       rollback_trigger: 'n/a (tunable push, instantly revertible)'
     - id: STEP-06
-      action: 'Jason-approved flag-ON (2026-07-04 directive superseded the 48h soak; freeze rules exempt tunable pushes; reference night banked): logged set_tunable sw_dehum_vent_hold_enabled=1 (registered name per PR #425 — sw_ prefix REQUIRED for switch_command wire routing)'
+      action: "Jason-approved flag-ON (2026-07-04 directive superseded the 48h soak): AFTER rule-7 restarts on the #425 images, INSERT INTO setpoint_changes (ts,parameter,value,source) VALUES (now(),'sw_dehum_vent_hold_enabled',1,'manual') — MCP set_tunable REJECTS this operator-locked class by design (critic F-procedure, PR #425). Verify: ingestor RT-push log, entity readback=1, setpoint_snapshot rows. NOTE restore_value:no — any reboot reverts OFF, nothing re-pushes; re-check after reboots. Rollback: same INSERT value 0."
       success_criteria: 'cfg_dehum_vent_hold_enabled ENTITY readback true (live entity state / device API — not setpoint_snapshot, see #420); first night shows DEHUM_VENT+heat1 episodes with mx_reason=vent_plus_heat_hold in telemetry'
       rollback_trigger: 'Any release-health blocking signal -> set_tunable false (NO OTA needed)'
     - id: STEP-07
