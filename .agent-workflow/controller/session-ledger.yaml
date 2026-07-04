@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-s8-vanda-night-dehum
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-04T01:45:00Z'
+updated_at: '2026-07-04T02:40:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -1534,6 +1534,40 @@ events:
   data_summary: null
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0035
+  content_sha256: null
+- id: LEDGER-EVT-0037
+  sequence: 37
+  occurred_at: '2026-07-04T02:40:00Z'
+  event_type: diagnostic_created
+  source: sprint-orchestrator
+  subject: 'Soak watch T+1h: all nominal'
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids: []
+    issue_ids:
+    - 410
+    lane_ids: []
+    pr_ids: []
+    deployment_ids:
+    - esp32-ota-2026.7.3.1931.ab18fe8
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs: []
+  result: passed
+  summary: 'T+1h07: fw holding ab18fe8; 0 DEHUM_VENT+heat1 rows since OTA (flag-OFF behavioral proof);
+    101 mx_present=true telemetry rows; only alert 7482 open; SUNSET trigger DELIVERED 02:33Z (Hermes
+    restart proven), plan_written pending (due 03:03Z); 188 anchors durability re-probe PASSED (23:00Z
+    -> 02:38Z identical: 60.71/65.71/70.71/0.83, >=60min per gate).'
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0036
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
