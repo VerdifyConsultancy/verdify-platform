@@ -3,12 +3,13 @@ schema_ref: status.schema.yaml
 kind: SprintStatus
 schema_version: '1.0'
 sprint_id: s8-vanda-night-dehum
-state: VERIFYING_DEPLOYMENT
-updated_at: '2026-07-04T13:45:00Z'
+state: AWAITING_OUTCOME_ACCEPTANCE
+updated_at: '2026-07-04T14:55:00Z'
 active_lanes: []
 blockers:
-  - 'STEPS 02-04 COMPLETE. OTA 2026.7.3.1931.ab18fe8 ACCEPTED 01:33Z (flag OFF, pinch floated to 0.0 per g-377). 48h soak -> flag-ON eligible ~07-06T01:33Z (Jason + canaries)'
-  - 'Watch: alert 7482 auto-resolve on SUNSET (~03:03Z); #424 vpd_low/high device gap persists (soak investigation); night canaries read tomorrow 02-06h'
+  - 'ALL WAVE STEPS 01-06 EXECUTED. FLAG ON since 2026-07-04T14:49Z (Jason early-activation directive). STEP-07 canary window running: night sentinel (auto flag-off, pre-authorized) + daily bake reads; HR-03 after 2 flag-ON nights'
+  - 'Expectation note (#424): night dehum floor = control envelope ~0.5 kPa; few hold episodes possible at ~0.70 nights; lever = night_vpd_bias_kpa (no OTA)'
+  - 'Binary 48h bake completes ~07-06T01:33Z -> propose firmware-promote-last-good (Jason)'
 next_action: >-
   GROUP 1 MERGED (#415/#417/#421/#418). Awaiting Jason: g-411 night-priority
   decision (unblocks db-411 lane), g-377 pinch decision, then the release wave

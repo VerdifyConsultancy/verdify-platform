@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-s8-vanda-night-dehum
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-04T15:10:00Z'
+updated_at: '2026-07-04T14:55:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -1765,6 +1765,48 @@ events:
   data_summary: null
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0040
+  content_sha256: null
+- id: LEDGER-EVT-0042
+  sequence: 42
+  occurred_at: '2026-07-04T14:55:00Z'
+  event_type: deployment_observed
+  source: sprint-orchestrator
+  subject: "STEP-06 EXECUTED: FLAG ON \u2014 #410 vent+reheat hold ARMED in production"
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids: []
+    issue_ids:
+    - 410
+    - 420
+    lane_ids: []
+    pr_ids:
+    - '#425'
+    - '#426'
+    deployment_ids:
+    - esp32-ota-2026.7.3.1931.ab18fe8
+    policy_decision_ids: []
+  refs:
+    artifact_refs:
+    - docs/reviews/s8-vanda-night-dehum-bake-report.md
+    evidence_refs: []
+    external_refs: []
+  result: passed
+  summary: 'Chain: #425 merged fbae876 -> publish -> promote PR #426 merged a333b146 (#320 fallback) ->
+    scoped sync Succeeded -> ingestor/mcp rolled to #425 images (rule-7) -> FLIP 14:44:49Z via setpoint_changes
+    INSERT source=manual (critic-F procedure; Jason directives ''Can we just call flag-on now''/''Deploy?
+    Continue'') -> RT push 14:49:07Z ''sw_dehum_vent_hold_enabled=1 -> ESP32 (<1s)'' -> snapshot readback
+    0->1 at 14:49:37Z (proving #420 fix) -> estimator alive (vent_plus_heat) -> 0 alerts. 48h-soak requirement
+    superseded by Jason''s explicit early-activation directive (freeze rules exempt tunable pushes; reference
+    night banked). Canary sentinels armed: night auto-flag-off cron (night_min<64F / vent>10 / heat2 breach
+    = pre-authorized rollback) + daily bake-report cron. Wave now in STEP-07 canary window -> HR-03.'
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0041
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
