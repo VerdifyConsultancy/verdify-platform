@@ -140,7 +140,7 @@ Verification:
 
 ### S8: Vanda Night Dehum (vent+reheat + telemetry + gated activation)
 
-Status: `Awaiting approval`
+Status: `Executing — 48h flag-OFF soak (OTA ab18fe8 accepted 2026-07-04T01:33Z; flag-ON eligible ~07-06T01:33Z, Jason gate)`
 
 Goal: dry the overnight center-zone air per #410 (02-06h median VPD 0.61 ->
 >=0.78) via the design-reviewed vent+reheat held-temp path, shipped flag-OFF and
