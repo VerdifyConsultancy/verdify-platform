@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-s8-vanda-night-dehum
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-04T13:45:00Z'
+updated_at: '2026-07-04T14:30:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -185,6 +185,41 @@ sessions:
   worktree: /private/tmp/claude-501/-Users-jason-repos-verdify-platform/17f4b1c3-9d61-4639-90f5-62fb219addce/scratchpad/.reviews/s8-ctl/db-411-night-anchors-s8-db411-c1
   pr_refs:
   - '#423'
+  artifact_refs: []
+- session_id: s8-data420-w1
+  parent_session_id: s8-outer-loop-2026-07-03
+  role: worker
+  executor: claude-local-subagent
+  repository: VerdifyConsultancy/verdify-platform
+  status: complete
+  started_at: '2026-07-04T13:55:00Z'
+  ended_at: '2026-07-04T14:30:00Z'
+  issue_ids:
+  - 420
+  - 410
+  lane_id: data-420-flag-registry
+  wave_id: wave-s8-night-dehum
+  branch: data-420-flag-registry
+  worktree: null
+  pr_refs:
+  - '#425'
+  artifact_refs: []
+- session_id: s8-data420-c1
+  parent_session_id: s8-outer-loop-2026-07-03
+  role: critic
+  executor: claude-local-subagent
+  repository: VerdifyConsultancy/verdify-platform
+  status: active
+  started_at: '2026-07-04T14:30:00Z'
+  ended_at: null
+  issue_ids:
+  - 420
+  lane_id: data-420-flag-registry
+  wave_id: wave-s8-night-dehum
+  branch: data-420-flag-registry
+  worktree: null
+  pr_refs:
+  - '#425'
   artifact_refs: []
 events:
 - id: LEDGER-EVT-0001
@@ -1650,6 +1685,45 @@ events:
   data_summary: null
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0038
+  content_sha256: null
+- id: LEDGER-EVT-0040
+  sequence: 40
+  occurred_at: '2026-07-04T14:30:00Z'
+  event_type: worker_closeout
+  source: sprint-orchestrator
+  subject: 'data-420-flag-registry closeout (PR #425)'
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids:
+    - s8-data420-w1
+    - s8-data420-c1
+    issue_ids:
+    - 420
+    - 410
+    lane_ids:
+    - data-420-flag-registry
+    pr_ids:
+    - '#425'
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs: []
+  result: passed
+  summary: "PR #425 head 8d63f88, CI green. Registered sw_dehum_vent_hold_enabled (operator-only controller_safety,\
+    \ planner locked out) \u2014 worker caught the push-side wire trap: unprefixed name routes to number_command\
+    \ = silent wire-dead push (twin of #421). Manual #421 CFG route removed (would SHADOW the registry\
+    \ route). Wave STEP-06 corrected to the sw_ name. Critic s8-data420-c1 verifying end-to-end wire soundness\
+    \ + exact flip procedure."
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0039
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001

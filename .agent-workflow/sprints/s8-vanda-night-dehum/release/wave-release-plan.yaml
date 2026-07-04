@@ -130,7 +130,7 @@ deployment_strategy:
       success_criteria: 'setpoint_snapshot readback matches the decided value; states recorded in the bake-report skeleton'
       rollback_trigger: 'n/a (tunable push, instantly revertible)'
     - id: STEP-06
-      action: '48h flag-OFF soak (freeze-rule bake), then Jason-approved flag-ON: logged set_tunable dehum_vent_hold_enabled=true'
+      action: 'Jason-approved flag-ON (2026-07-04 directive superseded the 48h soak; freeze rules exempt tunable pushes; reference night banked): logged set_tunable sw_dehum_vent_hold_enabled=1 (registered name per PR #425 — sw_ prefix REQUIRED for switch_command wire routing)'
       success_criteria: 'cfg_dehum_vent_hold_enabled ENTITY readback true (live entity state / device API — not setpoint_snapshot, see #420); first night shows DEHUM_VENT+heat1 episodes with mx_reason=vent_plus_heat_hold in telemetry'
       rollback_trigger: 'Any release-health blocking signal -> set_tunable false (NO OTA needed)'
     - id: STEP-07
