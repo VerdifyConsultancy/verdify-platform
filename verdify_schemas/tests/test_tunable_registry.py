@@ -626,6 +626,59 @@ class TestPlannerWriteContractLockout:
         mcp_text = (REPO_ROOT / "mcp" / "server.py").read_text()
         assert 'FORCED_ON_SWITCH_PARAMS = frozenset({"sw_fsm_controller_enabled"})' in mcp_text
 
+    def test_dehum_vent_hold_flag_is_operator_only(self) -> None:
+        """#410/#420: the S8 vent+reheat hold activation flag is operator-gated.
+
+        OFF-default switch; activation is a Jason-gated wave step (STEP-06)
+        through the sanctioned logged push path. Iris must never toggle it:
+        controller_safety class, absent from every planner-writable surface
+        (MCP set_tunable gates on PLANNER_PUSHABLE_REG). The canonical name is
+        sw_-prefixed because the dispatcher/RT-listener push paths select
+        switch_command by that prefix; the esp/cfg object_ids are the wire
+        NAME slugs per the #421 critic finding.
+        """
+        row = REGISTRY["sw_dehum_vent_hold_enabled"]
+        assert row.kind == "switch"
+        assert row.default == 0
+        assert row.push_owner == "operator"
+        assert not row.planner_pushable
+        assert row.tier == 2
+        assert row.control_class == "controller_safety"
+        assert "sw_dehum_vent_hold_enabled" not in PLANNER_PUSHABLE_REG
+        assert "sw_dehum_vent_hold_enabled" not in TIER1_REG
+        # Wire forms (aioesphomeapi delivers NAME slugs, not YAML ids).
+        assert row.esp_object_id == "dehum_vent_hold_enabled"
+        assert row.cfg_readback_object_id == "cfg___dehum_vent_hold_enabled"
+        # The sanctioned push path validates through the shared boundary check.
+        assert registry_value_error("sw_dehum_vent_hold_enabled", 1.0) is None
+        assert registry_value_error("sw_dehum_vent_hold_enabled", 0.0) is None
+        assert registry_value_error("sw_dehum_vent_hold_enabled", 0.5) is not None
+        # Never planner-named: the assembled iris prompt must not offer it.
+        planner_src = (REPO_ROOT / "ingestor" / "iris_planner.py").read_text()
+        assert "dehum_vent_hold_enabled" not in planner_src
+
+    def test_dehum_vent_hold_readback_route_is_registry_derived_only(self) -> None:
+        """#420 reconciliation: exactly ONE authoritative CFG route.
+
+        The manual PR #421 entry in _CFG_READBACK_ADDED_FW_V2 merges LAST into
+        CFG_READBACK_MAP, so a leftover copy would shadow the registry-derived
+        route with the old unregistered param name and setpoint_snapshot rows
+        would keep being rejected (issue #420 break (b)).
+        """
+        from verdify_schemas.tunable_registry import CFG_READBACK_MAP_REG
+
+        assert CFG_READBACK_MAP_REG["cfg___dehum_vent_hold_enabled"] == "sw_dehum_vent_hold_enabled"
+        for p in reversed((str(REPO_ROOT / "ingestor"), "/srv/verdify/ingestor", "/mnt/iris/verdify/ingestor")):
+            if p not in sys.path:
+                sys.path.insert(0, p)
+        from entity_map import _CFG_READBACK_ADDED_FW_V2, CFG_READBACK_MAP
+
+        assert "cfg___dehum_vent_hold_enabled" not in _CFG_READBACK_ADDED_FW_V2, (
+            "manual #421 route resurrected — it shadows the registry-derived route "
+            "(merge order puts _CFG_READBACK_ADDED_FW_V2 last in CFG_READBACK_MAP)"
+        )
+        assert CFG_READBACK_MAP["cfg___dehum_vent_hold_enabled"] == "sw_dehum_vent_hold_enabled"
+
     def test_set_plan_drops_band_owned_before_insert_and_rejects_non_policy(self) -> None:
         """set_plan's write path enforces the contract: band-owned params are
         dropped (band_params_dropped) BEFORE the setpoint_plan INSERT, any param
