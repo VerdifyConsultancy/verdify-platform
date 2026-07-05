@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-s8-vanda-night-dehum
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-04T14:55:00Z'
+updated_at: '2026-07-05T14:30:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -1807,6 +1807,42 @@ events:
   data_summary: null
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0041
+  content_sha256: null
+- id: LEDGER-EVT-0043
+  sequence: 43
+  occurred_at: '2026-07-05T14:30:00Z'
+  event_type: diagnostic_created
+  source: sprint-orchestrator
+  subject: 'Flag-ON night 1: canaries pass; hold path FIRED and held'
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids: []
+    issue_ids:
+    - 410
+    lane_ids: []
+    pr_ids: []
+    deployment_ids:
+    - esp32-ota-2026.7.3.1931.ab18fe8
+    policy_decision_ids: []
+  refs:
+    artifact_refs:
+    - docs/reviews/s8-vanda-night-dehum-bake-report.md
+    evidence_refs: []
+    external_refs: []
+  result: passed
+  summary: 'Night 1 (02-06h): med VPD 0.723 / RH 66.4 / night_min 65.6 / DIF 20.6 / vent 2 cycles / heat1
+    10.7% / heat2 0 / 20 hold co-run rows + 311 vent_plus_heat_hold decisions. Hold engaged late-window,
+    drove VPD to 0.77-0.80 with temp rising under reheat. All canaries pass; sentinel checks ~every 23min
+    all green. Verdict after night 2. Binary 48h bake completes 2026-07-06T01:33Z -> firmware-promote-last-good
+    proposed to Jason.'
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0042
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001

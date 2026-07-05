@@ -44,7 +44,14 @@ nothing re-pushes; re-check readback after reboots. Canary sentinels: night auto
 
 | night (02-06h local) | med VPD | RH | night_min | DIF | vent cycles | heat1 | hold episodes | verdict |
 |---|---|---|---|---|---|---|---|---|
-| _(first flag-ON night = 2026-07-05, read at 08:23)_ | | | | | | | | |
+| 2026-07-05 (night 1) | **0.723** | 66.4% | **65.6 °F** ✓ | **20.6 °F** ✓ | 2 ✓ | 10.7% (heat2 0 ✓) | 20 co-run rows / 311 `vent_plus_heat_hold` decisions | **ALL CANARIES PASS** |
+
+Night-1 notes: the hold engaged in the final ~40 min of the window (first-ever episodes) and
+drove VPD to 0.77–0.80 immediately after 06:00 with temp RISING under reheat (67.2→67.6 °F) —
+the in-window median 0.723 understates the settled behavior. Trend: 0.618 baseline → 0.700
+ref → 0.723 night-1 (late engage). heat1 cost of the hold: 10.7% duty (~26 min; electric).
+night_min dipped to 65.6 during the first episodes then recovered — the duty-cycle+floor
+design behaving as specified.
 
 ## Verdict
 
