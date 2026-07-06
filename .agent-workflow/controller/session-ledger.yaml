@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-s8-vanda-night-dehum
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-06T20:40:00Z'
+updated_at: '2026-07-06T21:15:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -2083,6 +2083,46 @@ events:
   data_summary: null
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0048
+  content_sha256: null
+- id: LEDGER-EVT-0050
+  sequence: 50
+  occurred_at: '2026-07-06T21:15:00Z'
+  event_type: critic_reviewed
+  source: sprint-orchestrator
+  subject: '#431 critic APPROVED (1b36144) + zero-cost hardening added (c6fe116)'
+  actor:
+    role: controller
+    name: claude-opus-4-8/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids: []
+    issue_ids:
+    - 430
+    - 428
+    lane_ids: []
+    pr_ids:
+    - '#431'
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs: []
+  result: approved
+  summary: 'Critic delta re-review APPROVED at 1b36144: Case D CLOSED for the live anchors-mode device
+    (10 reverting lighting force-reconciled; 56 crop-band anchors restore_value:yes; 8 served-band recomputed-from-persisted-anchors
+    and not pushed in anchors mode). Jason: "Agree with corrected fix". Then took the critic OPTIONAL
+    zero-cost hardening (head c6fe116): force-reconcile the 8 served-band restore_value:no params too
+    (defends a latent legacy-mode regression; ~0 churn in anchors mode) + added an ENFORCED invariant
+    test parsing firmware globals so no restore_value:no param can ever slip into the delta-seed. Final:
+    18 force-reconciled / 56 delta-seeded; the 56 hold the entire constant churn. ruff clean, fidelity+invariant
+    tests pass. Critic final-confirm + CI on c6fe116 in flight -> then merge + ingestor deploy (container
+    path, no OTA) -> measure heap floor.'
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0049
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
