@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-s8-vanda-night-dehum
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-06T19:00:00Z'
+updated_at: '2026-07-06T20:00:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -2003,6 +2003,46 @@ events:
   data_summary: null
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0046
+  content_sha256: null
+- id: LEDGER-EVT-0048
+  sequence: 48
+  occurred_at: '2026-07-06T20:00:00Z'
+  event_type: diagnostic_created
+  source: sprint-orchestrator
+  subject: "#430 Tier-1 implemented \u2014 dispatcher reconnect delta-push (PR #431)"
+  actor:
+    role: controller
+    name: claude-opus-4-8/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids: []
+    issue_ids:
+    - 430
+    - 428
+    lane_ids: []
+    pr_ids:
+    - '#431'
+    deployment_ids:
+    - verdify-prod-dark
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs: []
+  result: passed
+  summary: "Tier-1 (highest-value/lowest-risk simplification): dispatcher.py reconnect seed no longer\
+    \ excludes BAND_DRIVEN_PARAMS -> band params seeded from cfg_readback like all others -> stops re-asserting\
+    \ ~74 constants every reconnect (~7,400 pushes/day -> ~100). Safety preserved by _readback_drift (every\
+    \ band push site gates on it; a device with a wrong/post-OTA band still re-pushed) \u2014 verified\
+    \ by reading every push site. NO firmware, NO OTA; ingestor container path + verdify-ingestor bounce.\
+    \ Ruff clean; reconnect/readback-drift/fidelity tests pass; 6 test_08 failures pre-existing/env (identical\
+    \ at origin/main). PR #431; critic verifying the \"wrong band cannot be suppressed\" claim; CI watcher\
+    \ armed. On approval: merge -> promote/sync/bounce to make live -> measure heap floor 3-5d."
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0047
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
