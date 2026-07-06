@@ -618,6 +618,42 @@ binary_sensor:
       float heap_kb = gh_free_heap_kb();
       return heap_kb < 15.0f;
 
+# ───────────────────── HEAP-GUARD SAFETY NET (#428) ─────────────────────
+# Chronic heap exhaustion on this ~612-entity config has held free-heap at a
+# 3-8 KB worst-case floor for weeks (995c9b3 hit 7 KB over 11 days; ab18fe8
+# 3.8 KB) vs a healthy 38-44 KB. On 2026-07-05 15:44Z it finally met a transient
+# and the ESP32 Task WDT rebooted the device UNCONTROLLED (~8 min of degraded
+# operation, then a coredump reset). This guard converts that failure mode into
+# a CONTROLLED restart *before* the panic:
+#   • fires only when CURRENT free heap is genuinely low (< 20 KB) and SUSTAINED
+#     3 min — normal steady-state free is 48-68 KB, so this is near-panic only;
+#   • 15-min startup grace so the post-boot allocation transient (min-free dips
+#     to ~3.8 KB within ~4 min of every boot) can NEVER boot-loop this guard;
+#   • never reboots while a heater relay is actively driving (the one gap the
+#     parallel hardware thermostat can't fully cover on a cold night);
+#   • App.safe_reboot() is a clean "Software reset" (distinct from Task WDT in
+#     diagnostics.reset_reason); the dehum-vent-hold flag PERSISTS across it
+#     (switch sw_dehum_vent_hold RESTORE_DEFAULT_OFF re-asserts the global), the
+#     deterministic FSM re-enters within ~15 s, and on_boot forces all relays off.
+# CONTROL-NEUTRAL: touches no setpoint/mode/relay decision — determine_mode and
+# resolve_equipment are byte-unchanged, so make firmware-replay shows 0 divergence.
+interval:
+  - interval: 60s
+    then:
+      - lambda: |-
+          const float free_kb = gh_free_heap_kb();
+          const uint32_t up_ms = millis();
+          static uint32_t low_since_ms = 0;
+          if (up_ms < 900000UL) { low_since_ms = 0; return; }          // 15-min startup grace
+          if (free_kb >= 20.0f) { low_since_ms = 0; return; }          // healthy — clear latch
+          if (id(heat1_rly).state || id(heat2_rly).state) { low_since_ms = 0; return; }  // never reboot mid-heat
+          if (low_since_ms == 0) { low_since_ms = up_ms; return; }
+          if (up_ms - low_since_ms < 180000UL) return;                 // require 3 min sustained
+          ESP_LOGE("heap", "Heap-guard: free=%.1f kB sustained <20 KB for %.0fs (uptime %.0fs) "
+                           "— CONTROLLED restart ahead of Task WDT (chronic heap #428)",
+                   free_kb, (up_ms - low_since_ms) / 1000.0f, up_ms / 1000.0f);
+          App.safe_reboot();
+
 # ───────────────────── DASHBOARD BUTTONS ─────────────────────
 button:
   - platform: restart
