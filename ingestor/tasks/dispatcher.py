@@ -12,6 +12,7 @@ from ._common import (
     AI_MOISTURE_STRESS_POLICY_PARAMS,
     AI_MOISTURE_STRESS_REQUIRED_OBJECT_IDS,
     BAND_DRIVEN_PARAMS,
+    CROP_BAND_REG,
     DIRECT_WET_POLICY_PARAMS,
     DIRECT_WET_REQUIRED_OBJECT_IDS,
     FIRMWARE_HAS_LIGHTING_TARGET_MINUTES,
@@ -19,10 +20,13 @@ from ._common import (
     FORCED_ON_SWITCH_PARAMS,
     HEAP_DEFER_FREE_KB,
     HEAP_DEFER_LARGEST_BLOCK_KB,
+    HOUSE_BAND_PARAMS,
     HOUSE_VPD_LOW_MARGIN_KPA,
     HOUSE_VPD_MIN_WIDTH_KPA,
     LIGHTING_CIRCUIT_DEFAULT_PARAMS,
+    LIGHTING_CIRCUIT_LUX_PARAMS,
     LIGHTING_CIRCUIT_SUPPORT_SENTINELS,
+    LIGHTING_POLICY_PARAMS,
     LIGHTING_TARGET_MINUTE_PARAMS,
     MISTER_DEFAULTS,
     PARAM_TO_ENTITY,
@@ -564,16 +568,48 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
     # On ESP32 reconnect, rebuild the cache from firmware cfg_* readbacks.
     # Values already confirmed by the device do not need to be pushed again;
     # params without a readback still flow through as a conservative fallback.
-    # Dispatcher-owned band params are excluded from this seed so an OTA reboot
-    # cannot let firmware defaults suppress the authoritative crop-band push.
+    #
+    # NVS-persisted band params (CROP_BAND_REG — temp/vpd anchors, zone targets,
+    # priorities, boosts, taper) are seeded here too (#430 Tier 1). They were
+    # formerly force-re-pushed on every reconnect; but they are restore_value:yes
+    # (survive reboot), so seeding from cfg_readback is safe and their per-param
+    # `_readback_drift` gate still re-pushes any value that actually differs from
+    # authoritative (a changed band, or a device echoing a wrong value). The old
+    # blanket exclusion re-asserted all ~74 BAND_DRIVEN_PARAMS with UNCHANGED
+    # values every reconnect (~7,400 constant pushes/day, ~100 reconnects/day) —
+    # the churn the recently_pushed comment below names as driving ESP32 heap into
+    # critical-pressure transients (#428).
+    #
+    # EXCEPTION (must stay force-reconciled): band params that REVERT to cold
+    # defaults on a reboot/OTA (restore_value:no). Seeding these from the device's
+    # possibly-reverted — or silently-not-republished — cfg_readback could mask a
+    # reverted device and strand the greenhouse on a stale value, and
+    # `_readback_drift` reads the same stale cache so it can't catch it (Case D).
+    # They are left UNSEEDED so the next dispatch re-asserts the authoritative
+    # value unconditionally. Two groups:
+    #   • lighting lux/policy — the 2026-06-16 grow-light-strand incident
+    #     (_common.py:111); force-reconciled before and after this change.
+    #   • served-band edges + per-zone vpd_target (HOUSE_BAND_PARAMS + vpd_target_*)
+    #     back onto restore_value:no globals. Harmless in the live anchors regime —
+    #     recomputed on-chip every cycle from the restore_value:yes anchors and NOT
+    #     pushed while anchors_live — so force-reconciling them costs ~0 churn there;
+    #     included as defense-in-depth against a legacy on-chip-band-disabled fallback.
+    # The delta-seeded remainder (crop-band anchors/priorities/boosts/taper) is all
+    # restore_value:yes; a test pins that no reverting param slips into the seed.
+    RECONNECT_FORCE_RECONCILE = (
+        LIGHTING_POLICY_PARAMS
+        | LIGHTING_CIRCUIT_LUX_PARAMS
+        | HOUSE_BAND_PARAMS
+        | frozenset(p for p in CROP_BAND_REG if p.startswith("vpd_target_"))
+    )
     if shared.force_setpoint_push.is_set():
         shared.force_setpoint_push.clear()
         _last_pushed.clear()
         seeded = 0
-        forced_band = 0
+        force_reconciled = 0
         for param, val in shared.cfg_readback.items():
-            if param in BAND_DRIVEN_PARAMS:
-                forced_band += 1
+            if param in RECONNECT_FORCE_RECONCILE:
+                force_reconciled += 1
                 continue
             _last_pushed[param] = float(val)
             seeded += 1
@@ -596,9 +632,11 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                     _last_pushed[param] = 1.0 if equipment_state[equipment] else 0.0
                     seeded += 1
         log.info(
-            "Dispatcher: reconnect reconcile — seeded %d cfg readbacks; forcing %d band setpoint(s)",
+            "Dispatcher: reconnect reconcile — seeded %d cfg readbacks "
+            "(persisted crop-band included, re-sync via _readback_drift); "
+            "force-reconciling %d reboot-reverting lighting param(s)",
             seeded,
-            forced_band,
+            force_reconciled,
         )
     async with pool.acquire() as conn:
         # Compute crop-science band, per-zone VPD targets, the DB-owned house
