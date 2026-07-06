@@ -71,7 +71,14 @@ reheat), stayed out of the way when not (night 2), never touched heat2, never th
 (≤2 vent cycles/night), and respected the 64 °F floor with margin.
 
 Durability re-probes at verdict time (2026-07-06 ~14:30Z): anchors 65.71/0.83 ✓ · flag=1 ✓ ·
-fw ab18fe8 ✓ (60h uptime, 1 reset = the OTA). Attribution honesty: night-to-night weather
+fw ab18fe8 (running). **CORRECTION (2026-07-06 16:40Z):** the earlier "60h uptime, 1 clean
+reset" was inferred, not measured, and is WRONG — the device took a **Task WDT reset at
+07-05 15:44Z** (a firmware hang; first Task-WDT in ≥14 days, all 10 prior resets were clean
+Software resets — a new-binary stability regression, filed #428). It recovered (24.9h stable
+since) and the flag stayed ON through it (readback continuous 1, no drying gap — so the
+climate verdict is unaffected), but #428 BLOCKS firmware-promote-last-good until root-caused.
+Also corrected: the "reboot reverts flag OFF" caveat did NOT manifest on this WDT reset — the
+flag persisted ON; the restore_value:no assumption needs re-verification (safe direction here). Attribution honesty: night-to-night weather
 varies (outdoor 62–66 °F); the corridor+float+window account for most of the lift, the hold
 is the insurance that engages on the wet tail — which is precisely the design intent.
 

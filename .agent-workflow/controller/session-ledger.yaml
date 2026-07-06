@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-s8-vanda-night-dehum
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-06T14:40:00Z'
+updated_at: '2026-07-06T16:45:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -1879,6 +1879,46 @@ events:
   data_summary: null
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0043
+  content_sha256: null
+- id: LEDGER-EVT-0045
+  sequence: 45
+  occurred_at: '2026-07-06T16:45:00Z'
+  event_type: diagnostic_created
+  source: sprint-orchestrator
+  subject: 'CORRECTION: firmware WDT crash (regression, #428); verdict-reset-claim fixed'
+  actor:
+    role: controller
+    name: claude-opus-4-8/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids: []
+    issue_ids:
+    - 410
+    - 428
+    - 427
+    lane_ids: []
+    pr_ids: []
+    deployment_ids:
+    - esp32-ota-2026.7.3.1931.ab18fe8
+    policy_decision_ids: []
+  refs:
+    artifact_refs:
+    - docs/reviews/s8-vanda-night-dehum-bake-report.md
+    evidence_refs: []
+    external_refs: []
+  result: observed
+  summary: "Re-probe on Jason status request found: (1) Task WDT reset 07-05 15:44Z \u2014 a new-binary\
+    \ regression (0 WDT in prior 14d/10 resets); flag stayed ON through it (no drying gap), climate verdict\
+    \ unaffected, but BLOCKS firmware-promote-last-good -> #428. Verdict bake-report line corrected (was\
+    \ inferred 60h/1-clean-reset; actual 2 resets, 2nd=crash). (2) restore_value:no flag-revert caveat\
+    \ did NOT manifest (flag persisted ON \u2014 assumption needs re-verify). (3) Planner still unrecovered\
+    \ since 07-06 SUNRISE miss (alerts 7676/7677 open; #427); next required = SUNSET ~07-07 03Z. Climate\
+    \ outcome intact: nights 0.723->0.876, hold drove 20 relay co-run rows, 0 canary breaches."
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0044
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
