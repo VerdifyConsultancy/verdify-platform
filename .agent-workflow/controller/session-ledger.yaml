@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-s8-vanda-night-dehum
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-06T18:10:00Z'
+updated_at: '2026-07-06T19:00:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -1960,6 +1960,49 @@ events:
   data_summary: null
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0045
+  content_sha256: null
+- id: LEDGER-EVT-0047
+  sequence: 47
+  occurred_at: '2026-07-06T19:00:00Z'
+  event_type: diagnostic_created
+  source: sprint-orchestrator
+  subject: 'Firmware simplification proposal (#430) + heap-guard #429 merged'
+  actor:
+    role: controller
+    name: claude-opus-4-8/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids: []
+    issue_ids:
+    - 428
+    - 430
+    - 429
+    lane_ids: []
+    pr_ids:
+    - '#429'
+    deployment_ids:
+    - esp32-ota-2026.7.3.1931.ab18fe8
+    policy_decision_ids: []
+  refs:
+    artifact_refs:
+    - docs/reviews/firmware-simplification-proposal-2026-07-06.md
+    evidence_refs: []
+    external_refs: []
+  result: passed
+  summary: "Heap-guard #429 (controlled-restart safety net) critic-approved + MERGED 41656eb (control-neutral,\
+    \ replay 0-div, boot-loop-safe empirically). Then data-driven FIRMWARE SIMPLIFICATION proposal (#430,\
+    \ doc on main): tunable-sync:real-work traffic = 44:1; 88 constant tunables re-pushed 152K/60d; setpoint_snapshot\
+    \ 222K rows/day = 98% of device output; 612 entities ~62% tune-and-confirm machinery; heap 3-8KB floor.\
+    \ 5 tiers, Tier-1 (dispatcher delta-push, NO OTA, ingestor-only) kills ~85% churn without device risk.\
+    \ REFRAME of the #429 OTA (task #10): do Tier-1 first, measure heap 3-5d, THEN decide if the #429\
+    \ heap-guard OTA is still urgent \u2014 propose Tier-1 as the immediate next step to Jason rather\
+    \ than a same-week 2nd OTA. All tiers control-neutral (0 replay divergence), preserve autonomy + 72h\
+    \ network-isolation resilience."
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0046
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
