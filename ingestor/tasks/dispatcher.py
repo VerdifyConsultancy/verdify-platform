@@ -564,17 +564,24 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
     # On ESP32 reconnect, rebuild the cache from firmware cfg_* readbacks.
     # Values already confirmed by the device do not need to be pushed again;
     # params without a readback still flow through as a conservative fallback.
-    # Dispatcher-owned band params are excluded from this seed so an OTA reboot
-    # cannot let firmware defaults suppress the authoritative crop-band push.
+    #
+    # Band params are seeded here too (#430 Tier 1). They were formerly EXCLUDED
+    # — force-re-pushed on every reconnect "so firmware defaults can't suppress
+    # the authoritative crop-band push" — but that safety is already provided,
+    # per-param, by `_readback_drift`: every push site gates on
+    # `_should_skip(...) and not _readback_drift(param, val)`, so a device whose
+    # live cfg_* readback disagrees with the authoritative band (e.g. a post-OTA
+    # firmware default, or no readback yet) is STILL re-pushed regardless of the
+    # seed, while a device already holding the correct NVS-persisted band is NOT
+    # needlessly re-pushed. The old exclusion made every reconnect re-assert all
+    # ~74 BAND_DRIVEN_PARAMS with unchanged values (~7,400 constant pushes/day,
+    # ~100 reconnect events/day) — the churn the recently_pushed comment below
+    # names as driving ESP32 heap into critical-pressure transients (#428).
     if shared.force_setpoint_push.is_set():
         shared.force_setpoint_push.clear()
         _last_pushed.clear()
         seeded = 0
-        forced_band = 0
         for param, val in shared.cfg_readback.items():
-            if param in BAND_DRIVEN_PARAMS:
-                forced_band += 1
-                continue
             _last_pushed[param] = float(val)
             seeded += 1
         if SWITCH_CONFIRM_EQUIPMENT:
@@ -596,9 +603,9 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                     _last_pushed[param] = 1.0 if equipment_state[equipment] else 0.0
                     seeded += 1
         log.info(
-            "Dispatcher: reconnect reconcile — seeded %d cfg readbacks; forcing %d band setpoint(s)",
+            "Dispatcher: reconnect reconcile — seeded %d cfg readbacks "
+            "(band params included; re-sync driven by _readback_drift, not force-push)",
             seeded,
-            forced_band,
         )
     async with pool.acquire() as conn:
         # Compute crop-science band, per-zone VPD targets, the DB-owned house

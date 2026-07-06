@@ -196,11 +196,24 @@ class TestDispatcherWiring:
         assert "shared.recently_pushed.pop(param, None)" not in body
         assert "shared.recently_pushed_values.pop(param, None)" not in body
 
-    def test_reconnect_forces_dispatcher_owned_band_setpoints(self):
+    def test_reconnect_seeds_band_params_and_resyncs_via_readback_drift(self):
+        # #430 Tier 1: the reconnect seed no longer EXCLUDES band params (which
+        # force-re-pushed ~74 constants every reconnect ≈ 7,400/day of ESP32 heap
+        # churn, #428). Band params are now seeded from cfg_readback like every
+        # other param; corrective re-sync is provided per-param by _readback_drift
+        # (a device whose live readback disagrees with the authoritative band is
+        # still re-pushed), not by a blanket force-push.
         body = self._read()
         ingestor = (REPO_ROOT / "ingestor" / "ingestor.py").read_text()
-        assert "if param in BAND_DRIVEN_PARAMS:" in body
-        assert "forcing %d band setpoint(s)" in body
+        # The seed loop must NOT reintroduce the band exclusion / force-push log.
+        assert "forcing %d band setpoint(s)" not in body
+        assert "forced_band" not in body
+        # Seed comment documents the new behavior + the safety mechanism.
+        assert "Band params are seeded here too" in body
+        assert "_readback_drift" in body
+        # readback_drift remains the authoritative re-sync gate at every push site.
+        assert "and not _readback_drift(param, val)" in body
+        # The dispatcher-owned ESP32 echo-ignore (ingestor side) is unchanged.
         assert "setpoint_changes ignored dispatcher-owned ESP32 echo" in ingestor
         assert "BAND_DRIVEN_PARAMS" in ingestor
 
