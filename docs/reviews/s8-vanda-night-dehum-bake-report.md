@@ -77,8 +77,20 @@ reset" was inferred, not measured, and is WRONG — the device took a **Task WDT
 Software resets — a new-binary stability regression, filed #428). It recovered (24.9h stable
 since) and the flag stayed ON through it (readback continuous 1, no drying gap — so the
 climate verdict is unaffected), but #428 BLOCKS firmware-promote-last-good until root-caused.
-Also corrected: the "reboot reverts flag OFF" caveat did NOT manifest on this WDT reset — the
-flag persisted ON; the restore_value:no assumption needs re-verification (safe direction here). Attribution honesty: night-to-night weather
+Also corrected: the "reboot reverts flag OFF" caveat is WRONG — the flag PERSISTS across
+reboots. Mechanism: the switch `sw_dehum_vent_hold` is `restore_mode: RESTORE_DEFAULT_OFF`, so
+ESPHome persists its ON/OFF to flash and restores it on boot, and its `turn_on_action`
+re-asserts the global (`dehum_vent_hold_enabled=true`). The global's own `restore_value: no`
+is overridden in practice by the switch restore. Only a flash-wipe / factory-reset / re-flash
+that clears NVS defaults it OFF — a plain reboot keeps it ON (verified through the 07-05 reset).
+
+DEEPER FORENSICS (2026-07-06, #428): the WDT is **chronic heap exhaustion, not a clean S8
+regression**. Worst-case free heap by binary: b7a531b 15.8 KB → **995c9b3 (pre-S8, 11 days)
+7.0 KB** → ab18fe8 3.8 KB (healthy floor 38-44 KB). The device has been critically
+heap-starved since ~06-23; 995c9b3 ran 11 days on luck. ab18fe8's *average* min-free (17.6 KB)
+is actually slightly better than 995c9b3's (15.5); worst-case just dipped ~3 KB. So promoting
+ab18fe8 does NOT make heap risk worse than what it replaced — but the whole firmware-v2 line
+needs a heap diet + a controlled-restart safety net (fix in progress, control-neutral). Attribution honesty: night-to-night weather
 varies (outdoor 62–66 °F); the corridor+float+window account for most of the lift, the hold
 is the insurance that engages on the wet tail — which is precisely the design intent.
 
