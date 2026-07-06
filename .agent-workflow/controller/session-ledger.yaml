@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-s8-vanda-night-dehum
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-05T14:30:00Z'
+updated_at: '2026-07-06T14:40:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -1843,6 +1843,42 @@ events:
   data_summary: null
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0042
+  content_sha256: null
+- id: LEDGER-EVT-0044
+  sequence: 44
+  occurred_at: '2026-07-06T14:40:00Z'
+  event_type: outcome_reviewed
+  source: sprint-orchestrator
+  subject: "S8 BAKE VERDICT: PASS \u2014 HR-03 proposed to Jason"
+  actor:
+    role: controller
+    name: claude-fable-5/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids: []
+    issue_ids:
+    - 410
+    lane_ids: []
+    pr_ids: []
+    deployment_ids:
+    - esp32-ota-2026.7.3.1931.ab18fe8
+    policy_decision_ids: []
+  refs:
+    artifact_refs:
+    - docs/reviews/s8-vanda-night-dehum-bake-report.md
+    evidence_refs: []
+    external_refs: []
+  result: passed
+  summary: 'Night 2: med VPD 0.876 (acceptance >=0.78 MET), RH 62.2, night_min 67.5, DIF 19.5, 0 heat,
+    0 breaches. Two-night verdict PASS written to the bake report with durability re-probes (anchors/flag/fw
+    all held). Canary crons deleted (window complete); flag stays ON in steady state. Unrelated: 2 fresh
+    planner SUNRISE-miss criticals (recurring, issue filed) gate firmware-promote-last-good until auto-resolve.
+    HR-03 outcome acceptance proposed to Jason.'
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0043
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001

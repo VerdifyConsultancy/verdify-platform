@@ -53,6 +53,30 @@ ref → 0.723 night-1 (late engage). heat1 cost of the hold: 10.7% duty (~26 min
 night_min dipped to 65.6 during the first episodes then recovered — the duty-cycle+floor
 design behaving as specified.
 
-## Verdict
+| 2026-07-06 (night 2) | **0.876** ✓ | 62.2% | **67.5 °F** ✓ | **19.5 °F** ✓ | 2 ✓ | 0% / 0% | 0 co-run (144 hold decisions; temp stayed above target → vent-only per design) | **ALL CANARIES PASS** |
 
-_(pending 48h of flag-ON nights + re-probe)_
+Night-2 notes: warmer, drier outdoor night (66.3 °F); the corridor floated naturally dry —
+**median 0.876 exceeds the ≥0.78 acceptance outright** with zero heater energy. The estimator
+logged 144 `vent_plus_heat_hold` decisions but the reheat predicate never armed (house above
+`temp_target` all night — venting ran unheated, exactly the free-drying branch of the design).
+
+## Verdict — **PASS** (2026-07-06, HR-03 proposed)
+
+Two flag-ON nights, **zero canary breaches across ~20 sentinel checks**:
+0.618 (21-day baseline, RH 72.6%) → 0.700 (ref night) → 0.723 (night 1, hold engaged late,
+lifted to 0.77–0.80) → **0.876 (night 2, acceptance ≥0.78 MET; RH 62.2%)**. The wet-night
+problem that motivated #410 — bare Vanda roots sitting at RH >70% — has not recurred since
+activation. The hold mechanism fired when needed (night 1: 311 decisions, temp RISING under
+reheat), stayed out of the way when not (night 2), never touched heat2, never thrashed
+(≤2 vent cycles/night), and respected the 64 °F floor with margin.
+
+Durability re-probes at verdict time (2026-07-06 ~14:30Z): anchors 65.71/0.83 ✓ · flag=1 ✓ ·
+fw ab18fe8 ✓ (60h uptime, 1 reset = the OTA). Attribution honesty: night-to-night weather
+varies (outdoor 62–66 °F); the corridor+float+window account for most of the lift, the hold
+is the insurance that engages on the wet tail — which is precisely the design intent.
+
+Open, unrelated: 2 planner SUNRISE-miss alerts from 2026-07-06 morning (recurring
+reliability issue, filed separately) — they gate `firmware-promote-last-good` until they
+auto-resolve on the next successful required plan. Watch-items for steady state: reboot
+reverts the flag OFF (restore_value:no); #424's migration-189 view fix queued;
+`night_vpd_bias_kpa` remains the lever if wet nights return as fall approaches.
