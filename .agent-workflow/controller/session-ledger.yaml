@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-s8-vanda-night-dehum
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-06T21:15:00Z'
+updated_at: '2026-07-06T21:35:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -2123,6 +2123,43 @@ events:
   data_summary: null
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0049
+  content_sha256: null
+- id: LEDGER-EVT-0051
+  sequence: 51
+  occurred_at: '2026-07-06T21:35:00Z'
+  event_type: handoff
+  source: sprint-orchestrator
+  subject: '#431 Tier-1 MERGED (00f629a); ingestor deploy in flight'
+  actor:
+    role: controller
+    name: claude-opus-4-8/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids: []
+    issue_ids:
+    - 430
+    - 428
+    lane_ids: []
+    pr_ids:
+    - '#431'
+    deployment_ids:
+    - verdify-prod-dark
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs: []
+  result: passed
+  summary: 'PR #431 critic-approved at c6fe116, MERGED 00f629a. Container Publish dispatched for the ingestor
+    image. NEXT: prod-promote (pull-request) -> digests PR -> gated scoped sync verdify-prod-dark -> bounce
+    verdify-ingestor -> confirm dispatcher log "seeded N cfg readbacks... force-reconciling M lighting/served-band"
+    -> measure heap floor 3-5d. Follow-ups: test-mapping target_ alias hardening (critic note b, fail-closed
+    today); #430 Tiers 2-5 (OTA); #429 heap-guard OTA (calmer if Tier-1 lifts the floor).'
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0050
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
