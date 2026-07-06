@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-s8-vanda-night-dehum
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-06T16:45:00Z'
+updated_at: '2026-07-06T18:10:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -1919,6 +1919,47 @@ events:
   data_summary: null
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0044
+  content_sha256: null
+- id: LEDGER-EVT-0046
+  sequence: 46
+  occurred_at: '2026-07-06T18:10:00Z'
+  event_type: diagnostic_created
+  source: sprint-orchestrator
+  subject: '#428 root-caused (chronic heap) + heap-guard fix PR #429 (gates green)'
+  actor:
+    role: controller
+    name: claude-opus-4-8/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids: []
+    issue_ids:
+    - 428
+    - 410
+    lane_ids: []
+    pr_ids:
+    - '#429'
+    deployment_ids:
+    - esp32-ota-2026.7.3.1931.ab18fe8
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs: []
+  result: passed
+  summary: "ROOT CAUSE: chronic ESP32 heap exhaustion (worst-case free 3-8 KB for weeks; 995c9b3 7KB/11d\
+    \ pre-S8, ab18fe8 3.8KB) vs healthy 38-44KB \u2014 NOT a clean S8 regression (ab18fe8 avg 17.6 > 995c9b3\
+    \ avg 15.5). 07-05 forensics: telemetry froze 15:35:45, ~8min degraded, Task WDT reset 15:43:52. #428\
+    \ corrected+retitled. restore_value re-verified: flag PERSISTS via switch RESTORE_DEFAULT_OFF+turn_on_action\
+    \ (docs corrected). FIX PR #429: heap-guard interval -> App.safe_reboot when free<20KB sustained 3min\
+    \ (15-min startup grace, skip-mid-heat) = controlled restart vs Task WDT coredump. Control-neutral:\
+    \ replay 0-div @193525, invariants pass, 267/0 tests, full compile SUCCESS. Boot-loop-safe empirically\
+    \ (free<20KB = 1/1402 samples/24h, momentary). Critic reviewing; then Jason-gated OTA (>=1/week override\
+    \ rationale)."
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0045
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
