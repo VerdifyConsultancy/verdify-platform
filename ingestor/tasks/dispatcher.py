@@ -22,7 +22,9 @@ from ._common import (
     HOUSE_VPD_LOW_MARGIN_KPA,
     HOUSE_VPD_MIN_WIDTH_KPA,
     LIGHTING_CIRCUIT_DEFAULT_PARAMS,
+    LIGHTING_CIRCUIT_LUX_PARAMS,
     LIGHTING_CIRCUIT_SUPPORT_SENTINELS,
+    LIGHTING_POLICY_PARAMS,
     LIGHTING_TARGET_MINUTE_PARAMS,
     MISTER_DEFAULTS,
     PARAM_TO_ENTITY,
@@ -565,23 +567,35 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
     # Values already confirmed by the device do not need to be pushed again;
     # params without a readback still flow through as a conservative fallback.
     #
-    # Band params are seeded here too (#430 Tier 1). They were formerly EXCLUDED
-    # — force-re-pushed on every reconnect "so firmware defaults can't suppress
-    # the authoritative crop-band push" — but that safety is already provided,
-    # per-param, by `_readback_drift`: every push site gates on
-    # `_should_skip(...) and not _readback_drift(param, val)`, so a device whose
-    # live cfg_* readback disagrees with the authoritative band (e.g. a post-OTA
-    # firmware default, or no readback yet) is STILL re-pushed regardless of the
-    # seed, while a device already holding the correct NVS-persisted band is NOT
-    # needlessly re-pushed. The old exclusion made every reconnect re-assert all
-    # ~74 BAND_DRIVEN_PARAMS with unchanged values (~7,400 constant pushes/day,
-    # ~100 reconnect events/day) — the churn the recently_pushed comment below
-    # names as driving ESP32 heap into critical-pressure transients (#428).
+    # NVS-persisted band params (CROP_BAND_REG — temp/vpd anchors, zone targets,
+    # priorities, boosts, taper) are seeded here too (#430 Tier 1). They were
+    # formerly force-re-pushed on every reconnect; but they are restore_value:yes
+    # (survive reboot), so seeding from cfg_readback is safe and their per-param
+    # `_readback_drift` gate still re-pushes any value that actually differs from
+    # authoritative (a changed band, or a device echoing a wrong value). The old
+    # blanket exclusion re-asserted all ~74 BAND_DRIVEN_PARAMS with UNCHANGED
+    # values every reconnect (~7,400 constant pushes/day, ~100 reconnects/day) —
+    # the churn the recently_pushed comment below names as driving ESP32 heap into
+    # critical-pressure transients (#428).
+    #
+    # EXCEPTION (must stay force-reconciled): the lighting params
+    # (LIGHTING_POLICY_PARAMS | LIGHTING_CIRCUIT_LUX_PARAMS) are restore_value:no —
+    # they REVERT to cold defaults on a reboot/OTA (_common.py:111, the 2026-06-16
+    # grow-light-strand incident). Seeding them from the device's possibly-reverted
+    # (or silently-not-republished) cfg_readback could mask a reverted device and
+    # strand the lights at a stale threshold, and `_readback_drift` reads the same
+    # stale cache so it can't catch it. They are left UNSEEDED so the next dispatch
+    # re-asserts the authoritative value unconditionally.
+    RECONNECT_FORCE_RECONCILE = LIGHTING_POLICY_PARAMS | LIGHTING_CIRCUIT_LUX_PARAMS
     if shared.force_setpoint_push.is_set():
         shared.force_setpoint_push.clear()
         _last_pushed.clear()
         seeded = 0
+        force_reconciled = 0
         for param, val in shared.cfg_readback.items():
+            if param in RECONNECT_FORCE_RECONCILE:
+                force_reconciled += 1
+                continue
             _last_pushed[param] = float(val)
             seeded += 1
         if SWITCH_CONFIRM_EQUIPMENT:
@@ -604,8 +618,10 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                     seeded += 1
         log.info(
             "Dispatcher: reconnect reconcile — seeded %d cfg readbacks "
-            "(band params included; re-sync driven by _readback_drift, not force-push)",
+            "(persisted crop-band included, re-sync via _readback_drift); "
+            "force-reconciling %d reboot-reverting lighting param(s)",
             seeded,
+            force_reconciled,
         )
     async with pool.acquire() as conn:
         # Compute crop-science band, per-zone VPD targets, the DB-owned house
