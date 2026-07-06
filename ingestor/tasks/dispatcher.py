@@ -12,6 +12,7 @@ from ._common import (
     AI_MOISTURE_STRESS_POLICY_PARAMS,
     AI_MOISTURE_STRESS_REQUIRED_OBJECT_IDS,
     BAND_DRIVEN_PARAMS,
+    CROP_BAND_REG,
     DIRECT_WET_POLICY_PARAMS,
     DIRECT_WET_REQUIRED_OBJECT_IDS,
     FIRMWARE_HAS_LIGHTING_TARGET_MINUTES,
@@ -19,6 +20,7 @@ from ._common import (
     FORCED_ON_SWITCH_PARAMS,
     HEAP_DEFER_FREE_KB,
     HEAP_DEFER_LARGEST_BLOCK_KB,
+    HOUSE_BAND_PARAMS,
     HOUSE_VPD_LOW_MARGIN_KPA,
     HOUSE_VPD_MIN_WIDTH_KPA,
     LIGHTING_CIRCUIT_DEFAULT_PARAMS,
@@ -578,15 +580,28 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
     # the churn the recently_pushed comment below names as driving ESP32 heap into
     # critical-pressure transients (#428).
     #
-    # EXCEPTION (must stay force-reconciled): the lighting params
-    # (LIGHTING_POLICY_PARAMS | LIGHTING_CIRCUIT_LUX_PARAMS) are restore_value:no —
-    # they REVERT to cold defaults on a reboot/OTA (_common.py:111, the 2026-06-16
-    # grow-light-strand incident). Seeding them from the device's possibly-reverted
-    # (or silently-not-republished) cfg_readback could mask a reverted device and
-    # strand the lights at a stale threshold, and `_readback_drift` reads the same
-    # stale cache so it can't catch it. They are left UNSEEDED so the next dispatch
-    # re-asserts the authoritative value unconditionally.
-    RECONNECT_FORCE_RECONCILE = LIGHTING_POLICY_PARAMS | LIGHTING_CIRCUIT_LUX_PARAMS
+    # EXCEPTION (must stay force-reconciled): band params that REVERT to cold
+    # defaults on a reboot/OTA (restore_value:no). Seeding these from the device's
+    # possibly-reverted — or silently-not-republished — cfg_readback could mask a
+    # reverted device and strand the greenhouse on a stale value, and
+    # `_readback_drift` reads the same stale cache so it can't catch it (Case D).
+    # They are left UNSEEDED so the next dispatch re-asserts the authoritative
+    # value unconditionally. Two groups:
+    #   • lighting lux/policy — the 2026-06-16 grow-light-strand incident
+    #     (_common.py:111); force-reconciled before and after this change.
+    #   • served-band edges + per-zone vpd_target (HOUSE_BAND_PARAMS + vpd_target_*)
+    #     back onto restore_value:no globals. Harmless in the live anchors regime —
+    #     recomputed on-chip every cycle from the restore_value:yes anchors and NOT
+    #     pushed while anchors_live — so force-reconciling them costs ~0 churn there;
+    #     included as defense-in-depth against a legacy on-chip-band-disabled fallback.
+    # The delta-seeded remainder (crop-band anchors/priorities/boosts/taper) is all
+    # restore_value:yes; a test pins that no reverting param slips into the seed.
+    RECONNECT_FORCE_RECONCILE = (
+        LIGHTING_POLICY_PARAMS
+        | LIGHTING_CIRCUIT_LUX_PARAMS
+        | HOUSE_BAND_PARAMS
+        | frozenset(p for p in CROP_BAND_REG if p.startswith("vpd_target_"))
+    )
     if shared.force_setpoint_push.is_set():
         shared.force_setpoint_push.clear()
         _last_pushed.clear()

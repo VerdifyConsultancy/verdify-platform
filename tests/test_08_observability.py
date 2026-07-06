@@ -209,8 +209,12 @@ class TestDispatcherWiring:
         ingestor = (REPO_ROOT / "ingestor" / "ingestor.py").read_text()
         # The old blanket force-push log/behavior is gone.
         assert "forcing %d band setpoint(s)" not in body
-        # Reboot-reverting lighting params are still force-reconciled (unseeded).
-        assert "RECONNECT_FORCE_RECONCILE = LIGHTING_POLICY_PARAMS | LIGHTING_CIRCUIT_LUX_PARAMS" in body
+        # Reboot-reverting params (lighting + served-band edges + zone vpd_target)
+        # are force-reconciled (unseeded), not delta-seeded.
+        assert "RECONNECT_FORCE_RECONCILE = (" in body
+        assert "LIGHTING_POLICY_PARAMS" in body and "LIGHTING_CIRCUIT_LUX_PARAMS" in body
+        assert "HOUSE_BAND_PARAMS" in body
+        assert 'p for p in CROP_BAND_REG if p.startswith("vpd_target_")' in body
         assert "if param in RECONNECT_FORCE_RECONCILE:" in body
         # The 2026-06-16 grow-light-strand rationale is preserved in the seed comment.
         assert "2026-06-16" in body
@@ -219,6 +223,52 @@ class TestDispatcherWiring:
         # The dispatcher-owned ESP32 echo-ignore (ingestor side) is unchanged.
         assert "setpoint_changes ignored dispatcher-owned ESP32 echo" in ingestor
         assert "BAND_DRIVEN_PARAMS" in ingestor
+
+    def test_no_reboot_reverting_band_param_is_delta_seeded(self):
+        # ENFORCED INVARIANT (#430 Tier 1, critic Case D): every band param that
+        # the reconnect delta-seed keeps (BAND_DRIVEN_PARAMS minus the force-
+        # reconcile set) must be restore_value:yes in firmware globals, so a
+        # reverted/non-republished device can never be masked by a stale
+        # cfg_readback and stranded. A future restore_value:no addition that slips
+        # into the delta-seed fails here.
+        import re as _re
+
+        from tasks._common import (
+            BAND_DRIVEN_PARAMS,
+            CROP_BAND_REG,
+            HOUSE_BAND_PARAMS,
+            LIGHTING_CIRCUIT_LUX_PARAMS,
+            LIGHTING_POLICY_PARAMS,
+        )
+
+        force_reconcile = (
+            LIGHTING_POLICY_PARAMS
+            | LIGHTING_CIRCUIT_LUX_PARAMS
+            | HOUSE_BAND_PARAMS
+            | frozenset(p for p in CROP_BAND_REG if p.startswith("vpd_target_"))
+        )
+        delta_seeded = BAND_DRIVEN_PARAMS - force_reconcile
+
+        gl = (REPO_ROOT / "firmware" / "greenhouse" / "globals.yaml").read_text()
+        restore = {}
+        for blk in _re.split(r"\n  - id: ", gl)[1:]:
+            gid = blk.splitlines()[0].strip()
+            m = _re.search(r"restore_value:\s*(yes|no)", blk)
+            restore[gid] = m.group(1) if m else None
+
+        def reverts(param: str) -> bool:
+            # Direct-name / common-prefix mapping to a firmware global. Params with
+            # no direct global are on-chip-derived from persisted anchors (safe).
+            for gid in (param, f"band_{param}", f"num_{param}"):
+                if gid in restore:
+                    return restore[gid] == "no"
+            return False
+
+        offenders = sorted(p for p in delta_seeded if reverts(p))
+        assert not offenders, (
+            f"restore_value:no band params in the delta-seed (Case D exposure): {offenders} "
+            "— add them to RECONNECT_FORCE_RECONCILE in dispatcher.py"
+        )
 
     def test_dispatcher_repushes_active_plan_when_cfg_readback_drifts(self):
         body = self._read()
