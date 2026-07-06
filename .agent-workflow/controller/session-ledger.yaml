@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-s8-vanda-night-dehum
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-06T21:35:00Z'
+updated_at: '2026-07-06T22:05:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -2160,6 +2160,48 @@ events:
   data_summary: null
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0050
+  content_sha256: null
+- id: LEDGER-EVT-0052
+  sequence: 52
+  occurred_at: '2026-07-06T22:05:00Z'
+  event_type: deployment_observed
+  source: sprint-orchestrator
+  subject: 'Tier-1 deploy in flight (PR #432) + #429/#430 comprehensively documented'
+  actor:
+    role: controller
+    name: claude-opus-4-8/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids: []
+    issue_ids:
+    - 430
+    - 429
+    - 428
+    lane_ids: []
+    pr_ids:
+    - '#431'
+    - '#432'
+    deployment_ids:
+    - verdify-prod-dark
+    policy_decision_ids: []
+  refs:
+    artifact_refs:
+    - docs/reviews/firmware-simplification-proposal-2026-07-06.md
+    evidence_refs: []
+    external_refs: []
+  result: passed
+  summary: 'Jason: "Agree, deploy tier-1... make 429/430 well documented." DEPLOY: ingestor published
+    (00f629a, digest 175e5ec) -> prod-promote PR #432 (digests-only: ingestor+migrate) opened (operator
+    fallback #320); watcher merges on green -> gated scoped sync verdify-prod-dark -> bounce verdify-ingestor
+    -> verify reconnect log + heap floor 3-5d. DOCS: comprehensive status posted to #429 (heap-guard backstop:
+    mechanism/guards/validation/OTA-deferred-behind-Tier-1) and #430 (epic: 44:1 data, all 5 tiers with
+    sizing/status, Tier-1 as-shipped Case-D-safe 18/56 split, sequencing); proposal doc updated with Tier-1
+    outcome.'
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0051
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
