@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-s8-vanda-night-dehum
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-06T22:05:00Z'
+updated_at: '2026-07-06T22:35:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -2202,6 +2202,48 @@ events:
   data_summary: null
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0051
+  content_sha256: null
+- id: LEDGER-EVT-0053
+  sequence: 53
+  occurred_at: '2026-07-06T22:35:00Z'
+  event_type: deployment_observed
+  source: sprint-orchestrator
+  subject: Tier-1 LIVE + healthy (ingestor 175e5ec); heap/churn watch armed
+  actor:
+    role: controller
+    name: claude-opus-4-8/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids: []
+    issue_ids:
+    - 430
+    - 428
+    lane_ids: []
+    pr_ids:
+    - '#432'
+    deployment_ids:
+    - verdify-prod-dark
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs: []
+  result: passed
+  summary: "PR #432 merged 4ae6bdb -> gated scoped sync verdify-prod-dark Succeeded -> verdify-ingestor\
+    \ rolled to Tier-1 image 175e5ec (1/1 ready). LIVE PROOF: reconnect log \"seeded 147 cfg readbacks\
+    \ (persisted crop-band included, re-sync via _readback_drift); force-reconciling 13 reboot-reverting\
+    \ lighting param(s)\" \u2014 crop-band now delta-seeded (was force-pushed). Clean: 0 real ingestor\
+    \ errors (the \"2\" were climate_*_error_f state-name false matches), only open alert is pre-existing\
+    \ #427 planner-miss (unrelated, auto-resolves on SUNSET). Pre-deploy band-push baseline ~816/hr (136/10min)\
+    \ \u2014 the churn now being eliminated (shows over hours as reconnects stop re-asserting the 56 constants).\
+    \ Heap/churn watch cron armed (7:17/19:17 daily): band-rate/total-push/snapshot-rows/heap-floor vs\
+    \ baselines -> appends measured-effect table to the proposal doc -> verdict + #429-OTA recommendation\
+    \ after 4-5d. NO OTA performed."
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0052
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
