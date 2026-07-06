@@ -1,6 +1,15 @@
 # Firmware Simplification Proposal — shrink the on-chip surface to the irreducible control floor
 
-**Author:** control-plane agent · **Date:** 2026-07-06 · **Status:** proposal (data-driven) · **Refs:** #428 (chronic heap), #410 (S8), #424 (band-source split)
+**Author:** control-plane agent · **Date:** 2026-07-06 · **Status:** Tier 1 SHIPPED (PR #431, deploying); Tiers 2–5 proposed · **Epic:** #430 · **Refs:** #428 (chronic heap), #429 (heap-guard backstop), #410 (S8), #424 (band-source split)
+
+> **Tier-1 outcome (as-merged, PR #431 → `00f629a`):** the reconnect force-push no longer re-asserts
+> the 56 NVS-persisted (`restore_value: yes`) crop-band params on every reconnect — they are delta-seeded
+> and re-synced per-param by `_readback_drift`. The 18 reboot-reverting params (`restore_value: no`: 10
+> lighting + 8 served-band edges/zone-vpd) stay **force-reconciled** to preserve the 2026-06-16
+> grow-light-strand protection (critic-found "Case D": a reverted device masked by a stale/non-republished
+> cfg cache). An enforced invariant test parses the firmware globals so no reverting param can ever slip
+> into the delta-seed. Effect: ~7,400 constant band re-pushes/day → ~0 (only genuine changes + true drift),
+> plus ~400 harmless informational vpd_target pushes/day retained. Ingestor-only; **no firmware, no OTA.**
 
 > **Thesis in one line:** the ESP32 spends **44 rows of tunable-synchronization traffic for
 > every 1 row of actual sensing/control**, carries ~200 individually-pushable tunables + ~200
