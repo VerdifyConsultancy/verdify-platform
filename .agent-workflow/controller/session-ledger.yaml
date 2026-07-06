@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-s8-vanda-night-dehum
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-06T20:00:00Z'
+updated_at: '2026-07-06T20:40:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -2043,6 +2043,46 @@ events:
   data_summary: null
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0047
+  content_sha256: null
+- id: LEDGER-EVT-0049
+  sequence: 49
+  occurred_at: '2026-07-06T20:40:00Z'
+  event_type: critic_reviewed
+  source: sprint-orchestrator
+  subject: "#431 Tier-1 critic found Case D \u2192 fix revised (force-reconcile reverting lighting)"
+  actor:
+    role: controller
+    name: claude-opus-4-8/s8-outer-loop-2026-07-03
+  session_id: s8-outer-loop-2026-07-03
+  correlation:
+    trace_id: null
+    wave_id: wave-s8-night-dehum
+    session_ids: []
+    issue_ids:
+    - 430
+    - 428
+    lane_ids: []
+    pr_ids:
+    - '#431'
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs: []
+    evidence_refs: []
+    external_refs: []
+  result: changes_requested
+  summary: "Critic CHANGES_REQUESTED on #431 df49d41: core claim held (wrong-echo device re-pushed) but\
+    \ Case D \u2014 a restore_value:no param that REVERTS on reboot AND whose cfg fails to republish leaves\
+    \ the stale cache masking the reverted device, fooling both seed and _readback_drift. LIGHTING_CIRCUIT_LUX_PARAMS\
+    \ were excluded SPECIFICALLY to defend the 2026-06-16 grow-light-strand incident (_common.py:111).\
+    \ Fix revised (head 1b36144): delta-seed ONLY the 64 restore_value:yes crop-band params (the churn\
+    \ bulk); force-reconcile the 10 restore_value:no lighting params (unseeded). Verified partition 64+10=74\
+    \ disjoint; crop-band confirmed restore_value:yes. Ruff clean, target+fidelity tests pass. Critic\
+    \ re-verifying Case D closure. Churn ~7,400 -> ~1,000/day (safe reduction). GOOD catch \u2014 the\
+    \ critic prevented reintroducing a documented plant-affecting incident."
+  data_summary: null
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0048
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
