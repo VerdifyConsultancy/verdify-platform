@@ -99,12 +99,22 @@ The band + control constants are `restore_value: yes` (84 NVS-persisted globals)
 ## 4. The proposal — five tiers, ordered by value ÷ risk
 
 ### Tier 1 — STOP re-asserting unchanged tunables *(ingestor only — NO OTA, NO firmware, ships today)*
-Change the dispatcher to push a tunable **only when its value changes** (plus one re-sync on reconnect),
-not force-re-assert ~101 band/zone params every 5 min. **Eliminates ~85 % of the 7,505 pushes/day**
-and, symmetrically, the constant-value `cfg_*` echoes → collapses the 222,333 rows/day toward the
-real change rate. Immediate heap/flash/network relief **without touching the device**. Zero autonomy
-impact (device keeps the band in NVS). **Highest value, lowest risk — do this first and measure the
-heap recovery before deciding whether the #429 OTA is even still needed.**
+**Precise mechanism (consumption audit):** the periodic dispatcher is already delta-gated (`_should_skip`
+1 % dead-band, `dispatcher.py:272-286`) and pushes ≈0 rows on a stable connection. The churn is the
+**reconnect force-push** (`dispatcher.py:569-602`): it `_last_pushed.clear()`s the dedup cache, then
+re-seeds every param from `cfg_readback` **except `BAND_DRIVEN_PARAMS` (74 params), which it deliberately
+`continue`s past** (`:574-577`) — so all 74 band params re-push even though their value is a constant.
+It fires ~**100×/day** (every ESP32 API reconnect + any cfg-echo that shifts >1 %, a self-feeding loop:
+`ingestor.py:1401-1405, 1861`) → ~74 × 100 ≈ the observed churn. **The codebase already knows:**
+`dispatcher.py:1111-1114` comments that this reconnect force-push "can drive ESP32 heap into
+critical-pressure transients."
+
+**The fix is a one-line-class dispatcher change:** stop excluding `BAND_DRIVEN_PARAMS` from the reconnect
+readback-seed — seed them from `cfg_readback` like everything else and push only true deltas. Collapses
+~7,400 constant re-assertions/day → ~0 and, symmetrically, the constant `cfg_*` echoes. Immediate
+heap/flash/network relief **without touching the device**; zero autonomy impact (band persists in NVS).
+**Highest value, lowest risk — do this first and measure the heap floor before deciding whether the
+#429 OTA is even still needed.**
 
 ### Tier 2 — BAKE the 88 constants into firmware constants *(OTA)*
 The 88 CONSTANT tunables (zone priorities, boost offsets, taper minutes, mechanical-protection floors,
@@ -120,16 +130,23 @@ hashes (it knows what it pushed). Removes **~200 sensor entities** and the 222 K
 (Keeps the drift-detection guarantee — see #424 for why drift detection matters — at 1/200th the cost.)
 
 ### Tier 4 — DERIVE diagnostics server-side via the twin *(OTA)*
-Drop the device-side derived-diagnostic entities the twin can recompute from raw inputs. Every one of
-the climate diagnostic **text_sensors** — `gh_climate_priority_axis`, `gh_climate_moisture_exchange`
-(the 384-char JSON), `gh_climate_candidate_summary`, `gh_climate_mode_reason`,
-`gh_climate_resource_cost_estimate`, `gh_climate_fog_block_reason`, `gh_climate_next_mist_eligible_s`,
-`gh_climate_moisture_state/zone`, the override-audit string — is a **pure function of the raw sensor
-inputs + the served band**, which the twin already computes offline. The ingestor stores the raw
-sensors (`climate`) and the final decision (`climate_action_log`); running the twin over those
-reconstructs every reason/gain/summary for graphs and KPIs **at zero device cost**. This class is the
-highest per-publish heap churn (each publish allocates a `std::string`). Keep on-device only the
-control-critical decision itself (mode + relay truth); derive the *why* server-side.
+Not all 37 text_sensors are removable — the consumption audit splits them **8 keep / 7 housekeeping /
+~19 remove**:
+- **KEEP (8, control-critical, device-authoritative):** `greenhouse_state`, `lead_fan`,
+  `last_transition`, `mister_state`/`mister_selected_zone`, `gl_main_state`, `gl_grow_state`,
+  `band_source`, `zone_wet_granted` — these report what the relays/mode *actually did*; the server
+  cannot know them without the device asserting them.
+- **REMOVE (~19, twin-derivable):** `mode_reason`, `climate_priority_axis`,
+  `climate_candidate_summary`, `climate_moisture_exchange` (the 384-char JSON), `climate_resource_cost`,
+  `climate_temp_error_f`, `climate_vpd_error_kpa`, `climate_fog_margin/block`, `moisture_block_reason`,
+  `climate_moisture_assist_state/zone`, `climate_next_mist_eligible_s`, `gl_main/grow_reason`, etc. —
+  each is a **pure function of raw sensors + served band**, which the twin
+  (`deploy/k8s/components/firmware-twin/src/offline_driver.py:44-57`) already recomputes offline
+  (it emits `mode`/`reason`/`climate_action`/`override_bits`/relays into `twin_decisions`). The
+  ingestor has the raw sensors (`climate`) + final decision (`climate_action_log`); running the twin
+  over those reconstructs every "why" string for graphs/KPIs **at zero device cost**. This class is the
+  highest per-publish heap churn (each publish allocates a `std::string`).
+- **HOUSEKEEPING (7):** boot/version/IP/SSID/probe_health — keep tiny or fold into one health blob.
 
 ### Tier 5 — BATCH the live-tunable channel *(OTA, larger; optional)*
 The remaining ~29–60 genuinely-dynamic params → a **single versioned config payload** (one text/number
@@ -140,13 +157,21 @@ entity endpoints. Collapses the receive side to ~1–3 entities and makes pushes
 
 ## 5. Net effect (projected)
 
-| dimension | now | after T1–T3 | after T1–T5 |
+Entity-removal sizing from the consumption audit: Tier 3 (cfg echoes → 1 hash) ≈ **−211**, Tier 4
+(twin-derivable diagnostics) ≈ **−19**, Tier 2 (bake 88 constants' number entities) ≈ **−88** ⇒
+~612 → **~300** after T2–T4 (the honest figure; my earlier ~150 was optimistic). Tier 5 batching can
+take the receive side lower.
+
+| dimension | now | after Tier 1 | after T2–T4 |
 |---|---:|---:|---:|
-| entities | 612 | ~430 | ~150–200 |
-| pushes/day (down) | 7,505 | ~1,000 | ~few hundred |
-| readback rows/day (up) | 222,333 | ~change-rate | ~1 hash stream |
-| tunable-sync : real-work | 44 : 1 | ~5 : 1 | ~1 : 1 |
-| free-heap floor | 3.8 KB | recovering | → 38–44 KB target |
+| entities | 612 | 612 (unchanged) | **~300** |
+| pushes/day (down) | 7,505 | **~100** | ~100 |
+| readback rows/day (up) | 222,333 | ~change-rate | **~1 hash stream** |
+| tunable-sync : real-work | 44 : 1 | ~1 : 1 (traffic) | ~1 : 1 |
+| free-heap floor | 3.8 KB | **measure — expected ↑** | → 38–44 KB target |
+
+**Tier 1 alone** eliminates ~99 % of the *traffic* churn (the biggest per-cycle heap/API pressure)
+with zero entity change and no device risk — which is why it goes first and is measured before any OTA.
 
 **Preserved by construction:** autonomy (FSM + on-chip band + NVS unchanged), network-isolation
 resilience (device still runs the band offline on persisted config), the AI control surface (the ~29
