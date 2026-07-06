@@ -185,9 +185,9 @@ images:
   - name: ghcr.io/verdifyconsultancy/verdify-mcp
     digest: sha256:c8da79f404621ea006ac4814849a4e8bbb76a9f7e032e5389bde729c0ab26d88
   - name: ghcr.io/verdifyconsultancy/verdify-ingestor
-    digest: sha256:ae5f4dbe52d9c9f6bec94b6437d65e26aa2fe11a8b218e1823b054cc9ebbdc99
+    digest: sha256:175e5ecee7468651069458fff50d6036fbfa0f3b73cf366b3e7e9159d62259e8
   - name: ghcr.io/verdifyconsultancy/verdify-migrate
-    digest: sha256:dcf7b3720c0542c9e439731ee7621e0b4a6c0aec3b7deaecd5b6f7b09ad9df18
+    digest: sha256:5e684ab9f9733ec9c4dde4c0eb537a6f923b60df9025be32fcabcd7b5960a43d
   # verdify-planner (#117): real published GHCR digest, resolved read-only via
   # `gh api orgs/VerdifyConsultancy/packages/container/verdify-planner/versions`
   # (the `branch-live-platform-main` build of planner_graph/). The planner image is
