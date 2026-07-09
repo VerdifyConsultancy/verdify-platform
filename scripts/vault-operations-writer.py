@@ -15,10 +15,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from verdify_schemas.operations import Harvest, Treatment  # noqa: E402
 
 DEFAULT_OUT = Path("/mnt/iris/verdify-vault/operations")
-DSN = os.environ.get(
-    "VERDIFY_DSN",
-    f"postgresql://verdify:{os.environ.get('POSTGRES_PASSWORD', 'verdify_tsdb_2026')}@127.0.0.1:5432/verdify",
-)
+def _database_dsn() -> str:
+    if dsn := os.environ.get("VERDIFY_DSN"):
+        return dsn
+    password = os.environ.get("POSTGRES_PASSWORD")
+    if not password:
+        raise RuntimeError("VERDIFY_DSN or POSTGRES_PASSWORD is required")
+    return f"postgresql://verdify:{password}@127.0.0.1:5432/verdify"
 
 
 def _fmt(value: object) -> str:
@@ -112,7 +115,7 @@ async def render_treatments(conn: asyncpg.Connection) -> str:
 async def run(args: argparse.Namespace) -> int:
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
-    async with asyncpg.create_pool(DSN, min_size=1, max_size=2) as pool:
+    async with asyncpg.create_pool(_database_dsn(), min_size=1, max_size=2) as pool:
         async with pool.acquire() as conn:
             outputs = {
                 "harvests.md": await render_harvests(conn),

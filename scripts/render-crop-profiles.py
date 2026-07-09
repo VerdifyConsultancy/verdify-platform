@@ -31,10 +31,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 DEFAULT_OUT = Path("/mnt/iris/verdify-vault/website/greenhouse/crops")
 DEFAULT_VISION_OUT = Path("/mnt/iris/verdify-vault/website/static/vision")
-DSN = os.environ.get(
-    "VERDIFY_DSN",
-    f"postgresql://verdify:{os.environ.get('POSTGRES_PASSWORD', 'verdify_tsdb_2026')}@127.0.0.1:5432/verdify",
-)
+def _database_dsn() -> str:
+    if dsn := os.environ.get("VERDIFY_DSN"):
+        return dsn
+    password = os.environ.get("POSTGRES_PASSWORD")
+    if not password:
+        raise RuntimeError("VERDIFY_DSN or POSTGRES_PASSWORD is required")
+    return f"postgresql://verdify:{password}@127.0.0.1:5432/verdify"
 ACTIVE_CONTROL_SLUGS = {"canna", "lettuce", "orchid", "peppers", "strawberries"}
 
 # Crop slugs that are load-bearing for control (kept in crop_catalog / band anchors)
@@ -494,7 +497,7 @@ async def render_crop(
 
 
 async def run(args: argparse.Namespace) -> int:
-    conn = await asyncpg.connect(DSN)
+    conn = await asyncpg.connect(_database_dsn())
     try:
         if args.check_consistency:
             return await _check_crop_consistency(conn)

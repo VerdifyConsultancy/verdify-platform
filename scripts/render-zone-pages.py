@@ -29,10 +29,13 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from verdify_schemas.vault import VaultFrontmatter  # noqa: E402
 
 DEFAULT_OUT = Path("/mnt/iris/verdify-vault/website/greenhouse/zones")
-DSN = os.environ.get(
-    "VERDIFY_DSN",
-    f"postgresql://verdify:{os.environ.get('POSTGRES_PASSWORD', 'verdify_tsdb_2026')}@127.0.0.1:5432/verdify",
-)
+def _database_dsn() -> str:
+    if dsn := os.environ.get("VERDIFY_DSN"):
+        return dsn
+    password = os.environ.get("POSTGRES_PASSWORD")
+    if not password:
+        raise RuntimeError("VERDIFY_DSN or POSTGRES_PASSWORD is required")
+    return f"postgresql://verdify:{password}@127.0.0.1:5432/verdify"
 
 # Crops whose plantings must never be named on the public zone pages (#308,
 # Jason 2026-06-20). DB rows stay (control needs them); the renderer drops the
@@ -343,7 +346,7 @@ async def render_zone(conn: asyncpg.Connection, zone_slug: str) -> tuple[str, st
 
 
 async def run(args: argparse.Namespace) -> int:
-    conn = await asyncpg.connect(DSN)
+    conn = await asyncpg.connect(_database_dsn())
     try:
         if args.zone:
             zones = [args.zone]
