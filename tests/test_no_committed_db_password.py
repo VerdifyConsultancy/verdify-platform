@@ -65,16 +65,12 @@ def test_database_dsn_prefers_explicit_injection(relative_path: str, monkeypatch
 
 
 @pytest.mark.parametrize("relative_path", DB_SCRIPTS)
-def test_database_password_injection_constructs_local_dsn(
-    relative_path: str, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_database_password_injection_constructs_local_dsn(relative_path: str, monkeypatch: pytest.MonkeyPatch) -> None:
     password = "unit-" + "test-value"
     monkeypatch.delenv("VERDIFY_DSN", raising=False)
     monkeypatch.setenv("POSTGRES_PASSWORD", password)
 
-    assert _dsn_helper(relative_path)() == (
-        f"postgresql://verdify:{password}@127.0.0.1:5432/verdify"
-    )
+    assert _dsn_helper(relative_path)() == (f"postgresql://verdify:{password}@127.0.0.1:5432/verdify")
 
 
 @pytest.mark.parametrize("relative_path", DB_SCRIPTS)

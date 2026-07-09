@@ -29,6 +29,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from verdify_schemas.vault import VaultFrontmatter  # noqa: E402
 
 DEFAULT_OUT = Path("/mnt/iris/verdify-vault/website/greenhouse/zones")
+
+
 def _database_dsn() -> str:
     if dsn := os.environ.get("VERDIFY_DSN"):
         return dsn
@@ -36,6 +38,7 @@ def _database_dsn() -> str:
     if not password:
         raise RuntimeError("VERDIFY_DSN or POSTGRES_PASSWORD is required")
     return f"postgresql://verdify:{password}@127.0.0.1:5432/verdify"
+
 
 # Crops whose plantings must never be named on the public zone pages (#308,
 # Jason 2026-06-20). DB rows stay (control needs them); the renderer drops the

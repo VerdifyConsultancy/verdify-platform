@@ -31,6 +31,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 DEFAULT_OUT = Path("/mnt/iris/verdify-vault/website/greenhouse/crops")
 DEFAULT_VISION_OUT = Path("/mnt/iris/verdify-vault/website/static/vision")
+
+
 def _database_dsn() -> str:
     if dsn := os.environ.get("VERDIFY_DSN"):
         return dsn
@@ -38,6 +40,8 @@ def _database_dsn() -> str:
     if not password:
         raise RuntimeError("VERDIFY_DSN or POSTGRES_PASSWORD is required")
     return f"postgresql://verdify:{password}@127.0.0.1:5432/verdify"
+
+
 ACTIVE_CONTROL_SLUGS = {"canna", "lettuce", "orchid", "peppers", "strawberries"}
 
 # Crop slugs that are load-bearing for control (kept in crop_catalog / band anchors)

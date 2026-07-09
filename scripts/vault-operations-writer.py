@@ -15,6 +15,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from verdify_schemas.operations import Harvest, Treatment  # noqa: E402
 
 DEFAULT_OUT = Path("/mnt/iris/verdify-vault/operations")
+
+
 def _database_dsn() -> str:
     if dsn := os.environ.get("VERDIFY_DSN"):
         return dsn
