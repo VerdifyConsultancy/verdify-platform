@@ -1,0 +1,114 @@
+sprint_id: software-recovery-2026-07-09
+scope_id: security-hygiene
+revision: 1dfb05fdab864a3d000095346ee5e16bd145df5d
+environment: null
+generated_at: "2026-07-09T23:02:21Z"
+items:
+  - id: SEC-EV-001
+    type: TEST
+    status: PASS
+    source: tests/test_no_committed_db_password.py
+    command: .venv/bin/pytest -q tests/test_no_committed_db_password.py
+    timestamp: "2026-07-09T22:47:00Z"
+    revision: 1dfb05fdab864a3d000095346ee5e16bd145df5d
+    environment: local worktree with shared project virtualenv
+    result: 20 passed; all five clients reject literal/default passwords, prefer explicit DSN injection, construct the injected password DSN, and fail closed when injection is absent.
+    artifact_location: tests/test_no_committed_db_password.py
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02]
+    limitations: []
+  - id: SEC-EV-002
+    type: LINT
+    status: PASS
+    source: Ruff and Python compilation
+    command: make VENV=/Users/jason/repos/verdify-platform/.venv lint; ruff format --check <CI paths>; python3 -m py_compile <five clients>
+    timestamp: "2026-07-09T22:47:00Z"
+    revision: 1dfb05fdab864a3d000095346ee5e16bd145df5d
+    environment: local worktree
+    result: Repository lint, CI-equivalent Ruff formatting, and targeted compilation passed.
+    artifact_location: null
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02]
+    limitations: []
+  - id: SEC-EV-003
+    type: SECURITY
+    status: PASS
+    source: redacted current-tree gitleaks scan
+    command: gitleaks detect --no-git --redact --source .
+    timestamp: "2026-07-09T22:35:00Z"
+    revision: 1dfb05fdab864a3d000095346ee5e16bd145df5d
+    environment: local worktree
+    result: Eight reviewed baseline false positives in three schema/test files; none of the five remediated clients appears.
+    artifact_location: .agent-workflow/hygiene/database-credential-scan-summary.md
+    acceptance_criteria: [LANE-AC-02]
+    limitations: [Counts, paths, and rule IDs only; raw matches were not stored.]
+  - id: SEC-EV-004
+    type: SECURITY
+    status: WARNING
+    source: redacted full-history gitleaks scan
+    command: gitleaks git --redact
+    timestamp: "2026-07-09T22:46:00Z"
+    revision: 1dfb05fdab864a3d000095346ee5e16bd145df5d
+    environment: local repository history
+    result: Thirty-four historical findings across 12 paths; issue #438 remains release-blocking because a boolean-only comparison tied one committed fallback to the current production DB credential.
+    artifact_location: .agent-workflow/hygiene/database-credential-scan-summary.md
+    acceptance_criteria: [LANE-AC-02, LANE-AC-04]
+    limitations: [Detector labels alone do not prove other live exposures; no values were inspected or copied.]
+  - id: SEC-EV-005
+    type: RUNTIME_PROBE
+    status: PASS
+    source: live caller and Secret-reference inventory
+    command: kubectl read-only workload/secretKeyRef and log inventory
+    timestamp: "2026-07-09T22:47:00Z"
+    revision: 1dfb05fdab864a3d000095346ee5e16bd145df5d
+    environment: verdify-prod read-only
+    result: No live caller relies on the removed .env fallback; five-client and shared-secret consumer injection, restart, validation, and rollback paths are complete.
+    artifact_location: .agent-workflow/hygiene/database-credential-caller-matrix.md
+    acceptance_criteria: [LANE-AC-03]
+    limitations: [Refresh live Jobs and workload templates immediately before rotation.]
+  - id: SEC-EV-006
+    type: OTHER
+    status: PASS
+    source: protected rotation design
+    command: null
+    timestamp: "2026-07-09T22:48:00Z"
+    revision: 1dfb05fdab864a3d000095346ee5e16bd145df5d
+    environment: documentation
+    result: In-place role rotation, full consumer sequence, a 256-bit URI-safe replacement hard stop, new-valid/old-invalid evidence, and rollback are specified without raw credential handling.
+    artifact_location: .agent-workflow/hygiene/database-credential-rotation-runbook.md
+    acceptance_criteria: [LANE-AC-03, LANE-AC-04]
+    limitations: [Execution remains blocked by Q-001 and stale production secret-authority metadata.]
+  - id: SEC-EV-007
+    type: SECURITY
+    status: NOT_RUN
+    source: production credential rotation
+    command: null
+    timestamp: "2026-07-09T22:48:00Z"
+    revision: 1dfb05fdab864a3d000095346ee5e16bd145df5d
+    environment: verdify-prod
+    result: Not authorized; no production credential, database role, Secret, or workload was mutated.
+    artifact_location: .agent-workflow/hygiene/gates/g-prod-db-credential-rotation.yaml
+    acceptance_criteria: [LANE-AC-04]
+    limitations: [Requires Jason's separate explicit rotate-now decision.]
+  - id: SEC-EV-008
+    type: CI
+    status: PASS
+    source: GitHub PR #439 required checks
+    command: null
+    timestamp: "2026-07-09T22:57:56Z"
+    revision: 1dfb05fdab864a3d000095346ee5e16bd145df5d
+    environment: GitHub Actions
+    result: Seventeen checks passed, eight non-applicable publish/promotion checks skipped, and zero checks failed or remained pending.
+    artifact_location: https://github.com/VerdifyConsultancy/verdify-platform/pull/439/checks
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03]
+    limitations: [The protected production rotation and runtime proof are intentionally outside this CI checkpoint.]
+  - id: SEC-EV-009
+    type: DIFF_REVIEW
+    status: PASS
+    source: fresh independent security checkpoint critic
+    command: null
+    timestamp: "2026-07-09T23:02:21Z"
+    revision: 1dfb05fdab864a3d000095346ee5e16bd145df5d
+    environment: independent local critic with read-only production evidence
+    result: Source and tests are acceptable for a non-production merge checkpoint; the critic-confirmed URI parsing hazard is blocked by a 64-hex-character 256-bit replacement contract, while the overall lane remains blocked on AC4.
+    artifact_location: .verdify/sprints/software-recovery-2026-07-09/lanes/security-hygiene/critic-report.md
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03]
+    limitations: [The critic did not and could not approve the unexecuted protected rotation in LANE-AC-04.]

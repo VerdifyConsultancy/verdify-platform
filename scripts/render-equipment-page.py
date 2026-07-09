@@ -13,10 +13,17 @@ from pathlib import Path
 import asyncpg
 
 DEFAULT_TARGET = Path("/mnt/iris/verdify-vault/website/greenhouse/equipment.md")
-DSN = os.environ.get(
-    "VERDIFY_DSN",
-    f"postgresql://verdify:{os.environ.get('POSTGRES_PASSWORD', 'verdify_tsdb_2026')}@127.0.0.1:5432/verdify",
-)
+
+
+def _database_dsn() -> str:
+    if dsn := os.environ.get("VERDIFY_DSN"):
+        return dsn
+    password = os.environ.get("POSTGRES_PASSWORD")
+    if not password:
+        raise RuntimeError("VERDIFY_DSN or POSTGRES_PASSWORD is required")
+    return f"postgresql://verdify:{password}@127.0.0.1:5432/verdify"
+
+
 AUTO_BLOCK_RE = re.compile(
     r"(?P<start>(?:\[//\]: # \(auto-render:start (?P<markdown_name>[-a-z0-9_]+)\)|"
     r"<!-- auto-render:start (?P<html_name>[-a-z0-9_]+) -->|"
@@ -164,7 +171,7 @@ def _relay_map(rows: list[asyncpg.Record]) -> str:
 async def main_async(args: argparse.Namespace) -> int:
     target = Path(args.target)
     existing = target.read_text()
-    conn = await asyncpg.connect(DSN)
+    conn = await asyncpg.connect(_database_dsn())
     try:
         equipment = await conn.fetch(
             """

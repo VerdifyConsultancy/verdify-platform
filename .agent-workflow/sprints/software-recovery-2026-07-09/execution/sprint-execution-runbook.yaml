@@ -1,0 +1,328 @@
+schema_ref: sprint-execution-runbook.schema.yaml
+kind: SprintExecutionRunbook
+schema_version: "1.0"
+runbook_id: exec-software-recovery-2026-07-09
+status: active
+sprint_id: software-recovery-2026-07-09
+wave_id: wave-software-recovery-implementation
+repository: VerdifyConsultancy/verdify-platform
+prepared_at: "2026-07-09T22:31:05Z"
+controller:
+  session_id: software-recovery-root-019f4826
+  owner: codex-root
+  authority: Coordinate contracted lane sessions, answer delegated questions, reconcile CI/CD and review evidence, and stop at production, credential, migration, firmware, and release gates.
+  interfaces:
+    - agent_platform_mcp
+    - tmux_terminal
+    - browser_terminal
+    - github
+    - ci
+    - kubernetes
+    - gitops
+    - telemetry
+  poll_interval_minutes: 5
+  delegation_policy: Local fallback workers have full authority only inside approved lane contracts and isolated worktrees; protected production decisions remain controller-gated.
+prerequisites:
+  approved_sprint_plan: .verdify/sprints/software-recovery-2026-07-09/plan/sprint-plan.yaml
+  approved_lane_contracts:
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/security-hygiene/lane.yaml
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/device-writer/lane.yaml
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/evidence-core/lane.yaml
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/resource-accounting/lane.yaml
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/dli-availability/lane.yaml
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/planner-delivery/lane.yaml
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/firmware-control/lane.yaml
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/release-control/lane.yaml
+  wave_release_plan: null
+  platform_readiness: .agent-workflow/platform/platform-readiness.yaml
+  open_blockers:
+    - Native Agent Platform worktree-agent creation and removal are disabled post-MVP and return structured HTTP 501 responses.
+    - The controller planning/security baseline must be independently reviewed and merged before Wave-0 worker worktrees are cut.
+    - A current-sprint wave release plan is required before production delivery.
+    - Production release is blocked by g-prod-db-credential-rotation-20260709 until Jason separately authorizes and the controller verifies the protected rotation.
+platform:
+  mcp_server: agent-fleet MCP in repo-verdifyconsultancy-verdify-platform-0
+  api_ref: agents.vallery.net dashboard API and in-pod agent-fleet MCP
+  auth_mode: mcp_session
+  required_tools:
+    - name: agent-fleet.add_worktree_agent
+      purpose: Create one isolated worktree-agent session for a dependency-ready lane; observed disabled post-MVP with HTTP 501.
+      required: true
+    - name: agent-fleet.remove_worktree_agent
+      purpose: Remove or recover the exact isolated lane session; observed disabled post-MVP with HTTP 501.
+      required: true
+    - name: agent-platform.session.poll
+      purpose: Read durable lane heartbeat, status, questions, blockers, and closeout; absent from the controller tool inventory.
+      required: true
+    - name: agent-platform.session.send
+      purpose: Answer contract-scoped worker questions through the platform identity; absent from the controller tool inventory.
+      required: true
+    - name: agent-platform.terminal.attach
+      purpose: Attach the operator to the exact isolated lane session rather than a shared fixed clone; no dynamic lane identity exists.
+      required: true
+  terminal_access:
+    mode: both
+    operator_visible: true
+    attach_refs:
+      - agents.vallery.net authenticated dashboard/tmux surface
+      - repo pod SSH identity
+  fallback_policy: Use only the approved gate g-local-dispatch-fallback-software-recovery-20260709 for one local Codex subagent per contracted worktree; never reuse the four fixed shared sessions or expand the exception into production writes.
+cadence:
+  poll_interval_minutes: 5
+  heartbeat_timeout_minutes: 15
+  loop_until:
+    - All required lanes have immutable closeout evidence.
+    - Fresh independent critics approve current lane heads.
+    - CI, review packet, deployment, telemetry, rollback, and outcome gates are ready for their owning roles.
+    - Immediate and settled production verification satisfy the approved sprint acceptance criteria.
+lanes:
+  - lane_id: security-hygiene
+    issue_ids: [438]
+    contract_path: .verdify/sprints/software-recovery-2026-07-09/lanes/security-hygiene/lane.yaml
+    branch: codex/software-recovery-2026-07-09
+    owner: controller-integrator with security hygiene discipline
+    dependency_state: ready
+    platform_session:
+      create_operation_ref: null
+      session_id: software-recovery-root-019f4826
+      executor: codex-controller-local
+      model: GPT-5
+      effort: high
+      status: active
+    prompt:
+      prompt_path: .verdify/sprints/software-recovery-2026-07-09/lanes/security-hygiene/worker-prompt.md
+      manifest_path: null
+      contract_hash: 18ab8620ab97a0cb2bfcb9112e53dd01b155a83796170bd05e6eaa6620673de1
+    terminal:
+      tmux_session: null
+      browser_terminal_url: null
+      operator_attach_required: false
+    status: blocked
+  - lane_id: device-writer
+    issue_ids: [433]
+    contract_path: .verdify/sprints/software-recovery-2026-07-09/lanes/device-writer/lane.yaml
+    branch: lane/recovery-writer-433
+    owner: python-ingestor-writer
+    dependency_state: ready
+    platform_session:
+      create_operation_ref: .agent-workflow/sprints/software-recovery-2026-07-09/execution/control-requests/device-writer-session-create.yaml
+      session_id: null
+      executor: local-codex-subagent-fallback
+      model: GPT-5
+      effort: high
+      status: blocked
+    prompt:
+      prompt_path: .verdify/sprints/software-recovery-2026-07-09/lanes/device-writer/worker-prompt.md
+      manifest_path: null
+      contract_hash: bdb96d7025fe9e1c0e898058da84caace4789a79509cbe309eea5db3e96880bd
+    terminal:
+      tmux_session: null
+      browser_terminal_url: null
+      operator_attach_required: true
+    status: planned
+  - lane_id: evidence-core
+    issue_ids: [293, 389, 410, 419, 424]
+    contract_path: .verdify/sprints/software-recovery-2026-07-09/lanes/evidence-core/lane.yaml
+    branch: lane/recovery-evidence-293-389-410-419-424
+    owner: postgres-evidence-engineer with firmware replay literacy
+    dependency_state: ready
+    platform_session:
+      create_operation_ref: .agent-workflow/sprints/software-recovery-2026-07-09/execution/control-requests/evidence-core-session-create.yaml
+      session_id: null
+      executor: local-codex-subagent-fallback
+      model: GPT-5
+      effort: high
+      status: blocked
+    prompt:
+      prompt_path: .verdify/sprints/software-recovery-2026-07-09/lanes/evidence-core/worker-prompt.md
+      manifest_path: null
+      contract_hash: 212a480af3c12b45aeaa1f2f46db6cce2c4fa6d2bf7c8fb4910000a5c7e75b7b
+    terminal:
+      tmux_session: null
+      browser_terminal_url: null
+      operator_attach_required: true
+    status: planned
+  - lane_id: resource-accounting
+    issue_ids: [437]
+    contract_path: .verdify/sprints/software-recovery-2026-07-09/lanes/resource-accounting/lane.yaml
+    branch: lane/recovery-resource-437
+    owner: cross-stack-data-product
+    dependency_state: waiting
+    platform_session:
+      create_operation_ref: null
+      session_id: null
+      executor: local-codex-subagent-fallback
+      model: GPT-5
+      effort: high
+      status: planned
+    prompt:
+      prompt_path: .verdify/sprints/software-recovery-2026-07-09/lanes/resource-accounting/worker-prompt.md
+      manifest_path: null
+      contract_hash: 432226c06dca734b279b4e953041649bbbb0e8c7b0158eace15c2a0d8459fc5d
+    terminal:
+      tmux_session: null
+      browser_terminal_url: null
+      operator_attach_required: true
+    status: planned
+  - lane_id: dli-availability
+    issue_ids: [435]
+    contract_path: .verdify/sprints/software-recovery-2026-07-09/lanes/dli-availability/lane.yaml
+    branch: lane/recovery-dli-435
+    owner: cross-stack schema/firmware evidence engineer
+    dependency_state: waiting
+    platform_session:
+      create_operation_ref: null
+      session_id: null
+      executor: local-codex-subagent-fallback
+      model: GPT-5
+      effort: high
+      status: planned
+    prompt:
+      prompt_path: .verdify/sprints/software-recovery-2026-07-09/lanes/dli-availability/worker-prompt.md
+      manifest_path: null
+      contract_hash: d8c59e2e57891067ee645abc0de375c8951aaea8edae5114d4001a5f9e1f9829
+    terminal:
+      tmux_session: null
+      browser_terminal_url: null
+      operator_attach_required: true
+    status: planned
+  - lane_id: planner-delivery
+    issue_ids: [427]
+    contract_path: .verdify/sprints/software-recovery-2026-07-09/lanes/planner-delivery/lane.yaml
+    branch: lane/recovery-planner-427
+    owner: planner-mcp-reliability
+    dependency_state: waiting
+    platform_session:
+      create_operation_ref: null
+      session_id: null
+      executor: local-codex-subagent-fallback
+      model: GPT-5
+      effort: high
+      status: planned
+    prompt:
+      prompt_path: .verdify/sprints/software-recovery-2026-07-09/lanes/planner-delivery/worker-prompt.md
+      manifest_path: null
+      contract_hash: 21912e77d6b9899049a0a4e6150b97c7d5bec48391c533d882ca50fc35bc4914
+    terminal:
+      tmux_session: null
+      browser_terminal_url: null
+      operator_attach_required: true
+    status: planned
+  - lane_id: firmware-control
+    issue_ids: [299, 383, 386, 428, 434]
+    contract_path: .verdify/sprints/software-recovery-2026-07-09/lanes/firmware-control/lane.yaml
+    branch: lane/recovery-firmware-299-383-386-428-434
+    owner: firmware-esphome-cpp
+    dependency_state: waiting
+    platform_session:
+      create_operation_ref: null
+      session_id: null
+      executor: local-codex-subagent-fallback
+      model: GPT-5
+      effort: high
+      status: planned
+    prompt:
+      prompt_path: .verdify/sprints/software-recovery-2026-07-09/lanes/firmware-control/worker-prompt.md
+      manifest_path: null
+      contract_hash: 732c472a3f9b2cf9ac092047246ed729d90edefdeff758e2a047ea8407b0af6d
+    terminal:
+      tmux_session: null
+      browser_terminal_url: null
+      operator_attach_required: true
+    status: planned
+  - lane_id: release-control
+    issue_ids: [377, 390]
+    contract_path: .verdify/sprints/software-recovery-2026-07-09/lanes/release-control/lane.yaml
+    branch: lane/recovery-release-377-390
+    owner: controller-integrator; no autonomous worker may execute production state changes
+    dependency_state: blocked
+    platform_session:
+      create_operation_ref: null
+      session_id: null
+      executor: controller-integrator
+      model: GPT-5
+      effort: high
+      status: planned
+    prompt:
+      prompt_path: .verdify/sprints/software-recovery-2026-07-09/lanes/release-control/worker-prompt.md
+      manifest_path: null
+      contract_hash: 2804910fcffd7d929da551faf09dfb54c6d12e2b3bb4514177f461b7dadb4c4e
+    terminal:
+      tmux_session: null
+      browser_terminal_url: null
+      operator_attach_required: true
+    status: planned
+coordination:
+  poll_steps:
+    - Refresh GitHub, worktree, session, PR, check, and deployment state.
+    - Poll each active local fallback session and capture heartbeat, questions, blockers, closeout, and coordination requests.
+    - Answer only contract-scoped questions; open or retain gates for protected decisions.
+    - Reconcile immutable heads, CI, critic verdicts, review evidence, and dependency handoffs.
+    - Record controller and session-ledger events without copying raw terminal logs or secrets.
+  controller_responses:
+    - Dispatch only dependency-ready lanes with no active session or worktree owner.
+    - Answer approved contract-scoped worker questions and enforce path ownership.
+    - Route scope, architecture, schema-sequence, security, migration, and production changes to their owning gates or skills.
+    - Route immutable worker closeout to a fresh independent critic.
+  coordination_request_policy: Resolve only inside approved lane contracts and the local fallback boundary; any production, credential, destructive, schema-sequence, or scope expansion requires its owning controller gate.
+  escalation_paths:
+    - platform-readiness for native session lifecycle restoration
+    - controller-loop for session identity, ledger, or recovery ambiguity
+    - sprint-planning for material scope or dependency changes
+    - architecture-contracts for public contract or architecture changes
+ci_cd:
+  required_checks:
+    - lint
+    - test
+    - migration-rollback-safety
+    - firmware-replay-diff
+    - no-new-fire-and-forget
+    - service-restart-drift-guard
+  workflows:
+    - .github/workflows/ci.yml
+    - .github/workflows/prod-promote.yml
+  merge_policy: Merge only current independently accepted heads after all required checks pass; preserve schema-before-consumer and one-migration-at-a-time order.
+  deployment_trigger: Production promotion and manual ArgoCD sync occur only from the approved wave release plan after the credential, alert, CI, critic, migration, and runtime prerequisites close.
+  evidence_refs:
+    - .agent-workflow/platform/platform-readiness.yaml
+    - .agent-workflow/sprints/software-recovery-2026-07-09/gates/g-local-dispatch-fallback.yaml
+deployment:
+  target_environment: verdify-prod
+  namespace: verdify-prod
+  strategy: Manual digest-pinned prod promotion PR followed by gated ArgoCD sync; one reviewed firmware OTA follows the repository firmware preflight and rollback procedure.
+  approval_required: true
+  rollout_refs:
+    - deploy/k8s/overlays/prod
+    - ArgoCD application verdify-prod-dark
+  rollback_refs:
+    - Prior digest-pinned prod overlay revision
+    - firmware/artifacts/last-good.ota.bin
+review:
+  review_packet_path: .agent-workflow/sprints/software-recovery-2026-07-09/review/review-inbox-packet.yaml
+  human_review_trigger: The exact integrated revision has green CI, fresh critic acceptance, prod and OTA evidence, immediate and settled telemetry, rollback proof, and only explicitly accepted residual risks.
+  reviewer_visibility:
+    - GitHub issues, pull requests, checks, workflow runs, and immutable commit refs
+    - agents.vallery.net dashboard and authenticated terminal surfaces
+    - Durable .agent-workflow and .verdify evidence without raw session logs or secrets
+ledger:
+  controller_state_path: .agent-workflow/controller/controller-state.yaml
+  session_ledger_path: .agent-workflow/controller/session-ledger.yaml
+  required_events:
+    - lane_dispatched
+    - prompt_compiled
+    - worker_status
+    - worker_closeout
+    - critic_reviewed
+    - review_packet_created
+    - ci_observed
+    - deployment_observed
+stop_conditions:
+  - A local worker lacks a unique contracted branch, worktree, issue set, prompt, and controller-visible session identity.
+  - A worker requests production, credential, destructive database, broad RBAC, or secret-handling authority.
+  - The production credential rotation gate, critical planner alert, migration ordering, firmware safety, cycling, weekly OTA, bake, or rollback gate is not satisfied for its protected transition.
+  - A lane head, issue, PR, worktree, contract hash, CI result, critic verdict, deployment revision, or runtime evidence conflicts.
+  - Native Agent Platform tools are used despite their disabled contract or the four fixed shared sessions are treated as isolated lane workers.
+handoff:
+  next_skill: sprint-orchestrator
+  next_mode: local-fallback-dispatch
+  reason: Keep native platform requests blocked, commit and review the controller baseline, then supervise only dependency-ready isolated local Codex worktrees under the approved fallback gate.

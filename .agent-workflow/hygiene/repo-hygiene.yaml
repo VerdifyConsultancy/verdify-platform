@@ -1,0 +1,102 @@
+schema_ref: repo-hygiene.schema.yaml
+kind: RepoHygieneReport
+schema_version: "1.0"
+repository: VerdifyConsultancy/verdify-platform
+status: blocked
+assessed_at: "2026-07-09T21:33:00Z"
+baseline_sha: 0a9a19a840be6bae1beba604497d880b3b74b1ef
+areas:
+  - id: HY-001
+    area: repository identity and default branch
+    status: pass
+    summary: Repository, main authority, origin baseline, and isolated recovery worktree are explicit.
+    evidence: [VerdifyConsultancy/verdify-platform, origin/main 0a9a19a, verdify doctor]
+    blockers: []
+  - id: HY-002
+    area: agent and host instructions
+    status: pass
+    summary: AGENTS.md, README, k3s handoff, runbooks, safety gates, and host access rules were read and reconciled.
+    evidence: [AGENTS.md, README.md, docs/handoff/k3s-agent-handoff.md]
+    blockers: []
+  - id: HY-003
+    area: lifecycle source of truth
+    status: pass
+    summary: North Star, project definition, architecture, module contracts, strategy, and router artifacts are approved/current; historical S8 is cancelled/superseded.
+    evidence: [.agent-workflow/northstar, .agent-workflow/project, .agent-workflow/architecture, .agent-workflow/modules, .agent-workflow/strategy]
+    blockers: []
+  - id: HY-004
+    area: GitHub backlog and delivery records
+    status: pass
+    summary: GitHub is authoritative; issues 433–438 were created, 17 recovery issues carry one sprint label, relevant issues were corrected, obsolete issues/PR closed, and no open PR remains.
+    evidence: [.agent-workflow/strategy/github-backlog-sync.yaml, live gh reads]
+    blockers: []
+  - id: HY-005
+    area: branches and worktrees
+    status: warn
+    summary: Recovery worktree is isolated and attributable, but many old lane/worktrees and gone-upstream branches remain. They are not deleted because they may contain user history and have no open PR.
+    evidence: [git worktree list, git branch upstream inventory]
+    blockers: []
+  - id: HY-006
+    area: tests lint schemas and CI
+    status: pass
+    summary: Makefile, pyproject, workflows, pre-commit, firmware gates, migration guard, site and irrigation checks are discoverable; current main CI/K8s/publish runs pass.
+    evidence: [Makefile, .github/workflows, pyproject.toml, main run IDs 29024643976/997/381]
+    blockers: []
+  - id: HY-007
+    area: secrets and credential hygiene
+    status: blocked
+    summary: A live production database password was committed as a fallback in five current scripts and historical commits. The source fallback has been removed without displaying it, but the credential remains valid until rotated. Eight remaining current-tree gitleaks findings are reviewed SQL/test-key false positives.
+    evidence: [redacted gitleaks scans, boolean-only live-secret match, source diff]
+    blockers: [g-prod-db-credential-rotation-20260709]
+  - id: HY-008
+    area: environment deployment rollback and observability
+    status: pass
+    summary: Single-prod topology, promotion/sync/OTA paths, rollback artifacts, runtime probes, alerts, logs, metrics, and current drift are explicit.
+    evidence: [ARGOCD.md, laptop operator runbook, module release contract, state-of-union]
+    blockers: []
+  - id: HY-009
+    area: ownership and interface boundaries
+    status: pass
+    summary: Five exclusive module contracts and repo-agent-scope prevent overlapping firmware, MCP, ingestor, schema, and release ownership.
+    evidence: [.agent-workflow/modules, .agent-workflow/hygiene/repo-agent-scope.yaml]
+    blockers: []
+  - id: HY-010
+    area: documentation and stale planning
+    status: pass
+    summary: Current authority is durable; stale S8 and PR 409 intent are explicitly superseded rather than silently deleted.
+    evidence: [S8 cancellation records, PR 409 close comment, current review/strategy]
+    blockers: []
+  - id: HY-011
+    area: repo controller scope
+    status: pass
+    summary: The root recovery agent has a validated scope, responsibilities, credential rules, environment limits, escalation paths, and approval boundary.
+    evidence: [.agent-workflow/hygiene/repo-agent-scope.yaml]
+    blockers: []
+safe_cleanup:
+  - path: scripts/daily-summary-snapshot.py, scripts/render-equipment-page.py, scripts/render-zone-pages.py, scripts/render-crop-profiles.py, scripts/vault-operations-writer.py
+    action: Remove committed database password fallback; require VERDIFY_DSN or POSTGRES_PASSWORD and preserve localhost connection semantics.
+    status: applied
+  - path: .agent-workflow/sprints/s8-vanda-night-dehum
+    action: Mark obsolete active controller/sprint state cancelled/superseded while retaining history.
+    status: applied
+  - path: old local worktrees and gone-upstream branches
+    action: Preserve; cleanup is ambiguous and not required for isolated recovery planning.
+    status: skipped
+issues_to_open:
+  - Redacted security issue 438 records source cleanup, caller inventory, protected rotation, and consumer verification without exposing the value.
+gates_to_open:
+  - .agent-workflow/hygiene/gates/g-prod-db-credential-rotation.yaml
+completion_criteria:
+  - Jason explicitly selects rotate-now or defer-with-release-block.
+  - The committed source fallback remains absent and regression tests cover fail-closed credential lookup.
+  - If rotate-now, database role/secret consumers are changed through scoped mechanisms, affected workloads restart safely, old credential fails, new credential succeeds, backups/migrations/API/MCP/planner/ingestor/Grafana remain healthy, and rollback evidence is recorded.
+  - Full-history detections are baselined only after the exposed value is invalid; current-tree scan contains only reviewed false positives.
+  - Every hygiene area is pass or an approved exception with owner/follow-up, then record REPO_HYGIENE_COMPLETE.
+handoff:
+  next_skill: sprint-orchestrator
+  next_mode: implementation-with-release-gate
+  reason: Source remediation and redacted issue 438 are ready; secrets exposure remains a mandatory production-release stop, but isolated implementation and review may continue.
+approval:
+  status: pending
+  approver: null
+  approved_at: null

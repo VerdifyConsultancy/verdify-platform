@@ -1,0 +1,317 @@
+schema_ref: northstar-plan.schema.yaml
+kind: NorthStarPlan
+schema_version: "1.0"
+project_id: verdify-platform
+status: approved
+generated_at: "2026-07-09T21:12:00Z"
+sources:
+  - id: SRC-001
+    type: operator-brief
+    location: northstar://evidence/NSE-20260709-operator-delivery-brief
+    summary: Corrected product intent and implementation, production, and OTA approval.
+    evidence_status: reported
+  - id: SRC-002
+    type: adversarial-review
+    location: northstar://evidence/NSE-20260709-greenhouse-review
+    summary: Current code and live-runtime defects across writer, planner, irrigation, DLI, and dry-out.
+    evidence_status: observed
+  - id: SRC-003
+    type: project-definition
+    location: northstar://evidence/NSE-20260709-project-definition
+    summary: Approved product, requirement, design, lifecycle, gate, and risk authority.
+    evidence_status: verified
+  - id: SRC-004
+    type: research-report
+    location: northstar://evidence/NSE-20260709-wall-fertigation
+    summary: Primary-source wall-fertigation and commissioning synthesis.
+    evidence_status: verified
+goals:
+  - id: NSG-001
+    statement: Keep the live greenhouse safe while eliminating false device-write and planner failure loops.
+    priority: must
+    source_ids: [SRC-001, SRC-002, SRC-003]
+    success_signals: [one writer, zero stable broad pushes, recovered MCP, bounded active plan]
+  - id: NSG-002
+    statement: Align automated water and fertilizer behavior with the actual planted topology.
+    priority: must
+    source_ids: [SRC-001, SRC-002, SRC-004]
+    success_signals: [center-only climate mist, intentional-only south and west irrigation, wall-only commissioned fertilizer]
+  - id: NSG-003
+    statement: Stop presenting unavailable interior light evidence as crop DLI.
+    priority: must
+    source_ids: [SRC-001, SRC-002, SRC-003]
+    success_signals: [unavailable DLI across all active consumers, independent lighting control preserved]
+  - id: NSG-004
+    statement: Improve overnight dry-out using solar-phase controls and realized evidence.
+    priority: should
+    source_ids: [SRC-001, SRC-002]
+    success_signals: [night-only admission, bounded guards, realized effectiveness and stop reason]
+  - id: NSG-005
+    statement: Deliver and verify the full recovery in production and one gated OTA.
+    priority: must
+    source_ids: [SRC-001, SRC-003]
+    success_signals: [all CI and safety gates, exact revision proof, runtime acceptance, reconciled records]
+requirements:
+  - id: NSR-001
+    kind: non_functional
+    statement: Exactly one non-starving device writer shall distinguish true reconnect, cfg drift, requested writes, successful delivery, cancellation, and confirmation.
+    source_ids: [SRC-002, SRC-003]
+    acceptance_signals: [zero stable broad batches, deliberate drift writes once, task cadence remains bounded]
+  - id: NSR-002
+    kind: functional
+    statement: Planner delivery shall include MCP tool liveness, terminal action accounting, strict bounds intersection, expiry, uniqueness, and neutral failure.
+    source_ids: [SRC-001, SRC-002, SRC-003]
+    acceptance_signals: [failure injection self-heals, one valid active plan, terminal actions are classified]
+  - id: NSR-003
+    kind: functional
+    statement: Climate mist shall use center only; south and west require intentional irrigation; fertilizer shall use wall only.
+    source_ids: [SRC-001, SRC-002]
+    acceptance_signals: [firmware tests and live relay attribution match topology]
+  - id: NSR-004
+    kind: functional
+    statement: Weekly automatic wall feed shall fail closed until commissioned and use calibrated liters for prewet, feed, and immediate flush.
+    source_ids: [SRC-001, SRC-004]
+    acceptance_signals: [missing data cannot actuate, exact-once job, no fixed 90-minute hold]
+  - id: NSR-005
+    kind: functional
+    statement: Interior DLI shall be unavailable with explicit reason and provenance while sensor validity is false.
+    source_ids: [SRC-001, SRC-002, SRC-003]
+    acceptance_signals: [no active consumer publishes a numeric crop DLI]
+  - id: NSR-006
+    kind: functional
+    statement: Dry-out shall use firmware solar night and publish admission, stop, and realized response.
+    source_ids: [SRC-001, SRC-002]
+    acceptance_signals: [no day actuation, environmental guards pass, outcome view is live]
+  - id: NSR-007
+    kind: constraint
+    statement: Schema-first migration, immutable delivery, firmware replay/invariant/check, alert, weekly OTA, bake, single-writer, and runtime gates shall not be waived.
+    source_ids: [SRC-001, SRC-003]
+    acceptance_signals: [all applicable gates pass and exact revisions are recorded]
+user_stories:
+  - id: NSS-001
+    actor: Jason
+    story: Trust that the device is stable and automation matches actual crops and plumbing.
+    acceptance_signal: No false reconnect writes, no unplanned-zone water, and no non-wall fertilizer.
+    requirement_ids: [NSR-001, NSR-003, NSR-004]
+    source_ids: [SRC-001, SRC-002]
+  - id: NSS-002
+    actor: greenhouse operator
+    story: Receive a bounded plan or an explicit neutral failure and know which action actually occurred.
+    acceptance_signal: Tool health and terminal result action are visible and one valid plan is effective.
+    requirement_ids: [NSR-002]
+    source_ids: [SRC-001, SRC-002]
+  - id: NSS-003
+    actor: evidence consumer
+    story: See missing crop-light evidence as unavailable instead of a fabricated number.
+    acceptance_signal: DLI is unavailable throughout product and planner surfaces.
+    requirement_ids: [NSR-005]
+    source_ids: [SRC-001, SRC-002]
+  - id: NSS-004
+    actor: release operator
+    story: Deliver the recovery once and prove its live end state.
+    acceptance_signal: CI, promotion, sync, OTA, runtime, rollback, and tracker evidence are complete.
+    requirement_ids: [NSR-007]
+    source_ids: [SRC-001, SRC-003]
+architecture_principles:
+  - id: NSP-001
+    statement: Observed state and terminal outcomes, not inferred labels, control reconciliation.
+    purpose: Prevent false reconnects, false sent state, and silent delivery loss.
+    linked_goal_ids: [NSG-001]
+    linked_requirement_ids: [NSR-001]
+    source_ids: [SRC-002, SRC-003]
+  - id: NSP-002
+    statement: Deterministic firmware remains authoritative and AI operates only through bounded validated contracts.
+    purpose: Preserve plant safety through planner and service failure.
+    linked_goal_ids: [NSG-001, NSG-005]
+    linked_requirement_ids: [NSR-002, NSR-007]
+    source_ids: [SRC-003]
+  - id: NSP-003
+    statement: Physical topology and evidence availability are first-class configuration, not assumptions.
+    purpose: Prevent watering absent zones, forbidden fertilizer paths, and fabricated DLI.
+    linked_goal_ids: [NSG-002, NSG-003]
+    linked_requirement_ids: [NSR-003, NSR-004, NSR-005]
+    source_ids: [SRC-001, SRC-004]
+  - id: NSP-004
+    statement: Diurnal control uses shared solar semantics and is scored from realized response.
+    purpose: Avoid seasonal clock drift and tuning from projections alone.
+    linked_goal_ids: [NSG-004]
+    linked_requirement_ids: [NSR-006]
+    source_ids: [SRC-001, SRC-002]
+milestones:
+  - id: NSM-001
+    name: Contracted recovery
+    outcome: Approved module boundaries and reconciled lane issues.
+    entry_criteria: [approved North Star and project definition]
+    exit_criteria: [module contracts validated, lane topology approved, issues reconciled]
+    requirement_ids: [NSR-001, NSR-002, NSR-003, NSR-004, NSR-005, NSR-006, NSR-007]
+  - id: NSM-002
+    name: Integrated recovery
+    outcome: Independently reviewed software passes all integration gates.
+    entry_criteria: [bounded lane contracts]
+    exit_criteria: [lane critics approve, migrations serialized, integration CI green]
+    requirement_ids: [NSR-001, NSR-002, NSR-003, NSR-004, NSR-005, NSR-006, NSR-007]
+  - id: NSM-003
+    name: Live verified recovery
+    outcome: Services, database, stale-plan retirement, and one firmware OTA satisfy runtime acceptance.
+    entry_criteria: [accepted main and immutable artifacts]
+    exit_criteria: [live acceptance probes, rollback watch, GitHub and durable records reconciled]
+    requirement_ids: [NSR-007]
+risks:
+  - id: NSK-001
+    statement: Moving the current wall schedule into its feed window before topology repair would fertilize south and west misters.
+    impact: Unplanted zones receive fertilizer and safety assumptions are violated.
+    mitigation: Land and verify wall-only relay routing before enabling any automatic wall schedule.
+    source_ids: [SRC-002]
+  - id: NSK-002
+    statement: A guessed shared fertilizer recipe could over-salt citrus or misfeed cannabis.
+    impact: Root damage, nutrient imbalance, clogging, or false confidence.
+    mitigation: Fail closed on commissioning and keep shared-line chemistry conservative and measured.
+    source_ids: [SRC-001, SRC-004]
+  - id: NSK-003
+    statement: Broad writer batches and MCP failure can starve safety evidence and miss required plans.
+    impact: Stale control intent and hidden runtime degradation.
+    mitigation: Independent queue/scheduling, tool-level health, terminal action accounting, and fault injection.
+    source_ids: [SRC-002]
+  - id: NSK-004
+    statement: One production environment and one weekly OTA constrain end-to-end proving.
+    impact: A bundled firmware defect has higher live risk.
+    mitigation: Isolated lanes, critics, replay/invariants, schema/service-first delivery, one combined OTA, and retained rollback.
+    source_ids: [SRC-003]
+adversarial_findings:
+  - id: ADV-001
+    perspective: end-user
+    finding: Current labels imply reconnect, fertilizer scheduling, and DLI capabilities that do not exist as represented.
+    disposition: accepted
+    owner: verdify-platform owning agent
+  - id: ADV-002
+    perspective: operator
+    finding: Current fail-closed behavior is accidental and enabling the schedule first would actuate forbidden zones.
+    disposition: accepted
+    owner: irrigation lane
+  - id: ADV-003
+    perspective: historian-auditor
+    finding: Writes and planner runs lack trustworthy terminal semantics and historical DLI needs invalid provenance.
+    disposition: accepted
+    owner: reconcile and DLI lanes
+  - id: ADV-004
+    perspective: architect
+    finding: Connection, cfg drift, plan eligibility, relay ownership, and measurement availability are conflated.
+    disposition: accepted
+    owner: module-contract phase
+  - id: ADV-005
+    perspective: SRE
+    finding: TCP-green pods can be tool-dead and a single paced batch can starve the task loop.
+    disposition: accepted
+    owner: planner and reconcile lanes
+  - id: ADV-006
+    perspective: performance
+    finding: Repeated 69-write batches and oversized tactical prompts consume time and capacity without value.
+    disposition: accepted
+    owner: planner and reconcile lanes
+  - id: ADV-007
+    perspective: cost
+    finding: Unscored dry-out and excess writes can increase gas, wear, token, and maintenance cost.
+    disposition: accepted
+    owner: dry-out and planner lanes
+  - id: ADV-008
+    perspective: security-privacy
+    finding: Device-write authority remains appropriately bounded; broader SaaS/privacy work is unrelated to this recovery.
+    disposition: deferred
+    owner: future product-definition increment
+open_questions:
+  - id: NSQ-001
+    question: Which measured recipe, volume, flow, distribution, and flush endpoint complete wall commissioning?
+    owner: Jason and verdify-platform owning agent
+    blocking: false
+    source_ids: [SRC-001, SRC-004]
+conflicts:
+  - id: CON-001
+    statement: Current climate rotation conflicts with center-only VPD mist.
+    existing_authority: firmware climate zone router
+    proposed_direction: center-only climate route; explicit intentional south/west irrigation
+    blocking: false
+  - id: CON-002
+    statement: Current dead schedule and 90-minute hold conflict with commissioned weekly liters and immediate flush.
+    existing_authority: firmware irrigation scheduler
+    proposed_direction: fail-closed solar-week state machine and wall-local immediate flush
+    blocking: false
+  - id: CON-003
+    statement: Current proxy DLI conflicts with the operator-confirmed broken interior sensor.
+    existing_authority: firmware accumulator and downstream views
+    proposed_direction: explicit unavailable evidence contract
+    blocking: false
+  - id: CON-004
+    statement: Current active 0.25 plan conflicts with approved/device zero.
+    existing_authority: stale v_active_plan row
+    proposed_direction: atomically retire stale intent and prevent repinning
+    blocking: false
+traceability:
+  - from: SRC-001
+    to: NSG-002
+    relationship: approves
+  - from: SRC-002
+    to: NSR-001
+    relationship: reveals
+  - from: SRC-003
+    to: NSP-002
+    relationship: constrains
+  - from: SRC-004
+    to: NSR-004
+    relationship: supports
+  - from: NSG-001
+    to: NSM-002
+    relationship: delivered_by
+  - from: NSR-007
+    to: NSM-003
+    relationship: gates
+proposed_artifact_changes:
+  - path: .agent-workflow/northstar/NORTHSTAR_PRODUCT.md
+    change_type: update
+    summary: Lock corrected recovery product intent.
+    approval_required: true
+  - path: .agent-workflow/northstar/NORTHSTAR_ARCHITECTURE.md
+    change_type: create
+    summary: Lock recovery architecture intent and interfaces.
+    approval_required: true
+  - path: .agent-workflow/contracts/
+    change_type: create
+    summary: Define black-box contracts for implementation lanes.
+    approval_required: false
+issue_recommendations:
+  - title: Stop stable-connection full reconcile storms and make write outcomes truthful
+    repository: VerdifyConsultancy/verdify-platform
+    body_summary: Residual child of issue 430 covering canonical wire IDs, connection generation, fair queueing, post-success confirmation, and runtime acceptance.
+    labels: [bug, priority-p0]
+  - title: Restore bounded planner and MCP terminal delivery
+    repository: VerdifyConsultancy/verdify-platform
+    body_summary: Update issue 427 with tool-level health, terminal action, bounds, expiry, stale plan retirement, and active acceptance.
+    labels: [bug, planner]
+  - title: Enforce greenhouse irrigation topology and commissioned wall fertigation
+    repository: VerdifyConsultancy/verdify-platform
+    body_summary: Update issue 350 and supersede conflicting center/rotation work.
+    labels: [firmware, irrigation]
+  - title: Make interior DLI explicitly unavailable while sensor validity is false
+    repository: VerdifyConsultancy/verdify-platform
+    body_summary: Add schema-first evidence availability and guard all consumers while preserving lighting control.
+    labels: [data-quality, firmware]
+  - title: Prove solar-night dry-out realized effectiveness
+    repository: VerdifyConsultancy/verdify-platform
+    body_summary: Update issue 410 with solar-phase and realized-response acceptance.
+    labels: [firmware, observability]
+gate_recommendations:
+  - type: protected-delivery-approval
+    owner: Jason Vallery
+    reason: Implementation, production sync, and OTA are approved for this bounded recovery.
+    blocking: false
+  - type: deterministic-release-gates
+    owner: verdify-platform owning agent
+    reason: CI, migration, firmware, alert, weekly OTA, bake, single-writer, and runtime gates remain mandatory.
+    blocking: true
+handoff:
+  next_skill: architecture-contracts
+  next_mode: contract-definition
+  reason: Product and architecture intent are approved; black-box module contracts are the next prerequisite.
+approval:
+  status: approved
+  approver: Jason Vallery
+  approved_at: "2026-07-09T21:05:00Z"

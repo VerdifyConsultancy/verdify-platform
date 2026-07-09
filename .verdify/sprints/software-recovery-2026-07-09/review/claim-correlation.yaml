@@ -1,0 +1,103 @@
+sprint_id: software-recovery-2026-07-09
+source: .verdify/sprints/software-recovery-2026-07-09/review/human-review-transcript.md
+generated_at: "2026-07-09T21:36:00Z"
+claims:
+  - id: HR-001
+    paraphrase: Wall fertilizer should run automatically.
+    classifications: [DESIRED_OUTCOME, DECISION, PRIORITY_SIGNAL]
+    evidence:
+      supports: [operator brief, current wall plumbing path, primary fertigation research]
+      contradicts: [current dropped 10:30 schedule, current multi-zone fertilizer bitmask]
+    resolvable_without_human: true
+    affects: [issue 434, firmware-control-policy, evidence-contracts]
+    disposition: Implement commissioning-gated weekly wall-only automation.
+  - id: HR-002
+    paraphrase: Exact wall schedule, duration, dose, and flush are unknown and require research.
+    classifications: [UNKNOWN, CONCERN, CONSTRAINT]
+    evidence:
+      supports: [mixed lime/cannabis occupancy, UF/IFAS and Virginia Tech research, no measured flow/chemistry]
+      contradicts: [legacy guessed six-minute feed and two-minute flush defaults]
+    resolvable_without_human: partially
+    affects: [issue 434, NSQ-001, commissioning schema]
+    disposition: Research determines architecture and required measurements; actual values remain fail-closed operator commissioning.
+  - id: HR-003
+    paraphrase: Once weekly with clean flush is a likely starting policy, but not certain.
+    classifications: [PROPOSED_SOLUTION, HYPOTHESIS, PRIORITY_SIGNAL]
+    evidence:
+      supports: [operator preference, small-dose fertigation guidance]
+      contradicts: [no universal mixed-crop weekly optimum]
+    resolvable_without_human: true
+    affects: [issue 434, weekly scheduler]
+    disposition: Treat weekly as approved pilot cadence and immediate flush as a measured invariant; do not encode it as proven crop optimum.
+  - id: HR-004
+    paraphrase: Dormant center/south/west infrastructure should remain but be disabled while those zones are unplanted.
+    classifications: [DECISION, CONSTRAINT, NON_GOAL]
+    evidence:
+      supports: [operator physical-topology correction, current unplanted zones]
+      contradicts: [deletion proposals, live center enable, exposed non-wall fertilizer controls]
+    resolvable_without_human: true
+    affects: [issue 434, configuration/readback contract]
+    disposition: Preserve explicit disabled topology and future commissioning path.
+  - id: HR-005
+    paraphrase: VPD climate mist should always use center and never rotate into south/west.
+    classifications: [DESIRED_OUTCOME, DECISION]
+    evidence:
+      supports: [operator intent, current occupancy]
+      contradicts: [firmware climate router and live south/west cycles]
+    resolvable_without_human: true
+    affects: [issue 434, firmware relay resolver]
+    disposition: Make center the only climate wet target.
+  - id: HR-006
+    paraphrase: South/west misters should be intentional irrigation rather than climate actuators.
+    classifications: [DESIRED_OUTCOME, DECISION]
+    evidence:
+      supports: [operator intent]
+      contradicts: [time-window availability currently becomes climate demand, relay ownership race]
+    resolvable_without_human: true
+    affects: [issue 434, pure resolver and explicit jobs]
+    disposition: Add explicit disabled-by-default clean irrigation intent and one relay owner.
+  - id: HR-007
+    paraphrase: Night dry-out must be diurnal rather than fixed-clock.
+    classifications: [DECISION, CONSTRAINT]
+    evidence:
+      supports: [existing firmware `is_night_phase` solar semantics]
+      contradicts: [fixed 02–06 acceptance language, old DB solar function]
+    resolvable_without_human: true
+    affects: [issues 410 and 293, ADR-009]
+    disposition: Preserve firmware solar control; fix DB parity and realized outcome evidence.
+  - id: HR-008
+    paraphrase: Dry-out thresholds are not specified.
+    classifications: [UNKNOWN, CONCERN]
+    evidence:
+      supports: [expanded night evidence and weather dependence]
+      contradicts: []
+    resolvable_without_human: true
+    affects: [issue 410, planner-delivery]
+    disposition: Keep existing deterministic floors/guards and allow bounded planner tuning only from valid realized evidence.
+  - id: HR-009
+    paraphrase: Disable the June band experiment.
+    classifications: [DECISION, PRIORITY_SIGNAL]
+    evidence:
+      supports: [device/default zero]
+      contradicts: [stale v_active_plan row at 0.25]
+    resolvable_without_human: true
+    affects: [issue 377, ordered release cleanup]
+    disposition: Deploy repaired consumers, atomically retire stale row, and prove zero repin.
+  - id: HR-010
+    paraphrase: Activate the planner as soon as it is repaired.
+    classifications: [DECISION, PRIORITY_SIGNAL, CONSTRAINT]
+    evidence:
+      supports: [explicit operator approval, deterministic firmware safety boundary]
+      contradicts: [proposal-only 72-hour soak recommendation]
+    resolvable_without_human: true
+    affects: [issue 427, ADR-006]
+    disposition: Activate immediately after tool-health, terminal-action, bounds, lifecycle, migration, and runtime acceptance checks.
+  - id: HR-011
+    paraphrase: Deliver all software fixes and perform OTA without another request.
+    classifications: [DECISION, PRIORITY_SIGNAL, CONSTRAINT]
+    evidence:
+      supports: [goal authorization]
+      contradicts: []
+    resolvable_without_human: true
+    affects: [complete sprint, release contract]
+    disposition: Implement/deploy/OTA under non-waived gates; credential rotation remains a separately protected action discovered later.

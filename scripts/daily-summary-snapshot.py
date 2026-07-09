@@ -47,14 +47,12 @@ THERM_BTU = 100000
 
 
 def get_db_url() -> str:
-    pw = "verdify"
-    env_file = "/srv/verdify/.env"
-    if os.path.exists(env_file):
-        with open(env_file) as f:
-            for line in f:
-                if line.strip().startswith("POSTGRES_PASSWORD="):
-                    pw = line.strip().split("=", 1)[1].strip().strip('"').strip("'")
-    return f"postgresql://verdify:{pw}@localhost:5432/verdify"
+    if dsn := os.environ.get("VERDIFY_DSN"):
+        return dsn
+    password = os.environ.get("POSTGRES_PASSWORD")
+    if not password:
+        raise RuntimeError("VERDIFY_DSN or POSTGRES_PASSWORD is required")
+    return f"postgresql://verdify:{password}@127.0.0.1:5432/verdify"
 
 
 async def snapshot_day(conn, target_date: date) -> bool:

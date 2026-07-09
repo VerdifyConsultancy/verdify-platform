@@ -1,0 +1,21 @@
+sprint_id: software-recovery-2026-07-09
+lane_id: security-hygiene
+state: BLOCKED
+updated_at: "2026-07-09T23:02:21Z"
+head_sha: 1dfb05fdab864a3d000095346ee5e16bd145df5d
+working_tree_clean: true
+acceptance:
+  passed:
+    - LANE-AC-01
+    - LANE-AC-02
+    - LANE-AC-03
+  pending:
+    - LANE-AC-04
+  failed: []
+blockers:
+  - Production rotation and old-credential rejection proof remain protected by unresolved Q-001.
+decisions_requested:
+  - Q-001
+next_actions:
+  - Merge the independently accepted non-production checkpoint in PR #439 after the controller evidence commit and green rerun.
+  - Keep the lane and production release blocked until Jason explicitly authorizes rotation and redacted new-valid/old-invalid proofs pass.

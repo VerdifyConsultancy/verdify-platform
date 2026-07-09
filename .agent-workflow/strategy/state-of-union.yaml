@@ -1,0 +1,520 @@
+schema_ref: state-of-union.schema.yaml
+kind: StateOfUnion
+schema_version: "1.0"
+strategy_id: software-recovery-2026-07-09
+status: approved
+repository: VerdifyConsultancy/verdify-platform
+baseline_sha: 0a9a19a840be6bae1beba604497d880b3b74b1ef
+assessed_at: "2026-07-09T21:56:01Z"
+inputs:
+  - id: IN-001
+    type: approved-foundations
+    location: .agent-workflow/northstar, .agent-workflow/project, .agent-workflow/architecture, .agent-workflow/modules
+    summary: Approved North Star, project definition, architecture, ADRs, and five black-box module contracts.
+    evidence_status: verified
+  - id: IN-002
+    type: operator-feedback
+    location: .agent-workflow/intake/transcript-replan.yaml and attached July 9 brief
+    summary: Corrected irrigation, fertigation, DLI, dry-out, planner, delivery, and OTA intent.
+    evidence_status: reported
+  - id: IN-003
+    type: live-github
+    location: .agent-workflow/strategy/github-backlog-sync.yaml
+    summary: Live issues, PRs, checks, workflows, milestones, Project existence, applied issue reconciliation, and superseded work.
+    evidence_status: observed
+  - id: IN-004
+    type: production-runtime
+    location: vallery k3s, ArgoCD application, prod DB, pod logs, public endpoints
+    summary: Healthy core pods/endpoints but critical planner alert, stable-connection write storm, stale active 0.25 plan, Argo drift, and failed out-of-band vision CronJob.
+    evidence_status: observed
+  - id: IN-005
+    type: adversarial-audit
+    location: docs/reviews/greenhouse-performance-and-project-review-2026-07-09.md and delegated read-only audits
+    summary: Current-main and live code/runtime root causes for writer, planner, irrigation, DLI, dry-out, database, and release sequencing.
+    evidence_status: observed
+  - id: IN-006
+    type: primary-research
+    location: .agent-workflow/northstar/collateral/2026-07-09-wall-fertigation-research.md
+    summary: Calibrated volume, compatibility, uniformity, injector, immediate flush, and conservative shared-line commissioning evidence.
+    evidence_status: verified
+source_freshness:
+  - surface: git
+    source_ref: origin/main and fresh recovery worktree
+    status: fresh
+    captured_at: "2026-07-09T21:25:00Z"
+    limitation: Recovery planning artifacts are uncommitted until the sprint transaction is complete.
+  - surface: github_issues
+    source_ref: live GitHub issue API/CLI
+    status: fresh
+    captured_at: "2026-07-09T21:22:00Z"
+    limitation: Native sub-issue/dependency edges were not required; textual links are current.
+  - surface: github_pull_requests
+    source_ref: PRs 409, 431, and 432
+    status: fresh
+    captured_at: "2026-07-09T21:22:00Z"
+    limitation: PR 409 is closed; its vision branch remains only as extraction evidence.
+  - surface: github_checks
+    source_ref: main runs 29024643976, 29024643977, and 29024644381
+    status: fresh
+    captured_at: "2026-07-09T14:17:33Z"
+    limitation: Green checks do not prove live planner or writer behavior.
+  - surface: github_deployments
+    source_ref: GitHub deployment surface
+    status: unavailable
+    captured_at: null
+    limitation: ArgoCD and running image IDs are the runtime authority.
+  - surface: github_projects
+    source_ref: VerdifyConsultancy Project #5
+    status: fresh
+    captured_at: "2026-07-09T21:20:00Z"
+    limitation: Detailed item fields were not required for issue-sized sprint candidates.
+  - surface: north_star
+    source_ref: .agent-workflow/northstar/northstar-artifacts.yaml
+    status: fresh
+    captured_at: "2026-07-09T21:12:00Z"
+    limitation: Locked only for this bounded recovery; broader SaaS/product questions remain deferred.
+  - surface: project_definition
+    source_ref: .agent-workflow/project/project-definition.yaml
+    status: fresh
+    captured_at: "2026-07-09T21:07:00Z"
+    limitation: Exact physical fertigation commissioning remains accepted risk and fail-closed.
+  - surface: architecture
+    source_ref: .agent-workflow/architecture and .agent-workflow/modules
+    status: fresh
+    captured_at: "2026-07-09T21:17:00Z"
+    limitation: Contracts define modules, not sprint lanes.
+  - surface: sprint_artifacts
+    source_ref: .verdify/sprints/software-recovery-2026-07-09 and .agent-workflow/sprints/s8-vanda-night-dehum
+    status: fresh
+    captured_at: "2026-07-09T22:31:00Z"
+    limitation: The current sprint is approved but uncommitted; historical S8 is cancelled and retained only as evidence.
+  - surface: lane_artifacts
+    source_ref: .verdify/sprints/software-recovery-2026-07-09/lanes and current module contracts
+    status: fresh
+    captured_at: "2026-07-09T22:31:00Z"
+    limitation: All eight lane contracts validate, but Agent Platform dynamic worktree dispatch is disabled; the approved local-worktree fallback applies.
+  - surface: review_artifacts
+    source_ref: July 9 greenhouse review and fresh delegated audits
+    status: fresh
+    captured_at: "2026-07-09T21:05:00Z"
+    limitation: Long agronomic outcome windows remain later verification, not implementation blockers.
+  - surface: deployment_runtime
+    source_ref: ArgoCD app verdify-prod-dark and verdify-prod pods/images
+    status: fresh
+    captured_at: "2026-07-09T21:23:00Z"
+    limitation: Argo is Healthy but OutOfSync on five resources and must be diff-reconciled before broad sync.
+  - surface: logs
+    source_ref: verdify-ingestor and Hermes/MCP runtime logs
+    status: fresh
+    captured_at: "2026-07-09T21:24:00Z"
+    limitation: Logs show repeated 69/69 pushes and historical tool death; no distributed traces exist.
+  - surface: metrics
+    source_ref: production DB telemetry, diagnostics, plan and relay evidence
+    status: fresh
+    captured_at: "2026-07-09T21:24:47Z"
+    limitation: Interior DLI and some physical irrigation feedback are invalid/unavailable.
+  - surface: traces
+    source_ref: distributed tracing
+    status: missing
+    captured_at: null
+    limitation: Correlation uses run IDs, job IDs, logs, and database ledgers instead.
+  - surface: alerts
+    source_ref: production alert_log
+    status: fresh
+    captured_at: "2026-07-09T21:24:00Z"
+    limitation: One critical planner miss and 90 warnings are open; alert semantics themselves require repair.
+  - surface: local_artifacts
+    source_ref: recovery planning, issue drafts, and controller baseline
+    status: fresh
+    captured_at: "2026-07-09T21:25:00Z"
+    limitation: Must be committed and linked from delivery records.
+planning_inventory:
+  - artifact_type: north_star
+    location: .agent-workflow/northstar
+    status: current
+    finding: Product and architecture are approved for the corrected recovery.
+    action: Use as sprint-planning authority.
+  - artifact_type: project_definition
+    location: .agent-workflow/project
+    status: current
+    finding: Requirements, surfaces, accepted risk, and protected action approval are explicit.
+    action: Preserve fail-closed commissioning and non-waived gates.
+  - artifact_type: architecture
+    location: .agent-workflow/architecture
+    status: current
+    finding: Whole-system topology, five ADRs, delivery order, and risks are approved.
+    action: Do not expand scope or cross ownership without re-routing.
+  - artifact_type: module_contracts
+    location: .agent-workflow/modules/contracts
+    status: current
+    finding: Five versioned contracts plus the serialized MCP-adapter handoff cover writer, planner, firmware, evidence/resource, credential, and release boundaries.
+    action: Enforce them through the approved eight-lane topology and conflict matrix.
+  - artifact_type: github_backlog_sync
+    location: .agent-workflow/strategy/github-backlog-sync.yaml
+    status: current
+    finding: Issues 433–438 were created, issue 427 rewritten, 17 executable issues labeled, cycle/resource scope corrected, parents/dependencies updated, and conflicting issues/PR 409 closed.
+    action: Use the exact issue set and ownership in the validated sprint/lane plan.
+  - artifact_type: sprint_plan
+    location: .agent-workflow/sprints/s8-vanda-night-dehum
+    status: stale
+    finding: Delivered historical work but pending PASS/critic state conflicts with expanded evidence and no-numbered-sprint policy.
+    action: Cancelled and superseded; retain only as history/evidence.
+  - artifact_type: diagnostic_packet
+    location: docs/reviews/greenhouse-performance-and-project-review-2026-07-09.md
+    status: current
+    finding: Runtime is degraded despite green source/delivery checks.
+    action: Carry exact live acceptance into lane and release contracts.
+  - artifact_type: release_verification
+    location: .verdify/sprints/software-recovery-2026-07-09/release
+    status: missing
+    finding: No recovery code or deployment exists yet.
+    action: Create after independently reviewed integration.
+  - artifact_type: outcome_review
+    location: docs/reviews/s8-vanda-night-dehum-bake-report.md and July 9 review
+    status: stale
+    finding: Early two-night PASS is not sustained by expanded five-night review.
+    action: Replace with solar-night realized-effectiveness contract under issue 410.
+north_star:
+  goal: Restore truthful, bounded, non-starving software control and evidence for the live greenhouse, deliver it through production, and perform one gated OTA without inventing hardware or crop measurements.
+  alignment_status: aligned
+  source_refs: [.agent-workflow/northstar/NORTHSTAR_PRODUCT.md, .agent-workflow/northstar/NORTHSTAR_ARCHITECTURE.md, .agent-workflow/project/project-definition.yaml]
+current_state:
+  summary: The 17-issue sprint and eight lane contracts are approved and validated; Agent Platform dispatch is blocked by disabled dynamic worktrees and a stale shared clone, so execution will use the recorded isolated local-worktree fallback. Production remains degraded by writer/planner failures, wrong irrigation/DLI semantics, evidence/resource gaps, chronic firmware risk, stale intent, and an exposed live DB credential.
+  lifecycle_state: Controller baseline validation with recorded local dispatch fallback
+  active_sprint: software-recovery-2026-07-09
+  open_gates: [g-prod-db-credential-rotation-20260709]
+  delivery_risks:
+    - Enabling the current wall schedule before firmware topology repair would fertilize south and west misters.
+    - Stale 0.25 intent must not be retired until repaired planner/writer consumers are live.
+    - Argo OutOfSync drift must be reconciled before a broad production sync.
+    - The planner critical alert blocks normal OTA until a valid required plan clears it.
+    - All firmware changes share one device, one weekly OTA, tight historical heap, and one rollback artifact.
+    - Replay outdoor freshness, trustworthy cycle counts, and topology-aware policy must land before firmware acceptance.
+    - Water-event materialization is stale and equipment/energy scopes must converge before resource claims are trusted.
+    - Production release is blocked until the exposed DB credential is explicitly authorized, rotated, and verified across every consumer.
+    - The repo runner ServiceAccount currently has direct namespace-admin rights in verdify-prod; workers must not use that bypass and release remains GitOps/operator-gated.
+delivery_health:
+  status: failing
+  diagnostic_refs: [docs/reviews/greenhouse-performance-and-project-review-2026-07-09.md, .agent-workflow/strategy/github-backlog-sync.yaml]
+  deployment_refs: ["Argo verdify-prod-dark Healthy/OutOfSync @ 0a9a19a", "running ingestor digest 175e5ec", "firmware 2026.7.3.1931.ab18fe8"]
+  log_refs: ["verdify-ingestor 69/69 pushes every 5–6 minutes", "Hermes MCP retry exhaustion", "vision ImagePullBackOff GHCR 401"]
+  telemetry_refs: ["critical alert 7676", "plan_journal latest 2026-06-25", "v_active_plan band_track_fraction=0.25", "interior light 0 lx with numeric DLI"]
+  discovered_health_issues:
+    - id: HEALTH-001
+      statement: Stable ESPHome connection receives broad 69-value reconcile batches every five to six minutes and starves the task loop.
+      severity: critical
+      evidence_refs: [issue 433, live ingestor logs]
+      action: Implement device-writer-reconcile first and require two-hour zero-storm proof.
+    - id: HEALTH-002
+      statement: Required planner is tool-dead while pods are green; alert 7676 is critical and no plan journal entry has landed since June 25.
+      severity: critical
+      evidence_refs: [issue 427, Hermes/run audit, alert_log]
+      action: Restore tool-level health and terminal plan semantics before OTA.
+    - id: HEALTH-003
+      statement: Climate mist currently rotates into unplanted south/west zones and automatic fertilizer semantics are accidentally disabled rather than correct.
+      severity: high
+      evidence_refs: [issue 434, live relay attribution and HA config]
+      action: Implement one firmware relay resolver and commissioning-gated wall-only feed.
+    - id: HEALTH-004
+      statement: Product and planner publish numeric interior DLI despite a broken 0-lx sensor and compounding arithmetic defects.
+      severity: high
+      evidence_refs: [issue 435, live/read-code audit]
+      action: Land schema-first unavailable/provenance contract and guard all consumers.
+    - id: HEALTH-005
+      statement: DB solar phase remains old in production and dry-out has projected but not durable realized-effectiveness evidence.
+      severity: high
+      evidence_refs: [issues 293 and 410]
+      action: Apply/prove solar parity and materialize solar-night outcome evidence.
+    - id: HEALTH-006
+      statement: Out-of-band vision CronJob has not succeeded since July 4 and is in ImagePullBackOff due GHCR 401.
+      severity: medium
+      evidence_refs: [issue 436]
+      action: Defer from control recovery and reconcile separately as vision-only work.
+    - id: HEALTH-007
+      statement: Stock replay has no source-backed outdoor age/freshness and cannot reach outdoor-aware estimator branches honestly.
+      severity: high
+      evidence_refs: [issue 419, corpus audit]
+      action: Populate typed source-backed freshness and enforce coverage before firmware acceptance.
+    - id: HEALTH-008
+      statement: Firmware daily counters are unsafe for partial-day cycling acceptance and the device has a chronic low lifetime heap floor plus Task WDT history.
+      severity: critical
+      evidence_refs: ["issues 389, 390, and 428"]
+      action: Land raw-transition truth, topology-aware OTA policy, and measured heap/WDT gate.
+    - id: HEALTH-009
+      statement: Canonical/legacy equipment slugs diverge, the water-event ledger stopped May 1, and partial measured versus modeled energy is collapsed.
+      severity: high
+      evidence_refs: [issue 437, live resource audit]
+      action: Converge active aliases, restore idempotent water freshness, and expose resource scope/quality.
+    - id: HEALTH-010
+      statement: A committed fallback matches the still-valid production application DB credential.
+      severity: critical
+      evidence_refs: [issue 438, redacted hygiene gate]
+      action: Merge fail-closed cleanup but block production release until explicit scoped rotation and redacted consumer verification.
+issue_inventory:
+  - issue: 433
+    title: Stable-connection reconcile storm
+    state: OPEN
+    classification: candidate
+    rationale: P0 root failure is live and the issue matches the approved writer module.
+    dependencies: ["#430 parent", "#377 after deploy"]
+    action: Include first.
+  - issue: 427
+    title: Required planner/MCP delivery recovery
+    state: OPEN
+    classification: candidate
+    rationale: P0 live critical alert and exact planner module acceptance are recorded.
+    dependencies: ["#433 cadence", "#435 availability", "#377 cleanup"]
+    action: Include first wave and activate after acceptance.
+  - issue: 434
+    title: Center-only climate and commissioned wall feed
+    state: OPEN
+    classification: candidate
+    rationale: Approved operator topology and research are now issue-sized.
+    dependencies: ["#433 readback contract", operator commissioning before physical feed]
+    action: Include in one firmware-control lane.
+  - issue: 435
+    title: Interior DLI unavailable
+    state: OPEN
+    classification: candidate
+    rationale: High-integrity defect has schema-first and firmware acceptance.
+    dependencies: [serialized migration before consumers, one OTA with 434]
+    action: Include evidence and firmware slices.
+  - issue: 410
+    title: Solar-night realized dry-out
+    state: OPEN
+    classification: candidate
+    rationale: Existing control remains useful but acceptance requires corrected evidence.
+    dependencies: ["#293", realized-outcome migration]
+    action: Include evidence slice; firmware change only if tests reveal a gap.
+  - issue: 293
+    title: Live DB solar parity
+    state: OPEN
+    classification: candidate
+    rationale: Migration exists on main but is not effective live.
+    dependencies: [serialized apply of 186]
+    action: Include release/data lane before 410 verification.
+  - issue: 424
+    title: VPD divergence view source fix
+    state: OPEN
+    classification: candidate
+    rationale: Small known data defect reserves migration 189 and masks real drift.
+    dependencies: [serialized migration 189]
+    action: Include first database sequence.
+  - issue: 377
+    title: Retire stale 0.25 band intent
+    state: OPEN
+    classification: blocked
+    rationale: Value decision is complete but mutation must wait for repaired consumers.
+    dependencies: ["#433", "#427"]
+    action: Include as ordered release step, not independent lane.
+  - issue: 419
+    title: Source-backed replay outdoor freshness
+    state: OPEN
+    classification: candidate
+    rationale: Stock replay structurally misses every outdoor-aware estimator path and can ship a zero-divergence false negative.
+    dependencies: [typed outdoor freshness and corpus refresh]
+    action: Include in evidence-core before firmware work.
+  - issue: 389
+    title: Raw-transition cycle and runtime truth
+    state: OPEN
+    classification: candidate
+    rationale: Firmware daily counters are unsafe for partial/current-day grading and hide per-circuit/short-pulse detail.
+    dependencies: [serialized evidence migration]
+    action: Include in evidence-core and make it the source for 390.
+  - issue: 390
+    title: Topology-aware firmware cycling gate
+    state: OPEN
+    classification: candidate
+    rationale: One OTA needs immutable completed-day pre/post evidence that understands center-only redistribution.
+    dependencies: ["#389", exact firmware artifact]
+    action: Include in release-control.
+  - issue: 299
+    title: Preserve center-mister re-fire fence
+    state: OPEN
+    classification: candidate
+    rationale: Existing 45-second protection is effective and must survive the topology rewrite without a speculative new governor.
+    dependencies: ["#434", "#389", "#390"]
+    action: Include preservation/test slice in firmware-control.
+  - issue: 383
+    title: Preserve solar-night safety pending realized evidence
+    state: OPEN
+    classification: candidate
+    rationale: Current evidence supports observation, not a new post-wet hold or flag.
+    dependencies: ["#410", "#389"]
+    action: Include safety/evidence slice in firmware-control; defer tuning.
+  - issue: 386
+    title: Prove lighting boundary minimum-on behavior
+    state: OPEN
+    classification: candidate
+    rationale: Raw counts do not support the old severe premise, but the boundary regression and DLI-neutrality proof are missing.
+    dependencies: ["#389", "#390", "#435"]
+    action: Include validation slice in firmware-control.
+  - issue: 437
+    title: Canonical equipment and scope-aware water/energy evidence
+    state: OPEN
+    classification: candidate
+    rationale: Active slugs diverge, water events are stale, and unlike energy scopes are collapsed.
+    dependencies: ["#389", serialized resource migrations, "#434 intent"]
+    action: Include standalone resource-accounting lane.
+  - issue: 438
+    title: Remove DB credential fallbacks and rotate exposed app credential
+    state: OPEN
+    classification: blocked
+    rationale: Source cleanup is ready but production rotation remains a separately protected release action.
+    dependencies: [explicit Jason rotation authorization, complete caller inventory]
+    action: Include security-hygiene; block release but not implementation.
+  - issue: 428
+    title: Chronic ESP32 heap exhaustion
+    state: OPEN
+    classification: candidate
+    rationale: Writer storm may contribute, but the combined OTA independently requires measured heap/WDT diagnostics, floor, and soak.
+    dependencies: ["#433", post-fix measurement]
+    action: Include in firmware-control with pre/post release gate.
+  - issue: 367
+    title: Broad anti-chatter consolidation
+    state: OPEN
+    classification: deferred
+    rationale: Raw-edge audit does not justify a new control delta during heap/topology recovery.
+    dependencies: [post-recovery raw-edge and isolated response evidence]
+    action: Remove from sprint label and revisit only on proven residual failure.
+  - issue: 371
+    title: Broad outcome composite and homepage redesign
+    state: OPEN
+    classification: deferred
+    rationale: Required DLI/cycle/night/resource truth lands now, but broad UI/composite work is not needed for control recovery.
+    dependencies: ["#435", "#389", "#410", "#437"]
+    action: Keep as follow-up; do not synthesize unavailable terms.
+  - issue: 436
+    title: Vision CronJob image pull and source drift
+    state: OPEN
+    classification: deferred
+    rationale: Real medium health defect is unrelated to the approved control recovery.
+    dependencies: [retain/remove decision, fresh vision-only PR]
+    action: Keep out of current sprint.
+  - issue: 37
+    title: Change center start hour
+    state: CLOSED
+    classification: done
+    rationale: Wrong product premise is superseded by 434.
+    dependencies: []
+    action: None.
+  - issue: 323
+    title: Climate zone priority router
+    state: CLOSED
+    classification: done
+    rationale: Fairness rotation conflicts with center-only climate intent.
+    dependencies: []
+    action: None.
+  - issue: 397
+    title: Day-mask trim
+    state: CLOSED
+    classification: done
+    rationale: Stronger fail-closed commissioning contract is in 434.
+    dependencies: []
+    action: None.
+gaps:
+  - id: GAP-001
+    type: deployment
+    statement: ArgoCD is Healthy but OutOfSync on five resources; broad sync must distinguish intended storage/manual drift from recovery changes.
+    owner: runtime-release-verification
+    blocking: false
+    apply_through: release_verification
+  - id: GAP-002
+    type: external_dependency
+    statement: Exact wall recipe, water chemistry, injector calibration, flow, distribution, and flush endpoint are not measured.
+    owner: Jason and evidence-contracts
+    blocking: false
+    apply_through: github_issue
+  - id: GAP-003
+    type: evidence
+    statement: No distributed traces exist; correlation relies on logs and database IDs.
+    owner: planner-delivery and device-writer-reconcile
+    blocking: false
+    apply_through: sprint_planning
+  - id: GAP-004
+    type: deployment
+    statement: Vision source/runtime drift is tracked but intentionally outside control recovery.
+    owner: issue 436
+    blocking: false
+    apply_through: github_issue
+recommended_sequence:
+  - id: SEQ-001
+    outcome: Merge credential source cleanup while repairing the writer and core evidence in parallel.
+    issue_ids: [438, 433, 293, 389, 410, 419, 424]
+    prerequisites: [approved sprint and lane topology, controller baseline]
+    risks: [credential gate, single writer, serialized evidence migrations]
+    depends_on: []
+  - id: SEQ-002
+    outcome: Converge equipment/resource truth and restore the water-event ledger.
+    issue_ids: [437]
+    prerequisites: [evidence-core merged, migration and MCP adapter handoff]
+    risks: [active-slug mismatch, counter discontinuity, scope collapse]
+    depends_on: [SEQ-001]
+  - id: SEQ-003
+    outcome: Make DLI unavailable end to end, then repair planner delivery on the final shared contracts.
+    issue_ids: [435, 427]
+    prerequisites: [resource schema head, writer contract, serialized MCP/schema handoff]
+    risks: [cross-stack consumer drift, planner critical alert]
+    depends_on: [SEQ-001, SEQ-002]
+  - id: SEQ-004
+    outcome: Build the one combined firmware topology/reliability package without speculative cycle tuning.
+    issue_ids: [434, 428, 299, 383, 386]
+    prerequisites: [writer, evidence, DLI, and planner heads merged; exact replay corpus]
+    risks: [relay ownership, heap/WDT, weekly OTA, replay divergence]
+    depends_on: [SEQ-003]
+  - id: SEQ-005
+    outcome: With credential rotation authorized and verified, deploy services, retire stale intent, gate and perform one OTA, and prove settled runtime.
+    issue_ids: [438, 390, 377]
+    prerequisites: [all critics approved, green CI, Argo drift reconciled, credential gate closed, planner critical alert resolved, exact firmware and rollback artifacts]
+    risks: [one live device, credential consumer miss, stale repin, cycling/heap regression]
+    depends_on: [SEQ-001, SEQ-002, SEQ-003, SEQ-004]
+next_sprint_candidates:
+  - outcome: Deliver the bounded July 9 software recovery end to end.
+    issue_ids: [293, 299, 377, 383, 386, 389, 390, 410, 419, 424, 427, 428, 433, 434, 435, 437, 438]
+    readiness: ready
+    rationale: Product/architecture authority, evidence-driven scope, issue set, sprint, topology, and implementation approval are recorded; protected credential rotation blocks release only.
+    required_actions:
+      - Validate eight lane contracts and create dependency-ready isolated worktrees.
+      - Serialize evidence, resource, DLI, and planner migrations/MCP handoffs.
+      - Require independent critic review before integration.
+      - Resolve credential gate before production mutation and use one combined firmware OTA after service/planner acceptance.
+actions:
+  - id: ACT-001
+    type: create_issue
+    target: GitHub issues 433 through 438
+    owner: verdify-platform owning agent
+    status: applied
+  - id: ACT-002
+    type: update_issue
+    target: GitHub issues 427, 430, 350, 410, 377, 293, 424, 365, 371, 214, and 397
+    owner: verdify-platform owning agent
+    status: applied
+  - id: ACT-003
+    type: close_duplicate
+    target: GitHub issues 37, 323, and 397; PR 409
+    owner: verdify-platform owning agent
+    status: applied
+  - id: ACT-004
+    type: record_deployment_evidence
+    target: Live writer, planner, Argo, DB, endpoints, and vision state
+    owner: state-of-union
+    status: applied
+  - id: ACT-005
+    type: plan_sprint
+    target: The 17 issues labeled sprint:software-recovery-2026-07-09
+    owner: sprint-planning
+    status: applied
+  - id: ACT-006
+    type: route
+    target: sprint-planning bounded-recovery
+    owner: project-router
+    status: applied
+handoff:
+  next_skill: sprint-orchestrator
+  next_mode: approved-lane-contract-compilation
+  reason: The 17-issue sprint, eight-lane topology, approval record, and protected release gate are current; dependency-ready lanes may be contracted and dispatched without production mutation.
+  required_before_handoff: []
+approval:
+  status: approved
+  approver: Jason Vallery
+  approved_at: "2026-07-09T21:05:00Z"

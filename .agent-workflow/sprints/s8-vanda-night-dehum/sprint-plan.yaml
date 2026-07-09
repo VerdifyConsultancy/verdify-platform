@@ -3,7 +3,7 @@ schema_ref: sprint-plan.schema.yaml
 kind: SprintPlan
 schema_version: '1.0'
 sprint_id: s8-vanda-night-dehum
-status: active
+status: cancelled
 goal: >-
   Make the overnight center-zone (bare-root Vanda) climate dryable per the
   converged #410 analysis and the 2026-07-03 adversarial design review: land the

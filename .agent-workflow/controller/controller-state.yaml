@@ -1,0 +1,104 @@
+schema_ref: controller-state.schema.yaml
+kind: ControllerState
+schema_version: "1.0"
+project_id: verdify-platform
+controller_id: software-recovery-root-019f4826
+status: active
+state: WAVE_PLANNED
+updated_at: "2026-07-09T23:02:21Z"
+current_wave: wave-software-recovery-implementation
+sessions:
+  - id: software-recovery-root-019f4826
+    role: orchestrator
+    executor: codex-root-local-operator
+    repository: VerdifyConsultancy/verdify-platform
+    issue: null
+    lane_id: null
+    branch: codex/software-recovery-2026-07-09
+    worktree: /Users/jason/repos/verdify-worktrees/software-recovery-20260709
+    status: active
+  - id: platform-live-audit-20260709
+    role: readiness
+    executor: codex-local-subagent
+    repository: VerdifyConsultancy/verdify-platform
+    issue: null
+    lane_id: null
+    branch: codex/software-recovery-2026-07-09
+    worktree: /Users/jason/repos/verdify-worktrees/software-recovery-20260709
+    status: complete
+  - id: platform-artifact-audit-20260709
+    role: readiness
+    executor: codex-local-subagent
+    repository: VerdifyConsultancy/verdify-platform
+    issue: null
+    lane_id: null
+    branch: codex/software-recovery-2026-07-09
+    worktree: /Users/jason/repos/verdify-worktrees/software-recovery-20260709
+    status: complete
+  - id: controller-baseline-validation-20260709
+    role: validator
+    executor: codex-local-subagent
+    repository: VerdifyConsultancy/verdify-platform
+    issue: null
+    lane_id: null
+    branch: codex/software-recovery-2026-07-09
+    worktree: /Users/jason/repos/verdify-worktrees/software-recovery-20260709
+    status: complete
+  - id: security-caller-audit-20260709
+    role: readiness
+    executor: codex-local-subagent
+    repository: VerdifyConsultancy/verdify-platform
+    issue: 438
+    lane_id: security-hygiene
+    branch: codex/software-recovery-2026-07-09
+    worktree: /Users/jason/repos/verdify-worktrees/software-recovery-20260709
+    status: complete
+  - id: security-checkpoint-critic-20260709
+    role: critic
+    executor: codex-local-subagent
+    repository: VerdifyConsultancy/verdify-platform
+    issue: 438
+    lane_id: security-hygiene
+    branch: codex/software-recovery-2026-07-09
+    worktree: /Users/jason/repos/verdify-worktrees/software-recovery-20260709
+    status: complete
+events:
+  - id: controller-event-20260709-001
+    occurred_at: "2026-07-09T20:52:12Z"
+    event_type: sprint_planned
+    summary: User-authorized software-recovery scope was reconciled into 17 GitHub issues, eight lane contracts, and an approved agentic sprint plan at baseline 0a9a19a.
+  - id: controller-event-20260709-002
+    occurred_at: "2026-07-09T22:25:00Z"
+    event_type: platform_readiness
+    summary: Live Agent Platform substrate is healthy, but dynamic worktree session creation is explicitly disabled and all fixed Verdify sessions share one stale retired-branch clone.
+  - id: controller-event-20260709-003
+    occurred_at: "2026-07-09T22:31:00Z"
+    event_type: policy_exception
+    summary: Current-sprint local isolated-worktree fallback is authorized by the user's explicit delivery directive; production credential rotation remains excluded.
+  - id: controller-event-20260709-004
+    occurred_at: "2026-07-09T22:40:00Z"
+    event_type: baseline_validation
+    summary: Fifty-eight YAML files parse, 55 schema-backed artifacts validate, issue and dependency topology are exact, lint and 20 credential-hygiene tests pass; monolithic make test is blocked by retired laptop runtime assumptions and is deferred to PR CI.
+  - id: controller-event-20260709-005
+    occurred_at: "2026-07-09T22:48:00Z"
+    event_type: security_caller_inventory
+    summary: Every live and manual caller of the five remediated scripts plus every live verdify-app-secrets database-password consumer now has a durable injection, restart, validation, and rollback disposition; no live caller depends on the removed .env fallback.
+  - id: controller-event-20260709-006
+    occurred_at: "2026-07-09T23:02:21Z"
+    event_type: critic_reviewed
+    summary: A fresh critic approved PR #439 as a non-production checkpoint after a reviewed URI-safe rotation hard stop and record reconciliation; the security lane remains blocked on protected credential invalidation.
+open_gates:
+  - g-prod-db-credential-rotation-20260709
+next_actions:
+  - Commit and push the critic-reviewed security evidence reconciliation, then require the replacement PR #439 CI run to remain green.
+  - Merge the controller baseline to main after that evidence-only check completes.
+  - Create isolated local lane worktrees from the merged baseline and dispatch device-writer and evidence-core workers under the approved fallback gate.
+  - Preserve the credential-rotation release block until Jason explicitly authorizes the protected rotation.
+handoff:
+  next_skill: sprint-orchestrator
+  next_mode: recorded-local-fallback
+  reason: Agent Platform dynamic worktree CRUD is disabled; continue execution through the approved isolated local-worktree fallback and maintain durable controller records.
+approval:
+  status: approved
+  approver: Jason Vallery
+  approved_at: "2026-07-09T20:52:12Z"

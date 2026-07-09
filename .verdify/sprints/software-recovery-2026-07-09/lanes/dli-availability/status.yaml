@@ -1,0 +1,20 @@
+sprint_id: software-recovery-2026-07-09
+lane_id: dli-availability
+state: NOT_STARTED
+updated_at: "2026-07-09T22:10:43Z"
+head_sha: 0a9a19a840be6bae1beba604497d880b3b74b1ef
+working_tree_clean: false
+acceptance:
+  passed: []
+  pending:
+    - LANE-AC-01
+    - LANE-AC-02
+    - LANE-AC-03
+    - LANE-AC-04
+  failed: []
+blockers:
+  - Hard dependency resource-accounting has not yet been recorded as merged with a finalized migration/shared-consumer head.
+decisions_requested: []
+next_actions:
+  - Wait for controller confirmation that resource-accounting is merged and migration 195 is available.
+  - Cut the assigned worktree/branch from the controller-approved current main and begin orientation.

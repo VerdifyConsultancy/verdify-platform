@@ -1,0 +1,121 @@
+schema_ref: module-contract.schema.yaml
+kind: ModuleContract
+schema_version: "1.0"
+module_id: firmware-control-policy
+contract_version: "1.1"
+status: approved
+purpose: Own the single firmware relay resolver and device evidence for center-only climate mist, intentional disabled-by-default zone irrigation, wall-only commissioned fertigation, unavailable interior DLI, bounded solar-night dry-out, and measured heap/WDT safety while preserving proven dwell behavior.
+requirement_ids: [NSR-003, NSR-004, NSR-005, NSR-006, NSR-007]
+owned_paths:
+  - firmware/greenhouse/controls.yaml
+  - firmware/greenhouse/globals.yaml
+  - firmware/greenhouse/tunables.yaml
+  - firmware/greenhouse/sensors.yaml
+  - firmware/greenhouse/greenhouse.yaml
+  - firmware/lib/greenhouse_logic.h
+  - firmware/lib/greenhouse_types.h
+  - firmware/lib/heap_diagnostics.h
+  - firmware/test/test_greenhouse_logic.cpp
+  - firmware/test/invariants.h
+  - firmware/test/replay_invariants.cpp
+  - tests/test_12_fidelity.py
+prohibited_paths:
+  - ingestor/**
+  - mcp/**
+  - planner_graph/**
+  - db/migrations/**
+  - deploy/k8s/**
+inputs:
+  - name: climate_and_solar_state
+    schema: validated sensors, monotonic dt, firmware solar phase, weather/wind, safety rails, equipment state
+    producer: firmware sensors and deterministic clock
+  - name: irrigation_policy
+    schema: center climate policy, explicit zone enable/intent, weekly wall policy, current commissioning values and validity
+    producer: operator-configured cfg tunables through device-writer-reconcile
+  - name: dli_sensor_validity
+    schema: operator validity enable, calibration revision, valid_from, failure reason
+    producer: operator commissioning through cfg tunable
+outputs:
+  - name: resolved_wet_relay_intent
+    schema: demand source, selected zone, owner, admitted/blocked reason, requested duration/volume, relay state
+    consumers: [ESP32 relays, ingestor, evidence-contracts]
+  - name: wall_fertigation_job
+    schema: weekly eligibility, commissioning revision, requested liters, derived durations, state, terminal/stop reason
+    consumers: [ESP32 relays, ingestor, evidence-contracts]
+  - name: dli_availability
+    schema: nullable value, availability, reason, provenance, validity revision
+    consumers: [ingestor, evidence-contracts]
+  - name: dryout_diagnostic
+    schema: solar phase, eligible/admitted, guard states, actuator duty, stop reason
+    consumers: [ingestor, evidence-contracts, planner-delivery]
+  - name: firmware_health
+    schema: current/minimum free heap, largest block, loop duration, reset reason, guard action, build revision
+    consumers: [alerts, runtime-release-verification]
+public_interfaces:
+  - name: irrigation-resolver
+    location: firmware/lib/greenhouse_logic.h and firmware/greenhouse/controls.yaml
+    compatibility: One resolver owns every wet relay; climate can target center only; explicit irrigation and fertilizer cannot race or share a relay owner.
+  - name: commissioning-cfg-readbacks
+    location: firmware/greenhouse/tunables.yaml
+    compatibility: Every new tunable has a `cfg_*` readback; missing/stale commissioning disables automatic fertilizer.
+  - name: evidence-availability-and-dryout-diagnostics
+    location: firmware/greenhouse/sensors.yaml
+    compatibility: New fields are additive before consumers require them; invalid DLI never emits a product-valid number.
+dependencies:
+  hard: [device-writer-reconcile cfg contract, deterministic firmware safety and relay interlocks]
+  soft: [evidence-contracts job ledger and outcome views, planner-delivery bounded tuning]
+invariants:
+  - Climate/VPD demand can actuate only the center mister and never fertilizer.
+  - South and west misters require explicit enabled intentional irrigation and are never climate rotation candidates.
+  - Center drip and all non-wall fertilizer remain disabled by default and cannot be scheduled or manually admitted while disabled.
+  - The fertilizer master is mutually interlocked with non-wall wet relays and the wall sequence is clean prewet, feed, fertilizer-off, immediate clean flush.
+  - Weekly wall automatic admission requires current complete commissioning and exact-once eligibility.
+  - Interior DLI is unavailable while validity is false; independent qualified-minute/photoperiod lighting remains operational.
+  - Dry-out admission requires firmware night solar phase and every existing temperature, humidity, weather, wind, dwell, and equipment safety predicate.
+  - The existing 45-second mister re-fire fence and lighting minimum-on behavior survive the resolver/DLI changes without extending requested pulses or photoperiod limits.
+  - No new mister governor, post-wet hold, closed-heat flag, or lighting shoulder tunable is added without a separately accepted raw-edge and response-evidence decision.
+  - A controlled heap restart is last-resort containment, not a substitute for removing measured allocation/publish pressure.
+runtime_resources:
+  - one ESP32, active-low relay boards, wall drip/fertilizer plumbing, center/south/west mister relays
+  - firmware heap, flash, watchdog, persisted scheduler and last-job state
+  - cfg readbacks, diagnostic sensors, relay and available flow feedback
+validation_commands:
+  - id: firmware-units
+    command: make test-firmware
+    purpose: Prove pure control, routing, availability, scheduler, and fail-closed behavior.
+  - id: firmware-invariants
+    command: make firmware-invariants
+    purpose: Prove safety invariants over the replay corpus.
+  - id: firmware-replay
+    command: make firmware-replay-worktree OLD=origin/main
+    purpose: Quantify intended mode and relay behavior changes from the baseline.
+  - id: firmware-band-replay
+    command: make firmware-replay-band OLD=origin/main
+    purpose: Prove no accidental diurnal band-shape change and expose any intended band-sensitive effect.
+  - id: firmware-compile
+    command: make firmware-check
+    purpose: Compile the exact worktree and inspect map/heap evidence.
+  - id: irrigation-software-audit
+    command: make irrigation-stack-software-check
+    purpose: Check irrigation software and dashboard requirements without inventing missing physical feedback.
+  - id: lighting-audit
+    command: make lighting-audit-static
+    purpose: Prove DLI availability and boundary regression work does not alter independent lighting policy.
+required_evidence:
+  - Behavior tests route every climate wet request to center and reject disabled or fertilizer-crossed paths.
+  - Replay and invariants show only approved divergence and no safety regression.
+  - Missing commissioning cannot actuate; a fixture proves liters-to-time and immediate flush sequencing.
+  - DLI availability false suppresses value while qualified-light-minute tests remain green.
+  - Solar-day attempts cannot enter dry-out and night guard transitions expose reasons.
+  - Firmware map/heap, alert, weekly OTA, bake, build, archive, OTA, and post-deploy readback evidence is retained.
+  - Current heap/largest-block distributions and no-Task-WDT bake evidence supplement the lifetime watermark.
+  - Regression tests prove the existing mister re-fire and lighting boundary holds; raw-cycle evidence justifies no additional control delta.
+definition_of_done:
+  - One firmware implementation owns all overlapping greenhouse YAML and relay paths.
+  - Every new cfg tunable has readback and registry compatibility evidence.
+  - One combined firmware artifact passes all specialized gates and is safely OTA'd once.
+  - Live relay attribution proves the approved topology and diagnostics prove DLI/dry-out contracts.
+approval:
+  status: approved
+  approver: Jason Vallery
+  approved_at: "2026-07-09T21:05:00Z"
