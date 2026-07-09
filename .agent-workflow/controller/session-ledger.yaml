@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-verdify-platform-controller
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-09T23:02:21Z'
+updated_at: '2026-07-09T23:09:42Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -339,6 +339,44 @@ sessions:
   - '#439'
   artifact_refs:
   - .verdify/sprints/software-recovery-2026-07-09/lanes/security-hygiene/critic-report.md
+- session_id: device-writer-433-local-20260709
+  parent_session_id: software-recovery-root-019f4826
+  role: worker
+  executor: codex-local-subagent-fallback
+  repository: VerdifyConsultancy/verdify-platform
+  status: active
+  started_at: '2026-07-09T23:09:42Z'
+  ended_at: null
+  issue_ids:
+  - 433
+  lane_id: device-writer
+  wave_id: wave-software-recovery-implementation
+  branch: lane/recovery-writer-433
+  worktree: /Users/jason/repos/verdify-worktrees/software-recovery-writer-433
+  pr_refs: []
+  artifact_refs:
+  - .verdify/sprints/software-recovery-2026-07-09/lanes/device-writer/lane.yaml
+- session_id: evidence-core-local-20260709
+  parent_session_id: software-recovery-root-019f4826
+  role: worker
+  executor: codex-local-subagent-fallback
+  repository: VerdifyConsultancy/verdify-platform
+  status: active
+  started_at: '2026-07-09T23:09:42Z'
+  ended_at: null
+  issue_ids:
+  - 293
+  - 389
+  - 410
+  - 419
+  - 424
+  lane_id: evidence-core
+  wave_id: wave-software-recovery-implementation
+  branch: lane/recovery-evidence-293-389-410-419-424
+  worktree: /Users/jason/repos/verdify-worktrees/software-recovery-evidence-core
+  pr_refs: []
+  artifact_refs:
+  - .verdify/sprints/software-recovery-2026-07-09/lanes/evidence-core/lane.yaml
 events:
 - id: LEDGER-EVT-0001
   sequence: 1
@@ -2622,6 +2660,134 @@ events:
   data_summary: The identified URI-delimiter stranding risk is closed for this rotation by a reviewed 64-hex-character, 256-bit replacement hard stop; PR CI passed 17 checks with eight intentional skips.
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0058
+  content_sha256: null
+- id: LEDGER-EVT-0060
+  sequence: 60
+  occurred_at: '2026-07-09T23:07:58Z'
+  event_type: other
+  source: sprint-orchestrator
+  subject: PR 439 controller and security checkpoint merged
+  actor:
+    role: controller
+    name: software-recovery-root-019f4826
+  session_id: software-recovery-root-019f4826
+  correlation:
+    trace_id: null
+    wave_id: wave-software-recovery-implementation
+    session_ids:
+    - software-recovery-root-019f4826
+    issue_ids:
+    - 438
+    lane_ids:
+    - security-hygiene
+    pr_ids:
+    - '439'
+    deployment_ids: []
+    policy_decision_ids:
+    - g-prod-db-credential-rotation-20260709
+  refs:
+    artifact_refs:
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/security-hygiene/closure-report.md
+    evidence_refs:
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/security-hygiene/evidence.yaml
+    external_refs:
+    - type: github_pr
+      identifier: VerdifyConsultancy/verdify-platform#439
+      url: https://github.com/VerdifyConsultancy/verdify-platform/pull/439
+    - type: git_commit
+      identifier: 6b5042c6a9d525cf1429bfda5a1f6d9a95470476
+      url: https://github.com/VerdifyConsultancy/verdify-platform/commit/6b5042c6a9d525cf1429bfda5a1f6d9a95470476
+  result: approved
+  summary: The independently reviewed non-production checkpoint merged after final CI passed 17 checks with eight intentional skips; the protected production rotation remains open and unexecuted.
+  data_summary: Main now contains the approved 17-issue sprint contracts, controller baseline, fail-closed source remediation, caller matrix, and rotation guard.
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0059
+  content_sha256: null
+- id: LEDGER-EVT-0061
+  sequence: 61
+  occurred_at: '2026-07-09T23:09:42Z'
+  event_type: lane_dispatched
+  source: sprint-orchestrator
+  subject: device-writer lane local fallback dispatch
+  actor:
+    role: controller
+    name: software-recovery-root-019f4826
+  session_id: software-recovery-root-019f4826
+  correlation:
+    trace_id: null
+    wave_id: wave-software-recovery-implementation
+    session_ids:
+    - device-writer-433-local-20260709
+    issue_ids:
+    - 433
+    lane_ids:
+    - device-writer
+    pr_ids: []
+    deployment_ids: []
+    policy_decision_ids:
+    - g-software-recovery-local-dispatch-fallback
+  refs:
+    artifact_refs:
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/device-writer/lane.yaml
+    - .agent-workflow/sprints/software-recovery-2026-07-09/execution/sprint-execution-runbook.yaml
+    evidence_refs: []
+    external_refs:
+    - type: worktree
+      identifier: /Users/jason/repos/verdify-worktrees/software-recovery-writer-433
+      url: null
+    - type: git_commit
+      identifier: 6b5042c6a9d525cf1429bfda5a1f6d9a95470476
+      url: https://github.com/VerdifyConsultancy/verdify-platform/commit/6b5042c6a9d525cf1429bfda5a1f6d9a95470476
+  result: observed
+  summary: One isolated local Codex worker started issue 433 from merged main with exclusive device-writer ownership and no production mutation authority.
+  data_summary: Branch lane/recovery-writer-433 and its contracted worktree were clean at dispatch.
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0060
+  content_sha256: null
+- id: LEDGER-EVT-0062
+  sequence: 62
+  occurred_at: '2026-07-09T23:09:42Z'
+  event_type: lane_dispatched
+  source: sprint-orchestrator
+  subject: evidence-core lane local fallback dispatch
+  actor:
+    role: controller
+    name: software-recovery-root-019f4826
+  session_id: software-recovery-root-019f4826
+  correlation:
+    trace_id: null
+    wave_id: wave-software-recovery-implementation
+    session_ids:
+    - evidence-core-local-20260709
+    issue_ids:
+    - 293
+    - 389
+    - 410
+    - 419
+    - 424
+    lane_ids:
+    - evidence-core
+    pr_ids: []
+    deployment_ids: []
+    policy_decision_ids:
+    - g-software-recovery-local-dispatch-fallback
+  refs:
+    artifact_refs:
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/evidence-core/lane.yaml
+    - .agent-workflow/sprints/software-recovery-2026-07-09/execution/sprint-execution-runbook.yaml
+    evidence_refs: []
+    external_refs:
+    - type: worktree
+      identifier: /Users/jason/repos/verdify-worktrees/software-recovery-evidence-core
+      url: null
+    - type: git_commit
+      identifier: 6b5042c6a9d525cf1429bfda5a1f6d9a95470476
+      url: https://github.com/VerdifyConsultancy/verdify-platform/commit/6b5042c6a9d525cf1429bfda5a1f6d9a95470476
+  result: observed
+  summary: One isolated local Codex worker started the five-issue evidence-core lane from merged main with serialized migration ownership and no production apply authority.
+  data_summary: Branch lane/recovery-evidence-293-389-410-419-424 and its contracted worktree were clean at dispatch.
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0061
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
