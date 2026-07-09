@@ -4,7 +4,7 @@ State: **BLOCKED**, not complete. Source remediation and rotation readiness are 
 
 ## Objective and delivered outcome
 
-The five approved standalone clients now require `VERDIFY_DSN` or `POSTGRES_PASSWORD` and fail closed without injection. Twenty behavioral/source tests pass. Redacted current/history scan summaries, a complete five-client and live shared-secret caller matrix, and a protected rotation/rollback runbook are durable.
+The five approved standalone clients now require `VERDIFY_DSN` or `POSTGRES_PASSWORD` and fail closed without injection. Twenty behavioral/source tests pass. Redacted current/history scan summaries, a complete five-client and live shared-secret caller matrix, and a protected rotation/rollback runbook are durable. The runbook now hard-stops unless the replacement is a 256-bit, URI-safe 64-character lowercase hexadecimal value, preventing delimiter-driven DSN parsing failures across current consumers.
 
 No production Secret, role, workload, database schema, firmware, or device state was changed.
 
@@ -32,21 +32,33 @@ No production Secret, role, workload, database schema, firmware, or device state
 - The live `verdify` DB role is superuser and owns 4,791 relations; a replacement-role shortcut is unsafe.
 - The fleet SOPS registry/encrypted skeleton still targets retired `verdify-staging`; the production secret authority must be corrected before rotation.
 - Full-history findings remain until credential invalidation; no history rewrite is proposed.
+- Four clients carried committed password fallbacks; the fifth snapshot client implicitly loaded the retired `/srv/verdify/.env` path. The durable gate preserves that distinction.
 
 ## Validation
 
 - `python3 -m py_compile` for all five clients: PASS.
 - `.venv/bin/pytest -q tests/test_no_committed_db_password.py`: 20 passed.
 - `make VENV=/Users/jason/repos/verdify-platform/.venv lint`: PASS.
-- Targeted Ruff: PASS.
+- CI-equivalent Ruff format check and targeted Ruff: PASS.
 - `git diff --check`: PASS.
 - 58 changed/new YAML files parse; 55 schema-backed artifacts validate; exact 17-issue assignment and dependency DAG checks pass.
-- Monolithic `make test`: not a valid laptop proof; it ran 641 passing tests but failed 139 and errored 10 because it assumes the retired local Docker/systemd/Vault/API stack. Required PR CI remains pending and authoritative for the baseline.
+- Monolithic `make test`: not a valid laptop proof; it ran 641 passing tests but failed 139 and errored 10 because it assumes the retired local Docker/systemd/Vault/API stack. PR CI is the authoritative baseline and passed at the reviewed head.
+
+## Immutable checkpoint
+
+- Orchestration baseline commit: `6ad534f504b09d270f879e0a2c3d01c219ab0248`.
+- Security source/test commit: `de2dbaeeeb3e3ff429b1bc1e7feb180951d1ff2d`.
+- Reviewed implementation/format head: `1dfb05fdab864a3d000095346ee5e16bd145df5d`.
+- Pull request: [#439](https://github.com/VerdifyConsultancy/verdify-platform/pull/439), mergeable at the reviewed head.
+- Remote-head proof: local HEAD and `origin/codex/software-recovery-2026-07-09` both resolved to `1dfb05fdab864a3d000095346ee5e16bd145df5d` before the evidence-only reconciliation commit.
+- GitHub CI at the reviewed head: 17 successful, eight intentional skips, zero failed or pending.
+- Independent critic: `critic-report.md`; outcome `ESCALATE` for the overall lane because AC4 is protected and unexecuted, with explicit approval to merge this non-production checkpoint after the reviewed record corrections.
+- The follow-up controller commit is limited to the critic-reviewed runbook/gate corrections, critic report, and mechanical immutable-reference/status reconciliation; it introduces no product/source/test/runtime semantic change.
 
 ## Records and follow-ups
 
 - GitHub issue #438 exists and remains open.
-- Commit, PR, remote-head, CI, and independent critic refs are pending the controller checkpoint publication.
+- PR, reviewed implementation head, CI, remote-head, and independent critic refs are recorded above; the controller evidence commit and its CI rerun are the final publication step.
 - Production rotation gate: `.agent-workflow/hygiene/gates/g-prod-db-credential-rotation.yaml`.
 - The stale fleet production-secret authority and other unverified historical detector matches require separate disposition; neither is silently treated as fixed.
 
@@ -56,4 +68,4 @@ Before production use, source rollback is the parent commit. After authorized ro
 
 ## Git state
 
-Pre-commit checkpoint: worktree intentionally dirty with the controller planning/security transaction. No unrelated user change was removed or hidden. The report must be updated with immutable commit, PR, CI, critic, and remote-head refs after publication.
+The reviewed implementation head was clean and matched the remote. The controller evidence-only reconciliation is intentionally the sole pending diff at this report revision; no unrelated user change was removed or hidden. After it is committed and pushed, the worktree must be clean and the replacement CI run must remain green before merge.

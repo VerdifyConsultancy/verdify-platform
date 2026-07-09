@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-verdify-platform-controller
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-09T22:48:00Z'
+updated_at: '2026-07-09T23:02:21Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -251,7 +251,8 @@ sessions:
   wave_id: wave-software-recovery-implementation
   branch: codex/software-recovery-2026-07-09
   worktree: /Users/jason/repos/verdify-worktrees/software-recovery-20260709
-  pr_refs: []
+  pr_refs:
+  - '#439'
   artifact_refs:
   - .verdify/sprints/software-recovery-2026-07-09/plan/sprint-plan.yaml
   - .verdify/sprints/software-recovery-2026-07-09/plan/lane-topology.yaml
@@ -320,6 +321,24 @@ sessions:
   pr_refs: []
   artifact_refs:
   - .agent-workflow/hygiene/database-credential-caller-matrix.md
+- session_id: security-checkpoint-critic-20260709
+  parent_session_id: software-recovery-root-019f4826
+  role: critic
+  executor: codex-local-subagent
+  repository: VerdifyConsultancy/verdify-platform
+  status: complete
+  started_at: '2026-07-09T22:53:00Z'
+  ended_at: '2026-07-09T23:02:21Z'
+  issue_ids:
+  - 438
+  lane_id: security-hygiene
+  wave_id: wave-software-recovery-implementation
+  branch: codex/software-recovery-2026-07-09
+  worktree: /Users/jason/repos/verdify-worktrees/software-recovery-20260709
+  pr_refs:
+  - '#439'
+  artifact_refs:
+  - .verdify/sprints/software-recovery-2026-07-09/lanes/security-hygiene/critic-report.md
 events:
 - id: LEDGER-EVT-0001
   sequence: 1
@@ -2560,6 +2579,49 @@ events:
   data_summary: No current live caller relies on /srv/verdify/.env; the three renderers use the Secret-injected lab publisher, daily summary is ingestor-owned, and the vault writer is manual-only.
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0057
+  content_sha256: null
+- id: LEDGER-EVT-0059
+  sequence: 59
+  occurred_at: '2026-07-09T23:02:21Z'
+  event_type: critic_reviewed
+  source: sprint-orchestrator
+  subject: security-hygiene non-production checkpoint at PR 439
+  actor:
+    role: critic
+    name: security-checkpoint-critic-20260709
+  session_id: security-checkpoint-critic-20260709
+  correlation:
+    trace_id: null
+    wave_id: wave-software-recovery-implementation
+    session_ids:
+    - security-checkpoint-critic-20260709
+    issue_ids:
+    - 438
+    lane_ids:
+    - security-hygiene
+    pr_ids:
+    - '439'
+    deployment_ids: []
+    policy_decision_ids:
+    - g-prod-db-credential-rotation-20260709
+  refs:
+    artifact_refs:
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/security-hygiene/critic-report.md
+    - .agent-workflow/hygiene/database-credential-rotation-runbook.md
+    evidence_refs:
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/security-hygiene/evidence.yaml
+    external_refs:
+    - type: github_pr
+      identifier: VerdifyConsultancy/verdify-platform#439
+      url: https://github.com/VerdifyConsultancy/verdify-platform/pull/439
+    - type: git_commit
+      identifier: 1dfb05fdab864a3d000095346ee5e16bd145df5d
+      url: https://github.com/VerdifyConsultancy/verdify-platform/commit/1dfb05fdab864a3d000095346ee5e16bd145df5d
+  result: blocked
+  summary: The fresh critic approved the source/test/controller checkpoint for non-production merge after record corrections, but escalated the overall lane because protected credential rotation and old-invalid proof remain unexecuted.
+  data_summary: The identified URI-delimiter stranding risk is closed for this rotation by a reviewed 64-hex-character, 256-bit replacement hard stop; PR CI passed 17 checks with eight intentional skips.
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0058
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001

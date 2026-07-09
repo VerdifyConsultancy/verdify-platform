@@ -5,7 +5,7 @@ project_id: verdify-platform
 controller_id: software-recovery-root-019f4826
 status: active
 state: WAVE_PLANNED
-updated_at: "2026-07-09T22:48:00Z"
+updated_at: "2026-07-09T23:02:21Z"
 current_wave: wave-software-recovery-implementation
 sessions:
   - id: software-recovery-root-019f4826
@@ -53,6 +53,15 @@ sessions:
     branch: codex/software-recovery-2026-07-09
     worktree: /Users/jason/repos/verdify-worktrees/software-recovery-20260709
     status: complete
+  - id: security-checkpoint-critic-20260709
+    role: critic
+    executor: codex-local-subagent
+    repository: VerdifyConsultancy/verdify-platform
+    issue: 438
+    lane_id: security-hygiene
+    branch: codex/software-recovery-2026-07-09
+    worktree: /Users/jason/repos/verdify-worktrees/software-recovery-20260709
+    status: complete
 events:
   - id: controller-event-20260709-001
     occurred_at: "2026-07-09T20:52:12Z"
@@ -74,11 +83,15 @@ events:
     occurred_at: "2026-07-09T22:48:00Z"
     event_type: security_caller_inventory
     summary: Every live and manual caller of the five remediated scripts plus every live verdify-app-secrets database-password consumer now has a durable injection, restart, validation, and rollback disposition; no live caller depends on the removed .env fallback.
+  - id: controller-event-20260709-006
+    occurred_at: "2026-07-09T23:02:21Z"
+    event_type: critic_reviewed
+    summary: A fresh critic approved PR #439 as a non-production checkpoint after a reviewed URI-safe rotation hard stop and record reconciliation; the security lane remains blocked on protected credential invalidation.
 open_gates:
   - g-prod-db-credential-rotation-20260709
 next_actions:
-  - Validate and commit the controller, platform-readiness, sprint, and source-security baseline.
-  - Merge the controller baseline to main after independent criticism and required CI.
+  - Commit and push the critic-reviewed security evidence reconciliation, then require the replacement PR #439 CI run to remain green.
+  - Merge the controller baseline to main after that evidence-only check completes.
   - Create isolated local lane worktrees from the merged baseline and dispatch device-writer and evidence-core workers under the approved fallback gate.
   - Preserve the credential-rotation release block until Jason explicitly authorizes the protected rotation.
 handoff:

@@ -16,6 +16,7 @@ Do not begin until all are true:
 4. No CronJob using the password is running; the five listed CronJobs are suspended through an authorized change.
 5. The operator has a secure local shell with tracing/history disabled, `umask 077`, the fleet SOPS age key, the current credential retained only for rollback/negative proof, and the replacement held only in an approved credential manager or protected process memory.
 6. The stale fleet secret authority is corrected before use: the current `jvallery/agents` registry and encrypted skeleton still name retired `verdify-staging`. A reviewed production-targeted SOPS artifact for `verdify-prod/verdify-app-secrets` must be the source of truth. Never apply the stale staging artifact to production.
+7. The replacement satisfies the temporary URI-compatibility contract: exactly 64 lowercase hexadecimal characters generated from 32 cryptographically random bytes. Validate the shape in the secure process and record only `replacement_uri_safe: true`; never record the value. This preserves 256 bits of entropy while using only URI-unreserved characters. Until every consumer percent-encodes credentials, any other alphabet or length is a hard stop because characters such as `@`, `/`, `#`, and `?` can change PostgreSQL URI parsing. Do not use ordinary base64 output for this rotation.
 
 Do not print, echo, paste into a PR, pass as a command-line argument, enable shell tracing, or write either credential to a normal file.
 
@@ -24,7 +25,7 @@ Do not print, echo, paste into a PR, pass as a command-line argument, enable she
 1. **Capture non-secret baseline.** Record current Git/Argo revision, Secret resource version, DB pod identity, Ready replicas, active Jobs, alert counts, endpoint health, and caller inventory. Confirm the ingestor uses one replica and `Recreate` strategy.
 2. **Prepare rollback.** Retain the prior encrypted SOPS revision and a secure operator-only copy of the old credential until all new-valid/old-invalid proofs pass. Record the prior deployment digests.
 3. **Suspend scheduled consumers.** Suspend band-curve refresh, DB backup, HA gap backfill, lab publisher, and vision. Wait for already-started Jobs to finish or terminate them only under the protected change procedure.
-4. **Seal the replacement.** Edit the approved production SOPS artifact in place with `sops`, changing only `POSTGRES_PASSWORD`. Preserve `VERDIFY_WRITE_API_KEY`, `ESP32_API_KEY`, `MQTT_USER`, `MQTT_PASS`, and any later-added keys byte-for-byte. Commit/review the ciphertext and metadata change without decrypted output.
+4. **Seal the replacement.** Generate the replacement from 32 cryptographically random bytes as 64 lowercase hexadecimal characters, validate the format without emitting it, and store it only through the approved secure path. Edit the approved production SOPS artifact in place with `sops`, changing only `POSTGRES_PASSWORD`. Preserve `VERDIFY_WRITE_API_KEY`, `ESP32_API_KEY`, `MQTT_USER`, `MQTT_PASS`, and any later-added keys byte-for-byte. Commit/review the ciphertext and metadata change without decrypted output.
 5. **Deliver the Secret.** Use the fleet secret-delivery path to update `verdify-prod/verdify-app-secrets`. Verify only resource version and key-name parity. Existing pods retain their old environment until recreated.
 6. **Rotate the existing DB role in place.** In a secure interactive `psql` session on the DB pod, use the password meta-command for role `verdify` so the replacement is not placed in shell history or a logged SQL file. Do not create a substitute role: `verdify` owns thousands of relations and is currently superuser.
 7. **Restore the device writer first.** Recreate `verdify-ingestor` using its one-replica `Recreate` strategy. Stop if a second writer appears, the Lease is ambiguous, database tasks fail, ESPHome does not reconnect, or a new critical alert opens.
@@ -56,6 +57,7 @@ The closeout must contain only:
 - DB and workload identities/digests;
 - per-consumer Ready/authenticated-health booleans;
 - controlled CronJob results;
+- `replacement_uri_safe: true|false`;
 - `new_credential_valid: true|false`;
 - `old_credential_rejected: true|false`;
 - rollback used/not-used and disposition;

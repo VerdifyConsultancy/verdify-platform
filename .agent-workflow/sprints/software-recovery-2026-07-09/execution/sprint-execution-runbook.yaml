@@ -2,7 +2,7 @@ schema_ref: sprint-execution-runbook.schema.yaml
 kind: SprintExecutionRunbook
 schema_version: "1.0"
 runbook_id: exec-software-recovery-2026-07-09
-status: blocked
+status: active
 sprint_id: software-recovery-2026-07-09
 wave_id: wave-software-recovery-implementation
 repository: VerdifyConsultancy/verdify-platform
@@ -97,7 +97,7 @@ lanes:
       tmux_session: null
       browser_terminal_url: null
       operator_attach_required: false
-    status: implementing
+    status: blocked
   - lane_id: device-writer
     issue_ids: [433]
     contract_path: .verdify/sprints/software-recovery-2026-07-09/lanes/device-writer/lane.yaml
