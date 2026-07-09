@@ -106,11 +106,11 @@ lanes:
     dependency_state: ready
     platform_session:
       create_operation_ref: .agent-workflow/sprints/software-recovery-2026-07-09/execution/control-requests/device-writer-session-create.yaml
-      session_id: null
+      session_id: device-writer-433-local-20260709
       executor: local-codex-subagent-fallback
       model: GPT-5
       effort: high
-      status: blocked
+      status: active
     prompt:
       prompt_path: .verdify/sprints/software-recovery-2026-07-09/lanes/device-writer/worker-prompt.md
       manifest_path: null
@@ -119,7 +119,7 @@ lanes:
       tmux_session: null
       browser_terminal_url: null
       operator_attach_required: true
-    status: planned
+    status: implementing
   - lane_id: evidence-core
     issue_ids: [293, 389, 410, 419, 424]
     contract_path: .verdify/sprints/software-recovery-2026-07-09/lanes/evidence-core/lane.yaml
@@ -128,11 +128,11 @@ lanes:
     dependency_state: ready
     platform_session:
       create_operation_ref: .agent-workflow/sprints/software-recovery-2026-07-09/execution/control-requests/evidence-core-session-create.yaml
-      session_id: null
+      session_id: evidence-core-local-20260709
       executor: local-codex-subagent-fallback
       model: GPT-5
       effort: high
-      status: blocked
+      status: active
     prompt:
       prompt_path: .verdify/sprints/software-recovery-2026-07-09/lanes/evidence-core/worker-prompt.md
       manifest_path: null
@@ -141,7 +141,7 @@ lanes:
       tmux_session: null
       browser_terminal_url: null
       operator_attach_required: true
-    status: planned
+    status: implementing
   - lane_id: resource-accounting
     issue_ids: [437]
     contract_path: .verdify/sprints/software-recovery-2026-07-09/lanes/resource-accounting/lane.yaml

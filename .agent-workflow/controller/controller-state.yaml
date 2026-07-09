@@ -4,8 +4,8 @@ schema_version: "1.0"
 project_id: verdify-platform
 controller_id: software-recovery-root-019f4826
 status: active
-state: WAVE_PLANNED
-updated_at: "2026-07-09T23:02:21Z"
+state: WAVE_EXECUTING
+updated_at: "2026-07-09T23:09:42Z"
 current_wave: wave-software-recovery-implementation
 sessions:
   - id: software-recovery-root-019f4826
@@ -62,6 +62,24 @@ sessions:
     branch: codex/software-recovery-2026-07-09
     worktree: /Users/jason/repos/verdify-worktrees/software-recovery-20260709
     status: complete
+  - id: device-writer-433-local-20260709
+    role: worker
+    executor: codex-local-subagent-fallback
+    repository: VerdifyConsultancy/verdify-platform
+    issue: 433
+    lane_id: device-writer
+    branch: lane/recovery-writer-433
+    worktree: /Users/jason/repos/verdify-worktrees/software-recovery-writer-433
+    status: active
+  - id: evidence-core-local-20260709
+    role: worker
+    executor: codex-local-subagent-fallback
+    repository: VerdifyConsultancy/verdify-platform
+    issue: 293
+    lane_id: evidence-core
+    branch: lane/recovery-evidence-293-389-410-419-424
+    worktree: /Users/jason/repos/verdify-worktrees/software-recovery-evidence-core
+    status: active
 events:
   - id: controller-event-20260709-001
     occurred_at: "2026-07-09T20:52:12Z"
@@ -87,12 +105,24 @@ events:
     occurred_at: "2026-07-09T23:02:21Z"
     event_type: critic_reviewed
     summary: A fresh critic approved PR #439 as a non-production checkpoint after a reviewed URI-safe rotation hard stop and record reconciliation; the security lane remains blocked on protected credential invalidation.
+  - id: controller-event-20260709-007
+    occurred_at: "2026-07-09T23:07:58Z"
+    event_type: checkpoint_merged
+    summary: PR #439 merged to main at 6b5042c after two fully green 17-pass CI runs and independent checkpoint criticism; no production action occurred.
+  - id: controller-event-20260709-008
+    occurred_at: "2026-07-09T23:09:42Z"
+    event_type: lane_dispatched
+    summary: Device-writer issue #433 started in its exclusive local fallback worktree from merged main 6b5042c with production mutation forbidden.
+  - id: controller-event-20260709-009
+    occurred_at: "2026-07-09T23:09:42Z"
+    event_type: lane_dispatched
+    summary: Evidence-core issues #293, #389, #410, #419, and #424 started in one exclusive coupled worktree from merged main 6b5042c with production migration application forbidden.
 open_gates:
   - g-prod-db-credential-rotation-20260709
 next_actions:
-  - Commit and push the critic-reviewed security evidence reconciliation, then require the replacement PR #439 CI run to remain green.
-  - Merge the controller baseline to main after that evidence-only check completes.
-  - Create isolated local lane worktrees from the merged baseline and dispatch device-writer and evidence-core workers under the approved fallback gate.
+  - Poll the device-writer and evidence-core workers, answer contract-scoped questions, and enforce exclusive path ownership.
+  - Route each immutable lane head through its required fresh critic, GitHub CI, and integration review before merge.
+  - Dispatch downstream lanes only when merged dependency contracts are available.
   - Preserve the credential-rotation release block until Jason explicitly authorizes the protected rotation.
 handoff:
   next_skill: sprint-orchestrator
