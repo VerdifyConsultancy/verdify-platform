@@ -1,0 +1,208 @@
+sprint_id: software-recovery-2026-07-09
+lane_id: evidence-core
+title: Solar, cycle, dry-out, and replay evidence foundations
+objective: >-
+  Establish one serialized evidence contract for DB/device solar and VPD parity,
+  transition-derived equipment cycling, realized solar-night dry-out episodes,
+  and provenance-bearing outdoor freshness in the stock replay corpus.
+desired_outcome: >-
+  Production and offline gates use device-parity solar/VPD semantics,
+  raw-transition cycling, realized night episodes, and source-backed outdoor
+  freshness.
+non_goals:
+  - Change firmware control behavior, irrigation routing, writer delivery, planner policy, dashboards, or Kubernetes deployment.
+  - Rewrite historical equipment state or use a force-fresh override to manufacture replay coverage.
+  - Apply production migrations from the autonomous worker phase; release sequencing remains controller-owned.
+baseline_sha: 0a9a19a840be6bae1beba604497d880b3b74b1ef
+branch: lane/recovery-evidence-293-389-410-419-424
+worktree: /Users/jason/repos/verdify-worktrees/software-recovery-evidence-core
+issue_ids:
+  - "#293"
+  - "#389"
+  - "#410"
+  - "#419"
+  - "#424"
+issue_urls:
+  - https://github.com/VerdifyConsultancy/verdify-platform/issues/293
+  - https://github.com/VerdifyConsultancy/verdify-platform/issues/389
+  - https://github.com/VerdifyConsultancy/verdify-platform/issues/410
+  - https://github.com/VerdifyConsultancy/verdify-platform/issues/419
+  - https://github.com/VerdifyConsultancy/verdify-platform/issues/424
+spec_or_change_ids:
+  - software-recovery-change-proposal
+  - ADR-009
+  - evidence-contracts
+decision_ids:
+  - DEC-004
+  - DEC-007
+ownership:
+  domains:
+    - DB solar/VPD parity
+    - raw equipment transitions
+    - realized night episodes
+    - replay corpus freshness
+  owned_paths:
+    - db/migrations/186-device-solar-phase-parity.sql
+    - db/migrations/189-*.sql
+    - db/migrations/19[0-2]-*.sql
+    - db/migrations/tests/test-18[6-9]-*.sql
+    - db/migrations/tests/test-19[0-2]-*.sql
+    - db/schema.sql
+    - mcp/server.py
+    - scripts/export-replay-overrides.sh
+    - firmware/test/data/replay_overrides.csv.gz
+    - firmware/test/replay_overrides.cpp
+    - firmware/test/replay_emit.cpp
+    - firmware/test/invariants.h
+    - tests/test_02_database.py
+    - tests/test_04_planner.py
+  prohibited_paths:
+    - ingestor/tasks/dispatcher.py
+    - ingestor/esp32_push.py
+    - firmware/greenhouse/**
+    - firmware/lib/greenhouse_logic.h
+    - deploy/k8s/**
+    - grafana/**
+  coordination_required_paths:
+    - verdify_schemas/telemetry.py
+    - Makefile
+    - scripts/gather-plan-context.sh
+  owned_interfaces:
+    - served VPD divergence view
+    - complete-day transition KPI
+    - realized solar-night episode surface
+    - replay freshness contract
+  runtime_resources:
+    - verdify-prod Postgres definitions and telemetry, read-only except for explicitly controller-run rollback proofs
+    - Local archived replay corpus and native replay/invariant binaries
+dependencies:
+  hard: []
+  soft:
+    - lane_id: resource-accounting
+      coordination: Resource accounting consumes the complete-day transition truth produced by this lane.
+    - lane_id: firmware-control
+      coordination: Firmware control consumes the source-backed replay corpus and realized night evidence produced by this lane.
+    - lane_id: release-control
+      coordination: Release control consumes the trustworthy cycle view produced by this lane.
+expected_inputs:
+  - Migration 186 source
+  - Live function definition
+  - equipment_state
+  - Typed outdoor freshness
+  - Current replay corpus
+expected_outputs:
+  - Applied-ready migrations 189 onward
+  - SQL fixtures
+  - outcome_kpi cycle source
+  - Realized episode view
+  - Refreshed corpus and coverage invariant
+constraints:
+  - Serialize migrations in numeric order, reserve 189 for served VPD divergence, and escalate on any number collision.
+  - Run migration rollback classification first; never outer-wrap a self-committing or commit-forcing migration.
+  - Preserve raw historical equipment state and derive cycles from transitions with explicit completeness and quality.
+  - Realized dry-out evidence must be solar-phase based, admit no daytime episode, expose stop/block reasons, and never claim projected intent as outcome.
+  - Replay freshness must be source-backed from timestamps and provenance; no force-fresh override may satisfy coverage.
+  - At least 1,000 stock replay rows must be source-backed fresh and must exercise outdoor-aware branches across relevant regimes.
+  - Do not change firmware behavior; any necessary control delta is a scope-change escalation to firmware-control.
+  - Any MCP or schema contract change must document required MCP/ingestor restarts in the PR.
+  - Production schema application remains controller/release work; the lane supplies classified, rollback-proven, applied-ready migrations and live read-only parity evidence.
+  - Update only this lane's .verdify records; the security lane's sprint-wide artifact glob does not transfer ownership of this directory.
+acceptance_criteria:
+  - id: LANE-AC-01
+    statement: Migration 186 and reserved migration 189 have rollback proof plus representative solar and served-VPD parity fixtures.
+    evidence_required:
+      - Rollback classification and proof for each migration
+      - Equinox, solstice, false-near-miss, and true-drift SQL fixtures
+      - Read-only source-versus-live definition comparison
+  - id: LANE-AC-02
+    statement: The cycle view handles duplicates, midnight carry-over, open pulses, per-light circuits, incomplete days, and short-cycle buckets without rewriting history.
+    evidence_required:
+      - Hand-counted SQL fixtures for mister, fog, fans, and each light circuit
+      - Complete-day, partial-day, quality, starts, runtime, short-cycle, and peak-transition results
+  - id: LANE-AC-03
+    statement: Realized solar-night episodes expose AH advantage, temperature response, duty, stop reason, and effectiveness with zero daytime admission.
+    evidence_required:
+      - Episode SQL fixtures covering admission, blocking, stopping, and incomplete evidence
+      - Representative read-only night report with limitations and no projected-outcome claim
+  - id: LANE-AC-04
+    statement: Stock replay contains at least 1,000 source-backed fresh rows and reaches outdoor-aware branches without a force-fresh override.
+    evidence_required:
+      - Archived before/after corpus metadata and freshness distribution
+      - Coverage invariant result and outdoor-aware branch trace
+      - Stock invariant and replay results using the refreshed corpus
+validation_commands:
+  - id: EVI-VAL-01
+    command: make migration-rollback-safety
+    purpose: Classify every migration before any rollback proof.
+    required: true
+  - id: EVI-VAL-02
+    command: for file in db/migrations/186-device-solar-phase-parity.sql db/migrations/189-*.sql db/migrations/19[0-2]-*.sql; do python3 scripts/check_migration_rollback_safety.py --rollback-wrap "$file"; done
+    purpose: Prove every lane migration is safe for the required outer-rollback test before controller execution.
+    required: true
+  - id: EVI-VAL-03
+    command: make test
+    purpose: Run repository database, planner, drift, and integration tests.
+    required: true
+  - id: EVI-VAL-04
+    command: make firmware-invariants
+    purpose: Prove refreshed replay data preserves the firmware invariant suite.
+    required: true
+  - id: EVI-VAL-05
+    command: make firmware-replay OLD=origin/main NEW=HEAD
+    purpose: Prove the evidence/corpus change has an explicit replay diff against main.
+    required: true
+required_evidence:
+  - Migration classification and targeted rollback proof for migrations 186, 189, and 190 through 192 as created
+  - Solar-phase and served-VPD SQL fixture outputs plus read-only live definition comparison
+  - Hand-counted transition/cycle fixtures including duplicate, carry-over, open-pulse, per-light, and partial-day cases
+  - Realized night episode fixtures and representative report with weather/evidence limitations
+  - Archived corpus before/after metadata, source-backed freshness distribution, and at least 1,000-row coverage proof
+  - Outdoor-aware branch trace, invariant output, and replay diff
+  - Git diff, clean-scope review, commit SHA, PR URL, and CI results
+  - Independent SQL/replay evidence critic verdict tied to the immutable lane head
+record_updates:
+  issues: true
+  pull_request: true
+  specifications: true
+  documentation: true
+  decisions: false
+git_policy:
+  commit_style: Serialized migration/evidence commits referencing all five assigned issues.
+  push_required: true
+  self_merge_allowed: false
+  clean_worktree_required: true
+  pull_request_required: true
+  github_ci_required: true
+pull_request:
+  target_branch: main
+  title: "Evidence: solar parity, raw cycles, realized dry-out, and replay coverage (#293 #389 #410 #419 #424)"
+  linked_issues:
+    - "#293"
+    - "#389"
+    - "#410"
+    - "#419"
+    - "#424"
+  rules:
+    - Document migration order, rollback classification/proof, service restarts, corpus provenance, and every evidence limitation.
+    - Do not claim production application, control improvement, or complete outcome before controller deployment and runtime verification.
+critic_requirements:
+  - A fresh SQL/replay evidence critic re-counts representative transitions, challenges missing-data semantics, and verifies corpus provenance at the immutable head.
+  - The critic must reject rewritten history, daytime night episodes, force-fresh coverage, ambiguous migration order, or projected intent labeled as outcome.
+integration_requirements:
+  - Merge before resource-accounting starts so it inherits the finalized migration sequence and complete-day transition source.
+  - Firmware-control and release-control consume only the reviewed corpus, night episode, and cycle contracts from the immutable merged head.
+escalation_conditions:
+  - Migration 189 collision
+  - Typed freshness cannot be provenance-preserving
+  - Cycle semantics require rewriting history
+  - Firmware behavior change becomes necessary
+agent_profile: postgres-evidence-engineer with firmware replay literacy
+critic_profile: SQL/replay evidence critic
+definition_of_done:
+  - Every lane acceptance criterion has linked evidence in evidence.yaml.
+  - All required validation commands and classified rollback proofs pass at the immutable lane head.
+  - All five GitHub issues and the PR accurately record scope, migration order, provenance, limitations, tests, and deployment-only follow-up.
+  - The refreshed corpus is archived, source-backed, coverage-guarded, and reproducible without a force-fresh override.
+  - All intended commits are pushed, required GitHub CI is green, and the worktree is clean.
+  - A fresh critic accepts the SQL semantics, migration safety, replay provenance, and evidence claims.
+  - Integration confirms the finalized migration head and hands transition, replay, night, and cycle outputs to downstream lanes without ownership ambiguity.

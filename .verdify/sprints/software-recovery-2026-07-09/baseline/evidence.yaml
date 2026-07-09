@@ -1,0 +1,90 @@
+sprint_id: software-recovery-2026-07-09
+scope_id: baseline-discovery
+revision: 0a9a19a840be6bae1beba604497d880b3b74b1ef
+environment: verdify-prod
+generated_at: "2026-07-09T21:35:00Z"
+items:
+  - id: EV-GIT-001
+    type: DIFF_REVIEW
+    status: PASS
+    source: recovery worktree and origin/main
+    command: git status --short --branch; git rev-parse HEAD origin/main
+    timestamp: "2026-07-09T21:35:00Z"
+    revision: 0a9a19a840be6bae1beba604497d880b3b74b1ef
+    environment: null
+    result: Controller branch is isolated at current origin/main; dirty files are the deliberate recovery transaction.
+    artifact_location: .verdify/sprints/software-recovery-2026-07-09/baseline/repository-map.md
+    acceptance_criteria: [baseline identity, worktree isolation]
+    limitations: [Many old attributable worktrees remain and are not destructively removed.]
+  - id: EV-CI-001
+    type: CI
+    status: PASS
+    source: GitHub Actions main runs
+    command: gh run list
+    timestamp: "2026-07-09T14:17:33Z"
+    revision: 0a9a19a840be6bae1beba604497d880b3b74b1ef
+    environment: null
+    result: CI, K8s manifests, and container publish succeeded for baseline main.
+    artifact_location: .agent-workflow/strategy/github-backlog-sync.yaml
+    acceptance_criteria: [accepted source gates]
+    limitations: [Does not prove runtime behavior.]
+  - id: EV-RUNTIME-001
+    type: LOG
+    status: FAIL
+    source: verdify-ingestor production logs
+    command: kubectl logs deploy/verdify-ingestor --since=2h
+    timestamp: "2026-07-09T21:24:00Z"
+    revision: 175e5ecee7468651069458fff50d6036fbfa0f3b73cf366b3e7e9159d62259e8
+    environment: verdify-prod
+    result: Broad 69/69 device pushes recur about every five to six minutes on a stable transport.
+    artifact_location: https://github.com/VerdifyConsultancy/verdify-platform/issues/433
+    acceptance_criteria: [zero stable-connection bulk pushes]
+    limitations: [Passive observation did not deliberately mutate a cfg value or reconnect.]
+  - id: EV-PLANNER-001
+    type: METRIC
+    status: FAIL
+    source: production alert, planner, and run ledgers
+    command: read-only SQL and Hermes/MCP log correlation
+    timestamp: "2026-07-09T21:24:00Z"
+    revision: 0a9a19a840be6bae1beba604497d880b3b74b1ef
+    environment: verdify-prod
+    result: Critical alert 7676 is open, latest plan journal is June 25, and completed model runs map to tool-dead timeouts.
+    artifact_location: https://github.com/VerdifyConsultancy/verdify-platform/issues/427
+    acceptance_criteria: [tool health, terminal action, valid plan or neutral fallback]
+    limitations: [No distributed traces; correlation uses run IDs/logs/DB.]
+  - id: EV-CROP-001
+    type: METRIC
+    status: FAIL
+    source: firmware code, Home Assistant cfg/readbacks, relay history
+    command: read-only code and live SQL/HA audit
+    timestamp: "2026-07-09T21:05:00Z"
+    revision: 0a9a19a840be6bae1beba604497d880b3b74b1ef
+    environment: verdify-prod
+    result: Climate rotates into south/west, center irrigation is enabled, wall feed spans non-wall outputs, and numeric DLI is published from invalid sensing.
+    artifact_location: https://github.com/VerdifyConsultancy/verdify-platform/issues/434
+    acceptance_criteria: [center-only climate, wall-only fertilizer, DLI unavailable]
+    limitations: [Physical fertilizer commissioning is intentionally absent.]
+  - id: EV-SEC-001
+    type: SECURITY
+    status: FAIL
+    source: redacted current-tree/history scan and boolean-only live comparison
+    command: gitleaks with full redaction; no values emitted
+    timestamp: "2026-07-09T21:33:00Z"
+    revision: 0a9a19a840be6bae1beba604497d880b3b74b1ef
+    environment: verdify-prod
+    result: Five source fallbacks matched the live production DB password; source is remediated, rotation remains gated.
+    artifact_location: .agent-workflow/hygiene/gates/g-prod-db-credential-rotation.yaml
+    acceptance_criteria: [no committed fallback, credential invalidated, consumers healthy]
+    limitations: [Rotation is a protected action awaiting explicit authorization.]
+  - id: EV-SEC-TEST-001
+    type: TEST
+    status: PASS
+    source: tests/test_no_committed_db_password.py
+    command: /Users/jason/repos/verdify-platform/.venv/bin/pytest -q tests/test_no_committed_db_password.py
+    timestamp: "2026-07-09T21:34:00Z"
+    revision: working-tree
+    environment: null
+    result: Five credential-hygiene regression cases pass.
+    artifact_location: tests/test_no_committed_db_password.py
+    acceptance_criteria: [no literal POSTGRES_PASSWORD fallback]
+    limitations: [Uncommitted until recovery artifacts are landed.]

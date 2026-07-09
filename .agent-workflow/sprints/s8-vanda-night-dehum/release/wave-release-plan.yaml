@@ -3,7 +3,7 @@ schema_ref: wave-release-plan.schema.yaml
 kind: WaveReleasePlan
 schema_version: '1.0'
 wave_id: wave-s8-night-dehum
-status: approved
+status: superseded
 scope:
   sprint_id: s8-vanda-night-dehum
   issue_ids: [410, 327, 413, 411, 377]

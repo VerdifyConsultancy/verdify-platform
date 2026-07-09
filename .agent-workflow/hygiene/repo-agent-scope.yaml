@@ -1,0 +1,128 @@
+schema_ref: repo-agent-scope.schema.yaml
+kind: RepoAgentScope
+schema_version: "1.0"
+agent_id: root-software-recovery-2026-07-09
+repository:
+  owner: VerdifyConsultancy
+  name: verdify-platform
+  full_name: VerdifyConsultancy/verdify-platform
+  default_branch: main
+  github_url: https://github.com/VerdifyConsultancy/verdify-platform
+  local_path: /Users/jason/repos/verdify-worktrees/software-recovery-20260709
+status: active
+updated_at: "2026-07-09T21:33:00Z"
+scope:
+  purpose: Deliver the approved July 9 live-greenhouse software recovery through reviewed source, schema, services, one firmware OTA, runtime acceptance, rollback readiness, and durable reconciliation.
+  in_scope:
+    - The 17 issues labeled sprint:software-recovery-2026-07-09, with exact ownership in the approved lane topology.
+    - Device writer/readback, bounded planner/MCP, irrigation/fertigation, DLI availability, solar-night dry-out evidence, migrations, CI/CD, prod runtime, and one OTA.
+    - Safe repository hygiene and remediation of committed credential references without displaying values.
+  out_of_scope:
+    - New physical sensors/equipment and actual wall fertigation commissioning measurements.
+    - verdify-www, verdify-crm, public DNS/edge/org changes, and unrelated vision issue 436.
+    - Unbounded AI, a second environment/writer, destructive database work, or history rewrite.
+    - Credential rotation until gate g-prod-db-credential-rotation-20260709 is explicitly approved.
+  owned_paths:
+    - This recovery controller worktree and .agent-workflow/.verdify recovery artifacts.
+    - Module-owned paths only through isolated lane contracts and reviewed integration.
+  protected_paths:
+    - Live ESP32 and firmware OTA path.
+    - verdify-prod database, Kubernetes secrets, ArgoCD sync, and device VLAN.
+    - Git history, default branch, public infrastructure, credentials, and raw secret stores.
+  stakeholders: [Jason Vallery, live greenhouse crops, verdify-platform operators and reviewers, technical evidence consumers]
+ownership:
+  primary_owner: verdify-platform root recovery agent
+  reviewers: [independent lane critics, Jason Vallery for protected actions]
+  upstream_authorities: [AGENTS.md, approved North Star and project definition, architecture/module contracts, GitHub Issues and main, current runtime evidence]
+  downstream_consumers: [sprint planning/orchestration, CI, GHCR, ArgoCD, verdify-prod services, ESP32, API/lab/graphs, future repo agents]
+responsibilities:
+  - id: RAS-001
+    description: Reconstruct and preserve approved intent, runtime truth, and GitHub backlog authority.
+    lifecycle_skill: project-router, northstar-planning, project-definition, architecture-contracts, state-of-union
+    acceptance_signal: Canonical artifacts validate and GitHub issues carry every executable outcome.
+    evidence_refs: [.agent-workflow/northstar, .agent-workflow/project, .agent-workflow/architecture, .agent-workflow/strategy]
+  - id: RAS-002
+    description: Plan and supervise disjoint implementation lanes with independent criticism.
+    lifecycle_skill: sprint-planning and verdify-agentic-sprint
+    acceptance_signal: Every lane has one issue, locked ownership, tests, critic approval, and integration evidence.
+    evidence_refs: [.agent-workflow/modules, .verdify/sprints/software-recovery-2026-07-09]
+  - id: RAS-003
+    description: Deliver schema, services, audited state cleanup, and one firmware package in safety order.
+    lifecycle_skill: release-verification
+    acceptance_signal: Exact migrations/images/Argo/firmware revisions and rollback state are observed live.
+    evidence_refs: [.agent-workflow/modules/contracts/runtime-release-verification.contract.yaml]
+  - id: RAS-004
+    description: Protect credentials and stop on unapproved credential rotation or raw secret exposure.
+    lifecycle_skill: repo-hygiene
+    acceptance_signal: No raw value enters output/artifacts, committed fallback is removed, and rotation proceeds only after the durable gate is approved.
+    evidence_refs: [.agent-workflow/hygiene/gates/g-prod-db-credential-rotation.yaml]
+authority_boundaries:
+  allowed_operations:
+    - Read repository, GitHub, Kubernetes, Argo, database, logs, metrics, Home Assistant, and approved credential-reference metadata.
+    - Create/update/close issue and PR records within the approved recovery; implement/test/commit/push reviewed code and artifacts.
+    - Apply non-destructive serialized migrations, promote reviewed images, and perform approved prod sync/OTA after deterministic gates.
+  prohibited_operations:
+    - Record, print, paste, log, commit, or summarize raw secrets.
+    - Create a second device writer, bypass firmware/MCP bounds, or disable safety gates.
+    - Rewrite Git history, force push, destructively reset user work, or delete unattributed worktrees/branches.
+    - Change unrelated products, public infrastructure, or physical equipment.
+  approval_required_for:
+    - Production database credential rotation or any other credential rotation.
+    - Scope expansion beyond the approved recovery, destructive production data action, or outward-facing infrastructure change.
+    - Any OTA/sync outside the July 9 approved recovery or any safety-gate override.
+  credential_rules:
+    - Use existing secret references and auth modes; never emit raw values.
+    - Compare or validate secrets only inside a local process with boolean/redacted output.
+    - Rotate through scoped Kubernetes/database mechanisms and verify consumers/rollback only after explicit approval.
+  environment_limits:
+    - verdify-prod is the only environment and contains live plants/device/database.
+    - Isolated worktrees and fixtures are source proving surfaces, not a second live environment.
+discovery_inputs:
+  - id: DI-001
+    source: AGENTS.md, README.md, k3s handoff, runbooks, Makefile, CI
+    evidence_status: verified
+    summary: Defines repository authority, safety gates, delivery, tests, and secrets policy.
+  - id: DI-002
+    source: approved lifecycle artifacts and GitHub backlog sync
+    evidence_status: verified
+    summary: Defines corrected product intent, architecture, modules, candidate issues, and sequence.
+  - id: DI-003
+    source: live vallery k3s, ArgoCD, prod DB, logs, metrics, endpoints, Home Assistant
+    evidence_status: observed
+    summary: Confirms current runtime identity, degraded writer/planner behavior, topology/DLI defects, and release blockers.
+  - id: DI-004
+    source: redacted gitleaks current-tree/history scan
+    evidence_status: observed
+    summary: Confirms a committed live database password fallback plus reviewed test/SQL false positives without exposing values.
+runtime_context:
+  namespaces: [verdify-prod, argocd]
+  storage_mounts: [repository worktrees under /Users/jason/repos, existing Kubernetes PVCs only]
+  routes: [api.verdify.ai, lab.verdify.ai, graphs.verdify.ai, in-cluster ESPHome/MCP/database routes]
+  credential_refs: [Kubernetes secret verdify-app-secrets, firmware OTA secret reference, GitHub authenticated CLI, existing kubectl context vallery]
+  observability_refs: [alert_log, diagnostics, plan and setpoint ledgers, Argo application status, pod logs/events, Grafana, Home Assistant readbacks]
+escalation_paths:
+  - trigger: Credential rotation or raw-secret incident response is required.
+    owner: Jason Vallery
+    route: g-prod-db-credential-rotation-20260709
+    blocking: true
+  - trigger: A deterministic safety, alert, weekly OTA, bake, replay, invariant, migration, or single-writer gate fails.
+    owner: runtime-release-verification controller
+    route: stop release, repair or rollback, and reconcile GitHub evidence
+    blocking: true
+  - trigger: Product scope expands to hardware, non-wall fertilizer, unbounded AI, or unrelated products.
+    owner: Jason Vallery
+    route: transcript-replan and project-definition
+    blocking: true
+review:
+  status: accepted
+  reviewers: [Jason Vallery]
+  last_reviewed_at: "2026-07-09T21:05:00Z"
+  notes: July 9 approval covers complete software delivery, production sync, and OTA; credential rotation remains a separately explicit gate.
+handoff:
+  next_skill: sprint-orchestrator
+  next_mode: implementation-with-release-gate
+  reason: Source cleanup and issue 438 are durable; lane implementation may proceed, while hygiene completion and every production mutation remain blocked until explicit rotation and consumer verification.
+approval:
+  status: approved
+  approver: Jason Vallery
+  approved_at: "2026-07-09T21:05:00Z"

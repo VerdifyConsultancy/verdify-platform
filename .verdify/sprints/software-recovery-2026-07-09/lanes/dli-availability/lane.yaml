@@ -1,0 +1,197 @@
+sprint_id: software-recovery-2026-07-09
+lane_id: dli-availability
+title: Interior crop DLI unavailable end to end
+objective: >-
+  Replace every active numeric claim derived from the invalid interior light
+  sensor with an explicit unavailable/provenance contract while preserving raw
+  forensic history and all DLI-independent lighting behavior.
+desired_outcome: >-
+  Every active consumer reports crop DLI unavailable while the broken sensor is
+  invalid, without changing qualified-light-minute or photoperiod control.
+non_goals:
+  - Replace, calibrate, or add any physical sensor.
+  - Use outdoor irradiance as measured interior crop DLI or rewrite invalid history as valid.
+  - Disable or retune qualified-light-minute, photoperiod, or other DLI-independent lighting control.
+  - Deploy migration 195, restart services, publish sites/dashboards, or OTA firmware from this lane.
+baseline_sha: 0a9a19a840be6bae1beba604497d880b3b74b1ef
+branch: lane/recovery-dli-435
+worktree: /Users/jason/repos/verdify-worktrees/software-recovery-dli-435
+issue_ids:
+  - "#435"
+issue_urls:
+  - https://github.com/VerdifyConsultancy/verdify-platform/issues/435
+spec_or_change_ids:
+  - software-recovery-change-proposal
+  - evidence-contracts
+  - ADR-008
+decision_ids:
+  - DEC-003
+  - DEC-007
+ownership:
+  domains:
+    - DLI availability/provenance
+    - historical validity
+    - firmware signal
+    - planner/MCP/API/site/dashboard suppression
+  owned_paths:
+    - db/migrations/195-*.sql
+    - db/migrations/tests/test-195-*.sql
+    - db/schema.sql
+    - verdify_schemas/telemetry.py
+    - verdify_schemas/plan.py
+    - firmware/greenhouse/controls.yaml
+    - firmware/greenhouse/sensors.yaml
+    - firmware/lib/greenhouse_logic.h
+    - firmware/lib/greenhouse_types.h
+    - firmware/test/test_greenhouse_logic.cpp
+    - mcp/server.py
+    - ingestor/iris_planner.py
+    - scripts/gather-plan-context.sh
+    - api/main.py
+    - grafana/dashboards/**
+    - site/**
+    - tests/**dli*.py
+    - tests/test_04_planner.py
+    - tests/test_12_fidelity.py
+  prohibited_paths:
+    - ingestor/tasks/dispatcher.py
+    - ingestor/esp32_push.py
+    - firmware/greenhouse/tunables.yaml
+    - firmware/greenhouse/globals.yaml
+    - planner_graph/**
+  coordination_required_paths:
+    - db/schema.sql
+    - deploy/k8s/components/grafana/generated/**
+    - firmware twin mirrors
+    - mcp service restart docs
+  owned_interfaces:
+    - nullable DLI value
+    - unavailable reason/provenance/valid interval
+    - DLI consumer matrix
+  runtime_resources:
+    - verdify-prod PostgreSQL DLI history/views (read-only verification only)
+    - greenhouse ESP32 DLI diagnostic entities (offline build/replay ownership; controller performs OTA)
+    - verdify-mcp, verdify-api, and planner DLI consumers (code ownership only)
+    - provisioned Grafana and lab site DLI surfaces (source ownership; controller deploys)
+dependencies:
+  hard:
+    - lane_id: resource-accounting
+      required_output: finalized migration sequence and stable shared DB/MCP/API/Grafana head
+  soft:
+    - lane_id: planner-delivery
+      coordination: Planner-delivery consumes the merged unavailable DLI contract and must not reintroduce numeric fallback.
+    - lane_id: firmware-control
+      coordination: Firmware-control consumes the merged DLI signal and actuation-neutral regression baseline in its combined image.
+constraints:
+  - Do not begin implementation until resource-accounting is merged and the controller confirms the shared DB/MCP/API/Grafana head is stable.
+  - Reserve migration 195 only after the resource-accounting sequence is final; stop on a number collision.
+  - Land schema and historical-validity migration before consumers; preserve raw/proxy history for forensics with explicit invalid provenance and intervals.
+  - While the interior sensor is invalid, every active crop-DLI consumer must receive null/unavailable plus reason and provenance, never zero or an outdoor-proxy scalar.
+  - Use real elapsed time for any future firmware accumulation, but publish unavailable now; do not alter relay decisions, qualified-light-minute, or photoperiod logic.
+  - No new tunable, firmware global, physical calibration, sensor, or planner_graph behavior is authorized.
+  - Any firmware/schema change must preserve the cfg/readback contract and include service-restart documentation for verdify-mcp and verdify-ingestor where required by repository policy.
+  - Generated Grafana ConfigMaps and firmware twin mirrors may change only after explicit controller coordination and exclusive ownership transfer.
+  - This worker may inspect production read-only for evidence but may not apply migration 195, restart services, publish, deploy, or OTA.
+  - The later firmware-control lane owns the combined image; this lane must leave reproducible actuation-neutral tests and a mergeable firmware baseline.
+acceptance_criteria:
+  - id: LANE-AC-01
+    statement: No numeric crop DLI reaches planner, KPI, API, dashboard, or site while invalid.
+    evidence_required:
+      - Consumer matrix covering firmware, database, planner, MCP, API, dashboards, and generated sites
+      - Tests and rendered examples for unavailable value, reason, provenance, and validity interval
+  - id: LANE-AC-02
+    statement: Raw/proxy history remains forensic and explicitly invalid, never rewritten as measured.
+    evidence_required:
+      - Migration fixtures for invalid intervals, boundary timestamps, provenance, rerun idempotence, and raw-history preservation
+      - Before/after row-count and value-preservation proof on representative fixtures
+  - id: LANE-AC-03
+    statement: Firmware uses real elapsed time for future accumulation and publishes unavailable now.
+    evidence_required:
+      - Native firmware tests covering irregular loop cadence and invalid-sensor signaling
+      - Schema/readback fixture proving no numeric active DLI claim is emitted while invalid
+  - id: LANE-AC-04
+    statement: Qualified-light-minute and photoperiod behavior are unchanged.
+    evidence_required:
+      - Relay-decision unit/replay comparison with zero lighting divergence attributable to DLI availability
+      - Lighting boundary and static-audit results
+validation_commands:
+  - id: migration-classification
+    command: make migration-rollback-safety
+    purpose: Classify migration 195 and prevent unsafe rollback wrapping.
+    required: true
+  - id: dli-sql-fixtures
+    command: for f in db/migrations/tests/test-195-*.sql; do psql "$TEST_DATABASE_URL" -v ON_ERROR_STOP=1 -f "$f"; done
+    purpose: Prove historical validity, provenance, preservation, and idempotence against a disposable PostgreSQL/Timescale database.
+    required: true
+  - id: python-lint
+    command: make lint
+    purpose: Run repository Python lint across schema and consumer changes.
+    required: true
+  - id: repository-tests
+    command: make test
+    purpose: Run full repository tests, including planner, API, fidelity, and DLI consumers.
+    required: true
+  - id: firmware-unit-replay
+    command: make test-firmware && make firmware-invariants && make firmware-replay OLD=0a9a19a840be6bae1beba604497d880b3b74b1ef NEW=HEAD
+    purpose: Prove elapsed-time/unavailable signaling while preserving deterministic relay behavior.
+    required: true
+  - id: firmware-compile
+    command: make firmware-check
+    purpose: Compile and validate the firmware configuration affected by the DLI signal.
+    required: true
+  - id: lighting-regression
+    command: make lighting-audit-static
+    purpose: Verify DLI availability does not change qualified-light-minute or photoperiod control contracts.
+    required: true
+  - id: site-type-render
+    command: npm --prefix site run check && npm --prefix site test && npm --prefix site exec quartz build
+    purpose: Type-check, test, and render the site with unavailable DLI states.
+    required: true
+  - id: grafana-generation
+    command: python3 scripts/gen-grafana-dashboard-cms.py
+    purpose: Regenerate provisioned dashboards after the controller grants exclusive ownership of the generated path.
+    required: true
+  - id: diff-integrity
+    command: git diff --check
+    purpose: Reject whitespace errors and malformed patches.
+    required: true
+required_evidence:
+  - Lane-head commit SHA and complete diff against the assigned baseline/current-main branch point
+  - Migration classification and disposable-database historical-validity/rollback/idempotence output
+  - DLI consumer matrix covering firmware, DB, planner, MCP, API, dashboard, and site behavior
+  - Representative unavailable reason/provenance/valid-interval API, MCP, dashboard, and rendered-site artifacts
+  - Native firmware cadence/readback tests, invariants, replay comparison, compile output, and lighting audit
+  - Raw/proxy historical preservation proof with no rows or values rewritten as measured
+  - Full validation output or immutable CI links at lane HEAD
+  - Adversarial self-audit covering zero-sentinel leakage, proxy laundering, stale numeric caches, double counting, and actuation drift
+record_updates:
+  issues: true
+  pull_request: true
+  specifications: true
+  documentation: true
+  decisions: false
+git_policy:
+  commit_style: "Focused conventional commits that keep schema before consumers and cite #435"
+  push_required: true
+  self_merge_allowed: false
+  clean_worktree_required: true
+  pull_request_required: true
+  github_ci_required: true
+escalation_conditions:
+  - Any active consumer cannot represent unavailable plus reason/provenance/valid interval without a numeric sentinel.
+  - Migration 195 collides or requires rewriting/deleting raw forensic history.
+  - Firmware availability or elapsed-time changes alter qualified-light-minute, photoperiod, or any relay decision.
+  - A physical sensor replacement/calibration, outdoor proxy substitution, new tunable/global, or planner_graph change is requested.
+  - A prohibited or ungranted coordination-required path must change.
+  - A destructive/production operation, new external dependency, or public contract break beyond the approved nullable availability contract is required.
+agent_profile: cross-stack schema/firmware evidence engineer
+critic_profile: cross-stack provenance and actuation-neutrality critic
+definition_of_done:
+  - Every acceptance criterion passes with evidence tied to the immutable lane HEAD.
+  - Migration 195, schema dump, firmware signal, planner/MCP/API consumers, dashboards, and sites agree on one unavailable/provenance contract.
+  - Raw/proxy history remains preserved and explicitly invalid, with no numeric crop-DLI leakage in active consumers.
+  - "Issue #435 contains an implementation summary, validation evidence, consumer matrix, restart requirements, and physical-sensor limitation."
+  - "The feature branch is pushed and a PR linked to #435 is open with required firmware artifacts and verdify-mcp/verdify-ingestor restart notes; required CI is green."
+  - The worker has completed an adversarial self-audit and recorded discoveries separately rather than widening scope.
+  - The worktree is clean and contains no edits outside owned paths or explicitly granted coordination-required paths.
+  - An independent provenance/actuation-neutrality critic is requested; the worker leaves the lane READY_FOR_CRITIC and does not self-merge or deploy.

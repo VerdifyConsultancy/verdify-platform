@@ -1,4 +1,11 @@
-# Sprint S8 — vanda-night-dehum (awaiting approval)
+# Sprint S8 — vanda-night-dehum (superseded 2026-07-09)
+
+This historical sprint delivered migrations 187/188, the current dehumidification
+firmware, telemetry, and activation. Its remaining critic/outcome-acceptance
+state is cancelled: the expanded July 9 review did not sustain the early PASS
+claim, Jason corrected the irrigation/DLI/planner scope, and the approved
+`software-recovery-2026-07-09` North Star and module contracts now own follow-up.
+Do not dispatch its stale lane closeouts; retain them as implementation history.
 
 **Goal:** make the overnight center-zone (bare-root Vanda) climate dryable per the
 converged #410 analysis and the 2026-07-03 adversarial design review — land the

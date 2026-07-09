@@ -1,0 +1,202 @@
+sprint_id: software-recovery-2026-07-09
+lane_id: planner-delivery
+title: Self-healing bounded planner delivery
+objective: >-
+  Repair the Hermes/MCP/planner delivery chain so required planner triggers
+  recover tool health, produce truthful terminal actions, enforce the strictest
+  bounds once, expire cleanly, and evaluate forecasts against the correct
+  semantics.
+desired_outcome: >-
+  Required planner triggers regain tool health, truthful terminal action
+  semantics, strict bounds, singular expiry, and correct forecast evaluation.
+non_goals:
+  - Make planner_graph an operational writer.
+  - Move deterministic five-second control or safety rails into AI.
+  - Change firmware behavior, device-writer delivery code, or Grafana surfaces.
+  - Perform production deployment, stale-intent retirement, or alert mutation from this lane.
+baseline_sha: 0a9a19a840be6bae1beba604497d880b3b74b1ef
+branch: lane/recovery-planner-427
+worktree: /Users/jason/repos/verdify-worktrees/software-recovery-planner-427
+issue_ids:
+  - "#427"
+issue_urls:
+  - https://github.com/VerdifyConsultancy/verdify-platform/issues/427
+spec_or_change_ids:
+  - ADR-006
+  - planner-delivery
+  - software-recovery-change-proposal
+decision_ids:
+  - DEC-005
+  - DEC-006
+  - DEC-007
+ownership:
+  domains:
+    - Hermes MCP client liveness
+    - planner trigger/delivery ledger
+    - plan materializer/lifecycle
+    - forecast scoring
+    - planner context
+  owned_paths:
+    - ingestor/iris_planner.py
+    - ingestor/planner_routing.py
+    - ingestor/tasks/heartbeat.py
+    - ingestor/tasks/alerts.py
+    - ingestor/tasks/forecast.py
+    - mcp/server.py
+    - verdify_schemas/plan.py
+    - verdify_schemas/tunable_registry.py
+    - scripts/hermes-trigger.py
+    - scripts/hermes-validation-monitor.py
+    - scripts/gather-plan-context.sh
+    - "deploy/k8s/components/hermes-iris/**"
+    - deploy/k8s/base/mcp-deployment.yaml
+    - "db/migrations/196-*.sql"
+    - "db/migrations/tests/test-196-*.sql"
+    - db/schema.sql
+    - tests/test_04_planner.py
+    - tests/test_10_planner_routing.py
+    - tests/test_17_planner_health_surface.py
+  prohibited_paths:
+    - "planner_graph/**"
+    - "firmware/**"
+    - ingestor/tasks/dispatcher.py
+    - ingestor/esp32_push.py
+    - "grafana/**"
+  coordination_required_paths:
+    - verdify_schemas/tunable_registry.py
+    - db/schema.sql
+    - deploy/k8s/base/ingestor-deployment.yaml
+  owned_interfaces:
+    - tool-level readiness
+    - terminal result action/status
+    - strict bounds intersection
+    - single effective plan TTL
+    - outdoor forecast comparator
+  runtime_resources:
+    - verdify-prod Deployment/verdify-hermes-iris
+    - verdify-prod Deployment/verdify-mcp
+    - verdify-prod planner ledger and effective-plan database surfaces
+    - verdify-prod Deployment/verdify-ingestor for read-only acceptance and documented restart coordination only
+dependencies:
+  hard:
+    - lane_id: device-writer
+      required_output: non-starving task cadence and canonical registry/readback semantics
+    - lane_id: dli-availability
+      required_output: merged unavailable DLI contract and stable shared planner/MCP/schema head
+  soft:
+    - lane_id: evidence-core
+      coordination: supplies corrected forecast/outcome evidence
+expected_inputs:
+  - Quiet and fair writer cadence from device-writer.
+  - The merged unavailable-DLI contract from dli-availability.
+  - Existing firmware-supported tunable registry bounds.
+outputs:
+  - Self-healing MCP path with tool-level readiness.
+  - Terminal planner ledger and action-contract verifier.
+  - Normalized materializer with strict bounds, singularity, and expiry.
+  - Forecast comparator fixtures and explicit neutral fallback behavior.
+coordination_rules:
+  - Do not dispatch until both hard dependencies are independently accepted and merged.
+  - Cut the feature branch from the then-current main; retain baseline_sha as the sprint audit reference.
+  - Coordinate any change to the shared tunable registry or schema dump with the controller before editing.
+  - Schema and migration changes land before consumer changes, and the PR must name required verdify-mcp and verdify-ingestor restarts.
+constraints:
+  - Deterministic firmware remains authoritative and every failure path is neutral.
+  - Required set_plan triggers may be satisfied only by a valid full plan; other actions remain separately classified.
+  - Bounds are intersected and normalized once, exactly one plan is effective at an instant, and every plan expires.
+  - Tool readiness must fail on MCP tool loss and recover indefinitely with bounded backoff and no keepalive race.
+  - Never clear planner_required_plan_missed except through a valid accepted terminal action.
+  - No production mutation, Argo sync, or service restart is authorized for the lane worker.
+  - No raw secrets or credential material may enter source, logs, issues, PRs, or evidence.
+acceptance_criteria:
+  - id: LANE-AC-01
+    statement: Tool loss fails readiness and recovers indefinitely with bounded backoff and no keepalive race.
+    evidence_required:
+      - Deterministic MCP disconnect, reconnect, and prolonged-outage fault-injection tests.
+      - Readiness and retry-state assertions at lane HEAD.
+  - id: LANE-AC-02
+    statement: Required set_plan triggers are satisfied only by a valid full plan and every other action is terminally classified separately.
+    evidence_required:
+      - Action-contract unit and integration fixtures.
+      - Terminal ledger examples for success, neutral fallback, timeout, and wrong action.
+  - id: LANE-AC-03
+    statement: Bounds are intersected and normalized once, one plan is effective at an instant, and every plan expires.
+    evidence_required:
+      - Strict-bound conflict and normalization tests.
+      - Migration rollback proof and plan singularity/TTL fixtures.
+  - id: LANE-AC-04
+    statement: SUNRISE and SUNSET fault injection yields a valid plan or explicit neutral fallback and a valid action can resolve the critical planner alert.
+    evidence_required:
+      - Forecast comparator and trigger fault-injection results.
+      - Read-only end-to-end acceptance probe plan and output; production mutation remains release-controlled.
+validation_commands:
+  - id: planner-lint
+    command: make lint
+    purpose: Run repository Python lint and static policy checks.
+    required: true
+  - id: planner-tests
+    command: make test
+    purpose: Run the full Python/runtime test suite.
+    required: true
+  - id: planner-targeted-tests
+    command: .venv/bin/pytest -q tests/test_04_planner.py tests/test_10_planner_routing.py tests/test_17_planner_health_surface.py
+    purpose: Exercise planner delivery, routing, health, fault, bounds, and terminal-action contracts.
+    required: true
+  - id: migration-safety
+    command: make migration-rollback-safety
+    purpose: Classify the lane migration before any database application.
+    required: true
+  - id: prod-manifest-build
+    command: kustomize build deploy/k8s/overlays/prod | kubeconform -strict -summary -ignore-missing-schemas
+    purpose: Validate Hermes and MCP manifest integration without changing production.
+    required: true
+  - id: diff-check
+    command: git diff --check
+    purpose: Reject whitespace and patch-integrity defects.
+    required: true
+required_evidence:
+  - Full required-command output or immutable CI links at lane HEAD.
+  - MCP disconnect/reconnect/prolonged-outage fault-injection artifact.
+  - Terminal action ledger and wrong-action rejection artifact.
+  - Bounds, singularity, TTL, and migration rollback evidence.
+  - SUNRISE/SUNSET full-plan or neutral-fallback evidence.
+  - Diff self-audit proving no prohibited path or planner_graph writer change.
+  - Service-restart note for verdify-mcp and verdify-ingestor when required by touched contracts.
+record_updates:
+  issues: true
+  pull_request: true
+  specifications: true
+  documentation: true
+  decisions: false
+git_policy:
+  commit_style: Focused conventional commits tied to issue #427
+  push_required: true
+  self_merge_allowed: false
+  clean_worktree_required: true
+  pull_request_required: true
+  github_ci_required: true
+pull_request:
+  title: "Planner: self-healing MCP delivery, terminal plans, bounds, and expiry (#427)"
+  base: main
+  issue_update_rule: Keep #427 updated at orientation, PR open, blocker, critic handoff, and acceptance; never claim production resolution before release evidence.
+  merge_rule: Controller merges only after independent critic acceptance and required GitHub checks at the immutable reviewed head.
+escalation_conditions:
+  - Hermes upstream image must change.
+  - planner_graph would become a writer.
+  - Registry bounds conflict cannot be safely intersected.
+  - Neutral fallback would bypass deterministic firmware.
+  - A prohibited path, public API expansion, destructive migration, security-boundary change, or production mutation becomes necessary.
+  - Either hard dependency is incomplete, rejected, or changes a consumed interface after branch cut.
+agent_profile: planner-mcp-reliability
+critic_profile: distributed-state/planner contract critic
+integration_requirements:
+  - Independent critic reviews the immutable lane head and all acceptance evidence.
+  - Integration preserves schema-first ordering and reconciles shared registry, MCP, and schema changes against merged dependency heads.
+  - Repository-wide tests and GitHub CI rerun after merge; production proof belongs to release-control.
+definition_of_done:
+  - Every lane acceptance criterion passes with linked, revision-specific evidence.
+  - Only issue #427 scope and owned paths changed, or an approved coordination record exists.
+  - Migration and manifest validation pass and restart requirements are documented.
+  - Issue #427 and the pull request accurately state implementation and remaining production work.
+  - Branch is pushed, PR is open, required CI is green, and the lane worktree is clean.
+  - Adversarial self-audit is recorded and the lane is READY_FOR_CRITIC; the worker does not self-merge or deploy.

@@ -1,0 +1,123 @@
+schema_ref: module-contract.schema.yaml
+kind: ModuleContract
+schema_version: "1.0"
+module_id: evidence-contracts
+contract_version: "1.1"
+status: approved
+purpose: Own schema-first availability, solar/VPD parity, raw-transition cycle truth, realized dry-out, replay freshness, canonical equipment/resource evidence, historical provenance, API/MCP/daily/dashboard consumption, and alert semantics without writing device-control policy.
+requirement_ids: [NSR-004, NSR-005, NSR-006, NSR-007]
+owned_paths:
+  - verdify_schemas/mcp_responses.py
+  - verdify_schemas/telemetry.py
+  - db/migrations/*-evidence-availability-*.sql
+  - db/migrations/*-irrigation-job-ledger-*.sql
+  - db/migrations/*-dryout-effectiveness-*.sql
+  - db/schema.sql
+  - ingestor/tasks/daily.py
+  - ingestor/tasks/alerts.py
+  - mcp/server.py (outcome_kpi evidence adapter only; serialized before planner handoff)
+  - scripts/export-replay-overrides.sh
+  - firmware/test/data/replay_overrides.csv.gz
+  - firmware/test/replay_overrides.cpp
+  - api/**
+  - site/**
+  - scripts/*dli*.sh
+  - scripts/*dryout*.sh
+  - dashboards/**
+  - tests/test_*dli*.py
+  - tests/test_*dryout*.py
+  - tests/test_*irrigation*ledger*.py
+prohibited_paths:
+  - firmware/**
+  - mcp/server.py outside the outcome_kpi evidence adapter
+  - ingestor/ingestor.py
+  - ingestor/tasks/dispatcher.py
+  - verdify_schemas/tunable_registry.py
+  - deploy/k8s/**
+inputs:
+  - name: firmware_evidence
+    schema: relay intent/owner/state, fertigation job state and liters, DLI availability, solar phase and dry-out diagnostics
+    producer: firmware-control-policy through ingestor
+  - name: planner_lifecycle
+    schema: terminal action, effective plan, validity, expiry, provenance, neutral fallback
+    producer: planner-delivery
+  - name: outdoor_observations
+    schema: observed outdoor temperature/RH, derived VPD and absolute humidity, timestamps and source quality
+    producer: weather ingestion
+outputs:
+  - name: availability_bearing_metrics
+    schema: metric value nullable, status including unavailable, reason, provenance, validity interval, source revision
+    consumers: [planner-delivery, API, daily summaries, dashboards, generated site]
+  - name: crop_care_job_ledger
+    schema: request, admission, start, stages, requested/delivered liters, relay/flow evidence, terminal disposition
+    consumers: [operator, alerts, runtime-release-verification]
+  - name: realized_dryout_outcome
+    schema: solar-night episode, indoor/outdoor AH, temperature floor, actuator duty, expected/observed response, terminal assessment
+    consumers: [planner-delivery, operator, alerts]
+  - name: transition_equipment_outcome
+    schema: complete/partial local day, equipment slug, on-edges, runtime, sub-30/sub-60 pulses, peak transitions per hour, source and quality
+    consumers: [planner-delivery outcome adapter, runtime-release-verification, operator]
+  - name: resource_evidence
+    schema: canonical equipment alias, coefficient revision/range/provenance, measured/model/command-only/ambiguous/unattributed scope, coverage and quality
+    consumers: [planner-delivery, API, daily summaries, dashboards, generated site]
+  - name: replay_freshness
+    schema: source-backed outdoor fresh/stale state with corpus coverage and branch-reachability counts
+    consumers: [firmware-control-policy, runtime-release-verification]
+public_interfaces:
+  - name: metric-availability-schema
+    location: verdify_schemas/mcp_responses.py and serialized migration
+    compatibility: Add `unavailable` and reason/provenance before consumers require it; numeric absence is not encoded as zero.
+  - name: irrigation-job-ledger
+    location: serialized migration and API schema
+    compatibility: Stage and terminal states are append-compatible and idempotent by job identity.
+  - name: solar-and-dryout-views
+    location: serialized migrations and fixtures
+    compatibility: Database solar phase must match firmware fixtures; realized outcomes never compare outdoor forecast VPD with indoor observed VPD.
+dependencies:
+  hard: [firmware-control-policy output schemas, TimescaleDB migration order]
+  soft: [planner-delivery lifecycle, available physical flow feedback, public site generator]
+invariants:
+  - Unavailable evidence is explicit and never silently converted to zero, estimated measured truth, or a valid score.
+  - Historical invalid DLI remains queryable with invalid provenance but is excluded from product, planner, and composite outcome claims.
+  - Lighting control evidence independent of DLI remains visible and unchanged.
+  - Every irrigation/fertigation job has one durable terminal disposition; duplicate/restart events are idempotent.
+  - Cycle and runtime acceptance uses raw equipment-state transitions with explicit partial/completeness state, never a mid-day firmware counter snapshot.
+  - The water-event ledger is incremental, idempotent, freshness-monitored, and conserves quality-filtered complete-day totals across attributed, ambiguous, and unattributed buckets.
+  - Partial measured energy and runtime-modeled energy retain distinct scope, coefficient revision/range, coverage, and quality.
+  - Stock replay fails when source-backed outdoor freshness coverage disappears and does not require a force-fresh override for normal branch coverage.
+  - Database solar phase agrees with firmware test fixtures before dry-out outcomes are trusted.
+  - Realized dry-out evidence retains environment, guards, actuator duty, stop reason, and validity.
+runtime_resources:
+  - TimescaleDB schema, hypertables, views, continuous aggregates, and alerts
+  - API, ingestor daily/alert tasks, site generator, dashboards
+validation_commands:
+  - id: schema-tests
+    command: pytest -q tests/test_*dli*.py tests/test_*dryout*.py tests/test_*irrigation*ledger*.py
+    purpose: Prove availability, provenance, idempotent jobs, solar parity, and outcome semantics.
+  - id: migration-safety
+    command: make migration-rollback-safety
+    purpose: Classify all new migrations.
+  - id: integration
+    command: make lint && make test
+    purpose: Prove all schema consumers and drift guards.
+  - id: site
+    command: make site-lint
+    purpose: Verify generated/public evidence surfaces after schema changes.
+required_evidence:
+  - Rollback proof for each serialized migration and live schema/version confirmation.
+  - Consumer matrix showing unavailable DLI in firmware-derived rows, DB, planner context, MCP result, API, dashboard, and site.
+  - Historical invalid interval and provenance are recorded without rewriting raw evidence.
+  - Solar parity fixture and live migration 186 proof are green.
+  - At least one solar-night episode reaches a durable realized terminal assessment.
+  - Hand-counted transition fixtures cover midnight carry-over, duplicates, open pulses, mister/fog/fan, and both light circuits.
+  - Active equipment aliases, water-event freshness/catch-up, complete-day conservation, and energy-scope fixtures pass.
+  - Refreshed replay corpus includes source-backed fresh rows and reaches outdoor-aware estimator paths.
+definition_of_done:
+  - Schema lands before every consumer and service restart requirements are documented.
+  - DLI, job ledger, solar parity, and dry-out outcome contracts are green across integration tests.
+  - Operator-visible labels distinguish climate mist, intentional irrigation, fertilizer, unavailable evidence, and ineffective dry-out.
+  - Planner consumes only valid availability-bearing evidence.
+approval:
+  status: approved
+  approver: Jason Vallery
+  approved_at: "2026-07-09T21:05:00Z"

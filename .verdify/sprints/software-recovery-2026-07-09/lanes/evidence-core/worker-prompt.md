@@ -1,0 +1,15 @@
+# Worker prompt: evidence-core
+
+Own lane `evidence-core` for issues `#293`, `#389`, `#410`, `#419`, and `#424`. Objective: deliver the serialized evidence contract for DB/device solar and VPD parity, raw-transition cycling, realized solar-night dry-out episodes, and source-backed outdoor freshness in stock replay.
+
+Read first:
+
+1. `/Users/jason/.codex/skills/verdify-agentic-sprint/references/common-operating-contract.md`
+2. `.verdify/sprints/software-recovery-2026-07-09/lanes/evidence-core/lane.yaml` (authoritative)
+3. Repo `AGENTS.md`, handoff, migration safety rules, relevant DB/MCP/firmware-test docs, assigned issues, tests, and recent Git history.
+
+Start from baseline `0a9a19a840be6bae1beba604497d880b3b74b1ef` on the contracted branch/worktree. Own only migrations 186/189/190-192 and tests, schema/MCP evidence surfaces, replay exporter/corpus/harness, named tests, and this lane's records. Do not touch writer delivery, firmware control logic, deploy manifests, Grafana, or other lanes' records. Coordinate before telemetry-schema, `Makefile`, or planner-context changes. Production application is controller-owned; worker production access is read-only except an explicitly controller-run rollback proof.
+
+Work autonomously within bounds. Serialize migration numbers, reserve 189, classify before rollback testing, and never outer-wrap self-committing SQL. Preserve raw history; derive cycle/runtime/short-cycle/quality from transitions with complete-day and partial-state semantics. Model dry-out as realized sunset-to-sunrise episodes with AH, temperature, duty, stop/block reason, effectiveness, and zero daytime admission. Derive outdoor age from source timestamps, archive the prior corpus, require at least 1,000 source-backed fresh rows across useful regimes, and prove outdoor-aware branches without force-fresh. Escalate on migration 189 collision, non-preservable freshness provenance, any need to rewrite history, or a required firmware behavior change.
+
+Run every validation and satisfy every criterion in `lane.yaml`. Record structured evidence in `evidence.yaml`, keep `status.yaml` current, make coherent commits referencing all five issues, push, open/update the contracted PR, update every issue, and leave Git clean. Document migration order, rollback proof, service restarts, corpus provenance, and limitations. Before handoff, adversarially re-count fixtures and audit missing data, carry-over/open pulses, daytime exclusion, intent-versus-outcome claims, branch coverage, and reproducibility. Request the independent SQL/replay critic; do not self-merge or claim production application.

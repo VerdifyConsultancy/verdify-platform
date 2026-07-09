@@ -1,0 +1,34 @@
+sprint_id: software-recovery-2026-07-09
+state: EXECUTING
+phase: controller-baseline-validation
+updated_at: "2026-07-09T22:40:00Z"
+repository:
+  url: https://github.com/VerdifyConsultancy/verdify-platform
+  local_path: /Users/jason/repos/verdify-worktrees/software-recovery-20260709
+  default_branch: main
+  controller_branch: codex/software-recovery-2026-07-09
+  baseline_sha: 0a9a19a840be6bae1beba604497d880b3b74b1ef
+target_environment: verdify-prod
+human_owner: Jason
+authorization:
+  implementation: authorized by the 2026-07-09 objective to deliver all proposed software fixes
+  production_delivery: authorized as required to deliver the requested end state, subject to repository CI, GitOps, migration, and runtime gates
+  firmware_ota: explicitly authorized without another approval request, subject to non-waived safety, replay, invariant, weekly, and bake gates
+  destructive_database: not authorized or required
+  credentials_dns_edge: out of scope
+baseline:
+  git_clean: false
+  github_access: available
+  kubernetes_context: vallery
+  production_read_access: available
+  production_write_path: GitHub CI, prod-promote, ArgoCD manual sync
+  ota_path: laptop operator path available; credential values remain external to repository and logs
+known_gates:
+  - Production release is blocked until Jason explicitly authorizes scoped rotation of the exposed application DB credential and every consumer is verified under issue 438.
+  - The open critical planner_required_plan_missed alert must be repaired and resolved before firmware OTA preflight can pass.
+  - Firmware changes must pass unit tests, invariants, replay, compile, weekly-OTA, and 48-hour bake checks.
+  - Schema or migration changes must be serialized and rollback-classified.
+next_actions:
+  - Commit and independently review the controller planning/security transaction.
+  - Merge the controller baseline, then create isolated Wave-0 writer and evidence worktrees.
+  - Dispatch only dependency-ready workers with their validated lane contracts under the approved local-worktree fallback.

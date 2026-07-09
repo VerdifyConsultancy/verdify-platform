@@ -1,0 +1,247 @@
+sprint_id: software-recovery-2026-07-09
+lane_id: firmware-control
+title: Combined firmware topology and reliability package
+objective: >-
+  Produce one reviewable firmware package that enforces the approved irrigation
+  topology and fail-closed wall-feed sequence, preserves proven DLI-independent
+  and night/dwell behavior, and establishes a defensible ESP32 heap/WDT floor.
+desired_outcome: >-
+  The exact reviewed image enforces center-only climate and fail-closed wall
+  feed, remains DLI-honest, preserves proven dwell/night behavior, and runs
+  above the heap/WDT floor.
+non_goals:
+  - Add speculative anti-chatter, shoulder, freshness, post-wet, or closed-heat tunables.
+  - Enable physical fertilizer before commissioning is complete.
+  - Remove dormant south/west infrastructure or add physical hardware and sensors.
+  - Change planner, MCP, database migrations, device-writer dispatch, or Kubernetes manifests.
+  - Perform the production OTA or declare runtime acceptance from this lane.
+baseline_sha: 0a9a19a840be6bae1beba604497d880b3b74b1ef
+branch: lane/recovery-firmware-299-383-386-428-434
+worktree: /Users/jason/repos/verdify-worktrees/software-recovery-firmware-control
+issue_ids:
+  - "#299"
+  - "#383"
+  - "#386"
+  - "#428"
+  - "#434"
+issue_urls:
+  - https://github.com/VerdifyConsultancy/verdify-platform/issues/299
+  - https://github.com/VerdifyConsultancy/verdify-platform/issues/383
+  - https://github.com/VerdifyConsultancy/verdify-platform/issues/386
+  - https://github.com/VerdifyConsultancy/verdify-platform/issues/428
+  - https://github.com/VerdifyConsultancy/verdify-platform/issues/434
+spec_or_change_ids:
+  - ADR-007
+  - ADR-008
+  - ADR-009
+  - firmware-control-policy
+  - software-recovery-change-proposal
+decision_ids:
+  - DEC-001
+  - DEC-002
+  - DEC-003
+  - DEC-004
+  - DEC-007
+  - DEC-008
+ownership:
+  domains:
+    - relay resolver
+    - irrigation/fertigation FSM
+    - existing dwell preservation
+    - heap/WDT diagnostics
+    - combined firmware artifact
+  owned_paths:
+    - "firmware/greenhouse/**"
+    - "firmware/lib/**"
+    - "firmware/test/**"
+    - verdify_schemas/tunable_registry.py
+    - verdify_schemas/tests/test_firmware_drift.py
+    - ingestor/entity_map.py
+    - scripts/validate-irrigation-stack.py
+    - scripts/irrigation-completion-audit.py
+    - "scripts/firmware-*.sh"
+    - docs/firmware-fsm-spec.md
+    - docs/agents/firmware.md
+    - docs/agents/irrigation.md
+  prohibited_paths:
+    - "db/migrations/**"
+    - "mcp/**"
+    - ingestor/tasks/dispatcher.py
+    - ingestor/iris_planner.py
+    - "planner_graph/**"
+    - "deploy/k8s/**"
+  coordination_required_paths:
+    - Makefile
+    - db/schema.sql
+    - scripts/export-replay-overrides.sh
+    - firmware twin mirrors
+  owned_interfaces:
+    - pure relay resolver
+    - zone enable/readbacks
+    - wall commissioning/sequence contract
+    - heap safety diagnostics
+    - existing mister/light/night regression contract
+  runtime_resources:
+    - ESP32 greenhouse controller firmware image and rollback artifact
+    - center, south, west, wall-drip, and fertilizer relay intent/readback surfaces
+    - firmware heap, reset, loop-duration, and Task WDT diagnostics
+dependencies:
+  hard:
+    - lane_id: evidence-core
+      required_output: refreshed source-backed replay corpus and cycle/night evidence contracts
+    - lane_id: device-writer
+      required_output: canonical readbacks and quiet stable-connection writer
+    - lane_id: dli-availability
+      required_output: merged DLI firmware signal and actuation-neutral tests
+    - lane_id: planner-delivery
+      required_output: finalized tunable registry/bounds and no shared-file ambiguity
+  soft:
+    - lane_id: resource-accounting
+      coordination: consumes corrected irrigation intent after deploy
+expected_inputs:
+  - Merged canonical cfg readback contract and quiet writer behavior.
+  - Refreshed replay corpus plus raw-cycle and realized-night evidence contracts.
+  - Merged unavailable-DLI firmware signal and actuation-neutral baseline.
+  - Final planner tunable registry and bound definitions.
+outputs:
+  - One exact combined firmware binary and retained rollback artifact.
+  - Unit, invariant, stock replay, band replay, compile, lighting, and irrigation evidence packet.
+  - Heap allocation/profile report and actionable WDT diagnostics.
+  - OTA acceptance manifest for release-control; no OTA is executed by this lane.
+coordination_rules:
+  - Do not dispatch until all four hard dependencies are independently accepted and merged.
+  - Cut the feature branch from the then-current main; retain baseline_sha as the sprint audit reference.
+  - Coordinate before touching Makefile, the replay exporter, schema dump, any twin mirror, or any interface shared with a merged lane.
+  - This lane is the exclusive firmware YAML/header/test owner for the combined image; no parallel firmware edit may run.
+  - Although scripts/firmware-*.sh overlaps release-control's named release scripts, those named scripts are reserved for release-control unless the controller records and serializes an explicit handoff.
+  - Release-control alone executes the exact reviewed OTA after critic, CI, alert, weekly, bake, heap, cycling, and rollback gates pass.
+constraints:
+  - Climate/VPD wet intent resolves only to center mist; center drip and dormant south/west irrigation remain disabled by default.
+  - Fertilizer can reach only a commissioned wall-drip path, and incomplete commissioning must fail closed.
+  - Wall feed is exact-once prewet, feed, fertilizer-off, and immediate wall-local clean flush; no legacy 90-minute hold.
+  - Preserve the existing 45-second center re-fire fence and lighting minimum-on boundary without extending water pulses.
+  - Preserve solar-night zero-daytime admission, temperature bounds, heat2-off behavior, and existing deterministic safety.
+  - Add no new tunable/entity outside the approved contract; every approved new tunable still requires a cfg readback.
+  - Replay divergence is limited to documented topology and unavailable-DLI effects and must be explained row-by-row or by invariant.
+  - Controlled restart is a last resort; first remove avoidable allocation/publish churn and provide heap/WDT evidence.
+  - No production OTA, device-VLAN action, or secret access is authorized for the lane worker.
+acceptance_criteria:
+  - id: LANE-AC-01
+    statement: All climate wet intent resolves to center; center drip and dormant south/west paths remain disabled; only commissioned wall drip can receive fertilizer.
+    evidence_required:
+      - Resolver unit tests for every command source and zone-enable state.
+      - Invariant and replay evidence showing zero south/west climate demand and zero non-wall fertilizer demand.
+  - id: LANE-AC-02
+    statement: Missing commissioning prevents feed and the exact-once wall sequence is prewet, feed, fertilizer-off, and immediate clean flush.
+    evidence_required:
+      - Fail-closed commissioning fixtures.
+      - Restart, cancellation, duplicate-trigger, and sequence-order tests.
+  - id: LANE-AC-03
+    statement: Existing 45-second center re-fire and lighting minimum-on behavior are regression-tested without a speculative new control tunable.
+    evidence_required:
+      - Re-fire test proving no pulse extension.
+      - In-window to outside-window lighting boundary test and static lighting audit.
+  - id: LANE-AC-04
+    statement: Solar-night safety remains zero-daytime, temperature-bounded, and heat2-off with no unproven post-wet flag or hold.
+    evidence_required:
+      - Night admission and stop/block regression fixtures.
+      - Invariant and replay proof against the refreshed corpus.
+  - id: LANE-AC-05
+    statement: Heap profile, floor, and WDT diagnostics meet the pre-OTA contract, with controlled restart used only if all safer corrections are insufficient.
+    evidence_required:
+      - Before/after free-heap, largest-block, allocation/publish pressure, loop-duration, and reset profile.
+      - Compile/map output and an explicit defended heap threshold.
+  - id: LANE-AC-06
+    statement: One exact firmware artifact passes every required unit, invariant, replay, band-replay, lighting, irrigation, lint, test, and compile gate.
+    evidence_required:
+      - Immutable artifact manifest with source SHA and checksums.
+      - Full validation output and retained rollback artifact reference.
+validation_commands:
+  - id: firmware-unit
+    command: make test-firmware
+    purpose: Run native firmware unit tests and corpus replay.
+    required: true
+  - id: firmware-invariants
+    command: make firmware-invariants
+    purpose: Enforce greenhouse safety invariants on the refreshed corpus.
+    required: true
+  - id: firmware-replay
+    command: make firmware-replay OLD=origin/main NEW=HEAD
+    purpose: Quantify and explain every firmware behavior delta from current main.
+    required: true
+  - id: firmware-band-replay
+    command: make firmware-replay-band OLD=origin/main
+    purpose: Detect any diurnal-band shape delta hidden by corpus-fed setpoints.
+    required: true
+  - id: firmware-compile
+    command: make firmware-check
+    purpose: Compile the exact ESP32 firmware image without deployment.
+    required: true
+  - id: lighting-audit
+    command: make lighting-audit-static
+    purpose: Verify DLI-independent lighting and boundary behavior statically.
+    required: true
+  - id: irrigation-audit
+    command: make irrigation-stack-software-check
+    purpose: Verify the software irrigation topology and fail-closed behavior without physical commissioning.
+    required: true
+  - id: repository-lint
+    command: make lint
+    purpose: Run repository Python lint and policy checks.
+    required: true
+  - id: repository-tests
+    command: make test
+    purpose: Run the full Python/runtime regression suite.
+    required: true
+  - id: diff-check
+    command: git diff --check
+    purpose: Reject whitespace and patch-integrity defects.
+    required: true
+required_evidence:
+  - Full required-command output or immutable CI links at lane HEAD.
+  - Resolver matrix for every wet-intent source, zone enable, and fertilizer interlock.
+  - Exact-once wall prewet/feed/fertilizer-off/immediate-flush fault-injection results.
+  - Mister re-fire, lighting boundary, and solar-night preservation fixtures.
+  - Before/after heap, largest-block, allocation pressure, loop-duration, WDT, and reset profile.
+  - Stock replay and band-replay delta explanation against current main.
+  - Exact binary source SHA/checksum, map output, rollback artifact, and OTA acceptance manifest.
+  - Diff self-audit proving no prohibited path or speculative tunable/entity change.
+record_updates:
+  issues: true
+  pull_request: true
+  specifications: true
+  documentation: true
+  decisions: false
+git_policy:
+  commit_style: Focused conventional commits grouped by approved firmware contract
+  push_required: true
+  self_merge_allowed: false
+  clean_worktree_required: true
+  pull_request_required: true
+  github_ci_required: true
+pull_request:
+  title: "Firmware: center-only climate, wall-only feed, and reliability recovery (#299 #383 #386 #428 #434)"
+  base: main
+  issue_update_rule: Keep all five issues updated with their exact preservation or implementation slice; do not claim physical commissioning or production OTA completion.
+  merge_rule: Controller merges only after an independent firmware safety critic accepts the immutable artifact/head and every required CI gate passes.
+escalation_conditions:
+  - A new tunable or entity outside the approved contract is required.
+  - Replay divergence extends beyond the documented topology or unavailable-DLI delta.
+  - A defensible heap floor cannot be reached or measured.
+  - Fertilizer route or exact sequence is ambiguous.
+  - Physical commissioning or production device access is requested.
+  - A prohibited path, public/schema/security boundary, destructive operation, or second device writer becomes necessary.
+  - Any hard dependency changes a consumed interface after branch cut.
+agent_profile: firmware-esphome-cpp
+critic_profile: firmware safety/replay/heap adversarial critic
+integration_requirements:
+  - Independent critic reviews the immutable source head, binary manifest, replay deltas, topology matrix, and heap evidence.
+  - Controller reconciles any shared registry/entity-map/twin change with merged lane contracts before integration.
+  - Repository-wide CI reruns at the integrated head; release-control alone performs preflight, OTA, and runtime acceptance.
+definition_of_done:
+  - Every lane acceptance criterion passes with linked, revision-specific evidence.
+  - All five assigned issues are accurately updated and no unassigned firmware behavior is added.
+  - One exact combined image and rollback artifact are tied to the immutable lane head.
+  - Required firmware, lighting, irrigation, lint, test, replay, band-replay, and compile gates pass.
+  - Branch is pushed, PR is open, required CI is green, and the lane worktree is clean.
+  - Adversarial self-audit is recorded and the lane is READY_FOR_CRITIC; the worker does not self-merge or OTA.

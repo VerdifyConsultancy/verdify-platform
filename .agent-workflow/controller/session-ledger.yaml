@@ -3,10 +3,10 @@ schema_ref: session-ledger.schema.yaml
 kind: SessionLedger
 schema_version: '1.0'
 project_id: verdify-platform
-ledger_id: ledger-s8-vanda-night-dehum
+ledger_id: ledger-verdify-platform-controller
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-06T22:35:00Z'
+updated_at: '2026-07-09T22:48:00Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -18,9 +18,9 @@ sessions:
   role: controller
   executor: claude-fable-5
   repository: VerdifyConsultancy/verdify-platform
-  status: active
+  status: superseded
   started_at: '2026-07-03T20:30:00Z'
-  ended_at: null
+  ended_at: '2026-07-09T20:52:12Z'
   issue_ids:
   - 410
   - 327
@@ -221,6 +221,105 @@ sessions:
   pr_refs:
   - '#425'
   artifact_refs: []
+- session_id: software-recovery-root-019f4826
+  parent_session_id: null
+  role: orchestrator
+  executor: codex-root-local-operator
+  repository: VerdifyConsultancy/verdify-platform
+  status: active
+  started_at: '2026-07-09T20:52:12Z'
+  ended_at: null
+  issue_ids:
+  - 293
+  - 299
+  - 377
+  - 383
+  - 386
+  - 389
+  - 390
+  - 410
+  - 419
+  - 424
+  - 427
+  - 428
+  - 433
+  - 434
+  - 435
+  - 437
+  - 438
+  lane_id: null
+  wave_id: wave-software-recovery-implementation
+  branch: codex/software-recovery-2026-07-09
+  worktree: /Users/jason/repos/verdify-worktrees/software-recovery-20260709
+  pr_refs: []
+  artifact_refs:
+  - .verdify/sprints/software-recovery-2026-07-09/plan/sprint-plan.yaml
+  - .verdify/sprints/software-recovery-2026-07-09/plan/lane-topology.yaml
+- session_id: platform-live-audit-20260709
+  parent_session_id: software-recovery-root-019f4826
+  role: readiness
+  executor: codex-local-subagent
+  repository: VerdifyConsultancy/verdify-platform
+  status: complete
+  started_at: '2026-07-09T22:10:00Z'
+  ended_at: '2026-07-09T22:33:34Z'
+  issue_ids: []
+  lane_id: null
+  wave_id: wave-software-recovery-implementation
+  branch: codex/software-recovery-2026-07-09
+  worktree: /Users/jason/repos/verdify-worktrees/software-recovery-20260709
+  pr_refs: []
+  artifact_refs:
+  - .agent-workflow/platform/platform-readiness.yaml
+- session_id: platform-artifact-audit-20260709
+  parent_session_id: software-recovery-root-019f4826
+  role: readiness
+  executor: codex-local-subagent
+  repository: VerdifyConsultancy/verdify-platform
+  status: complete
+  started_at: '2026-07-09T22:10:00Z'
+  ended_at: '2026-07-09T22:36:00Z'
+  issue_ids: []
+  lane_id: null
+  wave_id: wave-software-recovery-implementation
+  branch: codex/software-recovery-2026-07-09
+  worktree: /Users/jason/repos/verdify-worktrees/software-recovery-20260709
+  pr_refs: []
+  artifact_refs:
+  - .agent-workflow/sprints/software-recovery-2026-07-09/execution/sprint-execution-runbook.yaml
+- session_id: controller-baseline-validation-20260709
+  parent_session_id: software-recovery-root-019f4826
+  role: tool
+  executor: codex-local-subagent
+  repository: VerdifyConsultancy/verdify-platform
+  status: complete
+  started_at: '2026-07-09T22:18:00Z'
+  ended_at: '2026-07-09T22:38:00Z'
+  issue_ids: []
+  lane_id: null
+  wave_id: wave-software-recovery-implementation
+  branch: codex/software-recovery-2026-07-09
+  worktree: /Users/jason/repos/verdify-worktrees/software-recovery-20260709
+  pr_refs: []
+  artifact_refs:
+  - .verdify/sprints/software-recovery-2026-07-09/state.yaml
+- session_id: security-caller-audit-20260709
+  parent_session_id: software-recovery-root-019f4826
+  role: readiness
+  executor: codex-local-subagent
+  repository: VerdifyConsultancy/verdify-platform
+  status: complete
+  started_at: '2026-07-09T22:38:00Z'
+  ended_at: '2026-07-09T22:47:00Z'
+  issue_ids:
+  - 438
+  lane_id: security-hygiene
+  wave_id: wave-software-recovery-implementation
+  branch: codex/software-recovery-2026-07-09
+  worktree: /Users/jason/repos/verdify-worktrees/software-recovery-20260709
+  pr_refs: []
+  artifact_refs:
+  - .agent-workflow/hygiene/database-credential-caller-matrix.md
 events:
 - id: LEDGER-EVT-0001
   sequence: 1
@@ -2245,6 +2344,223 @@ events:
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0052
   content_sha256: null
+- id: LEDGER-EVT-0054
+  sequence: 54
+  occurred_at: '2026-07-09T20:52:12Z'
+  event_type: planning_updated
+  source: controller-loop
+  subject: software-recovery user feedback and delivery directive
+  actor:
+    role: human
+    name: Jason Vallery
+  session_id: software-recovery-root-019f4826
+  correlation:
+    trace_id: null
+    wave_id: wave-software-recovery-implementation
+    session_ids:
+    - software-recovery-root-019f4826
+    issue_ids:
+    - 293
+    - 299
+    - 377
+    - 383
+    - 386
+    - 389
+    - 390
+    - 410
+    - 419
+    - 424
+    - 427
+    - 428
+    - 433
+    - 434
+    - 435
+    - 437
+    - 438
+    lane_ids: []
+    pr_ids: []
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs:
+    - .agent-workflow/intake/transcript-replan.yaml
+    - .agent-workflow/project/project-definition.yaml
+    evidence_refs:
+    - .verdify/sprints/software-recovery-2026-07-09/review/human-review-transcript.md
+    external_refs: []
+  result: approved
+  summary: Jason defined the irrigation, DLI, night dry-out, connectivity, and planner outcomes and authorized delivery of all proposed software fixes plus OTA when software gates require it.
+  data_summary: Protected production database credential rotation remains outside this approval and has its own open gate.
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0053
+  content_sha256: null
+- id: LEDGER-EVT-0055
+  sequence: 55
+  occurred_at: '2026-07-09T22:05:00Z'
+  event_type: sprint_planned
+  source: sprint-orchestrator
+  subject: software-recovery-2026-07-09 approved plan and lane contracts
+  actor:
+    role: controller
+    name: software-recovery-root-019f4826
+  session_id: software-recovery-root-019f4826
+  correlation:
+    trace_id: null
+    wave_id: wave-software-recovery-implementation
+    session_ids:
+    - software-recovery-root-019f4826
+    issue_ids:
+    - 293
+    - 299
+    - 377
+    - 383
+    - 386
+    - 389
+    - 390
+    - 410
+    - 419
+    - 424
+    - 427
+    - 428
+    - 433
+    - 434
+    - 435
+    - 437
+    - 438
+    lane_ids:
+    - security-hygiene
+    - device-writer
+    - evidence-core
+    - resource-accounting
+    - dli-availability
+    - planner-delivery
+    - firmware-control
+    - release-control
+    pr_ids: []
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs:
+    - .verdify/sprints/software-recovery-2026-07-09/plan/sprint-plan.yaml
+    - .verdify/sprints/software-recovery-2026-07-09/plan/lane-topology.yaml
+    evidence_refs:
+    - .verdify/sprints/software-recovery-2026-07-09/baseline/adversarial-audit.md
+    external_refs: []
+  result: approved
+  summary: Seventeen GitHub issues were assigned exactly once across eight dependency-ordered lane contracts at baseline 0a9a19a.
+  data_summary: Security-hygiene stays in the controller baseline; device-writer and evidence-core are the first implementation lanes.
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0054
+  content_sha256: null
+- id: LEDGER-EVT-0056
+  sequence: 56
+  occurred_at: '2026-07-09T22:25:00Z'
+  event_type: exception_recorded
+  source: platform-readiness
+  subject: Agent Platform dynamic lane dispatch blocked
+  actor:
+    role: readiness
+    name: platform-live-audit-20260709
+  session_id: software-recovery-root-019f4826
+  correlation:
+    trace_id: null
+    wave_id: wave-software-recovery-implementation
+    session_ids:
+    - platform-live-audit-20260709
+    issue_ids: []
+    lane_ids:
+    - device-writer
+    - evidence-core
+    pr_ids: []
+    deployment_ids: []
+    policy_decision_ids: []
+  refs:
+    artifact_refs:
+    - .agent-workflow/platform/platform-readiness.yaml
+    - .agent-workflow/sprints/software-recovery-2026-07-09/execution/sprint-execution-runbook.yaml
+    evidence_refs: []
+    external_refs: []
+  result: blocked
+  summary: The live repo pod and dashboard are healthy, but add/remove_worktree_agent are explicitly disabled and the four fixed Verdify sessions share one stale retired-branch clone, so platform lane dispatch cannot preserve isolated ownership.
+  data_summary: The current Codex session also has no Agent Platform create, poll, send, or terminal tools attached.
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0055
+  content_sha256: null
+- id: LEDGER-EVT-0057
+  sequence: 57
+  occurred_at: '2026-07-09T22:31:00Z'
+  event_type: gate_decision
+  source: controller-loop
+  subject: g-software-recovery-local-dispatch-fallback
+  actor:
+    role: controller
+    name: software-recovery-root-019f4826
+  session_id: software-recovery-root-019f4826
+  correlation:
+    trace_id: null
+    wave_id: wave-software-recovery-implementation
+    session_ids:
+    - software-recovery-root-019f4826
+    issue_ids: []
+    lane_ids:
+    - device-writer
+    - evidence-core
+    pr_ids: []
+    deployment_ids: []
+    policy_decision_ids:
+    - g-software-recovery-local-dispatch-fallback
+  refs:
+    artifact_refs:
+    - .agent-workflow/sprints/software-recovery-2026-07-09/gates/g-local-dispatch-fallback.yaml
+    evidence_refs:
+    - .verdify/sprints/software-recovery-2026-07-09/plan/approval.md
+    external_refs: []
+  result: approved
+  summary: Jason's explicit deliver-all-software-fixes directive authorizes isolated local-worktree workers as the current-sprint fallback; it does not authorize production credential rotation.
+  data_summary: Each lane still requires exclusive worktree ownership, independent criticism, CI, and protected release gates.
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0056
+  content_sha256: null
+- id: LEDGER-EVT-0058
+  sequence: 58
+  occurred_at: '2026-07-09T22:48:00Z'
+  event_type: worker_closeout
+  source: controller-loop
+  subject: security-hygiene caller and rotation readiness checkpoint
+  actor:
+    role: controller
+    name: software-recovery-root-019f4826
+  session_id: software-recovery-root-019f4826
+  correlation:
+    trace_id: null
+    wave_id: wave-software-recovery-implementation
+    session_ids:
+    - security-caller-audit-20260709
+    issue_ids:
+    - 438
+    lane_ids:
+    - security-hygiene
+    pr_ids: []
+    deployment_ids: []
+    policy_decision_ids:
+    - g-prod-db-credential-rotation-20260709
+  refs:
+    artifact_refs:
+    - .agent-workflow/hygiene/database-credential-caller-matrix.md
+    - .agent-workflow/hygiene/database-credential-rotation-runbook.md
+    - .agent-workflow/hygiene/database-credential-scan-summary.md
+    evidence_refs:
+    - tests/test_no_committed_db_password.py
+    external_refs:
+    - type: github_issue
+      identifier: VerdifyConsultancy/verdify-platform#438
+      url: https://github.com/VerdifyConsultancy/verdify-platform/issues/438
+  result: blocked
+  summary: Source remediation, 20 fail-closed tests, redacted scans, and complete caller/rotation records are ready for an immutable PR checkpoint; production rotation and old-invalid proof remain blocked on Jason's separate explicit gate decision.
+  data_summary: No current live caller relies on /srv/verdify/.env; the three renderers use the Secret-injected lab publisher, daily summary is ingestor-owned, and the vault writer is manual-only.
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0057
+  content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
   severity: low
@@ -2254,9 +2570,15 @@ exceptions:
   status: accepted
   event_ids:
   - LEDGER-EVT-0001
+- id: LEDGER-EXC-002
+  severity: high
+  statement: Agent Platform dynamic worktree CRUD is disabled, and the four fixed Verdify controller sessions share one clone on retired live/platform-main, so the approved parallel platform topology cannot execute.
+  owner: software-recovery-root-019f4826
+  status: accepted
+  event_ids:
+  - LEDGER-EVT-0056
+  - LEDGER-EVT-0057
 handoff:
-  next_skill: release-verification
-  next_mode: awaiting_gates
-  reason: 'Group-1 merged. Next transitions are human gates: g-411 night-temp priority (unblocks db-411
-    lane + migration 188), g-377 pinch decision, HR-02 OTA+activation approval. Wave STEP-02 (containers/187/restarts)
-    may be prepared once Jason schedules the gated sync.'
+  next_skill: sprint-orchestrator
+  next_mode: recorded-local-fallback
+  reason: Commit and merge the controller baseline, then dispatch dependency-ready lanes into isolated local worktrees under the approved current-sprint fallback while preserving the production credential gate.

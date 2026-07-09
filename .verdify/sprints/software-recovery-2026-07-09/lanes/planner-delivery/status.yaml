@@ -1,0 +1,21 @@
+sprint_id: software-recovery-2026-07-09
+lane_id: planner-delivery
+state: NOT_STARTED
+updated_at: "2026-07-09T22:11:18Z"
+head_sha: 0a9a19a840be6bae1beba604497d880b3b74b1ef
+working_tree_clean: false
+acceptance:
+  passed: []
+  pending:
+    - LANE-AC-01
+    - LANE-AC-02
+    - LANE-AC-03
+    - LANE-AC-04
+  failed: []
+blockers:
+  - Awaiting independently accepted and merged device-writer output.
+  - Awaiting independently accepted and merged dli-availability output.
+decisions_requested: []
+next_actions:
+  - Controller verifies both hard dependencies and cuts the lane branch from current main.
+  - Worker reads the common contract and lane.yaml, then begins orientation.

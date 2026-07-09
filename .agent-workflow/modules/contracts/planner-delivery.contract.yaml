@@ -1,0 +1,100 @@
+schema_ref: module-contract.schema.yaml
+kind: ModuleContract
+schema_version: "1.0"
+module_id: planner-delivery
+contract_version: "1.1"
+status: approved
+purpose: Own Hermes-to-MCP tool liveness, terminal run/action semantics, strict plan materialization, one effective expiring plan, forecast correction semantics, neutral fallback, and immediate bounded activation after acceptance.
+requirement_ids: [NSR-002, NSR-007]
+owned_paths:
+  - mcp/**
+  - mcp/server.py outside the evidence-owned outcome_kpi adapter, after serialized handoff
+  - verdify_schemas/tunable_registry.py (planner bounds/materializer semantics after writer handoff)
+  - ingestor/tasks/forecast.py
+  - scripts/gather-plan-context.sh
+  - deploy/k8s/base/mcp-deployment.yaml
+  - deploy/k8s/components/hermes-iris/**
+  - db/migrations/*-planner-delivery-*.sql
+  - db/migrations/*-forecast-vpd-*.sql
+  - tests/test_planner_*.py
+  - tests/test_mcp_*.py
+prohibited_paths:
+  - firmware/**
+  - ingestor/ingestor.py
+  - ingestor/tasks/dispatcher.py
+  - planner_graph/**
+  - deploy/k8s/overlays/prod/**
+inputs:
+  - name: planning_trigger
+    schema: event ID, event type, created/due timestamps, expected contract action, source evidence revision
+    producer: forecast scheduler and operator trigger
+  - name: planner_context
+    schema: compact availability-bearing telemetry, outdoor forecast, alerts, crop policy, current effective plan, and canonical registry
+    producer: evidence-contracts and device-writer-reconcile
+  - name: canonical_bounds
+    schema: strict planner-valid intersection of firmware, registry, and policy bounds
+    producer: device-writer-reconcile registry contract
+outputs:
+  - name: terminal_planner_delivery
+    schema: run ID, terminal status/time, actual result action, error class, retry count, correlation ID
+    consumers: [TimescaleDB, alerts, runtime-release-verification]
+  - name: effective_plan
+    schema: one atomic plan with provenance, values, valid_from, expires_at, plan kind, active/effective state
+    consumers: [device-writer-reconcile, API, evidence-contracts]
+  - name: neutral_fallback
+    schema: classified no-write or safe-neutral outcome with reason and expiry
+    consumers: [alerts, operator, runtime-release-verification]
+public_interfaces:
+  - name: verdify-mcp-tool-health
+    location: mcp/server.py and Kubernetes probes
+    compatibility: Readiness is true only when required Verdify tools are usable; retry is indefinite with bounded backoff and resets after stable service.
+  - name: terminal-plan-contract
+    location: planner delivery schema and migration
+    compatibility: Expected and actual actions are distinct; one-shot actions cannot satisfy a required full plan; status and expiry additions are backward-compatible before consumers switch.
+  - name: plan-materializer
+    location: planner and MCP validation code
+    compatibility: Every value is normalized once against the strict bounds intersection before persistence and downstream comparison.
+dependencies:
+  hard: [TimescaleDB serialized planner schema, device-writer-reconcile canonical registry, evidence-contracts availability model]
+  soft: [OpenAI/Hermes provider, outdoor weather forecast, evidence-owned outcome_kpi adapter]
+invariants:
+  - Kubernetes/TCP health cannot report ready when required Verdify MCP tools are unusable.
+  - Every trigger reaches a persisted terminal result before its due-time classification.
+  - Actual result action is recorded and checked against the trigger contract.
+  - Exactly one plan is effective at an instant; all plans have explicit validity and expiry.
+  - Invalid, stale, missing, or tool-dead planning becomes visible neutral behavior, never an unbounded write.
+  - Outdoor forecast VPD is evaluated against observed outdoor temperature/RH-derived VPD, never indoor VPD.
+  - The stale `band_track_fraction=0.25` intent cannot remain effective or repin the approved zero.
+  - "`planner_graph` remains non-authoritative and cannot become a writer in this recovery."
+runtime_resources:
+  - verdify-planner, verdify-mcp, and Hermes pods
+  - plan delivery, run, active plan, alert, forecast, and audit tables
+  - OpenAI/Hermes and FastMCP connections
+validation_commands:
+  - id: planner-targeted-tests
+    command: pytest -q tests/test_planner_*.py tests/test_mcp_*.py
+    purpose: Prove liveness, terminal action, bounds, expiry, forecast semantics, and neutral fallback.
+  - id: planner-dry
+    command: make planner-dry
+    purpose: Render planner prompts and enforce planner invariants without writes.
+  - id: migration-safety
+    command: make migration-rollback-safety
+    purpose: Classify every serialized planner migration before proof or apply.
+  - id: integration
+    command: make lint && make test
+    purpose: Prove repository-wide planner integration.
+required_evidence:
+  - MCP pod deletion and rolling restart recover tool access without manual repair.
+  - Terminal runs persist actual action and do not become false timeouts.
+  - Fixtures prove strict bounds intersection and outdoor/indoor VPD divergence.
+  - One valid future plan is effective, old rows expire, and stale 0.25 intent is absent.
+  - The bounded planner becomes active only after all acceptance checks pass.
+definition_of_done:
+  - Tool-level probes, retry, terminal polling, action classification, bounds, expiry, and neutral fallback are implemented.
+  - Planner context is compact and excludes unavailable DLI and invalid forecast correction.
+  - Required migrations are serialized, rollback-proven, applied, and observed live.
+  - Runtime alert #7676 is resolved only from a valid terminal planner action.
+approval:
+  status: approved
+  approver: Jason Vallery
+  approved_at: "2026-07-09T21:05:00Z"

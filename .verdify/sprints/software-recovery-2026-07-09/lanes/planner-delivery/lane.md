@@ -1,0 +1,26 @@
+# Planner delivery lane
+
+- Issue: `#427`
+- Branch: `lane/recovery-planner-427`
+- Worktree: `/Users/jason/repos/verdify-worktrees/software-recovery-planner-427`
+- Sprint baseline: `0a9a19a840be6bae1beba604497d880b3b74b1ef`
+
+## Outcome
+
+Restore a self-healing Hermes/MCP path and a bounded, terminally truthful planner. Tool loss must fail readiness and recover indefinitely; a required `set_plan` trigger must be satisfied only by a valid full plan; materialization must apply the strictest bounds once, keep one expiring effective plan, and use the correct forecast comparator. Deterministic firmware remains authoritative.
+
+## Readiness and sequencing
+
+This lane is `NOT_STARTED` and is not dispatchable until `device-writer` has delivered non-starving cadence/canonical readbacks and `dli-availability` has merged the unavailable-DLI contract plus the stable shared planner/MCP/schema head. The feature branch is cut from current `main` only after those dependencies merge; the sprint baseline above remains the audit reference. Corrected evidence from `evidence-core` is a soft input.
+
+## Boundaries
+
+The authoritative path and interface lists are in [lane.yaml](lane.yaml). The lane owns Hermes/MCP liveness, planner trigger and terminal ledgers, materialization/lifecycle, forecast scoring, and context. It must not edit `planner_graph/**`, firmware, the dispatcher/device push path, or Grafana. Shared registry, schema-dump, and ingestor-manifest changes require controller coordination.
+
+No lane worker may deploy, restart production services, retire stale intent, or clear the critical alert manually. Any schema change is serialized before consumers, receives rollback proof, and documents the required `verdify-mcp`/`verdify-ingestor` restart.
+
+## Acceptance
+
+The lane must prove MCP disconnect/recovery, terminal action classification, strict bound intersection, single-plan expiry, SUNRISE/SUNSET valid-plan-or-neutral behavior, and manifest/test health. Evidence is tied to the immutable lane head. Issue `#427`, the PR, specs/docs, and status/evidence manifests stay current.
+
+The worker finishes with a pushed, clean branch, open linked PR, green required CI, recorded adversarial self-audit, and `READY_FOR_CRITIC`. An independent distributed-state/planner critic must accept the exact head before controller integration. Production acceptance remains `release-control` work.

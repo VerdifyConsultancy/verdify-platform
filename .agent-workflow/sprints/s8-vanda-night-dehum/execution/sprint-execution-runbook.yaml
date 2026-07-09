@@ -3,7 +3,7 @@ schema_ref: sprint-execution-runbook.schema.yaml
 kind: SprintExecutionRunbook
 schema_version: '1.0'
 runbook_id: exec-s8-vanda-night-dehum
-status: active
+status: superseded
 sprint_id: s8-vanda-night-dehum
 wave_id: wave-s8-night-dehum
 repository: VerdifyConsultancy/verdify-platform
