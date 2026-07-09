@@ -11,7 +11,7 @@ Add a trustworthy topology-aware cycling gate, release the independently accepte
 
 ## Readiness and authority
 
-This lane is `NOT_STARTED` and is not dispatchable until all seven hard dependencies in [lane.yaml](lane.yaml) are independently accepted, merged, and live where required. In particular, issue `#438` credential rotation is a protected release gate: Jason has not yet authorized it. No production mutation may occur until that separate authorization, rotation, caller verification, and redacted old-invalid/new-valid proof exist.
+This lane is `NOT_STARTED`. Its tooling/manifest phase becomes dispatchable after all implementation dependencies in [lane.yaml](lane.yaml) are independently accepted and merged; they do not need to be live first because the controller-owned delivery phases produce that evidence. Issue `#438` credential rotation remains a protected production gate: Jason has not yet authorized it. No production mutation may occur until that separate authorization, rotation, caller verification, and redacted old-invalid/new-valid proof exist.
 
 An autonomous worker may implement and validate cycling/release tooling only. Production schema/service delivery, stale-row retirement, Argo sync, and OTA are controller-integrator actions after every gate. No failed alert, weekly, bake, heap, cycling, migration, CI, telemetry, or action-log gate may be overridden.
 
@@ -19,7 +19,7 @@ An autonomous worker may implement and validate cycling/release tooling only. Pr
 
 The lane owns release scripts, Makefile wiring, release/evidence packets, and router/strategy reconciliation. It does not own firmware behavior, ingestor/planner/MCP code, or migrations. Prod-promote workflows, overlays, intent rows, and secret authority require explicit coordination.
 
-The order is strict: independently accepted migrations and services become live; the planner produces a valid terminal plan and clears its critical alert; repaired consumers are verified; stale 0.25 intent is retired atomically; zero repin is proven; then the exact reviewed binary passes preflight and receives the single OTA. Verify running firmware from telemetry, retain the prior rollback artifact, and keep the kube DB backend active throughout post-OTA checks.
+The order is strict: tooling/manifest preparation first; independently accepted migrations and services become live; writer, DLI, planner, resource, and dry-out dispositions are verified; the planner produces a valid terminal plan and clears its critical alert; stale 0.25 intent is retired atomically; zero repin is proven; then the exact reviewed binary passes preflight and receives the single OTA. Verify running firmware from telemetry, retain the prior rollback artifact, and keep the kube DB backend active throughout post-OTA checks.
 
 ## Acceptance
 

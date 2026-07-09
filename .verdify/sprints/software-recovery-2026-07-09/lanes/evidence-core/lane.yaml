@@ -95,12 +95,14 @@ expected_outputs:
   - SQL fixtures
   - outcome_kpi cycle source
   - Realized episode view
+  - Explicit dry-out effectiveness disposition for firmware freeze
   - Refreshed corpus and coverage invariant
 constraints:
   - Serialize migrations in numeric order, reserve 189 for served VPD divergence, and escalate on any number collision.
   - Run migration rollback classification first; never outer-wrap a self-committing or commit-forcing migration.
   - Preserve raw historical equipment state and derive cycles from transitions with explicit completeness and quality.
   - Realized dry-out evidence must be solar-phase based, admit no daytime episode, expose stop/block reasons, and never claim projected intent as outcome.
+  - "Representative dry-out evidence must end in one explicit disposition: effective, ineffective, blocked, or insufficient_evidence; ineffective or insufficient evidence is not a completed control fix."
   - Replay freshness must be source-backed from timestamps and provenance; no force-fresh override may satisfy coverage.
   - At least 1,000 stock replay rows must be source-backed fresh and must exercise outdoor-aware branches across relevant regimes.
   - Do not change firmware behavior; any necessary control delta is a scope-change escalation to firmware-control.
@@ -120,10 +122,11 @@ acceptance_criteria:
       - Hand-counted SQL fixtures for mister, fog, fans, and each light circuit
       - Complete-day, partial-day, quality, starts, runtime, short-cycle, and peak-transition results
   - id: LANE-AC-03
-    statement: Realized solar-night episodes expose AH advantage, temperature response, duty, stop reason, and effectiveness with zero daytime admission.
+    statement: Realized solar-night episodes expose AH advantage, temperature response, duty, stop reason, and effectiveness with zero daytime admission, and produce an explicit effective, ineffective, blocked, or insufficient_evidence disposition for the firmware-freeze gate.
     evidence_required:
       - Episode SQL fixtures covering admission, blocking, stopping, and incomplete evidence
       - Representative read-only night report with limitations and no projected-outcome claim
+      - Controller-consumable disposition record; any indicated firmware delta is a scope-change handoff rather than an implicit PASS
   - id: LANE-AC-04
     statement: Stock replay contains at least 1,000 source-backed fresh rows and reaches outdoor-aware branches without a force-fresh override.
     evidence_required:
@@ -156,6 +159,7 @@ required_evidence:
   - Solar-phase and served-VPD SQL fixture outputs plus read-only live definition comparison
   - Hand-counted transition/cycle fixtures including duplicate, carry-over, open-pulse, per-light, and partial-day cases
   - Realized night episode fixtures and representative report with weather/evidence limitations
+  - Explicit dry-out effectiveness disposition and scope-change recommendation when the result is ineffective or insufficient
   - Archived corpus before/after metadata, source-backed freshness distribution, and at least 1,000-row coverage proof
   - Outdoor-aware branch trace, invariant output, and replay diff
   - Git diff, clean-scope review, commit SHA, PR URL, and CI results
@@ -191,6 +195,7 @@ critic_requirements:
 integration_requirements:
   - Merge before resource-accounting starts so it inherits the finalized migration sequence and complete-day transition source.
   - Firmware-control and release-control consume only the reviewed corpus, night episode, and cycle contracts from the immutable merged head.
+  - Firmware-control may not freeze the combined image until the controller records the dry-out disposition; this lane does not authorize a firmware behavior change.
 escalation_conditions:
   - Migration 189 collision
   - Typed freshness cannot be provenance-preserving
@@ -203,6 +208,7 @@ definition_of_done:
   - All required validation commands and classified rollback proofs pass at the immutable lane head.
   - All five GitHub issues and the PR accurately record scope, migration order, provenance, limitations, tests, and deployment-only follow-up.
   - The refreshed corpus is archived, source-backed, coverage-guarded, and reproducible without a force-fresh override.
+  - The realized-night packet states effective, ineffective, blocked, or insufficient_evidence and never claims ineffective instrumentation as a completed dry-out fix.
   - All intended commits are pushed, required GitHub CI is green, and the worktree is clean.
   - A fresh critic accepts the SQL semantics, migration safety, replay provenance, and evidence claims.
   - Integration confirms the finalized migration head and hands transition, replay, night, and cycle outputs to downstream lanes without ownership ambiguity.

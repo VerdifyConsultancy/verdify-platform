@@ -44,18 +44,19 @@ acceptance_criteria:
       - Two steady-state production hours with zero unchanged bulk repushes.
       - Controlled drift and reconnect probes with exact requested/sent/confirmed/cancelled outcomes.
   - id: SPR-AC-02
-    statement: Required planner cycles are tool-healthy, terminally classified, strictly bounded, expiring, and immediately active after acceptance.
+    statement: Required Hermes/MCP planner cycles are tool-healthy, terminally classified, strictly bounded, expiring, and immediately active after acceptance; the deployed non-authoritative planner_graph runtime is truthfully healthy or explicitly absent.
     evidence_required:
       - MCP fault-injection and self-heal tests.
       - SUNRISE and SUNSET terminal full-plan or neutral-fallback records.
       - Strict bound-intersection, action-contract, TTL, and forecast-semantics tests.
       - Resolution of critical planner_required_plan_missed from a valid terminal action.
+      - Worker-aware planner_graph DB/DNS fault/recovery or desired-state removal proof, never used as Hermes/MCP plan acceptance.
   - id: SPR-AC-03
-    statement: Climate/VPD wetting actuates center mist only; dormant center drip and south/west irrigation remain disabled; fertilizer can reach only the commissioned wall-drip path.
+    statement: Climate/VPD wetting actuates center mist only and center mist accepts no non-climate origin; dormant center drip and south/west irrigation remain disabled; both legacy 10:30 jobs are ineligible; fertilizer can reach only a calibrated commissioned wall-drip path on restart-safe weekly solar cadence.
     evidence_required:
       - Resolver unit/invariant/replay evidence for every command source.
       - Live intent and relay attribution showing zero south/west climate cycles and zero non-wall fertilizer cycles.
-      - Fail-closed commissioning and exact-once prewet/feed/immediate-flush tests.
+      - Reverse-exclusivity, no-10:30, weekly solar/missed-window/restart, calibrated liters-to-duration, fail-closed commissioning, and exact-once prewet/feed/immediate-flush tests.
   - id: SPR-AC-04
     statement: Interior crop DLI is unavailable with provenance everywhere the broken sensor is invalid, while DLI-independent lighting remains operational.
     evidence_required:
@@ -63,11 +64,12 @@ acceptance_criteria:
       - Consumer matrix across firmware, DB, planner, MCP, API, dashboards, and generated sites.
       - Lighting qualified-minute, photoperiod, and render verification.
   - id: SPR-AC-05
-    statement: DB solar/VPD semantics match device control and solar-night dry-out is judged from realized sunset-to-sunrise response rather than fixed clock or projected intent.
+    statement: DB solar/VPD semantics match device control and solar-night dry-out is judged from realized sunset-to-sunrise response rather than fixed clock or projected intent, ending in an explicit effectiveness disposition before firmware freeze.
     evidence_required:
       - Live migration 186 parity proof and migration 189 divergence fixtures.
       - Episode ledger with admission, stop/block reason, AH advantage, temperature, duty, and 10-20 minute response.
       - Representative valid-night report with zero daytime admission and heat2 forbidden.
+      - Effective, ineffective, blocked, or insufficient_evidence disposition; any firmware delta requires a separately accepted scope handoff.
   - id: SPR-AC-06
     statement: Stock replay exercises outdoor-aware control paths with real freshness data and cannot silently regress to zero branch coverage.
     evidence_required:
@@ -123,21 +125,21 @@ included_work:
     reason_for_inclusion: Live P0 storm and false accounting monopolize the sole device writer.
   - id: WRK-427
     github_issue: {number_or_id: "#427", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/427", title: Restore required planner delivery and MCP liveness, state: OPEN}
-    outcome: Tool-healthy, terminally observable, strictly bounded active planner.
-    scope: MCP readiness/self-heal, terminal action semantics, bounds intersection, plan TTL/singularity, forecast comparator, and compact context.
+    outcome: Tool-healthy, terminally observable, strictly bounded active Hermes/MCP planner plus truthful health or decommissioning for the deployed non-authoritative planner_graph workload.
+    scope: MCP readiness/self-heal, terminal action semantics, bounds intersection, plan TTL/singularity, forecast comparator, compact context, and narrow planner_graph worker/health desired-state correction without new authority.
     acceptance_criteria: [SPR-AC-02, SPR-AC-12]
     dependencies: ["#433 task cadence", "#435 availability contract", schema before services]
     risk: CRITICAL
-    evidence_required: [Fault injection, terminal ledger fixtures, end-to-end required-cycle proof, alert resolution]
+    evidence_required: [MCP fault injection, planner_graph DB/DNS worker-health or decommission proof, terminal ledger fixtures, end-to-end required-cycle proof, alert resolution]
     reason_for_inclusion: The planner has not delivered dependable required plans and currently blocks OTA.
   - id: WRK-434
     github_issue: {number_or_id: "#434", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/434", title: Enforce center-only climate mist and commissioned wall-only fertigation, state: OPEN}
     outcome: Approved physical topology is deterministic and fail-closed.
-    scope: Single relay resolver, center-only climate, intentional dormant-zone irrigation, wall-only liters-based weekly feed, immediate flush, commissioning gate, and run evidence.
+    scope: Single relay resolver, climate-only center mist, intentional dormant-zone irrigation, both legacy 10:30 jobs disabled, restart-safe solar-cadence wall-only liters-based weekly feed, immediate flush, calibration/commissioning gate, and run evidence.
     acceptance_criteria: [SPR-AC-03, SPR-AC-12]
     dependencies: ["#433 readback contract", physical feed remains disabled pending commissioning]
     risk: CRITICAL
-    evidence_required: [FSM tests, invariants, replay, irrigation audit, live readback/attribution]
+    evidence_required: [Command-source and reverse-exclusivity matrix, no-10:30 proof, solar/missed-window/restart exact-once cases, calibrated liters conversion, FSM tests, invariants, replay, irrigation audit, live readback/attribution]
     reason_for_inclusion: Current code can climate-water and fertilize the wrong zones.
   - id: WRK-435
     github_issue: {number_or_id: "#435", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/435", title: Make interior crop DLI explicitly unavailable while the sensor is invalid, state: OPEN}
@@ -169,11 +171,11 @@ included_work:
   - id: WRK-410
     github_issue: {number_or_id: "#410", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/410", title: Solar-night realized dry-out evidence and bounded control, state: OPEN}
     outcome: Night dry-out is seasonal, safe, and measured from realized response.
-    scope: Episode materialization, AH/temperature response, admission/stop reasons, alerts/planner evidence, and only evidence-proven firmware adjustments.
+    scope: Episode materialization, AH/temperature response, admission/stop reasons, alerts/planner evidence, and explicit effectiveness disposition before any separately accepted firmware adjustment.
     acceptance_criteria: [SPR-AC-05, SPR-AC-08, SPR-AC-12]
     dependencies: ["#293", "#419", "#389"]
     risk: HIGH
-    evidence_required: [Episode fixtures, representative night report, replay/invariants if firmware changes]
+    evidence_required: [Episode fixtures, representative night report, effective/ineffective/blocked/insufficient_evidence disposition, scope-change handoff if firmware response is requested]
     reason_for_inclusion: Jason wants diurnal overnight drying, but the current PASS claim is not durable evidence.
   - id: WRK-377
     github_issue: {number_or_id: "#377", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/377", title: Retire stale band_track_fraction 0.25 intent, state: OPEN}
@@ -275,7 +277,7 @@ deferred_work:
   - id: DEF-004
     reason: New HAF, shade, intake, meters, dehumidifier, sensors, and plumbing are outside the approved software-only wave.
   - id: DEF-005
-    reason: Broad controller deletion/mode collapse and planner_graph productization are not required to achieve the approved live outcome.
+    reason: Broad controller deletion/mode collapse and planner_graph productization remain deferred; the already-deployed zero-run workload still receives narrow truthful-health or explicit decommissioning treatment without gaining planner authority.
 risk:
   overall: CRITICAL
   items:

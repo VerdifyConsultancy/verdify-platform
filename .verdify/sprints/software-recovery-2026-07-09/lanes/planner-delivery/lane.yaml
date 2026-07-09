@@ -4,13 +4,14 @@ title: Self-healing bounded planner delivery
 objective: >-
   Repair the Hermes/MCP/planner delivery chain so required planner triggers
   recover tool health, produce truthful terminal actions, enforce the strictest
-  bounds once, expire cleanly, and evaluate forecasts against the correct
-  semantics.
+  bounds once, expire cleanly, evaluate forecasts against the correct
+  semantics, and leave no false-green deployed planner runtime.
 desired_outcome: >-
   Required planner triggers regain tool health, truthful terminal action
   semantics, strict bounds, singular expiry, and correct forecast evaluation.
 non_goals:
   - Make planner_graph an operational writer.
+  - Route production triggers or device writes through planner_graph, or use a planner_graph synthetic run as Hermes/MCP acceptance.
   - Move deterministic five-second control or safety rails into AI.
   - Change firmware behavior, device-writer delivery code, or Grafana surfaces.
   - Perform production deployment, stale-intent retirement, or alert mutation from this lane.
@@ -32,6 +33,7 @@ decision_ids:
 ownership:
   domains:
     - Hermes MCP client liveness
+    - non-authoritative planner_graph worker health or explicit decommissioning
     - planner trigger/delivery ledger
     - plan materializer/lifecycle
     - forecast scoring
@@ -56,8 +58,17 @@ ownership:
     - tests/test_04_planner.py
     - tests/test_10_planner_routing.py
     - tests/test_17_planner_health_surface.py
+    - planner_graph/api.py
+    - planner_graph/app.py
+    - planner_graph/contracts.py
+    - planner_graph/worker.py
+    - planner_graph/store.py
+    - planner_graph/tests/test_app.py
+    - planner_graph/tests/test_server.py
+    - planner_graph/tests/test_store_postgres.py
+    - planner_graph/tests/test_worker.py
+    - "deploy/k8s/components/planner/**"
   prohibited_paths:
-    - "planner_graph/**"
     - "firmware/**"
     - ingestor/tasks/dispatcher.py
     - ingestor/esp32_push.py
@@ -68,6 +79,7 @@ ownership:
     - deploy/k8s/base/ingestor-deployment.yaml
   owned_interfaces:
     - tool-level readiness
+    - worker-aware non-authoritative runtime health or desired-state removal
     - terminal result action/status
     - strict bounds intersection
     - single effective plan TTL
@@ -75,6 +87,7 @@ ownership:
   runtime_resources:
     - verdify-prod Deployment/verdify-hermes-iris
     - verdify-prod Deployment/verdify-mcp
+    - verdify-prod Deployment/verdify-planner, which is non-authoritative and had zero planner_graph_runs at the July 9 audit
     - verdify-prod planner ledger and effective-plan database surfaces
     - verdify-prod Deployment/verdify-ingestor for read-only acceptance and documented restart coordination only
 dependencies:
@@ -90,11 +103,13 @@ expected_inputs:
   - Quiet and fair writer cadence from device-writer.
   - The merged unavailable-DLI contract from dli-availability.
   - Existing firmware-supported tunable registry bounds.
+  - July 9 planner_graph crash trace plus read-only proof that planner_graph_runs contains zero rows and is not the Hermes/MCP writer path.
 outputs:
   - Self-healing MCP path with tool-level readiness.
   - Terminal planner ledger and action-contract verifier.
   - Normalized materializer with strict bounds, singularity, and expiry.
   - Forecast comparator fixtures and explicit neutral fallback behavior.
+  - Worker-aware health and transient DB/DNS recovery for the retained non-authoritative planner_graph workload, or a reviewed desired-state decommissioning change.
 coordination_rules:
   - Do not dispatch until both hard dependencies are independently accepted and merged.
   - Cut the feature branch from the then-current main; retain baseline_sha as the sprint audit reference.
@@ -105,6 +120,9 @@ constraints:
   - Required set_plan triggers may be satisfied only by a valid full plan; other actions remain separately classified.
   - Bounds are intersected and normalized once, exactly one plan is effective at an instant, and every plan expires.
   - Tool readiness must fail on MCP tool loss and recover indefinitely with bounded backoff and no keepalive race.
+  - "planner_graph remains non-authoritative: it may not receive production trigger routing, materialize device plans, or write device commands."
+  - If planner_graph remains deployed, repository/DB exceptions may not silently kill its worker while health stays green; readiness must observe worker state and recovery must be bounded and indefinite or deliberately exit for Kubernetes restart.
+  - If planner_graph is decommissioned instead, the reviewed desired state must remove its workload and probes without deleting run history or changing the Hermes/MCP path.
   - Never clear planner_required_plan_missed except through a valid accepted terminal action.
   - No production mutation, Argo sync, or service restart is authorized for the lane worker.
   - No raw secrets or credential material may enter source, logs, issues, PRs, or evidence.
@@ -129,6 +147,11 @@ acceptance_criteria:
     evidence_required:
       - Forecast comparator and trigger fault-injection results.
       - Read-only end-to-end acceptance probe plan and output; production mutation remains release-controlled.
+  - id: LANE-AC-05
+    statement: The deployed non-authoritative planner_graph runtime cannot remain false green; it either reports worker-aware health and recovers from transient DB/DNS loss, or is explicitly removed from desired state without becoming a writer.
+    evidence_required:
+      - Worker exception, retry/backoff or deliberate-exit, readiness, and recovery tests plus a synthetic non-authoritative queued-run terminal trace if retained.
+      - Manifest diff proving truthful probes or explicit workload removal, and read-only evidence that planner_graph does not satisfy Hermes/MCP required-plan acceptance.
 validation_commands:
   - id: planner-lint
     command: make lint
@@ -141,6 +164,10 @@ validation_commands:
   - id: planner-targeted-tests
     command: .venv/bin/pytest -q tests/test_04_planner.py tests/test_10_planner_routing.py tests/test_17_planner_health_surface.py
     purpose: Exercise planner delivery, routing, health, fault, bounds, and terminal-action contracts.
+    required: true
+  - id: planner-graph-health-tests
+    command: .venv/bin/pytest -q planner_graph/tests/test_app.py planner_graph/tests/test_server.py planner_graph/tests/test_store_postgres.py planner_graph/tests/test_worker.py
+    purpose: Prove the non-authoritative deployed planner worker cannot die behind a green health surface and can recover or exit deliberately.
     required: true
   - id: migration-safety
     command: make migration-rollback-safety
@@ -160,7 +187,8 @@ required_evidence:
   - Terminal action ledger and wrong-action rejection artifact.
   - Bounds, singularity, TTL, and migration rollback evidence.
   - SUNRISE/SUNSET full-plan or neutral-fallback evidence.
-  - Diff self-audit proving no prohibited path or planner_graph writer change.
+  - Worker-aware planner_graph recovery/decommission evidence that cannot be mistaken for Hermes/MCP plan acceptance.
+  - Diff self-audit proving no planner_graph production routing, materialization authority, or device-writer change.
   - Service-restart note for verdify-mcp and verdify-ingestor when required by touched contracts.
 record_updates:
   issues: true
@@ -182,7 +210,7 @@ pull_request:
   merge_rule: Controller merges only after independent critic acceptance and required GitHub checks at the immutable reviewed head.
 escalation_conditions:
   - Hermes upstream image must change.
-  - planner_graph would become a writer.
+  - planner_graph would become a writer or production trigger path.
   - Registry bounds conflict cannot be safely intersected.
   - Neutral fallback would bypass deterministic firmware.
   - A prohibited path, public API expansion, destructive migration, security-boundary change, or production mutation becomes necessary.

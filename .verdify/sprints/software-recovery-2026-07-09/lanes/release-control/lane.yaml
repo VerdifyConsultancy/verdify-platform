@@ -77,39 +77,40 @@ ownership:
 dependencies:
   hard:
     - lane_id: security-hygiene
-      required_output: credential rotation authorized, executed, and verified redacted
+      required_output: merged source hygiene, complete caller matrix, and executable protected rotation/rollback runbook; rotation closure is a production-phase gate, not a tooling prerequisite
     - lane_id: evidence-core
-      required_output: trustworthy cycle/night/replay evidence live
+      required_output: independently accepted and merged cycle/night/replay contracts plus dry-out disposition
     - lane_id: resource-accounting
-      required_output: scope-bearing resource consumers live
+      required_output: independently accepted and merged scope-bearing resource consumers
     - lane_id: device-writer
-      required_output: two-hour quiet writer acceptance live
+      required_output: independently accepted and merged writer implementation plus pre-deploy baseline/runtime probe
     - lane_id: dli-availability
-      required_output: DLI unavailable consumers live
+      required_output: independently accepted and merged DLI-unavailable consumers
     - lane_id: planner-delivery
-      required_output: valid required plan and critical alert resolution live
+      required_output: independently accepted and merged planner delivery/runtime-health implementation
     - lane_id: firmware-control
       required_output: exact reviewed firmware and rollback artifacts
   soft: []
 expected_inputs:
   - Independently accepted and merged heads from every implementation lane.
-  - Live issue-389 cycle view and realized night/replay evidence.
+  - Reviewed issue-389 cycle/night/replay implementation and pre-deploy evidence; live outputs become mandatory before their owning production decisions.
   - Exact reviewed combined firmware binary, source SHA, checksum, and rollback artifact.
-  - Closed issue-438 credential rotation gate with redacted new-valid and old-invalid proof.
+  - Issue-438 caller matrix and protected rotation runbook for tooling; the closed rotation gate with redacted new-valid and old-invalid proof is required before production mutation.
 outputs:
   - Immutable pre/post cycling JSON and human-readable reports.
   - Release manifest tying Git, image digests, migrations, Argo revision, firmware, policy, and evidence.
   - Audited stale-intent retirement and zero-repin proof.
   - Promotion, sync, OTA, immediate verification, 48-hour bake, and final review packet.
 coordination_rules:
-  - No release worktree dispatch until every hard dependency is independently accepted and merged.
+  - The release tooling/manifest worktree may dispatch after every implementation dependency is independently accepted and merged; live acceptance is produced by later controller-owned phases and is not a prerequisite for preparing the tooling.
   - No production mutation until the protected credential gate is explicitly authorized, executed, and verified without exposing material.
   - Cut the release branch from current main after dependencies merge; retain baseline_sha as the sprint audit reference.
   - Coordinate any prod-promote workflow or overlay edit; only a digests-only reviewed promotion may enter the sync surface.
   - Release-owned named firmware scripts are edited only after firmware-control is accepted; if that lane touched one through its wildcard, the controller must reconcile the handoff and rerun both contracts' checks serially.
   - An autonomous lane worker may implement and validate release tooling but may not execute production state changes; only the controller-integrator may do so after every gate.
+  - "Production execution is phased: schema/service delivery first; live writer, DLI, planner, and resource acceptance second; stale-intent retirement third; exact reviewed OTA fourth; settled verification last."
 constraints:
-  - Delivery order is serialized schema, services, valid planner action/alert clearance, stale-intent retirement, then one exact firmware OTA.
+  - Delivery order is serialized schema, services, live writer/DLI/planner/resource acceptance, valid planner action/alert clearance, stale-intent retirement, then one exact firmware OTA.
   - The cycling gate rejects overlapping, current/future, incomplete, or incomparable windows and records immutable source/SHA/firmware/policy metadata.
   - Cycling policy requires zero south/west climate cycles, compares center against the prior combined climate envelope, and uses explicit canaries/tolerances for other relays.
   - Repaired consumers must be live before the stale 0.25 row is atomically retired; effective and device band_track_fraction must stay zero with no repin.
@@ -139,9 +140,9 @@ acceptance_criteria:
       - Release manifest, Argo diff/sync/health, live image digests, schema versions, firmware version, and rollback references.
       - Immediate and 48-hour settled DB/log/readback/endpoint probes.
   - id: LANE-AC-05
-    statement: No deploy-blocking alert, Task WDT, heap-guard reboot, forbidden route, false DLI, writer storm, stale repin, or declared cycling regression remains.
+    statement: No deploy-blocking alert, Task WDT, heap-guard reboot, forbidden route, false DLI, writer storm, stale repin, unresolved dry-out disposition, or declared cycling regression remains.
     evidence_required:
-      - Alert, reset, heap, route attribution, DLI availability, writer cadence, planner action, and cycling evidence.
+      - Alert, reset, heap, route attribution, DLI availability, writer cadence, planner action, dry-out disposition, and cycling evidence.
       - Independent release/runtime critic verdict on the immutable final packet.
 validation_commands:
   - id: release-lint

@@ -2,7 +2,7 @@
 
 ## Verdict
 
-`SAFE_TO_APPROVE`
+`APPROVED_WITH_2026-07-09_COVERAGE_AMENDMENTS`
 
 The 17 issues resolve into eight logical lanes. Only three worker lanes may run concurrently because the controller occupies the fourth available agent slot. Most later work is deliberately serialized: the repository has one schema dump, one migration sequence, one MCP server, one tunable registry, and one firmware control surface. Parallelizing those shared contracts would create more review and integration risk than speed.
 
@@ -43,15 +43,19 @@ A cross-stack single-issue lane. It owns the availability/provenance migration, 
 
 ### `planner-delivery` — #427
 
-Owns Hermes/MCP liveness, terminal result action, strict bound intersection, plan singularity/expiry, correct forecast comparison, and required-cycle acceptance. `planner_graph` is prohibited. It waits for the writer and DLI lanes, then transfers the finalized registry head to firmware.
+Owns Hermes/MCP liveness, terminal result action, strict bound intersection, plan singularity/expiry, correct forecast comparison, and required-cycle acceptance. A post-dispatch live audit found that the already-deployed, non-authoritative `planner_graph` worker can die behind a green `/health` surface. The lane now also owns the narrow worker-health/probe surface needed to make that workload truthful or explicitly decommission it. `planner_graph_runs=0` confirms this is not the active Hermes/MCP failure, and the contract still forbids production trigger routing, plan authority, or device writes through `planner_graph`. It waits for the writer and DLI lanes, then transfers the finalized registry head to firmware.
 
 ### `firmware-control` — #299, #383, #386, #428, #434
 
-One exclusive firmware branch and one OTA artifact. It implements the approved topology and measured heap protection while preserving—not redesigning—the already-effective mister re-fire fence, lighting min-on boundary, and solar-night safety. #299/#383/#386 are regression/evidence slices; no new anti-chatter tunable or control delta is permitted without a new evidence-backed decision.
+One exclusive firmware branch and one OTA artifact. It implements the approved topology and measured heap protection while preserving—not redesigning—the already-effective mister re-fire fence, lighting min-on boundary, and solar-night safety. Acceptance now explicitly proves center mist has climate-only origins, both legacy 10:30 jobs are ineligible, weekly solar eligibility survives restart/missed windows exactly once, and calibrated liters convert to bounded wall durations or fail closed. #299/#383/#386 are regression/evidence slices; no new anti-chatter tunable or control delta is permitted without a new evidence-backed decision. The combined image cannot freeze until evidence-core records an explicit dry-out disposition.
 
 ### `release-control` — #377, #390
 
-Controller-owned. It builds the topology-aware cycling gate, integrates reviewed heads, executes promotion/schema/services/stale-plan cleanup/one OTA, and owns immediate plus settled runtime proof. No worker may mutate production. Credential rotation remains its protected first gate.
+Controller-owned. It builds the topology-aware cycling gate and release manifest after implementation heads merge, then the controller executes schema/services, live application acceptance, stale-plan cleanup, one OTA, and settled proof in that order. Live acceptance is produced by this lane rather than treated as a prerequisite for creating its tooling. No worker may mutate production. Credential rotation remains the protected gate before any production phase.
+
+## July 9 coverage amendments
+
+The controller ran a fresh read-only audit against Jason's exact feedback after Wave 0 dispatch. It found four ways the original contracts could have passed without delivering the requested outcome: unowned false-green planner runtime health, missing reverse-exclusivity/10:30/cadence/liters irrigation tests, no dry-out effectiveness disposition, and release live evidence listed as its own prerequisite. The amended contracts close those gaps without adding an issue, changing deterministic control authority, enabling uncommissioned fertilizer, or weakening any production gate.
 
 ## Why this is safer than plausible alternatives
 

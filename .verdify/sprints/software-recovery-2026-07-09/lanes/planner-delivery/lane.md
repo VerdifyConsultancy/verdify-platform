@@ -7,7 +7,7 @@
 
 ## Outcome
 
-Restore a self-healing Hermes/MCP path and a bounded, terminally truthful planner. Tool loss must fail readiness and recover indefinitely; a required `set_plan` trigger must be satisfied only by a valid full plan; materialization must apply the strictest bounds once, keep one expiring effective plan, and use the correct forecast comparator. Deterministic firmware remains authoritative.
+Restore a self-healing Hermes/MCP path and a bounded, terminally truthful planner. Tool loss must fail readiness and recover indefinitely; a required `set_plan` trigger must be satisfied only by a valid full plan; materialization must apply the strictest bounds once, keep one expiring effective plan, and use the correct forecast comparator. The already-deployed non-authoritative planner_graph workload must also become worker-truthful or be explicitly decommissioned. Deterministic firmware remains authoritative.
 
 ## Readiness and sequencing
 
@@ -15,12 +15,12 @@ This lane is `NOT_STARTED` and is not dispatchable until `device-writer` has del
 
 ## Boundaries
 
-The authoritative path and interface lists are in [lane.yaml](lane.yaml). The lane owns Hermes/MCP liveness, planner trigger and terminal ledgers, materialization/lifecycle, forecast scoring, and context. It must not edit `planner_graph/**`, firmware, the dispatcher/device push path, or Grafana. Shared registry, schema-dump, and ingestor-manifest changes require controller coordination.
+The authoritative path and interface lists are in [lane.yaml](lane.yaml). The lane owns Hermes/MCP liveness, planner trigger and terminal ledgers, materialization/lifecycle, forecast scoring, context, and the narrow planner_graph worker/health/manifest surface. Read-only production evidence shows `planner_graph_runs=0`; planner_graph remains non-authoritative and must never receive production trigger routing, plan acceptance authority, or device-write access. The lane must not edit firmware, the dispatcher/device push path, or Grafana. Shared registry, schema-dump, and ingestor-manifest changes require controller coordination.
 
 No lane worker may deploy, restart production services, retire stale intent, or clear the critical alert manually. Any schema change is serialized before consumers, receives rollback proof, and documents the required `verdify-mcp`/`verdify-ingestor` restart.
 
 ## Acceptance
 
-The lane must prove MCP disconnect/recovery, terminal action classification, strict bound intersection, single-plan expiry, SUNRISE/SUNSET valid-plan-or-neutral behavior, and manifest/test health. Evidence is tied to the immutable lane head. Issue `#427`, the PR, specs/docs, and status/evidence manifests stay current.
+The lane must prove MCP disconnect/recovery, terminal action classification, strict bound intersection, single-plan expiry, SUNRISE/SUNSET valid-plan-or-neutral behavior, and manifest/test health. If planner_graph remains deployed, fault injection must prove its worker cannot die behind green health after DB/DNS loss; if removed, desired state must make that explicit. Neither path may satisfy Hermes/MCP acceptance. Evidence is tied to the immutable lane head. Issue `#427`, the PR, specs/docs, and status/evidence manifests stay current.
 
 The worker finishes with a pushed, clean branch, open linked PR, green required CI, recorded adversarial self-audit, and `READY_FOR_CRITIC`. An independent distributed-state/planner critic must accept the exact head before controller integration. Production acceptance remains `release-control` work.
