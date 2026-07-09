@@ -29,10 +29,10 @@
 # automatic. prune is FALSE — never auto-reap the verdify-db StatefulSet/PVC (the
 # live TimescaleDB) or the verdify-db-dumps backup PVC on a manifest reshuffle.
 #
-# verdify-db STORAGE: overlays/prod now restates the verdify-db volumeClaimTemplate
-# onto synology-iscsi-ssd to MATCH the already-migrated live DB (PR #204), so
-# adopting the running STS forces no immutable-field change and never triggers a
-# delete/recreate of the DB.
+# verdify-db STORAGE: overlays/prod restates the verdify-db volumeClaimTemplate.
+# During the 2026-07 Synology CSI exit, live prod DB storage moves to
+# longhorn-v1-workspace-rwo; adoption still requires an operator-paced
+# StatefulSet recreate because volumeClaimTemplates are immutable.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:

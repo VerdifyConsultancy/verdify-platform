@@ -1,5 +1,5 @@
 # PROD storage reconcile: the live prod verdify-db is durable database state and
-# belongs on Synology iSCSI SSD RWO block storage. The prod overlay restates the
+# belongs on the Longhorn workspace RWO block class. The prod overlay restates the
 # full volumeClaimTemplate so git stays equal to the live StatefulSet template
 # and ArgoCD does not try to patch the immutable field piecemeal.
 #
@@ -30,7 +30,7 @@ spec:
         name: db-data
       spec:
         accessModes: ["ReadWriteOnce"]
-        storageClassName: synology-iscsi-ssd
+        storageClassName: longhorn-v1-workspace-rwo
         resources:
           requests:
             storage: 50Gi
