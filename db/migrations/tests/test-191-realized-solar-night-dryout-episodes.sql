@@ -41,7 +41,7 @@ AS $$
         THEN 3.0 ELSE 1.0 END
 $$;
 
-CREATE FUNCTION public.fn_band_setpoints(timestamptz)
+CREATE FUNCTION public.fn_band_setpoints(target_ts timestamptz)
 RETURNS TABLE(
     temp_low double precision,
     temp_high double precision,
@@ -51,7 +51,15 @@ RETURNS TABLE(
     vpd_target double precision
 )
 LANGUAGE sql STABLE ROWS 1
-AS $$ SELECT 63.0, 80.0, 0.50, 1.20, 70.0, 0.90 $$;
+AS $$
+    SELECT
+        CASE
+            WHEN target_ts >= '2026-01-12 00:00:00+00'::timestamptz
+                THEN NULL::double precision
+            ELSE 63.0
+        END,
+        80.0, 0.50, 1.20, 70.0, 0.90
+$$;
 
 CREATE FUNCTION public.fn_house_vpd_control_band(timestamptz)
 RETURNS TABLE(
@@ -112,7 +120,7 @@ SELECT
     'DEHUM_VENT',
     'vpd',
     '{"climate_moisture_exchange":{"action":"vent_dehum","reason":"vent_plus_heat_hold"}}',
-    '{"vent":true,"fan1":true,"fan2":false,"heat1":true,"heat2":false}'
+    '{"vent":true,"fan1":true,"fan2":false,"heat1":true,"heat2":false,"fog":false,"mister_south":false,"mister_west":false,"mister_center":false}'
 FROM generate_series(
     '2026-01-11 05:00:00+00'::timestamptz,
     '2026-01-11 05:09:00+00'::timestamptz,
@@ -139,7 +147,7 @@ FROM generate_series(
 
 INSERT INTO public.climate_action_log(ts, climate_action, priority_axis, relay_truth)
 SELECT gs, 'IDLE', 'vpd',
-       '{"vent":false,"fan1":false,"fan2":false,"heat1":false,"heat2":false}'
+       '{"vent":false,"fan1":false,"fan2":false,"heat1":false,"heat2":false,"fog":false,"mister_south":false,"mister_west":false,"mister_center":false}'
 FROM generate_series(
     '2026-01-11 06:00:00+00'::timestamptz,
     '2026-01-11 06:04:00+00'::timestamptz,
@@ -175,7 +183,7 @@ FROM generate_series(
 -- row-level admission must keep this episode blocked.
 INSERT INTO public.climate_action_log(ts, climate_action, priority_axis, relay_truth)
 SELECT gs, 'IDLE', 'vpd',
-       '{"vent":true,"fan1":true,"fan2":false,"heat1":false,"heat2":false}'
+       '{"vent":true,"fan1":true,"fan2":false,"heat1":false,"heat2":false,"fog":false,"mister_south":false,"mister_west":false,"mister_center":false}'
 FROM generate_series(
     '2026-01-11 08:00:00+00'::timestamptz,
     '2026-01-11 08:04:00+00'::timestamptz,
@@ -184,7 +192,7 @@ FROM generate_series(
 
 INSERT INTO public.climate_action_log(ts, climate_action, priority_axis, relay_truth)
 SELECT gs, 'DEHUM_VENT', 'vpd',
-       '{"vent":false,"fan1":false,"fan2":false,"heat1":false,"heat2":false}'
+       '{"vent":false,"fan1":false,"fan2":false,"heat1":false,"heat2":false,"fog":false,"mister_south":false,"mister_west":false,"mister_center":false}'
 FROM generate_series(
     '2026-01-11 08:00:00+00'::timestamptz,
     '2026-01-11 08:04:00+00'::timestamptz,
@@ -199,7 +207,7 @@ VALUES ('2026-01-10 19:00:00+00', 70, 0.60, 70, 40, 30);
 INSERT INTO public.climate_action_log(ts, climate_action, priority_axis, relay_truth)
 VALUES (
     '2026-01-10 19:00:00+00', 'DEHUM_VENT', 'vpd',
-    '{"vent":true,"fan1":true,"fan2":false,"heat1":false,"heat2":false}'
+    '{"vent":true,"fan1":true,"fan2":false,"heat1":false,"heat2":false,"fog":false,"mister_south":false,"mister_west":false,"mister_center":false}'
 );
 
 -- Projected hold intent is not realized hold. Vent+fan make this a physical dry
@@ -209,7 +217,7 @@ INSERT INTO public.climate_action_log(
 ) VALUES (
     '2026-01-10 19:02:00+00', 'DEHUM_VENT', 'vpd',
     '{"climate_moisture_exchange":{"action":"vent_dehum","reason":"vent_plus_heat_hold","hold_required":true}}',
-    '{"vent":true,"fan1":true,"fan2":false,"heat1":false,"heat2":false}'
+    '{"vent":true,"fan1":true,"fan2":false,"heat1":false,"heat2":false,"fog":false,"mister_south":false,"mister_west":false,"mister_center":false}'
 );
 
 -- A separate greenhouse proves the held-temperature flavor is different from
@@ -250,7 +258,7 @@ INSERT INTO public.climate_action_log(
 ) VALUES (
     '2026-01-10 19:01:00+00', 'violation', 'DEHUM_VENT', 'vpd',
     '{"climate_moisture_exchange":{"action":"vent_dehum","reason":"vent_plus_heat_hold","hold_required":true}}',
-    '{"vent":true,"fan1":true,"fan2":false,"heat1":true,"heat2":true}'
+    '{"vent":true,"fan1":true,"fan2":false,"heat1":true,"heat2":true,"fog":false,"mister_south":false,"mister_west":false,"mister_center":false}'
 );
 
 -- A VPD rise caused without indoor absolute-humidity removal is not dry-out.
@@ -293,8 +301,286 @@ INSERT INTO public.climate_action_log(
 ) VALUES (
     '2026-01-11 05:00:30+00', 'violation', 'DEHUM_VENT', 'vpd',
     '{"climate_moisture_exchange":{"action":"vent_dehum","reason":"vent_plus_heat_hold","hold_required":true}}',
-    '{"vent":true,"fan1":true,"fan2":false,"heat1":true,"heat2":true}'
+    '{"vent":true,"fan1":true,"fan2":false,"heat1":true,"heat2":true,"fog":false,"mister_south":false,"mister_west":false,"mister_center":false}'
 );
+
+-- Independent adversarial greenhouses cover each evidence qualification that
+-- previously allowed a false effective result.
+INSERT INTO public.setpoint_snapshot(ts, parameter, value, greenhouse_id)
+SELECT ts, parameter, value, greenhouse_id
+FROM (VALUES
+    ('2026-01-10 18:00:00+00'::timestamptz, 'temp_low', 64.0, 'missing_relay'),
+    ('2026-01-10 18:00:00+00'::timestamptz, 'vpd_low', 0.80, 'missing_relay'),
+    ('2026-01-10 18:00:00+00'::timestamptz, 'temp_low', 64.0, 'floor_breach'),
+    ('2026-01-10 18:00:00+00'::timestamptz, 'vpd_low', 0.80, 'floor_breach'),
+    ('2026-01-10 18:00:00+00'::timestamptz, 'temp_low', 64.0, 'gappy'),
+    ('2026-01-10 18:00:00+00'::timestamptz, 'vpd_low', 0.80, 'gappy'),
+    ('2026-01-10 18:00:00+00'::timestamptz, 'temp_low', 64.0, 'weather_confounded'),
+    ('2026-01-10 18:00:00+00'::timestamptz, 'vpd_low', 0.80, 'weather_confounded'),
+    ('2026-01-10 18:00:00+00'::timestamptz, 'temp_low', 64.0, 'wet_confounded'),
+    ('2026-01-10 18:00:00+00'::timestamptz, 'vpd_low', 0.80, 'wet_confounded'),
+    ('2026-01-10 18:00:00+00'::timestamptz, 'temp_low', 64.0, 'weather_interval_confounded'),
+    ('2026-01-10 18:00:00+00'::timestamptz, 'vpd_low', 0.80, 'weather_interval_confounded'),
+    ('2026-01-10 18:00:00+00'::timestamptz, 'temp_low', 64.0, 'response_gappy'),
+    ('2026-01-10 18:00:00+00'::timestamptz, 'vpd_low', 0.80, 'response_gappy'),
+    ('2026-01-10 18:00:00+00'::timestamptz, 'temp_low', 64.0, 'response_floor'),
+    ('2026-01-10 18:00:00+00'::timestamptz, 'vpd_low', 0.80, 'response_floor'),
+    ('2026-01-11 18:00:00+00'::timestamptz, 'vpd_low', 0.80, 'null_floor')
+) AS fixture(ts, parameter, value, greenhouse_id);
+
+-- An empty relay payload is missing evidence, never evidence that all relays
+-- were off.
+INSERT INTO public.climate(
+    ts, greenhouse_id, temp_avg, vpd_avg, rh_avg,
+    outdoor_temp_f, outdoor_rh_pct
+)
+SELECT
+    ts, 'missing_relay', temp_avg, vpd_avg, rh_avg,
+    outdoor_temp_f, outdoor_rh_pct
+FROM public.climate
+WHERE greenhouse_id = 'vallery'
+  AND ts >= '2026-01-11 04:55:00+00'
+  AND ts <= '2026-01-11 05:30:00+00';
+
+INSERT INTO public.climate_action_log(
+    ts, greenhouse_id, climate_action, priority_axis,
+    source_system_state, relay_truth
+)
+SELECT
+    ts, 'missing_relay', climate_action, priority_axis,
+    source_system_state, '{}'::jsonb
+FROM public.climate_action_log
+WHERE greenhouse_id = 'vallery'
+  AND ts >= '2026-01-11 05:00:00+00'
+  AND ts <= '2026-01-11 05:09:00+00';
+
+-- An admitted episode that crosses its actually served floor must fail even if
+-- the independently aggregated minimum floor would hide the same-row breach.
+INSERT INTO public.climate(
+    ts, greenhouse_id, temp_avg, vpd_avg, rh_avg,
+    outdoor_temp_f, outdoor_rh_pct
+)
+SELECT
+    ts,
+    'floor_breach',
+    CASE WHEN ts = '2026-01-11 05:05:00+00' THEN 63.0 ELSE temp_avg END,
+    vpd_avg,
+    rh_avg,
+    outdoor_temp_f,
+    outdoor_rh_pct
+FROM public.climate
+WHERE greenhouse_id = 'vallery'
+  AND ts >= '2026-01-11 04:55:00+00'
+  AND ts <= '2026-01-11 05:30:00+00';
+
+INSERT INTO public.climate_action_log(
+    ts, greenhouse_id, climate_action, priority_axis,
+    source_system_state, relay_truth
+)
+SELECT
+    ts, 'floor_breach', climate_action, priority_axis,
+    source_system_state, relay_truth
+FROM public.climate_action_log
+WHERE greenhouse_id = 'vallery'
+  AND ts >= '2026-01-11 05:00:00+00'
+  AND ts <= '2026-01-11 05:09:00+00';
+
+-- Alternating-minute telemetry has 100% row-relative action coverage but only
+-- about 56% wall-clock climate coverage and two-minute gaps.
+INSERT INTO public.climate(
+    ts, greenhouse_id, temp_avg, vpd_avg, rh_avg,
+    outdoor_temp_f, outdoor_rh_pct
+)
+SELECT
+    ts, 'gappy', temp_avg, vpd_avg, rh_avg,
+    outdoor_temp_f, outdoor_rh_pct
+FROM public.climate
+WHERE greenhouse_id = 'vallery'
+  AND ts >= '2026-01-11 04:55:00+00'
+  AND ts <= '2026-01-11 05:30:00+00'
+  AND extract(minute FROM ts)::int % 2 = 0;
+
+INSERT INTO public.climate_action_log(
+    ts, greenhouse_id, climate_action, priority_axis,
+    source_system_state, relay_truth
+)
+SELECT
+    ts, 'gappy', climate_action, priority_axis,
+    source_system_state, relay_truth
+FROM public.climate_action_log
+WHERE greenhouse_id = 'vallery'
+  AND ts >= '2026-01-11 05:00:00+00'
+  AND ts <= '2026-01-11 05:09:00+00'
+  AND extract(minute FROM ts)::int % 2 = 0;
+
+-- A VPD/AH response is confounded when outside air is wetter than inside.
+INSERT INTO public.climate(
+    ts, greenhouse_id, temp_avg, vpd_avg, rh_avg,
+    outdoor_temp_f, outdoor_rh_pct
+)
+SELECT
+    ts, 'weather_confounded', temp_avg, vpd_avg, rh_avg, 80.0, 90.0
+FROM public.climate
+WHERE greenhouse_id = 'vallery'
+  AND ts >= '2026-01-11 04:55:00+00'
+  AND ts <= '2026-01-11 05:30:00+00';
+
+INSERT INTO public.climate_action_log(
+    ts, greenhouse_id, climate_action, priority_axis,
+    source_system_state, relay_truth
+)
+SELECT
+    ts, 'weather_confounded', climate_action, priority_axis,
+    source_system_state, relay_truth
+FROM public.climate_action_log
+WHERE greenhouse_id = 'vallery'
+  AND ts >= '2026-01-11 05:00:00+00'
+  AND ts <= '2026-01-11 05:09:00+00';
+
+-- Simultaneous VPD mister activity invalidates attribution to dry-out.
+INSERT INTO public.climate(
+    ts, greenhouse_id, temp_avg, vpd_avg, rh_avg,
+    outdoor_temp_f, outdoor_rh_pct
+)
+SELECT
+    ts, 'wet_confounded', temp_avg, vpd_avg, rh_avg,
+    outdoor_temp_f, outdoor_rh_pct
+FROM public.climate
+WHERE greenhouse_id = 'vallery'
+  AND ts >= '2026-01-11 04:55:00+00'
+  AND ts <= '2026-01-11 05:30:00+00';
+
+INSERT INTO public.climate_action_log(
+    ts, greenhouse_id, climate_action, priority_axis,
+    source_system_state, relay_truth
+)
+SELECT
+    ts, 'wet_confounded', climate_action, priority_axis,
+    source_system_state,
+    jsonb_set(relay_truth, '{mister_center}', 'true'::jsonb)
+FROM public.climate_action_log
+WHERE greenhouse_id = 'vallery'
+  AND ts >= '2026-01-11 05:00:00+00'
+  AND ts <= '2026-01-11 05:09:00+00';
+
+-- A single outside-wetter minute invalidates the weather attribution even when
+-- the episode-average AH advantage remains positive.
+INSERT INTO public.climate(
+    ts, greenhouse_id, temp_avg, vpd_avg, rh_avg,
+    outdoor_temp_f, outdoor_rh_pct
+)
+SELECT
+    ts,
+    'weather_interval_confounded',
+    temp_avg,
+    vpd_avg,
+    rh_avg,
+    CASE WHEN ts = '2026-01-11 05:05:00+00' THEN 80.0 ELSE outdoor_temp_f END,
+    CASE WHEN ts = '2026-01-11 05:05:00+00' THEN 90.0 ELSE outdoor_rh_pct END
+FROM public.climate
+WHERE greenhouse_id = 'vallery'
+  AND ts >= '2026-01-11 04:55:00+00'
+  AND ts <= '2026-01-11 05:30:00+00';
+
+INSERT INTO public.climate_action_log(
+    ts, greenhouse_id, climate_action, priority_axis,
+    source_system_state, relay_truth
+)
+SELECT
+    ts, 'weather_interval_confounded', climate_action, priority_axis,
+    source_system_state, relay_truth
+FROM public.climate_action_log
+WHERE greenhouse_id = 'vallery'
+  AND ts >= '2026-01-11 05:00:00+00'
+  AND ts <= '2026-01-11 05:09:00+00';
+
+-- Eight samples are not sufficient when they are clustered around a three-
+-- minute hole in the anchored ten-minute response window.
+INSERT INTO public.climate(
+    ts, greenhouse_id, temp_avg, vpd_avg, rh_avg,
+    outdoor_temp_f, outdoor_rh_pct
+)
+SELECT
+    ts, 'response_gappy', temp_avg, vpd_avg, rh_avg,
+    outdoor_temp_f, outdoor_rh_pct
+FROM public.climate
+WHERE greenhouse_id = 'vallery'
+  AND ts >= '2026-01-11 04:55:00+00'
+  AND ts <= '2026-01-11 05:30:00+00'
+  AND ts NOT IN (
+      '2026-01-11 05:13:00+00'::timestamptz,
+      '2026-01-11 05:14:00+00'::timestamptz
+  );
+
+INSERT INTO public.climate_action_log(
+    ts, greenhouse_id, climate_action, priority_axis,
+    source_system_state, relay_truth
+)
+SELECT
+    ts, 'response_gappy', climate_action, priority_axis,
+    source_system_state, relay_truth
+FROM public.climate_action_log
+WHERE greenhouse_id = 'vallery'
+  AND ts >= '2026-01-11 05:00:00+00'
+  AND ts <= '2026-01-11 05:09:00+00';
+
+-- Cooling below the served floor after an admitted action is a safety failure,
+-- even when the episode itself stayed above the floor.
+INSERT INTO public.climate(
+    ts, greenhouse_id, temp_avg, vpd_avg, rh_avg,
+    outdoor_temp_f, outdoor_rh_pct
+)
+SELECT
+    ts,
+    'response_floor',
+    CASE WHEN ts = '2026-01-11 05:15:00+00' THEN 63.0 ELSE temp_avg END,
+    vpd_avg,
+    rh_avg,
+    outdoor_temp_f,
+    outdoor_rh_pct
+FROM public.climate
+WHERE greenhouse_id = 'vallery'
+  AND ts >= '2026-01-11 04:55:00+00'
+  AND ts <= '2026-01-11 05:30:00+00';
+
+INSERT INTO public.climate_action_log(
+    ts, greenhouse_id, climate_action, priority_axis,
+    source_system_state, relay_truth
+)
+SELECT
+    ts, 'response_floor', climate_action, priority_axis,
+    source_system_state, relay_truth
+FROM public.climate_action_log
+WHERE greenhouse_id = 'vallery'
+  AND ts >= '2026-01-11 05:00:00+00'
+  AND ts <= '2026-01-11 05:09:00+00';
+
+-- The current-band fallback deliberately returns a NULL temperature floor on
+-- this later night. Missing floor evidence must never become a safety PASS or
+-- an effective disposition.
+INSERT INTO public.climate(
+    ts, greenhouse_id, temp_avg, vpd_avg, rh_avg,
+    outdoor_temp_f, outdoor_rh_pct
+)
+SELECT
+    ts + interval '1 day', 'null_floor', temp_avg, vpd_avg, rh_avg,
+    outdoor_temp_f, outdoor_rh_pct
+FROM public.climate
+WHERE greenhouse_id = 'vallery'
+  AND ts >= '2026-01-11 04:55:00+00'
+  AND ts <= '2026-01-11 05:30:00+00';
+
+INSERT INTO public.climate_action_log(
+    ts, greenhouse_id, climate_action, priority_axis,
+    source_system_state, relay_truth
+)
+SELECT
+    ts + interval '1 day', 'null_floor', climate_action, priority_axis,
+    source_system_state, relay_truth
+FROM public.climate_action_log
+WHERE greenhouse_id = 'vallery'
+  AND ts >= '2026-01-11 05:00:00+00'
+  AND ts <= '2026-01-11 05:09:00+00';
 
 DO $$
 DECLARE
@@ -303,6 +589,15 @@ DECLARE
     insufficient record;
     gate_failed record;
     heat_only record;
+    missing_relay record;
+    floor_breach record;
+    gappy record;
+    weather_confounded record;
+    wet_confounded record;
+    weather_interval_confounded record;
+    response_gappy record;
+    response_floor record;
+    null_floor record;
     rows_found int;
 BEGIN
     SELECT count(*) INTO rows_found
@@ -377,6 +672,129 @@ BEGIN
        OR heat_only.dryout_disposition <> 'ineffective' THEN
         RAISE EXCEPTION 'heat-only VPD rise was mislabeled as dry-out: %',
             row_to_json(heat_only);
+    END IF;
+
+    SELECT * INTO missing_relay
+      FROM public.fn_realized_solar_night_dryout(
+          '2026-01-10', '2026-01-10', 'missing_relay'
+      );
+    IF missing_relay.action_evidence_minutes <> 0
+       OR missing_relay.evidence_status <> 'incomplete'
+       OR missing_relay.dryout_disposition <> 'insufficient_evidence' THEN
+        RAISE EXCEPTION 'empty relay payload was treated as complete: %',
+            row_to_json(missing_relay);
+    END IF;
+
+    SELECT * INTO floor_breach
+      FROM public.fn_realized_solar_night_dryout(
+          '2026-01-10', '2026-01-10', 'floor_breach'
+      );
+    IF floor_breach.min_temp_floor_margin_f <> -1.0
+       OR floor_breach.safety_gate_status <> 'fail'
+       OR floor_breach.evidence_status <> 'gate_failed'
+       OR floor_breach.dryout_disposition <> 'ineffective'
+       OR NOT ('temperature_floor_breach' = ANY(floor_breach.gate_violations))
+    THEN
+        RAISE EXCEPTION 'temperature-floor breach did not fail gate: %',
+            row_to_json(floor_breach);
+    END IF;
+
+    SELECT * INTO gappy
+      FROM public.fn_realized_solar_night_dryout(
+          '2026-01-10', '2026-01-10', 'gappy'
+      );
+    IF gappy.climate_coverage_pct >= 80.0
+       OR gappy.max_climate_gap_s <> 120
+       OR gappy.evidence_status <> 'incomplete'
+       OR gappy.dryout_disposition <> 'insufficient_evidence' THEN
+        RAISE EXCEPTION 'wall-clock telemetry gaps were hidden: %',
+            row_to_json(gappy);
+    END IF;
+
+    SELECT * INTO weather_confounded
+      FROM public.fn_realized_solar_night_dryout(
+          '2026-01-10', '2026-01-10', 'weather_confounded'
+      );
+    IF weather_confounded.ah_advantage_avg_g_m3 > 0
+       OR weather_confounded.evidence_status <> 'confounded'
+       OR weather_confounded.dryout_disposition <> 'insufficient_evidence'
+       OR NOT (
+           'no_positive_outdoor_ah_advantage'
+           = ANY(weather_confounded.confound_reasons)
+       ) THEN
+        RAISE EXCEPTION 'wetter outdoor air was not marked confounded: %',
+            row_to_json(weather_confounded);
+    END IF;
+
+    SELECT * INTO wet_confounded
+      FROM public.fn_realized_solar_night_dryout(
+          '2026-01-10', '2026-01-10', 'wet_confounded'
+      );
+    IF wet_confounded.wet_relay_duty_pct <> 100.0
+       OR wet_confounded.evidence_status <> 'confounded'
+       OR wet_confounded.dryout_disposition <> 'insufficient_evidence'
+       OR NOT ('simultaneous_wetting' = ANY(wet_confounded.confound_reasons))
+    THEN
+        RAISE EXCEPTION 'simultaneous mister activity was not confounded: %',
+            row_to_json(wet_confounded);
+    END IF;
+
+    SELECT * INTO weather_interval_confounded
+      FROM public.fn_realized_solar_night_dryout(
+          '2026-01-10', '2026-01-10', 'weather_interval_confounded'
+      );
+    IF weather_interval_confounded.ah_advantage_avg_g_m3 <= 0
+       OR weather_interval_confounded.ah_advantage_min_g_m3 > 0
+       OR weather_interval_confounded.evidence_status <> 'confounded'
+       OR weather_interval_confounded.dryout_disposition
+            <> 'insufficient_evidence'
+       OR NOT (
+           'no_positive_outdoor_ah_advantage'
+           = ANY(weather_interval_confounded.confound_reasons)
+       ) THEN
+        RAISE EXCEPTION 'outside-wetter interval was hidden by the average: %',
+            row_to_json(weather_interval_confounded);
+    END IF;
+
+    SELECT * INTO response_gappy
+      FROM public.fn_realized_solar_night_dryout(
+          '2026-01-10', '2026-01-10', 'response_gappy'
+      );
+    IF response_gappy.response_sample_minutes <> 8
+       OR response_gappy.response_max_gap_s <> 180
+       OR response_gappy.evidence_status <> 'incomplete'
+       OR response_gappy.dryout_disposition <> 'insufficient_evidence' THEN
+        RAISE EXCEPTION 'response-window gap was hidden by sample count: %',
+            row_to_json(response_gappy);
+    END IF;
+
+    SELECT * INTO response_floor
+      FROM public.fn_realized_solar_night_dryout(
+          '2026-01-10', '2026-01-10', 'response_floor'
+      );
+    IF response_floor.response_min_temp_floor_margin_f <> -1.0
+       OR response_floor.safety_gate_status <> 'fail'
+       OR response_floor.evidence_status <> 'gate_failed'
+       OR response_floor.dryout_disposition <> 'ineffective'
+       OR NOT (
+           'response_temperature_floor_breach'
+           = ANY(response_floor.gate_violations)
+       ) THEN
+        RAISE EXCEPTION 'post-action temperature-floor breach did not fail: %',
+            row_to_json(response_floor);
+    END IF;
+
+    SELECT * INTO null_floor
+      FROM public.fn_realized_solar_night_dryout(
+          '2026-01-11', '2026-01-11', 'null_floor'
+      );
+    IF null_floor.min_temp_floor_margin_f IS NOT NULL
+       OR null_floor.response_min_temp_floor_margin_f IS NOT NULL
+       OR null_floor.safety_gate_status <> 'incomplete'
+       OR null_floor.evidence_status <> 'incomplete'
+       OR null_floor.dryout_disposition <> 'insufficient_evidence' THEN
+        RAISE EXCEPTION 'missing temperature floor became false success: %',
+            row_to_json(null_floor);
     END IF;
 END $$;
 

@@ -41,14 +41,28 @@ ordered AS (
         lag(state) OVER (
             PARTITION BY greenhouse_id, equipment
             ORDER BY ts
-        ) AS previous_state
+        ) AS previous_state,
+        lag(conflicting_state) OVER (
+            PARTITION BY greenhouse_id, equipment
+            ORDER BY ts
+        ) AS previous_conflicting_state
     FROM relevant r
 ),
-transitions AS (
+transition_events AS (
     SELECT *
     FROM ordered
     WHERE previous_state IS DISTINCT FROM state
        OR previous_state IS NULL
+       OR conflicting_state
+       OR COALESCE(previous_conflicting_state, false)
+),
+transitions AS (
+    SELECT
+        e.*,
+        lead(e.ts) OVER (
+            PARTITION BY e.greenhouse_id, e.equipment ORDER BY e.ts
+        ) AS next_transition_ts
+    FROM transition_events e
 ),
 equipment_bounds AS (
     SELECT
@@ -88,10 +102,11 @@ day_context AS (
     SELECT
         b.*,
         start_event.state AS start_state,
-        start_event.ts AS start_state_ts
+        start_event.ts AS start_state_ts,
+        start_event.conflicting_state AS start_state_conflicting
     FROM day_bounds b
     LEFT JOIN LATERAL (
-        SELECT t.state, t.ts
+        SELECT t.state, t.ts, t.conflicting_state
         FROM transitions t
         WHERE t.greenhouse_id = b.greenhouse_id
           AND t.equipment = b.equipment
@@ -111,6 +126,8 @@ points AS (
         d.is_complete_day,
         d.start_state,
         d.start_state_ts,
+        d.start_state_conflicting,
+        NULL::timestamptz AS next_transition_ts,
         d.start_ts AS ts,
         d.start_state AS state,
         false AS is_event
@@ -129,6 +146,8 @@ points AS (
         d.is_complete_day,
         d.start_state,
         d.start_state_ts,
+        d.start_state_conflicting,
+        t.next_transition_ts,
         t.ts,
         t.state,
         true AS is_event
@@ -169,24 +188,37 @@ segment_metrics AS (
         )::bigint AS starts_with_unknown_prior_state,
         count(*) FILTER (
             WHERE is_event AND state IS TRUE AND prior_state IS FALSE
-              AND extract(epoch FROM (next_ts - ts)) < 60
+              AND extract(epoch FROM (
+                  LEAST(COALESCE(next_transition_ts, now()), now()) - ts
+              )) < 60
         )::bigint AS cycles_under_1m,
         count(*) FILTER (
             WHERE is_event AND state IS TRUE AND prior_state IS FALSE
-              AND extract(epoch FROM (next_ts - ts)) >= 60
-              AND extract(epoch FROM (next_ts - ts)) < 300
+              AND extract(epoch FROM (
+                  LEAST(COALESCE(next_transition_ts, now()), now()) - ts
+              )) >= 60
+              AND extract(epoch FROM (
+                  LEAST(COALESCE(next_transition_ts, now()), now()) - ts
+              )) < 300
         )::bigint AS cycles_1m_to_5m,
         count(*) FILTER (
             WHERE is_event AND state IS TRUE AND prior_state IS FALSE
-              AND extract(epoch FROM (next_ts - ts)) >= 300
-              AND extract(epoch FROM (next_ts - ts)) < 900
+              AND extract(epoch FROM (
+                  LEAST(COALESCE(next_transition_ts, now()), now()) - ts
+              )) >= 300
+              AND extract(epoch FROM (
+                  LEAST(COALESCE(next_transition_ts, now()), now()) - ts
+              )) < 900
         )::bigint AS cycles_5m_to_15m,
         count(*) FILTER (
             WHERE is_event AND state IS TRUE AND prior_state IS FALSE
-              AND extract(epoch FROM (next_ts - ts)) >= 900
+              AND extract(epoch FROM (
+                  LEAST(COALESCE(next_transition_ts, now()), now()) - ts
+              )) >= 900
         )::bigint AS cycles_15m_plus,
         count(*) FILTER (
-            WHERE is_event AND state IS TRUE AND next_ts = effective_end_ts
+            WHERE is_event AND state IS TRUE
+              AND (next_transition_ts IS NULL OR next_transition_ts > effective_end_ts)
         )::bigint AS open_pulses_at_cutoff,
         (array_agg(state ORDER BY ts DESC, is_event DESC))[1] AS end_state
     FROM sequenced_points
@@ -247,23 +279,29 @@ SELECT
     d.start_ts AS day_started_at,
     d.effective_end_ts AS observed_through,
     d.is_complete_day,
-    d.start_state IS NOT NULL AS start_state_known,
+    d.start_state IS NOT NULL
+        AND NOT COALESCE(d.start_state_conflicting, false) AS start_state_known,
     d.start_state,
     s.end_state,
     COALESCE(s.end_state, d.start_state, false) AS open_at_end,
     d.is_complete_day
         AND d.start_state IS NOT NULL
+        AND NOT COALESCE(d.start_state_conflicting, false)
         AND COALESCE(q.conflicting_timestamp_count, 0) = 0
         AS is_deploy_gate_eligible,
     CASE
         WHEN NOT d.is_complete_day THEN 'partial_day'
         WHEN d.start_state IS NULL THEN 'unknown_start_state'
+        WHEN COALESCE(d.start_state_conflicting, false)
+            THEN 'conflicting_carry_state'
         WHEN COALESCE(q.conflicting_timestamp_count, 0) > 0 THEN 'conflicting_events'
         ELSE 'complete'
     END AS quality,
     array_remove(ARRAY[
         CASE WHEN NOT d.is_complete_day THEN 'partial_day' END,
         CASE WHEN d.start_state IS NULL THEN 'unknown_start_state' END,
+        CASE WHEN COALESCE(d.start_state_conflicting, false)
+            THEN 'conflicting_carry_state' END,
         CASE WHEN COALESCE(q.conflicting_timestamp_count, 0) > 0
             THEN 'conflicting_same_timestamp' END,
         CASE WHEN COALESCE(s.open_pulses_at_cutoff, 0) > 0

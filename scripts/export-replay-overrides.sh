@@ -37,7 +37,7 @@ fi
 #   outdoor_temp_f        — Tempest, for sprint-15 gate + new invariants
 #   outdoor_dewpoint_f    — computed from Tempest temp+rh
 #   outdoor_data_age_s    — seconds since the last persisted Tempest value change
-#                           (source-backed, conservative; drives gate eligibility)
+#                           (conservative persisted observation; drives gate eligibility)
 #   solar_irradiance_w_m2 — Tempest, for sunrise-ramp invariants
 #   indoor_dew_point      — from climate.dew_point (Magnus inside firmware)
 #   eq_<relay>            — forward-filled equipment_state at row ts (0/1)
@@ -57,18 +57,45 @@ trap 'rm -rf "$TMP_ROOT"' EXIT
 echo "  reading climate + conservative outdoor provenance..."
 verdify_psql -c "
 COPY (
-    WITH outdoor_samples AS (
+    WITH ranked_climate AS (
         -- climate contains historical duplicate timestamps from earlier
-        -- ingestion paths. Collapse those peers before the change detector so
-        -- one eligible replay row can join to exactly one provenance row.
+        -- ingestion paths. Select one deterministic whole row for both replay
+        -- output and provenance; never merge fields from different rows or
+        -- emit more than one replay row for a timestamp.
         SELECT
-            c0.greenhouse_id,
-            c0.ts,
-            max(c0.outdoor_temp_f) AS outdoor_temp_f,
-            max(c0.outdoor_rh_pct) AS outdoor_rh_pct
+            c0.*,
+            row_number() OVER (
+                PARTITION BY c0.greenhouse_id, c0.ts
+                ORDER BY
+                    (
+                        c0.temp_avg IS NOT NULL
+                        AND c0.vpd_avg IS NOT NULL
+                        AND c0.rh_avg IS NOT NULL
+                    ) DESC,
+                    (
+                        c0.outdoor_temp_f IS NOT NULL
+                        AND c0.outdoor_rh_pct IS NOT NULL
+                    ) DESC,
+                    c0.temp_avg DESC NULLS LAST,
+                    c0.vpd_avg DESC NULLS LAST,
+                    c0.rh_avg DESC NULLS LAST,
+                    c0.outdoor_temp_f DESC NULLS LAST,
+                    c0.outdoor_rh_pct DESC NULLS LAST,
+                    c0.solar_irradiance_w_m2 DESC NULLS LAST,
+                    c0.dew_point DESC NULLS LAST,
+                    c0.enthalpy_delta DESC NULLS LAST
+            ) AS duplicate_rank
         FROM climate c0
         WHERE c0.greenhouse_id = 'vallery'
-        GROUP BY c0.greenhouse_id, c0.ts
+    ),
+    climate_rows AS (
+        SELECT *
+        FROM ranked_climate
+        WHERE duplicate_rank = 1
+    ),
+    outdoor_samples AS (
+        SELECT greenhouse_id, ts, outdoor_temp_f, outdoor_rh_pct
+        FROM climate_rows
     ),
     ordered_outdoor AS (
         SELECT
@@ -95,18 +122,18 @@ COPY (
                      OR o.outdoor_rh_pct IS DISTINCT FROM o.previous_outdoor_rh_pct
                  )
                 THEN o.ts
-            END AS outdoor_source_observed_at
+            END AS outdoor_observed_at
         FROM ordered_outdoor o
     ),
     outdoor_provenance AS (
         SELECT
             m.greenhouse_id,
             m.ts,
-            max(m.outdoor_source_observed_at) OVER (
+            max(m.outdoor_observed_at) OVER (
                 PARTITION BY m.greenhouse_id
                 ORDER BY m.ts
                 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
-            ) AS outdoor_source_ts
+            ) AS outdoor_observation_ts
         FROM marked_outdoor m
     )
     SELECT
@@ -149,14 +176,14 @@ COPY (
         CASE
             WHEN c.outdoor_temp_f IS NULL
               OR c.outdoor_rh_pct IS NULL
-              OR p.outdoor_source_ts IS NULL THEN NULL
+              OR p.outdoor_observation_ts IS NULL THEN NULL
             ELSE GREATEST(
                 0,
-                extract(epoch FROM (c.ts - p.outdoor_source_ts))::int
+                extract(epoch FROM (c.ts - p.outdoor_observation_ts))::int
             )
         END AS outdoor_data_age_s,
-        p.outdoor_source_ts
-    FROM climate c
+        p.outdoor_observation_ts
+    FROM climate_rows c
     LEFT JOIN outdoor_provenance p
       ON p.greenhouse_id = c.greenhouse_id
      AND p.ts = c.ts
@@ -346,7 +373,7 @@ fieldnames = (
     + ["occupied", "greenhouse_state", "mode_reason"]
     + [f"eq_{name}" for name in equipment_names]
     + [
-        "outdoor_source_ts",
+        "outdoor_observation_ts",
         "outdoor_freshness_basis",
         "sp_dehum_vent_hold_enabled",
     ]
@@ -419,9 +446,11 @@ try:
             for name in equipment_names:
                 output[f"eq_{name}"] = "1" if equipment.get(name, False) else "0"
 
-            output["outdoor_source_ts"] = climate.get("outdoor_source_ts", "")
+            output["outdoor_observation_ts"] = climate.get(
+                "outdoor_observation_ts", ""
+            )
             output["outdoor_freshness_basis"] = (
-                "conservative_climate_value_change_timestamp"
+                "conservative_change_observation"
             )
             hold = config.get("sw_dehum_vent_hold_enabled", "")
             output["sp_dehum_vent_hold_enabled"] = "" if hold is None else hold

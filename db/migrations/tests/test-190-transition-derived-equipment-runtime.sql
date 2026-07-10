@@ -50,6 +50,14 @@ INSERT INTO public.equipment_state(ts, equipment, state) VALUES
     ('2026-01-16 11:00:00+00', 'mister_south', true),
     ('2026-01-16 11:01:00+00', 'mister_south', false);
 
+-- Full pulse duration, not the local-day slice, owns the short-cycle bucket.
+-- This 12-minute heat1 pulse contributes 2 runtime minutes on Jan 15 and 10 on
+-- Jan 16, but is classified once in the 5-15m bucket on its start day.
+INSERT INTO public.equipment_state(ts, equipment, state) VALUES
+    ('2026-01-16 06:50:00+00', 'heat1', false),
+    ('2026-01-16 06:58:00+00', 'heat1', true),
+    ('2026-01-16 07:10:00+00', 'heat1', false);
+
 DO $$
 DECLARE
     r record;
@@ -111,6 +119,26 @@ BEGIN
      WHERE day = '2026-01-16' AND equipment = 'fan2';
     IF r.conflicting_timestamp_count <> 1 OR r.is_deploy_gate_eligible THEN
         RAISE EXCEPTION 'fan2 conflicting timestamp not quarantined';
+    END IF;
+    SELECT * INTO r FROM public.v_equipment_runtime_daily
+     WHERE day = '2026-01-17' AND equipment = 'fan2';
+    IF r.start_state_known OR r.is_deploy_gate_eligible
+       OR r.quality <> 'conflicting_carry_state' THEN
+        RAISE EXCEPTION 'fan2 conflict taint did not carry: %', row_to_json(r);
+    END IF;
+
+    SELECT * INTO r FROM public.v_equipment_runtime_daily
+     WHERE day = '2026-01-15' AND equipment = 'heat1';
+    IF r.on_minutes <> 2.0 OR r.starts <> 1 OR r.cycles_5m_to_15m <> 1
+       OR r.cycles_1m_to_5m <> 0 THEN
+        RAISE EXCEPTION 'cross-midnight start-day pulse bucket mismatch: %',
+            row_to_json(r);
+    END IF;
+    SELECT * INTO r FROM public.v_equipment_runtime_daily
+     WHERE day = '2026-01-16' AND equipment = 'heat1';
+    IF r.on_minutes <> 10.0 OR r.starts <> 0
+       OR r.cycles_5m_to_15m <> 0 THEN
+        RAISE EXCEPTION 'cross-midnight carry-day pulse mismatch: %', row_to_json(r);
     END IF;
 END $$;
 

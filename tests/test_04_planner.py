@@ -120,20 +120,23 @@ class TestPlannerPrompt:
 class TestEvidencePipelineSources:
     """Guard replay provenance and outcome KPI authority in source."""
 
-    def test_exporter_uses_source_timestamp_not_setpoint_age(self):
+    def test_exporter_uses_conservative_observation_not_setpoint_age(self):
         source = (REPO_ROOT / "scripts" / "export-replay-overrides.sh").read_text()
-        assert "outdoor_source_ts" in source
-        assert "conservative_climate_value_change_timestamp" in source
+        assert "outdoor_observation_ts" in source
+        assert "conservative_change_observation" in source
+        assert "WHERE duplicate_rank = 1" in source
+        assert "FROM climate_rows c" in source
+        assert "max(c0.outdoor_temp_f)" not in source
         assert "sp_dehum_vent_hold_enabled" in source
         assert "parameter = 'outdoor_temp'" not in source
         assert "force_fresh" not in source.lower()
 
-    def test_stock_replay_gates_source_backed_outdoor_branches(self):
+    def test_stock_replay_gates_observation_backed_outdoor_branches(self):
         source = (REPO_ROOT / "firmware" / "test" / "replay_overrides.cpp").read_text()
         for token in (
-            "outdoor_source_ts",
-            "conservative_climate_value_change_timestamp",
-            "outdoor_source_backed_rows",
+            "outdoor_observation_ts",
+            "conservative_change_observation",
+            "outdoor_observation_backed_rows",
             "outdoor_fresh_rows",
             "MX_VENT_DEHUM",
             "MX_HEAT_ASSIST",
@@ -141,7 +144,7 @@ class TestEvidencePipelineSources:
             "mx_hold_required_rows",
         ):
             assert token in source
-        assert "outdoor_source_backed_rows >= 1000" in source
+        assert "outdoor_observation_backed_rows >= 1000" in source
         assert "outdoor_fresh_rows >= 1000" in source
 
     def test_outcome_kpi_uses_raw_transitions_and_realized_nights(self):

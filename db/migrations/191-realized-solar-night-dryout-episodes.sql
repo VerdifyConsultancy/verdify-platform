@@ -57,6 +57,8 @@ RETURNS TABLE(
     block_reason text,
     stop_reason text,
     sample_minutes integer,
+    climate_coverage_pct double precision,
+    max_climate_gap_s integer,
     below_served_low_minutes integer,
     action_evidence_minutes integer,
     hold_admitted_minutes integer,
@@ -70,6 +72,7 @@ RETURNS TABLE(
     observed_indoor_ah_delta_10_20m_g_m3 double precision,
     served_temp_floor_f double precision,
     min_temp_f double precision,
+    min_temp_floor_margin_f double precision,
     vpd_before_kpa double precision,
     vpd_after_10_20m_kpa double precision,
     observed_vpd_delta_10_20m_kpa double precision,
@@ -78,10 +81,16 @@ RETURNS TABLE(
     fan_duty_pct double precision,
     heat1_duty_pct double precision,
     heat2_duty_pct double precision,
+    wet_relay_duty_pct double precision,
+    response_wet_relay_minutes integer,
+    response_sample_minutes integer,
+    response_max_gap_s integer,
+    response_min_temp_floor_margin_f double precision,
     daytime_dry_action_samples integer,
     daytime_hold_admission_samples integer,
     safety_gate_status text,
     gate_violations text[],
+    confound_reasons text[],
     evidence_status text,
     dryout_disposition text
 )
@@ -129,6 +138,15 @@ action_rows AS (
             OR COALESCE((l.relay_truth ->> 'fan2')::boolean, false) AS fan_on,
         COALESCE((l.relay_truth ->> 'heat1')::boolean, false) AS heat1_on,
         COALESCE((l.relay_truth ->> 'heat2')::boolean, false) AS heat2_on,
+        COALESCE((l.relay_truth ->> 'fog')::boolean, false)
+            OR COALESCE((l.relay_truth ->> 'mister_south')::boolean, false)
+            OR COALESCE((l.relay_truth ->> 'mister_west')::boolean, false)
+            OR COALESCE((l.relay_truth ->> 'mister_center')::boolean, false)
+            AS wet_relay_on,
+        l.relay_truth ?& ARRAY[
+            'vent', 'fan1', 'fan2', 'heat1', 'heat2',
+            'fog', 'mister_south', 'mister_west', 'mister_center'
+        ]::text[] AS relay_evidence_present,
         COALESCE(
             (l.source_system_state -> 'climate_moisture_exchange'
                 ->> 'hold_required')::boolean,
@@ -147,6 +165,8 @@ classified_action_rows AS (
     SELECT
         a.*,
         (
+            a.relay_evidence_present
+            AND
             (a.priority_axis = 'vpd' OR a.climate_action = 'DEHUM_VENT')
             AND (
                 (a.climate_action = 'DEHUM_VENT' AND a.vent_on AND a.fan_on)
@@ -158,7 +178,8 @@ classified_action_rows AS (
             )
         ) AS dry_action_admitted,
         (
-            a.hold_flavor
+            a.relay_evidence_present
+            AND a.hold_flavor
             AND a.climate_action = 'DEHUM_VENT'
             AND a.vent_on
             AND a.fan_on
@@ -178,6 +199,8 @@ action_minute AS (
         bool_or(fan_on) AS fan_on,
         bool_or(heat1_on) AS heat1_on,
         bool_or(heat2_on) AS heat2_on,
+        bool_or(wet_relay_on) AS wet_relay_on,
+        bool_and(relay_evidence_present) AS relay_evidence_complete,
         bool_or(dry_action_admitted) AS dry_action_admitted,
         bool_or(hold_action_admitted) AS hold_action_admitted,
         mode() WITHIN GROUP (
@@ -238,6 +261,8 @@ resolved AS (
         COALESCE(a.fan_on, false) AS fan_on,
         COALESCE(a.heat1_on, false) AS heat1_on,
         COALESCE(a.heat2_on, false) AS heat2_on,
+        COALESCE(a.wet_relay_on, false) AS wet_relay_on,
+        COALESCE(a.relay_evidence_complete, false) AS relay_evidence_complete,
         COALESCE(a.dry_action_admitted, false) AS dry_action_admitted,
         COALESCE(a.hold_action_admitted, false) AS hold_action_admitted,
         a.dry_admission_reason
@@ -317,8 +342,13 @@ episodes AS (
         extract(epoch FROM (max(bucket) + interval '1 minute' - min(bucket))) / 60.0
             AS duration_min,
         count(*)::int AS sample_minutes,
+        COALESCE(max(extract(epoch FROM (bucket - previous_bucket))) FILTER (
+            WHERE previous_episode_active IS TRUE
+        ), 0)::int AS max_climate_gap_s,
         count(*) FILTER (WHERE dry_demand)::int AS below_served_low_minutes,
-        count(*) FILTER (WHERE action_sample_present)::int AS action_evidence_minutes,
+        count(*) FILTER (
+            WHERE action_sample_present AND relay_evidence_complete
+        )::int AS action_evidence_minutes,
         count(*) FILTER (WHERE dry_action_admitted)::int AS admitted_minutes,
         count(*) FILTER (WHERE hold_action_admitted)::int AS hold_admitted_minutes,
         mode() WITHIN GROUP (
@@ -333,10 +363,13 @@ episodes AS (
         count(outdoor_ah_g_m3)::int AS outdoor_evidence_minutes,
         min(served_temp_low)::double precision AS served_temp_floor_f,
         min(temp_f)::double precision AS min_temp_f,
+        min(temp_f - served_temp_low)::double precision
+            AS min_temp_floor_margin_f,
         count(*) FILTER (WHERE vent_on)::int AS vent_minutes,
         count(*) FILTER (WHERE fan_on)::int AS fan_minutes,
         count(*) FILTER (WHERE heat1_on)::int AS heat1_minutes,
-        count(*) FILTER (WHERE heat2_on)::int AS heat2_minutes
+        count(*) FILTER (WHERE heat2_on)::int AS heat2_minutes,
+        count(*) FILTER (WHERE wet_relay_on)::int AS wet_relay_minutes
     FROM night_tagged
     WHERE episode_active
     GROUP BY night_date, episode_id
@@ -354,6 +387,9 @@ with_response AS (
         after.samples AS after_samples,
         after.indoor_ah_g_m3 AS indoor_ah_after_g_m3,
         after.ah_samples AS after_ah_samples,
+        after.wet_relay_minutes AS response_wet_relay_minutes,
+        after.response_max_gap_s,
+        after.min_temp_floor_margin_f AS response_min_temp_floor_margin_f,
         next_sample.solar_phase AS next_solar_phase,
         next_sample.vpd_kpa AS next_vpd_kpa,
         next_sample.served_vpd_low AS next_served_vpd_low,
@@ -372,7 +408,8 @@ with_response AS (
             avg(c.temp_f)::double precision AS temp_f,
             count(*)::int AS samples,
             avg(c.indoor_ah_g_m3)::double precision AS indoor_ah_g_m3,
-            count(c.indoor_ah_g_m3)::int AS ah_samples
+            count(c.indoor_ah_g_m3)::int AS ah_samples,
+            count(*) FILTER (WHERE c.wet_relay_on)::int AS wet_relay_minutes
         FROM resolved c
         -- Outcome baseline is the first five measured minutes of the demand
         -- episode, not the preceding in-band period.  Compare that realized
@@ -386,10 +423,39 @@ with_response AS (
             avg(c.temp_f)::double precision AS temp_f,
             count(*)::int AS samples,
             avg(c.indoor_ah_g_m3)::double precision AS indoor_ah_g_m3,
-            count(c.indoor_ah_g_m3)::int AS ah_samples
-        FROM resolved c
-        WHERE c.bucket >= e.episode_started_at + interval '10 minutes'
-          AND c.bucket < e.episode_started_at + interval '20 minutes'
+            count(c.indoor_ah_g_m3)::int AS ah_samples,
+            count(*) FILTER (WHERE c.wet_relay_on)::int AS wet_relay_minutes,
+            min(c.temp_f - c.served_temp_low)::double precision
+                AS min_temp_floor_margin_f,
+            CASE
+                WHEN count(*) = 0 THEN 600
+                ELSE greatest(
+                    extract(epoch FROM (
+                        min(c.bucket)
+                        - (e.episode_started_at + interval '10 minutes')
+                    ))::int,
+                    COALESCE(max(extract(epoch FROM (
+                        c.bucket - c.previous_response_bucket
+                    ))) FILTER (
+                        WHERE c.previous_response_bucket IS NOT NULL
+                    ), 0)::int,
+                    extract(epoch FROM (
+                        e.episode_started_at + interval '20 minutes'
+                        - (max(c.bucket) + interval '1 minute')
+                    ))::int
+                )
+            END AS response_max_gap_s
+        FROM (
+            SELECT
+                response.*,
+                lag(response.bucket) OVER (ORDER BY response.bucket)
+                    AS previous_response_bucket
+            FROM resolved response
+            WHERE response.bucket
+                    >= e.episode_started_at + interval '10 minutes'
+              AND response.bucket
+                    < e.episode_started_at + interval '20 minutes'
+        ) c
     ) after ON true
     LEFT JOIN LATERAL (
         SELECT s.*
@@ -424,7 +490,7 @@ SELECT
         WHEN r.outdoor_evidence_minutes < greatest(1, r.sample_minutes / 2)
             THEN 'outdoor_evidence_missing'
         WHEN r.ah_advantage_avg_g_m3 <= 0 THEN 'no_outdoor_ah_advantage'
-        WHEN r.min_temp_f <= r.served_temp_floor_f THEN 'temperature_floor'
+        WHEN r.min_temp_floor_margin_f <= 0 THEN 'temperature_floor'
         ELSE 'controller_no_admission'
     END AS block_reason,
     CASE
@@ -439,6 +505,9 @@ SELECT
         ELSE 'controller_stopped'
     END AS stop_reason,
     r.sample_minutes,
+    round((100.0 * r.sample_minutes / NULLIF(ceil(r.duration_min), 0))::numeric, 1)
+        ::double precision AS climate_coverage_pct,
+    r.max_climate_gap_s,
     r.below_served_low_minutes,
     r.action_evidence_minutes,
     r.hold_admitted_minutes,
@@ -454,6 +523,7 @@ SELECT
         ::double precision,
     round(r.served_temp_floor_f::numeric, 2)::double precision,
     round(r.min_temp_f::numeric, 2)::double precision,
+    round(r.min_temp_floor_margin_f::numeric, 2)::double precision,
     round(r.vpd_before_kpa::numeric, 3)::double precision,
     round(r.vpd_after_kpa::numeric, 3)::double precision,
     round((r.vpd_after_kpa - r.vpd_before_kpa)::numeric, 3)::double precision,
@@ -462,38 +532,109 @@ SELECT
     round((100.0 * r.fan_minutes / NULLIF(r.sample_minutes, 0))::numeric, 1)::double precision,
     round((100.0 * r.heat1_minutes / NULLIF(r.sample_minutes, 0))::numeric, 1)::double precision,
     round((100.0 * r.heat2_minutes / NULLIF(r.sample_minutes, 0))::numeric, 1)::double precision,
+    round((100.0 * r.wet_relay_minutes / NULLIF(r.sample_minutes, 0))::numeric, 1)::double precision,
+    r.response_wet_relay_minutes,
+    r.after_samples,
+    r.response_max_gap_s,
+    round(r.response_min_temp_floor_margin_f::numeric, 2)::double precision,
     r.daytime_dry_action_samples,
     r.daytime_hold_admission_samples,
     CASE
-        WHEN r.daytime_hold_admission_samples > 0 OR r.heat2_minutes > 0
+        WHEN r.daytime_hold_admission_samples > 0
+          OR r.heat2_minutes > 0
+          OR (
+              r.admitted_minutes > 0
+              AND r.min_temp_floor_margin_f <= 0
+          )
+          OR (
+              r.admitted_minutes > 0
+              AND r.response_min_temp_floor_margin_f <= 0
+          )
             THEN 'fail'
+        WHEN r.min_temp_floor_margin_f IS NULL
+          OR r.response_min_temp_floor_margin_f IS NULL
+            THEN 'incomplete'
         ELSE 'pass'
     END AS safety_gate_status,
     array_remove(ARRAY[
         CASE WHEN r.daytime_hold_admission_samples > 0
             THEN 'daytime_hold_admission' END,
-        CASE WHEN r.heat2_minutes > 0 THEN 'heat2_forbidden' END
+        CASE WHEN r.heat2_minutes > 0 THEN 'heat2_forbidden' END,
+        CASE
+            WHEN r.admitted_minutes > 0
+             AND r.min_temp_floor_margin_f <= 0
+                THEN 'temperature_floor_breach'
+        END,
+        CASE
+            WHEN r.admitted_minutes > 0
+             AND r.response_min_temp_floor_margin_f <= 0
+                THEN 'response_temperature_floor_breach'
+        END
     ]::text[], NULL) AS gate_violations,
+    array_remove(ARRAY[
+        CASE WHEN r.admitted_minutes > 0 AND r.ah_advantage_min_g_m3 <= 0
+            THEN 'no_positive_outdoor_ah_advantage' END,
+        CASE WHEN r.wet_relay_minutes > 0 THEN 'simultaneous_wetting' END,
+        CASE WHEN r.response_wet_relay_minutes > 0
+            THEN 'response_window_wetting' END
+    ]::text[], NULL) AS confound_reasons,
     CASE
-        WHEN r.daytime_hold_admission_samples > 0 OR r.heat2_minutes > 0
+        WHEN r.daytime_hold_admission_samples > 0
+          OR r.heat2_minutes > 0
+          OR (
+              r.admitted_minutes > 0
+              AND r.min_temp_floor_margin_f <= 0
+          )
+          OR (
+              r.admitted_minutes > 0
+              AND r.response_min_temp_floor_margin_f <= 0
+          )
             THEN 'gate_failed'
-        WHEN r.action_evidence_minutes < greatest(1, r.sample_minutes * 4 / 5)
-          OR r.outdoor_evidence_minutes < greatest(1, r.sample_minutes / 2)
-          OR r.before_samples < 3 OR r.after_samples < 5
-          OR r.before_ah_samples < 3 OR r.after_ah_samples < 5
+        WHEN r.min_temp_floor_margin_f IS NULL
+          OR r.response_min_temp_floor_margin_f IS NULL
+          OR r.sample_minutes < ceil(r.duration_min * 0.8)
+          OR r.max_climate_gap_s > 90
+          OR r.response_max_gap_s > 90
+          OR r.action_evidence_minutes < ceil(r.sample_minutes * 0.8)
+          OR r.outdoor_evidence_minutes < ceil(r.sample_minutes * 0.5)
+          OR r.before_samples < 4 OR r.after_samples < 8
+          OR r.before_ah_samples < 4 OR r.after_ah_samples < 8
             THEN 'incomplete'
+        WHEN (r.admitted_minutes > 0 AND r.ah_advantage_min_g_m3 <= 0)
+          OR r.wet_relay_minutes > 0
+          OR r.response_wet_relay_minutes > 0
+            THEN 'confounded'
         ELSE 'complete'
     END AS evidence_status,
     CASE
-        WHEN r.daytime_hold_admission_samples > 0 OR r.heat2_minutes > 0
+        WHEN r.daytime_hold_admission_samples > 0
+          OR r.heat2_minutes > 0
+          OR (
+              r.admitted_minutes > 0
+              AND r.min_temp_floor_margin_f <= 0
+          )
+          OR (
+              r.admitted_minutes > 0
+              AND r.response_min_temp_floor_margin_f <= 0
+          )
             THEN 'ineffective'
-        WHEN r.action_evidence_minutes < greatest(1, r.sample_minutes * 4 / 5)
-          OR r.outdoor_evidence_minutes < greatest(1, r.sample_minutes / 2)
-          OR r.before_samples < 3 OR r.after_samples < 5
-          OR r.before_ah_samples < 3 OR r.after_ah_samples < 5
+        WHEN r.min_temp_floor_margin_f IS NULL
+          OR r.response_min_temp_floor_margin_f IS NULL
+          OR r.sample_minutes < ceil(r.duration_min * 0.8)
+          OR r.max_climate_gap_s > 90
+          OR r.response_max_gap_s > 90
+          OR r.action_evidence_minutes < ceil(r.sample_minutes * 0.8)
+          OR r.outdoor_evidence_minutes < ceil(r.sample_minutes * 0.5)
+          OR r.before_samples < 4 OR r.after_samples < 8
+          OR r.before_ah_samples < 4 OR r.after_ah_samples < 8
+            THEN 'insufficient_evidence'
+        WHEN (r.admitted_minutes > 0 AND r.ah_advantage_min_g_m3 <= 0)
+          OR r.wet_relay_minutes > 0
+          OR r.response_wet_relay_minutes > 0
             THEN 'insufficient_evidence'
         WHEN r.admitted_minutes = 0 THEN 'blocked'
-        WHEN r.vpd_after_kpa - r.vpd_before_kpa >= 0.05
+        WHEN r.ah_advantage_min_g_m3 > 0
+         AND r.vpd_after_kpa - r.vpd_before_kpa >= 0.05
          AND r.indoor_ah_after_g_m3 - r.indoor_ah_before_g_m3 <= -0.05
             THEN 'effective'
         ELSE 'ineffective'
@@ -508,10 +649,11 @@ COMMENT ON FUNCTION public.fn_realized_solar_night_dryout(date, date, text) IS
 'fallback), and actual relay '
 'truth. Exposes admission/block/stop reasons, absolute-humidity advantage, '
 'temperature floor, actuator duty, observed 10-20 minute VPD/temperature/indoor-'
-'AH response, and an '
+'AH response, telemetry coverage/gaps, wetting and weather confounds, and an '
 'explicit effective|ineffective|blocked|insufficient_evidence disposition. '
 'The held-temp flavor is attributed separately: an actual daytime held-temp '
-'admission or any heat2 duty fails the safety gate and is ineffective. General '
+'admission, any heat2 duty, or an admitted same-row temperature-floor breach '
+'fails the safety gate and is ineffective. General '
 'daytime VPD dehumidification remains visible but is not mislabeled as the '
 'solar-night held-temp violation. Never labels projected estimator intent as '
 'outcome and never emits a daytime episode.';

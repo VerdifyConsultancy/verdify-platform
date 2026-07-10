@@ -138,8 +138,9 @@ struct Stats {
     // Flags that fired while mode was SENSOR_FAULT (should never happen)
     long sensor_fault_fires = 0;
     // #419 provenance/branch coverage.  These counters are populated only from
-    // the stock CSV's real age/source columns; there is no force-fresh path.
-    long outdoor_source_backed_rows = 0;
+    // the stock CSV's conservative observation/age columns; there is no
+    // force-fresh path and no claim that the Tempest packet timestamp persists.
+    long outdoor_observation_backed_rows = 0;
     long outdoor_fresh_rows = 0;
     long outdoor_fresh_cold_wet_rows = 0;
     long outdoor_fresh_wet_demand_rows = 0;
@@ -270,17 +271,18 @@ int main(int argc, char* argv[]) {
         validate_setpoints(sp);
 
         // #419: prove the stock corpus reaches outdoor-aware estimator paths
-        // from source-backed timestamps.  `outdoor_source_ts` and the explicit
-        // basis are emitted by the standard exporter; missing provenance never
-        // earns coverage even if an age cell were manually populated.
-        const bool source_backed = !get("outdoor_source_ts").empty()
+        // from conservative persisted change observations.
+        // `outdoor_observation_ts` and the explicit basis are emitted by the
+        // standard exporter; missing provenance never earns coverage even if
+        // an age cell were manually populated.
+        const bool observation_backed = !get("outdoor_observation_ts").empty()
             && get("outdoor_freshness_basis")
-                == "conservative_climate_value_change_timestamp";
-        const bool outdoor_fresh = source_backed
+                == "conservative_change_observation";
+        const bool outdoor_fresh = observation_backed
             && std::isfinite(in.outdoor_temp_f)
             && std::isfinite(in.outdoor_rh_pct)
             && in.outdoor_data_age_s < sp.outdoor_staleness_max_s;
-        if (source_backed) stats.outdoor_source_backed_rows++;
+        if (observation_backed) stats.outdoor_observation_backed_rows++;
         if (outdoor_fresh) {
             stats.outdoor_fresh_rows++;
             if (in.outdoor_temp_f < 50.0f && in.outdoor_rh_pct >= 50.0f)
@@ -405,7 +407,8 @@ int main(int argc, char* argv[]) {
            stats.sensor_fault_fires == 0 ? "✓" : "✗ BUG — should be 0");
 
     printf("\n#419 stock-corpus outdoor provenance/branch coverage:\n");
-    printf("  source-backed rows                 %ld\n", stats.outdoor_source_backed_rows);
+    printf("  observation-backed rows            %ld\n",
+           stats.outdoor_observation_backed_rows);
     printf("  fresh rows (< row staleness max)   %ld\n", stats.outdoor_fresh_rows);
     printf("  fresh cold/wet regime rows         %ld\n", stats.outdoor_fresh_cold_wet_rows);
     printf("  fresh below-target rows            %ld\n", stats.outdoor_fresh_wet_demand_rows);
@@ -416,7 +419,7 @@ int main(int argc, char* argv[]) {
     printf("  #410 hold-required rows            %ld\n", stats.mx_hold_required_rows);
 
     const bool corpus_coverage_ok =
-        stats.outdoor_source_backed_rows >= 1000
+        stats.outdoor_observation_backed_rows >= 1000
         && stats.outdoor_fresh_rows >= 1000
         && stats.outdoor_fresh_cold_wet_rows >= 100
         && stats.outdoor_fresh_wet_demand_rows >= 100
@@ -645,7 +648,7 @@ int main(int argc, char* argv[]) {
         printf("  REPLAY FAILED: %ld flag(s) fired while mode=SENSOR_FAULT\n", stats.sensor_fault_fires);
     }
     if (!corpus_coverage_ok) {
-        printf("  REPLAY FAILED: stock corpus lacks required source-backed outdoor branch coverage\n");
+        printf("  REPLAY FAILED: stock corpus lacks required observation-backed outdoor branch coverage\n");
     }
     printf("═══════════════════════════════════════════════════════════════\n");
 

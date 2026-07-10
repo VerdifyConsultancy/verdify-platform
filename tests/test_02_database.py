@@ -170,6 +170,7 @@ class TestEvidenceContractSources:
         for token in (
             "same_timestamp_duplicate_rows",
             "conflicting_timestamp_count",
+            "conflicting_carry_state",
             "start_state_known",
             "open_pulses_at_cutoff",
             "short_cycles_under_5m",
@@ -199,7 +200,13 @@ class TestEvidenceContractSources:
         assert "hold_action_admitted" in source
         assert "daytime_hold_admission" in source
         assert "heat2_forbidden" in source
+        assert "temperature_floor_breach" in source
+        assert "min(temp_f - served_temp_low)" in source
         assert "AND NOT a.heat2_on" not in source
+        assert "relay_evidence_complete" in source
+        assert "r.max_climate_gap_s > 90" in source
+        assert "simultaneous_wetting" in source
+        assert "no_positive_outdoor_ah_advantage" in source
         assert "observed_indoor_ah_delta_10_20m_g_m3" in source
         assert "r.indoor_ah_after_g_m3 - r.indoor_ah_before_g_m3 <= -0.05" in source
         assert "FROM public.setpoint_snapshot" in source
@@ -207,13 +214,16 @@ class TestEvidenceContractSources:
         assert "observed_vpd_delta_10_20m_kpa" in source
         assert "expected_vpd_gain" not in source
 
-    def test_replay_freshness_requires_persisted_source_provenance(self):
+    def test_replay_freshness_requires_persisted_observation_provenance(self):
         source = self.migration(192)
-        assert "outdoor_source_ts" in source
-        assert "ts - outdoor_source_ts" in source
-        assert "conservative_climate_value_change_timestamp" in source
-        assert "outdoor_source_ts IS NOT NULL AS source_backed" in source
-        assert "extract(epoch FROM (ts - outdoor_source_ts)) < 600" in source
+        assert "outdoor_observation_ts" in source
+        assert "ts - outdoor_observation_ts" in source
+        assert "conservative_change_observation" in source
+        assert "outdoor_observation_ts IS NOT NULL AS observation_backed" in source
+        assert "extract(epoch FROM (ts - outdoor_observation_ts)) < 600" in source
+        assert "row_number() OVER" in source
+        assert "WHERE duplicate_rank = 1" in source
+        assert "max(c.outdoor_temp_f)" not in source
 
     def test_schema_snapshot_mirrors_evidence_contracts(self):
         schema = (REPO_ROOT / "db" / "schema.sql").read_text()
@@ -222,7 +232,7 @@ class TestEvidenceContractSources:
             "is_deploy_gate_eligible",
             "fn_realized_solar_night_dryout",
             "v_replay_outdoor_freshness",
-            "conservative_climate_value_change_timestamp",
+            "conservative_change_observation",
         ):
             assert token in schema
 
