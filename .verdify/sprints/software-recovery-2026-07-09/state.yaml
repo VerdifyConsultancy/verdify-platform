@@ -1,7 +1,7 @@
 sprint_id: software-recovery-2026-07-09
-state: EXECUTING
-phase: wave-2-ready
-updated_at: "2026-07-10T12:21:20Z"
+state: AWAITING_OUTCOME_ACCEPTANCE
+phase: post-release-observation
+updated_at: "2026-07-10T23:21:06Z"
 repository:
   url: https://github.com/VerdifyConsultancy/verdify-platform
   local_path: /Users/jason/repos/verdify-worktrees/software-recovery-20260709
@@ -25,11 +25,10 @@ baseline:
   production_write_path: GitHub CI, prod-promote, ArgoCD manual sync
   ota_path: laptop operator path available; credential values remain external to repository and logs
 known_gates:
-  - Scoped production DB credential rotation is authorized but must complete every caller, backup, SOPS-authority, new-valid, old-invalid, and rollback hard stop before release.
-  - The open critical planner_required_plan_missed alert must be repaired and resolved before firmware OTA preflight can pass.
-  - Firmware changes must pass unit tests, invariants, replay, compile, weekly-OTA, and 48-hour bake checks.
-  - Schema or migration changes must be serialized and rollback-classified.
+  - The 48-hour firmware bake completes after 2026-07-12 15:03 MDT; the candidate must not replace last-good.ota.bin before it passes.
+  - Night dehumidification is enabled but requires an overnight humidity and dew-margin outcome review.
+  - The lab publisher remains suspended pending issue #454 because its internal retries create unsafe database pressure.
 next_actions:
-  - Dispatch dli-availability from authoritative current main; migration 195 is available after merged resource-accounting migrations 193-194.
-  - Route the immutable DLI lane head through a fresh contract-specific critic and required GitHub CI.
-  - Execute the authorized credential-rotation runbook without widening worker production-read-only boundaries.
+  - Run and record the overnight dry-out review after the first complete post-OTA night.
+  - Run and record the 48-hour firmware bake after 2026-07-12 15:03 MDT; promote the candidate to last-good only if it passes.
+  - Keep the lab publisher suspended until issue #454 supplies a bounded retry/concurrency fix and controlled acceptance.

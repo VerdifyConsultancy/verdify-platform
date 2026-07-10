@@ -1,7 +1,7 @@
 sprint_id: software-recovery-2026-07-09
 lane_id: security-hygiene
 state: COMPLETE
-updated_at: "2026-07-10T13:09:56Z"
+updated_at: "2026-07-10T23:21:06Z"
 head_sha: ed64e7d5fa37ad51407be9f9aca7bd23b1f4b43c
 working_tree_clean: true
 acceptance:
@@ -14,6 +14,4 @@ acceptance:
   failed: []
 blockers: []
 decisions_requested: []
-next_actions:
-  - Close issue #438 with the immutable closeout and critic references.
-  - Release control consumes this completed credential-rotation gate; no further security-lane production action remains.
+next_actions: []

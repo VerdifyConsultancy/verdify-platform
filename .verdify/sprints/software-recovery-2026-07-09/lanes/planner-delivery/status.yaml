@@ -1,7 +1,7 @@
 sprint_id: software-recovery-2026-07-09
 lane_id: planner-delivery
-state: READY_FOR_INTEGRATION
-updated_at: "2026-07-10T16:44:00Z"
+state: COMPLETE
+updated_at: "2026-07-10T23:21:06Z"
 head_sha: 8147aa3df104a6893c380818945f0382484dbb48
 working_tree_clean: true
 acceptance:
@@ -15,6 +15,4 @@ acceptance:
   failed: []
 blockers: []
 decisions_requested: []
-next_actions:
-  - Controller records the renewed PASS, marks PR 449 ready, and merges after the record-only head remains green.
-  - Production rollout, alert mutation, and release-control transitions remain blocked until downstream release gates.
+next_actions: []

@@ -1,25 +1,20 @@
 sprint_id: software-recovery-2026-07-09
 lane_id: firmware-control
-state: NOT_STARTED
-updated_at: "2026-07-09T22:11:18Z"
-head_sha: 0a9a19a840be6bae1beba604497d880b3b74b1ef
-working_tree_clean: false
+state: COMPLETE
+updated_at: "2026-07-10T23:21:06Z"
+head_sha: 19532f4e867ec5fe72ce564644c687cce6dbf8eb
+merge_sha: 0c8c3017811e990e44f0aea6d312cdba9e3eee87
+working_tree_clean: true
 acceptance:
-  passed: []
-  pending:
+  passed:
     - LANE-AC-01
     - LANE-AC-02
     - LANE-AC-03
     - LANE-AC-04
     - LANE-AC-05
     - LANE-AC-06
+  pending: []
   failed: []
-blockers:
-  - Awaiting independently accepted and merged evidence-core output.
-  - Awaiting independently accepted and merged device-writer output.
-  - Awaiting independently accepted and merged dli-availability output.
-  - Awaiting independently accepted and merged planner-delivery output.
+blockers: []
 decisions_requested: []
-next_actions:
-  - Controller verifies all hard dependencies and cuts the exclusive firmware branch from current main.
-  - Worker reads the common contract and lane.yaml, then begins orientation.
+next_actions: []

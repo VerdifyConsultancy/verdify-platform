@@ -1,9 +1,9 @@
 # Greenhouse software recovery deployment — 2026-07-10
 
-Status at 15:48 MDT: application rollout and the single authorized firmware
-OTA are complete. Immediate acceptance is green. The 2-hour and 48-hour
-firmware observation gates remain open; do not promote the candidate to
-`last-good.ota.bin` before the 48-hour gate.
+Status at 17:18 MDT: application rollout and the single authorized firmware
+OTA are complete. Immediate acceptance and the 2-hour observation gate are
+green. The 48-hour firmware observation gate remains open; do not promote the
+candidate to `last-good.ota.bin` before that gate.
 
 ## Released artifacts
 
@@ -31,6 +31,9 @@ firmware observation gates remain open; do not promote the candidate to
 - Firmware health sweep: 27 pass, 0 fail, 0 warn at 15:47 MDT; exact version
   readback, 4/4 probes, no Modbus timeouts, and no new deploy-window sensor,
   reboot, push, band, or heap alerts.
+- The 2-hour gate was repeated at 17:18 MDT after 8,104 seconds of continuous
+  firmware uptime: 27 pass, 0 fail, 0 warn; exact version readback, 4/4 probes,
+  no Modbus timeouts, and no new sensor, reboot, push, or band alerts.
 - Since first candidate telemetry: 41 diagnostic samples, zero uptime
   regressions, and maximum sample gap 65 seconds. This is materially different
   from the prior 5–6 minute reconnect concern.
@@ -67,7 +70,6 @@ firmware observation gates remain open; do not promote the candidate to
   three orphaned scorecard backends were narrowly cancelled, and the DB
   recovered without another restart. GitHub issue #454 is the source of truth
   for the remaining publisher retry/concurrency fix and unsuspend acceptance.
-- The firmware 2-hour observation is due after 17:03 MDT on 2026-07-10.
 - The 48-hour bake is due after 15:03 MDT on 2026-07-12. Only after that gate
   passes should the candidate replace the rollback floor.
 - Night dehumidification needs an overnight humidity/dew-margin review; the

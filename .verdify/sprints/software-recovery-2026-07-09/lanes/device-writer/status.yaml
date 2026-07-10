@@ -1,7 +1,7 @@
 sprint_id: software-recovery-2026-07-09
 lane_id: device-writer
-state: READY_FOR_INTEGRATION
-updated_at: "2026-07-10T00:33:04Z"
+state: COMPLETE
+updated_at: "2026-07-10T23:21:06Z"
 head_sha: e4e1c5901d2ce46400df65d9ced516bed25c0eb2
 integrated_validation_sha: a260e4258821fd14d87742180541a9ba196f1525
 controller_contract_sha: 07ad7e756d1caa5eb2c625a88796c999d8222fe8
@@ -12,12 +12,9 @@ acceptance:
     - LANE-AC-02
     - LANE-AC-03
     - LANE-AC-04
-  pending:
     - LANE-AC-05
+  pending: []
   failed: []
-blockers:
-  - LANE-AC-05 requires the controller-owned exact-digest two-hour production window.
+blockers: []
 decisions_requested: []
-next_actions:
-  - Hand PR 442 to integration/release control without self-merging.
-  - Keep LANE-AC-05 pending until post-deployment evidence exists.
+next_actions: []

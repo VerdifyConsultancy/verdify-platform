@@ -1,6 +1,53 @@
 sprint_id: software-recovery-2026-07-09
 scope_id: firmware-control
-revision: 0a9a19a840be6bae1beba604497d880b3b74b1ef
-environment: null
-generated_at: "2026-07-09T22:11:18Z"
-items: []
+revision: 19532f4e867ec5fe72ce564644c687cce6dbf8eb
+environment: verdify-prod
+generated_at: "2026-07-10T23:21:06Z"
+items:
+  - id: FW-EV-001
+    type: CI
+    status: PASS
+    source: GitHub PR 450 required checks
+    command: null
+    timestamp: "2026-07-10T19:02:56Z"
+    revision: 19532f4e867ec5fe72ce564644c687cce6dbf8eb
+    environment: GitHub Actions
+    result: >-
+      Firmware compile, native logic tests, replay, invariants, behavioral
+      replay diff, drift guards, lint, migration safety, single-writer safety,
+      and service-restart hygiene all succeeded before merge.
+    artifact_location: https://github.com/VerdifyConsultancy/verdify-platform/pull/450
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04, LANE-AC-05, LANE-AC-06]
+    limitations: [GitHub CI proves the reviewed artifact and contracts, not the 48-hour runtime outcome.]
+
+  - id: FW-EV-002
+    type: ARTIFACT
+    status: PASS
+    source: reviewed firmware candidate and retained rollback binary
+    command: null
+    timestamp: "2026-07-10T21:03:00Z"
+    revision: 09ee886
+    environment: verdify-prod ESP32
+    result: >-
+      Firmware 2026.7.10.1500.09ee886 was accepted by the device. Candidate
+      SHA-256 is 4c412460b19472c94a1dbb01fa5fb7c629aa05aa3cdde7a6ace5b1b35ecef65d;
+      the previous last-good rollback artifact remains retained and unchanged.
+    artifact_location: docs/handoff/software-recovery-deploy-2026-07-10.md
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04, LANE-AC-05, LANE-AC-06]
+    limitations: [The candidate must not replace last-good.ota.bin before the 48-hour gate passes.]
+
+  - id: FW-EV-003
+    type: RUNTIME_PROBE
+    status: PASS
+    source: two-hour post-OTA sensor health sweep
+    command: EXPECTED_FW_VERSION=2026.7.10.1500.09ee886 make sensor-health SINCE='2 hours'
+    timestamp: "2026-07-10T23:18:39Z"
+    revision: 09ee886
+    environment: verdify-prod
+    result: >-
+      27 pass, 0 fail, 0 warn after 8,104 seconds continuous uptime; exact
+      version, 4/4 probes, no Modbus timeouts, and no new sensor, reboot, push,
+      or band alerts. Four override events were expected vent/mist assist.
+    artifact_location: docs/handoff/software-recovery-deploy-2026-07-10.md
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04, LANE-AC-05]
+    limitations: [The 48-hour reliability and overnight dry-out outcomes remain release-control work.]

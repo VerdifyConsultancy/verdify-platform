@@ -1,6 +1,89 @@
 sprint_id: software-recovery-2026-07-09
 scope_id: release-control
-revision: 0a9a19a840be6bae1beba604497d880b3b74b1ef
+revision: 7de4dbb758defbdb9a35814ead7b6837b245a9bd
 environment: verdify-prod
-generated_at: "2026-07-09T22:11:18Z"
-items: []
+generated_at: "2026-07-10T23:21:06Z"
+items:
+  - id: REL-EV-001
+    type: DEPLOYMENT
+    status: PASS
+    source: production backup, migration, image promotion, and Argo acceptance
+    command: null
+    timestamp: "2026-07-10T21:48:49Z"
+    revision: 7de4dbb758defbdb9a35814ead7b6837b245a9bd
+    environment: verdify-prod
+    result: >-
+      Pre-change backup verdify-db-backup-release-20260710-1904 completed;
+      migrations 186 and 189-196 applied; API, Hermes, ingestor, MCP, and planner
+      reached desired Ready replicas on digest-pinned images; ArgoCD is Healthy.
+    artifact_location: docs/handoff/software-recovery-deploy-2026-07-10.md
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
+    limitations:
+      - The shared Namespace/verdify-prod remains intentionally OutOfSync under Agent Fleet ownership.
+
+  - id: REL-EV-002
+    type: RUNTIME_PROBE
+    status: PASS
+    source: immediate and two-hour firmware/runtime acceptance
+    command: EXPECTED_FW_VERSION=2026.7.10.1500.09ee886 make sensor-health SINCE='2 hours'
+    timestamp: "2026-07-10T23:18:39Z"
+    revision: 09ee886
+    environment: verdify-prod
+    result: >-
+      The exact firmware passed immediate and two-hour acceptance with 27 pass,
+      0 fail, and 0 warn. Center drip and all center fertilizer schedules are
+      disabled, center mist remains climate-only, fertilizer is wall-only,
+      band_track_fraction is zero, and exactly one ingestor holds the writer lease.
+    artifact_location: docs/handoff/software-recovery-deploy-2026-07-10.md
+    acceptance_criteria: [LANE-AC-02, LANE-AC-03, LANE-AC-04]
+    limitations: [The 48-hour settled runtime packet remains pending.]
+
+  - id: REL-EV-003
+    type: RUNTIME_PROBE
+    status: PASS
+    source: public planner and application health
+    command: curl -fsS https://api.verdify.ai/api/v1/public/planner-health
+    timestamp: "2026-07-10T23:18:53Z"
+    revision: 7de4dbb758defbdb9a35814ead7b6837b245a9bd
+    environment: verdify-prod public edge
+    result: >-
+      Planner overall_status is ok with zero required failures, zero overdue
+      deliveries, and an action-completed Peak Stress one-shot plan. Core
+      deployments are fully Ready and public evidence fails soft instead of
+      leaving unbounded database work.
+    artifact_location: docs/handoff/software-recovery-deploy-2026-07-10.md
+    acceptance_criteria: [LANE-AC-03, LANE-AC-04]
+    limitations: []
+
+  - id: REL-EV-004
+    type: OUTCOME
+    status: PENDING
+    source: settled release acceptance
+    command: null
+    timestamp: "2026-07-10T23:21:06Z"
+    revision: 7de4dbb758defbdb9a35814ead7b6837b245a9bd
+    environment: verdify-prod
+    result: >-
+      The first complete post-OTA overnight humidity/dew-margin review and the
+      48-hour firmware/cycling/runtime packet have not occurred yet.
+    artifact_location: docs/handoff/repository-shutdown-reconciliation-2026-07-10.md
+    acceptance_criteria: [LANE-AC-04, LANE-AC-05]
+    limitations:
+      - The 48-hour gate is due after 2026-07-12 15:03 MDT.
+      - Night dehumidification is enabled but its overnight outcome is unproven.
+
+  - id: REL-EV-005
+    type: RUNTIME_PROBE
+    status: WARNING
+    source: guarded lab publisher verification
+    command: null
+    timestamp: "2026-07-10T21:14:07Z"
+    revision: 7de4dbb758defbdb9a35814ead7b6837b245a9bd
+    environment: verdify-prod
+    result: >-
+      The publisher's internal retries produced unsafe database pressure. The
+      controlled run was stopped, orphaned queries were cancelled, and the
+      CronJob is suspended in both Git and production pending issue #454.
+    artifact_location: https://github.com/VerdifyConsultancy/verdify-platform/issues/454
+    acceptance_criteria: [LANE-AC-05]
+    limitations: [Publisher availability is deliberately withheld until the retry/concurrency defect is fixed.]
