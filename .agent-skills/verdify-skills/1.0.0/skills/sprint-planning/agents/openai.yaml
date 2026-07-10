@@ -1,6 +1,0 @@
-interface:
-  display_name: "Verdify Sprint Planning"
-  short_description: "Plan lanes, owners, review, and release"
-  default_prompt: "Use $sprint-planning to plan a bounded sprint from ready GitHub Issues, including lanes, owners, QA milestones, human review, lane contracts, and wave release plan, then stop at plan approval."
-policy:
-  allow_implicit_invocation: true

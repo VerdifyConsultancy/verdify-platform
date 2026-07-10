@@ -1,6 +1,0 @@
-interface:
-  display_name: "Verdify Release Verification"
-  short_description: "Review packets, diagnostics, deploy, and verify"
-  default_prompt: "Use $release-verification for the next durable mode: review inbox, observability diagnostics, integration, deployment verification, or outcome acceptance."
-policy:
-  allow_implicit_invocation: false
