@@ -1,21 +1,26 @@
 sprint_id: software-recovery-2026-07-09
 lane_id: evidence-core
-state: NOT_STARTED
-updated_at: "2026-07-09T22:09:48Z"
-head_sha: 0a9a19a840be6bae1beba604497d880b3b74b1ef
-working_tree_clean: false
+state: READY_FOR_CI
+updated_at: "2026-07-10T02:22:55Z"
+head_sha: ab56cf4556e262472333b1c813a9d4a4d44eee63
+integrated_validation_sha: ab56cf4556e262472333b1c813a9d4a4d44eee63
+controller_contract_sha: d27978a41873fc55a0b0f2abdfa2ec8e4254013f
+working_tree_clean: true
 acceptance:
-  passed: []
-  pending:
+  passed:
     - LANE-AC-01
     - LANE-AC-02
     - LANE-AC-03
     - LANE-AC-04
+  pending: []
   failed: []
 blockers:
-  - The assigned feature worktree does not yet exist and must be created from the approved baseline before dispatch.
+  - GitHub PR CI has not yet run on the replacement head.
+  - Production migration, service restart, and exact runtime proof are controller/release-owned.
+  - Current daytime held-temp admission requires the accepted firmware-control response scope.
 decisions_requested: []
 next_actions:
-  - Create the contracted branch/worktree from the approved baseline.
-  - Reconstruct the lane from the common contract and lane.yaml.
-  - Implement the serialized migration and replay evidence sequence without production application.
+  - Commit and push the durable validation/critic record to pull request 443.
+  - Require all applicable GitHub checks green, then merge pull request 443.
+  - Update issues 293, 389, 410, 419, and 424 with exact evidence and limitations.
+  - Hand migration/restart sequencing to release control and the daytime-hold failure to firmware-control.

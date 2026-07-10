@@ -137,6 +137,18 @@ struct Stats {
     long cross_check_fails[OF_COUNT] = {};
     // Flags that fired while mode was SENSOR_FAULT (should never happen)
     long sensor_fault_fires = 0;
+    // #419 provenance/branch coverage.  These counters are populated only from
+    // the stock CSV's conservative observation/age columns; there is no
+    // force-fresh path and no claim that the Tempest packet timestamp persists.
+    long outdoor_observation_backed_rows = 0;
+    long outdoor_fresh_rows = 0;
+    long outdoor_fresh_cold_wet_rows = 0;
+    long outdoor_fresh_wet_demand_rows = 0;
+    long outdoor_fresh_dry_demand_rows = 0;
+    long mx_vent_dehum_rows = 0;
+    long mx_heat_assist_rows = 0;
+    long mx_vent_humidify_rows = 0;
+    long mx_hold_required_rows = 0;
 };
 
 int main(int argc, char* argv[]) {
@@ -245,6 +257,10 @@ int main(int argc, char* argv[]) {
             get("sp_sw_fsm_controller_enabled"),
             sp.sw_fsm_controller_enabled
         );
+        sp.dehum_vent_hold_enabled = parse_bool(
+            get("sp_dehum_vent_hold_enabled"),
+            sp.dehum_vent_hold_enabled
+        );
         // Production ESPHome hard-forces the unified band-first controller ON
         // before each control tick. Keep override replay aligned by default;
         // set REPLAY_OVERRIDES_FORCE_FSM=0 only for explicit legacy forensics.
@@ -253,6 +269,36 @@ int main(int argc, char* argv[]) {
             sp.sw_fsm_controller_enabled = true;
         }
         validate_setpoints(sp);
+
+        // #419: prove the stock corpus reaches outdoor-aware estimator paths
+        // from conservative persisted change observations.
+        // `outdoor_observation_ts` and the explicit basis are emitted by the
+        // standard exporter; missing provenance never earns coverage even if
+        // an age cell were manually populated.
+        const bool observation_backed = !get("outdoor_observation_ts").empty()
+            && get("outdoor_freshness_basis")
+                == "conservative_change_observation";
+        const bool outdoor_fresh = observation_backed
+            && std::isfinite(in.outdoor_temp_f)
+            && std::isfinite(in.outdoor_rh_pct)
+            && in.outdoor_data_age_s < sp.outdoor_staleness_max_s;
+        if (observation_backed) stats.outdoor_observation_backed_rows++;
+        if (outdoor_fresh) {
+            stats.outdoor_fresh_rows++;
+            if (in.outdoor_temp_f < 50.0f && in.outdoor_rh_pct >= 50.0f)
+                stats.outdoor_fresh_cold_wet_rows++;
+            if (in.vpd_kpa < sp.vpd_target) stats.outdoor_fresh_wet_demand_rows++;
+            if (in.vpd_kpa > sp.vpd_target) stats.outdoor_fresh_dry_demand_rows++;
+
+            const MoistureExchangeEstimate mx = estimate_moisture_exchange(in, sp);
+            switch (mx.action) {
+                case MX_VENT_DEHUM: stats.mx_vent_dehum_rows++; break;
+                case MX_HEAT_ASSIST: stats.mx_heat_assist_rows++; break;
+                case MX_VENT_HUMIDIFY: stats.mx_vent_humidify_rows++; break;
+                case MX_NONE: break;
+            }
+            if (mx.hold_required) stats.mx_hold_required_rows++;
+        }
 
         uint64_t ts_unix = parse_ts_unix(ts);
         uint64_t delta_s = (last_ts_unix > 0 && ts_unix > last_ts_unix)
@@ -359,6 +405,31 @@ int main(int argc, char* argv[]) {
     printf("  Flags firing while mode=SENSOR_FAULT  %ld %s\n",
            stats.sensor_fault_fires,
            stats.sensor_fault_fires == 0 ? "✓" : "✗ BUG — should be 0");
+
+    printf("\n#419 stock-corpus outdoor provenance/branch coverage:\n");
+    printf("  observation-backed rows            %ld\n",
+           stats.outdoor_observation_backed_rows);
+    printf("  fresh rows (< row staleness max)   %ld\n", stats.outdoor_fresh_rows);
+    printf("  fresh cold/wet regime rows         %ld\n", stats.outdoor_fresh_cold_wet_rows);
+    printf("  fresh below-target rows            %ld\n", stats.outdoor_fresh_wet_demand_rows);
+    printf("  fresh above-target rows            %ld\n", stats.outdoor_fresh_dry_demand_rows);
+    printf("  MX_VENT_DEHUM rows                 %ld\n", stats.mx_vent_dehum_rows);
+    printf("  MX_HEAT_ASSIST rows                %ld\n", stats.mx_heat_assist_rows);
+    printf("  MX_VENT_HUMIDIFY rows              %ld\n", stats.mx_vent_humidify_rows);
+    printf("  #410 hold-required rows            %ld\n", stats.mx_hold_required_rows);
+
+    const bool corpus_coverage_ok =
+        stats.outdoor_observation_backed_rows >= 1000
+        && stats.outdoor_fresh_rows >= 1000
+        && stats.outdoor_fresh_cold_wet_rows >= 100
+        && stats.outdoor_fresh_wet_demand_rows >= 100
+        && stats.outdoor_fresh_dry_demand_rows >= 100
+        && stats.mx_vent_dehum_rows > 0
+        && stats.mx_heat_assist_rows > 0
+        && stats.mx_vent_humidify_rows > 0
+        && stats.mx_hold_required_rows > 0;
+    printf("  coverage invariant                 %s\n",
+           corpus_coverage_ok ? "✓ PASS" : "✗ FAIL");
 
     printf("\nTop 10 worst days by total override-minutes:\n");
     std::sort(stats.daily.begin(), stats.daily.end(),
@@ -576,7 +647,10 @@ int main(int argc, char* argv[]) {
     if (stats.sensor_fault_fires > 0) {
         printf("  REPLAY FAILED: %ld flag(s) fired while mode=SENSOR_FAULT\n", stats.sensor_fault_fires);
     }
+    if (!corpus_coverage_ok) {
+        printf("  REPLAY FAILED: stock corpus lacks required observation-backed outdoor branch coverage\n");
+    }
     printf("═══════════════════════════════════════════════════════════════\n");
 
-    return (self_test_failures > 0 || stats.sensor_fault_fires > 0) ? 1 : 0;
+    return (self_test_failures > 0 || stats.sensor_fault_fires > 0 || !corpus_coverage_ok) ? 1 : 0;
 }

@@ -45,7 +45,7 @@ ownership:
     - realized night episodes
     - replay corpus freshness
   owned_paths:
-    - db/migrations/186-device-solar-phase-parity.sql
+    - db/migrations/186-noaa-solar-phase-parity.sql
     - db/migrations/189-*.sql
     - db/migrations/19[0-2]-*.sql
     - db/migrations/tests/test-18[6-9]-*.sql
@@ -142,7 +142,7 @@ validation_commands:
     purpose: Classify every migration before any rollback proof.
     required: true
   - id: EVI-VAL-02
-    command: for file in db/migrations/186-device-solar-phase-parity.sql db/migrations/189-*.sql db/migrations/19[0-2]-*.sql; do python3 scripts/check_migration_rollback_safety.py --rollback-wrap "$file"; done
+    command: for file in db/migrations/186-noaa-solar-phase-parity.sql db/migrations/189-*.sql db/migrations/19[0-2]-*.sql; do python3 scripts/check_migration_rollback_safety.py --rollback-wrap "$file"; done
     purpose: Prove every lane migration is safe for the required outer-rollback test before controller execution.
     required: true
   - id: EVI-VAL-03

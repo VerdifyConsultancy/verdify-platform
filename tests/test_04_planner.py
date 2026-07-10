@@ -117,6 +117,47 @@ class TestPlannerPrompt:
         assert "3.9x" in preamble or "3.9×" in preamble
 
 
+class TestEvidencePipelineSources:
+    """Guard replay provenance and outcome KPI authority in source."""
+
+    def test_exporter_uses_conservative_observation_not_setpoint_age(self):
+        source = (REPO_ROOT / "scripts" / "export-replay-overrides.sh").read_text()
+        assert "outdoor_observation_ts" in source
+        assert "conservative_change_observation" in source
+        assert "WHERE duplicate_rank = 1" in source
+        assert "FROM climate_rows c" in source
+        assert "max(c0.outdoor_temp_f)" not in source
+        assert "sp_dehum_vent_hold_enabled" in source
+        assert "parameter = 'outdoor_temp'" not in source
+        assert "force_fresh" not in source.lower()
+
+    def test_stock_replay_gates_observation_backed_outdoor_branches(self):
+        source = (REPO_ROOT / "firmware" / "test" / "replay_overrides.cpp").read_text()
+        for token in (
+            "outdoor_observation_ts",
+            "conservative_change_observation",
+            "outdoor_observation_backed_rows",
+            "outdoor_fresh_rows",
+            "MX_VENT_DEHUM",
+            "MX_HEAT_ASSIST",
+            "MX_VENT_HUMIDIFY",
+            "mx_hold_required_rows",
+        ):
+            assert token in source
+        assert "outdoor_observation_backed_rows >= 1000" in source
+        assert "outdoor_fresh_rows >= 1000" in source
+
+    def test_outcome_kpi_uses_raw_transitions_and_realized_nights(self):
+        source = (REPO_ROOT / "mcp" / "server.py").read_text()
+        assert "FROM v_equipment_runtime_daily" in source
+        assert "FROM fn_realized_solar_night_dryout" in source
+        assert '"authority": "v_equipment_runtime_daily"' in source
+        assert '"firmware_counter_diagnostics"' in source
+        assert "this is not a completed control fix" in source
+        cycle_mapping = source.split("actuator_cycles = {", 1)[1].split("actuator_runtime =", 1)[0]
+        assert "summary.get" not in cycle_mapping
+
+
 class TestMCPToolAvailability:
     """The MCP server must expose all 17 planning tools."""
 

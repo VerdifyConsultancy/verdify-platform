@@ -450,7 +450,8 @@ async def outcome_kpi(target_date: str = "") -> str:
     """Get ADR-0004 outcome KPIs for a day.
 
     This is the read-only outcome surface for floating-corridor control: served
-    corridor compliance, VPD misses, actuator cycles/runtime, dew margin, water
+    corridor compliance, VPD misses, transition-derived actuator cycles/runtime,
+    dew margin, water
     use, DLI, moisture-estimator decisions, fog/dehum ping-pong sequences,
     heat-dehum episodes, and per-action effectiveness from the daily climate-
     action scorecard. ADR-0004 means these are outcome and resource guardrails,
@@ -467,7 +468,11 @@ async def outcome_kpi(target_date: str = "") -> str:
     and outdoor age, and vpd_policy carries episode counters by estimator
     reason (episodes_by_mx_reason; pre-#385 rows bucket as estimator_absent).
     Migration 187's v_moisture_estimator_telemetry view is the equivalent
-    typed SQL surface. Pass date as YYYY-MM-DD or omit for today."""
+    typed SQL surface.  Raw equipment transitions, not firmware daily counters,
+    are the cycle/runtime authority; the counters remain diagnostic context.
+    Realized solar-night dry-out episodes distinguish effective, ineffective,
+    blocked, and insufficient-evidence outcomes. Pass date as YYYY-MM-DD or
+    omit for today."""
     greenhouse_id = "vallery"
     conn = await _db()
     try:
@@ -537,6 +542,47 @@ async def outcome_kpi(target_date: str = "") -> str:
             greenhouse_id,
         )
         summary = dict(summary_row) if summary_row else {}
+
+        cycle_rows = await conn.fetch(
+            """
+            SELECT equipment,
+                   on_minutes::double precision AS on_minutes,
+                   starts,
+                   cycles_under_1m,
+                   cycles_1m_to_5m,
+                   short_cycles_under_5m,
+                   cycles_5m_to_15m,
+                   cycles_15m_plus,
+                   open_pulses_at_cutoff,
+                   peak_transitions_per_hour,
+                   is_complete_day,
+                   start_state_known,
+                   open_at_end,
+                   is_deploy_gate_eligible,
+                   quality,
+                   quality_flags,
+                   raw_event_rows,
+                   normalized_transition_count,
+                   same_timestamp_duplicate_rows,
+                   redundant_state_rows,
+                   conflicting_timestamp_count
+            FROM v_equipment_runtime_daily
+            WHERE day = $1::date AND greenhouse_id = $2
+            ORDER BY equipment
+            """,
+            d,
+            greenhouse_id,
+        )
+
+        dryout_rows = await conn.fetch(
+            """
+            SELECT *
+            FROM fn_realized_solar_night_dryout($1::date, $1::date, $2)
+            ORDER BY episode_started_at
+            """,
+            d,
+            greenhouse_id,
+        )
 
         action_rows = await conn.fetch(
             """
@@ -1206,9 +1252,148 @@ async def outcome_kpi(target_date: str = "") -> str:
         if vpd_policy:
             vpd_policy["transition_window_min"] = 30
             vpd_policy["episodes_by_mx_reason"] = [dict(row) for row in vpd_policy_reason_rows]
+
+        cycle_by_equipment = {row["equipment"]: dict(row) for row in cycle_rows}
+        actuator_cycles = {
+            equipment: cycle_by_equipment.get(equipment, {}).get("starts")
+            for equipment in (
+                "fan1",
+                "fan2",
+                "heat1",
+                "heat2",
+                "fog",
+                "vent",
+                "mister_south",
+                "mister_west",
+                "mister_center",
+                "drip_wall",
+                "drip_center",
+                "drip_wall_fert",
+                "drip_center_fert",
+                "mister_south_fert",
+                "mister_west_fert",
+                "fert_master_valve",
+                "grow_light_main",
+                "grow_light_grow",
+            )
+        }
+        light_cycle_values = [
+            actuator_cycles[name]
+            for name in ("grow_light_main", "grow_light_grow")
+            if actuator_cycles[name] is not None
+        ]
+        actuator_cycles["grow_light"] = sum(light_cycle_values) if light_cycle_values else None
+
+        actuator_runtime = {
+            f"{equipment}_min": cycle_by_equipment.get(equipment, {}).get("on_minutes")
+            for equipment in actuator_cycles
+            if equipment != "grow_light"
+        }
+        light_runtime_values = [
+            actuator_runtime[f"{name}_min"]
+            for name in ("grow_light_main", "grow_light_grow")
+            if actuator_runtime[f"{name}_min"] is not None
+        ]
+        actuator_runtime["grow_light_min"] = sum(light_runtime_values) if light_runtime_values else None
+        for mister in ("mister_south", "mister_west", "mister_center"):
+            minutes = actuator_runtime[f"{mister}_min"]
+            actuator_runtime[f"{mister}_h"] = round(minutes / 60.0, 3) if minutes is not None else None
+
+        dryout = [dict(row) for row in dryout_rows]
+        cycle_quality = [
+            {
+                key: row[key]
+                for key in (
+                    "equipment",
+                    "is_complete_day",
+                    "start_state_known",
+                    "open_at_end",
+                    "is_deploy_gate_eligible",
+                    "quality",
+                    "quality_flags",
+                    "cycles_under_1m",
+                    "cycles_1m_to_5m",
+                    "short_cycles_under_5m",
+                    "cycles_5m_to_15m",
+                    "cycles_15m_plus",
+                    "open_pulses_at_cutoff",
+                    "peak_transitions_per_hour",
+                    "raw_event_rows",
+                    "normalized_transition_count",
+                    "same_timestamp_duplicate_rows",
+                    "redundant_state_rows",
+                    "conflicting_timestamp_count",
+                )
+            }
+            for row in cycle_rows
+        ]
+        firmware_counter_diagnostics = {
+            "semantics": (
+                "Legacy firmware daily counters are diagnostic only; release "
+                "comparisons use v_equipment_runtime_daily raw transitions."
+            ),
+            "cycles": {key.removeprefix("cycles_"): summary.get(key) for key in summary if key.startswith("cycles_")},
+            "runtime": {
+                key.removeprefix("runtime_"): summary.get(key) for key in summary if key.startswith("runtime_")
+            },
+        }
+        vpd_policy["cycle_source"] = {
+            "authority": "v_equipment_runtime_daily",
+            "semantics": "raw equipment_state transition derivation",
+            "all_rows_deploy_gate_eligible": bool(cycle_rows)
+            and all(row["is_deploy_gate_eligible"] for row in cycle_rows),
+            "equipment": cycle_quality,
+        }
+        vpd_policy["firmware_counter_diagnostics"] = firmware_counter_diagnostics
+        vpd_policy["realized_solar_night_dryout"] = {
+            "semantics": (
+                "Measured solar-night demand and relay truth; projected planner "
+                "intent is never labeled as realized outcome."
+            ),
+            "episodes": dryout,
+            "dispositions": {
+                disposition: sum(row["dryout_disposition"] == disposition for row in dryout)
+                for disposition in (
+                    "effective",
+                    "ineffective",
+                    "blocked",
+                    "insufficient_evidence",
+                )
+            },
+            # The bounded SQL function repeats adjacent-day counts on each night
+            # episode, so take maxima rather than multiplying by episode count.
+            # General daytime VPD dehum remains visible and allowed; only an
+            # admitted held-temp flavor fails the solar-night safety gate.
+            "daytime_dry_action_samples": max(
+                (row["daytime_dry_action_samples"] or 0 for row in dryout),
+                default=0,
+            ),
+            "daytime_hold_admission_samples": max(
+                (row["daytime_hold_admission_samples"] or 0 for row in dryout),
+                default=0,
+            ),
+            "safety_gate_status": (
+                "pending"
+                if not dryout
+                else ("fail" if any(row["safety_gate_status"] == "fail" for row in dryout) else "pass")
+            ),
+        }
         pending_metrics = []
         if not moisture_sample_count:
             pending_metrics.append("moisture_estimator: source path wired; waiting for OTA/deploy/live rows")
+        if not cycle_rows:
+            pending_metrics.append("actuator_cycles_runtime: no transition-derived rows for date")
+        elif any(not row["is_deploy_gate_eligible"] for row in cycle_rows):
+            pending_metrics.append(
+                "actuator_cycles_runtime: transition evidence is partial or quarantined; not deploy-gate eligible"
+            )
+        if not dryout:
+            pending_metrics.append("solar_night_dryout: no eligible opportunity or admitted-action episodes for date")
+        elif any(row["dryout_disposition"] != "effective" for row in dryout):
+            pending_metrics.append(
+                "solar_night_dryout: ineffective, blocked, or insufficient-evidence "
+                "episodes remain unresolved; this is not a completed control fix"
+            )
         try:
             actions = [OutcomeKpiActionRow.model_validate(dict(row)) for row in action_rows]
             response = OutcomeKpiResponse(
@@ -1218,7 +1403,14 @@ async def outcome_kpi(target_date: str = "") -> str:
                     "ADR-0004 outcome view: float inside the crop corridor, act at "
                     "edges, and use resource cost/wear as first-class guardrails."
                 ),
-                coverage=OutcomeKpiCoverage(moisture_estimator="available" if moisture_sample_count else "pending"),
+                coverage=OutcomeKpiCoverage(
+                    actuator_cycles_runtime=(
+                        "available"
+                        if cycle_rows and all(row["is_deploy_gate_eligible"] for row in cycle_rows)
+                        else "pending"
+                    ),
+                    moisture_estimator="available" if moisture_sample_count else "pending",
+                ),
                 served_corridor={
                     "attributable_pct": summary.get("compliance_v2_attributable_pct"),
                     "raw_pct": summary.get("compliance_v2_raw_pct"),
@@ -1250,32 +1442,8 @@ async def outcome_kpi(target_date: str = "") -> str:
                     "graded_high_stress_h": summary.get("graded_stress_hours_vpd_high"),
                     "graded_low_stress_h": summary.get("graded_stress_hours_vpd_low"),
                 },
-                actuator_cycles={
-                    "fan1": summary.get("cycles_fan1"),
-                    "fan2": summary.get("cycles_fan2"),
-                    "heat1": summary.get("cycles_heat1"),
-                    "heat2": summary.get("cycles_heat2"),
-                    "fog": summary.get("cycles_fog"),
-                    "vent": summary.get("cycles_vent"),
-                    "dehum": summary.get("cycles_dehum"),
-                    "safety_dehum": summary.get("cycles_safety_dehum"),
-                    "mister_south": summary.get("cycles_mister_south"),
-                    "mister_west": summary.get("cycles_mister_west"),
-                    "mister_center": summary.get("cycles_mister_center"),
-                    "grow_light": summary.get("cycles_grow_light"),
-                },
-                actuator_runtime={
-                    "fan1_min": summary.get("runtime_fan1_min"),
-                    "fan2_min": summary.get("runtime_fan2_min"),
-                    "heat1_min": summary.get("runtime_heat1_min"),
-                    "heat2_min": summary.get("runtime_heat2_min"),
-                    "fog_min": summary.get("runtime_fog_min"),
-                    "vent_min": summary.get("runtime_vent_min"),
-                    "mister_south_h": summary.get("runtime_mister_south_h"),
-                    "mister_west_h": summary.get("runtime_mister_west_h"),
-                    "mister_center_h": summary.get("runtime_mister_center_h"),
-                    "grow_light_min": summary.get("runtime_grow_light_min"),
-                },
+                actuator_cycles=actuator_cycles,
+                actuator_runtime=actuator_runtime,
                 water_use_gal={
                     "total": summary.get("water_used_gal"),
                     "mister": summary.get("mister_water_gal"),
@@ -1309,6 +1477,8 @@ async def outcome_kpi(target_date: str = "") -> str:
                 pending_metrics=pending_metrics,
                 source_tables=[
                     "daily_summary",
+                    "v_equipment_runtime_daily",
+                    "fn_realized_solar_night_dryout",
                     "v_climate_action_daily_scorecard",
                     "climate",
                     "climate_action_log",

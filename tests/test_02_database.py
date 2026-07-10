@@ -2,7 +2,11 @@
 Test 02: Database — Schema integrity, views, functions, data freshness.
 """
 
+from pathlib import Path
+
 from conftest import db_query, db_query_rows
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 class TestSchemaIntegrity:
@@ -76,6 +80,9 @@ class TestSchemaIntegrity:
         "v_climate_action_effectiveness_5m",
         "v_climate_action_effectiveness_15m",
         "v_climate_action_daily_scorecard",
+        "v_equipment_runtime_daily",
+        "v_realized_solar_night_dryout",
+        "v_replay_outdoor_freshness",
     ]
 
     REQUIRED_FUNCTIONS = [
@@ -96,6 +103,8 @@ class TestSchemaIntegrity:
         "fn_lighting_timeline",
         "fn_lighting_lux_threshold_recommendation",
         "fn_climate_action_effectiveness",
+        "fn_absolute_humidity_g_m3",
+        "fn_realized_solar_night_dryout",
     ]
 
     def test_tables_exist(self):
@@ -127,6 +136,105 @@ class TestSchemaIntegrity:
         rows = db_query_rows("SELECT hypertable_name FROM timescaledb_information.hypertables ORDER BY hypertable_name")
         for ht in ["climate", "equipment_state", "system_state", "weather_forecast"]:
             assert ht in rows, f"Hypertable {ht} missing"
+
+
+class TestEvidenceContractSources:
+    """Static guards for the serialized #293/#389/#410/#419/#424 contract."""
+
+    @staticmethod
+    def migration(number: int) -> str:
+        matches = sorted((REPO_ROOT / "db" / "migrations").glob(f"{number}-*.sql"))
+        assert len(matches) == 1, f"expected one migration {number}, found {matches}"
+        return matches[0].read_text()
+
+    def test_migration_sequence_is_reserved_and_unambiguous(self):
+        expected = {
+            189: "189-served-vpd-divergence-parity.sql",
+            190: "190-transition-derived-equipment-runtime.sql",
+            191: "191-realized-solar-night-dryout-episodes.sql",
+            192: "192-replay-outdoor-freshness-provenance.sql",
+        }
+        for number, filename in expected.items():
+            matches = sorted((REPO_ROOT / "db" / "migrations").glob(f"{number}-*.sql"))
+            assert [path.name for path in matches] == [filename]
+
+    def test_divergence_compares_vpd_to_the_served_control_envelope(self):
+        source = self.migration(189)
+        assert "FROM public.fn_house_vpd_control_band(now())" in source
+        assert "FROM public.fn_band_setpoints(now())" in source
+        assert "dev.vpd_low - db.vpd_low" in source
+        assert "dev_tgt.vpd_target - db.vpd_target" in source
+
+    def test_cycle_truth_is_raw_transition_derived_and_quality_gated(self):
+        source = self.migration(190)
+        for token in (
+            "same_timestamp_duplicate_rows",
+            "conflicting_timestamp_count",
+            "conflicting_carry_state",
+            "start_state_known",
+            "open_pulses_at_cutoff",
+            "short_cycles_under_5m",
+            "peak_transitions_per_hour",
+            "grow_light_main",
+            "grow_light_grow",
+            "is_deploy_gate_eligible",
+        ):
+            assert token in source
+        assert "FROM public.equipment_state" in source
+        assert "daily_summary" not in source
+
+    def test_dryout_surface_is_realized_solar_night_evidence(self):
+        source = self.migration(191)
+        for disposition in (
+            "'effective'",
+            "'ineffective'",
+            "'blocked'",
+            "'insufficient_evidence'",
+        ):
+            assert disposition in source
+        assert "WHERE is_solar_night" in source
+        assert "solar_phase < 2.0" in source
+        assert "relay_truth" in source
+        assert "classified_action_rows" in source
+        assert "bool_or(dry_action_admitted)" in source
+        assert "hold_action_admitted" in source
+        assert "daytime_hold_admission" in source
+        assert "heat2_forbidden" in source
+        assert "temperature_floor_breach" in source
+        assert "min(temp_f - served_temp_low)" in source
+        assert "AND NOT a.heat2_on" not in source
+        assert "relay_evidence_complete" in source
+        assert "r.max_climate_gap_s > 90" in source
+        assert "simultaneous_wetting" in source
+        assert "no_positive_outdoor_ah_advantage" in source
+        assert "observed_indoor_ah_delta_10_20m_g_m3" in source
+        assert "r.indoor_ah_after_g_m3 - r.indoor_ah_before_g_m3 <= -0.05" in source
+        assert "FROM public.setpoint_snapshot" in source
+        assert "COALESCE(vpd_readback.value, h.house_vpd_low)" in source
+        assert "observed_vpd_delta_10_20m_kpa" in source
+        assert "expected_vpd_gain" not in source
+
+    def test_replay_freshness_requires_persisted_observation_provenance(self):
+        source = self.migration(192)
+        assert "outdoor_observation_ts" in source
+        assert "ts - outdoor_observation_ts" in source
+        assert "conservative_change_observation" in source
+        assert "outdoor_observation_ts IS NOT NULL AS observation_backed" in source
+        assert "extract(epoch FROM (ts - outdoor_observation_ts)) < 600" in source
+        assert "row_number() OVER" in source
+        assert "WHERE duplicate_rank = 1" in source
+        assert "max(c.outdoor_temp_f)" not in source
+
+    def test_schema_snapshot_mirrors_evidence_contracts(self):
+        schema = (REPO_ROOT / "db" / "schema.sql").read_text()
+        for token in (
+            "fn_house_vpd_control_band(now())",
+            "is_deploy_gate_eligible",
+            "fn_realized_solar_night_dryout",
+            "v_replay_outdoor_freshness",
+            "conservative_change_observation",
+        ):
+            assert token in schema
 
 
 class TestDataFreshness:
