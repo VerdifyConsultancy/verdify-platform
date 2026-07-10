@@ -10,6 +10,8 @@ history. It complements the production release record in
 - Repository: `VerdifyConsultancy/verdify-platform`.
 - Canonical branch: `main`.
 - Audit-start revision: `7de4dbb758defbdb9a35814ead7b6837b245a9bd`.
+- Recovery/status reconciliation revision:
+  `8965f017bb0d1f83c1cc51d40b62712217bfca0f`.
 - Canonical clean worktree:
   `/Users/jason/repos/verdify-worktrees/storage-migration-main`.
 - Production release: application rollout and firmware OTA are complete; the
@@ -32,13 +34,13 @@ history. It complements the production release record in
 
 ## Worktree and branch disposition
 
-The audit found 24 linked worktrees. Twenty-three were content-clean. The only
-dirty checkout was `/Users/jason/repos/verdify-platform` on
-`vanda-eyes-brain-climate-2026-07-03`; its 301 deletions are the lifecycle-skill
-removal already merged to `main` by PR #453. Those deletions are to be committed
-and pushed on that archived branch so the checkout is clean without discarding
-data. They do not need another merge to `main` because their content is already
-canonical there.
+The audit found 24 linked worktrees. The only initially dirty checkout was
+`/Users/jason/repos/verdify-platform` on
+`vanda-eyes-brain-climate-2026-07-03`; its 301 deletions exactly matched the
+lifecycle-skill removal already merged to `main` by PR #453. They were committed
+as `db724e072f30a88148512052cc2a1b46c04ed3aa` and pushed on that archived
+branch. They do not need another merge to `main` because their content is
+already canonical there. The final audit found all 24 worktrees clean.
 
 Three old clean topic heads are patch-equivalent to `main` and contain no
 unpublished work:
@@ -49,6 +51,31 @@ unpublished work:
 
 All other clean recovery, critic, and temporary worktree heads were ancestors
 of `main` at audit time.
+
+Sixteen exact historical local tips were no longer reachable from any remote
+ref after their original PR branches were deleted or squash-merged. To preserve
+commit identity without reopening or merging stale work, they were pushed under
+`origin/archive/shutdown-2026-07-10/`:
+
+- `chore/sprint-replan-lanes`
+- `chore/uninstall-verdify-skills`
+- `codex/adr0004-solar-kpi-deploy-gate`
+- `data-327-cfg-readback-410`
+- `data-327-moisture-telemetry`
+- `data-420-flag-registry`
+- `db-411-night-anchors`
+- `docs-413-freeze-drift`
+- `firmware/heap-pressure-restart-and-diag-throttle`
+- `fix/ingestor-emptydir-patch-order`
+- `fw-410-vent-reheat-hold`
+- `ingestor/tier1-band-reconnect-delta-push`
+- `lane/climate-floating-corridor`
+- `lane/mister-dwell-ota`
+- `lane/standardize-fleet-shape`
+- `sprint-s8-vanda-night-dehum`
+
+These are archive refs, not release candidates. Current `main`, the issue
+tracker, and the dispositions in this document remain authoritative.
 
 ### Closed Vanda/vision branch
 
@@ -94,14 +121,17 @@ the work without reintroducing rejected greenhouse behavior.
 
 ## Final shutdown audit
 
-Before declaring shutdown-ready, verify and record all of the following:
+The final audit records:
 
-- every linked worktree has an empty `git status --porcelain`;
-- canonical `main` equals `origin/main` after the reconciliation commit;
-- the archived Vanda branch, including the lifecycle-removal reconciliation,
-  is pushed;
+- `24/24` linked worktrees have an empty `git status --porcelain`;
+- canonical `main` equals `origin/main` after each reconciliation push;
+- the Vanda branch is pushed through
+  `db724e072f30a88148512052cc2a1b46c04ed3aa`;
 - no open pull request remains;
-- required checks on the final `main` revision are successful;
-- no unique local commit lacks either a merge to `main` or an explicit durable
-  remote archive/disposition above.
+- every local branch tip not contained by `main` is reachable from an origin
+  ref, including the 16 explicit archive refs above;
+- no unique local commit lacks either a merge to `main` or a durable remote
+  archive/disposition.
 
+After required checks on the final documentation revision pass, the immutable
+tag `shutdown-ready-2026-07-10` identifies the exact verified `main` revision.
