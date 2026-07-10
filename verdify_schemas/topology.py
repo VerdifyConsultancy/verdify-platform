@@ -22,7 +22,7 @@ from __future__ import annotations
 from datetime import date as DateType
 from typing import Annotated, Literal
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, model_validator
 
 from .telemetry import EquipmentId as EquipmentSlug  # Literal of known equipment slugs
 
@@ -113,6 +113,11 @@ EquipmentKind = Literal[
     "controller",
     "camera",
 ]
+
+EquipmentAliasKind = Literal["telemetry", "legacy_catalog", "display"]
+ResourceKind = Literal["electric_watts", "gas_btu_per_hour", "water_gpm"]
+ResourceCoefficientSource = Literal["nameplate", "operator", "meter_fit", "measured", "unknown"]
+ResourceUnit = Literal["W", "BTU/h", "gal/min"]
 
 SwitchBoard = Literal["pcf_out_1", "pcf_out_2", "pcf_in", "gpio"]
 
@@ -375,6 +380,57 @@ class EquipmentCreate(BaseModel):
     specs: dict = Field(default_factory=dict)
     install_date: DateType | None = None
     notes: str | None = None
+
+
+class EquipmentAlias(BaseModel):
+    """One explicit historical/telemetry alias into canonical equipment."""
+
+    model_config = ConfigDict(extra="ignore", str_strip_whitespace=True)
+
+    id: int | None = None
+    greenhouse_id: GreenhouseId
+    alias_slug: Annotated[str, Field(pattern=_SLUG_PATTERN, min_length=1, max_length=64)]
+    equipment_id: int
+    alias_kind: EquipmentAliasKind = "telemetry"
+    source: str = Field(..., min_length=1, max_length=200)
+    evidence_ref: str = Field(..., min_length=1, max_length=500)
+    valid_from: AwareDatetime
+    valid_to: AwareDatetime | None = None
+
+    @model_validator(mode="after")
+    def validate_interval(self) -> EquipmentAlias:
+        if self.valid_to is not None and self.valid_to <= self.valid_from:
+            raise ValueError("valid_to must be later than valid_from")
+        return self
+
+
+class ResourceCoefficient(BaseModel):
+    """Revisioned resource coefficient with machine-readable uncertainty."""
+
+    model_config = ConfigDict(extra="ignore", str_strip_whitespace=True)
+
+    id: int | None = None
+    equipment_id: int
+    resource_kind: ResourceKind
+    unit: ResourceUnit
+    nominal_value: float = Field(..., ge=0)
+    lower_bound: float = Field(..., ge=0)
+    upper_bound: float = Field(..., ge=0)
+    coefficient_source: ResourceCoefficientSource
+    revision: str = Field(..., min_length=1, max_length=200)
+    evidence_ref: str = Field(..., min_length=1, max_length=500)
+    valid_from: AwareDatetime
+    valid_to: AwareDatetime | None = None
+    is_model_default: bool = False
+    notes: str | None = None
+
+    @model_validator(mode="after")
+    def validate_bounds_and_interval(self) -> ResourceCoefficient:
+        if not self.lower_bound <= self.nominal_value <= self.upper_bound:
+            raise ValueError("coefficient bounds must contain nominal_value")
+        if self.valid_to is not None and self.valid_to <= self.valid_from:
+            raise ValueError("valid_to must be later than valid_from")
+        return self
 
 
 # ── Switch (relay pin assignment) ──────────────────────────────────

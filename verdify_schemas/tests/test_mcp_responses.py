@@ -42,6 +42,8 @@ class TestClimateSnapshot:
 class TestScorecard:
     FULL_METRICS = {
         "planner_score": Decimal("72.5"),
+        "planner_score_resource_weight_pct": Decimal("20"),
+        "resource_terms_available": Decimal("1"),
         "compliance_pct": Decimal("88.0"),
         "temp_compliance_pct": Decimal("92.0"),
         "vpd_compliance_pct": Decimal("85.0"),
@@ -69,11 +71,13 @@ class TestScorecard:
     }
 
     def test_full_day_roundtrip(self):
-        """All 25 metrics present — Decimal inputs coerce to float; by-alias wire format preserved."""
+        """All canonical metrics round-trip with resource-score scope intact."""
         rows = [{"metric": m, "value": v} for m, v in self.FULL_METRICS.items()]
         s = ScorecardResponse.from_metric_rows(rows)
         assert s.planner_score == 72.5
         assert s.cost_total == 6.41
+        assert s.planner_score_resource_weight_pct == 20
+        assert s.resource_terms_available == 1
         # Alias field read via Python identifier
         assert s.avg_score_7d == 68.3
         # Wire format preserves the `7d_*` keys
@@ -108,8 +112,8 @@ class TestScorecard:
 
     def test_metric_names_exposes_all_dialect_metrics(self):
         """Schema is a superset of both DB dialects:
-        - Live deployed fn_planner_scorecard emits 25 metrics.
-        - Migration-076/077-era (what CI's db/schema.sql serves) emits 27 —
+        - The resource-aware function emits two explicit score-scope metrics.
+        - Migration-076/077-era emitted 27 metrics —
           the deployed function dropped `7d_avg_stress` + `7d_avg_dp_risk`.
         Schema covers both until G15 resyncs migrations with live.
 
@@ -119,11 +123,13 @@ class TestScorecard:
         4 graded_*_stress_h — accepted BEFORE fn_planner_scorecard emits them so
         the extra='forbid' contract cannot 500 the public /api/v1/scorecard."""
         names = ScorecardResponse.metric_names()
-        assert len(names) == 27 + 9
+        assert len(names) == 27 + 9 + 2
         assert "planner_score" in names
         assert "7d_avg_score" in names
         assert "7d_avg_stress" in names  # CI-only until G15
         assert "7d_avg_dp_risk" in names  # CI-only until G15
+        assert "planner_score_resource_weight_pct" in names
+        assert "resource_terms_available" in names
         # Graded compliance metrics (schema-first, migration 146/147).
         assert "compliance_v2_attributable_pct" in names
         assert "graded_vpd_high_stress_h" in names

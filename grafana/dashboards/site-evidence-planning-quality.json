@@ -2887,7 +2887,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT (date + time '12:00')::timestamptz AS time, water_used_gal AS \"Water Used (gal)\" FROM daily_summary WHERE date >= current_date - interval '30 days' ORDER BY date",
+          "rawSql": "SELECT (date + time '12:00')::timestamptz AS time, water_gal AS \"Water Used (gal)\" FROM v_daily_kpi WHERE date >= current_date - interval '30 days' AND resource_terms_available ORDER BY date",
           "editorMode": "code"
         },
         {
@@ -2898,7 +2898,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT (date + time '12:00')::timestamptz AS time, mister_water_gal AS \"Mister Water (gal)\" FROM daily_summary WHERE date >= current_date - interval '30 days' ORDER BY date",
+          "rawSql": "SELECT (date + time '12:00')::timestamptz AS time, mister_water_gal AS \"Mister Water (gal)\" FROM v_daily_kpi WHERE date >= current_date - interval '30 days' AND resource_terms_available ORDER BY date",
           "editorMode": "code"
         },
         {
@@ -2909,7 +2909,7 @@
           },
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT (date + time '12:00')::timestamptz AS time, (runtime_mister_south_h + runtime_mister_west_h + runtime_mister_center_h) * 10 AS \"Mister Runtime h x10\" FROM daily_summary WHERE date >= current_date - interval '30 days' ORDER BY date",
+          "rawSql": "SELECT (day::date + time '12:00')::timestamptz AS time, SUM(on_minutes)/6.0 AS \"Mister Runtime h x10\" FROM v_equipment_runtime_daily WHERE day::date >= current_date - interval '30 days' AND equipment IN ('mister_south','mister_west','mister_center') AND is_deploy_gate_eligible GROUP BY day ORDER BY day",
           "editorMode": "code"
         }
       ],

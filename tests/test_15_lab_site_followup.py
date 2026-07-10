@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import re
@@ -119,21 +120,21 @@ def test_homepage_lighting_state_is_on_only_policy_placed_fill():
     solar_sql = next(target["rawSql"] for target in lighting["targets"] if target.get("refId") == "A")
     state_sql = next(target["rawSql"] for target in lighting["targets"] if target.get("refId") == "B")
 
-    assert lighting["title"] == "Lighting: Overhead vs Grow Circuit — Lux & Switch State"
+    assert lighting["title"] == "Lighting: Lux, Thresholds & Switch State"
     assert "Solar Forecast" in solar_sql
     assert "Threshold" not in solar_sql
     assert "fn_lighting_circuit_policy" not in solar_sql
-    assert "fn_lighting_circuit_policy" in state_sql
-    assert "setpoint_snapshot" not in state_sql
-    assert "max(p.lux_on_threshold) FILTER (WHERE p.light_key='main')" in state_sql
-    assert "max(p.lux_on_threshold) FILTER (WHERE p.light_key='grow')" in state_sql
+    assert "setpoint_snapshot" in state_sql
+    assert "setpoint_changes" in state_sql
+    assert "gl_main_lux_threshold" in state_sql
+    assert "gl_grow_lux_threshold" in state_sql
     assert ") THEN m.value_when_on ELSE NULL::double precision END AS value" in state_sql
     assert "Base" not in state_sql
-    assert "fillBelowTo" not in _override_props(lighting, "Overhead Light")
-    assert "fillBelowTo" not in _override_props(lighting, "Grow Light")
-    for label in ("Overhead Threshold Base", "Overhead Threshold", "Grow Threshold Base", "Grow Threshold"):
+    assert "fillBelowTo" not in _override_props(lighting, "Main Light On")
+    assert "fillBelowTo" not in _override_props(lighting, "Grow Light On")
+    for label in ("Main Light Threshold Base", "Grow Light Threshold Base"):
         assert not _override_props(lighting, label)
-    for label in ("Overhead Light", "Grow Light"):
+    for label in ("Main Light On", "Grow Light On"):
         props = _override_props(lighting, label)
         assert props["custom.lineWidth"] == 0
         assert props["custom.fillOpacity"] == 90
@@ -230,6 +231,110 @@ def test_site_grafana_k3s_configmaps_match_source_dashboards():
             source = next((root / name for root in source_roots if (root / name).exists()), None)
             assert source is not None, f"{cm_path.name} data key {name} has no source dashboard"
             assert json.loads(raw) == json.loads(source.read_text(encoding="utf-8"))
+
+
+def test_resource_dashboards_label_scope_quality_and_no_legacy_catalog():
+    climate = _dashboard("grafana/dashboards/site-climate.json")
+    water = _dashboard("grafana/dashboards/site-climate-water.json")
+    equipment = _dashboard("grafana/dashboards/site-greenhouse-equipment.json")
+
+    climate_text = json.dumps(climate)
+    water_text = json.dumps(water)
+    equipment_text = json.dumps(equipment)
+
+    assert "equipment_assets" not in climate_text
+    assert "Runtime-Modeled" in climate_text
+    assert "coefficient_revision" in climate_text
+    assert "Modeled kWh low" in climate_text
+    assert "partial Shelly" in climate_text
+    assert "v_daily_kpi" in climate_text
+    assert "resource_terms_available" in climate_text
+    assert "AVG(cost_total)::numeric, 2) AS v FROM daily_summary" not in climate_text
+    assert "AVG(cost_total)::numeric, 2) AS v FROM v_daily_kpi" in climate_text
+
+    assert "v_water_attribution_daily" in water_text
+    assert "Meter-Conserving Water Attribution" in water_text
+    assert "Ambiguous overlap" in water_text
+    assert "Manual / unattributed" in water_text
+    assert "command-only relay runs are never gallons" in water_text
+    assert "COALESCE(SUM(quality_filtered_meter_gal), 0)" not in water_text
+    assert water_text.count("available_for_scoring") >= 4
+
+    assert "Wet-relay runtime is never delivered gallons" in equipment_text
+    assert "partial Shelly measurement" in equipment_text
+
+
+def test_resource_dashboards_never_promote_legacy_daily_summary_scalars():
+    legacy_resource_terms = (
+        "runtime_",
+        "cost_",
+        "kwh",
+        "therm",
+        "water_used_gal",
+        "mister_water_gal",
+    )
+
+    for path in _site_dashboard_paths():
+        dashboard = json.loads(path.read_text(encoding="utf-8"))
+        nodes = [dashboard]
+        while nodes:
+            node = nodes.pop()
+            if isinstance(node, dict):
+                raw_sql = node.get("rawSql")
+                if isinstance(raw_sql, str) and "daily_summary" in raw_sql:
+                    assert not any(term in raw_sql for term in legacy_resource_terms), (
+                        f"{path.name} bypasses provenance gates: {raw_sql}"
+                    )
+                nodes.extend(node.values())
+            elif isinstance(node, list):
+                nodes.extend(node)
+
+
+def test_snapshot_and_metrics_preserve_resource_unavailability():
+    snapshot = (REPO_ROOT / "scripts/daily-summary-snapshot.py").read_text(encoding="utf-8")
+    metrics = (REPO_ROOT / "scripts/verdify-metrics.py").read_text(encoding="utf-8")
+
+    assert "Resource totals/costs" in snapshot
+    for legacy_writer_token in (
+        "WATTAGE",
+        "ELECTRIC_RATE",
+        "WATER_RATE",
+        "THERM_RATE",
+        "kwh_estimated=$",
+        "cost_total=$",
+        "water_used_gal=$",
+    ):
+        assert legacy_writer_token not in snapshot
+
+    assert "else None" in metrics
+    assert 'scorecard.get("cost_total")' in metrics
+    assert "if cost_total is not None:" in metrics
+    assert "scorecard.get('cost_total', 0)" not in metrics
+    assert "verdify_resource_terms_available" in metrics
+    assert "verdify_planner_score_resource_weight_pct" in metrics
+
+
+def test_grafana_brand_generator_preserves_resource_accounting_gates():
+    script_path = REPO_ROOT / "scripts/brand-grafana-embeds.py"
+    spec = importlib.util.spec_from_file_location("brand_grafana_embeds_resource_test", script_path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    for path in _site_dashboard_paths():
+        dashboard = json.loads(path.read_text(encoding="utf-8"))
+        findings = module.check_resource_accounting_generator_parity(path.name, dashboard)
+        assert findings == []
+
+    for sql in (
+        module.RUNTIME_MODELED_KWH_30D_SQL,
+        module.DAILY_COST_BY_SOURCE_SQL,
+        module.MONTHLY_RESOURCE_COST_SQL,
+    ):
+        assert "v_daily_kpi" in sql
+        assert "resource_terms_available" in sql
+        assert "daily_summary" not in sql
+    assert "COALESCE(c." not in module.MONTHLY_RESOURCE_COST_SQL
 
 
 def test_quartz_dark_mode_contract_is_user_theme_driven():

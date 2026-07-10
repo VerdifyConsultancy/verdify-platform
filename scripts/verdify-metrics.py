@@ -64,32 +64,49 @@ async def collect():
         rows = await conn.fetch(
             "SELECT metric, value FROM fn_planner_scorecard((now() AT TIME ZONE 'America/Denver')::date)"
         )
-        scorecard = {r["metric"]: float(r["value"]) if r["value"] is not None else 0 for r in rows}
+        scorecard = {r["metric"]: float(r["value"]) if r["value"] is not None else None for r in rows}
+
+        def score_value(metric: str, fallback: float = 0) -> float:
+            """Use a fallback only for non-resource operational gauges."""
+            value = scorecard.get(metric)
+            return fallback if value is None else value
 
         lines.append("# HELP verdify_compliance_pct Band compliance (both temp AND VPD in band)")
         lines.append("# TYPE verdify_compliance_pct gauge")
-        lines.append(f"verdify_compliance_pct {scorecard.get('compliance_pct', 0)}")
+        lines.append(f"verdify_compliance_pct {score_value('compliance_pct')}")
 
         lines.append("# HELP verdify_temp_compliance_pct Temperature band compliance")
         lines.append("# TYPE verdify_temp_compliance_pct gauge")
-        lines.append(f"verdify_temp_compliance_pct {scorecard.get('temp_compliance_pct', 0)}")
+        lines.append(f"verdify_temp_compliance_pct {score_value('temp_compliance_pct')}")
 
         lines.append("# HELP verdify_vpd_compliance_pct VPD band compliance")
         lines.append("# TYPE verdify_vpd_compliance_pct gauge")
-        lines.append(f"verdify_vpd_compliance_pct {scorecard.get('vpd_compliance_pct', 0)}")
+        lines.append(f"verdify_vpd_compliance_pct {score_value('vpd_compliance_pct')}")
 
         lines.append("# HELP verdify_planner_score Planner score today (0-100)")
         lines.append("# TYPE verdify_planner_score gauge")
-        lines.append(f"verdify_planner_score {scorecard.get('planner_score', 0)}")
+        lines.append(f"verdify_planner_score {score_value('planner_score')}")
 
-        lines.append("# HELP verdify_cost_today_dollars Utility cost today")
-        lines.append("# TYPE verdify_cost_today_dollars gauge")
-        lines.append(f"verdify_cost_today_dollars {scorecard.get('cost_total', 0)}")
+        lines.append("# HELP verdify_planner_score_resource_weight_pct Resource score weight in percent")
+        lines.append("# TYPE verdify_planner_score_resource_weight_pct gauge")
+        lines.append(f"verdify_planner_score_resource_weight_pct {score_value('planner_score_resource_weight_pct')}")
+
+        lines.append("# HELP verdify_resource_terms_available 1 when resource evidence is scoring eligible")
+        lines.append("# TYPE verdify_resource_terms_available gauge")
+        lines.append(f"verdify_resource_terms_available {score_value('resource_terms_available')}")
+
+        # Absence is meaningful for resource evidence. Do not publish a false
+        # zero when the scorecard has deliberately gated the scalar to NULL.
+        cost_total = scorecard.get("cost_total")
+        if cost_total is not None:
+            lines.append("# HELP verdify_cost_today_dollars Utility cost today")
+            lines.append("# TYPE verdify_cost_today_dollars gauge")
+            lines.append(f"verdify_cost_today_dollars {cost_total}")
 
         lines.append("# HELP verdify_stress_hours Stress hours by type today")
         lines.append("# TYPE verdify_stress_hours gauge")
         for stype in ["heat", "cold", "vpd_high", "vpd_low"]:
-            val = scorecard.get(f"{stype}_stress_h", 0)
+            val = score_value(f"{stype}_stress_h")
             lines.append(f'verdify_stress_hours{{type="{stype}"}} {val}')
 
         # Setpoint changes today

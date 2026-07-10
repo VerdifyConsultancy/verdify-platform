@@ -396,7 +396,7 @@ STATIC_EQUIPMENT: list[dict[str, Any]] = [
     },
     # Lighting circuits
     {
-        "slug": "grow_light",
+        "slug": "grow_light_grow",
         "zone": None,
         "kind": "light",
         "name": "Grow Light Circuit (2FT)",
@@ -407,7 +407,7 @@ STATIC_EQUIPMENT: list[dict[str, Any]] = [
         "specs": {"fixture_count": 34, "size": "2FT", "cri": 80},
     },
     {
-        "slug": "gl1",
+        "slug": "grow_light_main",
         "zone": None,
         "kind": "light",
         "name": "Main Lighting Circuit (4FT)",
@@ -416,16 +416,6 @@ STATIC_EQUIPMENT: list[dict[str, Any]] = [
         "watts": 630,
         "cost_per_hour_usd": None,
         "specs": {"fixture_count": 15, "size": "4FT", "cri": 98},
-    },
-    {
-        "slug": "gl2",
-        "zone": None,
-        "kind": "light",
-        "name": "Grow Lighting (secondary)",
-        "model": None,
-        "manufacturer": None,
-        "watts": None,
-        "cost_per_hour_usd": None,
     },
 ]
 

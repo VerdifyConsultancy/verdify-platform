@@ -388,7 +388,7 @@ async def climate() -> str:
 
 @mcp.tool()
 async def scorecard(target_date: str = "") -> str:
-    """Get the planner scorecard — 25 KPI metrics for a given day.
+    """Get the planner scorecard for a given day.
     Includes: planner_score, compliance_v2_attributable_pct (the current scored
     compliance field), dev_temp_norm_median_day/night + dev_temp_norm_p95
     (+ dev_vpd_*) as target-reference diagnostics only, compliance_v2_raw_pct,
@@ -414,6 +414,12 @@ async def scorecard(target_date: str = "") -> str:
     compliance_v2_raw_pct and compliance_v2_unachievable_frac are reported context — a
     high unachievable_frac should cue WIDENING the served envelope, not working the
     actuators harder.
+
+    Resource cost receives its historical 20% weight only when conserved water
+    and the whole-runtime energy model are both scoring-eligible. Otherwise the
+    climate term is normalized to 100% and resource scalars remain null; inspect
+    planner_score_resource_weight_pct and resource_terms_available before comparing
+    scores across scopes.
 
     The scorecard still reads compliance_v2_attributable_pct per day and falls back
     to the legacy binary compliance_pct (% of readings with BOTH temp and VPD in the
@@ -542,6 +548,30 @@ async def outcome_kpi(target_date: str = "") -> str:
             greenhouse_id,
         )
         summary = dict(summary_row) if summary_row else {}
+
+        water_resource_row = await conn.fetchrow(
+            """
+            SELECT *
+            FROM v_water_attribution_daily
+            WHERE date = $1::date AND greenhouse_id = $2
+            """,
+            d,
+            greenhouse_id,
+        )
+        water_resource = dict(water_resource_row) if water_resource_row else None
+
+        energy_resource_row = await conn.fetchrow(
+            """
+            SELECT *
+            FROM v_energy_estimate_reconciliation
+            WHERE date = $1::date AND greenhouse_id = $2
+            """,
+            d,
+            greenhouse_id,
+        )
+        energy_resource = dict(energy_resource_row) if energy_resource_row else None
+        if energy_resource and isinstance(energy_resource.get("coefficient_revisions"), str):
+            energy_resource["coefficient_revisions"] = json.loads(energy_resource["coefficient_revisions"])
 
         cycle_rows = await conn.fetch(
             """
@@ -1400,8 +1430,9 @@ async def outcome_kpi(target_date: str = "") -> str:
                 date=summary.get("date", d),
                 greenhouse_id=summary.get("greenhouse_id", greenhouse_id),
                 semantics=(
-                    "ADR-0004 outcome view: float inside the crop corridor, act at "
-                    "edges, and use resource cost/wear as first-class guardrails."
+                    "ADR-0004 outcome view: float inside the crop corridor and act at edges. "
+                    "Resource terms are eligible only when resource_evidence marks them "
+                    "available_for_scoring; modeled and measured scopes never collapse."
                 ),
                 coverage=OutcomeKpiCoverage(
                     actuator_cycles_runtime=(
@@ -1410,6 +1441,23 @@ async def outcome_kpi(target_date: str = "") -> str:
                         else "pending"
                     ),
                     moisture_estimator="available" if moisture_sample_count else "pending",
+                    water_use=(
+                        "available"
+                        if water_resource and water_resource.get("available_for_scoring")
+                        else "degraded"
+                        if water_resource
+                        else "unavailable"
+                    ),
+                    resource_accounting=(
+                        "available"
+                        if water_resource
+                        and water_resource.get("available_for_scoring")
+                        and energy_resource
+                        and energy_resource.get("modeled_available_for_scoring")
+                        else "degraded"
+                        if water_resource or energy_resource
+                        else "unavailable"
+                    ),
                 ),
                 served_corridor={
                     "attributable_pct": summary.get("compliance_v2_attributable_pct"),
@@ -1445,10 +1493,26 @@ async def outcome_kpi(target_date: str = "") -> str:
                 actuator_cycles=actuator_cycles,
                 actuator_runtime=actuator_runtime,
                 water_use_gal={
-                    "total": summary.get("water_used_gal"),
-                    "mister": summary.get("mister_water_gal"),
-                    "irrigation": summary.get("irrigation_water_gal"),
-                    "fertigation": summary.get("fertigation_water_gal"),
+                    "quality_filtered_total": (
+                        water_resource.get("quality_filtered_meter_gal")
+                        if water_resource and water_resource.get("available_for_scoring")
+                        else None
+                    ),
+                    "meter_attributed": (
+                        water_resource.get("attributed_gal")
+                        if water_resource and water_resource.get("available_for_scoring")
+                        else None
+                    ),
+                    "ambiguous": (
+                        water_resource.get("ambiguous_gal")
+                        if water_resource and water_resource.get("available_for_scoring")
+                        else None
+                    ),
+                    "manual_or_unattributed": (
+                        water_resource.get("manual_or_unattributed_gal")
+                        if water_resource and water_resource.get("available_for_scoring")
+                        else None
+                    ),
                 },
                 dli={"sensor_mol_m2_d": summary.get("dli_final")},
                 dif={
@@ -1463,12 +1527,43 @@ async def outcome_kpi(target_date: str = "") -> str:
                     "risk_h": summary.get("dp_risk_hours"),
                 },
                 energy_cost={
-                    "kwh_estimated": summary.get("kwh_estimated"),
-                    "therms_estimated": summary.get("therms_estimated"),
-                    "electric_usd": summary.get("cost_electric"),
-                    "gas_usd": summary.get("cost_gas"),
-                    "water_usd": summary.get("cost_water"),
-                    "total_usd": summary.get("cost_total"),
+                    "runtime_modeled_kwh": (
+                        energy_resource.get("kwh_estimated")
+                        if energy_resource and energy_resource.get("modeled_available_for_scoring")
+                        else None
+                    ),
+                    "partial_measured_kwh": (
+                        energy_resource.get("measured_kwh")
+                        if energy_resource and energy_resource.get("measured_available_for_scoring")
+                        else None
+                    ),
+                    "electric_usd": (
+                        summary.get("cost_electric")
+                        if energy_resource and energy_resource.get("modeled_available_for_scoring")
+                        else None
+                    ),
+                    "water_usd": (
+                        summary.get("cost_water")
+                        if water_resource and water_resource.get("available_for_scoring")
+                        else None
+                    ),
+                    "total_usd": (
+                        summary.get("cost_total")
+                        if water_resource
+                        and water_resource.get("available_for_scoring")
+                        and energy_resource
+                        and energy_resource.get("modeled_available_for_scoring")
+                        else None
+                    ),
+                },
+                resource_evidence={
+                    "water": water_resource,
+                    "energy": energy_resource,
+                    "contract": (
+                        "accepted meter gallons are conserved across attributed, ambiguous, "
+                        "and manual_or_unattributed; command-only runs have null gallons; "
+                        "runtime-modeled energy and partial Shelly energy are separate scopes"
+                    ),
                 },
                 action_scorecard=actions,
                 solar_phase_buckets=[dict(row) for row in phase_rows],
@@ -1480,6 +1575,9 @@ async def outcome_kpi(target_date: str = "") -> str:
                     "v_equipment_runtime_daily",
                     "fn_realized_solar_night_dryout",
                     "v_climate_action_daily_scorecard",
+                    "v_water_attribution_daily",
+                    "v_energy_estimate_reconciliation",
+                    "v_resource_accounting_health",
                     "climate",
                     "climate_action_log",
                     "setpoint_snapshot",

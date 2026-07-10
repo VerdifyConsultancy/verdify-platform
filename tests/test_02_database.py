@@ -29,6 +29,9 @@ class TestSchemaIntegrity:
         "alert_log",
         "diagnostics",
         "water_meter_events",
+        "water_meter_materializer_state",
+        "equipment_aliases",
+        "resource_coefficients",
         "daily_plan_archive_audit",
         "instrumentation_requirements",
         "climate_action_log",
@@ -83,6 +86,15 @@ class TestSchemaIntegrity:
         "v_equipment_runtime_daily",
         "v_realized_solar_night_dryout",
         "v_replay_outdoor_freshness",
+        "v_equipment_alias_resolution",
+        "v_equipment_resource_catalog",
+        "v_water_ledger_health",
+        "v_water_event_attribution",
+        "v_water_run_accounting",
+        "v_water_attribution_daily",
+        "v_runtime_energy_daily",
+        "v_energy_meter_health",
+        "v_resource_accounting_health",
     ]
 
     REQUIRED_FUNCTIONS = [
@@ -105,6 +117,7 @@ class TestSchemaIntegrity:
         "fn_climate_action_effectiveness",
         "fn_absolute_humidity_g_m3",
         "fn_realized_solar_night_dryout",
+        "materialize_water_meter_events",
     ]
 
     def test_tables_exist(self):
@@ -235,6 +248,61 @@ class TestEvidenceContractSources:
             "conservative_change_observation",
         ):
             assert token in schema
+
+
+class TestResourceAccountingContractSources:
+    """Static guards for issue #437's no-fabrication resource contract."""
+
+    def test_migration_sequence_and_contract_tokens(self):
+        migration_193 = (REPO_ROOT / "db/migrations/193-canonical-resource-coefficients.sql").read_text()
+        migration_194 = (REPO_ROOT / "db/migrations/194-scope-aware-resource-accounting.sql").read_text()
+        for token in (
+            "equipment_aliases",
+            "resource_coefficients",
+            "coefficient_source",
+            "lower_bound",
+            "upper_bound",
+            "alternative_revisions",
+            "grow_light_main",
+            "grow_light_grow",
+        ):
+            assert token in migration_193
+        for token in (
+            "materialize_water_meter_events",
+            "v_water_ledger_health",
+            "manual_or_unattributed",
+            "ambiguous_overlap",
+            "command_only",
+            "conservation_error_gal",
+            "partial_shelly_two_channels",
+            "whole_controlled_equipment_runtime",
+            "available_for_scoring",
+        ):
+            assert token in migration_194
+        assert "equipment_assets" not in migration_194
+        assert "drip_runtime_gal" not in migration_194
+
+    def test_consumers_do_not_restore_raw_or_legacy_fallbacks(self):
+        daily = (REPO_ROOT / "ingestor/tasks/daily.py").read_text()
+        ha = (REPO_ROOT / "ingestor/tasks/ha.py").read_text()
+        ingestor = (REPO_ROOT / "ingestor/ingestor.py").read_text()
+        mcp = (REPO_ROOT / "mcp/server.py").read_text()
+        api = (REPO_ROOT / "api/main.py").read_text()
+        assert "FROM equipment_assets" not in daily
+        assert "MAX(water_total_gal) - MIN(water_total_gal)" not in daily
+        assert "water_gal = max(" not in daily
+        assert "resource_coefficients" in daily
+        assert "rc.valid_from" in daily and "rc.valid_to" in daily
+        assert "v_water_attribution_daily" in daily
+        assert "resource_evidence" in mcp
+        assert "modeled_available_for_scoring" in mcp
+        assert "measured_available_for_scoring" in mcp
+        assert "async def water_meter_materialize" in ha
+        assert "materialize_water_meter_events('vallery', now())" in ha
+        assert '("water_meter_materialize", 60, water_meter_materialize)' in ingestor
+        assert '@app.get("/api/v1/resources/daily")' in api
+        assert "v_resource_accounting_health" in api
+        assert "water_today_available_for_scoring" in api
 
 
 class TestDataFreshness:
@@ -859,11 +927,38 @@ class TestViewsCompute:
         )
         assert not rows, f"daily_summary electric cost does not match runtime-modeled kWh: {rows[0]}"
 
-    def test_energy_reconciliation_compares_runtime_to_measured_kwh(self):
+    def test_energy_reconciliation_separates_runtime_and_partial_meter_scope(self):
         view_sql = db_query("SELECT pg_get_viewdef('v_energy_estimate_reconciliation'::regclass, true)")
-        assert "ds.kwh_estimated" in view_sql
-        assert "COALESCE(ds.kwh_total, ds.kwh_estimated)" not in view_sql
-        assert "meter_runtime_divergence" in view_sql
+        assert "v_runtime_energy_daily" in view_sql
+        assert "v_energy_daily" in view_sql
+        assert "scope_separated" in view_sql
+        assert "modeled_available_for_scoring" in view_sql
+        assert "measured_available_for_scoring" in view_sql
+        assert "meter_runtime_divergence" not in view_sql
+
+    def test_resource_score_excludes_unavailable_terms(self):
+        view_sql = db_query("SELECT pg_get_viewdef('v_daily_kpi'::regclass, true)")
+        assert "v_water_attribution_daily" in view_sql
+        assert "v_runtime_energy_daily" in view_sql
+        assert "resource_ok" in view_sql
+        assert "planner_score_resource_weight_pct" in view_sql
+        assert "WHEN resource_ok" in view_sql
+
+        function_sql = db_query("SELECT pg_get_functiondef('fn_planner_scorecard(date)'::regprocedure)")
+        assert "resource_terms_available" in function_sql
+        assert "planner_score_resource_weight_pct" in function_sql
+
+    def test_water_daily_requires_materializer_watermark(self):
+        view_sql = db_query("SELECT pg_get_viewdef('v_water_meter_daily'::regclass, true)")
+        assert "water_meter_materializer_state" in view_sql
+        assert "last_source_ts >= c.last_raw_ts" in view_sql
+        assert "ledger_incomplete" in view_sql
+
+    def test_energy_health_has_stale_and_unavailable_states(self):
+        view_sql = db_query("SELECT pg_get_viewdef('v_energy_meter_health'::regclass, true)")
+        assert "stale" in view_sql
+        assert "unavailable" in view_sql
+        assert "00:10:00" in view_sql
 
     def test_runtime_power_30m_function_returns_buckets(self):
         rows = db_query_rows(

@@ -3591,7 +3591,7 @@ data:
                 "uid": "verdify-tsdb",
                 "type": "grafana-postgresql-datasource"
               },
-              "rawSql": "SELECT now() AS time, COALESCE(SUM(cost_electric), 0) AS v FROM daily_summary WHERE $__timeFilter((date + time '12:00')::timestamptz)",
+              "rawSql": "SELECT now() AS time, SUM(cost_electric) AS v FROM v_daily_kpi WHERE resource_terms_available AND $__timeFilter((date + time '12:00')::timestamptz)",
               "format": "table",
               "refId": "A"
             }
@@ -4299,7 +4299,7 @@ data:
         {
           "id": 4,
           "type": "stat",
-          "title": "Water",
+          "title": "Eligible Meter Water Cost",
           "datasource": {
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
@@ -4316,7 +4316,7 @@ data:
                 "uid": "verdify-tsdb",
                 "type": "grafana-postgresql-datasource"
               },
-              "rawSql": "SELECT now() AS time, COALESCE(SUM(cost_water), 0) AS v FROM daily_summary WHERE $__timeFilter((date + time '12:00')::timestamptz)",
+              "rawSql": "SELECT now() AS time, ROUND(SUM(quality_filtered_meter_gal * 0.00484)::numeric, 2) AS v FROM v_water_attribution_daily WHERE $__timeFilter((date + time '12:00')::timestamptz) AND available_for_scoring",
               "format": "table",
               "refId": "A"
             }
@@ -4340,13 +4340,13 @@ data:
             "colorMode": "value",
             "graphMode": "none"
           },
-          "description": "Water cost = gallons used \u00d7 $0.00484/gal",
+          "description": "Quality-filtered meter gallons \u00d7 $0.00484/gal. Stale, incomplete, discontinuous, or non-conserving days are excluded rather than replaced with raw counter arithmetic.",
           "transparent": true
         },
         {
           "id": 7,
           "type": "stat",
-          "title": "Gallons",
+          "title": "Accepted Meter Gallons",
           "datasource": {
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
@@ -4363,7 +4363,7 @@ data:
                 "uid": "verdify-tsdb",
                 "type": "grafana-postgresql-datasource"
               },
-              "rawSql": "SELECT now() AS time, COALESCE(SUM(water_used_gal), 0) AS v FROM daily_summary WHERE $__timeFilter((date + time '12:00')::timestamptz)",
+              "rawSql": "SELECT now() AS time, SUM(quality_filtered_meter_gal) AS v FROM v_water_attribution_daily WHERE $__timeFilter((date + time '12:00')::timestamptz) AND available_for_scoring",
               "format": "table",
               "refId": "A"
             }
@@ -4387,12 +4387,13 @@ data:
             "colorMode": "value",
             "graphMode": "none"
           },
+          "description": "Accepted event-ledger deltas only for completed, conserving, watermark-covered days. Unavailable or degraded selections render null rather than zero.",
           "transparent": true
         },
         {
           "id": 8,
           "type": "stat",
-          "title": "$/Day (30-Day Average)",
+          "title": "Eligible Water $/Day (30d)",
           "datasource": {
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
@@ -4409,7 +4410,7 @@ data:
                 "uid": "verdify-tsdb",
                 "type": "grafana-postgresql-datasource"
               },
-              "rawSql": "SELECT now() AS time, ROUND(AVG(cost_total)::numeric, 2) AS v FROM daily_summary WHERE date >= current_date - interval '30 days' AND date < current_date AND cost_total > 0",
+              "rawSql": "SELECT now() AS time, ROUND(AVG(quality_filtered_meter_gal * 0.00484)::numeric, 2) AS v FROM v_water_attribution_daily WHERE date >= current_date - interval '30 days' AND date < current_date AND available_for_scoring",
               "format": "table",
               "refId": "A"
             }
@@ -4433,11 +4434,11 @@ data:
             "colorMode": "value",
             "graphMode": "none"
           },
-          "description": "Average daily total cost across the last 30 completed daily summaries.",
+          "description": "Average water-only cost for completed, conserving, quality-eligible ledger days. Energy costs are a separate modeled scope.",
           "transparent": true
         },
         {
-          "description": "Shows water use or irrigation behavior over time.",
+          "description": "Eligible meter gallons partitioned into single-run attribution, ambiguous overlap, and manual/unattributed remainder. The components conserve the meter total; unavailable/degraded days are excluded and command-only relay runs are never gallons.",
           "fieldConfig": {
             "defaults": {
               "custom": {
@@ -4472,11 +4473,11 @@ data:
           "targets": [
             {
               "format": "time_series",
-              "rawSql": "SELECT $__time(day::timestamptz), used_gal AS \"Total Water (gal)\" FROM v_water_daily WHERE $__timeFilter(day::timestamptz) ORDER BY day",
+              "rawSql": "SELECT $__time((date + time '12:00')::timestamptz), attributed_gal AS \"Meter-attributed (gal)\", ambiguous_gal AS \"Ambiguous overlap (gal)\", manual_or_unattributed_gal AS \"Manual / unattributed (gal)\", quality_filtered_meter_gal AS \"Accepted meter total (gal)\" FROM v_water_attribution_daily WHERE $__timeFilter((date + time '12:00')::timestamptz) AND available_for_scoring ORDER BY date",
               "refId": "A"
             }
           ],
-          "title": "Daily Water Use",
+          "title": "Meter-Conserving Water Attribution",
           "type": "timeseries",
           "transparent": true
         },
@@ -5169,17 +5170,17 @@ data:
           "targets": [
             {
               "format": "time_series",
-              "rawSql": "SELECT (date + time '12:00')::timestamptz AS time, runtime_mister_south_h * 60 AS \"South (min)\" FROM daily_summary WHERE $__timeFilter((date + time '12:00')::timestamptz) AND runtime_mister_south_h > 0 ORDER BY date",
+              "rawSql": "SELECT (day::date + time '12:00')::timestamptz AS time, on_minutes AS \"South (min)\" FROM v_equipment_runtime_daily WHERE equipment='mister_south' AND is_deploy_gate_eligible AND $__timeFilter((day::date + time '12:00')::timestamptz) ORDER BY day",
               "refId": "A"
             },
             {
               "format": "time_series",
-              "rawSql": "SELECT (date + time '12:00')::timestamptz AS time, runtime_mister_west_h * 60 AS \"West (min)\" FROM daily_summary WHERE $__timeFilter((date + time '12:00')::timestamptz) AND runtime_mister_west_h > 0 ORDER BY date",
+              "rawSql": "SELECT (day::date + time '12:00')::timestamptz AS time, on_minutes AS \"West (min)\" FROM v_equipment_runtime_daily WHERE equipment='mister_west' AND is_deploy_gate_eligible AND $__timeFilter((day::date + time '12:00')::timestamptz) ORDER BY day",
               "refId": "B"
             },
             {
               "format": "time_series",
-              "rawSql": "SELECT (date + time '12:00')::timestamptz AS time, runtime_mister_center_h * 60 AS \"Center (min)\" FROM daily_summary WHERE $__timeFilter((date + time '12:00')::timestamptz) AND runtime_mister_center_h > 0 ORDER BY date",
+              "rawSql": "SELECT (day::date + time '12:00')::timestamptz AS time, on_minutes AS \"Center (min)\" FROM v_equipment_runtime_daily WHERE equipment='mister_center' AND is_deploy_gate_eligible AND $__timeFilter((day::date + time '12:00')::timestamptz) ORDER BY day",
               "refId": "C"
             }
           ],
@@ -7194,7 +7195,7 @@ data:
                 "uid": "verdify-tsdb",
                 "type": "grafana-postgresql-datasource"
               },
-              "rawSql": "SELECT now() AS time, ROUND(AVG(cost_total)::numeric, 2) AS v FROM daily_summary WHERE date >= current_date - interval '30 days' AND date < current_date AND cost_total > 0",
+              "rawSql": "SELECT now() AS time, ROUND(AVG(cost_total)::numeric, 2) AS v FROM v_daily_kpi WHERE date >= current_date - interval '30 days' AND date < current_date AND resource_terms_available",
               "format": "table",
               "refId": "A"
             }
@@ -7218,7 +7219,7 @@ data:
             "colorMode": "value",
             "graphMode": "none"
           },
-          "description": "Average daily total cost across the last 30 completed daily summaries.",
+          "description": "Average daily total cost only where conserved water and the whole-runtime energy model are both scoring-eligible. Unavailable or uncertain resource days remain null.",
           "transparent": true
         },
         {
@@ -7374,7 +7375,7 @@ data:
         {
           "id": 105,
           "type": "stat",
-          "title": "Est. kWh/day (30-Day Avg)",
+          "title": "Runtime-Modeled kWh/day (30d)",
           "datasource": {
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
@@ -7392,7 +7393,7 @@ data:
                 "uid": "verdify-tsdb"
               },
               "format": "table",
-              "rawSql": "SELECT now() AS time,\n  ROUND(AVG(kwh_estimated)::numeric, 2) AS v\nFROM daily_summary\nWHERE date >= current_date - interval '30 days'\n  AND date < current_date\n  AND kwh_estimated IS NOT NULL",
+              "rawSql": "SELECT now() AS time, ROUND(AVG(modeled_kwh)::numeric, 2) AS v FROM v_runtime_energy_daily WHERE date >= current_date - interval '30 days' AND date < current_date",
               "refId": "A"
             }
           ],
@@ -7415,7 +7416,7 @@ data:
             "colorMode": "value",
             "graphMode": "none"
           },
-          "description": "Average estimated electric use per completed day across the last 30 days, computed from equipment runtimes and rated/observed wattages.",
+          "description": "Whole controlled-equipment runtime model using the selected coefficient revisions. This is modeled, bounded evidence, not the partial Shelly measurement or a billing total.",
           "transparent": true
         },
         {
@@ -7439,7 +7440,7 @@ data:
                 "uid": "verdify-tsdb"
               },
               "format": "table",
-              "rawSql": "SELECT now() AS time,\n  ROUND(AVG(therms_estimated)::numeric, 2) AS v\nFROM daily_summary\nWHERE date >= current_date - interval '30 days'\n  AND date < current_date\n  AND therms_estimated IS NOT NULL",
+              "rawSql": "SELECT now() AS time,\n  ROUND(AVG(therms)::numeric, 2) AS v\nFROM v_daily_kpi\nWHERE date >= current_date - interval '30 days'\n  AND date < current_date\n  AND resource_terms_available",
               "refId": "A"
             }
           ],
@@ -7468,7 +7469,7 @@ data:
         {
           "id": 107,
           "type": "stat",
-          "title": "Water gal/day (30-Day Avg)",
+          "title": "Accepted Meter gal/day (30d)",
           "datasource": {
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
@@ -7486,7 +7487,7 @@ data:
                 "uid": "verdify-tsdb"
               },
               "format": "table",
-              "rawSql": "SELECT now() AS time,\n  ROUND(AVG(water_used_gal)::numeric, 0) AS v\nFROM daily_summary\nWHERE date >= current_date - interval '30 days'\n  AND date < current_date\n  AND water_used_gal IS NOT NULL",
+              "rawSql": "SELECT now() AS time, ROUND(AVG(quality_filtered_meter_gal)::numeric, 0) AS v FROM v_water_attribution_daily WHERE date >= current_date - interval '30 days' AND date < current_date AND available_for_scoring",
               "refId": "A"
             }
           ],
@@ -7509,7 +7510,7 @@ data:
             "colorMode": "value",
             "graphMode": "none"
           },
-          "description": "Average water use per completed day across the last 30 days.",
+          "description": "Average accepted meter gallons across completed, conserving, quality-eligible ledger days. No raw max-minus-min fallback.",
           "transparent": true
         },
         {
@@ -8400,9 +8401,9 @@ data:
         },
         {
           "id": 121,
-          "title": "Equipment Energy by Device (30d)",
+          "title": "Runtime-Modeled Electric by Device (30d)",
           "type": "table",
-          "description": "Thirty-day runtime, estimated electric kWh or gas therms, and estimated cost by controllable climate device.",
+          "description": "Whole controlled-equipment runtime model with selected coefficient source, revision, and low/nominal/high kWh. Partial Shelly measurement is a separate scope and is not compared as a facility total.",
           "gridPos": {
             "h": 8,
             "w": 24,
@@ -8445,7 +8446,7 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Energy"
+                  "options": "Modeled kWh nominal"
                 },
                 "properties": [
                   {
@@ -8457,12 +8458,12 @@ data:
               {
                 "matcher": {
                   "id": "byName",
-                  "options": "Est. cost"
+                  "options": "Modeled kWh high"
                 },
                 "properties": [
                   {
                     "id": "unit",
-                    "value": "currencyUSD"
+                    "value": "kwatth"
                   },
                   {
                     "id": "decimals",
@@ -8491,7 +8492,7 @@ data:
                 "uid": "verdify-tsdb"
               },
               "format": "table",
-              "rawSql": "WITH d AS (\n  SELECT *\n  FROM daily_summary\n  WHERE date >= current_date - interval '30 days'\n    AND date < current_date\n), e AS (\n  SELECT equipment, wattage, btu_rating\n  FROM equipment_assets\n), loads AS (\n  SELECT\n    'Heat 1 electric'::text AS device,\n    COALESCE(SUM(d.runtime_heat1_min), 0) / 60.0 AS runtime_h,\n    COALESCE(SUM(d.runtime_heat1_min), 0) / 60.0 * COALESCE((SELECT wattage FROM e WHERE equipment = 'heat1'), 1500) / 1000.0 AS energy,\n    'kWh'::text AS unit,\n    COALESCE(SUM(d.runtime_heat1_min), 0) / 60.0 * COALESCE((SELECT wattage FROM e WHERE equipment = 'heat1'), 1500) / 1000.0 * 0.111 AS cost_usd\n  FROM d\n  UNION ALL\n  SELECT\n    'Heat 2 gas furnace',\n    COALESCE(SUM(d.runtime_heat2_min), 0) / 60.0,\n    COALESCE(SUM(d.runtime_heat2_min), 0) / 60.0 * COALESCE((SELECT btu_rating FROM e WHERE equipment = 'heat2'), 75000) / 100000.0,\n    'therms',\n    COALESCE(SUM(d.runtime_heat2_min), 0) / 60.0 * COALESCE((SELECT btu_rating FROM e WHERE equipment = 'heat2'), 75000) / 100000.0 * 0.83\n  FROM d\n  UNION ALL\n  SELECT\n    'Fogger',\n    COALESCE(SUM(d.runtime_fog_min), 0) / 60.0,\n    COALESCE(SUM(d.runtime_fog_min), 0) / 60.0 * COALESCE((SELECT wattage FROM e WHERE equipment = 'fog'), 800) / 1000.0,\n    'kWh',\n    COALESCE(SUM(d.runtime_fog_min), 0) / 60.0 * COALESCE((SELECT wattage FROM e WHERE equipment = 'fog'), 800) / 1000.0 * 0.111\n  FROM d\n  UNION ALL\n  SELECT\n    'Fans',\n    (COALESCE(SUM(d.runtime_fan1_min), 0) + COALESCE(SUM(d.runtime_fan2_min), 0)) / 60.0,\n    COALESCE(SUM(d.runtime_fan1_min), 0) / 60.0 * COALESCE((SELECT wattage FROM e WHERE equipment = 'fan1'), 52) / 1000.0 +\n      COALESCE(SUM(d.runtime_fan2_min), 0) / 60.0 * COALESCE((SELECT wattage FROM e WHERE equipment = 'fan2'), 52) / 1000.0,\n    'kWh',\n    (COALESCE(SUM(d.runtime_fan1_min), 0) / 60.0 * COALESCE((SELECT wattage FROM e WHERE equipment = 'fan1'), 52) / 1000.0 +\n      COALESCE(SUM(d.runtime_fan2_min), 0) / 60.0 * COALESCE((SELECT wattage FROM e WHERE equipment = 'fan2'), 52) / 1000.0) * 0.111\n  FROM d\n  UNION ALL\n  SELECT\n    'Vent actuator',\n    COALESCE(SUM(d.runtime_vent_min), 0) / 60.0,\n    COALESCE(SUM(d.runtime_vent_min), 0) / 60.0 * COALESCE((SELECT wattage FROM e WHERE equipment = 'vent'), 10) / 1000.0,\n    'kWh',\n    COALESCE(SUM(d.runtime_vent_min), 0) / 60.0 * COALESCE((SELECT wattage FROM e WHERE equipment = 'vent'), 10) / 1000.0 * 0.111\n  FROM d\n  UNION ALL\n  SELECT\n    'Grow lights',\n    COALESCE(SUM(d.runtime_grow_light_min), 0) / 60.0,\n    COALESCE(SUM(d.runtime_grow_light_min), 0) / 60.0 * (\n      COALESCE((SELECT wattage FROM e WHERE equipment = 'grow_light_grow'), 816) +\n      COALESCE((SELECT wattage FROM e WHERE equipment = 'grow_light_main'), 630)\n    ) / 1000.0,\n    'kWh',\n    COALESCE(SUM(d.runtime_grow_light_min), 0) / 60.0 * (\n      COALESCE((SELECT wattage FROM e WHERE equipment = 'grow_light_grow'), 816) +\n      COALESCE((SELECT wattage FROM e WHERE equipment = 'grow_light_main'), 630)\n    ) / 1000.0 * 0.111\n  FROM d\n)\nSELECT\n  device AS \"Device\",\n  ROUND(runtime_h::numeric, 1) AS \"Runtime h\",\n  ROUND(energy::numeric, 1) AS \"Energy\",\n  unit AS \"Unit\",\n  ROUND(cost_usd::numeric, 2) AS \"Est. cost\"\nFROM loads\nWHERE runtime_h > 0 OR energy > 0\nORDER BY cost_usd DESC;",
+              "rawSql": "SELECT\n  r.equipment AS \"Device\",\n  ROUND((SUM(r.on_minutes) / 60.0)::numeric, 1) AS \"Runtime h\",\n  ROUND(SUM((r.on_minutes / 60.0) * c.coefficient_low / 1000.0)::numeric, 2) AS \"Modeled kWh low\",\n  ROUND(SUM((r.on_minutes / 60.0) * c.coefficient_nominal / 1000.0)::numeric, 2) AS \"Modeled kWh nominal\",\n  ROUND(SUM((r.on_minutes / 60.0) * c.coefficient_high / 1000.0)::numeric, 2) AS \"Modeled kWh high\",\n  c.coefficient_source AS \"Coefficient source\",\n  c.coefficient_revision AS \"Coefficient revision\"\nFROM v_equipment_runtime_daily r\nJOIN v_equipment_resource_catalog c\n  ON c.greenhouse_id = r.greenhouse_id\n AND c.equipment_slug = r.equipment\n AND c.resource_kind = 'electric_watts'\nWHERE r.day >= current_date - interval '30 days'\n  AND r.day < current_date\nGROUP BY r.equipment, c.coefficient_source, c.coefficient_revision\nORDER BY \"Modeled kWh nominal\" DESC;",
               "refId": "A"
             }
           ],
@@ -13169,7 +13170,7 @@ data:
                 "uid": "verdify-tsdb"
               },
               "format": "table",
-              "rawSql": "SELECT now() AS time, cost_total AS \"Cost\" FROM v_cost_today",
+              "rawSql": "SELECT now() AS time, cost_total AS \"Cost\" FROM v_daily_kpi WHERE date = (now() AT TIME ZONE 'America/Denver')::date AND resource_terms_available",
               "refId": "A"
             }
           ],
@@ -13229,7 +13230,7 @@ data:
                 "uid": "verdify-tsdb"
               },
               "format": "table",
-              "rawSql": "SELECT now() AS time, ROUND(AVG(cost_total)::numeric, 2) AS v FROM daily_summary WHERE date >= current_date - interval '30 days' AND date < current_date AND cost_total > 0",
+              "rawSql": "SELECT now() AS time, ROUND(AVG(cost_total)::numeric, 2) AS v FROM v_daily_kpi WHERE date >= current_date - interval '30 days' AND date < current_date AND resource_terms_available",
               "refId": "A"
             }
           ],
@@ -13403,7 +13404,7 @@ data:
                 "uid": "verdify-tsdb"
               },
               "format": "time_series",
-              "rawSql": "SELECT date_trunc('month',date)::timestamptz AS time, ROUND(SUM(cost_electric)::numeric,2) AS \"Electric\"\nFROM daily_summary WHERE $__timeFilter((date + time '12:00')::timestamptz) GROUP BY 1 ORDER BY 1",
+              "rawSql": "SELECT date_trunc('month',date)::timestamptz AS time, ROUND(SUM(cost_electric)::numeric,2) AS \"Electric\"\nFROM v_daily_kpi WHERE resource_terms_available AND $__timeFilter((date + time '12:00')::timestamptz) GROUP BY 1 ORDER BY 1",
               "refId": "A"
             },
             {
@@ -13412,7 +13413,7 @@ data:
                 "uid": "verdify-tsdb"
               },
               "format": "time_series",
-              "rawSql": "SELECT date_trunc('month',date)::timestamptz AS time, ROUND(SUM(cost_gas)::numeric,2) AS \"Gas\"\nFROM daily_summary WHERE $__timeFilter((date + time '12:00')::timestamptz) GROUP BY 1 ORDER BY 1",
+              "rawSql": "SELECT date_trunc('month',date)::timestamptz AS time, ROUND(SUM(cost_gas)::numeric,2) AS \"Gas\"\nFROM v_daily_kpi WHERE resource_terms_available AND $__timeFilter((date + time '12:00')::timestamptz) GROUP BY 1 ORDER BY 1",
               "refId": "B"
             },
             {
@@ -13421,7 +13422,7 @@ data:
                 "uid": "verdify-tsdb"
               },
               "format": "time_series",
-              "rawSql": "SELECT date_trunc('month',date)::timestamptz AS time, ROUND(SUM(cost_water)::numeric,2) AS \"Water\"\nFROM daily_summary WHERE $__timeFilter((date + time '12:00')::timestamptz) GROUP BY 1 ORDER BY 1",
+              "rawSql": "SELECT date_trunc('month',date)::timestamptz AS time, ROUND(SUM(cost_water)::numeric,2) AS \"Water\"\nFROM v_daily_kpi WHERE resource_terms_available AND $__timeFilter((date + time '12:00')::timestamptz) GROUP BY 1 ORDER BY 1",
               "refId": "C"
             }
           ],
@@ -13626,7 +13627,7 @@ data:
               "editorMode": "code",
               "format": "time_series",
               "rawQuery": true,
-              "rawSql": "SELECT date_trunc('month', date)::timestamptz AS time, sum(cost_total) AS \"Monthly Cost\" FROM daily_summary WHERE date >= CURRENT_DATE - 365 GROUP BY 1 ORDER BY 1",
+              "rawSql": "SELECT date_trunc('month', date)::timestamptz AS time, SUM(cost_total) AS \"Monthly Cost\" FROM v_daily_kpi WHERE date >= CURRENT_DATE - 365 AND resource_terms_available GROUP BY 1 ORDER BY 1",
               "refId": "C",
               "sql": {
                 "columns": [
@@ -15608,6 +15609,7 @@ data:
       "refresh": "1m",
       "uid": "site-greenhouse-equipment",
       "title": "Site: Greenhouse \u2014 Equipment",
+      "description": "Equipment runtime and cycles are observed relay evidence. Wet-relay runtime is never delivered gallons; runtime-modeled energy uses the provenance-bearing canonical coefficient catalog and remains separate from partial Shelly measurement.",
       "editable": true,
       "panels": [
         {
@@ -15630,7 +15632,7 @@ data:
                 "uid": "verdify-tsdb",
                 "type": "grafana-postgresql-datasource"
               },
-              "rawSql": "SELECT now() AS time, ROUND(SUM(runtime_heat1_min)::numeric / 60.0, 2) AS \"Heat 1\"\nFROM daily_summary\nWHERE $__timeFilter((date + time '12:00')::timestamptz) AND runtime_heat1_min IS NOT NULL",
+              "rawSql": "SELECT now() AS time, ROUND(SUM(on_minutes)::numeric / 60.0, 2) AS \"Heat 1\"\nFROM v_equipment_runtime_daily\nWHERE equipment='heat1' AND is_deploy_gate_eligible AND $__timeFilter((day::date + time '12:00')::timestamptz)",
               "format": "table",
               "refId": "A"
             }
@@ -15696,7 +15698,7 @@ data:
                 "uid": "verdify-tsdb",
                 "type": "grafana-postgresql-datasource"
               },
-              "rawSql": "SELECT now() AS time, ROUND(SUM(runtime_heat2_min)::numeric / 60.0, 2) AS \"Heat 2\"\nFROM daily_summary\nWHERE $__timeFilter((date + time '12:00')::timestamptz) AND runtime_heat2_min IS NOT NULL",
+              "rawSql": "SELECT now() AS time, ROUND(SUM(on_minutes)::numeric / 60.0, 2) AS \"Heat 2\"\nFROM v_equipment_runtime_daily\nWHERE equipment='heat2' AND is_deploy_gate_eligible AND $__timeFilter((day::date + time '12:00')::timestamptz)",
               "format": "table",
               "refId": "A"
             }
@@ -15762,7 +15764,7 @@ data:
                 "uid": "verdify-tsdb",
                 "type": "grafana-postgresql-datasource"
               },
-              "rawSql": "SELECT now() AS time, ROUND(SUM(runtime_fan1_min)::numeric / 60.0, 2) AS \"Fan 1\"\nFROM daily_summary\nWHERE $__timeFilter((date + time '12:00')::timestamptz) AND runtime_fan1_min IS NOT NULL",
+              "rawSql": "SELECT now() AS time, ROUND(SUM(on_minutes)::numeric / 60.0, 2) AS \"Fan 1\"\nFROM v_equipment_runtime_daily\nWHERE equipment='fan1' AND is_deploy_gate_eligible AND $__timeFilter((day::date + time '12:00')::timestamptz)",
               "format": "table",
               "refId": "A"
             }
@@ -15828,7 +15830,7 @@ data:
                 "uid": "verdify-tsdb",
                 "type": "grafana-postgresql-datasource"
               },
-              "rawSql": "SELECT now() AS time, ROUND(SUM(runtime_fan2_min)::numeric / 60.0, 2) AS \"Fan 2\"\nFROM daily_summary\nWHERE $__timeFilter((date + time '12:00')::timestamptz) AND runtime_fan2_min IS NOT NULL",
+              "rawSql": "SELECT now() AS time, ROUND(SUM(on_minutes)::numeric / 60.0, 2) AS \"Fan 2\"\nFROM v_equipment_runtime_daily\nWHERE equipment='fan2' AND is_deploy_gate_eligible AND $__timeFilter((day::date + time '12:00')::timestamptz)",
               "format": "table",
               "refId": "A"
             }
@@ -15894,7 +15896,7 @@ data:
                 "uid": "verdify-tsdb",
                 "type": "grafana-postgresql-datasource"
               },
-              "rawSql": "SELECT now() AS time, ROUND(SUM(runtime_fog_min)::numeric / 60.0, 2) AS \"Fog\"\nFROM daily_summary\nWHERE $__timeFilter((date + time '12:00')::timestamptz) AND runtime_fog_min IS NOT NULL",
+              "rawSql": "SELECT now() AS time, ROUND(SUM(on_minutes)::numeric / 60.0, 2) AS \"Fog\"\nFROM v_equipment_runtime_daily\nWHERE equipment='fog' AND is_deploy_gate_eligible AND $__timeFilter((day::date + time '12:00')::timestamptz)",
               "format": "table",
               "refId": "A"
             }
@@ -15960,7 +15962,7 @@ data:
                 "uid": "verdify-tsdb",
                 "type": "grafana-postgresql-datasource"
               },
-              "rawSql": "SELECT now() AS time, ROUND(SUM(runtime_vent_min)::numeric / 60.0, 2) AS \"Vent\"\nFROM daily_summary\nWHERE $__timeFilter((date + time '12:00')::timestamptz) AND runtime_vent_min IS NOT NULL",
+              "rawSql": "SELECT now() AS time, ROUND(SUM(on_minutes)::numeric / 60.0, 2) AS \"Vent\"\nFROM v_equipment_runtime_daily\nWHERE equipment='vent' AND is_deploy_gate_eligible AND $__timeFilter((day::date + time '12:00')::timestamptz)",
               "format": "table",
               "refId": "A"
             }
@@ -16026,7 +16028,7 @@ data:
                 "uid": "verdify-tsdb",
                 "type": "grafana-postgresql-datasource"
               },
-              "rawSql": "SELECT now() AS time, ROUND(SUM(runtime_grow_light_min)::numeric / 60.0, 2) AS \"Grow Light\"\nFROM daily_summary\nWHERE $__timeFilter((date + time '12:00')::timestamptz) AND runtime_grow_light_min IS NOT NULL",
+              "rawSql": "SELECT now() AS time, ROUND(SUM(on_minutes)::numeric / 60.0, 2) AS \"Grow Light\"\nFROM v_equipment_runtime_daily\nWHERE equipment IN ('grow_light_main','grow_light_grow') AND is_deploy_gate_eligible AND $__timeFilter((day::date + time '12:00')::timestamptz)",
               "format": "table",
               "refId": "A"
             }
@@ -16076,6 +16078,7 @@ data:
           "id": 10,
           "type": "bargauge",
           "title": "Runtime (hours)",
+          "description": "Observed transition-derived relay runtime. For wet equipment this is command/operation evidence only, not water volume.",
           "datasource": {
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
@@ -16092,7 +16095,7 @@ data:
                 "uid": "verdify-tsdb",
                 "type": "grafana-postgresql-datasource"
               },
-              "rawSql": "SELECT now() AS time, ROUND(SUM(runtime_heat1_min)::numeric / 60.0, 2) AS \"Heat 1\"\nFROM daily_summary\nWHERE $__timeFilter((date + time '12:00')::timestamptz) AND runtime_heat1_min IS NOT NULL",
+              "rawSql": "SELECT now() AS time, ROUND(SUM(on_minutes)::numeric / 60.0, 2) AS \"Heat 1\"\nFROM v_equipment_runtime_daily\nWHERE equipment='heat1' AND is_deploy_gate_eligible AND $__timeFilter((day::date + time '12:00')::timestamptz)",
               "format": "table",
               "refId": "A"
             },
@@ -16101,7 +16104,7 @@ data:
                 "uid": "verdify-tsdb",
                 "type": "grafana-postgresql-datasource"
               },
-              "rawSql": "SELECT now() AS time, ROUND(SUM(runtime_heat2_min)::numeric / 60.0, 2) AS \"Heat 2\"\nFROM daily_summary\nWHERE $__timeFilter((date + time '12:00')::timestamptz) AND runtime_heat2_min IS NOT NULL",
+              "rawSql": "SELECT now() AS time, ROUND(SUM(on_minutes)::numeric / 60.0, 2) AS \"Heat 2\"\nFROM v_equipment_runtime_daily\nWHERE equipment='heat2' AND is_deploy_gate_eligible AND $__timeFilter((day::date + time '12:00')::timestamptz)",
               "format": "table",
               "refId": "B"
             },
@@ -16110,7 +16113,7 @@ data:
                 "uid": "verdify-tsdb",
                 "type": "grafana-postgresql-datasource"
               },
-              "rawSql": "SELECT now() AS time, ROUND(SUM(runtime_fan1_min)::numeric / 60.0, 2) AS \"Fan 1\"\nFROM daily_summary\nWHERE $__timeFilter((date + time '12:00')::timestamptz) AND runtime_fan1_min IS NOT NULL",
+              "rawSql": "SELECT now() AS time, ROUND(SUM(on_minutes)::numeric / 60.0, 2) AS \"Fan 1\"\nFROM v_equipment_runtime_daily\nWHERE equipment='fan1' AND is_deploy_gate_eligible AND $__timeFilter((day::date + time '12:00')::timestamptz)",
               "format": "table",
               "refId": "C"
             },
@@ -16119,7 +16122,7 @@ data:
                 "uid": "verdify-tsdb",
                 "type": "grafana-postgresql-datasource"
               },
-              "rawSql": "SELECT now() AS time, ROUND(SUM(runtime_fan2_min)::numeric / 60.0, 2) AS \"Fan 2\"\nFROM daily_summary\nWHERE $__timeFilter((date + time '12:00')::timestamptz) AND runtime_fan2_min IS NOT NULL",
+              "rawSql": "SELECT now() AS time, ROUND(SUM(on_minutes)::numeric / 60.0, 2) AS \"Fan 2\"\nFROM v_equipment_runtime_daily\nWHERE equipment='fan2' AND is_deploy_gate_eligible AND $__timeFilter((day::date + time '12:00')::timestamptz)",
               "format": "table",
               "refId": "D"
             },
@@ -16128,7 +16131,7 @@ data:
                 "uid": "verdify-tsdb",
                 "type": "grafana-postgresql-datasource"
               },
-              "rawSql": "SELECT now() AS time, ROUND(SUM(runtime_fog_min)::numeric / 60.0, 2) AS \"Fog\"\nFROM daily_summary\nWHERE $__timeFilter((date + time '12:00')::timestamptz) AND runtime_fog_min IS NOT NULL",
+              "rawSql": "SELECT now() AS time, ROUND(SUM(on_minutes)::numeric / 60.0, 2) AS \"Fog\"\nFROM v_equipment_runtime_daily\nWHERE equipment='fog' AND is_deploy_gate_eligible AND $__timeFilter((day::date + time '12:00')::timestamptz)",
               "format": "table",
               "refId": "E"
             },
@@ -16137,7 +16140,7 @@ data:
                 "uid": "verdify-tsdb",
                 "type": "grafana-postgresql-datasource"
               },
-              "rawSql": "SELECT now() AS time, ROUND(SUM(runtime_vent_min)::numeric / 60.0, 2) AS \"Vent\"\nFROM daily_summary\nWHERE $__timeFilter((date + time '12:00')::timestamptz) AND runtime_vent_min IS NOT NULL",
+              "rawSql": "SELECT now() AS time, ROUND(SUM(on_minutes)::numeric / 60.0, 2) AS \"Vent\"\nFROM v_equipment_runtime_daily\nWHERE equipment='vent' AND is_deploy_gate_eligible AND $__timeFilter((day::date + time '12:00')::timestamptz)",
               "format": "table",
               "refId": "F"
             },
@@ -16146,7 +16149,7 @@ data:
                 "uid": "verdify-tsdb",
                 "type": "grafana-postgresql-datasource"
               },
-              "rawSql": "SELECT now() AS time, ROUND(SUM(runtime_grow_light_min)::numeric / 60.0, 2) AS \"Grow Light\"\nFROM daily_summary\nWHERE $__timeFilter((date + time '12:00')::timestamptz) AND runtime_grow_light_min IS NOT NULL",
+              "rawSql": "SELECT now() AS time, ROUND(SUM(on_minutes)::numeric / 60.0, 2) AS \"Grow Light\"\nFROM v_equipment_runtime_daily\nWHERE equipment IN ('grow_light_main','grow_light_grow') AND is_deploy_gate_eligible AND $__timeFilter((day::date + time '12:00')::timestamptz)",
               "format": "table",
               "refId": "G"
             },
@@ -16155,7 +16158,7 @@ data:
                 "uid": "verdify-tsdb",
                 "type": "grafana-postgresql-datasource"
               },
-              "rawSql": "SELECT now() AS time, ROUND(SUM(runtime_mister_south_h)::numeric, 2) AS \"Mister South\"\nFROM daily_summary\nWHERE $__timeFilter((date + time '12:00')::timestamptz) AND runtime_mister_south_h IS NOT NULL",
+              "rawSql": "SELECT now() AS time, ROUND(SUM(on_minutes)::numeric / 60.0, 2) AS \"Mister South\"\nFROM v_equipment_runtime_daily\nWHERE equipment='mister_south' AND is_deploy_gate_eligible AND $__timeFilter((day::date + time '12:00')::timestamptz)",
               "format": "table",
               "refId": "H"
             },
@@ -16164,7 +16167,7 @@ data:
                 "uid": "verdify-tsdb",
                 "type": "grafana-postgresql-datasource"
               },
-              "rawSql": "SELECT now() AS time, ROUND(SUM(runtime_mister_west_h)::numeric, 2) AS \"Mister West\"\nFROM daily_summary\nWHERE $__timeFilter((date + time '12:00')::timestamptz) AND runtime_mister_west_h IS NOT NULL",
+              "rawSql": "SELECT now() AS time, ROUND(SUM(on_minutes)::numeric / 60.0, 2) AS \"Mister West\"\nFROM v_equipment_runtime_daily\nWHERE equipment='mister_west' AND is_deploy_gate_eligible AND $__timeFilter((day::date + time '12:00')::timestamptz)",
               "format": "table",
               "refId": "I"
             },
@@ -16173,7 +16176,7 @@ data:
                 "uid": "verdify-tsdb",
                 "type": "grafana-postgresql-datasource"
               },
-              "rawSql": "SELECT now() AS time, ROUND(SUM(runtime_mister_center_h)::numeric, 2) AS \"Mister Center\"\nFROM daily_summary\nWHERE $__timeFilter((date + time '12:00')::timestamptz) AND runtime_mister_center_h IS NOT NULL",
+              "rawSql": "SELECT now() AS time, ROUND(SUM(on_minutes)::numeric / 60.0, 2) AS \"Mister Center\"\nFROM v_equipment_runtime_daily\nWHERE equipment='mister_center' AND is_deploy_gate_eligible AND $__timeFilter((day::date + time '12:00')::timestamptz)",
               "format": "table",
               "refId": "J"
             },
@@ -16182,7 +16185,7 @@ data:
                 "uid": "verdify-tsdb",
                 "type": "grafana-postgresql-datasource"
               },
-              "rawSql": "SELECT now() AS time, ROUND(SUM(runtime_drip_wall_h)::numeric, 2) AS \"Drip Wall\"\nFROM daily_summary\nWHERE $__timeFilter((date + time '12:00')::timestamptz) AND runtime_drip_wall_h IS NOT NULL",
+              "rawSql": "SELECT now() AS time, ROUND(SUM(on_minutes)::numeric / 60.0, 2) AS \"Drip Wall\"\nFROM v_equipment_runtime_daily\nWHERE equipment='drip_wall' AND is_deploy_gate_eligible AND $__timeFilter((day::date + time '12:00')::timestamptz)",
               "format": "table",
               "refId": "K"
             },
@@ -16191,7 +16194,7 @@ data:
                 "uid": "verdify-tsdb",
                 "type": "grafana-postgresql-datasource"
               },
-              "rawSql": "SELECT now() AS time, ROUND(SUM(runtime_drip_center_h)::numeric, 2) AS \"Drip Center\"\nFROM daily_summary\nWHERE $__timeFilter((date + time '12:00')::timestamptz) AND runtime_drip_center_h IS NOT NULL",
+              "rawSql": "SELECT now() AS time, ROUND(SUM(on_minutes)::numeric / 60.0, 2) AS \"Drip Center\"\nFROM v_equipment_runtime_daily\nWHERE equipment='drip_center' AND is_deploy_gate_eligible AND $__timeFilter((day::date + time '12:00')::timestamptz)",
               "format": "table",
               "refId": "L"
             }

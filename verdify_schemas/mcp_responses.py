@@ -63,7 +63,7 @@ def _scorecard_value_to_float(value: Any) -> float | None:
 
 class ScorecardResponse(BaseModel):
     """`scorecard(target_date)` tool response — typed projection of
-    `fn_planner_scorecard()` (25 metrics).
+    `fn_planner_scorecard()`.
 
     All fields are Optional: partial days (today, data gaps) emit a subset
     of metrics. Unknown metric keys raise ValidationError — if the DB
@@ -80,6 +80,8 @@ class ScorecardResponse(BaseModel):
 
     # ── Score + compliance ──────────────────────────────────────────
     planner_score: float | None = None
+    planner_score_resource_weight_pct: float | None = None
+    resource_terms_available: float | None = None
     compliance_pct: float | None = None
     temp_compliance_pct: float | None = None
     vpd_compliance_pct: float | None = None
@@ -164,7 +166,7 @@ class ScorecardResponse(BaseModel):
         return frozenset(names)
 
 
-OutcomeMetricStatus = Literal["available", "pending"]
+OutcomeMetricStatus = Literal["available", "degraded", "unavailable", "pending"]
 
 
 class OutcomeKpiCoverage(BaseModel):
@@ -178,6 +180,7 @@ class OutcomeKpiCoverage(BaseModel):
     actuator_cycles_runtime: OutcomeMetricStatus = "available"
     dew_margin: OutcomeMetricStatus = "available"
     water_use: OutcomeMetricStatus = "available"
+    resource_accounting: OutcomeMetricStatus = "available"
     dli: OutcomeMetricStatus = "available"
     dif: OutcomeMetricStatus = "available"
     solar_phase_buckets: OutcomeMetricStatus = "available"
@@ -222,6 +225,7 @@ class OutcomeKpiResponse(BaseModel):
     dif: dict[str, float | int | None] = Field(default_factory=dict)
     dew_margin: dict[str, float | None] = Field(default_factory=dict)
     energy_cost: dict[str, float | None] = Field(default_factory=dict)
+    resource_evidence: dict[str, Any] = Field(default_factory=dict)
     action_scorecard: list[OutcomeKpiActionRow] = Field(default_factory=list)
     solar_phase_buckets: list[dict[str, float | int | str | None]] = Field(default_factory=list)
     moisture_estimator: dict[str, Any] = Field(default_factory=dict)
