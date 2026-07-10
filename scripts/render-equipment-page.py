@@ -70,6 +70,18 @@ def _fmt_watts(value: float | None) -> str:
     return f"{value:.0f}W" if value is not None else "-"
 
 
+def _fmt_coefficient(row: asyncpg.Record) -> str:
+    nominal = row["coefficient_nominal"]
+    if nominal is None:
+        return "unavailable"
+    low = row["coefficient_low"]
+    high = row["coefficient_high"]
+    unit = row["coefficient_unit"] or ""
+    if low is not None and high is not None and low != high:
+        return f"{low:.0f}-{high:.0f} {unit} (nominal {nominal:.0f})"
+    return f"{nominal:.0f} {unit}"
+
+
 def _fmt_cost(value: float | None) -> str:
     return f"USD {value:.3f}" if value is not None else "-"
 
@@ -126,14 +138,16 @@ def _equipment_catalog(rows: list[asyncpg.Record]) -> str:
                 row["name"],
                 model,
                 zone,
-                _fmt_watts(row["watts"]),
+                _fmt_coefficient(row),
+                row["coefficient_source"] or "unavailable",
+                row["coefficient_revision"] or "-",
                 _fmt_cost(row["cost_per_hour_usd"]),
             )
         )
     return _lab_table(
-        ["Slug", "Kind", "Name", "Model", "Zone", "Watts", "Cost/hr"],
+        ["Slug", "Kind", "Name", "Model", "Zone", "Modeled coefficient", "Source", "Revision", "Cost/hr"],
         rendered_rows,
-        nowrap_cols={0, 1, 4, 5, 6},
+        nowrap_cols={0, 1, 4, 6, 7, 8},
     )
 
 
@@ -175,9 +189,14 @@ async def main_async(args: argparse.Namespace) -> int:
     try:
         equipment = await conn.fetch(
             """
-            SELECT e.slug, e.kind, e.name, e.model, z.slug AS zone_slug, e.watts, e.cost_per_hour_usd
+            SELECT e.slug, e.kind, e.name, e.model, z.slug AS zone_slug,
+                   c.coefficient_nominal, c.coefficient_low, c.coefficient_high,
+                   c.unit AS coefficient_unit, c.coefficient_source,
+                   c.coefficient_revision, e.cost_per_hour_usd
             FROM equipment e
             LEFT JOIN zones z ON z.id = e.zone_id
+            LEFT JOIN v_equipment_resource_catalog c
+              ON c.equipment_id = e.id AND c.resource_kind = 'electric_watts'
             WHERE e.greenhouse_id = 'vallery' AND e.is_active
             ORDER BY e.kind, e.slug
             """

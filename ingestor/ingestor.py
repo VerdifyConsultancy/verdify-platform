@@ -94,6 +94,7 @@ from tasks import (
     slack_operator_briefs,
     tempest_sync,
     water_flowing_sync,
+    water_meter_materialize,
 )
 from writer_lease import WriterLease
 
@@ -2099,6 +2100,7 @@ async def task_loop(pool: asyncpg.Pool) -> None:
     TASKS = [
         # (name, interval_seconds, coroutine_factory)
         ("water_flowing", 60, water_flowing_sync),
+        ("water_meter_materialize", 60, water_meter_materialize),
         ("matview_refresh", 300, matview_refresh),
         ("shelly_sync", 300, shelly_sync),
         ("tempest_sync", 300, tempest_sync),

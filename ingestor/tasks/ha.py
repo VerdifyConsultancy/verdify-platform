@@ -106,6 +106,31 @@ async def water_flowing_sync(pool: asyncpg.Pool) -> None:
         _leak_state = leak
 
 
+async def water_meter_materialize(pool: asyncpg.Pool) -> None:
+    """Advance the idempotent cumulative-meter event ledger (#437)."""
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT * FROM materialize_water_meter_events('vallery', now())"
+        )
+    if row is None:
+        log.error("water_meter_materialize: materializer returned no status row")
+        return
+    status = row["ledger_status"]
+    message = (
+        "water_meter_materialize: processed=%s events=%s through=%s status=%s"
+    )
+    args = (
+        row["processed_sample_count"],
+        row["event_rows_upserted"],
+        row["materialized_through"],
+        status,
+    )
+    if status in {"stale", "unavailable"}:
+        log.warning(message, *args)
+    else:
+        log.info(message, *args)
+
+
 # ═════════════════════════════════════════════════════════════════
 # 2. MATERIALIZED VIEW REFRESH (every 300s)
 # ═════════════════════════════════════════════════════════════════

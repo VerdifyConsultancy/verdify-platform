@@ -9,7 +9,6 @@ from ._common import (
     _GRADE_RELAYS,
     _GRADED_ZONES,
     COMPLIANCE_ZONE_WEIGHTS_DEFAULT,
-    DEFAULT_ELECTRIC_WATTAGES,
     DEFAULT_ZONE_BAND,
     HEAT2_BTU,
     HOUSE_BAND_PARAMS,
@@ -551,18 +550,21 @@ class _GradedComplianceAccumulator:
 
 
 async def _electric_wattages(conn: asyncpg.Connection) -> dict[str, float]:
-    """Return published device wattages, falling back to conservative defaults."""
-    wattages = dict(DEFAULT_ELECTRIC_WATTAGES)
+    """Return the selected canonical coefficient revision for each device.
+
+    Migration 193 makes provenance and uncertainty first-class.  Missing schema
+    or coefficients must fail the task visibly; falling back to hard-coded
+    points would recreate the silent catalog drift fixed by #437.
+    """
     rows = await conn.fetch(
         """
-        SELECT equipment, wattage
-        FROM equipment_assets
-        WHERE wattage IS NOT NULL
+        SELECT equipment_slug, coefficient_nominal
+        FROM v_equipment_resource_catalog
+        WHERE greenhouse_id = 'vallery'
+          AND resource_kind = 'electric_watts'
         """
     )
-    for row in rows:
-        wattages[row["equipment"]] = float(row["wattage"])
-    return wattages
+    return {row["equipment_slug"]: float(row["coefficient_nominal"]) for row in rows}
 
 
 def _runtime_kwh_from_minutes(minutes_by_equipment: dict[str, float], wattages: dict[str, float]) -> float:
@@ -598,13 +600,23 @@ async def grow_light_daily(pool: asyncpg.Pool) -> None:
         electric_minutes = {e: rt.get(e, (0, 0))[0] for e in wattages}
         kwh = _runtime_kwh_from_minutes(electric_minutes, wattages)
         therms = rh2 / 60.0 * HEAT2_BTU / THERM_BTU
+        water_row = await conn.fetchrow(
+            """
+            SELECT quality_filtered_meter_gal, available_for_scoring
+            FROM v_water_attribution_daily
+            WHERE date = $1 AND greenhouse_id = 'vallery'
+            """,
+            yesterday,
+        )
         water_gal = (
-            await conn.fetchval("SELECT COALESCE(water_used_gal, 0) FROM daily_summary WHERE date = $1", yesterday) or 0
+            float(water_row["quality_filtered_meter_gal"])
+            if water_row and water_row["available_for_scoring"]
+            else None
         )
         ce = round(kwh * 0.111, 2)
         cg = round(therms * 0.83, 2)
-        cw = round(float(water_gal) * 0.00484, 2)
-        ct = round(ce + cg + cw, 2)
+        cw = round(water_gal * 0.00484, 2) if water_gal is not None else None
+        ct = round(ce + cg + (cw or 0), 2)
 
         await conn.execute(
             """
@@ -653,6 +665,17 @@ async def grow_light_daily(pool: asyncpg.Pool) -> None:
             cg,
             cw,
             ct,
+        )
+        await conn.execute(
+            """
+            UPDATE daily_summary
+            SET runtime_grow_light_main_min = $2,
+                runtime_grow_light_grow_min = $3
+            WHERE date = $1
+            """,
+            yesterday,
+            rt.get("grow_light_main", (0, 0))[0],
+            rt.get("grow_light_grow", (0, 0))[0],
         )
         # B5 / M3: kwh_total comes from the Shelly clamp power integral
         # (v_energy_daily.measured_kwh), which only meters 2 channels and so
@@ -979,39 +1002,36 @@ async def _refresh_daily_summary_for_date(conn: asyncpg.Connection, target_day) 
     kwh = _runtime_kwh_from_minutes(electric_minutes, wattages)
     therms = rt.get("heat2", 0) / 60.0 * 75000 / 100000
 
-    mister_water_gal = float(climate["mister_water_gal"]) if climate and climate["mister_water_gal"] else 0.0
-    meter_water_gal = (
-        await conn.fetchval(
-            """
-        SELECT COALESCE(
-            (SELECT used_gal FROM v_water_daily WHERE day::date = $1 ORDER BY day DESC LIMIT 1),
-            (SELECT COALESCE(MAX(water_total_gal) - MIN(water_total_gal), 0)
-               FROM climate
-              WHERE ts >= $1::date::timestamp AT TIME ZONE 'America/Denver'
-                AND ts < ($1::date + 1)::timestamp AT TIME ZONE 'America/Denver'
-                AND water_total_gal > 0)
-        )
-    """,
-            target_day,
-        )
-        or 0
-    )
-    water_gal = max(float(meter_water_gal), mister_water_gal)
-
-    ce = round(kwh * 0.111, 2)
-    cg = round(therms * 0.83, 2)
-    cw = round(float(water_gal) * 0.00484, 2)
-    ct = round(ce + cg + cw, 2)
-
-    gl_min = rt.get("grow_light_main", 0) + rt.get("grow_light_grow", 0)
-    irrigation_meter = await conn.fetchrow(
+    water_evidence = await conn.fetchrow(
         """
-        SELECT COALESCE(sum(COALESCE(meter_delta_gal, 0)), 0)::double precision AS meter_delta_gal
-          FROM v_irrigation_fertigation_runs
-         WHERE day = $1
+        SELECT quality_filtered_meter_gal,
+               climate_wetting_gal,
+               wall_irrigation_gal,
+               wall_fertigation_gal,
+               available_for_scoring
+        FROM v_water_attribution_daily
+        WHERE date = $1 AND greenhouse_id = 'vallery'
         """,
         target_day,
     )
+    water_available = bool(water_evidence and water_evidence["available_for_scoring"])
+    water_gal = (
+        float(water_evidence["quality_filtered_meter_gal"])
+        if water_available
+        else None
+    )
+    mister_water_gal = (
+        float(water_evidence["climate_wetting_gal"])
+        if water_available
+        else None
+    )
+
+    ce = round(kwh * 0.111, 2)
+    cg = round(therms * 0.83, 2)
+    cw = round(water_gal * 0.00484, 2) if water_gal is not None else None
+    ct = round(ce + cg + (cw or 0), 2)
+
+    gl_min = rt.get("grow_light_main", 0) + rt.get("grow_light_grow", 0)
     fert_runtime_h = (
         rt.get("drip_wall_fert", 0)
         + rt.get("drip_center_fert", 0)
@@ -1025,7 +1045,16 @@ async def _refresh_daily_summary_for_date(conn: asyncpg.Connection, target_day) 
         + rt.get("mister_west", 0)
         + rt.get("mister_center", 0)
     ) / 60.0
-    irrigation_water_gal = float(irrigation_meter["meter_delta_gal"] or 0) if irrigation_meter else 0.0
+    irrigation_water_gal = (
+        float(water_evidence["wall_irrigation_gal"])
+        if water_available
+        else None
+    )
+    fertigation_water_gal = (
+        float(water_evidence["wall_fertigation_gal"])
+        if water_available
+        else None
+    )
 
     await conn.execute(
         """
@@ -1094,7 +1123,7 @@ async def _refresh_daily_summary_for_date(conn: asyncpg.Connection, target_day) 
         cg,
         cw,
         ct,
-        float(water_gal),
+        water_gal,
         mister_water_gal,
         float(dp["min_margin_f"]) if dp and dp["min_margin_f"] is not None else None,
         float(dp["risk_hours"]) if dp else 0,
@@ -1106,6 +1135,17 @@ async def _refresh_daily_summary_for_date(conn: asyncpg.Connection, target_day) 
         cycles.get("mister_center", 0),
         cycles.get("drip_wall", 0),
         cycles.get("drip_center", 0),
+    )
+    await conn.execute(
+        """
+        UPDATE daily_summary
+        SET runtime_grow_light_main_min = $2,
+            runtime_grow_light_grow_min = $3
+        WHERE date = $1
+        """,
+        target_day,
+        rt.get("grow_light_main", 0),
+        rt.get("grow_light_grow", 0),
     )
     await conn.execute(
         """
@@ -1143,11 +1183,12 @@ async def _refresh_daily_summary_for_date(conn: asyncpg.Connection, target_day) 
         cycles.get("mister_west_fert", 0),
         cycles.get("fert_master_valve", 0),
         irrigation_water_gal,
-        irrigation_water_gal,
+        fertigation_water_gal,
     )
     # B5 / M3: kwh_total = Shelly 2-channel partial meter (undercounts whole-house
     # draw 3-6.6x). Kept for peak_kw / partial-load visibility only. The planner
-    # scores against kwh_estimated / cost_* (runtime estimate), never kwh_total.
+    # consumes the provenance-bearing reconciliation view and excludes uncertain
+    # or incomplete terms from scoring; neither scalar is sufficient alone.
     await conn.execute(
         """
         UPDATE daily_summary ds

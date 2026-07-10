@@ -7,7 +7,7 @@
     {
       "id": 4,
       "type": "stat",
-      "title": "Water",
+      "title": "Eligible Meter Water Cost",
       "datasource": {
         "uid": "verdify-tsdb",
         "type": "grafana-postgresql-datasource"
@@ -24,7 +24,7 @@
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
           },
-          "rawSql": "SELECT now() AS time, COALESCE(SUM(cost_water), 0) AS v FROM daily_summary WHERE $__timeFilter((date + time '12:00')::timestamptz)",
+          "rawSql": "SELECT now() AS time, ROUND(SUM(quality_filtered_meter_gal * 0.00484)::numeric, 2) AS v FROM v_water_attribution_daily WHERE $__timeFilter((date + time '12:00')::timestamptz) AND available_for_scoring",
           "format": "table",
           "refId": "A"
         }
@@ -48,13 +48,13 @@
         "colorMode": "value",
         "graphMode": "none"
       },
-      "description": "Water cost = gallons used \u00d7 $0.00484/gal",
+      "description": "Quality-filtered meter gallons \u00d7 $0.00484/gal. Stale, incomplete, discontinuous, or non-conserving days are excluded rather than replaced with raw counter arithmetic.",
       "transparent": true
     },
     {
       "id": 7,
       "type": "stat",
-      "title": "Gallons",
+      "title": "Accepted Meter Gallons",
       "datasource": {
         "uid": "verdify-tsdb",
         "type": "grafana-postgresql-datasource"
@@ -71,7 +71,7 @@
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
           },
-          "rawSql": "SELECT now() AS time, COALESCE(SUM(water_used_gal), 0) AS v FROM daily_summary WHERE $__timeFilter((date + time '12:00')::timestamptz)",
+          "rawSql": "SELECT now() AS time, COALESCE(SUM(quality_filtered_meter_gal), 0) AS v FROM v_water_attribution_daily WHERE $__timeFilter((date + time '12:00')::timestamptz)",
           "format": "table",
           "refId": "A"
         }
@@ -95,12 +95,13 @@
         "colorMode": "value",
         "graphMode": "none"
       },
+      "description": "Accepted event-ledger deltas only. This includes degraded days for visibility; quality and scoring eligibility remain explicit in the attribution panel.",
       "transparent": true
     },
     {
       "id": 8,
       "type": "stat",
-      "title": "$/Day (30-Day Average)",
+      "title": "Eligible Water $/Day (30d)",
       "datasource": {
         "uid": "verdify-tsdb",
         "type": "grafana-postgresql-datasource"
@@ -117,7 +118,7 @@
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
           },
-          "rawSql": "SELECT now() AS time, ROUND(AVG(cost_total)::numeric, 2) AS v FROM daily_summary WHERE date >= current_date - interval '30 days' AND date < current_date AND cost_total > 0",
+          "rawSql": "SELECT now() AS time, ROUND(AVG(quality_filtered_meter_gal * 0.00484)::numeric, 2) AS v FROM v_water_attribution_daily WHERE date >= current_date - interval '30 days' AND date < current_date AND available_for_scoring",
           "format": "table",
           "refId": "A"
         }
@@ -141,11 +142,11 @@
         "colorMode": "value",
         "graphMode": "none"
       },
-      "description": "Average daily total cost across the last 30 completed daily summaries.",
+      "description": "Average water-only cost for completed, conserving, quality-eligible ledger days. Energy costs are a separate modeled scope.",
       "transparent": true
     },
     {
-      "description": "Shows water use or irrigation behavior over time.",
+      "description": "Accepted meter gallons partitioned into single-run attribution, ambiguous overlap, and manual/unattributed remainder. The components conserve the meter total; command-only relay runs are never gallons.",
       "fieldConfig": {
         "defaults": {
           "custom": {
@@ -180,11 +181,11 @@
       "targets": [
         {
           "format": "time_series",
-          "rawSql": "SELECT $__time(day::timestamptz), used_gal AS \"Total Water (gal)\" FROM v_water_daily WHERE $__timeFilter(day::timestamptz) ORDER BY day",
+          "rawSql": "SELECT $__time((date + time '12:00')::timestamptz), attributed_gal AS \"Meter-attributed (gal)\", ambiguous_gal AS \"Ambiguous overlap (gal)\", manual_or_unattributed_gal AS \"Manual / unattributed (gal)\", quality_filtered_meter_gal AS \"Accepted meter total (gal)\" FROM v_water_attribution_daily WHERE $__timeFilter((date + time '12:00')::timestamptz) ORDER BY date",
           "refId": "A"
         }
       ],
-      "title": "Daily Water Use",
+      "title": "Meter-Conserving Water Attribution",
       "type": "timeseries",
       "transparent": true
     },

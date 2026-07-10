@@ -119,21 +119,21 @@ def test_homepage_lighting_state_is_on_only_policy_placed_fill():
     solar_sql = next(target["rawSql"] for target in lighting["targets"] if target.get("refId") == "A")
     state_sql = next(target["rawSql"] for target in lighting["targets"] if target.get("refId") == "B")
 
-    assert lighting["title"] == "Lighting: Overhead vs Grow Circuit — Lux & Switch State"
+    assert lighting["title"] == "Lighting: Lux, Thresholds & Switch State"
     assert "Solar Forecast" in solar_sql
     assert "Threshold" not in solar_sql
     assert "fn_lighting_circuit_policy" not in solar_sql
-    assert "fn_lighting_circuit_policy" in state_sql
-    assert "setpoint_snapshot" not in state_sql
-    assert "max(p.lux_on_threshold) FILTER (WHERE p.light_key='main')" in state_sql
-    assert "max(p.lux_on_threshold) FILTER (WHERE p.light_key='grow')" in state_sql
+    assert "setpoint_snapshot" in state_sql
+    assert "setpoint_changes" in state_sql
+    assert "gl_main_lux_threshold" in state_sql
+    assert "gl_grow_lux_threshold" in state_sql
     assert ") THEN m.value_when_on ELSE NULL::double precision END AS value" in state_sql
     assert "Base" not in state_sql
-    assert "fillBelowTo" not in _override_props(lighting, "Overhead Light")
-    assert "fillBelowTo" not in _override_props(lighting, "Grow Light")
-    for label in ("Overhead Threshold Base", "Overhead Threshold", "Grow Threshold Base", "Grow Threshold"):
+    assert "fillBelowTo" not in _override_props(lighting, "Main Light On")
+    assert "fillBelowTo" not in _override_props(lighting, "Grow Light On")
+    for label in ("Main Light Threshold Base", "Grow Light Threshold Base"):
         assert not _override_props(lighting, label)
-    for label in ("Overhead Light", "Grow Light"):
+    for label in ("Main Light On", "Grow Light On"):
         props = _override_props(lighting, label)
         assert props["custom.lineWidth"] == 0
         assert props["custom.fillOpacity"] == 90
@@ -230,6 +230,31 @@ def test_site_grafana_k3s_configmaps_match_source_dashboards():
             source = next((root / name for root in source_roots if (root / name).exists()), None)
             assert source is not None, f"{cm_path.name} data key {name} has no source dashboard"
             assert json.loads(raw) == json.loads(source.read_text(encoding="utf-8"))
+
+
+def test_resource_dashboards_label_scope_quality_and_no_legacy_catalog():
+    climate = _dashboard("grafana/dashboards/site-climate.json")
+    water = _dashboard("grafana/dashboards/site-climate-water.json")
+    equipment = _dashboard("grafana/dashboards/site-greenhouse-equipment.json")
+
+    climate_text = json.dumps(climate)
+    water_text = json.dumps(water)
+    equipment_text = json.dumps(equipment)
+
+    assert "equipment_assets" not in climate_text
+    assert "Runtime-Modeled" in climate_text
+    assert "coefficient_revision" in climate_text
+    assert "Modeled kWh low" in climate_text
+    assert "partial Shelly" in climate_text
+
+    assert "v_water_attribution_daily" in water_text
+    assert "Meter-Conserving Water Attribution" in water_text
+    assert "Ambiguous overlap" in water_text
+    assert "Manual / unattributed" in water_text
+    assert "command-only relay runs are never gallons" in water_text
+
+    assert "Wet-relay runtime is never delivered gallons" in equipment_text
+    assert "partial Shelly measurement" in equipment_text
 
 
 def test_quartz_dark_mode_contract_is_user_theme_driven():

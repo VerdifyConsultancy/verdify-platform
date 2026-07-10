@@ -155,7 +155,20 @@ class PublicHomeMetrics(BaseModel):
     planner_score_today: float | None = None
     compliance_pct_today: float | None = None
     cost_today_usd: float | None = None
+    cost_today_estimate_usd: float | None = None
     water_today_gal: float | None = None
+    water_today_observed_gal: float | None = None
+    water_today_quality: str = "unavailable"
+    water_today_available_for_scoring: bool = False
+    runtime_modeled_kwh: float | None = None
+    runtime_modeled_kwh_low: float | None = None
+    runtime_modeled_kwh_high: float | None = None
+    runtime_model_quality: str = "unavailable"
+    runtime_model_available_for_scoring: bool = False
+    partial_measured_kwh: float | None = None
+    partial_meter_coverage_pct: float | None = None
+    partial_meter_quality: str = "unavailable"
+    partial_meter_available_for_scoring: bool = False
     open_critical_high_alerts: int = Field(..., ge=0)
     climate_action_log_age_s: int | None = Field(default=None, ge=0)
     controller_climate_action: str | None = None

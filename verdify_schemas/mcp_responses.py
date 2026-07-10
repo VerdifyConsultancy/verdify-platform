@@ -164,7 +164,7 @@ class ScorecardResponse(BaseModel):
         return frozenset(names)
 
 
-OutcomeMetricStatus = Literal["available", "pending"]
+OutcomeMetricStatus = Literal["available", "degraded", "unavailable", "pending"]
 
 
 class OutcomeKpiCoverage(BaseModel):
@@ -178,6 +178,7 @@ class OutcomeKpiCoverage(BaseModel):
     actuator_cycles_runtime: OutcomeMetricStatus = "available"
     dew_margin: OutcomeMetricStatus = "available"
     water_use: OutcomeMetricStatus = "available"
+    resource_accounting: OutcomeMetricStatus = "available"
     dli: OutcomeMetricStatus = "available"
     dif: OutcomeMetricStatus = "available"
     solar_phase_buckets: OutcomeMetricStatus = "available"
@@ -222,6 +223,7 @@ class OutcomeKpiResponse(BaseModel):
     dif: dict[str, float | int | None] = Field(default_factory=dict)
     dew_margin: dict[str, float | None] = Field(default_factory=dict)
     energy_cost: dict[str, float | None] = Field(default_factory=dict)
+    resource_evidence: dict[str, Any] = Field(default_factory=dict)
     action_scorecard: list[OutcomeKpiActionRow] = Field(default_factory=list)
     solar_phase_buckets: list[dict[str, float | int | str | None]] = Field(default_factory=list)
     moisture_estimator: dict[str, Any] = Field(default_factory=dict)

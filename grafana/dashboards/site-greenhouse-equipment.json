@@ -2,6 +2,7 @@
   "refresh": "1m",
   "uid": "site-greenhouse-equipment",
   "title": "Site: Greenhouse \u2014 Equipment",
+  "description": "Equipment runtime and cycles are observed relay evidence. Wet-relay runtime is never delivered gallons; runtime-modeled energy uses the provenance-bearing canonical coefficient catalog and remains separate from partial Shelly measurement.",
   "editable": true,
   "panels": [
     {
@@ -470,6 +471,7 @@
       "id": 10,
       "type": "bargauge",
       "title": "Runtime (hours)",
+      "description": "Observed transition-derived relay runtime. For wet equipment this is command/operation evidence only, not water volume.",
       "datasource": {
         "uid": "verdify-tsdb",
         "type": "grafana-postgresql-datasource"

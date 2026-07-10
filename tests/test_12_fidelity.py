@@ -304,14 +304,17 @@ def test_daily_lifecycle_artifact_export_covers_public_safe_receipts():
     assert "source_plan_ids" in script
 
 
-def test_daily_summary_live_total_water_floors_known_mister_subset():
+def test_daily_summary_live_uses_scoring_eligible_meter_conservation_only():
     src = _tasks_src()
     start = src.index("async def _refresh_daily_summary_for_date")
     end = src.index("async def daily_summary_live", start)
     block = src[start:end]
-    assert 'mister_water_gal = float(climate["mister_water_gal"])' in block
-    assert "meter_water_gal" in block
-    assert "water_gal = max(float(meter_water_gal), mister_water_gal)" in block
+    assert "FROM v_water_attribution_daily" in block
+    assert 'water_evidence["available_for_scoring"]' in block
+    assert 'water_evidence["quality_filtered_meter_gal"]' in block
+    assert 'water_evidence["climate_wetting_gal"]' in block
+    assert "MAX(water_total_gal) - MIN(water_total_gal)" not in block
+    assert "water_gal = max(" not in block
 
 
 # ── S24.9.5 — zero-variance rule param list ────────────────────────
@@ -3257,7 +3260,8 @@ def test_schema_contract_marks_legacy_irrigation_as_retired():
     assert "soil_ec_south_1_last_positive_ts" in schema
     assert "south_2_reference_last_positive_ts" in schema
     assert "CREATE VIEW public.v_water_budget AS" in schema
-    assert "Daily water decomposition including equipment-derived fertigation gallons" in schema
+    assert "Meter-conserving daily water decomposition" in schema
+    assert "Relay runtime remains runtime; it is never converted to delivered gallons" in schema
     assert "After repair, run make irrigation-feedback-discover and make irrigation-feedback-check" in migration
     assert "sensor_registry targets are ready" in migration
     assert "Actual irrigation events. Linked to schedule" not in schema
