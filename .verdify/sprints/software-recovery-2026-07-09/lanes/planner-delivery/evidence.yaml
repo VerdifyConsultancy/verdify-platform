@@ -2,7 +2,7 @@ sprint_id: software-recovery-2026-07-09
 scope_id: planner-delivery
 revision: 8147aa3df104a6893c380818945f0382484dbb48
 environment: null
-generated_at: "2026-07-10T16:40:20Z"
+generated_at: "2026-07-10T16:44:00Z"
 items:
   - id: EVI-PLAN-001
     type: TEST
@@ -327,3 +327,23 @@ items:
     acceptance_criteria: [LANE-AC-01, LANE-AC-05]
     limitations:
       - Exact-head GitHub CI and renewed independent criticism remain pending.
+
+  - id: EVI-PLAN-016
+    type: REVIEW
+    status: PASS
+    source: renewed independent distributed-state critic
+    command: review remediation head 8147aa3df104a6893c380818945f0382484dbb48
+    timestamp: "2026-07-10T16:44:00Z"
+    revision: 8147aa3df104a6893c380818945f0382484dbb48
+    environment: source tree, GitHub CI, and disposable PostgreSQL
+    result: >-
+      PASS. Renewal exception and False outcomes fail readiness immediately and
+      recover through authoritative store success; the corrected ready-route
+      and complete targeted commands pass; all validation-only paths have
+      narrow controller grants. Independent planner_graph/API/PostgreSQL tests
+      passed 36/36, Ruff and diff checks passed, and no new P0/P1 finding
+      remains. PR record head c494b13 had 28 passes and eight intentional skips.
+    artifact_location: .verdify/sprints/software-recovery-2026-07-09/lanes/planner-delivery/critic-verdict-round-2.md
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04, LANE-AC-05]
+    limitations:
+      - Production acceptance remains release-controlled.
