@@ -1,8 +1,8 @@
 sprint_id: software-recovery-2026-07-09
 scope_id: planner-delivery
-revision: 402251ad8e6ce8d704d3d063022ae8f31c3e34df
+revision: 8b2fdeca8184efad720b3e8ad7303dcb6012d6c2
 environment: null
-generated_at: "2026-07-10T15:32:34Z"
+generated_at: "2026-07-10T16:26:11Z"
 items:
   - id: EVI-PLAN-001
     type: TEST
@@ -178,3 +178,111 @@ items:
     limitations:
       - Fresh independent distributed-state/planner criticism is still required before merge.
       - Production deployment, alert mutation, stale-intent retirement, and end-to-end plan acceptance remain release-controlled.
+
+  - id: EVI-PLAN-009
+    type: TEST
+    status: PASS
+    source: critic-remediation planner, Hermes, routing, and terminal fencing suite
+    command: >-
+      PLANNER_FENCE_TEST_DSN=<disposable-postgres> .venv/bin/python -m pytest
+      tests/test_04_planner.py::TestPlanValidity tests/test_12_fidelity.py
+      tests/test_17_planner_health_surface.py -q
+    timestamp: "2026-07-10T16:26:11Z"
+    revision: 8b2fdeca8184efad720b3e8ad7303dcb6012d6c2
+    environment: Jason laptop isolated planner worktree plus disposable PostgreSQL 16
+    result: >-
+      217 tests passed. Hermes readiness reduces post-process-start client logs
+      with exact tool-name parsing; liveness fails only after finite reconnect
+      exhaustion. Every planner terminal action locks the exact pending delivery
+      and linked delivered ledger row, rejects scheduled attempts without the
+      exact ledger, uses transaction-local PostgreSQL now() for current plan
+      validity, and conditionally fences both terminal updates. Three real
+      two-connection winner races passed.
+    artifact_location: tests/test_17_planner_health_surface.py
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
+    limitations:
+      - Production Hermes restart and end-to-end plan acceptance remain release-controlled.
+
+  - id: EVI-PLAN-010
+    type: TEST
+    status: PASS
+    source: planner_graph renewable lease and terminal CAS suite
+    command: ../.venv/bin/python -m pytest tests -q
+    timestamp: "2026-07-10T16:26:11Z"
+    revision: 8b2fdeca8184efad720b3e8ad7303dcb6012d6c2
+    environment: planner_graph directory on Jason laptop; disposable postgres:16-alpine fixtures
+    result: >-
+      64 tests passed. Long graph execution renews its lease, renewal prevents
+      takeover beyond the original expiry, an expired owner cannot write either
+      completed or failed after another owner reclaims, and owner identity is
+      unique across pod UID, process, and worker nonce. CLI replay/eval and the
+      planner-memory migration are also executable from the folded monorepo.
+    artifact_location: planner_graph/tests/test_store_postgres.py
+    acceptance_criteria: [LANE-AC-01, LANE-AC-05]
+    limitations:
+      - planner_graph remains explicitly non-authoritative for greenhouse writes.
+
+  - id: EVI-PLAN-011
+    type: TEST
+    status: PASS
+    source: migration 196 strict lifecycle rerun and rollback fixture
+    command: >-
+      apply migration 196 twice and run
+      db/migrations/tests/test-196-planner-terminal-lifecycle.sql inside an outer
+      transaction on disposable TimescaleDB/PostgreSQL 16
+    timestamp: "2026-07-10T16:26:11Z"
+    revision: 8b2fdeca8184efad720b3e8ad7303dcb6012d6c2
+    environment: disposable timescale/timescaledb PostgreSQL 16
+    result: >-
+      PASS after apply, rerun, fixture, and rollback. Rolling-compatibility
+      triggers normalize old terminal writes and clear stale evidence on retry;
+      strict constraints permit NULL terminal evidence only for true nonterminal
+      states. The active-plan view excludes newer-created superseded rows,
+      expired rows, and inactive rows from the effective plan while explicitly
+      retaining finite one-shots and active non-Iris sources. WEEKLY is accepted
+      by schema, routing, prompt, and ledger vocabulary.
+    artifact_location: db/migrations/tests/test-196-planner-terminal-lifecycle.sql
+    acceptance_criteria: [LANE-AC-02, LANE-AC-03]
+    limitations:
+      - Migration 196 has not been applied to production.
+
+  - id: EVI-PLAN-012
+    type: TEST
+    status: PASS
+    source: lint, rollback classification, and production manifest render
+    command: >-
+      make lint; git diff --check; check_migration_rollback_safety.py
+      --rollback-wrap db/migrations/196-planner-terminal-lifecycle.sql;
+      kubectl kustomize deploy/k8s/overlays/prod | kubeconform -strict
+      -summary -ignore-missing-schemas
+    timestamp: "2026-07-10T16:26:11Z"
+    revision: 8b2fdeca8184efad720b3e8ad7303dcb6012d6c2
+    environment: Jason laptop isolated planner worktree
+    result: >-
+      Ruff and diff checks pass; migration 196 remains non-self-transactional
+      and safe to outer-wrap. Production render contains planner Recreate plus
+      downward-API owner identity and Hermes python3 client-state probes; 90
+      resources found, 84 valid, zero invalid/errors, six expected schema skips.
+    artifact_location: deploy/k8s/components
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-05]
+    limitations:
+      - No ArgoCD sync, rollout, restart, or device action occurred.
+
+  - id: EVI-PLAN-013
+    type: TEST
+    status: WARNING
+    source: required monolithic retired-laptop/live-stack harness
+    command: make test
+    timestamp: "2026-07-10T16:26:11Z"
+    revision: 8b2fdeca8184efad720b3e8ad7303dcb6012d6c2
+    environment: Jason laptop after development moved to k3s
+    result: >-
+      Initial run reported 789 passed, 145 failed, and 16 skipped. Five stale
+      issue-427 source assertions were updated and then passed in the 217-test
+      offline rerun. The remaining 140 failures are inherited live/retired-host
+      expectations for local Docker systemd, verdify-timescaledb, localhost
+      API/site, and the pre-existing prod PVC storage-class assertion.
+    artifact_location: null
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04, LANE-AC-05]
+    limitations:
+      - The monolithic target is not host-portable despite the k3s-agent handoff; focused offline, disposable-DB, and manifest suites are the executable lane evidence.
