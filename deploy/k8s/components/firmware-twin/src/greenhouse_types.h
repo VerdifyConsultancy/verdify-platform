@@ -640,6 +640,11 @@ struct DliEvidence {
     const char* valid_to;
 };
 
+struct ElapsedIntervals {
+    uint32_t raw_ms;
+    uint32_t control_ms;
+};
+
 inline LightingState initial_lighting_state() {
     return {
         .sentinel = LIGHT_STATE_SENTINEL,

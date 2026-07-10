@@ -668,7 +668,9 @@ data:
     WITH deduped AS (
       SELECT DISTINCT ON (lesson) id, category, condition, lesson, confidence, times_validated
       FROM planner_lessons
-      WHERE is_active = true AND superseded_by IS NULL
+      WHERE is_active = true
+        AND superseded_by IS NULL
+        AND NOT public.fn_dli_proxy_lesson_invalid(condition, lesson)
       ORDER BY lesson, times_validated DESC
     )
     SELECT category, condition, lesson, confidence, times_validated

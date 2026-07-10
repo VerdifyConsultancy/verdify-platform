@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict 0S0rugZY5MzNb7hvBCgOUmEXfNXiQtkMFtp2BdX35tn64RKgvZbMNzCR7eOG052
+\restrict bnBHnFqbzoeqT0vgyVJ5W8RafjHjvnbHyxjLkl2PaWRl9reaMyGRXlvb06egyzc
 
 -- Dumped from database version 16.14
 -- Dumped by pg_dump version 16.14
@@ -1504,6 +1504,69 @@ $$;
 ALTER FUNCTION public.fn_diurnal_interp(target_ts timestamp with time zone, night_val double precision, day_val double precision) OWNER TO verdify;
 
 --
+-- Name: fn_dli_proxy_lesson_invalid(text, text); Type: FUNCTION; Schema: public; Owner: verdify
+--
+
+CREATE FUNCTION public.fn_dli_proxy_lesson_invalid(p_condition text, p_lesson text) RETURNS boolean
+    LANGUAGE sql IMMUTABLE
+    AS $$
+    WITH normalized AS (
+        SELECT lower(
+            COALESCE(p_condition, '') || ' ' || COALESCE(p_lesson, '')
+        ) AS body
+    )
+    SELECT
+        body ~ '(sensor[_ -]*dli|dli[_ -]*(today|sensor)|interior[^.]{0,40}dli|crop[^.]{0,40}dli)'
+        AND (
+            body ~ '(×|[*]|[[:space:]]x[[:space:]])[[:space:]]*[0-9]'
+            OR body ~ '(correction|corrected|proxy|estimate|estimated|multiply|multiplied|factor)'
+            OR body ~ 'grow[_ -]*light[_ -]*(hours|runtime)'
+        )
+    FROM normalized
+$$;
+
+
+ALTER FUNCTION public.fn_dli_proxy_lesson_invalid(p_condition text, p_lesson text) OWNER TO verdify;
+
+--
+-- Name: FUNCTION fn_dli_proxy_lesson_invalid(p_condition text, p_lesson text); Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON FUNCTION public.fn_dli_proxy_lesson_invalid(p_condition text, p_lesson text) IS 'Matches operational lessons that infer interior/crop DLI from the invalid sensor, a correction factor, proxy, estimate, or grow-light runtime.';
+
+
+--
+-- Name: fn_dli_source_invalid_reason(double precision); Type: FUNCTION; Schema: public; Owner: verdify
+--
+
+CREATE FUNCTION public.fn_dli_source_invalid_reason(p_value double precision) RETURNS text
+    LANGUAGE plpgsql IMMUTABLE
+    AS $$
+BEGIN
+    IF p_value IS NULL THEN
+        RETURN 'source_reading_missing';
+    ELSIF p_value::text IN ('NaN', 'Infinity', '-Infinity') THEN
+        RETURN 'source_reading_nonfinite';
+    ELSIF p_value < 0 THEN
+        RETURN 'source_reading_negative';
+    ELSIF p_value > 100 THEN
+        RETURN 'source_reading_out_of_range';
+    END IF;
+    RETURN NULL;
+END;
+$$;
+
+
+ALTER FUNCTION public.fn_dli_source_invalid_reason(p_value double precision) OWNER TO verdify;
+
+--
+-- Name: FUNCTION fn_dli_source_invalid_reason(p_value double precision); Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON FUNCTION public.fn_dli_source_invalid_reason(p_value double precision) IS 'Returns an explicit reason when candidate interior DLI is missing, non-finite, negative, or outside the 0..100 mol/m2/day product range.';
+
+
+--
 -- Name: fn_dli_validity(timestamp with time zone, text); Type: FUNCTION; Schema: public; Owner: verdify
 --
 
@@ -1533,7 +1596,7 @@ ALTER FUNCTION public.fn_dli_validity(p_ts timestamp with time zone, p_greenhous
 -- Name: FUNCTION fn_dli_validity(p_ts timestamp with time zone, p_greenhouse_id text); Type: COMMENT; Schema: public; Owner: verdify
 --
 
-COMMENT ON FUNCTION public.fn_dli_validity(p_ts timestamp with time zone, p_greenhouse_id text) IS 'Returns the one half-open validity interval governing interior crop DLI at a timestamp. No row means no validated DLI contract exists.';
+COMMENT ON FUNCTION public.fn_dli_validity(p_ts timestamp with time zone, p_greenhouse_id text) IS 'Returns the one half-open validity interval governing interior crop DLI at a timestamp. Under migration 195 every returned interval is unavailable; no row means no DLI contract exists.';
 
 
 --
@@ -3873,19 +3936,31 @@ CREATE FUNCTION public.fn_search_embeddings(query_embedding public.vector, p_top
     AS $$
 BEGIN
     RETURN QUERY
-    SELECT e.source_type, e.source_id, e.chunk_idx, e.content, e.metadata,
-           (e.embedding <=> query_embedding)::float AS distance
-      FROM verdify_embeddings e
-      LEFT JOIN planner_lessons pl
-        ON e.source_type = 'lesson'
-       AND pl.id::text = e.source_id
-     WHERE e.source_type = ANY(p_source_types)
-       AND (
-             e.source_type <> 'lesson'
-             OR (pl.is_active = true AND pl.superseded_by IS NULL)
-           )
-     ORDER BY e.embedding <=> query_embedding
-     LIMIT p_top_k;
+    SELECT
+        e.source_type,
+        e.source_id,
+        e.chunk_idx,
+        e.content,
+        e.metadata,
+        (e.embedding <=> query_embedding)::double precision AS distance
+    FROM public.verdify_embeddings e
+    LEFT JOIN public.planner_lessons pl
+      ON e.source_type = 'lesson'
+     AND pl.id::text = e.source_id
+    WHERE e.source_type = ANY(p_source_types)
+      AND (
+          e.source_type <> 'lesson'
+          OR (
+              pl.is_active IS TRUE
+              AND pl.superseded_by IS NULL
+              AND NOT public.fn_dli_proxy_lesson_invalid(
+                  pl.condition,
+                  pl.lesson
+              )
+          )
+      )
+    ORDER BY e.embedding <=> query_embedding
+    LIMIT p_top_k;
 END;
 $$;
 
@@ -3896,7 +3971,7 @@ ALTER FUNCTION public.fn_search_embeddings(query_embedding public.vector, p_top_
 -- Name: FUNCTION fn_search_embeddings(query_embedding public.vector, p_top_k integer, p_source_types text[]); Type: COMMENT; Schema: public; Owner: verdify
 --
 
-COMMENT ON FUNCTION public.fn_search_embeddings(query_embedding public.vector, p_top_k integer, p_source_types text[]) IS 'Top-K cosine-similarity retrieval over verdify_embeddings. Source types: lesson, plan, site_doc, playbook, observation.';
+COMMENT ON FUNCTION public.fn_search_embeddings(query_embedding public.vector, p_top_k integer, p_source_types text[]) IS 'Top-K semantic retrieval. Active lesson results also pass the DLI proxy/correction invalidation guard.';
 
 
 --
@@ -24144,7 +24219,8 @@ CREATE TABLE public.dli_validity_intervals (
     created_by text DEFAULT 'migration_195'::text NOT NULL,
     CONSTRAINT dli_validity_availability CHECK ((availability = ANY (ARRAY['available'::text, 'unavailable'::text]))),
     CONSTRAINT dli_validity_evidence_shape CHECK ((((availability = 'available'::text) AND operator_validated AND (unavailable_reason IS NULL)) OR ((availability = 'unavailable'::text) AND (NOT operator_validated) AND (unavailable_reason IS NOT NULL) AND (btrim(unavailable_reason) <> ''::text)))),
-    CONSTRAINT dli_validity_interval_order CHECK (((valid_to IS NULL) OR (valid_to > valid_from)))
+    CONSTRAINT dli_validity_interval_order CHECK (((valid_to IS NULL) OR (valid_to > valid_from))),
+    CONSTRAINT dli_validity_release_unavailable CHECK (((availability = 'unavailable'::text) AND (NOT operator_validated)))
 );
 
 
@@ -24154,7 +24230,7 @@ ALTER TABLE public.dli_validity_intervals OWNER TO verdify;
 -- Name: TABLE dli_validity_intervals; Type: COMMENT; Schema: public; Owner: verdify
 --
 
-COMMENT ON TABLE public.dli_validity_intervals IS 'Operator-controlled validity ledger for interior crop DLI. Available intervals require explicit operator validation; unavailable intervals carry reason, provenance, revision, and half-open validity bounds.';
+COMMENT ON TABLE public.dli_validity_intervals IS 'Fail-closed validity ledger for interior crop DLI. Migration 195 permits unavailable intervals only; ordinary DML cannot activate DLI. Future activation requires a separately reviewed migration/contract change. This is a schema invariant, not DB-role privilege separation.';
 
 
 --
@@ -25338,6 +25414,7 @@ CREATE TABLE public.planner_lessons (
     superseded_by integer,
     is_active boolean DEFAULT true,
     greenhouse_id text DEFAULT 'vallery'::text,
+    CONSTRAINT planner_lessons_active_dli_proxy_block CHECK (((is_active IS NOT TRUE) OR (NOT public.fn_dli_proxy_lesson_invalid(condition, lesson)))),
     CONSTRAINT planner_lessons_confidence_check CHECK ((confidence = ANY (ARRAY['low'::text, 'medium'::text, 'high'::text])))
 );
 
@@ -27059,29 +27136,83 @@ CREATE VIEW public.v_dli_daily AS
             (((ds.date + 1))::timestamp without time zone AT TIME ZONE 'America/Denver'::text) AS day_end
            FROM public.daily_summary ds
           WHERE (ds.date IS NOT NULL)
+        ), source_coverage AS (
+         SELECT ((c.ts AT TIME ZONE 'America/Denver'::text))::date AS date,
+            COALESCE(c.greenhouse_id, 'vallery'::text) AS greenhouse_id,
+            min(c.ts) AS source_first_ts,
+            max(c.ts) AS source_last_ts,
+            count(*) FILTER (WHERE (public.fn_dli_source_invalid_reason(c.dli_today) IS NULL)) AS valid_source_rows,
+            count(*) FILTER (WHERE ((c.dli_today IS NOT NULL) AND (public.fn_dli_source_invalid_reason(c.dli_today) IS NOT NULL))) AS invalid_source_rows
+           FROM public.climate c
+          GROUP BY (((c.ts AT TIME ZONE 'America/Denver'::text))::date), COALESCE(c.greenhouse_id, 'vallery'::text)
+        ), evaluated AS (
+         SELECT d.date,
+            d.greenhouse_id,
+            d.forensic_proxy_dli_mol_m2_day,
+            d.day_start,
+            d.day_end,
+            sc.source_first_ts,
+            sc.source_last_ts,
+            COALESCE(sc.valid_source_rows, (0)::bigint) AS valid_source_rows,
+            COALESCE(sc.invalid_source_rows, (0)::bigint) AS invalid_source_rows,
+            v.availability AS interval_availability,
+            v.unavailable_reason AS interval_unavailable_reason,
+            v.provenance,
+            v.validity_revision,
+            v.valid_from,
+            v.valid_to,
+            v.operator_validated,
+            public.fn_dli_source_invalid_reason(d.forensic_proxy_dli_mol_m2_day) AS final_source_invalid_reason
+           FROM ((day_bounds d
+             LEFT JOIN source_coverage sc ON (((sc.date = d.date) AND (sc.greenhouse_id = d.greenhouse_id))))
+             LEFT JOIN LATERAL public.fn_dli_validity((d.day_start + '12:00:00'::interval), d.greenhouse_id) v(availability, unavailable_reason, provenance, validity_revision, valid_from, valid_to, operator_validated) ON (true))
+        ), product AS (
+         SELECT e.date,
+            e.greenhouse_id,
+            e.forensic_proxy_dli_mol_m2_day,
+            e.day_start,
+            e.day_end,
+            e.source_first_ts,
+            e.source_last_ts,
+            e.valid_source_rows,
+            e.invalid_source_rows,
+            e.interval_availability,
+            e.interval_unavailable_reason,
+            e.provenance,
+            e.validity_revision,
+            e.valid_from,
+            e.valid_to,
+            e.operator_validated,
+            e.final_source_invalid_reason,
+            ((e.interval_availability = 'available'::text) AND e.operator_validated AND (e.valid_from <= e.day_start) AND ((e.valid_to IS NULL) OR (e.valid_to >= e.day_end)) AND (e.day_end <= now()) AND (e.final_source_invalid_reason IS NULL) AND (e.valid_source_rows > 0) AND (e.invalid_source_rows = 0) AND (e.source_first_ts <= (e.day_start + '00:05:00'::interval)) AND (e.source_last_ts >= (e.day_end - '00:05:00'::interval))) AS evidence_available
+           FROM evaluated e
         )
- SELECT d.date,
-    d.greenhouse_id,
+ SELECT date,
+    greenhouse_id,
         CASE
-            WHEN ((v.availability = 'available'::text) AND v.operator_validated AND (v.valid_from <= d.day_start) AND ((v.valid_to IS NULL) OR (v.valid_to >= d.day_end))) THEN d.forensic_proxy_dli_mol_m2_day
+            WHEN evidence_available THEN forensic_proxy_dli_mol_m2_day
             ELSE NULL::double precision
         END AS crop_dli_mol_m2_day,
         CASE
-            WHEN ((v.availability = 'available'::text) AND v.operator_validated AND (v.valid_from <= d.day_start) AND ((v.valid_to IS NULL) OR (v.valid_to >= d.day_end))) THEN 'available'::text
+            WHEN evidence_available THEN 'available'::text
             ELSE 'unavailable'::text
         END AS availability,
         CASE
-            WHEN ((v.availability = 'available'::text) AND v.operator_validated AND (v.valid_from <= d.day_start) AND ((v.valid_to IS NULL) OR (v.valid_to >= d.day_end))) THEN NULL::text
-            WHEN (v.availability = 'available'::text) THEN 'validity_interval_does_not_cover_full_local_day'::text
-            ELSE COALESCE(v.unavailable_reason, 'validity_contract_missing'::text)
+            WHEN evidence_available THEN NULL::text
+            WHEN (day_end > now()) THEN 'source_day_incomplete'::text
+            WHEN (final_source_invalid_reason IS NOT NULL) THEN final_source_invalid_reason
+            WHEN (valid_source_rows = 0) THEN 'source_coverage_missing'::text
+            WHEN (invalid_source_rows > 0) THEN 'source_coverage_contains_invalid_reading'::text
+            WHEN ((source_first_ts > (day_start + '00:05:00'::interval)) OR (source_last_ts < (day_end - '00:05:00'::interval))) THEN 'source_coverage_incomplete'::text
+            WHEN ((interval_availability = 'available'::text) AND ((valid_from > day_start) OR ((valid_to IS NOT NULL) AND (valid_to < day_end)))) THEN 'validity_interval_does_not_cover_full_local_day'::text
+            ELSE COALESCE(interval_unavailable_reason, 'validity_contract_missing'::text)
         END AS unavailable_reason,
-    COALESCE(v.provenance, 'unknown_unvalidated_source'::text) AS provenance,
-    COALESCE(v.validity_revision, 'missing'::text) AS validity_revision,
-    v.valid_from,
-    v.valid_to,
-    (d.forensic_proxy_dli_mol_m2_day IS NOT NULL) AS forensic_proxy_present
-   FROM (day_bounds d
-     LEFT JOIN LATERAL public.fn_dli_validity((d.day_start + '12:00:00'::interval), d.greenhouse_id) v(availability, unavailable_reason, provenance, validity_revision, valid_from, valid_to, operator_validated) ON (true));
+    COALESCE(provenance, 'unknown_unvalidated_source'::text) AS provenance,
+    COALESCE(validity_revision, 'missing'::text) AS validity_revision,
+    valid_from,
+    valid_to,
+    (forensic_proxy_dli_mol_m2_day IS NOT NULL) AS forensic_proxy_present
+   FROM product p;
 
 
 ALTER VIEW public.v_dli_daily OWNER TO verdify;
@@ -27090,7 +27221,7 @@ ALTER VIEW public.v_dli_daily OWNER TO verdify;
 -- Name: VIEW v_dli_daily; Type: COMMENT; Schema: public; Owner: verdify
 --
 
-COMMENT ON VIEW public.v_dli_daily IS 'Daily interior crop DLI product contract. A numeric value requires one operator-validated interval to cover the entire Denver-local day; partial/boundary days remain unavailable.';
+COMMENT ON VIEW public.v_dli_daily IS 'Daily interior crop DLI product contract. Migration 195 is fail closed. Future activation additionally requires an ended Denver-local day, valid finite 0..100 evidence, complete source coverage, and one validity interval covering the full day.';
 
 
 --
@@ -29789,11 +29920,18 @@ CREATE VIEW public.v_dli_current AS
  SELECT l.ts,
     l.greenhouse_id,
         CASE
-            WHEN ((v.availability = 'available'::text) AND v.operator_validated) THEN l.forensic_proxy_dli_mol_m2_day
+            WHEN ((v.availability = 'available'::text) AND v.operator_validated AND (public.fn_dli_source_invalid_reason(l.forensic_proxy_dli_mol_m2_day) IS NULL)) THEN l.forensic_proxy_dli_mol_m2_day
             ELSE NULL::double precision
         END AS crop_dli_mol_m2_day,
-    COALESCE(v.availability, 'unavailable'::text) AS availability,
-    COALESCE(v.unavailable_reason, 'validity_contract_missing'::text) AS unavailable_reason,
+        CASE
+            WHEN ((v.availability = 'available'::text) AND v.operator_validated AND (public.fn_dli_source_invalid_reason(l.forensic_proxy_dli_mol_m2_day) IS NULL)) THEN 'available'::text
+            ELSE 'unavailable'::text
+        END AS availability,
+        CASE
+            WHEN (public.fn_dli_source_invalid_reason(l.forensic_proxy_dli_mol_m2_day) IS NOT NULL) THEN public.fn_dli_source_invalid_reason(l.forensic_proxy_dli_mol_m2_day)
+            WHEN ((v.availability = 'available'::text) AND v.operator_validated) THEN NULL::text
+            ELSE COALESCE(v.unavailable_reason, 'validity_contract_missing'::text)
+        END AS unavailable_reason,
     COALESCE(v.provenance, 'unknown_unvalidated_source'::text) AS provenance,
     COALESCE(v.validity_revision, 'missing'::text) AS validity_revision,
     v.valid_from,
@@ -29809,7 +29947,7 @@ ALTER VIEW public.v_dli_current OWNER TO verdify;
 -- Name: VIEW v_dli_current; Type: COMMENT; Schema: public; Owner: verdify
 --
 
-COMMENT ON VIEW public.v_dli_current IS 'Current interior crop DLI product contract. Numeric value is NULL unless an operator-validated interval governs the source; invalid legacy proxy presence is diagnostic-only.';
+COMMENT ON VIEW public.v_dli_current IS 'Current interior crop DLI product contract. Migration 195 is fail closed, so numeric value is NULL. Invalid, non-finite, negative, missing, and out-of-range source readings receive explicit unavailable reasons; legacy proxy presence is diagnostic-only.';
 
 
 --
@@ -31786,214 +31924,6 @@ CREATE VIEW public.v_light_transmission AS
 ALTER VIEW public.v_light_transmission OWNER TO verdify;
 
 --
--- Name: v_lighting_circuit_status_now; Type: VIEW; Schema: public; Owner: verdify
---
-
-CREATE VIEW public.v_lighting_circuit_status_now AS
- WITH policy AS (
-         SELECT fn_lighting_circuit_policy.greenhouse_id,
-            fn_lighting_circuit_policy.ts,
-            fn_lighting_circuit_policy.light_key,
-            fn_lighting_circuit_policy.equipment,
-            fn_lighting_circuit_policy.dli_target,
-            fn_lighting_circuit_policy.start_hour,
-            fn_lighting_circuit_policy.cutoff_hour,
-            fn_lighting_circuit_policy.lux_on_threshold,
-            fn_lighting_circuit_policy.lux_hysteresis,
-            fn_lighting_circuit_policy.lux_off_threshold,
-            fn_lighting_circuit_policy.min_on_s,
-            fn_lighting_circuit_policy.min_off_s,
-            fn_lighting_circuit_policy.auto_enabled,
-            fn_lighting_circuit_policy.source_chain,
-            fn_lighting_circuit_policy.controller_contract
-           FROM public.fn_lighting_circuit_policy(now(), 'vallery'::text) fn_lighting_circuit_policy(greenhouse_id, ts, light_key, equipment, dli_target, start_hour, cutoff_hour, lux_on_threshold, lux_hysteresis, lux_off_threshold, min_on_s, min_off_s, auto_enabled, source_chain, controller_contract)
-        ), latest_climate AS (
-         SELECT climate.ts,
-            climate.dli_today,
-            climate.lux,
-            climate.outdoor_lux
-           FROM public.climate
-          WHERE (climate.greenhouse_id = 'vallery'::text)
-          ORDER BY climate.ts DESC
-         LIMIT 1
-        ), latest_equipment AS (
-         SELECT DISTINCT ON (equipment_state.equipment) equipment_state.equipment,
-            equipment_state.state,
-            equipment_state.ts
-           FROM public.equipment_state
-          WHERE (equipment_state.equipment = ANY (ARRAY['grow_light_main'::text, 'grow_light_grow'::text]))
-          ORDER BY equipment_state.equipment, equipment_state.ts DESC
-        ), firmware_ordered AS (
-         SELECT diagnostics.ts,
-            diagnostics.firmware_version,
-            lag(diagnostics.firmware_version) OVER (ORDER BY diagnostics.ts) AS previous_firmware_version
-           FROM public.diagnostics
-          WHERE ((diagnostics.firmware_version IS NOT NULL) AND (diagnostics.firmware_version <> ''::text) AND (diagnostics.ts > (now() - '30 days'::interval)))
-        ), current_firmware AS (
-         SELECT diagnostics.firmware_version
-           FROM public.diagnostics
-          WHERE ((diagnostics.firmware_version IS NOT NULL) AND (diagnostics.firmware_version <> ''::text))
-          ORDER BY diagnostics.ts DESC
-         LIMIT 1
-        ), current_firmware_start AS (
-         SELECT max(fo.ts) AS ts
-           FROM (firmware_ordered fo
-             CROSS JOIN current_firmware cf)
-          WHERE ((fo.firmware_version = cf.firmware_version) AND (fo.previous_firmware_version IS DISTINCT FROM fo.firmware_version))
-        ), latest_reason AS (
-         SELECT DISTINCT ON (system_state.entity) system_state.entity,
-            system_state.value,
-            system_state.ts
-           FROM public.system_state
-          WHERE (system_state.entity = ANY (ARRAY['gl_main_state'::text, 'gl_main_reason'::text, 'gl_grow_state'::text, 'gl_grow_reason'::text]))
-          ORDER BY system_state.entity, system_state.ts DESC
-        ), joined AS (
-         SELECT p.greenhouse_id,
-            p.ts,
-            p.light_key,
-            p.equipment,
-            p.dli_target,
-            p.start_hour,
-            p.cutoff_hour,
-            p.lux_on_threshold,
-            p.lux_hysteresis,
-            p.lux_off_threshold,
-            p.min_on_s,
-            p.min_off_s,
-            p.auto_enabled,
-            p.source_chain,
-            p.controller_contract,
-            c.ts AS climate_ts,
-            c.dli_today,
-            c.lux AS indoor_lux,
-            c.outdoor_lux,
-            COALESCE(c.outdoor_lux, c.lux, (0.0)::double precision) AS natural_lux,
-            (EXTRACT(hour FROM (now() AT TIME ZONE 'America/Denver'::text)))::integer AS local_hour,
-            e.state AS equipment_state,
-            e.ts AS equipment_ts,
-            state_row.value AS firmware_state_raw,
-            state_row.ts AS firmware_state_ts,
-            reason_row.value AS firmware_reason_raw,
-            reason_row.ts AS firmware_reason_ts,
-            ((state_row.ts >= COALESCE(( SELECT current_firmware_start.ts
-                   FROM current_firmware_start), (now() - '00:10:00'::interval))) AND (reason_row.ts >= COALESCE(( SELECT current_firmware_start.ts
-                   FROM current_firmware_start), (now() - '00:10:00'::interval))) AND (state_row.ts > (now() - '00:10:00'::interval)) AND (reason_row.ts > (now() - '00:10:00'::interval))) AS firmware_telemetry_fresh
-           FROM ((((policy p
-             LEFT JOIN latest_climate c ON (true))
-             LEFT JOIN latest_equipment e ON ((e.equipment = p.equipment)))
-             LEFT JOIN latest_reason state_row ON ((state_row.entity = (('gl_'::text || p.light_key) || '_state'::text))))
-             LEFT JOIN latest_reason reason_row ON ((reason_row.entity = (('gl_'::text || p.light_key) || '_reason'::text))))
-        )
- SELECT greenhouse_id,
-    ts,
-    light_key,
-    equipment,
-    dli_target,
-    start_hour,
-    cutoff_hour,
-    lux_on_threshold,
-    lux_hysteresis,
-    lux_off_threshold,
-    min_on_s,
-    min_off_s,
-    auto_enabled,
-    source_chain,
-    controller_contract,
-    climate_ts,
-    dli_today,
-    indoor_lux,
-    outdoor_lux,
-    natural_lux,
-    local_hour,
-        CASE
-            WHEN (start_hour <= cutoff_hour) THEN ((local_hour >= start_hour) AND (local_hour < cutoff_hour))
-            ELSE ((local_hour >= start_hour) OR (local_hour < cutoff_hour))
-        END AS in_light_window,
-    (COALESCE(dli_today, (0.0)::double precision) < dli_target) AS dli_below_target,
-    (natural_lux < lux_on_threshold) AS lux_below_on_threshold,
-    (natural_lux < lux_off_threshold) AS lux_below_off_threshold,
-    (auto_enabled AND
-        CASE
-            WHEN (start_hour <= cutoff_hour) THEN ((local_hour >= start_hour) AND (local_hour < cutoff_hour))
-            ELSE ((local_hour >= start_hour) OR (local_hour < cutoff_hour))
-        END AND (COALESCE(dli_today, (0.0)::double precision) < dli_target) AND ((natural_lux < lux_on_threshold) OR ((COALESCE(equipment_state, false) OR (firmware_telemetry_fresh AND (upper(COALESCE(firmware_state_raw, ''::text)) = 'ON'::text))) AND (natural_lux < lux_off_threshold)))) AS expected_on,
-    COALESCE(equipment_state, false) AS actual_on,
-        CASE
-            WHEN firmware_telemetry_fresh THEN firmware_state_raw
-            ELSE NULL::text
-        END AS firmware_state,
-        CASE
-            WHEN firmware_telemetry_fresh THEN firmware_reason_raw
-            ELSE NULL::text
-        END AS firmware_reason,
-    equipment_ts,
-    firmware_state_raw,
-    firmware_reason_raw,
-    firmware_state_ts,
-    firmware_reason_ts,
-    firmware_telemetry_fresh
-   FROM joined j;
-
-
-ALTER VIEW public.v_lighting_circuit_status_now OWNER TO verdify;
-
---
--- Name: VIEW v_lighting_circuit_status_now; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON VIEW public.v_lighting_circuit_status_now IS 'Current per-circuit lighting policy, expected state, fresh firmware text state, and actual Lutron equipment_state. Firmware state/reason are NULL unless updated after current firmware start and within 10 minutes.';
-
-
---
--- Name: v_lighting_daily; Type: VIEW; Schema: public; Owner: verdify
---
-
-CREATE VIEW public.v_lighting_daily AS
- WITH runtime AS (
-         SELECT v_equipment_runtime_daily.day,
-            v_equipment_runtime_daily.equipment,
-            v_equipment_runtime_daily.on_minutes,
-            v_equipment_runtime_daily.cycles
-           FROM public.v_equipment_runtime_daily
-          WHERE (v_equipment_runtime_daily.equipment = ANY (ARRAY['grow_light_main'::text, 'grow_light_grow'::text]))
-        )
- SELECT ds.date,
-    ((ds.date + '12:00:00'::time without time zone))::timestamp with time zone AS ts,
-    d.crop_dli_mol_m2_day AS sensor_dli,
-    (ds.runtime_grow_light_min / (60.0)::double precision) AS grow_light_hours,
-    (COALESCE(main_rt.on_minutes, 0.0) / 60.0) AS main_light_hours,
-    (COALESCE(grow_rt.on_minutes, 0.0) / 60.0) AS grow_light_circuit_hours,
-    COALESCE(main_rt.cycles, (0)::bigint) AS main_light_cycles,
-    COALESCE(grow_rt.cycles, (0)::bigint) AS grow_light_circuit_cycles,
-    p.target_dli,
-    p.target_light_hours,
-    p.sunrise_hour,
-    p.natural_sunset_hour,
-    p.cutoff_hour,
-    p.max_crop_name,
-    d.availability AS dli_availability,
-    d.unavailable_reason AS dli_unavailable_reason,
-    d.provenance AS dli_provenance,
-    d.validity_revision AS dli_validity_revision,
-    d.valid_from AS dli_valid_from,
-    d.valid_to AS dli_valid_to
-   FROM ((((public.daily_summary ds
-     CROSS JOIN LATERAL public.fn_lighting_policy(((ds.date + '12:00:00'::time without time zone))::timestamp with time zone, COALESCE(ds.greenhouse_id, 'vallery'::text)) p(greenhouse_id, ts, local_date, target_dli, target_ppfd_umol_m2_s, target_light_hours, sunrise_hour, natural_sunset_hour, cutoff_hour, max_crop_name, max_crop_stage, source_chain, controller_contract))
-     LEFT JOIN runtime main_rt ON (((main_rt.day = ds.date) AND (main_rt.equipment = 'grow_light_main'::text))))
-     LEFT JOIN runtime grow_rt ON (((grow_rt.day = ds.date) AND (grow_rt.equipment = 'grow_light_grow'::text))))
-     LEFT JOIN public.v_dli_daily d ON (((d.date = ds.date) AND (d.greenhouse_id = COALESCE(ds.greenhouse_id, 'vallery'::text)))));
-
-
-ALTER VIEW public.v_lighting_daily OWNER TO verdify;
-
---
--- Name: VIEW v_lighting_daily; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON VIEW public.v_lighting_daily IS 'DLI-independent lighting runtime and crop target context. Measured sensor_dli is NULL with explicit validity metadata while the interior sensor is invalid.';
-
-
---
 -- Name: v_lighting_minutes_status_now; Type: VIEW; Schema: public; Owner: verdify
 --
 
@@ -32116,13 +32046,14 @@ CREATE VIEW public.v_lighting_minutes_status_now AS
              LEFT JOIN minute_eval me ON (((me.light_key = w.light_key) AND (me.equipment = w.equipment))))
           GROUP BY w.light_key, w.equipment
         ), latest_climate AS (
-         SELECT climate.ts,
-            climate.dli_today,
-            climate.lux,
-            climate.outdoor_lux
-           FROM public.climate
-          WHERE (climate.greenhouse_id = 'vallery'::text)
-          ORDER BY climate.ts DESC
+         SELECT c.ts,
+            d.crop_dli_mol_m2_day AS dli_today,
+            c.lux,
+            c.outdoor_lux
+           FROM (public.climate c
+             LEFT JOIN public.v_dli_current d ON ((d.greenhouse_id = COALESCE(c.greenhouse_id, 'vallery'::text))))
+          WHERE (c.greenhouse_id = 'vallery'::text)
+          ORDER BY c.ts DESC
          LIMIT 1
         ), latest_equipment AS (
          SELECT DISTINCT ON (equipment_state.equipment) equipment_state.equipment,
@@ -32235,52 +32166,59 @@ CREATE VIEW public.v_lighting_minutes_status_now AS
              CROSS JOIN occupancy o)
              CROSS JOIN outdoor_staleness os)
         )
- SELECT greenhouse_id,
-    ts,
-    light_key,
-    equipment,
-    target_light_minutes,
-    start_hour,
-    cutoff_hour,
-    lux_on_threshold,
-    lux_hysteresis,
-    lux_off_threshold,
-    min_on_s,
-    min_off_s,
-    auto_enabled,
-    legacy_dli_target,
-    source_chain,
-    controller_contract,
-    qualified_light_minutes,
-    natural_qualified_minutes,
-    switch_on_minutes,
-    overlap_minutes,
-    remaining_light_minutes,
-    climate_ts,
-    dli_today,
-    indoor_lux,
-    outdoor_lux,
-    exterior_lux,
-    natural_lux,
-    natural_qualified_now,
-    local_hour,
-    in_light_window,
-    minutes_below_target,
-    lux_below_on_threshold,
-    lux_below_off_threshold,
-    exterior_lux_fresh,
-    exterior_lux_below_on_threshold,
-    exterior_lux_below_off_threshold,
-    occupancy_active,
-    actual_on,
-    firmware_state,
-    firmware_reason,
-    firmware_telemetry_fresh,
-    equipment_ts,
-    (auto_enabled AND in_light_window AND minutes_below_target AND (lux_below_on_threshold OR ((actual_on OR (firmware_telemetry_fresh AND (upper(COALESCE(firmware_state, ''::text)) = 'ON'::text))) AND lux_below_off_threshold))) AS plant_supplement_demand,
-    (auto_enabled AND occupancy_active AND exterior_lux_fresh AND (exterior_lux_below_on_threshold OR ((actual_on OR (firmware_telemetry_fresh AND (upper(COALESCE(firmware_state, ''::text)) = 'ON'::text))) AND exterior_lux_below_off_threshold))) AS occupancy_lux_demand,
-    ((auto_enabled AND in_light_window AND minutes_below_target AND (lux_below_on_threshold OR ((actual_on OR (firmware_telemetry_fresh AND (upper(COALESCE(firmware_state, ''::text)) = 'ON'::text))) AND lux_below_off_threshold))) OR (auto_enabled AND occupancy_active AND exterior_lux_fresh AND (exterior_lux_below_on_threshold OR ((actual_on OR (firmware_telemetry_fresh AND (upper(COALESCE(firmware_state, ''::text)) = 'ON'::text))) AND exterior_lux_below_off_threshold)))) AS expected_on
-   FROM joined j;
+ SELECT j.greenhouse_id,
+    j.ts,
+    j.light_key,
+    j.equipment,
+    j.target_light_minutes,
+    j.start_hour,
+    j.cutoff_hour,
+    j.lux_on_threshold,
+    j.lux_hysteresis,
+    j.lux_off_threshold,
+    j.min_on_s,
+    j.min_off_s,
+    j.auto_enabled,
+    j.legacy_dli_target,
+    j.source_chain,
+    j.controller_contract,
+    j.qualified_light_minutes,
+    j.natural_qualified_minutes,
+    j.switch_on_minutes,
+    j.overlap_minutes,
+    j.remaining_light_minutes,
+    j.climate_ts,
+    j.dli_today,
+    j.indoor_lux,
+    j.outdoor_lux,
+    j.exterior_lux,
+    j.natural_lux,
+    j.natural_qualified_now,
+    j.local_hour,
+    j.in_light_window,
+    j.minutes_below_target,
+    j.lux_below_on_threshold,
+    j.lux_below_off_threshold,
+    j.exterior_lux_fresh,
+    j.exterior_lux_below_on_threshold,
+    j.exterior_lux_below_off_threshold,
+    j.occupancy_active,
+    j.actual_on,
+    j.firmware_state,
+    j.firmware_reason,
+    j.firmware_telemetry_fresh,
+    j.equipment_ts,
+    (j.auto_enabled AND j.in_light_window AND j.minutes_below_target AND (j.lux_below_on_threshold OR ((j.actual_on OR (j.firmware_telemetry_fresh AND (upper(COALESCE(j.firmware_state, ''::text)) = 'ON'::text))) AND j.lux_below_off_threshold))) AS plant_supplement_demand,
+    (j.auto_enabled AND j.occupancy_active AND j.exterior_lux_fresh AND (j.exterior_lux_below_on_threshold OR ((j.actual_on OR (j.firmware_telemetry_fresh AND (upper(COALESCE(j.firmware_state, ''::text)) = 'ON'::text))) AND j.exterior_lux_below_off_threshold))) AS occupancy_lux_demand,
+    ((j.auto_enabled AND j.in_light_window AND j.minutes_below_target AND (j.lux_below_on_threshold OR ((j.actual_on OR (j.firmware_telemetry_fresh AND (upper(COALESCE(j.firmware_state, ''::text)) = 'ON'::text))) AND j.lux_below_off_threshold))) OR (j.auto_enabled AND j.occupancy_active AND j.exterior_lux_fresh AND (j.exterior_lux_below_on_threshold OR ((j.actual_on OR (j.firmware_telemetry_fresh AND (upper(COALESCE(j.firmware_state, ''::text)) = 'ON'::text))) AND j.exterior_lux_below_off_threshold)))) AS expected_on,
+    dc.availability AS dli_availability,
+    dc.unavailable_reason AS dli_unavailable_reason,
+    dc.provenance AS dli_provenance,
+    dc.validity_revision AS dli_validity_revision,
+    dc.valid_from AS dli_valid_from,
+    dc.valid_to AS dli_valid_to
+   FROM (joined j
+     LEFT JOIN public.v_dli_current dc ON ((dc.greenhouse_id = j.greenhouse_id)));
 
 
 ALTER VIEW public.v_lighting_minutes_status_now OWNER TO verdify;
@@ -32289,7 +32227,183 @@ ALTER VIEW public.v_lighting_minutes_status_now OWNER TO verdify;
 -- Name: VIEW v_lighting_minutes_status_now; Type: COMMENT; Schema: public; Owner: verdify
 --
 
-COMMENT ON VIEW public.v_lighting_minutes_status_now IS 'Current per-circuit qualified-light-minutes policy, plant supplement demand, lux-gated occupancy task-light demand, firmware state, and actual Lutron switch state.';
+COMMENT ON VIEW public.v_lighting_minutes_status_now IS 'Current per-circuit qualified-light-minutes policy and DLI-independent demand. dli_today is nullable product evidence with explicit availability/provenance; no zero sentinel or forensic proxy is exposed.';
+
+
+--
+-- Name: v_lighting_circuit_status_now; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_lighting_circuit_status_now AS
+ WITH status AS (
+         SELECT v_lighting_minutes_status_now.greenhouse_id,
+            v_lighting_minutes_status_now.ts,
+            v_lighting_minutes_status_now.light_key,
+            v_lighting_minutes_status_now.equipment,
+            v_lighting_minutes_status_now.target_light_minutes,
+            v_lighting_minutes_status_now.start_hour,
+            v_lighting_minutes_status_now.cutoff_hour,
+            v_lighting_minutes_status_now.lux_on_threshold,
+            v_lighting_minutes_status_now.lux_hysteresis,
+            v_lighting_minutes_status_now.lux_off_threshold,
+            v_lighting_minutes_status_now.min_on_s,
+            v_lighting_minutes_status_now.min_off_s,
+            v_lighting_minutes_status_now.auto_enabled,
+            v_lighting_minutes_status_now.legacy_dli_target,
+            v_lighting_minutes_status_now.source_chain,
+            v_lighting_minutes_status_now.controller_contract,
+            v_lighting_minutes_status_now.qualified_light_minutes,
+            v_lighting_minutes_status_now.natural_qualified_minutes,
+            v_lighting_minutes_status_now.switch_on_minutes,
+            v_lighting_minutes_status_now.overlap_minutes,
+            v_lighting_minutes_status_now.remaining_light_minutes,
+            v_lighting_minutes_status_now.climate_ts,
+            v_lighting_minutes_status_now.dli_today,
+            v_lighting_minutes_status_now.indoor_lux,
+            v_lighting_minutes_status_now.outdoor_lux,
+            v_lighting_minutes_status_now.exterior_lux,
+            v_lighting_minutes_status_now.natural_lux,
+            v_lighting_minutes_status_now.natural_qualified_now,
+            v_lighting_minutes_status_now.local_hour,
+            v_lighting_minutes_status_now.in_light_window,
+            v_lighting_minutes_status_now.minutes_below_target,
+            v_lighting_minutes_status_now.lux_below_on_threshold,
+            v_lighting_minutes_status_now.lux_below_off_threshold,
+            v_lighting_minutes_status_now.exterior_lux_fresh,
+            v_lighting_minutes_status_now.exterior_lux_below_on_threshold,
+            v_lighting_minutes_status_now.exterior_lux_below_off_threshold,
+            v_lighting_minutes_status_now.occupancy_active,
+            v_lighting_minutes_status_now.actual_on,
+            v_lighting_minutes_status_now.firmware_state,
+            v_lighting_minutes_status_now.firmware_reason,
+            v_lighting_minutes_status_now.firmware_telemetry_fresh,
+            v_lighting_minutes_status_now.equipment_ts,
+            v_lighting_minutes_status_now.plant_supplement_demand,
+            v_lighting_minutes_status_now.occupancy_lux_demand,
+            v_lighting_minutes_status_now.expected_on,
+            v_lighting_minutes_status_now.dli_availability,
+            v_lighting_minutes_status_now.dli_unavailable_reason,
+            v_lighting_minutes_status_now.dli_provenance,
+            v_lighting_minutes_status_now.dli_validity_revision,
+            v_lighting_minutes_status_now.dli_valid_from,
+            v_lighting_minutes_status_now.dli_valid_to
+           FROM public.v_lighting_minutes_status_now
+        ), latest_reason AS (
+         SELECT DISTINCT ON (ss.entity) ss.entity,
+            ss.value,
+            ss.ts
+           FROM public.system_state ss
+          WHERE (ss.entity = ANY (ARRAY['gl_main_state'::text, 'gl_main_reason'::text, 'gl_grow_state'::text, 'gl_grow_reason'::text]))
+          ORDER BY ss.entity, ss.ts DESC
+        )
+ SELECT s.greenhouse_id,
+    s.ts,
+    s.light_key,
+    s.equipment,
+    s.legacy_dli_target AS dli_target,
+    s.start_hour,
+    s.cutoff_hour,
+    s.lux_on_threshold,
+    s.lux_hysteresis,
+    s.lux_off_threshold,
+    s.min_on_s,
+    s.min_off_s,
+    s.auto_enabled,
+    s.source_chain,
+    s.controller_contract,
+    s.climate_ts,
+    s.dli_today,
+    s.indoor_lux,
+    s.outdoor_lux,
+    s.natural_lux,
+    s.local_hour,
+    s.in_light_window,
+    NULL::boolean AS dli_below_target,
+    s.lux_below_on_threshold,
+    s.lux_below_off_threshold,
+    s.expected_on,
+    s.actual_on,
+        CASE
+            WHEN s.firmware_telemetry_fresh THEN state_row.value
+            ELSE NULL::text
+        END AS firmware_state,
+        CASE
+            WHEN s.firmware_telemetry_fresh THEN reason_row.value
+            ELSE NULL::text
+        END AS firmware_reason,
+    s.equipment_ts,
+    state_row.value AS firmware_state_raw,
+    reason_row.value AS firmware_reason_raw,
+    state_row.ts AS firmware_state_ts,
+    reason_row.ts AS firmware_reason_ts,
+    s.firmware_telemetry_fresh,
+    s.dli_availability,
+    s.dli_unavailable_reason,
+    s.dli_provenance,
+    s.dli_validity_revision,
+    s.dli_valid_from,
+    s.dli_valid_to
+   FROM ((status s
+     LEFT JOIN latest_reason state_row ON ((state_row.entity = (('gl_'::text || s.light_key) || '_state'::text))))
+     LEFT JOIN latest_reason reason_row ON ((reason_row.entity = (('gl_'::text || s.light_key) || '_reason'::text))));
+
+
+ALTER VIEW public.v_lighting_circuit_status_now OWNER TO verdify;
+
+--
+-- Name: VIEW v_lighting_circuit_status_now; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_lighting_circuit_status_now IS 'Current per-circuit qualified-minute lighting status. dli_today and dli_below_target are NULL when unavailable; expected_on remains driven by qualified minutes/photoperiod and lux, with explicit DLI provenance appended.';
+
+
+--
+-- Name: v_lighting_daily; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_lighting_daily AS
+ WITH runtime AS (
+         SELECT v_equipment_runtime_daily.day,
+            v_equipment_runtime_daily.equipment,
+            v_equipment_runtime_daily.on_minutes,
+            v_equipment_runtime_daily.cycles
+           FROM public.v_equipment_runtime_daily
+          WHERE (v_equipment_runtime_daily.equipment = ANY (ARRAY['grow_light_main'::text, 'grow_light_grow'::text]))
+        )
+ SELECT ds.date,
+    ((ds.date + '12:00:00'::time without time zone))::timestamp with time zone AS ts,
+    d.crop_dli_mol_m2_day AS sensor_dli,
+    (ds.runtime_grow_light_min / (60.0)::double precision) AS grow_light_hours,
+    (COALESCE(main_rt.on_minutes, 0.0) / 60.0) AS main_light_hours,
+    (COALESCE(grow_rt.on_minutes, 0.0) / 60.0) AS grow_light_circuit_hours,
+    COALESCE(main_rt.cycles, (0)::bigint) AS main_light_cycles,
+    COALESCE(grow_rt.cycles, (0)::bigint) AS grow_light_circuit_cycles,
+    p.target_dli,
+    p.target_light_hours,
+    p.sunrise_hour,
+    p.natural_sunset_hour,
+    p.cutoff_hour,
+    p.max_crop_name,
+    d.availability AS dli_availability,
+    d.unavailable_reason AS dli_unavailable_reason,
+    d.provenance AS dli_provenance,
+    d.validity_revision AS dli_validity_revision,
+    d.valid_from AS dli_valid_from,
+    d.valid_to AS dli_valid_to
+   FROM ((((public.daily_summary ds
+     CROSS JOIN LATERAL public.fn_lighting_policy(((ds.date + '12:00:00'::time without time zone))::timestamp with time zone, COALESCE(ds.greenhouse_id, 'vallery'::text)) p(greenhouse_id, ts, local_date, target_dli, target_ppfd_umol_m2_s, target_light_hours, sunrise_hour, natural_sunset_hour, cutoff_hour, max_crop_name, max_crop_stage, source_chain, controller_contract))
+     LEFT JOIN runtime main_rt ON (((main_rt.day = ds.date) AND (main_rt.equipment = 'grow_light_main'::text))))
+     LEFT JOIN runtime grow_rt ON (((grow_rt.day = ds.date) AND (grow_rt.equipment = 'grow_light_grow'::text))))
+     LEFT JOIN public.v_dli_daily d ON (((d.date = ds.date) AND (d.greenhouse_id = COALESCE(ds.greenhouse_id, 'vallery'::text)))));
+
+
+ALTER VIEW public.v_lighting_daily OWNER TO verdify;
+
+--
+-- Name: VIEW v_lighting_daily; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_lighting_daily IS 'DLI-independent lighting runtime and crop target context. Measured sensor_dli is NULL with explicit validity metadata while the interior sensor is invalid.';
 
 
 --
@@ -32534,7 +32648,13 @@ CREATE VIEW public.v_lighting_status_now AS
             v_lighting_circuit_status_now.firmware_reason_raw,
             v_lighting_circuit_status_now.firmware_state_ts,
             v_lighting_circuit_status_now.firmware_reason_ts,
-            v_lighting_circuit_status_now.firmware_telemetry_fresh
+            v_lighting_circuit_status_now.firmware_telemetry_fresh,
+            v_lighting_circuit_status_now.dli_availability,
+            v_lighting_circuit_status_now.dli_unavailable_reason,
+            v_lighting_circuit_status_now.dli_provenance,
+            v_lighting_circuit_status_now.dli_validity_revision,
+            v_lighting_circuit_status_now.dli_valid_from,
+            v_lighting_circuit_status_now.dli_valid_to
            FROM public.v_lighting_circuit_status_now
         ), main AS (
          SELECT circuits.greenhouse_id,
@@ -32571,7 +32691,13 @@ CREATE VIEW public.v_lighting_status_now AS
             circuits.firmware_reason_raw,
             circuits.firmware_state_ts,
             circuits.firmware_reason_ts,
-            circuits.firmware_telemetry_fresh
+            circuits.firmware_telemetry_fresh,
+            circuits.dli_availability,
+            circuits.dli_unavailable_reason,
+            circuits.dli_provenance,
+            circuits.dli_validity_revision,
+            circuits.dli_valid_from,
+            circuits.dli_valid_to
            FROM circuits
           WHERE (circuits.light_key = 'main'::text)
         ), grow AS (
@@ -32609,7 +32735,13 @@ CREATE VIEW public.v_lighting_status_now AS
             circuits.firmware_reason_raw,
             circuits.firmware_state_ts,
             circuits.firmware_reason_ts,
-            circuits.firmware_telemetry_fresh
+            circuits.firmware_telemetry_fresh,
+            circuits.dli_availability,
+            circuits.dli_unavailable_reason,
+            circuits.dli_provenance,
+            circuits.dli_validity_revision,
+            circuits.dli_valid_from,
+            circuits.dli_valid_to
            FROM circuits
           WHERE (circuits.light_key = 'grow'::text)
         )
@@ -32662,7 +32794,13 @@ CREATE VIEW public.v_lighting_status_now AS
     main.firmware_telemetry_fresh AS main_firmware_telemetry_fresh,
     grow.firmware_state_ts AS grow_firmware_state_ts,
     grow.firmware_reason_ts AS grow_firmware_reason_ts,
-    grow.firmware_telemetry_fresh AS grow_firmware_telemetry_fresh
+    grow.firmware_telemetry_fresh AS grow_firmware_telemetry_fresh,
+    main.dli_availability,
+    main.dli_unavailable_reason,
+    main.dli_provenance,
+    main.dli_validity_revision,
+    main.dli_valid_from,
+    main.dli_valid_to
    FROM ((policy
      CROSS JOIN main)
      CROSS JOIN grow);
@@ -32674,7 +32812,7 @@ ALTER VIEW public.v_lighting_status_now OWNER TO verdify;
 -- Name: VIEW v_lighting_status_now; Type: COMMENT; Schema: public; Owner: verdify
 --
 
-COMMENT ON VIEW public.v_lighting_status_now IS 'Compatibility one-row lighting status with per-circuit policy, expected state, Lutron state, and firmware telemetry freshness.';
+COMMENT ON VIEW public.v_lighting_status_now IS 'Compatibility one-row lighting status. DLI evidence is nullable with explicit availability/provenance; qualified-minute and photoperiod expected-state behavior is unchanged.';
 
 
 --
@@ -32727,7 +32865,13 @@ CREATE VIEW public.v_lighting_traceability_now AS
             v_lighting_minutes_status_now.equipment_ts,
             v_lighting_minutes_status_now.plant_supplement_demand,
             v_lighting_minutes_status_now.occupancy_lux_demand,
-            v_lighting_minutes_status_now.expected_on
+            v_lighting_minutes_status_now.expected_on,
+            v_lighting_minutes_status_now.dli_availability,
+            v_lighting_minutes_status_now.dli_unavailable_reason,
+            v_lighting_minutes_status_now.dli_provenance,
+            v_lighting_minutes_status_now.dli_validity_revision,
+            v_lighting_minutes_status_now.dli_valid_from,
+            v_lighting_minutes_status_now.dli_valid_to
            FROM public.v_lighting_minutes_status_now
         ), latest_desired AS (
          SELECT DISTINCT ON (setpoint_changes.parameter) setpoint_changes.parameter,
@@ -32814,7 +32958,13 @@ CREATE VIEW public.v_lighting_traceability_now AS
         END AS firmware_decision_epoch,
     decision.ts AS firmware_decision_ts,
     (decision.ts > (now() - '00:15:00'::interval)) AS firmware_decision_fresh,
-    ((NOT (s.auto_enabled IS DISTINCT FROM (cfg_auto.value >= (0.5)::double precision))) AND (NOT (s.target_light_minutes IS DISTINCT FROM (round(cfg_target.value))::integer)) AND COALESCE((abs((s.lux_on_threshold - cfg_lux.value)) < (0.5)::double precision), false) AND COALESCE((abs((s.lux_hysteresis - cfg_hyst.value)) < (0.5)::double precision), false)) AS policy_matches_cfg
+    ((NOT (s.auto_enabled IS DISTINCT FROM (cfg_auto.value >= (0.5)::double precision))) AND (NOT (s.target_light_minutes IS DISTINCT FROM (round(cfg_target.value))::integer)) AND COALESCE((abs((s.lux_on_threshold - cfg_lux.value)) < (0.5)::double precision), false) AND COALESCE((abs((s.lux_hysteresis - cfg_hyst.value)) < (0.5)::double precision), false)) AS policy_matches_cfg,
+    s.dli_availability,
+    s.dli_unavailable_reason,
+    s.dli_provenance,
+    s.dli_validity_revision,
+    s.dli_valid_from,
+    s.dli_valid_to
    FROM (((((((((status s
      LEFT JOIN latest_cfg cfg_target ON ((cfg_target.parameter = (('gl_'::text || s.light_key) || '_target_light_minutes'::text))))
      LEFT JOIN latest_cfg cfg_lux ON ((cfg_lux.parameter = (('gl_'::text || s.light_key) || '_lux_threshold'::text))))
@@ -32833,7 +32983,7 @@ ALTER VIEW public.v_lighting_traceability_now OWNER TO verdify;
 -- Name: VIEW v_lighting_traceability_now; Type: COMMENT; Schema: public; Owner: verdify
 --
 
-COMMENT ON VIEW public.v_lighting_traceability_now IS 'Lighting policy traceability split into plant supplement demand, lux-gated occupancy task-light demand, desired setpoint rows, confirmed cfg readbacks, exact firmware decision epoch text, and physical Lutron state.';
+COMMENT ON VIEW public.v_lighting_traceability_now IS 'Lighting policy traceability with qualified-minute demand, cfg readbacks, firmware decisions, physical state, and appended nullable DLI availability/provenance. No forensic DLI scalar or zero sentinel is exposed.';
 
 
 --
@@ -33101,7 +33251,7 @@ CREATE VIEW public.v_monthly_summary AS
     round((sum(COALESCE(stress_hours_vpd_low, (0)::double precision)))::numeric, 1) AS stress_hours_vpd_low,
     round((sum(COALESCE(water_used_gal, (0)::double precision)))::numeric, 0) AS total_water_gal,
     round((sum(COALESCE(mister_water_gal, (0)::double precision)))::numeric, 0) AS mister_water_gal,
-    round((sum(COALESCE(kwh_estimated, (0)::double precision)))::numeric, 1) AS kwh_total,
+    round((sum(COALESCE(kwh_total, kwh_estimated, (0)::double precision)))::numeric, 1) AS kwh_total,
     round((sum(COALESCE(therms_estimated, (0)::double precision)))::numeric, 2) AS therms_total,
     round((sum(COALESCE(cost_electric, (0)::double precision)))::numeric, 2) AS cost_electric,
     round((sum(COALESCE(cost_gas, (0)::double precision)))::numeric, 2) AS cost_gas,
@@ -35142,7 +35292,7 @@ CREATE VIEW public.v_weekly_summary AS
     round((sum(COALESCE(stress_hours_vpd_low, (0)::double precision)))::numeric, 1) AS stress_hours_vpd_low,
     round((sum(COALESCE(water_used_gal, (0)::double precision)))::numeric, 0) AS total_water_gal,
     round((sum(COALESCE(mister_water_gal, (0)::double precision)))::numeric, 0) AS mister_water_gal,
-    round((sum(COALESCE(kwh_estimated, (0)::double precision)))::numeric, 1) AS kwh_total,
+    round((sum(COALESCE(kwh_total, kwh_estimated, (0)::double precision)))::numeric, 1) AS kwh_total,
     round((sum(COALESCE(therms_estimated, (0)::double precision)))::numeric, 2) AS therms_total,
     round((max(COALESCE(peak_kw, (0)::double precision)))::numeric, 2) AS peak_kw,
     round((sum(COALESCE(cost_electric, (0)::double precision)))::numeric, 2) AS cost_electric,
@@ -61097,4 +61247,4 @@ GRANT INSERT ON TABLE public.twin_decisions TO twin_ro;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict 0S0rugZY5MzNb7hvBCgOUmEXfNXiQtkMFtp2BdX35tn64RKgvZbMNzCR7eOG052
+\unrestrict bnBHnFqbzoeqT0vgyVJ5W8RafjHjvnbHyxjLkl2PaWRl9reaMyGRXlvb06egyzc

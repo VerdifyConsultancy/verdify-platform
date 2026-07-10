@@ -55,7 +55,12 @@ class DliEvidence(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    value_mol_m2_day: float | None = Field(default=None, ge=0)
+    value_mol_m2_day: float | None = Field(
+        default=None,
+        ge=0,
+        le=100,
+        allow_inf_nan=False,
+    )
     availability: DliAvailability
     unavailable_reason: str | None = None
     provenance: str = Field(..., min_length=1)

@@ -1247,6 +1247,21 @@ inline void validate_lighting_setpoints(LightingSetpoints& sp) noexcept {
 // switch-ON state must NOT credit supplemental DLI — the dark fixture was
 // otherwise self-deceivingly "meeting" the photoperiod on paper. main/grow
 // out_of_service default to false so legacy call sites are byte-identical.
+inline ElapsedIntervals elapsed_intervals(
+    uint32_t now_ms,
+    uint32_t previous_ms,
+    uint32_t control_cap_ms = 5000
+) noexcept {
+    // Unsigned subtraction is defined modulo 2^32 and therefore preserves the
+    // real interval across one millis() wrap. Controls retain their safety cap;
+    // forensic/future DLI receives raw_ms so stalls are not silently erased.
+    const uint32_t raw_ms = now_ms - previous_ms;
+    return {
+        .raw_ms = raw_ms,
+        .control_ms = std::min(raw_ms, control_cap_ms),
+    };
+}
+
 inline float lighting_dli_increment(
     float indoor_lux,
     float tempest_lux,

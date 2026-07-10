@@ -4543,6 +4543,42 @@ TEST(lighting_dli_increment_is_elapsed_time_invariant) {
     PASS();
 }
 
+TEST(elapsed_intervals_keep_raw_gap_while_controls_remain_capped) {
+    auto elapsed = elapsed_intervals(13000U, 1000U);
+    ASSERT_EQ(elapsed.raw_ms, 12000U);
+    ASSERT_EQ(elapsed.control_ms, 5000U);
+
+    float raw_dli = lighting_dli_increment(
+        12500.0f, 80000.0f, true, false, elapsed.raw_ms / 1000.0f);
+    float capped_dli = lighting_dli_increment(
+        12500.0f, 80000.0f, true, false, elapsed.control_ms / 1000.0f);
+    ASSERT_TRUE(raw_dli > capped_dli);
+    PASS();
+}
+
+TEST(elapsed_intervals_preserve_jitter_partition_sum) {
+    const uint32_t ticks[] = {1730U, 3140U, 6000U};
+    uint32_t previous = 1000U;
+    uint32_t raw_total = 0U;
+    uint32_t control_total = 0U;
+    for (uint32_t tick : ticks) {
+        auto elapsed = elapsed_intervals(tick, previous);
+        raw_total += elapsed.raw_ms;
+        control_total += elapsed.control_ms;
+        previous = tick;
+    }
+    ASSERT_EQ(raw_total, 5000U);
+    ASSERT_EQ(control_total, 5000U);
+    PASS();
+}
+
+TEST(elapsed_intervals_are_uint32_wrap_safe) {
+    auto elapsed = elapsed_intervals(500U, UINT32_MAX - 1000U);
+    ASSERT_EQ(elapsed.raw_ms, 1501U);
+    ASSERT_EQ(elapsed.control_ms, 1501U);
+    PASS();
+}
+
 TEST(interior_dli_evidence_is_unavailable_without_valid_sensor) {
     auto evidence = interior_dli_evidence(79.0f);
     ASSERT_TRUE(std::isnan(evidence.value_mol_m2_day));

@@ -53,6 +53,16 @@ def test_available_dli_requires_value_and_no_unavailable_reason():
     assert evidence.value_mol_m2_day == 18.0
 
 
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf"), -1.0, 101.0])
+def test_dli_evidence_rejects_nonfinite_negative_and_out_of_range_values(value):
+    with pytest.raises(ValidationError):
+        _unavailable(
+            availability="available",
+            value_mol_m2_day=value,
+            unavailable_reason=None,
+        )
+
+
 def test_dli_validity_interval_is_half_open_and_ordered():
     with pytest.raises(ValidationError, match="valid_to must be after valid_from"):
         _unavailable(valid_to=datetime(2023, 12, 31, tzinfo=UTC))

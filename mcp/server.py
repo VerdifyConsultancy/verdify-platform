@@ -3661,6 +3661,7 @@ async def lessons_search(query: str, top_k: int = 10, min_confidence: str = "low
               FROM hits h
               JOIN planner_lessons pl ON pl.id::text = h.source_id
              WHERE pl.is_active = true AND pl.superseded_by IS NULL
+               AND NOT fn_dli_proxy_lesson_invalid(pl.condition, pl.lesson)
                AND CASE pl.confidence WHEN 'high' THEN 3 WHEN 'medium' THEN 2 ELSE 1 END >= $3
              ORDER BY h.distance
             """,
@@ -3725,6 +3726,7 @@ async def knowledge_search(
                       WHERE pl.id::text = h.source_id
                         AND pl.is_active = true
                         AND pl.superseded_by IS NULL
+                        AND NOT fn_dli_proxy_lesson_invalid(pl.condition, pl.lesson)
                    )
             """,
             _vector_literal(embedding),

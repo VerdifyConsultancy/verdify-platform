@@ -145,7 +145,9 @@ def test_mcp_and_api_use_typed_unavailable_contract():
 def test_firmware_publishes_unavailable_but_accumulates_real_elapsed_time():
     controls = (ROOT / "firmware/greenhouse/controls.yaml").read_text()
     dli_block = controls.split("/*** B5 — forensic DLI proxy accumulation", 1)[1].split("/*** B6", 1)[0]
-    assert "dli_dt_s = dt_ms > 0 ? (float)dt_ms / 1000.0f" in dli_block
+    assert "dli_dt_s = raw_dt_ms > 0" in dli_block
+    assert "(float)raw_dt_ms / 1000.0f" in dli_block
+    assert "elapsed_intervals(now_ms, last_ms)" in controls
     assert "5.0f" not in dli_block
 
     sensors = (ROOT / "firmware/greenhouse/sensors.yaml").read_text()

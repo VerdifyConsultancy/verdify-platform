@@ -97,6 +97,9 @@ ownership:
     - path: deploy/k8s/components/ingestor-gather-script/gather-script-configmap.yaml
       granted_by: software-recovery controller
       reason: Regenerate the deployed planner-context mirror after the adversarial scan found the old raw DLI and 3.5 correction block.
+    - path: scripts/generate-lessons-page.py
+      granted_by: software-recovery controller
+      reason: Suppress the invalid live DLI correction lesson from public and generated lesson artifacts while retaining its inactive database row for forensics.
   owned_interfaces:
     - nullable DLI value
     - unavailable reason/provenance/valid interval
