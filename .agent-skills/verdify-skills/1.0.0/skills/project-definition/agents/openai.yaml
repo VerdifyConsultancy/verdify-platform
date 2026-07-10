@@ -1,6 +1,0 @@
-interface:
-  display_name: "Verdify Project Definition"
-  short_description: "Define end-to-end project intent, lifecycle coverage, and surfaces"
-  default_prompt: "Continue the earliest incomplete project-definition mode. Use supplied evidence, write the canonical artifact and human views, complete lifecycle coverage, and open a gate for material ambiguity."
-policy:
-  allow_implicit_invocation: true
