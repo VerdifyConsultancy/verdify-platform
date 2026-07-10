@@ -1,6 +1,6 @@
 sprint_id: software-recovery-2026-07-09
 scope_id: dli-availability
-revision: 6058562d4568a8b01ca5664e85534ffa860ec156
+revision: 0f68aac0c9af50159e11bd938411afccf2a221fe
 environment: null
 generated_at: "2026-07-10T13:08:35Z"
 items:
@@ -14,7 +14,7 @@ items:
       db/migrations/tests/test-195-dli-availability-provenance.sql with
       ON_ERROR_STOP=1
     timestamp: "2026-07-10T13:08:35Z"
-    revision: 6058562d4568a8b01ca5664e85534ffa860ec156
+    revision: 0f68aac0c9af50159e11bd938411afccf2a221fe
     environment: disposable timescale/timescaledb:latest-pg16
     result: >-
       Migration 195 is non-self-transactional and safe to wrap. The fixture
@@ -37,7 +37,7 @@ items:
       verdify_schemas/tests/test_dli_evidence.py
       verdify_schemas/tests/test_mcp_responses.py
     timestamp: "2026-07-10T13:08:35Z"
-    revision: 6058562d4568a8b01ca5664e85534ffa860ec156
+    revision: 0f68aac0c9af50159e11bd938411afccf2a221fe
     environment: Jason laptop worktree plus disposable PG16/TimescaleDB
     result: >-
       Fresh schema restore passes and exposes the validity ledger/current/daily
@@ -59,7 +59,7 @@ items:
       OLD=0a9a19a840be6bae1beba604497d880b3b74b1ef NEW=HEAD;
       SECRETS_SRC=$HOME/.verdify/esphome-secrets.yaml make firmware-check
     timestamp: "2026-07-10T13:08:35Z"
-    revision: 6058562d4568a8b01ca5664e85534ffa860ec156
+    revision: 0f68aac0c9af50159e11bd938411afccf2a221fe
     environment: Jason laptop worktree, native g++, ESPHome 2026.6.5
     result: >-
       Native firmware suite passes 269/269 including irregular elapsed-time DLI
@@ -80,7 +80,7 @@ items:
       make lighting-audit-static; npm --prefix site run check;
       npm --prefix site test; from site/, npm exec quartz build
     timestamp: "2026-07-10T13:08:35Z"
-    revision: 6058562d4568a8b01ca5664e85534ffa860ec156
+    revision: 0f68aac0c9af50159e11bd938411afccf2a221fe
     environment: Jason laptop worktree, Node 24.4.0
     result: >-
       Lighting audit passes 27 contracts with three inherited generated-content
@@ -106,7 +106,7 @@ items:
       scripts/gather-plan-context.sh and scripts/lib/psql-verdify.sh; scan
       generated artifacts for legacy numeric DLI expressions
     timestamp: "2026-07-10T13:08:35Z"
-    revision: 6058562d4568a8b01ca5664e85534ffa860ec156
+    revision: 0f68aac0c9af50159e11bd938411afccf2a221fe
     environment: Jason laptop worktree
     result: >-
       Dashboard regeneration is idempotent with zero updates at the recorded
@@ -124,7 +124,7 @@ items:
     source: required monolithic repository test command
     command: make test
     timestamp: "2026-07-10T13:08:35Z"
-    revision: 6058562d4568a8b01ca5664e85534ffa860ec156
+    revision: 0f68aac0c9af50159e11bd938411afccf2a221fe
     environment: Jason laptop after development moved to k3s
     result: 725 passed, 142 failed, 6 skipped, and 10 errors in 24.72 seconds.
     artifact_location: null
@@ -144,7 +144,7 @@ items:
     source: adversarial lane self-audit
     command: repository-wide DLI consumer and generated-artifact scan
     timestamp: "2026-07-10T13:08:35Z"
-    revision: 6058562d4568a8b01ca5664e85534ffa860ec156
+    revision: 0f68aac0c9af50159e11bd938411afccf2a221fe
     environment: source tree plus disposable TimescaleDB
     result: >-
       Closed the stale deployed gather-script mirror, dormant weekly/monthly/
@@ -156,4 +156,29 @@ items:
     acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
     limitations:
       - Physical sensor replacement/calibration is outside this software lane.
-      - Independent critic and GitHub CI results are pending the pushed PR head.
+      - Independent critic review remains pending the pushed record-only head.
+
+  - id: EVI-DLI-008
+    type: CI
+    status: PASS
+    source: GitHub pull-request checks and formatting remediation
+    command: >-
+      inspect PR #448 Actions logs; run Ruff 0.15.21 format/check on the CI
+      Python path set; rerun the focused DLI suite and diff check; push
+      formatting-only commit 0f68aac; wait for exact-head checks
+    timestamp: "2026-07-10T13:16:46Z"
+    revision: 0f68aac0c9af50159e11bd938411afccf2a221fe
+    environment: draft PR #448 at reviewed implementation head
+    result: >-
+      The first CI run found one deterministic format-only failure in
+      tests/test_dli_availability.py. Ruff 0.15.21 reformatted that file with no
+      semantic change; local CI-equivalent formatting/lint, focused tests, and
+      diff integrity passed. Exact-head CI for 0f68aac then completed with no
+      failures or pending checks: lint/format, offline logic/contracts,
+      Pydantic drift guards, firmware compile/replay/invariants, migration
+      safety, service-restart hygiene, device-write interlock, manifest and
+      route guards, and all applicable build-without-publish jobs passed.
+    artifact_location: https://github.com/VerdifyConsultancy/verdify-platform/pull/448/checks
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
+    limitations:
+      - Trusted image publication and prod-promotion-only jobs were correctly skipped for the draft PR.

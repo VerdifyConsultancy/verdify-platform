@@ -52,6 +52,11 @@ ESP32 push, firmware tunable/global, and `planner_graph` paths were not edited.
 - Generated artifacts: Grafana regeneration is idempotent; JSON/YAML parses;
   deployed planner script/helper blocks have byte parity; numeric leakage scan
   passes.
+- GitHub CI: the initial run found one format-only Ruff mismatch in the new
+  focused test. Ruff 0.15.21 remediation changed no semantics, and exact-head
+  PR checks at `0f68aac0c9af50159e11bd938411afccf2a221fe` completed with no
+  failures or pending checks, including all firmware/schema/migration/safety
+  gates and applicable build-without-publish jobs.
 - Monolithic `make test`: 725 passed; remaining failures/errors require the
   retired laptop live stack or unrelated historical paths. The one lane-caused
   static comment regression it exposed was fixed and retested.

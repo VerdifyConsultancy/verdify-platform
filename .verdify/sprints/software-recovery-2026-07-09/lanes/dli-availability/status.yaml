@@ -1,8 +1,8 @@
 sprint_id: software-recovery-2026-07-09
 lane_id: dli-availability
 state: READY_FOR_CRITIC
-updated_at: "2026-07-10T13:08:35Z"
-head_sha: 6058562d4568a8b01ca5664e85534ffa860ec156
+updated_at: "2026-07-10T13:16:46Z"
+head_sha: 0f68aac0c9af50159e11bd938411afccf2a221fe
 working_tree_clean: true
 acceptance:
   passed:
