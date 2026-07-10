@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-verdify-platform-controller
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-10T00:29:37Z'
+updated_at: '2026-07-10T02:28:11Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -344,16 +344,17 @@ sessions:
   role: worker
   executor: codex-local-subagent-fallback
   repository: VerdifyConsultancy/verdify-platform
-  status: active
+  status: complete
   started_at: '2026-07-09T23:09:42Z'
-  ended_at: null
+  ended_at: '2026-07-10T00:37:16Z'
   issue_ids:
   - 433
   lane_id: device-writer
   wave_id: wave-software-recovery-implementation
   branch: lane/recovery-writer-433
   worktree: /Users/jason/repos/verdify-worktrees/software-recovery-writer-433
-  pr_refs: []
+  pr_refs:
+  - '#442'
   artifact_refs:
   - .verdify/sprints/software-recovery-2026-07-09/lanes/device-writer/lane.yaml
 - session_id: evidence-core-local-20260709
@@ -361,9 +362,9 @@ sessions:
   role: worker
   executor: codex-local-subagent-fallback
   repository: VerdifyConsultancy/verdify-platform
-  status: active
+  status: complete
   started_at: '2026-07-09T23:09:42Z'
-  ended_at: null
+  ended_at: '2026-07-10T02:27:26Z'
   issue_ids:
   - 293
   - 389
@@ -374,9 +375,56 @@ sessions:
   wave_id: wave-software-recovery-implementation
   branch: lane/recovery-evidence-293-389-410-419-424
   worktree: /Users/jason/repos/verdify-worktrees/software-recovery-evidence-core
-  pr_refs: []
+  pr_refs:
+  - '#443'
   artifact_refs:
   - .verdify/sprints/software-recovery-2026-07-09/lanes/evidence-core/lane.yaml
+  - .verdify/sprints/software-recovery-2026-07-09/lanes/evidence-core/evidence.yaml
+  - .verdify/sprints/software-recovery-2026-07-09/lanes/evidence-core/critic-report.md
+- session_id: evidence-core-critic-primary-20260710
+  parent_session_id: software-recovery-root-019f4826
+  role: critic
+  executor: codex-local-subagent
+  repository: VerdifyConsultancy/verdify-platform
+  status: complete
+  started_at: '2026-07-10T01:07:00Z'
+  ended_at: '2026-07-10T01:15:00Z'
+  issue_ids:
+  - 293
+  - 389
+  - 410
+  - 419
+  - 424
+  lane_id: evidence-core
+  wave_id: wave-software-recovery-implementation
+  branch: lane/recovery-evidence-293-389-410-419-424
+  worktree: /private/tmp/verdify-pr443-critic
+  pr_refs:
+  - '#443'
+  artifact_refs:
+  - .verdify/sprints/software-recovery-2026-07-09/lanes/evidence-core/critic-report.md
+- session_id: evidence-core-critic-adversarial-20260710
+  parent_session_id: software-recovery-root-019f4826
+  role: critic
+  executor: codex-local-subagent
+  repository: VerdifyConsultancy/verdify-platform
+  status: complete
+  started_at: '2026-07-10T01:07:00Z'
+  ended_at: '2026-07-10T01:15:00Z'
+  issue_ids:
+  - 293
+  - 389
+  - 410
+  - 419
+  - 424
+  lane_id: evidence-core
+  wave_id: wave-software-recovery-implementation
+  branch: lane/recovery-evidence-293-389-410-419-424
+  worktree: /Users/jason/repos/verdify-worktrees/software-recovery-evidence-core
+  pr_refs:
+  - '#443'
+  artifact_refs:
+  - .verdify/sprints/software-recovery-2026-07-09/lanes/evidence-core/critic-report.md
 - session_id: scope-coverage-audit-20260709
   parent_session_id: software-recovery-root-019f4826
   role: critic
@@ -3069,6 +3117,249 @@ events:
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0066
   content_sha256: null
+- id: LEDGER-EVT-0068
+  sequence: 68
+  occurred_at: '2026-07-10T00:37:16Z'
+  event_type: worker_closeout
+  source: sprint-orchestrator
+  subject: device-writer lane source checkpoint merged
+  actor:
+    role: controller
+    name: software-recovery-root-019f4826
+  session_id: software-recovery-root-019f4826
+  correlation:
+    trace_id: null
+    wave_id: wave-software-recovery-implementation
+    session_ids:
+    - software-recovery-root-019f4826
+    - device-writer-433-local-20260709
+    issue_ids:
+    - 433
+    lane_ids:
+    - device-writer
+    pr_ids:
+    - '442'
+    deployment_ids: []
+    policy_decision_ids:
+    - g-prod-db-credential-rotation-20260709
+  refs:
+    artifact_refs:
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/device-writer/evidence.yaml
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/device-writer/critic-report.md
+    evidence_refs:
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/device-writer/status.yaml
+    external_refs:
+    - type: github_pr
+      identifier: VerdifyConsultancy/verdify-platform#442
+      url: https://github.com/VerdifyConsultancy/verdify-platform/pull/442
+    - type: git_commit
+      identifier: f15bf3ac35742278af429d5c3599639f56513f86
+      url: https://github.com/VerdifyConsultancy/verdify-platform/commit/f15bf3ac35742278af429d5c3599639f56513f86
+  result: approved
+  summary: Device-writer PR 442 merged after independent acceptance and green CI; the source fix is complete while production deployment and the two-hour quiet-writer proof remain release work.
+  data_summary: No production workload, database row, setpoint, or device state changed during this source merge.
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0067
+  content_sha256: null
+- id: LEDGER-EVT-0069
+  sequence: 69
+  occurred_at: '2026-07-10T01:15:00Z'
+  event_type: critic_reviewed
+  source: sprint-orchestrator
+  subject: evidence-core initial head adversarial review
+  actor:
+    role: critic
+    name: evidence-core-critic-primary-20260710
+  session_id: evidence-core-critic-primary-20260710
+  correlation:
+    trace_id: null
+    wave_id: wave-software-recovery-implementation
+    session_ids:
+    - evidence-core-critic-primary-20260710
+    - evidence-core-critic-adversarial-20260710
+    - evidence-core-local-20260709
+    issue_ids:
+    - 293
+    - 389
+    - 410
+    - 419
+    - 424
+    lane_ids:
+    - evidence-core
+    pr_ids:
+    - '443'
+    deployment_ids: []
+    policy_decision_ids:
+    - DEC-014
+    - DEC-015
+  refs:
+    artifact_refs:
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/evidence-core/critic-report.md
+    evidence_refs:
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/evidence-core/evidence.yaml
+    external_refs:
+    - type: github_pr
+      identifier: VerdifyConsultancy/verdify-platform#443
+      url: https://github.com/VerdifyConsultancy/verdify-platform/pull/443
+    - type: git_commit
+      identifier: e559020e88cf7ef98454c5520cb262e6bc552be4
+      url: https://github.com/VerdifyConsultancy/verdify-platform/commit/e559020e88cf7ef98454c5520cb262e6bc552be4
+  result: changes_requested
+  summary: Two critics rejected a green initial head after reproducing false-positive transition, relay, safety, coverage, weather, wetting, and duplicate-provenance paths.
+  data_summary: The rejected head was not merged or applied to production; all findings were retained as executable replacement-head fixtures.
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0068
+  content_sha256: null
+- id: LEDGER-EVT-0070
+  sequence: 70
+  occurred_at: '2026-07-10T01:40:21Z'
+  event_type: planning_updated
+  source: sprint-orchestrator
+  subject: dry-out and replay contract correction merged
+  actor:
+    role: controller
+    name: software-recovery-root-019f4826
+  session_id: software-recovery-root-019f4826
+  correlation:
+    trace_id: null
+    wave_id: wave-software-recovery-implementation
+    session_ids:
+    - software-recovery-root-019f4826
+    issue_ids:
+    - 410
+    - 419
+    lane_ids:
+    - evidence-core
+    - firmware-control
+    pr_ids:
+    - '444'
+    deployment_ids: []
+    policy_decision_ids:
+    - DEC-014
+    - DEC-015
+  refs:
+    artifact_refs:
+    - .verdify/sprints/software-recovery-2026-07-09/decisions/decision-register.yaml
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/evidence-core/lane.yaml
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/firmware-control/lane.yaml
+    evidence_refs:
+    - .agent-workflow/sprints/software-recovery-2026-07-09/execution/sprint-execution-runbook.yaml
+    external_refs:
+    - type: github_pr
+      identifier: VerdifyConsultancy/verdify-platform#444
+      url: https://github.com/VerdifyConsultancy/verdify-platform/pull/444
+    - type: git_commit
+      identifier: d27978a41873fc55a0b0f2abdfa2ec8e4254013f
+      url: https://github.com/VerdifyConsultancy/verdify-platform/commit/d27978a41873fc55a0b0f2abdfa2ec8e4254013f
+  result: approved
+  summary: PR 444 merged held-temperature-only solar-day gating and honest conservative replay provenance plus exact-age follow-up, preserving ordinary daytime VPD dehumidification.
+  data_summary: Thirteen applicable checks passed; no product code, migration application, workload, database, or device mutation occurred.
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0069
+  content_sha256: null
+- id: LEDGER-EVT-0071
+  sequence: 71
+  occurred_at: '2026-07-10T02:22:55Z'
+  event_type: critic_reviewed
+  source: sprint-orchestrator
+  subject: evidence-core replacement-head finding closure
+  actor:
+    role: controller
+    name: software-recovery-root-019f4826
+  session_id: software-recovery-root-019f4826
+  correlation:
+    trace_id: null
+    wave_id: wave-software-recovery-implementation
+    session_ids:
+    - software-recovery-root-019f4826
+    - evidence-core-local-20260709
+    - evidence-core-critic-primary-20260710
+    - evidence-core-critic-adversarial-20260710
+    issue_ids:
+    - 293
+    - 389
+    - 410
+    - 419
+    - 424
+    lane_ids:
+    - evidence-core
+    pr_ids:
+    - '443'
+    deployment_ids: []
+    policy_decision_ids:
+    - DEC-014
+    - DEC-015
+  refs:
+    artifact_refs:
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/evidence-core/critic-report.md
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/evidence-core/evidence.yaml
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/evidence-core/representative-night-report.md
+    evidence_refs:
+    - db/migrations/tests/test-190-transition-derived-equipment-runtime.sql
+    - db/migrations/tests/test-191-realized-solar-night-dryout-episodes.sql
+    - db/migrations/tests/test-192-replay-outdoor-freshness-provenance.sql
+    external_refs:
+    - type: git_commit
+      identifier: ab56cf4556e262472333b1c813a9d4a4d44eee63
+      url: https://github.com/VerdifyConsultancy/verdify-platform/commit/ab56cf4556e262472333b1c813a9d4a4d44eee63
+    - type: github_pr
+      identifier: VerdifyConsultancy/verdify-platform#443-comment-4931407857
+      url: https://github.com/VerdifyConsultancy/verdify-platform/pull/443#issuecomment-4931407857
+  result: approved
+  summary: Replacement head ab56cf4 closed every reproduced critic finding and follow-on edge case; the controller approved it for final CI and merge under the operator's all-PR approval direction.
+  data_summary: Five SQL fixtures, schema parity, 267 firmware tests, all invariants over 296698 rows, provenance coverage, and zero replay divergence passed.
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0070
+  content_sha256: null
+- id: LEDGER-EVT-0072
+  sequence: 72
+  occurred_at: '2026-07-10T02:27:26Z'
+  event_type: worker_closeout
+  source: sprint-orchestrator
+  subject: evidence-core lane source checkpoint merged
+  actor:
+    role: controller
+    name: software-recovery-root-019f4826
+  session_id: software-recovery-root-019f4826
+  correlation:
+    trace_id: null
+    wave_id: wave-software-recovery-implementation
+    session_ids:
+    - software-recovery-root-019f4826
+    - evidence-core-local-20260709
+    issue_ids:
+    - 293
+    - 389
+    - 410
+    - 419
+    - 424
+    lane_ids:
+    - evidence-core
+    pr_ids:
+    - '443'
+    deployment_ids: []
+    policy_decision_ids:
+    - DEC-014
+    - DEC-015
+  refs:
+    artifact_refs:
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/evidence-core/closure-report.md
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/evidence-core/status.yaml
+    evidence_refs:
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/evidence-core/evidence.yaml
+    external_refs:
+    - type: github_pr
+      identifier: VerdifyConsultancy/verdify-platform#443
+      url: https://github.com/VerdifyConsultancy/verdify-platform/pull/443
+    - type: git_commit
+      identifier: cfc58539c94416b7e8f5275fee73c795f6d8caf1
+      url: https://github.com/VerdifyConsultancy/verdify-platform/commit/cfc58539c94416b7e8f5275fee73c795f6d8caf1
+  result: approved
+  summary: Evidence-core PR 443 merged with every applicable check green, five GitHub issue records updated, and no production migration or device mutation.
+  data_summary: Resource accounting may now consume transition truth; release-control retains schema application, restart, firmware, and runtime authority.
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0071
+  content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
   severity: low
@@ -3089,4 +3380,4 @@ exceptions:
 handoff:
   next_skill: sprint-orchestrator
   next_mode: recorded-local-fallback
-  reason: Supervise device-writer and evidence-core on authoritative main a2c3ee9, route their immutable heads through fresh critics and CI, then dispatch dependency-ready downstream lanes while preserving the production credential gate.
+  reason: Writer and evidence-core source checkpoints are merged at cfc5853; dispatch resource-accounting next, then continue dependency-ready recovery lanes while preserving the production credential gate.

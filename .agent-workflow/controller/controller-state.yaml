@@ -5,7 +5,7 @@ project_id: verdify-platform
 controller_id: software-recovery-root-019f4826
 status: active
 state: WAVE_EXECUTING
-updated_at: "2026-07-10T00:29:37Z"
+updated_at: "2026-07-10T02:28:11Z"
 current_wave: wave-software-recovery-implementation
 sessions:
   - id: software-recovery-root-019f4826
@@ -70,7 +70,7 @@ sessions:
     lane_id: device-writer
     branch: lane/recovery-writer-433
     worktree: /Users/jason/repos/verdify-worktrees/software-recovery-writer-433
-    status: active
+    status: complete
   - id: evidence-core-local-20260709
     role: worker
     executor: codex-local-subagent-fallback
@@ -79,7 +79,7 @@ sessions:
     lane_id: evidence-core
     branch: lane/recovery-evidence-293-389-410-419-424
     worktree: /Users/jason/repos/verdify-worktrees/software-recovery-evidence-core
-    status: active
+    status: complete
   - id: scope-coverage-audit-20260709
     role: critic
     executor: codex-local-subagent
@@ -97,6 +97,24 @@ sessions:
     lane_id: null
     branch: codex/software-recovery-2026-07-09
     worktree: /Users/jason/repos/verdify-worktrees/software-recovery-20260709
+    status: complete
+  - id: evidence-core-critic-primary-20260710
+    role: critic
+    executor: codex-local-subagent
+    repository: VerdifyConsultancy/verdify-platform
+    issue: 410
+    lane_id: evidence-core
+    branch: lane/recovery-evidence-293-389-410-419-424
+    worktree: /private/tmp/verdify-pr443-critic
+    status: complete
+  - id: evidence-core-critic-adversarial-20260710
+    role: critic
+    executor: codex-local-subagent
+    repository: VerdifyConsultancy/verdify-platform
+    issue: 410
+    lane_id: evidence-core
+    branch: lane/recovery-evidence-293-389-410-419-424
+    worktree: /Users/jason/repos/verdify-worktrees/software-recovery-evidence-core
     status: complete
 events:
   - id: controller-event-20260709-001
@@ -155,17 +173,37 @@ events:
     occurred_at: "2026-07-10T00:28:25Z"
     event_type: checkpoint_merged
     summary: "PR #441 merged to main at a2c3ee9 with 13 successful checks, eight intentional skips, zero failures, and no production or device mutation."
+  - id: controller-event-20260710-015
+    occurred_at: "2026-07-10T00:37:16Z"
+    event_type: lane_merged
+    summary: "Device-writer PR #442 merged to main at f15bf3a after independent acceptance and green CI; production deployment and two-hour quiet-writer proof remain pending."
+  - id: controller-event-20260710-016
+    occurred_at: "2026-07-10T01:15:00Z"
+    event_type: critic_reviewed
+    summary: "Two independent critics rejected evidence-core head e559020 despite green CI and reproduced false-positive paths in transition carry, pulse duration, relay completeness, temperature safety, telemetry gaps, weather/wetting confounds, and duplicate provenance."
+  - id: controller-event-20260710-017
+    occurred_at: "2026-07-10T01:40:21Z"
+    event_type: decision_merged
+    summary: "PR #444 merged DEC-014 held-temperature-only solar-day gating and DEC-015 honest conservative replay provenance plus exact device-age follow-up to main at d27978a."
+  - id: controller-event-20260710-018
+    occurred_at: "2026-07-10T02:22:55Z"
+    event_type: critic_findings_closed
+    summary: "Replacement evidence head ab56cf4 closed every reproduced critic finding and follow-on edge case; five SQL fixtures, schema parity, 267 firmware tests, all 296,698-row invariants, and zero replay divergence passed."
+  - id: controller-event-20260710-019
+    occurred_at: "2026-07-10T02:27:26Z"
+    event_type: lane_merged
+    summary: "Evidence-core PR #443 merged to main at cfc5853 with all applicable checks green, exact issue comments recorded, and no production migration or device mutation."
 open_gates:
   - g-prod-db-credential-rotation-20260709
 next_actions:
-  - Poll device-writer and evidence-core after they integrate authoritative main a2c3ee9; enforce exclusive path ownership and current contract hashes.
-  - Route each immutable lane head through its required fresh critic, GitHub CI, and integration review before merge.
-  - Dispatch downstream lanes only when merged dependency contracts are available.
+  - Dispatch resource-accounting from authoritative main cfc5853, then DLI availability and planner delivery in dependency order.
+  - Keep writer deployment proof, evidence migrations, service restarts, firmware response, and runtime acceptance in release control.
+  - Route each future immutable lane head through its required critic, GitHub CI, and integration review before merge.
   - Preserve the credential-rotation release block until Jason explicitly authorizes the protected rotation.
 handoff:
   next_skill: sprint-orchestrator
   next_mode: recorded-local-fallback
-  reason: Agent Platform dynamic worktree CRUD is disabled; continue execution through the approved isolated local-worktree fallback and maintain durable controller records.
+  reason: Writer and evidence-core source checkpoints are merged; continue dependency-ready recovery lanes through the approved isolated local-worktree fallback while maintaining the production credential gate.
 approval:
   status: approved
   approver: Jason Vallery

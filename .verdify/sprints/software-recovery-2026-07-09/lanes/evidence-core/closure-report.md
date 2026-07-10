@@ -1,8 +1,9 @@
 # Evidence-core lane closeout checkpoint
 
-State: **READY_FOR_CRITIC**. Implementation and integrated local validation are
-complete. Independent criticism, GitHub CI, production migration/application,
-and the firmware-control response decision remain pending.
+State: **MERGED**. PR `#443` merged to `main` at
+`cfc58539c94416b7e8f5275fee73c795f6d8caf1` after the replacement head closed
+all critic findings and every applicable GitHub check passed. Production
+migration/application and the firmware-control response remain pending.
 
 ## Delivered outcome
 
@@ -18,8 +19,8 @@ and the firmware-control response decision remain pending.
   action/relay attribution, actuator duty, stop/block reason, 10-20-minute
   VPD/temperature/indoor-AH response, explicit safety gates, and exactly four
   dispositions.
-- Migration 192 and the exporter provide conservative outdoor source timestamps
-  and age without manufacturing freshness. The refreshed stock replay reaches
+- Migration 192 and the exporter provide conservatively observed outdoor age
+  without claiming a raw source timestamp or manufacturing freshness. The refreshed stock replay reaches
   every outdoor-aware estimator branch and carries a permanent coverage gate.
 - MCP `outcome_kpi` now treats transition truth as cycle/runtime authority,
   retains firmware counters as diagnostics, and exposes validity-bearing
@@ -41,7 +42,8 @@ Firmware-control must preserve ordinary daytime VPD dehumidification while
 preventing actual held-temp admission during solar day, unless Jason explicitly
 revises the zero-daytime requirement. The response scope must retain existing
 temperature-floor, re-entry, dwell/wind, and heat2-off safeguards, prove the
-change with source-backed replay and a daytime negative fixture, and recollect
+change with exact device-age replay where available, an honestly labeled
+conservative fallback, and a daytime negative fixture, and recollect
 realized outcomes before claiming effectiveness. This lane makes no such control
 change.
 
@@ -52,7 +54,7 @@ change.
 | LANE-AC-01: solar and served-VPD parity | PASS | EVI-EV-001, EVI-EV-002 |
 | LANE-AC-02: raw transition cycle truth | PASS | EVI-EV-003 |
 | LANE-AC-03: realized night evidence and safety attribution | PASS as evidence delivery; current control outcome ineffective | EVI-EV-004, EVI-EV-005, EVI-EV-010 |
-| LANE-AC-04: source-backed replay coverage | PASS | EVI-EV-006, EVI-EV-007 |
+| LANE-AC-04: provenance-bearing replay coverage | PASS | EVI-EV-006, EVI-EV-007 |
 
 ## Validation
 
@@ -61,11 +63,12 @@ change.
 - Five disposable-TimescaleDB fixtures: PASS.
 - Fresh `db/schema.sql` load and definition probes: PASS.
 - Ruff, shell syntax, diff check, and focused MCP/schema tests: PASS.
-- Firmware invariants: PASS over 296,580 stock rows.
+- Firmware invariants: PASS over 296,698 stock rows.
 - Native firmware tests: 267 passed.
-- Stock replay branch gate: PASS; 295,715 source-backed and 199,480 fresh rows,
+- Stock replay branch gate: PASS; 295,833 observation-backed and 199,598
+  conservatively fresh rows,
   with every required estimator action represented.
-- Firmware replay against integrated `origin/main`: 0 of 296,580 rows diverged.
+- Firmware replay against integrated `origin/main`: 0 of 296,698 rows diverged.
 - Required monolithic `make test`: 711 passed, 139 failed, 6 skipped, 10 errors.
   The failures are inherited laptop/live-service assumptions and unrelated
   existing PVC/UI assertions; focused lane checks are green.
@@ -76,12 +79,12 @@ change.
   `0a9a19a840be6bae1beba604497d880b3b74b1ef`.
 - Execution baseline:
   `6b5042c6a9d525cf1429bfda5a1f6d9a95470476`.
-- Frozen implementation commit:
-  `733349d0f5d9b6990791cce3b0e57b2a27656125`.
-- Controller/writer main integrated through:
-  `f15bf3ac35742278af429d5c3599639f56513f86`.
-- Locally validated merge head before records update:
-  `6f934d0825d35d067984716ea73d8aafe1fd49f7`.
+- Replacement implementation commit:
+  `ab56cf4556e262472333b1c813a9d4a4d44eee63`.
+- Durable validation/review head:
+  `fd8f73eb8ad9ae8efa8d170b9b1a24924f8f9e6d`.
+- Merged main checkpoint:
+  `cfc58539c94416b7e8f5275fee73c795f6d8caf1`.
 
 The writer merge introduced no shared-path conflict. Its lifecycle/registry
 contract remains intact. The running ingestor image still predates #442 and must
@@ -92,17 +95,13 @@ be built/promoted/restarted by release control; action logging itself is healthy
 Apply migrations strictly in numeric order after the migration gate. Schema and
 MCP changes require both `verdify-mcp` and `verdify-ingestor` to restart. The
 worker did not run production rollback proofs or apply schema. Before deployment,
-rollback is the parent of implementation commit `733349d`; after deployment,
+rollback is the parent of implementation commit `ab56cf4`; after deployment,
 restore the prior view/function definitions and corpus through the normal
 digest-pinned release process.
 
 ## Remaining gates
 
-1. Fresh independent SQL/replay critic at the immutable pushed checkpoint.
-2. GitHub PR checks green.
-3. Controller-owned migration/app rollout and exact service restart proof.
-4. Firmware-control decision and implementation for the measured daytime hold
+1. Controller-owned migration/app rollout and exact service restart proof.
+2. Firmware-control implementation for the measured daytime hold
    violation.
-5. Post-deployment realized episode collection before any outcome claim.
-
-Self-merge is not authorized and will not be attempted.
+3. Post-deployment realized episode collection before any outcome claim.
