@@ -1,8 +1,8 @@
 sprint_id: software-recovery-2026-07-09
 scope_id: resource-accounting
-revision: 6167e3b
+revision: 6ea8ab1
 environment: null
-generated_at: "2026-07-10T04:35:29Z"
+generated_at: "2026-07-10T04:51:37Z"
 items:
   - id: EVI-RA-001
     type: TEST
@@ -13,7 +13,7 @@ items:
       outer BEGIN/ROLLBACK replay against an origin/main disposable database;
       execute test-193 and test-194 with ON_ERROR_STOP=1
     timestamp: "2026-07-10T03:56:54Z"
-    revision: 6167e3b
+    revision: 6ea8ab1
     environment: disposable timescale/timescaledb:latest-pg16
     result: >-
       Both migrations are non-self-transactional, safe to wrap, idempotent, and
@@ -23,7 +23,8 @@ items:
       state ambiguity; null command-only gallons; positive-duration wall-fert
       master overlap plus commissioning; historical coefficient uncertainty;
       transition-backed full/partial/modeled-only/stale/unavailable energy;
-      null-preserving legacy cost compatibility; and no free resource term.
+      null-preserving legacy cost compatibility; aggregate gas/therms nulling;
+      and no free resource term.
     artifact_location: db/migrations/tests
     acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
     limitations: [No production migration was applied.]
@@ -36,7 +37,7 @@ items:
       read-only prod equipment/water/energy exports into disposable resource437;
       run materialize_water_meter_events and bounded resource views locally
     timestamp: "2026-07-10T03:56:54Z"
-    revision: 6167e3b
+    revision: 6ea8ab1
     environment: verdify-prod read-only plus disposable local TimescaleDB
     result: >-
       Production baseline had current raw water at 2026-07-10T03:09Z but ledger
@@ -62,13 +63,13 @@ items:
       make lint; pytest -q topology, fidelity, lab-site-followup, and
       TestResourceAccountingContractSources; compileall; json.tool; git diff --check
     timestamp: "2026-07-10T03:56:54Z"
-    revision: 6167e3b
+    revision: 6ea8ab1
     environment: Jason laptop worktree
     result: >-
-      Ruff, 253 focused tests collected (252 passed, one skipped), typed schema
+      Ruff, 254 focused tests collected (253 passed, one skipped), typed schema
       validation, six targeted disposable-schema tests, Python compilation,
-      dashboard JSON parsing, generated ConfigMap parity, and diff integrity all
-      pass.
+      dashboard JSON parsing, generated ConfigMap plus branding-generator parity,
+      and diff integrity all pass.
       Static guards reject equipment_assets reads, raw max-minus-min fallback,
       unlabeled scope collapse, and missing minute-cadence materializer wiring.
     artifact_location: tests and verdify_schemas/tests
@@ -81,7 +82,7 @@ items:
     source: complete schema snapshot restore
     command: psql -v ON_ERROR_STOP=1 -f db/schema.sql against a fresh disposable database
     timestamp: "2026-07-10T03:56:54Z"
-    revision: 6167e3b
+    revision: 6ea8ab1
     environment: disposable resource437_restore TimescaleDB
     result: >-
       Fresh schema restored cleanly and exposes resource_coefficients,
@@ -98,7 +99,7 @@ items:
     source: required monolithic repository test command
     command: make test
     timestamp: "2026-07-10T03:56:54Z"
-    revision: 6167e3b
+    revision: a9cc746
     environment: Jason laptop after development moved to k3s
     result: 717 passed, 141 failed, 6 skipped, and 10 errors in 19.43 seconds.
     artifact_location: null
@@ -118,30 +119,35 @@ items:
 
   - id: EVI-RA-006
     type: CI
-    status: NOT_RUN
+    status: PASS
     source: GitHub pull-request checks
     command: null
     timestamp: "2026-07-10T03:56:54Z"
-    revision: 6167e3b
-    environment: draft PR #445 pending corrected-head push
-    result: PR head b03c417 was fully green; checks for corrected head 6167e3b are pending push.
-    artifact_location: null
+    revision: 6ea8ab1
+    environment: draft PR #445 at exact implementation head
+    result: >-
+      CI, K8s manifest validation, container build-without-publish jobs, firmware
+      compile/replay/invariants, migration safety, drift guards, logic tests,
+      service-restart hygiene, and device-write interlock all completed
+      successfully. Trusted image publication was intentionally skipped for the PR.
+    artifact_location: https://github.com/VerdifyConsultancy/verdify-platform/pull/445/checks
     acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
     limitations: []
 
   - id: EVI-RA-007
     type: REVIEW
-    status: PENDING
-    source: independent data-integrity/accounting critic request-changes closure
-    command: independent source review and disposable PG16 reproductions at 722a90c
+    status: PASS
+    source: independent data-integrity/accounting critic final review
+    command: independent source and disposable PG16 review through exact head 6ea8ab1
     timestamp: "2026-07-10T03:56:54Z"
-    revision: 6167e3b
+    revision: 6ea8ab1
     environment: isolated critic plus disposable TimescaleDB
     result: >-
-      The re-review at b03c417 returned REQUEST_CHANGES with eight residual
+      Reviews at 722a90c/b03c417 and final-review checkpoints found and closed
       overlap, runtime-proof, conflict-health, boundary-seed, history, consumer,
-      inventory, and ownership defects. They are closed in 78fcc00/6167e3b and
-      mapped in critic-report.md. Independent third review remains required.
+      inventory, ownership, generator, and gas-scalar defects. The critic returned
+      APPROVE for exact implementation head 6ea8ab18633fbfd9638899495cdaaabb0ffa9fcf
+      with no remaining accounting blocker.
     artifact_location: .verdify/sprints/software-recovery-2026-07-09/lanes/resource-accounting/critic-report.md
     acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
-    limitations: [Awaiting independent third review of the corrected head.]
+    limitations: [Production rollout and live acceptance remain release-control work.]

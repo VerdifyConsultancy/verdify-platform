@@ -1,9 +1,9 @@
 sprint_id: software-recovery-2026-07-09
 lane_id: resource-accounting
-state: READY_FOR_CRITIC
-updated_at: "2026-07-10T04:35:29Z"
-head_sha: 6167e3b
-schema_sha: 78fcc00
+state: READY_FOR_MERGE
+updated_at: "2026-07-10T04:51:37Z"
+head_sha: 6ea8ab1
+schema_sha: 6ea8ab1
 working_tree_clean: true
 acceptance:
   passed:
@@ -16,9 +16,7 @@ acceptance:
 blockers:
   - Production migrations 193-194, service restarts, dashboard rollout, and post-deploy acceptance are release-control work; this lane made no production mutation.
   - Physical coefficient calibration and whole-building/circuit metering remain out of scope; provisional terms are scoring-ineligible.
-  - Independent third review and corrected-head GitHub checks are required before merge.
 decisions_requested: []
 next_actions:
-  - Re-run the independent data-integrity/accounting critic against corrected implementation head 6167e3b.
-  - Push the corrected branch to existing draft PR #445 and require green GitHub checks.
+  - Mark independently approved, fully green draft PR #445 ready and merge it to main.
   - Release-control applies migrations 193 then 194 before restarting verdify-ingestor, verdify-mcp, and verdify-api; then roll out Grafana and run live acceptance.
