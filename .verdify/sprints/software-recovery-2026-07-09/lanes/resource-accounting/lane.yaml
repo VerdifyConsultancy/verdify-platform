@@ -42,6 +42,7 @@ ownership:
     - db/migrations/194-*.sql
     - db/migrations/tests/test-193-*.sql
     - db/migrations/tests/test-194-*.sql
+    - db/migrations/tests/fixtures/active-equipment-state-inventory-2026-07-09.sql
     - db/schema.sql
     - ingestor/tasks/daily.py
     - ingestor/tasks/ha.py
@@ -52,12 +53,25 @@ ownership:
     - verdify_schemas/api.py
     - verdify_schemas/mcp_responses.py
     - verdify_schemas/tests/test_topology.py
+    - verdify_schemas/tests/test_mcp_responses.py
     - mcp/server.py
     - api/main.py
     - grafana/dashboards/site-climate.json
     - grafana/dashboards/site-climate-water.json
+    - grafana/dashboards/site-climate-cooling.json
+    - grafana/dashboards/site-climate-heating.json
+    - grafana/dashboards/site-climate-humidity.json
+    - grafana/dashboards/site-climate-lighting.json
+    - grafana/dashboards/site-evidence-dashboards.json
+    - grafana/dashboards/site-evidence-economics.json
+    - grafana/dashboards/site-evidence-planning-quality.json
+    - grafana/dashboards/site-home.json
+    - grafana/dashboards/site-greenhouse-crops.json
     - grafana/dashboards/site-greenhouse-equipment.json
+    - grafana/dashboards/site-irrigation.json
     - scripts/render-equipment-page.py
+    - scripts/daily-summary-snapshot.py
+    - scripts/verdify-metrics.py
     - tests/test_02_database.py
     - tests/test_12_fidelity.py
     - tests/test_15_lab_site_followup.py
@@ -78,6 +92,9 @@ ownership:
     - path: scripts/render-equipment-page.py
       granted_by: software-recovery controller
       reason: Preserve the merged fail-closed credential contract while exposing resource provenance.
+    - path: scripts/daily-summary-snapshot.py
+      granted_by: software-recovery controller
+      reason: Remove the legacy nominal/zero resource writer so it cannot overwrite provenance-gated daily values.
   owned_interfaces:
     - canonical active equipment alias contract
     - revisioned resource coefficient
@@ -112,7 +129,7 @@ constraints:
   - No new external dependency, physical device, public API break, or production mutation is authorized.
 acceptance_criteria:
   - id: LANE-AC-01
-    statement: Every active telemetry slug resolves canonically before legacy reads are removed.
+    statement: Every captured active physical control-output telemetry slug resolves canonically before legacy reads are removed; status/configuration telemetry is explicitly outside the asset-alias contract.
     evidence_required:
       - Active-slug inventory and alias fixture with zero unresolved or multiply resolved active slugs
       - Compatibility tests proving legacy reads remain valid during convergence

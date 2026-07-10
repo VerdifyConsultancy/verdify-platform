@@ -263,6 +263,56 @@ def test_resource_dashboards_label_scope_quality_and_no_legacy_catalog():
     assert "partial Shelly measurement" in equipment_text
 
 
+def test_resource_dashboards_never_promote_legacy_daily_summary_scalars():
+    legacy_resource_terms = (
+        "runtime_",
+        "cost_",
+        "kwh",
+        "therm",
+        "water_used_gal",
+        "mister_water_gal",
+    )
+
+    for path in _site_dashboard_paths():
+        dashboard = json.loads(path.read_text(encoding="utf-8"))
+        nodes = [dashboard]
+        while nodes:
+            node = nodes.pop()
+            if isinstance(node, dict):
+                raw_sql = node.get("rawSql")
+                if isinstance(raw_sql, str) and "daily_summary" in raw_sql:
+                    assert not any(term in raw_sql for term in legacy_resource_terms), (
+                        f"{path.name} bypasses provenance gates: {raw_sql}"
+                    )
+                nodes.extend(node.values())
+            elif isinstance(node, list):
+                nodes.extend(node)
+
+
+def test_snapshot_and_metrics_preserve_resource_unavailability():
+    snapshot = (REPO_ROOT / "scripts/daily-summary-snapshot.py").read_text(encoding="utf-8")
+    metrics = (REPO_ROOT / "scripts/verdify-metrics.py").read_text(encoding="utf-8")
+
+    assert "Resource totals/costs" in snapshot
+    for legacy_writer_token in (
+        "WATTAGE",
+        "ELECTRIC_RATE",
+        "WATER_RATE",
+        "THERM_RATE",
+        "kwh_estimated=$",
+        "cost_total=$",
+        "water_used_gal=$",
+    ):
+        assert legacy_writer_token not in snapshot
+
+    assert "else None" in metrics
+    assert 'scorecard.get("cost_total")' in metrics
+    assert "if cost_total is not None:" in metrics
+    assert "scorecard.get('cost_total', 0)" not in metrics
+    assert "verdify_resource_terms_available" in metrics
+    assert "verdify_planner_score_resource_weight_pct" in metrics
+
+
 def test_quartz_dark_mode_contract_is_user_theme_driven():
     config = (REPO_ROOT / "site/quartz.config.ts").read_text(encoding="utf-8")
     head = (REPO_ROOT / "site/quartz/components/Head.tsx").read_text(encoding="utf-8")

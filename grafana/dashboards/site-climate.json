@@ -1736,7 +1736,7 @@
             "uid": "verdify-tsdb"
           },
           "format": "table",
-          "rawSql": "SELECT now() AS time,\n  ROUND(AVG(therms_estimated)::numeric, 2) AS v\nFROM daily_summary\nWHERE date >= current_date - interval '30 days'\n  AND date < current_date\n  AND therms_estimated IS NOT NULL",
+          "rawSql": "SELECT now() AS time,\n  ROUND(AVG(therms)::numeric, 2) AS v\nFROM v_daily_kpi\nWHERE date >= current_date - interval '30 days'\n  AND date < current_date\n  AND resource_terms_available",
           "refId": "A"
         }
       ],

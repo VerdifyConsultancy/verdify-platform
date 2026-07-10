@@ -1009,7 +1009,7 @@
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
           },
-          "rawSql": "SELECT now() AS time, COALESCE(SUM(cost_electric), 0) AS v FROM daily_summary WHERE $__timeFilter((date + time '12:00')::timestamptz)",
+          "rawSql": "SELECT now() AS time, SUM(cost_electric) AS v FROM v_daily_kpi WHERE resource_terms_available AND $__timeFilter((date + time '12:00')::timestamptz)",
           "format": "table",
           "refId": "A"
         }

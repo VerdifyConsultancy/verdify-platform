@@ -10,7 +10,6 @@ from ._common import (
     _GRADED_ZONES,
     COMPLIANCE_ZONE_WEIGHTS_DEFAULT,
     DEFAULT_ZONE_BAND,
-    HEAT2_BTU,
     HOUSE_BAND_PARAMS,
     REGISTRY,
     RELAY_TRUTH_START,
@@ -602,6 +601,34 @@ async def _electric_wattages(conn: asyncpg.Connection, target_day) -> dict[str, 
     }
 
 
+async def _gas_btu_per_hour(conn: asyncpg.Connection, target_day) -> float | None:
+    """Return an exact, date-valid heat2 nameplate coefficient or ``None``."""
+    row = await conn.fetchrow(
+        """
+        SELECT rc.nominal_value, rc.lower_bound, rc.upper_bound
+        FROM equipment e
+        JOIN resource_coefficients rc ON rc.equipment_id = e.id
+        WHERE e.greenhouse_id = 'vallery'
+          AND e.slug = 'heat2'
+          AND e.is_active
+          AND rc.resource_kind = 'gas_btu_per_hour'
+          AND rc.valid_from <= ($1::date::timestamp AT TIME ZONE 'America/Denver')
+          AND (
+              rc.valid_to IS NULL
+              OR rc.valid_to > ($1::date::timestamp AT TIME ZONE 'America/Denver')
+          )
+        ORDER BY rc.valid_from DESC, rc.id DESC
+        LIMIT 1
+        """,
+        target_day,
+    )
+    if not row or row["nominal_value"] is None:
+        return None
+    if row["lower_bound"] != row["upper_bound"]:
+        return None
+    return float(row["nominal_value"])
+
+
 def _runtime_kwh_from_minutes(
     minutes_by_equipment: dict[str, float | None],
     wattages: dict[str, float | None],
@@ -673,9 +700,15 @@ async def grow_light_daily(pool: asyncpg.Pool) -> None:
     async with pool.acquire() as conn:
         yesterday = await conn.fetchval("SELECT CURRENT_DATE - 1")
         rows = await conn.fetch(
-            "SELECT equipment, on_minutes, cycles FROM v_equipment_runtime_daily WHERE day = $1", yesterday
+            """
+            SELECT equipment, on_minutes, cycles, is_deploy_gate_eligible
+            FROM v_equipment_runtime_daily
+            WHERE day = $1
+            """,
+            yesterday,
         )
         rt = {r["equipment"]: (float(r["on_minutes"] or 0), int(r["cycles"] or 0)) for r in rows}
+        rt_eligible = {r["equipment"]: bool(r["is_deploy_gate_eligible"]) for r in rows}
 
         # Runtimes
         rf1 = rt.get("fan1", (None, 0))[0]
@@ -698,9 +731,19 @@ async def grow_light_daily(pool: asyncpg.Pool) -> None:
         # Energy. Electric cost uses published device watts × observed on-time;
         # Shelly metered kWh remains a diagnostic because its circuit coverage is partial.
         wattages = await _electric_wattages(conn, yesterday)
-        electric_minutes = {e: (rt[e][0] if e in rt else None) for e in _MODELED_ELECTRIC_EQUIPMENT}
+        electric_minutes = {
+            e: (rt[e][0] if e in rt and rt_eligible.get(e, False) else None)
+            for e in _MODELED_ELECTRIC_EQUIPMENT
+        }
         kwh = _runtime_kwh_from_minutes(electric_minutes, wattages)
-        therms = rh2 / 60.0 * HEAT2_BTU / THERM_BTU if rh2 is not None else None
+        gas_btu_per_hour = await _gas_btu_per_hour(conn, yesterday)
+        therms = (
+            rh2 / 60.0 * gas_btu_per_hour / THERM_BTU
+            if rh2 is not None
+            and rt_eligible.get("heat2", False)
+            and gas_btu_per_hour is not None
+            else None
+        )
         water_row = await conn.fetchrow(
             """
             SELECT quality_filtered_meter_gal, available_for_scoring
@@ -1050,70 +1093,32 @@ async def _refresh_daily_summary_for_date(
     )
     rt_rows = await conn.fetch(
         """
-        WITH day_bounds AS (
-            SELECT $1::date::timestamp AT TIME ZONE 'America/Denver' AS day_start,
-                   ($1::date + 1)::timestamp AT TIME ZONE 'America/Denver' AS day_end
-        ),
-        seeded AS (
-            SELECT DISTINCT ON (e.equipment)
-                   e.equipment,
-                   day_bounds.day_start AS ts,
-                   e.state,
-                   true AS is_seed
-              FROM equipment_state e
-              CROSS JOIN day_bounds
-             WHERE e.ts < day_bounds.day_start
-               AND e.equipment = ANY($2::text[])
-             ORDER BY e.equipment, e.ts DESC
-        ),
-        day_events AS (
-            SELECT e.equipment, e.ts, e.state, false AS is_seed
-              FROM equipment_state e
-              CROSS JOIN day_bounds
-             WHERE e.ts >= day_bounds.day_start
-               AND e.ts < day_bounds.day_end
-               AND e.equipment = ANY($2::text[])
-        ),
-        raw AS (
-            SELECT * FROM seeded
-            UNION ALL
-            SELECT * FROM day_events
-        ),
-        changes AS (
-            SELECT equipment, ts, state, is_seed
-              FROM (
-                  SELECT equipment, ts, state, is_seed,
-                         lag(state) OVER (PARTITION BY equipment ORDER BY ts, is_seed DESC) AS prev_state
-                    FROM raw
-              ) ordered
-             WHERE prev_state IS NULL OR prev_state IS DISTINCT FROM state
-        ),
-        transitions AS (
-            SELECT equipment, ts, state, is_seed,
-                   lead(ts) OVER (PARTITION BY equipment ORDER BY ts, is_seed DESC) AS next_ts
-              FROM changes
-        )
-        SELECT equipment,
-               round(sum(extract(epoch FROM
-                   coalesce(next_ts, (SELECT day_end FROM day_bounds)) - ts
-               ) / 60.0) FILTER (WHERE state = true), 1) AS on_minutes,
-               count(*) FILTER (
-                   WHERE state IS TRUE
-                     AND is_seed IS FALSE
-               ) AS cycles
-        FROM transitions
-        GROUP BY equipment
+        SELECT equipment, on_minutes, cycles, is_deploy_gate_eligible
+        FROM v_equipment_runtime_daily
+        WHERE day = $1
+          AND equipment = ANY($2::text[])
     """,
         target_day,
         list(_RT_EQUIP),
     )
     rt = {r["equipment"]: float(r["on_minutes"] or 0) for r in rt_rows}
     cycles = {r["equipment"]: int(r["cycles"] or 0) for r in rt_rows}
+    rt_eligible = {r["equipment"]: bool(r["is_deploy_gate_eligible"]) for r in rt_rows}
 
     wattages = await _electric_wattages(conn, target_day)
-    electric_minutes = {e: (rt[e] if e in rt else None) for e in _MODELED_ELECTRIC_EQUIPMENT}
+    electric_minutes = {
+        e: (rt[e] if e in rt and rt_eligible.get(e, False) else None)
+        for e in _MODELED_ELECTRIC_EQUIPMENT
+    }
     kwh = _runtime_kwh_from_minutes(electric_minutes, wattages)
-    therms = rt["heat2"] / 60.0 * 75000 / 100000 if "heat2" in rt else None
+    gas_btu_per_hour = await _gas_btu_per_hour(conn, target_day)
+    therms = (
+        rt["heat2"] / 60.0 * gas_btu_per_hour / THERM_BTU
+        if "heat2" in rt
+        and rt_eligible.get("heat2", False)
+        and gas_btu_per_hour is not None
+        else None
+    )
 
     water_evidence = await conn.fetchrow(
         """

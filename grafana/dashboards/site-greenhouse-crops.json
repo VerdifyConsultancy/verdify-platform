@@ -1871,7 +1871,7 @@
             "uid": "verdify-tsdb"
           },
           "format": "time_series",
-          "rawSql": "SELECT (date + time '12:00')::timestamptz AS time, runtime_grow_light_min / 60.0 AS \"Grow Light Hours\"\nFROM daily_summary\nWHERE $__timeFilter((date + time '12:00')::timestamptz) AND runtime_grow_light_min > 0\nORDER BY date",
+          "rawSql": "SELECT (day::date + time '12:00')::timestamptz AS time, SUM(on_minutes) / 60.0 AS \"Grow Light Hours\"\nFROM v_equipment_runtime_daily\nWHERE equipment IN ('grow_light_main','grow_light_grow') AND is_deploy_gate_eligible AND $__timeFilter((day::date + time '12:00')::timestamptz)\nGROUP BY day ORDER BY day",
           "refId": "A"
         }
       ],

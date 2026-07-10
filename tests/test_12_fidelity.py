@@ -3298,9 +3298,9 @@ def test_daily_summary_runtime_includes_fertigation_relays():
     ):
         assert column in summary_update
 
-    assert "changes AS" in src
-    assert "lead(ts) OVER" in src
-    assert "prev_state IS NULL OR prev_state IS DISTINCT FROM state" in src
+    assert "FROM v_equipment_runtime_daily" in src
+    assert "is_deploy_gate_eligible" in src
+    assert "rt_eligible" in src
 
 
 def test_alert_monitor_tracks_irrigation_feedback_gaps():
