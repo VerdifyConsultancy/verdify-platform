@@ -2,7 +2,7 @@ sprint_id: software-recovery-2026-07-09
 scope_id: security-hygiene
 revision: 1dfb05fdab864a3d000095346ee5e16bd145df5d
 environment: null
-generated_at: "2026-07-10T12:34:32Z"
+generated_at: "2026-07-10T12:59:35Z"
 items:
   - id: SEC-EV-001
     type: TEST
@@ -160,3 +160,39 @@ items:
     artifact_location: .agent-workflow/hygiene/database-credential-rotation-runbook.md
     acceptance_criteria: [LANE-AC-04]
     limitations: [Do not mark the lane complete before boolean-only live verification and rollback disposition are recorded.]
+  - id: SEC-EV-014
+    type: SECURITY
+    status: PASS
+    source: production application database credential rotation
+    command: redacted SOPS, Kubernetes Secret, psql role, and direct TCP authentication workflow
+    timestamp: "2026-07-10T12:43:50Z"
+    revision: 19988c1ad955442a45b70f5957e53a6e5be2c480
+    environment: verdify-prod and jvallery/agents main
+    result: Encrypted authority PR jvallery/agents#2904 merged at deae5f50848597fb90057b2914c105113a23e3c0; replacement_uri_safe, merged-authority parity, new_credential_valid, and old_credential_rejected are true; Secret resourceVersion advanced to 67776214; rollback_used is false.
+    artifact_location: .verdify/sprints/software-recovery-2026-07-09/lanes/security-hygiene/rotation-closeout-2026-07-10.md
+    acceptance_criteria: [LANE-AC-04]
+    limitations: [All results are boolean or immutable-reference evidence; no credential value, digest, reversible derivative, or decrypted artifact is stored.]
+  - id: SEC-EV-015
+    type: RUNTIME_PROBE
+    status: PASS
+    source: serial consumer restart and controlled scheduled-consumer acceptance
+    command: redacted kubectl rollout, in-container SELECT 1, HTTP health, datasource query, and controlled Job probes
+    timestamp: "2026-07-10T12:59:00Z"
+    revision: 19988c1ad955442a45b70f5957e53a6e5be2c480
+    environment: verdify-prod
+    result: Ingestor 1/1, API 2/2, MCP 2/2, planner 2/2, setpoint-server 1/1, and Grafana 1/1 are Ready with zero auth errors; API, lab, and graphs return 200; Grafana datasource query passes; band refresh, 179.1M backup, HA gap backfill, and lab publish controlled Jobs succeeded and their CronJobs resumed; the writer lease matches the sole ingestor.
+    artifact_location: .verdify/sprints/software-recovery-2026-07-09/lanes/security-hygiene/rotation-closeout-2026-07-10.md
+    acceptance_criteria: [LANE-AC-03, LANE-AC-04]
+    limitations: [Vision remains suspended for its independent pre-existing ImagePullBackOff; setpoint-server /setpoints has an independent legacy docker-backend diagnostic failure while its live DB pool and direct read both pass.]
+  - id: SEC-EV-016
+    type: SECURITY
+    status: PASS
+    source: post-cutover secret-handling cleanup
+    command: secure deletion of the temporary SOPS age-key copy
+    timestamp: "2026-07-10T12:59:35Z"
+    revision: 19988c1ad955442a45b70f5957e53a6e5be2c480
+    environment: laptop operator host
+    result: Temporary SOPS age-key copy was removed with rm -P after the cutover, negative-old proof, and consumer acceptance completed.
+    artifact_location: .verdify/sprints/software-recovery-2026-07-09/lanes/security-hygiene/rotation-closeout-2026-07-10.md
+    acceptance_criteria: [LANE-AC-04]
+    limitations: [Canonical credential custody remains the merged SOPS authority; no key material is copied into this repository.]

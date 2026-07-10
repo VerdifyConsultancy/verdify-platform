@@ -1,19 +1,19 @@
 sprint_id: software-recovery-2026-07-09
 lane_id: security-hygiene
-state: IMPLEMENTING
-updated_at: "2026-07-10T12:21:20Z"
-head_sha: 1dfb05fdab864a3d000095346ee5e16bd145df5d
+state: READY_FOR_CRITIC
+updated_at: "2026-07-10T12:59:35Z"
+head_sha: 19988c1ad955442a45b70f5957e53a6e5be2c480
 working_tree_clean: true
 acceptance:
   passed:
     - LANE-AC-01
     - LANE-AC-02
     - LANE-AC-03
-  pending:
     - LANE-AC-04
+  pending: []
   failed: []
 blockers: []
 decisions_requested: []
 next_actions:
-  - Refresh the live caller inventory, current backup proof, CronJob activity, production SOPS authority, and rollback references without reading or emitting credential values.
-  - Execute the approved rotate-now runbook and record only replacement_uri_safe, new-valid, old-invalid, workload readiness, and rollback booleans.
+  - Obtain a fresh independent security/release critic verdict on the immutable closeout record and live boolean evidence.
+  - Reconcile issue #438 and mark the lane COMPLETE only after the critic accepts the final evidence head.
