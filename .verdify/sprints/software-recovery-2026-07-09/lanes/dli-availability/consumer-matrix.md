@@ -10,7 +10,8 @@ fixture runtime, and a numeric zero are not substitutes for measured crop DLI.
 | ESP32 firmware | Numeric DLI sensor publishes `NaN`; the internal legacy accumulator is forensic only | Six text entities publish availability, reason, provenance, revision, valid-from, and valid-to | Qualified-light minutes, photoperiod, relay decisions, and fixture out-of-service logic are unchanged |
 | Firmware twin | Byte-identical `greenhouse_logic.h` and `greenhouse_types.h` mirror the device source | Same `DliEvidence` helper and unavailable constants as device source | Replay/twin relay decisions remain identical |
 | Raw database history | `climate.dli_today` and `daily_summary.dli_final` retain their original numeric proxy values for forensics | Column/view comments label the proxy invalid; `v_dli_forensic_history` carries reason/provenance/interval | No raw row or value is rewritten or deleted |
-| Product database views | `v_dli_current.crop_dli_mol_m2_day` and `v_dli_daily.crop_dli_mol_m2_day` are `NULL` unless a full operator-validated interval applies | `availability`, `unavailable_reason`, `provenance`, `validity_revision`, `valid_from`, and `valid_to` | A future calibrated sensor can become numeric only through the validity ledger |
+| Product database views | `v_dli_current.crop_dli_mol_m2_day` and `v_dli_daily.crop_dli_mol_m2_day` are always `NULL` under migration 195 | `availability`, explicit invalid-source/day-completeness reason, provenance, revision, and interval | Migration 195 rejects ordinary DML that attempts `available`; activation requires a separately reviewed migration/contract change |
+| Live lighting status/traceability | `dli_today` and `dli_below_target` are `NULL` in circuit/status/minutes/traceability views | The six DLI availability/provenance columns are appended to every named view | `expected_on`, qualified minutes, photoperiod, lux hysteresis, occupancy task light, firmware state, and cfg readbacks remain independent |
 | Legacy DB reports | Weekly/monthly/period, harvest/economics, water-efficiency, KPI, estimated-DLI, and forecast DLI fields are typed `NULL` | Product callers are directed to `v_dli_current`/`v_dli_daily` | Climate, water, energy, cost, harvest, and lighting-runtime fields retain their existing contracts |
 | Iris planning context | No scalar, correction factor, forecast proxy, or seven-day numeric DLI is emitted | Context prints the unavailable reason/provenance/revision/interval and an explicit no-inference directive | DLI-independent qualified-light-minute planning remains available |
 | Planner prompt | DLI cannot be inferred, scored, or used for a recommendation | Standing directive identifies the broken sensor and invalid sources | Climate safety and DLI-independent lighting levers are unchanged |
@@ -20,6 +21,7 @@ fixture runtime, and a numeric zero are not substitutes for measured crop DLI.
 | Daily plan and Vault daily note | Legacy frontmatter key is retained with null value | Rendered Interior Light Evidence section shows reason/provenance/interval | Non-DLI frontmatter keys and page routes remain stable |
 | Public sample and lifecycle exports | Existing DLI CSV column is intentionally blank | README text records reason, provenance, revision, and interval | CSV shape and all non-DLI columns remain stable |
 | Deployed gather-script ConfigMap | No raw/max/corrected numeric DLI reaches the planner | ConfigMap is byte-parity generated from the corrected source script | Database transport helper and all non-DLI context blocks are unchanged |
+| Planner learned knowledge | The live `sensor_dli × 3.5 + grow_light_hours × 0.8` lesson and future equivalent proxy/correction text cannot be active or retrieved | Migration retires matching rows without deleting/rewriting them; DB constraint, gather, MCP search, embedding search, and generator filters are defense in depth | Direct DB rows remain available for forensic inspection only |
 
 ## Validity transition
 
@@ -27,9 +29,13 @@ Migration 195 seeds the half-open `vallery` interval beginning
 `2024-01-01T00:00:00Z` as unavailable with reason
 `interior_light_sensor_broken`, provenance
 `legacy_invalid_exterior_proxy_plus_fixture_estimate`, and revision
-`dli-validity-v1`. A future available interval must be explicitly
-operator-validated and must cover an entire Denver-local day before a daily
-numeric value is exposed.
+`dli-validity-v1`. Migration 195 adds a fail-closed schema invariant that
+permits only unavailable, non-operator-validated intervals. This is not a
+GRANT/REVOKE security boundary because the production application role owns
+the table. A future calibrated source can become available only through a
+separately reviewed migration/contract change. That future contract must also
+require finite 0..100 evidence, complete source coverage, an ended
+Denver-local day, and full-day validity before a daily value is exposed.
 
 Replacing or calibrating the physical sensor is outside this software lane.
 Migration application, service restarts, dashboard/site publication, and any

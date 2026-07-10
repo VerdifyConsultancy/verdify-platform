@@ -1,8 +1,8 @@
 sprint_id: software-recovery-2026-07-09
 scope_id: dli-availability
-revision: 0f68aac0c9af50159e11bd938411afccf2a221fe
+revision: ac3513e51918046921d7a559c6b0e16ebaf477c6
 environment: null
-generated_at: "2026-07-10T13:08:35Z"
+generated_at: "2026-07-10T13:43:04Z"
 items:
   - id: EVI-DLI-001
     type: TEST
@@ -182,3 +182,38 @@ items:
     acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
     limitations:
       - Trusted image publication and prod-promotion-only jobs were correctly skipped for the draft PR.
+
+  - id: EVI-DLI-009
+    type: TEST
+    status: PASS
+    source: changes-required critic remediation
+    command: >-
+      restore regenerated db/schema.sql into blank disposable PG16/Timescale;
+      run test-195 fixture with ON_ERROR_STOP; run Ruff 0.15.21 format/check,
+      focused DLI/schema/MCP tests, make test-firmware, make
+      firmware-invariants, baseline firmware replay, lighting static audit,
+      and site check/test/build
+    timestamp: "2026-07-10T13:43:04Z"
+    revision: ac3513e51918046921d7a559c6b0e16ebaf477c6
+    environment: Jason laptop plus disposable timescale/timescaledb:latest-pg16
+    result: >-
+      Closed all seven critic findings. The disposable fixture proves
+      fail-closed available-state DML, exact and future-equivalent invalid
+      lesson retirement without text deletion, unfinished-day and invalid
+      source rejection, no numeric/zero leakage in four live lighting views,
+      and actual-first weekly/monthly kWh parity. Focused Python passes 44 with
+      one inherited skip; native firmware passes 272; all 296,698 invariant
+      rows pass; replay reports zero divergence; lighting static passes 27
+      contracts with three inherited content warnings; site type/format and 69
+      tests pass and the in-directory build succeeds. Exact-head Actions
+      firmware compile passed; one Ruff-format-only finding was corrected in
+      ac3513e and all CI-equivalent local checks pass.
+    artifact_location: db/migrations/tests/test-195-dli-availability-provenance.sql
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
+    limitations:
+      - No production migration, restart, publish, deploy, device write, or OTA was performed.
+      - >-
+        The production application role owns the validity ledger, so v195's
+        fail-closed constraint is an application/schema invariant, not true
+        DB-role privilege separation; future activation requires a reviewed
+        migration and future role separation remains separate hardening.
