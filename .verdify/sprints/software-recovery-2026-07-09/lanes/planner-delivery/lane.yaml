@@ -93,6 +93,20 @@ ownership:
         terminal-action, singularity, and expiry schema; it must be regenerated
         from a disposable verified database and preserve merged DLI/resource/
         writer semantics.
+    - path: deploy/k8s/components/ingestor-gather-script/gather-script-configmap.yaml
+      granted_by: software-recovery controller
+      reason: >-
+        The owned gather-plan-context source gained expiry-aware terminal plan
+        output, so its deployed literal ConfigMap mirror must be regenerated
+        byte-for-byte; preserve the merged unavailable-DLI block and every
+        non-planner helper byte.
+    - path: tests/test_12_fidelity.py
+      granted_by: software-recovery controller
+      reason: >-
+        Three fidelity assertions encode the superseded one-shot plan_written
+        and event-type-only acknowledgement semantics. Test-only edits may
+        assert the approved required set_plan/terminal-action contract while
+        preserving every non-planner fidelity assertion.
   owned_interfaces:
     - tool-level readiness
     - worker-aware non-authoritative runtime health or desired-state removal
