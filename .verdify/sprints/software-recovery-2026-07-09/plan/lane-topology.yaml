@@ -342,7 +342,7 @@ lanes:
       - Solar-night safety remains zero-daytime, temperature-bounded, heat2-off; no unproven post-wet flag/hold is added, and the dry-out effectiveness disposition is accepted before firmware freeze.
       - Heap profile/floor and WDT diagnostics meet the pre-OTA contract; controlled restart is last resort only.
       - All required firmware tests, invariants, replay, band replay, lighting audit, irrigation audit, and compile checks pass.
-    validation_commands: [make test-firmware, make firmware-invariants, make firmware-replay OLD=origin/main NEW=HEAD, make firmware-replay-band OLD=origin/main, make firmware-check, make lighting-audit-static, make irrigation-software-audit, make lint, make test]
+    validation_commands: [make test-firmware, make firmware-invariants, make firmware-replay OLD=origin/main NEW=HEAD, make firmware-replay-band OLD=origin/main, make firmware-check, make lighting-audit-static, make irrigation-stack-software-check, make lint, make test]
     risk: CRITICAL
     escalation_conditions: [Any new tunable/entity not in approved contract, replay divergence outside documented topology/DLI delta, heap floor cannot be defended, fertilizer route ambiguity, physical commissioning requested]
     recommended_agent_profile: firmware-esphome-cpp
@@ -373,10 +373,10 @@ lanes:
     prohibited_paths: [firmware/greenhouse/**, firmware/lib/**, ingestor/**, mcp/**, db/migrations/**]
     coordination_required_paths: [.github/workflows/prod-promote.yml, deploy/k8s/overlays/prod/**, production DB intent rows, production secret authority]
     owned_interfaces: [topology-aware immutable cycling baseline/policy, release manifest, stale-plan retirement transaction, immediate/settled acceptance]
-    inputs: [all reviewed merged heads, issue 389 cycle view, dry-out disposition, combined firmware artifact, issue 438 caller matrix/runbook for tooling and closed rotation gate before production mutation]
+    inputs: [all reviewed merged product heads, issue 389 cycle view, dry-out disposition, combined firmware artifact, independently approved merged security checkpoint PR 439 for tooling, closed issue 438 rotation gate before production mutation]
     outputs: [pre/post JSON and human cycling artifacts, promotion/sync/OTA proof, zero-repin evidence, 48-hour heap/cycling bake, final review packet]
     hard_dependencies:
-      - {lane_id: security-hygiene, required_output: merged source hygiene and executable protected rotation runbook; gate closes before production mutation}
+      - {lane_id: security-hygiene, required_output: independently approved merged PR 439 source/caller/runbook checkpoint for tooling; security lane remains blocked until the credential gate closes before production mutation}
       - {lane_id: evidence-core, required_output: accepted and merged cycle/night/replay contracts plus dry-out disposition}
       - {lane_id: resource-accounting, required_output: accepted and merged scope-bearing resource consumers}
       - {lane_id: device-writer, required_output: accepted and merged writer plus pre-deploy baseline/runtime probe}
@@ -385,12 +385,13 @@ lanes:
       - {lane_id: firmware-control, required_output: exact reviewed firmware and rollback artifacts}
     soft_dependencies: []
     acceptance_criteria:
+      - Phase A tooling reaches READY_FOR_CRITIC on source/fixture portions of the first two criteria only; critic-approved merge returns the overall lane to IMPLEMENTING with all production criteria pending.
       - Gate rejects overlapping/current/future/incomplete windows and emits immutable source/SHA/firmware/policy metadata.
       - Policy requires south/west climate cycles zero, compares center to the prior combined climate envelope, and applies explicit canaries/tolerances to other relays.
       - Repaired consumers are live before the stale row is atomically retired; effective/device value remains zero with no repin.
       - Exact digest/revision and one firmware image are deployed with immediate and settled runtime proof.
       - No deploy-blocking alert, Task WDT, heap-guard reboot, forbidden route, false DLI, writer storm, unresolved dry-out disposition, or declared cycling regression remains.
-    validation_commands: [make lint, make test, make migration-rollback-safety, make firmware-cycling-gate, full firmware preflight bundle, Argo diff/health checks, DB/log/readback/alert probes]
+    validation_commands: ["Phase A: make lint", "Phase A: make test", "Phase A: make migration-rollback-safety", "Phase A: git diff --check", "Phase B: make firmware-cycling-gate", "Phase B: full firmware preflight bundle", "Phase B: Argo diff/health checks", "Phase B: DB/log/readback/alert probes"]
     risk: CRITICAL
     escalation_conditions: [Credential rotation not explicitly authorized, unrelated Argo drift in sync surface, critical alert open, weekly/bake/heap/cycling gate failure, stale row repins, runtime acceptance fails]
     recommended_agent_profile: controller-integrator; no autonomous worker may execute production state changes
@@ -432,4 +433,4 @@ wave_plan:
     start_condition: evidence, writer, DLI, and planner contracts merged; firmware branch cut from current main.
   - wave: 5
     lanes: [release-control]
-    start_condition: Every implementation lane independently accepted and merged; protected credential gate closed before production mutation.
+    start_condition: Phase A tooling starts after every product implementation lane is independently accepted/merged plus approved merged security checkpoint PR 439; Phase B production starts only after the protected credential gate closes.

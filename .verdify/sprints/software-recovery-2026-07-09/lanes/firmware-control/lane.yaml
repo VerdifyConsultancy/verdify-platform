@@ -43,6 +43,7 @@ decision_ids:
   - DEC-004
   - DEC-007
   - DEC-008
+  - DEC-013
 ownership:
   domains:
     - relay resolver

@@ -51,7 +51,7 @@ One exclusive firmware branch and one OTA artifact. It implements the approved t
 
 ### `release-control` — #377, #390
 
-Controller-owned. It builds the topology-aware cycling gate and release manifest after implementation heads merge, then the controller executes schema/services, live application acceptance, stale-plan cleanup, one OTA, and settled proof in that order. Live acceptance is produced by this lane rather than treated as a prerequisite for creating its tooling. No worker may mutate production. Credential rotation remains the protected gate before any production phase.
+Controller-owned overall, with one bounded autonomous Phase-A tooling checkpoint. After product implementation heads and independently approved merged security checkpoint PR #439 are available, the worker proves cycling fixtures and a manifest dry run, reaches `READY_FOR_CRITIC`, and may merge without claiming any live criterion; the controller returns the lane to `IMPLEMENTING`. Phase B then executes schema/services, live acceptance, stale-plan cleanup, one OTA, and settled proof in order. No worker may mutate production. Credential rotation remains the protected gate before Phase B.
 
 ## July 9 coverage amendments
 

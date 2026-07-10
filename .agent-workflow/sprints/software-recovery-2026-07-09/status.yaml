@@ -3,7 +3,7 @@ kind: SprintStatus
 schema_version: "1.0"
 sprint_id: software-recovery-2026-07-09
 state: IMPLEMENTING
-updated_at: "2026-07-09T23:46:04Z"
+updated_at: "2026-07-10T00:11:55Z"
 active_lanes:
   - security-hygiene
   - device-writer
@@ -11,4 +11,4 @@ active_lanes:
 blockers:
   - Native Agent Platform lane dispatch is unavailable; the approved sprint-scoped local Codex fallback is required for implementation lanes.
   - Production release remains blocked by g-prod-db-credential-rotation-20260709 until Jason separately authorizes and the controller verifies the protected rotation.
-next_action: Independently validate and merge the four-lane coverage amendment, notify active workers of the immutable contract SHA, and continue supervising device-writer and evidence-core without weakening the credential gate.
+next_action: "Revalidate the five focused PR #441 critic fixes, obtain follow-up approval, merge the four-lane coverage amendment, and notify active workers of the immutable contract SHA without weakening the credential gate."

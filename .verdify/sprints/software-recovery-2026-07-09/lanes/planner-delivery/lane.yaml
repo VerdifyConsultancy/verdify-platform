@@ -30,6 +30,7 @@ decision_ids:
   - DEC-005
   - DEC-006
   - DEC-007
+  - DEC-013
 ownership:
   domains:
     - Hermes MCP client liveness

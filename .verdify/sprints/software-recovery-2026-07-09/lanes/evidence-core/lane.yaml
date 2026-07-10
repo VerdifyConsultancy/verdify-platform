@@ -35,6 +35,7 @@ spec_or_change_ids:
 decision_ids:
   - DEC-004
   - DEC-007
+  - DEC-013
 ownership:
   domains:
     - DB solar/VPD parity

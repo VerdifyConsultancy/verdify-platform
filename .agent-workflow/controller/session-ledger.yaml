@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-verdify-platform-controller
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-09T23:46:04Z'
+updated_at: '2026-07-10T00:11:55Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -398,6 +398,28 @@ sessions:
   pr_refs: []
   artifact_refs:
   - .verdify/sprints/software-recovery-2026-07-09/baseline/scope-coverage-audit-20260709.md
+- session_id: coverage-amendment-critic-20260709
+  parent_session_id: software-recovery-root-019f4826
+  role: critic
+  executor: codex-local-subagent
+  repository: VerdifyConsultancy/verdify-platform
+  status: complete
+  started_at: '2026-07-09T23:48:00Z'
+  ended_at: '2026-07-10T00:07:00Z'
+  issue_ids:
+  - 377
+  - 390
+  - 410
+  - 427
+  - 434
+  lane_id: null
+  wave_id: wave-software-recovery-implementation
+  branch: codex/software-recovery-2026-07-09
+  worktree: /Users/jason/repos/verdify-worktrees/software-recovery-20260709
+  pr_refs:
+  - '#441'
+  artifact_refs:
+  - .verdify/sprints/software-recovery-2026-07-09/baseline/coverage-amendment-critic-report.md
 events:
 - id: LEDGER-EVT-0001
   sequence: 1
@@ -2892,6 +2914,56 @@ events:
   data_summary: Track A recovered without controller mutation, but the incident confirmed the DB single-node failure domain and planner_graph false-green lifecycle defect.
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0063
+  content_sha256: null
+- id: LEDGER-EVT-0065
+  sequence: 65
+  occurred_at: '2026-07-10T00:07:00Z'
+  event_type: critic_reviewed
+  source: sprint-orchestrator
+  subject: PR 441 post-dispatch coverage amendment review
+  actor:
+    role: critic
+    name: coverage-amendment-critic-20260709
+  session_id: coverage-amendment-critic-20260709
+  correlation:
+    trace_id: null
+    wave_id: wave-software-recovery-implementation
+    session_ids:
+    - coverage-amendment-critic-20260709
+    issue_ids:
+    - 377
+    - 390
+    - 410
+    - 427
+    - 434
+    lane_ids:
+    - evidence-core
+    - planner-delivery
+    - firmware-control
+    - release-control
+    pr_ids:
+    - '441'
+    deployment_ids: []
+    policy_decision_ids:
+    - DEC-013
+    - g-prod-db-credential-rotation-20260709
+  refs:
+    artifact_refs:
+    - .verdify/sprints/software-recovery-2026-07-09/baseline/coverage-amendment-critic-report.md
+    evidence_refs:
+    - .verdify/sprints/software-recovery-2026-07-09/baseline/scope-coverage-audit-20260709.md
+    external_refs:
+    - type: github_pr
+      identifier: VerdifyConsultancy/verdify-platform#441
+      url: https://github.com/VerdifyConsultancy/verdify-platform/pull/441
+    - type: git_commit
+      identifier: 9ee3b714d40639478b9136e7a5aaa7c825ab3617
+      url: https://github.com/VerdifyConsultancy/verdify-platform/commit/9ee3b714d40639478b9136e7a5aaa7c825ab3617
+  result: changes_requested
+  summary: The critic accepted substantive intent, safety, and authority coverage but requested an executable Phase-A tooling/Phase-B production release boundary plus four deterministic traceability corrections.
+  data_summary: "Live issue #434 was corrected during review; no product, production, credential, or device mutation occurred."
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0064
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001

@@ -34,6 +34,7 @@ decision_ids:
   - DEC-006
   - DEC-007
   - DEC-009
+  - DEC-013
 ownership:
   domains:
     - pre/post cycling baseline
@@ -77,7 +78,7 @@ ownership:
 dependencies:
   hard:
     - lane_id: security-hygiene
-      required_output: merged source hygiene, complete caller matrix, and executable protected rotation/rollback runbook; rotation closure is a production-phase gate, not a tooling prerequisite
+      required_output: "independently approved and merged non-production checkpoint PR #439 containing source hygiene, complete caller matrix, and executable protected rotation/rollback runbook; the lane remains BLOCKED on rotation until the production gate closes"
     - lane_id: evidence-core
       required_output: independently accepted and merged cycle/night/replay contracts plus dry-out disposition
     - lane_id: resource-accounting
@@ -92,17 +93,34 @@ dependencies:
       required_output: exact reviewed firmware and rollback artifacts
   soft: []
 expected_inputs:
-  - Independently accepted and merged heads from every implementation lane.
+  - Independently accepted and merged heads from every product implementation lane.
   - Reviewed issue-389 cycle/night/replay implementation and pre-deploy evidence; live outputs become mandatory before their owning production decisions.
   - Exact reviewed combined firmware binary, source SHA, checksum, and rollback artifact.
-  - Issue-438 caller matrix and protected rotation runbook for tooling; the closed rotation gate with redacted new-valid and old-invalid proof is required before production mutation.
+  - "Independently approved and merged PR #439 caller matrix and protected rotation runbook for tooling; security-hygiene remains BLOCKED and the closed rotation gate with redacted new-valid and old-invalid proof is required before production mutation."
 outputs:
   - Immutable pre/post cycling JSON and human-readable reports.
   - Release manifest tying Git, image digests, migrations, Argo revision, firmware, policy, and evidence.
   - Audited stale-intent retirement and zero-repin proof.
   - Promotion, sync, OTA, immediate verification, 48-hour bake, and final review packet.
+execution_phases:
+  - id: PHASE-A-TOOLING-CHECKPOINT
+    owner: autonomous release-tooling worker
+    entry_condition: "Every product implementation dependency is independently accepted and merged, firmware-control supplies the exact reviewed artifact, and independently approved merged security checkpoint PR #439 is available; live deployment and credential rotation are not Phase-A prerequisites."
+    acceptance_scope: Source and fixture portions of LANE-AC-01 and LANE-AC-02 only; LANE-AC-03 through LANE-AC-05 and every live/post-deploy evidence clause remain explicitly pending.
+    validation_command_ids: [release-lint, release-tests, migration-safety, diff-check]
+    evidence: [Cycling-gate fixture suite, immutable pre-release baseline and policy schema, release-manifest dry run, GitHub CI, independent tooling critic verdict]
+    exit_status: READY_FOR_CRITIC means tooling checkpoint only; an approving critic must state that production acceptance is pending, after merge the controller records the checkpoint and returns the overall lane to IMPLEMENTING.
+  - id: PHASE-B-CONTROLLER-PRODUCTION
+    owner: controller-integrator
+    entry_condition: "Phase A is approved and merged; every upstream head is accepted and integrated; issue #438 is separately authorized, rotated, and verified with redacted new-valid and old-invalid proof before the first production mutation."
+    acceptance_scope: Live portions of LANE-AC-01 and LANE-AC-02 plus all of LANE-AC-03 through LANE-AC-05.
+    validation_command_ids: [release-lint, release-tests, migration-safety, cycling-gate, firmware-preflight, argo-diff, argo-health, climate-authority, diff-check]
+    evidence: [Exact integrated release manifest, production mutation and rollback records, immediate evidence, 48-hour settled evidence, independent final runtime critic verdict]
+    exit_status: COMPLETE only after every production criterion, command, protected gate, and final critic passes.
 coordination_rules:
-  - The release tooling/manifest worktree may dispatch after every implementation dependency is independently accepted and merged; live acceptance is produced by later controller-owned phases and is not a prerequisite for preparing the tooling.
+  - "The Phase-A tooling/manifest worktree may dispatch after every product implementation dependency is independently accepted and merged and the approved merged PR #439 security checkpoint is available; the security lane's overall BLOCKED state and live acceptance are not tooling prerequisites."
+  - Phase A may claim only its named source/fixture subset, commands, and evidence; neither worker nor critic may mark the release lane complete or imply that LANE-AC-03 through LANE-AC-05 passed.
+  - After an independent Phase-A critic accepts the immutable tooling head and CI passes, the controller may merge that PR, record the checkpoint, and keep the overall lane IMPLEMENTING for Phase B.
   - No production mutation until the protected credential gate is explicitly authorized, executed, and verified without exposing material.
   - Cut the release branch from current main after dependencies merge; retain baseline_sha as the sprint audit reference.
   - Coordinate any prod-promote workflow or overlay edit; only a digests-only reviewed promotion may enter the sync surface.
@@ -207,8 +225,8 @@ git_policy:
 pull_request:
   title: "Release: topology-aware cycling gate and recovery acceptance (#377 #390)"
   base: main
-  issue_update_rule: Keep #377 and #390 updated at tooling PR, critic, preflight, state retirement, OTA, immediate proof, and settled proof; do not close before runtime evidence.
-  merge_rule: Controller merges tooling only after independent critic acceptance and required GitHub checks; production steps begin only after every hard dependency and protected gate are closed.
+  issue_update_rule: "Keep #377 and #390 updated at tooling PR, critic, preflight, state retirement, OTA, immediate proof, and settled proof; do not close before runtime evidence."
+  merge_rule: Controller may merge the Phase-A tooling checkpoint after its named source/fixture acceptance, independent critic approval explicitly leaving production pending, and required GitHub checks; this does not complete the lane. Phase B begins only after every upstream integration and protected production gate is closed.
 escalation_conditions:
   - Credential rotation is not separately and explicitly authorized or its caller verification is incomplete.
   - Unrelated Argo drift enters the sync surface.
@@ -220,14 +238,15 @@ agent_profile: controller-integrator; no autonomous worker may execute productio
 critic_profile: independent release/runtime critic
 integration_requirements:
   - Verify every upstream PR was accepted at its immutable head and integrated in dependency order before cutting this branch.
-  - Independent critic reviews cycling tooling and the pre-release manifest before production mutation.
+  - Independent critic reviews the Phase-A cycling tooling, fixtures, and pre-release manifest; it may approve that checkpoint while explicitly leaving live portions of LANE-AC-01/02 and all of LANE-AC-03 through LANE-AC-05 pending.
+  - After the Phase-A PR merges, the controller records the checkpoint and keeps the release lane IMPLEMENTING rather than COMPLETE.
   - Controller-integrator alone performs schema/service delivery, stale-state retirement, Argo sync, and OTA after all gates.
   - A fresh independent release/runtime critic reviews immediate and settled evidence before final completion.
 definition_of_done:
   - Every upstream lane is independently accepted, merged, live where required, and represented in the exact release manifest.
   - The protected credential rotation gate is explicitly authorized, executed, and verified with redacted evidence.
   - Every lane acceptance criterion passes with revision- and environment-specific evidence.
-  - Issues #377 and #390, PRs, decisions, router/strategy state, and final review packet match production reality.
+  - "Issues #377 and #390, PRs, decisions, router/strategy state, and final review packet match production reality."
   - Exact reviewed services and one firmware image are live; rollback artifacts and procedures are exercised or deterministically proven.
   - Immediate and 48-hour settled probes show no declared blocker or regression.
   - Git and worktrees are clean, required CI is green, and the independent final critic accepts the immutable release packet.

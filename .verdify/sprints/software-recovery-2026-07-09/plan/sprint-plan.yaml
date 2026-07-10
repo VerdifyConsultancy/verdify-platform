@@ -115,7 +115,7 @@ acceptance_criteria:
       - Final greenhouse operator-impact summary and rollback disposition.
 included_work:
   - id: WRK-433
-    github_issue: {number_or_id: "#433", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/433", title: Stop stable-connection full reconcile storms and make device writes truthful, state: OPEN}
+    github_issue: {number_or_id: "#433", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/433", title: "[P0] Stop stable-connection full reconcile storms and make device writes truthful", state: OPEN}
     outcome: One canonical, fair, terminally truthful device writer.
     scope: Connection generations, cfg wire identity, normalized comparisons, bounded queues, post-delivery lifecycle state, and task cadence.
     acceptance_criteria: [SPR-AC-01, SPR-AC-12]
@@ -124,7 +124,7 @@ included_work:
     evidence_required: [Wire-ID fixture, writer unit/integration tests, controlled drift/reconnect probes, two-hour production log window]
     reason_for_inclusion: Live P0 storm and false accounting monopolize the sole device writer.
   - id: WRK-427
-    github_issue: {number_or_id: "#427", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/427", title: Restore required planner delivery and MCP liveness, state: OPEN}
+    github_issue: {number_or_id: "#427", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/427", title: "Restore active Hermes/MCP planner delivery and truthful runtime health", state: OPEN}
     outcome: Tool-healthy, terminally observable, strictly bounded active Hermes/MCP planner plus truthful health or decommissioning for the deployed non-authoritative planner_graph workload.
     scope: MCP readiness/self-heal, terminal action semantics, bounds intersection, plan TTL/singularity, forecast comparator, compact context, and narrow planner_graph worker/health desired-state correction without new authority.
     acceptance_criteria: [SPR-AC-02, SPR-AC-12]
@@ -151,7 +151,7 @@ included_work:
     evidence_required: [Consumer matrix, migration tests, firmware tests, planner/API/render probes]
     reason_for_inclusion: Current numeric DLI is fabricated from an invalid sensor/proxy and repeated arithmetic errors.
   - id: WRK-293
-    github_issue: {number_or_id: "#293", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/293", title: DB solar phase parity before forecast feed-forward, state: OPEN}
+    github_issue: {number_or_id: "#293", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/293", title: "[P1][L5/L6] DB solar phase parity before forecast feed-forward", state: OPEN}
     outcome: Production DB solar phase matches firmware.
     scope: Rollback-prove and apply migration 186, fixtures, dependent refresh, and live definition/version proof.
     acceptance_criteria: [SPR-AC-05]
@@ -160,7 +160,7 @@ included_work:
     evidence_required: [Rollback classification, equinox/solstice fixtures, live function comparison]
     reason_for_inclusion: Source migration exists but production still evaluates the obsolete solar function.
   - id: WRK-424
-    github_issue: {number_or_id: "#424", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/424", title: Correct device-versus-served VPD divergence source, state: OPEN}
+    github_issue: {number_or_id: "#424", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/424", title: "Device vpd_low/vpd_high band anchors diverge from DB by ~0.3/0.2 kPa (pre-existing; matters for the #410 bake floor)", state: OPEN}
     outcome: Drift alerts compare the device with the actual served control band.
     scope: Reserved migration 189, SQL contract fixtures, alert calibration, serialized live apply.
     acceptance_criteria: [SPR-AC-05]
@@ -169,7 +169,7 @@ included_work:
     evidence_required: [Migration rollback proof, false-near-miss fixture, true-drift fixture, live view proof]
     reason_for_inclusion: The current view masks real parity and emits misleading evidence for night control.
   - id: WRK-410
-    github_issue: {number_or_id: "#410", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/410", title: Solar-night realized dry-out evidence and bounded control, state: OPEN}
+    github_issue: {number_or_id: "#410", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/410", title: "Solar-night realized dry-out evidence and bounded response", state: OPEN}
     outcome: Night dry-out is seasonal, safe, and measured from realized response.
     scope: Episode materialization, AH/temperature response, admission/stop reasons, alerts/planner evidence, and explicit effectiveness disposition before any separately accepted firmware adjustment.
     acceptance_criteria: [SPR-AC-05, SPR-AC-08, SPR-AC-12]
@@ -178,7 +178,7 @@ included_work:
     evidence_required: [Episode fixtures, representative night report, effective/ineffective/blocked/insufficient_evidence disposition, scope-change handoff if firmware response is requested]
     reason_for_inclusion: Jason wants diurnal overnight drying, but the current PASS claim is not durable evidence.
   - id: WRK-377
-    github_issue: {number_or_id: "#377", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/377", title: Retire stale band_track_fraction 0.25 intent, state: OPEN}
+    github_issue: {number_or_id: "#377", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/377", title: "Retire stale band_track_fraction=0.25 intent after consumer repair", state: OPEN}
     outcome: Effective and device band_track_fraction remain zero without repin.
     scope: Audited atomic retirement after repaired writer/planner deployment plus durable watch.
     acceptance_criteria: [SPR-AC-02, SPR-AC-12]
@@ -187,7 +187,7 @@ included_work:
     evidence_required: [Before/after plan rows, effective view/device readback, zero-repin log window]
     reason_for_inclusion: Jason explicitly ended the June experiment and the stale row still drives churn.
   - id: WRK-419
-    github_issue: {number_or_id: "#419", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/419", title: Populate replay outdoor_data_age_s and enforce branch coverage, state: OPEN}
+    github_issue: {number_or_id: "#419", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/419", title: "Replay corpus never populates outdoor_data_age_s — every outdoor-aware estimator path is replay-blind", state: OPEN}
     outcome: Stock replay actually covers outdoor-aware estimator paths.
     scope: Export timestamp-derived age, refresh/archive corpus, regime coverage invariant, and remove force-fresh dependence.
     acceptance_criteria: [SPR-AC-06, SPR-AC-11]
@@ -196,7 +196,7 @@ included_work:
     evidence_required: [Freshness distribution, branch trace, corpus invariant, replay artifacts]
     reason_for_inclusion: Current replay can report zero divergence while every relevant outdoor-aware branch is unreachable.
   - id: WRK-428
-    github_issue: {number_or_id: "#428", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/428", title: Repair chronic ESP32 heap exhaustion and WDT risk, state: OPEN}
+    github_issue: {number_or_id: "#428", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/428", title: "Chronic ESP32 heap exhaustion (worst-case free 3-8 KB for weeks) → Task WDT panic 07-05; needs heap diet + controlled-restart safety net", state: OPEN}
     outcome: Combined firmware runs above a conservative heap floor with actionable failure evidence.
     scope: Allocation/publish profile, heap diet, loop/WDT diagnostics, bounded last-resort restart, soak and last-good criteria.
     acceptance_criteria: [SPR-AC-07, SPR-AC-11, SPR-AC-12]
@@ -205,7 +205,7 @@ included_work:
     evidence_required: [Heap profile, compile/map evidence, runtime soak, reset history, rollback binary]
     reason_for_inclusion: The device has operated at 3-8 KB worst-case free heap and has suffered a Task WDT.
   - id: WRK-389
-    github_issue: {number_or_id: "#389", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/389", title: Reconcile cycle counts from raw equipment state, state: OPEN}
+    github_issue: {number_or_id: "#389", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/389", title: "Reconcile outcome_kpi cycle counts against raw equipment_state on-edges; exclude partial/future-dated days", state: OPEN}
     outcome: Runtime/cycling evidence is transition-derived and comparable.
     scope: Completed-day starts, runtime, short-cycle buckets, peak transitions, source/quality, and hand-counted fixtures.
     acceptance_criteria: [SPR-AC-08, SPR-AC-09]
@@ -214,7 +214,7 @@ included_work:
     evidence_required: [SQL fixtures for mister/fog/fan/lights, partial-day exclusion, live comparison]
     reason_for_inclusion: Existing firmware daily counters can inflate recent cycle counts by orders of magnitude.
   - id: WRK-390
-    github_issue: {number_or_id: "#390", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/390", title: Make cycling a firmware deploy and last-good gate, state: OPEN}
+    github_issue: {number_or_id: "#390", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/390", title: "Topology-aware cycling and runtime gate for every firmware OTA", state: OPEN}
     outcome: Every OTA is judged on trustworthy issue-specific wear and response evidence.
     scope: Matched windows, explicit tolerances, insufficient-data state, historical regression fixture, deploy artifact and last-good block.
     acceptance_criteria: [SPR-AC-08, SPR-AC-11, SPR-AC-12]
@@ -223,7 +223,7 @@ included_work:
     evidence_required: [Gate script tests, post-295 failure reproduction, pre/post artifact]
     reason_for_inclusion: Prior OTAs increased cycling without a runtime outcome gate.
   - id: WRK-299
-    github_issue: {number_or_id: "#299", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/299", title: Center-mister dwell and cycle governor, state: OPEN}
+    github_issue: {number_or_id: "#299", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/299", title: "Preserve and prove center-mister re-fire protection through topology recovery", state: OPEN}
     outcome: Existing center-mister re-fire protection survives the topology rewrite without extending water pulses.
     scope: Preserve and test the live 45-second re-fire fence for center climate; south/west climate demand becomes impossible under issue 434; add no new min-on/governor entity.
     acceptance_criteria: [SPR-AC-03, SPR-AC-08]
@@ -232,7 +232,7 @@ included_work:
     evidence_required: [Re-fire regression test, no-pulse-extension fixture, topology replay, post-OTA raw cycle/runtime/water evidence]
     reason_for_inclusion: The corrected resolver must preserve the already-effective fence while redistributing all climate demand to center.
   - id: WRK-386
-    github_issue: {number_or_id: "#386", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/386", title: Fix grow-light solar-window shoulder cycling, state: OPEN}
+    github_issue: {number_or_id: "#386", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/386", title: "Prove grow-light minimum-on behavior across the solar-window boundary", state: OPEN}
     outcome: Existing lighting minimum-on behavior is proven across solar-window transitions and remains independent of unavailable DLI.
     scope: Add the missing in-window to outside-window min-on regression and observe raw per-circuit counts; add no shoulder/freshness tunable without reproduced failure evidence.
     acceptance_criteria: [SPR-AC-04, SPR-AC-08]
@@ -241,7 +241,7 @@ included_work:
     evidence_required: [Lighting audit, boundary unit/replay test, post-295 historical gate fixture, recovery-bake raw starts]
     reason_for_inclusion: Old counters overstated the premise, but a boundary regression guard is still missing and DLI changes must remain actuation-neutral.
   - id: WRK-383
-    github_issue: {number_or_id: "#383", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/383", title: Consolidate wet-to-dry anti-ping-pong and night-dehum capability, state: OPEN}
+    github_issue: {number_or_id: "#383", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/383", title: "Preserve solar-night dehumidification safety and gate future tuning on realized evidence", state: OPEN}
     outcome: Existing solar-night dehumidification safety is preserved while realized evidence determines whether any future anti-ping-pong change is justified.
     scope: Add no new control flag/hold/tunable; preserve zero daytime admission, temperature-floor exits, and heat2-off, and evaluate raw transitions through issues 389/390 and realized episodes through issue 410.
     acceptance_criteria: [SPR-AC-05, SPR-AC-08]
@@ -250,7 +250,7 @@ included_work:
     evidence_required: [Existing-safety regression tests, realized night episodes, raw wet/dry transition report]
     reason_for_inclusion: The user wants night dry-out investigated, but current evidence does not justify another device-side response change.
   - id: WRK-437
-    github_issue: {number_or_id: "#437", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/437", title: Converge equipment registry and provenance-bearing resource attribution, state: OPEN}
+    github_issue: {number_or_id: "#437", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/437", title: "[P1] Converge equipment registry and expose provenance-bearing water/energy attribution", state: OPEN}
     outcome: One canonical catalog supports honest water and energy evidence.
     scope: Active telemetry-slug convergence, coefficient revision/provenance/uncertainty, idempotent water-event catch-up/freshness, run attribution, measured-versus-modeled energy scope, and explicit unattributed remainder.
     acceptance_criteria: [SPR-AC-09]
@@ -259,7 +259,7 @@ included_work:
     evidence_required: [Slug/alias and schema tests, meter-event freshness/catch-up proof, water conservation fixtures, live energy/KPI scope reconciliation, product labels]
     reason_for_inclusion: Competing catalogs, a water-event ledger stale since May 1, and unlabeled partial/model energy currently produce divergent resource claims.
   - id: WRK-438
-    github_issue: {number_or_id: "#438", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/438", title: Remove committed DB credential fallbacks and rotate exposed production credential, state: OPEN}
+    github_issue: {number_or_id: "#438", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/438", title: "[P0][security] Remove committed DB credential fallbacks and rotate the exposed production app credential", state: OPEN}
     outcome: Repository access no longer carries a usable production DB credential and all consumers authenticate through approved injection.
     scope: Five source clients, regression scan/test, caller inventory, protected scoped rotation, consumer restart and redacted verification.
     acceptance_criteria: [SPR-AC-10, SPR-AC-11]
