@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict Afjzg4eOSPhVtRO9uJTONTbp9jAV85iCSJeLmRwfGm9UzkHZDd2z33fODLm9p7k
+\restrict RuMtLVQcnbhAgk66FO6z8MiOgTJ1Fz8WIsTUBPxyw2KAlFyzkQHSEmgniwwnGlh
 
 -- Dumped from database version 16.14
 -- Dumped by pg_dump version 16.14
@@ -5430,7 +5430,9 @@ CREATE TABLE public.setpoint_plan (
     is_active boolean DEFAULT true,
     greenhouse_id text DEFAULT 'vallery'::text,
     trigger_id uuid,
-    planner_instance text
+    planner_instance text,
+    expires_at timestamp with time zone DEFAULT (now() + '78:00:00'::interval) NOT NULL,
+    CONSTRAINT setpoint_plan_expiry_check CHECK ((expires_at > ts))
 );
 
 
@@ -5483,6 +5485,13 @@ COMMENT ON COLUMN public.setpoint_plan.trigger_id IS 'Hermes planner trigger UUI
 --
 
 COMMENT ON COLUMN public.setpoint_plan.planner_instance IS 'Planner instance label copied from the Hermes audit banner (local | opus). Propagated through v_active_plan into setpoint_changes.';
+
+
+--
+-- Name: COLUMN setpoint_plan.expires_at; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.setpoint_plan.expires_at IS 'Hard expiry for a materialized waypoint. Expired rows are excluded from v_active_plan even if is_active was not cleaned up yet.';
 
 
 --
@@ -25222,7 +25231,13 @@ CREATE TABLE public.plan_delivery_log (
     acked_at timestamp with time zone,
     status text DEFAULT 'pending'::text,
     hermes_run_id text,
-    CONSTRAINT plan_delivery_log_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'acked'::text, 'plan_written'::text, 'timed_out'::text, 'delivery_failed'::text])))
+    terminal_action text,
+    terminal_at timestamp with time zone,
+    failure_class text,
+    result_payload jsonb,
+    CONSTRAINT plan_delivery_log_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'acked'::text, 'plan_written'::text, 'action_completed'::text, 'neutral_fallback'::text, 'wrong_action'::text, 'timed_out'::text, 'delivery_failed'::text]))),
+    CONSTRAINT plan_delivery_log_terminal_action_check CHECK (((terminal_action IS NULL) OR (terminal_action = ANY (ARRAY['set_plan'::text, 'set_tunable'::text, 'acknowledge_trigger'::text, 'neutral_fallback'::text, 'wrong_action'::text, 'timeout'::text, 'delivery_failed'::text])))),
+    CONSTRAINT plan_delivery_log_terminal_state_check CHECK ((((terminal_action IS NULL) AND (terminal_at IS NULL)) OR ((status = 'plan_written'::text) AND (terminal_action = 'set_plan'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'action_completed'::text) AND (terminal_action = 'set_tunable'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'acked'::text) AND (terminal_action = 'acknowledge_trigger'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'neutral_fallback'::text) AND (terminal_action = 'neutral_fallback'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'wrong_action'::text) AND (terminal_action = 'wrong_action'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'timed_out'::text) AND (terminal_action = 'timeout'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'delivery_failed'::text) AND (terminal_action = 'delivery_failed'::text) AND (terminal_at IS NOT NULL))))
 );
 
 
@@ -25271,6 +25286,20 @@ COMMENT ON COLUMN public.plan_delivery_log.hermes_run_id IS 'Hermes /v1/runs run
 
 
 --
+-- Name: COLUMN plan_delivery_log.terminal_action; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.plan_delivery_log.terminal_action IS 'Actual terminal action. Required set_plan acceptance succeeds only when this is set_plan and status is plan_written.';
+
+
+--
+-- Name: COLUMN plan_delivery_log.failure_class; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.plan_delivery_log.failure_class IS 'Stable machine-readable failure classification for timeout, wrong-action, neutral, tool-readiness, or delivery failures.';
+
+
+--
 -- Name: plan_delivery_log_id_seq; Type: SEQUENCE; Schema: public; Owner: verdify
 --
 
@@ -25316,7 +25345,12 @@ CREATE TABLE public.plan_journal (
     climate_intents jsonb,
     climate_intent_version text,
     guardrail_penalty numeric,
-    CONSTRAINT plan_journal_outcome_score_check CHECK (((outcome_score >= 1) AND (outcome_score <= 10)))
+    valid_from timestamp with time zone DEFAULT now() NOT NULL,
+    expires_at timestamp with time zone DEFAULT (now() + '78:00:00'::interval) NOT NULL,
+    lifecycle_status text DEFAULT 'superseded'::text NOT NULL,
+    CONSTRAINT plan_journal_lifecycle_status_check CHECK ((lifecycle_status = ANY (ARRAY['effective'::text, 'superseded'::text, 'expired'::text]))),
+    CONSTRAINT plan_journal_outcome_score_check CHECK (((outcome_score >= 1) AND (outcome_score <= 10))),
+    CONSTRAINT plan_journal_validity_check CHECK ((expires_at > valid_from))
 );
 
 
@@ -25369,6 +25403,13 @@ COMMENT ON COLUMN public.plan_journal.climate_intent_version IS 'ClimateIntent c
 --
 
 COMMENT ON COLUMN public.plan_journal.guardrail_penalty IS 'Per-plan guardrail penalty (from v_plan_guardrail_scorecard) persisted alongside outcome_score/anchor_score by the planner-learning-loop. NULL for plans scored before this column existed or not yet penalized. Added in migration 148.';
+
+
+--
+-- Name: COLUMN plan_journal.lifecycle_status; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON COLUMN public.plan_journal.lifecycle_status IS 'Exactly one row per greenhouse may be effective; every row has a finite expires_at.';
 
 
 --
@@ -25467,9 +25508,14 @@ CREATE TABLE public.planner_trigger_ledger (
     notes text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    terminal_action text,
+    terminal_at timestamp with time zone,
+    failure_class text,
     CONSTRAINT planner_trigger_ledger_event_type_check CHECK ((event_type = ANY (ARRAY['SUNRISE'::text, 'SUNSET'::text, 'SOLAR_MAX'::text, 'TRANSITION'::text, 'FORECAST_DEVIATION'::text, 'MANUAL'::text, 'MIDNIGHT'::text, 'FORECAST'::text, 'DEVIATION'::text, 'HEARTBEAT'::text]))),
     CONSTRAINT planner_trigger_ledger_expected_action_check CHECK ((expected_action = ANY (ARRAY['set_plan'::text, 'set_tunable'::text, 'acknowledge_trigger'::text, 'any'::text]))),
-    CONSTRAINT planner_trigger_ledger_status_check CHECK ((status = ANY (ARRAY['expected'::text, 'delivered'::text, 'acked'::text, 'plan_written'::text, 'delivery_failed'::text, 'timed_out'::text, 'missed'::text])))
+    CONSTRAINT planner_trigger_ledger_status_check CHECK ((status = ANY (ARRAY['expected'::text, 'delivered'::text, 'acked'::text, 'plan_written'::text, 'action_completed'::text, 'neutral_fallback'::text, 'wrong_action'::text, 'delivery_failed'::text, 'timed_out'::text, 'missed'::text]))),
+    CONSTRAINT planner_trigger_ledger_terminal_action_check CHECK (((terminal_action IS NULL) OR (terminal_action = ANY (ARRAY['set_plan'::text, 'set_tunable'::text, 'acknowledge_trigger'::text, 'neutral_fallback'::text, 'wrong_action'::text, 'timeout'::text, 'delivery_failed'::text])))),
+    CONSTRAINT planner_trigger_ledger_terminal_state_check CHECK ((((terminal_action IS NULL) AND (terminal_at IS NULL)) OR ((status = 'plan_written'::text) AND (terminal_action = 'set_plan'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'action_completed'::text) AND (terminal_action = 'set_tunable'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'acked'::text) AND (terminal_action = 'acknowledge_trigger'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'neutral_fallback'::text) AND (terminal_action = 'neutral_fallback'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'wrong_action'::text) AND (terminal_action = 'wrong_action'::text) AND (terminal_at IS NOT NULL)) OR ((status = ANY (ARRAY['timed_out'::text, 'missed'::text])) AND (terminal_action = 'timeout'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'delivery_failed'::text) AND (terminal_action = 'delivery_failed'::text) AND (terminal_at IS NOT NULL))))
 );
 
 
@@ -26608,7 +26654,7 @@ CREATE VIEW public.v_active_plan AS
     trigger_id,
     planner_instance
    FROM public.setpoint_plan
-  WHERE ((ts <= now()) AND (is_active = true))
+  WHERE ((ts <= now()) AND (expires_at > now()) AND (is_active = true))
   ORDER BY parameter, created_at DESC, ts DESC;
 
 
@@ -35585,6 +35631,13 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_10_217_chunk ALTER COLUMN greenhou
 
 
 --
+-- Name: _hyper_10_217_chunk expires_at; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_217_chunk ALTER COLUMN expires_at SET DEFAULT (now() + '78:00:00'::interval);
+
+
+--
 -- Name: _hyper_10_240_chunk source; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -35610,6 +35663,13 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_10_240_chunk ALTER COLUMN is_activ
 --
 
 ALTER TABLE ONLY _timescaledb_internal._hyper_10_240_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
+-- Name: _hyper_10_240_chunk expires_at; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_240_chunk ALTER COLUMN expires_at SET DEFAULT (now() + '78:00:00'::interval);
 
 
 --
@@ -35641,6 +35701,13 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_10_357_chunk ALTER COLUMN greenhou
 
 
 --
+-- Name: _hyper_10_357_chunk expires_at; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_357_chunk ALTER COLUMN expires_at SET DEFAULT (now() + '78:00:00'::interval);
+
+
+--
 -- Name: _hyper_10_371_chunk source; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -35666,6 +35733,13 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_10_371_chunk ALTER COLUMN is_activ
 --
 
 ALTER TABLE ONLY _timescaledb_internal._hyper_10_371_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
+-- Name: _hyper_10_371_chunk expires_at; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_371_chunk ALTER COLUMN expires_at SET DEFAULT (now() + '78:00:00'::interval);
 
 
 --
@@ -35697,6 +35771,13 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_10_385_chunk ALTER COLUMN greenhou
 
 
 --
+-- Name: _hyper_10_385_chunk expires_at; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_385_chunk ALTER COLUMN expires_at SET DEFAULT (now() + '78:00:00'::interval);
+
+
+--
 -- Name: _hyper_10_386_chunk source; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -35722,6 +35803,13 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_10_386_chunk ALTER COLUMN is_activ
 --
 
 ALTER TABLE ONLY _timescaledb_internal._hyper_10_386_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
+-- Name: _hyper_10_386_chunk expires_at; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_386_chunk ALTER COLUMN expires_at SET DEFAULT (now() + '78:00:00'::interval);
 
 
 --
@@ -35753,6 +35841,13 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_10_402_chunk ALTER COLUMN greenhou
 
 
 --
+-- Name: _hyper_10_402_chunk expires_at; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_402_chunk ALTER COLUMN expires_at SET DEFAULT (now() + '78:00:00'::interval);
+
+
+--
 -- Name: _hyper_10_418_chunk source; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -35778,6 +35873,13 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_10_418_chunk ALTER COLUMN is_activ
 --
 
 ALTER TABLE ONLY _timescaledb_internal._hyper_10_418_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
+-- Name: _hyper_10_418_chunk expires_at; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_418_chunk ALTER COLUMN expires_at SET DEFAULT (now() + '78:00:00'::interval);
 
 
 --
@@ -35809,6 +35911,13 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_10_455_chunk ALTER COLUMN greenhou
 
 
 --
+-- Name: _hyper_10_455_chunk expires_at; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_455_chunk ALTER COLUMN expires_at SET DEFAULT (now() + '78:00:00'::interval);
+
+
+--
 -- Name: _hyper_10_463_chunk source; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -35834,6 +35943,13 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_10_463_chunk ALTER COLUMN is_activ
 --
 
 ALTER TABLE ONLY _timescaledb_internal._hyper_10_463_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
+-- Name: _hyper_10_463_chunk expires_at; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_463_chunk ALTER COLUMN expires_at SET DEFAULT (now() + '78:00:00'::interval);
 
 
 --
@@ -35865,6 +35981,13 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_10_508_chunk ALTER COLUMN greenhou
 
 
 --
+-- Name: _hyper_10_508_chunk expires_at; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_508_chunk ALTER COLUMN expires_at SET DEFAULT (now() + '78:00:00'::interval);
+
+
+--
 -- Name: _hyper_10_708_chunk source; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -35890,6 +36013,13 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_10_708_chunk ALTER COLUMN is_activ
 --
 
 ALTER TABLE ONLY _timescaledb_internal._hyper_10_708_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
+-- Name: _hyper_10_708_chunk expires_at; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_708_chunk ALTER COLUMN expires_at SET DEFAULT (now() + '78:00:00'::interval);
 
 
 --
@@ -35921,6 +36051,13 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_10_739_chunk ALTER COLUMN greenhou
 
 
 --
+-- Name: _hyper_10_739_chunk expires_at; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_739_chunk ALTER COLUMN expires_at SET DEFAULT (now() + '78:00:00'::interval);
+
+
+--
 -- Name: _hyper_10_774_chunk source; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -35949,6 +36086,13 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_10_774_chunk ALTER COLUMN greenhou
 
 
 --
+-- Name: _hyper_10_774_chunk expires_at; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_774_chunk ALTER COLUMN expires_at SET DEFAULT (now() + '78:00:00'::interval);
+
+
+--
 -- Name: _hyper_10_775_chunk source; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
 --
 
@@ -35974,6 +36118,13 @@ ALTER TABLE ONLY _timescaledb_internal._hyper_10_775_chunk ALTER COLUMN is_activ
 --
 
 ALTER TABLE ONLY _timescaledb_internal._hyper_10_775_chunk ALTER COLUMN greenhouse_id SET DEFAULT 'vallery'::text;
+
+
+--
+-- Name: _hyper_10_775_chunk expires_at; Type: DEFAULT; Schema: _timescaledb_internal; Owner: verdify
+--
+
+ALTER TABLE ONLY _timescaledb_internal._hyper_10_775_chunk ALTER COLUMN expires_at SET DEFAULT (now() + '78:00:00'::interval);
 
 
 --
@@ -54244,6 +54395,20 @@ CREATE INDEX plan_delivery_log_unresolved_idx ON public.plan_delivery_log USING 
 
 
 --
+-- Name: plan_journal_expiry_idx; Type: INDEX; Schema: public; Owner: verdify
+--
+
+CREATE INDEX plan_journal_expiry_idx ON public.plan_journal USING btree (expires_at) WHERE (lifecycle_status = 'effective'::text);
+
+
+--
+-- Name: plan_journal_one_effective_per_greenhouse; Type: INDEX; Schema: public; Owner: verdify
+--
+
+CREATE UNIQUE INDEX plan_journal_one_effective_per_greenhouse ON public.plan_journal USING btree (greenhouse_id) WHERE (lifecycle_status = 'effective'::text);
+
+
+--
 -- Name: planner_graph_runs_status_idx; Type: INDEX; Schema: public; Owner: verdify
 --
 
@@ -54304,6 +54469,13 @@ CREATE INDEX setpoint_changes_ts_idx ON public.setpoint_changes USING btree (ts 
 --
 
 CREATE INDEX setpoint_clamps_ts_idx ON public.setpoint_clamps USING btree (ts DESC);
+
+
+--
+-- Name: setpoint_plan_active_expiry_idx; Type: INDEX; Schema: public; Owner: verdify
+--
+
+CREATE INDEX setpoint_plan_active_expiry_idx ON public.setpoint_plan USING btree (expires_at) WHERE (is_active = true);
 
 
 --
@@ -61191,4 +61363,4 @@ GRANT INSERT ON TABLE public.twin_decisions TO twin_ro;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict Afjzg4eOSPhVtRO9uJTONTbp9jAV85iCSJeLmRwfGm9UzkHZDd2z33fODLm9p7k
+\unrestrict RuMtLVQcnbhAgk66FO6z8MiOgTJ1Fz8WIsTUBPxyw2KAlFyzkQHSEmgniwwnGlh

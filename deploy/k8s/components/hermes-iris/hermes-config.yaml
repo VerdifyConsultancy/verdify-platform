@@ -26,6 +26,41 @@ metadata:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: hermes-iris
 data:
+  tool-readiness.py: |
+    """Hermes readiness: require the configured Verdify tool allowlist and MCP readiness."""
+    import json
+    import os
+    import sys
+    import urllib.request
+
+    REQUIRED = {
+        "acknowledge_trigger", "alerts", "climate", "crop_history",
+        "crop_lifecycle", "crops", "equipment_state", "forecast",
+        "get_setpoints", "history", "knowledge_search", "lessons",
+        "lessons_manage", "lessons_search", "observations", "plan_evaluate",
+        "plan_status", "position_current", "scorecard", "set_plan",
+        "set_tunable", "slack_ops", "topology",
+    }
+    config = open("/opt/data/config.yaml", encoding="utf-8").read()
+    configured = {name for name in REQUIRED if f"- {name}" in config}
+    if configured != REQUIRED:
+        print(json.dumps({"ready": False, "missing_configured_tools": sorted(REQUIRED - configured)}))
+        sys.exit(1)
+    url = os.environ.get(
+        "HERMES_MCP_READINESS_URL",
+        "http://verdify-mcp.verdify-prod.svc:8000/readyz",
+    )
+    try:
+        with urllib.request.urlopen(url, timeout=4) as response:
+            payload = json.load(response)
+    except Exception as exc:
+        print(json.dumps({"ready": False, "error_class": type(exc).__name__}))
+        sys.exit(1)
+    missing = sorted(REQUIRED - set(payload.get("required_tools", [])))
+    ready = response.status == 200 and payload.get("ready") is True and not missing
+    print(json.dumps({"ready": ready, "missing_tools": missing}))
+    sys.exit(0 if ready else 1)
+
   config.yaml: |
     # Hermes profile config for the Verdify Iris planner — single profile,
     # OpenAI GPT-5.5 with reasoning_effort=high, MCP-only tool surface.

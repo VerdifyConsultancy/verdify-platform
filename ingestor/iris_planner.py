@@ -115,8 +115,11 @@ _STANDING_DIRECTIVES = """
    `acknowledge_trigger(trigger_id, reason, planner_instance)` using the
    audit values at the bottom of this prompt. This closes the delivery SLA
    without writing a fake plan.
-   **Do not acknowledge SUNRISE or SUNSET** unless validation mode is active;
-   real SUNRISE/SUNSET cycles must call `set_plan`.
+   **Do not acknowledge SUNRISE, SUNSET, or MIDNIGHT as a normal no-op.** A
+   required cycle succeeds only through one valid full `set_plan`. If a tool or
+   required input fails and no safe plan can be produced, call
+   `acknowledge_trigger(..., neutral_fallback=true)` to record an explicit
+   neutral terminal outcome; it does not satisfy required-plan acceptance.
 
 7. **Validation mode override:** if the assembled context starts with
    `VALIDATION MODE: acknowledge-only smoke`, that instruction overrides the
@@ -733,13 +736,14 @@ today's forecast, and set the daytime posture.
 4. **Check current conditions** — call `climate` and `equipment_state`.
 5. **Review forecast** — call `forecast` for the next 18 hours.
 6. **Check alerts** — call `alerts`. Acknowledge or resolve any that are stale.
-7. **Write today's plan** — use `set_plan(plan_id=..., hypothesis=..., transitions=..., trigger_id=..., planner_instance=...)` with 5-8 waypoints
+7. **Write today's full plan** — this required trigger succeeds only through
+   `set_plan(plan_id=..., hypothesis=..., transitions=..., trigger_id=..., planner_instance=...)` with 5-8 waypoints
    anchored to solar milestones (dawn, morning ramp, peak stress, decline, evening).
    Include a bounded `climate_intent` object in each transition. Do not emit raw
    Tier 1 `params`, crop-band params (`temp_low`, `temp_high`, `vpd_low`,
    `vpd_high`), or retired knobs (`bias_heat`, `bias_cool`, `d_heat_stage_2`,
    `d_cool_stage_2`, `sw_fsm_controller_enabled`). Include a hypothesis and experiment.
-   OR use `set_tunable` for individual adjustments if only a few params need changing.
+   Do not substitute `set_tunable` or a normal acknowledgement for this full plan.
 7. **Post morning brief to #greenhouse** — include:
    - Yesterday's scorecard: score, temp vs VPD compliance, stress breakdown, utility cost + trend
    - Today's forecast summary (high/low temp, peak VPD, cloud cover)
@@ -776,7 +780,8 @@ and set the overnight posture.
 3. **Check current conditions** — call `climate` for dew point margin and outdoor forecast.
 4. **Review overnight forecast** — call `forecast` for the next 12 hours.
 5. **Check alerts** — call `alerts`. Resolve any from today.
-6. **Write overnight plan** — use `set_plan(plan_id=..., hypothesis=..., transitions=..., trigger_id=..., planner_instance=...)` with 3-5 waypoints
+6. **Write overnight full plan** — this required trigger succeeds only through
+   `set_plan(plan_id=..., hypothesis=..., transitions=..., trigger_id=..., planner_instance=...)` with 3-5 waypoints
    anchored to evening/overnight milestones (evening_settle, midnight_posture, pre_dawn).
    Each transition includes a bounded `climate_intent` object. Do not emit raw
    Tier 1 `params`, crop-band params (`temp_low`, `temp_high`, `vpd_low`,
@@ -790,7 +795,7 @@ and set the overnight posture.
    - Cold night (<45°F forecast)? Preserve heat with conservative vent/moisture posture
    - Dew point margin <5°F? Reduce sealed-vent time and fog intensity
    - Widen `mister_pulse_gap_s` overnight (humidity holds better when sealed)
-   OR use `set_tunable` for individual adjustments if only a few params need changing.
+   Do not substitute `set_tunable` or a normal acknowledgement for this full plan.
 7. **Post evening brief to #greenhouse** — include:
    - Today's scorecard: score, temp vs VPD compliance, stress breakdown, cost vs 7-day trend
    - What worked today: which tunable decisions improved compliance

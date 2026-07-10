@@ -92,14 +92,9 @@ spec:
             preStop:
               exec:
                 command: ["sleep", "5"]
-          # FastMCP (mcp/server.py) serves the streamable-http MCP protocol at
-          # /mcp, not a plain GET /health (the staging proof saw httpGet /health
-          # return 404 -> pod never Ready). A tcpSocket probe confirms the process
-          # is listening without touching the server.py DANGER surface (handoff
-          # §3.2: no tool-semantic edits to add a /health route). Liveness here is
-          # ALREADY DB-independent (TCP only), so the api "startup gap" cannot
-          # occur for mcp; the startupProbe below just holds liveness off until the
-          # listener is up so a slow import never trips it.
+          # Liveness remains DB-independent, but readiness is tool-aware: a
+          # listening socket is not usable by Hermes if required tools vanished
+          # or the DB boundary is unavailable.
           startupProbe:
             tcpSocket:
               port: http
@@ -111,10 +106,13 @@ spec:
             periodSeconds: 30
             failureThreshold: 3
           readinessProbe:
-            tcpSocket:
+            httpGet:
+              path: /readyz
               port: http
             initialDelaySeconds: 10
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 1
       # Endpoint-drain window for the preStop hook above (HA #231); 30s explicit.
       terminationGracePeriodSeconds: 30
       volumes:

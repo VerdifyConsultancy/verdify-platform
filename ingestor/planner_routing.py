@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
@@ -45,6 +45,7 @@ TriggerType = Literal[
     "HEARTBEAT",
     "MANUAL",
 ]
+RequiredTriggerDisposition = Literal["complete", "wait", "retry"]
 
 
 # ── Defaults (contract v1.5) — used when ai.yaml sections are missing ──
@@ -265,3 +266,25 @@ def sla_for(
     if minutes is None:
         return None
     return timedelta(minutes=minutes)
+
+
+def required_trigger_disposition(
+    *,
+    status: str,
+    terminal_action: str | None,
+    due_at: datetime | None,
+    now: datetime,
+) -> RequiredTriggerDisposition:
+    """Return whether a required expected-trigger row is complete or retryable.
+
+    Gateway acceptance is only an in-flight state. A valid full plan is the
+    sole completed outcome. Explicit neutral fallback waits until the current
+    SLA expires, then becomes retryable so safe failure remains visible without
+    becoming a permanent dead end. Wrong actions and delivery failures retry
+    on the next scheduler heartbeat.
+    """
+    if status == "plan_written" and terminal_action == "set_plan":
+        return "complete"
+    if status in {"delivered", "neutral_fallback"} and due_at is not None and due_at > now:
+        return "wait"
+    return "retry"

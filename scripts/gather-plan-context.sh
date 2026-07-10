@@ -67,12 +67,28 @@ echo ""
 
 # Active plan: compact transition summary (grouped by timestamp, Tier 1 only)
 echo "--- ACTIVE PLAN (future transitions only — your new plan will replace this entirely) ---"
+"${DB[@]}" -c "
+SELECT 'effective_plan=' || plan_id ||
+       ' valid_from=' || valid_from::text ||
+       ' expires_at=' || expires_at::text
+FROM plan_journal
+WHERE greenhouse_id = '${GREENHOUSE_ID}'
+  AND lifecycle_status = 'effective'
+  AND valid_from <= now()
+  AND expires_at > now()
+ORDER BY created_at DESC
+LIMIT 1;
+" 2>/dev/null || echo "(effective plan lifecycle unavailable)"
 echo "Key variables shown per transition. Vent/fog timing params at defaults unless noted."
 echo "ts_mdt|raw_params|cool_s2|cool_exit|all_fans|dw_stress|dw_until|fog_stress|fog_until|engage|all|gap|wt|hyst|vent_max|fog_esc"
 "${DB[@]}" -c "
 WITH deduped AS (
   SELECT DISTINCT ON (ts, parameter) ts, parameter, value
-  FROM setpoint_plan WHERE ts > now() AND parameter != 'plan_metadata' AND is_active = true
+  FROM setpoint_plan
+  WHERE ts > now()
+    AND expires_at > now()
+    AND parameter != 'plan_metadata'
+    AND is_active = true
   ORDER BY ts, parameter, created_at DESC
 )
 SELECT to_char(ts AT TIME ZONE 'America/Denver', 'Dy MM-DD HH24:MI'),
@@ -423,7 +439,12 @@ echo ""
 # scorecard. Now: list ALL plans whose interval_end >= now() - 24h AND
 # interval_start < now() (the plans that actually governed any wall-clock time
 # in the last 24h), each annotated with anchor_score from v_plan_window_scorecard.
-YESTERDAY=$(date -d "yesterday" +%Y-%m-%d)
+if YESTERDAY=$(date -d "yesterday" +%Y-%m-%d 2>/dev/null); then
+  :
+else
+  # BSD date on the supported laptop operator path.
+  YESTERDAY=$(date -v-1d +%Y-%m-%d)
+fi
 
 # Primary governing plan for sections that need a single anchor (e.g. structured
 # hypothesis display): the plan that governed the most hours in the last 24h.

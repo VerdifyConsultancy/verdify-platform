@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import os
 import subprocess
 import sys
 import time
@@ -31,12 +32,22 @@ EMBEDDING_SOURCES = ("lesson", "plan", "site_doc", "playbook", "observation")
 
 
 def _hermes_health() -> dict[str, object]:
-    req = urllib.request.Request("http://127.0.0.1:8642/health")
-    try:
-        with urllib.request.urlopen(req, timeout=5) as resp:
-            return {"ok": resp.status == 200, "status": resp.status, "body": resp.read(512).decode("utf-8")}
-    except (OSError, urllib.error.URLError) as exc:
-        return {"ok": False, "error": str(exc)}
+    checks: dict[str, dict[str, object]] = {}
+    urls = {
+        "gateway": os.environ.get("HERMES_HEALTH_URL", "http://127.0.0.1:8642/health"),
+        "mcp_tools": os.environ.get("VERDIFY_MCP_READINESS_URL", "http://127.0.0.1:8000/readyz"),
+    }
+    for name, url in urls.items():
+        req = urllib.request.Request(url)
+        try:
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                body = resp.read(4096).decode("utf-8")
+                payload = json.loads(body) if name == "mcp_tools" else None
+                ok = resp.status == 200 and (payload is None or payload.get("ready") is True)
+                checks[name] = {"ok": ok, "status": resp.status, "body": payload or body[:512]}
+        except (OSError, ValueError, urllib.error.URLError) as exc:
+            checks[name] = {"ok": False, "error_class": type(exc).__name__}
+    return {"ok": all(check["ok"] for check in checks.values()), "checks": checks}
 
 
 def _traceability_audit() -> dict[str, object]:
@@ -76,12 +87,25 @@ async def _db_checks() -> dict[str, object]:
             """
             SELECT count(*) AS rows,
                    count(DISTINCT parameter) AS params,
-                   min(ts) AS first_ts,
-                   max(ts) AS last_ts
-              FROM setpoint_plan
-             WHERE is_active = true
-               AND ts > now()
-               AND plan_id NOT LIKE 'iris-oneshot-%'
+                   min(sp.ts) AS first_ts,
+                   max(sp.ts) AS last_ts
+              FROM setpoint_plan sp
+              JOIN plan_journal pj ON pj.plan_id = sp.plan_id
+             WHERE sp.is_active = true
+               AND sp.ts > now()
+               AND sp.expires_at > now()
+               AND pj.lifecycle_status = 'effective'
+               AND pj.valid_from <= now()
+               AND pj.expires_at > now()
+            """
+        )
+        effective_plan = await conn.fetchrow(
+            """
+            SELECT count(*) AS rows, min(expires_at) AS expires_at
+              FROM plan_journal
+             WHERE lifecycle_status = 'effective'
+               AND valid_from <= now()
+               AND expires_at > now()
             """
         )
         active_params = await conn.fetchval("SELECT count(DISTINCT parameter) FROM v_active_plan")
@@ -109,8 +133,9 @@ async def _db_checks() -> dict[str, object]:
         )
         latest_delivery = await conn.fetchrow(
             """
-            SELECT event_type, status, trigger_id::text AS trigger_id,
-                   hermes_run_id, resulting_plan_id, delivered_at, acked_at, plan_written_at
+            SELECT event_type, status, terminal_action, terminal_at, failure_class,
+                   trigger_id::text AS trigger_id, hermes_run_id, resulting_plan_id,
+                   delivered_at, acked_at, plan_written_at, result_payload
               FROM plan_delivery_log
              ORDER BY delivered_at DESC
              LIMIT 1
@@ -133,6 +158,10 @@ async def _db_checks() -> dict[str, object]:
             "future_params": int(future["params"] or 0),
             "future_first_ts": future["first_ts"].isoformat() if future["first_ts"] else None,
             "future_last_ts": future["last_ts"].isoformat() if future["last_ts"] else None,
+            "effective_plan_count": int(effective_plan["rows"] or 0),
+            "effective_plan_expires_at": (
+                effective_plan["expires_at"].isoformat() if effective_plan["expires_at"] else None
+            ),
             "active_params": int(active_params or 0),
             "reserved_active_rows": int(reserved_active or 0),
             "recent_plan_dispatch_rows": int(recent_dispatch["rows"] or 0),
@@ -157,6 +186,8 @@ def _failures(health: dict[str, object], traceability: dict[str, object], db: di
         failures.append("open_critical_high_alerts")
     if db["future_params"] < EXPECTED_TIER1:
         failures.append("future_plan_param_count")
+    if db["effective_plan_count"] != 1:
+        failures.append("effective_plan_count")
     if db["active_params"] < EXPECTED_TIER1:
         failures.append("active_plan_param_count")
     if db["reserved_active_rows"] != 0:

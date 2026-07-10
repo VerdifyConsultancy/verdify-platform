@@ -139,6 +139,10 @@ class HealthResponse(BaseModel):
     openai: str = "fallback"
     mcp: str = "verdify-executes"
     checkpoint: str = "durable-run-store"
+    production_authority: Literal["non-authoritative"] = "non-authoritative"
+    consecutive_store_failures: int = 0
+    retry_delay_seconds: float = 0.0
+    last_error_class: str | None = None
 
 
 class MemoryIngestItem(BaseModel):

@@ -7,8 +7,10 @@ execution and terminal state updates.
 
 from __future__ import annotations
 
-import time
 import threading
+import time
+from dataclasses import dataclass
+from math import ceil, log2
 from typing import cast
 from uuid import UUID
 
@@ -18,25 +20,96 @@ from planner_graph.state import GRAPH_VERSION, PlannerState, utc_now
 from planner_graph.store import RunRecord, RunStore
 
 
+@dataclass(frozen=True)
+class WorkerHealth:
+    alive: bool
+    ready: bool
+    consecutive_store_failures: int
+    retry_delay_seconds: float
+    last_error_class: str | None
+
+
+class BoundedBackoff:
+    """Deterministic exponential retry with a finite ceiling and no stop race."""
+
+    def __init__(self, base_seconds: float = 0.25, max_seconds: float = 30.0) -> None:
+        self.base_seconds = base_seconds
+        self.max_seconds = max_seconds
+
+    def delay(self, failures: int) -> float:
+        if self.base_seconds <= 0 or self.max_seconds <= 0:
+            return 0.0
+        if self.base_seconds >= self.max_seconds:
+            return self.max_seconds
+        # Cap the exponent before calculating it.  A worker can remain in an
+        # outage for months; computing ``2 ** failures`` first eventually
+        # overflows and would kill the retry loop that is meant to be
+        # indefinite.
+        ceiling_exponent = max(0, ceil(log2(self.max_seconds / self.base_seconds)))
+        exponent = min(max(0, failures - 1), ceiling_exponent)
+        return min(self.max_seconds, self.base_seconds * (2**exponent))
+
+
 class PlannerWorker:
     def __init__(self, repository: RunStore, runtime: PlannerRuntime) -> None:
         self.repository = repository
         self.runtime = runtime
         self.graph = build_graph(runtime)
         self._stop = threading.Event()
-        self._thread = threading.Thread(
-            target=self._run_loop,
-            name="planner-worker",
-            daemon=True,
-        )
+        self._thread: threading.Thread | None = None
+        self._lifecycle_lock = threading.Lock()
+        self._health_lock = threading.Lock()
+        self._ready = False
+        self._consecutive_store_failures = 0
+        self._retry_delay_seconds = 0.0
+        self._last_error_class: str | None = None
+        self._backoff = BoundedBackoff()
 
     def start(self) -> None:
-        if not self._thread.is_alive():
+        with self._lifecycle_lock:
+            if self._thread is not None and self._thread.is_alive():
+                return
+            self._stop.clear()
+            self._thread = threading.Thread(
+                target=self._run_loop,
+                name="planner-worker",
+                daemon=True,
+            )
             self._thread.start()
 
     def stop(self) -> None:
         self._stop.set()
-        self._thread.join(timeout=5)
+        thread = self._thread
+        if thread is not None:
+            thread.join(timeout=5)
+        with self._health_lock:
+            self._ready = False
+
+    def health(self) -> WorkerHealth:
+        thread = self._thread
+        with self._health_lock:
+            return WorkerHealth(
+                alive=bool(thread and thread.is_alive()),
+                ready=self._ready,
+                consecutive_store_failures=self._consecutive_store_failures,
+                retry_delay_seconds=self._retry_delay_seconds,
+                last_error_class=self._last_error_class,
+            )
+
+    def _record_store_success(self) -> None:
+        with self._health_lock:
+            self._ready = True
+            self._consecutive_store_failures = 0
+            self._retry_delay_seconds = 0.0
+            self._last_error_class = None
+
+    def _record_store_failure(self, error: Exception) -> float:
+        with self._health_lock:
+            self._ready = False
+            self._consecutive_store_failures += 1
+            self._retry_delay_seconds = self._backoff.delay(self._consecutive_store_failures)
+            self._last_error_class = type(error).__name__
+            return self._retry_delay_seconds
 
     def submit(self, trigger_id: UUID, initial_state: PlannerState) -> bool:
         _, should_enqueue = self.repository.create_or_resume(trigger_id, initial_state)
@@ -45,14 +118,26 @@ class PlannerWorker:
     def _run_loop(self) -> None:
         while not self._stop.is_set():
             owner = threading.current_thread().name
-            record = self.repository.claim_next(
-                owner, self.runtime.settings.worker_lease_seconds
-            )
+            try:
+                record = self.repository.claim_next(owner, self.runtime.settings.worker_lease_seconds)
+            except Exception as error:
+                delay = self._record_store_failure(error)
+                # Event.wait is interruptible, unlike time.sleep: shutdown
+                # during a prolonged DB/DNS outage never races a sleeping loop.
+                self._stop.wait(delay)
+                continue
+            self._record_store_success()
             if record is None:
-                time.sleep(self.runtime.settings.worker_poll_interval_seconds)
+                self._stop.wait(self.runtime.settings.worker_poll_interval_seconds)
                 continue
             self.runtime.planner_logger.log_claim(record, owner)
-            self.execute(record)
+            try:
+                self.execute(record)
+            except Exception as error:
+                # Repository failure while recording terminal state belongs to
+                # the same retryable infrastructure class as claim failure.
+                delay = self._record_store_failure(error)
+                self._stop.wait(delay)
 
     def execute(self, record: RunRecord) -> None:
         trigger_id = record.trigger_id

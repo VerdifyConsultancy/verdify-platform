@@ -5,6 +5,8 @@ original module. The tasks package __init__ re-exports the public
 surface so every `from tasks import X` still resolves.
 """
 
+from planner_routing import required_trigger_disposition
+
 from ._common import (
     _DENVER,
     _LOCATION,
@@ -241,7 +243,8 @@ async def _ensure_expected_planner_triggers(
             await conn.execute(
                 """
                 WITH matched_delivery AS (
-                    SELECT id, delivered_at, trigger_id, resulting_plan_id, status, gateway_body
+                    SELECT id, delivered_at, trigger_id, resulting_plan_id, status,
+                           terminal_action, terminal_at, failure_class, gateway_body
                      FROM plan_delivery_log
                      WHERE event_type = $2
                        AND delivered_at BETWEEN $3::timestamptz - interval '5 minutes'
@@ -250,11 +253,14 @@ async def _ensure_expected_planner_triggers(
                      ORDER BY
                        CASE status
                          WHEN 'plan_written' THEN 0
-                         WHEN 'acked' THEN 1
-                         WHEN 'pending' THEN 2
-                         WHEN 'delivery_failed' THEN 3
-                         WHEN 'timed_out' THEN 4
-                         ELSE 5
+                         WHEN 'neutral_fallback' THEN 1
+                         WHEN 'wrong_action' THEN 2
+                         WHEN 'action_completed' THEN 3
+                         WHEN 'acked' THEN 4
+                         WHEN 'pending' THEN 5
+                         WHEN 'delivery_failed' THEN 6
+                         WHEN 'timed_out' THEN 7
+                         ELSE 8
                        END,
                        delivered_at ASC
                      LIMIT 1
@@ -265,12 +271,23 @@ async def _ensure_expected_planner_triggers(
                        trigger_id           = md.trigger_id,
                        resulting_plan_id    = md.resulting_plan_id,
                        status               = CASE
-                                                WHEN md.status IN ('acked', 'plan_written', 'timed_out', 'delivery_failed')
+                                                WHEN md.status IN (
+                                                    'acked', 'plan_written', 'action_completed',
+                                                    'neutral_fallback', 'wrong_action',
+                                                    'timed_out', 'delivery_failed'
+                                                )
                                                 THEN md.status
                                                 ELSE 'delivered'
                                               END,
+                       terminal_action      = md.terminal_action,
+                       terminal_at          = md.terminal_at,
+                       failure_class        = md.failure_class,
                        resolved_at          = CASE
-                                                WHEN md.status IN ('acked', 'plan_written', 'timed_out', 'delivery_failed')
+                                                WHEN md.status IN (
+                                                    'acked', 'plan_written', 'action_completed',
+                                                    'neutral_fallback', 'wrong_action',
+                                                    'timed_out', 'delivery_failed'
+                                                )
                                                 THEN COALESCE(ptl.resolved_at, now())
                                                 ELSE ptl.resolved_at
                                               END,
@@ -397,12 +414,18 @@ async def _mark_expected_trigger_delivered(
     status = "delivered"
     if result.get("status") == "delivery_failed" or result.get("delivered") is False:
         status = "delivery_failed"
+    retry_sla_seconds = _sla_seconds(str(result.get("event_type") or ""), result.get("instance")) or 7200
     async with pool.acquire() as conn:
         await conn.execute(
             """
             UPDATE planner_trigger_ledger
                SET delivered_at         = COALESCE($2, now()),
                    status               = $3,
+                   due_at               = CASE
+                                            WHEN $3 = 'delivered'
+                                            THEN now() + ($9::int * interval '1 second')
+                                            ELSE due_at
+                                          END,
                    resolved_at          = CASE
                                             WHEN $3 = 'delivered' THEN NULL
                                             ELSE COALESCE(resolved_at, now())
@@ -411,9 +434,28 @@ async def _mark_expected_trigger_delivered(
                    plan_delivery_log_id = $5,
                    trigger_id           = $6::uuid,
                    notes                = $7,
+                   terminal_action      = CASE
+                                            WHEN $3 = 'delivery_failed' THEN 'delivery_failed'
+                                            WHEN $3 = 'delivered' THEN NULL
+                                            ELSE terminal_action
+                                          END,
+                   terminal_at          = CASE
+                                            WHEN $3 = 'delivery_failed' THEN now()
+                                            WHEN $3 = 'delivered' THEN NULL
+                                            ELSE terminal_at
+                                          END,
+                   failure_class        = CASE
+                                            WHEN $3 = 'delivery_failed' THEN $8
+                                            WHEN $3 = 'delivered' THEN NULL
+                                            ELSE failure_class
+                                          END,
                    updated_at           = now()
              WHERE id = $1
-               AND status IN ('expected', 'missed', 'delivery_failed', 'delivered')
+               AND status IN (
+                   'expected', 'missed', 'delivery_failed', 'delivered',
+                   'wrong_action', 'neutral_fallback', 'timed_out', 'acked',
+                   'action_completed'
+               )
             """,
             expected_trigger_id,
             datetime.now(UTC),
@@ -422,6 +464,8 @@ async def _mark_expected_trigger_delivered(
             delivery_log_id,
             result.get("trigger_id"),
             (result.get("gateway_body") or "")[:1000],
+            result.get("failure_class") or "gateway_delivery_failed",
+            retry_sla_seconds,
         )
 
 
@@ -431,8 +475,14 @@ async def _sync_planner_trigger_ledger(conn: asyncpg.Connection) -> None:
         """
         UPDATE planner_trigger_ledger ptl
            SET status            = pdl.status,
+               terminal_action   = pdl.terminal_action,
+               terminal_at       = pdl.terminal_at,
+               failure_class     = pdl.failure_class,
                resolved_at       = CASE
-                                      WHEN pdl.status IN ('plan_written', 'acked', 'timed_out', 'delivery_failed')
+                                      WHEN pdl.status IN (
+                                          'plan_written', 'acked', 'action_completed',
+                                          'neutral_fallback', 'wrong_action', 'timed_out', 'delivery_failed'
+                                      )
                                       THEN COALESCE(ptl.resolved_at, now())
                                       ELSE ptl.resolved_at
                                     END,
@@ -442,8 +492,16 @@ async def _sync_planner_trigger_ledger(conn: asyncpg.Connection) -> None:
                updated_at        = now()
           FROM plan_delivery_log pdl
          WHERE ptl.plan_delivery_log_id = pdl.id
-           AND pdl.status IN ('acked', 'plan_written', 'timed_out', 'delivery_failed')
-           AND ptl.status IS DISTINCT FROM pdl.status
+           AND pdl.status IN (
+               'acked', 'plan_written', 'action_completed', 'neutral_fallback',
+               'wrong_action', 'timed_out', 'delivery_failed'
+           )
+           AND (
+               ptl.status IS DISTINCT FROM pdl.status
+               OR ptl.terminal_action IS DISTINCT FROM pdl.terminal_action
+               OR ptl.terminal_at IS DISTINCT FROM pdl.terminal_at
+               OR ptl.failure_class IS DISTINCT FROM pdl.failure_class
+           )
         """
     )
 
@@ -469,6 +527,9 @@ async def _expire_planner_trigger_slas(pool: asyncpg.Pool) -> None:
                     """
                     UPDATE plan_delivery_log
                        SET status = 'timed_out',
+                           terminal_action = 'timeout',
+                           terminal_at = now(),
+                           failure_class = 'planner_trigger_sla_timeout',
                            gateway_body = concat_ws(E'\n', NULLIF(gateway_body, ''), $2::text)
                      WHERE id = $1
                        AND status = 'pending'
@@ -481,6 +542,9 @@ async def _expire_planner_trigger_slas(pool: asyncpg.Pool) -> None:
             """
             UPDATE planner_trigger_ledger
                SET status      = 'missed',
+                   terminal_action = 'timeout',
+                   terminal_at = now(),
+                   failure_class = 'expected_trigger_not_delivered',
                    resolved_at = now(),
                    notes       = concat_ws(E'\n', NULLIF(notes, ''), 'expected trigger was not delivered before due_at'),
                    updated_at  = now()
@@ -493,6 +557,9 @@ async def _expire_planner_trigger_slas(pool: asyncpg.Pool) -> None:
             """
             UPDATE planner_trigger_ledger
                SET status      = 'timed_out',
+                   terminal_action = 'timeout',
+                   terminal_at = now(),
+                   failure_class = 'delivered_trigger_sla_timeout',
                    resolved_at = now(),
                    notes       = concat_ws(E'\n', NULLIF(notes, ''), 'delivered trigger did not resolve before due_at'),
                    updated_at  = now()
@@ -529,6 +596,11 @@ async def _log_plan_delivery(pool: asyncpg.Pool, result: dict) -> int | None:
     explicit_status = result.get("status")
     if explicit_status is None and result.get("delivered") is False and result.get("gateway_status") is not None:
         explicit_status = "delivery_failed"
+    terminal_action = result.get("terminal_action")
+    failure_class = result.get("failure_class")
+    if explicit_status == "delivery_failed":
+        terminal_action = terminal_action or "delivery_failed"
+        failure_class = failure_class or "gateway_delivery_failed"
     # Contract v1.4 §2.D — both columns now populated on every INSERT so
     # correlation queries can match deliveries to plans by uuid (not
     # just the 2h time-window fallback in _resolve_delivery_log).
@@ -543,8 +615,10 @@ async def _log_plan_delivery(pool: asyncpg.Pool, result: dict) -> int | None:
             """
             INSERT INTO plan_delivery_log AS pdl
               (event_type, event_label, session_key, wake_mode, gateway_status, gateway_body,
-               status, trigger_id, instance, hermes_run_id)
-            VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, 'pending'), $8::uuid, $9, $10)
+               status, trigger_id, instance, hermes_run_id,
+               terminal_action, terminal_at, failure_class)
+            VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, 'pending'), $8::uuid, $9, $10,
+                    $11, CASE WHEN $11::text IS NULL THEN NULL ELSE now() END, $12)
             ON CONFLICT (trigger_id) DO UPDATE
               SET event_type     = EXCLUDED.event_type,
                   event_label    = EXCLUDED.event_label,
@@ -554,8 +628,18 @@ async def _log_plan_delivery(pool: asyncpg.Pool, result: dict) -> int | None:
                   gateway_body   = COALESCE(EXCLUDED.gateway_body, pdl.gateway_body),
                   instance       = COALESCE(EXCLUDED.instance, pdl.instance),
                   hermes_run_id  = COALESCE(EXCLUDED.hermes_run_id, pdl.hermes_run_id),
+                  terminal_action = COALESCE(pdl.terminal_action, $11::text),
+                  terminal_at     = CASE
+                                      WHEN pdl.terminal_at IS NOT NULL THEN pdl.terminal_at
+                                      WHEN $11::text IS NOT NULL THEN now()
+                                      ELSE NULL
+                                    END,
+                  failure_class   = COALESCE(pdl.failure_class, $12::text),
                   status         = CASE
-                                     WHEN pdl.status IN ('acked', 'plan_written') THEN pdl.status
+                                     WHEN pdl.status IN (
+                                         'acked', 'plan_written', 'action_completed',
+                                         'neutral_fallback', 'wrong_action'
+                                     ) THEN pdl.status
                                      ELSE EXCLUDED.status
                                    END
             RETURNING id
@@ -570,6 +654,8 @@ async def _log_plan_delivery(pool: asyncpg.Pool, result: dict) -> int | None:
             trigger_id,
             instance,
             hermes_run_id,
+            terminal_action,
+            failure_class,
         )
 
 
@@ -581,7 +667,7 @@ async def _deliver_and_log(
     instance: str = "opus",
     expected_trigger_id: int | None = None,
     catchup: bool = False,
-) -> None:
+) -> bool:
     """Call send_to_iris in the executor and persist the outcome to
     plan_delivery_log. Called from every milestone/forecast/deviation path
     so F14 correlation is complete regardless of trigger source.
@@ -622,13 +708,13 @@ async def _deliver_and_log(
             result=stub_result,
             catchup=catchup,
         )
-        return
+        return False
 
     pre_result = prepare_delivery_result(event_type, label, instance=instance)
     delivery_id = await _log_plan_delivery(pool, pre_result)
     if delivery_id is None:
         log.error("Skipping %s/%s dispatch: failed to pre-create plan_delivery_log row", event_type, label)
-        return
+        return False
     if pre_result.get("status") == "delivery_failed":
         await _mark_expected_trigger_delivered(
             pool,
@@ -637,7 +723,7 @@ async def _deliver_and_log(
             result=pre_result,
             catchup=catchup,
         )
-        return
+        return False
 
     loop = asyncio.get_event_loop()
     # Threaded executor + kwargs: use a lambda so `instance` and the pre-created
@@ -661,6 +747,7 @@ async def _deliver_and_log(
         result=result,
         catchup=catchup,
     )
+    return bool(result.get("delivered"))
 
 
 async def _resolve_delivery_log(pool: asyncpg.Pool) -> None:
@@ -684,7 +771,11 @@ async def _resolve_delivery_log(pool: asyncpg.Pool) -> None:
             UPDATE plan_delivery_log pdl
                SET resulting_plan_id = pj.plan_id,
                    plan_written_at   = pj.created_at,
-                   status            = 'plan_written'
+                   status            = 'plan_written',
+                   terminal_action   = 'set_plan',
+                   terminal_at       = COALESCE(pdl.terminal_at, pj.created_at),
+                   failure_class     = NULL,
+                   result_payload    = jsonb_build_object('plan_id', pj.plan_id)
               FROM plan_journal pj
              WHERE pdl.resulting_plan_id IS NULL
                AND pdl.status = 'pending'
@@ -701,7 +792,11 @@ async def _resolve_delivery_log(pool: asyncpg.Pool) -> None:
             UPDATE plan_delivery_log pdl
                SET resulting_plan_id = pj.plan_id,
                    plan_written_at   = pj.created_at,
-                   status            = 'plan_written'
+                   status            = 'plan_written',
+                   terminal_action   = 'set_plan',
+                   terminal_at       = COALESCE(pdl.terminal_at, pj.created_at),
+                   failure_class     = NULL,
+                   result_payload    = jsonb_build_object('plan_id', pj.plan_id)
               FROM plan_journal pj
              WHERE pdl.resulting_plan_id IS NULL
                AND pdl.status = 'pending'
@@ -873,43 +968,42 @@ async def planning_heartbeat(pool: asyncpg.Pool) -> None:
         normal_window_s = spec.normal_window_seconds or 0
         catchup_window_s = spec.catchup_seconds or 0
         is_catchup = normal_window_s <= delta < catchup_window_s
-        if 0 <= delta < normal_window_s or is_catchup:
+        required_retry_window = spec.expected_action == "set_plan" and delta >= 0
+        if 0 <= delta < normal_window_s or is_catchup or required_retry_window:
             event_type, label = _milestone_event(key, catchup=is_catchup)
-
-            # Phase 4 cadence ceiling: if a SUNRISE plan was already written
-            # in the last 4 hours, drop another SUNRISE trigger. The 2026-04-10
-            # hot-cadence regression (41 plans in 24h, ~one every 36 min)
-            # showed catch-up firing produced cascading duplicates of the
-            # same posture decision. Skipping here keeps the catch-up safety
-            # net for SUNSET/SOLAR_MAX/TRANSITION without letting SUNRISE
-            # rewrite itself mid-morning.
-            if event_type == "SUNRISE":
+            required_full_plan = spec.expected_action == "set_plan"
+            expected_trigger_id = expected_trigger_ids.get(key)
+            if required_full_plan:
+                if expected_trigger_id is None:
+                    log.warning("Required planner trigger %s has no expected ledger row; deferring delivery", key)
+                    continue
                 try:
                     async with pool.acquire() as conn:
-                        recent_sunrise = await conn.fetchval(
+                        terminal = await conn.fetchrow(
                             """
-                            SELECT 1 FROM plan_journal
-                             WHERE plan_id LIKE 'iris-%'
-                               AND created_at > now() - interval '4 hours'
-                               AND EXTRACT(hour FROM created_at AT TIME ZONE 'America/Denver')
-                                     BETWEEN 5 AND 9
-                             LIMIT 1
-                            """
+                            SELECT status, terminal_action, due_at
+                              FROM planner_trigger_ledger
+                             WHERE id = $1
+                            """,
+                            expected_trigger_id,
                         )
                 except Exception as e:
-                    log.warning("cadence-ceiling check failed (proceeding): %s", e)
-                    recent_sunrise = None
-                if recent_sunrise:
+                    log.warning("Required planner trigger %s ledger read failed; deferring delivery: %s", key, e)
+                    continue
+                disposition = required_trigger_disposition(
+                    status=terminal["status"] if terminal else "expected",
+                    terminal_action=terminal["terminal_action"] if terminal else None,
+                    due_at=terminal["due_at"] if terminal else None,
+                    now=now,
+                )
+                if disposition == "complete":
                     _milestones_fired[key] = True
                     _save_milestone_state()
-                    log.info(
-                        "Skipping SUNRISE %s — another SUNRISE plan exists within last 4h (Phase 4 cadence ceiling)",
-                        key,
-                    )
+                    log.info("Required planner trigger %s completed with a valid set_plan", key)
                     continue
-
-            _milestones_fired[key] = True
-            _save_milestone_state()
+                if disposition == "wait":
+                    log.info("Required planner trigger %s remains in-flight until %s", key, terminal["due_at"])
+                    continue
 
             log.info("Planning milestone fired: %s (%s)%s", key, label, " [CATCH-UP]" if is_catchup else "")
 
@@ -922,15 +1016,28 @@ async def planning_heartbeat(pool: asyncpg.Pool) -> None:
             severity_event_type = spec.severity_event_type or event_type
             severity = classify_severity(severity_event_type, SeverityContext())
             instance = pick_instance(severity_event_type, severity)
-            await _deliver_and_log(
+            delivered = await _deliver_and_log(
                 pool,
                 event_type,
                 label,
                 context,
                 instance=instance,
-                expected_trigger_id=expected_trigger_ids.get(key),
+                expected_trigger_id=expected_trigger_id,
                 catchup=is_catchup,
             )
+            if delivered and not required_full_plan:
+                _milestones_fired[key] = True
+                _save_milestone_state()
+            elif not delivered:
+                log.warning(
+                    "Planner delivery for %s remains retryable; next heartbeat will retry with the same expected ledger row",
+                    key,
+                )
+            else:
+                log.info(
+                    "Required planner delivery for %s is accepted but not complete; fired-state waits for set_plan",
+                    key,
+                )
 
     # ── 3. FORECAST poll RETIRED (Phase 4, 2026-05-10) ──
     # The "new forecast fetched" event was the highest-volume / lowest-signal

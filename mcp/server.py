@@ -20,6 +20,7 @@ from zoneinfo import ZoneInfo
 import asyncpg
 from mcp.server.fastmcp import FastMCP
 from pydantic import ValidationError
+from starlette.responses import JSONResponse
 
 # verdify_schemas lives one level up from this server file in every worktree.
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -68,13 +69,14 @@ from verdify_schemas.climate_intent import (  # noqa: E402
     climate_intent_materialization_guardrails,
     materialize_climate_intent_tier1,
 )
+from verdify_schemas.plan import classify_planner_terminal_action  # noqa: E402
 from verdify_schemas.telemetry import DliEvidence  # noqa: E402
 from verdify_schemas.tunable_registry import (  # noqa: E402
     BAND_OWNED_REG,
     CROP_BAND_REG,
     PLANNER_PUSHABLE_REG,
     TIER1_REG,
-    registry_value_error,
+    normalize_planner_value,
 )
 
 # ── Config ──
@@ -210,7 +212,10 @@ def _materialize_climate_intent_waypoints(
             expanded.append(wp)
             continue
         intent = ClimateIntent.model_validate(wp["climate_intent"])
-        materialized = materialize_climate_intent_tier1(intent, active_tier1_params)
+        raw_materialized = materialize_climate_intent_tier1(intent, active_tier1_params)
+        # One final normalization boundary intersects the planner-facing and
+        # firmware/dispatcher bounds.  No later persistence path clamps again.
+        materialized = {name: normalize_planner_value(name, value) for name, value in raw_materialized.items()}
         guardrails = climate_intent_materialization_guardrails(intent, active_tier1_params, materialized)
         expanded_wp = dict(wp)
         expanded_wp["params"] = materialized
@@ -261,9 +266,70 @@ mcp = FastMCP(
     port=int(os.environ.get("MCP_HTTP_PORT", "8000")),
 )
 
+HERMES_REQUIRED_TOOLS = frozenset(
+    {
+        "acknowledge_trigger",
+        "alerts",
+        "climate",
+        "crop_history",
+        "crop_lifecycle",
+        "crops",
+        "equipment_state",
+        "forecast",
+        "get_setpoints",
+        "history",
+        "knowledge_search",
+        "lessons",
+        "lessons_manage",
+        "lessons_search",
+        "observations",
+        "plan_evaluate",
+        "plan_status",
+        "position_current",
+        "scorecard",
+        "set_plan",
+        "set_tunable",
+        "slack_ops",
+        "topology",
+    }
+)
+
 
 async def _db() -> asyncpg.Connection:
     return await asyncpg.connect(DB_DSN)
+
+
+@mcp.custom_route("/readyz", methods=["GET"])
+async def mcp_ready(_request) -> JSONResponse:
+    """Tool-level readiness used by Hermes and release acceptance.
+
+    A listening TCP socket is insufficient: required tools can disappear from
+    registration while the process remains healthy.  Readiness also proves a
+    minimal DB round trip because every control tool depends on that store.
+    """
+    registered = {tool.name for tool in await mcp.list_tools()}
+    missing = sorted(HERMES_REQUIRED_TOOLS - registered)
+    db_error: str | None = None
+    conn: asyncpg.Connection | None = None
+    try:
+        conn = await _db()
+        await conn.fetchval("SELECT 1")
+    except Exception as exc:
+        db_error = type(exc).__name__
+    finally:
+        if conn is not None:
+            await conn.close()
+    ready = not missing and db_error is None
+    return JSONResponse(
+        {
+            "ready": ready,
+            "required_tools": sorted(HERMES_REQUIRED_TOOLS),
+            "missing_tools": missing,
+            "db": "ok" if db_error is None else "unavailable",
+            "db_error_class": db_error,
+        },
+        status_code=200 if ready else 503,
+    )
 
 
 @mcp.tool()
@@ -310,16 +376,26 @@ async def _insert_plan_delivery_log(conn: asyncpg.Connection, result: dict) -> s
     explicit_status = result.get("status")
     if explicit_status is None and result.get("delivered") is False and result.get("gateway_status") is not None:
         explicit_status = "delivery_failed"
+    terminal_action = result.get("terminal_action")
+    failure_class = result.get("failure_class")
+    if explicit_status == "delivery_failed":
+        terminal_action = terminal_action or "delivery_failed"
+        failure_class = failure_class or "gateway_delivery_failed"
     if explicit_status is not None:
         row["status"] = explicit_status
+    if terminal_action is not None:
+        row["terminal_action"] = terminal_action
+        row["failure_class"] = failure_class
     PlanDeliveryLogRow.model_validate(row)
 
     await conn.execute(
         """
         INSERT INTO plan_delivery_log AS pdl
           (event_type, event_label, session_key, wake_mode, gateway_status,
-           gateway_body, trigger_id, instance, status, hermes_run_id)
-        VALUES ($1, $2, $3, $4, $5, $6, $7::uuid, $8, COALESCE($9, 'pending'), $10)
+           gateway_body, trigger_id, instance, status, hermes_run_id,
+           terminal_action, terminal_at, failure_class)
+        VALUES ($1, $2, $3, $4, $5, $6, $7::uuid, $8, COALESCE($9, 'pending'), $10,
+                $11, CASE WHEN $11::text IS NULL THEN NULL ELSE now() END, $12)
         ON CONFLICT (trigger_id) DO UPDATE
           SET event_type     = EXCLUDED.event_type,
               event_label    = EXCLUDED.event_label,
@@ -329,8 +405,14 @@ async def _insert_plan_delivery_log(conn: asyncpg.Connection, result: dict) -> s
               gateway_body   = COALESCE(EXCLUDED.gateway_body, pdl.gateway_body),
               instance       = COALESCE(EXCLUDED.instance, pdl.instance),
               hermes_run_id  = COALESCE(EXCLUDED.hermes_run_id, pdl.hermes_run_id),
+              terminal_action = COALESCE(pdl.terminal_action, EXCLUDED.terminal_action),
+              terminal_at     = COALESCE(pdl.terminal_at, EXCLUDED.terminal_at),
+              failure_class   = COALESCE(pdl.failure_class, EXCLUDED.failure_class),
               status         = CASE
-                                 WHEN pdl.status IN ('acked', 'plan_written') THEN pdl.status
+                                 WHEN pdl.status IN (
+                                     'acked', 'plan_written', 'action_completed',
+                                     'neutral_fallback', 'wrong_action'
+                                 ) THEN pdl.status
                                  ELSE EXCLUDED.status
                                END
         """,
@@ -344,6 +426,8 @@ async def _insert_plan_delivery_log(conn: asyncpg.Connection, result: dict) -> s
         row["instance"],
         explicit_status,
         row["hermes_run_id"],
+        terminal_action,
+        failure_class,
     )
     return explicit_status
 
@@ -1770,15 +1854,27 @@ async def set_tunable(
                 "allowed": sorted(PLANNER_PUSHABLE_REG),
             }
         )
-    if bounds_error := registry_value_error(parameter, value):
+    try:
+        normalized_value = normalize_planner_value(parameter, value)
+    except ValueError as exc:
         return json.dumps(
             {
-                "error": "Tunable value outside registry bounds",
+                "error": "Tunable value cannot be normalized against planner/firmware bounds",
                 "parameter": parameter,
                 "value": value,
-                "details": bounds_error,
+                "details": str(exc),
             }
         )
+    if normalized_value != float(value):
+        return json.dumps(
+            {
+                "error": "Tunable value outside strict planner/firmware bounds",
+                "parameter": parameter,
+                "value": value,
+                "nearest_safe": normalized_value,
+            }
+        )
+    value = normalized_value
     if parameter in FORCED_ON_SWITCH_PARAMS and value < 0.5:
         return json.dumps(
             {
@@ -1821,9 +1917,11 @@ async def set_tunable(
             if normalized_trigger_id:
                 delivery = await conn.fetchrow(
                     """
-                    SELECT trigger_id, status, instance
-                      FROM plan_delivery_log
-                     WHERE trigger_id = $1::uuid
+                    SELECT pdl.trigger_id, pdl.status, pdl.instance,
+                           COALESCE(ptl.expected_action, 'any') AS expected_action
+                      FROM plan_delivery_log pdl
+                 LEFT JOIN planner_trigger_ledger ptl ON ptl.trigger_id = pdl.trigger_id
+                     WHERE pdl.trigger_id = $1::uuid
                     """,
                     normalized_trigger_id,
                 )
@@ -1834,7 +1932,7 @@ async def set_tunable(
                             "trigger_id": normalized_trigger_id,
                         }
                     )
-                if delivery["status"] not in {"pending", "plan_written"}:
+                if delivery["status"] != "pending":
                     return json.dumps(
                         {
                             "error": "trigger_id is not writable",
@@ -1851,17 +1949,62 @@ async def set_tunable(
                             "delivery_instance": delivery["instance"],
                         }
                     )
-
+                if delivery["expected_action"] == "set_plan":
+                    terminal = classify_planner_terminal_action(
+                        expected_action="set_plan",
+                        actual_action="set_tunable",
+                    )
+                    await conn.execute(
+                        """
+                        UPDATE plan_delivery_log
+                           SET status = 'wrong_action',
+                               terminal_action = 'wrong_action',
+                               terminal_at = now(),
+                               failure_class = $3,
+                               result_payload = jsonb_build_object(
+                                   'attempted_action', 'set_tunable',
+                                   'parameter', $2::text
+                               )
+                         WHERE trigger_id = $1::uuid
+                           AND status = 'pending'
+                        """,
+                        normalized_trigger_id,
+                        parameter,
+                        terminal.failure_class,
+                    )
+                    await conn.execute(
+                        """
+                        UPDATE planner_trigger_ledger
+                           SET status = 'wrong_action',
+                               terminal_action = 'wrong_action',
+                               terminal_at = now(),
+                               failure_class = $2,
+                               resolved_at = now(),
+                               updated_at = now()
+                         WHERE trigger_id = $1::uuid
+                        """,
+                        normalized_trigger_id,
+                        terminal.failure_class,
+                    )
+                    return json.dumps(
+                        {
+                            "error": "required set_plan trigger cannot be satisfied by set_tunable",
+                            "trigger_id": normalized_trigger_id,
+                            "status": "wrong_action",
+                            "terminal_action": "wrong_action",
+                        }
+                    )
             wrote_at = await conn.fetchval(
                 """
                 INSERT INTO setpoint_plan
-                  (ts, parameter, value, plan_id, source, reason, trigger_id, planner_instance)
-                VALUES (now(), $1, $2, $3, 'iris', $4, $5::uuid, $6)
+                  (ts, parameter, value, plan_id, source, reason, trigger_id, planner_instance, expires_at)
+                VALUES (now(), $1, $2, $3, 'iris', $4, $5::uuid, $6, now() + interval '6 hours')
                 ON CONFLICT (ts, parameter, plan_id) DO UPDATE
                   SET value = EXCLUDED.value,
                       reason = EXCLUDED.reason,
                       trigger_id = EXCLUDED.trigger_id,
-                      planner_instance = EXCLUDED.planner_instance
+                      planner_instance = EXCLUDED.planner_instance,
+                      expires_at = EXCLUDED.expires_at
                 RETURNING ts
                 """,
                 parameter,
@@ -1877,13 +2020,37 @@ async def set_tunable(
                     UPDATE plan_delivery_log
                        SET resulting_plan_id = $2,
                            plan_written_at   = $3,
-                           status            = 'plan_written'
+                           status            = 'action_completed',
+                           terminal_action   = 'set_tunable',
+                           terminal_at       = now(),
+                           failure_class     = NULL,
+                           result_payload    = jsonb_build_object(
+                               'parameter', $4::text,
+                               'value', $5::double precision
+                           )
                      WHERE trigger_id = $1::uuid
-                       AND status IN ('pending', 'plan_written')
+                       AND status = 'pending'
                     """,
                     normalized_trigger_id,
                     plan_id,
                     wrote_at,
+                    parameter,
+                    value,
+                )
+                await conn.execute(
+                    """
+                    UPDATE planner_trigger_ledger
+                       SET status = 'action_completed',
+                           terminal_action = 'set_tunable',
+                           terminal_at = now(),
+                           failure_class = NULL,
+                           resulting_plan_id = $2,
+                           resolved_at = now(),
+                           updated_at = now()
+                     WHERE trigger_id = $1::uuid
+                    """,
+                    normalized_trigger_id,
+                    plan_id,
                 )
         return json.dumps(
             {
@@ -1894,7 +2061,8 @@ async def set_tunable(
                 "plan_id": plan_id,
                 "trigger_id": normalized_trigger_id,
                 "planner_instance": planner_instance,
-                "delivery_status": "plan_written" if normalized_trigger_id else None,
+                "delivery_status": "action_completed" if normalized_trigger_id else None,
+                "terminal_action": "set_tunable",
                 "note": (
                     "Written to setpoint_plan as a one-shot waypoint at now(). "
                     "Dispatcher pushes to ESP32 within 5 minutes and this value "
@@ -1988,12 +2156,19 @@ async def plan_status() -> str:
         journal = await conn.fetchrow("""
             SELECT plan_id, to_char(created_at AT TIME ZONE 'America/Denver', 'MM-DD HH24:MI') as created,
                    hypothesis, experiment, expected_outcome
-            FROM plan_journal WHERE plan_id NOT LIKE 'iris-reactive%'
+            FROM plan_journal
+            WHERE plan_id NOT LIKE 'iris-reactive%'
+              AND lifecycle_status = 'effective'
+              AND valid_from <= now()
+              AND expires_at > now()
             ORDER BY created_at DESC LIMIT 1
         """)
         waypoints = await conn.fetch("""
             SELECT to_char(ts AT TIME ZONE 'America/Denver', 'Dy HH24:MI') as time, count(*) as params
-            FROM setpoint_plan WHERE is_active = true AND ts > now()
+            FROM setpoint_plan
+            WHERE is_active = true
+              AND ts > now()
+              AND expires_at > now()
             GROUP BY ts ORDER BY ts LIMIT 15
         """)
         resp = PlanStatusResponse(
@@ -2068,6 +2243,8 @@ async def set_plan(
     expected_outcome: str = "",
     trigger_id: str | None = None,
     planner_instance: str | None = None,
+    valid_from: str | None = None,
+    expires_at: str | None = None,
 ) -> str:
     """Write a 72-hour setpoint plan with multiple time-based waypoints.
     Deactivates all existing future waypoints, writes new ones, and logs a plan journal entry.
@@ -2081,6 +2258,9 @@ async def set_plan(
     transitions: JSON array of objects: [{"ts": "ISO8601-with-TZ", "climate_intent": {...}, "reason": "..."}]
     experiment: optional one-line experiment description
     expected_outcome: optional measurable prediction
+    valid_from, expires_at: optional ISO-8601 validity bounds. When omitted,
+        validity starts at the first transition and expires six hours after the
+        final transition; the total envelope cannot exceed 78 hours.
     trigger_id, planner_instance: required contract v1.5 audit fields. Pass
         through from the audit-headers banner shown at the bottom of every
         planning event prompt (`trigger_id=<uuid>`, `planner_instance='opus'|'local'`).
@@ -2148,6 +2328,8 @@ async def set_plan(
                 "experiment": experiment or None,
                 "expected_outcome": expected_outcome or None,
                 "transitions": waypoints_raw,
+                "valid_from": valid_from,
+                "expires_at": expires_at,
             }
         )
     except ValidationError as e:
@@ -2296,7 +2478,13 @@ async def set_plan(
             # Look up the trigger's event_type from planner_trigger_ledger and
             # reject if the structured block is missing or invalid.
             event_type_row = await conn.fetchrow(
-                "SELECT event_type FROM planner_trigger_ledger WHERE trigger_id = $1::uuid",
+                """
+                SELECT COALESCE(ptl.event_type, pdl.event_type) AS event_type,
+                       COALESCE(ptl.expected_action, 'any') AS expected_action
+                  FROM plan_delivery_log pdl
+             LEFT JOIN planner_trigger_ledger ptl ON ptl.trigger_id = pdl.trigger_id
+                 WHERE pdl.trigger_id = $1::uuid
+                """,
                 normalized_trigger_id,
             )
             event_type = event_type_row["event_type"] if event_type_row else None
@@ -2374,17 +2562,22 @@ async def set_plan(
                         }
                     )
 
-            # Deactivate existing future waypoints EXCEPT iris-oneshot tactical pushes.
-            # Phase 1b: set_tunable writes to setpoint_plan with plan_id
-            # `iris-oneshot-<YYYYMMDD-HHMM>`. Those are live tactical adjustments
-            # that should survive across regular sunrise/sunset plans until
-            # superseded by a later waypoint. Plan-level supersession is by
-            # `created_at DESC` so the newer multi-waypoint plan still wins on
-            # any parameter it re-specifies.
+            # One full plan is effective per greenhouse. Expire or supersede the
+            # prior journal row before inserting the replacement so the partial
+            # unique index is a database-level race guard, not an application
+            # convention. A full plan also supersedes prior Iris one-shots.
+            await conn.execute(
+                """
+                UPDATE plan_journal
+                   SET lifecycle_status = CASE WHEN expires_at <= now() THEN 'expired' ELSE 'superseded' END
+                 WHERE greenhouse_id = 'vallery'
+                   AND lifecycle_status = 'effective'
+                """
+            )
             await conn.execute(
                 """UPDATE setpoint_plan SET is_active = false
-                   WHERE ts > now() AND is_active = true
-                     AND plan_id NOT LIKE 'iris-oneshot-%'"""
+                   WHERE is_active = true
+                     AND source = 'iris'"""
             )
 
             # Write new waypoints. Crop-band and lighting-policy params are
@@ -2405,8 +2598,8 @@ async def set_plan(
                     await conn.execute(
                         """INSERT INTO setpoint_plan
                              (ts, parameter, value, plan_id, source, reason, created_at,
-                              is_active, greenhouse_id, trigger_id, planner_instance)
-                           VALUES ($1, $2, $3, $4, 'iris', $5, now(), true, 'vallery', $6::uuid, $7)""",
+                              is_active, greenhouse_id, trigger_id, planner_instance, expires_at)
+                           VALUES ($1, $2, $3, $4, 'iris', $5, now(), true, 'vallery', $6::uuid, $7, $8)""",
                         wp.ts,
                         param,
                         float(value),
@@ -2414,6 +2607,7 @@ async def set_plan(
                         wp.reason or "",
                         normalized_trigger_id,
                         planner_instance,
+                        plan.expires_at,
                     )
                     rows_written += 1
 
@@ -2428,9 +2622,9 @@ async def set_plan(
                      (plan_id, created_at, hypothesis, experiment, expected_outcome,
                       hypothesis_structured, greenhouse_id, planner_instance, trigger_id,
                       conditions_summary, params_changed, climate_intents,
-                      climate_intent_version)
+                      climate_intent_version, valid_from, expires_at, lifecycle_status)
                    VALUES ($1, now(), $2, $3, $4, $5::jsonb, 'vallery', $6, $7::uuid,
-                           $8, $9::text[], $10::jsonb, $11)
+                           $8, $9::text[], $10::jsonb, $11, $12, $13, 'effective')
                    RETURNING created_at""",
                 plan.plan_id,
                 plan.hypothesis,
@@ -2443,6 +2637,8 @@ async def set_plan(
                 params_seen,
                 json.dumps(climate_intent_records) if climate_intent_records else None,
                 CLIMATE_INTENT_CONTRACT_VERSION if climate_intent_records else None,
+                plan.valid_from,
+                plan.expires_at,
             )
             if normalized_trigger_id:
                 await conn.execute(
@@ -2450,13 +2646,38 @@ async def set_plan(
                     UPDATE plan_delivery_log
                        SET resulting_plan_id = $2,
                            plan_written_at   = $3,
-                           status            = 'plan_written'
+                           status            = 'plan_written',
+                           terminal_action   = 'set_plan',
+                           terminal_at       = now(),
+                           failure_class     = NULL,
+                           result_payload    = jsonb_build_object(
+                               'plan_id', $2::text,
+                               'valid_from', $4::timestamptz,
+                               'expires_at', $5::timestamptz
+                           )
                      WHERE trigger_id = $1::uuid
                        AND status IN ('pending', 'timed_out')
                     """,
                     normalized_trigger_id,
                     plan.plan_id,
                     journal_created_at,
+                    plan.valid_from,
+                    plan.expires_at,
+                )
+                await conn.execute(
+                    """
+                    UPDATE planner_trigger_ledger
+                       SET status = 'plan_written',
+                           terminal_action = 'set_plan',
+                           terminal_at = now(),
+                           failure_class = NULL,
+                           resulting_plan_id = $2,
+                           resolved_at = now(),
+                           updated_at = now()
+                     WHERE trigger_id = $1::uuid
+                    """,
+                    normalized_trigger_id,
+                    plan.plan_id,
                 )
 
         # Sprint 20 Phase 6: drop a trigger file so verdify-plan-publish.path
@@ -2488,6 +2709,9 @@ async def set_plan(
             "trigger_id": normalized_trigger_id,
             "planner_instance": planner_instance,
             "delivery_status": "plan_written" if normalized_trigger_id else None,
+            "terminal_action": "set_plan",
+            "valid_from": plan.valid_from.isoformat() if plan.valid_from else None,
+            "expires_at": plan.expires_at.isoformat() if plan.expires_at else None,
             "note": "Dispatcher will execute waypoints on schedule. Old future waypoints deactivated.",
         }
         if structured_warning:
@@ -2498,7 +2722,12 @@ async def set_plan(
 
 
 @mcp.tool()
-async def acknowledge_trigger(trigger_id: str, reason: str, planner_instance: str | None = None) -> str:
+async def acknowledge_trigger(
+    trigger_id: str,
+    reason: str,
+    planner_instance: str | None = None,
+    neutral_fallback: bool = False,
+) -> str:
     """Record that Iris read a planning trigger and intentionally wrote no plan.
 
     Use this only when a FORECAST/TRANSITION/HEARTBEAT cycle needs no setpoint
@@ -2519,9 +2748,11 @@ async def acknowledge_trigger(trigger_id: str, reason: str, planner_instance: st
     try:
         existing = await conn.fetchrow(
             """
-            SELECT id, event_type, event_label, instance, status
-              FROM plan_delivery_log
-             WHERE trigger_id = $1::uuid
+            SELECT pdl.id, pdl.event_type, pdl.event_label, pdl.instance, pdl.status,
+                   COALESCE(ptl.expected_action, 'any') AS expected_action
+              FROM plan_delivery_log pdl
+         LEFT JOIN planner_trigger_ledger ptl ON ptl.trigger_id = pdl.trigger_id
+             WHERE pdl.trigger_id = $1::uuid
             """,
             str(tid),
         )
@@ -2538,22 +2769,78 @@ async def acknowledge_trigger(trigger_id: str, reason: str, planner_instance: st
                     "instance": existing["instance"],
                 }
             )
-        event_label = (existing["event_label"] or "").lower()
-        is_validation_ack = event_label.startswith("validation") and "ack-only" in event_label
-        if existing["event_type"] in {"SUNRISE", "SUNSET", "MIDNIGHT"} and not is_validation_ack:
+        if planner_instance and existing["instance"] and planner_instance != existing["instance"]:
             return _json(
                 {
-                    "error": "SUNRISE/SUNSET/MIDNIGHT triggers require set_plan; acknowledge_trigger is allowed only for validation ack-only rows",
+                    "error": "planner_instance does not match plan_delivery_log",
+                    "trigger_id": str(tid),
+                    "planner_instance": planner_instance,
+                    "delivery_instance": existing["instance"],
+                }
+            )
+        event_label = (existing["event_label"] or "").lower()
+        is_validation_ack = event_label.startswith("validation") and "ack-only" in event_label
+        required_full_plan = existing["expected_action"] == "set_plan" and not is_validation_ack
+        if required_full_plan and not neutral_fallback:
+            terminal = classify_planner_terminal_action(
+                expected_action="set_plan",
+                actual_action="acknowledge_trigger",
+            )
+            await conn.execute(
+                """
+                UPDATE plan_delivery_log
+                   SET status = 'wrong_action',
+                       terminal_action = 'wrong_action',
+                       terminal_at = now(),
+                       failure_class = $2,
+                       result_payload = jsonb_build_object('attempted_action', 'acknowledge_trigger')
+                 WHERE trigger_id = $1::uuid
+                   AND status = 'pending'
+                """,
+                str(tid),
+                terminal.failure_class,
+            )
+            await conn.execute(
+                """
+                UPDATE planner_trigger_ledger
+                   SET status = 'wrong_action',
+                       terminal_action = 'wrong_action',
+                       terminal_at = now(),
+                       failure_class = $2,
+                       resolved_at = now(),
+                       updated_at = now()
+                 WHERE trigger_id = $1::uuid
+                """,
+                str(tid),
+                terminal.failure_class,
+            )
+            return _json(
+                {
+                    "error": "required set_plan trigger received the wrong terminal action",
                     "trigger_id": str(tid),
                     "event_type": existing["event_type"],
                     "event_label": existing["event_label"],
+                    "status": "wrong_action",
+                    "terminal_action": "wrong_action",
                 }
             )
+        terminal = classify_planner_terminal_action(
+            expected_action=existing["expected_action"],
+            actual_action="acknowledge_trigger",
+            explicit_neutral=neutral_fallback,
+        )
+        target_status = terminal.status
+        terminal_action = terminal.terminal_action
+        failure_class = terminal.failure_class
         row = await conn.fetchrow(
             """
             UPDATE plan_delivery_log
-               SET status = 'acked',
+               SET status = $3,
                    acked_at = now(),
+                   terminal_action = $4,
+                   terminal_at = now(),
+                   failure_class = $5,
+                   result_payload = jsonb_build_object('reason', $2::text),
                    gateway_body = concat_ws(E'\n', NULLIF(gateway_body, ''), $2::text)
              WHERE trigger_id = $1::uuid
                AND status = 'pending'
@@ -2561,6 +2848,9 @@ async def acknowledge_trigger(trigger_id: str, reason: str, planner_instance: st
             """,
             str(tid),
             f"acknowledged by {planner_instance or 'iris'}: {reason}",
+            target_status,
+            terminal_action,
+            failure_class,
         )
         if row is None:
             return _json(
@@ -2573,6 +2863,22 @@ async def acknowledge_trigger(trigger_id: str, reason: str, planner_instance: st
                     "instance": existing["instance"],
                 }
             )
+        await conn.execute(
+            """
+            UPDATE planner_trigger_ledger
+               SET status = $2,
+                   terminal_action = $3,
+                   terminal_at = now(),
+                   failure_class = $4,
+                   resolved_at = now(),
+                   updated_at = now()
+             WHERE trigger_id = $1::uuid
+            """,
+            str(tid),
+            target_status,
+            terminal_action,
+            failure_class,
+        )
         return _json(
             {
                 "ok": True,
@@ -2581,6 +2887,8 @@ async def acknowledge_trigger(trigger_id: str, reason: str, planner_instance: st
                 "instance": row["instance"],
                 "planner_instance": planner_instance,
                 "status": row["status"],
+                "terminal_action": terminal_action,
+                "neutral": neutral_fallback,
             }
         )
     finally:

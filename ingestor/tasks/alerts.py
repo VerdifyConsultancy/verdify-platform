@@ -985,7 +985,7 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
         timed_out_deliveries = await conn.fetch(
             """
             WITH recent AS (
-                SELECT id, event_type, expected_at, status, plan_delivery_log_id
+                SELECT id, event_type, expected_at, status, terminal_action, plan_delivery_log_id
                   FROM planner_trigger_ledger
                  WHERE expected_at > now() - interval '36 hours'
             ),
@@ -994,6 +994,7 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                   FROM recent
                  WHERE event_type IN ('SUNRISE', 'SUNSET', 'MIDNIGHT')
                    AND status = 'plan_written'
+                   AND terminal_action = 'set_plan'
             )
             SELECT pdl.id, pdl.event_type, pdl.event_label, pdl.instance,
                    pdl.gateway_status, pdl.delivered_at, pdl.gateway_body,
@@ -1059,7 +1060,7 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
             WITH recent AS (
                 SELECT id, event_type, event_label, instance, status, expected_at,
                        due_at, delivered_at, plan_delivery_log_id, trigger_id,
-                       resulting_plan_id, notes
+                       resulting_plan_id, terminal_action, failure_class, notes
                   FROM planner_trigger_ledger
                  WHERE event_type IN ('SUNRISE', 'SUNSET', 'MIDNIGHT')
                    AND expected_at > now() - interval '36 hours'
@@ -1069,15 +1070,18 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                 SELECT max(expected_at) AS expected_at
                   FROM recent
                  WHERE status = 'plan_written'
+                   AND terminal_action = 'set_plan'
             ),
             unrecovered_required_misses AS (
                 SELECT r.*
                   FROM recent r
                   CROSS JOIN last_required_recovery lrr
-                 WHERE r.due_at < now()
-                   AND (
-                         r.status IN ('missed', 'timed_out', 'delivery_failed')
-                         OR r.status IN ('expected', 'delivered')
+                 WHERE (
+                         (
+                           r.due_at < now()
+                           AND r.status IN ('missed', 'timed_out', 'delivery_failed', 'expected', 'delivered')
+                         )
+                         OR r.status IN ('action_completed', 'neutral_fallback', 'wrong_action', 'acked')
                        )
                    AND (
                          lrr.expected_at IS NULL
@@ -1085,7 +1089,8 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                        )
             )
             SELECT id, event_type, event_label, instance, status, expected_at, due_at,
-                   delivered_at, plan_delivery_log_id, trigger_id, resulting_plan_id, notes
+                   delivered_at, plan_delivery_log_id, trigger_id, resulting_plan_id,
+                   terminal_action, failure_class, notes
               FROM unrecovered_required_misses
              ORDER BY expected_at DESC
             """
@@ -1108,6 +1113,8 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                     else None,
                     "trigger_id": str(r["trigger_id"]) if r["trigger_id"] else None,
                     "resulting_plan_id": r["resulting_plan_id"],
+                    "terminal_action": r["terminal_action"],
+                    "failure_class": r["failure_class"],
                 }
                 for r in required_misses
             ]

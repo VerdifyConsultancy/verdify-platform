@@ -124,16 +124,19 @@ spec:
               mountPath: /tmp
           livenessProbe:
             httpGet:
-              path: /health
+              path: /livez
               port: http
             initialDelaySeconds: 20
             periodSeconds: 30
+            failureThreshold: 3
           readinessProbe:
             httpGet:
               path: /health
               port: http
             initialDelaySeconds: 15
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 1
       volumes:
         - name: tmp
           emptyDir: {}
