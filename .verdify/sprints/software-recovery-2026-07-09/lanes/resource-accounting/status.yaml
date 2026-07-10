@@ -1,9 +1,9 @@
 sprint_id: software-recovery-2026-07-09
 lane_id: resource-accounting
 state: READY_FOR_CRITIC
-updated_at: "2026-07-10T03:21:40Z"
-head_sha: a3aa154
-schema_sha: 16c904b
+updated_at: "2026-07-10T03:56:54Z"
+head_sha: 23340fe
+schema_sha: 4b27f47
 working_tree_clean: true
 acceptance:
   passed:
@@ -16,8 +16,9 @@ acceptance:
 blockers:
   - Production migrations 193-194, service restarts, dashboard rollout, and post-deploy acceptance are release-control work; this lane made no production mutation.
   - Physical coefficient calibration and whole-building/circuit metering remain out of scope; provisional terms are scoring-ineligible.
+  - Independent re-review and corrected-head GitHub checks are required before merge.
 decisions_requested: []
 next_actions:
-  - Run an independent data-integrity/accounting critic against implementation head a3aa154.
-  - Push the branch, open the issue-linked PR with migration and restart notes, and require green GitHub checks.
+  - Re-run the independent data-integrity/accounting critic against corrected implementation head 23340fe.
+  - Push the corrected branch to existing draft PR #445 and require green GitHub checks.
   - Release-control applies migrations 193 then 194 before restarting verdify-ingestor, verdify-mcp, and verdify-api; then roll out Grafana and run live acceptance.
