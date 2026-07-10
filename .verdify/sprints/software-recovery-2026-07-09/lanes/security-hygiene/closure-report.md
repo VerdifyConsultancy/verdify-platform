@@ -1,8 +1,8 @@
 # Security-hygiene closeout
 
-State: **READY_FOR_CRITIC**. Source remediation, protected production rotation,
-negative-old proof, and consumer acceptance are complete. No credential material
-is present in this record.
+State: **COMPLETE**. Source remediation, protected production rotation,
+negative-old proof, consumer acceptance, and fresh independent criticism are
+complete. No credential material is present in this record.
 
 ## Delivered outcome
 
@@ -70,5 +70,7 @@ is present in this record.
 - Rollback disposition: **not used**. The documented layered rollback remains the
   recovery path; restoring literal fallbacks or retired `.env` behavior is not.
 
-The next state transition is a fresh independent critic verdict tied to the
-immutable evidence commit, followed by issue #438 closure and `COMPLETE`.
+The independent post-rotation critic returned **PASS** against evidence head
+`ecb987f` and the record-only reconciliations through `ed64e7d`. Its
+greater-than-10-minute live durability re-probe remained green and authorized
+issue #438 closure. See `rotation-critic-report-2026-07-10.md`.

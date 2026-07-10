@@ -1,8 +1,8 @@
 sprint_id: software-recovery-2026-07-09
 lane_id: security-hygiene
-state: READY_FOR_CRITIC
-updated_at: "2026-07-10T12:59:35Z"
-head_sha: 19988c1ad955442a45b70f5957e53a6e5be2c480
+state: COMPLETE
+updated_at: "2026-07-10T13:09:56Z"
+head_sha: ed64e7d5fa37ad51407be9f9aca7bd23b1f4b43c
 working_tree_clean: true
 acceptance:
   passed:
@@ -15,5 +15,5 @@ acceptance:
 blockers: []
 decisions_requested: []
 next_actions:
-  - Obtain a fresh independent security/release critic verdict on the immutable closeout record and live boolean evidence.
-  - Reconcile issue #438 and mark the lane COMPLETE only after the critic accepts the final evidence head.
+  - Close issue #438 with the immutable closeout and critic references.
+  - Release control consumes this completed credential-rotation gate; no further security-lane production action remains.

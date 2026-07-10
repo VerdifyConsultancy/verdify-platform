@@ -2,7 +2,7 @@ sprint_id: software-recovery-2026-07-09
 scope_id: security-hygiene
 revision: 1dfb05fdab864a3d000095346ee5e16bd145df5d
 environment: null
-generated_at: "2026-07-10T12:59:35Z"
+generated_at: "2026-07-10T13:09:56Z"
 items:
   - id: SEC-EV-001
     type: TEST
@@ -196,3 +196,15 @@ items:
     artifact_location: .verdify/sprints/software-recovery-2026-07-09/lanes/security-hygiene/rotation-closeout-2026-07-10.md
     acceptance_criteria: [LANE-AC-04]
     limitations: [Canonical credential custody remains the merged SOPS authority; no key material is copied into this repository.]
+  - id: SEC-EV-017
+    type: DIFF_REVIEW
+    status: PASS
+    source: fresh independent post-rotation security and release critic
+    command: read-only Git, GitHub, Kubernetes metadata, endpoint, Job, Lease, auth-log, redacted leak, and diff-check audit
+    timestamp: "2026-07-10T13:09:56Z"
+    revision: ed64e7d5fa37ad51407be9f9aca7bd23b1f4b43c
+    environment: verdify-prod plus verdify-platform and jvallery/agents immutable Git refs
+    result: PASS; every acceptance criterion is supported, the greater-than-10-minute durability re-probe remained green, residuals are separately tracked in #436, #447, and #427, and issue #438 may close.
+    artifact_location: .verdify/sprints/software-recovery-2026-07-09/lanes/security-hygiene/rotation-critic-report-2026-07-10.md
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
+    limitations: [The critic performed no edit, GitHub mutation, production mutation, or secret-value inspection.]
