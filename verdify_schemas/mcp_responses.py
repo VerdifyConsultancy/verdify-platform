@@ -63,7 +63,7 @@ def _scorecard_value_to_float(value: Any) -> float | None:
 
 class ScorecardResponse(BaseModel):
     """`scorecard(target_date)` tool response — typed projection of
-    `fn_planner_scorecard()` (25 metrics).
+    `fn_planner_scorecard()`.
 
     All fields are Optional: partial days (today, data gaps) emit a subset
     of metrics. Unknown metric keys raise ValidationError — if the DB
@@ -80,6 +80,8 @@ class ScorecardResponse(BaseModel):
 
     # ── Score + compliance ──────────────────────────────────────────
     planner_score: float | None = None
+    planner_score_resource_weight_pct: float | None = None
+    resource_terms_available: float | None = None
     compliance_pct: float | None = None
     temp_compliance_pct: float | None = None
     vpd_compliance_pct: float | None = None

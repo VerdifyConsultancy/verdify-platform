@@ -153,6 +153,11 @@ class PublicHomeMetrics(BaseModel):
     last_plan_created_at: AwareDatetime | None = None
     last_plan_age_s: int | None = Field(default=None, ge=0)
     planner_score_today: float | None = None
+    planner_score_scope: Literal["climate_only_resource_excluded", "climate_plus_resource"] = (
+        "climate_only_resource_excluded"
+    )
+    planner_score_resource_weight_pct: float = Field(default=0, ge=0, le=100)
+    planner_score_resource_terms_available: bool = False
     compliance_pct_today: float | None = None
     cost_today_usd: float | None = None
     cost_today_estimate_usd: float | None = None

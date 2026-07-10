@@ -93,6 +93,7 @@ class TestSchemaIntegrity:
         "v_water_run_accounting",
         "v_water_attribution_daily",
         "v_runtime_energy_daily",
+        "v_energy_meter_health",
         "v_resource_accounting_health",
     ]
 
@@ -290,7 +291,8 @@ class TestResourceAccountingContractSources:
         assert "FROM equipment_assets" not in daily
         assert "MAX(water_total_gal) - MIN(water_total_gal)" not in daily
         assert "water_gal = max(" not in daily
-        assert "v_equipment_resource_catalog" in daily
+        assert "resource_coefficients" in daily
+        assert "rc.valid_from" in daily and "rc.valid_to" in daily
         assert "v_water_attribution_daily" in daily
         assert "resource_evidence" in mcp
         assert "modeled_available_for_scoring" in mcp
@@ -933,6 +935,30 @@ class TestViewsCompute:
         assert "modeled_available_for_scoring" in view_sql
         assert "measured_available_for_scoring" in view_sql
         assert "meter_runtime_divergence" not in view_sql
+
+    def test_resource_score_excludes_unavailable_terms(self):
+        view_sql = db_query("SELECT pg_get_viewdef('v_daily_kpi'::regclass, true)")
+        assert "v_water_attribution_daily" in view_sql
+        assert "v_runtime_energy_daily" in view_sql
+        assert "resource_ok" in view_sql
+        assert "planner_score_resource_weight_pct" in view_sql
+        assert "WHEN resource_ok" in view_sql
+
+        function_sql = db_query("SELECT pg_get_functiondef('fn_planner_scorecard(date)'::regprocedure)")
+        assert "resource_terms_available" in function_sql
+        assert "planner_score_resource_weight_pct" in function_sql
+
+    def test_water_daily_requires_materializer_watermark(self):
+        view_sql = db_query("SELECT pg_get_viewdef('v_water_meter_daily'::regclass, true)")
+        assert "water_meter_materializer_state" in view_sql
+        assert "last_source_ts >= c.last_raw_ts" in view_sql
+        assert "ledger_incomplete" in view_sql
+
+    def test_energy_health_has_stale_and_unavailable_states(self):
+        view_sql = db_query("SELECT pg_get_viewdef('v_energy_meter_health'::regclass, true)")
+        assert "stale" in view_sql
+        assert "unavailable" in view_sql
+        assert "00:10:00" in view_sql
 
     def test_runtime_power_30m_function_returns_buckets(self):
         rows = db_query_rows(

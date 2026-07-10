@@ -549,26 +549,123 @@ class _GradedComplianceAccumulator:
         }
 
 
-async def _electric_wattages(conn: asyncpg.Connection) -> dict[str, float]:
-    """Return the selected canonical coefficient revision for each device.
+_MODELED_ELECTRIC_EQUIPMENT = (
+    "heat1",
+    "fan1",
+    "fan2",
+    "fog",
+    "vent",
+    "grow_light_main",
+    "grow_light_grow",
+)
+
+
+async def _electric_wattages(conn: asyncpg.Connection, target_day) -> dict[str, float | None]:
+    """Return the coefficient revision valid at the start of ``target_day``.
 
     Migration 193 makes provenance and uncertainty first-class.  Missing schema
-    or coefficients must fail the task visibly; falling back to hard-coded
-    points would recreate the silent catalog drift fixed by #437.
+    or coefficients remain ``None``; falling back to current or hard-coded
+    points would recreate the silent historical restatement fixed by #437.
     """
     rows = await conn.fetch(
         """
-        SELECT equipment_slug, coefficient_nominal
-        FROM v_equipment_resource_catalog
-        WHERE greenhouse_id = 'vallery'
-          AND resource_kind = 'electric_watts'
-        """
+        WITH expected(equipment_slug) AS (
+            SELECT unnest($2::text[])
+        )
+        SELECT x.equipment_slug, c.nominal_value AS coefficient_nominal
+        FROM expected x
+        LEFT JOIN equipment e
+          ON e.greenhouse_id = 'vallery'
+         AND e.slug = x.equipment_slug
+         AND e.is_active
+        LEFT JOIN LATERAL (
+            SELECT rc.nominal_value
+            FROM resource_coefficients rc
+            WHERE rc.equipment_id = e.id
+              AND rc.resource_kind = 'electric_watts'
+              AND rc.valid_from <= ($1::date::timestamp AT TIME ZONE 'America/Denver')
+              AND (
+                  rc.valid_to IS NULL
+                  OR rc.valid_to > ($1::date::timestamp AT TIME ZONE 'America/Denver')
+              )
+            ORDER BY rc.valid_from DESC, rc.id DESC
+            LIMIT 1
+        ) c ON true
+        ORDER BY x.equipment_slug
+        """,
+        target_day,
+        list(_MODELED_ELECTRIC_EQUIPMENT),
     )
-    return {row["equipment_slug"]: float(row["coefficient_nominal"]) for row in rows}
+    return {
+        row["equipment_slug"]: (float(row["coefficient_nominal"]) if row["coefficient_nominal"] is not None else None)
+        for row in rows
+    }
 
 
-def _runtime_kwh_from_minutes(minutes_by_equipment: dict[str, float], wattages: dict[str, float]) -> float:
-    return sum(minutes_by_equipment.get(e, 0.0) / 60.0 * watts / 1000.0 for e, watts in wattages.items())
+def _runtime_kwh_from_minutes(
+    minutes_by_equipment: dict[str, float | None],
+    wattages: dict[str, float | None],
+) -> float | None:
+    if set(minutes_by_equipment) != set(_MODELED_ELECTRIC_EQUIPMENT):
+        return None
+    if any(minutes_by_equipment[e] is None or wattages.get(e) is None for e in _MODELED_ELECTRIC_EQUIPMENT):
+        return None
+    return sum(float(minutes_by_equipment[e]) / 60.0 * float(wattages[e]) / 1000.0 for e in _MODELED_ELECTRIC_EQUIPMENT)
+
+
+async def _apply_resource_cost_gate(
+    conn: asyncpg.Connection,
+    target_day,
+    *,
+    kwh: float | None,
+    therms: float | None,
+    water_gal: float | None,
+) -> tuple[float | None, float | None, float | None, float | None]:
+    """Persist only costs whose underlying evidence is scoring-eligible."""
+    energy_available = bool(
+        await conn.fetchval(
+            """
+            SELECT available_for_scoring
+            FROM v_runtime_energy_daily
+            WHERE date = $1 AND greenhouse_id = 'vallery'
+            """,
+            target_day,
+        )
+    )
+    water_available = bool(
+        await conn.fetchval(
+            """
+            SELECT available_for_scoring
+            FROM v_water_attribution_daily
+            WHERE date = $1 AND greenhouse_id = 'vallery'
+            """,
+            target_day,
+        )
+    )
+    electric_cost = round(kwh * 0.111, 2) if energy_available and kwh is not None else None
+    gas_cost = round(therms * 0.83, 2) if therms is not None else None
+    water_cost = round(water_gal * 0.00484, 2) if water_available and water_gal is not None else None
+    total_cost = (
+        round(electric_cost + gas_cost + water_cost, 2)
+        if electric_cost is not None and gas_cost is not None and water_cost is not None
+        else None
+    )
+    await conn.execute(
+        """
+        UPDATE daily_summary
+        SET cost_electric = $2,
+            cost_gas = $3,
+            cost_water = $4,
+            cost_total = $5
+        WHERE date = $1
+        """,
+        target_day,
+        electric_cost,
+        gas_cost,
+        water_cost,
+        total_cost,
+    )
+    return electric_cost, gas_cost, water_cost, total_cost
 
 
 async def grow_light_daily(pool: asyncpg.Pool) -> None:
@@ -581,25 +678,29 @@ async def grow_light_daily(pool: asyncpg.Pool) -> None:
         rt = {r["equipment"]: (float(r["on_minutes"] or 0), int(r["cycles"] or 0)) for r in rows}
 
         # Runtimes
-        rf1 = rt.get("fan1", (0, 0))[0]
-        rf2 = rt.get("fan2", (0, 0))[0]
-        rh1 = rt.get("heat1", (0, 0))[0]
-        rh2 = rt.get("heat2", (0, 0))[0]
-        rfg = rt.get("fog", (0, 0))[0]
-        rv = rt.get("vent", (0, 0))[0]
+        rf1 = rt.get("fan1", (None, 0))[0]
+        rf2 = rt.get("fan2", (None, 0))[0]
+        rh1 = rt.get("heat1", (None, 0))[0]
+        rh2 = rt.get("heat2", (None, 0))[0]
+        rfg = rt.get("fog", (None, 0))[0]
+        rv = rt.get("vent", (None, 0))[0]
         rms = rt.get("mister_south", (0, 0))[0] / 60.0
         rmw = rt.get("mister_west", (0, 0))[0] / 60.0
         rmc = rt.get("mister_center", (0, 0))[0] / 60.0
         rdw = rt.get("drip_wall", (0, 0))[0] / 60.0
         rdc = rt.get("drip_center", (0, 0))[0] / 60.0
-        rgl = rt.get("grow_light_main", (0, 0))[0] + rt.get("grow_light_grow", (0, 0))[0]
+        rgl = (
+            rt["grow_light_main"][0] + rt["grow_light_grow"][0]
+            if "grow_light_main" in rt and "grow_light_grow" in rt
+            else None
+        )
 
         # Energy. Electric cost uses published device watts × observed on-time;
         # Shelly metered kWh remains a diagnostic because its circuit coverage is partial.
-        wattages = await _electric_wattages(conn)
-        electric_minutes = {e: rt.get(e, (0, 0))[0] for e in wattages}
+        wattages = await _electric_wattages(conn, yesterday)
+        electric_minutes = {e: (rt[e][0] if e in rt else None) for e in _MODELED_ELECTRIC_EQUIPMENT}
         kwh = _runtime_kwh_from_minutes(electric_minutes, wattages)
-        therms = rh2 / 60.0 * HEAT2_BTU / THERM_BTU
+        therms = rh2 / 60.0 * HEAT2_BTU / THERM_BTU if rh2 is not None else None
         water_row = await conn.fetchrow(
             """
             SELECT quality_filtered_meter_gal, available_for_scoring
@@ -611,10 +712,7 @@ async def grow_light_daily(pool: asyncpg.Pool) -> None:
         water_gal = (
             float(water_row["quality_filtered_meter_gal"]) if water_row and water_row["available_for_scoring"] else None
         )
-        ce = round(kwh * 0.111, 2)
-        cg = round(therms * 0.83, 2)
-        cw = round(water_gal * 0.00484, 2) if water_gal is not None else None
-        ct = round(ce + cg + (cw or 0), 2)
+        cg = round(therms * 0.83, 2) if therms is not None else None
 
         await conn.execute(
             """
@@ -657,12 +755,12 @@ async def grow_light_daily(pool: asyncpg.Pool) -> None:
             rt.get("mister_center", (0, 0))[1],
             rt.get("drip_wall", (0, 0))[1],
             rt.get("drip_center", (0, 0))[1],
-            round(kwh, 2),
-            round(therms, 3),
-            ce,
+            round(kwh, 2) if kwh is not None else None,
+            round(therms, 3) if therms is not None else None,
+            None,
             cg,
-            cw,
-            ct,
+            None,
+            None,
         )
         await conn.execute(
             """
@@ -672,17 +770,25 @@ async def grow_light_daily(pool: asyncpg.Pool) -> None:
             WHERE date = $1
             """,
             yesterday,
-            rt.get("grow_light_main", (0, 0))[0],
-            rt.get("grow_light_grow", (0, 0))[0],
+            rt.get("grow_light_main", (None, 0))[0],
+            rt.get("grow_light_grow", (None, 0))[0],
+        )
+        ce, cg, cw, ct = await _apply_resource_cost_gate(
+            conn,
+            yesterday,
+            kwh=kwh,
+            therms=therms,
+            water_gal=water_gal,
         )
         # B5 / M3: kwh_total comes from the Shelly clamp power integral
         # (v_energy_daily.measured_kwh), which only meters 2 channels and so
         # UNDERCOUNTS whole-greenhouse draw by 3-6.6x (verified: kwh_total ~4-15
         # vs runtime-estimate kwh_estimated ~20-30 on the same day). It is kept
         # for the peak_kw panel and partial-load visibility only. The
-        # AUTHORITATIVE energy + cost figures the planner scores against are
-        # kwh_estimated / cost_* (the runtime-estimate path, written above);
-        # kwh_total must NOT be presented as a reliable whole-house total.
+        # The provenance-bearing runtime model is the whole controlled-equipment
+        # scope, but its scalar/cost remains NULL for scoring while runtime or
+        # coefficient evidence is incomplete/uncertain. kwh_total must NOT be
+        # presented as a reliable whole-house total.
         await conn.execute(
             """
             UPDATE daily_summary ds
@@ -698,11 +804,11 @@ async def grow_light_daily(pool: asyncpg.Pool) -> None:
         )
 
     log.info(
-        "Daily summary (%s): %.1f kWh (runtime-estimate; kwh_total partial-meter, unreliable), %.3f therms, $%.2f",
+        "Daily summary (%s): runtime-model kWh=%s, %.3f therms, eligible total cost=%s",
         yesterday,
-        kwh,
-        therms,
-        ct,
+        f"{kwh:.1f}" if kwh is not None else "unavailable",
+        therms if therms is not None else 0.0,
+        f"${ct:.2f}" if ct is not None else "unavailable",
     )
 
     # ── utility_cost monthly roll-up (idempotent) ──
@@ -710,17 +816,21 @@ async def grow_light_daily(pool: asyncpg.Pool) -> None:
         month_start = yesterday.replace(day=1)
         row = await conn.fetchrow(
             """
-            SELECT ROUND(SUM(COALESCE(cost_electric,0))::numeric, 2) AS ce,
-                   ROUND(SUM(COALESCE(cost_gas,0))::numeric, 2)      AS cg,
-                   ROUND(SUM(COALESCE(cost_water,0))::numeric, 2)    AS cw,
-                   ROUND(SUM(COALESCE(kwh_estimated,0))::numeric, 2) AS kwh,
-                   ROUND(SUM(COALESCE(water_used_gal,0))::numeric, 2) AS gal
+            SELECT ROUND(SUM(cost_electric)::numeric, 2) AS ce,
+                   ROUND(SUM(cost_gas)::numeric, 2)      AS cg,
+                   ROUND(SUM(cost_water)::numeric, 2)    AS cw,
+                   ROUND(SUM(kwh_estimated) FILTER (
+                       WHERE cost_electric IS NOT NULL
+                   )::numeric, 2) AS kwh,
+                   ROUND(SUM(water_used_gal) FILTER (
+                       WHERE cost_water IS NOT NULL
+                   )::numeric, 2) AS gal
             FROM daily_summary
             WHERE date >= $1 AND date < ($1 + INTERVAL '1 month')::date
         """,
             month_start,
         )
-        if row:
+        if row and row["ce"] is not None:
             await conn.execute(
                 """
                 INSERT INTO utility_cost (month, category, amount_usd, kwh, notes)
@@ -732,6 +842,7 @@ async def grow_light_daily(pool: asyncpg.Pool) -> None:
                 row["ce"],
                 row["kwh"],
             )
+        if row and row["cg"] is not None:
             await conn.execute(
                 """
                 INSERT INTO utility_cost (month, category, amount_usd, notes)
@@ -742,6 +853,7 @@ async def grow_light_daily(pool: asyncpg.Pool) -> None:
                 month_start,
                 row["cg"],
             )
+        if row and row["cw"] is not None:
             await conn.execute(
                 """
                 INSERT INTO utility_cost (month, category, amount_usd, gallons, notes)
@@ -759,7 +871,10 @@ async def grow_light_daily(pool: asyncpg.Pool) -> None:
 # ═════════════════════════════════════════════════════════════════
 # 13. LIVE DAILY SUMMARY (every 1800s = 30 min)
 # ═════════════════════════════════════════════════════════════════
-async def _refresh_daily_summary_for_date(conn: asyncpg.Connection, target_day) -> tuple[float, float, float]:
+async def _refresh_daily_summary_for_date(
+    conn: asyncpg.Connection,
+    target_day,
+) -> tuple[float | None, float, float]:
     """Refresh daily_summary derived aggregates for a local greenhouse day."""
     # Ensure row exists
     await conn.execute("INSERT INTO daily_summary (date) VALUES ($1) ON CONFLICT (date) DO NOTHING", target_day)
@@ -995,10 +1110,10 @@ async def _refresh_daily_summary_for_date(conn: asyncpg.Connection, target_day) 
     rt = {r["equipment"]: float(r["on_minutes"] or 0) for r in rt_rows}
     cycles = {r["equipment"]: int(r["cycles"] or 0) for r in rt_rows}
 
-    wattages = await _electric_wattages(conn)
-    electric_minutes = {e: rt.get(e, 0.0) for e in wattages}
+    wattages = await _electric_wattages(conn, target_day)
+    electric_minutes = {e: (rt[e] if e in rt else None) for e in _MODELED_ELECTRIC_EQUIPMENT}
     kwh = _runtime_kwh_from_minutes(electric_minutes, wattages)
-    therms = rt.get("heat2", 0) / 60.0 * 75000 / 100000
+    therms = rt["heat2"] / 60.0 * 75000 / 100000 if "heat2" in rt else None
 
     water_evidence = await conn.fetchrow(
         """
@@ -1016,12 +1131,11 @@ async def _refresh_daily_summary_for_date(conn: asyncpg.Connection, target_day) 
     water_gal = float(water_evidence["quality_filtered_meter_gal"]) if water_available else None
     mister_water_gal = float(water_evidence["climate_wetting_gal"]) if water_available else None
 
-    ce = round(kwh * 0.111, 2)
-    cg = round(therms * 0.83, 2)
-    cw = round(water_gal * 0.00484, 2) if water_gal is not None else None
-    ct = round(ce + cg + (cw or 0), 2)
+    cg = round(therms * 0.83, 2) if therms is not None else None
 
-    gl_min = rt.get("grow_light_main", 0) + rt.get("grow_light_grow", 0)
+    gl_min = (
+        rt["grow_light_main"] + rt["grow_light_grow"] if "grow_light_main" in rt and "grow_light_grow" in rt else None
+    )
     fert_runtime_h = (
         rt.get("drip_wall_fert", 0)
         + rt.get("drip_center_fert", 0)
@@ -1087,24 +1201,24 @@ async def _refresh_daily_summary_for_date(conn: asyncpg.Connection, target_day) 
         float(stress["vpd_high"]) if stress else 0,
         float(stress["cold"]) if stress else 0,
         float(stress["vpd_low"]) if stress else 0,
-        rt.get("fan1", 0),
-        rt.get("fan2", 0),
-        rt.get("heat1", 0),
-        rt.get("heat2", 0),
-        rt.get("fog", 0),
-        rt.get("vent", 0),
+        rt.get("fan1"),
+        rt.get("fan2"),
+        rt.get("heat1"),
+        rt.get("heat2"),
+        rt.get("fog"),
+        rt.get("vent"),
         gl_min,
         rt.get("mister_south", 0) / 60.0,
         rt.get("mister_west", 0) / 60.0,
         rt.get("mister_center", 0) / 60.0,
         rt.get("drip_wall", 0) / 60.0,
         rt.get("drip_center", 0) / 60.0,
-        round(kwh, 2),
-        round(therms, 3),
-        ce,
+        round(kwh, 2) if kwh is not None else None,
+        round(therms, 3) if therms is not None else None,
+        None,
         cg,
-        cw,
-        ct,
+        None,
+        None,
         water_gal,
         mister_water_gal,
         float(dp["min_margin_f"]) if dp and dp["min_margin_f"] is not None else None,
@@ -1126,8 +1240,8 @@ async def _refresh_daily_summary_for_date(conn: asyncpg.Connection, target_day) 
         WHERE date = $1
         """,
         target_day,
-        rt.get("grow_light_main", 0),
-        rt.get("grow_light_grow", 0),
+        rt.get("grow_light_main"),
+        rt.get("grow_light_grow"),
     )
     await conn.execute(
         """
@@ -1166,6 +1280,13 @@ async def _refresh_daily_summary_for_date(conn: asyncpg.Connection, target_day) 
         cycles.get("fert_master_valve", 0),
         irrigation_water_gal,
         fertigation_water_gal,
+    )
+    _, _, _, ct = await _apply_resource_cost_gate(
+        conn,
+        target_day,
+        kwh=kwh,
+        therms=therms,
+        water_gal=water_gal,
     )
     # B5 / M3: kwh_total = Shelly 2-channel partial meter (undercounts whole-house
     # draw 3-6.6x). Kept for peak_kw / partial-load visibility only. The planner
@@ -1335,9 +1456,9 @@ async def daily_summary_live(pool: asyncpg.Pool) -> None:
 
     latest_day, ct, temp_max, compliance_pct = refreshed[0]
     log.info(
-        "Daily summary live: %s $%.2f, %.1f°F max, compliance %.1f%% (yesterday also refreshed)",
+        "Daily summary live: %s eligible-cost=%s, %.1f°F max, compliance %.1f%% (yesterday also refreshed)",
         latest_day,
-        ct,
+        f"${ct:.2f}" if ct is not None else "unavailable",
         temp_max,
         compliance_pct,
     )

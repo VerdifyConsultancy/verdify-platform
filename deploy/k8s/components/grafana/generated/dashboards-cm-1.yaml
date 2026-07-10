@@ -4363,7 +4363,7 @@ data:
                 "uid": "verdify-tsdb",
                 "type": "grafana-postgresql-datasource"
               },
-              "rawSql": "SELECT now() AS time, COALESCE(SUM(quality_filtered_meter_gal), 0) AS v FROM v_water_attribution_daily WHERE $__timeFilter((date + time '12:00')::timestamptz)",
+              "rawSql": "SELECT now() AS time, SUM(quality_filtered_meter_gal) AS v FROM v_water_attribution_daily WHERE $__timeFilter((date + time '12:00')::timestamptz) AND available_for_scoring",
               "format": "table",
               "refId": "A"
             }
@@ -4387,7 +4387,7 @@ data:
             "colorMode": "value",
             "graphMode": "none"
           },
-          "description": "Accepted event-ledger deltas only. This includes degraded days for visibility; quality and scoring eligibility remain explicit in the attribution panel.",
+          "description": "Accepted event-ledger deltas only for completed, conserving, watermark-covered days. Unavailable or degraded selections render null rather than zero.",
           "transparent": true
         },
         {
@@ -4438,7 +4438,7 @@ data:
           "transparent": true
         },
         {
-          "description": "Accepted meter gallons partitioned into single-run attribution, ambiguous overlap, and manual/unattributed remainder. The components conserve the meter total; command-only relay runs are never gallons.",
+          "description": "Eligible meter gallons partitioned into single-run attribution, ambiguous overlap, and manual/unattributed remainder. The components conserve the meter total; unavailable/degraded days are excluded and command-only relay runs are never gallons.",
           "fieldConfig": {
             "defaults": {
               "custom": {
@@ -4473,7 +4473,7 @@ data:
           "targets": [
             {
               "format": "time_series",
-              "rawSql": "SELECT $__time((date + time '12:00')::timestamptz), attributed_gal AS \"Meter-attributed (gal)\", ambiguous_gal AS \"Ambiguous overlap (gal)\", manual_or_unattributed_gal AS \"Manual / unattributed (gal)\", quality_filtered_meter_gal AS \"Accepted meter total (gal)\" FROM v_water_attribution_daily WHERE $__timeFilter((date + time '12:00')::timestamptz) ORDER BY date",
+              "rawSql": "SELECT $__time((date + time '12:00')::timestamptz), attributed_gal AS \"Meter-attributed (gal)\", ambiguous_gal AS \"Ambiguous overlap (gal)\", manual_or_unattributed_gal AS \"Manual / unattributed (gal)\", quality_filtered_meter_gal AS \"Accepted meter total (gal)\" FROM v_water_attribution_daily WHERE $__timeFilter((date + time '12:00')::timestamptz) AND available_for_scoring ORDER BY date",
               "refId": "A"
             }
           ],
@@ -7195,7 +7195,7 @@ data:
                 "uid": "verdify-tsdb",
                 "type": "grafana-postgresql-datasource"
               },
-              "rawSql": "SELECT now() AS time, ROUND(AVG(cost_total)::numeric, 2) AS v FROM daily_summary WHERE date >= current_date - interval '30 days' AND date < current_date AND cost_total > 0",
+              "rawSql": "SELECT now() AS time, ROUND(AVG(cost_total)::numeric, 2) AS v FROM v_daily_kpi WHERE date >= current_date - interval '30 days' AND date < current_date AND resource_terms_available",
               "format": "table",
               "refId": "A"
             }
@@ -7219,7 +7219,7 @@ data:
             "colorMode": "value",
             "graphMode": "none"
           },
-          "description": "Average daily total cost across the last 30 completed daily summaries.",
+          "description": "Average daily total cost only where conserved water and the whole-runtime energy model are both scoring-eligible. Unavailable or uncertain resource days remain null.",
           "transparent": true
         },
         {

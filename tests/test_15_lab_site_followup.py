@@ -246,12 +246,18 @@ def test_resource_dashboards_label_scope_quality_and_no_legacy_catalog():
     assert "coefficient_revision" in climate_text
     assert "Modeled kWh low" in climate_text
     assert "partial Shelly" in climate_text
+    assert "v_daily_kpi" in climate_text
+    assert "resource_terms_available" in climate_text
+    assert "AVG(cost_total)::numeric, 2) AS v FROM daily_summary" not in climate_text
+    assert "AVG(cost_total)::numeric, 2) AS v FROM v_daily_kpi" in climate_text
 
     assert "v_water_attribution_daily" in water_text
     assert "Meter-Conserving Water Attribution" in water_text
     assert "Ambiguous overlap" in water_text
     assert "Manual / unattributed" in water_text
     assert "command-only relay runs are never gallons" in water_text
+    assert "COALESCE(SUM(quality_filtered_meter_gal), 0)" not in water_text
+    assert water_text.count("available_for_scoring") >= 4
 
     assert "Wet-relay runtime is never delivered gallons" in equipment_text
     assert "partial Shelly measurement" in equipment_text

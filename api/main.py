@@ -2526,6 +2526,13 @@ async def public_home_metrics(greenhouse_id: str = DEFAULT_GREENHOUSE):
         last_plan_created_at=last_plan["created_at"] if last_plan else None,
         last_plan_age_s=last_plan["age_s"] if last_plan else None,
         planner_score_today=scorecard.get("planner_score"),
+        planner_score_scope=(
+            "climate_plus_resource"
+            if scorecard.get("resource_terms_available") == 1.0
+            else "climate_only_resource_excluded"
+        ),
+        planner_score_resource_weight_pct=scorecard.get("planner_score_resource_weight_pct") or 0,
+        planner_score_resource_terms_available=scorecard.get("resource_terms_available") == 1.0,
         compliance_pct_today=scorecard.get("compliance_pct"),
         cost_today_usd=(
             scorecard.get("cost_total")
@@ -2774,6 +2781,13 @@ async def public_evidence_snapshot(greenhouse_id: str = DEFAULT_GREENHOUSE):
         "climate_age_seconds": latest_climate["age_s"] if latest_climate else None,
         "open_critical_high_alerts": open_critical_high or 0,
         "planner_score_today": scorecard.get("planner_score"),
+        "planner_score_scope": (
+            "climate_plus_resource"
+            if scorecard.get("resource_terms_available") == 1.0
+            else "climate_only_resource_excluded"
+        ),
+        "planner_score_resource_weight_pct": scorecard.get("planner_score_resource_weight_pct") or 0,
+        "planner_score_resource_terms_available": scorecard.get("resource_terms_available") == 1.0,
         "both_axis_compliance_pct": scorecard.get("compliance_pct"),
         "graded_compliance_attributable_pct": scorecard.get("compliance_v2_attributable_pct"),
         "temp_compliance_pct": scorecard.get("temp_compliance_pct"),
@@ -2809,6 +2823,13 @@ async def public_evidence_snapshot(greenhouse_id: str = DEFAULT_GREENHOUSE):
         "planner_health": planner_health_payload,
         "planning_quality": {
             "planner_score_today": scorecard.get("planner_score"),
+            "planner_score_scope": (
+                "climate_plus_resource"
+                if scorecard.get("resource_terms_available") == 1.0
+                else "climate_only_resource_excluded"
+            ),
+            "planner_score_resource_weight_pct": scorecard.get("planner_score_resource_weight_pct") or 0,
+            "resource_terms_available": scorecard.get("resource_terms_available") == 1.0,
             "both_axis_compliance_pct": scorecard.get("compliance_pct"),
             "graded_compliance_attributable_pct": scorecard.get("compliance_v2_attributable_pct"),
             "temp_compliance_pct": scorecard.get("temp_compliance_pct"),

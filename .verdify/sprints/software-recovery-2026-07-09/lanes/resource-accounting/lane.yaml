@@ -45,8 +45,13 @@ ownership:
     - db/schema.sql
     - ingestor/tasks/daily.py
     - ingestor/tasks/ha.py
+    - ingestor/ingestor.py
     - scripts/import-vault-topology.py
     - verdify_schemas/topology.py
+    - verdify_schemas/__init__.py
+    - verdify_schemas/api.py
+    - verdify_schemas/mcp_responses.py
+    - verdify_schemas/tests/test_topology.py
     - mcp/server.py
     - api/main.py
     - grafana/dashboards/site-climate.json
@@ -54,6 +59,7 @@ ownership:
     - grafana/dashboards/site-greenhouse-equipment.json
     - scripts/render-equipment-page.py
     - tests/test_02_database.py
+    - tests/test_12_fidelity.py
     - tests/test_15_lab_site_followup.py
   prohibited_paths:
     - firmware/**
@@ -65,6 +71,13 @@ ownership:
     - db/migrations/195-*.sql
     - scripts/daily-summary-snapshot.py
     - scripts/render-equipment-page.py
+  granted_coordination_paths:
+    - path: deploy/k8s/components/grafana/generated/**
+      granted_by: software-recovery controller
+      reason: Regenerate provisioned ConfigMaps from lane-owned dashboard sources.
+    - path: scripts/render-equipment-page.py
+      granted_by: software-recovery controller
+      reason: Preserve the merged fail-closed credential contract while exposing resource provenance.
   owned_interfaces:
     - canonical active equipment alias contract
     - revisioned resource coefficient

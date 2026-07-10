@@ -138,6 +138,7 @@ def _equipment_catalog(rows: list[asyncpg.Record]) -> str:
                 row["name"],
                 model,
                 zone,
+                row["resource_kind"] or "unavailable",
                 _fmt_coefficient(row),
                 row["coefficient_source"] or "unavailable",
                 row["coefficient_revision"] or "-",
@@ -145,9 +146,20 @@ def _equipment_catalog(rows: list[asyncpg.Record]) -> str:
             )
         )
     return _lab_table(
-        ["Slug", "Kind", "Name", "Model", "Zone", "Modeled coefficient", "Source", "Revision", "Cost/hr"],
+        [
+            "Slug",
+            "Kind",
+            "Name",
+            "Model",
+            "Zone",
+            "Resource",
+            "Modeled coefficient",
+            "Source",
+            "Revision",
+            "Cost/hr",
+        ],
         rendered_rows,
-        nowrap_cols={0, 1, 4, 6, 7, 8},
+        nowrap_cols={0, 1, 4, 5, 7, 8, 9},
     )
 
 
@@ -190,13 +202,23 @@ async def main_async(args: argparse.Namespace) -> int:
         equipment = await conn.fetch(
             """
             SELECT e.slug, e.kind, e.name, e.model, z.slug AS zone_slug,
+                   c.resource_kind,
                    c.coefficient_nominal, c.coefficient_low, c.coefficient_high,
                    c.unit AS coefficient_unit, c.coefficient_source,
                    c.coefficient_revision, e.cost_per_hour_usd
             FROM equipment e
             LEFT JOIN zones z ON z.id = e.zone_id
-            LEFT JOIN v_equipment_resource_catalog c
-              ON c.equipment_id = e.id AND c.resource_kind = 'electric_watts'
+            LEFT JOIN LATERAL (
+                SELECT catalog.*
+                FROM v_equipment_resource_catalog catalog
+                WHERE catalog.equipment_id = e.id
+                ORDER BY CASE catalog.resource_kind
+                    WHEN 'electric_watts' THEN 0
+                    WHEN 'gas_btu_per_hour' THEN 1
+                    ELSE 2
+                END
+                LIMIT 1
+            ) c ON true
             WHERE e.greenhouse_id = 'vallery' AND e.is_active
             ORDER BY e.kind, e.slug
             """

@@ -388,7 +388,7 @@ async def climate() -> str:
 
 @mcp.tool()
 async def scorecard(target_date: str = "") -> str:
-    """Get the planner scorecard — 25 KPI metrics for a given day.
+    """Get the planner scorecard for a given day.
     Includes: planner_score, compliance_v2_attributable_pct (the current scored
     compliance field), dev_temp_norm_median_day/night + dev_temp_norm_p95
     (+ dev_vpd_*) as target-reference diagnostics only, compliance_v2_raw_pct,
@@ -414,6 +414,12 @@ async def scorecard(target_date: str = "") -> str:
     compliance_v2_raw_pct and compliance_v2_unachievable_frac are reported context — a
     high unachievable_frac should cue WIDENING the served envelope, not working the
     actuators harder.
+
+    Resource cost receives its historical 20% weight only when conserved water
+    and the whole-runtime energy model are both scoring-eligible. Otherwise the
+    climate term is normalized to 100% and resource scalars remain null; inspect
+    planner_score_resource_weight_pct and resource_terms_available before comparing
+    scores across scopes.
 
     The scorecard still reads compliance_v2_attributable_pct per day and falls back
     to the legacy binary compliance_pct (% of readings with BOTH temp and VPD in the
