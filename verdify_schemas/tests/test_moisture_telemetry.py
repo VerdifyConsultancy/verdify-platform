@@ -238,7 +238,7 @@ class TestKeyAgreementDriftGuards:
         capacity_match = re.search(r"char\s+moisture_exchange\[(\d+)\]", src)
         assert capacity_match, "fixed moisture_exchange buffer missing"
         capacity = int(capacity_match.group(1))
-        assert "\"\\\"outdoor_data_age_s\\\":%u,\"" in src
+        assert '"\\"outdoor_data_age_s\\":%u,"' in src
         assert "sensor_in.outdoor_data_age_s" in src
         assert "moisture_exchange_len < 0" in src
         assert "sizeof(moisture_exchange)" in src

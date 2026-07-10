@@ -380,6 +380,7 @@ def test_retired_irrigation_clocks_fert_cadence_and_center_bursts_are_not_writab
     }
     assert firmware_ids.isdisjoint(forbidden_entity_ids)
 
+
 # (#410 staging stanza removed: PR #418 merged the cfg_dehum_vent_hold_enabled
 # sensor into firmware/greenhouse/sensors.yaml, so the self-shrinking allowlist
 # entry for cfg___dehum_vent_hold_enabled had already shrunk to nothing, and

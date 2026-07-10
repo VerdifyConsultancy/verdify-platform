@@ -177,12 +177,19 @@ class TestAnchorContract:
         """Writes use canonical names; readbacks use exact ESPHome wire slugs."""
         from verdify_schemas.tunable_registry import FIRMWARE_V2_CFG_WIRE_IDS
 
+        retired_center_watering_offsets = {"dawn_boost_offset_min", "midday_boost_offset_min"}
         for name in band_anchors.ANCHOR_SYNC_PARAMS:
             spec = REGISTRY[name]
-            assert spec.esp_object_id == name
             assert spec.cfg_readback_object_id == FIRMWARE_V2_CFG_WIRE_IDS[name]
-            assert spec.push_owner == "band"
             assert spec.planner_pushable is False, f"{name} must not be planner-authorable"
+            if name in retired_center_watering_offsets:
+                assert spec.esp_object_id is None
+                assert spec.default == 0
+                assert spec.push_owner == "firmware_internal"
+                assert spec.control_class == "retired"
+            else:
+                assert spec.esp_object_id == name
+                assert spec.push_owner == "band"
 
     def test_zone_crop_mapping(self):
         assert band_anchors.ZONE_CROP == {

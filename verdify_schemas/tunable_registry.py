@@ -3275,10 +3275,7 @@ for _name in _INERT_IRRIGATION_COMPAT_TUNABLES:
             "esp_object_id": None,
             "push_owner": "firmware_internal",
             "planner_pushable": False,
-            "notes": (
-                "Retired irrigation compatibility readback; ignored by firmware "
-                "and fixed at zero."
-            ),
+            "notes": ("Retired irrigation compatibility readback; ignored by firmware and fixed at zero."),
         }
     )
 

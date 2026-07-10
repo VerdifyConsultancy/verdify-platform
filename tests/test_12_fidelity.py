@@ -2600,12 +2600,8 @@ def test_fert_master_valve_is_wired_and_interlocked_with_fert_relays():
     )
     flush_start = controls.index('ESP_LOGI("irrig", "WALL IMMEDIATE CLEAN FLUSH')
     flush_block = controls[controls.rfind("} else if(id(irrig_state) == 6)", 0, flush_start) : flush_start]
-    assert flush_block.index("id(wall_drips_fertilized).turn_off();") < flush_block.index(
-        "id(wall_drips).turn_on();"
-    )
-    assert flush_block.index("id(fertilizer_master_valve).turn_off();") < flush_block.index(
-        "id(wall_drips).turn_on();"
-    )
+    assert flush_block.index("id(wall_drips_fertilized).turn_off();") < flush_block.index("id(wall_drips).turn_on();")
+    assert flush_block.index("id(fertilizer_master_valve).turn_off();") < flush_block.index("id(wall_drips).turn_on();")
 
 
 def test_clean_water_relays_reject_direct_on_and_keep_controller_paths():
