@@ -32,9 +32,29 @@ def get_planner_service(request: Request):
     return request.app.state.planner_service
 
 
+@router.get("/livez")
+def livez() -> dict[str, object]:
+    """Process-only liveness; worker/store truth belongs to /health readiness."""
+    return {"live": True, "production_authority": "non-authoritative"}
+
+
 @router.get("/health", response_model=HealthResponse)
 def health(request: Request) -> HealthResponse:
     planner_service = get_planner_service(request)
+    worker_health = planner_service.worker.health()
+    if not worker_health.alive or not worker_health.ready:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail={
+                "service": "unavailable",
+                "production_authority": "non-authoritative",
+                "worker_alive": worker_health.alive,
+                "worker_ready": worker_health.ready,
+                "consecutive_store_failures": worker_health.consecutive_store_failures,
+                "retry_delay_seconds": worker_health.retry_delay_seconds,
+                "last_error_class": worker_health.last_error_class,
+            },
+        )
     checkpoint = (
         "postgres"
         if planner_service.settings.planner_store_backend == "postgres"
@@ -46,6 +66,11 @@ def health(request: Request) -> HealthResponse:
     return HealthResponse(
         checkpoint=checkpoint,
         openai=openai_status,
+        worker="ready",
+        db="ok",
+        consecutive_store_failures=worker_health.consecutive_store_failures,
+        retry_delay_seconds=worker_health.retry_delay_seconds,
+        last_error_class=worker_health.last_error_class,
     )
 
 

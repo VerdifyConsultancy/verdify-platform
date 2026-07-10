@@ -47,6 +47,11 @@ async def _upsert_delivery(result: dict) -> int | None:
     explicit_status = result.get("status")
     if explicit_status is None and result.get("delivered") is False and result.get("gateway_status") is not None:
         explicit_status = "delivery_failed"
+    terminal_action = result.get("terminal_action")
+    failure_class = result.get("failure_class")
+    if explicit_status == "delivery_failed":
+        terminal_action = terminal_action or "delivery_failed"
+        failure_class = failure_class or "gateway_delivery_failed"
     if explicit_status is not None:
         row["status"] = explicit_status
     try:
@@ -60,8 +65,10 @@ async def _upsert_delivery(result: dict) -> int | None:
             """
             INSERT INTO plan_delivery_log AS pdl
               (event_type, event_label, session_key, wake_mode, gateway_status, gateway_body,
-               status, trigger_id, instance, hermes_run_id)
-            VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, 'pending'), $8::uuid, $9, $10)
+               status, trigger_id, instance, hermes_run_id,
+               terminal_action, terminal_at, failure_class)
+            VALUES ($1, $2, $3, $4, $5, $6, COALESCE($7, 'pending'), $8::uuid, $9, $10,
+                    $11, CASE WHEN $11::text IS NULL THEN NULL ELSE now() END, $12)
             ON CONFLICT (trigger_id) DO UPDATE
               SET event_type     = EXCLUDED.event_type,
                   event_label    = EXCLUDED.event_label,
@@ -71,8 +78,18 @@ async def _upsert_delivery(result: dict) -> int | None:
                   gateway_body   = COALESCE(EXCLUDED.gateway_body, pdl.gateway_body),
                   instance       = COALESCE(EXCLUDED.instance, pdl.instance),
                   hermes_run_id  = COALESCE(EXCLUDED.hermes_run_id, pdl.hermes_run_id),
+                  terminal_action = COALESCE(pdl.terminal_action, $11::text),
+                  terminal_at = CASE
+                                  WHEN pdl.terminal_at IS NOT NULL THEN pdl.terminal_at
+                                  WHEN $11::text IS NOT NULL THEN now()
+                                  ELSE NULL
+                                END,
+                  failure_class = COALESCE(pdl.failure_class, $12::text),
                   status         = CASE
-                                     WHEN pdl.status IN ('acked', 'plan_written') THEN pdl.status
+                                     WHEN pdl.status IN (
+                                         'acked', 'plan_written', 'action_completed',
+                                         'neutral_fallback', 'wrong_action'
+                                     ) THEN pdl.status
                                      ELSE EXCLUDED.status
                                    END
             RETURNING id
@@ -87,6 +104,8 @@ async def _upsert_delivery(result: dict) -> int | None:
             row["trigger_id"],
             row["instance"],
             row["hermes_run_id"],
+            terminal_action,
+            failure_class,
         )
     finally:
         await conn.close()

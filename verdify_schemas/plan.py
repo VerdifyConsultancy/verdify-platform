@@ -9,6 +9,8 @@ to the database.
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
+from datetime import datetime, timedelta
 from typing import Annotated, Literal
 from uuid import UUID
 
@@ -88,6 +90,8 @@ class Plan(BaseModel):
     experiment: str | None = Field(default=None, max_length=20000)
     expected_outcome: str | None = Field(default=None, max_length=20000)
     transitions: list[PlanTransition] = Field(..., min_length=1)
+    valid_from: AwareDatetime | None = None
+    expires_at: AwareDatetime | None = None
 
     @model_validator(mode="after")
     def _validate_transitions_ordered(self) -> Plan:
@@ -101,7 +105,34 @@ class Plan(BaseModel):
                     f"Plan transitions must be strictly ts-ascending (got {t.ts} after {prev})",
                 )
             prev = t.ts
+        effective_from = self.valid_from or self.transitions[0].ts
+        expires_at = self.expires_at or (self.transitions[-1].ts + timedelta(hours=6))
+        if effective_from > self.transitions[0].ts:
+            raise ValueError("Plan valid_from may not be after the first transition")
+        if expires_at <= self.transitions[-1].ts:
+            raise ValueError("Plan expires_at must be after the final transition")
+        if expires_at <= effective_from:
+            raise ValueError("Plan expires_at must be after valid_from")
+        if expires_at > effective_from + timedelta(hours=78):
+            raise ValueError("Plan validity may not exceed the 72-hour horizon plus a 6-hour terminal hold")
+        self.valid_from = effective_from
+        self.expires_at = expires_at
         return self
+
+
+def plan_current_coverage_error(plan: Plan, now: datetime) -> str | None:
+    """Return why a full plan cannot safely become the current effective plan."""
+    if now.tzinfo is None or now.utcoffset() is None:
+        raise ValueError("plan coverage reference time must be timezone-aware")
+    if plan.valid_from is None or plan.expires_at is None:
+        return "plan validity bounds were not resolved"
+    if plan.valid_from > now:
+        return "plan is not yet valid"
+    if plan.expires_at <= now:
+        return "plan is already expired"
+    if plan.transitions[0].ts > now:
+        return "plan has a gap before its first transition"
+    return None
 
 
 # ── Structured hypothesis (Phase 5) ────────────────────────────────
@@ -249,13 +280,71 @@ PlanDeliveryEventType = Literal[
     "DEVIATION",
     "FORECAST_DEVIATION",
     "HEARTBEAT",
+    "WEEKLY",
     "MANUAL",
 ]
 # v1.4 (contract §2.G): opus | local are the post-rollout instance values.
 # "iris-planner" is the backfill label for pre-v1.4 rows.
 PlannerInstance = Literal["opus", "local", "iris-planner"]
 # v1.4 (contract §2.F): lifecycle state on plan_delivery_log.
-PlanDeliveryStatus = Literal["pending", "acked", "plan_written", "timed_out", "delivery_failed"]
+PlanDeliveryStatus = Literal[
+    "pending",
+    "acked",
+    "plan_written",
+    "action_completed",
+    "neutral_fallback",
+    "wrong_action",
+    "timed_out",
+    "delivery_failed",
+]
+PlanTerminalAction = Literal[
+    "set_plan",
+    "set_tunable",
+    "acknowledge_trigger",
+    "neutral_fallback",
+    "wrong_action",
+    "timeout",
+    "delivery_failed",
+]
+
+
+@dataclass(frozen=True)
+class PlannerTerminalResult:
+    status: PlanDeliveryStatus
+    terminal_action: PlanTerminalAction
+    failure_class: str | None
+    satisfies_required_plan: bool
+
+
+def classify_planner_terminal_action(
+    *,
+    expected_action: str,
+    actual_action: Literal["set_plan", "set_tunable", "acknowledge_trigger"],
+    valid_full_plan: bool = False,
+    explicit_neutral: bool = False,
+) -> PlannerTerminalResult:
+    """Classify one planner action without conflating acceptance and activity."""
+    if actual_action == "set_plan" and valid_full_plan:
+        return PlannerTerminalResult("plan_written", "set_plan", None, expected_action == "set_plan")
+    if expected_action == "set_plan":
+        if explicit_neutral and actual_action == "acknowledge_trigger":
+            return PlannerTerminalResult(
+                "neutral_fallback",
+                "neutral_fallback",
+                "explicit_neutral_fallback",
+                False,
+            )
+        return PlannerTerminalResult(
+            "wrong_action",
+            "wrong_action",
+            f"required_set_plan_received_{actual_action}",
+            False,
+        )
+    if actual_action == "set_tunable":
+        return PlannerTerminalResult("action_completed", "set_tunable", None, False)
+    if actual_action == "acknowledge_trigger":
+        return PlannerTerminalResult("acked", "acknowledge_trigger", None, False)
+    return PlannerTerminalResult("wrong_action", "wrong_action", "invalid_set_plan", False)
 
 
 class PlanDeliveryLogRow(BaseModel):
@@ -289,3 +378,7 @@ class PlanDeliveryLogRow(BaseModel):
     acked_at: AwareDatetime | None = None
     status: PlanDeliveryStatus | None = None
     hermes_run_id: str | None = None
+    terminal_action: PlanTerminalAction | None = None
+    terminal_at: AwareDatetime | None = None
+    failure_class: str | None = None
+    result_payload: dict[str, object] | None = None

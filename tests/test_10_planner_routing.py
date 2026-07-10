@@ -8,7 +8,7 @@ overrides. Run independent of the live stack.
 from __future__ import annotations
 
 import sys
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -21,9 +21,11 @@ from planner_routing import (  # noqa: E402
     _DEFAULT_SLA_MIN,
     RoutingConfig,
     SeverityContext,
+    classify_planner_terminal_action,
     classify_severity,
     load_routing_config,
     pick_instance,
+    required_trigger_disposition,
     sla_for,
 )
 
@@ -257,3 +259,69 @@ def test_routing_config_is_frozen():
     )
     with pytest.raises((AttributeError, Exception)):  # dataclass frozen raises FrozenInstanceError
         cfg.forecast_major_delta_vpd_kpa = 0.8  # type: ignore[misc]
+
+
+@pytest.mark.parametrize(
+    "actual,valid,neutral,status,terminal,satisfies",
+    [
+        ("set_plan", True, False, "plan_written", "set_plan", True),
+        ("set_tunable", False, False, "wrong_action", "wrong_action", False),
+        ("acknowledge_trigger", False, False, "wrong_action", "wrong_action", False),
+        (
+            "acknowledge_trigger",
+            False,
+            True,
+            "neutral_fallback",
+            "neutral_fallback",
+            False,
+        ),
+    ],
+)
+def test_required_set_plan_terminal_actions_are_truthful(actual, valid, neutral, status, terminal, satisfies):
+    result = classify_planner_terminal_action(
+        expected_action="set_plan",
+        actual_action=actual,
+        valid_full_plan=valid,
+        explicit_neutral=neutral,
+    )
+
+    assert result.status == status
+    assert result.terminal_action == terminal
+    assert result.satisfies_required_plan is satisfies
+
+
+def test_routine_actions_remain_distinct_terminal_classes():
+    tunable = classify_planner_terminal_action(expected_action="any", actual_action="set_tunable")
+    ack = classify_planner_terminal_action(expected_action="any", actual_action="acknowledge_trigger")
+
+    assert (tunable.status, tunable.terminal_action) == ("action_completed", "set_tunable")
+    assert (ack.status, ack.terminal_action) == ("acked", "acknowledge_trigger")
+
+
+@pytest.mark.parametrize(
+    "status,terminal,due_delta,expected",
+    [
+        ("plan_written", "set_plan", 30, "complete"),
+        ("delivered", None, 30, "wait"),
+        ("delivered", None, -1, "retry"),
+        ("neutral_fallback", "neutral_fallback", 30, "wait"),
+        ("neutral_fallback", "neutral_fallback", -1, "retry"),
+        ("wrong_action", "wrong_action", 30, "retry"),
+        ("timed_out", "timeout", -1, "retry"),
+        ("delivery_failed", "delivery_failed", -1, "retry"),
+        ("action_completed", "set_tunable", 30, "retry"),
+        ("acked", "acknowledge_trigger", 30, "retry"),
+    ],
+)
+def test_required_trigger_terminal_outcomes_do_not_become_retry_dead_ends(status, terminal, due_delta, expected):
+    now = datetime(2026, 7, 10, 12, tzinfo=UTC)
+
+    assert (
+        required_trigger_disposition(
+            status=status,
+            terminal_action=terminal,
+            due_at=now + timedelta(minutes=due_delta),
+            now=now,
+        )
+        == expected
+    )

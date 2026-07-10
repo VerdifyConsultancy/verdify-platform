@@ -139,6 +139,8 @@ spec:
             # compose:375 VERDIFY_SLACK_CONFIG=/opt/data/slack.yaml (on the PVC).
             - name: VERDIFY_SLACK_CONFIG
               value: /opt/data/slack.yaml
+            - name: HERMES_MCP_READINESS_URL
+              value: http://verdify-mcp.verdify-prod.svc:8000/readyz
           securityContext:
             allowPrivilegeEscalation: false
             # hermes writes run state under /opt/data (PVC); root FS can stay RO.
@@ -163,15 +165,19 @@ spec:
             - name: tmp
               mountPath: /tmp
           livenessProbe:
-            tcpSocket:
-              port: gateway
-            initialDelaySeconds: 30
-            periodSeconds: 30
+            exec:
+              command: ["python3", "/etc/verdify/hermes-config/tool-readiness.py", "--mode", "liveness"]
+            initialDelaySeconds: 45
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 1
           readinessProbe:
-            tcpSocket:
-              port: gateway
+            exec:
+              command: ["python3", "/etc/verdify/hermes-config/tool-readiness.py", "--mode", "readiness"]
             initialDelaySeconds: 15
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 1
       volumes:
         - name: data
           persistentVolumeClaim:

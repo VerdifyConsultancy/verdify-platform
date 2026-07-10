@@ -26,6 +26,181 @@ metadata:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: hermes-iris
 data:
+  tool-readiness.py: |
+    """Hermes probes: configured tools, MCP server, and in-process client state."""
+    import argparse
+    import datetime
+    import json
+    import os
+    import re
+    import sys
+    import urllib.request
+
+    REQUIRED = {
+        "acknowledge_trigger", "alerts", "climate", "crop_history",
+        "crop_lifecycle", "crops", "equipment_state", "forecast",
+        "get_setpoints", "history", "knowledge_search", "lessons",
+        "lessons_manage", "lessons_search", "observations", "plan_evaluate",
+        "plan_status", "position_current", "scorecard", "set_plan",
+        "set_tunable", "slack_ops", "topology",
+    }
+    LOG_TIMESTAMP = re.compile(r"^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2},\d{3})")
+    CONNECTED = (
+        "MCP server 'verdify_greenhouse' (HTTP): registered",
+    )
+    DISCONNECTED = (
+        "MCP server 'verdify_greenhouse' connection lost",
+        "MCP server 'verdify_greenhouse' is not connected",
+        "MCP server 'verdify_greenhouse' is unreachable after",
+        "Failed to connect to MCP server 'verdify_greenhouse'",
+    )
+    FATAL = (
+        "MCP server 'verdify_greenhouse' failed after",
+        "MCP server 'verdify_greenhouse' failed initial connection after",
+    )
+
+    def configured_tool_names(config):
+        """Parse only the exact tools.include YAML sequence, without substrings."""
+        tools_indent = None
+        include_indent = None
+        names = set()
+        for raw_line in config.splitlines():
+            if not raw_line.strip() or raw_line.lstrip().startswith("#"):
+                continue
+            indent = len(raw_line) - len(raw_line.lstrip())
+            stripped = raw_line.strip()
+            if tools_indent is None:
+                if stripped == "tools:":
+                    tools_indent = indent
+                continue
+            if include_indent is None:
+                if indent <= tools_indent:
+                    tools_indent = None
+                    if stripped == "tools:":
+                        tools_indent = indent
+                    continue
+                if stripped == "include:":
+                    include_indent = indent
+                continue
+            if indent <= include_indent:
+                break
+            if stripped.startswith("- "):
+                name = stripped[2:].split("#", 1)[0].strip().strip("'\"")
+                if name:
+                    names.add(name)
+        return names
+
+    def process_start_epoch(pid=1):
+        """Return the container main process start time from procfs."""
+        with open("/proc/stat", encoding="utf-8") as proc_stat:
+            boot_epoch = next(
+                float(line.split()[1])
+                for line in proc_stat
+                if line.startswith("btime ")
+            )
+        with open(f"/proc/{pid}/stat", encoding="utf-8") as process_stat:
+            start_ticks = float(process_stat.read().split()[21])
+        return boot_epoch + (start_ticks / os.sysconf("SC_CLK_TCK"))
+
+    def _line_epoch(line):
+        match = LOG_TIMESTAMP.match(line)
+        if not match:
+            return None
+        stamp = datetime.datetime.strptime(match.group(1), "%Y-%m-%d %H:%M:%S,%f")
+        return stamp.replace(tzinfo=datetime.timezone.utc).timestamp()
+
+    def hermes_client_state(log_paths, started_at):
+        """Reduce post-start Hermes log markers to connected/disconnected/fatal."""
+        events = []
+        for path in log_paths:
+            try:
+                with open(path, encoding="utf-8", errors="replace") as stream:
+                    for sequence, line in enumerate(stream):
+                        event_at = _line_epoch(line)
+                        # Persistent PVC logs survive pod replacement. Untimestamped
+                        # and pre-start lines can never describe this process.
+                        if event_at is None or event_at < started_at - 2:
+                            continue
+                        events.append((event_at, sequence, line))
+            except FileNotFoundError:
+                continue
+        state = "unknown"
+        fatal = False
+        last_event_at = None
+        for event_at, _sequence, line in sorted(events):
+            if any(marker in line for marker in FATAL) and "giving up" in line:
+                state = "fatal"
+                fatal = True
+                last_event_at = event_at
+            elif any(marker in line for marker in CONNECTED):
+                state = "connected"
+                fatal = False
+                last_event_at = event_at
+            elif any(marker in line for marker in DISCONNECTED):
+                state = "disconnected"
+                last_event_at = event_at
+        return {
+            "state": state,
+            "fatal": fatal,
+            "last_event_at": last_event_at,
+        }
+
+    def mcp_server_ready():
+        url = os.environ.get(
+            "HERMES_MCP_READINESS_URL",
+            "http://verdify-mcp.verdify-prod.svc:8000/readyz",
+        )
+        try:
+            with urllib.request.urlopen(url, timeout=4) as response:
+                payload = json.load(response)
+                status = response.status
+        except Exception as exc:
+            return False, [], type(exc).__name__
+        missing = sorted(REQUIRED - set(payload.get("required_tools", [])))
+        ready = status == 200 and payload.get("ready") is True and not missing
+        return ready, missing, None
+
+    def main(argv=None):
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--mode", choices=("readiness", "liveness"), default="readiness")
+        args = parser.parse_args(argv)
+        configured_start = os.environ.get("HERMES_PROCESS_START_EPOCH")
+        started_at = float(configured_start) if configured_start else process_start_epoch()
+        log_paths = os.environ.get(
+            "HERMES_CLIENT_LOG_PATHS",
+            "/opt/data/logs/agent.log:/opt/data/logs/errors.log",
+        ).split(":")
+        client = hermes_client_state(log_paths, started_at)
+        if args.mode == "liveness":
+            alive = not client["fatal"]
+            print(json.dumps({"alive": alive, "client": client}, sort_keys=True))
+            return 0 if alive else 1
+
+        with open("/opt/data/config.yaml", encoding="utf-8") as config_file:
+            configured = configured_tool_names(config_file.read())
+        missing_configured = sorted(REQUIRED - configured)
+        unexpected_configured = sorted(configured - REQUIRED)
+        server_ready, missing_server_tools, server_error = mcp_server_ready()
+        ready = (
+            not missing_configured
+            and not unexpected_configured
+            and server_ready
+            and client["state"] == "connected"
+            and not client["fatal"]
+        )
+        print(json.dumps({
+            "ready": ready,
+            "client": client,
+            "missing_configured_tools": missing_configured,
+            "unexpected_configured_tools": unexpected_configured,
+            "missing_server_tools": missing_server_tools,
+            "mcp_server_error_class": server_error,
+        }, sort_keys=True))
+        return 0 if ready else 1
+
+    if __name__ == "__main__":
+        sys.exit(main())
+
   config.yaml: |
     # Hermes profile config for the Verdify Iris planner — single profile,
     # OpenAI GPT-5.5 with reasoning_effort=high, MCP-only tool surface.

@@ -3299,3 +3299,60 @@ def registry_value_error(name: str, value: float) -> str | None:
         return f"{name}={numeric:g} outside registry bounds [{lo}, {hi}] nearest_safe={tunable.max:g}"
 
     return None
+
+
+def planner_effective_bounds(name: str) -> tuple[float | None, float | None]:
+    """Return the strict intersection of planner and firmware bounds.
+
+    ``min``/``max`` are the planner-facing contract while ``fw_clamp_*`` are
+    the device/dispatcher envelope.  A planner value is safe only inside both
+    sets.  Keeping this calculation here prevents MCP and materializers from
+    independently choosing one of the two bound sources.
+    """
+    tunable = get(name)
+    if tunable is None:
+        raise ValueError(f"{name!r} is not registered in tunable_registry")
+
+    lower_candidates = [bound for bound in (tunable.min, tunable.fw_clamp_lo) if bound is not None]
+    upper_candidates = [bound for bound in (tunable.max, tunable.fw_clamp_hi) if bound is not None]
+    lower = max(lower_candidates) if lower_candidates else None
+    upper = min(upper_candidates) if upper_candidates else None
+    if lower is not None and upper is not None and lower > upper:
+        raise ValueError(
+            f"{name!r} has empty planner/firmware bounds intersection: "
+            f"planner=[{tunable.min}, {tunable.max}] firmware=[{tunable.fw_clamp_lo}, {tunable.fw_clamp_hi}]"
+        )
+    return lower, upper
+
+
+def normalize_planner_value(name: str, value: float) -> float:
+    """Normalize a planner value exactly once against the strict intersection.
+
+    The planner materializer may calculate a value from semantic intent, but
+    this function is the sole final normalization boundary before persistence.
+    It rejects non-finite and enum-invalid values rather than hiding them.
+    """
+    tunable = get(name)
+    if tunable is None:
+        raise ValueError(f"{name!r} is not registered in tunable_registry")
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name}={value!r} is not numeric") from exc
+    if not math.isfinite(numeric):
+        raise ValueError(f"{name}={value!r} is not finite")
+
+    if tunable.kind == "switch":
+        return 1.0 if numeric >= 0.5 else 0.0
+    if tunable.kind == "enum":
+        allowed = sorted((tunable.enum_values or {}).values())
+        if numeric % 1 != 0 or int(numeric) not in allowed:
+            raise ValueError(f"{name}={numeric:g} outside registry enum values {allowed}")
+        return float(int(numeric))
+
+    lower, upper = planner_effective_bounds(name)
+    if lower is not None:
+        numeric = max(float(lower), numeric)
+    if upper is not None:
+        numeric = min(float(upper), numeric)
+    return numeric

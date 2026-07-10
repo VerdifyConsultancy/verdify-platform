@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
@@ -43,8 +43,33 @@ TriggerType = Literal[
     "DEVIATION",  # legacy alias for FORECAST_DEVIATION in routing table
     "FORECAST_DEVIATION",  # Phase 4: renamed from DEVIATION on the wire
     "HEARTBEAT",
+    "WEEKLY",  # optional non-required deep-review strategy event
     "MANUAL",
 ]
+RequiredTriggerDisposition = Literal["complete", "wait", "retry"]
+PlannerActualAction = Literal["set_plan", "set_tunable", "acknowledge_trigger"]
+PlannerTerminalStatus = Literal[
+    "acked",
+    "plan_written",
+    "action_completed",
+    "neutral_fallback",
+    "wrong_action",
+]
+PlannerTerminalAction = Literal[
+    "set_plan",
+    "set_tunable",
+    "acknowledge_trigger",
+    "neutral_fallback",
+    "wrong_action",
+]
+
+
+@dataclass(frozen=True)
+class PlannerTerminalResult:
+    status: PlannerTerminalStatus
+    terminal_action: PlannerTerminalAction
+    failure_class: str | None
+    satisfies_required_plan: bool
 
 
 # ── Defaults (contract v1.5) — used when ai.yaml sections are missing ──
@@ -265,3 +290,60 @@ def sla_for(
     if minutes is None:
         return None
     return timedelta(minutes=minutes)
+
+
+def required_trigger_disposition(
+    *,
+    status: str,
+    terminal_action: str | None,
+    due_at: datetime | None,
+    now: datetime,
+) -> RequiredTriggerDisposition:
+    """Return whether a required expected-trigger row is complete or retryable.
+
+    Gateway acceptance is only an in-flight state. A valid full plan is the
+    sole completed outcome. Explicit neutral fallback waits until the current
+    SLA expires, then becomes retryable so safe failure remains visible without
+    becoming a permanent dead end. Wrong actions and delivery failures retry
+    on the next scheduler heartbeat.
+    """
+    if status == "plan_written" and terminal_action == "set_plan":
+        return "complete"
+    if status in {"delivered", "neutral_fallback"} and due_at is not None and due_at > now:
+        return "wait"
+    return "retry"
+
+
+def classify_planner_terminal_action(
+    *,
+    expected_action: str,
+    actual_action: PlannerActualAction,
+    valid_full_plan: bool = False,
+    explicit_neutral: bool = False,
+) -> PlannerTerminalResult:
+    """Classify terminal planner activity without runtime service dependencies.
+
+    This routing-layer form deliberately remains pure so the scheduler's
+    contract matrix can run without importing the MCP or schema runtimes.
+    """
+    if actual_action == "set_plan" and valid_full_plan:
+        return PlannerTerminalResult("plan_written", "set_plan", None, expected_action == "set_plan")
+    if expected_action == "set_plan":
+        if explicit_neutral and actual_action == "acknowledge_trigger":
+            return PlannerTerminalResult(
+                "neutral_fallback",
+                "neutral_fallback",
+                "explicit_neutral_fallback",
+                False,
+            )
+        return PlannerTerminalResult(
+            "wrong_action",
+            "wrong_action",
+            f"required_set_plan_received_{actual_action}",
+            False,
+        )
+    if actual_action == "set_tunable":
+        return PlannerTerminalResult("action_completed", "set_tunable", None, False)
+    if actual_action == "acknowledge_trigger":
+        return PlannerTerminalResult("acked", "acknowledge_trigger", None, False)
+    return PlannerTerminalResult("wrong_action", "wrong_action", "invalid_set_plan", False)

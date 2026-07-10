@@ -34,6 +34,7 @@ import zlib
 from datetime import date
 from datetime import datetime as _dt
 from pathlib import Path
+from typing import get_args
 from unittest.mock import MagicMock, patch
 
 import pytest  # noqa: F401  (used by @pytest.fixture in some runs)
@@ -51,9 +52,20 @@ os.environ.setdefault("DB_PORT", "5432")
 os.environ.setdefault("DB_NAME", "test")
 
 import iris_planner  # noqa: E402
+from planner_routing import (  # noqa: E402
+    TriggerType,
+)
+from planner_routing import (
+    classify_planner_terminal_action as classify_routing_terminal_action,
+)
 
 import ingestor  # noqa: E402
-from verdify_schemas.plan import PlanDeliveryLogRow  # noqa: E402
+from verdify_schemas.plan import (  # noqa: E402
+    PlanDeliveryLogRow,
+)
+from verdify_schemas.plan import (
+    classify_planner_terminal_action as classify_schema_terminal_action,
+)
 from verdify_schemas.tunable_registry import (  # noqa: E402
     BAND_OWNED_REG,
     CROP_BAND_REG,
@@ -64,6 +76,57 @@ from verdify_schemas.tunable_registry import (  # noqa: E402
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_weekly_planner_delivery_is_a_valid_nonrequired_wire_event():
+    row = PlanDeliveryLogRow.model_validate({"event_type": "WEEKLY", "status": "pending"})
+    prompt = iris_planner._PROMPT_BUILDERS["WEEKLY"]("context", "weekly review", "local")
+
+    assert row.event_type == "WEEKLY"
+    assert "WEEKLY" in get_args(TriggerType)
+    assert "## Planning Event: WEEKLY" in prompt
+    assert "set_plan(plan_id=" in prompt
+    assert "Interior crop DLI remains unavailable" in prompt
+
+
+@pytest.mark.parametrize(
+    "expected_action,actual_action,valid_full_plan,explicit_neutral",
+    [
+        ("set_plan", "set_plan", True, False),
+        ("set_plan", "set_plan", False, False),
+        ("set_plan", "set_tunable", False, False),
+        ("set_plan", "acknowledge_trigger", False, False),
+        ("set_plan", "acknowledge_trigger", False, True),
+        ("any", "set_plan", True, False),
+        ("any", "set_plan", False, False),
+        ("any", "set_tunable", False, False),
+        ("any", "acknowledge_trigger", False, False),
+        ("any", "acknowledge_trigger", False, True),
+    ],
+)
+def test_routing_and_schema_terminal_classifiers_remain_in_parity(
+    expected_action, actual_action, valid_full_plan, explicit_neutral
+):
+    kwargs = {
+        "expected_action": expected_action,
+        "actual_action": actual_action,
+        "valid_full_plan": valid_full_plan,
+        "explicit_neutral": explicit_neutral,
+    }
+    routing = classify_routing_terminal_action(**kwargs)
+    schema = classify_schema_terminal_action(**kwargs)
+
+    assert (
+        routing.status,
+        routing.terminal_action,
+        routing.failure_class,
+        routing.satisfies_required_plan,
+    ) == (
+        schema.status,
+        schema.terminal_action,
+        schema.failure_class,
+        schema.satisfies_required_plan,
+    )
 
 
 def _tasks_src() -> str:
@@ -1248,7 +1311,9 @@ def test_alert_monitor_detects_planner_delivery_outages():
     assert "event_type IN ('SUNRISE', 'SUNSET', 'MIDNIGHT')" in src
     assert "last_required_recovery" in src
     assert "COALESCE(r.expected_at, pdl.delivered_at) > lrr.expected_at" in src
-    assert "r.status IN ('missed', 'timed_out', 'delivery_failed')" in src
+    assert "r.status IN ('missed', 'timed_out', 'delivery_failed', 'expected', 'delivered')" in src
+    assert "r.status IN ('action_completed', 'neutral_fallback', 'wrong_action', 'acked')" in src
+    assert "terminal_action = 'set_plan'" in src
 
 
 def test_forecast_deviation_defaults_cover_material_axes():
@@ -1889,7 +1954,7 @@ def test_midnight_trigger_has_required_review_prompt_and_wake_mode():
     assert "call `plan_evaluate` for every completed Iris plan" in src
     assert "Start the new local day with a plan" in src
     assert '"MIDNIGHT": lambda ctx' in src
-    assert 'event_type in ("SUNRISE", "SUNSET", "MIDNIGHT", "FORECAST_DEVIATION", "MANUAL")' in src
+    assert 'event_type in ("SUNRISE", "SUNSET", "MIDNIGHT", "WEEKLY", "FORECAST_DEVIATION", "MANUAL")' in src
 
 
 def test_midnight_milestone_exists_only_inside_catchup_window(monkeypatch):
@@ -1996,14 +2061,18 @@ def test_mcp_set_plan_requires_audited_trigger():
     start = server.index("async def set_plan")
     end = server.index("@mcp.tool()", start + 1)
     body = server[start:end]
+    helper_start = server.index("async def _lock_current_planner_attempt")
+    helper_end = server.index("@mcp.tool()", helper_start)
+    helper = server[helper_start:helper_end]
     assert "normalized_trigger_id" in body
     assert "trigger_id is required for set_plan MCP writes" in body
     assert "Copy trigger_id exactly from the planning prompt audit headers" in body
     assert "plan_id is required" in body
     assert "transitions is required" in body
     assert "include_input=False" in body
-    assert "trigger_id not found in plan_delivery_log" in body
-    assert "planner_instance does not match plan_delivery_log" in body
+    assert "_lock_current_planner_attempt(" in body
+    assert "trigger_id not found in plan_delivery_log" in helper
+    assert "planner_instance does not match plan_delivery_log" in helper
 
 
 def test_mcp_set_plan_updates_delivery_log_by_trigger_id_immediately():
@@ -2015,6 +2084,7 @@ def test_mcp_set_plan_updates_delivery_log_by_trigger_id_immediately():
     assert "resulting_plan_id = $2" in body
     assert "plan_written_at   = $3" in body
     assert "status            = 'plan_written'" in body
+    assert "terminal_action   = 'set_plan'" in body
     assert '"delivery_status": "plan_written" if normalized_trigger_id else None' in body
 
 
@@ -2044,6 +2114,9 @@ def test_mcp_set_plan_materializes_and_audits_climate_intent():
     start = server.index("async def set_plan")
     end = server.index("@mcp.tool()", start + 1)
     body = server[start:end]
+    helper_start = server.index("async def _lock_current_planner_attempt")
+    helper_end = server.index("@mcp.tool()", helper_start)
+    helper = server[helper_start:helper_end]
 
     assert "_climate_intent_waypoint_errors(waypoints_raw)" in body
     assert "_materialize_climate_intent_waypoints(" in body
@@ -2062,8 +2135,8 @@ def test_mcp_set_plan_materializes_and_audits_climate_intent():
     assert "temp_above_high_f" in server
     assert "vpd_above_high_kpa" in server
     assert "dew_margin_f" in server
-    assert '"timed_out"' in body
-    assert "trigger_id is not pending or timed_out" in body
+    assert 'delivery["status"] != "pending"' in helper
+    assert "trigger_id is not the current writable attempt" in helper
 
 
 def test_mcp_climate_intent_materializer_uses_dispatcher_band_aliases():
@@ -2477,26 +2550,33 @@ def test_mcp_set_tunable_resolves_trigger_ledger_with_oneshot_plan():
     start = server.index("async def set_tunable")
     end = server.index("# ═══════════════════════════════════════════════════════════════", start + 1)
     body = server[start:end]
+    helper_start = server.index("async def _lock_current_planner_attempt")
+    helper_end = server.index("@mcp.tool()", helper_start)
+    helper = server[helper_start:helper_end]
     assert "trigger_id is required for set_tunable MCP writes" in body
     assert "Copy trigger_id exactly from the planning prompt audit headers into set_tunable" in body
     assert "parameter is required" in body
     assert "value is required" in body
-    assert "trigger_id not found in plan_delivery_log" in body
-    assert "planner_instance does not match plan_delivery_log" in body
+    assert "_lock_current_planner_attempt(" in body
+    assert "trigger_id not found in plan_delivery_log" in helper
+    assert "planner_instance does not match plan_delivery_log" in helper
     assert "UPDATE plan_delivery_log" in body
     assert "resulting_plan_id = $2" in body
     assert "plan_written_at   = $3" in body
-    assert "status            = 'plan_written'" in body
-    assert '"delivery_status": "plan_written" if normalized_trigger_id else None' in body
+    assert "status            = 'action_completed'" in body
+    assert "terminal_action   = 'set_tunable'" in body
+    assert '"delivery_status": "action_completed" if normalized_trigger_id else None' in body
 
 
-def test_mcp_rejects_non_validation_solar_acknowledgement():
+def test_mcp_classifies_required_ack_as_wrong_or_explicit_neutral():
     server = (Path(iris_planner.__file__).resolve().parent.parent / "mcp" / "server.py").read_text()
     start = server.index("async def acknowledge_trigger")
     body = server[start:]
-    assert 'existing["event_type"] in {"SUNRISE", "SUNSET", "MIDNIGHT"}' in body
-    assert "SUNRISE/SUNSET/MIDNIGHT triggers require set_plan" in body
-    assert "validation ack-only" in body
+    assert 'expected_action = ledger["expected_action"]' in body
+    assert 'required_full_plan = expected_action == "set_plan"' in body
+    assert "required set_plan trigger received the wrong terminal action" in body
+    assert "target_status = terminal.status" in body
+    assert "neutral_fallback: bool = False" in body
 
 
 def test_required_plan_alert_ignores_validation_ack_only_rows():

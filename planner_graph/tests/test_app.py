@@ -13,13 +13,13 @@ from typing import cast
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
+from tests.helpers import tier1_active_plan_summary
 
 from planner_graph.app import PlannerService, create_app
 from planner_graph.clients.openai import OpenAIPlannerClient
 from planner_graph.runtime import ExecutionHooks
 from planner_graph.state import PROTECTED_MCP_TOOLS
 from planner_graph.verdify_contract import CLIMATE_INTENT_FIELD_NAMES
-from tests.helpers import tier1_active_plan_summary
 
 
 def planner_request(
@@ -113,19 +113,35 @@ def planner_metadata(payload: dict[str, object]) -> dict[str, object]:
 
 def test_health_endpoint_reports_production_service() -> None:
     with TestClient(create_app()) as client:
-        response = client.get("/health")
+        deadline = time.time() + 1
+        while True:
+            response = client.get("/health")
+            if response.status_code == 200 or time.time() >= deadline:
+                break
 
     assert response.status_code == 200
     assert response.json() == {
         "service": "ok",
         "private_api": True,
         "default_run_mode": "production",
-        "worker": "ok",
+        "worker": "ready",
         "db": "ok",
         "openai": "fallback",
         "mcp": "verdify-executes",
         "checkpoint": "in-memory",
+        "production_authority": "non-authoritative",
+        "consecutive_store_failures": 0,
+        "retry_delay_seconds": 0.0,
+        "last_error_class": None,
     }
+
+
+def test_liveness_is_process_only_and_explicitly_non_authoritative() -> None:
+    with TestClient(create_app()) as client:
+        response = client.get("/livez")
+
+    assert response.status_code == 200
+    assert response.json() == {"live": True, "production_authority": "non-authoritative"}
 
 
 def test_planner_run_endpoint_accepts_request_and_returns_quickly() -> None:
@@ -207,7 +223,7 @@ def test_worker_owns_execution_not_request_handler() -> None:
         payload = wait_for_terminal(client, trigger_id)
 
     assert response.status_code == 202
-    assert payload["execution_owner"] == "planner-worker"
+    assert payload["execution_owner"].startswith("planner-worker:")
     assert payload["status"] == "completed"
 
 
