@@ -1,7 +1,7 @@
 sprint_id: software-recovery-2026-07-09
 state: EXECUTING
 phase: wave-0-implementation
-updated_at: "2026-07-10T00:11:55Z"
+updated_at: "2026-07-10T00:29:37Z"
 repository:
   url: https://github.com/VerdifyConsultancy/verdify-platform
   local_path: /Users/jason/repos/verdify-worktrees/software-recovery-20260709
@@ -29,7 +29,6 @@ known_gates:
   - Firmware changes must pass unit tests, invariants, replay, compile, weekly-OTA, and 48-hour bake checks.
   - Schema or migration changes must be serialized and rollback-classified.
 next_actions:
-  - "Apply the focused PR #441 critic fixes, obtain follow-up approval, and merge the post-dispatch coverage amendment before downstream dispatch."
-  - Supervise device-writer and evidence-core in their isolated worktrees from merged checkpoint 6b5042c.
+  - Supervise device-writer and evidence-core after integration of authoritative main a2c3ee9.
   - Route immutable lane heads through fresh contract-specific critics and required GitHub CI.
   - Preserve worker production-read-only boundaries and the protected credential-rotation release block.
