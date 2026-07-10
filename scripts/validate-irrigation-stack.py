@@ -462,6 +462,7 @@ def _check_schedule_setpoint_confirmations(direct_db: bool) -> Check:
             SELECT sc.parameter,
                    sc.ts,
                    sc.value,
+                   COALESCE(sc.delivery_status, 'pending') AS delivery_status,
                    l.value AS cfg_value,
                    l.ts AS cfg_ts
               FROM setpoint_changes sc
@@ -471,7 +472,29 @@ def _check_schedule_setpoint_confirmations(direct_db: bool) -> Check:
                AND sc.expired_at IS NULL
                AND sc.superseded_by_ts IS NULL
                AND COALESCE(sc.source, '') <> 'esp32'
-               AND COALESCE(sc.delivery_status, 'pending') IN ('pending', 'deferred_heap_pressure')
+               AND COALESCE(sc.delivery_status, 'pending') IN (
+                   'pending', 'requested', 'queued', 'retrying', 'sent',
+                   'deferred_heap_pressure'
+               )
+               AND sc.ts > now() - interval '1 hour'
+        ),
+        lifecycle AS (
+            SELECT count(*) FILTER (
+                       WHERE sc.confirmed_at IS NOT NULL OR sc.delivery_status = 'confirmed'
+                   )::text AS confirmed,
+                   count(*) FILTER (
+                       WHERE sc.confirmed_at IS NULL
+                         AND COALESCE(sc.delivery_status, 'pending') IN (
+                             'pending', 'requested', 'queued', 'retrying', 'sent',
+                             'deferred_heap_pressure'
+                         )
+                   )::text AS in_flight,
+                   count(*) FILTER (
+                       WHERE sc.delivery_status IN ('failed', 'cancelled', 'superseded')
+                   )::text AS terminal_unconfirmed
+              FROM setpoint_changes sc
+              JOIN params p USING (parameter)
+             WHERE COALESCE(sc.source, '') <> 'esp32'
                AND sc.ts > now() - interval '1 hour'
         ),
         open_alerts AS (
@@ -503,12 +526,27 @@ def _check_schedule_setpoint_confirmations(direct_db: bool) -> Check:
                    '-'
                ),
                (SELECT open_unconfirmed_alerts FROM open_alerts),
-               (SELECT open_alert_sensors FROM open_alerts)
+               (SELECT open_alert_sensors FROM open_alerts),
+               (SELECT confirmed FROM lifecycle),
+               (SELECT in_flight FROM lifecycle),
+               (SELECT terminal_unconfirmed FROM lifecycle)
           FROM classified
         """,
         direct_db=direct_db,
     )[0]
-    active, should_confirm, alert_age, min_ts, max_ts, offenders, open_alerts, open_alert_sensors = row
+    (
+        active,
+        should_confirm,
+        alert_age,
+        min_ts,
+        max_ts,
+        offenders,
+        open_alerts,
+        open_alert_sensors,
+        confirmed,
+        in_flight,
+        terminal_unconfirmed,
+    ) = row
     status = "pass" if int(should_confirm) == 0 and int(alert_age) == 0 and int(open_alerts) == 0 else "fail"
     return Check(
         "irrigation setpoint confirmations",
@@ -516,6 +554,8 @@ def _check_schedule_setpoint_confirmations(direct_db: bool) -> Check:
         (
             f"active_unconfirmed={active} should_be_confirmed={should_confirm} "
             f"older_than_5m={alert_age} open_unconfirmed_alerts={open_alerts} "
+            f"lifecycle_confirmed={confirmed} lifecycle_in_flight={in_flight} "
+            f"lifecycle_terminal_unconfirmed={terminal_unconfirmed} "
             f"range={min_ts}..{max_ts} offenders={offenders} open_alert_sensors={open_alert_sensors}"
         ),
     )

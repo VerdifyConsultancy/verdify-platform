@@ -1,8 +1,8 @@
 sprint_id: software-recovery-2026-07-09
 lane_id: device-writer
-state: NOT_STARTED
-updated_at: "2026-07-09T22:09:48Z"
-head_sha: 0a9a19a840be6bae1beba604497d880b3b74b1ef
+state: IMPLEMENTING
+updated_at: "2026-07-09T23:24:00Z"
+head_sha: 6b5042c6a9d525cf1429bfda5a1f6d9a95470476
 working_tree_clean: false
 acceptance:
   passed: []
@@ -13,10 +13,10 @@ acceptance:
     - LANE-AC-04
     - LANE-AC-05
   failed: []
-blockers:
-  - The assigned feature worktree does not yet exist and must be created from the approved baseline before dispatch.
+blockers: []
 decisions_requested: []
 next_actions:
-  - Create the contracted branch/worktree from the approved baseline.
-  - Reconstruct the lane from the common contract and lane.yaml.
-  - Implement and validate issue #433 without production mutation.
+  - Implement the canonical firmware-v2 cfg wire-ID map and exact drift fixture.
+  - Separate transport generations from cfg drift and add reason-classified dispatch.
+  - Add bounded fair delivery, truthful lifecycle persistence, and fault-injection tests.
+  - Validate locally, push a PR, and leave post-deployment AC-05 pending for release control.

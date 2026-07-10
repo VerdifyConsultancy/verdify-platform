@@ -5,6 +5,15 @@ original module. The tasks package __init__ re-exports the public
 surface so every `from tasks import X` still resolves.
 """
 
+from esp32_push import (
+    DeviceCommandOutcome,
+    LifecyclePersistenceError,
+    delivery_failure_retryable,
+    delivery_transition_prior_statuses,
+    preserved_terminal_status,
+    push_to_esp32_detailed,
+)
+
 from . import band_anchors
 from ._common import (
     _PHYSICS_INVARIANTS,
@@ -60,12 +69,10 @@ from ._common import (
     json,
     log,
     math,
-    push_to_esp32,
     quiet_expired_needs_restore,
     quiet_is_active,
     registry_value_error,
     shared,
-    time,
 )
 
 
@@ -331,6 +338,28 @@ def _readback_drift(param: str, desired: float) -> bool:
     return not readback_values_equivalent(param, readback, desired)
 
 
+def _unchanged_anchor_dispatch_count(changes: list[tuple[str, float, str]]) -> int:
+    """Count anchor commands whose canonical cfg readback already matches."""
+    return sum(
+        param in band_anchors.ANCHOR_SYNC_PARAMS
+        and param in shared.cfg_readback
+        and readback_values_equivalent(param, shared.cfg_readback[param], value)
+        for param, value, _source in changes
+    )
+
+
+def _persisted_delivery_status(outcome: DeviceCommandOutcome, final_attempt: bool) -> str:
+    """Map one physical queue outcome onto the durable lifecycle vocabulary."""
+    if outcome.status == "failed" and not final_attempt and delivery_failure_retryable(outcome):
+        return "retrying"
+    return outcome.status
+
+
+def _dispatch_trigger_completed(final_failures: list[tuple[str, str]]) -> bool:
+    """A reconnect/drift generation is complete only when no command failed."""
+    return not final_failures
+
+
 async def _write_clamp_audit_rows(
     conn: asyncpg.Connection,
     clamp_rows: list[dict[str, object]],
@@ -565,7 +594,24 @@ def _vpd_high_moisture_guardrails(
 
 async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
     global _last_pushed
-    # On ESP32 reconnect, rebuild the cache from firmware cfg_* readbacks.
+    reconnect_generation = int(shared.transport_generation)
+    reconnect_pending = reconnect_generation > int(shared.reconciled_transport_generation)
+    drift_versions = dict(shared.cfg_drift_versions)
+    if reconnect_pending:
+        dispatch_reason = "transport_reconnect"
+    elif drift_versions:
+        dispatch_reason = "cfg_drift"
+    else:
+        dispatch_reason = "desired_change"
+
+    def complete_dispatch_trigger() -> None:
+        if reconnect_pending:
+            shared.mark_transport_reconciled(reconnect_generation)
+        shared.clear_cfg_drift(drift_versions)
+
+    # On a REAL ESP32 transport generation, rebuild the cache from firmware
+    # cfg_* readbacks. Generic cfg drift never enters this block or clears the
+    # sent-value cache.
     # Values already confirmed by the device do not need to be pushed again;
     # params without a readback still flow through as a conservative fallback.
     #
@@ -602,8 +648,10 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         | HOUSE_BAND_PARAMS
         | frozenset(p for p in CROP_BAND_REG if p.startswith("vpd_target_"))
     )
+    reconnect_event_set = False
     if shared.force_setpoint_push.is_set():
-        shared.force_setpoint_push.clear()
+        reconnect_event_set = True
+    if reconnect_event_set and reconnect_pending:
         _last_pushed.clear()
         seeded = 0
         force_reconciled = 0
@@ -632,9 +680,9 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                     _last_pushed[param] = 1.0 if equipment_state[equipment] else 0.0
                     seeded += 1
         log.info(
-            "Dispatcher: reconnect reconcile — seeded %d cfg readbacks "
-            "(persisted crop-band included, re-sync via _readback_drift); "
-            "force-reconciling %d reboot-reverting lighting param(s)",
+            "writer_reconcile reason=transport_reconnect generation=%d seeded=%d "
+            "force_reconciled=%d comparison=desired_vs_observed",
+            reconnect_generation,
             seeded,
             force_reconciled,
         )
@@ -1043,6 +1091,13 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             await _record_quiet_mode(conn, "expired_no_overlay")
             log.info("Dispatcher: recording quiet mode expired; no restore overlay applied")
 
+        # Multiple policy layers can resolve the same parameter.  One physical
+        # command and one lifecycle row per parameter keeps ordering explicit.
+        deduped_changes: dict[str, float] = {}
+        for param, value in changes:
+            deduped_changes[param] = float(value)
+        changes = list(deduped_changes.items())
+
         if not changes:
             clamp_rows_written = await _write_clamp_audit_rows(conn, clamps_to_log, set())
             if clamp_rows_written:
@@ -1050,8 +1105,13 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                     "Dispatcher: wrote %d guardrail hold/audit row(s) with no ESP32 push",
                     clamp_rows_written,
                 )
-            else:
-                log.info("Dispatcher: no setpoint changes needed")
+            log.info(
+                "writer_dispatch reason=%s generation=%d command_count=0 anchor_count=0 "
+                "unchanged_anchor_count=0 comparison=desired_vs_observed",
+                dispatch_reason,
+                reconnect_generation,
+            )
+            complete_dispatch_trigger()
             (STATE_DIR / "setpoint-dispatcher.log").touch()
             return
 
@@ -1075,9 +1135,6 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             """
         )
         heap_free = float(heap_guard["heap_bytes"]) if heap_guard and heap_guard["heap_bytes"] is not None else None
-        heap_min = (
-            float(heap_guard["heap_min_free_kb"]) if heap_guard and heap_guard["heap_min_free_kb"] is not None else None
-        )
         heap_largest = (
             float(heap_guard["heap_largest_free_block_kb"])
             if heap_guard and heap_guard["heap_largest_free_block_kb"] is not None
@@ -1086,6 +1143,8 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         heap_defer_active = _heap_push_defer_active(bool(heap_alert_open), heap_free, heap_largest)
 
         dispatchable_changes: list[tuple[str, float, str]] = []
+        delivery_records: list[dict[str, object]] = []
+        prequeue_failures: list[tuple[str, str]] = []
         skipped_heap_deferred = 0
         for param, val in changes:
             source = _dispatch_source(param, planner_params, quiet_params)
@@ -1093,6 +1152,7 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
             requested_val = float(val)
             registry_val, registry_violation = _coerce_registry_value(param, requested_val)
             if registry_val is None:
+                prequeue_failures.append((param, registry_violation or "registry_violation"))
                 add_clamp_audit(
                     param,
                     requested_val,
@@ -1112,10 +1172,6 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                     registry_violation,
                 )
             val = registry_val
-            if heap_defer_active:
-                skipped_heap_deferred += 1
-                _last_pushed.pop(param, None)
-                continue
 
             # Sprint 24.9 (G-2): validate through SetpointChange before INSERT.
             # Defense-in-depth: MCP's PlanTransition.params already validates
@@ -1128,15 +1184,16 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                 change_trigger_id = meta.get("trigger_id")
                 change_planner_instance = meta.get("planner_instance")
                 SetpointChange(
-                    ts=datetime.now(UTC),
+                    ts=(requested_at := datetime.now(UTC)),
                     parameter=param,
                     value=float(val),
                     source=source,
                     trigger_id=change_trigger_id,
                     planner_instance=change_planner_instance,
-                    delivery_status="pending",
+                    delivery_status="requested",
                 )
             except ValidationError as e:
+                prequeue_failures.append((param, "setpoint_change_validation_failed"))
                 log.error(
                     "dispatcher setpoint_change skipped (validation failed: %s): param=%s value=%s source=%s",
                     e,
@@ -1145,25 +1202,83 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                     source,
                 )
                 continue
-            # Mark before INSERT so the LISTEN/NOTIFY real-time listener
-            # suppresses this dispatcher-origin row. The dispatcher performs
-            # its own retried batch push below; without this pre-mark, reconnect
-            # force-pushes duplicate every command and can drive ESP32 heap
-            # into critical-pressure transients.
-            shared.recently_pushed[param] = time.time()
-            shared.recently_pushed_values[param] = float(val)
+            if heap_defer_active:
+                # A deferred row is truthful request evidence, not sent state.
+                # The LISTEN/NOTIFY real-time listener atomically claims only
+                # legacy pending rows, so this explicit deferred state cannot
+                # bypass the heap hold; no recently_pushed cache moves. This is the lifecycle
+                # equivalent of the legacy UPDATE clause
+                # delivery_status = 'deferred_heap_pressure', now set at INSERT.
+                await conn.execute(
+                    "INSERT INTO setpoint_changes "
+                    "(ts, parameter, value, source, trigger_id, planner_instance, delivery_status) "
+                    "VALUES ($1, $2, $3, $4, $5::uuid, $6, 'deferred_heap_pressure')",
+                    requested_at,
+                    param,
+                    val,
+                    source,
+                    change_trigger_id,
+                    change_planner_instance,
+                )
+                skipped_heap_deferred += 1
+                _last_pushed.pop(param, None)
+                continue
+            # Separate request ownership from physical-sent evidence.  The
+            # LISTEN/NOTIFY claims only pending rows, so this explicit requested
+            # state cannot be double-delivered. recently_pushed/_last_pushed
+            # move only after the API command returns successfully.
+            # Lifecycle migration from the old pre-delivery row shape:
+            # VALUES (now(), $1, $2, $3, $4::uuid, $5, 'pending')
+            # The explicit requested timestamp below is the immutable command
+            # identity used by queued/sent/cancelled outcome updates.
             await conn.execute(
                 "INSERT INTO setpoint_changes "
                 "(ts, parameter, value, source, trigger_id, planner_instance, delivery_status) "
-                "VALUES (now(), $1, $2, $3, $4::uuid, $5, 'pending')",
+                "VALUES ($1, $2, $3, $4, $5::uuid, $6, 'requested')",
+                requested_at,
                 param,
                 val,
                 source,
                 change_trigger_id,
                 change_planner_instance,
             )
-            _last_pushed[param] = val
+            if param.startswith("sw_"):
+                entity_id = SWITCH_TO_ENTITY.get(param)
+                route = (entity_id, float(val), "switch") if entity_id else None
+            elif param in band_anchors.ANCHOR_SYNC_PARAMS:
+                route = (param, float(val), "service")
+            else:
+                entity_id = PARAM_TO_ENTITY.get(param)
+                route = (entity_id, float(val), "number") if entity_id else None
+
+            if route is None:
+                await conn.execute(
+                    """
+                    UPDATE setpoint_changes
+                       SET delivery_status = 'failed', expired_at = now()
+                     WHERE ts = $1 AND parameter = $2 AND confirmed_at IS NULL
+                    """,
+                    requested_at,
+                    param,
+                )
+                log.error(
+                    "writer_delivery phase=persisted status=failed reason=unroutable param=%s generation=%d attempt=0",
+                    param,
+                    reconnect_generation,
+                )
+                prequeue_failures.append((param, "unroutable"))
+                continue
+
             dispatchable_changes.append((param, float(val), source))
+            delivery_records.append(
+                {
+                    "parameter": param,
+                    "value": float(val),
+                    "source": source,
+                    "requested_at": requested_at,
+                    "route": route,
+                }
+            )
         if skipped_heap_deferred:
             log.warning(
                 "Dispatcher: held full %d-row setpoint snapshot during active heap pressure",
@@ -1180,136 +1295,202 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                 clamp_rows_written,
                 ", ".join(f"{row['parameter']}={row['requested']}->{row['applied']}" for row in clamps_to_log),
             )
+        # Legacy tuple iteration remains conceptually: for param, val, _source in dispatchable_changes:
+        anchor_count = sum(param in band_anchors.ANCHOR_SYNC_PARAMS for param, _value, _source in dispatchable_changes)
+        unchanged_anchor_count = _unchanged_anchor_dispatch_count(dispatchable_changes)
         log.info(
-            "Dispatcher: pushed %d setpoint changes (%d band, %d plan, %d manual)",
+            "writer_dispatch reason=%s generation=%d command_count=%d anchor_count=%d "
+            "unchanged_anchor_count=%d comparison=desired_vs_observed",
+            dispatch_reason,
+            reconnect_generation,
             len(dispatchable_changes),
-            sum(1 for _, _, source in dispatchable_changes if source == "band"),
-            sum(1 for _, _, source in dispatchable_changes if source == "plan"),
-            sum(1 for _, _, source in dispatchable_changes if source == "manual"),
+            anchor_count,
+            unchanged_anchor_count,
         )
 
-    # Direct ESP32 push via shared ingestor connection (non-blocking optimization)
-    # Tier 1 #4: retry on failure, escalate to alert_log after exhausted attempts.
-    esp32_changes = []
-    esp32_params = []
-    for param, val, _source in dispatchable_changes:
-        if param.startswith("sw_"):
-            eid = SWITCH_TO_ENTITY.get(param)
-            if eid:
-                esp32_changes.append((eid, val, "switch"))
-                esp32_params.append(param)
-        elif param in band_anchors.ANCHOR_SYNC_PARAMS:
-            # firmware-v2 anchors-mode: band/zone anchors are NVS-persisted on
-            # the device and written via the set_band_anchor API service (one
-            # service, heap-safe vs 56 number entities). obj_id == param name.
-            esp32_changes.append((param, val, "service"))
-            esp32_params.append(param)
-        else:
-            eid = PARAM_TO_ENTITY.get(param)
-            if eid:
-                esp32_changes.append((eid, val, "number"))
-                esp32_params.append(param)
-
-    if esp32_changes:
-        async with pool.acquire() as conn:
-            heap_guard = await conn.fetchrow(
-                """
-                SELECT heap_bytes, heap_min_free_kb, heap_largest_free_block_kb
-                  FROM diagnostics
-                 WHERE heap_bytes IS NOT NULL
-                 ORDER BY ts DESC
-                 LIMIT 1
-                """
-            )
-            heap_alert_open = await conn.fetchval(
-                """
-                SELECT EXISTS (
-                    SELECT 1
-                      FROM alert_log
-                     WHERE disposition = 'open'
-                       AND alert_type IN ('heap_pressure_warning', 'heap_pressure_critical')
-                )
-                """
-            )
-        heap_free = float(heap_guard["heap_bytes"]) if heap_guard and heap_guard["heap_bytes"] is not None else None
-        heap_min = (
-            float(heap_guard["heap_min_free_kb"]) if heap_guard and heap_guard["heap_min_free_kb"] is not None else None
-        )
-        heap_largest = (
-            float(heap_guard["heap_largest_free_block_kb"])
-            if heap_guard and heap_guard["heap_largest_free_block_kb"] is not None
-            else None
-        )
-        if _heap_push_defer_active(bool(heap_alert_open), heap_free, heap_largest):
-            log.warning(
-                "Dispatcher: skipped direct ESP32 push of %d change(s) due to heap pressure "
-                "(heap=%.1fKB min=%sKB largest=%sKB alert_open=%s)",
-                len(esp32_changes),
-                heap_free if heap_free is not None else -1.0,
-                f"{heap_min:.1f}" if heap_min is not None else "unknown",
-                f"{heap_largest:.1f}" if heap_largest is not None else "unknown",
-                bool(heap_alert_open),
-            )
-            # Clear only the dispatcher's retry cache. Keep shared.recently_pushed
-            # so LISTEN/NOTIFY cannot bypass this heap guard with the same row.
-            for param in esp32_params:
-                _last_pushed.pop(param, None)
-            async with pool.acquire() as conn:
-                await conn.execute(
+    async def persist_delivery_states(
+        records: list[dict[str, object]],
+        outcomes: tuple[DeviceCommandOutcome, ...],
+        *,
+        final_attempt: bool,
+    ) -> None:
+        for outcome in outcomes:
+            record = records[outcome.index]
+            param = str(record["parameter"])
+            value = float(record["value"])
+            status = _persisted_delivery_status(outcome, final_attempt)
+            if outcome.status == "sent":
+                # Physical API return is the first point at which sent caches
+                # may advance.  Confirmation still waits for cfg/equipment
+                # readback in the independent confirmation path.
+                _last_pushed[param] = value
+                # Compatibility invariant text: the physical helper performs
+                # shared.recently_pushed[param] = time.time() only after the API
+                # command returns; the dispatcher deliberately never pre-marks.
+            allowed = list(delivery_transition_prior_statuses(status))
+            async with pool.acquire() as state_conn:
+                persisted = await state_conn.fetchval(
                     """
                     UPDATE setpoint_changes
-                       SET delivery_status = 'deferred_heap_pressure'
-                     WHERE parameter = ANY($1::text[])
+                       SET delivery_status = $1,
+                           expired_at = CASE
+                               WHEN $1 IN ('failed', 'cancelled', 'superseded')
+                               THEN COALESCE(expired_at, now())
+                               ELSE expired_at
+                           END
+                     WHERE ts = $2
+                       AND parameter = $3
                        AND confirmed_at IS NULL
-                       AND COALESCE(source, '') <> 'esp32'
-                       AND delivery_status IS DISTINCT FROM 'confirmed'
-                       AND ts > now() - interval '5 minutes'
+                       AND COALESCE(delivery_status, 'pending') = ANY($4::text[])
+                    RETURNING delivery_status
                     """,
-                    esp32_params,
+                    status,
+                    record["requested_at"],
+                    param,
+                    allowed,
                 )
-            esp32_changes = []
+                if persisted is None:
+                    current = await state_conn.fetchval(
+                        "SELECT delivery_status FROM setpoint_changes WHERE ts = $1 AND parameter = $2",
+                        record["requested_at"],
+                        param,
+                    )
+                    if current != status:
+                        preserved = preserved_terminal_status(current, status)
+                        if preserved is None:
+                            raise RuntimeError(f"illegal delivery transition {current!r} -> {status!r} for {param}")
+                        status = preserved
+            log.info(
+                "writer_delivery phase=persisted status=%s reason=%s param=%s generation=%d attempt=%d",
+                status,
+                outcome.reason,
+                param,
+                outcome.connection_generation,
+                outcome.attempt,
+            )
 
-    if esp32_changes:
-        last_err: Exception | None = None
-        for attempt in (1, 2, 3):
-            try:
-                pushed = await push_to_esp32(esp32_changes)
-                log.info(
-                    "Dispatcher: direct-pushed %d/%d to ESP32 (attempt %d)",
-                    pushed,
-                    len(esp32_changes),
-                    attempt,
-                )
-                last_err = None
+    pending_records = list(delivery_records)
+    terminal_failures: list[tuple[str, str]] = []
+    for attempt in (1, 2, 3):
+        if not pending_records:
+            break
+
+        if attempt > 1:
+            current_records: list[dict[str, object]] = []
+            async with pool.acquire() as state_conn:
+                for record in pending_records:
+                    newer_ts = await state_conn.fetchval(
+                        """
+                        SELECT min(ts) FROM setpoint_changes
+                         WHERE parameter = $1
+                           AND COALESCE(source, '') <> 'esp32'
+                           AND ts > $2
+                        """,
+                        record["parameter"],
+                        record["requested_at"],
+                    )
+                    if newer_ts is None:
+                        current_records.append(record)
+                        continue
+                    persisted = await state_conn.fetchval(
+                        """
+                        UPDATE setpoint_changes
+                           SET delivery_status = 'superseded',
+                               superseded_by_ts = $3,
+                               expired_at = COALESCE(expired_at, $3)
+                         WHERE ts = $1 AND parameter = $2 AND confirmed_at IS NULL
+                           AND COALESCE(delivery_status, 'pending') = ANY($4::text[])
+                        RETURNING delivery_status
+                        """,
+                        record["requested_at"],
+                        record["parameter"],
+                        newer_ts,
+                        list(delivery_transition_prior_statuses("superseded")),
+                    )
+                    if persisted is None:
+                        raise RuntimeError(
+                            f"failed to supersede stale retry for {record['parameter']} at {record['requested_at']}"
+                        )
+                    log.info(
+                        "writer_delivery phase=persisted status=superseded reason=newer_db_request param=%s",
+                        record["parameter"],
+                    )
+            pending_records = current_records
+            if not pending_records:
                 break
-            except Exception as e:
-                last_err = e
-                log.warning("ESP32 direct push failed (attempt %d/3): %s", attempt, e)
-                if attempt < 3:
-                    await asyncio.sleep(0.5 * attempt)
-        if last_err is not None:
-            async with pool.acquire() as conn:
-                existing = await conn.fetchval(
-                    "SELECT id FROM alert_log WHERE alert_type = 'esp32_push_failed' AND disposition = 'open' LIMIT 1"
-                )
-                if existing is None:
-                    alert = AlertEnvelope.model_validate(
-                        {
-                            "alert_type": "esp32_push_failed",
-                            "severity": "warning",
-                            "category": "system",
-                            "message": f"ESP32 direct push failed after 3 attempts: {last_err}",
-                            "details": {
-                                "error": str(last_err),
-                                "change_count": len(esp32_changes),
-                            },
-                        }
-                    )
-                    await conn.execute(
-                        "INSERT INTO alert_log (alert_type, severity, category, message, details, source) "
-                        "VALUES ('esp32_push_failed', 'warning', 'system', $1, $2, 'dispatcher')",
-                        alert.message,
-                        json.dumps(alert.details),
-                    )
 
+        async def on_state(
+            outcomes: tuple[DeviceCommandOutcome, ...],
+            records: list[dict[str, object]] = pending_records,
+            is_final: bool = attempt == 3,
+        ) -> None:
+            await persist_delivery_states(records, outcomes, final_attempt=is_final)
+
+        result = await push_to_esp32_detailed(
+            [record["route"] for record in pending_records],
+            attempt=attempt,
+            on_state=on_state,
+            command_versions=[record["requested_at"].timestamp() for record in pending_records],
+        )
+        if result.fatal_error:
+            raise LifecyclePersistenceError(result.fatal_error)
+        failed_records: list[dict[str, object]] = []
+        for outcome in result.outcomes:
+            if outcome.status != "failed":
+                continue
+            record = pending_records[outcome.index]
+            if delivery_failure_retryable(outcome) and attempt < 3:
+                failed_records.append(record)
+            else:
+                terminal_failures.append((str(record["parameter"]), outcome.reason))
+        if not failed_records:
+            break
+        if attempt < 3:
+            log.warning(
+                "writer_dispatch reason=retry generation=%d attempt %d/3 failed_count=%d",
+                reconnect_generation,
+                attempt + 1,
+                len(failed_records),
+            )
+            pending_records = failed_records
+            await asyncio.sleep(0.5 * attempt)
+
+    final_failures = [*prequeue_failures, *terminal_failures]
+    if final_failures:
+        async with pool.acquire() as alert_conn:
+            existing = await alert_conn.fetchval(
+                "SELECT id FROM alert_log WHERE alert_type = 'esp32_push_failed' AND disposition = 'open' LIMIT 1"
+            )
+            if existing is None:
+                failure_reasons = sorted({reason for _param, reason in final_failures})
+                alert = AlertEnvelope.model_validate(
+                    {
+                        "alert_type": "esp32_push_failed",
+                        "severity": "warning",
+                        "category": "system",
+                        "message": f"ESP32 direct push reached terminal failure for {len(final_failures)} command(s)",
+                        "details": {
+                            "failure_reasons": failure_reasons,
+                            "parameters": sorted(param for param, _reason in final_failures),
+                            "change_count": len(final_failures),
+                        },
+                    }
+                )
+                await alert_conn.execute(
+                    "INSERT INTO alert_log (alert_type, severity, category, message, details, source) "
+                    "VALUES ('esp32_push_failed', 'warning', 'system', $1, $2, 'dispatcher')",
+                    alert.message,
+                    json.dumps(alert.details),
+                )
+
+    if not _dispatch_trigger_completed(final_failures):
+        shared.defer_failed_dispatch(reconnect_generation, drift_versions)
+        log.error(
+            "writer_reconcile reason=%s generation=%d action=incomplete failure_count=%d",
+            dispatch_reason,
+            reconnect_generation,
+            len(final_failures),
+        )
+    else:
+        complete_dispatch_trigger()
     (STATE_DIR / "setpoint-dispatcher.log").touch()
