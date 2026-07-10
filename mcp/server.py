@@ -68,7 +68,10 @@ from verdify_schemas.climate_intent import (  # noqa: E402
     climate_intent_materialization_guardrails,
     materialize_climate_intent_tier1,
 )
-from verdify_schemas.plan import classify_planner_terminal_action  # noqa: E402
+from verdify_schemas.plan import (  # noqa: E402
+    classify_planner_terminal_action,
+    plan_current_coverage_error,
+)
 from verdify_schemas.telemetry import DliEvidence  # noqa: E402
 from verdify_schemas.tunable_registry import (  # noqa: E402
     BAND_OWNED_REG,
@@ -1936,65 +1939,45 @@ async def set_tunable(
         now_mdt = datetime.now(ZoneInfo("America/Denver"))
         plan_id = f"iris-oneshot-{now_mdt.strftime('%Y%m%d-%H%M')}"
         async with conn.transaction():
-            if normalized_trigger_id:
-                delivery = await conn.fetchrow(
+            delivery, ledger, attempt_error = await _lock_current_planner_attempt(
+                conn,
+                normalized_trigger_id,
+                planner_instance,
+            )
+            if attempt_error:
+                return json.dumps(attempt_error)
+            assert delivery is not None
+            expected_action = ledger["expected_action"] if ledger is not None else "any"
+            if expected_action == "set_plan":
+                terminal = classify_planner_terminal_action(
+                    expected_action="set_plan",
+                    actual_action="set_tunable",
+                )
+                updated_delivery_id = await conn.fetchval(
                     """
-                    SELECT pdl.trigger_id, pdl.status, pdl.instance,
-                           COALESCE(ptl.expected_action, 'any') AS expected_action
-                      FROM plan_delivery_log pdl
-                 LEFT JOIN planner_trigger_ledger ptl ON ptl.trigger_id = pdl.trigger_id
-                     WHERE pdl.trigger_id = $1::uuid
+                    UPDATE plan_delivery_log
+                       SET status = 'wrong_action',
+                           terminal_action = 'wrong_action',
+                           terminal_at = now(),
+                           failure_class = $3,
+                           result_payload = jsonb_build_object(
+                               'attempted_action', 'set_tunable',
+                               'parameter', $2::text
+                           )
+                     WHERE id = $4
+                       AND trigger_id = $1::uuid
+                       AND status = 'pending'
+                     RETURNING id
                     """,
                     normalized_trigger_id,
+                    parameter,
+                    terminal.failure_class,
+                    delivery["id"],
                 )
-                if not delivery:
-                    return json.dumps(
-                        {
-                            "error": "trigger_id not found in plan_delivery_log",
-                            "trigger_id": normalized_trigger_id,
-                        }
-                    )
-                if delivery["status"] != "pending":
-                    return json.dumps(
-                        {
-                            "error": "trigger_id is not writable",
-                            "trigger_id": normalized_trigger_id,
-                            "status": delivery["status"],
-                        }
-                    )
-                if planner_instance and delivery["instance"] and planner_instance != delivery["instance"]:
-                    return json.dumps(
-                        {
-                            "error": "planner_instance does not match plan_delivery_log",
-                            "trigger_id": normalized_trigger_id,
-                            "planner_instance": planner_instance,
-                            "delivery_instance": delivery["instance"],
-                        }
-                    )
-                if delivery["expected_action"] == "set_plan":
-                    terminal = classify_planner_terminal_action(
-                        expected_action="set_plan",
-                        actual_action="set_tunable",
-                    )
-                    await conn.execute(
-                        """
-                        UPDATE plan_delivery_log
-                           SET status = 'wrong_action',
-                               terminal_action = 'wrong_action',
-                               terminal_at = now(),
-                               failure_class = $3,
-                               result_payload = jsonb_build_object(
-                                   'attempted_action', 'set_tunable',
-                                   'parameter', $2::text
-                               )
-                         WHERE trigger_id = $1::uuid
-                           AND status = 'pending'
-                        """,
-                        normalized_trigger_id,
-                        parameter,
-                        terminal.failure_class,
-                    )
-                    await conn.execute(
+                if updated_delivery_id != delivery["id"]:
+                    raise RuntimeError("plan delivery attempt lost its set_tunable wrong-action fence")
+                if ledger is not None:
+                    updated_ledger_id = await conn.fetchval(
                         """
                         UPDATE planner_trigger_ledger
                            SET status = 'wrong_action',
@@ -2003,19 +1986,27 @@ async def set_tunable(
                                failure_class = $2,
                                resolved_at = now(),
                                updated_at = now()
-                         WHERE trigger_id = $1::uuid
+                         WHERE id = $3
+                           AND trigger_id = $1::uuid
+                           AND plan_delivery_log_id = $4
+                           AND status = 'delivered'
+                         RETURNING id
                         """,
                         normalized_trigger_id,
                         terminal.failure_class,
+                        ledger["id"],
+                        delivery["id"],
                     )
-                    return json.dumps(
-                        {
-                            "error": "required set_plan trigger cannot be satisfied by set_tunable",
-                            "trigger_id": normalized_trigger_id,
-                            "status": "wrong_action",
-                            "terminal_action": "wrong_action",
-                        }
-                    )
+                    if updated_ledger_id != ledger["id"]:
+                        raise RuntimeError("planner ledger attempt lost its set_tunable wrong-action fence")
+                return json.dumps(
+                    {
+                        "error": "required set_plan trigger cannot be satisfied by set_tunable",
+                        "trigger_id": normalized_trigger_id,
+                        "status": "wrong_action",
+                        "terminal_action": "wrong_action",
+                    }
+                )
             wrote_at = await conn.fetchval(
                 """
                 INSERT INTO setpoint_plan
@@ -2037,7 +2028,7 @@ async def set_tunable(
                 planner_instance,
             )
             if normalized_trigger_id:
-                await conn.execute(
+                updated_delivery_id = await conn.fetchval(
                     """
                     UPDATE plan_delivery_log
                        SET resulting_plan_id = $2,
@@ -2050,30 +2041,44 @@ async def set_tunable(
                                'parameter', $4::text,
                                'value', $5::double precision
                            )
-                     WHERE trigger_id = $1::uuid
+                     WHERE id = $6
+                       AND trigger_id = $1::uuid
                        AND status = 'pending'
+                     RETURNING id
                     """,
                     normalized_trigger_id,
                     plan_id,
                     wrote_at,
                     parameter,
                     value,
+                    delivery["id"],
                 )
-                await conn.execute(
-                    """
-                    UPDATE planner_trigger_ledger
-                       SET status = 'action_completed',
-                           terminal_action = 'set_tunable',
-                           terminal_at = now(),
-                           failure_class = NULL,
-                           resulting_plan_id = $2,
-                           resolved_at = now(),
-                           updated_at = now()
-                     WHERE trigger_id = $1::uuid
-                    """,
-                    normalized_trigger_id,
-                    plan_id,
-                )
+                if updated_delivery_id != delivery["id"]:
+                    raise RuntimeError("plan delivery attempt lost its set_tunable completion fence")
+                if ledger is not None:
+                    updated_ledger_id = await conn.fetchval(
+                        """
+                        UPDATE planner_trigger_ledger
+                           SET status = 'action_completed',
+                               terminal_action = 'set_tunable',
+                               terminal_at = now(),
+                               failure_class = NULL,
+                               resulting_plan_id = $2,
+                               resolved_at = now(),
+                               updated_at = now()
+                         WHERE id = $3
+                           AND trigger_id = $1::uuid
+                           AND plan_delivery_log_id = $4
+                           AND status = 'delivered'
+                         RETURNING id
+                        """,
+                        normalized_trigger_id,
+                        plan_id,
+                        ledger["id"],
+                        delivery["id"],
+                    )
+                    if updated_ledger_id != ledger["id"]:
+                        raise RuntimeError("planner ledger attempt lost its set_tunable completion fence")
         return json.dumps(
             {
                 "ok": True,
@@ -2254,6 +2259,116 @@ async def query(sql: str) -> str:
 # ═══════════════════════════════════════════════════════════════
 # PLANNING TOOLS
 # ═══════════════════════════════════════════════════════════════
+
+_REQUIRED_FULL_PLAN_EVENTS = frozenset({"SUNRISE", "SUNSET", "MIDNIGHT"})
+_LEDGER_BACKED_EVENTS = frozenset(
+    {
+        "SUNRISE",
+        "SUNSET",
+        "MIDNIGHT",
+        "WEEKLY",
+        "SOLAR_MAX",
+        "TRANSITION",
+        "FORECAST_DEVIATION",
+        "FORECAST",
+        "DEVIATION",
+        "HEARTBEAT",
+    }
+)
+
+
+async def _lock_current_planner_attempt(
+    conn: asyncpg.Connection,
+    trigger_id: str,
+    planner_instance: str | None,
+) -> tuple[asyncpg.Record | None, asyncpg.Record | None, dict[str, object] | None]:
+    """Lock and validate the delivery/ledger attempt that may replace a plan."""
+    delivery = await conn.fetchrow(
+        """
+        SELECT id, trigger_id, event_type, event_label, status, instance
+          FROM plan_delivery_log
+         WHERE trigger_id = $1::uuid
+         FOR UPDATE
+        """,
+        trigger_id,
+    )
+    if delivery is None:
+        return (
+            None,
+            None,
+            {
+                "error": "trigger_id not found in plan_delivery_log",
+                "trigger_id": trigger_id,
+            },
+        )
+    if delivery["status"] != "pending":
+        return (
+            delivery,
+            None,
+            {
+                "error": "trigger_id is not the current writable attempt",
+                "trigger_id": trigger_id,
+                "status": delivery["status"],
+            },
+        )
+    if planner_instance and delivery["instance"] and planner_instance != delivery["instance"]:
+        return (
+            delivery,
+            None,
+            {
+                "error": "planner_instance does not match plan_delivery_log",
+                "trigger_id": trigger_id,
+                "planner_instance": planner_instance,
+                "delivery_instance": delivery["instance"],
+            },
+        )
+
+    ledger = await conn.fetchrow(
+        """
+        SELECT id, trigger_id, plan_delivery_log_id, event_type, expected_action, status
+          FROM planner_trigger_ledger
+         WHERE trigger_id = $1::uuid
+           AND plan_delivery_log_id = $2
+         FOR UPDATE
+        """,
+        trigger_id,
+        delivery["id"],
+    )
+    validation_ack = (delivery["event_label"] or "").lower().startswith("validation") and "ack-only" in (
+        delivery["event_label"] or ""
+    ).lower()
+    ledger_backed_event = delivery["event_type"] in _LEDGER_BACKED_EVENTS
+    required_event = delivery["event_type"] in _REQUIRED_FULL_PLAN_EVENTS and not validation_ack
+    if ledger_backed_event and ledger is None:
+        return (
+            delivery,
+            None,
+            {
+                "error": "scheduled trigger attempt is stale or superseded",
+                "trigger_id": trigger_id,
+            },
+        )
+    if ledger is not None and ledger["status"] != "delivered":
+        return (
+            delivery,
+            ledger,
+            {
+                "error": "planner trigger ledger attempt is not currently delivered",
+                "trigger_id": trigger_id,
+                "ledger_status": ledger["status"],
+            },
+        )
+    if required_event and ledger is not None and ledger["expected_action"] != "set_plan":
+        return (
+            delivery,
+            ledger,
+            {
+                "error": "required trigger ledger does not expect set_plan",
+                "trigger_id": trigger_id,
+                "expected_action": ledger["expected_action"],
+            },
+        )
+    return delivery, ledger, None
 
 
 @mcp.tool()
@@ -2492,6 +2607,24 @@ async def set_plan(
     conn = await _db()
     try:
         async with conn.transaction():
+            db_now = await conn.fetchval("SELECT now()")
+            coverage_error = plan_current_coverage_error(plan, db_now)
+            if coverage_error:
+                return json.dumps(
+                    {
+                        "error": "Plan does not provide current required coverage",
+                        "detail": coverage_error,
+                    }
+                )
+            delivery, ledger, attempt_error = await _lock_current_planner_attempt(
+                conn,
+                normalized_trigger_id,
+                planner_instance,
+            )
+            if attempt_error:
+                return json.dumps(attempt_error)
+            assert delivery is not None
+
             existing = await conn.fetchval("SELECT 1 FROM plan_journal WHERE plan_id = $1", plan.plan_id)
             if existing:
                 return json.dumps({"error": f"plan_id {plan.plan_id!r} already exists; generate a new plan_id"})
@@ -2499,17 +2632,7 @@ async def set_plan(
             # Phase 2b: SUNRISE/SUNSET MUST carry a valid hypothesis_structured.
             # Look up the trigger's event_type from planner_trigger_ledger and
             # reject if the structured block is missing or invalid.
-            event_type_row = await conn.fetchrow(
-                """
-                SELECT COALESCE(ptl.event_type, pdl.event_type) AS event_type,
-                       COALESCE(ptl.expected_action, 'any') AS expected_action
-                  FROM plan_delivery_log pdl
-             LEFT JOIN planner_trigger_ledger ptl ON ptl.trigger_id = pdl.trigger_id
-                 WHERE pdl.trigger_id = $1::uuid
-                """,
-                normalized_trigger_id,
-            )
-            event_type = event_type_row["event_type"] if event_type_row else None
+            event_type = ledger["event_type"] if ledger is not None else delivery["event_type"]
             if event_type in ("SUNRISE", "SUNSET") and structured_payload is None:
                 return json.dumps(
                     {
@@ -2549,40 +2672,6 @@ async def set_plan(
                         },
                     }
                 )
-
-            if normalized_trigger_id:
-                delivery = await conn.fetchrow(
-                    """
-                    SELECT trigger_id, status, instance
-                      FROM plan_delivery_log
-                     WHERE trigger_id = $1::uuid
-                    """,
-                    normalized_trigger_id,
-                )
-                if not delivery:
-                    return json.dumps(
-                        {
-                            "error": "trigger_id not found in plan_delivery_log",
-                            "trigger_id": normalized_trigger_id,
-                        }
-                    )
-                if delivery["status"] not in {"pending", "timed_out"}:
-                    return json.dumps(
-                        {
-                            "error": "trigger_id is not pending or timed_out",
-                            "trigger_id": normalized_trigger_id,
-                            "status": delivery["status"],
-                        }
-                    )
-                if planner_instance and delivery["instance"] and planner_instance != delivery["instance"]:
-                    return json.dumps(
-                        {
-                            "error": "planner_instance does not match plan_delivery_log",
-                            "trigger_id": normalized_trigger_id,
-                            "planner_instance": planner_instance,
-                            "delivery_instance": delivery["instance"],
-                        }
-                    )
 
             # One full plan is effective per greenhouse. Expire or supersede the
             # prior journal row before inserting the replacement so the partial
@@ -2663,7 +2752,7 @@ async def set_plan(
                 plan.expires_at,
             )
             if normalized_trigger_id:
-                await conn.execute(
+                updated_delivery_id = await conn.fetchval(
                     """
                     UPDATE plan_delivery_log
                        SET resulting_plan_id = $2,
@@ -2677,17 +2766,23 @@ async def set_plan(
                                'valid_from', $4::timestamptz,
                                'expires_at', $5::timestamptz
                            )
-                     WHERE trigger_id = $1::uuid
-                       AND status IN ('pending', 'timed_out')
+                     WHERE id = $6
+                       AND trigger_id = $1::uuid
+                       AND status = 'pending'
+                     RETURNING id
                     """,
                     normalized_trigger_id,
                     plan.plan_id,
                     journal_created_at,
                     plan.valid_from,
                     plan.expires_at,
+                    delivery["id"],
                 )
-                await conn.execute(
-                    """
+                if updated_delivery_id != delivery["id"]:
+                    raise RuntimeError("plan delivery attempt lost its write fence")
+                if ledger is not None:
+                    updated_ledger_id = await conn.fetchval(
+                        """
                     UPDATE planner_trigger_ledger
                        SET status = 'plan_written',
                            terminal_action = 'set_plan',
@@ -2696,11 +2791,19 @@ async def set_plan(
                            resulting_plan_id = $2,
                            resolved_at = now(),
                            updated_at = now()
-                     WHERE trigger_id = $1::uuid
+                     WHERE id = $3
+                       AND trigger_id = $1::uuid
+                       AND plan_delivery_log_id = $4
+                       AND status = 'delivered'
+                     RETURNING id
                     """,
-                    normalized_trigger_id,
-                    plan.plan_id,
-                )
+                        normalized_trigger_id,
+                        plan.plan_id,
+                        ledger["id"],
+                        delivery["id"],
+                    )
+                    if updated_ledger_id != ledger["id"]:
+                        raise RuntimeError("planner trigger ledger attempt lost its write fence")
 
         # Sprint 20 Phase 6: drop a trigger file so verdify-plan-publish.path
         # fires and regenerates the daily plan page. Local-SSD location so
@@ -2768,151 +2871,146 @@ async def acknowledge_trigger(
 
     conn = await _db()
     try:
-        existing = await conn.fetchrow(
-            """
-            SELECT pdl.id, pdl.event_type, pdl.event_label, pdl.instance, pdl.status,
-                   COALESCE(ptl.expected_action, 'any') AS expected_action
-              FROM plan_delivery_log pdl
-         LEFT JOIN planner_trigger_ledger ptl ON ptl.trigger_id = pdl.trigger_id
-             WHERE pdl.trigger_id = $1::uuid
-            """,
-            str(tid),
-        )
-        if existing is None:
-            return json.dumps({"error": f"trigger_id {tid} not found in plan_delivery_log"})
-        if existing["status"] != "pending":
-            return _json(
-                {
-                    "ok": False,
-                    "trigger_id": str(tid),
-                    "note": "trigger was already resolved",
-                    "status": existing["status"],
-                    "event_type": existing["event_type"],
-                    "instance": existing["instance"],
-                }
+        async with conn.transaction():
+            existing, ledger, attempt_error = await _lock_current_planner_attempt(
+                conn,
+                str(tid),
+                planner_instance,
             )
-        if planner_instance and existing["instance"] and planner_instance != existing["instance"]:
-            return _json(
-                {
-                    "error": "planner_instance does not match plan_delivery_log",
-                    "trigger_id": str(tid),
-                    "planner_instance": planner_instance,
-                    "delivery_instance": existing["instance"],
-                }
-            )
-        event_label = (existing["event_label"] or "").lower()
-        is_validation_ack = event_label.startswith("validation") and "ack-only" in event_label
-        required_full_plan = existing["expected_action"] == "set_plan" and not is_validation_ack
-        if required_full_plan and not neutral_fallback:
+            if attempt_error:
+                return _json(attempt_error)
+            assert existing is not None
+            expected_action = ledger["expected_action"] if ledger is not None else "any"
+            event_label = (existing["event_label"] or "").lower()
+            is_validation_ack = event_label.startswith("validation") and "ack-only" in event_label
+            required_full_plan = expected_action == "set_plan" and not is_validation_ack
+            if required_full_plan and not neutral_fallback:
+                terminal = classify_planner_terminal_action(
+                    expected_action="set_plan",
+                    actual_action="acknowledge_trigger",
+                )
+                updated_delivery_id = await conn.fetchval(
+                    """
+                    UPDATE plan_delivery_log
+                       SET status = 'wrong_action',
+                           terminal_action = 'wrong_action',
+                           terminal_at = now(),
+                           failure_class = $2,
+                           result_payload = jsonb_build_object('attempted_action', 'acknowledge_trigger')
+                     WHERE id = $3
+                       AND trigger_id = $1::uuid
+                       AND status = 'pending'
+                     RETURNING id
+                    """,
+                    str(tid),
+                    terminal.failure_class,
+                    existing["id"],
+                )
+                if updated_delivery_id != existing["id"]:
+                    raise RuntimeError("plan delivery attempt lost its acknowledge wrong-action fence")
+                if ledger is not None:
+                    updated_ledger_id = await conn.fetchval(
+                        """
+                        UPDATE planner_trigger_ledger
+                           SET status = 'wrong_action',
+                               terminal_action = 'wrong_action',
+                               terminal_at = now(),
+                               failure_class = $2,
+                               resolved_at = now(),
+                               updated_at = now()
+                         WHERE id = $3
+                           AND trigger_id = $1::uuid
+                           AND plan_delivery_log_id = $4
+                           AND status = 'delivered'
+                         RETURNING id
+                        """,
+                        str(tid),
+                        terminal.failure_class,
+                        ledger["id"],
+                        existing["id"],
+                    )
+                    if updated_ledger_id != ledger["id"]:
+                        raise RuntimeError("planner ledger attempt lost its acknowledge wrong-action fence")
+                return _json(
+                    {
+                        "error": "required set_plan trigger received the wrong terminal action",
+                        "trigger_id": str(tid),
+                        "event_type": existing["event_type"],
+                        "event_label": existing["event_label"],
+                        "status": "wrong_action",
+                        "terminal_action": "wrong_action",
+                    }
+                )
+
             terminal = classify_planner_terminal_action(
-                expected_action="set_plan",
+                expected_action=expected_action,
                 actual_action="acknowledge_trigger",
+                explicit_neutral=neutral_fallback,
             )
-            await conn.execute(
+            target_status = terminal.status
+            terminal_action = terminal.terminal_action
+            failure_class = terminal.failure_class
+            row = await conn.fetchrow(
                 """
                 UPDATE plan_delivery_log
-                   SET status = 'wrong_action',
-                       terminal_action = 'wrong_action',
+                   SET status = $3,
+                       acked_at = now(),
+                       terminal_action = $4,
                        terminal_at = now(),
-                       failure_class = $2,
-                       result_payload = jsonb_build_object('attempted_action', 'acknowledge_trigger')
-                 WHERE trigger_id = $1::uuid
+                       failure_class = $5,
+                       result_payload = jsonb_build_object('reason', $2::text),
+                       gateway_body = concat_ws(E'\n', NULLIF(gateway_body, ''), $2::text)
+                 WHERE id = $6
+                   AND trigger_id = $1::uuid
                    AND status = 'pending'
+                 RETURNING id, event_type, instance, delivered_at, status
                 """,
                 str(tid),
-                terminal.failure_class,
+                f"acknowledged by {planner_instance or 'iris'}: {reason}",
+                target_status,
+                terminal_action,
+                failure_class,
+                existing["id"],
             )
-            await conn.execute(
-                """
-                UPDATE planner_trigger_ledger
-                   SET status = 'wrong_action',
-                       terminal_action = 'wrong_action',
-                       terminal_at = now(),
-                       failure_class = $2,
-                       resolved_at = now(),
-                       updated_at = now()
-                 WHERE trigger_id = $1::uuid
-                """,
-                str(tid),
-                terminal.failure_class,
-            )
+            if row is None:
+                raise RuntimeError("plan delivery attempt lost its acknowledge completion fence")
+            if ledger is not None:
+                updated_ledger_id = await conn.fetchval(
+                    """
+                    UPDATE planner_trigger_ledger
+                       SET status = $2,
+                           terminal_action = $3,
+                           terminal_at = now(),
+                           failure_class = $4,
+                           resolved_at = now(),
+                           updated_at = now()
+                     WHERE id = $5
+                       AND trigger_id = $1::uuid
+                       AND plan_delivery_log_id = $6
+                       AND status = 'delivered'
+                     RETURNING id
+                    """,
+                    str(tid),
+                    target_status,
+                    terminal_action,
+                    failure_class,
+                    ledger["id"],
+                    existing["id"],
+                )
+                if updated_ledger_id != ledger["id"]:
+                    raise RuntimeError("planner ledger attempt lost its acknowledge completion fence")
             return _json(
                 {
-                    "error": "required set_plan trigger received the wrong terminal action",
+                    "ok": True,
                     "trigger_id": str(tid),
-                    "event_type": existing["event_type"],
-                    "event_label": existing["event_label"],
-                    "status": "wrong_action",
-                    "terminal_action": "wrong_action",
+                    "event_type": row["event_type"],
+                    "instance": row["instance"],
+                    "planner_instance": planner_instance,
+                    "status": row["status"],
+                    "terminal_action": terminal_action,
+                    "neutral": neutral_fallback,
                 }
             )
-        terminal = classify_planner_terminal_action(
-            expected_action=existing["expected_action"],
-            actual_action="acknowledge_trigger",
-            explicit_neutral=neutral_fallback,
-        )
-        target_status = terminal.status
-        terminal_action = terminal.terminal_action
-        failure_class = terminal.failure_class
-        row = await conn.fetchrow(
-            """
-            UPDATE plan_delivery_log
-               SET status = $3,
-                   acked_at = now(),
-                   terminal_action = $4,
-                   terminal_at = now(),
-                   failure_class = $5,
-                   result_payload = jsonb_build_object('reason', $2::text),
-                   gateway_body = concat_ws(E'\n', NULLIF(gateway_body, ''), $2::text)
-             WHERE trigger_id = $1::uuid
-               AND status = 'pending'
-             RETURNING id, event_type, instance, delivered_at, status
-            """,
-            str(tid),
-            f"acknowledged by {planner_instance or 'iris'}: {reason}",
-            target_status,
-            terminal_action,
-            failure_class,
-        )
-        if row is None:
-            return _json(
-                {
-                    "ok": False,
-                    "trigger_id": str(tid),
-                    "note": "trigger was already resolved",
-                    "status": existing["status"],
-                    "event_type": existing["event_type"],
-                    "instance": existing["instance"],
-                }
-            )
-        await conn.execute(
-            """
-            UPDATE planner_trigger_ledger
-               SET status = $2,
-                   terminal_action = $3,
-                   terminal_at = now(),
-                   failure_class = $4,
-                   resolved_at = now(),
-                   updated_at = now()
-             WHERE trigger_id = $1::uuid
-            """,
-            str(tid),
-            target_status,
-            terminal_action,
-            failure_class,
-        )
-        return _json(
-            {
-                "ok": True,
-                "trigger_id": str(tid),
-                "event_type": row["event_type"],
-                "instance": row["instance"],
-                "planner_instance": planner_instance,
-                "status": row["status"],
-                "terminal_action": terminal_action,
-                "neutral": neutral_fallback,
-            }
-        )
     finally:
         await conn.close()
 

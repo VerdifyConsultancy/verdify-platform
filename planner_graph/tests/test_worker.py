@@ -55,6 +55,9 @@ class _RecoveringStore:
     def mark_completed(self, *args, **kwargs):
         return self.delegate.mark_completed(*args, **kwargs)
 
+    def renew_lease(self, *args, **kwargs):
+        return self.delegate.renew_lease(*args, **kwargs)
+
     def mark_failed(self, *args, **kwargs):
         return self.delegate.mark_failed(*args, **kwargs)
 
@@ -154,3 +157,43 @@ def test_synthetic_non_authoritative_run_reaches_terminal_after_recovery(monkeyp
     # This store is planner_graph_runs only; no Hermes delivery or MCP/device
     # acceptance surface is available to this worker by construction.
     assert not hasattr(store, "set_plan")
+
+
+def test_workers_get_process_unique_fencing_identities(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("planner_graph.worker.build_graph", lambda _runtime: _Graph())
+
+    first = PlannerWorker(InMemoryRunStore(), _runtime())
+    second = PlannerWorker(InMemoryRunStore(), _runtime())
+
+    assert first.worker_id.startswith("planner-worker:")
+    assert second.worker_id.startswith("planner-worker:")
+    assert first.worker_id != second.worker_id
+
+
+def test_long_graph_renews_lease_before_terminal_write(monkeypatch: pytest.MonkeyPatch) -> None:
+    class SlowGraph(_Graph):
+        def invoke(self, state, config):
+            time.sleep(0.75)
+            return super().invoke(state, config)
+
+    class CountingStore(InMemoryRunStore):
+        renewals = 0
+
+        def renew_lease(self, *args, **kwargs):
+            self.renewals += 1
+            return super().renew_lease(*args, **kwargs)
+
+    monkeypatch.setattr("planner_graph.worker.build_graph", lambda _runtime: SlowGraph())
+    runtime = _runtime()
+    runtime.settings.worker_lease_seconds = 1
+    store = CountingStore()
+    worker = PlannerWorker(store, runtime, worker_id="planner-worker:test")
+    trigger_id = uuid4()
+    worker.submit(trigger_id, {"updated_at": "2026-07-10T00:00:00+00:00"})
+    claimed = store.claim_next(worker.worker_id, lease_seconds=1)
+
+    assert claimed is not None
+    worker.execute(claimed)
+
+    assert store.renewals >= 2
+    assert store.get(trigger_id).status == "completed"  # type: ignore[union-attr]

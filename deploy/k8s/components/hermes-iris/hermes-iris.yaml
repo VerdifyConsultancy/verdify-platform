@@ -165,13 +165,15 @@ spec:
             - name: tmp
               mountPath: /tmp
           livenessProbe:
-            tcpSocket:
-              port: gateway
-            initialDelaySeconds: 30
-            periodSeconds: 30
+            exec:
+              command: ["python3", "/etc/verdify/hermes-config/tool-readiness.py", "--mode", "liveness"]
+            initialDelaySeconds: 45
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 1
           readinessProbe:
             exec:
-              command: ["python", "/etc/verdify/hermes-config/tool-readiness.py"]
+              command: ["python3", "/etc/verdify/hermes-config/tool-readiness.py", "--mode", "readiness"]
             initialDelaySeconds: 15
             periodSeconds: 10
             timeoutSeconds: 5

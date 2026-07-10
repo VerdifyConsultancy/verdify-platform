@@ -13,7 +13,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from verdify_schemas.plan import Plan
+from verdify_schemas.plan import Plan, plan_current_coverage_error
 from verdify_schemas.tunable_registry import REGISTRY, normalize_planner_value, planner_effective_bounds
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -120,6 +120,77 @@ class TestPlanValidity:
                     "transitions": [{"ts": start.isoformat(), "params": {"mister_vpd_weight": 1.0}}],
                 }
             )
+
+    def test_plan_current_coverage_rejects_expired_boundary(self):
+        now = datetime(2026, 7, 10, 6, tzinfo=ZoneInfo("America/Denver"))
+        plan = Plan.model_validate(
+            {
+                "plan_id": "iris-20260710-0600",
+                "hypothesis": "expired plan",
+                "valid_from": (now - timedelta(hours=1)).isoformat(),
+                "expires_at": now.isoformat(),
+                "transitions": [
+                    {
+                        "ts": (now - timedelta(minutes=30)).isoformat(),
+                        "params": {"mister_vpd_weight": 1.0},
+                    }
+                ],
+            }
+        )
+
+        assert plan_current_coverage_error(plan, now) == "plan is already expired"
+
+    def test_plan_current_coverage_rejects_not_yet_valid(self):
+        now = datetime(2026, 7, 10, 6, tzinfo=ZoneInfo("America/Denver"))
+        plan = Plan.model_validate(
+            {
+                "plan_id": "iris-20260710-0600",
+                "hypothesis": "future plan",
+                "valid_from": (now + timedelta(minutes=5)).isoformat(),
+                "expires_at": (now + timedelta(hours=1)).isoformat(),
+                "transitions": [
+                    {
+                        "ts": (now + timedelta(minutes=5)).isoformat(),
+                        "params": {"mister_vpd_weight": 1.0},
+                    }
+                ],
+            }
+        )
+
+        assert plan_current_coverage_error(plan, now) == "plan is not yet valid"
+
+    def test_plan_current_coverage_rejects_future_first_transition_gap(self):
+        now = datetime(2026, 7, 10, 6, tzinfo=ZoneInfo("America/Denver"))
+        plan = Plan.model_validate(
+            {
+                "plan_id": "iris-20260710-0600",
+                "hypothesis": "gapped plan",
+                "valid_from": now.isoformat(),
+                "expires_at": (now + timedelta(hours=1)).isoformat(),
+                "transitions": [
+                    {
+                        "ts": (now + timedelta(minutes=5)).isoformat(),
+                        "params": {"mister_vpd_weight": 1.0},
+                    }
+                ],
+            }
+        )
+
+        assert plan_current_coverage_error(plan, now) == "plan has a gap before its first transition"
+
+    def test_plan_current_coverage_accepts_exact_current_boundary_and_persistent_value(self):
+        now = datetime(2026, 7, 10, 6, tzinfo=ZoneInfo("America/Denver"))
+        plan = Plan.model_validate(
+            {
+                "plan_id": "iris-20260710-0600",
+                "hypothesis": "current plan",
+                "valid_from": now.isoformat(),
+                "expires_at": (now + timedelta(seconds=1)).isoformat(),
+                "transitions": [{"ts": now.isoformat(), "params": {"mister_vpd_weight": 1.0}}],
+            }
+        )
+
+        assert plan_current_coverage_error(plan, now) is None
 
 
 class TestContextGathering:

@@ -11,9 +11,11 @@ import time
 from typing import cast
 from uuid import UUID, uuid4
 
-from planner_graph.state import PlannerState, utc_now
-from planner_graph.store import PostgresRunStore
+import pytest
 from tests.helpers import tier1_active_plan_summary
+
+from planner_graph.state import PlannerState, utc_now
+from planner_graph.store import LeaseLostError, PostgresRunStore
 
 
 def sample_state(trigger_id: UUID, *, event_type: str = "SUNRISE") -> PlannerState:
@@ -168,3 +170,47 @@ def test_postgres_store_reclaims_expired_leases(postgres_dsn: str) -> None:
     assert reclaimed.trigger_id == trigger_id
     assert reclaimed.status == "running"
     assert reclaimed.execution_owner == "worker-2"
+
+
+def test_postgres_store_renewal_prevents_reclaim_after_original_expiry(
+    postgres_dsn: str,
+) -> None:
+    store = PostgresRunStore(postgres_dsn)
+    store.initialize()
+    trigger_id = uuid4()
+    store.create_or_resume(trigger_id, sample_state(trigger_id))
+
+    assert store.claim_next("worker-1", lease_seconds=1) is not None
+    time.sleep(0.7)
+    assert store.renew_lease(trigger_id, "worker-1", lease_seconds=2) is True
+    time.sleep(0.6)
+
+    assert store.claim_next("worker-2", lease_seconds=30) is None
+
+
+@pytest.mark.parametrize("terminal_method", ["completed", "failed"])
+def test_postgres_store_stale_owner_cannot_write_terminal_state_after_reclaim(
+    postgres_dsn: str,
+    terminal_method: str,
+) -> None:
+    store = PostgresRunStore(postgres_dsn)
+    store.initialize()
+    trigger_id = uuid4()
+    initial_state = sample_state(trigger_id)
+    store.create_or_resume(trigger_id, initial_state)
+
+    assert store.claim_next("worker-1", lease_seconds=1) is not None
+    time.sleep(1.2)
+    reclaimed = store.claim_next("worker-2", lease_seconds=30)
+    assert reclaimed is not None
+
+    with pytest.raises(LeaseLostError, match="lease lost"):
+        if terminal_method == "completed":
+            store.mark_completed(trigger_id, initial_state, "worker-1")
+        else:
+            store.mark_failed(trigger_id, RuntimeError("stale failure"), "worker-1")
+
+    current = store.get(trigger_id)
+    assert current is not None
+    assert current.status == "running"
+    assert current.execution_owner == "worker-2"

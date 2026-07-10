@@ -53,15 +53,80 @@ UPDATE public.plan_delivery_log
  WHERE terminal_action IS NULL
     OR (status = 'plan_written' AND resulting_plan_id LIKE 'iris-oneshot-%');
 
+-- The migration job runs before the new MCP/ingestor pods roll.  Normalize the
+-- previous consumer's terminal writes at the database boundary during that
+-- overlap, while preserving any explicit fields written by the new consumer.
+-- This makes it safe to enforce a strict terminal-state constraint below
+-- without retaining a permanent "all terminal evidence may be NULL" escape.
+CREATE OR REPLACE FUNCTION public.normalize_plan_delivery_terminal_state()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NEW.status = 'pending' THEN
+        NEW.terminal_action := NULL;
+        NEW.terminal_at := NULL;
+        NEW.failure_class := NULL;
+        RETURN NEW;
+    END IF;
+
+    IF NEW.status = 'plan_written'
+       AND NEW.resulting_plan_id LIKE 'iris-oneshot-%'
+       AND NEW.terminal_action IS NULL THEN
+        NEW.status := 'action_completed';
+    END IF;
+
+    IF NEW.terminal_action IS NULL THEN
+        NEW.terminal_action := CASE NEW.status
+            WHEN 'plan_written' THEN 'set_plan'
+            WHEN 'action_completed' THEN 'set_tunable'
+            WHEN 'acked' THEN 'acknowledge_trigger'
+            WHEN 'neutral_fallback' THEN 'neutral_fallback'
+            WHEN 'wrong_action' THEN 'wrong_action'
+            WHEN 'timed_out' THEN 'timeout'
+            WHEN 'delivery_failed' THEN 'delivery_failed'
+            ELSE NULL
+        END;
+    END IF;
+
+    IF NEW.terminal_at IS NULL
+       AND NEW.status IN (
+           'plan_written', 'action_completed', 'acked', 'neutral_fallback',
+           'wrong_action', 'timed_out', 'delivery_failed'
+       ) THEN
+        NEW.terminal_at := CASE NEW.status
+            WHEN 'plan_written' THEN COALESCE(NEW.plan_written_at, NEW.delivered_at, now())
+            WHEN 'action_completed' THEN COALESCE(NEW.plan_written_at, NEW.delivered_at, now())
+            WHEN 'acked' THEN COALESCE(NEW.acked_at, NEW.delivered_at, now())
+            ELSE COALESCE(NEW.delivered_at, now())
+        END;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_normalize_plan_delivery_terminal_state
+    ON public.plan_delivery_log;
+CREATE TRIGGER trg_normalize_plan_delivery_terminal_state
+    BEFORE INSERT OR UPDATE OF
+        status, terminal_action, terminal_at, resulting_plan_id,
+        plan_written_at, acked_at
+    ON public.plan_delivery_log
+    FOR EACH ROW
+    EXECUTE FUNCTION public.normalize_plan_delivery_terminal_state();
+
+UPDATE public.plan_delivery_log
+   SET status = 'pending'
+ WHERE status IS NULL;
+ALTER TABLE public.plan_delivery_log
+    ALTER COLUMN status SET NOT NULL;
+
 ALTER TABLE public.plan_delivery_log
     DROP CONSTRAINT IF EXISTS plan_delivery_log_terminal_state_check;
 ALTER TABLE public.plan_delivery_log
     ADD CONSTRAINT plan_delivery_log_terminal_state_check CHECK (
-        -- Compatibility window: migration 196 lands before the consumer
-        -- rollout, so the previous MCP/ingestor revision may still write an
-        -- old terminal status without the new fields for a few seconds. New
-        -- terminal data, when present, must be a truthful pair.
-        (terminal_action IS NULL AND terminal_at IS NULL)
+        (status = 'pending' AND terminal_action IS NULL AND terminal_at IS NULL)
         OR (status = 'plan_written' AND terminal_action = 'set_plan' AND terminal_at IS NOT NULL)
         OR (status = 'action_completed' AND terminal_action = 'set_tunable' AND terminal_at IS NOT NULL)
         OR (status = 'acked' AND terminal_action = 'acknowledge_trigger' AND terminal_at IS NOT NULL)
@@ -83,6 +148,16 @@ ALTER TABLE public.planner_trigger_ledger
         status IN (
             'expected', 'delivered', 'acked', 'plan_written', 'action_completed',
             'neutral_fallback', 'wrong_action', 'delivery_failed', 'timed_out', 'missed'
+        )
+    );
+ALTER TABLE public.planner_trigger_ledger
+    DROP CONSTRAINT IF EXISTS planner_trigger_ledger_event_type_check;
+ALTER TABLE public.planner_trigger_ledger
+    ADD CONSTRAINT planner_trigger_ledger_event_type_check CHECK (
+        event_type IN (
+            'SUNRISE', 'SUNSET', 'MIDNIGHT', 'WEEKLY', 'SOLAR_MAX',
+            'TRANSITION', 'FORECAST_DEVIATION', 'MANUAL',
+            'FORECAST', 'DEVIATION', 'HEARTBEAT'
         )
     );
 
@@ -124,6 +199,55 @@ UPDATE public.planner_trigger_ledger
    )
    AND (terminal_action IS NULL OR terminal_at IS NULL);
 
+CREATE OR REPLACE FUNCTION public.normalize_planner_trigger_terminal_state()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NEW.status IN ('expected', 'delivered') THEN
+        NEW.terminal_action := NULL;
+        NEW.terminal_at := NULL;
+        NEW.failure_class := NULL;
+        NEW.resolved_at := NULL;
+        NEW.resulting_plan_id := NULL;
+        RETURN NEW;
+    END IF;
+
+    IF NEW.terminal_action IS NULL THEN
+        NEW.terminal_action := CASE NEW.status
+            WHEN 'plan_written' THEN 'set_plan'
+            WHEN 'action_completed' THEN 'set_tunable'
+            WHEN 'acked' THEN 'acknowledge_trigger'
+            WHEN 'neutral_fallback' THEN 'neutral_fallback'
+            WHEN 'wrong_action' THEN 'wrong_action'
+            WHEN 'delivery_failed' THEN 'delivery_failed'
+            WHEN 'timed_out' THEN 'timeout'
+            WHEN 'missed' THEN 'timeout'
+            ELSE NULL
+        END;
+    END IF;
+
+    IF NEW.terminal_at IS NULL
+       AND NEW.status IN (
+           'plan_written', 'action_completed', 'acked', 'neutral_fallback',
+           'wrong_action', 'delivery_failed', 'timed_out', 'missed'
+       ) THEN
+        NEW.terminal_at := COALESCE(NEW.resolved_at, NEW.updated_at, now());
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_normalize_planner_trigger_terminal_state
+    ON public.planner_trigger_ledger;
+CREATE TRIGGER trg_normalize_planner_trigger_terminal_state
+    BEFORE INSERT OR UPDATE OF
+        status, terminal_action, terminal_at, resolved_at, updated_at
+    ON public.planner_trigger_ledger
+    FOR EACH ROW
+    EXECUTE FUNCTION public.normalize_planner_trigger_terminal_state();
+
 ALTER TABLE public.planner_trigger_ledger
     DROP CONSTRAINT IF EXISTS planner_trigger_ledger_terminal_action_check;
 ALTER TABLE public.planner_trigger_ledger
@@ -137,7 +261,7 @@ ALTER TABLE public.planner_trigger_ledger
     DROP CONSTRAINT IF EXISTS planner_trigger_ledger_terminal_state_check;
 ALTER TABLE public.planner_trigger_ledger
     ADD CONSTRAINT planner_trigger_ledger_terminal_state_check CHECK (
-        (terminal_action IS NULL AND terminal_at IS NULL)
+        (status IN ('expected', 'delivered') AND terminal_action IS NULL AND terminal_at IS NULL)
         OR (status = 'plan_written' AND terminal_action = 'set_plan' AND terminal_at IS NOT NULL)
         OR (status = 'action_completed' AND terminal_action = 'set_tunable' AND terminal_at IS NOT NULL)
         OR (status = 'acked' AND terminal_action = 'acknowledge_trigger' AND terminal_at IS NOT NULL)
@@ -239,21 +363,71 @@ CREATE INDEX IF NOT EXISTS setpoint_plan_active_expiry_idx
     ON public.setpoint_plan (expires_at)
     WHERE is_active = true;
 
+-- Reconcile the legacy is_active flag with the journal lifecycle before the
+-- device-facing view starts treating the journal as the authority. Tactical
+-- one-shots intentionally have no plan_journal row and remain independently
+-- expiry-bounded. Non-Iris sources (for example forecast preemption) keep
+-- their existing is_active semantics.
+UPDATE public.setpoint_plan sp
+   SET is_active = false
+ WHERE sp.source = 'iris'
+   AND sp.plan_id NOT LIKE 'iris-oneshot-%'
+   AND sp.is_active = true
+   AND NOT EXISTS (
+       SELECT 1
+         FROM public.plan_journal pj
+        WHERE pj.plan_id = sp.plan_id
+          AND pj.greenhouse_id = sp.greenhouse_id
+          AND pj.lifecycle_status = 'effective'
+          AND pj.valid_from <= now()
+          AND pj.expires_at > now()
+   );
+
+UPDATE public.setpoint_plan sp
+   SET is_active = true
+  FROM public.plan_journal pj
+ WHERE pj.plan_id = sp.plan_id
+   AND pj.greenhouse_id = sp.greenhouse_id
+   AND pj.lifecycle_status = 'effective'
+   AND pj.valid_from <= now()
+   AND pj.expires_at > now()
+   AND sp.source = 'iris'
+   AND sp.plan_id NOT LIKE 'iris-oneshot-%'
+   AND sp.is_active = false;
+
 CREATE OR REPLACE VIEW public.v_active_plan AS
 SELECT DISTINCT ON (parameter)
-       parameter,
-       value,
-       ts,
-       plan_id,
-       reason,
-       created_at,
-       trigger_id,
-       planner_instance
-  FROM public.setpoint_plan
- WHERE ts <= now()
-   AND expires_at > now()
-   AND is_active = true
- ORDER BY parameter, created_at DESC, ts DESC;
+       sp.parameter,
+       sp.value,
+       sp.ts,
+       sp.plan_id,
+       sp.reason,
+       sp.created_at,
+       sp.trigger_id,
+       sp.planner_instance
+  FROM public.setpoint_plan sp
+  LEFT JOIN public.plan_journal pj
+    ON pj.plan_id = sp.plan_id
+   AND pj.greenhouse_id = sp.greenhouse_id
+ WHERE sp.ts <= now()
+   AND sp.expires_at > now()
+   AND (
+       -- Tactical one-shots are explicit, finite, journal-free overrides.
+       (sp.source = 'iris' AND sp.plan_id LIKE 'iris-oneshot-%' AND sp.is_active = true)
+       -- Full Iris plans are eligible only while their journal row is the one
+       -- effective, current-valid plan. Journal lifecycle outranks created_at.
+       OR (
+           sp.source = 'iris'
+           AND sp.plan_id NOT LIKE 'iris-oneshot-%'
+           AND sp.is_active = true
+           AND pj.lifecycle_status = 'effective'
+           AND pj.valid_from <= now()
+           AND pj.expires_at > now()
+       )
+       -- Preemptive and other non-Iris producers retain legacy semantics.
+       OR (sp.source <> 'iris' AND sp.is_active = true)
+   )
+ ORDER BY sp.parameter, sp.created_at DESC, sp.ts DESC;
 
 COMMENT ON COLUMN public.plan_delivery_log.terminal_action IS
     'Actual terminal action. Required set_plan acceptance succeeds only when this is set_plan and status is plan_written.';

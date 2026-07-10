@@ -5168,6 +5168,60 @@ $$;
 ALTER FUNCTION public.normalize_param_name(p text) OWNER TO verdify;
 
 --
+-- Name: normalize_plan_delivery_terminal_state(); Type: FUNCTION; Schema: public; Owner: verdify
+--
+
+CREATE FUNCTION public.normalize_plan_delivery_terminal_state() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    IF NEW.status = 'pending' THEN
+        NEW.terminal_action := NULL;
+        NEW.terminal_at := NULL;
+        NEW.failure_class := NULL;
+        RETURN NEW;
+    END IF;
+
+    IF NEW.status = 'plan_written'
+       AND NEW.resulting_plan_id LIKE 'iris-oneshot-%'
+       AND NEW.terminal_action IS NULL THEN
+        NEW.status := 'action_completed';
+    END IF;
+
+    IF NEW.terminal_action IS NULL THEN
+        NEW.terminal_action := CASE NEW.status
+            WHEN 'plan_written' THEN 'set_plan'
+            WHEN 'action_completed' THEN 'set_tunable'
+            WHEN 'acked' THEN 'acknowledge_trigger'
+            WHEN 'neutral_fallback' THEN 'neutral_fallback'
+            WHEN 'wrong_action' THEN 'wrong_action'
+            WHEN 'timed_out' THEN 'timeout'
+            WHEN 'delivery_failed' THEN 'delivery_failed'
+            ELSE NULL
+        END;
+    END IF;
+
+    IF NEW.terminal_at IS NULL
+       AND NEW.status IN (
+           'plan_written', 'action_completed', 'acked', 'neutral_fallback',
+           'wrong_action', 'timed_out', 'delivery_failed'
+       ) THEN
+        NEW.terminal_at := CASE NEW.status
+            WHEN 'plan_written' THEN COALESCE(NEW.plan_written_at, NEW.delivered_at, now())
+            WHEN 'action_completed' THEN COALESCE(NEW.plan_written_at, NEW.delivered_at, now())
+            WHEN 'acked' THEN COALESCE(NEW.acked_at, NEW.delivered_at, now())
+            ELSE COALESCE(NEW.delivered_at, now())
+        END;
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.normalize_plan_delivery_terminal_state() OWNER TO verdify;
+
+--
 -- Name: normalize_plan_param(); Type: FUNCTION; Schema: public; Owner: verdify
 --
 
@@ -5182,6 +5236,52 @@ $$;
 
 
 ALTER FUNCTION public.normalize_plan_param() OWNER TO verdify;
+
+--
+-- Name: normalize_planner_trigger_terminal_state(); Type: FUNCTION; Schema: public; Owner: verdify
+--
+
+CREATE FUNCTION public.normalize_planner_trigger_terminal_state() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    IF NEW.status IN ('expected', 'delivered') THEN
+        NEW.terminal_action := NULL;
+        NEW.terminal_at := NULL;
+        NEW.failure_class := NULL;
+        NEW.resolved_at := NULL;
+        NEW.resulting_plan_id := NULL;
+        RETURN NEW;
+    END IF;
+
+    IF NEW.terminal_action IS NULL THEN
+        NEW.terminal_action := CASE NEW.status
+            WHEN 'plan_written' THEN 'set_plan'
+            WHEN 'action_completed' THEN 'set_tunable'
+            WHEN 'acked' THEN 'acknowledge_trigger'
+            WHEN 'neutral_fallback' THEN 'neutral_fallback'
+            WHEN 'wrong_action' THEN 'wrong_action'
+            WHEN 'delivery_failed' THEN 'delivery_failed'
+            WHEN 'timed_out' THEN 'timeout'
+            WHEN 'missed' THEN 'timeout'
+            ELSE NULL
+        END;
+    END IF;
+
+    IF NEW.terminal_at IS NULL
+       AND NEW.status IN (
+           'plan_written', 'action_completed', 'acked', 'neutral_fallback',
+           'wrong_action', 'delivery_failed', 'timed_out', 'missed'
+       ) THEN
+        NEW.terminal_at := COALESCE(NEW.resolved_at, NEW.updated_at, now());
+    END IF;
+
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.normalize_planner_trigger_terminal_state() OWNER TO verdify;
 
 --
 -- Name: notify_setpoint_change(); Type: FUNCTION; Schema: public; Owner: verdify
@@ -25229,7 +25329,7 @@ CREATE TABLE public.plan_delivery_log (
     trigger_id uuid,
     instance text,
     acked_at timestamp with time zone,
-    status text DEFAULT 'pending'::text,
+    status text DEFAULT 'pending'::text NOT NULL,
     hermes_run_id text,
     terminal_action text,
     terminal_at timestamp with time zone,
@@ -25237,7 +25337,7 @@ CREATE TABLE public.plan_delivery_log (
     result_payload jsonb,
     CONSTRAINT plan_delivery_log_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'acked'::text, 'plan_written'::text, 'action_completed'::text, 'neutral_fallback'::text, 'wrong_action'::text, 'timed_out'::text, 'delivery_failed'::text]))),
     CONSTRAINT plan_delivery_log_terminal_action_check CHECK (((terminal_action IS NULL) OR (terminal_action = ANY (ARRAY['set_plan'::text, 'set_tunable'::text, 'acknowledge_trigger'::text, 'neutral_fallback'::text, 'wrong_action'::text, 'timeout'::text, 'delivery_failed'::text])))),
-    CONSTRAINT plan_delivery_log_terminal_state_check CHECK ((((terminal_action IS NULL) AND (terminal_at IS NULL)) OR ((status = 'plan_written'::text) AND (terminal_action = 'set_plan'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'action_completed'::text) AND (terminal_action = 'set_tunable'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'acked'::text) AND (terminal_action = 'acknowledge_trigger'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'neutral_fallback'::text) AND (terminal_action = 'neutral_fallback'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'wrong_action'::text) AND (terminal_action = 'wrong_action'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'timed_out'::text) AND (terminal_action = 'timeout'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'delivery_failed'::text) AND (terminal_action = 'delivery_failed'::text) AND (terminal_at IS NOT NULL))))
+    CONSTRAINT plan_delivery_log_terminal_state_check CHECK ((((status = 'pending'::text) AND (terminal_action IS NULL) AND (terminal_at IS NULL)) OR ((status = 'plan_written'::text) AND (terminal_action = 'set_plan'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'action_completed'::text) AND (terminal_action = 'set_tunable'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'acked'::text) AND (terminal_action = 'acknowledge_trigger'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'neutral_fallback'::text) AND (terminal_action = 'neutral_fallback'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'wrong_action'::text) AND (terminal_action = 'wrong_action'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'timed_out'::text) AND (terminal_action = 'timeout'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'delivery_failed'::text) AND (terminal_action = 'delivery_failed'::text) AND (terminal_at IS NOT NULL))))
 );
 
 
@@ -25511,11 +25611,11 @@ CREATE TABLE public.planner_trigger_ledger (
     terminal_action text,
     terminal_at timestamp with time zone,
     failure_class text,
-    CONSTRAINT planner_trigger_ledger_event_type_check CHECK ((event_type = ANY (ARRAY['SUNRISE'::text, 'SUNSET'::text, 'SOLAR_MAX'::text, 'TRANSITION'::text, 'FORECAST_DEVIATION'::text, 'MANUAL'::text, 'MIDNIGHT'::text, 'FORECAST'::text, 'DEVIATION'::text, 'HEARTBEAT'::text]))),
+    CONSTRAINT planner_trigger_ledger_event_type_check CHECK ((event_type = ANY (ARRAY['SUNRISE'::text, 'SUNSET'::text, 'MIDNIGHT'::text, 'WEEKLY'::text, 'SOLAR_MAX'::text, 'TRANSITION'::text, 'FORECAST_DEVIATION'::text, 'MANUAL'::text, 'FORECAST'::text, 'DEVIATION'::text, 'HEARTBEAT'::text]))),
     CONSTRAINT planner_trigger_ledger_expected_action_check CHECK ((expected_action = ANY (ARRAY['set_plan'::text, 'set_tunable'::text, 'acknowledge_trigger'::text, 'any'::text]))),
     CONSTRAINT planner_trigger_ledger_status_check CHECK ((status = ANY (ARRAY['expected'::text, 'delivered'::text, 'acked'::text, 'plan_written'::text, 'action_completed'::text, 'neutral_fallback'::text, 'wrong_action'::text, 'delivery_failed'::text, 'timed_out'::text, 'missed'::text]))),
     CONSTRAINT planner_trigger_ledger_terminal_action_check CHECK (((terminal_action IS NULL) OR (terminal_action = ANY (ARRAY['set_plan'::text, 'set_tunable'::text, 'acknowledge_trigger'::text, 'neutral_fallback'::text, 'wrong_action'::text, 'timeout'::text, 'delivery_failed'::text])))),
-    CONSTRAINT planner_trigger_ledger_terminal_state_check CHECK ((((terminal_action IS NULL) AND (terminal_at IS NULL)) OR ((status = 'plan_written'::text) AND (terminal_action = 'set_plan'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'action_completed'::text) AND (terminal_action = 'set_tunable'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'acked'::text) AND (terminal_action = 'acknowledge_trigger'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'neutral_fallback'::text) AND (terminal_action = 'neutral_fallback'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'wrong_action'::text) AND (terminal_action = 'wrong_action'::text) AND (terminal_at IS NOT NULL)) OR ((status = ANY (ARRAY['timed_out'::text, 'missed'::text])) AND (terminal_action = 'timeout'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'delivery_failed'::text) AND (terminal_action = 'delivery_failed'::text) AND (terminal_at IS NOT NULL))))
+    CONSTRAINT planner_trigger_ledger_terminal_state_check CHECK ((((status = ANY (ARRAY['expected'::text, 'delivered'::text])) AND (terminal_action IS NULL) AND (terminal_at IS NULL)) OR ((status = 'plan_written'::text) AND (terminal_action = 'set_plan'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'action_completed'::text) AND (terminal_action = 'set_tunable'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'acked'::text) AND (terminal_action = 'acknowledge_trigger'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'neutral_fallback'::text) AND (terminal_action = 'neutral_fallback'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'wrong_action'::text) AND (terminal_action = 'wrong_action'::text) AND (terminal_at IS NOT NULL)) OR ((status = ANY (ARRAY['timed_out'::text, 'missed'::text])) AND (terminal_action = 'timeout'::text) AND (terminal_at IS NOT NULL)) OR ((status = 'delivery_failed'::text) AND (terminal_action = 'delivery_failed'::text) AND (terminal_at IS NOT NULL))))
 );
 
 
@@ -26645,17 +26745,18 @@ ALTER SEQUENCE public.utility_cost_id_seq OWNED BY public.utility_cost.id;
 --
 
 CREATE VIEW public.v_active_plan AS
- SELECT DISTINCT ON (parameter) parameter,
-    value,
-    ts,
-    plan_id,
-    reason,
-    created_at,
-    trigger_id,
-    planner_instance
-   FROM public.setpoint_plan
-  WHERE ((ts <= now()) AND (expires_at > now()) AND (is_active = true))
-  ORDER BY parameter, created_at DESC, ts DESC;
+ SELECT DISTINCT ON (sp.parameter) sp.parameter,
+    sp.value,
+    sp.ts,
+    sp.plan_id,
+    sp.reason,
+    sp.created_at,
+    sp.trigger_id,
+    sp.planner_instance
+   FROM (public.setpoint_plan sp
+     LEFT JOIN public.plan_journal pj ON (((pj.plan_id = sp.plan_id) AND (pj.greenhouse_id = sp.greenhouse_id))))
+  WHERE ((sp.ts <= now()) AND (sp.expires_at > now()) AND (((sp.source = 'iris'::text) AND (sp.plan_id ~~ 'iris-oneshot-%'::text) AND (sp.is_active = true)) OR ((sp.source = 'iris'::text) AND (sp.plan_id !~~ 'iris-oneshot-%'::text) AND (sp.is_active = true) AND (pj.lifecycle_status = 'effective'::text) AND (pj.valid_from <= now()) AND (pj.expires_at > now())) OR ((sp.source <> 'iris'::text) AND (sp.is_active = true))))
+  ORDER BY sp.parameter, sp.created_at DESC, sp.ts DESC;
 
 
 ALTER VIEW public.v_active_plan OWNER TO verdify;
@@ -55893,10 +55994,24 @@ CREATE TRIGGER trg_normalize_changes_param BEFORE INSERT ON public.setpoint_chan
 
 
 --
+-- Name: plan_delivery_log trg_normalize_plan_delivery_terminal_state; Type: TRIGGER; Schema: public; Owner: verdify
+--
+
+CREATE TRIGGER trg_normalize_plan_delivery_terminal_state BEFORE INSERT OR UPDATE OF status, terminal_action, terminal_at, resulting_plan_id, plan_written_at, acked_at ON public.plan_delivery_log FOR EACH ROW EXECUTE FUNCTION public.normalize_plan_delivery_terminal_state();
+
+
+--
 -- Name: setpoint_plan trg_normalize_plan_param; Type: TRIGGER; Schema: public; Owner: verdify
 --
 
 CREATE TRIGGER trg_normalize_plan_param BEFORE INSERT ON public.setpoint_plan FOR EACH ROW EXECUTE FUNCTION public.normalize_plan_param();
+
+
+--
+-- Name: planner_trigger_ledger trg_normalize_planner_trigger_terminal_state; Type: TRIGGER; Schema: public; Owner: verdify
+--
+
+CREATE TRIGGER trg_normalize_planner_trigger_terminal_state BEFORE INSERT OR UPDATE OF status, terminal_action, terminal_at, resolved_at, updated_at ON public.planner_trigger_ledger FOR EACH ROW EXECUTE FUNCTION public.normalize_planner_trigger_terminal_state();
 
 
 --

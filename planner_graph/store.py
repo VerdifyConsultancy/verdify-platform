@@ -11,7 +11,7 @@ import copy
 import json
 import threading
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any, Protocol, cast
 from uuid import UUID
 
@@ -24,6 +24,10 @@ from planner_graph.contracts import (
     ValidationSummaryResponse,
 )
 from planner_graph.state import PlannerState, PlannerStatus, RunMode, utc_now
+
+
+class LeaseLostError(RuntimeError):
+    """Raised when a worker no longer owns a live lease for a run."""
 
 
 def empty_planner_state() -> PlannerState:
@@ -78,6 +82,8 @@ class RunRecord:
     state: PlannerState = field(default_factory=empty_planner_state)
     queued: bool = True
     submission_count: int = 1
+    lease_owner: str | None = None
+    lease_expires_at: datetime | None = None
 
     def response(self) -> RunStatusResponse:
         diagnosis = None
@@ -162,6 +168,8 @@ class RunStore(Protocol):
 
     def claim_next(self, owner: str, lease_seconds: int) -> RunRecord | None: ...
 
+    def renew_lease(self, trigger_id: UUID, owner: str, lease_seconds: int) -> bool: ...
+
     def mark_completed(
         self, trigger_id: UUID, state: PlannerState, owner: str
     ) -> RunRecord: ...
@@ -205,24 +213,72 @@ class InMemoryRunStore:
             return copy.deepcopy(record), should_enqueue
 
     def claim_next(self, owner: str, lease_seconds: int) -> RunRecord | None:
-        del lease_seconds
         with self._lock:
-            if not self._queue:
-                return None
-            trigger_id = self._queue.pop(0)
-            record = self._records[trigger_id]
+            now = datetime.now(UTC)
+            record: RunRecord | None = None
+            while self._queue and record is None:
+                trigger_id = self._queue.pop(0)
+                candidate = self._records[trigger_id]
+                if candidate.status == "queued" and candidate.queued:
+                    record = candidate
+            if record is None:
+                expired = sorted(
+                    (
+                        candidate
+                        for candidate in self._records.values()
+                        if candidate.status == "running"
+                        and candidate.lease_expires_at is not None
+                        and candidate.lease_expires_at < now
+                    ),
+                    key=lambda candidate: candidate.updated_at,
+                )
+                if not expired:
+                    return None
+                record = expired[0]
             record.status = "running"
             record.queued = False
             record.execution_owner = owner
+            record.lease_owner = owner
+            record.lease_expires_at = now + timedelta(seconds=lease_seconds)
             record.updated_at = utc_now()
             record.state["status"] = "running"
             return copy.deepcopy(record)
+
+    def renew_lease(self, trigger_id: UUID, owner: str, lease_seconds: int) -> bool:
+        with self._lock:
+            now = datetime.now(UTC)
+            record = self._records.get(trigger_id)
+            if (
+                record is None
+                or record.status != "running"
+                or record.lease_owner != owner
+                or record.lease_expires_at is None
+                or record.lease_expires_at <= now
+            ):
+                return False
+            record.lease_expires_at = now + timedelta(seconds=lease_seconds)
+            record.updated_at = utc_now()
+            return True
+
+    @staticmethod
+    def _require_live_lease(record: RunRecord, owner: str) -> None:
+        now = datetime.now(UTC)
+        if (
+            record.status != "running"
+            or record.lease_owner != owner
+            or record.lease_expires_at is None
+            or record.lease_expires_at <= now
+        ):
+            raise LeaseLostError(
+                f"planner run lease lost for trigger {record.trigger_id} and owner {owner}"
+            )
 
     def mark_completed(
         self, trigger_id: UUID, state: PlannerState, owner: str
     ) -> RunRecord:
         with self._lock:
             record = self._records[trigger_id]
+            self._require_live_lease(record, owner)
             record.status = "completed"
             record.current_step = state.get("current_step")
             record.terminal_status = state.get("terminal_status")
@@ -230,11 +286,14 @@ class InMemoryRunStore:
             record.updated_at = state.get("updated_at", utc_now())
             record.state = copy.deepcopy(state)
             record.queued = False
+            record.lease_owner = None
+            record.lease_expires_at = None
             return copy.deepcopy(record)
 
     def mark_failed(self, trigger_id: UUID, error: Exception, owner: str) -> RunRecord:
         with self._lock:
             record = self._records[trigger_id]
+            self._require_live_lease(record, owner)
             record.status = "failed"
             record.last_error = str(error)
             record.execution_owner = owner
@@ -245,6 +304,9 @@ class InMemoryRunStore:
                 "errors": [*record.state.get("errors", []), str(error)],
                 "updated_at": record.updated_at,
             }
+            record.queued = False
+            record.lease_owner = None
+            record.lease_expires_at = None
             return copy.deepcopy(record)
 
     def get(self, trigger_id: UUID) -> RunRecord | None:
@@ -377,6 +439,26 @@ class PostgresRunStore:
                 conn.commit()
                 return self.get(trigger_id)
 
+    def renew_lease(self, trigger_id: UUID, owner: str, lease_seconds: int) -> bool:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE planner_graph_runs
+                       SET lease_expires_at = now() + (%s || ' seconds')::interval,
+                           updated_at = now()
+                     WHERE trigger_id = %s
+                       AND status = 'running'
+                       AND lease_owner = %s
+                       AND lease_expires_at > now()
+                     RETURNING trigger_id
+                    """,
+                    (str(lease_seconds), trigger_id, owner),
+                )
+                renewed = cur.fetchone() is not None
+                conn.commit()
+                return renewed
+
     def mark_completed(
         self, trigger_id: UUID, state: PlannerState, owner: str
     ) -> RunRecord:
@@ -396,6 +478,10 @@ class PostgresRunStore:
                            lease_expires_at = NULL,
                            queued = FALSE
                      WHERE trigger_id = %s
+                       AND status = 'running'
+                       AND lease_owner = %s
+                       AND lease_expires_at > now()
+                     RETURNING *
                     """,
                     (
                         state.get("current_step"),
@@ -403,13 +489,17 @@ class PostgresRunStore:
                         owner,
                         json.dumps(state),
                         trigger_id,
+                        owner,
                     ),
                 )
+                raw_row = cur.fetchone()
+                if raw_row is None:
+                    conn.rollback()
+                    raise LeaseLostError(
+                        f"planner run lease lost for trigger {trigger_id} and owner {owner}"
+                    )
                 conn.commit()
-        record = self.get(trigger_id)
-        if record is None:
-            raise RuntimeError("planner_graph_runs row missing after mark_completed")
-        return record
+        return self._row_to_record(cast(dict[str, object], dict(cast(Any, raw_row))))
 
     def mark_failed(self, trigger_id: UUID, error: Exception, owner: str) -> RunRecord:
         with self._connect() as conn:
@@ -431,14 +521,21 @@ class PostgresRunStore:
                                TRUE
                            )
                      WHERE trigger_id = %s
+                       AND status = 'running'
+                       AND lease_owner = %s
+                       AND lease_expires_at > now()
+                     RETURNING *
                     """,
-                    (str(error), owner, utc_now(), trigger_id),
+                    (str(error), owner, utc_now(), trigger_id, owner),
                 )
+                raw_row = cur.fetchone()
+                if raw_row is None:
+                    conn.rollback()
+                    raise LeaseLostError(
+                        f"planner run lease lost for trigger {trigger_id} and owner {owner}"
+                    )
                 conn.commit()
-        record = self.get(trigger_id)
-        if record is None:
-            raise RuntimeError("planner_graph_runs row missing after mark_failed")
-        return record
+        return self._row_to_record(cast(dict[str, object], dict(cast(Any, raw_row))))
 
     def get(self, trigger_id: UUID) -> RunRecord | None:
         with self._connect() as conn:
@@ -476,4 +573,6 @@ class PostgresRunStore:
             ),
             queued=cast(bool, row["queued"]),
             submission_count=cast(int, row["submission_count"]),
+            lease_owner=cast(str | None, row["lease_owner"]),
+            lease_expires_at=cast(datetime | None, row["lease_expires_at"]),
         )

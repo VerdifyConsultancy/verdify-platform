@@ -13,13 +13,13 @@ from typing import cast
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
+from tests.helpers import tier1_active_plan_summary
 
 from planner_graph.app import PlannerService, create_app
 from planner_graph.clients.openai import OpenAIPlannerClient
 from planner_graph.runtime import ExecutionHooks
 from planner_graph.state import PROTECTED_MCP_TOOLS
 from planner_graph.verdify_contract import CLIMATE_INTENT_FIELD_NAMES
-from tests.helpers import tier1_active_plan_summary
 
 
 def planner_request(
@@ -223,7 +223,7 @@ def test_worker_owns_execution_not_request_handler() -> None:
         payload = wait_for_terminal(client, trigger_id)
 
     assert response.status_code == 202
-    assert payload["execution_owner"] == "planner-worker"
+    assert payload["execution_owner"].startswith("planner-worker:")
     assert payload["status"] == "completed"
 
 

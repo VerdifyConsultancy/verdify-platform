@@ -13,7 +13,6 @@ from planner_graph.state import PlannerState
 
 MIGRATION_PATH = (
     Path(__file__).resolve().parents[1]
-    / "planner_graph"
     / "migrations"
     / "001_planner_memory.sql"
 )

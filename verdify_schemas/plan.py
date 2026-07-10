@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Annotated, Literal
 from uuid import UUID
 
@@ -118,6 +118,21 @@ class Plan(BaseModel):
         self.valid_from = effective_from
         self.expires_at = expires_at
         return self
+
+
+def plan_current_coverage_error(plan: Plan, now: datetime) -> str | None:
+    """Return why a full plan cannot safely become the current effective plan."""
+    if now.tzinfo is None or now.utcoffset() is None:
+        raise ValueError("plan coverage reference time must be timezone-aware")
+    if plan.valid_from is None or plan.expires_at is None:
+        return "plan validity bounds were not resolved"
+    if plan.valid_from > now:
+        return "plan is not yet valid"
+    if plan.expires_at <= now:
+        return "plan is already expired"
+    if plan.transitions[0].ts > now:
+        return "plan has a gap before its first transition"
+    return None
 
 
 # ── Structured hypothesis (Phase 5) ────────────────────────────────
@@ -265,6 +280,7 @@ PlanDeliveryEventType = Literal[
     "DEVIATION",
     "FORECAST_DEVIATION",
     "HEARTBEAT",
+    "WEEKLY",
     "MANUAL",
 ]
 # v1.4 (contract §2.G): opus | local are the post-rollout instance values.

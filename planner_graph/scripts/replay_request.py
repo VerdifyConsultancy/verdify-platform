@@ -16,11 +16,16 @@ from pathlib import Path
 from typing import Protocol, cast
 
 import httpx
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
 from planner_graph.contracts import PlannerRunRequest
 
 
 class SyncClientLike(Protocol):
-    def __enter__(self) -> "SyncClientLike": ...
+    def __enter__(self) -> SyncClientLike: ...
 
     def __exit__(self, exc_type: object, exc: object, tb: object) -> object: ...
 

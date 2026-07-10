@@ -43,6 +43,7 @@ TriggerType = Literal[
     "DEVIATION",  # legacy alias for FORECAST_DEVIATION in routing table
     "FORECAST_DEVIATION",  # Phase 4: renamed from DEVIATION on the wire
     "HEARTBEAT",
+    "WEEKLY",  # optional non-required deep-review strategy event
     "MANUAL",
 ]
 RequiredTriggerDisposition = Literal["complete", "wait", "retry"]

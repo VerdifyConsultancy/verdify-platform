@@ -846,6 +846,43 @@ required full-plan trigger, separate from SUNRISE and SUNSET.
 When done, post your summary to #greenhouse via Slack."""
 
 
+def _weekly_prompt(context: str) -> str:
+    now = datetime.now(DENVER).strftime("%A %Y-%m-%d %H:%M %Z")
+    return f"""## Planning Event: WEEKLY
+**Time:** {now}
+
+You are beginning the weekly deep performance review. This is a strategy-level
+cycle: use the prior seven days of outcomes, lessons, and operating trends to
+choose the next bounded planning posture. It is not part of the required daily
+SUNRISE/SUNSET/MIDNIGHT SLA, but its expected terminal action is one valid full
+plan.
+
+### Your tasks:
+1. **Review the prior seven local days** — call `scorecard` for the period and
+   compare compliance, stress, equipment runtime, water, and reliable cost
+   trends. Interior crop DLI remains unavailable while its sensor is broken.
+2. **Grade completed plans** — call `plan_evaluate` for completed Iris plans
+   that have enough outcome data and are still missing an evaluation.
+3. **Synthesize learning** — retrieve relevant plans, observations, site docs,
+   and lessons with `knowledge_search`; validate, supersede, or create lessons
+   only when the weekly evidence supports the change.
+4. **Check present risk** — inspect climate, equipment, alerts, the forecast,
+   and current plan coverage before changing strategy.
+5. **Write the weekly full plan** — call
+   `set_plan(plan_id=..., hypothesis=..., transitions=..., trigger_id=..., planner_instance=...)`.
+   The first transition must be current when written, every transition must
+   carry a complete bounded `climate_intent`, and the plan must remain inside
+   the approved 72-hour envelope. Do not emit raw Tier 1 or crop-band params.
+6. **Post a concise weekly brief** — report what improved, what regressed, the
+   evidence-backed strategy adjustment, and the next measurable hypothesis.
+
+### Assembled Context
+{context}
+
+---
+When done, post your summary to #greenhouse via Slack."""
+
+
 def _transition_prompt(context: str, label: str) -> str:
     """TRANSITION prompt — Phase 4: only `peak_stress` and `decline` survive
     the trigger reshape; the other 7 subtypes were retired (fixed_midnight /
@@ -1006,6 +1043,7 @@ _PROMPT_BUILDERS = {
     "SUNRISE": lambda ctx, lbl, instance="local": _compose_preamble(instance) + _sunrise_prompt(ctx),
     "SUNSET": lambda ctx, lbl, instance="local": _compose_preamble(instance) + _sunset_prompt(ctx),
     "MIDNIGHT": lambda ctx, lbl, instance="local": _compose_preamble(instance) + _midnight_prompt(ctx),
+    "WEEKLY": lambda ctx, lbl, instance="local": _compose_preamble(instance) + _weekly_prompt(ctx),
     "SOLAR_MAX": lambda ctx, lbl, instance="local": _compose_preamble(instance) + _solar_max_prompt(ctx),
     "TRANSITION": lambda ctx, lbl, instance="local": _compose_preamble(instance) + _transition_prompt(ctx, lbl),
     "FORECAST_DEVIATION": lambda ctx, lbl, instance="local": (
@@ -1251,7 +1289,7 @@ def send_to_iris(
             "---\n\n"
         ) + message
 
-    wake_now = event_type in ("SUNRISE", "SUNSET", "MIDNIGHT", "FORECAST_DEVIATION", "MANUAL")
+    wake_now = event_type in ("SUNRISE", "SUNSET", "MIDNIGHT", "WEEKLY", "FORECAST_DEVIATION", "MANUAL")
     result["wake_mode"] = "now" if wake_now else "next-heartbeat"
 
     payload = {

@@ -7,17 +7,19 @@ execution and terminal state updates.
 
 from __future__ import annotations
 
+import os
+import socket
 import threading
 import time
 from dataclasses import dataclass
 from math import ceil, log2
 from typing import cast
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from planner_graph.graph import build_graph
 from planner_graph.runtime import PlannerRuntime
 from planner_graph.state import GRAPH_VERSION, PlannerState, utc_now
-from planner_graph.store import RunRecord, RunStore
+from planner_graph.store import LeaseLostError, RunRecord, RunStore
 
 
 @dataclass(frozen=True)
@@ -50,11 +52,24 @@ class BoundedBackoff:
         return min(self.max_seconds, self.base_seconds * (2**exponent))
 
 
+def _default_worker_id() -> str:
+    pod_name = os.environ.get("POD_NAME") or socket.gethostname()
+    pod_uid = os.environ.get("POD_UID") or "local"
+    return f"planner-worker:{pod_name}:{pod_uid}:{os.getpid()}:{uuid4().hex[:12]}"
+
+
 class PlannerWorker:
-    def __init__(self, repository: RunStore, runtime: PlannerRuntime) -> None:
+    def __init__(
+        self,
+        repository: RunStore,
+        runtime: PlannerRuntime,
+        *,
+        worker_id: str | None = None,
+    ) -> None:
         self.repository = repository
         self.runtime = runtime
         self.graph = build_graph(runtime)
+        self.worker_id = worker_id or _default_worker_id()
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self._lifecycle_lock = threading.Lock()
@@ -117,7 +132,7 @@ class PlannerWorker:
 
     def _run_loop(self) -> None:
         while not self._stop.is_set():
-            owner = threading.current_thread().name
+            owner = self.worker_id
             try:
                 record = self.repository.claim_next(owner, self.runtime.settings.worker_lease_seconds)
             except Exception as error:
@@ -141,8 +156,51 @@ class PlannerWorker:
 
     def execute(self, record: RunRecord) -> None:
         trigger_id = record.trigger_id
-        owner = threading.current_thread().name
+        owner = self.worker_id
         started = time.perf_counter()
+        lease_seconds = self.runtime.settings.worker_lease_seconds
+        renewal_stop = threading.Event()
+        renewal_lost = threading.Event()
+        renewal_errors: list[Exception] = []
+
+        def renew_until_stopped() -> None:
+            interval = max(0.1, lease_seconds / 3)
+            while not renewal_stop.wait(interval):
+                try:
+                    renewed = self.repository.renew_lease(
+                        trigger_id,
+                        owner,
+                        lease_seconds,
+                    )
+                except Exception as error:  # pragma: no cover - store-specific
+                    renewal_errors.append(error)
+                    renewal_lost.set()
+                    return
+                if not renewed:
+                    renewal_lost.set()
+                    return
+
+        renewal_thread = threading.Thread(
+            target=renew_until_stopped,
+            name=f"planner-lease-renew-{str(trigger_id)[:8]}",
+            daemon=True,
+        )
+        renewal_thread.start()
+
+        def stop_and_refresh_lease() -> None:
+            renewal_stop.set()
+            renewal_thread.join(timeout=2)
+            if renewal_errors:
+                raise renewal_errors[0]
+            if renewal_lost.is_set() or not self.repository.renew_lease(
+                trigger_id,
+                owner,
+                lease_seconds,
+            ):
+                raise LeaseLostError(
+                    f"planner run lease lost for trigger {trigger_id} and owner {owner}"
+                )
+
         initial_state: PlannerState = {
             "trigger_id": str(trigger_id),
             "thread_id": str(trigger_id),
@@ -168,27 +226,32 @@ class PlannerWorker:
             revision_count=int(initial_state.get("revision_count", 0) or 0),
         )
         try:
-            final_state = cast(
-                PlannerState,
-                self.graph.invoke(
-                    initial_state,
-                    config={"configurable": {"thread_id": str(trigger_id)}},
-                ),
-            )
-        except Exception as error:  # pragma: no cover - surfaced in API state
-            self.repository.mark_failed(trigger_id, error, owner)
+            try:
+                final_state = cast(
+                    PlannerState,
+                    self.graph.invoke(
+                        initial_state,
+                        config={"configurable": {"thread_id": str(trigger_id)}},
+                    ),
+                )
+            except Exception as error:  # pragma: no cover - surfaced in API state
+                stop_and_refresh_lease()
+                self.repository.mark_failed(trigger_id, error, owner)
+                duration_ms = int((time.perf_counter() - started) * 1000)
+                self.runtime.planner_logger.log_failed(
+                    trigger_id=str(trigger_id),
+                    owner=owner,
+                    request_id=str(initial_state.get("request_id", "")),
+                    trace_id=str(initial_state.get("trace_id", "")),
+                    duration_ms=duration_ms,
+                    error=error,
+                )
+                return
+            stop_and_refresh_lease()
+            completed = self.repository.mark_completed(trigger_id, final_state, owner)
             duration_ms = int((time.perf_counter() - started) * 1000)
-            self.runtime.planner_logger.log_failed(
-                trigger_id=str(trigger_id),
-                owner=owner,
-                request_id=str(initial_state.get("request_id", "")),
-                trace_id=str(initial_state.get("trace_id", "")),
-                duration_ms=duration_ms,
-                error=error,
-            )
-            return
+            self.runtime.planner_logger.log_completed(completed, duration_ms)
         finally:
+            renewal_stop.set()
+            renewal_thread.join(timeout=2)
             self.runtime.hooks.clear_run_context()
-        completed = self.repository.mark_completed(trigger_id, final_state, owner)
-        duration_ms = int((time.perf_counter() - started) * 1000)
-        self.runtime.planner_logger.log_completed(completed, duration_ms)
