@@ -55,10 +55,7 @@ def test_unavailable_dli_warning_is_not_misclassified_as_proxy_guidance() -> Non
 def test_all_active_lesson_retrieval_paths_apply_database_guard() -> None:
     gather = (ROOT / "scripts" / "gather-plan-context.sh").read_text()
     mcp = (ROOT / "mcp" / "server.py").read_text()
-    generated = (
-        ROOT
-        / "deploy/k8s/components/ingestor-gather-script/gather-script-configmap.yaml"
-    ).read_text()
+    generated = (ROOT / "deploy/k8s/components/ingestor-gather-script/gather-script-configmap.yaml").read_text()
     guard = "fn_dli_proxy_lesson_invalid"
     assert guard in gather
     assert mcp.count(guard) >= 2
