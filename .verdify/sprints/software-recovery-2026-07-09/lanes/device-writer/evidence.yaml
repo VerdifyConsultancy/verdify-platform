@@ -2,7 +2,7 @@ sprint_id: software-recovery-2026-07-09
 scope_id: device-writer
 revision: e4e1c5901d2ce46400df65d9ced516bed25c0eb2
 environment: null
-generated_at: "2026-07-10T00:24:06Z"
+generated_at: "2026-07-10T00:28:36Z"
 items:
   - id: WRI-EV-001
     type: TEST
@@ -174,16 +174,16 @@ items:
 
   - id: WRI-EV-010
     type: CI
-    status: NOT_RUN
+    status: PASS
     source: GitHub PR 442 checks
     command: null
-    timestamp: "2026-07-10T00:24:06Z"
-    revision: e4e1c5901d2ce46400df65d9ced516bed25c0eb2
+    timestamp: "2026-07-10T00:28:36Z"
+    revision: 991f9aae417a6eedce3fd252d11e254834bf3584
     environment: GitHub Actions
-    result: PR opened; checks pending at record generation time.
+    result: 25 checks passed, eight non-applicable publish/promotion checks skipped, zero failed or pending.
     artifact_location: https://github.com/VerdifyConsultancy/verdify-platform/pull/442/checks
     acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
-    limitations: [Must be updated before integration handoff.]
+    limitations: [A final records-only commit may trigger a mechanical rerun; no product source changes follow the accepted head.]
 
   - id: WRI-EV-011
     type: RUNTIME_PROBE

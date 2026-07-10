@@ -1,9 +1,9 @@
 sprint_id: software-recovery-2026-07-09
 lane_id: device-writer
-state: VALIDATING
-updated_at: "2026-07-10T00:24:06Z"
+state: READY_FOR_INTEGRATION
+updated_at: "2026-07-10T00:28:36Z"
 head_sha: e4e1c5901d2ce46400df65d9ced516bed25c0eb2
-working_tree_clean: false
+working_tree_clean: true
 acceptance:
   passed:
     - LANE-AC-01
@@ -14,11 +14,8 @@ acceptance:
     - LANE-AC-05
   failed: []
 blockers:
-  - GitHub PR 442 checks are pending.
   - LANE-AC-05 requires the controller-owned exact-digest two-hour production window.
 decisions_requested: []
 next_actions:
-  - Commit and push this evidence-only closeout update.
-  - Reconcile PR 442 CI and update WRI-EV-010.
-  - Hand the accepted source to integration/release control without self-merging.
+  - Hand PR 442 to integration/release control without self-merging.
   - Keep LANE-AC-05 pending until post-deployment evidence exists.

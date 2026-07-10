@@ -1,7 +1,7 @@
 # Device-writer lane closeout checkpoint
 
-State: **VALIDATING**. Implementation and independent criticism are complete;
-GitHub CI and deployment-only LANE-AC-05 remain open.
+State: **READY_FOR_INTEGRATION**. Implementation, independent criticism, and
+GitHub CI are complete; deployment-only LANE-AC-05 remains open.
 
 ## Objective and delivered outcome
 
@@ -111,12 +111,15 @@ release.
 - Pull request: [#442](https://github.com/VerdifyConsultancy/verdify-platform/pull/442).
 - Remote implementation branch matched the reviewed head before this
   evidence-only closeout commit.
-- CI: pending at this checkpoint; must be green before integration handoff.
+- CI at closeout head `991f9aae417a6eedce3fd252d11e254834bf3584`:
+  25 passed, eight non-applicable publish/promotion checks skipped, zero failed
+  or pending.
 - Self-merge is not authorized and was not attempted.
 
 ## Follow-ups and residual risk
 
-- LANE-AC-05 remains owned by release control.
+- LANE-AC-05 remains owned by release control and does not block source
+  integration; it does block declaring this lane COMPLETE.
 - Stale `band_track_fraction=0.25` retirement remains #377 after repaired
   consumers are deployed and accepted.
 - The full lifecycle classification in
