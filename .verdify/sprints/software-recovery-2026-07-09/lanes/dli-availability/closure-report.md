@@ -128,3 +128,14 @@ separate operator task. Even after replacement, migration 195 cannot be
 activated by ordinary DML: a separately reviewed activation migration and
 contract validation are required. Until then, the correct product answer is
 unavailable.
+
+## Independent verdict
+
+The fresh provenance and actuation-neutrality critic returned **PASS** for
+substantive head `03946b7da51f59c0a820d9cd64ac64249d669f33` and attested
+record-only head `b6fe30cfee24eb3b948a485efcecebdbd2c21322`. The critic
+independently reproduced every original and renewed finding closure, confirmed
+zero firmware actuation divergence and final green CI, and found no remaining
+PR defect. Production migration, restarts, publication, live acceptance, the
+combined image, OTA, and physical sensor replacement remain separate
+release/operator gates.

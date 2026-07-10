@@ -2,7 +2,7 @@ sprint_id: software-recovery-2026-07-09
 scope_id: dli-availability
 revision: 03946b7da51f59c0a820d9cd64ac64249d669f33
 environment: null
-generated_at: "2026-07-10T14:02:05Z"
+generated_at: "2026-07-10T14:05:47Z"
 items:
   - id: EVI-DLI-001
     type: TEST
@@ -272,3 +272,28 @@ items:
     acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
     limitations:
       - Trusted publication and prod-promotion-only jobs were intentionally skipped for the draft PR.
+
+  - id: EVI-DLI-012
+    type: REVIEW
+    status: PASS
+    source: fresh independent provenance and actuation-neutrality critic
+    command: >-
+      adversarial review and independent reproduction across the substantive
+      implementation, both changes-required remediation series, migration and
+      schema fixtures, active live consumer discovery, firmware regression,
+      generated artifacts, and exact-head GitHub checks
+    timestamp: "2026-07-10T14:05:47Z"
+    revision: b6fe30cfee24eb3b948a485efcecebdbd2c21322
+    environment: local immutable Git heads, disposable PG16/TimescaleDB, read-only production discovery, and GitHub Actions
+    result: >-
+      PASS. The critic independently reproduced closure of the original seven
+      findings, four renewed provenance gaps, and the rollover-neutrality edge.
+      Substantive head 03946b7 is accepted; record-only head b6fe30c accurately
+      records it. Focused contracts, 272 firmware tests, all 296,698 invariant
+      rows, static lighting, zero-divergence replay, migration classification,
+      firmware-twin parity, diff integrity, and final 26-pass/8-skip CI are
+      green. PR #448 is clean and mergeable.
+    artifact_location: .verdify/sprints/software-recovery-2026-07-09/lanes/dli-availability/critic-report-2026-07-10.md
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
+    limitations:
+      - Production migration, restarts, publication, live acceptance, combined-image OTA, and physical sensor replacement remain release/operator work.
