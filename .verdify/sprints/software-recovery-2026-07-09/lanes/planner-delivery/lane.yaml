@@ -78,6 +78,21 @@ ownership:
     - verdify_schemas/tunable_registry.py
     - db/schema.sql
     - deploy/k8s/base/ingestor-deployment.yaml
+  granted_coordination_paths:
+    - path: verdify_schemas/tunable_registry.py
+      granted_by: software-recovery controller
+      reason: >-
+        Planner issue #427 requires one-time strict bound intersection against
+        the canonical registry; edits are limited to planner bound semantics
+        and focused tests and must preserve every non-planner tunable/readback
+        contract.
+    - path: db/schema.sql
+      granted_by: software-recovery controller
+      reason: >-
+        Migration 196 requires the generated schema dump to match the accepted
+        terminal-action, singularity, and expiry schema; it must be regenerated
+        from a disposable verified database and preserve merged DLI/resource/
+        writer semantics.
   owned_interfaces:
     - tool-level readiness
     - worker-aware non-authoritative runtime health or desired-state removal
