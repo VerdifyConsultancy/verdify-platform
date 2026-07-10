@@ -161,6 +161,52 @@ ON CONFLICT (date) DO UPDATE SET
     temp_avg = EXCLUDED.temp_avg,
     dli_final = EXCLUDED.dli_final;
 
+CREATE TEMP TABLE dli_raw_before AS
+SELECT
+    (SELECT count(*) FROM public.climate
+      WHERE greenhouse_id IN ('dli-fixture', 'vallery')) AS climate_rows,
+    (SELECT sum(dli_today) FROM public.climate
+      WHERE greenhouse_id IN ('dli-fixture', 'vallery')) AS climate_dli_sum,
+    (SELECT count(*) FROM public.daily_summary
+      WHERE greenhouse_id IN ('dli-fixture', 'vallery')) AS daily_rows,
+    (SELECT sum(dli_final) FROM public.daily_summary
+      WHERE greenhouse_id IN ('dli-fixture', 'vallery')) AS daily_dli_sum;
+
+-- Reapply with representative raw/proxy history present. The exact pre/post
+-- counts and sums must survive; migration 195 classifies history but never
+-- rewrites or deletes it.
+\ir ../195-dli-availability-provenance.sql
+
+DO $$
+DECLARE
+    before_row record;
+    climate_rows_after bigint;
+    climate_sum_after double precision;
+    daily_rows_after bigint;
+    daily_sum_after double precision;
+BEGIN
+    SELECT * INTO before_row FROM dli_raw_before;
+    SELECT count(*), sum(dli_today)
+      INTO climate_rows_after, climate_sum_after
+    FROM public.climate
+    WHERE greenhouse_id IN ('dli-fixture', 'vallery');
+    SELECT count(*), sum(dli_final)
+      INTO daily_rows_after, daily_sum_after
+    FROM public.daily_summary
+    WHERE greenhouse_id IN ('dli-fixture', 'vallery');
+
+    IF climate_rows_after IS DISTINCT FROM before_row.climate_rows
+       OR climate_sum_after IS DISTINCT FROM before_row.climate_dli_sum
+       OR daily_rows_after IS DISTINCT FROM before_row.daily_rows
+       OR daily_sum_after IS DISTINCT FROM before_row.daily_dli_sum THEN
+        RAISE EXCEPTION
+            'raw DLI history changed across migration rerun: before %, after climate=(%,%), daily=(%,%)',
+            row_to_json(before_row), climate_rows_after, climate_sum_after,
+            daily_rows_after, daily_sum_after;
+    END IF;
+END;
+$$;
+
 DO $$
 DECLARE
     row_value record;
