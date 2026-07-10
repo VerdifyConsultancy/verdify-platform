@@ -1,7 +1,7 @@
 sprint_id: software-recovery-2026-07-09
 state: EXECUTING
-phase: security-checkpoint-integration
-updated_at: "2026-07-09T23:02:21Z"
+phase: wave-0-implementation
+updated_at: "2026-07-10T00:29:37Z"
 repository:
   url: https://github.com/VerdifyConsultancy/verdify-platform
   local_path: /Users/jason/repos/verdify-worktrees/software-recovery-20260709
@@ -17,7 +17,7 @@ authorization:
   destructive_database: not authorized or required
   credentials_dns_edge: out of scope
 baseline:
-  git_clean: false
+  git_clean: true
   github_access: available
   kubernetes_context: vallery
   production_read_access: available
@@ -29,6 +29,6 @@ known_gates:
   - Firmware changes must pass unit tests, invariants, replay, compile, weekly-OTA, and 48-hour bake checks.
   - Schema or migration changes must be serialized and rollback-classified.
 next_actions:
-  - Commit and push the critic-reviewed evidence reconciliation, require green CI, and merge PR 439.
-  - Create isolated Wave-0 writer and evidence worktrees from the merged main checkpoint.
-  - Dispatch only dependency-ready workers with their validated lane contracts under the approved local-worktree fallback.
+  - Supervise device-writer and evidence-core after integration of authoritative main a2c3ee9.
+  - Route immutable lane heads through fresh contract-specific critics and required GitHub CI.
+  - Preserve worker production-read-only boundaries and the protected credential-rotation release block.

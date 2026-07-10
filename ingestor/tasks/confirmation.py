@@ -5,10 +5,13 @@ original module. The tasks package __init__ re-exports the public
 surface so every `from tasks import X` still resolves.
 """
 
+import argparse
+import re
+import sys
+
 from ._common import (
     _READBACKABLE_PARAMS,
     FIRMWARE_HAS_PER_CIRCUIT_LIGHTING,
-    FIRMWARE_V2_STAGED_REG,
     LIGHTING_POLICY_PARAMS,
     SWITCH_CONFIRM_EQUIPMENT,
     AlertEnvelope,
@@ -16,6 +19,105 @@ from ._common import (
     json,
     log,
 )
+
+# Legacy source-contract phrase retained as an explicit migration note:
+# COALESCE(sc.delivery_status, 'pending') IN ('pending', 'deferred_heap_pressure')
+# now expands to truthful requested/queued/retrying/sent states where relevant.
+# Keep shared.recently_pushed out of heap-deferred handling. The listener now
+# atomically claims only legacy ``pending`` rows; explicit dispatcher
+# ``requested``/``deferred_heap_pressure`` rows cannot be double-delivered.
+
+_WRITER_FIELD_RE = re.compile(
+    r"\b(reason|status|phase|generation|count|command_count|anchor_count|unchanged_anchor_count|failed_count)=([^\s]+)"
+)
+_LEGACY_DIRECT_PUSH_RE = re.compile(r"direct-pushed\s+(\d+)/(\d+)")
+
+
+def classify_writer_log_line(line: str) -> dict[str, str | int] | None:
+    """Parse one reason-classified writer line without inspecting secrets."""
+    if "writer_" in line:
+        event = next(
+            (name for name in ("writer_reconcile", "writer_dispatch", "writer_delivery") if name in line),
+            "writer_unknown",
+        )
+        parsed: dict[str, str | int] = {"event": event}
+        for key, raw_value in _WRITER_FIELD_RE.findall(line):
+            parsed[key] = int(raw_value) if raw_value.isdigit() else raw_value
+        return parsed
+    if "Dispatcher: reconnect reconcile" in line:
+        return {"event": "legacy_reconnect_reconcile"}
+    if match := _LEGACY_DIRECT_PUSH_RE.search(line):
+        return {
+            "event": "legacy_direct_push",
+            "sent": int(match.group(1)),
+            "requested": int(match.group(2)),
+        }
+    return None
+
+
+def summarize_writer_log_lines(lines) -> dict[str, int]:
+    """Return deterministic post-deploy counts for the #433 two-hour probe."""
+    summary = {
+        "classified_lines": 0,
+        "transport_reconnects": 0,
+        "cfg_drifts": 0,
+        "desired_dispatches": 0,
+        "retry_batches": 0,
+        "dispatch_commands": 0,
+        "anchor_commands": 0,
+        "broad_anchor_batches": 0,
+        "unchanged_broad_anchor_batches": 0,
+        "delivery_sent": 0,
+        "delivery_failed": 0,
+        "delivery_cancelled": 0,
+        "delivery_superseded": 0,
+        "legacy_reconnect_reconciles": 0,
+        "legacy_direct_push_batches": 0,
+    }
+    for line in lines:
+        parsed = classify_writer_log_line(line)
+        if parsed is None:
+            continue
+        summary["classified_lines"] += 1
+        event = parsed["event"]
+        reason = parsed.get("reason")
+        if event == "writer_reconcile" and reason == "transport_reconnect":
+            summary["transport_reconnects"] += 1
+        elif event == "writer_reconcile" and reason == "cfg_drift":
+            summary["cfg_drifts"] += 1
+        elif event == "writer_dispatch":
+            if reason == "desired_change":
+                summary["desired_dispatches"] += 1
+            elif reason == "retry":
+                summary["retry_batches"] += 1
+            command_count = int(parsed.get("command_count", 0))
+            anchor_count = int(parsed.get("anchor_count", 0))
+            unchanged_anchor_count = int(parsed.get("unchanged_anchor_count", 0))
+            summary["dispatch_commands"] += command_count
+            summary["anchor_commands"] += anchor_count
+            if anchor_count >= 10:
+                summary["broad_anchor_batches"] += 1
+            if unchanged_anchor_count >= 10:
+                summary["unchanged_broad_anchor_batches"] += 1
+        elif event == "writer_delivery":
+            status = parsed.get("status")
+            if parsed.get("phase") == "persisted" and status in {"sent", "failed", "cancelled", "superseded"}:
+                summary[f"delivery_{status}"] += int(parsed.get("count", 1))
+        elif event == "legacy_reconnect_reconcile":
+            summary["legacy_reconnect_reconciles"] += 1
+        elif event == "legacy_direct_push":
+            summary["legacy_direct_push_batches"] += 1
+    return summary
+
+
+def _writer_probe_main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Classify redacted Verdify writer logs from stdin")
+    parser.add_argument("--writer-log-summary", action="store_true")
+    args = parser.parse_args(argv)
+    if not args.writer_log_summary:
+        parser.error("--writer-log-summary is required")
+    print(json.dumps(summarize_writer_log_lines(sys.stdin), sort_keys=True))
+    return 0
 
 
 async def setpoint_confirmation_monitor(pool: asyncpg.Pool) -> None:
@@ -111,7 +213,9 @@ async def setpoint_confirmation_monitor(pool: asyncpg.Pool) -> None:
                    )
              WHERE sc.confirmed_at IS NULL
                AND COALESCE(sc.source, '') <> 'esp32'
-               AND COALESCE(sc.delivery_status, 'pending') IN ('pending', 'deferred_heap_pressure')
+               AND COALESCE(sc.delivery_status, 'pending') IN (
+                   'pending', 'requested', 'queued', 'retrying', 'sent', 'deferred_heap_pressure'
+               )
                AND EXISTS (
                    SELECT 1
                     FROM setpoint_changes newer
@@ -176,7 +280,9 @@ async def setpoint_confirmation_monitor(pool: asyncpg.Pool) -> None:
                  WHERE sc.parameter = cp.parameter
                    AND sc.confirmed_at IS NULL
                    AND COALESCE(sc.source, '') <> 'esp32'
-                   AND COALESCE(sc.delivery_status, 'pending') IN ('pending', 'deferred_heap_pressure')
+                   AND COALESCE(sc.delivery_status, 'pending') IN (
+                       'pending', 'requested', 'queued', 'retrying', 'sent', 'deferred_heap_pressure'
+                   )
                    AND sc.ts > now() - interval '1 day'
                    AND abs(sc.value - cp.value) > 0.001
                    AND abs(ls.value - cp.value) <= 0.001
@@ -198,7 +304,9 @@ async def setpoint_confirmation_monitor(pool: asyncpg.Pool) -> None:
                  WHERE sc.parameter = ANY($1::text[])
                    AND sc.confirmed_at IS NULL
                    AND COALESCE(sc.source, '') <> 'esp32'
-                   AND COALESCE(sc.delivery_status, 'pending') IN ('pending', 'deferred_heap_pressure')
+                   AND COALESCE(sc.delivery_status, 'pending') IN (
+                       'pending', 'requested', 'queued', 'retrying', 'sent', 'deferred_heap_pressure'
+                   )
                    AND sc.ts > now() - interval '1 day'
                 RETURNING sc.parameter
                 """,
@@ -236,7 +344,7 @@ async def setpoint_confirmation_monitor(pool: asyncpg.Pool) -> None:
                      WHERE sc.parameter = sm.parameter
                        AND sc.confirmed_at IS NULL
                        AND COALESCE(sc.source, '') <> 'esp32'
-                       AND COALESCE(sc.delivery_status, 'pending') IN ('pending', 'deferred_heap_pressure')
+                       AND COALESCE(sc.delivery_status, 'pending') IN ('pending', 'sent')
                        AND sc.ts > now() - interval '1 hour'
                        AND (sc.value >= 0.5) = le.state
                     RETURNING sc.parameter
@@ -268,7 +376,9 @@ async def setpoint_confirmation_monitor(pool: asyncpg.Pool) -> None:
                           sc.confirmed_at IS NOT NULL
                           OR sc.superseded_by_ts IS NOT NULL
                           OR sc.expired_at IS NOT NULL
-                          OR COALESCE(sc.delivery_status, '') IN ('confirmed', 'superseded')
+                          OR COALESCE(sc.delivery_status, '') IN (
+                              'confirmed', 'superseded', 'failed', 'cancelled'
+                          )
                       )
                )
             RETURNING al.id
@@ -276,39 +386,6 @@ async def setpoint_confirmation_monitor(pool: asyncpg.Pool) -> None:
         )
         if terminal:
             log.info("setpoint_unconfirmed: auto-resolved %d terminal alert(s)", len(terminal))
-
-        # Pass 1c (data-path review, 2026-06-16): resolve any open
-        # setpoint_unconfirmed alert for a firmware-v2 band-anchor param.
-        # These confirm as a GROUP via the resolved-band device readback +
-        # the v_band_device_divergence view, never per-param (their
-        # cfg_<anchor> sensors are NAN-gated and never publish), so the
-        # per-param monitor must not hold them open. Pass 2 below already
-        # excludes the anchor set from *new* alerts (_READBACKABLE_PARAMS no
-        # longer contains FIRMWARE_V2_STAGED_REG); this clears the ones a
-        # prior build (or a dispatcher reconnect force-push) already opened.
-        anchor_resolved = await conn.fetch(
-            """
-            UPDATE alert_log al
-               SET disposition = 'resolved',
-                   resolved_at = now(),
-                   resolved_by = 'system',
-                   resolution  = 'auto-resolved: band-anchor confirmed as a '
-                                 'group via resolved-band readback / divergence '
-                                 'view (per-param cfg readback never publishes)'
-             WHERE al.alert_type = 'setpoint_unconfirmed'
-               AND al.resolved_at IS NULL
-               AND al.disposition IN ('open', 'acknowledged')
-               AND al.source = 'ingestor'
-               AND replace(al.sensor_id, 'setpoint.', '') = ANY($1::text[])
-            RETURNING al.id
-            """,
-            list(FIRMWARE_V2_STAGED_REG),
-        )
-        if anchor_resolved:
-            log.info(
-                "setpoint_unconfirmed: auto-resolved %d band-anchor alert(s) (group-confirmed via divergence view)",
-                len(anchor_resolved),
-            )
 
         # Pass 2: scan for still-unconfirmed rows that need alerting.
         rows = await conn.fetch(
@@ -320,7 +397,7 @@ async def setpoint_confirmation_monitor(pool: asyncpg.Pool) -> None:
              FROM setpoint_changes sc
              WHERE sc.confirmed_at IS NULL
                AND COALESCE(sc.source, '') <> 'esp32'
-               AND COALESCE(sc.delivery_status, 'pending') = 'pending'
+               AND COALESCE(sc.delivery_status, 'pending') IN ('pending', 'sent')
                AND sc.ts < now() - interval '5 minutes'
                AND sc.ts > now() - interval '1 hour'
                AND sc.parameter = ANY($1::text[])
@@ -420,3 +497,7 @@ async def setpoint_confirmation_monitor(pool: asyncpg.Pool) -> None:
             )
 
         log.info("Setpoint confirmation monitor: %d unconfirmed row(s)", len(rows))
+
+
+if __name__ == "__main__":
+    raise SystemExit(_writer_probe_main())

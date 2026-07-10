@@ -50,10 +50,16 @@ from entity_map import (
     MQTT_FEEDBACK_MAP,
     SETPOINT_MAP,
     STATE_MAP,
-    SWITCH_TO_ENTITY,
     normalize_feedback_value,
 )
-from esp32_push import push_to_esp32
+from esp32_push import (
+    DeviceCommandOutcome,
+    LifecyclePersistenceError,
+    delivery_failure_retryable,
+    delivery_transition_prior_statuses,
+    preserved_terminal_status,
+    push_to_esp32_detailed,
+)
 from mqtt_fanout import (
     FanoutPublisher,
     assert_modes_consistent,
@@ -1255,6 +1261,7 @@ _SETPOINT_RANGES = {
 }
 
 FORCED_ON_SWITCH_PARAMS = frozenset({"sw_fsm_controller_enabled"})
+_RECONCILABLE_CFG_PARAMS = frozenset(SETPOINT_MAP.values())
 
 # Boot window: suppress ESP32 setpoint reports for 60s after connect
 # to prevent firmware defaults from polluting the DB
@@ -1413,20 +1420,28 @@ def _record_cfg_readback(obj_id: str, value: Any) -> bool:
     prev = shared.cfg_readback.get(cfg_param)
     state.cfg_readback[cfg_param] = val
     shared.cfg_readback[cfg_param] = val
-    if prev is not None and not math.isclose(prev, val, rel_tol=0.01, abs_tol=0.001):
-        shared.force_setpoint_push.set()
+    drift_version: int | None = None
+    if (
+        cfg_param in _RECONCILABLE_CFG_PARAMS
+        and prev is not None
+        and not math.isclose(prev, val, rel_tol=0.01, abs_tol=0.001)
+    ):
+        drift_version = shared.note_cfg_drift(cfg_param)
+        log.info(
+            "writer_reconcile reason=cfg_drift param=%s generation=%d drift_version=%d",
+            cfg_param,
+            shared.transport_generation,
+            drift_version,
+        )
     if cfg_param in FORCED_ON_SWITCH_PARAMS and val < 0.5:
-        eid = SWITCH_TO_ENTITY.get(cfg_param)
-        if eid:
-            log.warning(
-                "Controller guardrail: cfg readback has %s=%.0f; immediate repair push queued",
-                cfg_param,
-                val,
-            )
-            try:
-                asyncio.get_running_loop().create_task(push_to_esp32([(eid, 1.0, "switch")]))
-            except RuntimeError:
-                shared.force_setpoint_push.set()
+        if drift_version is None:
+            drift_version = shared.note_cfg_drift(cfg_param)
+        log.warning(
+            "Controller guardrail: cfg readback has %s=%.0f; truthful repair dispatch queued drift_version=%d",
+            cfg_param,
+            val,
+            drift_version,
+        )
     return True
 
 
@@ -1451,7 +1466,13 @@ def _mirror_irrigation_number_readback(param: str, value: Any) -> None:
     state.cfg_readback[param] = val
     shared.cfg_readback[param] = val
     if prev is not None and not math.isclose(prev, val, rel_tol=0.01, abs_tol=0.001):
-        shared.force_setpoint_push.set()
+        drift_version = shared.note_cfg_drift(param)
+        log.info(
+            "writer_reconcile reason=cfg_drift param=%s generation=%d drift_version=%d source=number_mirror",
+            param,
+            shared.transport_generation,
+            drift_version,
+        )
 
 
 # ──────────────────────────────────────────────────────────────
@@ -1663,6 +1684,7 @@ async def flush_loop(pool: asyncpg.Pool) -> None:
                                    delivery_status = 'confirmed'
                              WHERE sc.parameter = $1
                                AND sc.confirmed_at IS NULL
+                               AND COALESCE(sc.delivery_status, 'pending') IN ('sent', 'pending')
                                AND sc.ts > now() - interval '7 days'
                                AND (
                                    abs(sc.value - $2::double precision)
@@ -1867,12 +1889,21 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
                 ", ".join(sorted(shared.esp32["services"])) or "none",
             )
 
-            # Signal dispatcher to do a full re-push (clears _last_pushed cache)
+            # Advance the transport generation exactly once for this successful
+            # API connect.  cfg drift has a separate targeted wakeup and can
+            # never reach this generation counter.
             import time as _time_mod
 
+            connection_generation = shared.note_transport_connected()
+            # Compatibility event is set inside note_transport_connected(); it
+            # remains reconnect-only and is consumed after this generation is
+            # reconciled.
             shared.force_setpoint_push.set()
             shared.esp32_connected_at = _time_mod.time()
-            log.info("Force-push flag set — dispatcher will re-push all setpoints")
+            log.info(
+                "writer_reconcile reason=transport_reconnect generation=%d action=reconcile_requested",
+                connection_generation,
+            )
             if pool is not None:
                 try:
                     await refresh_latest_occupancy_state(pool, "esp32_reconnect")
@@ -1910,14 +1941,18 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
                 from tasks import setpoint_dispatcher
 
                 await asyncio.sleep(2)
-                if shared.setpoint_dispatch_in_progress:
-                    log.info("Post-reconnect setpoint dispatch skipped; dispatcher already running")
+                if shared.setpoint_dispatch_lock.locked():
+                    log.info(
+                        "Post-reconnect setpoint dispatch queued; dispatcher already running for generation %d",
+                        shared.transport_generation,
+                    )
                 else:
-                    shared.setpoint_dispatch_in_progress = True
-                    try:
-                        await setpoint_dispatcher(pool)
-                    finally:
-                        shared.setpoint_dispatch_in_progress = False
+                    async with shared.setpoint_dispatch_lock:
+                        shared.setpoint_dispatch_in_progress = True
+                        try:
+                            await setpoint_dispatcher(pool)
+                        finally:
+                            shared.setpoint_dispatch_in_progress = False
                     log.info("Post-reconnect setpoint dispatch complete")
             except Exception as e:
                 log.error(f"Post-reconnect dispatch failed: {e}")
@@ -1987,8 +2022,75 @@ async def esp32_loop(pool: asyncpg.Pool = None) -> None:
 # ──────────────────────────────────────────────────────────────
 # Task loop — periodic background tasks (replaces 10 cron jobs)
 # ──────────────────────────────────────────────────────────────
+_FORCED_TASK_RETRY_MIN_S = 30.0
+
+
+async def _run_periodic_task(
+    pool: asyncpg.Pool,
+    name: str,
+    coro_fn,
+    timeout_s: float,
+) -> None:
+    """Run one named task without blocking the scheduler or another cadence."""
+    try:
+        if name == "setpoint_dispatch":
+            async with shared.setpoint_dispatch_lock:
+                shared.setpoint_dispatch_in_progress = True
+                try:
+                    await asyncio.wait_for(coro_fn(pool), timeout=timeout_s)
+                finally:
+                    shared.setpoint_dispatch_in_progress = False
+        else:
+            await asyncio.wait_for(coro_fn(pool), timeout=timeout_s)
+    except TimeoutError:
+        log.error("Task %s timed out (%ss)", name, timeout_s)
+    except asyncio.CancelledError:
+        raise
+    except Exception as e:
+        log.error("Task %s failed: %s", name, e)
+
+
+async def _writer_failure_monitor() -> None:
+    """Turn a fail-closed writer lifecycle fault into a supervised restart."""
+    await shared.writer_fatal_event.wait()
+    raise RuntimeError(f"fatal device-writer state: {shared.writer_fatal_reason or 'unknown'}")
+
+
+def _launch_due_tasks(
+    pool: asyncpg.Pool,
+    tasks,
+    last_run: dict[str, float],
+    running: dict[str, asyncio.Task[None]],
+    now: float,
+    task_timeouts: dict[str, float],
+    force_names: set[str] | None = None,
+) -> list[str]:
+    """Launch due tasks concurrently and return their names for deterministic tests."""
+    forced = force_names or set()
+    for name, task in list(running.items()):
+        if task.done():
+            running.pop(name, None)
+
+    started: list[str] = []
+    for name, interval, coro_fn in tasks:
+        forced_due = name in forced and (last_run[name] == 0.0 or now - last_run[name] >= _FORCED_TASK_RETRY_MIN_S)
+        due = forced_due or now - last_run[name] >= interval
+        if not due or name in running:
+            continue
+        if name == "setpoint_dispatch" and shared.setpoint_dispatch_lock.locked():
+            log.info("Task setpoint_dispatch queued; dispatcher already running")
+            continue
+        last_run[name] = now
+        running[name] = asyncio.create_task(
+            _run_periodic_task(pool, name, coro_fn, task_timeouts.get(name, 120)),
+            name=f"verdify-periodic-{name}",
+        )
+        started.append(name)
+    return started
+
+
 async def task_loop(pool: asyncpg.Pool) -> None:
-    """Run periodic tasks on defined intervals."""
+    """Run periodic tasks concurrently so writer pacing cannot starve them."""
     task_timeouts = {
         # Reconnect reconciles can push 25+ values through heap-safe ESPHome
         # pacing, which intentionally exceeds the generic 120s watchdog.
@@ -2028,33 +2130,25 @@ async def task_loop(pool: asyncpg.Pool) -> None:
         ("infra_cpu_sync", 300, infra_cpu_sync),
     ]
     last_run: dict[str, float] = {name: 0.0 for name, _, _ in TASKS}
+    running: dict[str, asyncio.Task[None]] = {}
 
     # Stagger startup: wait 30s for ESP32 connection to establish first
     await asyncio.sleep(30)
     log.info("Task loop started: %d tasks registered", len(TASKS))
 
-    while True:
-        await asyncio.sleep(10)
-        now = asyncio.get_event_loop().time()
-
-        for name, interval, coro_fn in TASKS:
-            if now - last_run[name] >= interval:
-                last_run[name] = now
-                if name == "setpoint_dispatch" and shared.setpoint_dispatch_in_progress:
-                    log.info("Task setpoint_dispatch skipped; dispatcher already running")
-                    continue
-                if name == "setpoint_dispatch":
-                    shared.setpoint_dispatch_in_progress = True
-                try:
-                    timeout_s = task_timeouts.get(name, 120)
-                    await asyncio.wait_for(coro_fn(pool), timeout=timeout_s)
-                except TimeoutError:
-                    log.error("Task %s timed out (%ss)", name, timeout_s)
-                except Exception as e:
-                    log.error("Task %s failed: %s", name, e)
-                finally:
-                    if name == "setpoint_dispatch":
-                        shared.setpoint_dispatch_in_progress = False
+    try:
+        while True:
+            await asyncio.sleep(1)
+            now = asyncio.get_running_loop().time()
+            forced = {"setpoint_dispatch"} if shared.setpoint_dispatch_requested.is_set() else set()
+            started = _launch_due_tasks(pool, TASKS, last_run, running, now, task_timeouts, forced)
+            if started:
+                log.debug("Task scheduler launched: %s", ", ".join(started))
+    finally:
+        for task in running.values():
+            task.cancel()
+        if running:
+            await asyncio.gather(*running.values(), return_exceptions=True)
 
 
 # ──────────────────────────────────────────────────────────────
@@ -2225,65 +2319,280 @@ async def mqtt_loop(pool: asyncpg.Pool) -> None:
 # ──────────────────────────────────────────────────────────────
 # Real-time setpoint listener (LISTEN/NOTIFY → ESP32 push)
 # ──────────────────────────────────────────────────────────────
-async def setpoint_listener(pool: asyncpg.Pool) -> None:
-    """Listen for DB setpoint changes and push to ESP32 in real-time."""
-    import json
+_SETPOINT_ALIASES = {
+    "set_vpd_high_kpa": "vpd_high",
+    "set_vpd_low_kpa": "vpd_low",
+    "set_temp_low__f": "temp_low",
+    "set_temp_high__f": "temp_high",
+    "vpd_mister_engage_kpa": "mister_engage_kpa",
+    "vpd_mister_all_kpa": "mister_all_kpa",
+}
+
+
+def _parse_setpoint_notification(payload: str) -> tuple[str, float, str] | None:
+    """Parse JSON/legacy NOTIFY payloads without dropping numeric zero."""
+    source = ""
+    if payload.startswith("{"):
+        try:
+            event = json.loads(payload)
+            raw_param = event.get("parameter")
+            raw_value = event.get("value")
+            if raw_param is None or raw_value is None:
+                return None
+            param = str(raw_param)
+            val = float(raw_value)
+            source = str(event.get("source") or "")
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return None
+    else:
+        if "=" not in payload:
+            return None
+        param, raw_value = payload.split("=", 1)
+        try:
+            val = float(raw_value)
+        except ValueError:
+            return None
+    return _SETPOINT_ALIASES.get(param, param), val, source
+
+
+async def _cas_notify_delivery_state(
+    pool: asyncpg.Pool,
+    requested_at: datetime,
+    param: str,
+    status: str,
+) -> str:
+    """Persist one legal transition; reject a delayed state regression."""
+    allowed = list(delivery_transition_prior_statuses(status))
+    async with pool.acquire() as state_conn:
+        persisted = await state_conn.fetchval(
+            """
+            UPDATE setpoint_changes
+               SET delivery_status = $1,
+                   expired_at = CASE
+                       WHEN $1 IN ('failed', 'cancelled', 'superseded')
+                       THEN COALESCE(expired_at, now())
+                       ELSE expired_at
+                   END
+             WHERE ts = $2
+               AND parameter = $3
+               AND confirmed_at IS NULL
+               AND COALESCE(delivery_status, 'pending') = ANY($4::text[])
+            RETURNING delivery_status
+            """,
+            status,
+            requested_at,
+            param,
+            allowed,
+        )
+        if persisted is not None:
+            return str(persisted)
+        current = await state_conn.fetchval(
+            "SELECT delivery_status FROM setpoint_changes WHERE ts = $1 AND parameter = $2",
+            requested_at,
+            param,
+        )
+    if current == status:
+        return status
+    if preserved := preserved_terminal_status(current, status):
+        return preserved
+    raise RuntimeError(f"illegal delivery transition {current!r} -> {status!r} for {param}")
+
+
+async def _open_rt_delivery_failure_alert(
+    pool: asyncpg.Pool,
+    param: str,
+    reason: str,
+    requested_at: datetime,
+) -> None:
+    details = json.dumps(
+        {
+            "parameter": param,
+            "failure_reason": reason,
+            "requested_at": requested_at.isoformat(),
+            "path": "setpoint_listener",
+        }
+    )
+    async with pool.acquire() as alert_conn:
+        await alert_conn.execute(
+            """
+            INSERT INTO alert_log
+              (alert_type, severity, category, message, details, source, sensor_id)
+            SELECT 'esp32_push_failed', 'warning', 'system', $1, $2::jsonb,
+                   'setpoint_listener', 'setpoint.' || $3
+             WHERE NOT EXISTS (
+                 SELECT 1 FROM alert_log
+                  WHERE alert_type = 'esp32_push_failed'
+                    AND disposition = 'open'
+                    AND sensor_id = 'setpoint.' || $3
+             )
+            """,
+            f"ESP32 real-time delivery failed for {param}",
+            details,
+            param,
+        )
+
+
+async def _handle_setpoint_notification(pool: asyncpg.Pool, payload: str) -> None:
+    """Atomically claim and deliver one DB-origin request from NOTIFY."""
     import time as _time
 
     from entity_map import PARAM_TO_ENTITY, SWITCH_TO_ENTITY
 
-    _ALIASES = {
-        "set_vpd_high_kpa": "vpd_high",
-        "set_vpd_low_kpa": "vpd_low",
-        "set_temp_low__f": "temp_low",
-        "set_temp_high__f": "temp_high",
-        "vpd_mister_engage_kpa": "mister_engage_kpa",
-        "vpd_mister_all_kpa": "mister_all_kpa",
-    }
+    parsed = _parse_setpoint_notification(payload)
+    if parsed is None:
+        return
+    param, val, source = parsed
+    if source == "esp32":
+        log.debug("RT push suppressed for ESP32 echo %s", param)
+        return
 
-    async def _on_notify(conn, pid, channel, payload):
-        source = None
-        if payload.startswith("{"):
-            try:
-                event = json.loads(payload)
-                param = str(event.get("parameter") or "")
-                val_str = str(event.get("value") or "")
-                source = str(event.get("source") or "")
-            except (TypeError, ValueError):
+    async with pool.acquire() as state_conn:
+        requested_at = await state_conn.fetchval(
+            """
+            WITH candidate AS (
+                SELECT ts
+                  FROM setpoint_changes
+                 WHERE parameter = $1
+                   AND abs(value - $2::double precision)
+                         / greatest(abs($2::double precision), 1e-3) < 0.01
+                   AND COALESCE(source, '') = COALESCE($3, '')
+                   AND confirmed_at IS NULL
+                   AND COALESCE(delivery_status, 'pending') = 'pending'
+                 ORDER BY ts ASC
+                 FOR UPDATE SKIP LOCKED
+                 LIMIT 1
+            )
+            UPDATE setpoint_changes sc
+               SET delivery_status = 'requested'
+              FROM candidate
+             WHERE sc.ts = candidate.ts AND sc.parameter = $1
+            RETURNING sc.ts
+            """,
+            param,
+            val,
+            source,
+        )
+    if requested_at is None:
+        # Dispatcher-owned and heap-deferred rows have explicit non-pending
+        # states, so they are deterministically ignored without an in-memory
+        # param/value suppression marker.
+        log.debug("RT push ignored: no unclaimed pending row for %s", param)
+        return
+
+    if not _accept_outbound_setpoint(param, val):
+        await _cas_notify_delivery_state(pool, requested_at, param, "failed")
+        await _open_rt_delivery_failure_alert(pool, param, "outbound_rejected", requested_at)
+        return
+
+    if param.startswith("sw_"):
+        eid = SWITCH_TO_ENTITY.get(param)
+        etype = "switch"
+    else:
+        eid = PARAM_TO_ENTITY.get(param)
+        etype = "number"
+    if not eid:
+        await _cas_notify_delivery_state(pool, requested_at, param, "failed")
+        log.error(
+            "writer_delivery phase=persisted status=failed reason=unroutable param=%s source=notify",
+            param,
+        )
+        await _open_rt_delivery_failure_alert(pool, param, "unroutable", requested_at)
+        return
+
+    pushed_at = shared.recently_pushed.get(param, 0)
+    if _time.time() - pushed_at < _PUSH_ECHO_SUPPRESS_S and _same_pushed_value(param, val):
+        log.debug("RT push suppressed for recently pushed %s; terminalizing duplicate request", param)
+        await _cas_notify_delivery_state(pool, requested_at, param, "superseded")
+        log.info(
+            "writer_delivery phase=persisted status=superseded reason=duplicate_recent_delivery param=%s source=notify",
+            param,
+        )
+        return
+
+    async def persist_notify_state(
+        outcomes: tuple[DeviceCommandOutcome, ...],
+        *,
+        final_attempt: bool,
+    ) -> None:
+        if not outcomes:
+            return
+        outcome = outcomes[0]
+        status = (
+            "retrying"
+            if outcome.status == "failed" and not final_attempt and delivery_failure_retryable(outcome)
+            else outcome.status
+        )
+        persisted_status = await _cas_notify_delivery_state(pool, requested_at, param, status)
+        log.info(
+            "writer_delivery phase=persisted status=%s reason=%s param=%s generation=%d attempt=%d source=notify",
+            persisted_status,
+            outcome.reason,
+            param,
+            outcome.connection_generation,
+            outcome.attempt,
+        )
+
+    terminal_failure_reason: str | None = None
+    for attempt in (1, 2, 3):
+        if attempt > 1:
+            async with pool.acquire() as state_conn:
+                newer_ts = await state_conn.fetchval(
+                    """
+                    SELECT min(ts) FROM setpoint_changes
+                     WHERE parameter = $1
+                       AND COALESCE(source, '') <> 'esp32'
+                       AND ts > $2
+                    """,
+                    param,
+                    requested_at,
+                )
+            if newer_ts is not None:
+                await _cas_notify_delivery_state(pool, requested_at, param, "superseded")
+                log.info(
+                    "writer_delivery phase=persisted status=superseded reason=newer_db_request param=%s source=notify",
+                    param,
+                )
                 return
-        else:
-            if "=" not in payload:
-                return
-            param, val_str = payload.split("=", 1)
-        try:
-            val = float(val_str)
-        except ValueError:
-            return
 
-        # Normalize param name
-        param = _ALIASES.get(param, param)
-        if source == "esp32":
-            log.debug("RT push suppressed for ESP32 echo %s", param)
-            return
-        if not _accept_outbound_setpoint(param, val):
-            return
-        pushed_at = shared.recently_pushed.get(param, 0)
-        if _time.time() - pushed_at < _PUSH_ECHO_SUPPRESS_S and _same_pushed_value(param, val):
-            log.debug("RT push suppressed for recently pushed %s", param)
-            return
+        async def on_state(
+            outcomes: tuple[DeviceCommandOutcome, ...],
+            is_final: bool = attempt == 3,
+        ) -> None:
+            await persist_notify_state(outcomes, final_attempt=is_final)
 
-        # Look up ESP32 entity
-        if param.startswith("sw_"):
-            eid = SWITCH_TO_ENTITY.get(param)
-            etype = "switch"
-        else:
-            eid = PARAM_TO_ENTITY.get(param)
-            etype = "number"
+        result = await push_to_esp32_detailed(
+            [(eid, val, etype)],
+            attempt=attempt,
+            on_state=on_state,
+            command_versions=[requested_at.timestamp()],
+        )
+        if result.fatal_error:
+            raise LifecyclePersistenceError(result.fatal_error)
+        if result.sent_count:
+            log.info("RT push: %s=%s → ESP32 (<1s)", param, val)
+            return
+        failed = next((outcome for outcome in result.outcomes if outcome.status == "failed"), None)
+        if failed is None:
+            return
+        terminal_failure_reason = failed.reason
+        if not delivery_failure_retryable(failed) or attempt == 3:
+            break
+        log.warning(
+            "writer_dispatch reason=retry generation=%d attempt=%d failed_count=1 source=notify",
+            shared.transport_generation,
+            attempt + 1,
+        )
+        await asyncio.sleep(0.5 * attempt)
 
-        if eid:
-            pushed = await push_to_esp32([(eid, val, etype)])
-            if pushed:
-                log.info("RT push: %s=%s → ESP32 (<1s)", param, val_str)
+    if terminal_failure_reason is not None:
+        await _open_rt_delivery_failure_alert(pool, param, terminal_failure_reason, requested_at)
+
+
+async def setpoint_listener(pool: asyncpg.Pool) -> None:
+    """Listen for DB setpoint changes and push to ESP32 in real-time."""
+
+    async def _on_notify(_conn, _pid, _channel, payload):
+        await _handle_setpoint_notification(pool, payload)
 
     # Acquire a dedicated connection for LISTEN (can't share with pool)
     conn = await asyncpg.connect(DB_DSN)
@@ -2342,6 +2651,41 @@ async def backfill_gap(
     log.info("Gap backfill: %.0fs gap recorded, equipment state snapshot taken", duration)
 
 
+async def reconcile_interrupted_device_writes(pool: asyncpg.Pool) -> int:
+    """Terminalize queue states left behind by a prior process generation.
+
+    The in-memory writer queue cannot survive a process restart.  Therefore any
+    unconfirmed ``requested``/``queued``/``retrying`` row present before this
+    process starts can no longer complete.  Mark it failed, not sent/confirmed
+    and not "cancelled before send": a process can die in the unavoidable gap
+    between an ESPHome API return and durable Postgres acknowledgement, so the
+    physical outcome is unknown.  Already-``sent`` rows remain eligible for
+    later cfg confirmation.
+    """
+    if shared.is_shadow_mode():
+        return 0
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            UPDATE setpoint_changes
+               SET delivery_status = 'failed',
+                   expired_at = COALESCE(expired_at, now())
+             WHERE confirmed_at IS NULL
+               AND COALESCE(source, '') <> 'esp32'
+               AND delivery_status IN ('requested', 'queued', 'retrying')
+            RETURNING parameter
+            """
+        )
+    if rows:
+        log.warning(
+            "writer_delivery phase=persisted status=failed reason=process_restart_outcome_unknown "
+            "count=%d generation=%d",
+            len(rows),
+            shared.transport_generation,
+        )
+    return len(rows)
+
+
 # ──────────────────────────────────────────────────────────────
 # Main
 # ──────────────────────────────────────────────────────────────
@@ -2375,6 +2719,7 @@ async def main() -> None:
 
     # ── Capture mode (prod, and the legacy VM single-writer) ──────────────────
     log.info("Verdify ingestor starting (greenhouse: %s)...", GREENHOUSE_ID)
+    await reconcile_interrupted_device_writes(pool)
 
     # #113: prod-only publish-all. Set up the bus publisher; the flush path
     # re-emits every flushed row. Best-effort connect — a bus outage must never
@@ -2462,6 +2807,7 @@ async def main() -> None:
         task_loop(pool),
         mqtt_loop(pool),
         setpoint_listener(pool),
+        _writer_failure_monitor(),
     )
 
     # Race the worker gather against the shutdown signal so SIGTERM unwinds

@@ -1,6 +1,229 @@
 sprint_id: software-recovery-2026-07-09
 scope_id: device-writer
-revision: 0a9a19a840be6bae1beba604497d880b3b74b1ef
+revision: e4e1c5901d2ce46400df65d9ced516bed25c0eb2
 environment: null
-generated_at: "2026-07-09T22:09:48Z"
-items: []
+generated_at: "2026-07-10T00:28:36Z"
+items:
+  - id: WRI-EV-001
+    type: TEST
+    status: PASS
+    source: generated firmware-v2 cfg wire fixture and exact drift guard
+    command: >-
+      .venv/bin/pytest -q verdify_schemas/tests/test_firmware_drift.py
+      tests/test_solar_band_anchors.py
+    timestamp: "2026-07-10T00:18:00Z"
+    revision: e4e1c5901d2ce46400df65d9ced516bed25c0eb2
+    environment: local worktree plus read-only list_entities_services result from verdify-prod
+    result: >-
+      All 56 firmware-v2 cfg identities matched the exact ESPHome display-name
+      wire slug; the read-only live comparison reported expected=56, matched=56,
+      missing=[], and unexpected_fixture=[].
+    artifact_location: verdify_schemas/tunable_registry.py
+    acceptance_criteria: [LANE-AC-01]
+    limitations: [The live entity list was read-only; no device service or number command was invoked.]
+
+  - id: WRI-EV-002
+    type: TEST
+    status: PASS
+    source: transport generation, cfg drift, scheduler, listener, and lifecycle fault injection
+    command: >-
+      .venv/bin/pytest -q tests/test_03_ingestor.py tests/test_05_dispatcher.py
+      tests/test_16_*.py
+    timestamp: "2026-07-10T00:20:00Z"
+    revision: e4e1c5901d2ce46400df65d9ced516bed25c0eb2
+    environment: local worktree with mocked ESPHome transport and Postgres lifecycle callbacks
+    result: >-
+      46 passed. Coverage includes real-connect generation, dynamic readback-only
+      suppression, version-safe drift, newer reconnect wake preservation, partial
+      delivery, caller cancellation, command timeout, bounded/hung lifecycle
+      callback failure, supervised restart, generation/client/Lease fencing,
+      old-retry ordering, atomic NOTIFY claim, numeric zero, CAS conflicts,
+      superseded in-flight outcomes, RT alerts, queue bound, and fairness.
+    artifact_location: tests/test_16_writer_lifecycle.py
+    acceptance_criteria: [LANE-AC-02, LANE-AC-03, LANE-AC-04]
+    limitations: []
+
+  - id: WRI-EV-003
+    type: TEST
+    status: PASS
+    source: compatibility, static contract, registry, and drift suite
+    command: >-
+      .venv/bin/pytest -q tests/test_03_ingestor.py tests/test_05_dispatcher.py
+      tests/test_16_writer_lifecycle.py tests/test_08_observability.py::TestDispatcherWiring
+      tests/test_08_observability.py::TestContractDriftGuardrails::test_post_boot_readback_repair_covers_static_and_planner_paths
+      tests/test_08_observability.py::TestSetpointConfirmation::test_confirmation_monitor_ignores_superseded_rows
+      tests/test_12_fidelity.py
+      tests/test_13_operational_recovery.py::test_echo_suppression_covers_delayed_esphome_state_publish
+      tests/test_solar_band_anchors.py verdify_schemas/tests/test_firmware_drift.py
+      verdify_schemas/tests/test_tunable_registry.py
+    timestamp: "2026-07-10T00:20:00Z"
+    revision: e4e1c5901d2ce46400df65d9ced516bed25c0eb2
+    environment: local worktree
+    result: 299 passed.
+    artifact_location: null
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
+    limitations: []
+
+  - id: WRI-EV-004
+    type: LINT
+    status: PASS
+    source: repository Ruff gate and Python compilation
+    command: >-
+      make VENV=/Users/jason/repos/verdify-platform/.venv lint;
+      python -m py_compile <changed runtime and approved consumer Python files>;
+      git diff --check
+    timestamp: "2026-07-10T00:20:00Z"
+    revision: e4e1c5901d2ce46400df65d9ced516bed25c0eb2
+    environment: local worktree
+    result: All checks passed.
+    artifact_location: null
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
+    limitations: []
+
+  - id: WRI-EV-005
+    type: TEST
+    status: WARNING
+    source: required monolithic repository test command
+    command: make VENV=/Users/jason/repos/verdify-platform/.venv test
+    timestamp: "2026-07-10T00:21:00Z"
+    revision: e4e1c5901d2ce46400df65d9ced516bed25c0eb2
+    environment: Jason laptop after the project moved to k3s
+    result: 702 passed, 139 failed, 6 skipped, 10 errors in 18.79s.
+    artifact_location: null
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
+    limitations:
+      - >-
+        The 139 failures and 10 errors are the inherited retired-laptop baseline:
+        missing local Docker/systemd/TimescaleDB/API/Vault/site surfaces plus
+        unrelated pre-existing firmware, PVC, and lab-title assertions. Focused
+        #433 and compatibility suites are green.
+
+  - id: WRI-EV-006
+    type: RUNTIME_PROBE
+    status: WARNING
+    source: pre-fix production ingestor baseline and redacted log classifier
+    command: >-
+      kubectl -n verdify-prod logs deployment/verdify-ingestor --since=2h |
+      PYTHONPATH=ingestor .venv/bin/python -c '<summarize_writer_log_lines>'
+    timestamp: "2026-07-10T00:18:00Z"
+    revision: e4e1c5901d2ce46400df65d9ced516bed25c0eb2
+    environment: verdify-prod read-only
+    result: >-
+      Current pod verdify-ingestor-84b785cc55-pgq5r runs pre-fix digest
+      sha256:175e5ecee7468651069458fff50d6036fbfa0f3b73cf366b3e7e9159d62259e8
+      from 2026-07-10T00:13:57Z. Its short available window classified one legacy
+      reconnect reconcile and no new-format events. Earlier controller baseline
+      evidence recorded the repeating 69-command storm roughly every 5m22s.
+    artifact_location: https://github.com/VerdifyConsultancy/verdify-platform/issues/433
+    acceptance_criteria: [LANE-AC-02, LANE-AC-05]
+    limitations:
+      - This is pre-fix baseline evidence, not post-deployment acceptance.
+      - The current pod had less than two hours of logs, so LANE-AC-05 remains pending.
+
+  - id: WRI-EV-007
+    type: DIFF_REVIEW
+    status: PASS
+    source: independent async and state-machine critic
+    command: null
+    timestamp: "2026-07-10T00:20:00Z"
+    revision: e4e1c5901d2ce46400df65d9ced516bed25c0eb2
+    environment: fresh read-only adversarial review with focused fault tests
+    result: ACCEPT; no remaining P0/P1 blocker.
+    artifact_location: .verdify/sprints/software-recovery-2026-07-09/lanes/device-writer/critic-report.md
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
+    limitations: [The critic did not claim deployment-only LANE-AC-05.]
+
+  - id: WRI-EV-008
+    type: OTHER
+    status: PASS
+    source: single-writer startup and physical-send fence audit
+    command: null
+    timestamp: "2026-07-10T00:20:00Z"
+    revision: e4e1c5901d2ce46400df65d9ced516bed25c0eb2
+    environment: repository deployment/runtime contract
+    result: >-
+      Existing prod deployment remains replicas=1 with strategy=Recreate. Every
+      command rechecks the held writer Lease, accepted transport generation, and
+      accepted client identity inside the sole physical lock after pacing.
+      Lifecycle persistence exhaustion sets a fatal monitor included in the main
+      gather so the process exits for supervised restart rather than remaining
+      false-green.
+    artifact_location: deploy/k8s/base/ingestor-deployment.yaml
+    acceptance_criteria: [LANE-AC-03, LANE-AC-04]
+    limitations: [No deployment manifest changed in this lane.]
+
+  - id: WRI-EV-009
+    type: OTHER
+    status: PASS
+    source: controller-approved scope exceptions
+    command: null
+    timestamp: "2026-07-10T00:20:00Z"
+    revision: e4e1c5901d2ce46400df65d9ced516bed25c0eb2
+    environment: sprint coordination record
+    result: >-
+      Approval 1 changed only TestAnchorContract.test_registry_wire_contract to
+      assert the exact generated wire fixture, resolving the contradictory old
+      cfg_<name> assertion. Approval 2 changed only slack_ops/briefs.py and
+      scripts/validate-irrigation-stack.py to report in-flight, confirmed, and
+      terminal-unconfirmed lifecycle buckets; no irrigation policy or alert
+      threshold changed.
+    artifact_location: https://github.com/VerdifyConsultancy/verdify-platform/pull/442
+    acceptance_criteria: [LANE-AC-01, LANE-AC-03]
+    limitations:
+      - Firmware-control must preserve the validator's lifecycle vocabulary during integration.
+
+  - id: WRI-EV-010
+    type: CI
+    status: PASS
+    source: GitHub PR 442 checks
+    command: null
+    timestamp: "2026-07-10T00:28:36Z"
+    revision: 991f9aae417a6eedce3fd252d11e254834bf3584
+    environment: GitHub Actions
+    result: 25 checks passed, eight non-applicable publish/promotion checks skipped, zero failed or pending.
+    artifact_location: https://github.com/VerdifyConsultancy/verdify-platform/pull/442/checks
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
+    limitations: [A final records-only commit may trigger a mechanical rerun; no product source changes follow the accepted head.]
+
+  - id: WRI-EV-011
+    type: RUNTIME_PROBE
+    status: NOT_RUN
+    source: post-deployment exact-digest two-hour steady-state window
+    command: kubectl -n verdify-prod logs deployment/verdify-ingestor --since=2h
+    timestamp: "2026-07-10T00:24:06Z"
+    revision: e4e1c5901d2ce46400df65d9ced516bed25c0eb2
+    environment: verdify-prod
+    result: Not deployed or authorized in the worker lane; LANE-AC-05 is pending.
+    artifact_location: https://github.com/VerdifyConsultancy/verdify-platform/issues/433
+    acceptance_criteria: [LANE-AC-05]
+    limitations:
+      - Release control must tie the exact running digest and commit to a complete two-hour window.
+      - Zero unchanged broad anchor pushes is not claimed before that window exists.
+
+  - id: WRI-EV-012
+    type: TEST
+    status: PASS
+    source: final validation after integrating the controller coverage amendment and current main
+    command: >-
+      make VENV=/Users/jason/repos/verdify-platform/.venv lint;
+      PYTHONPATH=. .venv/bin/pytest -o addopts='' -q tests/test_03_ingestor.py
+      tests/test_05_dispatcher.py tests/test_16_*.py;
+      PYTHONPATH=. .venv/bin/pytest -o addopts='' -q <focused compatibility suite>;
+      make VENV=/Users/jason/repos/verdify-platform/.venv test;
+      python -m py_compile <changed runtime and approved consumer Python files>;
+      git diff --check
+    timestamp: "2026-07-10T00:33:04Z"
+    revision: a260e4258821fd14d87742180541a9ba196f1525
+    environment: local worktree integrated through main 07ad7e756d1caa5eb2c625a88796c999d8222fe8
+    result: >-
+      Ruff passed; the contracted writer/dispatcher fault suite passed 46 tests;
+      the focused compatibility, drift, and registry suite passed 300 tests;
+      Python compilation, YAML parsing, and git diff checks passed. The required
+      monolithic suite retained its inherited laptop baseline of 702 passed,
+      139 failed, 6 skipped, and 10 environment errors in 18.58 seconds. No
+      product source changed after the independent critic accepted e4e1c590.
+    artifact_location: https://github.com/VerdifyConsultancy/verdify-platform/pull/442
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
+    limitations:
+      - LANE-AC-05 remains deployment-only and was not run or claimed.
+      - The monolithic failures require retired laptop/live services and are unchanged from the recorded lane baseline.

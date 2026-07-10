@@ -28,7 +28,7 @@ import pytest
 import yaml
 
 from verdify_schemas.telemetry import OVERRIDE_EVENT_TYPES
-from verdify_schemas.tunable_registry import FIRMWARE_V2_STAGED_REG, REGISTRY
+from verdify_schemas.tunable_registry import FIRMWARE_V2_CFG_WIRE_IDS, FIRMWARE_V2_STAGED_REG, REGISTRY
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 YAML_DIRS = [
@@ -141,6 +141,27 @@ def _firmware_cfg_sensor_routes() -> dict[str, set[str]]:
                 candidates.update(_slugify(name))
             routes[sensor_id] = candidates
     return routes
+
+
+def _firmware_cfg_sensor_wire_ids() -> dict[str, str]:
+    """C++ sensor id -> exact aioesphomeapi object_id derived from ``name``."""
+    wire_ids: dict[str, str] = {}
+    for yf in sorted(REPO_ROOT.joinpath("firmware", "greenhouse").glob("*.yaml")):
+        try:
+            data = yaml.safe_load(yf.read_text())
+        except yaml.YAMLError:
+            continue
+        if not isinstance(data, dict) or not isinstance(data.get("sensor"), list):
+            continue
+        for entry in data["sensor"]:
+            if not isinstance(entry, dict):
+                continue
+            sensor_id = entry.get("id")
+            name = entry.get("name")
+            if not isinstance(sensor_id, str) or not sensor_id.startswith("cfg_") or not isinstance(name, str):
+                continue
+            wire_ids[sensor_id] = str(entry.get("object_id") or _slugify(name)[1])
+    return wire_ids
 
 
 pytestmark = pytest.mark.skipif(
@@ -353,6 +374,36 @@ def test_cfg_readback_sensors_are_routed_to_entity_map(entity_map):
         "firmware cfg_* sensors missing CFG_READBACK_MAP routes: "
         f"{missing}. Add the ESPHome object_id/name slug to ingestor/entity_map.py."
     )
+
+
+def test_firmware_v2_cfg_fixture_matches_every_exact_wire_slug(entity_map):
+    """All 56 firmware-v2 readbacks use their actual API slug, not C++ id.
+
+    The old registry used ``cfg_<canonical-name>``.  ESPHome actually derives
+    object_id from display names such as ``Cfg • Band Temp Low SR (°F)``, which
+    yields ``cfg___band_temp_low_sr___f_``.  Accepting the YAML ``id`` as an
+    alternate candidate hid all 56 mismatches from the earlier drift guard.
+    """
+    firmware_wire = _firmware_cfg_sensor_wire_ids()
+    assert len(FIRMWARE_V2_CFG_WIRE_IDS) == len(FIRMWARE_V2_STAGED_REG) == 56
+
+    missing_fixture: list[str] = []
+    mismatches: dict[str, tuple[str, str]] = {}
+    unrouted: dict[str, str] = {}
+    for param, expected_wire_id in FIRMWARE_V2_CFG_WIRE_IDS.items():
+        sensor_id = f"cfg_{param}"
+        actual_wire_id = firmware_wire.get(sensor_id)
+        if actual_wire_id is None:
+            missing_fixture.append(sensor_id)
+            continue
+        if expected_wire_id != actual_wire_id:
+            mismatches[param] = (expected_wire_id, actual_wire_id)
+        if entity_map.CFG_READBACK_MAP.get(actual_wire_id) != param:
+            unrouted[param] = actual_wire_id
+
+    assert not missing_fixture, f"firmware-v2 cfg fixture missing sensor ids: {missing_fixture}"
+    assert not mismatches, f"firmware-v2 cfg wire-id mismatches: {mismatches}"
+    assert not unrouted, f"firmware-v2 exact wire ids not routed to canonical params: {unrouted}"
 
 
 def _override_flag_fields() -> set[str]:

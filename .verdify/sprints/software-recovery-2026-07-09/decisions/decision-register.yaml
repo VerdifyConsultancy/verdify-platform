@@ -1,5 +1,5 @@
 sprint_id: software-recovery-2026-07-09
-generated_at: "2026-07-09T21:37:00Z"
+generated_at: "2026-07-09T23:46:04Z"
 decisions:
   - id: DEC-001
     title: Center-only climate and intentional zone irrigation
@@ -217,6 +217,24 @@ decisions:
     review_date: "2026-07-09"
     revisit_conditions: [New calibrated meters or isolated coefficient measurements become available]
     sources: [delegated equipment/resource audit, live equipment catalogs, water ledger, energy reconciliation]
+  - id: DEC-013
+    title: Post-dispatch scope coverage amendment
+    status: ACCEPTED
+    decision: Narrowly repair or remove the already-deployed false-green non-authoritative planner_graph workload; require reverse-exclusivity, no-10:30, restart-safe weekly solar cadence, calibrated liters, and explicit dry-out disposition acceptance; prepare release tooling before live evidence while retaining every production gate.
+    desired_outcome: No lane can pass while leaving a deployed dead worker green, actuating an unintended irrigation origin, declaring ineffective drying fixed, or requiring live evidence before the tooling that creates it exists.
+    rationale: A post-dispatch read-only coverage audit found four acceptance holes between the approved product intent, live runtime, and original black-box lane contracts.
+    alternatives_considered: [Ignore the false-green workload, make planner_graph authoritative, leave irrigation intent implicit, treat instrumentation as outcome, keep circular release dependencies]
+    constraints: [Hermes/MCP remains the active planner, one device writer, fail-closed commissioning, no speculative firmware response, all production gates retained]
+    non_goals: [Planner_graph productization, production trigger rerouting, physical commissioning, unproven night-control changes, early production mutation]
+    consequences: [Four lane contracts and the sprint topology are re-hashed before downstream dispatch; active evidence-core receives the additive disposition requirement]
+    risks: [A retained planner_graph workload needs truthful lifecycle semantics; later dry-out evidence may require a separately approved firmware response]
+    affected_components: [planner_graph runtime health, firmware irrigation acceptance, dry-out evidence, release orchestration]
+    affected_issues: ["#427", "#434", "#410", "#377", "#390"]
+    affected_specs: [planner-delivery lane, firmware-control lane, evidence-core lane, release-control lane]
+    owner: recovery controller
+    review_date: "2026-07-09"
+    revisit_conditions: [A scope amendment would grant planner_graph authority or dry-out evidence proves a firmware response is required]
+    sources: [scope coverage audit 2026-07-09, live planner worker failure, operator feedback]
 unresolved:
   - id: Q-001
     question: Authorize scoped rotation of the exposed production application DB credential and verification of every consumer?

@@ -43,6 +43,7 @@ decision_ids:
   - DEC-004
   - DEC-007
   - DEC-008
+  - DEC-013
 ownership:
   domains:
     - relay resolver
@@ -116,9 +117,12 @@ coordination_rules:
   - Although scripts/firmware-*.sh overlaps release-control's named release scripts, those named scripts are reserved for release-control unless the controller records and serializes an explicit handoff.
   - Release-control alone executes the exact reviewed OTA after critic, CI, alert, weekly, bake, heap, cycling, and rollback gates pass.
 constraints:
-  - Climate/VPD wet intent resolves only to center mist; center drip and dormant south/west irrigation remain disabled by default.
+  - Climate/VPD wet intent resolves only to center mist, and center mist accepts no irrigation, fertigation, manual-feed, or legacy-schedule origin; center drip and dormant south/west irrigation remain disabled by default.
   - Fertilizer can reach only a commissioned wall-drip path, and incomplete commissioning must fail closed.
   - Wall feed is exact-once prewet, feed, fertilizer-off, and immediate wall-local clean flush; no legacy 90-minute hold.
+  - Both legacy 10:30 irrigation/fertigation jobs are removed or ineligible, so no fixed-clock 10:30 actuation remains.
+  - Weekly wall-feed eligibility uses the approved solar/diurnal cadence, persists exact-once state across restart and missed windows, and remains disabled until commissioning is complete.
+  - Prewet, feed, and post-flush liters convert to bounded durations only through positive calibrated wall flow; missing, stale, zero, or invalid calibration fails closed.
   - Preserve the existing 45-second center re-fire fence and lighting minimum-on boundary without extending water pulses.
   - Preserve solar-night zero-daytime admission, temperature bounds, heat2-off behavior, and existing deterministic safety.
   - Add no new tunable/entity outside the approved contract; every approved new tunable still requires a cfg readback.
@@ -127,25 +131,28 @@ constraints:
   - No production OTA, device-VLAN action, or secret access is authorized for the lane worker.
 acceptance_criteria:
   - id: LANE-AC-01
-    statement: All climate wet intent resolves to center; center drip and dormant south/west paths remain disabled; only commissioned wall drip can receive fertilizer.
+    statement: Every climate/VPD source resolves to center mist, center mist receives no non-climate command origin, center drip and dormant south/west paths remain disabled, and only commissioned wall drip can receive fertilizer.
     evidence_required:
       - Resolver unit tests for every command source and zone-enable state.
-      - Invariant and replay evidence showing zero south/west climate demand and zero non-wall fertilizer demand.
+      - Invariant and replay evidence showing zero south/west climate demand, zero center-mist non-climate demand, and zero non-wall fertilizer demand.
   - id: LANE-AC-02
-    statement: Missing commissioning prevents feed and the exact-once wall sequence is prewet, feed, fertilizer-off, and immediate clean flush.
+    statement: Missing commissioning or missing, stale, zero, or invalid calibrated flow prevents feed; both legacy 10:30 jobs are ineligible; and the restart-safe weekly solar-cadence wall sequence converts bounded liters into exact-once prewet, feed, fertilizer-off, and immediate clean flush.
     evidence_required:
       - Fail-closed commissioning fixtures.
-      - Restart, cancellation, duplicate-trigger, and sequence-order tests.
+      - Command-source matrix proving no eligible fixed 10:30 actuation.
+      - Weekly solar eligibility, missed-window, restart, cancellation, duplicate-trigger, and sequence-order tests.
+      - Positive calibrated-flow liters-to-duration fixtures plus missing/stale/zero/invalid-flow rejection tests for prewet, feed, and post-flush.
   - id: LANE-AC-03
     statement: Existing 45-second center re-fire and lighting minimum-on behavior are regression-tested without a speculative new control tunable.
     evidence_required:
       - Re-fire test proving no pulse extension.
       - In-window to outside-window lighting boundary test and static lighting audit.
   - id: LANE-AC-04
-    statement: Solar-night safety remains zero-daytime, temperature-bounded, and heat2-off with no unproven post-wet flag or hold.
+    statement: Solar-night safety remains zero-daytime, temperature-bounded, and heat2-off with no unproven post-wet flag or hold, and the evidence-core effectiveness disposition is explicitly accepted before the combined image freezes.
     evidence_required:
       - Night admission and stop/block regression fixtures.
       - Invariant and replay proof against the refreshed corpus.
+      - Controller disposition recording effective, ineffective, blocked, or insufficient_evidence; any requested control delta requires an approved scope update before implementation.
   - id: LANE-AC-05
     statement: Heap profile, floor, and WDT diagnostics meet the pre-OTA contract, with controlled restart used only if all safer corrections are insufficient.
     evidence_required:
@@ -199,9 +206,11 @@ validation_commands:
     required: true
 required_evidence:
   - Full required-command output or immutable CI links at lane HEAD.
-  - Resolver matrix for every wet-intent source, zone enable, and fertilizer interlock.
-  - Exact-once wall prewet/feed/fertilizer-off/immediate-flush fault-injection results.
+  - Resolver matrix for every wet-intent source, zone enable, center-mist reverse-exclusivity rule, and fertilizer interlock.
+  - Proof that no fixed-clock 10:30 job remains eligible.
+  - Restart-safe weekly solar eligibility plus bounded calibrated liters-to-duration and exact-once wall prewet/feed/fertilizer-off/immediate-flush fault-injection results.
   - Mister re-fire, lighting boundary, and solar-night preservation fixtures.
+  - Accepted realized-night effectiveness disposition and any resulting scope decision before firmware freeze.
   - Before/after heap, largest-block, allocation pressure, loop-duration, WDT, and reset profile.
   - Stock replay and band-replay delta explanation against current main.
   - Exact binary source SHA/checksum, map output, rollback artifact, and OTA acceptance manifest.
@@ -237,6 +246,7 @@ critic_profile: firmware safety/replay/heap adversarial critic
 integration_requirements:
   - Independent critic reviews the immutable source head, binary manifest, replay deltas, topology matrix, and heap evidence.
   - Controller reconciles any shared registry/entity-map/twin change with merged lane contracts before integration.
+  - Controller records the evidence-core dry-out effectiveness disposition before accepting the combined image; ineffective or insufficient evidence is not silently labeled fixed.
   - Repository-wide CI reruns at the integrated head; release-control alone performs preflight, OTA, and runtime acceptance.
 definition_of_done:
   - Every lane acceptance criterion passes with linked, revision-specific evidence.

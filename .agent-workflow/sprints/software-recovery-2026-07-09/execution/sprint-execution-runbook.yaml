@@ -37,7 +37,6 @@ prerequisites:
   platform_readiness: .agent-workflow/platform/platform-readiness.yaml
   open_blockers:
     - Native Agent Platform worktree-agent creation and removal are disabled post-MVP and return structured HTTP 501 responses.
-    - The controller planning/security baseline must be independently reviewed and merged before Wave-0 worker worktrees are cut.
     - A current-sprint wave release plan is required before production delivery.
     - Production release is blocked by g-prod-db-credential-rotation-20260709 until Jason separately authorizes and the controller verifies the protected rotation.
 platform:
@@ -106,11 +105,11 @@ lanes:
     dependency_state: ready
     platform_session:
       create_operation_ref: .agent-workflow/sprints/software-recovery-2026-07-09/execution/control-requests/device-writer-session-create.yaml
-      session_id: null
+      session_id: device-writer-433-local-20260709
       executor: local-codex-subagent-fallback
       model: GPT-5
       effort: high
-      status: blocked
+      status: active
     prompt:
       prompt_path: .verdify/sprints/software-recovery-2026-07-09/lanes/device-writer/worker-prompt.md
       manifest_path: null
@@ -119,7 +118,7 @@ lanes:
       tmux_session: null
       browser_terminal_url: null
       operator_attach_required: true
-    status: planned
+    status: implementing
   - lane_id: evidence-core
     issue_ids: [293, 389, 410, 419, 424]
     contract_path: .verdify/sprints/software-recovery-2026-07-09/lanes/evidence-core/lane.yaml
@@ -128,20 +127,20 @@ lanes:
     dependency_state: ready
     platform_session:
       create_operation_ref: .agent-workflow/sprints/software-recovery-2026-07-09/execution/control-requests/evidence-core-session-create.yaml
-      session_id: null
+      session_id: evidence-core-local-20260709
       executor: local-codex-subagent-fallback
       model: GPT-5
       effort: high
-      status: blocked
+      status: active
     prompt:
       prompt_path: .verdify/sprints/software-recovery-2026-07-09/lanes/evidence-core/worker-prompt.md
       manifest_path: null
-      contract_hash: 212a480af3c12b45aeaa1f2f46db6cce2c4fa6d2bf7c8fb4910000a5c7e75b7b
+      contract_hash: 8ca0bf7bec2be2be9375a76c6e7d1918e12346cf27be2c4d2d4662f86b6846b3
     terminal:
       tmux_session: null
       browser_terminal_url: null
       operator_attach_required: true
-    status: planned
+    status: implementing
   - lane_id: resource-accounting
     issue_ids: [437]
     contract_path: .verdify/sprints/software-recovery-2026-07-09/lanes/resource-accounting/lane.yaml
@@ -202,7 +201,7 @@ lanes:
     prompt:
       prompt_path: .verdify/sprints/software-recovery-2026-07-09/lanes/planner-delivery/worker-prompt.md
       manifest_path: null
-      contract_hash: 21912e77d6b9899049a0a4e6150b97c7d5bec48391c533d882ca50fc35bc4914
+      contract_hash: 82fbeb8e8f1114556ff728503a70941eb34c86a1d5f2a67d9aa0c43addc8e10d
     terminal:
       tmux_session: null
       browser_terminal_url: null
@@ -224,7 +223,7 @@ lanes:
     prompt:
       prompt_path: .verdify/sprints/software-recovery-2026-07-09/lanes/firmware-control/worker-prompt.md
       manifest_path: null
-      contract_hash: 732c472a3f9b2cf9ac092047246ed729d90edefdeff758e2a047ea8407b0af6d
+      contract_hash: f31490a5fc1b07f9c87eb8c35f581c938531faf552f96158556e843c91ae14c3
     terminal:
       tmux_session: null
       browser_terminal_url: null
@@ -246,7 +245,7 @@ lanes:
     prompt:
       prompt_path: .verdify/sprints/software-recovery-2026-07-09/lanes/release-control/worker-prompt.md
       manifest_path: null
-      contract_hash: 2804910fcffd7d929da551faf09dfb54c6d12e2b3bb4514177f461b7dadb4c4e
+      contract_hash: 4cef1e7e9c9831bdff5c8cd4cd078010180bc7bd6e9d36ad2ef50dcfdf5c9931
     terminal:
       tmux_session: null
       browser_terminal_url: null
@@ -325,4 +324,4 @@ stop_conditions:
 handoff:
   next_skill: sprint-orchestrator
   next_mode: local-fallback-dispatch
-  reason: Keep native platform requests blocked, commit and review the controller baseline, then supervise only dependency-ready isolated local Codex worktrees under the approved fallback gate.
+  reason: Supervise the active device-writer and evidence-core isolated worktrees on authoritative main a2c3ee9, then dispatch only dependency-ready downstream lanes under the approved fallback gate.

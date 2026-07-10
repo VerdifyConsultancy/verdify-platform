@@ -241,10 +241,10 @@ lanes:
 
   - lane_id: planner-delivery
     title: Self-healing bounded planner delivery
-    primary_outcome: Required planner triggers regain tool health, truthful terminal action semantics, strict bounds, singular expiry, and correct forecast evaluation.
+    primary_outcome: Required Hermes/MCP planner triggers regain tool health, truthful terminal action semantics, strict bounds, singular expiry, and correct forecast evaluation, while the deployed non-authoritative planner_graph runtime becomes truthful or is decommissioned.
     issue_ids: [427]
     issue_urls: [https://github.com/VerdifyConsultancy/verdify-platform/issues/427]
-    owned_domains: [Hermes MCP client liveness, planner trigger/delivery ledger, plan materializer/lifecycle, forecast scoring, planner context]
+    owned_domains: [Hermes MCP client liveness, non-authoritative planner_graph worker health or decommissioning, planner trigger/delivery ledger, plan materializer/lifecycle, forecast scoring, planner context]
     owned_paths:
       - ingestor/iris_planner.py
       - ingestor/planner_routing.py
@@ -265,11 +265,21 @@ lanes:
       - tests/test_04_planner.py
       - tests/test_10_planner_routing.py
       - tests/test_17_planner_health_surface.py
-    prohibited_paths: [planner_graph/**, firmware/**, ingestor/tasks/dispatcher.py, ingestor/esp32_push.py, grafana/**]
+      - planner_graph/api.py
+      - planner_graph/app.py
+      - planner_graph/contracts.py
+      - planner_graph/worker.py
+      - planner_graph/store.py
+      - planner_graph/tests/test_app.py
+      - planner_graph/tests/test_server.py
+      - planner_graph/tests/test_store_postgres.py
+      - planner_graph/tests/test_worker.py
+      - deploy/k8s/components/planner/**
+    prohibited_paths: [firmware/**, ingestor/tasks/dispatcher.py, ingestor/esp32_push.py, grafana/**]
     coordination_required_paths: [verdify_schemas/tunable_registry.py, db/schema.sql, deploy/k8s/base/ingestor-deployment.yaml]
-    owned_interfaces: [tool-level readiness, terminal result action/status, strict bounds intersection, single effective plan TTL, outdoor forecast comparator]
-    inputs: [quiet/fair writer cadence, DLI availability contract, existing registry bounds]
-    outputs: [self-healing MCP path, terminal ledger, action-contract verifier, normalized plan materializer, expiry/singularity migration, forecast fixtures]
+    owned_interfaces: [tool-level readiness, worker-aware non-authoritative runtime health or desired-state removal, terminal result action/status, strict bounds intersection, single effective plan TTL, outdoor forecast comparator]
+    inputs: [quiet/fair writer cadence, DLI availability contract, existing registry bounds, planner_graph crash trace and zero-run non-authority proof]
+    outputs: [self-healing MCP path, truthful retained planner_graph health or reviewed decommissioning, terminal ledger, action-contract verifier, normalized plan materializer, expiry/singularity migration, forecast fixtures]
     hard_dependencies:
       - {lane_id: device-writer, required_output: non-starving task cadence and canonical registry/readback semantics}
       - {lane_id: dli-availability, required_output: merged unavailable DLI contract and stable shared planner/MCP/schema head}
@@ -279,9 +289,10 @@ lanes:
       - Required set_plan triggers are satisfied only by a valid full plan; other actions are separately classified.
       - Bounds are intersected/normalized once, one plan is effective at an instant, and every plan expires.
       - SUNRISE/SUNSET fault injection yields valid plan or explicit neutral fallback and clears the critical alert from a valid action.
-    validation_commands: [make lint, make test, targeted MCP fault injection, kustomize/kubeconform checks, read-only end-to-end planner acceptance probe]
+      - The non-authoritative planner_graph workload either exposes worker-aware recovery health or is removed from desired state without becoming a writer or satisfying Hermes/MCP acceptance.
+    validation_commands: [make lint, make test, targeted MCP fault injection, targeted planner_graph worker/health fault injection, kustomize/kubeconform checks, read-only end-to-end planner acceptance probe]
     risk: CRITICAL
-    escalation_conditions: [Hermes upstream image must change, planner_graph would become writer, registry bounds conflict cannot be intersected, neutral fallback would bypass deterministic firmware]
+    escalation_conditions: [Hermes upstream image must change, planner_graph would become a writer or production trigger path, registry bounds conflict cannot be intersected, neutral fallback would bypass deterministic firmware]
     recommended_agent_profile: planner-mcp-reliability
     branch: lane/recovery-planner-427
     worktree: /Users/jason/repos/verdify-worktrees/software-recovery-planner-427
@@ -325,13 +336,13 @@ lanes:
       - {lane_id: planner-delivery, required_output: finalized tunable registry/bounds and no shared-file ambiguity}
     soft_dependencies: [resource-accounting consumes corrected irrigation intent after deploy]
     acceptance_criteria:
-      - All climate wet intent resolves to center; center drip and dormant south/west paths remain disabled; only commissioned wall drip can receive fertilizer.
-      - Missing commissioning prevents feed; prewet/feed/fertilizer-off/immediate-flush is exact once and wall-local.
+      - All climate wet intent resolves to center mist and center mist accepts no non-climate command origin; center drip and dormant south/west paths remain disabled; only commissioned wall drip can receive fertilizer.
+      - Missing commissioning or missing, stale, zero, or invalid calibrated flow prevents feed; both legacy 10:30 jobs are ineligible; weekly solar eligibility and liters-to-duration conversion drive restart-safe exact-once prewet/feed/fertilizer-off/immediate-flush.
       - Existing 45-second center re-fire and lighting min-on boundary are regression-tested; no new speculative anti-chatter tunable exists.
-      - Solar-night safety remains zero-daytime, temperature-bounded, heat2-off; no unproven post-wet flag/hold is added.
+      - Solar-night safety remains zero-daytime, temperature-bounded, heat2-off; no unproven post-wet flag/hold is added, and the dry-out effectiveness disposition is accepted before firmware freeze.
       - Heap profile/floor and WDT diagnostics meet the pre-OTA contract; controlled restart is last resort only.
       - All required firmware tests, invariants, replay, band replay, lighting audit, irrigation audit, and compile checks pass.
-    validation_commands: [make test-firmware, make firmware-invariants, make firmware-replay OLD=origin/main NEW=HEAD, make firmware-replay-band OLD=origin/main, make firmware-check, make lighting-audit-static, make irrigation-software-audit, make lint, make test]
+    validation_commands: [make test-firmware, make firmware-invariants, make firmware-replay OLD=origin/main NEW=HEAD, make firmware-replay-band OLD=origin/main, make firmware-check, make lighting-audit-static, make irrigation-stack-software-check, make lint, make test]
     risk: CRITICAL
     escalation_conditions: [Any new tunable/entity not in approved contract, replay divergence outside documented topology/DLI delta, heap floor cannot be defended, fertilizer route ambiguity, physical commissioning requested]
     recommended_agent_profile: firmware-esphome-cpp
@@ -362,24 +373,25 @@ lanes:
     prohibited_paths: [firmware/greenhouse/**, firmware/lib/**, ingestor/**, mcp/**, db/migrations/**]
     coordination_required_paths: [.github/workflows/prod-promote.yml, deploy/k8s/overlays/prod/**, production DB intent rows, production secret authority]
     owned_interfaces: [topology-aware immutable cycling baseline/policy, release manifest, stale-plan retirement transaction, immediate/settled acceptance]
-    inputs: [all reviewed merged heads, issue 389 cycle view, combined firmware artifact, issue 438 closed rotation gate]
+    inputs: [all reviewed merged product heads, issue 389 cycle view, dry-out disposition, combined firmware artifact, independently approved merged security checkpoint PR 439 for tooling, closed issue 438 rotation gate before production mutation]
     outputs: [pre/post JSON and human cycling artifacts, promotion/sync/OTA proof, zero-repin evidence, 48-hour heap/cycling bake, final review packet]
     hard_dependencies:
-      - {lane_id: security-hygiene, required_output: credential rotation authorized, executed, and verified redacted}
-      - {lane_id: evidence-core, required_output: trustworthy cycle/night/replay evidence live}
-      - {lane_id: resource-accounting, required_output: scope-bearing resource consumers live}
-      - {lane_id: device-writer, required_output: two-hour quiet writer acceptance live}
-      - {lane_id: dli-availability, required_output: DLI unavailable consumers live}
-      - {lane_id: planner-delivery, required_output: valid required plan and critical alert resolution live}
+      - {lane_id: security-hygiene, required_output: independently approved merged PR 439 source/caller/runbook checkpoint for tooling; security lane remains blocked until the credential gate closes before production mutation}
+      - {lane_id: evidence-core, required_output: accepted and merged cycle/night/replay contracts plus dry-out disposition}
+      - {lane_id: resource-accounting, required_output: accepted and merged scope-bearing resource consumers}
+      - {lane_id: device-writer, required_output: accepted and merged writer plus pre-deploy baseline/runtime probe}
+      - {lane_id: dli-availability, required_output: accepted and merged DLI-unavailable consumers}
+      - {lane_id: planner-delivery, required_output: accepted and merged planner delivery/runtime-health implementation}
       - {lane_id: firmware-control, required_output: exact reviewed firmware and rollback artifacts}
     soft_dependencies: []
     acceptance_criteria:
+      - Phase A tooling reaches READY_FOR_CRITIC on source/fixture portions of the first two criteria only; critic-approved merge returns the overall lane to IMPLEMENTING with all production criteria pending.
       - Gate rejects overlapping/current/future/incomplete windows and emits immutable source/SHA/firmware/policy metadata.
       - Policy requires south/west climate cycles zero, compares center to the prior combined climate envelope, and applies explicit canaries/tolerances to other relays.
       - Repaired consumers are live before the stale row is atomically retired; effective/device value remains zero with no repin.
       - Exact digest/revision and one firmware image are deployed with immediate and settled runtime proof.
-      - No deploy-blocking alert, Task WDT, heap-guard reboot, forbidden route, false DLI, writer storm, or declared cycling regression remains.
-    validation_commands: [make lint, make test, make migration-rollback-safety, make firmware-cycling-gate, full firmware preflight bundle, Argo diff/health checks, DB/log/readback/alert probes]
+      - No deploy-blocking alert, Task WDT, heap-guard reboot, forbidden route, false DLI, writer storm, unresolved dry-out disposition, or declared cycling regression remains.
+    validation_commands: ["Phase A: make lint", "Phase A: make test", "Phase A: make migration-rollback-safety", "Phase A: git diff --check", "Phase B: make firmware-cycling-gate", "Phase B: full firmware preflight bundle", "Phase B: Argo diff/health checks", "Phase B: DB/log/readback/alert probes"]
     risk: CRITICAL
     escalation_conditions: [Credential rotation not explicitly authorized, unrelated Argo drift in sync surface, critical alert open, weekly/bake/heap/cycling gate failure, stale row repins, runtime acceptance fails]
     recommended_agent_profile: controller-integrator; no autonomous worker may execute production state changes
@@ -421,4 +433,4 @@ wave_plan:
     start_condition: evidence, writer, DLI, and planner contracts merged; firmware branch cut from current main.
   - wave: 5
     lanes: [release-control]
-    start_condition: Every implementation lane independently accepted and merged; protected credential gate closed before production mutation.
+    start_condition: Phase A tooling starts after every product implementation lane is independently accepted/merged plus approved merged security checkpoint PR 439; Phase B production starts only after the protected credential gate closes.

@@ -4,8 +4,8 @@ schema_version: "1.0"
 project_id: verdify-platform
 controller_id: software-recovery-root-019f4826
 status: active
-state: WAVE_PLANNED
-updated_at: "2026-07-09T23:02:21Z"
+state: WAVE_EXECUTING
+updated_at: "2026-07-10T00:29:37Z"
 current_wave: wave-software-recovery-implementation
 sessions:
   - id: software-recovery-root-019f4826
@@ -62,6 +62,42 @@ sessions:
     branch: codex/software-recovery-2026-07-09
     worktree: /Users/jason/repos/verdify-worktrees/software-recovery-20260709
     status: complete
+  - id: device-writer-433-local-20260709
+    role: worker
+    executor: codex-local-subagent-fallback
+    repository: VerdifyConsultancy/verdify-platform
+    issue: 433
+    lane_id: device-writer
+    branch: lane/recovery-writer-433
+    worktree: /Users/jason/repos/verdify-worktrees/software-recovery-writer-433
+    status: active
+  - id: evidence-core-local-20260709
+    role: worker
+    executor: codex-local-subagent-fallback
+    repository: VerdifyConsultancy/verdify-platform
+    issue: 293
+    lane_id: evidence-core
+    branch: lane/recovery-evidence-293-389-410-419-424
+    worktree: /Users/jason/repos/verdify-worktrees/software-recovery-evidence-core
+    status: active
+  - id: scope-coverage-audit-20260709
+    role: critic
+    executor: codex-local-subagent
+    repository: VerdifyConsultancy/verdify-platform
+    issue: null
+    lane_id: null
+    branch: codex/software-recovery-2026-07-09
+    worktree: /Users/jason/repos/verdify-worktrees/software-recovery-20260709
+    status: complete
+  - id: coverage-amendment-critic-20260709
+    role: critic
+    executor: codex-local-subagent
+    repository: VerdifyConsultancy/verdify-platform
+    issue: null
+    lane_id: null
+    branch: codex/software-recovery-2026-07-09
+    worktree: /Users/jason/repos/verdify-worktrees/software-recovery-20260709
+    status: complete
 events:
   - id: controller-event-20260709-001
     occurred_at: "2026-07-09T20:52:12Z"
@@ -86,13 +122,45 @@ events:
   - id: controller-event-20260709-006
     occurred_at: "2026-07-09T23:02:21Z"
     event_type: critic_reviewed
-    summary: A fresh critic approved PR #439 as a non-production checkpoint after a reviewed URI-safe rotation hard stop and record reconciliation; the security lane remains blocked on protected credential invalidation.
+    summary: "A fresh critic approved PR #439 as a non-production checkpoint after a reviewed URI-safe rotation hard stop and record reconciliation; the security lane remains blocked on protected credential invalidation."
+  - id: controller-event-20260709-007
+    occurred_at: "2026-07-09T23:07:58Z"
+    event_type: checkpoint_merged
+    summary: "PR #439 merged to main at 6b5042c after two fully green 17-pass CI runs and independent checkpoint criticism; no production action occurred."
+  - id: controller-event-20260709-008
+    occurred_at: "2026-07-09T23:09:42Z"
+    event_type: lane_dispatched
+    summary: "Device-writer issue #433 started in its exclusive local fallback worktree from merged main 6b5042c with production mutation forbidden."
+  - id: controller-event-20260709-009
+    occurred_at: "2026-07-09T23:09:42Z"
+    event_type: lane_dispatched
+    summary: "Evidence-core issues #293, #389, #410, #419, and #424 started in one exclusive coupled worktree from merged main 6b5042c with production migration application forbidden."
+  - id: controller-event-20260709-010
+    occurred_at: "2026-07-09T23:42:00Z"
+    event_type: scope_coverage_audit
+    summary: A fresh post-dispatch audit found four acceptance holes; planner runtime health, irrigation exactness, dry-out disposition, and release phase ordering are now explicit contract amendments pending independent review and merge.
+  - id: controller-event-20260709-011
+    occurred_at: "2026-07-09T23:46:04Z"
+    event_type: track_a_incident
+    summary: "Node5 SystemOOM and NodeNotReady events removed the sole Postgres pod; Kubernetes and Longhorn recovered it as primary, the ingestor drained all ten spooled climate rows, and the DB HA gap was recorded on issue #218."
+  - id: controller-event-20260710-012
+    occurred_at: "2026-07-10T00:07:00Z"
+    event_type: critic_reviewed
+    summary: "The fresh PR #441 critic accepted all substantive intent and authority boundaries but requested five record fixes, led by an explicit Phase-A tooling versus Phase-B production release checkpoint boundary."
+  - id: controller-event-20260710-013
+    occurred_at: "2026-07-10T00:24:52Z"
+    event_type: critic_reviewed
+    summary: "The focused PR #441 re-review approved d617ae6 after all five findings closed; a final attestation confirmed 318de1f changed only the critic report and was safe to merge."
+  - id: controller-event-20260710-014
+    occurred_at: "2026-07-10T00:28:25Z"
+    event_type: checkpoint_merged
+    summary: "PR #441 merged to main at a2c3ee9 with 13 successful checks, eight intentional skips, zero failures, and no production or device mutation."
 open_gates:
   - g-prod-db-credential-rotation-20260709
 next_actions:
-  - Commit and push the critic-reviewed security evidence reconciliation, then require the replacement PR #439 CI run to remain green.
-  - Merge the controller baseline to main after that evidence-only check completes.
-  - Create isolated local lane worktrees from the merged baseline and dispatch device-writer and evidence-core workers under the approved fallback gate.
+  - Poll device-writer and evidence-core after they integrate authoritative main a2c3ee9; enforce exclusive path ownership and current contract hashes.
+  - Route each immutable lane head through its required fresh critic, GitHub CI, and integration review before merge.
+  - Dispatch downstream lanes only when merged dependency contracts are available.
   - Preserve the credential-rotation release block until Jason explicitly authorizes the protected rotation.
 handoff:
   next_skill: sprint-orchestrator

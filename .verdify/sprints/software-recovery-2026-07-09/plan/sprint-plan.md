@@ -11,8 +11,8 @@ This is an outcome-driven recovery wave, not a one-day issue-count exercise. It 
 1. Finish source credential cleanup and caller inventory; hold the production release at the explicit rotation gate.
 2. Land serialized contracts/evidence: solar parity, divergence migration 189, DLI availability, cycle truth, night episodes, resource provenance, and outcome integration.
 3. Repair the device writer and prove non-starving terminal semantics.
-4. Repair planner/MCP delivery, strict bounds, plan lifecycle, and forecast semantics; activate after acceptance.
-5. Build one exclusive firmware package: measured heap protection/diagnostics, approved irrigation topology, DLI unavailable signal, real replay freshness, and regression proof that existing mister/light dwell and solar-night safety survive. Add no speculative control tunables.
+4. Repair active Hermes/MCP delivery, strict bounds, plan lifecycle, and forecast semantics; activate after acceptance. Make the deployed zero-run planner_graph workload truthfully recoverable or remove it from desired state without granting it authority.
+5. Build one exclusive firmware package: measured heap protection/diagnostics, climate-only center mist, no legacy 10:30 jobs, restart-safe weekly solar wall-feed eligibility with calibrated liters and fail-closed commissioning, DLI unavailable signal, real replay freshness, and regression proof that existing mister/light dwell and solar-night safety survive. Add no speculative control tunables.
 6. Independently review and integrate every lane on current main; run repo, migration, firmware, lighting, irrigation, heap, cycling, and release gates.
 7. With rotation authorized, rotate and verify every DB consumer; then release schema/services, retire stale 0.25 intent, clear the planner critical alert, and OTA once.
 8. Prove immediate and settled production behavior; reconcile GitHub and lifecycle records.
@@ -20,10 +20,10 @@ This is an outcome-driven recovery wave, not a one-day issue-count exercise. It 
 ## What good looks like
 
 - No five-to-six-minute 69-value push storm; one deliberate drift causes one truthful write.
-- Required SUNRISE/SUNSET work terminates in a valid expiring plan or explicit neutral fallback, and tool loss self-heals.
-- Climate mist is center-only. Center drip and dormant south/west irrigation remain disabled. Fertilizer is wall-drip-only and cannot actuate until commissioning is complete.
+- Required SUNRISE/SUNSET work terminates in a valid expiring Hermes/MCP plan or explicit neutral fallback, tool loss self-heals, and no deployed planner process remains false green.
+- Climate mist is center-only and climate-only. Center drip and dormant south/west irrigation remain disabled, no fixed 10:30 actuation remains, and fertilizer is weekly solar-cadence wall-drip-only with calibrated liters but cannot actuate until commissioning is complete.
 - Crop DLI is `unavailable`, not a number, until Jason replaces and validates the sensor.
-- Night drying follows solar night and reports realized moisture/temperature response with bounded stop reasons.
+- Night drying follows solar night and reports realized moisture/temperature response with bounded stop reasons plus an explicit effective, ineffective, blocked, or insufficient-evidence disposition before firmware freeze.
 - Replay contains real outdoor freshness coverage; firmware maintains a safe heap floor; transition-derived cycling does not regress; old inflated counter premises do not trigger speculative tuning.
 - Water and energy surfaces say what is measured, modeled, uncertain, or unattributed.
 - Effective `band_track_fraction` is zero with no repin, the exposed DB credential is invalidated, and no deploy-blocking alert remains.
@@ -38,4 +38,4 @@ The combined firmware touches the only live controller; several schema changes m
 
 ## Readiness
 
-Ready for lane decomposition. Product decisions are resolved; physical fertigation commissioning is intentionally fail-closed; credential rotation blocks release only, not implementation.
+Wave 0 is executing. Post-dispatch coverage amendments are approved and must merge before downstream lane dispatch. Product decisions are resolved; physical fertigation commissioning is intentionally fail-closed; credential rotation blocks production phases only, not implementation or release-tool preparation.

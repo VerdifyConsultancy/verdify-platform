@@ -149,14 +149,96 @@ recently_pushed_values: dict[str, float] = {}
 # values the firmware has already confirmed.
 cfg_readback: dict[str, float] = {}
 
-# Set by esp32_loop on reconnect — tells dispatcher to reconcile desired
-# setpoints against cfg_readback and push only drift/missing values.
+# Monotonic transport generation.  Only a successful API connect may advance
+# this counter; cfg readback drift is tracked separately below.  The dispatcher
+# records the last generation it reconciled so a stable socket can never be
+# mistaken for a reconnect merely because a dynamic cfg value changed.
+transport_generation = 0
+reconciled_transport_generation = 0
+
+# cfg parameter -> monotonic drift version.  Versioning lets a dispatcher clear
+# only the drift it actually observed; a newer readback arriving mid-dispatch
+# remains pending for the next targeted pass.
+cfg_drift_versions: dict[str, int] = {}
+_cfg_drift_version = 0
+
+# Wake the scheduler for targeted cfg drift without advancing transport state.
+setpoint_dispatch_requested = asyncio.Event()
+
+# Compatibility reconnect event.  This event is now set ONLY by
+# note_transport_connected(); generic cfg drift must never set it.
 force_setpoint_push = asyncio.Event()
+
+
+def note_transport_connected() -> int:
+    """Advance and return the one monotonic generation for a real API connect."""
+    global transport_generation
+    transport_generation += 1
+    force_setpoint_push.set()
+    setpoint_dispatch_requested.set()
+    return transport_generation
+
+
+def mark_transport_reconciled(generation: int) -> None:
+    """Mark one completed generation without erasing a newer reconnect."""
+    global reconciled_transport_generation
+    reconciled_transport_generation = max(reconciled_transport_generation, generation)
+    if transport_generation <= reconciled_transport_generation:
+        force_setpoint_push.clear()
+
+
+def note_cfg_drift(param: str) -> int:
+    """Record targeted readback drift without changing transport generation."""
+    global _cfg_drift_version
+    _cfg_drift_version += 1
+    cfg_drift_versions[param] = _cfg_drift_version
+    setpoint_dispatch_requested.set()
+    return _cfg_drift_version
+
+
+def clear_cfg_drift(observed_versions: dict[str, int]) -> None:
+    """Clear only drift versions consumed by a completed dispatcher pass."""
+    for param, version in observed_versions.items():
+        if cfg_drift_versions.get(param) == version:
+            cfg_drift_versions.pop(param, None)
+    # A newer transport generation can arrive while the prior dispatcher owns
+    # the lock.  Never erase that reconnect's scheduler wake when clearing an
+    # older cfg-drift snapshot.
+    if not cfg_drift_versions and transport_generation <= reconciled_transport_generation:
+        setpoint_dispatch_requested.clear()
+
+
+def defer_failed_dispatch(generation: int, observed_versions: dict[str, int]) -> None:
+    """Consume only the failed pass's immediate wake, without claiming success.
+
+    The unreconciled transport generation and drift versions remain intact for
+    the normal 300-second cadence. A newer reconnect or drift arriving during
+    the failed pass keeps the immediate scheduler wake set.
+    """
+    newer_drift_pending = cfg_drift_versions != observed_versions
+    if transport_generation == generation and not newer_drift_pending:
+        setpoint_dispatch_requested.clear()
+
 
 # True while ingestor.py is running setpoint_dispatcher from any entrypoint.
 # Prevents reconnect dispatch and the periodic task loop from queueing
 # duplicate heap-sensitive ESPHome pushes.
 setpoint_dispatch_in_progress = False
+setpoint_dispatch_lock = asyncio.Lock()
+
+# A terminal lifecycle-persistence failure means a physical outcome may no
+# longer match its durable row.  The writer fail-closes and this event makes the
+# owning ingestor process exit so Kubernetes can restart and reconcile unknown
+# in-memory states instead of leaving a permanently false-green pod.
+writer_fatal_event = asyncio.Event()
+writer_fatal_reason: str | None = None
+
+
+def note_writer_fatal(reason: str) -> None:
+    global writer_fatal_reason
+    writer_fatal_reason = reason
+    writer_fatal_event.set()
+
 
 # Timestamp of last ESP32 connect (used for boot-window gating)
 esp32_connected_at: float = 0.0
