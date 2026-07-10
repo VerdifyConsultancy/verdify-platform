@@ -6,7 +6,7 @@ import json
 import sys
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 
 import pytest
 import yaml
@@ -17,15 +17,69 @@ if str(REPO_ROOT) not in sys.path:
 
 from verdify_schemas import PublicPlannerDelivery, PublicPlannerHealthResponse
 
+_MISSING_MODULE = object()
+_MCP_STUB_MODULES = ("mcp", "mcp.server", "mcp.server.fastmcp")
+
+
+def _install_fastmcp_test_stub() -> None:
+    """Provide only the registration surface this isolated module test needs.
+
+    The logic CI environment deliberately does not install the MCP runtime, and
+    the repository's ``mcp/`` namespace shadows that distribution during test
+    collection.  These tests call tool functions directly and monkeypatch all
+    I/O, so a deterministic registration stub is the honest dependency boundary.
+    """
+
+    class _FastMCP:
+        def __init__(self, *_args, **_kwargs) -> None:
+            self._registered_tools: list[SimpleNamespace] = []
+
+        def tool(self, *_args, **_kwargs):
+            def decorator(func):
+                self._registered_tools.append(SimpleNamespace(name=func.__name__))
+                return func
+
+            return decorator
+
+        def custom_route(self, *_args, **_kwargs):
+            return lambda func: func
+
+        async def list_tools(self):
+            return list(self._registered_tools)
+
+        def run(self, *_args, **_kwargs) -> None:
+            pass
+
+    fastmcp_module = ModuleType("mcp.server.fastmcp")
+    fastmcp_module.FastMCP = _FastMCP
+    server_module = ModuleType("mcp.server")
+    server_module.__path__ = []
+    server_module.fastmcp = fastmcp_module
+    mcp_module = ModuleType("mcp")
+    mcp_module.__path__ = []
+    mcp_module.server = server_module
+    sys.modules["mcp"] = mcp_module
+    sys.modules["mcp.server"] = server_module
+    sys.modules["mcp.server.fastmcp"] = fastmcp_module
+
 
 @pytest.fixture(scope="module")
 def mcp_server():
-    path = REPO_ROOT / "mcp" / "server.py"
-    spec = importlib.util.spec_from_file_location("verdify_mcp_server_health_test", path)
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+    prior_modules = {name: sys.modules.get(name, _MISSING_MODULE) for name in _MCP_STUB_MODULES}
+    _install_fastmcp_test_stub()
+    try:
+        path = REPO_ROOT / "mcp" / "server.py"
+        spec = importlib.util.spec_from_file_location("verdify_mcp_server_health_test", path)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        yield module
+    finally:
+        for name, previous in prior_modules.items():
+            if previous is _MISSING_MODULE:
+                sys.modules.pop(name, None)
+            else:
+                sys.modules[name] = previous
 
 
 class _Transaction:
