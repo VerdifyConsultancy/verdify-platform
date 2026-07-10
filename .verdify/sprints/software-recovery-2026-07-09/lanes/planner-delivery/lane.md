@@ -11,7 +11,7 @@ Restore a self-healing Hermes/MCP path and a bounded, terminally truthful planne
 
 ## Readiness and sequencing
 
-This lane is `NOT_STARTED` and is not dispatchable until `device-writer` has delivered non-starving cadence/canonical readbacks and `dli-availability` has merged the unavailable-DLI contract plus the stable shared planner/MCP/schema head. The feature branch is cut from current `main` only after those dependencies merge; the sprint baseline above remains the audit reference. Corrected evidence from `evidence-core` is a soft input.
+This lane is `READY_FOR_CRITIC` at substantive head `402251ad8e6ce8d704d3d063022ae8f31c3e34df`. Device-writer and DLI availability were independently accepted and merged before implementation began, and evidence-core was consumed as a soft input. Exact-head GitHub CI is green; production deployment, migration application, alert mutation, and required-plan acceptance remain release-control work. The sprint baseline above remains the audit reference.
 
 ## Boundaries
 

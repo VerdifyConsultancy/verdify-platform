@@ -1,6 +1,180 @@
 sprint_id: software-recovery-2026-07-09
 scope_id: planner-delivery
-revision: 0a9a19a840be6bae1beba604497d880b3b74b1ef
+revision: 402251ad8e6ce8d704d3d063022ae8f31c3e34df
 environment: null
-generated_at: "2026-07-09T22:11:18Z"
-items: []
+generated_at: "2026-07-10T15:32:34Z"
+items:
+  - id: EVI-PLAN-001
+    type: TEST
+    status: PASS
+    source: planner delivery, routing, terminal action, and health fault matrix
+    command: >-
+      .venv/bin/pytest -q tests/test_04_planner.py
+      tests/test_10_planner_routing.py tests/test_12_fidelity.py
+      tests/test_17_planner_health_surface.py
+    timestamp: "2026-07-10T15:20:00Z"
+    revision: 402251ad8e6ce8d704d3d063022ae8f31c3e34df
+    environment: Jason laptop isolated planner worktree
+    result: >-
+      263 tests passed. Required SUNRISE/SUNSET actions complete only after a
+      valid full set_plan; set_tunable, ordinary acknowledgement, explicit
+      neutral fallback, timeout, and delivery failure remain distinct terminal
+      outcomes. Readiness proves the exact Hermes tool allowlist and database
+      round trip, and routing/schema terminal classifiers have a full-matrix
+      parity guard.
+    artifact_location: tests/test_17_planner_health_surface.py
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-04]
+    limitations:
+      - Production required-plan acceptance and alert resolution remain release-control work.
+
+  - id: EVI-PLAN-002
+    type: TEST
+    status: PASS
+    source: non-authoritative planner_graph worker and readiness fault injection
+    command: >-
+      .venv/bin/pytest -q planner_graph/tests/test_app.py
+      planner_graph/tests/test_server.py planner_graph/tests/test_store_postgres.py
+      planner_graph/tests/test_worker.py
+    timestamp: "2026-07-10T15:20:00Z"
+    revision: 402251ad8e6ce8d704d3d063022ae8f31c3e34df
+    environment: Jason laptop isolated planner worktree
+    result: >-
+      30 tests passed. The retained planner_graph worker retries transient
+      repository failures indefinitely with capped, interruptible backoff;
+      readiness observes worker state and fails when the worker is absent or
+      unhealthy, while liveness remains process-only. A 100,000-failure fixture
+      proves the backoff ceiling without granting planner_graph plan or device
+      authority.
+    artifact_location: planner_graph/tests/test_worker.py
+    acceptance_criteria: [LANE-AC-01, LANE-AC-05]
+    limitations:
+      - planner_graph remains non-authoritative and is not used as Hermes/MCP acceptance evidence.
+
+  - id: EVI-PLAN-003
+    type: TEST
+    status: PASS
+    source: migration 196 lifecycle, singularity, expiry, and rollback proof
+    command: >-
+      make migration-rollback-safety; apply migration 196, rerun it, execute
+      db/migrations/tests/test-196-planner-terminal-lifecycle.sql, and prove an
+      outer rollback in disposable PostgreSQL 16/TimescaleDB; restore the
+      generated db/schema.sql into a blank database
+    timestamp: "2026-07-10T15:20:00Z"
+    revision: 402251ad8e6ce8d704d3d063022ae8f31c3e34df
+    environment: disposable timescale/timescaledb:latest-pg16
+    result: >-
+      Migration 196 is non-self-transactional and safe to wrap. Apply, rerun,
+      targeted fixture, outer rollback, generated-schema restore, and rerun all
+      pass. The schema adds terminal action/time/failure/result evidence,
+      lifecycle validity and expiry, a partial unique one-effective-plan
+      invariant, paired terminal status/action constraints, and an active-plan
+      view that excludes expired rows.
+    artifact_location: db/migrations/tests/test-196-planner-terminal-lifecycle.sql
+    acceptance_criteria: [LANE-AC-02, LANE-AC-03]
+    limitations:
+      - Migration 196 has not been applied to production.
+
+  - id: EVI-PLAN-004
+    type: TEST
+    status: PASS
+    source: strict bounds, plan materialization, forecast, and DLI regression contracts
+    command: >-
+      run the targeted tunable-registry schema job, planner fidelity/parity
+      contracts, and DLI regression contracts
+    timestamp: "2026-07-10T15:20:00Z"
+    revision: 402251ad8e6ce8d704d3d063022ae8f31c3e34df
+    environment: Jason laptop isolated planner worktree
+    result: >-
+      Tunable-registry schema contracts pass 28 tests; planner fidelity/parity
+      passes five tests; DLI regression passes 14 tests. Planner materialization
+      intersects registry and firmware limits, preserves the literal registry
+      validation guard, performs one canonical normalization, writes expiring
+      full plans, and preserves categorical interior-DLI unavailability in
+      generated context.
+    artifact_location: verdify_schemas/tunable_registry.py
+    acceptance_criteria: [LANE-AC-03, LANE-AC-04]
+    limitations: []
+
+  - id: EVI-PLAN-005
+    type: TEST
+    status: PASS
+    source: production manifest and generated-context parity validation
+    command: >-
+      kustomize build deploy/k8s/overlays/prod | kubeconform -strict -summary
+      -ignore-missing-schemas; compare the ingestor gather-script ConfigMap
+      literal with scripts/gather-plan-context.sh
+    timestamp: "2026-07-10T15:20:00Z"
+    revision: 402251ad8e6ce8d704d3d063022ae8f31c3e34df
+    environment: Jason laptop isolated planner worktree
+    result: >-
+      Production render reports 84 valid resources, zero invalid resources, and
+      six expected CRD schema skips. The deployed gather-script literal has
+      byte parity with source. MCP/Hermes/planner probes and restart annotations
+      are present without adding a planner_graph writer or production-trigger
+      route.
+    artifact_location: deploy/k8s/components
+    acceptance_criteria: [LANE-AC-01, LANE-AC-05]
+    limitations:
+      - No ArgoCD sync, rollout, or production restart occurred.
+
+  - id: EVI-PLAN-006
+    type: TEST
+    status: WARNING
+    source: required monolithic repository test command
+    command: make test
+    timestamp: "2026-07-10T15:20:00Z"
+    revision: 402251ad8e6ce8d704d3d063022ae8f31c3e34df
+    environment: Jason laptop after development moved to k3s
+    result: 770 passed, 139 failed, and 13 skipped; no issue-427 assertion failed.
+    artifact_location: null
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04, LANE-AC-05]
+    limitations:
+      - >-
+        The 139 failures are inherited retired-laptop/live-service expectations
+        requiring unavailable local Docker/systemd/TimescaleDB/API/Vault/site
+        surfaces. Focused planner, schema, migration, manifest, and fault suites
+        are green.
+
+  - id: EVI-PLAN-007
+    type: CI
+    status: PASS
+    source: exact substantive-head GitHub pull-request checks
+    command: inspect PR 449 checks at 402251ad8e6ce8d704d3d063022ae8f31c3e34df
+    timestamp: "2026-07-10T15:32:34Z"
+    revision: 402251ad8e6ce8d704d3d063022ae8f31c3e34df
+    environment: GitHub Actions draft PR 449
+    result: >-
+      Exact substantive head completed with 28 successful checks, eight
+      intentional skips, and zero failures or pending checks. This includes
+      Ruff format/lint, offline logic/contracts, schema migration/unit/drift
+      guards, firmware compile/replay/invariants, rollback safety, restart
+      hygiene, single-writer and manifest guards, and every applicable
+      build-without-publish job.
+    artifact_location: https://github.com/VerdifyConsultancy/verdify-platform/pull/449/checks
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04, LANE-AC-05]
+    limitations:
+      - Trusted image publication and prod-promotion-only jobs were intentionally skipped for the draft PR.
+
+  - id: EVI-PLAN-008
+    type: REVIEW
+    status: PASS
+    source: adversarial lane self-audit
+    command: >-
+      audit origin/main...402251ad for distributed-state races, false success,
+      stale plans, authority leakage, prohibited paths, migration safety,
+      generated parity, and service-restart notes
+    timestamp: "2026-07-10T15:32:34Z"
+    revision: 402251ad8e6ce8d704d3d063022ae8f31c3e34df
+    environment: source tree, CI evidence, and disposable PostgreSQL 16
+    result: >-
+      The lane remains inside issue 427 plus the two controller-approved shared
+      path grants. Required triggers cannot be satisfied by the wrong action;
+      later successful delivery clears stale delivery-failure evidence;
+      planner_graph remains non-authoritative; bounds and expiry are enforced;
+      generated context is in parity; firmware/device-writer paths are untouched;
+      and the PR names required verdify-mcp and verdify-ingestor restarts.
+    artifact_location: https://github.com/VerdifyConsultancy/verdify-platform/pull/449
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04, LANE-AC-05]
+    limitations:
+      - Fresh independent distributed-state/planner criticism is still required before merge.
+      - Production deployment, alert mutation, stale-intent retirement, and end-to-end plan acceptance remain release-controlled.
