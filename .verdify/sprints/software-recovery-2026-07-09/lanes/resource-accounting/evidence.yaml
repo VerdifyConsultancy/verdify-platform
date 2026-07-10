@@ -1,8 +1,8 @@
 sprint_id: software-recovery-2026-07-09
 scope_id: resource-accounting
-revision: 23340fe
+revision: 6167e3b
 environment: null
-generated_at: "2026-07-10T03:56:54Z"
+generated_at: "2026-07-10T04:35:29Z"
 items:
   - id: EVI-RA-001
     type: TEST
@@ -13,16 +13,17 @@ items:
       outer BEGIN/ROLLBACK replay against an origin/main disposable database;
       execute test-193 and test-194 with ON_ERROR_STOP=1
     timestamp: "2026-07-10T03:56:54Z"
-    revision: 23340fe
+    revision: 6167e3b
     environment: disposable timescale/timescaledb:latest-pg16
     result: >-
       Both migrations are non-self-transactional, safe to wrap, idempotent, and
       rollback cleanly. Fixtures prove dynamic telemetry alias convergence and
       collision rejection; catch-up/rerun/reset/gap/staleness/watermark/source-
-      conflict behavior; exact conservation; same-relay multi-run ambiguity;
-      null command-only gallons; fail-closed wall-fert master/commissioning;
-      historical coefficient selection; full/partial/modeled-only/stale/
-      unavailable energy; and no free resource cost or planner-score term.
+      conflict behavior; exact conservation; same-relay multi-run and boundary-
+      state ambiguity; null command-only gallons; positive-duration wall-fert
+      master overlap plus commissioning; historical coefficient uncertainty;
+      transition-backed full/partial/modeled-only/stale/unavailable energy;
+      null-preserving legacy cost compatibility; and no free resource term.
     artifact_location: db/migrations/tests
     acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
     limitations: [No production migration was applied.]
@@ -35,14 +36,15 @@ items:
       read-only prod equipment/water/energy exports into disposable resource437;
       run materialize_water_meter_events and bounded resource views locally
     timestamp: "2026-07-10T03:56:54Z"
-    revision: 23340fe
+    revision: 6167e3b
     environment: verdify-prod read-only plus disposable local TimescaleDB
     result: >-
       Production baseline had current raw water at 2026-07-10T03:09Z but ledger
       events stopped 2026-05-01. The local replay ingested 107,467 raw meter
       samples, 97,033 equipment rows, and 21,080 energy samples. One-time catch-up
-      produced 20,544 audited events in 54.4 seconds after relay-episode counting;
-      idempotent rerun processed 0 rows in 0.17 seconds. July 8 remains exactly
+      produced 20,544 audited events in 33.33 seconds after relay-episode counting
+      and candidate-only fertilizer proof; idempotent rerun processed 0 rows in
+      0.11 seconds. July 8 remains exactly
       conserved at 147 = 9 attributed + 136 ambiguous + 2 manual gallons. Daily
       water queries complete in about 0.3 seconds and energy reconciliation in
       about 0.03 seconds.
@@ -60,12 +62,13 @@ items:
       make lint; pytest -q topology, fidelity, lab-site-followup, and
       TestResourceAccountingContractSources; compileall; json.tool; git diff --check
     timestamp: "2026-07-10T03:56:54Z"
-    revision: 23340fe
+    revision: 6167e3b
     environment: Jason laptop worktree
     result: >-
-      Ruff, 249 focused tests, typed schema validation, five targeted disposable-
-      schema tests, Python compilation, dashboard JSON parsing, generated
-      ConfigMap parity, and diff integrity all pass.
+      Ruff, 253 focused tests collected (252 passed, one skipped), typed schema
+      validation, six targeted disposable-schema tests, Python compilation,
+      dashboard JSON parsing, generated ConfigMap parity, and diff integrity all
+      pass.
       Static guards reject equipment_assets reads, raw max-minus-min fallback,
       unlabeled scope collapse, and missing minute-cadence materializer wiring.
     artifact_location: tests and verdify_schemas/tests
@@ -78,7 +81,7 @@ items:
     source: complete schema snapshot restore
     command: psql -v ON_ERROR_STOP=1 -f db/schema.sql against a fresh disposable database
     timestamp: "2026-07-10T03:56:54Z"
-    revision: 23340fe
+    revision: 6167e3b
     environment: disposable resource437_restore TimescaleDB
     result: >-
       Fresh schema restored cleanly and exposes resource_coefficients,
@@ -95,9 +98,9 @@ items:
     source: required monolithic repository test command
     command: make test
     timestamp: "2026-07-10T03:56:54Z"
-    revision: 23340fe
+    revision: 6167e3b
     environment: Jason laptop after development moved to k3s
-    result: 715 passed, 141 failed, 6 skipped, and 10 errors in 18.95 seconds.
+    result: 717 passed, 141 failed, 6 skipped, and 10 errors in 19.43 seconds.
     artifact_location: null
     acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
     limitations:
@@ -119,9 +122,9 @@ items:
     source: GitHub pull-request checks
     command: null
     timestamp: "2026-07-10T03:56:54Z"
-    revision: 23340fe
-    environment: branch pending push and PR
-    result: Previous PR head was green; checks for corrected head 23340fe are pending push.
+    revision: 6167e3b
+    environment: draft PR #445 pending corrected-head push
+    result: PR head b03c417 was fully green; checks for corrected head 6167e3b are pending push.
     artifact_location: null
     acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
     limitations: []
@@ -132,12 +135,13 @@ items:
     source: independent data-integrity/accounting critic request-changes closure
     command: independent source review and disposable PG16 reproductions at 722a90c
     timestamp: "2026-07-10T03:56:54Z"
-    revision: 23340fe
+    revision: 6167e3b
     environment: isolated critic plus disposable TimescaleDB
     result: >-
-      All eight P1/P2 findings and both actionable follow-ups were reproduced and
-      closed in 4b27f47/23340fe. The durable item-by-item mapping is in
-      critic-report.md. Independent re-review remains required before merge.
+      The re-review at b03c417 returned REQUEST_CHANGES with eight residual
+      overlap, runtime-proof, conflict-health, boundary-seed, history, consumer,
+      inventory, and ownership defects. They are closed in 78fcc00/6167e3b and
+      mapped in critic-report.md. Independent third review remains required.
     artifact_location: .verdify/sprints/software-recovery-2026-07-09/lanes/resource-accounting/critic-report.md
     acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
-    limitations: [Awaiting critic re-review of the corrected head.]
+    limitations: [Awaiting independent third review of the corrected head.]

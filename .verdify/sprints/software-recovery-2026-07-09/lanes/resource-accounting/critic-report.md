@@ -1,6 +1,6 @@
 # Resource-accounting independent critic record
 
-Independent data-integrity review returned `REQUEST_CHANGES` at `722a90c`. The implementation was not merged. Schema correction `4b27f47` and consumer correction `23340fe` close the findings as follows.
+Independent data-integrity review returned `REQUEST_CHANGES` at `722a90c`. The implementation was not merged. Schema correction `4b27f47` and consumer correction `23340fe` addressed that first review.
 
 1. Incomplete ledger scoring: `v_water_meter_daily` now requires the materializer watermark to cover the final raw sample and emits `ledger_incomplete`; the disposable fixture reproduces and rejects the prior false-eligible case.
 2. Free resource score/scalars: daily cost writes, `v_daily_kpi`, `v_planner_performance`, `fn_planner_scorecard`, API/MCP schemas, and Grafana now gate resource scalars. Missing/uncertain resources receive zero score weight, not free efficiency points; the climate-only score is explicitly labeled.
@@ -13,4 +13,17 @@ Independent data-integrity review returned `REQUEST_CHANGES` at `722a90c`. The i
 9. Raw conflicts: contradictory totalizer values at one timestamp create a `source_conflict` event and reset the baseline without accepting invented gallons.
 10. Gas provenance: the equipment renderer selects the applicable electric or gas coefficient, so `heat2` no longer loses its gas/nameplate evidence.
 
-Disposable SQL fixtures, schema restore, idempotence, rollback proofs, source-shaped replay, focused tests, and lint are green. Re-review of `23340fe` or later is required before merge.
+The independent re-review at `b03c417` also returned `REQUEST_CHANGES`. It confirmed the watermark, repeated-run ambiguity, primary API/MCP/scorecard consumers, collision triggers, energy-health states, historical selection, gas rendering, migration safety, and schema restore, but found eight residual defects:
+
+1. Fertilizer-master evidence proved presence, not positive-duration overlap with the wall-fert relay.
+2. Runtime energy still accepted populated `daily_summary` fields rather than complete transition evidence.
+3. Contradictory raw meter samples could leave ledger health fresh and scoring-eligible.
+4. Conflicting relay states exactly at an interval boundary could seed nondeterministically.
+5. Historical `legacy_catalog_085` coefficients remained exact-looking and scoring-eligible.
+6. Additional Grafana, snapshot-writer, and Prometheus paths still emitted legacy or zero-filled resource scalars.
+7. Alias inventory evidence was circular instead of an independently captured physical-output inventory.
+8. The lane omitted `verdify_schemas/tests/test_mcp_responses.py` from ownership and validation scope.
+
+Schema correction `78fcc00` and consumer correction `6167e3b` close those residuals. Wall fertigation now requires actual positive-duration master overlap; runtime energy uses only complete `v_equipment_runtime_daily` evidence; conflicts degrade ledger health; boundary seeds require one unambiguous state; every historical catalog point has conservative bounds; all site resource panels, the snapshot writer, Prometheus exporter, and legacy cost compatibility view preserve unavailability; the fixture independently inventories 39 observed slugs and classifies the 18 physical outputs; and MCP response tests are explicitly owned and green.
+
+Disposable SQL fixtures, fresh schema restore, idempotence, outer rollback proofs, production-shaped replay, focused tests, generated-dashboard parity, and lint are green. The optimized from-zero replay processed 107,467 samples into 20,544 events in 33.33 seconds; an immediate rerun processed zero rows in 0.11 seconds. Independent third review of `6167e3b` or later is required before merge.
