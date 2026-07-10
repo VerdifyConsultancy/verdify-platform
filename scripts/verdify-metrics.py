@@ -64,10 +64,7 @@ async def collect():
         rows = await conn.fetch(
             "SELECT metric, value FROM fn_planner_scorecard((now() AT TIME ZONE 'America/Denver')::date)"
         )
-        scorecard = {
-            r["metric"]: float(r["value"]) if r["value"] is not None else None
-            for r in rows
-        }
+        scorecard = {r["metric"]: float(r["value"]) if r["value"] is not None else None for r in rows}
 
         def score_value(metric: str, fallback: float = 0) -> float:
             """Use a fallback only for non-resource operational gauges."""
@@ -92,16 +89,11 @@ async def collect():
 
         lines.append("# HELP verdify_planner_score_resource_weight_pct Resource score weight in percent")
         lines.append("# TYPE verdify_planner_score_resource_weight_pct gauge")
-        lines.append(
-            "verdify_planner_score_resource_weight_pct "
-            f"{score_value('planner_score_resource_weight_pct')}"
-        )
+        lines.append(f"verdify_planner_score_resource_weight_pct {score_value('planner_score_resource_weight_pct')}")
 
         lines.append("# HELP verdify_resource_terms_available 1 when resource evidence is scoring eligible")
         lines.append("# TYPE verdify_resource_terms_available gauge")
-        lines.append(
-            f"verdify_resource_terms_available {score_value('resource_terms_available')}"
-        )
+        lines.append(f"verdify_resource_terms_available {score_value('resource_terms_available')}")
 
         # Absence is meaningful for resource evidence. Do not publish a false
         # zero when the scorecard has deliberately gated the scalar to NULL.

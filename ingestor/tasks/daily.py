@@ -732,16 +732,13 @@ async def grow_light_daily(pool: asyncpg.Pool) -> None:
         # Shelly metered kWh remains a diagnostic because its circuit coverage is partial.
         wattages = await _electric_wattages(conn, yesterday)
         electric_minutes = {
-            e: (rt[e][0] if e in rt and rt_eligible.get(e, False) else None)
-            for e in _MODELED_ELECTRIC_EQUIPMENT
+            e: (rt[e][0] if e in rt and rt_eligible.get(e, False) else None) for e in _MODELED_ELECTRIC_EQUIPMENT
         }
         kwh = _runtime_kwh_from_minutes(electric_minutes, wattages)
         gas_btu_per_hour = await _gas_btu_per_hour(conn, yesterday)
         therms = (
             rh2 / 60.0 * gas_btu_per_hour / THERM_BTU
-            if rh2 is not None
-            and rt_eligible.get("heat2", False)
-            and gas_btu_per_hour is not None
+            if rh2 is not None and rt_eligible.get("heat2", False) and gas_btu_per_hour is not None
             else None
         )
         water_row = await conn.fetchrow(
@@ -1107,16 +1104,13 @@ async def _refresh_daily_summary_for_date(
 
     wattages = await _electric_wattages(conn, target_day)
     electric_minutes = {
-        e: (rt[e] if e in rt and rt_eligible.get(e, False) else None)
-        for e in _MODELED_ELECTRIC_EQUIPMENT
+        e: (rt[e] if e in rt and rt_eligible.get(e, False) else None) for e in _MODELED_ELECTRIC_EQUIPMENT
     }
     kwh = _runtime_kwh_from_minutes(electric_minutes, wattages)
     gas_btu_per_hour = await _gas_btu_per_hour(conn, target_day)
     therms = (
         rt["heat2"] / 60.0 * gas_btu_per_hour / THERM_BTU
-        if "heat2" in rt
-        and rt_eligible.get("heat2", False)
-        and gas_btu_per_hour is not None
+        if "heat2" in rt and rt_eligible.get("heat2", False) and gas_btu_per_hour is not None
         else None
     )
 
