@@ -1,10 +1,10 @@
 sprint_id: software-recovery-2026-07-09
 lane_id: evidence-core
-state: READY_FOR_CRITIC
-updated_at: "2026-07-10T01:06:53Z"
-head_sha: 733349d0f5d9b6990791cce3b0e57b2a27656125
-integrated_validation_sha: 6f934d0825d35d067984716ea73d8aafe1fd49f7
-controller_contract_sha: f15bf3ac35742278af429d5c3599639f56513f86
+state: READY_FOR_CI
+updated_at: "2026-07-10T02:22:55Z"
+head_sha: ab56cf4556e262472333b1c813a9d4a4d44eee63
+integrated_validation_sha: ab56cf4556e262472333b1c813a9d4a4d44eee63
+controller_contract_sha: d27978a41873fc55a0b0f2abdfa2ec8e4254013f
 working_tree_clean: true
 acceptance:
   passed:
@@ -15,13 +15,12 @@ acceptance:
   pending: []
   failed: []
 blockers:
-  - Independent SQL/replay evidence critic has not yet reviewed the immutable pushed checkpoint.
-  - GitHub PR CI has not yet run.
+  - GitHub PR CI has not yet run on the replacement head.
   - Production migration, service restart, and exact runtime proof are controller/release-owned.
   - Current daytime held-temp admission requires the accepted firmware-control response scope.
 decisions_requested: []
 next_actions:
-  - Commit and push the integrated evidence checkpoint and open the linked PR.
-  - Request the fresh SQL/replay evidence critic and record its immutable-head verdict.
+  - Commit and push the durable validation/critic record to pull request 443.
+  - Require all applicable GitHub checks green, then merge pull request 443.
   - Update issues 293, 389, 410, 419, and 424 with exact evidence and limitations.
   - Hand migration/restart sequencing to release control and the daytime-hold failure to firmware-control.

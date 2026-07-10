@@ -1,6 +1,6 @@
 # Representative solar-night dry-out report
 
-Generated: 2026-07-10T00:57:18Z
+Generated: 2026-07-10T02:22:55Z
 Scope: read-only evidence for issue #410; no production migration or control change
 
 ## Disposition
@@ -119,9 +119,11 @@ analytics but cannot by itself characterize current firmware.
   seconds, and a maximum gap of 866.639 s. Affected episodes must remain
   `insufficient_evidence`.
 - Refreshed corpus SHA-256:
-  `47ab56eac236c3e7af85d39b45159e3c871aa7eb3674fecc958972c278ca56dc`
-  (`296,580` unique timestamp rows; `295,715` source-backed; `199,480`
-  source-backed/fresh under 600 seconds).
+  `9db25b8c9118bd485e95a8ce203229ac318d48eaffc23a2bde438e65d8f2cb2b`
+  (`296,698` unique timestamp rows; zero duplicate timestamps; `295,833`
+  observation-backed rows; `199,598` conservatively fresh under 600 seconds).
+  Historical freshness basis is explicitly `conservative_change_observation`;
+  it is not represented as a raw Tempest packet timestamp.
 - Archived prior corpus SHA-256:
   `b31ce9348f9602e6b94935a63c819b7048275fdb410c53632848f3f697bb261e`
   (`193,525` rows; no populated outdoor-age values).
@@ -131,7 +133,10 @@ analytics but cannot by itself characterize current firmware.
 - Migration 191 is intentionally not applied by this worker. Its disposable-DB
   fixture covers effective, heat-only ineffective, blocked, incomplete,
   mixed-row attribution, projected-vs-realized hold, forbidden heat2, daytime
-  hold failure, and daytime episode exclusion.
+  hold failure, and daytime episode exclusion. Adversarial cases also prove
+  missing relay keys, episode/response telemetry gaps, missing temperature
+  floors, episode and post-action floor breaches, any outside-wetter interval,
+  simultaneous wet relays, and response-window wetting cannot report effective.
 
 ## Required follow-up
 
@@ -143,6 +148,7 @@ and implement the accepted solar-day behavior. Acceptance for that scope is:
 2. prevent actual held-temp admission during solar day, or explicitly revise
    the human-approved zero-daytime requirement;
 3. preserve temperature-floor, re-entry, wind/dwell, and heat2-off safeguards;
-4. prove the change with source-backed replay, a daytime-hold negative fixture,
+4. prove the change with exact device-age replay where available, an honestly
+   labeled conservative fallback for old rows, a daytime-hold negative fixture,
    current firmware identity, and independent safety review; and
 5. recollect realized episodes before claiming dry-out effective.
