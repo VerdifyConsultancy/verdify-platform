@@ -2,7 +2,7 @@ sprint_id: software-recovery-2026-07-09
 scope_id: security-hygiene
 revision: 1dfb05fdab864a3d000095346ee5e16bd145df5d
 environment: null
-generated_at: "2026-07-09T23:02:21Z"
+generated_at: "2026-07-10T12:34:32Z"
 items:
   - id: SEC-EV-001
     type: TEST
@@ -112,3 +112,51 @@ items:
     artifact_location: .verdify/sprints/software-recovery-2026-07-09/lanes/security-hygiene/critic-report.md
     acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03]
     limitations: [The critic did not and could not approve the unexecuted protected rotation in LANE-AC-04.]
+  - id: SEC-EV-010
+    type: GATE
+    status: PASS
+    source: Jason Vallery 2026-07-10 completion objective
+    command: null
+    timestamp: "2026-07-10T12:21:20Z"
+    revision: dca668fc6d5a68e14843510e32a26d4d4d673522
+    environment: controller
+    result: Gate g-prod-db-credential-rotation-20260709 is approved with decision rotate-now; every runbook hard stop remains mandatory.
+    artifact_location: .agent-workflow/hygiene/gates/g-prod-db-credential-rotation.yaml
+    acceptance_criteria: [LANE-AC-04]
+    limitations: [Authorization does not prove rotation or consumer acceptance.]
+  - id: SEC-EV-011
+    type: SECURITY
+    status: PASS
+    source: production SOPS authority and staged encrypted replacement
+    command: SOPS decrypt/parity and 64-hex shape checks with no value output
+    timestamp: "2026-07-10T12:33:00Z"
+    revision: e6e8f69d92349d1577ada6feb3af6f6a0722ea9a
+    environment: jvallery/agents PR #2904 plus verdify-prod read-only Secret metadata
+    result: Pre-stage encrypted/live parity passed for six keys; replacement_uri_safe, non-password plaintext parity, and metadata parity are true.
+    artifact_location: .verdify/sprints/software-recovery-2026-07-09/lanes/security-hygiene/rotation-preflight-2026-07-10.md
+    acceptance_criteria: [LANE-AC-03, LANE-AC-04]
+    limitations: [Live Secret and DB role were unchanged at this checkpoint; PR checks and independent criticism were still running.]
+  - id: SEC-EV-012
+    type: RUNTIME_PROBE
+    status: PASS
+    source: refreshed caller, backup, job, service, writer, and endpoint preflight
+    command: redacted kubectl, psql identity, and HTTP status probes
+    timestamp: "2026-07-10T12:31:10Z"
+    revision: c9cb0ceddc13671c7cd8da103016e8846efacf44
+    environment: verdify-prod
+    result: Current 178.6M backup succeeded on the persistent NAS dump volume; caller inventory matched; all five CronJobs are suspended; zero active Jobs remain; the sole ingestor writer and public endpoints are healthy.
+    artifact_location: .verdify/sprints/software-recovery-2026-07-09/lanes/security-hygiene/rotation-preflight-2026-07-10.md
+    acceptance_criteria: [LANE-AC-03, LANE-AC-04]
+    limitations: [Two pre-existing critical planner alerts remain and block OTA; they do not block the scoped credential rotation.]
+  - id: SEC-EV-013
+    type: SECURITY
+    status: IN_PROGRESS
+    source: production credential rotation
+    command: null
+    timestamp: "2026-07-10T12:34:32Z"
+    revision: c9cb0ceddc13671c7cd8da103016e8846efacf44
+    environment: verdify-prod
+    result: Authorization and hard-stop preflight are complete; live Secret delivery, DB role rotation, serial consumer rollout, new-valid, and old-invalid proof remain pending.
+    artifact_location: .agent-workflow/hygiene/database-credential-rotation-runbook.md
+    acceptance_criteria: [LANE-AC-04]
+    limitations: [Do not mark the lane complete before boolean-only live verification and rollback disposition are recorded.]

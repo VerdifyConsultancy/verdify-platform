@@ -33,11 +33,10 @@ prerequisites:
     - .verdify/sprints/software-recovery-2026-07-09/lanes/planner-delivery/lane.yaml
     - .verdify/sprints/software-recovery-2026-07-09/lanes/firmware-control/lane.yaml
     - .verdify/sprints/software-recovery-2026-07-09/lanes/release-control/lane.yaml
-  wave_release_plan: null
+  wave_release_plan: .agent-workflow/sprints/software-recovery-2026-07-09/release/wave-release-plan.yaml
   platform_readiness: .agent-workflow/platform/platform-readiness.yaml
   open_blockers:
     - Native Agent Platform worktree-agent creation and removal are disabled post-MVP and return structured HTTP 501 responses.
-    - A current-sprint wave release plan is required before production delivery.
 platform:
   mcp_server: agent-fleet MCP in repo-verdifyconsultancy-verdify-platform-0
   api_ref: agents.vallery.net dashboard API and in-pod agent-fleet MCP
@@ -101,14 +100,14 @@ lanes:
     contract_path: .verdify/sprints/software-recovery-2026-07-09/lanes/device-writer/lane.yaml
     branch: lane/recovery-writer-433
     owner: python-ingestor-writer
-    dependency_state: ready
+    dependency_state: complete
     platform_session:
       create_operation_ref: .agent-workflow/sprints/software-recovery-2026-07-09/execution/control-requests/device-writer-session-create.yaml
       session_id: device-writer-433-local-20260709
       executor: local-codex-subagent-fallback
       model: GPT-5
       effort: high
-      status: active
+      status: complete
     prompt:
       prompt_path: .verdify/sprints/software-recovery-2026-07-09/lanes/device-writer/worker-prompt.md
       manifest_path: null
@@ -117,20 +116,20 @@ lanes:
       tmux_session: null
       browser_terminal_url: null
       operator_attach_required: true
-    status: implementing
+    status: complete
   - lane_id: evidence-core
     issue_ids: [293, 389, 410, 419, 424]
     contract_path: .verdify/sprints/software-recovery-2026-07-09/lanes/evidence-core/lane.yaml
     branch: lane/recovery-evidence-293-389-410-419-424
     owner: postgres-evidence-engineer with firmware replay literacy
-    dependency_state: ready
+    dependency_state: complete
     platform_session:
       create_operation_ref: .agent-workflow/sprints/software-recovery-2026-07-09/execution/control-requests/evidence-core-session-create.yaml
       session_id: evidence-core-local-20260709
       executor: local-codex-subagent-fallback
       model: GPT-5
       effort: high
-      status: active
+      status: complete
     prompt:
       prompt_path: .verdify/sprints/software-recovery-2026-07-09/lanes/evidence-core/worker-prompt.md
       manifest_path: null
@@ -139,20 +138,20 @@ lanes:
       tmux_session: null
       browser_terminal_url: null
       operator_attach_required: true
-    status: implementing
+    status: complete
   - lane_id: resource-accounting
     issue_ids: [437]
     contract_path: .verdify/sprints/software-recovery-2026-07-09/lanes/resource-accounting/lane.yaml
     branch: lane/recovery-resource-437
     owner: cross-stack-data-product
-    dependency_state: ready
+    dependency_state: complete
     platform_session:
       create_operation_ref: null
-      session_id: null
-      executor: local-codex-subagent-fallback
+      session_id: resource-accounting-local-20260710
+      executor: codex-root-local-operator
       model: GPT-5
       effort: high
-      status: planned
+      status: complete
     prompt:
       prompt_path: .verdify/sprints/software-recovery-2026-07-09/lanes/resource-accounting/worker-prompt.md
       manifest_path: null
@@ -161,20 +160,20 @@ lanes:
       tmux_session: null
       browser_terminal_url: null
       operator_attach_required: true
-    status: planned
+    status: complete
   - lane_id: dli-availability
     issue_ids: [435]
     contract_path: .verdify/sprints/software-recovery-2026-07-09/lanes/dli-availability/lane.yaml
     branch: lane/recovery-dli-435
     owner: cross-stack schema/firmware evidence engineer
-    dependency_state: waiting
+    dependency_state: ready
     platform_session:
       create_operation_ref: null
-      session_id: null
-      executor: local-codex-subagent-fallback
+      session_id: /root/dli_435
+      executor: codex-collaboration-subagent-fallback
       model: GPT-5
       effort: high
-      status: planned
+      status: active
     prompt:
       prompt_path: .verdify/sprints/software-recovery-2026-07-09/lanes/dli-availability/worker-prompt.md
       manifest_path: null
@@ -183,7 +182,7 @@ lanes:
       tmux_session: null
       browser_terminal_url: null
       operator_attach_required: true
-    status: planned
+    status: implementing
   - lane_id: planner-delivery
     issue_ids: [427]
     contract_path: .verdify/sprints/software-recovery-2026-07-09/lanes/planner-delivery/lane.yaml

@@ -5,7 +5,7 @@ project_id: verdify-platform
 controller_id: software-recovery-root-019f4826
 status: active
 state: WAVE_EXECUTING
-updated_at: "2026-07-10T12:21:20Z"
+updated_at: "2026-07-10T12:34:32Z"
 current_wave: wave-software-recovery-implementation
 sessions:
   - id: software-recovery-root-019f4826
@@ -134,6 +134,15 @@ sessions:
     branch: lane/recovery-resource-437
     worktree: /Users/jason/repos/verdify-worktrees/software-recovery-resource-437
     status: complete
+  - id: dli-availability-local-20260710
+    role: worker
+    executor: codex-collaboration-subagent-fallback
+    repository: VerdifyConsultancy/verdify-platform
+    issue: 435
+    lane_id: dli-availability
+    branch: lane/recovery-dli-435
+    worktree: /Users/jason/repos/verdify-worktrees/software-recovery-dli-435
+    status: active
 events:
   - id: controller-event-20260709-001
     occurred_at: "2026-07-09T20:52:12Z"
@@ -223,6 +232,14 @@ events:
     occurred_at: "2026-07-10T12:21:20Z"
     event_type: gate_decision
     summary: "Jason explicitly authorized completion of the full deployment, resolving g-prod-db-credential-rotation-20260709 as rotate-now. The scoped rotation may proceed only through the approved runbook with caller, backup, SOPS-authority, single-writer, redacted new-valid, and old-invalid hard stops."
+  - id: controller-event-20260710-023
+    occurred_at: "2026-07-10T12:25:43Z"
+    event_type: lane_dispatched
+    summary: "DLI availability issue #435 started from current main dca668f in the exclusive worktree software-recovery-dli-435 with worker /root/dli_435; production migration, restart, deployment, and OTA remain prohibited to the worker."
+  - id: controller-event-20260710-024
+    occurred_at: "2026-07-10T12:34:32Z"
+    event_type: coordination_request
+    summary: "DLI worker identified that OutcomeKpiResponse.dli is numeric-only and defaults to available. The controller granted DLI-only ownership of verdify_schemas/mcp_responses.py and its focused tests so the already-approved unavailable provenance contract can validate without changing non-DLI semantics."
 open_gates: []
 next_actions:
   - Dispatch DLI availability from authoritative current main, then planner delivery in dependency order.
