@@ -1248,7 +1248,9 @@ def test_alert_monitor_detects_planner_delivery_outages():
     assert "event_type IN ('SUNRISE', 'SUNSET', 'MIDNIGHT')" in src
     assert "last_required_recovery" in src
     assert "COALESCE(r.expected_at, pdl.delivered_at) > lrr.expected_at" in src
-    assert "r.status IN ('missed', 'timed_out', 'delivery_failed')" in src
+    assert "r.status IN ('missed', 'timed_out', 'delivery_failed', 'expected', 'delivered')" in src
+    assert "r.status IN ('action_completed', 'neutral_fallback', 'wrong_action', 'acked')" in src
+    assert "terminal_action = 'set_plan'" in src
 
 
 def test_forecast_deviation_defaults_cover_material_axes():
@@ -2015,6 +2017,7 @@ def test_mcp_set_plan_updates_delivery_log_by_trigger_id_immediately():
     assert "resulting_plan_id = $2" in body
     assert "plan_written_at   = $3" in body
     assert "status            = 'plan_written'" in body
+    assert "terminal_action   = 'set_plan'" in body
     assert '"delivery_status": "plan_written" if normalized_trigger_id else None' in body
 
 
@@ -2486,17 +2489,19 @@ def test_mcp_set_tunable_resolves_trigger_ledger_with_oneshot_plan():
     assert "UPDATE plan_delivery_log" in body
     assert "resulting_plan_id = $2" in body
     assert "plan_written_at   = $3" in body
-    assert "status            = 'plan_written'" in body
-    assert '"delivery_status": "plan_written" if normalized_trigger_id else None' in body
+    assert "status            = 'action_completed'" in body
+    assert "terminal_action   = 'set_tunable'" in body
+    assert '"delivery_status": "action_completed" if normalized_trigger_id else None' in body
 
 
-def test_mcp_rejects_non_validation_solar_acknowledgement():
+def test_mcp_classifies_required_ack_as_wrong_or_explicit_neutral():
     server = (Path(iris_planner.__file__).resolve().parent.parent / "mcp" / "server.py").read_text()
     start = server.index("async def acknowledge_trigger")
     body = server[start:]
-    assert 'existing["event_type"] in {"SUNRISE", "SUNSET", "MIDNIGHT"}' in body
-    assert "SUNRISE/SUNSET/MIDNIGHT triggers require set_plan" in body
-    assert "validation ack-only" in body
+    assert 'existing["expected_action"] == "set_plan"' in body
+    assert "required set_plan trigger received the wrong terminal action" in body
+    assert 'target_status = terminal.status' in body
+    assert 'neutral_fallback: bool = False' in body
 
 
 def test_required_plan_alert_ignores_validation_ack_only_rows():
