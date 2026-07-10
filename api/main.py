@@ -2859,7 +2859,7 @@ async def public_evidence_snapshot(greenhouse_id: str = DEFAULT_GREENHOUSE):
             ORDER BY
               CASE lower(status) WHEN 'fail' THEN 0 WHEN 'warn' THEN 1 ELSE 2 END,
               check_name
-            """
+            """,
         )
         planner_health = await conn.fetchrow("SELECT * FROM v_planner_trigger_health")
 
