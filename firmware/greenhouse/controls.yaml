@@ -2259,7 +2259,6 @@ interval:
               id(south_wall_mister_fertilized).turn_off();
               id(west_wall_mister).turn_off();
               id(west_wall_mister_fertilized).turn_off();
-              id(center_mister).turn_off();
               id(center_drips).turn_off();
               id(center_drips_fertilized).turn_off();
               id(fertilizer_master_valve).turn_off();
@@ -2302,30 +2301,99 @@ interval:
             id(wall_feed_claimed_solar_day),
             id(wall_feed_last_terminal_solar_day),
             id(wall_feed_claim_revision)};
+          int weekly_terminal_code = id(wall_feed_terminal_code);
 
-          auto persist_weekly_and_sync = [&](const WeeklyWallFeedState& state,
-                                              int terminal_code) -> bool {
+          // One authoritative packed record owns exact-once durability. The
+          // restore_value globals above are readback mirrors only: their 1s
+          // polling save cannot acknowledge a relay boundary synchronously.
+          static ESPPreferenceObject wall_feed_journal_pref =
+            global_preferences->make_preference<WeeklyWallFeedJournalRecord>(
+              WALL_FEED_JOURNAL_KEY, true);
+          static WeeklyWallFeedJournalRecord wall_feed_journal_record{};
+          static bool wall_feed_journal_load_attempted = false;
+          static bool wall_feed_journal_ready = false;
+          bool journal_boot_active = false;
+
+          auto weekly_stage_active = [](WallFeedStage stage) {
+            return stage == WallFeedStage::PREWET
+              || stage == WallFeedStage::FEED
+              || stage == WallFeedStage::FLUSH;
+          };
+          auto mirror_weekly_readbacks = [&](const WeeklyWallFeedState& state,
+                                              int terminal_code) {
             id(wall_feed_stage) = static_cast<int>(state.stage);
             id(wall_feed_claimed_solar_day) = state.claimed_solar_day;
             id(wall_feed_last_terminal_solar_day) = state.last_terminal_solar_day;
             id(wall_feed_claim_revision) = state.commissioning_revision;
             id(wall_feed_terminal_code) = terminal_code;
             weekly_state = state;
-            // restore_value writes are buffered by ESPHome. A stage/claim is
-            // not durable until preferences sync succeeds, so no next-stage
-            // relay may open before this returns true.
-            if(!global_preferences->sync()) {
-              ESP_LOGE("irrig", "Wall-feed preference sync failed at stage=%d",
-                static_cast<int>(state.stage));
+            weekly_terminal_code = terminal_code;
+          };
+
+          const bool journal_first_tick = !wall_feed_journal_load_attempted;
+          if(journal_first_tick) {
+            WeeklyWallFeedJournalRecord loaded{};
+            const bool found = wall_feed_journal_pref.load(&loaded);
+            if(found && wall_feed_journal_record_valid(loaded)) {
+              wall_feed_journal_record = loaded;
+              weekly_state = wall_feed_state_from_journal(loaded);
+              weekly_terminal_code = loaded.terminal_code;
+              wall_feed_journal_ready = true;
+              journal_boot_active = weekly_stage_active(weekly_state.stage);
+              mirror_weekly_readbacks(weekly_state, weekly_terminal_code);
+            } else if(found) {
+              // A corrupt authoritative record must never fall back to a stale
+              // restoring-global claim. Permanently fail closed until an
+              // operator repairs/reset storage deliberately.
+              weekly_state = {
+                WallFeedStage::CANCELLED, UINT32_MAX, UINT32_MAX, 0u};
+              weekly_terminal_code = 2;
+              wall_feed_journal_record = {};
+              ESP_LOGE("irrig", "Wall-feed journal invalid; forcing terminal cancellation");
+            } else {
+              // One-time migration from pre-journal firmware. Any active legacy
+              // restore is cancelled before the first relay can energize.
+              if(weekly_stage_active(weekly_state.stage)) {
+                weekly_state = cancel_interrupted_wall_feed(weekly_state, solar_day);
+                weekly_terminal_code = 2;
+              }
+              wall_feed_journal_record = {};
+            }
+            wall_feed_journal_load_attempted = true;
+          }
+
+          auto persist_weekly_and_sync = [&](const WeeklyWallFeedState& state,
+                                              int terminal_code) -> bool {
+            WeeklyWallFeedJournalRecord committed{};
+            const uint32_t next_sequence = wall_feed_journal_record.sequence + 1u;
+            const bool durable = commit_wall_feed_journal(
+              state, static_cast<uint8_t>(terminal_code), next_sequence,
+              [&](const WeeklyWallFeedJournalRecord& candidate) {
+                return wall_feed_journal_pref.save(&candidate);
+              },
+              [&]() { return global_preferences->sync(); },
+              committed);
+            if(!durable) {
+              wall_feed_journal_ready = false;
+              ESP_LOGE("irrig", "Wall-feed journal save/sync failed at stage=%d seq=%u",
+                static_cast<int>(state.stage), next_sequence);
               return false;
             }
+            wall_feed_journal_record = committed;
+            wall_feed_journal_ready = true;
+            // Mirrors update only after the authoritative record is durable.
+            mirror_weekly_readbacks(state, terminal_code);
             return true;
           };
+
+          if(journal_first_tick && !wall_feed_journal_ready) {
+            if(!persist_weekly_and_sync(weekly_state, weekly_terminal_code)) {
+              ESP_LOGE("irrig", "Wall-feed journal initialization failed; automatic feed blocked");
+            }
+          }
           auto cancel_all = [&](const char* reason) {
             turn_off_all_irrigation();
-            if(weekly_state.stage == WallFeedStage::PREWET
-               || weekly_state.stage == WallFeedStage::FEED
-               || weekly_state.stage == WallFeedStage::FLUSH) {
+            if(weekly_stage_active(weekly_state.stage)) {
               auto cancelled = advance_wall_feed_sequence(
                 weekly_state, false, true, solar_day);
               if(!persist_weekly_and_sync(cancelled, 2)) {
@@ -2338,9 +2406,22 @@ interval:
             ESP_LOGE("irrig", "STOPPED fail-closed: %s", reason);
           };
 
-          const bool weekly_active = weekly_state.stage == WallFeedStage::PREWET
-            || weekly_state.stage == WallFeedStage::FEED
-            || weekly_state.stage == WallFeedStage::FLUSH;
+          // A journaled active stage proves a reset occurred after relay
+          // admission. Cancel it durably on the first control tick; never
+          // resume or re-dose an interrupted stage.
+          if(journal_boot_active) {
+            turn_off_all_irrigation();
+            auto cancelled = cancel_interrupted_wall_feed(weekly_state, solar_day);
+            if(!persist_weekly_and_sync(cancelled, 2)) {
+              ESP_LOGE("irrig", "Interrupted wall-feed cancellation not durable; relays remain OFF");
+            }
+            id(irrig_state) = 0;
+            id(irrig_queue) = 0;
+            id(irrig_timer_ms) = 0;
+            return;
+          }
+
+          const bool weekly_active = weekly_stage_active(weekly_state.stage);
           if(id(wall_feed_stage) < static_cast<int>(WallFeedStage::IDLE)
              || id(wall_feed_stage) > static_cast<int>(WallFeedStage::CANCELLED)) {
             cancel_all("invalid persisted stage");

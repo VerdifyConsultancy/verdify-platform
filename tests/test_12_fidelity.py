@@ -2838,12 +2838,65 @@ def test_leak_detected_locks_water_actuators():
     irrigation_start = controls.index("auto turn_off_all_irrigation")
     irrigation_end = controls.index("// Claim at most once each seven-day interval", irrigation_start)
     irrigation_block = controls[irrigation_start:irrigation_end]
-    assert "id(center_mister).turn_off();" in irrigation_block
+    assert "id(center_mister).turn_off();" not in irrigation_block
     assert 'if(leak_block) { cancel_all("leak"); return; }' in irrigation_block
     assert "id(irrig_queue) = 0;" in irrigation_block
     assert "id(fertilizer_master_valve).turn_off();" in irrigation_block
     assert "persist_weekly_and_sync(cancelled, 2)" in irrigation_block
     assert "STOPPED fail-closed" in irrigation_block
+
+
+def test_irrigation_disable_cannot_suppress_climate_center_mist():
+    controls = Path("firmware/greenhouse/controls.yaml").read_text()
+    climate_end = controls.index("# 14b — IRRIGATION / COMMISSIONED WALL-FEED STATE MACHINE")
+    climate_block = controls[:climate_end]
+    shutdown_start = controls.index("auto turn_off_all_irrigation")
+    shutdown_end = controls.index("};", shutdown_start)
+    shutdown_block = controls[shutdown_start:shutdown_end]
+
+    assert "if(!id(irrig_enabled))" not in climate_block
+    assert "id(center_mister).turn_on();" in climate_block
+    assert "id(center_mister).turn_off();" not in shutdown_block
+    assert 'if(!id(irrig_enabled)) { cancel_all("irrigation disabled"); return; }' in controls
+
+    # Water-path conflicts still close center mist explicitly at admission,
+    # while the generic disabled-irrigation cleanup cannot touch it.
+    claim_start = controls.index("if(feed_route.admitted")
+    claim_end = controls.index("// Advance the wall sequence", claim_start)
+    assert "id(center_mister).turn_off();" in controls[claim_start:claim_end]
+    explicit_start = controls.index("if(route.admitted)", claim_end)
+    explicit_end = controls.index("} else {", explicit_start)
+    assert "id(center_mister).turn_off();" in controls[explicit_start:explicit_end]
+
+
+def test_weekly_wall_relay_boundaries_require_authoritative_journal_ack():
+    controls = Path("firmware/greenhouse/controls.yaml").read_text()
+    journal_start = controls.index("static ESPPreferenceObject wall_feed_journal_pref")
+    claim_start = controls.index("if(feed_route.admitted", journal_start)
+    claim_end = controls.index("// Advance the wall sequence", claim_start)
+    claim_block = controls[claim_start:claim_end]
+
+    assert "wall_feed_journal_pref.save(&candidate)" in controls
+    assert "global_preferences->sync()" in controls
+    assert controls.index("wall_feed_journal_pref.save(&candidate)") < controls.index(
+        "global_preferences->sync()", journal_start
+    )
+    assert claim_block.index("persist_weekly_and_sync(claimed, 0)") < claim_block.index("id(wall_drips).turn_on();")
+
+    transitions = controls[claim_end : controls.index("// Explicit clean irrigation", claim_end)]
+    assert transitions.index("persist_weekly_and_sync(next, 0)") < transitions.index(
+        "id(fertilizer_master_valve).turn_on();"
+    )
+    second_persist = transitions.index(
+        "persist_weekly_and_sync(next, 0)",
+        transitions.index("persist_weekly_and_sync(next, 0)") + 1,
+    )
+    assert second_persist < transitions.index("id(wall_drips).turn_on();", second_persist)
+    assert transitions.index("persist_weekly_and_sync(complete, 1)") < transitions.index(
+        'ESP_LOGI("irrig", "WALL FEED COMPLETE'
+    )
+    assert "journal_boot_active" in controls[journal_start:claim_start]
+    assert "cancel_interrupted_wall_feed(weekly_state, solar_day)" in controls[journal_start:claim_start]
 
 
 def test_occupancy_inhibit_is_final_fog_force_off():

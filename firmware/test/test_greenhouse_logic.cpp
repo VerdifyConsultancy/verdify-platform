@@ -5304,6 +5304,139 @@ TEST(irrigation_weekly_solar_eligibility_is_restart_missed_window_and_exact_once
     PASS();
 }
 
+struct FakeWallFeedJournalNvs {
+    bool save_allowed{true};
+    bool sync_allowed{true};
+    bool pending_valid{false};
+    bool durable_valid{false};
+    WeeklyWallFeedJournalRecord pending{};
+    WeeklyWallFeedJournalRecord durable{};
+
+    bool save(const WeeklyWallFeedJournalRecord& record) {
+        if (!save_allowed) return false;
+        pending = record;
+        pending_valid = true;
+        return true;
+    }
+
+    bool sync() {
+        if (!sync_allowed) {
+            pending_valid = false;
+            return false;
+        }
+        if (pending_valid) {
+            durable = pending;
+            durable_valid = true;
+            pending_valid = false;
+        }
+        return true;
+    }
+
+    void reboot() { pending_valid = false; }
+
+    bool load(WeeklyWallFeedJournalRecord& record) const {
+        if (!durable_valid) return false;
+        record = durable;
+        return true;
+    }
+};
+
+static bool commit_to_fake_journal(
+    FakeWallFeedJournalNvs& nvs,
+    const WeeklyWallFeedState& state,
+    uint8_t terminal_code,
+    uint32_t sequence,
+    WeeklyWallFeedJournalRecord& committed) {
+    return commit_wall_feed_journal(
+        state, terminal_code, sequence,
+        [&](const WeeklyWallFeedJournalRecord& record) { return nvs.save(record); },
+        [&]() { return nvs.sync(); },
+        committed);
+}
+
+TEST(wall_feed_journal_claim_is_durable_before_first_restore_poll) {
+    FakeWallFeedJournalNvs nvs{};
+    WeeklyWallFeedState state{};
+    const WeeklyWallEligibilityInput input{true, false, 0.2f, 41'000u, 7u};
+    state = claim_weekly_wall_feed(input, state, 19u);
+    WeeklyWallFeedJournalRecord committed{};
+
+    // This direct save+sync happens before any RestoringGlobalsComponent poll.
+    ASSERT_TRUE(commit_to_fake_journal(nvs, state, 0, 1u, committed));
+    nvs.reboot();
+    WeeklyWallFeedJournalRecord loaded{};
+    ASSERT_TRUE(nvs.load(loaded));
+    ASSERT_TRUE(wall_feed_journal_record_valid(loaded));
+    ASSERT_EQ(wall_feed_state_from_journal(loaded).stage, WallFeedStage::PREWET);
+    ASSERT_EQ(wall_feed_state_from_journal(loaded).claimed_solar_day, input.solar_day);
+
+    // First-tick reboot handling cancels an admitted active stage and durably
+    // records the terminal day, so the same weekly claim cannot re-dose.
+    auto cancelled = cancel_interrupted_wall_feed(
+        wall_feed_state_from_journal(loaded), input.solar_day);
+    ASSERT_TRUE(commit_to_fake_journal(nvs, cancelled, 2, 2u, committed));
+    nvs.reboot();
+    ASSERT_TRUE(nvs.load(loaded));
+    ASSERT_EQ(wall_feed_state_from_journal(loaded).stage, WallFeedStage::CANCELLED);
+    ASSERT_EQ(loaded.terminal_code, 2);
+    ASSERT_EQ(loaded.last_terminal_solar_day, input.solar_day);
+    PASS();
+}
+
+TEST(wall_feed_journal_each_stage_boundary_survives_immediate_reboot) {
+    WeeklyWallFeedState state{
+        WallFeedStage::PREWET, 52'000u, 0u, 23u};
+    const WallFeedStage stages[] = {
+        WallFeedStage::PREWET,
+        WallFeedStage::FEED,
+        WallFeedStage::FLUSH,
+        WallFeedStage::COMPLETE,
+    };
+
+    for (uint32_t i = 0; i < 4; ++i) {
+        state.stage = stages[i];
+        if (state.stage == WallFeedStage::COMPLETE) {
+            state.last_terminal_solar_day = state.claimed_solar_day;
+        }
+        const uint8_t terminal_code = state.stage == WallFeedStage::COMPLETE ? 1 : 0;
+        FakeWallFeedJournalNvs nvs{};
+        WeeklyWallFeedJournalRecord committed{};
+        ASSERT_TRUE(commit_to_fake_journal(nvs, state, terminal_code, i + 1u, committed));
+        nvs.reboot();
+        WeeklyWallFeedJournalRecord loaded{};
+        ASSERT_TRUE(nvs.load(loaded));
+        ASSERT_TRUE(wall_feed_journal_record_valid(loaded));
+        ASSERT_EQ(wall_feed_state_from_journal(loaded).stage, stages[i]);
+        ASSERT_EQ(loaded.terminal_code, terminal_code);
+        ASSERT_EQ(loaded.sequence, i + 1u);
+    }
+    PASS();
+}
+
+TEST(wall_feed_journal_requires_both_save_and_sync_ack_before_relay) {
+    const WeeklyWallFeedState claimed{
+        WallFeedStage::PREWET, 61'000u, 0u, 29u};
+    WeeklyWallFeedJournalRecord committed{};
+
+    FakeWallFeedJournalNvs save_fail{};
+    save_fail.save_allowed = false;
+    ASSERT_FALSE(commit_to_fake_journal(save_fail, claimed, 0, 1u, committed));
+    save_fail.reboot();
+    WeeklyWallFeedJournalRecord loaded{};
+    ASSERT_FALSE(save_fail.load(loaded));
+
+    FakeWallFeedJournalNvs sync_fail{};
+    sync_fail.sync_allowed = false;
+    ASSERT_FALSE(commit_to_fake_journal(sync_fail, claimed, 0, 1u, committed));
+    sync_fail.reboot();
+    ASSERT_FALSE(sync_fail.load(loaded));
+
+    auto corrupt = make_wall_feed_journal_record(claimed, 0, 1u);
+    corrupt.checksum ^= 1u;
+    ASSERT_FALSE(wall_feed_journal_record_valid(corrupt));
+    PASS();
+}
+
 TEST(irrigation_wall_sequence_is_prewet_feed_fertilizer_off_immediate_clean_flush) {
     WeeklyWallFeedState state{};
     WeeklyWallEligibilityInput input{true, false, 0.2f, 30'000u, 7u};

@@ -285,6 +285,112 @@ struct WeeklyWallFeedState {
     uint32_t commissioning_revision{0};
 };
 
+// Authoritative exact-once persistence record. ESPHome restore_value globals
+// remain readback mirrors, but relay admission is gated on this packed record's
+// save()+sync() acknowledgement. The fixed layout, magic, and version are an
+// on-flash ABI; change them only with an explicit migration.
+static constexpr uint32_t WALL_FEED_JOURNAL_KEY = 0x57464A31u;    // "WFJ1"
+static constexpr uint32_t WALL_FEED_JOURNAL_MAGIC = 0x56465731u;  // "VFW1"
+static constexpr uint16_t WALL_FEED_JOURNAL_VERSION = 1u;
+
+#pragma pack(push, 1)
+struct WeeklyWallFeedJournalRecord {
+    uint32_t magic{WALL_FEED_JOURNAL_MAGIC};
+    uint16_t version{WALL_FEED_JOURNAL_VERSION};
+    uint8_t stage{static_cast<uint8_t>(WallFeedStage::IDLE)};
+    uint8_t terminal_code{0};
+    uint32_t claimed_solar_day{0};
+    uint32_t last_terminal_solar_day{0};
+    uint32_t commissioning_revision{0};
+    uint32_t sequence{0};
+    uint32_t checksum{0};
+};
+#pragma pack(pop)
+
+static_assert(sizeof(WeeklyWallFeedJournalRecord) == 28, "wall-feed journal ABI drift");
+
+inline uint32_t wall_feed_journal_checksum(
+    const WeeklyWallFeedJournalRecord& record) noexcept {
+    uint32_t hash = 2166136261u;
+    auto mix = [&](uint32_t value) {
+        for (int shift = 0; shift < 32; shift += 8) {
+            hash ^= (value >> shift) & 0xFFu;
+            hash *= 16777619u;
+        }
+    };
+    mix(record.magic);
+    mix(record.version);
+    mix(record.stage);
+    mix(record.terminal_code);
+    mix(record.claimed_solar_day);
+    mix(record.last_terminal_solar_day);
+    mix(record.commissioning_revision);
+    mix(record.sequence);
+    return hash;
+}
+
+inline WeeklyWallFeedJournalRecord make_wall_feed_journal_record(
+    const WeeklyWallFeedState& state,
+    uint8_t terminal_code,
+    uint32_t sequence) noexcept {
+    WeeklyWallFeedJournalRecord record{};
+    record.stage = static_cast<uint8_t>(state.stage);
+    record.terminal_code = terminal_code;
+    record.claimed_solar_day = state.claimed_solar_day;
+    record.last_terminal_solar_day = state.last_terminal_solar_day;
+    record.commissioning_revision = state.commissioning_revision;
+    record.sequence = sequence;
+    record.checksum = wall_feed_journal_checksum(record);
+    return record;
+}
+
+inline bool wall_feed_journal_record_valid(
+    const WeeklyWallFeedJournalRecord& record) noexcept {
+    if (record.magic != WALL_FEED_JOURNAL_MAGIC
+        || record.version != WALL_FEED_JOURNAL_VERSION
+        || record.stage > static_cast<uint8_t>(WallFeedStage::CANCELLED)
+        || record.terminal_code > 2
+        || record.checksum != wall_feed_journal_checksum(record)) {
+        return false;
+    }
+    const auto stage = static_cast<WallFeedStage>(record.stage);
+    if ((stage == WallFeedStage::PREWET
+         || stage == WallFeedStage::FEED
+         || stage == WallFeedStage::FLUSH)
+        && record.terminal_code != 0) {
+        return false;
+    }
+    if (stage == WallFeedStage::COMPLETE && record.terminal_code != 1) return false;
+    if (stage == WallFeedStage::CANCELLED && record.terminal_code != 2) return false;
+    if (stage == WallFeedStage::IDLE && record.terminal_code != 0) return false;
+    return true;
+}
+
+inline WeeklyWallFeedState wall_feed_state_from_journal(
+    const WeeklyWallFeedJournalRecord& record) noexcept {
+    return {
+        static_cast<WallFeedStage>(record.stage),
+        record.claimed_solar_day,
+        record.last_terminal_solar_day,
+        record.commissioning_revision,
+    };
+}
+
+template<typename SaveFn, typename SyncFn>
+inline bool commit_wall_feed_journal(
+    const WeeklyWallFeedState& state,
+    uint8_t terminal_code,
+    uint32_t next_sequence,
+    SaveFn&& save,
+    SyncFn&& sync,
+    WeeklyWallFeedJournalRecord& committed) noexcept {
+    const auto candidate = make_wall_feed_journal_record(
+        state, terminal_code, next_sequence);
+    if (!save(candidate) || !sync()) return false;
+    committed = candidate;
+    return true;
+}
+
 struct WeeklyWallEligibilityInput {
     bool clock_valid{false};
     bool leak_blocked{false};

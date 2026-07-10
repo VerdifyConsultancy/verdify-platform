@@ -545,7 +545,10 @@ def test_weekly_wall_claim_syncs_before_first_relay_write():
     helper_start = controls.index("auto persist_weekly_and_sync")
     helper_end = controls.index("auto cancel_all", helper_start)
     helper = controls[helper_start:helper_end]
-    assert helper.index("id(wall_feed_stage)") < helper.index("global_preferences->sync()")
+    assert helper.index("wall_feed_journal_pref.save(&candidate)") < helper.index("global_preferences->sync()")
+    assert helper.index("global_preferences->sync()") < helper.index("mirror_weekly_readbacks(state, terminal_code)")
+    assert "RestoringGlobalsComponent" not in helper
+    assert "->update()" not in helper
 
     claim_start = controls.index("auto claimed = claim_weekly_wall_feed")
     claim_end = controls.index("// Advance the wall sequence", claim_start)
