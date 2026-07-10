@@ -1,8 +1,8 @@
 sprint_id: software-recovery-2026-07-09
 lane_id: planner-delivery
 state: READY_FOR_CRITIC
-updated_at: "2026-07-10T16:26:11Z"
-head_sha: 8b2fdeca8184efad720b3e8ad7303dcb6012d6c2
+updated_at: "2026-07-10T16:40:20Z"
+head_sha: 8147aa3df104a6893c380818945f0382484dbb48
 working_tree_clean: true
 acceptance:
   passed:
@@ -16,5 +16,5 @@ acceptance:
 blockers: []
 decisions_requested: []
 next_actions:
-  - Wait for exact-head GitHub CI, then route the immutable head plus critic-remediation.md to a fresh independent critic.
+  - Wait for exact-head GitHub CI, then route the immutable head plus critic-remediation-round-2.md to renewed independent criticism.
   - Keep PR 449 draft and block merge, production rollout, alert mutation, and release-control transitions until critic PASS.

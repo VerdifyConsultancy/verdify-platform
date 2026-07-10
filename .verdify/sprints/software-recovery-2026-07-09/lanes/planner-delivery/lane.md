@@ -11,7 +11,7 @@ Restore a self-healing Hermes/MCP path and a bounded, terminally truthful planne
 
 ## Readiness and sequencing
 
-This lane is `READY_FOR_CRITIC` at substantive remediation head `8b2fdeca8184efad720b3e8ad7303dcb6012d6c2`. The prior independent `CHANGES_REQUIRED` verdict is preserved in [critic-report.md](critic-report.md), and the code/test disposition for every finding is in [critic-remediation.md](critic-remediation.md). Device-writer and DLI availability were independently accepted and merged before implementation began, and evidence-core was consumed as a soft input. Production deployment, migration application, alert mutation, and required-plan acceptance remain release-control work. The sprint baseline above remains the audit reference.
+This lane is `READY_FOR_CRITIC` at round-two remediation head `8147aa3df104a6893c380818945f0382484dbb48`. The independent `CHANGES_REQUIRED` verdicts are preserved in [critic-report.md](critic-report.md) and [critic-report-round-2.md](critic-report-round-2.md); their dispositions are in [critic-remediation.md](critic-remediation.md) and [critic-remediation-round-2.md](critic-remediation-round-2.md). Device-writer and DLI availability were independently accepted and merged before implementation began, and evidence-core was consumed as a soft input. Production deployment, migration application, alert mutation, and required-plan acceptance remain release-control work. The sprint baseline above remains the audit reference.
 
 ## Boundaries
 

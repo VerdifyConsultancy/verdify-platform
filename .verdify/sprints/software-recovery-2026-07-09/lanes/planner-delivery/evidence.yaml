@@ -1,8 +1,8 @@
 sprint_id: software-recovery-2026-07-09
 scope_id: planner-delivery
-revision: 8b2fdeca8184efad720b3e8ad7303dcb6012d6c2
+revision: 8147aa3df104a6893c380818945f0382484dbb48
 environment: null
-generated_at: "2026-07-10T16:26:11Z"
+generated_at: "2026-07-10T16:40:20Z"
 items:
   - id: EVI-PLAN-001
     type: TEST
@@ -286,3 +286,44 @@ items:
     acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04, LANE-AC-05]
     limitations:
       - The monolithic target is not host-portable despite the k3s-agent handoff; focused offline, disposable-DB, and manifest suites are the executable lane evidence.
+
+  - id: EVI-PLAN-014
+    type: REVIEW
+    status: FAIL
+    source: fresh independent distributed-state critic round 2
+    command: review substantive head 8b2fdeca8184efad720b3e8ad7303dcb6012d6c2
+    timestamp: "2026-07-10T16:37:00Z"
+    revision: 8b2fdeca8184efad720b3e8ad7303dcb6012d6c2
+    environment: source tree plus disposable PostgreSQL
+    result: >-
+      CHANGES_REQUIRED: in-flight lease-renewal loss remained false green,
+      test_04 retained one stale route-decorator assertion, and three
+      validation-only paths lacked explicit controller grants. The critic
+      confirmed all seven first-round findings were otherwise repaired.
+    artifact_location: .verdify/sprints/software-recovery-2026-07-09/lanes/planner-delivery/critic-report-round-2.md
+    acceptance_criteria: [LANE-AC-01, LANE-AC-05]
+    limitations: []
+
+  - id: EVI-PLAN-015
+    type: TEST
+    status: PASS
+    source: round-two lease-health, MCP route, and scope remediation
+    command: >-
+      PYTHONPATH=. .venv/bin/pytest -q tests/test_04_planner.py
+      tests/test_10_planner_routing.py tests/test_17_planner_health_surface.py;
+      PYTHONPATH=. .venv/bin/pytest -q planner_graph/tests/test_app.py
+      planner_graph/tests/test_server.py planner_graph/tests/test_store_postgres.py
+      planner_graph/tests/test_worker.py; make lint; make migration-rollback-safety;
+      git diff --check
+    timestamp: "2026-07-10T16:40:20Z"
+    revision: 8147aa3df104a6893c380818945f0382484dbb48
+    environment: Jason laptop isolated planner worktree plus disposable PostgreSQL fixtures
+    result: >-
+      PASS. The required planner slice passed; all 35 planner_graph tests
+      passed, including readiness failure before a blocking graph returns and
+      subsequent authoritative-store recovery. Ruff, migration classification,
+      and diff checking passed. Narrow validation-path grants are recorded.
+    artifact_location: .verdify/sprints/software-recovery-2026-07-09/lanes/planner-delivery/critic-remediation-round-2.md
+    acceptance_criteria: [LANE-AC-01, LANE-AC-05]
+    limitations:
+      - Exact-head GitHub CI and renewed independent criticism remain pending.
