@@ -22,7 +22,8 @@ def test_migration_preserves_raw_proxy_and_creates_product_contract():
     assert "CREATE OR REPLACE VIEW public.v_dli_current" in sql
     assert "CREATE OR REPLACE VIEW public.v_dli_daily" in sql
     assert "forensic_proxy_dli_mol_m2_day" in sql
-    assert "validity_interval_does_not_cover_full_local_day" in sql
+    assert "Migration 195 is categorically unavailable" in sql
+    assert "source_coverage AS" not in sql
     assert "COMMENT ON COLUMN public.climate.dli_today" in sql
     assert "COMMENT ON COLUMN public.daily_summary.dli_final" in sql
     assert "UPDATE public.climate" not in sql
@@ -73,6 +74,37 @@ def test_product_views_do_not_promote_legacy_numeric_proxy():
     )[0]
     assert "NULL::numeric" in forecast
     assert "direct_radiation_w_m2" not in forecast
+
+    estimated_compat = sql.split(
+        "CREATE OR REPLACE VIEW public.v_estimated_dli",
+        1,
+    )[1].split("CREATE OR REPLACE VIEW public.v_weekly_summary", 1)[0]
+    assert "NULL::numeric AS est_natural_dli" in estimated_compat
+    assert "outdoor_lux_glazing_model_not_interior_crop_dli" in estimated_compat
+    assert "fn_glazing_transmission" not in estimated_compat
+    assert "0.0185" not in estimated_compat
+
+
+def test_whole_schema_has_no_active_outdoor_proxy_dli_view():
+    schema = (ROOT / "db/schema.sql").read_text()
+    estimated = schema.split("CREATE VIEW public.v_estimated_dli AS", 1)[1].split(
+        "ALTER VIEW public.v_estimated_dli", 1
+    )[0]
+    assert "NULL::numeric AS est_natural_dli" in estimated
+    assert "outdoor_lux_glazing_model_not_interior_crop_dli" in estimated
+    assert "fn_glazing_transmission" not in estimated
+    assert "0.0185" not in estimated
+
+
+def test_broken_dli_sensor_is_not_active_or_required_metadata():
+    sql = MIGRATION.read_text()
+    assert "UPDATE public.sensor_registry" in sql
+    assert "source_table = 'climate'" in sql
+    assert "source_column = 'dli_today'" in sql
+    assert "SET active = false" in sql
+    assert "UPDATE public.greenhouse_sensor_config" in sql
+    assert "SET is_required = false" in sql
+    assert "v_sensor_staleness already filters active=true" in sql
 
 
 def test_planner_context_contains_only_availability_bearing_dli():
@@ -148,6 +180,9 @@ def test_firmware_publishes_unavailable_but_accumulates_real_elapsed_time():
     assert "dli_dt_s = raw_dt_ms > 0" in dli_block
     assert "(float)raw_dt_ms / 1000.0f" in dli_block
     assert "elapsed_intervals(now_ms, last_ms)" in controls
+    logic = (ROOT / "firmware/lib/greenhouse_logic.h").read_text()
+    assert "now_ms < previous_ms" in logic
+    assert "? 0U" in logic
     assert "5.0f" not in dli_block
 
     sensors = (ROOT / "firmware/greenhouse/sensors.yaml").read_text()

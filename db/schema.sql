@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict bnBHnFqbzoeqT0vgyVJ5W8RafjHjvnbHyxjLkl2PaWRl9reaMyGRXlvb06egyzc
+\restrict Afjzg4eOSPhVtRO9uJTONTbp9jAV85iCSJeLmRwfGm9UzkHZDd2z33fODLm9p7k
 
 -- Dumped from database version 16.14
 -- Dumped by pg_dump version 16.14
@@ -27136,83 +27136,23 @@ CREATE VIEW public.v_dli_daily AS
             (((ds.date + 1))::timestamp without time zone AT TIME ZONE 'America/Denver'::text) AS day_end
            FROM public.daily_summary ds
           WHERE (ds.date IS NOT NULL)
-        ), source_coverage AS (
-         SELECT ((c.ts AT TIME ZONE 'America/Denver'::text))::date AS date,
-            COALESCE(c.greenhouse_id, 'vallery'::text) AS greenhouse_id,
-            min(c.ts) AS source_first_ts,
-            max(c.ts) AS source_last_ts,
-            count(*) FILTER (WHERE (public.fn_dli_source_invalid_reason(c.dli_today) IS NULL)) AS valid_source_rows,
-            count(*) FILTER (WHERE ((c.dli_today IS NOT NULL) AND (public.fn_dli_source_invalid_reason(c.dli_today) IS NOT NULL))) AS invalid_source_rows
-           FROM public.climate c
-          GROUP BY (((c.ts AT TIME ZONE 'America/Denver'::text))::date), COALESCE(c.greenhouse_id, 'vallery'::text)
-        ), evaluated AS (
-         SELECT d.date,
-            d.greenhouse_id,
-            d.forensic_proxy_dli_mol_m2_day,
-            d.day_start,
-            d.day_end,
-            sc.source_first_ts,
-            sc.source_last_ts,
-            COALESCE(sc.valid_source_rows, (0)::bigint) AS valid_source_rows,
-            COALESCE(sc.invalid_source_rows, (0)::bigint) AS invalid_source_rows,
-            v.availability AS interval_availability,
-            v.unavailable_reason AS interval_unavailable_reason,
-            v.provenance,
-            v.validity_revision,
-            v.valid_from,
-            v.valid_to,
-            v.operator_validated,
-            public.fn_dli_source_invalid_reason(d.forensic_proxy_dli_mol_m2_day) AS final_source_invalid_reason
-           FROM ((day_bounds d
-             LEFT JOIN source_coverage sc ON (((sc.date = d.date) AND (sc.greenhouse_id = d.greenhouse_id))))
-             LEFT JOIN LATERAL public.fn_dli_validity((d.day_start + '12:00:00'::interval), d.greenhouse_id) v(availability, unavailable_reason, provenance, validity_revision, valid_from, valid_to, operator_validated) ON (true))
-        ), product AS (
-         SELECT e.date,
-            e.greenhouse_id,
-            e.forensic_proxy_dli_mol_m2_day,
-            e.day_start,
-            e.day_end,
-            e.source_first_ts,
-            e.source_last_ts,
-            e.valid_source_rows,
-            e.invalid_source_rows,
-            e.interval_availability,
-            e.interval_unavailable_reason,
-            e.provenance,
-            e.validity_revision,
-            e.valid_from,
-            e.valid_to,
-            e.operator_validated,
-            e.final_source_invalid_reason,
-            ((e.interval_availability = 'available'::text) AND e.operator_validated AND (e.valid_from <= e.day_start) AND ((e.valid_to IS NULL) OR (e.valid_to >= e.day_end)) AND (e.day_end <= now()) AND (e.final_source_invalid_reason IS NULL) AND (e.valid_source_rows > 0) AND (e.invalid_source_rows = 0) AND (e.source_first_ts <= (e.day_start + '00:05:00'::interval)) AND (e.source_last_ts >= (e.day_end - '00:05:00'::interval))) AS evidence_available
-           FROM evaluated e
         )
- SELECT date,
-    greenhouse_id,
+ SELECT d.date,
+    d.greenhouse_id,
+    NULL::double precision AS crop_dli_mol_m2_day,
+    'unavailable'::text AS availability,
         CASE
-            WHEN evidence_available THEN forensic_proxy_dli_mol_m2_day
-            ELSE NULL::double precision
-        END AS crop_dli_mol_m2_day,
-        CASE
-            WHEN evidence_available THEN 'available'::text
-            ELSE 'unavailable'::text
-        END AS availability,
-        CASE
-            WHEN evidence_available THEN NULL::text
-            WHEN (day_end > now()) THEN 'source_day_incomplete'::text
-            WHEN (final_source_invalid_reason IS NOT NULL) THEN final_source_invalid_reason
-            WHEN (valid_source_rows = 0) THEN 'source_coverage_missing'::text
-            WHEN (invalid_source_rows > 0) THEN 'source_coverage_contains_invalid_reading'::text
-            WHEN ((source_first_ts > (day_start + '00:05:00'::interval)) OR (source_last_ts < (day_end - '00:05:00'::interval))) THEN 'source_coverage_incomplete'::text
-            WHEN ((interval_availability = 'available'::text) AND ((valid_from > day_start) OR ((valid_to IS NOT NULL) AND (valid_to < day_end)))) THEN 'validity_interval_does_not_cover_full_local_day'::text
-            ELSE COALESCE(interval_unavailable_reason, 'validity_contract_missing'::text)
+            WHEN (d.day_end > now()) THEN 'source_day_incomplete'::text
+            WHEN (public.fn_dli_source_invalid_reason(d.forensic_proxy_dli_mol_m2_day) IS NOT NULL) THEN public.fn_dli_source_invalid_reason(d.forensic_proxy_dli_mol_m2_day)
+            ELSE COALESCE(v.unavailable_reason, 'validity_contract_missing'::text)
         END AS unavailable_reason,
-    COALESCE(provenance, 'unknown_unvalidated_source'::text) AS provenance,
-    COALESCE(validity_revision, 'missing'::text) AS validity_revision,
-    valid_from,
-    valid_to,
-    (forensic_proxy_dli_mol_m2_day IS NOT NULL) AS forensic_proxy_present
-   FROM product p;
+    COALESCE(v.provenance, 'unknown_unvalidated_source'::text) AS provenance,
+    COALESCE(v.validity_revision, 'missing'::text) AS validity_revision,
+    v.valid_from,
+    v.valid_to,
+    (d.forensic_proxy_dli_mol_m2_day IS NOT NULL) AS forensic_proxy_present
+   FROM (day_bounds d
+     LEFT JOIN LATERAL public.fn_dli_validity((d.day_start + '12:00:00'::interval), d.greenhouse_id) v(availability, unavailable_reason, provenance, validity_revision, valid_from, valid_to, operator_validated) ON (true));
 
 
 ALTER VIEW public.v_dli_daily OWNER TO verdify;
@@ -27221,7 +27161,7 @@ ALTER VIEW public.v_dli_daily OWNER TO verdify;
 -- Name: VIEW v_dli_daily; Type: COMMENT; Schema: public; Owner: verdify
 --
 
-COMMENT ON VIEW public.v_dli_daily IS 'Daily interior crop DLI product contract. Migration 195 is fail closed. Future activation additionally requires an ended Denver-local day, valid finite 0..100 evidence, complete source coverage, and one validity interval covering the full day.';
+COMMENT ON VIEW public.v_dli_daily IS 'Daily interior crop DLI product contract. Migration 195 is categorically unavailable and never emits a numeric value. A later reviewed sensor-activation migration must define source revision, cadence/completeness, calibration, and validity rules.';
 
 
 --
@@ -29919,17 +29859,10 @@ CREATE VIEW public.v_dli_current AS
         )
  SELECT l.ts,
     l.greenhouse_id,
-        CASE
-            WHEN ((v.availability = 'available'::text) AND v.operator_validated AND (public.fn_dli_source_invalid_reason(l.forensic_proxy_dli_mol_m2_day) IS NULL)) THEN l.forensic_proxy_dli_mol_m2_day
-            ELSE NULL::double precision
-        END AS crop_dli_mol_m2_day,
-        CASE
-            WHEN ((v.availability = 'available'::text) AND v.operator_validated AND (public.fn_dli_source_invalid_reason(l.forensic_proxy_dli_mol_m2_day) IS NULL)) THEN 'available'::text
-            ELSE 'unavailable'::text
-        END AS availability,
+    NULL::double precision AS crop_dli_mol_m2_day,
+    'unavailable'::text AS availability,
         CASE
             WHEN (public.fn_dli_source_invalid_reason(l.forensic_proxy_dli_mol_m2_day) IS NOT NULL) THEN public.fn_dli_source_invalid_reason(l.forensic_proxy_dli_mol_m2_day)
-            WHEN ((v.availability = 'available'::text) AND v.operator_validated) THEN NULL::text
             ELSE COALESCE(v.unavailable_reason, 'validity_contract_missing'::text)
         END AS unavailable_reason,
     COALESCE(v.provenance, 'unknown_unvalidated_source'::text) AS provenance,
@@ -29947,7 +29880,7 @@ ALTER VIEW public.v_dli_current OWNER TO verdify;
 -- Name: VIEW v_dli_current; Type: COMMENT; Schema: public; Owner: verdify
 --
 
-COMMENT ON VIEW public.v_dli_current IS 'Current interior crop DLI product contract. Migration 195 is fail closed, so numeric value is NULL. Invalid, non-finite, negative, missing, and out-of-range source readings receive explicit unavailable reasons; legacy proxy presence is diagnostic-only.';
+COMMENT ON VIEW public.v_dli_current IS 'Current interior crop DLI product contract. Migration 195 is categorically unavailable and always emits NULL. Invalid, non-finite, negative, missing, and out-of-range source readings receive explicit reasons; a later reviewed activation migration owns source completeness and calibration.';
 
 
 --
@@ -30212,23 +30145,34 @@ ALTER VIEW public.v_equipment_runtime_today OWNER TO verdify;
 
 CREATE VIEW public.v_estimated_dli AS
  WITH readings AS (
-         SELECT climate.ts,
-            (date_trunc('day'::text, (climate.ts AT TIME ZONE 'America/Denver'::text)))::date AS date,
-            ((climate.outdoor_lux * public.fn_glazing_transmission(climate.solar_azimuth_deg)) * (0.0185)::double precision) AS ppfd,
-            COALESCE(EXTRACT(epoch FROM (lead(climate.ts) OVER (PARTITION BY ((date_trunc('day'::text, (climate.ts AT TIME ZONE 'America/Denver'::text)))::date) ORDER BY climate.ts) - climate.ts)), (300)::numeric) AS dt_sec
-           FROM public.climate
-          WHERE ((climate.outdoor_lux > (0)::double precision) AND (climate.solar_azimuth_deg IS NOT NULL) AND (climate.solar_altitude_deg > (0)::double precision))
+         SELECT (date_trunc('day'::text, (c.ts AT TIME ZONE 'America/Denver'::text)))::date AS date,
+            COALESCE(EXTRACT(epoch FROM (lead(c.ts) OVER (PARTITION BY ((date_trunc('day'::text, (c.ts AT TIME ZONE 'America/Denver'::text)))::date) ORDER BY c.ts) - c.ts)), (300)::numeric) AS dt_sec
+           FROM public.climate c
+          WHERE ((c.outdoor_lux > (0)::double precision) AND (c.solar_azimuth_deg IS NOT NULL) AND (c.solar_altitude_deg > (0)::double precision))
         )
  SELECT date,
-    round(((sum((ppfd * (LEAST(dt_sec, (900)::numeric))::double precision)) / (1000000)::double precision))::numeric, 1) AS est_natural_dli,
-    count(*) AS readings
-   FROM readings
+    NULL::numeric AS est_natural_dli,
+    count(*) AS readings,
+    'unavailable'::text AS availability,
+    'interior_light_sensor_broken'::text AS unavailable_reason,
+    'outdoor_lux_glazing_model_not_interior_crop_dli'::text AS provenance,
+    'dli-validity-v1'::text AS validity_revision,
+    '2024-01-01 00:00:00+00'::timestamp with time zone AS valid_from,
+    NULL::timestamp with time zone AS valid_to
+   FROM readings r
   WHERE ((dt_sec > (0)::numeric) AND (dt_sec < (900)::numeric))
   GROUP BY date
   ORDER BY date;
 
 
 ALTER VIEW public.v_estimated_dli OWNER TO verdify;
+
+--
+-- Name: VIEW v_estimated_dli; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_estimated_dli IS 'Deprecated compatibility view. est_natural_dli is always NULL because outdoor lux and glazing transmission are not measured interior crop DLI; readings remains an outdoor-source diagnostic count.';
+
 
 --
 -- Name: v_estimated_indoor_light; Type: VIEW; Schema: public; Owner: verdify
@@ -61247,4 +61191,4 @@ GRANT INSERT ON TABLE public.twin_decisions TO twin_ro;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict bnBHnFqbzoeqT0vgyVJ5W8RafjHjvnbHyxjLkl2PaWRl9reaMyGRXlvb06egyzc
+\unrestrict Afjzg4eOSPhVtRO9uJTONTbp9jAV85iCSJeLmRwfGm9UzkHZDd2z33fODLm9p7k

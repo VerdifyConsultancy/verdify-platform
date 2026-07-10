@@ -1253,12 +1253,16 @@ inline ElapsedIntervals elapsed_intervals(
     uint32_t control_cap_ms = 5000
 ) noexcept {
     // Unsigned subtraction is defined modulo 2^32 and therefore preserves the
-    // real interval across one millis() wrap. Controls retain their safety cap;
-    // forensic/future DLI receives raw_ms so stalls are not silently erased.
+    // real interval across one millis() wrap. Controls retain their legacy
+    // zero-on-wrap behavior plus safety cap; forensic/future DLI receives
+    // raw_ms so the rollover interval is not silently erased.
     const uint32_t raw_ms = now_ms - previous_ms;
+    const uint32_t control_ms = now_ms < previous_ms
+        ? 0U
+        : std::min(raw_ms, control_cap_ms);
     return {
         .raw_ms = raw_ms,
-        .control_ms = std::min(raw_ms, control_cap_ms),
+        .control_ms = control_ms,
     };
 }
 

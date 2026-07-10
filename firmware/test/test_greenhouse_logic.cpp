@@ -4575,7 +4575,9 @@ TEST(elapsed_intervals_preserve_jitter_partition_sum) {
 TEST(elapsed_intervals_are_uint32_wrap_safe) {
     auto elapsed = elapsed_intervals(500U, UINT32_MAX - 1000U);
     ASSERT_EQ(elapsed.raw_ms, 1501U);
-    ASSERT_EQ(elapsed.control_ms, 1501U);
+    // DLI preserves the real wrap interval; DLI-independent controls retain
+    // the pre-#435 zero-on-wrap behavior and accrue no dwell/light minutes.
+    ASSERT_EQ(elapsed.control_ms, 0U);
     PASS();
 }
 
