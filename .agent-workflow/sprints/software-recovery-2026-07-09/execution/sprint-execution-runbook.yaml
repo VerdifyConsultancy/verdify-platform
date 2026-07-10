@@ -135,7 +135,7 @@ lanes:
     prompt:
       prompt_path: .verdify/sprints/software-recovery-2026-07-09/lanes/evidence-core/worker-prompt.md
       manifest_path: null
-      contract_hash: 8ca0bf7bec2be2be9375a76c6e7d1918e12346cf27be2c4d2d4662f86b6846b3
+      contract_hash: 51a6eb866269273988b5a8868876bc8209070ff7d26e0534d61b721c576f1350
     terminal:
       tmux_session: null
       browser_terminal_url: null
@@ -223,7 +223,7 @@ lanes:
     prompt:
       prompt_path: .verdify/sprints/software-recovery-2026-07-09/lanes/firmware-control/worker-prompt.md
       manifest_path: null
-      contract_hash: f31490a5fc1b07f9c87eb8c35f581c938531faf552f96158556e843c91ae14c3
+      contract_hash: 29086db389b8725e727b8bcd6a40dc40c06abdeada8b0bb482421245d3c24816
     terminal:
       tmux_session: null
       browser_terminal_url: null

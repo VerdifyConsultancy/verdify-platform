@@ -7,7 +7,7 @@ objective: >-
   and provenance-bearing outdoor freshness in the stock replay corpus.
 desired_outcome: >-
   Production and offline gates use device-parity solar/VPD semantics,
-  raw-transition cycling, realized night episodes, and source-backed outdoor
+  raw-transition cycling, realized night episodes, and provenance-bearing outdoor
   freshness.
 non_goals:
   - Change firmware control behavior, irrigation routing, writer delivery, planner policy, dashboards, or Kubernetes deployment.
@@ -36,6 +36,8 @@ decision_ids:
   - DEC-004
   - DEC-007
   - DEC-013
+  - DEC-014
+  - DEC-015
 ownership:
   domains:
     - DB solar/VPD parity
@@ -82,7 +84,7 @@ dependencies:
     - lane_id: resource-accounting
       coordination: Resource accounting consumes the complete-day transition truth produced by this lane.
     - lane_id: firmware-control
-      coordination: Firmware control consumes the source-backed replay corpus and realized night evidence produced by this lane.
+      coordination: Firmware control consumes the provenance-bearing replay corpus and realized night evidence produced by this lane.
     - lane_id: release-control
       coordination: Release control consumes the trustworthy cycle view produced by this lane.
 expected_inputs:
@@ -102,10 +104,10 @@ constraints:
   - Serialize migrations in numeric order, reserve 189 for served VPD divergence, and escalate on any number collision.
   - Run migration rollback classification first; never outer-wrap a self-committing or commit-forcing migration.
   - Preserve raw historical equipment state and derive cycles from transitions with explicit completeness and quality.
-  - Realized dry-out evidence must be solar-phase based, admit no daytime episode, expose stop/block reasons, and never claim projected intent as outcome.
+  - Realized dry-out evidence must be solar-phase based, admit no daytime episode, expose stop/block reasons, and never claim projected intent as outcome. The zero-daytime safety gate applies specifically to physically realized held-temperature vent-plus-heat admission; ordinary pre-existing daytime VPD dehumidification remains visible and allowed under DEC-014.
   - "Representative dry-out evidence must end in one explicit disposition: effective, ineffective, blocked, or insufficient_evidence; ineffective or insufficient evidence is not a completed control fix."
-  - Replay freshness must be source-backed from timestamps and provenance; no force-fresh override may satisfy coverage.
-  - At least 1,000 stock replay rows must be source-backed fresh and must exercise outdoor-aware branches across relevant regimes.
+  - Replay freshness must be provenance-bearing and must not manufacture a silent source as fresh. Historical persisted value-change observations are allowed only under the explicit conservative_change_observation basis from DEC-015 and must not be described as raw Tempest source timestamps; no force-fresh override may satisfy coverage.
+  - At least 1,000 stock replay rows must be conservatively fresh with an explicit provenance basis and must exercise outdoor-aware branches across relevant regimes. Exact device-reported age is preferred when available and becomes a firmware-control/release acceptance item.
   - Do not change firmware behavior; any necessary control delta is a scope-change escalation to firmware-control.
   - Any MCP or schema contract change must document required MCP/ingestor restarts in the PR.
   - Production schema application remains controller/release work; the lane supplies classified, rollback-proven, applied-ready migrations and live read-only parity evidence.
@@ -123,13 +125,13 @@ acceptance_criteria:
       - Hand-counted SQL fixtures for mister, fog, fans, and each light circuit
       - Complete-day, partial-day, quality, starts, runtime, short-cycle, and peak-transition results
   - id: LANE-AC-03
-    statement: Realized solar-night episodes expose AH advantage, temperature response, duty, stop reason, and effectiveness with zero daytime admission, and produce an explicit effective, ineffective, blocked, or insufficient_evidence disposition for the firmware-freeze gate.
+    statement: Realized solar-night episodes expose AH advantage, temperature response, duty, stop reason, and effectiveness; physically realized held-temperature admission is zero during solar day while ordinary daytime VPD dehumidification remains visible and allowed; every packet produces an explicit effective, ineffective, blocked, or insufficient_evidence disposition for the firmware-freeze gate.
     evidence_required:
       - Episode SQL fixtures covering admission, blocking, stopping, and incomplete evidence
       - Representative read-only night report with limitations and no projected-outcome claim
       - Controller-consumable disposition record; any indicated firmware delta is a scope-change handoff rather than an implicit PASS
   - id: LANE-AC-04
-    statement: Stock replay contains at least 1,000 source-backed fresh rows and reaches outdoor-aware branches without a force-fresh override.
+    statement: Stock replay contains at least 1,000 provenance-bearing conservatively fresh rows, labels historical value-change inference honestly, prefers exact device age when available, and reaches outdoor-aware branches without a force-fresh override.
     evidence_required:
       - Archived before/after corpus metadata and freshness distribution
       - Coverage invariant result and outdoor-aware branch trace
@@ -161,7 +163,7 @@ required_evidence:
   - Hand-counted transition/cycle fixtures including duplicate, carry-over, open-pulse, per-light, and partial-day cases
   - Realized night episode fixtures and representative report with weather/evidence limitations
   - Explicit dry-out effectiveness disposition and scope-change recommendation when the result is ineffective or insufficient
-  - Archived corpus before/after metadata, source-backed freshness distribution, and at least 1,000-row coverage proof
+  - Archived corpus before/after metadata, freshness-basis distribution, and at least 1,000-row provenance-bearing coverage proof
   - Outdoor-aware branch trace, invariant output, and replay diff
   - Git diff, clean-scope review, commit SHA, PR URL, and CI results
   - Independent SQL/replay evidence critic verdict tied to the immutable lane head
@@ -208,7 +210,7 @@ definition_of_done:
   - Every lane acceptance criterion has linked evidence in evidence.yaml.
   - All required validation commands and classified rollback proofs pass at the immutable lane head.
   - All five GitHub issues and the PR accurately record scope, migration order, provenance, limitations, tests, and deployment-only follow-up.
-  - The refreshed corpus is archived, source-backed, coverage-guarded, and reproducible without a force-fresh override.
+  - The refreshed corpus is archived, provenance-labeled, coverage-guarded, and reproducible without a force-fresh override.
   - The realized-night packet states effective, ineffective, blocked, or insufficient_evidence and never claims ineffective instrumentation as a completed dry-out fix.
   - All intended commits are pushed, required GitHub CI is green, and the worktree is clean.
   - A fresh critic accepts the SQL semantics, migration safety, replay provenance, and evidence claims.

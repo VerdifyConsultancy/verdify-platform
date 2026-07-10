@@ -2,7 +2,7 @@
 
 ## Outcome
 
-Create the serialized evidence foundation for device-parity solar/VPD semantics, transition-derived cycling, realized solar-night dry-out episodes, and source-backed outdoor freshness in stock replay.
+Create the serialized evidence foundation for device-parity solar/VPD semantics, transition-derived cycling, realized solar-night dry-out episodes, and provenance-bearing outdoor freshness in stock replay.
 
 ## Scope and boundaries
 
@@ -21,7 +21,7 @@ There is no hard dependency. Resource accounting consumes transition truth; firm
 
 1. Migrations 186 and reserved 189 have rollback proof and solar/VPD fixtures.
 2. Cycle evidence handles duplicates, midnight carry-over, open pulses, individual light circuits, partial days, and short-cycle buckets.
-3. Solar-night episodes expose realized AH/temperature/duty/stop/effectiveness evidence with zero daytime admission and end in an explicit `effective`, `ineffective`, `blocked`, or `insufficient_evidence` disposition. Ineffective or insufficient instrumentation is not a completed control fix; any firmware delta requires a scope-change handoff.
-4. Stock replay contains at least 1,000 provenance-backed fresh rows and reaches outdoor-aware branches without a force-fresh override.
+3. Solar-night episodes expose realized AH/temperature/duty/stop/effectiveness evidence and end in an explicit `effective`, `ineffective`, `blocked`, or `insufficient_evidence` disposition. Physically realized held-temperature admission is forbidden during solar day; ordinary daytime VPD dehumidification remains visible and allowed under DEC-014. Ineffective or insufficient instrumentation is not a completed control fix; any firmware delta requires a scope-change handoff.
+4. Stock replay contains at least 1,000 provenance-bearing conservatively fresh rows and reaches outdoor-aware branches without a force-fresh override. Historical value-change inference is labeled `conservative_change_observation`, never a raw source timestamp; exact device age is preferred when available under DEC-015.
 
 The authoritative validation, evidence, record updates, critic requirements, escalation conditions, and exact definition of done are in `lane.yaml`.
