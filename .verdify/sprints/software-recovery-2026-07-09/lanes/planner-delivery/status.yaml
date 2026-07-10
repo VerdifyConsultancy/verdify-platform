@@ -1,21 +1,22 @@
 sprint_id: software-recovery-2026-07-09
 lane_id: planner-delivery
-state: READY_FOR_CRITIC
-updated_at: "2026-07-10T15:32:34Z"
+state: IMPLEMENTING
+updated_at: "2026-07-10T15:45:21Z"
 head_sha: 402251ad8e6ce8d704d3d063022ae8f31c3e34df
 working_tree_clean: true
 acceptance:
-  passed:
+  passed: []
+  pending:
     - LANE-AC-01
     - LANE-AC-02
     - LANE-AC-03
     - LANE-AC-04
     - LANE-AC-05
-  pending: []
   failed: []
-blockers: []
+blockers:
+  - Independent critic returned CHANGES_REQUIRED for Hermes client-state recovery, stale-attempt fencing, plan validity and dispatcher-view singularity, planner_graph lease fencing, and durable terminal constraints.
 decisions_requested: []
 next_actions:
-  - Route substantive head 402251ad8e6ce8d704d3d063022ae8f31c3e34df and this records-only handoff to a fresh independent distributed-state/planner critic.
-  - Merge PR 449 only after critic PASS and exact reviewed-head GitHub checks are green.
-  - Release control applies migration 196 before consumers, rolls out verdify-mcp, Hermes, verdify-ingestor, and planner, then proves a valid required plan before resolving alerts.
+  - Remediate every finding in critic-report.md with deterministic fault and concurrency tests.
+  - Rerun local/disposable validation and exact-head GitHub CI, then route the immutable head to a fresh independent critic.
+  - Keep PR 449 draft and block merge, production rollout, alert mutation, and release-control transitions until critic PASS.
