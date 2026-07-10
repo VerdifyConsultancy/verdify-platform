@@ -547,6 +547,7 @@ SET compliance_pct = 50,
     temp_compliance_pct = 50,
     vpd_compliance_pct = 50,
     compliance_v2_attributable_pct = 50,
+    therms_estimated = 1,
     cost_electric = 1,
     cost_gas = 1,
     cost_water = 1,
@@ -651,6 +652,8 @@ BEGIN
             stale_status, unavailable_status;
     END IF;
     IF gated.water_gal IS NOT NULL
+       OR gated.therms IS NOT NULL
+       OR gated.cost_gas IS NOT NULL
        OR gated.cost_total IS NOT NULL
        OR gated.planner_score <> 50
        OR gated.planner_score_resource_weight_pct <> 0
@@ -664,6 +667,34 @@ BEGIN
        OR no_runtime.available_for_scoring THEN
         RAISE EXCEPTION 'daily_summary fields masqueraded as runtime evidence: %',
             row_to_json(no_runtime);
+    END IF;
+END $$;
+
+DO $$
+DECLARE
+    resource_available numeric;
+    scorecard_therms numeric;
+    scorecard_cost_gas numeric;
+BEGIN
+    SELECT value INTO resource_available
+    FROM public.fn_planner_scorecard(
+        (now() AT TIME ZONE 'America/Denver')::date - 5
+    ) WHERE metric = 'resource_terms_available';
+    SELECT value INTO scorecard_therms
+    FROM public.fn_planner_scorecard(
+        (now() AT TIME ZONE 'America/Denver')::date - 5
+    ) WHERE metric = 'therms';
+    SELECT value INTO scorecard_cost_gas
+    FROM public.fn_planner_scorecard(
+        (now() AT TIME ZONE 'America/Denver')::date - 5
+    ) WHERE metric = 'cost_gas';
+
+    IF resource_available <> 0
+       OR scorecard_therms IS NOT NULL
+       OR scorecard_cost_gas IS NOT NULL THEN
+        RAISE EXCEPTION
+            'scorecard leaked gas scalars while resources unavailable: available %, therms %, cost_gas %',
+            resource_available, scorecard_therms, scorecard_cost_gas;
     END IF;
 END $$;
 

@@ -1322,7 +1322,10 @@ WITH daily AS (
         COALESCE(d.graded_vpd_compliance_pct, d.vpd_compliance_pct, 0) AS vpd_compliance_pct,
         CASE WHEN d.water_ok AND d.energy_ok THEN d.cost_total END AS cost_total,
         CASE WHEN d.energy_ok THEN d.cost_electric END AS cost_electric,
-        d.cost_gas,
+        CASE
+            WHEN d.water_ok AND d.energy_ok AND d.cost_total IS NOT NULL
+            THEN d.cost_gas
+        END AS cost_gas,
         CASE WHEN d.water_ok THEN d.cost_water END AS cost_water,
         COALESCE(d.compliance_pct, 0) AS compliance_binary_pct,
         COALESCE(d.compliance_v2_raw_pct, 0) AS compliance_raw_graded_pct,
@@ -1413,11 +1416,13 @@ SELECT
         + COALESCE(graded_stress_hours_vpd_low, stress_hours_vpd_low, 0)
     )::numeric, 2) AS total_stress_h,
     CASE WHEN energy_ok THEN round(modeled_kwh::numeric, 2) END AS kwh,
-    round(COALESCE(therms_estimated, gas_used_therms)::numeric, 3) AS therms,
+    CASE WHEN resource_ok
+      THEN round(COALESCE(therms_estimated, gas_used_therms)::numeric, 3)
+    END AS therms,
     CASE WHEN water_ok THEN round(quality_filtered_meter_gal::numeric, 0) END AS water_gal,
     CASE WHEN water_ok THEN round(climate_wetting_gal::numeric, 0) END AS mister_water_gal,
     CASE WHEN energy_ok THEN round(cost_electric::numeric, 2) END AS cost_electric,
-    round(cost_gas::numeric, 2) AS cost_gas,
+    CASE WHEN resource_ok THEN round(cost_gas::numeric, 2) END AS cost_gas,
     CASE WHEN water_ok THEN round(cost_water::numeric, 2) END AS cost_water,
     CASE WHEN resource_ok THEN round(cost_total::numeric, 2) END AS cost_total,
     round(temp_min::numeric, 1) AS temp_min,

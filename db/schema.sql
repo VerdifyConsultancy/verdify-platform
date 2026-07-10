@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict kMpOEXhwsBBHpohPWbiYThkmjARkimicaVcoolyB936niHnZU6XvBdL2ABkXBfo
+\restrict UN5zcfRgFwprT4DyZc6XR9O3OKw6zsYSGglhjXLdvRLLsbv5BGs3HogbVTaL1qY
 
 -- Dumped from database version 16.14
 -- Dumped by pg_dump version 16.14
@@ -27886,7 +27886,10 @@ CREATE VIEW public.v_daily_kpi AS
             WHEN energy_ok THEN round((modeled_kwh)::numeric, 2)
             ELSE NULL::numeric
         END AS kwh,
-    round((COALESCE(therms_estimated, gas_used_therms))::numeric, 3) AS therms,
+        CASE
+            WHEN resource_ok THEN round((COALESCE(therms_estimated, gas_used_therms))::numeric, 3)
+            ELSE NULL::numeric
+        END AS therms,
         CASE
             WHEN water_ok THEN round((quality_filtered_meter_gal)::numeric, 0)
             ELSE NULL::numeric
@@ -27899,7 +27902,10 @@ CREATE VIEW public.v_daily_kpi AS
             WHEN energy_ok THEN round((cost_electric)::numeric, 2)
             ELSE NULL::numeric
         END AS cost_electric,
-    round((cost_gas)::numeric, 2) AS cost_gas,
+        CASE
+            WHEN resource_ok THEN round((cost_gas)::numeric, 2)
+            ELSE NULL::numeric
+        END AS cost_gas,
         CASE
             WHEN water_ok THEN round((cost_water)::numeric, 2)
             ELSE NULL::numeric
@@ -33445,7 +33451,10 @@ CREATE VIEW public.v_planner_performance AS
                     WHEN d.energy_ok THEN d.cost_electric
                     ELSE NULL::double precision
                 END AS cost_electric,
-            d.cost_gas,
+                CASE
+                    WHEN (d.water_ok AND d.energy_ok AND (d.cost_total IS NOT NULL)) THEN d.cost_gas
+                    ELSE NULL::double precision
+                END AS cost_gas,
                 CASE
                     WHEN d.water_ok THEN d.cost_water
                     ELSE NULL::double precision
@@ -60797,4 +60806,4 @@ GRANT INSERT ON TABLE public.twin_decisions TO twin_ro;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict kMpOEXhwsBBHpohPWbiYThkmjARkimicaVcoolyB936niHnZU6XvBdL2ABkXBfo
+\unrestrict UN5zcfRgFwprT4DyZc6XR9O3OKw6zsYSGglhjXLdvRLLsbv5BGs3HogbVTaL1qY
