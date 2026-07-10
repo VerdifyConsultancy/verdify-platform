@@ -69,15 +69,31 @@ async def build_operator_brief(
          LIMIT 1
         """
     )
-    unconfirmed = await conn.fetchval(
+    delivery_row = await conn.fetchrow(
         """
-        SELECT count(*)::int
+        SELECT count(*) FILTER (
+                   WHERE confirmed_at IS NULL
+                     AND COALESCE(delivery_status, 'pending') IN (
+                         'pending', 'requested', 'queued', 'retrying', 'sent',
+                         'deferred_heap_pressure'
+                     )
+               )::int AS in_flight,
+               count(*) FILTER (
+                   WHERE confirmed_at IS NOT NULL
+                      OR delivery_status = 'confirmed'
+               )::int AS confirmed,
+               count(*) FILTER (
+                   WHERE delivery_status IN ('failed', 'cancelled', 'superseded')
+               )::int AS terminal_unconfirmed
           FROM setpoint_changes
          WHERE COALESCE(source, '') <> 'esp32'
-           AND COALESCE(delivery_status, 'pending') = 'pending'
            AND ts > now() - interval '24 hours'
         """
     )
+    delivery = dict(delivery_row) if delivery_row else {}
+    in_flight = int(delivery.get("in_flight") or 0)
+    confirmed = int(delivery.get("confirmed") or 0)
+    terminal_unconfirmed = int(delivery.get("terminal_unconfirmed") or 0)
 
     heading = {
         "morning": "Morning greenhouse brief",
@@ -115,10 +131,15 @@ async def build_operator_brief(
     if recent_plan:
         lines.append(
             f"Planner: latest `{recent_plan['plan_id']}` from {recent_plan['created_at']:%m-%d %H:%M UTC}; "
-            f"unconfirmed setpoints: {unconfirmed or 0}"
+            f"setpoints in-flight: {in_flight}, confirmed: {confirmed}, "
+            f"terminal unconfirmed: {terminal_unconfirmed}"
         )
     else:
-        lines.append(f"Planner: no recent plan row; unconfirmed setpoints: {unconfirmed or 0}")
+        lines.append(
+            "Planner: no recent plan row; "
+            f"setpoints in-flight: {in_flight}, confirmed: {confirmed}, "
+            f"terminal unconfirmed: {terminal_unconfirmed}"
+        )
 
     if tasks:
         lines.append("*Due crop tasks:*")
@@ -143,6 +164,9 @@ async def build_operator_brief(
         "window_end": end_utc.isoformat(),
         "open_alerts": len(alerts),
         "due_tasks": len(tasks),
-        "unconfirmed_setpoints": unconfirmed or 0,
+        "setpoints_in_flight": in_flight,
+        "setpoints_confirmed": confirmed,
+        "setpoints_terminal_unconfirmed": terminal_unconfirmed,
+        "unconfirmed_setpoints": in_flight,
     }
     return "\n".join(lines), data

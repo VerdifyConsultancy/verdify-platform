@@ -59,7 +59,6 @@ from verdify_schemas import (
 )
 from verdify_schemas.tunable_registry import (
     CROP_BAND_REG,
-    FIRMWARE_V2_STAGED_REG,
     LEGACY_SHARED_LIGHTING_REG,
     LIGHTING_CIRCUIT_DEFAULT_REG,
     PLANNER_PUSHABLE_REG,
@@ -1288,23 +1287,13 @@ PLANNER_TRIGGER_MATRIX: dict[str, PlannerTriggerSpec] = {
 # remains perpetually NULL by design. The 52-param readback gap is
 # tracked as a Sprint 21 firmware follow-up.
 #
-# Band-anchor exclusion (data-path review, 2026-06-16): the 56 firmware-v2
-# band-anchor tunables (FIRMWARE_V2_STAGED_REG — band_*_{sr,sm,ss,mid},
-# zone_vpd_*, zone_priority_*, *_boost_offset_min, …) are *declared*
-# readbackable in CFG_READBACK_MAP (the firmware exposes a cfg_<anchor>
-# sensor for each), but those cfg sensors are gated `if (!cfg_first_pull_ok)
-# return NAN` AND have never published a value in prod history — so the
-# per-param confirmation loop can NEVER match them and the monitor raises a
-# guaranteed false-positive `setpoint_unconfirmed` critical on every push of
-# the set (e.g. the dispatcher reconnect force-push). They are not
-# fire-and-forget: the device's *resolved* band readback (band_house_*/
-# band_center_*, which DO flow) plus the v_band_device_divergence view are
-# the group-level confirmation that the anchors took effect. So exclude the
-# anchor set from the per-param monitor and confirm the band as a group.
-# Firmware follow-up: make cfg_<anchor> sensors actually publish (or drop
-# them) so per-param confirmation becomes possible again.
+# #433 repaired the prior band-anchor exclusion.  The sensors did publish, but
+# their ESPHome API object_ids were derived from display names with bullets and
+# units (for example ``cfg___band_temp_low_sr___f_``); the registry incorrectly
+# routed the C++ id form (``cfg_band_temp_low_sr``).  Exact generated wire IDs
+# now make every firmware-v2 anchor individually readbackable and confirmable.
 # ═════════════════════════════════════════════════════════════════
-_READBACKABLE_PARAMS: list[str] = sorted(set(CFG_READBACK_MAP.values()) - set(FIRMWARE_V2_STAGED_REG))
+_READBACKABLE_PARAMS: list[str] = sorted(set(CFG_READBACK_MAP.values()))
 
 
 # ═════════════════════════════════════════════════════════════════

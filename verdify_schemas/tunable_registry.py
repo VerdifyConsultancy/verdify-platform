@@ -2893,10 +2893,12 @@ REGISTRY: dict[str, TunableDef] = {
 # widths, zone priority ranks, and solar-anchored window/cadence params.
 #
 # STAGED: these rows are registered (and dispatcher-routed) AHEAD of the
-# firmware-v2 OTA that exposes the matching number entities. The wire contract
-# the firmware build targets:
+# firmware-v2 OTA that exposes the matching number entities. The write-side
+# service key stays canonical, but ESPHome derives each readback object_id from
+# the sensor's human ``name`` (not its C++ ``id``).  The bullet/unit characters
+# therefore produce deliberate repeated underscores on the API wire:
 #   esp_object_id          == the canonical tunable name
-#   cfg_readback_object_id == "cfg_" + the canonical tunable name
+#   cfg_readback_object_id == exact ESPHome slug of "Cfg • ... (unit)"
 # fw_clamp_lo/hi stay None until the entities exist in
 # firmware/greenhouse/tunables.yaml (the clamp drift guard only checks rows
 # with explicit clamps). All rows are push_owner="band": the dispatcher emits
@@ -2968,6 +2970,37 @@ _FW2_WINDOW_PARAMS: dict[str, tuple[float, float, float, str]] = {
 }
 
 
+def _esphome_wire_slug(display_name: str) -> str:
+    """Apply ESPHome's exact per-character object-id normalization.
+
+    ESPHome lowercases the display name and replaces every non-ASCII
+    alphanumeric character independently.  It does not collapse or trim the
+    resulting underscores.  This is intentionally stricter than a web-style
+    slugifier because ``Cfg • X (kPa)`` becomes ``cfg___x__kpa_`` on the API.
+    """
+    return "".join(char if char.isascii() and char.isalnum() else "_" for char in display_name.lower())
+
+
+def _fw2_cfg_display_name(name: str) -> str:
+    """Return the firmware sensor ``name:`` for one staged readback."""
+    unit: str | None = None
+    stem = name
+    if name.startswith("band_temp_"):
+        unit = "°F"
+    elif name.startswith(("band_vpd_", "zone_vpd_target_", "zone_vpd_width_")):
+        unit = "kPa"
+    elif name in _FW2_WINDOW_PARAMS:
+        stem = name.removesuffix("_min")
+        unit = "min"
+    label = stem.replace("_", " ").title()
+    return f"Cfg • {label}" + (f" ({unit})" if unit else "")
+
+
+def _fw2_cfg_wire_id(name: str) -> str:
+    """Canonical aioesphomeapi object_id for one firmware-v2 cfg sensor."""
+    return _esphome_wire_slug(_fw2_cfg_display_name(name))
+
+
 def _fw2_def(name: str, default: float, lo: float, hi: float, note: str) -> TunableDef:
     return TunableDef(
         name=name,
@@ -2978,7 +3011,7 @@ def _fw2_def(name: str, default: float, lo: float, hi: float, note: str) -> Tuna
         fw_clamp_lo=None,
         fw_clamp_hi=None,
         esp_object_id=name,
-        cfg_readback_object_id=f"cfg_{name}",
+        cfg_readback_object_id=_fw2_cfg_wire_id(name),
         push_owner="band",
         planner_pushable=False,
         tier=2,
@@ -3019,6 +3052,9 @@ assert not set(_FW2_STAGED_DEFS) & set(REGISTRY), "firmware-v2 staged names coll
 REGISTRY.update(_FW2_STAGED_DEFS)
 
 FIRMWARE_V2_STAGED_REG: frozenset[str] = frozenset(_FW2_STAGED_DEFS)
+FIRMWARE_V2_CFG_WIRE_IDS: dict[str, str] = {
+    name: _FW2_STAGED_DEFS[name].cfg_readback_object_id for name in sorted(FIRMWARE_V2_STAGED_REG)
+}
 
 
 # ─────────────────────────────────────────────────────────────────────────────

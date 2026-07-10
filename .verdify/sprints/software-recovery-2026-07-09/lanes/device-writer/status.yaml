@@ -1,22 +1,23 @@
 sprint_id: software-recovery-2026-07-09
 lane_id: device-writer
-state: NOT_STARTED
-updated_at: "2026-07-09T22:09:48Z"
-head_sha: 0a9a19a840be6bae1beba604497d880b3b74b1ef
-working_tree_clean: false
+state: READY_FOR_INTEGRATION
+updated_at: "2026-07-10T00:33:04Z"
+head_sha: e4e1c5901d2ce46400df65d9ced516bed25c0eb2
+integrated_validation_sha: a260e4258821fd14d87742180541a9ba196f1525
+controller_contract_sha: 07ad7e756d1caa5eb2c625a88796c999d8222fe8
+working_tree_clean: true
 acceptance:
-  passed: []
-  pending:
+  passed:
     - LANE-AC-01
     - LANE-AC-02
     - LANE-AC-03
     - LANE-AC-04
+  pending:
     - LANE-AC-05
   failed: []
 blockers:
-  - The assigned feature worktree does not yet exist and must be created from the approved baseline before dispatch.
+  - LANE-AC-05 requires the controller-owned exact-digest two-hour production window.
 decisions_requested: []
 next_actions:
-  - Create the contracted branch/worktree from the approved baseline.
-  - Reconstruct the lane from the common contract and lane.yaml.
-  - Implement and validate issue #433 without production mutation.
+  - Hand PR 442 to integration/release control without self-merging.
+  - Keep LANE-AC-05 pending until post-deployment evidence exists.

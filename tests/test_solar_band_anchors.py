@@ -174,11 +174,13 @@ class TestAnchorContract:
         assert set(band_anchors.ANCHOR_SYNC_PARAMS) == set(FIRMWARE_V2_STAGED_REG)
 
     def test_registry_wire_contract(self):
-        """Firmware v2 is built against object_id == name + cfg_<name> readback."""
+        """Writes use canonical names; readbacks use exact ESPHome wire slugs."""
+        from verdify_schemas.tunable_registry import FIRMWARE_V2_CFG_WIRE_IDS
+
         for name in band_anchors.ANCHOR_SYNC_PARAMS:
             spec = REGISTRY[name]
             assert spec.esp_object_id == name
-            assert spec.cfg_readback_object_id == f"cfg_{name}"
+            assert spec.cfg_readback_object_id == FIRMWARE_V2_CFG_WIRE_IDS[name]
             assert spec.push_owner == "band"
             assert spec.planner_pushable is False, f"{name} must not be planner-authorable"
 
