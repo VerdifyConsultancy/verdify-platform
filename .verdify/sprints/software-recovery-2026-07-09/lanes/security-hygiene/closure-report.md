@@ -48,13 +48,15 @@ is present in this record.
 
 ## Independent follow-ups
 
-- `verdify-setpoint-server` has a pre-existing `/setpoints` diagnostic-path bug:
+- `verdify-setpoint-server` has a pre-existing `/setpoints` diagnostic-path bug
+  tracked in [#447](https://github.com/VerdifyConsultancy/verdify-platform/issues/447):
   it selects the legacy Docker psql backend inside k3s. Its service health, DB
   pool, and direct database read all passed, so this did not block the credential
   cutover; it must be tracked separately.
 - The two pre-existing critical planner alerts remain open and continue to block
   firmware OTA until the planner lane produces a valid terminal action.
-- Vision image-pull repair remains outside this security lane.
+- Vision image-pull repair remains outside this security lane and is tracked in
+  [#436](https://github.com/VerdifyConsultancy/verdify-platform/issues/436).
 
 ## Immutable references and rollback
 

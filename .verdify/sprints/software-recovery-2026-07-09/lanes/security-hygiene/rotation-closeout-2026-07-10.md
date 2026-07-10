@@ -57,8 +57,9 @@ device writer exists.
 | Vision | none | not run | suspended |
 
 Vision remains suspended because its prior ImagePullBackOff is independent of
-the rotation. The failed old Vision Job was removed before the rotation and was
-not recreated.
+the rotation and is tracked in
+[#436](https://github.com/VerdifyConsultancy/verdify-platform/issues/436). The
+failed old Vision Job was removed before the rotation and was not recreated.
 
 ## Residuals and cleanup
 
@@ -67,7 +68,8 @@ not recreated.
 - API, lab, and graphs public health endpoints returned HTTP `200`.
 - The setpoint-server `/setpoints` endpoint still selects the retired Docker
   psql backend inside k3s and returns 500, while its async DB pool, health probe,
-  and direct database read pass. This is a separate software issue, not a
-  credential-rotation failure.
+  and direct database read pass. This is a separate software issue tracked in
+  [#447](https://github.com/VerdifyConsultancy/verdify-platform/issues/447), not
+  a credential-rotation failure.
 - The temporary SOPS age-key copy at the laptop operator boundary was removed
   with secure deletion after acceptance completed.
