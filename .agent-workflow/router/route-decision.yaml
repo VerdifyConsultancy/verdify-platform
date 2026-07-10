@@ -2,36 +2,27 @@
 schema_ref: route-decision.schema.yaml
 kind: RouteDecision
 schema_version: '1.0'
-generated_at: '2026-07-09T22:40:00Z'
+generated_at: '2026-07-10T04:59:56Z'
 repository: VerdifyConsultancy/verdify-platform
 current_state: EXECUTION_FALLBACK_READY
 next_skill: sprint-orchestrator
 next_mode: local-fallback-dispatch
 reason: >-
-  Project, architecture, strategy, hygiene, sprint, lane, controller, and
-  platform-readiness artifacts are current. Native Agent Platform lane
-  isolation is blocked, but the approved sprint-scoped isolated local-worktree
-  fallback can proceed after the controller/security baseline is reviewed and
-  merged.
+  Resource accounting is merged and DLI availability is dependency-ready. The
+  open production database credential-rotation gate blocks release mutation,
+  but its recorded authority boundary does not block the approved source-only,
+  production-read-only DLI lane.
 evidence:
-- source: ".agent-workflow/intake/transcript-replan.yaml"
-  finding: transcript-replan status is "routed"
-- source: ".agent-workflow/northstar/evidence-registry.yaml"
-  finding: registered North Star evidence count is 4
-- source: ".agent-workflow/northstar/northstar-plan.yaml"
-  finding: northstar-plan status is "approved"
-- source: ".agent-workflow/northstar/northstar-artifacts.yaml"
-  finding: northstar-artifacts status is "approved"
-- source: ".agent-workflow/strategy/state-of-union.yaml"
-  finding: state-of-union status is "approved"
-- source: ".agent-workflow/hygiene/repo-hygiene.yaml"
-  finding: repo-hygiene status is "blocked" only on the protected production credential-rotation gate; local source implementation may proceed
-- source: ".agent-workflow/platform/platform-readiness.yaml"
-  finding: native platform status is "not_ready" because dynamic worktree operations are disabled
+- source: ".agent-workflow/sprints/software-recovery-2026-07-09/status.yaml"
+  finding: approved sprint is implementing and names dli-availability as the next dependency-ready lane
+- source: ".verdify/sprints/software-recovery-2026-07-09/lanes/resource-accounting/status.yaml"
+  finding: resource-accounting is complete at merged main a2060adabef37398f02c3b9db84995347d86649b
+- source: ".verdify/sprints/software-recovery-2026-07-09/lanes/dli-availability/status.yaml"
+  finding: dli-availability is ready from main and migration 195 is available
+- source: ".agent-workflow/hygiene/gates/g-prod-db-credential-rotation.yaml"
+  finding: protected credential rotation remains open and blocks production release mutation
 - source: ".agent-workflow/sprints/software-recovery-2026-07-09/gates/g-local-dispatch-fallback.yaml"
   finding: isolated local Codex worktree fallback is approved for this sprint
-- source: ".agent-workflow/sprints/software-recovery-2026-07-09/status.yaml"
-  finding: sprint status is "READY" for controller-baseline review and fallback execution
 missing_artifacts: []
 open_gates:
 - g-prod-db-credential-rotation-20260709

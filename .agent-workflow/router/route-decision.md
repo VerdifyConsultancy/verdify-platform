@@ -1,15 +1,20 @@
 # Route decision
 
-- Current state: `REPO_HYGIENE_MISSING`
-- Next skill: `repo-hygiene`
-- Next mode: `assess`
+- Current state: `EXECUTION_FALLBACK_READY`
+- Next skill: `sprint-orchestrator`
+- Next mode: `local-fallback-dispatch`
 
-Approved strategy is ready for sprint planning, but Wave 0 repo hygiene is missing.
+Resource accounting is merged, so DLI availability is now dependency-ready.
+The open production database credential-rotation gate still blocks release
+mutation, but it does not block the approved source-only, production-read-only
+DLI lane. Dispatch remains on the sprint-scoped isolated local-worktree
+fallback because native Agent Platform worktree creation is unavailable.
 
 ## Missing artifacts
 
-- .agent-workflow/hygiene/repo-hygiene.yaml
+None.
 
 ## Open gates
 
-None.
+- `g-prod-db-credential-rotation-20260709` — blocks production release mutation;
+  it does not authorize or prevent the next source-only lane.
