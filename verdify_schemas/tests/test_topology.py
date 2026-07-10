@@ -6,6 +6,8 @@ fields, and cross-module composition of the new topology layer.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
 import pytest
 from pydantic import ValidationError
 
@@ -15,10 +17,12 @@ from verdify_schemas import (
     CropProfileHour,
     CropStageTarget,
     Equipment,
+    EquipmentAlias,
     EquipmentCreate,
     Greenhouse,
     PositionCreate,
     PressureGroupCreate,
+    ResourceCoefficient,
     Sensor,
     SensorCreate,
     ShelfCreate,
@@ -227,6 +231,48 @@ class TestEquipment:
             name="Exhaust Fan 1",
         )
         assert e.is_active is True
+
+    def test_alias_and_resource_coefficient_contracts(self):
+        now = datetime.now(UTC)
+        alias = EquipmentAlias(
+            greenhouse_id="vallery",
+            alias_slug="gl1",
+            equipment_id=1,
+            alias_kind="legacy_catalog",
+            source="migration_193",
+            evidence_ref="issue:#437",
+            valid_from=now,
+        )
+        coefficient = ResourceCoefficient(
+            equipment_id=1,
+            resource_kind="electric_watts",
+            unit="W",
+            nominal_value=113,
+            lower_bound=102,
+            upper_bound=124,
+            coefficient_source="meter_fit",
+            revision="meter_fit_2026_07_09",
+            evidence_ref="issue:#437",
+            valid_from=now,
+            is_model_default=True,
+        )
+        assert alias.alias_slug == "gl1"
+        assert coefficient.lower_bound < coefficient.nominal_value < coefficient.upper_bound
+
+    def test_resource_coefficient_rejects_false_precision_bounds(self):
+        with pytest.raises(ValidationError):
+            ResourceCoefficient(
+                equipment_id=1,
+                resource_kind="electric_watts",
+                unit="W",
+                nominal_value=113,
+                lower_bound=124,
+                upper_bound=130,
+                coefficient_source="meter_fit",
+                revision="bad",
+                evidence_ref="fixture",
+                valid_from=datetime.now(UTC),
+            )
 
 
 class TestSwitch:
