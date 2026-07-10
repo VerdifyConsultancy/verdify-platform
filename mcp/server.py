@@ -96,6 +96,10 @@ if _env_path.exists():
 # in-cluster Postgres endpoint moves this service off the VM with no code change.
 # Default below preserves the live VM connection (localhost:5432).
 DB_DSN = os.environ.get("DB_DSN", f"postgresql://verdify:{_db_pass}@localhost:5432/verdify")
+MCP_DB_STATEMENT_TIMEOUT_MS = max(
+    1000,
+    int(os.environ.get("VERDIFY_MCP_DB_STATEMENT_TIMEOUT_MS", "15000")),
+)
 # Legacy planner.py removed — planning runs via iris_planner.py → Hermes /v1/runs
 BAND_OWNED_PARAMS = BAND_OWNED_REG
 # P1a (B6): the crop temp/VPD band targets (temp_low/high, vpd_low/high, per-zone
@@ -299,7 +303,17 @@ HERMES_REQUIRED_TOOLS = frozenset(
 
 
 async def _db() -> asyncpg.Connection:
-    return await asyncpg.connect(DB_DSN)
+    # Hermes's MCP client timeout is intentionally longer than the database
+    # query budget. A server-side fence prevents a timed-out tool call from
+    # leaving a PostgreSQL backend consuming memory until it reaches a send
+    # boundary.
+    return await asyncpg.connect(
+        DB_DSN,
+        server_settings={
+            "application_name": "verdify-mcp",
+            "statement_timeout": f"{MCP_DB_STATEMENT_TIMEOUT_MS}ms",
+        },
+    )
 
 
 def _custom_route(path: str, *, methods: list[str]):
@@ -536,7 +550,17 @@ async def scorecard(target_date: str = "") -> str:
             d = datetime.strptime(target_date, "%Y-%m-%d").date()
         else:
             d = await conn.fetchval("SELECT (now() AT TIME ZONE 'America/Denver')::date")
-        rows = await conn.fetch("SELECT * FROM fn_planner_scorecard($1::date)", d)
+        try:
+            rows = await conn.fetch("SELECT * FROM fn_planner_scorecard($1::date)", d)
+        except asyncpg.QueryCanceledError:
+            return _json(
+                {
+                    "availability": "unavailable",
+                    "reason": "db_statement_timeout",
+                    "query_budget_ms": MCP_DB_STATEMENT_TIMEOUT_MS,
+                    "guidance": "Do not infer zero performance; continue from fresh climate and forecast evidence.",
+                }
+            )
         try:
             sc = ScorecardResponse.from_metric_rows(rows)
         except ValidationError as e:
@@ -1774,8 +1798,9 @@ async def forecast(hours: int = 72) -> str:
         return json.dumps({"error": "hours must be an integer between 1 and 168"})
     conn = await _db()
     try:
-        rows = await conn.fetch(
-            """
+        try:
+            rows = await conn.fetch(
+                """
             SELECT to_char(ts AT TIME ZONE 'America/Denver', 'Dy HH24:MI') as time,
                    round(temp_f::numeric,0) as temp, round(rh_pct::numeric,0) as rh,
                    round(vpd_kpa::numeric,2) as vpd, round(cloud_cover_pct::numeric,0) as cloud,
@@ -1789,9 +1814,18 @@ async def forecast(hours: int = 72) -> str:
             ) sub
             ORDER BY ts
             LIMIT $1
-            """,
-            hours,
-        )
+                """,
+                hours,
+            )
+        except asyncpg.QueryCanceledError:
+            return _json(
+                {
+                    "availability": "unavailable",
+                    "reason": "db_statement_timeout",
+                    "query_budget_ms": MCP_DB_STATEMENT_TIMEOUT_MS,
+                    "guidance": "Do not infer benign weather from an unavailable forecast.",
+                }
+            )
         validated = [ForecastSummaryRow.model_validate(dict(r)).model_dump(mode="json") for r in rows]
         return json.dumps(validated)
     finally:

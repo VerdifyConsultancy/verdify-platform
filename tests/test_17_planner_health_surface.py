@@ -551,6 +551,28 @@ async def test_mcp_readiness_recovers_after_prolonged_db_refusal(mcp_server, mon
 
 
 @pytest.mark.asyncio
+async def test_mcp_db_connections_enforce_server_side_query_budget(mcp_server, monkeypatch):
+    captured: dict[str, object] = {}
+    connection = object()
+
+    async def connect(dsn, **kwargs):
+        captured["dsn"] = dsn
+        captured.update(kwargs)
+        return connection
+
+    monkeypatch.setattr(mcp_server.asyncpg, "connect", connect)
+    result = await mcp_server._db()
+
+    assert result is connection
+    assert captured["dsn"] == mcp_server.DB_DSN
+    assert captured["server_settings"] == {
+        "application_name": "verdify-mcp",
+        "statement_timeout": f"{mcp_server.MCP_DB_STATEMENT_TIMEOUT_MS}ms",
+    }
+    assert mcp_server.MCP_DB_STATEMENT_TIMEOUT_MS == 15000
+
+
+@pytest.mark.asyncio
 async def test_required_set_plan_rejects_set_tunable_without_writing_a_waypoint(mcp_server, monkeypatch):
     connection = _RequiredTunableConnection()
 
