@@ -1,10 +1,17 @@
 # Verdify application database credential rotation runbook
 
-Status: **BLOCKED** by `g-prod-db-credential-rotation-20260709`.
+Status: **COMPLETE**. Gate `g-prod-db-credential-rotation-20260709` was
+approved as `rotate-now` and the runbook completed on 2026-07-10.
 
 Owner: Jason Vallery, with the controller executing only after an explicit `rotate-now` decision.
 
 Scope: rotate only `verdify-app-secrets.POSTGRES_PASSWORD` and the existing PostgreSQL `verdify` role; preserve every unrelated key.
+
+Execution evidence: `.verdify/sprints/software-recovery-2026-07-09/lanes/security-hygiene/rotation-closeout-2026-07-10.md`
+at controller evidence commit `ecb987f`. The replacement passed new-valid and
+old-invalid proof, all healthy consumers accepted it, and rollback was not used.
+This status records the completed execution; the hard stops and sequence below
+remain the authoritative procedure for any future rotation.
 
 ## Hard stops
 
