@@ -228,10 +228,14 @@ about pre-change behavior.
   (center=Vanda 0.60, east=food 0.40). ADR-0004 changes how to use it: treat it as
   a corridor/outcome guard, not as permission to chase the target line. A good day
   is high served-corridor time, low controller-attributable edge misses, acceptable
-  dew margin, and stable daily integrals. `dev_temp_norm_*` and `dev_vpd_*` remain
+  dew margin, and stable DLI-independent lighting behavior. Interior crop DLI is
+  explicitly unavailable while the physical sensor is broken; do not infer it
+  from outdoor irradiance, fixture runtime, or legacy proxy history, and do not
+  make a DLI-dependent recommendation or score. `dev_temp_norm_*` and `dev_vpd_*` remain
   diagnostics of where the air sat relative to the target reference; do **not**
   drive them toward 0 when temp/VPD are inside the crop corridor. The outcome/KPI
-  lane will replace this with served-vs-pinched compliance, DLI/DIF, water, runtime,
+  outcome surfaces add served-vs-pinched compliance, explicit DLI unavailability,
+  DIF, provenance-gated water/energy, runtime,
   cycle, dew-margin, and solar-phase buckets; until then, read the existing score
   through ADR-0004.
 - **20% Cost efficiency** — daily utility spend plus water/wear context. <$5/day =
@@ -510,11 +514,11 @@ Use tactical knobs below to shift behavior instead.
 **Lighting policy (schedule-layer owned; main/overhead + grow/secondary circuits):**
 The light window also mirrors into the global activity window above, so moving
 these moves clean/fert wetting timing too. Iris normally leaves lighting to the
-schedule layer; touch it only for a deliberate photoperiod/DLI change, not for
+schedule layer; touch it only for a deliberate photoperiod or qualified-minute change, not for
 short-term climate stress. Both circuits share the same parameter shape:
 - `gl_main_sunrise_hour`, `gl_grow_sunrise_hour` local hour, [0-23], def 7 — earliest hour the circuit may turn on.
 - `gl_main_sunset_hour`, `gl_grow_sunset_hour` local hour, [0-23], def 19 — latest hour the circuit may stay on.
-- `gl_main_target_light_minutes`, `gl_grow_target_light_minutes` min/day, [0-1080], def 960 — daily qualified-light-minutes target (a minute counts when outdoor lux is above threshold OR the switch is on); this is the photoperiod/DLI lever.
+- `gl_main_target_light_minutes`, `gl_grow_target_light_minutes` min/day, [0-1080], def 960 — daily qualified-light-minutes target (a minute counts when outdoor lux is above threshold OR the switch is on); this is a DLI-independent photoperiod/runtime lever.
 - `gl_main_lux_threshold`, `gl_grow_lux_threshold` lux, [100-100000], def 40000 — outdoor lux above which the circuit turns ON.
 - `gl_main_lux_hysteresis`, `gl_grow_lux_hysteresis` lux, [0-25000], def 8000 — OFF threshold sits this far above the ON threshold to prevent flicker.
 - `gl_main_min_on_s`, `gl_grow_min_on_s` s, [0-3600], def 120 — minimum ON dwell for the lighting state machine.

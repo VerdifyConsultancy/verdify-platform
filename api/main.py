@@ -93,6 +93,7 @@ from verdify_schemas import (  # noqa: E402
     ZoneListItem,
 )
 from verdify_schemas.mcp_responses import ScorecardResponse  # noqa: E402
+from verdify_schemas.telemetry import DliEvidence  # noqa: E402
 from verdify_schemas.tunable_registry import (  # noqa: E402
     CROP_BAND_REG,
     LEGACY_SHARED_LIGHTING_REG,
@@ -1443,6 +1444,48 @@ async def planner_scorecard(scorecard_date: Annotated[date | None, Query(alias="
         known = ScorecardResponse.metric_names()
         kept = [r for r in rows if str(r["metric"]) in known]
         return ScorecardResponse.from_metric_rows(kept)
+
+
+@app.get("/api/v1/dli", response_model=DliEvidence)
+@app.get("/api/v1/greenhouses/{greenhouse_id}/dli", response_model=DliEvidence)
+async def get_dli_evidence(greenhouse_id: str = DEFAULT_GREENHOUSE):
+    """Return interior crop DLI with explicit validity and provenance.
+
+    The current sensor is broken, so this intentionally returns a null value
+    and ``availability=unavailable``. Legacy proxy numbers remain forensic in
+    the database and are never projected through this product endpoint.
+    """
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            SELECT crop_dli_mol_m2_day AS value_mol_m2_day,
+                   availability,
+                   unavailable_reason,
+                   provenance,
+                   validity_revision,
+                   valid_from,
+                   valid_to
+            FROM v_dli_current
+            WHERE greenhouse_id = $1
+            """,
+            greenhouse_id,
+        )
+        if row is None:
+            row = await conn.fetchrow(
+                """
+                SELECT NULL::double precision AS value_mol_m2_day,
+                       COALESCE(availability, 'unavailable') AS availability,
+                       COALESCE(unavailable_reason, 'validity_contract_missing') AS unavailable_reason,
+                       COALESCE(provenance, 'unknown_unvalidated_source') AS provenance,
+                       COALESCE(validity_revision, 'missing') AS validity_revision,
+                       COALESCE(valid_from, '2024-01-01 00:00:00+00'::timestamptz) AS valid_from,
+                       valid_to
+                FROM (SELECT 1) anchor
+                LEFT JOIN LATERAL fn_dli_validity(now(), $1) ON true
+                """,
+                greenhouse_id,
+            )
+    return DliEvidence.model_validate(dict(row))
 
 
 @app.get("/api/v1/resources/daily")

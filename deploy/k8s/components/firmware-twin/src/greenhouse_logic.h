@@ -1278,6 +1278,23 @@ inline float lighting_dli_increment(
     return natural_dli + supplemental_dli_per_hour * std::max(0.0f, dt_s) / 3600.0f;
 }
 
+inline DliEvidence interior_dli_evidence(float /*forensic_proxy_accumulator*/) noexcept {
+    // ADR-008 / #435: no arithmetic or outdoor proxy can repair a broken
+    // interior sensor.  Keep the internal accumulator only for forensics and
+    // publish an unavailable value until a new operator-validated revision is
+    // implemented.  NAN maps to an unavailable ESPHome numeric sensor state;
+    // the companion text sensors carry the full reason/provenance contract.
+    return {
+        .value_mol_m2_day = NAN,
+        .available = false,
+        .unavailable_reason = "interior_light_sensor_broken",
+        .provenance = "legacy_invalid_exterior_proxy_plus_fixture_estimate",
+        .validity_revision = "dli-validity-v1",
+        .valid_from = "2024-01-01T00:00:00Z",
+        .valid_to = "open",
+    };
+}
+
 inline LightingDecision evaluate_lighting(
     const LightingInputs& in,
     LightingSetpoints sp,

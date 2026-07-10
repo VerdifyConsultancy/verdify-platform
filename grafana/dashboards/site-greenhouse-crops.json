@@ -1593,7 +1593,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "verdify-tsdb"
       },
-      "description": "Shows how badly the current lux sensor underreports actual plant light, relative to a corrected estimate and the target DLI line.",
+      "description": "Interior crop DLI is unavailable because the physical sensor is broken. No outdoor proxy or correction is presented as crop evidence.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1740,7 +1740,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT date_trunc('day', ts) AS time, max(dli_today) AS \"Sensor DLI\" FROM climate WHERE ts > now() - interval '90 days' GROUP BY 1 ORDER BY 1",
+          "rawSql": "SELECT now() AS time, initcap(availability) || ' — ' || unavailable_reason AS \"Interior DLI\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
           "refId": "A",
           "sql": {
             "columns": [
@@ -1768,7 +1768,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT date_trunc('day', ts) AS time, max(dli_today) * 3.2 AS \"Estimated Actual DLI\" FROM climate WHERE ts > now() - interval '90 days' GROUP BY 1 ORDER BY 1",
+          "rawSql": "SELECT now() AS time, provenance || ' · ' || validity_revision AS \"DLI Provenance\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
           "refId": "B",
           "sql": {
             "columns": [
@@ -1796,7 +1796,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT date_trunc('day', ts) AS time, 14.0 AS \"Target DLI\" FROM climate WHERE ts > now() - interval '90 days' GROUP BY 1 ORDER BY 1",
+          "rawSql": "SELECT now() AS time, valid_from::text || ' → ' || COALESCE(valid_to::text, 'open') AS \"DLI Validity\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
           "refId": "C",
           "sql": {
             "columns": [
@@ -1817,7 +1817,7 @@
           }
         }
       ],
-      "title": "Sensor DLI vs Estimated Actual DLI",
+      "title": "Interior DLI — Unavailable",
       "type": "timeseries",
       "transparent": true
     },

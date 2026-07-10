@@ -24,6 +24,7 @@ from typing import Any, Literal
 from pydantic import AwareDatetime, BaseModel, ConfigDict, Field
 
 from .lessons import LessonConfidence
+from .telemetry import DliEvidence
 
 
 class ClimateSnapshot(BaseModel):
@@ -181,7 +182,7 @@ class OutcomeKpiCoverage(BaseModel):
     dew_margin: OutcomeMetricStatus = "available"
     water_use: OutcomeMetricStatus = "available"
     resource_accounting: OutcomeMetricStatus = "available"
-    dli: OutcomeMetricStatus = "available"
+    dli: OutcomeMetricStatus = "unavailable"
     dif: OutcomeMetricStatus = "available"
     solar_phase_buckets: OutcomeMetricStatus = "available"
     moisture_estimator: OutcomeMetricStatus = "pending"
@@ -221,7 +222,7 @@ class OutcomeKpiResponse(BaseModel):
     actuator_cycles: dict[str, int | None] = Field(default_factory=dict)
     actuator_runtime: dict[str, float | None] = Field(default_factory=dict)
     water_use_gal: dict[str, float | None] = Field(default_factory=dict)
-    dli: dict[str, float | int | None] = Field(default_factory=dict)
+    dli: DliEvidence
     dif: dict[str, float | int | None] = Field(default_factory=dict)
     dew_margin: dict[str, float | None] = Field(default_factory=dict)
     energy_cost: dict[str, float | None] = Field(default_factory=dict)

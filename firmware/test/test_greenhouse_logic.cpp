@@ -4530,6 +4530,33 @@ TEST(lighting_dli_increment_out_of_service_suppresses_supplemental) {
     PASS();
 }
 
+TEST(lighting_dli_increment_is_elapsed_time_invariant) {
+    // A jittery ~1 s loop must integrate exactly the same evidence as one
+    // coarse interval covering the same elapsed time.  This closes the old
+    // hard-coded 5 s credit on a ~1 s controller loop.
+    float irregular = 0.0f;
+    irregular += lighting_dli_increment(12500.0f, 80000.0f, true, false, 0.73f);
+    irregular += lighting_dli_increment(12500.0f, 80000.0f, true, false, 1.41f);
+    irregular += lighting_dli_increment(12500.0f, 80000.0f, true, false, 2.86f);
+    float combined = lighting_dli_increment(12500.0f, 80000.0f, true, false, 5.0f);
+    ASSERT_TRUE(std::fabs(irregular - combined) < 0.000001f);
+    PASS();
+}
+
+TEST(interior_dli_evidence_is_unavailable_without_valid_sensor) {
+    auto evidence = interior_dli_evidence(79.0f);
+    ASSERT_TRUE(std::isnan(evidence.value_mol_m2_day));
+    ASSERT_FALSE(evidence.available);
+    ASSERT_EQ(std::string(evidence.unavailable_reason), "interior_light_sensor_broken");
+    ASSERT_EQ(
+        std::string(evidence.provenance),
+        "legacy_invalid_exterior_proxy_plus_fixture_estimate");
+    ASSERT_EQ(std::string(evidence.validity_revision), "dli-validity-v1");
+    ASSERT_EQ(std::string(evidence.valid_from), "2024-01-01T00:00:00Z");
+    ASSERT_EQ(std::string(evidence.valid_to), "open");
+    PASS();
+}
+
 // #295: an out_of_service circuit's switch-ON time must NOT accrue qualified
 // light minutes (so a dark fixture cannot "meet" the photoperiod on paper).
 // Natural lux above threshold still counts — it is real, fixture-independent.

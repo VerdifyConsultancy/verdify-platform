@@ -88,14 +88,25 @@ def render_markdown(row: dict) -> str:
         tags=["daily", "greenhouse"],
         temp_avg=_round(row.get("temp_avg")),
         vpd_avg=_round(row.get("vpd_avg"), 2),
-        dli=_round(row.get("dli_final")),
+        # Preserve the frontmatter key for compatibility, but source it only
+        # from the availability-gated product view (NULL while invalid).
+        dli=_round(row.get("dli_product_value")),
+        dli_availability=row.get("dli_availability") or "unavailable",
+        dli_unavailable_reason=row.get("dli_unavailable_reason") or "validity_contract_missing",
+        dli_provenance=row.get("dli_provenance") or "unknown_unvalidated_source",
+        dli_validity_revision=row.get("dli_validity_revision") or "missing",
+        dli_valid_from=str(row.get("dli_valid_from") or "2024-01-01T00:00:00Z"),
+        dli_valid_to=str(row.get("dli_valid_to") or "open"),
         cost_total=f"${float(cost_total):.2f}" if cost_total is not None else None,
         water_gal=int(row["water_used_gal"]) if row.get("water_used_gal") is not None else None,
         stress_vpd_h=_round(row.get("stress_hours_vpd_high")),
         stress_heat_h=_round(row.get("stress_hours_heat")),
     )
+    frontmatter = fm.model_dump(mode="json", exclude_none=True)
+    # Stable Dataview key, now explicitly null rather than omitted or zero.
+    frontmatter["dli"] = None
     yaml_block = yaml.safe_dump(
-        fm.model_dump(mode="json", exclude_none=True),
+        frontmatter,
         sort_keys=False,
         default_flow_style=None,
     )
@@ -123,7 +134,13 @@ def render_markdown(row: dict) -> str:
         f"| VPD (kPa) | {fmt(row.get('vpd_min'), decimals=2)} | {fmt(row.get('vpd_avg'), decimals=2)} | {fmt(row.get('vpd_max'), decimals=2)} |"
     )
     lines.append("")
-    lines.append(f"- **DLI:** {fmt(row.get('dli_final'))} mol/m²/d")
+    lines.append("- **Interior crop DLI:** unavailable")
+    lines.append(f"  - Reason: `{row.get('dli_unavailable_reason') or 'validity_contract_missing'}`")
+    lines.append(f"  - Provenance: `{row.get('dli_provenance') or 'unknown_unvalidated_source'}`")
+    lines.append(
+        f"  - Validity: `{row.get('dli_validity_revision') or 'missing'}`; "
+        f"{row.get('dli_valid_from') or '2024-01-01T00:00:00Z'} → {row.get('dli_valid_to') or 'open'}"
+    )
     lines.append(f"- **CO₂:** {fmt(row.get('co2_avg'), decimals=0)} ppm")
     lines.append("")
 
@@ -191,7 +208,24 @@ def render_markdown(row: dict) -> str:
 
 
 async def write_day(conn, target_date: date) -> bool:
-    row = await conn.fetchrow("SELECT * FROM daily_summary WHERE date = $1", target_date)
+    row = await conn.fetchrow(
+        """
+        SELECT ds.*,
+               d.crop_dli_mol_m2_day AS dli_product_value,
+               d.availability AS dli_availability,
+               d.unavailable_reason AS dli_unavailable_reason,
+               d.provenance AS dli_provenance,
+               d.validity_revision AS dli_validity_revision,
+               d.valid_from AS dli_valid_from,
+               d.valid_to AS dli_valid_to
+        FROM daily_summary ds
+        LEFT JOIN v_dli_daily d
+          ON d.date = ds.date
+         AND d.greenhouse_id = COALESCE(ds.greenhouse_id, 'vallery')
+        WHERE ds.date = $1
+        """,
+        target_date,
+    )
     if not row or row.get("temp_avg") is None:
         log.warning("No data for %s — skipping", target_date)
         return False
