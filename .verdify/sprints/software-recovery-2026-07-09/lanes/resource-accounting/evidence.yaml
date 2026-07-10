@@ -1,6 +1,120 @@
 sprint_id: software-recovery-2026-07-09
 scope_id: resource-accounting
-revision: 0a9a19a840be6bae1beba604497d880b3b74b1ef
+revision: a3aa154
 environment: null
-generated_at: "2026-07-09T22:10:43Z"
-items: []
+generated_at: "2026-07-10T03:21:40Z"
+items:
+  - id: EVI-RA-001
+    type: TEST
+    status: PASS
+    source: serialized migration classification, rollback proof, idempotence, and fixed SQL fixtures
+    command: >-
+      check_migration_rollback_safety.py --rollback-wrap for migrations 193-194;
+      outer BEGIN/ROLLBACK replay against an origin/main disposable database;
+      execute test-193 and test-194 with ON_ERROR_STOP=1
+    timestamp: "2026-07-10T03:21:40Z"
+    revision: a3aa154
+    environment: disposable timescale/timescaledb:latest-pg16
+    result: >-
+      Both migrations are non-self-transactional, safe to wrap, idempotent, and
+      rollback cleanly. Fixtures prove zero missing/multiply-resolved active
+      slugs, preserved legacy lighting aliases, bounded coefficient provenance,
+      catch-up/rerun/reset/gap/staleness behavior, 6-gallon exact conservation
+      (2 attributed + 2 ambiguous + 2 manual), null gallons for command-only
+      runs, and separate 0.102/0.113/0.124 modeled versus 2.392 partial-meter kWh.
+    artifact_location: db/migrations/tests
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
+    limitations: [No production migration was applied.]
+
+  - id: EVI-RA-002
+    type: RUNTIME_PROBE
+    status: PASS
+    source: read-only production baseline plus production-shaped local replay
+    command: >-
+      read-only prod equipment/water/energy exports into disposable resource437;
+      run materialize_water_meter_events and bounded resource views locally
+    timestamp: "2026-07-10T03:21:40Z"
+    revision: a3aa154
+    environment: verdify-prod read-only plus disposable local TimescaleDB
+    result: >-
+      Production baseline had current raw water at 2026-07-10T03:09Z but ledger
+      events stopped 2026-05-01. The local replay ingested 107,467 raw meter
+      samples, 97,033 equipment rows, and 21,080 energy samples. One-time catch-up
+      produced 20,544 audited events in 21.5 seconds and status=fresh; idempotent
+      rerun processed 0 rows in 0.1 seconds. Daily water queries complete in
+      about 0.3 seconds and energy reconciliation in about 0.03 seconds.
+    artifact_location: docs/handoff/resource-accounting-2026-07-10.md
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
+    limitations:
+      - Existing telemetry only; no new meter or sensor was installed.
+      - One-gallon totalizer resolution creates legitimate ambiguous and command-only evidence.
+
+  - id: EVI-RA-003
+    type: TEST
+    status: PASS
+    source: focused Python, schema, API/MCP, dashboard, and renderer contracts
+    command: >-
+      make lint; pytest -q topology, fidelity, lab-site-followup, and
+      TestResourceAccountingContractSources; compileall; json.tool; git diff --check
+    timestamp: "2026-07-10T03:21:40Z"
+    revision: a3aa154
+    environment: Jason laptop worktree
+    result: >-
+      Ruff, focused tests, typed schema validation, Python compilation, dashboard
+      JSON parsing, generated ConfigMap parity, and diff integrity all pass.
+      Static guards reject equipment_assets reads, raw max-minus-min fallback,
+      unlabeled scope collapse, and missing minute-cadence materializer wiring.
+    artifact_location: tests and verdify_schemas/tests
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
+    limitations: []
+
+  - id: EVI-RA-004
+    type: TEST
+    status: PASS
+    source: complete schema snapshot restore
+    command: psql -v ON_ERROR_STOP=1 -f db/schema.sql against a fresh disposable database
+    timestamp: "2026-07-10T03:21:40Z"
+    revision: a3aa154
+    environment: disposable resource437_restore TimescaleDB
+    result: >-
+      Fresh schema restored cleanly and exposes resource_coefficients,
+      v_water_attribution_daily, v_runtime_energy_daily, and
+      materialize_water_meter_events(text,timestamptz).
+    artifact_location: db/schema.sql
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
+    limitations: []
+
+  - id: EVI-RA-005
+    type: TEST
+    status: WARNING
+    source: required monolithic repository test command
+    command: make test
+    timestamp: "2026-07-10T03:21:40Z"
+    revision: a3aa154
+    environment: Jason laptop after development moved to k3s
+    result: 715 passed, 138 failed, 6 skipped, and 10 errors in 21.07 seconds.
+    artifact_location: null
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
+    limitations:
+      - >-
+        Failures are the inherited retired-laptop/live-service suite: missing
+        verdify-timescaledb, systemd, localhost APIs/routes, and retired /mnt/iris
+        Vault paths, plus unrelated pre-existing Longhorn/PVC expectations.
+        Focused lane suites and disposable DB proofs are green.
+      - >-
+        make grafana-brand-check is also blocked by the retired /mnt/iris vault
+        path and unrelated pre-existing site-home branding drift; the lane's
+        generated dashboard parity test passes.
+
+  - id: EVI-RA-006
+    type: CI
+    status: NOT_RUN
+    source: GitHub pull-request checks
+    command: null
+    timestamp: "2026-07-10T03:21:40Z"
+    revision: a3aa154
+    environment: branch pending push and PR
+    result: Pending GitHub checks and independent data-integrity critic.
+    artifact_location: null
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
+    limitations: []
