@@ -37,7 +37,6 @@ prerequisites:
   platform_readiness: .agent-workflow/platform/platform-readiness.yaml
   open_blockers:
     - Native Agent Platform worktree-agent creation and removal are disabled post-MVP and return structured HTTP 501 responses.
-    - The controller planning/security baseline must be independently reviewed and merged before Wave-0 worker worktrees are cut.
     - A current-sprint wave release plan is required before production delivery.
     - Production release is blocked by g-prod-db-credential-rotation-20260709 until Jason separately authorizes and the controller verifies the protected rotation.
 platform:
@@ -325,4 +324,4 @@ stop_conditions:
 handoff:
   next_skill: sprint-orchestrator
   next_mode: local-fallback-dispatch
-  reason: Keep native platform requests blocked, commit and review the controller baseline, then supervise only dependency-ready isolated local Codex worktrees under the approved fallback gate.
+  reason: Supervise the active device-writer and evidence-core isolated worktrees on authoritative main a2c3ee9, then dispatch only dependency-ready downstream lanes under the approved fallback gate.
