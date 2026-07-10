@@ -7,7 +7,7 @@
 
 ## Outcome
 
-Build one reviewed firmware artifact that routes all climate wetting to center mist, leaves center drip and dormant south/west irrigation disabled, allows fertilizer only through a commissioned wall-drip sequence, preserves proven mister/lighting/night behavior, and raises the ESP32 above a defensible heap/WDT floor. Physical feed stays disabled until commissioning is complete.
+Build one reviewed firmware artifact that routes all climate wetting to center mist, rejects every non-climate center-mist origin, leaves center drip and dormant south/west irrigation disabled, removes both legacy 10:30 jobs, and allows fertilizer only through a restart-safe weekly solar/diurnal commissioned wall-drip sequence with calibrated liters-to-duration conversion. Preserve proven mister/lighting/night behavior and raise the ESP32 above a defensible heap/WDT floor. Physical feed stays disabled until commissioning and valid flow calibration are complete.
 
 ## Readiness and sequencing
 
@@ -17,7 +17,7 @@ This lane is `NOT_STARTED`. It is not dispatchable until `evidence-core`, `devic
 
 The exact paths and interfaces are in [lane.yaml](lane.yaml). The lane owns firmware policy, tests, the resolver/FSM, heap/WDT diagnostics, registry/entity-map firmware contracts, and firmware/irrigation docs. It does not own migrations, MCP, planner, dispatcher, or Kubernetes manifests. Makefile, replay exporter, schema dump, and twin mirrors require controller coordination.
 
-The approved preservation slices are strict: `#299` proves the existing 45-second re-fire fence without lengthening pulses; `#383` preserves solar-night zero-daytime/temperature/heat2 safety and adds no unproven post-wet hold; `#386` proves lighting minimum-on across the solar-window boundary and adds no speculative shoulder tunable. Every route and feed sequence fails closed.
+The approved preservation slices are strict: `#299` proves the existing 45-second re-fire fence without lengthening pulses; `#383` preserves solar-night zero-daytime/temperature/heat2 safety and adds no unproven post-wet hold; `#386` proves lighting minimum-on across the solar-window boundary and adds no speculative shoulder tunable. Every route and feed sequence fails closed. Evidence-core must provide an explicit `effective`, `ineffective`, `blocked`, or `insufficient_evidence` dry-out disposition before the image freezes; no result silently authorizes a firmware delta.
 
 ## Acceptance
 

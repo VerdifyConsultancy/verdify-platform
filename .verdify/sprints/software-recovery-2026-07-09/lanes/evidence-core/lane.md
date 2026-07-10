@@ -21,7 +21,7 @@ There is no hard dependency. Resource accounting consumes transition truth; firm
 
 1. Migrations 186 and reserved 189 have rollback proof and solar/VPD fixtures.
 2. Cycle evidence handles duplicates, midnight carry-over, open pulses, individual light circuits, partial days, and short-cycle buckets.
-3. Solar-night episodes expose realized AH/temperature/duty/stop/effectiveness evidence with zero daytime admission.
+3. Solar-night episodes expose realized AH/temperature/duty/stop/effectiveness evidence with zero daytime admission and end in an explicit `effective`, `ineffective`, `blocked`, or `insufficient_evidence` disposition. Ineffective or insufficient instrumentation is not a completed control fix; any firmware delta requires a scope-change handoff.
 4. Stock replay contains at least 1,000 provenance-backed fresh rows and reaches outdoor-aware branches without a force-fresh override.
 
 The authoritative validation, evidence, record updates, critic requirements, escalation conditions, and exact definition of done are in `lane.yaml`.
