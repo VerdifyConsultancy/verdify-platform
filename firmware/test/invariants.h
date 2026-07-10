@@ -625,6 +625,9 @@ inline bool check_10_equipment_toggle_auditable(Ctx10& c, const TraceRow& r, Rep
         const bool mode_changed = r.greenhouse_state != c.prev_mode;
         const bool reason_changed = r.mode_reason != c.prev_reason;
         const bool reason_auditable = r.mode_reason == "dehum_continue"
+                                   // #410: heat assist may enter/exit while the
+                                   // top-level DEHUM_VENT mode stays stable.
+                                   || r.mode_reason == "dehum_vent_heat"
                                    || r.mode_reason == "dry_override"
                                    || r.mode_reason == "dwell_expired"
                                    || r.mode_reason == "dwell_hold"
