@@ -235,6 +235,42 @@ decisions:
     review_date: "2026-07-09"
     revisit_conditions: [A scope amendment would grant planner_graph authority or dry-out evidence proves a firmware response is required]
     sources: [scope coverage audit 2026-07-09, live planner worker failure, operator feedback]
+  - id: DEC-014
+    title: Solar-night held-temperature boundary correction
+    status: ACCEPTED
+    decision: The zero-daytime rule applies to the held-temperature vent-plus-heat extension, not to ordinary pre-existing daytime VPD dehumidification. Firmware-control may add only the device-solar-night predicate to the existing held-temperature candidate so it de-admits on the first control tick at sunrise while normal daytime cooled-vent dehumidification remains available.
+    desired_outcome: Preserve useful daytime climate control while making the explicitly night-scoped held-temperature response impossible during solar day.
+    rationale: Current firmware ab18fe8 with the hold flag enabled produced 13 physically realized vent-plus-heat held minutes after device sunrise on 2026-07-09. Independent review found that adding is_night_phase(in) to the existing can_hold predicate is the smallest safe correction and does not change the legacy daytime dehumidification ladder.
+    alternatives_considered: [Disable all daytime dehumidification, gate only the heat relay after selection, add a new clock or tunable, accept the daytime hold]
+    constraints: [Device solar phase only, no fixed clock, no new tunable or entity, ordinary daytime dehum preserved, temperature floor and re-entry preserved, heat2 forbidden, flag-off remains immediate rollback]
+    non_goals: [Retune night targets, redesign moisture physics, disable ordinary daytime dehumidification, add hardware]
+    consequences: [Evidence-core attributes held-temperature admission separately; firmware-control receives the narrow issue-410 response slice and must prove zero solar-day held rows plus zero night regression]
+    risks: [Incorrect placement could leave the vent running without required heat or suppress legitimate daytime dehum]
+    affected_components: [firmware held-temperature candidate, replay fixtures, realized dry-out evidence, release acceptance]
+    affected_issues: ["#410", "#383"]
+    affected_specs: [evidence-core lane, firmware-control lane, runtime release verification]
+    owner: recovery controller and firmware-control lane
+    review_date: "2026-07-09"
+    revisit_conditions: [Post-fix realized evidence shows a separate night-control defect]
+    sources: [current-version action-ledger probe, PR 443 critic findings, independent firmware scope review, operator request for solar-night dry-out]
+  - id: DEC-015
+    title: Honest replay freshness provenance and exact-age follow-up
+    status: ACCEPTED
+    decision: Historical replay may use a conservative persisted outdoor-value-change observation as a sufficient freshness proxy only when it is labeled conservative_change_observation; it must never be called a raw Tempest source timestamp. Firmware-control will add the device-computed outdoor_data_age_s to the existing moisture-exchange telemetry, without a new entity, so post-OTA replay/export can prefer exact device age and retain the conservative proxy only for older rows.
+    desired_outcome: Exercise outdoor-aware firmware paths before OTA without fabricating freshness, then converge future evidence on the exact age already computed by the device.
+    rationale: Production does not persist the Tempest packet timestamp or device age historically. A valid value change proves a source observation occurred and can conservatively overstate age but cannot make a silent source look fresh; the exact device age is available in control memory and can be added to the existing JSON telemetry during the combined firmware change.
+    alternatives_considered: [Call the inferred value-change timestamp source-backed, force freshness in replay, trust the retired weather_station table, block all replay coverage until new history accrues]
+    constraints: [Provenance tier exposed per row, duplicate rows cannot synthesize observations, no force-fresh override, exact age preferred when present, telemetry-size and heap impact measured]
+    non_goals: [Reconstruct an unavailable historical packet timestamp, add a physical weather sensor, treat the legacy weather_station table as current authority]
+    consequences: [Evidence-core renames proxy fields and keeps issue 419 open; firmware-control adds one diagnostic JSON field and release-control proves exact-age rows after OTA]
+    risks: [Conservative proxy can create false stale rows; telemetry growth must not worsen heap pressure]
+    affected_components: [migration 192, replay exporter and corpus, moisture-exchange telemetry, firmware heap evidence, release verification]
+    affected_issues: ["#419", "#410", "#428"]
+    affected_specs: [evidence-core lane, firmware-control lane, runtime release verification]
+    owner: recovery controller, evidence-core lane, and firmware-control lane
+    review_date: "2026-07-09"
+    revisit_conditions: [A true persisted Tempest source timestamp becomes available without firmware telemetry]
+    sources: [issue 419 acceptance, PR 443 critic findings, live schema and telemetry audit]
 unresolved:
   - id: Q-001
     question: Authorize scoped rotation of the exposed production application DB credential and verification of every consumer?

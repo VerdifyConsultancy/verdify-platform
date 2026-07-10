@@ -44,6 +44,8 @@ decision_ids:
   - DEC-007
   - DEC-008
   - DEC-013
+  - DEC-014
+  - DEC-015
 ownership:
   domains:
     - relay resolver
@@ -89,7 +91,7 @@ ownership:
 dependencies:
   hard:
     - lane_id: evidence-core
-      required_output: refreshed source-backed replay corpus and cycle/night evidence contracts
+      required_output: refreshed provenance-bearing replay corpus and cycle/night evidence contracts
     - lane_id: device-writer
       required_output: canonical readbacks and quiet stable-connection writer
     - lane_id: dli-availability
@@ -124,7 +126,8 @@ constraints:
   - Weekly wall-feed eligibility uses the approved solar/diurnal cadence, persists exact-once state across restart and missed windows, and remains disabled until commissioning is complete.
   - Prewet, feed, and post-flush liters convert to bounded durations only through positive calibrated wall flow; missing, stale, zero, or invalid calibration fails closed.
   - Preserve the existing 45-second center re-fire fence and lighting minimum-on boundary without extending water pulses.
-  - Preserve solar-night zero-daytime admission, temperature bounds, heat2-off behavior, and existing deterministic safety.
+  - Preserve ordinary daytime VPD dehumidification, but make the held-temperature vent-plus-heat candidate solar-night-only and de-admit it on the first control tick at sunrise. Preserve temperature bounds, heat2-off behavior, and existing deterministic safety.
+  - Add device-computed outdoor_data_age_s only to the existing moisture-exchange telemetry contract, with no new entity or tunable; measure JSON-size and heap impact and preserve the conservative historical fallback.
   - Add no new tunable/entity outside the approved contract; every approved new tunable still requires a cfg readback.
   - Replay divergence is limited to documented topology and unavailable-DLI effects and must be explained row-by-row or by invariant.
   - Controlled restart is a last resort; first remove avoidable allocation/publish churn and provide heap/WDT evidence.
@@ -148,11 +151,13 @@ acceptance_criteria:
       - Re-fire test proving no pulse extension.
       - In-window to outside-window lighting boundary test and static lighting audit.
   - id: LANE-AC-04
-    statement: Solar-night safety remains zero-daytime, temperature-bounded, and heat2-off with no unproven post-wet flag or hold, and the evidence-core effectiveness disposition is explicitly accepted before the combined image freezes.
+    statement: The existing held-temperature response is admitted only during device solar night and de-admits within one control tick at sunrise, ordinary daytime cooled-vent dehumidification remains eligible, temperature bounds and heat2-off remain intact, and the evidence-core effectiveness disposition is explicitly accepted before the combined image freezes.
     evidence_required:
-      - Night admission and stop/block regression fixtures.
+      - Night held-temperature admission, exact-sunrise exit, ordinary daytime cooled-vent eligibility, daytime safety-rescue no-rearm, and stop/block regression fixtures.
       - Invariant and replay proof against the refreshed corpus.
       - Controller disposition recording effective, ineffective, blocked, or insufficient_evidence; any requested control delta requires an approved scope update before implementation.
+      - Flag-OFF zero divergence and flag-ON divergence limited to solar-day held rows, with zero night divergence.
+      - Existing moisture-exchange telemetry carries exact device outdoor_data_age_s after the change without a new entity; buffer-size, heap, and parser compatibility evidence are recorded.
   - id: LANE-AC-05
     statement: Heap profile, floor, and WDT diagnostics meet the pre-OTA contract, with controlled restart used only if all safer corrections are insufficient.
     evidence_required:
@@ -210,7 +215,7 @@ required_evidence:
   - Proof that no fixed-clock 10:30 job remains eligible.
   - Restart-safe weekly solar eligibility plus bounded calibrated liters-to-duration and exact-once wall prewet/feed/fertilizer-off/immediate-flush fault-injection results.
   - Mister re-fire, lighting boundary, and solar-night preservation fixtures.
-  - Accepted realized-night effectiveness disposition and any resulting scope decision before firmware freeze.
+  - Accepted realized-night effectiveness disposition plus DEC-014/DEC-015 response proof before firmware freeze.
   - Before/after heap, largest-block, allocation pressure, loop-duration, WDT, and reset profile.
   - Stock replay and band-replay delta explanation against current main.
   - Exact binary source SHA/checksum, map output, rollback artifact, and OTA acceptance manifest.
@@ -246,7 +251,7 @@ critic_profile: firmware safety/replay/heap adversarial critic
 integration_requirements:
   - Independent critic reviews the immutable source head, binary manifest, replay deltas, topology matrix, and heap evidence.
   - Controller reconciles any shared registry/entity-map/twin change with merged lane contracts before integration.
-  - Controller records the evidence-core dry-out effectiveness disposition before accepting the combined image; ineffective or insufficient evidence is not silently labeled fixed.
+  - Controller records the evidence-core dry-out effectiveness disposition before accepting the combined image; ineffective or insufficient evidence is not silently labeled fixed. DEC-014 authorizes only the solar-night predicate on the existing held-temperature candidate, and DEC-015 authorizes only the exact-age diagnostic field in existing telemetry.
   - Repository-wide CI reruns at the integrated head; release-control alone performs preflight, OTA, and runtime acceptance.
 definition_of_done:
   - Every lane acceptance criterion passes with linked, revision-specific evidence.

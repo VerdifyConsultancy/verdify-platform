@@ -68,7 +68,7 @@ acceptance_criteria:
     evidence_required:
       - Live migration 186 parity proof and migration 189 divergence fixtures.
       - Episode ledger with admission, stop/block reason, AH advantage, temperature, duty, and 10-20 minute response.
-      - Representative valid-night report with zero daytime admission and heat2 forbidden.
+      - Representative valid-night report with zero solar-day held-temperature admission, ordinary daytime VPD dehumidification distinguished, and heat2 forbidden.
       - Effective, ineffective, blocked, or insufficient_evidence disposition; any firmware delta requires a separately accepted scope handoff.
   - id: SPR-AC-06
     statement: Stock replay exercises outdoor-aware control paths with real freshness data and cannot silently regress to zero branch coverage.
@@ -243,7 +243,7 @@ included_work:
   - id: WRK-383
     github_issue: {number_or_id: "#383", url: "https://github.com/VerdifyConsultancy/verdify-platform/issues/383", title: "Preserve solar-night dehumidification safety and gate future tuning on realized evidence", state: OPEN}
     outcome: Existing solar-night dehumidification safety is preserved while realized evidence determines whether any future anti-ping-pong change is justified.
-    scope: Add no new control flag/hold/tunable; preserve zero daytime admission, temperature-floor exits, and heat2-off, and evaluate raw transitions through issues 389/390 and realized episodes through issue 410.
+    scope: Add no new control flag/hold/tunable; make the existing held-temperature extension solar-night-only while preserving ordinary daytime VPD dehumidification, temperature-floor exits, and heat2-off, and evaluate raw transitions through issues 389/390 and realized episodes through issue 410.
     acceptance_criteria: [SPR-AC-05, SPR-AC-08]
     dependencies: ["#410", "#419", "#389", "#390"]
     risk: HIGH

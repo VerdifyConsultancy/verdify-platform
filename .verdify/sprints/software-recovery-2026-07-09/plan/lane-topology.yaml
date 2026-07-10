@@ -101,7 +101,7 @@ lanes:
 
   - lane_id: evidence-core
     title: Solar, cycle, dry-out, and replay evidence foundations
-    primary_outcome: Production and offline gates use device-parity solar/VPD semantics, raw-transition cycling, realized night episodes, and source-backed outdoor freshness.
+    primary_outcome: Production and offline gates use device-parity solar/VPD semantics, raw-transition cycling, realized night episodes, and honestly provenance-labeled outdoor freshness.
     issue_ids: [293, 389, 410, 419, 424]
     issue_urls:
       - https://github.com/VerdifyConsultancy/verdify-platform/issues/293
@@ -136,8 +136,8 @@ lanes:
     acceptance_criteria:
       - Migration 186 and reserved 189 have rollback proof and solar/VPD fixtures.
       - Cycle view handles duplicates, midnight carry-over, open pulses, per-light circuits, partial/completeness state, and short-cycle buckets.
-      - Realized night episodes expose AH advantage, temperature response, duty, stop reason, and effectiveness with zero daytime admission.
-      - Stock replay contains at least 1,000 source-backed fresh rows and reaches outdoor-aware branches without a force-fresh override.
+      - Realized night episodes expose AH advantage, temperature response, duty, stop reason, and effectiveness; realized held-temperature admission is zero during solar day while ordinary daytime VPD dehumidification remains visible and allowed.
+      - Stock replay contains at least 1,000 provenance-bearing conservatively fresh rows and reaches outdoor-aware branches without a force-fresh override.
     validation_commands: [make migration-rollback-safety, targeted SQL rollback proofs, make test, make firmware-invariants, make firmware-replay OLD=origin/main NEW=HEAD]
     risk: HIGH
     escalation_conditions: [Migration 189 collision, typed freshness cannot be provenance-preserving, cycle semantics require rewriting history, firmware behavior change becomes necessary]
@@ -330,7 +330,7 @@ lanes:
     inputs: [merged writer readback contract, replay/evidence core, DLI firmware baseline, repaired planner registry head]
     outputs: [one combined binary, unit/invariant/replay/band-replay/compile packet, heap map/profile, rollback artifact, OTA acceptance manifest]
     hard_dependencies:
-      - {lane_id: evidence-core, required_output: refreshed source-backed replay corpus and cycle/night evidence contracts}
+      - {lane_id: evidence-core, required_output: refreshed provenance-bearing replay corpus and cycle/night evidence contracts}
       - {lane_id: device-writer, required_output: canonical readbacks and quiet stable-connection writer}
       - {lane_id: dli-availability, required_output: merged DLI firmware signal and actuation-neutral tests}
       - {lane_id: planner-delivery, required_output: finalized tunable registry/bounds and no shared-file ambiguity}
@@ -339,7 +339,7 @@ lanes:
       - All climate wet intent resolves to center mist and center mist accepts no non-climate command origin; center drip and dormant south/west paths remain disabled; only commissioned wall drip can receive fertilizer.
       - Missing commissioning or missing, stale, zero, or invalid calibrated flow prevents feed; both legacy 10:30 jobs are ineligible; weekly solar eligibility and liters-to-duration conversion drive restart-safe exact-once prewet/feed/fertilizer-off/immediate-flush.
       - Existing 45-second center re-fire and lighting min-on boundary are regression-tested; no new speculative anti-chatter tunable exists.
-      - Solar-night safety remains zero-daytime, temperature-bounded, heat2-off; no unproven post-wet flag/hold is added, and the dry-out effectiveness disposition is accepted before firmware freeze.
+      - The existing held-temperature response becomes device-solar-night-only and exits on the first sunrise tick; ordinary daytime cooled-vent dehumidification remains eligible, temperature bounds and heat2-off are preserved, exact device outdoor age is added only to existing telemetry, and the dry-out effectiveness disposition is accepted before firmware freeze.
       - Heap profile/floor and WDT diagnostics meet the pre-OTA contract; controlled restart is last resort only.
       - All required firmware tests, invariants, replay, band replay, lighting audit, irrigation audit, and compile checks pass.
     validation_commands: [make test-firmware, make firmware-invariants, make firmware-replay OLD=origin/main NEW=HEAD, make firmware-replay-band OLD=origin/main, make firmware-check, make lighting-audit-static, make irrigation-stack-software-check, make lint, make test]
