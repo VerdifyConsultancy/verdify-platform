@@ -146,13 +146,27 @@ $$;
 
 -- The production contract must remain unavailable even when a legacy proxy
 -- value exists.  Use a deterministic historical timestamp inside its interval.
+INSERT INTO public.greenhouses (id, name)
+VALUES ('vallery', 'Vallery greenhouse fixture')
+ON CONFLICT (id) DO NOTHING;
+
 INSERT INTO public.climate (ts, greenhouse_id, temp_avg, dli_today)
 VALUES ('2025-01-15 18:00:00+00', 'vallery', 72, 79.0)
 ON CONFLICT DO NOTHING;
 
+INSERT INTO public.daily_summary (date, greenhouse_id, temp_avg, dli_final)
+VALUES ('2025-01-15', 'vallery', 72, 79.0)
+ON CONFLICT (date) DO UPDATE SET
+    greenhouse_id = EXCLUDED.greenhouse_id,
+    temp_avg = EXCLUDED.temp_avg,
+    dli_final = EXCLUDED.dli_final;
+
 DO $$
 DECLARE
     row_value record;
+    reporting_dli numeric;
+    economics_dli double precision;
+    forecast_row record;
 BEGIN
     SELECT
         CASE
@@ -171,6 +185,41 @@ BEGIN
        OR row_value.unavailable_reason <> 'interior_light_sensor_broken'
        OR row_value.validity_revision <> 'dli-validity-v1' THEN
         RAISE EXCEPTION 'invalid vallery proxy escaped availability gate: %', row_to_json(row_value);
+    END IF;
+
+    SELECT dli_avg INTO reporting_dli
+    FROM public.v_weekly_summary
+    WHERE week_start = '2025-01-13';
+    IF reporting_dli IS NOT NULL THEN
+        RAISE EXCEPTION 'weekly report laundered forensic DLI: %', reporting_dli;
+    END IF;
+
+    SELECT dli_avg INTO reporting_dli
+    FROM public.v_monthly_summary
+    WHERE month_start = '2025-01-01';
+    IF reporting_dli IS NOT NULL THEN
+        RAISE EXCEPTION 'monthly report laundered forensic DLI: %', reporting_dli;
+    END IF;
+
+    SELECT dli_avg INTO reporting_dli
+    FROM public.fn_period_summary('2025-01-15', '2025-01-15');
+    IF reporting_dli IS NOT NULL THEN
+        RAISE EXCEPTION 'period report laundered forensic DLI: %', reporting_dli;
+    END IF;
+
+    SELECT dli_final INTO economics_dli
+    FROM public.v_grower_economics_story
+    WHERE date = '2025-01-15';
+    IF economics_dli IS NOT NULL THEN
+        RAISE EXCEPTION 'economics story laundered forensic DLI: %', economics_dli;
+    END IF;
+
+    SELECT * INTO forecast_row FROM public.fn_forecast_dli('2025-01-16');
+    IF forecast_row.predicted_dli IS NOT NULL
+       OR forecast_row.gl_hours_needed IS NOT NULL
+       OR forecast_row.recommended_gl_start IS NOT NULL
+       OR forecast_row.recommended_gl_end IS NOT NULL THEN
+        RAISE EXCEPTION 'outdoor forecast escaped as crop DLI: %', row_to_json(forecast_row);
     END IF;
 END;
 $$;

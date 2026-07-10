@@ -12453,7 +12453,7 @@ data:
             "type": "grafana-postgresql-datasource",
             "uid": "verdify-tsdb"
           },
-          "description": "Shows how badly the current lux sensor underreports actual plant light, relative to a corrected estimate and the target DLI line.",
+          "description": "Interior crop DLI is unavailable because the physical sensor is broken. No outdoor proxy or correction is presented as crop evidence.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -12600,7 +12600,7 @@ data:
               "editorMode": "code",
               "format": "time_series",
               "rawQuery": true,
-              "rawSql": "SELECT date_trunc('day', ts) AS time, max(dli_today) AS \"Sensor DLI\" FROM climate WHERE ts > now() - interval '90 days' GROUP BY 1 ORDER BY 1",
+              "rawSql": "SELECT now() AS time, initcap(availability) || ' — ' || unavailable_reason AS \"Interior DLI\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
               "refId": "A",
               "sql": {
                 "columns": [
@@ -12628,7 +12628,7 @@ data:
               "editorMode": "code",
               "format": "time_series",
               "rawQuery": true,
-              "rawSql": "SELECT date_trunc('day', ts) AS time, max(dli_today) * 3.2 AS \"Estimated Actual DLI\" FROM climate WHERE ts > now() - interval '90 days' GROUP BY 1 ORDER BY 1",
+              "rawSql": "SELECT now() AS time, provenance || ' · ' || validity_revision AS \"DLI Provenance\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
               "refId": "B",
               "sql": {
                 "columns": [
@@ -12656,7 +12656,7 @@ data:
               "editorMode": "code",
               "format": "time_series",
               "rawQuery": true,
-              "rawSql": "SELECT date_trunc('day', ts) AS time, 14.0 AS \"Target DLI\" FROM climate WHERE ts > now() - interval '90 days' GROUP BY 1 ORDER BY 1",
+              "rawSql": "SELECT now() AS time, valid_from::text || ' → ' || COALESCE(valid_to::text, 'open') AS \"DLI Validity\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
               "refId": "C",
               "sql": {
                 "columns": [
@@ -12677,7 +12677,7 @@ data:
               }
             }
           ],
-          "title": "Sensor DLI vs Estimated Actual DLI",
+          "title": "Interior DLI — Unavailable",
           "type": "timeseries",
           "transparent": true
         },
@@ -19116,7 +19116,7 @@ data:
             "type": "grafana-postgresql-datasource",
             "uid": "verdify-tsdb"
           },
-          "description": "Daily Light Integral accumulation vs crop-driven target. Grow light state bars show both supplemental lighting circuits.",
+          "description": "Interior DLI is unavailable while the physical sensor is broken. Solar irradiance and grow-light relay bars remain independent observational signals.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -19393,7 +19393,7 @@ data:
               "editorMode": "code",
               "format": "table",
               "rawQuery": true,
-              "rawSql": "SELECT ts AS time, dli_today AS \"DLI Today\" FROM climate WHERE $__timeFilter(ts) AND dli_today IS NOT NULL ORDER BY ts",
+              "rawSql": "SELECT now() AS time, initcap(availability) || ' — ' || unavailable_reason AS \"Interior DLI\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
               "refId": "A",
               "sql": {
                 "columns": [
@@ -19449,7 +19449,7 @@ data:
               "editorMode": "code",
               "format": "table",
               "rawQuery": true,
-              "rawSql": "WITH t AS (\n  SELECT generate_series($__timeFrom(), $__timeTo(), interval '1 hour') AS time\n)\nSELECT t.time, p.target_dli AS \"DLI Target\"\nFROM t CROSS JOIN LATERAL fn_lighting_policy(t.time, 'vallery') p\nORDER BY t.time",
+              "rawSql": "SELECT now() AS time, provenance || ' · ' || validity_revision AS \"DLI Provenance\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
               "refId": "C",
               "sql": {
                 "columns": [
@@ -19520,7 +19520,7 @@ data:
               "refId": "F"
             }
           ],
-          "title": "Light & DLI vs Target",
+          "title": "Light Evidence — Interior DLI Unavailable",
           "type": "timeseries",
           "transparent": true
         },

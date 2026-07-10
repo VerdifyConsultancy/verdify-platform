@@ -1,7 +1,6 @@
 import json
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 MIGRATION = ROOT / "db/migrations/195-dli-availability-provenance.sql"
 
@@ -57,6 +56,24 @@ def test_product_views_do_not_promote_legacy_numeric_proxy():
     ):
         assert field in daily_kpi
 
+    for surface in (
+        "public.v_weekly_summary",
+        "public.v_monthly_summary",
+        "public.fn_period_summary",
+        "public.v_harvest_story",
+        "public.v_grower_economics_story",
+        "public.fn_forecast_dli",
+    ):
+        assert f"CREATE OR REPLACE {'FUNCTION' if '.fn_' in surface else 'VIEW'} {surface}" in sql
+    assert sql.count("NULL::numeric AS dli_avg") == 2
+    assert "NULL::double precision AS dli_final" in sql
+    assert "NULL::double precision AS kg_per_mol_dli" in sql
+    forecast = sql.split("CREATE OR REPLACE FUNCTION public.fn_forecast_dli", 1)[1].split(
+        "CREATE OR REPLACE VIEW public.v_greenhouse_now", 1
+    )[0]
+    assert "NULL::numeric" in forecast
+    assert "direct_radiation_w_m2" not in forecast
+
 
 def test_planner_context_contains_only_availability_bearing_dli():
     gather = (ROOT / "scripts/gather-plan-context.sh").read_text()
@@ -85,6 +102,30 @@ def test_planner_context_contains_only_availability_bearing_dli():
     assert "Interior crop DLI is\n  explicitly unavailable" in planner
     assert "do not infer it" in planner
     assert "DLI-independent photoperiod/runtime lever" in planner
+
+
+def test_deployed_planner_context_mirror_has_byte_parity_and_no_legacy_dli():
+    generated = (
+        ROOT / "deploy/k8s/components/ingestor-gather-script/gather-script-configmap.yaml"
+    ).read_text()
+
+    def literal_block(key: str, source: Path) -> str:
+        body = "".join(
+            line if not line.strip("\r\n") else f"    {line}"
+            for line in source.read_text().splitlines(keepends=True)
+        )
+        return f"  {key}: |\n{body}"
+
+    assert literal_block("gather-plan-context.sh", ROOT / "scripts/gather-plan-context.sh") in generated
+    assert literal_block("psql-verdify.sh", ROOT / "scripts/lib/psql-verdify.sh") in generated
+    for forbidden in (
+        "max(dli_today)",
+        "estimated_actual_dli",
+        "estimated_total_plant_dli",
+        "s*3.5",
+        "Sensor DLI of 5-7",
+    ):
+        assert forbidden not in generated
 
 
 def test_mcp_and_api_use_typed_unavailable_contract():

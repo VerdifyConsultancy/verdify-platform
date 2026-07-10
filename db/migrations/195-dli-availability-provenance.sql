@@ -264,6 +264,262 @@ COMMENT ON MATERIALIZED VIEW public.v_climate_merged IS
 COMMENT ON VIEW public.v_greenhouse_state IS
 'Replay/raw control-state history. dli_today is preserved as forensic legacy proxy only; it is not product DLI. Product consumers must use v_dli_current/v_dli_daily.';
 
+-- Neutralize older reporting surfaces that directly aggregate the forensic
+-- daily_summary proxy.  Their column names/types remain stable for callers,
+-- but no numeric DLI or DLI-derived efficiency claim escapes the validity
+-- contract.  Product consumers needing reason/provenance join v_dli_daily.
+CREATE OR REPLACE VIEW public.v_weekly_summary AS
+SELECT
+    date_trunc('week', date)::date AS week_start,
+    (date_trunc('week', date) + interval '6 days')::date AS week_end,
+    count(*) AS days,
+    round(avg(temp_avg)::numeric, 1) AS temp_avg,
+    round(min(temp_min)::numeric, 1) AS temp_min,
+    round(max(temp_max)::numeric, 1) AS temp_max,
+    round(avg(rh_avg)::numeric, 1) AS rh_avg,
+    round(min(rh_min)::numeric, 1) AS rh_min,
+    round(max(rh_max)::numeric, 1) AS rh_max,
+    round(avg(vpd_avg)::numeric, 2) AS vpd_avg,
+    round(min(vpd_min)::numeric, 2) AS vpd_min,
+    round(max(vpd_max)::numeric, 2) AS vpd_max,
+    NULL::numeric AS dli_avg,
+    round(avg(co2_avg)::numeric, 0) AS co2_avg,
+    round(min(outdoor_temp_min)::numeric, 1) AS outdoor_temp_min,
+    round(max(outdoor_temp_max)::numeric, 1) AS outdoor_temp_max,
+    round(sum(COALESCE(stress_hours_heat, 0))::numeric, 1) AS stress_hours_heat,
+    round(sum(COALESCE(stress_hours_cold, 0))::numeric, 1) AS stress_hours_cold,
+    round(sum(COALESCE(stress_hours_vpd_high, 0))::numeric, 1) AS stress_hours_vpd_high,
+    round(sum(COALESCE(stress_hours_vpd_low, 0))::numeric, 1) AS stress_hours_vpd_low,
+    round(sum(COALESCE(water_used_gal, 0))::numeric, 0) AS total_water_gal,
+    round(sum(COALESCE(mister_water_gal, 0))::numeric, 0) AS mister_water_gal,
+    round(sum(COALESCE(kwh_estimated, 0))::numeric, 1) AS kwh_total,
+    round(sum(COALESCE(therms_estimated, 0))::numeric, 2) AS therms_total,
+    round(max(COALESCE(peak_kw, 0))::numeric, 2) AS peak_kw,
+    round(sum(COALESCE(cost_electric, 0))::numeric, 2) AS cost_electric,
+    round(sum(COALESCE(cost_gas, 0))::numeric, 2) AS cost_gas,
+    round(sum(COALESCE(cost_water, 0))::numeric, 2) AS cost_water,
+    round(sum(COALESCE(cost_total, 0))::numeric, 2) AS total_cost,
+    round(sum(COALESCE(runtime_heat1_min, 0))::numeric / 60, 1) AS runtime_heat1_h,
+    round(sum(COALESCE(runtime_heat2_min, 0))::numeric / 60, 1) AS runtime_heat2_h,
+    round(sum(COALESCE(runtime_fan1_min + runtime_fan2_min, 0))::numeric / 60, 1) AS runtime_fans_h,
+    round(sum(COALESCE(runtime_fog_min, 0))::numeric / 60, 1) AS runtime_fog_h,
+    round(sum(COALESCE(runtime_vent_min, 0))::numeric / 60, 1) AS runtime_vent_h,
+    round(sum(COALESCE(runtime_grow_light_min, 0))::numeric / 60, 1) AS runtime_grow_light_h,
+    round(sum(COALESCE(runtime_mister_south_h + runtime_mister_west_h + runtime_mister_center_h, 0))::numeric, 1) AS runtime_misters_h,
+    sum(COALESCE(cycles_heat1, 0) + COALESCE(cycles_heat2, 0)) AS cycles_heat,
+    sum(COALESCE(cycles_fan1, 0) + COALESCE(cycles_fan2, 0)) AS cycles_fans,
+    sum(COALESCE(cycles_fog, 0)) AS cycles_fog,
+    sum(COALESCE(cycles_vent, 0)) AS cycles_vent
+FROM public.daily_summary
+WHERE temp_avg IS NOT NULL
+GROUP BY date_trunc('week', date)
+ORDER BY week_start;
+
+COMMENT ON VIEW public.v_weekly_summary IS
+'Weekly reporting rollup. dli_avg is intentionally NULL while interior crop DLI is unavailable; use v_dli_daily for validity provenance.';
+
+CREATE OR REPLACE VIEW public.v_monthly_summary AS
+SELECT
+    date_trunc('month', date)::date AS month_start,
+    count(*) AS days,
+    round(avg(temp_avg)::numeric, 1) AS temp_avg,
+    round(min(temp_min)::numeric, 1) AS temp_min,
+    round(max(temp_max)::numeric, 1) AS temp_max,
+    round(avg(rh_avg)::numeric, 1) AS rh_avg,
+    round(min(rh_min)::numeric, 1) AS rh_min,
+    round(max(rh_max)::numeric, 1) AS rh_max,
+    round(avg(vpd_avg)::numeric, 2) AS vpd_avg,
+    round(min(vpd_min)::numeric, 2) AS vpd_min,
+    round(max(vpd_max)::numeric, 2) AS vpd_max,
+    NULL::numeric AS dli_avg,
+    round(avg(co2_avg)::numeric, 0) AS co2_avg,
+    round(min(outdoor_temp_min)::numeric, 1) AS outdoor_temp_min,
+    round(max(outdoor_temp_max)::numeric, 1) AS outdoor_temp_max,
+    round(sum(COALESCE(stress_hours_heat, 0))::numeric, 1) AS stress_hours_heat,
+    round(sum(COALESCE(stress_hours_cold, 0))::numeric, 1) AS stress_hours_cold,
+    round(sum(COALESCE(stress_hours_vpd_high, 0))::numeric, 1) AS stress_hours_vpd_high,
+    round(sum(COALESCE(stress_hours_vpd_low, 0))::numeric, 1) AS stress_hours_vpd_low,
+    round(sum(COALESCE(water_used_gal, 0))::numeric, 0) AS total_water_gal,
+    round(sum(COALESCE(mister_water_gal, 0))::numeric, 0) AS mister_water_gal,
+    round(sum(COALESCE(kwh_estimated, 0))::numeric, 1) AS kwh_total,
+    round(sum(COALESCE(therms_estimated, 0))::numeric, 2) AS therms_total,
+    round(sum(COALESCE(cost_electric, 0))::numeric, 2) AS cost_electric,
+    round(sum(COALESCE(cost_gas, 0))::numeric, 2) AS cost_gas,
+    round(sum(COALESCE(cost_water, 0))::numeric, 2) AS cost_water,
+    round(sum(COALESCE(cost_total, 0))::numeric, 2) AS total_cost,
+    round(sum(COALESCE(runtime_heat1_min, 0))::numeric / 60, 1) AS runtime_heat1_h,
+    round(sum(COALESCE(runtime_heat2_min, 0))::numeric / 60, 1) AS runtime_heat2_h,
+    round(sum(COALESCE(runtime_fan1_min + runtime_fan2_min, 0))::numeric / 60, 1) AS runtime_fans_h,
+    round(sum(COALESCE(runtime_fog_min, 0))::numeric / 60, 1) AS runtime_fog_h,
+    round(sum(COALESCE(runtime_vent_min, 0))::numeric / 60, 1) AS runtime_vent_h,
+    round(sum(COALESCE(runtime_grow_light_min, 0))::numeric / 60, 1) AS runtime_grow_light_h,
+    round(sum(COALESCE(runtime_mister_south_h + runtime_mister_west_h + runtime_mister_center_h, 0))::numeric, 1) AS runtime_misters_h,
+    sum(COALESCE(cycles_heat1, 0) + COALESCE(cycles_heat2, 0)) AS cycles_heat,
+    sum(COALESCE(cycles_fan1, 0) + COALESCE(cycles_fan2, 0)) AS cycles_fans,
+    sum(COALESCE(cycles_fog, 0)) AS cycles_fog,
+    sum(COALESCE(cycles_vent, 0)) AS cycles_vent
+FROM public.daily_summary
+WHERE temp_avg IS NOT NULL
+GROUP BY date_trunc('month', date)
+ORDER BY month_start;
+
+COMMENT ON VIEW public.v_monthly_summary IS
+'Monthly reporting rollup. dli_avg is intentionally NULL while interior crop DLI is unavailable; use v_dli_daily for validity provenance.';
+
+CREATE OR REPLACE FUNCTION public.fn_period_summary(start_date date, end_date date)
+RETURNS TABLE(
+    days bigint,
+    temp_avg numeric, temp_min numeric, temp_max numeric,
+    rh_avg numeric, vpd_avg numeric, vpd_min numeric, vpd_max numeric,
+    dli_avg numeric, co2_avg numeric,
+    outdoor_temp_min numeric, outdoor_temp_max numeric,
+    stress_hours_heat numeric, stress_hours_cold numeric,
+    stress_hours_vpd_high numeric, stress_hours_vpd_low numeric,
+    total_water_gal numeric, mister_water_gal numeric,
+    kwh_total numeric, therms_total numeric,
+    cost_electric numeric, cost_gas numeric, cost_water numeric, total_cost numeric,
+    runtime_heat1_h numeric, runtime_heat2_h numeric, runtime_fans_h numeric,
+    runtime_fog_h numeric, runtime_vent_h numeric, runtime_grow_light_h numeric,
+    runtime_misters_h numeric
+)
+LANGUAGE sql
+STABLE
+AS $$
+    SELECT
+        count(*)::bigint,
+        round(avg(ds.temp_avg)::numeric, 1),
+        round(min(ds.temp_min)::numeric, 1),
+        round(max(ds.temp_max)::numeric, 1),
+        round(avg(ds.rh_avg)::numeric, 1),
+        round(avg(ds.vpd_avg)::numeric, 2),
+        round(min(ds.vpd_min)::numeric, 2),
+        round(max(ds.vpd_max)::numeric, 2),
+        NULL::numeric,
+        round(avg(ds.co2_avg)::numeric, 0),
+        round(min(ds.outdoor_temp_min)::numeric, 1),
+        round(max(ds.outdoor_temp_max)::numeric, 1),
+        round(sum(COALESCE(ds.stress_hours_heat, 0))::numeric, 1),
+        round(sum(COALESCE(ds.stress_hours_cold, 0))::numeric, 1),
+        round(sum(COALESCE(ds.stress_hours_vpd_high, 0))::numeric, 1),
+        round(sum(COALESCE(ds.stress_hours_vpd_low, 0))::numeric, 1),
+        round(sum(COALESCE(ds.water_used_gal, 0))::numeric, 0),
+        round(sum(COALESCE(ds.mister_water_gal, 0))::numeric, 0),
+        round(sum(COALESCE(ds.kwh_estimated, 0))::numeric, 1),
+        round(sum(COALESCE(ds.therms_estimated, 0))::numeric, 2),
+        round(sum(COALESCE(ds.cost_electric, 0))::numeric, 2),
+        round(sum(COALESCE(ds.cost_gas, 0))::numeric, 2),
+        round(sum(COALESCE(ds.cost_water, 0))::numeric, 2),
+        round(sum(COALESCE(ds.cost_total, 0))::numeric, 2),
+        round(sum(COALESCE(ds.runtime_heat1_min, 0))::numeric / 60, 1),
+        round(sum(COALESCE(ds.runtime_heat2_min, 0))::numeric / 60, 1),
+        round(sum(COALESCE(ds.runtime_fan1_min + ds.runtime_fan2_min, 0))::numeric / 60, 1),
+        round(sum(COALESCE(ds.runtime_fog_min, 0))::numeric / 60, 1),
+        round(sum(COALESCE(ds.runtime_vent_min, 0))::numeric / 60, 1),
+        round(sum(COALESCE(ds.runtime_grow_light_min, 0))::numeric / 60, 1),
+        round(sum(COALESCE(ds.runtime_mister_south_h + ds.runtime_mister_west_h + ds.runtime_mister_center_h, 0))::numeric, 1)
+    FROM public.daily_summary ds
+    WHERE ds.date >= start_date
+      AND ds.date <= end_date
+      AND ds.temp_avg IS NOT NULL
+$$;
+
+COMMENT ON FUNCTION public.fn_period_summary(date, date) IS
+'Arbitrary-period reporting summary. dli_avg is intentionally NULL while interior crop DLI is unavailable; use v_dli_daily for validity provenance.';
+
+CREATE OR REPLACE VIEW public.v_harvest_story AS
+SELECT
+    h.id,
+    h.ts,
+    (h.ts AT TIME ZONE 'America/Denver')::date AS date,
+    h.greenhouse_id,
+    h.crop_id,
+    c.name AS crop_name,
+    h.position_id,
+    h.zone,
+    COALESCE(h.salable_weight_kg, h.weight_kg) AS salable_weight_kg,
+    h.cull_weight_kg,
+    h.unit_count,
+    h.quality_grade,
+    h.quality_reason,
+    h.destination,
+    h.unit_price,
+    COALESCE(h.revenue, h.unit_price * h.unit_count) AS revenue,
+    NULL::double precision AS dli_final,
+    ds.water_used_gal,
+    ds.kwh_total,
+    NULL::double precision AS kg_per_mol_dli,
+    CASE WHEN ds.water_used_gal > 0
+      THEN COALESCE(h.salable_weight_kg, h.weight_kg) / ds.water_used_gal
+    END AS kg_per_gal,
+    CASE WHEN ds.kwh_total > 0
+      THEN COALESCE(h.salable_weight_kg, h.weight_kg) / ds.kwh_total
+    END AS kg_per_kwh
+FROM public.harvests h
+LEFT JOIN public.crops c ON c.id = h.crop_id
+LEFT JOIN public.daily_summary ds
+  ON ds.date = (h.ts AT TIME ZONE 'America/Denver')::date;
+
+COMMENT ON VIEW public.v_harvest_story IS
+'Harvest outcome evidence. DLI and kg_per_mol_dli are intentionally NULL while interior crop DLI is unavailable; water and energy evidence remain independent.';
+
+CREATE OR REPLACE VIEW public.v_grower_economics_story AS
+WITH harvest_daily AS (
+    SELECT
+        (ts AT TIME ZONE 'America/Denver')::date AS date,
+        sum(COALESCE(salable_weight_kg, weight_kg, 0)) AS salable_kg,
+        sum(COALESCE(cull_weight_kg, 0)) AS cull_kg,
+        sum(COALESCE(revenue, unit_price * unit_count, 0)) AS revenue
+    FROM public.harvests
+    GROUP BY 1
+)
+SELECT
+    ds.date,
+    hd.salable_kg,
+    hd.cull_kg,
+    hd.revenue,
+    NULL::double precision AS dli_final,
+    ds.water_used_gal,
+    COALESCE(ds.kwh_total, ds.kwh_estimated) AS kwh,
+    ds.therms_estimated,
+    ds.cost_total,
+    ds.stress_hours_heat + ds.stress_hours_vpd_high
+      + ds.stress_hours_cold + ds.stress_hours_vpd_low AS stress_hours,
+    NULL::double precision AS kg_per_mol_dli,
+    CASE WHEN ds.water_used_gal > 0 THEN hd.salable_kg / ds.water_used_gal END AS kg_per_gal,
+    CASE WHEN COALESCE(ds.kwh_total, ds.kwh_estimated) > 0
+      THEN hd.salable_kg / COALESCE(ds.kwh_total, ds.kwh_estimated)
+    END AS kg_per_kwh,
+    CASE WHEN ds.cost_total > 0 THEN hd.revenue / ds.cost_total END AS revenue_per_cost_dollar
+FROM public.daily_summary ds
+LEFT JOIN harvest_daily hd USING (date)
+WHERE ds.date IS NOT NULL
+ORDER BY ds.date DESC;
+
+COMMENT ON VIEW public.v_grower_economics_story IS
+'Grower economics by local day. DLI and kg_per_mol_dli are intentionally NULL while interior crop DLI is unavailable; resource and cost fields remain independently governed.';
+
+CREATE OR REPLACE FUNCTION public.fn_forecast_dli(
+    target_date date DEFAULT CURRENT_DATE + 1
+)
+RETURNS TABLE(
+    predicted_dli numeric,
+    gl_hours_needed numeric,
+    recommended_gl_start integer,
+    recommended_gl_end integer
+)
+LANGUAGE sql
+STABLE
+AS $$
+    SELECT
+        NULL::numeric,
+        NULL::numeric,
+        NULL::integer,
+        NULL::integer
+$$;
+
+COMMENT ON FUNCTION public.fn_forecast_dli(date) IS
+'Deprecated compatibility function. All values are NULL because outdoor forecast irradiance is not measured interior crop DLI; qualified-light-minute control remains independent.';
+
 CREATE OR REPLACE VIEW public.v_greenhouse_now AS
 SELECT
     c.ts,
