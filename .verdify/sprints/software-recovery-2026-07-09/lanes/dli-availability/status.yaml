@@ -1,8 +1,8 @@
 sprint_id: software-recovery-2026-07-09
 lane_id: dli-availability
 state: READY_FOR_CRITIC
-updated_at: "2026-07-10T13:43:04Z"
-head_sha: ac3513e51918046921d7a559c6b0e16ebaf477c6
+updated_at: "2026-07-10T14:02:05Z"
+head_sha: 03946b7da51f59c0a820d9cd64ac64249d669f33
 working_tree_clean: true
 acceptance:
   passed:
@@ -18,5 +18,5 @@ blockers:
   - Migration 195 is fail closed by schema constraint, not DB-role privilege separation; future activation requires a separately reviewed migration/contract change.
 decisions_requested: []
 next_actions:
-  - Route the pushed immutable critic-remediation head to renewed independent provenance/actuation-neutrality review; the lane worker does not self-merge.
+  - Route the exact-green renewed implementation head to independent provenance/actuation-neutrality review; the lane worker does not self-merge.
   - After approval and merge, release-control applies migration 195, restarts verdify-mcp/verdify-ingestor/verdify-api, publishes consumers, and runs live acceptance before any combined-image OTA.

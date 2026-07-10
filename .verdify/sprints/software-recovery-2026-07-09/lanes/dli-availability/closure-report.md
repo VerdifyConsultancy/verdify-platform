@@ -19,7 +19,8 @@ invariant, not a GRANT/REVOKE security boundary, because the production
 application role owns the table.
 
 Firmware accumulation now uses wrap-safe raw elapsed milliseconds for any
-future validated sensor while control dwell timers retain their 5-second cap.
+future validated sensor while DLI-independent control time retains both its
+legacy zero-on-`millis()`-wrap behavior and 5-second cap.
 The current numeric product sensor publishes `NaN` and
 six companion text entities publish reason/provenance/revision/validity. Native
 tests and a 296,698-row baseline replay prove no relay, qualified-light-minute,
@@ -39,12 +40,30 @@ The changes-required review identified seven real gaps, all closed at source:
    `COALESCE(kwh_total, kwh_estimated, 0)` semantics.
 4. The validity ledger is fail closed and documentation does not overclaim
    role-based security.
-5. Firmware separates wrap-safe raw elapsed time from capped control time and
-   tests long gaps, jitter partitions, and `uint32_t` wrap.
-6. Daily product evidence rejects the open Denver-local day and incomplete
-   source coverage.
+5. Firmware separates wrap-safe raw elapsed time from capped control time,
+   preserves legacy zero-on-wrap control behavior, and tests long gaps, jitter
+   partitions, and `uint32_t` wrap.
+6. Current and daily product evidence is categorically unavailable. Migration
+   195 makes no unproved promise about future cadence/source completeness.
 7. Current/daily products and Pydantic reject missing, NaN, infinity, negative,
    and out-of-range values with explicit unavailable reasons.
+
+Renewed review found four additional provenance gaps plus one rollover
+neutrality edge; these are also closed:
+
+1. Legacy `v_estimated_dli.est_natural_dli` is typed NULL with explicit
+   reason/provenance. Its non-DLI `readings` count retains the exact prior
+   `lead(ts)`/`dt_sec` and `0 < dt_sec < 900` semantics.
+2. The fixture again proves exact raw climate/daily pre/post row counts and
+   sums, half-open adjacent interval resolution, overlap rejection, and
+   idempotent reruns.
+3. Future daily completeness is explicitly deferred to a later reviewed
+   sensor-activation migration instead of inferred from endpoints.
+4. All registry rows mapped to `climate.dli_today` are inactive and the
+   greenhouse mapping is not required, removing the broken sensor from
+   staleness/required-coverage alert inputs without deleting history.
+5. At `uint32_t` rollover, raw DLI elapsed time remains wrap-safe while
+   DLI-independent control elapsed time remains the legacy zero.
 
 ## Coordination and ownership
 
@@ -64,12 +83,15 @@ ESP32 push, firmware tunable/global, and `planner_graph` paths were not edited.
 
 ## Verification summary
 
-- Migration 195: safe-to-wrap; fresh generated-schema restore, idempotent
+- Migration 195: safe-to-wrap; fresh generated-schema restore, true no-op
   reruns, fail-closed insert/update, exact/future lesson retirement and
-  preservation, unfinished-day/source-validity cases, live-lighting leakage
-  checks, and actual-first kWh parity pass in disposable PG16/TimescaleDB.
+  preservation, exact raw climate/daily pre/post row+sum equality, half-open
+  boundaries, overlap rejection, source-validity cases, `v_estimated_dli`
+  count parity, registry/staleness correction, whole-schema proxy sweep,
+  live-lighting leakage checks, and actual-first kWh parity pass in disposable
+  PG16/TimescaleDB.
 - Schema: generated dump restores into a second blank disposable database.
-- Python: lint passes; focused DLI/schema/MCP suite passes 44 with one inherited
+- Python: lint passes; focused DLI/schema/MCP suite passes 46 with one inherited
   skip.
 - Firmware: 272 native tests pass; all 296,698 invariant rows pass; replay from
   `0a9a19a840be6bae1beba604497d880b3b74b1ef` reports zero divergence; ESPHome
@@ -82,10 +104,11 @@ ESP32 push, firmware tunable/global, and `planner_graph` paths were not edited.
 - Generated artifacts: Grafana regeneration is idempotent; JSON/YAML parses;
   deployed planner script/helper blocks have byte parity; numeric leakage scan
   passes.
-- GitHub CI: the pre-critic implementation head
-  `0f68aac0c9af50159e11bd938411afccf2a221fe` was fully green. Exact-head CI for
-  critic remediation is required before renewed review.
-- Monolithic `make test`: 730 passed and 6 skipped; remaining 141 failures and
+- GitHub CI: renewed implementation head
+  `03946b7da51f59c0a820d9cd64ac64249d669f33` is fully green across CI,
+  manifest, promotion guard, and build-without-publish workflows: 26 success,
+  8 intentional skips, 0 failure/pending.
+- Monolithic `make test`: 732 passed and 6 skipped; remaining 141 failures and
   10 setup errors require the
   retired laptop live stack or unrelated historical paths. The one lane-caused
   static comment regression it exposed was fixed and retested.
