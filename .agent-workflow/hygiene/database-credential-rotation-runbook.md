@@ -22,7 +22,13 @@ Do not begin until all are true:
 3. The current database backup has succeeded and its rollback location is recorded without credential material.
 4. No CronJob using the password is running; the five listed CronJobs are suspended through an authorized change.
 5. The operator has a secure local shell with tracing/history disabled, `umask 077`, the fleet SOPS age key, the current credential retained only for rollback/negative proof, and the replacement held only in an approved credential manager or protected process memory.
-6. The stale fleet secret authority is corrected before use: the current `jvallery/agents` registry and encrypted skeleton still name retired `verdify-staging`. A reviewed production-targeted SOPS artifact for `verdify-prod/verdify-app-secrets` must be the source of truth. Never apply the stale staging artifact to production.
+6. The fleet secret authority is verified before use. At the 2026-07-09
+   preflight, the available registry/skeleton still named retired
+   `verdify-staging`; that historical blocker was corrected by the reviewed
+   production SOPS authority merged in `jvallery/agents#2904`. For every future
+   execution, a reviewed production-targeted artifact for
+   `verdify-prod/verdify-app-secrets` must be the source of truth. Never apply a
+   staging or otherwise non-production artifact to production.
 7. The replacement satisfies the temporary URI-compatibility contract: exactly 64 lowercase hexadecimal characters generated from 32 cryptographically random bytes. Validate the shape in the secure process and record only `replacement_uri_safe: true`; never record the value. This preserves 256 bits of entropy while using only URI-unreserved characters. Until every consumer percent-encodes credentials, any other alphabet or length is a hard stop because characters such as `@`, `/`, `#`, and `?` can change PostgreSQL URI parsing. Do not use ordinary base64 output for this rotation.
 
 Do not print, echo, paste into a PR, pass as a command-line argument, enable shell tracing, or write either credential to a normal file.
