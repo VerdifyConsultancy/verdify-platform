@@ -3494,6 +3494,47 @@ events:
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0074
   content_sha256: null
+- id: LEDGER-EVT-0076
+  sequence: 76
+  occurred_at: '2026-07-10T12:25:43Z'
+  event_type: lane_dispatched
+  source: sprint-orchestrator
+  subject: dli-availability worker dispatch
+  actor:
+    role: controller
+    name: software-recovery-root-019f4826
+  session_id: software-recovery-root-019f4826
+  correlation:
+    trace_id: null
+    wave_id: wave-software-recovery-implementation
+    session_ids:
+    - software-recovery-root-019f4826
+    - dli-availability-local-20260710
+    issue_ids:
+    - 435
+    lane_ids:
+    - dli-availability
+    pr_ids: []
+    deployment_ids: []
+    policy_decision_ids:
+    - g-local-dispatch-fallback-software-recovery-20260709
+  refs:
+    artifact_refs:
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/dli-availability/lane.yaml
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/dli-availability/worker-prompt.md
+    - .agent-workflow/sprints/software-recovery-2026-07-09/execution/sprint-execution-runbook.yaml
+    evidence_refs:
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/dli-availability/status.yaml
+    external_refs:
+    - type: git_commit
+      identifier: dca668fc6d5a68e14843510e32a26d4d4d673522
+      url: https://github.com/VerdifyConsultancy/verdify-platform/commit/dca668fc6d5a68e14843510e32a26d4d4d673522
+  result: observed
+  summary: One contract-bound DLI worker started in an isolated worktree from current main with migration 195 reserved and all production mutation prohibited.
+  data_summary: The legacy Verdify lane-create schema rejected the approved recovery contract shape, so the already-approved local fallback uses git worktree identity plus the collaboration session and records the incompatibility explicitly.
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0075
+  content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
   severity: low
@@ -3511,6 +3552,13 @@ exceptions:
   event_ids:
   - LEDGER-EVT-0056
   - LEDGER-EVT-0057
+- id: LEDGER-EXC-003
+  severity: medium
+  statement: The Verdify 1.0 lane-create CLI validates a newer lane-contract schema and rejects the approved legacy .verdify recovery contract shape; the approved local-fallback gate therefore uses an isolated git worktree and collaboration session with durable controller identity.
+  owner: software-recovery-root-019f4826
+  status: accepted
+  event_ids:
+  - LEDGER-EVT-0076
 handoff:
   next_skill: sprint-orchestrator
   next_mode: recorded-local-fallback
