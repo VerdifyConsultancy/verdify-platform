@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict ehmwONOT5fygu4TXpTdCZnrwvdlfc2lFQSGXyUdZNUAa1OCkWdUcYU7BNMOJtwP
+\restrict kMpOEXhwsBBHpohPWbiYThkmjARkimicaVcoolyB936niHnZU6XvBdL2ABkXBfo
 
 -- Dumped from database version 16.14
 -- Dumped by pg_dump version 16.14
@@ -4601,7 +4601,7 @@ DECLARE
     v_raw_latest timestamptz;
     v_candidate_relays text[];
     v_candidate_count integer;
-    v_fert_master_observed boolean;
+    v_fert_master_overlap boolean;
     v_fert_commissioned boolean;
     v_attribution_class text;
     v_attributed_scope text;
@@ -4786,13 +4786,18 @@ BEGIN
                     l.relay_slug,
                     v_last_total_ts AS ts,
                     COALESCE((
-                        SELECT es.state
+                        SELECT bool_and(es.state)
                         FROM public.equipment_state es
                         WHERE COALESCE(es.greenhouse_id, 'vallery') = p_greenhouse_id
                           AND es.equipment = l.relay_slug
-                          AND es.ts <= v_last_total_ts
-                        ORDER BY es.ts DESC
-                        LIMIT 1
+                          AND es.ts = (
+                              SELECT max(latest.ts)
+                              FROM public.equipment_state latest
+                              WHERE COALESCE(latest.greenhouse_id, 'vallery') = p_greenhouse_id
+                                AND latest.equipment = l.relay_slug
+                                AND latest.ts <= v_last_total_ts
+                          )
+                        HAVING count(DISTINCT es.state) = 1
                     ), false) AS state
                 FROM relay_list l
             ), interval_events AS (
@@ -4828,36 +4833,74 @@ BEGIN
               INTO v_candidate_relays, v_candidate_count
               FROM relay_runs;
 
-            SELECT COALESCE((
-                  SELECT es.state
-                  FROM public.equipment_state es
-                  WHERE COALESCE(es.greenhouse_id, 'vallery') = p_greenhouse_id
-                    AND es.equipment = 'fert_master_valve'
-                    AND es.ts <= v_last_total_ts
-                  ORDER BY es.ts DESC
-                  LIMIT 1
-              ), false)
-              OR EXISTS (
-                  SELECT 1
-                  FROM public.equipment_state es
-                  WHERE COALESCE(es.greenhouse_id, 'vallery') = p_greenhouse_id
-                    AND es.equipment = 'fert_master_valve'
-                    AND es.ts > v_last_total_ts
-                    AND es.ts <= r.ts
-                    AND es.state IS TRUE
-              )
-              INTO v_fert_master_observed;
+            v_fert_master_overlap := false;
+            v_fert_commissioned := false;
+            IF 'drip_wall_fert' = ANY(v_candidate_relays) THEN
+                WITH boundaries AS (
+                    SELECT v_last_total_ts AS ts
+                    UNION
+                    SELECT es.ts
+                    FROM public.equipment_state es
+                    WHERE COALESCE(es.greenhouse_id, 'vallery') = p_greenhouse_id
+                      AND es.equipment IN ('drip_wall_fert', 'fert_master_valve')
+                      AND es.ts > v_last_total_ts
+                      AND es.ts < r.ts
+                    UNION
+                    SELECT r.ts
+                ), segments AS (
+                    SELECT
+                        b.ts,
+                        lead(b.ts) OVER (ORDER BY b.ts) AS next_ts,
+                        COALESCE((
+                            SELECT bool_and(es.state)
+                            FROM public.equipment_state es
+                            WHERE COALESCE(es.greenhouse_id, 'vallery') = p_greenhouse_id
+                              AND es.equipment = 'drip_wall_fert'
+                              AND es.ts = (
+                                  SELECT max(latest.ts)
+                                  FROM public.equipment_state latest
+                                  WHERE COALESCE(latest.greenhouse_id, 'vallery') = p_greenhouse_id
+                                    AND latest.equipment = 'drip_wall_fert'
+                                    AND latest.ts <= b.ts
+                              )
+                            HAVING count(DISTINCT es.state) = 1
+                        ), false) AS wall_fert_on,
+                        COALESCE((
+                            SELECT bool_and(es.state)
+                            FROM public.equipment_state es
+                            WHERE COALESCE(es.greenhouse_id, 'vallery') = p_greenhouse_id
+                              AND es.equipment = 'fert_master_valve'
+                              AND es.ts = (
+                                  SELECT max(latest.ts)
+                                  FROM public.equipment_state latest
+                                  WHERE COALESCE(latest.greenhouse_id, 'vallery') = p_greenhouse_id
+                                    AND latest.equipment = 'fert_master_valve'
+                                    AND latest.ts <= b.ts
+                              )
+                            HAVING count(DISTINCT es.state) = 1
+                        ), false) AS fert_master_on
+                    FROM boundaries b
+                )
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM segments s
+                    WHERE s.wall_fert_on
+                      AND s.fert_master_on
+                      AND s.next_ts > s.ts
+                )
+                  INTO v_fert_master_overlap;
 
-            SELECT COALESCE((
-                SELECT lower(s.value) IN ('true', 'on', '1', 'eligible')
-                FROM public.system_state s
-                WHERE COALESCE(s.greenhouse_id, 'vallery') = p_greenhouse_id
-                  AND s.entity = 'fertigation_commissioning_eligible'
-                  AND s.ts <= r.ts
-                ORDER BY s.ts DESC
-                LIMIT 1
-            ), false)
-              INTO v_fert_commissioned;
+                SELECT COALESCE((
+                    SELECT lower(s.value) IN ('true', 'on', '1', 'eligible')
+                    FROM public.system_state s
+                    WHERE COALESCE(s.greenhouse_id, 'vallery') = p_greenhouse_id
+                      AND s.entity = 'fertigation_commissioning_eligible'
+                      AND s.ts <= r.ts
+                    ORDER BY s.ts DESC
+                    LIMIT 1
+                ), false)
+                  INTO v_fert_commissioned;
+            END IF;
 
             v_attribution_class := CASE
                 WHEN v_candidate_count = 0 THEN 'manual_or_unattributed'
@@ -4871,7 +4914,7 @@ BEGIN
                 ) THEN 'climate_wetting'
                 WHEN v_candidate_relays[1] = 'drip_wall' THEN 'wall_irrigation'
                 WHEN v_candidate_relays[1] = 'drip_wall_fert'
-                  AND v_fert_master_observed
+                  AND v_fert_master_overlap
                   AND v_fert_commissioned THEN 'wall_fertigation'
                 ELSE 'unsupported_path'
             END;
@@ -4881,15 +4924,20 @@ BEGIN
                     SELECT 1
                     FROM public.equipment_state es
                     WHERE COALESCE(es.greenhouse_id, 'vallery') = p_greenhouse_id
-                      AND es.equipment = ANY(v_candidate_relays)
-                      AND es.ts > v_last_total_ts
+                      AND es.equipment = ANY(ARRAY[
+                          'fog', 'mister_center', 'mister_south', 'mister_west',
+                          'drip_wall', 'drip_center', 'drip_wall_fert',
+                          'drip_center_fert', 'mister_south_fert',
+                          'mister_west_fert'
+                      ]::text[])
+                      AND es.ts >= v_last_total_ts
                       AND es.ts <= r.ts
                     GROUP BY es.equipment, es.ts
                     HAVING count(DISTINCT es.state) > 1
                 ) THEN 'conflicting_relay_events'
                 WHEN v_candidate_count = 1
                   AND v_candidate_relays[1] = 'drip_wall_fert'
-                  AND NOT v_fert_master_observed THEN 'fert_master_not_observed'
+                  AND NOT v_fert_master_overlap THEN 'fert_master_not_observed'
                 WHEN v_candidate_count = 1
                   AND v_candidate_relays[1] = 'drip_wall_fert'
                   AND NOT v_fert_commissioned THEN 'fertigation_not_commissioned'
@@ -4960,7 +5008,10 @@ BEGIN
             WHEN v_raw_latest IS NULL OR v_last_source_ts IS NULL THEN 'unavailable'
             WHEN v_last_source_ts < v_raw_latest - interval '5 minutes' THEN 'stale'
             WHEN v_raw_latest < now() - interval '10 minutes' THEN 'stale'
-            WHEN v_last_quality IN ('source_gap', 'high_delta') THEN 'discontinuous'
+            WHEN v_last_quality IN (
+                'source_gap', 'high_delta', 'conflicting_source_samples',
+                'counter_reset', 'phantom_zero'
+            ) THEN 'discontinuous'
             ELSE 'fresh'
         END;
 END;
@@ -26897,408 +26948,262 @@ CREATE MATERIALIZED VIEW public.v_climate_merged AS
 ALTER MATERIALIZED VIEW public.v_climate_merged OWNER TO verdify;
 
 --
--- Name: v_cost_today; Type: VIEW; Schema: public; Owner: verdify
+-- Name: v_equipment_runtime_daily; Type: VIEW; Schema: public; Owner: verdify
 --
 
-CREATE VIEW public.v_cost_today AS
- SELECT round((COALESCE(ds.cost_electric, (0)::double precision))::numeric, 2) AS cost_electric,
-    round((COALESCE(ds.cost_gas, (0)::double precision))::numeric, 2) AS cost_gas,
-    round((COALESCE(ds.cost_water, (0)::double precision))::numeric, 2) AS cost_water,
-    round((COALESCE(ds.cost_total, (0)::double precision))::numeric, 2) AS cost_total
-   FROM (( SELECT 1 AS "?column?") anchor
-     LEFT JOIN public.daily_summary ds ON ((ds.date = CURRENT_DATE)));
-
-
-ALTER VIEW public.v_cost_today OWNER TO verdify;
-
---
--- Name: v_crop_catalog_with_profiles; Type: VIEW; Schema: public; Owner: verdify
---
-
-CREATE VIEW public.v_crop_catalog_with_profiles AS
- SELECT id AS crop_catalog_id,
-    slug,
-    common_name,
-    scientific_name,
-    category,
-    season,
-    cycle_days_min,
-    cycle_days_max,
-    base_temp_f,
-    default_target_dli,
-    default_target_vpd_low,
-    default_target_vpd_high,
-    default_ph_low,
-    default_ph_high,
-    default_ec_low,
-    default_ec_high,
-    COALESCE(( SELECT jsonb_agg(jsonb_build_object('growth_stage', p.growth_stage, 'season', p.season, 'hours_covered', p.hours_covered, 'temp_ideal_min_24h', p.temp_ideal_min_24h, 'temp_ideal_max_24h', p.temp_ideal_max_24h, 'vpd_ideal_min_24h', p.vpd_ideal_min_24h, 'vpd_ideal_max_24h', p.vpd_ideal_max_24h, 'dli_target_mol', p.dli_target_mol) ORDER BY p.growth_stage, p.season) AS jsonb_agg
-           FROM ( SELECT ctp.growth_stage,
-                    ctp.season,
-                    (count(*))::integer AS hours_covered,
-                    avg(ctp.temp_ideal_min) AS temp_ideal_min_24h,
-                    avg(ctp.temp_ideal_max) AS temp_ideal_max_24h,
-                    avg(ctp.vpd_ideal_min) AS vpd_ideal_min_24h,
-                    avg(ctp.vpd_ideal_max) AS vpd_ideal_max_24h,
-                    avg(ctp.dli_target_mol) AS dli_target_mol
-                   FROM public.crop_target_profiles ctp
-                  WHERE (ctp.crop_catalog_id = cc.id)
-                  GROUP BY ctp.growth_stage, ctp.season) p), '[]'::jsonb) AS stage_season_profiles
-   FROM public.crop_catalog cc
-  ORDER BY slug;
-
-
-ALTER VIEW public.v_crop_catalog_with_profiles OWNER TO verdify;
-
---
--- Name: VIEW v_crop_catalog_with_profiles; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON VIEW public.v_crop_catalog_with_profiles IS 'Sprint 22: per-crop reference data + stage/season band aggregates. Drives the website crop-profile pages (currently hand-typed per variety).';
-
-
---
--- Name: v_crop_health_trend; Type: VIEW; Schema: public; Owner: verdify
---
-
-CREATE VIEW public.v_crop_health_trend AS
- SELECT c.name AS crop_name,
-    c.zone,
-    (o.ts AT TIME ZONE 'America/Denver'::text) AS observed,
-    o.health_score,
-    o.obs_type AS observation_type,
-    o.notes,
-    o.source
-   FROM (public.observations o
-     JOIN public.crops c ON ((o.crop_id = c.id)))
-  WHERE (o.ts > (now() - '30 days'::interval))
-  ORDER BY c.name, o.ts DESC;
-
-
-ALTER VIEW public.v_crop_health_trend OWNER TO verdify;
-
---
--- Name: zones; Type: TABLE; Schema: public; Owner: verdify
---
-
-CREATE TABLE public.zones (
-    id integer NOT NULL,
-    greenhouse_id text DEFAULT 'vallery'::text NOT NULL,
-    slug text NOT NULL,
-    name text NOT NULL,
-    orientation text,
-    sensor_modbus_addr integer,
-    peak_temp_f double precision,
-    status text DEFAULT 'active'::text NOT NULL,
-    notes text,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    CONSTRAINT zones_sensor_modbus_addr_check CHECK (((sensor_modbus_addr >= 1) AND (sensor_modbus_addr <= 247))),
-    CONSTRAINT zones_slug_check CHECK ((slug ~ '^[a-z][a-z0-9_]*$'::text)),
-    CONSTRAINT zones_status_check CHECK ((status = ANY (ARRAY['active'::text, 'offline'::text, 'decommissioned'::text])))
-);
-
-
-ALTER TABLE public.zones OWNER TO verdify;
-
---
--- Name: TABLE zones; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON TABLE public.zones IS 'Sprint 22: physical zones (south/north/east/west/center). Replaces free-text `zone` columns on crops/observations/alert_log with FK targets.';
-
-
---
--- Name: v_crop_history; Type: VIEW; Schema: public; Owner: verdify
---
-
-CREATE VIEW public.v_crop_history AS
- SELECT p.id AS position_id,
-    p.greenhouse_id,
-    p.label AS position_label,
-    z.slug AS zone_slug,
-    c.id AS crop_id,
-    c.name AS crop_name,
-    c.variety AS crop_variety,
-    c.stage AS final_stage,
-    c.planted_date,
-    c.cleared_at,
-    c.is_active,
-    ((c.cleared_at)::date - c.planted_date) AS days_in_place,
-    cc.slug AS crop_catalog_slug,
-    cc.common_name AS crop_common_name,
-    ( SELECT count(*) AS count
-           FROM public.crop_events e
-          WHERE (e.crop_id = c.id)) AS event_count,
-    ( SELECT count(*) AS count
-           FROM public.observations o
-          WHERE (o.crop_id = c.id)) AS observation_count,
-    ( SELECT count(*) AS count
-           FROM public.harvests h
-          WHERE (h.crop_id = c.id)) AS harvest_count
-   FROM ((((public.crops c
-     LEFT JOIN public.positions p ON ((p.id = c.position_id)))
-     LEFT JOIN public.shelves sh ON ((sh.id = p.shelf_id)))
-     LEFT JOIN public.zones z ON ((z.id = sh.zone_id)))
-     LEFT JOIN public.crop_catalog cc ON ((cc.id = c.crop_catalog_id)))
-  ORDER BY p.label, c.planted_date DESC;
-
-
-ALTER VIEW public.v_crop_history OWNER TO verdify;
-
---
--- Name: VIEW v_crop_history; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON VIEW public.v_crop_history IS 'Sprint 23: every crop ever recorded at a position, in reverse-chronological order. Drives website position history + /api/v1/positions/{id}/crops.';
-
-
---
--- Name: v_crop_lifecycle; Type: VIEW; Schema: public; Owner: verdify
---
-
-CREATE VIEW public.v_crop_lifecycle AS
- SELECT c.id AS crop_id,
-    c.greenhouse_id,
-    c.name AS crop_name,
-    c.variety,
-    c.stage AS current_stage,
-    c.is_active,
-    c.planted_date,
-    c.cleared_at,
-    (COALESCE((c.cleared_at)::date, CURRENT_DATE) - c.planted_date) AS days_alive,
-    z.slug AS current_zone_slug,
-    p.label AS current_position_label,
-    cc.slug AS crop_catalog_slug,
-    cc.common_name AS catalog_name,
-    cc.category AS catalog_category,
-    COALESCE(( SELECT jsonb_agg(jsonb_build_object('ts', e.ts, 'event_type', e.event_type, 'old_stage', e.old_stage, 'new_stage', e.new_stage, 'position_id', e.position_id, 'notes', e.notes, 'source', e.source) ORDER BY e.ts) AS jsonb_agg
-           FROM public.crop_events e
-          WHERE (e.crop_id = c.id)), '[]'::jsonb) AS events,
-    COALESCE(( SELECT sum(h.weight_kg) AS sum
-           FROM public.harvests h
-          WHERE (h.crop_id = c.id)), (0)::double precision) AS total_weight_kg,
-    COALESCE(( SELECT sum(h.unit_count) AS sum
-           FROM public.harvests h
-          WHERE (h.crop_id = c.id)), (0)::bigint) AS total_units,
-    COALESCE(( SELECT sum(h.revenue) AS sum
-           FROM public.harvests h
-          WHERE (h.crop_id = c.id)), (0)::double precision) AS total_revenue_usd,
-    ( SELECT count(*) AS count
-           FROM public.observations o
-          WHERE (o.crop_id = c.id)) AS observation_count,
-    ( SELECT (avg(o.health_score))::numeric(4,3) AS avg
-           FROM public.observations o
-          WHERE ((o.crop_id = c.id) AND (o.health_score IS NOT NULL))) AS avg_health_score,
-    ( SELECT max(o.ts) AS max
-           FROM public.observations o
-          WHERE (o.crop_id = c.id)) AS latest_observation_ts
-   FROM ((((public.crops c
-     LEFT JOIN public.positions p ON ((p.id = c.position_id)))
-     LEFT JOIN public.shelves sh ON ((sh.id = p.shelf_id)))
-     LEFT JOIN public.zones z ON ((z.id = sh.zone_id)))
-     LEFT JOIN public.crop_catalog cc ON ((cc.id = c.crop_catalog_id)))
-  ORDER BY c.is_active DESC, c.planted_date DESC;
-
-
-ALTER VIEW public.v_crop_lifecycle OWNER TO verdify;
-
---
--- Name: VIEW v_crop_lifecycle; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON VIEW public.v_crop_lifecycle IS 'Sprint 23: per-crop timeline with events JSONB array + harvest totals + observation summary. Drives /api/v1/crops/{id}/lifecycle and the MCP crop_lifecycle tool.';
-
-
---
--- Name: v_crop_lifecycle_completeness; Type: VIEW; Schema: public; Owner: verdify
---
-
-CREATE VIEW public.v_crop_lifecycle_completeness AS
- SELECT id AS crop_id,
-    name,
-    variety,
-    zone,
-    "position",
-    stage,
-    is_active,
-    count,
-    expected_harvest,
-    crop_catalog_id,
-    target_dli,
-    target_vpd_low,
-    target_vpd_high,
+CREATE VIEW public.v_equipment_runtime_daily AS
+ WITH relevant AS (
+         SELECT COALESCE(equipment_state.greenhouse_id, 'vallery'::text) AS greenhouse_id,
+            equipment_state.equipment,
+            equipment_state.ts,
+            bool_or(equipment_state.state) AS state,
+            count(*) AS raw_rows,
+            (count(DISTINCT equipment_state.state) > 1) AS conflicting_state
+           FROM public.equipment_state
+          WHERE (equipment_state.equipment = ANY (ARRAY['fan1'::text, 'fan2'::text, 'heat1'::text, 'heat2'::text, 'fog'::text, 'vent'::text, 'mister_south'::text, 'mister_west'::text, 'mister_center'::text, 'grow_light_main'::text, 'grow_light_grow'::text, 'drip_wall'::text, 'drip_center'::text, 'drip_wall_fert'::text, 'drip_center_fert'::text, 'mister_south_fert'::text, 'mister_west_fert'::text, 'fert_master_valve'::text]))
+          GROUP BY COALESCE(equipment_state.greenhouse_id, 'vallery'::text), equipment_state.equipment, equipment_state.ts
+        ), ordered AS (
+         SELECT r.greenhouse_id,
+            r.equipment,
+            r.ts,
+            r.state,
+            r.raw_rows,
+            r.conflicting_state,
+            lag(r.state) OVER (PARTITION BY r.greenhouse_id, r.equipment ORDER BY r.ts) AS previous_state,
+            lag(r.conflicting_state) OVER (PARTITION BY r.greenhouse_id, r.equipment ORDER BY r.ts) AS previous_conflicting_state
+           FROM relevant r
+        ), transition_events AS (
+         SELECT ordered.greenhouse_id,
+            ordered.equipment,
+            ordered.ts,
+            ordered.state,
+            ordered.raw_rows,
+            ordered.conflicting_state,
+            ordered.previous_state,
+            ordered.previous_conflicting_state
+           FROM ordered
+          WHERE ((ordered.previous_state IS DISTINCT FROM ordered.state) OR (ordered.previous_state IS NULL) OR ordered.conflicting_state OR COALESCE(ordered.previous_conflicting_state, false))
+        ), transitions AS (
+         SELECT e.greenhouse_id,
+            e.equipment,
+            e.ts,
+            e.state,
+            e.raw_rows,
+            e.conflicting_state,
+            e.previous_state,
+            e.previous_conflicting_state,
+            lead(e.ts) OVER (PARTITION BY e.greenhouse_id, e.equipment ORDER BY e.ts) AS next_transition_ts
+           FROM transition_events e
+        ), equipment_bounds AS (
+         SELECT relevant.greenhouse_id,
+            relevant.equipment,
+            min(((relevant.ts AT TIME ZONE 'America/Denver'::text))::date) AS first_day,
+            ((now() AT TIME ZONE 'America/Denver'::text))::date AS last_day
+           FROM relevant
+          GROUP BY relevant.greenhouse_id, relevant.equipment
+        ), days AS (
+         SELECT b.greenhouse_id,
+            b.equipment,
+            (gs.gs)::date AS day
+           FROM (equipment_bounds b
+             CROSS JOIN LATERAL generate_series((b.first_day)::timestamp without time zone, (b.last_day)::timestamp without time zone, '1 day'::interval) gs(gs))
+          WHERE (b.first_day <= b.last_day)
+        ), day_bounds AS (
+         SELECT d_1.greenhouse_id,
+            d_1.equipment,
+            d_1.day,
+            ((d_1.day)::timestamp without time zone AT TIME ZONE 'America/Denver'::text) AS start_ts,
+            (((d_1.day + 1))::timestamp without time zone AT TIME ZONE 'America/Denver'::text) AS end_ts,
+            LEAST((((d_1.day + 1))::timestamp without time zone AT TIME ZONE 'America/Denver'::text), now()) AS effective_end_ts,
+            (d_1.day < ((now() AT TIME ZONE 'America/Denver'::text))::date) AS is_complete_day
+           FROM days d_1
+        ), day_context AS (
+         SELECT b.greenhouse_id,
+            b.equipment,
+            b.day,
+            b.start_ts,
+            b.end_ts,
+            b.effective_end_ts,
+            b.is_complete_day,
+            start_event.state AS start_state,
+            start_event.ts AS start_state_ts,
+            start_event.conflicting_state AS start_state_conflicting
+           FROM (day_bounds b
+             LEFT JOIN LATERAL ( SELECT t.state,
+                    t.ts,
+                    t.conflicting_state
+                   FROM transitions t
+                  WHERE ((t.greenhouse_id = b.greenhouse_id) AND (t.equipment = b.equipment) AND (t.ts < b.start_ts))
+                  ORDER BY t.ts DESC
+                 LIMIT 1) start_event ON (true))
+        ), points AS (
+         SELECT d_1.greenhouse_id,
+            d_1.equipment,
+            d_1.day,
+            d_1.start_ts,
+            d_1.end_ts,
+            d_1.effective_end_ts,
+            d_1.is_complete_day,
+            d_1.start_state,
+            d_1.start_state_ts,
+            d_1.start_state_conflicting,
+            NULL::timestamp with time zone AS next_transition_ts,
+            d_1.start_ts AS ts,
+            d_1.start_state AS state,
+            false AS is_event
+           FROM day_context d_1
+          WHERE (d_1.start_state IS NOT NULL)
+        UNION ALL
+         SELECT d_1.greenhouse_id,
+            d_1.equipment,
+            d_1.day,
+            d_1.start_ts,
+            d_1.end_ts,
+            d_1.effective_end_ts,
+            d_1.is_complete_day,
+            d_1.start_state,
+            d_1.start_state_ts,
+            d_1.start_state_conflicting,
+            t.next_transition_ts,
+            t.ts,
+            t.state,
+            true AS is_event
+           FROM (day_context d_1
+             JOIN transitions t ON (((t.greenhouse_id = d_1.greenhouse_id) AND (t.equipment = d_1.equipment) AND (t.ts >= d_1.start_ts) AND (t.ts < d_1.effective_end_ts))))
+        ), sequenced_points AS (
+         SELECT p_1.greenhouse_id,
+            p_1.equipment,
+            p_1.day,
+            p_1.start_ts,
+            p_1.end_ts,
+            p_1.effective_end_ts,
+            p_1.is_complete_day,
+            p_1.start_state,
+            p_1.start_state_ts,
+            p_1.start_state_conflicting,
+            p_1.next_transition_ts,
+            p_1.ts,
+            p_1.state,
+            p_1.is_event,
+            lag(p_1.state) OVER (PARTITION BY p_1.greenhouse_id, p_1.equipment, p_1.day ORDER BY p_1.ts, p_1.is_event) AS prior_state,
+            lead(p_1.ts, 1, p_1.effective_end_ts) OVER (PARTITION BY p_1.greenhouse_id, p_1.equipment, p_1.day ORDER BY p_1.ts, p_1.is_event) AS next_ts
+           FROM points p_1
+        ), segment_metrics AS (
+         SELECT sequenced_points.greenhouse_id,
+            sequenced_points.equipment,
+            sequenced_points.day,
+            round(sum((EXTRACT(epoch FROM (sequenced_points.next_ts - sequenced_points.ts)) / 60.0)) FILTER (WHERE ((sequenced_points.state IS TRUE) AND (sequenced_points.next_ts > sequenced_points.ts))), 1) AS on_minutes,
+            count(*) FILTER (WHERE (sequenced_points.is_event AND (sequenced_points.state IS TRUE) AND (sequenced_points.prior_state IS FALSE))) AS starts,
+            count(*) FILTER (WHERE (sequenced_points.is_event AND (sequenced_points.state IS TRUE) AND (sequenced_points.prior_state IS NULL))) AS starts_with_unknown_prior_state,
+            count(*) FILTER (WHERE (sequenced_points.is_event AND (sequenced_points.state IS TRUE) AND (sequenced_points.prior_state IS FALSE) AND (EXTRACT(epoch FROM (LEAST(COALESCE(sequenced_points.next_transition_ts, now()), now()) - sequenced_points.ts)) < (60)::numeric))) AS cycles_under_1m,
+            count(*) FILTER (WHERE (sequenced_points.is_event AND (sequenced_points.state IS TRUE) AND (sequenced_points.prior_state IS FALSE) AND (EXTRACT(epoch FROM (LEAST(COALESCE(sequenced_points.next_transition_ts, now()), now()) - sequenced_points.ts)) >= (60)::numeric) AND (EXTRACT(epoch FROM (LEAST(COALESCE(sequenced_points.next_transition_ts, now()), now()) - sequenced_points.ts)) < (300)::numeric))) AS cycles_1m_to_5m,
+            count(*) FILTER (WHERE (sequenced_points.is_event AND (sequenced_points.state IS TRUE) AND (sequenced_points.prior_state IS FALSE) AND (EXTRACT(epoch FROM (LEAST(COALESCE(sequenced_points.next_transition_ts, now()), now()) - sequenced_points.ts)) >= (300)::numeric) AND (EXTRACT(epoch FROM (LEAST(COALESCE(sequenced_points.next_transition_ts, now()), now()) - sequenced_points.ts)) < (900)::numeric))) AS cycles_5m_to_15m,
+            count(*) FILTER (WHERE (sequenced_points.is_event AND (sequenced_points.state IS TRUE) AND (sequenced_points.prior_state IS FALSE) AND (EXTRACT(epoch FROM (LEAST(COALESCE(sequenced_points.next_transition_ts, now()), now()) - sequenced_points.ts)) >= (900)::numeric))) AS cycles_15m_plus,
+            count(*) FILTER (WHERE (sequenced_points.is_event AND (sequenced_points.state IS TRUE) AND ((sequenced_points.next_transition_ts IS NULL) OR (sequenced_points.next_transition_ts > sequenced_points.effective_end_ts)))) AS open_pulses_at_cutoff,
+            (array_agg(sequenced_points.state ORDER BY sequenced_points.ts DESC, sequenced_points.is_event DESC))[1] AS end_state
+           FROM sequenced_points
+          GROUP BY sequenced_points.greenhouse_id, sequenced_points.equipment, sequenced_points.day
+        ), day_event_quality AS (
+         SELECT d_1.greenhouse_id,
+            d_1.equipment,
+            d_1.day,
+            (COALESCE(sum(o.raw_rows), (0)::numeric))::bigint AS raw_event_rows,
+            (COALESCE(sum((o.raw_rows - 1)), (0)::numeric))::bigint AS same_timestamp_duplicate_rows,
+            count(*) FILTER (WHERE (NOT (o.previous_state IS DISTINCT FROM o.state))) AS redundant_state_rows,
+            count(*) FILTER (WHERE o.conflicting_state) AS conflicting_timestamp_count,
+            count(*) FILTER (WHERE ((o.previous_state IS NOT NULL) AND (o.previous_state IS DISTINCT FROM o.state))) AS normalized_transition_count
+           FROM (day_context d_1
+             LEFT JOIN ordered o ON (((o.greenhouse_id = d_1.greenhouse_id) AND (o.equipment = d_1.equipment) AND (o.ts >= d_1.start_ts) AND (o.ts < d_1.effective_end_ts))))
+          GROUP BY d_1.greenhouse_id, d_1.equipment, d_1.day
+        ), hourly_transitions AS (
+         SELECT d_1.greenhouse_id,
+            d_1.equipment,
+            d_1.day,
+            date_trunc('hour'::text, o.ts) AS hour_bucket,
+            (count(*))::integer AS transitions_in_hour
+           FROM (day_context d_1
+             JOIN ordered o ON (((o.greenhouse_id = d_1.greenhouse_id) AND (o.equipment = d_1.equipment) AND (o.ts >= d_1.start_ts) AND (o.ts < d_1.effective_end_ts) AND (o.previous_state IS NOT NULL) AND (o.previous_state IS DISTINCT FROM o.state))))
+          GROUP BY d_1.greenhouse_id, d_1.equipment, d_1.day, (date_trunc('hour'::text, o.ts))
+        ), peak_transitions AS (
+         SELECT hourly_transitions.greenhouse_id,
+            hourly_transitions.equipment,
+            hourly_transitions.day,
+            max(hourly_transitions.transitions_in_hour) AS peak_transitions_per_hour
+           FROM hourly_transitions
+          GROUP BY hourly_transitions.greenhouse_id, hourly_transitions.equipment, hourly_transitions.day
+        )
+ SELECT d.day,
+    d.equipment,
+    COALESCE(s.on_minutes, 0.0) AS on_minutes,
+    COALESCE(s.starts, (0)::bigint) AS cycles,
+    d.greenhouse_id,
+    d.start_ts AS day_started_at,
+    d.effective_end_ts AS observed_through,
+    d.is_complete_day,
+    ((d.start_state IS NOT NULL) AND (NOT COALESCE(d.start_state_conflicting, false))) AS start_state_known,
+    d.start_state,
+    s.end_state,
+    COALESCE(s.end_state, d.start_state, false) AS open_at_end,
+    (d.is_complete_day AND (d.start_state IS NOT NULL) AND (NOT COALESCE(d.start_state_conflicting, false)) AND (COALESCE(q.conflicting_timestamp_count, (0)::bigint) = 0)) AS is_deploy_gate_eligible,
+        CASE
+            WHEN (NOT d.is_complete_day) THEN 'partial_day'::text
+            WHEN (d.start_state IS NULL) THEN 'unknown_start_state'::text
+            WHEN COALESCE(d.start_state_conflicting, false) THEN 'conflicting_carry_state'::text
+            WHEN (COALESCE(q.conflicting_timestamp_count, (0)::bigint) > 0) THEN 'conflicting_events'::text
+            ELSE 'complete'::text
+        END AS quality,
     array_remove(ARRAY[
         CASE
-            WHEN (count IS NULL) THEN 'count'::text
+            WHEN (NOT d.is_complete_day) THEN 'partial_day'::text
             ELSE NULL::text
         END,
         CASE
-            WHEN (expected_harvest IS NULL) THEN 'expected_harvest'::text
+            WHEN (d.start_state IS NULL) THEN 'unknown_start_state'::text
             ELSE NULL::text
         END,
         CASE
-            WHEN (crop_catalog_id IS NULL) THEN 'crop_catalog_id'::text
+            WHEN COALESCE(d.start_state_conflicting, false) THEN 'conflicting_carry_state'::text
             ELSE NULL::text
         END,
         CASE
-            WHEN (stage IS NULL) THEN 'stage'::text
+            WHEN (COALESCE(q.conflicting_timestamp_count, (0)::bigint) > 0) THEN 'conflicting_same_timestamp'::text
             ELSE NULL::text
         END,
         CASE
-            WHEN (target_dli IS NULL) THEN 'target_dli'::text
+            WHEN (COALESCE(s.open_pulses_at_cutoff, (0)::bigint) > 0) THEN 'open_pulse_at_cutoff'::text
             ELSE NULL::text
         END,
         CASE
-            WHEN ((target_vpd_low IS NULL) OR (target_vpd_high IS NULL)) THEN 'target_vpd'::text
+            WHEN ((COALESCE(q.same_timestamp_duplicate_rows, (0)::bigint) > 0) OR (COALESCE(q.redundant_state_rows, (0)::bigint) > 0)) THEN 'duplicates_collapsed'::text
             ELSE NULL::text
-        END], NULL::text) AS missing_fields,
-    cardinality(array_remove(ARRAY[
-        CASE
-            WHEN (count IS NULL) THEN 'count'::text
-            ELSE NULL::text
-        END,
-        CASE
-            WHEN (expected_harvest IS NULL) THEN 'expected_harvest'::text
-            ELSE NULL::text
-        END,
-        CASE
-            WHEN (crop_catalog_id IS NULL) THEN 'crop_catalog_id'::text
-            ELSE NULL::text
-        END,
-        CASE
-            WHEN (stage IS NULL) THEN 'stage'::text
-            ELSE NULL::text
-        END,
-        CASE
-            WHEN (target_dli IS NULL) THEN 'target_dli'::text
-            ELSE NULL::text
-        END,
-        CASE
-            WHEN ((target_vpd_low IS NULL) OR (target_vpd_high IS NULL)) THEN 'target_vpd'::text
-            ELSE NULL::text
-        END], NULL::text)) AS missing_count
-   FROM public.crops c;
+        END], NULL::text) AS quality_flags,
+    COALESCE(s.starts, (0)::bigint) AS starts,
+    COALESCE(s.cycles_under_1m, (0)::bigint) AS cycles_under_1m,
+    COALESCE(s.cycles_1m_to_5m, (0)::bigint) AS cycles_1m_to_5m,
+    (COALESCE(s.cycles_under_1m, (0)::bigint) + COALESCE(s.cycles_1m_to_5m, (0)::bigint)) AS short_cycles_under_5m,
+    COALESCE(s.cycles_5m_to_15m, (0)::bigint) AS cycles_5m_to_15m,
+    COALESCE(s.cycles_15m_plus, (0)::bigint) AS cycles_15m_plus,
+    COALESCE(s.open_pulses_at_cutoff, (0)::bigint) AS open_pulses_at_cutoff,
+    COALESCE(p.peak_transitions_per_hour, 0) AS peak_transitions_per_hour,
+    COALESCE(q.raw_event_rows, (0)::bigint) AS raw_event_rows,
+    COALESCE(q.normalized_transition_count, (0)::bigint) AS normalized_transition_count,
+    COALESCE(q.same_timestamp_duplicate_rows, (0)::bigint) AS same_timestamp_duplicate_rows,
+    COALESCE(q.redundant_state_rows, (0)::bigint) AS redundant_state_rows,
+    COALESCE(q.conflicting_timestamp_count, (0)::bigint) AS conflicting_timestamp_count,
+    COALESCE(s.starts_with_unknown_prior_state, (0)::bigint) AS starts_with_unknown_prior_state
+   FROM (((day_context d
+     LEFT JOIN segment_metrics s USING (greenhouse_id, equipment, day))
+     LEFT JOIN day_event_quality q USING (greenhouse_id, equipment, day))
+     LEFT JOIN peak_transitions p USING (greenhouse_id, equipment, day));
 
 
-ALTER VIEW public.v_crop_lifecycle_completeness OWNER TO verdify;
+ALTER VIEW public.v_equipment_runtime_daily OWNER TO verdify;
 
 --
--- Name: VIEW v_crop_lifecycle_completeness; Type: COMMENT; Schema: public; Owner: verdify
+-- Name: VIEW v_equipment_runtime_daily; Type: COMMENT; Schema: public; Owner: verdify
 --
 
-COMMENT ON VIEW public.v_crop_lifecycle_completeness IS 'Crop rows with lifecycle/outcome fields required for agronomic analysis.';
-
-
---
--- Name: v_cycle_count_audit; Type: VIEW; Schema: public; Owner: verdify
---
-
-CREATE VIEW public.v_cycle_count_audit AS
- WITH equipment_edges AS (
-         SELECT (date_trunc('day'::text, (e_1.ts AT TIME ZONE 'America/Denver'::text)))::date AS date,
-            e_1.equipment,
-            count(*) FILTER (WHERE ((e_1.state IS TRUE) AND (COALESCE(e_1.lag_state, false) IS FALSE))) AS equipment_cycles
-           FROM ( SELECT equipment_state.ts,
-                    equipment_state.equipment,
-                    equipment_state.state,
-                    lag(equipment_state.state) OVER (PARTITION BY equipment_state.equipment, (date_trunc('day'::text, (equipment_state.ts AT TIME ZONE 'America/Denver'::text))) ORDER BY equipment_state.ts) AS lag_state
-                   FROM public.equipment_state
-                  WHERE (equipment_state.equipment = ANY (ARRAY['mister_south'::text, 'mister_west'::text, 'mister_center'::text, 'drip_wall'::text, 'drip_center'::text]))) e_1
-          GROUP BY ((date_trunc('day'::text, (e_1.ts AT TIME ZONE 'America/Denver'::text)))::date), e_1.equipment
-        ), firmware_cycles AS (
-         SELECT daily_summary.date,
-            'mister_south'::text AS equipment,
-            daily_summary.cycles_mister_south AS firmware_cycles
-           FROM public.daily_summary
-        UNION ALL
-         SELECT daily_summary.date,
-            'mister_west'::text AS text,
-            daily_summary.cycles_mister_west
-           FROM public.daily_summary
-        UNION ALL
-         SELECT daily_summary.date,
-            'mister_center'::text AS text,
-            daily_summary.cycles_mister_center
-           FROM public.daily_summary
-        UNION ALL
-         SELECT daily_summary.date,
-            'drip_wall'::text AS text,
-            daily_summary.cycles_drip_wall
-           FROM public.daily_summary
-        UNION ALL
-         SELECT daily_summary.date,
-            'drip_center'::text AS text,
-            daily_summary.cycles_drip_center
-           FROM public.daily_summary
-        )
- SELECT f.date,
-    f.equipment,
-    f.firmware_cycles,
-    COALESCE(e.equipment_cycles, (0)::bigint) AS equipment_cycles,
-    (f.firmware_cycles - COALESCE(e.equipment_cycles, (0)::bigint)) AS cycle_delta,
-        CASE
-            WHEN (f.firmware_cycles IS NULL) THEN 'missing_firmware_counter'::text
-            WHEN (GREATEST((f.firmware_cycles)::bigint, COALESCE(e.equipment_cycles, (0)::bigint)) = 0) THEN 'ok'::text
-            WHEN (((abs((f.firmware_cycles - COALESCE(e.equipment_cycles, (0)::bigint))))::numeric / (GREATEST((f.firmware_cycles)::bigint, COALESCE(e.equipment_cycles, (0)::bigint)))::numeric) > 0.05) THEN 'warn'::text
-            ELSE 'ok'::text
-        END AS audit_status
-   FROM (firmware_cycles f
-     LEFT JOIN equipment_edges e ON (((e.date = f.date) AND (e.equipment = f.equipment))));
-
-
-ALTER VIEW public.v_cycle_count_audit OWNER TO verdify;
-
---
--- Name: VIEW v_cycle_count_audit; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON VIEW public.v_cycle_count_audit IS 'Compares firmware per-zone mister/drip cycle counters against equipment_state rising-edge counts; >5% divergence is warn.';
-
-
---
--- Name: v_daily_checklist; Type: VIEW; Schema: public; Owner: verdify
---
-
-CREATE VIEW public.v_daily_checklist AS
- WITH last_done AS (
-         SELECT daily_checklist_log.template_id,
-            max(daily_checklist_log.date) FILTER (WHERE (daily_checklist_log.completed_at IS NOT NULL)) AS last_completed
-           FROM public.daily_checklist_log
-          GROUP BY daily_checklist_log.template_id
-        )
- SELECT t.id AS template_id,
-    t.task,
-    t.zone,
-    t.priority,
-    t.frequency,
-    t.role,
-        CASE t.frequency
-            WHEN 'daily'::text THEN true
-            WHEN 'weekly'::text THEN ((ld.last_completed IS NULL) OR ((CURRENT_DATE - ld.last_completed) > 6))
-            WHEN 'biweekly'::text THEN ((ld.last_completed IS NULL) OR ((CURRENT_DATE - ld.last_completed) > 13))
-            WHEN 'monthly'::text THEN ((ld.last_completed IS NULL) OR ((CURRENT_DATE - ld.last_completed) > 29))
-            ELSE NULL::boolean
-        END AS is_due_today,
-    ld.last_completed,
-    log.completed_at,
-    log.completed_by,
-    log.skipped,
-    log.skip_reason,
-    log.notes AS log_notes
-   FROM ((public.daily_checklist_template t
-     LEFT JOIN last_done ld ON ((ld.template_id = t.id)))
-     LEFT JOIN public.daily_checklist_log log ON (((log.template_id = t.id) AND (log.date = CURRENT_DATE))))
-  WHERE (t.is_active = true)
-  ORDER BY (log.completed_at IS NOT NULL), t.priority, t.zone;
-
-
-ALTER VIEW public.v_daily_checklist OWNER TO verdify;
-
---
--- Name: VIEW v_daily_checklist; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON VIEW public.v_daily_checklist IS 'Today''s checklist: shows all active tasks, whether due today, completion status. Incomplete + due items sort first.';
+COMMENT ON VIEW public.v_equipment_runtime_daily IS 'Transition-derived per-equipment local-day truth from raw equipment_state. Carries state across midnight; collapses repeated and same-timestamp duplicate observations; preserves per-light circuits; exposes runtime, starts, short-cycle buckets, open pulses, peak transitions/hour, completeness, and quality. Use only is_deploy_gate_eligible rows for release comparisons; current/future days are never eligible. Firmware daily counters remain diagnostics.';
 
 
 --
@@ -27310,14 +27215,23 @@ CREATE VIEW public.v_runtime_energy_daily AS
          SELECT ds.date,
             ds.greenhouse_id,
             v.equipment,
-            v.on_minutes
-           FROM (public.daily_summary ds
-             CROSS JOIN LATERAL ( VALUES ('heat1'::text,ds.runtime_heat1_min), ('fan1'::text,ds.runtime_fan1_min), ('fan2'::text,ds.runtime_fan2_min), ('fog'::text,ds.runtime_fog_min), ('vent'::text,ds.runtime_vent_min), ('grow_light_main'::text,ds.runtime_grow_light_main_min), ('grow_light_grow'::text,ds.runtime_grow_light_grow_min)) v(equipment, on_minutes))
+            (rt.on_minutes)::double precision AS on_minutes,
+            rt.is_complete_day,
+            rt.start_state_known,
+            rt.is_deploy_gate_eligible AS runtime_evidence_eligible,
+            rt.quality AS runtime_quality
+           FROM ((public.daily_summary ds
+             CROSS JOIN LATERAL ( VALUES ('heat1'::text), ('fan1'::text), ('fan2'::text), ('fog'::text), ('vent'::text), ('grow_light_main'::text), ('grow_light_grow'::text)) v(equipment))
+             LEFT JOIN public.v_equipment_runtime_daily rt ON (((rt.day = ds.date) AND (rt.greenhouse_id = ds.greenhouse_id) AND (rt.equipment = v.equipment))))
         ), evidence AS (
          SELECT r_1.date,
             r_1.greenhouse_id,
             r_1.equipment,
             r_1.on_minutes,
+            r_1.is_complete_day,
+            r_1.start_state_known,
+            r_1.runtime_evidence_eligible,
+            r_1.runtime_quality,
             c.nominal_value AS coefficient_nominal,
             c.lower_bound AS coefficient_low,
             c.upper_bound AS coefficient_high,
@@ -27351,28 +27265,29 @@ CREATE VIEW public.v_runtime_energy_daily AS
  SELECT date,
     greenhouse_id,
         CASE
-            WHEN bool_or(((on_minutes IS NULL) OR (coefficient_nominal IS NULL))) THEN NULL::double precision
+            WHEN bool_or(((on_minutes IS NULL) OR (NOT COALESCE(runtime_evidence_eligible, false)) OR (coefficient_nominal IS NULL))) THEN NULL::double precision
             ELSE (round((sum((((on_minutes / (60.0)::double precision) * coefficient_nominal) / (1000.0)::double precision)))::numeric, 3))::double precision
         END AS modeled_kwh,
         CASE
-            WHEN bool_or(((on_minutes IS NULL) OR (coefficient_low IS NULL))) THEN NULL::double precision
+            WHEN bool_or(((on_minutes IS NULL) OR (NOT COALESCE(runtime_evidence_eligible, false)) OR (coefficient_low IS NULL))) THEN NULL::double precision
             ELSE (round((sum((((on_minutes / (60.0)::double precision) * coefficient_low) / (1000.0)::double precision)))::numeric, 3))::double precision
         END AS modeled_kwh_low,
         CASE
-            WHEN bool_or(((on_minutes IS NULL) OR (coefficient_high IS NULL))) THEN NULL::double precision
+            WHEN bool_or(((on_minutes IS NULL) OR (NOT COALESCE(runtime_evidence_eligible, false)) OR (coefficient_high IS NULL))) THEN NULL::double precision
             ELSE (round((sum((((on_minutes / (60.0)::double precision) * coefficient_high) / (1000.0)::double precision)))::numeric, 3))::double precision
         END AS modeled_kwh_high,
-    (round(((100.0 * (count(*) FILTER (WHERE ((on_minutes IS NOT NULL) AND (coefficient_nominal IS NOT NULL))))::numeric) / (NULLIF(count(*), 0))::numeric), 1))::double precision AS runtime_coverage_pct,
+    (round(((100.0 * (count(*) FILTER (WHERE ((on_minutes IS NOT NULL) AND (coefficient_nominal IS NOT NULL) AND runtime_evidence_eligible)))::numeric) / (NULLIF(count(*), 0))::numeric), 1))::double precision AS runtime_coverage_pct,
     jsonb_agg(DISTINCT jsonb_build_object('equipment', equipment, 'revision', coefficient_revision, 'source', coefficient_source, 'low', coefficient_low, 'nominal', coefficient_nominal, 'high', coefficient_high, 'unit', unit, 'evidence_ref', evidence_ref)) FILTER (WHERE (coefficient_nominal IS NOT NULL)) AS coefficient_revisions,
     'whole_controlled_equipment_runtime'::text AS modeled_scope,
         CASE
             WHEN (date >= ((now() AT TIME ZONE 'America/Denver'::text))::date) THEN 'incomplete_runtime'::text
             WHEN bool_or((coefficient_nominal IS NULL)) THEN 'missing_coefficients'::text
-            WHEN bool_or((on_minutes IS NULL)) THEN 'incomplete_runtime'::text
+            WHEN bool_or(((on_minutes IS NULL) OR (NOT COALESCE(runtime_evidence_eligible, false)))) THEN 'incomplete_runtime_evidence'::text
             WHEN bool_or(has_uncertainty) THEN 'uncertain_coefficients'::text
             ELSE 'ok'::text
         END AS model_quality,
-    ((date < ((now() AT TIME ZONE 'America/Denver'::text))::date) AND bool_and((on_minutes IS NOT NULL)) AND bool_and((coefficient_nominal IS NOT NULL)) AND (NOT bool_or(COALESCE(has_uncertainty, true)))) AS available_for_scoring
+    ((date < ((now() AT TIME ZONE 'America/Denver'::text))::date) AND bool_and((on_minutes IS NOT NULL)) AND bool_and(COALESCE(runtime_evidence_eligible, false)) AND bool_and((coefficient_nominal IS NOT NULL)) AND (NOT bool_or(COALESCE(has_uncertainty, true)))) AS available_for_scoring,
+    jsonb_agg(jsonb_build_object('equipment', equipment, 'quality', COALESCE(runtime_quality, 'missing'::text), 'complete_day', COALESCE(is_complete_day, false), 'start_state_known', COALESCE(start_state_known, false), 'eligible', COALESCE(runtime_evidence_eligible, false)) ORDER BY equipment) AS runtime_evidence
    FROM evidence r
   GROUP BY date, greenhouse_id;
 
@@ -27383,7 +27298,7 @@ ALTER VIEW public.v_runtime_energy_daily OWNER TO verdify;
 -- Name: VIEW v_runtime_energy_daily; Type: COMMENT; Schema: public; Owner: verdify
 --
 
-COMMENT ON VIEW public.v_runtime_energy_daily IS 'Whole controlled-equipment runtime model with low/nominal/high kWh and the coefficient revision valid on that local day. Missing runtime or coefficients make the whole scalar NULL; uncertain, incomplete, or historically uncovered models are scoring-ineligible.';
+COMMENT ON VIEW public.v_runtime_energy_daily IS 'Whole controlled-equipment runtime model with low/nominal/high kWh, transition-derived runtime completeness, and the coefficient revision valid on that local day. Populated daily_summary fields are never treated as runtime proof; missing/ineligible transitions or coefficients make the whole scalar NULL, and uncertain evidence is scoring-ineligible.';
 
 
 --
@@ -28026,6 +27941,418 @@ COMMENT ON VIEW public.v_daily_kpi IS 'Daily planner KPI with provenance-gated r
 
 
 --
+-- Name: v_cost_today; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_cost_today AS
+ SELECT round(k.cost_electric, 2) AS cost_electric,
+    round(k.cost_gas, 2) AS cost_gas,
+    round(k.cost_water, 2) AS cost_water,
+    round(k.cost_total, 2) AS cost_total
+   FROM (( SELECT 1 AS "?column?") anchor
+     LEFT JOIN public.v_daily_kpi k ON (((k.date = ((now() AT TIME ZONE 'America/Denver'::text))::date) AND k.resource_terms_available)));
+
+
+ALTER VIEW public.v_cost_today OWNER TO verdify;
+
+--
+-- Name: VIEW v_cost_today; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_cost_today IS 'Compatibility view over provenance-gated current-day resource evidence. It always returns one row and leaves unavailable values NULL; it never substitutes zero or recomputes costs from raw runtime/meter extrema.';
+
+
+--
+-- Name: v_crop_catalog_with_profiles; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_crop_catalog_with_profiles AS
+ SELECT id AS crop_catalog_id,
+    slug,
+    common_name,
+    scientific_name,
+    category,
+    season,
+    cycle_days_min,
+    cycle_days_max,
+    base_temp_f,
+    default_target_dli,
+    default_target_vpd_low,
+    default_target_vpd_high,
+    default_ph_low,
+    default_ph_high,
+    default_ec_low,
+    default_ec_high,
+    COALESCE(( SELECT jsonb_agg(jsonb_build_object('growth_stage', p.growth_stage, 'season', p.season, 'hours_covered', p.hours_covered, 'temp_ideal_min_24h', p.temp_ideal_min_24h, 'temp_ideal_max_24h', p.temp_ideal_max_24h, 'vpd_ideal_min_24h', p.vpd_ideal_min_24h, 'vpd_ideal_max_24h', p.vpd_ideal_max_24h, 'dli_target_mol', p.dli_target_mol) ORDER BY p.growth_stage, p.season) AS jsonb_agg
+           FROM ( SELECT ctp.growth_stage,
+                    ctp.season,
+                    (count(*))::integer AS hours_covered,
+                    avg(ctp.temp_ideal_min) AS temp_ideal_min_24h,
+                    avg(ctp.temp_ideal_max) AS temp_ideal_max_24h,
+                    avg(ctp.vpd_ideal_min) AS vpd_ideal_min_24h,
+                    avg(ctp.vpd_ideal_max) AS vpd_ideal_max_24h,
+                    avg(ctp.dli_target_mol) AS dli_target_mol
+                   FROM public.crop_target_profiles ctp
+                  WHERE (ctp.crop_catalog_id = cc.id)
+                  GROUP BY ctp.growth_stage, ctp.season) p), '[]'::jsonb) AS stage_season_profiles
+   FROM public.crop_catalog cc
+  ORDER BY slug;
+
+
+ALTER VIEW public.v_crop_catalog_with_profiles OWNER TO verdify;
+
+--
+-- Name: VIEW v_crop_catalog_with_profiles; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_crop_catalog_with_profiles IS 'Sprint 22: per-crop reference data + stage/season band aggregates. Drives the website crop-profile pages (currently hand-typed per variety).';
+
+
+--
+-- Name: v_crop_health_trend; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_crop_health_trend AS
+ SELECT c.name AS crop_name,
+    c.zone,
+    (o.ts AT TIME ZONE 'America/Denver'::text) AS observed,
+    o.health_score,
+    o.obs_type AS observation_type,
+    o.notes,
+    o.source
+   FROM (public.observations o
+     JOIN public.crops c ON ((o.crop_id = c.id)))
+  WHERE (o.ts > (now() - '30 days'::interval))
+  ORDER BY c.name, o.ts DESC;
+
+
+ALTER VIEW public.v_crop_health_trend OWNER TO verdify;
+
+--
+-- Name: zones; Type: TABLE; Schema: public; Owner: verdify
+--
+
+CREATE TABLE public.zones (
+    id integer NOT NULL,
+    greenhouse_id text DEFAULT 'vallery'::text NOT NULL,
+    slug text NOT NULL,
+    name text NOT NULL,
+    orientation text,
+    sensor_modbus_addr integer,
+    peak_temp_f double precision,
+    status text DEFAULT 'active'::text NOT NULL,
+    notes text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT zones_sensor_modbus_addr_check CHECK (((sensor_modbus_addr >= 1) AND (sensor_modbus_addr <= 247))),
+    CONSTRAINT zones_slug_check CHECK ((slug ~ '^[a-z][a-z0-9_]*$'::text)),
+    CONSTRAINT zones_status_check CHECK ((status = ANY (ARRAY['active'::text, 'offline'::text, 'decommissioned'::text])))
+);
+
+
+ALTER TABLE public.zones OWNER TO verdify;
+
+--
+-- Name: TABLE zones; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON TABLE public.zones IS 'Sprint 22: physical zones (south/north/east/west/center). Replaces free-text `zone` columns on crops/observations/alert_log with FK targets.';
+
+
+--
+-- Name: v_crop_history; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_crop_history AS
+ SELECT p.id AS position_id,
+    p.greenhouse_id,
+    p.label AS position_label,
+    z.slug AS zone_slug,
+    c.id AS crop_id,
+    c.name AS crop_name,
+    c.variety AS crop_variety,
+    c.stage AS final_stage,
+    c.planted_date,
+    c.cleared_at,
+    c.is_active,
+    ((c.cleared_at)::date - c.planted_date) AS days_in_place,
+    cc.slug AS crop_catalog_slug,
+    cc.common_name AS crop_common_name,
+    ( SELECT count(*) AS count
+           FROM public.crop_events e
+          WHERE (e.crop_id = c.id)) AS event_count,
+    ( SELECT count(*) AS count
+           FROM public.observations o
+          WHERE (o.crop_id = c.id)) AS observation_count,
+    ( SELECT count(*) AS count
+           FROM public.harvests h
+          WHERE (h.crop_id = c.id)) AS harvest_count
+   FROM ((((public.crops c
+     LEFT JOIN public.positions p ON ((p.id = c.position_id)))
+     LEFT JOIN public.shelves sh ON ((sh.id = p.shelf_id)))
+     LEFT JOIN public.zones z ON ((z.id = sh.zone_id)))
+     LEFT JOIN public.crop_catalog cc ON ((cc.id = c.crop_catalog_id)))
+  ORDER BY p.label, c.planted_date DESC;
+
+
+ALTER VIEW public.v_crop_history OWNER TO verdify;
+
+--
+-- Name: VIEW v_crop_history; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_crop_history IS 'Sprint 23: every crop ever recorded at a position, in reverse-chronological order. Drives website position history + /api/v1/positions/{id}/crops.';
+
+
+--
+-- Name: v_crop_lifecycle; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_crop_lifecycle AS
+ SELECT c.id AS crop_id,
+    c.greenhouse_id,
+    c.name AS crop_name,
+    c.variety,
+    c.stage AS current_stage,
+    c.is_active,
+    c.planted_date,
+    c.cleared_at,
+    (COALESCE((c.cleared_at)::date, CURRENT_DATE) - c.planted_date) AS days_alive,
+    z.slug AS current_zone_slug,
+    p.label AS current_position_label,
+    cc.slug AS crop_catalog_slug,
+    cc.common_name AS catalog_name,
+    cc.category AS catalog_category,
+    COALESCE(( SELECT jsonb_agg(jsonb_build_object('ts', e.ts, 'event_type', e.event_type, 'old_stage', e.old_stage, 'new_stage', e.new_stage, 'position_id', e.position_id, 'notes', e.notes, 'source', e.source) ORDER BY e.ts) AS jsonb_agg
+           FROM public.crop_events e
+          WHERE (e.crop_id = c.id)), '[]'::jsonb) AS events,
+    COALESCE(( SELECT sum(h.weight_kg) AS sum
+           FROM public.harvests h
+          WHERE (h.crop_id = c.id)), (0)::double precision) AS total_weight_kg,
+    COALESCE(( SELECT sum(h.unit_count) AS sum
+           FROM public.harvests h
+          WHERE (h.crop_id = c.id)), (0)::bigint) AS total_units,
+    COALESCE(( SELECT sum(h.revenue) AS sum
+           FROM public.harvests h
+          WHERE (h.crop_id = c.id)), (0)::double precision) AS total_revenue_usd,
+    ( SELECT count(*) AS count
+           FROM public.observations o
+          WHERE (o.crop_id = c.id)) AS observation_count,
+    ( SELECT (avg(o.health_score))::numeric(4,3) AS avg
+           FROM public.observations o
+          WHERE ((o.crop_id = c.id) AND (o.health_score IS NOT NULL))) AS avg_health_score,
+    ( SELECT max(o.ts) AS max
+           FROM public.observations o
+          WHERE (o.crop_id = c.id)) AS latest_observation_ts
+   FROM ((((public.crops c
+     LEFT JOIN public.positions p ON ((p.id = c.position_id)))
+     LEFT JOIN public.shelves sh ON ((sh.id = p.shelf_id)))
+     LEFT JOIN public.zones z ON ((z.id = sh.zone_id)))
+     LEFT JOIN public.crop_catalog cc ON ((cc.id = c.crop_catalog_id)))
+  ORDER BY c.is_active DESC, c.planted_date DESC;
+
+
+ALTER VIEW public.v_crop_lifecycle OWNER TO verdify;
+
+--
+-- Name: VIEW v_crop_lifecycle; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_crop_lifecycle IS 'Sprint 23: per-crop timeline with events JSONB array + harvest totals + observation summary. Drives /api/v1/crops/{id}/lifecycle and the MCP crop_lifecycle tool.';
+
+
+--
+-- Name: v_crop_lifecycle_completeness; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_crop_lifecycle_completeness AS
+ SELECT id AS crop_id,
+    name,
+    variety,
+    zone,
+    "position",
+    stage,
+    is_active,
+    count,
+    expected_harvest,
+    crop_catalog_id,
+    target_dli,
+    target_vpd_low,
+    target_vpd_high,
+    array_remove(ARRAY[
+        CASE
+            WHEN (count IS NULL) THEN 'count'::text
+            ELSE NULL::text
+        END,
+        CASE
+            WHEN (expected_harvest IS NULL) THEN 'expected_harvest'::text
+            ELSE NULL::text
+        END,
+        CASE
+            WHEN (crop_catalog_id IS NULL) THEN 'crop_catalog_id'::text
+            ELSE NULL::text
+        END,
+        CASE
+            WHEN (stage IS NULL) THEN 'stage'::text
+            ELSE NULL::text
+        END,
+        CASE
+            WHEN (target_dli IS NULL) THEN 'target_dli'::text
+            ELSE NULL::text
+        END,
+        CASE
+            WHEN ((target_vpd_low IS NULL) OR (target_vpd_high IS NULL)) THEN 'target_vpd'::text
+            ELSE NULL::text
+        END], NULL::text) AS missing_fields,
+    cardinality(array_remove(ARRAY[
+        CASE
+            WHEN (count IS NULL) THEN 'count'::text
+            ELSE NULL::text
+        END,
+        CASE
+            WHEN (expected_harvest IS NULL) THEN 'expected_harvest'::text
+            ELSE NULL::text
+        END,
+        CASE
+            WHEN (crop_catalog_id IS NULL) THEN 'crop_catalog_id'::text
+            ELSE NULL::text
+        END,
+        CASE
+            WHEN (stage IS NULL) THEN 'stage'::text
+            ELSE NULL::text
+        END,
+        CASE
+            WHEN (target_dli IS NULL) THEN 'target_dli'::text
+            ELSE NULL::text
+        END,
+        CASE
+            WHEN ((target_vpd_low IS NULL) OR (target_vpd_high IS NULL)) THEN 'target_vpd'::text
+            ELSE NULL::text
+        END], NULL::text)) AS missing_count
+   FROM public.crops c;
+
+
+ALTER VIEW public.v_crop_lifecycle_completeness OWNER TO verdify;
+
+--
+-- Name: VIEW v_crop_lifecycle_completeness; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_crop_lifecycle_completeness IS 'Crop rows with lifecycle/outcome fields required for agronomic analysis.';
+
+
+--
+-- Name: v_cycle_count_audit; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_cycle_count_audit AS
+ WITH equipment_edges AS (
+         SELECT (date_trunc('day'::text, (e_1.ts AT TIME ZONE 'America/Denver'::text)))::date AS date,
+            e_1.equipment,
+            count(*) FILTER (WHERE ((e_1.state IS TRUE) AND (COALESCE(e_1.lag_state, false) IS FALSE))) AS equipment_cycles
+           FROM ( SELECT equipment_state.ts,
+                    equipment_state.equipment,
+                    equipment_state.state,
+                    lag(equipment_state.state) OVER (PARTITION BY equipment_state.equipment, (date_trunc('day'::text, (equipment_state.ts AT TIME ZONE 'America/Denver'::text))) ORDER BY equipment_state.ts) AS lag_state
+                   FROM public.equipment_state
+                  WHERE (equipment_state.equipment = ANY (ARRAY['mister_south'::text, 'mister_west'::text, 'mister_center'::text, 'drip_wall'::text, 'drip_center'::text]))) e_1
+          GROUP BY ((date_trunc('day'::text, (e_1.ts AT TIME ZONE 'America/Denver'::text)))::date), e_1.equipment
+        ), firmware_cycles AS (
+         SELECT daily_summary.date,
+            'mister_south'::text AS equipment,
+            daily_summary.cycles_mister_south AS firmware_cycles
+           FROM public.daily_summary
+        UNION ALL
+         SELECT daily_summary.date,
+            'mister_west'::text AS text,
+            daily_summary.cycles_mister_west
+           FROM public.daily_summary
+        UNION ALL
+         SELECT daily_summary.date,
+            'mister_center'::text AS text,
+            daily_summary.cycles_mister_center
+           FROM public.daily_summary
+        UNION ALL
+         SELECT daily_summary.date,
+            'drip_wall'::text AS text,
+            daily_summary.cycles_drip_wall
+           FROM public.daily_summary
+        UNION ALL
+         SELECT daily_summary.date,
+            'drip_center'::text AS text,
+            daily_summary.cycles_drip_center
+           FROM public.daily_summary
+        )
+ SELECT f.date,
+    f.equipment,
+    f.firmware_cycles,
+    COALESCE(e.equipment_cycles, (0)::bigint) AS equipment_cycles,
+    (f.firmware_cycles - COALESCE(e.equipment_cycles, (0)::bigint)) AS cycle_delta,
+        CASE
+            WHEN (f.firmware_cycles IS NULL) THEN 'missing_firmware_counter'::text
+            WHEN (GREATEST((f.firmware_cycles)::bigint, COALESCE(e.equipment_cycles, (0)::bigint)) = 0) THEN 'ok'::text
+            WHEN (((abs((f.firmware_cycles - COALESCE(e.equipment_cycles, (0)::bigint))))::numeric / (GREATEST((f.firmware_cycles)::bigint, COALESCE(e.equipment_cycles, (0)::bigint)))::numeric) > 0.05) THEN 'warn'::text
+            ELSE 'ok'::text
+        END AS audit_status
+   FROM (firmware_cycles f
+     LEFT JOIN equipment_edges e ON (((e.date = f.date) AND (e.equipment = f.equipment))));
+
+
+ALTER VIEW public.v_cycle_count_audit OWNER TO verdify;
+
+--
+-- Name: VIEW v_cycle_count_audit; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_cycle_count_audit IS 'Compares firmware per-zone mister/drip cycle counters against equipment_state rising-edge counts; >5% divergence is warn.';
+
+
+--
+-- Name: v_daily_checklist; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_daily_checklist AS
+ WITH last_done AS (
+         SELECT daily_checklist_log.template_id,
+            max(daily_checklist_log.date) FILTER (WHERE (daily_checklist_log.completed_at IS NOT NULL)) AS last_completed
+           FROM public.daily_checklist_log
+          GROUP BY daily_checklist_log.template_id
+        )
+ SELECT t.id AS template_id,
+    t.task,
+    t.zone,
+    t.priority,
+    t.frequency,
+    t.role,
+        CASE t.frequency
+            WHEN 'daily'::text THEN true
+            WHEN 'weekly'::text THEN ((ld.last_completed IS NULL) OR ((CURRENT_DATE - ld.last_completed) > 6))
+            WHEN 'biweekly'::text THEN ((ld.last_completed IS NULL) OR ((CURRENT_DATE - ld.last_completed) > 13))
+            WHEN 'monthly'::text THEN ((ld.last_completed IS NULL) OR ((CURRENT_DATE - ld.last_completed) > 29))
+            ELSE NULL::boolean
+        END AS is_due_today,
+    ld.last_completed,
+    log.completed_at,
+    log.completed_by,
+    log.skipped,
+    log.skip_reason,
+    log.notes AS log_notes
+   FROM ((public.daily_checklist_template t
+     LEFT JOIN last_done ld ON ((ld.template_id = t.id)))
+     LEFT JOIN public.daily_checklist_log log ON (((log.template_id = t.id) AND (log.date = CURRENT_DATE))))
+  WHERE (t.is_active = true)
+  ORDER BY (log.completed_at IS NOT NULL), t.priority, t.zone;
+
+
+ALTER VIEW public.v_daily_checklist OWNER TO verdify;
+
+--
+-- Name: VIEW v_daily_checklist; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_daily_checklist IS 'Today''s checklist: shows all active tasks, whether due today, completion status. Incomplete + due items sort first.';
+
+
+--
 -- Name: v_daily_oscillation; Type: VIEW; Schema: public; Owner: verdify
 --
 
@@ -28287,7 +28614,8 @@ CREATE VIEW public.v_energy_estimate_reconciliation AS
     r.model_quality,
     e.measured_quality,
     COALESCE(r.available_for_scoring, false) AS modeled_available_for_scoring,
-    COALESCE(e.available_for_scoring, false) AS measured_available_for_scoring
+    COALESCE(e.available_for_scoring, false) AS measured_available_for_scoring,
+    r.runtime_evidence
    FROM ((days d
      LEFT JOIN public.v_runtime_energy_daily r ON (((r.date = d.date) AND (r.greenhouse_id = d.greenhouse_id))))
      LEFT JOIN public.v_energy_daily e ON (((e.date = d.date) AND (e.greenhouse_id = d.greenhouse_id))));
@@ -29475,265 +29803,6 @@ ALTER VIEW public.v_equipment_relay_map OWNER TO verdify;
 --
 
 COMMENT ON VIEW public.v_equipment_relay_map IS 'Sprint 22: replaces the hand-typed Relay Map in website/greenhouse/equipment.md. One row per PCF pin with equipment + zone joined in.';
-
-
---
--- Name: v_equipment_runtime_daily; Type: VIEW; Schema: public; Owner: verdify
---
-
-CREATE VIEW public.v_equipment_runtime_daily AS
- WITH relevant AS (
-         SELECT COALESCE(equipment_state.greenhouse_id, 'vallery'::text) AS greenhouse_id,
-            equipment_state.equipment,
-            equipment_state.ts,
-            bool_or(equipment_state.state) AS state,
-            count(*) AS raw_rows,
-            (count(DISTINCT equipment_state.state) > 1) AS conflicting_state
-           FROM public.equipment_state
-          WHERE (equipment_state.equipment = ANY (ARRAY['fan1'::text, 'fan2'::text, 'heat1'::text, 'heat2'::text, 'fog'::text, 'vent'::text, 'mister_south'::text, 'mister_west'::text, 'mister_center'::text, 'grow_light_main'::text, 'grow_light_grow'::text, 'drip_wall'::text, 'drip_center'::text, 'drip_wall_fert'::text, 'drip_center_fert'::text, 'mister_south_fert'::text, 'mister_west_fert'::text, 'fert_master_valve'::text]))
-          GROUP BY COALESCE(equipment_state.greenhouse_id, 'vallery'::text), equipment_state.equipment, equipment_state.ts
-        ), ordered AS (
-         SELECT r.greenhouse_id,
-            r.equipment,
-            r.ts,
-            r.state,
-            r.raw_rows,
-            r.conflicting_state,
-            lag(r.state) OVER (PARTITION BY r.greenhouse_id, r.equipment ORDER BY r.ts) AS previous_state,
-            lag(r.conflicting_state) OVER (PARTITION BY r.greenhouse_id, r.equipment ORDER BY r.ts) AS previous_conflicting_state
-           FROM relevant r
-        ), transition_events AS (
-         SELECT ordered.greenhouse_id,
-            ordered.equipment,
-            ordered.ts,
-            ordered.state,
-            ordered.raw_rows,
-            ordered.conflicting_state,
-            ordered.previous_state,
-            ordered.previous_conflicting_state
-           FROM ordered
-          WHERE ((ordered.previous_state IS DISTINCT FROM ordered.state) OR (ordered.previous_state IS NULL) OR ordered.conflicting_state OR COALESCE(ordered.previous_conflicting_state, false))
-        ), transitions AS (
-         SELECT e.greenhouse_id,
-            e.equipment,
-            e.ts,
-            e.state,
-            e.raw_rows,
-            e.conflicting_state,
-            e.previous_state,
-            e.previous_conflicting_state,
-            lead(e.ts) OVER (PARTITION BY e.greenhouse_id, e.equipment ORDER BY e.ts) AS next_transition_ts
-           FROM transition_events e
-        ), equipment_bounds AS (
-         SELECT relevant.greenhouse_id,
-            relevant.equipment,
-            min(((relevant.ts AT TIME ZONE 'America/Denver'::text))::date) AS first_day,
-            ((now() AT TIME ZONE 'America/Denver'::text))::date AS last_day
-           FROM relevant
-          GROUP BY relevant.greenhouse_id, relevant.equipment
-        ), days AS (
-         SELECT b.greenhouse_id,
-            b.equipment,
-            (gs.gs)::date AS day
-           FROM (equipment_bounds b
-             CROSS JOIN LATERAL generate_series((b.first_day)::timestamp without time zone, (b.last_day)::timestamp without time zone, '1 day'::interval) gs(gs))
-          WHERE (b.first_day <= b.last_day)
-        ), day_bounds AS (
-         SELECT d_1.greenhouse_id,
-            d_1.equipment,
-            d_1.day,
-            ((d_1.day)::timestamp without time zone AT TIME ZONE 'America/Denver'::text) AS start_ts,
-            (((d_1.day + 1))::timestamp without time zone AT TIME ZONE 'America/Denver'::text) AS end_ts,
-            LEAST((((d_1.day + 1))::timestamp without time zone AT TIME ZONE 'America/Denver'::text), now()) AS effective_end_ts,
-            (d_1.day < ((now() AT TIME ZONE 'America/Denver'::text))::date) AS is_complete_day
-           FROM days d_1
-        ), day_context AS (
-         SELECT b.greenhouse_id,
-            b.equipment,
-            b.day,
-            b.start_ts,
-            b.end_ts,
-            b.effective_end_ts,
-            b.is_complete_day,
-            start_event.state AS start_state,
-            start_event.ts AS start_state_ts,
-            start_event.conflicting_state AS start_state_conflicting
-           FROM (day_bounds b
-             LEFT JOIN LATERAL ( SELECT t.state,
-                    t.ts,
-                    t.conflicting_state
-                   FROM transitions t
-                  WHERE ((t.greenhouse_id = b.greenhouse_id) AND (t.equipment = b.equipment) AND (t.ts < b.start_ts))
-                  ORDER BY t.ts DESC
-                 LIMIT 1) start_event ON (true))
-        ), points AS (
-         SELECT d_1.greenhouse_id,
-            d_1.equipment,
-            d_1.day,
-            d_1.start_ts,
-            d_1.end_ts,
-            d_1.effective_end_ts,
-            d_1.is_complete_day,
-            d_1.start_state,
-            d_1.start_state_ts,
-            d_1.start_state_conflicting,
-            NULL::timestamp with time zone AS next_transition_ts,
-            d_1.start_ts AS ts,
-            d_1.start_state AS state,
-            false AS is_event
-           FROM day_context d_1
-          WHERE (d_1.start_state IS NOT NULL)
-        UNION ALL
-         SELECT d_1.greenhouse_id,
-            d_1.equipment,
-            d_1.day,
-            d_1.start_ts,
-            d_1.end_ts,
-            d_1.effective_end_ts,
-            d_1.is_complete_day,
-            d_1.start_state,
-            d_1.start_state_ts,
-            d_1.start_state_conflicting,
-            t.next_transition_ts,
-            t.ts,
-            t.state,
-            true AS is_event
-           FROM (day_context d_1
-             JOIN transitions t ON (((t.greenhouse_id = d_1.greenhouse_id) AND (t.equipment = d_1.equipment) AND (t.ts >= d_1.start_ts) AND (t.ts < d_1.effective_end_ts))))
-        ), sequenced_points AS (
-         SELECT p_1.greenhouse_id,
-            p_1.equipment,
-            p_1.day,
-            p_1.start_ts,
-            p_1.end_ts,
-            p_1.effective_end_ts,
-            p_1.is_complete_day,
-            p_1.start_state,
-            p_1.start_state_ts,
-            p_1.start_state_conflicting,
-            p_1.next_transition_ts,
-            p_1.ts,
-            p_1.state,
-            p_1.is_event,
-            lag(p_1.state) OVER (PARTITION BY p_1.greenhouse_id, p_1.equipment, p_1.day ORDER BY p_1.ts, p_1.is_event) AS prior_state,
-            lead(p_1.ts, 1, p_1.effective_end_ts) OVER (PARTITION BY p_1.greenhouse_id, p_1.equipment, p_1.day ORDER BY p_1.ts, p_1.is_event) AS next_ts
-           FROM points p_1
-        ), segment_metrics AS (
-         SELECT sequenced_points.greenhouse_id,
-            sequenced_points.equipment,
-            sequenced_points.day,
-            round(sum((EXTRACT(epoch FROM (sequenced_points.next_ts - sequenced_points.ts)) / 60.0)) FILTER (WHERE ((sequenced_points.state IS TRUE) AND (sequenced_points.next_ts > sequenced_points.ts))), 1) AS on_minutes,
-            count(*) FILTER (WHERE (sequenced_points.is_event AND (sequenced_points.state IS TRUE) AND (sequenced_points.prior_state IS FALSE))) AS starts,
-            count(*) FILTER (WHERE (sequenced_points.is_event AND (sequenced_points.state IS TRUE) AND (sequenced_points.prior_state IS NULL))) AS starts_with_unknown_prior_state,
-            count(*) FILTER (WHERE (sequenced_points.is_event AND (sequenced_points.state IS TRUE) AND (sequenced_points.prior_state IS FALSE) AND (EXTRACT(epoch FROM (LEAST(COALESCE(sequenced_points.next_transition_ts, now()), now()) - sequenced_points.ts)) < (60)::numeric))) AS cycles_under_1m,
-            count(*) FILTER (WHERE (sequenced_points.is_event AND (sequenced_points.state IS TRUE) AND (sequenced_points.prior_state IS FALSE) AND (EXTRACT(epoch FROM (LEAST(COALESCE(sequenced_points.next_transition_ts, now()), now()) - sequenced_points.ts)) >= (60)::numeric) AND (EXTRACT(epoch FROM (LEAST(COALESCE(sequenced_points.next_transition_ts, now()), now()) - sequenced_points.ts)) < (300)::numeric))) AS cycles_1m_to_5m,
-            count(*) FILTER (WHERE (sequenced_points.is_event AND (sequenced_points.state IS TRUE) AND (sequenced_points.prior_state IS FALSE) AND (EXTRACT(epoch FROM (LEAST(COALESCE(sequenced_points.next_transition_ts, now()), now()) - sequenced_points.ts)) >= (300)::numeric) AND (EXTRACT(epoch FROM (LEAST(COALESCE(sequenced_points.next_transition_ts, now()), now()) - sequenced_points.ts)) < (900)::numeric))) AS cycles_5m_to_15m,
-            count(*) FILTER (WHERE (sequenced_points.is_event AND (sequenced_points.state IS TRUE) AND (sequenced_points.prior_state IS FALSE) AND (EXTRACT(epoch FROM (LEAST(COALESCE(sequenced_points.next_transition_ts, now()), now()) - sequenced_points.ts)) >= (900)::numeric))) AS cycles_15m_plus,
-            count(*) FILTER (WHERE (sequenced_points.is_event AND (sequenced_points.state IS TRUE) AND ((sequenced_points.next_transition_ts IS NULL) OR (sequenced_points.next_transition_ts > sequenced_points.effective_end_ts)))) AS open_pulses_at_cutoff,
-            (array_agg(sequenced_points.state ORDER BY sequenced_points.ts DESC, sequenced_points.is_event DESC))[1] AS end_state
-           FROM sequenced_points
-          GROUP BY sequenced_points.greenhouse_id, sequenced_points.equipment, sequenced_points.day
-        ), day_event_quality AS (
-         SELECT d_1.greenhouse_id,
-            d_1.equipment,
-            d_1.day,
-            (COALESCE(sum(o.raw_rows), (0)::numeric))::bigint AS raw_event_rows,
-            (COALESCE(sum((o.raw_rows - 1)), (0)::numeric))::bigint AS same_timestamp_duplicate_rows,
-            count(*) FILTER (WHERE (NOT (o.previous_state IS DISTINCT FROM o.state))) AS redundant_state_rows,
-            count(*) FILTER (WHERE o.conflicting_state) AS conflicting_timestamp_count,
-            count(*) FILTER (WHERE ((o.previous_state IS NOT NULL) AND (o.previous_state IS DISTINCT FROM o.state))) AS normalized_transition_count
-           FROM (day_context d_1
-             LEFT JOIN ordered o ON (((o.greenhouse_id = d_1.greenhouse_id) AND (o.equipment = d_1.equipment) AND (o.ts >= d_1.start_ts) AND (o.ts < d_1.effective_end_ts))))
-          GROUP BY d_1.greenhouse_id, d_1.equipment, d_1.day
-        ), hourly_transitions AS (
-         SELECT d_1.greenhouse_id,
-            d_1.equipment,
-            d_1.day,
-            date_trunc('hour'::text, o.ts) AS hour_bucket,
-            (count(*))::integer AS transitions_in_hour
-           FROM (day_context d_1
-             JOIN ordered o ON (((o.greenhouse_id = d_1.greenhouse_id) AND (o.equipment = d_1.equipment) AND (o.ts >= d_1.start_ts) AND (o.ts < d_1.effective_end_ts) AND (o.previous_state IS NOT NULL) AND (o.previous_state IS DISTINCT FROM o.state))))
-          GROUP BY d_1.greenhouse_id, d_1.equipment, d_1.day, (date_trunc('hour'::text, o.ts))
-        ), peak_transitions AS (
-         SELECT hourly_transitions.greenhouse_id,
-            hourly_transitions.equipment,
-            hourly_transitions.day,
-            max(hourly_transitions.transitions_in_hour) AS peak_transitions_per_hour
-           FROM hourly_transitions
-          GROUP BY hourly_transitions.greenhouse_id, hourly_transitions.equipment, hourly_transitions.day
-        )
- SELECT d.day,
-    d.equipment,
-    COALESCE(s.on_minutes, 0.0) AS on_minutes,
-    COALESCE(s.starts, (0)::bigint) AS cycles,
-    d.greenhouse_id,
-    d.start_ts AS day_started_at,
-    d.effective_end_ts AS observed_through,
-    d.is_complete_day,
-    ((d.start_state IS NOT NULL) AND (NOT COALESCE(d.start_state_conflicting, false))) AS start_state_known,
-    d.start_state,
-    s.end_state,
-    COALESCE(s.end_state, d.start_state, false) AS open_at_end,
-    (d.is_complete_day AND (d.start_state IS NOT NULL) AND (NOT COALESCE(d.start_state_conflicting, false)) AND (COALESCE(q.conflicting_timestamp_count, (0)::bigint) = 0)) AS is_deploy_gate_eligible,
-        CASE
-            WHEN (NOT d.is_complete_day) THEN 'partial_day'::text
-            WHEN (d.start_state IS NULL) THEN 'unknown_start_state'::text
-            WHEN COALESCE(d.start_state_conflicting, false) THEN 'conflicting_carry_state'::text
-            WHEN (COALESCE(q.conflicting_timestamp_count, (0)::bigint) > 0) THEN 'conflicting_events'::text
-            ELSE 'complete'::text
-        END AS quality,
-    array_remove(ARRAY[
-        CASE
-            WHEN (NOT d.is_complete_day) THEN 'partial_day'::text
-            ELSE NULL::text
-        END,
-        CASE
-            WHEN (d.start_state IS NULL) THEN 'unknown_start_state'::text
-            ELSE NULL::text
-        END,
-        CASE
-            WHEN COALESCE(d.start_state_conflicting, false) THEN 'conflicting_carry_state'::text
-            ELSE NULL::text
-        END,
-        CASE
-            WHEN (COALESCE(q.conflicting_timestamp_count, (0)::bigint) > 0) THEN 'conflicting_same_timestamp'::text
-            ELSE NULL::text
-        END,
-        CASE
-            WHEN (COALESCE(s.open_pulses_at_cutoff, (0)::bigint) > 0) THEN 'open_pulse_at_cutoff'::text
-            ELSE NULL::text
-        END,
-        CASE
-            WHEN ((COALESCE(q.same_timestamp_duplicate_rows, (0)::bigint) > 0) OR (COALESCE(q.redundant_state_rows, (0)::bigint) > 0)) THEN 'duplicates_collapsed'::text
-            ELSE NULL::text
-        END], NULL::text) AS quality_flags,
-    COALESCE(s.starts, (0)::bigint) AS starts,
-    COALESCE(s.cycles_under_1m, (0)::bigint) AS cycles_under_1m,
-    COALESCE(s.cycles_1m_to_5m, (0)::bigint) AS cycles_1m_to_5m,
-    (COALESCE(s.cycles_under_1m, (0)::bigint) + COALESCE(s.cycles_1m_to_5m, (0)::bigint)) AS short_cycles_under_5m,
-    COALESCE(s.cycles_5m_to_15m, (0)::bigint) AS cycles_5m_to_15m,
-    COALESCE(s.cycles_15m_plus, (0)::bigint) AS cycles_15m_plus,
-    COALESCE(s.open_pulses_at_cutoff, (0)::bigint) AS open_pulses_at_cutoff,
-    COALESCE(p.peak_transitions_per_hour, 0) AS peak_transitions_per_hour,
-    COALESCE(q.raw_event_rows, (0)::bigint) AS raw_event_rows,
-    COALESCE(q.normalized_transition_count, (0)::bigint) AS normalized_transition_count,
-    COALESCE(q.same_timestamp_duplicate_rows, (0)::bigint) AS same_timestamp_duplicate_rows,
-    COALESCE(q.redundant_state_rows, (0)::bigint) AS redundant_state_rows,
-    COALESCE(q.conflicting_timestamp_count, (0)::bigint) AS conflicting_timestamp_count,
-    COALESCE(s.starts_with_unknown_prior_state, (0)::bigint) AS starts_with_unknown_prior_state
-   FROM (((day_context d
-     LEFT JOIN segment_metrics s USING (greenhouse_id, equipment, day))
-     LEFT JOIN day_event_quality q USING (greenhouse_id, equipment, day))
-     LEFT JOIN peak_transitions p USING (greenhouse_id, equipment, day));
-
-
-ALTER VIEW public.v_equipment_runtime_daily OWNER TO verdify;
-
---
--- Name: VIEW v_equipment_runtime_daily; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON VIEW public.v_equipment_runtime_daily IS 'Transition-derived per-equipment local-day truth from raw equipment_state. Carries state across midnight; collapses repeated and same-timestamp duplicate observations; preserves per-light circuits; exposes runtime, starts, short-cycle buckets, open pulses, peak transitions/hour, completeness, and quality. Use only is_deploy_gate_eligible rows for release comparisons; current/future days are never eligible. Firmware daily counters remain diagnostics.';
 
 
 --
@@ -33803,11 +33872,12 @@ CREATE VIEW public.v_water_ledger_health AS
             max(c.ts) FILTER (WHERE (c.water_total_gal IS NOT NULL)) AS raw_latest_ts
            FROM public.climate c
           GROUP BY COALESCE(c.greenhouse_id, 'vallery'::text)
-        ), recent_gap AS (
+        ), recent_discontinuity AS (
          SELECT e.greenhouse_id,
-            max(e.ts) AS latest_gap_ts
+            max(e.ts) FILTER (WHERE (e.event_type = 'gap'::text)) AS latest_gap_ts,
+            max(e.ts) AS latest_discontinuity_ts
            FROM public.water_meter_events e
-          WHERE ((e.event_type = 'gap'::text) AND (e.ts >= (now() - '24:00:00'::interval)))
+          WHERE ((e.ts >= (now() - '24:00:00'::interval)) AND ((e.event_type = ANY (ARRAY['gap'::text, 'reset'::text, 'phantom_zero'::text, 'source_conflict'::text])) OR (e.quality_flag <> 'ok'::text)))
           GROUP BY e.greenhouse_id
         )
  SELECT h.greenhouse_id,
@@ -33822,14 +33892,16 @@ CREATE VIEW public.v_water_ledger_health AS
             WHEN ((r.raw_latest_ts IS NULL) OR (s.last_source_ts IS NULL)) THEN 'unavailable'::text
             WHEN (r.raw_latest_ts < (now() - '00:10:00'::interval)) THEN 'stale'::text
             WHEN (s.last_source_ts < (r.raw_latest_ts - '00:05:00'::interval)) THEN 'stale'::text
-            WHEN (g.latest_gap_ts IS NOT NULL) THEN 'discontinuous'::text
+            WHEN (s.last_event_quality = ANY (ARRAY['source_gap'::text, 'high_delta'::text, 'conflicting_source_samples'::text, 'counter_reset'::text, 'phantom_zero'::text])) THEN 'discontinuous'::text
+            WHEN (g.latest_discontinuity_ts IS NOT NULL) THEN 'discontinuous'::text
             ELSE 'fresh'::text
         END AS ledger_status,
-    ((r.raw_latest_ts IS NOT NULL) AND (s.last_source_ts >= (r.raw_latest_ts - '00:05:00'::interval)) AND (r.raw_latest_ts >= (now() - '00:10:00'::interval)) AND (g.latest_gap_ts IS NULL)) AS available_for_scoring
+    ((r.raw_latest_ts IS NOT NULL) AND (s.last_source_ts >= (r.raw_latest_ts - '00:05:00'::interval)) AND (r.raw_latest_ts >= (now() - '00:10:00'::interval)) AND (s.last_event_quality <> ALL (ARRAY['source_gap'::text, 'high_delta'::text, 'conflicting_source_samples'::text, 'counter_reset'::text, 'phantom_zero'::text])) AND (g.latest_discontinuity_ts IS NULL)) AS available_for_scoring,
+    g.latest_discontinuity_ts
    FROM (((houses h
      LEFT JOIN raw r ON ((r.greenhouse_id = h.greenhouse_id)))
      LEFT JOIN public.water_meter_materializer_state s ON (((s.greenhouse_id = h.greenhouse_id) AND (s.source = 'climate.water_total_gal'::text) AND (s.meter_id = 'main_pulse'::text))))
-     LEFT JOIN recent_gap g ON ((g.greenhouse_id = h.greenhouse_id)));
+     LEFT JOIN recent_discontinuity g ON ((g.greenhouse_id = h.greenhouse_id)));
 
 
 ALTER VIEW public.v_water_ledger_health OWNER TO verdify;
@@ -33851,7 +33923,7 @@ CREATE VIEW public.v_resource_accounting_health AS
     h.ledger_status AS quality,
     h.available_for_scoring,
     h.materialized_through_ts AS observed_through,
-    jsonb_build_object('raw_latest_ts', h.raw_latest_ts, 'raw_age_seconds', h.raw_age_seconds, 'materializer_lag_seconds', h.materializer_lag_seconds, 'latest_gap_ts', h.latest_gap_ts) AS detail
+    jsonb_build_object('raw_latest_ts', h.raw_latest_ts, 'raw_age_seconds', h.raw_age_seconds, 'materializer_lag_seconds', h.materializer_lag_seconds, 'latest_gap_ts', h.latest_gap_ts, 'latest_discontinuity_ts', h.latest_discontinuity_ts) AS detail
    FROM public.v_water_ledger_health h
 UNION ALL
  SELECT 'energy_runtime_model'::text AS resource,
@@ -33859,7 +33931,7 @@ UNION ALL
     e.model_quality AS quality,
     e.available_for_scoring,
     (((e.date + 1))::timestamp without time zone AT TIME ZONE 'America/Denver'::text) AS observed_through,
-    jsonb_build_object('modeled_kwh', e.modeled_kwh, 'modeled_kwh_low', e.modeled_kwh_low, 'modeled_kwh_high', e.modeled_kwh_high, 'runtime_coverage_pct', e.runtime_coverage_pct, 'scope', e.modeled_scope, 'coefficient_revisions', e.coefficient_revisions) AS detail
+    jsonb_build_object('modeled_kwh', e.modeled_kwh, 'modeled_kwh_low', e.modeled_kwh_low, 'modeled_kwh_high', e.modeled_kwh_high, 'runtime_coverage_pct', e.runtime_coverage_pct, 'scope', e.modeled_scope, 'coefficient_revisions', e.coefficient_revisions, 'runtime_evidence', e.runtime_evidence) AS detail
    FROM public.v_runtime_energy_daily e
   WHERE (e.date = (((now() AT TIME ZONE 'America/Denver'::text))::date - 1))
 UNION ALL
@@ -60725,4 +60797,4 @@ GRANT INSERT ON TABLE public.twin_decisions TO twin_ro;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict ehmwONOT5fygu4TXpTdCZnrwvdlfc2lFQSGXyUdZNUAa1OCkWdUcYU7BNMOJtwP
+\unrestrict kMpOEXhwsBBHpohPWbiYThkmjARkimicaVcoolyB936niHnZU6XvBdL2ABkXBfo

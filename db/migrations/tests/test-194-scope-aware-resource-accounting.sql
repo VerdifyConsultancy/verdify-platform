@@ -101,7 +101,9 @@ CREATE TABLE public.v_equipment_runtime_daily (
     on_minutes numeric,
     greenhouse_id text,
     is_complete_day boolean,
-    start_state_known boolean
+    start_state_known boolean,
+    is_deploy_gate_eligible boolean,
+    quality text
 );
 CREATE TABLE public.equipment (
     id serial PRIMARY KEY,
@@ -128,7 +130,7 @@ CREATE TABLE public.resource_coefficients (
 
 INSERT INTO public.greenhouses(id) VALUES
     ('vallery'), ('gap_house'), ('empty_house'), ('partial_house'),
-    ('coarse_house'), ('fert_house'), ('conflict_house');
+    ('coarse_house'), ('fert_house'), ('conflict_house'), ('boundary_house');
 
 INSERT INTO public.equipment (greenhouse_id, slug)
 SELECT 'vallery', slug
@@ -392,29 +394,34 @@ BEGIN
 END $$;
 
 -- Wall-fert relay evidence alone is not fertilizer delivery. The first delta
--- lacks master proof, the second lacks commissioning, and only the third has
--- both a master overlap and a current commissioning-eligibility record.
+-- lacks master proof, the second lacks commissioning, the third has both, and
+-- the fourth has master and wall activity that never overlap.
 INSERT INTO public.climate(ts, greenhouse_id, water_total_gal) VALUES
-    (now() - interval '15 minutes', 'fert_house', 10),
-    (now() - interval '10 minutes', 'fert_house', 11),
-    (now() - interval '5 minutes', 'fert_house', 12),
-    (now(), 'fert_house', 13);
+    (now() - interval '20 minutes', 'fert_house', 10),
+    (now() - interval '15 minutes', 'fert_house', 11),
+    (now() - interval '10 minutes', 'fert_house', 12),
+    (now() - interval '5 minutes', 'fert_house', 13),
+    (now(), 'fert_house', 14);
 INSERT INTO public.system_state(ts, entity, value, greenhouse_id) VALUES
-    (now() - interval '12 minutes 30 seconds', 'fertigation_commissioning_eligible', 'false', 'fert_house'),
-    (now() - interval '4 minutes 45 seconds', 'fertigation_commissioning_eligible', 'true', 'fert_house');
+    (now() - interval '17 minutes 30 seconds', 'fertigation_commissioning_eligible', 'false', 'fert_house'),
+    (now() - interval '9 minutes 45 seconds', 'fertigation_commissioning_eligible', 'true', 'fert_house');
 INSERT INTO public.equipment_state(ts, equipment, state, greenhouse_id) VALUES
-    (now() - interval '15 minutes', 'drip_wall_fert', false, 'fert_house'),
+    (now() - interval '20 minutes', 'drip_wall_fert', false, 'fert_house'),
+    (now() - interval '19 minutes 30 seconds', 'drip_wall_fert', true, 'fert_house'),
+    (now() - interval '15 minutes 30 seconds', 'drip_wall_fert', false, 'fert_house'),
     (now() - interval '14 minutes 30 seconds', 'drip_wall_fert', true, 'fert_house'),
     (now() - interval '10 minutes 30 seconds', 'drip_wall_fert', false, 'fert_house'),
     (now() - interval '9 minutes 30 seconds', 'drip_wall_fert', true, 'fert_house'),
     (now() - interval '5 minutes 30 seconds', 'drip_wall_fert', false, 'fert_house'),
-    (now() - interval '4 minutes 30 seconds', 'drip_wall_fert', true, 'fert_house'),
+    (now() - interval '2 minutes 30 seconds', 'drip_wall_fert', true, 'fert_house'),
     (now() - interval '30 seconds', 'drip_wall_fert', false, 'fert_house'),
-    (now() - interval '15 minutes', 'fert_master_valve', false, 'fert_house'),
+    (now() - interval '20 minutes', 'fert_master_valve', false, 'fert_house'),
+    (now() - interval '14 minutes 30 seconds', 'fert_master_valve', true, 'fert_house'),
+    (now() - interval '10 minutes 30 seconds', 'fert_master_valve', false, 'fert_house'),
     (now() - interval '9 minutes 30 seconds', 'fert_master_valve', true, 'fert_house'),
     (now() - interval '5 minutes 30 seconds', 'fert_master_valve', false, 'fert_house'),
     (now() - interval '4 minutes 30 seconds', 'fert_master_valve', true, 'fert_house'),
-    (now() - interval '30 seconds', 'fert_master_valve', false, 'fert_house');
+    (now() - interval '3 minutes 30 seconds', 'fert_master_valve', false, 'fert_house');
 SELECT * FROM public.materialize_water_meter_events('fert_house', now());
 
 DO $$
@@ -432,7 +439,7 @@ BEGIN
       INTO no_master, uncommissioned, commissioned
     FROM public.v_water_event_attribution
     WHERE greenhouse_id = 'fert_house';
-    IF no_master <> 1 OR uncommissioned <> 1 OR commissioned <> 1 THEN
+    IF no_master <> 2 OR uncommissioned <> 1 OR commissioned <> 1 THEN
         RAISE EXCEPTION 'fertigation proof gate failed: no-master %, uncommissioned %, commissioned %',
             no_master, uncommissioned, commissioned;
     END IF;
@@ -450,6 +457,7 @@ DO $$
 DECLARE
     conflicts bigint;
     accepted double precision;
+    health record;
 BEGIN
     SELECT count(*) FILTER (WHERE event_type = 'source_conflict'),
            COALESCE(sum(delta_gal) FILTER (
@@ -458,17 +466,60 @@ BEGIN
       INTO conflicts, accepted
     FROM public.water_meter_events
     WHERE greenhouse_id = 'conflict_house';
-    IF conflicts <> 1 OR accepted <> 0 THEN
+    SELECT * INTO health
+    FROM public.v_water_ledger_health
+    WHERE greenhouse_id = 'conflict_house';
+    IF conflicts <> 1 OR accepted <> 0
+       OR health.ledger_status <> 'discontinuous'
+       OR health.available_for_scoring THEN
         RAISE EXCEPTION 'source conflict was hidden: conflicts %, accepted %',
             conflicts, accepted;
     END IF;
 END $$;
 
--- Runtime model and partial meter intentionally have different scopes. Three
--- daily rows cover fully measured, modeled-only, and low-coverage cases.
-INSERT INTO public.v_equipment_runtime_daily VALUES
-    ((now() AT TIME ZONE 'America/Denver')::date - 2,
-     'fan1', 60, 'vallery', true, true);
+-- Conflicting relay truth exactly at the prior meter timestamp is part of the
+-- interval seed. It must be deterministic and degraded, never arbitrarily
+-- meter-attributed.
+INSERT INTO public.climate(ts, greenhouse_id, water_total_gal) VALUES
+    (now() - interval '5 minutes', 'boundary_house', 10),
+    (now(), 'boundary_house', 12);
+INSERT INTO public.equipment_state(ts, equipment, state, greenhouse_id) VALUES
+    (now() - interval '5 minutes', 'mister_center', true, 'boundary_house'),
+    (now() - interval '5 minutes', 'mister_center', false, 'boundary_house');
+SELECT * FROM public.materialize_water_meter_events('boundary_house', now());
+
+DO $$
+DECLARE
+    boundary record;
+BEGIN
+    SELECT * INTO boundary
+    FROM public.v_water_event_attribution
+    WHERE greenhouse_id = 'boundary_house';
+    IF boundary.attribution_quality <> 'conflicting_relay_events'
+       OR boundary.attribution_class = 'meter_attributed' THEN
+        RAISE EXCEPTION 'boundary relay conflict was not fail-closed: %',
+            row_to_json(boundary);
+    END IF;
+END $$;
+
+-- Runtime model and partial meter intentionally have different scopes. Only
+-- transition-backed complete rows are eligible; populated daily_summary fields
+-- without transition evidence must remain unavailable.
+INSERT INTO public.v_equipment_runtime_daily (
+    day, equipment, on_minutes, greenhouse_id, is_complete_day,
+    start_state_known, is_deploy_gate_eligible, quality
+)
+SELECT d.day, e.slug,
+       CASE WHEN e.slug = 'fan1' THEN 60 ELSE 0 END,
+       'vallery', true, true, true, 'complete'
+FROM (VALUES
+    ((now() AT TIME ZONE 'America/Denver')::date - 2),
+    ((now() AT TIME ZONE 'America/Denver')::date - 3),
+    ((now() AT TIME ZONE 'America/Denver')::date - 4),
+    ((now() AT TIME ZONE 'America/Denver')::date - 5)
+) AS d(day)
+CROSS JOIN public.equipment e
+WHERE e.greenhouse_id = 'vallery';
 INSERT INTO public.daily_summary (
     date, greenhouse_id, runtime_heat1_min, runtime_fan1_min,
     runtime_fan2_min, runtime_fog_min, runtime_vent_min,
@@ -486,6 +537,9 @@ INSERT INTO public.daily_summary (
 ), (
     (now() AT TIME ZONE 'America/Denver')::date - 5,
     'vallery', 0, 60, 0, 0, 0, 0, 0, 0
+), (
+    (now() AT TIME ZONE 'America/Denver')::date - 7,
+    'vallery', 0, 0, 0, 0, 0, 0, 0, 0
 );
 
 UPDATE public.daily_summary
@@ -562,6 +616,7 @@ DECLARE
     stale_status text;
     unavailable_status text;
     gated record;
+    no_runtime record;
 BEGIN
     SELECT * INTO partial
     FROM public.v_energy_estimate_reconciliation
@@ -578,6 +633,10 @@ BEGIN
     SELECT * INTO gated
     FROM public.v_daily_kpi
     WHERE date = (now() AT TIME ZONE 'America/Denver')::date - 5;
+    SELECT * INTO no_runtime
+    FROM public.v_runtime_energy_daily
+    WHERE date = (now() AT TIME ZONE 'America/Denver')::date - 7
+      AND greenhouse_id = 'vallery';
 
     IF partial.measured_quality <> 'low_coverage'
        OR partial.measured_available_for_scoring THEN
@@ -599,6 +658,13 @@ BEGIN
         RAISE EXCEPTION 'unavailable resources became free score/cost: %',
             row_to_json(gated);
     END IF;
+    IF no_runtime.modeled_kwh IS NOT NULL
+       OR no_runtime.runtime_coverage_pct <> 0
+       OR no_runtime.model_quality <> 'incomplete_runtime_evidence'
+       OR no_runtime.available_for_scoring THEN
+        RAISE EXCEPTION 'daily_summary fields masqueraded as runtime evidence: %',
+            row_to_json(no_runtime);
+    END IF;
 END $$;
 
 SELECT date, quality_filtered_meter_gal, attributed_gal, ambiguous_gal,
@@ -614,5 +680,20 @@ SELECT date, kwh_estimated, modeled_kwh_low, modeled_kwh_high, measured_kwh,
 FROM public.v_energy_estimate_reconciliation
 WHERE greenhouse_id = 'vallery'
 ORDER BY date;
+
+DO $$
+DECLARE
+    r record;
+BEGIN
+    SELECT * INTO r FROM public.v_cost_today;
+    IF r.cost_electric IS NOT NULL
+       OR r.cost_gas IS NOT NULL
+       OR r.cost_water IS NOT NULL
+       OR r.cost_total IS NOT NULL THEN
+        RAISE EXCEPTION
+            'v_cost_today must preserve unavailable current-day resources as NULL, got %',
+            row_to_json(r);
+    END IF;
+END $$;
 
 ROLLBACK;

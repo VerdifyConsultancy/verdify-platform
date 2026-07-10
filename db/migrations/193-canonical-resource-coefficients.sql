@@ -201,21 +201,21 @@ INSERT INTO public.resource_coefficients (
     coefficient_source, revision, evidence_ref, valid_from, valid_to,
     is_model_default, notes
 )
-SELECT e.id, x.resource_kind, x.unit, x.nominal, x.nominal, x.nominal,
+SELECT e.id, x.resource_kind, x.unit, x.nominal, x.low, x.high,
        'operator', 'legacy_catalog_085', 'migration:085,migration:020',
        '2026-01-01 00:00:00-07'::timestamptz,
        '2026-07-09 00:00:00-06'::timestamptz, false,
-       'Historical point retained for comparison; provenance before migration 193 was not machine-readable.'
+       'Historical point retained with conservative bounds; provenance before migration 193 was not machine-readable and is never exact/scoring-grade.'
 FROM (VALUES
-    ('heat1'::text, 'electric_watts'::text, 'W'::text, 1500.0),
-    ('fan1', 'electric_watts', 'W', 52.0),
-    ('fan2', 'electric_watts', 'W', 52.0),
-    ('fog', 'electric_watts', 'W', 1644.0),
-    ('vent', 'electric_watts', 'W', 10.0),
-    ('grow_light_main', 'electric_watts', 'W', 630.0),
-    ('grow_light_grow', 'electric_watts', 'W', 816.0),
-    ('heat2', 'gas_btu_per_hour', 'BTU/h', 75000.0)
-) AS x(slug, resource_kind, unit, nominal)
+    ('heat1'::text, 'electric_watts'::text, 'W'::text, 1500.0, 1350.0, 1650.0),
+    ('fan1', 'electric_watts', 'W', 52.0, 40.0, 70.0),
+    ('fan2', 'electric_watts', 'W', 52.0, 40.0, 70.0),
+    ('fog', 'electric_watts', 'W', 1644.0, 1400.0, 1900.0),
+    ('vent', 'electric_watts', 'W', 10.0, 8.0, 12.0),
+    ('grow_light_main', 'electric_watts', 'W', 630.0, 567.0, 693.0),
+    ('grow_light_grow', 'electric_watts', 'W', 816.0, 734.4, 897.6),
+    ('heat2', 'gas_btu_per_hour', 'BTU/h', 75000.0, 67500.0, 82500.0)
+) AS x(slug, resource_kind, unit, nominal, low, high)
 JOIN public.equipment e
   ON e.greenhouse_id = 'vallery' AND e.slug = x.slug
 ON CONFLICT (equipment_id, resource_kind, revision) DO UPDATE

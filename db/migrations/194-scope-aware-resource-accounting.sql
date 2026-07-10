@@ -92,7 +92,7 @@ DECLARE
     v_raw_latest timestamptz;
     v_candidate_relays text[];
     v_candidate_count integer;
-    v_fert_master_observed boolean;
+    v_fert_master_overlap boolean;
     v_fert_commissioned boolean;
     v_attribution_class text;
     v_attributed_scope text;
@@ -277,13 +277,18 @@ BEGIN
                     l.relay_slug,
                     v_last_total_ts AS ts,
                     COALESCE((
-                        SELECT es.state
+                        SELECT bool_and(es.state)
                         FROM public.equipment_state es
                         WHERE COALESCE(es.greenhouse_id, 'vallery') = p_greenhouse_id
                           AND es.equipment = l.relay_slug
-                          AND es.ts <= v_last_total_ts
-                        ORDER BY es.ts DESC
-                        LIMIT 1
+                          AND es.ts = (
+                              SELECT max(latest.ts)
+                              FROM public.equipment_state latest
+                              WHERE COALESCE(latest.greenhouse_id, 'vallery') = p_greenhouse_id
+                                AND latest.equipment = l.relay_slug
+                                AND latest.ts <= v_last_total_ts
+                          )
+                        HAVING count(DISTINCT es.state) = 1
                     ), false) AS state
                 FROM relay_list l
             ), interval_events AS (
@@ -319,36 +324,74 @@ BEGIN
               INTO v_candidate_relays, v_candidate_count
               FROM relay_runs;
 
-            SELECT COALESCE((
-                  SELECT es.state
-                  FROM public.equipment_state es
-                  WHERE COALESCE(es.greenhouse_id, 'vallery') = p_greenhouse_id
-                    AND es.equipment = 'fert_master_valve'
-                    AND es.ts <= v_last_total_ts
-                  ORDER BY es.ts DESC
-                  LIMIT 1
-              ), false)
-              OR EXISTS (
-                  SELECT 1
-                  FROM public.equipment_state es
-                  WHERE COALESCE(es.greenhouse_id, 'vallery') = p_greenhouse_id
-                    AND es.equipment = 'fert_master_valve'
-                    AND es.ts > v_last_total_ts
-                    AND es.ts <= r.ts
-                    AND es.state IS TRUE
-              )
-              INTO v_fert_master_observed;
+            v_fert_master_overlap := false;
+            v_fert_commissioned := false;
+            IF 'drip_wall_fert' = ANY(v_candidate_relays) THEN
+                WITH boundaries AS (
+                    SELECT v_last_total_ts AS ts
+                    UNION
+                    SELECT es.ts
+                    FROM public.equipment_state es
+                    WHERE COALESCE(es.greenhouse_id, 'vallery') = p_greenhouse_id
+                      AND es.equipment IN ('drip_wall_fert', 'fert_master_valve')
+                      AND es.ts > v_last_total_ts
+                      AND es.ts < r.ts
+                    UNION
+                    SELECT r.ts
+                ), segments AS (
+                    SELECT
+                        b.ts,
+                        lead(b.ts) OVER (ORDER BY b.ts) AS next_ts,
+                        COALESCE((
+                            SELECT bool_and(es.state)
+                            FROM public.equipment_state es
+                            WHERE COALESCE(es.greenhouse_id, 'vallery') = p_greenhouse_id
+                              AND es.equipment = 'drip_wall_fert'
+                              AND es.ts = (
+                                  SELECT max(latest.ts)
+                                  FROM public.equipment_state latest
+                                  WHERE COALESCE(latest.greenhouse_id, 'vallery') = p_greenhouse_id
+                                    AND latest.equipment = 'drip_wall_fert'
+                                    AND latest.ts <= b.ts
+                              )
+                            HAVING count(DISTINCT es.state) = 1
+                        ), false) AS wall_fert_on,
+                        COALESCE((
+                            SELECT bool_and(es.state)
+                            FROM public.equipment_state es
+                            WHERE COALESCE(es.greenhouse_id, 'vallery') = p_greenhouse_id
+                              AND es.equipment = 'fert_master_valve'
+                              AND es.ts = (
+                                  SELECT max(latest.ts)
+                                  FROM public.equipment_state latest
+                                  WHERE COALESCE(latest.greenhouse_id, 'vallery') = p_greenhouse_id
+                                    AND latest.equipment = 'fert_master_valve'
+                                    AND latest.ts <= b.ts
+                              )
+                            HAVING count(DISTINCT es.state) = 1
+                        ), false) AS fert_master_on
+                    FROM boundaries b
+                )
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM segments s
+                    WHERE s.wall_fert_on
+                      AND s.fert_master_on
+                      AND s.next_ts > s.ts
+                )
+                  INTO v_fert_master_overlap;
 
-            SELECT COALESCE((
-                SELECT lower(s.value) IN ('true', 'on', '1', 'eligible')
-                FROM public.system_state s
-                WHERE COALESCE(s.greenhouse_id, 'vallery') = p_greenhouse_id
-                  AND s.entity = 'fertigation_commissioning_eligible'
-                  AND s.ts <= r.ts
-                ORDER BY s.ts DESC
-                LIMIT 1
-            ), false)
-              INTO v_fert_commissioned;
+                SELECT COALESCE((
+                    SELECT lower(s.value) IN ('true', 'on', '1', 'eligible')
+                    FROM public.system_state s
+                    WHERE COALESCE(s.greenhouse_id, 'vallery') = p_greenhouse_id
+                      AND s.entity = 'fertigation_commissioning_eligible'
+                      AND s.ts <= r.ts
+                    ORDER BY s.ts DESC
+                    LIMIT 1
+                ), false)
+                  INTO v_fert_commissioned;
+            END IF;
 
             v_attribution_class := CASE
                 WHEN v_candidate_count = 0 THEN 'manual_or_unattributed'
@@ -362,7 +405,7 @@ BEGIN
                 ) THEN 'climate_wetting'
                 WHEN v_candidate_relays[1] = 'drip_wall' THEN 'wall_irrigation'
                 WHEN v_candidate_relays[1] = 'drip_wall_fert'
-                  AND v_fert_master_observed
+                  AND v_fert_master_overlap
                   AND v_fert_commissioned THEN 'wall_fertigation'
                 ELSE 'unsupported_path'
             END;
@@ -372,15 +415,20 @@ BEGIN
                     SELECT 1
                     FROM public.equipment_state es
                     WHERE COALESCE(es.greenhouse_id, 'vallery') = p_greenhouse_id
-                      AND es.equipment = ANY(v_candidate_relays)
-                      AND es.ts > v_last_total_ts
+                      AND es.equipment = ANY(ARRAY[
+                          'fog', 'mister_center', 'mister_south', 'mister_west',
+                          'drip_wall', 'drip_center', 'drip_wall_fert',
+                          'drip_center_fert', 'mister_south_fert',
+                          'mister_west_fert'
+                      ]::text[])
+                      AND es.ts >= v_last_total_ts
                       AND es.ts <= r.ts
                     GROUP BY es.equipment, es.ts
                     HAVING count(DISTINCT es.state) > 1
                 ) THEN 'conflicting_relay_events'
                 WHEN v_candidate_count = 1
                   AND v_candidate_relays[1] = 'drip_wall_fert'
-                  AND NOT v_fert_master_observed THEN 'fert_master_not_observed'
+                  AND NOT v_fert_master_overlap THEN 'fert_master_not_observed'
                 WHEN v_candidate_count = 1
                   AND v_candidate_relays[1] = 'drip_wall_fert'
                   AND NOT v_fert_commissioned THEN 'fertigation_not_commissioned'
@@ -451,7 +499,10 @@ BEGIN
             WHEN v_raw_latest IS NULL OR v_last_source_ts IS NULL THEN 'unavailable'
             WHEN v_last_source_ts < v_raw_latest - interval '5 minutes' THEN 'stale'
             WHEN v_raw_latest < now() - interval '10 minutes' THEN 'stale'
-            WHEN v_last_quality IN ('source_gap', 'high_delta') THEN 'discontinuous'
+            WHEN v_last_quality IN (
+                'source_gap', 'high_delta', 'conflicting_source_samples',
+                'counter_reset', 'phantom_zero'
+            ) THEN 'discontinuous'
             ELSE 'fresh'
         END;
 END;
@@ -481,11 +532,17 @@ WITH houses AS (
            max(c.ts) FILTER (WHERE c.water_total_gal IS NOT NULL) AS raw_latest_ts
     FROM public.climate c
     GROUP BY COALESCE(c.greenhouse_id, 'vallery')
-), recent_gap AS (
-    SELECT e.greenhouse_id, max(e.ts) AS latest_gap_ts
+), recent_discontinuity AS (
+    SELECT
+        e.greenhouse_id,
+        max(e.ts) FILTER (WHERE e.event_type = 'gap') AS latest_gap_ts,
+        max(e.ts) AS latest_discontinuity_ts
     FROM public.water_meter_events e
-    WHERE e.event_type = 'gap'
-      AND e.ts >= now() - interval '24 hours'
+    WHERE e.ts >= now() - interval '24 hours'
+      AND (
+          e.event_type IN ('gap', 'reset', 'phantom_zero', 'source_conflict')
+          OR e.quality_flag <> 'ok'
+      )
     GROUP BY e.greenhouse_id
 )
 SELECT
@@ -501,20 +558,29 @@ SELECT
         WHEN r.raw_latest_ts IS NULL OR s.last_source_ts IS NULL THEN 'unavailable'
         WHEN r.raw_latest_ts < now() - interval '10 minutes' THEN 'stale'
         WHEN s.last_source_ts < r.raw_latest_ts - interval '5 minutes' THEN 'stale'
-        WHEN g.latest_gap_ts IS NOT NULL THEN 'discontinuous'
+        WHEN s.last_event_quality IN (
+            'source_gap', 'high_delta', 'conflicting_source_samples',
+            'counter_reset', 'phantom_zero'
+        ) THEN 'discontinuous'
+        WHEN g.latest_discontinuity_ts IS NOT NULL THEN 'discontinuous'
         ELSE 'fresh'
     END AS ledger_status,
     r.raw_latest_ts IS NOT NULL
       AND s.last_source_ts >= r.raw_latest_ts - interval '5 minutes'
       AND r.raw_latest_ts >= now() - interval '10 minutes'
-      AND g.latest_gap_ts IS NULL AS available_for_scoring
+      AND s.last_event_quality NOT IN (
+          'source_gap', 'high_delta', 'conflicting_source_samples',
+          'counter_reset', 'phantom_zero'
+      )
+      AND g.latest_discontinuity_ts IS NULL AS available_for_scoring,
+    g.latest_discontinuity_ts
 FROM houses h
 LEFT JOIN raw r ON r.greenhouse_id = h.greenhouse_id
 LEFT JOIN public.water_meter_materializer_state s
   ON s.greenhouse_id = h.greenhouse_id
  AND s.source = 'climate.water_total_gal'
  AND s.meter_id = 'main_pulse'
-LEFT JOIN recent_gap g ON g.greenhouse_id = h.greenhouse_id;
+LEFT JOIN recent_discontinuity g ON g.greenhouse_id = h.greenhouse_id;
 
 COMMENT ON VIEW public.v_water_ledger_health IS
 'Compares the incremental ledger watermark with current raw totalizer telemetry. Stale, unavailable, and recent discontinuity are explicit and scoring-ineligible.';
@@ -889,17 +955,25 @@ WITH runtime AS (
         ds.date,
         ds.greenhouse_id,
         v.equipment,
-        v.on_minutes
+        rt.on_minutes::double precision AS on_minutes,
+        rt.is_complete_day,
+        rt.start_state_known,
+        rt.is_deploy_gate_eligible AS runtime_evidence_eligible,
+        rt.quality AS runtime_quality
     FROM public.daily_summary ds
     CROSS JOIN LATERAL (VALUES
-        ('heat1'::text, ds.runtime_heat1_min),
-        ('fan1', ds.runtime_fan1_min),
-        ('fan2', ds.runtime_fan2_min),
-        ('fog', ds.runtime_fog_min),
-        ('vent', ds.runtime_vent_min),
-        ('grow_light_main', ds.runtime_grow_light_main_min),
-        ('grow_light_grow', ds.runtime_grow_light_grow_min)
-    ) AS v(equipment, on_minutes)
+        ('heat1'::text),
+        ('fan1'),
+        ('fan2'),
+        ('fog'),
+        ('vent'),
+        ('grow_light_main'),
+        ('grow_light_grow')
+    ) AS v(equipment)
+    LEFT JOIN public.v_equipment_runtime_daily rt
+      ON rt.day::date = ds.date
+     AND rt.greenhouse_id = ds.greenhouse_id
+     AND rt.equipment = v.equipment
 ), evidence AS (
     SELECT
         r.*,
@@ -935,23 +1009,36 @@ WITH runtime AS (
 SELECT
     r.date,
     r.greenhouse_id,
-    CASE WHEN bool_or(r.on_minutes IS NULL OR r.coefficient_nominal IS NULL)
+    CASE WHEN bool_or(
+        r.on_minutes IS NULL
+        OR NOT COALESCE(r.runtime_evidence_eligible, false)
+        OR r.coefficient_nominal IS NULL
+    )
       THEN NULL
       ELSE round(sum((r.on_minutes / 60.0)
         * r.coefficient_nominal / 1000.0)::numeric, 3)::double precision
     END AS modeled_kwh,
-    CASE WHEN bool_or(r.on_minutes IS NULL OR r.coefficient_low IS NULL)
+    CASE WHEN bool_or(
+        r.on_minutes IS NULL
+        OR NOT COALESCE(r.runtime_evidence_eligible, false)
+        OR r.coefficient_low IS NULL
+    )
       THEN NULL
       ELSE round(sum((r.on_minutes / 60.0)
         * r.coefficient_low / 1000.0)::numeric, 3)::double precision
     END AS modeled_kwh_low,
-    CASE WHEN bool_or(r.on_minutes IS NULL OR r.coefficient_high IS NULL)
+    CASE WHEN bool_or(
+        r.on_minutes IS NULL
+        OR NOT COALESCE(r.runtime_evidence_eligible, false)
+        OR r.coefficient_high IS NULL
+    )
       THEN NULL
       ELSE round(sum((r.on_minutes / 60.0)
         * r.coefficient_high / 1000.0)::numeric, 3)::double precision
     END AS modeled_kwh_high,
     round((100.0 * count(*) FILTER (
             WHERE r.on_minutes IS NOT NULL AND r.coefficient_nominal IS NOT NULL
+              AND r.runtime_evidence_eligible
         )
         / NULLIF(count(*), 0))::numeric, 1)::double precision AS runtime_coverage_pct,
     jsonb_agg(DISTINCT jsonb_build_object(
@@ -968,19 +1055,30 @@ SELECT
     CASE
         WHEN r.date >= (now() AT TIME ZONE 'America/Denver')::date THEN 'incomplete_runtime'
         WHEN bool_or(r.coefficient_nominal IS NULL) THEN 'missing_coefficients'
-        WHEN bool_or(r.on_minutes IS NULL) THEN 'incomplete_runtime'
+        WHEN bool_or(
+            r.on_minutes IS NULL
+            OR NOT COALESCE(r.runtime_evidence_eligible, false)
+        ) THEN 'incomplete_runtime_evidence'
         WHEN bool_or(r.has_uncertainty) THEN 'uncertain_coefficients'
         ELSE 'ok'
     END AS model_quality,
     r.date < (now() AT TIME ZONE 'America/Denver')::date
       AND bool_and(r.on_minutes IS NOT NULL)
+      AND bool_and(COALESCE(r.runtime_evidence_eligible, false))
       AND bool_and(r.coefficient_nominal IS NOT NULL)
-      AND NOT bool_or(COALESCE(r.has_uncertainty, true)) AS available_for_scoring
+      AND NOT bool_or(COALESCE(r.has_uncertainty, true)) AS available_for_scoring,
+    jsonb_agg(jsonb_build_object(
+        'equipment', r.equipment,
+        'quality', COALESCE(r.runtime_quality, 'missing'),
+        'complete_day', COALESCE(r.is_complete_day, false),
+        'start_state_known', COALESCE(r.start_state_known, false),
+        'eligible', COALESCE(r.runtime_evidence_eligible, false)
+    ) ORDER BY r.equipment) AS runtime_evidence
 FROM evidence r
 GROUP BY r.date, r.greenhouse_id;
 
 COMMENT ON VIEW public.v_runtime_energy_daily IS
-'Whole controlled-equipment runtime model with low/nominal/high kWh and the coefficient revision valid on that local day. Missing runtime or coefficients make the whole scalar NULL; uncertain, incomplete, or historically uncovered models are scoring-ineligible.';
+'Whole controlled-equipment runtime model with low/nominal/high kWh, transition-derived runtime completeness, and the coefficient revision valid on that local day. Populated daily_summary fields are never treated as runtime proof; missing/ineligible transitions or coefficients make the whole scalar NULL, and uncertain evidence is scoring-ineligible.';
 
 CREATE OR REPLACE VIEW public.v_energy_daily AS
 WITH samples AS (
@@ -1095,7 +1193,8 @@ SELECT
     r.model_quality,
     e.measured_quality,
     COALESCE(r.available_for_scoring, false) AS modeled_available_for_scoring,
-    COALESCE(e.available_for_scoring, false) AS measured_available_for_scoring
+    COALESCE(e.available_for_scoring, false) AS measured_available_for_scoring,
+    r.runtime_evidence
 FROM days d
 LEFT JOIN public.v_runtime_energy_daily r
   ON r.date = d.date AND r.greenhouse_id = d.greenhouse_id
@@ -1143,7 +1242,8 @@ SELECT
         'raw_latest_ts', h.raw_latest_ts,
         'raw_age_seconds', h.raw_age_seconds,
         'materializer_lag_seconds', h.materializer_lag_seconds,
-        'latest_gap_ts', h.latest_gap_ts
+        'latest_gap_ts', h.latest_gap_ts,
+        'latest_discontinuity_ts', h.latest_discontinuity_ts
     ) AS detail
 FROM public.v_water_ledger_health h
 UNION ALL
@@ -1159,7 +1259,8 @@ SELECT
         'modeled_kwh_high', e.modeled_kwh_high,
         'runtime_coverage_pct', e.runtime_coverage_pct,
         'scope', e.modeled_scope,
-        'coefficient_revisions', e.coefficient_revisions
+        'coefficient_revisions', e.coefficient_revisions,
+        'runtime_evidence', e.runtime_evidence
     )
 FROM public.v_runtime_energy_daily e
 WHERE e.date = (now() AT TIME ZONE 'America/Denver')::date - 1
@@ -1341,6 +1442,23 @@ ORDER BY date;
 
 COMMENT ON VIEW public.v_daily_kpi IS
 'Daily planner KPI with provenance-gated resources. Missing or low-confidence water/energy stays NULL and contributes zero score weight; the climate-only score is normalized and labeled by planner_score_resource_weight_pct/resource_terms_available.';
+
+-- Retain the legacy operator-view shape without retaining its fabricated-zero
+-- semantics. Existing consumers can keep reading one row while unavailable or
+-- incomplete current-day resource evidence stays NULL.
+CREATE OR REPLACE VIEW public.v_cost_today AS
+SELECT
+    round(k.cost_electric::numeric, 2) AS cost_electric,
+    round(k.cost_gas::numeric, 2) AS cost_gas,
+    round(k.cost_water::numeric, 2) AS cost_water,
+    round(k.cost_total::numeric, 2) AS cost_total
+FROM (SELECT 1) anchor
+LEFT JOIN public.v_daily_kpi k
+  ON k.date = (now() AT TIME ZONE 'America/Denver')::date
+ AND k.resource_terms_available;
+
+COMMENT ON VIEW public.v_cost_today IS
+'Compatibility view over provenance-gated current-day resource evidence. It always returns one row and leaves unavailable values NULL; it never substitutes zero or recomputes costs from raw runtime/meter extrema.';
 
 CREATE OR REPLACE FUNCTION public.fn_planner_scorecard(
     p_date date DEFAULT CURRENT_DATE

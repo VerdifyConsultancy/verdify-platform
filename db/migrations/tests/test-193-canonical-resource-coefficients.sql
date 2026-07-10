@@ -26,12 +26,6 @@ CREATE TABLE public.equipment (
     created_at timestamptz NOT NULL DEFAULT now(),
     UNIQUE (greenhouse_id, slug)
 );
-CREATE TABLE public.equipment_state (
-    ts timestamptz NOT NULL,
-    greenhouse_id text NOT NULL,
-    equipment text NOT NULL,
-    state boolean NOT NULL
-);
 
 INSERT INTO public.greenhouses(id) VALUES ('vallery');
 
@@ -66,14 +60,9 @@ FROM (VALUES
 -- Rerun proves additive migration idempotence.
 \i db/migrations/193-canonical-resource-coefficients.sql
 
--- The fixture inventory is telemetry-driven: every recently observed active
--- input slug must resolve exactly once, including legacy compatibility names.
-INSERT INTO public.equipment_state (ts, greenhouse_id, equipment, state)
-SELECT now(), greenhouse_id, slug, false
-FROM public.equipment
-WHERE greenhouse_id = 'vallery' AND is_active
-UNION ALL
-SELECT now(), 'vallery', 'gl1', false;
+-- Independent captured telemetry inventory; this is not generated from the
+-- catalog under test. Only physical control-output slugs must resolve as assets.
+\i db/migrations/tests/fixtures/active-equipment-state-inventory-2026-07-09.sql
 
 DO $$
 DECLARE
@@ -104,12 +93,14 @@ DECLARE
     provenance_failures integer;
     bounded_conflicts integer;
     compatibility_lights integer;
+    exact_legacy_points integer;
+    captured_outputs integer;
+    captured_inventory integer;
 BEGIN
     WITH expected AS (
-        SELECT DISTINCT equipment AS slug
-        FROM public.equipment_state
-        WHERE greenhouse_id = 'vallery'
-          AND ts >= now() - interval '1 hour'
+        SELECT equipment AS slug
+        FROM captured_equipment_state_inventory
+        WHERE telemetry_role = 'physical_control_output'
     )
     SELECT count(*) INTO unresolved
     FROM expected x
@@ -154,6 +145,16 @@ BEGIN
     WHERE equipment IN ('grow_light_main', 'grow_light_grow')
       AND wattage IS NOT NULL;
 
+    SELECT count(*) INTO exact_legacy_points
+    FROM public.resource_coefficients
+    WHERE revision = 'legacy_catalog_085'
+      AND lower_bound = upper_bound;
+
+    SELECT count(*) FILTER (WHERE telemetry_role = 'physical_control_output'),
+           count(*)
+      INTO captured_outputs, captured_inventory
+    FROM captured_equipment_state_inventory;
+
     IF unresolved <> 0 OR multiply_resolved <> 0 THEN
         RAISE EXCEPTION 'alias convergence failed: unresolved %, multiply resolved %',
             unresolved, multiply_resolved;
@@ -168,6 +169,14 @@ BEGIN
     END IF;
     IF bounded_conflicts <> 4 THEN
         RAISE EXCEPTION 'provisional fan/fog/heat evidence not preserved: %', bounded_conflicts;
+    END IF;
+    IF exact_legacy_points <> 0 THEN
+        RAISE EXCEPTION 'unproven legacy coefficients remained point-exact: %',
+            exact_legacy_points;
+    END IF;
+    IF captured_outputs <> 18 OR captured_inventory <> 39 THEN
+        RAISE EXCEPTION 'captured telemetry inventory drifted: outputs %, total %',
+            captured_outputs, captured_inventory;
     END IF;
     IF (SELECT canonical_slug FROM public.v_equipment_alias_resolution
         WHERE greenhouse_id = 'vallery' AND input_slug = 'gl1') <> 'grow_light_main'
