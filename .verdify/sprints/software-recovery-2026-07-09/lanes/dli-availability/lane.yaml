@@ -73,6 +73,30 @@ ownership:
     - path: verdify_schemas/tests/test_mcp_responses.py
       granted_by: software-recovery controller
       reason: Focused schema compatibility tests are required to keep every non-DLI MCP response contract unchanged.
+    - path: scripts/generate-daily-plan.py
+      granted_by: software-recovery controller
+      reason: Preserve the daily-plan route and frontmatter contract while replacing the active numeric DLI consumer with unavailable provenance.
+    - path: scripts/vault-daily-writer.py
+      granted_by: software-recovery controller
+      reason: Preserve existing Vault frontmatter keys while rendering null DLI plus reason, provenance, and validity interval.
+    - path: scripts/export-public-sample-dataset.sh
+      granted_by: software-recovery controller
+      reason: Preserve the public CSV shape while blanking invalid interior DLI and documenting the unavailable evidence contract.
+    - path: scripts/export-daily-lifecycle-artifact.py
+      granted_by: software-recovery controller
+      reason: Preserve the lifecycle artifact shape while blanking invalid interior DLI and documenting provenance.
+    - path: deploy/k8s/components/grafana/generated/**
+      granted_by: software-recovery controller
+      reason: Regenerate provisioned Grafana ConfigMaps from lane-owned DLI dashboard sources after exclusive ownership transfer.
+    - path: deploy/k8s/components/firmware-twin/src/greenhouse_logic.h
+      granted_by: software-recovery controller
+      reason: Keep the firmware twin byte-identical to the DLI evidence helper in device source.
+    - path: deploy/k8s/components/firmware-twin/src/greenhouse_types.h
+      granted_by: software-recovery controller
+      reason: Keep the firmware twin byte-identical to the DLI evidence type in device source.
+    - path: deploy/k8s/components/ingestor-gather-script/gather-script-configmap.yaml
+      granted_by: software-recovery controller
+      reason: Regenerate the deployed planner-context mirror after the adversarial scan found the old raw DLI and 3.5 correction block.
   owned_interfaces:
     - nullable DLI value
     - unavailable reason/provenance/valid interval
