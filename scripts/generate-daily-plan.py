@@ -140,8 +140,15 @@ def get_daily_summary(d: date) -> dict:
     return (
         db_query_json(f"""
         SELECT row_to_json(ds) FROM (
-            SELECT date, temp_min, temp_max, temp_avg, vpd_min, vpd_max, vpd_avg,
-                   rh_min, rh_max, co2_avg, dli_final,
+            SELECT ds.date, ds.temp_min, ds.temp_max, ds.temp_avg, ds.vpd_min, ds.vpd_max, ds.vpd_avg,
+                   ds.rh_min, ds.rh_max, ds.co2_avg,
+                   d.crop_dli_mol_m2_day AS dli_final,
+                   d.availability AS dli_availability,
+                   d.unavailable_reason AS dli_unavailable_reason,
+                   d.provenance AS dli_provenance,
+                   d.validity_revision AS dli_validity_revision,
+                   d.valid_from AS dli_valid_from,
+                   d.valid_to AS dli_valid_to,
                    cost_electric, cost_gas, cost_water, cost_total,
                    water_used_gal, mister_water_gal,
                    stress_hours_heat, stress_hours_cold, stress_hours_vpd_high, stress_hours_vpd_low,
@@ -150,7 +157,11 @@ def get_daily_summary(d: date) -> dict:
                    runtime_grow_light_min,
                    runtime_mister_south_h, runtime_mister_west_h, runtime_mister_center_h,
                    runtime_drip_wall_h
-            FROM daily_summary WHERE date = '{d}'
+            FROM daily_summary ds
+            LEFT JOIN v_dli_daily d
+              ON d.date = ds.date
+             AND d.greenhouse_id = COALESCE(ds.greenhouse_id, 'vallery')
+            WHERE ds.date = '{d}'
         ) ds
     """)
         or {}
@@ -857,6 +868,12 @@ def generate_frontmatter(d: date, plans: list[dict], summary: dict, setpoints: d
         "rh_min_pct": _num(summary.get("rh_min")),
         "rh_max_pct": _num(summary.get("rh_max")),
         "dli_sensor_mol": _num(summary.get("dli_final")),
+        "dli_availability": summary.get("dli_availability") or "unavailable",
+        "dli_unavailable_reason": summary.get("dli_unavailable_reason") or "validity_contract_missing",
+        "dli_provenance": summary.get("dli_provenance") or "unknown_unvalidated_source",
+        "dli_validity_revision": summary.get("dli_validity_revision") or "missing",
+        "dli_valid_from": str(summary.get("dli_valid_from") or "2024-01-01T00:00:00Z"),
+        "dli_valid_to": str(summary.get("dli_valid_to") or "open"),
     }
     stress = {
         "heat_hours": _num(summary.get("stress_hours_heat")),
@@ -1305,6 +1322,21 @@ def generate_daily_summary_section(
                     ("Relative humidity", f"{r(summary.get('rh_min'))}–{r(summary.get('rh_max'))}%"),
                 ]
             ),
+            "",
+        ]
+    )
+
+    lines.extend(
+        [
+            "### Interior Light Evidence",
+            "",
+            "- **Crop DLI:** unavailable",
+            f"- **Reason:** `{summary.get('dli_unavailable_reason') or 'validity_contract_missing'}`",
+            f"- **Provenance:** `{summary.get('dli_provenance') or 'unknown_unvalidated_source'}`",
+            f"- **Validity:** `{summary.get('dli_validity_revision') or 'missing'}`; "
+            f"{summary.get('dli_valid_from') or '2024-01-01T00:00:00Z'} → "
+            f"{summary.get('dli_valid_to') or 'open'}",
+            "- Qualified-light minutes and photoperiod remain independent of unavailable DLI.",
             "",
         ]
     )

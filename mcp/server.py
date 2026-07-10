@@ -68,6 +68,7 @@ from verdify_schemas.climate_intent import (  # noqa: E402
     climate_intent_materialization_guardrails,
     materialize_climate_intent_tier1,
 )
+from verdify_schemas.telemetry import DliEvidence  # noqa: E402
 from verdify_schemas.tunable_registry import (  # noqa: E402
     BAND_OWNED_REG,
     CROP_BAND_REG,
@@ -458,7 +459,8 @@ async def outcome_kpi(target_date: str = "") -> str:
     This is the read-only outcome surface for floating-corridor control: served
     corridor compliance, VPD misses, transition-derived actuator cycles/runtime,
     dew margin, water
-    use, DLI, moisture-estimator decisions, fog/dehum ping-pong sequences,
+    use, availability-bearing DLI evidence, moisture-estimator decisions,
+    fog/dehum ping-pong sequences,
     heat-dehum episodes, and per-action effectiveness from the daily climate-
     action scorecard. ADR-0004 means these are outcome and resource guardrails,
     not an instruction to target-hug while the crop is already inside the
@@ -532,7 +534,6 @@ async def outcome_kpi(target_date: str = "") -> str:
                    mister_water_gal,
                    irrigation_water_gal,
                    fertigation_water_gal,
-                   dli_final,
                    min_dp_margin_f,
                    dp_risk_hours,
                    kwh_estimated,
@@ -548,6 +549,44 @@ async def outcome_kpi(target_date: str = "") -> str:
             greenhouse_id,
         )
         summary = dict(summary_row) if summary_row else {}
+
+        dli_row = await conn.fetchrow(
+            """
+            SELECT crop_dli_mol_m2_day AS value_mol_m2_day,
+                   availability,
+                   unavailable_reason,
+                   provenance,
+                   validity_revision,
+                   valid_from,
+                   valid_to
+            FROM v_dli_daily
+            WHERE date = $1::date AND greenhouse_id = $2
+            """,
+            d,
+            greenhouse_id,
+        )
+        if dli_row:
+            dli_evidence = DliEvidence.model_validate(dict(dli_row))
+        else:
+            validity_row = await conn.fetchrow(
+                """
+                SELECT NULL::double precision AS value_mol_m2_day,
+                       COALESCE(availability, 'unavailable') AS availability,
+                       COALESCE(unavailable_reason, 'validity_contract_missing') AS unavailable_reason,
+                       COALESCE(provenance, 'unknown_unvalidated_source') AS provenance,
+                       COALESCE(validity_revision, 'missing') AS validity_revision,
+                       COALESCE(valid_from, '2024-01-01 00:00:00+00'::timestamptz) AS valid_from,
+                       valid_to
+                FROM (SELECT 1) anchor
+                LEFT JOIN LATERAL fn_dli_validity(
+                    ($1::date::timestamp + interval '12 hours') AT TIME ZONE 'America/Denver',
+                    $2
+                ) ON true
+                """,
+                d,
+                greenhouse_id,
+            )
+            dli_evidence = DliEvidence.model_validate(dict(validity_row))
 
         water_resource_row = await conn.fetchrow(
             """
@@ -1435,6 +1474,7 @@ async def outcome_kpi(target_date: str = "") -> str:
                     "available_for_scoring; modeled and measured scopes never collapse."
                 ),
                 coverage=OutcomeKpiCoverage(
+                    dli="unavailable",
                     actuator_cycles_runtime=(
                         "available"
                         if cycle_rows and all(row["is_deploy_gate_eligible"] for row in cycle_rows)
@@ -1514,7 +1554,7 @@ async def outcome_kpi(target_date: str = "") -> str:
                         else None
                     ),
                 },
-                dli={"sensor_mol_m2_d": summary.get("dli_final")},
+                dli=dli_evidence,
                 dif={
                     "day_night_temp_delta_f": dif.get("day_night_temp_delta_f"),
                     "day_temp_avg_f": dif.get("day_temp_avg_f"),
@@ -1578,6 +1618,8 @@ async def outcome_kpi(target_date: str = "") -> str:
                     "v_water_attribution_daily",
                     "v_energy_estimate_reconciliation",
                     "v_resource_accounting_health",
+                    "v_dli_daily",
+                    "dli_validity_intervals",
                     "climate",
                     "climate_action_log",
                     "setpoint_snapshot",
@@ -3619,6 +3661,7 @@ async def lessons_search(query: str, top_k: int = 10, min_confidence: str = "low
               FROM hits h
               JOIN planner_lessons pl ON pl.id::text = h.source_id
              WHERE pl.is_active = true AND pl.superseded_by IS NULL
+               AND NOT fn_dli_proxy_lesson_invalid(pl.condition, pl.lesson)
                AND CASE pl.confidence WHEN 'high' THEN 3 WHEN 'medium' THEN 2 ELSE 1 END >= $3
              ORDER BY h.distance
             """,
@@ -3683,6 +3726,7 @@ async def knowledge_search(
                       WHERE pl.id::text = h.source_id
                         AND pl.is_active = true
                         AND pl.superseded_by IS NULL
+                        AND NOT fn_dli_proxy_lesson_invalid(pl.condition, pl.lesson)
                    )
             """,
             _vector_literal(embedding),

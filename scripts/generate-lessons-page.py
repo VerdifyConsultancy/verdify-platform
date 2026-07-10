@@ -57,6 +57,24 @@ def public_text(text: str) -> str:
     return re.sub(r"\$(\d)", r"USD \1", text or "")
 
 
+DLI_SOURCE_RE = re.compile(
+    r"sensor[_ -]*dli|dli[_ -]*(?:today|sensor)|"
+    r"interior[^.]{0,40}dli|crop[^.]{0,40}dli",
+    re.IGNORECASE,
+)
+DLI_INFERENCE_RE = re.compile(
+    r"(?:×|\*|\sx\s)\s*\d|correction|corrected|proxy|estimate|estimated|"
+    r"multiply|multiplied|factor|grow[_ -]*light[_ -]*(?:hours|runtime)",
+    re.IGNORECASE,
+)
+
+
+def is_invalid_dli_proxy_lesson(lesson: dict) -> bool:
+    """Reject lessons that infer crop DLI from the broken sensor or proxies."""
+    text = f"{lesson.get('condition', '')} {lesson.get('lesson', '')}"
+    return bool(DLI_SOURCE_RE.search(text) and DLI_INFERENCE_RE.search(text))
+
+
 def fetch_lessons(active: bool) -> list[dict]:
     """Fetch lessons from the database."""
     flag = "true" if active else "false"
@@ -93,7 +111,10 @@ def fetch_lessons(active: bool) -> list[dict]:
                 "superseded_by": int(row["superseded_by"]) if row["superseded_by"] is not None else None,
             }
         )
-    return lessons
+    # Defense in depth: both active guidance and the generated noindex audit
+    # omit invalid DLI proxy/correction text. The original DB row remains
+    # preserved and inactive for direct forensic inspection.
+    return [lesson for lesson in lessons if not is_invalid_dli_proxy_lesson(lesson)]
 
 
 CONFIDENCE_RANK = {"low": 1, "medium": 2, "high": 3}
@@ -164,7 +185,6 @@ CURATED_SECTIONS = [
 
 TOPIC_LABELS = {
     "gas_heat_economics": "Gas heat economics",
-    "dli_sensor_correction": "DLI sensor correction",
     "cooling_physics_limit": "Cooling physics limit",
     "band_temp_high_dispatcher": "Dispatcher owns temp_high",
     "canonical_parameter_names": "Canonical parameter names",
@@ -281,7 +301,6 @@ def lesson_topic(lesson: dict) -> str | None:
     id_topics = {
         1: "dry_day_misting",
         2: "gas_heat_economics",
-        3: "dli_sensor_correction",
         4: "cooling_physics_limit",
         5: "band_temp_high_dispatcher",
         6: "dispatcher_reboot_correction",

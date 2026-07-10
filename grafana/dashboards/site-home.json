@@ -4344,7 +4344,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "verdify-tsdb"
       },
-      "description": "Daily Light Integral accumulation vs crop-driven target. Grow light state bars show both supplemental lighting circuits.",
+      "description": "Interior DLI is unavailable while the physical sensor is broken. Solar irradiance and grow-light relay bars remain independent observational signals.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -4621,7 +4621,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ts AS time, dli_today AS \"DLI Today\" FROM climate WHERE $__timeFilter(ts) AND dli_today IS NOT NULL ORDER BY ts",
+          "rawSql": "SELECT now() AS time, initcap(availability) || ' — ' || unavailable_reason AS \"Interior DLI\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
           "refId": "A",
           "sql": {
             "columns": [
@@ -4677,7 +4677,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH t AS (\n  SELECT generate_series($__timeFrom(), $__timeTo(), interval '1 hour') AS time\n)\nSELECT t.time, p.target_dli AS \"DLI Target\"\nFROM t CROSS JOIN LATERAL fn_lighting_policy(t.time, 'vallery') p\nORDER BY t.time",
+          "rawSql": "SELECT now() AS time, provenance || ' · ' || validity_revision AS \"DLI Provenance\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
           "refId": "C",
           "sql": {
             "columns": [
@@ -4748,7 +4748,7 @@
           "refId": "F"
         }
       ],
-      "title": "Light & DLI vs Target",
+      "title": "Light Evidence — Interior DLI Unavailable",
       "type": "timeseries",
       "transparent": true
     },

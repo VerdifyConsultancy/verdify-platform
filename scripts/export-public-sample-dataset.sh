@@ -38,7 +38,7 @@ COPY (
       round(avg(outdoor_temp_f)::numeric, 2) AS outdoor_temp_f,
       round(avg(outdoor_rh_pct)::numeric, 2) AS outdoor_rh_pct,
       round(avg(solar_irradiance_w_m2)::numeric, 1) AS solar_irradiance_w_m2,
-      round(max(dli_today)::numeric, 2) AS dli_today_mol_m2,
+      NULL::numeric AS dli_today_mol_m2,
       round(max(water_total_gal)::numeric, 3) AS water_total_gal,
       round(max(mister_water_today)::numeric, 3) AS mister_water_today_gal,
       round(avg(hydro_ph)::numeric, 2) AS hydro_ph,
@@ -120,6 +120,11 @@ Column notes:
 - graded_compliance_attributable_pct is the graded, per-zone, feasibility-aware controller-attributable
   compliance (band-compliance design). It is blank until the graded compliance engine is promoted, then
   populated automatically by this export.
+- dli_today_mol_m2 is intentionally blank. Interior crop DLI is unavailable because the physical interior
+  light sensor is broken. Reason: interior_light_sensor_broken; provenance:
+  legacy_invalid_exterior_proxy_plus_fixture_estimate; validity revision:
+  dli-validity-v1, 2024-01-01T00:00:00Z to open. Outdoor irradiance and fixture runtime are not relabeled as
+  measured interior crop DLI; qualified-light-minute control remains independent.
 
 Timestamps are rendered in America/Denver local time. The export intentionally omits local IPs, device IDs, trigger UUIDs, alert channels, hostnames, and raw sensor entity names.
 EOF

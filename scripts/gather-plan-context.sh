@@ -312,21 +312,28 @@ echo ""
 
 # ── 12. QUALIFIED LIGHT MINUTES + GROW LIGHTS ─────────────────────
 echo "--- QUALIFIED LIGHT MINUTES + GROW LIGHTS ---"
-echo "Current readings:"
+echo "Current outdoor lux (lighting trigger evidence, not interior crop DLI):"
 "${DB[@]}" -c "
-SELECT round(dli_today::numeric,1) as dli_mol, round(lux::numeric,0) as lux_now
+SELECT round(outdoor_lux::numeric,0) AS outdoor_lux_now
 FROM climate ORDER BY ts DESC LIMIT 1;
 " 2>/dev/null
-echo "DLI last 7 days:"
+echo "Interior crop DLI evidence:"
 "${DB[@]}" -c "
-SELECT to_char(date_trunc('day', ts)::date, 'MM-DD') as day, round(max(dli_today)::numeric,1) as peak_dli
-FROM climate WHERE ts > now() - interval '7 days' GROUP BY 1 ORDER BY 1;
-"
+SELECT crop_dli_mol_m2_day AS value_mol_m2_day,
+       availability,
+       unavailable_reason,
+       provenance,
+       validity_revision,
+       valid_from,
+       valid_to
+FROM v_dli_current
+WHERE greenhouse_id = '${GREENHOUSE_ID}';
+" 2>/dev/null || echo "value_mol_m2_day=NULL | availability=unavailable | reason=interior_light_sensor_broken | provenance=legacy_invalid_exterior_proxy_plus_fixture_estimate | validity_revision=dli-validity-v1"
+echo "Do not infer interior crop DLI from outdoor irradiance, the broken sensor, fixture runtime, or legacy proxy history."
 echo ""
 echo "LIGHTING POLICY (read-only; dispatcher pushes these to ESP32):"
 "${DB[@]}" -c "
-SELECT target_dli,
-       target_light_hours,
+SELECT target_light_hours,
        sunrise_hour,
        natural_sunset_hour,
        cutoff_hour,
@@ -392,15 +399,8 @@ FROM fn_lighting_lux_threshold_recommendation(now(), '${GREENHOUSE_ID}');
 echo "current_gl_lux_threshold/current_gl_lux_hysteresis are recommendation evidence; confirmed ESP32 cfg readbacks remain the controller-state source of truth."
 echo "Use Tempest outdoor illuminance as the lighting trigger. Set gl_main_target_light_minutes/gl_grow_target_light_minutes, gl_main_lux_threshold/gl_main_lux_hysteresis, and gl_grow_lux_threshold/gl_grow_lux_hysteresis from this evidence unless you have a stronger observation."
 echo ""
-echo "DLI CORRECTION (estimated actual plant DLI):"
-SENSOR_DLI=$("${DB[@]}" -c "SELECT round(COALESCE(max(dli_today), 0)::numeric, 1) FROM climate WHERE ts >= date_trunc('day', now() AT TIME ZONE 'America/Denver');" 2>/dev/null)
-GL_HOURS=$("${DB[@]}" -c "SELECT round(COALESCE(runtime_grow_light_min, 0)::numeric / 60, 1) FROM daily_summary ORDER BY date DESC LIMIT 1;" 2>/dev/null)
-SENSOR_DLI=${SENSOR_DLI:-0}
-GL_HOURS=${GL_HOURS:-0}
-python3 -c "s=${SENSOR_DLI};g=${GL_HOURS};print(f'sensor_dli={s} | estimated_actual_dli={s*3.5:.1f} | gl_hours={g} | estimated_total_plant_dli={s*3.5+g*0.8:.1f}')" 2>/dev/null || echo "sensor_dli=${SENSOR_DLI} | gl_hours=${GL_HOURS}"
-echo "SENSOR LIMITATION: The lux sensor reads 25-40% of actual plant-available light."
-echo "Sensor DLI of 5-7 mol corresponds to actual plant DLI of 17-27 mol."
-echo "Do NOT use DLI as the primary grow-light control signal. The lighting controller now targets qualified light minutes."
+echo "INTERIOR DLI UNAVAILABLE: the physical sensor is broken. No correction factor or outdoor proxy is valid crop-light evidence."
+echo "Do not issue a DLI-dependent recommendation or score. The lighting controller independently targets qualified light minutes."
 echo "The lux threshold is the overcast/shade detector; target_light_minutes sets the per-circuit photoperiod budget."
 echo ""
 
@@ -634,7 +634,9 @@ echo "--- ACTIVE LESSONS (top 10 by confidence + validation count) ---"
 WITH deduped AS (
   SELECT DISTINCT ON (lesson) id, category, condition, lesson, confidence, times_validated
   FROM planner_lessons
-  WHERE is_active = true AND superseded_by IS NULL
+  WHERE is_active = true
+    AND superseded_by IS NULL
+    AND NOT public.fn_dli_proxy_lesson_invalid(condition, lesson)
   ORDER BY lesson, times_validated DESC
 )
 SELECT category, condition, lesson, confidence, times_validated
@@ -825,7 +827,7 @@ alerts AS (
   -- OVERCAST / RAIN
   SELECT 4, 'OVERCAST/RAIN: avg cloud cover ' || round(avg(cloud_cover_pct)::numeric,0)
     || '%, precip prob ' || round(max(precip_prob_pct)::numeric,0)
-    || '% tomorrow. DLI may be low (lighting handled by gl_auto_mode, not this planner).'
+    || '% tomorrow. Interior DLI is unavailable; qualified-light-minute control remains independent.'
   FROM fc
   WHERE ts::date = (CURRENT_DATE + 1)
   HAVING avg(cloud_cover_pct) > 80 OR max(precip_prob_pct) > 60

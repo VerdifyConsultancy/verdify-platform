@@ -474,7 +474,7 @@
     {
       "id": 905,
       "type": "stat",
-      "title": "DLI",
+      "title": "Interior DLI — Unavailable",
       "gridPos": {
         "h": 3,
         "w": 3,
@@ -530,12 +530,12 @@
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
           },
-          "rawSql": "SELECT now() AS time, dli_today AS \"DLI\" FROM v_greenhouse_now",
+          "rawSql": "SELECT now() AS time, initcap(availability) || ' — ' || unavailable_reason AS \"Interior DLI\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
           "format": "table",
           "refId": "A"
         }
       ],
-      "description": "Shows daily light integral, the accumulated plant light for the day."
+      "description": "Interior crop DLI is unavailable because the physical sensor is broken; this stat carries the explicit reason instead of a numeric proxy."
     },
     {
       "id": 906,

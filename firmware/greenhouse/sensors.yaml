@@ -1707,9 +1707,10 @@ sensor:
       return id(min_vent_off_s);
 
   # --------------------------------------------------------------------------
-  # 8. DLI — Daily Light Integral (B5)
-  # Accumulated on-device every 5s from lux sensor. Reset at midnight.
-  # DLI = Σ (lux × 0.0185 × Δt / 1e6) where Δt in seconds
+  # 8. DLI — availability-bearing interior crop evidence (B5 / ADR-008)
+  # The physical interior sensor is broken.  Keep the legacy proxy accumulator
+  # internal for forensics, but publish NAN until an operator validates a
+  # replacement sensor.  Companion text sensors below carry reason/provenance.
   # --------------------------------------------------------------------------
   - platform: template
     id: dli_sensor
@@ -1718,7 +1719,7 @@ sensor:
     state_class: total_increasing
     accuracy_decimals: 2
     update_interval: 60s
-    lambda: "return id(dli_accumulator);"
+    lambda: "return interior_dli_evidence(id(dli_accumulator)).value_mol_m2_day;"
 
   # --------------------------------------------------------------------------
   # 9. MISTER STATE MACHINE SENSORS
@@ -3944,6 +3945,55 @@ sensor:
 # ─────────────────── TEXT SENSORS ──────────────────────────────────────────
 
 text_sensor:
+  - platform: template
+    id: dli_availability
+    name: "DLI Availability"
+    entity_category: diagnostic
+    update_interval: 60s
+    lambda: |-
+      return {interior_dli_evidence(id(dli_accumulator)).available
+        ? "available" : "unavailable"};
+
+  - platform: template
+    id: dli_unavailable_reason
+    name: "DLI Unavailable Reason"
+    entity_category: diagnostic
+    update_interval: 60s
+    lambda: |-
+      return {interior_dli_evidence(id(dli_accumulator)).unavailable_reason};
+
+  - platform: template
+    id: dli_provenance
+    name: "DLI Provenance"
+    entity_category: diagnostic
+    update_interval: 60s
+    lambda: |-
+      return {interior_dli_evidence(id(dli_accumulator)).provenance};
+
+  - platform: template
+    id: dli_validity_revision
+    name: "DLI Validity Revision"
+    entity_category: diagnostic
+    update_interval: 60s
+    lambda: |-
+      return {interior_dli_evidence(id(dli_accumulator)).validity_revision};
+
+  - platform: template
+    id: dli_valid_from
+    name: "DLI Valid From"
+    entity_category: diagnostic
+    update_interval: 60s
+    lambda: |-
+      return {interior_dli_evidence(id(dli_accumulator)).valid_from};
+
+  - platform: template
+    id: dli_valid_to
+    name: "DLI Valid To"
+    entity_category: diagnostic
+    update_interval: 60s
+    lambda: |-
+      return {interior_dli_evidence(id(dli_accumulator)).valid_to};
+
   # Full Unix epochs exceed ESPHome sensor float precision. Publish them as
   # strings and let the ingestor parse exact bigint values.
   - platform: template

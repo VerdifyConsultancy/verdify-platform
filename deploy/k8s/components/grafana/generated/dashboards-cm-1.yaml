@@ -2591,7 +2591,7 @@ data:
             "type": "grafana-postgresql-datasource",
             "uid": "verdify-tsdb"
           },
-          "description": "Observational DLI trend for crop context. Runtime grow-light control is tracked in qualified light minutes from fn_lighting_minutes_policy().",
+          "description": "Interior crop DLI is unavailable because the physical sensor is broken. Reason, provenance, and validity come from v_dli_current; qualified-light-minute control remains independent.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2739,7 +2739,7 @@ data:
               "editorMode": "code",
               "format": "time_series",
               "rawQuery": true,
-              "rawSql": "SELECT date_trunc('day', ts) AS time, max(dli_today) AS \"Sensor DLI\" FROM climate WHERE ts > now() - interval '90 days' GROUP BY 1 ORDER BY 1",
+              "rawSql": "SELECT now() AS time, initcap(availability) || ' — ' || unavailable_reason AS \"Interior DLI\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
               "refId": "A",
               "sql": {
                 "columns": [
@@ -2767,7 +2767,7 @@ data:
               "editorMode": "code",
               "format": "time_series",
               "rawQuery": true,
-              "rawSql": "SELECT date_trunc('day', ts) AS time, max(dli_today) * 3.2 AS \"Estimated Actual DLI\" FROM climate WHERE ts > now() - interval '90 days' GROUP BY 1 ORDER BY 1",
+              "rawSql": "SELECT now() AS time, provenance || ' · ' || validity_revision AS \"DLI Provenance\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
               "refId": "B",
               "sql": {
                 "columns": [
@@ -2795,7 +2795,7 @@ data:
               "editorMode": "code",
               "format": "time_series",
               "rawQuery": true,
-              "rawSql": "SELECT ts AS time, target_dli AS \"Target DLI\"\nFROM v_lighting_daily\nWHERE ts > now() - interval '90 days'\nORDER BY ts",
+              "rawSql": "SELECT now() AS time, valid_from::text || ' → ' || COALESCE(valid_to::text, 'open') AS \"DLI Validity\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
               "refId": "C",
               "sql": {
                 "columns": [
@@ -2816,7 +2816,7 @@ data:
               }
             }
           ],
-          "title": "Sensor DLI vs Estimated Actual DLI",
+          "title": "Interior DLI — Unavailable",
           "type": "timeseries",
           "transparent": true
         },
@@ -2825,7 +2825,7 @@ data:
             "type": "grafana-postgresql-datasource",
             "uid": "verdify-tsdb"
           },
-          "description": "Daily DLI and crop-driven target from the same lighting policy the dispatcher pushes.",
+          "description": "No numeric interior DLI is published while the sensor is invalid. Grow-light runtime and qualified minutes remain available separately.",
           "fieldConfig": {
             "defaults": {
               "color": {
@@ -2894,7 +2894,7 @@ data:
                 "uid": "verdify-tsdb"
               },
               "format": "time_series",
-              "rawSql": "SELECT ts AS time, sensor_dli AS \"Daily DLI\"\nFROM v_lighting_daily\nWHERE $__timeFilter(ts) AND sensor_dli > 0\nORDER BY ts",
+              "rawSql": "SELECT now() AS time, initcap(availability) || ' — ' || unavailable_reason AS \"Interior DLI\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
               "refId": "A"
             },
             {
@@ -2903,11 +2903,11 @@ data:
                 "uid": "verdify-tsdb"
               },
               "format": "time_series",
-              "rawSql": "SELECT ts AS time, target_dli AS \"Target DLI\"\nFROM v_lighting_daily\nWHERE $__timeFilter(ts)\nORDER BY ts",
+              "rawSql": "SELECT now() AS time, provenance || ' · ' || validity_revision AS \"DLI Provenance\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
               "refId": "B"
             }
           ],
-          "title": "Daily DLI Trend",
+          "title": "Interior DLI — Unavailable",
           "type": "timeseries",
           "transparent": true
         },

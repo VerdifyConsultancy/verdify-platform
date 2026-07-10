@@ -1247,6 +1247,25 @@ inline void validate_lighting_setpoints(LightingSetpoints& sp) noexcept {
 // switch-ON state must NOT credit supplemental DLI — the dark fixture was
 // otherwise self-deceivingly "meeting" the photoperiod on paper. main/grow
 // out_of_service default to false so legacy call sites are byte-identical.
+inline ElapsedIntervals elapsed_intervals(
+    uint32_t now_ms,
+    uint32_t previous_ms,
+    uint32_t control_cap_ms = 5000
+) noexcept {
+    // Unsigned subtraction is defined modulo 2^32 and therefore preserves the
+    // real interval across one millis() wrap. Controls retain their legacy
+    // zero-on-wrap behavior plus safety cap; forensic/future DLI receives
+    // raw_ms so the rollover interval is not silently erased.
+    const uint32_t raw_ms = now_ms - previous_ms;
+    const uint32_t control_ms = now_ms < previous_ms
+        ? 0U
+        : std::min(raw_ms, control_cap_ms);
+    return {
+        .raw_ms = raw_ms,
+        .control_ms = control_ms,
+    };
+}
+
 inline float lighting_dli_increment(
     float indoor_lux,
     float tempest_lux,
@@ -1276,6 +1295,23 @@ inline float lighting_dli_increment(
         (main_credits ? MAIN_LIGHT_DLI_PER_HOUR : 0.0f)
         + (grow_credits ? GROW_LIGHT_DLI_PER_HOUR : 0.0f);
     return natural_dli + supplemental_dli_per_hour * std::max(0.0f, dt_s) / 3600.0f;
+}
+
+inline DliEvidence interior_dli_evidence(float /*forensic_proxy_accumulator*/) noexcept {
+    // ADR-008 / #435: no arithmetic or outdoor proxy can repair a broken
+    // interior sensor.  Keep the internal accumulator only for forensics and
+    // publish an unavailable value until a new operator-validated revision is
+    // implemented.  NAN maps to an unavailable ESPHome numeric sensor state;
+    // the companion text sensors carry the full reason/provenance contract.
+    return {
+        .value_mol_m2_day = NAN,
+        .available = false,
+        .unavailable_reason = "interior_light_sensor_broken",
+        .provenance = "legacy_invalid_exterior_proxy_plus_fixture_estimate",
+        .validity_revision = "dli-validity-v1",
+        .valid_from = "2024-01-01T00:00:00Z",
+        .valid_to = "open",
+    };
 }
 
 inline LightingDecision evaluate_lighting(

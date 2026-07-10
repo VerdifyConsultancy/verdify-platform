@@ -43,14 +43,13 @@ interval:
           /**************** 1 — time bookkeeping *********************************/
           static uint32_t last_ms = millis();
           uint32_t now_ms = millis();
-          uint32_t dt_ms  = (now_ms < last_ms) ? 0 : (now_ms - last_ms);
-          // Sprint-10 0.4a: clamp dt_ms. The interval is 1 s; a gap of several
-          // seconds is a hiccup (RTOS hang, OTA pause, debugger break). The 5 s
-          // cap catches a multi-tick stall; normal 1 s ticks are far below it.
-          // sat_add prevents overflow but not behavioral skipping — one huge
-          // dt_ms can leap through vpd_watch_dwell, sealed_max_ms, and
-          // mist_s2_delay_ms in a single tick.
-          if(dt_ms > 5000) dt_ms = 5000;
+          const ElapsedIntervals elapsed = elapsed_intervals(now_ms, last_ms);
+          const uint32_t raw_dt_ms = elapsed.raw_ms;
+          uint32_t dt_ms = elapsed.control_ms;
+          // Clamp only the control interval. A gap of several seconds is a
+          // hiccup (RTOS hang, OTA pause, debugger break), and one huge dt_ms
+          // must not leap through control dwell gates in a single tick. The
+          // wrap-safe raw interval remains available to forensic DLI below.
           last_ms = now_ms;
 
           /**************** 1b — occupancy fail-safe *****************************/
@@ -2049,18 +2048,21 @@ interval:
             }
           }
 
-          /*** B5 — DLI accumulation (every 5s) ***/
+          /*** B5 — forensic DLI proxy accumulation (real elapsed time) ***/
           {
             // #295: a circuit flagged out_of_service emits no light, so its
             // switch-ON state must NOT credit supplemental DLI (phantom-DLI
             // suppression — the dead west grow circuit was self-deceivingly
             // crediting 0.4515 mol/m²/h with dark fixtures).
+            const float dli_dt_s = raw_dt_ms > 0
+              ? (float)raw_dt_ms / 1000.0f
+              : 0.0f;
             id(dli_accumulator) += lighting_dli_increment(
               id(greenhouse_light_lux).state,
               id(tempest_lux),
               id(grow_light_main).state,
               id(grow_light_grow).state,
-              5.0f,
+              dli_dt_s,
               id(gl_main_out_of_service),
               id(gl_grow_out_of_service));
           }

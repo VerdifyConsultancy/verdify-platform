@@ -4530,6 +4530,71 @@ TEST(lighting_dli_increment_out_of_service_suppresses_supplemental) {
     PASS();
 }
 
+TEST(lighting_dli_increment_is_elapsed_time_invariant) {
+    // A jittery ~1 s loop must integrate exactly the same evidence as one
+    // coarse interval covering the same elapsed time.  This closes the old
+    // hard-coded 5 s credit on a ~1 s controller loop.
+    float irregular = 0.0f;
+    irregular += lighting_dli_increment(12500.0f, 80000.0f, true, false, 0.73f);
+    irregular += lighting_dli_increment(12500.0f, 80000.0f, true, false, 1.41f);
+    irregular += lighting_dli_increment(12500.0f, 80000.0f, true, false, 2.86f);
+    float combined = lighting_dli_increment(12500.0f, 80000.0f, true, false, 5.0f);
+    ASSERT_TRUE(std::fabs(irregular - combined) < 0.000001f);
+    PASS();
+}
+
+TEST(elapsed_intervals_keep_raw_gap_while_controls_remain_capped) {
+    auto elapsed = elapsed_intervals(13000U, 1000U);
+    ASSERT_EQ(elapsed.raw_ms, 12000U);
+    ASSERT_EQ(elapsed.control_ms, 5000U);
+
+    float raw_dli = lighting_dli_increment(
+        12500.0f, 80000.0f, true, false, elapsed.raw_ms / 1000.0f);
+    float capped_dli = lighting_dli_increment(
+        12500.0f, 80000.0f, true, false, elapsed.control_ms / 1000.0f);
+    ASSERT_TRUE(raw_dli > capped_dli);
+    PASS();
+}
+
+TEST(elapsed_intervals_preserve_jitter_partition_sum) {
+    const uint32_t ticks[] = {1730U, 3140U, 6000U};
+    uint32_t previous = 1000U;
+    uint32_t raw_total = 0U;
+    uint32_t control_total = 0U;
+    for (uint32_t tick : ticks) {
+        auto elapsed = elapsed_intervals(tick, previous);
+        raw_total += elapsed.raw_ms;
+        control_total += elapsed.control_ms;
+        previous = tick;
+    }
+    ASSERT_EQ(raw_total, 5000U);
+    ASSERT_EQ(control_total, 5000U);
+    PASS();
+}
+
+TEST(elapsed_intervals_are_uint32_wrap_safe) {
+    auto elapsed = elapsed_intervals(500U, UINT32_MAX - 1000U);
+    ASSERT_EQ(elapsed.raw_ms, 1501U);
+    // DLI preserves the real wrap interval; DLI-independent controls retain
+    // the pre-#435 zero-on-wrap behavior and accrue no dwell/light minutes.
+    ASSERT_EQ(elapsed.control_ms, 0U);
+    PASS();
+}
+
+TEST(interior_dli_evidence_is_unavailable_without_valid_sensor) {
+    auto evidence = interior_dli_evidence(79.0f);
+    ASSERT_TRUE(std::isnan(evidence.value_mol_m2_day));
+    ASSERT_FALSE(evidence.available);
+    ASSERT_EQ(std::string(evidence.unavailable_reason), "interior_light_sensor_broken");
+    ASSERT_EQ(
+        std::string(evidence.provenance),
+        "legacy_invalid_exterior_proxy_plus_fixture_estimate");
+    ASSERT_EQ(std::string(evidence.validity_revision), "dli-validity-v1");
+    ASSERT_EQ(std::string(evidence.valid_from), "2024-01-01T00:00:00Z");
+    ASSERT_EQ(std::string(evidence.valid_to), "open");
+    PASS();
+}
+
 // #295: an out_of_service circuit's switch-ON time must NOT accrue qualified
 // light minutes (so a dark fixture cannot "meet" the photoperiod on paper).
 // Natural lux above threshold still counts — it is real, fixture-independent.

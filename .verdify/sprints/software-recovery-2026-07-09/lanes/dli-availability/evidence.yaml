@@ -1,6 +1,299 @@
 sprint_id: software-recovery-2026-07-09
 scope_id: dli-availability
-revision: 0a9a19a840be6bae1beba604497d880b3b74b1ef
+revision: 03946b7da51f59c0a820d9cd64ac64249d669f33
 environment: null
-generated_at: "2026-07-09T22:10:43Z"
-items: []
+generated_at: "2026-07-10T14:05:47Z"
+items:
+  - id: EVI-DLI-001
+    type: TEST
+    status: PASS
+    source: migration classification, idempotence, boundary, provenance, and preservation fixture
+    command: >-
+      make migration-rollback-safety; apply migration 195 to a fresh
+      origin/main disposable PG16/Timescale schema; run
+      db/migrations/tests/test-195-dli-availability-provenance.sql with
+      ON_ERROR_STOP=1
+    timestamp: "2026-07-10T13:08:35Z"
+    revision: 0f68aac0c9af50159e11bd938411afccf2a221fe
+    environment: disposable timescale/timescaledb:latest-pg16
+    result: >-
+      Migration 195 is non-self-transactional and safe to wrap. The fixture
+      passes repeated application, half-open interval boundaries, rejection of
+      overlaps, an unavailable partial local day, a numeric fully validated
+      future day, null legacy report/forecast outputs, and exact raw
+      climate/daily row-count and value-sum preservation across a migration
+      rerun. No raw row is updated or deleted.
+    artifact_location: db/migrations/tests/test-195-dli-availability-provenance.sql
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02]
+    limitations: [No production migration was applied.]
+
+  - id: EVI-DLI-002
+    type: TEST
+    status: PASS
+    source: complete generated schema restore and typed consumer contracts
+    command: >-
+      restore db/schema.sql into a fresh disposable database; make lint;
+      pytest tests/test_dli_availability.py
+      verdify_schemas/tests/test_dli_evidence.py
+      verdify_schemas/tests/test_mcp_responses.py
+    timestamp: "2026-07-10T13:08:35Z"
+    revision: 0f68aac0c9af50159e11bd938411afccf2a221fe
+    environment: Jason laptop worktree plus disposable PG16/TimescaleDB
+    result: >-
+      Fresh schema restore passes and exposes the validity ledger/current/daily
+      product views. Ruff passes. Focused DLI/schema/MCP contracts pass 35 tests
+      with one intentionally skipped inherited response fixture. Static guards
+      reject zero sentinels, raw max(dli_today), correction factors, outdoor
+      proxy laundering, stale generated planner context, and numeric dashboard
+      queries.
+    artifact_location: tests/test_dli_availability.py
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02]
+    limitations: []
+
+  - id: EVI-DLI-003
+    type: TEST
+    status: PASS
+    source: native firmware tests, invariant corpus, replay diff, and ESPHome compile
+    command: >-
+      make test-firmware; make firmware-invariants; make firmware-replay
+      OLD=0a9a19a840be6bae1beba604497d880b3b74b1ef NEW=HEAD;
+      SECRETS_SRC=$HOME/.verdify/esphome-secrets.yaml make firmware-check
+    timestamp: "2026-07-10T13:08:35Z"
+    revision: 0f68aac0c9af50159e11bd938411afccf2a221fe
+    environment: Jason laptop worktree, native g++, ESPHome 2026.6.5
+    result: >-
+      Native firmware suite passes 269/269 including irregular elapsed-time DLI
+      cadence and unavailable evidence. All invariants pass across 296,698 rows.
+      Replay against the assigned baseline reports 0 divergent rows and 0
+      diagnostic-only rows. ESPHome compiles successfully at 33.3% RAM and
+      59.2% flash. No OTA was performed.
+    artifact_location: firmware/test/test_greenhouse_logic.cpp
+    acceptance_criteria: [LANE-AC-03, LANE-AC-04]
+    limitations:
+      - Replay warns that six pre-existing wet-window setpoint columns are absent from the corpus; both sides use the same defaults and divergence remains zero.
+
+  - id: EVI-DLI-004
+    type: TEST
+    status: PASS
+    source: lighting and site validation
+    command: >-
+      make lighting-audit-static; npm --prefix site run check;
+      npm --prefix site test; from site/, npm exec quartz build
+    timestamp: "2026-07-10T13:08:35Z"
+    revision: 0f68aac0c9af50159e11bd938411afccf2a221fe
+    environment: Jason laptop worktree, Node 24.4.0
+    result: >-
+      Lighting audit passes 27 contracts with three inherited generated-content
+      warnings. TypeScript/Prettier pass, all 69 Quartz tests pass, and an
+      equivalent in-directory Quartz build succeeds. The isolated worktree has
+      no content mount, so the build emits the shell with zero content files.
+    artifact_location: site
+    acceptance_criteria: [LANE-AC-01, LANE-AC-04]
+    limitations:
+      - >-
+        The lane.yaml spelling `npm --prefix site exec quartz build` launches
+        Quartz from the repository root and fails because Quartz opens
+        ./package.json. Running the same lockfile-pinned command from site/
+        succeeds.
+
+  - id: EVI-DLI-005
+    type: TEST
+    status: PASS
+    source: generated dashboard and deployed planner-context parity
+    command: >-
+      python3 scripts/gen-grafana-dashboard-cms.py; parse all source JSON and
+      generated ConfigMap YAML; compare parsed ConfigMap literal blocks with
+      scripts/gather-plan-context.sh and scripts/lib/psql-verdify.sh; scan
+      generated artifacts for legacy numeric DLI expressions
+    timestamp: "2026-07-10T13:08:35Z"
+    revision: 0f68aac0c9af50159e11bd938411afccf2a221fe
+    environment: Jason laptop worktree
+    result: >-
+      Dashboard regeneration is idempotent with zero updates at the recorded
+      head. Every JSON/YAML artifact parses. The deployed planner-context and DB
+      helper literal blocks have byte parity with source, and generated Grafana
+      has no max(dli_today), dli_final scalar, estimated-DLI alias, or 3.2/3.5
+      correction query.
+    artifact_location: deploy/k8s/components
+    acceptance_criteria: [LANE-AC-01]
+    limitations: []
+
+  - id: EVI-DLI-006
+    type: TEST
+    status: WARNING
+    source: required monolithic repository test command
+    command: make test
+    timestamp: "2026-07-10T13:08:35Z"
+    revision: 0f68aac0c9af50159e11bd938411afccf2a221fe
+    environment: Jason laptop after development moved to k3s
+    result: 725 passed, 142 failed, 6 skipped, and 10 errors in 24.72 seconds.
+    artifact_location: null
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
+    limitations:
+      - >-
+        Failures are the inherited retired-laptop/live-stack suite: no local
+        verdify-timescaledb/systemd stack, localhost production APIs, /srv
+        checkout, or retired /mnt/iris Vault paths, plus an unrelated existing
+        Longhorn/PVC expectation. One DLI-adjacent static comment failure found
+        by this run was fixed; its targeted regression and focused lane suites
+        pass afterward.
+
+  - id: EVI-DLI-007
+    type: REVIEW
+    status: PASS
+    source: adversarial lane self-audit
+    command: repository-wide DLI consumer and generated-artifact scan
+    timestamp: "2026-07-10T13:08:35Z"
+    revision: 0f68aac0c9af50159e11bd938411afccf2a221fe
+    environment: source tree plus disposable TimescaleDB
+    result: >-
+      Closed the stale deployed gather-script mirror, dormant weekly/monthly/
+      period/harvest/economics/forecast proxy laundering, zero-sentinel risk,
+      partial-day validity laundering, missing generated-dashboard parity, and
+      raw-history preservation gap. Firmware replay proves no actuation drift;
+      raw proxy storage remains single-purpose forensic evidence.
+    artifact_location: .verdify/sprints/software-recovery-2026-07-09/lanes/dli-availability/consumer-matrix.md
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
+    limitations:
+      - Physical sensor replacement/calibration is outside this software lane.
+      - Independent critic review remains pending the pushed record-only head.
+
+  - id: EVI-DLI-008
+    type: CI
+    status: PASS
+    source: GitHub pull-request checks and formatting remediation
+    command: >-
+      inspect PR #448 Actions logs; run Ruff 0.15.21 format/check on the CI
+      Python path set; rerun the focused DLI suite and diff check; push
+      formatting-only commit 0f68aac; wait for exact-head checks
+    timestamp: "2026-07-10T13:16:46Z"
+    revision: 0f68aac0c9af50159e11bd938411afccf2a221fe
+    environment: draft PR #448 at reviewed implementation head
+    result: >-
+      The first CI run found one deterministic format-only failure in
+      tests/test_dli_availability.py. Ruff 0.15.21 reformatted that file with no
+      semantic change; local CI-equivalent formatting/lint, focused tests, and
+      diff integrity passed. Exact-head CI for 0f68aac then completed with no
+      failures or pending checks: lint/format, offline logic/contracts,
+      Pydantic drift guards, firmware compile/replay/invariants, migration
+      safety, service-restart hygiene, device-write interlock, manifest and
+      route guards, and all applicable build-without-publish jobs passed.
+    artifact_location: https://github.com/VerdifyConsultancy/verdify-platform/pull/448/checks
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
+    limitations:
+      - Trusted image publication and prod-promotion-only jobs were correctly skipped for the draft PR.
+
+  - id: EVI-DLI-009
+    type: TEST
+    status: PASS
+    source: changes-required critic remediation
+    command: >-
+      restore regenerated db/schema.sql into blank disposable PG16/Timescale;
+      run test-195 fixture with ON_ERROR_STOP; run Ruff 0.15.21 format/check,
+      focused DLI/schema/MCP tests, make test-firmware, make
+      firmware-invariants, baseline firmware replay, lighting static audit,
+      and site check/test/build
+    timestamp: "2026-07-10T13:43:04Z"
+    revision: ac3513e51918046921d7a559c6b0e16ebaf477c6
+    environment: Jason laptop plus disposable timescale/timescaledb:latest-pg16
+    result: >-
+      Closed all seven critic findings. The disposable fixture proves
+      fail-closed available-state DML, exact and future-equivalent invalid
+      lesson retirement without text deletion, unfinished-day and invalid
+      source rejection, no numeric/zero leakage in four live lighting views,
+      and actual-first weekly/monthly kWh parity. Focused Python passes 44 with
+      one inherited skip; native firmware passes 272; all 296,698 invariant
+      rows pass; replay reports zero divergence; lighting static passes 27
+      contracts with three inherited content warnings; site type/format and 69
+      tests pass and the in-directory build succeeds. Exact-head Actions
+      firmware compile passed; one Ruff-format-only finding was corrected in
+      ac3513e and all CI-equivalent local checks pass.
+    artifact_location: db/migrations/tests/test-195-dli-availability-provenance.sql
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
+    limitations:
+      - No production migration, restart, publish, deploy, device write, or OTA was performed.
+      - >-
+        The production application role owns the validity ledger, so v195's
+        fail-closed constraint is an application/schema invariant, not true
+        DB-role privilege separation; future activation requires a reviewed
+        migration and future role separation remains separate hardening.
+
+  - id: EVI-DLI-010
+    type: TEST
+    status: PASS
+    source: renewed changes-required provenance and rollover remediation
+    command: >-
+      restore regenerated db/schema.sql into blank disposable PG16/Timescale;
+      run expanded test-195 fixture with ON_ERROR_STOP; run Ruff format/check,
+      focused DLI/schema/MCP tests, test-firmware, firmware invariants,
+      committed-head baseline replay, and lighting static audit
+    timestamp: "2026-07-10T13:59:19Z"
+    revision: 03946b7da51f59c0a820d9cd64ac64249d669f33
+    environment: Jason laptop plus disposable timescale/timescaledb:latest-pg16
+    result: >-
+      v_estimated_dli now returns typed NULL plus provenance while retaining
+      exact prior lead/dt filtered readings counts, including a >900s gap
+      fixture. Current/daily are categorically unavailable and promise no
+      future completeness semantics. Mapping-based registry/config updates are
+      true no-ops after correction and remove DLI from staleness/required
+      coverage. Raw climate/daily row counts and sums survive exact reruns;
+      half-open boundaries and overlap rejection pass; whole-schema proxy sweep
+      passes. Focused Python passes 46 with one inherited skip; native firmware
+      passes 272 including wrap raw_ms=1501/control_ms=0; all 296,698 invariant
+      rows pass; committed-head replay has zero divergence; lighting static
+      passes 27 with three inherited content warnings.
+      The required monolithic suite reaches 732 passed and 6 skipped; the 141
+      failures and 10 setup errors remain the retired laptop live-stack and
+      unrelated historical expectations documented by EVI-DLI-006.
+    artifact_location: db/migrations/tests/test-195-dli-availability-provenance.sql
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
+    limitations:
+      - Exact-head GitHub CI is pending at the time of this local evidence record.
+      - No production mutation, restart, publish, deploy, device write, or OTA was performed.
+
+  - id: EVI-DLI-011
+    type: CI
+    status: PASS
+    source: exact renewed-implementation-head GitHub checks
+    command: inspect PR 448 checks and Actions runs at 03946b7
+    timestamp: "2026-07-10T14:02:05Z"
+    revision: 03946b7da51f59c0a820d9cd64ac64249d669f33
+    environment: GitHub Actions draft PR 448
+    result: >-
+      Exact implementation head completed with 26 successful checks, 8
+      intentional skips, and zero failures or pending checks. This includes
+      Pydantic schema migration/unit/drift/database smoke tests, offline logic
+      contracts, Ruff format/lint, firmware compile, native logic/replay/
+      invariants, firmware behavioral replay diff, migration rollback safety,
+      device-write gate, service-restart hygiene, generated-route guards,
+      manifest validation, promotion guard, and applicable container
+      build-without-publish jobs.
+    artifact_location: https://github.com/VerdifyConsultancy/verdify-platform/pull/448/checks
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
+    limitations:
+      - Trusted publication and prod-promotion-only jobs were intentionally skipped for the draft PR.
+
+  - id: EVI-DLI-012
+    type: REVIEW
+    status: PASS
+    source: fresh independent provenance and actuation-neutrality critic
+    command: >-
+      adversarial review and independent reproduction across the substantive
+      implementation, both changes-required remediation series, migration and
+      schema fixtures, active live consumer discovery, firmware regression,
+      generated artifacts, and exact-head GitHub checks
+    timestamp: "2026-07-10T14:05:47Z"
+    revision: b6fe30cfee24eb3b948a485efcecebdbd2c21322
+    environment: local immutable Git heads, disposable PG16/TimescaleDB, read-only production discovery, and GitHub Actions
+    result: >-
+      PASS. The critic independently reproduced closure of the original seven
+      findings, four renewed provenance gaps, and the rollover-neutrality edge.
+      Substantive head 03946b7 is accepted; record-only head b6fe30c accurately
+      records it. Focused contracts, 272 firmware tests, all 296,698 invariant
+      rows, static lighting, zero-divergence replay, migration classification,
+      firmware-twin parity, diff integrity, and final 26-pass/8-skip CI are
+      green. PR #448 is clean and mergeable.
+    artifact_location: .verdify/sprints/software-recovery-2026-07-09/lanes/dli-availability/critic-report-2026-07-10.md
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
+    limitations:
+      - Production migration, restarts, publication, live acceptance, combined-image OTA, and physical sensor replacement remain release/operator work.

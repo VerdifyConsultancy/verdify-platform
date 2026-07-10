@@ -27,6 +27,7 @@ from verdify_schemas.mcp_responses import (
     SetpointSummary,
     ToolError,
 )
+from verdify_schemas.telemetry import DliEvidence
 
 
 class TestClimateSnapshot:
@@ -148,7 +149,15 @@ class TestOutcomeKpi:
             actuator_cycles={"fan1": 14, "fog": 3},
             actuator_runtime={"fan1_min": 185.5, "fog_min": 8.0},
             water_use_gal={"total": 12.2, "mister": 3.4},
-            dli={"sensor_mol_m2_d": 18.6},
+            dli=DliEvidence(
+                value_mol_m2_day=None,
+                availability="unavailable",
+                unavailable_reason="interior_light_sensor_broken",
+                provenance="legacy_invalid_exterior_proxy_plus_fixture_estimate",
+                validity_revision="dli-validity-v1",
+                valid_from="2024-01-01T00:00:00Z",
+                valid_to=None,
+            ),
             dif={"day_night_temp_delta_f": None},
             dew_margin={"min_f": 6.2, "risk_h": 0.0},
             energy_cost={"total_usd": 4.85},
@@ -230,6 +239,9 @@ class TestOutcomeKpi:
         assert dumped["coverage"]["solar_phase_buckets"] == "available"
         assert dumped["coverage"]["moisture_estimator"] == "available"
         assert dumped["coverage"]["vpd_policy_sequences"] == "available"
+        assert dumped["coverage"]["dli"] == "unavailable"
+        assert dumped["dli"]["value_mol_m2_day"] is None
+        assert dumped["dli"]["unavailable_reason"] == "interior_light_sensor_broken"
         assert dumped["served_corridor"]["attributable_pct"] == 91.2
         assert dumped["action_scorecard"][0]["decisions"] == 7
         assert dumped["moisture_estimator"]["sample_count"] == 7

@@ -625,6 +625,26 @@ struct LightingDecision {
     const char* reason;
 };
 
+// Interior crop DLI is availability-bearing evidence.  The current physical
+// sensor is broken, so firmware must publish an unavailable value while still
+// carrying a machine-readable reason/provenance contract.  The legacy
+// accumulator remains internal forensic state until a future operator-
+// validated sensor revision explicitly enables publication.
+struct DliEvidence {
+    float value_mol_m2_day;
+    bool available;
+    const char* unavailable_reason;
+    const char* provenance;
+    const char* validity_revision;
+    const char* valid_from;
+    const char* valid_to;
+};
+
+struct ElapsedIntervals {
+    uint32_t raw_ms;
+    uint32_t control_ms;
+};
+
 inline LightingState initial_lighting_state() {
     return {
         .sentinel = LIGHT_STATE_SENTINEL,

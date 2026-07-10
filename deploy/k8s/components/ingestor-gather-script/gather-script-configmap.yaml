@@ -346,21 +346,28 @@ data:
 
     # ── 12. QUALIFIED LIGHT MINUTES + GROW LIGHTS ─────────────────────
     echo "--- QUALIFIED LIGHT MINUTES + GROW LIGHTS ---"
-    echo "Current readings:"
+    echo "Current outdoor lux (lighting trigger evidence, not interior crop DLI):"
     "${DB[@]}" -c "
-    SELECT round(dli_today::numeric,1) as dli_mol, round(lux::numeric,0) as lux_now
+    SELECT round(outdoor_lux::numeric,0) AS outdoor_lux_now
     FROM climate ORDER BY ts DESC LIMIT 1;
     " 2>/dev/null
-    echo "DLI last 7 days:"
+    echo "Interior crop DLI evidence:"
     "${DB[@]}" -c "
-    SELECT to_char(date_trunc('day', ts)::date, 'MM-DD') as day, round(max(dli_today)::numeric,1) as peak_dli
-    FROM climate WHERE ts > now() - interval '7 days' GROUP BY 1 ORDER BY 1;
-    "
+    SELECT crop_dli_mol_m2_day AS value_mol_m2_day,
+           availability,
+           unavailable_reason,
+           provenance,
+           validity_revision,
+           valid_from,
+           valid_to
+    FROM v_dli_current
+    WHERE greenhouse_id = '${GREENHOUSE_ID}';
+    " 2>/dev/null || echo "value_mol_m2_day=NULL | availability=unavailable | reason=interior_light_sensor_broken | provenance=legacy_invalid_exterior_proxy_plus_fixture_estimate | validity_revision=dli-validity-v1"
+    echo "Do not infer interior crop DLI from outdoor irradiance, the broken sensor, fixture runtime, or legacy proxy history."
     echo ""
     echo "LIGHTING POLICY (read-only; dispatcher pushes these to ESP32):"
     "${DB[@]}" -c "
-    SELECT target_dli,
-           target_light_hours,
+    SELECT target_light_hours,
            sunrise_hour,
            natural_sunset_hour,
            cutoff_hour,
@@ -426,15 +433,8 @@ data:
     echo "current_gl_lux_threshold/current_gl_lux_hysteresis are recommendation evidence; confirmed ESP32 cfg readbacks remain the controller-state source of truth."
     echo "Use Tempest outdoor illuminance as the lighting trigger. Set gl_main_target_light_minutes/gl_grow_target_light_minutes, gl_main_lux_threshold/gl_main_lux_hysteresis, and gl_grow_lux_threshold/gl_grow_lux_hysteresis from this evidence unless you have a stronger observation."
     echo ""
-    echo "DLI CORRECTION (estimated actual plant DLI):"
-    SENSOR_DLI=$("${DB[@]}" -c "SELECT round(COALESCE(max(dli_today), 0)::numeric, 1) FROM climate WHERE ts >= date_trunc('day', now() AT TIME ZONE 'America/Denver');" 2>/dev/null)
-    GL_HOURS=$("${DB[@]}" -c "SELECT round(COALESCE(runtime_grow_light_min, 0)::numeric / 60, 1) FROM daily_summary ORDER BY date DESC LIMIT 1;" 2>/dev/null)
-    SENSOR_DLI=${SENSOR_DLI:-0}
-    GL_HOURS=${GL_HOURS:-0}
-    python3 -c "s=${SENSOR_DLI};g=${GL_HOURS};print(f'sensor_dli={s} | estimated_actual_dli={s*3.5:.1f} | gl_hours={g} | estimated_total_plant_dli={s*3.5+g*0.8:.1f}')" 2>/dev/null || echo "sensor_dli=${SENSOR_DLI} | gl_hours=${GL_HOURS}"
-    echo "SENSOR LIMITATION: The lux sensor reads 25-40% of actual plant-available light."
-    echo "Sensor DLI of 5-7 mol corresponds to actual plant DLI of 17-27 mol."
-    echo "Do NOT use DLI as the primary grow-light control signal. The lighting controller now targets qualified light minutes."
+    echo "INTERIOR DLI UNAVAILABLE: the physical sensor is broken. No correction factor or outdoor proxy is valid crop-light evidence."
+    echo "Do not issue a DLI-dependent recommendation or score. The lighting controller independently targets qualified light minutes."
     echo "The lux threshold is the overcast/shade detector; target_light_minutes sets the per-circuit photoperiod budget."
     echo ""
 
@@ -668,7 +668,9 @@ data:
     WITH deduped AS (
       SELECT DISTINCT ON (lesson) id, category, condition, lesson, confidence, times_validated
       FROM planner_lessons
-      WHERE is_active = true AND superseded_by IS NULL
+      WHERE is_active = true
+        AND superseded_by IS NULL
+        AND NOT public.fn_dli_proxy_lesson_invalid(condition, lesson)
       ORDER BY lesson, times_validated DESC
     )
     SELECT category, condition, lesson, confidence, times_validated
@@ -859,7 +861,7 @@ data:
       -- OVERCAST / RAIN
       SELECT 4, 'OVERCAST/RAIN: avg cloud cover ' || round(avg(cloud_cover_pct)::numeric,0)
         || '%, precip prob ' || round(max(precip_prob_pct)::numeric,0)
-        || '% tomorrow. DLI may be low (lighting handled by gl_auto_mode, not this planner).'
+        || '% tomorrow. Interior DLI is unavailable; qualified-light-minute control remains independent.'
       FROM fc
       WHERE ts::date = (CURRENT_DATE + 1)
       HAVING avg(cloud_cover_pct) > 80 OR max(precip_prob_pct) > 60
@@ -1575,11 +1577,18 @@ data:
     #   mapfile -t DB < <(verdify_psql_cmd)                # NOT needed; see helpers
     #   "${DB[@]}" -t -A -c "SELECT 1"
     #
-    # Backend switch (VERDIFY_DB_BACKEND) — the issue-#24 contract:
+    # Backend switch (VERDIFY_DB_BACKEND) — the issue-#24/#254 contract:
     #   docker  (DEFAULT) — docker exec [-i] <container> psql ...  (byte-identical VM)
     #   dsn               — bare psql against PG* / k3s ConfigMap+Secret env (no
     #                       docker socket; in-cluster or any host with a reachable
     #                       Postgres endpoint).
+    #   kube              — <kubectl> exec [-i] -n <ns> <pod> -c <ctr> -- psql ...
+    #                       (#254: re-homes the VM `docker exec verdify-timescaledb`
+    #                       firmware preflight DB handle to the k3s prod DB from a
+    #                       tooling host that has kubectl but no Postgres socket —
+    #                       the headless verdify-db Service is in-cluster only).
+    #                       VERDIFY_KUBECTL may be a multi-token remote driver, e.g.
+    #                       "ssh jason@192.168.30.32 sudo k3s kubectl".
     # VERDIFY_DB_BACKEND is the documented top-level knob. It is implemented on top
     # of the lower-level VERDIFY_PSQL_MODE (below): docker -> docker-exec,
     # dsn -> direct. If a caller sets VERDIFY_PSQL_MODE explicitly it still wins
@@ -1594,12 +1603,17 @@ data:
     #                            contract) and exports PG* for psql.
     #
     # Env knobs (all optional; defaults preserve VM behavior):
-    #   VERDIFY_DB_BACKEND      docker | dsn                          (default docker)
-    #   VERDIFY_PSQL_MODE       docker-exec | direct | in-cluster     (overrides backend)
+    #   VERDIFY_DB_BACKEND      docker | dsn | kube                   (default docker)
+    #   VERDIFY_PSQL_MODE       docker-exec | direct | kube-exec      (overrides backend)
     #   VERDIFY_DB_CONTAINER    docker container name   (default verdify-timescaledb)
     #   VERDIFY_DB_USER         db user                 (default verdify)
     #   VERDIFY_DB_NAME         db name                 (default verdify)
     #   VERDIFY_DOCKER_STDIN    1 to add `docker exec -i` (for piped/heredoc SQL)
+    #   --- kube-exec backend (#254) ---
+    #   VERDIFY_KUBECTL         kubectl binary or remote driver       (default kubectl)
+    #   VERDIFY_DB_NAMESPACE    k3s namespace           (default verdify-prod)
+    #   VERDIFY_DB_POD          DB pod                  (default verdify-db-0)
+    #   VERDIFY_DB_PGCONTAINER  pod container w/ psql   (default postgres)
     #
     # The function intentionally does NOT bake -t/-A/-F/-c etc.: callers pass those
     # so each site keeps its exact formatting flags.
@@ -1618,8 +1632,9 @@ data:
         case "${VERDIFY_DB_BACKEND:-docker}" in
             docker|docker-exec) VERDIFY_PSQL_MODE="docker-exec" ;;
             dsn|direct|in-cluster) VERDIFY_PSQL_MODE="direct" ;;
+            kube|kubectl|kube-exec) VERDIFY_PSQL_MODE="kube-exec" ;;
             *)
-                echo "psql-verdify.sh: unknown VERDIFY_DB_BACKEND='${VERDIFY_DB_BACKEND}' (use docker|dsn)" >&2
+                echo "psql-verdify.sh: unknown VERDIFY_DB_BACKEND='${VERDIFY_DB_BACKEND}' (use docker|dsn|kube)" >&2
                 VERDIFY_PSQL_MODE="$_VERDIFY_PSQL_MODE_DEFAULT"
                 ;;
         esac
@@ -1628,6 +1643,36 @@ data:
     VERDIFY_DB_CONTAINER="${VERDIFY_DB_CONTAINER:-verdify-timescaledb}"
     VERDIFY_DB_USER="${VERDIFY_DB_USER:-${DB_USER:-verdify}}"
     VERDIFY_DB_NAME="${VERDIFY_DB_NAME:-${DB_NAME:-verdify}}"
+
+    # kube-exec backend knobs (#254 — re-home the VM-era `docker exec verdify-
+    # timescaledb` firmware preflight DB handle to the k3s prod DB from a tooling
+    # host that has kubectl, NOT a Postgres socket). Defaults target verdify-prod/
+    # verdify-db-0 (container `postgres`). VERDIFY_KUBECTL lets the call run the
+    # binary verbatim OR through a remote driver, e.g.
+    #   VERDIFY_KUBECTL="ssh jason@192.168.30.32 sudo k3s kubectl"
+    # (it is word-split intentionally so a multi-token driver works).
+    VERDIFY_KUBECTL="${VERDIFY_KUBECTL:-kubectl}"
+    VERDIFY_DB_NAMESPACE="${VERDIFY_DB_NAMESPACE:-verdify-prod}"
+    VERDIFY_DB_POD="${VERDIFY_DB_POD:-verdify-db-0}"
+    VERDIFY_DB_PGCONTAINER="${VERDIFY_DB_PGCONTAINER:-postgres}"
+
+    # _verdify_pgoptions_from_extra — pull a `-e PGOPTIONS=...` pair out of the
+    # docker-extra args a call site passes to verdify_psql_cmd (e.g. the firmware
+    # preflight's statement_timeout). In docker-exec mode those args are forwarded
+    # verbatim to `docker exec`; the direct/kube-exec backends have no docker, so we
+    # translate the PGOPTIONS into an in-band `env PGOPTIONS=...` so the statement
+    # timeout is NOT silently dropped (the latent bug #254 calls out). Echoes the
+    # bare PGOPTIONS value (no `-e`/key); empty if none present.
+    _verdify_pgoptions_from_extra() {
+        local prev="" f
+        for f in "$@"; do
+            if [[ "$prev" == "-e" && "$f" == PGOPTIONS=* ]]; then
+                printf '%s' "${f#PGOPTIONS=}"
+                return 0
+            fi
+            prev="$f"
+        done
+    }
 
     # verdify_psql_cmd — print the connection-prefix argv (one token per line) for
     # the active mode. Call sites that keep a `DB=(...)` array do:
@@ -1663,7 +1708,41 @@ data:
                         export PGPASSWORD="$DB_PASS"
                     fi
                 fi
+                # #254: don't drop a caller's `-e PGOPTIONS=...` (e.g. the firmware
+                # preflight statement_timeout). psql honors the PGOPTIONS env var, so
+                # export it when present and not already set on the environment.
+                local _pgopt
+                _pgopt="$(_verdify_pgoptions_from_extra "${docker_extra[@]}")"
+                if [[ -n "$_pgopt" && -z "${PGOPTIONS:-}" ]]; then
+                    export PGOPTIONS="$_pgopt"
+                fi
                 printf '%s\n' psql
+                ;;
+            kube-exec)
+                # #254: re-home the VM `docker exec verdify-timescaledb psql ...` to
+                # `<kubectl> exec [-i] -n <ns> <pod> -c <container> -- psql ...`. The
+                # firmware preflight (and any other docker-exec call site) becomes
+                # mode-agnostic: only the connection PREFIX changes, the psql flags +
+                # SQL the call site appends are untouched. VERDIFY_KUBECTL is word-
+                # split so a multi-token remote driver (ssh ... sudo k3s kubectl)
+                # works. A `-e PGOPTIONS=...` from docker_extra is translated into an
+                # in-pod `env PGOPTIONS=...` so statement_timeout survives.
+                local _kbin
+                # shellcheck disable=SC2206  # intentional word-split of the driver
+                local -a _kctl=($VERDIFY_KUBECTL)
+                printf '%s\n' "${_kctl[@]}"
+                printf '%s\n' exec
+                if [[ "${VERDIFY_DOCKER_STDIN:-0}" == "1" ]]; then
+                    printf '%s\n' -i
+                fi
+                printf '%s\n' -n "$VERDIFY_DB_NAMESPACE" "$VERDIFY_DB_POD" \
+                    -c "$VERDIFY_DB_PGCONTAINER" --
+                local _kpgopt
+                _kpgopt="$(_verdify_pgoptions_from_extra "${docker_extra[@]}")"
+                if [[ -n "$_kpgopt" ]]; then
+                    printf '%s\n' env "PGOPTIONS=${_kpgopt}"
+                fi
+                printf '%s\n' psql -U "$VERDIFY_DB_USER" -d "$VERDIFY_DB_NAME"
                 ;;
             *)
                 echo "psql-verdify.sh: unknown VERDIFY_PSQL_MODE='$VERDIFY_PSQL_MODE'" >&2
@@ -1729,6 +1808,23 @@ data:
                 # bare program name. libpq clients (pg_dump etc.) read PG*.
                 verdify_psql_cmd >/dev/null || return $?
                 printf '%s\n' "$program"
+                ;;
+            kube-exec)
+                # #254: `<kubectl> exec [-i][-t] -n <ns> <pod> -c <container> --
+                # <program> -U <user> -d <db>`. -U/-d baked to match the docker-exec
+                # contract (the pod's libpq has no PG* from the caller's host).
+                local -a _kctl=($VERDIFY_KUBECTL)
+                printf '%s\n' "${_kctl[@]}"
+                printf '%s\n' exec
+                if [[ "${VERDIFY_DOCKER_STDIN:-0}" == "1" ]]; then
+                    printf '%s\n' -i
+                fi
+                if [[ "${VERDIFY_DOCKER_TTY:-0}" == "1" ]]; then
+                    printf '%s\n' -t
+                fi
+                printf '%s\n' -n "$VERDIFY_DB_NAMESPACE" "$VERDIFY_DB_POD" \
+                    -c "$VERDIFY_DB_PGCONTAINER" -- \
+                    "$program" -U "$VERDIFY_DB_USER" -d "$VERDIFY_DB_NAME"
                 ;;
             *)
                 echo "psql-verdify.sh: unknown VERDIFY_PSQL_MODE='$VERDIFY_PSQL_MODE'" >&2

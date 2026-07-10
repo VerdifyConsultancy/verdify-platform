@@ -20,7 +20,7 @@ from __future__ import annotations
 import math
 from typing import Literal
 
-from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, ValidationError, field_validator
+from pydantic import AwareDatetime, BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 from .climate_intent import ClimateAction, ClimatePriorityAxis, MoistureAssistState, MoistureZone
 
@@ -40,6 +40,49 @@ OVERRIDE_EVENT_TYPES: frozenset[str] = frozenset(
         "fog_heat_assist",
     }
 )
+
+DliAvailability = Literal["available", "unavailable"]
+
+
+class DliEvidence(BaseModel):
+    """Availability-bearing interior crop DLI contract (ADR-008 / #435).
+
+    A numeric value is legal only when an operator-validated source interval is
+    available.  While the physical interior sensor is broken, every active
+    producer emits ``None`` plus reason, provenance, revision, and interval.
+    Legacy proxy numbers live only in explicitly forensic DB surfaces.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    value_mol_m2_day: float | None = Field(
+        default=None,
+        ge=0,
+        le=100,
+        allow_inf_nan=False,
+    )
+    availability: DliAvailability
+    unavailable_reason: str | None = None
+    provenance: str = Field(..., min_length=1)
+    validity_revision: str = Field(..., min_length=1)
+    valid_from: AwareDatetime
+    valid_to: AwareDatetime | None = None
+
+    @model_validator(mode="after")
+    def _availability_matches_value(self) -> DliEvidence:
+        if self.valid_to is not None and self.valid_to <= self.valid_from:
+            raise ValueError("DLI valid_to must be after valid_from")
+        if self.availability == "available":
+            if self.value_mol_m2_day is None:
+                raise ValueError("available DLI requires value_mol_m2_day")
+            if self.unavailable_reason is not None:
+                raise ValueError("available DLI cannot carry unavailable_reason")
+        else:
+            if self.value_mol_m2_day is not None:
+                raise ValueError("unavailable DLI must not carry a numeric value")
+            if not self.unavailable_reason:
+                raise ValueError("unavailable DLI requires unavailable_reason")
+        return self
 
 
 class ClimateRow(BaseModel):
