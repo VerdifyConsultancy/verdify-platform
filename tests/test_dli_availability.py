@@ -105,14 +105,11 @@ def test_planner_context_contains_only_availability_bearing_dli():
 
 
 def test_deployed_planner_context_mirror_has_byte_parity_and_no_legacy_dli():
-    generated = (
-        ROOT / "deploy/k8s/components/ingestor-gather-script/gather-script-configmap.yaml"
-    ).read_text()
+    generated = (ROOT / "deploy/k8s/components/ingestor-gather-script/gather-script-configmap.yaml").read_text()
 
     def literal_block(key: str, source: Path) -> str:
         body = "".join(
-            line if not line.strip("\r\n") else f"    {line}"
-            for line in source.read_text().splitlines(keepends=True)
+            line if not line.strip("\r\n") else f"    {line}" for line in source.read_text().splitlines(keepends=True)
         )
         return f"  {key}: |\n{body}"
 
