@@ -241,6 +241,21 @@ async def _fetch_planner_scorecard(
         return []
 
 
+async def _fetchrow_optional(
+    conn: asyncpg.Connection,
+    statement: str,
+    *args: object,
+    timeout_ms: int = 3_000,
+) -> asyncpg.Record | None:
+    """Fetch optional public evidence without blocking the whole response."""
+    try:
+        async with conn.transaction():
+            await conn.execute(f"SET LOCAL statement_timeout = '{timeout_ms}ms'")
+            return await conn.fetchrow(statement, *args)
+    except asyncpg.QueryCanceledError:
+        return None
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global pool
@@ -1531,12 +1546,14 @@ async def daily_resource_accounting(
     """
     async with pool.acquire() as conn:
         target_date = resource_date or await conn.fetchval("SELECT (now() AT TIME ZONE 'America/Denver')::date")
-        water = await conn.fetchrow(
+        water = await _fetchrow_optional(
+            conn,
             "SELECT * FROM v_water_attribution_daily WHERE date = $1 AND greenhouse_id = $2",
             target_date,
             greenhouse_id,
         )
-        energy = await conn.fetchrow(
+        energy = await _fetchrow_optional(
+            conn,
             "SELECT * FROM v_energy_estimate_reconciliation WHERE date = $1 AND greenhouse_id = $2",
             target_date,
             greenhouse_id,
@@ -2446,7 +2463,8 @@ async def public_home_metrics(greenhouse_id: str = DEFAULT_GREENHOUSE):
         )
         score_rows = await _fetch_planner_scorecard(conn)
         scorecard = {r["metric"]: _to_float(r["value"]) for r in score_rows}
-        water_resource = await conn.fetchrow(
+        water_resource = await _fetchrow_optional(
+            conn,
             """
             SELECT * FROM v_water_attribution_daily
             WHERE date = (now() AT TIME ZONE 'America/Denver')::date
@@ -2454,7 +2472,8 @@ async def public_home_metrics(greenhouse_id: str = DEFAULT_GREENHOUSE):
             """,
             greenhouse_id,
         )
-        energy_resource = await conn.fetchrow(
+        energy_resource = await _fetchrow_optional(
+            conn,
             """
             SELECT * FROM v_energy_estimate_reconciliation
             WHERE date = (now() AT TIME ZONE 'America/Denver')::date
@@ -2662,7 +2681,8 @@ async def public_evidence_snapshot(greenhouse_id: str = DEFAULT_GREENHOUSE):
         generated_at = await conn.fetchval("SELECT now()")
         score_rows = await _fetch_planner_scorecard(conn)
         scorecard = {r["metric"]: _to_float(r["value"]) for r in score_rows}
-        water_resource = await conn.fetchrow(
+        water_resource = await _fetchrow_optional(
+            conn,
             """
             SELECT * FROM v_water_attribution_daily
             WHERE date = (now() AT TIME ZONE 'America/Denver')::date
@@ -2670,7 +2690,8 @@ async def public_evidence_snapshot(greenhouse_id: str = DEFAULT_GREENHOUSE):
             """,
             greenhouse_id,
         )
-        energy_resource = await conn.fetchrow(
+        energy_resource = await _fetchrow_optional(
+            conn,
             """
             SELECT * FROM v_energy_estimate_reconciliation
             WHERE date = (now() AT TIME ZONE 'America/Denver')::date

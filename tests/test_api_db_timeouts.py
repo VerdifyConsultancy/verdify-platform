@@ -34,6 +34,11 @@ class _Connection:
             raise asyncpg.QueryCanceledError("canceling statement due to statement timeout")
         return [{"metric": "planner_score", "value": 91.0}]
 
+    async def fetchrow(self, statement: str, *args):
+        if self.cancel_fetch:
+            raise asyncpg.QueryCanceledError("canceling statement due to statement timeout")
+        return {"available_for_scoring": True}
+
 
 @pytest.mark.asyncio
 async def test_api_pool_checkout_reapplies_query_safety_settings():
@@ -55,3 +60,13 @@ async def test_scorecard_statement_timeout_degrades_to_empty_metrics():
 
     assert rows == []
     assert conn.executed == ["SET LOCAL statement_timeout = '6000ms'"]
+
+
+@pytest.mark.asyncio
+async def test_optional_public_evidence_timeout_degrades_to_none():
+    conn = _Connection(cancel_fetch=True)
+
+    row = await main._fetchrow_optional(conn, "SELECT * FROM slow_optional_view")
+
+    assert row is None
+    assert conn.executed == ["SET LOCAL statement_timeout = '3000ms'"]
