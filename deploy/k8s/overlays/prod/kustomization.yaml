@@ -181,7 +181,7 @@ patches:
 # GHCR digests in-repo.
 images:
   - name: ghcr.io/verdifyconsultancy/verdify-api
-    digest: sha256:9d988f678a59483a70bd08f535e11db2e6541d0e3ad87a1c6e56cf3f689f94a4
+    digest: sha256:77bc462d1bafa33d7597fd57667ff4a09bfe98cb1953b732fea03d5e3f11ba6b
   - name: ghcr.io/verdifyconsultancy/verdify-mcp
     digest: sha256:b6b6ea2f7827578a9b4a8331880f6c17884c28391e9d597a8513c0446a424ac6
   - name: ghcr.io/verdifyconsultancy/verdify-ingestor
