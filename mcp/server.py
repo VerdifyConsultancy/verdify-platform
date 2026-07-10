@@ -565,9 +565,7 @@ async def outcome_kpi(target_date: str = "") -> str:
         )
         energy_resource = dict(energy_resource_row) if energy_resource_row else None
         if energy_resource and isinstance(energy_resource.get("coefficient_revisions"), str):
-            energy_resource["coefficient_revisions"] = json.loads(
-                energy_resource["coefficient_revisions"]
-            )
+            energy_resource["coefficient_revisions"] = json.loads(energy_resource["coefficient_revisions"])
 
         cycle_rows = await conn.fetch(
             """

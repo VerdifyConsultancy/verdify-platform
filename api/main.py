@@ -1457,9 +1457,7 @@ async def daily_resource_accounting(
     scoring-availability fields.
     """
     async with pool.acquire() as conn:
-        target_date = resource_date or await conn.fetchval(
-            "SELECT (now() AT TIME ZONE 'America/Denver')::date"
-        )
+        target_date = resource_date or await conn.fetchval("SELECT (now() AT TIME ZONE 'America/Denver')::date")
         water = await conn.fetchrow(
             "SELECT * FROM v_water_attribution_daily WHERE date = $1 AND greenhouse_id = $2",
             target_date,
@@ -2462,15 +2460,9 @@ async def public_home_metrics(greenhouse_id: str = DEFAULT_GREENHOUSE):
         },
         {
             "check_name": "water_ledger_freshness",
-            "status": (
-                "ok"
-                if water_ledger_health and water_ledger_health["ledger_status"] == "fresh"
-                else "fail"
-            ),
+            "status": ("ok" if water_ledger_health and water_ledger_health["ledger_status"] == "fresh" else "fail"),
             "metric_value": (
-                _to_float(water_ledger_health["materializer_lag_seconds"])
-                if water_ledger_health
-                else None
+                _to_float(water_ledger_health["materializer_lag_seconds"]) if water_ledger_health else None
             ),
             "threshold_value": 300,
             "details": (
@@ -2549,30 +2541,18 @@ async def public_home_metrics(greenhouse_id: str = DEFAULT_GREENHOUSE):
             if water_resource and water_resource["available_for_scoring"]
             else None
         ),
-        water_today_observed_gal=(
-            _to_float(water_resource["quality_filtered_meter_gal"])
-            if water_resource
-            else None
-        ),
+        water_today_observed_gal=(_to_float(water_resource["quality_filtered_meter_gal"]) if water_resource else None),
         water_today_quality=water_resource["resource_quality"] if water_resource else "unavailable",
-        water_today_available_for_scoring=bool(
-            water_resource and water_resource["available_for_scoring"]
-        ),
+        water_today_available_for_scoring=bool(water_resource and water_resource["available_for_scoring"]),
         runtime_modeled_kwh=_to_float(energy_resource["kwh_estimated"]) if energy_resource else None,
         runtime_modeled_kwh_low=_to_float(energy_resource["modeled_kwh_low"]) if energy_resource else None,
         runtime_modeled_kwh_high=_to_float(energy_resource["modeled_kwh_high"]) if energy_resource else None,
         runtime_model_quality=energy_resource["model_quality"] if energy_resource else "unavailable",
-        runtime_model_available_for_scoring=bool(
-            energy_resource and energy_resource["modeled_available_for_scoring"]
-        ),
+        runtime_model_available_for_scoring=bool(energy_resource and energy_resource["modeled_available_for_scoring"]),
         partial_measured_kwh=_to_float(energy_resource["measured_kwh"]) if energy_resource else None,
-        partial_meter_coverage_pct=(
-            _to_float(energy_resource["meter_coverage_pct"]) if energy_resource else None
-        ),
+        partial_meter_coverage_pct=(_to_float(energy_resource["meter_coverage_pct"]) if energy_resource else None),
         partial_meter_quality=energy_resource["measured_quality"] if energy_resource else "unavailable",
-        partial_meter_available_for_scoring=bool(
-            energy_resource and energy_resource["measured_available_for_scoring"]
-        ),
+        partial_meter_available_for_scoring=bool(energy_resource and energy_resource["measured_available_for_scoring"]),
         open_critical_high_alerts=open_critical_high or 0,
         climate_action_log_age_s=climate_action_log_age_s,
         controller_climate_action=latest_action_data["climate_action"] if latest_action_data else None,
@@ -2814,9 +2794,7 @@ async def public_evidence_snapshot(greenhouse_id: str = DEFAULT_GREENHOUSE):
         "water_today_gal": water_today_gal,
         "resource_accounting": {
             "water": dict(water_resource) if water_resource else None,
-            "energy": _coerce_jsonb(dict(energy_resource), "coefficient_revisions")
-            if energy_resource
-            else None,
+            "energy": _coerce_jsonb(dict(energy_resource), "coefficient_revisions") if energy_resource else None,
             "scalar_policy": (
                 "water_today_gal is null unless ledger conservation/coverage is scoring-eligible; "
                 "modeled and partial-measured energy remain separate"
@@ -2871,12 +2849,8 @@ async def public_evidence_snapshot(greenhouse_id: str = DEFAULT_GREENHOUSE):
                 if water_resource and water_resource["available_for_scoring"]
                 else None
             ),
-            "water_accounting_status": (
-                water_resource["resource_quality"] if water_resource else "unavailable"
-            ),
-            "water_accounting_incomplete": bool(
-                not water_resource or not water_resource["available_for_scoring"]
-            ),
+            "water_accounting_status": (water_resource["resource_quality"] if water_resource else "unavailable"),
+            "water_accounting_incomplete": bool(not water_resource or not water_resource["available_for_scoring"]),
             "water_accounting_details": (
                 "accepted meter gallons are conserved across attributed, ambiguous, "
                 "and manual_or_unattributed; inspect resource_accounting.water for coverage"

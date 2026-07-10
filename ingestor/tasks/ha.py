@@ -109,16 +109,12 @@ async def water_flowing_sync(pool: asyncpg.Pool) -> None:
 async def water_meter_materialize(pool: asyncpg.Pool) -> None:
     """Advance the idempotent cumulative-meter event ledger (#437)."""
     async with pool.acquire() as conn:
-        row = await conn.fetchrow(
-            "SELECT * FROM materialize_water_meter_events('vallery', now())"
-        )
+        row = await conn.fetchrow("SELECT * FROM materialize_water_meter_events('vallery', now())")
     if row is None:
         log.error("water_meter_materialize: materializer returned no status row")
         return
     status = row["ledger_status"]
-    message = (
-        "water_meter_materialize: processed=%s events=%s through=%s status=%s"
-    )
+    message = "water_meter_materialize: processed=%s events=%s through=%s status=%s"
     args = (
         row["processed_sample_count"],
         row["event_rows_upserted"],

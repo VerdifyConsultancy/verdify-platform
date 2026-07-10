@@ -609,9 +609,7 @@ async def grow_light_daily(pool: asyncpg.Pool) -> None:
             yesterday,
         )
         water_gal = (
-            float(water_row["quality_filtered_meter_gal"])
-            if water_row and water_row["available_for_scoring"]
-            else None
+            float(water_row["quality_filtered_meter_gal"]) if water_row and water_row["available_for_scoring"] else None
         )
         ce = round(kwh * 0.111, 2)
         cg = round(therms * 0.83, 2)
@@ -1015,16 +1013,8 @@ async def _refresh_daily_summary_for_date(conn: asyncpg.Connection, target_day) 
         target_day,
     )
     water_available = bool(water_evidence and water_evidence["available_for_scoring"])
-    water_gal = (
-        float(water_evidence["quality_filtered_meter_gal"])
-        if water_available
-        else None
-    )
-    mister_water_gal = (
-        float(water_evidence["climate_wetting_gal"])
-        if water_available
-        else None
-    )
+    water_gal = float(water_evidence["quality_filtered_meter_gal"]) if water_available else None
+    mister_water_gal = float(water_evidence["climate_wetting_gal"]) if water_available else None
 
     ce = round(kwh * 0.111, 2)
     cg = round(therms * 0.83, 2)
@@ -1045,16 +1035,8 @@ async def _refresh_daily_summary_for_date(conn: asyncpg.Connection, target_day) 
         + rt.get("mister_west", 0)
         + rt.get("mister_center", 0)
     ) / 60.0
-    irrigation_water_gal = (
-        float(water_evidence["wall_irrigation_gal"])
-        if water_available
-        else None
-    )
-    fertigation_water_gal = (
-        float(water_evidence["wall_fertigation_gal"])
-        if water_available
-        else None
-    )
+    irrigation_water_gal = float(water_evidence["wall_irrigation_gal"]) if water_available else None
+    fertigation_water_gal = float(water_evidence["wall_fertigation_gal"]) if water_available else None
 
     await conn.execute(
         """
