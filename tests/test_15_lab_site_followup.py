@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import re
@@ -311,6 +312,29 @@ def test_snapshot_and_metrics_preserve_resource_unavailability():
     assert "scorecard.get('cost_total', 0)" not in metrics
     assert "verdify_resource_terms_available" in metrics
     assert "verdify_planner_score_resource_weight_pct" in metrics
+
+
+def test_grafana_brand_generator_preserves_resource_accounting_gates():
+    script_path = REPO_ROOT / "scripts/brand-grafana-embeds.py"
+    spec = importlib.util.spec_from_file_location("brand_grafana_embeds_resource_test", script_path)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    for path in _site_dashboard_paths():
+        dashboard = json.loads(path.read_text(encoding="utf-8"))
+        findings = module.check_resource_accounting_generator_parity(path.name, dashboard)
+        assert findings == []
+
+    for sql in (
+        module.RUNTIME_MODELED_KWH_30D_SQL,
+        module.DAILY_COST_BY_SOURCE_SQL,
+        module.MONTHLY_RESOURCE_COST_SQL,
+    ):
+        assert "v_daily_kpi" in sql
+        assert "resource_terms_available" in sql
+        assert "daily_summary" not in sql
+    assert "COALESCE(c." not in module.MONTHLY_RESOURCE_COST_SQL
 
 
 def test_quartz_dark_mode_contract_is_user_theme_driven():

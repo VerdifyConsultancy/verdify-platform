@@ -216,13 +216,19 @@ ORDER BY date"""
 
 DAILY_COST_BY_SOURCE_SQL = """SELECT
   (date + time '12:00')::timestamptz AS time,
-  round(cost_electric::numeric, 2) AS "Runtime Electric ($)",
-  round(cost_gas::numeric, 2) AS "Gas ($)",
-  round(cost_water::numeric, 2) AS "Water ($)"
-FROM daily_summary
-WHERE $__timeFilter((date + time '12:00')::timestamptz)
-  AND cost_total > 0
+  ROUND(cost_electric::numeric, 2) AS "Runtime Electric ($)",
+  ROUND(cost_gas::numeric, 2) AS "Gas ($)",
+  ROUND(cost_water::numeric, 2) AS "Water ($)"
+FROM v_daily_kpi
+WHERE resource_terms_available
+  AND $__timeFilter((date + time '12:00')::timestamptz)
 ORDER BY date"""
+
+RUNTIME_MODELED_KWH_30D_SQL = (
+    "SELECT now() AS time, ROUND(AVG(kwh)::numeric, 1) AS value FROM v_daily_kpi "
+    "WHERE date >= current_date - interval '30 days' AND date < current_date "
+    "AND resource_terms_available"
+)
 
 MONTHLY_RESOURCE_COST_SQL = """WITH months AS (
   SELECT generate_series(
@@ -233,22 +239,22 @@ MONTHLY_RESOURCE_COST_SQL = """WITH months AS (
 ), costs AS (
   SELECT
     date_trunc('month', date)::date AS month_start,
-    ROUND(SUM(COALESCE(cost_electric, 0))::numeric, 2) AS electric_cost_usd,
-    ROUND(SUM(COALESCE(cost_gas, 0))::numeric, 2) AS gas_cost_usd,
-    ROUND(SUM(COALESCE(cost_water, 0))::numeric, 2) AS water_cost_usd
-  FROM daily_summary
-  WHERE date >= (SELECT min(month_start) FROM months)
+    ROUND(SUM(cost_electric)::numeric, 2) AS electric_cost_usd,
+    ROUND(SUM(cost_gas)::numeric, 2) AS gas_cost_usd,
+    ROUND(SUM(cost_water)::numeric, 2) AS water_cost_usd,
+    ROUND(SUM(cost_total)::numeric, 2) AS total_cost_usd
+  FROM v_daily_kpi
+  WHERE resource_terms_available
+    AND date >= (SELECT min(month_start) FROM months)
     AND date < ((SELECT max(month_start) FROM months) + interval '1 month')::date
   GROUP BY 1
 )
 SELECT
   to_char(m.month_start, 'Mon YYYY') AS "Month",
-  COALESCE(c.electric_cost_usd, 0) AS "Runtime Electric ($)",
-  COALESCE(c.gas_cost_usd, 0) AS "Gas ($)",
-  COALESCE(c.water_cost_usd, 0) AS "Water ($)",
-  COALESCE(c.electric_cost_usd, 0)
-    + COALESCE(c.gas_cost_usd, 0)
-    + COALESCE(c.water_cost_usd, 0) AS "Total ($)"
+  c.electric_cost_usd AS "Runtime Electric ($)",
+  c.gas_cost_usd AS "Gas ($)",
+  c.water_cost_usd AS "Water ($)",
+  c.total_cost_usd AS "Total ($)"
 FROM months m
 LEFT JOIN costs c USING (month_start)
 ORDER BY m.month_start"""
@@ -1596,10 +1602,7 @@ def normalize_runtime_electric_sources(panel: dict[str, Any]) -> None:
         replace_first_target_sql(panel, RUNTIME_POWERWALL_COVERAGE_SQL)
 
     if title == "Runtime-Modeled kWh/day (30-Day Avg)":
-        replace_first_target_sql(
-            panel,
-            "SELECT now() as time, round(avg(kwh_estimated)::numeric, 1) as value FROM daily_summary WHERE date >= current_date - interval '30 days' AND date < current_date AND kwh_estimated IS NOT NULL",
-        )
+        replace_first_target_sql(panel, RUNTIME_MODELED_KWH_30D_SQL)
 
     if title in {
         "Runtime-Modeled Power vs Solar Irradiance",
@@ -1624,7 +1627,8 @@ def normalize_runtime_electric_sources(panel: dict[str, Any]) -> None:
 
     if title == "Daily Cost by Type" and panel.get("type") == "timeseries":
         panel["description"] = (
-            "Daily cost stacked by utility type. Electric uses published device watts multiplied by observed on-time."
+            "Eligible daily cost by utility type. Electric uses transition-derived runtime and date-valid "
+            "coefficient evidence."
         )
         rename_override_label(panel, "Shelly Electric", "Runtime Electric")
         for target in panel.get("targets", []) or []:
@@ -1634,9 +1638,9 @@ def normalize_runtime_electric_sources(panel: dict[str, Any]) -> None:
 
     if title == "Monthly Resource Cost by Source (6 Months)" and panel.get("type") == "barchart":
         panel["description"] = (
-            "Stacked monthly greenhouse utility cost for the current local month-to-date plus the previous "
-            "five months. Electric uses published device watts multiplied by observed on-time; gas and water "
-            "use the public rate assumptions shown on Resource Use."
+            "Monthly eligible greenhouse utility cost. Missing or low-confidence days stay blank; electric "
+            "requires transition runtime and date-valid coefficients, while gas and water use the published "
+            "rate assumptions."
         )
         replace_first_target_sql(panel, MONTHLY_RESOURCE_COST_SQL)
         rename_override_label(panel, "Shelly Electric ($)", "Runtime Electric ($)")
@@ -2812,6 +2816,48 @@ def check_explicit_graph_series_colors(label: str, panel: dict[str, Any]) -> lis
     return findings
 
 
+def check_resource_accounting_generator_parity(label: str, dashboard: dict[str, Any]) -> list[str]:
+    """Reject resource SQL that is unsafe now or after the normal branding rewrite."""
+
+    findings: list[str] = []
+    managed_titles = {
+        "Runtime-Modeled kWh/day (30-Day Avg)",
+        "Daily Cost by Type",
+        "Monthly Resource Cost by Source (6 Months)",
+        "Daily Cost by Source",
+    }
+    legacy_terms = ("runtime_", "cost_", "kwh", "therm", "water_used_gal", "mister_water_gal")
+
+    for source_panel in iter_panels(dashboard.get("panels", [])):
+        panel = deepcopy(source_panel)
+        normalize_runtime_electric_sources(panel)
+        title = str(panel.get("title") or "")
+        if title not in managed_titles:
+            continue
+        for stage, candidate in (("source", source_panel), ("normalized", panel)):
+            queries = [
+                target.get("rawSql")
+                for target in candidate.get("targets", []) or []
+                if isinstance(target, dict) and isinstance(target.get("rawSql"), str)
+            ]
+            for raw_sql in queries:
+                if "daily_summary" in raw_sql and any(term in raw_sql for term in legacy_terms):
+                    findings.append(
+                        f"{label}: panel {candidate.get('id')} {title!r} {stage} SQL bypasses resource provenance"
+                    )
+            if queries:
+                combined = "\n".join(queries)
+                if "v_daily_kpi" not in combined or "resource_terms_available" not in combined:
+                    findings.append(
+                        f"{label}: panel {candidate.get('id')} {title!r} {stage} SQL is not availability-gated"
+                    )
+                if title == "Monthly Resource Cost by Source (6 Months)" and "COALESCE(c." in combined:
+                    findings.append(
+                        f"{label}: panel {candidate.get('id')} {title!r} {stage} SQL zero-fills unavailable months"
+                    )
+    return findings
+
+
 def check_dashboard_data(label: str, dashboard: dict[str, Any], embedded_ids: set[int]) -> list[str]:
     findings: list[str] = []
     if dashboard.get("style") not in {"light", "dark"}:
@@ -2820,6 +2866,7 @@ def check_dashboard_data(label: str, dashboard: dict[str, Any], embedded_ids: se
     findings.extend(check_compliance_dashboard_data(label, dashboard))
     findings.extend(check_lighting_threshold_dashboard_data(label, dashboard))
     findings.extend(check_relay_state_lane_dashboard_data(label, dashboard))
+    findings.extend(check_resource_accounting_generator_parity(label, dashboard))
     found_ids = set()
     for panel in iter_panels(dashboard.get("panels", [])):
         if panel.get("id") not in embedded_ids:
@@ -2987,7 +3034,7 @@ def check_dashboard_data(label: str, dashboard: dict[str, Any], embedded_ids: se
             )
             if raw_sql != DAILY_COST_BY_SOURCE_SQL:
                 findings.append(
-                    f"{label}: panel {panel['id']} 'Daily Cost by Source' does not use daily_summary cost fields"
+                    f"{label}: panel {panel['id']} 'Daily Cost by Source' does not use provenance-gated cost fields"
                 )
         if panel.get("type") == "stat" and panel.get("title") == "Free Heap":
             defaults = panel.get("fieldConfig", {}).get("defaults", {})
@@ -3211,6 +3258,7 @@ def main() -> int:
                     findings.extend(check_compliance_dashboard_data(str(path), dashboard))
                     findings.extend(check_lighting_threshold_dashboard_data(str(path), dashboard))
                     findings.extend(check_relay_state_lane_dashboard_data(str(path), dashboard))
+                    findings.extend(check_resource_accounting_generator_parity(str(path), dashboard))
                 except json.JSONDecodeError:
                     continue
             findings.extend(check_site_embed_contract(args.vault_root))

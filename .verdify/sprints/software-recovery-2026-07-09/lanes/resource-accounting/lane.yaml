@@ -71,6 +71,7 @@ ownership:
     - grafana/dashboards/site-irrigation.json
     - scripts/render-equipment-page.py
     - scripts/daily-summary-snapshot.py
+    - scripts/brand-grafana-embeds.py
     - scripts/verdify-metrics.py
     - tests/test_02_database.py
     - tests/test_12_fidelity.py
