@@ -559,82 +559,41 @@ static Setpoints irr_setpoints() {
     return sp;
 }
 
-TEST(center_burst_windows_match_anchors_and_durations) {
+TEST(center_burst_is_retired_even_with_legacy_fields_forced_on) {
     auto sp = irr_setpoints();
-    auto dawn_in   = irr_dry_inputs(7);    // anchors: sunrise 07:00, solar-noon 13:00
-    auto midday_in = irr_dry_inputs(14);
-    // Dawn window: sunrise + offset(0) → [7:00, 7:12)
-    ASSERT_TRUE(in_dawn_rehydrate_window(local_minute_of_day(7, 0), dawn_in, sp));
-    ASSERT_TRUE(in_dawn_rehydrate_window(local_minute_of_day(7, 11), dawn_in, sp));
-    ASSERT_FALSE(in_dawn_rehydrate_window(local_minute_of_day(7, 12), dawn_in, sp));
-    ASSERT_FALSE(in_dawn_rehydrate_window(local_minute_of_day(6, 59), dawn_in, sp));
-    // Midday window: solar-noon + offset(60) → [14:00, 14:11)
-    ASSERT_TRUE(in_midday_drench_window(local_minute_of_day(14, 0), midday_in, sp));
-    ASSERT_TRUE(in_midday_drench_window(local_minute_of_day(14, 10), midday_in, sp));
-    ASSERT_FALSE(in_midday_drench_window(local_minute_of_day(14, 11), midday_in, sp));
-    ASSERT_FALSE(in_midday_drench_window(local_minute_of_day(13, 59), midday_in, sp));
+    sp.sw_dawn_rehydrate_enabled = true;
+    sp.dawn_rehydrate_window_min = 120;
+    sp.dawn_rehydrate_on_s = 600;
+    sp.dawn_rehydrate_gap_s = 5;
+    sp.sw_midday_drench_enabled = true;
+    sp.midday_drench_window_min = 120;
+    sp.midday_drench_on_s = 600;
+    sp.midday_drench_gap_s = 5;
+
+    for (int hour : {7, 10, 14, 23}) {
+        auto in = irr_dry_inputs(hour);
+        ASSERT_EQ(center_burst_decision(local_minute_of_day(hour, 5), in, sp), CENTER_BURST_NONE);
+    }
+    int on_s = 111, gap_s = 222;
+    ASSERT_FALSE(center_burst_cadence_s(CENTER_BURST_DAWN, sp, on_s, gap_s));
+    ASSERT_FALSE(center_burst_cadence_s(CENTER_BURST_MIDDAY, sp, on_s, gap_s));
+    ASSERT_EQ(on_s, 111);
+    ASSERT_EQ(gap_s, 222);
     PASS();
 }
 
-TEST(center_burst_decision_selects_dawn_then_midday) {
-    auto sp = irr_setpoints();
-    // Inside dawn window → DAWN.
-    ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), irr_dry_inputs(7), sp), CENTER_BURST_DAWN);
-    // Inside midday window → MIDDAY.
-    ASSERT_EQ(center_burst_decision(local_minute_of_day(14, 5), irr_dry_inputs(14), sp), CENTER_BURST_MIDDAY);
-    // Outside both windows (mid-morning) → NONE even though dry+eligible.
-    ASSERT_EQ(center_burst_decision(local_minute_of_day(10, 0), irr_dry_inputs(10), sp), CENTER_BURST_NONE);
-    PASS();
-}
-
-TEST(center_burst_cadence_is_denser_than_base_and_per_burst) {
-    auto sp = irr_setpoints();
-    int on_s = 0, gap_s = 0;
-    ASSERT_FALSE(center_burst_cadence_s(CENTER_BURST_NONE, sp, on_s, gap_s));
-    ASSERT_TRUE(center_burst_cadence_s(CENTER_BURST_DAWN, sp, on_s, gap_s));
-    ASSERT_EQ(on_s, 90); ASSERT_EQ(gap_s, 20);
-    ASSERT_TRUE(center_burst_cadence_s(CENTER_BURST_MIDDAY, sp, on_s, gap_s));
-    ASSERT_EQ(on_s, 120); ASSERT_EQ(gap_s, 25);
-    // Denser than the 60s-ON / 45s-GAP base: longer ON, shorter GAP.
-    ASSERT_TRUE(sp.dawn_rehydrate_on_s   > 60);  ASSERT_TRUE(sp.dawn_rehydrate_gap_s   < 45);
-    ASSERT_TRUE(sp.midday_drench_on_s    > 60);  ASSERT_TRUE(sp.midday_drench_gap_s    < 45);
-    PASS();
-}
-
-TEST(center_burst_blocked_by_each_rail) {
-    // feed-hold (FRT-6 absorption hold) blocks the burst.
-    {
-        auto sp = irr_setpoints(); sp.feed_hold_active = true;
-        ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), irr_dry_inputs(7), sp), CENTER_BURST_NONE);
-    }
-    // CURVE-ONLY: the wet-taper rail is removed (past_wet_taper is inert), so it is
-    // no longer one of the burst rails. The remaining rails below still gate bursts.
-    // dew margin below floor blocks (don't wet a cold leaf).
-    {
-        auto sp = irr_setpoints();
-        auto in = irr_dry_inputs(7); in.dew_point_f = in.temp_f - 2.0f;  // 2°F << 8°F floor
-        ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), in, sp), CENTER_BURST_NONE);
-    }
-    // over-saturation sanity gate: VPD at/below center band ceiling → no drench.
-    {
-        auto sp = irr_setpoints();
-        auto in = irr_dry_inputs(7); in.vpd_kpa = sp.vpd_high;        // exactly at ceiling
-        ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), in, sp), CENTER_BURST_NONE);
-        in.vpd_kpa = sp.vpd_high - 0.2f;                              // humid → below ceiling
-        ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), in, sp), CENTER_BURST_NONE);
-    }
-    // occupancy inhibit blocks the burst.
-    {
-        auto sp = irr_setpoints(); sp.occupancy_inhibit = true;
-        auto in = irr_dry_inputs(7); in.occupied = true;
-        ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), in, sp), CENTER_BURST_NONE);
-    }
-    // sensor fault (implausible inputs) blocks the burst.
-    {
-        auto sp = irr_setpoints();
-        auto in = irr_dry_inputs(7); in.vpd_kpa = NAN;
-        ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), in, sp), CENTER_BURST_NONE);
-    }
+TEST(center_burst_defaults_are_off_and_zero) {
+    const auto sp = default_setpoints();
+    ASSERT_FALSE(sp.sw_dawn_rehydrate_enabled);
+    ASSERT_EQ(sp.dawn_boost_offset_min, 0);
+    ASSERT_EQ(sp.dawn_rehydrate_window_min, 0);
+    ASSERT_EQ(sp.dawn_rehydrate_on_s, 0);
+    ASSERT_EQ(sp.dawn_rehydrate_gap_s, 0);
+    ASSERT_FALSE(sp.sw_midday_drench_enabled);
+    ASSERT_EQ(sp.midday_boost_offset_min, 0);
+    ASSERT_EQ(sp.midday_drench_window_min, 0);
+    ASSERT_EQ(sp.midday_drench_on_s, 0);
+    ASSERT_EQ(sp.midday_drench_gap_s, 0);
     PASS();
 }
 
@@ -696,27 +655,14 @@ TEST(sf1_degraded_keeps_temp_safety_rails) {
     PASS();
 }
 
-TEST(sf1_degraded_allows_timed_center_burst_without_vpd) {
-    // The conservative timed fallback: dawn/midday center bursts still fire when
-    // degraded, even though VPD is at/below the band ceiling (the over-saturation
-    // gate is bypassed because the VPD reading is untrusted). Every OTHER rail
-    // (dusk, feed-hold, dew margin, occupancy, plausibility) still applies.
+TEST(sf1_degraded_does_not_reenable_retired_center_burst) {
     auto sp = irr_setpoints();
-    // Humid reading that would normally block the burst (VPD <= ceiling).
+    sp.sw_dawn_rehydrate_enabled = true;
+    sp.sw_midday_drench_enabled = true;
     auto in = irr_dry_inputs(7);
-    in.vpd_kpa = sp.vpd_high - 0.5f;     // below ceiling → trusted path blocks
+    in.sensor_degraded = true;
     ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), in, sp), CENTER_BURST_NONE);
-    in.sensor_degraded = true;            // degraded → over-saturation gate bypassed
-    ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), in, sp), CENTER_BURST_DAWN);
-    // ...but a degraded burst STILL respects the dusk cutoff and feed hold.
-    {
-        auto sp2 = sp; sp2.feed_hold_active = true;
-        ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), in, sp2), CENTER_BURST_NONE);
-    }
-    {
-        auto in2 = in; in2.dew_point_f = in2.temp_f - 2.0f;   // cold leaf → blocked
-        ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), in2, sp), CENTER_BURST_NONE);
-    }
+    ASSERT_EQ(center_burst_decision(local_minute_of_day(14, 5), in, sp), CENTER_BURST_NONE);
     PASS();
 }
 
@@ -800,51 +746,17 @@ TEST(night_stress_wet_blocked_by_each_rail) {
     PASS();
 }
 
-TEST(center_burst_respects_enable_switches) {
+TEST(determine_mode_never_stamps_retired_center_burst) {
     auto sp = irr_setpoints();
-    sp.sw_dawn_rehydrate_enabled = false;
-    ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), irr_dry_inputs(7), sp), CENTER_BURST_NONE);
-    // midday still works while dawn disabled.
-    ASSERT_EQ(center_burst_decision(local_minute_of_day(14, 5), irr_dry_inputs(14), sp), CENTER_BURST_MIDDAY);
-    sp.sw_midday_drench_enabled = false;
-    ASSERT_EQ(center_burst_decision(local_minute_of_day(14, 5), irr_dry_inputs(14), sp), CENTER_BURST_NONE);
-    PASS();
-}
-
-TEST(center_burst_windows_are_pre_taper_by_default) {
-    // Firmware-v2: the dawn/midday windows anchor to the on-chip solar times via
-    // offsets. With the IRR anchors (sunrise 07:00, solar-noon 13:00, sunset
-    // 20:00) and default offsets (dawn 0, midday 60) + durations, both windows
-    // must close before the pre-sunset wet taper begins, so no burst ever fires
-    // past the taper.
-    auto sp = irr_setpoints();
-    auto in = irr_dry_inputs(7);
-    const int dawn_end   = ((in.sunrise_min + sp.dawn_boost_offset_min) % 1440)
-                         + dawn_rehydrate_window_minutes(sp);
-    const int midday_end = ((in.solar_noon_min + sp.midday_boost_offset_min) % 1440)
-                         + midday_drench_window_minutes(sp);
-    const int taper_start = in.sunset_min - sp.wet_taper_before_sunset_min;  // 20:00 - 120 = 18:00
-    ASSERT_TRUE(dawn_end   <= taper_start);
-    ASSERT_TRUE(midday_end <= taper_start);
-    PASS();
-}
-
-TEST(determine_mode_stamps_center_burst_and_clears_under_safety) {
-    auto sp = irr_setpoints();
-    sp.sw_fsm_controller_enabled = true;
-    validate_setpoints(sp);
-    sp.sw_fsm_controller_enabled = true;
-    // Dry, pre-dusk, dawn hour, VPD above center ceiling, dwell satisfied so we
-    // are firmly in SEALED_MIST → FSM stamps DAWN (hour-granular: hour 7 → 7:00).
-    auto in = irr_dry_inputs(7);
-    auto s = initial_state(); s.vpd_watch_timer_ms = sp.vpd_watch_dwell_ms;
-    determine_mode(in, sp, s, 5000);
-    ASSERT_EQ(s.center_burst, CENTER_BURST_DAWN);
-
-    // Drive temp to the safety_max rail → SAFETY_COOL must clear the burst.
-    auto hot = in; hot.temp_f = sp.safety_max + 2.0f;
-    determine_mode(hot, sp, s, 5000);
-    ASSERT_EQ(s.center_burst, CENTER_BURST_NONE);
+    sp.sw_dawn_rehydrate_enabled = true;
+    sp.sw_midday_drench_enabled = true;
+    for (int hour : {7, 14}) {
+        auto in = irr_dry_inputs(hour);
+        auto state = initial_state();
+        state.vpd_watch_timer_ms = sp.vpd_watch_dwell_ms;
+        determine_mode(in, sp, state, 5000);
+        ASSERT_EQ(state.center_burst, CENTER_BURST_NONE);
+    }
     PASS();
 }
 
@@ -1050,41 +962,6 @@ TEST(day_mask_allows_zero_sunday) {
     ASSERT_FALSE(day_mask_allows(0b0000001, 1));
     ASSERT_TRUE(day_mask_allows(0b0100100, 2));
     ASSERT_TRUE(day_mask_allows(0b0100100, 5));
-    PASS();
-}
-
-TEST(feed_window_open_am_only) {
-    // FRT-8 / F3: default 06:00-09:00 window. Inside → open; outside → closed.
-    ASSERT_TRUE(feed_window_open(6, 6, 9));    // window start, inclusive
-    ASSERT_TRUE(feed_window_open(7, 6, 9));    // ~06:30 feed lands here (and 07:xx)
-    ASSERT_TRUE(feed_window_open(8, 6, 9));    // last in-window hour
-    ASSERT_FALSE(feed_window_open(9, 6, 9));   // end, exclusive
-    ASSERT_FALSE(feed_window_open(5, 6, 9));   // before dawn
-    ASSERT_FALSE(feed_window_open(10, 6, 9));  // the old 10:30 feed time — now blocked
-    ASSERT_FALSE(feed_window_open(15, 6, 9));  // afternoon — blocked
-    ASSERT_FALSE(feed_window_open(22, 6, 9));  // dusk/overnight — blocked
-    ASSERT_FALSE(feed_window_open(0, 6, 9));   // midnight — blocked
-    PASS();
-}
-
-TEST(feed_window_open_fails_safe_degenerate) {
-    // start == end is degenerate → fail CLOSED (no feed) rather than open 24/7.
-    for (int h = 0; h < 24; h++) {
-        ASSERT_FALSE(feed_window_open(h, 8, 8));
-    }
-    PASS();
-}
-
-TEST(feed_window_open_clamps_and_wraps) {
-    // Out-of-range hours are clamped into [0,23]; a wrap window (start>end) is
-    // handled (degenerate for a morning feed but must not open everything).
-    ASSERT_TRUE(feed_window_open(99, 6, 9) == feed_window_open(23, 6, 9));  // clamp
-    // Wrap window 22->2 covers 22,23,0,1 only.
-    ASSERT_TRUE(feed_window_open(23, 22, 2));
-    ASSERT_TRUE(feed_window_open(0, 22, 2));
-    ASSERT_TRUE(feed_window_open(1, 22, 2));
-    ASSERT_FALSE(feed_window_open(2, 22, 2));
-    ASSERT_FALSE(feed_window_open(12, 22, 2));
     PASS();
 }
 

@@ -89,6 +89,8 @@ ownership:
       scope: Update only the primary climate publication assertion for state-change publication plus 60-second continuous and 5-minute band caps; preserve independent ingestor periodic-write proof and unrelated observability assertions.
     - path: deploy/k8s/components/firmware-twin/src/greenhouse_logic.h
       scope: Copy canonical firmware/lib/greenhouse_logic.h byte-for-byte after the one-line DEC-014 solar-night predicate so the existing twin sync guard remains exact.
+    - path: deploy/k8s/components/firmware-twin/src/greenhouse_types.h
+      scope: Copy canonical firmware/lib/greenhouse_types.h byte-for-byte after retiring deliberate dawn/midday center-watering defaults so the existing twin sync guard remains exact.
   owned_interfaces:
     - pure relay resolver
     - zone enable/readbacks

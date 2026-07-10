@@ -2683,49 +2683,94 @@ def test_visible_gpio_relays_are_internal_or_controller_guarded():
         assert ".turn_off();" in block, f"{id_line} guard does not force relay OFF"
 
 
-def test_irrigation_schedule_persists_and_is_readbacked():
+def test_retired_irrigation_schedule_is_inert_and_explicit_durations_remain_writable():
     greenhouse_yaml = Path("firmware/greenhouse.yaml").read_text()
     globals_yaml = Path("firmware/greenhouse/globals.yaml").read_text()
     tunables_yaml = Path("firmware/greenhouse/tunables.yaml").read_text()
     sensors_yaml = Path("firmware/greenhouse/sensors.yaml").read_text()
 
-    expected = {
-        "irrig_wall_start_hour": ("10", "cfg_irrig_wall_start_hour"),
-        "irrig_wall_start_minute": ("30", "cfg_irrig_wall_start_min"),
-        "irrig_wall_duration_min": ("10", "cfg_irrig_wall_duration_min"),
-        "irrig_wall_fert_duration_min": ("6", "cfg_irrig_wall_fert_duration_min"),
-        "irrig_wall_fert_every_n": ("0", "cfg_irrig_wall_fert_every_n"),
-        "irrig_wall_days_mask": ("127", "cfg_irrig_wall_days_mask"),
-        "irrig_wall_fert_days_mask": ("127", "cfg_irrig_wall_fert_days_mask"),
-        "irrig_wall_flush_min": ("2", "cfg_irrig_wall_flush_min"),
-        "irrig_wall_interval_days": ("1", "cfg_irrig_wall_interval_days"),
-        "irrig_center_start_hour": ("10", "cfg_irrig_center_start_hour"),
-        "irrig_center_start_minute": ("30", "cfg_irrig_center_start_min"),
-        "irrig_center_duration_min": ("10", "cfg_irrig_center_duration_min"),
-        "irrig_center_fert_duration_min": ("6", "cfg_irrig_center_fert_duration_min"),
-        "irrig_center_fert_every_n": ("0", "cfg_irrig_center_fert_every_n"),
-        "irrig_center_days_mask": ("127", "cfg_irrig_center_days_mask"),
-        "irrig_center_fert_days_mask": ("127", "cfg_irrig_center_fert_days_mask"),
-        "irrig_center_flush_min": ("2", "cfg_irrig_center_flush_min"),
-        "irrig_center_interval_days": ("1", "cfg_irrig_center_interval_days"),
+    retired = {
+        "irrig_wall_start_hour": "cfg_irrig_wall_start_hour",
+        "irrig_wall_start_minute": "cfg_irrig_wall_start_min",
+        "irrig_wall_fert_duration_min": "cfg_irrig_wall_fert_duration_min",
+        "irrig_wall_fert_every_n": "cfg_irrig_wall_fert_every_n",
+        "irrig_wall_days_mask": "cfg_irrig_wall_days_mask",
+        "irrig_wall_fert_days_mask": "cfg_irrig_wall_fert_days_mask",
+        "irrig_wall_flush_min": "cfg_irrig_wall_flush_min",
+        "irrig_wall_interval_days": "cfg_irrig_wall_interval_days",
+        "irrig_center_start_hour": "cfg_irrig_center_start_hour",
+        "irrig_center_start_minute": "cfg_irrig_center_start_min",
+        "irrig_center_fert_duration_min": "cfg_irrig_center_fert_duration_min",
+        "irrig_center_fert_every_n": "cfg_irrig_center_fert_every_n",
+        "irrig_center_days_mask": "cfg_irrig_center_days_mask",
+        "irrig_center_fert_days_mask": "cfg_irrig_center_fert_days_mask",
+        "irrig_center_flush_min": "cfg_irrig_center_flush_min",
+        "irrig_center_interval_days": "cfg_irrig_center_interval_days",
     }
-    for global_id, (default, cfg_id) in expected.items():
+    for global_id, cfg_id in retired.items():
         registry_name = global_id.removesuffix("ute") if global_id.endswith("_minute") else global_id
         block = re.search(rf"- id: {global_id}\n(?P<body>.*?)(?=\n  - id:|\Z)", globals_yaml, re.S)
         assert block, f"{global_id} missing from globals.yaml"
-        assert "restore_value: yes" in block.group("body")
-        assert f"initial_value: '{default}'" in block.group("body")
+        assert "restore_value: no" in block.group("body")
+        assert "initial_value: '0'" in block.group("body")
+        assert REGISTRY[registry_name].default == 0
+        assert REGISTRY[registry_name].esp_object_id is None
         assert REGISTRY[registry_name].cfg_readback_object_id == cfg_id
         assert f"id: {cfg_id}" in sensors_yaml
-        assert f"return (float)id({global_id});" in sensors_yaml or (
-            global_id.endswith("_minute") and f"return (float)id({global_id});" in sensors_yaml
-        )
-        assert f"if(id({global_id}) <" in greenhouse_yaml
+        assert f"return (float)id({global_id});" in sensors_yaml
+        assert f"if(id({global_id}) != 0)" in greenhouse_yaml
+        assert f"id: num_{global_id.removesuffix('ute')}" not in tunables_yaml
+
+    for global_id, entity_id, cfg_id in (
+        ("irrig_wall_duration_min", "num_irrig_wall_duration", "cfg_irrig_wall_duration_min"),
+        ("irrig_center_duration_min", "num_irrig_center_duration", "cfg_irrig_center_duration_min"),
+    ):
+        block = re.search(rf"- id: {global_id}\n(?P<body>.*?)(?=\n  - id:|\Z)", globals_yaml, re.S)
+        assert block
+        assert "restore_value: yes" in block.group("body")
+        assert "initial_value: '10'" in block.group("body")
+        assert f"id: {entity_id}" in tunables_yaml
+        assert f"id: {cfg_id}" in sensors_yaml
 
     assert "id: sw_irrig_center_enabled" in tunables_yaml
     center_switch = tunables_yaml[tunables_yaml.index("id: sw_irrig_center_enabled") :]
     center_switch = center_switch[: center_switch.index("  # Weather skip enable")]
     assert "restore_mode: RESTORE_DEFAULT_OFF" in center_switch
+
+
+def test_center_mist_has_no_deliberate_dawn_or_midday_watering_surface():
+    controls = Path("firmware/greenhouse/controls.yaml").read_text()
+    tunables = Path("firmware/greenhouse/tunables.yaml").read_text()
+    globals_yaml = Path("firmware/greenhouse/globals.yaml").read_text()
+
+    assert "center_burst_decision(" not in controls
+    assert "CENTER_PULSE" not in controls
+    assert "ctl_state.center_burst = CENTER_BURST_NONE;" in controls
+    assert "return PULSE_ON_MS;" in controls
+    assert "return PULSE_GAP_MS;" in controls
+    assert "10:30" not in controls
+    for entity_id in (
+        "num_dawn_rehydrate_window_min",
+        "num_dawn_rehydrate_on_s",
+        "num_dawn_rehydrate_gap_s",
+        "num_midday_drench_window_min",
+        "num_midday_drench_on_s",
+        "num_midday_drench_gap_s",
+        "num_dawn_boost_offset_min",
+        "num_midday_boost_offset_min",
+        "sw_dawn_rehydrate_enabled_switch",
+        "sw_midday_drench_enabled_switch",
+    ):
+        assert f"id: {entity_id}" not in tunables
+    for global_id in (
+        "sw_dawn_rehydrate_enabled",
+        "sw_midday_drench_enabled",
+        "dawn_rehydrate_window_min",
+        "midday_drench_window_min",
+    ):
+        block = re.search(rf"- id: {global_id}\n(?P<body>.*?)(?=\n  - id:|\Z)", globals_yaml, re.S)
+        assert block
+        assert "initial_value: 'false'" in block.group("body") or "initial_value: '0'" in block.group("body")
 
 
 def test_irrigation_scheduler_serializes_weekly_feed_and_explicit_clean_starts():

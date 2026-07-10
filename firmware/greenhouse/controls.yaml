@@ -574,9 +574,9 @@ interval:
               .night_stress_min_dew_margin_f = id(night_stress_min_dew_margin_f),
               // FRT-6 absorption hold (computed above from feed_hold_until_ms).
               .feed_hold_active = feed_hold_active,
-              // Firmware-v2: dawn/midday boosts anchor to the ON-CHIP solar
-              // times via offsets (sunrise+dawn_boost_offset_min / solar-noon+
-              // midday_boost_offset_min). Cadence knobs unchanged.
+              // Deliberate dawn/midday center watering is retired. Keep the
+              // compatibility fields inert; center mist uses the base VPD
+              // cadence only.
               .sw_dawn_rehydrate_enabled = id(sw_dawn_rehydrate_enabled),
               .dawn_boost_offset_min = id(dawn_boost_offset_min),
               .dawn_rehydrate_window_min = id(dawn_rehydrate_window_min),
@@ -1175,38 +1175,11 @@ interval:
               const uint32_t PULSE_ON_MS  = uint32_t(id(mister_pulse_on_s)) * 1000UL;
               const uint32_t PULSE_GAP_MS = uint32_t(id(mister_pulse_gap_s)) * 1000UL;
 
-              // ── IRR-3 (dawn rehydrate) / IRR-4 (midday drench) ──
-              // Re-evaluate the CENTER-zone time-anchored cadence override with
-              // minute-precise SNTP (determine_mode only had local_hour, so its
-              // ctl_state.center_burst is hour-granular). center_burst_decision
-              // re-checks every rail (feed-hold, dusk cutoff, dew margin,
-              // over-saturation VPD gate, occupancy, plausibility) from the same
-              // sensor_in/setpts the FSM used, so the burst can fire only when
-              // the center is already eligible to wet. It does NOT bypass the
-              // SAF-4 duty cap / daily-volume ceiling (center_wet_allowed +
-              // mister_volume_hard_block, enforced above) — those still gate the
-              // relay, so a burst counts toward and is bounded by the cap. The
-              // override touches ONLY the center pulse ON/GAP; west/south/east
-              // keep the base cadence.
-              CenterBurst center_burst = wet_time_valid
-                ? center_burst_decision(wet_now_minute, sensor_in, setpts)
-                : CENTER_BURST_NONE;
-              // The center burst is also disallowed if the center zone itself is
-              // not currently wet-eligible (duty cap reached / volume ceiling /
-              // crop+climate gate closed) — never drive a denser cadence into a
-              // capped zone.
-              if(!center_wet_allowed) center_burst = CENTER_BURST_NONE;
-              ctl_state.center_burst = center_burst;
-              int center_burst_on_s = 0, center_burst_gap_s = 0;
-              const bool center_burst_active =
-                  center_burst_cadence_s(center_burst, setpts, center_burst_on_s, center_burst_gap_s);
-              const uint32_t CENTER_PULSE_ON_MS  = center_burst_active
-                  ? (uint32_t)center_burst_on_s  * 1000UL : PULSE_ON_MS;
-              const uint32_t CENTER_PULSE_GAP_MS = center_burst_active
-                  ? (uint32_t)center_burst_gap_s * 1000UL : PULSE_GAP_MS;
-              // Per-zone cadence: ONLY zone 3 (center) gets the burst override.
-              auto pulse_on_ms_for  = [&](int zone) -> uint32_t { return zone == 3 ? CENTER_PULSE_ON_MS  : PULSE_ON_MS;  };
-              auto pulse_gap_ms_for = [&](int zone) -> uint32_t { return zone == 3 ? CENTER_PULSE_GAP_MS : PULSE_GAP_MS; };
+              // Center mist is climate/VPD-only. Every zone uses the base pulse
+              // cadence; there is no dawn or midday watering substitution.
+              ctl_state.center_burst = CENTER_BURST_NONE;
+              auto pulse_on_ms_for  = [&](int) -> uint32_t { return PULSE_ON_MS; };
+              auto pulse_gap_ms_for = [&](int) -> uint32_t { return PULSE_GAP_MS; };
 
               // Mister re-fire dwell fence: a zone may not re-energize within
               // mister_min_off_s of its own last off. The misters bypass the
@@ -2234,7 +2207,7 @@ interval:
   ################################################################################
   # 14b — IRRIGATION / COMMISSIONED WALL-FEED STATE MACHINE
   #
-  # One resolver owns every wet origin. Fixed-clock 10:30 jobs and every
+  # One resolver owns every wet origin. Fixed-clock jobs and every
   # center/non-wall fertilizer job are actuation-ineligible. Automatic
   # fertilizer is an exact-once weekly solar claim with measured liters:
   # wall PREWET(clean) -> wall FEED(fertilized) -> fertilizer OFF -> immediate

@@ -640,83 +640,60 @@ globals:
     restore_value: no
     initial_value: '0'
 
-  # ─── FRT-8 / F3 / F1: AM-only feed window ───
-  # Authoritative VPD-INDEPENDENT rail. Every fertilizer job (scheduled fert
-  # states 2/4/7/8 AND the manual fert buttons) is rejected outside the local
-  # [feed_start_hour, feed_end_hour) morning window, regardless of VPD stress.
-  # Default 06:00-09:00 places the once-daily Vanda feed at ~06:30 (F1: the
-  # dispatcher pushes irrig_center_start_hour/minute to 06:30; this gate is the
-  # firmware backstop so PM/dusk/overnight feeds can never run even if a
-  # schedule or manual press lands off-window). Dispatcher-overridable per
-  # season. feed_start_hour == feed_end_hour fails SAFE (no feed).
+  # Retired fixed-clock feed-window compatibility readbacks. Commissioned wall
+  # feed uses the solar scheduler; these values are inert and fixed at zero.
   - id: feed_start_hour
     type: int
     restore_value: no
-    initial_value: '6'
+    initial_value: '0'
 
   - id: feed_end_hour
     type: int
     restore_value: no
-    initial_value: '9'
+    initial_value: '0'
 
-  # ─── IRR-3 (dawn rehydrate) / IRR-4 (midday drench) ───
-  # Two time-anchored CENTER-ZONE mist cadence OVERRIDES for the bare-root
-  # Vanda. They do NOT create a new relay path or mode — they make the existing
-  # center-mist pulse cadence (mister_pulse_on_s / mister_pulse_gap_s) DENSER
-  # inside two short pre-dusk windows so the velamen re-saturates after the
-  # overnight dry-down (dawn) and gets a deeper soak at the solar/thermal peak
-  # (midday). West/south/east cadence is untouched. The burst fires only when
-  # the center is already eligible to wet (climate wet-assist rails: not
-  # feed-hold, not past dusk, dew margin OK, VPD above the center target) and
-  # still counts toward / is bounded by the SAF-4 duty cap + daily-volume
-  # ceiling — a burst can never exceed the cap. Switches default ON so the
-  # feature ships active in the OTA; operator-toggleable.
-  #
-  # IRR-3 dawn: window START anchors to the dispatched sunrise hour
-  # (gl_sunrise_hour) in controls.yaml; only the minute/duration/on/gap live
-  # here. 12-min window, 90s-ON / 20s-GAP — denser than the 60/45 base.
+  # Retired deliberate dawn/midday center-watering fields. Center misters run
+  # only as part of the base climate/VPD cycle; these compatibility values are
+  # fixed off/zero and are not writable.
   - id: sw_dawn_rehydrate_enabled
     type: bool
     restore_value: no
-    initial_value: 'true'
+    initial_value: 'false'
 
   - id: dawn_rehydrate_window_min
     type: int
     restore_value: no
-    initial_value: '12'       # dawn rehydrate window length (minutes)
+    initial_value: '0'
 
   - id: dawn_rehydrate_on_s
     type: int
     restore_value: no
-    initial_value: '90'       # center pulse ON during dawn window (s) — longer than 60s base
+    initial_value: '0'
 
   - id: dawn_rehydrate_gap_s
     type: int
     restore_value: no
-    initial_value: '20'       # center pulse GAP during dawn window (s) — shorter than 45s base → denser
+    initial_value: '0'
 
-  # IRR-4 midday: firmware-v2 anchors the window START to solar-noon +
-  # midday_boost_offset_min (on-chip ephemeris). 11-min window, deeper
-  # 120s-ON / 25s-GAP soak. Still pre-taper (blocked by the wet-taper rule).
   - id: sw_midday_drench_enabled
     type: bool
     restore_value: no
-    initial_value: 'true'
+    initial_value: 'false'
 
   - id: midday_drench_window_min
     type: int
     restore_value: no
-    initial_value: '11'       # midday drench window length (minutes)
+    initial_value: '0'
 
   - id: midday_drench_on_s
     type: int
     restore_value: no
-    initial_value: '120'      # center pulse ON during midday window (s) — deeper soak than dawn
+    initial_value: '0'
 
   - id: midday_drench_gap_s
     type: int
     restore_value: no
-    initial_value: '25'       # center pulse GAP during midday window (s) — still denser than 45s base
+    initial_value: '0'
 
   # (CYC-4 overnight micro-pulse path DELETED in firmware-v2: night emergency
   # is now `vpd > band_high` via the normal SEALED_MIST path under existing
@@ -1022,17 +999,16 @@ globals:
     restore_value: yes
     initial_value: '6.0'
 
-  # Generic zone-boost offsets (minutes from solar event); replace the fixed
-  # dawn_rehydrate_start_hour / midday_drench_hour clocks.
+  # Retired deliberate center-watering offsets; fixed at zero/readback only.
   - id: dawn_boost_offset_min
     type: int
-    restore_value: yes
-    initial_value: '0'        # offset from sunrise (SR)
+    restore_value: no
+    initial_value: '0'
 
   - id: midday_boost_offset_min
     type: int
-    restore_value: yes
-    initial_value: '60'       # offset from solar noon (SM)
+    restore_value: no
+    initial_value: '0'
 
   # Manual button latch timeout (minutes) for the deadline latches below.
   - id: manual_override_timeout_min
@@ -1373,9 +1349,8 @@ globals:
     type: int
     restore_value: no
     initial_value: '0'
-    # 0=idle, 1=wall_clean, 2=wall_fert, 3=center_clean, 4=center_fert,
-    # 5=wall_flush, 6=center_flush, 7=south_mister_fert, 8=west_mister_fert,
-    # 9=south_mister_flush, 10=west_mister_flush
+    # 0=idle, 1=wall_clean, 2=center_drip_clean,
+    # 5=weekly_wall_prewet, 6=weekly_wall_feed, 7=weekly_wall_flush
 
   - id: irrig_timer_ms
     type: uint32_t
@@ -1386,8 +1361,8 @@ globals:
     type: int
     restore_value: no
     initial_value: '0'
-    # Bitmask: bit0=wall_clean, bit1=wall_fert, bit2=center_clean,
-    # bit3=center_fert, bit4=south_mister_fert, bit5=west_mister_fert
+    # Bitmask: bit0=wall_clean, bit2=center_drip_clean. All fertilizer queue
+    # bits and all mister irrigation jobs are retired.
 
   # True only while the irrigation state machine is intentionally changing
   # fertilized relays or the fertilizer master valve. Relay-level guards use
@@ -1432,17 +1407,18 @@ globals:
     restore_value: no
     initial_value: '0'
 
-  # Scheduling tunables (persisted so OTA/reboot does not rewrite the live
-  # irrigation program before the dispatcher reasserts the authoritative plan).
+  # Retired fixed-clock/fertilizer schedule compatibility readbacks. These are
+  # inert, not persisted, and forced to zero at boot. Only explicit clean-water
+  # durations remain writable.
   - id: irrig_wall_start_hour
     type: int
-    restore_value: yes
-    initial_value: '10'
+    restore_value: no
+    initial_value: '0'
 
   - id: irrig_wall_start_minute
     type: int
-    restore_value: yes
-    initial_value: '30'
+    restore_value: no
+    initial_value: '0'
 
   - id: irrig_wall_duration_min
     type: int
@@ -1451,43 +1427,43 @@ globals:
 
   - id: irrig_wall_fert_duration_min
     type: int
-    restore_value: yes
-    initial_value: '6'
+    restore_value: no
+    initial_value: '0'
 
   - id: irrig_wall_fert_every_n
     type: int
-    restore_value: yes
+    restore_value: no
     initial_value: '0'
 
   - id: irrig_wall_days_mask
     type: int
-    restore_value: yes
-    initial_value: '127'
+    restore_value: no
+    initial_value: '0'
 
   - id: irrig_wall_fert_days_mask
     type: int
-    restore_value: yes
-    initial_value: '127'
+    restore_value: no
+    initial_value: '0'
 
   - id: irrig_wall_flush_min
     type: int
-    restore_value: yes
-    initial_value: '2'
+    restore_value: no
+    initial_value: '0'
 
   - id: irrig_wall_interval_days
     type: int
-    restore_value: yes
-    initial_value: '1'
+    restore_value: no
+    initial_value: '0'
 
   - id: irrig_center_start_hour
     type: int
-    restore_value: yes
-    initial_value: '10'
+    restore_value: no
+    initial_value: '0'
 
   - id: irrig_center_start_minute
     type: int
-    restore_value: yes
-    initial_value: '30'
+    restore_value: no
+    initial_value: '0'
 
   - id: irrig_center_duration_min
     type: int
@@ -1496,33 +1472,33 @@ globals:
 
   - id: irrig_center_fert_duration_min
     type: int
-    restore_value: yes
-    initial_value: '6'
+    restore_value: no
+    initial_value: '0'
 
   - id: irrig_center_fert_every_n
     type: int
-    restore_value: yes
+    restore_value: no
     initial_value: '0'
 
   - id: irrig_center_days_mask
     type: int
-    restore_value: yes
-    initial_value: '127'
+    restore_value: no
+    initial_value: '0'
 
   - id: irrig_center_fert_days_mask
     type: int
-    restore_value: yes
-    initial_value: '127'
+    restore_value: no
+    initial_value: '0'
 
   - id: irrig_center_flush_min
     type: int
-    restore_value: yes
-    initial_value: '2'
+    restore_value: no
+    initial_value: '0'
 
   - id: irrig_center_interval_days
     type: int
-    restore_value: yes
-    initial_value: '1'
+    restore_value: no
+    initial_value: '0'
 
   # VPD boost
   - id: irrig_vpd_boost_pct

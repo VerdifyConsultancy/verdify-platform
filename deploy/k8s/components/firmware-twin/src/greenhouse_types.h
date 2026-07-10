@@ -754,20 +754,18 @@ inline Setpoints default_setpoints() {
         .night_stress_min_dew_margin_f = 10.0f,
         // FRT-6: absorption hold inactive until controls.yaml arms it.
         .feed_hold_active = false,
-        // Dawn boost: window opens AT on-chip sunrise (offset 0), 12 min,
-        // 90s-ON/20s-GAP — denser than the 60/45 base. Generic zone boost.
-        .sw_dawn_rehydrate_enabled = true,
+        // Retired deliberate center-watering compatibility fields. Center mist
+        // follows the base VPD cycle only.
+        .sw_dawn_rehydrate_enabled = false,
         .dawn_boost_offset_min = 0,
-        .dawn_rehydrate_window_min = 12,
-        .dawn_rehydrate_on_s = 90,
-        .dawn_rehydrate_gap_s = 20,
-        // Midday boost: window opens solar-noon + 60 min (the thermal peak
-        // lags solar max), 11 min, deeper 120s-ON/25s-GAP soak.
-        .sw_midday_drench_enabled = true,
-        .midday_boost_offset_min = 60,
-        .midday_drench_window_min = 11,
-        .midday_drench_on_s = 120,
-        .midday_drench_gap_s = 25,
+        .dawn_rehydrate_window_min = 0,
+        .dawn_rehydrate_on_s = 0,
+        .dawn_rehydrate_gap_s = 0,
+        .sw_midday_drench_enabled = false,
+        .midday_boost_offset_min = 0,
+        .midday_drench_window_min = 0,
+        .midday_drench_on_s = 0,
+        .midday_drench_gap_s = 0,
         // Served-band targets: neutral defaults; the on-chip curve overwrites
         // these every cycle (they are telemetry/arbitration inputs, not knobs).
         .temp_target = 75.0f,

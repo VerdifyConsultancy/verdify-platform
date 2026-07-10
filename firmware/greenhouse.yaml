@@ -78,26 +78,31 @@ esphome:
           if(id(target_temp_high_f) < 60 || id(target_temp_high_f) > 100){ id(target_temp_high_f) = 82; fixes++; }
           if(id(target_vpd_high_kpa) < 0.5 || id(target_vpd_high_kpa) > 4){ id(target_vpd_high_kpa) = 2.0; fixes++; }
           if(id(target_vpd_low_kpa) < 0.1 || id(target_vpd_low_kpa) > 2){ id(target_vpd_low_kpa) = 0.5; fixes++; }
-          // Legacy fixed-clock irrigation fields remain readback-compatible but
-          // are actuation-ineligible. Weekly wall feed uses the solar scheduler.
-          if(id(irrig_wall_start_hour) < 0 || id(irrig_wall_start_hour) > 23){ id(irrig_wall_start_hour) = 10; fixes++; }
-          if(id(irrig_wall_start_minute) < 0 || id(irrig_wall_start_minute) > 59){ id(irrig_wall_start_minute) = 30; fixes++; }
+          // Retired fixed-clock/fertilizer fields remain readback-compatible
+          // but are ineligible for actuation and fixed at zero. Weekly wall
+          // feed uses the commissioned solar scheduler.
+          if(id(irrig_wall_start_hour) != 0){ id(irrig_wall_start_hour) = 0; fixes++; }
+          if(id(irrig_wall_start_minute) != 0){ id(irrig_wall_start_minute) = 0; fixes++; }
           if(id(irrig_wall_duration_min) < 1 || id(irrig_wall_duration_min) > 120){ id(irrig_wall_duration_min) = 10; fixes++; }
-          if(id(irrig_wall_fert_duration_min) < 0 || id(irrig_wall_fert_duration_min) > 60){ id(irrig_wall_fert_duration_min) = 6; fixes++; }
-          if(id(irrig_wall_fert_every_n) < 0 || id(irrig_wall_fert_every_n) > 30){ id(irrig_wall_fert_every_n) = 0; fixes++; }
-          if(id(irrig_wall_days_mask) < 0 || id(irrig_wall_days_mask) > 127){ id(irrig_wall_days_mask) = 127; fixes++; }
-          if(id(irrig_wall_fert_days_mask) < 0 || id(irrig_wall_fert_days_mask) > 127){ id(irrig_wall_fert_days_mask) = 127; fixes++; }
-          if(id(irrig_wall_flush_min) < 0 || id(irrig_wall_flush_min) > 30){ id(irrig_wall_flush_min) = 2; fixes++; }
-          if(id(irrig_wall_interval_days) < 1 || id(irrig_wall_interval_days) > 14){ id(irrig_wall_interval_days) = 1; fixes++; }
-          if(id(irrig_center_start_hour) < 0 || id(irrig_center_start_hour) > 23){ id(irrig_center_start_hour) = 10; fixes++; }
-          if(id(irrig_center_start_minute) < 0 || id(irrig_center_start_minute) > 59){ id(irrig_center_start_minute) = 30; fixes++; }
+          if(id(irrig_wall_fert_duration_min) != 0){ id(irrig_wall_fert_duration_min) = 0; fixes++; }
+          if(id(irrig_wall_fert_every_n) != 0){ id(irrig_wall_fert_every_n) = 0; fixes++; }
+          if(id(irrig_wall_days_mask) != 0){ id(irrig_wall_days_mask) = 0; fixes++; }
+          if(id(irrig_wall_fert_days_mask) != 0){ id(irrig_wall_fert_days_mask) = 0; fixes++; }
+          if(id(irrig_wall_flush_min) != 0){ id(irrig_wall_flush_min) = 0; fixes++; }
+          if(id(irrig_wall_interval_days) != 0){ id(irrig_wall_interval_days) = 0; fixes++; }
+          if(id(irrig_center_start_hour) != 0){ id(irrig_center_start_hour) = 0; fixes++; }
+          if(id(irrig_center_start_minute) != 0){ id(irrig_center_start_minute) = 0; fixes++; }
           if(id(irrig_center_duration_min) < 1 || id(irrig_center_duration_min) > 120){ id(irrig_center_duration_min) = 10; fixes++; }
-          if(id(irrig_center_fert_duration_min) < 0 || id(irrig_center_fert_duration_min) > 60){ id(irrig_center_fert_duration_min) = 6; fixes++; }
-          if(id(irrig_center_fert_every_n) < 0 || id(irrig_center_fert_every_n) > 30){ id(irrig_center_fert_every_n) = 0; fixes++; }
-          if(id(irrig_center_days_mask) < 0 || id(irrig_center_days_mask) > 127){ id(irrig_center_days_mask) = 127; fixes++; }
-          if(id(irrig_center_fert_days_mask) < 0 || id(irrig_center_fert_days_mask) > 127){ id(irrig_center_fert_days_mask) = 127; fixes++; }
-          if(id(irrig_center_flush_min) < 0 || id(irrig_center_flush_min) > 30){ id(irrig_center_flush_min) = 2; fixes++; }
-          if(id(irrig_center_interval_days) < 1 || id(irrig_center_interval_days) > 14){ id(irrig_center_interval_days) = 1; fixes++; }
+          if(id(irrig_center_fert_duration_min) != 0){ id(irrig_center_fert_duration_min) = 0; fixes++; }
+          if(id(irrig_center_fert_every_n) != 0){ id(irrig_center_fert_every_n) = 0; fixes++; }
+          if(id(irrig_center_days_mask) != 0){ id(irrig_center_days_mask) = 0; fixes++; }
+          if(id(irrig_center_fert_days_mask) != 0){ id(irrig_center_fert_days_mask) = 0; fixes++; }
+          if(id(irrig_center_flush_min) != 0){ id(irrig_center_flush_min) = 0; fixes++; }
+          if(id(irrig_center_interval_days) != 0){ id(irrig_center_interval_days) = 0; fixes++; }
+          if(id(sw_dawn_rehydrate_enabled)){ id(sw_dawn_rehydrate_enabled) = false; fixes++; }
+          if(id(sw_midday_drench_enabled)){ id(sw_midday_drench_enabled) = false; fixes++; }
+          if(id(dawn_boost_offset_min) != 0){ id(dawn_boost_offset_min) = 0; fixes++; }
+          if(id(midday_boost_offset_min) != 0){ id(midday_boost_offset_min) = 0; fixes++; }
           // Commissioned weekly wall feed fails closed on every corrupt/missing
           // input. Zero is the safe default; do not invent field values here.
           if(id(wall_commissioning_evidence_mask) < 0 || id(wall_commissioning_evidence_mask) > WALL_COMMISSIONING_REQUIRED_MASK){ id(wall_commissioning_evidence_mask) = 0; fixes++; }

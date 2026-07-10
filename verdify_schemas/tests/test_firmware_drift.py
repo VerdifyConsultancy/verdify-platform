@@ -314,6 +314,72 @@ KNOWN_PRE_EXISTING_DRIFT.setdefault("CFG_READBACK_MAP", set()).update(
     if (oid := REGISTRY[name].cfg_readback_object_id) and oid not in _STAGED_FW_IDS
 )
 
+
+def test_retired_irrigation_clocks_fert_cadence_and_center_bursts_are_not_writable(entity_map):
+    firmware_ids = _firmware_entity_ids()
+    retired = {
+        "feed_start_hour",
+        "feed_end_hour",
+        "irrig_wall_start_hour",
+        "irrig_wall_start_min",
+        "irrig_wall_fert_duration_min",
+        "irrig_wall_fert_every_n",
+        "irrig_wall_days_mask",
+        "irrig_wall_fert_days_mask",
+        "irrig_wall_flush_min",
+        "irrig_wall_interval_days",
+        "irrig_center_start_hour",
+        "irrig_center_start_min",
+        "irrig_center_fert_duration_min",
+        "irrig_center_fert_every_n",
+        "irrig_center_days_mask",
+        "irrig_center_fert_days_mask",
+        "irrig_center_flush_min",
+        "irrig_center_interval_days",
+        "sw_dawn_rehydrate_enabled",
+        "dawn_rehydrate_window_min",
+        "dawn_rehydrate_on_s",
+        "dawn_rehydrate_gap_s",
+        "sw_midday_drench_enabled",
+        "midday_drench_window_min",
+        "midday_drench_on_s",
+        "midday_drench_gap_s",
+        "dawn_boost_offset_min",
+        "midday_boost_offset_min",
+    }
+    for name in retired:
+        spec = REGISTRY[name]
+        assert spec.default == 0
+        assert spec.esp_object_id is None
+        assert spec.planner_pushable is False
+        assert name not in entity_map.SETPOINT_MAP.values()
+
+    forbidden_entity_ids = {
+        "num_irrig_wall_start_hour",
+        "num_irrig_wall_start_min",
+        "num_irrig_wall_fert_duration",
+        "num_irrig_wall_fert_every_n",
+        "num_irrig_wall_days_mask",
+        "num_irrig_wall_fert_days_mask",
+        "num_irrig_wall_flush",
+        "num_irrig_wall_interval",
+        "num_irrig_center_start_hour",
+        "num_irrig_center_start_min",
+        "num_irrig_center_fert_duration",
+        "num_irrig_center_fert_every_n",
+        "num_irrig_center_days_mask",
+        "num_irrig_center_fert_days_mask",
+        "num_irrig_center_flush",
+        "num_irrig_center_interval",
+        "num_dawn_rehydrate_window_min",
+        "num_midday_drench_window_min",
+        "num_dawn_boost_offset_min",
+        "num_midday_boost_offset_min",
+        "sw_dawn_rehydrate_enabled_switch",
+        "sw_midday_drench_enabled_switch",
+    }
+    assert firmware_ids.isdisjoint(forbidden_entity_ids)
+
 # (#410 staging stanza removed: PR #418 merged the cfg_dehum_vent_hold_enabled
 # sensor into firmware/greenhouse/sensors.yaml, so the self-shrinking allowlist
 # entry for cfg___dehum_vent_hold_enabled had already shrunk to nothing, and

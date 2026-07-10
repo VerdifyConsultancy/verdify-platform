@@ -3259,7 +3259,7 @@ sensor:
       if (!id(cfg_first_pull_ok)) return NAN;
       return id(sw_midday_drench_enabled) ? 1.0f : 0.0f;
 
-  # FRT-8 / F3 / F1: AM-only feed window readbacks (rule 6).
+  # Retired fixed-clock feed-window compatibility readbacks (fixed zero).
   - platform: template
     id: cfg_num_feed_start_hour
     name: "Cfg Feed Start Hour"

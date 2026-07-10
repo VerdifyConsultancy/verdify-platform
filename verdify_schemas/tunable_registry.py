@@ -2773,11 +2773,9 @@ REGISTRY: dict[str, TunableDef] = {
         ),
     ),
     # ─────────────────────────────────────────────────────────────────────
-    # FRT-8 / F1 / F3 — AM-only Vanda feed window (firmware backstop globals).
-    # No dispatcher number/switch entity: these are firmware-internal globals
-    # with cfg_* readbacks only (sensors.yaml). The dispatcher owns actual feed
-    # timing via irrig_center_start_hour/min; these gate fert jobs to a safe AM
-    # window regardless. Routed here so the cfg readbacks are not fire-and-forget.
+    # Retired fixed-clock feed-window compatibility readbacks. Commissioned
+    # wall feed uses the solar scheduler; post-assembly normalization below
+    # fixes these fields at zero and classifies them retired.
     # ─────────────────────────────────────────────────────────────────────
     "feed_start_hour": TunableDef(
         name="feed_start_hour",
@@ -2792,7 +2790,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="firmware_internal",
         planner_pushable=False,
         tier=2,
-        notes="FRT-8 feed-window backstop: earliest local hour fert jobs may run. cfg readback only; no dispatcher number entity.",
+        notes="Retired fixed-clock feed-window compatibility readback; fixed zero.",
     ),
     "feed_end_hour": TunableDef(
         name="feed_end_hour",
@@ -2807,15 +2805,12 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="firmware_internal",
         planner_pushable=False,
         tier=2,
-        notes="FRT-8 feed-window backstop: latest local hour fert jobs may run. feed_start_hour==feed_end_hour fails SAFE (no feed).",
+        notes="Retired fixed-clock feed-window compatibility readback; fixed zero.",
     ),
     # ─────────────────────────────────────────────────────────────────────
-    # IRR-3 (dawn rehydrate) / IRR-4 (midday drench) — CENTER-zone denser mist
-    # cadence overrides. Firmware-internal globals; ESPHome num_*/sw_* entities
-    # exist in tunables.yaml but are not on the dispatcher SETPOINT_MAP route,
-    # so they stay readback-only context here (esp_object_id=None). cfg_*
-    # readbacks (sensors.yaml) routed so the IRR-3/IRR-4 knobs are not
-    # fire-and-forget (CLAUDE.md rule 6).
+    # Retired deliberate dawn/midday center-watering compatibility readbacks.
+    # Center mist follows only the base climate/VPD cadence; post-assembly
+    # normalization below fixes these fields off/zero and classifies them retired.
     # ─────────────────────────────────────────────────────────────────────
     "sw_dawn_rehydrate_enabled": TunableDef(
         name="sw_dawn_rehydrate_enabled",
@@ -3229,6 +3224,64 @@ assert not set(_FW2_STAGED_DEFS) & set(REGISTRY), "firmware-v2 staged names coll
 
 REGISTRY.update(_FW2_STAGED_DEFS)
 
+# Fixed-clock irrigation/fertilizer schedule controls and deliberate
+# dawn/midday center-watering controls are retired compatibility readbacks.
+# Normalize them here after the staged firmware-v2 rows are assembled so every
+# derived consumer sees the same fail-closed, non-writable contract.
+_INERT_IRRIGATION_COMPAT_TUNABLES: frozenset[str] = frozenset(
+    {
+        "feed_start_hour",
+        "feed_end_hour",
+        "irrig_wall_start_hour",
+        "irrig_wall_start_min",
+        "irrig_wall_fert_duration_min",
+        "irrig_wall_fert_every_n",
+        "irrig_wall_days_mask",
+        "irrig_wall_fert_days_mask",
+        "irrig_wall_flush_min",
+        "irrig_wall_interval_days",
+        "irrig_center_start_hour",
+        "irrig_center_start_min",
+        "irrig_center_fert_duration_min",
+        "irrig_center_fert_every_n",
+        "irrig_center_days_mask",
+        "irrig_center_fert_days_mask",
+        "irrig_center_flush_min",
+        "irrig_center_interval_days",
+        "sw_dawn_rehydrate_enabled",
+        "dawn_rehydrate_start_minute",
+        "dawn_rehydrate_window_min",
+        "dawn_rehydrate_on_s",
+        "dawn_rehydrate_gap_s",
+        "sw_midday_drench_enabled",
+        "midday_drench_hour",
+        "midday_drench_start_minute",
+        "midday_drench_window_min",
+        "midday_drench_on_s",
+        "midday_drench_gap_s",
+        "dawn_boost_offset_min",
+        "midday_boost_offset_min",
+    }
+)
+
+for _name in _INERT_IRRIGATION_COMPAT_TUNABLES:
+    _spec = REGISTRY[_name]
+    REGISTRY[_name] = _spec.model_copy(
+        update={
+            "min": 0.0,
+            "default": 0.0,
+            "fw_clamp_lo": None,
+            "fw_clamp_hi": None,
+            "esp_object_id": None,
+            "push_owner": "firmware_internal",
+            "planner_pushable": False,
+            "notes": (
+                "Retired irrigation compatibility readback; ignored by firmware "
+                "and fixed at zero."
+            ),
+        }
+    )
+
 FIRMWARE_V2_STAGED_REG: frozenset[str] = frozenset(_FW2_STAGED_DEFS)
 FIRMWARE_V2_CFG_WIRE_IDS: dict[str, str] = {
     name: _FW2_STAGED_DEFS[name].cfg_readback_object_id for name in sorted(FIRMWARE_V2_STAGED_REG)
@@ -3257,6 +3310,7 @@ RETIRED_TUNABLES_REG: frozenset[str] = frozenset(
         "sw_fsm_controller_enabled",
         "summer_vent_min_runtime_s",
         "vent_bypass_min",
+        *_INERT_IRRIGATION_COMPAT_TUNABLES,
     }
 )
 

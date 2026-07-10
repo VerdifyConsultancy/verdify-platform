@@ -371,6 +371,9 @@ class TestActivityDirectWetGuards:
         "direct_wet_west_drydown_before_off_min",
         "direct_wet_center_start_offset_min",
         "direct_wet_center_drydown_before_off_min",
+    }
+
+    RETIRED_IRRIGATION_MASKS = {
         "irrig_wall_days_mask",
         "irrig_wall_fert_days_mask",
         "irrig_center_days_mask",
@@ -398,6 +401,14 @@ class TestActivityDirectWetGuards:
             assert row.control_class == "scheduled_policy"
             assert row.push_owner == "schedule"
             assert row.cfg_readback_object_id  # readback visibility preserved
+        for name in self.RETIRED_IRRIGATION_MASKS:
+            row = REGISTRY[name]
+            assert not row.planner_pushable
+            assert row.control_class == "retired"
+            assert row.push_owner == "firmware_internal"
+            assert row.esp_object_id is None
+            assert row.default == 0
+            assert row.cfg_readback_object_id
         for name in (
             "direct_wet_stress_vpd_margin_kpa",
             "direct_wet_stress_min_dew_margin_f",
