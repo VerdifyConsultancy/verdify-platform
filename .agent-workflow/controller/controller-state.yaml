@@ -5,7 +5,7 @@ project_id: verdify-platform
 controller_id: software-recovery-root-019f4826
 status: active
 state: WAVE_EXECUTING
-updated_at: "2026-07-10T02:33:50Z"
+updated_at: "2026-07-10T04:58:05Z"
 current_wave: wave-software-recovery-implementation
 sessions:
   - id: software-recovery-root-019f4826
@@ -116,6 +116,24 @@ sessions:
     branch: lane/recovery-evidence-293-389-410-419-424
     worktree: /Users/jason/repos/verdify-worktrees/software-recovery-evidence-core
     status: complete
+  - id: resource-accounting-local-20260710
+    role: worker
+    executor: codex-root-local-operator
+    repository: VerdifyConsultancy/verdify-platform
+    issue: 437
+    lane_id: resource-accounting
+    branch: lane/recovery-resource-437
+    worktree: /Users/jason/repos/verdify-worktrees/software-recovery-resource-437
+    status: complete
+  - id: resource-accounting-critic-20260710
+    role: critic
+    executor: codex-local-subagent
+    repository: VerdifyConsultancy/verdify-platform
+    issue: 437
+    lane_id: resource-accounting
+    branch: lane/recovery-resource-437
+    worktree: /Users/jason/repos/verdify-worktrees/software-recovery-resource-437
+    status: complete
 events:
   - id: controller-event-20260709-001
     occurred_at: "2026-07-09T20:52:12Z"
@@ -197,17 +215,21 @@ events:
     occurred_at: "2026-07-10T02:33:50Z"
     event_type: repository_clean
     summary: "All registered worktrees are clean, local main equals origin/main, zero PRs remain open, redundant superseded review drafts were reconciled, and the clean-main handoff is committed for the next dependency-ready lane."
+  - id: controller-event-20260710-021
+    occurred_at: "2026-07-10T04:58:05Z"
+    event_type: lane_merged
+    summary: "Resource-accounting PR #445 merged to main at a2060ad after exact-head independent approval and fully green CI; issue #437 closed and DLI availability is now dependency-ready. Production migrations, restarts, dashboard rollout, and acceptance remain release-control work."
 open_gates:
   - g-prod-db-credential-rotation-20260709
 next_actions:
-  - Dispatch resource-accounting from authoritative main cfc5853, then DLI availability and planner delivery in dependency order.
+  - Dispatch DLI availability from authoritative main a2060ad, then planner delivery in dependency order.
   - Keep writer deployment proof, evidence migrations, service restarts, firmware response, and runtime acceptance in release control.
   - Route each future immutable lane head through its required critic, GitHub CI, and integration review before merge.
   - Preserve the credential-rotation release block until Jason explicitly authorizes the protected rotation.
 handoff:
   next_skill: sprint-orchestrator
   next_mode: recorded-local-fallback
-  reason: Writer and evidence-core source checkpoints are merged; continue dependency-ready recovery lanes through the approved isolated local-worktree fallback while maintaining the production credential gate.
+  reason: Writer, evidence-core, and resource-accounting are merged; dispatch dependency-ready DLI availability through the approved isolated local-worktree fallback while maintaining the production credential gate.
 approval:
   status: approved
   approver: Jason Vallery

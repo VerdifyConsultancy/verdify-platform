@@ -1,9 +1,10 @@
 sprint_id: software-recovery-2026-07-09
 lane_id: resource-accounting
-state: READY_FOR_MERGE
-updated_at: "2026-07-10T04:51:37Z"
-head_sha: 6ea8ab1
-schema_sha: 6ea8ab1
+state: COMPLETE
+updated_at: "2026-07-10T04:58:05Z"
+head_sha: 6ea8ab18633fbfd9638899495cdaaabb0ffa9fcf
+schema_sha: 6ea8ab18633fbfd9638899495cdaaabb0ffa9fcf
+merge_sha: a2060adabef37398f02c3b9db84995347d86649b
 working_tree_clean: true
 acceptance:
   passed:
@@ -18,5 +19,5 @@ blockers:
   - Physical coefficient calibration and whole-building/circuit metering remain out of scope; provisional terms are scoring-ineligible.
 decisions_requested: []
 next_actions:
-  - Mark independently approved, fully green draft PR #445 ready and merge it to main.
   - Release-control applies migrations 193 then 194 before restarting verdify-ingestor, verdify-mcp, and verdify-api; then roll out Grafana and run live acceptance.
+  - DLI availability may reserve migration 195 and consume the merged shared DB/MCP/API/Grafana head.

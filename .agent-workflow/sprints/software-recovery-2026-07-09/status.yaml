@@ -3,10 +3,9 @@ kind: SprintStatus
 schema_version: "1.0"
 sprint_id: software-recovery-2026-07-09
 state: IMPLEMENTING
-updated_at: "2026-07-10T02:33:50Z"
-active_lanes:
-  - security-hygiene
+updated_at: "2026-07-10T04:58:05Z"
+active_lanes: []
 blockers:
   - Native Agent Platform lane dispatch is unavailable; the approved sprint-scoped local Codex fallback is required for implementation lanes.
   - Production release remains blocked by g-prod-db-credential-rotation-20260709 until Jason separately authorizes and the controller verifies the protected rotation.
-next_action: Dispatch resource-accounting from merged main cfc5853, then continue DLI availability and planner delivery while release-control retains all production mutation authority.
+next_action: Dispatch dli-availability from merged main a2060ad, then continue planner delivery while release-control retains all production mutation authority.

@@ -3411,6 +3411,52 @@ events:
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0072
   content_sha256: null
+- id: LEDGER-EVT-0074
+  sequence: 74
+  occurred_at: '2026-07-10T04:58:05Z'
+  event_type: worker_closeout
+  source: sprint-orchestrator
+  subject: resource-accounting lane source checkpoint merged
+  actor:
+    role: controller
+    name: software-recovery-root-019f4826
+  session_id: software-recovery-root-019f4826
+  correlation:
+    trace_id: null
+    wave_id: wave-software-recovery-implementation
+    session_ids:
+    - software-recovery-root-019f4826
+    - resource-accounting-local-20260710
+    - resource-accounting-critic-20260710
+    issue_ids:
+    - 437
+    lane_ids:
+    - resource-accounting
+    pr_ids:
+    - '445'
+    deployment_ids: []
+    policy_decision_ids:
+    - g-prod-db-credential-rotation-20260709
+  refs:
+    artifact_refs:
+    - docs/handoff/resource-accounting-2026-07-10.md
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/resource-accounting/status.yaml
+    evidence_refs:
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/resource-accounting/evidence.yaml
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/resource-accounting/critic-report.md
+    external_refs:
+    - type: github_pr
+      identifier: VerdifyConsultancy/verdify-platform#445
+      url: https://github.com/VerdifyConsultancy/verdify-platform/pull/445
+    - type: git_commit
+      identifier: a2060adabef37398f02c3b9db84995347d86649b
+      url: https://github.com/VerdifyConsultancy/verdify-platform/commit/a2060adabef37398f02c3b9db84995347d86649b
+  result: approved
+  summary: Resource-accounting PR 445 merged after exact-head independent approval and green CI; issue 437 closed and DLI availability became dependency-ready.
+  data_summary: Migrations 193-194, service restarts, dashboard rollout, and live acceptance remain exclusively in release control; no production mutation occurred.
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0073
+  content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
   severity: low
@@ -3431,4 +3477,4 @@ exceptions:
 handoff:
   next_skill: sprint-orchestrator
   next_mode: recorded-local-fallback
-  reason: Writer and evidence-core source checkpoints are merged at cfc5853; dispatch resource-accounting next, then continue dependency-ready recovery lanes while preserving the production credential gate.
+  reason: Writer, evidence-core, and resource-accounting are merged at a2060ad; dispatch DLI availability next while preserving the production credential gate.
