@@ -1,21 +1,27 @@
 sprint_id: software-recovery-2026-07-09
 lane_id: evidence-core
-state: NOT_STARTED
-updated_at: "2026-07-09T22:09:48Z"
-head_sha: 0a9a19a840be6bae1beba604497d880b3b74b1ef
-working_tree_clean: false
+state: READY_FOR_CRITIC
+updated_at: "2026-07-10T01:06:53Z"
+head_sha: 733349d0f5d9b6990791cce3b0e57b2a27656125
+integrated_validation_sha: 6f934d0825d35d067984716ea73d8aafe1fd49f7
+controller_contract_sha: f15bf3ac35742278af429d5c3599639f56513f86
+working_tree_clean: true
 acceptance:
-  passed: []
-  pending:
+  passed:
     - LANE-AC-01
     - LANE-AC-02
     - LANE-AC-03
     - LANE-AC-04
+  pending: []
   failed: []
 blockers:
-  - The assigned feature worktree does not yet exist and must be created from the approved baseline before dispatch.
+  - Independent SQL/replay evidence critic has not yet reviewed the immutable pushed checkpoint.
+  - GitHub PR CI has not yet run.
+  - Production migration, service restart, and exact runtime proof are controller/release-owned.
+  - Current daytime held-temp admission requires the accepted firmware-control response scope.
 decisions_requested: []
 next_actions:
-  - Create the contracted branch/worktree from the approved baseline.
-  - Reconstruct the lane from the common contract and lane.yaml.
-  - Implement the serialized migration and replay evidence sequence without production application.
+  - Commit and push the integrated evidence checkpoint and open the linked PR.
+  - Request the fresh SQL/replay evidence critic and record its immutable-head verdict.
+  - Update issues 293, 389, 410, 419, and 424 with exact evidence and limitations.
+  - Hand migration/restart sequencing to release control and the daytime-hold failure to firmware-control.

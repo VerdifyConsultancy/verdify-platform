@@ -107,8 +107,10 @@ analytics but cannot by itself characterize current firmware.
 ## Read-only production and provenance checks
 
 - `climate_action_log` had more than 161,500 current `vallery` rows from
-  2026-05-25 onward. The deployed writer is byte-identical to main, the app role
-  has INSERT/SELECT, and current pod logs show no action validation/write errors.
+  2026-05-25 onward. Its deployed action-log emitter, entity mapping, and schema
+  contract match main, the app role has INSERT/SELECT, and current pod logs show
+  no action validation/write errors. The running ingestor image predates the
+  merged #442 writer repair and still requires build/promotion/restart proof.
 - An earlier zero-row probe used the wrong greenhouse id (`greenhouse1`) and was
   discarded. Production and the evidence contract use `vallery`; no emitter
   source fix belongs in this lane.
