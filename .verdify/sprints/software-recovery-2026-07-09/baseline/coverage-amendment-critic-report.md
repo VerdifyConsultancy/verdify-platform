@@ -5,8 +5,8 @@
 - Reviewed head: `9ee3b714d40639478b9136e7a5aaa7c825ab3617`
 - Base: `bfac89a17a8e81c7ac1f11e22604ec7174834409`
 - Review date: `2026-07-09`
-- Verdict: **REQUEST_FIXES**
-- Skill outcome mapping: **CHANGES_REQUESTED**
+- Initial verdict on `9ee3b71`: **REQUEST_FIXES**
+- Initial skill outcome mapping: **CHANGES_REQUESTED**
 
 The amendment closes the four substantive coverage holes it set out to close. It preserves Hermes/MCP as the sole accepted production planner, forbids planner_graph writer authority, makes center mist climate-only in both directions, removes both legacy 10:30 jobs from eligibility, requires restart/missed-window-safe weekly solar cadence and calibrated liters, prevents a dry-out disposition from masquerading as a control fix, and keeps issue `#438` as a hard stop before every production mutation.
 
@@ -143,3 +143,48 @@ A focused follow-up may be approved mechanically if it is limited to:
 5. controller/ledger role reconciliation.
 
 Any broader scope or authority change requires a fresh independent critic.
+
+## Focused re-review — 2026-07-10T00:24:52Z
+
+- Re-reviewed head: `d617ae6593f8ea9474b952d6075923af0b226dd9`
+- Pull request: `#441`
+- Re-review scope: the five mechanical corrections authorized above
+- Final verdict: **APPROVE**
+- Skill outcome mapping: **PASS**
+
+This focused follow-up resolves every requested finding without changing issue allocation, product behavior, planner or device authority, production state, or protected-gate policy. The initial `REQUEST_FIXES` verdict remains the historical finding record for `9ee3b71`; this `APPROVE` verdict supersedes it for `d617ae6`.
+
+### Finding closure
+
+1. **Release phases — CLOSED.** `release-control/lane.yaml` now defines `PHASE-A-TOOLING-CHECKPOINT` and `PHASE-B-CONTROLLER-PRODUCTION` with explicit owners, entry conditions, acceptance subsets, command IDs, evidence, and exit states. Phase A can reach `READY_FOR_CRITIC` on only the source/fixture portions of AC01/02 and returns the overall lane to `IMPLEMENTING` after merge. Phase B alone owns all live clauses, AC03-05, production commands, and final `COMPLETE`. The lane, summary, topology, and worker prompt all require the independently approved merged PR `#439` checkpoint for tooling while security-hygiene remains `BLOCKED`. Issue `#438` must be separately authorized, rotated, and verified with redacted new-valid/old-invalid proof before the first production mutation. Neither worker nor Phase-A critic can claim live acceptance or lane completion.
+2. **Irrigation command — CLOSED.** The topology and authoritative firmware contract both use `make irrigation-stack-software-check`; `Makefile:298` defines that exact target. No `make irrigation-software-audit` reference remains in the reviewed command surfaces.
+3. **DEC-013 and hashes — CLOSED.** Evidence-core, planner-delivery, firmware-control, and release-control all include `DEC-013`. All eight lane SHA-256 values exactly match the execution runbook after the four amended contracts were re-hashed.
+4. **GitHub titles — CLOSED.** All 17 parsed `sprint-plan.yaml` issue numbers and titles exactly equal the 17 live open issues carrying `sprint:software-recovery-2026-07-09`; there are zero missing, extra, duplicate, or title-mismatched entries.
+5. **Session role — CLOSED.** `scope-coverage-audit-20260709` is `critic` in both controller state and session ledger.
+6. **Durable validation — CLOSED.** Fourteen schema-backed artifacts validate. The plan, lane contracts, and topology contain the same 17 unique issues across eight lanes. The topology has 15 unique edges, exactly equals contract hard dependencies, and is acyclic. All eight prompts remain below 4,000 characters. The ledger contains 65 unique contiguous events with correct predecessor links. Both the focused diff and full PR diff pass `git diff --check`.
+
+### YAML-reference proof
+
+The re-review parsed the YAML rather than relying on source grep. Literal values survive YAML comment semantics:
+
+- release dependency, expected input, Phase-A entry, and coordination strings retain `#439`;
+- the Phase-B entry condition retains `#438`;
+- controller summaries and next actions retain `#439` and `#441`;
+- session ledger PR references retain `#439` and `#441`, and external identifiers retain repository-qualified `#438/#439/#441` values;
+- sprint state/status next actions retain `#441`.
+
+The relevant scalars are quoted or use a no-whitespace repository-qualified `#`, so none is truncated into a YAML comment.
+
+### Final PR evidence
+
+- Local HEAD and PR head both resolve to `d617ae6593f8ea9474b952d6075923af0b226dd9`.
+- PR base remains `bfac89a17a8e81c7ac1f11e22604ec7174834409`.
+- GitHub reports `CLEAN`, 13 successful checks, eight intentional skips, zero failed, and zero pending.
+- The PR body now accurately records 65 contiguous linked ledger events.
+- The focused diff is limited to the critic report, release-phase clarification, irrigation command, decision links/hashes, issue-title refresh, and controller/ledger/status reconciliation. It introduces no product code, migration, deploy manifest, firmware, credential, database, or production mutation.
+
+### Remaining gates and limitations
+
+Approval means the amended planning/controller contract may merge. It does not mean any implementation lane, deployment, credential rotation, stale-state transaction, OTA, or runtime outcome is complete. Security-hygiene remains `BLOCKED`; `#438` still blocks every production mutation until Jason separately authorizes the scoped rotation and redacted verification passes. All implementation, critic, CI, migration, firmware, cycling, alert, weekly, bake, rollback, immediate, and settled-runtime gates remain in force.
+
+No GitHub, production, credential, database, ArgoCD, or device state was mutated by this critic. Only this report was updated during the focused re-review.
