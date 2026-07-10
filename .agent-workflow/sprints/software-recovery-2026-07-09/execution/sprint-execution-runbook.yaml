@@ -33,11 +33,10 @@ prerequisites:
     - .verdify/sprints/software-recovery-2026-07-09/lanes/planner-delivery/lane.yaml
     - .verdify/sprints/software-recovery-2026-07-09/lanes/firmware-control/lane.yaml
     - .verdify/sprints/software-recovery-2026-07-09/lanes/release-control/lane.yaml
-  wave_release_plan: null
+  wave_release_plan: .agent-workflow/sprints/software-recovery-2026-07-09/release/wave-release-plan.yaml
   platform_readiness: .agent-workflow/platform/platform-readiness.yaml
   open_blockers:
     - Native Agent Platform worktree-agent creation and removal are disabled post-MVP and return structured HTTP 501 responses.
-    - A current-sprint wave release plan is required before production delivery.
 platform:
   mcp_server: agent-fleet MCP in repo-verdifyconsultancy-verdify-platform-0
   api_ref: agents.vallery.net dashboard API and in-pod agent-fleet MCP
