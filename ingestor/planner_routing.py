@@ -46,6 +46,29 @@ TriggerType = Literal[
     "MANUAL",
 ]
 RequiredTriggerDisposition = Literal["complete", "wait", "retry"]
+PlannerActualAction = Literal["set_plan", "set_tunable", "acknowledge_trigger"]
+PlannerTerminalStatus = Literal[
+    "acked",
+    "plan_written",
+    "action_completed",
+    "neutral_fallback",
+    "wrong_action",
+]
+PlannerTerminalAction = Literal[
+    "set_plan",
+    "set_tunable",
+    "acknowledge_trigger",
+    "neutral_fallback",
+    "wrong_action",
+]
+
+
+@dataclass(frozen=True)
+class PlannerTerminalResult:
+    status: PlannerTerminalStatus
+    terminal_action: PlannerTerminalAction
+    failure_class: str | None
+    satisfies_required_plan: bool
 
 
 # ── Defaults (contract v1.5) — used when ai.yaml sections are missing ──
@@ -288,3 +311,38 @@ def required_trigger_disposition(
     if status in {"delivered", "neutral_fallback"} and due_at is not None and due_at > now:
         return "wait"
     return "retry"
+
+
+def classify_planner_terminal_action(
+    *,
+    expected_action: str,
+    actual_action: PlannerActualAction,
+    valid_full_plan: bool = False,
+    explicit_neutral: bool = False,
+) -> PlannerTerminalResult:
+    """Classify terminal planner activity without runtime service dependencies.
+
+    This routing-layer form deliberately remains pure so the scheduler's
+    contract matrix can run without importing the MCP or schema runtimes.
+    """
+    if actual_action == "set_plan" and valid_full_plan:
+        return PlannerTerminalResult("plan_written", "set_plan", None, expected_action == "set_plan")
+    if expected_action == "set_plan":
+        if explicit_neutral and actual_action == "acknowledge_trigger":
+            return PlannerTerminalResult(
+                "neutral_fallback",
+                "neutral_fallback",
+                "explicit_neutral_fallback",
+                False,
+            )
+        return PlannerTerminalResult(
+            "wrong_action",
+            "wrong_action",
+            f"required_set_plan_received_{actual_action}",
+            False,
+        )
+    if actual_action == "set_tunable":
+        return PlannerTerminalResult("action_completed", "set_tunable", None, False)
+    if actual_action == "acknowledge_trigger":
+        return PlannerTerminalResult("acked", "acknowledge_trigger", None, False)
+    return PlannerTerminalResult("wrong_action", "wrong_action", "invalid_set_plan", False)

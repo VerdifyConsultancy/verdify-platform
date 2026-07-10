@@ -238,7 +238,9 @@ def _hermes_config_documents() -> tuple[dict, dict, str]:
 def _readiness_required_tools(source: str) -> set[str]:
     tree = ast.parse(source)
     for node in tree.body:
-        if isinstance(node, ast.Assign) and any(isinstance(target, ast.Name) and target.id == "REQUIRED" for target in node.targets):
+        if isinstance(node, ast.Assign) and any(
+            isinstance(target, ast.Name) and target.id == "REQUIRED" for target in node.targets
+        ):
             value = ast.literal_eval(node.value)
             return set(value)
     raise AssertionError("Hermes readiness REQUIRED set is missing")
@@ -368,9 +370,7 @@ async def test_set_tunable_rejects_value_outside_stricter_firmware_bound(mcp_ser
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("event_type", ["SUNRISE", "SUNSET"])
-async def test_required_set_plan_accepts_only_explicit_neutral_ack_fallback(
-    mcp_server, monkeypatch, event_type
-):
+async def test_required_set_plan_accepts_only_explicit_neutral_ack_fallback(mcp_server, monkeypatch, event_type):
     connection = _RequiredAckConnection(event_type)
 
     async def db():

@@ -20,7 +20,6 @@ from zoneinfo import ZoneInfo
 import asyncpg
 from mcp.server.fastmcp import FastMCP
 from pydantic import ValidationError
-from starlette.responses import JSONResponse
 
 # verdify_schemas lives one level up from this server file in every worktree.
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -77,6 +76,7 @@ from verdify_schemas.tunable_registry import (  # noqa: E402
     PLANNER_PUSHABLE_REG,
     TIER1_REG,
     normalize_planner_value,
+    registry_value_error,
 )
 
 # ── Config ──
@@ -299,14 +299,27 @@ async def _db() -> asyncpg.Connection:
     return await asyncpg.connect(DB_DSN)
 
 
-@mcp.custom_route("/readyz", methods=["GET"])
-async def mcp_ready(_request) -> JSONResponse:
+def _custom_route(path: str, *, methods: list[str]):
+    """Register a FastMCP route while keeping schema-only import stubs usable."""
+    custom_route = getattr(mcp, "custom_route", None)
+    if custom_route is None:
+        return lambda func: func
+    return custom_route(path, methods=methods)
+
+
+@_custom_route("/readyz", methods=["GET"])
+async def mcp_ready(_request):
     """Tool-level readiness used by Hermes and release acceptance.
 
     A listening TCP socket is insufficient: required tools can disappear from
     registration while the process remains healthy.  Readiness also proves a
     minimal DB round trip because every control tool depends on that store.
     """
+    # Starlette is a runtime dependency of the MCP package, but schema-only CI
+    # intentionally imports this module with lightweight MCP stubs.  Keep the
+    # response dependency off that import path.
+    from starlette.responses import JSONResponse
+
     registered = {tool.name for tool in await mcp.list_tools()}
     missing = sorted(HERMES_REQUIRED_TOOLS - registered)
     db_error: str | None = None
@@ -1852,6 +1865,15 @@ async def set_tunable(
             {
                 "error": f"'{parameter}' is not planner-pushable in the tunable registry",
                 "allowed": sorted(PLANNER_PUSHABLE_REG),
+            }
+        )
+    if bounds_error := registry_value_error(parameter, value):
+        return json.dumps(
+            {
+                "error": "Tunable value outside registry bounds",
+                "parameter": parameter,
+                "value": value,
+                "details": bounds_error,
             }
         )
     try:

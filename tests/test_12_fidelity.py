@@ -51,9 +51,15 @@ os.environ.setdefault("DB_PORT", "5432")
 os.environ.setdefault("DB_NAME", "test")
 
 import iris_planner  # noqa: E402
+from planner_routing import classify_planner_terminal_action as classify_routing_terminal_action  # noqa: E402
 
 import ingestor  # noqa: E402
-from verdify_schemas.plan import PlanDeliveryLogRow  # noqa: E402
+from verdify_schemas.plan import (  # noqa: E402
+    PlanDeliveryLogRow,
+)
+from verdify_schemas.plan import (
+    classify_planner_terminal_action as classify_schema_terminal_action,
+)
 from verdify_schemas.tunable_registry import (  # noqa: E402
     BAND_OWNED_REG,
     CROP_BAND_REG,
@@ -64,6 +70,46 @@ from verdify_schemas.tunable_registry import (  # noqa: E402
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+@pytest.mark.parametrize(
+    "expected_action,actual_action,valid_full_plan,explicit_neutral",
+    [
+        ("set_plan", "set_plan", True, False),
+        ("set_plan", "set_plan", False, False),
+        ("set_plan", "set_tunable", False, False),
+        ("set_plan", "acknowledge_trigger", False, False),
+        ("set_plan", "acknowledge_trigger", False, True),
+        ("any", "set_plan", True, False),
+        ("any", "set_plan", False, False),
+        ("any", "set_tunable", False, False),
+        ("any", "acknowledge_trigger", False, False),
+        ("any", "acknowledge_trigger", False, True),
+    ],
+)
+def test_routing_and_schema_terminal_classifiers_remain_in_parity(
+    expected_action, actual_action, valid_full_plan, explicit_neutral
+):
+    kwargs = {
+        "expected_action": expected_action,
+        "actual_action": actual_action,
+        "valid_full_plan": valid_full_plan,
+        "explicit_neutral": explicit_neutral,
+    }
+    routing = classify_routing_terminal_action(**kwargs)
+    schema = classify_schema_terminal_action(**kwargs)
+
+    assert (
+        routing.status,
+        routing.terminal_action,
+        routing.failure_class,
+        routing.satisfies_required_plan,
+    ) == (
+        schema.status,
+        schema.terminal_action,
+        schema.failure_class,
+        schema.satisfies_required_plan,
+    )
 
 
 def _tasks_src() -> str:
@@ -2500,8 +2546,8 @@ def test_mcp_classifies_required_ack_as_wrong_or_explicit_neutral():
     body = server[start:]
     assert 'existing["expected_action"] == "set_plan"' in body
     assert "required set_plan trigger received the wrong terminal action" in body
-    assert 'target_status = terminal.status' in body
-    assert 'neutral_fallback: bool = False' in body
+    assert "target_status = terminal.status" in body
+    assert "neutral_fallback: bool = False" in body
 
 
 def test_required_plan_alert_ignores_validation_ack_only_rows():

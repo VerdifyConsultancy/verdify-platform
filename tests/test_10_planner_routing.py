@@ -21,14 +21,13 @@ from planner_routing import (  # noqa: E402
     _DEFAULT_SLA_MIN,
     RoutingConfig,
     SeverityContext,
+    classify_planner_terminal_action,
     classify_severity,
     load_routing_config,
     pick_instance,
     required_trigger_disposition,
     sla_for,
 )
-
-from verdify_schemas.plan import classify_planner_terminal_action
 
 LOCAL_FIRST_CONFIG = RoutingConfig(
     forecast_major_delta_vpd_kpa=0.5,
