@@ -26,6 +26,70 @@ CREATE TABLE IF NOT EXISTS public.equipment_aliases (
 COMMENT ON TABLE public.equipment_aliases IS
 'Explicit compatibility aliases into canonical equipment. Active telemetry consumers resolve through v_equipment_alias_resolution; aliases never create a second physical asset.';
 
+CREATE OR REPLACE FUNCTION public.reject_active_equipment_alias_collision()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NEW.valid_to IS NULL AND EXISTS (
+        SELECT 1
+        FROM public.equipment e
+        WHERE e.greenhouse_id = NEW.greenhouse_id
+          AND e.slug = NEW.alias_slug
+          AND e.is_active
+    ) THEN
+        RAISE EXCEPTION USING
+            ERRCODE = '23514',
+            MESSAGE = format(
+                'equipment alias %s/%s collides with an active canonical slug',
+                NEW.greenhouse_id,
+                NEW.alias_slug
+            );
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS reject_active_equipment_alias_collision
+    ON public.equipment_aliases;
+CREATE TRIGGER reject_active_equipment_alias_collision
+BEFORE INSERT OR UPDATE OF greenhouse_id, alias_slug, valid_to
+ON public.equipment_aliases
+FOR EACH ROW
+EXECUTE FUNCTION public.reject_active_equipment_alias_collision();
+
+CREATE OR REPLACE FUNCTION public.reject_equipment_slug_alias_collision()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+    IF NEW.is_active AND EXISTS (
+        SELECT 1
+        FROM public.equipment_aliases a
+        WHERE a.greenhouse_id = NEW.greenhouse_id
+          AND a.alias_slug = NEW.slug
+          AND a.valid_to IS NULL
+    ) THEN
+        RAISE EXCEPTION USING
+            ERRCODE = '23514',
+            MESSAGE = format(
+                'active equipment slug %s/%s collides with a current alias',
+                NEW.greenhouse_id,
+                NEW.slug
+            );
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS reject_equipment_slug_alias_collision
+    ON public.equipment;
+CREATE TRIGGER reject_equipment_slug_alias_collision
+BEFORE INSERT OR UPDATE OF greenhouse_id, slug, is_active
+ON public.equipment
+FOR EACH ROW
+EXECUTE FUNCTION public.reject_equipment_slug_alias_collision();
+
 CREATE TABLE IF NOT EXISTS public.resource_coefficients (
     id bigserial PRIMARY KEY,
     equipment_id integer NOT NULL REFERENCES public.equipment(id) ON DELETE CASCADE,
@@ -190,15 +254,15 @@ FROM (VALUES
     ('fog', 'electric_watts', 'W', 468.0, 315.0, 620.0,
      'meter_fit', 'meter_fit_2026_07_09', 'issue:#437,july-9-meter-audit',
      'Wide overlap-sensitive fit; the historical 1644 W catalog point remains queryable.'),
-    ('vent', 'electric_watts', 'W', 10.0, 10.0, 10.0,
+    ('vent', 'electric_watts', 'W', 10.0, 8.0, 12.0,
      'operator', 'operator_catalog_2026_07_09', 'migration:085',
-     'Operator catalog value; no circuit-isolated measurement.'),
-    ('grow_light_main', 'electric_watts', 'W', 630.0, 630.0, 630.0,
+     'Operator catalog point with provisional +/-20% bounds; no circuit-isolated measurement.'),
+    ('grow_light_main', 'electric_watts', 'W', 630.0, 567.0, 693.0,
      'operator', 'operator_fixture_count_2026_07_09', 'vault:equipment.md',
-     '15 fixtures times 42 W; operator-entered fixture inventory.'),
-    ('grow_light_grow', 'electric_watts', 'W', 816.0, 816.0, 816.0,
+     '15 fixtures times a 42 W catalog point; provisional +/-10% bounds until circuit-isolated measurement.'),
+    ('grow_light_grow', 'electric_watts', 'W', 816.0, 734.4, 897.6,
      'operator', 'operator_fixture_count_2026_07_09', 'vault:equipment.md',
-     '34 fixtures times 24 W; operator-entered fixture inventory.'),
+     '34 fixtures times a 24 W catalog point; provisional +/-10% bounds until circuit-isolated measurement.'),
     ('heat2', 'gas_btu_per_hour', 'BTU/h', 75000.0, 75000.0, 75000.0,
      'nameplate', 'nameplate_2026_07_09', 'model:Lennox-LF24-75A-5',
      'Nameplate input rating; gas flow is not metered.')
@@ -243,10 +307,17 @@ SELECT
 FROM public.equipment_aliases a
 JOIN public.equipment e ON e.id = a.equipment_id
 WHERE a.valid_to IS NULL
-  AND e.is_active;
+  AND e.is_active
+  AND NOT EXISTS (
+      SELECT 1
+      FROM public.equipment canonical
+      WHERE canonical.greenhouse_id = a.greenhouse_id
+        AND canonical.slug = a.alias_slug
+        AND canonical.is_active
+  );
 
 COMMENT ON VIEW public.v_equipment_alias_resolution IS
-'One-row resolution of canonical and historical telemetry slugs into active canonical equipment. Duplicate input slugs are prevented by table constraints.';
+'One-row resolution of canonical and historical telemetry slugs into active canonical equipment. Cross-table triggers reject a current alias that collides with an active canonical slug; the view also gives canonical rows defensive precedence.';
 
 CREATE OR REPLACE VIEW public.v_equipment_resource_catalog AS
 SELECT

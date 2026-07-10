@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict HZB08iRuyjvP4obdizdBw9fKLSn3spAaR19IN8JVvE5hfJKQFJysHxljfNTygIm
+\restrict ehmwONOT5fygu4TXpTdCZnrwvdlfc2lFQSGXyUdZNUAa1OCkWdUcYU7BNMOJtwP
 
 -- Dumped from database version 16.14
 -- Dumped by pg_dump version 16.14
@@ -3116,36 +3116,45 @@ CREATE FUNCTION public.fn_planner_scorecard(p_date date DEFAULT CURRENT_DATE) RE
     AS $$
 BEGIN
     RETURN QUERY
-    SELECT 'planner_score'::text, k.planner_score FROM v_daily_kpi k WHERE k.date = p_date
-    UNION ALL SELECT 'compliance_pct', k.compliance_pct FROM v_daily_kpi k WHERE k.date = p_date
-    UNION ALL SELECT 'temp_compliance_pct', k.temp_compliance_pct FROM v_daily_kpi k WHERE k.date = p_date
-    UNION ALL SELECT 'vpd_compliance_pct', k.vpd_compliance_pct FROM v_daily_kpi k WHERE k.date = p_date
-    UNION ALL SELECT 'total_stress_h', k.total_stress_h FROM v_daily_kpi k WHERE k.date = p_date
-    UNION ALL SELECT 'heat_stress_h', k.heat_stress_h FROM v_daily_kpi k WHERE k.date = p_date
-    UNION ALL SELECT 'cold_stress_h', k.cold_stress_h FROM v_daily_kpi k WHERE k.date = p_date
-    UNION ALL SELECT 'vpd_high_stress_h', k.vpd_high_stress_h FROM v_daily_kpi k WHERE k.date = p_date
-    UNION ALL SELECT 'vpd_low_stress_h', k.vpd_low_stress_h FROM v_daily_kpi k WHERE k.date = p_date
-    UNION ALL SELECT 'kwh', k.kwh FROM v_daily_kpi k WHERE k.date = p_date
-    UNION ALL SELECT 'therms', k.therms FROM v_daily_kpi k WHERE k.date = p_date
-    UNION ALL SELECT 'water_gal', k.water_gal FROM v_daily_kpi k WHERE k.date = p_date
-    UNION ALL SELECT 'mister_water_gal', k.mister_water_gal FROM v_daily_kpi k WHERE k.date = p_date
-    UNION ALL SELECT 'cost_electric', k.cost_electric FROM v_daily_kpi k WHERE k.date = p_date
-    UNION ALL SELECT 'cost_gas', k.cost_gas FROM v_daily_kpi k WHERE k.date = p_date
-    UNION ALL SELECT 'cost_water', k.cost_water FROM v_daily_kpi k WHERE k.date = p_date
-    UNION ALL SELECT 'cost_total', k.cost_total FROM v_daily_kpi k WHERE k.date = p_date
-    UNION ALL SELECT 'dp_margin_min_f', k.dp_margin_min_f FROM v_daily_kpi k WHERE k.date = p_date
-    UNION ALL SELECT 'dp_risk_hours', k.dp_risk_hours FROM v_daily_kpi k WHERE k.date = p_date
-    UNION ALL SELECT '7d_avg_score', round(avg(k.planner_score), 1) FROM v_daily_kpi k WHERE k.date BETWEEN p_date - 7 AND p_date - 1
-    UNION ALL SELECT '7d_avg_compliance', round(avg(k.compliance_pct), 1) FROM v_daily_kpi k WHERE k.date BETWEEN p_date - 7 AND p_date - 1
-    UNION ALL SELECT '7d_avg_cost', round(avg(k.cost_total), 2) FROM v_daily_kpi k WHERE k.date BETWEEN p_date - 7 AND p_date - 1
-    UNION ALL SELECT '7d_avg_kwh', round(avg(k.kwh), 1) FROM v_daily_kpi k WHERE k.date BETWEEN p_date - 7 AND p_date - 1
-    UNION ALL SELECT '7d_avg_therms', round(avg(k.therms), 3) FROM v_daily_kpi k WHERE k.date BETWEEN p_date - 7 AND p_date - 1
-    UNION ALL SELECT '7d_avg_water_gal', round(avg(k.water_gal), 0) FROM v_daily_kpi k WHERE k.date BETWEEN p_date - 7 AND p_date - 1;
+    SELECT 'planner_score'::text, k.planner_score FROM public.v_daily_kpi k WHERE k.date = p_date
+    UNION ALL SELECT 'planner_score_resource_weight_pct', k.planner_score_resource_weight_pct FROM public.v_daily_kpi k WHERE k.date = p_date
+    UNION ALL SELECT 'resource_terms_available', CASE WHEN k.resource_terms_available THEN 1::numeric ELSE 0::numeric END FROM public.v_daily_kpi k WHERE k.date = p_date
+    UNION ALL SELECT 'compliance_pct', k.compliance_pct FROM public.v_daily_kpi k WHERE k.date = p_date
+    UNION ALL SELECT 'temp_compliance_pct', k.temp_compliance_pct FROM public.v_daily_kpi k WHERE k.date = p_date
+    UNION ALL SELECT 'vpd_compliance_pct', k.vpd_compliance_pct FROM public.v_daily_kpi k WHERE k.date = p_date
+    UNION ALL SELECT 'total_stress_h', k.total_stress_h FROM public.v_daily_kpi k WHERE k.date = p_date
+    UNION ALL SELECT 'heat_stress_h', k.heat_stress_h FROM public.v_daily_kpi k WHERE k.date = p_date
+    UNION ALL SELECT 'cold_stress_h', k.cold_stress_h FROM public.v_daily_kpi k WHERE k.date = p_date
+    UNION ALL SELECT 'vpd_high_stress_h', k.vpd_high_stress_h FROM public.v_daily_kpi k WHERE k.date = p_date
+    UNION ALL SELECT 'vpd_low_stress_h', k.vpd_low_stress_h FROM public.v_daily_kpi k WHERE k.date = p_date
+    UNION ALL SELECT 'kwh', k.kwh FROM public.v_daily_kpi k WHERE k.date = p_date
+    UNION ALL SELECT 'therms', k.therms FROM public.v_daily_kpi k WHERE k.date = p_date
+    UNION ALL SELECT 'water_gal', k.water_gal FROM public.v_daily_kpi k WHERE k.date = p_date
+    UNION ALL SELECT 'mister_water_gal', k.mister_water_gal FROM public.v_daily_kpi k WHERE k.date = p_date
+    UNION ALL SELECT 'cost_electric', k.cost_electric FROM public.v_daily_kpi k WHERE k.date = p_date
+    UNION ALL SELECT 'cost_gas', k.cost_gas FROM public.v_daily_kpi k WHERE k.date = p_date
+    UNION ALL SELECT 'cost_water', k.cost_water FROM public.v_daily_kpi k WHERE k.date = p_date
+    UNION ALL SELECT 'cost_total', k.cost_total FROM public.v_daily_kpi k WHERE k.date = p_date
+    UNION ALL SELECT 'dp_margin_min_f', k.dp_margin_min_f FROM public.v_daily_kpi k WHERE k.date = p_date
+    UNION ALL SELECT 'dp_risk_hours', k.dp_risk_hours FROM public.v_daily_kpi k WHERE k.date = p_date
+    UNION ALL SELECT '7d_avg_score', round(avg(k.planner_score), 1) FROM public.v_daily_kpi k WHERE k.date BETWEEN p_date - 7 AND p_date - 1
+    UNION ALL SELECT '7d_avg_compliance', round(avg(k.compliance_pct), 1) FROM public.v_daily_kpi k WHERE k.date BETWEEN p_date - 7 AND p_date - 1
+    UNION ALL SELECT '7d_avg_cost', round(avg(k.cost_total), 2) FROM public.v_daily_kpi k WHERE k.date BETWEEN p_date - 7 AND p_date - 1
+    UNION ALL SELECT '7d_avg_kwh', round(avg(k.kwh), 1) FROM public.v_daily_kpi k WHERE k.date BETWEEN p_date - 7 AND p_date - 1
+    UNION ALL SELECT '7d_avg_therms', round(avg(k.therms), 3) FROM public.v_daily_kpi k WHERE k.date BETWEEN p_date - 7 AND p_date - 1
+    UNION ALL SELECT '7d_avg_water_gal', round(avg(k.water_gal), 0) FROM public.v_daily_kpi k WHERE k.date BETWEEN p_date - 7 AND p_date - 1;
 END;
 $$;
 
 
 ALTER FUNCTION public.fn_planner_scorecard(p_date date) OWNER TO verdify;
+
+--
+-- Name: FUNCTION fn_planner_scorecard(p_date date); Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON FUNCTION public.fn_planner_scorecard(p_date date) IS 'Planner scorecard with explicit resource_terms_available and planner_score_resource_weight_pct metrics. Unavailable resource terms remain NULL and earn no free efficiency points.';
+
 
 --
 -- Name: fn_realized_solar_night_dryout(date, date, text); Type: FUNCTION; Schema: public; Owner: verdify
@@ -3721,15 +3730,17 @@ WITH bounds AS (
     SELECT
         time_bucket('30 minutes', p_start) AS start_ts,
         time_bucket('30 minutes', p_end) + interval '30 minutes' AS end_ts
-), wattages AS (
-    SELECT equipment_slug AS equipment,
-           coefficient_nominal::double precision AS wattage
-    FROM public.v_equipment_resource_catalog
-    WHERE greenhouse_id = 'vallery'
-      AND resource_kind = 'electric_watts'
+), equipment_catalog AS (
+    SELECT DISTINCT e.id AS equipment_id, e.slug AS equipment
+    FROM public.equipment e
+    JOIN public.resource_coefficients c ON c.equipment_id = e.id
+    WHERE e.greenhouse_id = 'vallery'
+      AND e.is_active
+      AND c.resource_kind = 'electric_watts'
 ), seed AS (
     SELECT
         b.start_ts AS ts,
+        w.equipment_id,
         w.equipment,
         COALESCE((
             SELECT es.state
@@ -3738,14 +3749,13 @@ WITH bounds AS (
               AND es.ts <= b.start_ts
             ORDER BY es.ts DESC
             LIMIT 1
-        ), false) AS state,
-        w.wattage
+        ), false) AS state
     FROM bounds b
-    CROSS JOIN wattages w
+    CROSS JOIN equipment_catalog w
 ), changes AS (
-    SELECT es.ts, es.equipment, es.state, w.wattage
+    SELECT es.ts, w.equipment_id, es.equipment, es.state
     FROM public.equipment_state es
-    JOIN wattages w USING (equipment)
+    JOIN equipment_catalog w USING (equipment)
     CROSS JOIN bounds b
     WHERE es.ts > b.start_ts
       AND es.ts < b.end_ts
@@ -3755,16 +3765,16 @@ WITH bounds AS (
     SELECT * FROM changes
 ), segments AS (
     SELECT
+        equipment_id,
         equipment,
-        wattage,
         state,
         ts AS start_ts,
         lead(ts) OVER (PARTITION BY equipment ORDER BY ts) AS next_ts
     FROM events
 ), active_segments AS (
     SELECT
+        s.equipment_id,
         s.equipment,
-        s.wattage,
         greatest(s.start_ts, b.start_ts) AS start_ts,
         least(COALESCE(s.next_ts, b.end_ts), b.end_ts) AS end_ts
     FROM segments s
@@ -3776,7 +3786,7 @@ WITH bounds AS (
     SELECT
         gs.bucket,
         a.equipment,
-        a.wattage
+        c.nominal_value
             * greatest(
                 extract(epoch FROM least(a.end_ts, gs.bucket + interval '30 minutes')
                     - greatest(a.start_ts, gs.bucket)),
@@ -3789,6 +3799,16 @@ WITH bounds AS (
         time_bucket('30 minutes', a.end_ts - interval '1 microsecond'),
         interval '30 minutes'
     ) AS gs(bucket)
+    JOIN LATERAL (
+        SELECT rc.nominal_value
+        FROM public.resource_coefficients rc
+        WHERE rc.equipment_id = a.equipment_id
+          AND rc.resource_kind = 'electric_watts'
+          AND rc.valid_from <= gs.bucket
+          AND (rc.valid_to IS NULL OR rc.valid_to > gs.bucket)
+        ORDER BY rc.valid_from DESC, rc.id DESC
+        LIMIT 1
+    ) c ON true
 ), buckets AS (
     SELECT generate_series(
         (SELECT start_ts FROM bounds),
@@ -3815,7 +3835,7 @@ ALTER FUNCTION public.fn_runtime_power_30m(p_start timestamp with time zone, p_e
 -- Name: FUNCTION fn_runtime_power_30m(p_start timestamp with time zone, p_end timestamp with time zone); Type: COMMENT; Schema: public; Owner: verdify
 --
 
-COMMENT ON FUNCTION public.fn_runtime_power_30m(p_start timestamp with time zone, p_end timestamp with time zone) IS 'Thirty-minute runtime-modeled load using the selected canonical coefficient revision. Provenance and uncertainty remain available through v_equipment_resource_catalog.';
+COMMENT ON FUNCTION public.fn_runtime_power_30m(p_start timestamp with time zone, p_end timestamp with time zone) IS 'Thirty-minute runtime-modeled load using the coefficient revision valid for each historical bucket. Provenance and uncertainty remain available through resource_coefficients; this nominal diagnostic is not a scoring-eligible whole-facility measurement.';
 
 
 --
@@ -4581,6 +4601,8 @@ DECLARE
     v_raw_latest timestamptz;
     v_candidate_relays text[];
     v_candidate_count integer;
+    v_fert_master_observed boolean;
+    v_fert_commissioned boolean;
     v_attribution_class text;
     v_attributed_scope text;
     v_attribution_quality text;
@@ -4602,16 +4624,51 @@ BEGIN
      FOR UPDATE;
 
     FOR r IN
-        SELECT DISTINCT ON (c.ts)
-               c.ts, c.water_total_gal::double precision AS total_gal
+        SELECT c.ts,
+               max(c.water_total_gal)::double precision AS total_gal,
+               count(DISTINCT c.water_total_gal)::integer AS total_variants
           FROM public.climate c
          WHERE COALESCE(c.greenhouse_id, 'vallery') = p_greenhouse_id
            AND c.water_total_gal IS NOT NULL
            AND (v_last_source_ts IS NULL OR c.ts > v_last_source_ts)
            AND c.ts <= p_through
-         ORDER BY c.ts, c.water_total_gal DESC
+         GROUP BY c.ts
+         ORDER BY c.ts
     LOOP
         v_processed := v_processed + 1;
+
+        IF r.total_variants > 1 THEN
+            INSERT INTO public.water_meter_events (
+                ts, greenhouse_id, source, meter_id, event_type, prior_ts,
+                prior_total_gal, total_gal, delta_gal, quality_flag, raw,
+                materializer_revision
+            ) VALUES (
+                r.ts, p_greenhouse_id, 'climate.water_total_gal', 'main_pulse',
+                'source_conflict', v_last_total_ts, v_last_total, r.total_gal, 0,
+                'conflicting_source_samples',
+                jsonb_build_object(
+                    'variant_count', r.total_variants,
+                    'materializer', 'migration_194'
+                ),
+                'migration_194'
+            )
+            ON CONFLICT (ts, source, meter_id, event_type) DO UPDATE
+            SET greenhouse_id = EXCLUDED.greenhouse_id,
+                prior_ts = EXCLUDED.prior_ts,
+                prior_total_gal = EXCLUDED.prior_total_gal,
+                total_gal = EXCLUDED.total_gal,
+                quality_flag = EXCLUDED.quality_flag,
+                raw = public.water_meter_events.raw || EXCLUDED.raw,
+                materializer_revision = EXCLUDED.materializer_revision;
+            GET DIAGNOSTICS v_row_count = ROW_COUNT;
+            v_events := v_events + v_row_count;
+            -- Establish a new baseline without accepting an unknowable delta.
+            v_last_quality := 'conflicting_source_samples';
+            v_last_total := r.total_gal;
+            v_last_total_ts := r.ts;
+            v_last_source_ts := r.ts;
+            CONTINUE;
+        END IF;
 
         IF v_last_source_ts IS NOT NULL
            AND r.ts - v_last_source_ts > interval '5 minutes' THEN
@@ -4718,36 +4775,89 @@ BEGIN
                 ELSE 'ok'
             END;
 
+            WITH relay_list(relay_slug) AS (
+                SELECT unnest(ARRAY[
+                    'fog', 'mister_center', 'mister_south', 'mister_west',
+                    'drip_wall', 'drip_center', 'drip_wall_fert', 'drip_center_fert',
+                    'mister_south_fert', 'mister_west_fert'
+                ]::text[])
+            ), seed AS (
+                SELECT
+                    l.relay_slug,
+                    v_last_total_ts AS ts,
+                    COALESCE((
+                        SELECT es.state
+                        FROM public.equipment_state es
+                        WHERE COALESCE(es.greenhouse_id, 'vallery') = p_greenhouse_id
+                          AND es.equipment = l.relay_slug
+                          AND es.ts <= v_last_total_ts
+                        ORDER BY es.ts DESC
+                        LIMIT 1
+                    ), false) AS state
+                FROM relay_list l
+            ), interval_events AS (
+                SELECT relay_slug, ts, state FROM seed
+                UNION ALL
+                SELECT l.relay_slug, es.ts, bool_or(es.state) AS state
+                FROM relay_list l
+                JOIN public.equipment_state es ON es.equipment = l.relay_slug
+                WHERE COALESCE(es.greenhouse_id, 'vallery') = p_greenhouse_id
+                  AND es.ts > v_last_total_ts
+                  AND es.ts <= r.ts
+                GROUP BY l.relay_slug, es.ts
+            ), ordered AS (
+                SELECT relay_slug, ts, state,
+                       lag(state) OVER (PARTITION BY relay_slug ORDER BY ts) AS prior_state
+                FROM interval_events
+            ), relay_runs AS (
+                SELECT relay_slug,
+                       count(*) FILTER (
+                           WHERE state IS TRUE
+                             AND prior_state IS DISTINCT FROM true
+                       )::integer AS run_count
+                FROM ordered
+                GROUP BY relay_slug
+            )
             SELECT
-                COALESCE(array_agg(relay_slug ORDER BY relay_slug), ARRAY[]::text[]),
-                count(*)::integer
+                COALESCE(
+                    array_agg(relay_slug ORDER BY relay_slug)
+                        FILTER (WHERE run_count > 0),
+                    ARRAY[]::text[]
+                ),
+                COALESCE(sum(run_count), 0)::integer
               INTO v_candidate_relays, v_candidate_count
-              FROM unnest(ARRAY[
-                  'fog', 'mister_center', 'mister_south', 'mister_west',
-                  'drip_wall', 'drip_center', 'drip_wall_fert', 'drip_center_fert',
-                  'mister_south_fert', 'mister_west_fert'
-              ]::text[]) AS relay_slug
-             WHERE v_last_total_ts IS NOT NULL
-               AND (
-                   COALESCE((
-                       SELECT es.state
-                       FROM public.equipment_state es
-                       WHERE COALESCE(es.greenhouse_id, 'vallery') = p_greenhouse_id
-                         AND es.equipment = relay_slug
-                         AND es.ts <= v_last_total_ts
-                       ORDER BY es.ts DESC
-                       LIMIT 1
-                   ), false)
-                   OR EXISTS (
-                       SELECT 1
-                       FROM public.equipment_state es
-                       WHERE COALESCE(es.greenhouse_id, 'vallery') = p_greenhouse_id
-                         AND es.equipment = relay_slug
-                         AND es.ts > v_last_total_ts
-                         AND es.ts <= r.ts
-                         AND es.state IS TRUE
-                   )
-               );
+              FROM relay_runs;
+
+            SELECT COALESCE((
+                  SELECT es.state
+                  FROM public.equipment_state es
+                  WHERE COALESCE(es.greenhouse_id, 'vallery') = p_greenhouse_id
+                    AND es.equipment = 'fert_master_valve'
+                    AND es.ts <= v_last_total_ts
+                  ORDER BY es.ts DESC
+                  LIMIT 1
+              ), false)
+              OR EXISTS (
+                  SELECT 1
+                  FROM public.equipment_state es
+                  WHERE COALESCE(es.greenhouse_id, 'vallery') = p_greenhouse_id
+                    AND es.equipment = 'fert_master_valve'
+                    AND es.ts > v_last_total_ts
+                    AND es.ts <= r.ts
+                    AND es.state IS TRUE
+              )
+              INTO v_fert_master_observed;
+
+            SELECT COALESCE((
+                SELECT lower(s.value) IN ('true', 'on', '1', 'eligible')
+                FROM public.system_state s
+                WHERE COALESCE(s.greenhouse_id, 'vallery') = p_greenhouse_id
+                  AND s.entity = 'fertigation_commissioning_eligible'
+                  AND s.ts <= r.ts
+                ORDER BY s.ts DESC
+                LIMIT 1
+            ), false)
+              INTO v_fert_commissioned;
 
             v_attribution_class := CASE
                 WHEN v_candidate_count = 0 THEN 'manual_or_unattributed'
@@ -4760,7 +4870,9 @@ BEGIN
                     'fog', 'mister_center', 'mister_south', 'mister_west'
                 ) THEN 'climate_wetting'
                 WHEN v_candidate_relays[1] = 'drip_wall' THEN 'wall_irrigation'
-                WHEN v_candidate_relays[1] = 'drip_wall_fert' THEN 'wall_fertigation'
+                WHEN v_candidate_relays[1] = 'drip_wall_fert'
+                  AND v_fert_master_observed
+                  AND v_fert_commissioned THEN 'wall_fertigation'
                 ELSE 'unsupported_path'
             END;
             v_attribution_quality := CASE
@@ -4775,19 +4887,25 @@ BEGIN
                     GROUP BY es.equipment, es.ts
                     HAVING count(DISTINCT es.state) > 1
                 ) THEN 'conflicting_relay_events'
+                WHEN v_candidate_count = 1
+                  AND v_candidate_relays[1] = 'drip_wall_fert'
+                  AND NOT v_fert_master_observed THEN 'fert_master_not_observed'
+                WHEN v_candidate_count = 1
+                  AND v_candidate_relays[1] = 'drip_wall_fert'
+                  AND NOT v_fert_commissioned THEN 'fertigation_not_commissioned'
                 ELSE 'ok'
             END;
             INSERT INTO public.water_meter_events (
                 ts, greenhouse_id, source, meter_id, event_type, prior_ts,
                 prior_total_gal, total_gal, delta_gal, quality_flag, raw,
                 materializer_revision, attribution_class, attributed_scope,
-                candidate_relays, attribution_quality
+                candidate_relays, candidate_run_count, attribution_quality
             ) VALUES (
                 r.ts, p_greenhouse_id, 'climate.water_total_gal', 'main_pulse',
                 'delta', v_last_total_ts, v_last_total, r.total_gal, v_delta,
                 v_quality, jsonb_build_object('materializer', 'migration_194'),
                 'migration_194', v_attribution_class, v_attributed_scope,
-                v_candidate_relays, v_attribution_quality
+                v_candidate_relays, v_candidate_count, v_attribution_quality
             )
             ON CONFLICT (ts, source, meter_id, event_type) DO UPDATE
             SET greenhouse_id = EXCLUDED.greenhouse_id,
@@ -4801,6 +4919,7 @@ BEGIN
                 attribution_class = EXCLUDED.attribution_class,
                 attributed_scope = EXCLUDED.attributed_scope,
                 candidate_relays = EXCLUDED.candidate_relays,
+                candidate_run_count = EXCLUDED.candidate_run_count,
                 attribution_quality = EXCLUDED.attribution_quality;
             GET DIAGNOSTICS v_row_count = ROW_COUNT;
             v_events := v_events + v_row_count;
@@ -5013,6 +5132,66 @@ $$;
 
 
 ALTER FUNCTION public.refresh_relay_stuck(job_id integer, config jsonb) OWNER TO verdify;
+
+--
+-- Name: reject_active_equipment_alias_collision(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.reject_active_equipment_alias_collision() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    IF NEW.valid_to IS NULL AND EXISTS (
+        SELECT 1
+        FROM public.equipment e
+        WHERE e.greenhouse_id = NEW.greenhouse_id
+          AND e.slug = NEW.alias_slug
+          AND e.is_active
+    ) THEN
+        RAISE EXCEPTION USING
+            ERRCODE = '23514',
+            MESSAGE = format(
+                'equipment alias %s/%s collides with an active canonical slug',
+                NEW.greenhouse_id,
+                NEW.alias_slug
+            );
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.reject_active_equipment_alias_collision() OWNER TO postgres;
+
+--
+-- Name: reject_equipment_slug_alias_collision(); Type: FUNCTION; Schema: public; Owner: postgres
+--
+
+CREATE FUNCTION public.reject_equipment_slug_alias_collision() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+    IF NEW.is_active AND EXISTS (
+        SELECT 1
+        FROM public.equipment_aliases a
+        WHERE a.greenhouse_id = NEW.greenhouse_id
+          AND a.alias_slug = NEW.slug
+          AND a.valid_to IS NULL
+    ) THEN
+        RAISE EXCEPTION USING
+            ERRCODE = '23514',
+            MESSAGE = format(
+                'active equipment slug %s/%s collides with a current alias',
+                NEW.greenhouse_id,
+                NEW.slug
+            );
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+
+ALTER FUNCTION public.reject_equipment_slug_alias_collision() OWNER TO postgres;
 
 --
 -- Name: update_updated_at_column(); Type: FUNCTION; Schema: public; Owner: verdify
@@ -27123,27 +27302,697 @@ COMMENT ON VIEW public.v_daily_checklist IS 'Today''s checklist: shows all activ
 
 
 --
+-- Name: v_runtime_energy_daily; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_runtime_energy_daily AS
+ WITH runtime AS (
+         SELECT ds.date,
+            ds.greenhouse_id,
+            v.equipment,
+            v.on_minutes
+           FROM (public.daily_summary ds
+             CROSS JOIN LATERAL ( VALUES ('heat1'::text,ds.runtime_heat1_min), ('fan1'::text,ds.runtime_fan1_min), ('fan2'::text,ds.runtime_fan2_min), ('fog'::text,ds.runtime_fog_min), ('vent'::text,ds.runtime_vent_min), ('grow_light_main'::text,ds.runtime_grow_light_main_min), ('grow_light_grow'::text,ds.runtime_grow_light_grow_min)) v(equipment, on_minutes))
+        ), evidence AS (
+         SELECT r_1.date,
+            r_1.greenhouse_id,
+            r_1.equipment,
+            r_1.on_minutes,
+            c.nominal_value AS coefficient_nominal,
+            c.lower_bound AS coefficient_low,
+            c.upper_bound AS coefficient_high,
+            c.coefficient_source,
+            c.revision AS coefficient_revision,
+            c.evidence_ref,
+            c.unit,
+            (c.lower_bound <> c.upper_bound) AS has_uncertainty
+           FROM ((runtime r_1
+             LEFT JOIN public.equipment e ON (((e.greenhouse_id = r_1.greenhouse_id) AND (e.slug = r_1.equipment) AND e.is_active)))
+             LEFT JOIN LATERAL ( SELECT rc.id,
+                    rc.equipment_id,
+                    rc.resource_kind,
+                    rc.unit,
+                    rc.nominal_value,
+                    rc.lower_bound,
+                    rc.upper_bound,
+                    rc.coefficient_source,
+                    rc.revision,
+                    rc.evidence_ref,
+                    rc.valid_from,
+                    rc.valid_to,
+                    rc.is_model_default,
+                    rc.notes,
+                    rc.created_at
+                   FROM public.resource_coefficients rc
+                  WHERE ((rc.equipment_id = e.id) AND (rc.resource_kind = 'electric_watts'::text) AND (rc.valid_from <= ((r_1.date)::timestamp without time zone AT TIME ZONE 'America/Denver'::text)) AND ((rc.valid_to IS NULL) OR (rc.valid_to > ((r_1.date)::timestamp without time zone AT TIME ZONE 'America/Denver'::text))))
+                  ORDER BY rc.valid_from DESC, rc.id DESC
+                 LIMIT 1) c ON (true))
+        )
+ SELECT date,
+    greenhouse_id,
+        CASE
+            WHEN bool_or(((on_minutes IS NULL) OR (coefficient_nominal IS NULL))) THEN NULL::double precision
+            ELSE (round((sum((((on_minutes / (60.0)::double precision) * coefficient_nominal) / (1000.0)::double precision)))::numeric, 3))::double precision
+        END AS modeled_kwh,
+        CASE
+            WHEN bool_or(((on_minutes IS NULL) OR (coefficient_low IS NULL))) THEN NULL::double precision
+            ELSE (round((sum((((on_minutes / (60.0)::double precision) * coefficient_low) / (1000.0)::double precision)))::numeric, 3))::double precision
+        END AS modeled_kwh_low,
+        CASE
+            WHEN bool_or(((on_minutes IS NULL) OR (coefficient_high IS NULL))) THEN NULL::double precision
+            ELSE (round((sum((((on_minutes / (60.0)::double precision) * coefficient_high) / (1000.0)::double precision)))::numeric, 3))::double precision
+        END AS modeled_kwh_high,
+    (round(((100.0 * (count(*) FILTER (WHERE ((on_minutes IS NOT NULL) AND (coefficient_nominal IS NOT NULL))))::numeric) / (NULLIF(count(*), 0))::numeric), 1))::double precision AS runtime_coverage_pct,
+    jsonb_agg(DISTINCT jsonb_build_object('equipment', equipment, 'revision', coefficient_revision, 'source', coefficient_source, 'low', coefficient_low, 'nominal', coefficient_nominal, 'high', coefficient_high, 'unit', unit, 'evidence_ref', evidence_ref)) FILTER (WHERE (coefficient_nominal IS NOT NULL)) AS coefficient_revisions,
+    'whole_controlled_equipment_runtime'::text AS modeled_scope,
+        CASE
+            WHEN (date >= ((now() AT TIME ZONE 'America/Denver'::text))::date) THEN 'incomplete_runtime'::text
+            WHEN bool_or((coefficient_nominal IS NULL)) THEN 'missing_coefficients'::text
+            WHEN bool_or((on_minutes IS NULL)) THEN 'incomplete_runtime'::text
+            WHEN bool_or(has_uncertainty) THEN 'uncertain_coefficients'::text
+            ELSE 'ok'::text
+        END AS model_quality,
+    ((date < ((now() AT TIME ZONE 'America/Denver'::text))::date) AND bool_and((on_minutes IS NOT NULL)) AND bool_and((coefficient_nominal IS NOT NULL)) AND (NOT bool_or(COALESCE(has_uncertainty, true)))) AS available_for_scoring
+   FROM evidence r
+  GROUP BY date, greenhouse_id;
+
+
+ALTER VIEW public.v_runtime_energy_daily OWNER TO verdify;
+
+--
+-- Name: VIEW v_runtime_energy_daily; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_runtime_energy_daily IS 'Whole controlled-equipment runtime model with low/nominal/high kWh and the coefficient revision valid on that local day. Missing runtime or coefficients make the whole scalar NULL; uncertain, incomplete, or historically uncovered models are scoring-ineligible.';
+
+
+--
+-- Name: water_meter_events; Type: TABLE; Schema: public; Owner: verdify
+--
+
+CREATE TABLE public.water_meter_events (
+    id bigint NOT NULL,
+    ts timestamp with time zone NOT NULL,
+    greenhouse_id text DEFAULT 'vallery'::text,
+    source text DEFAULT 'climate.water_total_gal'::text NOT NULL,
+    meter_id text DEFAULT 'main_pulse'::text NOT NULL,
+    event_type text NOT NULL,
+    prior_total_gal double precision,
+    total_gal double precision,
+    delta_gal double precision DEFAULT 0 NOT NULL,
+    quality_flag text DEFAULT 'ok'::text NOT NULL,
+    raw jsonb DEFAULT '{}'::jsonb NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    prior_ts timestamp with time zone,
+    materializer_revision text,
+    attribution_class text,
+    attributed_scope text,
+    candidate_relays text[],
+    attribution_quality text,
+    candidate_run_count integer,
+    CONSTRAINT water_meter_events_event_type_check CHECK ((event_type = ANY (ARRAY['initial'::text, 'delta'::text, 'reset'::text, 'phantom_zero'::text, 'gap'::text, 'source_conflict'::text])))
+);
+
+
+ALTER TABLE public.water_meter_events OWNER TO verdify;
+
+--
+-- Name: TABLE water_meter_events; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON TABLE public.water_meter_events IS 'Event ledger derived from cumulative water meter snapshots. Holds deltas, resets, and phantom-zero samples so daily totals are auditable.';
+
+
+--
+-- Name: v_water_event_attribution; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_water_event_attribution AS
+ SELECT id AS water_event_id,
+    greenhouse_id,
+    meter_id,
+    ts,
+    prior_ts,
+    delta_gal,
+    (COALESCE(candidate_run_count, cardinality(COALESCE(candidate_relays, ARRAY[]::text[]))))::bigint AS candidate_run_count,
+    COALESCE(candidate_relays, ARRAY[]::text[]) AS candidate_relays,
+        CASE
+            WHEN (attributed_scope IS NULL) THEN ARRAY[]::text[]
+            ELSE ARRAY[attributed_scope]
+        END AS candidate_scopes,
+    COALESCE(attribution_class, 'manual_or_unattributed'::text) AS attribution_class,
+    attributed_scope,
+    COALESCE(attribution_quality, 'legacy_missing_interval'::text) AS attribution_quality
+   FROM public.water_meter_events e
+  WHERE ((event_type = 'delta'::text) AND (quality_flag = 'ok'::text));
+
+
+ALTER VIEW public.v_water_event_attribution OWNER TO verdify;
+
+--
+-- Name: VIEW v_water_event_attribution; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_water_event_attribution IS 'Partitions every accepted meter delta into one observed run, ambiguous overlap, or manual/unattributed. It does not distribute volume across multiple candidates.';
+
+
+--
+-- Name: water_meter_materializer_state; Type: TABLE; Schema: public; Owner: verdify
+--
+
+CREATE TABLE public.water_meter_materializer_state (
+    greenhouse_id text NOT NULL,
+    source text DEFAULT 'climate.water_total_gal'::text NOT NULL,
+    meter_id text DEFAULT 'main_pulse'::text NOT NULL,
+    last_source_ts timestamp with time zone,
+    last_total_ts timestamp with time zone,
+    last_total_gal double precision,
+    last_event_quality text,
+    last_success_at timestamp with time zone,
+    processed_samples bigint DEFAULT 0 NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+ALTER TABLE public.water_meter_materializer_state OWNER TO verdify;
+
+--
+-- Name: TABLE water_meter_materializer_state; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON TABLE public.water_meter_materializer_state IS 'Incremental checkpoint for climate.water_total_gal to water_meter_events. The checkpoint advances across unchanged samples, so interruption catch-up is bounded and idempotent.';
+
+
+--
+-- Name: v_water_meter_daily; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_water_meter_daily AS
+ WITH raw_ordered AS (
+         SELECT COALESCE(c_1.greenhouse_id, 'vallery'::text) AS greenhouse_id,
+            c_1.ts,
+            lag(c_1.ts) OVER (PARTITION BY COALESCE(c_1.greenhouse_id, 'vallery'::text), (((c_1.ts AT TIME ZONE 'America/Denver'::text))::date) ORDER BY c_1.ts) AS prior_ts
+           FROM public.climate c_1
+          WHERE (c_1.water_total_gal IS NOT NULL)
+        ), raw_daily AS (
+         SELECT ((((raw_ordered.ts AT TIME ZONE 'America/Denver'::text))::date)::timestamp without time zone AT TIME ZONE 'America/Denver'::text) AS day,
+            raw_ordered.greenhouse_id,
+            count(*) AS raw_sample_count,
+            min(raw_ordered.ts) AS first_raw_ts,
+            max(raw_ordered.ts) AS last_raw_ts,
+            (max(EXTRACT(epoch FROM (raw_ordered.ts - raw_ordered.prior_ts))))::double precision AS max_raw_gap_seconds
+           FROM raw_ordered
+          GROUP BY (((((raw_ordered.ts AT TIME ZONE 'America/Denver'::text))::date)::timestamp without time zone AT TIME ZONE 'America/Denver'::text)), raw_ordered.greenhouse_id
+        ), event_daily AS (
+         SELECT ((((e.ts AT TIME ZONE 'America/Denver'::text))::date)::timestamp without time zone AT TIME ZONE 'America/Denver'::text) AS day,
+            e.greenhouse_id,
+            e.meter_id,
+            (round((COALESCE(sum(e.delta_gal) FILTER (WHERE ((e.event_type = 'delta'::text) AND (e.quality_flag = 'ok'::text))), (0)::double precision))::numeric, 3))::double precision AS used_gal,
+            count(*) FILTER (WHERE ((e.event_type = 'delta'::text) AND (e.quality_flag = 'ok'::text))) AS delta_events,
+            count(*) FILTER (WHERE (e.event_type = 'reset'::text)) AS reset_events,
+            count(*) FILTER (WHERE (e.event_type = 'phantom_zero'::text)) AS phantom_zero_events,
+            count(*) FILTER (WHERE (e.quality_flag <> 'ok'::text)) AS quality_events,
+            count(*) FILTER (WHERE (e.event_type = 'gap'::text)) AS gap_events,
+            count(*) FILTER (WHERE ((e.event_type = 'delta'::text) AND (e.prior_ts IS NULL))) AS missing_interval_events
+           FROM public.water_meter_events e
+          GROUP BY (((((e.ts AT TIME ZONE 'America/Denver'::text))::date)::timestamp without time zone AT TIME ZONE 'America/Denver'::text)), e.greenhouse_id, e.meter_id
+        ), combined AS (
+         SELECT COALESCE(e.day, r.day) AS day,
+            COALESCE(e.greenhouse_id, r.greenhouse_id) AS greenhouse_id,
+            COALESCE(e.meter_id, 'main_pulse'::text) AS meter_id,
+            COALESCE(e.used_gal, (0)::double precision) AS used_gal,
+            COALESCE(e.delta_events, (0)::bigint) AS delta_events,
+            COALESCE(e.reset_events, (0)::bigint) AS reset_events,
+            COALESCE(e.phantom_zero_events, (0)::bigint) AS phantom_zero_events,
+            COALESCE(e.quality_events, (0)::bigint) AS quality_events,
+            COALESCE(e.gap_events, (0)::bigint) AS gap_events,
+            COALESCE(e.missing_interval_events, (0)::bigint) AS missing_interval_events,
+            COALESCE(r.raw_sample_count, (0)::bigint) AS raw_sample_count,
+            r.first_raw_ts,
+            r.last_raw_ts,
+            r.max_raw_gap_seconds
+           FROM (event_daily e
+             FULL JOIN raw_daily r USING (day, greenhouse_id))
+        )
+ SELECT c.day,
+    c.greenhouse_id,
+    c.meter_id,
+    c.used_gal,
+    c.delta_events,
+    c.reset_events,
+    c.phantom_zero_events,
+    c.quality_events,
+    c.gap_events,
+    c.raw_sample_count,
+    c.first_raw_ts,
+    c.last_raw_ts,
+    c.max_raw_gap_seconds,
+    c.missing_interval_events,
+    (((c.day)::date < ((now() AT TIME ZONE 'America/Denver'::text))::date) AND (c.first_raw_ts <= (c.day + '00:10:00'::interval)) AND (c.last_raw_ts >= ((c.day + '1 day'::interval) - '00:10:00'::interval)) AND (COALESCE(c.max_raw_gap_seconds, (0)::double precision) <= (300)::double precision) AND (s.last_source_ts >= c.last_raw_ts)) AS is_complete_day,
+        CASE
+            WHEN ((c.day)::date = ((now() AT TIME ZONE 'America/Denver'::text))::date) THEN 'partial_day'::text
+            WHEN (c.raw_sample_count = 0) THEN 'unavailable'::text
+            WHEN ((s.last_source_ts IS NULL) OR (s.last_source_ts < c.last_raw_ts)) THEN 'ledger_incomplete'::text
+            WHEN ((c.gap_events > 0) OR (COALESCE(c.max_raw_gap_seconds, (0)::double precision) > (300)::double precision) OR (c.quality_events > 0) OR (c.missing_interval_events > 0)) THEN 'discontinuous'::text
+            WHEN ((c.first_raw_ts > (c.day + '00:10:00'::interval)) OR (c.last_raw_ts < ((c.day + '1 day'::interval) - '00:10:00'::interval))) THEN 'incomplete'::text
+            ELSE 'ok'::text
+        END AS quality,
+    (((c.day)::date < ((now() AT TIME ZONE 'America/Denver'::text))::date) AND (c.first_raw_ts <= (c.day + '00:10:00'::interval)) AND (c.last_raw_ts >= ((c.day + '1 day'::interval) - '00:10:00'::interval)) AND (COALESCE(c.max_raw_gap_seconds, (0)::double precision) <= (300)::double precision) AND (s.last_source_ts >= c.last_raw_ts) AND (c.quality_events = 0) AND (c.missing_interval_events = 0)) AS available_for_scoring,
+    s.last_source_ts AS materialized_through_ts,
+    ((s.last_source_ts IS NOT NULL) AND (s.last_source_ts >= c.last_raw_ts)) AS ledger_covers_day
+   FROM (combined c
+     LEFT JOIN public.water_meter_materializer_state s ON (((s.greenhouse_id = c.greenhouse_id) AND (s.source = 'climate.water_total_gal'::text) AND (s.meter_id = c.meter_id))))
+  ORDER BY c.day DESC;
+
+
+ALTER VIEW public.v_water_meter_daily OWNER TO verdify;
+
+--
+-- Name: VIEW v_water_meter_daily; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_water_meter_daily IS 'Quality-filtered ledger gallons with raw-source coverage, reset/gap counts, interval completeness, and an explicit materializer watermark. A complete raw day is scoring-ineligible until the ledger watermark covers its final raw sample; no raw max-minus-min fallback is permitted.';
+
+
+--
+-- Name: v_water_relay_runs; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_water_relay_runs AS
+ WITH observed AS (
+         SELECT COALESCE(es.greenhouse_id, 'vallery'::text) AS greenhouse_id,
+            es.equipment AS relay_slug,
+            es.ts,
+            bool_or(es.state) AS state,
+            (count(DISTINCT es.state) > 1) AS conflicting_state
+           FROM public.equipment_state es
+          WHERE (es.equipment = ANY (ARRAY['fog'::text, 'mister_center'::text, 'mister_south'::text, 'mister_west'::text, 'drip_wall'::text, 'drip_center'::text, 'drip_wall_fert'::text, 'drip_center_fert'::text, 'mister_south_fert'::text, 'mister_west_fert'::text]))
+          GROUP BY COALESCE(es.greenhouse_id, 'vallery'::text), es.equipment, es.ts
+        ), changed AS (
+         SELECT x.greenhouse_id,
+            x.relay_slug,
+            x.ts,
+            x.state,
+            x.conflicting_state,
+            x.prior_state
+           FROM ( SELECT o.greenhouse_id,
+                    o.relay_slug,
+                    o.ts,
+                    o.state,
+                    o.conflicting_state,
+                    lag(o.state) OVER (PARTITION BY o.greenhouse_id, o.relay_slug ORDER BY o.ts) AS prior_state
+                   FROM observed o) x
+          WHERE ((x.prior_state IS DISTINCT FROM x.state) OR (x.prior_state IS NULL) OR x.conflicting_state)
+        ), intervals AS (
+         SELECT c.greenhouse_id,
+            c.relay_slug,
+            c.ts,
+            c.state,
+            c.conflicting_state,
+            c.prior_state,
+            lead(c.ts, 1, now()) OVER (PARTITION BY c.greenhouse_id, c.relay_slug ORDER BY c.ts) AS run_end
+           FROM changed c
+        )
+ SELECT md5(concat_ws('|'::text, greenhouse_id, relay_slug, (ts)::text)) AS run_id,
+    greenhouse_id,
+    relay_slug,
+        CASE
+            WHEN (relay_slug = ANY (ARRAY['fog'::text, 'mister_center'::text, 'mister_south'::text, 'mister_west'::text])) THEN 'climate_wetting'::text
+            WHEN (relay_slug = 'drip_wall'::text) THEN 'wall_irrigation'::text
+            WHEN (relay_slug = 'drip_wall_fert'::text) THEN 'wall_fertigation'::text
+            ELSE 'unsupported_path'::text
+        END AS delivery_scope,
+    ts AS run_start,
+    run_end,
+    (round((EXTRACT(epoch FROM (run_end - ts)) / 60.0), 3))::double precision AS runtime_minutes,
+        CASE
+            WHEN conflicting_state THEN 'conflicting_start'::text
+            ELSE 'observed_relay'::text
+        END AS evidence_quality
+   FROM intervals
+  WHERE ((state IS TRUE) AND (run_end > ts));
+
+
+ALTER VIEW public.v_water_relay_runs OWNER TO verdify;
+
+--
+-- Name: VIEW v_water_relay_runs; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_water_relay_runs IS 'Observed wet-relay episodes. Runtime is operational evidence only; delivered_gallons is intentionally absent.';
+
+
+--
+-- Name: v_water_run_accounting; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_water_run_accounting AS
+ SELECT r.run_id,
+    r.greenhouse_id,
+    r.relay_slug,
+    r.delivery_scope,
+    r.run_start,
+    r.run_end,
+    r.runtime_minutes,
+        CASE
+            WHEN (e.event_count = 0) THEN 'command_only'::text
+            WHEN e.has_ambiguous_overlap THEN 'ambiguous_overlap'::text
+            ELSE 'meter_attributed'::text
+        END AS run_classification,
+        CASE
+            WHEN (e.event_count = 0) THEN NULL::double precision
+            ELSE (round((COALESCE(e.meter_attributed_gal, (0)::double precision))::numeric, 3))::double precision
+        END AS meter_attributed_gal,
+    e.event_count AS overlapping_meter_events,
+    r.evidence_quality
+   FROM (public.v_water_relay_runs r
+     LEFT JOIN LATERAL ( SELECT count(*) AS event_count,
+            COALESCE(bool_or((a.attribution_class = 'ambiguous_overlap'::text)), false) AS has_ambiguous_overlap,
+            sum(a.delta_gal) FILTER (WHERE (a.attribution_class = 'meter_attributed'::text)) AS meter_attributed_gal
+           FROM public.v_water_event_attribution a
+          WHERE ((a.greenhouse_id = r.greenhouse_id) AND (a.ts > r.run_start) AND (a.prior_ts < r.run_end))) e ON (true));
+
+
+ALTER VIEW public.v_water_run_accounting OWNER TO verdify;
+
+--
+-- Name: VIEW v_water_run_accounting; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_water_run_accounting IS 'Observed run classification: meter_attributed, ambiguous_overlap, or command_only. Command-only gallons remain NULL.';
+
+
+--
+-- Name: v_water_attribution_daily; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_water_attribution_daily AS
+ WITH events AS (
+         SELECT ((e_1.ts AT TIME ZONE 'America/Denver'::text))::date AS date,
+            e_1.greenhouse_id,
+            (round((sum(e_1.delta_gal) FILTER (WHERE (e_1.attribution_class = 'meter_attributed'::text)))::numeric, 3))::double precision AS attributed_gal,
+            (round((sum(e_1.delta_gal) FILTER (WHERE (e_1.attributed_scope = 'climate_wetting'::text)))::numeric, 3))::double precision AS climate_wetting_gal,
+            (round((sum(e_1.delta_gal) FILTER (WHERE (e_1.attributed_scope = 'wall_irrigation'::text)))::numeric, 3))::double precision AS wall_irrigation_gal,
+            (round((sum(e_1.delta_gal) FILTER (WHERE (e_1.attributed_scope = 'wall_fertigation'::text)))::numeric, 3))::double precision AS wall_fertigation_gal,
+            (round((sum(e_1.delta_gal) FILTER (WHERE (e_1.attributed_scope = 'unsupported_path'::text)))::numeric, 3))::double precision AS unsupported_path_gal,
+            (round((sum(e_1.delta_gal) FILTER (WHERE (e_1.attribution_class = 'ambiguous_overlap'::text)))::numeric, 3))::double precision AS ambiguous_gal,
+            (round((sum(e_1.delta_gal) FILTER (WHERE (e_1.attribution_class = 'manual_or_unattributed'::text)))::numeric, 3))::double precision AS manual_or_unattributed_gal,
+            count(*) FILTER (WHERE (e_1.attribution_quality <> 'ok'::text)) AS attribution_quality_events
+           FROM public.v_water_event_attribution e_1
+          GROUP BY (((e_1.ts AT TIME ZONE 'America/Denver'::text))::date), e_1.greenhouse_id
+        ), runs AS (
+         SELECT ((r_1.run_start AT TIME ZONE 'America/Denver'::text))::date AS date,
+            r_1.greenhouse_id,
+            count(*) FILTER (WHERE (r_1.run_classification = 'command_only'::text)) AS command_only_runs,
+            count(*) FILTER (WHERE (r_1.run_classification = 'ambiguous_overlap'::text)) AS ambiguous_runs,
+            count(*) FILTER (WHERE (r_1.run_classification = 'meter_attributed'::text)) AS meter_attributed_runs
+           FROM public.v_water_run_accounting r_1
+          GROUP BY (((r_1.run_start AT TIME ZONE 'America/Denver'::text))::date), r_1.greenhouse_id
+        )
+ SELECT (m.day)::date AS date,
+    m.greenhouse_id,
+    m.used_gal AS quality_filtered_meter_gal,
+    COALESCE(e.attributed_gal, (0)::double precision) AS attributed_gal,
+    COALESCE(e.climate_wetting_gal, (0)::double precision) AS climate_wetting_gal,
+    COALESCE(e.wall_irrigation_gal, (0)::double precision) AS wall_irrigation_gal,
+    COALESCE(e.wall_fertigation_gal, (0)::double precision) AS wall_fertigation_gal,
+    COALESCE(e.unsupported_path_gal, (0)::double precision) AS unsupported_path_gal,
+    COALESCE(e.ambiguous_gal, (0)::double precision) AS ambiguous_gal,
+    COALESCE(e.manual_or_unattributed_gal, (0)::double precision) AS manual_or_unattributed_gal,
+    COALESCE(r.command_only_runs, (0)::bigint) AS command_only_runs,
+    COALESCE(r.ambiguous_runs, (0)::bigint) AS ambiguous_runs,
+    COALESCE(r.meter_attributed_runs, (0)::bigint) AS meter_attributed_runs,
+    (round(((((m.used_gal - COALESCE(e.attributed_gal, (0)::double precision)) - COALESCE(e.ambiguous_gal, (0)::double precision)) - COALESCE(e.manual_or_unattributed_gal, (0)::double precision)))::numeric, 6))::double precision AS conservation_error_gal,
+    m.quality AS ledger_quality,
+        CASE
+            WHEN (abs((((m.used_gal - COALESCE(e.attributed_gal, (0)::double precision)) - COALESCE(e.ambiguous_gal, (0)::double precision)) - COALESCE(e.manual_or_unattributed_gal, (0)::double precision))) > (0.001)::double precision) THEN 'conservation_error'::text
+            WHEN (m.quality <> 'ok'::text) THEN m.quality
+            WHEN (COALESCE(e.attribution_quality_events, (0)::bigint) > 0) THEN 'attribution_degraded'::text
+            ELSE 'ok'::text
+        END AS resource_quality,
+    (m.available_for_scoring AND (abs((((m.used_gal - COALESCE(e.attributed_gal, (0)::double precision)) - COALESCE(e.ambiguous_gal, (0)::double precision)) - COALESCE(e.manual_or_unattributed_gal, (0)::double precision))) <= (0.001)::double precision) AND (COALESCE(e.attribution_quality_events, (0)::bigint) = 0)) AS available_for_scoring
+   FROM ((public.v_water_meter_daily m
+     LEFT JOIN events e ON (((e.date = (m.day)::date) AND (e.greenhouse_id = m.greenhouse_id))))
+     LEFT JOIN runs r ON (((r.date = (m.day)::date) AND (r.greenhouse_id = m.greenhouse_id))));
+
+
+ALTER VIEW public.v_water_attribution_daily OWNER TO verdify;
+
+--
+-- Name: VIEW v_water_attribution_daily; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_water_attribution_daily IS 'Conservative daily water partition. Attributed + ambiguous + manual/unattributed exactly conserves accepted meter gallons; command-only runs never contribute gallons.';
+
+
+--
 -- Name: v_daily_kpi; Type: VIEW; Schema: public; Owner: verdify
 --
 
 CREATE VIEW public.v_daily_kpi AS
+ WITH evidence AS (
+         SELECT d.date,
+            d.cycles_fan1,
+            d.cycles_fan2,
+            d.cycles_heat1,
+            d.cycles_heat2,
+            d.cycles_fog,
+            d.cycles_vent,
+            d.cycles_dehum,
+            d.cycles_safety_dehum,
+            d.runtime_fan1_min,
+            d.runtime_fan2_min,
+            d.runtime_heat1_min,
+            d.runtime_heat2_min,
+            d.runtime_fog_min,
+            d.runtime_vent_min,
+            d.runtime_mister_south_h,
+            d.runtime_mister_west_h,
+            d.runtime_mister_center_h,
+            d.water_used_gal,
+            d.mister_water_gal,
+            d.dli_final,
+            d.captured_at,
+            d.kwh_total,
+            d.kwh_heat,
+            d.kwh_fans,
+            d.kwh_other,
+            d.peak_kw,
+            d.gas_used_therms,
+            d.runtime_grow_light_min,
+            d.cycles_grow_light,
+            d.runtime_drip_wall_h,
+            d.runtime_drip_center_h,
+            d.kwh_estimated,
+            d.therms_estimated,
+            d.cost_electric,
+            d.cost_gas,
+            d.cost_water,
+            d.cost_total,
+            d.temp_min,
+            d.temp_max,
+            d.temp_avg,
+            d.rh_min,
+            d.rh_max,
+            d.rh_avg,
+            d.vpd_min,
+            d.vpd_max,
+            d.vpd_avg,
+            d.co2_avg,
+            d.outdoor_temp_min,
+            d.outdoor_temp_max,
+            d.stress_hours_heat,
+            d.stress_hours_cold,
+            d.stress_hours_vpd_high,
+            d.stress_hours_vpd_low,
+            d.notes,
+            d.greenhouse_id,
+            d.min_dp_margin_f,
+            d.dp_risk_hours,
+            d.compliance_pct,
+            d.temp_compliance_pct,
+            d.vpd_compliance_pct,
+            d.mister_fairness_overrides_today,
+            d.cycles_mister_south,
+            d.cycles_mister_west,
+            d.cycles_mister_center,
+            d.cycles_drip_wall,
+            d.cycles_drip_center,
+            d.runtime_drip_wall_fert_h,
+            d.runtime_drip_center_fert_h,
+            d.runtime_mister_south_fert_h,
+            d.runtime_mister_west_fert_h,
+            d.runtime_fert_master_h,
+            d.runtime_irrigation_clean_h,
+            d.runtime_irrigation_fert_h,
+            d.runtime_irrigation_total_h,
+            d.cycles_drip_wall_fert,
+            d.cycles_drip_center_fert,
+            d.cycles_mister_south_fert,
+            d.cycles_mister_west_fert,
+            d.cycles_fert_master,
+            d.irrigation_water_gal,
+            d.fertigation_water_gal,
+            d.compliance_v2_raw_pct,
+            d.compliance_v2_attributable_pct,
+            d.compliance_v2_unachievable_frac,
+            d.graded_temp_compliance_pct,
+            d.graded_vpd_compliance_pct,
+            d.graded_stress_hours_heat,
+            d.graded_stress_hours_cold,
+            d.graded_stress_hours_vpd_high,
+            d.graded_stress_hours_vpd_low,
+            d.feasibility_unknown_min,
+            d.runtime_grow_light_main_min,
+            d.runtime_grow_light_grow_min,
+            w.quality_filtered_meter_gal,
+            w.climate_wetting_gal,
+            COALESCE(w.available_for_scoring, false) AS water_ok,
+            e.modeled_kwh,
+            COALESCE(e.available_for_scoring, false) AS energy_ok
+           FROM ((public.daily_summary d
+             LEFT JOIN public.v_water_attribution_daily w ON (((w.date = d.date) AND (w.greenhouse_id = d.greenhouse_id))))
+             LEFT JOIN public.v_runtime_energy_daily e ON (((e.date = d.date) AND (e.greenhouse_id = d.greenhouse_id))))
+          WHERE (d.date IS NOT NULL)
+        ), normalized AS (
+         SELECT e.date,
+            e.cycles_fan1,
+            e.cycles_fan2,
+            e.cycles_heat1,
+            e.cycles_heat2,
+            e.cycles_fog,
+            e.cycles_vent,
+            e.cycles_dehum,
+            e.cycles_safety_dehum,
+            e.runtime_fan1_min,
+            e.runtime_fan2_min,
+            e.runtime_heat1_min,
+            e.runtime_heat2_min,
+            e.runtime_fog_min,
+            e.runtime_vent_min,
+            e.runtime_mister_south_h,
+            e.runtime_mister_west_h,
+            e.runtime_mister_center_h,
+            e.water_used_gal,
+            e.mister_water_gal,
+            e.dli_final,
+            e.captured_at,
+            e.kwh_total,
+            e.kwh_heat,
+            e.kwh_fans,
+            e.kwh_other,
+            e.peak_kw,
+            e.gas_used_therms,
+            e.runtime_grow_light_min,
+            e.cycles_grow_light,
+            e.runtime_drip_wall_h,
+            e.runtime_drip_center_h,
+            e.kwh_estimated,
+            e.therms_estimated,
+            e.cost_electric,
+            e.cost_gas,
+            e.cost_water,
+            e.cost_total,
+            e.temp_min,
+            e.temp_max,
+            e.temp_avg,
+            e.rh_min,
+            e.rh_max,
+            e.rh_avg,
+            e.vpd_min,
+            e.vpd_max,
+            e.vpd_avg,
+            e.co2_avg,
+            e.outdoor_temp_min,
+            e.outdoor_temp_max,
+            e.stress_hours_heat,
+            e.stress_hours_cold,
+            e.stress_hours_vpd_high,
+            e.stress_hours_vpd_low,
+            e.notes,
+            e.greenhouse_id,
+            e.min_dp_margin_f,
+            e.dp_risk_hours,
+            e.compliance_pct,
+            e.temp_compliance_pct,
+            e.vpd_compliance_pct,
+            e.mister_fairness_overrides_today,
+            e.cycles_mister_south,
+            e.cycles_mister_west,
+            e.cycles_mister_center,
+            e.cycles_drip_wall,
+            e.cycles_drip_center,
+            e.runtime_drip_wall_fert_h,
+            e.runtime_drip_center_fert_h,
+            e.runtime_mister_south_fert_h,
+            e.runtime_mister_west_fert_h,
+            e.runtime_fert_master_h,
+            e.runtime_irrigation_clean_h,
+            e.runtime_irrigation_fert_h,
+            e.runtime_irrigation_total_h,
+            e.cycles_drip_wall_fert,
+            e.cycles_drip_center_fert,
+            e.cycles_mister_south_fert,
+            e.cycles_mister_west_fert,
+            e.cycles_fert_master,
+            e.irrigation_water_gal,
+            e.fertigation_water_gal,
+            e.compliance_v2_raw_pct,
+            e.compliance_v2_attributable_pct,
+            e.compliance_v2_unachievable_frac,
+            e.graded_temp_compliance_pct,
+            e.graded_vpd_compliance_pct,
+            e.graded_stress_hours_heat,
+            e.graded_stress_hours_cold,
+            e.graded_stress_hours_vpd_high,
+            e.graded_stress_hours_vpd_low,
+            e.feasibility_unknown_min,
+            e.runtime_grow_light_main_min,
+            e.runtime_grow_light_grow_min,
+            e.quality_filtered_meter_gal,
+            e.climate_wetting_gal,
+            e.water_ok,
+            e.modeled_kwh,
+            e.energy_ok,
+            COALESCE(e.compliance_v2_attributable_pct, e.compliance_pct, (0)::double precision) AS score_compliance,
+            (e.water_ok AND e.energy_ok AND (e.cost_total IS NOT NULL)) AS resource_ok
+           FROM evidence e
+        )
  SELECT date,
-    round((COALESCE(compliance_pct, (0)::double precision))::numeric, 1) AS compliance_pct,
-    round((COALESCE(temp_compliance_pct, (0)::double precision))::numeric, 1) AS temp_compliance_pct,
-    round((COALESCE(vpd_compliance_pct, (0)::double precision))::numeric, 1) AS vpd_compliance_pct,
-    round((COALESCE(stress_hours_heat, (0)::double precision))::numeric, 2) AS heat_stress_h,
-    round((COALESCE(stress_hours_cold, (0)::double precision))::numeric, 2) AS cold_stress_h,
-    round((COALESCE(stress_hours_vpd_high, (0)::double precision))::numeric, 2) AS vpd_high_stress_h,
-    round((COALESCE(stress_hours_vpd_low, (0)::double precision))::numeric, 2) AS vpd_low_stress_h,
-    round(((((COALESCE(stress_hours_heat, (0)::double precision) + COALESCE(stress_hours_cold, (0)::double precision)) + COALESCE(stress_hours_vpd_high, (0)::double precision)) + COALESCE(stress_hours_vpd_low, (0)::double precision)))::numeric, 2) AS total_stress_h,
-    round((COALESCE(kwh_total, kwh_estimated, (0)::double precision))::numeric, 2) AS kwh,
-    round((COALESCE(therms_estimated, gas_used_therms, (0)::double precision))::numeric, 3) AS therms,
-    round((COALESCE(water_used_gal, (0)::double precision))::numeric, 0) AS water_gal,
-    round((COALESCE(mister_water_gal, (0)::double precision))::numeric, 0) AS mister_water_gal,
-    round((COALESCE(cost_electric, (0)::double precision))::numeric, 2) AS cost_electric,
-    round((COALESCE(cost_gas, (0)::double precision))::numeric, 2) AS cost_gas,
-    round((COALESCE(cost_water, (0)::double precision))::numeric, 2) AS cost_water,
-    round((COALESCE(cost_total, (0)::double precision))::numeric, 2) AS cost_total,
+    round((score_compliance)::numeric, 1) AS compliance_pct,
+    round((COALESCE(graded_temp_compliance_pct, temp_compliance_pct, (0)::double precision))::numeric, 1) AS temp_compliance_pct,
+    round((COALESCE(graded_vpd_compliance_pct, vpd_compliance_pct, (0)::double precision))::numeric, 1) AS vpd_compliance_pct,
+    round((COALESCE(graded_stress_hours_heat, stress_hours_heat, (0)::double precision))::numeric, 2) AS heat_stress_h,
+    round((COALESCE(graded_stress_hours_cold, stress_hours_cold, (0)::double precision))::numeric, 2) AS cold_stress_h,
+    round((COALESCE(graded_stress_hours_vpd_high, stress_hours_vpd_high, (0)::double precision))::numeric, 2) AS vpd_high_stress_h,
+    round((COALESCE(graded_stress_hours_vpd_low, stress_hours_vpd_low, (0)::double precision))::numeric, 2) AS vpd_low_stress_h,
+    round(((((COALESCE(graded_stress_hours_heat, stress_hours_heat, (0)::double precision) + COALESCE(graded_stress_hours_cold, stress_hours_cold, (0)::double precision)) + COALESCE(graded_stress_hours_vpd_high, stress_hours_vpd_high, (0)::double precision)) + COALESCE(graded_stress_hours_vpd_low, stress_hours_vpd_low, (0)::double precision)))::numeric, 2) AS total_stress_h,
+        CASE
+            WHEN energy_ok THEN round((modeled_kwh)::numeric, 2)
+            ELSE NULL::numeric
+        END AS kwh,
+    round((COALESCE(therms_estimated, gas_used_therms))::numeric, 3) AS therms,
+        CASE
+            WHEN water_ok THEN round((quality_filtered_meter_gal)::numeric, 0)
+            ELSE NULL::numeric
+        END AS water_gal,
+        CASE
+            WHEN water_ok THEN round((climate_wetting_gal)::numeric, 0)
+            ELSE NULL::numeric
+        END AS mister_water_gal,
+        CASE
+            WHEN energy_ok THEN round((cost_electric)::numeric, 2)
+            ELSE NULL::numeric
+        END AS cost_electric,
+    round((cost_gas)::numeric, 2) AS cost_gas,
+        CASE
+            WHEN water_ok THEN round((cost_water)::numeric, 2)
+            ELSE NULL::numeric
+        END AS cost_water,
+        CASE
+            WHEN resource_ok THEN round((cost_total)::numeric, 2)
+            ELSE NULL::numeric
+        END AS cost_total,
     round((temp_min)::numeric, 1) AS temp_min,
     round((temp_max)::numeric, 1) AS temp_max,
     round((temp_avg)::numeric, 1) AS temp_avg,
@@ -27153,13 +28002,28 @@ CREATE VIEW public.v_daily_kpi AS
     round((dli_final)::numeric, 1) AS dli,
     round((min_dp_margin_f)::numeric, 1) AS dp_margin_min_f,
     round((COALESCE(dp_risk_hours, (0)::double precision))::numeric, 1) AS dp_risk_hours,
-    round(((((COALESCE(compliance_pct, (0)::double precision) / (100.0)::double precision) * (80)::double precision) + (GREATEST((0)::double precision, ((1.0)::double precision - LEAST((COALESCE(cost_total, (0)::double precision) / (15.0)::double precision), (1.0)::double precision))) * (20)::double precision)))::numeric, 1) AS planner_score
-   FROM public.daily_summary
-  WHERE (date IS NOT NULL)
+    round((
+        CASE
+            WHEN resource_ok THEN (((score_compliance / (100.0)::double precision) * (80)::double precision) + (GREATEST((0)::double precision, ((1.0)::double precision - LEAST((cost_total / (15.0)::double precision), (1.0)::double precision))) * (20)::double precision))
+            ELSE score_compliance
+        END)::numeric, 1) AS planner_score,
+        CASE
+            WHEN resource_ok THEN (20)::numeric
+            ELSE (0)::numeric
+        END AS planner_score_resource_weight_pct,
+    resource_ok AS resource_terms_available
+   FROM normalized
   ORDER BY date;
 
 
 ALTER VIEW public.v_daily_kpi OWNER TO verdify;
+
+--
+-- Name: VIEW v_daily_kpi; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_daily_kpi IS 'Daily planner KPI with provenance-gated resources. Missing or low-confidence water/energy stays NULL and contributes zero score weight; the climate-only score is normalized and labeled by planner_score_resource_weight_pct/resource_terms_available.';
+
 
 --
 -- Name: v_daily_oscillation; Type: VIEW; Schema: public; Owner: verdify
@@ -27372,7 +28236,8 @@ CREATE VIEW public.v_energy_daily AS
             WHEN ((sum(observed_seconds) / 3600.0) < 21.6) THEN 'low_coverage'::text
             ELSE 'ok'::text
         END AS measured_quality,
-    (((day)::date < ((now() AT TIME ZONE 'America/Denver'::text))::date) AND ((sum(observed_seconds) / 3600.0) >= 21.6)) AS available_for_scoring
+    (((day)::date < ((now() AT TIME ZONE 'America/Denver'::text))::date) AND ((sum(observed_seconds) / 3600.0) >= 21.6)) AS available_for_scoring,
+    greenhouse_id
    FROM durations
   GROUP BY day, greenhouse_id
   ORDER BY ((day)::date);
@@ -27384,87 +28249,7 @@ ALTER VIEW public.v_energy_daily OWNER TO verdify;
 -- Name: VIEW v_energy_daily; Type: COMMENT; Schema: public; Owner: verdify
 --
 
-COMMENT ON VIEW public.v_energy_daily IS 'Partial two-channel Shelly watt-time integration with explicit measured scope, temporal coverage, quality, and scoring availability. It is not a whole-facility total.';
-
-
---
--- Name: v_equipment_resource_catalog; Type: VIEW; Schema: public; Owner: verdify
---
-
-CREATE VIEW public.v_equipment_resource_catalog AS
- SELECT e.greenhouse_id,
-    e.id AS equipment_id,
-    e.slug AS equipment_slug,
-    e.kind AS equipment_kind,
-    e.name AS equipment_name,
-    c.resource_kind,
-    c.unit,
-    c.nominal_value AS coefficient_nominal,
-    c.lower_bound AS coefficient_low,
-    c.upper_bound AS coefficient_high,
-    c.coefficient_source,
-    c.revision AS coefficient_revision,
-    c.evidence_ref,
-    c.valid_from,
-    c.valid_to,
-    (c.lower_bound <> c.upper_bound) AS has_uncertainty,
-    COALESCE(( SELECT jsonb_agg(jsonb_build_object('revision', h.revision, 'source', h.coefficient_source, 'nominal', h.nominal_value, 'low', h.lower_bound, 'high', h.upper_bound, 'unit', h.unit, 'evidence_ref', h.evidence_ref, 'valid_from', h.valid_from, 'valid_to', h.valid_to) ORDER BY h.valid_from, h.revision) AS jsonb_agg
-           FROM public.resource_coefficients h
-          WHERE ((h.equipment_id = c.equipment_id) AND (h.resource_kind = c.resource_kind) AND (h.id <> c.id))), '[]'::jsonb) AS alternative_revisions
-   FROM (public.resource_coefficients c
-     JOIN public.equipment e ON ((e.id = c.equipment_id)))
-  WHERE (c.is_model_default AND (c.valid_to IS NULL) AND e.is_active);
-
-
-ALTER VIEW public.v_equipment_resource_catalog OWNER TO verdify;
-
---
--- Name: VIEW v_equipment_resource_catalog; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON VIEW public.v_equipment_resource_catalog IS 'Selected canonical modeling coefficient plus bounds, provenance, revision, evidence, and all alternative historical revisions. Consumers must retain these labels.';
-
-
---
--- Name: v_runtime_energy_daily; Type: VIEW; Schema: public; Owner: verdify
---
-
-CREATE VIEW public.v_runtime_energy_daily AS
- WITH runtime AS (
-         SELECT ds.date,
-            ds.greenhouse_id,
-            v.equipment,
-            v.on_minutes
-           FROM (public.daily_summary ds
-             CROSS JOIN LATERAL ( VALUES ('heat1'::text,ds.runtime_heat1_min), ('fan1'::text,ds.runtime_fan1_min), ('fan2'::text,ds.runtime_fan2_min), ('fog'::text,ds.runtime_fog_min), ('vent'::text,ds.runtime_vent_min), ('grow_light_main'::text,ds.runtime_grow_light_main_min), ('grow_light_grow'::text,ds.runtime_grow_light_grow_min)) v(equipment, on_minutes))
-        )
- SELECT r.date,
-    r.greenhouse_id,
-    (round((sum((((COALESCE(r.on_minutes, (0)::double precision) / (60.0)::double precision) * c.coefficient_nominal) / (1000.0)::double precision)))::numeric, 3))::double precision AS modeled_kwh,
-    (round((sum((((COALESCE(r.on_minutes, (0)::double precision) / (60.0)::double precision) * c.coefficient_low) / (1000.0)::double precision)))::numeric, 3))::double precision AS modeled_kwh_low,
-    (round((sum((((COALESCE(r.on_minutes, (0)::double precision) / (60.0)::double precision) * c.coefficient_high) / (1000.0)::double precision)))::numeric, 3))::double precision AS modeled_kwh_high,
-    (round(((100.0 * (count(*) FILTER (WHERE (r.on_minutes IS NOT NULL)))::numeric) / (NULLIF(count(*), 0))::numeric), 1))::double precision AS runtime_coverage_pct,
-    jsonb_agg(DISTINCT jsonb_build_object('equipment', c.equipment_slug, 'revision', c.coefficient_revision, 'source', c.coefficient_source, 'low', c.coefficient_low, 'nominal', c.coefficient_nominal, 'high', c.coefficient_high, 'unit', c.unit, 'evidence_ref', c.evidence_ref)) AS coefficient_revisions,
-    'whole_controlled_equipment_runtime'::text AS modeled_scope,
-        CASE
-            WHEN (r.date >= ((now() AT TIME ZONE 'America/Denver'::text))::date) THEN 'incomplete_runtime'::text
-            WHEN bool_or((r.on_minutes IS NULL)) THEN 'incomplete_runtime'::text
-            WHEN bool_or(c.has_uncertainty) THEN 'uncertain_coefficients'::text
-            ELSE 'ok'::text
-        END AS model_quality,
-    ((r.date < ((now() AT TIME ZONE 'America/Denver'::text))::date) AND bool_and((r.on_minutes IS NOT NULL)) AND (NOT bool_or(c.has_uncertainty))) AS available_for_scoring
-   FROM (runtime r
-     JOIN public.v_equipment_resource_catalog c ON (((c.greenhouse_id = r.greenhouse_id) AND (c.equipment_slug = r.equipment) AND (c.resource_kind = 'electric_watts'::text))))
-  GROUP BY r.date, r.greenhouse_id;
-
-
-ALTER VIEW public.v_runtime_energy_daily OWNER TO verdify;
-
---
--- Name: VIEW v_runtime_energy_daily; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON VIEW public.v_runtime_energy_daily IS 'Whole controlled-equipment runtime model with low/nominal/high kWh, coefficient revisions and provenance. Uncertain or incomplete models are scoring-ineligible.';
+COMMENT ON VIEW public.v_energy_daily IS 'Partial two-channel Shelly watt-time integration per greenhouse with explicit measured scope, temporal coverage, quality, and scoring availability. It is not a whole-facility total.';
 
 
 --
@@ -27478,7 +28263,7 @@ CREATE VIEW public.v_energy_estimate_reconciliation AS
            FROM public.v_runtime_energy_daily
         UNION
          SELECT v_energy_daily.date,
-            'vallery'::text AS greenhouse_id
+            v_energy_daily.greenhouse_id
            FROM public.v_energy_daily
         )
  SELECT d.date,
@@ -27505,7 +28290,7 @@ CREATE VIEW public.v_energy_estimate_reconciliation AS
     COALESCE(e.available_for_scoring, false) AS measured_available_for_scoring
    FROM ((days d
      LEFT JOIN public.v_runtime_energy_daily r ON (((r.date = d.date) AND (r.greenhouse_id = d.greenhouse_id))))
-     LEFT JOIN public.v_energy_daily e ON ((e.date = d.date)));
+     LEFT JOIN public.v_energy_daily e ON (((e.date = d.date) AND (e.greenhouse_id = d.greenhouse_id))));
 
 
 ALTER VIEW public.v_energy_estimate_reconciliation OWNER TO verdify;
@@ -28142,333 +28927,6 @@ COMMENT ON VIEW public.v_required_sensor_coverage IS 'Required configured sensor
 
 
 --
--- Name: water_meter_events; Type: TABLE; Schema: public; Owner: verdify
---
-
-CREATE TABLE public.water_meter_events (
-    id bigint NOT NULL,
-    ts timestamp with time zone NOT NULL,
-    greenhouse_id text DEFAULT 'vallery'::text,
-    source text DEFAULT 'climate.water_total_gal'::text NOT NULL,
-    meter_id text DEFAULT 'main_pulse'::text NOT NULL,
-    event_type text NOT NULL,
-    prior_total_gal double precision,
-    total_gal double precision,
-    delta_gal double precision DEFAULT 0 NOT NULL,
-    quality_flag text DEFAULT 'ok'::text NOT NULL,
-    raw jsonb DEFAULT '{}'::jsonb NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    prior_ts timestamp with time zone,
-    materializer_revision text,
-    attribution_class text,
-    attributed_scope text,
-    candidate_relays text[],
-    attribution_quality text,
-    CONSTRAINT water_meter_events_event_type_check CHECK ((event_type = ANY (ARRAY['initial'::text, 'delta'::text, 'reset'::text, 'phantom_zero'::text, 'gap'::text])))
-);
-
-
-ALTER TABLE public.water_meter_events OWNER TO verdify;
-
---
--- Name: TABLE water_meter_events; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON TABLE public.water_meter_events IS 'Event ledger derived from cumulative water meter snapshots. Holds deltas, resets, and phantom-zero samples so daily totals are auditable.';
-
-
---
--- Name: v_water_event_attribution; Type: VIEW; Schema: public; Owner: verdify
---
-
-CREATE VIEW public.v_water_event_attribution AS
- SELECT id AS water_event_id,
-    greenhouse_id,
-    meter_id,
-    ts,
-    prior_ts,
-    delta_gal,
-    (cardinality(COALESCE(candidate_relays, ARRAY[]::text[])))::bigint AS candidate_run_count,
-    COALESCE(candidate_relays, ARRAY[]::text[]) AS candidate_relays,
-        CASE
-            WHEN (attributed_scope IS NULL) THEN ARRAY[]::text[]
-            ELSE ARRAY[attributed_scope]
-        END AS candidate_scopes,
-    COALESCE(attribution_class, 'manual_or_unattributed'::text) AS attribution_class,
-    attributed_scope,
-    COALESCE(attribution_quality, 'legacy_missing_interval'::text) AS attribution_quality
-   FROM public.water_meter_events e
-  WHERE ((event_type = 'delta'::text) AND (quality_flag = 'ok'::text));
-
-
-ALTER VIEW public.v_water_event_attribution OWNER TO verdify;
-
---
--- Name: VIEW v_water_event_attribution; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON VIEW public.v_water_event_attribution IS 'Partitions every accepted meter delta into one observed run, ambiguous overlap, or manual/unattributed. It does not distribute volume across multiple candidates.';
-
-
---
--- Name: v_water_meter_daily; Type: VIEW; Schema: public; Owner: verdify
---
-
-CREATE VIEW public.v_water_meter_daily AS
- WITH raw_ordered AS (
-         SELECT COALESCE(c_1.greenhouse_id, 'vallery'::text) AS greenhouse_id,
-            c_1.ts,
-            lag(c_1.ts) OVER (PARTITION BY COALESCE(c_1.greenhouse_id, 'vallery'::text), (((c_1.ts AT TIME ZONE 'America/Denver'::text))::date) ORDER BY c_1.ts) AS prior_ts
-           FROM public.climate c_1
-          WHERE (c_1.water_total_gal IS NOT NULL)
-        ), raw_daily AS (
-         SELECT ((((raw_ordered.ts AT TIME ZONE 'America/Denver'::text))::date)::timestamp without time zone AT TIME ZONE 'America/Denver'::text) AS day,
-            raw_ordered.greenhouse_id,
-            count(*) AS raw_sample_count,
-            min(raw_ordered.ts) AS first_raw_ts,
-            max(raw_ordered.ts) AS last_raw_ts,
-            (max(EXTRACT(epoch FROM (raw_ordered.ts - raw_ordered.prior_ts))))::double precision AS max_raw_gap_seconds
-           FROM raw_ordered
-          GROUP BY (((((raw_ordered.ts AT TIME ZONE 'America/Denver'::text))::date)::timestamp without time zone AT TIME ZONE 'America/Denver'::text)), raw_ordered.greenhouse_id
-        ), event_daily AS (
-         SELECT ((((e.ts AT TIME ZONE 'America/Denver'::text))::date)::timestamp without time zone AT TIME ZONE 'America/Denver'::text) AS day,
-            e.greenhouse_id,
-            e.meter_id,
-            (round((COALESCE(sum(e.delta_gal) FILTER (WHERE ((e.event_type = 'delta'::text) AND (e.quality_flag = 'ok'::text))), (0)::double precision))::numeric, 3))::double precision AS used_gal,
-            count(*) FILTER (WHERE ((e.event_type = 'delta'::text) AND (e.quality_flag = 'ok'::text))) AS delta_events,
-            count(*) FILTER (WHERE (e.event_type = 'reset'::text)) AS reset_events,
-            count(*) FILTER (WHERE (e.event_type = 'phantom_zero'::text)) AS phantom_zero_events,
-            count(*) FILTER (WHERE (e.quality_flag <> 'ok'::text)) AS quality_events,
-            count(*) FILTER (WHERE (e.event_type = 'gap'::text)) AS gap_events,
-            count(*) FILTER (WHERE ((e.event_type = 'delta'::text) AND (e.prior_ts IS NULL))) AS missing_interval_events
-           FROM public.water_meter_events e
-          GROUP BY (((((e.ts AT TIME ZONE 'America/Denver'::text))::date)::timestamp without time zone AT TIME ZONE 'America/Denver'::text)), e.greenhouse_id, e.meter_id
-        ), combined AS (
-         SELECT COALESCE(e.day, r.day) AS day,
-            COALESCE(e.greenhouse_id, r.greenhouse_id) AS greenhouse_id,
-            COALESCE(e.meter_id, 'main_pulse'::text) AS meter_id,
-            COALESCE(e.used_gal, (0)::double precision) AS used_gal,
-            COALESCE(e.delta_events, (0)::bigint) AS delta_events,
-            COALESCE(e.reset_events, (0)::bigint) AS reset_events,
-            COALESCE(e.phantom_zero_events, (0)::bigint) AS phantom_zero_events,
-            COALESCE(e.quality_events, (0)::bigint) AS quality_events,
-            COALESCE(e.gap_events, (0)::bigint) AS gap_events,
-            COALESCE(e.missing_interval_events, (0)::bigint) AS missing_interval_events,
-            COALESCE(r.raw_sample_count, (0)::bigint) AS raw_sample_count,
-            r.first_raw_ts,
-            r.last_raw_ts,
-            r.max_raw_gap_seconds
-           FROM (event_daily e
-             FULL JOIN raw_daily r USING (day, greenhouse_id))
-        )
- SELECT day,
-    greenhouse_id,
-    meter_id,
-    used_gal,
-    delta_events,
-    reset_events,
-    phantom_zero_events,
-    quality_events,
-    gap_events,
-    raw_sample_count,
-    first_raw_ts,
-    last_raw_ts,
-    max_raw_gap_seconds,
-    missing_interval_events,
-    (((day)::date < ((now() AT TIME ZONE 'America/Denver'::text))::date) AND (first_raw_ts <= (day + '00:10:00'::interval)) AND (last_raw_ts >= ((day + '1 day'::interval) - '00:10:00'::interval)) AND (COALESCE(max_raw_gap_seconds, (0)::double precision) <= (300)::double precision)) AS is_complete_day,
-        CASE
-            WHEN ((day)::date = ((now() AT TIME ZONE 'America/Denver'::text))::date) THEN 'partial_day'::text
-            WHEN (raw_sample_count = 0) THEN 'unavailable'::text
-            WHEN ((gap_events > 0) OR (COALESCE(max_raw_gap_seconds, (0)::double precision) > (300)::double precision) OR (quality_events > 0) OR (missing_interval_events > 0)) THEN 'discontinuous'::text
-            WHEN ((first_raw_ts > (day + '00:10:00'::interval)) OR (last_raw_ts < ((day + '1 day'::interval) - '00:10:00'::interval))) THEN 'incomplete'::text
-            ELSE 'ok'::text
-        END AS quality,
-    (((day)::date < ((now() AT TIME ZONE 'America/Denver'::text))::date) AND (first_raw_ts <= (day + '00:10:00'::interval)) AND (last_raw_ts >= ((day + '1 day'::interval) - '00:10:00'::interval)) AND (COALESCE(max_raw_gap_seconds, (0)::double precision) <= (300)::double precision) AND (quality_events = 0) AND (missing_interval_events = 0)) AS available_for_scoring
-   FROM combined c
-  ORDER BY day DESC;
-
-
-ALTER VIEW public.v_water_meter_daily OWNER TO verdify;
-
---
--- Name: VIEW v_water_meter_daily; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON VIEW public.v_water_meter_daily IS 'Quality-filtered ledger gallons with raw-source coverage, reset/gap counts, interval completeness, and scoring availability. No raw max-minus-min fallback is permitted.';
-
-
---
--- Name: v_water_relay_runs; Type: VIEW; Schema: public; Owner: verdify
---
-
-CREATE VIEW public.v_water_relay_runs AS
- WITH observed AS (
-         SELECT COALESCE(es.greenhouse_id, 'vallery'::text) AS greenhouse_id,
-            es.equipment AS relay_slug,
-            es.ts,
-            bool_or(es.state) AS state,
-            (count(DISTINCT es.state) > 1) AS conflicting_state
-           FROM public.equipment_state es
-          WHERE (es.equipment = ANY (ARRAY['fog'::text, 'mister_center'::text, 'mister_south'::text, 'mister_west'::text, 'drip_wall'::text, 'drip_center'::text, 'drip_wall_fert'::text, 'drip_center_fert'::text, 'mister_south_fert'::text, 'mister_west_fert'::text]))
-          GROUP BY COALESCE(es.greenhouse_id, 'vallery'::text), es.equipment, es.ts
-        ), changed AS (
-         SELECT x.greenhouse_id,
-            x.relay_slug,
-            x.ts,
-            x.state,
-            x.conflicting_state,
-            x.prior_state
-           FROM ( SELECT o.greenhouse_id,
-                    o.relay_slug,
-                    o.ts,
-                    o.state,
-                    o.conflicting_state,
-                    lag(o.state) OVER (PARTITION BY o.greenhouse_id, o.relay_slug ORDER BY o.ts) AS prior_state
-                   FROM observed o) x
-          WHERE ((x.prior_state IS DISTINCT FROM x.state) OR (x.prior_state IS NULL) OR x.conflicting_state)
-        ), intervals AS (
-         SELECT c.greenhouse_id,
-            c.relay_slug,
-            c.ts,
-            c.state,
-            c.conflicting_state,
-            c.prior_state,
-            lead(c.ts, 1, now()) OVER (PARTITION BY c.greenhouse_id, c.relay_slug ORDER BY c.ts) AS run_end
-           FROM changed c
-        )
- SELECT md5(concat_ws('|'::text, greenhouse_id, relay_slug, (ts)::text)) AS run_id,
-    greenhouse_id,
-    relay_slug,
-        CASE
-            WHEN (relay_slug = ANY (ARRAY['fog'::text, 'mister_center'::text, 'mister_south'::text, 'mister_west'::text])) THEN 'climate_wetting'::text
-            WHEN (relay_slug = 'drip_wall'::text) THEN 'wall_irrigation'::text
-            WHEN (relay_slug = 'drip_wall_fert'::text) THEN 'wall_fertigation'::text
-            ELSE 'unsupported_path'::text
-        END AS delivery_scope,
-    ts AS run_start,
-    run_end,
-    (round((EXTRACT(epoch FROM (run_end - ts)) / 60.0), 3))::double precision AS runtime_minutes,
-        CASE
-            WHEN conflicting_state THEN 'conflicting_start'::text
-            ELSE 'observed_relay'::text
-        END AS evidence_quality
-   FROM intervals
-  WHERE ((state IS TRUE) AND (run_end > ts));
-
-
-ALTER VIEW public.v_water_relay_runs OWNER TO verdify;
-
---
--- Name: VIEW v_water_relay_runs; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON VIEW public.v_water_relay_runs IS 'Observed wet-relay episodes. Runtime is operational evidence only; delivered_gallons is intentionally absent.';
-
-
---
--- Name: v_water_run_accounting; Type: VIEW; Schema: public; Owner: verdify
---
-
-CREATE VIEW public.v_water_run_accounting AS
- SELECT r.run_id,
-    r.greenhouse_id,
-    r.relay_slug,
-    r.delivery_scope,
-    r.run_start,
-    r.run_end,
-    r.runtime_minutes,
-        CASE
-            WHEN (e.event_count = 0) THEN 'command_only'::text
-            WHEN e.has_ambiguous_overlap THEN 'ambiguous_overlap'::text
-            ELSE 'meter_attributed'::text
-        END AS run_classification,
-        CASE
-            WHEN (e.event_count = 0) THEN NULL::double precision
-            ELSE (round((COALESCE(e.meter_attributed_gal, (0)::double precision))::numeric, 3))::double precision
-        END AS meter_attributed_gal,
-    e.event_count AS overlapping_meter_events,
-    r.evidence_quality
-   FROM (public.v_water_relay_runs r
-     LEFT JOIN LATERAL ( SELECT count(*) AS event_count,
-            COALESCE(bool_or((a.attribution_class = 'ambiguous_overlap'::text)), false) AS has_ambiguous_overlap,
-            sum(a.delta_gal) FILTER (WHERE (a.attribution_class = 'meter_attributed'::text)) AS meter_attributed_gal
-           FROM public.v_water_event_attribution a
-          WHERE ((a.greenhouse_id = r.greenhouse_id) AND (a.ts > r.run_start) AND (a.ts <= r.run_end) AND (a.prior_ts < r.run_end))) e ON (true));
-
-
-ALTER VIEW public.v_water_run_accounting OWNER TO verdify;
-
---
--- Name: VIEW v_water_run_accounting; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON VIEW public.v_water_run_accounting IS 'Observed run classification: meter_attributed, ambiguous_overlap, or command_only. Command-only gallons remain NULL.';
-
-
---
--- Name: v_water_attribution_daily; Type: VIEW; Schema: public; Owner: verdify
---
-
-CREATE VIEW public.v_water_attribution_daily AS
- WITH events AS (
-         SELECT ((e_1.ts AT TIME ZONE 'America/Denver'::text))::date AS date,
-            e_1.greenhouse_id,
-            (round((sum(e_1.delta_gal) FILTER (WHERE (e_1.attribution_class = 'meter_attributed'::text)))::numeric, 3))::double precision AS attributed_gal,
-            (round((sum(e_1.delta_gal) FILTER (WHERE (e_1.attributed_scope = 'climate_wetting'::text)))::numeric, 3))::double precision AS climate_wetting_gal,
-            (round((sum(e_1.delta_gal) FILTER (WHERE (e_1.attributed_scope = 'wall_irrigation'::text)))::numeric, 3))::double precision AS wall_irrigation_gal,
-            (round((sum(e_1.delta_gal) FILTER (WHERE (e_1.attributed_scope = 'wall_fertigation'::text)))::numeric, 3))::double precision AS wall_fertigation_gal,
-            (round((sum(e_1.delta_gal) FILTER (WHERE (e_1.attributed_scope = 'unsupported_path'::text)))::numeric, 3))::double precision AS unsupported_path_gal,
-            (round((sum(e_1.delta_gal) FILTER (WHERE (e_1.attribution_class = 'ambiguous_overlap'::text)))::numeric, 3))::double precision AS ambiguous_gal,
-            (round((sum(e_1.delta_gal) FILTER (WHERE (e_1.attribution_class = 'manual_or_unattributed'::text)))::numeric, 3))::double precision AS manual_or_unattributed_gal,
-            count(*) FILTER (WHERE (e_1.attribution_quality <> 'ok'::text)) AS attribution_quality_events
-           FROM public.v_water_event_attribution e_1
-          GROUP BY (((e_1.ts AT TIME ZONE 'America/Denver'::text))::date), e_1.greenhouse_id
-        ), runs AS (
-         SELECT ((r_1.run_start AT TIME ZONE 'America/Denver'::text))::date AS date,
-            r_1.greenhouse_id,
-            count(*) FILTER (WHERE (r_1.run_classification = 'command_only'::text)) AS command_only_runs,
-            count(*) FILTER (WHERE (r_1.run_classification = 'ambiguous_overlap'::text)) AS ambiguous_runs,
-            count(*) FILTER (WHERE (r_1.run_classification = 'meter_attributed'::text)) AS meter_attributed_runs
-           FROM public.v_water_run_accounting r_1
-          GROUP BY (((r_1.run_start AT TIME ZONE 'America/Denver'::text))::date), r_1.greenhouse_id
-        )
- SELECT (m.day)::date AS date,
-    m.greenhouse_id,
-    m.used_gal AS quality_filtered_meter_gal,
-    COALESCE(e.attributed_gal, (0)::double precision) AS attributed_gal,
-    COALESCE(e.climate_wetting_gal, (0)::double precision) AS climate_wetting_gal,
-    COALESCE(e.wall_irrigation_gal, (0)::double precision) AS wall_irrigation_gal,
-    COALESCE(e.wall_fertigation_gal, (0)::double precision) AS wall_fertigation_gal,
-    COALESCE(e.unsupported_path_gal, (0)::double precision) AS unsupported_path_gal,
-    COALESCE(e.ambiguous_gal, (0)::double precision) AS ambiguous_gal,
-    COALESCE(e.manual_or_unattributed_gal, (0)::double precision) AS manual_or_unattributed_gal,
-    COALESCE(r.command_only_runs, (0)::bigint) AS command_only_runs,
-    COALESCE(r.ambiguous_runs, (0)::bigint) AS ambiguous_runs,
-    COALESCE(r.meter_attributed_runs, (0)::bigint) AS meter_attributed_runs,
-    (round(((((m.used_gal - COALESCE(e.attributed_gal, (0)::double precision)) - COALESCE(e.ambiguous_gal, (0)::double precision)) - COALESCE(e.manual_or_unattributed_gal, (0)::double precision)))::numeric, 6))::double precision AS conservation_error_gal,
-    m.quality AS ledger_quality,
-        CASE
-            WHEN (abs((((m.used_gal - COALESCE(e.attributed_gal, (0)::double precision)) - COALESCE(e.ambiguous_gal, (0)::double precision)) - COALESCE(e.manual_or_unattributed_gal, (0)::double precision))) > (0.001)::double precision) THEN 'conservation_error'::text
-            WHEN (m.quality <> 'ok'::text) THEN m.quality
-            WHEN (COALESCE(e.attribution_quality_events, (0)::bigint) > 0) THEN 'attribution_degraded'::text
-            ELSE 'ok'::text
-        END AS resource_quality,
-    (m.available_for_scoring AND (abs((((m.used_gal - COALESCE(e.attributed_gal, (0)::double precision)) - COALESCE(e.ambiguous_gal, (0)::double precision)) - COALESCE(e.manual_or_unattributed_gal, (0)::double precision))) <= (0.001)::double precision) AND (COALESCE(e.attribution_quality_events, (0)::bigint) = 0)) AS available_for_scoring
-   FROM ((public.v_water_meter_daily m
-     LEFT JOIN events e ON (((e.date = (m.day)::date) AND (e.greenhouse_id = m.greenhouse_id))))
-     LEFT JOIN runs r ON (((r.date = (m.day)::date) AND (r.greenhouse_id = m.greenhouse_id))));
-
-
-ALTER VIEW public.v_water_attribution_daily OWNER TO verdify;
-
---
--- Name: VIEW v_water_attribution_daily; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON VIEW public.v_water_attribution_daily IS 'Conservative daily water partition. Attributed + ambiguous + manual/unattributed exactly conserves accepted meter gallons; command-only runs never contribute gallons.';
-
-
---
 -- Name: v_water_budget; Type: VIEW; Schema: public; Owner: verdify
 --
 
@@ -28816,6 +29274,45 @@ CREATE VIEW public.v_disease_risk AS
 ALTER VIEW public.v_disease_risk OWNER TO verdify;
 
 --
+-- Name: v_energy_meter_health; Type: VIEW; Schema: public; Owner: postgres
+--
+
+CREATE VIEW public.v_energy_meter_health AS
+ WITH houses AS (
+         SELECT g.id AS greenhouse_id
+           FROM public.greenhouses g
+        ), latest AS (
+         SELECT COALESCE(e.greenhouse_id, 'vallery'::text) AS greenhouse_id,
+            max(e.ts) FILTER (WHERE (e.watts_total IS NOT NULL)) AS latest_ts,
+            count(*) FILTER (WHERE ((e.watts_total IS NOT NULL) AND (e.ts >= (now() - '00:10:00'::interval)))) AS recent_sample_count
+           FROM public.energy e
+          GROUP BY COALESCE(e.greenhouse_id, 'vallery'::text)
+        )
+ SELECT h.greenhouse_id,
+    l.latest_ts,
+    round(EXTRACT(epoch FROM (now() - l.latest_ts)), 1) AS sample_age_seconds,
+    COALESCE(l.recent_sample_count, (0)::bigint) AS recent_sample_count,
+        CASE
+            WHEN (l.latest_ts IS NULL) THEN 'unavailable'::text
+            WHEN (l.latest_ts < (now() - '00:10:00'::interval)) THEN 'stale'::text
+            ELSE 'fresh'::text
+        END AS meter_status,
+    ((l.latest_ts IS NOT NULL) AND (l.latest_ts >= (now() - '00:10:00'::interval))) AS fresh_for_observation,
+    'partial_shelly_two_channels'::text AS measured_scope
+   FROM (houses h
+     LEFT JOIN latest l ON ((l.greenhouse_id = h.greenhouse_id)));
+
+
+ALTER VIEW public.v_energy_meter_health OWNER TO postgres;
+
+--
+-- Name: VIEW v_energy_meter_health; Type: COMMENT; Schema: public; Owner: postgres
+--
+
+COMMENT ON VIEW public.v_energy_meter_health IS 'Current partial-Shelly freshness per greenhouse. Freshness is distinct from completed-day temporal coverage and never upgrades the partial scope to whole-facility measurement.';
+
+
+--
 -- Name: v_equipment_alias_resolution; Type: VIEW; Schema: public; Owner: verdify
 --
 
@@ -28843,7 +29340,9 @@ UNION ALL
     e.is_active
    FROM (public.equipment_aliases a
      JOIN public.equipment e ON ((e.id = a.equipment_id)))
-  WHERE ((a.valid_to IS NULL) AND e.is_active);
+  WHERE ((a.valid_to IS NULL) AND e.is_active AND (NOT (EXISTS ( SELECT 1
+           FROM public.equipment canonical
+          WHERE ((canonical.greenhouse_id = a.greenhouse_id) AND (canonical.slug = a.alias_slug) AND canonical.is_active)))));
 
 
 ALTER VIEW public.v_equipment_alias_resolution OWNER TO verdify;
@@ -28852,7 +29351,45 @@ ALTER VIEW public.v_equipment_alias_resolution OWNER TO verdify;
 -- Name: VIEW v_equipment_alias_resolution; Type: COMMENT; Schema: public; Owner: verdify
 --
 
-COMMENT ON VIEW public.v_equipment_alias_resolution IS 'One-row resolution of canonical and historical telemetry slugs into active canonical equipment. Duplicate input slugs are prevented by table constraints.';
+COMMENT ON VIEW public.v_equipment_alias_resolution IS 'One-row resolution of canonical and historical telemetry slugs into active canonical equipment. Cross-table triggers reject a current alias that collides with an active canonical slug; the view also gives canonical rows defensive precedence.';
+
+
+--
+-- Name: v_equipment_resource_catalog; Type: VIEW; Schema: public; Owner: verdify
+--
+
+CREATE VIEW public.v_equipment_resource_catalog AS
+ SELECT e.greenhouse_id,
+    e.id AS equipment_id,
+    e.slug AS equipment_slug,
+    e.kind AS equipment_kind,
+    e.name AS equipment_name,
+    c.resource_kind,
+    c.unit,
+    c.nominal_value AS coefficient_nominal,
+    c.lower_bound AS coefficient_low,
+    c.upper_bound AS coefficient_high,
+    c.coefficient_source,
+    c.revision AS coefficient_revision,
+    c.evidence_ref,
+    c.valid_from,
+    c.valid_to,
+    (c.lower_bound <> c.upper_bound) AS has_uncertainty,
+    COALESCE(( SELECT jsonb_agg(jsonb_build_object('revision', h.revision, 'source', h.coefficient_source, 'nominal', h.nominal_value, 'low', h.lower_bound, 'high', h.upper_bound, 'unit', h.unit, 'evidence_ref', h.evidence_ref, 'valid_from', h.valid_from, 'valid_to', h.valid_to) ORDER BY h.valid_from, h.revision) AS jsonb_agg
+           FROM public.resource_coefficients h
+          WHERE ((h.equipment_id = c.equipment_id) AND (h.resource_kind = c.resource_kind) AND (h.id <> c.id))), '[]'::jsonb) AS alternative_revisions
+   FROM (public.resource_coefficients c
+     JOIN public.equipment e ON ((e.id = c.equipment_id)))
+  WHERE (c.is_model_default AND (c.valid_to IS NULL) AND e.is_active);
+
+
+ALTER VIEW public.v_equipment_resource_catalog OWNER TO verdify;
+
+--
+-- Name: VIEW v_equipment_resource_catalog; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_equipment_resource_catalog IS 'Selected canonical modeling coefficient plus bounds, provenance, revision, evidence, and all alternative historical revisions. Consumers must retain these labels.';
 
 
 --
@@ -32723,27 +33260,139 @@ COMMENT ON VIEW public.v_plan_transition_audit_36h IS 'Last-36h guardrail-aware 
 CREATE VIEW public.v_planner_performance AS
  WITH daily AS (
          SELECT d.date,
-            COALESCE(d.stress_hours_heat, (0)::double precision) AS heat_stress_h,
-            COALESCE(d.stress_hours_cold, (0)::double precision) AS cold_stress_h,
-            COALESCE(d.stress_hours_vpd_high, (0)::double precision) AS vpd_high_stress_h,
-            COALESCE(d.stress_hours_vpd_low, (0)::double precision) AS vpd_low_stress_h,
-            (((COALESCE(d.stress_hours_heat, (0)::double precision) + COALESCE(d.stress_hours_cold, (0)::double precision)) + COALESCE(d.stress_hours_vpd_high, (0)::double precision)) + COALESCE(d.stress_hours_vpd_low, (0)::double precision)) AS total_stress_h,
-            COALESCE(d.compliance_pct, (0)::double precision) AS compliance_pct,
-            COALESCE(d.temp_compliance_pct, (0)::double precision) AS temp_compliance_pct,
-            COALESCE(d.vpd_compliance_pct, (0)::double precision) AS vpd_compliance_pct,
-            COALESCE(d.cost_total, (0)::double precision) AS cost_total,
-            COALESCE(d.cost_electric, (0)::double precision) AS cost_electric,
-            COALESCE(d.cost_gas, (0)::double precision) AS cost_gas,
-            COALESCE(d.cost_water, (0)::double precision) AS cost_water
-           FROM public.daily_summary d
+            d.cycles_fan1,
+            d.cycles_fan2,
+            d.cycles_heat1,
+            d.cycles_heat2,
+            d.cycles_fog,
+            d.cycles_vent,
+            d.cycles_dehum,
+            d.cycles_safety_dehum,
+            d.runtime_fan1_min,
+            d.runtime_fan2_min,
+            d.runtime_heat1_min,
+            d.runtime_heat2_min,
+            d.runtime_fog_min,
+            d.runtime_vent_min,
+            d.runtime_mister_south_h,
+            d.runtime_mister_west_h,
+            d.runtime_mister_center_h,
+            d.water_used_gal,
+            d.mister_water_gal,
+            d.dli_final,
+            d.captured_at,
+            d.kwh_total,
+            d.kwh_heat,
+            d.kwh_fans,
+            d.kwh_other,
+            d.peak_kw,
+            d.gas_used_therms,
+            d.runtime_grow_light_min,
+            d.cycles_grow_light,
+            d.runtime_drip_wall_h,
+            d.runtime_drip_center_h,
+            d.kwh_estimated,
+            d.therms_estimated,
+            d.cost_electric,
+            d.cost_gas,
+            d.cost_water,
+            d.cost_total,
+            d.temp_min,
+            d.temp_max,
+            d.temp_avg,
+            d.rh_min,
+            d.rh_max,
+            d.rh_avg,
+            d.vpd_min,
+            d.vpd_max,
+            d.vpd_avg,
+            d.co2_avg,
+            d.outdoor_temp_min,
+            d.outdoor_temp_max,
+            d.stress_hours_heat,
+            d.stress_hours_cold,
+            d.stress_hours_vpd_high,
+            d.stress_hours_vpd_low,
+            d.notes,
+            d.greenhouse_id,
+            d.min_dp_margin_f,
+            d.dp_risk_hours,
+            d.compliance_pct,
+            d.temp_compliance_pct,
+            d.vpd_compliance_pct,
+            d.mister_fairness_overrides_today,
+            d.cycles_mister_south,
+            d.cycles_mister_west,
+            d.cycles_mister_center,
+            d.cycles_drip_wall,
+            d.cycles_drip_center,
+            d.runtime_drip_wall_fert_h,
+            d.runtime_drip_center_fert_h,
+            d.runtime_mister_south_fert_h,
+            d.runtime_mister_west_fert_h,
+            d.runtime_fert_master_h,
+            d.runtime_irrigation_clean_h,
+            d.runtime_irrigation_fert_h,
+            d.runtime_irrigation_total_h,
+            d.cycles_drip_wall_fert,
+            d.cycles_drip_center_fert,
+            d.cycles_mister_south_fert,
+            d.cycles_mister_west_fert,
+            d.cycles_fert_master,
+            d.irrigation_water_gal,
+            d.fertigation_water_gal,
+            d.compliance_v2_raw_pct,
+            d.compliance_v2_attributable_pct,
+            d.compliance_v2_unachievable_frac,
+            d.graded_temp_compliance_pct,
+            d.graded_vpd_compliance_pct,
+            d.graded_stress_hours_heat,
+            d.graded_stress_hours_cold,
+            d.graded_stress_hours_vpd_high,
+            d.graded_stress_hours_vpd_low,
+            d.feasibility_unknown_min,
+            d.runtime_grow_light_main_min,
+            d.runtime_grow_light_grow_min,
+            COALESCE(w.available_for_scoring, false) AS water_ok,
+            COALESCE(e.available_for_scoring, false) AS energy_ok
+           FROM ((public.daily_summary d
+             LEFT JOIN public.v_water_attribution_daily w ON (((w.date = d.date) AND (w.greenhouse_id = d.greenhouse_id))))
+             LEFT JOIN public.v_runtime_energy_daily e ON (((e.date = d.date) AND (e.greenhouse_id = d.greenhouse_id))))
           WHERE (d.date IS NOT NULL)
+        ), scored AS (
+         SELECT d.date,
+            COALESCE(d.graded_stress_hours_heat, d.stress_hours_heat, (0)::double precision) AS heat_stress_h,
+            COALESCE(d.graded_stress_hours_cold, d.stress_hours_cold, (0)::double precision) AS cold_stress_h,
+            COALESCE(d.graded_stress_hours_vpd_high, d.stress_hours_vpd_high, (0)::double precision) AS vpd_high_stress_h,
+            COALESCE(d.graded_stress_hours_vpd_low, d.stress_hours_vpd_low, (0)::double precision) AS vpd_low_stress_h,
+            COALESCE(d.compliance_v2_attributable_pct, d.compliance_pct, (0)::double precision) AS compliance_pct,
+            COALESCE(d.graded_temp_compliance_pct, d.temp_compliance_pct, (0)::double precision) AS temp_compliance_pct,
+            COALESCE(d.graded_vpd_compliance_pct, d.vpd_compliance_pct, (0)::double precision) AS vpd_compliance_pct,
+                CASE
+                    WHEN (d.water_ok AND d.energy_ok) THEN d.cost_total
+                    ELSE NULL::double precision
+                END AS cost_total,
+                CASE
+                    WHEN d.energy_ok THEN d.cost_electric
+                    ELSE NULL::double precision
+                END AS cost_electric,
+            d.cost_gas,
+                CASE
+                    WHEN d.water_ok THEN d.cost_water
+                    ELSE NULL::double precision
+                END AS cost_water,
+            COALESCE(d.compliance_pct, (0)::double precision) AS compliance_binary_pct,
+            COALESCE(d.compliance_v2_raw_pct, (0)::double precision) AS compliance_raw_graded_pct,
+            COALESCE(d.compliance_v2_unachievable_frac, (0)::double precision) AS unachievable_frac,
+            (d.water_ok AND d.energy_ok AND (d.cost_total IS NOT NULL)) AS resource_ok
+           FROM daily d
         )
  SELECT date,
     heat_stress_h,
     cold_stress_h,
     vpd_high_stress_h,
     vpd_low_stress_h,
-    total_stress_h,
+    (((heat_stress_h + cold_stress_h) + vpd_high_stress_h) + vpd_low_stress_h) AS total_stress_h,
     round((compliance_pct)::numeric, 1) AS compliance_pct,
     round((temp_compliance_pct)::numeric, 1) AS temp_compliance_pct,
     round((vpd_compliance_pct)::numeric, 1) AS vpd_compliance_pct,
@@ -32752,14 +33401,33 @@ CREATE VIEW public.v_planner_performance AS
     cost_gas,
     cost_water,
         CASE
-            WHEN (total_stress_h > (0)::double precision) THEN round(((cost_total / total_stress_h))::numeric, 2)
+            WHEN (((((heat_stress_h + cold_stress_h) + vpd_high_stress_h) + vpd_low_stress_h) > (0)::double precision) AND (cost_total IS NOT NULL)) THEN round(((cost_total / (((heat_stress_h + cold_stress_h) + vpd_high_stress_h) + vpd_low_stress_h)))::numeric, 2)
             ELSE NULL::numeric
         END AS cost_per_stress_hour,
-    round(((((compliance_pct / (100.0)::double precision) * (80)::double precision) + (GREATEST((0)::double precision, ((1.0)::double precision - LEAST((cost_total / (15.0)::double precision), (1.0)::double precision))) * (20)::double precision)))::numeric, 1) AS planner_score
-   FROM daily;
+    round((
+        CASE
+            WHEN resource_ok THEN (((compliance_pct / (100.0)::double precision) * (80)::double precision) + (GREATEST((0)::double precision, ((1.0)::double precision - LEAST((cost_total / (15.0)::double precision), (1.0)::double precision))) * (20)::double precision))
+            ELSE compliance_pct
+        END)::numeric, 1) AS planner_score,
+    round((compliance_binary_pct)::numeric, 1) AS compliance_binary_pct,
+    round((compliance_raw_graded_pct)::numeric, 1) AS compliance_raw_graded_pct,
+    round((unachievable_frac)::numeric, 4) AS unachievable_frac,
+        CASE
+            WHEN resource_ok THEN (20)::numeric
+            ELSE (0)::numeric
+        END AS planner_score_resource_weight_pct,
+    resource_ok AS resource_terms_available
+   FROM scored;
 
 
 ALTER VIEW public.v_planner_performance OWNER TO verdify;
+
+--
+-- Name: VIEW v_planner_performance; Type: COMMENT; Schema: public; Owner: verdify
+--
+
+COMMENT ON VIEW public.v_planner_performance IS 'Controller-attributable climate performance plus explicitly gated resource evidence. The cost term has 20% weight only when conserved water and the whole-runtime energy model are scoring-eligible; otherwise climate is normalized to 100% and resource scalars remain NULL.';
+
 
 --
 -- Name: v_plan_window_scorecard; Type: VIEW; Schema: public; Owner: verdify
@@ -33123,33 +33791,6 @@ COMMENT ON VIEW public.v_replay_outdoor_freshness IS 'Replay outdoor freshness p
 
 
 --
--- Name: water_meter_materializer_state; Type: TABLE; Schema: public; Owner: verdify
---
-
-CREATE TABLE public.water_meter_materializer_state (
-    greenhouse_id text NOT NULL,
-    source text DEFAULT 'climate.water_total_gal'::text NOT NULL,
-    meter_id text DEFAULT 'main_pulse'::text NOT NULL,
-    last_source_ts timestamp with time zone,
-    last_total_ts timestamp with time zone,
-    last_total_gal double precision,
-    last_event_quality text,
-    last_success_at timestamp with time zone,
-    processed_samples bigint DEFAULT 0 NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
-
-ALTER TABLE public.water_meter_materializer_state OWNER TO verdify;
-
---
--- Name: TABLE water_meter_materializer_state; Type: COMMENT; Schema: public; Owner: verdify
---
-
-COMMENT ON TABLE public.water_meter_materializer_state IS 'Incremental checkpoint for climate.water_total_gal to water_meter_events. The checkpoint advances across unchanged samples, so interruption catch-up is bounded and idempotent.';
-
-
---
 -- Name: v_water_ledger_health; Type: VIEW; Schema: public; Owner: verdify
 --
 
@@ -33223,13 +33864,16 @@ UNION ALL
   WHERE (e.date = (((now() AT TIME ZONE 'America/Denver'::text))::date - 1))
 UNION ALL
  SELECT 'energy_partial_meter'::text AS resource,
-    'vallery'::text AS greenhouse_id,
-    e.measured_quality AS quality,
-    e.available_for_scoring,
-    (((e.date + 1))::timestamp without time zone AT TIME ZONE 'America/Denver'::text) AS observed_through,
-    jsonb_build_object('measured_kwh', e.measured_kwh, 'meter_coverage_pct', e.meter_coverage_pct, 'scope', e.measured_scope, 'sample_count', e.sample_count) AS detail
-   FROM public.v_energy_daily e
-  WHERE (e.date = (((now() AT TIME ZONE 'America/Denver'::text))::date - 1));
+    h.greenhouse_id,
+        CASE
+            WHEN (h.meter_status <> 'fresh'::text) THEN h.meter_status
+            ELSE COALESCE(e.measured_quality, 'unavailable'::text)
+        END AS quality,
+    ((h.meter_status = 'fresh'::text) AND COALESCE(e.available_for_scoring, false)) AS available_for_scoring,
+    h.latest_ts AS observed_through,
+    jsonb_build_object('measured_kwh', e.measured_kwh, 'meter_coverage_pct', e.meter_coverage_pct, 'scope', h.measured_scope, 'sample_count', e.sample_count, 'current_meter_status', h.meter_status, 'sample_age_seconds', h.sample_age_seconds, 'recent_sample_count', h.recent_sample_count, 'completed_day_quality', e.measured_quality) AS detail
+   FROM (public.v_energy_meter_health h
+     LEFT JOIN public.v_energy_daily e ON (((e.greenhouse_id = h.greenhouse_id) AND (e.date = (((now() AT TIME ZONE 'America/Denver'::text))::date - 1)))));
 
 
 ALTER VIEW public.v_resource_accounting_health OWNER TO verdify;
@@ -34080,6 +34724,7 @@ CREATE VIEW public.v_water_daily AS
         CASE
             WHEN bool_and(available_for_scoring) THEN 'ok'::text
             WHEN bool_or((quality = 'discontinuous'::text)) THEN 'discontinuous'::text
+            WHEN bool_or((quality = 'ledger_incomplete'::text)) THEN 'ledger_incomplete'::text
             WHEN bool_or((quality = 'incomplete'::text)) THEN 'incomplete'::text
             WHEN bool_or((quality = 'partial_day'::text)) THEN 'partial_day'::text
             ELSE 'unavailable'::text
@@ -54533,6 +55178,20 @@ CREATE TRIGGER block_retired_irrigation_schedule_write BEFORE INSERT OR DELETE O
 
 
 --
+-- Name: equipment_aliases reject_active_equipment_alias_collision; Type: TRIGGER; Schema: public; Owner: verdify
+--
+
+CREATE TRIGGER reject_active_equipment_alias_collision BEFORE INSERT OR UPDATE OF greenhouse_id, alias_slug, valid_to ON public.equipment_aliases FOR EACH ROW EXECUTE FUNCTION public.reject_active_equipment_alias_collision();
+
+
+--
+-- Name: equipment reject_equipment_slug_alias_collision; Type: TRIGGER; Schema: public; Owner: verdify
+--
+
+CREATE TRIGGER reject_equipment_slug_alias_collision BEFORE INSERT OR UPDATE OF greenhouse_id, slug, is_active ON public.equipment FOR EACH ROW EXECUTE FUNCTION public.reject_equipment_slug_alias_collision();
+
+
+--
 -- Name: alert_log trg_alert_log_updated_at; Type: TRIGGER; Schema: public; Owner: verdify
 --
 
@@ -60066,4 +60725,4 @@ GRANT INSERT ON TABLE public.twin_decisions TO twin_ro;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict HZB08iRuyjvP4obdizdBw9fKLSn3spAaR19IN8JVvE5hfJKQFJysHxljfNTygIm
+\unrestrict ehmwONOT5fygu4TXpTdCZnrwvdlfc2lFQSGXyUdZNUAa1OCkWdUcYU7BNMOJtwP

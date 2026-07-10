@@ -26,6 +26,12 @@ CREATE TABLE public.equipment (
     created_at timestamptz NOT NULL DEFAULT now(),
     UNIQUE (greenhouse_id, slug)
 );
+CREATE TABLE public.equipment_state (
+    ts timestamptz NOT NULL,
+    greenhouse_id text NOT NULL,
+    equipment text NOT NULL,
+    state boolean NOT NULL
+);
 
 INSERT INTO public.greenhouses(id) VALUES ('vallery');
 
@@ -60,6 +66,35 @@ FROM (VALUES
 -- Rerun proves additive migration idempotence.
 \i db/migrations/193-canonical-resource-coefficients.sql
 
+-- The fixture inventory is telemetry-driven: every recently observed active
+-- input slug must resolve exactly once, including legacy compatibility names.
+INSERT INTO public.equipment_state (ts, greenhouse_id, equipment, state)
+SELECT now(), greenhouse_id, slug, false
+FROM public.equipment
+WHERE greenhouse_id = 'vallery' AND is_active
+UNION ALL
+SELECT now(), 'vallery', 'gl1', false;
+
+DO $$
+DECLARE
+    target_id integer;
+BEGIN
+    SELECT id INTO target_id
+    FROM public.equipment
+    WHERE greenhouse_id = 'vallery' AND slug = 'fan1';
+
+    BEGIN
+        INSERT INTO public.equipment_aliases (
+            greenhouse_id, alias_slug, equipment_id, source, evidence_ref
+        ) VALUES (
+            'vallery', 'heat1', target_id, 'fixture', 'test:alias-collision'
+        );
+        RAISE EXCEPTION 'alias/canonical collision was accepted';
+    EXCEPTION WHEN check_violation THEN
+        NULL;
+    END;
+END $$;
+
 DO $$
 DECLARE
     unresolved integer;
@@ -70,14 +105,11 @@ DECLARE
     bounded_conflicts integer;
     compatibility_lights integer;
 BEGIN
-    WITH expected(slug) AS (
-        VALUES
-            ('heat1'), ('heat2'), ('fan1'), ('fan2'), ('vent'), ('fog'),
-            ('mister_south'), ('mister_west'), ('mister_center'),
-            ('drip_wall'), ('drip_center'), ('fert_master_valve'),
-            ('mister_south_fert'), ('mister_west_fert'),
-            ('drip_wall_fert'), ('drip_center_fert'),
-            ('grow_light_main'), ('grow_light_grow')
+    WITH expected AS (
+        SELECT DISTINCT equipment AS slug
+        FROM public.equipment_state
+        WHERE greenhouse_id = 'vallery'
+          AND ts >= now() - interval '1 hour'
     )
     SELECT count(*) INTO unresolved
     FROM expected x
