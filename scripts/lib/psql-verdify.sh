@@ -156,13 +156,15 @@ verdify_psql_cmd() {
                     export PGPASSWORD="$DB_PASS"
                 fi
             fi
-            # #254: don't drop a caller's `-e PGOPTIONS=...` (e.g. the firmware
-            # preflight statement_timeout). psql honors the PGOPTIONS env var, so
-            # export it when present and not already set on the environment.
+            # #254: don't drop a caller's `-e PGOPTIONS=...` (e.g. the planner
+            # context statement_timeout). This function is normally consumed by
+            # `mapfile < <(verdify_psql_cmd ...)`, so an export here occurs in a
+            # process-substitution subshell and cannot reach the eventual psql
+            # process. Emit `env PGOPTIONS=... psql` as command argv instead.
             local _pgopt
             _pgopt="$(_verdify_pgoptions_from_extra "${docker_extra[@]}")"
             if [[ -n "$_pgopt" && -z "${PGOPTIONS:-}" ]]; then
-                export PGOPTIONS="$_pgopt"
+                printf '%s\n' env "PGOPTIONS=${_pgopt}"
             fi
             printf '%s\n' psql
             ;;

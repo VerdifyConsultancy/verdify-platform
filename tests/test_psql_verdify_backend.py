@@ -49,6 +49,7 @@ _DB_ENV_KEYS = (
     "PGHOST",
     "PGPORT",
     "PGPASSWORD",
+    "PGOPTIONS",
 )
 
 
@@ -116,6 +117,20 @@ def test_backend_dsn_pg_dump_emits_bare_program_never_docker():
     tokens = res.stdout.split()
     assert tokens == ["pg_dump"], tokens
     assert "docker" not in tokens
+
+
+def test_backend_dsn_translates_pgoptions_to_process_env():
+    """Direct psql must inherit PGOPTIONS even when argv is read via mapfile."""
+    res = _source_and_run(
+        'verdify_psql_cmd -e "PGOPTIONS=-c statement_timeout=15000"',
+        env={"VERDIFY_DB_BACKEND": "dsn", "DB_HOST": "pg"},
+    )
+    assert res.returncode == 0, res.stderr
+    assert res.stdout.splitlines() == [
+        "env",
+        "PGOPTIONS=-c statement_timeout=15000",
+        "psql",
+    ]
 
 
 def test_pg_dump_docker_default_is_byte_identical():

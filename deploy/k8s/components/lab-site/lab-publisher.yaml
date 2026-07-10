@@ -41,7 +41,11 @@ spec:
   jobTemplate:
     spec:
       activeDeadlineSeconds: 1200
-      backoffLimit: 1
+      # A failed publisher can leave its canceled/disconnected PostgreSQL query
+      # running until the backend reaches a send boundary. Retrying the pod in
+      # the same Job then overlaps another full export despite Forbid at the
+      # CronJob level, which exhausted the production DB memory limit.
+      backoffLimit: 0
       template:
         metadata:
           labels:
@@ -71,6 +75,11 @@ spec:
                 - secretRef:
                     name: verdify-lab-publisher-s3
               env:
+                # Bound report-generation queries so a public-site refresh can
+                # never starve the control database. PGOPTIONS is consumed by
+                # the psql shim/libpq clients used by the publisher scripts.
+                - name: PGOPTIONS
+                  value: "-c statement_timeout=45000 -c work_mem=4MB -c max_parallel_workers_per_gather=1"
                 - name: POSTGRES_PASSWORD
                   valueFrom:
                     secretKeyRef:
