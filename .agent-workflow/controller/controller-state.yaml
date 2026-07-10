@@ -5,7 +5,7 @@ project_id: verdify-platform
 controller_id: software-recovery-root-019f4826
 status: active
 state: WAVE_EXECUTING
-updated_at: "2026-07-10T04:58:05Z"
+updated_at: "2026-07-10T12:21:20Z"
 current_wave: wave-software-recovery-implementation
 sessions:
   - id: software-recovery-root-019f4826
@@ -219,17 +219,21 @@ events:
     occurred_at: "2026-07-10T04:58:05Z"
     event_type: lane_merged
     summary: "Resource-accounting PR #445 merged to main at a2060ad after exact-head independent approval and fully green CI; issue #437 closed and DLI availability is now dependency-ready. Production migrations, restarts, dashboard rollout, and acceptance remain release-control work."
-open_gates:
-  - g-prod-db-credential-rotation-20260709
+  - id: controller-event-20260710-022
+    occurred_at: "2026-07-10T12:21:20Z"
+    event_type: gate_decision
+    summary: "Jason explicitly authorized completion of the full deployment, resolving g-prod-db-credential-rotation-20260709 as rotate-now. The scoped rotation may proceed only through the approved runbook with caller, backup, SOPS-authority, single-writer, redacted new-valid, and old-invalid hard stops."
+open_gates: []
 next_actions:
-  - Dispatch DLI availability from authoritative main a2060ad, then planner delivery in dependency order.
+  - Dispatch DLI availability from authoritative current main, then planner delivery in dependency order.
+  - Refresh every credential-rotation hard stop and execute the scoped rotation without exposing secret material.
   - Keep writer deployment proof, evidence migrations, service restarts, firmware response, and runtime acceptance in release control.
   - Route each future immutable lane head through its required critic, GitHub CI, and integration review before merge.
-  - Preserve the credential-rotation release block until Jason explicitly authorizes the protected rotation.
+  - Preserve every non-waivable credential, migration, writer, planner, firmware, and runtime check through release.
 handoff:
   next_skill: sprint-orchestrator
   next_mode: recorded-local-fallback
-  reason: Writer, evidence-core, and resource-accounting are merged; dispatch dependency-ready DLI availability through the approved isolated local-worktree fallback while maintaining the production credential gate.
+  reason: Writer, evidence-core, and resource-accounting are merged; dispatch dependency-ready DLI availability through the approved isolated local-worktree fallback while the controller executes the authorized credential runbook.
 approval:
   status: approved
   approver: Jason Vallery

@@ -6,11 +6,11 @@ status: active
 sprint_id: software-recovery-2026-07-09
 wave_id: wave-software-recovery-implementation
 repository: VerdifyConsultancy/verdify-platform
-prepared_at: "2026-07-09T22:31:05Z"
+prepared_at: "2026-07-10T12:21:20Z"
 controller:
   session_id: software-recovery-root-019f4826
   owner: codex-root
-  authority: Coordinate contracted lane sessions, answer delegated questions, reconcile CI/CD and review evidence, and stop at production, credential, migration, firmware, and release gates.
+  authority: Coordinate contracted lane sessions and execute controller-owned production, credential, migration, firmware, and release actions now explicitly authorized, while preserving every non-waivable check and role boundary.
   interfaces:
     - agent_platform_mcp
     - tmux_terminal
@@ -38,7 +38,6 @@ prerequisites:
   open_blockers:
     - Native Agent Platform worktree-agent creation and removal are disabled post-MVP and return structured HTTP 501 responses.
     - A current-sprint wave release plan is required before production delivery.
-    - Production release is blocked by g-prod-db-credential-rotation-20260709 until Jason separately authorizes and the controller verifies the protected rotation.
 platform:
   mcp_server: agent-fleet MCP in repo-verdifyconsultancy-verdify-platform-0
   api_ref: agents.vallery.net dashboard API and in-pod agent-fleet MCP
@@ -96,7 +95,7 @@ lanes:
       tmux_session: null
       browser_terminal_url: null
       operator_attach_required: false
-    status: blocked
+    status: implementing
   - lane_id: device-writer
     issue_ids: [433]
     contract_path: .verdify/sprints/software-recovery-2026-07-09/lanes/device-writer/lane.yaml
@@ -146,7 +145,7 @@ lanes:
     contract_path: .verdify/sprints/software-recovery-2026-07-09/lanes/resource-accounting/lane.yaml
     branch: lane/recovery-resource-437
     owner: cross-stack-data-product
-    dependency_state: waiting
+    dependency_state: ready
     platform_session:
       create_operation_ref: null
       session_id: null

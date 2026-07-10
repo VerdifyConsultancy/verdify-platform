@@ -1,7 +1,7 @@
 sprint_id: software-recovery-2026-07-09
 state: EXECUTING
 phase: wave-2-ready
-updated_at: "2026-07-10T04:58:05Z"
+updated_at: "2026-07-10T12:21:20Z"
 repository:
   url: https://github.com/VerdifyConsultancy/verdify-platform
   local_path: /Users/jason/repos/verdify-worktrees/software-recovery-20260709
@@ -14,8 +14,9 @@ authorization:
   implementation: authorized by the 2026-07-09 objective to deliver all proposed software fixes
   production_delivery: authorized as required to deliver the requested end state, subject to repository CI, GitOps, migration, and runtime gates
   firmware_ota: explicitly authorized without another approval request, subject to non-waived safety, replay, invariant, weekly, and bake gates
+  credential_rotation: explicitly authorized on 2026-07-10 for the scoped Verdify application DB credential runbook with redacted proof
   destructive_database: not authorized or required
-  credentials_dns_edge: out of scope
+  credentials_dns_edge: unrelated credentials, public DNS, and edge changes remain out of scope
 baseline:
   git_clean: true
   github_access: available
@@ -24,11 +25,11 @@ baseline:
   production_write_path: GitHub CI, prod-promote, ArgoCD manual sync
   ota_path: laptop operator path available; credential values remain external to repository and logs
 known_gates:
-  - Production release is blocked until Jason explicitly authorizes scoped rotation of the exposed application DB credential and every consumer is verified under issue 438.
+  - Scoped production DB credential rotation is authorized but must complete every caller, backup, SOPS-authority, new-valid, old-invalid, and rollback hard stop before release.
   - The open critical planner_required_plan_missed alert must be repaired and resolved before firmware OTA preflight can pass.
   - Firmware changes must pass unit tests, invariants, replay, compile, weekly-OTA, and 48-hour bake checks.
   - Schema or migration changes must be serialized and rollback-classified.
 next_actions:
-  - Dispatch dli-availability from authoritative main a2060adabef37398f02c3b9db84995347d86649b; migration 195 is available after merged resource-accounting migrations 193-194.
+  - Dispatch dli-availability from authoritative current main; migration 195 is available after merged resource-accounting migrations 193-194.
   - Route the immutable DLI lane head through a fresh contract-specific critic and required GitHub CI.
-  - Preserve worker production-read-only boundaries and the protected credential-rotation release block.
+  - Execute the authorized credential-rotation runbook without widening worker production-read-only boundaries.

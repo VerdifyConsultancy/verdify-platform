@@ -3457,6 +3457,43 @@ events:
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0073
   content_sha256: null
+- id: LEDGER-EVT-0075
+  sequence: 75
+  occurred_at: '2026-07-10T12:21:20Z'
+  event_type: gate_decision
+  source: user_goal
+  subject: production database credential rotation authorization
+  actor:
+    role: human_owner
+    name: Jason Vallery
+  session_id: software-recovery-root-019f4826
+  correlation:
+    trace_id: null
+    wave_id: wave-software-recovery-implementation
+    session_ids:
+    - software-recovery-root-019f4826
+    issue_ids:
+    - 438
+    lane_ids:
+    - security-hygiene
+    - release-control
+    pr_ids: []
+    deployment_ids: []
+    policy_decision_ids:
+    - g-prod-db-credential-rotation-20260709
+  refs:
+    artifact_refs:
+    - .agent-workflow/hygiene/gates/g-prod-db-credential-rotation.yaml
+    - .agent-workflow/hygiene/database-credential-rotation-runbook.md
+    evidence_refs:
+    - /Users/jason/.codex/attachments/acbc77c0-d6d4-4136-8061-3a062aa03e81/pasted-text-1.txt
+    external_refs: []
+  result: approved
+  summary: Jason granted full authority to complete the proposed production deployment, explicitly satisfying the rotate-now decision required by issue 438.
+  data_summary: Authorization is scoped to the approved application DB credential runbook; raw material remains excluded and every preflight, redacted proof, rollback, and single-writer stop condition remains mandatory.
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0074
+  content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
   severity: low
@@ -3477,4 +3514,4 @@ exceptions:
 handoff:
   next_skill: sprint-orchestrator
   next_mode: recorded-local-fallback
-  reason: Writer, evidence-core, and resource-accounting are merged at a2060ad; dispatch DLI availability next while preserving the production credential gate.
+  reason: Writer, evidence-core, and resource-accounting are merged; dispatch DLI availability next while the controller executes the authorized credential-rotation runbook.
