@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict aKIwWMKOvc4owFheptPBBo2hP96Gq04DRqP6eJrP17BN0yTbGldHbVhQCczDK9k
+\restrict 0S0rugZY5MzNb7hvBCgOUmEXfNXiQtkMFtp2BdX35tn64RKgvZbMNzCR7eOG052
 
 -- Dumped from database version 16.14
 -- Dumped by pg_dump version 16.14
@@ -30975,7 +30975,7 @@ ALTER VIEW public.v_greenhouse_state OWNER TO verdify;
 -- Name: VIEW v_greenhouse_state; Type: COMMENT; Schema: public; Owner: verdify
 --
 
-COMMENT ON VIEW public.v_greenhouse_state IS 'Replay/raw control-state history. dli_today is preserved as forensic legacy proxy only; it is not product DLI. Product consumers must use v_dli_current/v_dli_daily.';
+COMMENT ON VIEW public.v_greenhouse_state IS 'Live rolling 14-day greenhouse time series. One row per sensor reading with equipment, setpoints, compliance, mode, dispatcher-owned targets, and signed target deltas. dli_today is preserved as a forensic legacy proxy only; product consumers must use v_dli_current/v_dli_daily.';
 
 
 --
@@ -61097,4 +61097,4 @@ GRANT INSERT ON TABLE public.twin_decisions TO twin_ro;
 -- PostgreSQL database dump complete
 --
 
-\unrestrict aKIwWMKOvc4owFheptPBBo2hP96Gq04DRqP6eJrP17BN0yTbGldHbVhQCczDK9k
+\unrestrict 0S0rugZY5MzNb7hvBCgOUmEXfNXiQtkMFtp2BdX35tn64RKgvZbMNzCR7eOG052

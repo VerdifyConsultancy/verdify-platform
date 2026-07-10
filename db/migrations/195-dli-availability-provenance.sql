@@ -262,7 +262,7 @@ COMMENT ON VIEW public.v_climate_latest IS
 COMMENT ON MATERIALIZED VIEW public.v_climate_merged IS
 'Raw merged climate transport history. dli_today is the explicitly invalid legacy proxy described by the source-column comment; product consumers must use v_dli_daily.';
 COMMENT ON VIEW public.v_greenhouse_state IS
-'Replay/raw control-state history. dli_today is preserved as forensic legacy proxy only; it is not product DLI. Product consumers must use v_dli_current/v_dli_daily.';
+'Live rolling 14-day greenhouse time series. One row per sensor reading with equipment, setpoints, compliance, mode, dispatcher-owned targets, and signed target deltas. dli_today is preserved as a forensic legacy proxy only; product consumers must use v_dli_current/v_dli_daily.';
 
 -- Neutralize older reporting surfaces that directly aggregate the forensic
 -- daily_summary proxy.  Their column names/types remain stable for callers,
