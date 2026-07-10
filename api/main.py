@@ -200,6 +200,8 @@ def get_db_dsn():
 
 
 pool: asyncpg.Pool = None
+API_DB_STATEMENT_TIMEOUT_MS = 15_000
+SCORECARD_DB_STATEMENT_TIMEOUT_MS = 6_000
 
 
 async def _init_db_connection(conn: asyncpg.Connection) -> None:
@@ -207,6 +209,36 @@ async def _init_db_connection(conn: asyncpg.Connection) -> None:
     # complex enough for Postgres JIT to spend seconds compiling. Keep API
     # sessions latency-first; the DB still uses JIT for other clients.
     await conn.execute("SET jit = off")
+
+
+async def _setup_db_connection(conn: asyncpg.Connection) -> None:
+    # Pool reset runs RESET ALL when a connection is released. Reapply these
+    # safety settings on every checkout so a disconnected HTTP caller cannot
+    # leave an unbounded production query running behind it.
+    await conn.execute("SET application_name = 'verdify-api'")
+    await conn.execute(f"SET statement_timeout = '{API_DB_STATEMENT_TIMEOUT_MS}ms'")
+
+
+async def _fetch_planner_scorecard(
+    conn: asyncpg.Connection,
+    scorecard_date: date | None = None,
+) -> list[asyncpg.Record]:
+    """Fetch the optional scorecard within a strict server-side DB budget."""
+    try:
+        async with conn.transaction():
+            await conn.execute(f"SET LOCAL statement_timeout = '{SCORECARD_DB_STATEMENT_TIMEOUT_MS}ms'")
+            return await conn.fetch(
+                """
+                SELECT metric, value
+                FROM fn_planner_scorecard(
+                    COALESCE($1::date, (now() AT TIME ZONE 'America/Denver')::date)
+                )
+                ORDER BY metric
+                """,
+                scorecard_date,
+            )
+    except asyncpg.QueryCanceledError:
+        return []
 
 
 @asynccontextmanager
@@ -218,6 +250,7 @@ async def lifespan(app: FastAPI):
         max_size=3,
         max_inactive_connection_lifetime=60,
         init=_init_db_connection,
+        setup=_setup_db_connection,
     )
     yield
     await pool.close()
@@ -1429,10 +1462,7 @@ async def status():
 async def planner_scorecard(scorecard_date: Annotated[date | None, Query(alias="date")] = None):
     """Planner scorecard metrics for a given date, defaulting to today."""
     async with pool.acquire() as conn:
-        rows = await conn.fetch(
-            "SELECT metric, value FROM fn_planner_scorecard(COALESCE($1::date, CURRENT_DATE)) ORDER BY metric",
-            scorecard_date,
-        )
+        rows = await _fetch_planner_scorecard(conn, scorecard_date)
     try:
         return ScorecardResponse.from_metric_rows(rows)
     except ValidationError:
@@ -2414,9 +2444,7 @@ async def public_home_metrics(greenhouse_id: str = DEFAULT_GREENHOUSE):
             """,
             greenhouse_id,
         )
-        score_rows = await conn.fetch(
-            "SELECT metric, value FROM fn_planner_scorecard((now() AT TIME ZONE 'America/Denver')::date)"
-        )
+        score_rows = await _fetch_planner_scorecard(conn)
         scorecard = {r["metric"]: _to_float(r["value"]) for r in score_rows}
         water_resource = await conn.fetchrow(
             """
@@ -2632,9 +2660,7 @@ async def public_evidence_snapshot(greenhouse_id: str = DEFAULT_GREENHOUSE):
     """Crawler-friendly public proof snapshot for evidence subpages."""
     async with pool.acquire() as conn:
         generated_at = await conn.fetchval("SELECT now()")
-        score_rows = await conn.fetch(
-            "SELECT metric, value FROM fn_planner_scorecard((now() AT TIME ZONE 'America/Denver')::date)"
-        )
+        score_rows = await _fetch_planner_scorecard(conn)
         scorecard = {r["metric"]: _to_float(r["value"]) for r in score_rows}
         water_resource = await conn.fetchrow(
             """
