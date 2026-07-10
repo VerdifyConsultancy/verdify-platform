@@ -371,6 +371,9 @@ class TestActivityDirectWetGuards:
         "direct_wet_west_drydown_before_off_min",
         "direct_wet_center_start_offset_min",
         "direct_wet_center_drydown_before_off_min",
+    }
+
+    RETIRED_IRRIGATION_MASKS = {
         "irrig_wall_days_mask",
         "irrig_wall_fert_days_mask",
         "irrig_center_days_mask",
@@ -398,6 +401,14 @@ class TestActivityDirectWetGuards:
             assert row.control_class == "scheduled_policy"
             assert row.push_owner == "schedule"
             assert row.cfg_readback_object_id  # readback visibility preserved
+        for name in self.RETIRED_IRRIGATION_MASKS:
+            row = REGISTRY[name]
+            assert not row.planner_pushable
+            assert row.control_class == "retired"
+            assert row.push_owner == "firmware_internal"
+            assert row.esp_object_id is None
+            assert row.default == 0
+            assert row.cfg_readback_object_id
         for name in (
             "direct_wet_stress_vpd_margin_kpa",
             "direct_wet_stress_min_dew_margin_f",
@@ -410,65 +421,55 @@ class TestActivityDirectWetGuards:
         assert REGISTRY["sw_direct_wet_gate_enabled"].planner_pushable
         assert REGISTRY["sw_direct_wet_gate_enabled"].cfg_readback_object_id
 
-    def test_mister_state_machine_gates_each_wet_zone(self, controls_yaml: str) -> None:
-        # The SAF-4 duty-cap split (commit e7781a3) renamed the per-zone helper
-        # `direct_wet_allowed(N)` → `crop_direct_wet_allowed(N)` and the per-zone
-        # vars to `*_crop_wet_allowed`, then composed the final `*_wet_allowed`
-        # gate as `(crop_wet || climate_wet_assist) && !volume_hard_block` (center
-        # additionally `&& !center_duty_cap_reached`). The gating is intact; these
-        # needles track the CURRENT identifiers, not the pre-split ones.
+    def test_mister_state_machine_routes_climate_only_to_center(self, controls_yaml: str) -> None:
         required = [
-            "south_crop_wet_allowed = crop_direct_wet_allowed(1)",
-            "west_crop_wet_allowed = crop_direct_wet_allowed(2)",
-            "center_crop_wet_allowed = crop_direct_wet_allowed(3)",
-            "wall_wet_allowed = crop_direct_wet_allowed(4)",
+            "WetCommandOrigin::CLIMATE_VPD",
+            "climate_wet_resolution.relay == WetRelay::CENTER_MISTER",
+            "const bool south_wet_allowed = false",
+            "const bool west_wet_allowed = false",
+            "const bool center_wet_allowed = climate_wet_assist_demand",
             "direct_wet_relay_watchdog",
+            "id(south_wall_mister).turn_off();",
+            "id(west_wall_mister).turn_off();",
             "id(south_wall_mister_fertilized).turn_off();",
             "id(west_wall_mister_fertilized).turn_off();",
+            "id(center_drips_fertilized).turn_off();",
             "|| !any_mister_wet_allowed",
             "active_zone_gate_closed",
-            "if(zone == 1 && !south_wet_allowed)",
-            "if(zone == 2 && !west_wet_allowed)",
-            "if(zone == 3 && !center_wet_allowed)",
-            "direct_wet_south_drydown_before_off_min",
-            "direct_wet_west_drydown_before_off_min",
-            "direct_wet_center_drydown_before_off_min",
-            "direct_wet_stress_override",
+            "if(center_wet_allowed) return 3",
             "wet_dew_margin_f",
-            # firmware-v2 (firmware/v2-solar-bands) refactored the inline
-            # positive dew-margin gate (`wet_dew_margin_f >= id(...)`) into the
-            # header's single-source wet-assist gate. The dew-margin rule is now
-            # expressed as the explicit block-reason comparison plus the
-            # solar-band wet-taper / stress-override gate, all funnelled through
-            # climate_wet_assist_permitted(). These needles track the CURRENT
-            # gate, not the pre-refactor inline comparison.
             "climate_wet_assist_permitted(sensor_in, setpts)",
             "wet_dew_margin_f < id(direct_wet_stress_min_dew_margin_f)",
             "past_wet_taper(sensor_in, setpts) && !stress_wet_override_permitted(sensor_in, setpts)",
         ]
         missing = [needle for needle in required if needle not in controls_yaml]
         assert not missing, f"Mister direct-wet gate coverage missing: {missing}"
+        assert "crop_direct_wet_allowed" not in controls_yaml
 
-    def test_irrigation_state_machine_gates_clean_fert_and_flush(self, controls_yaml: str) -> None:
+    def test_irrigation_state_machine_gates_explicit_clean_and_weekly_wall_feed(self, controls_yaml: str) -> None:
         required = [
-            "active_wall = id(irrig_state) == 1 || id(irrig_state) == 2 || id(irrig_state) == 5",
-            "active_center = id(irrig_state) == 3 || id(irrig_state) == 4 || id(irrig_state) == 6",
+            "WetCommandOrigin::AUTOMATIC_WEEKLY_WALL_FEED",
+            "WetCommandOrigin::EXPLICIT_IRRIGATION",
+            "weekly_wall_feed_eligible(eligibility, weekly_state, durations)",
+            "persist_weekly_and_sync(claimed, 0)",
+            "return;  // weekly owner excludes every explicit clean writer",
+            "id(irrig_queue) &= (1 | 4);",
             "id(wall_drips).turn_off();",
             "id(wall_drips_fertilized).turn_off();",
             "id(center_drips).turn_off();",
             "id(center_drips_fertilized).turn_off();",
             "id(fertilizer_master_valve).turn_off();",
             "direct_wet_relay_watchdog",
-            "direct_wet_wall_start_offset_min",
-            "direct_wet_wall_drydown_before_off_min",
-            'ESP_LOGW("irrig","DROP QUEUED %s job (direct-wet gate)"',
-            'ESP_LOGW("irrig","Wall SKIPPED (direct-wet gate) doy=%d"',
-            'ESP_LOGW("irrig","Center SKIPPED (direct-wet gate) doy=%d"',
+            'cancel_all("leak")',
+            'cancel_all("irrigation disabled")',
+            'ESP_LOGW("irrig", "EXPLICIT CLEAN REJECTED: %s"',
         ]
         missing = [needle for needle in required if needle not in controls_yaml]
         assert not missing, f"Irrigation direct-wet gate coverage missing: {missing}"
 
-    def test_direct_wet_watchdog_covers_physical_wet_relays(self, controls_yaml: str, hardware_yaml: str) -> None:
+    def test_climate_wet_watchdog_covers_only_climate_owned_relays(
+        self, controls_yaml: str, hardware_yaml: str
+    ) -> None:
         wet_relays = {
             "south_wall_mister",
             "south_wall_mister_fertilized",
@@ -484,32 +485,35 @@ class TestActivityDirectWetGuards:
         assert not missing_hardware, f"Expected wet relay missing from hardware.yaml: {missing_hardware}"
 
         watchdog = controls_yaml.split("auto direct_wet_relay_watchdog", 1)[1].split("};", 1)[0]
-        missing_watchdog = [relay for relay in wet_relays if f"id({relay}).turn_off();" not in watchdog]
-        assert not missing_watchdog, f"Direct-wet watchdog does not close relays: {missing_watchdog}"
-
-        fert_relays = {
+        climate_owned = {
+            "south_wall_mister",
             "south_wall_mister_fertilized",
+            "west_wall_mister",
             "west_wall_mister_fertilized",
-            "wall_drips_fertilized",
+            "center_mister",
             "center_drips_fertilized",
         }
-        missing_fert_master_guard = [relay for relay in fert_relays if f"!id({relay}).state" not in watchdog]
-        assert not missing_fert_master_guard, (
-            f"Fert master guard does not observe fert relays: {missing_fert_master_guard}"
-        )
-        assert "id(fertilizer_master_valve).turn_off();" in watchdog
+        missing_watchdog = [relay for relay in climate_owned if f"id({relay}).turn_off();" not in watchdog]
+        assert not missing_watchdog, f"Direct-wet watchdog does not close relays: {missing_watchdog}"
+        for irrigation_owned in ("wall_drips", "wall_drips_fertilized", "center_drips"):
+            assert f"id({irrigation_owned}).turn_off();" not in watchdog
 
-    def test_fert_day_masks_supersede_every_n_fallback(self, controls_yaml: str) -> None:
+    def test_legacy_fert_day_masks_cannot_schedule_actuation(self, controls_yaml: str) -> None:
         required = [
-            "id(irrig_wall_fert_days_mask) > 0",
-            "day_mask_allows(id(irrig_wall_fert_days_mask), cur_dow0)",
-            "id(irrig_wall_fert_every_n) > 0",
-            "id(irrig_center_fert_days_mask) > 0",
-            "day_mask_allows(id(irrig_center_fert_days_mask), cur_dow0)",
-            "id(irrig_center_fert_every_n) > 0",
+            "WeeklyWallEligibilityInput eligibility",
+            "current_solar_phase",
+            "solar_day, 7u",
+            "weekly_wall_feed_eligible(eligibility, weekly_state, durations)",
         ]
         missing = [needle for needle in required if needle not in controls_yaml]
-        assert not missing, f"Fert day-mask scheduler fallback missing: {missing}"
+        assert not missing, f"Weekly solar scheduler coverage missing: {missing}"
+        for retired_scheduler_field in (
+            "irrig_wall_fert_days_mask",
+            "irrig_wall_fert_every_n",
+            "irrig_center_fert_days_mask",
+            "irrig_center_fert_every_n",
+        ):
+            assert f"id({retired_scheduler_field})" not in controls_yaml
 
     def test_irrigation_weather_skip_defaults_off(self) -> None:
         row = REGISTRY["sw_irrigation_weather_skip"]
@@ -517,26 +521,27 @@ class TestActivityDirectWetGuards:
         assert not row.planner_pushable
         assert row.push_owner == "operator"
 
-    def test_wall_fert_schedule_queues_fertilized_misters(self, controls_yaml: str, tunables_yaml: str) -> None:
+    def test_wall_fert_is_automatic_wall_only_and_not_manually_queued(
+        self, controls_yaml: str, tunables_yaml: str
+    ) -> None:
         required = [
-            "do_fert ? (2 | 16 | 32) : 1",
-            "case 7: id(south_wall_mister_fertilized).turn_on();",
-            "case 8: id(west_wall_mister_fertilized).turn_on();",
-            "id(irrig_state) = is_center ? 6 : is_south_mister ? 9 : is_west_mister ? 10 : 5;",
-            "id(south_wall_mister).turn_on(); id(cnt_mister_south_today) += 1;",
-            "id(west_wall_mister).turn_on();  id(cnt_mister_west_today)  += 1;",
-            "queued_fert_jobs()",
+            "WetCommandOrigin::AUTOMATIC_WEEKLY_WALL_FEED",
+            "WetZone::WALL_DRIP, WetChemistry::FERTILIZER",
+            "id(wall_drips_fertilized).turn_on();",
+            "id(fertilizer_master_valve).turn_on();",
+            "id(wall_drips_fertilized).turn_off();",
+            "id(fertilizer_master_valve).turn_off();",
+            "WALL IMMEDIATE CLEAN FLUSH",
         ]
         missing = [needle for needle in required if needle not in controls_yaml]
-        assert not missing, f"Wall fert-mister scheduling missing from controls.yaml: {missing}"
-
-        button_required = [
-            "id(irrig_queue) |= (2 | 16 | 32);",
-            "id(irrig_queue) |= 16;",
-            "id(irrig_queue) |= 32;",
-        ]
-        missing_buttons = [needle for needle in button_required if needle not in tunables_yaml]
-        assert not missing_buttons, f"Manual fert-mister queue buttons missing from tunables.yaml: {missing_buttons}"
+        assert not missing, f"Automatic wall-only fertigation missing from controls.yaml: {missing}"
+        for retired_button in (
+            "btn_wall_fert",
+            "btn_center_fert",
+            "btn_south_mister_fert",
+            "btn_west_mister_fert",
+        ):
+            assert f"id: {retired_button}" not in tunables_yaml
 
     def test_dispatcher_and_api_derive_activity_from_light_window(self, tasks_py: str, api_main_py: str) -> None:
         for text in (tasks_py, api_main_py):

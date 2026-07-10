@@ -247,6 +247,7 @@ inline MoistureExchangeEstimate estimate_moisture_exchange(
         // the cooled candidate). Flag OFF ⇒ can_hold==false ⇒ vent_helps_held==false
         // ⇒ the ladder below degenerates to the exact pre-#410 selection.
         const bool can_hold = sp.dehum_vent_hold_enabled
+            && is_night_phase(in)
             && in.temp_f >= (band_heat_target_f(sp) + sp.heat_hysteresis);
         const bool vent_helps_held = fresh && r.vent_held_vpd_gain_kpa > margin && can_hold;
         // Selection ladder (#410 / ADR0003 §6.4 addendum):
@@ -412,28 +413,6 @@ inline bool day_mask_allows(int day_mask, int day_of_week_zero_sunday) noexcept 
     return (day_mask & (1 << day_of_week_zero_sunday)) != 0;
 }
 
-// ── FRT-8 / F3 (AM-only feed window) ───────────────────────────────────
-// Returns true iff `hour` is inside the morning feed window [start, end).
-// This is the authoritative, VPD-INDEPENDENT rail that gates every
-// fertilizer job (scheduled fert states 2/4/7/8 AND the manual fert
-// buttons). Bare-root Vanda must be fed once per day in the morning so the
-// velamen has the full daylight period to absorb and the surfaces dry well
-// before the dusk cutoff; an afternoon/dusk/overnight feed leaves salts on
-// wet roots into the night (rot/burn risk). Wrap-aware like
-// fog_hour_in_window: when start <= end the window is the simple [start,
-// end); a start > end would cross midnight (degenerate for a morning feed,
-// but handled for safety). A degenerate start == end is treated as "always
-// closed" so a misconfigured pair fails SAFE (no feed) rather than open.
-inline bool feed_window_open(int hour, int feed_start_hour, int feed_end_hour) noexcept {
-    hour = std::max(0, std::min(23, hour));
-    feed_start_hour = std::max(0, std::min(23, feed_start_hour));
-    feed_end_hour   = std::max(0, std::min(24, feed_end_hour));
-    if (feed_start_hour == feed_end_hour) return false;  // degenerate → fail closed
-    return (feed_start_hour < feed_end_hour)
-        ? (hour >= feed_start_hour && hour < feed_end_hour)
-        : (hour >= feed_start_hour || hour < feed_end_hour);
-}
-
 // True iff all of RH, temp, and hour-of-day permit fogging. Occupancy is
 // NOT checked here — see moisture_blocked_by_occupancy().
 inline bool fog_permitted(const SensorInputs& in, const Setpoints& sp) noexcept {
@@ -463,12 +442,10 @@ inline bool climate_fog_assist_permitted(const SensorInputs& in, const Setpoints
     return climate_fog_assist_block_reason(in, sp)[0] == '\0';
 }
 
-// ── IRR-3 (dawn rehydrate) / IRR-4 (midday drench) ─────────────────────
-// Two time-anchored CENTER-zone mist cadence overrides for the bare-root
-// Vanda. These do NOT pick a mode or fire a relay; they only report whether
-// the current minute is inside a burst window AND every rail still permits
-// CENTER wetting, so controls.yaml can swap the center pulse ON/GAP for the
-// denser dawn/midday cadence. West/south/east are never consulted here.
+// Retired dawn/midday center-watering compatibility helpers. Deliberate
+// time-anchored center watering is a non-goal: center mist follows only the
+// base climate/VPD pulse cadence. These helpers stay for wire/test source
+// compatibility and must remain inert.
 //
 // RAILS (each is a hard precondition — a burst can fire only when ALL hold):
 //   * master enable switch (sw_dawn_rehydrate_enabled / sw_midday_drench_enabled)
@@ -534,28 +511,20 @@ inline bool center_burst_rails_permit(const SensorInputs& in, const Setpoints& s
 // matching the climate wet-assist gate). Dawn takes precedence if both windows
 // somehow overlap (a misconfiguration the clamps guard against).
 inline CenterBurst center_burst_decision(int now_minute, const SensorInputs& in, const Setpoints& sp) noexcept {
-    if (!center_burst_rails_permit(in, sp)) return CENTER_BURST_NONE;
-    if (sp.sw_dawn_rehydrate_enabled && in_dawn_rehydrate_window(now_minute, in, sp)) {
-        return CENTER_BURST_DAWN;
-    }
-    if (sp.sw_midday_drench_enabled && in_midday_drench_window(now_minute, in, sp)) {
-        return CENTER_BURST_MIDDAY;
-    }
+    (void)now_minute;
+    (void)in;
+    (void)sp;
     return CENTER_BURST_NONE;
 }
 
 // Center pulse ON / GAP (seconds) for the active burst. Returns false when no
 // burst is active (caller keeps the base mister_pulse_on_s / mister_pulse_gap_s).
 inline bool center_burst_cadence_s(CenterBurst burst, const Setpoints& sp, int& on_s, int& gap_s) noexcept {
-    switch (burst) {
-        case CENTER_BURST_DAWN:
-            on_s = sp.dawn_rehydrate_on_s;  gap_s = sp.dawn_rehydrate_gap_s;  return true;
-        case CENTER_BURST_MIDDAY:
-            on_s = sp.midday_drench_on_s;   gap_s = sp.midday_drench_gap_s;   return true;
-        case CENTER_BURST_NONE:
-        default:
-            return false;
-    }
+    (void)burst;
+    (void)sp;
+    (void)on_s;
+    (void)gap_s;
+    return false;
 }
 
 // (Firmware-v2: the CYC-4 overnight micro-pulse path is DELETED. Night
@@ -1854,7 +1823,7 @@ inline Mode determine_mode_band_first(
     if (mode == SAFETY_COOL || mode == SAFETY_HEAT || mode == SENSOR_FAULT) {
         state.center_burst = CENTER_BURST_NONE;
     } else {
-        state.center_burst = center_burst_decision(effective_now_minute(in), in, sp);
+        state.center_burst = CENTER_BURST_NONE;
     }
 
     state.mode = mode;
@@ -2341,7 +2310,7 @@ inline Mode determine_mode(
     if (mode == SAFETY_COOL || mode == SAFETY_HEAT || mode == SENSOR_FAULT) {
         state.center_burst = CENTER_BURST_NONE;
     } else {
-        state.center_burst = center_burst_decision(effective_now_minute(in), in, sp);
+        state.center_burst = CENTER_BURST_NONE;
     }
 
     state.mode = mode;

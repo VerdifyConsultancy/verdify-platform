@@ -1007,37 +1007,9 @@ number:
 
 
 
-  # ─── IRRIGATION SCHEDULING TUNABLES ──────────────────────────────────────────
-
-  # --- Wall drip schedule ---
-  - platform: template
-    id: num_irrig_wall_start_hour
-    name: "Irrig Wall Start Hour"
-    min_value: 0
-    max_value: 23
-    step: 1
-    lambda: "return id(irrig_wall_start_hour);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          id(irrig_wall_start_hour) = val;
-          id(num_irrig_wall_start_hour).publish_state(val);
-
-  - platform: template
-    id: num_irrig_wall_start_min
-    name: "Irrig Wall Start Min"
-    min_value: 0
-    max_value: 59
-    step: 1
-    lambda: "return id(irrig_wall_start_minute);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          id(irrig_wall_start_minute) = val;
-          id(num_irrig_wall_start_min).publish_state(val);
-
+  # ─── EXPLICIT CLEAN-WATER DURATION TUNABLES ──────────────────────────────────
+  # Fixed-clock and fertilizer cadence controls are retired. These durations
+  # apply only when an operator explicitly queues a clean-water wall/center job.
   - platform: template
     id: num_irrig_wall_duration
     name: "Irrig Wall Duration (min)"
@@ -1052,125 +1024,6 @@ number:
           if(val < 1) val = 1;
           id(irrig_wall_duration_min) = val;
           id(num_irrig_wall_duration).publish_state(val);
-
-  - platform: template
-    id: num_irrig_wall_fert_duration
-    name: "Irrig Wall Fert Duration (min)"
-    min_value: 0
-    max_value: 60
-    step: 1
-    lambda: "return id(irrig_wall_fert_duration_min);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          if(val < 0) val = 0;
-          id(irrig_wall_fert_duration_min) = val;
-          id(num_irrig_wall_fert_duration).publish_state(val);
-
-  - platform: template
-    id: num_irrig_wall_fert_every_n
-    name: "Irrig Wall Fert Every N Cycles"
-    min_value: 0
-    max_value: 30
-    step: 1
-    lambda: "return id(irrig_wall_fert_every_n);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          id(irrig_wall_fert_every_n) = val;
-          id(num_irrig_wall_fert_every_n).publish_state(val);
-
-  - platform: template
-    id: num_irrig_wall_days_mask
-    name: "Irrig Wall Days Mask"
-    min_value: 0
-    max_value: 127
-    step: 1
-    lambda: "return id(irrig_wall_days_mask);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          if(val < 0) val = 0;
-          if(val > 127) val = 127;
-          id(irrig_wall_days_mask) = val;
-          id(num_irrig_wall_days_mask).publish_state(val);
-
-  - platform: template
-    id: num_irrig_wall_fert_days_mask
-    name: "Irrig Wall Fert Days Mask"
-    min_value: 0
-    max_value: 127
-    step: 1
-    lambda: "return id(irrig_wall_fert_days_mask);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          if(val < 0) val = 0;
-          if(val > 127) val = 127;
-          id(irrig_wall_fert_days_mask) = val;
-          id(num_irrig_wall_fert_days_mask).publish_state(val);
-
-  - platform: template
-    id: num_irrig_wall_flush
-    name: "Irrig Wall Flush (min)"
-    min_value: 0
-    max_value: 30
-    step: 1
-    lambda: "return id(irrig_wall_flush_min);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          id(irrig_wall_flush_min) = val;
-          id(num_irrig_wall_flush).publish_state(val);
-
-  - platform: template
-    id: num_irrig_wall_interval
-    name: "Irrig Wall Interval (days)"
-    min_value: 1
-    max_value: 14
-    step: 1
-    lambda: "return id(irrig_wall_interval_days);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          if(val < 1) val = 1;
-          id(irrig_wall_interval_days) = val;
-          id(num_irrig_wall_interval).publish_state(val);
-
-  # --- Center drip schedule ---
-  - platform: template
-    id: num_irrig_center_start_hour
-    name: "Irrig Center Start Hour"
-    min_value: 0
-    max_value: 23
-    step: 1
-    lambda: "return id(irrig_center_start_hour);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          id(irrig_center_start_hour) = val;
-          id(num_irrig_center_start_hour).publish_state(val);
-
-  - platform: template
-    id: num_irrig_center_start_min
-    name: "Irrig Center Start Min"
-    min_value: 0
-    max_value: 59
-    step: 1
-    lambda: "return id(irrig_center_start_minute);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          id(irrig_center_start_minute) = val;
-          id(num_irrig_center_start_min).publish_state(val);
 
   - platform: template
     id: num_irrig_center_duration
@@ -1188,94 +1041,108 @@ number:
           id(num_irrig_center_duration).publish_state(val);
 
   - platform: template
-    id: num_irrig_center_fert_duration
-    name: "Irrig Center Fert Duration (min)"
+    id: num_wall_commissioning_revision
+    name: "Wall Commissioning Revision"
     min_value: 0
-    max_value: 60
+    max_value: 1000000
     step: 1
-    lambda: "return id(irrig_center_fert_duration_min);"
+    lambda: "return (float)id(wall_commissioning_revision);"
     set_action:
-      - lambda: |
+      - lambda: |-
           id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          if(val < 0) val = 0;
-          id(irrig_center_fert_duration_min) = val;
-          id(num_irrig_center_fert_duration).publish_state(val);
+          id(wall_commissioning_revision) = (uint32_t)roundf(x);
+          id(num_wall_commissioning_revision).publish_state(x);
 
   - platform: template
-    id: num_irrig_center_fert_every_n
-    name: "Irrig Center Fert Every N Cycles"
+    id: num_wall_commissioning_evidence_mask
+    name: "Wall Commissioning Evidence Mask"
     min_value: 0
-    max_value: 30
+    max_value: 511
     step: 1
-    lambda: "return id(irrig_center_fert_every_n);"
+    lambda: "return (float)id(wall_commissioning_evidence_mask);"
     set_action:
-      - lambda: |
+      - lambda: |-
           id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          id(irrig_center_fert_every_n) = val;
-          id(num_irrig_center_fert_every_n).publish_state(val);
+          id(wall_commissioning_evidence_mask) = (int)roundf(x);
+          id(num_wall_commissioning_evidence_mask).publish_state(x);
 
   - platform: template
-    id: num_irrig_center_days_mask
-    name: "Irrig Center Days Mask"
+    id: num_wall_commissioning_valid_until
+    name: "Wall Commissioning Valid Until Epoch S"
     min_value: 0
-    max_value: 127
-    step: 1
-    lambda: "return id(irrig_center_days_mask);"
+    max_value: 2147483520
+    step: 60
+    lambda: "return (float)id(wall_commissioning_valid_until_epoch_s);"
     set_action:
-      - lambda: |
+      - lambda: |-
           id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          if(val < 0) val = 0;
-          if(val > 127) val = 127;
-          id(irrig_center_days_mask) = val;
-          id(num_irrig_center_days_mask).publish_state(val);
+          id(wall_commissioning_valid_until_epoch_s) = (uint32_t)fmaxf(0.0f, x);
+          id(num_wall_commissioning_valid_until).publish_state(x);
 
   - platform: template
-    id: num_irrig_center_fert_days_mask
-    name: "Irrig Center Fert Days Mask"
+    id: num_wall_flow_lpm
+    name: "Wall Calibrated Flow LPM"
     min_value: 0
-    max_value: 127
-    step: 1
-    lambda: "return id(irrig_center_fert_days_mask);"
+    max_value: 100
+    step: 0.1
+    lambda: "return id(wall_flow_lpm);"
     set_action:
-      - lambda: |
+      - lambda: |-
           id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          if(val < 0) val = 0;
-          if(val > 127) val = 127;
-          id(irrig_center_fert_days_mask) = val;
-          id(num_irrig_center_fert_days_mask).publish_state(val);
+          id(wall_flow_lpm) = x;
+          id(num_wall_flow_lpm).publish_state(x);
 
   - platform: template
-    id: num_irrig_center_flush
-    name: "Irrig Center Flush (min)"
+    id: num_wall_flow_valid_until
+    name: "Wall Flow Valid Until Epoch S"
     min_value: 0
-    max_value: 30
-    step: 1
-    lambda: "return id(irrig_center_flush_min);"
+    max_value: 2147483520
+    step: 60
+    lambda: "return (float)id(wall_flow_valid_until_epoch_s);"
     set_action:
-      - lambda: |
+      - lambda: |-
           id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          id(irrig_center_flush_min) = val;
-          id(num_irrig_center_flush).publish_state(val);
+          id(wall_flow_valid_until_epoch_s) = (uint32_t)fmaxf(0.0f, x);
+          id(num_wall_flow_valid_until).publish_state(x);
 
   - platform: template
-    id: num_irrig_center_interval
-    name: "Irrig Center Interval (days)"
-    min_value: 1
-    max_value: 14
-    step: 1
-    lambda: "return id(irrig_center_interval_days);"
+    id: num_wall_prewet_liters
+    name: "Wall Prewet Liters"
+    min_value: 0
+    max_value: 200
+    step: 0.1
+    lambda: "return id(wall_prewet_liters);"
     set_action:
-      - lambda: |
+      - lambda: |-
           id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          if(val < 1) val = 1;
-          id(irrig_center_interval_days) = val;
-          id(num_irrig_center_interval).publish_state(val);
+          id(wall_prewet_liters) = x;
+          id(num_wall_prewet_liters).publish_state(x);
+
+  - platform: template
+    id: num_wall_feed_liters
+    name: "Wall Feed Liters"
+    min_value: 0
+    max_value: 200
+    step: 0.1
+    lambda: "return id(wall_feed_liters);"
+    set_action:
+      - lambda: |-
+          id(cfg_first_pull_ok) = true;
+          id(wall_feed_liters) = x;
+          id(num_wall_feed_liters).publish_state(x);
+
+  - platform: template
+    id: num_wall_flush_liters
+    name: "Wall Flush Liters"
+    min_value: 0
+    max_value: 400
+    step: 0.1
+    lambda: "return id(wall_flush_liters);"
+    set_action:
+      - lambda: |-
+          id(cfg_first_pull_ok) = true;
+          id(wall_flush_liters) = x;
+          id(num_wall_flush_liters).publish_state(x);
 
   # --- VPD boost ---
   - platform: template
@@ -1886,110 +1753,8 @@ number:
           id(mister_daily_volume_max_gal) = val;
           id(num_mister_daily_volume_max).publish_state(val);
 
-  # ─── IRR-3 (dawn rehydrate): CENTER-zone denser pulse cadence at sunrise ───
-  # Window START = sunrise + dawn_boost_offset_min (firmware-v2 solar anchor);
-  # these are the window/duration/on/gap knobs. Each has a cfg_* readback.
-  - platform: template
-    id: num_dawn_rehydrate_window_min
-    name: "Dawn Rehydrate Window (min)"
-    min_value: 0
-    max_value: 120
-    step: 1
-    lambda: "return id(dawn_rehydrate_window_min);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          if(val < 0) val = 0;
-          if(val > 120) val = 120;
-          id(dawn_rehydrate_window_min) = val;
-          id(num_dawn_rehydrate_window_min).publish_state(val);
-
-  - platform: template
-    id: num_dawn_rehydrate_on_s
-    name: "Dawn Rehydrate Pulse On (s)"
-    min_value: 1
-    max_value: 600
-    step: 5
-    lambda: "return id(dawn_rehydrate_on_s);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          if(val < 1) val = 1;
-          if(val > 600) val = 600;
-          id(dawn_rehydrate_on_s) = val;
-          id(num_dawn_rehydrate_on_s).publish_state(val);
-
-  - platform: template
-    id: num_dawn_rehydrate_gap_s
-    name: "Dawn Rehydrate Pulse Gap (s)"
-    min_value: 5
-    max_value: 600
-    step: 5
-    lambda: "return id(dawn_rehydrate_gap_s);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          if(val < 5) val = 5;
-          if(val > 600) val = 600;
-          id(dawn_rehydrate_gap_s) = val;
-          id(num_dawn_rehydrate_gap_s).publish_state(val);
-
-  # ─── IRR-4 (midday drench): CENTER-zone deeper soak at the solar peak ───
-  # Window START = solar noon + midday_boost_offset_min (firmware-v2 anchor).
-  - platform: template
-    id: num_midday_drench_window_min
-    name: "Midday Drench Window (min)"
-    min_value: 0
-    max_value: 120
-    step: 1
-    lambda: "return id(midday_drench_window_min);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          if(val < 0) val = 0;
-          if(val > 120) val = 120;
-          id(midday_drench_window_min) = val;
-          id(num_midday_drench_window_min).publish_state(val);
-
-  - platform: template
-    id: num_midday_drench_on_s
-    name: "Midday Drench Pulse On (s)"
-    min_value: 1
-    max_value: 600
-    step: 5
-    lambda: "return id(midday_drench_on_s);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          if(val < 1) val = 1;
-          if(val > 600) val = 600;
-          id(midday_drench_on_s) = val;
-          id(num_midday_drench_on_s).publish_state(val);
-
-  - platform: template
-    id: num_midday_drench_gap_s
-    name: "Midday Drench Pulse Gap (s)"
-    min_value: 5
-    max_value: 600
-    step: 5
-    lambda: "return id(midday_drench_gap_s);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          if(val < 5) val = 5;
-          if(val > 600) val = 600;
-          id(midday_drench_gap_s) = val;
-          id(num_midday_drench_gap_s).publish_state(val);
-
-  # ─── FIRMWARE-V2 operator tunables (contract §B4/§B5; cfg_* readbacks) ───
-  # Wet taper window before sunset (minutes) — routine wetting blocked when
-  # minutes_to_sunset < this OR phase >= 2.
+  # Deliberate dawn/midday center watering is retired; center mist uses only
+  # the base climate/VPD cadence. Compatibility readbacks remain fixed at zero.
   - platform: template
     id: num_wet_taper_before_sunset_min
     name: "Wet Taper Before Sunset (min)"
@@ -2021,40 +1786,6 @@ number:
           id(num_night_stress_min_dew_margin_f).publish_state(x);
 
   # Dawn boost offset from sunrise (minutes).
-  - platform: template
-    id: num_dawn_boost_offset_min
-    name: "Dawn Boost Offset (min)"
-    min_value: 0
-    max_value: 240
-    step: 5
-    lambda: "return id(dawn_boost_offset_min);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          if(val < 0) val = 0;
-          if(val > 240) val = 240;
-          id(dawn_boost_offset_min) = val;
-          id(num_dawn_boost_offset_min).publish_state(val);
-
-  # Midday boost offset from solar noon (minutes).
-  - platform: template
-    id: num_midday_boost_offset_min
-    name: "Midday Boost Offset (min)"
-    min_value: 0
-    max_value: 240
-    step: 5
-    lambda: "return id(midday_boost_offset_min);"
-    set_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          int val = int(roundf(x));
-          if(val < 0) val = 0;
-          if(val > 240) val = 240;
-          id(midday_boost_offset_min) = val;
-          id(num_midday_boost_offset_min).publish_state(val);
-
-  # B5: manual button latch timeout (minutes).
   - platform: template
     id: num_manual_override_timeout_min
     name: "Manual Override Timeout (min)"
@@ -2232,42 +1963,6 @@ switch:
           id(sw_night_econ_heat_suppress_enabled_switch).publish_state(false);
 
   # IRR-3: dawn rehydrate master enable (default ON — ships active in OTA).
-  - platform: template
-    id: sw_dawn_rehydrate_enabled_switch
-    name: "Dawn Rehydrate Enabled"
-    optimistic: false
-    restore_mode: RESTORE_DEFAULT_ON
-    lambda: "return id(sw_dawn_rehydrate_enabled);"
-    turn_on_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          id(sw_dawn_rehydrate_enabled) = true;
-          id(sw_dawn_rehydrate_enabled_switch).publish_state(true);
-    turn_off_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          id(sw_dawn_rehydrate_enabled) = false;
-          id(sw_dawn_rehydrate_enabled_switch).publish_state(false);
-
-  # IRR-4: midday drench master enable (default ON — ships active in OTA).
-  - platform: template
-    id: sw_midday_drench_enabled_switch
-    name: "Midday Drench Enabled"
-    optimistic: false
-    restore_mode: RESTORE_DEFAULT_ON
-    lambda: "return id(sw_midday_drench_enabled);"
-    turn_on_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          id(sw_midday_drench_enabled) = true;
-          id(sw_midday_drench_enabled_switch).publish_state(true);
-    turn_off_action:
-      - lambda: |
-          id(cfg_first_pull_ok) = true;
-          id(sw_midday_drench_enabled) = false;
-          id(sw_midday_drench_enabled_switch).publish_state(false);
-
-  # Grow light auto mode — enable DLI-based supplementation
   - platform: template
     id: sw_gl_auto
     name: "GL Auto Mode"
@@ -2475,7 +2170,7 @@ switch:
   - platform: template
     id: sw_irrig_center_enabled
     name: "Irrigation Center Enabled"
-    restore_mode: RESTORE_DEFAULT_ON
+    restore_mode: RESTORE_DEFAULT_OFF
     lambda: 'return id(irrig_center_enabled);'
     turn_on_action:
       - lambda: |
@@ -2485,6 +2180,54 @@ switch:
       - lambda: |
           id(irrig_center_enabled) = false;
           id(sw_irrig_center_enabled).publish_state(false);
+
+  - platform: template
+    id: sw_irrig_south_enabled
+    name: "Irrigation South Enabled"
+    restore_mode: RESTORE_DEFAULT_OFF
+    lambda: 'return id(irrig_south_enabled);'
+    turn_on_action:
+      - lambda: |-
+          id(cfg_first_pull_ok) = true;
+          id(irrig_south_enabled) = true;
+          id(sw_irrig_south_enabled).publish_state(true);
+    turn_off_action:
+      - lambda: |-
+          id(cfg_first_pull_ok) = true;
+          id(irrig_south_enabled) = false;
+          id(sw_irrig_south_enabled).publish_state(false);
+
+  - platform: template
+    id: sw_irrig_west_enabled
+    name: "Irrigation West Enabled"
+    restore_mode: RESTORE_DEFAULT_OFF
+    lambda: 'return id(irrig_west_enabled);'
+    turn_on_action:
+      - lambda: |-
+          id(cfg_first_pull_ok) = true;
+          id(irrig_west_enabled) = true;
+          id(sw_irrig_west_enabled).publish_state(true);
+    turn_off_action:
+      - lambda: |-
+          id(cfg_first_pull_ok) = true;
+          id(irrig_west_enabled) = false;
+          id(sw_irrig_west_enabled).publish_state(false);
+
+  - platform: template
+    id: sw_wall_fertigation_commissioned
+    name: "Wall Fertigation Commissioned"
+    restore_mode: RESTORE_DEFAULT_OFF
+    lambda: 'return id(wall_fertigation_commissioned);'
+    turn_on_action:
+      - lambda: |-
+          id(cfg_first_pull_ok) = true;
+          id(wall_fertigation_commissioned) = true;
+          id(sw_wall_fertigation_commissioned).publish_state(true);
+    turn_off_action:
+      - lambda: |-
+          id(cfg_first_pull_ok) = true;
+          id(wall_fertigation_commissioned) = false;
+          id(sw_wall_fertigation_commissioned).publish_state(false);
 
   # Weather skip enable
   - platform: template
@@ -2659,83 +2402,12 @@ button:
           ESP_LOGI("irrig","Manual: WALL CLEAN queued");
 
   - platform: template
-    id: btn_wall_fert
-    name: "Wall Fert - RUN ALL"
-    on_press:
-      - lambda: |-
-          // FRT-8 / F3: manual fert buttons obey the AM-only feed window too.
-          // Reject (do not queue) outside [feed_start_hour, feed_end_hour),
-          // regardless of VPD. The dequeue gate is the authoritative backstop;
-          // this gives the operator immediate feedback at the press. The clean
-          // half (wall clean) is unaffected — only fert bits are withheld.
-          auto t = id(sntp_time).now();
-          const bool ok = t.is_valid() && !id(sntp_failed) &&
-            feed_window_open(t.hour, id(feed_start_hour), id(feed_end_hour));
-          if(ok){
-            id(irrig_queue) |= (2 | 16 | 32);
-            ESP_LOGI("irrig","Manual: WALL FERT + SOUTH/WEST MISTER FERT queued");
-          } else {
-            ESP_LOGW("irrig","Manual WALL FERT REJECTED — outside feed window %d:00-%d:00",
-                     id(feed_start_hour), id(feed_end_hour));
-          }
-
-  - platform: template
-    id: btn_south_mister_fert
-    name: "South Wall Mister - RUN FERT"
-    on_press:
-      - lambda: |-
-          auto t = id(sntp_time).now();
-          const bool ok = t.is_valid() && !id(sntp_failed) &&
-            feed_window_open(t.hour, id(feed_start_hour), id(feed_end_hour));
-          if(ok){
-            id(irrig_queue) |= 16;
-            ESP_LOGI("irrig","Manual: SOUTH MISTER FERT queued");
-          } else {
-            ESP_LOGW("irrig","Manual SOUTH MISTER FERT REJECTED — outside feed window %d:00-%d:00",
-                     id(feed_start_hour), id(feed_end_hour));
-          }
-
-  - platform: template
-    id: btn_west_mister_fert
-    name: "West Wall Mister - RUN FERT"
-    on_press:
-      - lambda: |-
-          auto t = id(sntp_time).now();
-          const bool ok = t.is_valid() && !id(sntp_failed) &&
-            feed_window_open(t.hour, id(feed_start_hour), id(feed_end_hour));
-          if(ok){
-            id(irrig_queue) |= 32;
-            ESP_LOGI("irrig","Manual: WEST MISTER FERT queued");
-          } else {
-            ESP_LOGW("irrig","Manual WEST MISTER FERT REJECTED — outside feed window %d:00-%d:00",
-                     id(feed_start_hour), id(feed_end_hour));
-          }
-
-  - platform: template
     id: btn_center_clean
     name: "Center Drips - RUN CLEAN"
     on_press:
       - lambda: |-
           id(irrig_queue) |= 4;
           ESP_LOGI("irrig","Manual: CENTER CLEAN queued");
-
-  - platform: template
-    id: btn_center_fert
-    name: "Center Drips - RUN FERT"
-    on_press:
-      - lambda: |-
-          // FRT-8 / F3: the priority-Vanda manual feed. Reject outside the
-          // AM-only feed window regardless of VPD (fail SAFE on an invalid clock).
-          auto t = id(sntp_time).now();
-          const bool ok = t.is_valid() && !id(sntp_failed) &&
-            feed_window_open(t.hour, id(feed_start_hour), id(feed_end_hour));
-          if(ok){
-            id(irrig_queue) |= 8;
-            ESP_LOGI("irrig","Manual: CENTER FERT queued");
-          } else {
-            ESP_LOGW("irrig","Manual CENTER FERT REJECTED — outside feed window %d:00-%d:00",
-                     id(feed_start_hour), id(feed_end_hour));
-          }
 
 ###############################################################################
 # END OF FILE

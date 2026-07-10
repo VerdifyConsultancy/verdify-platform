@@ -6,6 +6,7 @@
  */
 
 #include "greenhouse_logic.h"
+#include "irrigation_policy.h"
 #include "invariants.h"
 #include <cstdio>
 #include <cstring>
@@ -558,82 +559,41 @@ static Setpoints irr_setpoints() {
     return sp;
 }
 
-TEST(center_burst_windows_match_anchors_and_durations) {
+TEST(center_burst_is_retired_even_with_legacy_fields_forced_on) {
     auto sp = irr_setpoints();
-    auto dawn_in   = irr_dry_inputs(7);    // anchors: sunrise 07:00, solar-noon 13:00
-    auto midday_in = irr_dry_inputs(14);
-    // Dawn window: sunrise + offset(0) → [7:00, 7:12)
-    ASSERT_TRUE(in_dawn_rehydrate_window(local_minute_of_day(7, 0), dawn_in, sp));
-    ASSERT_TRUE(in_dawn_rehydrate_window(local_minute_of_day(7, 11), dawn_in, sp));
-    ASSERT_FALSE(in_dawn_rehydrate_window(local_minute_of_day(7, 12), dawn_in, sp));
-    ASSERT_FALSE(in_dawn_rehydrate_window(local_minute_of_day(6, 59), dawn_in, sp));
-    // Midday window: solar-noon + offset(60) → [14:00, 14:11)
-    ASSERT_TRUE(in_midday_drench_window(local_minute_of_day(14, 0), midday_in, sp));
-    ASSERT_TRUE(in_midday_drench_window(local_minute_of_day(14, 10), midday_in, sp));
-    ASSERT_FALSE(in_midday_drench_window(local_minute_of_day(14, 11), midday_in, sp));
-    ASSERT_FALSE(in_midday_drench_window(local_minute_of_day(13, 59), midday_in, sp));
+    sp.sw_dawn_rehydrate_enabled = true;
+    sp.dawn_rehydrate_window_min = 120;
+    sp.dawn_rehydrate_on_s = 600;
+    sp.dawn_rehydrate_gap_s = 5;
+    sp.sw_midday_drench_enabled = true;
+    sp.midday_drench_window_min = 120;
+    sp.midday_drench_on_s = 600;
+    sp.midday_drench_gap_s = 5;
+
+    for (int hour : {7, 10, 14, 23}) {
+        auto in = irr_dry_inputs(hour);
+        ASSERT_EQ(center_burst_decision(local_minute_of_day(hour, 5), in, sp), CENTER_BURST_NONE);
+    }
+    int on_s = 111, gap_s = 222;
+    ASSERT_FALSE(center_burst_cadence_s(CENTER_BURST_DAWN, sp, on_s, gap_s));
+    ASSERT_FALSE(center_burst_cadence_s(CENTER_BURST_MIDDAY, sp, on_s, gap_s));
+    ASSERT_EQ(on_s, 111);
+    ASSERT_EQ(gap_s, 222);
     PASS();
 }
 
-TEST(center_burst_decision_selects_dawn_then_midday) {
-    auto sp = irr_setpoints();
-    // Inside dawn window → DAWN.
-    ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), irr_dry_inputs(7), sp), CENTER_BURST_DAWN);
-    // Inside midday window → MIDDAY.
-    ASSERT_EQ(center_burst_decision(local_minute_of_day(14, 5), irr_dry_inputs(14), sp), CENTER_BURST_MIDDAY);
-    // Outside both windows (mid-morning) → NONE even though dry+eligible.
-    ASSERT_EQ(center_burst_decision(local_minute_of_day(10, 0), irr_dry_inputs(10), sp), CENTER_BURST_NONE);
-    PASS();
-}
-
-TEST(center_burst_cadence_is_denser_than_base_and_per_burst) {
-    auto sp = irr_setpoints();
-    int on_s = 0, gap_s = 0;
-    ASSERT_FALSE(center_burst_cadence_s(CENTER_BURST_NONE, sp, on_s, gap_s));
-    ASSERT_TRUE(center_burst_cadence_s(CENTER_BURST_DAWN, sp, on_s, gap_s));
-    ASSERT_EQ(on_s, 90); ASSERT_EQ(gap_s, 20);
-    ASSERT_TRUE(center_burst_cadence_s(CENTER_BURST_MIDDAY, sp, on_s, gap_s));
-    ASSERT_EQ(on_s, 120); ASSERT_EQ(gap_s, 25);
-    // Denser than the 60s-ON / 45s-GAP base: longer ON, shorter GAP.
-    ASSERT_TRUE(sp.dawn_rehydrate_on_s   > 60);  ASSERT_TRUE(sp.dawn_rehydrate_gap_s   < 45);
-    ASSERT_TRUE(sp.midday_drench_on_s    > 60);  ASSERT_TRUE(sp.midday_drench_gap_s    < 45);
-    PASS();
-}
-
-TEST(center_burst_blocked_by_each_rail) {
-    // feed-hold (FRT-6 absorption hold) blocks the burst.
-    {
-        auto sp = irr_setpoints(); sp.feed_hold_active = true;
-        ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), irr_dry_inputs(7), sp), CENTER_BURST_NONE);
-    }
-    // CURVE-ONLY: the wet-taper rail is removed (past_wet_taper is inert), so it is
-    // no longer one of the burst rails. The remaining rails below still gate bursts.
-    // dew margin below floor blocks (don't wet a cold leaf).
-    {
-        auto sp = irr_setpoints();
-        auto in = irr_dry_inputs(7); in.dew_point_f = in.temp_f - 2.0f;  // 2°F << 8°F floor
-        ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), in, sp), CENTER_BURST_NONE);
-    }
-    // over-saturation sanity gate: VPD at/below center band ceiling → no drench.
-    {
-        auto sp = irr_setpoints();
-        auto in = irr_dry_inputs(7); in.vpd_kpa = sp.vpd_high;        // exactly at ceiling
-        ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), in, sp), CENTER_BURST_NONE);
-        in.vpd_kpa = sp.vpd_high - 0.2f;                              // humid → below ceiling
-        ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), in, sp), CENTER_BURST_NONE);
-    }
-    // occupancy inhibit blocks the burst.
-    {
-        auto sp = irr_setpoints(); sp.occupancy_inhibit = true;
-        auto in = irr_dry_inputs(7); in.occupied = true;
-        ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), in, sp), CENTER_BURST_NONE);
-    }
-    // sensor fault (implausible inputs) blocks the burst.
-    {
-        auto sp = irr_setpoints();
-        auto in = irr_dry_inputs(7); in.vpd_kpa = NAN;
-        ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), in, sp), CENTER_BURST_NONE);
-    }
+TEST(center_burst_defaults_are_off_and_zero) {
+    const auto sp = default_setpoints();
+    ASSERT_FALSE(sp.sw_dawn_rehydrate_enabled);
+    ASSERT_EQ(sp.dawn_boost_offset_min, 0);
+    ASSERT_EQ(sp.dawn_rehydrate_window_min, 0);
+    ASSERT_EQ(sp.dawn_rehydrate_on_s, 0);
+    ASSERT_EQ(sp.dawn_rehydrate_gap_s, 0);
+    ASSERT_FALSE(sp.sw_midday_drench_enabled);
+    ASSERT_EQ(sp.midday_boost_offset_min, 0);
+    ASSERT_EQ(sp.midday_drench_window_min, 0);
+    ASSERT_EQ(sp.midday_drench_on_s, 0);
+    ASSERT_EQ(sp.midday_drench_gap_s, 0);
     PASS();
 }
 
@@ -695,27 +655,14 @@ TEST(sf1_degraded_keeps_temp_safety_rails) {
     PASS();
 }
 
-TEST(sf1_degraded_allows_timed_center_burst_without_vpd) {
-    // The conservative timed fallback: dawn/midday center bursts still fire when
-    // degraded, even though VPD is at/below the band ceiling (the over-saturation
-    // gate is bypassed because the VPD reading is untrusted). Every OTHER rail
-    // (dusk, feed-hold, dew margin, occupancy, plausibility) still applies.
+TEST(sf1_degraded_does_not_reenable_retired_center_burst) {
     auto sp = irr_setpoints();
-    // Humid reading that would normally block the burst (VPD <= ceiling).
+    sp.sw_dawn_rehydrate_enabled = true;
+    sp.sw_midday_drench_enabled = true;
     auto in = irr_dry_inputs(7);
-    in.vpd_kpa = sp.vpd_high - 0.5f;     // below ceiling → trusted path blocks
+    in.sensor_degraded = true;
     ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), in, sp), CENTER_BURST_NONE);
-    in.sensor_degraded = true;            // degraded → over-saturation gate bypassed
-    ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), in, sp), CENTER_BURST_DAWN);
-    // ...but a degraded burst STILL respects the dusk cutoff and feed hold.
-    {
-        auto sp2 = sp; sp2.feed_hold_active = true;
-        ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), in, sp2), CENTER_BURST_NONE);
-    }
-    {
-        auto in2 = in; in2.dew_point_f = in2.temp_f - 2.0f;   // cold leaf → blocked
-        ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), in2, sp), CENTER_BURST_NONE);
-    }
+    ASSERT_EQ(center_burst_decision(local_minute_of_day(14, 5), in, sp), CENTER_BURST_NONE);
     PASS();
 }
 
@@ -799,51 +746,17 @@ TEST(night_stress_wet_blocked_by_each_rail) {
     PASS();
 }
 
-TEST(center_burst_respects_enable_switches) {
+TEST(determine_mode_never_stamps_retired_center_burst) {
     auto sp = irr_setpoints();
-    sp.sw_dawn_rehydrate_enabled = false;
-    ASSERT_EQ(center_burst_decision(local_minute_of_day(7, 5), irr_dry_inputs(7), sp), CENTER_BURST_NONE);
-    // midday still works while dawn disabled.
-    ASSERT_EQ(center_burst_decision(local_minute_of_day(14, 5), irr_dry_inputs(14), sp), CENTER_BURST_MIDDAY);
-    sp.sw_midday_drench_enabled = false;
-    ASSERT_EQ(center_burst_decision(local_minute_of_day(14, 5), irr_dry_inputs(14), sp), CENTER_BURST_NONE);
-    PASS();
-}
-
-TEST(center_burst_windows_are_pre_taper_by_default) {
-    // Firmware-v2: the dawn/midday windows anchor to the on-chip solar times via
-    // offsets. With the IRR anchors (sunrise 07:00, solar-noon 13:00, sunset
-    // 20:00) and default offsets (dawn 0, midday 60) + durations, both windows
-    // must close before the pre-sunset wet taper begins, so no burst ever fires
-    // past the taper.
-    auto sp = irr_setpoints();
-    auto in = irr_dry_inputs(7);
-    const int dawn_end   = ((in.sunrise_min + sp.dawn_boost_offset_min) % 1440)
-                         + dawn_rehydrate_window_minutes(sp);
-    const int midday_end = ((in.solar_noon_min + sp.midday_boost_offset_min) % 1440)
-                         + midday_drench_window_minutes(sp);
-    const int taper_start = in.sunset_min - sp.wet_taper_before_sunset_min;  // 20:00 - 120 = 18:00
-    ASSERT_TRUE(dawn_end   <= taper_start);
-    ASSERT_TRUE(midday_end <= taper_start);
-    PASS();
-}
-
-TEST(determine_mode_stamps_center_burst_and_clears_under_safety) {
-    auto sp = irr_setpoints();
-    sp.sw_fsm_controller_enabled = true;
-    validate_setpoints(sp);
-    sp.sw_fsm_controller_enabled = true;
-    // Dry, pre-dusk, dawn hour, VPD above center ceiling, dwell satisfied so we
-    // are firmly in SEALED_MIST → FSM stamps DAWN (hour-granular: hour 7 → 7:00).
-    auto in = irr_dry_inputs(7);
-    auto s = initial_state(); s.vpd_watch_timer_ms = sp.vpd_watch_dwell_ms;
-    determine_mode(in, sp, s, 5000);
-    ASSERT_EQ(s.center_burst, CENTER_BURST_DAWN);
-
-    // Drive temp to the safety_max rail → SAFETY_COOL must clear the burst.
-    auto hot = in; hot.temp_f = sp.safety_max + 2.0f;
-    determine_mode(hot, sp, s, 5000);
-    ASSERT_EQ(s.center_burst, CENTER_BURST_NONE);
+    sp.sw_dawn_rehydrate_enabled = true;
+    sp.sw_midday_drench_enabled = true;
+    for (int hour : {7, 14}) {
+        auto in = irr_dry_inputs(hour);
+        auto state = initial_state();
+        state.vpd_watch_timer_ms = sp.vpd_watch_dwell_ms;
+        determine_mode(in, sp, state, 5000);
+        ASSERT_EQ(state.center_burst, CENTER_BURST_NONE);
+    }
     PASS();
 }
 
@@ -1049,41 +962,6 @@ TEST(day_mask_allows_zero_sunday) {
     ASSERT_FALSE(day_mask_allows(0b0000001, 1));
     ASSERT_TRUE(day_mask_allows(0b0100100, 2));
     ASSERT_TRUE(day_mask_allows(0b0100100, 5));
-    PASS();
-}
-
-TEST(feed_window_open_am_only) {
-    // FRT-8 / F3: default 06:00-09:00 window. Inside → open; outside → closed.
-    ASSERT_TRUE(feed_window_open(6, 6, 9));    // window start, inclusive
-    ASSERT_TRUE(feed_window_open(7, 6, 9));    // ~06:30 feed lands here (and 07:xx)
-    ASSERT_TRUE(feed_window_open(8, 6, 9));    // last in-window hour
-    ASSERT_FALSE(feed_window_open(9, 6, 9));   // end, exclusive
-    ASSERT_FALSE(feed_window_open(5, 6, 9));   // before dawn
-    ASSERT_FALSE(feed_window_open(10, 6, 9));  // the old 10:30 feed time — now blocked
-    ASSERT_FALSE(feed_window_open(15, 6, 9));  // afternoon — blocked
-    ASSERT_FALSE(feed_window_open(22, 6, 9));  // dusk/overnight — blocked
-    ASSERT_FALSE(feed_window_open(0, 6, 9));   // midnight — blocked
-    PASS();
-}
-
-TEST(feed_window_open_fails_safe_degenerate) {
-    // start == end is degenerate → fail CLOSED (no feed) rather than open 24/7.
-    for (int h = 0; h < 24; h++) {
-        ASSERT_FALSE(feed_window_open(h, 8, 8));
-    }
-    PASS();
-}
-
-TEST(feed_window_open_clamps_and_wraps) {
-    // Out-of-range hours are clamped into [0,23]; a wrap window (start>end) is
-    // handled (degenerate for a morning feed but must not open everything).
-    ASSERT_TRUE(feed_window_open(99, 6, 9) == feed_window_open(23, 6, 9));  // clamp
-    // Wrap window 22->2 covers 22,23,0,1 only.
-    ASSERT_TRUE(feed_window_open(23, 22, 2));
-    ASSERT_TRUE(feed_window_open(0, 22, 2));
-    ASSERT_TRUE(feed_window_open(1, 22, 2));
-    ASSERT_FALSE(feed_window_open(2, 22, 2));
-    ASSERT_FALSE(feed_window_open(12, 22, 2));
     PASS();
 }
 
@@ -3803,6 +3681,95 @@ TEST(estimator_held_gain_selects_vent_plus_heat_hold_on_night_numbers) {
     PASS();
 }
 
+TEST(estimator_held_gain_is_solar_night_only) {
+    auto sp = hold_dehum_setpoints(true);
+    auto in = hold_dehum_night_inputs();
+    ASSERT_TRUE(is_night_phase(in));
+    auto night = estimate_moisture_exchange(in, sp);
+    ASSERT_TRUE(night.hold_required);
+    ASSERT_TRUE(std::string(night.reason) == "vent_plus_heat_hold");
+
+    set_solar_day(in, 12);  // same physics, device solar day
+    ASSERT_FALSE(is_night_phase(in));
+    auto day = estimate_moisture_exchange(in, sp);
+    ASSERT_FALSE(day.hold_required);
+    ASSERT_TRUE(day.action != MX_VENT_DEHUM);
+    ASSERT_TRUE(std::string(day.reason) == "heat_assist");
+    PASS();
+}
+
+TEST(estimator_flag_off_is_solar_phase_zero_divergence) {
+    auto sp = hold_dehum_setpoints(false);
+    auto night_in = hold_dehum_night_inputs();
+    auto day_in = night_in;
+    set_solar_day(day_in, 12);
+
+    const auto night = estimate_moisture_exchange(night_in, sp);
+    const auto day = estimate_moisture_exchange(day_in, sp);
+    ASSERT_EQ(night.action, day.action);
+    ASSERT_EQ(night.heat_assist_corun, day.heat_assist_corun);
+    ASSERT_EQ(night.hold_required, day.hold_required);
+    ASSERT_EQ(night.vent_vpd_gain_kpa, day.vent_vpd_gain_kpa);
+    ASSERT_EQ(night.vent_held_vpd_gain_kpa, day.vent_held_vpd_gain_kpa);
+    ASSERT_EQ(night.heat_vpd_gain_kpa, day.heat_vpd_gain_kpa);
+    ASSERT_EQ(night.outdoor_fresh, day.outdoor_fresh);
+    ASSERT_EQ(night.vent_overcools, day.vent_overcools);
+    ASSERT_TRUE(std::string(night.reason) == std::string(day.reason));
+    PASS();
+}
+
+TEST(estimator_daytime_cooled_vent_dehum_remains_available) {
+    auto sp = hold_dehum_setpoints(true);
+    auto in = make_inputs(68.0f, 0.50f, 82.0f);
+    set_solar_day(in, 12);
+    in.outdoor_temp_f = 66.0f;
+    in.outdoor_rh_pct = 35.0f;
+    in.outdoor_data_age_s = 10;
+
+    const auto mx = estimate_moisture_exchange(in, sp);
+    ASSERT_EQ(mx.action, MX_VENT_DEHUM);
+    ASSERT_FALSE(mx.hold_required);  // ordinary cooled candidate, not the extension
+    ASSERT_FALSE(mx.vent_overcools);
+    auto s = initial_state();
+    const Mode mode = determine_mode(in, sp, s, 60000);
+    ASSERT_EQ(mode, DEHUM_VENT);
+    const auto out = resolve_equipment(mode, in, sp, s, true);
+    ASSERT_TRUE(out.vent);
+    ASSERT_FALSE(out.heat2);
+    PASS();
+}
+
+TEST(hold_dehum_deadmits_on_exact_sunrise_tick) {
+    auto sp = hold_dehum_setpoints(true);
+    auto in = hold_dehum_night_inputs();
+    const SolarTimes solar = compute_greenhouse_solar_times(172, -360);
+    in.now_minute = solar.sunrise_min - 1;
+    in.solar_phase = solar_phase(in.now_minute, solar);
+    ASSERT_TRUE(is_night_phase(in));
+
+    auto s = initial_state();
+    // Model an already-running held response one tick before sunrise; entry
+    // re-hysteresis is intentionally irrelevant to the sunrise exit contract.
+    s.mode = DEHUM_VENT;
+    s.mode_prev = DEHUM_VENT;
+    Mode before = determine_mode(in, sp, s, 60000);
+    ASSERT_EQ(before, DEHUM_VENT);
+    ASSERT_TRUE(s.dehum_heat_assist_active);
+
+    in.now_minute = solar.sunrise_min;
+    in.local_hour = solar.sunrise_min / 60;
+    in.solar_phase = solar_phase(in.now_minute, solar);
+    ASSERT_FALSE(is_night_phase(in));
+    const auto mx = estimate_moisture_exchange(in, sp);
+    ASSERT_FALSE(mx.hold_required);
+    Mode sunrise = determine_mode(in, sp, s, 5000);
+    ASSERT_TRUE(sunrise != DEHUM_VENT);
+    const auto out = resolve_equipment(sunrise, in, sp, s, true);
+    ASSERT_FALSE(out.vent);
+    ASSERT_FALSE(out.heat2);
+    PASS();
+}
+
 TEST(estimator_flag_off_is_legacy_and_still_reports_held_gain) {
     // Flag OFF must degenerate to the exact pre-#410 ladder: the cooled vent
     // candidate fails, heat helps -> MX_HEAT_ASSIST, never hold_required. The
@@ -5133,6 +5100,374 @@ TEST(f7_vpd_min_safe_rescue_heats_on_cold_day) {
     auto out = resolve_equipment(m, in, sp, s, true);
     ASSERT_TRUE(out.heat1);
     ASSERT_FALSE(out.vent);
+    PASS();
+}
+
+// ── Software-recovery irrigation topology / commissioned wall sequence ─────
+static WallFeedCommissioning ready_wall_commissioning() {
+    return {
+        .armed = true,
+        .revision = 7,
+        .evidence_mask = WALL_COMMISSIONING_REQUIRED_MASK,
+        .now_epoch_s = 1'800'000'000u,
+        .commissioning_valid_until_epoch_s = 1'800'086'400u,
+        .calibrated_flow_lpm = 10.0f,
+        .flow_valid_until_epoch_s = 1'800'086'400u,
+        .prewet_liters = 2.0f,
+        .feed_liters = 1.0f,
+        .flush_liters = 3.0f,
+    };
+}
+
+TEST(irrigation_climate_origins_always_resolve_center_mist_only) {
+    WetTopologyPolicy policy{};
+    for (WetZone stale_hint : {
+            WetZone::NONE, WetZone::CENTER_MIST, WetZone::CENTER_DRIP,
+            WetZone::SOUTH_MIST, WetZone::WEST_MIST, WetZone::WALL_DRIP}) {
+        const auto resolution = resolve_wet_request(
+            {WetCommandOrigin::CLIMATE_VPD, stale_hint, WetChemistry::CLEAN}, policy);
+        ASSERT_TRUE(resolution.admitted);
+        ASSERT_EQ(resolution.relay, WetRelay::CENTER_MISTER);
+    }
+    const auto fertilizer = resolve_wet_request(
+        {WetCommandOrigin::CLIMATE_VPD, WetZone::CENTER_MIST, WetChemistry::FERTILIZER}, policy);
+    ASSERT_FALSE(fertilizer.admitted);
+    ASSERT_EQ(fertilizer.relay, WetRelay::NONE);
+    PASS();
+}
+
+TEST(irrigation_center_mist_rejects_every_non_climate_origin) {
+    WetTopologyPolicy policy{true, true, true, true, true};
+    for (WetCommandOrigin origin : {
+            WetCommandOrigin::EXPLICIT_IRRIGATION,
+            WetCommandOrigin::AUTOMATIC_WEEKLY_WALL_FEED,
+            WetCommandOrigin::MANUAL_FEED,
+            WetCommandOrigin::PLANNER_FEED,
+            WetCommandOrigin::LEGACY_SCHEDULE,
+            WetCommandOrigin::RETRY_REPLAY,
+            WetCommandOrigin::REPAIR}) {
+        for (WetChemistry chemistry : {WetChemistry::CLEAN, WetChemistry::FERTILIZER}) {
+            const auto resolution = resolve_wet_request(
+                {origin, WetZone::CENTER_MIST, chemistry}, policy);
+            ASSERT_FALSE(resolution.admitted);
+            ASSERT_EQ(resolution.relay, WetRelay::NONE);
+        }
+    }
+    PASS();
+}
+
+TEST(irrigation_dormant_clean_paths_are_disabled_by_default_and_explicit_when_enabled) {
+    WetTopologyPolicy disabled{};
+    for (WetZone zone : {WetZone::CENTER_DRIP, WetZone::SOUTH_MIST, WetZone::WEST_MIST}) {
+        const auto resolution = resolve_wet_request(
+            {WetCommandOrigin::EXPLICIT_IRRIGATION, zone, WetChemistry::CLEAN}, disabled);
+        ASSERT_FALSE(resolution.admitted);
+    }
+
+    WetTopologyPolicy enabled{true, true, true, false, false};
+    ASSERT_EQ(resolve_wet_request(
+        {WetCommandOrigin::EXPLICIT_IRRIGATION, WetZone::CENTER_DRIP, WetChemistry::CLEAN}, enabled).relay,
+        WetRelay::CENTER_DRIP);
+    ASSERT_EQ(resolve_wet_request(
+        {WetCommandOrigin::EXPLICIT_IRRIGATION, WetZone::SOUTH_MIST, WetChemistry::CLEAN}, enabled).relay,
+        WetRelay::SOUTH_MISTER);
+    ASSERT_EQ(resolve_wet_request(
+        {WetCommandOrigin::EXPLICIT_IRRIGATION, WetZone::WEST_MIST, WetChemistry::CLEAN}, enabled).relay,
+        WetRelay::WEST_MISTER);
+    PASS();
+}
+
+TEST(irrigation_fertilizer_is_wall_only_commissioned_and_exact_origin) {
+    WetTopologyPolicy commissioned{false, false, false, true, true};
+    for (WetZone forbidden : {
+            WetZone::CENTER_MIST, WetZone::CENTER_DRIP,
+            WetZone::SOUTH_MIST, WetZone::WEST_MIST}) {
+        const auto resolution = resolve_wet_request(
+            {WetCommandOrigin::AUTOMATIC_WEEKLY_WALL_FEED, forbidden, WetChemistry::FERTILIZER},
+            commissioned);
+        ASSERT_FALSE(resolution.admitted);
+    }
+    for (WetCommandOrigin forbidden_origin : {
+            WetCommandOrigin::EXPLICIT_IRRIGATION,
+            WetCommandOrigin::MANUAL_FEED,
+            WetCommandOrigin::PLANNER_FEED,
+            WetCommandOrigin::LEGACY_SCHEDULE,
+            WetCommandOrigin::RETRY_REPLAY,
+            WetCommandOrigin::REPAIR}) {
+        const auto resolution = resolve_wet_request(
+            {forbidden_origin, WetZone::WALL_DRIP, WetChemistry::FERTILIZER}, commissioned);
+        ASSERT_FALSE(resolution.admitted);
+    }
+    const auto allowed = resolve_wet_request(
+        {WetCommandOrigin::AUTOMATIC_WEEKLY_WALL_FEED, WetZone::WALL_DRIP, WetChemistry::FERTILIZER},
+        commissioned);
+    ASSERT_TRUE(allowed.admitted);
+    ASSERT_EQ(allowed.relay, WetRelay::WALL_DRIP_FERTILIZED);
+
+    commissioned.wall_fertigation_commissioned = false;
+    ASSERT_FALSE(resolve_wet_request(
+        {WetCommandOrigin::AUTOMATIC_WEEKLY_WALL_FEED, WetZone::WALL_DRIP, WetChemistry::FERTILIZER},
+        commissioned).admitted);
+    PASS();
+}
+
+TEST(irrigation_fixed_1030_legacy_schedule_is_ineligible) {
+    WetTopologyPolicy all_enabled{true, true, true, true, true};
+    for (WetZone zone : {
+            WetZone::CENTER_MIST, WetZone::CENTER_DRIP, WetZone::SOUTH_MIST,
+            WetZone::WEST_MIST, WetZone::WALL_DRIP}) {
+        for (WetChemistry chemistry : {WetChemistry::CLEAN, WetChemistry::FERTILIZER}) {
+            const auto resolution = resolve_wet_request(
+                {WetCommandOrigin::LEGACY_SCHEDULE, zone, chemistry}, all_enabled);
+            ASSERT_FALSE(resolution.admitted);
+        }
+    }
+    PASS();
+}
+
+TEST(irrigation_commissioning_converts_positive_liters_to_bounded_durations) {
+    const auto commissioning = ready_wall_commissioning();
+    const auto durations = validate_wall_feed_commissioning(commissioning);
+    ASSERT_TRUE(durations.valid);
+    ASSERT_EQ(durations.status, WallFeedCommissioningStatus::READY);
+    ASSERT_EQ(durations.prewet_ms, 12'000u);
+    ASSERT_EQ(durations.feed_ms, 6'000u);
+    ASSERT_EQ(durations.flush_ms, 18'000u);
+    PASS();
+}
+
+TEST(irrigation_commissioning_fails_closed_for_missing_stale_zero_invalid_or_unbounded_inputs) {
+    {
+        auto c = ready_wall_commissioning(); c.armed = false;
+        ASSERT_EQ(validate_wall_feed_commissioning(c).status, WallFeedCommissioningStatus::NOT_ARMED);
+    }
+    {
+        auto c = ready_wall_commissioning(); c.revision = 0;
+        ASSERT_EQ(validate_wall_feed_commissioning(c).status, WallFeedCommissioningStatus::MISSING_REVISION);
+    }
+    {
+        auto c = ready_wall_commissioning(); c.evidence_mask &= ~WALL_PRODUCT_ANALYSIS_VERIFIED;
+        ASSERT_EQ(validate_wall_feed_commissioning(c).status, WallFeedCommissioningStatus::INCOMPLETE_EVIDENCE);
+    }
+    {
+        auto c = ready_wall_commissioning(); c.now_epoch_s = 0;
+        ASSERT_EQ(validate_wall_feed_commissioning(c).status, WallFeedCommissioningStatus::CLOCK_INVALID);
+    }
+    {
+        auto c = ready_wall_commissioning(); c.commissioning_valid_until_epoch_s = c.now_epoch_s;
+        ASSERT_EQ(validate_wall_feed_commissioning(c).status, WallFeedCommissioningStatus::COMMISSIONING_STALE);
+    }
+    for (float invalid_flow : {0.0f, -1.0f, NAN, INFINITY, 101.0f}) {
+        auto c = ready_wall_commissioning(); c.calibrated_flow_lpm = invalid_flow;
+        ASSERT_EQ(validate_wall_feed_commissioning(c).status, WallFeedCommissioningStatus::FLOW_MISSING_OR_INVALID);
+    }
+    {
+        auto c = ready_wall_commissioning(); c.flow_valid_until_epoch_s = c.now_epoch_s;
+        ASSERT_EQ(validate_wall_feed_commissioning(c).status, WallFeedCommissioningStatus::FLOW_STALE);
+    }
+    for (float invalid_volume : {0.0f, -1.0f, NAN, INFINITY}) {
+        auto c = ready_wall_commissioning(); c.feed_liters = invalid_volume;
+        ASSERT_EQ(validate_wall_feed_commissioning(c).status, WallFeedCommissioningStatus::VOLUME_MISSING_OR_INVALID);
+    }
+    {
+        auto c = ready_wall_commissioning(); c.calibrated_flow_lpm = 0.1f; c.flush_liters = 400.0f;
+        ASSERT_EQ(validate_wall_feed_commissioning(c).status, WallFeedCommissioningStatus::DURATION_OUT_OF_BOUNDS);
+    }
+    PASS();
+}
+
+TEST(irrigation_weekly_solar_eligibility_is_restart_missed_window_and_exact_once_safe) {
+    const auto durations = validate_wall_feed_commissioning(ready_wall_commissioning());
+    WeeklyWallFeedState state{};
+    WeeklyWallEligibilityInput input{true, false, 0.25f, 20'000u, 7u};
+    ASSERT_TRUE(weekly_wall_feed_eligible(input, state, durations));
+    state = claim_weekly_wall_feed(input, state, 7u);
+    ASSERT_EQ(state.stage, WallFeedStage::PREWET);
+    ASSERT_FALSE(weekly_wall_feed_eligible(input, state, durations)); // duplicate tick
+
+    auto restored = cancel_interrupted_wall_feed(state, input.solar_day);
+    ASSERT_EQ(restored.stage, WallFeedStage::CANCELLED);
+    ASSERT_EQ(restored.last_terminal_solar_day, input.solar_day);
+    ASSERT_FALSE(weekly_wall_feed_eligible(input, restored, durations)); // restart, same day
+
+    input.solar_day += 6u;
+    ASSERT_FALSE(weekly_wall_feed_eligible(input, restored, durations));
+    input.solar_phase = 1.25f;
+    input.solar_day += 1u;
+    ASSERT_FALSE(weekly_wall_feed_eligible(input, restored, durations)); // due but missed solar window
+    input.solar_phase = 0.10f;
+    input.solar_day += 1u;
+    ASSERT_TRUE(weekly_wall_feed_eligible(input, restored, durations)); // next solar window remains due
+
+    input.solar_day = restored.last_terminal_solar_day - 1u;
+    ASSERT_FALSE(weekly_wall_feed_eligible(input, restored, durations)); // clock regression fails closed
+    PASS();
+}
+
+struct FakeWallFeedJournalNvs {
+    bool save_allowed{true};
+    bool sync_allowed{true};
+    bool pending_valid{false};
+    bool durable_valid{false};
+    WeeklyWallFeedJournalRecord pending{};
+    WeeklyWallFeedJournalRecord durable{};
+
+    bool save(const WeeklyWallFeedJournalRecord& record) {
+        if (!save_allowed) return false;
+        pending = record;
+        pending_valid = true;
+        return true;
+    }
+
+    bool sync() {
+        if (!sync_allowed) {
+            pending_valid = false;
+            return false;
+        }
+        if (pending_valid) {
+            durable = pending;
+            durable_valid = true;
+            pending_valid = false;
+        }
+        return true;
+    }
+
+    void reboot() { pending_valid = false; }
+
+    bool load(WeeklyWallFeedJournalRecord& record) const {
+        if (!durable_valid) return false;
+        record = durable;
+        return true;
+    }
+};
+
+static bool commit_to_fake_journal(
+    FakeWallFeedJournalNvs& nvs,
+    const WeeklyWallFeedState& state,
+    uint8_t terminal_code,
+    uint32_t sequence,
+    WeeklyWallFeedJournalRecord& committed) {
+    return commit_wall_feed_journal(
+        state, terminal_code, sequence,
+        [&](const WeeklyWallFeedJournalRecord& record) { return nvs.save(record); },
+        [&]() { return nvs.sync(); },
+        committed);
+}
+
+TEST(wall_feed_journal_claim_is_durable_before_first_restore_poll) {
+    FakeWallFeedJournalNvs nvs{};
+    WeeklyWallFeedState state{};
+    const WeeklyWallEligibilityInput input{true, false, 0.2f, 41'000u, 7u};
+    state = claim_weekly_wall_feed(input, state, 19u);
+    WeeklyWallFeedJournalRecord committed{};
+
+    // This direct save+sync happens before any RestoringGlobalsComponent poll.
+    ASSERT_TRUE(commit_to_fake_journal(nvs, state, 0, 1u, committed));
+    nvs.reboot();
+    WeeklyWallFeedJournalRecord loaded{};
+    ASSERT_TRUE(nvs.load(loaded));
+    ASSERT_TRUE(wall_feed_journal_record_valid(loaded));
+    ASSERT_EQ(wall_feed_state_from_journal(loaded).stage, WallFeedStage::PREWET);
+    ASSERT_EQ(wall_feed_state_from_journal(loaded).claimed_solar_day, input.solar_day);
+
+    // First-tick reboot handling cancels an admitted active stage and durably
+    // records the terminal day, so the same weekly claim cannot re-dose.
+    auto cancelled = cancel_interrupted_wall_feed(
+        wall_feed_state_from_journal(loaded), input.solar_day);
+    ASSERT_TRUE(commit_to_fake_journal(nvs, cancelled, 2, 2u, committed));
+    nvs.reboot();
+    ASSERT_TRUE(nvs.load(loaded));
+    ASSERT_EQ(wall_feed_state_from_journal(loaded).stage, WallFeedStage::CANCELLED);
+    ASSERT_EQ(loaded.terminal_code, 2);
+    ASSERT_EQ(loaded.last_terminal_solar_day, input.solar_day);
+    PASS();
+}
+
+TEST(wall_feed_journal_each_stage_boundary_survives_immediate_reboot) {
+    WeeklyWallFeedState state{
+        WallFeedStage::PREWET, 52'000u, 0u, 23u};
+    const WallFeedStage stages[] = {
+        WallFeedStage::PREWET,
+        WallFeedStage::FEED,
+        WallFeedStage::FLUSH,
+        WallFeedStage::COMPLETE,
+    };
+
+    for (uint32_t i = 0; i < 4; ++i) {
+        state.stage = stages[i];
+        if (state.stage == WallFeedStage::COMPLETE) {
+            state.last_terminal_solar_day = state.claimed_solar_day;
+        }
+        const uint8_t terminal_code = state.stage == WallFeedStage::COMPLETE ? 1 : 0;
+        FakeWallFeedJournalNvs nvs{};
+        WeeklyWallFeedJournalRecord committed{};
+        ASSERT_TRUE(commit_to_fake_journal(nvs, state, terminal_code, i + 1u, committed));
+        nvs.reboot();
+        WeeklyWallFeedJournalRecord loaded{};
+        ASSERT_TRUE(nvs.load(loaded));
+        ASSERT_TRUE(wall_feed_journal_record_valid(loaded));
+        ASSERT_EQ(wall_feed_state_from_journal(loaded).stage, stages[i]);
+        ASSERT_EQ(loaded.terminal_code, terminal_code);
+        ASSERT_EQ(loaded.sequence, i + 1u);
+    }
+    PASS();
+}
+
+TEST(wall_feed_journal_requires_both_save_and_sync_ack_before_relay) {
+    const WeeklyWallFeedState claimed{
+        WallFeedStage::PREWET, 61'000u, 0u, 29u};
+    WeeklyWallFeedJournalRecord committed{};
+
+    FakeWallFeedJournalNvs save_fail{};
+    save_fail.save_allowed = false;
+    ASSERT_FALSE(commit_to_fake_journal(save_fail, claimed, 0, 1u, committed));
+    save_fail.reboot();
+    WeeklyWallFeedJournalRecord loaded{};
+    ASSERT_FALSE(save_fail.load(loaded));
+
+    FakeWallFeedJournalNvs sync_fail{};
+    sync_fail.sync_allowed = false;
+    ASSERT_FALSE(commit_to_fake_journal(sync_fail, claimed, 0, 1u, committed));
+    sync_fail.reboot();
+    ASSERT_FALSE(sync_fail.load(loaded));
+
+    auto corrupt = make_wall_feed_journal_record(claimed, 0, 1u);
+    corrupt.checksum ^= 1u;
+    ASSERT_FALSE(wall_feed_journal_record_valid(corrupt));
+    PASS();
+}
+
+TEST(irrigation_wall_sequence_is_prewet_feed_fertilizer_off_immediate_clean_flush) {
+    WeeklyWallFeedState state{};
+    WeeklyWallEligibilityInput input{true, false, 0.2f, 30'000u, 7u};
+    state = claim_weekly_wall_feed(input, state, 11u);
+
+    auto relays = wall_feed_relay_intent(state.stage);
+    ASSERT_TRUE(relays.wall_clean);
+    ASSERT_FALSE(relays.wall_fertilized);
+    ASSERT_FALSE(relays.fertilizer_master);
+
+    state = advance_wall_feed_sequence(state, true, false, input.solar_day);
+    ASSERT_EQ(state.stage, WallFeedStage::FEED);
+    relays = wall_feed_relay_intent(state.stage);
+    ASSERT_FALSE(relays.wall_clean);
+    ASSERT_TRUE(relays.wall_fertilized);
+    ASSERT_TRUE(relays.fertilizer_master);
+
+    state = advance_wall_feed_sequence(state, true, false, input.solar_day);
+    ASSERT_EQ(state.stage, WallFeedStage::FLUSH);
+    relays = wall_feed_relay_intent(state.stage);
+    ASSERT_TRUE(relays.wall_clean);             // immediate wall-local flush
+    ASSERT_FALSE(relays.wall_fertilized);       // fertilizer off before flush
+    ASSERT_FALSE(relays.fertilizer_master);     // no 90-minute global hold
+
+    state = advance_wall_feed_sequence(state, true, false, input.solar_day);
+    ASSERT_EQ(state.stage, WallFeedStage::COMPLETE);
+    ASSERT_EQ(state.last_terminal_solar_day, input.solar_day);
+    relays = wall_feed_relay_intent(state.stage);
+    ASSERT_FALSE(relays.wall_clean);
+    ASSERT_FALSE(relays.wall_fertilized);
+    ASSERT_FALSE(relays.fertilizer_master);
     PASS();
 }
 

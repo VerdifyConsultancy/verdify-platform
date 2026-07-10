@@ -22,6 +22,7 @@ interval:
   - interval: 1s
     then:
       - lambda: |-
+          const uint32_t control_loop_started_us = micros();
           /*************** CONFIG CONSTANTS **************************************/
           const uint32_t MIN_HEAT_ON_MS    = uint32_t(id(min_heat_on_s))  * 1000UL;
           const uint32_t MIN_HEAT_OFF_MS   = uint32_t(id(min_heat_off_s)) * 1000UL;
@@ -573,9 +574,9 @@ interval:
               .night_stress_min_dew_margin_f = id(night_stress_min_dew_margin_f),
               // FRT-6 absorption hold (computed above from feed_hold_until_ms).
               .feed_hold_active = feed_hold_active,
-              // Firmware-v2: dawn/midday boosts anchor to the ON-CHIP solar
-              // times via offsets (sunrise+dawn_boost_offset_min / solar-noon+
-              // midday_boost_offset_min). Cadence knobs unchanged.
+              // Deliberate dawn/midday center watering is retired. Keep the
+              // compatibility fields inert; center mist uses the base VPD
+              // cadence only.
               .sw_dawn_rehydrate_enabled = id(sw_dawn_rehydrate_enabled),
               .dawn_boost_offset_min = id(dawn_boost_offset_min),
               .dawn_rehydrate_window_min = id(dawn_rehydrate_window_min),
@@ -959,57 +960,13 @@ interval:
             // controls.yaml-side wall-clock recompute — same code as the FSM.
             const bool climate_wet_assist_safety_ok =
               wet_time_valid && climate_wet_assist_permitted(sensor_in, setpts);
-            auto crop_direct_wet_allowed = [&](int zone) -> bool {
-              if(!id(direct_wet_gate_enabled)) return true;
-              if(!wet_time_valid) return false;
-              if(id(direct_wet_min_temp_f) > 0.0f && (isnan(Tin) || Tin < id(direct_wet_min_temp_f))) return false;
-              if(zone == 1) {
-                return direct_wet_window_open(
-                  wet_now_minute,
-                  id(activity_start_hour),
-                  id(activity_start_minute),
-                  id(activity_duration_min),
-                  id(direct_wet_south_start_offset_min),
-                  id(direct_wet_south_drydown_before_off_min));
-              }
-              if(zone == 4) {
-                return direct_wet_window_open(
-                  wet_now_minute,
-                  id(activity_start_hour),
-                  id(activity_start_minute),
-                  id(activity_duration_min),
-                  id(direct_wet_wall_start_offset_min),
-                  id(direct_wet_wall_drydown_before_off_min));
-              }
-              if(zone == 2) {
-                return direct_wet_window_open(
-                  wet_now_minute,
-                  id(activity_start_hour),
-                  id(activity_start_minute),
-                  id(activity_duration_min),
-                  id(direct_wet_west_start_offset_min),
-                  id(direct_wet_west_drydown_before_off_min));
-              }
-              if(zone == 3) {
-                return direct_wet_window_open(
-                  wet_now_minute,
-                  id(activity_start_hour),
-                  id(activity_start_minute),
-                  id(activity_duration_min),
-                  id(direct_wet_center_start_offset_min),
-                  id(direct_wet_center_drydown_before_off_min));
-              }
-              return false;
-            };
-            auto climate_wet_assist_allowed = [&](int zone) -> bool {
-              if(zone == 4) return false;  // climate control never drives wall drips.
-              if(!climate_wet_assist_demand) return false;
-              return climate_wet_assist_safety_ok;
-            };
-            const bool south_crop_wet_allowed = crop_direct_wet_allowed(1);
-            const bool west_crop_wet_allowed = crop_direct_wet_allowed(2);
-            const bool center_crop_wet_allowed = crop_direct_wet_allowed(3);
-            const bool wall_wet_allowed = crop_direct_wet_allowed(4);
+            // ADR-007: command origin, not an availability window, owns relay
+            // selection. Every climate/VPD wet request resolves to center mist;
+            // dormant irrigation enables are irrelevant to this path.
+            const WetTopologyPolicy climate_topology{};
+            const WetResolution climate_wet_resolution = resolve_wet_request(
+              {WetCommandOrigin::CLIMATE_VPD, WetZone::NONE, WetChemistry::CLEAN},
+              climate_topology);
             // SAF-4/IRR-5: non-bypassable per-zone (center) cumulative-runtime
             // duty cap. Once the center mister has run mister_max_runtime_min
             // minutes today it is locked out for the rest of the day —
@@ -1023,11 +980,12 @@ interval:
             // SAF-4: absolute daily volume hard-ceiling — blocks ALL climate
             // misting even under a VPD emergency (mister_volume_hard_block is
             // computed earlier from mister_water_today vs the hard cap).
-            const bool south_wet_allowed = (south_crop_wet_allowed || climate_wet_assist_allowed(1))
-                                           && !mister_volume_hard_block;
-            const bool west_wet_allowed = (west_crop_wet_allowed || climate_wet_assist_allowed(2))
-                                          && !mister_volume_hard_block;
-            const bool center_wet_allowed = (center_crop_wet_allowed || climate_wet_assist_allowed(3))
+            const bool south_wet_allowed = false;
+            const bool west_wet_allowed = false;
+            const bool center_wet_allowed = climate_wet_assist_demand
+                                            && climate_wet_assist_safety_ok
+                                            && climate_wet_resolution.admitted
+                                            && climate_wet_resolution.relay == WetRelay::CENTER_MISTER
                                             && !center_duty_cap_reached
                                             && !mister_volume_hard_block;
             const bool any_mister_wet_allowed = south_wet_allowed || west_wet_allowed || center_wet_allowed;
@@ -1051,36 +1009,16 @@ interval:
               if(mask_n == 0) snprintf(direct_wet_zone_mask, sizeof(direct_wet_zone_mask), "none");
             }
             auto direct_wet_relay_watchdog = [&]() {
-              if(!id(direct_wet_gate_enabled)) return;
-              if(!south_wet_allowed) {
+              // Climate owns center only. Non-wall fertilizer is never eligible,
+              // even if stale HA state or a legacy retry attempts to restore it.
+              if(id(irrig_state) == 0) {
                 id(south_wall_mister).turn_off();
-              }
-              if(!south_crop_wet_allowed) {
-                id(south_wall_mister_fertilized).turn_off();
-              }
-              if(!west_wet_allowed) {
                 id(west_wall_mister).turn_off();
               }
-              if(!west_crop_wet_allowed) {
-                id(west_wall_mister_fertilized).turn_off();
-              }
-              if(!wall_wet_allowed) {
-                id(wall_drips).turn_off();
-                id(wall_drips_fertilized).turn_off();
-              }
-              if(!center_wet_allowed) {
-                id(center_mister).turn_off();
-              }
-              if(!center_crop_wet_allowed) {
-                id(center_drips).turn_off();
-                id(center_drips_fertilized).turn_off();
-              }
-              if(!id(south_wall_mister_fertilized).state &&
-                 !id(west_wall_mister_fertilized).state &&
-                 !id(wall_drips_fertilized).state &&
-                 !id(center_drips_fertilized).state) {
-                id(fertilizer_master_valve).turn_off();
-              }
+              id(south_wall_mister_fertilized).turn_off();
+              id(west_wall_mister_fertilized).turn_off();
+              id(center_drips_fertilized).turn_off();
+              if(!center_wet_allowed) id(center_mister).turn_off();
               bool active_zone_gate_closed =
                   (id(mister_pulse_zone) == 1 && !south_wet_allowed) ||
                   (id(mister_pulse_zone) == 2 && !west_wet_allowed) ||
@@ -1092,8 +1030,6 @@ interval:
             };
             direct_wet_relay_watchdog();
             auto first_allowed_mister_zone = [&]() -> int {
-              if(south_wet_allowed) return 1;
-              if(west_wet_allowed) return 2;
               if(center_wet_allowed) return 3;
               return 0;
             };
@@ -1101,9 +1037,11 @@ interval:
               // If misters WERE firing but vent just opened, kill the zone
               // drivers immediately so we don't wait for the pulse timer.
             if (!mister_vent_ok && id(mister_pulse_zone) > 0) {
+              if(id(irrig_state) == 0) {
                 id(south_wall_mister).turn_off();
-                id(south_wall_mister_fertilized).turn_off();
                 id(west_wall_mister).turn_off();
+              }
+                id(south_wall_mister_fertilized).turn_off();
                 id(west_wall_mister_fertilized).turn_off();
                 id(center_mister).turn_off();
                 id(mister_pulse_zone) = 0;
@@ -1193,9 +1131,11 @@ interval:
               ESP_LOGI("mister","BLOCKED (budget=%.0f/%.0f humid=%d zone=%d occ=%d)",
                        id(mister_water_today), id(mister_water_budget_gal),
                        humidity_demand, any_zone_stressed, occupancy_blocks);
-              id(south_wall_mister).turn_off();
+              if(id(irrig_state) == 0) {
+                id(south_wall_mister).turn_off();
+                id(west_wall_mister).turn_off();
+              }
               id(south_wall_mister_fertilized).turn_off();
-              id(west_wall_mister).turn_off();
               id(west_wall_mister_fertilized).turn_off();
               id(center_mister).turn_off();
               id(mister_state) = 0;
@@ -1235,38 +1175,11 @@ interval:
               const uint32_t PULSE_ON_MS  = uint32_t(id(mister_pulse_on_s)) * 1000UL;
               const uint32_t PULSE_GAP_MS = uint32_t(id(mister_pulse_gap_s)) * 1000UL;
 
-              // ── IRR-3 (dawn rehydrate) / IRR-4 (midday drench) ──
-              // Re-evaluate the CENTER-zone time-anchored cadence override with
-              // minute-precise SNTP (determine_mode only had local_hour, so its
-              // ctl_state.center_burst is hour-granular). center_burst_decision
-              // re-checks every rail (feed-hold, dusk cutoff, dew margin,
-              // over-saturation VPD gate, occupancy, plausibility) from the same
-              // sensor_in/setpts the FSM used, so the burst can fire only when
-              // the center is already eligible to wet. It does NOT bypass the
-              // SAF-4 duty cap / daily-volume ceiling (center_wet_allowed +
-              // mister_volume_hard_block, enforced above) — those still gate the
-              // relay, so a burst counts toward and is bounded by the cap. The
-              // override touches ONLY the center pulse ON/GAP; west/south/east
-              // keep the base cadence.
-              CenterBurst center_burst = wet_time_valid
-                ? center_burst_decision(wet_now_minute, sensor_in, setpts)
-                : CENTER_BURST_NONE;
-              // The center burst is also disallowed if the center zone itself is
-              // not currently wet-eligible (duty cap reached / volume ceiling /
-              // crop+climate gate closed) — never drive a denser cadence into a
-              // capped zone.
-              if(!center_wet_allowed) center_burst = CENTER_BURST_NONE;
-              ctl_state.center_burst = center_burst;
-              int center_burst_on_s = 0, center_burst_gap_s = 0;
-              const bool center_burst_active =
-                  center_burst_cadence_s(center_burst, setpts, center_burst_on_s, center_burst_gap_s);
-              const uint32_t CENTER_PULSE_ON_MS  = center_burst_active
-                  ? (uint32_t)center_burst_on_s  * 1000UL : PULSE_ON_MS;
-              const uint32_t CENTER_PULSE_GAP_MS = center_burst_active
-                  ? (uint32_t)center_burst_gap_s * 1000UL : PULSE_GAP_MS;
-              // Per-zone cadence: ONLY zone 3 (center) gets the burst override.
-              auto pulse_on_ms_for  = [&](int zone) -> uint32_t { return zone == 3 ? CENTER_PULSE_ON_MS  : PULSE_ON_MS;  };
-              auto pulse_gap_ms_for = [&](int zone) -> uint32_t { return zone == 3 ? CENTER_PULSE_GAP_MS : PULSE_GAP_MS; };
+              // Center mist is climate/VPD-only. Every zone uses the base pulse
+              // cadence; there is no dawn or midday watering substitution.
+              ctl_state.center_burst = CENTER_BURST_NONE;
+              auto pulse_on_ms_for  = [&](int) -> uint32_t { return PULSE_ON_MS; };
+              auto pulse_gap_ms_for = [&](int) -> uint32_t { return PULSE_GAP_MS; };
 
               // Mister re-fire dwell fence: a zone may not re-energize within
               // mister_min_off_s of its own last off. The misters bypass the
@@ -1343,13 +1256,16 @@ interval:
               };
 
               auto turn_on_zone = [&](int zone) {
-                id(south_wall_mister).turn_off();
+                if(id(irrig_state) == 0) {
+                  id(south_wall_mister).turn_off();
+                  id(west_wall_mister).turn_off();
+                }
                 id(south_wall_mister_fertilized).turn_off();
-                id(west_wall_mister).turn_off();
                 id(west_wall_mister_fertilized).turn_off();
                 id(center_mister).turn_off();
-                if(zone == 1 && !south_wet_allowed) zone = first_allowed_mister_zone();
-                if(zone == 2 && !west_wet_allowed) zone = first_allowed_mister_zone();
+                // Resolve every climate selection through the pure topology;
+                // stale fairness/zone hints cannot route away from center.
+                if(zone != 3) zone = first_allowed_mister_zone();
                 if(zone == 3 && !center_wet_allowed) zone = first_allowed_mister_zone();
                 if(zone == 0) { id(mister_pulse_zone) = 0; return; }
                 // Mister re-fire dwell fence (mister_min_off_s): if the chosen
@@ -1374,11 +1290,9 @@ interval:
                 // sprint-7: per-zone cycle counters at the rising edge
                 //          (turn_on_zone is always preceded by all-off,
                 //          so every call is an off→on transition).
-                id(water_controller_actuating) = true;
-                if(zone == 1)      { id(south_wall_mister).turn_on(); id(last_fire_south_ms)  = now_ms; id(cnt_mister_south_today)  += 1; }
-                else if(zone == 2) { id(west_wall_mister).turn_on();  id(last_fire_west_ms)   = now_ms; id(cnt_mister_west_today)   += 1; }
-                else if(zone == 3) { id(center_mister).turn_on();     id(last_fire_center_ms) = now_ms; id(cnt_mister_center_today) += 1; }
-                id(water_controller_actuating) = false;
+                id(climate_wet_controller_actuating) = true;
+                if(zone == 3) { id(center_mister).turn_on(); id(last_fire_center_ms) = now_ms; id(cnt_mister_center_today) += 1; }
+                id(climate_wet_controller_actuating) = false;
                 id(mister_pulse_zone) = zone;
                 id(mister_selected_zone) = zone;
               };
@@ -1720,6 +1634,8 @@ interval:
             char fog_margin[24];
             char next_mist[24];
             char resource_cost[112];
+            // Fixed stack buffer: the defended worst-case payload, including
+            // uint32 outdoor age, is 331 bytes; 384 leaves 52 bytes plus NUL.
             char moisture_exchange[384];
             snprintf(temp_error, sizeof(temp_error), "%.2f", climate_decision.temp_error_f);
             snprintf(vpd_error, sizeof(vpd_error), "%.3f", climate_decision.vpd_error_kpa);
@@ -1736,10 +1652,11 @@ interval:
                      climate_decision.resource_cost_estimate.gas_therm);
             // #410: additive fields vent_held_vpd_gain_kpa + hold_required
             // (names coordinated with data-327 / migration 187 — do not rename).
-            snprintf(moisture_exchange, sizeof(moisture_exchange),
+            const int moisture_exchange_len = snprintf(moisture_exchange, sizeof(moisture_exchange),
                      "{\"action\":\"%s\",\"reason\":\"%s\",\"vent_vpd_gain_kpa\":%.3f,"
                      "\"vent_held_vpd_gain_kpa\":%.3f,"
                      "\"heat_vpd_gain_kpa\":%.3f,\"outdoor_fresh\":%s,"
+                     "\"outdoor_data_age_s\":%u,"
                      "\"vent_overcools\":%s,\"heat_assist_corun\":%s,"
                      "\"hold_required\":%s,"
                      "\"heat_assist_active\":%s,\"heat_assist_timer_s\":%.0f}",
@@ -1749,23 +1666,33 @@ interval:
                      climate_decision.moisture_vent_held_vpd_gain_kpa,
                      climate_decision.moisture_heat_vpd_gain_kpa,
                      climate_decision.moisture_outdoor_fresh ? "true" : "false",
+                     sensor_in.outdoor_data_age_s,
                      climate_decision.moisture_vent_overcools ? "true" : "false",
                      climate_decision.moisture_heat_assist_corun ? "true" : "false",
                      climate_decision.moisture_hold_required ? "true" : "false",
                      climate_decision.moisture_heat_assist_active ? "true" : "false",
                      float(climate_decision.moisture_heat_assist_timer_ms) / 1000.0f);
+            if(moisture_exchange_len < 0
+               || static_cast<size_t>(moisture_exchange_len) >= sizeof(moisture_exchange)) {
+              ESP_LOGE("climate", "Moisture-exchange telemetry truncated: required=%d capacity=%u",
+                moisture_exchange_len, unsigned(sizeof(moisture_exchange)));
+            }
             const uint32_t climate_diag_now_ms = millis();
-            static uint32_t last_climate_diag_publish_ms = 0;
-            const bool climate_diag_republish = (climate_diag_now_ms - last_climate_diag_publish_ms) >= 60000UL;
-            bool climate_diag_published = false;
+            static uint32_t last_climate_continuous_diag_ms = 0;
+            static uint32_t last_climate_band_diag_ms = 0;
+            const bool climate_continuous_diag_due = last_climate_continuous_diag_ms == 0
+              || (climate_diag_now_ms - last_climate_continuous_diag_ms) >= 60000UL;
+            const bool climate_band_diag_due = last_climate_band_diag_ms == 0
+              || (climate_diag_now_ms - last_climate_band_diag_ms) >= 300000UL;
 
             // ── Firmware-v2 EVIDENCE SURFACE (per-zone bands + solar) ─────────
             // Compute the per-zone VPD bands on-chip from the NVS anchor curves
             // at the current solar phase, score each zone's delta-to-target,
             // run the priority arbiter, and publish the new-architecture
             // telemetry so the dispatcher/DB can verify the data is flowing.
-            // Throttled to the 60s diag cadence.
-            if (climate_diag_republish) {
+            // Five-minute evidence cadence is enough for these slowly varying
+            // curves and removes 18 unconditional API publications per minute.
+            if (climate_band_diag_due) {
               auto zcurve = [&](float sr, float sm, float ss, float mid) -> float {
                 BandAnchors a = {sr, sm, ss, mid};
                 return band_value_at_phase(a, sv2_phase);
@@ -1801,82 +1728,71 @@ interval:
               id(gh_zone_vpd_delta_east).publish_state(std::isfinite(zvpd[ZONE_EAST]) ? zvpd[ZONE_EAST] - zb[ZONE_EAST].target : NAN);
               id(gh_zone_wet_granted).publish_state(won < 0 ? "none" : ZONE_NAMES[won]);
               id(gh_band_source).publish_state(id(sw_onchip_band_enabled) ? "onchip_curve" : "dispatcher_legacy");
+              last_climate_band_diag_ms = climate_diag_now_ms;
             }
 
             static char last_climate_action[48] = "";
-            if(strcmp(last_climate_action, climate_action) != 0 || climate_diag_republish){
+            if(strcmp(last_climate_action, climate_action) != 0){
               id(gh_climate_action).publish_state(climate_action);
               snprintf(last_climate_action, sizeof(last_climate_action), "%s", climate_action);
-              climate_diag_published = true;
             }
             static char last_climate_priority_axis[24] = "";
-            if(strcmp(last_climate_priority_axis, priority_axis) != 0 || climate_diag_republish){
+            if(strcmp(last_climate_priority_axis, priority_axis) != 0){
               id(gh_climate_priority_axis).publish_state(priority_axis);
               snprintf(last_climate_priority_axis, sizeof(last_climate_priority_axis), "%s", priority_axis);
-              climate_diag_published = true;
             }
             static char last_climate_candidate_summary[160] = "";
-            if(strcmp(last_climate_candidate_summary, climate_decision.candidate_summary) != 0 || climate_diag_republish){
+            if(strcmp(last_climate_candidate_summary, climate_decision.candidate_summary) != 0){
               id(gh_climate_candidate_summary).publish_state(climate_decision.candidate_summary);
               snprintf(last_climate_candidate_summary, sizeof(last_climate_candidate_summary), "%s", climate_decision.candidate_summary);
-              climate_diag_published = true;
             }
             static char last_climate_moisture_state[24] = "";
-            if(strcmp(last_climate_moisture_state, effective_moisture_state) != 0 || climate_diag_republish){
+            if(strcmp(last_climate_moisture_state, effective_moisture_state) != 0){
               id(gh_climate_moisture_assist_state).publish_state(effective_moisture_state);
               snprintf(last_climate_moisture_state, sizeof(last_climate_moisture_state), "%s", effective_moisture_state);
-              climate_diag_published = true;
             }
             static char last_climate_moisture_zone[24] = "";
-            if(strcmp(last_climate_moisture_zone, effective_moisture_zone) != 0 || climate_diag_republish){
+            if(strcmp(last_climate_moisture_zone, effective_moisture_zone) != 0){
               id(gh_climate_moisture_zone).publish_state(effective_moisture_zone);
               snprintf(last_climate_moisture_zone, sizeof(last_climate_moisture_zone), "%s", effective_moisture_zone);
-              climate_diag_published = true;
             }
             static char last_climate_temp_error[24] = "";
-            if(strcmp(last_climate_temp_error, temp_error) != 0 || climate_diag_republish){
+            if(climate_continuous_diag_due && strcmp(last_climate_temp_error, temp_error) != 0){
               id(gh_climate_temp_error_f).publish_state(temp_error);
               snprintf(last_climate_temp_error, sizeof(last_climate_temp_error), "%s", temp_error);
-              climate_diag_published = true;
             }
             static char last_climate_vpd_error[24] = "";
-            if(strcmp(last_climate_vpd_error, vpd_error) != 0 || climate_diag_republish){
+            if(climate_continuous_diag_due && strcmp(last_climate_vpd_error, vpd_error) != 0){
               id(gh_climate_vpd_error_kpa).publish_state(vpd_error);
               snprintf(last_climate_vpd_error, sizeof(last_climate_vpd_error), "%s", vpd_error);
-              climate_diag_published = true;
             }
             static char last_climate_fog_margin[24] = "";
-            if(strcmp(last_climate_fog_margin, fog_margin) != 0 || climate_diag_republish){
+            if(climate_continuous_diag_due && strcmp(last_climate_fog_margin, fog_margin) != 0){
               id(gh_climate_fog_margin_kpa).publish_state(fog_margin);
               snprintf(last_climate_fog_margin, sizeof(last_climate_fog_margin), "%s", fog_margin);
-              climate_diag_published = true;
             }
             static char last_climate_fog_block[48] = "";
-            if(strcmp(last_climate_fog_block, climate_decision.fog_block_reason) != 0 || climate_diag_republish){
+            if(strcmp(last_climate_fog_block, climate_decision.fog_block_reason) != 0){
               id(gh_climate_fog_block_reason).publish_state(climate_decision.fog_block_reason);
               snprintf(last_climate_fog_block, sizeof(last_climate_fog_block), "%s", climate_decision.fog_block_reason);
-              climate_diag_published = true;
             }
             static char last_climate_resource_cost[112] = "";
-            if(strcmp(last_climate_resource_cost, resource_cost) != 0 || climate_diag_republish){
+            if(climate_continuous_diag_due && strcmp(last_climate_resource_cost, resource_cost) != 0){
               id(gh_climate_resource_cost_estimate).publish_state(resource_cost);
               snprintf(last_climate_resource_cost, sizeof(last_climate_resource_cost), "%s", resource_cost);
-              climate_diag_published = true;
             }
             static char last_climate_next_mist[24] = "";
-            if(strcmp(last_climate_next_mist, next_mist) != 0 || climate_diag_republish){
+            if(climate_continuous_diag_due && strcmp(last_climate_next_mist, next_mist) != 0){
               id(gh_climate_next_mist_eligible_s).publish_state(next_mist);
               snprintf(last_climate_next_mist, sizeof(last_climate_next_mist), "%s", next_mist);
-              climate_diag_published = true;
             }
             static char last_climate_moisture_exchange[384] = "";
-            if(strcmp(last_climate_moisture_exchange, moisture_exchange) != 0 || climate_diag_republish){
+            if(climate_continuous_diag_due && strcmp(last_climate_moisture_exchange, moisture_exchange) != 0){
               id(gh_climate_moisture_exchange).publish_state(moisture_exchange);
               snprintf(last_climate_moisture_exchange, sizeof(last_climate_moisture_exchange), "%s", moisture_exchange);
-              climate_diag_published = true;
             }
-            if(climate_diag_published){
-              last_climate_diag_publish_ms = climate_diag_now_ms;
+            if(climate_continuous_diag_due){
+              last_climate_continuous_diag_ms = climate_diag_now_ms;
             }
           }
 
@@ -2016,8 +1932,8 @@ interval:
 
           /*** OBS-3 — Relief-cycle state exposure (Sprint 18) ***/
           {
-            static uint8_t ctl_diag_ctr = 11;
-            if(++ctl_diag_ctr >= 12){
+            static uint8_t ctl_diag_ctr = 59;
+            if(++ctl_diag_ctr >= 60){
               ctl_diag_ctr = 0;
               id(ctl_relief_cycle_count).publish_state((float)ctl_state.relief_cycle_count);
               id(ctl_vent_latch_timer_s).publish_state((float)(ctl_state.vent_latch_timer_ms / 1000));
@@ -2247,6 +2163,7 @@ interval:
               id(runtime_fog_ms)   = R[4].runtime_ms;
               id(runtime_vent_ms)  = R[5].runtime_ms;
               id(econ_block_state) = econ_block;
+          gh_record_control_loop_duration_us(micros() - control_loop_started_us);
           App.feed_wdt();
   ################################################################################
   # Per-probe watchdog — only reboot if ALL probes silent (not just case)
@@ -2288,17 +2205,19 @@ interval:
 
 
   ################################################################################
-  # 14b — IRRIGATION STATE MACHINE
+  # 14b — IRRIGATION / COMMISSIONED WALL-FEED STATE MACHINE
   #
-  # Autonomous drip irrigation with mutual exclusion, fert cycling, VPD boost,
-  # optional weather skip, and manual triggers.  Runs independently of WiFi/HA.
+  # One resolver owns every wet origin. Fixed-clock jobs and every
+  # center/non-wall fertilizer job are actuation-ineligible. Automatic
+  # fertilizer is an exact-once weekly solar claim with measured liters:
+  # wall PREWET(clean) -> wall FEED(fertilized) -> fertilizer OFF -> immediate
+  # wall FLUSH(clean) -> terminal. There is no global post-feed hold.
   #
-  # States: 0=idle, 1=wall_clean, 2=wall_fert, 3=center_clean, 4=center_fert,
-  #         5=wall_flush, 6=center_flush, 7=south_mister_fert,
-  #         8=west_mister_fert, 9=south_mister_flush, 10=west_mister_flush
-  # Queue bitmask: bit0=wall_clean, bit1=wall_fert, bit2=center_clean,
-  #                bit3=center_fert, bit4=south_mister_fert,
-  #                bit5=west_mister_fert
+  # irrig_state: 0=idle, 1=wall_clean, 2=center_drip_clean,
+  #              5=wall_prewet, 6=wall_feed, 7=wall_flush.
+  # States 3/4 and every non-wall fertilizer path are retired/ineligible.
+  # irrig_queue has exactly two callers: bit0 wall clean, bit2 center clean.
+  # Every legacy fertilizer or unknown bit is rejected and cleared fail-closed.
   ################################################################################
   - interval: 5s
     then:
@@ -2308,26 +2227,11 @@ interval:
           uint32_t irrig_dt = (irrig_now < irrig_last_ms) ? 0 : (irrig_now - irrig_last_ms);
           irrig_last_ms = irrig_now;
 
-          // Track which job entered flush (persists across ticks)
-          static int flush_origin = 0;
           const bool leak_block = id(bs_leak_detected).state;
+          // The retired 90-minute global hold can never block center climate.
+          id(feed_hold_until_ms) = 0;
 
-          // FRT-6: absorption hold active while irrig_now is before the armed
-          // deadline (same wrap-aware test as the climate loop). During the
-          // hold, NO new clean wetting job may dispatch — the velamen absorbs
-          // the feed before any clean rinse/flush is allowed to run.
-          const bool feed_hold_active =
-              id(feed_hold_until_ms) != 0
-              && (int32_t)(id(feed_hold_until_ms) - irrig_now) > 0;
-
-          // ── VPD stress accumulator ──
-          float cur_vpd = id(average_vpd_kpa).state;
-          float vpd_hi = id(target_vpd_high_kpa);
-          if(!isnan(cur_vpd) && cur_vpd > vpd_hi){
-            id(irrig_vpd_stress_ms) += irrig_dt;
-          }
-
-          // ── Midnight reset ──
+          // ── Daily runtime reset/tracking ──
           static int irrig_last_doy = -1;
           if(id(sntp_time).now().is_valid()){
             int doy = id(sntp_time).now().day_of_year;
@@ -2348,79 +2252,6 @@ interval:
             if(id(west_wall_mister_fertilized).state)  id(runtime_mister_west_ms)  += irrig_dt;
             if(id(fertilizer_master_valve).state) id(runtime_fert_master_ms) += irrig_dt;
 
-            auto fert_relay_active = [&]() -> bool {
-              return id(south_wall_mister_fertilized).state ||
-                     id(west_wall_mister_fertilized).state ||
-                     id(wall_drips_fertilized).state ||
-                     id(center_drips_fertilized).state;
-            };
-            auto queued_fert_jobs = [&]() -> bool {
-              return (id(irrig_queue) & (2 | 8 | 16 | 32)) != 0;
-            };
-            auto sync_fert_master = [&](const char* reason) {
-              const bool master_needed = fert_relay_active();
-              if(master_needed && !id(fertilizer_master_valve).state) {
-                id(fert_controller_actuating) = true;
-                id(fertilizer_master_valve).turn_on();
-                id(fert_controller_actuating) = false;
-                ESP_LOGW("irrig","FERT MASTER opened by relay interlock (%s)", reason);
-              } else if(!master_needed && id(fertilizer_master_valve).state) {
-                id(fertilizer_master_valve).turn_off();
-                ESP_LOGI("irrig","FERT MASTER closed by relay interlock (%s)", reason);
-              }
-            };
-
-            auto wet_now_t = id(sntp_time).now();
-            const bool wet_time_valid = wet_now_t.is_valid() && !id(sntp_failed);
-            const int wet_now_minute = wet_time_valid
-              ? local_minute_of_day(wet_now_t.hour, wet_now_t.minute)
-              : 0;
-            auto irrig_direct_wet_allowed_zone = [&](int zone) -> bool {
-              if(!id(direct_wet_gate_enabled)) return true;
-              if(!wet_time_valid) return false;
-              float t = id(average_temperature).state;
-              if(id(direct_wet_min_temp_f) > 0.0f && (isnan(t) || t < id(direct_wet_min_temp_f))) return false;
-              if(zone == 1) {
-                return direct_wet_window_open(
-                  wet_now_minute,
-                  id(activity_start_hour),
-                  id(activity_start_minute),
-                  id(activity_duration_min),
-                  id(direct_wet_south_start_offset_min),
-                  id(direct_wet_south_drydown_before_off_min));
-              }
-              if(zone == 2) {
-                return direct_wet_window_open(
-                  wet_now_minute,
-                  id(activity_start_hour),
-                  id(activity_start_minute),
-                  id(activity_duration_min),
-                  id(direct_wet_west_start_offset_min),
-                  id(direct_wet_west_drydown_before_off_min));
-              }
-              if(zone == 4) {
-                return direct_wet_window_open(
-                  wet_now_minute,
-                  id(activity_start_hour),
-                  id(activity_start_minute),
-                  id(activity_duration_min),
-                  id(direct_wet_wall_start_offset_min),
-                  id(direct_wet_wall_drydown_before_off_min));
-              }
-              if(zone == 3) {
-                return direct_wet_window_open(
-                  wet_now_minute,
-                  id(activity_start_hour),
-                  id(activity_start_minute),
-                  id(activity_duration_min),
-                  id(direct_wet_center_start_offset_min),
-                  id(direct_wet_center_drydown_before_off_min));
-              }
-              return false;
-            };
-            auto irrig_direct_wet_allowed = [&](bool is_wall) -> bool {
-              return irrig_direct_wet_allowed_zone(is_wall ? 4 : 3);
-            };
             auto turn_off_all_irrigation = [&]() {
               id(wall_drips).turn_off();
               id(wall_drips_fertilized).turn_off();
@@ -2428,402 +2259,308 @@ interval:
               id(south_wall_mister_fertilized).turn_off();
               id(west_wall_mister).turn_off();
               id(west_wall_mister_fertilized).turn_off();
-              id(center_mister).turn_off();
               id(center_drips).turn_off();
               id(center_drips_fertilized).turn_off();
               id(fertilizer_master_valve).turn_off();
             };
-            static bool leak_irrigation_lock_prev = false;
-            if(leak_block) {
-              turn_off_all_irrigation();
-              id(irrig_state) = 0;
-              id(irrig_queue) = 0;
-              id(irrig_timer_ms) = 0;
-              sync_fert_master("leak_lock");
-              if(!leak_irrigation_lock_prev) {
-                ESP_LOGE("irrig","STOPPED by leak_detected");
-              }
-              leak_irrigation_lock_prev = true;
-              return;
+          auto now_t = id(sntp_time).now();
+          const bool clock_valid = now_t.is_valid() && !id(sntp_failed) && now_t.timestamp > 0;
+          uint32_t solar_day = clock_valid ? uint32_t(now_t.timestamp / 86400) : 0;
+          float current_solar_phase = NAN;
+          if(clock_valid) {
+            int utc_offset_min = -360;
+            auto utc_t = id(sntp_time).utcnow();
+            if(utc_t.is_valid()) {
+              int diff = (now_t.hour * 60 + now_t.minute) - (utc_t.hour * 60 + utc_t.minute);
+              if(diff > 720) diff -= 1440; else if(diff < -720) diff += 1440;
+              utc_offset_min = diff;
             }
-            if(leak_irrigation_lock_prev) {
-              ESP_LOGW("irrig","Leak lock cleared");
-              leak_irrigation_lock_prev = false;
-            }
-            if(id(direct_wet_gate_enabled) && id(irrig_state) > 0) {
-              bool active_wall = id(irrig_state) == 1 || id(irrig_state) == 2 || id(irrig_state) == 5;
-              bool active_south = id(irrig_state) == 7 || id(irrig_state) == 9;
-              bool active_west = id(irrig_state) == 8 || id(irrig_state) == 10;
-              bool active_center = id(irrig_state) == 3 || id(irrig_state) == 4 || id(irrig_state) == 6;
-              if((active_wall && !irrig_direct_wet_allowed(true)) ||
-                 (active_south && !irrig_direct_wet_allowed_zone(1)) ||
-                 (active_west && !irrig_direct_wet_allowed_zone(2)) ||
-                 (active_center && !irrig_direct_wet_allowed(false))) {
-                turn_off_all_irrigation();
-                id(irrig_state) = 0;
-                id(irrig_timer_ms) = 0;
-                ESP_LOGW("irrig","STOPPED by direct-wet gate");
-              }
-            }
-            sync_fert_master("watchdog");
-
-            // ── Skip if globally disabled ──
-            if(!id(irrig_enabled)) return;
-
-          // TODO(IRR-3 / IRR-4) — DEFERRED, NOT IMPLEMENTED.
-          // IRR-3 dawn rehydrate burst (sunrise-anchored, longer ON / shorter
-          //   GAP center-mister pre-wet of the velamen) and IRR-4 midday heavy
-          //   drench (solar-peak-anchored deeper soak) are larger NEW
-          //   time-anchored behaviors. They require new sunrise/solar-peak
-          //   anchor globals pushed by the dispatcher (vanda design §4.2),
-          //   new irrigation states/timers, and crop-observation calibration
-          //   of volume — none of which is cleanly validatable in the C++
-          //   replay harness (irrigation runs in controls.yaml, outside the
-          //   replay corpus). Per the honesty rule they are left as a marked
-          //   stub rather than shipped unvalidated into the live greenhouse.
-          //   Implement with: anchor globals + new dispatch states gated by
-          //   feed_hold_active (already wired) and the SAF-4 duty cap (already
-          //   wired), then add a controls-level acceptance test before OTA.
-
-          // ── Schedule check (only when idle, no queue pending) ──
-          if(id(irrig_state) == 0 && id(irrig_queue) == 0 &&
-             id(sntp_time).now().is_valid() && !id(sntp_failed)){
-
-            auto now_t = id(sntp_time).now();
-              int cur_hour = now_t.hour;
-              int cur_min  = now_t.minute;
-              int cur_doy  = now_t.day_of_year;
-              int cur_dow0 = ((int(now_t.day_of_week) + 6) % 7);  // ESPTime: Sun=1 -> 0
-
-            // Weather skip: VPD >= 0.6 kPa AND outdoor temp >= 35°F
-            bool weather_ok = true;
-            if(id(irrig_weather_skip)){
-              float outdoor_t = id(ha_outdoor_temp).state;
-              if(isnan(outdoor_t)) outdoor_t = id(pulled_outdoor_temp_f);
-              if(!isnan(cur_vpd) && cur_vpd < 0.6f) weather_ok = false;
-              if(!isnan(outdoor_t) && outdoor_t < 35.0f) weather_ok = false;
-            }
-
-            // Wall schedule
-              if(id(irrig_wall_enabled) &&
-                 cur_hour == id(irrig_wall_start_hour) &&
-                 cur_min  == id(irrig_wall_start_minute) &&
-                 (id(irrig_last_wall_doy) == 0 ||
-                  ((cur_doy >= id(irrig_last_wall_doy)) ? (cur_doy - id(irrig_last_wall_doy)) : (365 - id(irrig_last_wall_doy) + cur_doy)) >= id(irrig_wall_interval_days))){
-                if(!day_mask_allows(id(irrig_wall_days_mask), cur_dow0)){
-                  ESP_LOGI("irrig","Wall SKIPPED (day mask) doy=%d", cur_doy);
-                  id(irrig_last_wall_doy) = cur_doy;
-                } else if(!irrig_direct_wet_allowed(true)){
-                  ESP_LOGW("irrig","Wall SKIPPED (direct-wet gate) doy=%d", cur_doy);
-                } else if(weather_ok){
-                  bool do_fert = id(irrig_wall_fert_days_mask) > 0
-                    ? day_mask_allows(id(irrig_wall_fert_days_mask), cur_dow0)
-                    : ((id(irrig_wall_fert_every_n) > 0) &&
-                      ((id(irrig_wall_cycle_count) % id(irrig_wall_fert_every_n)) == 0));
-                  id(irrig_queue) |= do_fert ? (2 | 16 | 32) : 1;
-                  ESP_LOGI("irrig","Wall SCHEDULED (%s) doy=%d",
-                         do_fert ? "FERT" : "CLEAN", cur_doy);
-              } else {
-                ESP_LOGI("irrig","Wall SKIPPED (weather) doy=%d", cur_doy);
-                id(irrig_last_wall_doy) = cur_doy;
-              }
-            }
-
-            // Center schedule
-              if(id(irrig_center_enabled) &&
-                 cur_hour == id(irrig_center_start_hour) &&
-                 cur_min  == id(irrig_center_start_minute) &&
-                 (id(irrig_last_center_doy) == 0 ||
-                  ((cur_doy >= id(irrig_last_center_doy)) ? (cur_doy - id(irrig_last_center_doy)) : (365 - id(irrig_last_center_doy) + cur_doy)) >= id(irrig_center_interval_days))){
-                if(!day_mask_allows(id(irrig_center_days_mask), cur_dow0)){
-                  ESP_LOGI("irrig","Center SKIPPED (day mask) doy=%d", cur_doy);
-                  id(irrig_last_center_doy) = cur_doy;
-                } else if(!irrig_direct_wet_allowed(false)){
-                  ESP_LOGW("irrig","Center SKIPPED (direct-wet gate) doy=%d", cur_doy);
-                } else if(weather_ok){
-                  bool do_fert = id(irrig_center_fert_days_mask) > 0
-                    ? day_mask_allows(id(irrig_center_fert_days_mask), cur_dow0)
-                    : ((id(irrig_center_fert_every_n) > 0) &&
-                      ((id(irrig_center_cycle_count) % id(irrig_center_fert_every_n)) == 0));
-                  id(irrig_queue) |= do_fert ? 8 : 4;
-                ESP_LOGI("irrig","Center SCHEDULED (%s) doy=%d",
-                         do_fert ? "FERT" : "CLEAN", cur_doy);
-              } else {
-                ESP_LOGI("irrig","Center SKIPPED (weather) doy=%d", cur_doy);
-                id(irrig_last_center_doy) = cur_doy;
-              }
-            }
+            SolarTimes solar = compute_greenhouse_solar_times(now_t.day_of_year, utc_offset_min);
+            current_solar_phase = solar_phase(now_t.hour * 60 + now_t.minute, solar);
           }
 
-          // ── Dequeue next job (mutual exclusion) ──
-          if(id(irrig_state) == 0 && id(irrig_queue) != 0){
-            bool fert_queue_pending = queued_fert_jobs();
-            int job = 0;
-            int bit = 0;
-            if     (id(irrig_queue) & 1){ job = 1; bit = 1; }
-            else if(id(irrig_queue) & 2){ job = 2; bit = 2; }
-            else if(id(irrig_queue) & 16){ job = 7; bit = 16; }
-            else if(id(irrig_queue) & 32){ job = 8; bit = 32; }
-            else if(id(irrig_queue) & 4){ job = 3; bit = 4; }
-            else if(id(irrig_queue) & 8){ job = 4; bit = 8; }
+          WallFeedCommissioning commissioning{
+            id(wall_fertigation_commissioned),
+            id(wall_commissioning_revision),
+            static_cast<uint16_t>(id(wall_commissioning_evidence_mask)),
+            clock_valid ? static_cast<uint32_t>(now_t.timestamp) : 0u,
+            id(wall_commissioning_valid_until_epoch_s),
+            id(wall_flow_lpm),
+            id(wall_flow_valid_until_epoch_s),
+            id(wall_prewet_liters),
+            id(wall_feed_liters),
+            id(wall_flush_liters)};
+          const WallFeedDurations durations = validate_wall_feed_commissioning(commissioning);
+          id(wall_feed_commissioning_ready) = durations.valid && id(irrig_wall_enabled);
 
-            if(job > 0){
-              id(irrig_queue) &= ~bit;
-              int job_zone = (job == 7) ? 1 : (job == 8) ? 2 : (job == 3 || job == 4) ? 3 : 4;
-              if(!irrig_direct_wet_allowed_zone(job_zone)){
-                const char* drop_zone = (job_zone == 1) ? "SOUTH" : (job_zone == 2) ? "WEST" : (job_zone == 3) ? "CENTER" : "WALL";
-                ESP_LOGW("irrig","DROP QUEUED %s job (direct-wet gate)", drop_zone);
-                job = 0;
+          WetTopologyPolicy topology{
+            id(irrig_center_enabled), id(irrig_south_enabled), id(irrig_west_enabled),
+            id(irrig_wall_enabled), id(wall_feed_commissioning_ready)};
+          WeeklyWallFeedState weekly_state{
+            static_cast<WallFeedStage>(id(wall_feed_stage)),
+            id(wall_feed_claimed_solar_day),
+            id(wall_feed_last_terminal_solar_day),
+            id(wall_feed_claim_revision)};
+          int weekly_terminal_code = id(wall_feed_terminal_code);
+
+          // One authoritative packed record owns exact-once durability. The
+          // restore_value globals above are readback mirrors only: their 1s
+          // polling save cannot acknowledge a relay boundary synchronously.
+          static ESPPreferenceObject wall_feed_journal_pref =
+            global_preferences->make_preference<WeeklyWallFeedJournalRecord>(
+              WALL_FEED_JOURNAL_KEY, true);
+          static WeeklyWallFeedJournalRecord wall_feed_journal_record{};
+          static bool wall_feed_journal_load_attempted = false;
+          static bool wall_feed_journal_ready = false;
+          bool journal_boot_active = false;
+
+          auto weekly_stage_active = [](WallFeedStage stage) {
+            return stage == WallFeedStage::PREWET
+              || stage == WallFeedStage::FEED
+              || stage == WallFeedStage::FLUSH;
+          };
+          auto mirror_weekly_readbacks = [&](const WeeklyWallFeedState& state,
+                                              int terminal_code) {
+            id(wall_feed_stage) = static_cast<int>(state.stage);
+            id(wall_feed_claimed_solar_day) = state.claimed_solar_day;
+            id(wall_feed_last_terminal_solar_day) = state.last_terminal_solar_day;
+            id(wall_feed_claim_revision) = state.commissioning_revision;
+            id(wall_feed_terminal_code) = terminal_code;
+            weekly_state = state;
+            weekly_terminal_code = terminal_code;
+          };
+
+          const bool journal_first_tick = !wall_feed_journal_load_attempted;
+          if(journal_first_tick) {
+            WeeklyWallFeedJournalRecord loaded{};
+            const bool found = wall_feed_journal_pref.load(&loaded);
+            if(found && wall_feed_journal_record_valid(loaded)) {
+              wall_feed_journal_record = loaded;
+              weekly_state = wall_feed_state_from_journal(loaded);
+              weekly_terminal_code = loaded.terminal_code;
+              wall_feed_journal_ready = true;
+              journal_boot_active = weekly_stage_active(weekly_state.stage);
+              mirror_weekly_readbacks(weekly_state, weekly_terminal_code);
+            } else if(found) {
+              // A corrupt authoritative record must never fall back to a stale
+              // restoring-global claim. Permanently fail closed until an
+              // operator repairs/reset storage deliberately.
+              weekly_state = {
+                WallFeedStage::CANCELLED, UINT32_MAX, UINT32_MAX, 0u};
+              weekly_terminal_code = 2;
+              wall_feed_journal_record = {};
+              ESP_LOGE("irrig", "Wall-feed journal invalid; forcing terminal cancellation");
+            } else {
+              // One-time migration from pre-journal firmware. Any active legacy
+              // restore is cancelled before the first relay can energize.
+              if(weekly_stage_active(weekly_state.stage)) {
+                weekly_state = cancel_interrupted_wall_feed(weekly_state, solar_day);
+                weekly_terminal_code = 2;
               }
-              // FRT-8 / F3: AM-only feed window. Fertilizer jobs (2=wall_fert,
-              // 4=center_fert, 7=south_mister_fert, 8=west_mister_fert) are the
-              // ONLY jobs that carry salts; they are dropped outside the local
-              // [feed_start_hour, feed_end_hour) window REGARDLESS of VPD. This
-              // is the single chokepoint that gates both scheduled fert and the
-              // manual fert buttons (which only set irrig_queue). Clean jobs
-              // (1/3) are unaffected. Requires a valid clock; if the clock is
-              // invalid we fail SAFE and drop the fert job rather than feed at
-              // an unknown hour.
-              const bool is_fert_job = (job == 2 || job == 4 || job == 7 || job == 8);
-              if(job > 0 && is_fert_job){
-                const bool feed_clock_ok = wet_time_valid;
-                const bool feed_window_ok = feed_clock_ok &&
-                  feed_window_open(wet_now_t.hour, id(feed_start_hour), id(feed_end_hour));
-                if(!feed_window_ok){
-                  ESP_LOGW("irrig","DROP QUEUED FERT job %d (feed window %d:00-%d:00, hour=%d%s)",
-                           job, id(feed_start_hour), id(feed_end_hour),
-                           feed_clock_ok ? wet_now_t.hour : -1,
-                           feed_clock_ok ? "" : ", clock invalid");
-                  job = 0;
-                }
+              wall_feed_journal_record = {};
+            }
+            wall_feed_journal_load_attempted = true;
+          }
+
+          auto persist_weekly_and_sync = [&](const WeeklyWallFeedState& state,
+                                              int terminal_code) -> bool {
+            WeeklyWallFeedJournalRecord committed{};
+            const uint32_t next_sequence = wall_feed_journal_record.sequence + 1u;
+            const bool durable = commit_wall_feed_journal(
+              state, static_cast<uint8_t>(terminal_code), next_sequence,
+              [&](const WeeklyWallFeedJournalRecord& candidate) {
+                return wall_feed_journal_pref.save(&candidate);
+              },
+              [&]() { return global_preferences->sync(); },
+              committed);
+            if(!durable) {
+              wall_feed_journal_ready = false;
+              ESP_LOGE("irrig", "Wall-feed journal save/sync failed at stage=%d seq=%u",
+                static_cast<int>(state.stage), next_sequence);
+              return false;
+            }
+            wall_feed_journal_record = committed;
+            wall_feed_journal_ready = true;
+            // Mirrors update only after the authoritative record is durable.
+            mirror_weekly_readbacks(state, terminal_code);
+            return true;
+          };
+
+          if(journal_first_tick && !wall_feed_journal_ready) {
+            if(!persist_weekly_and_sync(weekly_state, weekly_terminal_code)) {
+              ESP_LOGE("irrig", "Wall-feed journal initialization failed; automatic feed blocked");
+            }
+          }
+          auto cancel_all = [&](const char* reason) {
+            turn_off_all_irrigation();
+            if(weekly_stage_active(weekly_state.stage)) {
+              auto cancelled = advance_wall_feed_sequence(
+                weekly_state, false, true, solar_day);
+              if(!persist_weekly_and_sync(cancelled, 2)) {
+                ESP_LOGE("irrig", "Cancellation persistence failed; all relays remain OFF");
               }
             }
+            id(irrig_state) = 0;
+            id(irrig_queue) = 0;
+            id(irrig_timer_ms) = 0;
+            ESP_LOGE("irrig", "STOPPED fail-closed: %s", reason);
+          };
 
-            if(job > 0){
-              id(irrig_state) = job;
+          // A journaled active stage proves a reset occurred after relay
+          // admission. Cancel it durably on the first control tick; never
+          // resume or re-dose an interrupted stage.
+          if(journal_boot_active) {
+            turn_off_all_irrigation();
+            auto cancelled = cancel_interrupted_wall_feed(weekly_state, solar_day);
+            if(!persist_weekly_and_sync(cancelled, 2)) {
+              ESP_LOGE("irrig", "Interrupted wall-feed cancellation not durable; relays remain OFF");
+            }
+            id(irrig_state) = 0;
+            id(irrig_queue) = 0;
+            id(irrig_timer_ms) = 0;
+            return;
+          }
 
-              bool is_wall = (job == 1 || job == 2);
-              bool is_center = (job == 3 || job == 4);
-              bool is_south_mister = (job == 7);
-              bool is_west_mister = (job == 8);
-              bool is_fert = (job == 2 || job == 4 || is_south_mister || is_west_mister);
-              int base_min = is_fert
-                ? (is_center ? id(irrig_center_fert_duration_min) : id(irrig_wall_fert_duration_min))
-                : (is_center ? id(irrig_center_duration_min) : id(irrig_wall_duration_min));
+          const bool weekly_active = weekly_stage_active(weekly_state.stage);
+          if(id(wall_feed_stage) < static_cast<int>(WallFeedStage::IDLE)
+             || id(wall_feed_stage) > static_cast<int>(WallFeedStage::CANCELLED)) {
+            cancel_all("invalid persisted stage");
+            WeeklyWallFeedState invalid_cancelled{
+              WallFeedStage::CANCELLED, UINT32_MAX, UINT32_MAX, 0u};
+            if(!persist_weekly_and_sync(invalid_cancelled, 2)) {
+              ESP_LOGE("irrig", "Invalid-stage cancellation persistence failed");
+            }
+            return;
+          }
+          if(leak_block) { cancel_all("leak"); return; }
+          if(weekly_active && (!clock_valid || !durations.valid
+             || weekly_state.commissioning_revision != id(wall_commissioning_revision))) {
+            cancel_all(!clock_valid ? "clock invalid" : !durations.valid
+              ? "commissioning invalid/stale" : "commissioning revision changed");
+            return;
+          }
+          if(!id(irrig_enabled)) { cancel_all("irrigation disabled"); return; }
+          const int rejected_queue_bits = id(irrig_queue) & ~(1 | 4);
+          if(rejected_queue_bits != 0) {
+            ESP_LOGW("irrig", "Rejected legacy/unknown irrigation queue bits: 0x%X",
+              rejected_queue_bits);
+          }
+          id(irrig_queue) &= (1 | 4);
 
-              // VPD boost
-              float stress_hrs = float(id(irrig_vpd_stress_ms)) / 3600000.0f;
-              if(stress_hrs > id(irrig_vpd_boost_threshold_hrs)){
-                float boost = 1.0f + float(id(irrig_vpd_boost_pct)) / 100.0f;
-                base_min = int(float(base_min) * boost);
-                ESP_LOGI("irrig","VPD boost: %.1fh>%.1fh → %dmin",
-                         stress_hrs, id(irrig_vpd_boost_threshold_hrs), base_min);
+          // Claim at most once each seven-day interval, only from sunrise to
+          // solar noon. Missing today's window leaves the next solar day due.
+          if(id(irrig_state) == 0 && id(irrig_queue) == 0 && !weekly_active) {
+            WeeklyWallEligibilityInput eligibility{
+              clock_valid, leak_block, current_solar_phase, solar_day, 7u};
+            const auto feed_route = resolve_wet_request(
+              {WetCommandOrigin::AUTOMATIC_WEEKLY_WALL_FEED,
+               WetZone::WALL_DRIP, WetChemistry::FERTILIZER}, topology);
+            if(feed_route.admitted
+               && weekly_wall_feed_eligible(eligibility, weekly_state, durations)) {
+              auto claimed = claim_weekly_wall_feed(
+                eligibility, weekly_state, id(wall_commissioning_revision));
+              if(!persist_weekly_and_sync(claimed, 0)) {
+                cancel_all("claim persistence sync failed");
+                return;
               }
-
-              id(irrig_timer_ms) = uint32_t(base_min) * 60000UL;
-
-              id(wall_drips).turn_off();
-              id(wall_drips_fertilized).turn_off();
-              id(south_wall_mister).turn_off();
-              id(south_wall_mister_fertilized).turn_off();
-              id(west_wall_mister).turn_off();
-              id(west_wall_mister_fertilized).turn_off();
-              id(center_drips).turn_off();
-              id(center_drips_fertilized).turn_off();
+              id(irrig_state) = 5;
+              id(irrig_timer_ms) = durations.prewet_ms;
               id(center_mister).turn_off();
-
-              // Open the fert master before any fertilized drip/mister relay.
-              if(is_fert) {
-                id(fert_controller_actuating) = true;
-                if(!id(fertilizer_master_valve).state) id(fertilizer_master_valve).turn_on();
-              }
-
-              // Turn on drip line. sprint-7: count one cycle per dispatch —
-              // matches equipment_state's rising-edge count for the
-              // underlying relay. Fert/clean increment the same zone
-              // counter (audit granularity is per-zone).
               id(water_controller_actuating) = true;
-              switch(job){
-                case 1: id(wall_drips).turn_on();              id(cnt_drip_wall_today)   += 1; break;
-                case 2: id(wall_drips_fertilized).turn_on();   id(cnt_drip_wall_today)   += 1; break;
-                case 3: id(center_drips).turn_on();            id(cnt_drip_center_today) += 1; break;
-                case 4: id(center_drips_fertilized).turn_on(); id(cnt_drip_center_today) += 1; break;
-                case 7: id(south_wall_mister_fertilized).turn_on(); id(cnt_mister_south_today) += 1; break;
-                case 8: id(west_wall_mister_fertilized).turn_on();  id(cnt_mister_west_today)  += 1; break;
-              }
+              id(wall_drips).turn_on();
               id(water_controller_actuating) = false;
-              if(is_fert) id(fert_controller_actuating) = false;
-              sync_fert_master("job-start");
-
-              const char* job_name = (job == 1) ? "WALL_CLEAN" :
-                (job == 2) ? "WALL_FERT" :
-                (job == 3) ? "CENTER_CLEAN" :
-                (job == 4) ? "CENTER_FERT" :
-                (job == 7) ? "SOUTH_MISTER_FERT" :
-                (job == 8) ? "WEST_MISTER_FERT" : "UNKNOWN";
-              ESP_LOGI("irrig","START %s — %dmin%s", job_name, base_min, fert_queue_pending ? " (fert queue)" : "");
+              id(cnt_drip_wall_today) += 1;
+              ESP_LOGI("irrig", "WALL PREWET claim_day=%u rev=%u ms=%u",
+                solar_day, id(wall_commissioning_revision), durations.prewet_ms);
             }
           }
 
-          // ── Active irrigation/fert-mister countdown (states 1-4, 7-8) ──
-          if((id(irrig_state) >= 1 && id(irrig_state) <= 4) || id(irrig_state) == 7 || id(irrig_state) == 8){
+          // Advance the wall sequence. FEED completion closes fertilizer first
+          // and opens wall-local clean flush in this same control tick.
+          if(id(irrig_state) >= 5 && id(irrig_state) <= 7) {
             if(irrig_dt >= id(irrig_timer_ms)) id(irrig_timer_ms) = 0;
             else id(irrig_timer_ms) -= irrig_dt;
-
-            if(id(irrig_timer_ms) == 0){
-              int job = id(irrig_state);
-              bool is_wall = (job == 1 || job == 2);
-              bool is_center = (job == 3 || job == 4);
-              bool is_south_mister = (job == 7);
-              bool is_west_mister = (job == 8);
-              bool is_fert = (job == 2 || job == 4 || is_south_mister || is_west_mister);
-
-              // Turn off active line
-              switch(job){
-                case 1: id(wall_drips).turn_off(); break;
-                case 2: id(wall_drips_fertilized).turn_off(); break;
-                case 3: id(center_drips).turn_off(); break;
-                case 4: id(center_drips_fertilized).turn_off(); break;
-                case 7: id(south_wall_mister_fertilized).turn_off(); break;
-                case 8: id(west_wall_mister_fertilized).turn_off(); break;
-              }
-              sync_fert_master("fert-done-before-hold");
-
-              // FRT-6/FRT-7: after a FERTILIZER feed, enter the post-feed
-              // ABSORPTION HOLD before any clean flush. Arm the shared
-              // feed_hold_until_ms deadline (also gates the climate fog/mister
-              // path) and park in state 11 with the flush origin remembered.
-              // The clean flush (FRT-7, salt rinse) is relocated to fire AFTER
-              // the hold expires. Clean (non-fert) jobs are unchanged. If the
-              // hold is disabled (post_feed_hold_min <= 0) fall through to the
-              // legacy immediate-flush behavior.
-              int flush_min = is_center ? id(irrig_center_flush_min) : id(irrig_wall_flush_min);
-              const int hold_min = id(post_feed_hold_min);
-              if(is_fert && hold_min > 0){
-                flush_origin = job;
-                id(feed_hold_until_ms) = irrig_now + uint32_t(hold_min) * 60000UL;
-                id(irrig_state) = 11;  // absorption hold (all clean wetting blocked)
-                id(irrig_timer_ms) = uint32_t(hold_min) * 60000UL;
-                ESP_LOGI("irrig","FEED HOLD %dmin (origin job %d) — clean wetting blocked", hold_min, job);
-              } else if(is_fert && flush_min > 0){
-                // Hold disabled → legacy immediate clean flush.
-                flush_origin = job;
-                id(irrig_state) = is_center ? 6 : is_south_mister ? 9 : is_west_mister ? 10 : 5;
-                id(irrig_timer_ms) = uint32_t(flush_min) * 60000UL;
-                id(water_controller_actuating) = true;
-                if(is_south_mister)      { id(south_wall_mister).turn_on(); id(cnt_mister_south_today) += 1; }
-                else if(is_west_mister)  { id(west_wall_mister).turn_on();  id(cnt_mister_west_today)  += 1; }
-                else if(is_center)       { id(center_drips).turn_on();      id(cnt_drip_center_today)  += 1; }
-                else                     { id(wall_drips).turn_on();        id(cnt_drip_wall_today)    += 1; }
-                id(water_controller_actuating) = false;
-                const char* flush_name = is_south_mister ? "SOUTH_MISTER" : is_west_mister ? "WEST_MISTER" : is_center ? "CENTER" : "WALL";
-                ESP_LOGI("irrig","FLUSH %s — %dmin (hold disabled)", flush_name, flush_min);
-              } else {
-                // Done — finalize
-                if(is_wall){
-                  id(irrig_wall_cycle_count) += 1;
-                  if(id(sntp_time).now().is_valid())
-                    id(irrig_last_wall_doy) = id(sntp_time).now().day_of_year;
-                  ESP_LOGI("irrig","DONE WALL (cycle #%d)", id(irrig_wall_cycle_count));
-                } else if(is_center) {
-                  id(irrig_center_cycle_count) += 1;
-                  if(id(sntp_time).now().is_valid())
-                    id(irrig_last_center_doy) = id(sntp_time).now().day_of_year;
-                  ESP_LOGI("irrig","DONE CENTER (cycle #%d)", id(irrig_center_cycle_count));
-                } else {
-                  ESP_LOGI("irrig","DONE %s_MISTER_FERT", is_south_mister ? "SOUTH" : "WEST");
+            if(id(irrig_timer_ms) == 0) {
+              if(id(irrig_state) == 5) {
+                id(wall_drips).turn_off();
+                auto next = advance_wall_feed_sequence(weekly_state, true, false, solar_day);
+                if(!persist_weekly_and_sync(next, 0)) {
+                  cancel_all("FEED transition persistence sync failed");
+                  return;
                 }
-                sync_fert_master("job-done");
-                id(irrig_state) = 0;
-              }
-            }
-          }
-
-          // ── FRT-6: absorption-hold countdown (state 11) ──
-          // No relay runs during the hold (the fert line was closed before
-          // entering; the clean flush has not started yet). When the hold
-          // expires, start the relocated clean flush (FRT-7) for the remembered
-          // origin job, or finalize if no flush configured.
-          if(id(irrig_state) == 11){
-            if(irrig_dt >= id(irrig_timer_ms)) id(irrig_timer_ms) = 0;
-            else id(irrig_timer_ms) -= irrig_dt;
-
-            if(id(irrig_timer_ms) == 0){
-              int job = flush_origin;
-              bool is_center = (job == 3 || job == 4);
-              bool is_south_mister = (job == 7);
-              bool is_west_mister = (job == 8);
-              id(feed_hold_until_ms) = 0;  // hold complete → clean wetting allowed
-              int flush_min = is_center ? id(irrig_center_flush_min) : id(irrig_wall_flush_min);
-              if(flush_min > 0){
-                id(irrig_state) = is_center ? 6 : is_south_mister ? 9 : is_west_mister ? 10 : 5;
-                id(irrig_timer_ms) = uint32_t(flush_min) * 60000UL;
-                // Flush is a separate rising edge on the matching clean relay,
-                // so equipment_state and firmware cycle counters stay aligned.
-                id(water_controller_actuating) = true;
-                if(is_south_mister)      { id(south_wall_mister).turn_on(); id(cnt_mister_south_today) += 1; }
-                else if(is_west_mister)  { id(west_wall_mister).turn_on();  id(cnt_mister_west_today)  += 1; }
-                else if(is_center)       { id(center_drips).turn_on();      id(cnt_drip_center_today)  += 1; }
-                else                     { id(wall_drips).turn_on();        id(cnt_drip_wall_today)    += 1; }
-                id(water_controller_actuating) = false;
-                const char* flush_name = is_south_mister ? "SOUTH_MISTER" : is_west_mister ? "WEST_MISTER" : is_center ? "CENTER" : "WALL";
-                ESP_LOGI("irrig","FLUSH %s — %dmin (post-hold)", flush_name, flush_min);
-              } else {
-                // No flush configured — finalize the originating fert cycle.
-                if(is_center){
-                  id(irrig_center_cycle_count) += 1;
-                  if(id(sntp_time).now().is_valid())
-                    id(irrig_last_center_doy) = id(sntp_time).now().day_of_year;
-                  ESP_LOGI("irrig","DONE CENTER+HOLD (cycle #%d)", id(irrig_center_cycle_count));
-                } else if(is_south_mister || is_west_mister){
-                  ESP_LOGI("irrig","DONE %s_MISTER_FERT+HOLD", is_south_mister ? "SOUTH" : "WEST");
-                } else {
-                  id(irrig_wall_cycle_count) += 1;
-                  if(id(sntp_time).now().is_valid())
-                    id(irrig_last_wall_doy) = id(sntp_time).now().day_of_year;
-                  ESP_LOGI("irrig","DONE WALL+HOLD (cycle #%d)", id(irrig_wall_cycle_count));
+                id(irrig_state) = 6;
+                id(irrig_timer_ms) = durations.feed_ms;
+                id(fert_controller_actuating) = true;
+                id(fertilizer_master_valve).turn_on();
+                id(wall_drips_fertilized).turn_on();
+                id(fert_controller_actuating) = false;
+                ESP_LOGI("irrig", "WALL FEED ms=%u", durations.feed_ms);
+              } else if(id(irrig_state) == 6) {
+                id(wall_drips_fertilized).turn_off();
+                id(fertilizer_master_valve).turn_off();
+                auto next = advance_wall_feed_sequence(weekly_state, true, false, solar_day);
+                if(!persist_weekly_and_sync(next, 0)) {
+                  cancel_all("FLUSH transition persistence sync failed");
+                  return;
                 }
-                sync_fert_master("hold-done");
-                id(irrig_state) = 0;
-              }
-            }
-          }
-
-          // ── Flush countdown (states 5-6 drip, 9-10 mister) ──
-          if(id(irrig_state) == 5 || id(irrig_state) == 6 || id(irrig_state) == 9 || id(irrig_state) == 10){
-            if(irrig_dt >= id(irrig_timer_ms)) id(irrig_timer_ms) = 0;
-            else id(irrig_timer_ms) -= irrig_dt;
-
-            if(id(irrig_timer_ms) == 0){
-              bool is_wall = (id(irrig_state) == 5);
-              bool is_center = (id(irrig_state) == 6);
-              bool is_south_mister = (id(irrig_state) == 9);
-              bool is_west_mister = (id(irrig_state) == 10);
-
-              // Turn off flush line
-              if(is_wall)             id(wall_drips).turn_off();
-              else if(is_center)      id(center_drips).turn_off();
-              else if(is_south_mister) id(south_wall_mister).turn_off();
-              else if(is_west_mister)  id(west_wall_mister).turn_off();
-
-              sync_fert_master("flush-done");
-
-              // Finalize
-              if(is_wall){
+                id(irrig_state) = 7;
+                id(irrig_timer_ms) = durations.flush_ms;
+                id(water_controller_actuating) = true;
+                id(wall_drips).turn_on();
+                id(water_controller_actuating) = false;
+                id(cnt_drip_wall_today) += 1;
+                ESP_LOGI("irrig", "WALL IMMEDIATE CLEAN FLUSH ms=%u", durations.flush_ms);
+              } else {
+                id(wall_drips).turn_off();
+                auto complete = advance_wall_feed_sequence(weekly_state, true, false, solar_day);
+                if(!persist_weekly_and_sync(complete, 1)) {
+                  cancel_all("COMPLETE transition persistence sync failed");
+                  return;
+                }
                 id(irrig_wall_cycle_count) += 1;
-                if(id(sntp_time).now().is_valid())
-                  id(irrig_last_wall_doy) = id(sntp_time).now().day_of_year;
-                ESP_LOGI("irrig","DONE WALL+FLUSH (cycle #%d)", id(irrig_wall_cycle_count));
-              } else if(is_center) {
-                id(irrig_center_cycle_count) += 1;
-                if(id(sntp_time).now().is_valid())
-                  id(irrig_last_center_doy) = id(sntp_time).now().day_of_year;
-                ESP_LOGI("irrig","DONE CENTER+FLUSH (cycle #%d)", id(irrig_center_cycle_count));
-              } else {
-                ESP_LOGI("irrig","DONE %s_MISTER+FLUSH", is_south_mister ? "SOUTH" : "WEST");
+                id(irrig_state) = 0;
+                ESP_LOGI("irrig", "WALL FEED COMPLETE claim_day=%u", complete.claimed_solar_day);
               }
+            }
+            return;  // weekly owner excludes every explicit clean writer
+          }
 
+          // Explicit clean irrigation remains represented but has no automatic
+          // clock schedule. Center drip defaults disabled and requires its
+          // operator enable; center mist is not an irrigation destination.
+          if(id(irrig_state) == 0 && id(irrig_queue) != 0) {
+            int job = 0, bit = 0;
+            WetZone zone = WetZone::NONE;
+            if(id(irrig_queue) & 1) { job = 1; bit = 1; zone = WetZone::WALL_DRIP; }
+            else if(id(irrig_queue) & 4) { job = 2; bit = 4; zone = WetZone::CENTER_DRIP; }
+            id(irrig_queue) &= ~bit;
+            const auto route = resolve_wet_request(
+              {WetCommandOrigin::EXPLICIT_IRRIGATION, zone, WetChemistry::CLEAN}, topology);
+            if(route.admitted) {
+              turn_off_all_irrigation();
+              id(center_mister).turn_off();
+              id(irrig_state) = job;
+              const int duration_min = job == 2
+                ? id(irrig_center_duration_min) : id(irrig_wall_duration_min);
+              id(irrig_timer_ms) = uint32_t(duration_min) * 60000UL;
+              id(water_controller_actuating) = true;
+              if(route.relay == WetRelay::WALL_DRIP_CLEAN) { id(wall_drips).turn_on(); id(cnt_drip_wall_today) += 1; }
+              else if(route.relay == WetRelay::CENTER_DRIP) { id(center_drips).turn_on(); id(cnt_drip_center_today) += 1; }
+              id(water_controller_actuating) = false;
+              ESP_LOGI("irrig", "EXPLICIT CLEAN START state=%d ms=%u", job, id(irrig_timer_ms));
+            } else {
+              ESP_LOGW("irrig", "EXPLICIT CLEAN REJECTED: %s", route.reason);
+            }
+          }
+
+          if(id(irrig_state) >= 1 && id(irrig_state) <= 2) {
+            if(irrig_dt >= id(irrig_timer_ms)) id(irrig_timer_ms) = 0;
+            else id(irrig_timer_ms) -= irrig_dt;
+            if(id(irrig_timer_ms) == 0) {
+              if(id(irrig_state) == 1) id(wall_drips).turn_off();
+              else if(id(irrig_state) == 2) id(center_drips).turn_off();
               id(irrig_state) = 0;
+              ESP_LOGI("irrig", "EXPLICIT CLEAN COMPLETE");
             }
           }
 
@@ -2831,13 +2568,27 @@ interval:
 # HEAP PROFILE — low-rate fallback fragmentation telemetry.
 ################################################################################
   - interval: 900s
-    startup_delay: 90s
+    startup_delay: 900s
     then:
       - lambda: |-
-          ESP_LOGD("heap", "Heap profile: free=%.1f kB min=%.1f kB largest=%.1f kB",
-                   gh_free_heap_kb(),
-                   gh_min_free_heap_kb(),
-                   gh_largest_free_heap_block_kb());
+          const float free_kb = gh_free_heap_kb();
+          const float min_free_kb = gh_min_free_heap_kb();
+          const float largest_kb = gh_largest_free_heap_block_kb();
+          const uint32_t loop_last_us = gh_control_loop_last_us();
+          const uint32_t loop_max_us = gh_take_control_loop_max_us();
+          const uint32_t loop_overruns = gh_take_control_loop_overrun_count();
+          const bool floor_met = gh_pre_ota_heap_floor_met(free_kb, largest_kb);
+          // Global logging stays WARN to protect heap, so this intentionally
+          // uses one WARN packet per 15 minutes instead of opening INFO logs.
+          ESP_LOGW("heap_profile",
+                   "free=%.1fKB lifetime_min=%.1fKB largest=%.1fKB floor=%s "
+                   "loop_last=%uus loop_15m_max=%uus loop_15m_overruns=%u reset=%d",
+                   free_kb, min_free_kb, largest_kb, floor_met ? "PASS" : "FAIL",
+                   loop_last_us, loop_max_us, loop_overruns, int(esp_reset_reason()));
+          if(!floor_met || loop_overruns > 0) {
+            ESP_LOGW("heap", "Pre-OTA runtime floor violation: heap=%s loop_overruns=%u",
+                     floor_met ? "PASS" : "FAIL", loop_overruns);
+          }
 
 ################################################################################
 # END OF FILE

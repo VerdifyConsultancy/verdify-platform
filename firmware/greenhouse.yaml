@@ -25,6 +25,7 @@ esphome:
     - lib/heap_diagnostics.h
     - lib/greenhouse_types.h
     - lib/greenhouse_solar.h
+    - lib/irrigation_policy.h
     - lib/greenhouse_logic.h
   # Lutron LEAP TLS disabled (causes ESP32 crash — TLS heap exhaustion)
   # Grow lights use HA native service calls; no on-device HTTP client.
@@ -77,26 +78,76 @@ esphome:
           if(id(target_temp_high_f) < 60 || id(target_temp_high_f) > 100){ id(target_temp_high_f) = 82; fixes++; }
           if(id(target_vpd_high_kpa) < 0.5 || id(target_vpd_high_kpa) > 4){ id(target_vpd_high_kpa) = 2.0; fixes++; }
           if(id(target_vpd_low_kpa) < 0.1 || id(target_vpd_low_kpa) > 2){ id(target_vpd_low_kpa) = 0.5; fixes++; }
-          // Irrigation schedule sanity — persisted operator schedule must not
-          // become an impossible or disabled program after NVS corruption.
-          if(id(irrig_wall_start_hour) < 0 || id(irrig_wall_start_hour) > 23){ id(irrig_wall_start_hour) = 10; fixes++; }
-          if(id(irrig_wall_start_minute) < 0 || id(irrig_wall_start_minute) > 59){ id(irrig_wall_start_minute) = 30; fixes++; }
+          // Retired fixed-clock/fertilizer fields remain readback-compatible
+          // but are ineligible for actuation and fixed at zero. Weekly wall
+          // feed uses the commissioned solar scheduler.
+          if(id(irrig_wall_start_hour) != 0){ id(irrig_wall_start_hour) = 0; fixes++; }
+          if(id(irrig_wall_start_minute) != 0){ id(irrig_wall_start_minute) = 0; fixes++; }
           if(id(irrig_wall_duration_min) < 1 || id(irrig_wall_duration_min) > 120){ id(irrig_wall_duration_min) = 10; fixes++; }
-          if(id(irrig_wall_fert_duration_min) < 0 || id(irrig_wall_fert_duration_min) > 60){ id(irrig_wall_fert_duration_min) = 6; fixes++; }
-          if(id(irrig_wall_fert_every_n) < 0 || id(irrig_wall_fert_every_n) > 30){ id(irrig_wall_fert_every_n) = 0; fixes++; }
-          if(id(irrig_wall_days_mask) < 0 || id(irrig_wall_days_mask) > 127){ id(irrig_wall_days_mask) = 127; fixes++; }
-          if(id(irrig_wall_fert_days_mask) < 0 || id(irrig_wall_fert_days_mask) > 127){ id(irrig_wall_fert_days_mask) = 127; fixes++; }
-          if(id(irrig_wall_flush_min) < 0 || id(irrig_wall_flush_min) > 30){ id(irrig_wall_flush_min) = 2; fixes++; }
-          if(id(irrig_wall_interval_days) < 1 || id(irrig_wall_interval_days) > 14){ id(irrig_wall_interval_days) = 1; fixes++; }
-          if(id(irrig_center_start_hour) < 0 || id(irrig_center_start_hour) > 23){ id(irrig_center_start_hour) = 10; fixes++; }
-          if(id(irrig_center_start_minute) < 0 || id(irrig_center_start_minute) > 59){ id(irrig_center_start_minute) = 30; fixes++; }
+          if(id(irrig_wall_fert_duration_min) != 0){ id(irrig_wall_fert_duration_min) = 0; fixes++; }
+          if(id(irrig_wall_fert_every_n) != 0){ id(irrig_wall_fert_every_n) = 0; fixes++; }
+          if(id(irrig_wall_days_mask) != 0){ id(irrig_wall_days_mask) = 0; fixes++; }
+          if(id(irrig_wall_fert_days_mask) != 0){ id(irrig_wall_fert_days_mask) = 0; fixes++; }
+          if(id(irrig_wall_flush_min) != 0){ id(irrig_wall_flush_min) = 0; fixes++; }
+          if(id(irrig_wall_interval_days) != 0){ id(irrig_wall_interval_days) = 0; fixes++; }
+          if(id(irrig_center_start_hour) != 0){ id(irrig_center_start_hour) = 0; fixes++; }
+          if(id(irrig_center_start_minute) != 0){ id(irrig_center_start_minute) = 0; fixes++; }
           if(id(irrig_center_duration_min) < 1 || id(irrig_center_duration_min) > 120){ id(irrig_center_duration_min) = 10; fixes++; }
-          if(id(irrig_center_fert_duration_min) < 0 || id(irrig_center_fert_duration_min) > 60){ id(irrig_center_fert_duration_min) = 6; fixes++; }
-          if(id(irrig_center_fert_every_n) < 0 || id(irrig_center_fert_every_n) > 30){ id(irrig_center_fert_every_n) = 0; fixes++; }
-          if(id(irrig_center_days_mask) < 0 || id(irrig_center_days_mask) > 127){ id(irrig_center_days_mask) = 127; fixes++; }
-          if(id(irrig_center_fert_days_mask) < 0 || id(irrig_center_fert_days_mask) > 127){ id(irrig_center_fert_days_mask) = 127; fixes++; }
-          if(id(irrig_center_flush_min) < 0 || id(irrig_center_flush_min) > 30){ id(irrig_center_flush_min) = 2; fixes++; }
-          if(id(irrig_center_interval_days) < 1 || id(irrig_center_interval_days) > 14){ id(irrig_center_interval_days) = 1; fixes++; }
+          if(id(irrig_center_fert_duration_min) != 0){ id(irrig_center_fert_duration_min) = 0; fixes++; }
+          if(id(irrig_center_fert_every_n) != 0){ id(irrig_center_fert_every_n) = 0; fixes++; }
+          if(id(irrig_center_days_mask) != 0){ id(irrig_center_days_mask) = 0; fixes++; }
+          if(id(irrig_center_fert_days_mask) != 0){ id(irrig_center_fert_days_mask) = 0; fixes++; }
+          if(id(irrig_center_flush_min) != 0){ id(irrig_center_flush_min) = 0; fixes++; }
+          if(id(irrig_center_interval_days) != 0){ id(irrig_center_interval_days) = 0; fixes++; }
+          if(id(sw_dawn_rehydrate_enabled)){ id(sw_dawn_rehydrate_enabled) = false; fixes++; }
+          if(id(sw_midday_drench_enabled)){ id(sw_midday_drench_enabled) = false; fixes++; }
+          if(id(dawn_boost_offset_min) != 0){ id(dawn_boost_offset_min) = 0; fixes++; }
+          if(id(midday_boost_offset_min) != 0){ id(midday_boost_offset_min) = 0; fixes++; }
+          // Commissioned weekly wall feed fails closed on every corrupt/missing
+          // input. Zero is the safe default; do not invent field values here.
+          if(id(wall_commissioning_evidence_mask) < 0 || id(wall_commissioning_evidence_mask) > WALL_COMMISSIONING_REQUIRED_MASK){ id(wall_commissioning_evidence_mask) = 0; fixes++; }
+          if(!std::isfinite(id(wall_flow_lpm)) || id(wall_flow_lpm) < 0.0f || id(wall_flow_lpm) > 100.0f){ id(wall_flow_lpm) = 0.0f; fixes++; }
+          if(!std::isfinite(id(wall_prewet_liters)) || id(wall_prewet_liters) < 0.0f || id(wall_prewet_liters) > 200.0f){ id(wall_prewet_liters) = 0.0f; fixes++; }
+          if(!std::isfinite(id(wall_feed_liters)) || id(wall_feed_liters) < 0.0f || id(wall_feed_liters) > 200.0f){ id(wall_feed_liters) = 0.0f; fixes++; }
+          if(!std::isfinite(id(wall_flush_liters)) || id(wall_flush_liters) < 0.0f || id(wall_flush_liters) > 400.0f){ id(wall_flush_liters) = 0.0f; fixes++; }
+          // An interrupted feed never resumes or re-doses after reboot. Mark the
+          // claimed solar day terminal/cancelled before normal intervals start.
+          {
+            if(id(wall_feed_stage) < static_cast<int>(WallFeedStage::IDLE)
+               || id(wall_feed_stage) > static_cast<int>(WallFeedStage::CANCELLED)) {
+              id(wall_feed_stage) = static_cast<int>(WallFeedStage::CANCELLED);
+              id(wall_feed_claimed_solar_day) = UINT32_MAX;
+              id(wall_feed_last_terminal_solar_day) = UINT32_MAX;
+              id(wall_feed_terminal_code) = 2;
+              fixes++;
+              ESP_LOGE("boot", "Invalid wall-feed stage -> cancelled/fail-closed");
+            }
+            WeeklyWallFeedState restored{
+              static_cast<WallFeedStage>(id(wall_feed_stage)),
+              id(wall_feed_claimed_solar_day),
+              id(wall_feed_last_terminal_solar_day),
+              id(wall_feed_claim_revision)};
+            auto cancelled = cancel_interrupted_wall_feed(restored, restored.claimed_solar_day);
+            if((restored.stage == WallFeedStage::PREWET
+                || restored.stage == WallFeedStage::FEED
+                || restored.stage == WallFeedStage::FLUSH)
+               && (restored.claimed_solar_day == 0 || restored.commissioning_revision == 0)) {
+              cancelled.stage = WallFeedStage::CANCELLED;
+              cancelled.claimed_solar_day = UINT32_MAX;
+              cancelled.last_terminal_solar_day = UINT32_MAX;
+            }
+            id(wall_feed_stage) = static_cast<int>(cancelled.stage);
+            id(wall_feed_last_terminal_solar_day) = cancelled.last_terminal_solar_day;
+            if(cancelled.stage == WallFeedStage::CANCELLED) id(wall_feed_terminal_code) = 2;
+          }
+          // Current physical topology wins over legacy restored NVS. These
+          // dormant paths can be explicitly enabled after boot if commissioned.
+          id(irrig_center_enabled) = false;
+          id(irrig_south_enabled) = false;
+          id(irrig_west_enabled) = false;
+          id(sw_irrig_center_enabled).publish_state(false);
+          id(sw_irrig_south_enabled).publish_state(false);
+          id(sw_irrig_west_enabled).publish_state(false);
           // VPD-primary state machine globals
           if(id(vpd_watch_dwell_s) < 15 || id(vpd_watch_dwell_s) > 120){ id(vpd_watch_dwell_s) = 60; fixes++; }
           if(id(mist_max_closed_vent_s) < 60){ id(mist_max_closed_vent_s) = 600; fixes++; }
@@ -124,7 +175,7 @@ esphome:
           if(id(bias_cool_f) < -10 || id(bias_cool_f) > 10){ id(bias_cool_f) = 0; fixes++; }
           // State machine corruption protection
           if(id(mister_state) < 0 || id(mister_state) > 2){ id(mister_state) = 0; fixes++; ESP_LOGE("boot","mister_state corrupted → 0"); }
-          if(id(irrig_state) < 0 || id(irrig_state) > 6){ id(irrig_state) = 0; fixes++; ESP_LOGE("boot","irrig_state corrupted → 0"); }
+          if(id(irrig_state) < 0 || id(irrig_state) > 7){ id(irrig_state) = 0; fixes++; ESP_LOGE("boot","irrig_state corrupted → 0"); }
           // Zone VPD targets — prevent division issues in mister stress scoring
           if(id(vpd_target_south) < 0.1 || id(vpd_target_south) > 3){ id(vpd_target_south) = 1.3; fixes++; }
           if(id(vpd_target_west) < 0.1 || id(vpd_target_west) > 3){ id(vpd_target_west) = 1.3; fixes++; }
