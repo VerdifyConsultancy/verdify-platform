@@ -35,6 +35,9 @@ metadata:
     app.kubernetes.io/component: lab-publisher
 spec:
   schedule: "*/10 * * * *"
+  # Declare the API-defaulted value so a temporary operator pause can be
+  # reconciled cleanly instead of leaving permanent ArgoCD drift.
+  suspend: false
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 5
