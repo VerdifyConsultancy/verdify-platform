@@ -12,12 +12,15 @@ if [ "${1:-}" = "--greenhouse-id" ] && [ -n "${2:-}" ]; then
 fi
 
 DB_STATEMENT_TIMEOUT_MS="${VERDIFY_PLANNER_CONTEXT_DB_STATEMENT_TIMEOUT_MS:-15000}"
+DB_OPTIONAL_STATEMENT_TIMEOUT_MS="${VERDIFY_PLANNER_OPTIONAL_DB_STATEMENT_TIMEOUT_MS:-3000}"
 # #24: DB access via the shared psql-verdify abstraction (docker-exec default
 # preserves prior VM argv). The PGOPTIONS statement-timeout is injected as a
 # docker-exec extra flag in docker-exec mode. Call sites add -c "...".
 . "$(dirname "${BASH_SOURCE[0]}")/lib/psql-verdify.sh"
 mapfile -t DB < <(verdify_psql_cmd -e "PGOPTIONS=-c statement_timeout=${DB_STATEMENT_TIMEOUT_MS}")
 DB+=(-t -A)
+mapfile -t DB_OPTIONAL < <(verdify_psql_cmd -e "PGOPTIONS=-c statement_timeout=${DB_OPTIONAL_STATEMENT_TIMEOUT_MS}")
+DB_OPTIONAL+=(-t -A)
 HA_TOKEN=$(cat /mnt/agents/shared/credentials/ha_token.txt 2>/dev/null || echo "")
 HA_URL="http://192.168.30.107:8123"
 SCRIPT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -214,12 +217,12 @@ echo ""
 TODAY=$(date +%Y-%m-%d)
 echo "--- PLANNER SCORECARD (${TODAY} — partial if before midnight, informational only) ---"
 echo "metric|value"
-"${DB[@]}" -c "SELECT * FROM fn_planner_scorecard((now() AT TIME ZONE 'America/Denver')::date);" \
+"${DB_OPTIONAL[@]}" -c "SELECT * FROM fn_planner_scorecard((now() AT TIME ZONE 'America/Denver')::date);" \
   2>/dev/null || echo "(scorecard unavailable within DB query budget; do not infer zero performance)"
 echo ""
 echo "--- PLANNER SCORE TREND (7 complete calendar days, excludes today) ---"
 echo "date|score|comp|temp%|vpd%|stress_h|heat|cold|vpd_hi|vpd_lo|kwh|therms|water_gal|cost"
-"${DB[@]}" -c "
+"${DB_OPTIONAL[@]}" -c "
 SELECT date, planner_score, compliance_pct, temp_compliance_pct, vpd_compliance_pct,
        total_stress_h, heat_stress_h, cold_stress_h, vpd_high_stress_h, vpd_low_stress_h,
        kwh, therms, water_gal, cost_total
@@ -1480,7 +1483,7 @@ else
 fi
 
 # Scorecard function: non-zero rows for yesterday (data rolled up)
-sc_rows=$("${DB[@]}" -c "SELECT count(*) FROM fn_planner_scorecard(CURRENT_DATE - 1);" 2>/dev/null | tr -d ' ')
+sc_rows=$("${DB_OPTIONAL[@]}" -c "SELECT count(*) FROM fn_planner_scorecard(CURRENT_DATE - 1);" 2>/dev/null | tr -d ' ' || true)
 if [ -n "${sc_rows:-}" ] && [ "${sc_rows:-0}" -ge 20 ]; then
   _check "yesterday scorecard rolled up" ok "${sc_rows} metrics available — previous_plan_validation can be computed"
 else
