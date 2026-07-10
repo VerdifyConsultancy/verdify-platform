@@ -20,6 +20,17 @@ The approval is interpreted against the verified July 9 evidence, not stale issu
 
 These revisions reduce unproven device behavior while still delivering the approved software outcomes.
 
+### Post-dispatch coverage amendment
+
+A fresh read-only coverage audit on 2026-07-09 found that four approved outcomes were weaker in lane acceptance than in Jason's directive and the architecture decisions. The controller therefore tightened the existing eight-lane/17-issue plan without adding authority or changing issue ownership:
+
+- #427 narrowly owns truthful health/recovery or explicit desired-state removal for the already-deployed, zero-run, non-authoritative planner_graph workload; Hermes/MCP remains the only active planner acceptance path and planner_graph cannot become a writer.
+- #434 firmware acceptance now proves center-mist reverse exclusivity, removal/ineligibility of both legacy 10:30 jobs, restart-safe weekly solar eligibility, and calibrated liters-to-duration fail-closed behavior.
+- #410 evidence must end in `effective`, `ineffective`, `blocked`, or `insufficient_evidence`; an ineffective or insufficient result cannot be called a completed dry-out fix or silently authorize firmware behavior.
+- #377/#390 release tooling can be prepared after reviewed implementation merges, while credential closure and live acceptance remain mandatory gates before their owning production phases.
+
+These are evidence-backed acceptance clarifications within Jason's already approved “deliver all proposed software fixes” outcome. They do not authorize physical feed, credential rotation, production mutation by workers, a second writer, or a new control policy.
+
 ## Authority boundary
 
 Approved:

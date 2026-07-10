@@ -14,7 +14,7 @@ GitHub is authoritative. The query `is:issue is:open label:sprint:software-recov
 | #410 | Include | Solar-night realized dry-out evidence and only proven control adjustments. |
 | #419 | Include; labels/milestone repaired | Real outdoor freshness in stock replay plus coverage invariant. |
 | #424 | Include | Reserved migration 189 fixes served VPD divergence. |
-| #427 | Include; body rewritten | Tool-level planner health, terminal actions, strict bounds, TTL, forecast semantics. |
+| #427 | Include; body rewritten and post-dispatch health scope reconciled | Active Hermes/MCP tool health, terminal actions, strict bounds, TTL, forecast semantics, plus truthful health/recovery or decommissioning for the zero-run non-authoritative planner_graph workload. |
 | #428 | Include | Heap diet, actionable WDT evidence, conservative floor, and soak. |
 | #433 | Include; created | Truthful, fair, non-starving device writer. |
 | #434 | Include; created | Center-only climate and commissioned wall-only fertigation. |
@@ -33,12 +33,13 @@ GitHub is authoritative. The query `is:issue is:open label:sprint:software-recov
 
 ## Deferred
 
-Physical sensor replacement, fertigation commissioning measurements, new hardware/meters, vision issue #436, broad controller deletion/mode collapse, and planner_graph productization are not part of this software recovery.
+Physical sensor replacement, fertigation commissioning measurements, new hardware/meters, vision issue #436, broad controller deletion/mode collapse, and planner_graph productization are not part of this software recovery. Narrow truthful health/recovery or explicit decommissioning of the already-deployed zero-run planner_graph workload is included without granting it planner authority.
 
 ## GitHub mutations recorded
 
 - Created issues #433–#438 (with #436 explicitly deferred).
 - Rewrote #427 and added corrective comments to all relevant parent/dependency issues.
+- Rewrote stale bodies for #299, #383, #386, #410, #390, and #377 so GitHub now matches the approved preservation, solar-night, topology-aware cycling, and definitive stale-intent decisions.
 - Created and applied label `sprint:software-recovery-2026-07-09` to the 17 included issues; removed it from #367/#371 after the raw-edge scope audit.
 - Removed stale `gate:jason` from #386 because OTA approval is already explicit; kept `gate:jason` on #438 because credential rotation remains separately protected.
 - Raised #299/#386 and repaired #367/#419 priority metadata to match the approved recovery risk.
