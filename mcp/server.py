@@ -1282,9 +1282,7 @@ async def outcome_kpi(target_date: str = "") -> str:
             for name in ("grow_light_main", "grow_light_grow")
             if actuator_cycles[name] is not None
         ]
-        actuator_cycles["grow_light"] = (
-            sum(light_cycle_values) if light_cycle_values else None
-        )
+        actuator_cycles["grow_light"] = sum(light_cycle_values) if light_cycle_values else None
 
         actuator_runtime = {
             f"{equipment}_min": cycle_by_equipment.get(equipment, {}).get("on_minutes")
@@ -1296,14 +1294,10 @@ async def outcome_kpi(target_date: str = "") -> str:
             for name in ("grow_light_main", "grow_light_grow")
             if actuator_runtime[f"{name}_min"] is not None
         ]
-        actuator_runtime["grow_light_min"] = (
-            sum(light_runtime_values) if light_runtime_values else None
-        )
+        actuator_runtime["grow_light_min"] = sum(light_runtime_values) if light_runtime_values else None
         for mister in ("mister_south", "mister_west", "mister_center"):
             minutes = actuator_runtime[f"{mister}_min"]
-            actuator_runtime[f"{mister}_h"] = (
-                round(minutes / 60.0, 3) if minutes is not None else None
-            )
+            actuator_runtime[f"{mister}_h"] = round(minutes / 60.0, 3) if minutes is not None else None
 
         dryout = [dict(row) for row in dryout_rows]
         cycle_quality = [
@@ -1338,15 +1332,9 @@ async def outcome_kpi(target_date: str = "") -> str:
                 "Legacy firmware daily counters are diagnostic only; release "
                 "comparisons use v_equipment_runtime_daily raw transitions."
             ),
-            "cycles": {
-                key.removeprefix("cycles_"): summary.get(key)
-                for key in summary
-                if key.startswith("cycles_")
-            },
+            "cycles": {key.removeprefix("cycles_"): summary.get(key) for key in summary if key.startswith("cycles_")},
             "runtime": {
-                key.removeprefix("runtime_"): summary.get(key)
-                for key in summary
-                if key.startswith("runtime_")
+                key.removeprefix("runtime_"): summary.get(key) for key in summary if key.startswith("runtime_")
             },
         }
         vpd_policy["cycle_source"] = {
@@ -1364,9 +1352,7 @@ async def outcome_kpi(target_date: str = "") -> str:
             ),
             "episodes": dryout,
             "dispositions": {
-                disposition: sum(
-                    row["dryout_disposition"] == disposition for row in dryout
-                )
+                disposition: sum(row["dryout_disposition"] == disposition for row in dryout)
                 for disposition in (
                     "effective",
                     "ineffective",
@@ -1389,30 +1375,20 @@ async def outcome_kpi(target_date: str = "") -> str:
             "safety_gate_status": (
                 "pending"
                 if not dryout
-                else (
-                    "fail"
-                    if any(row["safety_gate_status"] == "fail" for row in dryout)
-                    else "pass"
-                )
+                else ("fail" if any(row["safety_gate_status"] == "fail" for row in dryout) else "pass")
             ),
         }
         pending_metrics = []
         if not moisture_sample_count:
             pending_metrics.append("moisture_estimator: source path wired; waiting for OTA/deploy/live rows")
         if not cycle_rows:
-            pending_metrics.append(
-                "actuator_cycles_runtime: no transition-derived rows for date"
-            )
+            pending_metrics.append("actuator_cycles_runtime: no transition-derived rows for date")
         elif any(not row["is_deploy_gate_eligible"] for row in cycle_rows):
             pending_metrics.append(
-                "actuator_cycles_runtime: transition evidence is partial or quarantined; "
-                "not deploy-gate eligible"
+                "actuator_cycles_runtime: transition evidence is partial or quarantined; not deploy-gate eligible"
             )
         if not dryout:
-            pending_metrics.append(
-                "solar_night_dryout: no eligible opportunity or admitted-action "
-                "episodes for date"
-            )
+            pending_metrics.append("solar_night_dryout: no eligible opportunity or admitted-action episodes for date")
         elif any(row["dryout_disposition"] != "effective" for row in dryout):
             pending_metrics.append(
                 "solar_night_dryout: ineffective, blocked, or insufficient-evidence "
@@ -1430,8 +1406,7 @@ async def outcome_kpi(target_date: str = "") -> str:
                 coverage=OutcomeKpiCoverage(
                     actuator_cycles_runtime=(
                         "available"
-                        if cycle_rows
-                        and all(row["is_deploy_gate_eligible"] for row in cycle_rows)
+                        if cycle_rows and all(row["is_deploy_gate_eligible"] for row in cycle_rows)
                         else "pending"
                     ),
                     moisture_estimator="available" if moisture_sample_count else "pending",

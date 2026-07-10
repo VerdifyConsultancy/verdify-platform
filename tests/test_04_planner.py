@@ -151,9 +151,7 @@ class TestEvidencePipelineSources:
         assert '"authority": "v_equipment_runtime_daily"' in source
         assert '"firmware_counter_diagnostics"' in source
         assert "this is not a completed control fix" in source
-        cycle_mapping = source.split("actuator_cycles = {", 1)[1].split(
-            "actuator_runtime =", 1
-        )[0]
+        cycle_mapping = source.split("actuator_cycles = {", 1)[1].split("actuator_runtime =", 1)[0]
         assert "summary.get" not in cycle_mapping
 
 
