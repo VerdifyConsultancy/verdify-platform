@@ -47,6 +47,7 @@ def _install_mcp_runtime_import_stubs(monkeypatch: pytest.MonkeyPatch) -> None:
 
     asyncpg_stub = types.SimpleNamespace(
         Connection=object,
+        Record=object,
         ReadOnlySQLTransactionError=type("ReadOnlySQLTransactionError", (Exception,), {}),
         connect=lambda *_args, **_kwargs: None,
     )
