@@ -39,6 +39,8 @@ ownership:
     - db/schema.sql
     - verdify_schemas/telemetry.py
     - verdify_schemas/plan.py
+    - verdify_schemas/mcp_responses.py
+    - verdify_schemas/tests/test_mcp_responses.py
     - firmware/greenhouse/controls.yaml
     - firmware/greenhouse/sensors.yaml
     - firmware/lib/greenhouse_logic.h
@@ -64,6 +66,13 @@ ownership:
     - deploy/k8s/components/grafana/generated/**
     - firmware twin mirrors
     - mcp service restart docs
+  granted_coordination_paths:
+    - path: verdify_schemas/mcp_responses.py
+      granted_by: software-recovery controller
+      reason: OutcomeKpiResponse.dli must validate the approved unavailable reason, provenance, and validity interval instead of a numeric-only dictionary.
+    - path: verdify_schemas/tests/test_mcp_responses.py
+      granted_by: software-recovery controller
+      reason: Focused schema compatibility tests are required to keep every non-DLI MCP response contract unchanged.
   owned_interfaces:
     - nullable DLI value
     - unavailable reason/provenance/valid interval
@@ -90,6 +99,7 @@ constraints:
   - Use real elapsed time for any future firmware accumulation, but publish unavailable now; do not alter relay decisions, qualified-light-minute, or photoperiod logic.
   - No new tunable, firmware global, physical calibration, sensor, or planner_graph behavior is authorized.
   - Any firmware/schema change must preserve the cfg/readback contract and include service-restart documentation for verdify-mcp and verdify-ingestor where required by repository policy.
+  - The granted mcp_responses change is DLI-only and must preserve every non-DLI response field and resource/planner semantic.
   - Generated Grafana ConfigMaps and firmware twin mirrors may change only after explicit controller coordination and exclusive ownership transfer.
   - This worker may inspect production read-only for evidence but may not apply migration 195, restart services, publish, deploy, or OTA.
   - The later firmware-control lane owns the combined image; this lane must leave reproducible actuation-neutral tests and a mergeable firmware baseline.

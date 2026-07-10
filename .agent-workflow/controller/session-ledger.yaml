@@ -3535,6 +3535,41 @@ events:
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0075
   content_sha256: null
+- id: LEDGER-EVT-0077
+  sequence: 77
+  occurred_at: '2026-07-10T12:34:32Z'
+  event_type: gate_decision
+  source: sprint-orchestrator
+  subject: DLI MCP response schema coordination grant
+  actor:
+    role: controller
+    name: software-recovery-root-019f4826
+  session_id: software-recovery-root-019f4826
+  correlation:
+    trace_id: null
+    wave_id: wave-software-recovery-implementation
+    session_ids:
+    - software-recovery-root-019f4826
+    - dli-availability-local-20260710
+    issue_ids:
+    - 435
+    lane_ids:
+    - dli-availability
+    pr_ids: []
+    deployment_ids: []
+    policy_decision_ids:
+    - DEC-003
+  refs:
+    artifact_refs:
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/dli-availability/lane.yaml
+    evidence_refs: []
+    external_refs: []
+  result: approved
+  summary: Controller granted the DLI lane focused ownership of the MCP response schema and tests required to represent unavailable DLI end to end.
+  data_summary: The grant is schema-first, DLI-only, and must preserve all non-DLI response compatibility; worker production boundaries are unchanged.
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0076
+  content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
   severity: low
