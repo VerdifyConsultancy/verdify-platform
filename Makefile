@@ -444,7 +444,7 @@ firmware-deploy: ## Compile + OTA deploy to ESP32 + post-deploy sensor-health sw
 	# Fail → flash last-good back to ESP32 via firmware-rollback.sh.
 	@if bash scripts/wait-for-firmware-version.sh "$$(cat firmware/artifacts/pending-fw-version.txt)" --timeout 180 && \
 		EXPECTED_FW_VERSION="$$(cat firmware/artifacts/pending-fw-version.txt)" $(MAKE) sensor-health SINCE='5 minutes'; then \
-		FIRMWARE_DEPLOYED_AT="$$(date -Is)" bash scripts/archive-firmware-artifacts.sh "$$(cat firmware/artifacts/pending-fw-version.txt)" ; \
+		FIRMWARE_DEPLOYED_AT="$$(date '+%Y-%m-%dT%H:%M:%S%z')" bash scripts/archive-firmware-artifacts.sh "$$(cat firmware/artifacts/pending-fw-version.txt)" ; \
 		mkdir -p /srv/verdify/state ; \
 		cp firmware/artifacts/pending-fw-version.txt /srv/verdify/state/expected-firmware-version ; \
 		echo "✓ Deploy accepted. Archived build outputs + promoted expected firmware pin. Rollback target unchanged while this build bakes." ; \

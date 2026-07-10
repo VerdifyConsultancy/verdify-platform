@@ -36,6 +36,20 @@ PROVENANCE_DIR="$DEST/provenance"
 SOURCE_SNAPSHOT_DIR="$DEST/source-snapshot"
 GENERATED_SOURCE_DIR="$DEST/generated-src"
 
+iso8601_now() {
+    date '+%Y-%m-%dT%H:%M:%S%z'
+}
+
+touch_at() {
+    local timestamp="$1"
+    local path="$2"
+
+    if touch -d "$timestamp" "$path" 2>/dev/null; then
+        return
+    fi
+    touch -t "$(date -j -f '%Y-%m-%dT%H:%M:%S%z' "$timestamp" '+%Y%m%d%H%M.%S')" "$path"
+}
+
 required=(
     firmware.ota.bin
     firmware.bin
@@ -64,7 +78,7 @@ fi
 
 {
     echo "firmware_version=$FW_VERSION"
-    echo "archived_at=$(date -Is)"
+    echo "archived_at=$(iso8601_now)"
     echo "source_ref=$(git rev-parse --abbrev-ref HEAD)"
     echo "source_sha=$(git rev-parse HEAD)"
     if git diff --quiet -- . && git diff --cached --quiet -- .; then
@@ -134,7 +148,7 @@ if [[ "$PROMOTE" -eq 1 ]]; then
     printf '%s\n' "$FW_VERSION" > "$ARTIFACT_ROOT/last-good.version"
     cp "$DEST/metadata.env" "$ARTIFACT_ROOT/last-good.metadata.env"
     if [[ -n "${FIRMWARE_DEPLOYED_AT:-}" ]]; then
-        touch -d "$FIRMWARE_DEPLOYED_AT" "$ARTIFACT_ROOT/last-good.ota.bin"
+        touch_at "$FIRMWARE_DEPLOYED_AT" "$ARTIFACT_ROOT/last-good.ota.bin"
     fi
 fi
 
