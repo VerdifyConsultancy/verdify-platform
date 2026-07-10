@@ -78,7 +78,8 @@ Because the schema registry changed, release rollout must restart both
 
 - `make VENV=/Users/jason/repos/verdify-platform/.venv lint`: PASS.
 - Contracted targeted pytest command: 46 passed.
-- Focused compatibility/drift/registry suite: 299 passed.
+- Focused compatibility/drift/registry suite: 299 passed at the reviewed
+  implementation snapshot and 300 passed at the current integrated head.
 - Python compilation and `git diff --check`: PASS.
 - Required `make test`: 702 passed, 139 inherited failures, 6 skipped, 10
   inherited environment errors. The failures are retired local
@@ -86,6 +87,10 @@ Because the schema registry changed, release rollout must restart both
   firmware/PVC/UI assertions; no focused #433 regression remains.
 - Read-only exact entity comparison: expected 56, matched 56, zero missing.
 - Independent critic: ACCEPT, no remaining P0/P1 blocker.
+- The controller coverage amendment and controller/session records were merged
+  through `07ad7e756d1caa5eb2c625a88796c999d8222fe8`. Final local validation ran at
+  integrated head `a260e4258821fd14d87742180541a9ba196f1525` with no post-critic
+  product-source change.
 
 ## Runtime and release evidence
 
@@ -106,8 +111,13 @@ release.
 
 - Contract baseline: `0a9a19a840be6bae1beba604497d880b3b74b1ef` (provenance).
 - Controller execution baseline: `6b5042c6a9d525cf1429bfda5a1f6d9a95470476`.
+- Current controller contract/session head:
+  `07ad7e756d1caa5eb2c625a88796c999d8222fe8` (contract content introduced by
+  `a2c3ee92a46abe1861b330bf63d60e0f717605bd`).
 - Reviewed/rebased implementation head:
   `e4e1c5901d2ce46400df65d9ced516bed25c0eb2`.
+- Final locally validated integrated head before this records-only update:
+  `a260e4258821fd14d87742180541a9ba196f1525`.
 - Pull request: [#442](https://github.com/VerdifyConsultancy/verdify-platform/pull/442).
 - Remote implementation branch matched the reviewed head before this
   evidence-only closeout commit.

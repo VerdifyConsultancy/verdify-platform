@@ -1,8 +1,10 @@
 sprint_id: software-recovery-2026-07-09
 lane_id: device-writer
 state: READY_FOR_INTEGRATION
-updated_at: "2026-07-10T00:28:36Z"
+updated_at: "2026-07-10T00:33:04Z"
 head_sha: e4e1c5901d2ce46400df65d9ced516bed25c0eb2
+integrated_validation_sha: a260e4258821fd14d87742180541a9ba196f1525
+controller_contract_sha: 07ad7e756d1caa5eb2c625a88796c999d8222fe8
 working_tree_clean: true
 acceptance:
   passed:

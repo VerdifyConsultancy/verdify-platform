@@ -199,3 +199,31 @@ items:
     limitations:
       - Release control must tie the exact running digest and commit to a complete two-hour window.
       - Zero unchanged broad anchor pushes is not claimed before that window exists.
+
+  - id: WRI-EV-012
+    type: TEST
+    status: PASS
+    source: final validation after integrating the controller coverage amendment and current main
+    command: >-
+      make VENV=/Users/jason/repos/verdify-platform/.venv lint;
+      PYTHONPATH=. .venv/bin/pytest -o addopts='' -q tests/test_03_ingestor.py
+      tests/test_05_dispatcher.py tests/test_16_*.py;
+      PYTHONPATH=. .venv/bin/pytest -o addopts='' -q <focused compatibility suite>;
+      make VENV=/Users/jason/repos/verdify-platform/.venv test;
+      python -m py_compile <changed runtime and approved consumer Python files>;
+      git diff --check
+    timestamp: "2026-07-10T00:33:04Z"
+    revision: a260e4258821fd14d87742180541a9ba196f1525
+    environment: local worktree integrated through main 07ad7e756d1caa5eb2c625a88796c999d8222fe8
+    result: >-
+      Ruff passed; the contracted writer/dispatcher fault suite passed 46 tests;
+      the focused compatibility, drift, and registry suite passed 300 tests;
+      Python compilation, YAML parsing, and git diff checks passed. The required
+      monolithic suite retained its inherited laptop baseline of 702 passed,
+      139 failed, 6 skipped, and 10 environment errors in 18.58 seconds. No
+      product source changed after the independent critic accepted e4e1c590.
+    artifact_location: https://github.com/VerdifyConsultancy/verdify-platform/pull/442
+    acceptance_criteria: [LANE-AC-01, LANE-AC-02, LANE-AC-03, LANE-AC-04]
+    limitations:
+      - LANE-AC-05 remains deployment-only and was not run or claimed.
+      - The monolithic failures require retired laptop/live services and are unchanged from the recorded lane baseline.
