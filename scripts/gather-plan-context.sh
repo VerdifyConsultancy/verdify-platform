@@ -214,7 +214,8 @@ echo ""
 TODAY=$(date +%Y-%m-%d)
 echo "--- PLANNER SCORECARD (${TODAY} — partial if before midnight, informational only) ---"
 echo "metric|value"
-"${DB[@]}" -c "SELECT * FROM fn_planner_scorecard((now() AT TIME ZONE 'America/Denver')::date);"
+"${DB[@]}" -c "SELECT * FROM fn_planner_scorecard((now() AT TIME ZONE 'America/Denver')::date);" \
+  2>/dev/null || echo "(scorecard unavailable within DB query budget; do not infer zero performance)"
 echo ""
 echo "--- PLANNER SCORE TREND (7 complete calendar days, excludes today) ---"
 echo "date|score|comp|temp%|vpd%|stress_h|heat|cold|vpd_hi|vpd_lo|kwh|therms|water_gal|cost"
@@ -226,7 +227,7 @@ FROM v_daily_kpi
 WHERE date >= (now() AT TIME ZONE 'America/Denver')::date - 7
   AND date < (now() AT TIME ZONE 'America/Denver')::date
 ORDER BY date DESC;
-"
+" 2>/dev/null || echo "(7-day KPI trend unavailable within DB query budget)"
 echo "Score = 80% compliance (both temp AND VPD in band) + 20% cost efficiency (<\$5/day=full marks)"
 echo "compliance_pct = % time both temp AND VPD in band. temp_comp / vpd_comp = individual axes."
 echo "VPD compliance is usually the bottleneck on dry spring days (tight band, 15% outdoor RH)."
