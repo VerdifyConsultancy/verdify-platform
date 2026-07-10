@@ -5,7 +5,7 @@ project_id: verdify-platform
 controller_id: software-recovery-root-019f4826
 status: active
 state: WAVE_EXECUTING
-updated_at: "2026-07-10T12:34:32Z"
+updated_at: "2026-07-10T14:10:58Z"
 current_wave: wave-software-recovery-implementation
 sessions:
   - id: software-recovery-root-019f4826
@@ -142,6 +142,33 @@ sessions:
     lane_id: dli-availability
     branch: lane/recovery-dli-435
     worktree: /Users/jason/repos/verdify-worktrees/software-recovery-dli-435
+    status: complete
+  - id: dli-availability-critic-20260710
+    role: critic
+    executor: codex-collaboration-subagent
+    repository: VerdifyConsultancy/verdify-platform
+    issue: 435
+    lane_id: dli-availability
+    branch: lane/recovery-dli-435
+    worktree: /Users/jason/repos/verdify-worktrees/software-recovery-dli-435
+    status: complete
+  - id: security-rotation-critic-20260710
+    role: critic
+    executor: codex-collaboration-subagent
+    repository: VerdifyConsultancy/verdify-platform
+    issue: 438
+    lane_id: security-hygiene
+    branch: main
+    worktree: /Users/jason/repos/verdify-worktrees/storage-migration-main
+    status: complete
+  - id: planner-delivery-local-20260710
+    role: worker
+    executor: codex-collaboration-subagent-fallback
+    repository: VerdifyConsultancy/verdify-platform
+    issue: 427
+    lane_id: planner-delivery
+    branch: lane/recovery-planner-427
+    worktree: /Users/jason/repos/verdify-worktrees/software-recovery-planner-427
     status: active
 events:
   - id: controller-event-20260709-001
@@ -240,17 +267,29 @@ events:
     occurred_at: "2026-07-10T12:34:32Z"
     event_type: coordination_request
     summary: "DLI worker identified that OutcomeKpiResponse.dli is numeric-only and defaults to available. The controller granted DLI-only ownership of verdify_schemas/mcp_responses.py and its focused tests so the already-approved unavailable provenance contract can validate without changing non-DLI semantics."
+  - id: controller-event-20260710-025
+    occurred_at: "2026-07-10T13:11:58Z"
+    event_type: protected_change_complete
+    summary: "The production application DB credential rotation completed with new-valid, old-invalid, all-consumer acceptance, one-writer proof, controlled scheduled jobs, a greater-than-10-minute durability re-probe, independent PASS, and issue #438 closure; no credential material entered evidence."
+  - id: controller-event-20260710-026
+    occurred_at: "2026-07-10T14:10:02Z"
+    event_type: lane_merged
+    summary: "DLI PR #448 merged to main at 55d0743 after two adversarial changes-required cycles, exact-head independent PASS, 26 successful checks, eight intentional skips, and issue #435 closure; migration 195 and runtime publication remain release-control work."
+  - id: controller-event-20260710-027
+    occurred_at: "2026-07-10T14:10:58Z"
+    event_type: lane_dispatched
+    summary: "Both hard dependencies are independently accepted and merged; planner-delivery issue #427 is dispatched from authoritative current main into the exclusive local-fallback worktree with production mutation prohibited to the worker."
 open_gates: []
 next_actions:
-  - Dispatch DLI availability from authoritative current main, then planner delivery in dependency order.
-  - Refresh every credential-rotation hard stop and execute the scoped rotation without exposing secret material.
+  - Supervise planner delivery from authoritative current main, then dispatch the combined firmware-control lane in dependency order.
+  - Keep the completed credential-rotation evidence and closed issue #438 immutable; no further security-lane production action remains.
   - Keep writer deployment proof, evidence migrations, service restarts, firmware response, and runtime acceptance in release control.
   - Route each future immutable lane head through its required critic, GitHub CI, and integration review before merge.
   - Preserve every non-waivable credential, migration, writer, planner, firmware, and runtime check through release.
 handoff:
   next_skill: sprint-orchestrator
   next_mode: recorded-local-fallback
-  reason: Writer, evidence-core, and resource-accounting are merged; dispatch dependency-ready DLI availability through the approved isolated local-worktree fallback while the controller executes the authorized credential runbook.
+  reason: Credential rotation and DLI are complete; supervise planner delivery through the approved isolated local-worktree fallback before the combined firmware and release-control phases.
 approval:
   status: approved
   approver: Jason Vallery

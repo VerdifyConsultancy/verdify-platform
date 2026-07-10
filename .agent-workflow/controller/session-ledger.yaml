@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-verdify-platform-controller
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-10T02:33:50Z'
+updated_at: '2026-07-10T14:10:58Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -468,6 +468,71 @@ sessions:
   - '#441'
   artifact_refs:
   - .verdify/sprints/software-recovery-2026-07-09/baseline/coverage-amendment-critic-report.md
+- session_id: security-rotation-critic-20260710
+  parent_session_id: software-recovery-root-019f4826
+  role: critic
+  executor: codex-collaboration-subagent
+  repository: VerdifyConsultancy/verdify-platform
+  status: complete
+  started_at: '2026-07-10T12:59:35Z'
+  ended_at: '2026-07-10T13:09:56Z'
+  issue_ids: [438]
+  lane_id: security-hygiene
+  wave_id: wave-software-recovery-implementation
+  branch: main
+  worktree: /Users/jason/repos/verdify-worktrees/storage-migration-main
+  pr_refs: []
+  artifact_refs:
+  - .verdify/sprints/software-recovery-2026-07-09/lanes/security-hygiene/rotation-critic-report-2026-07-10.md
+- session_id: dli-availability-local-20260710
+  parent_session_id: software-recovery-root-019f4826
+  role: worker
+  executor: codex-collaboration-subagent-fallback
+  repository: VerdifyConsultancy/verdify-platform
+  status: complete
+  started_at: '2026-07-10T12:25:43Z'
+  ended_at: '2026-07-10T14:10:02Z'
+  issue_ids: [435]
+  lane_id: dli-availability
+  wave_id: wave-software-recovery-implementation
+  branch: lane/recovery-dli-435
+  worktree: /Users/jason/repos/verdify-worktrees/software-recovery-dli-435
+  pr_refs: ['448']
+  artifact_refs:
+  - .verdify/sprints/software-recovery-2026-07-09/lanes/dli-availability/closure-report.md
+  - .verdify/sprints/software-recovery-2026-07-09/lanes/dli-availability/evidence.yaml
+- session_id: dli-availability-critic-20260710
+  parent_session_id: software-recovery-root-019f4826
+  role: critic
+  executor: codex-collaboration-subagent
+  repository: VerdifyConsultancy/verdify-platform
+  status: complete
+  started_at: '2026-07-10T13:17:00Z'
+  ended_at: '2026-07-10T14:05:47Z'
+  issue_ids: [435]
+  lane_id: dli-availability
+  wave_id: wave-software-recovery-implementation
+  branch: lane/recovery-dli-435
+  worktree: /Users/jason/repos/verdify-worktrees/software-recovery-dli-435
+  pr_refs: ['448']
+  artifact_refs:
+  - .verdify/sprints/software-recovery-2026-07-09/lanes/dli-availability/critic-report-2026-07-10.md
+- session_id: planner-delivery-local-20260710
+  parent_session_id: software-recovery-root-019f4826
+  role: worker
+  executor: codex-collaboration-subagent-fallback
+  repository: VerdifyConsultancy/verdify-platform
+  status: active
+  started_at: '2026-07-10T14:10:58Z'
+  ended_at: null
+  issue_ids: [427]
+  lane_id: planner-delivery
+  wave_id: wave-software-recovery-implementation
+  branch: lane/recovery-planner-427
+  worktree: /Users/jason/repos/verdify-worktrees/software-recovery-planner-427
+  pr_refs: []
+  artifact_refs:
+  - .verdify/sprints/software-recovery-2026-07-09/lanes/planner-delivery/lane.yaml
 events:
 - id: LEDGER-EVT-0001
   sequence: 1
@@ -3570,6 +3635,116 @@ events:
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0076
   content_sha256: null
+- id: LEDGER-EVT-0078
+  sequence: 78
+  occurred_at: '2026-07-10T13:11:58Z'
+  event_type: deployment_observed
+  source: sprint-orchestrator
+  subject: production database credential rotation closed
+  actor:
+    role: controller
+    name: software-recovery-root-019f4826
+  session_id: software-recovery-root-019f4826
+  correlation:
+    trace_id: null
+    wave_id: wave-software-recovery-implementation
+    session_ids: [software-recovery-root-019f4826, security-rotation-critic-20260710]
+    issue_ids: [438]
+    lane_ids: [security-hygiene]
+    pr_ids: ['2904']
+    deployment_ids: [verdify-prod]
+    policy_decision_ids: [g-prod-db-credential-rotation-20260709]
+  refs:
+    artifact_refs:
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/security-hygiene/rotation-closeout-2026-07-10.md
+    evidence_refs:
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/security-hygiene/evidence.yaml
+    external_refs:
+    - type: github_issue
+      identifier: VerdifyConsultancy/verdify-platform#438
+      url: https://github.com/VerdifyConsultancy/verdify-platform/issues/438
+    - type: git_commit
+      identifier: 20737755aef8b4f1c63de1b29555f82f5616f995
+      url: https://github.com/VerdifyConsultancy/verdify-platform/commit/20737755aef8b4f1c63de1b29555f82f5616f995
+  result: approved
+  summary: Production credential rotation, all-consumer acceptance, old-invalid proof, durability re-probe, independent criticism, and issue closure completed without credential disclosure.
+  data_summary: Four healthy scheduled consumers resumed, Vision remains separately tracked, and ingestor remained the sole writer.
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0077
+  content_sha256: null
+- id: LEDGER-EVT-0079
+  sequence: 79
+  occurred_at: '2026-07-10T14:10:02Z'
+  event_type: worker_closeout
+  source: sprint-orchestrator
+  subject: DLI availability lane merged
+  actor:
+    role: controller
+    name: software-recovery-root-019f4826
+  session_id: software-recovery-root-019f4826
+  correlation:
+    trace_id: null
+    wave_id: wave-software-recovery-implementation
+    session_ids: [software-recovery-root-019f4826, dli-availability-local-20260710, dli-availability-critic-20260710]
+    issue_ids: [435]
+    lane_ids: [dli-availability]
+    pr_ids: ['448']
+    deployment_ids: []
+    policy_decision_ids: [DEC-003, DEC-007]
+  refs:
+    artifact_refs:
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/dli-availability/closure-report.md
+    evidence_refs:
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/dli-availability/evidence.yaml
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/dli-availability/critic-report-2026-07-10.md
+    external_refs:
+    - type: github_pr
+      identifier: VerdifyConsultancy/verdify-platform#448
+      url: https://github.com/VerdifyConsultancy/verdify-platform/pull/448
+    - type: git_commit
+      identifier: 55d0743ddd1997cd347c8575fad76f51ddfd0fba
+      url: https://github.com/VerdifyConsultancy/verdify-platform/commit/55d0743ddd1997cd347c8575fad76f51ddfd0fba
+  result: approved
+  summary: DLI PR 448 merged after two changes-required cycles, exact-head PASS, green CI, and issue 435 closure.
+  data_summary: Crop DLI is categorically unavailable with provenance in source; migration 195, service restarts, publication, live acceptance, and OTA remain release-control work.
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0078
+  content_sha256: null
+- id: LEDGER-EVT-0080
+  sequence: 80
+  occurred_at: '2026-07-10T14:10:58Z'
+  event_type: lane_dispatched
+  source: sprint-orchestrator
+  subject: planner-delivery worker dispatch
+  actor:
+    role: controller
+    name: software-recovery-root-019f4826
+  session_id: software-recovery-root-019f4826
+  correlation:
+    trace_id: null
+    wave_id: wave-software-recovery-implementation
+    session_ids: [software-recovery-root-019f4826, planner-delivery-local-20260710]
+    issue_ids: [427]
+    lane_ids: [planner-delivery]
+    pr_ids: []
+    deployment_ids: []
+    policy_decision_ids: [g-local-dispatch-fallback-software-recovery-20260709]
+  refs:
+    artifact_refs:
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/planner-delivery/lane.yaml
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/planner-delivery/worker-prompt.md
+    evidence_refs:
+    - .verdify/sprints/software-recovery-2026-07-09/lanes/planner-delivery/status.yaml
+    external_refs:
+    - type: git_commit
+      identifier: 55d0743ddd1997cd347c8575fad76f51ddfd0fba
+      url: https://github.com/VerdifyConsultancy/verdify-platform/commit/55d0743ddd1997cd347c8575fad76f51ddfd0fba
+  result: observed
+  summary: Planner issue 427 is dependency-ready and dispatched from current main through the approved isolated local fallback.
+  data_summary: Worker may change only contracted source/test/records and may not deploy, restart production, mutate alerts, retire stale intent, or alter device authority.
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0079
+  content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
   severity: low
@@ -3597,4 +3772,4 @@ exceptions:
 handoff:
   next_skill: sprint-orchestrator
   next_mode: recorded-local-fallback
-  reason: Writer, evidence-core, and resource-accounting are merged; dispatch DLI availability next while the controller executes the authorized credential-rotation runbook.
+  reason: Credential rotation and DLI are complete; planner delivery is the active dependency before combined firmware and release control.
