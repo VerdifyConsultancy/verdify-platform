@@ -31,7 +31,7 @@ Owns connection generations, real ESPHome cfg wire identities, normalized desire
 
 ### `evidence-core` — #293, #389, #410, #419, #424
 
-Owns one ordered evidence foundation: DB solar parity, migration 189 VPD correction, raw-transition cycle/runtime truth, realized solar-night episodes, and replay freshness. These issues intentionally share one branch because they collide in `db/schema.sql`, MCP outcome queries, migration numbering, and replay fixtures. It must not change firmware behavior.
+Owns one ordered evidence foundation: DB solar parity, migration 189 VPD correction, raw-transition cycle/runtime truth, realized solar-night episodes, and honestly provenance-labeled replay freshness. These issues intentionally share one branch because they collide in `db/schema.sql`, MCP outcome queries, migration numbering, and replay fixtures. Historical value-change freshness is an explicitly conservative sufficient proxy under DEC-015, never a claimed raw Tempest timestamp. This lane must not change firmware behavior.
 
 ### `resource-accounting` — #437
 
@@ -47,7 +47,7 @@ Owns Hermes/MCP liveness, terminal result action, strict bound intersection, pla
 
 ### `firmware-control` — #299, #383, #386, #428, #434
 
-One exclusive firmware branch and one OTA artifact. It implements the approved topology and measured heap protection while preserving—not redesigning—the already-effective mister re-fire fence, lighting min-on boundary, and solar-night safety. Acceptance now explicitly proves center mist has climate-only origins, both legacy 10:30 jobs are ineligible, weekly solar eligibility survives restart/missed windows exactly once, and calibrated liters convert to bounded wall durations or fail closed. #299/#383/#386 are regression/evidence slices; no new anti-chatter tunable or control delta is permitted without a new evidence-backed decision. The combined image cannot freeze until evidence-core records an explicit dry-out disposition.
+One exclusive firmware branch and one OTA artifact. It implements the approved topology and measured heap protection while preserving the already-effective mister re-fire fence and lighting min-on boundary. DEC-014 narrowly makes the existing held-temperature response solar-night-only while preserving ordinary daytime dehumidification; DEC-015 adds exact device outdoor age only to existing moisture-exchange telemetry. Acceptance also proves center mist has climate-only origins, both legacy 10:30 jobs are ineligible, weekly solar eligibility survives restart/missed windows exactly once, and calibrated liters convert to bounded wall durations or fail closed. #299/#383/#386 are regression/evidence slices; no broader anti-chatter tunable or control delta is permitted. The combined image cannot freeze until evidence-core records an explicit dry-out disposition.
 
 ### `release-control` — #377, #390
 
