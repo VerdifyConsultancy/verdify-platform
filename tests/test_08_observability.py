@@ -1630,10 +1630,31 @@ class TestClimateIntentControllerObservability:
         legacy_prefix = "climate_" + "s" + "hadow"
         assert legacy_prefix not in controls
         assert legacy_prefix not in hardware
-        assert "climate_diag_republish" in controls
+        assert "climate_diag_republish" not in controls
+        assert "climate_continuous_diag_due" in controls
         assert ">= 60000UL" in controls
-        assert "last_climate_diag_publish_ms = climate_diag_now_ms" in controls
-        assert controls.count("|| climate_diag_republish") >= len(self.CLIMATE_KEYS)
+        assert "climate_band_diag_due" in controls
+        assert ">= 300000UL" in controls
+        # Discrete action/axis/state/reason fields publish immediately on
+        # transitions; continuously changing numeric/JSON strings are capped.
+        for last_value in (
+            "last_climate_action",
+            "last_climate_priority_axis",
+            "last_climate_candidate_summary",
+            "last_climate_moisture_state",
+            "last_climate_moisture_zone",
+            "last_climate_fog_block",
+        ):
+            assert f"if(strcmp({last_value}" in controls
+        for last_value in (
+            "last_climate_temp_error",
+            "last_climate_vpd_error",
+            "last_climate_fog_margin",
+            "last_climate_resource_cost",
+            "last_climate_next_mist",
+            "last_climate_moisture_exchange",
+        ):
+            assert f"if(climate_continuous_diag_due && strcmp({last_value}" in controls
         for key in self.CLIMATE_KEYS:
             assert f"id: gh_{key}" in hardware
             assert f"id(gh_{key}).publish_state(" in controls

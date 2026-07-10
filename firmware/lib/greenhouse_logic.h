@@ -247,6 +247,7 @@ inline MoistureExchangeEstimate estimate_moisture_exchange(
         // the cooled candidate). Flag OFF ⇒ can_hold==false ⇒ vent_helps_held==false
         // ⇒ the ladder below degenerates to the exact pre-#410 selection.
         const bool can_hold = sp.dehum_vent_hold_enabled
+            && is_night_phase(in)
             && in.temp_f >= (band_heat_target_f(sp) + sp.heat_hysteresis);
         const bool vent_helps_held = fresh && r.vent_held_vpd_gain_kpa > margin && can_hold;
         // Selection ladder (#410 / ADR0003 §6.4 addendum):

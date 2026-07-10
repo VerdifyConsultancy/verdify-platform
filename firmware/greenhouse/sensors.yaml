@@ -2807,6 +2807,124 @@ sensor:
       if (!id(cfg_first_pull_ok)) return NAN;
       return (float)id(irrig_center_interval_days);
 
+  # Commissioned weekly wall-feed cfg readbacks. Every value is operator-owned
+  # and planner-ineligible; zero/off is intentionally incomplete commissioning.
+  - platform: template
+    id: cfg_irrig_enabled
+    name: "Cfg Irrig Enabled"
+    entity_category: diagnostic
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: 'return id(irrig_enabled) ? 1.0f : 0.0f;'
+
+  - platform: template
+    id: cfg_irrig_wall_enabled
+    name: "Cfg Irrig Wall Enabled"
+    entity_category: diagnostic
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: 'return id(irrig_wall_enabled) ? 1.0f : 0.0f;'
+
+  - platform: template
+    id: cfg_irrig_center_enabled
+    name: "Cfg Irrig Center Enabled"
+    entity_category: diagnostic
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: 'return id(irrig_center_enabled) ? 1.0f : 0.0f;'
+
+  - platform: template
+    id: cfg_irrig_south_enabled
+    name: "Cfg Irrig South Enabled"
+    entity_category: diagnostic
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: 'return id(irrig_south_enabled) ? 1.0f : 0.0f;'
+
+  - platform: template
+    id: cfg_irrig_west_enabled
+    name: "Cfg Irrig West Enabled"
+    entity_category: diagnostic
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: 'return id(irrig_west_enabled) ? 1.0f : 0.0f;'
+
+  - platform: template
+    id: cfg_wall_fertigation_commissioned
+    name: "Cfg Wall Fertigation Commissioned"
+    entity_category: diagnostic
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: 'return id(wall_fertigation_commissioned) ? 1.0f : 0.0f;'
+
+  - platform: template
+    id: cfg_wall_commissioning_revision
+    name: "Cfg Wall Commissioning Revision"
+    entity_category: diagnostic
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: 'return (float)id(wall_commissioning_revision);'
+
+  - platform: template
+    id: cfg_wall_commissioning_evidence_mask
+    name: "Cfg Wall Commissioning Evidence Mask"
+    entity_category: diagnostic
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: 'return (float)id(wall_commissioning_evidence_mask);'
+
+  - platform: template
+    id: cfg_wall_commissioning_valid_until_epoch_s
+    name: "Cfg Wall Commissioning Valid Until Epoch S"
+    entity_category: diagnostic
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: 'return (float)id(wall_commissioning_valid_until_epoch_s);'
+
+  - platform: template
+    id: cfg_wall_flow_lpm
+    name: "Cfg Wall Flow LPM"
+    unit_of_measurement: "L/min"
+    entity_category: diagnostic
+    accuracy_decimals: 2
+    update_interval: 30s
+    lambda: 'return id(wall_flow_lpm);'
+
+  - platform: template
+    id: cfg_wall_flow_valid_until_epoch_s
+    name: "Cfg Wall Flow Valid Until Epoch S"
+    entity_category: diagnostic
+    accuracy_decimals: 0
+    update_interval: 30s
+    lambda: 'return (float)id(wall_flow_valid_until_epoch_s);'
+
+  - platform: template
+    id: cfg_wall_prewet_liters
+    name: "Cfg Wall Prewet Liters"
+    unit_of_measurement: "L"
+    entity_category: diagnostic
+    accuracy_decimals: 2
+    update_interval: 30s
+    lambda: 'return id(wall_prewet_liters);'
+
+  - platform: template
+    id: cfg_wall_feed_liters
+    name: "Cfg Wall Feed Liters"
+    unit_of_measurement: "L"
+    entity_category: diagnostic
+    accuracy_decimals: 2
+    update_interval: 30s
+    lambda: 'return id(wall_feed_liters);'
+
+  - platform: template
+    id: cfg_wall_flush_liters
+    name: "Cfg Wall Flush Liters"
+    unit_of_measurement: "L"
+    entity_category: diagnostic
+    accuracy_decimals: 2
+    update_interval: 30s
+    lambda: 'return id(wall_flush_liters);'
+
   - platform: template
     id: cfg_gl_main_min_on_s
     name: "Cfg GL Main Min On S"

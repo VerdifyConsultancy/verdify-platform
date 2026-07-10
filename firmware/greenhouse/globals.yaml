@@ -622,7 +622,9 @@ globals:
     restore_value: no
     initial_value: 'true'
 
-  # ─── FRT-6 / FRT-7: post-feed absorption hold ───
+  # Retired compatibility state. The commissioned wall sequence never arms a
+  # global post-feed hold: fertilizer turns off and wall-local clean flush starts
+  # immediately. Kept at zero so older readback consumers remain harmless.
   # feed_hold_until_ms is the millis() deadline (uint32, wrap-aware compare)
   # until which ALL clean wetting is blocked after a fertilizer feed. Armed by
   # the irrigation state machine when a fert job finishes; the post-fert clean
@@ -632,11 +634,11 @@ globals:
     restore_value: no
     initial_value: '0'
 
-  # Minutes of absorption hold after a feed completes (default 90).
+  # Legacy readback only; no control path consumes it.
   - id: post_feed_hold_min
     type: int
     restore_value: no
-    initial_value: '90'
+    initial_value: '0'
 
   # ─── FRT-8 / F3 / F1: AM-only feed window ───
   # Authoritative VPD-INDEPENDENT rail. Every fertilizer job (scheduled fert
@@ -1403,6 +1405,13 @@ globals:
     restore_value: no
     initial_value: 'false'
 
+  # Reverse-exclusivity token: ONLY the climate/VPD resolver may energize the
+  # center mister. Irrigation/manual/schedule paths use water_controller_actuating.
+  - id: climate_wet_controller_actuating
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+
   - id: irrig_wall_cycle_count
     type: int
     restore_value: no
@@ -1540,7 +1549,99 @@ globals:
   - id: irrig_center_enabled
     type: bool
     restore_value: yes
-    initial_value: 'true'
+    initial_value: 'false'
+
+  - id: irrig_south_enabled
+    type: bool
+    restore_value: yes
+    initial_value: 'false'
+
+  - id: irrig_west_enabled
+    type: bool
+    restore_value: yes
+    initial_value: 'false'
+
+  # ─── Commissioned weekly wall-only fertigation ───
+  # All operator inputs default missing/off. Every field is required by the
+  # pure irrigation policy before a relay can energize.
+  - id: wall_fertigation_commissioned
+    type: bool
+    restore_value: yes
+    initial_value: 'false'
+
+  - id: wall_commissioning_revision
+    type: uint32_t
+    restore_value: yes
+    initial_value: '0'
+
+  - id: wall_commissioning_evidence_mask
+    type: int
+    restore_value: yes
+    initial_value: '0'
+
+  - id: wall_commissioning_valid_until_epoch_s
+    type: uint32_t
+    restore_value: yes
+    initial_value: '0'
+
+  - id: wall_flow_lpm
+    type: float
+    restore_value: yes
+    initial_value: '0.0'
+
+  - id: wall_flow_valid_until_epoch_s
+    type: uint32_t
+    restore_value: yes
+    initial_value: '0'
+
+  - id: wall_prewet_liters
+    type: float
+    restore_value: yes
+    initial_value: '0.0'
+
+  - id: wall_feed_liters
+    type: float
+    restore_value: yes
+    initial_value: '0.0'
+
+  - id: wall_flush_liters
+    type: float
+    restore_value: yes
+    initial_value: '0.0'
+
+  # Persisted exact-once claim/terminal state. Active stages restored after a
+  # reboot are cancelled before any relay may turn on, preventing re-dose.
+  - id: wall_feed_stage
+    type: int
+    restore_value: yes
+    initial_value: '0'
+
+  - id: wall_feed_claimed_solar_day
+    type: uint32_t
+    restore_value: yes
+    initial_value: '0'
+
+  - id: wall_feed_last_terminal_solar_day
+    type: uint32_t
+    restore_value: yes
+    initial_value: '0'
+
+  - id: wall_feed_claim_revision
+    type: uint32_t
+    restore_value: yes
+    initial_value: '0'
+
+  # 0=none, 1=complete, 2=cancelled/faulted.
+  - id: wall_feed_terminal_code
+    type: int
+    restore_value: yes
+    initial_value: '0'
+
+  # Ephemeral relay guard asserted only after validation on the current tick.
+  - id: wall_feed_commissioning_ready
+    type: bool
+    restore_value: no
+    initial_value: 'false'
 
   - id: irrig_weather_skip
     type: bool

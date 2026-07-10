@@ -2482,67 +2482,29 @@ def test_climate_decision_surface_excludes_fert_and_drip_relays():
 def test_climate_wet_assist_is_separate_from_crop_direct_wet_windows():
     controls = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
 
-    assert "auto crop_direct_wet_allowed" in controls
-    assert "auto climate_wet_assist_allowed" in controls
-    # SAF-4 wraps the per-zone wet-allowed booleans with the daily-volume
-    # hard-ceiling (and, for center, the cumulative-runtime duty cap). The
-    # crop ∥ climate-assist core remains; the SAF-4 guards are AND-appended.
-    assert (
-        "const bool south_wet_allowed = (south_crop_wet_allowed || climate_wet_assist_allowed(1))\n"
-        "                                           && !mister_volume_hard_block;"
-    ) in controls
-    assert (
-        "const bool west_wet_allowed = (west_crop_wet_allowed || climate_wet_assist_allowed(2))\n"
-        "                                          && !mister_volume_hard_block;"
-    ) in controls
-    assert (
-        "const bool center_wet_allowed = (center_crop_wet_allowed || climate_wet_assist_allowed(3))\n"
-        "                                            && !center_duty_cap_reached\n"
-        "                                            && !mister_volume_hard_block;"
-    ) in controls
-    assert "if(zone == 4) return false;  // climate control never drives wall drips." in controls
-
-    crop_block = controls[
-        controls.index("auto crop_direct_wet_allowed") : controls.index("auto climate_wet_assist_allowed")
-    ]
-    assert "direct_wet_stress_override" not in crop_block
-    assert "direct_wet_window_open" in crop_block
-
-    climate_block = controls[
-        controls.index("auto climate_wet_assist_allowed") : controls.index("const bool south_crop_wet_allowed")
-    ]
-    assert "direct_wet_window_open" not in climate_block
-    assert "direct_wet_min_temp_f" not in climate_block
-    assert "direct_wet_gate_enabled" not in climate_block
-    assert "return climate_wet_assist_safety_ok;" in climate_block
-    assert "climate_wet_assist_safety_ok" in climate_block
-
-    block_reason = controls[
-        controls.index("} else if(!any_mister_wet_allowed)") : controls.index("} else if(irrigation_block)")
-    ]
-    climate_reason = block_reason[
-        block_reason.index("if(climate_wet_assist_demand)") : block_reason.index(
-            "} else if(!id(direct_wet_gate_enabled))"
-        )
-    ]
-    assert "if(climate_wet_assist_demand)" in block_reason
-    assert "direct_wet_window" not in climate_reason
-    assert 'snprintf(moisture_block_reason, sizeof(moisture_block_reason), "dew_margin")' in block_reason
-    assert 'snprintf(moisture_block_reason, sizeof(moisture_block_reason), "direct_wet_time_invalid")' in block_reason
-    assert block_reason.index("if(climate_wet_assist_demand)") < block_reason.index("direct_wet_min_temp_f")
+    assert "const bool climate_wet_assist_safety_ok" in controls
+    assert "climate_wet_assist_permitted(sensor_in, setpts)" in controls
+    assert "const WetTopologyPolicy climate_topology{};" in controls
+    assert "WetCommandOrigin::CLIMATE_VPD" in controls
+    assert "climate_wet_resolution.relay == WetRelay::CENTER_MISTER" in controls
+    assert "const bool south_wet_allowed = false;" in controls
+    assert "const bool west_wet_allowed = false;" in controls
+    assert "const bool center_wet_allowed = climate_wet_assist_demand" in controls
+    assert "auto crop_direct_wet_allowed" not in controls
+    assert "direct_wet_window_open" not in controls
 
     watchdog = controls[
         controls.index("auto direct_wet_relay_watchdog") : controls.index("direct_wet_relay_watchdog();")
     ]
-    for gate in (
-        "if(!south_wet_allowed)",
-        "if(!south_crop_wet_allowed)",
-        "if(!west_wet_allowed)",
-        "if(!west_crop_wet_allowed)",
-        "if(!center_wet_allowed)",
-        "if(!center_crop_wet_allowed)",
+    for forced_off in (
+        "id(south_wall_mister).turn_off();",
+        "id(west_wall_mister).turn_off();",
+        "id(south_wall_mister_fertilized).turn_off();",
+        "id(west_wall_mister_fertilized).turn_off();",
+        "id(center_drips_fertilized).turn_off();",
+        "if(!center_wet_allowed) id(center_mister).turn_off();",
     ):
-        assert gate in watchdog
+        assert forced_off in watchdog
 
 
 def test_mcp_set_tunable_resolves_trigger_ledger_with_oneshot_plan():
@@ -2602,62 +2564,48 @@ def test_fert_master_valve_is_wired_and_interlocked_with_fert_relays():
     fert_master_block = hardware[hardware.index("id: fertilizer_master_valve") :]
     assert "pcf8574: pcf_out_2" in fert_master_block
     assert "number: 1" in fert_master_block
-    assert "Blocked non-controller fert master ON" in fert_master_block
+    assert "if(!id(fert_controller_actuating)" in fert_master_block
+    assert "!id(wall_feed_commissioning_ready)" in fert_master_block
+    assert "id(wall_feed_stage) != static_cast<int>(WallFeedStage::FEED)" in fert_master_block
+    assert "id(wall_feed_claim_revision) != id(wall_commissioning_revision)" in fert_master_block
+    assert "Blocked uncommissioned/non-sequenced fert master ON" in fert_master_block
     assert "FERT MASTER manual-off corrected while fert relay active" in fert_master_block
     assert '"valve___fert__master": "fert_master_valve"' in entity_map
 
-    for relay_id, relay_name in (
-        ("west_wall_mister_fertilized", "west fert-mister"),
-        ("south_wall_mister_fertilized", "south fert-mister"),
-        ("center_drips_fertilized", "center fert-drip"),
-        ("wall_drips_fertilized", "wall fert-drip"),
+    for relay_id, disabled_path in (
+        ("west_wall_mister_fertilized", "west fertilizer"),
+        ("south_wall_mister_fertilized", "south fertilizer"),
+        ("center_drips_fertilized", "center fertilizer"),
     ):
         relay_start = hardware.index(f"id: {relay_id}")
         relay_end = hardware.find("\n  - platform: gpio", relay_start + 1)
         relay_block = hardware[relay_start : relay_end if relay_end != -1 else len(hardware)]
-        assert "if(!id(fert_controller_actuating))" in relay_block
-        assert f"Blocked non-controller {relay_name} relay ON" in relay_block
-        assert f"FERT MASTER opened by {relay_name} relay" in relay_block
-        assert relay_block.index("if(!id(fert_controller_actuating))") < relay_block.index("FERT MASTER opened")
+        assert f"id({relay_id}).turn_off();" in relay_block
+        assert f"Blocked disabled {disabled_path} path" in relay_block
+        assert "turn_on();" not in relay_block
 
-    assert "auto fert_relay_active = [&]() -> bool" in controls
-    for relay_id in (
-        "south_wall_mister_fertilized",
-        "west_wall_mister_fertilized",
-        "wall_drips_fertilized",
-        "center_drips_fertilized",
-    ):
-        assert f"id({relay_id}).state" in controls
+    wall_start = hardware.index("id: wall_drips_fertilized")
+    wall_end = hardware.index("id: fertilizer_master_valve", wall_start)
+    wall_block = hardware[wall_start:wall_end]
+    assert "if(!id(fert_controller_actuating)" in wall_block
+    assert "!id(wall_feed_commissioning_ready)" in wall_block
+    assert "WallFeedStage::FEED" in wall_block
+    assert "Blocked uncommissioned/non-sequenced wall fertilizer relay ON" in wall_block
+    assert "FERT MASTER opened by wall fert-drip relay" in wall_block
 
-    job_start = controls[
-        controls.index("// Open the fert master before any fertilized drip/mister relay.") : controls.index(
-            'sync_fert_master("job-start")'
-        )
-    ]
-    assert "if(is_fert) {" in job_start
-    assert "id(fert_controller_actuating) = true;" in job_start
-    assert "if(!id(fertilizer_master_valve).state) id(fertilizer_master_valve).turn_on();" in job_start
-    assert "if(is_fert) id(fert_controller_actuating) = false;" in job_start
-    for fert_turn_on in (
-        "case 2: id(wall_drips_fertilized).turn_on();",
-        "case 4: id(center_drips_fertilized).turn_on();",
-        "case 7: id(south_wall_mister_fertilized).turn_on();",
-        "case 8: id(west_wall_mister_fertilized).turn_on();",
-    ):
-        assert fert_turn_on in job_start
-        assert job_start.index("id(fert_controller_actuating) = true;") < job_start.index(fert_turn_on)
-        assert job_start.index(fert_turn_on) < job_start.index("id(fert_controller_actuating) = false;")
-
-    assert 'sync_fert_master("watchdog")' in controls
-    assert 'sync_fert_master("job-start")' in controls
-    # FRT-6/FRT-7: the post-feed clean flush is relocated to fire AFTER a
-    # post-feed absorption hold (irrig_state 11). The fert master is therefore
-    # closed at "fert-done-before-hold" (was "fert-done-before-flush"), and the
-    # hold path resyncs at "hold-done" before either the relocated flush runs or
-    # the cycle finalizes.
-    assert 'sync_fert_master("fert-done-before-hold")' in controls
-    assert 'sync_fert_master("hold-done")' in controls
-    assert 'sync_fert_master("flush-done")' in controls
+    feed_start = controls.index('ESP_LOGI("irrig", "WALL FEED ms=%u"')
+    feed_block = controls[controls.rfind("if(id(irrig_state) == 5)", 0, feed_start) : feed_start]
+    assert feed_block.index("id(fertilizer_master_valve).turn_on();") < feed_block.index(
+        "id(wall_drips_fertilized).turn_on();"
+    )
+    flush_start = controls.index('ESP_LOGI("irrig", "WALL IMMEDIATE CLEAN FLUSH')
+    flush_block = controls[controls.rfind("} else if(id(irrig_state) == 6)", 0, flush_start) : flush_start]
+    assert flush_block.index("id(wall_drips_fertilized).turn_off();") < flush_block.index(
+        "id(wall_drips).turn_on();"
+    )
+    assert flush_block.index("id(fertilizer_master_valve).turn_off();") < flush_block.index(
+        "id(wall_drips).turn_on();"
+    )
 
 
 def test_clean_water_relays_reject_direct_on_and_keep_controller_paths():
@@ -2669,67 +2617,51 @@ def test_clean_water_relays_reject_direct_on_and_keep_controller_paths():
     assert "id: water_controller_actuating" in globals_yaml
     assert "reject direct HA/manual clean-water actuation" in globals_yaml
 
-    for relay_id, relay_name in (
-        ("west_wall_mister", "west clean-mister"),
-        ("south_wall_mister", "south clean-mister"),
-        ("wall_drips", "wall clean-drip"),
-        ("center_mister", "center clean-mister"),
-        ("center_drips", "center clean-drip"),
+    for relay_id, relay_name, enable_id in (
+        ("west_wall_mister", "west clean-mister", "irrig_west_enabled"),
+        ("south_wall_mister", "south clean-mister", "irrig_south_enabled"),
+        ("wall_drips", "wall clean-drip", "irrig_wall_enabled"),
+        ("center_drips", "center clean-drip", "irrig_center_enabled"),
     ):
         relay_start = hardware.index(f"\n    id: {relay_id}\n")
         relay_end = hardware.find("\n  - platform: gpio", relay_start + 1)
         relay_block = hardware[relay_start : relay_end if relay_end != -1 else len(hardware)]
-        assert "if(!id(water_controller_actuating))" in relay_block
+        assert "!id(water_controller_actuating)" in relay_block
+        assert f"!id({enable_id})" in relay_block
         assert f"id({relay_id}).turn_off();" in relay_block
         assert f"Blocked non-controller {relay_name} relay ON" in relay_block
 
-    climate_zone_start = controls.index("auto turn_on_zone =")
-    climate_zone_end = controls.index("auto turn_off_all_misters", climate_zone_start)
-    climate_zone_block = controls[climate_zone_start:climate_zone_end]
-    assert "id(water_controller_actuating) = true;" in climate_zone_block
-    assert "id(water_controller_actuating) = false;" in climate_zone_block
-    for relay_turn_on in (
-        "id(south_wall_mister).turn_on();",
-        "id(west_wall_mister).turn_on();",
-        "id(center_mister).turn_on();",
-    ):
-        assert relay_turn_on in climate_zone_block
-        assert climate_zone_block.index("id(water_controller_actuating) = true;") < climate_zone_block.index(
-            relay_turn_on
-        )
-        assert climate_zone_block.index(relay_turn_on) < climate_zone_block.index(
-            "id(water_controller_actuating) = false;"
-        )
+    center_start = hardware.index("id: center_mister")
+    center_end = hardware.index("id: center_drips_fertilized", center_start)
+    center_block = hardware[center_start:center_end]
+    assert "!id(climate_wet_controller_actuating)" in center_block
+    assert "id(irrig_state) != 0" in center_block
+    assert "id(fertilizer_master_valve).state" in center_block
+    assert "Blocked non-climate center-mister relay ON" in center_block
 
-    job_start = controls[
-        controls.index("// Open the fert master before any fertilized drip/mister relay.") : controls.index(
-            'sync_fert_master("job-start")'
-        )
-    ]
-    assert "id(water_controller_actuating) = true;" in job_start
-    assert "id(water_controller_actuating) = false;" in job_start
-    for relay_turn_on in (
-        "case 1: id(wall_drips).turn_on();",
-        "case 3: id(center_drips).turn_on();",
-    ):
-        assert relay_turn_on in job_start
-        assert job_start.index("id(water_controller_actuating) = true;") < job_start.index(relay_turn_on)
-        assert job_start.index(relay_turn_on) < job_start.index("id(water_controller_actuating) = false;")
+    climate_on = controls[controls.index("auto turn_on_zone =") : controls.index("auto turn_off_all_misters")]
+    assert "id(climate_wet_controller_actuating) = true;" in climate_on
+    assert "id(center_mister).turn_on();" in climate_on
+    assert "id(south_wall_mister).turn_on();" not in climate_on
+    assert "id(west_wall_mister).turn_on();" not in climate_on
 
-    flush_start = controls.index("// Flush is a separate rising edge on the matching clean relay")
-    flush_end = controls.index("const char* flush_name", flush_start)
-    flush_block = controls[flush_start:flush_end]
-    assert "id(water_controller_actuating) = true;" in flush_block
-    assert "id(water_controller_actuating) = false;" in flush_block
-    for relay_turn_on in (
-        "id(south_wall_mister).turn_on();",
-        "id(west_wall_mister).turn_on();",
-        "id(center_drips).turn_on();",
-        "id(wall_drips).turn_on();",
-    ):
-        assert relay_turn_on in flush_block
-        assert flush_block.index("id(water_controller_actuating) = true;") < flush_block.index(relay_turn_on)
-        assert flush_block.index(relay_turn_on) < flush_block.index("id(water_controller_actuating) = false;")
+    weekly_start = controls.index("WALL PREWET claim_day")
+    weekly_block = controls[controls.rfind("persist_weekly_and_sync(claimed", 0, weekly_start) : weekly_start]
+    assert weekly_block.index("id(water_controller_actuating) = true;") < weekly_block.index(
+        "id(wall_drips).turn_on();"
+    )
+    assert weekly_block.index("id(wall_drips).turn_on();") < weekly_block.index(
+        "id(water_controller_actuating) = false;"
+    )
+
+    explicit_start = controls.index("// Explicit clean irrigation remains represented")
+    explicit_block = controls[explicit_start : controls.index("EXPLICIT CLEAN COMPLETE", explicit_start)]
+    assert "WetCommandOrigin::EXPLICIT_IRRIGATION" in explicit_block
+    assert "WetChemistry::CLEAN" in explicit_block
+    assert "id(wall_drips).turn_on();" in explicit_block
+    assert "id(center_drips).turn_on();" in explicit_block
+    assert "id(south_wall_mister).turn_on();" not in explicit_block
+    assert "id(west_wall_mister).turn_on();" not in explicit_block
 
     manual_buttons = tunables_yaml[tunables_yaml.index("# ─── IRRIGATION MANUAL TRIGGER BUTTONS") :]
     assert ".turn_on()" not in manual_buttons
@@ -2747,7 +2679,7 @@ def test_visible_gpio_relays_are_internal_or_controller_guarded():
         if "name: " not in block:
             continue
         assert "on_turn_on:" in block, f"{id_line} is visible but has no turn-on guard"
-        assert "Blocked non-controller" in block, f"{id_line} is visible but does not block direct ON"
+        assert "Blocked " in block, f"{id_line} is visible but does not block direct ON"
         assert ".turn_off();" in block, f"{id_line} guard does not force relay OFF"
 
 
@@ -2793,28 +2725,23 @@ def test_irrigation_schedule_persists_and_is_readbacked():
     assert "id: sw_irrig_center_enabled" in tunables_yaml
     center_switch = tunables_yaml[tunables_yaml.index("id: sw_irrig_center_enabled") :]
     center_switch = center_switch[: center_switch.index("  # Weather skip enable")]
-    assert "restore_mode: RESTORE_DEFAULT_ON" in center_switch
+    assert "restore_mode: RESTORE_DEFAULT_OFF" in center_switch
 
 
-def test_irrigation_scheduler_serializes_same_minute_zone_starts():
+def test_irrigation_scheduler_serializes_weekly_feed_and_explicit_clean_starts():
     controls = Path("firmware/greenhouse/controls.yaml").read_text()
     schedule_check = "if(id(irrig_state) == 0 && id(irrig_queue) == 0 &&"
-    dequeue = "if(id(irrig_state) == 0 && id(irrig_queue) != 0){"
+    dequeue = "if(id(irrig_state) == 0 && id(irrig_queue) != 0) {"
     assert schedule_check in controls
     assert dequeue in controls
     assert controls.index(schedule_check) < controls.index(dequeue)
-    assert "id(irrig_queue) |= do_fert ? (2 | 16 | 32) : 1;" in controls
-    assert "id(irrig_queue) |= do_fert ? 8 : 4;" in controls
+    assert "id(irrig_queue) &= (1 | 4);" in controls
     for needle in (
-        "if     (id(irrig_queue) & 1){ job = 1; bit = 1; }",
-        "else if(id(irrig_queue) & 2){ job = 2; bit = 2; }",
-        "else if(id(irrig_queue) & 16){ job = 7; bit = 16; }",
-        "else if(id(irrig_queue) & 32){ job = 8; bit = 32; }",
-        "else if(id(irrig_queue) & 4){ job = 3; bit = 4; }",
-        "else if(id(irrig_queue) & 8){ job = 4; bit = 8; }",
+        "if(id(irrig_queue) & 1) { job = 1; bit = 1; zone = WetZone::WALL_DRIP; }",
+        "else if(id(irrig_queue) & 4) { job = 2; bit = 4; zone = WetZone::CENTER_DRIP; }",
     ):
         assert needle in controls
-    assert controls.index("id(center_mister).turn_off();") < controls.index("switch(job){")
+    assert "return;  // weekly owner excludes every explicit clean writer" in controls
     assert "const bool irrigation_water_conflict = id(irrig_state) > 0;" in controls
     assert "bool irrigation_block = irrigation_water_conflict;" in controls
     assert "|| irrigation_block" in controls
@@ -2868,13 +2795,14 @@ def test_leak_detected_locks_water_actuators():
     assert fog_block.index("leak_block") < fog_block.index("id(fog_rly)->state")
 
     irrigation_start = controls.index("auto turn_off_all_irrigation")
-    irrigation_end = controls.index("// \u2500\u2500 Schedule check", irrigation_start)
+    irrigation_end = controls.index("// Claim at most once each seven-day interval", irrigation_start)
     irrigation_block = controls[irrigation_start:irrigation_end]
     assert "id(center_mister).turn_off();" in irrigation_block
-    assert "if(leak_block)" in irrigation_block
+    assert 'if(leak_block) { cancel_all("leak"); return; }' in irrigation_block
     assert "id(irrig_queue) = 0;" in irrigation_block
-    assert 'sync_fert_master("leak_lock")' in irrigation_block
-    assert "STOPPED by leak_detected" in irrigation_block
+    assert "id(fertilizer_master_valve).turn_off();" in irrigation_block
+    assert "persist_weekly_and_sync(cancelled, 2)" in irrigation_block
+    assert "STOPPED fail-closed" in irrigation_block
 
 
 def test_occupancy_inhibit_is_final_fog_force_off():

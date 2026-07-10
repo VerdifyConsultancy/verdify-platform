@@ -6,6 +6,7 @@
  */
 
 #include "greenhouse_logic.h"
+#include "irrigation_policy.h"
 #include "invariants.h"
 #include <cstdio>
 #include <cstring>
@@ -3803,6 +3804,95 @@ TEST(estimator_held_gain_selects_vent_plus_heat_hold_on_night_numbers) {
     PASS();
 }
 
+TEST(estimator_held_gain_is_solar_night_only) {
+    auto sp = hold_dehum_setpoints(true);
+    auto in = hold_dehum_night_inputs();
+    ASSERT_TRUE(is_night_phase(in));
+    auto night = estimate_moisture_exchange(in, sp);
+    ASSERT_TRUE(night.hold_required);
+    ASSERT_TRUE(std::string(night.reason) == "vent_plus_heat_hold");
+
+    set_solar_day(in, 12);  // same physics, device solar day
+    ASSERT_FALSE(is_night_phase(in));
+    auto day = estimate_moisture_exchange(in, sp);
+    ASSERT_FALSE(day.hold_required);
+    ASSERT_TRUE(day.action != MX_VENT_DEHUM);
+    ASSERT_TRUE(std::string(day.reason) == "heat_assist");
+    PASS();
+}
+
+TEST(estimator_flag_off_is_solar_phase_zero_divergence) {
+    auto sp = hold_dehum_setpoints(false);
+    auto night_in = hold_dehum_night_inputs();
+    auto day_in = night_in;
+    set_solar_day(day_in, 12);
+
+    const auto night = estimate_moisture_exchange(night_in, sp);
+    const auto day = estimate_moisture_exchange(day_in, sp);
+    ASSERT_EQ(night.action, day.action);
+    ASSERT_EQ(night.heat_assist_corun, day.heat_assist_corun);
+    ASSERT_EQ(night.hold_required, day.hold_required);
+    ASSERT_EQ(night.vent_vpd_gain_kpa, day.vent_vpd_gain_kpa);
+    ASSERT_EQ(night.vent_held_vpd_gain_kpa, day.vent_held_vpd_gain_kpa);
+    ASSERT_EQ(night.heat_vpd_gain_kpa, day.heat_vpd_gain_kpa);
+    ASSERT_EQ(night.outdoor_fresh, day.outdoor_fresh);
+    ASSERT_EQ(night.vent_overcools, day.vent_overcools);
+    ASSERT_TRUE(std::string(night.reason) == std::string(day.reason));
+    PASS();
+}
+
+TEST(estimator_daytime_cooled_vent_dehum_remains_available) {
+    auto sp = hold_dehum_setpoints(true);
+    auto in = make_inputs(68.0f, 0.50f, 82.0f);
+    set_solar_day(in, 12);
+    in.outdoor_temp_f = 66.0f;
+    in.outdoor_rh_pct = 35.0f;
+    in.outdoor_data_age_s = 10;
+
+    const auto mx = estimate_moisture_exchange(in, sp);
+    ASSERT_EQ(mx.action, MX_VENT_DEHUM);
+    ASSERT_FALSE(mx.hold_required);  // ordinary cooled candidate, not the extension
+    ASSERT_FALSE(mx.vent_overcools);
+    auto s = initial_state();
+    const Mode mode = determine_mode(in, sp, s, 60000);
+    ASSERT_EQ(mode, DEHUM_VENT);
+    const auto out = resolve_equipment(mode, in, sp, s, true);
+    ASSERT_TRUE(out.vent);
+    ASSERT_FALSE(out.heat2);
+    PASS();
+}
+
+TEST(hold_dehum_deadmits_on_exact_sunrise_tick) {
+    auto sp = hold_dehum_setpoints(true);
+    auto in = hold_dehum_night_inputs();
+    const SolarTimes solar = compute_greenhouse_solar_times(172, -360);
+    in.now_minute = solar.sunrise_min - 1;
+    in.solar_phase = solar_phase(in.now_minute, solar);
+    ASSERT_TRUE(is_night_phase(in));
+
+    auto s = initial_state();
+    // Model an already-running held response one tick before sunrise; entry
+    // re-hysteresis is intentionally irrelevant to the sunrise exit contract.
+    s.mode = DEHUM_VENT;
+    s.mode_prev = DEHUM_VENT;
+    Mode before = determine_mode(in, sp, s, 60000);
+    ASSERT_EQ(before, DEHUM_VENT);
+    ASSERT_TRUE(s.dehum_heat_assist_active);
+
+    in.now_minute = solar.sunrise_min;
+    in.local_hour = solar.sunrise_min / 60;
+    in.solar_phase = solar_phase(in.now_minute, solar);
+    ASSERT_FALSE(is_night_phase(in));
+    const auto mx = estimate_moisture_exchange(in, sp);
+    ASSERT_FALSE(mx.hold_required);
+    Mode sunrise = determine_mode(in, sp, s, 5000);
+    ASSERT_TRUE(sunrise != DEHUM_VENT);
+    const auto out = resolve_equipment(sunrise, in, sp, s, true);
+    ASSERT_FALSE(out.vent);
+    ASSERT_FALSE(out.heat2);
+    PASS();
+}
+
 TEST(estimator_flag_off_is_legacy_and_still_reports_held_gain) {
     // Flag OFF must degenerate to the exact pre-#410 ladder: the cooled vent
     // candidate fails, heat helps -> MX_HEAT_ASSIST, never hold_required. The
@@ -5133,6 +5223,241 @@ TEST(f7_vpd_min_safe_rescue_heats_on_cold_day) {
     auto out = resolve_equipment(m, in, sp, s, true);
     ASSERT_TRUE(out.heat1);
     ASSERT_FALSE(out.vent);
+    PASS();
+}
+
+// ── Software-recovery irrigation topology / commissioned wall sequence ─────
+static WallFeedCommissioning ready_wall_commissioning() {
+    return {
+        .armed = true,
+        .revision = 7,
+        .evidence_mask = WALL_COMMISSIONING_REQUIRED_MASK,
+        .now_epoch_s = 1'800'000'000u,
+        .commissioning_valid_until_epoch_s = 1'800'086'400u,
+        .calibrated_flow_lpm = 10.0f,
+        .flow_valid_until_epoch_s = 1'800'086'400u,
+        .prewet_liters = 2.0f,
+        .feed_liters = 1.0f,
+        .flush_liters = 3.0f,
+    };
+}
+
+TEST(irrigation_climate_origins_always_resolve_center_mist_only) {
+    WetTopologyPolicy policy{};
+    for (WetZone stale_hint : {
+            WetZone::NONE, WetZone::CENTER_MIST, WetZone::CENTER_DRIP,
+            WetZone::SOUTH_MIST, WetZone::WEST_MIST, WetZone::WALL_DRIP}) {
+        const auto resolution = resolve_wet_request(
+            {WetCommandOrigin::CLIMATE_VPD, stale_hint, WetChemistry::CLEAN}, policy);
+        ASSERT_TRUE(resolution.admitted);
+        ASSERT_EQ(resolution.relay, WetRelay::CENTER_MISTER);
+    }
+    const auto fertilizer = resolve_wet_request(
+        {WetCommandOrigin::CLIMATE_VPD, WetZone::CENTER_MIST, WetChemistry::FERTILIZER}, policy);
+    ASSERT_FALSE(fertilizer.admitted);
+    ASSERT_EQ(fertilizer.relay, WetRelay::NONE);
+    PASS();
+}
+
+TEST(irrigation_center_mist_rejects_every_non_climate_origin) {
+    WetTopologyPolicy policy{true, true, true, true, true};
+    for (WetCommandOrigin origin : {
+            WetCommandOrigin::EXPLICIT_IRRIGATION,
+            WetCommandOrigin::AUTOMATIC_WEEKLY_WALL_FEED,
+            WetCommandOrigin::MANUAL_FEED,
+            WetCommandOrigin::PLANNER_FEED,
+            WetCommandOrigin::LEGACY_SCHEDULE,
+            WetCommandOrigin::RETRY_REPLAY,
+            WetCommandOrigin::REPAIR}) {
+        for (WetChemistry chemistry : {WetChemistry::CLEAN, WetChemistry::FERTILIZER}) {
+            const auto resolution = resolve_wet_request(
+                {origin, WetZone::CENTER_MIST, chemistry}, policy);
+            ASSERT_FALSE(resolution.admitted);
+            ASSERT_EQ(resolution.relay, WetRelay::NONE);
+        }
+    }
+    PASS();
+}
+
+TEST(irrigation_dormant_clean_paths_are_disabled_by_default_and_explicit_when_enabled) {
+    WetTopologyPolicy disabled{};
+    for (WetZone zone : {WetZone::CENTER_DRIP, WetZone::SOUTH_MIST, WetZone::WEST_MIST}) {
+        const auto resolution = resolve_wet_request(
+            {WetCommandOrigin::EXPLICIT_IRRIGATION, zone, WetChemistry::CLEAN}, disabled);
+        ASSERT_FALSE(resolution.admitted);
+    }
+
+    WetTopologyPolicy enabled{true, true, true, false, false};
+    ASSERT_EQ(resolve_wet_request(
+        {WetCommandOrigin::EXPLICIT_IRRIGATION, WetZone::CENTER_DRIP, WetChemistry::CLEAN}, enabled).relay,
+        WetRelay::CENTER_DRIP);
+    ASSERT_EQ(resolve_wet_request(
+        {WetCommandOrigin::EXPLICIT_IRRIGATION, WetZone::SOUTH_MIST, WetChemistry::CLEAN}, enabled).relay,
+        WetRelay::SOUTH_MISTER);
+    ASSERT_EQ(resolve_wet_request(
+        {WetCommandOrigin::EXPLICIT_IRRIGATION, WetZone::WEST_MIST, WetChemistry::CLEAN}, enabled).relay,
+        WetRelay::WEST_MISTER);
+    PASS();
+}
+
+TEST(irrigation_fertilizer_is_wall_only_commissioned_and_exact_origin) {
+    WetTopologyPolicy commissioned{false, false, false, true, true};
+    for (WetZone forbidden : {
+            WetZone::CENTER_MIST, WetZone::CENTER_DRIP,
+            WetZone::SOUTH_MIST, WetZone::WEST_MIST}) {
+        const auto resolution = resolve_wet_request(
+            {WetCommandOrigin::AUTOMATIC_WEEKLY_WALL_FEED, forbidden, WetChemistry::FERTILIZER},
+            commissioned);
+        ASSERT_FALSE(resolution.admitted);
+    }
+    for (WetCommandOrigin forbidden_origin : {
+            WetCommandOrigin::EXPLICIT_IRRIGATION,
+            WetCommandOrigin::MANUAL_FEED,
+            WetCommandOrigin::PLANNER_FEED,
+            WetCommandOrigin::LEGACY_SCHEDULE,
+            WetCommandOrigin::RETRY_REPLAY,
+            WetCommandOrigin::REPAIR}) {
+        const auto resolution = resolve_wet_request(
+            {forbidden_origin, WetZone::WALL_DRIP, WetChemistry::FERTILIZER}, commissioned);
+        ASSERT_FALSE(resolution.admitted);
+    }
+    const auto allowed = resolve_wet_request(
+        {WetCommandOrigin::AUTOMATIC_WEEKLY_WALL_FEED, WetZone::WALL_DRIP, WetChemistry::FERTILIZER},
+        commissioned);
+    ASSERT_TRUE(allowed.admitted);
+    ASSERT_EQ(allowed.relay, WetRelay::WALL_DRIP_FERTILIZED);
+
+    commissioned.wall_fertigation_commissioned = false;
+    ASSERT_FALSE(resolve_wet_request(
+        {WetCommandOrigin::AUTOMATIC_WEEKLY_WALL_FEED, WetZone::WALL_DRIP, WetChemistry::FERTILIZER},
+        commissioned).admitted);
+    PASS();
+}
+
+TEST(irrigation_fixed_1030_legacy_schedule_is_ineligible) {
+    WetTopologyPolicy all_enabled{true, true, true, true, true};
+    for (WetZone zone : {
+            WetZone::CENTER_MIST, WetZone::CENTER_DRIP, WetZone::SOUTH_MIST,
+            WetZone::WEST_MIST, WetZone::WALL_DRIP}) {
+        for (WetChemistry chemistry : {WetChemistry::CLEAN, WetChemistry::FERTILIZER}) {
+            const auto resolution = resolve_wet_request(
+                {WetCommandOrigin::LEGACY_SCHEDULE, zone, chemistry}, all_enabled);
+            ASSERT_FALSE(resolution.admitted);
+        }
+    }
+    PASS();
+}
+
+TEST(irrigation_commissioning_converts_positive_liters_to_bounded_durations) {
+    const auto commissioning = ready_wall_commissioning();
+    const auto durations = validate_wall_feed_commissioning(commissioning);
+    ASSERT_TRUE(durations.valid);
+    ASSERT_EQ(durations.status, WallFeedCommissioningStatus::READY);
+    ASSERT_EQ(durations.prewet_ms, 12'000u);
+    ASSERT_EQ(durations.feed_ms, 6'000u);
+    ASSERT_EQ(durations.flush_ms, 18'000u);
+    PASS();
+}
+
+TEST(irrigation_commissioning_fails_closed_for_missing_stale_zero_invalid_or_unbounded_inputs) {
+    {
+        auto c = ready_wall_commissioning(); c.armed = false;
+        ASSERT_EQ(validate_wall_feed_commissioning(c).status, WallFeedCommissioningStatus::NOT_ARMED);
+    }
+    {
+        auto c = ready_wall_commissioning(); c.revision = 0;
+        ASSERT_EQ(validate_wall_feed_commissioning(c).status, WallFeedCommissioningStatus::MISSING_REVISION);
+    }
+    {
+        auto c = ready_wall_commissioning(); c.evidence_mask &= ~WALL_PRODUCT_ANALYSIS_VERIFIED;
+        ASSERT_EQ(validate_wall_feed_commissioning(c).status, WallFeedCommissioningStatus::INCOMPLETE_EVIDENCE);
+    }
+    {
+        auto c = ready_wall_commissioning(); c.now_epoch_s = 0;
+        ASSERT_EQ(validate_wall_feed_commissioning(c).status, WallFeedCommissioningStatus::CLOCK_INVALID);
+    }
+    {
+        auto c = ready_wall_commissioning(); c.commissioning_valid_until_epoch_s = c.now_epoch_s;
+        ASSERT_EQ(validate_wall_feed_commissioning(c).status, WallFeedCommissioningStatus::COMMISSIONING_STALE);
+    }
+    for (float invalid_flow : {0.0f, -1.0f, NAN, INFINITY, 101.0f}) {
+        auto c = ready_wall_commissioning(); c.calibrated_flow_lpm = invalid_flow;
+        ASSERT_EQ(validate_wall_feed_commissioning(c).status, WallFeedCommissioningStatus::FLOW_MISSING_OR_INVALID);
+    }
+    {
+        auto c = ready_wall_commissioning(); c.flow_valid_until_epoch_s = c.now_epoch_s;
+        ASSERT_EQ(validate_wall_feed_commissioning(c).status, WallFeedCommissioningStatus::FLOW_STALE);
+    }
+    for (float invalid_volume : {0.0f, -1.0f, NAN, INFINITY}) {
+        auto c = ready_wall_commissioning(); c.feed_liters = invalid_volume;
+        ASSERT_EQ(validate_wall_feed_commissioning(c).status, WallFeedCommissioningStatus::VOLUME_MISSING_OR_INVALID);
+    }
+    {
+        auto c = ready_wall_commissioning(); c.calibrated_flow_lpm = 0.1f; c.flush_liters = 400.0f;
+        ASSERT_EQ(validate_wall_feed_commissioning(c).status, WallFeedCommissioningStatus::DURATION_OUT_OF_BOUNDS);
+    }
+    PASS();
+}
+
+TEST(irrigation_weekly_solar_eligibility_is_restart_missed_window_and_exact_once_safe) {
+    const auto durations = validate_wall_feed_commissioning(ready_wall_commissioning());
+    WeeklyWallFeedState state{};
+    WeeklyWallEligibilityInput input{true, false, 0.25f, 20'000u, 7u};
+    ASSERT_TRUE(weekly_wall_feed_eligible(input, state, durations));
+    state = claim_weekly_wall_feed(input, state, 7u);
+    ASSERT_EQ(state.stage, WallFeedStage::PREWET);
+    ASSERT_FALSE(weekly_wall_feed_eligible(input, state, durations)); // duplicate tick
+
+    auto restored = cancel_interrupted_wall_feed(state, input.solar_day);
+    ASSERT_EQ(restored.stage, WallFeedStage::CANCELLED);
+    ASSERT_EQ(restored.last_terminal_solar_day, input.solar_day);
+    ASSERT_FALSE(weekly_wall_feed_eligible(input, restored, durations)); // restart, same day
+
+    input.solar_day += 6u;
+    ASSERT_FALSE(weekly_wall_feed_eligible(input, restored, durations));
+    input.solar_phase = 1.25f;
+    input.solar_day += 1u;
+    ASSERT_FALSE(weekly_wall_feed_eligible(input, restored, durations)); // due but missed solar window
+    input.solar_phase = 0.10f;
+    input.solar_day += 1u;
+    ASSERT_TRUE(weekly_wall_feed_eligible(input, restored, durations)); // next solar window remains due
+
+    input.solar_day = restored.last_terminal_solar_day - 1u;
+    ASSERT_FALSE(weekly_wall_feed_eligible(input, restored, durations)); // clock regression fails closed
+    PASS();
+}
+
+TEST(irrigation_wall_sequence_is_prewet_feed_fertilizer_off_immediate_clean_flush) {
+    WeeklyWallFeedState state{};
+    WeeklyWallEligibilityInput input{true, false, 0.2f, 30'000u, 7u};
+    state = claim_weekly_wall_feed(input, state, 11u);
+
+    auto relays = wall_feed_relay_intent(state.stage);
+    ASSERT_TRUE(relays.wall_clean);
+    ASSERT_FALSE(relays.wall_fertilized);
+    ASSERT_FALSE(relays.fertilizer_master);
+
+    state = advance_wall_feed_sequence(state, true, false, input.solar_day);
+    ASSERT_EQ(state.stage, WallFeedStage::FEED);
+    relays = wall_feed_relay_intent(state.stage);
+    ASSERT_FALSE(relays.wall_clean);
+    ASSERT_TRUE(relays.wall_fertilized);
+    ASSERT_TRUE(relays.fertilizer_master);
+
+    state = advance_wall_feed_sequence(state, true, false, input.solar_day);
+    ASSERT_EQ(state.stage, WallFeedStage::FLUSH);
+    relays = wall_feed_relay_intent(state.stage);
+    ASSERT_TRUE(relays.wall_clean);             // immediate wall-local flush
+    ASSERT_FALSE(relays.wall_fertilized);       // fertilizer off before flush
+    ASSERT_FALSE(relays.fertilizer_master);     // no 90-minute global hold
+
+    state = advance_wall_feed_sequence(state, true, false, input.solar_day);
+    ASSERT_EQ(state.stage, WallFeedStage::COMPLETE);
+    ASSERT_EQ(state.last_terminal_solar_day, input.solar_day);
+    relays = wall_feed_relay_intent(state.stage);
+    ASSERT_FALSE(relays.wall_clean);
+    ASSERT_FALSE(relays.wall_fertilized);
+    ASSERT_FALSE(relays.fertilizer_master);
     PASS();
 }
 

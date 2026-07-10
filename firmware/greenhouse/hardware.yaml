@@ -405,7 +405,7 @@ switch:
     restore_mode: RESTORE_DEFAULT_OFF
     on_turn_on:
       - lambda: |-
-          if(!id(water_controller_actuating)) {
+          if(!id(water_controller_actuating) || !id(irrig_west_enabled)) {
             id(west_wall_mister).turn_off();
             ESP_LOGE("irrig","Blocked non-controller west clean-mister relay ON");
             return;
@@ -422,15 +422,8 @@ switch:
     restore_mode: RESTORE_DEFAULT_OFF
     on_turn_on:
       - lambda: |-
-          if(!id(fert_controller_actuating)) {
-            id(west_wall_mister_fertilized).turn_off();
-            ESP_LOGE("irrig","Blocked non-controller west fert-mister relay ON");
-            return;
-          }
-          if(!id(fertilizer_master_valve).state) {
-            id(fertilizer_master_valve).turn_on();
-            ESP_LOGW("irrig","FERT MASTER opened by west fert-mister relay");
-          }
+          id(west_wall_mister_fertilized).turn_off();
+          ESP_LOGE("irrig","Blocked disabled west fertilizer path");
     on_turn_off:
       - lambda: |-
           if(!id(south_wall_mister_fertilized).state &&
@@ -451,15 +444,8 @@ switch:
     restore_mode: RESTORE_DEFAULT_OFF
     on_turn_on:
       - lambda: |-
-          if(!id(fert_controller_actuating)) {
-            id(south_wall_mister_fertilized).turn_off();
-            ESP_LOGE("irrig","Blocked non-controller south fert-mister relay ON");
-            return;
-          }
-          if(!id(fertilizer_master_valve).state) {
-            id(fertilizer_master_valve).turn_on();
-            ESP_LOGW("irrig","FERT MASTER opened by south fert-mister relay");
-          }
+          id(south_wall_mister_fertilized).turn_off();
+          ESP_LOGE("irrig","Blocked disabled south fertilizer path");
     on_turn_off:
       - lambda: |-
           if(!id(south_wall_mister_fertilized).state &&
@@ -480,7 +466,7 @@ switch:
     restore_mode: RESTORE_DEFAULT_OFF
     on_turn_on:
       - lambda: |-
-          if(!id(water_controller_actuating)) {
+          if(!id(water_controller_actuating) || !id(irrig_south_enabled)) {
             id(south_wall_mister).turn_off();
             ESP_LOGE("irrig","Blocked non-controller south clean-mister relay ON");
             return;
@@ -497,7 +483,7 @@ switch:
     restore_mode: RESTORE_DEFAULT_OFF
     on_turn_on:
       - lambda: |-
-          if(!id(water_controller_actuating)) {
+          if(!id(water_controller_actuating) || !id(irrig_wall_enabled)) {
             id(wall_drips).turn_off();
             ESP_LOGE("irrig","Blocked non-controller wall clean-drip relay ON");
             return;
@@ -514,9 +500,11 @@ switch:
     restore_mode: RESTORE_DEFAULT_OFF
     on_turn_on:
       - lambda: |-
-          if(!id(water_controller_actuating)) {
+          if(!id(climate_wet_controller_actuating)
+             || id(irrig_state) != 0
+             || id(fertilizer_master_valve).state) {
             id(center_mister).turn_off();
-            ESP_LOGE("irrig","Blocked non-controller center clean-mister relay ON");
+            ESP_LOGE("irrig","Blocked non-climate center-mister relay ON");
             return;
           }
 
@@ -531,15 +519,8 @@ switch:
     restore_mode: RESTORE_DEFAULT_OFF
     on_turn_on:
       - lambda: |-
-          if(!id(fert_controller_actuating)) {
-            id(center_drips_fertilized).turn_off();
-            ESP_LOGE("irrig","Blocked non-controller center fert-drip relay ON");
-            return;
-          }
-          if(!id(fertilizer_master_valve).state) {
-            id(fertilizer_master_valve).turn_on();
-            ESP_LOGW("irrig","FERT MASTER opened by center fert-drip relay");
-          }
+          id(center_drips_fertilized).turn_off();
+          ESP_LOGE("irrig","Blocked disabled center fertilizer path");
     on_turn_off:
       - lambda: |-
           if(!id(south_wall_mister_fertilized).state &&
@@ -560,7 +541,7 @@ switch:
     restore_mode: RESTORE_DEFAULT_OFF
     on_turn_on:
       - lambda: |-
-          if(!id(water_controller_actuating)) {
+          if(!id(water_controller_actuating) || !id(irrig_center_enabled)) {
             id(center_drips).turn_off();
             ESP_LOGE("irrig","Blocked non-controller center clean-drip relay ON");
             return;
@@ -577,9 +558,12 @@ switch:
     restore_mode: RESTORE_DEFAULT_OFF
     on_turn_on:
       - lambda: |-
-          if(!id(fert_controller_actuating)) {
+          if(!id(fert_controller_actuating)
+             || !id(wall_feed_commissioning_ready)
+             || id(wall_feed_stage) != static_cast<int>(WallFeedStage::FEED)
+             || id(wall_feed_claim_revision) != id(wall_commissioning_revision)) {
             id(wall_drips_fertilized).turn_off();
-            ESP_LOGE("irrig","Blocked non-controller wall fert-drip relay ON");
+            ESP_LOGE("irrig","Blocked uncommissioned/non-sequenced wall fertilizer relay ON");
             return;
           }
           if(!id(fertilizer_master_valve).state) {
@@ -606,16 +590,19 @@ switch:
     restore_mode: RESTORE_DEFAULT_OFF
     on_turn_on:
       - lambda: |-
-          if(!id(fert_controller_actuating)) {
+          if(!id(fert_controller_actuating)
+             || !id(wall_feed_commissioning_ready)
+             || id(wall_feed_stage) != static_cast<int>(WallFeedStage::FEED)
+             || id(wall_feed_claim_revision) != id(wall_commissioning_revision)) {
             id(fertilizer_master_valve).turn_off();
-            ESP_LOGE("irrig","Blocked non-controller fert master ON");
+            ESP_LOGE("irrig","Blocked uncommissioned/non-sequenced fert master ON");
           }
     on_turn_off:
       - lambda: |-
-          if(id(south_wall_mister_fertilized).state ||
-             id(west_wall_mister_fertilized).state ||
-             id(wall_drips_fertilized).state ||
-             id(center_drips_fertilized).state) {
+          if(id(wall_drips_fertilized).state
+             && id(wall_feed_commissioning_ready)
+             && id(wall_feed_stage) == static_cast<int>(WallFeedStage::FEED)
+             && id(wall_feed_claim_revision) == id(wall_commissioning_revision)) {
             id(fert_controller_actuating) = true;
             id(fertilizer_master_valve).turn_on();
             id(fert_controller_actuating) = false;
@@ -665,7 +652,7 @@ switch:
 
 ###############################################################################
 # Firmware-v2 EVIDENCE SURFACE (numeric) — on-chip solar + per-zone bands.
-# Published by controls.yaml every 60s so the dispatcher/DB can verify the
+# Published by controls.yaml every 5 minutes so the dispatcher/DB can verify the
 # new-architecture data is flowing (solar phase, house target/delta, per-zone
 # VPD target/delta). All publish-on-demand (update_interval: never).
 ###############################################################################

@@ -78,6 +78,12 @@ class TestNormalizeTolerance:
         for field in SETTLED_410_FIELDS:
             assert field in out
 
+    def test_exact_device_age_alias_round_trips_without_schema_mutation(self):
+        payload = {**PAYLOAD_410, "outdoor_data_age_s": 4294967295}
+        out = normalize_moisture_exchange_telemetry(payload)
+        assert out["outdoor_data_age_s"] == 4294967295
+        assert MX_ACCEPTED_KEY_ALIASES["outdoor_data_age_s"] == "outdoor_age_s"
+
     def test_missing_410_fields_stay_absent(self):
         """#385-era rows must not grow the #410 keys (absent stays absent)."""
         out = normalize_moisture_exchange_telemetry(dict(PAYLOAD_385))
@@ -219,12 +225,36 @@ class TestKeyAgreementDriftGuards:
         versa the schema stays a superset — absence-tolerant by design)."""
         keys = _firmware_emitted_keys()
         assert keys >= {"action", "reason", "vent_vpd_gain_kpa", "heat_vpd_gain_kpa"}
-        unmodeled = sorted(keys - set(MoistureExchangeTelemetry.model_fields))
+        declared = set(MoistureExchangeTelemetry.model_fields) | set(MX_ACCEPTED_KEY_ALIASES)
+        unmodeled = sorted(keys - declared)
         assert unmodeled == [], (
             f"firmware emits climate_moisture_exchange key(s) {unmodeled} not declared "
             "on verdify_schemas.MoistureExchangeTelemetry — coordinate the contract "
             "(field names for #410 are settled: vent_held_vpd_gain_kpa, hold_required)."
         )
+
+    def test_exact_device_age_fits_fixed_firmware_buffer(self):
+        src = FIRMWARE_CONTROLS.read_text()
+        capacity_match = re.search(r"char\s+moisture_exchange\[(\d+)\]", src)
+        assert capacity_match, "fixed moisture_exchange buffer missing"
+        capacity = int(capacity_match.group(1))
+        assert "\"\\\"outdoor_data_age_s\\\":%u,\"" in src
+        assert "sensor_in.outdoor_data_age_s" in src
+        assert "moisture_exchange_len < 0" in src
+        assert "sizeof(moisture_exchange)" in src
+
+        # Longest current action/reason, uint32 max age, intentionally broad
+        # diagnostic numbers, and the maximum uint32-ms timer rendered in sec.
+        worst_case = (
+            '{"action":"vent_humidify","reason":"vent_plus_heat_hold",'
+            '"vent_vpd_gain_kpa":-999.999,"vent_held_vpd_gain_kpa":-999.999,'
+            '"heat_vpd_gain_kpa":-999.999,"outdoor_fresh":false,'
+            '"outdoor_data_age_s":4294967295,"vent_overcools":false,'
+            '"heat_assist_corun":false,"hold_required":false,'
+            '"heat_assist_active":false,"heat_assist_timer_s":4294967}'
+        )
+        assert len(worst_case) == 331
+        assert capacity - (len(worst_case) + 1) >= 52
 
     def test_settled_410_names_everywhere(self):
         """The two #410 fields keep their settled names in every consumer."""

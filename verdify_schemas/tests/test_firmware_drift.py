@@ -440,3 +440,84 @@ def test_override_event_schema_matches_firmware_published_tags():
         "verdify_schemas.telemetry.OVERRIDE_EVENT_TYPES must match firmware-published override tags. "
         f"expected={sorted(expected_tags)}, got={sorted(OVERRIDE_EVENT_TYPES)}"
     )
+
+
+def test_irrigation_queue_callers_match_clean_route_matrix():
+    """Queue bit identities are a firmware wire contract, not scratch state.
+
+    Only the two actual clean buttons may write the queue. This prevents a
+    removed fertilizer button or unknown legacy bit from being reinterpreted as
+    a clean relay request when the scheduler changes.
+    """
+    tunables = (REPO_ROOT / "firmware" / "greenhouse" / "tunables.yaml").read_text()
+    controls = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
+
+    queue_writes = re.findall(r"id\(irrig_queue\)\s*\|=\s*([^;]+);", tunables)
+    assert queue_writes == ["1", "4"], f"unexpected irrigation queue callers: {queue_writes}"
+    assert "id: btn_wall_clean" in tunables
+    assert "id: btn_center_clean" in tunables
+    for retired_button in (
+        "btn_wall_fert",
+        "btn_center_fert",
+        "btn_south_mister_fert",
+        "btn_west_mister_fert",
+    ):
+        assert f"id: {retired_button}" not in tunables
+
+    assert "id(irrig_queue) &= (1 | 4);" in controls
+    assert "if(id(irrig_queue) & 1) { job = 1; bit = 1; zone = WetZone::WALL_DRIP; }" in controls
+    assert "else if(id(irrig_queue) & 4) { job = 2; bit = 4; zone = WetZone::CENTER_DRIP; }" in controls
+    for retired_bit in (2, 8, 16, 32, 64, 128):
+        assert f"id(irrig_queue) & {retired_bit}" not in controls
+
+
+def test_weekly_wall_claim_syncs_before_first_relay_write():
+    """The exact-once claim must survive a reset before water can open."""
+    controls = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
+
+    helper_start = controls.index("auto persist_weekly_and_sync")
+    helper_end = controls.index("auto cancel_all", helper_start)
+    helper = controls[helper_start:helper_end]
+    assert helper.index("id(wall_feed_stage)") < helper.index("global_preferences->sync()")
+
+    claim_start = controls.index("auto claimed = claim_weekly_wall_feed")
+    claim_end = controls.index("// Advance the wall sequence", claim_start)
+    claim = controls[claim_start:claim_end]
+    assert claim.index("claim_weekly_wall_feed") < claim.index("persist_weekly_and_sync(claimed, 0)")
+    assert claim.index("persist_weekly_and_sync(claimed, 0)") < claim.index("id(wall_drips).turn_on()")
+    assert "claim persistence sync failed" in claim
+
+    # Every active/terminal transition uses the same sync gate; fertilizer and
+    # flush relay writes only occur after the corresponding call succeeds.
+    assert controls.count("persist_weekly_and_sync(next, 0)") == 2
+    assert "persist_weekly_and_sync(complete, 1)" in controls
+    assert "persist_weekly_and_sync(cancelled, 2)" in controls
+
+
+def test_heap_recovery_coalesces_diagnostics_and_records_loop_high_water():
+    controls = (REPO_ROOT / "firmware" / "greenhouse" / "controls.yaml").read_text()
+    heap_header = (REPO_ROOT / "firmware" / "lib" / "heap_diagnostics.h").read_text()
+    root_yaml = (REPO_ROOT / "firmware" / "greenhouse.yaml").read_text()
+
+    # Continuous strings can vary on every 1 s control tick, but API publication
+    # is capped at 60 s. Slowly varying band evidence is capped at 5 minutes.
+    assert ">= 60000UL" in controls
+    assert ">= 300000UL" in controls
+    assert "if(climate_continuous_diag_due && strcmp(last_climate_moisture_exchange" in controls
+    assert "if (climate_band_diag_due)" in controls
+    assert "climate_diag_republish" not in controls
+    assert "if(++ctl_diag_ctr >= 60)" in controls
+
+    # No extra entity is needed: loop timing and heap fragmentation share one
+    # allocation-free, low-rate log packet after the 15-minute boot transient.
+    assert "gh_record_control_loop_duration_us(micros() - control_loop_started_us);" in controls
+    assert controls.index("gh_record_control_loop_duration_us") < controls.index("App.feed_wdt();")
+    assert "startup_delay: 900s" in controls
+    assert 'ESP_LOGW("heap_profile"' in controls
+    assert "heap_profile: INFO" not in root_yaml
+
+    assert "GH_PRE_OTA_MIN_FREE_HEAP_KB = 32.0f" in heap_header
+    assert "GH_PRE_OTA_MIN_LARGEST_BLOCK_KB = 16.0f" in heap_header
+    assert "GH_CONTROL_LOOP_WARN_US = 250000u" in heap_header
+    assert "gh_take_control_loop_max_us" in heap_header
+    assert "gh_take_control_loop_overrun_count" in heap_header

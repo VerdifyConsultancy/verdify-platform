@@ -78,6 +78,17 @@ ownership:
     - db/schema.sql
     - scripts/export-replay-overrides.sh
     - firmware twin mirrors
+  granted_coordination_paths:
+    - path: tests/test_12_fidelity.py
+      scope: Replace assertions that encode the retired 10:30/non-wall fertilizer scheduler or obsolete relay guards with the approved commissioned wall-only and climate-center policy, preserving negative coverage.
+    - path: verdify_schemas/tests/test_tunable_registry.py
+      scope: Replace assertions that encode the retired 10:30/non-wall fertilizer scheduler or obsolete crop-window climate routes with the approved weekly wall-only and center-only climate topology.
+    - path: verdify_schemas/tests/test_moisture_telemetry.py
+      scope: Add exact-age alias and fixed-buffer compatibility tests for DEC-015; product telemetry schema changes remain coordination-required.
+    - path: tests/test_08_observability.py
+      scope: Update only the primary climate publication assertion for state-change publication plus 60-second continuous and 5-minute band caps; preserve independent ingestor periodic-write proof and unrelated observability assertions.
+    - path: deploy/k8s/components/firmware-twin/src/greenhouse_logic.h
+      scope: Copy canonical firmware/lib/greenhouse_logic.h byte-for-byte after the one-line DEC-014 solar-night predicate so the existing twin sync guard remains exact.
   owned_interfaces:
     - pure relay resolver
     - zone enable/readbacks
