@@ -6,7 +6,7 @@ project_id: verdify-platform
 ledger_id: ledger-verdify-platform-controller
 status: active
 generated_at: '2026-07-03T20:30:00Z'
-updated_at: '2026-07-10T02:28:11Z'
+updated_at: '2026-07-10T02:33:50Z'
 retention:
   source_policy: durable artifacts + GitHub only; no raw session logs copied
   redaction_policy: no secrets/tokens/paths-with-credentials in ledger entries
@@ -3359,6 +3359,57 @@ events:
   data_summary: Resource accounting may now consume transition truth; release-control retains schema application, restart, firmware, and runtime authority.
   redacted_payload_ref: null
   previous_event_id: LEDGER-EVT-0071
+  content_sha256: null
+- id: LEDGER-EVT-0073
+  sequence: 73
+  occurred_at: '2026-07-10T02:33:50Z'
+  event_type: handoff
+  source: controller-loop
+  subject: repository clean-main reconciliation
+  actor:
+    role: controller
+    name: software-recovery-root-019f4826
+  session_id: software-recovery-root-019f4826
+  correlation:
+    trace_id: null
+    wave_id: wave-software-recovery-implementation
+    session_ids:
+    - software-recovery-root-019f4826
+    issue_ids:
+    - 293
+    - 389
+    - 410
+    - 419
+    - 424
+    - 433
+    lane_ids:
+    - device-writer
+    - evidence-core
+    pr_ids:
+    - '442'
+    - '443'
+    - '444'
+    deployment_ids: []
+    policy_decision_ids:
+    - DEC-014
+    - DEC-015
+    - g-prod-db-credential-rotation-20260709
+  refs:
+    artifact_refs:
+    - docs/handoff/software-recovery-clean-main-2026-07-10.md
+    - .agent-workflow/controller/controller-state.yaml
+    - .agent-workflow/controller/session-ledger.yaml
+    evidence_refs:
+    - .agent-workflow/sprints/software-recovery-2026-07-09/status.yaml
+    external_refs:
+    - type: git_commit
+      identifier: 034708e2fbeb3fea11d267da00480d4283bd64d2
+      url: https://github.com/VerdifyConsultancy/verdify-platform/commit/034708e2fbeb3fea11d267da00480d4283bd64d2
+  result: passed
+  summary: Every registered worktree is clean, local main equals origin/main, all recovery PRs are merged, zero PRs remain open, and superseded local review drafts were reconciled against canonical git copies.
+  data_summary: Historical clean topic branches remain preserved and intentionally unmerged where their dev/staging or firmware proposals are retired or superseded.
+  redacted_payload_ref: null
+  previous_event_id: LEDGER-EVT-0072
   content_sha256: null
 exceptions:
 - id: LEDGER-EXC-001
