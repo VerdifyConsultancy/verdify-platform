@@ -29,7 +29,7 @@ class _Connection:
     def transaction(self):
         return _Transaction()
 
-    async def fetch(self, statement: str, scorecard_date):
+    async def fetch(self, statement: str, *args):
         if self.cancel_fetch:
             raise asyncpg.QueryCanceledError("canceling statement due to statement timeout")
         return [{"metric": "planner_score", "value": 91.0}]
@@ -69,4 +69,14 @@ async def test_optional_public_evidence_timeout_degrades_to_none():
     row = await main._fetchrow_optional(conn, "SELECT * FROM slow_optional_view")
 
     assert row is None
+    assert conn.executed == ["SET LOCAL statement_timeout = '3000ms'"]
+
+
+@pytest.mark.asyncio
+async def test_optional_public_evidence_rows_timeout_degrades_to_empty():
+    conn = _Connection(cancel_fetch=True)
+
+    rows = await main._fetch_optional(conn, "SELECT * FROM slow_optional_view")
+
+    assert rows == []
     assert conn.executed == ["SET LOCAL statement_timeout = '3000ms'"]

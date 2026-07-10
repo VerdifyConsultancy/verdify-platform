@@ -256,6 +256,21 @@ async def _fetchrow_optional(
         return None
 
 
+async def _fetch_optional(
+    conn: asyncpg.Connection,
+    statement: str,
+    *args: object,
+    timeout_ms: int = 3_000,
+) -> list[asyncpg.Record]:
+    """Fetch optional public evidence rows within a fail-soft DB budget."""
+    try:
+        async with conn.transaction():
+            await conn.execute(f"SET LOCAL statement_timeout = '{timeout_ms}ms'")
+            return await conn.fetch(statement, *args)
+    except asyncpg.QueryCanceledError:
+        return []
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global pool
@@ -2836,7 +2851,8 @@ async def public_evidence_snapshot(greenhouse_id: str = DEFAULT_GREENHOUSE):
             """,
             greenhouse_id,
         )
-        data_checks = await conn.fetch(
+        data_checks = await _fetch_optional(
+            conn,
             """
             SELECT check_name, lower(status) AS status, metric_value, threshold_value, details
             FROM v_data_trust_ledger
