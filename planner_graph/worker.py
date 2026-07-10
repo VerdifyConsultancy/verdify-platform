@@ -175,10 +175,20 @@ class PlannerWorker:
                 except Exception as error:  # pragma: no cover - store-specific
                     renewal_errors.append(error)
                     renewal_lost.set()
+                    # Readiness must reflect the store outage while the graph
+                    # is still running. Waiting for ``execute`` to return can
+                    # leave a slow or hung graph false-green for minutes.
+                    self._record_store_failure(error)
                     return
                 if not renewed:
+                    error = LeaseLostError(
+                        f"planner run lease lost for trigger {trigger_id} and owner {owner}"
+                    )
+                    renewal_errors.append(error)
                     renewal_lost.set()
+                    self._record_store_failure(error)
                     return
+                self._record_store_success()
 
         renewal_thread = threading.Thread(
             target=renew_until_stopped,

@@ -379,7 +379,11 @@ class TestMCPToolAvailability:
             return
         source = (REPO_ROOT / "mcp" / "server.py").read_text()
         manifest = (REPO_ROOT / "deploy/k8s/base/mcp-deployment.yaml").read_text()
-        assert '@mcp.custom_route("/readyz"' in source
+        # Route registration goes through the compatibility wrapper so the
+        # schema-only import stubs and real FastMCP runtime share one path.
+        assert "def _custom_route(" in source
+        assert '@_custom_route("/readyz"' in source
+        assert 'getattr(mcp, "custom_route"' in source
         assert "path: /readyz" in manifest
 
     def test_skill_file_exists(self):

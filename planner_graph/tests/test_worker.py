@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import threading
 import time
 from types import SimpleNamespace
 from uuid import uuid4
@@ -197,3 +198,53 @@ def test_long_graph_renews_lease_before_terminal_write(monkeypatch: pytest.Monke
 
     assert store.renewals >= 2
     assert store.get(trigger_id).status == "completed"  # type: ignore[union-attr]
+
+
+def test_inflight_renewal_failure_immediately_fails_readiness_and_recovers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    graph_started = threading.Event()
+    release_graph = threading.Event()
+
+    class BlockingGraph(_Graph):
+        def invoke(self, state, config):
+            graph_started.set()
+            assert release_graph.wait(2), "test did not release blocking graph"
+            return super().invoke(state, config)
+
+    class OneRenewalFailureStore(_RecoveringStore):
+        def __init__(self, delegate: InMemoryRunStore) -> None:
+            super().__init__(delegate, failing=False)
+            self.renew_failed = threading.Event()
+
+        def renew_lease(self, *args, **kwargs):
+            if not self.renew_failed.is_set():
+                self.renew_failed.set()
+                raise OSError("renewal database outage")
+            return self.delegate.renew_lease(*args, **kwargs)
+
+    monkeypatch.setattr("planner_graph.worker.build_graph", lambda _runtime: BlockingGraph())
+    runtime = _runtime()
+    runtime.settings.worker_lease_seconds = 1
+    store = OneRenewalFailureStore(InMemoryRunStore())
+    worker = PlannerWorker(store, runtime, worker_id="planner-worker:test")
+    trigger_id = uuid4()
+    worker.submit(trigger_id, {"updated_at": "2026-07-10T00:00:00+00:00"})
+
+    worker.start()
+    assert graph_started.wait(1)
+    _wait_until(lambda: store.renew_failed.is_set())
+    _wait_until(lambda: not worker.health().ready)
+    failed_health = worker.health()
+
+    assert failed_health.alive is True
+    assert failed_health.consecutive_store_failures >= 1
+    assert failed_health.last_error_class == "OSError"
+
+    release_graph.set()
+    _wait_until(lambda: worker.health().ready)
+    recovered_health = worker.health()
+    worker.stop()
+
+    assert recovered_health.consecutive_store_failures == 0
+    assert recovered_health.last_error_class is None

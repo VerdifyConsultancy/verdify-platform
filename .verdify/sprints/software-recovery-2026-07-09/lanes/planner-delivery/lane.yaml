@@ -107,6 +107,27 @@ ownership:
         and event-type-only acknowledgement semantics. Test-only edits may
         assert the approved required set_plan/terminal-action contract while
         preserving every non-planner fidelity assertion.
+    - path: planner_graph/scripts/eval_openai_planner.py
+      granted_by: software-recovery controller
+      reason: >-
+        The contracted full planner_graph validation exposed that this direct
+        evaluation entrypoint could not import the repo package. The narrow
+        path-bootstrap edit is a developer-tool repair only and grants no
+        production routing or write authority.
+    - path: planner_graph/scripts/replay_request.py
+      granted_by: software-recovery controller
+      reason: >-
+        The contracted full planner_graph validation exposed that this direct
+        replay entrypoint could not import the repo package. The narrow
+        path-bootstrap and typing edit is a developer-tool repair only and
+        grants no production routing or write authority.
+    - path: planner_graph/tests/test_memory_postgres.py
+      granted_by: software-recovery controller
+      reason: >-
+        The contracted full planner_graph validation exposed an incorrect
+        migration fixture path. The one-line test-only correction is granted
+        so the required PostgreSQL memory suite executes against its actual
+        migration without expanding planner_graph authority.
   owned_interfaces:
     - tool-level readiness
     - worker-aware non-authoritative runtime health or desired-state removal
