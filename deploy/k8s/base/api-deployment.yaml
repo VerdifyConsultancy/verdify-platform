@@ -132,14 +132,16 @@ spec:
           #     does NOT touch the DB. A DB-less-but-listening pod is NEVER killed.
           #     (Interim form per the design doc; swaps to GET /health/live once
           #     the api scope owner adds that no-DB route in the containerize PR.)
-          #   - readinessProbe = stays on /health (DB-coupled is CORRECT here): a
-          #     pod that can't reach the DB is pulled from rotation but NOT killed.
-          #   - startupProbe   = /health with failureThreshold:30 periodSeconds:5
-          #     → up to 150s for pool/DB warmup before liveness arms, so a cold
-          #     start never trips the (now TCP) liveness probe.
+          #   - readinessProbe = /health/detailed: one cheap SELECT 1 proves DB
+          #     reachability without running the operational scorecard queries in
+          #     /health. Those queries can exceed the probe timeout and formerly
+          #     amplified into a DB backlog during a rollout.
+          #   - startupProbe   = the same cheap DB-reachability endpoint with
+          #     failureThreshold:30 periodSeconds:5 → up to 150s for pool/DB
+          #     warmup before liveness arms.
           startupProbe:
             httpGet:
-              path: /health
+              path: /health/detailed
               port: http
             periodSeconds: 5
             failureThreshold: 30
@@ -150,7 +152,7 @@ spec:
             failureThreshold: 3
           readinessProbe:
             httpGet:
-              path: /health
+              path: /health/detailed
               port: http
             initialDelaySeconds: 15
             periodSeconds: 10

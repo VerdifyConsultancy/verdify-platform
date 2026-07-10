@@ -158,6 +158,12 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /opt/data
+            # Probe implementation and non-secret runtime profile. The init
+            # container also mounts this ConfigMap to seed config.yaml, but the
+            # main container needs it for tool-readiness.py.
+            - name: hermes-config
+              mountPath: /etc/verdify/hermes-config
+              readOnly: true
             # NON-SECRET slack channel config (compose:371 /etc/verdify/slack RO).
             - name: slack-config
               mountPath: /etc/verdify/slack
