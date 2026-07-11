@@ -117,7 +117,6 @@ db AS (
 )
 SELECT
     now() AS ts,
-    dev.band_source,
     dev.device_ts,
     age(now(), dev.device_ts) AS device_age,
     dev.temp_low AS device_temp_low,
@@ -145,7 +144,10 @@ SELECT
     greatest(abs(dev.vpd_low - db.vpd_low), abs(dev.vpd_high - db.vpd_high))
         AS max_vpd_abs_diff,
     abs(dev_tgt.temp_target - db.temp_target) AS temp_target_abs_diff,
-    abs(dev_tgt.vpd_target - db.vpd_target) AS vpd_target_abs_diff
+    abs(dev_tgt.vpd_target - db.vpd_target) AS vpd_target_abs_diff,
+    -- Appended LAST deliberately: CREATE OR REPLACE VIEW may only add
+    -- trailing columns over the migration-189 shape.
+    dev.band_source
 FROM dev
 CROSS JOIN db
 CROSS JOIN dev_tgt;
