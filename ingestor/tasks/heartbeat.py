@@ -99,18 +99,55 @@ def _load_milestone_state():
             if data.get("date") == datetime.now(_DENVER).strftime("%Y-%m-%d"):
                 _milestones_fired = data.get("fired", {})
                 _milestones_date = data["date"]
+                _trigger_attempts.clear()
+                _trigger_attempts.update(data.get("attempts", {}))
                 log.info("Loaded milestone state: %d fired today", len(_milestones_fired))
     except Exception as e:
         log.warning("Could not load milestone state: %s", e)
 
 
 def _save_milestone_state():
-    """Save fired milestones to disk."""
+    """Save fired milestones (and per-trigger attempt counts) to disk."""
     try:
-        data = {"date": _milestones_date, "fired": _milestones_fired}
+        data = {"date": _milestones_date, "fired": _milestones_fired, "attempts": _trigger_attempts}
         _MILESTONE_STATE_FILE.write_text(json.dumps(data))
     except Exception as e:
         log.warning("Could not save milestone state: %s", e)
+
+
+# ── Required-trigger retry bounds (2026-07-11 audit) ─────────────────────────
+# Before these bounds a failing required trigger retried on every heartbeat
+# for the whole local day with no cap (7/8: 12 stuck Hermes runs) and a
+# trigger missed across local midnight was permanently unrecoverable (the
+# 2026-07-10→11 SUNSET miss during the DB outage). Hermes has no run-cancel
+# API (DELETE /v1/runs/{id} → 405, probed 2026-07-11), so the attempt cap is
+# the only bound on gateway/LLM resource burn.
+#
+# Attempts are counted per planner_trigger_ledger id and persisted in the
+# milestone state file (ingestor-state PVC), so a process restart does not
+# reset the budget. When the cap is reached the trigger stops retrying and the
+# SLA expiry + planner_required_plan_missed critical own the escalation.
+MAX_REQUIRED_TRIGGER_ATTEMPTS = 6
+# A missed required trigger is carried across the local-midnight cache rebuild
+# and retried for up to this long after its expected time — bounded so a stale
+# plan request from many hours ago is never delivered as if current.
+CARRYOVER_MAX_AGE_H = 8.0
+
+_trigger_attempts: dict[str, int] = {}
+
+
+def _attempts_for(expected_trigger_id: int | None) -> int:
+    if expected_trigger_id is None:
+        return 0
+    return _trigger_attempts.get(str(expected_trigger_id), 0)
+
+
+def _record_attempt(expected_trigger_id: int | None) -> None:
+    if expected_trigger_id is None:
+        return
+    key = str(expected_trigger_id)
+    _trigger_attempts[key] = _trigger_attempts.get(key, 0) + 1
+    _save_milestone_state()
 
 
 def _compute_milestones() -> dict[str, datetime]:
@@ -940,6 +977,81 @@ async def planner_memory_ingest_sync(pool: asyncpg.Pool) -> None:
     save_memory_ingest_state(state)
 
 
+async def _retry_missed_required_triggers(pool: asyncpg.Pool) -> None:
+    """Retry required (set_plan) ledger rows that missed across the local-day boundary.
+
+    _compute_milestones rebuilds the milestone cache per local day, so a
+    required trigger that was still unresolved when the date flipped simply
+    vanished from the retry loop (2026-07-10→11: SUNSET expected 02:30Z missed
+    during the DB outage, resolved 'missed', never retried, and the miss alert
+    was schema-dropped — two silent failures stacked). This sweep re-delivers
+    such rows, bounded three ways:
+
+    * age: expected_at within CARRYOVER_MAX_AGE_H — a many-hours-stale plan
+      request must not be delivered as if current;
+    * supersession: skipped once ANY newer required trigger has produced a
+      valid set_plan (the greenhouse already has a fresher plan);
+    * budget: the same persisted MAX_REQUIRED_TRIGGER_ATTEMPTS counter as the
+      in-day retry loop.
+    """
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT p.id, p.event_type, p.event_label, p.expected_at
+              FROM planner_trigger_ledger p
+             WHERE p.greenhouse_id = $1
+               AND p.expected_action = 'set_plan'
+               AND p.status IN ('missed', 'timed_out')
+               AND COALESCE(p.terminal_action, '') <> 'set_plan'
+               AND p.expected_at >= now() - ($2::float8 * interval '1 hour')
+               AND NOT EXISTS (
+                       SELECT 1 FROM planner_trigger_ledger n
+                        WHERE n.greenhouse_id = p.greenhouse_id
+                          AND n.expected_action = 'set_plan'
+                          AND n.terminal_action = 'set_plan'
+                          AND n.expected_at > p.expected_at
+                   )
+             ORDER BY p.expected_at
+            """,
+            GREENHOUSE_ID,
+            CARRYOVER_MAX_AGE_H,
+        )
+    # Today's milestones are owned by the main loop; this sweep only handles
+    # rows that fell out of the per-day cache (yesterday's tail). Local-date
+    # comparison is deliberate — exact timestamp matching would be fragile.
+    today_local = datetime.now(_DENVER).date()
+    for row in rows:
+        if row["expected_at"].astimezone(_DENVER).date() == today_local:
+            continue
+        if _attempts_for(row["id"]) >= MAX_REQUIRED_TRIGGER_ATTEMPTS:
+            continue
+        event_type = str(row["event_type"])
+        label = f"{row['event_label'] or event_type} (cross-midnight catch-up)"
+        log.warning(
+            "Carrying over missed required trigger %s (%s expected %s); re-delivering",
+            row["id"],
+            event_type,
+            row["expected_at"],
+        )
+        loop = asyncio.get_event_loop()
+        context = await loop.run_in_executor(None, gather_context)
+        severity = classify_severity(event_type, SeverityContext())
+        instance = pick_instance(event_type, severity)
+        _record_attempt(row["id"])
+        await _deliver_and_log(
+            pool,
+            event_type,
+            label,
+            context,
+            instance=instance,
+            expected_trigger_id=row["id"],
+            catchup=True,
+        )
+        # One carry-over delivery per heartbeat: the ledger row's extended
+        # due_at now owns pacing, exactly like the in-day retry path.
+        break
+
+
 async def planning_heartbeat(pool: asyncpg.Pool) -> None:
     """Check if a planning event should fire. Triggers Iris planner session."""
     now = datetime.now(_DENVER)
@@ -1004,6 +1116,17 @@ async def planning_heartbeat(pool: asyncpg.Pool) -> None:
                 if disposition == "wait":
                     log.info("Required planner trigger %s remains in-flight until %s", key, terminal["due_at"])
                     continue
+                if _attempts_for(expected_trigger_id) >= MAX_REQUIRED_TRIGGER_ATTEMPTS:
+                    if not _milestones_fired.get(f"{key}:attempts_exhausted"):
+                        _milestones_fired[f"{key}:attempts_exhausted"] = True
+                        _save_milestone_state()
+                        log.error(
+                            "Required planner trigger %s exhausted %d delivery attempts; "
+                            "stopping retries — SLA expiry / planner_required_plan_missed owns escalation",
+                            key,
+                            MAX_REQUIRED_TRIGGER_ATTEMPTS,
+                        )
+                    continue
 
             log.info("Planning milestone fired: %s (%s)%s", key, label, " [CATCH-UP]" if is_catchup else "")
 
@@ -1016,6 +1139,7 @@ async def planning_heartbeat(pool: asyncpg.Pool) -> None:
             severity_event_type = spec.severity_event_type or event_type
             severity = classify_severity(severity_event_type, SeverityContext())
             instance = pick_instance(severity_event_type, severity)
+            _record_attempt(expected_trigger_id)
             delivered = await _deliver_and_log(
                 pool,
                 event_type,
@@ -1038,6 +1162,12 @@ async def planning_heartbeat(pool: asyncpg.Pool) -> None:
                     "Required planner delivery for %s is accepted but not complete; fired-state waits for set_plan",
                     key,
                 )
+
+    # ── 2b. Carry missed required triggers across the local-midnight boundary ──
+    try:
+        await _retry_missed_required_triggers(pool)
+    except Exception as e:
+        log.warning("missed required-trigger carry-over failed: %s", e)
 
     # ── 3. FORECAST poll RETIRED (Phase 4, 2026-05-10) ──
     # The "new forecast fetched" event was the highest-volume / lowest-signal

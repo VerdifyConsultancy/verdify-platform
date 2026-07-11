@@ -136,3 +136,46 @@ def test_weekly_review_due_time_is_review_hour():
     assert (due.hour, due.minute) == (heartbeat._WEEKLY_REVIEW_HOUR, 0)
     assert due.date() == today
     assert due.tzinfo is not None
+
+
+class TestRequiredTriggerRetryBounds:
+    """2026-07-11 audit: unbounded in-day retries (12 stuck Hermes runs on
+    7/8) and required triggers missed across local midnight being permanently
+    unrecoverable (the 7/10→11 SUNSET miss)."""
+
+    def setup_method(self):
+        heartbeat._trigger_attempts.clear()
+
+    def teardown_method(self):
+        heartbeat._trigger_attempts.clear()
+
+    def test_attempts_counter_round_trips_state_file(self, tmp_path, monkeypatch):
+        state_file = tmp_path / "milestones.json"
+        monkeypatch.setattr(heartbeat, "_MILESTONE_STATE_FILE", state_file)
+        monkeypatch.setattr(heartbeat, "_milestones_date", datetime.now(DENVER).strftime("%Y-%m-%d"))
+        heartbeat._record_attempt(341631)
+        heartbeat._record_attempt(341631)
+        heartbeat._record_attempt(344942)
+        assert heartbeat._attempts_for(341631) == 2
+        assert heartbeat._attempts_for(344942) == 1
+        # Simulate a process restart: counters reload from the state file.
+        heartbeat._trigger_attempts.clear()
+        heartbeat._load_milestone_state()
+        assert heartbeat._attempts_for(341631) == 2
+        assert heartbeat._attempts_for(344942) == 1
+
+    def test_attempts_for_none_id_is_zero_and_uncounted(self):
+        assert heartbeat._attempts_for(None) == 0
+        heartbeat._record_attempt(None)
+        assert heartbeat._trigger_attempts == {}
+
+    def test_cap_constant_bounds_a_full_day(self):
+        # 6 attempts at the >=30-min SLA pacing spans the failure window the
+        # audit measured (12 unbounded runs/day) while halting the burn.
+        assert 3 <= heartbeat.MAX_REQUIRED_TRIGGER_ATTEMPTS <= 12
+
+    def test_carryover_window_is_bounded(self):
+        # Must cover an overnight outage tail (SUNSET 8:30pm -> morning
+        # recovery ~9h later misses; 8h reaches a 5am recovery) without
+        # delivering many-hours-stale plans as current.
+        assert 4.0 <= heartbeat.CARRYOVER_MAX_AGE_H <= 12.0
