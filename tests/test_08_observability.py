@@ -1503,7 +1503,10 @@ def test_second_based_cfg_readback_rounding_does_not_force_repush():
 class TestSetpointsFailLoud:
     """API /setpoints must fail-loud on NULL band (Tier 1 #3)."""
 
-    API_PATH = "/srv/verdify/api/main.py"
+    # Prefer the in-repo source; /srv/verdify is the retired VM layout.
+    API_PATH = (
+        str(REPO_ROOT / "api" / "main.py") if (REPO_ROOT / "api" / "main.py").exists() else "/srv/verdify/api/main.py"
+    )
 
     def test_api_raises_on_null_band(self):
         with open(self.API_PATH) as f:
@@ -1516,11 +1519,12 @@ class TestSetpointsFailLoud:
 
     def test_setpoints_still_200_under_normal_conditions(self):
         """Under normal operation the endpoint must not regress to 503."""
+        target = os.environ.get("VERDIFY_API_SETPOINTS_URL", "https://127.0.0.1/setpoints")
         result = subprocess.run(
             [
                 "curl",
                 "-sk",
-                "https://127.0.0.1/setpoints",
+                target,
                 "-H",
                 "Host: api.verdify.ai",
                 "-w",
@@ -1542,7 +1546,8 @@ class TestSetpointsFailLoud:
         proving the runtime path actually fires."""
         import asyncio
 
-        sys.path.insert(0, "/srv/verdify/api")
+        api_dir = str(REPO_ROOT / "api") if (REPO_ROOT / "api" / "main.py").exists() else "/srv/verdify/api"
+        sys.path.insert(0, api_dir)
         import main as api_mod
         from fastapi import HTTPException
 
