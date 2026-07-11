@@ -17,6 +17,7 @@ from .alerts import (
     AlertResolvePayload,
     AlertSeverity,
     AlertType,
+    build_validation_failed_envelope,
 )
 from .api import (
     APIStatus,
@@ -280,6 +281,7 @@ __all__ = [
     "AlertCategory",
     "AlertDisposition",
     "AlertEnvelope",
+    "build_validation_failed_envelope",
     "AlertLogRow",
     "APIStatus",
     "AlertResolvePayload",

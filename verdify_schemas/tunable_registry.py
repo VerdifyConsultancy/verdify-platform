@@ -1681,7 +1681,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="schedule",
         planner_pushable=False,
         tier=2,
-        notes="Explicit wall watering day mask, bit0=Sunday through bit6=Saturday.",
+        notes="RETIRED 2026-07-11 (#450 recovery firmware removed the clocked schedule; no ESPHome entity). Explicit wall watering day mask, bit0=Sunday through bit6=Saturday.",
     ),
     "irrig_wall_fert_days_mask": TunableDef(
         name="irrig_wall_fert_days_mask",
@@ -1696,7 +1696,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="schedule",
         planner_pushable=False,
         tier=2,
-        notes="Explicit wall fertigation day mask. Nonzero supersedes irrig_wall_fert_every_n.",
+        notes="RETIRED 2026-07-11 (#450 recovery firmware removed the clocked schedule; no ESPHome entity). Explicit wall fertigation day mask. Nonzero supersedes irrig_wall_fert_every_n.",
     ),
     "irrig_wall_flush_min": TunableDef(
         name="irrig_wall_flush_min",
@@ -1810,7 +1810,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="schedule",
         planner_pushable=False,
         tier=2,
-        notes="Explicit center watering day mask, bit0=Sunday through bit6=Saturday.",
+        notes="RETIRED 2026-07-11 (#450 recovery firmware removed the clocked schedule; no ESPHome entity). Explicit center watering day mask, bit0=Sunday through bit6=Saturday.",
     ),
     "irrig_center_fert_days_mask": TunableDef(
         name="irrig_center_fert_days_mask",
@@ -1825,7 +1825,7 @@ REGISTRY: dict[str, TunableDef] = {
         push_owner="schedule",
         planner_pushable=False,
         tier=2,
-        notes="Explicit center fertigation day mask. Nonzero supersedes irrig_center_fert_every_n.",
+        notes="RETIRED 2026-07-11 (#450 recovery firmware removed the clocked schedule; no ESPHome entity). Explicit center fertigation day mask. Nonzero supersedes irrig_center_fert_every_n.",
     ),
     "irrig_center_flush_min": TunableDef(
         name="irrig_center_flush_min",

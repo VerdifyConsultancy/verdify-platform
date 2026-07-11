@@ -18,6 +18,7 @@ AlertSeverity = Literal["info", "warning", "critical"]
 AlertCategory = Literal["sensor", "equipment", "climate", "water", "system"]
 AlertDisposition = Literal["open", "acknowledged", "resolved", "suppressed"]
 AlertType = Literal[
+    "alert_validation_failed",
     "band_anchor_db_read_failed",
     "band_device_db_divergence",
     "band_fn_null",
@@ -60,6 +61,7 @@ AlertType = Literal[
 ]
 
 ALERT_TYPES: tuple[str, ...] = (
+    "alert_validation_failed",
     "band_anchor_db_read_failed",
     "band_device_db_divergence",
     "band_fn_null",
@@ -248,6 +250,12 @@ class RequiredPlanMissDetails(PlanDeliveryFailureDetails):
     plan_delivery_log_id: int | None = None
     trigger_id: str | None = None
     resulting_plan_id: str | None = None
+    # Ledger disposition columns surfaced by the #427 delivery rewrite. Their
+    # absence from this model silently dropped every planner_required_plan_missed
+    # CRITICAL between 2026-07-10 and 2026-07-11 (drop-on-ValidationError in
+    # ingestor/tasks/alerts.py).
+    terminal_action: str | None = None
+    failure_class: str | None = None
 
 
 class PlannerRequiredPlanMissedDetails(_DetailsBase):
@@ -429,8 +437,20 @@ class SetpointUnconfirmedDetails(_DetailsBase):
 
 
 class ESP32PushFailedDetails(_DetailsBase):
-    error: str
+    # `error` is the legacy single-string shape; the dispatcher's terminal-failure
+    # path reports per-parameter `failure_reasons`/`parameters` instead. At least
+    # one of the two shapes must be present (enforced below) so an empty payload
+    # still fails loudly.
+    error: str | None = None
+    failure_reasons: list[str] = Field(default_factory=list)
+    parameters: list[str] = Field(default_factory=list)
     change_count: int = Field(..., ge=0)
+
+    @model_validator(mode="after")
+    def _require_some_reason(self) -> ESP32PushFailedDetails:
+        if self.error is None and not self.failure_reasons:
+            raise ValueError("esp32_push_failed details need error or failure_reasons")
+        return self
 
 
 class BandAnchorDbReadFailedDetails(_DetailsBase):
@@ -459,6 +479,17 @@ class BandFnNullDetails(_DetailsBase):
     zone_row_null: bool
     house_row_null: bool = False
     lighting_row_null: bool = False
+
+
+class AlertValidationFailedDetails(_DetailsBase):
+    # Fallback envelope written whenever a producer's alert payload fails
+    # AlertEnvelope validation. The original severity is preserved on the
+    # envelope so a dropped critical still pages as critical; the original
+    # payload shape is summarized here for repair.
+    original_alert_type: str
+    original_severity: str
+    validation_error: str
+    producer: str | None = None
 
 
 class _AlertBase(BaseModel):
@@ -669,8 +700,14 @@ class BandFnNullAlert(_AlertBase):
     details: BandFnNullDetails
 
 
+class AlertValidationFailedAlert(_AlertBase):
+    alert_type: Literal["alert_validation_failed"]
+    details: AlertValidationFailedDetails
+
+
 AlertEnvelopeUnion = Annotated[
-    BandAnchorDbReadFailedAlert
+    AlertValidationFailedAlert
+    | BandAnchorDbReadFailedAlert
     | BandDeviceDbDivergenceAlert
     | BandFnNullAlert
     | ESP32PushFailedAlert
@@ -744,6 +781,38 @@ class AlertEnvelope(BaseModel):
         typed = ALERT_ENVELOPE_ADAPTER.validate_python(self.model_dump(mode="python"))
         self.details = typed.details.model_dump(mode="json")
         return self
+
+
+def build_validation_failed_envelope(payload: dict[str, Any], error: Exception, producer: str) -> AlertEnvelope:
+    """Fallback envelope for a payload that failed :class:`AlertEnvelope` validation.
+
+    Producer/schema drift must never silently drop an alert (the 2026-07-10/11
+    planner_required_plan_missed criticals were lost exactly this way). The
+    fallback preserves the ORIGINAL severity so a dropped critical still pages
+    as critical, and records enough of the original shape to repair the drift.
+    """
+    original_type = str(payload.get("alert_type", "unknown"))
+    original_severity = str(payload.get("severity", "warning"))
+    severity = original_severity if original_severity in ("info", "warning", "critical") else "warning"
+    original_message = str(payload.get("message", ""))[:200]
+    return AlertEnvelope.model_validate(
+        {
+            "alert_type": "alert_validation_failed",
+            "severity": severity,
+            "category": "system",
+            "sensor_id": payload.get("sensor_id"),
+            "message": (
+                f"Alert payload for `{original_type}` failed schema validation; "
+                f"original alert not recorded: {original_message}"
+            ),
+            "details": {
+                "original_alert_type": original_type,
+                "original_severity": original_severity,
+                "validation_error": str(error)[:1500],
+                "producer": producer,
+            },
+        }
+    )
 
 
 class AlertLogRow(BaseModel):

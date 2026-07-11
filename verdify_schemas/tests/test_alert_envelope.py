@@ -12,6 +12,7 @@ from verdify_schemas.alerts import (
     ALERT_ENVELOPE_ADAPTER,
     ALERT_TYPES,
     AlertEnvelope,
+    AlertValidationFailedAlert,
     BandAnchorDbReadFailedAlert,
     BandDeviceDbDivergenceAlert,
     BandFnNullAlert,
@@ -56,6 +57,15 @@ from verdify_schemas.alerts import (
 NOW = "2026-05-01T12:00:00+00:00"
 
 CASES = {
+    "alert_validation_failed": (
+        AlertValidationFailedAlert,
+        {
+            "original_alert_type": "planner_required_plan_missed",
+            "original_severity": "critical",
+            "validation_error": "2 validation errors for AlertEnvelope ...",
+            "producer": "alert_monitor",
+        },
+    ),
     "band_anchor_db_read_failed": (
         BandAnchorDbReadFailedAlert,
         {"origin": "defaults(table-error)"},
@@ -76,6 +86,8 @@ CASES = {
         ESP32PushFailedAlert,
         {"error": "timeout", "change_count": 3},
     ),
+    # NOTE: the dispatcher's terminal-failure shape (failure_reasons/parameters,
+    # no `error`) is round-tripped in test_alert_producer_payloads.py.
     "esp32_reboot": (
         ESP32RebootAlert,
         {"uptime_s": 42.0, "reset_reason": "poweron"},
