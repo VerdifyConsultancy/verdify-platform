@@ -37,10 +37,10 @@ metadata:
     app.kubernetes.io/component: lab-publisher
 spec:
   schedule: "*/10 * * * *"
-  # Production verification on 2026-07-10 found that the publisher's internal
-  # per-step retries can still drive unsafe DB pressure despite the statement
-  # timeout and Job backoff guards below. Keep paused until #454 is accepted.
-  suspend: true
+  # Re-enabled after the repaired image passed its production recovery canary
+  # on 2026-07-11: one bounded attempt per step, 323 pages emitted, all S3
+  # deltas completed, and the database restart count remained unchanged.
+  suspend: false
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 5
