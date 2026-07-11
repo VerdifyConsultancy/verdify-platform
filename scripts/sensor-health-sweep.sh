@@ -173,12 +173,19 @@ fi
 # ── 4. ALERTS (new since deploy window) ────────────────────────────
 # Any sensor_offline alert that FIRED within the --since window is a
 # regression — means a sensor went dark right around the deploy.
+#
+# 2026-07-11 audit: the filter was structurally blind to the 07-10 deploy's
+# real band regression — band_device_db_divergence was excluded by type AND
+# its acknowledged disposition was excluded by disposition='open'. Widen to
+# every band/divergence/validation type and count any UNRESOLVED row
+# (open or acknowledged): an acknowledged-but-unresolved alert in the deploy
+# window is still a deploy-window regression.
 section "Alerts opened during the deploy window ('$SINCE')"
 
-NEW_ALERTS=$("${DB[@]}" "SELECT alert_type || ' :: ' || COALESCE(sensor_id, '?') FROM alert_log WHERE ts >= now() - interval '$SINCE' AND disposition = 'open' AND alert_type IN ('sensor_offline', 'esp32_reboot', 'esp32_push_failed', 'band_fn_null', 'heap_pressure_critical')" 2>/dev/null)
+NEW_ALERTS=$("${DB[@]}" "SELECT alert_type || ' :: ' || COALESCE(sensor_id, '?') FROM alert_log WHERE ts >= now() - interval '$SINCE' AND disposition IN ('open', 'acknowledged') AND resolved_at IS NULL AND (alert_type IN ('sensor_offline', 'esp32_reboot', 'esp32_push_failed', 'heap_pressure_critical', 'firmware_version_mismatch', 'alert_validation_failed') OR alert_type LIKE 'band%')" 2>/dev/null)
 
 if [[ -z "$NEW_ALERTS" ]]; then
-    pass "No new sensor_offline / esp32_reboot / push / band alerts opened in window"
+    pass "No new sensor_offline / esp32_reboot / push / band / validation alerts open in window"
 else
     while IFS= read -r a; do
         fail "NEW alert: $a"
