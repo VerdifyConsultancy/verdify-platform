@@ -22,6 +22,7 @@ from ._common import (
     SLACK_SETTINGS,
     SLACK_TOKEN_FILE,
     SOIL_DRYOUT_MIN_DURATION_H,
+    SOIL_DRYOUT_PROBES,
     UTC,
     AlertEnvelope,
     ValidationError,
@@ -31,6 +32,7 @@ from ._common import (
     _post_slack,
     _td,
     asyncpg,
+    build_validation_failed_envelope,
     datetime,
     fetch_alert_runbook,
     format_runbook,
@@ -1517,13 +1519,8 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                 str(r["zone"]): float(r["wilt_pct"])
                 for r in await conn.fetch("SELECT zone, wilt_pct FROM soil_moisture_targets WHERE wilt_pct IS NOT NULL")
             }
-            dryout_cols = [
-                ("soil_moisture_south_1", "soil.south_1", "south"),
-                ("soil_moisture_south_2", "soil.south_2", "south"),
-                ("soil_moisture_west", "soil.west", "west"),
-            ]
             lookback_interval = f"{SOIL_DRYOUT_MIN_DURATION_H + 0.5} hours"
-            for col, sensor_id, zone in dryout_cols:
+            for col, sensor_id, zone, target_zone in SOIL_DRYOUT_PROBES:
                 stats = await conn.fetchrow(
                     f"""
                     SELECT COUNT({col}) AS samples,
@@ -1549,7 +1546,7 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                     if stats["oldest_sample_age_h"] is not None
                     else None,
                 )
-                wilt_pct = wilt_by_zone.get(zone)
+                wilt_pct = wilt_by_zone.get(target_zone, wilt_by_zone.get(zone))
                 zone_occupied = zone in soil_active_zones
                 if not evaluate_soil_dryout(window, wilt_pct, zone_occupied):
                     continue
@@ -2155,8 +2152,11 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                 try:
                     env = AlertEnvelope.model_validate(a)
                 except ValidationError as e:
-                    log.error("alert refresh skipped (validation failed: %s): %r", e, a)
-                    continue
+                    # Fail LOUD (2026-07-11 audit): schema drift froze open-alert
+                    # context silently. Refresh with a fallback envelope that
+                    # preserves the original severity so drift is visible.
+                    log.error("alert refresh failed validation; degrading to fallback: %s: %r", e, a)
+                    env = build_validation_failed_envelope(a, e, producer="alert_monitor")
                 is_escalation = env.severity == "critical" and existing["severity"] != "critical"
                 await conn.execute(
                     """
@@ -2198,8 +2198,17 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
             try:
                 env = AlertEnvelope.model_validate(a)
             except ValidationError as e:
-                log.error("alert skipped (envelope validation failed: %s): %r", e, a)
-                continue
+                # Fail LOUD (2026-07-11 audit): the planner_required_plan_missed
+                # CRITICALs of 2026-07-10/11 were dropped here as log lines. A
+                # fallback row with the ORIGINAL severity still lands and pages.
+                log.error("alert failed validation; writing alert_validation_failed fallback: %s: %r", e, a)
+                env = build_validation_failed_envelope(a, e, producer="alert_monitor")
+                fallback_key = (env.alert_type, env.sensor_id)
+                # Keep one open fallback per sensor while the drift persists
+                # (no per-cycle duplicate inserts, no auto-resolve flapping).
+                active_keys.add(fallback_key)
+                if fallback_key in open_keys:
+                    continue
             should_slack = should_post_alert(env.alert_type, env.severity, settings=SLACK_SETTINGS)
             slack_ts = None
             if should_slack:

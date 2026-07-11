@@ -56,6 +56,7 @@ from verdify_schemas import (
     OpenMeteoForecastResponse,
     PlanDeliveryLogRow,
     SetpointChange,
+    build_validation_failed_envelope,
 )
 from verdify_schemas.tunable_registry import (
     CROP_BAND_REG,
@@ -237,6 +238,19 @@ VPD_STRESS_LEGACY_THRESHOLD_H = 2.0
 # soil_sensor_offline — so a fired dryout requires every in-window sample to be
 # strictly positive (min_pct > 0) and below wilt.
 SOIL_DRYOUT_MIN_DURATION_H = 2.0
+
+# (column, sensor_id, crop_zone, target_zone) per root-zone probe. crop_zone
+# matches crops.zone (coarse: south/west) and drives occupancy; target_zone
+# matches soil_moisture_targets.zone (per-probe: south_1/south_2/west) and
+# drives the wilt threshold. Conflating the two vocabularies keyed "south"
+# into a targets table that only has south_1/south_2 — the wilt lookup
+# returned None and soil_dryout could NEVER fire for either south probe
+# (2026-07-11 audit: south_2 sat at the wilt line with the pager dead).
+SOIL_DRYOUT_PROBES = (
+    ("soil_moisture_south_1", "soil.south_1", "south", "south_1"),
+    ("soil_moisture_south_2", "soil.south_2", "south", "south_2"),
+    ("soil_moisture_west", "soil.west", "west", "west"),
+)
 
 
 # A 5 s ESP32 loop yields ~720 soil samples/h. Require well over an hour of
@@ -961,12 +975,23 @@ DIRECT_WET_DEFAULTS = {
     "direct_wet_west_drydown_before_off_min": 120,
     "direct_wet_center_start_offset_min": 120,
     "direct_wet_center_drydown_before_off_min": 180,
-    "irrig_wall_days_mask": 127,
-    "irrig_wall_fert_days_mask": 127,
-    "irrig_center_days_mask": 127,
-    "irrig_center_fert_days_mask": 127,
     "sw_direct_wet_gate_enabled": 1,
 }
+
+
+# Retired with the #450 recovery firmware: the clocked/day-mask irrigation
+# schedule has no ESPHome entity and no tunables.yaml entry, so these params
+# are permanently unroutable. The dispatcher SKIPS them (with one log line)
+# instead of failing them every cycle — pre-#450 plan rows may still carry
+# them. Do not re-add to DIRECT_WET_DEFAULTS without a firmware route.
+RETIRED_UNROUTABLE_PARAMS = frozenset(
+    {
+        "irrig_wall_days_mask",
+        "irrig_wall_fert_days_mask",
+        "irrig_center_days_mask",
+        "irrig_center_fert_days_mask",
+    }
+)
 
 
 DIRECT_WET_POLICY_PARAMS = ACTIVITY_MIRROR_PARAMS | frozenset(DIRECT_WET_DEFAULTS)
@@ -1360,6 +1385,7 @@ __all__ = [
     "fetch_alert_runbook",
     "format_runbook",
     "AlertEnvelope",
+    "build_validation_failed_envelope",
     "ClimateRow",
     "EnergySample",
     "EquipmentStateEvent",
@@ -1401,6 +1427,7 @@ __all__ = [
     "VPD_STRESS_FLOOR_H",
     "VPD_STRESS_LEGACY_THRESHOLD_H",
     "SOIL_DRYOUT_MIN_DURATION_H",
+    "SOIL_DRYOUT_PROBES",
     "SOIL_DRYOUT_MIN_SAMPLES",
     "VPD_HIGH_GUARD_MARGIN_KPA",
     "VPD_MOISTURE_DEW_MARGIN_F",
@@ -1478,6 +1505,7 @@ __all__ = [
     "FORCED_ON_SWITCH_PARAMS",
     "ACTIVITY_MIRROR_PARAMS",
     "DIRECT_WET_DEFAULTS",
+    "RETIRED_UNROUTABLE_PARAMS",
     "DIRECT_WET_POLICY_PARAMS",
     "DIRECT_WET_REQUIRED_OBJECT_IDS",
     "AI_MOISTURE_STRESS_POLICY_PARAMS",

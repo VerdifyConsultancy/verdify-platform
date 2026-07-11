@@ -43,6 +43,7 @@ from ._common import (
     QUIET_MODE_ENTITY,
     QUIET_STATE_ENTITIES,
     QUIET_UNTIL_ENTITY,
+    RETIRED_UNROUTABLE_PARAMS,
     SAFETY_PARAMS,
     SECOND_READBACK_ABS_TOLERANCE_PARAMS,
     STATE_DIR,
@@ -64,6 +65,7 @@ from ._common import (
     _last_pushed,
     asyncio,
     asyncpg,
+    build_validation_failed_envelope,
     datetime,
     get_tunable,
     json,
@@ -145,10 +147,6 @@ def _activity_defaults_from_lighting(lighting_row, lighting_circuit_rows) -> dic
         "direct_wet_west_drydown_before_off_min": 120.0,
         "direct_wet_center_start_offset_min": 120.0,
         "direct_wet_center_drydown_before_off_min": 180.0,
-        "irrig_wall_days_mask": 127.0,
-        "irrig_wall_fert_days_mask": 127.0,
-        "irrig_center_days_mask": 127.0,
-        "irrig_center_fert_days_mask": 127.0,
         "sw_direct_wet_gate_enabled": 1.0,
     }
 
@@ -1035,6 +1033,9 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
         # Process planner setpoints (tactical knobs — skip band params already handled)
         for row in planned or []:
             param = row["parameter"]
+            if param in RETIRED_UNROUTABLE_PARAMS:
+                log.info("Dispatcher skipping retired unroutable param from plan row: %s", param)
+                continue
             planned_val = planner_params.get(param, row["value"])
             if param in LIGHTING_CIRCUIT_DEFAULT_PARAMS and not lighting_circuit_supported:
                 continue
@@ -1242,6 +1243,20 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                 change_trigger_id,
                 change_planner_instance,
             )
+            if param in RETIRED_UNROUTABLE_PARAMS:
+                # Pre-#450 rows can still surface here (e.g. reconnect re-seeds).
+                # Expire them quietly — they are not delivery failures.
+                await conn.execute(
+                    """
+                    UPDATE setpoint_changes
+                       SET delivery_status = 'superseded', expired_at = now()
+                     WHERE ts = $1 AND parameter = $2 AND confirmed_at IS NULL
+                    """,
+                    requested_at,
+                    param,
+                )
+                log.info("writer_delivery phase=persisted status=superseded reason=retired_param param=%s", param)
+                continue
             if param.startswith("sw_"):
                 entity_id = SWITCH_TO_ENTITY.get(param)
                 route = (entity_id, float(val), "switch") if entity_id else None
@@ -1457,14 +1472,17 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
 
     final_failures = [*prequeue_failures, *terminal_failures]
     if final_failures:
-        async with pool.acquire() as alert_conn:
-            existing = await alert_conn.fetchval(
-                "SELECT id FROM alert_log WHERE alert_type = 'esp32_push_failed' AND disposition = 'open' LIMIT 1"
-            )
-            if existing is None:
-                failure_reasons = sorted({reason for _param, reason in final_failures})
-                alert = AlertEnvelope.model_validate(
-                    {
+        # This block must NEVER raise: an exception here aborts the
+        # dispatch-state cleanup below and locks the writer into a full
+        # re-dispatch loop (the 2026-07-10/11 crash loop, ~18k rows/day).
+        try:
+            async with pool.acquire() as alert_conn:
+                existing = await alert_conn.fetchval(
+                    "SELECT id FROM alert_log WHERE alert_type = 'esp32_push_failed' AND disposition = 'open' LIMIT 1"
+                )
+                if existing is None:
+                    failure_reasons = sorted({reason for _param, reason in final_failures})
+                    payload = {
                         "alert_type": "esp32_push_failed",
                         "severity": "warning",
                         "category": "system",
@@ -1475,13 +1493,21 @@ async def setpoint_dispatcher(pool: asyncpg.Pool) -> None:
                             "change_count": len(final_failures),
                         },
                     }
-                )
-                await alert_conn.execute(
-                    "INSERT INTO alert_log (alert_type, severity, category, message, details, source) "
-                    "VALUES ('esp32_push_failed', 'warning', 'system', $1, $2, 'dispatcher')",
-                    alert.message,
-                    json.dumps(alert.details),
-                )
+                    try:
+                        alert = AlertEnvelope.model_validate(payload)
+                    except ValidationError as e:
+                        log.error("esp32_push_failed payload failed validation; writing fallback: %s", e)
+                        alert = build_validation_failed_envelope(payload, e, producer="dispatcher")
+                    await alert_conn.execute(
+                        "INSERT INTO alert_log (alert_type, severity, category, message, details, source) "
+                        "VALUES ($1, $2, 'system', $3, $4, 'dispatcher')",
+                        alert.alert_type,
+                        alert.severity,
+                        alert.message,
+                        json.dumps(alert.details),
+                    )
+        except Exception:
+            log.exception("terminal-failure alert write failed; continuing to dispatch cleanup")
 
     if not _dispatch_trigger_completed(final_failures):
         shared.defer_failed_dispatch(reconnect_generation, drift_versions)

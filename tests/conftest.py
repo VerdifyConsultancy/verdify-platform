@@ -48,6 +48,26 @@ def db_query(sql: str) -> str:
     """Run a SQL query via docker exec and return stdout."""
     if os.environ.get("VERDIFY_DB_QUERY_MODE") == "direct" and shutil.which("psql"):
         cmd = ["psql", "-t", "-A", "-c", sql]
+    elif os.environ.get("VERDIFY_DB_BACKEND") == "kube" or not shutil.which("docker"):
+        # k3s-resident agents (docs/handoff/k3s-agent-handoff.md) have kubectl,
+        # not the retired VM's docker socket.
+        cmd = [
+            "kubectl",
+            "exec",
+            "-n",
+            "verdify-prod",
+            "verdify-db-0",
+            "--",
+            "psql",
+            "-U",
+            "verdify",
+            "-d",
+            "verdify",
+            "-t",
+            "-A",
+            "-c",
+            sql,
+        ]
     else:
         cmd = ["docker", "exec", "verdify-timescaledb", "psql", "-U", "verdify", "-d", "verdify", "-t", "-A", "-c", sql]
     result = subprocess.run(

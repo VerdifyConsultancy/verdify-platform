@@ -511,8 +511,7 @@ Use tactical knobs below to shift behavior instead.
 - `direct_wet_stress_vpd_margin_kpa` kPa, [0-0.5], def 0.05 — VPD excess over `vpd_high` required before the stress override can open drydown-gated zones.
 - `direct_wet_stress_min_dew_margin_f` °F, [3-15], def 8 — minimum temp-dewpoint margin for direct-wet stress override.
 - `direct_wet_stress_latest_hour` local hour, [17-24], def 22 — latest local hour for bounded evening dry recovery.
-- Fertigation scheduling can use day masks: `irrig_wall_fert_days_mask`, `irrig_center_fert_days_mask` (bit0=Sunday ... bit6=Saturday). Nonzero masks supersede the legacy every-N fert cadence; zero preserves existing every-N behavior.
-- Clean-water watering day masks: `irrig_wall_days_mask`, `irrig_center_days_mask` [0-127], def 127 (every day; bit0=Sunday ... bit6=Saturday). These set which days the wall/center clean-water drip runs at all. Schedule-layer cadence — change only to deliberately skip watering days, not as a tactical climate lever.
+- RETIRED (recovery firmware 2026-07-10): the clocked/day-mask irrigation schedule (`irrig_wall_days_mask`, `irrig_wall_fert_days_mask`, `irrig_center_days_mask`, `irrig_center_fert_days_mask`) no longer exists in firmware. Wall fertigation runs via the commissioned weekly wall-feed state machine; do NOT emit day-mask parameters.
 
 **Lighting policy (schedule-layer owned; main/overhead + grow/secondary circuits):**
 The light window also mirrors into the global activity window above, so moving

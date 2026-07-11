@@ -458,7 +458,10 @@ class TestHeapPressureObservability:
 
     def test_alert_monitor_refreshes_existing_alert_payloads(self):
         body = _tasks_source()
-        assert "alert refresh skipped" in body
+        # 2026-07-11 audit: validation failures must degrade to a fallback
+        # envelope (fail-loud), never silently skip the refresh/insert.
+        assert "alert refresh failed validation" in body
+        assert "build_validation_failed_envelope" in body
         assert "threshold_value=$5" in body
         assert "Same-severity updates intentionally stay quiet" in body
         assert "disposition IN ('open', 'acknowledged')" in body

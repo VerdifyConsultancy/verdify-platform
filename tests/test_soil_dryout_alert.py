@@ -157,3 +157,37 @@ class TestSoilDryoutEnvelope:
                     "threshold_value": WEST_WILT_PCT,
                 }
             )
+
+
+class TestProbeZoneVocabulary:
+    """2026-07-11 audit regression: the wilt lookup keyed crops.zone ("south")
+    into soil_moisture_targets, whose zone column is per-probe
+    (south_1/south_2/west). Both south probes resolved wilt=None and the pager
+    was structurally dead. SOIL_DRYOUT_PROBES now carries both vocabularies."""
+
+    # Mirrors prod soil_moisture_targets.zone (migration 064 + live rows).
+    TARGETS_TABLE_ZONES = {"south_1", "south_2", "west"}
+    # Mirrors prod crops.zone vocabulary.
+    CROPS_TABLE_ZONES = {"center", "east", "south", "west"}
+
+    def test_every_probe_target_zone_exists_in_targets_table(self):
+        from tasks import SOIL_DRYOUT_PROBES
+
+        target_zones = {target for _c, _s, _z, target in SOIL_DRYOUT_PROBES}
+        assert target_zones <= self.TARGETS_TABLE_ZONES
+        # Every probed target zone is distinct — no two probes share a threshold row.
+        assert len(target_zones) == len(SOIL_DRYOUT_PROBES)
+
+    def test_every_probe_crop_zone_exists_in_crops_vocabulary(self):
+        from tasks import SOIL_DRYOUT_PROBES
+
+        crop_zones = {zone for _c, _s, zone, _t in SOIL_DRYOUT_PROBES}
+        assert crop_zones <= self.CROPS_TABLE_ZONES
+
+    def test_south_probes_resolve_a_wilt_threshold(self):
+        from tasks import SOIL_DRYOUT_PROBES
+
+        wilt_by_zone = {"south_1": 20.0, "south_2": 20.0, "west": 18.0}  # prod rows
+        for _col, _sensor, zone, target_zone in SOIL_DRYOUT_PROBES:
+            wilt = wilt_by_zone.get(target_zone, wilt_by_zone.get(zone))
+            assert wilt is not None, f"probe {target_zone} has no wilt threshold"
