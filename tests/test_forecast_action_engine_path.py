@@ -72,16 +72,23 @@ def test_dockerfile_copies_scripts_into_image():
     )
 
 
-def test_mcp_restart_hook_has_no_legacy_srv_interpreter():
+def test_mcp_watchdog_probes_service_and_never_respawns():
+    """2026-07-11 audit: the legacy watchdog probed 127.0.0.1 (always dead in
+    k3s — MCP is a separate Deployment) and Popen'd a doomed in-container
+    server.py every minute. The contract is now: probe the verdify-mcp
+    Service, page once per outage transition, and NEVER respawn in-process
+    (k8s owns MCP recovery)."""
     src = HEARTBEAT_PY.read_text()
     tree = ast.parse(src)
     fn = next(n for n in ast.walk(tree) if isinstance(n, ast.AsyncFunctionDef) and n.name == "planning_heartbeat")
     literals = _string_literals(fn)
     assert not any("/srv/greenhouse/.venv" in s for s in literals), (
-        "MCP restart hook still hardcodes the dead /srv interpreter"
+        "MCP watchdog still hardcodes the dead /srv interpreter"
     )
-    assert "sys.executable" in src, "MCP restart hook must use sys.executable"
-    assert 'REPO_ROOT / "mcp" / "server.py"' in src, "MCP restart hook must anchor server.py on REPO_ROOT"
+    assert not any("127.0.0.1:8000" in s for s in literals), "MCP watchdog must not probe localhost in k3s"
+    assert "verdify-mcp:8000" in src, "MCP watchdog must default to the verdify-mcp Service"
+    assert "VERDIFY_MCP_HEALTH_URL" in src, "MCP watchdog target must be overridable"
+    assert "Popen" not in src, "MCP watchdog must not respawn server.py in-process (k8s owns recovery)"
 
 
 def test_engine_repo_root_resolves_beside_its_repo_imports():
