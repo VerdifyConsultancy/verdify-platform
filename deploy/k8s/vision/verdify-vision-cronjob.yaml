@@ -7,6 +7,10 @@ metadata:
     app.kubernetes.io/component: vision
 spec:
   schedule: "0 15,18,21,0 * * *"
+  # Recovery canary 2026-07-11: the repaired digest/pull-auth shape completed
+  # in 53s, captured both greenhouse cameras, finished analysis, and persisted
+  # two fresh image_observations. Resume the normal four-times-daily cadence.
+  suspend: false
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 3
   failedJobsHistoryLimit: 3
