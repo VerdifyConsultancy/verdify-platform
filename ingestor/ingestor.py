@@ -2102,6 +2102,11 @@ async def task_loop(pool: asyncpg.Pool) -> None:
         # derived aggregates and daily_zone_compliance silently stopped
         # refreshing in-process. 600s stays well inside the 1800s interval.
         "daily_summary_live": 600,
+        # gather-plan-context.sh alone can exceed 120s; killing the heartbeat
+        # mid-gather burned a required-trigger retry attempt without a single
+        # gateway POST (observed 2026-07-11 20:15Z). Budget above worst-case
+        # gather + Hermes POST.
+        "planning_heartbeat": 300,
     }
     TASKS = [
         # (name, interval_seconds, coroutine_factory)
