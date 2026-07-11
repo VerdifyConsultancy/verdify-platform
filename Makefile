@@ -53,6 +53,9 @@ HERMES_IRIS_ENV_FILE ?= /etc/verdify/hermes-iris.env
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
+ci: ## Run the FULL pre-merge validation gate (lint+format+schema+logic tests, migrations, twin compile, overlay render); CI_BASE_REF=<ref> adds diff gates
+	bash scripts/ci-local.sh
+
 setup: ## Create/update the repo-local Python tooling venv
 	BOOTSTRAP_PYTHON="$(BOOTSTRAP_PYTHON)" BOOTSTRAP_EXTRAS="$(BOOTSTRAP_EXTRAS)" VENV="$(VENV)" bash scripts/bootstrap-venv.sh
 

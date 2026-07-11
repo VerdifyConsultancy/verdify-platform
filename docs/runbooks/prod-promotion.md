@@ -12,11 +12,9 @@ builds only (`Container Publish` runs every Dockerfile with `push: false`).
 
 ## Flow
 
-1. Merge to `main`.
-2. GitHub Actions runs (validation only):
-   - `CI`
-   - `K8s Manifests`
-   - `Container Publish` (build-without-push; a Dockerfile/COPY break fails)
+1. Merge to `main` with `make ci` green (GitHub Actions is REMOVED as of
+   2026-07-11 — `scripts/ci-local.sh` is the entire validation gate, runnable
+   on any host or in the in-cluster `verdify-platform-ci` Workflow).
 3. Publish happens IN-CLUSTER: submit one `repo-build` Argo Workflow per
    changed image in namespace `agent-fleet-ci` (Kaniko builds the exact main
    revision and pushes `registry.vallery.net/verdifyconsultancy/<image>@sha256:…`
@@ -70,11 +68,11 @@ change says otherwise:
 
 ## Operator Checks
 
-Before syncing ArgoCD, verify the GitHub checks for the merge and promotion PR are
-green:
+Before syncing ArgoCD, verify the gate and the in-cluster CI workflow are green:
 
 ```sh
-gh run list --repo VerdifyConsultancy/verdify-platform --branch main --limit 10
+make ci
+kubectl get workflows -n agent-fleet-ci -l agent-fleet.vallery.net/repo=verdify-platform
 ```
 
 After the prod ArgoCD app is green, run read-only smoke checks from a host with a

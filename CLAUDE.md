@@ -35,7 +35,8 @@ First-turn orientation, before editing:
    and any visible `AGENTS.override.md` or local config such as `.codex/` /
    `.claude/`.
 3. Inspect the authoritative discovery surfaces before choosing commands:
-   `Makefile`, `pyproject.toml`, `.github/workflows/`, `.pre-commit-config.yaml`,
+   `Makefile` (`make ci` is THE validation gate), `pyproject.toml`,
+   `scripts/ci-local.sh`, `.pre-commit-config.yaml`,
    and area manifests such as `site/package.json`, `planner_graph/pyproject.toml`,
    and `*/requirements*.txt`.
 4. Read the relevant architecture and operation references for the touched
@@ -57,7 +58,8 @@ Discovery rules:
   ripgrep is unreliable in this repo** — it silently returns empty/misses,
   especially in `.sql` files; cross-check any "zero hits" with `grep`.
 - Prefer references over duplicated instructions. README is the one-page
-  architecture summary; Makefile and CI define commands; runbooks define laptop,
+  architecture summary; the Makefile defines commands (`make ci` = the gate;
+  GitHub Actions was REMOVED 2026-07-11 — all CI is local/in-cluster); runbooks define laptop,
   deploy, DB, and OTA operations.
 - Treat GitHub issues on `VerdifyConsultancy/verdify-platform` as the live
   tracker. Historical backlog, handoff, sprint, audit, evidence, and context
@@ -173,7 +175,7 @@ prod ArgoCD sync that touches the live writer, anything on the device VLAN),
 DB-destructive operations on prod, credential rotation, and outward-facing
 infra (public DNS/edge, org settings). Everything else — code, schemas,
 migrations (with the safety rules below), CI, k8s manifests, docs — the agent
-lands autonomously on `main`, keeping CI green.
+lands autonomously on `main`, keeping `make ci` green.
 
 Discipline that stays (it was never about the org chart):
 
@@ -214,8 +216,8 @@ The guard is codified, not prose-only:
   `irrigation-migration-proof` run before piping into psql; it refuses to wrap a
   self-committing migration. `make migration-rollback-safety` lists the full
   classification.
-- CI job `migration-rollback-safety` (`.github/workflows/ci.yml`) flags any
-  self-committing migration touched in a PR.
+- `make ci` (scripts/ci-local.sh) runs the classification on every gate run;
+  GitHub Actions is removed — the gate is local/in-cluster.
 
 ## Branches, working copy & memory
 
@@ -259,7 +261,7 @@ Post-2026-04-21 incident (sprint-15/15.1 fix-it-forward spiral producing repeate
 
 7. **Schema changes require explicit restart documentation.** If a PR touches `verdify_schemas/**`, `ingestor/entity_map.py`, or `mcp/server.py`, the PR body must mention which services need to bounce post-merge (`verdify-mcp`, `verdify-ingestor`). CI job `service-restart-drift-guard` enforces this. Observed need from the 2026-04-21 MCP staleness incident.
 
-8. **Every firmware PR must show a replay-diff.** CI job `firmware-replay-diff` runs `scripts/firmware-replay-diff.sh` against merge-base. Default `THRESHOLD_PCT=0` means zero mode/relay divergence allowed. Intentional divergence (e.g. Phase 2 dwell-gate rollout) requires coordinator approval + explicit `THRESHOLD_PCT` override in the PR.
+8. **Every firmware PR must show a replay-diff.** `make ci` with `CI_BASE_REF=<base>` runs `scripts/firmware-replay-diff.sh` against merge-base. Default `THRESHOLD_PCT=0` means zero mode/relay divergence allowed. Intentional divergence (e.g. Phase 2 dwell-gate rollout) requires coordinator approval + explicit `THRESHOLD_PCT` override in the PR.
 
 9. **Required artifacts** for firmware changes (PR body or commit message):
    - Replay diff output (`make firmware-replay OLD=<base> NEW=HEAD`)
