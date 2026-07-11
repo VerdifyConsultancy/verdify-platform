@@ -93,6 +93,91 @@ spec:
             runAsGroup: 1000
             seccompProfile:
               type: RuntimeDefault
+          initContainers:
+            # Lease read + k8s Event emission live here: the kube API needs
+            # real TLS (SNI/ALPN) that busybox wget in the timescale image
+            # cannot speak ("Connection reset by peer", first run 2026-07-11
+            # 19:58Z) — python urllib with the SA CA is the proven db-watchdog
+            # pattern. Writes /shared/lease_state for the psql container:
+            #   ok <age_s> | absent | read_failed
+            - name: lease-check
+              image: python:3.13-alpine
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              command: [python, -c]
+              args:
+                - |
+                  import json, os, ssl, urllib.request, urllib.error
+                  from datetime import datetime, timezone
+
+                  ns = os.environ.get("POD_NAMESPACE", "verdify-prod")
+                  host = os.environ["KUBERNETES_SERVICE_HOST"]
+                  port = os.environ.get("KUBERNETES_SERVICE_PORT", "443")
+                  base = f"https://{host}:{port}"
+                  token = open("/var/run/secrets/kubernetes.io/serviceaccount/token").read().strip()
+                  ctx = ssl.create_default_context(cafile="/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+                  THRESHOLD = 180
+
+                  def emit_event(reason, message):
+                      now = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+                      body = json.dumps({
+                          "metadata": {"generateName": "verdify-writer-watchdog-"},
+                          "type": "Warning", "reason": reason, "message": message,
+                          "involvedObject": {"kind": "CronJob", "name": "verdify-writer-watchdog", "namespace": ns},
+                          "source": {"component": "verdify-writer-watchdog"},
+                          "firstTimestamp": now, "lastTimestamp": now,
+                      }).encode()
+                      req = urllib.request.Request(
+                          f"{base}/api/v1/namespaces/{ns}/events", data=body, method="POST",
+                          headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"})
+                      try:
+                          urllib.request.urlopen(req, context=ctx, timeout=10)
+                      except Exception as e:
+                          print(f"event emit failed ({reason}): {e}")
+
+                  state = "read_failed"
+                  try:
+                      req = urllib.request.Request(
+                          f"{base}/apis/coordination.k8s.io/v1/namespaces/{ns}/leases/verdify-ingestor-writer",
+                          headers={"Authorization": f"Bearer {token}"})
+                      lease = json.load(urllib.request.urlopen(req, context=ctx, timeout=10))
+                      renew = lease.get("spec", {}).get("renewTime")
+                      if renew:
+                          rt = datetime.fromisoformat(renew.replace("Z", "+00:00"))
+                          age = int((datetime.now(timezone.utc) - rt).total_seconds())
+                          state = f"ok {age}"
+                          if age > THRESHOLD:
+                              emit_event("VerdifyEsp32WriterAbsent",
+                                         f"verdify-ingestor-writer lease stale: age_s={age} > {THRESHOLD}")
+                      else:
+                          state = "absent"
+                          emit_event("VerdifyEsp32WriterAbsent", "verdify-ingestor-writer lease has no renewTime")
+                  except urllib.error.HTTPError as e:
+                      if e.code == 404:
+                          state = "absent"
+                          emit_event("VerdifyEsp32WriterAbsent", "verdify-ingestor-writer lease does not exist")
+                      else:
+                          print(f"lease read HTTP {e.code}")
+                          emit_event("VerdifyWatchdogLeaseReadFailed", f"lease read failed: HTTP {e.code}")
+                  except Exception as e:
+                      print(f"lease read failed: {e}")
+                      emit_event("VerdifyWatchdogLeaseReadFailed", f"lease read failed: {type(e).__name__}")
+                  open("/shared/lease_state", "w").write(state)
+                  print("lease_state:", state)
+              env:
+                - name: POD_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.namespace
+              volumeMounts:
+                - name: shared
+                  mountPath: /shared
+              resources:
+                requests: { cpu: 10m, memory: 32Mi }
+                limits: { cpu: 100m, memory: 128Mi }
           containers:
             - name: watchdog
               # timescaledb image: psql for alert_log paging + busybox wget
@@ -108,58 +193,30 @@ spec:
                 - /bin/sh
                 - -ceu
                 - |
-                  NS="${POD_NAMESPACE:-verdify-prod}"
-                  API="https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT:-443}"
-                  TOKEN="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
                   LEASE_THRESHOLD_S=180
                   STALL_THRESHOLD_S=600
 
-                  emit_event() { # $1=reason $2=message
-                    NOW="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-                    wget -q -O /dev/null \
-                      --header "Authorization: Bearer ${TOKEN}" \
-                      --header "Content-Type: application/json" \
-                      --post-data "{\"metadata\":{\"generateName\":\"verdify-writer-watchdog-\"},\"type\":\"Warning\",\"reason\":\"$1\",\"message\":\"$2\",\"involvedObject\":{\"kind\":\"CronJob\",\"name\":\"verdify-writer-watchdog\",\"namespace\":\"${NS}\"},\"source\":{\"component\":\"verdify-writer-watchdog\"},\"firstTimestamp\":\"${NOW}\",\"lastTimestamp\":\"${NOW}\"}" \
-                      "${API}/api/v1/namespaces/${NS}/events" || echo "event emit failed: $1"
-                  }
-
-                  # ── 1. Writer presence: Lease renewTime age ──
+                  # Lease state comes from the python initContainer (the kube
+                  # API needs TLS that busybox wget cannot speak — proven on
+                  # the first live run). Format: "ok <age_s>" | absent | read_failed
+                  LEASE_STATE="$(cat /shared/lease_state 2>/dev/null || echo read_failed)"
+                  echo "lease_state: ${LEASE_STATE}"
                   LEASE_RC=0
-                  LEASE_JSON="$(wget -q -O - \
-                    --header "Authorization: Bearer ${TOKEN}" \
-                    "${API}/apis/coordination.k8s.io/v1/namespaces/${NS}/leases/verdify-ingestor-writer" \
-                    2>/dev/null)" || LEASE_RC=$?
-                  if [ "$LEASE_RC" -ne 0 ]; then
-                    # Cannot distinguish 404 from an API blip with busybox wget:
-                    # do NOT page critical on a monitoring-path failure; surface
-                    # it as a Warning event and skip the writer decision.
-                    echo "lease GET failed (rc=${LEASE_RC}); skipping writer check"
-                    emit_event "VerdifyWatchdogLeaseReadFailed" "cannot read verdify-ingestor-writer lease (wget rc=${LEASE_RC})"
-                    LEASE_JSON=""
-                  fi
-                  RENEW="$(printf '%s' "$LEASE_JSON" | sed -n 's/.*"renewTime":"\([^"]*\)".*/\1/p')"
                   LEASE_FOUND=false
                   LEASE_AGE_S=""
-                  if [ -n "$RENEW" ]; then
-                    LEASE_FOUND=true
-                    RENEW_EPOCH="$(date -u -d "$(printf '%s' "$RENEW" | cut -c1-19 | tr T ' ')" +%s 2>/dev/null || echo 0)"
-                    NOW_EPOCH="$(date -u +%s)"
-                    if [ "$RENEW_EPOCH" -gt 0 ]; then
-                      LEASE_AGE_S=$((NOW_EPOCH - RENEW_EPOCH))
-                    else
-                      echo "WARN: could not parse lease renewTime '$RENEW'"
-                      LEASE_FOUND=false
-                    fi
-                  fi
-                  echo "lease: found=${LEASE_FOUND} age_s=${LEASE_AGE_S:-n/a}"
+                  case "$LEASE_STATE" in
+                    ok\ *)  LEASE_FOUND=true; LEASE_AGE_S="${LEASE_STATE#ok }" ;;
+                    absent) LEASE_FOUND=false ;;
+                    *)      LEASE_RC=1 ;;  # read_failed: skip the writer decision
+                  esac
 
                   # ── 2. DB reachability gate for the paging surface ──
+                  # (the initContainer already emitted the writer-absent k8s
+                  # Event if the lease was stale; a DB outage here fails the
+                  # job loudly — failed jobs are the visibility surface until
+                  # the monitoring-stack PrometheusRule lands.)
                   if ! pg_isready -h "${PGHOST}" -p "${PGPORT:-5432}" -U "${PGUSER}" -d "${PGDATABASE}" >/dev/null 2>&1; then
-                    echo "DB unreachable: cannot write alert_log; emitting k8s event"
-                    emit_event "VerdifyWatchdogDbUnreachable" "writer watchdog cannot reach ${PGHOST}: lease_found=${LEASE_FOUND} lease_age_s=${LEASE_AGE_S:-n/a}"
-                    if [ "$LEASE_RC" -eq 0 ] && { [ "$LEASE_FOUND" != "true" ] || [ "${LEASE_AGE_S:-99999}" -gt "$LEASE_THRESHOLD_S" ]; }; then
-                      emit_event "VerdifyEsp32WriterAbsent" "no fresh verdify-ingestor-writer lease (age_s=${LEASE_AGE_S:-absent}) AND the DB is down"
-                    fi
+                    echo "DB unreachable: cannot write alert_log (lease_state=${LEASE_STATE}); failing the job for visibility"
                     exit 1
                   fi
 
@@ -221,9 +278,14 @@ spec:
               volumeMounts:
                 - name: tmp
                   mountPath: /tmp
+                - name: shared
+                  mountPath: /shared
+                  readOnly: true
               resources:
                 requests: { cpu: 10m, memory: 32Mi }
                 limits: { cpu: 100m, memory: 128Mi }
           volumes:
             - name: tmp
+              emptyDir: {}
+            - name: shared
               emptyDir: {}
