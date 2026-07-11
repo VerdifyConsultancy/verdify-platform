@@ -86,9 +86,16 @@ def test_mcp_watchdog_probes_service_and_never_respawns():
         "MCP watchdog still hardcodes the dead /srv interpreter"
     )
     assert not any("127.0.0.1:8000" in s for s in literals), "MCP watchdog must not probe localhost in k3s"
-    assert "verdify-mcp:8000" in src, "MCP watchdog must default to the verdify-mcp Service"
-    assert "VERDIFY_MCP_HEALTH_URL" in src, "MCP watchdog target must be overridable"
-    assert "Popen" not in src, "MCP watchdog must not respawn server.py in-process (k8s owns recovery)"
+    assert any("verdify-mcp:8000" in s for s in literals), "MCP watchdog must default to the verdify-mcp Service"
+    assert any("VERDIFY_MCP_HEALTH_URL" in s for s in literals), "MCP watchdog target must be overridable"
+    # AST-level (comments don't count): no subprocess spawn anywhere in the
+    # heartbeat — the old watchdog Popen'd a doomed in-container server.py.
+    spawn_attrs = {
+        node.attr
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Attribute) and node.attr in ("Popen", "run", "check_output")
+    }
+    assert "Popen" not in spawn_attrs, "MCP watchdog must not respawn server.py in-process (k8s owns recovery)"
 
 
 def test_engine_repo_root_resolves_beside_its_repo_imports():
