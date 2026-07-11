@@ -58,6 +58,8 @@ AlertType = Literal[
     "vent_vpd_moisture_gap",
     "vpd_extreme",
     "vpd_stress",
+    "writer_absent",
+    "telemetry_stall",
 ]
 
 ALERT_TYPES: tuple[str, ...] = (
@@ -101,6 +103,8 @@ ALERT_TYPES: tuple[str, ...] = (
     "vent_vpd_moisture_gap",
     "vpd_extreme",
     "vpd_stress",
+    "writer_absent",
+    "telemetry_stall",
 )
 
 
@@ -705,6 +709,32 @@ class AlertValidationFailedAlert(_AlertBase):
     details: AlertValidationFailedDetails
 
 
+class WriterAbsentDetails(_DetailsBase):
+    # Out-of-band writer-presence check (2026-07-11 audit P0): the in-ingestor
+    # alert engine self-silences when the writer dies, so this row is written
+    # by the verdify-writer-watchdog CronJob from the Lease age.
+    lease_found: bool
+    lease_age_s: float | None = None
+    threshold_s: float
+
+
+class WriterAbsentAlert(_AlertBase):
+    alert_type: Literal["writer_absent"]
+    details: WriterAbsentDetails
+
+
+class TelemetryStallDetails(_DetailsBase):
+    # Writer holds the connection but rows stopped landing (wedged loop /
+    # dead DB conn). Measured out-of-band from climate max(ts).
+    climate_age_s: float
+    threshold_s: float
+
+
+class TelemetryStallAlert(_AlertBase):
+    alert_type: Literal["telemetry_stall"]
+    details: TelemetryStallDetails
+
+
 AlertEnvelopeUnion = Annotated[
     AlertValidationFailedAlert
     | BandAnchorDbReadFailedAlert
@@ -745,7 +775,9 @@ AlertEnvelopeUnion = Annotated[
     | VentMoistureCapacityLimitAlert
     | VentVpdMoistureGapAlert
     | VpdExtremeAlert
-    | VpdStressAlert,
+    | VpdStressAlert
+    | WriterAbsentAlert
+    | TelemetryStallAlert,
     Field(discriminator="alert_type"),
 ]
 

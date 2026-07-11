@@ -34,6 +34,7 @@ resources:
   # live device VLAN. See allow-ingestor-device-egress.yaml.
   - allow-ingestor-device-egress.yaml
   - db-watchdog.yaml
+  - writer-watchdog.yaml
   - ingestor-state-pvc.yaml
   # Plant-observation pipeline: GitOps-owned CronJob using the production
   # ingestor digest plus the existing scoped GHCR pull credential. The mounted

@@ -1,5 +1,15 @@
 # Handover → monitoring-stack agent: out-of-band writer-absent + telemetry-stall alerts
 
+> **STATUS UPDATE 2026-07-11:** after a SECOND silent multi-hour outage
+> (2026-07-11 01:59–09:08 UTC DB/Longhorn outage, zero alerts), the gap is now
+> closed **in-lane** by `deploy/k8s/overlays/prod/writer-watchdog.yaml` — a
+> CronJob independent of the ingestor that checks the
+> `verdify-ingestor-writer` Lease age (>180 s → CRITICAL `writer_absent`) and
+> climate freshness (>600 s → CRITICAL `telemetry_stall`), paging via direct
+> `alert_log` rows + k8s Events when the DB is down. The PrometheusRule below
+> is STILL WANTED as the fully out-of-cluster backstop (this repo has no RBAC
+> in `observability`), and Slack wiring waits on the token-secret sealing.
+
 **From:** `verdify-platform` (L1 audit P0) · **Date:** 2026-06-17 · **Tracker:** `jvallery/agents` monitoring-stack; cross-ref `VerdifyConsultancy/verdify-platform#343`, `COORDINATION_REQUESTS.md`.
 
 ## Why this is needed (the P0 gap)

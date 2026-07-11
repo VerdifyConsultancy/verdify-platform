@@ -46,17 +46,27 @@ from verdify_schemas.alerts import (
     SetpointUnconfirmedAlert,
     SoilDryoutAlert,
     SoilSensorOfflineAlert,
+    TelemetryStallAlert,
     TempSafetyAlert,
     TunableZeroVarianceAlert,
     VentMoistureCapacityLimitAlert,
     VentVpdMoistureGapAlert,
     VpdExtremeAlert,
     VpdStressAlert,
+    WriterAbsentAlert,
 )
 
 NOW = "2026-05-01T12:00:00+00:00"
 
 CASES = {
+    "writer_absent": (
+        WriterAbsentAlert,
+        {"lease_found": True, "lease_age_s": 421.5, "threshold_s": 180.0},
+    ),
+    "telemetry_stall": (
+        TelemetryStallAlert,
+        {"climate_age_s": 1240.0, "threshold_s": 600.0},
+    ),
     "alert_validation_failed": (
         AlertValidationFailedAlert,
         {

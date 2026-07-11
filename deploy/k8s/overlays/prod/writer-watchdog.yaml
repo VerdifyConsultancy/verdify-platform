@@ -1,0 +1,229 @@
+# Out-of-band writer-presence + telemetry-stall watchdog (2026-07-11 audit P0).
+#
+# The in-ingestor alert engine self-silences when the writer dies — proven
+# twice (2026-06-17 storage incident ~1h dark; 2026-07-11 DB/Longhorn outage
+# 7h09m dark, zero alerts). docs/handoff/monitoring-writer-absent-alert.md
+# asked monitoring-stack for a PrometheusRule on 2026-06-17 and it was never
+# delivered; this CronJob closes the gap from INSIDE this repo's lane, fully
+# independent of the ingestor process:
+#
+#   * writer presence — age of the coordination.k8s.io Lease
+#     `verdify-ingestor-writer` (renewed every ~15 s by the live writer only).
+#     Stale/absent > 180 s → CRITICAL `writer_absent` (tolerates a normal
+#     Recreate roll, catches a real outage — same 3 min rationale as the
+#     handoff rule).
+#   * telemetry stall — climate max(ts) age > 600 s while the writer looks
+#     alive → CRITICAL `telemetry_stall` (connected-but-not-writing).
+#
+# Paging surface: direct alert_log rows (source='writer_watchdog', deduped,
+# auto-resolved by this job when the condition clears) — these show in
+# Grafana, the deploy-gate sweeps, and the firmware-OTA critical-alert
+# preflight. When the DB itself is unreachable the job emits a Kubernetes
+# Warning Event (VerdifyWatchdogDbUnreachable) and fails loudly instead.
+# Slack: intentionally not wired here until the slack token secret is sealed
+# (docs/handoff/k3s-agent-handoff.md §5.2) — do not add a silent-noop path.
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: verdify-writer-watchdog
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: writer-watchdog
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: verdify-writer-watchdog
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: writer-watchdog
+rules:
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    resourceNames: ["verdify-ingestor-writer"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: verdify-writer-watchdog
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: writer-watchdog
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: verdify-writer-watchdog
+subjects:
+  - kind: ServiceAccount
+    name: verdify-writer-watchdog
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: verdify-writer-watchdog
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: writer-watchdog
+spec:
+  schedule: "*/2 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 3
+  startingDeadlineSeconds: 90
+  jobTemplate:
+    spec:
+      activeDeadlineSeconds: 100
+      backoffLimit: 0
+      ttlSecondsAfterFinished: 600
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/part-of: verdify
+            app.kubernetes.io/component: writer-watchdog
+        spec:
+          serviceAccountName: verdify-writer-watchdog
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: watchdog
+              # timescaledb image: psql for alert_log paging + busybox wget
+              # for the kube API lease read. Same image the DB runs, so it is
+              # always present on the storage nodes.
+              image: timescale/timescaledb:2.25.2-pg16
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              command:
+                - /bin/sh
+                - -ceu
+                - |
+                  NS="${POD_NAMESPACE:-verdify-prod}"
+                  API="https://${KUBERNETES_SERVICE_HOST}:${KUBERNETES_SERVICE_PORT:-443}"
+                  TOKEN="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)"
+                  LEASE_THRESHOLD_S=180
+                  STALL_THRESHOLD_S=600
+
+                  emit_event() { # $1=reason $2=message
+                    NOW="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+                    wget -q -O /dev/null \
+                      --header "Authorization: Bearer ${TOKEN}" \
+                      --header "Content-Type: application/json" \
+                      --post-data "{\"metadata\":{\"generateName\":\"verdify-writer-watchdog-\"},\"type\":\"Warning\",\"reason\":\"$1\",\"message\":\"$2\",\"involvedObject\":{\"kind\":\"CronJob\",\"name\":\"verdify-writer-watchdog\",\"namespace\":\"${NS}\"},\"source\":{\"component\":\"verdify-writer-watchdog\"},\"firstTimestamp\":\"${NOW}\",\"lastTimestamp\":\"${NOW}\"}" \
+                      "${API}/api/v1/namespaces/${NS}/events" || echo "event emit failed: $1"
+                  }
+
+                  # ── 1. Writer presence: Lease renewTime age ──
+                  LEASE_RC=0
+                  LEASE_JSON="$(wget -q -O - \
+                    --header "Authorization: Bearer ${TOKEN}" \
+                    "${API}/apis/coordination.k8s.io/v1/namespaces/${NS}/leases/verdify-ingestor-writer" \
+                    2>/dev/null)" || LEASE_RC=$?
+                  if [ "$LEASE_RC" -ne 0 ]; then
+                    # Cannot distinguish 404 from an API blip with busybox wget:
+                    # do NOT page critical on a monitoring-path failure; surface
+                    # it as a Warning event and skip the writer decision.
+                    echo "lease GET failed (rc=${LEASE_RC}); skipping writer check"
+                    emit_event "VerdifyWatchdogLeaseReadFailed" "cannot read verdify-ingestor-writer lease (wget rc=${LEASE_RC})"
+                    LEASE_JSON=""
+                  fi
+                  RENEW="$(printf '%s' "$LEASE_JSON" | sed -n 's/.*"renewTime":"\([^"]*\)".*/\1/p')"
+                  LEASE_FOUND=false
+                  LEASE_AGE_S=""
+                  if [ -n "$RENEW" ]; then
+                    LEASE_FOUND=true
+                    RENEW_EPOCH="$(date -u -d "$(printf '%s' "$RENEW" | cut -c1-19 | tr T ' ')" +%s 2>/dev/null || echo 0)"
+                    NOW_EPOCH="$(date -u +%s)"
+                    if [ "$RENEW_EPOCH" -gt 0 ]; then
+                      LEASE_AGE_S=$((NOW_EPOCH - RENEW_EPOCH))
+                    else
+                      echo "WARN: could not parse lease renewTime '$RENEW'"
+                      LEASE_FOUND=false
+                    fi
+                  fi
+                  echo "lease: found=${LEASE_FOUND} age_s=${LEASE_AGE_S:-n/a}"
+
+                  # ── 2. DB reachability gate for the paging surface ──
+                  if ! pg_isready -h "${PGHOST}" -p "${PGPORT:-5432}" -U "${PGUSER}" -d "${PGDATABASE}" >/dev/null 2>&1; then
+                    echo "DB unreachable: cannot write alert_log; emitting k8s event"
+                    emit_event "VerdifyWatchdogDbUnreachable" "writer watchdog cannot reach ${PGHOST}: lease_found=${LEASE_FOUND} lease_age_s=${LEASE_AGE_S:-n/a}"
+                    if [ "$LEASE_RC" -eq 0 ] && { [ "$LEASE_FOUND" != "true" ] || [ "${LEASE_AGE_S:-99999}" -gt "$LEASE_THRESHOLD_S" ]; }; then
+                      emit_event "VerdifyEsp32WriterAbsent" "no fresh verdify-ingestor-writer lease (age_s=${LEASE_AGE_S:-absent}) AND the DB is down"
+                    fi
+                    exit 1
+                  fi
+
+                  PSQL="psql -v ON_ERROR_STOP=1 -t -A -q"
+
+                  # ── 3. writer_absent lifecycle (skipped when the lease read failed) ──
+                  if [ "$LEASE_RC" -eq 0 ] && { [ "$LEASE_FOUND" != "true" ] || [ "${LEASE_AGE_S:-99999}" -gt "$LEASE_THRESHOLD_S" ]; }; then
+                    AGE_JSON="${LEASE_AGE_S:-null}"
+                    $PSQL -c "INSERT INTO alert_log (alert_type, severity, category, message, details, source)
+                      SELECT 'writer_absent', 'critical', 'system',
+                             'WRITER ABSENT: verdify-ingestor-writer lease stale/missing (age_s=${LEASE_AGE_S:-absent}). Telemetry, setpoint dispatch, and the in-ingestor alert engine are all down; the ESP32 holds its on-chip band.',
+                             json_build_object('lease_found', ${LEASE_FOUND}, 'lease_age_s', ${AGE_JSON}, 'threshold_s', ${LEASE_THRESHOLD_S})::jsonb,
+                             'writer_watchdog'
+                      WHERE NOT EXISTS (SELECT 1 FROM alert_log WHERE alert_type = 'writer_absent' AND resolved_at IS NULL)"
+                    echo "writer_absent: CRITICAL (lease age ${LEASE_AGE_S:-absent}s)"
+                  elif [ "$LEASE_RC" -eq 0 ]; then
+                    $PSQL -c "UPDATE alert_log SET resolved_at = now(), disposition = 'resolved', resolved_by = 'writer_watchdog',
+                              resolution = 'writer lease fresh again'
+                       WHERE alert_type = 'writer_absent' AND resolved_at IS NULL" >/dev/null
+                  fi
+
+                  # ── 4. telemetry_stall lifecycle ──
+                  CLIMATE_AGE="$($PSQL -c "SELECT COALESCE(round(extract(epoch FROM now() - max(ts)))::text, 'none') FROM climate")"
+                  echo "climate age_s=${CLIMATE_AGE}"
+                  if [ "$CLIMATE_AGE" != "none" ] && [ "$CLIMATE_AGE" -gt "$STALL_THRESHOLD_S" ]; then
+                    $PSQL -c "INSERT INTO alert_log (alert_type, severity, category, message, details, source)
+                      SELECT 'telemetry_stall', 'critical', 'system',
+                             'TELEMETRY STALL: newest climate row is ${CLIMATE_AGE}s old (threshold ${STALL_THRESHOLD_S}s). Writer may be connected but not persisting.',
+                             json_build_object('climate_age_s', ${CLIMATE_AGE}, 'threshold_s', ${STALL_THRESHOLD_S})::jsonb,
+                             'writer_watchdog'
+                      WHERE NOT EXISTS (SELECT 1 FROM alert_log WHERE alert_type = 'telemetry_stall' AND resolved_at IS NULL)"
+                    echo "telemetry_stall: CRITICAL"
+                  else
+                    $PSQL -c "UPDATE alert_log SET resolved_at = now(), disposition = 'resolved', resolved_by = 'writer_watchdog',
+                              resolution = 'climate rows landing again'
+                       WHERE alert_type = 'telemetry_stall' AND resolved_at IS NULL" >/dev/null
+                  fi
+                  echo "watchdog sweep complete $(date -u +%FT%TZ)"
+              env:
+                - name: POD_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      fieldPath: metadata.namespace
+                - name: PGHOST
+                  valueFrom:
+                    configMapKeyRef: { key: DB_HOST, name: verdify-config }
+                - name: PGPORT
+                  valueFrom:
+                    configMapKeyRef: { key: DB_PORT, name: verdify-config }
+                - name: PGDATABASE
+                  valueFrom:
+                    configMapKeyRef: { key: DB_NAME, name: verdify-config }
+                - name: PGUSER
+                  valueFrom:
+                    configMapKeyRef: { key: DB_USER, name: verdify-config }
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef: { key: POSTGRES_PASSWORD, name: verdify-app-secrets }
+              volumeMounts:
+                - name: tmp
+                  mountPath: /tmp
+              resources:
+                requests: { cpu: 10m, memory: 32Mi }
+                limits: { cpu: 100m, memory: 128Mi }
+          volumes:
+            - name: tmp
+              emptyDir: {}
