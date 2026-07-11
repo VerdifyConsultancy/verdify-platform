@@ -6,23 +6,46 @@
 `verdify-dev`, and `verdify-staging` promotion chain is not part of the deploy
 path anymore.
 
+**ZOT MIGRATION (2026-07-11, ADR-0021):** publishing moved OFF GHCR to the
+in-cluster zot origin (`registry.vallery.net`). GitHub Actions now VALIDATES
+builds only (`Container Publish` runs every Dockerfile with `push: false`).
+
 ## Flow
 
 1. Merge to `main`.
-2. GitHub Actions runs:
+2. GitHub Actions runs (validation only):
    - `CI`
    - `K8s Manifests`
-   - `Container Publish`
-3. `Container Publish` builds and publishes changed images to GHCR with immutable
-   digests and the mutable `:branch-main` tag.
-4. A maintainer runs `.github/workflows/prod-promote.yml`.
-5. `prod-promote` resolves the latest published `:branch-main` digest for each
-   promotable prod image and opens a digest-only PR against
-   `deploy/k8s/overlays/prod/kustomization.yaml`.
-6. `promote-diff-guard.yml` verifies the PR changed only the allowed prod image
-   digest surface.
-7. A human reviews and merges the promotion PR.
-8. The prod ArgoCD app remains OutOfSync until an operator performs the explicit
+   - `Container Publish` (build-without-push; a Dockerfile/COPY break fails)
+3. Publish happens IN-CLUSTER: submit one `repo-build` Argo Workflow per
+   changed image in namespace `agent-fleet-ci` (Kaniko builds the exact main
+   revision and pushes `registry.vallery.net/verdifyconsultancy/<image>@sha256:…`
+   using the org push secret `zot-origin-verdifyconsultancy-ci-dockerconfig`):
+
+   ```sh
+   kubectl create -n agent-fleet-ci -f - <<'WF'
+   apiVersion: argoproj.io/v1alpha1
+   kind: Workflow
+   metadata:
+     generateName: verdify-platform-build-<image>-
+     labels: {agent-fleet.vallery.net/repo: verdify-platform}
+   spec:
+     workflowTemplateRef: {name: repo-build}
+     arguments:
+       parameters:
+         - {name: repo, value: https://github.com/VerdifyConsultancy/verdify-platform.git}
+         - {name: revision, value: <sha>}
+         - {name: dockerfile, value: <path/to/Dockerfile>}
+         - {name: context, value: "."}
+         - {name: image, value: verdifyconsultancy/verdify-<image>}
+         - {name: push_secret, value: zot-origin-verdifyconsultancy-ci-dockerconfig}
+   WF
+   ```
+4. Collect each workflow's `digest` output parameter and commit a digest-only
+   change to `deploy/k8s/overlays/prod/kustomization.yaml`
+   (`newName: registry.vallery.net/verdifyconsultancy/<image>` + `digest:`).
+5. A human reviews the digest-only commit/PR.
+6. The prod ArgoCD app remains OutOfSync until an operator performs the explicit
    manual sync.
 
 The manual ArgoCD sync is the device-write gate. Nothing in GitHub Actions should

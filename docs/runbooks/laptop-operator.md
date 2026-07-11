@@ -6,7 +6,7 @@
 and staging are DECOMMISSIONED and DELETED — prod (`verdify-prod`, ArgoCD app
 `verdify-prod-dark`, manual-sync behind the device-write gate) is the ONLY
 environment** (serves lab/graphs/api.verdify.ai). Prod is advanced by the
-`prod-promote` workflow off the published `:branch-main` image digests in GHCR
+`prod-promote` workflow off published image digests (ZOT as of 2026-07-11 — see docs/runbooks/prod-promotion.md; GHCR is retired per ADR-0021)
 (no more `bump-dev-digests` / dev render / dev-equality guard). Any section
 below that mentions a dev environment, `overlays/dev`, dev DB restore, or the
 dev proving flow is HISTORICAL — those resources no longer exist.
@@ -59,7 +59,7 @@ by default; any prod apply requires an explicit operator gate.
 
 - **Push to `main`** (or merge a PR): `container-publish.yml` builds the
   impacted images (api/mcp/ingestor/migrate/planner + artifact-only
-  setpoint-server) and publishes them **digest-pinned to GHCR** (immutable
+  setpoint-server) and validated them build-only on GHCR-era CI; as of 2026-07-11 publishing is the in-cluster Kaniko→zot flow (immutable
   `:sha-<sha>` + mutable `:branch-main`). There is **no environment write-back**
   — `bump-dev-digests` / dev auto-sync are removed (dev is gone). `ci.yml` (all
   gates), `k8s-manifests.yml` (kubeconform) and `cnpg-image.yml` fire on `main` too.
@@ -68,7 +68,7 @@ by default; any prod apply requires an explicit operator gate.
 - **Promote to prod:**
   `gh workflow run prod-promote.yml --ref main -f mode=pull-request`
   (or `mode=dry-run`). Resolves each promotable image's `:branch-main` digest
-  from GHCR (imagetools), surgically bumps `overlays/prod/kustomization.yaml`,
+  from the zot origin (registry.vallery.net), surgically bumps `overlays/prod/kustomization.yaml`,
   runs the Device-Write-Safety-Gate, opens a `prod-promote` PR.
   `promote-diff-guard` (required check) re-asserts a **digests-only** change
   surface. Merge = git change only; then the gated sync below.

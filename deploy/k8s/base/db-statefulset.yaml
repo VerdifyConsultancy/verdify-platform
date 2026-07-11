@@ -38,6 +38,7 @@ spec:
       # field here means a future private-mirror swap pulls without a manifest
       # change, and the namespace default SA stays untouched.
       imagePullSecrets:
+        - name: zot-origin-cluster-pull  # zot origin (ADR-0021); ghcr kept during transition
         - name: ghcr-jvallery-readonly
       securityContext:
         runAsNonRoot: true

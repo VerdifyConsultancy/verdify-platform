@@ -1,11 +1,14 @@
 name: Container Publish
 
-# Verdify APP CI/CD (golden-path, mirrors jvallery/gravity container-publish.yml).
+# Verdify APP CI (VALIDATION ONLY as of 2026-07-11 — ADR-0021 zot migration).
 #
-# On push to the production branch, build and publish the Verdify application
-# images to GHCR, then request a k3s GitOps deploy via the Agent Fleet
-# (jvallery/agents) desired-state promotion workflow. The repo drives the
-# deployment: push -> build -> publish -> GitOps desired-state PR -> Argo CD.
+# GitHub Actions builds every image WITHOUT pushing (a Dockerfile/COPY break
+# still fails the PR/push). PUBLISHING is the in-cluster pipeline: repo-build
+# Argo Workflows (agent-fleet-ci) run Kaniko against the exact revision and
+# push to the zot origin (registry.vallery.net / registry-origin svc); the
+# digests are pinned into deploy/k8s/overlays/prod by digest-only commits.
+# ghcr.io is BANNED for publishing (fleet ADR-0021); the ghcr push path below
+# is retired via push:false, kept as build-validation matrix.
 #
 # The Verdify application is composed of these image contexts (handoff §3):
 #   - api       (FastAPI public crop catalog + setpoints)  ./api
@@ -316,7 +319,7 @@ jobs:
       # the gravity .prod suffix. RECONCILED 2026-05-30; flag for coordinator.
       dockerfile: api/Dockerfile
       image-name: ${{ github.repository_owner }}/verdify-api
-      push: true
+      push: false  # ADR-0021: GitHub Actions VALIDATES ONLY; publish is the in-cluster Kaniko flow -> zot origin
       publish-branches: main
       build-args: |
         GIT_SHA=${{ github.sha }}
@@ -343,7 +346,7 @@ jobs:
       context: .
       dockerfile: mcp/Dockerfile
       image-name: ${{ github.repository_owner }}/verdify-mcp
-      push: true
+      push: false  # ADR-0021: GitHub Actions VALIDATES ONLY; publish is the in-cluster Kaniko flow -> zot origin
       publish-branches: main
       build-args: |
         GIT_SHA=${{ github.sha }}
@@ -367,7 +370,7 @@ jobs:
       context: .
       dockerfile: ingestor/Dockerfile
       image-name: ${{ github.repository_owner }}/verdify-ingestor
-      push: true
+      push: false  # ADR-0021: GitHub Actions VALIDATES ONLY; publish is the in-cluster Kaniko flow -> zot origin
       publish-branches: main
       build-args: |
         GIT_SHA=${{ github.sha }}
@@ -399,7 +402,7 @@ jobs:
       context: .
       dockerfile: planner_graph/Dockerfile
       image-name: ${{ github.repository_owner }}/verdify-planner
-      push: true
+      push: false  # ADR-0021: GitHub Actions VALIDATES ONLY; publish is the in-cluster Kaniko flow -> zot origin
       publish-branches: main
       build-args: |
         GIT_SHA=${{ github.sha }}
@@ -425,7 +428,7 @@ jobs:
       context: .
       dockerfile: db/Dockerfile.migrate
       image-name: ${{ github.repository_owner }}/verdify-migrate
-      push: true
+      push: false  # ADR-0021: GitHub Actions VALIDATES ONLY; publish is the in-cluster Kaniko flow -> zot origin
       publish-branches: main
       build-args: |
         GIT_SHA=${{ github.sha }}
@@ -452,7 +455,7 @@ jobs:
       context: .
       dockerfile: scripts/Dockerfile.setpoint-server
       image-name: ${{ github.repository_owner }}/verdify-setpoint-server
-      push: true
+      push: false  # ADR-0021: GitHub Actions VALIDATES ONLY; publish is the in-cluster Kaniko flow -> zot origin
       publish-branches: main
       build-args: |
         GIT_SHA=${{ github.sha }}
@@ -482,7 +485,7 @@ jobs:
       # push to it even with packages:write. Publish future CI-owned images to a
       # fresh repo-linked package while keeping the Kubernetes CronJob name.
       image-name: ${{ github.repository_owner }}/verdify-lab-publisher-k3s
-      push: true
+      push: false  # ADR-0021: GitHub Actions VALIDATES ONLY; publish is the in-cluster Kaniko flow -> zot origin
       publish-branches: main
       build-args: |
         GIT_SHA=${{ github.sha }}

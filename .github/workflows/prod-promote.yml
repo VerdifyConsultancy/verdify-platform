@@ -67,8 +67,22 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  deprecated-gate:
+    # ADR-0021 zot migration (2026-07-11): this workflow resolved promotion
+    # digests from GHCR, which is retired for publishing. Digest promotion is
+    # now the in-cluster repo-build (Kaniko -> registry.vallery.net) flow +
+    # a digest-only pin commit — procedure in docs/runbooks/prod-promotion.md.
+    # Fail fast with a pointer instead of silently promoting stale GHCR tags.
+    name: DEPRECATED — publishing moved to the zot origin
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "::error::prod-promote via GHCR is retired (ADR-0021). Use the in-cluster repo-build Kaniko flow -> registry.vallery.net and a digest-only pin commit. See docs/runbooks/prod-promotion.md."
+          exit 1
+
   promote:
-    name: Compute published->prod digest promotion and open PR
+    name: Compute published->prod digest promotion and open PR (RETIRED PATH)
+    needs: deprecated-gate
     runs-on: ubuntu-latest
     permissions:
       contents: write

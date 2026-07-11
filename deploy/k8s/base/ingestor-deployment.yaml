@@ -48,6 +48,7 @@ spec:
       # the kubelet can pull the pinned @sha256 digests (the namespace default
       # SA has no imagePullSecrets, and we do not mutate it from the overlay).
       imagePullSecrets:
+        - name: zot-origin-cluster-pull  # zot origin (ADR-0021); ghcr kept during transition
         - name: ghcr-jvallery-readonly
       # HA-3.2 FENCE (#240): bind the dedicated SA whose Role grants the minimal
       # Lease verbs (ingestor-rbac.yaml). The lease code is INERT until

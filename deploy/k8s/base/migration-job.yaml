@@ -41,6 +41,7 @@ spec:
       # default SA has no imagePullSecrets, and we do not mutate it from the
       # overlay). The wait-for-db init container shares this one pod spec.
       imagePullSecrets:
+        - name: zot-origin-cluster-pull  # zot origin (ADR-0021); ghcr kept during transition
         - name: ghcr-jvallery-readonly
       securityContext:
         runAsNonRoot: true

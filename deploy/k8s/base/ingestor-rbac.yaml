@@ -29,6 +29,7 @@ metadata:
 # digests without relying on the namespace default SA (which has none). Mirrors
 # the explicit imagePullSecrets already on the Deployment podSpec.
 imagePullSecrets:
+  - name: zot-origin-cluster-pull  # zot origin (ADR-0021); ghcr kept during transition
   - name: ghcr-jvallery-readonly
 ---
 apiVersion: rbac.authorization.k8s.io/v1

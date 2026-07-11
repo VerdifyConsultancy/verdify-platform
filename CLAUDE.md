@@ -141,15 +141,16 @@ Handoff protocol:
   device-write gate**. NOTE: `verdify-www` (verdify.ai/www marketing) and
   `verdify-crm` are SEPARATE products in SEPARATE repos — unrelated to the
   greenhouse, do not touch.
-- **Pipeline (single-env):** every push to main publishes digest-pinned images
-  to GHCR (immutable `sha-<sha>` + mutable `branch-main` tags). There is **no
-  environment write-back** — `bump-dev-digests` / `request-gitops-promotion` are
-  removed. Prod is advanced by the `prod-promote` workflow (dispatch), which
-  resolves each promotable image's `:branch-main` digest from GHCR (imagetools),
-  surgically bumps `overlays/prod`, and opens a `prod-promote` PR;
-  `promote-diff-guard` enforces a digests-only change-surface; a human merges and
-  an operator runs the gated `argocd app sync verdify-prod-dark`. Promotable set
-  = api/mcp/ingestor/migrate/planner (setpoint-server + lab are hand-pinned).
+- **Pipeline (single-env, ZOT as of 2026-07-11 / ADR-0021):** GitHub Actions
+  VALIDATES only — `Container Publish` builds every image with `push: false`
+  (a Dockerfile/COPY break still fails the push/PR). PUBLISHING is in-cluster:
+  `repo-build` Argo Workflows in ns `agent-fleet-ci` (Kaniko) build the exact
+  main revision and push `registry.vallery.net/verdifyconsultancy/<image>@sha256`
+  to the zot origin; digests are pinned into `overlays/prod/kustomization.yaml`
+  by a digest-only commit (procedure: `docs/runbooks/prod-promotion.md`).
+  GHCR is retired for publishing. A human reviews the pin commit and an
+  operator runs the gated `argocd app sync verdify-prod-dark`. Workloads pull
+  with the `zot-origin-cluster-pull` secret.
 - **No dev device / no dev DB.** Firmware is hot-staged direct to prod. There is
   no nightly prod-restore copy anymore (it lived in dev).
 - **Operating from the laptop:** see `docs/runbooks/laptop-operator.md` for
