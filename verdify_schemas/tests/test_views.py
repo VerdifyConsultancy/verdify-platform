@@ -184,6 +184,13 @@ class TestZoneBandGradeRollupBasic:
 
 
 def _has_docker() -> bool:
+    # FileNotFoundError guard (2026-07-11): in-cluster CI images have no
+    # docker binary AT ALL — a bare subprocess.run exploded at pytest
+    # COLLECTION time and took five schema test modules with it.
+    import shutil
+
+    if not shutil.which("docker"):
+        return False
     r = subprocess.run(["docker", "ps"], capture_output=True, text=True, check=False)
     return r.returncode == 0
 

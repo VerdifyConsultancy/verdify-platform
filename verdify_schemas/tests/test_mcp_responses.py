@@ -267,6 +267,10 @@ class TestOutcomeKpi:
 # ── Drift guard: live fn_planner_scorecard() metric names must be a subset of
 #    ScorecardResponse.metric_names(). Skips if no DB is reachable. ─────
 def _docker_timescaledb_reachable() -> bool:
+    import shutil
+
+    if not shutil.which("docker"):
+        return False
     r = subprocess.run(
         ["docker", "inspect", "-f", "{{.State.Running}}", "verdify-timescaledb"],
         capture_output=True,

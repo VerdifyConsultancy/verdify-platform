@@ -41,6 +41,10 @@ HARD_FKS = [
 
 
 def _docker_available() -> bool:
+    import shutil
+
+    if not shutil.which("docker"):
+        return False
     r = subprocess.run(["docker", "ps"], capture_output=True, text=True, check=False)
     return r.returncode == 0
 

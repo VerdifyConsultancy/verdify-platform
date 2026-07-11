@@ -358,6 +358,10 @@ def test_action_decision_validates_observability_block_reasons() -> None:
 
 
 def _docker_available() -> bool:
+    import shutil
+
+    if not shutil.which("docker"):
+        return False
     r = subprocess.run(["docker", "ps"], capture_output=True, text=True, check=False)
     return r.returncode == 0
 

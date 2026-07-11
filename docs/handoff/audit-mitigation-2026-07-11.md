@@ -41,18 +41,48 @@ vacuous passes — not stricter).
   running the exact image in-cluster before shipping.
 - Fence-invariant SQL run against live `equipment_state`: no false positives.
 
-## Post-deploy validation checklist (this session, after image promotion)
+## Post-deploy validation (COMPLETED 2026-07-11 ~20:10 UTC — zot release live)
 
-- [ ] dispatcher: no `Task setpoint_dispatch failed` in logs; cadence back to
-      ~300 s; `setpoint_changes` volume drops from ~18k/day.
-- [ ] no new `failed/unroutable` rows for `irrig_*_days_mask`.
-- [ ] alert 7803 resolved; 16 zombie `sensor_offline` resolved.
-- [ ] `verdify-writer-watchdog` CronJob runs green every 2 min.
-- [ ] setpoint-server `/setpoints` returns 200 in-pod (#447 closed).
-- [ ] MCP watchdog noise gone from ingestor logs.
-- [ ] tonight's SUNSET (ledger 344942, due 2026-07-12 02:30–03:00 UTC)
-      delivers; if it misses, `planner_required_plan_missed` now actually
-      lands (fail-loud path) — check `alert_log` tomorrow morning.
+Deployed as the FIRST ZOT RELEASE (`gitops(pin): verdify images 76677e81a34a`):
+all seven app images pull from `registry.vallery.net`; GitHub Actions removed
+(the gate is `make ci`; in-cluster `verdify-platform-ci` webhook pipeline live).
+
+- [x] dispatcher: 0 crashes since the new pod (was ~80/h); writer lease
+      acquired cleanly by the new pod.
+- [x] zero `irrig_*_days_mask` rows since rollout (was ~1,073/day/param).
+- [x] alert 7803 + all 16 zombie `sensor_offline` auto-resolved at 18:29Z
+      (view fixes were live before the code deploy); the 3 center
+      `irrigation_feedback_gap` alerts auto-resolved after the producer filter
+      deployed.
+- [x] `verdify-writer-watchdog` running every 2 min. First run exposed that
+      busybox wget cannot TLS to the kube API — lease read moved to a python
+      initContainer (db-watchdog pattern) same-day.
+- [x] setpoint-server `/setpoints` HTTP 200, 205 params (#447 closed — first
+      success since the k3s cutover).
+- [x] MCP watchdog noise gone (0 log lines; was 1/min).
+- [x] `plan_context_failed` alert path proven ALIVE: it caught a transient
+      gather failure during the DB pod cycle — the exact alert class that had
+      been silently dead since 2026-05-25.
+- [x] firmware bake undisturbed: ESP32 uptime continuous (~23 h, exact
+      version readback), zero firmware criticals; the one bake-window critical
+      was the 19:15–19:40Z Hermes MCP-client wedge (app-layer, recovered by a
+      gateway restart; SOLAR_MAX delivered after recovery).
+- [ ] tonight's SUNSET (ledger 344942, due 2026-07-12 02:30–03:00 UTC): first
+      unattended required cycle on the fixed stack — check `plan_delivery_log`
+      tomorrow; a miss now pages AND carries across midnight.
+- [ ] `daily_summary_live` first 600s-budget run (~20:27Z tick) — confirm no
+      timeout.
+
+Deploy-day extras (operator-directed, same session): zot registry migration
+(ADR-0021) end-to-end; GitHub Actions deleted; in-cluster CI
+(validate -> 7 Kaniko builds -> digest pin) wired via jvallery/agents #2934 +
+follow-ups (kaniko memory input via podSpecPatch after the resources-expression
+hotfix; webhook ingress route; validate deps from pyproject). Kaniko surfaced
+two latent Dockerfile bugs: BuildKit heredoc in Dockerfile.migrate and
+kaniko-incompatible db/ re-includes in .dockerignore — both fixed. Still on
+ghcr: verdify-lab (built in verdify-site-legacy) + third-party runtime images
+(mirroring into zot = open follow-up); ghcr pull secrets retained during
+transition.
 
 ## 48-hour bake follow-through (due after 2026-07-12 15:03 MDT / 21:03 UTC)
 
