@@ -28,8 +28,9 @@ deploy/k8s/components/grafana/generated/dashboards-cm-{0,1,2}.yaml   ← ConfigM
 Grafana pod (ns verdify-prod, deploy/verdify-grafana)
   • dashboards dir-mounted at /etc/grafana/provisioning/dashboards/json/bucket{0..3}
   • provider config (provisioning-cm.yaml) updateIntervalSeconds: 300  ← reload cadence
-  • anonymous org role = Viewer (public, no login); admin login form on but
-    GRAFANA_ADMIN_PASSWORD secret is unset → no admin API available
+  • anonymous org role = Viewer (public, no login); admin login requires the
+    out-of-band verdify-grafana-secrets/GRAFANA_ADMIN_PASSWORD prerequisite
+    (no default; missing Secret/key leaves a new pod CreateContainerConfigError)
   • image-renderer sidecar → server-side PNG via /render/d-solo/...
         ▼
 graphs.verdify.ai (landing/Home)  +  lab.verdify.ai (/d-solo iframe embeds)
@@ -271,8 +272,9 @@ region the data spikes into. So:
 - **JSON formatting:** `indent=2, ensure_ascii=True` + trailing newline → exact
   byte round-trip → clean diffs.
 - **SQL macros don't expand in psql:** substitute literal bounds to test.
-- **No Grafana admin API** (admin password secret unset) → can't import a temp
-  dashboard to preview; you must deploy to render.
+- **Do not use the Grafana admin API as an authoring path.** The required admin
+  Secret is delivered out of band and must exist before any rollout; dashboards
+  remain Git-provisioned, so preview through the reviewed deployment path.
 - **Band panels project into the future** (`now+30h`); `equipment_state` only
   exists up to now, so stripes correctly stop at "now".
 - **`rg` is unreliable in this repo** (silently misses, esp. `.sql`); use
