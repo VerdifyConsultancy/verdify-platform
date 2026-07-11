@@ -73,6 +73,12 @@ all seven app images pull from `registry.vallery.net`; GitHub Actions removed
 - [ ] `daily_summary_live` first 600s-budget run (~20:27Z tick) — confirm no
       timeout.
 
+PIPELINE AUTONOMY PROVEN 2026-07-11 ~20:55Z: run `verdify-platform-ci-vgxhz`
+executed the FULL loop unattended — webhook → validate (make ci gate) →
+7 Kaniko builds → its own digest-pin commit `d4a8faf` — which was then applied
+to prod. The platform now releases itself end-to-end with only the apply/sync
+human-gated.
+
 Deploy-day extras (operator-directed, same session): zot registry migration
 (ADR-0021) end-to-end; GitHub Actions deleted; in-cluster CI
 (validate -> 7 Kaniko builds -> digest pin) wired via jvallery/agents #2934 +
