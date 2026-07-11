@@ -109,20 +109,16 @@ kind: Deployment
 metadata:
   name: verdify-planner
 spec:
-  replicas: 2
+  # 2026-07-11 audit: planner_graph has processed ZERO runs ever
+  # (planner_graph_runs is empty; both pods logged only health probes) — the
+  # operational planner path is ingestor→Hermes→MCP. Two replicas + hard
+  # hostname spread of an idle service was pure resource/deploy-surface noise.
+  # Back to 1 replica until real deliveries route through it; its Postgres
+  # lease/claim path (FOR UPDATE SKIP LOCKED) already makes a future 1->N
+  # scale-out safe.
+  replicas: 1
   strategy:
     type: RollingUpdate
     rollingUpdate:
       maxUnavailable: 0
       maxSurge: 1
-  template:
-    spec:
-      topologySpreadConstraints:
-        - maxSkew: 1
-          topologyKey: kubernetes.io/hostname
-          whenUnsatisfiable: DoNotSchedule
-          matchLabelKeys:
-            - pod-template-hash
-          labelSelector:
-            matchLabels:
-              app.kubernetes.io/component: planner
