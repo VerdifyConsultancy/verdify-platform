@@ -1664,6 +1664,13 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                    details
               FROM v_irrigation_sensor_feedback_status
              WHERE status <> 'ok'
+               -- 2026-07-11 audit: center irrigation is fenced/retired by the
+               -- #450 recovery firmware — 'install center feedback hardware'
+               -- asks are moot while the water path is closed, and these three
+               -- rows sat open since 2026-05-21 (and re-created themselves
+               -- when manually closed). Re-enable by dropping this filter when
+               -- center irrigation is recommissioned.
+               AND feedback_key NOT LIKE 'center%'
              ORDER BY zone, signal
             """
         ):
