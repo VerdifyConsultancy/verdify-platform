@@ -29,6 +29,7 @@ spec:
           # credential as the running ingestor instead of falling back to an
           # anonymous GHCR token, which returns 401 for this CronJob.
           imagePullSecrets:
+            - name: zot-origin-cluster-pull  # zot origin (ADR-0021); ghcr kept during transition
             - name: ghcr-jvallery-readonly
           containers:
             - name: vision

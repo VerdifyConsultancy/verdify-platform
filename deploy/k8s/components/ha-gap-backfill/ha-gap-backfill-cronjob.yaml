@@ -38,6 +38,7 @@ spec:
         spec:
           restartPolicy: Never
           imagePullSecrets:
+            - name: zot-origin-cluster-pull  # zot origin (ADR-0021); ghcr kept during transition
             - name: ghcr-jvallery-readonly
           securityContext:
             runAsNonRoot: true
