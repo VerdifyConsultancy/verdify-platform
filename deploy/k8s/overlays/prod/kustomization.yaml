@@ -35,6 +35,10 @@ resources:
   - allow-ingestor-device-egress.yaml
   - db-watchdog.yaml
   - ingestor-state-pvc.yaml
+  # Plant-observation pipeline: GitOps-owned CronJob using the production
+  # ingestor digest plus the existing scoped GHCR pull credential. The mounted
+  # source ConfigMap and model credential Secret remain runtime prerequisites.
+  - ../../vision
   # HA-3 (#239): ingestor PDB maxUnavailable:1 (singleton-may-be-disrupted intent;
   # correctness is the Lease fence, not the PDB). Additive — does NOT restart the
   # writer. The fast-failover podSpec patch (priority/tolerations/cpu) is the

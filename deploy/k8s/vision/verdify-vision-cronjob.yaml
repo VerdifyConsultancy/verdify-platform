@@ -1,0 +1,95 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: verdify-vision
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: vision
+spec:
+  schedule: "0 15,18,21,0 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      ttlSecondsAfterFinished: 86400
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/part-of: verdify
+            app.kubernetes.io/component: vision
+        spec:
+          restartPolicy: Never
+          # The ingestor package is private. Reuse the same scoped pull
+          # credential as the running ingestor instead of falling back to an
+          # anonymous GHCR token, which returns 401 for this CronJob.
+          imagePullSecrets:
+            - name: ghcr-jvallery-readonly
+          containers:
+            - name: vision
+              # overlays/prod applies its current, already-running immutable
+              # ingestor digest to this image name.
+              image: ghcr.io/verdifyconsultancy/verdify-ingestor
+              imagePullPolicy: IfNotPresent
+              command: ["sh", "-c"]
+              args:
+                - |
+                  set -e
+                  cd /app/ingestor
+                  python3 /vsrc/frigate-snapshot.py
+              env:
+                - name: PYTHONPATH
+                  value: /app/ingestor
+                - name: AI_CONFIG
+                  value: /vsrc/ai.yaml
+                - name: TEMPLATES_DIR
+                  value: /vsrc
+                - name: GEMINI_API_KEY_FILE
+                  value: /vkey/gemini_api_key.txt
+                - name: VERDIFY_FRIGATE_URL
+                  value: http://frigate.frigate.svc.cluster.local:5000
+                - name: VERDIFY_GO2RTC_PUBLIC_BASE_URL
+                  value: http://frigate.frigate.svc.cluster.local:1984
+                - name: VERDIFY_SNAPSHOT_DIR
+                  value: /snap
+                - name: VERDIFY_ZONES_CONFIG
+                  value: /vsrc/zones.yaml
+                - name: VERDIFY_ANALYZE_SNAPSHOT_SCRIPT
+                  value: /vsrc/analyze-greenhouse-snapshot.py
+                - name: POSTGRES_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: verdify-app-secrets
+                      key: POSTGRES_PASSWORD
+                - name: VERDIFY_DB_DSN
+                  value: postgresql://verdify:$(POSTGRES_PASSWORD)@verdify-db:5432/verdify
+              resources:
+                requests:
+                  cpu: 100m
+                  memory: 256Mi
+                limits:
+                  cpu: "1"
+                  memory: 1Gi
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop: ["ALL"]
+              volumeMounts:
+                - name: vsrc
+                  mountPath: /vsrc
+                  readOnly: true
+                - name: vkey
+                  mountPath: /vkey
+                  readOnly: true
+                - name: snap
+                  mountPath: /snap
+          volumes:
+            - name: vsrc
+              configMap:
+                name: verdify-vision-src
+            - name: vkey
+              secret:
+                secretName: verdify-vision-key
+            - name: snap
+              emptyDir: {}

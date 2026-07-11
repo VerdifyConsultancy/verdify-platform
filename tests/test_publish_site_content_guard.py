@@ -22,14 +22,17 @@ SCRIPT_ROOT (so no live DB, no real HTTPS, no device) and assert the guard:
 
 from __future__ import annotations
 
+import importlib.util
 import os
 import subprocess
+import sys
 from pathlib import Path
 
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = REPO_ROOT / "scripts" / "publish-site-content.sh"
+BASELINE_GENERATOR = REPO_ROOT / "scripts" / "generate-baseline-vs-iris-page.py"
 
 # Fake PYTHON dispatcher: receives the generator path as $1 and dispatches on its
 # basename to a per-generator behavior driven by env vars set by each test:
@@ -204,3 +207,29 @@ def test_locked_publish_can_return_nonzero_without_running_generators(harness):
     assert rc == 75, out
     assert "publish already running; skipping test refresh" in out
     assert not list(state_dir.glob("*.attempts"))
+
+
+def _load_baseline_generator():
+    spec = importlib.util.spec_from_file_location("generate_baseline_vs_iris_page", BASELINE_GENERATOR)
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_fixed_baseline_queries_do_not_expand_resource_accounting_views():
+    generator = _load_baseline_generator()
+
+    for query in (generator.PERIOD_SQL, generator.DAILY_SQL):
+        assert "JOIN v_planner_performance" not in query
+        assert "COALESCE({graded_day_expr}, ds.compliance_pct, 0)" in query
+
+
+def test_fixed_baseline_score_remains_compatible_before_graded_columns_exist():
+    generator = _load_baseline_generator()
+
+    rendered = generator.DAILY_SQL.format(graded_day_expr=generator._graded_day_expr(False))
+
+    assert "COALESCE(NULL::double precision, ds.compliance_pct, 0)" in rendered
+    assert generator.GRADED_DAILY_COL not in rendered
