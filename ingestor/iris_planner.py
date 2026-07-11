@@ -1063,28 +1063,54 @@ def _sql_literal(value: str) -> str:
     return "'" + value.replace("'", "''") + "'"
 
 
+def _alert_sql_argv(sql: str) -> list[str]:
+    """psql argv honoring VERDIFY_DB_BACKEND (#24 contract: docker|dsn|kube).
+
+    The hardcoded docker argv was VM-era residue: the k3s ingestor pod has no
+    docker socket, so every plan_context_failed lifecycle write silently
+    failed from the k3s cutover until the 2026-07-11 audit caught it (newest
+    row 2026-05-25 while context_gather_failed deliveries kept occurring).
+    """
+    backend = os.environ.get("VERDIFY_DB_BACKEND", "dsn")
+    if backend == "docker":
+        return ["docker", "exec", "-i", "verdify-timescaledb", "psql", "-U", "verdify", "-d", "verdify", "-c", sql]
+    if backend == "kube":
+        return [
+            "kubectl",
+            "exec",
+            "-n",
+            "verdify-prod",
+            "verdify-db-0",
+            "--",
+            "psql",
+            "-U",
+            "verdify",
+            "-d",
+            "verdify",
+            "-c",
+            sql,
+        ]
+    from config import get_db_dsn
+
+    return ["psql", get_db_dsn(), "-v", "ON_ERROR_STOP=1", "-c", sql]
+
+
 def _run_alert_sql(sql: str) -> None:
     """Run a small alert_log lifecycle statement without adding a sync DB driver."""
     try:
-        subprocess.run(
-            [
-                "docker",
-                "exec",
-                "-i",
-                "verdify-timescaledb",
-                "psql",
-                "-U",
-                "verdify",
-                "-d",
-                "verdify",
-                "-c",
-                sql,
-            ],
+        result = subprocess.run(
+            _alert_sql_argv(sql),
             capture_output=True,
             text=True,
             timeout=10,
             check=False,
         )
+        if result.returncode != 0:
+            log.warning(
+                "plan_context_failed alert lifecycle SQL failed (rc=%d): %s",
+                result.returncode,
+                (result.stderr or "").strip()[:300],
+            )
     except Exception as e:  # never let observability failures crash the planner
         log.warning("failed to update plan_context_failed alert lifecycle: %s", e)
 

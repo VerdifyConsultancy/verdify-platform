@@ -261,43 +261,36 @@ def get_db_url() -> str:
     return f"postgresql://verdify:{pw}@localhost:5432/verdify"
 
 
-def _resolve_psql_prefix() -> list[str]:
-    """Resolve the psql connection-prefix argv via the shared psql-verdify.sh
-    abstraction (#24) so in-cluster/DSN modes work without a code change.
+def _db_text_safe(sql: str) -> str:
+    """Run one read-only SQL through the asyncpg pool from the HTTP thread.
 
-    The VERDIFY_DB_BACKEND knob (docker|dsn, default docker) selects the backend
-    in the lib. Falls back to the historical docker-exec argv if the lib is
-    unavailable, so behavior on the live VM is byte-identical.
+    Returns rows as psql-style '-t -A -F=' text (columns joined by '='), or ""
+    on failure — matching the prior subprocess semantics per query. Replaces
+    the VM-era psql/docker shell-out (#447): the k3s image ships neither
+    binary, so /setpoints returned HTTP 500 from the cutover until 2026-07-11.
     """
-    import shlex
-    import subprocess
+    if _main_loop is None or _db_pool is None:
+        log.error("Setpoint query skipped: DB pool not ready")
+        return ""
 
-    fallback = ["docker", "exec", "verdify-timescaledb", "psql", "-U", "verdify", "-d", "verdify"]
-    lib = Path(__file__).resolve().parent / "lib" / "psql-verdify.sh"
-    if not lib.exists():
-        return fallback
+    async def _q() -> str:
+        async with _db_pool.acquire() as conn:
+            rows = await conn.fetch(sql)
+        lines = []
+        for r in rows:
+            vals = ["" if v is None else str(v) for v in r.values()]
+            lines.append("=".join(vals))
+        return "\n".join(lines)
+
     try:
-        out = subprocess.run(
-            ["bash", "-c", f'. "{lib}"; verdify_psql_cmd'],
-            capture_output=True,
-            text=True,
-            timeout=10,
-            check=True,
-        )
-    except (subprocess.SubprocessError, OSError):
-        return fallback
-    prefix = shlex.split(out.stdout)
-    return prefix or fallback
+        return asyncio.run_coroutine_threadsafe(_q(), _main_loop).result(timeout=5)
+    except Exception as e:
+        log.error("Setpoint query failed: %s", e)
+        return ""
 
 
 def get_setpoint_text_sync() -> str:
     """Query setpoint_plan for current active values. Synchronous for HTTP thread."""
-    import subprocess
-
-    # #24: connection prefix via the shared psql-verdify abstraction (docker-exec
-    # default preserves the exact prior argv on the VM). Formatting flags
-    # (-t -A -F = -c) are unchanged so the parsed output is byte-identical.
-    db_cmd = _resolve_psql_prefix() + ["-t", "-A", "-F", "=", "-c"]
 
     # Planner/dispatcher param names → firmware-compatible param names.
     # The current ESP32 firmware receives values through ESPHome native API
@@ -306,17 +299,11 @@ def get_setpoint_text_sync() -> str:
     # DB trigger (migration 058) normalizes all param names at INSERT — no aliases needed
     # Step 1: ALL current setpoints as baseline
     params = {}
-    result = subprocess.run(
-        db_cmd
-        + [
-            "SELECT parameter, value FROM (SELECT DISTINCT ON (parameter) parameter, value "
-            "FROM setpoint_changes ORDER BY parameter, ts DESC) sub"
-        ],
-        capture_output=True,
-        text=True,
-        timeout=5,
+    result_text = _db_text_safe(
+        "SELECT parameter, value FROM (SELECT DISTINCT ON (parameter) parameter, value "
+        "FROM setpoint_changes ORDER BY parameter, ts DESC) sub"
     )
-    for line in result.stdout.strip().split("\n"):
+    for line in result_text.strip().split("\n"):
         if "=" in line:
             k, v = line.split("=", 1)
             params[k.strip()] = v.strip()
@@ -326,13 +313,10 @@ def get_setpoint_text_sync() -> str:
     # latest dispatcher push or DB policy overlay; active plan rows are not
     # authoritative for crop/house bands or photoperiod.
     plan_params: set[str] = set()
-    result = subprocess.run(
-        db_cmd + [f"SELECT parameter, value FROM v_active_plan WHERE parameter NOT IN ({PLAN_EXCLUDED_PARAMS_SQL})"],
-        capture_output=True,
-        text=True,
-        timeout=5,
+    result_text = _db_text_safe(
+        f"SELECT parameter, value FROM v_active_plan WHERE parameter NOT IN ({PLAN_EXCLUDED_PARAMS_SQL})"
     )
-    for line in result.stdout.strip().split("\n"):
+    for line in result_text.strip().split("\n"):
         if "=" in line:
             k, v = line.split("=", 1)
             plan_params.add(k.strip())
@@ -341,28 +325,22 @@ def get_setpoint_text_sync() -> str:
     # Step 2a: Overlay crop/house band policy. This mirrors the ingestor
     # dispatcher so the compatibility endpoint cannot serve stale temp/VPD or
     # zone VPD targets after policy functions change.
-    result = subprocess.run(
-        db_cmd
-        + [
-            "WITH crop AS (SELECT * FROM fn_band_setpoints(now())), "
-            "house AS (SELECT * FROM fn_house_vpd_control_band(now())), "
-            "zone AS (SELECT * FROM fn_zone_vpd_targets(now())) "
-            "SELECT parameter, value FROM (VALUES "
-            "('temp_low', (SELECT round(temp_low::numeric, 1)::text FROM crop)), "
-            "('temp_high', (SELECT round(temp_high::numeric, 1)::text FROM crop)), "
-            "('vpd_low', (SELECT round(house_vpd_low::numeric, 2)::text FROM house)), "
-            "('vpd_high', (SELECT round(house_vpd_high::numeric, 2)::text FROM house)), "
-            "('vpd_target_south', (SELECT round(vpd_target_south::numeric, 2)::text FROM zone)), "
-            "('vpd_target_west', (SELECT round(vpd_target_west::numeric, 2)::text FROM zone)), "
-            "('vpd_target_east', (SELECT round(vpd_target_east::numeric, 2)::text FROM zone)), "
-            "('vpd_target_center', (SELECT round(vpd_target_center::numeric, 2)::text FROM zone))"
-            ") AS v(parameter, value) WHERE value IS NOT NULL"
-        ],
-        capture_output=True,
-        text=True,
-        timeout=5,
+    result_text = _db_text_safe(
+        "WITH crop AS (SELECT * FROM fn_band_setpoints(now())), "
+        "house AS (SELECT * FROM fn_house_vpd_control_band(now())), "
+        "zone AS (SELECT * FROM fn_zone_vpd_targets(now())) "
+        "SELECT parameter, value FROM (VALUES "
+        "('temp_low', (SELECT round(temp_low::numeric, 1)::text FROM crop)), "
+        "('temp_high', (SELECT round(temp_high::numeric, 1)::text FROM crop)), "
+        "('vpd_low', (SELECT round(house_vpd_low::numeric, 2)::text FROM house)), "
+        "('vpd_high', (SELECT round(house_vpd_high::numeric, 2)::text FROM house)), "
+        "('vpd_target_south', (SELECT round(vpd_target_south::numeric, 2)::text FROM zone)), "
+        "('vpd_target_west', (SELECT round(vpd_target_west::numeric, 2)::text FROM zone)), "
+        "('vpd_target_east', (SELECT round(vpd_target_east::numeric, 2)::text FROM zone)), "
+        "('vpd_target_center', (SELECT round(vpd_target_center::numeric, 2)::text FROM zone))"
+        ") AS v(parameter, value) WHERE value IS NOT NULL"
     )
-    for line in result.stdout.strip().split("\n"):
+    for line in result_text.strip().split("\n"):
         if "=" in line:
             k, v = line.split("=", 1)
             if k.strip() in BAND_OWNED_PARAMS:
@@ -372,27 +350,21 @@ def get_setpoint_text_sync() -> str:
     # crop policy + Tempest threshold evidence, but let active planner rows
     # override them. This keeps the compatibility endpoint aligned with the
     # dispatcher without taking per-circuit control away from Iris.
-    result = subprocess.run(
-        db_cmd
-        + [
-            "SELECT parameter, value FROM fn_lighting_minutes_policy(now(), 'vallery') p "
-            "CROSS JOIN LATERAL (VALUES "
-            "('gl_' || p.light_key || '_dli_target', round(p.legacy_dli_target::numeric, 1)::text), "
-            "('gl_' || p.light_key || '_target_light_minutes', p.target_light_minutes::text), "
-            "('gl_' || p.light_key || '_sunrise_hour', p.start_hour::text), "
-            "('gl_' || p.light_key || '_sunset_hour', p.cutoff_hour::text), "
-            "('gl_' || p.light_key || '_lux_threshold', round(p.lux_on_threshold::numeric, 0)::text), "
-            "('gl_' || p.light_key || '_lux_hysteresis', round(p.lux_hysteresis::numeric, 0)::text), "
-            "('gl_' || p.light_key || '_min_on_s', p.min_on_s::text), "
-            "('gl_' || p.light_key || '_min_off_s', p.min_off_s::text), "
-            "('sw_gl_' || p.light_key || '_auto_mode', CASE WHEN p.auto_enabled THEN '1' ELSE '0' END)"
-            ") AS v(parameter, value)"
-        ],
-        capture_output=True,
-        text=True,
-        timeout=5,
+    result_text = _db_text_safe(
+        "SELECT parameter, value FROM fn_lighting_minutes_policy(now(), 'vallery') p "
+        "CROSS JOIN LATERAL (VALUES "
+        "('gl_' || p.light_key || '_dli_target', round(p.legacy_dli_target::numeric, 1)::text), "
+        "('gl_' || p.light_key || '_target_light_minutes', p.target_light_minutes::text), "
+        "('gl_' || p.light_key || '_sunrise_hour', p.start_hour::text), "
+        "('gl_' || p.light_key || '_sunset_hour', p.cutoff_hour::text), "
+        "('gl_' || p.light_key || '_lux_threshold', round(p.lux_on_threshold::numeric, 0)::text), "
+        "('gl_' || p.light_key || '_lux_hysteresis', round(p.lux_hysteresis::numeric, 0)::text), "
+        "('gl_' || p.light_key || '_min_on_s', p.min_on_s::text), "
+        "('gl_' || p.light_key || '_min_off_s', p.min_off_s::text), "
+        "('sw_gl_' || p.light_key || '_auto_mode', CASE WHEN p.auto_enabled THEN '1' ELSE '0' END)"
+        ") AS v(parameter, value)"
     )
-    for line in result.stdout.strip().split("\n"):
+    for line in result_text.strip().split("\n"):
         if "=" in line:
             k, v = line.split("=", 1)
             if k.strip() not in plan_params:
@@ -408,27 +380,16 @@ def get_setpoint_text_sync() -> str:
         params[param] = "1"
 
     # Occupancy state (real-time from system_state, written by occupancy-bridge.py)
-    result = subprocess.run(
-        db_cmd + ["SELECT value FROM system_state WHERE entity = 'occupancy' ORDER BY ts DESC LIMIT 1"],
-        capture_output=True,
-        text=True,
-        timeout=5,
-    )
-    occ = result.stdout.strip()
+    result_text = _db_text_safe("SELECT value FROM system_state WHERE entity = 'occupancy' ORDER BY ts DESC LIMIT 1")
+    occ = result_text.strip()
     params["occupancy"] = "1" if occ == "occupied" else "0"
 
     # Outdoor conditions (from Tempest via climate table — for ESP32 enthalpy computation)
-    result = subprocess.run(
-        db_cmd
-        + [
-            "SELECT round(outdoor_temp_f::numeric,1) || '|' || round(outdoor_rh_pct::numeric,1) "
-            "FROM climate WHERE outdoor_temp_f IS NOT NULL ORDER BY ts DESC LIMIT 1"
-        ],
-        capture_output=True,
-        text=True,
-        timeout=5,
+    result_text = _db_text_safe(
+        "SELECT round(outdoor_temp_f::numeric,1) || '|' || round(outdoor_rh_pct::numeric,1) "
+        "FROM climate WHERE outdoor_temp_f IS NOT NULL ORDER BY ts DESC LIMIT 1"
     )
-    outdoor = result.stdout.strip()
+    outdoor = result_text.strip()
     if "|" in outdoor:
         parts = outdoor.split("|")
         params["outdoor_temp"] = parts[0]
@@ -437,10 +398,7 @@ def get_setpoint_text_sync() -> str:
     switch_values_sql = ", ".join(
         f"('{param}', '{equipment}')" for param, equipment in sorted(EQUIPMENT_SWITCH_SETPOINTS.items())
     )
-    result = subprocess.run(
-        db_cmd
-        + [
-            f"""
+    result_text = _db_text_safe(f"""
             WITH switch_map(parameter, equipment) AS (VALUES {switch_values_sql}),
             latest AS (
                 SELECT DISTINCT ON (equipment) equipment, state
@@ -451,13 +409,8 @@ def get_setpoint_text_sync() -> str:
             SELECT sm.parameter, CASE WHEN latest.state THEN 1 ELSE 0 END
               FROM switch_map sm
               JOIN latest USING (equipment)
-            """
-        ],
-        capture_output=True,
-        text=True,
-        timeout=5,
-    )
-    for line in result.stdout.strip().split("\n"):
+            """)
+    for line in result_text.strip().split("\n"):
         if "=" in line:
             k, v = line.split("=", 1)
             params[k.strip()] = v.strip()

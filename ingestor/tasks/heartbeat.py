@@ -14,7 +14,6 @@ from ._common import (
     CONTEXT_GATHER_FAILED_SENTINEL,
     GREENHOUSE_ID,
     PLANNER_TRIGGER_MATRIX,
-    REPO_ROOT,
     SLACK_CHANNEL,
     SLACK_TOKEN_FILE,
     STATE_DIR,
@@ -37,11 +36,11 @@ from ._common import (
     gather_context,
     json,
     log,
+    os,
     pick_instance,
     prepare_delivery_result,
     send_to_iris,
     sla_for,
-    sys,
     urllib,
     uuid,
 )
@@ -134,6 +133,9 @@ MAX_REQUIRED_TRIGGER_ATTEMPTS = 6
 CARRYOVER_MAX_AGE_H = 8.0
 
 _trigger_attempts: dict[str, int] = {}
+
+# Consecutive failed MCP Service probes (see heartbeat section 6).
+_mcp_unreachable_streak = 0
 
 
 def _attempts_for(expected_trigger_id: int | None) -> int:
@@ -1312,43 +1314,37 @@ async def planning_heartbeat(pool: asyncpg.Pool) -> None:
                 log.info("Plan delivery verified: %d plan(s) written after %s", plan_count, key)
 
     # ── 6. MCP server health check (every heartbeat = 60s) ──
+    # 2026-07-11 audit: the legacy single-host watchdog probed 127.0.0.1:8000
+    # (always dead in k3s — MCP is a separate Deployment), logged an ERROR,
+    # Popen'd a doomed in-container mcp/server.py, and attempted a Slack post
+    # EVERY MINUTE — pure noise that masked the real MCP health signal. Probe
+    # the in-cluster Service instead (override via VERDIFY_MCP_HEALTH_URL);
+    # k8s liveness/restart of the MCP Deployment owns recovery, so the local
+    # Popen respawn is gone. Slack is posted once per outage transition, not
+    # per heartbeat.
+    global _mcp_unreachable_streak
+    mcp_url = os.environ.get("VERDIFY_MCP_HEALTH_URL", "http://verdify-mcp:8000/mcp")
     try:
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(
             None,
-            lambda: urllib.request.urlopen("http://127.0.0.1:8000/mcp", timeout=5),
+            lambda: urllib.request.urlopen(mcp_url, timeout=5),
         )
+        _mcp_unreachable_streak = 0
         # Any response (even 405 Method Not Allowed) means the server is alive
     except urllib.error.HTTPError:
-        pass  # Server is alive, just doesn't accept GET on /mcp — that's fine
+        _mcp_unreachable_streak = 0  # alive, just doesn't accept GET on /mcp
     except Exception as e:
-        log.error("MCP server unreachable: %s", e)
-        # Try to restart it. REPO_ROOT resolves to the in-container repo root
-        # (/app) — no hardcoded /srv legacy iris-VM path — and sys.executable is
-        # the interpreter actually running this process, not a vanished venv. The
-        # restart log goes under STATE_DIR (best-effort; the dir is created if
-        # missing). NOTE: in k3s the MCP server runs as a SEPARATE Deployment, so
-        # this in-process Popen is a no-op safety net for the legacy single-host
-        # layout; the path fix keeps it from raising FileNotFoundError.
-        try:
-            import subprocess as _sp_mcp
-
-            try:
-                STATE_DIR.mkdir(parents=True, exist_ok=True)
-            except OSError:
-                pass
-            _mcp_log = open(STATE_DIR / "mcp-server.log", "a")
-            _sp_mcp.Popen(
-                [sys.executable, str(REPO_ROOT / "mcp" / "server.py")],
-                cwd=str(REPO_ROOT),
-                stdout=_mcp_log,
-                stderr=_mcp_log,
-            )
-            log.warning("MCP server restarted")
+        _mcp_unreachable_streak += 1
+        log.error("MCP server unreachable (%s, streak=%d): %s", mcp_url, _mcp_unreachable_streak, e)
+        if _mcp_unreachable_streak == 3:  # ~3 min of hard-down before paging, once
             try:
                 token = _load_token(SLACK_TOKEN_FILE)
-                _post_slack(token, SLACK_CHANNEL, ":warning: MCP server was unreachable — auto-restarted.")
+                _post_slack(
+                    token,
+                    SLACK_CHANNEL,
+                    f":warning: MCP server unreachable at {mcp_url} for 3 consecutive checks — "
+                    "kubectl -n verdify-prod get deploy verdify-mcp",
+                )
             except Exception:
                 pass
-        except Exception as restart_err:
-            log.error("MCP server restart failed: %s", restart_err)
