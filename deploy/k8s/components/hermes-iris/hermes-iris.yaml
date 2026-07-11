@@ -41,6 +41,8 @@ metadata:
   labels:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: hermes-iris
+    app.kubernetes.io/name: verdify-hermes-iris
+    storage.vallery.net/policy: rebuildable-single-replica
 spec:
   accessModes: ["ReadWriteOnce"]
   # Hermes gateway run-state is regenerable working state — NOT a database and

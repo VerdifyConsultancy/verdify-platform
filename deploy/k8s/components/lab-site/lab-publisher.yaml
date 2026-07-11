@@ -5,6 +5,8 @@ metadata:
   labels:
     app.kubernetes.io/part-of: verdify
     app.kubernetes.io/component: lab-site
+    app.kubernetes.io/name: verdify-lab
+    storage.vallery.net/policy: rebuildable-single-replica
 spec:
   accessModes:
     - ReadWriteOnce
