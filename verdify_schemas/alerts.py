@@ -61,6 +61,7 @@ AlertType = Literal[
     "writer_absent",
     "telemetry_stall",
     "deploy_override",
+    "irrigation_fence_breach",
 ]
 
 ALERT_TYPES: tuple[str, ...] = (
@@ -107,6 +108,7 @@ ALERT_TYPES: tuple[str, ...] = (
     "writer_absent",
     "telemetry_stall",
     "deploy_override",
+    "irrigation_fence_breach",
 )
 
 
@@ -751,6 +753,21 @@ class DeployOverrideAlert(_AlertBase):
     details: DeployOverrideDetails
 
 
+class IrrigationFenceBreachDetails(_DetailsBase):
+    # Live-truth invariant on equipment_state (2026-07-11 audit: replay/
+    # invariants cannot see irrigation, so the #450 fencing contracts are
+    # asserted against what the relays actually did).
+    rule: Literal["blocked_fert_path_on", "fert_master_without_wall_drip", "center_drip_while_disabled"]
+    equipment: str
+    observed_at: AwareDatetime
+    context: dict[str, Any] = Field(default_factory=dict)
+
+
+class IrrigationFenceBreachAlert(_AlertBase):
+    alert_type: Literal["irrigation_fence_breach"]
+    details: IrrigationFenceBreachDetails
+
+
 AlertEnvelopeUnion = Annotated[
     AlertValidationFailedAlert
     | BandAnchorDbReadFailedAlert
@@ -794,7 +811,8 @@ AlertEnvelopeUnion = Annotated[
     | VpdStressAlert
     | WriterAbsentAlert
     | TelemetryStallAlert
-    | DeployOverrideAlert,
+    | DeployOverrideAlert
+    | IrrigationFenceBreachAlert,
     Field(discriminator="alert_type"),
 ]
 

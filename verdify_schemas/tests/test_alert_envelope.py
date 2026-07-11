@@ -30,6 +30,7 @@ from verdify_schemas.alerts import (
     HeatStagingInversionAlert,
     HouseBandDriftAlert,
     IrrigationFeedbackGapAlert,
+    IrrigationFenceBreachAlert,
     LeakDetectedAlert,
     LightingCfgThresholdDriftAlert,
     PlanContextFailedAlert,
@@ -71,6 +72,15 @@ CASES = {
     "deploy_override": (
         DeployOverrideAlert,
         {"gate": "48h-bake", "reason": "attended active-dev deploy, Jason on site", "sha": "09ee886"},
+    ),
+    "irrigation_fence_breach": (
+        IrrigationFenceBreachAlert,
+        {
+            "rule": "blocked_fert_path_on",
+            "equipment": "mister_south_fert",
+            "observed_at": NOW,
+            "context": {"state": True},
+        },
     ),
     "alert_validation_failed": (
         AlertValidationFailedAlert,

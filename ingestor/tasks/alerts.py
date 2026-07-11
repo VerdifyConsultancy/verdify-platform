@@ -367,6 +367,75 @@ async def alert_monitor(pool: asyncpg.Pool) -> None:
                 }
             )
 
+        # 2b. Irrigation fence breaches (2026-07-11 audit): the replay harness
+        # and the 15 invariants model the CLIMATE FSM only — none of the #450
+        # recovery irrigation contracts are observable there. Assert them on
+        # live relay truth instead. Any breach is CRITICAL: these relays are
+        # supposed to be unconditionally fenced in firmware, so one ON edge
+        # means the fence itself failed (or firmware regressed).
+        fence_rows = await conn.fetch(
+            """
+            SELECT equipment,
+                   bool_or(state) FILTER (WHERE ts >= now() - interval '15 minutes') AS any_on_15m,
+                   max(ts) FILTER (WHERE state AND ts >= now() - interval '15 minutes') AS last_on_ts,
+                   (array_agg(state ORDER BY ts DESC))[1] AS latest_state
+              FROM equipment_state
+             WHERE ts >= now() - interval '7 days'
+               AND equipment IN ('drip_center_fert', 'mister_south_fert', 'mister_west_fert',
+                                 'fert_master_valve', 'drip_wall_fert', 'drip_center',
+                                 'irrigation_center_enabled')
+             GROUP BY equipment
+            """
+        )
+        fence = {r["equipment"]: r for r in fence_rows}
+
+        def _fence_on(equipment: str) -> bool:
+            row = fence.get(equipment)
+            return bool(row and row["any_on_15m"])
+
+        def _fence_latest(equipment: str) -> bool:
+            row = fence.get(equipment)
+            return bool(row and row["latest_state"])
+
+        fence_hits: list[tuple[str, str]] = []
+        for equipment in ("drip_center_fert", "mister_south_fert", "mister_west_fert"):
+            # Post-#450 these paths are relay-level blocked (hardware.yaml
+            # unconditional turn_off) — any persisted ON is a fence failure.
+            if _fence_on(equipment):
+                fence_hits.append(("blocked_fert_path_on", equipment))
+        # Window-based pairing (not event ordering) so a legitimate wall feed
+        # that batches master+drip edges in either order cannot false-positive.
+        if _fence_on("fert_master_valve") and not _fence_on("drip_wall_fert"):
+            fence_hits.append(("fert_master_without_wall_drip", "fert_master_valve"))
+        if _fence_on("drip_center") and not _fence_latest("irrigation_center_enabled"):
+            fence_hits.append(("center_drip_while_disabled", "drip_center"))
+        latest_state = {equipment: bool(row["latest_state"]) for equipment, row in fence.items()}
+        for rule, equipment in fence_hits:
+            row = fence[equipment]
+            ts = row["last_on_ts"]
+            alerts.append(
+                {
+                    "alert_type": "irrigation_fence_breach",
+                    "severity": "critical",
+                    "category": "water",
+                    "sensor_id": f"equipment.{equipment}",
+                    "zone": None,
+                    "message": (
+                        f"IRRIGATION FENCE BREACH ({rule}): `{equipment}` reported ON at {ts.isoformat()} — "
+                        "this path is supposed to be firmware-fenced (#450 recovery contracts). "
+                        "Verify relay truth and close the water paths before anything else."
+                    ),
+                    "details": {
+                        "rule": rule,
+                        "equipment": equipment,
+                        "observed_at": ts.isoformat(),
+                        "context": {k: v for k, v in latest_state.items()},
+                    },
+                    "metric_value": None,
+                    "threshold_value": None,
+                }
+            )
+
         # 3. VPD stress
         # Daily cumulative stress belongs in the scorecard; an open alert
         # should represent a condition that is still active. Gate the daily
