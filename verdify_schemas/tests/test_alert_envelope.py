@@ -17,6 +17,7 @@ from verdify_schemas.alerts import (
     BandDeviceDbDivergenceAlert,
     BandFnNullAlert,
     ClimateActionProofStaleAlert,
+    DeployOverrideAlert,
     ESP32PushFailedAlert,
     ESP32RebootAlert,
     FirmwareReliefCeilingAlert,
@@ -66,6 +67,10 @@ CASES = {
     "telemetry_stall": (
         TelemetryStallAlert,
         {"climate_age_s": 1240.0, "threshold_s": 600.0},
+    ),
+    "deploy_override": (
+        DeployOverrideAlert,
+        {"gate": "48h-bake", "reason": "attended active-dev deploy, Jason on site", "sha": "09ee886"},
     ),
     "alert_validation_failed": (
         AlertValidationFailedAlert,

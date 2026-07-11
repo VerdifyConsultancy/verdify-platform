@@ -26,6 +26,10 @@ override_authorized() {
 guard_or_fail() {
     local message="$1"
     if override_authorized; then
+        # 2026-07-11 audit: this override previously left NO durable record
+        # (only the bake/weekly gates called record_override). Every accepted
+        # override is now audited to the override log AND alert_log.
+        record_deploy_override "severe-alert-or-telemetry" "$message" "${FIRMWARE_DEPLOY_OVERRIDE_REASON:-no reason supplied}"
         warn "$message — operator override active (${FIRMWARE_DEPLOY_OVERRIDE_REASON:-no reason supplied})"
     else
         if override_enabled; then
@@ -65,7 +69,36 @@ record_override() {
         "$(git rev-parse --show-toplevel 2>/dev/null || pwd)" \
         "$(git rev-parse HEAD 2>/dev/null || echo unknown)" \
         >> "$override_log"
+    db_audit_override "$gate" "$detail" "$override_reason"
     warn "$gate override accepted: $detail"
+}
+
+# Durable, host-independent override audit: an info row in alert_log. The
+# host-local log file above is invisible from other kubectl hosts and from
+# the repo; the DB row is queryable by the sweeps and any future session.
+# Best-effort — an audit-write failure must not block the deploy itself
+# (the override was already authorized), but it is loudly warned.
+db_audit_override() {
+    local gate="$1" detail="$2" reason="$3"
+    local esc_msg esc_details
+    esc_msg="$(printf 'FIRMWARE DEPLOY OVERRIDE (%s): %s' "$gate" "$detail" | sed "s/'/''/g")"
+    esc_details="$(printf '{"gate": "%s", "reason": "%s", "sha": "%s"}' \
+        "$gate" "$(printf '%s' "$reason" | sed 's/["\\]/\\&/g')" \
+        "$(git rev-parse HEAD 2>/dev/null || echo unknown)" | sed "s/'/''/g")"
+    if ! "${DB[@]}" "INSERT INTO alert_log (alert_type, severity, category, message, details, source, disposition, resolved_at, resolved_by, resolution)
+        VALUES ('deploy_override', 'info', 'system', '${esc_msg}', '${esc_details}'::jsonb, 'firmware_preflight', 'resolved', now(), 'operator', 'audit record')" >/dev/null 2>&1; then
+        warn "override DB audit write FAILED — only the local log at ${override_log} records this override"
+    fi
+}
+
+# guard_or_fail overrides route through the same durable audit as the
+# freeze-gate overrides, without requiring FIRMWARE_OTA_FREEZE_OVERRIDE_REASON.
+record_deploy_override() {
+    local gate="$1" detail="$2" reason="$3"
+    local saved_reason="$override_reason"
+    override_reason="$reason"
+    record_override "$gate" "$detail"
+    override_reason="$saved_reason"
 }
 
 open_bad="$("${DB[@]}" "SELECT count(*) FROM alert_log WHERE disposition IN ('open','acknowledged') AND resolved_at IS NULL AND severity IN ('critical','high')" | tr -d '[:space:]')"

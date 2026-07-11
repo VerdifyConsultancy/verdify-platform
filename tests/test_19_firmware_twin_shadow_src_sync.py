@@ -18,6 +18,7 @@ COMPONENT = REPO / "deploy/k8s/components/firmware-twin/src"
 PAIRS = {
     "greenhouse_logic.h": "firmware/lib/greenhouse_logic.h",
     "greenhouse_types.h": "firmware/lib/greenhouse_types.h",
+    "greenhouse_solar.h": "firmware/lib/greenhouse_solar.h",
     "replay_emit.cpp": "firmware/test/replay_emit.cpp",
     "offline_driver.py": "twin/offline_driver.py",
 }
@@ -34,3 +35,34 @@ def test_twin_shadow_src_is_byte_identical_to_canonical(copy_name: str, canonica
         f"the exact rule-8 control code. Re-copy: cp {canonical_rel} "
         f"deploy/k8s/components/firmware-twin/src/{copy_name}"
     )
+
+
+def _local_includes(path: Path) -> set[str]:
+    return {
+        line.split('"')[1]
+        for line in path.read_text().splitlines()
+        if line.strip().startswith("#include ") and '"' in line
+    }
+
+
+def test_twin_shadow_src_include_closure_is_complete() -> None:
+    """2026-07-11 audit: the vendored src was missing greenhouse_solar.h — the
+    twin initContainer could never have compiled, and this test passed anyway
+    because PAIRS was a hardcoded 4-file list. Walk the local #include closure
+    of every vendored C++ file and require each header to be vendored (and
+    therefore byte-checked by the test above)."""
+    vendored = {p.name for p in COMPONENT.iterdir() if p.suffix in {".h", ".cpp"}}
+    missing: dict[str, set[str]] = {}
+    for name in sorted(vendored):
+        needed = _local_includes(COMPONENT / name)
+        absent = needed - vendored
+        if absent:
+            missing[name] = absent
+    assert not missing, (
+        f"twin shadow vendored source has unvendored local includes {missing}: "
+        "the initContainer g++ compile would fail. Vendor the missing header(s) "
+        "from firmware/lib/ and add them to PAIRS."
+    )
+    # Every vendored C++ file must also be tracked in PAIRS so drift is checked.
+    untracked = vendored - set(PAIRS)
+    assert not untracked, f"vendored twin sources not drift-tracked in PAIRS: {untracked}"

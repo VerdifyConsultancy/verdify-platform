@@ -60,6 +60,7 @@ AlertType = Literal[
     "vpd_stress",
     "writer_absent",
     "telemetry_stall",
+    "deploy_override",
 ]
 
 ALERT_TYPES: tuple[str, ...] = (
@@ -105,6 +106,7 @@ ALERT_TYPES: tuple[str, ...] = (
     "vpd_stress",
     "writer_absent",
     "telemetry_stall",
+    "deploy_override",
 )
 
 
@@ -735,6 +737,20 @@ class TelemetryStallAlert(_AlertBase):
     details: TelemetryStallDetails
 
 
+class DeployOverrideDetails(_DetailsBase):
+    # Audit record (pre-resolved info row) written by firmware-deploy-preflight
+    # whenever an operator override is accepted — host-independent counterpart
+    # of the local override log file.
+    gate: str
+    reason: str
+    sha: str | None = None
+
+
+class DeployOverrideAlert(_AlertBase):
+    alert_type: Literal["deploy_override"]
+    details: DeployOverrideDetails
+
+
 AlertEnvelopeUnion = Annotated[
     AlertValidationFailedAlert
     | BandAnchorDbReadFailedAlert
@@ -777,7 +793,8 @@ AlertEnvelopeUnion = Annotated[
     | VpdExtremeAlert
     | VpdStressAlert
     | WriterAbsentAlert
-    | TelemetryStallAlert,
+    | TelemetryStallAlert
+    | DeployOverrideAlert,
     Field(discriminator="alert_type"),
 ]
 

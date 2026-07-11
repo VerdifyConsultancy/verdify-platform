@@ -482,10 +482,16 @@ jobs:
             echo "No merge-base change; skipping replay diff"
             exit 0
           fi
+          # 2026-07-11 audit: the old explicit three-file list let PR #450's
+          # entire irrigation/fencing rearchitecture (irrigation_policy.h,
+          # heap_diagnostics.h — new headers) bypass rule 8 unseen. Trigger on
+          # ANY firmware logic header or greenhouse yaml instead.
           CHANGED=$(git diff --name-only "$BASE" HEAD -- \
-            firmware/lib/greenhouse_logic.h \
-            firmware/lib/greenhouse_types.h \
-            firmware/greenhouse/controls.yaml)
+            'firmware/lib/*.h' \
+            'firmware/lib/*.cpp' \
+            firmware/greenhouse/controls.yaml \
+            firmware/greenhouse/tunables.yaml \
+            firmware/greenhouse/globals.yaml)
           if [ -z "$CHANGED" ]; then
             echo "No firmware-logic diff in PR; skipping replay diff"
             exit 0
@@ -530,6 +536,16 @@ jobs:
             echo "::error::band-curve behavioral divergence exceeds ${THRESHOLD_PCT}%. If intentional, add 'BAND_REPLAY_THRESHOLD_PCT: <N>' to the PR body and have it reviewed."
           fi
           exit $rc
+      - name: Twin shadow vendored source must compile
+        # 2026-07-11 audit: the vendored twin src was missing greenhouse_solar.h
+        # for weeks — its initContainer g++ step could never have succeeded, and
+        # the byte-sync test passed because its PAIRS list was hardcoded. Compile
+        # the vendored copy exactly the way the twin initContainer does.
+        run: |
+          g++ -std=c++17 -fsyntax-only \
+            -Ideploy/k8s/components/firmware-twin/src \
+            deploy/k8s/components/firmware-twin/src/replay_emit.cpp
+          echo "twin vendored source compiles"
 
   no-new-fire-and-forget:
     name: No new tunables without readback
@@ -546,9 +562,13 @@ jobs:
           # (the `id:` is NOT a sequence item, so the old `/^\+ - id:/` awk matched nothing
           # and this gate passed vacuously — freeze rule 6 was unenforced). Extract the
           # added `id: num_<base>` lines and reduce to the <base> name the readback uses.
+          # 2026-07-11 audit: sw_* switch entities bypassed this gate entirely
+          # (rule 6 covered numerics only), and a bare `id(<base>)` reference
+          # anywhere in sensors.yaml false-passed as a readback. Cover both
+          # entity kinds and require a literal `id: cfg_<base>` template sensor.
           NEW_IDS=$(git diff "$BASE" HEAD -- firmware/greenhouse/tunables.yaml 2>/dev/null \
-            | grep -oE '^\+[[:space:]]+id:[[:space:]]+num_[a-z0-9_]+' \
-            | sed -E 's/.*id:[[:space:]]+num_//' | sort -u || true)
+            | grep -oE '^\+[[:space:]]+id:[[:space:]]+(num|sw)_[a-z0-9_]+' \
+            | sed -E 's/.*id:[[:space:]]+(num|sw)_//' | sort -u || true)
           if [ -z "$NEW_IDS" ]; then
             echo "No new tunable entities in PR"
             exit 0
@@ -556,7 +576,7 @@ jobs:
           echo "New tunable IDs in PR: $NEW_IDS"
           MISSING=""
           for id in $NEW_IDS; do
-            if ! grep -qE "(id: cfg_${id}|id\\(${id}\\))" firmware/greenhouse/sensors.yaml 2>/dev/null; then
+            if ! grep -qE "id: cfg_(sw_)?${id}\b" firmware/greenhouse/sensors.yaml 2>/dev/null; then
               MISSING="$MISSING $id"
             fi
           done
