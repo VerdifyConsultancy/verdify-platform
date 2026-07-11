@@ -49,7 +49,7 @@ spec:
       # The normal publish is roughly 1-3 minutes. Bound cold-cache/S3 cases to
       # ten minutes so a disconnected optional generator cannot retain the DB
       # or cache PVC indefinitely.
-      activeDeadlineSeconds: 600
+      activeDeadlineSeconds: 900
       # A failed publisher can leave its canceled/disconnected PostgreSQL query
       # running until the backend reaches a send boundary. Retrying the pod in
       # the same Job then overlaps another full export despite Forbid at the
@@ -92,8 +92,13 @@ spec:
                 # #454.
                 - name: VERDIFY_PUBLISH_STEP_RETRIES
                   value: "1"
+                # 60 -> 180 (2026-07-11 21:00Z): the Quartz rebuild step
+                # exceeds 60s on a cold site cache (the cache PVC was
+                # recreated in the storage migration), so every run since
+                # ~17:45Z failed that step. One attempt per step and the
+                # 45s DB statement_timeout keep the #454 pressure profile.
                 - name: VERDIFY_PUBLISH_STEP_TIMEOUT
-                  value: "60"
+                  value: "180"
                 # Bound report-generation queries so a public-site refresh can
                 # never starve the control database. PGOPTIONS is consumed by
                 # the psql shim/libpq clients used by the publisher scripts.
