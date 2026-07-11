@@ -30,9 +30,10 @@
 # gated handoff step.
 #
 # STATE PVC: compose mounts host /var/lib/verdify/hermes/iris -> /opt/data. In
-# k3s this is a PVC on Longhorn NVMe RWO storage. The slack.yaml referenced by
-# VERDIFY_SLACK_CONFIG=/opt/data/slack.yaml lives on that PVC; the NON-SECRET
-# slack channel config is also available from the verdify-hermes-slack mount.
+# k3s this is a PVC on rebuildable Longhorn RWO storage. The slack.yaml
+# referenced by VERDIFY_SLACK_CONFIG=/opt/data/slack.yaml lives on that PVC;
+# the NON-SECRET slack channel config is also available from the
+# verdify-hermes-slack mount.
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -42,12 +43,12 @@ metadata:
     app.kubernetes.io/component: hermes-iris
 spec:
   accessModes: ["ReadWriteOnce"]
-  # node-local-temp-rwo (rancher.io/local-path NVMe). Hermes gateway run-state is
-  # regenerable working state — NOT a database and NOT durable logs — so per the
-  # storage-tiering policy it uses fast node-local capacity, not Synology iSCSI.
+  # Hermes gateway run-state is regenerable working state — NOT a database and
+  # NOT durable logs — so it uses the rebuildable Longhorn tier, not Synology
+  # iSCSI or node-local storage.
   # (Bonus: this also gets the gateway off the dead /volume1 SSD tier from the
   # 2026-06-17 incident.) Durable planner memory lives in the DB, not here.
-  storageClassName: node-local-temp-rwo
+  storageClassName: longhorn-v1-rebuildable-rwo
   resources:
     requests:
       storage: 5Gi

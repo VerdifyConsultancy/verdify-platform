@@ -8,7 +8,7 @@ metadata:
 spec:
   accessModes:
     - ReadWriteOnce
-  storageClassName: node-local-temp-rwo
+  storageClassName: longhorn-v1-rebuildable-rwo
   resources:
     requests:
       storage: 5Gi
