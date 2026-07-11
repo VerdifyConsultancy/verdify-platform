@@ -2096,6 +2096,12 @@ async def task_loop(pool: asyncpg.Pool) -> None:
         # Reconnect reconciles can push 25+ values through heap-safe ESPHome
         # pacing, which intentionally exceeds the generic 120s watchdog.
         "setpoint_dispatch": 300,
+        # 2026-07-11 audit: the graded-compliance per-reading loop over two
+        # full days (~2800 rows, migration-146 dual-write) outgrew the generic
+        # 120s watchdog — the task timed out on 100% of runs, so daily_summary
+        # derived aggregates and daily_zone_compliance silently stopped
+        # refreshing in-process. 600s stays well inside the 1800s interval.
+        "daily_summary_live": 600,
     }
     TASKS = [
         # (name, interval_seconds, coroutine_factory)
