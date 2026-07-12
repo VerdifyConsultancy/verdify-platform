@@ -13,7 +13,11 @@ test("fixture build preserves leaf, folder, planner, and alias route shapes", as
     "index.html",
     "start/about.html",
     "data/plans/index.html",
+    "data/forecast/index.html",
+    "greenhouse/index.html",
     "plans/2026-07-12.html",
+    "start/contact.html",
+    "start/evidence.html",
     "about.html",
     "story.html",
     "plans/latest.html",
@@ -66,11 +70,11 @@ test("stage output stays noindex, blocker-labelled, searchable, and auditable", 
   assert.match(await read("robots.txt"), /Disallow: \//);
 
   const routeManifest = JSON.parse(await read("route-manifest.json"));
-  assert.equal(routeManifest.build.sourceCount, 4);
-  assert.equal(routeManifest.build.snapshotMarkdownCount, 4);
+  assert.equal(routeManifest.build.sourceCount, 8);
+  assert.equal(routeManifest.build.snapshotMarkdownCount, 8);
   assert.equal(routeManifest.build.aliasCount, 4);
   assert.equal(routeManifest.build.rollingPlanCompatibility.suppressedDeclarationCount, 1);
-  assert.equal(routeManifest.build.grafanaOccurrenceCount, 1);
+  assert.equal(routeManifest.build.grafanaOccurrenceCount, 2);
   assert.equal(routeManifest.build.cameraOccurrenceCount, 1);
   assert.equal(routeManifest.build.cameraLocalFallbackCount, 0);
   const assetRecords = JSON.parse(await readFile(path.join(ROOT, ".generated", "asset-records.json"), "utf8"));
@@ -82,7 +86,7 @@ test("stage output stays noindex, blocker-labelled, searchable, and auditable", 
   assert.equal(routeManifest.build.siteShell.contractVersion, "1.1.0");
   assert.equal(routeManifest.build.siteShell.releaseDigest, "sha256:779620f2eda4d62677a2d9d61c65e2a1014e34de8cb2cec5008928caeef46a6d");
   assert.equal(routeManifest.build.sanitization.fixtureOnly, true);
-  assert.equal(routeManifest.routes.filter((record) => record.source.endsWith(".md")).length, 7);
+  assert.equal(routeManifest.routes.filter((record) => record.source.endsWith(".md")).length, 11);
   await access(path.join(DIST, "pagefind", "pagefind.js"));
   for (const unused of ["pagefind-component-ui.js", "pagefind-ui.js"]) {
     await assert.rejects(access(path.join(DIST, "pagefind", unused)), { code: "ENOENT" });

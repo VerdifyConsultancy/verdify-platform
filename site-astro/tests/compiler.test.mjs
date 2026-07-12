@@ -22,7 +22,7 @@ const FIXTURE = path.join(ROOT, "tests", "fixtures", "snapshot");
 
 test("fixture snapshot is exact, local, and explicitly provisional", async () => {
   const snapshot = await verifySnapshot(FIXTURE, { allowSyntheticFixture: true });
-  assert.equal(snapshot.files.size, 6);
+  assert.equal(snapshot.files.size, 10);
   assert.equal(snapshot.approvalEligible, false);
   assert.equal(snapshot.evidenceStatus, "provisional-only");
   assert.match(snapshot.manifestDigest, /^sha256:[0-9a-f]{64}$/);

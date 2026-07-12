@@ -20,7 +20,9 @@
     "test:manifests": "kubectl kustomize ../deploy/k8s/overlays/lab-stage | node scripts/verify-rendered-stage.mjs",
     "test:output": "node --test tests/output.test.mjs",
     "test:browser": "npm run build:fixture && playwright test --config=playwright.config.mjs",
-    "test": "npm run test:unit && npm run test:parity && npm run test:manifests && npm run build:fixture && npm run test:output",
+    "test:quality:built": "playwright test --config=playwright.config.mjs --grep @quality",
+    "test:quality": "npm run build:fixture && npm run test:quality:built",
+    "test": "npm run test:unit && npm run test:parity && npm run test:manifests && npm run build:fixture && npm run test:output && npm run test:quality:built",
     "verify:static": "node scripts/verify-static.mjs",
     "verify:real": "node scripts/verify-real-build.mjs",
     "parity:manifest": "python3 scripts/site-build-parity.py manifest dist -o astro-manifest.json --origin ${SITE_ORIGIN:-https://lab-stage.verdify.ai}",
@@ -49,6 +51,7 @@
   },
   "devDependencies": {
     "@astrojs/check": "0.9.2",
+    "@axe-core/playwright": "4.10.2",
     "@playwright/test": "1.61.1",
     "typescript": "5.9.3"
   }

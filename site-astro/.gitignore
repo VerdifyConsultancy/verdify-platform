@@ -6,3 +6,6 @@ dist/
 .astro-stage-build.lock
 astro-manifest.json
 parity-report.json
+test-results/
+playwright-report/
+blob-report/

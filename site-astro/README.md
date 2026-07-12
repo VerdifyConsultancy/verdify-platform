@@ -13,12 +13,34 @@ Starlight can demonstrate the required Quartz/Obsidian/raw-HTML route contract.
 ## Local build
 
 The checked-in fixture exercises root, leaf, folder, alias, planner, table,
-download, media, and Grafana occurrence semantics:
+download, media, and Grafana occurrence semantics. It also carries synthetic,
+non-production representatives for the home, planner, forecast, archive,
+evidence, contact, and media/lightbox page families used by browser quality
+gates:
 
 ```bash
 npm ci
 npm test
 ```
+
+`npm test` includes the desktop/mobile browser quality gate. It runs the
+representative routes at the Marketing contract's 390px and 1440px widths,
+checks WCAG A/AA rules with Axe, horizontal overflow, default-light and
+explicit-dark surface rules, console/request failures, bounded DOM/asset/JS
+budgets, FCP/LCP/CLS/long-task budgets, semantic page enhancements, skip-link
+and mobile-navigation focus, form boundaries, reduced motion, responsive image
+geometry, and native-dialog lightbox focus restoration. Chromium must be
+installed once in a fresh tool image with `npx playwright install chromium`.
+For a focused rebuild and quality run, use:
+
+```bash
+npm run test:quality
+```
+
+The pinned browser fixture mirrors the immutable page-primitives visual
+contract published by the Marketing shell release. It is a regression oracle,
+not an alternative source of design tokens; browser assertions read the
+computed `--color-*` values from the installed shared shell.
 
 The fixture path is synthetic-only and cannot satisfy real snapshot mode. A
 real stage candidate is assembled outside Git as `.snapshot/` and must carry
