@@ -2107,7 +2107,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT $__time(ts), CASE WHEN state THEN 'Open' ELSE 'Closed' END AS \"Vent\" FROM equipment_state WHERE equipment = 'vent' AND $__timeFilter(ts) ORDER BY ts",
+          "rawSql": "SELECT $__time(ts), CASE WHEN state THEN 'Open' ELSE 'Closed' END AS \"Vent\" FROM (\n  SELECT ts, state FROM equipment_state WHERE equipment='vent' AND $__timeFilter(ts)\n  UNION ALL\n  -- seed: long-hold relays (vent stayed open 10h on 2026-07-12) have no\n  -- transitions inside short windows; carry the state at window start\n  SELECT $__timeFrom(), state FROM (\n    SELECT state FROM equipment_state WHERE equipment='vent' AND ts <= $__timeFrom()\n    ORDER BY ts DESC LIMIT 1) seed\n) x ORDER BY ts",
           "refId": "A",
           "format": "time_series",
           "datasource": {
@@ -2116,7 +2116,7 @@
           }
         },
         {
-          "rawSql": "SELECT $__time(ts), CASE WHEN state THEN 'Blocked' ELSE 'Available' END AS \"Economiser\" FROM equipment_state WHERE equipment = 'economiser_blocked' AND $__timeFilter(ts) ORDER BY ts",
+          "rawSql": "SELECT $__time(ts), CASE WHEN state THEN 'Blocked' ELSE 'Available' END AS \"Economiser\" FROM (\n  SELECT ts, state FROM equipment_state WHERE equipment='economiser_blocked' AND $__timeFilter(ts)\n  UNION ALL\n  -- seed: long-hold relays (vent stayed open 10h on 2026-07-12) have no\n  -- transitions inside short windows; carry the state at window start\n  SELECT $__timeFrom(), state FROM (\n    SELECT state FROM equipment_state WHERE equipment='economiser_blocked' AND ts <= $__timeFrom()\n    ORDER BY ts DESC LIMIT 1) seed\n) x ORDER BY ts",
           "refId": "B",
           "format": "time_series",
           "datasource": {

@@ -2561,7 +2561,7 @@
             "limit": 50
           },
           "refId": "E",
-          "rawSql": "SELECT $__time(ts), CASE WHEN state THEN 93.0::float8 ELSE 90.6::float8 END AS \"Vent\", 90.6::float8 AS \"Vent Base\" FROM equipment_state WHERE greenhouse_id='vallery' AND equipment='vent' AND $__timeFilter(ts) ORDER BY ts"
+          "rawSql": "SELECT $__time(ts), CASE WHEN state THEN 93.0::float8 ELSE 90.6::float8 END AS \"Vent\", 90.6::float8 AS \"Vent Base\" FROM (\n  SELECT ts, state FROM equipment_state WHERE greenhouse_id='vallery' AND equipment='vent' AND $__timeFilter(ts)\n  UNION ALL\n  -- seed: long-hold relays have no transitions inside short windows\n  -- (the vent held open 10h on 2026-07-12 and vanished from graphs)\n  SELECT $__timeFrom(), state FROM (\n    SELECT state FROM equipment_state WHERE greenhouse_id='vallery' AND equipment='vent' AND ts <= $__timeFrom()\n    ORDER BY ts DESC LIMIT 1) seed\n) x ORDER BY ts"
         },
         {
           "datasource": {
@@ -4220,7 +4220,7 @@
             "limit": 50
           },
           "refId": "G",
-          "rawSql": "SELECT $__time(ts), CASE WHEN state THEN 0.0::float8 ELSE -0.16::float8 END AS \"Vent\", -0.16::float8 AS \"Vent Base\" FROM equipment_state WHERE greenhouse_id='vallery' AND equipment='vent' AND $__timeFilter(ts) ORDER BY ts"
+          "rawSql": "SELECT $__time(ts), CASE WHEN state THEN 0.0::float8 ELSE -0.16::float8 END AS \"Vent\", -0.16::float8 AS \"Vent Base\" FROM (\n  SELECT ts, state FROM equipment_state WHERE greenhouse_id='vallery' AND equipment='vent' AND $__timeFilter(ts)\n  UNION ALL\n  -- seed: long-hold relays have no transitions inside short windows\n  -- (the vent held open 10h on 2026-07-12 and vanished from graphs)\n  SELECT $__timeFrom(), state FROM (\n    SELECT state FROM equipment_state WHERE greenhouse_id='vallery' AND equipment='vent' AND ts <= $__timeFrom()\n    ORDER BY ts DESC LIMIT 1) seed\n) x ORDER BY ts"
         },
         {
           "datasource": {
@@ -4621,7 +4621,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT now() AS time, initcap(availability) || ' — ' || unavailable_reason AS \"Interior DLI\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
+          "rawSql": "SELECT now() AS time, initcap(availability) || ' \u2014 ' || unavailable_reason AS \"Interior DLI\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
           "refId": "A",
           "sql": {
             "columns": [
@@ -4677,7 +4677,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT now() AS time, provenance || ' · ' || validity_revision AS \"DLI Provenance\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
+          "rawSql": "SELECT now() AS time, provenance || ' \u00b7 ' || validity_revision AS \"DLI Provenance\" FROM v_dli_current WHERE greenhouse_id = 'vallery'",
           "refId": "C",
           "sql": {
             "columns": [
@@ -4733,7 +4733,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT $__time(ts), CASE WHEN state THEN 1.0 ELSE NULL END AS \"Grow Light Main\" FROM equipment_state WHERE equipment='grow_light_main' AND $__timeFilter(ts) ORDER BY ts",
+          "rawSql": "SELECT $__time(ts), CASE WHEN state THEN 1.0 ELSE NULL END AS \"Grow Light Main\" FROM (\n  SELECT ts, state FROM equipment_state WHERE equipment='grow_light_main' AND $__timeFilter(ts)\n  UNION ALL\n  -- seed: long-hold relays (vent stayed open 10h on 2026-07-12) have no\n  -- transitions inside short windows; carry the state at window start\n  SELECT $__timeFrom(), state FROM (\n    SELECT state FROM equipment_state WHERE equipment='grow_light_main' AND ts <= $__timeFrom()\n    ORDER BY ts DESC LIMIT 1) seed\n) x ORDER BY ts",
           "refId": "D"
         },
         {
@@ -4744,11 +4744,11 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT $__time(ts), CASE WHEN state THEN 0.5 ELSE NULL END AS \"Grow Light Grow\" FROM equipment_state WHERE equipment='grow_light_grow' AND $__timeFilter(ts) ORDER BY ts",
+          "rawSql": "SELECT $__time(ts), CASE WHEN state THEN 0.5 ELSE NULL END AS \"Grow Light Grow\" FROM (\n  SELECT ts, state FROM equipment_state WHERE equipment='grow_light_grow' AND $__timeFilter(ts)\n  UNION ALL\n  -- seed: long-hold relays (vent stayed open 10h on 2026-07-12) have no\n  -- transitions inside short windows; carry the state at window start\n  SELECT $__timeFrom(), state FROM (\n    SELECT state FROM equipment_state WHERE equipment='grow_light_grow' AND ts <= $__timeFrom()\n    ORDER BY ts DESC LIMIT 1) seed\n) x ORDER BY ts",
           "refId": "F"
         }
       ],
-      "title": "Light Evidence — Interior DLI Unavailable",
+      "title": "Light Evidence \u2014 Interior DLI Unavailable",
       "type": "timeseries",
       "transparent": true
     },
