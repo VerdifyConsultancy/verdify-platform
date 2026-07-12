@@ -137,6 +137,34 @@ these local selectors: a deployed no-build pointer update/rollback still require
 future runtime/object-store adapter and end-to-end proof. No service restart is
 required by this source-only change.
 
+## Complete built-site releases
+
+The full Astro output now also has a local release and cache path. Run
+`scripts/manage-site-release.mjs prepare` after a successful build to obtain the
+content identity and event-payload digest, then publish one canonical request. The
+release manifest binds snapshot, policy, builder, event, freshness, and the complete
+path/digest/size/media-type inventory. Publication uses durable event intent,
+selection-digest CAS, atomic current/previous selection, a crash-recoverable same-host
+lease with hard-crash candidate repair, identical-content change gating, maximum-ten
+release retention, byte-aware reachability eviction under a 10 GiB retained-store cap.
+Rollback swaps pointers without a
+rebuild.
+
+`manage-site-release.mjs hydrate` verifies every blob and completed output tree before
+atomically moving the serving cache's `current` symlink. A same-host hydrate lease
+serializes install/swap/prune; unique physical generations permit atomic self-repair
+without deleting the selected path. It keeps two complete local generations and can
+cold-start from a separately verified baked known-good bundle when
+the store is unavailable. Its machine-readable status distinguishes current,
+previous, and baked fallback, and carries the planner five-minute target/fifteen-minute
+alert evaluation. `npm test` includes failure injection, concurrency, GC/retention,
+corruption/fallback, rollback, baked-outage, and CLI end-to-end coverage.
+
+This is a complete local-filesystem backend, not a deployed S3 adapter or distributed
+lease. Stage still needs image/GitOps/cache-volume wiring and alert routing. No code in
+this path queries S3, the database, Grafana, cameras, or the network, and this change
+does not deploy or alter production.
+
 The stage vendors the reviewed offline parity comparator at
 `scripts/site-build-parity.py` (SHA-256
 `d3f6662ac8303ae8a29020743254eb859db61693103b420b26df2c043ee659a4`):
@@ -217,16 +245,16 @@ store, Grafana, or device-network access.
   a policy-approved exporter/reporting source has not populated a selected release.
 - Current-camera occurrences now have an opaque same-origin manifest contract, but
   the camera sanitizer and independently served occurrence pointer are not deployed.
-- Planner event idempotency, freshness, conditional promotion, and local pointer
-  rollback are implemented and fixture-tested; no bounded event delivery authority,
-  runtime pointer resolver, freshness histogram, or firing alert is connected to
-  stage yet.
-- Local manifests are capped and individual releases have aggregate image budgets,
-  but reachability GC and the ratified 10 GiB lifecycle cap belong to the future
-  object-store adapter and are not implemented by this filesystem fixture.
-- The local publisher lock is a fail-closed pathname sentinel; a killed process can
-  require operator cleanup. A crash-released/distributed lease is required before
-  this source-only store becomes a runtime publisher.
+- Planner event idempotency, freshness, conditional promotion, local pointer rollback,
+  verified cache hydration, and baked outage fallback are implemented and tested; no
+  bounded event delivery authority, freshness histogram, or firing alert is connected
+  to stage yet.
+- The complete built-tree local store implements reachability GC, maximum-ten
+  retention, and the ratified 10 GiB cap. A real object-store backend and distributed
+  lease remain external deployment work; neither is claimed here.
+- The built-tree publisher lease recovers a provably dead same-host PID and excludes a
+  live local owner. Cross-pod publication still requires a distributed lease or
+  object-store conditional-write primitive.
 - The frozen Quartz baseline has known HLS, alias, feed/sitemap, missing-asset,
   and fallback findings and is not clean approval evidence.
 - The WWW shell release is review-only until its producer PR is merged; the Lab

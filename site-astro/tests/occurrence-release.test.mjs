@@ -337,10 +337,30 @@ test("failed graph and camera updates retain last-known-good bytes", async (cont
   assert.equal(currentGraph.state, "retained-last-known-good");
   assert.deepEqual(currentGraph.fallback, priorGraph.fallback);
 
+  const thirdRequest = {
+    storeRoot: store,
+    sourceRoot: source,
+    event: null,
+    sourceSnapshotManifestSha256: digest("snapshot-three"),
+    policyVersion: "verdify-public-output-v2",
+    publishedAt: "2026-07-12T12:11:00Z",
+    graphs: [graphInput(candidate("corrupt.png", "2026-07-12T12:10:00Z"))],
+    expectedSelectionSha256: (await loadSelectedOccurrenceRelease(store)).selectionSha256,
+  };
+  bindReleaseEvent(thirdRequest, "evt_plan_1003", "planner-completed", "2026-07-12T12:10:00Z");
+  const third = await publishOccurrenceRelease(thirdRequest);
+  assert.equal(third.manifest.policyVersion, "verdify-public-output-v2");
+  assert.equal(third.manifest.occurrences.graphs[0].state, "retained-last-known-good");
+  assert.equal(
+    third.manifest.occurrences.graphs[0].fallback.policyVersion,
+    "verdify-public-output-v1",
+    "carried evidence preserves the policy that actually approved its bytes",
+  );
+
   const selected = await loadSelectedOccurrenceRelease(store);
-  assert.equal(selected.selection.current.manifestSha256, second.manifestSha256);
-  assert.equal(selected.selection.previous.manifestSha256, first.manifestSha256);
-  assert.equal(selected.selection.generation, 2);
+  assert.equal(selected.selection.current.manifestSha256, third.manifestSha256);
+  assert.equal(selected.selection.previous.manifestSha256, second.manifestSha256);
+  assert.equal(selected.selection.generation, 3);
 
 });
 
