@@ -57,10 +57,21 @@ TEXT_SUFFIXES = frozenset(
     }
 )
 TEXT_FILENAMES = frozenset({".prettierrc"})
-SUPPORTED_BINARY_SUFFIXES = frozenset({".gz", ".gzip", ".jpeg", ".jpg", ".pdf", ".png"})
+SUPPORTED_BINARY_SUFFIXES = frozenset({".gz", ".gzip", ".jpeg", ".jpg", ".m4v", ".mp4", ".pdf", ".png"})
 TEXT_CHUNK_SIZE = 1024 * 1024
 STREAM_OVERLAP = 64 * 1024
 BINARY_CHUNK_SIZE = 1024 * 1024
+MPEG_TS_PACKET_SIZE = 188
+MPEG_TS_PROBE_PACKETS = 5
+MPEG_TS_TEXT_PROBE_BYTES = 64 * 1024
+MPEG_TS_READ_PACKETS = 4096
+MPEG_TS_METADATA_MAX_BYTES = 1024 * 1024
+MPEG_TS_MAX_PSI_SECTION_BYTES = 1024
+MPEG_TS_METADATA_STREAM_TYPES = frozenset({0x05, 0x06, 0x0D, 0x15, 0x86})
+MPEG_TS_PACKET_LAYOUTS = ((188, 0), (192, 4), (204, 0))
+ISO_BMFF_MAX_BOXES = 4096
+ISO_BMFF_MAX_METADATA_BYTES = 4 * 1024 * 1024
+ISO_BMFF_MEDIA_BOXES = frozenset({b"mdat"})
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 JPEG_SIGNATURE = b"\xff\xd8"
 PDF_SIGNATURE = b"%PDF-"
@@ -347,6 +358,378 @@ def _scan_binary_stream(file_descriptor: int) -> set[str]:
             reasons.update(_value_reasons(payload.decode(encoding, errors="ignore")))
         carry = combined[-STREAM_OVERLAP:]
         offset += len(chunk)
+    return reasons
+
+
+def _is_utf8_text_probe(payload: bytes) -> bool:
+    """Keep ordinary TypeScript on the text path without trusting its shared suffix."""
+    if not payload:
+        return True
+    try:
+        payload.decode("utf-8")
+    except UnicodeDecodeError:
+        return False
+    return b"\x00" not in payload
+
+
+def _mpeg_ts_probe_layouts(payload: bytes) -> tuple[tuple[int, int], ...]:
+    """Return packet layouts with a deterministic run of transport sync bytes."""
+    layouts: list[tuple[int, int]] = []
+    for packet_size, sync_offset in MPEG_TS_PACKET_LAYOUTS:
+        available_packets = 0 if len(payload) <= sync_offset else 1 + (len(payload) - 1 - sync_offset) // packet_size
+        probe_packets = min(MPEG_TS_PROBE_PACKETS, available_packets)
+        if probe_packets < 3:
+            continue
+        if all(payload[sync_offset + packet_size * index] == 0x47 for index in range(probe_packets)):
+            layouts.append((packet_size, sync_offset))
+    return tuple(layouts)
+
+
+def _mpeg_ts_crc32(payload: bytes) -> int:
+    """Return the ISO/IEC 13818-1 CRC remainder used by PAT and PMT sections."""
+    value = 0xFFFFFFFF
+    for byte in payload:
+        value ^= byte << 24
+        for _ in range(8):
+            if value & 0x80000000:
+                value = ((value << 1) ^ 0x04C11DB7) & 0xFFFFFFFF
+            else:
+                value = (value << 1) & 0xFFFFFFFF
+    return value
+
+
+def _mpeg_ts_parse_pat(section: bytes) -> tuple[tuple[int, int] | None, bool]:
+    """Parse one single-program HLS PAT, returning (program, PMT PID)."""
+    if (
+        len(section) < 12
+        or section[0] != 0x00
+        or section[1] & 0xF0 != 0xB0
+        or 3 + (((section[1] & 0x0F) << 8) | section[2]) != len(section)
+        or section[5] & 0xC1 != 0xC1
+        or section[6] != 0
+        or section[7] != 0
+        or _mpeg_ts_crc32(section) != 0
+    ):
+        return None, True
+    program_bytes = section[8:-4]
+    if len(program_bytes) % 4:
+        return None, True
+    programs: list[tuple[int, int]] = []
+    seen_programs: set[int] = set()
+    for offset in range(0, len(program_bytes), 4):
+        program = (program_bytes[offset] << 8) | program_bytes[offset + 1]
+        if program_bytes[offset + 2] & 0xE0 != 0xE0 or program in seen_programs:
+            return None, True
+        seen_programs.add(program)
+        pid = ((program_bytes[offset + 2] & 0x1F) << 8) | program_bytes[offset + 3]
+        if program:
+            programs.append((program, pid))
+    if len(programs) != 1 or programs[0][1] in {0, 0x1FFF}:
+        return None, True
+    return programs[0], False
+
+
+def _mpeg_ts_parse_pmt(
+    section: bytes,
+    expected_program: int,
+) -> tuple[tuple[int, tuple[tuple[int, int], ...]] | None, bool]:
+    """Parse one HLS PMT, returning its PCR PID and elementary stream map."""
+    if (
+        len(section) < 16
+        or section[0] != 0x02
+        or section[1] & 0xF0 != 0xB0
+        or 3 + (((section[1] & 0x0F) << 8) | section[2]) != len(section)
+        or ((section[3] << 8) | section[4]) != expected_program
+        or section[5] & 0xC1 != 0xC1
+        or section[6] != 0
+        or section[7] != 0
+        or section[8] & 0xE0 != 0xE0
+        or section[10] & 0xF0 != 0xF0
+        or _mpeg_ts_crc32(section) != 0
+    ):
+        return None, True
+    pcr_pid = ((section[8] & 0x1F) << 8) | section[9]
+    program_info_length = ((section[10] & 0x0F) << 8) | section[11]
+    offset = 12 + program_info_length
+    payload_end = len(section) - 4
+    if offset > payload_end:
+        return None, True
+    streams: list[tuple[int, int]] = []
+    seen_pids: set[int] = set()
+    while offset < payload_end:
+        if offset + 5 > payload_end or section[offset + 1] & 0xE0 != 0xE0 or section[offset + 3] & 0xF0 != 0xF0:
+            return None, True
+        stream_type = section[offset]
+        elementary_pid = ((section[offset + 1] & 0x1F) << 8) | section[offset + 2]
+        descriptor_length = ((section[offset + 3] & 0x0F) << 8) | section[offset + 4]
+        offset += 5
+        if offset + descriptor_length > payload_end or elementary_pid in seen_pids or elementary_pid == 0x1FFF:
+            return None, True
+        seen_pids.add(elementary_pid)
+        streams.append((stream_type, elementary_pid))
+        offset += descriptor_length
+    if not streams:
+        return None, True
+    return (pcr_pid, tuple(streams)), False
+
+
+def _mpeg_ts_append_section_data(
+    buffer: bytearray,
+    payload: bytes,
+) -> tuple[list[bytes], bool]:
+    """Append bytes at a PSI section boundary and retain a bounded tail."""
+    sections: list[bytes] = []
+    cursor = 0
+    while cursor < len(payload):
+        if not buffer and payload[cursor] == 0xFF:
+            return sections, any(byte != 0xFF for byte in payload[cursor:])
+        if len(buffer) < 3:
+            take = min(3 - len(buffer), len(payload) - cursor)
+            buffer.extend(payload[cursor : cursor + take])
+            cursor += take
+            if len(buffer) < 3:
+                return sections, False
+        section_size = 3 + (((buffer[1] & 0x0F) << 8) | buffer[2])
+        if section_size < 4 or section_size > MPEG_TS_MAX_PSI_SECTION_BYTES:
+            return sections, True
+        take = min(section_size - len(buffer), len(payload) - cursor)
+        buffer.extend(payload[cursor : cursor + take])
+        cursor += take
+        if len(buffer) < section_size:
+            return sections, False
+        sections.append(bytes(buffer))
+        buffer.clear()
+    return sections, False
+
+
+def _mpeg_ts_feed_psi(
+    buffer: bytearray,
+    payload: bytes,
+    payload_unit_start: bool,
+) -> tuple[list[bytes], bool]:
+    """Reassemble bounded PSI sections while validating pointer-field framing."""
+    if not payload_unit_start:
+        if not buffer:
+            return [], False
+        sections, malformed = _mpeg_ts_append_section_data(buffer, payload)
+        if malformed or len(sections) > 1:
+            return sections, True
+        return sections, False
+    if not payload:
+        return [], True
+    pointer = payload[0]
+    if pointer > len(payload) - 1:
+        return [], True
+    prefix = payload[1 : 1 + pointer]
+    sections: list[bytes] = []
+    if buffer:
+        completed, malformed = _mpeg_ts_append_section_data(buffer, prefix)
+        if malformed or buffer or len(completed) != 1:
+            return completed, True
+        sections.extend(completed)
+    elif any(byte != 0xFF for byte in prefix):
+        return [], True
+    new_sections, malformed = _mpeg_ts_append_section_data(buffer, payload[1 + pointer :])
+    sections.extend(new_sections)
+    return sections, malformed
+
+
+def _mpeg_ts_adaptation_field(packet: memoryview, control: int) -> tuple[int, bytes, bool]:
+    """Validate an adaptation field and return payload offset plus private data."""
+    if control not in {2, 3}:
+        return 4, b"", False
+    length = packet[4]
+    if length > 183 or (control == 2 and length != 183) or (control == 3 and length > 182):
+        return 0, b"", True
+    end = 5 + length
+    if length == 0:
+        return end, b"", False
+    flags = packet[5]
+    cursor = 6
+    if flags & 0x10:
+        cursor += 6
+    if flags & 0x08:
+        cursor += 6
+    if flags & 0x04:
+        cursor += 1
+    private_data = b""
+    if flags & 0x02:
+        if cursor >= end:
+            return 0, b"", True
+        private_length = packet[cursor]
+        cursor += 1
+        if cursor + private_length > end:
+            return 0, b"", True
+        private_data = bytes(packet[cursor : cursor + private_length])
+        cursor += private_length
+    if flags & 0x01:
+        if cursor >= end:
+            return 0, b"", True
+        extension_length = packet[cursor]
+        cursor += 1 + extension_length
+    if cursor > end or any(byte != 0xFF for byte in packet[cursor:end]):
+        return 0, b"", True
+    return end, private_data, False
+
+
+def _scan_mpeg_ts_stream(file_descriptor: int) -> set[str]:
+    """Validate every 188-byte packet and scan only bounded transport metadata."""
+    metadata: dict[int, bytearray] = {}
+    metadata_size = 0
+    metadata_limit_hit = False
+    pat_buffer = bytearray()
+    pmt_buffer = bytearray()
+    program_map: tuple[int, int] | None = None
+    pmt: tuple[int, tuple[tuple[int, int], ...]] | None = None
+    metadata_pids: set[int] = set()
+    file_size = os.fstat(file_descriptor).st_size
+    if file_size < MPEG_TS_PACKET_SIZE * 3 or file_size % MPEG_TS_PACKET_SIZE:
+        return {"malformed-media-artifact"}
+
+    def retain_metadata(pid: int, payload: bytes) -> None:
+        nonlocal metadata_limit_hit, metadata_size
+        if not payload or metadata_limit_hit:
+            return
+        if metadata_size + len(payload) > MPEG_TS_METADATA_MAX_BYTES:
+            metadata_limit_hit = True
+            return
+        metadata.setdefault(pid, bytearray()).extend(payload)
+        metadata_size += len(payload)
+
+    offset = 0
+    read_size = MPEG_TS_PACKET_SIZE * MPEG_TS_READ_PACKETS
+    while offset < file_size:
+        chunk = os.pread(file_descriptor, min(read_size, file_size - offset), offset)
+        if not chunk or len(chunk) % MPEG_TS_PACKET_SIZE:
+            return {"malformed-media-artifact"}
+        view = memoryview(chunk)
+        for packet_offset in range(0, len(chunk), MPEG_TS_PACKET_SIZE):
+            packet = view[packet_offset : packet_offset + MPEG_TS_PACKET_SIZE]
+            if packet[0] != 0x47 or packet[1] & 0x80 or packet[3] & 0xC0:
+                return {"malformed-media-artifact"}
+            pid = ((packet[1] & 0x1F) << 8) | packet[2]
+            payload_unit_start = bool(packet[1] & 0x40)
+            control = (packet[3] >> 4) & 0x03
+            if control == 0:
+                return {"malformed-media-artifact"}
+            payload_start, private_data, malformed = _mpeg_ts_adaptation_field(packet, control)
+            if malformed or (control == 2 and payload_unit_start):
+                return {"malformed-media-artifact"}
+            retain_metadata(-1, private_data)
+            if control not in {1, 3}:
+                continue
+            payload = bytes(packet[payload_start:])
+            if pid <= 0x1F or (program_map is not None and pid == program_map[1]) or pid in metadata_pids:
+                retain_metadata(pid, payload)
+            if pid == 0:
+                sections, malformed = _mpeg_ts_feed_psi(pat_buffer, payload, payload_unit_start)
+                if malformed:
+                    return {"malformed-media-artifact"}
+                for section in sections:
+                    parsed, malformed = _mpeg_ts_parse_pat(section)
+                    if malformed or (program_map is not None and parsed != program_map):
+                        return {"malformed-media-artifact"}
+                    program_map = parsed
+            elif program_map is not None and pid == program_map[1]:
+                sections, malformed = _mpeg_ts_feed_psi(pmt_buffer, payload, payload_unit_start)
+                if malformed:
+                    return {"malformed-media-artifact"}
+                for section in sections:
+                    parsed, malformed = _mpeg_ts_parse_pmt(section, program_map[0])
+                    if malformed or (pmt is not None and parsed != pmt):
+                        return {"malformed-media-artifact"}
+                    pmt = parsed
+                    metadata_pids.update(
+                        elementary_pid
+                        for stream_type, elementary_pid in parsed[1]
+                        if stream_type in MPEG_TS_METADATA_STREAM_TYPES
+                    )
+        offset += len(chunk)
+    if program_map is None or pmt is None or pat_buffer or pmt_buffer:
+        return {"malformed-media-artifact"}
+    reasons = {"media-metadata-limit"} if metadata_limit_hit else set()
+    for payload in metadata.values():
+        reasons.update(_scan_metadata_bytes(bytes(payload)))
+    return reasons
+
+
+def _scan_typescript_or_mpeg_ts(file_descriptor: int) -> set[str]:
+    """Disambiguate the shared .ts suffix, rejecting opaque or ambiguous media."""
+    probe = os.pread(file_descriptor, MPEG_TS_TEXT_PROBE_BYTES, 0)
+    text_candidate = _is_utf8_text_probe(probe) or _looks_utf16(probe) is not None
+    layouts = _mpeg_ts_probe_layouts(probe)
+    if not layouts:
+        return _scan_text_stream(file_descriptor) if text_candidate else {"malformed-media-artifact"}
+    if text_candidate or len(layouts) != 1:
+        return {"ambiguous-media-artifact"}
+    if layouts[0] != (MPEG_TS_PACKET_SIZE, 0):
+        return {"unsupported-media-packet-size"}
+    return _scan_mpeg_ts_stream(file_descriptor)
+
+
+def _scan_iso_bmff_stream(file_descriptor: int) -> set[str]:
+    """Validate top-level ISO-BMFF boxes and scan metadata, never codec payload.
+
+    MP4 ``mdat`` payload is compressed audiovisual data, not a textual metadata
+    representation.  Treating those bytes as prose is both semantically wrong
+    and regex-pathological.  All other top-level box bytes remain bounded and
+    pass through the canonical UTF-8/UTF-16/encoded-metadata scanner.
+    """
+    file_size = os.fstat(file_descriptor).st_size
+    if file_size < 16:
+        return {"malformed-media-artifact"}
+    reasons: set[str] = set()
+    offset = 0
+    boxes = 0
+    metadata_bytes = 0
+    first_type: bytes | None = None
+    seen_file_type = False
+    seen_moov = False
+    while offset < file_size:
+        header = os.pread(file_descriptor, 8, offset)
+        if len(header) != 8:
+            return {"malformed-media-artifact"}
+        size32, box_type = struct.unpack(">I4s", header)
+        header_size = 8
+        if size32 == 1:
+            extended = os.pread(file_descriptor, 8, offset + 8)
+            if len(extended) != 8:
+                return {"malformed-media-artifact"}
+            box_size = struct.unpack(">Q", extended)[0]
+            header_size = 16
+        elif size32 == 0:
+            box_size = file_size - offset
+        else:
+            box_size = size32
+        if box_size < header_size or offset + box_size > file_size:
+            return {"malformed-media-artifact"}
+        boxes += 1
+        if boxes > ISO_BMFF_MAX_BOXES:
+            return {"media-metadata-limit"}
+        payload_size = box_size - header_size
+        if first_type is None:
+            first_type = box_type
+        if box_type == b"ftyp":
+            if seen_file_type or payload_size < 8 or (payload_size - 8) % 4:
+                return {"malformed-media-artifact"}
+            seen_file_type = True
+        if box_type == b"moov":
+            if seen_moov:
+                return {"malformed-media-artifact"}
+            seen_moov = True
+        if box_type not in ISO_BMFF_MEDIA_BOXES:
+            metadata_bytes += payload_size
+            if metadata_bytes > ISO_BMFF_MAX_METADATA_BYTES:
+                return {"media-metadata-limit"}
+            payload = os.pread(file_descriptor, payload_size, offset + header_size)
+            if len(payload) != payload_size:
+                return {"malformed-media-artifact"}
+            reasons.update(_scan_metadata_bytes(payload))
+        offset += box_size
+        if size32 == 0 and offset != file_size:
+            return {"malformed-media-artifact"}
+    if offset != file_size or first_type != b"ftyp" or not seen_file_type or not seen_moov:
+        return {"malformed-media-artifact", *reasons}
     return reasons
 
 
@@ -1373,6 +1756,10 @@ def _scan_gzip_bytes(data: bytes, *, recursion_depth: int = 0) -> set[str]:
 
 def _scan_file(file_descriptor: int, relative_path: Path) -> set[str]:
     suffix = relative_path.suffix.casefold()
+    if suffix == ".ts":
+        return _scan_typescript_or_mpeg_ts(file_descriptor)
+    if suffix in {".mp4", ".m4v"}:
+        return _scan_iso_bmff_stream(file_descriptor)
     if suffix in TEXT_SUFFIXES or relative_path.name in TEXT_FILENAMES:
         return _scan_text_stream(file_descriptor)
     signature = os.pread(file_descriptor, 16, 0)

@@ -88,6 +88,102 @@ def gzip_member(
     return bytes(header) + canonical[10:]
 
 
+def mpeg_ts_crc32(payload: bytes) -> int:
+    value = 0xFFFFFFFF
+    for byte in payload:
+        value ^= byte << 24
+        for _ in range(8):
+            if value & 0x80000000:
+                value = ((value << 1) ^ 0x04C11DB7) & 0xFFFFFFFF
+            else:
+                value = (value << 1) & 0xFFFFFFFF
+    return value
+
+
+def mpeg_ts_section(table_id: int, body: bytes) -> bytes:
+    section_length = len(body) + 4
+    section = bytes([table_id, 0xB0 | (section_length >> 8), section_length & 0xFF]) + body
+    return section + mpeg_ts_crc32(section).to_bytes(4, "big")
+
+
+def mpeg_ts_packet(pid: int, payload: bytes, *, payload_unit_start: bool = False, counter: int = 0) -> bytes:
+    assert 0 <= pid < 0x2000
+    assert len(payload) <= 184
+    second = (0x40 if payload_unit_start else 0) | (pid >> 8)
+    if len(payload) == 184:
+        return bytes([0x47, second, pid & 0xFF, 0x10 | counter]) + payload
+    adaptation_length = 183 - len(payload)
+    adaptation = b"" if adaptation_length == 0 else b"\x00" + b"\xff" * (adaptation_length - 1)
+    return bytes([0x47, second, pid & 0xFF, 0x30 | counter, adaptation_length]) + adaptation + payload
+
+
+def mpeg_ts_fixture(*, metadata: bytes | None = None, split_pmt: bool = False) -> bytes:
+    program = 1
+    pmt_pid = 0x1000
+    video_pid = 0x0100
+    metadata_pid = 0x0102
+    pat = mpeg_ts_section(
+        0x00,
+        b"\x00\x01\xc1\x00\x00" + bytes([program >> 8, program & 0xFF, 0xE0 | (pmt_pid >> 8), pmt_pid & 0xFF]),
+    )
+    streams = bytes([0x1B, 0xE0 | (video_pid >> 8), video_pid & 0xFF, 0xF0, 0x00])
+    if metadata is not None:
+        streams += bytes([0x15, 0xE0 | (metadata_pid >> 8), metadata_pid & 0xFF, 0xF0, 0x00])
+    pmt = mpeg_ts_section(
+        0x02,
+        bytes(
+            [
+                program >> 8,
+                program & 0xFF,
+                0xC1,
+                0x00,
+                0x00,
+                0xE0 | (video_pid >> 8),
+                video_pid & 0xFF,
+                0xF0,
+                0x00,
+            ]
+        )
+        + streams,
+    )
+    pmt_packets = [mpeg_ts_packet(pmt_pid, b"\x00" + pmt, payload_unit_start=True)]
+    if split_pmt:
+        pmt_packets = [
+            mpeg_ts_packet(pmt_pid, b"\x00" + pmt[:5], payload_unit_start=True),
+            mpeg_ts_packet(pmt_pid, pmt[5:10], counter=1),
+            mpeg_ts_packet(pmt_pid, pmt[10:], counter=2),
+        ]
+    packets = [
+        mpeg_ts_packet(0, b"\x00" + pat, payload_unit_start=True),
+        *pmt_packets,
+        mpeg_ts_packet(video_pid, b"\x00\x00\x01\xe0ordinary video payload", payload_unit_start=True),
+    ]
+    if metadata is not None:
+        packets.append(
+            mpeg_ts_packet(
+                metadata_pid,
+                b"\x00\x00\x01\xbdID3" + metadata,
+                payload_unit_start=True,
+            )
+        )
+    return b"".join(packets)
+
+
+def iso_bmff_box(box_type: bytes, payload: bytes) -> bytes:
+    assert len(box_type) == 4
+    return struct.pack(">I4s", len(payload) + 8, box_type) + payload
+
+
+def iso_bmff_fixture(*, metadata: bytes = b"ordinary metadata", media: bytes = b"compressed codec bytes") -> bytes:
+    return b"".join(
+        (
+            iso_bmff_box(b"ftyp", b"isom\x00\x00\x02\x00isomiso2"),
+            iso_bmff_box(b"moov", metadata),
+            iso_bmff_box(b"mdat", media),
+        )
+    )
+
+
 def test_guard_enumerates_routes_and_never_echoes_prohibited_text(tmp_path):
     guard = load_guard()
     excluded = next(iter(policy.PUBLIC_CROP_EXCLUDE_SLUGS))
@@ -107,18 +203,153 @@ def test_guard_enumerates_routes_and_never_echoes_prohibited_text(tmp_path):
     assert {finding.reason for finding in findings} == {"content", "filename"}
 
 
+def test_ts_suffix_preserves_typescript_and_validates_mpeg_transport_stream(tmp_path):
+    guard = load_guard()
+    excluded = next(iter(policy.PUBLIC_CROP_EXCLUDE_SLUGS))
+    (tmp_path / "types.ts").write_text("export type ClimateSample = { value: number };\n", encoding="utf-8")
+    (tmp_path / "protected.ts").write_text(f'export const crop = "{excluded}";\n', encoding="utf-8")
+    (tmp_path / "protected-utf16.ts").write_bytes(f'export const crop = "{excluded}";\n'.encode("utf-16"))
+    (tmp_path / "segment.ts").write_bytes(mpeg_ts_fixture())
+    (tmp_path / "split-map.ts").write_bytes(mpeg_ts_fixture(split_pmt=True))
+
+    findings = guard.scan_root(tmp_path)
+
+    assert [(finding.path, finding.reason) for finding in findings] == [
+        ("protected-utf16.ts", "content"),
+        ("protected-utf16.ts", "unreadable-text"),
+        ("protected.ts", "content"),
+    ]
+    assert excluded not in str(findings).casefold()
+
+
+def test_mpeg_transport_stream_scans_metadata_and_enforces_its_bound(tmp_path, monkeypatch):
+    guard = load_guard()
+    excluded = next(iter(policy.PUBLIC_CROP_EXCLUDE_SLUGS))
+    (tmp_path / "protected.ts").write_bytes(mpeg_ts_fixture(metadata=f"review {excluded}".encode()))
+    (tmp_path / "invalid.ts").write_bytes(mpeg_ts_fixture(metadata=b"humidity: NaN%"))
+
+    findings = guard.scan_root(tmp_path)
+
+    assert {(finding.path, finding.reason) for finding in findings} == {
+        ("invalid.ts", "invalid-rendered-value"),
+        ("protected.ts", "content"),
+    }
+    assert excluded not in str(findings).casefold()
+
+    bounded = tmp_path / "bounded.ts"
+    bounded.write_bytes(mpeg_ts_fixture(metadata=b"ordinary metadata"))
+    monkeypatch.setattr(guard, "MPEG_TS_METADATA_MAX_BYTES", 20)
+    bounded_findings = guard.scan_root(tmp_path)
+    assert {finding.path for finding in bounded_findings if finding.reason == "media-metadata-limit"} == {
+        "bounded.ts",
+        "invalid.ts",
+        "protected.ts",
+    }
+
+
+def test_mpeg_transport_stream_rejects_packet_crc_header_and_map_corruption(tmp_path):
+    guard = load_guard()
+    valid = mpeg_ts_fixture()
+    corruptions: dict[str, bytes] = {}
+
+    bad_sync = bytearray(valid)
+    bad_sync[guard.MPEG_TS_PACKET_SIZE] = 0x46
+    corruptions["bad-sync.ts"] = bytes(bad_sync)
+
+    bad_header = bytearray(valid)
+    bad_header[guard.MPEG_TS_PACKET_SIZE * 2 + 3] = 0
+    corruptions["bad-header.ts"] = bytes(bad_header)
+
+    bad_crc = bytearray(valid)
+    bad_crc[guard.MPEG_TS_PACKET_SIZE - 1] ^= 0x01
+    corruptions["bad-crc.ts"] = bytes(bad_crc)
+
+    missing_map = bytearray(valid)
+    missing_map[guard.MPEG_TS_PACKET_SIZE + 1] = 0x41
+    missing_map[guard.MPEG_TS_PACKET_SIZE + 2] = 0x00
+    corruptions["missing-map.ts"] = bytes(missing_map)
+    corruptions["truncated.ts"] = valid[:-1]
+
+    for name, payload in corruptions.items():
+        (tmp_path / name).write_bytes(payload)
+
+    findings = guard.scan_root(tmp_path)
+
+    assert {(finding.path, finding.reason) for finding in findings} == {
+        (name, "malformed-media-artifact") for name in corruptions
+    }
+
+
+def test_mpeg_transport_stream_rejects_unsupported_and_ambiguous_packet_layouts(tmp_path):
+    guard = load_guard()
+    valid = mpeg_ts_fixture()
+    m2ts = b"".join(b"\x00\x00\x00\x00" + valid[offset : offset + 188] for offset in range(0, len(valid), 188))
+    (tmp_path / "wrapped.ts").write_bytes(m2ts)
+
+    text_media_ambiguity = bytearray(b"a" * (188 * guard.MPEG_TS_PROBE_PACKETS))
+    for offset in range(0, len(text_media_ambiguity), 188):
+        text_media_ambiguity[offset] = 0x47
+    (tmp_path / "ambiguous.ts").write_bytes(text_media_ambiguity)
+
+    findings = guard.scan_root(tmp_path)
+
+    assert {(finding.path, finding.reason) for finding in findings} == {
+        ("ambiguous.ts", "ambiguous-media-artifact"),
+        ("wrapped.ts", "unsupported-media-packet-size"),
+    }
+
+
+def test_iso_bmff_scans_metadata_without_treating_compressed_media_as_text(tmp_path):
+    guard = load_guard()
+    excluded = next(iter(policy.PUBLIC_CROP_EXCLUDE_SLUGS))
+    (tmp_path / "protected.mp4").write_bytes(iso_bmff_fixture(metadata=f"review {excluded}".encode()))
+    (tmp_path / "invalid.m4v").write_bytes(iso_bmff_fixture(metadata=b"humidity: NaN%"))
+    (tmp_path / "safe.mp4").write_bytes(iso_bmff_fixture(media=(b"$-information-none-is-codec-data" * 65_536)))
+    (tmp_path / "init.mp4").write_bytes(
+        iso_bmff_box(b"ftyp", b"isom\x00\x00\x02\x00isomiso2") + iso_bmff_box(b"moov", b"ordinary metadata")
+    )
+
+    findings = guard.scan_root(tmp_path)
+
+    assert {(finding.path, finding.reason) for finding in findings} == {
+        ("invalid.m4v", "invalid-rendered-value"),
+        ("protected.mp4", "content"),
+    }
+    assert excluded not in str(findings).casefold()
+
+
+def test_iso_bmff_rejects_malformed_boxes_and_metadata_bounds(tmp_path, monkeypatch):
+    guard = load_guard()
+    malformed = bytearray(iso_bmff_fixture())
+    malformed[0:4] = struct.pack(">I", len(malformed) + 1)
+    (tmp_path / "malformed.mp4").write_bytes(malformed)
+    (tmp_path / "malformed-ftyp.mp4").write_bytes(
+        iso_bmff_box(b"ftyp", b"isom") + iso_bmff_box(b"moov", b"ordinary metadata") + iso_bmff_box(b"mdat", b"codec")
+    )
+    (tmp_path / "bounded.mp4").write_bytes(iso_bmff_fixture(metadata=b"ordinary metadata"))
+    monkeypatch.setattr(guard, "ISO_BMFF_MAX_METADATA_BYTES", 8)
+
+    findings = guard.scan_root(tmp_path)
+
+    assert {(finding.path, finding.reason) for finding in findings} == {
+        ("bounded.mp4", "media-metadata-limit"),
+        ("malformed-ftyp.mp4", "malformed-media-artifact"),
+        ("malformed.mp4", "malformed-media-artifact"),
+    }
+
+
 def test_guard_maps_index_pages_and_scans_binary_metadata(tmp_path):
     guard = load_guard()
     excluded = next(iter(policy.PUBLIC_CROP_EXCLUDE_SLUGS))
     index = tmp_path / "reference" / "index.html"
     index.parent.mkdir()
     index.write_text("clean", encoding="utf-8")
-    binary = tmp_path / "video.mp4"
+    binary = tmp_path / "video.bin"
     binary.write_bytes(b"\x00\xff" + excluded.encode())
 
     assert guard.public_route(index.relative_to(tmp_path)) == "/reference"
     findings = guard.scan_root(tmp_path)
-    assert [(finding.path, finding.reason) for finding in findings] == [("video.mp4", "content")]
+    assert [(finding.path, finding.reason) for finding in findings] == [("video.bin", "content")]
 
 
 def test_guard_scans_bounded_compressed_png_metadata(tmp_path):

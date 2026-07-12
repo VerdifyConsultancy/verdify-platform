@@ -53,6 +53,10 @@ REASON_CLASS_BY_SCANNER_REASON = {
     "compressed-artifact-limit": "unsafe-artifact",
     "malformed-compressed-artifact": "unsafe-artifact",
     "unsupported-compressed-container": "unsafe-artifact",
+    "malformed-media-artifact": "unsafe-artifact",
+    "ambiguous-media-artifact": "unsafe-artifact",
+    "unsupported-media-packet-size": "unsafe-artifact",
+    "media-metadata-limit": "unsafe-artifact",
 }
 
 

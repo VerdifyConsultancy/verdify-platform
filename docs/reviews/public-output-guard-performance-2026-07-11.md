@@ -98,3 +98,53 @@ site container cannot mount a partially copied tree and publisher promotion
 cannot overlap migration. The site extracts its baked fallback to an `emptyDir`
 before taking the PVC lock; consequently either the site or publisher pod may
 start first without losing the prior last-good tree.
+
+## Mixed HLS snapshot follow-up — 2026-07-12
+
+The `.ts` suffix is shared by TypeScript and MPEG transport streams. The guard
+now probes that suffix before dispatch: UTF-8/UTF-16 source stays on the text
+path, while media must have one unambiguous 188-byte packet layout, valid sync
+and adaptation fields throughout, and CRC-valid single-program PAT/PMT tables.
+Known transport metadata PIDs and private-data fields are scanned under a 1 MiB
+per-file bound. Malformed, ambiguous, wrapped 192/204-byte, opaque, and
+over-bound inputs fail closed.
+
+The same frozen tree contains MP4 camera exports. Their top-level ISO-BMFF box
+layout is validated, non-`mdat` metadata is scanned under a 4 MiB bound, and the
+validated compressed `mdat` payload is not reinterpreted as prose.
+
+This driver suppresses scanner diagnostics and prints only aggregate evidence;
+it cannot echo a matched protected value:
+
+```python
+import hashlib
+import json
+import resource
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+root = "/tmp/verdify-lab-snapshot-sanitized-20260712t1620z/content"
+report = Path("/tmp/verdify-hls-guard-final-report.json")
+command = [sys.executable, "scripts/check-public-output.py", "--root", root, "--json-report", str(report)]
+started = time.perf_counter()
+completed = subprocess.run(command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+elapsed = time.perf_counter() - started
+payload = json.loads(report.read_text(encoding="utf-8"))
+print("scanner_exit", completed.returncode)
+print("elapsed_seconds", f"{elapsed:.3f}")
+print("maxrss_kib", resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss)
+print("finding_count", len(payload["findings"]))
+print("report_sha256", hashlib.sha256(report.read_bytes()).hexdigest())
+```
+
+```text
+files=429
+bytes=409203669
+scanner_exit=0
+elapsed_seconds=17.712
+maxrss_kib=35060
+finding_count=0
+report_sha256=8da094d7f9eb0957d38fff47dcd6b80f2d906676433c1b57613ad8aa632bf20d
+```
