@@ -71,6 +71,15 @@ spec:
                     psql -v ON_ERROR_STOP=1 -c "REFRESH MATERIALIZED VIEW mv_band_curve;"
                   fi
                   echo "mv_band_curve refreshed $(date -u +%FT%TZ)"
+                  # Equipment-runtime dashboard snapshot (migration 200): the
+                  # live view exceeds Grafana query timeouts — panels read this
+                  # matview (the 2026-07-12 "fans not running" false alarm).
+                  if [ "$(psql -v ON_ERROR_STOP=1 -t -A -c "SELECT COALESCE((SELECT ispopulated FROM pg_matviews WHERE schemaname='public' AND matviewname='mv_equipment_runtime_daily'), false)")" = "t" ]; then
+                    psql -v ON_ERROR_STOP=1 -c "REFRESH MATERIALIZED VIEW CONCURRENTLY mv_equipment_runtime_daily;"
+                  else
+                    psql -v ON_ERROR_STOP=1 -c "REFRESH MATERIALIZED VIEW mv_equipment_runtime_daily;"
+                  fi
+                  echo "mv_equipment_runtime_daily refreshed $(date -u +%FT%TZ)"
               env:
                 - name: PGHOST
                   valueFrom:

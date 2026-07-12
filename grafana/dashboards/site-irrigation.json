@@ -467,7 +467,7 @@
             "uid": "verdify-tsdb",
             "type": "grafana-postgresql-datasource"
           },
-          "rawSql": "SELECT (day::date + time '12:00')::timestamptz AS time, MAX(on_minutes) FILTER (WHERE equipment='drip_wall')/60.0 AS \"clean h\", MAX(on_minutes) FILTER (WHERE equipment='drip_wall_fert')/60.0 AS \"fert h\", MAX(on_minutes) FILTER (WHERE equipment='fert_master_valve')/60.0 AS \"master h\" FROM v_equipment_runtime_daily WHERE is_deploy_gate_eligible AND equipment IN ('drip_wall','drip_wall_fert','fert_master_valve') AND $__timeFilter((day::date + time '12:00')::timestamptz) GROUP BY day ORDER BY day",
+          "rawSql": "SELECT (day::date + time '12:00')::timestamptz AS time, MAX(on_minutes) FILTER (WHERE equipment='drip_wall')/60.0 AS \"clean h\", MAX(on_minutes) FILTER (WHERE equipment='drip_wall_fert')/60.0 AS \"fert h\", MAX(on_minutes) FILTER (WHERE equipment='fert_master_valve')/60.0 AS \"master h\" FROM mv_equipment_runtime_daily WHERE is_deploy_gate_eligible AND equipment IN ('drip_wall','drip_wall_fert','fert_master_valve') AND $__timeFilter((day::date + time '12:00')::timestamptz) GROUP BY day ORDER BY day",
           "format": "time_series",
           "refId": "A"
         }
