@@ -7,6 +7,8 @@ import argparse
 import base64
 import binascii
 import codecs
+import ctypes
+import ctypes.util
 import hashlib
 import json
 import os
@@ -14,6 +16,7 @@ import re
 import stat
 import struct
 import sys
+import xml.etree.ElementTree as ET
 import zlib
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -57,7 +60,9 @@ TEXT_SUFFIXES = frozenset(
     }
 )
 TEXT_FILENAMES = frozenset({".prettierrc"})
-SUPPORTED_BINARY_SUFFIXES = frozenset({".gz", ".gzip", ".jpeg", ".jpg", ".m4v", ".mp4", ".pdf", ".png"})
+SUPPORTED_BINARY_SUFFIXES = frozenset(
+    {".gz", ".gzip", ".jpeg", ".jpg", ".m4v", ".mp4", ".pdf", ".png", ".woff", ".woff2"}
+)
 TEXT_CHUNK_SIZE = 1024 * 1024
 STREAM_OVERLAP = 64 * 1024
 BINARY_CHUNK_SIZE = 1024 * 1024
@@ -76,6 +81,8 @@ PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 JPEG_SIGNATURE = b"\xff\xd8"
 PDF_SIGNATURE = b"%PDF-"
 GZIP_SIGNATURE = b"\x1f\x8b"
+WOFF_SIGNATURE = b"wOFF"
+WOFF2_SIGNATURE = b"wOF2"
 PNG_MAX_CHUNKS = 4096
 JPEG_MAX_SEGMENTS = 4096
 PDF_MAX_STREAMS = 4096
@@ -114,9 +121,7 @@ PNG_SAFE_BINARY_ANCILLARY_CHUNKS = frozenset(
     }
 )
 PNG_CRITICAL_CHUNKS = frozenset({b"IDAT", b"IEND", b"IHDR", b"PLTE"})
-UNSUPPORTED_COMPRESSED_SUFFIXES = frozenset(
-    {".7z", ".br", ".bz2", ".rar", ".tgz", ".woff", ".woff2", ".xz", ".zip", ".zst", ".zstd"}
-)
+UNSUPPORTED_COMPRESSED_SUFFIXES = frozenset({".7z", ".br", ".bz2", ".rar", ".tgz", ".xz", ".zip", ".zst", ".zstd"})
 UNSUPPORTED_COMPRESSED_MAGICS = (
     b"PK\x03\x04",
     b"BZh",
@@ -124,8 +129,122 @@ UNSUPPORTED_COMPRESSED_MAGICS = (
     b"\x28\xb5\x2f\xfd",
     b"7z\xbc\xaf\x27\x1c",
     b"Rar!\x1a\x07",
-    b"wOFF",
-    b"wOF2",
+)
+FONT_MAX_TABLES = 4096
+FONT_MAX_NAME_RECORDS = 65535
+FONT_MAX_TABLE_BYTES = 64 * 1024 * 1024
+FONT_MAX_DECOMPRESSED_BYTES = 128 * 1024 * 1024
+WOFF2_KNOWN_TAGS = (
+    b"cmap",
+    b"head",
+    b"hhea",
+    b"hmtx",
+    b"maxp",
+    b"name",
+    b"OS/2",
+    b"post",
+    b"cvt ",
+    b"fpgm",
+    b"glyf",
+    b"loca",
+    b"prep",
+    b"CFF ",
+    b"VORG",
+    b"EBDT",
+    b"EBLC",
+    b"gasp",
+    b"hdmx",
+    b"kern",
+    b"LTSH",
+    b"PCLT",
+    b"VDMX",
+    b"vhea",
+    b"vmtx",
+    b"BASE",
+    b"GDEF",
+    b"GPOS",
+    b"GSUB",
+    b"EBSC",
+    b"JSTF",
+    b"MATH",
+    b"CBDT",
+    b"CBLC",
+    b"COLR",
+    b"CPAL",
+    b"SVG ",
+    b"sbix",
+    b"acnt",
+    b"avar",
+    b"bdat",
+    b"bloc",
+    b"bsln",
+    b"cvar",
+    b"fdsc",
+    b"feat",
+    b"fmtx",
+    b"fvar",
+    b"gvar",
+    b"hsty",
+    b"just",
+    b"lcar",
+    b"mort",
+    b"morx",
+    b"opbd",
+    b"prop",
+    b"trak",
+    b"Zapf",
+    b"Silf",
+    b"Glat",
+    b"Gloc",
+    b"Feat",
+    b"Sill",
+)
+# Only tables whose payload can be scanned directly are accepted. Tables with
+# embedded images/XML, signatures, arbitrary metadata, or nested compression
+# remain unsupported until they have their own bounded parser.
+FONT_SUPPORTED_TABLE_TAGS = frozenset(
+    {
+        b"BASE",
+        b"CFF ",
+        b"CFF2",
+        b"COLR",
+        b"CPAL",
+        b"GDEF",
+        b"GPOS",
+        b"GSUB",
+        b"HVAR",
+        b"JSTF",
+        b"LTSH",
+        b"MATH",
+        b"MVAR",
+        b"OS/2",
+        b"PCLT",
+        b"STAT",
+        b"VDMX",
+        b"VORG",
+        b"VVAR",
+        b"avar",
+        b"cmap",
+        b"cvar",
+        b"cvt ",
+        b"fpgm",
+        b"fvar",
+        b"gasp",
+        b"glyf",
+        b"gvar",
+        b"hdmx",
+        b"head",
+        b"hhea",
+        b"hmtx",
+        b"kern",
+        b"loca",
+        b"maxp",
+        b"name",
+        b"post",
+        b"prep",
+        b"vhea",
+        b"vmtx",
+    }
 )
 DATA_IMAGE_URI_RE = re.compile(
     rf"data:image/(?P<kind>png|jpeg|jpg);base64,(?P<payload>[A-Za-z0-9+/]{{1,{DATA_URI_MAX_ENCODED_CHARS}}}={{0,2}})"
@@ -1754,6 +1873,486 @@ def _scan_gzip_bytes(data: bytes, *, recursion_depth: int = 0) -> set[str]:
     return reasons
 
 
+def _font_xml_reasons(payload: bytes) -> set[str]:
+    if len(payload) > DECOMPRESSED_METADATA_MAX_BYTES:
+        return {"compressed-metadata-limit"}
+    try:
+        text = payload.decode("utf-8")
+        # WOFF metadata cannot require a DTD. Reject declarations before using
+        # the bounded stdlib parser so entity expansion is not reachable.
+        if "<!DOCTYPE" in text or "<!ENTITY" in text:
+            return {"malformed-compressed-metadata"}
+        ET.fromstring(text)  # noqa: S314 -- bounded input with DTDs/entities rejected above
+    except (ET.ParseError, UnicodeDecodeError):
+        return {"malformed-compressed-metadata"}
+    return _value_reasons(text)
+
+
+def _scan_sfnt_name_table(payload: bytes) -> set[str]:
+    if len(payload) < 6:
+        return {"malformed-compressed-artifact"}
+    table_format, count, string_offset = struct.unpack(">HHH", payload[:6])
+    if table_format not in {0, 1} or count > FONT_MAX_NAME_RECORDS:
+        return {"malformed-compressed-artifact" if count <= FONT_MAX_NAME_RECORDS else "compressed-artifact-limit"}
+    records_end = 6 + count * 12
+    if records_end > len(payload) or string_offset < records_end or string_offset > len(payload):
+        return {"malformed-compressed-artifact"}
+    language_records: list[tuple[int, int]] = []
+    if table_format == 1:
+        if records_end + 2 > len(payload):
+            return {"malformed-compressed-artifact"}
+        language_count = struct.unpack(">H", payload[records_end : records_end + 2])[0]
+        if language_count > FONT_MAX_NAME_RECORDS or records_end + 2 + language_count * 4 > string_offset:
+            return {
+                "malformed-compressed-artifact"
+                if language_count <= FONT_MAX_NAME_RECORDS
+                else "compressed-artifact-limit"
+            }
+        for index in range(language_count):
+            start = records_end + 2 + index * 4
+            language_records.append(struct.unpack(">HH", payload[start : start + 4]))
+
+    reasons: set[str] = set()
+    storage = payload[string_offset:]
+    reasons.update(_scan_metadata_bytes(storage))
+    if len(storage) >= 2:
+        even_storage = storage[: len(storage) - len(storage) % 2]
+        reasons.update(_value_reasons(even_storage.decode("utf-16-be", errors="ignore")))
+        reasons.update(_value_reasons(even_storage.decode("utf-16-le", errors="ignore")))
+    for length, offset in language_records:
+        if offset + length > len(storage):
+            reasons.add("malformed-compressed-artifact")
+            continue
+        try:
+            reasons.update(_value_reasons(storage[offset : offset + length].decode("utf-16-be")))
+        except UnicodeDecodeError:
+            reasons.add("malformed-compressed-artifact")
+    for index in range(count):
+        start = 6 + index * 12
+        platform_id, encoding_id, _language_id, _name_id, length, offset = struct.unpack(
+            ">HHHHHH", payload[start : start + 12]
+        )
+        if offset + length > len(storage):
+            reasons.add("malformed-compressed-artifact")
+            continue
+        value = storage[offset : offset + length]
+        try:
+            if platform_id == 0 or (platform_id == 3 and encoding_id in {0, 1, 10}):
+                decoded = value.decode("utf-16-be")
+            elif platform_id == 1 and encoding_id == 0:
+                decoded = value.decode("mac-roman")
+            else:
+                decoded = value.decode("latin-1")
+        except UnicodeDecodeError:
+            reasons.add("malformed-compressed-artifact")
+            continue
+        reasons.update(_value_reasons(decoded))
+    return reasons
+
+
+def _sfnt_table_checksum(tag: bytes, payload: bytes) -> int:
+    checksum_payload = payload
+    if tag == b"head" and len(payload) >= 12:
+        checksum_payload = payload[:8] + b"\x00\x00\x00\x00" + payload[12:]
+    padding = (-len(checksum_payload)) % 4
+    padded = checksum_payload + b"\x00" * padding
+    return sum(struct.unpack(f">{len(padded) // 4}I", padded)) & 0xFFFFFFFF if padded else 0
+
+
+def _zlib_decompress_exact(payload: bytes, expected_length: int) -> tuple[bytes | None, str | None]:
+    if expected_length > FONT_MAX_TABLE_BYTES:
+        return None, "compressed-artifact-limit"
+    try:
+        decompressor = zlib.decompressobj(zlib.MAX_WBITS)
+        decoded = decompressor.decompress(payload, expected_length + 1)
+        if decompressor.unconsumed_tail or len(decoded) > expected_length:
+            return None, "compressed-artifact-limit"
+        decoded += decompressor.flush(expected_length - len(decoded) + 1)
+    except (ValueError, zlib.error):
+        return None, "malformed-compressed-artifact"
+    if (
+        len(decoded) != expected_length
+        or not decompressor.eof
+        or decompressor.unused_data
+        or decompressor.unconsumed_tail
+    ):
+        return None, "malformed-compressed-artifact"
+    return decoded, None
+
+
+def _scan_woff_bytes(data: bytes) -> set[str]:
+    if len(data) < 44 or not data.startswith(WOFF_SIGNATURE):
+        return {"malformed-compressed-artifact"}
+    try:
+        (
+            _signature,
+            flavor,
+            declared_length,
+            num_tables,
+            reserved,
+            total_sfnt_size,
+            _major_version,
+            _minor_version,
+            meta_offset,
+            meta_length,
+            meta_orig_length,
+            private_offset,
+            private_length,
+        ) = struct.unpack(">4sIIHHIHHIIIII", data[:44])
+    except struct.error:
+        return {"malformed-compressed-artifact"}
+    if flavor not in {0x00010000, 0x4F54544F, 0x74727565, 0x74797031}:
+        return {"malformed-compressed-artifact"}
+    if declared_length != len(data) or reserved != 0 or not 0 < num_tables <= FONT_MAX_TABLES:
+        return {"malformed-compressed-artifact" if num_tables <= FONT_MAX_TABLES else "compressed-artifact-limit"}
+    directory_end = 44 + num_tables * 20
+    if directory_end > len(data) or total_sfnt_size > FONT_MAX_DECOMPRESSED_BYTES or total_sfnt_size % 4:
+        return {
+            "compressed-artifact-limit"
+            if total_sfnt_size > FONT_MAX_DECOMPRESSED_BYTES
+            else "malformed-compressed-artifact"
+        }
+
+    entries: list[tuple[bytes, int, int, int, int]] = []
+    tags: list[bytes] = []
+    expected_sfnt_size = 12 + num_tables * 16
+    for index in range(num_tables):
+        start = 44 + index * 20
+        tag, offset, compressed_length, original_length, original_checksum = struct.unpack(
+            ">4sIIII", data[start : start + 20]
+        )
+        if original_length > FONT_MAX_TABLE_BYTES:
+            return {"compressed-artifact-limit"}
+        if (
+            tag in tags
+            or any(byte < 0x20 or byte > 0x7E for byte in tag)
+            or compressed_length > original_length
+            or (original_length == 0) != (compressed_length == 0)
+            or offset % 4
+            or offset < directory_end
+            or offset + compressed_length > len(data)
+        ):
+            return {"malformed-compressed-artifact"}
+        if tag not in FONT_SUPPORTED_TABLE_TAGS:
+            return {"unsupported-compressed-container"}
+        tags.append(tag)
+        expected_sfnt_size += (original_length + 3) & ~3
+        if expected_sfnt_size > FONT_MAX_DECOMPRESSED_BYTES:
+            return {"compressed-artifact-limit"}
+        entries.append((tag, offset, compressed_length, original_length, original_checksum))
+    if tags != sorted(tags) or b"name" not in tags or total_sfnt_size != expected_sfnt_size:
+        return {"malformed-compressed-artifact"}
+
+    reasons: set[str] = set()
+    cursor = directory_end
+    for tag, offset, compressed_length, original_length, original_checksum in sorted(entries, key=lambda item: item[1]):
+        if offset != cursor:
+            return {"malformed-compressed-artifact"}
+        compressed = data[offset : offset + compressed_length]
+        if compressed_length < original_length:
+            decoded, error = _zlib_decompress_exact(compressed, original_length)
+            if error:
+                reasons.add(error)
+                return reasons
+            assert decoded is not None
+        else:
+            decoded = compressed
+        if _sfnt_table_checksum(tag, decoded) != original_checksum:
+            return {"malformed-compressed-artifact"}
+        reasons.update(_scan_metadata_bytes(decoded))
+        if tag == b"name":
+            reasons.update(_scan_sfnt_name_table(decoded))
+        cursor = (offset + compressed_length + 3) & ~3
+        if cursor > len(data) or any(data[offset + compressed_length : cursor]):
+            return {"malformed-compressed-artifact"}
+
+    metadata_fields = (meta_offset, meta_length, meta_orig_length)
+    if any(metadata_fields):
+        if not all(metadata_fields) or meta_offset != cursor or meta_length > COMPRESSED_METADATA_MAX_BYTES:
+            reasons.add(
+                "compressed-metadata-limit"
+                if meta_length > COMPRESSED_METADATA_MAX_BYTES
+                else "malformed-compressed-artifact"
+            )
+            return reasons
+        if meta_offset + meta_length > len(data) or meta_orig_length > DECOMPRESSED_METADATA_MAX_BYTES:
+            reasons.add(
+                "compressed-metadata-limit"
+                if meta_orig_length > DECOMPRESSED_METADATA_MAX_BYTES
+                else "malformed-compressed-artifact"
+            )
+            return reasons
+        metadata, error = _zlib_decompress_exact(data[meta_offset : meta_offset + meta_length], meta_orig_length)
+        if error:
+            reasons.add(
+                "compressed-metadata-limit" if error == "compressed-artifact-limit" else "malformed-compressed-metadata"
+            )
+            return reasons
+        assert metadata is not None
+        reasons.update(_font_xml_reasons(metadata))
+        cursor = meta_offset + meta_length
+    elif metadata_fields != (0, 0, 0):
+        return {"malformed-compressed-artifact"}
+
+    private_fields = (private_offset, private_length)
+    if any(private_fields):
+        aligned_cursor = (cursor + 3) & ~3
+        if (
+            not all(private_fields)
+            or private_offset != aligned_cursor
+            or private_offset + private_length != len(data)
+            or any(data[cursor:aligned_cursor])
+        ):
+            reasons.add("malformed-compressed-artifact")
+        else:
+            reasons.add("unsupported-compressed-container")
+        return reasons
+    if private_fields != (0, 0) or cursor != len(data):
+        reasons.add("malformed-compressed-artifact")
+    return reasons
+
+
+_BROTLI_DECODER: object | None = None
+_BROTLI_DECODER_ATTEMPTED = False
+
+
+def _brotli_decoder() -> object | None:
+    global _BROTLI_DECODER, _BROTLI_DECODER_ATTEMPTED
+    if _BROTLI_DECODER_ATTEMPTED:
+        return _BROTLI_DECODER
+    _BROTLI_DECODER_ATTEMPTED = True
+    candidates = [ctypes.util.find_library("brotlidec"), "libbrotlidec.so.1", "libbrotlidec.so"]
+    for candidate in candidates:
+        if not candidate:
+            continue
+        try:
+            library = ctypes.CDLL(candidate)
+            decoder = library.BrotliDecoderDecompress
+            decoder.argtypes = [
+                ctypes.c_size_t,
+                ctypes.POINTER(ctypes.c_ubyte),
+                ctypes.POINTER(ctypes.c_size_t),
+                ctypes.POINTER(ctypes.c_ubyte),
+            ]
+            decoder.restype = ctypes.c_int
+        except (AttributeError, OSError):
+            continue
+        _BROTLI_DECODER = decoder
+        return decoder
+    return None
+
+
+def _brotli_decompress_exact(payload: bytes, expected_length: int) -> tuple[bytes | None, str | None]:
+    if expected_length > FONT_MAX_DECOMPRESSED_BYTES:
+        return None, "compressed-artifact-limit"
+    decoder = _brotli_decoder()
+    if decoder is None:
+        return None, "unsupported-compressed-container"
+    encoded = (ctypes.c_ubyte * len(payload)).from_buffer_copy(payload)
+    decoded = (ctypes.c_ubyte * max(1, expected_length))()
+    decoded_size = ctypes.c_size_t(expected_length)
+    result = decoder(len(payload), encoded, ctypes.byref(decoded_size), decoded)
+    if result != 1 or decoded_size.value != expected_length:
+        return None, "malformed-compressed-artifact"
+    return bytes(decoded[:expected_length]), None
+
+
+def _woff2_uint_base128(data: bytes, offset: int) -> tuple[int | None, int, str | None]:
+    value = 0
+    for index in range(5):
+        if offset >= len(data):
+            return None, offset, "malformed-compressed-artifact"
+        byte = data[offset]
+        offset += 1
+        if index == 0 and byte == 0x80:
+            return None, offset, "malformed-compressed-artifact"
+        if value > (0xFFFFFFFF >> 7):
+            return None, offset, "compressed-artifact-limit"
+        value = (value << 7) | (byte & 0x7F)
+        if not byte & 0x80:
+            return value, offset, None
+    return None, offset, "malformed-compressed-artifact"
+
+
+def _scan_woff2_bytes(data: bytes) -> set[str]:
+    if len(data) < 48 or not data.startswith(WOFF2_SIGNATURE):
+        return {"malformed-compressed-artifact"}
+    try:
+        (
+            _signature,
+            flavor,
+            declared_length,
+            num_tables,
+            reserved,
+            total_sfnt_size,
+            total_compressed_size,
+            _major_version,
+            _minor_version,
+            meta_offset,
+            meta_length,
+            meta_orig_length,
+            private_offset,
+            private_length,
+        ) = struct.unpack(">4sIIHHIIHHIIIII", data[:48])
+    except struct.error:
+        return {"malformed-compressed-artifact"}
+    if flavor not in {0x00010000, 0x4F54544F, 0x74727565, 0x74797031}:
+        return {"malformed-compressed-artifact"}
+    if (
+        declared_length != len(data)
+        or reserved != 0
+        or not 0 < num_tables <= FONT_MAX_TABLES
+        or total_sfnt_size > FONT_MAX_DECOMPRESSED_BYTES
+        or total_compressed_size > COMPRESSED_ARTIFACT_MAX_BYTES
+        or total_compressed_size == 0
+    ):
+        if (
+            num_tables > FONT_MAX_TABLES
+            or total_sfnt_size > FONT_MAX_DECOMPRESSED_BYTES
+            or total_compressed_size > COMPRESSED_ARTIFACT_MAX_BYTES
+        ):
+            return {"compressed-artifact-limit"}
+        return {"malformed-compressed-artifact"}
+
+    offset = 48
+    entries: list[tuple[bytes, int, int, bool]] = []
+    tags: set[bytes] = set()
+    for _index in range(num_tables):
+        if offset >= len(data):
+            return {"malformed-compressed-artifact"}
+        flags = data[offset]
+        offset += 1
+        tag_index = flags & 0x3F
+        transform_version = flags >> 6
+        if tag_index == 0x3F:
+            if offset + 4 > len(data):
+                return {"malformed-compressed-artifact"}
+            tag = data[offset : offset + 4]
+            offset += 4
+            if any(byte < 0x20 or byte > 0x7E for byte in tag):
+                return {"malformed-compressed-artifact"}
+        else:
+            tag = WOFF2_KNOWN_TAGS[tag_index]
+        if tag in tags:
+            return {"malformed-compressed-artifact"}
+        if tag not in FONT_SUPPORTED_TABLE_TAGS:
+            return {"unsupported-compressed-container"}
+        tags.add(tag)
+        original_length, offset, error = _woff2_uint_base128(data, offset)
+        if error:
+            return {error}
+        assert original_length is not None
+        if original_length > FONT_MAX_TABLE_BYTES:
+            return {"compressed-artifact-limit"}
+        transformed = False
+        if tag in {b"glyf", b"loca"}:
+            if transform_version == 0:
+                transformed = True
+            elif transform_version != 3:
+                return {"malformed-compressed-artifact"}
+        elif tag == b"hmtx":
+            if transform_version == 1:
+                transformed = True
+            elif transform_version != 0:
+                return {"malformed-compressed-artifact"}
+        elif transform_version != 0:
+            return {"malformed-compressed-artifact"}
+        transformed_length = original_length
+        if transformed:
+            transformed_length, offset, error = _woff2_uint_base128(data, offset)
+            if error:
+                return {error}
+            assert transformed_length is not None
+            if transformed_length > FONT_MAX_TABLE_BYTES:
+                return {"compressed-artifact-limit"}
+        entries.append((tag, original_length, transformed_length, transformed))
+
+    glyf = next((entry for entry in entries if entry[0] == b"glyf"), None)
+    loca = next((entry for entry in entries if entry[0] == b"loca"), None)
+    if (glyf is None) != (loca is None) or (glyf and loca and (glyf[3] != loca[3] or (loca[3] and loca[2] != 0))):
+        return {"malformed-compressed-artifact"}
+    expected_sfnt_size = 12 + num_tables * 16 + sum((entry[1] + 3) & ~3 for entry in entries)
+    if b"name" not in tags or total_sfnt_size != expected_sfnt_size:
+        return {"malformed-compressed-artifact"}
+    transformed_size = sum(entry[2] for entry in entries)
+    if transformed_size > FONT_MAX_DECOMPRESSED_BYTES:
+        return {"compressed-artifact-limit"}
+    compressed_end = offset + total_compressed_size
+    if compressed_end > len(data):
+        return {"malformed-compressed-artifact"}
+    decoded, error = _brotli_decompress_exact(data[offset:compressed_end], transformed_size)
+    if error:
+        return {error}
+    assert decoded is not None
+
+    reasons: set[str] = set()
+    decoded_offset = 0
+    for tag, _original_length, stored_length, _transformed in entries:
+        table = decoded[decoded_offset : decoded_offset + stored_length]
+        if len(table) != stored_length:
+            return {"malformed-compressed-artifact"}
+        reasons.update(_scan_metadata_bytes(table))
+        if tag == b"name":
+            reasons.update(_scan_sfnt_name_table(table))
+        decoded_offset += stored_length
+    if decoded_offset != len(decoded):
+        return {"malformed-compressed-artifact"}
+
+    cursor = (compressed_end + 3) & ~3
+    if cursor > len(data) or any(data[compressed_end:cursor]):
+        return {"malformed-compressed-artifact", *reasons}
+    metadata_fields = (meta_offset, meta_length, meta_orig_length)
+    if any(metadata_fields):
+        if (
+            not all(metadata_fields)
+            or meta_offset != cursor
+            or meta_length > COMPRESSED_METADATA_MAX_BYTES
+            or meta_offset + meta_length > len(data)
+            or meta_orig_length > DECOMPRESSED_METADATA_MAX_BYTES
+        ):
+            if meta_length > COMPRESSED_METADATA_MAX_BYTES or meta_orig_length > DECOMPRESSED_METADATA_MAX_BYTES:
+                reasons.add("compressed-metadata-limit")
+            else:
+                reasons.add("malformed-compressed-artifact")
+            return reasons
+        metadata, error = _brotli_decompress_exact(data[meta_offset : meta_offset + meta_length], meta_orig_length)
+        if error:
+            reasons.add(
+                "compressed-metadata-limit" if error == "compressed-artifact-limit" else "malformed-compressed-metadata"
+            )
+            return reasons
+        assert metadata is not None
+        reasons.update(_font_xml_reasons(metadata))
+        cursor = meta_offset + meta_length
+    elif metadata_fields != (0, 0, 0):
+        return {"malformed-compressed-artifact"}
+
+    private_fields = (private_offset, private_length)
+    if any(private_fields):
+        aligned_cursor = (cursor + 3) & ~3
+        if (
+            not all(private_fields)
+            or private_offset != aligned_cursor
+            or private_offset + private_length != len(data)
+            or any(data[cursor:aligned_cursor])
+        ):
+            reasons.add("malformed-compressed-artifact")
+        else:
+            reasons.add("unsupported-compressed-container")
+        return reasons
+    if private_fields != (0, 0) or cursor != len(data):
+        reasons.add("malformed-compressed-artifact")
+    return reasons
+
+
+def _scan_font_bytes(data: bytes, suffix: str) -> set[str]:
+    if suffix == ".woff" and data.startswith(WOFF_SIGNATURE):
+        return _scan_woff_bytes(data)
+    if suffix == ".woff2" and data.startswith(WOFF2_SIGNATURE):
+        return _scan_woff2_bytes(data)
+    return {"malformed-compressed-artifact"}
+
+
 def _scan_file(file_descriptor: int, relative_path: Path) -> set[str]:
     suffix = relative_path.suffix.casefold()
     if suffix == ".ts":
@@ -1763,6 +2362,9 @@ def _scan_file(file_descriptor: int, relative_path: Path) -> set[str]:
     if suffix in TEXT_SUFFIXES or relative_path.name in TEXT_FILENAMES:
         return _scan_text_stream(file_descriptor)
     signature = os.pread(file_descriptor, 16, 0)
+    if suffix in {".woff", ".woff2"} or signature.startswith((WOFF_SIGNATURE, WOFF2_SIGNATURE)):
+        data, error = _read_bounded(file_descriptor, COMPRESSED_ARTIFACT_MAX_BYTES, "compressed-artifact-limit")
+        return {error} if error else _scan_font_bytes(data or b"", suffix)
     if suffix in UNSUPPORTED_COMPRESSED_SUFFIXES or any(
         signature.startswith(magic) for magic in UNSUPPORTED_COMPRESSED_MAGICS
     ):

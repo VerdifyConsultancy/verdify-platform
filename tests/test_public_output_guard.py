@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import base64
+import ctypes
+import ctypes.util
 import gzip
 import importlib.util
 import io
@@ -182,6 +184,182 @@ def iso_bmff_fixture(*, metadata: bytes = b"ordinary metadata", media: bytes = b
             iso_bmff_box(b"mdat", media),
         )
     )
+
+
+def font_table_checksum(tag: bytes, payload: bytes) -> int:
+    if tag == b"head" and len(payload) >= 12:
+        payload = payload[:8] + b"\x00\x00\x00\x00" + payload[12:]
+    payload += b"\x00" * (-len(payload) % 4)
+    return sum(struct.unpack(f">{len(payload) // 4}I", payload)) & 0xFFFFFFFF if payload else 0
+
+
+def font_name_table(text: str) -> bytes:
+    value = text.encode("utf-16-be")
+    record = struct.pack(">HHHHHH", 3, 1, 0x0409, 1, len(value), 0)
+    return struct.pack(">HHH", 0, 1, 6 + len(record)) + record + value
+
+
+def woff_fixture(
+    text: str = "ordinary public font",
+    *,
+    metadata: bytes | None = None,
+    private: bytes | None = None,
+    extra_tables: dict[bytes, bytes] | None = None,
+) -> bytes:
+    tables = {b"name": font_name_table(text), **(extra_tables or {})}
+    ordered = sorted(tables.items())
+    directory_end = 44 + len(ordered) * 20
+    cursor = directory_end
+    directory = bytearray()
+    body = bytearray()
+    for tag, payload in ordered:
+        compressed = zlib.compress(payload)
+        stored = compressed if len(compressed) < len(payload) else payload
+        directory.extend(
+            struct.pack(">4sIIII", tag, cursor, len(stored), len(payload), font_table_checksum(tag, payload))
+        )
+        body.extend(stored)
+        body.extend(b"\x00" * (-len(body) % 4))
+        cursor = directory_end + len(body)
+
+    metadata_offset = metadata_length = metadata_original_length = 0
+    if metadata is not None:
+        encoded_metadata = zlib.compress(metadata)
+        metadata_offset = cursor
+        metadata_length = len(encoded_metadata)
+        metadata_original_length = len(metadata)
+        body.extend(encoded_metadata)
+        cursor += len(encoded_metadata)
+
+    private_offset = private_length = 0
+    if private is not None:
+        padding = -cursor % 4
+        body.extend(b"\x00" * padding)
+        cursor += padding
+        private_offset = cursor
+        private_length = len(private)
+        body.extend(private)
+        cursor += len(private)
+
+    total_sfnt_size = 12 + len(ordered) * 16 + sum((len(payload) + 3) & ~3 for _, payload in ordered)
+    header = struct.pack(
+        ">4sIIHHIHHIIIII",
+        b"wOFF",
+        0x00010000,
+        cursor,
+        len(ordered),
+        0,
+        total_sfnt_size,
+        1,
+        0,
+        metadata_offset,
+        metadata_length,
+        metadata_original_length,
+        private_offset,
+        private_length,
+    )
+    return header + bytes(directory) + bytes(body)
+
+
+def woff2_uint_base128(value: int) -> bytes:
+    assert 0 <= value <= 0xFFFFFFFF
+    encoded = bytearray([value & 0x7F])
+    value >>= 7
+    while value:
+        encoded.append(0x80 | (value & 0x7F))
+        value >>= 7
+    return bytes(reversed(encoded))
+
+
+def brotli_compress(payload: bytes) -> bytes:
+    library_name = ctypes.util.find_library("brotlienc")
+    assert library_name, "Brotli encoder library is required for WOFF2 guard tests"
+    library = ctypes.CDLL(library_name)
+    max_size = library.BrotliEncoderMaxCompressedSize
+    max_size.argtypes = [ctypes.c_size_t]
+    max_size.restype = ctypes.c_size_t
+    compress = library.BrotliEncoderCompress
+    compress.argtypes = [
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.c_size_t,
+        ctypes.POINTER(ctypes.c_ubyte),
+        ctypes.POINTER(ctypes.c_size_t),
+        ctypes.POINTER(ctypes.c_ubyte),
+    ]
+    compress.restype = ctypes.c_int
+    source = (ctypes.c_ubyte * len(payload)).from_buffer_copy(payload)
+    capacity = max_size(len(payload))
+    output = (ctypes.c_ubyte * capacity)()
+    output_size = ctypes.c_size_t(capacity)
+    assert compress(5, 22, 0, len(payload), source, ctypes.byref(output_size), output) == 1
+    return bytes(output[: output_size.value])
+
+
+def woff2_fixture(
+    text: str = "ordinary public font",
+    *,
+    metadata: bytes | None = None,
+    private: bytes | None = None,
+    extra_tables: dict[bytes, bytes] | None = None,
+) -> bytes:
+    tables = {b"name": font_name_table(text), **(extra_tables or {})}
+    ordered = sorted(tables.items())
+    directory = bytearray()
+    transformed = bytearray()
+    for tag, payload in ordered:
+        if tag == b"name":
+            directory.append(5)
+        else:
+            directory.append(0x3F)
+            directory.extend(tag)
+        directory.extend(woff2_uint_base128(len(payload)))
+        transformed.extend(payload)
+
+    compressed = brotli_compress(bytes(transformed))
+    body = bytearray(compressed)
+    body.extend(b"\x00" * (-(48 + len(directory) + len(body)) % 4))
+    cursor = 48 + len(directory) + len(body)
+
+    metadata_offset = metadata_length = metadata_original_length = 0
+    if metadata is not None:
+        encoded_metadata = brotli_compress(metadata)
+        metadata_offset = cursor
+        metadata_length = len(encoded_metadata)
+        metadata_original_length = len(metadata)
+        body.extend(encoded_metadata)
+        cursor += len(encoded_metadata)
+
+    private_offset = private_length = 0
+    if private is not None:
+        padding = -cursor % 4
+        body.extend(b"\x00" * padding)
+        cursor += padding
+        private_offset = cursor
+        private_length = len(private)
+        body.extend(private)
+        cursor += len(private)
+
+    total_sfnt_size = 12 + len(ordered) * 16 + sum((len(payload) + 3) & ~3 for _, payload in ordered)
+    header = struct.pack(
+        ">4sIIHHIIHHIIIII",
+        b"wOF2",
+        0x00010000,
+        cursor,
+        len(ordered),
+        0,
+        total_sfnt_size,
+        len(compressed),
+        1,
+        0,
+        metadata_offset,
+        metadata_length,
+        metadata_original_length,
+        private_offset,
+        private_length,
+    )
+    return header + bytes(directory) + bytes(body)
 
 
 def test_guard_enumerates_routes_and_never_echoes_prohibited_text(tmp_path):
@@ -449,6 +627,102 @@ def test_checked_in_site_extension_inventory_is_explicitly_supported():
         ):
             unsupported.append(path.relative_to(site).as_posix())
     assert unsupported == []
+
+
+def test_guard_scans_woff_and_woff2_name_and_xml_metadata(tmp_path):
+    guard = load_guard()
+    excluded = next(iter(policy.PUBLIC_CROP_EXCLUDE_SLUGS))
+    safe_metadata = b'<?xml version="1.0" encoding="UTF-8"?><metadata><text>ordinary font</text></metadata>'
+    protected_metadata = f"<metadata><text>review {excluded}</text></metadata>".encode()
+    invalid_metadata = b"<metadata><text>humidity: NaN%</text></metadata>"
+
+    (tmp_path / "safe.woff").write_bytes(woff_fixture(metadata=safe_metadata))
+    (tmp_path / "safe.woff2").write_bytes(woff2_fixture(metadata=safe_metadata))
+    (tmp_path / "protected-name.woff").write_bytes(woff_fixture(f"review {excluded}"))
+    (tmp_path / "protected-name.woff2").write_bytes(woff2_fixture(f"review {excluded}"))
+    (tmp_path / "protected-metadata.woff").write_bytes(woff_fixture(metadata=protected_metadata))
+    (tmp_path / "invalid-metadata.woff2").write_bytes(woff2_fixture(metadata=invalid_metadata))
+
+    findings = guard.scan_root(tmp_path)
+
+    assert {(finding.path, finding.reason) for finding in findings} == {
+        ("invalid-metadata.woff2", "invalid-rendered-value"),
+        ("protected-metadata.woff", "content"),
+        ("protected-name.woff", "content"),
+        ("protected-name.woff2", "content"),
+    }
+    assert excluded not in str(findings).casefold()
+
+
+def test_font_guard_scans_supported_tables_and_rejects_opaque_tables_and_private_data():
+    guard = load_guard()
+    excluded = next(iter(policy.PUBLIC_CROP_EXCLUDE_SLUGS)).encode()
+
+    assert "content" in guard._scan_woff_bytes(woff_fixture(extra_tables={b"post": b"review " + excluded}))
+    assert "content" in guard._scan_woff2_bytes(woff2_fixture(extra_tables={b"post": b"review " + excluded}))
+    assert guard._scan_woff_bytes(woff_fixture(extra_tables={b"ZZZZ": b"opaque"})) == {
+        "unsupported-compressed-container"
+    }
+    assert guard._scan_woff2_bytes(woff2_fixture(extra_tables={b"ZZZZ": b"opaque"})) == {
+        "unsupported-compressed-container"
+    }
+    assert guard._scan_woff_bytes(woff_fixture(private=b"opaque")) == {"unsupported-compressed-container"}
+    assert guard._scan_woff2_bytes(woff2_fixture(private=b"opaque")) == {"unsupported-compressed-container"}
+
+
+def test_font_guard_rejects_checksums_brotli_padding_suffix_and_xml_corruption(tmp_path):
+    guard = load_guard()
+
+    bad_checksum = bytearray(woff_fixture())
+    bad_checksum[60] ^= 1
+    assert guard._scan_woff_bytes(bytes(bad_checksum)) == {"malformed-compressed-artifact"}
+
+    malformed_xml = woff_fixture(metadata=b"<metadata>")
+    entity_xml = woff2_fixture(metadata=b'<!DOCTYPE metadata [<!ENTITY x "x">]><metadata>&x;</metadata>')
+    assert guard._scan_woff_bytes(malformed_xml) == {"malformed-compressed-metadata"}
+    assert guard._scan_woff2_bytes(entity_xml) == {"malformed-compressed-metadata"}
+
+    bad_language_record = struct.pack(">HHH", 1, 0, 12) + struct.pack(">H", 1) + struct.pack(">HH", 2, 99) + b"ok"
+    assert guard._scan_sfnt_name_table(bad_language_record) == {"malformed-compressed-artifact"}
+
+    bad_brotli = bytearray(woff2_fixture())
+    compressed_start = 49
+    _name_length, compressed_start, error = guard._woff2_uint_base128(bad_brotli, compressed_start)
+    assert error is None
+    bad_brotli[compressed_start] ^= 0xFF
+    assert "malformed-compressed-artifact" in guard._scan_woff2_bytes(bytes(bad_brotli))
+
+    padded = bytearray(woff2_fixture("ordinary public font with padding"))
+    compressed_size = struct.unpack(">I", padded[20:24])[0]
+    compressed_start = 49
+    _name_length, compressed_start, error = guard._woff2_uint_base128(padded, compressed_start)
+    assert error is None
+    compressed_end = compressed_start + compressed_size
+    assert compressed_end < ((compressed_end + 3) & ~3)
+    padded[compressed_end] = 1
+    assert guard._scan_woff2_bytes(bytes(padded)) == {"malformed-compressed-artifact"}
+
+    (tmp_path / "wrong.woff").write_bytes(woff2_fixture())
+    (tmp_path / "wrong.woff2").write_bytes(woff_fixture())
+    assert {(finding.path, finding.reason) for finding in guard.scan_root(tmp_path)} == {
+        ("wrong.woff", "malformed-compressed-artifact"),
+        ("wrong.woff2", "malformed-compressed-artifact"),
+    }
+
+
+def test_font_guard_enforces_declared_bounds_and_fails_closed_without_brotli(monkeypatch):
+    guard = load_guard()
+    woff = woff_fixture()
+    woff2 = woff2_fixture()
+
+    monkeypatch.setattr(guard, "FONT_MAX_TABLE_BYTES", 8)
+    assert guard._scan_woff_bytes(woff) == {"compressed-artifact-limit"}
+    assert guard._scan_woff2_bytes(woff2) == {"compressed-artifact-limit"}
+
+    guard = load_guard()
+    monkeypatch.setattr(guard, "_BROTLI_DECODER", None)
+    monkeypatch.setattr(guard, "_BROTLI_DECODER_ATTEMPTED", True)
+    assert guard._scan_woff2_bytes(woff2) == {"unsupported-compressed-container"}
 
 
 def test_guard_scans_concatenated_png_zlib_and_rejects_unused_garbage(tmp_path):
