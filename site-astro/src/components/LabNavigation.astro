@@ -27,9 +27,9 @@ const active = (href: string) => {
   </button>
   <aside id="lab-navigation-panel" class="lab-navigation" data-lab-navigation-panel>
     <div class="lab-navigation__controls">
-    <label class="lab-search-label" for="lab-search">Search the lab</label>
-    <input id="lab-search" type="search" placeholder="Plans, crops, evidence…" autocomplete="off" />
-    <div id="lab-search-results" class="lab-search-results" aria-live="polite"></div>
+      <label class="lab-search-label" for="lab-search">Search the lab</label>
+      <input id="lab-search" type="search" placeholder="Plans, crops, evidence…" autocomplete="off" />
+      <div id="lab-search-results" class="lab-search-results" role="status" aria-live="polite"></div>
       <div class="view-controls">
         <button type="button" data-theme-toggle aria-label="Use dark appearance" aria-pressed="false">Dark mode</button>
         <button type="button" data-reader-toggle aria-label="Toggle reader mode" aria-pressed="false">Reader</button>
@@ -117,18 +117,23 @@ const active = (href: string) => {
     const input = document.querySelector("#lab-search");
     const output = document.querySelector("#lab-search-results");
     let pagefind;
+    let searchSequence = 0;
     input?.addEventListener("input", async () => {
       const query = input.value.trim();
       if (!output) return;
+      const sequence = ++searchSequence;
       if (query.length < 2) {
         output.replaceChildren();
+        output.removeAttribute("aria-busy");
         return;
       }
+      output.setAttribute("aria-busy", "true");
       try {
         pagefind ??= await import("/pagefind/pagefind.js");
         await pagefind.init();
         const search = await pagefind.search(query);
         const details = await Promise.all(search.results.slice(0, 6).map((result) => result.data()));
+        if (sequence !== searchSequence) return;
         const list = document.createElement("ul");
         for (const detail of details) {
           const item = document.createElement("li");
@@ -138,9 +143,13 @@ const active = (href: string) => {
           item.append(link);
           list.append(item);
         }
-        output.replaceChildren(list);
-      } catch {
+        if (details.length > 0) output.replaceChildren(list);
+        else output.textContent = `No Lab pages found for “${query}”.`;
+      } catch (error) {
+        if (sequence !== searchSequence) return;
         output.textContent = "Search index unavailable.";
+      } finally {
+        if (sequence === searchSequence) output.removeAttribute("aria-busy");
       }
     });
   })();

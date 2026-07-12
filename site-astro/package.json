@@ -19,6 +19,7 @@
     "test:parity": "python3 -m unittest discover -s tests -p 'test_site_build_parity_limits.py'",
     "test:manifests": "kubectl kustomize ../deploy/k8s/overlays/lab-stage | node scripts/verify-rendered-stage.mjs",
     "test:output": "node --test tests/output.test.mjs",
+    "test:browser": "npm run build:fixture && playwright test --config=playwright.config.mjs",
     "test": "npm run test:unit && npm run test:parity && npm run test:manifests && npm run build:fixture && npm run test:output",
     "verify:static": "node scripts/verify-static.mjs",
     "verify:real": "node scripts/verify-real-build.mjs",
@@ -48,6 +49,7 @@
   },
   "devDependencies": {
     "@astrojs/check": "0.9.2",
+    "@playwright/test": "1.61.1",
     "typescript": "5.9.3"
   }
 }

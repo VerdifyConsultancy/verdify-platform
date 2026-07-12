@@ -97,6 +97,31 @@ IBM Plex fonts come directly from that release. Lab-owned evidence navigation,
 Pagefind search, reader mode, article styles, and specialist evidence rendering
 remain outside the shell boundary.
 
+## Browser runtime contract
+
+Pagefind runs under the stage CSP with only `'wasm-unsafe-eval'`; broad
+`'unsafe-eval'` is forbidden. Fonts are emitted as same-origin files and KaTeX
+CSS is linked only by pages that contain rendered math. The contact form keeps
+its captured HTML and submission endpoint, while Lab-owned selectors map its
+legacy Quartz variables to the shared Marketing tokens.
+
+Camera markup never auto-loads or refreshes across origins. For each captured
+public camera URL, the snapshot publisher may include an immutable
+`static/cameras/<camera>/latest.jpg` file. The compiler rewrites the image and
+30-second refresh to that same-origin last-known-good path. If the asset is
+missing, the build renders an explicit unavailable state instead of a broken
+image; `static-build.json` records occurrence and local-fallback counts. This
+contract does not authorize database, device-network, or Track A access from the
+site builder.
+
+The browser regression gate exercises real Pagefind WASM under the nginx CSP,
+same-origin KaTeX fonts, and computed contact-form visibility/focus styles:
+
+```bash
+npx playwright install chromium
+npm run test:browser
+```
+
 ## Stage image contract
 
 The Dockerfile separates dependency assembly from the content build and pins

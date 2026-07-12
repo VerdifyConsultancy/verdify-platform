@@ -1,6 +1,6 @@
 ---
 import "../../.generated/site-shell-root/vendor/verdify-site-shell/styles/global.css";
-import "katex/dist/katex.min.css";
+import katexStylesheet from "katex/dist/katex.min.css?url";
 import "../styles/global.css";
 
 import Breadcrumbs from "../../.generated/site-shell-root/vendor/verdify-site-shell/components/Breadcrumbs.astro";
@@ -18,6 +18,7 @@ interface Props {
 
 const { record } = Astro.props;
 const hasHeading = /<h1(?:\s|>)/i.test(record.html);
+const hasMath = /class="katex(?:["\s])/i.test(record.html);
 const robots = build.stageGlobalNoindex || record.noindex || record.kind === "alias" ? "noindex,follow" : "index,follow";
 const groups = navigation(latestPlan?.canonicalPath ?? "/data/plans/");
 const classes = ["lab-article", ...record.cssclasses].join(" ");
@@ -61,6 +62,7 @@ const breadcrumbItems = [
     <link rel="icon" href="/assets/verdify-lab-lockup.svg" type="image/svg+xml" />
     <link rel="canonical" href={record.kind === "alias" ? `${build.siteOrigin}${record.target}` : record.canonicalUrl} />
     <link rel="alternate" type="application/rss+xml" href="/rss.xml" title="Verdify Lab" />
+    {hasMath && <link rel="stylesheet" href={katexStylesheet} />}
     {record.kind === "alias" && <meta http-equiv="refresh" content={`0; URL='${record.target}'`} />}
     <title>{record.title} — Verdify Lab</title>
   </head>
@@ -102,5 +104,34 @@ const breadcrumbItems = [
     <MediaLightbox />
     <PageEnhancements pageFamily={pageFamily} />
     <Footer {...shellProps} />
+    <script is:inline>
+      (() => {
+        const snapshots = [...document.querySelectorAll("img[data-camera-local-src]")];
+        if (!snapshots.length) return;
+
+        const refresh = () => {
+          for (const snapshot of snapshots) {
+            const source = snapshot.getAttribute("data-camera-local-src");
+            if (!source) continue;
+            const target = new URL(source, window.location.href);
+            if (target.origin !== window.location.origin || !target.pathname.startsWith("/static/cameras/")) continue;
+            target.searchParams.set("refresh", String(Date.now()));
+            const candidate = new Image();
+            candidate.onload = () => {
+              snapshot.src = target.href;
+              snapshot.dataset.cameraState = "fresh";
+              snapshot.removeAttribute("title");
+            };
+            candidate.onerror = () => {
+              snapshot.dataset.cameraState = "last-known-good";
+              snapshot.title = "Showing the last verified snapshot; the latest refresh was unavailable.";
+            };
+            candidate.src = target.href;
+          }
+        };
+
+        window.setInterval(refresh, 30_000);
+      })();
+    </script>
   </body>
 </html>

@@ -35,7 +35,7 @@ await writeFile(
       contract: "verdify.lab-astro-route-manifest",
       schemaVersion: 1,
       build,
-      routes: records.map(({ route, canonicalPath, physicalPath, kind, source, noindex, grafana }) => ({
+      routes: records.map(({ route, canonicalPath, physicalPath, kind, source, noindex, grafana, cameras }) => ({
         route,
         canonicalPath,
         physicalPath,
@@ -43,6 +43,7 @@ await writeFile(
         source,
         noindex,
         grafana,
+        cameras,
       })),
     },
     null,

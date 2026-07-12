@@ -5,7 +5,15 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { aliasRecords, imageDimensions, normalizeRoute, routeFromSource, splitFrontmatter } from "../scripts/compile-snapshot.mjs";
+import {
+  aliasRecords,
+  cameraSnapshotAsset,
+  imageDimensions,
+  normalizeRoute,
+  renderMarkdown,
+  routeFromSource,
+  splitFrontmatter,
+} from "../scripts/compile-snapshot.mjs";
 import { verifySanitizationAttestation, verifySnapshot } from "../scripts/lib/snapshot.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -81,6 +89,41 @@ test("route contract distinguishes root, leaf, and folder physical outputs", () 
   });
   assert.equal(normalizeRoute("//start//about/"), "/start/about");
   assert.throws(() => normalizeRoute("../outside"), /unsafe route/);
+});
+
+test("camera snapshots require a same-origin last-known-good artifact", () => {
+  const source = "https://api.verdify.ai/api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080";
+  assert.deepEqual(cameraSnapshotAsset(source, new Set()), {
+    sourceUrl: source,
+    relative: "static/cameras/greenhouse_1/latest.jpg",
+    publicPath: "/static/cameras/greenhouse_1/latest.jpg",
+    available: false,
+  });
+  assert.equal(cameraSnapshotAsset(source, new Set(["static/cameras/greenhouse_1/latest.jpg"])).available, true);
+  for (const rejected of [
+    "http://api.verdify.ai/api/v1/public/cameras/greenhouse_1/latest.jpg",
+    "https://example.com/api/v1/public/cameras/greenhouse_1/latest.jpg",
+    "https://api.verdify.ai/api/v1/public/cameras/../private/latest.jpg",
+  ]) {
+    assert.equal(cameraSnapshotAsset(rejected, new Set()), null);
+  }
+});
+
+test("camera rendering rewrites verified artifacts and removes the legacy refresher", async () => {
+  const rendered = await renderMarkdown(
+    '<a href="https://api.verdify.ai/api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080"><img class="camera-snapshot" data-camera-src="https://api.verdify.ai/api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080" src="https://api.verdify.ai/api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080" alt="Camera"></a><script src="/static/camera-refresh.js"></script>',
+    { relative: "index.md" },
+    new Map(),
+    new Map(),
+    new Set(),
+    new Map(),
+    new Map([["static/cameras/greenhouse_1/latest.jpg", {}]]),
+  );
+  assert.match(rendered.html, /src="\/static\/cameras\/greenhouse_1\/latest\.jpg"/);
+  assert.match(rendered.html, /data-camera-local-src="\/static\/cameras\/greenhouse_1\/latest\.jpg"/);
+  assert.doesNotMatch(rendered.html, /data-camera-src|camera-refresh\.js/);
+  assert.equal(rendered.cameras.length, 1);
+  assert.equal(rendered.cameras[0].available, true);
 });
 
 test("rolling latest is generated once from the newest dated plan and every other alias collision fails", () => {

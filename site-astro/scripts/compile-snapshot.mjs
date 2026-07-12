@@ -12,7 +12,7 @@ import remarkMath from "remark-math";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { unified } from "unified";
-import { visit } from "unist-util-visit";
+import { SKIP, visit } from "unist-util-visit";
 import YAML from "yaml";
 import sharp from "sharp";
 
@@ -309,6 +309,75 @@ function rehypeImageMetadata(metadata) {
   };
 }
 
+function cameraSnapshotAsset(rawSource, snapshotFiles) {
+  if (typeof rawSource !== "string") return null;
+  let parsed;
+  try {
+    parsed = new URL(rawSource);
+  } catch {
+    return null;
+  }
+  if (
+    parsed.protocol !== "https:"
+    || parsed.hostname !== "api.verdify.ai"
+    || parsed.username
+    || parsed.password
+  ) return null;
+  const match = /^\/api\/v1\/public\/cameras\/([a-z0-9_-]+)\/latest\.jpg$/.exec(parsed.pathname);
+  if (!match) return null;
+  const relative = `static/cameras/${match[1]}/latest.jpg`;
+  return {
+    sourceUrl: parsed.toString(),
+    relative,
+    publicPath: `/${relative}`,
+    available: snapshotFiles.has(relative),
+  };
+}
+
+function rehypeCameraSnapshots(snapshotFiles, occurrences) {
+  return () => (tree) => {
+    visit(tree, "element", (node, index, parent) => {
+      if (!parent || index === undefined) return;
+      if (node.tagName === "script" && node.properties?.src === "/static/camera-refresh.js") {
+        parent.children.splice(index, 1);
+        return [SKIP, index];
+      }
+      if (node.tagName !== "img") return;
+      const candidate = cameraSnapshotAsset(node.properties?.dataCameraSrc ?? node.properties?.src, snapshotFiles);
+      if (!candidate) return;
+      occurrences.push(candidate);
+      const alt = typeof node.properties?.alt === "string" ? node.properties.alt : "Greenhouse camera snapshot";
+      if (candidate.available) {
+        node.properties.src = candidate.publicPath;
+        node.properties.dataCameraLocalSrc = candidate.publicPath;
+        node.properties.dataCameraState = "last-known-good";
+        delete node.properties.dataCameraSrc;
+        if (parent.tagName === "a") parent.properties.href = candidate.publicPath;
+        return;
+      }
+      parent.children[index] = {
+        type: "element",
+        tagName: "div",
+        properties: {
+          className: ["camera-snapshot", "camera-snapshot--unavailable"],
+          role: "img",
+          ariaLabel: alt,
+          dataCameraState: "unavailable",
+        },
+        children: [{
+          type: "text",
+          value: "A verified same-origin camera snapshot was not included in this publication.",
+        }],
+      };
+      if (parent.tagName === "a") {
+        parent.properties.target = "_blank";
+        parent.properties.rel = ["noopener", "noreferrer"];
+        parent.properties.ariaLabel = "Open the latest camera snapshot at the public API";
+      }
+    });
+  };
+}
+
 function rehypeGrafanaEvidence(occurrences) {
   return () => (tree) => {
     visit(tree, "element", (node, index, parent) => {
@@ -358,8 +427,9 @@ function rehypeGrafanaEvidence(occurrences) {
   };
 }
 
-async function renderMarkdown(markdown, source, linkIndex, routeBySource, assetPaths, imageMetadata) {
+async function renderMarkdown(markdown, source, linkIndex, routeBySource, assetPaths, imageMetadata, snapshotFiles) {
   const occurrences = [];
+  const cameras = [];
   const processor = unified()
     .use(remarkParse)
     .use(remarkGfm, { singleTilde: false })
@@ -370,11 +440,12 @@ async function renderMarkdown(markdown, source, linkIndex, routeBySource, assetP
     .use(rehypeRewriteRelativeReferences(source, routeBySource, assetPaths))
     .use(rehypeSlug)
     .use(rehypeKatex)
+    .use(rehypeCameraSnapshots(snapshotFiles, cameras))
     .use(rehypeImageMetadata(imageMetadata))
     .use(rehypeGrafanaEvidence(occurrences));
   const tree = processor.parse(expandWikilinks(markdown, source, linkIndex));
   const result = await processor.run(tree);
-  return { html: toHtml(result, { allowDangerousHtml: true }), grafana: occurrences };
+  return { html: toHtml(result, { allowDangerousHtml: true }), grafana: occurrences, cameras };
 }
 
 function aliasRecords(sourceRecords) {
@@ -408,6 +479,7 @@ function aliasRecords(sourceRecords) {
         noindex: true,
         target: record.canonicalPath,
         grafana: [],
+        cameras: [],
         date: record.date,
       };
       if (aliases.has(route)) throw new Error(`duplicate alias is not an approved rolling-plan alias: ${route}`);
@@ -435,6 +507,7 @@ function aliasRecords(sourceRecords) {
       noindex: true,
       target: latest.canonicalPath,
       grafana: [],
+      cameras: [],
       date: latest.date,
     });
   }
@@ -487,6 +560,7 @@ function tagRecords(sourceRecords, occupied) {
       noindex: false,
       target: "",
       grafana: [],
+      cameras: [],
       date: "",
     });
   }
@@ -506,6 +580,7 @@ function tagRecords(sourceRecords, occupied) {
     noindex: false,
     target: "",
     grafana: [],
+    cameras: [],
     date: "",
   });
   return records;
@@ -593,7 +668,15 @@ async function main() {
   for (const source of markdownSources) {
     if (occupied.has(source.route)) throw new Error(`duplicate source route: ${source.route}`);
     occupied.add(source.route);
-    const rendered = await renderMarkdown(source.markdown, source, linkIndex, routeBySource, assetPaths, imageMetadata);
+    const rendered = await renderMarkdown(
+      source.markdown,
+      source,
+      linkIndex,
+      routeBySource,
+      assetPaths,
+      imageMetadata,
+      snapshot.files,
+    );
     const aliases = stringList(source.frontmatter.aliases ?? source.frontmatter.alias);
     const tags = stringList(source.frontmatter.tags);
     const title = String(source.frontmatter.title ?? path.posix.basename(source.relative, ".md"));
@@ -613,6 +696,7 @@ async function main() {
       noindex: source.frontmatter.noindex === true,
       target: "",
       grafana: rendered.grafana,
+      cameras: rendered.cameras,
       date: source.frontmatter.date ? String(source.frontmatter.date) : "",
     };
     record.canonicalPath = canonicalPath(record);
@@ -645,6 +729,11 @@ async function main() {
     rollingPlanCompatibility: aliasResult.compatibility,
     tagRouteCount: tags.length,
     grafanaOccurrenceCount: records.reduce((count, record) => count + record.grafana.length, 0),
+    cameraOccurrenceCount: records.reduce((count, record) => count + record.cameras.length, 0),
+    cameraLocalFallbackCount: records.reduce(
+      (count, record) => count + record.cameras.filter((camera) => camera.available).length,
+      0,
+    ),
     routeDigest: `sha256:${routeDigest}`,
     snapshotAssetCount: [...snapshot.files.keys()].filter((relative) => !relative.endsWith(".md")).length,
     copiedSnapshotAssetCount: assetRecords.length,
@@ -675,4 +764,13 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   });
 }
 
-export { aliasRecords, imageDimensions, main, normalizeRoute, routeFromSource, splitFrontmatter };
+export {
+  aliasRecords,
+  cameraSnapshotAsset,
+  imageDimensions,
+  main,
+  normalizeRoute,
+  renderMarkdown,
+  routeFromSource,
+  splitFrontmatter,
+};
