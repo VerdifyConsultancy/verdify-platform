@@ -6,13 +6,17 @@ import { fileURLToPath } from "node:url";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const GENERATED = path.join(ROOT, ".generated");
 const LOCK = path.join(ROOT, ".astro-stage-build.lock");
+const buildTarget = process.env.LAB_BUILD_TARGET ?? "stage";
+if (!new Set(["stage", "production"]).has(buildTarget)) {
+  throw new Error("LAB_BUILD_TARGET must be exactly stage or production");
+}
 const checkOnly = process.argv.slice(2).includes("--check");
 if (process.argv.length > (checkOnly ? 3 : 2) || (process.argv.length === 3 && !checkOnly)) {
   throw new Error("Usage: node scripts/build-stage.mjs [--check]");
 }
 
 function run(label, script, args = []) {
-  process.stdout.write(`\n[lab-stage] ${label}\n`);
+  process.stdout.write(`\n[lab-${buildTarget}] ${label}\n`);
   const result = spawnSync(process.execPath, [script, ...args], {
     cwd: ROOT,
     env: process.env,
@@ -41,7 +45,15 @@ try {
     run("finalize route shapes", path.join(ROOT, "scripts/finalize-output.mjs"));
     run("Pagefind index", path.join(ROOT, "node_modules/pagefind/lib/runner/bin.cjs"), ["--site", "dist"]);
     run("prune unused Pagefind UI bundles", path.join(ROOT, "scripts/prune-pagefind-output.mjs"));
-    run("verify static output", path.join(ROOT, "scripts/verify-static.mjs"));
+    if (buildTarget === "production") {
+      run(
+        "verify production output",
+        path.join(ROOT, "scripts/verify-production-output.mjs"),
+        process.env.ALLOW_SYNTHETIC_FIXTURE === "true" ? ["--allow-fixture"] : [],
+      );
+    } else {
+      run("verify static output", path.join(ROOT, "scripts/verify-static.mjs"));
+    }
   }
 } finally {
   await lock.close().catch(() => {});
