@@ -28,10 +28,10 @@ if [ ! -x "$RUFF" ]; then RUFF="$PY -m ruff"; fi
 step() { printf '\n== %s ==\n' "$1"; }
 
 step "ruff lint"
-$RUFF check ingestor/ api/ mcp/ scripts/*.py tests/ verdify_schemas/
+$RUFF check ingestor/ api/ mcp/ scripts/*.py tests/ verdify_public/ verdify_schemas/
 
 step "ruff format"
-$RUFF format --check ingestor/ api/ mcp/ scripts/*.py tests/ verdify_schemas/
+$RUFF format --check ingestor/ api/ mcp/ scripts/*.py tests/ verdify_public/ verdify_schemas/
 
 step "schema suites (incl. drift guards + producer payload round-trips)"
 $PY -m pytest -q verdify_schemas/tests/
@@ -50,16 +50,23 @@ $PY -m pytest -q \
   tests/test_18_twin_divergence_dashboard.py \
   tests/test_19_firmware_twin_shadow_src_sync.py \
   tests/test_anchor_service_sync.py \
+  tests/test_api_public_output_policy.py \
   tests/test_climate_intent_replay_evaluator.py \
   tests/test_compliance_feasibility_classifier.py \
   tests/test_firmware_crop_agnostic_guard.py \
   tests/test_forecast_action_engine_path.py \
   tests/test_g5_dualwrite_validation.py \
   tests/test_generate_daily_plan.py \
+  tests/test_lab_publish_k3s_guard.py \
   tests/test_mqtt_fanout.py \
   tests/test_planner_memory_ingest.py \
   tests/test_psql_verdify_backend.py \
   tests/test_publish_site_content_guard.py \
+  tests/test_public_output_generators.py \
+  tests/test_public_output_guard.py \
+  tests/test_public_output_policy.py \
+  tests/test_public_output_remediation.py \
+  tests/test_public_zone_renderer.py \
   tests/test_site_content_refresh.py \
   tests/test_slack_config.py \
   tests/test_slack_ops.py \

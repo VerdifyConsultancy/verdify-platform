@@ -1,0 +1,1795 @@
+#!/usr/bin/env python3
+"""Fail closed when a public source or build tree violates publication policy."""
+
+from __future__ import annotations
+
+import argparse
+import base64
+import binascii
+import codecs
+import hashlib
+import json
+import os
+import re
+import stat
+import struct
+import sys
+import zlib
+from dataclasses import asdict, dataclass
+from pathlib import Path
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
+from verdify_public.atomic_directory import (  # noqa: E402
+    discard_open_directory,
+    promote_open_directory,
+    tree_inventory,
+)
+from verdify_public.output_policy import (  # noqa: E402
+    PUBLIC_CROP_EXCLUDE_SLUGS,
+    PUBLIC_CROP_REFERENCE_RE,
+    decode_public_text,
+    public_text_requires_decoding,
+    redact_non_public_crop_references,
+)
+
+TEXT_SUFFIXES = frozenset(
+    {
+        ".css",
+        ".conf",
+        ".csv",
+        ".html",
+        ".js",
+        ".json",
+        ".map",
+        ".md",
+        ".mjs",
+        ".rss",
+        ".svg",
+        ".scss",
+        ".txt",
+        ".ts",
+        ".tsx",
+        ".webmanifest",
+        ".xml",
+        ".yaml",
+        ".yml",
+    }
+)
+TEXT_FILENAMES = frozenset({".prettierrc"})
+SUPPORTED_BINARY_SUFFIXES = frozenset({".gz", ".gzip", ".jpeg", ".jpg", ".pdf", ".png"})
+TEXT_CHUNK_SIZE = 1024 * 1024
+STREAM_OVERLAP = 64 * 1024
+BINARY_CHUNK_SIZE = 1024 * 1024
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+JPEG_SIGNATURE = b"\xff\xd8"
+PDF_SIGNATURE = b"%PDF-"
+GZIP_SIGNATURE = b"\x1f\x8b"
+PNG_MAX_CHUNKS = 4096
+JPEG_MAX_SEGMENTS = 4096
+PDF_MAX_STREAMS = 4096
+PDF_MAX_DICTIONARY_BYTES = 1024 * 1024
+PDF_MAX_DICTIONARY_TOKENS = 65536
+PDF_MAX_OBJECT_DEPTH = 64
+PDF_MAX_LEXICAL_TOKENS = 1_000_000
+PDF_MAX_FILTERS = 8
+PDF_MAX_FILTER_MEMBERS = 1
+PDF_MAX_FILTER_DECODE_RATIO = 256
+PDF_MAX_FILTER_TOTAL_DECODED_BYTES = 128 * 1024 * 1024
+PDF_MAX_FILTER_RECURSION = 4
+COMPRESSED_MAX_MEMBERS = 64
+COMPRESSED_METADATA_MAX_BYTES = 1024 * 1024
+DECOMPRESSED_METADATA_MAX_BYTES = 1024 * 1024
+COMPRESSED_ARTIFACT_MAX_BYTES = 64 * 1024 * 1024
+DECOMPRESSED_ARTIFACT_MAX_BYTES = 64 * 1024 * 1024
+GZIP_MAX_HEADER_METADATA_BYTES = 1024 * 1024
+DATA_URI_MAX_ENCODED_CHARS = 64 * 1024
+PNG_TEXTUAL_CHUNKS = frozenset({b"eXIf", b"iCCP", b"iTXt", b"sPLT", b"tEXt", b"zTXt"})
+PNG_SAFE_BINARY_ANCILLARY_CHUNKS = frozenset(
+    {
+        b"acTL",
+        b"bKGD",
+        b"cHRM",
+        b"fcTL",
+        b"fdAT",
+        b"gAMA",
+        b"hIST",
+        b"iDOT",
+        b"pHYs",
+        b"sBIT",
+        b"sRGB",
+        b"tIME",
+        b"tRNS",
+    }
+)
+PNG_CRITICAL_CHUNKS = frozenset({b"IDAT", b"IEND", b"IHDR", b"PLTE"})
+UNSUPPORTED_COMPRESSED_SUFFIXES = frozenset(
+    {".7z", ".br", ".bz2", ".rar", ".tgz", ".woff", ".woff2", ".xz", ".zip", ".zst", ".zstd"}
+)
+UNSUPPORTED_COMPRESSED_MAGICS = (
+    b"PK\x03\x04",
+    b"BZh",
+    b"\xfd7zXZ\x00",
+    b"\x28\xb5\x2f\xfd",
+    b"7z\xbc\xaf\x27\x1c",
+    b"Rar!\x1a\x07",
+    b"wOFF",
+    b"wOF2",
+)
+DATA_IMAGE_URI_RE = re.compile(
+    rf"data:image/(?P<kind>png|jpeg|jpg);base64,(?P<payload>[A-Za-z0-9+/]{{1,{DATA_URI_MAX_ENCODED_CHARS}}}={{0,2}})"
+    rf"(?![A-Za-z0-9+/=])",
+    flags=re.IGNORECASE,
+)
+OVERSIZED_DATA_IMAGE_URI_RE = re.compile(
+    rf"data:image/(?:png|jpeg|jpg);base64,[A-Za-z0-9+/]{{{DATA_URI_MAX_ENCODED_CHARS + 1}}}",
+    flags=re.IGNORECASE,
+)
+NONFINITE_NUMBER = r"[+-]?(?:nan|inf(?:inity)?|\.(?:nan|inf))"
+INVALID_NUMBER = rf"(?:none|{NONFINITE_NUMBER})"
+INVALID_NUMBER_VALUE = rf"['\"]?{INVALID_NUMBER}['\"]?"
+NONFINITE_NUMBER_VALUE = rf"['\"]?{NONFINITE_NUMBER}['\"]?"
+INVALID_NUMBER_TOKEN_RE = re.compile(
+    rf"(?<![A-Za-z0-9_]){INVALID_NUMBER}(?![A-Za-z0-9_])",
+    flags=re.IGNORECASE,
+)
+NUMERIC_FIELD_NAME = (
+    r"(?:value|score|ratio|percent(?:age)?|pct|count|total|average|avg|mean|min|max|limit|bound|"
+    r"temperature|temp|humidity|vpd|dli|energy|water|power|watts?|cost|price|revenue|currency|amount|opacity)"
+    r"(?:[_ .-][A-Za-z0-9]+){0,3}"
+)
+INVALID_RENDERED_VALUE_RE = re.compile(
+    rf"(?:"
+    rf"(?<![A-Za-z0-9_])(?:USD|US\$|\$)\s*[:=]?\s*{INVALID_NUMBER_VALUE}(?![A-Za-z0-9_-])"
+    rf"|(?<![A-Za-z0-9_]){INVALID_NUMBER_VALUE}\s*(?:USD|US\$)(?![A-Za-z0-9_-])"
+    rf")",
+    flags=re.IGNORECASE,
+)
+INVALID_CURRENCY_FIELD_RE = re.compile(
+    rf"(?<![A-Za-z0-9_])(?:cost|price|revenue|currency|amount)(?:[_ -][A-Za-z0-9]+){{0,3}}"
+    rf"\s*['\"]?\s*[:=]\s*{INVALID_NUMBER_VALUE}(?![A-Za-z0-9_-])",
+    flags=re.IGNORECASE,
+)
+INVALID_STRUCTURED_VALUE_RE = re.compile(
+    rf"(?<![A-Za-z0-9_])"
+    rf"(?:[A-Za-z_][A-Za-z0-9_. -]{{0,80}}|['\"][^'\"\r\n]{{1,80}}['\"])"
+    rf"\s*['\"]?\s*[:=]\s*{NONFINITE_NUMBER}"
+    rf"(?=\s*(?:[,}}\]\r\n#;>]|$))",
+    flags=re.IGNORECASE | re.MULTILINE,
+)
+INVALID_QUOTED_NUMERIC_FIELD_RE = re.compile(
+    rf"(?<![A-Za-z0-9_]){NUMERIC_FIELD_NAME}\s*['\"]?\s*[:=]\s*"
+    rf"['\"]{NONFINITE_NUMBER}['\"](?=\s*(?:[,}}\]\r\n#;>]|$))",
+    flags=re.IGNORECASE | re.MULTILINE,
+)
+INVALID_NULL_NUMERIC_FIELD_RE = re.compile(
+    rf"(?<![A-Za-z0-9_])(?!max-(?:width|height|inline-size|block-size)\s*:\s*none)"
+    rf"{NUMERIC_FIELD_NAME}\s*['\"]?\s*[:=]\s*['\"]?none['\"]?"
+    rf"(?=\s*(?:[,}}\]\r\n#;>]|$))",
+    flags=re.IGNORECASE | re.MULTILINE,
+)
+INVALID_MEASURED_VALUE_RE = re.compile(
+    rf"(?<![A-Za-z0-9_]){INVALID_NUMBER_VALUE}\s*"
+    rf"(?:%|°[CF]|kPa|Pa|ppm|k?W(?:h)?|m?L|gal(?:lons?)?|kg|lb|oz)"
+    rf"(?![A-Za-z0-9_])",
+    flags=re.IGNORECASE,
+)
+INVALID_DELIMITED_VALUE_RE = re.compile(
+    rf"(?P<prefix>^|[,:=|>\[({{;])\s*(?:-\s+)?{NONFINITE_NUMBER}"
+    rf"(?=\s*(?:$|[,|<}}\]);#]))",
+    flags=re.IGNORECASE | re.MULTILINE,
+)
+INVALID_VALUE_PATTERNS = (
+    INVALID_RENDERED_VALUE_RE,
+    INVALID_CURRENCY_FIELD_RE,
+    INVALID_STRUCTURED_VALUE_RE,
+    INVALID_QUOTED_NUMERIC_FIELD_RE,
+    INVALID_NULL_NUMERIC_FIELD_RE,
+    INVALID_MEASURED_VALUE_RE,
+    INVALID_DELIMITED_VALUE_RE,
+)
+INVALID_VALUE_RE = re.compile(
+    "(?:" + ")|(?:".join(pattern.pattern for pattern in INVALID_VALUE_PATTERNS) + ")",
+    flags=re.IGNORECASE | re.MULTILINE,
+)
+VALUE_SCAN_TRIGGER_RE = re.compile(r"[A-Za-z0-9%&\\+$]")
+INVALID_LITERAL_TOKENS = ("nan", "inf", "none", "usd", "us$", "$")
+
+
+@dataclass(frozen=True, order=True)
+class Finding:
+    root: str
+    root_identity: str
+    path: str
+    route: str
+    reason: str
+
+
+def _value_reasons(value: object) -> set[str]:
+    text = str(value or "")
+    if not VALUE_SCAN_TRIGGER_RE.search(text):
+        return set()
+    reasons: set[str] = set()
+    if not public_text_requires_decoding(text):
+        lowered = text.casefold()
+        if any(identifier in lowered for identifier in PUBLIC_CROP_EXCLUDE_SLUGS) and PUBLIC_CROP_REFERENCE_RE.search(
+            text
+        ):
+            reasons.add("content")
+        if any(token in lowered for token in INVALID_LITERAL_TOKENS) and INVALID_VALUE_RE.search(text):
+            reasons.add("invalid-rendered-value")
+        return reasons
+    decoded = decode_public_text(text)
+    if decoded.limit_hit:
+        reasons.add("decode-limit")
+    for variant in decoded.variants:
+        if PUBLIC_CROP_REFERENCE_RE.search(variant):
+            reasons.add("content")
+        if INVALID_VALUE_RE.search(variant):
+            reasons.add("invalid-rendered-value")
+    return reasons
+
+
+def _safe_report_text(value: object) -> str:
+    """Decode then sanitize paths so reports and stderr cannot echo violations."""
+    decoded = decode_public_text(value)
+    safe = redact_non_public_crop_references(decoded.variants[-1] if decoded.variants else "")
+    has_invalid_value = any(INVALID_VALUE_RE.search(variant) for variant in decoded.variants)
+    safe = INVALID_VALUE_RE.sub("invalid-rendered-value", safe)
+    if has_invalid_value or decoded.limit_hit:
+        safe = INVALID_NUMBER_TOKEN_RE.sub("invalid-rendered-value", safe)
+    if decoded.limit_hit:
+        safe = "bounded-value"
+    return "".join(char if char >= " " and char != "\x7f" else "?" for char in safe)
+
+
+def public_route(relative_path: Path) -> str:
+    """Map source Markdown or built HTML to its stable public route."""
+    suffix = relative_path.suffix.casefold()
+    if suffix in {".md", ".html"}:
+        without_suffix = relative_path.with_suffix("")
+        parts = list(without_suffix.parts)
+        if parts and parts[-1] == "index":
+            parts.pop()
+        return "/" + "/".join(parts) if parts else "/"
+    return "/" + relative_path.as_posix()
+
+
+def _looks_utf16(data: bytes) -> str | None:
+    sample = data[: min(len(data), 4096)]
+    if sample.startswith(codecs.BOM_UTF16_LE):
+        return "utf-16-le"
+    if sample.startswith(codecs.BOM_UTF16_BE):
+        return "utf-16-be"
+    if len(sample) < 8:
+        return None
+    even = sample[0::2]
+    odd = sample[1::2]
+    even_zero = even.count(0) / max(1, len(even))
+    odd_zero = odd.count(0) / max(1, len(odd))
+    if odd_zero >= 0.4 and even_zero <= 0.1:
+        return "utf-16-le"
+    if even_zero >= 0.4 and odd_zero <= 0.1:
+        return "utf-16-be"
+    return None
+
+
+def _scan_data_image_uris(text: str, *, final: bool = True) -> set[str]:
+    reasons: set[str] = set()
+    if "data:image/" not in text.casefold():
+        return reasons
+    if OVERSIZED_DATA_IMAGE_URI_RE.search(text):
+        reasons.add("decode-limit")
+    for match in DATA_IMAGE_URI_RE.finditer(text):
+        if not final and match.end() == len(text):
+            continue
+        try:
+            payload = base64.b64decode(match.group("payload"), validate=True)
+        except (binascii.Error, ValueError):
+            reasons.add("malformed-compressed-artifact")
+            continue
+        kind = match.group("kind").casefold()
+        if kind == "png":
+            reasons.update(_scan_png_bytes(payload))
+        else:
+            reasons.update(_scan_jpeg_bytes(payload))
+    return reasons
+
+
+def _scan_text_stream(file_descriptor: int) -> set[str]:
+    reasons: set[str] = set()
+    decoder = codecs.getincrementaldecoder("utf-8")(errors="strict")
+    carry = ""
+    offset = 0
+    try:
+        while chunk := os.pread(file_descriptor, TEXT_CHUNK_SIZE, offset):
+            decoded = decoder.decode(chunk)
+            if "\x00" in decoded:
+                reasons.update(_scan_binary_stream(file_descriptor))
+                return reasons
+            combined = carry + decoded
+            scan_text = combined
+            if (
+                offset
+                and scan_text
+                and scan_text[0] in "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_+/=-"
+            ):
+                boundary = re.search(r"[^A-Za-z0-9_+/=-]", scan_text)
+                if boundary is not None:
+                    scan_text = scan_text[boundary.end() :]
+            reasons.update(_value_reasons(scan_text))
+            reasons.update(_scan_data_image_uris(scan_text, final=False))
+            carry = combined[-STREAM_OVERLAP:]
+            offset += len(chunk)
+        tail = decoder.decode(b"", final=True)
+        if tail:
+            combined = carry + tail
+            reasons.update(_value_reasons(combined))
+        if "data:image/" in carry.casefold():
+            reasons.update(_scan_data_image_uris(carry, final=True))
+    except UnicodeDecodeError:
+        reasons.add("unreadable-text")
+        reasons.update(_scan_binary_stream(file_descriptor))
+    return reasons
+
+
+def _scan_binary_stream(file_descriptor: int) -> set[str]:
+    """Scan raw metadata once per chunk, adding one UTF-16 pass only when indicated."""
+    reasons: set[str] = set()
+    carry = b""
+    offset = 0
+    while chunk := os.pread(file_descriptor, BINARY_CHUNK_SIZE, offset):
+        combined = carry + chunk
+        reasons.update(_value_reasons(combined.decode("utf-8", errors="ignore")))
+        encoding = _looks_utf16(combined)
+        if encoding is not None:
+            payload = combined[: len(combined) - (len(combined) % 2)]
+            reasons.update(_value_reasons(payload.decode(encoding, errors="ignore")))
+        carry = combined[-STREAM_OVERLAP:]
+        offset += len(chunk)
+    return reasons
+
+
+def _bounded_decompress_members(
+    payload: bytes,
+    *,
+    wbits: int,
+    compressed_limit: int,
+    decompressed_limit: int,
+    limit_reason: str,
+    malformed_reason: str,
+    member_limit: int = COMPRESSED_MAX_MEMBERS,
+) -> tuple[bytes | None, str | None]:
+    if len(payload) > compressed_limit:
+        return None, limit_reason
+    remaining = payload
+    decoded_parts: list[bytes] = []
+    decoded_size = 0
+    members = 0
+    while remaining:
+        members += 1
+        if members > member_limit:
+            return None, limit_reason
+        try:
+            decompressor = zlib.decompressobj(wbits)
+            decoded = decompressor.decompress(remaining, decompressed_limit - decoded_size + 1)
+            if decompressor.unconsumed_tail or decoded_size + len(decoded) > decompressed_limit:
+                return None, limit_reason
+            decoded += decompressor.flush(decompressed_limit - decoded_size - len(decoded) + 1)
+        except (ValueError, zlib.error):
+            return None, malformed_reason
+        if decoded_size + len(decoded) > decompressed_limit:
+            return None, limit_reason
+        if not decompressor.eof:
+            return None, malformed_reason
+        decoded_parts.append(decoded)
+        decoded_size += len(decoded)
+        unused = decompressor.unused_data
+        consumed = len(remaining) - len(unused)
+        if consumed <= 0:
+            return None, malformed_reason
+        remaining = unused
+    return b"".join(decoded_parts), None
+
+
+def _bounded_zlib_decompress(payload: bytes) -> tuple[bytes | None, str | None]:
+    return _bounded_decompress_members(
+        payload,
+        wbits=zlib.MAX_WBITS,
+        compressed_limit=COMPRESSED_METADATA_MAX_BYTES,
+        decompressed_limit=DECOMPRESSED_METADATA_MAX_BYTES,
+        limit_reason="compressed-metadata-limit",
+        malformed_reason="malformed-compressed-metadata",
+    )
+
+
+def _scan_decoded_bytes(payload: bytes, encoding: str, malformed_reason: str) -> set[str]:
+    try:
+        return _value_reasons(payload.decode(encoding))
+    except UnicodeDecodeError:
+        return {malformed_reason}
+
+
+def _scan_metadata_bytes(payload: bytes) -> set[str]:
+    """Scan bounded binary metadata without interpreting compressed pixels."""
+    if len(payload) > DECOMPRESSED_METADATA_MAX_BYTES:
+        return {"compressed-metadata-limit"}
+    reasons = _value_reasons(payload.decode("latin-1", errors="ignore"))
+    encoding = _looks_utf16(payload)
+    if encoding is not None:
+        even_payload = payload[: len(payload) - len(payload) % 2]
+        reasons.update(_value_reasons(even_payload.decode(encoding, errors="ignore")))
+    return reasons
+
+
+def _valid_png_keyword(keyword: bytes) -> bool:
+    return bool(keyword) and len(keyword) <= 79 and b"\x00" not in keyword
+
+
+def _scan_png_bytes(data: bytes) -> set[str]:
+    if not data.startswith(PNG_SIGNATURE):
+        return {"malformed-compressed-artifact"}
+    reasons: set[str] = set()
+    offset = len(PNG_SIGNATURE)
+    chunk_count = 0
+    saw_iend = False
+    while offset + 12 <= len(data):
+        chunk_count += 1
+        if chunk_count > PNG_MAX_CHUNKS:
+            reasons.add("compressed-metadata-limit")
+            break
+        length, chunk_type = struct.unpack(">I4s", data[offset : offset + 8])
+        chunk_end = offset + 12 + length
+        if chunk_end > len(data):
+            reasons.add("malformed-compressed-metadata")
+            break
+        payload = data[offset + 8 : offset + 8 + length]
+        expected_crc = struct.unpack(">I", data[offset + 8 + length : chunk_end])[0]
+        if zlib.crc32(chunk_type + payload) & 0xFFFFFFFF != expected_crc:
+            reasons.add("malformed-compressed-metadata")
+            break
+        if chunk_type in PNG_TEXTUAL_CHUNKS and length > COMPRESSED_METADATA_MAX_BYTES:
+            reasons.add("compressed-metadata-limit")
+        elif chunk_type == b"tEXt":
+            keyword, separator, text = payload.partition(b"\x00")
+            if not separator or not _valid_png_keyword(keyword):
+                reasons.add("malformed-compressed-metadata")
+            else:
+                reasons.update(_scan_decoded_bytes(keyword + b" " + text, "latin-1", "malformed-compressed-metadata"))
+        elif chunk_type == b"zTXt":
+            keyword, separator, remainder = payload.partition(b"\x00")
+            if not separator or not _valid_png_keyword(keyword) or len(remainder) < 2 or remainder[0] != 0:
+                reasons.add("malformed-compressed-metadata")
+            else:
+                decoded, error = _bounded_zlib_decompress(remainder[1:])
+                if error:
+                    reasons.add(error)
+                elif decoded is not None:
+                    reasons.update(
+                        _scan_decoded_bytes(keyword + b" " + decoded, "latin-1", "malformed-compressed-metadata")
+                    )
+        elif chunk_type == b"iTXt":
+            keyword, separator, remainder = payload.partition(b"\x00")
+            if not separator or not _valid_png_keyword(keyword) or len(remainder) < 2:
+                reasons.add("malformed-compressed-metadata")
+            else:
+                compressed_flag, compression_method = remainder[0], remainder[1]
+                language, language_separator, remainder = remainder[2:].partition(b"\x00")
+                translated, translated_separator, text = remainder.partition(b"\x00")
+                if not language_separator or not translated_separator or compression_method != 0:
+                    reasons.add("malformed-compressed-metadata")
+                elif compressed_flag == 0:
+                    reasons.update(
+                        _scan_decoded_bytes(
+                            keyword + b" " + language + b" " + translated + b" " + text,
+                            "utf-8",
+                            "malformed-compressed-metadata",
+                        )
+                    )
+                elif compressed_flag == 1:
+                    decoded, error = _bounded_zlib_decompress(text)
+                    if error:
+                        reasons.add(error)
+                    elif decoded is not None:
+                        reasons.update(
+                            _scan_decoded_bytes(
+                                keyword + b" " + language + b" " + translated + b" " + decoded,
+                                "utf-8",
+                                "malformed-compressed-metadata",
+                            )
+                        )
+                else:
+                    reasons.add("malformed-compressed-metadata")
+        elif chunk_type == b"iCCP":
+            profile_name, separator, remainder = payload.partition(b"\x00")
+            if not separator or not _valid_png_keyword(profile_name) or len(remainder) < 2 or remainder[0] != 0:
+                reasons.add("malformed-compressed-metadata")
+            else:
+                reasons.update(_scan_decoded_bytes(profile_name, "latin-1", "malformed-compressed-metadata"))
+                decoded, error = _bounded_zlib_decompress(remainder[1:])
+                if error:
+                    reasons.add(error)
+                elif decoded is not None:
+                    reasons.update(_scan_metadata_bytes(decoded))
+        elif chunk_type == b"eXIf":
+            reasons.update(_scan_metadata_bytes(payload))
+        elif chunk_type == b"sPLT":
+            palette_name, separator, remainder = payload.partition(b"\x00")
+            if not separator or not _valid_png_keyword(palette_name) or not remainder or remainder[0] not in {8, 16}:
+                reasons.add("malformed-compressed-metadata")
+            else:
+                entry_size = 6 if remainder[0] == 8 else 10
+                if not remainder[1:] or len(remainder[1:]) % entry_size:
+                    reasons.add("malformed-compressed-metadata")
+                reasons.update(_scan_decoded_bytes(palette_name, "latin-1", "malformed-compressed-metadata"))
+        elif chunk_type not in PNG_CRITICAL_CHUNKS and chunk_type not in PNG_SAFE_BINARY_ANCILLARY_CHUNKS:
+            # Unknown ancillary chunks may carry textual application metadata.
+            # Without a bounded parser their content is not eligible to publish.
+            reasons.add("unsupported-compressed-container")
+        offset = chunk_end
+        if chunk_type == b"IEND":
+            saw_iend = True
+            if length != 0 or offset != len(data):
+                reasons.add("malformed-compressed-metadata")
+            break
+    if not saw_iend:
+        reasons.add("malformed-compressed-metadata")
+    return reasons
+
+
+def _jpeg_marker_kind(marker: int, *, in_entropy: bool) -> str:
+    """Classify one post-FF marker identically on both sides of a scan."""
+    if marker in {0x00, 0xFF, 0xD8} or 0x02 <= marker <= 0xBF:
+        return "invalid"
+    if 0xD0 <= marker <= 0xD7:
+        return "restart" if in_entropy else "invalid"
+    if marker == 0xD9:
+        return "eoi"
+    if marker == 0x01:
+        return "standalone"
+    return "segment"
+
+
+def _scan_jpeg_bytes(data: bytes) -> set[str]:
+    if not data.startswith(JPEG_SIGNATURE):
+        return {"malformed-compressed-artifact"}
+    reasons: set[str] = set()
+    offset = 2
+    markers = 0
+    in_scan = False
+    while True:
+        if in_scan:
+            while offset < len(data):
+                if data[offset] != 0xFF:
+                    offset += 1
+                    continue
+                marker_start = offset
+                offset += 1
+                while offset < len(data) and data[offset] == 0xFF:
+                    offset += 1
+                if offset >= len(data):
+                    return {"malformed-compressed-artifact", *reasons}
+                marker = data[offset]
+                offset += 1
+                if marker == 0x00:
+                    # Byte stuffing is exactly FF 00; fill bytes may precede
+                    # real markers but cannot extend a stuffed data byte.
+                    if offset - marker_start != 2:
+                        return {"malformed-compressed-artifact", *reasons}
+                    continue
+                marker_kind = _jpeg_marker_kind(marker, in_entropy=True)
+                if marker_kind == "invalid":
+                    return {"malformed-compressed-artifact", *reasons}
+                markers += 1
+                if markers > JPEG_MAX_SEGMENTS:
+                    return {"compressed-artifact-limit", *reasons}
+                if marker_kind == "restart":
+                    continue
+                in_scan = False
+                break
+            else:
+                return {"malformed-compressed-artifact", *reasons}
+        else:
+            if offset >= len(data) or data[offset] != 0xFF:
+                return {"malformed-compressed-artifact", *reasons}
+            offset += 1
+            while offset < len(data) and data[offset] == 0xFF:
+                offset += 1
+            if offset >= len(data):
+                return {"malformed-compressed-artifact", *reasons}
+            marker = data[offset]
+            offset += 1
+            marker_kind = _jpeg_marker_kind(marker, in_entropy=False)
+            if marker_kind == "invalid":
+                return {"malformed-compressed-artifact", *reasons}
+            markers += 1
+            if markers > JPEG_MAX_SEGMENTS:
+                return {"compressed-artifact-limit", *reasons}
+
+        if marker_kind == "eoi":
+            return reasons if offset == len(data) else {"malformed-compressed-artifact", *reasons}
+        if marker_kind == "standalone":
+            continue
+        if offset + 2 > len(data):
+            return {"malformed-compressed-artifact", *reasons}
+        length = struct.unpack(">H", data[offset : offset + 2])[0]
+        if length < 2 or offset + length > len(data):
+            return {"malformed-compressed-artifact", *reasons}
+        segment = data[offset + 2 : offset + length]
+        if marker == 0xFE or 0xE0 <= marker <= 0xEF:
+            text = segment.decode("utf-8", errors="ignore")
+            reasons.update(_value_reasons(text))
+            encoding = _looks_utf16(segment)
+            if encoding:
+                reasons.update(
+                    _value_reasons(segment[: len(segment) - len(segment) % 2].decode(encoding, errors="ignore"))
+                )
+        offset += length
+        if marker == 0xDA:
+            in_scan = True
+
+
+def _pdf_dictionary_end(data: bytes, start: int, stream_marker: int) -> tuple[int | None, str | None]:
+    depth = 0
+    literal_depth = 0
+    offset = start
+    while offset < stream_marker:
+        if offset - start > PDF_MAX_DICTIONARY_BYTES:
+            return None, "compressed-artifact-limit"
+        byte = data[offset]
+        if literal_depth:
+            if byte == 0x5C:
+                offset += 2
+                continue
+            if byte == 0x28:
+                literal_depth += 1
+            elif byte == 0x29:
+                literal_depth -= 1
+            offset += 1
+            continue
+        if byte == 0x25:
+            offset += 1
+            while offset < stream_marker and data[offset] not in {0x0A, 0x0D}:
+                offset += 1
+            continue
+        if byte == 0x28:
+            literal_depth = 1
+            offset += 1
+            continue
+        if data[offset : offset + 2] == b"<<":
+            depth += 1
+            offset += 2
+            continue
+        if data[offset : offset + 2] == b">>":
+            depth -= 1
+            offset += 2
+            if depth == 0:
+                return offset, None
+            if depth < 0:
+                return None, "malformed-compressed-artifact"
+            continue
+        if byte == 0x3C:
+            end = data.find(b">", offset + 1, stream_marker)
+            if end < 0:
+                return None, "malformed-compressed-artifact"
+            offset = end + 1
+            continue
+        offset += 1
+    return None, "malformed-compressed-artifact"
+
+
+def _pdf_gap_is_trivia(data: bytes) -> bool:
+    offset = 0
+    while offset < len(data):
+        if data[offset] in b"\x00\t\n\x0c\r ":
+            offset += 1
+            continue
+        if data[offset] == 0x25:
+            offset += 1
+            while offset < len(data) and data[offset] not in {0x0A, 0x0D}:
+                offset += 1
+            if offset == len(data):
+                return False
+            continue
+        return False
+    return True
+
+
+def _find_pdf_stream_dictionary(
+    data: bytes,
+    stream_marker: int,
+    candidates: list[int],
+) -> tuple[bytes | None, str | None]:
+    window_start = max(0, stream_marker - PDF_MAX_DICTIONARY_BYTES)
+    saw_limit = False
+    for candidate in reversed([value for value in candidates if value >= window_start]):
+        end, error = _pdf_dictionary_end(data, candidate, stream_marker)
+        if error == "compressed-artifact-limit":
+            saw_limit = True
+            continue
+        if end is not None:
+            gap = data[end:stream_marker]
+            if _pdf_gap_is_trivia(gap):
+                return data[candidate:end], None
+    if saw_limit or any(value < window_start for value in candidates):
+        return None, "compressed-artifact-limit"
+    return None, "malformed-compressed-artifact"
+
+
+@dataclass(frozen=True)
+class _PDFToken:
+    kind: str
+    value: bytes = b""
+
+
+@dataclass(frozen=True)
+class _PDFObject:
+    kind: str
+    start: int
+    end: int
+
+
+@dataclass(frozen=True)
+class _PDFDictionary:
+    tokens: tuple[_PDFToken, ...]
+    entries: dict[bytes, _PDFObject]
+
+
+_PDF_WHITESPACE = frozenset(b"\x00\t\n\x0c\r ")
+_PDF_DELIMITERS = frozenset(b"()<>[]{}/%")
+_PDF_HEX_DIGITS = frozenset(b"0123456789abcdefABCDEF")
+
+
+def _pdf_regular_token_end(data: bytes, offset: int) -> int:
+    while offset < len(data) and data[offset] not in _PDF_WHITESPACE and data[offset] not in _PDF_DELIMITERS:
+        offset += 1
+    return offset
+
+
+def _pdf_name_token(data: bytes, offset: int) -> tuple[_PDFToken | None, int, str | None]:
+    end = _pdf_regular_token_end(data, offset + 1)
+    raw = data[offset + 1 : end]
+    decoded = bytearray()
+    index = 0
+    while index < len(raw):
+        if raw[index] != 0x23:
+            decoded.append(raw[index])
+            index += 1
+            continue
+        if index + 2 >= len(raw) or raw[index + 1] not in _PDF_HEX_DIGITS or raw[index + 2] not in _PDF_HEX_DIGITS:
+            return None, end, "malformed-compressed-artifact"
+        decoded.append(int(raw[index + 1 : index + 3], 16))
+        index += 3
+    return _PDFToken("name", bytes(decoded)), end, None
+
+
+def _pdf_literal_string_end(data: bytes, offset: int) -> tuple[int | None, str | None]:
+    depth = 1
+    offset += 1
+    while offset < len(data):
+        byte = data[offset]
+        if byte == 0x5C:
+            offset += 1
+            if offset >= len(data):
+                return None, "malformed-compressed-artifact"
+            if data[offset] == 0x0D and offset + 1 < len(data) and data[offset + 1] == 0x0A:
+                offset += 2
+            else:
+                offset += 1
+            continue
+        if byte == 0x28:
+            depth += 1
+        elif byte == 0x29:
+            depth -= 1
+            if depth == 0:
+                return offset + 1, None
+        offset += 1
+    return None, "malformed-compressed-artifact"
+
+
+def _pdf_number_kind(value: bytes) -> str | None:
+    if re.fullmatch(rb"[+-]?[0-9]+", value):
+        return "integer"
+    if re.fullmatch(rb"[+-]?(?:[0-9]+\.[0-9]*|\.[0-9]+)", value):
+        return "real"
+    return None
+
+
+def _pdf_dictionary_tokens(dictionary: bytes) -> tuple[list[_PDFToken] | None, str | None]:
+    if len(dictionary) > PDF_MAX_DICTIONARY_BYTES:
+        return None, "compressed-artifact-limit"
+    tokens: list[_PDFToken] = []
+    offset = 0
+
+    def append(token: _PDFToken) -> str | None:
+        tokens.append(token)
+        if len(tokens) > PDF_MAX_DICTIONARY_TOKENS:
+            return "compressed-artifact-limit"
+        return None
+
+    while offset < len(dictionary):
+        byte = dictionary[offset]
+        if byte in _PDF_WHITESPACE:
+            offset += 1
+            continue
+        if byte == 0x25:
+            offset += 1
+            while offset < len(dictionary) and dictionary[offset] not in {0x0A, 0x0D}:
+                offset += 1
+            continue
+        if dictionary[offset : offset + 2] == b"<<":
+            error = append(_PDFToken("dictionary-start"))
+            offset += 2
+        elif dictionary[offset : offset + 2] == b">>":
+            error = append(_PDFToken("dictionary-end"))
+            offset += 2
+        elif byte == 0x5B:
+            error = append(_PDFToken("array-start"))
+            offset += 1
+        elif byte == 0x5D:
+            error = append(_PDFToken("array-end"))
+            offset += 1
+        elif byte == 0x2F:
+            token, offset, error = _pdf_name_token(dictionary, offset)
+            if error:
+                return None, error
+            assert token is not None
+            error = append(token)
+        elif byte == 0x28:
+            offset, error = _pdf_literal_string_end(dictionary, offset)
+            if error:
+                return None, error
+            assert offset is not None
+            error = append(_PDFToken("literal-string"))
+        elif byte == 0x3C:
+            end = dictionary.find(b">", offset + 1)
+            if end < 0:
+                return None, "malformed-compressed-artifact"
+            if any(
+                value not in _PDF_WHITESPACE and value not in _PDF_HEX_DIGITS for value in dictionary[offset + 1 : end]
+            ):
+                return None, "malformed-compressed-artifact"
+            error = append(_PDFToken("hex-string"))
+            offset = end + 1
+        elif byte in {0x29, 0x3E, 0x7B, 0x7D}:
+            return None, "malformed-compressed-artifact"
+        else:
+            end = _pdf_regular_token_end(dictionary, offset)
+            if end == offset:
+                return None, "malformed-compressed-artifact"
+            value = dictionary[offset:end]
+            error = append(_PDFToken(_pdf_number_kind(value) or "keyword", value))
+            offset = end
+        if error:
+            return None, error
+    return tokens, None
+
+
+def _pdf_nonnegative_integer(value: bytes, maximum: int) -> tuple[int | None, str | None]:
+    if value.startswith(b"-"):
+        return None, "unsupported-compressed-container"
+    digits = value[1:] if value.startswith(b"+") else value
+    result = 0
+    for digit in digits:
+        result = result * 10 + digit - 0x30
+        if result > maximum:
+            return None, "compressed-artifact-limit"
+    return result, None
+
+
+def _pdf_parse_object(tokens: list[_PDFToken], offset: int, depth: int = 0) -> tuple[int, str, str | None]:
+    if offset >= len(tokens):
+        return offset, "", "malformed-compressed-artifact"
+    if depth > PDF_MAX_OBJECT_DEPTH:
+        return offset, "", "compressed-artifact-limit"
+    token = tokens[offset]
+    if token.kind == "integer":
+        if (
+            offset + 2 < len(tokens)
+            and tokens[offset + 1].kind == "integer"
+            and tokens[offset + 2] == _PDFToken("keyword", b"R")
+            and not token.value.startswith(b"-")
+            and not tokens[offset + 1].value.startswith(b"-")
+        ):
+            return offset + 3, "indirect-reference", None
+        return offset + 1, "integer", None
+    if token.kind in {"real", "name", "literal-string", "hex-string"}:
+        return offset + 1, token.kind, None
+    if token.kind == "keyword":
+        if token.value not in {b"true", b"false", b"null"}:
+            return offset, "", "malformed-compressed-artifact"
+        return offset + 1, "keyword", None
+    if token.kind == "array-start":
+        offset += 1
+        while offset < len(tokens) and tokens[offset].kind != "array-end":
+            offset, _, error = _pdf_parse_object(tokens, offset, depth + 1)
+            if error:
+                return offset, "", error
+        if offset >= len(tokens):
+            return offset, "", "malformed-compressed-artifact"
+        return offset + 1, "array", None
+    if token.kind == "dictionary-start":
+        offset += 1
+        while offset < len(tokens) and tokens[offset].kind != "dictionary-end":
+            if tokens[offset].kind != "name":
+                return offset, "", "malformed-compressed-artifact"
+            offset, _, error = _pdf_parse_object(tokens, offset + 1, depth + 1)
+            if error:
+                return offset, "", error
+        if offset >= len(tokens):
+            return offset, "", "malformed-compressed-artifact"
+        return offset + 1, "dictionary", None
+    return offset, "", "malformed-compressed-artifact"
+
+
+def _pdf_top_level_dictionary(dictionary: bytes) -> tuple[_PDFDictionary | None, str | None]:
+    tokens, error = _pdf_dictionary_tokens(dictionary)
+    if error:
+        return None, error
+    assert tokens is not None
+    if not tokens or tokens[0].kind != "dictionary-start":
+        return None, "malformed-compressed-artifact"
+    offset = 1
+    entries: dict[bytes, _PDFObject] = {}
+    while offset < len(tokens) and tokens[offset].kind != "dictionary-end":
+        key = tokens[offset]
+        if key.kind != "name":
+            return None, "malformed-compressed-artifact"
+        if key.value in entries:
+            reason = "unsupported-compressed-container" if key.value == b"Length" else "malformed-compressed-artifact"
+            return None, reason
+        value_offset = offset + 1
+        offset, value_kind, error = _pdf_parse_object(tokens, value_offset, 1)
+        if error:
+            return None, error
+        entries[key.value] = _PDFObject(value_kind, value_offset, offset)
+    if offset != len(tokens) - 1 or tokens[offset].kind != "dictionary-end":
+        return None, "malformed-compressed-artifact"
+    return _PDFDictionary(tuple(tokens), entries), None
+
+
+def _pdf_parsed_stream_length(dictionary: _PDFDictionary) -> tuple[int | None, str | None]:
+    value = dictionary.entries.get(b"Length")
+    if value is None:
+        return None, "malformed-compressed-artifact"
+    if value.kind != "integer":
+        return None, "unsupported-compressed-container"
+    length, error = _pdf_nonnegative_integer(
+        dictionary.tokens[value.start].value,
+        DECOMPRESSED_ARTIFACT_MAX_BYTES,
+    )
+    if error:
+        return None, error
+    return length, None
+
+
+def _pdf_direct_stream_length(dictionary: bytes) -> tuple[int | None, str | None]:
+    parsed, error = _pdf_top_level_dictionary(dictionary)
+    if error:
+        return None, error
+    assert parsed is not None
+    return _pdf_parsed_stream_length(parsed)
+
+
+def _pdf_stream_filters(dictionary: _PDFDictionary) -> tuple[list[bytes] | None, str | None]:
+    unsupported_filter_keys = {b"DP", b"DecodeParms", b"F", b"FDecodeParms", b"FFilter"}
+    if unsupported_filter_keys.intersection(dictionary.entries):
+        # PNG/TIFF predictors and per-filter parameter arrays change the decoded
+        # byte representation. None are publishable until explicitly bounded and
+        # implemented here.
+        return None, "unsupported-compressed-container"
+    value = dictionary.entries.get(b"Filter")
+    if value is None:
+        return [], None
+    if value.kind == "name":
+        return [dictionary.tokens[value.start].value], None
+    if value.kind != "array":
+        return None, "malformed-compressed-artifact"
+    filters: list[bytes] = []
+    for token in dictionary.tokens[value.start + 1 : value.end - 1]:
+        if token.kind != "name":
+            return None, "malformed-compressed-artifact"
+        filters.append(token.value)
+    if not filters:
+        return None, "malformed-compressed-artifact"
+    if len(filters) > PDF_MAX_FILTERS:
+        return None, "compressed-artifact-limit"
+    return filters, None
+
+
+def _pdf_stream_is_image(dictionary: _PDFDictionary) -> bool:
+    value = dictionary.entries.get(b"Subtype")
+    return value is not None and value.kind == "name" and dictionary.tokens[value.start].value == b"Image"
+
+
+def _decode_pdf_filter_chain(
+    stream: bytes,
+    filters: list[bytes],
+    *,
+    is_image: bool,
+) -> tuple[bytes | None, str | None, str | None]:
+    """Apply supported PDF filters in declaration order under per-stage bounds."""
+    if len(filters) > PDF_MAX_FILTERS:
+        return None, None, "compressed-artifact-limit"
+    aliases = {
+        b"FlateDecode": "flate",
+        b"Fl": "flate",
+        b"DCTDecode": "jpeg",
+        b"DCT": "jpeg",
+    }
+    payload = stream
+    total_decoded = 0
+    terminal_format: str | None = None
+    for index, filter_name in enumerate(filters):
+        filter_kind = aliases.get(filter_name)
+        if filter_kind is None:
+            return None, None, "unsupported-compressed-container"
+        if filter_kind == "jpeg":
+            # DCT decoding produces pixels, which this guard deliberately does
+            # not implement. Preserve and scan the encoded JPEG metadata, so DCT
+            # must be the terminal image filter in the chain.
+            if not is_image or index != len(filters) - 1:
+                return None, None, "unsupported-compressed-container"
+            terminal_format = "jpeg"
+            continue
+
+        decoded, error = _bounded_decompress_members(
+            payload,
+            wbits=zlib.MAX_WBITS,
+            compressed_limit=COMPRESSED_ARTIFACT_MAX_BYTES,
+            decompressed_limit=DECOMPRESSED_ARTIFACT_MAX_BYTES,
+            limit_reason="compressed-artifact-limit",
+            malformed_reason="malformed-compressed-artifact",
+            member_limit=PDF_MAX_FILTER_MEMBERS,
+        )
+        if error:
+            return None, None, error
+        assert decoded is not None
+        if payload and len(decoded) > len(payload) * PDF_MAX_FILTER_DECODE_RATIO:
+            return None, None, "compressed-artifact-limit"
+        total_decoded += len(decoded)
+        if total_decoded > PDF_MAX_FILTER_TOTAL_DECODED_BYTES:
+            return None, None, "compressed-artifact-limit"
+        payload = decoded
+    return payload, terminal_format, None
+
+
+def _scan_pdf_decoded_payload(
+    payload: bytes,
+    *,
+    terminal_format: str | None,
+    recursion_depth: int,
+) -> set[str]:
+    if terminal_format == "jpeg":
+        return _scan_jpeg_bytes(payload)
+    if payload.startswith(PNG_SIGNATURE):
+        return _scan_png_bytes(payload)
+    if payload.startswith(JPEG_SIGNATURE):
+        return _scan_jpeg_bytes(payload)
+    if payload.startswith(PDF_SIGNATURE):
+        if recursion_depth >= PDF_MAX_FILTER_RECURSION:
+            return {"compressed-artifact-limit"}
+        return _scan_pdf_bytes(payload, recursion_depth=recursion_depth + 1)
+    if payload.startswith(GZIP_SIGNATURE):
+        if recursion_depth >= PDF_MAX_FILTER_RECURSION:
+            return {"compressed-artifact-limit"}
+        return _scan_gzip_bytes(payload, recursion_depth=recursion_depth + 1)
+    if any(payload.startswith(magic) for magic in UNSUPPORTED_COMPRESSED_MAGICS):
+        return {"unsupported-compressed-container"}
+    return _value_reasons(payload.decode("latin-1", errors="ignore"))
+
+
+def _pdf_next_stream_context(
+    data: bytes,
+    offset: int,
+) -> tuple[int | None, list[int], str | None]:
+    dictionary_candidates: list[int] = []
+    tokens_seen = 0
+    while offset < len(data):
+        byte = data[offset]
+        if byte in _PDF_WHITESPACE:
+            offset += 1
+            continue
+        tokens_seen += 1
+        if tokens_seen > PDF_MAX_LEXICAL_TOKENS:
+            return None, dictionary_candidates, "compressed-artifact-limit"
+        if byte == 0x25:
+            offset += 1
+            while offset < len(data) and data[offset] not in {0x0A, 0x0D}:
+                offset += 1
+            continue
+        if byte == 0x28:
+            end, error = _pdf_literal_string_end(data, offset)
+            if error:
+                return None, dictionary_candidates, error
+            assert end is not None
+            offset = end
+            continue
+        if data[offset : offset + 2] == b"<<":
+            dictionary_candidates.append(offset)
+            offset += 2
+            continue
+        if data[offset : offset + 2] == b">>":
+            offset += 2
+            continue
+        if byte == 0x3C:
+            end = data.find(b">", offset + 1)
+            if end < 0:
+                return None, dictionary_candidates, "malformed-compressed-artifact"
+            if any(value not in _PDF_WHITESPACE and value not in _PDF_HEX_DIGITS for value in data[offset + 1 : end]):
+                return None, dictionary_candidates, "malformed-compressed-artifact"
+            offset = end + 1
+            continue
+        if byte == 0x2F:
+            _, offset, error = _pdf_name_token(data, offset)
+            if error:
+                return None, dictionary_candidates, error
+            continue
+        if byte in _PDF_DELIMITERS:
+            offset += 1
+            continue
+        end = _pdf_regular_token_end(data, offset)
+        if end == offset:
+            return None, dictionary_candidates, "malformed-compressed-artifact"
+        if data[offset:end] == b"stream":
+            return offset, dictionary_candidates, None
+        offset = end
+    return None, dictionary_candidates, None
+
+
+def _pdf_keyword_at(data: bytes, offset: int, keyword: bytes) -> bool:
+    end = offset + len(keyword)
+    if data[offset:end] != keyword:
+        return False
+    before = offset == 0 or data[offset - 1] in _PDF_WHITESPACE or data[offset - 1] in _PDF_DELIMITERS
+    after = end == len(data) or data[end] in _PDF_WHITESPACE or data[end] in _PDF_DELIMITERS
+    return before and after
+
+
+def _scan_pdf_bytes(data: bytes, *, recursion_depth: int = 0) -> set[str]:
+    if recursion_depth > PDF_MAX_FILTER_RECURSION:
+        return {"compressed-artifact-limit"}
+    if not data.startswith(PDF_SIGNATURE) or b"%%EOF" not in data[-1024:]:
+        return {"malformed-compressed-artifact"}
+    reasons: set[str] = set()
+    cursor = 0
+    search_offset = 0
+    stream_count = 0
+    while True:
+        stream_marker, dictionary_candidates, keyword_error = _pdf_next_stream_context(data, search_offset)
+        if keyword_error:
+            reasons.add(keyword_error)
+            return reasons
+        if stream_marker is None:
+            break
+        keyword_end = stream_marker + len(b"stream")
+        search_offset = keyword_end
+        dictionary, dictionary_error = _find_pdf_stream_dictionary(data, stream_marker, dictionary_candidates)
+        if dictionary_error:
+            reasons.add(dictionary_error)
+            return reasons
+        if dictionary is None:
+            continue
+        stream_count += 1
+        if stream_count > PDF_MAX_STREAMS:
+            reasons.add("compressed-artifact-limit")
+            return reasons
+        if data[keyword_end : keyword_end + 2] == b"\r\n":
+            stream_start = keyword_end + 2
+        elif data[keyword_end : keyword_end + 1] in {b"\r", b"\n"}:
+            stream_start = keyword_end + 1
+        else:
+            reasons.add("malformed-compressed-artifact")
+            return reasons
+        parsed_dictionary, dictionary_error = _pdf_top_level_dictionary(dictionary)
+        if dictionary_error:
+            reasons.add(dictionary_error)
+            return reasons
+        assert parsed_dictionary is not None
+        reasons.update(_value_reasons(data[cursor:stream_start].decode("latin-1", errors="ignore")))
+
+        stream_length, length_error = _pdf_parsed_stream_length(parsed_dictionary)
+        if length_error:
+            reasons.add(length_error)
+            return reasons
+        assert stream_length is not None
+        stream_end = stream_start + stream_length
+        if stream_end > len(data):
+            reasons.add("malformed-compressed-artifact")
+            return reasons
+        end_marker = stream_end
+        if data[end_marker : end_marker + 2] == b"\r\n":
+            end_marker += 2
+        elif data[end_marker : end_marker + 1] in {b"\r", b"\n"}:
+            end_marker += 1
+        else:
+            reasons.add("malformed-compressed-artifact")
+            return reasons
+        if not _pdf_keyword_at(data, end_marker, b"endstream"):
+            reasons.add("malformed-compressed-artifact")
+            return reasons
+
+        stream = data[stream_start:stream_end]
+        filters, filter_error = _pdf_stream_filters(parsed_dictionary)
+        if filter_error:
+            reasons.add(filter_error)
+            return reasons
+        is_image = _pdf_stream_is_image(parsed_dictionary)
+        decoded, terminal_format, filter_error = _decode_pdf_filter_chain(stream, filters, is_image=is_image)
+        if filter_error:
+            reasons.add(filter_error)
+            return reasons
+        assert decoded is not None
+        reasons.update(
+            _scan_pdf_decoded_payload(
+                decoded,
+                terminal_format=terminal_format,
+                recursion_depth=recursion_depth,
+            )
+        )
+        cursor = end_marker + len(b"endstream")
+        search_offset = cursor
+    reasons.update(_value_reasons(data[cursor:].decode("latin-1", errors="ignore")))
+    return reasons
+
+
+def _read_bounded(file_descriptor: int, limit: int, limit_reason: str) -> tuple[bytes | None, str | None]:
+    size = os.fstat(file_descriptor).st_size
+    if size > limit:
+        return None, limit_reason
+    chunks: list[bytes] = []
+    offset = 0
+    while chunk := os.pread(file_descriptor, BINARY_CHUNK_SIZE, offset):
+        chunks.append(chunk)
+        offset += len(chunk)
+    return b"".join(chunks), None
+
+
+def _gzip_cstring(
+    data: bytes,
+    offset: int,
+    remaining_metadata: int,
+) -> tuple[bytes | None, int, int, str | None]:
+    search_end = min(len(data), offset + remaining_metadata + 1)
+    terminator = data.find(b"\x00", offset, search_end)
+    if terminator < 0:
+        reason = (
+            "compressed-artifact-limit" if len(data) - offset > remaining_metadata else "malformed-compressed-artifact"
+        )
+        return None, offset, remaining_metadata, reason
+    field = data[offset:terminator]
+    if len(field) > remaining_metadata:
+        return None, offset, remaining_metadata, "compressed-artifact-limit"
+    return field, terminator + 1, remaining_metadata - len(field), None
+
+
+def _decode_gzip_members(data: bytes) -> tuple[bytes | None, set[str], str | None]:
+    if len(data) > COMPRESSED_ARTIFACT_MAX_BYTES:
+        return None, set(), "compressed-artifact-limit"
+    reasons: set[str] = set()
+    decoded_parts: list[bytes] = []
+    decoded_size = 0
+    metadata_remaining = GZIP_MAX_HEADER_METADATA_BYTES
+    offset = 0
+    members = 0
+    while offset < len(data):
+        members += 1
+        if members > COMPRESSED_MAX_MEMBERS:
+            return None, reasons, "compressed-artifact-limit"
+        header_start = offset
+        if offset + 10 > len(data) or data[offset : offset + 2] != GZIP_SIGNATURE or data[offset + 2] != 8:
+            return None, reasons, "malformed-compressed-artifact"
+        flags = data[offset + 3]
+        if flags & 0xE0:
+            return None, reasons, "malformed-compressed-artifact"
+        offset += 10
+        if flags & 0x04:
+            if offset + 2 > len(data):
+                return None, reasons, "malformed-compressed-artifact"
+            extra_length = struct.unpack("<H", data[offset : offset + 2])[0]
+            offset += 2
+            if extra_length > metadata_remaining:
+                return None, reasons, "compressed-artifact-limit"
+            if offset + extra_length > len(data):
+                return None, reasons, "malformed-compressed-artifact"
+            extra = data[offset : offset + extra_length]
+            reasons.update(_scan_metadata_bytes(extra))
+            metadata_remaining -= extra_length
+            offset += extra_length
+        for flag in (0x08, 0x10):
+            if not flags & flag:
+                continue
+            field, offset, metadata_remaining, error = _gzip_cstring(data, offset, metadata_remaining)
+            if error:
+                return None, reasons, error
+            reasons.update(_scan_decoded_bytes(field or b"", "latin-1", "malformed-compressed-artifact"))
+        if flags & 0x02:
+            if offset + 2 > len(data):
+                return None, reasons, "malformed-compressed-artifact"
+            expected_header_crc = struct.unpack("<H", data[offset : offset + 2])[0]
+            if zlib.crc32(data[header_start:offset]) & 0xFFFF != expected_header_crc:
+                return None, reasons, "malformed-compressed-artifact"
+            offset += 2
+
+        remaining_output = DECOMPRESSED_ARTIFACT_MAX_BYTES - decoded_size
+        try:
+            decompressor = zlib.decompressobj(-zlib.MAX_WBITS)
+            decoded = decompressor.decompress(data[offset:], remaining_output + 1)
+            if decompressor.unconsumed_tail or len(decoded) > remaining_output:
+                return None, reasons, "compressed-artifact-limit"
+            decoded += decompressor.flush(remaining_output - len(decoded) + 1)
+        except (ValueError, zlib.error):
+            return None, reasons, "malformed-compressed-artifact"
+        if len(decoded) > remaining_output:
+            return None, reasons, "compressed-artifact-limit"
+        if not decompressor.eof:
+            return None, reasons, "malformed-compressed-artifact"
+        deflate_length = len(data) - offset - len(decompressor.unused_data)
+        if deflate_length <= 0:
+            return None, reasons, "malformed-compressed-artifact"
+        trailer_offset = offset + deflate_length
+        if trailer_offset + 8 > len(data):
+            return None, reasons, "malformed-compressed-artifact"
+        expected_crc, expected_size = struct.unpack("<II", data[trailer_offset : trailer_offset + 8])
+        if zlib.crc32(decoded) & 0xFFFFFFFF != expected_crc or len(decoded) & 0xFFFFFFFF != expected_size:
+            return None, reasons, "malformed-compressed-artifact"
+        decoded_parts.append(decoded)
+        decoded_size += len(decoded)
+        offset = trailer_offset + 8
+    return b"".join(decoded_parts), reasons, None
+
+
+def _scan_gzip_bytes(data: bytes, *, recursion_depth: int = 0) -> set[str]:
+    if recursion_depth > PDF_MAX_FILTER_RECURSION:
+        return {"compressed-artifact-limit"}
+    decoded, reasons, error = _decode_gzip_members(data)
+    if error:
+        reasons.add(error)
+        return reasons
+    if decoded is None:
+        return {"malformed-compressed-artifact", *reasons}
+    if decoded.startswith(GZIP_SIGNATURE):
+        return {"unsupported-compressed-container", *reasons}
+    if any(decoded.startswith(magic) for magic in UNSUPPORTED_COMPRESSED_MAGICS):
+        return {"unsupported-compressed-container", *reasons}
+    if decoded.startswith(PNG_SIGNATURE):
+        reasons.update(_scan_png_bytes(decoded))
+        return reasons
+    if decoded.startswith(JPEG_SIGNATURE):
+        reasons.update(_scan_jpeg_bytes(decoded))
+        return reasons
+    if decoded.startswith(PDF_SIGNATURE):
+        reasons.update(_scan_pdf_bytes(decoded, recursion_depth=recursion_depth + 1))
+        return reasons
+    try:
+        reasons.update(_value_reasons(decoded.decode("utf-8")))
+    except UnicodeDecodeError:
+        reasons.update(_value_reasons(decoded.decode("utf-8", errors="ignore")))
+        encoding = _looks_utf16(decoded)
+        if encoding:
+            reasons.update(_value_reasons(decoded[: len(decoded) - len(decoded) % 2].decode(encoding, errors="ignore")))
+    return reasons
+
+
+def _scan_file(file_descriptor: int, relative_path: Path) -> set[str]:
+    suffix = relative_path.suffix.casefold()
+    if suffix in TEXT_SUFFIXES or relative_path.name in TEXT_FILENAMES:
+        return _scan_text_stream(file_descriptor)
+    signature = os.pread(file_descriptor, 16, 0)
+    if suffix in UNSUPPORTED_COMPRESSED_SUFFIXES or any(
+        signature.startswith(magic) for magic in UNSUPPORTED_COMPRESSED_MAGICS
+    ):
+        return {"unsupported-compressed-container"}
+    if signature.startswith(PNG_SIGNATURE) or suffix == ".png":
+        data, error = _read_bounded(file_descriptor, COMPRESSED_ARTIFACT_MAX_BYTES, "compressed-artifact-limit")
+        return {error} if error else _scan_png_bytes(data or b"")
+    if signature.startswith(JPEG_SIGNATURE) or suffix in {".jpg", ".jpeg"}:
+        data, error = _read_bounded(file_descriptor, COMPRESSED_ARTIFACT_MAX_BYTES, "compressed-artifact-limit")
+        return {error} if error else _scan_jpeg_bytes(data or b"")
+    if signature.startswith(PDF_SIGNATURE) or suffix == ".pdf":
+        data, error = _read_bounded(file_descriptor, COMPRESSED_ARTIFACT_MAX_BYTES, "compressed-artifact-limit")
+        return {error} if error else _scan_pdf_bytes(data or b"")
+    if signature.startswith(GZIP_SIGNATURE) or suffix in {".gz", ".gzip"}:
+        data, error = _read_bounded(file_descriptor, COMPRESSED_ARTIFACT_MAX_BYTES, "compressed-artifact-limit")
+        return {error} if error else _scan_gzip_bytes(data or b"")
+    return _scan_binary_stream(file_descriptor)
+
+
+def _open_declared_root(root: Path) -> tuple[int | None, str | None]:
+    """Open a declared root component-by-component without following links."""
+    if not hasattr(os, "O_NOFOLLOW") or not hasattr(os, "O_DIRECTORY") or not hasattr(os, "pread"):
+        return None, "unsupported-safe-traversal"
+    if ".." in root.parts:
+        return None, "path-traversal"
+    absolute = Path(os.path.abspath(root))
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0)
+    try:
+        directory_fd = os.open(absolute.anchor, flags)
+    except OSError:
+        return None, "unreadable-directory"
+    for part in absolute.parts[1:]:
+        try:
+            metadata = os.stat(part, dir_fd=directory_fd, follow_symlinks=False)
+        except FileNotFoundError:
+            os.close(directory_fd)
+            return None, "missing-root"
+        except OSError:
+            os.close(directory_fd)
+            return None, "unreadable-directory"
+        if stat.S_ISLNK(metadata.st_mode):
+            os.close(directory_fd)
+            return None, "symlink"
+        if not stat.S_ISDIR(metadata.st_mode):
+            os.close(directory_fd)
+            return None, "not-directory"
+        try:
+            next_fd = os.open(part, flags, dir_fd=directory_fd)
+        except OSError:
+            os.close(directory_fd)
+            return None, "unreadable-directory"
+        os.close(directory_fd)
+        directory_fd = next_fd
+    return directory_fd, None
+
+
+def _root_identity(file_descriptor: int) -> str:
+    metadata = os.fstat(file_descriptor)
+    material = f"public-output-root-v1:{metadata.st_dev}:{metadata.st_ino}".encode()
+    return hashlib.sha256(material).hexdigest()
+
+
+def _scan_open_root(
+    file_descriptor: int,
+    root_label: str,
+) -> tuple[str, list[Finding], dict[str, tuple[int, ...]] | None]:
+    identity = _root_identity(file_descriptor)
+    findings: set[Finding] = set()
+    device = os.fstat(file_descriptor).st_dev
+    try:
+        before_inventory = tree_inventory(file_descriptor, device)
+    except (OSError, ValueError):
+        before_inventory = None
+    _scan_directory(file_descriptor, root_label, identity, (), findings)
+    try:
+        after_inventory = tree_inventory(file_descriptor, device)
+    except (OSError, ValueError):
+        after_inventory = None
+    if (before_inventory is None) != (after_inventory is None) or (
+        before_inventory is not None and after_inventory is not None and before_inventory != after_inventory
+    ):
+        findings.add(_entry_finding(root_label, identity, Path("."), "changed-during-scan"))
+    return identity, sorted(findings), after_inventory
+
+
+def _entry_finding(root_label: str, root_identity: str, relative_path: Path, reason: str) -> Finding:
+    safe_path = _safe_report_text(relative_path.as_posix())
+    route = "/" if relative_path == Path(".") else _safe_report_text(public_route(relative_path))
+    return Finding(root_label, root_identity, safe_path, route, reason)
+
+
+def _scan_directory(
+    directory_fd: int,
+    root_label: str,
+    root_identity: str,
+    relative_parts: tuple[str, ...],
+    findings: set[Finding],
+) -> None:
+    current_path = Path(*relative_parts) if relative_parts else Path(".")
+    try:
+        with os.scandir(directory_fd) as iterator:
+            entries = sorted(iterator, key=lambda entry: entry.name)
+    except OSError:
+        findings.add(_entry_finding(root_label, root_identity, current_path, "unreadable-directory"))
+        return
+
+    directory_flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0)
+    file_flags = os.O_RDONLY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NONBLOCK", 0)
+    for entry in entries:
+        if entry.name in {"", ".", ".."} or "/" in entry.name:
+            findings.add(_entry_finding(root_label, root_identity, current_path, "path-traversal"))
+            continue
+        parts = (*relative_parts, entry.name)
+        relative_path = Path(*parts)
+        safe_path = _safe_report_text(relative_path.as_posix())
+        route = _safe_report_text(public_route(relative_path))
+        for reason in _value_reasons(relative_path.as_posix()):
+            findings.add(
+                Finding(
+                    root_label,
+                    root_identity,
+                    safe_path,
+                    route,
+                    "filename" if reason == "content" else reason,
+                )
+            )
+        try:
+            metadata = entry.stat(follow_symlinks=False)
+        except OSError:
+            findings.add(Finding(root_label, root_identity, safe_path, route, "unreadable-entry"))
+            continue
+        if stat.S_ISLNK(metadata.st_mode):
+            findings.add(Finding(root_label, root_identity, safe_path, route, "symlink"))
+            continue
+        if stat.S_ISDIR(metadata.st_mode):
+            try:
+                child_fd = os.open(entry.name, directory_flags, dir_fd=directory_fd)
+            except OSError:
+                findings.add(Finding(root_label, root_identity, safe_path, route, "unreadable-directory"))
+                continue
+            try:
+                if not stat.S_ISDIR(os.fstat(child_fd).st_mode):
+                    findings.add(Finding(root_label, root_identity, safe_path, route, "special-entry"))
+                else:
+                    _scan_directory(child_fd, root_label, root_identity, parts, findings)
+            finally:
+                os.close(child_fd)
+            continue
+        if not stat.S_ISREG(metadata.st_mode):
+            findings.add(Finding(root_label, root_identity, safe_path, route, "special-entry"))
+            continue
+        if metadata.st_nlink != 1:
+            findings.add(Finding(root_label, root_identity, safe_path, route, "hardlink"))
+            continue
+        file_descriptor: int | None = None
+        try:
+            file_descriptor = os.open(entry.name, file_flags, dir_fd=directory_fd)
+            opened_metadata = os.fstat(file_descriptor)
+            if not stat.S_ISREG(opened_metadata.st_mode):
+                findings.add(Finding(root_label, root_identity, safe_path, route, "special-entry"))
+                continue
+            if opened_metadata.st_nlink != 1:
+                findings.add(Finding(root_label, root_identity, safe_path, route, "hardlink"))
+                continue
+            for reason in _scan_file(file_descriptor, relative_path):
+                findings.add(Finding(root_label, root_identity, safe_path, route, reason))
+        except OSError:
+            findings.add(Finding(root_label, root_identity, safe_path, route, "unreadable-file"))
+        finally:
+            if file_descriptor is not None:
+                os.close(file_descriptor)
+
+
+def scan_root(root: Path) -> list[Finding]:
+    """Return findings without following links or reading outside the root."""
+    findings: set[Finding] = set()
+    root_label = _safe_report_text(root.name or str(root))
+    root_fd, root_error = _open_declared_root(root)
+    if root_fd is None:
+        findings.add(_entry_finding(root_label, "unavailable", Path("."), root_error or "unreadable-directory"))
+        return sorted(findings)
+    try:
+        _identity, opened_findings, _inventory = _scan_open_root(root_fd, root_label)
+        findings.update(opened_findings)
+    finally:
+        os.close(root_fd)
+    return sorted(findings)
+
+
+def _root_declaration(root: Path) -> dict[str, str]:
+    root_fd, _error = _open_declared_root(root)
+    if root_fd is None:
+        identity = "unavailable"
+    else:
+        try:
+            identity = _root_identity(root_fd)
+        finally:
+            os.close(root_fd)
+    return {"label": _safe_report_text(root.name or str(root)), "identity": identity}
+
+
+def report_payload(
+    roots: list[Path],
+    findings: list[Finding],
+    *,
+    missing: list[Path] | None = None,
+    root_declarations: list[dict[str, str]] | None = None,
+) -> dict:
+    return {
+        "schema_version": 2,
+        "roots": root_declarations or [_root_declaration(root) for root in roots],
+        "missing_roots": [_safe_report_text(root.name or str(root)) for root in (missing or [])],
+        "routes": sorted({finding.route for finding in findings}),
+        "findings": [asdict(finding) for finding in findings],
+    }
+
+
+def _write_report(path: Path | None, payload: dict) -> bool:
+    if path is None:
+        return True
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload, indent=2, sort_keys=True, allow_nan=False) + "\n", encoding="utf-8")
+    except (OSError, TypeError, ValueError):
+        return False
+    return True
+
+
+def _inventory_digest(root_identity: str, inventory: dict[str, tuple[int, ...]]) -> str:
+    material = json.dumps(
+        {
+            "entries": [[path, list(state)] for path, state in sorted(inventory.items())],
+            "root_identity": root_identity,
+        },
+        ensure_ascii=True,
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode()
+    return f"sha256:{hashlib.sha256(material).hexdigest()}"
+
+
+def _write_attestation(
+    path: Path | None,
+    *,
+    root_identity: str,
+    inventory: dict[str, tuple[int, ...]] | None,
+) -> bool:
+    if path is None:
+        return True
+    if inventory is None:
+        return False
+    payload = {
+        "contract": "verdify.public-output-layout-attestation",
+        "root_identity": f"sha256:{root_identity}",
+        "schema_version": 1,
+        "tree_digest": _inventory_digest(root_identity, inventory),
+    }
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(
+            json.dumps(payload, ensure_ascii=True, separators=(",", ":"), sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+    except (OSError, TypeError, ValueError):
+        return False
+    return True
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--root", action="append", type=Path, required=True, help="Public source/build root to scan.")
+    parser.add_argument("--json-report", type=Path, help="Optional deterministic JSON report path.")
+    parser.add_argument(
+        "--attestation-report",
+        type=Path,
+        help="After one clean root scan, write a canonical identity/inventory-bound layout attestation.",
+    )
+    parser.add_argument(
+        "--promote-to",
+        type=Path,
+        help="After a clean one-root scan, atomically promote that exact open candidate descriptor.",
+    )
+    args = parser.parse_args()
+
+    if args.attestation_report is not None and (len(args.root) != 1 or args.promote_to is not None):
+        parser.error("--attestation-report requires exactly one root and cannot be combined with promotion")
+
+    if args.promote_to is not None:
+        if len(args.root) != 1:
+            parser.error("--promote-to requires exactly one --root")
+        staged = Path(os.path.abspath(args.root[0]))
+        live = Path(os.path.abspath(args.promote_to))
+        if staged == live or staged.parent != live.parent:
+            parser.error("promotion root and destination must be distinct siblings")
+        parent_fd, parent_error = _open_declared_root(staged.parent)
+        if parent_fd is None:
+            print(
+                f"public-output guard: promotion parent unavailable ({parent_error or 'unreadable-directory'})",
+                file=sys.stderr,
+            )
+            return 2
+        staged_fd: int | None = None
+        try:
+            flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | getattr(os, "O_CLOEXEC", 0)
+            try:
+                staged_fd = os.open(staged.name, flags, dir_fd=parent_fd)
+            except OSError:
+                print("public-output guard: promotion candidate unavailable", file=sys.stderr)
+                return 2
+            root_label = _safe_report_text(staged.name)
+            identity, findings, inventory = _scan_open_root(staged_fd, root_label)
+            if inventory is None and not findings:
+                findings = [_entry_finding(root_label, identity, Path("."), "changed-during-scan")]
+            declaration = {"label": root_label, "identity": identity}
+            payload = report_payload([staged], findings, root_declarations=[declaration])
+            if not _write_report(args.json_report, payload):
+                print("public-output guard: report write failed", file=sys.stderr)
+                return 2
+            if findings:
+                print(f"public-output guard: {len(findings)} prohibited artifact finding(s)", file=sys.stderr)
+                for finding in findings:
+                    print(f"  {finding.route} ({finding.root}/{finding.path}; {finding.reason})", file=sys.stderr)
+                try:
+                    discard_open_directory(
+                        parent_fd,
+                        staged.name,
+                        staged_fd,
+                        expected_identity=identity,
+                        expected_parent_path=staged.parent,
+                    )
+                except (OSError, ValueError):
+                    pass
+                return 1
+            try:
+                promote_open_directory(
+                    parent_fd,
+                    staged.name,
+                    staged_fd,
+                    live.name,
+                    expected_identity=identity,
+                    expected_parent_path=staged.parent,
+                    expected_inventory=inventory,
+                )
+            except (OSError, ValueError):
+                print("public-output guard: descriptor-bound promotion failed", file=sys.stderr)
+                return 1
+            print("public-output guard: clean candidate promoted (1 root)")
+            return 0
+        finally:
+            if staged_fd is not None:
+                os.close(staged_fd)
+            os.close(parent_fd)
+
+    missing: list[Path] = []
+    findings: list[Finding] = []
+    declarations: list[dict[str, str]] = []
+    attestation_identity = ""
+    attestation_inventory: dict[str, tuple[int, ...]] | None = None
+    for root in args.root:
+        root_label = _safe_report_text(root.name or str(root))
+        root_fd, root_error = _open_declared_root(root)
+        if root_fd is None:
+            declarations.append({"label": root_label, "identity": "unavailable"})
+            if root_error == "missing-root":
+                missing.append(root)
+            else:
+                findings.append(
+                    _entry_finding(root_label, "unavailable", Path("."), root_error or "unreadable-directory")
+                )
+            continue
+        try:
+            identity, root_findings, inventory = _scan_open_root(root_fd, root_label)
+            declarations.append({"label": root_label, "identity": identity})
+            findings.extend(root_findings)
+            if args.attestation_report is not None:
+                attestation_identity = identity
+                attestation_inventory = inventory
+        finally:
+            os.close(root_fd)
+    if missing:
+        payload = report_payload(
+            args.root,
+            [],
+            missing=missing,
+            root_declarations=declarations,
+        )
+        if not _write_report(args.json_report, payload):
+            print("public-output guard: report write failed", file=sys.stderr)
+            return 2
+        for root in missing:
+            print(f"public-output guard: missing root {_safe_report_text(root)}", file=sys.stderr)
+        return 2
+
+    findings = sorted(findings)
+    payload = report_payload(args.root, findings, root_declarations=declarations)
+    if not _write_report(args.json_report, payload):
+        print("public-output guard: report write failed", file=sys.stderr)
+        return 2
+
+    if findings:
+        print(f"public-output guard: {len(findings)} prohibited artifact finding(s)", file=sys.stderr)
+        for finding in findings:
+            print(f"  {finding.route} ({finding.root}/{finding.path}; {finding.reason})", file=sys.stderr)
+        return 1
+    if not _write_attestation(
+        args.attestation_report,
+        root_identity=attestation_identity,
+        inventory=attestation_inventory,
+    ):
+        print("public-output guard: attestation write failed", file=sys.stderr)
+        return 2
+    print(f"public-output guard: clean ({len(args.root)} root(s))")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

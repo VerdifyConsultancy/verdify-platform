@@ -16,6 +16,7 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO_ROOT))
+from verdify_public.output_policy import redact_non_public_crop_references  # noqa: E402
 from verdify_schemas import LessonsVaultFrontmatter  # noqa: E402
 
 DB_CONTAINER = "verdify-timescaledb"
@@ -54,7 +55,7 @@ def plan_id_to_link(plan_id: str) -> str:
 
 def public_text(text: str) -> str:
     """Avoid Quartz/Markdown dollar-sign math parsing on public pages."""
-    return re.sub(r"\$(\d)", r"USD \1", text or "")
+    return re.sub(r"\$(\d)", r"USD \1", redact_non_public_crop_references(text))
 
 
 DLI_SOURCE_RE = re.compile(
