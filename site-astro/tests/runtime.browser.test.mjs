@@ -83,11 +83,12 @@ function collectBrowserFailures(page) {
 
 test("Pagefind searches under CSP and KaTeX fonts remain same-origin", async ({ page }) => {
   const failures = collectBrowserFailures(page);
-  const response = await page.goto(`${origin}/`);
+  const response = await page.goto(`${origin}/start/about`);
   expect(response.headers()["content-security-policy"]).toContain("'wasm-unsafe-eval'");
   await page.locator("#lab-search").fill("greenhouse");
   await expect(page.locator("#lab-search-results li").first()).toBeVisible();
   await expect(page.locator("#lab-search-results")).not.toContainText("Search index unavailable");
+  await page.goto(`${origin}/`);
   await page.evaluate(() => document.fonts.ready);
   expect(await page.locator('link[href*="katex.min"]').count()).toBe(1);
   expect(failures).toEqual([]);
