@@ -20,6 +20,9 @@ const { record } = Astro.props;
 const hasHeading = /<h1(?:\s|>)/i.test(record.html);
 const hasMath = /class="katex(?:["\s])/i.test(record.html);
 const robots = build.stageGlobalNoindex || record.noindex || record.kind === "alias" ? "noindex,follow" : "index,follow";
+const socialTitle = `${record.title} — Verdify Lab`;
+const socialDescription = record.description || "Verdify public greenhouse evidence.";
+const socialImage = `${build.siteOrigin}/static/og-image-v2.jpg`;
 const groups = navigation(latestPlan?.canonicalPath ?? "/data/plans/");
 const classes = ["lab-article", ...record.cssclasses].join(" ");
 const pageFamily = (() => {
@@ -57,14 +60,23 @@ const breadcrumbItems = [
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="description" content={record.description || "Verdify public greenhouse evidence."} />
+    <meta name="description" content={socialDescription} />
     <meta name="robots" content={robots} />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={socialTitle} />
+    <meta property="og:description" content={socialDescription} />
+    <meta property="og:image" content={socialImage} />
+    <meta property="og:url" content={record.kind === "alias" ? `${build.siteOrigin}${record.target}` : record.canonicalUrl} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={socialTitle} />
+    <meta name="twitter:description" content={socialDescription} />
+    <meta name="twitter:image" content={socialImage} />
     <link rel="icon" href="/assets/verdify-lab-lockup.svg" type="image/svg+xml" />
     <link rel="canonical" href={record.kind === "alias" ? `${build.siteOrigin}${record.target}` : record.canonicalUrl} />
     <link rel="alternate" type="application/rss+xml" href="/rss.xml" title="Verdify Lab" />
     {hasMath && <link rel="stylesheet" href={katexStylesheet} />}
     {record.kind === "alias" && <meta http-equiv="refresh" content={`0; URL='${record.target}'`} />}
-    <title>{record.title} — Verdify Lab</title>
+    <title>{socialTitle}</title>
   </head>
   <body class={`site-page lab-page lab-page--${pageFamily}`} data-page-family={pageFamily}>
     <a class="skip-link" href="#lab-content">Skip to Lab content</a>
