@@ -86,14 +86,15 @@ is not release input.
 
 ## Shared-shell boundary
 
-The build vendors the reviewed `@verdify/site-shell` 1.0.0 release from WWW
-commit `c9c0d56f654d6b9198352f16c620717dbee71612`. The archive, independent
+The build vendors the reviewed `@verdify/site-shell` 1.1.0 release from WWW
+commit `7febbc479c6ed7d22f829e9c1e7109bc9bc7c6c0`. The archive, independent
 release record, and four-file consumer kit are committed under `vendor/` and
 `scripts/site-shell/`; every byte is independently pinned before the hardened
 installer runs, and the installed tree is verified again in a separate
 process. There is no runtime, CDN, registry, or package-manager fetch. The
-shared Header, Footer, Breadcrumbs, Lab lockup, design tokens, and self-hosted
-IBM Plex fonts come directly from that release. Lab-owned evidence navigation,
+shared Header, Footer, Breadcrumbs, full-page design contract, responsive media
+and lightbox primitives, Lab lockup, design tokens, and self-hosted IBM Plex
+fonts come directly from that release. Lab-owned evidence navigation,
 Pagefind search, reader mode, article styles, and specialist evidence rendering
 remain outside the shell boundary.
 

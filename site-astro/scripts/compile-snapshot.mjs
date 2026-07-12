@@ -185,6 +185,47 @@ function rehypeRewriteRelativeReferences(source, routeBySource, assetPaths) {
   };
 }
 
+function rehypeUnavailableLocalReferences(assetPaths, availableRoutes, unavailable) {
+  return () => (tree) => {
+    visit(tree, "element", (node) => {
+      const property = node.tagName === "a" ? "href" : node.tagName === "img" ? "src" : null;
+      if (!property) return;
+      const raw = node.properties?.[property];
+      if (typeof raw !== "string" || raw.startsWith("#")) return;
+      let parsed;
+      try {
+        parsed = new URL(raw, SITE_ORIGIN);
+      } catch {
+        return;
+      }
+      if (parsed.origin !== SITE_ORIGIN) return;
+      const pathname = decodeURIComponent(parsed.pathname);
+      const relative = pathname.replace(/^\/+/, "").replace(/\/$/, "");
+      const route = normalizeRoute(pathname);
+      if (availableRoutes.has(route) || assetPaths.has(relative)) return;
+
+      const kind = node.tagName === "img" ? "image" : "link";
+      unavailable.push({ kind, path: pathname });
+      if (kind === "image") {
+        const alt = typeof node.properties?.alt === "string" ? node.properties.alt : "Evidence image";
+        node.tagName = "span";
+        node.properties = {
+          className: ["media-unavailable"],
+          role: "img",
+          ariaLabel: `${alt} — image unavailable in this publication`,
+        };
+        node.children = [{ type: "text", value: `${alt} — image unavailable in this publication` }];
+        return;
+      }
+      node.tagName = "span";
+      node.properties = {
+        className: ["unavailable-reference"],
+        title: "This evidence route is unavailable in this publication.",
+      };
+    });
+  };
+}
+
 function grafanaRenderUrl(liveUrl) {
   const parsed = new URL(liveUrl);
   parsed.pathname = parsed.pathname.replace(/^\/d-solo\//, "/render/d-solo/");
@@ -427,9 +468,19 @@ function rehypeGrafanaEvidence(occurrences) {
   };
 }
 
-async function renderMarkdown(markdown, source, linkIndex, routeBySource, assetPaths, imageMetadata, snapshotFiles) {
+async function renderMarkdown(
+  markdown,
+  source,
+  linkIndex,
+  routeBySource,
+  assetPaths,
+  imageMetadata,
+  snapshotFiles,
+  availableRoutes = new Set(routeBySource.values()),
+) {
   const occurrences = [];
   const cameras = [];
+  const unavailable = [];
   const processor = unified()
     .use(remarkParse)
     .use(remarkGfm, { singleTilde: false })
@@ -438,6 +489,7 @@ async function renderMarkdown(markdown, source, linkIndex, routeBySource, assetP
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeRaw)
     .use(rehypeRewriteRelativeReferences(source, routeBySource, assetPaths))
+    .use(rehypeUnavailableLocalReferences(assetPaths, availableRoutes, unavailable))
     .use(rehypeSlug)
     .use(rehypeKatex)
     .use(rehypeCameraSnapshots(snapshotFiles, cameras))
@@ -445,7 +497,7 @@ async function renderMarkdown(markdown, source, linkIndex, routeBySource, assetP
     .use(rehypeGrafanaEvidence(occurrences));
   const tree = processor.parse(expandWikilinks(markdown, source, linkIndex));
   const result = await processor.run(tree);
-  return { html: toHtml(result, { allowDangerousHtml: true }), grafana: occurrences, cameras };
+  return { html: toHtml(result, { allowDangerousHtml: true }), grafana: occurrences, cameras, unavailable };
 }
 
 function aliasRecords(sourceRecords) {
@@ -586,6 +638,61 @@ function tagRecords(sourceRecords, occupied) {
   return records;
 }
 
+function folderRecords(sourceRecords, occupied) {
+  const groups = new Map();
+  for (const record of sourceRecords) {
+    const segments = record.route.split("/").filter(Boolean);
+    if (segments.length < 2) continue;
+    const route = `/${segments[0]}`;
+    if (occupied.has(route)) continue;
+    const directChild = segments.length === 2;
+    if (!directChild) continue;
+    const entries = groups.get(route) ?? [];
+    entries.push(record);
+    groups.set(route, entries);
+  }
+
+  const generated = [];
+  for (const [route, entries] of [...groups].sort()) {
+    if (occupied.has(route)) continue;
+    occupied.add(route);
+    const label = route.slice(1);
+    const cards = entries
+      .sort((left, right) => left.title.localeCompare(right.title))
+      .map((record) => {
+        const topics = record.tags
+          .map((tag) => {
+            const slug = titleKey(tag).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+            return slug ? `<a href="/tags/${slug}">${escapeHtml(tag)}</a>` : "";
+          })
+          .filter(Boolean)
+          .join(" · ");
+        return `<li><h3><a href="${escapeHtml(record.canonicalPath)}">${escapeHtml(record.title)}</a></h3>${topics ? `<p>${topics}</p>` : ""}</li>`;
+      })
+      .join("");
+    generated.push({
+      route,
+      canonicalPath: `${route}/`,
+      canonicalUrl: `${SITE_ORIGIN}${route}/`,
+      physicalPath: `${label}/index.html`,
+      kind: "folder",
+      source: `generated:folder:${label}`,
+      title: `Folder: ${label}`,
+      description: `Browse Verdify Lab ${label} evidence pages.`,
+      html: `<h1>Folder: ${escapeHtml(label)}</h1><ul class="folder-index">${cards}</ul>`,
+      aliases: [],
+      tags: [],
+      cssclasses: ["folder-index-page"],
+      noindex: false,
+      target: "",
+      grafana: [],
+      cameras: [],
+      date: "",
+    });
+  }
+  return generated;
+}
+
 function xmlEscape(value) {
   return escapeHtml(value);
 }
@@ -663,6 +770,22 @@ async function main() {
   const linkIndex = buildLinkIndex(markdownSources);
   const routeBySource = new Map(markdownSources.map((source) => [source.relative, source.route]));
   const assetPaths = new Set(assetRecords.map((record) => record.relative));
+  const plannedRoutes = new Set(["/", "/404", ...routeBySource.values()]);
+  for (const source of markdownSources) {
+    for (const alias of stringList(source.frontmatter.aliases ?? source.frontmatter.alias)) {
+      plannedRoutes.add(normalizeRoute(alias));
+    }
+    for (const tag of stringList(source.frontmatter.tags)) {
+      const slug = titleKey(tag).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      if (slug) plannedRoutes.add(`/tags/${slug}`);
+    }
+    const segments = source.route.split("/").filter(Boolean);
+    if (segments.length >= 2) plannedRoutes.add(`/${segments[0]}`);
+  }
+  plannedRoutes.add("/tags");
+  if (markdownSources.some((source) => /^\/plans\/\d{4}-\d{2}-\d{2}$/.test(source.route))) {
+    plannedRoutes.add("/plans/latest");
+  }
   const records = [];
   const occupied = new Set();
   for (const source of markdownSources) {
@@ -676,6 +799,7 @@ async function main() {
       assetPaths,
       imageMetadata,
       snapshot.files,
+      plannedRoutes,
     );
     const aliases = stringList(source.frontmatter.aliases ?? source.frontmatter.alias);
     const tags = stringList(source.frontmatter.tags);
@@ -697,6 +821,7 @@ async function main() {
       target: "",
       grafana: rendered.grafana,
       cameras: rendered.cameras,
+      unavailable: rendered.unavailable,
       date: source.frontmatter.date ? String(source.frontmatter.date) : "",
     };
     record.canonicalPath = canonicalPath(record);
@@ -706,8 +831,10 @@ async function main() {
 
   const aliasResult = aliasRecords(records);
   const aliases = aliasResult.aliases;
-  const tags = tagRecords(records, new Set([...occupied, ...aliases.map((record) => record.route)]));
-  const allRecords = [...records, ...aliases, ...tags].sort((left, right) => left.route.localeCompare(right.route));
+  const generatedOccupied = new Set([...occupied, ...aliases.map((record) => record.route)]);
+  const folders = folderRecords(records, generatedOccupied);
+  const tags = tagRecords(records, generatedOccupied);
+  const allRecords = [...records, ...aliases, ...folders, ...tags].sort((left, right) => left.route.localeCompare(right.route));
   const routeDigest = createHash("sha256")
     .update(JSON.stringify(allRecords.map(({ route, physicalPath, kind, source }) => ({ route, physicalPath, kind, source }))))
     .digest("hex");
@@ -728,12 +855,14 @@ async function main() {
     aliasCount: aliases.length,
     rollingPlanCompatibility: aliasResult.compatibility,
     tagRouteCount: tags.length,
+    folderRouteCount: folders.length,
     grafanaOccurrenceCount: records.reduce((count, record) => count + record.grafana.length, 0),
     cameraOccurrenceCount: records.reduce((count, record) => count + record.cameras.length, 0),
     cameraLocalFallbackCount: records.reduce(
       (count, record) => count + record.cameras.filter((camera) => camera.available).length,
       0,
     ),
+    unavailableReferenceCount: records.reduce((count, record) => count + record.unavailable.length, 0),
     routeDigest: `sha256:${routeDigest}`,
     snapshotAssetCount: [...snapshot.files.keys()].filter((relative) => !relative.endsWith(".md")).length,
     copiedSnapshotAssetCount: assetRecords.length,
@@ -741,11 +870,11 @@ async function main() {
     policyReplacedAssets: snapshot.files.has("robots.txt") ? ["robots.txt"] : [],
     preservedMediaCount: assetRecords.filter((record) => record.relative.startsWith("static/video/")).length,
     siteShell: {
-      contractVersion: "1.0.0",
-      wwwCommit: "c9c0d56f654d6b9198352f16c620717dbee71612",
-      archiveDigest: "sha256:6600525856f7a32b2fe7b30b4043fc29cdb26346f5b4689b20343cdff4efce61",
-      releaseDigest: "sha256:897f872a6ab8de39f2c55e0d7833d723c00b1c9533673df6309472552956b42c",
-      manifestDigest: "sha256:43ca0600f9a6db8af2a54e93da06d4d2994991018c2344a6c854bc6297ab9458",
+      contractVersion: "1.1.0",
+      wwwCommit: "7febbc479c6ed7d22f829e9c1e7109bc9bc7c6c0",
+      archiveDigest: "sha256:0645773ab3a952727251840e28dc73929a3e42b904450bcc9e7d25d8b03b1c91",
+      releaseDigest: "sha256:779620f2eda4d62677a2d9d61c65e2a1014e34de8cb2cec5008928caeef46a6d",
+      manifestDigest: "sha256:2864debbe67b23cd20ef5aa5fb57e86803ed1a1a9393b993c0acdd9182a6f585",
     },
   };
   await writeFile(RECORDS_PATH, `${JSON.stringify(allRecords)}\n`);
@@ -767,6 +896,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 export {
   aliasRecords,
   cameraSnapshotAsset,
+  folderRecords,
   imageDimensions,
   main,
   normalizeRoute,

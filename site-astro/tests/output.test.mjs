@@ -38,7 +38,7 @@ test("prose, table, download, media, and Grafana occurrence semantics survive", 
   assert.match(html, /class="media-lightbox"/);
   assert.match(html, /data-lightbox-previous/);
   assert.match(html, /data-lab-navigation-toggle/);
-  assert.match(html, /class="lab-page lab-page--home"/);
+  assert.match(html, /class="site-page lab-page lab-page--home"/);
   assert.match(html, /A verified same-origin camera snapshot was not included in this publication/);
   assert.doesNotMatch(html, /<img[^>]+api\.verdify\.ai/i);
   assert.doesNotMatch(html, /src="\/static\/camera-refresh\.js"/);
@@ -71,9 +71,14 @@ test("stage output stays noindex, blocker-labelled, searchable, and auditable", 
   assert.equal(routeManifest.build.grafanaOccurrenceCount, 1);
   assert.equal(routeManifest.build.cameraOccurrenceCount, 1);
   assert.equal(routeManifest.build.cameraLocalFallbackCount, 0);
+  const assetRecords = JSON.parse(await readFile(path.join(ROOT, ".generated", "asset-records.json"), "utf8"));
+  assert.equal(
+    routeManifest.build.copiedSnapshotAssetCount + routeManifest.build.generatedResponsiveImageCount,
+    assetRecords.length,
+  );
   assert.equal(routeManifest.build.approvalEligible, false);
-  assert.equal(routeManifest.build.siteShell.contractVersion, "1.0.0");
-  assert.equal(routeManifest.build.siteShell.releaseDigest, "sha256:897f872a6ab8de39f2c55e0d7833d723c00b1c9533673df6309472552956b42c");
+  assert.equal(routeManifest.build.siteShell.contractVersion, "1.1.0");
+  assert.equal(routeManifest.build.siteShell.releaseDigest, "sha256:779620f2eda4d62677a2d9d61c65e2a1014e34de8cb2cec5008928caeef46a6d");
   assert.equal(routeManifest.build.sanitization.fixtureOnly, true);
   assert.equal(routeManifest.routes.filter((record) => record.source.endsWith(".md")).length, 7);
   await access(path.join(DIST, "pagefind", "pagefind.js"));

@@ -17,7 +17,9 @@ if (build.approvalEligible !== false || build.localEvidenceStatus !== "provision
   throw new Error("stage build must not claim immutable-snapshot approval");
 }
 if (!build.stageGlobalNoindex) throw new Error("stage build must be globally noindex");
-if (build.copiedSnapshotAssetCount !== assets.length) throw new Error("snapshot asset accounting is incomplete");
+if (build.copiedSnapshotAssetCount + build.generatedResponsiveImageCount !== assets.length) {
+  throw new Error("snapshot and generated asset accounting is incomplete");
+}
 if (
   build.rollingPlanCompatibility?.contract !== "verdify.rolling-plan-latest/v1"
   || build.rollingPlanCompatibility?.route !== "/plans/latest"
@@ -29,9 +31,9 @@ if (!build.sanitization.fixtureOnly && build.rollingPlanCompatibility.suppressed
   throw new Error("frozen corpus rolling-plan collision count changed");
 }
 if (
-  build.siteShell?.contractVersion !== "1.0.0"
-  || build.siteShell?.wwwCommit !== "c9c0d56f654d6b9198352f16c620717dbee71612"
-  || build.siteShell?.archiveDigest !== "sha256:6600525856f7a32b2fe7b30b4043fc29cdb26346f5b4689b20343cdff4efce61"
+  build.siteShell?.contractVersion !== "1.1.0"
+  || build.siteShell?.wwwCommit !== "7febbc479c6ed7d22f829e9c1e7109bc9bc7c6c0"
+  || build.siteShell?.archiveDigest !== "sha256:0645773ab3a952727251840e28dc73929a3e42b904450bcc9e7d25d8b03b1c91"
 ) {
   throw new Error("stage output is not bound to the reviewed WWW shell release");
 }
@@ -53,15 +55,21 @@ for (const record of records) {
   }
 }
 
-const assetPaths = new Set(assets.map((asset) => asset.relative));
+const snapshotAssets = assets.filter((asset) => typeof asset.relative === "string");
+const generatedAssets = assets.filter((asset) => typeof asset.path === "string");
+if (snapshotAssets.length !== build.copiedSnapshotAssetCount || generatedAssets.length !== build.generatedResponsiveImageCount) {
+  throw new Error("snapshot and generated asset classes are not independently accounted");
+}
+const assetPaths = new Set(snapshotAssets.map((asset) => asset.relative));
 for (const asset of assets) {
-  const output = path.join(DIST_ROOT, ...asset.relative.split("/"));
+  const relative = asset.relative ?? asset.path;
+  const output = path.join(DIST_ROOT, ...relative.split("/"));
   await access(output);
   if ((await sha256File(output)) !== asset.sha256) {
-    throw new Error(`snapshot asset bytes changed during the Astro build: ${asset.relative}`);
+    throw new Error(`published asset bytes changed during the Astro build: ${relative}`);
   }
 }
-if (build.preservedMediaCount !== assets.filter((asset) => asset.relative.startsWith("static/video/")).length) {
+if (build.preservedMediaCount !== snapshotAssets.filter((asset) => asset.relative.startsWith("static/video/")).length) {
   throw new Error("preserved media accounting is incomplete");
 }
 if (!build.sanitization.fixtureOnly) {
@@ -69,7 +77,7 @@ if (!build.sanitization.fixtureOnly) {
     throw new Error("stage output media count does not match the sanitization attestation");
   }
   const referencedSegments = new Set();
-  const playlists = assets.filter((asset) => asset.relative.startsWith("static/video/") && asset.relative.endsWith(".m3u8"));
+  const playlists = snapshotAssets.filter((asset) => asset.relative.startsWith("static/video/") && asset.relative.endsWith(".m3u8"));
   for (const playlist of playlists) {
     const source = await readFile(path.join(DIST_ROOT, ...playlist.relative.split("/")), "utf8");
     for (const line of source.split(/\r?\n/u).map((value) => value.trim()).filter((value) => value && !value.startsWith("#"))) {
@@ -83,7 +91,7 @@ if (!build.sanitization.fixtureOnly) {
       if (resolved.endsWith(".ts")) referencedSegments.add(resolved);
     }
   }
-  const allSegments = assets.filter((asset) => asset.relative.startsWith("static/video/") && asset.relative.endsWith(".ts"));
+  const allSegments = snapshotAssets.filter((asset) => asset.relative.startsWith("static/video/") && asset.relative.endsWith(".ts"));
   if (allSegments.some((asset) => !referencedSegments.has(asset.relative))) {
     throw new Error("stage output contains an orphaned HLS segment");
   }

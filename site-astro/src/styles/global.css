@@ -544,6 +544,54 @@ kbd {
   grid-column: 1 / -1;
 }
 
+.media-unavailable {
+  display: grid;
+  min-height: 9rem;
+  place-items: center;
+  margin: 1rem 0;
+  padding: 1.25rem;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--fog);
+  color: var(--slate);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.unavailable-reference {
+  color: var(--slate);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  text-decoration-color: var(--line-strong);
+}
+
+.folder-index {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 1.5rem 0;
+  padding: 0;
+  gap: 1rem;
+  list-style: none;
+}
+
+.folder-index > li {
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.folder-index h3,
+.folder-index p {
+  margin: 0;
+}
+
+.folder-index p {
+  margin-top: 0.55rem;
+  font-size: 0.82rem;
+}
+
 .home-launch-video {
   margin: 2rem 0 4rem;
   padding: clamp(1rem, 2vw, 1.5rem);
@@ -1156,7 +1204,8 @@ kbd {
   .media-grid-3,
   .vision-gallery,
   .home-hero__media,
-  .verdify-contact-grid {
+  .verdify-contact-grid,
+  .folder-index {
     grid-template-columns: 1fr !important;
   }
 

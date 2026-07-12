@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import {
   aliasRecords,
   cameraSnapshotAsset,
+  folderRecords,
   imageDimensions,
   normalizeRoute,
   renderMarkdown,
@@ -126,6 +127,23 @@ test("camera rendering rewrites verified artifacts and removes the legacy refres
   assert.equal(rendered.cameras[0].available, true);
 });
 
+test("missing local routes and images become explicit non-broken publication states", async () => {
+  const rendered = await renderMarkdown(
+    "[Missing plan](/plans/2099-01-01)\n\n![Missing proof](/static/vision/missing.jpg)",
+    { relative: "index.md" },
+    new Map(),
+    new Map([["index.md", "/"]]),
+    new Set(),
+    new Map(),
+    new Map(),
+    new Set(["/"]),
+  );
+  assert.match(rendered.html, /class="unavailable-reference"/);
+  assert.match(rendered.html, /class="media-unavailable" role="img"/);
+  assert.doesNotMatch(rendered.html, /href="\/plans\/2099-01-01"|src="\/static\/vision\/missing\.jpg"/);
+  assert.deepEqual(rendered.unavailable.map((item) => item.kind), ["link", "image"]);
+});
+
 test("rolling latest is generated once from the newest dated plan and every other alias collision fails", () => {
   const record = (date, aliases = ["/plans/latest"]) => ({
     route: `/plans/${date}`,
@@ -146,6 +164,18 @@ test("rolling latest is generated once from the newest dated plan and every othe
     () => aliasRecords([record("2026-06-07", ["/duplicate"]), record("2026-07-12", ["/duplicate"])]),
     /duplicate alias/,
   );
+});
+
+test("missing top-level folder indexes preserve direct child and breadcrumb discovery", () => {
+  const records = [
+    { route: "/data/forecast", canonicalPath: "/data/forecast", title: "Forecast", tags: ["weather"] },
+    { route: "/data/plans", canonicalPath: "/data/plans", title: "Plans", tags: ["planning"] },
+    { route: "/water/irrigation", canonicalPath: "/water/irrigation", title: "Irrigation", tags: [] },
+  ];
+  const folders = folderRecords(records, new Set(records.map((record) => record.route)));
+  assert.deepEqual(folders.map((record) => record.route), ["/data", "/water"]);
+  assert.match(folders[0].html, /href="\/data\/forecast"/);
+  assert.match(folders[0].html, /href="\/tags\/planning"/);
 });
 
 test("frontmatter parser preserves nested YAML and rejects ambiguity", () => {
