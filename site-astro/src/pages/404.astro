@@ -1,0 +1,25 @@
+---
+import LabPage from "../layouts/LabPage.astro";
+import type { ContentRecord } from "../lib/content";
+
+const record: ContentRecord = {
+  route: "/404",
+  canonicalPath: "/404",
+  canonicalUrl: "https://lab-stage.verdify.ai/404",
+  physicalPath: "404.html",
+  kind: "page",
+  source: "generated:404",
+  title: "Evidence page not found",
+  description: "The requested Verdify Lab evidence route does not exist.",
+  html: '<p>The requested evidence route does not exist. Return to the <a href="/">Lab home page</a> or use search.</p>',
+  aliases: [],
+  tags: [],
+  cssclasses: [],
+  noindex: true,
+  target: "",
+  grafana: [],
+  date: "",
+};
+---
+
+<LabPage record={record} />

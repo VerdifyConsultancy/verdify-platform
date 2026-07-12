@@ -1,0 +1,90 @@
+---
+import "../../.generated/site-shell-root/vendor/verdify-site-shell/styles/global.css";
+import "katex/dist/katex.min.css";
+import "../styles/global.css";
+
+import Breadcrumbs from "../../.generated/site-shell-root/vendor/verdify-site-shell/components/Breadcrumbs.astro";
+import Footer from "../../.generated/site-shell-root/vendor/verdify-site-shell/components/Footer.astro";
+import Header from "../../.generated/site-shell-root/vendor/verdify-site-shell/components/Header.astro";
+import LabNavigation from "../components/LabNavigation.astro";
+import { navigation } from "../data/navigation";
+import { build, latestPlan, type ContentRecord } from "../lib/content";
+
+interface Props {
+  record: ContentRecord;
+}
+
+const { record } = Astro.props;
+const hasHeading = /<h1(?:\s|>)/i.test(record.html);
+const robots = build.stageGlobalNoindex || record.noindex || record.kind === "alias" ? "noindex,follow" : "index,follow";
+const groups = navigation(latestPlan?.canonicalPath ?? "/data/plans/");
+const classes = ["lab-article", ...record.cssclasses].join(" ");
+const corporateOrigin = "https://verdify.ai";
+const shellProps = {
+  currentSite: "lab" as const,
+  corporateOrigin,
+  labOrigin: build.siteOrigin,
+  brand: "lab" as const,
+  homeHref: "/",
+};
+const segments = record.route.split("/").filter(Boolean);
+const breadcrumbItems = [
+  { name: "Lab", href: "/" },
+  ...segments.map((segment, index) => ({
+    name: index === segments.length - 1 ? record.title : segment.replaceAll("-", " "),
+    href: `/${segments.slice(0, index + 1).join("/")}`,
+  })),
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={record.description || "Verdify public greenhouse evidence."} />
+    <meta name="robots" content={robots} />
+    <link rel="icon" href="/assets/verdify-lab-lockup.svg" type="image/svg+xml" />
+    <link rel="canonical" href={record.kind === "alias" ? `${build.siteOrigin}${record.target}` : record.canonicalUrl} />
+    <link rel="alternate" type="application/rss+xml" href="/rss.xml" title="Verdify Lab" />
+    {record.kind === "alias" && <meta http-equiv="refresh" content={`0; URL='${record.target}'`} />}
+    <title>{record.title} — Verdify Lab</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#lab-content">Skip to Lab content</a>
+    <Header {...shellProps} />
+    <div class="stage-banner" role="status">
+      Stage preview · globally noindex · known frozen-baseline integrity blockers remain open · no production authority
+    </div>
+    {record.route !== "/" && <Breadcrumbs items={breadcrumbItems} {...shellProps} />}
+    <div class="lab-frame">
+      <LabNavigation groups={groups} currentRoute={record.route} />
+      <main id="lab-content" class="lab-main" tabindex="-1">
+        <article class={classes} data-pagefind-body data-pagefind-meta={`title:${record.title}`}>
+          {!hasHeading && <h1>{record.title}</h1>}
+          {
+            record.kind === "alias" ? (
+              <div class="redirect-card">
+                <p>This route moved.</p>
+                <a href={record.target}>Continue to {record.target}</a>
+              </div>
+            ) : (
+              <div set:html={record.html} />
+            )
+          }
+          {
+            record.tags.length > 0 && (
+              <footer class="article-tags" aria-label="Topics">
+                {record.tags.map((tag) => <a href={`/tags/${tag.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}>{tag}</a>)}
+              </footer>
+            )
+          }
+        </article>
+        <p class="stage-provenance">
+          Stage snapshot <code>{build.snapshotManifestDigest.slice(0, 23)}…</code> · {build.localEvidenceStatus} · not approval evidence
+        </p>
+      </main>
+    </div>
+    <Footer {...shellProps} />
+  </body>
+</html>

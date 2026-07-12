@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: verdify-platform
+
+resources:
+  - ../../components/lab-astro-stage
+  - ingressroute.yaml
+
+images:
+  # Integration replaces this visibly non-deployable digest with the exact
+  # fleet-origin digest produced by the in-cluster Kaniko path.
+  - name: registry.vallery.net/verdifyconsultancy/verdify-lab-astro
+    newName: registry.vallery.net/verdifyconsultancy/verdify-lab-astro
+    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+
+labels:
+  - pairs:
+      app.kubernetes.io/instance: verdify-platform-lab-stage
+      verdify.ai/environment: lab-stage
+    includeSelectors: false
