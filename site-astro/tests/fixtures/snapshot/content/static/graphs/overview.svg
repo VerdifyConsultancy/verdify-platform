@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 180" role="img" aria-labelledby="title desc">
+  <title id="title">Representative greenhouse trend</title>
+  <desc id="desc">A rising and falling sample line used by the offline build fixture.</desc>
+  <rect width="640" height="180" fill="#f4f7f4"/>
+  <path d="M20 140 C120 120 170 40 270 70 S430 150 620 35" fill="none" stroke="#0e5a43" stroke-width="8"/>
+</svg>

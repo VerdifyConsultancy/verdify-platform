@@ -1,0 +1,18 @@
+---
+import LabPage from "../layouts/LabPage.astro";
+import { records, type ContentRecord } from "../lib/content";
+
+export function getStaticPaths() {
+  return records
+    .filter((record) => record.route !== "/")
+    .map((record) => ({ params: { route: record.route.slice(1) }, props: { record } }));
+}
+
+interface Props {
+  record: ContentRecord;
+}
+
+const { record } = Astro.props;
+---
+
+<LabPage record={record} />
