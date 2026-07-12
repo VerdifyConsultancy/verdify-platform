@@ -7,6 +7,8 @@ import Breadcrumbs from "../../.generated/site-shell-root/vendor/verdify-site-sh
 import Footer from "../../.generated/site-shell-root/vendor/verdify-site-shell/components/Footer.astro";
 import Header from "../../.generated/site-shell-root/vendor/verdify-site-shell/components/Header.astro";
 import LabNavigation from "../components/LabNavigation.astro";
+import MediaLightbox from "../components/MediaLightbox.astro";
+import PageEnhancements from "../components/PageEnhancements.astro";
 import { navigation } from "../data/navigation";
 import { build, latestPlan, type ContentRecord } from "../lib/content";
 
@@ -19,6 +21,18 @@ const hasHeading = /<h1(?:\s|>)/i.test(record.html);
 const robots = build.stageGlobalNoindex || record.noindex || record.kind === "alias" ? "noindex,follow" : "index,follow";
 const groups = navigation(latestPlan?.canonicalPath ?? "/data/plans/");
 const classes = ["lab-article", ...record.cssclasses].join(" ");
+const pageFamily = (() => {
+  if (record.route === "/") return "home";
+  if (record.route === "/data/plans") return "archive";
+  if (record.route === "/data/forecast") return "forecast";
+  if (record.route === "/data/operations") return "operations";
+  if (record.route === "/start/evidence") return "evidence";
+  if (record.route === "/start/contact") return "contact";
+  if (record.route.startsWith("/plans/")) return "plan";
+  if (record.route.startsWith("/reference/")) return "reference";
+  if (record.route.startsWith("/greenhouse/")) return "greenhouse";
+  return "article";
+})();
 const corporateOrigin = "https://verdify.ai";
 const shellProps = {
   currentSite: "lab" as const,
@@ -50,7 +64,7 @@ const breadcrumbItems = [
     {record.kind === "alias" && <meta http-equiv="refresh" content={`0; URL='${record.target}'`} />}
     <title>{record.title} — Verdify Lab</title>
   </head>
-  <body>
+  <body class={`lab-page lab-page--${pageFamily}`} data-page-family={pageFamily}>
     <a class="skip-link" href="#lab-content">Skip to Lab content</a>
     <Header {...shellProps} />
     <div class="stage-banner" role="status">
@@ -85,6 +99,8 @@ const breadcrumbItems = [
         </p>
       </main>
     </div>
+    <MediaLightbox />
+    <PageEnhancements pageFamily={pageFamily} />
     <Footer {...shellProps} />
   </body>
 </html>

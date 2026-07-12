@@ -29,10 +29,16 @@ test("prose, table, download, media, and Grafana occurrence semantics survive", 
   assert.match(html, /<table>/);
   assert.match(html, /greenhouse-evidence\.csv/);
   assert.match(html, /static\/graphs\/overview\.svg/);
+  assert.match(html, /src="\/static\/graphs\/overview\.svg"[^>]+width="640"[^>]+height="180"/);
+  assert.match(html, /sizes="\(max-width: 620px\)/);
   assert.match(html, /class="grafana-evidence"/);
   assert.match(html, /data-iframe-src="https:\/\/graphs\.verdify\.ai\/d-solo\//);
   assert.match(html, /data-image-src="https:\/\/graphs\.verdify\.ai\/render\/d-solo\//);
   assert.doesNotMatch(html, /<iframe[^>]+graphs\.verdify\.ai/i);
+  assert.match(html, /class="media-lightbox"/);
+  assert.match(html, /data-lightbox-previous/);
+  assert.match(html, /data-lab-navigation-toggle/);
+  assert.match(html, /class="lab-page lab-page--home"/);
 });
 
 test("stage output stays noindex, blocker-labelled, searchable, and auditable", async () => {

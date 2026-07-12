@@ -14,6 +14,7 @@ import remarkRehype from "remark-rehype";
 import { unified } from "unified";
 import { visit } from "unist-util-visit";
 import YAML from "yaml";
+import sharp from "sharp";
 
 import { verifySnapshot } from "./lib/snapshot.mjs";
 
@@ -157,10 +158,155 @@ function remarkRewriteLocalLinks(source, routeBySource) {
   };
 }
 
+function rehypeRewriteRelativeReferences(source, routeBySource, assetPaths) {
+  return () => (tree) => {
+    visit(tree, "element", (node) => {
+      const property = node.tagName === "a" ? "href" : ["img", "source", "video"].includes(node.tagName) ? "src" : null;
+      if (!property) return;
+      const raw = node.properties?.[property];
+      if (typeof raw !== "string" || /^(?:[a-z]+:|\/|#)/i.test(raw)) return;
+      const match = /^([^?#]*)([?#].*)?$/u.exec(raw);
+      const pathname = match?.[1] ?? "";
+      const suffix = match?.[2] ?? "";
+      if (!pathname) return;
+      const resolved = path.posix.normalize(path.posix.join(path.posix.dirname(source.relative), pathname));
+      const sourceCandidates = pathname.endsWith(".md")
+        ? [resolved]
+        : [resolved, `${resolved}.md`, `${resolved.replace(/\/$/, "")}/index.md`];
+      for (const candidate of sourceCandidates) {
+        const route = routeBySource.get(candidate);
+        if (route) {
+          node.properties[property] = `${route}${suffix}`;
+          return;
+        }
+      }
+      if (assetPaths.has(resolved)) node.properties[property] = `/${resolved}${suffix}`;
+    });
+  };
+}
+
 function grafanaRenderUrl(liveUrl) {
   const parsed = new URL(liveUrl);
   parsed.pathname = parsed.pathname.replace(/^\/d-solo\//, "/render/d-solo/");
   return parsed.toString();
+}
+
+function imageDimensions(buffer, relative = "") {
+  if (buffer.length >= 24 && buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) {
+    return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
+  }
+  if (buffer.length >= 4 && buffer[0] === 0xff && buffer[1] === 0xd8) {
+    const startOfFrame = new Set([0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf]);
+    let offset = 2;
+    while (offset + 8 < buffer.length) {
+      while (offset < buffer.length && buffer[offset] !== 0xff) offset += 1;
+      while (offset < buffer.length && buffer[offset] === 0xff) offset += 1;
+      if (offset >= buffer.length) break;
+      const marker = buffer[offset];
+      offset += 1;
+      if (marker === 0xd8 || marker === 0x01) continue;
+      if (marker === 0xd9 || marker === 0xda || offset + 2 > buffer.length) break;
+      const length = buffer.readUInt16BE(offset);
+      if (length < 2 || offset + length > buffer.length) break;
+      if (startOfFrame.has(marker) && length >= 7) {
+        return { width: buffer.readUInt16BE(offset + 5), height: buffer.readUInt16BE(offset + 3) };
+      }
+      offset += length;
+    }
+  }
+  if (/\.svg$/i.test(relative)) {
+    const source = buffer.toString("utf8", 0, Math.min(buffer.length, 128 * 1024));
+    const open = /<svg\b[^>]*>/i.exec(source)?.[0] ?? "";
+    const width = /\bwidth=["']([0-9.]+)(?:px)?["']/i.exec(open)?.[1];
+    const height = /\bheight=["']([0-9.]+)(?:px)?["']/i.exec(open)?.[1];
+    if (width && height) return { width: Math.round(Number(width)), height: Math.round(Number(height)) };
+    const viewBox = /\bviewBox=["']\s*[-0-9.]+\s+[-0-9.]+\s+([0-9.]+)\s+([0-9.]+)\s*["']/i.exec(open);
+    if (viewBox) return { width: Math.round(Number(viewBox[1])), height: Math.round(Number(viewBox[2])) };
+  }
+  return null;
+}
+
+async function buildResponsiveImage(entry, relative, sourceDigest) {
+  if (!/\.(?:jpe?g|png)$/i.test(relative)) return null;
+  const metadata = await sharp(entry.absolute, { failOn: "warning", limitInputPixels: 80_000_000 }).metadata();
+  if (!metadata.width || !metadata.height) return null;
+  const rotated = [5, 6, 7, 8].includes(metadata.orientation ?? 1);
+  const width = rotated ? metadata.height : metadata.width;
+  const height = rotated ? metadata.width : metadata.height;
+  const variants = [];
+  for (const targetWidth of [480, 960, 1440]) {
+    if (targetWidth >= width) continue;
+    const relativeOutput = `_media/${sourceDigest.slice(0, 24)}-${targetWidth}.webp`;
+    const destination = path.join(PUBLIC_ROOT, ...relativeOutput.split("/"));
+    await mkdir(path.dirname(destination), { recursive: true });
+    await sharp(entry.absolute, { failOn: "warning", limitInputPixels: 80_000_000 })
+      .rotate()
+      .resize({ width: targetWidth, withoutEnlargement: true })
+      .webp({ quality: 82, effort: 5 })
+      .toFile(destination);
+    const output = await readFile(destination);
+    variants.push({
+      path: relativeOutput,
+      width: targetWidth,
+      height: Math.max(1, Math.round((height / width) * targetWidth)),
+      bytes: output.length,
+      sha256: createHash("sha256").update(output).digest("hex"),
+      generatedFrom: relative,
+    });
+  }
+  return { width, height, variants };
+}
+
+function rehypeImageMetadata(metadata) {
+  return () => (tree) => {
+    visit(tree, "element", (node) => {
+      if (node.tagName !== "img") return;
+      const rawSource = node.properties?.src;
+      if (typeof rawSource !== "string") return;
+      let pathname;
+      try {
+        const parsed = new URL(rawSource, SITE_ORIGIN);
+        if (parsed.origin !== SITE_ORIGIN) {
+          if ((node.properties?.className ?? []).includes("camera-snapshot")) {
+            node.properties.width ??= 704;
+            node.properties.height ??= 480;
+          }
+          return;
+        }
+        pathname = decodeURIComponent(parsed.pathname).replace(/^\//, "");
+      } catch {
+        return;
+      }
+      const dimensions = metadata.get(pathname);
+      if (!dimensions) return;
+      node.properties.width ??= dimensions.width;
+      node.properties.height ??= dimensions.height;
+      node.properties.decoding ??= "async";
+      node.properties.loading ??= "lazy";
+      node.properties.sizes ??= "(max-width: 620px) calc(100vw - 2rem), (max-width: 860px) 50vw, 806px";
+      const candidates = [
+        ...(dimensions.variants ?? []).map((variant) => ({ source: `/${variant.path}`, width: variant.width })),
+        { source: `/${pathname}`, width: dimensions.width },
+      ];
+      if (pathname.startsWith("static/photos/") && !pathname.startsWith("static/photos/full/")) {
+        const fullPath = `static/photos/full/${path.posix.basename(pathname)}`;
+        const fullDimensions = metadata.get(fullPath);
+        if (fullDimensions && fullDimensions.width > dimensions.width) {
+          candidates.push(
+            ...(fullDimensions.variants ?? []).map((variant) => ({ source: `/${variant.path}`, width: variant.width })),
+            { source: `/${fullPath}`, width: fullDimensions.width },
+          );
+        }
+      }
+      const byWidth = new Map();
+      for (const candidate of candidates.sort((left, right) => left.width - right.width)) {
+        byWidth.set(candidate.width, candidate);
+      }
+      if (byWidth.size > 1) {
+        node.properties.srcSet = [...byWidth.values()].map((candidate) => `${candidate.source} ${candidate.width}w`).join(", ");
+      }
+    });
+  };
 }
 
 function rehypeGrafanaEvidence(occurrences) {
@@ -212,7 +358,7 @@ function rehypeGrafanaEvidence(occurrences) {
   };
 }
 
-async function renderMarkdown(markdown, source, linkIndex, routeBySource) {
+async function renderMarkdown(markdown, source, linkIndex, routeBySource, assetPaths, imageMetadata) {
   const occurrences = [];
   const processor = unified()
     .use(remarkParse)
@@ -221,8 +367,10 @@ async function renderMarkdown(markdown, source, linkIndex, routeBySource) {
     .use(remarkRewriteLocalLinks(source, routeBySource))
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeRaw)
+    .use(rehypeRewriteRelativeReferences(source, routeBySource, assetPaths))
     .use(rehypeSlug)
     .use(rehypeKatex)
+    .use(rehypeImageMetadata(imageMetadata))
     .use(rehypeGrafanaEvidence(occurrences));
   const tree = processor.parse(expandWikilinks(markdown, source, linkIndex));
   const result = await processor.run(tree);
@@ -410,6 +558,8 @@ async function main() {
   const markdownSources = [];
   const excludedDrafts = [];
   const assetRecords = [];
+  const imageMetadata = new Map();
+  const responsiveAssets = [];
   for (const [relative, entry] of snapshot.files) {
     if (relative.endsWith(".md")) {
       const source = await readFile(entry.absolute, "utf8");
@@ -424,17 +574,26 @@ async function main() {
       await mkdir(path.dirname(destination), { recursive: true });
       await cp(entry.absolute, destination, { dereference: false, force: false });
       assetRecords.push({ relative, sha256: snapshot.manifest.files[relative], bytes: entry.size });
+      if (/\.(?:jpe?g|png|svg)$/i.test(relative)) {
+        const responsive = await buildResponsiveImage(entry, relative, snapshot.manifest.files[relative]);
+        const dimensions = responsive ?? imageDimensions(await readFile(entry.absolute), relative);
+        if (dimensions?.width > 0 && dimensions?.height > 0) {
+          imageMetadata.set(relative, dimensions);
+          responsiveAssets.push(...(dimensions.variants ?? []));
+        }
+      }
     }
   }
   markdownSources.sort((left, right) => left.relative.localeCompare(right.relative));
   const linkIndex = buildLinkIndex(markdownSources);
   const routeBySource = new Map(markdownSources.map((source) => [source.relative, source.route]));
+  const assetPaths = new Set(assetRecords.map((record) => record.relative));
   const records = [];
   const occupied = new Set();
   for (const source of markdownSources) {
     if (occupied.has(source.route)) throw new Error(`duplicate source route: ${source.route}`);
     occupied.add(source.route);
-    const rendered = await renderMarkdown(source.markdown, source, linkIndex, routeBySource);
+    const rendered = await renderMarkdown(source.markdown, source, linkIndex, routeBySource, assetPaths, imageMetadata);
     const aliases = stringList(source.frontmatter.aliases ?? source.frontmatter.alias);
     const tags = stringList(source.frontmatter.tags);
     const title = String(source.frontmatter.title ?? path.posix.basename(source.relative, ".md"));
@@ -489,6 +648,7 @@ async function main() {
     routeDigest: `sha256:${routeDigest}`,
     snapshotAssetCount: [...snapshot.files.keys()].filter((relative) => !relative.endsWith(".md")).length,
     copiedSnapshotAssetCount: assetRecords.length,
+    generatedResponsiveImageCount: responsiveAssets.length,
     policyReplacedAssets: snapshot.files.has("robots.txt") ? ["robots.txt"] : [],
     preservedMediaCount: assetRecords.filter((record) => record.relative.startsWith("static/video/")).length,
     siteShell: {
@@ -500,7 +660,7 @@ async function main() {
     },
   };
   await writeFile(RECORDS_PATH, `${JSON.stringify(allRecords)}\n`);
-  await writeFile(ASSETS_PATH, `${JSON.stringify(assetRecords)}\n`);
+  await writeFile(ASSETS_PATH, `${JSON.stringify([...assetRecords, ...responsiveAssets])}\n`);
   await writeFile(BUILD_PATH, `${JSON.stringify(build, null, 2)}\n`);
   await writeIndexes(allRecords, build);
   process.stdout.write(
@@ -515,4 +675,4 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   });
 }
 
-export { aliasRecords, main, normalizeRoute, routeFromSource, splitFrontmatter };
+export { aliasRecords, imageDimensions, main, normalizeRoute, routeFromSource, splitFrontmatter };

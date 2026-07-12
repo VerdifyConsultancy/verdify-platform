@@ -5,7 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { aliasRecords, normalizeRoute, routeFromSource, splitFrontmatter } from "../scripts/compile-snapshot.mjs";
+import { aliasRecords, imageDimensions, normalizeRoute, routeFromSource, splitFrontmatter } from "../scripts/compile-snapshot.mjs";
 import { verifySanitizationAttestation, verifySnapshot } from "../scripts/lib/snapshot.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -111,6 +111,12 @@ test("frontmatter parser preserves nested YAML and rejects ambiguity", () => {
   assert.deepEqual(frontmatter.aliases, ["old"]);
   assert.equal(body, "# Body\n");
   assert.throws(() => splitFrontmatter("---\ntitle: one\ntitle: two\n---\n", "bad.md"), /invalid YAML/);
+});
+
+test("image dimensions are read from bounded static image headers", () => {
+  const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630"></svg>');
+  assert.deepEqual(imageDimensions(svg, "evidence.svg"), { width: 1200, height: 630 });
+  assert.equal(imageDimensions(Buffer.from("not an image"), "evidence.bin"), null);
 });
 
 test("snapshot verification refuses tampering, additions, and links", async (context) => {
