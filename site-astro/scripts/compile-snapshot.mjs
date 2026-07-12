@@ -16,6 +16,14 @@ import { SKIP, visit } from "unist-util-visit";
 import YAML from "yaml";
 import sharp from "sharp";
 
+import {
+  discoverCurrentMediaOccurrence,
+  discoverGraphOccurrence,
+  loadSelectedOccurrenceRelease,
+  materializeOccurrenceBlobs,
+  occurrenceStateIndex,
+  staticOccurrenceManifest,
+} from "./lib/occurrence-release.mjs";
 import { verifySnapshot } from "./lib/snapshot.mjs";
 
 const SCRIPT_ROOT = path.dirname(fileURLToPath(import.meta.url));
@@ -419,9 +427,65 @@ function rehypeCameraSnapshots(snapshotFiles, occurrences) {
   };
 }
 
-function rehypeGrafanaEvidence(occurrences) {
-  return () => (tree) => {
+function rehypeSpecialistEvidence({ route, grafanaOccurrences, currentMediaOccurrences, selectedOccurrenceState }) {
+  return (tree) => {
+    let graphOrdinal = 0;
+    let mediaOrdinal = 0;
     visit(tree, "element", (node, index, parent) => {
+      if (node.tagName === "script" && node.properties?.src === "/static/camera-refresh.js" && parent && index !== undefined) {
+        parent.children.splice(index, 1);
+        return [SKIP, index];
+      }
+      if (node.tagName === "img") {
+        const rawSource = node.properties?.src;
+        if (typeof rawSource !== "string") return;
+        const discovered = discoverCurrentMediaOccurrence({
+          route,
+          ordinal: mediaOrdinal,
+          sourceUrl: rawSource,
+          semanticRole: typeof node.properties?.alt === "string" ? node.properties.alt : "Current greenhouse camera",
+        });
+        mediaOrdinal += 1;
+        if (discovered === null) return;
+        currentMediaOccurrences.push(discovered);
+        const selectedCandidate = selectedOccurrenceState.currentMedia.get(discovered.occurrenceId);
+        const selected = selectedCandidate?.sourceProvenanceSha256 === discovered.sourceProvenanceSha256
+          ? selectedCandidate
+          : null;
+        if (selected?.fallback) {
+          node.properties.src = selected.fallback.publicPath;
+          node.properties.width = selected.fallback.width;
+          node.properties.height = selected.fallback.height;
+          node.properties["data-occurrence-id"] = discovered.occurrenceId;
+          node.properties["data-current-media-target"] = discovered.stableTarget;
+          node.properties["data-fallback-verified-at"] = selected.fallback.verifiedAt;
+          if (parent?.tagName === "a") parent.properties.href = selected.fallback.publicPath;
+        } else {
+          if (!parent || index === undefined) throw new Error("current media occurrence has no render parent");
+          if (parent.tagName === "a") {
+            parent.tagName = "div";
+            parent.properties = { className: ["current-media-evidence__wrapper"] };
+          }
+          parent.children[index] = {
+            type: "element",
+            tagName: "figure",
+            properties: {
+              className: ["current-media-evidence", "current-media-evidence--pending"],
+              "data-occurrence-id": discovered.occurrenceId,
+              "data-current-media-target": discovered.stableTarget,
+            },
+            children: [
+              {
+                type: "element",
+                tagName: "figcaption",
+                properties: { className: ["current-media-evidence__status"] },
+                children: [{ type: "text", value: "Verified local camera fallback is pending." }],
+              },
+            ],
+          };
+        }
+        return;
+      }
       if (node.tagName !== "iframe" || !parent || index === undefined) return;
       const rawSource = node.properties?.src;
       if (typeof rawSource !== "string") return;
@@ -436,33 +500,58 @@ function rehypeGrafanaEvidence(occurrences) {
         throw new Error("unsupported Grafana occurrence URL");
       }
       const liveUrl = parsed.toString();
-      const renderUrl = grafanaRenderUrl(liveUrl);
       const title = typeof node.properties?.title === "string" ? node.properties.title : "Greenhouse evidence graph";
-      occurrences.push({ liveUrl, renderUrl, title });
+      const discovered = discoverGraphOccurrence({ route, ordinal: graphOrdinal, liveUrl, title });
+      graphOrdinal += 1;
+      const selected = selectedOccurrenceState.graphs.get(discovered.occurrenceId);
+      grafanaOccurrences.push(discovered);
+      const fallback = selected?.fallback;
+      const status = fallback
+        ? `${selected.state === "retained-last-known-good" ? "Last-known-good" : "Verified"} graph fallback · ${fallback.verifiedAt}`
+        : "Verified local graph fallback is pending for this stage snapshot.";
+      const children = [];
+      if (fallback) {
+        children.push({
+          type: "element",
+          tagName: "img",
+          properties: {
+            className: ["grafana-evidence__image"],
+            src: fallback.publicPath,
+            alt: title,
+            width: fallback.width,
+            height: fallback.height,
+            loading: "lazy",
+            decoding: "async",
+          },
+          children: [],
+        });
+      }
+      children.push(
+        {
+          type: "element",
+          tagName: "figcaption",
+          properties: { className: ["grafana-evidence__status"] },
+          children: [{ type: "text", value: status }],
+        },
+        {
+          type: "element",
+          tagName: "a",
+          properties: { href: selected?.liveUrl ?? liveUrl, rel: ["noopener", "noreferrer"], target: "_blank" },
+          children: [{ type: "text", value: "Open interactive graph" }],
+        },
+      );
       parent.children[index] = {
         type: "element",
         tagName: "figure",
         properties: {
           className: ["grafana-evidence"],
+          "data-occurrence-id": discovered.occurrenceId,
           "data-iframe-src": liveUrl,
           "data-live-src": liveUrl,
-          "data-image-src": renderUrl,
+          ...(fallback ? { "data-image-src": fallback.publicPath, "data-image-sha256": fallback.sha256 } : {}),
           "data-title": title,
         },
-        children: [
-          {
-            type: "element",
-            tagName: "div",
-            properties: { className: ["grafana-evidence__status"] },
-            children: [{ type: "text", value: "Verified local graph fallback is pending for this stage snapshot." }],
-          },
-          {
-            type: "element",
-            tagName: "a",
-            properties: { href: liveUrl, rel: ["noopener", "noreferrer"], target: "_blank" },
-            children: [{ type: "text", value: "Open interactive graph" }],
-          },
-        ],
+        children,
       };
     });
   };
@@ -477,9 +566,10 @@ async function renderMarkdown(
   imageMetadata,
   snapshotFiles,
   availableRoutes = new Set(routeBySource.values()),
+  selectedOccurrenceState = { graphs: new Map(), currentMedia: new Map() },
 ) {
-  const occurrences = [];
-  const cameras = [];
+  const grafanaOccurrences = [];
+  const currentMediaOccurrences = [];
   const unavailable = [];
   const processor = unified()
     .use(remarkParse)
@@ -492,12 +582,21 @@ async function renderMarkdown(
     .use(rehypeUnavailableLocalReferences(assetPaths, availableRoutes, unavailable))
     .use(rehypeSlug)
     .use(rehypeKatex)
-    .use(rehypeCameraSnapshots(snapshotFiles, cameras))
-    .use(rehypeImageMetadata(imageMetadata))
-    .use(rehypeGrafanaEvidence(occurrences));
+    .use(rehypeSpecialistEvidence, {
+      route: source.route,
+      grafanaOccurrences,
+      currentMediaOccurrences,
+      selectedOccurrenceState,
+    })
+    .use(rehypeImageMetadata(imageMetadata));
   const tree = processor.parse(expandWikilinks(markdown, source, linkIndex));
   const result = await processor.run(tree);
-  return { html: toHtml(result, { allowDangerousHtml: true }), grafana: occurrences, cameras, unavailable };
+  return {
+    html: toHtml(result, { allowDangerousHtml: true }),
+    grafana: grafanaOccurrences,
+    currentMedia: currentMediaOccurrences,
+    unavailable,
+  };
 }
 
 function aliasRecords(sourceRecords) {
@@ -532,6 +631,8 @@ function aliasRecords(sourceRecords) {
         target: record.canonicalPath,
         grafana: [],
         cameras: [],
+        currentMedia: [],
+        unavailable: [],
         date: record.date,
       };
       if (aliases.has(route)) throw new Error(`duplicate alias is not an approved rolling-plan alias: ${route}`);
@@ -560,6 +661,8 @@ function aliasRecords(sourceRecords) {
       target: latest.canonicalPath,
       grafana: [],
       cameras: [],
+      currentMedia: [],
+      unavailable: [],
       date: latest.date,
     });
   }
@@ -613,6 +716,8 @@ function tagRecords(sourceRecords, occupied) {
       target: "",
       grafana: [],
       cameras: [],
+      currentMedia: [],
+      unavailable: [],
       date: "",
     });
   }
@@ -633,6 +738,8 @@ function tagRecords(sourceRecords, occupied) {
     target: "",
     grafana: [],
     cameras: [],
+    currentMedia: [],
+    unavailable: [],
     date: "",
   });
   return records;
@@ -687,6 +794,8 @@ function folderRecords(sourceRecords, occupied) {
       target: "",
       grafana: [],
       cameras: [],
+      currentMedia: [],
+      unavailable: [],
       date: "",
     });
   }
@@ -724,6 +833,19 @@ async function main() {
   const snapshot = await verifySnapshot(snapshotRoot, {
     allowSyntheticFixture: process.env.ALLOW_SYNTHETIC_FIXTURE === "true",
   });
+  const selectedOccurrenceRelease = process.env.LAB_OCCURRENCE_STORE
+    ? await loadSelectedOccurrenceRelease(process.env.LAB_OCCURRENCE_STORE)
+    : { selection: null, current: null };
+  if (
+    selectedOccurrenceRelease.current
+    && (
+      selectedOccurrenceRelease.current.sourceSnapshotManifestSha256 !== snapshot.manifestDigest.slice("sha256:".length)
+      || selectedOccurrenceRelease.current.policyVersion !== snapshot.sanitization.policyVersion
+    )
+  ) {
+    throw new Error("selected occurrence release does not match the exact snapshot and policy");
+  }
+  const selectedOccurrenceState = occurrenceStateIndex(selectedOccurrenceRelease.current);
   await rm(PUBLIC_ROOT, { recursive: true, force: true });
   await rm(RECORDS_PATH, { force: true });
   await rm(ASSETS_PATH, { force: true });
@@ -800,6 +922,7 @@ async function main() {
       imageMetadata,
       snapshot.files,
       plannedRoutes,
+      selectedOccurrenceState,
     );
     const aliases = stringList(source.frontmatter.aliases ?? source.frontmatter.alias);
     const tags = stringList(source.frontmatter.tags);
@@ -820,7 +943,8 @@ async function main() {
       noindex: source.frontmatter.noindex === true,
       target: "",
       grafana: rendered.grafana,
-      cameras: rendered.cameras,
+      cameras: rendered.currentMedia,
+      currentMedia: rendered.currentMedia,
       unavailable: rendered.unavailable,
       date: source.frontmatter.date ? String(source.frontmatter.date) : "",
     };
@@ -838,6 +962,32 @@ async function main() {
   const routeDigest = createHash("sha256")
     .update(JSON.stringify(allRecords.map(({ route, physicalPath, kind, source }) => ({ route, physicalPath, kind, source }))))
     .digest("hex");
+  const discoveredGraphs = records.flatMap((record) => record.grafana);
+  const discoveredCurrentMedia = records.flatMap((record) => record.currentMedia);
+  const occurrenceManifest = staticOccurrenceManifest({
+    snapshotId: snapshot.snapshotId,
+    selectedManifestSha256: selectedOccurrenceRelease.selection?.current.manifestSha256 ?? null,
+    discoveredGraphs,
+    discoveredCurrentMedia,
+    selectedManifest: selectedOccurrenceRelease.current,
+  });
+  const discoveredGraphIds = new Set(discoveredGraphs.map((occurrence) => occurrence.occurrenceId));
+  const discoveredMediaIds = new Set(discoveredCurrentMedia.map((occurrence) => occurrence.occurrenceId));
+  const selectedBuildOccurrences = selectedOccurrenceRelease.current
+    ? {
+        ...selectedOccurrenceRelease.current,
+        occurrences: {
+          graphs: selectedOccurrenceRelease.current.occurrences.graphs.filter((occurrence) => discoveredGraphIds.has(occurrence.occurrenceId)),
+          currentMedia: selectedOccurrenceRelease.current.occurrences.currentMedia.filter((occurrence) => discoveredMediaIds.has(occurrence.occurrenceId)),
+        },
+      }
+    : null;
+  const materializedOccurrenceBlobCount = selectedBuildOccurrences
+    ? await materializeOccurrenceBlobs(process.env.LAB_OCCURRENCE_STORE, selectedBuildOccurrences, PUBLIC_ROOT)
+    : 0;
+  const occurrenceManifestBytes = `${JSON.stringify(occurrenceManifest, null, 2)}\n`;
+  const occurrenceManifestDigest = createHash("sha256").update(occurrenceManifestBytes).digest("hex");
+  await writeFile(path.join(PUBLIC_ROOT, "occurrence-manifest.json"), occurrenceManifestBytes);
   const build = {
     contract: "verdify.lab-astro-stage-build",
     schemaVersion: 1,
@@ -857,12 +1007,15 @@ async function main() {
     tagRouteCount: tags.length,
     folderRouteCount: folders.length,
     grafanaOccurrenceCount: records.reduce((count, record) => count + record.grafana.length, 0),
-    cameraOccurrenceCount: records.reduce((count, record) => count + record.cameras.length, 0),
-    cameraLocalFallbackCount: records.reduce(
-      (count, record) => count + record.cameras.filter((camera) => camera.available).length,
-      0,
-    ),
+    cameraOccurrenceCount: discoveredCurrentMedia.length,
+    cameraLocalFallbackCount: discoveredCurrentMedia.filter(
+      (occurrence) => selectedOccurrenceState.currentMedia.get(occurrence.occurrenceId)?.fallback,
+    ).length,
     unavailableReferenceCount: records.reduce((count, record) => count + record.unavailable.length, 0),
+    currentMediaOccurrenceCount: discoveredCurrentMedia.length,
+    selectedOccurrenceManifestSha256: selectedOccurrenceRelease.selection?.current.manifestSha256 ?? null,
+    occurrenceManifestDigest: `sha256:${occurrenceManifestDigest}`,
+    materializedOccurrenceBlobCount,
     routeDigest: `sha256:${routeDigest}`,
     snapshotAssetCount: [...snapshot.files.keys()].filter((relative) => !relative.endsWith(".md")).length,
     copiedSnapshotAssetCount: assetRecords.length,

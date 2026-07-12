@@ -2,9 +2,28 @@ import buildDocument from "../../.generated/build.json";
 import recordDocument from "../../.generated/content-records.json";
 
 export type GrafanaOccurrence = {
+  occurrenceId: string;
+  route: string;
+  ordinal: number;
+  semanticRole: string;
+  uid: string;
+  panelId: string;
+  query: Record<string, string[]>;
+  variables: Record<string, string[]>;
+  timeRange: { from: string; to: string };
   liveUrl: string;
-  renderUrl: string;
-  title: string;
+  renderCadenceSeconds: number;
+};
+
+export type CurrentMediaOccurrence = {
+  occurrenceId: string;
+  route: string;
+  ordinal: number;
+  classification: "current-still";
+  semanticRole: string;
+  sourceProvenanceSha256: string;
+  stableTarget: string;
+  captureCadenceSeconds: number;
 };
 
 export type ContentRecord = {
@@ -23,6 +42,7 @@ export type ContentRecord = {
   noindex: boolean;
   target: string;
   grafana: GrafanaOccurrence[];
+  currentMedia: CurrentMediaOccurrence[];
   date: string;
 };
 
@@ -63,10 +83,19 @@ export type BuildDocument = {
     suppressedSources: string[];
   };
   tagRouteCount: number;
+  folderRouteCount: number;
   grafanaOccurrenceCount: number;
+  cameraOccurrenceCount: number;
+  cameraLocalFallbackCount: number;
+  unavailableReferenceCount: number;
+  currentMediaOccurrenceCount: number;
+  selectedOccurrenceManifestSha256: string | null;
+  occurrenceManifestDigest: string;
+  materializedOccurrenceBlobCount: number;
   routeDigest: string;
   snapshotAssetCount: number;
   copiedSnapshotAssetCount: number;
+  generatedResponsiveImageCount: number;
   policyReplacedAssets: string[];
   preservedMediaCount: number;
   siteShell: {

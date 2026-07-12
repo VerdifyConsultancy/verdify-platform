@@ -24,11 +24,6 @@ Read [[About the Lab|how this evidence is published]] or inspect the [latest pla
 
 <img src="/static/graphs/overview.svg" alt="Representative greenhouse trend">
 
-<figure>
-  <a href="https://api.verdify.ai/api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080">
-    <img class="camera-snapshot" data-camera-src="https://api.verdify.ai/api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080" src="https://api.verdify.ai/api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080" alt="Latest public greenhouse snapshot">
-  </a>
-</figure>
-<script src="/static/camera-refresh.js" defer></script>
+<img src="https://api.verdify.ai/api/v1/public/cameras/cam-public-fixture/latest.png" alt="Current greenhouse view">
 
 <iframe src="https://graphs.verdify.ai/d-solo/site-home/climate?orgId=1&amp;panelId=28&amp;from=now-24h&amp;to=now" width="100%" height="320" title="Greenhouse climate trend"></iframe>

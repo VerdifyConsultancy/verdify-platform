@@ -65,7 +65,7 @@ test("runtime CSP permits Pagefind WASM without broad eval or cross-origin media
   assert.doesNotMatch(csp.match(/img-src ([^;]+)/)?.[1] ?? "", /api\.verdify\.ai/);
   assert.equal(
     nginx.match(/include \/etc\/nginx\/conf\.d\/security-headers\.inc;/g)?.length,
-    8,
+    9,
     "server and every location must explicitly include security headers because add_header does not inherit",
   );
   for (const name of ["X-Content-Type-Options", "X-Frame-Options", "Referrer-Policy", "X-Robots-Tag"]) {
@@ -74,6 +74,8 @@ test("runtime CSP permits Pagefind WASM without broad eval or cross-origin media
   assert.match(nginx, /application\/vnd\.apple\.mpegurl m3u8/);
   assert.match(nginx, /video\/mp2t ts/);
   assert.match(nginx, /add_header Accept-Ranges "bytes" always/);
+  assert.match(nginx, /evidence\/blobs\/sha256\/\[a-f0-9\]\{64\}/);
+  assert.match(nginx, /max-age=31536000, immutable/);
 });
 
 test("default Docker target serves only the real attested build", async () => {

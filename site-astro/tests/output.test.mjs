@@ -37,13 +37,14 @@ test("prose, table, download, media, and Grafana occurrence semantics survive", 
   assert.match(html, /sizes="\(max-width: 620px\)/);
   assert.match(html, /class="grafana-evidence"/);
   assert.match(html, /data-iframe-src="https:\/\/graphs\.verdify\.ai\/d-solo\//);
-  assert.match(html, /data-image-src="https:\/\/graphs\.verdify\.ai\/render\/d-solo\//);
+  assert.match(html, /data-occurrence-id="graph_[0-9a-f]{24}"/);
+  assert.doesNotMatch(html, /data-image-src="https:\/\/graphs\.verdify\.ai\/render\/d-solo\//);
   assert.doesNotMatch(html, /<iframe[^>]+graphs\.verdify\.ai/i);
   assert.match(html, /class="media-lightbox"/);
   assert.match(html, /data-lightbox-previous/);
   assert.match(html, /data-lab-navigation-toggle/);
   assert.match(html, /class="site-page lab-page lab-page--home"/);
-  assert.match(html, /A verified same-origin camera snapshot was not included in this publication/);
+  assert.match(html, /Verified local camera fallback is pending/);
   assert.doesNotMatch(html, /<img[^>]+api\.verdify\.ai/i);
   assert.doesNotMatch(html, /src="\/static\/camera-refresh\.js"/);
 });
@@ -77,6 +78,16 @@ test("stage output stays noindex, blocker-labelled, searchable, and auditable", 
   assert.equal(routeManifest.build.grafanaOccurrenceCount, 2);
   assert.equal(routeManifest.build.cameraOccurrenceCount, 1);
   assert.equal(routeManifest.build.cameraLocalFallbackCount, 0);
+  assert.equal(routeManifest.build.currentMediaOccurrenceCount, 1);
+  assert.equal(routeManifest.build.selectedOccurrenceManifestSha256, null);
+  assert.match(routeManifest.build.occurrenceManifestDigest, /^sha256:[0-9a-f]{64}$/);
+  const occurrenceManifest = JSON.parse(await read("occurrence-manifest.json"));
+  assert.equal(occurrenceManifest.contract, "verdify.lab-static-occurrence-manifest");
+  assert.equal(occurrenceManifest.graphs.length, 2);
+  assert.equal(occurrenceManifest.graphs[0].selected, null);
+  assert.equal(occurrenceManifest.currentMedia.length, 1);
+  assert.match(occurrenceManifest.currentMedia[0].occurrenceId, /^media_[0-9a-f]{24}$/);
+  assert.doesNotMatch(JSON.stringify(occurrenceManifest.currentMedia[0]), /api\.verdify\.ai|latest\.(?:jpg|png)/);
   const assetRecords = JSON.parse(await readFile(path.join(ROOT, ".generated", "asset-records.json"), "utf8"));
   assert.equal(
     routeManifest.build.copiedSnapshotAssetCount + routeManifest.build.generatedResponsiveImageCount,

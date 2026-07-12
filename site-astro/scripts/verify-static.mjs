@@ -20,6 +20,27 @@ if (!build.stageGlobalNoindex) throw new Error("stage build must be globally noi
 if (build.copiedSnapshotAssetCount + build.generatedResponsiveImageCount !== assets.length) {
   throw new Error("snapshot and generated asset accounting is incomplete");
 }
+const occurrenceManifestBytes = await readFile(path.join(DIST_ROOT, "occurrence-manifest.json"));
+const occurrenceManifest = JSON.parse(occurrenceManifestBytes.toString("utf8"));
+if (
+  occurrenceManifest.contract !== "verdify.lab-static-occurrence-manifest"
+  || occurrenceManifest.schemaVersion !== 1
+  || occurrenceManifest.snapshotId !== build.snapshotId
+  || occurrenceManifest.graphs.length !== build.grafanaOccurrenceCount
+  || occurrenceManifest.currentMedia.length !== build.currentMediaOccurrenceCount
+  || `sha256:${await sha256File(path.join(DIST_ROOT, "occurrence-manifest.json"))}` !== build.occurrenceManifestDigest
+) {
+  throw new Error("static occurrence manifest is incomplete or not bound to the build");
+}
+if (build.selectedOccurrenceManifestSha256 === null && build.materializedOccurrenceBlobCount !== 0) {
+  throw new Error("unselected occurrence blobs were materialized");
+}
+if (
+  occurrenceManifest.graphs.some((occurrence) => !/^graph_[0-9a-f]{24}$/.test(occurrence.occurrenceId))
+  || occurrenceManifest.currentMedia.some((occurrence) => !/^media_[0-9a-f]{24}$/.test(occurrence.occurrenceId))
+) {
+  throw new Error("static occurrence manifest contains an invalid occurrence identity");
+}
 if (
   build.rollingPlanCompatibility?.contract !== "verdify.rolling-plan-latest/v1"
   || build.rollingPlanCompatibility?.route !== "/plans/latest"
@@ -140,6 +161,7 @@ for (const required of [
   "sitemap.xml",
   "route-manifest.json",
   "static-build.json",
+  "occurrence-manifest.json",
   "assets/verdify-lab-lockup.svg",
   "assets/verdify-site-shell/fonts/ibm-plex-sans-latin-wght-normal.woff2",
   "assets/verdify-site-shell/fonts/ibm-plex-mono-latin-400-normal.woff2",

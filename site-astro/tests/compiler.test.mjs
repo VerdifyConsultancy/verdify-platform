@@ -15,6 +15,11 @@ import {
   routeFromSource,
   splitFrontmatter,
 } from "../scripts/compile-snapshot.mjs";
+import {
+  discoverCurrentMediaOccurrence,
+  discoverGraphOccurrence,
+  occurrenceStateIndex,
+} from "../scripts/lib/occurrence-release.mjs";
 import { verifySanitizationAttestation, verifySnapshot } from "../scripts/lib/snapshot.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -110,21 +115,19 @@ test("camera snapshots require a same-origin last-known-good artifact", () => {
   }
 });
 
-test("camera rendering rewrites verified artifacts and removes the legacy refresher", async () => {
+test("camera rendering fails closed without a selected CAS generation and removes the legacy refresher", async () => {
   const rendered = await renderMarkdown(
     '<a href="https://api.verdify.ai/api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080"><img class="camera-snapshot" data-camera-src="https://api.verdify.ai/api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080" src="https://api.verdify.ai/api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080" alt="Camera"></a><script src="/static/camera-refresh.js"></script>',
-    { relative: "index.md" },
+    { relative: "index.md", route: "/" },
     new Map(),
     new Map(),
     new Set(),
     new Map(),
-    new Map([["static/cameras/greenhouse_1/latest.jpg", {}]]),
+    new Map(),
   );
-  assert.match(rendered.html, /src="\/static\/cameras\/greenhouse_1\/latest\.jpg"/);
-  assert.match(rendered.html, /data-camera-local-src="\/static\/cameras\/greenhouse_1\/latest\.jpg"/);
-  assert.doesNotMatch(rendered.html, /data-camera-src|camera-refresh\.js/);
-  assert.equal(rendered.cameras.length, 1);
-  assert.equal(rendered.cameras[0].available, true);
+  assert.match(rendered.html, /current-media-evidence--pending/);
+  assert.doesNotMatch(rendered.html, /<img[^>]+api\.verdify\.ai|camera-refresh\.js/);
+  assert.equal(rendered.currentMedia.length, 1);
 });
 
 test("missing local routes and images become explicit non-broken publication states", async () => {
@@ -190,6 +193,59 @@ test("image dimensions are read from bounded static image headers", () => {
   const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630"></svg>');
   assert.deepEqual(imageDimensions(svg, "evidence.svg"), { width: 1200, height: 630 });
   assert.equal(imageDimensions(Buffer.from("not an image"), "evidence.bin"), null);
+});
+
+test("specialist renderer uses only selected same-origin decoded fallbacks", async () => {
+  const graphUrl = "https://graphs.verdify.ai/d-solo/site-home/public?panelId=7&from=now-24h&to=now";
+  const cameraUrl = "https://api.verdify.ai/api/v1/public/cameras/cam-public-fixture/latest.png";
+  const graph = discoverGraphOccurrence({
+    route: "/",
+    ordinal: 0,
+    liveUrl: graphUrl,
+    title: "Climate evidence",
+  });
+  const media = discoverCurrentMediaOccurrence({
+    route: "/",
+    ordinal: 0,
+    sourceUrl: cameraUrl,
+    semanticRole: "Current greenhouse view",
+  });
+  const fallback = {
+    publicPath: `/evidence/blobs/sha256/${"1".repeat(64)}.png`,
+    sha256: "1".repeat(64),
+    decodedSha256: "2".repeat(64),
+    decodedBytes: 640 * 360 * 4,
+    bytes: 100,
+    mediaType: "image/png",
+    width: 640,
+    height: 360,
+    capturedAt: "2026-07-12T12:00:00Z",
+    verifiedAt: "2026-07-12T12:00:30Z",
+    policyVersion: "synthetic-fixture-only",
+  };
+  const selected = occurrenceStateIndex({
+    occurrences: {
+      graphs: [{ ...graph, state: "verified", fallback }],
+      currentMedia: [{ ...media, state: "verified", fallback }],
+    },
+  });
+  const rendered = await renderMarkdown(
+    `<img src="${cameraUrl}" alt="Current greenhouse view">\n\n<iframe src="${graphUrl}" title="Climate evidence"></iframe>`,
+    { relative: "index.md", route: "/" },
+    new Map(),
+    new Map(),
+    new Set(),
+    new Map(),
+    new Map(),
+    new Set(["/"]),
+    selected,
+  );
+  assert.match(rendered.html, /src="\/evidence\/blobs\/sha256\/1{64}\.png"/);
+  assert.match(rendered.html, /data-current-media-target="\/evidence\/current\/media_[0-9a-f]{24}"/);
+  assert.match(rendered.html, /data-image-sha256="1{64}"/);
+  assert.doesNotMatch(rendered.html, /data-image-src="https:\/\/graphs\.verdify\.ai/);
+  assert.equal(rendered.grafana.length, 1);
+  assert.equal(rendered.currentMedia.length, 1);
 });
 
 test("snapshot verification refuses tampering, additions, and links", async (context) => {

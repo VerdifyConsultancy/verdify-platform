@@ -89,6 +89,54 @@ immutable snapshot attestation. `static-build.json` and `route-manifest.json`
 therefore always report `localEvidenceStatus: provisional-only` and
 `approvalEligible: false`.
 
+## Specialist evidence releases
+
+The Astro compiler now emits `occurrence-manifest.json` for every discovered
+Grafana and current-camera occurrence. Grafana records preserve the normalized
+dashboard UID, panel, query multiplicity, variables, time range, semantic role,
+cadence, and an opaque occurrence ID. Camera records expose only an opaque
+occurrence ID, semantic role, stable same-origin target, cadence, and a digest of
+the approved occurrence provenance; the upstream camera identity is neither copied
+nor reversibly hashed into the public
+manifest.
+
+`scripts/manage-occurrence-release.mjs` implements the offline specialist-release
+contract. Its input is a canonical, bounded request containing one idempotent
+`verdify.lab-release-trigger` and local candidate paths. It has no HTTP, database,
+Grafana, object-store, or credential client. PNG candidates are accepted only after
+chunk checksums, bounded inflate, scanline-filter reconstruction, dimensions, encoded
+digest, and decoded-pixel digest all validate; ancillary metadata is rejected.
+Failed renders/captures retain the prior verified fallback; corrupt candidates
+never replace last-known-good bytes.
+
+The local store uses content-addressed image blobs and release manifests. One
+canonical release `selection.json` atomically selects both `current` and `previous`.
+Each current-camera occurrence has a separate two-generation CAS selector so camera
+events never mutate the graph/page release. Every selector carries a generation and
+selection-digest precondition. Event intents are durable before selection, retries
+are idempotent, event IDs bind both payload and envelope, and old-event tombstones
+survive the ten-manifest retention window. Local rollback swaps current/previous
+without regenerating evidence. Planner triggers carry a five-minute
+target and fifteen-minute alert contract; graph and camera records carry their
+ratified cadence-based stale thresholds.
+
+For a build that has an already-verified local occurrence store, set
+`LAB_OCCURRENCE_STORE` to that read-only store. The compiler revalidates the selected
+manifest and decoded blobs, copies only referenced content-addressed images into the
+static release, renders them as the inline same-origin fallbacks, and preserves the
+separate interactive evidence link. An absent store remains explicit pending evidence
+and never causes a network render during the build.
+
+This is release tooling and fixture proof, not live export authority. The current
+stage image was built before these contracts and still has no selected occurrence
+release. A future stage rollout requires a new fleet-origin image/pin and the normal
+stage GitOps durability probe. Production Lab cutover, a reporting-store grant,
+camera sanitizer authority, public routing, and Quartz retirement remain separately
+gated. In particular, nginx does not yet resolve `/evidence/current/<id>` or watch
+these local selectors: a deployed no-build pointer update/rollback still requires the
+future runtime/object-store adapter and end-to-end proof. No service restart is
+required by this source-only change.
+
 The stage vendors the reviewed offline parity comparator at
 `scripts/site-build-parity.py` (SHA-256
 `d3f6662ac8303ae8a29020743254eb859db61693103b420b26df2c043ee659a4`):
@@ -163,9 +211,22 @@ store, Grafana, or device-network access.
 
 - The sanitized legacy capture remains provisional-only; the future approved
   immutable filesystem/object-store evidence attestation is not implemented.
-- Digest-verified local Grafana fallback images are absent from the frozen
-  snapshot; stage preserves each source occurrence as non-embedded provenance
-  and an explicit external link.
+- Digest-verified local Grafana fallback images remain absent from the frozen
+  snapshot. The compiler and specialist-release store now enforce decoded,
+  content-addressed current/previous selection and last-known-good retention, but
+  a policy-approved exporter/reporting source has not populated a selected release.
+- Current-camera occurrences now have an opaque same-origin manifest contract, but
+  the camera sanitizer and independently served occurrence pointer are not deployed.
+- Planner event idempotency, freshness, conditional promotion, and local pointer
+  rollback are implemented and fixture-tested; no bounded event delivery authority,
+  runtime pointer resolver, freshness histogram, or firing alert is connected to
+  stage yet.
+- Local manifests are capped and individual releases have aggregate image budgets,
+  but reachability GC and the ratified 10 GiB lifecycle cap belong to the future
+  object-store adapter and are not implemented by this filesystem fixture.
+- The local publisher lock is a fail-closed pathname sentinel; a killed process can
+  require operator cleanup. A crash-released/distributed lease is required before
+  this source-only store becomes a runtime publisher.
 - The frozen Quartz baseline has known HLS, alias, feed/sitemap, missing-asset,
   and fallback findings and is not clean approval evidence.
 - The WWW shell release is review-only until its producer PR is merged; the Lab
