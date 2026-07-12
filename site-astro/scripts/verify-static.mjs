@@ -1,4 +1,4 @@
-import { access, readFile } from "node:fs/promises";
+import { access, lstat, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -38,6 +38,18 @@ if (
   throw new Error("stage output is not bound to the reviewed WWW shell release");
 }
 
+const routePaths = new Set(records.flatMap((record) => [record.route, record.canonicalPath].map((value) => value.replace(/\/$/, "") || "/")));
+let localReferenceCount = 0;
+
+async function isFile(relative) {
+  try {
+    return (await lstat(path.join(DIST_ROOT, ...relative.split("/")))).isFile();
+  } catch (error) {
+    if (error.code === "ENOENT" || error.code === "ENOTDIR") return false;
+    throw error;
+  }
+}
+
 for (const record of records) {
   const output = path.join(DIST_ROOT, ...record.physicalPath.split("/"));
   const html = await readFile(output, "utf8");
@@ -52,6 +64,29 @@ for (const record of records) {
   }
   if (record.kind === "alias" && (!html.includes("http-equiv=\"refresh\"") || !html.includes(record.target))) {
     throw new Error(`alias output lost redirect semantics: ${record.physicalPath}`);
+  }
+  for (const match of build.sanitization.fixtureOnly
+    ? []
+    : html.matchAll(/\b(?:href|src|poster|action)=(?:"([^"]*)"|'([^']*)')/gu)) {
+    const raw = match[1] ?? match[2];
+    if (!raw || raw.startsWith("#") || /^(?:data:|mailto:|tel:|javascript:)/i.test(raw)) continue;
+    let target;
+    try {
+      target = new URL(raw, `${build.siteOrigin}${record.canonicalPath}`);
+    } catch {
+      throw new Error(`stage output contains an invalid URL reference: ${record.physicalPath}`);
+    }
+    if (target.origin !== build.siteOrigin) continue;
+    localReferenceCount += 1;
+    const pathname = decodeURIComponent(target.pathname).replace(/\/$/, "") || "/";
+    if (routePaths.has(pathname)) continue;
+    const relative = pathname.replace(/^\/+/, "");
+    if (
+      await isFile(relative)
+      || await isFile(`${relative}.html`)
+      || await isFile(`${relative}/index.html`)
+    ) continue;
+    throw new Error(`stage output contains a broken same-origin reference: ${record.physicalPath}`);
   }
 }
 
@@ -116,4 +151,4 @@ for (const required of [
 
 const robots = await readFile(path.join(DIST_ROOT, "robots.txt"), "utf8");
 if (!robots.includes("Disallow: /")) throw new Error("stage robots policy must disallow crawling");
-process.stdout.write(`verified ${records.length} noindex stage routes\n`);
+process.stdout.write(`verified ${records.length} noindex stage routes and ${localReferenceCount} same-origin references\n`);
