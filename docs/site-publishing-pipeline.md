@@ -3,6 +3,75 @@
 This is the operator trace for publishing `lab.verdify.ai` from curated
 Markdown/static content into the k3s-served Quartz site.
 
+Production still uses the Quartz path documented below. The isolated Astro
+candidate at `lab-stage.verdify.ai` is a separate, provisional image and must not
+be treated as production authority or as permission to retire this path.
+
+## Astro specialist-occurrence release contract (source-only)
+
+The Astro candidate owns an offline specialist-evidence release interface under
+`site-astro/scripts/lib/occurrence-release.mjs`. It is intentionally separate
+from the current Quartz publisher and does not query the database, Grafana,
+camera API, S3, or any other network service. A future bounded exporter supplies
+one canonical local request containing only event metadata, approved occurrence
+metadata, and local sanitized candidate paths.
+
+The contract provides:
+
+- opaque, stable occurrence IDs for normalized Grafana and current-camera
+  occurrences;
+- same-origin content-addressed PNG fallbacks validated by PNG structure and
+  checksums, bounded decompression, complete scanline reconstruction, dimensions,
+  encoded SHA-256, and decoded-pixel SHA-256;
+- last-known-good retention when a render, capture, policy check, or decode fails;
+- one atomic `selection.json` containing `current` and `previous` release-manifest
+  digests, a monotonic generation, selection time, and reason;
+- a separate current/previous CAS selector for each current-camera occurrence;
+- compare-before-promote semantics keyed by the complete selection digest;
+- durable pre-selection event intents and idempotent triggers keyed by event ID,
+  payload digest, and event-envelope digest;
+- planner completion freshness evaluation at a five-minute target and a
+  fifteen-minute alert threshold; and
+- local pointer-only rollback to `previous` without regenerating evidence.
+
+The Astro compiler always emits `occurrence-manifest.json`. With no selected
+specialist store, every occurrence is explicit pending evidence. When
+`LAB_OCCURRENCE_STORE` names an already-verified read-only store, the compiler
+revalidates the selected manifest and decoded blobs, copies only the referenced
+content-addressed images, emits local fallbacks, and keeps an independently
+usable graph link. Current-camera public manifests include a provenance digest,
+not the upstream identity.
+
+The CLI is deliberately local and credential-free:
+
+```bash
+cd site-astro
+node scripts/manage-occurrence-release.mjs publish --request /path/to/canonical-request.json
+node scripts/manage-occurrence-release.mjs status --store /path/to/store
+node scripts/manage-occurrence-release.mjs rollback \
+  --store /path/to/store --expected <selection-sha256> --at <UTC-instant>
+node scripts/manage-occurrence-release.mjs publish-media --request /path/to/media-request.json
+node scripts/manage-occurrence-release.mjs media-status --store /path/to/store --occurrence <opaque-id>
+node scripts/manage-occurrence-release.mjs rollback-media \
+  --store /path/to/store --occurrence <opaque-id> --expected <selection-sha256> --at <UTC-instant>
+```
+
+This implementation does not grant export authority or prove live freshness.
+Before stage can select a real occurrence release, separate work must provide a
+policy-approved reporting source and camera sanitizer that cannot reach the Track
+A primary, plus durable delivery, alerts, outage probes, and the GitOps image/pin
+rollout. Static nginx does not yet watch the selectors or resolve the stable current
+media targets, so deployed no-build delivery/rollback and its under-five-minute SLO
+remain unproven until a runtime/object-store adapter lands. A source-only merge needs
+no service restart. Any stage rollout needs the
+normal stage acceptance and delayed durability probes; production sync, public
+cutover, and Quartz retirement remain human-gated.
+
+The local fixture retains ten release manifests and two selected media generations,
+but it is not the DEC-SITE-007 object-store lifecycle implementation: reachability
+garbage collection, the 10 GiB cap, a crash-released/distributed publisher lease, and
+outage recovery remain requirements of that adapter.
+
 ## Source of Truth
 
 As of 2026-06-14, durable lab content/public/state lives in S3-compatible object

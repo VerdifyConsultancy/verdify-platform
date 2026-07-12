@@ -1,0 +1,80 @@
+---
+interface Props {
+  pageFamily: string;
+}
+
+const { pageFamily } = Astro.props;
+---
+
+<script is:inline define:vars={{ pageFamily }}>
+  (() => {
+    const article = document.querySelector(".lab-article");
+    if (!article) return;
+
+    for (const table of article.querySelectorAll("table")) {
+      if (table.parentElement?.classList.contains("lab-table-scroll")) continue;
+      const region = document.createElement("div");
+      region.className = "lab-table-scroll";
+      region.tabIndex = 0;
+      region.setAttribute("role", "region");
+      region.setAttribute("aria-label", "Scrollable data table");
+      table.before(region);
+      region.append(table);
+    }
+
+    if (pageFamily === "plan") {
+      const headings = [...article.querySelectorAll(":scope > div > h2")];
+      headings.forEach((heading, index) => {
+        const details = document.createElement("details");
+        details.className = "technical-section";
+        details.open = index === 0 || location.hash === `#${heading.id}`;
+        const summary = document.createElement("summary");
+        summary.append(heading.cloneNode(true));
+        const content = document.createElement("div");
+        content.className = "technical-section__content";
+        let sibling = heading.nextSibling;
+        while (sibling && !(sibling.nodeType === Node.ELEMENT_NODE && sibling.matches?.("h2"))) {
+          const next = sibling.nextSibling;
+          content.append(sibling);
+          sibling = next;
+        }
+        heading.replaceWith(details);
+        details.append(summary, content);
+      });
+    }
+
+    if (pageFamily === "archive") {
+      const table = article.querySelector("table");
+      const body = table?.tBodies?.[0];
+      if (table && body && body.rows.length > 8) {
+        const tools = document.createElement("div");
+        tools.className = "archive-tools";
+        const label = document.createElement("label");
+        label.htmlFor = "archive-filter";
+        label.textContent = "Filter planning archive";
+        const input = document.createElement("input");
+        input.id = "archive-filter";
+        input.type = "search";
+        input.placeholder = "Date, status, outcome…";
+        const count = document.createElement("output");
+        count.htmlFor = "archive-filter";
+        const rows = [...body.rows];
+        const update = () => {
+          const query = input.value.trim().toLocaleLowerCase("en-US");
+          let visible = 0;
+          for (const row of rows) {
+            const show = !query || row.textContent.toLocaleLowerCase("en-US").includes(query);
+            row.hidden = !show;
+            if (show) visible += 1;
+          }
+          count.value = `${visible} ${visible === 1 ? "record" : "records"}`;
+          count.textContent = count.value;
+        };
+        input.addEventListener("input", update);
+        tools.append(label, input, count);
+        table.parentElement.before(tools);
+        update();
+      }
+    }
+  })();
+</script>

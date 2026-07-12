@@ -13,12 +13,34 @@ Starlight can demonstrate the required Quartz/Obsidian/raw-HTML route contract.
 ## Local build
 
 The checked-in fixture exercises root, leaf, folder, alias, planner, table,
-download, media, and Grafana occurrence semantics:
+download, media, and Grafana occurrence semantics. It also carries synthetic,
+non-production representatives for the home, planner, forecast, archive,
+evidence, contact, and media/lightbox page families used by browser quality
+gates:
 
 ```bash
 npm ci
 npm test
 ```
+
+`npm test` includes the desktop/mobile browser quality gate. It runs the
+representative routes at the Marketing contract's 390px and 1440px widths,
+checks WCAG A/AA rules with Axe, horizontal overflow, default-light and
+explicit-dark surface rules, console/request failures, bounded DOM/asset/JS
+budgets, FCP/LCP/CLS/long-task budgets, semantic page enhancements, skip-link
+and mobile-navigation focus, form boundaries, reduced motion, responsive image
+geometry, and native-dialog lightbox focus restoration. Chromium must be
+installed once in a fresh tool image with `npx playwright install chromium`.
+For a focused rebuild and quality run, use:
+
+```bash
+npm run test:quality
+```
+
+The pinned browser fixture mirrors the immutable page-primitives visual
+contract published by the Marketing shell release. It is a regression oracle,
+not an alternative source of design tokens; browser assertions read the
+computed `--color-*` values from the installed shared shell.
 
 The fixture path is synthetic-only and cannot satisfy real snapshot mode. A
 real stage candidate is assembled outside Git as `.snapshot/` and must carry
@@ -67,6 +89,54 @@ immutable snapshot attestation. `static-build.json` and `route-manifest.json`
 therefore always report `localEvidenceStatus: provisional-only` and
 `approvalEligible: false`.
 
+## Specialist evidence releases
+
+The Astro compiler now emits `occurrence-manifest.json` for every discovered
+Grafana and current-camera occurrence. Grafana records preserve the normalized
+dashboard UID, panel, query multiplicity, variables, time range, semantic role,
+cadence, and an opaque occurrence ID. Camera records expose only an opaque
+occurrence ID, semantic role, stable same-origin target, cadence, and a digest of
+the approved occurrence provenance; the upstream camera identity is neither copied
+nor reversibly hashed into the public
+manifest.
+
+`scripts/manage-occurrence-release.mjs` implements the offline specialist-release
+contract. Its input is a canonical, bounded request containing one idempotent
+`verdify.lab-release-trigger` and local candidate paths. It has no HTTP, database,
+Grafana, object-store, or credential client. PNG candidates are accepted only after
+chunk checksums, bounded inflate, scanline-filter reconstruction, dimensions, encoded
+digest, and decoded-pixel digest all validate; ancillary metadata is rejected.
+Failed renders/captures retain the prior verified fallback; corrupt candidates
+never replace last-known-good bytes.
+
+The local store uses content-addressed image blobs and release manifests. One
+canonical release `selection.json` atomically selects both `current` and `previous`.
+Each current-camera occurrence has a separate two-generation CAS selector so camera
+events never mutate the graph/page release. Every selector carries a generation and
+selection-digest precondition. Event intents are durable before selection, retries
+are idempotent, event IDs bind both payload and envelope, and old-event tombstones
+survive the ten-manifest retention window. Local rollback swaps current/previous
+without regenerating evidence. Planner triggers carry a five-minute
+target and fifteen-minute alert contract; graph and camera records carry their
+ratified cadence-based stale thresholds.
+
+For a build that has an already-verified local occurrence store, set
+`LAB_OCCURRENCE_STORE` to that read-only store. The compiler revalidates the selected
+manifest and decoded blobs, copies only referenced content-addressed images into the
+static release, renders them as the inline same-origin fallbacks, and preserves the
+separate interactive evidence link. An absent store remains explicit pending evidence
+and never causes a network render during the build.
+
+This is release tooling and fixture proof, not live export authority. The current
+stage image was built before these contracts and still has no selected occurrence
+release. A future stage rollout requires a new fleet-origin image/pin and the normal
+stage GitOps durability probe. Production Lab cutover, a reporting-store grant,
+camera sanitizer authority, public routing, and Quartz retirement remain separately
+gated. In particular, nginx does not yet resolve `/evidence/current/<id>` or watch
+these local selectors: a deployed no-build pointer update/rollback still requires the
+future runtime/object-store adapter and end-to-end proof. No service restart is
+required by this source-only change.
+
 The stage vendors the reviewed offline parity comparator at
 `scripts/site-build-parity.py` (SHA-256
 `d3f6662ac8303ae8a29020743254eb859db61693103b420b26df2c043ee659a4`):
@@ -86,16 +156,42 @@ is not release input.
 
 ## Shared-shell boundary
 
-The build vendors the reviewed `@verdify/site-shell` 1.0.0 release from WWW
-commit `c9c0d56f654d6b9198352f16c620717dbee71612`. The archive, independent
+The build vendors the reviewed `@verdify/site-shell` 1.1.0 release from WWW
+commit `7febbc479c6ed7d22f829e9c1e7109bc9bc7c6c0`. The archive, independent
 release record, and four-file consumer kit are committed under `vendor/` and
 `scripts/site-shell/`; every byte is independently pinned before the hardened
 installer runs, and the installed tree is verified again in a separate
 process. There is no runtime, CDN, registry, or package-manager fetch. The
-shared Header, Footer, Breadcrumbs, Lab lockup, design tokens, and self-hosted
-IBM Plex fonts come directly from that release. Lab-owned evidence navigation,
+shared Header, Footer, Breadcrumbs, full-page design contract, responsive media
+and lightbox primitives, Lab lockup, design tokens, and self-hosted IBM Plex
+fonts come directly from that release. Lab-owned evidence navigation,
 Pagefind search, reader mode, article styles, and specialist evidence rendering
 remain outside the shell boundary.
+
+## Browser runtime contract
+
+Pagefind runs under the stage CSP with only `'wasm-unsafe-eval'`; broad
+`'unsafe-eval'` is forbidden. Fonts are emitted as same-origin files and KaTeX
+CSS is linked only by pages that contain rendered math. The contact form keeps
+its captured HTML and submission endpoint, while Lab-owned selectors map its
+legacy Quartz variables to the shared Marketing tokens.
+
+Camera markup never auto-loads or refreshes across origins. For each captured
+public camera URL, the snapshot publisher may include an immutable
+`static/cameras/<camera>/latest.jpg` file. The compiler rewrites the image and
+30-second refresh to that same-origin last-known-good path. If the asset is
+missing, the build renders an explicit unavailable state instead of a broken
+image; `static-build.json` records occurrence and local-fallback counts. This
+contract does not authorize database, device-network, or Track A access from the
+site builder.
+
+The browser regression gate exercises real Pagefind WASM under the nginx CSP,
+same-origin KaTeX fonts, and computed contact-form visibility/focus styles:
+
+```bash
+npx playwright install chromium
+npm run test:browser
+```
 
 ## Stage image contract
 
@@ -115,9 +211,22 @@ store, Grafana, or device-network access.
 
 - The sanitized legacy capture remains provisional-only; the future approved
   immutable filesystem/object-store evidence attestation is not implemented.
-- Digest-verified local Grafana fallback images are absent from the frozen
-  snapshot; stage preserves each source occurrence as non-embedded provenance
-  and an explicit external link.
+- Digest-verified local Grafana fallback images remain absent from the frozen
+  snapshot. The compiler and specialist-release store now enforce decoded,
+  content-addressed current/previous selection and last-known-good retention, but
+  a policy-approved exporter/reporting source has not populated a selected release.
+- Current-camera occurrences now have an opaque same-origin manifest contract, but
+  the camera sanitizer and independently served occurrence pointer are not deployed.
+- Planner event idempotency, freshness, conditional promotion, and local pointer
+  rollback are implemented and fixture-tested; no bounded event delivery authority,
+  runtime pointer resolver, freshness histogram, or firing alert is connected to
+  stage yet.
+- Local manifests are capped and individual releases have aggregate image budgets,
+  but reachability GC and the ratified 10 GiB lifecycle cap belong to the future
+  object-store adapter and are not implemented by this filesystem fixture.
+- The local publisher lock is a fail-closed pathname sentinel; a killed process can
+  require operator cleanup. A crash-released/distributed lease is required before
+  this source-only store becomes a runtime publisher.
 - The frozen Quartz baseline has known HLS, alias, feed/sitemap, missing-asset,
   and fallback findings and is not clean approval evidence.
 - The WWW shell release is review-only until its producer PR is merged; the Lab

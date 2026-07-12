@@ -12,6 +12,9 @@ export default defineConfig({
   trailingSlash: "ignore",
   vite: {
     build: {
+      // Keep font loads on the static origin. Vite otherwise inlines the
+      // smallest KaTeX font as a data URL, which needlessly widens font-src.
+      assetsInlineLimit: 0,
       sourcemap: false,
     },
   },

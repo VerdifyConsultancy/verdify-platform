@@ -8,22 +8,22 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DESTINATION = path.join(ROOT, ".generated", "site-shell-root");
 const ARCHIVE = path.join(
   ROOT,
-  "vendor/site-shell/releases/verdify-site-shell-1.0.0.sha256-6600525856f7a32b2fe7b30b4043fc29cdb26346f5b4689b20343cdff4efce61.tar.gz",
+  "vendor/site-shell/releases/verdify-site-shell-1.1.0.sha256-0645773ab3a952727251840e28dc73929a3e42b904450bcc9e7d25d8b03b1c91.tar.gz",
 );
 const RELEASE = path.join(
   ROOT,
-  "vendor/site-shell/releases/verdify-site-shell-1.0.0.commit-c9c0d56f654d6b9198352f16c620717dbee71612.release.json",
+  "vendor/site-shell/releases/verdify-site-shell-1.1.0.commit-7febbc479c6ed7d22f829e9c1e7109bc9bc7c6c0.release.json",
 );
 const PINS = Object.freeze({
-  archive: "6600525856f7a32b2fe7b30b4043fc29cdb26346f5b4689b20343cdff4efce61",
-  release: "897f872a6ab8de39f2c55e0d7833d723c00b1c9533673df6309472552956b42c",
-  manifest: "43ca0600f9a6db8af2a54e93da06d4d2994991018c2344a6c854bc6297ab9458",
-  sourceTree: "b154afb4247c0b1cba1016a000ca651e211fdc3ce40c70b19d0dfca695546629",
-  wwwCommit: "c9c0d56f654d6b9198352f16c620717dbee71612",
+  archive: "0645773ab3a952727251840e28dc73929a3e42b904450bcc9e7d25d8b03b1c91",
+  release: "779620f2eda4d62677a2d9d61c65e2a1014e34de8cb2cec5008928caeef46a6d",
+  manifest: "2864debbe67b23cd20ef5aa5fb57e86803ed1a1a9393b993c0acdd9182a6f585",
+  sourceTree: "cb1053c8d793e7e60f78286541a88e9f00e0b54de7611e993d92fda3502115e7",
+  wwwCommit: "7febbc479c6ed7d22f829e9c1e7109bc9bc7c6c0",
 });
 const KIT = Object.freeze({
   "scripts/site-shell/install-site-shell-artifact.mjs": "820b597132d7c3b82d6af9e789cbf2f63426afd8b7204f7c9619cbf5644e96c8",
-  "scripts/site-shell/lib/site-shell-artifact.mjs": "dfacb18f97451694bb1e79a587cb8a8984ed1158fdd98f05da04e956531913ae",
+  "scripts/site-shell/lib/site-shell-artifact.mjs": "1a6df1874f0a4deec0fd3c2da57e48d22f92803151c6213d8b4d77625484a984",
   "scripts/site-shell/lib/site-shell-install.mjs": "c45fff395cdc5925806ac35d4097577732fdd07609b2ef2dbaeaea5cfbf6b1b5",
   "scripts/site-shell/verify-site-shell-ready.mjs": "512fc3817c54be2a1e3bf317c031a81f372b1f67bd9709970ea362752a136128",
 });
@@ -63,8 +63,8 @@ if (
   || release.archive?.sha256 !== `sha256:${PINS.archive}`
   || release.archive?.manifestSha256 !== `sha256:${PINS.manifest}`
   || release.contract?.sourceTreeDigest !== `sha256:${PINS.sourceTree}`
-  || release.contract?.version !== "1.0.0"
-  || release.contract?.installedFileCount !== 18
+  || release.contract?.version !== "1.1.0"
+  || release.contract?.installedFileCount !== 31
 ) {
   throw new Error("site-shell release record does not match independent consumer pins");
 }
@@ -92,6 +92,6 @@ run(path.join(ROOT, "scripts/site-shell/verify-site-shell-ready.mjs"), [
   "--archive-sha256", `sha256:${PINS.archive}`,
   "--source-tree-digest", `sha256:${PINS.sourceTree}`,
   "--manifest-sha256", `sha256:${PINS.manifest}`,
-  "--contract-version", "1.0.0",
-  "--installed-file-count", "18",
+  "--contract-version", "1.1.0",
+  "--installed-file-count", "31",
 ]);

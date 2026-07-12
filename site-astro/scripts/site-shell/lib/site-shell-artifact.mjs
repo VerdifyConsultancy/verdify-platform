@@ -57,7 +57,20 @@ const COMPONENT_TYPE_KEYS = ["BreadcrumbItem"];
 const OBJECT_TYPE_DESCRIPTOR_KEYS = ["additionalProperties", "properties", "required", "type"];
 const BREADCRUMB_ITEM_KEYS = ["href", "name", "targetSite"];
 const SHARED_PROP_KEYS = ["brand", "corporateOrigin", "currentSite", "homeHref", "labOrigin"];
-const COMPONENT_KEYS = ["Breadcrumbs", "Footer", "Header"];
+const COMPONENT_KEYS = [
+  "Breadcrumbs",
+  "DataGrid",
+  "Footer",
+  "FormField",
+  "Header",
+  "MediaFigure",
+  "PageContainer",
+  "PageHero",
+  "PageSection",
+  "ProofRail",
+  "SiteCard",
+  "SiteLightbox",
+];
 const COMPONENT_DESCRIPTOR_KEYS = ["props", "requiredProps"];
 const PROP_DESCRIPTOR_KEYS = ["default", "enum", "required", "semantics", "type"];
 const CONTRACT_VERSION_PATTERN = /^[0-9]+\.[0-9]+\.[0-9]+$/;
@@ -478,6 +491,97 @@ export const validateContract = (contract, contractPath = DEFAULT_CONTRACT_PATH)
   validateDescriptor(contract.componentApi.components.Breadcrumbs.props.defaultItemTarget, "componentApi.components.Breadcrumbs.props.defaultItemTarget", {
     type: "breadcrumb-target", required: false, default: "current", enum: ["corporate", "lab", "current"],
   });
+  const pageComponents = {
+    PageContainer: {
+      required: [],
+      props: {
+        width: { type: "string", required: false, default: "wide", enum: ["content", "wide", "full"] },
+      },
+    },
+    PageSection: {
+      required: [],
+      props: {
+        id: { type: "string", required: false, default: null, enum: null },
+        tone: { type: "string", required: false, default: "white", enum: ["white", "field", "glass", "navy"] },
+        spacing: { type: "string", required: false, default: "standard", enum: ["compact", "standard", "spacious"] },
+      },
+    },
+    PageHero: {
+      required: ["title", "body"],
+      props: {
+        eyebrow: { type: "string", required: false, default: null, enum: null },
+        title: { type: "string", required: true, default: null, enum: null },
+        body: { type: "string", required: true, default: null, enum: null },
+        tone: { type: "string", required: false, default: "light", enum: ["light", "dark"] },
+      },
+    },
+    SiteCard: {
+      required: ["title", "body"],
+      props: {
+        eyebrow: { type: "string", required: false, default: null, enum: null },
+        title: { type: "string", required: true, default: null, enum: null },
+        body: { type: "string", required: true, default: null, enum: null },
+        href: { type: "string", required: false, default: null, enum: null },
+        tone: { type: "string", required: false, default: "white", enum: ["white", "glass", "navy"] },
+      },
+    },
+    ProofRail: {
+      required: ["title", "caveat"],
+      props: {
+        eyebrow: { type: "string", required: false, default: "Operating evidence", enum: null },
+        title: { type: "string", required: true, default: null, enum: null },
+        caveat: { type: "string", required: true, default: null, enum: null },
+        sourceHref: { type: "string", required: false, default: null, enum: null },
+        sourceLabel: { type: "string", required: false, default: "Inspect source", enum: null },
+        tone: { type: "string", required: false, default: "light", enum: ["light", "dark"] },
+      },
+    },
+    DataGrid: {
+      required: [],
+      props: {
+        columns: { type: "string", required: false, default: "three", enum: ["two", "three", "four"] },
+        density: { type: "string", required: false, default: "comfortable", enum: ["comfortable", "compact"] },
+      },
+    },
+    FormField: {
+      required: ["id", "label"],
+      props: {
+        id: { type: "string", required: true, default: null, enum: null },
+        label: { type: "string", required: true, default: null, enum: null },
+        hint: { type: "string", required: false, default: null, enum: null },
+        error: { type: "string", required: false, default: null, enum: null },
+        required: { type: "boolean", required: false, default: false, enum: null },
+      },
+    },
+    MediaFigure: {
+      required: ["src", "alt", "width", "height"],
+      props: {
+        src: { type: "string", required: true, default: null, enum: null },
+        alt: { type: "string", required: true, default: null, enum: null },
+        width: { type: "positive-integer", required: true, default: null, enum: null },
+        height: { type: "positive-integer", required: true, default: null, enum: null },
+        caption: { type: "string", required: false, default: null, enum: null },
+        credit: { type: "string", required: false, default: null, enum: null },
+        fullSrc: { type: "string", required: false, default: null, enum: null },
+        srcset: { type: "string", required: false, default: null, enum: null },
+        sizes: { type: "string", required: false, default: null, enum: null },
+        variant: { type: "string", required: false, default: "standard", enum: ["standard", "wide", "portrait", "thumbnail"] },
+        loading: { type: "string", required: false, default: "lazy", enum: ["eager", "lazy"] },
+      },
+    },
+    SiteLightbox: { required: [], props: {} },
+  };
+  for (const [name, expected] of Object.entries(pageComponents)) {
+    const propNames = Object.keys(expected.props);
+    validateComponent(name, expected.required, propNames);
+    for (const [propName, descriptor] of Object.entries(expected.props)) {
+      validateDescriptor(
+        contract.componentApi.components[name].props[propName],
+        `componentApi.components.${name}.props.${propName}`,
+        descriptor,
+      );
+    }
+  }
   return contract;
 };
 

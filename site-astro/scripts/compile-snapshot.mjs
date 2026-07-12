@@ -12,9 +12,18 @@ import remarkMath from "remark-math";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { unified } from "unified";
-import { visit } from "unist-util-visit";
+import { SKIP, visit } from "unist-util-visit";
 import YAML from "yaml";
+import sharp from "sharp";
 
+import {
+  discoverCurrentMediaOccurrence,
+  discoverGraphOccurrence,
+  loadSelectedOccurrenceRelease,
+  materializeOccurrenceBlobs,
+  occurrenceStateIndex,
+  staticOccurrenceManifest,
+} from "./lib/occurrence-release.mjs";
 import { verifySnapshot } from "./lib/snapshot.mjs";
 
 const SCRIPT_ROOT = path.dirname(fileURLToPath(import.meta.url));
@@ -157,15 +166,326 @@ function remarkRewriteLocalLinks(source, routeBySource) {
   };
 }
 
+function rehypeRewriteRelativeReferences(source, routeBySource, assetPaths) {
+  return () => (tree) => {
+    visit(tree, "element", (node) => {
+      const property = node.tagName === "a" ? "href" : ["img", "source", "video"].includes(node.tagName) ? "src" : null;
+      if (!property) return;
+      const raw = node.properties?.[property];
+      if (typeof raw !== "string" || /^(?:[a-z]+:|\/|#)/i.test(raw)) return;
+      const match = /^([^?#]*)([?#].*)?$/u.exec(raw);
+      const pathname = match?.[1] ?? "";
+      const suffix = match?.[2] ?? "";
+      if (!pathname) return;
+      const resolved = path.posix.normalize(path.posix.join(path.posix.dirname(source.relative), pathname));
+      const sourceCandidates = pathname.endsWith(".md")
+        ? [resolved]
+        : [resolved, `${resolved}.md`, `${resolved.replace(/\/$/, "")}/index.md`];
+      for (const candidate of sourceCandidates) {
+        const route = routeBySource.get(candidate);
+        if (route) {
+          node.properties[property] = `${route}${suffix}`;
+          return;
+        }
+      }
+      if (assetPaths.has(resolved)) node.properties[property] = `/${resolved}${suffix}`;
+    });
+  };
+}
+
+function rehypeUnavailableLocalReferences(assetPaths, availableRoutes, unavailable) {
+  return () => (tree) => {
+    visit(tree, "element", (node) => {
+      const property = node.tagName === "a" ? "href" : node.tagName === "img" ? "src" : null;
+      if (!property) return;
+      const raw = node.properties?.[property];
+      if (typeof raw !== "string" || raw.startsWith("#")) return;
+      let parsed;
+      try {
+        parsed = new URL(raw, SITE_ORIGIN);
+      } catch {
+        return;
+      }
+      if (parsed.origin !== SITE_ORIGIN) return;
+      const pathname = decodeURIComponent(parsed.pathname);
+      const relative = pathname.replace(/^\/+/, "").replace(/\/$/, "");
+      const route = normalizeRoute(pathname);
+      if (availableRoutes.has(route) || assetPaths.has(relative)) return;
+
+      const kind = node.tagName === "img" ? "image" : "link";
+      unavailable.push({ kind, path: pathname });
+      if (kind === "image") {
+        const alt = typeof node.properties?.alt === "string" ? node.properties.alt : "Evidence image";
+        node.tagName = "span";
+        node.properties = {
+          className: ["media-unavailable"],
+          role: "img",
+          ariaLabel: `${alt} — image unavailable in this publication`,
+        };
+        node.children = [{ type: "text", value: `${alt} — image unavailable in this publication` }];
+        return;
+      }
+      node.tagName = "span";
+      node.properties = {
+        className: ["unavailable-reference"],
+        title: "This evidence route is unavailable in this publication.",
+      };
+    });
+  };
+}
+
 function grafanaRenderUrl(liveUrl) {
   const parsed = new URL(liveUrl);
   parsed.pathname = parsed.pathname.replace(/^\/d-solo\//, "/render/d-solo/");
   return parsed.toString();
 }
 
-function rehypeGrafanaEvidence(occurrences) {
+function imageDimensions(buffer, relative = "") {
+  if (buffer.length >= 24 && buffer.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) {
+    return { width: buffer.readUInt32BE(16), height: buffer.readUInt32BE(20) };
+  }
+  if (buffer.length >= 4 && buffer[0] === 0xff && buffer[1] === 0xd8) {
+    const startOfFrame = new Set([0xc0, 0xc1, 0xc2, 0xc3, 0xc5, 0xc6, 0xc7, 0xc9, 0xca, 0xcb, 0xcd, 0xce, 0xcf]);
+    let offset = 2;
+    while (offset + 8 < buffer.length) {
+      while (offset < buffer.length && buffer[offset] !== 0xff) offset += 1;
+      while (offset < buffer.length && buffer[offset] === 0xff) offset += 1;
+      if (offset >= buffer.length) break;
+      const marker = buffer[offset];
+      offset += 1;
+      if (marker === 0xd8 || marker === 0x01) continue;
+      if (marker === 0xd9 || marker === 0xda || offset + 2 > buffer.length) break;
+      const length = buffer.readUInt16BE(offset);
+      if (length < 2 || offset + length > buffer.length) break;
+      if (startOfFrame.has(marker) && length >= 7) {
+        return { width: buffer.readUInt16BE(offset + 5), height: buffer.readUInt16BE(offset + 3) };
+      }
+      offset += length;
+    }
+  }
+  if (/\.svg$/i.test(relative)) {
+    const source = buffer.toString("utf8", 0, Math.min(buffer.length, 128 * 1024));
+    const open = /<svg\b[^>]*>/i.exec(source)?.[0] ?? "";
+    const width = /\bwidth=["']([0-9.]+)(?:px)?["']/i.exec(open)?.[1];
+    const height = /\bheight=["']([0-9.]+)(?:px)?["']/i.exec(open)?.[1];
+    if (width && height) return { width: Math.round(Number(width)), height: Math.round(Number(height)) };
+    const viewBox = /\bviewBox=["']\s*[-0-9.]+\s+[-0-9.]+\s+([0-9.]+)\s+([0-9.]+)\s*["']/i.exec(open);
+    if (viewBox) return { width: Math.round(Number(viewBox[1])), height: Math.round(Number(viewBox[2])) };
+  }
+  return null;
+}
+
+async function buildResponsiveImage(entry, relative, sourceDigest) {
+  if (!/\.(?:jpe?g|png)$/i.test(relative)) return null;
+  const metadata = await sharp(entry.absolute, { failOn: "warning", limitInputPixels: 80_000_000 }).metadata();
+  if (!metadata.width || !metadata.height) return null;
+  const rotated = [5, 6, 7, 8].includes(metadata.orientation ?? 1);
+  const width = rotated ? metadata.height : metadata.width;
+  const height = rotated ? metadata.width : metadata.height;
+  const variants = [];
+  for (const targetWidth of [480, 960, 1440]) {
+    if (targetWidth >= width) continue;
+    const relativeOutput = `_media/${sourceDigest.slice(0, 24)}-${targetWidth}.webp`;
+    const destination = path.join(PUBLIC_ROOT, ...relativeOutput.split("/"));
+    await mkdir(path.dirname(destination), { recursive: true });
+    await sharp(entry.absolute, { failOn: "warning", limitInputPixels: 80_000_000 })
+      .rotate()
+      .resize({ width: targetWidth, withoutEnlargement: true })
+      .webp({ quality: 82, effort: 5 })
+      .toFile(destination);
+    const output = await readFile(destination);
+    variants.push({
+      path: relativeOutput,
+      width: targetWidth,
+      height: Math.max(1, Math.round((height / width) * targetWidth)),
+      bytes: output.length,
+      sha256: createHash("sha256").update(output).digest("hex"),
+      generatedFrom: relative,
+    });
+  }
+  return { width, height, variants };
+}
+
+function rehypeImageMetadata(metadata) {
+  return () => (tree) => {
+    visit(tree, "element", (node) => {
+      if (node.tagName !== "img") return;
+      const rawSource = node.properties?.src;
+      if (typeof rawSource !== "string") return;
+      let pathname;
+      try {
+        const parsed = new URL(rawSource, SITE_ORIGIN);
+        if (parsed.origin !== SITE_ORIGIN) {
+          if ((node.properties?.className ?? []).includes("camera-snapshot")) {
+            node.properties.width ??= 704;
+            node.properties.height ??= 480;
+          }
+          return;
+        }
+        pathname = decodeURIComponent(parsed.pathname).replace(/^\//, "");
+      } catch {
+        return;
+      }
+      const dimensions = metadata.get(pathname);
+      if (!dimensions) return;
+      node.properties.width ??= dimensions.width;
+      node.properties.height ??= dimensions.height;
+      node.properties.decoding ??= "async";
+      node.properties.loading ??= "lazy";
+      node.properties.sizes ??= "(max-width: 620px) calc(100vw - 2rem), (max-width: 860px) 50vw, 806px";
+      const candidates = [
+        ...(dimensions.variants ?? []).map((variant) => ({ source: `/${variant.path}`, width: variant.width })),
+        { source: `/${pathname}`, width: dimensions.width },
+      ];
+      if (pathname.startsWith("static/photos/") && !pathname.startsWith("static/photos/full/")) {
+        const fullPath = `static/photos/full/${path.posix.basename(pathname)}`;
+        const fullDimensions = metadata.get(fullPath);
+        if (fullDimensions && fullDimensions.width > dimensions.width) {
+          candidates.push(
+            ...(fullDimensions.variants ?? []).map((variant) => ({ source: `/${variant.path}`, width: variant.width })),
+            { source: `/${fullPath}`, width: fullDimensions.width },
+          );
+        }
+      }
+      const byWidth = new Map();
+      for (const candidate of candidates.sort((left, right) => left.width - right.width)) {
+        byWidth.set(candidate.width, candidate);
+      }
+      if (byWidth.size > 1) {
+        node.properties.srcSet = [...byWidth.values()].map((candidate) => `${candidate.source} ${candidate.width}w`).join(", ");
+      }
+    });
+  };
+}
+
+function cameraSnapshotAsset(rawSource, snapshotFiles) {
+  if (typeof rawSource !== "string") return null;
+  let parsed;
+  try {
+    parsed = new URL(rawSource);
+  } catch {
+    return null;
+  }
+  if (
+    parsed.protocol !== "https:"
+    || parsed.hostname !== "api.verdify.ai"
+    || parsed.username
+    || parsed.password
+  ) return null;
+  const match = /^\/api\/v1\/public\/cameras\/([a-z0-9_-]+)\/latest\.jpg$/.exec(parsed.pathname);
+  if (!match) return null;
+  const relative = `static/cameras/${match[1]}/latest.jpg`;
+  return {
+    sourceUrl: parsed.toString(),
+    relative,
+    publicPath: `/${relative}`,
+    available: snapshotFiles.has(relative),
+  };
+}
+
+function rehypeCameraSnapshots(snapshotFiles, occurrences) {
   return () => (tree) => {
     visit(tree, "element", (node, index, parent) => {
+      if (!parent || index === undefined) return;
+      if (node.tagName === "script" && node.properties?.src === "/static/camera-refresh.js") {
+        parent.children.splice(index, 1);
+        return [SKIP, index];
+      }
+      if (node.tagName !== "img") return;
+      const candidate = cameraSnapshotAsset(node.properties?.dataCameraSrc ?? node.properties?.src, snapshotFiles);
+      if (!candidate) return;
+      occurrences.push(candidate);
+      const alt = typeof node.properties?.alt === "string" ? node.properties.alt : "Greenhouse camera snapshot";
+      if (candidate.available) {
+        node.properties.src = candidate.publicPath;
+        node.properties.dataCameraLocalSrc = candidate.publicPath;
+        node.properties.dataCameraState = "last-known-good";
+        delete node.properties.dataCameraSrc;
+        if (parent.tagName === "a") parent.properties.href = candidate.publicPath;
+        return;
+      }
+      parent.children[index] = {
+        type: "element",
+        tagName: "div",
+        properties: {
+          className: ["camera-snapshot", "camera-snapshot--unavailable"],
+          role: "img",
+          ariaLabel: alt,
+          dataCameraState: "unavailable",
+        },
+        children: [{
+          type: "text",
+          value: "A verified same-origin camera snapshot was not included in this publication.",
+        }],
+      };
+      if (parent.tagName === "a") {
+        parent.properties.target = "_blank";
+        parent.properties.rel = ["noopener", "noreferrer"];
+        parent.properties.ariaLabel = "Open the latest camera snapshot at the public API";
+      }
+    });
+  };
+}
+
+function rehypeSpecialistEvidence({ route, grafanaOccurrences, currentMediaOccurrences, selectedOccurrenceState }) {
+  return (tree) => {
+    let graphOrdinal = 0;
+    let mediaOrdinal = 0;
+    visit(tree, "element", (node, index, parent) => {
+      if (node.tagName === "script" && node.properties?.src === "/static/camera-refresh.js" && parent && index !== undefined) {
+        parent.children.splice(index, 1);
+        return [SKIP, index];
+      }
+      if (node.tagName === "img") {
+        const rawSource = node.properties?.src;
+        if (typeof rawSource !== "string") return;
+        const discovered = discoverCurrentMediaOccurrence({
+          route,
+          ordinal: mediaOrdinal,
+          sourceUrl: rawSource,
+          semanticRole: typeof node.properties?.alt === "string" ? node.properties.alt : "Current greenhouse camera",
+        });
+        mediaOrdinal += 1;
+        if (discovered === null) return;
+        currentMediaOccurrences.push(discovered);
+        const selectedCandidate = selectedOccurrenceState.currentMedia.get(discovered.occurrenceId);
+        const selected = selectedCandidate?.sourceProvenanceSha256 === discovered.sourceProvenanceSha256
+          ? selectedCandidate
+          : null;
+        if (selected?.fallback) {
+          node.properties.src = selected.fallback.publicPath;
+          node.properties.width = selected.fallback.width;
+          node.properties.height = selected.fallback.height;
+          node.properties["data-occurrence-id"] = discovered.occurrenceId;
+          node.properties["data-current-media-target"] = discovered.stableTarget;
+          node.properties["data-fallback-verified-at"] = selected.fallback.verifiedAt;
+          if (parent?.tagName === "a") parent.properties.href = selected.fallback.publicPath;
+        } else {
+          if (!parent || index === undefined) throw new Error("current media occurrence has no render parent");
+          if (parent.tagName === "a") {
+            parent.tagName = "div";
+            parent.properties = { className: ["current-media-evidence__wrapper"] };
+          }
+          parent.children[index] = {
+            type: "element",
+            tagName: "figure",
+            properties: {
+              className: ["current-media-evidence", "current-media-evidence--pending"],
+              "data-occurrence-id": discovered.occurrenceId,
+              "data-current-media-target": discovered.stableTarget,
+            },
+            children: [
+              {
+                type: "element",
+                tagName: "figcaption",
+                properties: { className: ["current-media-evidence__status"] },
+                children: [{ type: "text", value: "Verified local camera fallback is pending." }],
+              },
+            ],
+          };
+        }
+        return;
+      }
       if (node.tagName !== "iframe" || !parent || index === undefined) return;
       const rawSource = node.properties?.src;
       if (typeof rawSource !== "string") return;
@@ -180,40 +500,77 @@ function rehypeGrafanaEvidence(occurrences) {
         throw new Error("unsupported Grafana occurrence URL");
       }
       const liveUrl = parsed.toString();
-      const renderUrl = grafanaRenderUrl(liveUrl);
       const title = typeof node.properties?.title === "string" ? node.properties.title : "Greenhouse evidence graph";
-      occurrences.push({ liveUrl, renderUrl, title });
+      const discovered = discoverGraphOccurrence({ route, ordinal: graphOrdinal, liveUrl, title });
+      graphOrdinal += 1;
+      const selected = selectedOccurrenceState.graphs.get(discovered.occurrenceId);
+      grafanaOccurrences.push(discovered);
+      const fallback = selected?.fallback;
+      const status = fallback
+        ? `${selected.state === "retained-last-known-good" ? "Last-known-good" : "Verified"} graph fallback · ${fallback.verifiedAt}`
+        : "Verified local graph fallback is pending for this stage snapshot.";
+      const children = [];
+      if (fallback) {
+        children.push({
+          type: "element",
+          tagName: "img",
+          properties: {
+            className: ["grafana-evidence__image"],
+            src: fallback.publicPath,
+            alt: title,
+            width: fallback.width,
+            height: fallback.height,
+            loading: "lazy",
+            decoding: "async",
+          },
+          children: [],
+        });
+      }
+      children.push(
+        {
+          type: "element",
+          tagName: "figcaption",
+          properties: { className: ["grafana-evidence__status"] },
+          children: [{ type: "text", value: status }],
+        },
+        {
+          type: "element",
+          tagName: "a",
+          properties: { href: selected?.liveUrl ?? liveUrl, rel: ["noopener", "noreferrer"], target: "_blank" },
+          children: [{ type: "text", value: "Open interactive graph" }],
+        },
+      );
       parent.children[index] = {
         type: "element",
         tagName: "figure",
         properties: {
           className: ["grafana-evidence"],
+          "data-occurrence-id": discovered.occurrenceId,
           "data-iframe-src": liveUrl,
           "data-live-src": liveUrl,
-          "data-image-src": renderUrl,
+          ...(fallback ? { "data-image-src": fallback.publicPath, "data-image-sha256": fallback.sha256 } : {}),
           "data-title": title,
         },
-        children: [
-          {
-            type: "element",
-            tagName: "div",
-            properties: { className: ["grafana-evidence__status"] },
-            children: [{ type: "text", value: "Verified local graph fallback is pending for this stage snapshot." }],
-          },
-          {
-            type: "element",
-            tagName: "a",
-            properties: { href: liveUrl, rel: ["noopener", "noreferrer"], target: "_blank" },
-            children: [{ type: "text", value: "Open interactive graph" }],
-          },
-        ],
+        children,
       };
     });
   };
 }
 
-async function renderMarkdown(markdown, source, linkIndex, routeBySource) {
-  const occurrences = [];
+async function renderMarkdown(
+  markdown,
+  source,
+  linkIndex,
+  routeBySource,
+  assetPaths,
+  imageMetadata,
+  snapshotFiles,
+  availableRoutes = new Set(routeBySource.values()),
+  selectedOccurrenceState = { graphs: new Map(), currentMedia: new Map() },
+) {
+  const grafanaOccurrences = [];
+  const currentMediaOccurrences = [];
+  const unavailable = [];
   const processor = unified()
     .use(remarkParse)
     .use(remarkGfm, { singleTilde: false })
@@ -221,12 +578,25 @@ async function renderMarkdown(markdown, source, linkIndex, routeBySource) {
     .use(remarkRewriteLocalLinks(source, routeBySource))
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeRaw)
+    .use(rehypeRewriteRelativeReferences(source, routeBySource, assetPaths))
+    .use(rehypeUnavailableLocalReferences(assetPaths, availableRoutes, unavailable))
     .use(rehypeSlug)
     .use(rehypeKatex)
-    .use(rehypeGrafanaEvidence(occurrences));
+    .use(rehypeSpecialistEvidence, {
+      route: source.route,
+      grafanaOccurrences,
+      currentMediaOccurrences,
+      selectedOccurrenceState,
+    })
+    .use(rehypeImageMetadata(imageMetadata));
   const tree = processor.parse(expandWikilinks(markdown, source, linkIndex));
   const result = await processor.run(tree);
-  return { html: toHtml(result, { allowDangerousHtml: true }), grafana: occurrences };
+  return {
+    html: toHtml(result, { allowDangerousHtml: true }),
+    grafana: grafanaOccurrences,
+    currentMedia: currentMediaOccurrences,
+    unavailable,
+  };
 }
 
 function aliasRecords(sourceRecords) {
@@ -260,6 +630,9 @@ function aliasRecords(sourceRecords) {
         noindex: true,
         target: record.canonicalPath,
         grafana: [],
+        cameras: [],
+        currentMedia: [],
+        unavailable: [],
         date: record.date,
       };
       if (aliases.has(route)) throw new Error(`duplicate alias is not an approved rolling-plan alias: ${route}`);
@@ -287,6 +660,9 @@ function aliasRecords(sourceRecords) {
       noindex: true,
       target: latest.canonicalPath,
       grafana: [],
+      cameras: [],
+      currentMedia: [],
+      unavailable: [],
       date: latest.date,
     });
   }
@@ -339,6 +715,9 @@ function tagRecords(sourceRecords, occupied) {
       noindex: false,
       target: "",
       grafana: [],
+      cameras: [],
+      currentMedia: [],
+      unavailable: [],
       date: "",
     });
   }
@@ -358,9 +737,69 @@ function tagRecords(sourceRecords, occupied) {
     noindex: false,
     target: "",
     grafana: [],
+    cameras: [],
+    currentMedia: [],
+    unavailable: [],
     date: "",
   });
   return records;
+}
+
+function folderRecords(sourceRecords, occupied) {
+  const groups = new Map();
+  for (const record of sourceRecords) {
+    const segments = record.route.split("/").filter(Boolean);
+    if (segments.length < 2) continue;
+    const route = `/${segments[0]}`;
+    if (occupied.has(route)) continue;
+    const directChild = segments.length === 2;
+    if (!directChild) continue;
+    const entries = groups.get(route) ?? [];
+    entries.push(record);
+    groups.set(route, entries);
+  }
+
+  const generated = [];
+  for (const [route, entries] of [...groups].sort()) {
+    if (occupied.has(route)) continue;
+    occupied.add(route);
+    const label = route.slice(1);
+    const cards = entries
+      .sort((left, right) => left.title.localeCompare(right.title))
+      .map((record) => {
+        const topics = record.tags
+          .map((tag) => {
+            const slug = titleKey(tag).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+            return slug ? `<a href="/tags/${slug}">${escapeHtml(tag)}</a>` : "";
+          })
+          .filter(Boolean)
+          .join(" · ");
+        return `<li><h3><a href="${escapeHtml(record.canonicalPath)}">${escapeHtml(record.title)}</a></h3>${topics ? `<p>${topics}</p>` : ""}</li>`;
+      })
+      .join("");
+    generated.push({
+      route,
+      canonicalPath: `${route}/`,
+      canonicalUrl: `${SITE_ORIGIN}${route}/`,
+      physicalPath: `${label}/index.html`,
+      kind: "folder",
+      source: `generated:folder:${label}`,
+      title: `Folder: ${label}`,
+      description: `Browse Verdify Lab ${label} evidence pages.`,
+      html: `<h1>Folder: ${escapeHtml(label)}</h1><ul class="folder-index">${cards}</ul>`,
+      aliases: [],
+      tags: [],
+      cssclasses: ["folder-index-page"],
+      noindex: false,
+      target: "",
+      grafana: [],
+      cameras: [],
+      currentMedia: [],
+      unavailable: [],
+      date: "",
+    });
+  }
+  return generated;
 }
 
 function xmlEscape(value) {
@@ -394,6 +833,19 @@ async function main() {
   const snapshot = await verifySnapshot(snapshotRoot, {
     allowSyntheticFixture: process.env.ALLOW_SYNTHETIC_FIXTURE === "true",
   });
+  const selectedOccurrenceRelease = process.env.LAB_OCCURRENCE_STORE
+    ? await loadSelectedOccurrenceRelease(process.env.LAB_OCCURRENCE_STORE)
+    : { selection: null, current: null };
+  if (
+    selectedOccurrenceRelease.current
+    && (
+      selectedOccurrenceRelease.current.sourceSnapshotManifestSha256 !== snapshot.manifestDigest.slice("sha256:".length)
+      || selectedOccurrenceRelease.current.policyVersion !== snapshot.sanitization.policyVersion
+    )
+  ) {
+    throw new Error("selected occurrence release does not match the exact snapshot and policy");
+  }
+  const selectedOccurrenceState = occurrenceStateIndex(selectedOccurrenceRelease.current);
   await rm(PUBLIC_ROOT, { recursive: true, force: true });
   await rm(RECORDS_PATH, { force: true });
   await rm(ASSETS_PATH, { force: true });
@@ -410,6 +862,8 @@ async function main() {
   const markdownSources = [];
   const excludedDrafts = [];
   const assetRecords = [];
+  const imageMetadata = new Map();
+  const responsiveAssets = [];
   for (const [relative, entry] of snapshot.files) {
     if (relative.endsWith(".md")) {
       const source = await readFile(entry.absolute, "utf8");
@@ -424,17 +878,52 @@ async function main() {
       await mkdir(path.dirname(destination), { recursive: true });
       await cp(entry.absolute, destination, { dereference: false, force: false });
       assetRecords.push({ relative, sha256: snapshot.manifest.files[relative], bytes: entry.size });
+      if (/\.(?:jpe?g|png|svg)$/i.test(relative)) {
+        const responsive = await buildResponsiveImage(entry, relative, snapshot.manifest.files[relative]);
+        const dimensions = responsive ?? imageDimensions(await readFile(entry.absolute), relative);
+        if (dimensions?.width > 0 && dimensions?.height > 0) {
+          imageMetadata.set(relative, dimensions);
+          responsiveAssets.push(...(dimensions.variants ?? []));
+        }
+      }
     }
   }
   markdownSources.sort((left, right) => left.relative.localeCompare(right.relative));
   const linkIndex = buildLinkIndex(markdownSources);
   const routeBySource = new Map(markdownSources.map((source) => [source.relative, source.route]));
+  const assetPaths = new Set(assetRecords.map((record) => record.relative));
+  const plannedRoutes = new Set(["/", "/404", ...routeBySource.values()]);
+  for (const source of markdownSources) {
+    for (const alias of stringList(source.frontmatter.aliases ?? source.frontmatter.alias)) {
+      plannedRoutes.add(normalizeRoute(alias));
+    }
+    for (const tag of stringList(source.frontmatter.tags)) {
+      const slug = titleKey(tag).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      if (slug) plannedRoutes.add(`/tags/${slug}`);
+    }
+    const segments = source.route.split("/").filter(Boolean);
+    if (segments.length >= 2) plannedRoutes.add(`/${segments[0]}`);
+  }
+  plannedRoutes.add("/tags");
+  if (markdownSources.some((source) => /^\/plans\/\d{4}-\d{2}-\d{2}$/.test(source.route))) {
+    plannedRoutes.add("/plans/latest");
+  }
   const records = [];
   const occupied = new Set();
   for (const source of markdownSources) {
     if (occupied.has(source.route)) throw new Error(`duplicate source route: ${source.route}`);
     occupied.add(source.route);
-    const rendered = await renderMarkdown(source.markdown, source, linkIndex, routeBySource);
+    const rendered = await renderMarkdown(
+      source.markdown,
+      source,
+      linkIndex,
+      routeBySource,
+      assetPaths,
+      imageMetadata,
+      snapshot.files,
+      plannedRoutes,
+      selectedOccurrenceState,
+    );
     const aliases = stringList(source.frontmatter.aliases ?? source.frontmatter.alias);
     const tags = stringList(source.frontmatter.tags);
     const title = String(source.frontmatter.title ?? path.posix.basename(source.relative, ".md"));
@@ -454,6 +943,9 @@ async function main() {
       noindex: source.frontmatter.noindex === true,
       target: "",
       grafana: rendered.grafana,
+      cameras: rendered.currentMedia,
+      currentMedia: rendered.currentMedia,
+      unavailable: rendered.unavailable,
       date: source.frontmatter.date ? String(source.frontmatter.date) : "",
     };
     record.canonicalPath = canonicalPath(record);
@@ -463,11 +955,39 @@ async function main() {
 
   const aliasResult = aliasRecords(records);
   const aliases = aliasResult.aliases;
-  const tags = tagRecords(records, new Set([...occupied, ...aliases.map((record) => record.route)]));
-  const allRecords = [...records, ...aliases, ...tags].sort((left, right) => left.route.localeCompare(right.route));
+  const generatedOccupied = new Set([...occupied, ...aliases.map((record) => record.route)]);
+  const folders = folderRecords(records, generatedOccupied);
+  const tags = tagRecords(records, generatedOccupied);
+  const allRecords = [...records, ...aliases, ...folders, ...tags].sort((left, right) => left.route.localeCompare(right.route));
   const routeDigest = createHash("sha256")
     .update(JSON.stringify(allRecords.map(({ route, physicalPath, kind, source }) => ({ route, physicalPath, kind, source }))))
     .digest("hex");
+  const discoveredGraphs = records.flatMap((record) => record.grafana);
+  const discoveredCurrentMedia = records.flatMap((record) => record.currentMedia);
+  const occurrenceManifest = staticOccurrenceManifest({
+    snapshotId: snapshot.snapshotId,
+    selectedManifestSha256: selectedOccurrenceRelease.selection?.current.manifestSha256 ?? null,
+    discoveredGraphs,
+    discoveredCurrentMedia,
+    selectedManifest: selectedOccurrenceRelease.current,
+  });
+  const discoveredGraphIds = new Set(discoveredGraphs.map((occurrence) => occurrence.occurrenceId));
+  const discoveredMediaIds = new Set(discoveredCurrentMedia.map((occurrence) => occurrence.occurrenceId));
+  const selectedBuildOccurrences = selectedOccurrenceRelease.current
+    ? {
+        ...selectedOccurrenceRelease.current,
+        occurrences: {
+          graphs: selectedOccurrenceRelease.current.occurrences.graphs.filter((occurrence) => discoveredGraphIds.has(occurrence.occurrenceId)),
+          currentMedia: selectedOccurrenceRelease.current.occurrences.currentMedia.filter((occurrence) => discoveredMediaIds.has(occurrence.occurrenceId)),
+        },
+      }
+    : null;
+  const materializedOccurrenceBlobCount = selectedBuildOccurrences
+    ? await materializeOccurrenceBlobs(process.env.LAB_OCCURRENCE_STORE, selectedBuildOccurrences, PUBLIC_ROOT)
+    : 0;
+  const occurrenceManifestBytes = `${JSON.stringify(occurrenceManifest, null, 2)}\n`;
+  const occurrenceManifestDigest = createHash("sha256").update(occurrenceManifestBytes).digest("hex");
+  await writeFile(path.join(PUBLIC_ROOT, "occurrence-manifest.json"), occurrenceManifestBytes);
   const build = {
     contract: "verdify.lab-astro-stage-build",
     schemaVersion: 1,
@@ -485,22 +1005,33 @@ async function main() {
     aliasCount: aliases.length,
     rollingPlanCompatibility: aliasResult.compatibility,
     tagRouteCount: tags.length,
+    folderRouteCount: folders.length,
     grafanaOccurrenceCount: records.reduce((count, record) => count + record.grafana.length, 0),
+    cameraOccurrenceCount: discoveredCurrentMedia.length,
+    cameraLocalFallbackCount: discoveredCurrentMedia.filter(
+      (occurrence) => selectedOccurrenceState.currentMedia.get(occurrence.occurrenceId)?.fallback,
+    ).length,
+    unavailableReferenceCount: records.reduce((count, record) => count + record.unavailable.length, 0),
+    currentMediaOccurrenceCount: discoveredCurrentMedia.length,
+    selectedOccurrenceManifestSha256: selectedOccurrenceRelease.selection?.current.manifestSha256 ?? null,
+    occurrenceManifestDigest: `sha256:${occurrenceManifestDigest}`,
+    materializedOccurrenceBlobCount,
     routeDigest: `sha256:${routeDigest}`,
     snapshotAssetCount: [...snapshot.files.keys()].filter((relative) => !relative.endsWith(".md")).length,
     copiedSnapshotAssetCount: assetRecords.length,
+    generatedResponsiveImageCount: responsiveAssets.length,
     policyReplacedAssets: snapshot.files.has("robots.txt") ? ["robots.txt"] : [],
     preservedMediaCount: assetRecords.filter((record) => record.relative.startsWith("static/video/")).length,
     siteShell: {
-      contractVersion: "1.0.0",
-      wwwCommit: "c9c0d56f654d6b9198352f16c620717dbee71612",
-      archiveDigest: "sha256:6600525856f7a32b2fe7b30b4043fc29cdb26346f5b4689b20343cdff4efce61",
-      releaseDigest: "sha256:897f872a6ab8de39f2c55e0d7833d723c00b1c9533673df6309472552956b42c",
-      manifestDigest: "sha256:43ca0600f9a6db8af2a54e93da06d4d2994991018c2344a6c854bc6297ab9458",
+      contractVersion: "1.1.0",
+      wwwCommit: "7febbc479c6ed7d22f829e9c1e7109bc9bc7c6c0",
+      archiveDigest: "sha256:0645773ab3a952727251840e28dc73929a3e42b904450bcc9e7d25d8b03b1c91",
+      releaseDigest: "sha256:779620f2eda4d62677a2d9d61c65e2a1014e34de8cb2cec5008928caeef46a6d",
+      manifestDigest: "sha256:2864debbe67b23cd20ef5aa5fb57e86803ed1a1a9393b993c0acdd9182a6f585",
     },
   };
   await writeFile(RECORDS_PATH, `${JSON.stringify(allRecords)}\n`);
-  await writeFile(ASSETS_PATH, `${JSON.stringify(assetRecords)}\n`);
+  await writeFile(ASSETS_PATH, `${JSON.stringify([...assetRecords, ...responsiveAssets])}\n`);
   await writeFile(BUILD_PATH, `${JSON.stringify(build, null, 2)}\n`);
   await writeIndexes(allRecords, build);
   process.stdout.write(
@@ -515,4 +1046,14 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   });
 }
 
-export { aliasRecords, main, normalizeRoute, routeFromSource, splitFrontmatter };
+export {
+  aliasRecords,
+  cameraSnapshotAsset,
+  folderRecords,
+  imageDimensions,
+  main,
+  normalizeRoute,
+  renderMarkdown,
+  routeFromSource,
+  splitFrontmatter,
+};

@@ -1,0 +1,396 @@
+import AxeBuilder from "@axe-core/playwright";
+import { expect, test } from "@playwright/test";
+import { createServer } from "node:http";
+import { access, readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const DIST = path.join(ROOT, "dist");
+const QUALITY_FIXTURE = path.join(ROOT, "tests", "fixtures", "quality");
+const MARKETING_CONTRACT = JSON.parse(
+  await readFile(path.join(QUALITY_FIXTURE, "marketing-page-visual-contract.json"), "utf8"),
+);
+const shellReady = JSON.parse(await readFile(path.join(
+  ROOT,
+  ".generated",
+  "site-shell-root",
+  ".site-shell-ready.json",
+), "utf8"));
+let installedMarketingContract = null;
+try {
+  installedMarketingContract = JSON.parse(await readFile(path.join(
+    ROOT,
+    ".generated",
+    "site-shell-root",
+    "vendor",
+    "verdify-site-shell",
+    "contract",
+    "page-primitives-visual.json",
+  ), "utf8"));
+} catch (error) {
+  if (error.code !== "ENOENT") throw error;
+}
+const securityHeaders = await readFile(path.join(ROOT, "nginx", "security-headers.inc"), "utf8");
+const CSP = securityHeaders.match(/Content-Security-Policy "([^"]+)"/)?.[1];
+if (!CSP) throw new Error("runtime CSP is missing");
+
+const contentTypes = new Map([
+  [".css", "text/css; charset=utf-8"],
+  [".html", "text/html; charset=utf-8"],
+  [".js", "application/javascript; charset=utf-8"],
+  [".json", "application/json; charset=utf-8"],
+  [".pagefind", "application/octet-stream"],
+  [".pf_fragment", "application/octet-stream"],
+  [".pf_index", "application/octet-stream"],
+  [".pf_meta", "application/octet-stream"],
+  [".svg", "image/svg+xml"],
+  [".wasm", "application/wasm"],
+  [".webp", "image/webp"],
+  [".woff", "font/woff"],
+  [".woff2", "font/woff2"],
+]);
+
+const routes = [
+  { label: "home", path: "/", family: "home" },
+  { label: "planner", path: "/plans/2026-07-12", family: "plan" },
+  { label: "forecast", path: "/data/forecast", family: "forecast" },
+  { label: "archive", path: "/data/plans", family: "archive" },
+  { label: "evidence", path: "/start/evidence", family: "evidence" },
+  { label: "contact", path: "/start/contact", family: "contact" },
+  { label: "media", path: "/greenhouse", family: "article" },
+];
+const viewports = MARKETING_CONTRACT.viewports.filter(({ name }) => name !== "tablet");
+
+async function resolveRequest(pathname) {
+  const decoded = decodeURIComponent(pathname);
+  if (decoded.includes("\0") || decoded.split("/").includes("..")) return null;
+  const relative = decoded.replace(/^\/+/, "");
+  const candidates = path.extname(relative)
+    ? [relative]
+    : relative
+      ? [`${relative}.html`, `${relative}/index.html`]
+      : ["index.html"];
+  for (const candidate of candidates) {
+    const absolute = path.resolve(DIST, candidate);
+    if (!absolute.startsWith(`${DIST}${path.sep}`) && absolute !== DIST) continue;
+    try {
+      await access(absolute);
+      return absolute;
+    } catch {
+      // Try the next canonical static route shape.
+    }
+  }
+  return null;
+}
+
+let server;
+let origin;
+
+test.beforeAll(async () => {
+  server = createServer(async (request, response) => {
+    const target = await resolveRequest(new URL(request.url, "http://localhost").pathname);
+    response.setHeader("Content-Security-Policy", CSP);
+    response.setHeader("X-Content-Type-Options", "nosniff");
+    if (!target) {
+      response.statusCode = 404;
+      response.end("not found");
+      return;
+    }
+    response.setHeader("Content-Type", contentTypes.get(path.extname(target)) ?? "application/octet-stream");
+    if (request.method === "HEAD") {
+      response.end();
+      return;
+    }
+    response.end(await readFile(target));
+  });
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  origin = `http://127.0.0.1:${address.port}`;
+});
+
+test.afterAll(async () => {
+  await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+});
+
+function observeFailures(page) {
+  const failures = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") failures.push(`console: ${message.text()}`);
+  });
+  page.on("pageerror", (error) => failures.push(`pageerror: ${error.message}`));
+  page.on("requestfailed", (request) => failures.push(`request: ${request.url()} (${request.failure()?.errorText})`));
+  page.on("response", (response) => {
+    if (response.status() >= 400) failures.push(`response: ${response.status()} ${response.url()}`);
+  });
+  return failures;
+}
+
+async function installPerformanceObservers(context) {
+  await context.addInitScript(() => {
+    window.__verdifyQuality = { cls: 0, lcp: 0, longTaskCount: 0, longTaskDuration: 0 };
+    try {
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) window.__verdifyQuality.lcp = Math.max(window.__verdifyQuality.lcp, entry.startTime);
+      }).observe({ type: "largest-contentful-paint", buffered: true });
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          if (!entry.hadRecentInput) window.__verdifyQuality.cls += entry.value;
+        }
+      }).observe({ type: "layout-shift", buffered: true });
+      new PerformanceObserver((list) => {
+        for (const entry of list.getEntries()) {
+          window.__verdifyQuality.longTaskCount += 1;
+          window.__verdifyQuality.longTaskDuration += entry.duration;
+        }
+      }).observe({ type: "longtask", buffered: true });
+    } catch {
+      // The metric assertion below still covers timing, bytes, and DOM size if
+      // an older browser omits one optional observer entry type.
+    }
+  });
+}
+
+async function visit(page, route) {
+  const response = await page.goto(`${origin}${route}`, { waitUntil: "load" });
+  expect(response?.status()).toBe(200);
+  await page.evaluate(() => document.fonts.ready);
+  await page.waitForTimeout(80);
+}
+
+async function performanceMetrics(page) {
+  return page.evaluate(() => {
+    const navigation = performance.getEntriesByType("navigation")[0];
+    const resources = performance.getEntriesByType("resource");
+    const firstContentfulPaint = performance.getEntriesByName("first-contentful-paint")[0]?.startTime ?? 0;
+    return {
+      cls: window.__verdifyQuality?.cls ?? 0,
+      domContentLoaded: navigation?.domContentLoadedEventEnd ?? 0,
+      domNodes: document.querySelectorAll("*").length,
+      firstContentfulPaint,
+      largestContentfulPaint: window.__verdifyQuality?.lcp ?? 0,
+      load: navigation?.loadEventEnd ?? 0,
+      longTaskCount: window.__verdifyQuality?.longTaskCount ?? 0,
+      longTaskDuration: window.__verdifyQuality?.longTaskDuration ?? 0,
+      scriptCount: resources.filter((entry) => entry.initiatorType === "script").length,
+      totalDecodedBytes: (navigation?.decodedBodySize ?? 0)
+        + resources.reduce((total, entry) => total + (entry.decodedBodySize ?? 0), 0),
+    };
+  });
+}
+
+function expectWithinPerformanceBudget(metrics) {
+  expect(metrics.firstContentfulPaint, "FCP must be observed").toBeGreaterThan(0);
+  expect(metrics.largestContentfulPaint, "LCP must be observed").toBeGreaterThan(0);
+  expect(metrics.domContentLoaded, "DOMContentLoaded must stay below 2 seconds").toBeLessThan(2_000);
+  expect(metrics.load, "load must stay below 2.5 seconds").toBeLessThan(2_500);
+  expect(metrics.firstContentfulPaint, "FCP must stay below 1.5 seconds").toBeLessThan(1_500);
+  expect(metrics.largestContentfulPaint, "LCP must stay below 2.5 seconds").toBeLessThan(2_500);
+  expect(metrics.cls, "CLS must stay within the good threshold").toBeLessThanOrEqual(0.1);
+  expect(metrics.longTaskDuration, "long-task time must stay below 150ms").toBeLessThan(150);
+  expect(metrics.domNodes, "representative pages must keep a bounded DOM").toBeLessThan(1_500);
+  expect(metrics.totalDecodedBytes, "first-load decoded bytes must stay below 1.5MiB").toBeLessThan(1_572_864);
+  expect(metrics.scriptCount, "static evidence pages must keep JS requests bounded").toBeLessThanOrEqual(4);
+}
+
+test("@quality Marketing visual contract is the Lab quality source", async ({ browser }) => {
+  if (installedMarketingContract) expect(installedMarketingContract).toEqual(MARKETING_CONTRACT);
+  else expect(shellReady.contractVersion, "only the predecessor shell may lack the page visual contract").toBe("1.0.0");
+  expect(MARKETING_CONTRACT.contractVersion).toBe("1.1.0");
+  expect(MARKETING_CONTRACT.viewports.map(({ width }) => width)).toEqual([390, 768, 1440]);
+  expect(MARKETING_CONTRACT.assertions).toEqual([
+    "body-has-no-horizontal-overflow",
+    "page-defaults-to-light",
+    "hero-copy-precedes-media-on-mobile",
+    "content-width-is-bounded",
+    "media-reserves-intrinsic-space",
+    "form-controls-have-visible-boundaries",
+    "focus-visible-is-three-pixel-harvest-gold",
+    "lightbox-is-native-dialog",
+    "lightbox-restores-opener-focus",
+    "reduced-motion-disables-nonessential-transition",
+  ]);
+
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
+  const page = await context.newPage();
+  await visit(page, "/start/evidence");
+  const sharedStyles = await page.evaluate(() => {
+    const root = getComputedStyle(document.documentElement);
+    return {
+      field: root.getPropertyValue("--color-field").trim(),
+      font: getComputedStyle(document.body).fontFamily,
+      forest: root.getPropertyValue("--color-forest").trim(),
+      ink: root.getPropertyValue("--color-ink").trim(),
+      line: root.getPropertyValue("--color-line").trim(),
+      mint: root.getPropertyValue("--color-mint").trim(),
+    };
+  });
+  expect(sharedStyles).toEqual({
+    field: MARKETING_CONTRACT.tokens.field,
+    font: expect.stringContaining("IBM Plex Sans Variable"),
+    forest: MARKETING_CONTRACT.tokens.forest,
+    ink: MARKETING_CONTRACT.tokens.ink,
+    line: MARKETING_CONTRACT.tokens.line,
+    mint: MARKETING_CONTRACT.tokens.mint,
+  });
+  await expect(page.locator("header")).toHaveCount(1);
+  await expect(page.locator("body > footer")).toHaveCount(1);
+  await expect(page.locator('header img[src="/assets/verdify-lab-lockup.svg"]')).toBeVisible();
+  await context.close();
+});
+
+for (const route of routes) {
+  test(`@quality ${route.label} is accessible, responsive, light-default, and within budget`, async ({ browser }) => {
+    for (const viewport of viewports) {
+      const context = await browser.newContext({
+        viewport: { width: viewport.width, height: viewport.height },
+        reducedMotion: "reduce",
+      });
+      await installPerformanceObservers(context);
+      const page = await context.newPage();
+      const failures = observeFailures(page);
+      await visit(page, route.path);
+
+      await expect(page.locator("body")).toHaveAttribute("data-page-family", route.family);
+      await expect(page.locator("main h1")).toHaveCount(1);
+      expect(await page.evaluate(() => document.documentElement.dataset.theme ?? "light")).toBe("light");
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
+      expect(await page.evaluate(() => document.body.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
+      expect(await page.locator(".lab-frame").evaluate((element) => element.getBoundingClientRect().width)).toBeLessThanOrEqual(viewport.width);
+
+      const darkOffenders = await page.locator(".lab-frame").evaluate((frame) => {
+        const allowed = "pre, .home-launch-video, .verdify-contact-actions button";
+        const channel = (value) => {
+          const normalized = value / 255;
+          return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+        };
+        return [...frame.querySelectorAll("*")].flatMap((element) => {
+          if (element.matches(allowed) || element.closest(allowed)) return [];
+          if (!element.checkVisibility({ checkOpacity: true, checkVisibilityCSS: true })) return [];
+          const color = getComputedStyle(element).backgroundColor;
+          const match = /^rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)$/.exec(color);
+          if (!match || Number(match[4] ?? 1) < 0.5) return [];
+          const luminance = 0.2126 * channel(Number(match[1]))
+            + 0.7152 * channel(Number(match[2]))
+            + 0.0722 * channel(Number(match[3]));
+          return luminance < 0.16 ? [`${element.tagName.toLowerCase()}.${element.className}`] : [];
+        });
+      });
+      expect(darkOffenders, "Lab content uses dark surfaces only where explicitly allowed").toEqual([]);
+
+      expectWithinPerformanceBudget(await performanceMetrics(page));
+      const accessibility = await new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+        .analyze();
+      expect(
+        accessibility.violations,
+        `${route.path} at ${viewport.width}px must have no WCAG A/AA violations`,
+      ).toEqual([]);
+      expect(failures).toEqual([]);
+      await context.close();
+    }
+  });
+}
+
+test("@quality keyboard skip link and mobile navigation preserve focus", async ({ browser }) => {
+  const desktop = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
+  const desktopPage = await desktop.newPage();
+  await visit(desktopPage, "/start/evidence");
+  await desktopPage.keyboard.press("Tab");
+  await expect(desktopPage.locator(".skip-link")).toBeFocused();
+  await desktopPage.keyboard.press("Enter");
+  await expect(desktopPage.locator("#lab-content")).toBeFocused();
+  await desktop.close();
+
+  const mobile = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
+  const mobilePage = await mobile.newPage();
+  await visit(mobilePage, "/data/forecast");
+  const toggle = mobilePage.getByRole("button", { name: "Lab index" });
+  await toggle.focus();
+  await mobilePage.keyboard.press("Enter");
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await expect(mobilePage.locator("#lab-navigation-panel")).toBeVisible();
+  await expect(mobilePage.locator("#lab-search")).toBeFocused();
+  await mobilePage.keyboard.press("Escape");
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(toggle).toBeFocused();
+  await mobile.close();
+});
+
+test("@quality planner, archive, evidence, and contact templates keep semantic interactions", async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
+  const page = await context.newPage();
+
+  await visit(page, "/plans/2026-07-12");
+  await expect(page.locator("details.technical-section")).toHaveCount(2);
+  await expect(page.locator("details.technical-section").first()).toHaveAttribute("open", "");
+  const secondSummary = page.locator("details.technical-section summary").nth(1);
+  await secondSummary.focus();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("details.technical-section").nth(1)).toHaveAttribute("open", "");
+
+  await visit(page, "/data/plans");
+  const archiveFilter = page.getByRole("searchbox", { name: "Filter planning archive" });
+  await archiveFilter.fill("July 12");
+  await expect(page.locator(".archive-tools output")).toHaveText("1 record");
+  await expect(page.locator("tbody tr:visible")).toHaveCount(1);
+
+  await visit(page, "/start/evidence");
+  await expect(page.locator('.lab-table-scroll[role="region"]')).toHaveAttribute("tabindex", "0");
+  await expect(page.locator(".grafana-evidence")).toHaveCount(1);
+
+  await visit(page, "/start/contact");
+  const name = page.getByRole("textbox", { name: "Name" });
+  const message = page.getByRole("textbox", { name: "Message" });
+  const submit = page.getByRole("button", { name: "Send message" });
+  await expect(name).toBeVisible();
+  await expect(message).toBeVisible();
+  await name.focus();
+  expect(await name.evaluate((element) => getComputedStyle(element).boxShadow)).not.toBe("none");
+  expect((await submit.boundingBox()).height).toBeGreaterThanOrEqual(44);
+  await context.close();
+});
+
+test("@quality media reserves responsive space and the native lightbox is keyboard complete", async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
+  const page = await context.newPage();
+  const failures = observeFailures(page);
+  await visit(page, "/greenhouse");
+
+  const images = page.locator(".media-grid img");
+  await expect(images).toHaveCount(2);
+  for (const image of await images.all()) {
+    await expect(image).toHaveAttribute("width", "640");
+    await expect(image).toHaveAttribute("height", "180");
+    await expect(image).toHaveAttribute("srcset", /640w/);
+    await expect(image).toHaveAttribute("sizes", /50vw/);
+    const natural = await image.evaluate((element) => ({ width: element.naturalWidth, height: element.naturalHeight }));
+    expect(natural.width).toBeGreaterThan(0);
+    expect(natural.height).toBeGreaterThan(0);
+    expect(natural.width / natural.height).toBeCloseTo(640 / 180, 1);
+  }
+
+  const opener = page.locator(".media-grid a").first();
+  await opener.focus();
+  await page.keyboard.press("Enter");
+  const dialog = page.locator("dialog.media-lightbox");
+  await expect(dialog).toHaveAttribute("open", "");
+  await expect(page.getByRole("button", { name: "Close image viewer" })).toBeFocused();
+  await page.keyboard.press("ArrowRight");
+  await expect(dialog.locator("[data-lightbox-original]")).toHaveAttribute("href", /view=secondary/);
+  await page.keyboard.press("Escape");
+  await expect(dialog).not.toHaveAttribute("open", "");
+  await expect(opener).toBeFocused();
+  expect(failures).toEqual([]);
+  await context.close();
+});
+
+test("@quality reduced motion collapses nonessential transitions", async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
+  const page = await context.newPage();
+  await visit(page, "/greenhouse");
+  const transitionDuration = await page.locator(".media-figure img").first()
+    .evaluate((element) => getComputedStyle(element).transitionDuration);
+  expect(Number.parseFloat(transitionDuration) || 0).toBeLessThanOrEqual(0.01);
+  await context.close();
+});
