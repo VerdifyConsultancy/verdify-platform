@@ -202,10 +202,11 @@ fallbacks at T0 and T+10, with no pending/invalid occurrences and with LKG and
 freshness recovery proven. No reporting-tier activation, credential work,
 production sync, DNS, or Quartz change occurs without its recorded human gate.
 
-Phase 5 — **Production cutover (Jason-gated).** Land canary scaffold
-(`da26d54`) on main once Phase 2 is green, build/pin/deploy the dark canary,
-full acceptance vs prod, then Jason APPLY: route cutover, Quartz retirement,
-publisher decommission, ghcr image retirement (ADR-0021 cleanup).
+Phase 5 — **Production cutover (Jason-gated).** The canary scaffold landed via
+#471 but remains unbuilt, unpinned, undeployed, and unrouted. Build/pin/deploy
+the dark canary only after its gates, run full acceptance vs prod, then Jason
+APPLY: route cutover, Quartz retirement, publisher decommission, ghcr image
+retirement (ADR-0021 cleanup).
 GATE: Jason explicit approval; rollback = route flip back to Quartz (kept
 warm until sign-off).
 
@@ -249,7 +250,8 @@ CLOSED REVIEW VEHICLE:
   validate (`verdify-platform-pr-ci-dgmff`), merged at head 6ff5b19 + branch
   deleted. MEDIUM/LOW review findings remain tracked as PR comments. The two
   subsumed branches (`web/public-output-guard`,
-  `web/site-unification-integration`) are now safe to delete. Residue: two
+  `web/site-unification-integration`) are confirmed absent locally and on
+  `origin`. Residue: two
   inert debug Workflows (`…debug458`, `…debug458b`) in agent-fleet-ci need a
   delete-rights cleanup.
 
@@ -264,9 +266,8 @@ DELETE — verified superseded (content demonstrably on main via #461/#462):
   `coordinator/lab-s3-release` (local-filesystem release/CAS content already on main; canary
   superseded), and `coordinator/lab-goal-completion` after PR #470 preserved its
   doc patch. These are the nine authorized deletions.
-- **Deferred:** `web/public-output-guard` +
-  `web/site-unification-integration` are subsumed by PR #458 but stay until that
-  PR is green and merged.
+- **Confirmed absent:** `web/public-output-guard` +
+  `web/site-unification-integration`, subsumed by merged PR #458.
 - Local `main` in the shared root checkout: do NOT push, reset, rewrite, or
   otherwise disturb it; its extra commit is canary-v2 content and may coexist
   with unrelated operator state. Continue all program work from fresh
