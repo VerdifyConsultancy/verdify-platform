@@ -78,6 +78,15 @@ for (const container of runtimeContainers) {
     assert.equal(environment.find(({ name }) => name === "LAB_RELEASE_STORE")?.value, "/unconfigured/verdify-lab-release-store");
   }
 }
+const runtimeInit = runtime.spec.template.spec.initContainers.find((container) => container.name === "hydrate-known-good");
+const runtimeSite = runtime.spec.template.spec.containers.find((container) => container.name === "site");
+const runtimeReconciler = runtime.spec.template.spec.containers.find((container) => container.name === "release-reconciler");
+assert.deepEqual(runtimeInit.command, ["/app/release-runtime/entrypoint.sh"]);
+assert.deepEqual(runtimeInit.args, ["init"]);
+assert.deepEqual(runtimeSite.command, ["nginx"]);
+assert.deepEqual(runtimeSite.args, ["-g", "daemon off;"]);
+assert.deepEqual(runtimeReconciler.command, ["/app/release-runtime/entrypoint.sh"]);
+assert.deepEqual(runtimeReconciler.args, ["reconcile"]);
 
 const runtimeService = one("Service", "verdify-lab-release-runtime");
 assert.equal(runtimeService.spec.type, "ClusterIP");

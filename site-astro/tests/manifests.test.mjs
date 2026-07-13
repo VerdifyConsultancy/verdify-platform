@@ -164,8 +164,18 @@ test("release runtime candidate is a two-node, no-PVC, no-route read-only cache"
   assert.deepEqual(deployment.spec.template.spec.topologySpreadConstraints[0].matchLabelKeys, ["pod-template-hash"]);
   assert.equal(deployment.spec.template.spec.initContainers.length, 1);
   assert.equal(deployment.spec.template.spec.initContainers[0].name, "hydrate-known-good");
+  assert.deepEqual(
+    deployment.spec.template.spec.initContainers[0].command,
+    ["/app/release-runtime/entrypoint.sh"],
+  );
   assert.deepEqual(deployment.spec.template.spec.initContainers[0].args, ["init"]);
   assert.deepEqual(deployment.spec.template.spec.containers.map((container) => container.name), ["site", "release-reconciler"]);
+  assert.deepEqual(deployment.spec.template.spec.containers[0].command, ["nginx"]);
+  assert.deepEqual(deployment.spec.template.spec.containers[0].args, ["-g", "daemon off;"]);
+  assert.deepEqual(
+    deployment.spec.template.spec.containers[1].command,
+    ["/app/release-runtime/entrypoint.sh"],
+  );
   assert.deepEqual(deployment.spec.template.spec.containers[1].args, ["reconcile"]);
   assert.equal(deployment.spec.template.spec.containers[0].readinessProbe.httpGet.path, "/readyz");
   assert.equal(deployment.spec.template.spec.containers[0].livenessProbe.httpGet.path, "/healthz");

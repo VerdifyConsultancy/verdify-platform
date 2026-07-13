@@ -13,6 +13,9 @@ starts. The sidecar polls the site-release CLI for the selector's immutable
 SHA-256 identity, verifies a changed release into a new physical generation,
 then atomically changes the relative `current` symlink. Nginx serves
 `current/tree`; a failed observation preserves that complete generation.
+The workload declares the agent and nginx commands explicitly, and the fleet
+image-pair probe exercises this same command contract. Runtime startup therefore
+does not depend on a control-plane registry metadata lookup for a private image.
 
 The checked-in workload is deliberately disabled at both the scheduler and
 storage boundaries: `LAB_RELEASE_STORE` names an absent local directory, the

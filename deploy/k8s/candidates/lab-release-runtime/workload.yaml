@@ -48,6 +48,7 @@ spec:
         - name: hydrate-known-good
           image: registry.vallery.net/verdifyconsultancy/verdify-lab-release-agent@sha256:0000000000000000000000000000000000000000000000000000000000000000
           imagePullPolicy: IfNotPresent
+          command: ["/app/release-runtime/entrypoint.sh"]
           args: ["init"]
           env:
             # Deliberately absent. The verified image-baked release is selected
@@ -88,6 +89,8 @@ spec:
         - name: site
           image: registry.vallery.net/verdifyconsultancy/verdify-lab-release-nginx@sha256:0000000000000000000000000000000000000000000000000000000000000000
           imagePullPolicy: IfNotPresent
+          command: ["nginx"]
+          args: ["-g", "daemon off;"]
           ports:
             - name: http
               containerPort: 8080
@@ -140,6 +143,7 @@ spec:
         - name: release-reconciler
           image: registry.vallery.net/verdifyconsultancy/verdify-lab-release-agent@sha256:0000000000000000000000000000000000000000000000000000000000000000
           imagePullPolicy: IfNotPresent
+          command: ["/app/release-runtime/entrypoint.sh"]
           args: ["reconcile"]
           env:
             - name: LAB_RELEASE_STORE
