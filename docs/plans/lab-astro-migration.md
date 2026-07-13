@@ -1,7 +1,7 @@
 # Lab Astro Migration — Consolidated Program Tracker
 
 Last updated: 2026-07-13 (Phase 4c offline producer build/probe/pin gate passed;
-Phase 4b S3 foundation ready for review).
+Phase 4b S3 foundation merged; names-only binding contract ready for review).
 Owner: platform agent (Claude outer loop plans/verifies; Codex executes on
 xhigh). Human gate: Jason (prod sync, DNS/edge, Quartz retirement, credential
 work). Epic: #351 (L9, G3). This file is the single source of truth for the
@@ -51,7 +51,7 @@ Child issues (persisted 2026-07-13 post-consensus): 1→#474, 2→#475, 3→#476
 | 6 | Semantic parity | Routes/aliases complete; comparator improved | Exact same-snapshot parity not green: ~240 false findings from SVG-`<title>` parser bug (fix exists uncommitted on a dead worktree — must be recreated), 9 unavailable historical refs (5 daily-plan routes, 4 images), and Quartz-vs-Astro must build from the SAME immutable snapshot |
 | 7 | Immutable publishing | Local-filesystem CAS/release/cache engine and inactive S3 conditional-store foundation merged; 4a runtime is source-visible with exact source-bound images as a disconnected `replicas: 0` workload; the source-only occurrence-store name inventory fixes separate reader/writer Secret names plus non-secret metadata key names without reading values | Release CLI/caller, occurrence adapter, actual resource/value binding, real-endpoint proof, distributed coordination, retention/GC, and event producer remain; no runtime pod is scheduled or routed |
 | 8 | Quality gates | Strict real-content gates green; exact tested build passed live T0 and T+10 acceptance | Keep the same budgets for every Phase 4 rollout; no production acceptance yet |
-| 9 | Production cutover | Fail-closed canary scaffold is preserved in open PR #471 | Not on main/built/pinned/deployed; Quartz remains authoritative; Jason APPLY required |
+| 9 | Production cutover | Fail-closed canary scaffold merged through #471 and remains inactive/source-only | Not built/pinned/deployed; Quartz remains authoritative; Jason APPLY required |
 
 ## Execution phases and gates
 
