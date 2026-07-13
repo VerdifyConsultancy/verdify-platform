@@ -191,16 +191,16 @@ patches:
 images:
   - name: ghcr.io/verdifyconsultancy/verdify-api
     newName: registry.vallery.net/verdifyconsultancy/verdify-api
-    digest: sha256:253bc9bfdfba585aec87d3670976b396ed83d91b8573fc87423b35b70206c389
+    digest: sha256:da6f1eb0ba980d49c930aabdc5296454257362ca4f9c887b5c6bd89906f8a78b
   - name: ghcr.io/verdifyconsultancy/verdify-mcp
     newName: registry.vallery.net/verdifyconsultancy/verdify-mcp
-    digest: sha256:6979e2bf0266defd8879a935261f5056956afbe3203c8ea2075ba154f3623205
+    digest: sha256:186d3fee7a8cff5fef2aa9e53bf142ee007cb6ee8de134a31dffa93a674a1a13
   - name: ghcr.io/verdifyconsultancy/verdify-ingestor
     newName: registry.vallery.net/verdifyconsultancy/verdify-ingestor
-    digest: sha256:5a165e2df0fe514a1af9487fbbcbb7b9ad4a68cfd78de5934b2b08ccd2aec885
+    digest: sha256:9d155133e468b7afcd9e458e5f2a82c57e18313e55a2bd5098fee4b9de5e9ee1
   - name: ghcr.io/verdifyconsultancy/verdify-migrate
     newName: registry.vallery.net/verdifyconsultancy/verdify-migrate
-    digest: sha256:36bc5712e65b0faa52eeb786c229f87688c6d5c96428ee221f89da29fef10cc8
+    digest: sha256:ab1a20e62a9b619f364ed774a9b6d909a73e7069e49c2e16ef60d78705482cfe
   # verdify-planner (#117): real published GHCR digest, resolved read-only via
   # `gh api orgs/VerdifyConsultancy/packages/container/verdify-planner/versions`
   # (the `branch-live-platform-main` build of planner_graph/). The planner image is
@@ -209,7 +209,7 @@ images:
   # its digest is advanced only by a reviewed prod-promote PR.
   - name: ghcr.io/verdifyconsultancy/verdify-planner
     newName: registry.vallery.net/verdifyconsultancy/verdify-planner
-    digest: sha256:150afb7890ab542801524593ccf8fc8138d6a1520b958df2af0e0beeb8a8b916
+    digest: sha256:3cd8793fcfc5d0d24b0eabeb51648c2f48f26bdf77e478ecdc62dd8326f00f13
   # verdify-setpoint-server (#118): real GHCR digest of the grow-light writer +
   # setpoint-diagnostics image built from scripts/Dockerfile.setpoint-server. The
   # `branch-live-platform-main` build is published + repo-linked to
@@ -221,7 +221,7 @@ images:
   # @sha256 is preserved inline in the component (NOT transformer-pinned).
   - name: ghcr.io/verdifyconsultancy/verdify-setpoint-server
     newName: registry.vallery.net/verdifyconsultancy/verdify-setpoint-server
-    digest: sha256:7b3578731a3771210261fce7a94370ca0c2976bfca1689970062c332808b1f52
+    digest: sha256:3836598fb02efe054ad282e3c185b964b48097ef9ff78ae9272236200a1e6407
   # verdify-lab (#124): real GHCR digest of the Quartz research-site image built
   # from the verdify-site-legacy repo's Dockerfile.k3s (Quartz `npx quartz build`
   # -> static public/ -> nginx-unprivileged on :8080). Published + repo-linked by
@@ -246,4 +246,4 @@ images:
   # GITHUB_TOKEN can publish immutable CI-built digests.
   - name: ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s
     newName: registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s
-    digest: sha256:c5da961f8eec09cdb788ce60146375b7f3a6d2e2acff77b85fb325d0cdd1fb07
+    digest: sha256:726d64bd57ebe698ccfd426490332fed3fb8c750c0652a7c8cb3c32552aa90b1

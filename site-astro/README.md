@@ -235,16 +235,26 @@ previous, and baked fallback, and carries the planner five-minute target/fifteen
 alert evaluation. `npm test` includes failure injection, concurrency, GC/retention,
 corruption/fallback, rollback, baked-outage, and CLI end-to-end coverage.
 
-This is a complete local-filesystem backend, not a deployed S3 adapter or distributed
-lease. Its candidate is present in the Lab stage GitOps source only as a dormant
-`replicas: 0` workload with separate zero-digest agent/site sentinels, no route, no
-object-store/AWS environment, no application/object-store credential, and no
-egress. Its standard zot registry `imagePullSecret` is only for image retrieval.
-The stage app remains manual-sync; merging source is not an operator sync, and even
-a sync cannot schedule this zero-replica candidate. Activation still needs reviewed
-image pins, store/egress wiring, an explicit replicas change, cache and alert proof,
-and normal stage acceptance. No code in this path queries S3, the database, Grafana,
-cameras, or the network, and this change does not alter production.
+The release-store operation surface now has both the existing local implementation and
+an inactive `S3SiteReleaseStore` foundation. Store locations are parsed strictly as a
+local path or `s3://bucket/non-empty-prefix`. The S3 adapter uses absent-only writes for
+immutable objects, entity-tag compare-and-swap for the selector, bounded streamed
+reads, and bounded paginated listing. Its client is dependency-injected and covered by
+offline fakes; no endpoint or credential is configured or contacted by the tests.
+
+The runtime candidate is present in Lab stage GitOps source only as a dormant
+`replicas: 0` workload. Its paired agent/site images are pinned to exact zot digests
+after their source-bound container probe, but it still has no route, object-store/AWS
+environment, application/object-store credential, or egress. Its standard zot registry
+`imagePullSecret` is only for image retrieval. The stage app remains manual-sync;
+merging source is not an operator sync, and even a sync cannot schedule this
+zero-replica candidate.
+
+The CLI and cache hydrator remain local-only. Object-store CLI wiring and bounded cache
+materialization, occurrence persistence, the event agent, distributed coordination,
+retention/GC, resource accounting, real-endpoint conditional-write proof, store/egress
+wiring, and alert routing are still required before activation. No endpoint or
+credential is configured here, and this change does not deploy or alter production.
 
 The stage vendors the reviewed offline parity comparator at
 `scripts/site-build-parity.py` (SHA-256
@@ -332,8 +342,9 @@ token, database, object store, Grafana, or device-network access.
   bounded event delivery authority, freshness histogram, or firing alert is connected
   to stage yet.
 - The complete built-tree local store implements reachability GC, maximum-ten
-  retention, and the ratified 10 GiB cap. A real object-store backend and distributed
-  lease remain external deployment work; neither is claimed here.
+  retention, and the ratified 10 GiB cap. The inactive S3 foundation implements
+  bounded conditional store primitives, but CLI/caller wiring, distributed
+  coordination, object-store retention/GC, and real-endpoint proof remain.
 - The built-tree publisher lease recovers a provably dead same-host PID and excludes a
   live local owner. Cross-pod publication still requires a distributed lease or
   object-store conditional-write primitive.
