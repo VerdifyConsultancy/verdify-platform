@@ -1,6 +1,7 @@
 # Lab Astro Migration — Consolidated Program Tracker
 
-Last updated: 2026-07-13 (Phase 4a dormant release-runtime source prepared).
+Last updated: 2026-07-13 (Phase 4c offline camera/graph producers merged;
+Phase 4b S3 foundation in progress).
 Owner: platform agent (Claude outer loop plans/verifies; Codex executes on
 xhigh). Human gate: Jason (prod sync, DNS/edge, Quartz retirement, credential
 work). Epic: #351 (L9, G3). This file is the single source of truth for the
@@ -13,7 +14,7 @@ changes state.
 |---|---|
 | `lab.verdify.ai` (prod) | Quartz. `verdify-lab` Deployment in `verdify-prod` (ghcr image — pre-ADR-0021 holdover), `verdify-lab-publisher` CronJob republished every 10 min (mutable, shared RWO PVC, both replicas node-pinned). Healthy and fresh; had a 5-job BackoffLimitExceeded streak before recovering. |
 | `lab-stage.verdify.ai` (canary) | Astro. `verdify-lab-astro-stage` in ns `verdify-platform`, 2/2 Ready with zero restarts on distinct nodes, exact image and pod image IDs `verdify-lab-astro@sha256:ee36941f20028fcfe06f12bf253e7139c00e3d5de1949eb8b12bb1d4ebe60b99` (pin PR #468), shell contract **1.1.0**, content frozen at the 2026-07-12 snapshot. Live T0/T+10 acceptance passed and the ArgoCD app returned to manual-sync. |
-| `main` | Astro implementation through `38ccd5e` is deployed on stage: PRs #459/#461/#462 plus Pagefind fix #466, quality-gate retry #467, and verdify-www#33 shell 1.1.0. The release/cache runtime and offline graph/camera boundary are source-visible, but the live stage remains the static image above; event/store wiring, exact parity, and production cutover remain. |
+| `main` | Astro source now includes the accepted static implementation plus the dormant release/cache runtime, offline camera producer (#487), and complete offline 143-graph producer (#492). The live stage remains the static image above; occurrence-store/event wiring, exact parity, and production cutover remain. |
 | In-cluster CI | **Green for lab-astro.** `verdify-platform-ci-phase1-38ccd5e` built exact revision `38ccd5e`, passed all 12 browser quality tests plus build/verify/probe/pin, and published the accepted zot digest above. Playwright fixes #463/#464 and agents#2969/#2970 closed the missing-browser, pin-idempotency, and deterministic CPU-allocation failures without relaxing the strict quality budgets. |
 
 ## Completed (do not re-plan)
@@ -43,12 +44,12 @@ Child issues (persisted 2026-07-13 post-consensus): 1→#474, 2→#475, 3→#476
 | # | Surface | Position | Remaining gap |
 |---|---|---|---|
 | 1 | Shared design contract | 1.1.0 merged and accepted on stage | Production remains Quartz until Phase 5 |
-| 2 | Search/CSP/camera/contact | Pagefind/search, strict CSP, and contact behavior accepted on stage | 2 camera occurrences have 0 verified same-origin fallbacks; carried to 4c. Cloudflare analytics remains diagnostic-only under the strict CSP |
-| 3 | Graph fallbacks | 143/143 occurrences discovered and DOM-reconciled; interactive links preserved | No exporter, reporting tier, selected fallback release, materialized blob, or live immutable fallback image |
+| 2 | Search/CSP/camera/contact | Pagefind/search, strict CSP, and contact behavior accepted on stage; privacy-approved bounded offline producers exist for both camera occurrences | No selected occurrence release, materialized same-origin fallback, freshness/LKG proof, or live producer; Cloudflare analytics remains diagnostic-only under the strict CSP |
+| 3 | Graph fallbacks | 143/143 occurrences discovered and DOM-reconciled; complete manifest/feed-bound offline producer merged; interactive links preserved | No reporting-feed activation, occurrence-store selection/materialization, freshness/LKG proof, or live immutable fallback image |
 | 4 | Media & lightbox | Responsive images, intrinsic sizing, and lightbox accepted on stage | Production remains Quartz until Phase 5 |
 | 5 | Planner/evidence templates | Accepted on stage against the full frozen snapshot | Event-driven content refresh remains Phase 4b |
 | 6 | Semantic parity | Routes/aliases complete; comparator improved | Exact same-snapshot parity not green: ~240 false findings from SVG-`<title>` parser bug (fix exists uncommitted on a dead worktree — must be recreated), 9 unavailable historical refs (5 daily-plan routes, 4 images), and Quartz-vs-Astro must build from the SAME immutable snapshot |
-| 7 | Immutable publishing | Local-filesystem CAS/release/cache engine merged; 4a runtime is source-visible in the Lab stage overlay as a disconnected `replicas: 0` workload with zero image sentinels | No S3 backend or adapter exists (CLI s3:// unwired, no endpoint/credential probe, no event producer); no runtime pod is scheduled or routed |
+| 7 | Immutable publishing | Local-filesystem CAS/release/cache engine merged; 4a runtime is source-visible with exact source-bound images as a disconnected `replicas: 0` workload | S3 conditional-store foundation is not yet on main; CLI/caller, occurrence adapter, endpoint/credential-name probe, distributed coordination, retention/GC, and event producer remain; no runtime pod is scheduled or routed |
 | 8 | Quality gates | Strict real-content gates green; exact tested build passed live T0 and T+10 acceptance | Keep the same budgets for every Phase 4 rollout; no production acceptance yet |
 | 9 | Production cutover | Fail-closed canary scaffold is preserved in open PR #471 | Not on main/built/pinned/deployed; Quartz remains authoritative; Jason APPLY required |
 
@@ -156,18 +157,19 @@ Phase 4 — **Feature completion (owner: codex, critical-path order below).**
    sanitizer has no device-VLAN, Frigate/go2rtc, controller, DB, or general API
    access. Any future camera credential or source/allowlist change is also
    Jason-gated.
-   The first inert, offline trust-boundary slice was merged and accepted via
-   PR #483 and refs #476. It does not create a workload, activate a tier, read a
-   credential, or mutate stage/prod. Issue #476 is reopened and In Progress for
-   the operator-owned reporting feed, renderer/re-encoder, occurrence-store
-   delivery, alerts, and joint live proof. Inert Phase 4b implementation may
-   begin, but live reporting or occurrence activation remains separately
-   Jason-gated.
+   The inert trust-boundary slice (#483), two-camera offline producer (#487),
+   and complete 143-graph offline producer (#492) are merged. They do not
+   create a workload, activate a tier, read a credential, make a default live
+   request, or mutate stage/prod. Issue #476 remains In Progress for the
+   operator-owned reporting feed, occurrence-store delivery/selection,
+   freshness alerts, LKG behavior, and joint live proof. Inert Phase 4b
+   implementation may proceed, but live reporting or occurrence activation
+   remains separately Jason-gated.
 2. **4a Release runtime:** `d91737d` landed via #473 with init hydration,
    atomic runtime, readiness, metrics, and tests. The follow-through makes the
    candidate visible in the Lab stage GitOps source only as a truly disconnected
-   dormant workload: `replicas: 0`, separate zero-digest agent/site image
-   sentinels, no route, no object-store/AWS environment, and deny-all egress.
+   dormant workload: `replicas: 0`, exact source-bound agent/site image
+   digests, no route, no object-store/AWS environment, and deny-all egress.
    Merging that source is not a live rollout: the Lab stage ArgoCD app remains
    manual-sync, and an operator sync is a separately recorded boundary. A later
    activation must pin both runtime images, add the reviewed 4b store/egress
