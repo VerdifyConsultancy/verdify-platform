@@ -78,7 +78,15 @@ after a fresh pin lands); podGC `OnPodCompletion` destroys failure logs;
 `pin-digests` "main: Error" races in older runs; and `build-api` Kaniko
 failure on run `c7b2b` (rev `c1a7fff`) is SEPARATE and currently blocks prod
 digest pins for the firmware-OTA commit — diagnose alongside.
-GATE: stage serves the post-#462 digest; shell reports 1.1.0.
+GATE: **PASSED 2026-07-13 ~05:35Z.** Fix chain: PR #463 (Playwright browser
+provisioning) + PR #464 (exported Playwright CLI resolution) + jvallery/
+agents#2967 (podGC OnPodSuccess — failed CI pods now keep logs 48h); run
+`verdify-platform-ci-mcdlh` went green through build/verify/probe; pin step
+failed late as predicted (branch-without-PR trap) and was hand-opened/merged
+as PR #465. Stage `verdify-lab-astro-stage` serves
+`fb72e1bad7c6…` 2/2 ready; outer-loop live probes confirm shell 1.1.0
+markers, `wasm-unsafe-eval` CSP, lab-nav toggle, lightbox markup, intrinsic
+dims + srcset, /pagefind assets 200.
 
 Phase 2 — **Stage convergence verification (owner: codex, verified by outer
 loop).** Confirm on live stage: Pagefind search works (the 2026-07-13 probe
