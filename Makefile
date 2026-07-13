@@ -270,6 +270,9 @@ grafana-brand-check-live: ## Verify live embedded Grafana panels use Verdify Lab
 grafana-cm-check: ## Verify generated dashboard ConfigMaps match grafana/dashboards JSON sources (#392)
 	$(PYTHON) scripts/gen-grafana-dashboard-cms.py --check
 
+solar-constants-check: ## Verify solar site constants (lat/lon/zenith) agree across ingestor/firmware/DB surfaces (#393)
+	$(PYTHON) scripts/check-solar-constants.py
+
 site-lint: ## Run cheap lint for public-site content and routes
 	$(PYTHON) scripts/lint_public_site.py
 

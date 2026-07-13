@@ -18,6 +18,15 @@ float solar_phase(int now_minute, const SolarTimes& st);  // [0,4): 0=SR 1=SM 2=
 
 - Greenhouse constants: lat 40.167, lon −105.102 (Longmont CO). `utc_offset_min`
   comes from the time component each cycle (DST-correct by construction).
+- **Site-constant SSOT contract (#393):** `ingestor/solar.py`
+  (`GREENHOUSE_LAT_DEG` / `GREENHOUSE_LON_DEG` / `_ZENITH_DEG` 90.833) is the
+  single editable source for lat/lon/zenith. The mirrored literals in
+  `firmware/lib/greenhouse_solar.h` (+ the vendored firmware-twin copy),
+  `db/migrations/186-noaa-solar-phase-parity.sql`, and the dumped
+  `db/schema.sql` `fn_solar_*` bodies must carry the same numeric values.
+  `make solar-constants-check` (`scripts/check-solar-constants.py`, run by
+  `make ci`) parses the values out of every surface and fails on any
+  divergence — to change the site constants, change all surfaces in one PR.
 - Phase mapping: day half SR→SM→SS spans [0,2]; night half SS→midnight→nextSR
   spans [2,4). Solar-midnight ≈ midpoint(SS, SR+24h).
 - Lives in the pure header so ESP32, unit tests, and the replay harness share
