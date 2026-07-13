@@ -136,7 +136,16 @@ Phase 4 — **Feature completion (owner: codex, critical-path order below).**
    credential. The feed exposes only allowlisted public time-series/views and
    carries a source watermark: p95 lag at most 15 minutes and an alert at more
    than 30 minutes. Provisioning/changing that feed, tier, or credential is
-   Jason-gated; code and credential-name-only manifests may land first.
+   Jason-gated; code and credential-name-only manifests may land first. The
+   camera sanitizer separately performs GET-only reads from the exact approved
+   public-edge allowlist
+   `https://api.verdify.ai/api/v1/public/cameras/{greenhouse_1|greenhouse_2}/latest.jpg?h=1080`,
+   with no Authorization header or cookie. It rejects redirects, strips
+   metadata by bounded decode/re-encode, and can egress only to that origin and
+   the occurrence store. Only the API owns its internal camera handoff; the
+   sanitizer has no device-VLAN, Frigate/go2rtc, controller, DB, or general API
+   access. Any future camera credential or source/allowlist change is also
+   Jason-gated.
 2. **4a Release runtime:** cherry-pick only `d91737d` onto main and land its
    init hydration, atomic runtime, readiness, and metrics with tests. This can
    proceed in parallel with the gated 4c reporting-tier activation.
@@ -250,14 +259,20 @@ workload), not the backend itself.
   immutable fallback live at T0 and T+10; S3 stays open until this joint S3+S7
   proof passes.
 - The isolated public reporting feed has p95 source-watermark lag at most 15
-  minutes; lag beyond 30 minutes alerts and retains LKG without presenting the
-  result as fresh. It has no write path or controller credential into Track A.
+  minutes over a rolling 24-hour window of at least 96 fifteen-minute samples
+  from `verdify_lab_reporting_source_lag_seconds`. Lag above 30 minutes for two
+  consecutive five-minute evaluations alerts; two evaluations below 15 minutes
+  recover it. Alerted output retains LKG without being labelled fresh. The feed
+  has no write path or controller credential into Track A.
 - Exact same-snapshot parity findings = 0 (after parser fix + snapshot-locked
   rebuild), 9 historical refs dispositioned.
 - S3-backed event-driven publish replaces the 10-min mutable publisher.
 - Occurrence/release storage has measured bytes written/retained/deleted and
   request/egress counts; safe CAS-aware GC retains the current plus rollback
   generation and removes unreferenced immutable objects after a documented
-  recovery window. Phase 4 records the observed daily footprint and an alerting
-  budget before S3/S7 close; no unbounded object-retention policy is accepted.
+  48-hour recovery window. Default pre-activation hard budgets are 10 GiB
+  retained, 5 GiB written/day, 10 GiB egress/day, and 25,000 object requests/
+  day; 80% alerts and 100% blocks publication while retaining LKG. A different
+  numeric budget requires explicit Jason approval recorded on S7 before
+  activation; no unbounded object-retention policy is accepted.
 - Production on Astro, Quartz retired — with Jason APPLY recorded.

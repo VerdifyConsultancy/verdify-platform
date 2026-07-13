@@ -73,7 +73,7 @@ checksum on live stage.
 - Parent: #351
 - Related Issues/PRs: #308, #461, #466, #468
 - Dependencies: S1 satisfied; close blocked by S3 current-media output and S7 live publication
-- Evidence: docs/plans/lab-astro-migration.md Phase 2; #351 acceptance evidence; scratch/lab-astro-final-t0.json and scratch/lab-astro-final-tplus10.json
+- Evidence: docs/plans/lab-astro-migration.md Phase 2; #468; immutable #351 acceptance comment https://github.com/VerdifyConsultancy/verdify-platform/issues/351#issuecomment-4955268098
 
 ### What
 
@@ -131,8 +131,9 @@ does not proxy or originate the request.
 - Related Issues/PRs: #308, #458, security/grafana-supported-images
 - Dependencies: no code-start blocker; final live proof requires S7; privacy policy #308; operator-owned read-only reporting feed and credential by name only
 - Human gate: Jason must approve standing up the reporting tier and issuing or
-  changing its scoped read credential or reporting feed; code/evidence must
-  reference only the Secret name/key, never its value
+  changing its scoped read credential or reporting feed, and any camera source,
+  allowlist, device-facing access, or future camera credential; code/evidence
+  must reference only a Secret name/key, never its value
 - Evidence: docs/plans/lab-astro-migration.md Phase 4c; site-astro/scripts/lib/occurrence-release.mjs; Phase 2 reports showing 143 graph and 2 camera occurrences
 
 ### What
@@ -160,15 +161,25 @@ images; validate MIME, dimensions, and digest; publish content-addressed
 occurrence releases; retain last-known-good on failure; and apply the camera
 privacy allowlist before persistence. Run the exporter in a dedicated context
 whose egress is limited to that reporting tier and the occurrence store; the
-deny-all static stage runtime remains credential-free.
+deny-all static stage runtime remains credential-free. A separate sanitizer
+may GET only the two exact operator-approved public-edge URLs
+`https://api.verdify.ai/api/v1/public/cameras/{greenhouse_1|greenhouse_2}/latest.jpg?h=1080`.
+It sends no Authorization header or cookie and rejects redirects, user-supplied
+URLs, other IDs/query keys, and non-image responses, then bounded-decodes and
+re-encodes the still as metadata-free PNG before persistence under an opaque
+occurrence ID. Its egress is limited to that public API origin and the
+occurrence store. Only the API owns its internal camera handoff; the sanitizer
+has no device VLAN, Frigate/go2rtc, controller, DB, or general API access.
 
 ### Test
 
 Exercise occurrence unit/rollback tests, adversarial URL/MIME/size inputs, CAS
 races, stale/failure recovery, network and credential boundaries, and real
 read-only endpoint rendering. Prove the one-way feed exposes no write/control
-surface and test source-watermark lag/failure. Run live T0/T+10 reconciliation
-after S7 integration.
+surface and test source-watermark lag/failure. Test the exact camera path/ID
+allowlist, GET-only/no-redirect behavior, decoded image bounds, metadata
+stripping, source failure, and absence of device/private-network access. Run
+live T0/T+10 reconciliation after S7 integration.
 
 ### Success
 
@@ -179,8 +190,11 @@ after S7 integration.
   targets.
 - Anonymous access is disabled; reporting cannot mutate or use the Track A
   primary datasource.
-- The public reporting feed's p95 source-watermark lag is at most 15 minutes;
-  lag beyond 30 minutes alerts, retains LKG, and is never labelled fresh.
+- `verdify_lab_reporting_source_lag_seconds` has p95 at most 15 minutes over a
+  rolling 24 hours with at least 96 fifteen-minute samples; lag above 30 minutes
+  for two consecutive five-minute evaluations alerts, and two evaluations
+  below 15 minutes recover it. Alerted output retains LKG and is never labelled
+  fresh.
 - Failed exports retain last-known-good; age beyond the existing 30-minute
   graph threshold fires and later recovers.
 - No secret value appears in logs, releases, URLs, or evidence.
@@ -357,7 +371,7 @@ Twitter-card metadata plus referenced social images.
 - Agent Lane: verdify-platform
 - Parent: #351
 - Related Issues/PRs: #43, #219, coordinator/lab-release-runtime@d91737d
-- Dependencies: no Phase 4a start blocker; S3 exporter artifacts for full-path proof; endpoint/credential names only
+- Dependencies: only the Phase 4a runtime cherry-pick may proceed in parallel; every Phase 4b S3 adapter, occurrence caller, real-endpoint, and event-agent change is blocked until the S3/4c producer contract is merged and accepted; endpoint/credential names only
 - Human gate: Jason must approve issuing, scoping, changing, or rotating the S3
   credential and any real-endpoint/release-agent activation; code and inert
   Secret name/key references may land without that activation
@@ -377,9 +391,11 @@ timely content.
 ### How
 
 Cherry-pick only `d91737d`; retain init hydration, sidecar reconciliation,
-atomic nginx current/tree, readiness, and metrics; construct the CLI `s3://`
-adapter; wire occurrence callers; prove conditional writes against the real
-endpoint; and add a release-agent/event producer. Do not retire the production
+atomic nginx current/tree, readiness, and metrics as the parallel-safe 4a
+slice. Only after the S3/4c producer contract is merged and accepted, begin 4b:
+construct the CLI `s3://` adapter, wire occurrence callers, prove conditional
+writes against the real endpoint, and add a release-agent/event producer. Do
+not retire the production
 Quartz publisher here. Keep real-endpoint probes and the release agent inert
 until the issue-local credential/activation gate is recorded.
 
@@ -398,9 +414,11 @@ generation.
 - Every release and occurrence object is immutable and digest-addressed;
   pointer changes use conditional writes.
 - CAS-aware GC retains the current and rollback generation, removes only
-  unreferenced objects after the documented recovery window, and exports bytes
-  written/retained/deleted plus request/egress metrics. The observed daily
-  footprint and alerting budget are recorded before closure.
+  unreferenced objects after a 48-hour recovery window, and exports bytes
+  written/retained/deleted plus request/egress metrics. Until an explicitly
+  Jason-approved replacement budget is recorded, hard limits are 10 GiB
+  retained, 5 GiB written/day, 10 GiB egress/day, and 25,000 object requests/
+  day; 80% alerts and 100% blocks publication while retaining LKG.
 - Both stage pods converge on the exact release digest after restart; readiness
   stays false during incomplete hydration.
 - No partial generation is served; rollback to the previous generation
@@ -426,7 +444,7 @@ generation.
 - Parent: #351
 - Related Issues/PRs: #463, #464, #465, #466, #467, #468, jvallery/agents#2967, #2969, #2970, #2971, #2972
 - Dependencies: S1, S4, S5 satisfied; exact tested digest pinned by #468
-- Evidence: #351 Phase 2 comment; scratch/lab-astro-phase1-log.md; scratch/lab-astro-final-t0.json and scratch/lab-astro-final-tplus10.json
+- Evidence: PRs #463-#468; workflows `verdify-platform-ci-phase1-38ccd5e` and `verdify-platform-ci-9q2bl`; immutable #351 acceptance comment https://github.com/VerdifyConsultancy/verdify-platform/issues/351#issuecomment-4955268098
 
 ### What
 
