@@ -357,19 +357,32 @@ test("network and time failures are bounded and do not reflect the approved URL"
   const root = await workspace(context);
   const policy = activePolicy();
   const request = cameraRequest(policy, cameraExportProducerContract.approvedOccurrenceIds[0]);
+  const NativeAbortController = globalThis.AbortController;
+  let timeoutAbortCalls = 0;
+  globalThis.AbortController = class CountingAbortController extends NativeAbortController {
+    abort(reason) {
+      timeoutAbortCalls += 1;
+      return super.abort(reason);
+    }
+  };
   let timeoutSignal;
-  const timeout = captureCameraOccurrence({
-    policy,
-    request,
-    outputRoot: root,
-    timeoutMs: 10,
-    transport: async ({ signal }) => {
-      timeoutSignal = signal;
-      return new Promise(() => {});
-    },
-  });
-  await assert.rejects(timeout, /time limit/);
+  try {
+    const timeout = captureCameraOccurrence({
+      policy,
+      request,
+      outputRoot: root,
+      timeoutMs: 10,
+      transport: async ({ signal }) => {
+        timeoutSignal = signal;
+        return new Promise(() => {});
+      },
+    });
+    await assert.rejects(timeout, /time limit/);
+  } finally {
+    globalThis.AbortController = NativeAbortController;
+  }
   assert.equal(timeoutSignal.aborted, true);
+  assert.equal(timeoutAbortCalls, 1);
 
   let error;
   try {
