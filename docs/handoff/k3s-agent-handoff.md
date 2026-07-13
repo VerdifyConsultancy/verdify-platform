@@ -170,10 +170,19 @@ flash. The procedure and its traps:
 These are why the repo is "self-documenting" but not yet "100% laptop-free." Most
 are infra work, gated and tracked — do **not** try to fix them in a code session:
 
-1. **Firmware OTA in-cluster** — needs the esphome/PlatformIO toolchain in a
-   builder image, **device-VLAN reachability** (a gated network spike; the
-   ingestor is the only sanctioned device-egress path), and the OTA secrets
-   re-homed into a k8s Secret. Until then OTA stays operator-run (§4).
+1. **Firmware OTA in-cluster** — CLOSED 2026-07-13 (operator-directed).
+   `deploy/k8s/components/firmware-builder/`: a suspended-CronJob job template
+   (`kubectl -n verdify-prod create job --from=cronjob/verdify-firmware-builder …`)
+   runs the official esphome image, assembles `secrets.yaml` from k8s Secrets
+   (`verdify-firmware-ota`, `verdify-app-secrets/ESP32_API_KEY`,
+   `verdify-firmware-wifi`, `verdify-github-token`), compiles with the
+   toolchain cached on a PVC, archives to the `verdify-firmware-artifacts`
+   PVC (**the rollback floor `last-good.ota.bin` now lives THERE, not on the
+   laptop**), and — only with `FLASH=1`, which stays Jason-gated — uploads to
+   192.168.10.111:3232 through its own scoped egress NetworkPolicy. The
+   preflight/verify steps (`firmware-deploy-preflight.sh`,
+   `wait-for-firmware-version.sh`, `make sensor-health`) already run
+   kube-backend from any cluster pod.
 2. **Secret sealing / source reconciliation** — `docs/runbooks/verdify-secret-sealing-plan.md`
    lists source path/name mismatches (MQTT_*, HERMES_IRIS_API_KEY,
    API_WRITE_TOKEN↔VERDIFY_WRITE_API_KEY) to reconcile before SOPS/age sealing.
