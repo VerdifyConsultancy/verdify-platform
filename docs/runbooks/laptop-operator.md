@@ -90,10 +90,19 @@ by default; any prod apply requires an explicit operator gate.
 ## 3. Firmware OTA from the laptop
 
 Device: ESP32 at `192.168.10.111` (OTA :3232, native API :6053). **Running
-firmware `2026.6.17.2042.dcc6078`** (band-compliance; pinch wired, live
-`band_track_fraction=0.25`). **Verify the running version from
-`diagnostics.firmware_version`, NOT `firmware/artifacts/last-good.version`**
-(last-good is the rollback floor — it lags through the 48 h bake). The secrets
+firmware as of 2026-07-13: `2026.7.10.1500.09ee886`** (the 2026-07-10
+software-recovery release; pinch machinery wired, live
+`band_track_fraction=0.0` — the ADR-0004/#377 float). **Verify the running
+version from `diagnostics.firmware_version`, NOT
+`firmware/artifacts/last-good.version`** (last-good is the rollback floor — it
+lags through the 48 h bake); the authoritative read from any kubectl host:
+
+```bash
+scripts/verdify-db.sh prod -c "SELECT firmware_version, max(ts) FROM diagnostics
+  WHERE firmware_version IS NOT NULL GROUP BY 1 ORDER BY 2 DESC LIMIT 1;"
+```
+
+The secrets
 reconstruction (k3s sources) and the **false-rollback gotcha** (the post-OTA
 checks default to the wrong DB backend off-laptop and can auto-rollback a
 healthy OTA) are documented in
@@ -103,11 +112,12 @@ before flashing.
 **Pinch resets on every flash (#413/#377):** `band_track_fraction` is
 `restore_value: no` in `firmware/greenhouse/globals.yaml`, so an OTA/reboot
 cold-starts it to the compiled `initial_value` — **`0.0` on current `main`**
-(ADR-0004) — regardless of the live planner-pushed 0.25. The
+(ADR-0004) — regardless of any live planner-pushed value (this is how the
+pre-2026-07-10 live 0.25 was dropped). The
 `crop_band_anchors`→NVS reconcile does **NOT** re-assert it (that path only
 protects `restore_value: yes` band globals — `docs/CONTROL-ARCHITECTURE.md` §7),
 and the registry pins its bounds to `[0.0, 0.0]`, so no current push path can
-restore 0.25 without a registry-bounds change first. Post-flash, execute the
+restore a nonzero pinch without a registry-bounds change first. Post-flash, execute the
 g-377 pinch decision (re-pin vs accept float) and record `band_track_fraction` +
 `dehum_vent_hold_enabled` (#410) + the envelope config (door screen-window
 open/closed, #412) in the bake report — step-by-step in
