@@ -210,18 +210,30 @@ images:
   - name: ghcr.io/verdifyconsultancy/verdify-planner
     newName: registry.vallery.net/verdifyconsultancy/verdify-planner
     digest: sha256:77209866f6680c168f99d11ba26dfefc1dad449208bab49b46f5339154cb8608
-  # verdify-setpoint-server (#118): real GHCR digest of the grow-light writer +
-  # setpoint-diagnostics image built from scripts/Dockerfile.setpoint-server. The
-  # `branch-live-platform-main` build is published + repo-linked to
-  # VerdifyConsultancy/verdify-platform and verified pullable 2026-06-04 (GHCR
-  # manifest HEAD -> 200) — REPLACES the prior all-zeros placeholder pin.
-  # setpoint-server is a PROD-ONLY device-affecting Component, so it is excluded
-  # from prod-promote and remains hand-pinned. A rebuild alone does not advance it.
+  # verdify-setpoint-server (#118): grow-light writer + setpoint-diagnostics image
+  # built from scripts/Dockerfile.setpoint-server. setpoint-server is a PROD-ONLY
+  # device-affecting Component, so it is excluded from prod-promote and remains
+  # hand-pinned. A rebuild alone does not advance it.
+  #
+  # #447 HAND-PIN ADVANCE (2026-07-13): f5ac817 is the zot-origin build carrying
+  # commit 7e0d8c0 — /setpoints queries through the asyncpg pool (_db_text_safe);
+  # the VM-era _resolve_psql_prefix docker/psql shell-out is GONE. It REPLACES
+  # the stale 2026-06-04 f49868cb pin, whose /setpoints path resolved
+  # `docker exec` and returned HTTP 500 in the k3s pod (no docker binary).
+  # f5ac817 is what verdify-prod has been RUNNING since 2026-07-11 (hand-rolled
+  # with the #447 fix); repinning here makes the gated ArgoCD sync a NO-OP for
+  # this workload instead of a ROLLBACK to the broken image. Verified live
+  # 2026-07-13 (read-only, in-pod): GET /setpoints -> HTTP 200, 205 params;
+  # GET /health -> 200; image script has _db_text_safe, no _resolve_psql_prefix,
+  # no subprocess import. Rollback = revert this digest line (restores the
+  # previous rendered shape; the live pod is only touched by a gated sync).
+  # Regression fence: tests/test_setpoint_server_db_backend.py refuses the
+  # pre-fix digest.
   # hermes-agent is deliberately ABSENT from this transformer — its upstream
   # @sha256 is preserved inline in the component (NOT transformer-pinned).
   - name: ghcr.io/verdifyconsultancy/verdify-setpoint-server
     newName: registry.vallery.net/verdifyconsultancy/verdify-setpoint-server
-    digest: sha256:f49868cb9887c7e1dc18dc32f289fb873ee97dd1c5bd80bb961474a5f4976948
+    digest: sha256:f5ac817f42f9a0f306692e1fb0434eb1b600c2ba5fa35da0dccdc618bbb3690a
   # verdify-lab (#124): real GHCR digest of the Quartz research-site image built
   # from the verdify-site-legacy repo's Dockerfile.k3s (Quartz `npx quartz build`
   # -> static public/ -> nginx-unprivileged on :8080). Published + repo-linked by
