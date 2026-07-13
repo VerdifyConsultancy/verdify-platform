@@ -36,8 +36,12 @@ function refreshTarget(html, physicalPath) {
 function verifySelectedEvidence(build, occurrenceManifest) {
   const occurrences = [...occurrenceManifest.graphs, ...occurrenceManifest.currentMedia];
   if (occurrences.length === 0) return;
-  if (!/^sha256:[0-9a-f]{64}$/u.test(build.selectedOccurrenceManifestSha256 ?? "")) {
+  const selectedMatch = /^sha256:([0-9a-f]{64})$/u.exec(build.selectedOccurrenceManifestSha256 ?? "");
+  if (!selectedMatch) {
     throw new Error("production evidence has no selected immutable occurrence manifest");
+  }
+  if (occurrenceManifest.selectedManifestSha256 !== selectedMatch[1]) {
+    throw new Error("production build and static occurrence manifest select different releases");
   }
   if (build.materializedOccurrenceBlobCount < 1) {
     throw new Error("production evidence selection materialized no immutable blobs");
@@ -53,6 +57,8 @@ function verifySelectedEvidence(build, occurrenceManifest) {
     }
   }
 }
+
+export { verifySelectedEvidence };
 
 export async function verifyProductionOutput({ dist, allowFixture = false }) {
   const read = (relative) => readFile(path.join(dist, ...relative.split("/")), "utf8");
