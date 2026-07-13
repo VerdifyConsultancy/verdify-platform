@@ -112,8 +112,9 @@ over-bound inputs fail closed.
 The same frozen tree contains MP4 camera exports. Their top-level ISO-BMFF box
 layout is validated and non-`mdat` metadata is scanned under a 4 MiB bound.
 `stsc`/`stsz`/`stz2`/`stco`/`co64` sample tables must prove every skipped byte
-belongs to a whitelisted audio/video sample; unreferenced `mdat` gaps and
-unproven track formats are scanned or rejected fail-closed.
+belongs to a whitelisted audio/video sample. An unreferenced `mdat` gap is
+accepted only as at most 16 all-zero alignment bytes (4 KiB cumulative);
+opaque gaps and unproven track formats are rejected fail-closed.
 
 This driver suppresses scanner diagnostics and prints only aggregate evidence;
 it cannot echo a matched protected value:
@@ -159,7 +160,9 @@ top-level MP4 `mdat` bytes were skipped without proving their sample ownership.
 Regression fixtures now require PAT/PMT-first declared PIDs and place protected,
 invalid, base64, and UTF-16 text in an unreferenced `mdat` gap behind otherwise
 valid sample tables. Unknown codecs and sample ranges outside `mdat` also fail
-closed.
+closed. A follow-up also rejects non-padding null-PID payloads, PMTs whose PCR
+PID is neither null nor a declared elementary stream, compressed/opaque `mdat`
+gaps, and padding beyond the narrow alignment bound.
 
 At `2026-07-13T07:59:07Z`, copies of the two MP4 camera exports currently served
 by `lab-stage` (2 files, 101,976,633 bytes) scanned clean in 1.362 seconds. The
@@ -168,6 +171,10 @@ seconds. Both commands used the strengthened scanner and emitted JSON reports;
 their report SHA-256 values were respectively
 `8a2cd377d925c0534d1fed9a39e05b151c360b8872f5b8fc884997ecc608e80a` and
 `b50cacc5714e8ff5c657644adc18e066f96de72dfa5b11413740bc110e5fb996`.
+After the stricter null/PCR/gap follow-up, the complete current stage launch
+media tree (179 files, 370,069,481 bytes) scanned clean at
+`2026-07-13T08:16:05Z` in 2.897 seconds; the report SHA-256 was
+`286d0ecf568faf1cb865ea3f2110e98d69bff75ea8a38e36563de7c77fccc08c`.
 
 The complete current stage tree is not a replacement for the frozen clean
 corpus above: its 1,184 files (453,366,254 bytes) completed in 125.060 seconds

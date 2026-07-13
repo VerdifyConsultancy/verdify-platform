@@ -119,11 +119,13 @@ def mpeg_ts_packet(pid: int, payload: bytes, *, payload_unit_start: bool = False
     return bytes([0x47, second, pid & 0xFF, 0x30 | counter, adaptation_length]) + adaptation + payload
 
 
-def mpeg_ts_fixture(*, metadata: bytes | None = None, split_pmt: bool = False) -> bytes:
+def mpeg_ts_fixture(*, metadata: bytes | None = None, split_pmt: bool = False, pcr_pid: int | None = None) -> bytes:
     program = 1
     pmt_pid = 0x1000
     video_pid = 0x0100
     metadata_pid = 0x0102
+    pcr_pid = video_pid if pcr_pid is None else pcr_pid
+    assert 0 <= pcr_pid < 0x2000
     pat = mpeg_ts_section(
         0x00,
         b"\x00\x01\xc1\x00\x00" + bytes([program >> 8, program & 0xFF, 0xE0 | (pmt_pid >> 8), pmt_pid & 0xFF]),
@@ -140,8 +142,8 @@ def mpeg_ts_fixture(*, metadata: bytes | None = None, split_pmt: bool = False) -
                 0xC1,
                 0x00,
                 0x00,
-                0xE0 | (video_pid >> 8),
-                video_pid & 0xFF,
+                0xE0 | (pcr_pid >> 8),
+                pcr_pid & 0xFF,
                 0xF0,
                 0x00,
             ]
@@ -494,6 +496,30 @@ def test_mpeg_transport_stream_rejects_payload_before_map_and_undeclared_pids(tm
     }
 
 
+def test_mpeg_transport_stream_rejects_null_payload_and_undeclared_pcr(tmp_path):
+    guard = load_guard()
+    excluded = next(iter(policy.PUBLIC_CROP_EXCLUDE_SLUGS))
+    protected = f"review {excluded}".encode()
+    valid = mpeg_ts_fixture()
+
+    (tmp_path / "null-payload.ts").write_bytes(valid + mpeg_ts_packet(0x1FFF, protected))
+    undeclared_pcr = 0x0103
+    (tmp_path / "undeclared-pcr.ts").write_bytes(
+        mpeg_ts_fixture(pcr_pid=undeclared_pcr) + mpeg_ts_packet(undeclared_pcr, protected, payload_unit_start=True)
+    )
+    # Canonical null-packet stuffing and a PMT's explicit null-PCR sentinel
+    # remain valid inputs.
+    (tmp_path / "padding.ts").write_bytes(valid + mpeg_ts_packet(0x1FFF, b"\xff" * 184))
+    (tmp_path / "null-pcr.ts").write_bytes(mpeg_ts_fixture(pcr_pid=0x1FFF))
+
+    findings = guard.scan_root(tmp_path)
+
+    assert {(finding.path, finding.reason) for finding in findings} == {
+        ("null-payload.ts", "malformed-media-artifact"),
+        ("undeclared-pcr.ts", "malformed-media-artifact"),
+    }
+
+
 def test_mpeg_transport_stream_rejects_unsupported_and_ambiguous_packet_layouts(tmp_path):
     guard = load_guard()
     valid = mpeg_ts_fixture()
@@ -513,7 +539,7 @@ def test_mpeg_transport_stream_rejects_unsupported_and_ambiguous_packet_layouts(
     }
 
 
-def test_iso_bmff_scans_metadata_and_unproven_mdat_payloads(tmp_path):
+def test_iso_bmff_scans_metadata_and_rejects_unproven_mdat_gaps(tmp_path):
     guard = load_guard()
     excluded = next(iter(policy.PUBLIC_CROP_EXCLUDE_SLUGS))
     (tmp_path / "protected.mp4").write_bytes(iso_bmff_fixture(metadata=f"review {excluded}".encode()))
@@ -524,6 +550,16 @@ def test_iso_bmff_scans_metadata_and_unproven_mdat_payloads(tmp_path):
     (tmp_path / "utf16-mdat.mp4").write_bytes(iso_bmff_fixture(unreferenced=f"review {excluded}".encode("utf-16-le")))
     (tmp_path / "invalid-mdat.m4v").write_bytes(iso_bmff_fixture(unreferenced=b"humidity: NaN%"))
     (tmp_path / "short-invalid-mdat.mp4").write_bytes(iso_bmff_fixture(unreferenced=b"NaN"))
+    (tmp_path / "gzip-mdat.mp4").write_bytes(
+        iso_bmff_fixture(unreferenced=gzip.compress(f"review {excluded}".encode()))
+    )
+    (tmp_path / "opaque-mdat.mp4").write_bytes(iso_bmff_fixture(unreferenced=b"\x01\x02\x03\x04"))
+    (tmp_path / "oversized-padding.mp4").write_bytes(
+        iso_bmff_fixture(unreferenced=b"\x00" * (guard.ISO_BMFF_MAX_GAP_PADDING_BYTES + 1))
+    )
+    (tmp_path / "valid-padding.mp4").write_bytes(
+        iso_bmff_fixture(unreferenced=b"\x00" * guard.ISO_BMFF_MAX_GAP_PADDING_BYTES)
+    )
     (tmp_path / "safe.mp4").write_bytes(iso_bmff_fixture(media=(b"$-information-none-is-codec-data" * 65_536)))
     (tmp_path / "init.mp4").write_bytes(
         iso_bmff_box(b"ftyp", b"isom\x00\x00\x02\x00isomiso2") + iso_bmff_box(b"moov", b"ordinary metadata")
@@ -532,13 +568,16 @@ def test_iso_bmff_scans_metadata_and_unproven_mdat_payloads(tmp_path):
     findings = guard.scan_root(tmp_path)
 
     assert {(finding.path, finding.reason) for finding in findings} == {
-        ("encoded-mdat.mp4", "content"),
-        ("invalid-mdat.m4v", "invalid-rendered-value"),
+        ("encoded-mdat.mp4", "malformed-media-artifact"),
+        ("gzip-mdat.mp4", "malformed-media-artifact"),
+        ("invalid-mdat.m4v", "malformed-media-artifact"),
         ("invalid.m4v", "invalid-rendered-value"),
-        ("protected-mdat.mp4", "content"),
+        ("opaque-mdat.mp4", "malformed-media-artifact"),
+        ("oversized-padding.mp4", "malformed-media-artifact"),
+        ("protected-mdat.mp4", "malformed-media-artifact"),
         ("protected.mp4", "content"),
-        ("short-invalid-mdat.mp4", "invalid-rendered-value"),
-        ("utf16-mdat.mp4", "content"),
+        ("short-invalid-mdat.mp4", "malformed-media-artifact"),
+        ("utf16-mdat.mp4", "malformed-media-artifact"),
     }
     assert excluded not in str(findings).casefold()
 

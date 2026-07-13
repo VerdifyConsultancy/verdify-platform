@@ -66,9 +66,6 @@ SUPPORTED_BINARY_SUFFIXES = frozenset(
 TEXT_CHUNK_SIZE = 1024 * 1024
 STREAM_OVERLAP = 64 * 1024
 BINARY_CHUNK_SIZE = 1024 * 1024
-OPAQUE_MEDIA_ASCII_RUN_RE = re.compile(rb"[\t\r\n\x20-\x7e]{3,}")
-OPAQUE_MEDIA_UTF16_LE_RUN_RE = re.compile(rb"(?:[\t\r\n\x20-\x7e]\x00){3,}")
-OPAQUE_MEDIA_UTF16_BE_RUN_RE = re.compile(rb"(?:\x00[\t\r\n\x20-\x7e]){3,}")
 MPEG_TS_PACKET_SIZE = 188
 MPEG_TS_PROBE_PACKETS = 5
 MPEG_TS_TEXT_PROBE_BYTES = 64 * 1024
@@ -80,6 +77,8 @@ MPEG_TS_PACKET_LAYOUTS = ((188, 0), (192, 4), (204, 0))
 ISO_BMFF_MAX_BOXES = 4096
 ISO_BMFF_MAX_METADATA_BYTES = 4 * 1024 * 1024
 ISO_BMFF_MAX_SAMPLES = 2_000_000
+ISO_BMFF_MAX_GAP_PADDING_BYTES = 16
+ISO_BMFF_MAX_TOTAL_GAP_PADDING_BYTES = 4096
 ISO_BMFF_MEDIA_BOXES = frozenset({b"mdat"})
 ISO_BMFF_VIDEO_SAMPLE_ENTRIES = frozenset({b"av01", b"avc1", b"avc3", b"hev1", b"hvc1", b"vp08", b"vp09"})
 ISO_BMFF_AUDIO_SAMPLE_ENTRIES = frozenset({b".mp3", b"Opus", b"ac-3", b"ec-3", b"fLaC", b"mp4a"})
@@ -496,42 +495,6 @@ def _scan_binary_range(file_descriptor: int, start: int, length: int) -> set[str
     return reasons
 
 
-def _opaque_media_text_candidate(text: str) -> bool:
-    """Return whether a text-bearing codec run can affect publication policy."""
-    lowered = text.casefold()
-    if any(identifier in lowered for identifier in PUBLIC_CROP_EXCLUDE_SLUGS):
-        return True
-    if any(token in lowered for token in ("nan", "inf", "none")):
-        return True
-    return public_text_requires_decoding(text)
-
-
-def _scan_opaque_media_range(file_descriptor: int, start: int, length: int) -> set[str]:
-    """Scan text-bearing runs in codec bytes without decoding arbitrary binary as prose."""
-    reasons: set[str] = set()
-    overlap = b""
-    offset = start
-    end = start + length
-    while offset < end:
-        chunk = os.pread(file_descriptor, min(BINARY_CHUNK_SIZE, end - offset), offset)
-        if not chunk:
-            reasons.add("malformed-media-artifact")
-            break
-        combined = overlap + chunk
-        for pattern, encoding in (
-            (OPAQUE_MEDIA_ASCII_RUN_RE, "ascii"),
-            (OPAQUE_MEDIA_UTF16_LE_RUN_RE, "utf-16-le"),
-            (OPAQUE_MEDIA_UTF16_BE_RUN_RE, "utf-16-be"),
-        ):
-            for match in pattern.finditer(combined):
-                text = match.group().decode(encoding)
-                if _opaque_media_text_candidate(text):
-                    reasons.update(_value_reasons(text))
-        overlap = combined[-STREAM_OVERLAP:]
-        offset += len(chunk)
-    return reasons
-
-
 def _is_utf8_text_probe(payload: bytes) -> bool:
     """Keep ordinary TypeScript on the text path without trusting its shared suffix."""
     if not payload:
@@ -634,12 +597,19 @@ def _mpeg_ts_parse_pmt(
         elementary_pid = ((section[offset + 1] & 0x1F) << 8) | section[offset + 2]
         descriptor_length = ((section[offset + 3] & 0x0F) << 8) | section[offset + 4]
         offset += 5
-        if offset + descriptor_length > payload_end or elementary_pid in seen_pids or elementary_pid == 0x1FFF:
+        if (
+            offset + descriptor_length > payload_end
+            or elementary_pid in seen_pids
+            or elementary_pid <= 0x1F
+            or elementary_pid == 0x1FFF
+        ):
             return None, True
         seen_pids.add(elementary_pid)
         streams.append((stream_type, elementary_pid))
         offset += descriptor_length
     if not streams:
+        return None, True
+    if pcr_pid != 0x1FFF and pcr_pid not in seen_pids:
         return None, True
     return (pcr_pid, tuple(streams)), False
 
@@ -791,17 +761,24 @@ def _scan_mpeg_ts_stream(file_descriptor: int) -> set[str]:
             if control not in {1, 3}:
                 continue
             payload = bytes(packet[payload_start:])
+            # Null packets are padding, not an unclassified metadata channel.
+            # Verdify HLS emits canonical 0xff payload stuffing, so any start
+            # indicator or non-padding byte is malformed and fails closed.
+            if pid == 0x1FFF:
+                if payload_unit_start or any(byte != 0xFF for byte in payload):
+                    return {"malformed-media-artifact"}
+                continue
             # A PID cannot be classified as compressed A/V versus public
             # metadata until its PMT has been validated. Accepting elementary
             # payload before that point silently discarded it from the bounded
             # metadata scan. Verdify HLS is single-program PAT/PMT-first, so
             # fail closed on premature or undeclared elementary payload.
-            if pid > 0x1F and pid != 0x1FFF:
+            if pid > 0x1F:
                 if pmt is None:
                     if program_map is None or pid != program_map[1]:
                         return {"malformed-media-artifact"}
                 else:
-                    if pid not in elementary_pids and pid not in {program_map[1], pmt[0]}:
+                    if pid not in elementary_pids and pid != program_map[1]:
                         return {"malformed-media-artifact"}
             if pid <= 0x1F or (program_map is not None and pid == program_map[1]) or pid in metadata_pids:
                 retain_metadata(pid, payload)
@@ -1030,6 +1007,14 @@ def _iso_bmff_track_ranges(moov: bytes) -> tuple[list[tuple[int, int]], bool, bo
     return safe_ranges, unproven, False
 
 
+def _iso_bmff_gap_is_padding(file_descriptor: int, start: int, length: int) -> bool:
+    """Allow only a tiny all-zero alignment gap outside proven A/V samples."""
+    if length <= 0 or length > ISO_BMFF_MAX_GAP_PADDING_BYTES:
+        return False
+    payload = os.pread(file_descriptor, length, start)
+    return len(payload) == length and not any(payload)
+
+
 def _scan_iso_bmff_stream(file_descriptor: int) -> set[str]:
     """Validate top-level ISO-BMFF boxes and scan metadata plus text-bearing media."""
     file_size = os.fstat(file_descriptor).st_size
@@ -1110,6 +1095,7 @@ def _scan_iso_bmff_stream(file_descriptor: int) -> set[str]:
     ):
         return {"malformed-media-artifact", *reasons}
 
+    padding_bytes = 0
     for media_start, media_end in media_ranges:
         cursor = media_start
         for sample_start, sample_end in safe_ranges:
@@ -1118,10 +1104,20 @@ def _scan_iso_bmff_stream(file_descriptor: int) -> set[str]:
             if sample_start >= media_end:
                 break
             if sample_start > cursor:
-                reasons.update(_scan_opaque_media_range(file_descriptor, cursor, sample_start - cursor))
+                gap_size = sample_start - cursor
+                padding_bytes += gap_size
+                if padding_bytes > ISO_BMFF_MAX_TOTAL_GAP_PADDING_BYTES or not _iso_bmff_gap_is_padding(
+                    file_descriptor, cursor, gap_size
+                ):
+                    return {"malformed-media-artifact", *reasons}
             cursor = sample_end
         if cursor < media_end:
-            reasons.update(_scan_opaque_media_range(file_descriptor, cursor, media_end - cursor))
+            gap_size = media_end - cursor
+            padding_bytes += gap_size
+            if padding_bytes > ISO_BMFF_MAX_TOTAL_GAP_PADDING_BYTES or not _iso_bmff_gap_is_padding(
+                file_descriptor, cursor, gap_size
+            ):
+                return {"malformed-media-artifact", *reasons}
     if unproven:
         reasons.add("malformed-media-artifact")
     return reasons
