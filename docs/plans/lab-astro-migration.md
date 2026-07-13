@@ -1,7 +1,7 @@
 # Lab Astro Migration — Consolidated Program Tracker
 
-Last updated: 2026-07-13 (Phase 4c offline camera/graph producers merged;
-Phase 4b S3 foundation in progress).
+Last updated: 2026-07-13 (Phase 4c offline producer build/probe/pin gate passed;
+Phase 4b S3 foundation ready for review).
 Owner: platform agent (Claude outer loop plans/verifies; Codex executes on
 xhigh). Human gate: Jason (prod sync, DNS/edge, Quartz retirement, credential
 work). Epic: #351 (L9, G3). This file is the single source of truth for the
@@ -14,8 +14,8 @@ changes state.
 |---|---|
 | `lab.verdify.ai` (prod) | Quartz. `verdify-lab` Deployment in `verdify-prod` (ghcr image — pre-ADR-0021 holdover), `verdify-lab-publisher` CronJob republished every 10 min (mutable, shared RWO PVC, both replicas node-pinned). Healthy and fresh; had a 5-job BackoffLimitExceeded streak before recovering. |
 | `lab-stage.verdify.ai` (canary) | Astro. `verdify-lab-astro-stage` in ns `verdify-platform`, 2/2 Ready with zero restarts on distinct nodes, exact image and pod image IDs `verdify-lab-astro@sha256:ee36941f20028fcfe06f12bf253e7139c00e3d5de1949eb8b12bb1d4ebe60b99` (pin PR #468), shell contract **1.1.0**, content frozen at the 2026-07-12 snapshot. Live T0/T+10 acceptance passed and the ArgoCD app returned to manual-sync. |
-| `main` | Astro source now includes the accepted static implementation plus the dormant release/cache runtime, offline camera producer (#487), and complete offline 143-graph producer (#492). The live stage remains the static image above; occurrence-store/event wiring, exact parity, and production cutover remain. |
-| In-cluster CI | **Green for lab-astro.** `verdify-platform-ci-phase1-38ccd5e` built exact revision `38ccd5e`, passed all 12 browser quality tests plus build/verify/probe/pin, and published the accepted zot digest above. Playwright fixes #463/#464 and agents#2969/#2970 closed the missing-browser, pin-idempotency, and deterministic CPU-allocation failures without relaxing the strict quality budgets. |
+| `main` | Astro source now includes the accepted static implementation, dormant release/cache runtime, offline camera producer (#487), and complete offline 143-graph producer (#492). Runtime pin #495 binds the dormant agent/nginx pair to the exact graph-containing source; the live stage remains the static image above. Occurrence-store/event wiring, exact parity, and production cutover remain. |
+| In-cluster CI | **Green for lab-astro.** Current-source workflow `verdify-platform-ci-d9bqw` completed 17/17 Lab Pod gates for `64dda4d...`: 12 browser quality tests, static/agent/nginx builds, metadata hydration, exact static probe, and paired runtime probe. Pin #495 passed exact-head PR CI/render/kubeconform; its digest-only follow-up workflow also passed. Earlier Playwright fixes #463/#464 and agents#2969/#2970 remain enforced without relaxing quality budgets. |
 
 ## Completed (do not re-plan)
 
@@ -165,6 +165,10 @@ Phase 4 — **Feature completion (owner: codex, critical-path order below).**
    freshness alerts, LKG behavior, and joint live proof. Inert Phase 4b
    implementation may proceed, but live reporting or occurrence activation
    remains separately Jason-gated.
+   Their exact-source static/agent/nginx build, metadata, static-image, paired
+   runtime, and dormant digest-pin chain passed via `verdify-platform-ci-d9bqw`
+   and #495. This proves the packaged source pair only; no stage sync,
+   reporting feed, producer request, route, or runtime activation occurred.
 2. **4a Release runtime:** `d91737d` landed via #473 with init hydration,
    atomic runtime, readiness, metrics, and tests. The follow-through makes the
    candidate visible in the Lab stage GitOps source only as a truly disconnected
