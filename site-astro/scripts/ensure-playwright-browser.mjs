@@ -4,6 +4,7 @@ import { chromium } from "@playwright/test";
 
 const require = createRequire(import.meta.url);
 const executable = chromium.executablePath();
+const playwrightCli = require.resolve("@playwright/test/cli");
 
 async function browserIsReady() {
   let browser;
@@ -20,7 +21,6 @@ async function browserIsReady() {
 if (await browserIsReady()) {
   process.stdout.write(`[lab-stage] pinned Playwright Chromium is ready: ${executable}\n`);
 } else {
-  const playwrightCli = require.resolve("playwright/cli");
   process.stdout.write(
     "[lab-stage] pinned Playwright Chromium is absent; installing browser and OS dependencies\n",
   );
