@@ -235,6 +235,20 @@ test("image dimensions are read from bounded static image headers", () => {
   assert.equal(imageDimensions(Buffer.from("not an image"), "evidence.bin"), null);
 });
 
+test("video evidence defers media bytes until the visitor requests playback", async () => {
+  const rendered = await renderMarkdown(
+    '<video controls preload="metadata"><source src="/static/video/proof.mp4" type="video/mp4"></video>',
+    { relative: "index.md" },
+    new Map(),
+    new Map([["index.md", "/"]]),
+    new Set(["static/video/proof.mp4"]),
+    new Map(),
+    new Map(),
+    new Set(["/"]),
+  );
+  assert.match(rendered.html, /<video controls preload="none">/);
+});
+
 test("legacy public compatibility assets are closed and digest-bound", async () => {
   const assets = await verifyCompatAssets();
   assert.equal(assets.length, 11);

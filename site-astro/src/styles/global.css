@@ -337,6 +337,12 @@ kbd {
   cursor: zoom-in;
 }
 
+.lab-article :where(p, li, dd, td, figcaption) > a:not(:has(> img)) {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.16em;
+}
+
 .lab-table-wrap,
 .lab-table-scroll {
   display: block;

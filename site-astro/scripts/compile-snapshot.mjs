@@ -459,6 +459,16 @@ function rehypeImageMetadata(metadata) {
   };
 }
 
+function rehypeMediaLoadingPolicy() {
+  return () => (tree) => {
+    visit(tree, "element", (node) => {
+      if (node.tagName !== "video" || node.properties?.autoPlay) return;
+      node.properties ??= {};
+      node.properties.preload = "none";
+    });
+  };
+}
+
 function cameraSnapshotAsset(rawSource, snapshotFiles) {
   if (typeof rawSource !== "string") return null;
   let parsed;
@@ -679,6 +689,7 @@ async function renderMarkdown(
     .use(remarkRewriteLocalLinks(source, routeBySource))
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeRaw)
+    .use(rehypeMediaLoadingPolicy())
     .use(rehypeRewriteRelativeReferences(source, routeBySource, assetPaths))
     .use(rehypeUnavailableLocalReferences(assetPaths, availableRoutes, unavailable))
     .use(rehypeSlug)
