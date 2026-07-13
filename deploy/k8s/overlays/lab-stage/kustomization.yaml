@@ -18,10 +18,10 @@ images:
   # reviewed activation replaces each sentinel with its exact zot digest.
   - name: registry.vallery.net/verdifyconsultancy/verdify-lab-release-agent
     newName: registry.vallery.net/verdifyconsultancy/verdify-lab-release-agent
-    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+    digest: sha256:bfd3b7bbfac90e4af38057b84a360b6642a9cea34d8ab5fdfaa24cdb97f3c2ae
   - name: registry.vallery.net/verdifyconsultancy/verdify-lab-release-nginx
     newName: registry.vallery.net/verdifyconsultancy/verdify-lab-release-nginx
-    digest: sha256:0000000000000000000000000000000000000000000000000000000000000000
+    digest: sha256:501444dc8c662a7491de8bbb92118967facaa416f97cf72bb0c32440a2efe637
 
 patches:
   - path: lab-release-runtime-dormant.patch.yaml
