@@ -116,14 +116,19 @@ device-VLAN + secrets). Until that's built (§5), the agent prepares the change 
 the evidence (replay-diff, invariants, unit-test delta) and an operator runs the
 flash. The procedure and its traps:
 
-- **Device:** ESP32 `192.168.10.111` (OTA `:3232`, native API `:6053`). It
-  currently runs **`2026.6.17.2042.dcc6078`** (the band-compliance firmware; pinch
-  wired, `band_track_fraction=0.25` live).
+- **Device:** ESP32 `192.168.10.111` (OTA `:3232`, native API `:6053`). As of
+  2026-07-13 it runs **`2026.7.10.1500.09ee886`** (the 2026-07-10 software-recovery
+  release; pinch machinery still wired, `band_track_fraction` **`0.0` live** — the
+  ADR-0004/#377 float, recorded in
+  `docs/handoff/software-recovery-deploy-2026-07-10.md`). Any version string
+  written in a doc rots — read the live value per the VERIFY bullet below before
+  trusting this one.
 - **Pinch resets on every flash (#413/#377, verified 2026-07-03):**
   `band_track_fraction` is `restore_value: no` in `firmware/greenhouse/globals.yaml`
   — an OTA/reboot **cold-starts it to the compiled `initial_value`, `0.0` on
-  current `main`** (the ADR-0004 float flip), silently dropping the live
-  planner-pushed 0.25. The `crop_band_anchors`→NVS reconcile does **NOT** cover it
+  current `main`** (the ADR-0004 float flip), silently dropping any live
+  planner-pushed nonzero value (this is how the pre-recovery live `0.25` was
+  dropped). The `crop_band_anchors`→NVS reconcile does **NOT** cover it
   (it only re-asserts `restore_value: yes` band globals —
   `docs/CONTROL-ARCHITECTURE.md` §7), and no dispatcher path re-pushes it: the
   registry pins its bounds to `[0.0, 0.0]`, so MCP `set_tunable` rejects a nonzero
@@ -132,7 +137,10 @@ flash. The procedure and its traps:
   registry-bounds change — vs accept float 0.0) per the checklist step in
   `docs/RELEASE-CHECKLIST.md` §B "Deploy + post".
 - **VERIFY the running firmware from telemetry — `diagnostics.firmware_version`
-  — NEVER from `firmware/artifacts/last-good.version`.** `last-good` is the
+  — NEVER from `firmware/artifacts/last-good.version`.** The authoritative read
+  (any kubectl host):
+  `scripts/verdify-db.sh prod -c "SELECT firmware_version, max(ts) FROM diagnostics WHERE firmware_version IS NOT NULL GROUP BY 1 ORDER BY 2 DESC LIMIT 1;"`
+  (live `band_track_fraction`: latest `setpoint_snapshot` row). `last-good` is the
   **rollback floor**, which deliberately lags the running binary through the 48 h
   bake. (Misreading it caused a wrong "device is on the old firmware" conclusion
   mid-2026-06-18; don't repeat it.)
@@ -226,10 +234,11 @@ and #322/#339 (retired-VM doc/test cleanup).
   especially `.sql`). Use `grep -rnE` or Python globs; cross-check any "zero hits."
 - **Verify device firmware from `diagnostics.firmware_version`,** not
   `firmware/artifacts/last-good.version` (rollback floor, lags during the bake).
-- **The pinched band IS the device's control band today** (device runs
-  band-compliance dcc6078, pinch wired @ 0.25). VPD sitting above the band with
-  actuators idle = cooling-priority arbitration, not a wider tolerance. ADR-0004
-  direction = float (`band_track_fraction → 0`, #377).
+- **The pinched band IS the device's control band** (pinch machinery wired since
+  band-compliance `dcc6078`; since the 2026-07-10 recovery OTA `09ee886` the live
+  `band_track_fraction` is `0.0` — the ADR-0004/#377 float — so the pinched band
+  currently equals the full band). VPD sitting above the band with actuators
+  idle = cooling-priority arbitration, not a wider tolerance.
 - **Never wrap a self-committing migration in an outer `BEGIN..ROLLBACK`** (the
   2026-05-30 live-commit incident). Use `make migration-rollback-safety` +
   `scripts/check_migration_rollback_safety.py`.
