@@ -75,21 +75,27 @@ node scripts/prepare-occurrence-export.mjs validate \
 ```
 
 The checked-in policy is blocked and byte-binds the accepted stage occurrence
-manifest: 143 graph fingerprints plus two opaque camera fingerprints. The
-compiler requires a named operator-owned, one-way, read-only public reporting
-feed and rejects reuse of anonymous `graphs.verdify.ai` or the Track A primary
-role. Its source watermark has a p95 target of 900 seconds; greater than 1800
+manifest: 143 graph fingerprints plus two opaque camera fingerprints. Every batch
+also binds the exact canonical policy SHA-256. The compiler requires a named
+operator-owned, one-way, read-only public reporting feed and rejects reuse of
+anonymous `graphs.verdify.ai` or the Track A primary role. A trusted processing
+instant limits delivery delay to 300 seconds and future skew to 60 seconds. Its
+end-to-end source watermark has a p95 target of 900 seconds; greater than 1800
 seconds is alert state and cannot prepare new release requests, so selected LKG
 bytes stay in place.
 
 The camera source contract is GET-only and exact:
 `https://api.verdify.ai/api/v1/public/cameras/{greenhouse_1|greenhouse_2}/latest.jpg?h=1080`.
 Redirects, cookies, auth, direct device/VLAN, Frigate, go2rtc, database, and
-control access are forbidden. The future producer must decode each JPEG and
+control access are forbidden. A domain-separated SHA-256 binds each opaque
+occurrence to GET, its exact URL, and those redirect/auth/cookie rules in the
+reviewed policy, batch, sanitized candidate, and private generation request; the
+URL is never emitted into public release output. The future producer must decode each JPEG and
 re-encode a metadata-free RGB/RGBA PNG named by its SHA-256. The offline compiler
 then revalidates PNG structure, CRC, bounded inflate, decoded pixels, MIME,
-dimensions, byte count, content-addressed name, exact occurrence allowlist, and
-camera opacity before emitting canonical per-camera then reconciliation requests.
+dimensions, byte count, bounded PNG chunk cardinality, content-addressed name,
+exact occurrence allowlist, and camera opacity before emitting canonical
+per-camera then reconciliation requests.
 
 `deploy/k8s/components/lab-occurrence-reporting-boundary/` records the future
 boundary but is deliberately inert: no overlay reference, workload, Secret,

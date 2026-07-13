@@ -144,16 +144,22 @@ future specialist producer must satisfy. The reviewed, byte-bound policy at
 `config/lab-stage-occurrence-export-policy.json` contains exactly 143 graph and
 two opaque camera occurrence fingerprints from the accepted stage snapshot. A
 producer batch must name the operator-owned, one-way, read-only public reporting
-feed contract, carry its source watermark, and include every approved occurrence
-exactly once. The target is source-watermark p95 at or below 15 minutes; a sample
+feed contract, bind the exact canonical policy SHA-256, carry its source watermark,
+and include every approved occurrence exactly once. The trusted compiler clock
+allows at most five minutes of delivery delay and 60 seconds of future clock skew.
+The target is end-to-end source-watermark p95 at or below 15 minutes; a sample
 older than 30 minutes is alert state and cannot prepare a release, preserving
 last-known-good evidence.
 
 Candidate files must be metadata-free RGB/RGBA PNGs named by their actual SHA-256.
-The compiler independently decodes them, verifies CRCs and scanlines, and applies
-tighter MIME, byte, and dimension bounds before it can emit canonical media-first
-and reconciliation publish requests. Camera batches carry only opaque occurrence
-IDs. Their approved upstream handoff is GET-only to the two exact
+The compiler independently decodes them, verifies CRCs and scanlines, bounds total
+and image-data chunk cardinality, and applies tighter MIME, byte, and dimension
+bounds before it can emit canonical media-first and reconciliation publish
+requests. Camera batches carry only opaque occurrence IDs plus a domain-separated
+request-provenance SHA-256. That digest binds the occurrence ID, GET method, exact
+URL, and the no-redirect/no-auth/no-cookie rules through the candidate and private
+generation request without publishing the URL. The approved upstream handoff is
+GET-only to the two exact
 `api.verdify.ai/api/v1/public/cameras/.../latest.jpg?h=1080` paths; redirects,
 cookies, authentication, device/VLAN access, Frigate, and go2rtc are forbidden,
 and JPEG input must be decoded and cleanly re-encoded without metadata before it

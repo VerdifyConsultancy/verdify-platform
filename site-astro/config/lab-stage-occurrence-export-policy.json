@@ -1,7 +1,7 @@
 {
   "contract": "verdify.lab-occurrence-export-policy",
-  "schemaVersion": 1,
-  "policyVersion": "lab-public-reporting-v1",
+  "schemaVersion": 2,
+  "policyVersion": "lab-public-reporting-v2",
   "activation": {
     "state": "blocked",
     "approvedBy": null,
@@ -45,11 +45,13 @@
     "sources": [
       {
         "occurrenceId": "media_024bdac9f86794c7d1f36d48",
-        "url": "https://api.verdify.ai/api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080"
+        "url": "https://api.verdify.ai/api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080",
+        "requestProvenanceSha256": "34d53abda8ab745e106c0719534a554769a9b1017f22b7bb40e5895a6be74a34"
       },
       {
         "occurrenceId": "media_4e973f995789201d00aed8fd",
-        "url": "https://api.verdify.ai/api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080"
+        "url": "https://api.verdify.ai/api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080",
+        "requestProvenanceSha256": "0667d58e2f39c22e68bd906d3e4c754de1b41a845487eb55654aadba37c76fe0"
       }
     ]
   },
@@ -649,11 +651,13 @@
   "currentMedia": [
     {
       "occurrenceId": "media_024bdac9f86794c7d1f36d48",
-      "occurrenceSha256": "547b8dcc86cd04339c694df4fb161a2f9d24e07cd16fadc5e52cbc1d8a4d02e7"
+      "occurrenceSha256": "547b8dcc86cd04339c694df4fb161a2f9d24e07cd16fadc5e52cbc1d8a4d02e7",
+      "requestProvenanceSha256": "34d53abda8ab745e106c0719534a554769a9b1017f22b7bb40e5895a6be74a34"
     },
     {
       "occurrenceId": "media_4e973f995789201d00aed8fd",
-      "occurrenceSha256": "390e735571e74f5e9151a87847e002e5e708091aae67fa7901bfb2f4cae7b8fb"
+      "occurrenceSha256": "390e735571e74f5e9151a87847e002e5e708091aae67fa7901bfb2f4cae7b8fb",
+      "requestProvenanceSha256": "0667d58e2f39c22e68bd906d3e4c754de1b41a845487eb55654aadba37c76fe0"
     }
   ]
 }

@@ -20,6 +20,8 @@ const MAX_DOCUMENT_BYTES = 8 * 1024 * 1024;
 const MAX_OCCURRENCES = 10_000;
 const REPORTING_TARGET_SECONDS = 15 * 60;
 const REPORTING_STALE_SECONDS = 30 * 60;
+const MAX_BATCH_PROCESSING_DELAY_SECONDS = 5 * 60;
+const MAX_CLOCK_SKEW_SECONDS = 60;
 const REQUIRED_ACTIVATION_GATES = [
   "jason-approval",
   "operator-owned-reporting-feed",
@@ -32,6 +34,21 @@ function canonicalBytes(value) {
 
 function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
+}
+
+export function cameraRequestProvenanceSha256({ occurrenceId, url }) {
+  if (!MEDIA_ID_RE.test(occurrenceId)) throw new Error("camera request occurrence ID is invalid");
+  safeText(url, "camera request URL", 2048);
+  return sha256(canonicalBytes({
+    contract: "verdify.public-camera-request-provenance",
+    schemaVersion: 1,
+    occurrenceId,
+    method: "GET",
+    url,
+    redirectsAllowed: false,
+    authorization: "forbidden",
+    cookies: "forbidden",
+  }));
 }
 
 function exactKeys(value, keys) {
@@ -54,7 +71,10 @@ function safeText(value, label, maximum = 512) {
 
 function instant(value, label) {
   safeText(value, label, 32);
-  if (!ISO_INSTANT_RE.test(value) || !Number.isFinite(Date.parse(value))) throw new Error(`${label} is invalid`);
+  const milliseconds = Date.parse(value);
+  const normalized = Number.isFinite(milliseconds) ? new Date(milliseconds).toISOString() : "";
+  const expected = value.includes(".") ? normalized : normalized.replace(".000Z", "Z");
+  if (!ISO_INSTANT_RE.test(value) || value !== expected) throw new Error(`${label} is invalid`);
   return value;
 }
 
@@ -219,9 +239,23 @@ export function draftBlockedOccurrenceExportPolicy({
   safeText(policyVersion, "occurrence export policy version", 256);
   instant(approvedAt, "policy review time");
   const { graphs, currentMedia } = validateStaticOccurrenceManifest(manifest);
+  const cameraSourceRecords = cameraSources.map((source) => {
+    if (!exactKeys(source, ["occurrenceId", "url"])) {
+      throw new Error("camera upstream draft entry does not use the closed source-map shape");
+    }
+    return {
+      occurrenceId: source.occurrenceId,
+      url: source.url,
+      requestProvenanceSha256: cameraRequestProvenanceSha256(source),
+    };
+  }).sort((left, right) => left.occurrenceId.localeCompare(right.occurrenceId));
+  const cameraRequestByOccurrence = new Map(cameraSourceRecords.map((source) => [
+    source.occurrenceId,
+    source.requestProvenanceSha256,
+  ]));
   const policy = {
     contract: "verdify.lab-occurrence-export-policy",
-    schemaVersion: 1,
+    schemaVersion: 2,
     policyVersion,
     activation: {
       state: "blocked",
@@ -254,7 +288,7 @@ export function draftBlockedOccurrenceExportPolicy({
       allowedResponseMediaType: "image/jpeg",
       sanitization: "decode-reencode-rgb-or-rgba-png-metadata-free",
       forbiddenNetworkClasses: ["device-vlan", "frigate", "go2rtc", "control-plane"],
-      sources: [...cameraSources].sort((left, right) => left.occurrenceId.localeCompare(right.occurrenceId)),
+      sources: cameraSourceRecords,
     },
     imagePolicy: {
       mediaType: "image/png",
@@ -285,6 +319,7 @@ export function draftBlockedOccurrenceExportPolicy({
       .map((occurrence) => ({
         occurrenceId: occurrence.occurrenceId,
         occurrenceSha256: occurrenceFingerprint(occurrence),
+        requestProvenanceSha256: cameraRequestByOccurrence.get(occurrence.occurrenceId) ?? null,
       }))
       .sort((left, right) => left.occurrenceId.localeCompare(right.occurrenceId)),
   };
@@ -324,7 +359,7 @@ function validateCameraUpstream(cameraUpstream, approvedCurrentMedia) {
   if (!Array.isArray(cameraUpstream.sources) || cameraUpstream.sources.length !== approvedCurrentMedia.length) {
     throw new Error("camera upstream allowlist is incomplete");
   }
-  const approvedIds = new Set(approvedCurrentMedia.map((record) => record.occurrenceId));
+  const approvedById = new Map(approvedCurrentMedia.map((record) => [record.occurrenceId, record]));
   const approvedUrls = new Set([
     "https://api.verdify.ai/api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080",
     "https://api.verdify.ai/api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080",
@@ -332,7 +367,7 @@ function validateCameraUpstream(cameraUpstream, approvedCurrentMedia) {
   const seenIds = new Set();
   const seenUrls = new Set();
   for (const source of cameraUpstream.sources) {
-    if (!exactKeys(source, ["occurrenceId", "url"]) || !approvedIds.has(source.occurrenceId)) {
+    if (!exactKeys(source, ["occurrenceId", "url", "requestProvenanceSha256"]) || !approvedById.has(source.occurrenceId)) {
       throw new Error("camera upstream allowlist entry is invalid");
     }
     let parsed;
@@ -349,6 +384,8 @@ function validateCameraUpstream(cameraUpstream, approvedCurrentMedia) {
       || parsed.hash
       || seenIds.has(source.occurrenceId)
       || seenUrls.has(source.url)
+      || source.requestProvenanceSha256 !== cameraRequestProvenanceSha256(source)
+      || approvedById.get(source.occurrenceId).requestProvenanceSha256 !== source.requestProvenanceSha256
     ) throw new Error("camera upstream URL is outside the exact public allowlist");
     seenIds.add(source.occurrenceId);
     seenUrls.add(source.url);
@@ -418,14 +455,17 @@ function validateImageBounds(bounds, label) {
   }
 }
 
-function validateAllowlist(records, pattern, label) {
+function validateAllowlist(records, pattern, label, requireRequestProvenance = false) {
   if (!Array.isArray(records) || records.length > MAX_OCCURRENCES) throw new Error(`${label} allowlist is invalid`);
   const seen = new Set();
   for (const record of records) {
     if (
-      !exactKeys(record, ["occurrenceId", "occurrenceSha256"])
+      !exactKeys(record, requireRequestProvenance
+        ? ["occurrenceId", "occurrenceSha256", "requestProvenanceSha256"]
+        : ["occurrenceId", "occurrenceSha256"])
       || !pattern.test(record.occurrenceId)
       || !SHA256_RE.test(record.occurrenceSha256)
+      || (requireRequestProvenance && !SHA256_RE.test(record.requestProvenanceSha256))
       || seen.has(record.occurrenceId)
     ) throw new Error(`${label} allowlist entry is invalid`);
     seen.add(record.occurrenceId);
@@ -448,8 +488,8 @@ export function validateOccurrenceExportPolicy(policy) {
     "imagePolicy",
     "graphs",
     "currentMedia",
-  ]) || policy.contract !== "verdify.lab-occurrence-export-policy" || policy.schemaVersion !== 1) {
-    throw new Error("occurrence export policy does not use the closed v1 shape");
+  ]) || policy.contract !== "verdify.lab-occurrence-export-policy" || policy.schemaVersion !== 2) {
+    throw new Error("occurrence export policy does not use the closed v2 shape");
   }
   safeText(policy.policyVersion, "occurrence export policy version", 256);
   validateActivation(policy.activation);
@@ -469,8 +509,13 @@ export function validateOccurrenceExportPolicy(policy) {
   validateImageBounds(policy.imagePolicy.graphs, "graph");
   validateImageBounds(policy.imagePolicy.currentMedia, "current-media");
   validateAllowlist(policy.graphs, GRAPH_ID_RE, "graph");
-  validateAllowlist(policy.currentMedia, MEDIA_ID_RE, "current-media");
+  validateAllowlist(policy.currentMedia, MEDIA_ID_RE, "current-media", true);
   return policy;
+}
+
+export function occurrenceExportPolicySha256(policy) {
+  validateOccurrenceExportPolicy(policy);
+  return sha256(canonicalBytes(policy));
 }
 
 export function validatePolicyManifestBinding(policy, manifest, manifestSha256) {
@@ -497,18 +542,39 @@ export function validatePolicyManifestBinding(policy, manifest, manifestSha256) 
   return discovered;
 }
 
-export function evaluateReportingFeedFreshness(batch) {
-  const elapsedSeconds = Math.floor((Date.parse(batch.exportedAt) - Date.parse(batch.reportingFeed.sourceWatermarkAt)) / 1000);
-  if (elapsedSeconds < 0) throw new Error("reporting feed watermark is newer than the export batch");
+export function evaluateReportingFeedFreshness(batch, processingAt = new Date().toISOString()) {
+  instant(processingAt, "occurrence export processing time");
+  instant(batch.exportedAt, "occurrence export time");
+  instant(batch.reportingFeed.sourceWatermarkAt, "reporting feed source watermark time");
+  const sourceAgeAtExportMilliseconds = Date.parse(batch.exportedAt) - Date.parse(batch.reportingFeed.sourceWatermarkAt);
+  if (sourceAgeAtExportMilliseconds < 0) throw new Error("reporting feed watermark is newer than the export batch");
+  const processingDelayMilliseconds = Date.parse(processingAt) - Date.parse(batch.exportedAt);
+  if (processingDelayMilliseconds < -(MAX_CLOCK_SKEW_SECONDS * 1000)) {
+    throw new Error("occurrence export batch is too far in the future");
+  }
+  if (processingDelayMilliseconds > MAX_BATCH_PROCESSING_DELAY_SECONDS * 1000) {
+    throw new Error("occurrence export batch was not processed within its replay window; retain last-known-good evidence");
+  }
+  const effectiveProcessingAt = Date.parse(batch.exportedAt) > Date.parse(processingAt)
+    ? batch.exportedAt
+    : processingAt;
+  const elapsedMilliseconds = Date.parse(effectiveProcessingAt) - Date.parse(batch.reportingFeed.sourceWatermarkAt);
+  const sourceAgeAtExportSeconds = Math.floor(sourceAgeAtExportMilliseconds / 1000);
+  const processingDelaySeconds = Math.floor(processingDelayMilliseconds / 1000);
+  const elapsedSeconds = Math.floor(elapsedMilliseconds / 1000);
   return {
     sourceWatermarkAt: batch.reportingFeed.sourceWatermarkAt,
     exportedAt: batch.exportedAt,
+    processingAt,
+    effectiveProcessingAt,
+    sourceAgeAtExportSeconds,
+    processingDelaySeconds,
     elapsedSeconds,
     p95TargetSeconds: REPORTING_TARGET_SECONDS,
     staleAfterSeconds: REPORTING_STALE_SECONDS,
-    status: elapsedSeconds > REPORTING_STALE_SECONDS
+    status: elapsedMilliseconds > REPORTING_STALE_SECONDS * 1000
       ? "alert"
-      : elapsedSeconds > REPORTING_TARGET_SECONDS
+      : elapsedMilliseconds > REPORTING_TARGET_SECONDS * 1000
         ? "late"
         : "fresh",
   };
@@ -537,56 +603,68 @@ function validateBatchFeed(feed) {
   instant(feed.sourceWatermarkAt, "reporting feed source watermark time");
 }
 
-function validateCandidate(candidate, label) {
-  if (!exactKeys(candidate, ["relativePath", "mediaType", "capturedAt"])) {
+function validateCandidate(candidate, label, requestProvenanceSha256 = null) {
+  const keys = label === "current-media"
+    ? ["relativePath", "mediaType", "capturedAt", "requestProvenanceSha256"]
+    : ["relativePath", "mediaType", "capturedAt"];
+  if (!exactKeys(candidate, keys)) {
     throw new Error(`${label} candidate does not use the closed v1 shape`);
   }
   safeText(candidate.relativePath, `${label} candidate path`, 1024);
   if (candidate.mediaType !== "image/png") throw new Error(`${label} candidate MIME type is not image/png`);
   instant(candidate.capturedAt, `${label} capture time`);
+  if (label === "current-media" && candidate.requestProvenanceSha256 !== requestProvenanceSha256) {
+    throw new Error("current-media candidate is not bound to its approved camera request");
+  }
 }
 
 function validateBatchRecords(records, approved, pattern, statusKey, allowedStatuses, label) {
   if (!Array.isArray(records) || records.length !== approved.length) throw new Error(`${label} export batch is not complete`);
-  const approvedIds = new Set(approved.map((record) => record.occurrenceId));
+  const approvedById = new Map(approved.map((record) => [record.occurrenceId, record]));
   const seen = new Set();
   for (const record of records) {
     const keys = label === "current-media"
-      ? ["occurrenceId", statusKey, "candidate", "expectedSelectionSha256"]
+      ? ["occurrenceId", statusKey, "requestProvenanceSha256", "candidate", "expectedSelectionSha256"]
       : ["occurrenceId", statusKey, "candidate"];
+    const approvedRecord = approvedById.get(record.occurrenceId);
     if (
       !exactKeys(record, keys)
       || !pattern.test(record.occurrenceId)
-      || !approvedIds.has(record.occurrenceId)
+      || !approvedRecord
       || seen.has(record.occurrenceId)
       || !allowedStatuses.includes(record[statusKey])
+      || (label === "current-media" && record.requestProvenanceSha256 !== approvedRecord.requestProvenanceSha256)
     ) throw new Error(`${label} export batch entry is invalid`);
     seen.add(record.occurrenceId);
     if (label === "current-media") nullableDigest(record.expectedSelectionSha256, "current-media selection precondition");
-    if (record[statusKey] === "success") validateCandidate(record.candidate, label);
+    if (record[statusKey] === "success") validateCandidate(record.candidate, label, record.requestProvenanceSha256);
     else if (record.candidate !== null) throw new Error(`${label} failed probe carries a candidate`);
   }
 }
 
-export function validateOccurrenceExportBatch(batch, policy) {
+export function validateOccurrenceExportBatch(batch, policy, processingAt = new Date().toISOString()) {
   validateOccurrenceExportPolicy(policy);
   if (!exactKeys(batch, [
     "contract",
     "schemaVersion",
     "batchId",
     "policyVersion",
+    "policySha256",
     "sourceOccurrenceManifestSha256",
     "reportingFeed",
     "exportedAt",
     "expectedSelectionSha256",
     "graphs",
     "currentMedia",
-  ]) || batch.contract !== "verdify.lab-occurrence-export-batch" || batch.schemaVersion !== 1) {
-    throw new Error("occurrence export batch does not use the closed v1 shape");
+  ]) || batch.contract !== "verdify.lab-occurrence-export-batch" || batch.schemaVersion !== 2) {
+    throw new Error("occurrence export batch does not use the closed v2 shape");
   }
   if (!BATCH_ID_RE.test(batch.batchId)) throw new Error("occurrence export batch ID is invalid");
   if (batch.policyVersion !== policy.policyVersion || batch.sourceOccurrenceManifestSha256 !== policy.sourceOccurrenceManifestSha256) {
     throw new Error("occurrence export batch is not bound to the approved policy and manifest");
+  }
+  if (batch.policySha256 !== occurrenceExportPolicySha256(policy)) {
+    throw new Error("occurrence export batch is not bound to the exact approved policy bytes");
   }
   validateBatchFeed(batch.reportingFeed);
   instant(batch.exportedAt, "occurrence export time");
@@ -607,10 +685,10 @@ export function validateOccurrenceExportBatch(batch, policy) {
     ["success", "timeout", "http-error", "decode-error", "missing", "policy-rejected"],
     "current-media",
   );
-  return evaluateReportingFeedFreshness(batch);
+  return evaluateReportingFeedFreshness(batch, processingAt);
 }
 
-async function verifiedCandidate(sourceRoot, record, bounds, kind, exportedAt) {
+async function verifiedCandidate(sourceRoot, record, bounds, kind, exportedAt, verifiedAt) {
   if (record.candidate === null) return null;
   const expected = new RegExp(`^${kind}/${record.occurrenceId}/([0-9a-f]{64})\\.png$`).exec(record.candidate.relativePath);
   if (!expected) throw new Error(`${kind} candidate path is not opaque and content-addressed`);
@@ -627,14 +705,18 @@ async function verifiedCandidate(sourceRoot, record, bounds, kind, exportedAt) {
   if (Date.parse(record.candidate.capturedAt) > Date.parse(exportedAt)) {
     throw new Error(`${kind} candidate was captured after the export batch`);
   }
-  const candidateAgeSeconds = Math.floor((Date.parse(exportedAt) - Date.parse(record.candidate.capturedAt)) / 1000);
-  if (candidateAgeSeconds > bounds.maxCandidateAgeSeconds) {
+  const candidateAgeMilliseconds = Date.parse(verifiedAt) - Date.parse(record.candidate.capturedAt);
+  if (candidateAgeMilliseconds > bounds.maxCandidateAgeSeconds * 1000) {
     throw new Error(`${kind} candidate is stale; retain last-known-good evidence`);
   }
   return {
     relativePath: record.candidate.relativePath,
-    verifiedAt: exportedAt,
+    expectedSha256: verified.sha256,
+    verifiedAt,
     capturedAt: record.candidate.capturedAt,
+    ...(kind === "current-media"
+      ? { requestProvenanceSha256: record.candidate.requestProvenanceSha256 }
+      : {}),
   };
 }
 
@@ -655,8 +737,14 @@ function deterministicEventId(prefix, value) {
   return `evt_${prefix}_${sha256(canonicalBytes(value)).slice(0, 32)}`;
 }
 
-export async function inspectOccurrenceExportCandidates({ policy, batch, sourceRoot }) {
-  const feedFreshness = validateOccurrenceExportBatch(batch, policy);
+export async function inspectOccurrenceExportCandidates({
+  policy,
+  batch,
+  sourceRoot,
+  processingAt = new Date().toISOString(),
+}) {
+  const feedFreshness = validateOccurrenceExportBatch(batch, policy, processingAt);
+  const verifiedAt = feedFreshness.effectiveProcessingAt;
   const graphCandidates = new Map();
   for (const record of batch.graphs) {
     graphCandidates.set(record.occurrenceId, await verifiedCandidate(
@@ -665,6 +753,7 @@ export async function inspectOccurrenceExportCandidates({ policy, batch, sourceR
       policy.imagePolicy.graphs,
       "graphs",
       batch.exportedAt,
+      verifiedAt,
     ));
   }
   const currentMediaCandidates = new Map();
@@ -675,6 +764,7 @@ export async function inspectOccurrenceExportCandidates({ policy, batch, sourceR
       policy.imagePolicy.currentMedia,
       "current-media",
       batch.exportedAt,
+      verifiedAt,
     ));
   }
   return { feedFreshness, graphCandidates, currentMediaCandidates };
@@ -687,6 +777,7 @@ export async function prepareOccurrenceExportRequests({
   batch,
   sourceRoot,
   storeRoot,
+  processingAt = new Date().toISOString(),
 }) {
   const discovered = validatePolicyManifestBinding(policy, manifest, manifestSha256);
   if (
@@ -699,7 +790,7 @@ export async function prepareOccurrenceExportRequests({
   }
   safeText(path.resolve(sourceRoot), "occurrence export source root", 4096);
   safeText(path.resolve(storeRoot), "occurrence export store root", 4096);
-  const inspected = await inspectOccurrenceExportCandidates({ policy, batch, sourceRoot });
+  const inspected = await inspectOccurrenceExportCandidates({ policy, batch, sourceRoot, processingAt });
   if (inspected.feedFreshness.status === "alert") {
     throw new Error("reporting feed source watermark is more than 30 minutes stale; retain last-known-good evidence");
   }
@@ -715,7 +806,7 @@ export async function prepareOccurrenceExportRequests({
       sourceRoot: path.resolve(sourceRoot),
       event: null,
       policyVersion: policy.policyVersion,
-      publishedAt: batch.exportedAt,
+      publishedAt: inspected.feedFreshness.effectiveProcessingAt,
       occurrence,
       candidate,
       expectedSelectionSha256: record.expectedSelectionSha256,
@@ -742,7 +833,7 @@ export async function prepareOccurrenceExportRequests({
     event: null,
     sourceSnapshotManifestSha256: policy.sourceSnapshotManifestSha256,
     policyVersion: policy.policyVersion,
-    publishedAt: batch.exportedAt,
+    publishedAt: inspected.feedFreshness.effectiveProcessingAt,
     graphs,
     currentMedia: discovered.currentMedia,
     expectedSelectionSha256: batch.expectedSelectionSha256,
@@ -764,5 +855,7 @@ export async function prepareOccurrenceExportRequests({
 export const occurrenceExportContract = {
   p95TargetSeconds: REPORTING_TARGET_SECONDS,
   staleAfterSeconds: REPORTING_STALE_SECONDS,
+  maxBatchProcessingDelaySeconds: MAX_BATCH_PROCESSING_DELAY_SECONDS,
+  maxClockSkewSeconds: MAX_CLOCK_SKEW_SECONDS,
   requiredActivationGates: REQUIRED_ACTIVATION_GATES,
 };

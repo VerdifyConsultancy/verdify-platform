@@ -7,9 +7,11 @@ import test from "node:test";
 import { deflateSync } from "node:zlib";
 
 import {
+  cameraRequestProvenanceSha256,
   draftBlockedOccurrenceExportPolicy,
   evaluateReportingFeedFreshness,
   inspectOccurrenceExportCandidates,
+  occurrenceExportPolicySha256,
   prepareOccurrenceExportRequests,
   validateOccurrenceExportBatch,
   validateOccurrenceExportPolicy,
@@ -122,11 +124,13 @@ function fixture() {
 }
 
 function batch({ policy, graph, media, graphCandidate, mediaCandidate, id = "batch_fixture_0001", exportedAt = "2026-07-13T12:10:00Z", watermarkAt = "2026-07-13T12:00:00Z", releaseExpected = null, mediaExpected = null }) {
+  const mediaPolicy = policy.currentMedia.find((record) => record.occurrenceId === media.occurrenceId);
   return {
     contract: "verdify.lab-occurrence-export-batch",
-    schemaVersion: 1,
+    schemaVersion: 2,
     batchId: id,
     policyVersion: policy.policyVersion,
+    policySha256: occurrenceExportPolicySha256(policy),
     sourceOccurrenceManifestSha256: policy.sourceOccurrenceManifestSha256,
     reportingFeed: {
       contract: "verdify.operator-public-reporting-feed",
@@ -148,23 +152,142 @@ function batch({ policy, graph, media, graphCandidate, mediaCandidate, id = "bat
     currentMedia: [{
       occurrenceId: media.occurrenceId,
       captureStatus: mediaCandidate ? "success" : "timeout",
+      requestProvenanceSha256: mediaPolicy.requestProvenanceSha256,
       candidate: mediaCandidate,
       expectedSelectionSha256: mediaExpected,
     }],
   };
 }
 
-async function candidate(sourceRoot, kind, occurrenceId, bytes, capturedAt = "2026-07-13T12:00:00Z") {
+async function candidate(
+  sourceRoot,
+  kind,
+  occurrenceId,
+  bytes,
+  capturedAt = "2026-07-13T12:00:00Z",
+  requestProvenanceSha256 = null,
+) {
   const sha = digest(bytes);
   const relativePath = `${kind}/${occurrenceId}/${sha}.png`;
   await mkdir(path.join(sourceRoot, kind, occurrenceId), { recursive: true });
   await writeFile(path.join(sourceRoot, ...relativePath.split("/")), bytes);
-  return { relativePath, mediaType: "image/png", capturedAt };
+  return {
+    relativePath,
+    mediaType: "image/png",
+    capturedAt,
+    ...(kind === "current-media" ? { requestProvenanceSha256 } : {}),
+  };
+}
+
+function requestProvenance(policy, occurrenceId) {
+  return policy.currentMedia.find((record) => record.occurrenceId === occurrenceId).requestProvenanceSha256;
+}
+
+function processingAtFor(exportBatch, delayMilliseconds = 30_000) {
+  return new Date(Date.parse(exportBatch.exportedAt) + delayMilliseconds).toISOString();
+}
+
+function fullFixture() {
+  const graphs = Array.from({ length: 143 }, (_, index) => discoverGraphOccurrence({
+    route: `/evidence/full-${index + 1}`,
+    ordinal: index,
+    liveUrl: `https://graphs.verdify.ai/d-solo/site-home/public?orgId=1&panelId=${index + 1}&theme=dark&from=now-24h&to=now`,
+    title: `Full graph ${index + 1}`,
+  }));
+  const cameraUrls = [
+    "https://api.verdify.ai/api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080",
+    "https://api.verdify.ai/api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080",
+  ];
+  const currentMedia = cameraUrls.map((sourceUrl, index) => discoverCurrentMediaOccurrence({
+    route: `/evidence/camera-${index + 1}`,
+    ordinal: index,
+    sourceUrl,
+    semanticRole: `Full camera ${index + 1}`,
+  }));
+  const sourceSnapshotManifestSha256 = digest("full-143-plus-2-snapshot");
+  const manifest = staticOccurrenceManifest({
+    snapshotId: `sanitized-content-sha256:${sourceSnapshotManifestSha256}`,
+    discoveredGraphs: graphs,
+    discoveredCurrentMedia: currentMedia,
+  });
+  const manifestSha256 = digest(canonical(manifest));
+  const blocked = draftBlockedOccurrenceExportPolicy({
+    manifest,
+    manifestSha256,
+    policyVersion: "full-public-reporting-v2",
+    approvedAt: "2026-07-13T12:00:00Z",
+    cameraSources: currentMedia.map((occurrence, index) => ({
+      occurrenceId: occurrence.occurrenceId,
+      url: cameraUrls[index],
+    })),
+  });
+  const active = {
+    ...blocked,
+    activation: {
+      ...blocked.activation,
+      state: "approved",
+      approvedBy: "jason",
+      approvedAt: "2026-07-13T12:01:00Z",
+    },
+  };
+  return { graphs, currentMedia, manifest, manifestSha256, active };
+}
+
+function fullBatch({
+  policy,
+  graphs,
+  currentMedia,
+  candidates = new Map(),
+  status = "success",
+  id,
+  exportedAt,
+  watermarkAt,
+  releaseExpected = null,
+  mediaExpected = new Map(),
+}) {
+  const requestById = new Map(policy.currentMedia.map((record) => [
+    record.occurrenceId,
+    record.requestProvenanceSha256,
+  ]));
+  return {
+    contract: "verdify.lab-occurrence-export-batch",
+    schemaVersion: 2,
+    batchId: id,
+    policyVersion: policy.policyVersion,
+    policySha256: occurrenceExportPolicySha256(policy),
+    sourceOccurrenceManifestSha256: policy.sourceOccurrenceManifestSha256,
+    reportingFeed: {
+      contract: "verdify.operator-public-reporting-feed",
+      schemaVersion: 1,
+      sourceId: "operator-public-reporting-feed-full",
+      sourceClass: "public-reporting-projection",
+      credentialClass: "reporting-read-only",
+      direction: "one-way-read-only",
+      sourceWatermark: `wm_${id.slice("batch_".length)}`,
+      sourceWatermarkAt: watermarkAt,
+    },
+    exportedAt,
+    expectedSelectionSha256: releaseExpected,
+    graphs: graphs.map((occurrence) => ({
+      occurrenceId: occurrence.occurrenceId,
+      probeStatus: status,
+      candidate: status === "success" ? candidates.get(occurrence.occurrenceId) : null,
+    })),
+    currentMedia: currentMedia.map((occurrence) => ({
+      occurrenceId: occurrence.occurrenceId,
+      captureStatus: status,
+      requestProvenanceSha256: requestById.get(occurrence.occurrenceId),
+      candidate: status === "success" ? candidates.get(occurrence.occurrenceId) : null,
+      expectedSelectionSha256: mediaExpected.get(occurrence.occurrenceId) ?? null,
+    })),
+  };
 }
 
 test("checked-in Phase 4c policy is an exact blocked 143+2 allowlist", async () => {
   const policy = JSON.parse(await readFile(new URL("../config/lab-stage-occurrence-export-policy.json", import.meta.url)));
   validateOccurrenceExportPolicy(policy);
+  assert.equal(policy.schemaVersion, 2);
+  assert.equal(policy.policyVersion, "lab-public-reporting-v2");
   assert.equal(policy.activation.state, "blocked");
   assert.equal(policy.reportingFeed.authority, "operator-owned");
   assert.equal(policy.reportingFeed.existingAnonymousGraphsAllowed, false);
@@ -182,6 +305,28 @@ test("checked-in Phase 4c policy is an exact blocked 143+2 allowlist", async () 
   assert.equal(policy.cameraUpstream.redirectsAllowed, false);
   assert.equal(policy.cameraUpstream.authorization, "forbidden");
   assert.match(policy.cameraUpstream.sanitization, /decode-reencode.*metadata-free/);
+  for (const source of policy.cameraUpstream.sources) {
+    const approved = policy.currentMedia.find((record) => record.occurrenceId === source.occurrenceId);
+    assert.equal(source.requestProvenanceSha256, cameraRequestProvenanceSha256(source));
+    assert.equal(source.requestProvenanceSha256, approved.requestProvenanceSha256);
+  }
+
+  const swappedUrls = structuredClone(policy);
+  [swappedUrls.cameraUpstream.sources[0].url, swappedUrls.cameraUpstream.sources[1].url] = [
+    swappedUrls.cameraUpstream.sources[1].url,
+    swappedUrls.cameraUpstream.sources[0].url,
+  ];
+  assert.throws(() => validateOccurrenceExportPolicy(swappedUrls), /outside the exact public allowlist/);
+
+  const swappedDigests = structuredClone(policy);
+  [
+    swappedDigests.cameraUpstream.sources[0].requestProvenanceSha256,
+    swappedDigests.cameraUpstream.sources[1].requestProvenanceSha256,
+  ] = [
+    swappedDigests.cameraUpstream.sources[1].requestProvenanceSha256,
+    swappedDigests.cameraUpstream.sources[0].requestProvenanceSha256,
+  ];
+  assert.throws(() => validateOccurrenceExportPolicy(swappedDigests), /outside the exact public allowlist/);
 });
 
 test("offline producer compiler has no network, database, camera, or credential client", async () => {
@@ -199,9 +344,21 @@ test("blocked policy validates candidates but cannot prepare publish requests", 
   const { sourceRoot, storeRoot } = await workspace(context);
   const { graph, media, manifest, manifestSha256, blocked } = fixture();
   const graphCandidate = await candidate(sourceRoot, "graphs", graph.occurrenceId, png());
-  const mediaCandidate = await candidate(sourceRoot, "current-media", media.occurrenceId, png(640, 360));
+  const mediaCandidate = await candidate(
+    sourceRoot,
+    "current-media",
+    media.occurrenceId,
+    png(640, 360),
+    "2026-07-13T12:00:00Z",
+    requestProvenance(blocked, media.occurrenceId),
+  );
   const exportBatch = batch({ policy: blocked, graph, media, graphCandidate, mediaCandidate });
-  const inspected = await inspectOccurrenceExportCandidates({ policy: blocked, batch: exportBatch, sourceRoot });
+  const inspected = await inspectOccurrenceExportCandidates({
+    policy: blocked,
+    batch: exportBatch,
+    sourceRoot,
+    processingAt: processingAtFor(exportBatch),
+  });
   assert.equal(inspected.feedFreshness.status, "fresh");
   await assert.rejects(
     () => prepareOccurrenceExportRequests({
@@ -211,6 +368,7 @@ test("blocked policy validates candidates but cannot prepare publish requests", 
       batch: exportBatch,
       sourceRoot,
       storeRoot,
+      processingAt: processingAtFor(exportBatch),
     }),
     /blocked pending separate Jason-gated feed, tier, and credential work/,
   );
@@ -219,40 +377,132 @@ test("blocked policy validates candidates but cannot prepare publish requests", 
 test("source watermark has <=15m target and >30m stale alert semantics", () => {
   const { graph, media, blocked } = fixture();
   const base = { policy: blocked, graph, media, graphCandidate: null, mediaCandidate: null };
-  assert.equal(evaluateReportingFeedFreshness(batch({ ...base, exportedAt: "2026-07-13T12:15:00Z" })).status, "fresh");
-  assert.equal(evaluateReportingFeedFreshness(batch({ ...base, id: "batch_fixture_0002", exportedAt: "2026-07-13T12:15:01Z" })).status, "late");
-  assert.equal(evaluateReportingFeedFreshness(batch({ ...base, id: "batch_fixture_0003", exportedAt: "2026-07-13T12:30:00Z" })).status, "late");
-  assert.equal(evaluateReportingFeedFreshness(batch({ ...base, id: "batch_fixture_0004", exportedAt: "2026-07-13T12:30:01Z" })).status, "alert");
+  const evaluateAtExport = (exportBatch) => evaluateReportingFeedFreshness(exportBatch, exportBatch.exportedAt);
+  assert.equal(evaluateAtExport(batch({ ...base, exportedAt: "2026-07-13T12:15:00Z" })).status, "fresh");
+  assert.equal(evaluateAtExport(batch({ ...base, id: "batch_fixture_0002", exportedAt: "2026-07-13T12:15:01Z" })).status, "late");
+  assert.equal(evaluateAtExport(batch({ ...base, id: "batch_fixture_0003", exportedAt: "2026-07-13T12:30:00Z" })).status, "late");
+  assert.equal(evaluateAtExport(batch({ ...base, id: "batch_fixture_0004", exportedAt: "2026-07-13T12:30:01Z" })).status, "alert");
+});
+
+test("processing time rejects delayed and future replay at raw-millisecond boundaries", () => {
+  const { graph, media, blocked } = fixture();
+  const base = { policy: blocked, graph, media, graphCandidate: null, mediaCandidate: null };
+  const replay = batch({ ...base, exportedAt: "2026-07-13T12:10:00Z" });
+  const atDelayLimit = evaluateReportingFeedFreshness(replay, "2026-07-13T12:15:00Z");
+  assert.equal(atDelayLimit.processingDelaySeconds, 300);
+  assert.equal(atDelayLimit.status, "fresh");
+  assert.throws(
+    () => evaluateReportingFeedFreshness(replay, "2026-07-13T12:15:00.001Z"),
+    /not processed within its replay window/,
+  );
+
+  const atFutureSkewLimit = evaluateReportingFeedFreshness(replay, "2026-07-13T12:09:00Z");
+  assert.equal(atFutureSkewLimit.processingDelaySeconds, -60);
+  assert.equal(atFutureSkewLimit.effectiveProcessingAt, replay.exportedAt);
+  assert.throws(
+    () => evaluateReportingFeedFreshness(replay, "2026-07-13T12:08:59.999Z"),
+    /too far in the future/,
+  );
+
+  const staleByOneMillisecond = batch({
+    ...base,
+    id: "batch_fixture_stale_ms",
+    exportedAt: "2026-07-13T12:29:00Z",
+  });
+  assert.equal(
+    evaluateReportingFeedFreshness(staleByOneMillisecond, "2026-07-13T12:30:00.001Z").status,
+    "alert",
+  );
+  assert.throws(
+    () => evaluateReportingFeedFreshness(
+      { ...replay, exportedAt: "2026-02-30T12:10:00Z" },
+      "2026-03-02T12:10:00Z",
+    ),
+    /occurrence export time is invalid/,
+  );
 });
 
 test("producer batch is closed, opaque for cameras, and enforces PNG MIME, paths, dimensions, and bytes", async (context) => {
   const { sourceRoot } = await workspace(context);
   const { graph, media, active } = fixture();
   const goodGraph = await candidate(sourceRoot, "graphs", graph.occurrenceId, png());
-  const goodMedia = await candidate(sourceRoot, "current-media", media.occurrenceId, png(640, 360));
+  const goodMedia = await candidate(
+    sourceRoot,
+    "current-media",
+    media.occurrenceId,
+    png(640, 360),
+    "2026-07-13T12:00:00Z",
+    requestProvenance(active, media.occurrenceId),
+  );
   const valid = batch({ policy: active, graph, media, graphCandidate: goodGraph, mediaCandidate: goodMedia });
-  await inspectOccurrenceExportCandidates({ policy: active, batch: valid, sourceRoot });
+  await inspectOccurrenceExportCandidates({
+    policy: active,
+    batch: valid,
+    sourceRoot,
+    processingAt: processingAtFor(valid),
+  });
   assert.doesNotMatch(JSON.stringify(valid), /greenhouse_1|api\.verdify|frigate|go2rtc/i);
 
   const wrongMime = structuredClone(valid);
   wrongMime.currentMedia[0].candidate.mediaType = "image/jpeg";
-  assert.throws(() => validateOccurrenceExportBatch(wrongMime, active), /MIME type is not image\/png/);
+  assert.throws(
+    () => validateOccurrenceExportBatch(wrongMime, active, processingAtFor(wrongMime)),
+    /MIME type is not image\/png/,
+  );
 
   const leaked = structuredClone(valid);
   leaked.currentMedia[0].sourceUrl = "https://api.verdify.ai/forbidden";
-  assert.throws(() => validateOccurrenceExportBatch(leaked, active), /current-media export batch entry is invalid/);
+  assert.throws(
+    () => validateOccurrenceExportBatch(leaked, active, processingAtFor(leaked)),
+    /current-media export batch entry is invalid/,
+  );
+
+  const wrongCandidateProvenance = structuredClone(valid);
+  wrongCandidateProvenance.currentMedia[0].candidate.requestProvenanceSha256 = "f".repeat(64);
+  assert.throws(
+    () => validateOccurrenceExportBatch(
+      wrongCandidateProvenance,
+      active,
+      processingAtFor(wrongCandidateProvenance),
+    ),
+    /candidate is not bound to its approved camera request/,
+  );
+
+  const wrongBatchProvenance = structuredClone(valid);
+  wrongBatchProvenance.currentMedia[0].requestProvenanceSha256 = "e".repeat(64);
+  assert.throws(
+    () => validateOccurrenceExportBatch(wrongBatchProvenance, active, processingAtFor(wrongBatchProvenance)),
+    /current-media export batch entry is invalid/,
+  );
+
+  const sameVersionPolicyMutation = structuredClone(active);
+  sameVersionPolicyMutation.imagePolicy.graphs.maxWidth -= 1;
+  assert.throws(
+    () => validateOccurrenceExportBatch(valid, sameVersionPolicyMutation, processingAtFor(valid)),
+    /not bound to the exact approved policy bytes/,
+  );
 
   const tinyCandidate = await candidate(sourceRoot, "graphs", graph.occurrenceId, png(2, 1));
   const tiny = batch({ policy: active, graph, media, graphCandidate: tinyCandidate, mediaCandidate: goodMedia });
   await assert.rejects(
-    () => inspectOccurrenceExportCandidates({ policy: active, batch: tiny, sourceRoot }),
+    () => inspectOccurrenceExportCandidates({
+      policy: active,
+      batch: tiny,
+      sourceRoot,
+      processingAt: processingAtFor(tiny),
+    }),
     /outside the approved MIME, byte, or dimension bounds/,
   );
 
   const wrongPath = structuredClone(valid);
   wrongPath.graphs[0].candidate.relativePath = `graphs/${graph.occurrenceId}/not-content-addressed.png`;
   await assert.rejects(
-    () => inspectOccurrenceExportCandidates({ policy: active, batch: wrongPath, sourceRoot }),
+    () => inspectOccurrenceExportCandidates({
+      policy: active,
+      batch: wrongPath,
+      sourceRoot,
+      processingAt: processingAtFor(wrongPath),
+    }),
     /not opaque and content-addressed/,
   );
 
@@ -262,19 +512,67 @@ test("producer batch is closed, opaque for cameras, and enforces PNG MIME, paths
     media.occurrenceId,
     png(800, 450),
     "2026-07-13T11:54:59Z",
+    requestProvenance(active, media.occurrenceId),
   );
   const staleMedia = batch({ policy: active, graph, media, graphCandidate: goodGraph, mediaCandidate: staleMediaCandidate });
   await assert.rejects(
-    () => inspectOccurrenceExportCandidates({ policy: active, batch: staleMedia, sourceRoot }),
+    () => inspectOccurrenceExportCandidates({
+      policy: active,
+      batch: staleMedia,
+      sourceRoot,
+      processingAt: processingAtFor(staleMedia),
+    }),
     /current-media candidate is stale; retain last-known-good/,
   );
+});
+
+test("prepared digests reject valid PNG replacement between inspection and publication", async (context) => {
+  const { sourceRoot, storeRoot } = await workspace(context);
+  const { graph, media, manifest, manifestSha256, active } = fixture();
+  const graphCandidate = await candidate(sourceRoot, "graphs", graph.occurrenceId, png());
+  const mediaCandidate = await candidate(
+    sourceRoot,
+    "current-media",
+    media.occurrenceId,
+    png(640, 360),
+    "2026-07-13T12:00:00Z",
+    requestProvenance(active, media.occurrenceId),
+  );
+  const exportBatch = batch({ policy: active, graph, media, graphCandidate, mediaCandidate });
+  const prepared = await prepareOccurrenceExportRequests({
+    policy: active,
+    manifest,
+    manifestSha256,
+    batch: exportBatch,
+    sourceRoot,
+    storeRoot,
+    processingAt: processingAtFor(exportBatch),
+  });
+  await writeFile(path.join(sourceRoot, ...mediaCandidate.relativePath.split("/")), png(640, 360, [80, 20, 120, 255]));
+  await assert.rejects(
+    () => publishCurrentMediaGeneration(prepared.mediaRequests[0]),
+    /changed after prepared verification/,
+  );
+
+  await writeFile(path.join(sourceRoot, ...graphCandidate.relativePath.split("/")), png(320, 180, [120, 20, 80, 255]));
+  const released = await publishOccurrenceRelease(prepared.releaseRequest);
+  assert.equal(released.manifest.occurrences.graphs[0].probeStatus, "decode-error");
+  assert.equal(released.manifest.occurrences.graphs[0].state, "missing");
+  assert.equal(released.manifest.occurrences.graphs[0].fallback, null);
 });
 
 test("canonical requests publish every occurrence and failed refresh retains graph and camera LKG", async (context) => {
   const { sourceRoot, storeRoot } = await workspace(context);
   const { graph, media, manifest, manifestSha256, active } = fixture();
   const graphCandidate = await candidate(sourceRoot, "graphs", graph.occurrenceId, png());
-  const mediaCandidate = await candidate(sourceRoot, "current-media", media.occurrenceId, png(640, 360));
+  const mediaCandidate = await candidate(
+    sourceRoot,
+    "current-media",
+    media.occurrenceId,
+    png(640, 360),
+    "2026-07-13T12:00:00Z",
+    requestProvenance(active, media.occurrenceId),
+  );
   const firstBatch = batch({ policy: active, graph, media, graphCandidate, mediaCandidate });
   const first = await prepareOccurrenceExportRequests({
     policy: active,
@@ -283,6 +581,7 @@ test("canonical requests publish every occurrence and failed refresh retains gra
     batch: firstBatch,
     sourceRoot,
     storeRoot,
+    processingAt: processingAtFor(firstBatch),
   });
   assert.equal(first.mediaRequests.length, 1);
   assert.equal(first.releaseRequest.graphs.length, 1);
@@ -314,6 +613,7 @@ test("canonical requests publish every occurrence and failed refresh retains gra
     batch: failedBatch,
     sourceRoot,
     storeRoot,
+    processingAt: processingAtFor(failedBatch),
   });
   assert.equal(failed.mediaRequests.length, 0);
   await publishOccurrenceRelease(failed.releaseRequest);
@@ -328,6 +628,156 @@ test("canonical requests publish every occurrence and failed refresh retains gra
     retained.current.occurrences.currentMedia[0].fallback.sha256,
     selected.current.occurrences.currentMedia[0].fallback.sha256,
   );
+
+  const rejectedReplays = [
+    {
+      exportBatch: batch({
+        policy: active,
+        graph,
+        media,
+        graphCandidate: null,
+        mediaCandidate: null,
+        id: "batch_delayed_replay",
+        exportedAt: "2026-07-13T12:21:00Z",
+        watermarkAt: "2026-07-13T12:20:00Z",
+        releaseExpected: retained.selectionSha256,
+      }),
+      processingAt: "2026-07-13T12:26:00.001Z",
+      message: /not processed within its replay window/,
+    },
+    {
+      exportBatch: batch({
+        policy: active,
+        graph,
+        media,
+        graphCandidate: null,
+        mediaCandidate: null,
+        id: "batch_future_replay",
+        exportedAt: "2026-07-13T12:30:00Z",
+        watermarkAt: "2026-07-13T12:29:00Z",
+        releaseExpected: retained.selectionSha256,
+      }),
+      processingAt: "2026-07-13T12:28:59.999Z",
+      message: /too far in the future/,
+    },
+  ];
+  for (const replay of rejectedReplays) {
+    await assert.rejects(
+      () => prepareOccurrenceExportRequests({
+        policy: active,
+        manifest,
+        manifestSha256,
+        batch: replay.exportBatch,
+        sourceRoot,
+        storeRoot,
+        processingAt: replay.processingAt,
+      }),
+      replay.message,
+    );
+    const unchanged = await loadSelectedOccurrenceRelease(storeRoot);
+    assert.equal(unchanged.selectionSha256, retained.selectionSha256);
+    assert.equal(
+      unchanged.current.occurrences.currentMedia[0].fallback.sha256,
+      retained.current.occurrences.currentMedia[0].fallback.sha256,
+    );
+  }
+});
+
+test("full 143+2 policy-rejected reconciliation publishes then retains every LKG", async (context) => {
+  const { sourceRoot, storeRoot } = await workspace(context);
+  const { graphs, currentMedia, manifest, manifestSha256, active } = fullFixture();
+  const candidates = new Map();
+  const graphPng = png();
+  const mediaPng = png(640, 360);
+  for (const occurrence of graphs) {
+    candidates.set(occurrence.occurrenceId, await candidate(
+      sourceRoot,
+      "graphs",
+      occurrence.occurrenceId,
+      graphPng,
+      "2026-07-13T12:05:00Z",
+    ));
+  }
+  for (const occurrence of currentMedia) {
+    candidates.set(occurrence.occurrenceId, await candidate(
+      sourceRoot,
+      "current-media",
+      occurrence.occurrenceId,
+      mediaPng,
+      "2026-07-13T12:05:00Z",
+      requestProvenance(active, occurrence.occurrenceId),
+    ));
+  }
+
+  const successBatch = fullBatch({
+    policy: active,
+    graphs,
+    currentMedia,
+    candidates,
+    status: "success",
+    id: "batch_full_success_0001",
+    exportedAt: "2026-07-13T12:10:00Z",
+    watermarkAt: "2026-07-13T12:09:00Z",
+  });
+  const first = await prepareOccurrenceExportRequests({
+    policy: active,
+    manifest,
+    manifestSha256,
+    batch: successBatch,
+    sourceRoot,
+    storeRoot,
+    processingAt: "2026-07-13T12:10:30Z",
+  });
+  assert.equal(first.mediaRequests.length, 2);
+  assert.equal(first.releaseRequest.graphs.length, 143);
+  assert.equal(first.releaseRequest.currentMedia.length, 2);
+  assert.doesNotMatch(JSON.stringify(first), /api\.verdify|greenhouse_[12]|latest\.jpg|authorization|cookies/i);
+  for (const request of first.mediaRequests) await publishCurrentMediaGeneration(request);
+  await publishOccurrenceRelease(first.releaseRequest);
+  const selected = await loadSelectedOccurrenceRelease(storeRoot);
+  assert.equal(selected.current.occurrences.graphs.filter((item) => item.state === "verified").length, 143);
+  assert.equal(selected.current.occurrences.currentMedia.filter((item) => item.state === "verified").length, 2);
+
+  const mediaExpected = new Map(selected.current.occurrences.currentMedia.map((occurrence) => [
+    occurrence.occurrenceId,
+    occurrence.pointer.selectionSha256,
+  ]));
+  const rejectedBatch = fullBatch({
+    policy: active,
+    graphs,
+    currentMedia,
+    status: "policy-rejected",
+    id: "batch_full_rejected_0002",
+    exportedAt: "2026-07-13T12:20:00Z",
+    watermarkAt: "2026-07-13T12:19:00Z",
+    releaseExpected: selected.selectionSha256,
+    mediaExpected,
+  });
+  const rejected = await prepareOccurrenceExportRequests({
+    policy: active,
+    manifest,
+    manifestSha256,
+    batch: rejectedBatch,
+    sourceRoot,
+    storeRoot,
+    processingAt: "2026-07-13T12:20:30Z",
+  });
+  assert.equal(rejected.mediaRequests.length, 0);
+  assert.equal(rejected.releaseRequest.graphs.filter((item) => item.probeStatus === "policy-rejected").length, 143);
+  await publishOccurrenceRelease(rejected.releaseRequest);
+  const retained = await loadSelectedOccurrenceRelease(storeRoot);
+  const priorGraphs = new Map(selected.current.occurrences.graphs.map((occurrence) => [occurrence.occurrenceId, occurrence]));
+  for (const occurrence of retained.current.occurrences.graphs) {
+    assert.equal(occurrence.probeStatus, "policy-rejected");
+    assert.equal(occurrence.state, "retained-last-known-good");
+    assert.equal(occurrence.fallback.sha256, priorGraphs.get(occurrence.occurrenceId).fallback.sha256);
+  }
+  const priorMedia = new Map(selected.current.occurrences.currentMedia.map((occurrence) => [occurrence.occurrenceId, occurrence]));
+  for (const occurrence of retained.current.occurrences.currentMedia) {
+    assert.equal(occurrence.state, "verified");
+    assert.equal(occurrence.fallback.sha256, priorMedia.get(occurrence.occurrenceId).fallback.sha256);
+    assert.equal(occurrence.pointer.currentGenerationSha256, priorMedia.get(occurrence.occurrenceId).pointer.currentGenerationSha256);
+  }
 });
 
 test("more-than-30-minute reporting watermark cannot replace LKG", async (context) => {
@@ -349,6 +799,7 @@ test("more-than-30-minute reporting watermark cannot replace LKG", async (contex
       batch: stale,
       sourceRoot,
       storeRoot,
+      processingAt: stale.exportedAt,
     }),
     /more than 30 minutes stale; retain last-known-good/,
   );

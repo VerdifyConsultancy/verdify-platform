@@ -104,7 +104,7 @@ export function occurrenceReleasePayloadSha256({
 export function currentMediaGenerationPayloadSha256({ policyVersion, occurrence, candidate }) {
   return sha256(canonicalBytes({
     contract: "verdify.lab-current-media-generation-payload",
-    schemaVersion: 1,
+    schemaVersion: 2,
     policyVersion,
     occurrence,
     candidate,
@@ -445,12 +445,19 @@ async function publishCanonicalAbsent(destination, value) {
   return sha256(bytes);
 }
 
-async function importVerifiedPng(storeRoot, sourceRoot, candidate) {
-  if (!exactKeys(candidate, ["relativePath", "verifiedAt", "capturedAt"])) {
-    throw new Error("image candidate does not use the closed v1 shape");
+async function importVerifiedPng(storeRoot, sourceRoot, candidate, requireRequestProvenance = false) {
+  const keys = requireRequestProvenance
+    ? ["relativePath", "expectedSha256", "verifiedAt", "capturedAt", "requestProvenanceSha256"]
+    : ["relativePath", "expectedSha256", "verifiedAt", "capturedAt"];
+  if (!exactKeys(candidate, keys)) {
+    throw new Error("image candidate does not use its closed shape");
   }
   requireInstant(candidate.verifiedAt, "image verification time");
   requireInstant(candidate.capturedAt, "image capture time");
+  if (!SHA256_RE.test(candidate.expectedSha256)) throw new Error("image candidate expected digest is invalid");
+  if (requireRequestProvenance && !SHA256_RE.test(candidate.requestProvenanceSha256)) {
+    throw new Error("current media candidate request provenance is invalid");
+  }
   if (Date.parse(candidate.capturedAt) > Date.parse(candidate.verifiedAt)) {
     throw new Error("image verification precedes capture");
   }
@@ -459,6 +466,9 @@ async function importVerifiedPng(storeRoot, sourceRoot, candidate) {
     verified = await validatePngFile(sourceRoot, candidate.relativePath);
   } catch {
     throw new CandidateImageError("candidate image validation failed");
+  }
+  if (verified.sha256 !== candidate.expectedSha256) {
+    throw new CandidateImageError("candidate image changed after prepared verification");
   }
   const filename = `${verified.sha256}.png`;
   const relativeBlob = path.posix.join("blobs", "sha256", filename);
@@ -507,7 +517,7 @@ async function resolveGraph(storeRoot, sourceRoot, input, priorRelease, policyVe
   let fallback = null;
   let state = "missing";
   let probeStatus = input.probeStatus;
-  if (!["success", "timeout", "http-error", "decode-error", "missing"].includes(probeStatus)) {
+  if (!["success", "timeout", "http-error", "decode-error", "missing", "policy-rejected"].includes(probeStatus)) {
     throw new Error("graph probe status is invalid");
   }
   if (probeStatus === "success") {
@@ -678,18 +688,20 @@ async function loadCurrentMediaGenerationFromRoot(storeRoot, occurrenceIdValue, 
       "schemaVersion",
       "occurrenceId",
       "sourceProvenanceSha256",
+      "requestProvenanceSha256",
       "event",
       "policyVersion",
       "publishedAt",
       "fallback",
     ])
     || generation.contract !== "verdify.lab-current-media-generation"
-    || generation.schemaVersion !== 1
+    || generation.schemaVersion !== 2
     || generation.occurrenceId !== occurrenceIdValue
     || !SHA256_RE.test(generation.sourceProvenanceSha256)
+    || !SHA256_RE.test(generation.requestProvenanceSha256)
     || canonicalBytes(generation).compare(bytes) !== 0
   ) {
-    throw new Error("current media generation does not use the canonical v1 contract");
+    throw new Error("current media generation does not use the canonical v2 contract");
   }
   validateEvent(generation.event);
   if (generation.event.eventType !== "current-media-updated") throw new Error("current media generation event type is invalid");
@@ -812,14 +824,15 @@ export async function publishCurrentMediaGeneration({
       throw new Error("current media selection precondition failed");
     }
     const fallback = {
-      ...(await importVerifiedPng(root, sourceRoot, candidate)),
+      ...(await importVerifiedPng(root, sourceRoot, candidate, true)),
       policyVersion,
     };
     const generation = {
       contract: "verdify.lab-current-media-generation",
-      schemaVersion: 1,
+      schemaVersion: 2,
       occurrenceId: occurrence.occurrenceId,
       sourceProvenanceSha256: occurrence.sourceProvenanceSha256,
+      requestProvenanceSha256: candidate.requestProvenanceSha256,
       event,
       policyVersion,
       publishedAt,
@@ -1089,7 +1102,7 @@ async function verifyReleaseBlobs(storeRoot, manifest) {
     }
     if (
       occurrence.staleAfterSeconds !== Math.max(occurrence.renderCadenceSeconds * 2, GRAPH_MIN_STALE_SECONDS)
-      || !["success", "timeout", "http-error", "decode-error", "missing"].includes(occurrence.probeStatus)
+      || !["success", "timeout", "http-error", "decode-error", "missing", "policy-rejected"].includes(occurrence.probeStatus)
       || !["verified", "retained-last-known-good", "missing"].includes(occurrence.state)
       || (occurrence.state === "missing") !== (occurrence.fallback === null)
       || (occurrence.state === "verified" && occurrence.probeStatus !== "success")

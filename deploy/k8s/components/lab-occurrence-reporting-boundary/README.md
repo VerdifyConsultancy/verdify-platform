@@ -16,5 +16,8 @@ go2rtc, the primary database, MCP, or any controller surface.
 Camera responses are an input only. The producer must reject redirects and
 authentication, decode the JPEG, re-encode clean RGB/RGBA PNG bytes without
 metadata, and name the candidate by its SHA-256 before the offline occurrence
-compiler will accept it. The public release continues to expose opaque
-occurrence IDs only.
+compiler will accept it. A privacy-safe request-provenance digest binds the
+occurrence, GET method, exact URL, and no-redirect/no-auth/no-cookie policy through
+the private handoff; the public release continues to expose opaque occurrence IDs
+only. Batches are also exact-policy-digest bound and must reach the trusted compiler
+clock within five minutes, with at most 60 seconds of bounded future skew.

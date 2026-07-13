@@ -7,7 +7,7 @@ metadata:
     app.kubernetes.io/component: lab-occurrence-exporter
 data:
   activation: blocked
-  policyVersion: lab-public-reporting-v1
+  policyVersion: lab-public-reporting-v2
   sourceOccurrenceManifestSha256: e455309736cf785914141d1641ec2569f623e048cf9073b3ea6fce181726160d
   reportingFeedContract: verdify.operator-public-reporting-feed/v1
   reportingFeedAuthority: operator-owned
@@ -17,11 +17,14 @@ data:
   existingAnonymousGraphsAllowed: "false"
   sourceWatermarkP95TargetSeconds: "900"
   sourceWatermarkStaleAfterSeconds: "1800"
+  maxBatchProcessingDelaySeconds: "300"
+  maxClockSkewSeconds: "60"
   cameraMethod: GET
   cameraOrigin: https://api.verdify.ai
   cameraPathAllowlist: /api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080,/api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080
   cameraRedirectsAllowed: "false"
   cameraAuthorization: forbidden
+  cameraRequestProvenance: sha256-of-occurrence-method-exact-url-redirect-auth-cookie-contract
   cameraSanitization: decode-reencode-rgb-or-rgba-png-metadata-free
   futureEgressContract: api.verdify.ai:443-and-occurrence-store-only
   requiredGates: jason-approval,operator-owned-reporting-feed,least-privilege-reporting-credential

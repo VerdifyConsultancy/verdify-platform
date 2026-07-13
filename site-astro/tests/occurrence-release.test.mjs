@@ -23,7 +23,7 @@ import {
   staticOccurrenceManifest,
   summarizeOccurrenceFreshness,
 } from "../scripts/lib/occurrence-release.mjs";
-import { decodePng, validatePngFile } from "../scripts/lib/png-validation.mjs";
+import { decodePng, limits as pngLimits, validatePngFile } from "../scripts/lib/png-validation.mjs";
 
 const CRC_TABLE = Array.from({ length: 256 }, (_, value) => {
   let crc = value;
@@ -77,6 +77,16 @@ function event(eventId, payloadSha256, eventType = "planner-completed", occurred
 
 function digest(value) {
   return createHash("sha256").update(value).digest("hex");
+}
+
+function verifiedCandidate(relativePath, bytes, instant, requestProvenanceSha256 = null) {
+  return {
+    relativePath,
+    expectedSha256: digest(bytes),
+    verifiedAt: instant,
+    capturedAt: instant,
+    ...(requestProvenanceSha256 === null ? {} : { requestProvenanceSha256 }),
+  };
 }
 
 function bindReleaseEvent(request, eventId, eventType = "planner-completed", occurredAt = "2026-07-12T12:00:00Z") {
@@ -151,6 +161,30 @@ test("PNG validation inflates and reconstructs bounded scanlines", async (contex
   const metadata = Buffer.concat([bytes.subarray(0, 33), chunk("tEXt", Buffer.from("author\0private")), bytes.subarray(33)]);
   assert.throws(() => decodePng(metadata), /unsupported metadata or structural chunk/);
 
+  const emptyImageData = Buffer.concat([
+    bytes.subarray(0, 33),
+    ...Array.from({ length: 32 }, () => chunk("IDAT", Buffer.alloc(0))),
+    bytes.subarray(33),
+  ]);
+  assert.throws(() => decodePng(emptyImageData), /image data chunk is empty/);
+
+  const stormHeader = Buffer.alloc(13);
+  stormHeader.writeUInt32BE(800, 0);
+  stormHeader.writeUInt32BE(1, 4);
+  stormHeader[8] = 8;
+  stormHeader[9] = 6;
+  const noisyScanline = Buffer.alloc(1 + (800 * 4));
+  for (let index = 1; index < noisyScanline.length; index += 1) noisyScanline[index] = (index * 131) & 0xff;
+  const noisyCompressed = deflateSync(noisyScanline, { level: 0 });
+  assert.ok(noisyCompressed.length > pngLimits.maxIdatChunks);
+  const highCardinality = Buffer.concat([
+    Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
+    chunk("IHDR", stormHeader),
+    ...[...noisyCompressed].map((byte) => chunk("IDAT", Buffer.from([byte]))),
+    chunk("IEND", Buffer.alloc(0)),
+  ]);
+  assert.throws(() => decodePng(highCardinality), /image-data chunk-count limit/);
+
   const idatLength = bytes.readUInt32BE(33);
   const idatData = bytes.subarray(41, 41 + idatLength);
   const concatenated = Buffer.concat([
@@ -177,12 +211,13 @@ test("PNG validation inflates and reconstructs bounded scanlines", async (contex
 
 test("publisher selects decoded fallbacks and emits one atomic current/previous record", async (context) => {
   const { root, source, store } = await workspace(context);
-  await writeFile(path.join(source, "graph.png"), png(10, 90, 30));
-  await writeFile(path.join(source, "camera.png"), png(90, 30, 10));
-  const candidate = (relativePath) => ({
-    relativePath,
+  const graphBytes = png(10, 90, 30);
+  const cameraBytes = png(90, 30, 10);
+  await writeFile(path.join(source, "graph.png"), graphBytes);
+  await writeFile(path.join(source, "camera.png"), cameraBytes);
+  const candidate = (relativePath, bytes) => ({
+    ...verifiedCandidate(relativePath, bytes, "2026-07-12T12:00:00Z"),
     verifiedAt: "2026-07-12T12:00:30Z",
-    capturedAt: "2026-07-12T12:00:00Z",
   });
   const firstRequest = {
     storeRoot: store,
@@ -191,8 +226,8 @@ test("publisher selects decoded fallbacks and emits one atomic current/previous 
     sourceSnapshotManifestSha256: digest("snapshot-one"),
     policyVersion: "verdify-public-output-v1",
     publishedAt: "2026-07-12T12:01:00Z",
-    graphs: [graphInput(candidate("graph.png"))],
-    currentMedia: [mediaInput(candidate("camera.png")).discovered],
+    graphs: [graphInput(candidate("graph.png", graphBytes))],
+    currentMedia: [mediaInput(candidate("camera.png", cameraBytes)).discovered],
   };
   bindReleaseEvent(firstRequest, "evt_plan_0001");
   const first = await publishOccurrenceRelease(firstRequest);
@@ -228,9 +263,22 @@ test("publisher selects decoded fallbacks and emits one atomic current/previous 
 
 test("current media generations advance and roll back through their own CAS pointer", async (context) => {
   const { source, store } = await workspace(context);
-  await writeFile(path.join(source, "camera-one.png"), png(90, 30, 10));
-  await writeFile(path.join(source, "camera-two.png"), png(10, 30, 90));
-  const candidate = (relativePath, instant) => ({ relativePath, verifiedAt: instant, capturedAt: instant });
+  const cameraOneBytes = png(90, 30, 10);
+  const cameraTwoBytes = png(10, 30, 90);
+  const corruptBytes = "not an image";
+  await writeFile(path.join(source, "camera-one.png"), cameraOneBytes);
+  await writeFile(path.join(source, "camera-two.png"), cameraTwoBytes);
+  const bytesByPath = new Map([
+    ["camera-one.png", cameraOneBytes],
+    ["camera-two.png", cameraTwoBytes],
+    ["corrupt.png", corruptBytes],
+  ]);
+  const candidate = (relativePath, instant) => verifiedCandidate(
+    relativePath,
+    bytesByPath.get(relativePath),
+    instant,
+    digest("approved-camera-request"),
+  );
   const firstOccurrence = mediaInput(candidate("camera-one.png", "2026-07-12T12:00:00Z")).discovered;
   const firstRequest = {
     storeRoot: store,
@@ -260,7 +308,7 @@ test("current media generations advance and roll back through their own CAS poin
     (await loadSelectedCurrentMediaGeneration(store, firstOccurrence.occurrenceId)).selectionSha256,
     firstPointer.selectionSha256,
   );
-  await writeFile(path.join(source, "corrupt.png"), "not an image");
+  await writeFile(path.join(source, "corrupt.png"), corruptBytes);
   const failedCapture = {
     ...firstRequest,
     event: null,
@@ -302,9 +350,17 @@ test("current media generations advance and roll back through their own CAS poin
 
 test("failed graph and camera updates retain last-known-good bytes", async (context) => {
   const { source, store } = await workspace(context);
-  await writeFile(path.join(source, "graph.png"), png(10, 90, 30));
-  await writeFile(path.join(source, "camera.png"), png(90, 30, 10));
-  const candidate = (relativePath, instant) => ({ relativePath, verifiedAt: instant, capturedAt: instant });
+  const graphBytes = png(10, 90, 30);
+  const cameraBytes = png(90, 30, 10);
+  const corruptBytes = "not a decoded image";
+  await writeFile(path.join(source, "graph.png"), graphBytes);
+  await writeFile(path.join(source, "camera.png"), cameraBytes);
+  const bytesByPath = new Map([
+    ["graph.png", graphBytes],
+    ["camera.png", cameraBytes],
+    ["corrupt.png", corruptBytes],
+  ]);
+  const candidate = (relativePath, instant) => verifiedCandidate(relativePath, bytesByPath.get(relativePath), instant);
   const firstRequest = {
     storeRoot: store,
     sourceRoot: source,
@@ -317,7 +373,7 @@ test("failed graph and camera updates retain last-known-good bytes", async (cont
   };
   bindReleaseEvent(firstRequest, "evt_plan_1001");
   const first = await publishOccurrenceRelease(firstRequest);
-  await writeFile(path.join(source, "corrupt.png"), "not a decoded image");
+  await writeFile(path.join(source, "corrupt.png"), corruptBytes);
   const secondGraph = graphInput(candidate("corrupt.png", "2026-07-12T12:05:00Z"));
   const firstSelection = await loadSelectedOccurrenceRelease(store);
   const secondRequest = {
@@ -367,8 +423,9 @@ test("failed graph and camera updates retain last-known-good bytes", async (cont
 
 test("event idempotency, conditional promotion, and no-build rollback are enforced", async (context) => {
   const { source, store } = await workspace(context);
-  await writeFile(path.join(source, "graph.png"), png(10, 90, 30));
-  const candidate = { relativePath: "graph.png", verifiedAt: "2026-07-12T12:00:00Z", capturedAt: "2026-07-12T12:00:00Z" };
+  const graphBytes = png(10, 90, 30);
+  await writeFile(path.join(source, "graph.png"), graphBytes);
+  const candidate = verifiedCandidate("graph.png", graphBytes, "2026-07-12T12:00:00Z");
   const request = (eventId, occurredAt, publishedAt, expectedSelectionSha256 = null) => {
     const value = {
       storeRoot: store,
@@ -445,7 +502,8 @@ test("event idempotency, conditional promotion, and no-build rollback are enforc
 
 test("selected releases fail closed when content-addressed image bytes change", async (context) => {
   const { source, store } = await workspace(context);
-  await writeFile(path.join(source, "graph.png"), png(10, 90, 30));
+  const graphBytes = png(10, 90, 30);
+  await writeFile(path.join(source, "graph.png"), graphBytes);
   const request = {
     storeRoot: store,
     sourceRoot: source,
@@ -453,7 +511,7 @@ test("selected releases fail closed when content-addressed image bytes change", 
     sourceSnapshotManifestSha256: digest("snapshot"),
     policyVersion: "verdify-public-output-v1",
     publishedAt: "2026-07-12T12:01:00Z",
-    graphs: [graphInput({ relativePath: "graph.png", verifiedAt: "2026-07-12T12:00:00Z", capturedAt: "2026-07-12T12:00:00Z" })],
+    graphs: [graphInput(verifiedCandidate("graph.png", graphBytes, "2026-07-12T12:00:00Z"))],
   };
   bindReleaseEvent(request, "evt_plan_3001");
   const result = await publishOccurrenceRelease(request);
@@ -494,7 +552,8 @@ test("release retention keeps ten manifests and permanent event tombstones", asy
 
 test("current-media readers reject intermediate directory symlinks", async (context) => {
   const { root, source, store } = await workspace(context);
-  await writeFile(path.join(source, "camera.png"), png(90, 30, 10));
+  const cameraBytes = png(90, 30, 10);
+  await writeFile(path.join(source, "camera.png"), cameraBytes);
   const occurrence = mediaInput({
     relativePath: "camera.png",
     verifiedAt: "2026-07-12T12:00:00Z",
@@ -507,7 +566,13 @@ test("current-media readers reject intermediate directory symlinks", async (cont
     policyVersion: "verdify-public-output-v1",
     publishedAt: "2026-07-12T12:01:00Z",
     occurrence,
-    candidate: { relativePath: "camera.png", verifiedAt: "2026-07-12T12:00:00Z", capturedAt: "2026-07-12T12:00:00Z" },
+    candidate: {
+      relativePath: "camera.png",
+      expectedSha256: digest(cameraBytes),
+      verifiedAt: "2026-07-12T12:00:00Z",
+      capturedAt: "2026-07-12T12:00:00Z",
+      requestProvenanceSha256: digest("approved-camera-request"),
+    },
     expectedSelectionSha256: null,
   };
   bindMediaEvent(request, "evt_media_link1");
