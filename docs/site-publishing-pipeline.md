@@ -67,17 +67,80 @@ This implementation does not grant export authority or prove live freshness.
 Before stage can select a real occurrence release, separate work must provide a
 policy-approved reporting source and camera sanitizer that cannot reach the Track
 A primary, plus durable delivery, alerts, outage probes, and the GitOps image/pin
-rollout. Static nginx does not yet watch the selectors or resolve the stable current
-media targets, so deployed no-build delivery/rollback and its under-five-minute SLO
-remain unproven until a runtime/object-store adapter lands. A source-only merge needs
-no service restart. Any stage rollout needs the
+rollout. Static nginx does not yet resolve the stable current-media targets. A
+source-only merge needs no service restart. Any stage rollout needs the
 normal stage acceptance and delayed durability probes; production sync, public
 cutover, and Quartz retirement remain human-gated.
 
-The local fixture retains ten release manifests and two selected media generations,
-but it is not the DEC-SITE-007 object-store lifecycle implementation: reachability
-garbage collection, the 10 GiB cap, a crash-released/distributed publisher lease, and
-outage recovery remain requirements of that adapter.
+The specialist-occurrence fixture is separate from the complete built-tree release
+store below. It retains ten occurrence manifests and two selected media generations,
+but does not claim a deployed object-store adapter or distributed lease.
+
+## Astro built-tree release and serving cache (local backend)
+
+`site-astro/scripts/lib/site-release-store.mjs` treats one complete Astro `dist/`
+tree as the release unit. It inventories a closed, sorted, case-fold-collision-free
+tree; rejects symlinks, hard links, special files, excessive depth/count/size, and a
+missing `index.html`; and imports every file as a SHA-256-addressed blob. The canonical
+release manifest binds the exact source-snapshot manifest digest, publication-policy
+version, builder commit, planner/event envelope and payload, timestamps/freshness,
+and every output path, media type, byte count, and digest. A policy change therefore
+cannot silently reuse the prior release identity. Specialist last-known-good evidence
+also retains the policy version that approved those bytes when carried forward; it is
+not relabeled as verified under a later policy.
+
+Publication writes an immutable event intent before changing selection. Event ID,
+envelope digest, payload digest, intended release, and expected selection digest are
+bound together, so a retry after process failure completes the same operation without
+forking it. One atomic canonical selector carries current and previous releases plus
+a monotonic generation. Every update after the first requires the full selector SHA
+precondition. Identical content is change-gated, and rollback only swaps current and
+previous; neither operation rebuilds the site.
+
+The exported `SiteReleaseStore` class documents the backend operation surface; the
+credential-free `LocalSiteReleaseStore` implements it. The local backend has a
+recoverable, same-host PID/nonce lease. A live or foreign-host owner excludes
+concurrent publishers; a demonstrably dead same-host lease is atomically moved to a
+nonce tombstone before reacquisition. Well-formed interrupted candidates, including
+the second link left after immutable publication, are repaired under that lease. This
+is explicitly not a distributed lease. Each publication retains at most ten manifests,
+then evicts optional oldest releases until reachability-accounted bytes fit the 10 GiB
+cap. Event tombstones remain so an evicted event ID cannot be reinterpreted as new work.
+
+`site-astro/scripts/lib/site-release-cache.mjs` is the pod/local serving adapter. It
+rehashes every source blob and every completed tree before installing a unique physical
+generation, then atomically replaces a relative `current` symlink. A separate
+same-host lease serializes the complete hydrate/swap/prune transaction. It preserves
+the prior complete generation through `previous`, prunes older cache generations, and
+leaves the served symlink untouched if hydration fails. A corrupt current store release
+falls back to the verified previous release. An independently created, byte-verified
+baked bundle is the cold-start known-good when the store is unavailable. Status reports
+readiness, source/degraded fallback state, release identity, and planner freshness using
+the five-minute target and fifteen-minute alert thresholds.
+
+The credential-free CLI is:
+
+```bash
+cd site-astro
+node scripts/manage-site-release.mjs prepare --build dist --snapshot <sha256> --policy <version> --commit <commit>
+node scripts/manage-site-release.mjs publish --request /path/to/canonical-request.json
+node scripts/manage-site-release.mjs status --store /path/to/store --at <UTC-instant>
+node scripts/manage-site-release.mjs rollback --store /path/to/store --expected <selection-sha256> --at <UTC-instant>
+node scripts/manage-site-release.mjs bundle --store /path/to/store --release <release-sha256> --destination /image/known-good
+node scripts/manage-site-release.mjs hydrate --store /path/to/store --cache /srv/lab-cache --baked /image/known-good
+```
+
+The focused tests inject failures after blob import, manifest publication, event-intent
+publication, and immediately before selection; exercise concurrent and dead-owner
+leases; prove retry and rollback; enforce retention/reachability; corrupt selected
+bytes; boot from baked fallback; and run all CLI operations end to end.
+
+This commit provides the complete local filesystem primitive needed for stage wiring,
+but does not deploy it. Object storage still needs an implementation of the exposed
+store semantics plus a real distributed lease/conditional-write authority. Stage
+wiring still needs a fleet-origin image and GitOps manifest, a writable cache volume,
+an immutable baked bundle selected by release digest, and live freshness alert routing.
+Those are deployment/data-authority concerns, not hidden claims of this local backend.
 
 ## Source of Truth
 
