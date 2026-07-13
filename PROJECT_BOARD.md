@@ -1,6 +1,6 @@
 # Verdify Platform Project Board
 
-Last updated: 2026-06-23
+Last updated: 2026-07-13
 
 Agent name: `verdify-platform`
 
@@ -15,6 +15,11 @@ Agent name: `verdify-platform`
 - Current planning surface: the ten controller-replan lane epics #343-#352,
   with the 2026-06-23 climate/control audit overlay in
   `docs/reviews/adversarial-audit-backlog-replan-2026-06-23.md`.
+- 2026-07-13: L9 (#351) is promoted from a generic pipeline audit to the
+  **lab Quartz→Astro migration program** (In Progress/P1/XL). The
+  authoritative decomposition, phase gates, and branch dispositions live in
+  `docs/plans/lab-astro-migration.md`; nine surface child issues follow
+  under G3.
 - Legacy/evidence cards remain on the board so old issue history is not lost;
   they are no longer the primary planning decomposition.
 - Required fallback: keep `## Project Tracking` in every new or materially

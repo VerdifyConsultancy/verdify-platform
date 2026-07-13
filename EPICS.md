@@ -354,29 +354,39 @@ focused VPD/dehum policy lane (#383).
 - User/value statement: The public lab notebook reflects the actual greenhouse
   architecture, data, dashboards, releases, and lessons instead of stale
   implementation assumptions.
-- Scope: lab notebook generation pipeline, S3/proxy/Cloudflare publish path,
-  architecture redocumentation after stabilization, release notes, and lessons
-  learned.
+- Scope (promoted 2026-07-13 to the Quartz→Astro migration program): the nine
+  migration surfaces — shared design contract; search/CSP/camera/contact;
+  secure graph fallbacks; media/lightbox; dynamic templates; semantic/route
+  parity; immutable event-driven S3 publishing; quality gates; production
+  cutover and Quartz retirement. Master plan and phase gates:
+  `docs/plans/lab-astro-migration.md` (the authoritative tracker).
 - Non-goals: marketing site (`verdify-www`), CRM, DNS/Cloudflare changes, or raw
   S3 credential handling.
-- Acceptance criteria:
-  - Lab generation pipeline is audited.
-  - S3/proxy/Cloudflare publishing path is documented with repo-owned vs
-    network-owned boundaries.
-  - Architecture docs/lab content are refreshed after implementation stabilizes.
-  - Release notes and lessons learned are represented.
-- Status: `Ready`
-- Priority: P2
-- Effort: M
+- Acceptance criteria (see the tracker's KPI bar for the measurable form):
+  - Stage serves the latest main Astro digest; the five deployed-stage defects
+    are cleared with a full acceptance run against the deployed build.
+  - All 143 graph occurrences have a secure immutable fallback live.
+  - Exact same-snapshot semantic parity is green; historical-reference gaps
+    dispositioned.
+  - Event-driven immutable S3 publishing replaces the 10-minute mutable
+    publisher.
+  - Production serves Astro and Quartz is retired, behind Jason's APPLY.
+- Status: `In Progress`
+- Priority: P1
+- Effort: XL
 - Milestone: G3 - Planner, Irrigation, Lab, and Research
 - Sprint: S7 `irrigation-lab-testing-hardening`
-- Related files/issues/PRs: #43, #219, #308, #337, `site/`,
-  `lab-content-pipeline.yml`, `scripts/lab-publish-k3s.sh`.
-- Dependencies: network-infra for route truth; secret locations by name/key
-  only.
-- Risks: generated content can become a stale parallel architecture if not tied
-  back to L1/L5/L6.
-- Evidence: web subsystem docs and service map.
+- Related files/issues/PRs: #351, #459, #460, #461, #462, verdify-www#33,
+  `site-astro/`, `docs/plans/lab-astro-migration.md`, `site/`,
+  `scripts/lab-publish-k3s.sh`.
+- Dependencies: in-cluster `build-lab-astro` green (current P0 blocker);
+  network-infra for route truth; secret locations by name/key only; Jason for
+  production cutover.
+- Risks: stage drifting from main while the pipeline is red; parity comparator
+  false positives masking real gaps; legacy anonymous Grafana being reused as
+  the graph authority instead of an isolated reporting tier.
+- Evidence: `docs/plans/lab-astro-migration.md` ground-truth table; web
+  subsystem docs and service map.
 
 ### L10 Testing And Research
 

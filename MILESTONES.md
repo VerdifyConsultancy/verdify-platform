@@ -11,7 +11,7 @@ Agent name: `verdify-platform`
 | G0 - Controller Architecture Audit | 0 | 1 | **DONE 2026-06-17.** L1 actual-vs-intended architecture, dead/stale path inventory, CI/CD/release checklist, and failure-mode docs — delivered + drift remediated (PRs #353-#358) + prod deploy executed. |
 | G1 - Firmware-First Determinism | 1 | 2 | **L2 #344 + L3 #345 DONE 2026-06-17** for the firmware/control base: firmware-internals FSM/relay/safety/bands/72h spec (`docs/firmware-fsm-spec.md`) + safety-rail + 72h-disconnected + crop-agnostic + compliance-feasibility test rails, proven offline (222/0 native, 193,525-row invariants) + live-prod confirmation. **L7 #349** lighting/occupancy remains open. June 23 follow-through now lives under G2/#359/#293/#347/#348. |
 | G2 - Data Contracts and Observability | 2 | 0 | L5/L6 schema authority, source-of-truth/readback contracts, drift detection, DB solar phase parity, floating-corridor outcome KPIs, moisture-estimator telemetry, and the evidence-gated VPD/dehum policy lane. |
-| G3 - Planner, Irrigation, Lab, and Research | 4 | 0 | L4/L8/L9/L10 planner boundary, irrigation/fertilization decisions, lab notebook publishing, and all-year/extreme-weather test harness. |
+| G3 - Planner, Irrigation, Lab, and Research | 4 | 0 | L4/L8/L9/L10 planner boundary, irrigation/fertilization decisions, lab notebook publishing, and all-year/extreme-weather test harness. 2026-07-13: L9 is mid-execution as the lab Quartz->Astro migration program (`docs/plans/lab-astro-migration.md`): stage live at lab-stage.verdify.ai on old digest `2c03489c`; merged #461/#462 blocked on the red in-cluster `build-lab-astro`; prod still Quartz. |
 
 ## Legacy/Open Milestones
 

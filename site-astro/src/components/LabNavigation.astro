@@ -1,0 +1,163 @@
+---
+import type { NavGroup } from "../data/navigation";
+
+interface Props {
+  groups: NavGroup[];
+  currentRoute: string;
+}
+
+const { groups, currentRoute } = Astro.props;
+const normalize = (value: string) => value.replace(/\/$/, "") || "/";
+const active = (href: string) => {
+  const target = normalize(href);
+  const current = normalize(currentRoute);
+  return target === "/" ? current === "/" : current === target || current.startsWith(`${target}/`);
+};
+---
+
+<div class="lab-navigation-shell" data-lab-navigation-shell>
+  <button
+    type="button"
+    class="lab-navigation-toggle"
+    aria-expanded="false"
+    aria-controls="lab-navigation-panel"
+    data-lab-navigation-toggle
+  >
+    <span>Lab index</span><span aria-hidden="true" data-lab-navigation-icon>+</span>
+  </button>
+  <aside id="lab-navigation-panel" class="lab-navigation" data-lab-navigation-panel>
+    <div class="lab-navigation__controls">
+      <label class="lab-search-label" for="lab-search">Search the lab</label>
+      <input id="lab-search" type="search" placeholder="Plans, crops, evidence…" autocomplete="off" />
+      <div id="lab-search-results" class="lab-search-results" role="status" aria-live="polite"></div>
+      <div class="view-controls">
+        <button type="button" data-theme-toggle aria-label="Use dark appearance" aria-pressed="false">Dark mode</button>
+        <button type="button" data-reader-toggle aria-label="Toggle reader mode" aria-pressed="false">Reader</button>
+      </div>
+    </div>
+    <nav aria-label="Lab evidence navigation">
+      {groups.map((group) => (
+        <details open={group.links.some((link) => active(link.href))} data-lab-nav-group>
+          <summary>{group.label}</summary>
+          <ul>
+            {group.links.map((link) => (
+              <li>
+                <a href={link.href} aria-current={active(link.href) ? "page" : undefined}>{link.label}</a>
+              </li>
+            ))}
+          </ul>
+        </details>
+      ))}
+    </nav>
+  </aside>
+</div>
+
+<script is:inline>
+  (() => {
+    const root = document.documentElement;
+    const themeToggle = document.querySelector("[data-theme-toggle]");
+    const readerToggle = document.querySelector("[data-reader-toggle]");
+    const stored = localStorage.getItem("verdify-color-theme-v2");
+    const readerStored = localStorage.getItem("verdify-reader-mode-v1") === "true";
+    if (stored === "dark") root.dataset.theme = "dark";
+    if (readerStored) root.classList.add("reader-mode");
+    const synchronizeControls = () => {
+      const dark = root.dataset.theme === "dark";
+      themeToggle?.setAttribute("aria-pressed", String(dark));
+      themeToggle?.setAttribute("aria-label", dark ? "Use light appearance" : "Use dark appearance");
+      if (themeToggle) themeToggle.textContent = dark ? "Light mode" : "Dark mode";
+      readerToggle?.setAttribute("aria-pressed", String(root.classList.contains("reader-mode")));
+    };
+    synchronizeControls();
+    themeToggle?.addEventListener("click", () => {
+      root.dataset.theme = root.dataset.theme === "dark" ? "light" : "dark";
+      localStorage.setItem("verdify-color-theme-v2", root.dataset.theme);
+      synchronizeControls();
+    });
+    readerToggle?.addEventListener("click", () => {
+      root.classList.toggle("reader-mode");
+      localStorage.setItem("verdify-reader-mode-v1", String(root.classList.contains("reader-mode")));
+      synchronizeControls();
+    });
+
+    const navigationShell = document.querySelector("[data-lab-navigation-shell]");
+    const navigationPanel = document.querySelector("[data-lab-navigation-panel]");
+    const navigationToggle = document.querySelector("[data-lab-navigation-toggle]");
+    const navigationIcon = document.querySelector("[data-lab-navigation-icon]");
+    const navigationGroups = [...document.querySelectorAll("[data-lab-nav-group]")];
+    const desktopNavigation = matchMedia("(min-width: 861px)");
+    const synchronizeNavigation = (desktop) => {
+      navigationPanel?.toggleAttribute("hidden", !desktop);
+      navigationShell?.classList.remove("is-open");
+      navigationToggle?.setAttribute("aria-expanded", "false");
+      if (navigationIcon) navigationIcon.textContent = "+";
+      for (const group of navigationGroups) {
+        group.open = desktop || Boolean(group.querySelector('[aria-current="page"]'));
+      }
+    };
+    synchronizeNavigation(desktopNavigation.matches);
+    desktopNavigation.addEventListener("change", (event) => synchronizeNavigation(event.matches));
+    navigationToggle?.addEventListener("click", () => {
+      const open = navigationToggle.getAttribute("aria-expanded") !== "true";
+      navigationToggle.setAttribute("aria-expanded", String(open));
+      navigationPanel?.toggleAttribute("hidden", !open);
+      navigationShell?.classList.toggle("is-open", open);
+      if (navigationIcon) navigationIcon.textContent = open ? "−" : "+";
+      if (open) navigationPanel?.querySelector("input, a, button, summary")?.focus();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape" || desktopNavigation.matches) return;
+      navigationPanel?.setAttribute("hidden", "");
+      navigationShell?.classList.remove("is-open");
+      navigationToggle?.setAttribute("aria-expanded", "false");
+      if (navigationIcon) navigationIcon.textContent = "+";
+      navigationToggle?.focus();
+    });
+
+    const input = document.querySelector("#lab-search");
+    const output = document.querySelector("#lab-search-results");
+    let pagefindReady;
+    let searchSequence = 0;
+    input?.addEventListener("input", async () => {
+      const query = input.value.trim();
+      if (!output) return;
+      const sequence = ++searchSequence;
+      if (query.length < 2) {
+        output.replaceChildren();
+        output.removeAttribute("aria-busy");
+        return;
+      }
+      output.setAttribute("aria-busy", "true");
+      try {
+        pagefindReady ??= import("/pagefind/pagefind.js").then(async (pagefind) => {
+          // Pagefind's worker URL is not content-addressed. Running the index on
+          // the document avoids an old immutable edge response pinning the
+          // worker to a superseded CSP after a stage release.
+          await pagefind.options({ noWorker: true });
+          await pagefind.init();
+          return pagefind;
+        });
+        const pagefind = await pagefindReady;
+        const search = await pagefind.search(query);
+        const details = await Promise.all(search.results.slice(0, 6).map((result) => result.data()));
+        if (sequence !== searchSequence) return;
+        const list = document.createElement("ul");
+        for (const detail of details) {
+          const item = document.createElement("li");
+          const link = document.createElement("a");
+          link.href = detail.url;
+          link.textContent = detail.meta.title || detail.url;
+          item.append(link);
+          list.append(item);
+        }
+        if (details.length > 0) output.replaceChildren(list);
+        else output.textContent = `No Lab pages found for “${query}”.`;
+      } catch (error) {
+        if (sequence !== searchSequence) return;
+        output.textContent = "Search index unavailable.";
+      } finally {
+        if (sequence === searchSequence) output.removeAttribute("aria-busy");
+      }
+    });
+  })();
+</script>

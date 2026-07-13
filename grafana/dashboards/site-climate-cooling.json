@@ -2155,7 +2155,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT $__time(ts), CASE WHEN state THEN 3 ELSE 0 END AS \"Vent\" FROM equipment_state WHERE equipment='vent' AND $__timeFilter(ts) ORDER BY ts",
+          "rawSql": "SELECT $__time(ts), CASE WHEN state THEN 3 ELSE 0 END AS \"Vent\" FROM (\n  SELECT ts, state FROM equipment_state WHERE equipment='vent' AND $__timeFilter(ts)\n  UNION ALL\n  -- seed: long-hold relays (vent stayed open 10h on 2026-07-12) have no\n  -- transitions inside short windows; carry the state at window start\n  SELECT $__timeFrom(), state FROM (\n    SELECT state FROM equipment_state WHERE equipment='vent' AND ts <= $__timeFrom()\n    ORDER BY ts DESC LIMIT 1) seed\n) x ORDER BY ts",
           "refId": "C"
         },
         {
@@ -2294,7 +2294,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT (day::date + time '12:00')::timestamptz AS time, on_minutes AS \"Fan 1 min\" FROM v_equipment_runtime_daily WHERE equipment='fan1' AND is_deploy_gate_eligible AND $__timeFilter((day::date + time '12:00')::timestamptz) ORDER BY day",
+          "rawSql": "SELECT (day::date + time '12:00')::timestamptz AS time, on_minutes AS \"Fan 1 min\" FROM mv_equipment_runtime_daily WHERE equipment='fan1' AND $__timeFilter((day::date + time '12:00')::timestamptz) ORDER BY day",
           "refId": "A"
         },
         {
@@ -2305,7 +2305,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT (day::date + time '12:00')::timestamptz AS time, on_minutes AS \"Fan 2 min\" FROM v_equipment_runtime_daily WHERE equipment='fan2' AND is_deploy_gate_eligible AND $__timeFilter((day::date + time '12:00')::timestamptz) ORDER BY day",
+          "rawSql": "SELECT (day::date + time '12:00')::timestamptz AS time, on_minutes AS \"Fan 2 min\" FROM mv_equipment_runtime_daily WHERE equipment='fan2' AND $__timeFilter((day::date + time '12:00')::timestamptz) ORDER BY day",
           "refId": "B"
         },
         {
@@ -2316,7 +2316,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT (day::date + time '12:00')::timestamptz AS time, on_minutes AS \"Vent min\" FROM v_equipment_runtime_daily WHERE equipment='vent' AND is_deploy_gate_eligible AND $__timeFilter((day::date + time '12:00')::timestamptz) ORDER BY day",
+          "rawSql": "SELECT (day::date + time '12:00')::timestamptz AS time, on_minutes AS \"Vent min\" FROM mv_equipment_runtime_daily WHERE equipment='vent' AND $__timeFilter((day::date + time '12:00')::timestamptz) ORDER BY day",
           "refId": "C"
         },
         {
@@ -2327,7 +2327,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT (day::date + time '12:00')::timestamptz AS time, on_minutes AS \"Fog min\" FROM v_equipment_runtime_daily WHERE equipment='fog' AND is_deploy_gate_eligible AND $__timeFilter((day::date + time '12:00')::timestamptz) ORDER BY day",
+          "rawSql": "SELECT (day::date + time '12:00')::timestamptz AS time, on_minutes AS \"Fog min\" FROM mv_equipment_runtime_daily WHERE equipment='fog' AND $__timeFilter((day::date + time '12:00')::timestamptz) ORDER BY day",
           "refId": "D"
         }
       ],

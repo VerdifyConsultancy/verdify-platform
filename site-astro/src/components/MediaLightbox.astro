@@ -1,0 +1,109 @@
+<dialog class="media-lightbox" data-media-lightbox aria-labelledby="media-lightbox-title">
+  <div class="media-lightbox__bar">
+    <p id="media-lightbox-title">Image viewer</p>
+    <button type="button" class="media-lightbox__close" data-lightbox-close aria-label="Close image viewer">
+      Close <span aria-hidden="true">×</span>
+    </button>
+  </div>
+  <div class="media-lightbox__stage">
+    <button type="button" class="media-lightbox__step" data-lightbox-previous aria-label="Previous image">←</button>
+    <figure>
+      <img data-lightbox-image alt="" />
+      <figcaption>
+        <span data-lightbox-caption></span>
+        <a data-lightbox-original href="/" target="_blank" rel="noopener">Open original</a>
+      </figcaption>
+    </figure>
+    <button type="button" class="media-lightbox__step" data-lightbox-next aria-label="Next image">→</button>
+  </div>
+</dialog>
+
+<script is:inline>
+  (() => {
+    const dialog = document.querySelector("[data-media-lightbox]");
+    if (!(dialog instanceof HTMLDialogElement)) return;
+    const image = dialog.querySelector("[data-lightbox-image]");
+    const caption = dialog.querySelector("[data-lightbox-caption]");
+    const original = dialog.querySelector("[data-lightbox-original]");
+    const close = dialog.querySelector("[data-lightbox-close]");
+    const previous = dialog.querySelector("[data-lightbox-previous]");
+    const next = dialog.querySelector("[data-lightbox-next]");
+    const items = [...document.querySelectorAll(".lab-article img")]
+      .filter((candidate) => !candidate.closest(".grafana-evidence") && !candidate.closest(".katex"))
+      .map((candidate) => {
+        const anchor = candidate.closest("a");
+        return {
+          image: candidate,
+          trigger: anchor || candidate,
+          source: anchor?.href || candidate.currentSrc || candidate.src,
+          caption: candidate.closest("figure")?.querySelector("figcaption")?.textContent?.trim() || candidate.alt,
+        };
+      })
+      .filter((item) => item.source);
+    let selected = 0;
+    let returnFocus = null;
+    let pointerStart = null;
+
+    const render = (index) => {
+      selected = (index + items.length) % items.length;
+      const item = items[selected];
+      image.src = item.source;
+      image.alt = item.image.alt || item.caption || "Verdify Lab image";
+      caption.textContent = item.caption || item.image.alt || "";
+      original.href = item.source;
+      const hasSequence = items.length > 1;
+      previous.hidden = !hasSequence;
+      next.hidden = !hasSequence;
+    };
+
+    const open = (index, trigger) => {
+      returnFocus = trigger;
+      render(index);
+      dialog.showModal();
+      close.focus();
+    };
+
+    items.forEach((item, index) => {
+      if (!(item.trigger instanceof HTMLElement)) return;
+      if (item.trigger === item.image) {
+        item.trigger.tabIndex = 0;
+        item.trigger.setAttribute("role", "button");
+        item.trigger.setAttribute("aria-label", `Open image viewer: ${item.image.alt || "Lab image"}`);
+      } else {
+        item.trigger.dataset.lightbox = "true";
+      }
+      item.trigger.addEventListener("click", (event) => {
+        event.preventDefault();
+        open(index, item.trigger);
+      });
+      item.trigger.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        open(index, item.trigger);
+      });
+    });
+
+    close?.addEventListener("click", () => dialog.close());
+    previous?.addEventListener("click", () => render(selected - 1));
+    next?.addEventListener("click", () => render(selected + 1));
+    dialog.addEventListener("click", (event) => {
+      if (event.target === dialog) dialog.close();
+    });
+    dialog.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowLeft") render(selected - 1);
+      if (event.key === "ArrowRight") render(selected + 1);
+    });
+    dialog.addEventListener("pointerdown", (event) => { pointerStart = event.clientX; });
+    dialog.addEventListener("pointerup", (event) => {
+      if (pointerStart === null) return;
+      const distance = event.clientX - pointerStart;
+      pointerStart = null;
+      if (Math.abs(distance) < 60) return;
+      render(selected + (distance < 0 ? 1 : -1));
+    });
+    dialog.addEventListener("close", () => {
+      image.removeAttribute("src");
+      returnFocus?.focus?.();
+    });
+  })();
+</script>

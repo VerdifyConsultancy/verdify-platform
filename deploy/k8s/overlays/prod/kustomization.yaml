@@ -72,6 +72,10 @@ resources:
 # Components, NOT added to base, so future overlays must opt in explicitly. The
 # fan-out broker runs in PROD ONLY. The planner is NOT a device writer.
 components:
+  # In-cluster firmware OTA capability (handoff §5.1 closed 2026-07-13):
+  # suspended-CronJob build/flash template + durable artifacts PVC (the
+  # rollback floor lives HERE now, not on the laptop) + toolchain cache.
+  - ../../components/firmware-builder
   - ../../components/planner
   - ../../components/mqtt-broker
   # #118 verdify-setpoint-server — the grow-light writer + setpoint diagnostics.
@@ -243,4 +247,3 @@ images:
   - name: ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s
     newName: registry.vallery.net/verdifyconsultancy/verdify-lab-publisher-k3s
     digest: sha256:a4b73e82c7619cb3eccd5f4331ab4a5be62aedd0fea36540c42aab509241523f
-    digest: sha256:ec4b236aa5603ef91317632083e16872ccb01a2c60cc737e5432dd277f78c4c3

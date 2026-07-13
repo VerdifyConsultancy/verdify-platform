@@ -1333,17 +1333,17 @@
       "targets": [
         {
           "format": "time_series",
-          "rawSql": "SELECT (day::date + time '12:00')::timestamptz AS time, on_minutes AS \"South (min)\" FROM v_equipment_runtime_daily WHERE equipment='mister_south' AND is_deploy_gate_eligible AND $__timeFilter((day::date + time '12:00')::timestamptz) ORDER BY day",
+          "rawSql": "SELECT (day::date + time '12:00')::timestamptz AS time, on_minutes AS \"South (min)\" FROM mv_equipment_runtime_daily WHERE equipment='mister_south' AND $__timeFilter((day::date + time '12:00')::timestamptz) ORDER BY day",
           "refId": "A"
         },
         {
           "format": "time_series",
-          "rawSql": "SELECT (day::date + time '12:00')::timestamptz AS time, on_minutes AS \"West (min)\" FROM v_equipment_runtime_daily WHERE equipment='mister_west' AND is_deploy_gate_eligible AND $__timeFilter((day::date + time '12:00')::timestamptz) ORDER BY day",
+          "rawSql": "SELECT (day::date + time '12:00')::timestamptz AS time, on_minutes AS \"West (min)\" FROM mv_equipment_runtime_daily WHERE equipment='mister_west' AND $__timeFilter((day::date + time '12:00')::timestamptz) ORDER BY day",
           "refId": "B"
         },
         {
           "format": "time_series",
-          "rawSql": "SELECT (day::date + time '12:00')::timestamptz AS time, on_minutes AS \"Center (min)\" FROM v_equipment_runtime_daily WHERE equipment='mister_center' AND is_deploy_gate_eligible AND $__timeFilter((day::date + time '12:00')::timestamptz) ORDER BY day",
+          "rawSql": "SELECT (day::date + time '12:00')::timestamptz AS time, on_minutes AS \"Center (min)\" FROM mv_equipment_runtime_daily WHERE equipment='mister_center' AND $__timeFilter((day::date + time '12:00')::timestamptz) ORDER BY day",
           "refId": "C"
         }
       ],

@@ -54,7 +54,7 @@ product evolution. Track A wins whenever they conflict.
 | L6 Observability, Dashboards, and KPIs | #348 | Ready | G2 - Data Contracts and Observability |
 | L7 Lighting and Occupancy | #349 | Ready | G1 - Firmware-First Determinism |
 | L8 Irrigation, Fertilization, and Orchids | #350 | Ready | G3 - Planner, Irrigation, Lab, and Research |
-| L9 Lab Notebook, Website, and Publishing | #351 | Ready | G3 - Planner, Irrigation, Lab, and Research |
+| L9 Lab Notebook, Website, and Publishing | #351 | In Progress (Astro migration program, `docs/plans/lab-astro-migration.md`) | G3 - Planner, Irrigation, Lab, and Research |
 | L10 Testing and Research | #352 | Ready | G3 - Planner, Irrigation, Lab, and Research |
 
 ## Components

@@ -1,0 +1,12 @@
+{
+  "contract": "verdify.lab-stage-snapshot-release",
+  "schemaVersion": 1,
+  "assetUrl": "https://github.com/VerdifyConsultancy/verdify-platform/releases/download/lab-stage-snapshot-20260712t1620z/verdify-lab-stage-snapshot-20260712t1620z.tar",
+  "assetSha256": "fe9332c8cdfa95de90ac7da0aff79d4f0c60f39f0c2cbd7ab35b55fcb3fb4029",
+  "assetBytes": 409600000,
+  "assetFormat": "tar",
+  "attestationSha256": "a5ed1cc899094dc061c01904d93e7034618d9eb22cf14488d04298da635a4e6d",
+  "sanitizedManifestSha256": "2dbcb7256f475be6bd620427101900c53814fb065a815e0129b19451d7467d86",
+  "sourceManifestSha256": "05d4373ebf59bef3a7899c5e94514971d663fd7264db09b2b5cb26fec78410b1",
+  "fileCount": 429
+}
