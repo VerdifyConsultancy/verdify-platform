@@ -1,0 +1,85 @@
+schema_ref: consensus-report.schema.yaml
+kind: ConsensusReport
+schema_version: "1.0"
+plan:
+  ref: docs/plans/lab-astro-migration.md@1e7dc6ccede1a2a87ce09b364a107e9e3660d70e
+  title: "Lab Astro migration — consolidated program and nine surface issues"
+generated_by: consensus-review
+generated_at: "2026-07-13T07:53:42Z"
+status: consensus
+min_clean_turns: 2
+kpis:
+  - id: pipeline
+    name: "Exact-revision stage delivery"
+    target: "Each Lab-relevant main revision produces or updates its digest pin PR within 24 hours; every authorized rollout passes T0 and T+10 acceptance"
+  - id: occurrences
+    name: "Secure graph and camera fallback completeness"
+    target: "143/143 graph and 2/2 approved camera occurrences reconcile at T0 and T+10 with zero pending, invalid, conflicting, or credential-bearing targets"
+  - id: reporting-freshness
+    name: "Public reporting feed source lag"
+    target: "verdify_lab_reporting_source_lag_seconds p95 <= 15 minutes over 24 hours with >= 96 samples; > 30 minutes for two evaluations alerts and two evaluations < 15 minutes recover"
+  - id: semantic-parity
+    name: "Same-snapshot semantic parity"
+    target: "Zero unexplained findings without provisional mode and all nine unavailable historical references restored or explicitly dispositioned"
+  - id: publish-latency
+    name: "Event-driven publication latency"
+    target: "Three consecutive content events reach stage in <= 10 minutes each"
+  - id: resource-bounds
+    name: "Occurrence and release resource envelope"
+    target: "Current plus rollback retained; unreferenced objects recoverable for 48 hours; <= 10 GiB retained, 5 GiB written/day, 10 GiB egress/day, and 25000 requests/day unless Jason approves a replacement budget"
+  - id: production-cutover
+    name: "Gated Astro production cutover"
+    target: "S1-S8 green, Jason APPLY recorded, zero unexplained parity findings or observed 5xx in acceptance, and route rollback executable in <= 5 minutes"
+seats:
+  product:
+    verdict: approve
+    note: "All user-visible surfaces are owned; exact parity and explicit disposition of nine unavailable references prevent silent content loss."
+  engineering-manager:
+    verdict: approve
+    note: "The 4c producer contract gates every 4b adapter/caller/endpoint/event-agent slice while isolated 4a may proceed in parallel; close conditions avoid an S3/S7 cycle."
+  finance:
+    verdict: approve
+    note: "Numeric storage, write, egress, and request ceilings; 80 percent alerts; 100 percent publication blocking; and a 48-hour recovery window prevent unbounded cost."
+  infrastructure:
+    verdict: approve
+    note: "The static runtime remains credential-free and deny-all; reporting and camera contexts have narrow egress; GitOps and tier activation remain human-gated."
+  sre:
+    verdict: approve
+    note: "Freshness, alert/recovery, LKG, T0/T+10 reconciliation, restart convergence, readiness, publication latency, and rollback criteria are measurable."
+  security:
+    verdict: approve
+    note: "Reporting cannot reuse Track A roles or write paths; camera reads are exact-URL GET-only without auth, cookies, redirects, device access, or source metadata persistence."
+reviews:
+  claude:
+    sign_off: no-changes
+    consecutive_clean_turns: 2
+    available: true
+    note: "No changes on formal turns 4 and 5 at frozen commit 1e7dc6c."
+  codex:
+    sign_off: no-changes
+    consecutive_clean_turns: 2
+    available: true
+    note: "No changes on formal turns 4 and 5 at frozen commit 1e7dc6c."
+cross_model: full
+cross_model_note: ""
+votes:
+  - {lane_owner: verdify-platform, issue: "#474", vote: "yes", at: "2026-07-13T07:53:42Z"}
+  - {lane_owner: verdify-platform, issue: "#475", vote: "yes", at: "2026-07-13T07:53:42Z"}
+  - {lane_owner: verdify-platform, issue: "#476", vote: "yes", at: "2026-07-13T07:53:42Z"}
+  - {lane_owner: verdify-platform, issue: "#477", vote: "yes", at: "2026-07-13T07:53:42Z"}
+  - {lane_owner: verdify-platform, issue: "#478", vote: "yes", at: "2026-07-13T07:53:42Z"}
+  - {lane_owner: verdify-platform, issue: "#479", vote: "yes", at: "2026-07-13T07:53:42Z"}
+  - {lane_owner: verdify-platform, issue: "#480", vote: "yes", at: "2026-07-13T07:53:42Z"}
+  - {lane_owner: verdify-platform, issue: "#481", vote: "yes", at: "2026-07-13T07:53:42Z"}
+  - {lane_owner: verdify-platform, issue: "#482", vote: "yes", at: "2026-07-13T07:53:42Z"}
+consensus: true
+persisted_issues:
+  - "#474"
+  - "#475"
+  - "#476"
+  - "#477"
+  - "#478"
+  - "#479"
+  - "#480"
+  - "#481"
+  - "#482"

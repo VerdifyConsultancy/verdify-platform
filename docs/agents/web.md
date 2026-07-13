@@ -1,6 +1,8 @@
 # Agent: `web`
 
-The FastAPI crop catalog, every vault markdown writer, every page generator, and the Quartz static lab site that serves `lab.verdify.ai`.
+The FastAPI crop catalog, every vault markdown writer, every page generator, the
+current Quartz production site, and the Astro replacement staged for
+`lab.verdify.ai`.
 
 ## Owns
 
@@ -8,6 +10,11 @@ The FastAPI crop catalog, every vault markdown writer, every page generator, and
 - `scripts/generate-*.py` and public export generators — `generate-daily-plan.py`, `generate-forecast-page.py`, `generate-lessons-page.py`, `export-hourly-performance-dataset.py`, etc.
 - `scripts/vault-*.py` — `vault-daily-writer.py`, `vault-crop-writer.py`
 - `site/` — full Quartz source tree, docs, package lock, build config, and nginx config
+- `site-astro/` — Astro compiler/runtime, shared-shell consumer, immutable
+  snapshot/occurrence/release contracts, and parity/browser quality gates
+- `deploy/k8s/components/lab-astro-stage/` and
+  `deploy/k8s/overlays/lab-stage/` — isolated static canary workload and its
+  reviewed zot digest pin
 - S3-backed lab content store — source/public/state for the k3s lab publisher
   (`deploy/k8s/components/lab-site/lab-publisher.yaml`)
 - Legacy `/mnt/iris/verdify-vault/` paths — compatibility paths for generators;
@@ -31,8 +38,22 @@ The FastAPI crop catalog, every vault markdown writer, every page generator, and
 
 - Vault writer changes must produce byte-for-byte identical frontmatter on existing files (`diff` against pre-regen file) — Obsidian dataview queries depend on key names and order.
 - FastAPI endpoints must have `response_model=` declared (Sprint 22 pattern). OpenAPI `/docs` populates from these; regressions here mislead downstream consumers.
-- Quartz build must succeed (`make site-rebuild` or equivalent) before pushing to vault.
-- Run `make site-doctor` after site/Grafana/content changes; it validates generated-page markers, image refs, live Grafana iframe panel IDs, built output, and nginx bind-mount readability. For content audits, add `--semantic-report <path>` to `scripts/site-doctor.py` to write the iframe-to-heading-to-live-panel-title inventory.
+- Quartz production changes must build successfully (`make site-rebuild` or
+  equivalent) before publishing. Astro changes must pass
+  `cd site-astro && npm ci && npm test`; the test chain includes the fixture
+  build, manifest/parity checks, and desktop/mobile Playwright quality gate.
+- Run `make site-doctor` after Quartz/Grafana/content changes; it validates
+  generated-page markers, image refs, live Grafana iframe panel IDs, built
+  output, and nginx bind-mount readability. For content audits, add
+  `--semantic-report <path>` to `scripts/site-doctor.py` to write the
+  iframe-to-heading-to-live-panel-title inventory.
+- A real Astro candidate must consume a closed sanitized snapshot and publish
+  an exact zot digest. Stage acceptance proves 2/2 Ready replicas with zero
+  restarts on distinct nodes, exact pod image IDs, `/healthz`, Pagefind,
+  responsive media/lightbox, mobile navigation, route/alias and occurrence
+  reconciliation at T0 and T+10, then restores the manual-sync posture.
+  Occurrence-count reconciliation alone is not fallback parity: selected graph
+  and camera evidence must be verified separately.
 - Use `docs/site-content-map.md` as the route/content contract before reorganizing pages. It defines canonical route families, source type, data source, graph layer, and known gaps.
 - Site markdown edits must respect generated-page ownership. Check the generator
   list below before hand-editing pages that will be synced into the S3 content
@@ -44,11 +65,13 @@ The FastAPI crop catalog, every vault markdown writer, every page generator, and
 - Changing a vault frontmatter key (breaks Obsidian dataview silently)
 - Adding an API endpoint (affects external consumers incl. Cloud Run api)
 - Reworking the vault directory layout (site routing depends on it)
-- Touching Quartz configuration that changes URL structure
+- Changing the public route/alias contract in either Quartz or Astro
+- Any production cutover, public route change, Quartz retirement, or publisher
+  decommission (Jason-gated)
 
 ## Site operations reference
 
-`lab.verdify.ai` is a Quartz static site. The current production serving path is:
+`lab.verdify.ai` remains the Quartz production site. Its current serving path is:
 
 `s3://$LAB_S3_BUCKET/$LAB_S3_PREFIX/content` → `verdify-lab-publisher` CronJob → `/work/content` → `npx quartz build` → `/work/public` → S3 public/state sync → `verdify-lab` nginx reads the lab cache PVC → Traefik → `lab.verdify.ai`.
 
@@ -56,18 +79,39 @@ Do not edit `/work/public` or `/srv/verdify/verdify-site/public`; they are build
 output. Hand-authored content should be seeded/synced to the S3 content prefix.
 Repo-owned Quartz/build code lives in `site/` and `scripts/`.
 
-Do not edit `/srv/verdify/verdify-site/quartz` for normal work. The normal
-deploy path is GitHub CI/CD into k3s: source changes land in Git, the lab image
-is published from `VerdifyConsultancy/verdify-site-legacy@v4`, and
-`verdify-platform` pins the resulting GHCR digest for ArgoCD. Treat `/srv`
-paths as historical/break-glass context only.
+The current production Quartz image is a pre-ADR-0021 GHCR holdover. GHCR
+publishing and `VerdifyConsultancy/verdify-site-legacy@v4` are not valid paths
+for a new release. Do not edit `/srv/verdify/verdify-site/quartz` for normal
+work; treat `/srv` paths as historical/break-glass context only.
 
-Build/publish unit:
+`lab-stage.verdify.ai` is the isolated Astro canary. Its build path is the exact
+`verdify-platform` revision through the in-cluster `verdify-platform-ci` /
+`repo-build` WorkflowTemplate: the sanitized snapshot is hydrated and verified
+before Kaniko, Kaniko pushes the image to the zot origin, and a reviewed digest
+pin lands in `deploy/k8s/overlays/lab-stage/kustomization.yaml`. ArgoCD serves
+the static nginx image with no PVC, runtime Secret, service-account token, DB,
+Grafana, object-store access, or egress.
+
+The Phase 2 checkpoint accepted digest
+`sha256:ee36941f20028fcfe06f12bf253e7139c00e3d5de1949eb8b12bb1d4ebe60b99`
+on 2026-07-13: 2/2 Ready, zero restarts, distinct nodes, shell 1.1.0, 323
+routes, and live Pagefind/media/lightbox/mobile checks with identical T0/T+10
+evidence. The stage app returned to manual-sync afterward. This is a dated
+checkpoint, not a cutover claim: content is still the frozen snapshot, and all
+143 graph plus 2 camera occurrences have no selected same-origin evidence
+release or materialized fallback blobs. Graph/camera parity is carried by Phase
+4c in `docs/plans/lab-astro-migration.md`.
+
+Current production Quartz build/publish unit:
 
 - `verdify-lab-publisher` CronJob runs every 10 minutes in k3s. It calls
   `scripts/lab-publish-k3s.sh`, which syncs S3 content, runs
   `scripts/publish-site-content.sh`, builds Quartz, updates the cache PVC, and
   syncs generated content/public/state back to S3.
+
+The current Astro stage has no publisher CronJob, mutable cache PVC, or runtime
+content fetch. Phase 4 replaces the frozen build input with the reviewed
+event-driven release/store path before any production cutover.
 
 `scripts/rebuild-site.sh` builds Quartz into a staged `public.*` directory,
 verifies the staged `index.html`, then rsyncs the complete staged output into
