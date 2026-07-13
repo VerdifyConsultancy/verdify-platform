@@ -24,6 +24,13 @@ import {
   occurrenceStateIndex,
   staticOccurrenceManifest,
 } from "./lib/occurrence-release.mjs";
+import {
+  occurrenceExportPolicySha256,
+  readCanonicalExportDocument,
+  staticOccurrenceDiscoverySha256,
+  validateOccurrenceExportPolicy,
+  validatePolicyManifestBinding,
+} from "./lib/occurrence-export-contract.mjs";
 import { verifySnapshot } from "./lib/snapshot.mjs";
 
 const SCRIPT_ROOT = path.dirname(fileURLToPath(import.meta.url));
@@ -46,6 +53,80 @@ function normalizeOrigin(value) {
   }
   parsed.pathname = "";
   return parsed.toString().replace(/\/$/, "");
+}
+
+async function loadCompilerOccurrenceBinding({
+  snapshot,
+  occurrenceStore = process.env.LAB_OCCURRENCE_STORE,
+  occurrencePolicy = process.env.LAB_OCCURRENCE_POLICY,
+}) {
+  if (!occurrenceStore) {
+    return {
+      release: { selection: null, current: null },
+      policy: null,
+      policySha256: null,
+    };
+  }
+  if (!occurrencePolicy) {
+    throw new Error("LAB_OCCURRENCE_POLICY must name the exact policy when LAB_OCCURRENCE_STORE is set");
+  }
+
+  const policyValue = await readCanonicalExportDocument(occurrencePolicy, "occurrence export policy");
+  const policy = validateOccurrenceExportPolicy(policyValue.document);
+  const policySha256 = occurrenceExportPolicySha256(policy);
+  if (policySha256 !== policyValue.sha256) {
+    throw new Error("occurrence export policy digest does not match its canonical bytes");
+  }
+
+  const release = await loadSelectedOccurrenceRelease(occurrenceStore);
+  if (release.current !== null) {
+    const snapshotMatch = /^sha256:([0-9a-f]{64})$/u.exec(snapshot.manifestDigest ?? "");
+    if (!snapshotMatch) throw new Error("snapshot manifest digest is invalid");
+    if (
+      release.current.sourceSnapshotManifestSha256 !== snapshotMatch[1]
+      || release.current.sourceSnapshotManifestSha256 !== policy.sourceSnapshotManifestSha256
+    ) {
+      throw new Error("selected occurrence release does not match the exact snapshot manifest");
+    }
+    if (release.current.policyVersion !== policy.policyVersion) {
+      throw new Error("selected occurrence release does not match the occurrence export policy version");
+    }
+    if (policy.activation.state !== "approved") {
+      throw new Error("selected occurrence release policy is not approved for compiler use");
+    }
+    if (release.current.policySha256 !== policySha256) {
+      throw new Error("selected occurrence release does not match the exact occurrence export policy bytes");
+    }
+  }
+  return { release, policy, policySha256 };
+}
+
+function verifyCompilerOccurrenceDiscovery(binding, discoveryManifest) {
+  if (binding.release.current === null) return;
+  const discoverySha256 = staticOccurrenceDiscoverySha256(discoveryManifest);
+  if (binding.policy.sourceOccurrenceManifestSha256 !== discoverySha256) {
+    throw new Error("selected occurrence release policy does not match the stable discovery manifest");
+  }
+  validatePolicyManifestBinding(binding.policy, discoveryManifest, discoverySha256);
+}
+
+function verifyCompleteSelectedOccurrenceEvidence(release, occurrenceManifest) {
+  if (release.current === null) return;
+  if (occurrenceManifest.selectedManifestSha256 !== release.selection.current.manifestSha256) {
+    throw new Error("selected occurrence release identity differs from the static occurrence manifest");
+  }
+  for (const [label, released, discovered] of [
+    ["graph", release.current.occurrences.graphs, occurrenceManifest.graphs],
+    ["current-media", release.current.occurrences.currentMedia, occurrenceManifest.currentMedia],
+  ]) {
+    const releasedIds = new Set(released.map((occurrence) => occurrence.occurrenceId));
+    if (
+      released.length !== discovered.length
+      || discovered.some((occurrence) => !releasedIds.has(occurrence.occurrenceId) || !occurrence.selected?.fallback)
+    ) {
+      throw new Error(`selected occurrence release lacks complete ${label} fallback coverage`);
+    }
+  }
 }
 
 function escapeHtml(value) {
@@ -968,18 +1049,8 @@ async function main() {
   const snapshot = await verifySnapshot(snapshotRoot, {
     allowSyntheticFixture: process.env.ALLOW_SYNTHETIC_FIXTURE === "true",
   });
-  const selectedOccurrenceRelease = process.env.LAB_OCCURRENCE_STORE
-    ? await loadSelectedOccurrenceRelease(process.env.LAB_OCCURRENCE_STORE)
-    : { selection: null, current: null };
-  if (
-    selectedOccurrenceRelease.current
-    && (
-      selectedOccurrenceRelease.current.sourceSnapshotManifestSha256 !== snapshot.manifestDigest.slice("sha256:".length)
-      || selectedOccurrenceRelease.current.policyVersion !== snapshot.sanitization.policyVersion
-    )
-  ) {
-    throw new Error("selected occurrence release does not match the exact snapshot and policy");
-  }
+  const occurrenceBinding = await loadCompilerOccurrenceBinding({ snapshot });
+  const selectedOccurrenceRelease = occurrenceBinding.release;
   const selectedOccurrenceState = occurrenceStateIndex(selectedOccurrenceRelease.current);
   await rm(PUBLIC_ROOT, { recursive: true, force: true });
   await rm(RECORDS_PATH, { force: true });
@@ -1101,6 +1172,12 @@ async function main() {
     .digest("hex");
   const discoveredGraphs = records.flatMap((record) => record.grafana);
   const discoveredCurrentMedia = records.flatMap((record) => record.currentMedia);
+  const discoveryOccurrenceManifest = staticOccurrenceManifest({
+    snapshotId: snapshot.snapshotId,
+    discoveredGraphs,
+    discoveredCurrentMedia,
+  });
+  verifyCompilerOccurrenceDiscovery(occurrenceBinding, discoveryOccurrenceManifest);
   const occurrenceManifest = staticOccurrenceManifest({
     snapshotId: snapshot.snapshotId,
     selectedManifestSha256: selectedOccurrenceRelease.selection?.current.manifestSha256 ?? null,
@@ -1108,6 +1185,7 @@ async function main() {
     discoveredCurrentMedia,
     selectedManifest: selectedOccurrenceRelease.current,
   });
+  verifyCompleteSelectedOccurrenceEvidence(selectedOccurrenceRelease, occurrenceManifest);
   const discoveredGraphIds = new Set(discoveredGraphs.map((occurrence) => occurrence.occurrenceId));
   const discoveredMediaIds = new Set(discoveredCurrentMedia.map((occurrence) => occurrence.occurrenceId));
   const selectedBuildOccurrences = selectedOccurrenceRelease.current
@@ -1150,7 +1228,9 @@ async function main() {
     ).length,
     unavailableReferenceCount: records.reduce((count, record) => count + record.unavailable.length, 0),
     currentMediaOccurrenceCount: discoveredCurrentMedia.length,
-    selectedOccurrenceManifestSha256: selectedOccurrenceRelease.selection?.current.manifestSha256 ?? null,
+    selectedOccurrenceManifestSha256: selectedOccurrenceRelease.selection?.current.manifestSha256
+      ? `sha256:${selectedOccurrenceRelease.selection.current.manifestSha256}`
+      : null,
     occurrenceManifestDigest: `sha256:${occurrenceManifestDigest}`,
     materializedOccurrenceBlobCount,
     routeDigest: `sha256:${routeDigest}`,
@@ -1188,6 +1268,7 @@ export {
   cameraSnapshotAsset,
   folderRecords,
   imageDimensions,
+  loadCompilerOccurrenceBinding,
   main,
   normalizeRoute,
   renderMarkdown,
@@ -1195,5 +1276,7 @@ export {
   socialImagePath,
   splitFrontmatter,
   tagRecords,
+  verifyCompilerOccurrenceDiscovery,
+  verifyCompleteSelectedOccurrenceEvidence,
   verifyCompatAssets,
 };
