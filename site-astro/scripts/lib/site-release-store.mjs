@@ -613,6 +613,12 @@ export class S3SiteReleaseStore extends SiteReleaseStore {
   }
 
   async publishImmutable(key, bytes, maximumBytes, collisionMessage, contentType) {
+    if (!Number.isSafeInteger(maximumBytes) || maximumBytes < 1) {
+      throw new Error("immutable site release object byte limit is invalid");
+    }
+    if (!Buffer.isBuffer(bytes) || bytes.length < 1 || bytes.length > maximumBytes) {
+      throw new Error("immutable site release object is outside its byte limit");
+    }
     const published = await this.objects.putIfAbsent(key, bytes, { contentType });
     if (published.written) return;
     const existing = await this.objects.read(key, { maximumBytes, label: "immutable site release object" });

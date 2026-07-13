@@ -285,6 +285,31 @@ test("S3 release adapter creates immutable blobs and manifests and detects diffe
     );
 });
 
+test("immutable writes reject invalid body bounds before issuing a client command", async () => {
+    const client = new FakeS3Client();
+    const store = await new S3SiteReleaseStore(LOCATION, {
+        client,
+    }).initialize();
+    for (const [bytes, maximumBytes] of [
+        [Buffer.from("bounded"), 0],
+        [Buffer.from("bounded"), 1.5],
+        [Buffer.alloc(0), 1],
+        [Buffer.from("oversized"), 4],
+    ]) {
+        await assert.rejects(
+            store.publishImmutable(
+                "releases/sha256/test.json",
+                bytes,
+                maximumBytes,
+                "collision",
+                "application/json",
+            ),
+            /byte limit/,
+        );
+    }
+    assert.equal(client.commands.length, 0);
+});
+
 test("S3 selection updates use entity-tag compare-and-swap and reject stale and racing writers", async () => {
     const first = selection();
     const initialClient = new FakeS3Client();
@@ -404,6 +429,39 @@ test("S3 release listing consumes continuation pages and bounds membership", asy
     await assert.rejects(
         store.listReleaseDigests(),
         /manifest membership is invalid/,
+    );
+
+    const invalidKeyObjects = await new S3ObjectStore({
+        bucket: BUCKET,
+        prefix: PREFIX,
+        client: {
+            send: async () => ({
+                Contents: [
+                    { Key: `${PREFIX}/releases/sha256/not canonical.json` },
+                ],
+                IsTruncated: false,
+            }),
+        },
+    }).initialize();
+    await assert.rejects(
+        invalidKeyObjects.list("releases/sha256/"),
+        /listing membership is invalid/,
+    );
+
+    const oversizedTokenObjects = await new S3ObjectStore({
+        bucket: BUCKET,
+        prefix: PREFIX,
+        client: {
+            send: async () => ({
+                Contents: [],
+                IsTruncated: true,
+                NextContinuationToken: "x".repeat(4097),
+            }),
+        },
+    }).initialize();
+    await assert.rejects(
+        oversizedTokenObjects.list("releases/sha256/"),
+        /listing continuation is invalid/,
     );
 });
 

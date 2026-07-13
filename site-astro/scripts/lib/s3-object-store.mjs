@@ -14,6 +14,7 @@ const KEY_SEGMENT_RE = /^[A-Za-z0-9](?:[A-Za-z0-9._=-]{0,254})$/u;
 const ETAG_RE = /^"[^"\\\u0000-\u001f\u007f]{1,512}"$/u;
 const MAX_KEY_BYTES = 1024;
 const MAX_LIST_PAGES = 100;
+const MAX_CONTINUATION_TOKEN_BYTES = 4096;
 
 function validBucket(bucket) {
     return (
@@ -318,8 +319,16 @@ export class S3ObjectStore {
                 ) {
                     throw new Error("S3 object listing membership is invalid");
                 }
+                const relative = entry.Key.slice(`${this.prefix}/`.length);
+                try {
+                    validateRelativeObjectKey(relative);
+                } catch {
+                    throw new Error("S3 object listing membership is invalid");
+                }
+                if (Buffer.byteLength(entry.Key) > MAX_KEY_BYTES)
+                    throw new Error("S3 object listing membership is invalid");
                 seenKeys.add(entry.Key);
-                keys.push(entry.Key.slice(`${this.prefix}/`.length));
+                keys.push(relative);
                 if (keys.length > maximumObjects)
                     throw new Error(
                         "S3 object listing exceeds its membership limit",
@@ -338,6 +347,7 @@ export class S3ObjectStore {
                 typeof token !== "string" ||
                 token.length === 0 ||
                 CONTROL_RE.test(token) ||
+                Buffer.byteLength(token) > MAX_CONTINUATION_TOKEN_BYTES ||
                 seenTokens.has(token)
             ) {
                 throw new Error("S3 object listing continuation is invalid");
