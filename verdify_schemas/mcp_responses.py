@@ -49,6 +49,30 @@ class ClimateSnapshot(BaseModel):
     mode: str | None = None
 
 
+# ── ADR-0004 composite outcome score — shared wire contract (#388) ──────────
+# Canonical property names for the composite outcome score and its component
+# sub-scores (ADR-0004 §5: grade on outcomes — time-in-corridor × DLI-achieved
+# × DIF-delivered × wet/dry-completion − (energy + water + cycling) — not
+# target-distance). This frozenset is THE binding between:
+#   - the ScorecardResponse fields below (the MCP `scorecard()` emitter is a
+#     pass-through of this model, so these are also the wire keys),
+#   - the #371 DB function / daily_summary column names, and
+#   - the #365 planner reader.
+# Rename any side without the others and the drift guards fail loud
+# (tests/test_mcp_responses.py + tests/test_drift_guards.py) instead of the
+# planner reward silently going NULL.
+OUTCOME_COMPOSITE_METRICS: frozenset[str] = frozenset(
+    {
+        "outcome_score_composite",
+        "outcome_time_in_band",
+        "outcome_dli_grade",
+        "outcome_dif_grade",
+        "outcome_wet_dry_completion",
+        "outcome_cost_cycling_penalty",
+    }
+)
+
+
 def _scorecard_value_to_float(value: Any) -> float | None:
     """Normalize asyncpg Decimal / str / None into float | None for scorecard metrics."""
     if value is None:
@@ -96,6 +120,21 @@ class ScorecardResponse(BaseModel):
     compliance_v2_unachievable_frac: float | None = None
     graded_temp_compliance_pct: float | None = None
     graded_vpd_compliance_pct: float | None = None
+
+    # ── ADR-0004 composite outcome score (schema-first, #388) ────────────
+    # Grade on outcomes, not target-distance. Modelled BEFORE the #371 DB
+    # function emits them (the migration-147-header / G8 pattern) so the
+    # extra='forbid' contract cannot 500 the public /api/v1/scorecard or the
+    # MCP scorecard() tool when the metrics appear. All Optional — they read
+    # as null until #371 populates them; the #365 planner consumer must treat
+    # null as "composite not yet computed", never as a zero score. Names are
+    # pinned by OUTCOME_COMPOSITE_METRICS above (no wire aliases, ever).
+    outcome_score_composite: float | None = None
+    outcome_time_in_band: float | None = None
+    outcome_dli_grade: float | None = None
+    outcome_dif_grade: float | None = None
+    outcome_wet_dry_completion: float | None = None
+    outcome_cost_cycling_penalty: float | None = None
 
     # ── Stress hours (four independent categories; overlap allowed so
     #    total_stress_h can exceed 24h)
