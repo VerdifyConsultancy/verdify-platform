@@ -13,7 +13,7 @@ images:
   # release; changing it requires its own reviewed exact-source pin.
   - name: registry.vallery.net/verdifyconsultancy/verdify-lab-astro
     newName: registry.vallery.net/verdifyconsultancy/verdify-lab-astro
-    digest: sha256:ee36941f20028fcfe06f12bf253e7139c00e3d5de1949eb8b12bb1d4ebe60b99
+    digest: sha256:814eafff19c748c7a87e2b617d9eff8738dd13814a24c193f8768b63ebf12fff
   # These exact-source runtime images remain dormant under the replicas-zero
   # patch. A separate reviewed activation must add the store contract and raise
   # replicas; digest presence alone is not rollout authority.
