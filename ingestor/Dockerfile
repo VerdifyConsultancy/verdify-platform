@@ -79,11 +79,15 @@ COPY verdify_schemas/ /app/verdify_schemas/
 # its imports resolve at this in-container location.
 COPY scripts/ /app/scripts/
 
-# k3s cleanup (#339/#210): the Iris planner playbook moved off the decommissioned
-# iris-VM mount (/mnt/agents). Package the canonical repo copy into the image so
-# iris_planner.PLANNER_PLAYBOOK_PATH resolves /app/docs/planner/greenhouse-playbook.md
-# at runtime instead of silently degrading without tuning guidance.
-COPY docs/planner/greenhouse-playbook.md /app/docs/planner/greenhouse-playbook.md
+# k3s cleanup (#339/#210 + #43/#400): docs/ is runtime for TWO consumers now.
+# (1) iris_planner.PLANNER_PLAYBOOK_PATH reads /app/docs/planner/greenhouse-playbook.md
+# (moved off the decommissioned iris-VM /mnt/agents mount). (2) The daily
+# site_content_refresh task (ingestor/tasks/ha.py) walks the populate-site-content
+# SITE_DOC_ROOTS — repointed to the in-repo docs tree after the iris-VM vault
+# mount (/mnt/iris/verdify-vault/website) died; without docs/ in the image the
+# RAG corpus walk touches 0 rows and site_content rots stale (#43). The tree is
+# ~2 MB of Markdown; .dockerignore re-includes it (kaniko-safe pattern).
+COPY docs/ /app/docs/
 
 # slack.yaml is the NON-SECRET Slack config (channel IDs + credential FILE
 # PATHS, never tokens). slack_config.DEFAULT_CONFIG_PATH resolves it next to

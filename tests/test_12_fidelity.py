@@ -2043,11 +2043,14 @@ def test_firmware_misters_have_no_standalone_zone_stress_path():
     assert "&& (humidity_demand || any_zone_stressed)" not in controls
 
 
-def test_site_content_populator_indexes_public_website_markdown():
+def test_site_content_populator_corpus_roots_are_post_vm_decommission():
+    """#43/#400: the RAG corpus source of truth must never point at the dead
+    iris-VM vault mount again. The always-live root is the in-repo docs tree
+    (packaged into the ingestor image); a website corpus is opt-in via env."""
     script = Path("scripts/populate-site-content.py").read_text()
-    assert 'WEBSITE_ROOT = Path("/mnt/iris/verdify-vault/website")' in script
-    assert "(WEBSITE_ROOT, WEBSITE_ROOT.parent)" in script
-    assert "Walks /mnt/iris/verdify-vault/website/**/*.md" in script
+    assert "/mnt/iris" not in script  # grep proof, per the #400 acceptance
+    assert '(REPO_ROOT / "docs", REPO_ROOT),' in script
+    assert 'WEBSITE_ROOT_ENV = "VERDIFY_SITE_WEBSITE_ROOT"' in script
 
 
 def test_embedding_chunker_hard_splits_oversized_blocks():
