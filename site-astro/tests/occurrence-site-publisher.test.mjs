@@ -1283,7 +1283,7 @@ test("143+2 fake-S3 publish retries across a downstream outage and two caches co
     );
 });
 
-test("selected occurrence CAS restores a missing checkpoint after an unavailable post-read", async (context) => {
+test("selected occurrence CAS restores a missing checkpoint without the candidate workspace", async (context) => {
     const value = await fixture(context);
     const event = eventFor(value, null);
     const outage = { armed: true, postReadUnavailable: false };
@@ -1321,6 +1321,8 @@ test("selected occurrence CAS restores a missing checkpoint after an unavailable
     const selected = await loadSelectedOccurrenceRelease(value.occurrenceStore);
     assert.equal(selected.current.occurrences.graphs.length, 143);
     assert.equal(selected.current.occurrences.currentMedia.length, 2);
+    await rm(value.candidateRoot, { recursive: true, force: true });
+    await assert.rejects(readdir(value.candidateRoot), { code: "ENOENT" });
 
     const retryWorkspace = path.join(
         value.root,

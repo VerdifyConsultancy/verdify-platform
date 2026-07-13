@@ -12,8 +12,8 @@ import path from "node:path";
 import { executeOccurrenceExportBatch } from "./occurrence-export-caller.mjs";
 import { createOccurrenceExportStoreOperations } from "./occurrence-export-operation-adapter.mjs";
 import {
-    inspectOccurrenceExportCandidates,
     occurrenceExportPolicySha256,
+    validateOccurrenceExportBatch,
     validatePolicyManifestBinding,
 } from "./occurrence-export-contract.mjs";
 import {
@@ -394,6 +394,62 @@ function deterministicOccurrenceEventId(prefix, value) {
     return `evt_${prefix}_${sha256(canonicalBytes(value)).slice(0, 32)}`;
 }
 
+function recoverableCandidate({
+    record,
+    kind,
+    bounds,
+    exportedAt,
+    verifiedAt,
+}) {
+    if (record.candidate === null) return null;
+    const match = new RegExp(
+        `^${kind}/${record.occurrenceId}/([0-9a-f]{64})\\.png$`,
+        "u",
+    ).exec(record.candidate.relativePath);
+    if (match === null) {
+        throw new Error(
+            `${kind} recovery candidate path is not content-addressed`,
+        );
+    }
+    if (
+        Date.parse(record.candidate.capturedAt) > Date.parse(exportedAt) ||
+        Date.parse(verifiedAt) - Date.parse(record.candidate.capturedAt) >
+            bounds.maxCandidateAgeSeconds * 1000
+    ) {
+        throw new Error(`${kind} recovery candidate time is invalid`);
+    }
+    return {
+        relativePath: record.candidate.relativePath,
+        expectedSha256: match[1],
+        verifiedAt,
+        capturedAt: record.candidate.capturedAt,
+        ...(kind === "current-media"
+            ? {
+                  requestProvenanceSha256:
+                      record.candidate.requestProvenanceSha256,
+              }
+            : {}),
+    };
+}
+
+function fallbackMatchesCandidate(fallback, candidate, bounds, policyVersion) {
+    return (
+        fallback !== null &&
+        fallback.publicPath ===
+            `/evidence/blobs/sha256/${candidate.expectedSha256}.png` &&
+        fallback.sha256 === candidate.expectedSha256 &&
+        fallback.mediaType === "image/png" &&
+        fallback.bytes <= bounds.maxBytes &&
+        fallback.width >= bounds.minWidth &&
+        fallback.width <= bounds.maxWidth &&
+        fallback.height >= bounds.minHeight &&
+        fallback.height <= bounds.maxHeight &&
+        fallback.capturedAt === candidate.capturedAt &&
+        fallback.verifiedAt === candidate.verifiedAt &&
+        fallback.policyVersion === policyVersion
+    );
+}
+
 function selectedOccurrenceProof({ producerResult, selected, cameraBindings }) {
     return {
         contract: "verdify.lab-occurrence-export-selected-proof",
@@ -439,7 +495,6 @@ async function recoverSelectedOccurrenceProof({
     manifest,
     manifestSha256,
     producerResult,
-    candidateRoot,
     processingAt,
 }) {
     const selected = await loadSelectedOccurrenceRelease(
@@ -453,14 +508,13 @@ async function recoverSelectedOccurrenceProof({
         manifest,
         manifestSha256,
     );
-    const inspected = await inspectOccurrenceExportCandidates({
-        policy,
+    const feedFreshness = validateOccurrenceExportBatch(
         batch,
-        sourceRoot: candidateRoot,
+        policy,
         processingAt,
-    });
+    );
     if (
-        inspected.feedFreshness.status === "alert" ||
+        feedFreshness.status === "alert" ||
         selected.selection.current.manifestSha256 !==
             sha256(canonicalBytes(selected.current)) ||
         selected.selection.current.eventId !== selected.current.event.eventId ||
@@ -468,8 +522,7 @@ async function recoverSelectedOccurrenceProof({
         selected.current.policySha256 !== producerResult.policySha256 ||
         selected.current.sourceSnapshotManifestSha256 !==
             policy.sourceSnapshotManifestSha256 ||
-        selected.current.publishedAt !==
-            inspected.feedFreshness.effectiveProcessingAt ||
+        selected.current.publishedAt !== feedFreshness.effectiveProcessingAt ||
         selected.current.occurrences.graphs.length !== 143 ||
         selected.current.occurrences.currentMedia.length !== 2
     ) {
@@ -479,11 +532,24 @@ async function recoverSelectedOccurrenceProof({
     const graphBatchById = new Map(
         batch.graphs.map((record) => [record.occurrenceId, record]),
     );
+    const priorGraphById = new Map(
+        (selected.previous?.occurrences.graphs ?? []).map((record) => [
+            record.occurrenceId,
+            record,
+        ]),
+    );
     for (let index = 0; index < discovered.graphs.length; index += 1) {
         const expected = discovered.graphs[index];
         const actual = selected.current.occurrences.graphs[index];
         const batchRecord = graphBatchById.get(expected.occurrenceId);
-        const candidate = inspected.graphCandidates.get(expected.occurrenceId);
+        const candidate = recoverableCandidate({
+            record: batchRecord,
+            kind: "graphs",
+            bounds: policy.imagePolicy.graphs,
+            exportedAt: batch.exportedAt,
+            verifiedAt: feedFreshness.effectiveProcessingAt,
+        });
+        const prior = priorGraphById.get(expected.occurrenceId) ?? null;
         if (
             actual?.occurrenceId !== expected.occurrenceId ||
             batchRecord?.occurrenceId !== expected.occurrenceId ||
@@ -498,12 +564,19 @@ async function recoverSelectedOccurrenceProof({
             actual.probeStatus !== batchRecord.probeStatus ||
             (candidate !== null &&
                 (actual.state !== "verified" ||
-                    actual.fallback?.sha256 !== candidate.expectedSha256 ||
-                    actual.fallback?.capturedAt !== candidate.capturedAt ||
-                    actual.fallback?.verifiedAt !== candidate.verifiedAt ||
-                    actual.fallback?.policyVersion !== policy.policyVersion)) ||
+                    !fallbackMatchesCandidate(
+                        actual.fallback,
+                        candidate,
+                        policy.imagePolicy.graphs,
+                        policy.policyVersion,
+                    ))) ||
             (candidate === null &&
-                !["retained-last-known-good", "missing"].includes(actual.state))
+                (prior?.fallback !== null && prior?.fallback !== undefined
+                    ? actual.state !== "retained-last-known-good" ||
+                      !canonicalBytes(actual.fallback).equals(
+                          canonicalBytes(prior.fallback),
+                      )
+                    : actual.state !== "missing" || actual.fallback !== null))
         ) {
             return null;
         }
@@ -517,9 +590,13 @@ async function recoverSelectedOccurrenceProof({
         const expected = discovered.currentMedia[index];
         const actual = selected.current.occurrences.currentMedia[index];
         const batchRecord = mediaBatchById.get(expected.occurrenceId);
-        const candidate = inspected.currentMediaCandidates.get(
-            expected.occurrenceId,
-        );
+        const candidate = recoverableCandidate({
+            record: batchRecord,
+            kind: "current-media",
+            bounds: policy.imagePolicy.currentMedia,
+            exportedAt: batch.exportedAt,
+            verifiedAt: feedFreshness.effectiveProcessingAt,
+        });
         const selectedMedia = await loadSelectedCurrentMediaGeneration(
             operations.evidenceStore,
             expected.occurrenceId,
@@ -590,14 +667,14 @@ async function recoverSelectedOccurrenceProof({
                     canonicalBytes(expectedMediaEvent),
                 ) ||
                     selectedMedia.current.publishedAt !==
-                        inspected.feedFreshness.effectiveProcessingAt)) ||
+                        feedFreshness.effectiveProcessingAt)) ||
             (candidate !== null &&
-                (selectedMedia.current.fallback.sha256 !==
-                    candidate.expectedSha256 ||
-                    selectedMedia.current.fallback.capturedAt !==
-                        candidate.capturedAt ||
-                    selectedMedia.current.fallback.verifiedAt !==
-                        candidate.verifiedAt))
+                !fallbackMatchesCandidate(
+                    selectedMedia.current.fallback,
+                    candidate,
+                    policy.imagePolicy.currentMedia,
+                    policy.policyVersion,
+                ))
         ) {
             return null;
         }
@@ -629,7 +706,7 @@ async function recoverSelectedOccurrenceProof({
         reportingFeedSha256: producerResult.reportingFeedSha256,
         graphResultSha256: producerResult.graphResultSha256,
         cameraBindings,
-        publishedAt: inspected.feedFreshness.effectiveProcessingAt,
+        publishedAt: feedFreshness.effectiveProcessingAt,
     };
     const reconciliationSha256 = sha256(canonicalBytes(reconciliation));
     const expectedEvent = {
@@ -1382,7 +1459,6 @@ export async function processOccurrenceSitePublishEvent({
             manifest,
             manifestSha256,
             producerResult,
-            candidateRoot,
             processingAt: event.releasedAt,
         });
         if (recovered === null) {
@@ -1407,7 +1483,6 @@ export async function processOccurrenceSitePublishEvent({
                 manifest,
                 manifestSha256,
                 producerResult,
-                candidateRoot,
                 processingAt: event.releasedAt,
             });
             if (
