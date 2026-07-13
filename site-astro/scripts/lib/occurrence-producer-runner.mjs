@@ -317,6 +317,11 @@ async function captureCurrentMedia({
 }
 
 function assertTransportFreeResult(result, rawDatasourceIdentity) {
+  const hasRawDatasourceIdentity = (value) => (
+    typeof rawDatasourceIdentity === "string"
+    && rawDatasourceIdentity.length > 0
+    && value.includes(rawDatasourceIdentity)
+  );
   const visit = (value, key = "") => {
     if (/^(?:url|endpoint|authorization|cookie|secret|credential)$/iu.test(key)) {
       throw new Error("occurrence producer result contains a transport field");
@@ -325,7 +330,7 @@ function assertTransportFreeResult(result, rawDatasourceIdentity) {
       typeof value === "string"
       && (
         value.includes("://")
-        || value === rawDatasourceIdentity
+        || hasRawDatasourceIdentity(value)
         || /graphs\.verdify\.ai/iu.test(value)
       )
     ) throw new Error("occurrence producer result contains transport identity");
@@ -390,6 +395,11 @@ export async function runOccurrenceProducer({
     reportingDatasourceIdentitySha256: datasourceIdentitySha256,
   });
   const bindingProof = datasourceBindingProof(plan);
+  assertTransportFreeResult({
+    policyVersion: policySnapshot.policyVersion,
+    reportingFeed: reportingFeedSnapshot,
+    datasourceBindingProof: bindingProof,
+  }, reportingDatasourceIdentity);
 
   validateOutputRoot(outputRoot);
   if (typeof now !== "function" || typeof cameraTransport !== "function") {

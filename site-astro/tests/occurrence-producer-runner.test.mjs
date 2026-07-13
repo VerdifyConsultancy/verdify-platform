@@ -374,7 +374,7 @@ test("the selector reader is sampled once and later race input cannot rewrite va
   assert.equal(result.selectorPreconditionsSha256, digest(canonicalBytes(value.selectorPreconditions)));
 });
 
-test("blocked policy stops before the selector, clock, renderer, camera, or file dependency", async (context) => {
+test("policy and raw transport identity preflight stop before every injected dependency", async (context) => {
   const outputRoot = await workspace(context);
   const value = fixture();
   const calls = {
@@ -414,6 +414,66 @@ test("blocked policy stops before the selector, clock, renderer, camera, or file
     camera: 0,
     file: 0,
   });
+
+  const rawDatasourceIdentity = "reporting-datasource-secret";
+  const leakingFeeds = [
+    {
+      ...REPORTING_FEED,
+      sourceId: `operator-public-reporting-feed-${rawDatasourceIdentity}`,
+    },
+    {
+      ...REPORTING_FEED,
+      sourceWatermark: `wm_fixture_${rawDatasourceIdentity}_0001`,
+    },
+  ];
+  for (const reportingFeed of leakingFeeds) {
+    assert.match(reportingFeedEnvelopeSha256(reportingFeed), /^[0-9a-f]{64}$/u);
+    const dependencyCalls = {
+      selector: 0,
+      clock: 0,
+      renderer: 0,
+      camera: 0,
+      file: 0,
+    };
+    let result;
+    let caught;
+    try {
+      result = await runOccurrenceProducer(runnerInput(value, outputRoot, {
+        reportingFeed,
+        reportingDatasourceIdentity: rawDatasourceIdentity,
+        renderer: rendererContract(async () => {
+          dependencyCalls.renderer += 1;
+          return graphResponse(Buffer.from("unused"));
+        }),
+        cameraTransport: async () => {
+          dependencyCalls.camera += 1;
+        },
+        reader: selectorReader(async () => {
+          dependencyCalls.selector += 1;
+          return value.selectorPreconditions;
+        }),
+        now: () => {
+          dependencyCalls.clock += 1;
+          return RUN_AT;
+        },
+        fileOperations: {
+          mkdir: async () => { dependencyCalls.file += 1; },
+        },
+      }));
+    } catch (error) {
+      caught = error;
+    }
+    assert.equal(caught?.message, "occurrence producer result contains transport identity");
+    assert.equal(caught?.message.includes(rawDatasourceIdentity), false);
+    assert.equal(JSON.stringify(result ?? {}).includes(rawDatasourceIdentity), false);
+    assert.deepEqual(dependencyCalls, {
+      selector: 0,
+      clock: 0,
+      renderer: 0,
+      camera: 0,
+      file: 0,
+    });
+  }
 });
 
 test("runner source has no default request, environment, store, deployment, or activation binding", async () => {
