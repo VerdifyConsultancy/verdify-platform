@@ -603,6 +603,11 @@ function validateBatchFeed(feed) {
   instant(feed.sourceWatermarkAt, "reporting feed source watermark time");
 }
 
+export function reportingFeedEnvelopeSha256(feed) {
+  validateBatchFeed(feed);
+  return sha256(canonicalBytes(feed));
+}
+
 function validateCandidate(candidate, label, requestProvenanceSha256 = null) {
   const keys = label === "current-media"
     ? ["relativePath", "mediaType", "capturedAt", "requestProvenanceSha256"]
