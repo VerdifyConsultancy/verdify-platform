@@ -62,7 +62,7 @@ checksum on live stage.
 
 ### Project Tracking
 
-- Status: Ready
+- Status: Backlog
 - Priority: P1
 - Effort: L
 - Component: site-astro/search + CSP + current-media + contact
@@ -72,7 +72,7 @@ checksum on live stage.
 - Agent Lane: verdify-platform
 - Parent: #351
 - Related Issues/PRs: #308, #461, #466, #468
-- Dependencies: S1 satisfied; blocked by S3 current-media output and S7 live publication
+- Dependencies: S1 satisfied; close blocked by S3 current-media output and S7 live publication
 - Evidence: docs/plans/lab-astro-migration.md Phase 2; #351 acceptance evidence; scratch/lab-astro-final-t0.json and scratch/lab-astro-final-tplus10.json
 
 ### What
@@ -97,7 +97,10 @@ diagnostic-only unless separately approved.
 
 Run manifest, parity, and browser suites plus live stage acceptance. Test
 absent/stale/fresh camera states, CSP headers, Pagefind query execution,
-contact focus/labels/touch targets, and zero cross-origin camera requests.
+contact focus/labels/touch targets, the native POST action, and zero
+cross-origin camera/image requests. The contact form is a browser-submitted
+POST to `https://api.verdify.ai/api/v1/public/contact`; the static nginx runtime
+does not proxy or originate the request.
 
 ### Success
 
@@ -108,6 +111,9 @@ contact focus/labels/touch targets, and zero cross-origin camera requests.
   pending and zero public hotlinks.
 - Privacy exclusion policy from #308 remains enforced.
 - Contact semantic-interaction browser tests pass.
+- Contact retains `method="post"` and the exact approved API action; CSP
+  `form-action` permits that endpoint, and browser evidence confirms submission
+  is not redirected to the static Lab runtime.
 
 ## S3 — Secure graph and camera occurrence fallbacks
 
@@ -123,7 +129,10 @@ contact focus/labels/touch targets, and zero cross-origin camera requests.
 - Agent Lane: verdify-platform
 - Parent: #351
 - Related Issues/PRs: #308, #458, security/grafana-supported-images
-- Dependencies: no start blocker; final live proof requires S7; privacy policy #308; reporting credential by name only
+- Dependencies: no code-start blocker; final live proof requires S7; privacy policy #308; operator-owned read-only reporting feed and credential by name only
+- Human gate: Jason must approve standing up the reporting tier and issuing or
+  changing its scoped read credential or reporting feed; code/evidence must
+  reference only the Secret name/key, never its value
 - Evidence: docs/plans/lab-astro-migration.md Phase 4c; site-astro/scripts/lib/occurrence-release.mjs; Phase 2 reports showing 143 graph and 2 camera occurrences
 
 ### What
@@ -141,18 +150,25 @@ gap.
 ### How
 
 Use an isolated, anonymous-disabled Grafana reporting tier with a
-least-privilege read credential distinct from Track A. Allowlist dashboard,
-panel, and time-range targets; render bounded images; validate MIME,
-dimensions, and digest; publish content-addressed occurrence releases; retain
-last-known-good on failure; and apply the camera privacy allowlist before
-persistence.
+least-privilege read credential distinct from Track A. Its datasource is an
+operator-owned, one-way, read-only public reporting feed containing only the
+allowlisted time-series/materialized views required by the 143 graph targets;
+it does not reuse the Track A Grafana datasource UID, database role, controller
+credential, or any write-capable connection. The feed publishes a source
+watermark. Allowlist dashboard, panel, and time-range targets; render bounded
+images; validate MIME, dimensions, and digest; publish content-addressed
+occurrence releases; retain last-known-good on failure; and apply the camera
+privacy allowlist before persistence. Run the exporter in a dedicated context
+whose egress is limited to that reporting tier and the occurrence store; the
+deny-all static stage runtime remains credential-free.
 
 ### Test
 
 Exercise occurrence unit/rollback tests, adversarial URL/MIME/size inputs, CAS
 races, stale/failure recovery, network and credential boundaries, and real
-read-only endpoint rendering. Run live T0/T+10 reconciliation after S7
-integration.
+read-only endpoint rendering. Prove the one-way feed exposes no write/control
+surface and test source-watermark lag/failure. Run live T0/T+10 reconciliation
+after S7 integration.
 
 ### Success
 
@@ -163,9 +179,13 @@ integration.
   targets.
 - Anonymous access is disabled; reporting cannot mutate or use the Track A
   primary datasource.
+- The public reporting feed's p95 source-watermark lag is at most 15 minutes;
+  lag beyond 30 minutes alerts, retains LKG, and is never labelled fresh.
 - Failed exports retain last-known-good; age beyond the existing 30-minute
   graph threshold fires and later recovers.
 - No secret value appears in logs, releases, URLs, or evidence.
+- S3 stays open until the joint S3+S7 stage rollout serves and reconciles all
+  143 graph and two approved camera fallbacks at both T0 and T+10.
 
 ## S4 — Responsive media and keyboard-complete lightbox
 
@@ -284,7 +304,8 @@ contact routes.
 ### What
 
 Produce a strict, framework-neutral Quartz-versus-Astro comparison from the
-exact same immutable source snapshot.
+exact same immutable source snapshot, including routes, feeds, canonical URLs,
+and social metadata.
 
 ### Why
 
@@ -296,14 +317,16 @@ content preservation.
 
 Recreate the SVG-title fix, add at least eight targeted regression tests, build
 both generators from one verified snapshot digest, compare without provisional
-mode, and restore or explicitly disposition every unavailable historical
-reference.
+mode, validate RSS/XML and canonical/Open Graph/Twitter metadata, and restore or
+explicitly disposition every unavailable historical reference.
 
 ### Test
 
 Run `npm run test:parity`, full `npm test`, generate both manifests with
 recorded snapshot hashes, run strict `parity:compare`, then `make ci` and the
-in-cluster build.
+in-cluster build. Parse every discovered RSS/feed route, compare its entry set
+and absolute canonical URLs, and verify live-stage canonical, Open Graph, and
+Twitter-card metadata plus referenced social images.
 
 ### Success
 
@@ -311,6 +334,11 @@ in-cluster build.
 - 240/240 canonical routes, 84/84 aliases, and the full same-origin reference
   graph reconcile.
 - Exact unexplained semantic findings = 0; parser false positives = 0.
+- Every same-snapshot RSS/feed route is valid XML and has the expected entry
+  set, timestamps, and absolute canonical URLs; live-stage feed URLs return 200.
+- Canonical URL, Open Graph title/type/url/image, and Twitter-card fields match
+  the same-snapshot contract on every applicable route; referenced social
+  images return 200 and no source social surface is silently dropped.
 - All nine unavailable references are individually restored or explicitly
   reviewed/dispositioned—none silently omitted.
 - Final evidence does not use `--allow-provisional`.
@@ -330,6 +358,9 @@ in-cluster build.
 - Parent: #351
 - Related Issues/PRs: #43, #219, coordinator/lab-release-runtime@d91737d
 - Dependencies: no Phase 4a start blocker; S3 exporter artifacts for full-path proof; endpoint/credential names only
+- Human gate: Jason must approve issuing, scoping, changing, or rotating the S3
+  credential and any real-endpoint/release-agent activation; code and inert
+  Secret name/key references may land without that activation
 - Evidence: docs/plans/lab-astro-migration.md Phase 4a/4b; docs/site-publishing-pipeline.md; site-astro/scripts/lib/site-release-store.mjs
 
 ### What
@@ -349,20 +380,27 @@ Cherry-pick only `d91737d`; retain init hydration, sidecar reconciliation,
 atomic nginx current/tree, readiness, and metrics; construct the CLI `s3://`
 adapter; wire occurrence callers; prove conditional writes against the real
 endpoint; and add a release-agent/event producer. Do not retire the production
-Quartz publisher here.
+Quartz publisher here. Keep real-endpoint probes and the release agent inert
+until the issue-local credential/activation gate is recorded.
 
 ### Test
 
 Run the existing 61-test runtime baseline plus full `npm test` and `make ci`;
 prove concurrent CAS behavior, restart/hydration, two-pod convergence,
 partial-release rejection, rollback, two-generation cache retention, and a
-credential-safe real-endpoint probe.
+credential-safe real-endpoint probe. Exercise CAS-aware object GC and verify
+storage/request/egress accounting without deleting the active or rollback
+generation.
 
 ### Success
 
 - Three consecutive content events reach stage in at most 10 minutes each.
 - Every release and occurrence object is immutable and digest-addressed;
   pointer changes use conditional writes.
+- CAS-aware GC retains the current and rollback generation, removes only
+  unreferenced objects after the documented recovery window, and exports bytes
+  written/retained/deleted plus request/egress metrics. The observed daily
+  footprint and alerting budget are recorded before closure.
 - Both stage pods converge on the exact release digest after restart; readiness
   stays false during incomplete hydration.
 - No partial generation is served; rollback to the previous generation
@@ -370,6 +408,8 @@ credential-safe real-endpoint probe.
 - Frozen vendored content is no longer the live-stage publishing source.
 - Secrets are referenced by name/key only; production Quartz remains untouched
   until S9.
+- Credential provisioning/change and real-endpoint or release-agent activation
+  have Jason's recorded approval; source-only work never reads a Secret value.
 
 ## S8 — CI quality gates and durable stage acceptance
 
