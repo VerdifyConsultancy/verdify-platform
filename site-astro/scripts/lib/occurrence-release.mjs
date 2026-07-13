@@ -1371,6 +1371,18 @@ async function verifyReleaseBlobs(storeRoot, manifest, { verifyBlobBytes = true 
   }
 }
 
+export async function loadOccurrenceReleaseManifest(storeRoot, manifestSha256) {
+  const store = await occurrenceStore(storeRoot);
+  const value = await store.readAggregateManifest(manifestSha256);
+  const manifest = validateOccurrenceManifest(
+    value.document,
+    value.bytes,
+    manifestSha256,
+  );
+  await verifyReleaseBlobs(store, manifest);
+  return { manifestSha256, manifest };
+}
+
 export async function loadSelectedOccurrenceRelease(storeRoot) {
   const store = await occurrenceStore(storeRoot);
   const selected = await store.readAggregateSelection();
@@ -1652,6 +1664,22 @@ export async function rollbackOccurrenceRelease({ storeRoot, expectedSelectionSh
 export async function loadSelectedCurrentMediaGeneration(storeRoot, occurrenceIdValue) {
   const store = await occurrenceStore(storeRoot);
   return selectedCurrentMediaPointerFromStore(store, occurrenceIdValue);
+}
+
+export async function loadCurrentMediaGeneration(storeRoot, occurrenceIdValue, generationSha256) {
+  const store = await occurrenceStore(storeRoot);
+  const value = await store.readCurrentMediaGeneration(
+    occurrenceIdValue,
+    generationSha256,
+  );
+  const generation = await validateCurrentMediaGeneration(
+    value.document,
+    value.bytes,
+    occurrenceIdValue,
+    generationSha256,
+    store,
+  );
+  return { generationSha256, generation };
 }
 
 export async function rollbackCurrentMediaGeneration({
