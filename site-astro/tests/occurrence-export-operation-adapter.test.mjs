@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import {
+    mkdir,
+    mkdtemp,
+    readFile,
+    readdir,
+    rm,
+    unlink,
+    writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -60,7 +68,7 @@ function chunk(type, data) {
     return result;
 }
 
-function png() {
+function png(rgba = [24, 96, 48, 255]) {
     const width = 320;
     const height = 180;
     const header = Buffer.alloc(13);
@@ -70,7 +78,7 @@ function png() {
     header[9] = 6;
     const row = Buffer.alloc(1 + width * 4);
     for (let column = 0; column < width; column += 1) {
-        Buffer.from([24, 96, 48, 255]).copy(row, 1 + column * 4);
+        Buffer.from(rgba).copy(row, 1 + column * 4);
     }
     return Buffer.concat([
         Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
@@ -349,6 +357,40 @@ function callerInput(value, operations) {
     };
 }
 
+async function nextCameraBatch(value, store) {
+    const batch = structuredClone(value.batch);
+    batch.batchId = "batch_operation_adapter_offline_0002";
+    batch.reportingFeed.sourceWatermark = "wm_operation_adapter_offline_0002";
+    batch.reportingFeed.sourceWatermarkAt = "2026-07-13T12:00:30Z";
+    batch.exportedAt = "2026-07-13T12:10:15Z";
+    batch.expectedSelectionSha256 = (
+        await store.readAggregateSelection()
+    ).sha256;
+    const image = png([96, 24, 48, 255]);
+    const imageSha256 = sha256(image);
+    for (const record of batch.currentMedia) {
+        record.expectedSelectionSha256 = (
+            await store.readCurrentMediaSelection(record.occurrenceId)
+        ).sha256;
+        record.candidate = {
+            relativePath: `current-media/${record.occurrenceId}/${imageSha256}.png`,
+            mediaType: "image/png",
+            capturedAt: "2026-07-13T12:06:00Z",
+            requestProvenanceSha256: record.requestProvenanceSha256,
+        };
+        await writeFile(
+            path.join(
+                value.sourceRoot,
+                "current-media",
+                record.occurrenceId,
+                `${imageSha256}.png`,
+            ),
+            image,
+        );
+    }
+    return { batch, graphResult: graphResultFor(batch), imageSha256 };
+}
+
 test("concrete local operations select the exact 143+2 aggregate", async (context) => {
     const value = await fixture(context);
     const store = new LocalOccurrenceReleaseStore(value.storeRoot);
@@ -436,6 +478,99 @@ test("committed camera response failures are resolved by exact selector post-rea
     assert.equal(result.status, "selected");
     assert.ok(result.media.every(({ status }) => status === "selected"));
 });
+
+for (const mutation of ["missing", "altered"]) {
+    test(`media-intent replay preserves the selected LKG when its new PNG is ${mutation}`, async (context) => {
+        const value = await fixture(context);
+        const store = new LocalOccurrenceReleaseStore(value.storeRoot);
+        const operations = await createOccurrenceExportStoreOperations({
+            store,
+            sourceRoot: value.sourceRoot,
+        });
+        const initial = await executeOccurrenceExportBatch(
+            callerInput(value, operations),
+        );
+        assert.equal(initial.status, "selected");
+        const occurrenceId = value.currentMedia[0].occurrenceId;
+        const lkgCameraSelection =
+            await store.readCurrentMediaSelection(occurrenceId);
+        const lkgAggregateSelection = await store.readAggregateSelection();
+        const next = await nextCameraBatch(value, store);
+        const writeCurrentMediaSelection =
+            store.writeCurrentMediaSelection.bind(store);
+        let interruptFirstSelection = true;
+        store.writeCurrentMediaSelection = async (...args) => {
+            if (interruptFirstSelection) {
+                interruptFirstSelection = false;
+                throw new Error("injected interruption before camera selector");
+            }
+            return writeCurrentMediaSelection(...args);
+        };
+
+        const first = await executeOccurrenceExportBatch({
+            ...callerInput(value, operations),
+            batch: next.batch,
+            graphResult: next.graphResult,
+        });
+        assert.equal(first.status, "failed");
+        assert.equal(first.failure.occurrenceId, occurrenceId);
+        assert.equal(
+            (await store.readCurrentMediaSelection(occurrenceId)).sha256,
+            lkgCameraSelection.sha256,
+        );
+        const eventDirectory = path.join(
+            value.storeRoot,
+            "occurrences",
+            occurrenceId,
+            "events",
+            "sha256",
+        );
+        const eventFiles = await readdir(eventDirectory);
+        assert.equal(eventFiles.length, 2);
+        const intents = await Promise.all(
+            eventFiles.map(async (name) =>
+                JSON.parse(
+                    await readFile(path.join(eventDirectory, name), "utf8"),
+                ),
+            ),
+        );
+        const intent = intents.find(
+            ({ blobSha256 }) => blobSha256 === next.imageSha256,
+        );
+        assert.ok(intent);
+        const generation = await store.readCurrentMediaGeneration(
+            occurrenceId,
+            intent.generationSha256,
+        );
+        assert.equal(generation.document.fallback.sha256, next.imageSha256);
+        assert.equal(intent.blobSha256, next.imageSha256);
+
+        const blobPath = path.join(
+            value.storeRoot,
+            "blobs",
+            "sha256",
+            `${next.imageSha256}.png`,
+        );
+        if (mutation === "missing") await unlink(blobPath);
+        else await writeFile(blobPath, png([48, 96, 24, 255]));
+
+        const retried = await executeOccurrenceExportBatch({
+            ...callerInput(value, operations),
+            batch: next.batch,
+            graphResult: next.graphResult,
+        });
+        assert.equal(retried.status, "failed");
+        assert.equal(retried.failure.occurrenceId, occurrenceId);
+        assert.equal(
+            (await store.readCurrentMediaSelection(occurrenceId)).sha256,
+            lkgCameraSelection.sha256,
+        );
+        assert.equal(
+            (await store.readAggregateSelection()).sha256,
+            lkgAggregateSelection.sha256,
+        );
+    });
+}
 
 test("camera preconditions stop aggregate CAS before changing its selector", async (context) => {
     const value = await fixture(context);

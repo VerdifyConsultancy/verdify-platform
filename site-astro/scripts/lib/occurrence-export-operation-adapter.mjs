@@ -3,7 +3,10 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { OccurrenceReleaseStore } from "./occurrence-release-store.mjs";
-import { evaluateEventFreshness } from "./occurrence-release.mjs";
+import {
+    evaluateEventFreshness,
+    loadCurrentMediaGeneration,
+} from "./occurrence-release.mjs";
 import { validatePngFile } from "./png-validation.mjs";
 
 const SHA256_RE = /^[0-9a-f]{64}$/u;
@@ -153,6 +156,34 @@ function validateStoredMediaIntent(value, request, storeIdentitySha256) {
     return value.document;
 }
 
+function validateReplayGeneration(value, request, intent) {
+    const generation = value?.generation;
+    if (
+        value?.generationSha256 !== intent.generationSha256 ||
+        generation?.occurrenceId !== request.occurrence.occurrenceId ||
+        generation.sourceProvenanceSha256 !==
+            request.occurrence.sourceProvenanceSha256 ||
+        generation.policyVersion !== request.policyVersion ||
+        generation.policySha256 !== request.policySha256 ||
+        generation.requestProvenanceSha256 !==
+            request.requestProvenanceSha256 ||
+        !canonicalBytes(generation.event).equals(
+            canonicalBytes(request.event),
+        ) ||
+        generation.publishedAt !== request.publishedAt ||
+        generation.fallback.sha256 !== intent.blobSha256 ||
+        generation.fallback.sha256 !== request.candidate.expectedSha256 ||
+        generation.fallback.capturedAt !== request.candidate.capturedAt ||
+        generation.fallback.verifiedAt !== request.candidate.verifiedAt ||
+        generation.fallback.policyVersion !== request.policyVersion
+    ) {
+        throw new Error(
+            "current media replay generation does not match the exact request and intent",
+        );
+    }
+    return generation;
+}
+
 function mediaSelection(request, selected, generationSha256, blobSha256) {
     return {
         contract: "verdify.lab-current-media-selection",
@@ -217,10 +248,12 @@ async function publishCurrentMedia({ store, root, readCandidate }, request) {
             request,
             store.identity.sha256,
         );
-        await store.readCurrentMediaGeneration(
+        const generation = await loadCurrentMediaGeneration(
+            store,
             occurrenceId,
             intent.generationSha256,
         );
+        validateReplayGeneration(generation, request, intent);
         const selected = await store.readCurrentMediaSelection(occurrenceId);
         if (
             selected?.document.current.generationSha256 ===
