@@ -28,6 +28,7 @@ from pathlib import Path
 import asyncpg
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from verdify_public.output_policy import is_public_crop, is_public_crop_record  # noqa: E402
 
 DEFAULT_OUT = Path("/mnt/iris/verdify-vault/website/greenhouse/crops")
 DEFAULT_VISION_OUT = Path("/mnt/iris/verdify-vault/website/static/vision")
@@ -44,11 +45,6 @@ def _database_dsn() -> str:
 
 ACTIVE_CONTROL_SLUGS = {"canna", "lettuce", "orchid", "peppers", "strawberries"}
 
-# Crop slugs that are load-bearing for control (kept in crop_catalog / band anchors)
-# but MUST NOT be rendered to the public lab.verdify.ai site. The DB rows stay; the
-# renderer simply never emits a page for these (Jason 2026-06-20, #308 — cannabis
-# planting is not for public exposure). Mirrored in render-zone-pages.py.
-PUBLISH_EXCLUDE_SLUGS = {"cannabis"}
 STALE_SEEDLING_AFTER_DAYS = 35
 CROP_TAXONOMY = {
     "basil": (
@@ -393,6 +389,8 @@ async def render_crop(
     if entry is None:
         return None
     d = dict(entry)
+    if not is_public_crop_record(slug, d.get("common_name"), occupied=True):
+        return None
     # JSONB
     sp = d.get("stage_season_profiles")
     profiles = json.loads(sp) if isinstance(sp, str) else (sp or [])
@@ -512,10 +510,10 @@ async def run(args: argparse.Namespace) -> int:
             slugs = [r["slug"] for r in rows]
         # Never publish redacted crops (#308). DB rows are kept for control; the
         # public site simply omits the page (and thus the URL + search index entry).
-        excluded = [s for s in slugs if s in PUBLISH_EXCLUDE_SLUGS]
+        excluded = [s for s in slugs if not is_public_crop(s)]
         if excluded:
-            print(f"  REDACT (not published): {', '.join(sorted(excluded))}")
-        slugs = [s for s in slugs if s not in PUBLISH_EXCLUDE_SLUGS]
+            print(f"  REDACT: {len(excluded)} non-public crop profile(s) omitted")
+        slugs = [s for s in slugs if is_public_crop(s)]
 
         out_dir = Path(args.out)
         out_dir.mkdir(parents=True, exist_ok=True)
@@ -528,7 +526,7 @@ async def run(args: argparse.Namespace) -> int:
                 stale = out_dir / f"{slug.replace('_', '-')}.md"
                 if stale.exists():
                     stale.unlink()
-                    print(f"  DELETED stale redacted page: {stale.name}")
+                    print("  DELETED one stale non-public crop profile")
 
         changes = 0
         expected_vision_assets: set[Path] = set()

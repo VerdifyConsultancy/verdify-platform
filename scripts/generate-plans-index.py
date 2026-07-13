@@ -6,9 +6,14 @@ from __future__ import annotations
 import os
 import re
 import subprocess
+import sys
 from datetime import date, datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
+from verdify_public.output_policy import redact_non_public_crop_references  # noqa: E402
 
 CONTENT_ROOT = Path("/srv/verdify/verdify-site/content")
 INDEX_ALIAS = CONTENT_ROOT / "plans" / "index.md"
@@ -23,7 +28,7 @@ def local_today() -> date:
 
 
 def public_text(value: object) -> str:
-    text = str(value or "")
+    text = redact_non_public_crop_references(value)
     text = re.sub(r"iris-hermes-validation", "iris-validation", text, flags=re.IGNORECASE)
     text = re.sub(r"\bHermes\b", "planning gateway", text)
     text = re.sub(r"\bhermes\b", "planner-gateway", text)
@@ -128,7 +133,7 @@ def existing_header(today: date) -> str:
             "## What the Archive Shows",
             "*Generated planning archive: daily pages are lab notebook records. Pending rows and missed cycles stay visible because planner availability is part of the evidence.*\n\n## What the Archive Shows",
         )
-    return header.rstrip()
+    return public_text(header.rstrip())
 
 
 def render(rows: list[list[str]], today: date) -> str:

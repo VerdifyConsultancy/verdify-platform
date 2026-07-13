@@ -70,8 +70,30 @@ spec:
             runAsUser: 1000
             runAsGroup: 1000
             fsGroup: 1000
+            fsGroupChangePolicy: OnRootMismatch
             seccompProfile:
               type: RuntimeDefault
+          initContainers:
+            - name: prepare-private-work-root
+              image: ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s
+              imagePullPolicy: IfNotPresent
+              command:
+                - prepare-lab-cache
+                - --root
+                - /work/publisher
+                - --legacy
+                - /work/public
+              securityContext:
+                runAsNonRoot: true
+                runAsUser: 1000
+                runAsGroup: 1000
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              volumeMounts:
+                - name: lab-cache
+                  mountPath: /work
           containers:
             - name: publisher
               image: ghcr.io/verdifyconsultancy/verdify-lab-publisher-k3s
@@ -85,6 +107,8 @@ spec:
                 - secretRef:
                     name: verdify-lab-publisher-s3
               env:
+                - name: LAB_WORK_ROOT
+                  value: /work/publisher
                 # Production CronJobs fail soft after one bounded attempt per
                 # generator. Host/manual publishers retain the script's retry
                 # default, but repeating a 45s analytical/API failure inside a

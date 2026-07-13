@@ -7,10 +7,15 @@ import argparse
 import html
 import json
 import re
+import sys
 import urllib.request
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO_ROOT))
+from verdify_public.output_policy import redact_non_public_crop_references  # noqa: E402
 
 DEFAULT_API_URL = "https://api.verdify.ai/api/v1/public/evidence-snapshot"
 DEFAULT_VAULT = Path("/mnt/iris/verdify-vault/website")
@@ -117,12 +122,12 @@ def planning_block(data: dict) -> str:
     latest_lesson_text = "No latest lesson was present in the public evidence snapshot."
     if latest_lesson:
         lesson_id = latest_lesson.get("id")
-        category = latest_lesson.get("category") or "uncategorized"
+        category = redact_non_public_crop_references(latest_lesson.get("category") or "uncategorized")
         confidence = latest_lesson.get("confidence") or "unknown confidence"
         times_validated = latest_lesson.get("times_validated")
         validated = f"{times_validated}x" if times_validated is not None else "unknown"
         latest_lesson_span = f"#{lesson_id} · {category} · {confidence} confidence · validated {validated}"
-        latest_lesson_text = latest_lesson.get("lesson") or latest_lesson_text
+        latest_lesson_text = redact_non_public_crop_references(latest_lesson.get("lesson") or latest_lesson_text)
 
     last_plan_id = last_plan.get("plan_id") or data.get("active_plan_id") or "No active plan"
     last_plan_status = last_plan.get("status") or data.get("active_plan_status") or "unknown status"

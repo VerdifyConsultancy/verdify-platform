@@ -61,6 +61,8 @@ COPY --from=builder /install /usr/local
 # resolves (the `/app` entry sys.path.insert in main.py covers it).
 COPY api/main.py ./main.py
 COPY verdify_schemas/ ./verdify_schemas/
+COPY verdify_public/ ./verdify_public/
+RUN python -c "import verdify_public.output_policy"
 
 # Non-root user (uid 1000, matches the homelab NFS/source ownership convention).
 RUN useradd -m -u 1000 -s /usr/sbin/nologin appuser \
