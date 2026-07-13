@@ -85,13 +85,14 @@ function validateSelectorPreconditions(value, discovered) {
   return value;
 }
 
-function validateCurrentMediaCandidate(candidate, requestProvenanceSha256) {
+function validateCurrentMediaCandidate(candidate, occurrenceId, requestProvenanceSha256) {
+  const canonicalPath = typeof candidate?.relativePath === "string"
+    ? /^current-media\/(media_[0-9a-f]{24})\/([0-9a-f]{64})\.png$/u.exec(candidate.relativePath)
+    : null;
   if (
     !exactKeys(candidate, ["relativePath", "mediaType", "capturedAt", "requestProvenanceSha256"])
-    || typeof candidate.relativePath !== "string"
-    || candidate.relativePath.length === 0
-    || candidate.relativePath.length > 1024
-    || /[\u0000-\u001f\u007f]/u.test(candidate.relativePath)
+    || canonicalPath === null
+    || canonicalPath[1] !== occurrenceId
     || candidate.mediaType !== "image/png"
     || candidate.requestProvenanceSha256 !== requestProvenanceSha256
   ) throw new Error("current media candidate does not use the closed batch shape");
@@ -128,7 +129,11 @@ function validateCurrentMediaRecords(records, policy, discovered, selectorPrecon
     ) throw new Error("current media export record is not policy- and selector-bound");
     observedIds.push(record.occurrenceId);
     if (record.captureStatus === "success") {
-      validateCurrentMediaCandidate(record.candidate, record.requestProvenanceSha256);
+      validateCurrentMediaCandidate(
+        record.candidate,
+        record.occurrenceId,
+        record.requestProvenanceSha256,
+      );
     } else if (record.candidate !== null) {
       throw new Error("failed current media export record carries a candidate");
     }

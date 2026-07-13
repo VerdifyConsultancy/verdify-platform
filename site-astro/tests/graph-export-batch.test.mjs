@@ -310,6 +310,27 @@ test("policy, datasource, renderer, media, and selector drift fail before a rend
   await assert.rejects(assembleGraphOccurrenceExportBatch(assemblyInput(value, outputRoot, renderer, {
     currentMediaRecords: reorderedMedia,
   })), /manifest order/u);
+  for (const relativePath of [
+    `https://graphs.verdify.ai/current-media/${value.currentMediaRecords[0].occurrenceId}/${"f".repeat(64)}.png`,
+    `current-media/${value.currentMediaRecords[0].occurrenceId}/../${"f".repeat(64)}.png`,
+    `current-media/${value.currentMediaRecords[1].occurrenceId}/${"f".repeat(64)}.png`,
+    `current-media/${value.currentMediaRecords[0].occurrenceId}/latest.png`,
+  ]) {
+    const pathDrift = structuredClone(value.currentMediaRecords);
+    pathDrift[0] = {
+      ...pathDrift[0],
+      captureStatus: "success",
+      candidate: {
+        relativePath,
+        mediaType: "image/png",
+        capturedAt: CAPTURED_AT,
+        requestProvenanceSha256: pathDrift[0].requestProvenanceSha256,
+      },
+    };
+    await assert.rejects(assembleGraphOccurrenceExportBatch(assemblyInput(value, outputRoot, renderer, {
+      currentMediaRecords: pathDrift,
+    })), /current media candidate does not use the closed batch shape/u);
+  }
   assert.equal(calls, 0);
 });
 
