@@ -195,8 +195,8 @@ Phase 4 — **Feature completion (owner: codex, critical-path order below).**
    validates canonical key-name inventories without reading values, and makes no
    existence, endpoint, deployment, or authority claim. The source-only 4c
    caller supplies a closed, injected store-operation contract without
-   endpoint, value, credential, deployment, or activation wiring. Next land
-   the caller slice and wire the release CLI. Prove real-endpoint conditional writes and a
+   endpoint, value, credential, deployment, or activation wiring. Next wire the
+   release CLI. Prove real-endpoint conditional writes and a
    distributed lease (credential presence by name only), event-driven publishing, bounded
    retention/GC, and resource metrics. S3 occurrence wiring and S7 closure are
    hard-gated on the 4c producer contract.
