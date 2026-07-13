@@ -6,6 +6,7 @@ import {
   LocalOccurrenceReleaseStore,
   OccurrenceReleaseStore,
   createOccurrenceReleaseStore,
+  removeMaterializedOccurrenceTarget,
 } from "./occurrence-release-store.mjs";
 import { validatePngFile } from "./png-validation.mjs";
 
@@ -1694,16 +1695,31 @@ export async function materializeOccurrenceBlobs(storeRoot, manifest, destinatio
     .map((occurrence) => occurrence.fallback)
     .filter(Boolean);
   const digests = [...new Set(fallbacks.map((fallback) => fallback.sha256))].sort();
-  for (const digest of digests) {
-    const target = path.join(destination, "evidence", "blobs", "sha256", `${digest}.png`);
-    const fallback = fallbacks.find((value) => value.sha256 === digest);
-    const verified = await store.materializePngBlob(digest, target, { maximumBytes: fallback.bytes });
-    try {
+  const created = [];
+  try {
+    for (const digest of digests) {
+      const target = path.join(destination, "evidence", "blobs", "sha256", `${digest}.png`);
+      const fallback = fallbacks.find((value) => value.sha256 === digest);
+      const verified = await store.materializePngBlob(digest, target, { maximumBytes: fallback.bytes });
+      created.push({ target, identity: verified.materializedIdentity });
       verifyFallbackMetadata(verified, fallback);
-    } catch (error) {
-      await unlink(target).catch(() => {});
-      throw error;
     }
+  } catch (error) {
+    const cleanupErrors = [];
+    for (const item of created.reverse()) {
+      try {
+        await removeMaterializedOccurrenceTarget(item.target, item.identity);
+      } catch (cleanupError) {
+        cleanupErrors.push(cleanupError);
+      }
+    }
+    if (cleanupErrors.length > 0) {
+      throw new AggregateError(
+        [error, ...cleanupErrors],
+        "occurrence materialization failed and cleanup did not complete",
+      );
+    }
+    throw error;
   }
   return digests.length;
 }

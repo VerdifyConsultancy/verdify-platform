@@ -1,15 +1,27 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import {
+  lstat,
+  mkdir,
+  mkdtemp,
+  open,
+  readFile,
+  readdir,
+  rm,
+  unlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
 import { deflateSync } from "node:zlib";
 
 import {
+  discoverGraphOccurrence,
   evaluateEventFreshness,
   loadSelectedCurrentMediaGeneration,
   loadSelectedOccurrenceRelease,
+  materializeOccurrenceBlobs,
   occurrenceReleasePayloadSha256,
   publishOccurrenceRelease,
 } from "../scripts/lib/occurrence-release.mjs";
@@ -19,6 +31,7 @@ import {
   createOccurrenceReleaseStore,
   occurrenceReleaseStoreContract,
   parseOccurrenceReleaseStoreLocation,
+  removeMaterializedOccurrenceTarget,
 } from "../scripts/lib/occurrence-release-store.mjs";
 
 const BUCKET = "verdify-lab-releases";
@@ -248,6 +261,58 @@ function mediaGeneration(blob) {
   };
 }
 
+function fallbackRecord(blob) {
+  return {
+    publicPath: `/evidence/blobs/sha256/${blob.sha256}.png`,
+    sha256: blob.sha256,
+    decodedSha256: blob.decodedSha256,
+    decodedBytes: blob.decodedBytes,
+    bytes: blob.bytes,
+    mediaType: "image/png",
+    width: blob.width,
+    height: blob.height,
+    capturedAt: "2026-07-12T12:00:00Z",
+    verifiedAt: "2026-07-12T12:00:30Z",
+    policyVersion: "offline-policy-v1",
+  };
+}
+
+function graphOccurrence(ordinal, blob) {
+  const discovered = discoverGraphOccurrence({
+    route: `/evidence/materialize-${ordinal}`,
+    ordinal,
+    liveUrl: `https://graphs.verdify.ai/d-solo/site-home/public?panelId=${ordinal + 1}&from=now-24h&to=now`,
+    title: `Materialization graph ${ordinal}`,
+    renderCadenceSeconds: 600,
+  });
+  return {
+    ...discovered,
+    staleAfterSeconds: 1800,
+    probeStatus: "success",
+    state: "verified",
+    fallback: fallbackRecord(blob),
+  };
+}
+
+function twoGraphManifest(blobs) {
+  const releaseEvent = event("evt_materialize_s3_0001");
+  const publishedAt = "2026-07-12T12:01:00Z";
+  return {
+    contract: "verdify.lab-specialist-occurrence-release",
+    schemaVersion: 2,
+    event: releaseEvent,
+    policyVersion: "offline-policy-v1",
+    policySha256: "b".repeat(64),
+    sourceSnapshotManifestSha256: "c".repeat(64),
+    publishedAt,
+    freshness: evaluateEventFreshness(releaseEvent, publishedAt),
+    occurrences: {
+      graphs: blobs.map((blob, ordinal) => graphOccurrence(ordinal, blob)),
+      currentMedia: [],
+    },
+  };
+}
+
 test("occurrence store factory is strict and binds a distinct typed namespace", async (t) => {
   const root = await mkdtemp(path.join(tmpdir(), "verdify-occurrence-store-"));
   t.after(() => rm(root, { recursive: true, force: true }));
@@ -284,6 +349,24 @@ test("occurrence store factory is strict and binds a distinct typed namespace", 
   assert.equal(s3.identity.document.namespace, occurrenceReleaseStoreContract.namespace);
   assert.equal(s3.identity.document.prefix, TYPED_PREFIX);
   assert.equal(client.commands.length, 0, "construction performs no client operation");
+  let factoryCalls = 0;
+  const lazy = createOccurrenceReleaseStore(LOCATION, {
+    clientFactory: () => {
+      factoryCalls += 1;
+      return client;
+    },
+  });
+  assert.ok(lazy instanceof S3OccurrenceReleaseStore);
+  assert.equal(factoryCalls, 0, "the injected client factory stays lazy before initialize");
+  const oversizedTypedPrefix = `${Array.from({ length: 4 }, () => "a".repeat(220)).join("/")}/occurrence-releases/v1`;
+  assert.throws(
+    () => new S3OccurrenceReleaseStore({
+      kind: "s3",
+      bucket: BUCKET,
+      prefix: oversizedTypedPrefix,
+    }, { client }),
+    /location is invalid/,
+  );
 });
 
 test("local adapter preserves aggregate, per-camera, event, and PNG layouts", async (t) => {
@@ -348,6 +431,65 @@ test("local adapter preserves aggregate, per-camera, event, and PNG layouts", as
     store.materializePngBlob(imageSha256, target),
     (error) => error.code === "EEXIST",
   );
+});
+
+test("materialization removes its wx target when the file-handle close fails", async (t) => {
+  const root = await mkdtemp(path.join(tmpdir(), "verdify-occurrence-close-"));
+  const storeRoot = path.join(root, "store");
+  const output = path.join(root, "output");
+  await mkdir(storeRoot);
+  await mkdir(output);
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const store = await new LocalOccurrenceReleaseStore(storeRoot).initialize({ create: true });
+  const image = png(45, 60, 75);
+  const imageSha256 = sha256(image);
+  await store.publishPngBlob(image, imageSha256);
+  const target = path.join(output, `${imageSha256}.png`);
+  let closeCalls = 0;
+  await assert.rejects(
+    store.materializePngBlob(imageSha256, target, {
+      maximumBytes: image.length,
+      fileOperations: {
+        open: async (...args) => {
+          const handle = await open(...args);
+          return {
+            stat: (...values) => handle.stat(...values),
+            writeFile: (...values) => handle.writeFile(...values),
+            sync: (...values) => handle.sync(...values),
+            close: async () => {
+              closeCalls += 1;
+              await handle.close().catch(() => {});
+              throw new Error("injected materialization close failure");
+            },
+          };
+        },
+      },
+    }),
+    /injected materialization close failure/,
+  );
+  assert.ok(closeCalls >= 1);
+  await assert.rejects(readFile(target), (error) => error.code === "ENOENT");
+});
+
+test("materialization cleanup preserves a foreign replacement", async (t) => {
+  const root = await mkdtemp(path.join(tmpdir(), "verdify-occurrence-replacement-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const target = path.join(root, "target.png");
+  await writeFile(target, "created-by-this-invocation");
+  const created = await lstat(target, { bigint: true });
+  const identity = {
+    dev: created.dev,
+    ino: created.ino,
+    birthtimeNs: created.birthtimeNs,
+    ctimeNs: created.ctimeNs,
+    mtimeNs: created.mtimeNs,
+    size: created.size,
+  };
+  await unlink(target);
+  const replacement = Buffer.alloc(Number(created.size), 0x66);
+  await writeFile(target, replacement);
+  assert.equal(await removeMaterializedOccurrenceTarget(target, identity), false);
+  assert.deepEqual(await readFile(target), replacement);
 });
 
 test("S3 adapter covers both selector families and immutable object families offline", async (t) => {
@@ -435,6 +577,56 @@ test("S3 adapter covers both selector families and immutable object families off
   assert.deepEqual(await readFile(target), image);
 });
 
+test("explicit S3 two-blob materialization removes partial output and retries cleanly", async (t) => {
+  const root = await mkdtemp(path.join(tmpdir(), "verdify-occurrence-s3-materialize-"));
+  const output = path.join(root, "output");
+  await mkdir(output);
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const client = new FakeS3Client();
+  const store = await new S3OccurrenceReleaseStore(LOCATION, { client }).initialize();
+  const firstBytes = png(15, 30, 45);
+  const secondBytes = png(90, 75, 60);
+  const blobs = [
+    await store.publishPngBlob(firstBytes, sha256(firstBytes)),
+    await store.publishPngBlob(secondBytes, sha256(secondBytes)),
+  ];
+  const manifest = twoGraphManifest(blobs);
+  const ordered = [...blobs].sort((left, right) => left.sha256.localeCompare(right.sha256));
+  const failedBlob = ordered[1];
+  const failedKey = `${TYPED_PREFIX}/blobs/sha256/${failedBlob.sha256}.png`;
+  client.seed(failedKey, Buffer.from("invalid PNG bytes"));
+
+  await assert.rejects(
+    materializeOccurrenceBlobs(store, manifest, output),
+    /digest mismatch|cannot be decoded|signature/,
+  );
+  const targetDirectory = path.join(output, "evidence", "blobs", "sha256");
+  assert.deepEqual(await readdir(targetDirectory), []);
+
+  client.seed(failedKey, failedBlob.body);
+  assert.equal(await materializeOccurrenceBlobs(store, manifest, output), 2);
+  assert.deepEqual(
+    (await readdir(targetDirectory)).sort(),
+    ordered.map((blob) => `${blob.sha256}.png`),
+  );
+  for (const blob of ordered) {
+    assert.deepEqual(
+      await readFile(path.join(targetDirectory, `${blob.sha256}.png`)),
+      blob.body,
+    );
+  }
+  await assert.rejects(
+    materializeOccurrenceBlobs(store, manifest, output),
+    (error) => error.code === "EEXIST",
+  );
+  for (const blob of ordered) {
+    assert.deepEqual(
+      await readFile(path.join(targetDirectory, `${blob.sha256}.png`)),
+      blob.body,
+    );
+  }
+});
+
 test("S3 immutable writes recover exact committed bytes and reject collisions and bounds", async () => {
   const client = new FakeS3Client();
   const store = await new S3OccurrenceReleaseStore(LOCATION, { client }).initialize();
@@ -508,6 +700,22 @@ test("S3 selectors reject stale and racing writers using the immediately read ET
     /precondition failed/,
   );
   assert.equal((await store.readAggregateSelection()).document.generation, 1);
+});
+
+test("S3 selector writes recover exact bytes after a committed response failure", async () => {
+  const client = new FakeS3Client();
+  const store = await new S3OccurrenceReleaseStore(LOCATION, { client }).initialize();
+  const first = aggregateSelection("1".repeat(64));
+  client.afterPutError = new Error("initial selector response was unavailable after commit");
+  const firstSha256 = await store.writeAggregateSelection(first, null);
+  assert.equal((await store.readAggregateSelection()).sha256, firstSha256);
+
+  const second = aggregateSelection("2".repeat(64), 2, first.current);
+  client.afterPutError = new Error("CAS selector response was unavailable after commit");
+  const secondSha256 = await store.writeAggregateSelection(second, firstSha256);
+  const selected = await store.readAggregateSelection();
+  assert.equal(selected.sha256, secondSha256);
+  assert.deepEqual(selected.document, second);
 });
 
 test("high-level readers consume an explicitly injected S3 adapter without enabling CLI mutation", async () => {
