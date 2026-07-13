@@ -183,6 +183,21 @@ test("release runtime candidate is a two-node, no-PVC, no-route read-only cache"
     deployment.spec.template.spec.containers[0].volumeMounts.find((mount) => mount.name === "release-cache").readOnly,
     true,
   );
+  const siteMounts = deployment.spec.template.spec.containers[0].volumeMounts;
+  assert.equal(
+    siteMounts.find((mount) => mount.name === "release-state")?.mountPath,
+    "/run/verdify-lab-release",
+  );
+  assert.equal(siteMounts.find((mount) => mount.name === "release-state")?.readOnly, true);
+  assert.equal(
+    siteMounts.some((mount) => mount.mountPath === "/var/run"),
+    false,
+    "a broad /var/run mount aliases /run in nginx-unprivileged and masks the release-state submount",
+  );
+  assert.equal(
+    deployment.spec.template.spec.volumes.some((volume) => volume.name === "nginx-run"),
+    false,
+  );
   for (const container of [...deployment.spec.template.spec.initContainers, ...deployment.spec.template.spec.containers]) {
     assert.equal(container.securityContext.readOnlyRootFilesystem, true);
     assert.deepEqual(container.securityContext.capabilities.drop, ["ALL"]);
