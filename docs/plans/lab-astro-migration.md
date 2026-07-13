@@ -1,6 +1,6 @@
 # Lab Astro Migration — Consolidated Program Tracker
 
-Last updated: 2026-07-13 (Phase 3 formalization; Phase 2 gate passed).
+Last updated: 2026-07-13 (Phase 3 gate passed; Phase 4c PR #483 open).
 Owner: platform agent (Claude outer loop plans/verifies; Codex executes on
 xhigh). Human gate: Jason (prod sync, DNS/edge, Quartz retirement, credential
 work). Epic: #351 (L9, G3). This file is the single source of truth for the
@@ -48,9 +48,9 @@ Child issues (persisted 2026-07-13 post-consensus): 1→#474, 2→#475, 3→#476
 | 4 | Media & lightbox | Responsive images, intrinsic sizing, and lightbox accepted on stage | Production remains Quartz until Phase 5 |
 | 5 | Planner/evidence templates | Accepted on stage against the full frozen snapshot | Event-driven content refresh remains Phase 4b |
 | 6 | Semantic parity | Routes/aliases complete; comparator improved | Exact same-snapshot parity not green: ~240 false findings from SVG-`<title>` parser bug (fix exists uncommitted on a dead worktree — must be recreated), 9 unavailable historical refs (5 daily-plan routes, 4 images), and Quartz-vs-Astro must build from the SAME immutable snapshot |
-| 7 | Immutable publishing | Local CAS/release/cache engine merged | No S3 adapter wiring (CLI s3:// unwired, no endpoint/credential probe, no event producer/release-agent workload); release runtime on unmerged branch `coordinator/lab-release-runtime` (d91737d: hydration init/sidecar, atomic nginx current/tree, readiness/metrics, 61 tests passed) |
+| 7 | Immutable publishing | Local CAS/release/cache engine merged; isolated 4a runtime cherry-pick is PR #473 | No S3 adapter wiring (CLI s3:// unwired, no endpoint/credential probe, no event producer/release-agent workload) |
 | 8 | Quality gates | Strict real-content gates green; exact tested build passed live T0 and T+10 acceptance | Keep the same budgets for every Phase 4 rollout; no production acceptance yet |
-| 9 | Production cutover | Fail-closed canary scaffold on `coordinator/lab-production-canary-v2` | Not on main/built/pinned/deployed; Quartz remains authoritative; Jason APPLY required |
+| 9 | Production cutover | Fail-closed canary scaffold is preserved in open PR #471 | Not on main/built/pinned/deployed; Quartz remains authoritative; Jason APPLY required |
 
 ## Execution phases and gates
 
@@ -119,15 +119,22 @@ occurrences, 0 verified same-origin fallbacks — carried to Phase 4c
 (occurrence exporter/store), NOT claimed as parity. Cloudflare-analytics CSP
 blocks: diagnostic-only; strict CSP retained.
 
-Phase 3 — **Program formalization (owner: codex).** #351 → In Progress/P1/XL;
-create the nine surface child issues (What/Why/How/Test/Success + Project #5
-fields); salvage/park branch work per dispositions below. The doc-debt slice
+Phase 3 — **Program formalization (owner: codex) — PASSED.** #351 is In
+Progress/P1/XL. Issues #474-#482 carry What/Why/How/Test/Success, all Project
+#5 fields, native parent/blocker links, and explicit human gates; completed
+stage surfaces #474/#477/#478/#481 are closed with durable evidence. The
+cross-model consensus report and append-only ledger are under
+`.agent-workflow/consensus/`. Branch work is salvaged/parked per the
+dispositions below. The doc-debt slice
 from the 2026-07-13 staleness scan is complete in this Phase 3 change:
 `docs/handoff/k3s-agent-handoff.md` §2/§5.3 now records the zot/Kaniko
 pipeline and current Lab blocker; `docs/agents/web.md` records Astro ownership,
 deploy, acceptance, and stage state; and `LANES.md` carries a Lab-lane
 staleness banner without rewriting its non-Lab historical plan.
-GATE: board reflects this tracker; no orphan branches unaccounted.
+GATE: **PASSED 2026-07-13 ~07:54Z.** Board and tracker agree; two consecutive
+unchanged `no-changes` turns from Claude and Codex, all six seat approvals,
+and YES votes for all nine issues are recorded; no authorized orphan branch is
+unaccounted.
 
 Phase 4 — **Feature completion (owner: codex, critical-path order below).**
 1. **4c Graphs/camera producer first:** build the isolated reporting/export
@@ -149,6 +156,10 @@ Phase 4 — **Feature completion (owner: codex, critical-path order below).**
    sanitizer has no device-VLAN, Frigate/go2rtc, controller, DB, or general API
    access. Any future camera credential or source/allowlist change is also
    Jason-gated.
+   The first inert, offline trust-boundary slice is open as PR #483 and refs
+   #476. It does not create a workload, activate a tier, read a credential, or
+   mutate stage/prod; #476 remains open for the operator-owned reporting feed,
+   renderer/re-encoder, occurrence-store delivery, alerts, and joint live proof.
 2. **4a Release runtime:** cherry-pick only `d91737d` onto main and land its
    init hydration, atomic runtime, readiness, and metrics with tests. This can
    proceed in parallel with the gated 4c reporting-tier activation.
@@ -217,7 +228,6 @@ DELETE — verified superseded (content demonstrably on main via #461/#462):
 - **Deleted locally 2026-07-13 after remote-absence and salvage verification:**
   `web/lab-astro-stage`, `web/lab-parity-final` (landed verbatim as 87eb007),
   `web/lab-parity-completion`, `web/lab-design-completion` (tree-identical to
-  #461 squash 7020834), `web/lab-runtime-completion`,
   `coordinator/lab-publishing-completion` (byte-identical release machinery),
   `web/lab-production-candidate` (canary superseded by canary-v2),
   `coordinator/lab-s3-release` (S3/CAS content already on main; canary
@@ -247,9 +257,9 @@ workload), not the backend itself.
 - Executor (codex, xhigh): works the phase order above; every change lands
   via `main` with `make ci` green; no prod sync/DNS/device/credential action
   without Jason.
-- Consensus ceremony: the full consensus-review ratification codex queued is
-  deferred until after Phase 1-2 (delivery bottleneck first); run it during
-  Phase 3 before the nine surface issues become final Project items.
+- Consensus ceremony: completed in Phase 3 at frozen commit `1e7dc6c`; the
+  report and ledger are `.agent-workflow/consensus/lab-astro-migration.*`.
+  Issues #474-#482 were persisted only after the full gate passed.
 
 ## KPIs / done bar
 
