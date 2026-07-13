@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { cp, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { deflateSync } from "node:zlib";
 
 import {
@@ -28,9 +28,14 @@ import {
   publishOccurrenceRelease,
   staticOccurrenceManifest,
 } from "../scripts/lib/occurrence-release.mjs";
+import { S3OccurrenceReleaseStore } from "../scripts/lib/occurrence-release-store.mjs";
 import { verifySelectedEvidence } from "../scripts/verify-production-output.mjs";
 
 const SITE_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const S3_BUCKET = "verdify-lab-releases";
+const S3_PREFIX = "compiler-reader-offline";
+const S3_TYPED_PREFIX = `${S3_PREFIX}/occurrence-releases/v1`;
+const S3_LOCATION = `s3://${S3_BUCKET}/${S3_PREFIX}`;
 
 const CRC_TABLE = Array.from({ length: 256 }, (_, value) => {
   let crc = value;
@@ -88,6 +93,56 @@ function sha256(value) {
 
 function canonicalBytes(value) {
   return Buffer.from(`${JSON.stringify(value, null, 2)}\n`);
+}
+
+function missingS3Object() {
+  const error = new Error("object is absent");
+  error.name = "NoSuchKey";
+  error.$metadata = { httpStatusCode: 404 };
+  return error;
+}
+
+class FakeReadOnlyS3Client {
+  constructor() {
+    this.objects = new Map();
+    this.commands = [];
+  }
+
+  seed(key, bytes) {
+    this.objects.set(`${S3_BUCKET}/${key}`, Buffer.from(bytes));
+  }
+
+  async send(command) {
+    const name = command.constructor.name;
+    const input = command.input;
+    this.commands.push({ name, bucket: input.Bucket, key: input.Key });
+    if (name !== "GetObjectCommand") throw new Error(`unexpected compiler store command ${name}`);
+    const bytes = this.objects.get(`${input.Bucket}/${input.Key}`);
+    if (bytes === undefined) throw missingS3Object();
+    return {
+      ETag: `"fake-${sha256(bytes).slice(0, 16)}"`,
+      ContentLength: bytes.length,
+      Body: (async function* body() {
+        for (let offset = 0; offset < bytes.length; offset += 1024) {
+          yield bytes.subarray(offset, offset + 1024);
+        }
+      })(),
+    };
+  }
+}
+
+async function seedFakeS3FromLocalStore(client, storeRoot) {
+  const pending = [[storeRoot, ""]];
+  while (pending.length > 0) {
+    const [directory, prefix] = pending.pop();
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
+      const absolute = path.join(directory, entry.name);
+      if (entry.isDirectory()) pending.push([absolute, relative]);
+      else if (entry.isFile()) client.seed(`${S3_TYPED_PREFIX}/${relative}`, await readFile(absolute));
+      else throw new Error("local occurrence fixture contains a special file");
+    }
+  }
 }
 
 function discoveredOccurrences(sourceSnapshotManifestSha256) {
@@ -250,6 +305,38 @@ test("compiler keeps absent-store behavior pending and requires a policy for any
     }),
     /policy is not approved for compiler use/,
   );
+});
+
+test("blocked compiler policy prevents injected S3 store and client construction", async (context) => {
+  const fixture = await selectedReleaseFixture(context);
+  let storeFactoryCalls = 0;
+  let clientFactoryCalls = 0;
+  let clientInvocationCalls = 0;
+  await assert.rejects(
+    loadCompilerOccurrenceBinding({
+      snapshot: fixture.snapshot,
+      occurrenceStore: S3_LOCATION,
+      occurrencePolicy: fixture.blockedPolicyPath,
+      occurrenceStoreFactory: (location) => {
+        storeFactoryCalls += 1;
+        return new S3OccurrenceReleaseStore(location, {
+          clientFactory: () => {
+            clientFactoryCalls += 1;
+            return {
+              send: async () => {
+                clientInvocationCalls += 1;
+                throw new Error("blocked policy invoked its client");
+              },
+            };
+          },
+        });
+      },
+    }),
+    /policy is not approved for compiler use/,
+  );
+  assert.equal(storeFactoryCalls, 0);
+  assert.equal(clientFactoryCalls, 0);
+  assert.equal(clientInvocationCalls, 0);
 });
 
 test("compiler rejects snapshot, discovery, policy-version, and canonical-policy drift", async (context) => {
@@ -454,7 +541,7 @@ test("selected builds retain a stable discovery hash and require 143 graph plus 
   );
 });
 
-test("compiler subprocess consumes the selected store and policy, prefixes its identity, and materializes a blob", async (context) => {
+test("compiler builds and materializes a selected 143 plus 2 release through one fake S3 reader", async (context) => {
   const root = await mkdtemp(path.join(tmpdir(), "verdify-selected-compiler-integration-"));
   context.after(() => rm(root, { recursive: true, force: true }));
   const projectRoot = path.join(root, "site-astro");
@@ -472,6 +559,20 @@ test("compiler subprocess consumes the selected store and policy, prefixes its i
   const contentRoot = path.join(snapshotRoot, "content");
   const manifestPath = path.join(snapshotRoot, "manifests", "content.json");
   const snapshotManifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  const indexPath = path.join(contentRoot, "index.md");
+  const indexSource = await readFile(indexPath, "utf8");
+  const completeOccurrenceSource = indexSource
+    .replace(
+      "https://api.verdify.ai/api/v1/public/cameras/cam-public-fixture/latest.png",
+      "https://api.verdify.ai/api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080",
+    )
+    + `\n<img src="https://api.verdify.ai/api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080" alt="Current greenhouse view 2">\n`
+    + Array.from({ length: 141 }, (_, index) => (
+      `<iframe src="https://graphs.verdify.ai/d-solo/site-complete/graph?orgId=1&amp;panelId=${index + 1}&amp;from=now-24h&amp;to=now" width="100%" height="320" title="Complete graph ${index + 1}"></iframe>`
+    )).join("\n")
+    + "\n";
+  await writeFile(indexPath, completeOccurrenceSource);
+  snapshotManifest.files["index.md"] = sha256(completeOccurrenceSource);
   const fillerWrites = [];
   for (let index = 0; index < 179; index += 1) {
     const relative = `static/video/integration-${String(index).padStart(3, "0")}.ts`;
@@ -555,8 +656,8 @@ test("compiler subprocess consumes the selected store and policy, prefixes its i
     path.join(projectRoot, ".generated", "build.json"),
     "utf8",
   ));
-  assert.equal(discoveryManifest.graphs.length, 2);
-  assert.equal(discoveryManifest.currentMedia.length, 1);
+  assert.equal(discoveryManifest.graphs.length, 143);
+  assert.equal(discoveryManifest.currentMedia.length, 2);
 
   const cameraUrls = [
     "https://api.verdify.ai/api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080",
@@ -670,11 +771,47 @@ test("compiler subprocess consumes the selected store and policy, prefixes its i
     publishedAt: "2026-07-13T18:01:00Z",
   });
 
-  run("scripts/compile-snapshot.mjs", {
-    ...baseEnvironment,
-    LAB_OCCURRENCE_STORE: storeRoot,
-    LAB_OCCURRENCE_POLICY: policyPath,
-  });
+  const client = new FakeReadOnlyS3Client();
+  await seedFakeS3FromLocalStore(client, storeRoot);
+  const environmentNames = [
+    "LAB_SNAPSHOT",
+    "ALLOW_SYNTHETIC_FIXTURE",
+    "SITE_ORIGIN",
+    "STAGE_GLOBAL_NOINDEX",
+    "LAB_OCCURRENCE_STORE",
+    "LAB_OCCURRENCE_POLICY",
+  ];
+  const previousEnvironment = new Map(environmentNames.map((name) => [name, process.env[name]]));
+  let storeFactoryCalls = 0;
+  let clientFactoryCalls = 0;
+  try {
+    Object.assign(process.env, {
+      LAB_SNAPSHOT: snapshotRoot,
+      ALLOW_SYNTHETIC_FIXTURE: "false",
+      SITE_ORIGIN: "https://lab-stage.verdify.ai",
+      STAGE_GLOBAL_NOINDEX: "true",
+      LAB_OCCURRENCE_STORE: S3_LOCATION,
+      LAB_OCCURRENCE_POLICY: policyPath,
+    });
+    const compilerModule = await import(pathToFileURL(path.join(projectRoot, "scripts", "compile-snapshot.mjs")));
+    const storeModule = await import(pathToFileURL(path.join(projectRoot, "scripts", "lib", "occurrence-release-store.mjs")));
+    await compilerModule.main({
+      occurrenceStoreFactory: (location) => {
+        storeFactoryCalls += 1;
+        return new storeModule.S3OccurrenceReleaseStore(location, {
+          clientFactory: () => {
+            clientFactoryCalls += 1;
+            return client;
+          },
+        });
+      },
+    });
+  } finally {
+    for (const [name, value] of previousEnvironment) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  }
   const selectedBuild = JSON.parse(await readFile(path.join(projectRoot, ".generated", "build.json"), "utf8"));
   const selectedManifest = JSON.parse(await readFile(
     path.join(projectRoot, ".generated", "public", "occurrence-manifest.json"),
@@ -683,8 +820,13 @@ test("compiler subprocess consumes the selected store and policy, prefixes its i
   assert.equal(selectedBuild.selectedOccurrenceManifestSha256, `sha256:${published.manifestSha256}`);
   assert.equal(selectedManifest.selectedManifestSha256, published.manifestSha256);
   assert.equal(selectedBuild.materializedOccurrenceBlobCount, 1);
-  assert.equal(selectedManifest.graphs.filter((occurrence) => occurrence.selected?.fallback).length, 2);
-  assert.equal(selectedManifest.currentMedia.filter((occurrence) => occurrence.selected?.fallback).length, 1);
+  assert.equal(selectedManifest.graphs.filter((occurrence) => occurrence.selected?.fallback).length, 143);
+  assert.equal(selectedManifest.currentMedia.filter((occurrence) => occurrence.selected?.fallback).length, 2);
+  assert.equal(storeFactoryCalls, 1);
+  assert.equal(clientFactoryCalls, 1);
+  assert.ok(client.commands.length > 0);
+  assert.ok(client.commands.every(({ name }) => name === "GetObjectCommand"));
+  assert.ok(client.commands.every(({ key }) => key.startsWith(`${S3_TYPED_PREFIX}/`)));
   assert.equal((await readFile(
     path.join(projectRoot, ".generated", "public", "evidence", "blobs", "sha256", `${imageSha256}.png`),
   )).compare(imageBytes), 0);

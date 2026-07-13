@@ -31,6 +31,11 @@ import {
   validateOccurrenceExportPolicy,
   validatePolicyManifestBinding,
 } from "./lib/occurrence-export-contract.mjs";
+import {
+  OccurrenceReleaseStore,
+  createOccurrenceReleaseStore,
+  parseOccurrenceReleaseStoreLocation,
+} from "./lib/occurrence-release-store.mjs";
 import { verifySnapshot } from "./lib/snapshot.mjs";
 
 const SCRIPT_ROOT = path.dirname(fileURLToPath(import.meta.url));
@@ -46,6 +51,36 @@ const COMPAT_PUBLIC_ROOT = path.join(PROJECT_ROOT, "vendor", "compat-public");
 const SITE_ORIGIN = normalizeOrigin(process.env.SITE_ORIGIN ?? "https://lab-stage.verdify.ai");
 const STAGE_GLOBAL_NOINDEX = process.env.STAGE_GLOBAL_NOINDEX !== "false";
 
+function sameOccurrenceStoreLocation(left, right) {
+  return left?.kind === right.kind
+    && (right.kind === "local"
+      ? left.root === right.root
+      : left.bucket === right.bucket && left.prefix === right.prefix);
+}
+
+async function createCompilerOccurrenceStore(location, occurrenceStoreFactory) {
+  const expectedLocation = parseOccurrenceReleaseStoreLocation(location);
+  let store;
+  if (occurrenceStoreFactory === null) {
+    if (expectedLocation.kind !== "local") {
+      throw new Error("compiler S3 occurrence access requires an explicitly injected store adapter");
+    }
+    store = createOccurrenceReleaseStore(location);
+  } else {
+    if (typeof occurrenceStoreFactory !== "function") {
+      throw new Error("compiler occurrence store factory is invalid");
+    }
+    store = await occurrenceStoreFactory(location);
+  }
+  if (!(store instanceof OccurrenceReleaseStore)) {
+    throw new Error("compiler occurrence store factory did not return an OccurrenceReleaseStore");
+  }
+  if (!sameOccurrenceStoreLocation(store.location, expectedLocation)) {
+    throw new Error("compiler occurrence store adapter does not match the requested location");
+  }
+  return store;
+}
+
 function normalizeOrigin(value) {
   const parsed = new URL(value);
   if (parsed.protocol !== "https:" || parsed.username || parsed.password || parsed.search || parsed.hash) {
@@ -59,6 +94,7 @@ async function loadCompilerOccurrenceBinding({
   snapshot,
   occurrenceStore = process.env.LAB_OCCURRENCE_STORE,
   occurrencePolicy = process.env.LAB_OCCURRENCE_POLICY,
+  occurrenceStoreFactory = null,
 }) {
   if (!occurrenceStore) {
     return {
@@ -78,10 +114,24 @@ async function loadCompilerOccurrenceBinding({
     throw new Error("occurrence export policy digest does not match its canonical bytes");
   }
 
-  const release = await loadSelectedOccurrenceRelease(occurrenceStore);
+  const snapshotMatch = /^sha256:([0-9a-f]{64})$/u.exec(snapshot.manifestDigest ?? "");
+  if (
+    !snapshotMatch
+    || policy.sourceSnapshotManifestSha256 !== snapshotMatch[1]
+  ) {
+    throw new Error("occurrence export policy does not match the exact snapshot manifest");
+  }
+  if (policy.activation.state !== "approved") {
+    throw new Error("selected occurrence release policy is not approved for compiler use");
+  }
+
+  // The policy is the authority boundary. Only after its closed shape,
+  // canonical bytes, approval, and snapshot binding are proven may a lazy
+  // adapter construct or invoke a client. Keep this exact store instance for
+  // both selector reads and later blob materialization.
+  const store = await createCompilerOccurrenceStore(occurrenceStore, occurrenceStoreFactory);
+  const release = await loadSelectedOccurrenceRelease(store);
   if (release.current !== null) {
-    const snapshotMatch = /^sha256:([0-9a-f]{64})$/u.exec(snapshot.manifestDigest ?? "");
-    if (!snapshotMatch) throw new Error("snapshot manifest digest is invalid");
     if (
       release.current.sourceSnapshotManifestSha256 !== snapshotMatch[1]
       || release.current.sourceSnapshotManifestSha256 !== policy.sourceSnapshotManifestSha256
@@ -91,14 +141,11 @@ async function loadCompilerOccurrenceBinding({
     if (release.current.policyVersion !== policy.policyVersion) {
       throw new Error("selected occurrence release does not match the occurrence export policy version");
     }
-    if (policy.activation.state !== "approved") {
-      throw new Error("selected occurrence release policy is not approved for compiler use");
-    }
     if (release.current.policySha256 !== policySha256) {
       throw new Error("selected occurrence release does not match the exact occurrence export policy bytes");
     }
   }
-  return { release, policy, policySha256 };
+  return { release, policy, policySha256, store };
 }
 
 function verifyCompilerOccurrenceDiscovery(binding, discoveryManifest) {
@@ -1113,13 +1160,13 @@ async function writeIndexes(records, build) {
   await writeFile(path.join(PUBLIC_ROOT, "static-build.json"), `${JSON.stringify(build, null, 2)}\n`);
 }
 
-async function main() {
+async function main({ occurrenceStoreFactory = null } = {}) {
   const snapshotRoot = process.env.LAB_SNAPSHOT;
   if (!snapshotRoot) throw new Error("LAB_SNAPSHOT must name a local snapshot root");
   const snapshot = await verifySnapshot(snapshotRoot, {
     allowSyntheticFixture: process.env.ALLOW_SYNTHETIC_FIXTURE === "true",
   });
-  const occurrenceBinding = await loadCompilerOccurrenceBinding({ snapshot });
+  const occurrenceBinding = await loadCompilerOccurrenceBinding({ snapshot, occurrenceStoreFactory });
   const selectedOccurrenceRelease = occurrenceBinding.release;
   const selectedOccurrenceState = occurrenceStateIndex(selectedOccurrenceRelease.current);
   await rm(PUBLIC_ROOT, { recursive: true, force: true });
@@ -1273,7 +1320,7 @@ async function main() {
       }
     : null;
   const materializedOccurrenceBlobCount = selectedBuildOccurrences
-    ? await materializeOccurrenceBlobs(process.env.LAB_OCCURRENCE_STORE, selectedBuildOccurrences, PUBLIC_ROOT)
+    ? await materializeOccurrenceBlobs(occurrenceBinding.store, selectedBuildOccurrences, PUBLIC_ROOT)
     : 0;
   const occurrenceManifestBytes = `${JSON.stringify(occurrenceManifest, null, 2)}\n`;
   const occurrenceManifestDigest = createHash("sha256").update(occurrenceManifestBytes).digest("hex");
