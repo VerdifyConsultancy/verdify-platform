@@ -406,6 +406,61 @@ test("@quality media reserves responsive space and the native lightbox is keyboa
   await context.close();
 });
 
+test("@quality viewport scrolls and the lightbox scroll lock applies then releases", async ({ browser }) => {
+  // Regression guard for the P0 no-scroll defect (2026-07-13): the shared
+  // shell's `.site-page { overflow: clip }` sits on <body> in this layout, and
+  // body overflow propagates to the viewport — `clip` removed the viewport
+  // scroll container entirely, so nothing on lab-stage could scroll.
+  const context = await browser.newContext({ viewport: { width: 1280, height: 720 }, reducedMotion: "reduce" });
+  const page = await context.newPage();
+
+  for (const route of ["/", "/greenhouse"]) {
+    await visit(page, route);
+    const scroller = await page.evaluate(() => ({
+      bodyOverflowY: getComputedStyle(document.body).overflowY,
+      clientHeight: document.scrollingElement.clientHeight,
+      scrollHeight: document.scrollingElement.scrollHeight,
+    }));
+    expect(scroller.bodyOverflowY, `${route} body must not clip the viewport scroll container`).not.toBe("clip");
+    expect(scroller.scrollHeight, `${route} must overflow the viewport`).toBeGreaterThan(scroller.clientHeight);
+
+    await page.evaluate(() => window.scrollTo(0, 160));
+    expect(await page.evaluate(() => window.scrollY), `${route} must scroll programmatically`).toBe(160);
+    await page.evaluate(() => window.scrollTo(0, 0));
+
+    await page.keyboard.press("End");
+    await expect
+      .poll(() => page.evaluate(() => window.scrollY), { message: `${route} must scroll from the keyboard` })
+      .toBeGreaterThan(0);
+    await page.evaluate(() => window.scrollTo(0, 0));
+  }
+
+  // The lightbox is a native modal dialog; showModal() alone does not stop the
+  // background document from scrolling. The lock must hold while it is open
+  // and release when it closes.
+  const opener = page.locator(".media-grid a").first();
+  await opener.click();
+  const dialog = page.locator("dialog.media-lightbox");
+  await expect(dialog).toHaveAttribute("open", "");
+  expect(await page.evaluate(() => getComputedStyle(document.body).overflowY)).toBe("hidden");
+  const lockedY = await page.evaluate(() => window.scrollY);
+  await page.mouse.wheel(0, 480);
+  await page.waitForTimeout(250);
+  expect(
+    await page.evaluate(() => window.scrollY),
+    "wheel must not scroll the page behind the open lightbox",
+  ).toBe(lockedY);
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).not.toHaveAttribute("open", "");
+  expect(await page.evaluate(() => getComputedStyle(document.body).overflowY)).not.toBe("hidden");
+  await page.mouse.wheel(0, 480);
+  await expect
+    .poll(() => page.evaluate(() => window.scrollY), { message: "scrolling must release after the lightbox closes" })
+    .toBeGreaterThan(lockedY);
+  await context.close();
+});
+
 test("@quality reduced motion collapses nonessential transitions", async ({ browser }) => {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, reducedMotion: "reduce" });
   const page = await context.newPage();

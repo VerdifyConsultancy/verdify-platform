@@ -364,6 +364,22 @@ class TestEvidencePipelineSources:
         cycle_mapping = source.split("actuator_cycles = {", 1)[1].split("actuator_runtime =", 1)[0]
         assert "summary.get" not in cycle_mapping
 
+    def test_outcome_kpi_cycle_reads_snapshot_and_excludes_partial_future_days(self):
+        # #389: the fast path is the migration-200 materialized snapshot; the
+        # live view remains only as the stale-snapshot reconciliation
+        # fallback, and partial/future-dated days are explicit deploy-gate
+        # exclusions, never silent numbers.
+        source = (REPO_ROOT / "mcp" / "server.py").read_text()
+        assert "FROM mv_equipment_runtime_daily" in source
+        assert "_cycle_snapshot_is_stale" in source
+        assert "_cycle_day_status" in source
+        assert '"read_path": cycle_read_path' in source
+        assert "v_equipment_runtime_daily_stale_snapshot_fallback" in source
+        assert '"target_day_status": cycle_day_status' in source
+        assert "partial_day_excluded" in source
+        assert "future_date_excluded" in source
+        assert "excluded from deploy-gate cycle comparison" in source
+
 
 class TestMCPToolAvailability:
     """The MCP server must expose all 17 planning tools."""
