@@ -9,8 +9,8 @@
 # STATELESS: anonymous-Viewer + provisioned datasource + provisioned dashboards
 # means there is NO durable org/user/dashboard state worth a PVC — the SQLite
 # store is rebuilt from git provisioning on every start. /var/lib/grafana is an
-# emptyDir (no synology-iscsi-ssd PVC; no MIGRATE item). This sheds the prior
-# PVC/Recreate gate so the tier lands cleanly in overlays/prod.
+# emptyDir (no synology-iscsi-ssd PVC; no MIGRATE item). That permits a surge-first
+# rollout: the old pod remains available until the complete new pod is Ready.
 #
 # DATASOURCE (verdify-grafana-provisioning CM): uid `verdify-tsdb` — the exact
 # uid every site-*.json panel target references — pointed at verdify-db:5432.
@@ -25,10 +25,12 @@
 # + root_url=https://graphs.verdify.ai, so the cross-site lab.verdify.ai
 # /d-solo iframes render with no login.
 #
-# IMAGE: grafana/grafana-oss — UPSTREAM (NOT a verdify-* name, so the overlay
-# images: transformer leaves it untouched). No renderer sidecar: the lab embeds
-# are live iframes (browser-rendered), not server-side PNG renders, so the
-# renderer is not needed for #498 and is dropped to keep the pod lean.
+# IMAGES: upstream Grafana and renderer are hand-pinned by immutable multi-arch
+# digest. Grafana 11.6.0 is past support and the former renderer 3.12.6 is in
+# CVE-2025-11539's affected range. Both containers receive the same required
+# renderer token from verdify-grafana-secrets/GRAFANA_RENDERER_TOKEN. The value
+# is delivered out of band and never committed; port isolation remains mandatory.
+# The unsafe upstream default is unused.
 #
 # COMPONENT (not base): graphs.verdify.ai is a prod host; wiring lives in
 # overlays/prod only, never staging.
@@ -45,7 +47,10 @@ spec:
     matchLabels:
       app.kubernetes.io/component: grafana
   strategy:
-    type: Recreate
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   template:
     metadata:
       labels:
@@ -67,12 +72,12 @@ spec:
         # <style> override into a COPY of public/views (the root FS is
         # read-only) that the main container mounts. The panels are transparent,
         # so recoloring the canvas makes the graphs render in the brand green and
-        # blend into the site. FAILS SAFE: if a Grafana upgrade changes
-        # index.html the override simply won't apply and graphs revert to the
-        # stock canvas — nothing breaks. CSS lives in verdify-grafana-canvas-css
-        # (iterate there + rollout restart).
+        # blend into the site. The exact pinned Grafana 12 image path and injection
+        # are preflight-tested. A future path move intentionally blocks the new pod
+        # at init while the rolling strategy retains the old ready pod. CSS lives in
+        # verdify-grafana-canvas-css (iterate there + rollout restart).
         - name: inject-canvas-css
-          image: grafana/grafana-oss:11.6.0
+          image: grafana/grafana:12.4.5@sha256:26b8f35a9e4e4431995cf64c3f396505a4faf17bcfc19f9ed84943ec6bfd5ecd
           command:
             - sh
             - -c
@@ -102,7 +107,7 @@ spec:
               readOnly: true
       containers:
         - name: grafana
-          image: grafana/grafana-oss:11.6.0
+          image: grafana/grafana:12.4.5@sha256:26b8f35a9e4e4431995cf64c3f396505a4faf17bcfc19f9ed84943ec6bfd5ecd
           ports:
             - name: http
               containerPort: 3000
@@ -132,8 +137,10 @@ spec:
               value: "none"
             - name: GF_SECURITY_COOKIE_SECURE
               value: "true"
-            # --- admin (out-of-band secret; optional so the Component renders
-            #     standalone in CI). Login form stays on for the admin only. ---
+            # --- admin (out-of-band required Secret). Kustomize rendering does
+            #     not resolve Secrets. Kubernetes admits the workload reference,
+            #     but container creation stays CreateContainerConfigError if the
+            #     Secret or key is missing. Login stays on for the admin only. ---
             - name: GF_SECURITY_ADMIN_USER
               value: admin
             - name: GF_SECURITY_ADMIN_PASSWORD
@@ -141,7 +148,6 @@ spec:
                 secretKeyRef:
                   name: verdify-grafana-secrets
                   key: GRAFANA_ADMIN_PASSWORD
-                  optional: true
             # --- lean tier: no alerting / explore / external snapshots ---
             - name: GF_SNAPSHOTS_EXTERNAL_ENABLED
               value: "false"
@@ -168,17 +174,22 @@ spec:
             # The lab.verdify.ai homepage embeds BOTH live /d-solo iframes AND
             # /render/d-solo server-side PNGs (as <img> fallbacks). Without a
             # renderer the /render PNGs are a "no renderer" placeholder, so the
-            # sidecar IS needed to fully restore the lab embeds. Callback URL is
-            # this pod's own Service so the renderer can fetch panels back.
+            # sidecar IS needed to fully restore the lab embeds. Callback stays on
+            # this pod's loopback so a surge rollout cannot send a render key to
+            # the other Grafana pod through the load-balanced Service.
             - name: GF_RENDERING_SERVER_URL
               value: http://localhost:8081/render
-            # Hardcoded ns: this Component is PROD-ONLY (verdify-prod). A
-            # fieldRef $(POD_NAMESPACE) substitution is order-fragile in the env
-            # list and was passing the literal string to the renderer.
+            # Required out-of-band Secret key shared with the renderer. The
+            # source contains only its name/key contract, never its value.
+            - name: GF_RENDERING_RENDERER_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-grafana-secrets
+                  key: GRAFANA_RENDERER_TOKEN
             - name: GF_RENDERING_CALLBACK_URL
-              value: http://verdify-grafana.verdify-prod.svc:3000/
+              value: http://127.0.0.1:3000/
             - name: GF_RENDERING_CONCURRENT_RENDER_REQUEST_LIMIT
-              value: "30"
+              value: "4"
             # --- datasource password (the provisioned datasource reads
             #     $POSTGRES_PASSWORD); same key the api/mcp/planner read. ---
             - name: POSTGRES_PASSWORD
@@ -186,7 +197,6 @@ spec:
                 secretKeyRef:
                   name: verdify-app-secrets
                   key: POSTGRES_PASSWORD
-                  optional: true
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -251,33 +261,52 @@ spec:
         # /render/d-solo PNG embeds on lab.verdify.ai. grafana-image-renderer,
         # pinned (UPSTREAM image; not transformer-rewritten).
         - name: renderer
-          image: grafana/grafana-image-renderer:3.12.6
+          image: grafana/grafana-image-renderer:v5.10.0@sha256:c0eb7b915a181c7bbe451718f9b633843678bef93703b5ed5fda2f28fa508986
           ports:
             - name: renderer
               containerPort: 8081
           env:
-            - name: HTTP_PORT
-              value: "8081"
+            - name: SERVER_ADDR
+              value: ":8081"
+            - name: AUTH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: verdify-grafana-secrets
+                  key: GRAFANA_RENDERER_TOKEN
             - name: LOG_LEVEL
               value: warn
-            - name: RENDERING_MODE
-              value: clustered
-            - name: RENDERING_CLUSTERING_MODE
-              value: browser
-            - name: RENDERING_CLUSTERING_MAX_CONCURRENCY
+            # Renderer v5 uses a memory-aware limiter instead of the retired
+            # Node clustering knobs. Preserve the former four-render ceiling.
+            - name: RATE_LIMIT_MAX_LIMIT
               value: "4"
-            - name: RENDERING_CLUSTERING_TIMEOUT
-              value: "30"
-            # Chromium flags: --no-sandbox (no SYS_ADMIN cap) +
-            # --disable-dev-shm-usage so it uses /tmp not the tiny /dev/shm,
-            # avoiding the "frame detached" crash under user 472.
-            - name: RENDERING_ARGS
-              value: --no-sandbox,--disable-gpu,--disable-dev-shm-usage
-            # HOME must be writable for the Chromium profile (the pod runs the
-            # sidecar as uid 472 whose image home isn't writable); point it at tmp.
+            - name: RATE_LIMIT_MIN_LIMIT
+              value: "1"
+            - name: BROWSER_READINESS_TIMEOUT
+              value: 30s
+            - name: BROWSER_TIMEZONE
+              value: America/Denver
+            # Keep the Chromium profile on the dedicated writable scratch volume
+            # instead of writing it into the image layer.
             - name: HOME
               value: /tmp
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: renderer
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: renderer
+            initialDelaySeconds: 5
+            periodSeconds: 10
           securityContext:
+            # The pinned v5 image declares USER 65532 and WORKDIR
+            # /home/nonroot (0770, owned by that uid). Override the pod's Grafana
+            # uid for this container only so OCI startup can enter its working
+            # directory; inherited gid/fsGroup 472 retain emptyDir access.
+            runAsUser: 65532
             allowPrivilegeEscalation: false
             # The headless-Chromium renderer needs a writable scratch + cannot run
             # under a fully RO root FS; keep the rest of the hardening.
@@ -375,10 +404,12 @@ spec:
         - protocol: TCP
           port: 3000
 ---
-# Egress->db: the base allow-db-from-app only admits api/mcp/ingestor/migrate
-# (+planner) to verdify-db:5432. Grafana's provisioned TimescaleDB datasource
-# also needs to reach it. This prod-only Component policy ADDS grafana to the db
-# ingress allow set (read-only SELECT queries from the dashboards; NOT a writer).
+# DB reachability: the base allow-db-from-app only admits api/mcp/ingestor/migrate
+# (+planner) to verdify-db:5432. This legacy Grafana datasource still uses the
+# application credential, so NetworkPolicy does NOT make it read-only. The site
+# unification canary must not reuse this trust boundary; DEC-SITE-015 requires a
+# reporting-only store/login before public graph cutover. This prod-only policy
+# merely preserves current reachability while the image security patch is reviewed.
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
