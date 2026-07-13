@@ -1,0 +1,269 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: verdify-lab-release-runtime
+  labels:
+    app.kubernetes.io/name: verdify-lab-release-runtime
+    app.kubernetes.io/component: lab-site-candidate
+    app.kubernetes.io/part-of: verdify
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: verdify-lab-release-runtime
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: verdify-lab-release-runtime
+        app.kubernetes.io/component: lab-site-candidate
+        app.kubernetes.io/part-of: verdify
+      annotations:
+        verdify.ai/release-boundary: disconnected-read-only-cache-candidate
+        verdify.ai/object-store-endpoint: s3-hdd.vallery.net
+    spec:
+      automountServiceAccountToken: false
+      imagePullSecrets:
+        - name: zot-origin-cluster-pull
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+        fsGroup: 101
+        seccompProfile:
+          type: RuntimeDefault
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: DoNotSchedule
+          matchLabelKeys:
+            - pod-template-hash
+          labelSelector:
+            matchLabels:
+              app.kubernetes.io/name: verdify-lab-release-runtime
+      initContainers:
+        - name: hydrate-known-good
+          image: registry.vallery.net/verdifyconsultancy/verdify-lab-release-agent@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          imagePullPolicy: IfNotPresent
+          args: ["init"]
+          env:
+            # Deliberately absent. The verified image-baked release is selected
+            # until an operator supplies a read-only object-store adapter and
+            # patches this URI in a separate, reviewed overlay.
+            - name: LAB_RELEASE_STORE
+              value: /unconfigured/verdify-lab-release-store
+            - name: LAB_S3_ENDPOINT_URL
+              value: https://s3-hdd.vallery.net
+            - name: AWS_DEFAULT_REGION
+              value: garage
+            - name: LAB_RELEASE_CACHE
+              value: /srv/lab-cache
+            - name: LAB_RELEASE_RUNTIME_STATE
+              value: /run/verdify-lab-release
+            - name: LAB_RELEASE_BAKED_BUNDLE
+              value: /opt/verdify/lab-known-good
+            - name: LAB_RELEASE_RECONCILE_SECONDS
+              value: "60"
+            - name: LAB_RELEASE_VERIFY_SECONDS
+              value: "900"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+          volumeMounts:
+            - name: release-cache
+              mountPath: /srv/lab-cache
+            - name: release-state
+              mountPath: /run/verdify-lab-release
+            - name: tmp
+              mountPath: /tmp
+      containers:
+        - name: site
+          image: registry.vallery.net/verdifyconsultancy/verdify-lab-release-nginx@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+          startupProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            failureThreshold: 30
+            periodSeconds: 2
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          lifecycle:
+            preStop:
+              exec:
+                command: ["sleep", "5"]
+          volumeMounts:
+            - name: release-cache
+              mountPath: /srv/lab-cache
+              readOnly: true
+            - name: release-state
+              mountPath: /run/verdify-lab-release
+              readOnly: true
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
+            - name: nginx-run
+              mountPath: /var/run
+            - name: tmp
+              mountPath: /tmp
+        - name: release-reconciler
+          image: registry.vallery.net/verdifyconsultancy/verdify-lab-release-agent@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          imagePullPolicy: IfNotPresent
+          args: ["reconcile"]
+          env:
+            - name: LAB_RELEASE_STORE
+              value: /unconfigured/verdify-lab-release-store
+            - name: LAB_S3_ENDPOINT_URL
+              value: https://s3-hdd.vallery.net
+            - name: AWS_DEFAULT_REGION
+              value: garage
+            - name: LAB_RELEASE_CACHE
+              value: /srv/lab-cache
+            - name: LAB_RELEASE_RUNTIME_STATE
+              value: /run/verdify-lab-release
+            - name: LAB_RELEASE_BAKED_BUNDLE
+              value: /opt/verdify/lab-known-good
+            - name: LAB_RELEASE_RECONCILE_SECONDS
+              value: "60"
+            - name: LAB_RELEASE_VERIFY_SECONDS
+              value: "900"
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 25m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          volumeMounts:
+            - name: release-cache
+              mountPath: /srv/lab-cache
+            - name: release-state
+              mountPath: /run/verdify-lab-release
+            - name: tmp
+              mountPath: /tmp
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: release-cache
+          emptyDir:
+            sizeLimit: 3Gi
+        - name: release-state
+          emptyDir:
+            medium: Memory
+            sizeLimit: 16Mi
+        - name: nginx-cache
+          emptyDir: {}
+        - name: nginx-run
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: verdify-lab-release-runtime
+  labels:
+    app.kubernetes.io/name: verdify-lab-release-runtime
+    app.kubernetes.io/component: lab-site-candidate
+    app.kubernetes.io/part-of: verdify
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: verdify-lab-release-runtime
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: verdify-lab-release-runtime
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: verdify-lab-release-runtime
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: verdify-lab-release-runtime-isolated
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: verdify-lab-release-runtime
+  policyTypes: ["Ingress", "Egress"]
+  ingress:
+    # There is no IngressRoute. A temporary in-namespace probe pod must opt in.
+    - from:
+        - podSelector:
+            matchLabels:
+              verdify.ai/lab-canary-client: "true"
+      ports:
+        - protocol: TCP
+          port: 8080
+  egress:
+    # DNS is the only infrastructure dependency. Both protocols are required
+    # because large DNS replies can retry over TCP.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # s3-hdd.vallery.net resolves through the apps edge VIP. This /32 + 443 is
+    # the only application egress; an application-layer client must also pin
+    # the exact HTTPS host and reject redirects.
+    - to:
+        - ipBlock:
+            cidr: 192.168.7.10/32
+      ports:
+        - protocol: TCP
+          port: 443
