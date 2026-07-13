@@ -12,7 +12,7 @@ import {
 const START = Date.parse("2026-07-13T00:00:00Z");
 
 function instant(index) {
-    return new Date(START + index * 15 * 60 * 1000).toISOString();
+    return new Date(START + index * 5 * 60 * 1000).toISOString();
 }
 
 function digest(index) {
@@ -38,15 +38,23 @@ function seed({ count = 96, lagSeconds = 100, startIndex = 0 } = {}) {
     let state = createReportingFreshnessState();
     let result = null;
     for (let offset = 0; offset < count; offset += 1) {
-        result = apply(state, startIndex + offset, lagSeconds);
+        result = apply(state, startIndex + offset * 3, lagSeconds);
         state = result.nextState;
     }
-    return { state, result, nextIndex: startIndex + count };
+    const lastIndex = startIndex + (count - 1) * 3;
+    return {
+        state,
+        result,
+        lastIndex,
+        nextIndex: lastIndex + 1,
+        nextSampleIndex: lastIndex + 3,
+    };
 }
 
 test("rolling nearest-rank p95 requires 96 samples and discards the oldest sample", () => {
     assert.equal(reportingFreshnessContract.windowSeconds, 86_400);
     assert.equal(reportingFreshnessContract.sampleCadenceSeconds, 900);
+    assert.equal(reportingFreshnessContract.sampleAnchor, "utc-quarter-hour");
     assert.equal(
         reportingFreshnessContract.windowAgeBoundary,
         "(evaluatedAt-86400s,evaluatedAt]",
@@ -54,26 +62,27 @@ test("rolling nearest-rank p95 requires 96 samples and discards the oldest sampl
     let state = createReportingFreshnessState();
     let result;
     for (let index = 0; index < 95; index += 1) {
-        result = apply(state, index, index + 1);
+        result = apply(state, index * 3, index + 1);
         state = result.nextState;
     }
     assert.equal(result.window.sampleCount, 95);
     assert.equal(result.window.minimumSampleCount, 96);
     assert.equal(result.window.windowSeconds, 86_400);
     assert.equal(result.window.sampleCadenceSeconds, 900);
+    assert.equal(result.window.sampleAnchor, "utc-quarter-hour");
     assert.equal(result.window.ageBoundary, "(evaluatedAt-86400s,evaluatedAt]");
     assert.equal(result.window.coverageSeconds, 84_600);
     assert.equal(result.window.cadenceValid, true);
     assert.equal(result.window.p95LagSeconds, 91);
     assert.equal(result.window.status, "insufficient");
     assert.deepEqual(result.publication, {
-        candidateOutputSha256: digest(94),
+        candidateOutputSha256: digest(94 * 3),
         selectedOutputSha256: null,
         state: "missing",
         freshness: "insufficient",
     });
 
-    result = apply(state, 95, 96);
+    result = apply(state, 95 * 3, 96);
     state = result.nextState;
     assert.equal(result.window.sampleCount, 96);
     assert.equal(result.window.coverageSeconds, 85_500);
@@ -81,19 +90,29 @@ test("rolling nearest-rank p95 requires 96 samples and discards the oldest sampl
     assert.equal(result.window.p95LagSeconds, 92);
     assert.equal(result.window.status, "target");
     assert.equal(result.publication.state, "verified-fresh");
-    assert.equal(result.publication.selectedOutputSha256, digest(95));
+    assert.equal(result.publication.selectedOutputSha256, digest(95 * 3));
 
-    result = apply(state, 96, 97);
+    const intervening = apply(state, 95 * 3 + 1, 97);
+    assert.equal(intervening.windowSampleDisposition, "not-scheduled");
+    assert.equal(intervening.window.sampleCount, 96);
+    assert.equal(intervening.window.p95LagSeconds, 92);
+    const secondIntervening = apply(intervening.nextState, 95 * 3 + 2, 97);
+    assert.equal(secondIntervening.windowSampleDisposition, "not-scheduled");
+    assert.equal(secondIntervening.window.sampleCount, 96);
+    assert.equal(secondIntervening.window.p95LagSeconds, 92);
+
+    result = apply(secondIntervening.nextState, 96 * 3, 97);
+    assert.equal(result.windowSampleDisposition, "appended");
     assert.equal(result.window.sampleCount, 96);
     assert.equal(result.window.p95LagSeconds, 93);
-    assert.equal(result.nextState.samples[0].evaluatedAt, instant(1));
-    assert.equal(result.nextState.samples.at(-1).evaluatedAt, instant(96));
+    assert.equal(result.nextState.samples[0].evaluatedAt, instant(3));
+    assert.equal(result.nextState.samples.at(-1).evaluatedAt, instant(288));
 });
 
 test("24-hour age and fifteen-minute cadence gates prevent gaps or dense samples from looking fresh", () => {
     const seeded = seed();
     const initialLkg = seeded.result.publication.selectedOutputSha256;
-    const afterGapIndex = seeded.nextIndex - 1 + 26 * 4;
+    const afterGapIndex = seeded.lastIndex + 26 * 12;
     let result = apply(seeded.state, afterGapIndex, 100);
     let state = result.nextState;
     assert.equal(result.window.sampleCount, 1);
@@ -104,7 +123,7 @@ test("24-hour age and fifteen-minute cadence gates prevent gaps or dense samples
     assert.equal(result.publication.freshness, "insufficient");
 
     for (let offset = 1; offset < 96; offset += 1) {
-        result = apply(state, afterGapIndex + offset, 100);
+        result = apply(state, afterGapIndex + offset * 3, 100);
         state = result.nextState;
     }
     assert.equal(result.window.sampleCount, 96);
@@ -112,6 +131,26 @@ test("24-hour age and fifteen-minute cadence gates prevent gaps or dense samples
     assert.equal(result.window.cadenceValid, true);
     assert.equal(result.window.status, "target");
     assert.equal(result.publication.state, "verified-fresh");
+
+    const missingSeed = seed();
+    const missingAnchor = apply(
+        missingSeed.state,
+        missingSeed.nextSampleIndex,
+        null,
+    );
+    assert.equal(missingAnchor.windowSampleDisposition, "missing");
+    assert.equal(missingAnchor.window.sampleCount, 95);
+    assert.equal(missingAnchor.window.status, "insufficient");
+    assert.equal(missingAnchor.nextState.samples[0].evaluatedAt, instant(3));
+    const lateQuarterHour = apply(
+        missingAnchor.nextState,
+        missingSeed.nextSampleIndex + 1,
+        100,
+    );
+    assert.equal(lateQuarterHour.windowSampleDisposition, "not-scheduled");
+    assert.equal(lateQuarterHour.window.sampleCount, 95);
+    assert.equal(lateQuarterHour.window.status, "insufficient");
+    assert.equal(lateQuarterHour.publication.state, "retained-last-known-good");
 
     state = createReportingFreshnessState();
     for (let index = 0; index < 96; index += 1) {
@@ -127,8 +166,8 @@ test("24-hour age and fifteen-minute cadence gates prevent gaps or dense samples
         });
         state = result.nextState;
     }
-    assert.equal(result.window.sampleCount, 96);
-    assert.equal(result.window.coverageSeconds, 57_000);
+    assert.equal(result.window.sampleCount, 32);
+    assert.equal(result.window.coverageSeconds, 55_800);
     assert.equal(result.window.cadenceValid, false);
     assert.equal(result.window.status, "insufficient");
     assert.equal(result.publication.state, "missing");
@@ -190,7 +229,7 @@ test("strict alert and recovery boundaries require two consecutive evaluations",
     );
     assert.equal(
         reportingFreshnessContract.maximumConsecutiveEvaluationGapSeconds,
-        900,
+        300,
     );
     assert.equal(highAfterGap.alert.state, "inactive");
     assert.equal(highAfterGap.alert.consecutiveAboveAlert, 1);
@@ -208,9 +247,10 @@ test("missing, duplicate, and out-of-order observations never advance the window
     result = evaluateReportingFreshness({ state, evaluation: missing });
     state = result.nextState;
     assert.equal(result.sampleDisposition, "accepted");
-    assert.equal(result.window.sampleCount, 95);
-    assert.equal(result.window.status, "insufficient");
-    assert.equal(result.nextState.samples[0].evaluatedAt, instant(2));
+    assert.equal(result.windowSampleDisposition, "not-scheduled");
+    assert.equal(result.window.sampleCount, 96);
+    assert.equal(result.window.status, "target");
+    assert.equal(result.nextState.samples[0].evaluatedAt, instant(0));
     assert.equal(result.alert.consecutiveAboveAlert, 0);
     assert.equal(result.metric.sample, null);
     assert.equal(state.revision, revisionBeforeMissing + 1);
@@ -220,6 +260,7 @@ test("missing, duplicate, and out-of-order observations never advance the window
         evaluation: missing,
     });
     assert.equal(duplicate.sampleDisposition, "duplicate");
+    assert.equal(duplicate.windowSampleDisposition, "ignored");
     assert.equal(duplicate.nextState.revision, state.revision);
     assert.equal(duplicate.metric.sample, null);
 
@@ -245,7 +286,7 @@ test("serialized restart preserves alert hysteresis and LKG without relabelling 
     const initialLkg = seeded.publication.selectedOutputSha256;
     assert.equal(seeded.publication.state, "verified-fresh");
 
-    for (let offset = 0; offset < 5; offset += 1) {
+    for (let offset = 0; offset < 15; offset += 1) {
         const result = apply(state, index, 1801);
         state = result.nextState;
         index += 1;
@@ -280,10 +321,9 @@ test("serialized restart preserves alert hysteresis and LKG without relabelling 
     assert.equal(result.publication.selectedOutputSha256, initialLkg);
     assert.equal(result.publication.freshness, "stale");
 
-    for (let offset = 0; offset < 90; offset += 1) {
-        result = apply(state, index, 100);
+    for (let offset = 0; offset < 92; offset += 1) {
+        result = apply(state, index + offset * 3, 100);
         state = result.nextState;
-        index += 1;
     }
     assert.equal(result.window.status, "target");
     assert.equal(result.publication.state, "verified-fresh");
@@ -316,10 +356,25 @@ test("restart rejects streaks that cannot follow the persisted evaluation and al
                 canonical({
                     ...seeded.state,
                     revision: seeded.state.revision + 1,
-                    lastEvaluation: evaluation(seeded.nextIndex, null),
+                    lastEvaluation: evaluation(seeded.nextSampleIndex, null),
                 }),
             ),
         /outside the rolling 24-hour window/,
+    );
+    const unanchoredEvaluation = evaluation(seeded.nextIndex, 100);
+    assert.throws(
+        () =>
+            deserializeReportingFreshnessState(
+                canonical({
+                    ...seeded.state,
+                    samples: [
+                        ...seeded.state.samples.slice(0, -1),
+                        unanchoredEvaluation,
+                    ],
+                    lastEvaluation: unanchoredEvaluation,
+                }),
+            ),
+        /missing or unanchored sample/,
     );
     rejectsInconsistent({
         ...seeded.state,

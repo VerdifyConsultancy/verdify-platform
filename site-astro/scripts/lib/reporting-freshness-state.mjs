@@ -7,7 +7,8 @@ const SAMPLE_CADENCE_SECONDS = 15 * 60;
 const COMPLETE_WINDOW_COVERAGE_SECONDS =
     (WINDOW_SAMPLE_COUNT - 1) * SAMPLE_CADENCE_SECONDS;
 const WINDOW_AGE_BOUNDARY = "(evaluatedAt-86400s,evaluatedAt]";
-const MAX_CONSECUTIVE_EVALUATION_GAP_SECONDS = SAMPLE_CADENCE_SECONDS;
+const SAMPLE_ANCHOR = "utc-quarter-hour";
+const MAX_CONSECUTIVE_EVALUATION_GAP_SECONDS = 5 * 60;
 const TARGET_LAG_SECONDS = 15 * 60;
 const ALERT_LAG_SECONDS = 30 * 60;
 const REQUIRED_CONSECUTIVE_EVALUATIONS = 2;
@@ -67,6 +68,10 @@ function validateEvaluation(value, label = "reporting freshness evaluation") {
         throw new Error(`${label} cannot bind output to a missing lag sample`);
     }
     return value;
+}
+
+function isQuarterHourAnchor(value) {
+    return Date.parse(value) % (SAMPLE_CADENCE_SECONDS * 1000) === 0;
 }
 
 function validateLastKnownGood(value) {
@@ -188,9 +193,12 @@ function validateState(value) {
     let previousTime = -1;
     for (const sample of value.samples) {
         validateEvaluation(sample, "reporting freshness sample");
-        if (sample.lagSeconds === null) {
+        if (
+            sample.lagSeconds === null ||
+            !isQuarterHourAnchor(sample.evaluatedAt)
+        ) {
             throw new Error(
-                "reporting freshness window contains a missing sample",
+                "reporting freshness window contains a missing or unanchored sample",
             );
         }
         const sampleTime = Date.parse(sample.evaluatedAt);
@@ -230,8 +238,11 @@ function validateState(value) {
                 "reporting freshness sample is outside the rolling 24-hour window",
             );
         }
-        if (
+        const lastEvaluationIsWindowSample =
             value.lastEvaluation.lagSeconds !== null &&
+            isQuarterHourAnchor(value.lastEvaluation.evaluatedAt);
+        if (
+            lastEvaluationIsWindowSample &&
             JSON.stringify(value.lastEvaluation) !==
                 JSON.stringify(value.samples.at(-1))
         )
@@ -329,6 +340,7 @@ function windowModel(samples) {
         maximumSampleCount: WINDOW_SAMPLE_COUNT,
         windowSeconds: WINDOW_SECONDS,
         sampleCadenceSeconds: SAMPLE_CADENCE_SECONDS,
+        sampleAnchor: SAMPLE_ANCHOR,
         ageBoundary: WINDOW_AGE_BOUNDARY,
         coverageSeconds: coverage.coverageSeconds,
         cadenceValid: coverage.cadenceValid,
@@ -365,6 +377,7 @@ function ignoredResult(state, evaluation, disposition) {
         schemaVersion: 1,
         evaluatedAt: evaluation.evaluatedAt,
         sampleDisposition: disposition,
+        windowSampleDisposition: "ignored",
         window: windowModel(state.samples),
         alert: {
             state: state.alertState,
@@ -485,12 +498,25 @@ export function evaluateReportingFreshness({ state, evaluation }) {
     let transition = "none";
     let alertEvaluation = "missing";
 
+    let windowSampleDisposition = "not-scheduled";
+    if (
+        evaluation.lagSeconds !== null &&
+        isQuarterHourAnchor(evaluation.evaluatedAt)
+    ) {
+        next.samples.push(structuredClone(evaluation));
+        next.samples = next.samples.slice(-WINDOW_SAMPLE_COUNT);
+        windowSampleDisposition = "appended";
+    } else if (
+        evaluation.lagSeconds === null &&
+        isQuarterHourAnchor(evaluation.evaluatedAt)
+    ) {
+        windowSampleDisposition = "missing";
+    }
+
     if (evaluation.lagSeconds === null) {
         next.consecutiveAboveAlert = 0;
         next.consecutiveBelowRecovery = 0;
     } else {
-        next.samples.push(structuredClone(evaluation));
-        next.samples = next.samples.slice(-WINDOW_SAMPLE_COUNT);
         if (evaluation.lagSeconds > ALERT_LAG_SECONDS) {
             alertEvaluation = "above-alert";
             next.consecutiveBelowRecovery = 0;
@@ -563,6 +589,7 @@ export function evaluateReportingFreshness({ state, evaluation }) {
         schemaVersion: 1,
         evaluatedAt: evaluation.evaluatedAt,
         sampleDisposition: "accepted",
+        windowSampleDisposition,
         window,
         alert: {
             state: next.alertState,
@@ -596,6 +623,7 @@ export const reportingFreshnessContract = Object.freeze({
     minimumSampleCount: WINDOW_SAMPLE_COUNT,
     windowSeconds: WINDOW_SECONDS,
     sampleCadenceSeconds: SAMPLE_CADENCE_SECONDS,
+    sampleAnchor: SAMPLE_ANCHOR,
     completeWindowCoverageSeconds: COMPLETE_WINDOW_COVERAGE_SECONDS,
     windowAgeBoundary: WINDOW_AGE_BOUNDARY,
     maximumConsecutiveEvaluationGapSeconds:
