@@ -923,14 +923,20 @@ def _iso_bmff_uint_table(payload: bytes, width: int) -> tuple[list[int], bool]:
     return [int.from_bytes(payload[offset : offset + width], "big") for offset in range(8, len(payload), width)], False
 
 
-def _iso_bmff_sample_sizes(stsz: bytes | None, stz2: bytes | None) -> tuple[list[int], bool]:
+def _iso_bmff_sample_sizes(
+    stsz: bytes | None,
+    stz2: bytes | None,
+    remaining_samples: int,
+) -> tuple[list[int], bool]:
     if (stsz is None) == (stz2 is None):
+        return [], True
+    if remaining_samples < 0 or remaining_samples > ISO_BMFF_MAX_SAMPLES:
         return [], True
     if stsz is not None:
         if len(stsz) < 12 or stsz[:4] != b"\x00\x00\x00\x00":
             return [], True
         sample_size, count = struct.unpack(">II", stsz[4:12])
-        if count > ISO_BMFF_MAX_SAMPLES:
+        if count > remaining_samples:
             return [], True
         if sample_size:
             return ([sample_size] * count, len(stsz) != 12)
@@ -943,7 +949,7 @@ def _iso_bmff_sample_sizes(stsz: bytes | None, stz2: bytes | None) -> tuple[list
         return [], True
     field_size = stz2[7]
     count = struct.unpack(">I", stz2[8:12])[0]
-    if count > ISO_BMFF_MAX_SAMPLES or field_size not in {4, 8, 16}:
+    if count > remaining_samples or field_size not in {4, 8, 16}:
         return [], True
     encoded_size = (count * field_size + 7) // 8
     if len(stz2) != 12 + encoded_size:
@@ -970,6 +976,7 @@ def _iso_bmff_track_ranges(moov: bytes) -> tuple[list[tuple[int, int]], bool, bo
 
     safe_ranges: list[tuple[int, int]] = []
     unproven = False
+    remaining_samples = ISO_BMFF_MAX_SAMPLES
     for track in tracks:
         track_boxes, malformed = _iso_bmff_child_boxes(track)
         mdia = _iso_bmff_one_box(track_boxes, b"mdia")
@@ -1023,11 +1030,18 @@ def _iso_bmff_track_ranges(moov: bytes) -> tuple[list[tuple[int, int]], bool, bo
         if any(description_index > entry_count for _first, _count, description_index in mappings):
             return [], True, True
 
-        sizes, malformed = _iso_bmff_sample_sizes(stsz, stz2)
+        # The work budget is per file, not per track. In particular, a compact
+        # constant-size stsz can declare millions of samples without spending
+        # metadata bytes for each one, so reject the aggregate before
+        # materializing its size list.
+        sizes, malformed = _iso_bmff_sample_sizes(stsz, stz2, remaining_samples)
+        if malformed:
+            return [], True, True
+        remaining_samples -= len(sizes)
         offsets, offset_malformed = _iso_bmff_uint_table(
             stco if stco is not None else co64 or b"", 4 if stco is not None else 8
         )
-        if malformed or offset_malformed:
+        if offset_malformed:
             return [], True, True
 
         sample_index = 0

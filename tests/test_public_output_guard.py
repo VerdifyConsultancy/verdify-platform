@@ -246,6 +246,34 @@ def iso_bmff_many_mdat_fixture(*, sample_count: int = 100_000, empty_mdat_count:
     return ftyp + moov(offset_bytes) + empty_mdats + iso_bmff_box(b"mdat", b"\x80" * sample_count)
 
 
+def iso_bmff_multi_track_fixture(*, samples_per_track: int, track_count: int) -> bytes:
+    ftyp = iso_bmff_box(b"ftyp", b"isom\x00\x00\x02\x00isomiso2")
+
+    def track(chunk_offset: int) -> bytes:
+        stsd = iso_bmff_box(b"stsd", b"\x00\x00\x00\x00" + struct.pack(">I", 1) + iso_bmff_box(b"avc1", b""))
+        stsc = iso_bmff_box(
+            b"stsc",
+            b"\x00\x00\x00\x00" + struct.pack(">IIII", 1, 1, samples_per_track, 1),
+        )
+        stsz = iso_bmff_box(
+            b"stsz",
+            b"\x00\x00\x00\x00" + struct.pack(">II", 1, samples_per_track),
+        )
+        stco = iso_bmff_box(b"stco", b"\x00\x00\x00\x00" + struct.pack(">II", 1, chunk_offset))
+        stbl = iso_bmff_box(b"stbl", stsd + stsc + stsz + stco)
+        minf = iso_bmff_box(b"minf", stbl)
+        hdlr = iso_bmff_box(b"hdlr", b"\x00\x00\x00\x00" + b"\x00\x00\x00\x00vide" + b"\x00" * 12)
+        return iso_bmff_box(b"trak", iso_bmff_box(b"mdia", hdlr + minf))
+
+    preliminary_moov = iso_bmff_box(b"moov", b"".join(track(0) for _ in range(track_count)))
+    media_offset = len(ftyp) + len(preliminary_moov) + 8
+    moov = iso_bmff_box(
+        b"moov",
+        b"".join(track(media_offset + index * samples_per_track) for index in range(track_count)),
+    )
+    return ftyp + moov + iso_bmff_box(b"mdat", b"\x80" * (samples_per_track * track_count))
+
+
 def font_table_checksum(tag: bytes, payload: bytes) -> int:
     if tag == b"head" and len(payload) >= 12:
         payload = payload[:8] + b"\x00\x00\x00\x00" + payload[12:]
@@ -735,6 +763,19 @@ def test_iso_bmff_many_mdat_sample_validation_is_linear(tmp_path):
     # for this 100k-sample/4094-mdat shape. Five seconds leaves substantial CI
     # noise headroom while preserving a practical regression gate.
     assert elapsed < 5.0
+
+
+def test_iso_bmff_sample_budget_is_aggregate_across_tracks(tmp_path, monkeypatch):
+    guard = load_guard()
+    artifact = tmp_path / "aggregate-sample-budget.mp4"
+    artifact.write_bytes(iso_bmff_multi_track_fixture(samples_per_track=3, track_count=2))
+    monkeypatch.setattr(guard, "ISO_BMFF_MAX_SAMPLES", 4)
+
+    findings = guard.scan_root(tmp_path)
+
+    assert [(finding.path, finding.reason) for finding in findings] == [
+        ("aggregate-sample-budget.mp4", "malformed-media-artifact"),
+    ]
 
 
 def test_guard_maps_index_pages_and_scans_binary_metadata(tmp_path):
