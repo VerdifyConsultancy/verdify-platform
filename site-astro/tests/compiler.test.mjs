@@ -13,7 +13,10 @@ import {
   normalizeRoute,
   renderMarkdown,
   routeFromSource,
+  socialImagePath,
   splitFrontmatter,
+  tagRecords,
+  verifyCompatAssets,
 } from "../scripts/compile-snapshot.mjs";
 import {
   discoverCurrentMediaOccurrence,
@@ -181,6 +184,43 @@ test("missing top-level folder indexes preserve direct child and breadcrumb disc
   assert.match(folders[0].html, /href="\/tags\/planning"/);
 });
 
+test("tag collections preserve counts, dates, item metadata, and baseline noindex policy", () => {
+  const records = [
+    {
+      route: "/reference/architecture",
+      canonicalPath: "/reference/architecture",
+      title: "Architecture",
+      tags: ["architecture", "planning"],
+      date: "2026-05-19",
+    },
+    {
+      route: "/reference/safety",
+      canonicalPath: "/reference/safety",
+      title: "Safety",
+      tags: ["architecture"],
+      date: "2026-05-18",
+    },
+  ];
+  const tags = tagRecords(records, new Set(records.map((record) => record.route)));
+  const architecture = tags.find((record) => record.route === "/tags/architecture");
+  const index = tags.find((record) => record.route === "/tags");
+  assert.equal(architecture.noindex, true);
+  assert.equal(index.noindex, true);
+  assert.match(architecture.html, /2 items with this tag/);
+  assert.match(architecture.html, /May 19, 2026/);
+  assert.match(architecture.html, /href="\/tags\/planning"/);
+  assert.match(index.html, /<h1>Tag Index<\/h1>/);
+  assert.match(index.html, /<h2><a href="\/tags\/architecture">architecture<\/a><\/h2>/);
+});
+
+test("social images are exact same-origin snapshot assets", () => {
+  const assets = new Set(["static/photos/about.jpeg"]);
+  assert.equal(socialImagePath("/static/photos/about.jpeg", assets, "about.md"), "/static/photos/about.jpeg");
+  assert.equal(socialImagePath(undefined, assets, "about.md"), "");
+  assert.throws(() => socialImagePath("https://example.com/about.jpeg", assets, "about.md"), /same-origin/);
+  assert.throws(() => socialImagePath("/static/photos/missing.jpeg", assets, "about.md"), /absent/);
+});
+
 test("frontmatter parser preserves nested YAML and rejects ambiguity", () => {
   const [frontmatter, body] = splitFrontmatter("---\ntitle: Test\naliases: [old]\n---\n# Body\n", "test.md");
   assert.equal(frontmatter.title, "Test");
@@ -193,6 +233,26 @@ test("image dimensions are read from bounded static image headers", () => {
   const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630"></svg>');
   assert.deepEqual(imageDimensions(svg, "evidence.svg"), { width: 1200, height: 630 });
   assert.equal(imageDimensions(Buffer.from("not an image"), "evidence.bin"), null);
+});
+
+test("video evidence defers media bytes until the visitor requests playback", async () => {
+  const rendered = await renderMarkdown(
+    '<video controls preload="metadata"><source src="/static/video/proof.mp4" type="video/mp4"></video>',
+    { relative: "index.md" },
+    new Map(),
+    new Map([["index.md", "/"]]),
+    new Set(["static/video/proof.mp4"]),
+    new Map(),
+    new Map(),
+    new Set(["/"]),
+  );
+  assert.match(rendered.html, /<video controls preload="none">/);
+});
+
+test("legacy public compatibility assets are closed and digest-bound", async () => {
+  const assets = await verifyCompatAssets();
+  assert.equal(assets.length, 11);
+  assert.ok(assets.every((asset) => asset.relative && asset.bytes.length > 0));
 });
 
 test("specialist renderer uses only selected same-origin decoded fallbacks", async () => {

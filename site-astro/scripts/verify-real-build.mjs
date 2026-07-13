@@ -22,7 +22,7 @@ if (
   || build.preservedMediaCount !== 179
   || build.rollingPlanCompatibility?.suppressedDeclarationCount !== 2
   || build.stageGlobalNoindex !== true
-  || routes.routes?.length !== 320
+  || routes.routes?.length !== 323
 ) {
   throw new Error("dist is not the reviewed 429-file sanitized Lab stage build");
 }
@@ -37,5 +37,5 @@ while (pending.length > 0) {
     else if (entry.isFile() && entry.name.endsWith(".html")) htmlFiles += 1;
   }
 }
-if (htmlFiles !== 321) throw new Error("real Lab stage HTML route count changed");
+if (htmlFiles !== 324) throw new Error("real Lab stage HTML route count changed");
 process.stdout.write(`verified real sanitized Lab build: routes=${routes.routes.length} html=${htmlFiles} media=${build.preservedMediaCount}\n`);
