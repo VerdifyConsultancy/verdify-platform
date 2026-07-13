@@ -165,7 +165,7 @@ class _FakeConnection:
             return list(self.live_rows)
         for marker in (
             "fn_realized_solar_night_dryout",
-            "v_climate_action_daily_scorecard",
+            "fn_climate_action_daily_scorecard",
             "climate_moisture_exchange",
             "prev_action",  # vpd_policy_reason_sql
             "fn_band_setpoints",  # pinched/phase combined statement
