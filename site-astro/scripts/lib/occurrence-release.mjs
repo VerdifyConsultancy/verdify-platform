@@ -20,7 +20,10 @@ const EVENT_FRESHNESS = {
   "dataset-published": { targetSeconds: 15 * 60, alertAfterSeconds: 30 * 60 },
   "graph-fallback-updated": { targetSeconds: 30 * 60, alertAfterSeconds: 30 * 60 },
   "current-media-updated": { targetSeconds: 15 * 60, alertAfterSeconds: 15 * 60 },
-  reconciliation: { targetSeconds: 15 * 60, alertAfterSeconds: 15 * 60 },
+  // A reconciliation carries the reporting-feed source watermark. Keep the
+  // per-release target aligned with the <=15 minute public-evidence SLO while
+  // reserving alert state for the >30 minute stale boundary.
+  reconciliation: { targetSeconds: 15 * 60, alertAfterSeconds: 30 * 60 },
 };
 
 class CandidateImageError extends Error {}
@@ -327,6 +330,23 @@ export function evaluateOccurrenceFreshness(manifest, asOf) {
     evaluatedAt: asOf,
     graphs: manifest.occurrences.graphs.map((occurrence) => result(occurrence, occurrence.fallback?.verifiedAt)),
     currentMedia: manifest.occurrences.currentMedia.map((occurrence) => result(occurrence, occurrence.fallback?.capturedAt)),
+  };
+}
+
+export function summarizeOccurrenceFreshness(manifest, asOf) {
+  const evaluated = evaluateOccurrenceFreshness(manifest, asOf);
+  function group(items) {
+    const counts = { fresh: 0, alert: 0, missing: 0 };
+    for (const item of items) counts[item.status] += 1;
+    return { total: items.length, ...counts };
+  }
+  const graphs = group(evaluated.graphs);
+  const currentMedia = group(evaluated.currentMedia);
+  return {
+    evaluatedAt: evaluated.evaluatedAt,
+    status: graphs.alert + graphs.missing + currentMedia.alert + currentMedia.missing > 0 ? "alert" : "fresh",
+    graphs,
+    currentMedia,
   };
 }
 

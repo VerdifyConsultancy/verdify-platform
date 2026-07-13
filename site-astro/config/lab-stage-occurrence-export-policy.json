@@ -1,0 +1,659 @@
+{
+  "contract": "verdify.lab-occurrence-export-policy",
+  "schemaVersion": 1,
+  "policyVersion": "lab-public-reporting-v1",
+  "activation": {
+    "state": "blocked",
+    "approvedBy": null,
+    "approvedAt": null,
+    "requiredGates": [
+      "jason-approval",
+      "operator-owned-reporting-feed",
+      "least-privilege-reporting-credential"
+    ]
+  },
+  "sourceSnapshotManifestSha256": "2dbcb7256f475be6bd620427101900c53814fb065a815e0129b19451d7467d86",
+  "sourceOccurrenceManifestSha256": "e455309736cf785914141d1641ec2569f623e048cf9073b3ea6fce181726160d",
+  "reviewedAt": "2026-07-13T07:36:30Z",
+  "reportingFeed": {
+    "contract": "verdify.operator-public-reporting-feed",
+    "authority": "operator-owned",
+    "direction": "one-way-read-only",
+    "sourceClass": "public-reporting-projection",
+    "credentialClass": "reporting-read-only",
+    "existingAnonymousGraphsAllowed": false,
+    "trackAPrimaryRoleAllowed": false,
+    "sourceWatermarkRequired": true,
+    "p95TargetSeconds": 900,
+    "staleAfterSeconds": 1800
+  },
+  "cameraUpstream": {
+    "contract": "verdify.public-camera-read-feed",
+    "method": "GET",
+    "origin": "https://api.verdify.ai",
+    "redirectsAllowed": false,
+    "authorization": "forbidden",
+    "cookies": "forbidden",
+    "allowedResponseMediaType": "image/jpeg",
+    "sanitization": "decode-reencode-rgb-or-rgba-png-metadata-free",
+    "forbiddenNetworkClasses": [
+      "device-vlan",
+      "frigate",
+      "go2rtc",
+      "control-plane"
+    ],
+    "sources": [
+      {
+        "occurrenceId": "media_024bdac9f86794c7d1f36d48",
+        "url": "https://api.verdify.ai/api/v1/public/cameras/greenhouse_2/latest.jpg?h=1080"
+      },
+      {
+        "occurrenceId": "media_4e973f995789201d00aed8fd",
+        "url": "https://api.verdify.ai/api/v1/public/cameras/greenhouse_1/latest.jpg?h=1080"
+      }
+    ]
+  },
+  "imagePolicy": {
+    "mediaType": "image/png",
+    "graphs": {
+      "minWidth": 320,
+      "minHeight": 180,
+      "maxWidth": 4096,
+      "maxHeight": 2160,
+      "maxBytes": 8388608,
+      "maxCandidateAgeSeconds": 1800
+    },
+    "currentMedia": {
+      "minWidth": 320,
+      "minHeight": 180,
+      "maxWidth": 2160,
+      "maxHeight": 2160,
+      "maxBytes": 8388608,
+      "maxCandidateAgeSeconds": 900
+    }
+  },
+  "graphs": [
+    {
+      "occurrenceId": "graph_00dc2281841c93f9d0e3d1ee",
+      "occurrenceSha256": "ce5da8cd43f7a09070e32dc2994cd9735aef925841422bdb6789ba3edbfeb0d8"
+    },
+    {
+      "occurrenceId": "graph_0209e13f9240f1ca6c7e32b8",
+      "occurrenceSha256": "3a49157cb2eacf9e75db8d6385ae7a94e63991bbc970fe1a309f46fe901f6d39"
+    },
+    {
+      "occurrenceId": "graph_040d4d9677dcb9608a9a0522",
+      "occurrenceSha256": "e3337d7c9adc120d553446f6a57161bde964d07b44254c230fd4a9c5ad39d0bf"
+    },
+    {
+      "occurrenceId": "graph_05c271913d5b6a31b7b3d8c0",
+      "occurrenceSha256": "5385c2a52f1831ca2f673af5e12c44461c023f6c0de6cf0fdc8de106d0f25ace"
+    },
+    {
+      "occurrenceId": "graph_07469bcc2d4d64428fb7d57f",
+      "occurrenceSha256": "8915a395f3b3a354ac3c56b33290c7d6215ccd3370d6e1a91322566efb34e8bf"
+    },
+    {
+      "occurrenceId": "graph_0837d0969ef95509c386ebb4",
+      "occurrenceSha256": "843355d1c11ba9edcbd3e0d4c68dacc97e71d28fcfc8392c31b989f44caedb42"
+    },
+    {
+      "occurrenceId": "graph_08ab434f05053cb49634d904",
+      "occurrenceSha256": "11b29c9935c56ee12b0171791f21fa68edbfc5ed83dc47798b09a4b6db21db56"
+    },
+    {
+      "occurrenceId": "graph_0bef09d81405dc7b9f9afc5e",
+      "occurrenceSha256": "f92448ec3cd78a292995ed22832178688607dd48afac3cbabd397e060f4bcd5a"
+    },
+    {
+      "occurrenceId": "graph_0f04844157db91f656f5afa8",
+      "occurrenceSha256": "627c8674ea6ca613597d91378ed722b834c9e77438855057c48841d58f159a1a"
+    },
+    {
+      "occurrenceId": "graph_0fb5cc09f819fc5e7886e570",
+      "occurrenceSha256": "9e66cd5dbfe9ae6a916674d7e5c1b0dbc0823f058eee8e80548c53ec6b0ea766"
+    },
+    {
+      "occurrenceId": "graph_10bc787adf06c03878ef3233",
+      "occurrenceSha256": "857acb44deed5188817ad5356cfa27126858e137b49cc710b797a06b6a20d65c"
+    },
+    {
+      "occurrenceId": "graph_10cb4c37add2b6cd9d67f7e7",
+      "occurrenceSha256": "4086a1e87935b8c1120c9bb91c76057306e4267b18cade0e8b18fccd7fd2d214"
+    },
+    {
+      "occurrenceId": "graph_118080d42bc3165f434f9768",
+      "occurrenceSha256": "485e01363c8a870367a578d54490aeb97134cc8d5b25fb49ebf7cb61e98fba50"
+    },
+    {
+      "occurrenceId": "graph_1185325ac8c7a34131757f2a",
+      "occurrenceSha256": "681ff8ddd79515beb23769213b102e0cf68a8a43c1109301a6176e58ebc66019"
+    },
+    {
+      "occurrenceId": "graph_12574e6164118d6e5cad660c",
+      "occurrenceSha256": "fca98cf5d5f72770a1672c775bfd9978373dc0be024db82b8f78af60391299ca"
+    },
+    {
+      "occurrenceId": "graph_13eb5811f50628163aa56a86",
+      "occurrenceSha256": "571b15ac11fff4b8ab7ebfe13e5e045de00cbe403630b1e3d936e8798d46de1c"
+    },
+    {
+      "occurrenceId": "graph_1d7356340f879ae721f127cf",
+      "occurrenceSha256": "1189fa97a37db6470bfae37aa7e89b44a183e22a9fcb3ee545bdbf5ccd60bba7"
+    },
+    {
+      "occurrenceId": "graph_1ffdfc79f485376896fe1b46",
+      "occurrenceSha256": "21ede8e1b35a618c075ea3026073db2b7096df16c34d60ef72c75b403e98a2da"
+    },
+    {
+      "occurrenceId": "graph_220b9ddd8ea2b79f9826cf08",
+      "occurrenceSha256": "ce5a04b3fceba01da61fe7ec08485520e8069fd5e6be07401f477c858719469d"
+    },
+    {
+      "occurrenceId": "graph_233d202215475b934f9284c4",
+      "occurrenceSha256": "c41d5258a137c6b2401d39b0b0214aa6bd0d388c23f209560bdc87957d6477e9"
+    },
+    {
+      "occurrenceId": "graph_254647a468be5b9b3a7ecf09",
+      "occurrenceSha256": "809fa4945bf7ced2ad770bf22227c4732c0dd059718ccfcaad50f8ea3ef06ac5"
+    },
+    {
+      "occurrenceId": "graph_26808bbe851b18c864ee5e92",
+      "occurrenceSha256": "4ac5d971d094ac187346a152fc7778a9e4f7d1939f98fd6f3664b26c25d0c4ed"
+    },
+    {
+      "occurrenceId": "graph_2688be2bc4394375bc308a4a",
+      "occurrenceSha256": "fef081426b341f12c5a708a3336db8c891fe2ae28881988aef744eea4fab4d42"
+    },
+    {
+      "occurrenceId": "graph_27ff680dde91dd268a48eaed",
+      "occurrenceSha256": "dad8fd6a4415a4051825a04aa87a5b277141726961c2b4e073abb2519e237669"
+    },
+    {
+      "occurrenceId": "graph_29f61270eb63ce828f0dc272",
+      "occurrenceSha256": "bd3fa59ab2aa6e6bb6a6cc1f947498345350f276d2210a4d7dcb1fef5a54f9bb"
+    },
+    {
+      "occurrenceId": "graph_2b76a30e0187e94f191b68d7",
+      "occurrenceSha256": "df9974039891ce15d325fefddd94d04a5d6f8c10ea6a2794fad62dbb27f1a940"
+    },
+    {
+      "occurrenceId": "graph_2bdb3731fc67b66c58fa84fb",
+      "occurrenceSha256": "4bfd4579c11d6ae432839e355bd0162c70e296a808fe74566e03d9b309fb4ffb"
+    },
+    {
+      "occurrenceId": "graph_2db4b278b226e54309774733",
+      "occurrenceSha256": "34c6cf332437332a09428fc99fc6375aa7f1c1ad0ec534226362d92ea7213100"
+    },
+    {
+      "occurrenceId": "graph_2f5604a0a8da68a8a5f063e5",
+      "occurrenceSha256": "9158d0a9dfb91c7c000206db64aa4552819f96c06625039354267741fbccf760"
+    },
+    {
+      "occurrenceId": "graph_313ba2a3cc7787afa1102031",
+      "occurrenceSha256": "0ac115fcea5a6727bb14a9714bbf3b623ced07aa066db5f88907b6d8df3e70b3"
+    },
+    {
+      "occurrenceId": "graph_3624ad05d8632f1e391f34d5",
+      "occurrenceSha256": "f3d451ac73e99b4ca9b924b6c068eadb2ec2bd321b2c4481d08fa0aaf29cf016"
+    },
+    {
+      "occurrenceId": "graph_3bace4aeaceaf267e1537d0b",
+      "occurrenceSha256": "dfa61bf53f6182a527ac7c3ef9cba54ae3dc3f17e95770ad85fa133232f8b996"
+    },
+    {
+      "occurrenceId": "graph_3c55067fa0e34e115fcb4bd6",
+      "occurrenceSha256": "5942a9504d75b56a70c3fa14a8de741750daac26042598fc36dc30c5ddffd943"
+    },
+    {
+      "occurrenceId": "graph_3c752c6f9c0a711c05b0777c",
+      "occurrenceSha256": "a8a3bc0863c36b6bcccd2127d8561428de8fdd55fea6311f4570eb9c3b45ac61"
+    },
+    {
+      "occurrenceId": "graph_3d369824ea488640199d6c6b",
+      "occurrenceSha256": "cb431a0b1c2d86b7963f549c866c9ff8ee99afab63fc66fe46a6bd10eeefc2ec"
+    },
+    {
+      "occurrenceId": "graph_3ef9973c6157411187bd3034",
+      "occurrenceSha256": "a9fd5e345d0387a1fbe6cb712748462c848e759c452da32231e49ac092705fe7"
+    },
+    {
+      "occurrenceId": "graph_400f0c83ec8f01118dff52a3",
+      "occurrenceSha256": "9d5d15f2106aa7c0125809fc18325fbd4b72125c0c2d914e90864df40519baaa"
+    },
+    {
+      "occurrenceId": "graph_4121fd059cb9a92da9c3e47d",
+      "occurrenceSha256": "c874ef8c957f0a907b028cbcc51ed4596ef6edb4e40b469118d5e32b6960355d"
+    },
+    {
+      "occurrenceId": "graph_41411d4d550a2f138da628de",
+      "occurrenceSha256": "d1d4c65400a5a9f6b3e02d202e29430ef909cb1373dcdca917d17034f535aaf8"
+    },
+    {
+      "occurrenceId": "graph_4146497983fc02cbcb05949e",
+      "occurrenceSha256": "60322dcafe9bebb7cb8e3a84e12407de6ed1f52b2a8b79528e4056018f954425"
+    },
+    {
+      "occurrenceId": "graph_428d24635cde358815131633",
+      "occurrenceSha256": "996ddbad0f9e8d3519dbf85f2ffd419df365fa51f137410eaf5fd505c2f419cc"
+    },
+    {
+      "occurrenceId": "graph_4357fefce98b19de8ae04d4f",
+      "occurrenceSha256": "a65da950bf93f23d6fd9b55216fe50783e6d65a6d2df490a87b2b36c0d8681df"
+    },
+    {
+      "occurrenceId": "graph_47281bd6f4bbb670827f7703",
+      "occurrenceSha256": "13dcebb38a1a59483081b82b9ade6b1fd4953cf0d993f5ff36588443acd7c1e5"
+    },
+    {
+      "occurrenceId": "graph_48478caf35a6779da0653aa2",
+      "occurrenceSha256": "659e39ff064f231ae0a64cfcf85bb1493870353be37607e71a47aa54bca88e7d"
+    },
+    {
+      "occurrenceId": "graph_4865bcb3181f3c11c3182269",
+      "occurrenceSha256": "161f81637ced34ff81766dd17cb7276ba15eb9eeef2e8a88c8650efb1e14504d"
+    },
+    {
+      "occurrenceId": "graph_49cd69412b12e078222617c1",
+      "occurrenceSha256": "ce52aea945487fba13ff0bda0aafe50878577f83ab91b8ba84858ff04b085ad9"
+    },
+    {
+      "occurrenceId": "graph_4dfac91f95eaf4ad0a6be5fe",
+      "occurrenceSha256": "a6c7d2beae027b333faeb7ac663861c4c3702b48f5b31e5f839264967febcb11"
+    },
+    {
+      "occurrenceId": "graph_4f31369a7ab7a5e18a520ef9",
+      "occurrenceSha256": "1a1cf349a2be9a4380f467cd9e811c74716673169ed55663d4bf58a41561eefd"
+    },
+    {
+      "occurrenceId": "graph_509ac44ae7291a9bc11b137b",
+      "occurrenceSha256": "73c70e4a66589e252e7cc72e790cf6a5cdbf8b7a43c12cb8f009c299c14b177d"
+    },
+    {
+      "occurrenceId": "graph_50c5b5d05021bd6bb86be3b5",
+      "occurrenceSha256": "e1962bbf8d664bf9b3030bfebcaad7451b9b45c993545547c651b4dd121cd211"
+    },
+    {
+      "occurrenceId": "graph_513325baf03581823d347378",
+      "occurrenceSha256": "aaac10eabf8e8f975b313c10b939107688ec668b8e8c5454fcfcaded44df5635"
+    },
+    {
+      "occurrenceId": "graph_52177193c89f5e994ae62227",
+      "occurrenceSha256": "cdaa238b747e5735759bb88968e880f7d1bbf0f0c1b4fd8e5f041c65916b2467"
+    },
+    {
+      "occurrenceId": "graph_54d192066e6da12b8e063a9f",
+      "occurrenceSha256": "70be9bd3dc82c2ec04a3e6bc270a86d258559905db9283514d7489d366caa362"
+    },
+    {
+      "occurrenceId": "graph_555ee22a4e7d2ea9328ca722",
+      "occurrenceSha256": "4b75d383de4a1fcd5408fbdd5c041e878886a18091e32c2813364c26f3d60e44"
+    },
+    {
+      "occurrenceId": "graph_59cb81f934815030a293d1f4",
+      "occurrenceSha256": "f1af6f74d9b04f38f4060da2307fdf90541bc1138615e78a14abf60ddf350381"
+    },
+    {
+      "occurrenceId": "graph_5a879b6046139e6b0d974484",
+      "occurrenceSha256": "eba874d68bbf334c32ad856ce165a38d42ed788e9126d5a1c7fe9da04dc49331"
+    },
+    {
+      "occurrenceId": "graph_5b0389ebdb868755cb89b614",
+      "occurrenceSha256": "52bb38a783afa08838ed22db710683327654283be1068c908f4256d662501de7"
+    },
+    {
+      "occurrenceId": "graph_5c8675d2c5a1d9f86c9ac0af",
+      "occurrenceSha256": "26ed2bad266a3944bec76b499a9e166f2096bdfe118e018e3d3c5f9b06765a29"
+    },
+    {
+      "occurrenceId": "graph_5d6cf87ffc363274e24a718b",
+      "occurrenceSha256": "97e6e59ff5ad04c232208e2a43c54c8db6eefb1666c85208cb603aa5215f72ee"
+    },
+    {
+      "occurrenceId": "graph_5edac7d30bcfb2d7cd6ba7a2",
+      "occurrenceSha256": "45eac9630d6c49cf5e4e273d32e61b8977caf5e06cec76dd6ceeda60afb52d84"
+    },
+    {
+      "occurrenceId": "graph_5f4ff0b6b04dc01c3d93b696",
+      "occurrenceSha256": "454edb9cf8ab479530066e00ceb89c17472899e88555ab45c292bf9caf4ea348"
+    },
+    {
+      "occurrenceId": "graph_5fd353f2e75933165f74f308",
+      "occurrenceSha256": "5cb9655b02b0d95d7b01816ecb473e954b70810c78b7471c2428582275c79d91"
+    },
+    {
+      "occurrenceId": "graph_62b126464e3fbdc3a1c12088",
+      "occurrenceSha256": "c975ab1a2cbc6d83952a99dbaed2ee52f99b2988e8a19a75f0abe2af48bd2d54"
+    },
+    {
+      "occurrenceId": "graph_6477d40a3b3611204294f17c",
+      "occurrenceSha256": "80d73e8d633b97b117fd89eae408af5cd5b44c88ed1891a5646758b0cc7855eb"
+    },
+    {
+      "occurrenceId": "graph_66f796ba0f5e5c983f555542",
+      "occurrenceSha256": "976bad0e8a2e41da27526a567e5f42c2a30f9fce67bc35b9698638665aefc3b4"
+    },
+    {
+      "occurrenceId": "graph_671e385043b07c8340edeca5",
+      "occurrenceSha256": "209c3f51a5ed8901db4ccb47aeb4d7ea4e99066715fbc2160302f03735e04c49"
+    },
+    {
+      "occurrenceId": "graph_6c23c8bbe07119f24185f134",
+      "occurrenceSha256": "028f54f8a9eaee18e87d9a81cea7329197ee5838f8e17da3ccffd1521ed16d2b"
+    },
+    {
+      "occurrenceId": "graph_6d07d7d0a3631184924fa5eb",
+      "occurrenceSha256": "23c334542a3c01a84e867bf86bf460dd7c71ad2cd5505ef81394eff17702f120"
+    },
+    {
+      "occurrenceId": "graph_7067e6c68746d7b75b8b3a42",
+      "occurrenceSha256": "11b042e26184e028fc49f09b7038c1b29cef0b4affc9570cd655b09c7ad10777"
+    },
+    {
+      "occurrenceId": "graph_71a223ba6efe4c3a37dc41bf",
+      "occurrenceSha256": "5f7f0c2309622a61994cf06a348a9e954e4be048393f56a95144e98bf96b2c73"
+    },
+    {
+      "occurrenceId": "graph_71af417ef92710388c3a0587",
+      "occurrenceSha256": "8ead667340ddbf103b903dd0ffd4529d86cd477cef7d87f46370a530c2e7ca1d"
+    },
+    {
+      "occurrenceId": "graph_72ce1c9ccfe47756e36ebcc1",
+      "occurrenceSha256": "8f982c708d28a0c3f1e5bf8c66732e72acae0c11a212ba6a9296eea98789096f"
+    },
+    {
+      "occurrenceId": "graph_742a603399b8cd93683fbae1",
+      "occurrenceSha256": "b7f295970f3e3f3ec4687dabccf2c29801a5ade37afba8a310cf08d4f313ea68"
+    },
+    {
+      "occurrenceId": "graph_750eea767e9f743059800c73",
+      "occurrenceSha256": "59d1eb6a5c81491e2ef36544986d235fcaac83ff738546c6800e38a9bc069e70"
+    },
+    {
+      "occurrenceId": "graph_756ff3290f90847daa17b3ad",
+      "occurrenceSha256": "e42e23d11e4fd4543ca802e1a57103b1bfb3f46380b1b53c41e08b664818f415"
+    },
+    {
+      "occurrenceId": "graph_759583607f7307c2e7c07c7e",
+      "occurrenceSha256": "5e47b87067172f1eae86a0f286e7ebfe911383d9441bbf9f819ef1de7e40d41b"
+    },
+    {
+      "occurrenceId": "graph_75db23fe84188453dfc7e966",
+      "occurrenceSha256": "31b3c55f0af2d939f5ab4208ea89a62373c28b506c92fe73036ca8dc8ba33342"
+    },
+    {
+      "occurrenceId": "graph_77a83bdb31b9261baa47174f",
+      "occurrenceSha256": "445228cbe792e16d9c9cbffa4f8d7fb148a98e31a37979f3720e9ff452116069"
+    },
+    {
+      "occurrenceId": "graph_7ac60c35a82890d8571da45b",
+      "occurrenceSha256": "d6e937faf370b1bb2834ca4c9a1f2bfe7b7011d15442d6b1686273dda9dd7855"
+    },
+    {
+      "occurrenceId": "graph_7b5d3116a0ff3f25876d952a",
+      "occurrenceSha256": "a589eabb46dd5e148dceff67ec317a9d56c706ec4074d5c5555864db56017899"
+    },
+    {
+      "occurrenceId": "graph_7bebc9b9ef93f19f9c29ab15",
+      "occurrenceSha256": "ecf66681205fd59e9fe67a45582b5d045051614ff7560eee7afec6dc79b0c889"
+    },
+    {
+      "occurrenceId": "graph_7cde53d26bdc04f99cda0065",
+      "occurrenceSha256": "29be89b520b52f14193eca84c6ea2b74a141afc79558e99bb222c1a24d1ab269"
+    },
+    {
+      "occurrenceId": "graph_8186e3a94a49d5ffca124a2a",
+      "occurrenceSha256": "ca2a19495f486d3d2200c1c8d569b4115da9f9ef5c0aa364d972a0b94ef29173"
+    },
+    {
+      "occurrenceId": "graph_85d9f902406a6f8005240d2c",
+      "occurrenceSha256": "281681e3afa373437a501729bbdc46c5b5f98fdd8821d9dfc92b2b79a0b60dfe"
+    },
+    {
+      "occurrenceId": "graph_873f57b5c56c71265fa8bc60",
+      "occurrenceSha256": "353d84e6df9d078bbc40dc214337405360946a3536c65a3a9eb73bdc1ff50d28"
+    },
+    {
+      "occurrenceId": "graph_8916988c29a61040f267cc5d",
+      "occurrenceSha256": "d1903dbe5eb98b8860a04e4f45c94bfc3a96b1804742c2210b44fd4a715ac7d7"
+    },
+    {
+      "occurrenceId": "graph_8c10dc40ba068bda2460f5b4",
+      "occurrenceSha256": "3f5db6a2914454a113e4e5a635387ee2513577a55a87b8c56557653e77638f4f"
+    },
+    {
+      "occurrenceId": "graph_905f40ebaf3874ac709ffaea",
+      "occurrenceSha256": "c383664d885671f7c1cc518b6f6895c522be37d1bbedae45cc3abd4416dca282"
+    },
+    {
+      "occurrenceId": "graph_909407920d35a38538ab902e",
+      "occurrenceSha256": "078b1fa850ffb4bb4383b591899ceb2d6136385bfdc8154c9f3c88032ec7bb4a"
+    },
+    {
+      "occurrenceId": "graph_95b03b2523026fc08bae2802",
+      "occurrenceSha256": "a176cbcba656e0ed3428e9bb997bf6f12bc9fc1836722a7aa0f0603d514f7b17"
+    },
+    {
+      "occurrenceId": "graph_95d44a6405748f59607081fd",
+      "occurrenceSha256": "6022baf760610f8f3f4abae4433125623fccf1d15c294b22c0bac2f36384e344"
+    },
+    {
+      "occurrenceId": "graph_98de5e134751361282c8e3f9",
+      "occurrenceSha256": "3854a48b6ed3f7239b4e44f81e41d67d00da7f3d8b396b6a33796b9a542ab947"
+    },
+    {
+      "occurrenceId": "graph_9bda5ec2ccc9c7397bf330ee",
+      "occurrenceSha256": "55a086e18a2ed22997925b1f0c23729bbff8243187c008cbdaeedebe0bd34190"
+    },
+    {
+      "occurrenceId": "graph_9fae40c075babe4af60a4838",
+      "occurrenceSha256": "d2d97978caaf2e7e731e225d4faa7a79f39faf70f308bb6bee2cc20fa6a6728c"
+    },
+    {
+      "occurrenceId": "graph_a208f6f44312bfe1d475ec8b",
+      "occurrenceSha256": "f9a9eaf2ead2b4989d2a5447074b86210e92dd4ba979bd69178d07e0b08898aa"
+    },
+    {
+      "occurrenceId": "graph_a3761ccce04da31aaf6e4c9e",
+      "occurrenceSha256": "b693ad93e1e112a28275f896c9cf4b1a8892a34b1749ed45238173eaeec8d945"
+    },
+    {
+      "occurrenceId": "graph_a4eea29a50c2b51ef61f1a0d",
+      "occurrenceSha256": "31dad195538c4a400d8e0d12efb633974f9c62e784bc11cc9f6e785aecd94e53"
+    },
+    {
+      "occurrenceId": "graph_a6448f7d96cbf5c37c1f48a6",
+      "occurrenceSha256": "ae2f41a896b518a526049e823765085a28e366d1c856a0a84a0e939497da055f"
+    },
+    {
+      "occurrenceId": "graph_a8a45a45212ff3fb9791e7a5",
+      "occurrenceSha256": "5bc49475f06b488b9048ae1368f2924623d4facbef52c1e89cedc9e34a88c203"
+    },
+    {
+      "occurrenceId": "graph_aa9671216ae41953a29a28b0",
+      "occurrenceSha256": "54a5955d65bde16d93a1c256520cb644fa5256be3c8ad8c78b1fdb955135702b"
+    },
+    {
+      "occurrenceId": "graph_ae01e8206b07e2c8b231c732",
+      "occurrenceSha256": "79fba4d57355a7bd1f22d1a657bc89dace2683a4f8a61a6b3e4797e8c4fded40"
+    },
+    {
+      "occurrenceId": "graph_ae271e05a0861dde912e09d2",
+      "occurrenceSha256": "b437f69b283f07c444f3de00b6e42bdfc5afaebae12ea8785ffd2d60e1efef1a"
+    },
+    {
+      "occurrenceId": "graph_b137a9438d62561dbf18918e",
+      "occurrenceSha256": "1c1d1a3a5e6c169b6457c0c0b9850c5dc5b5d9e0f6dbfdddcc799e0e2ea2e177"
+    },
+    {
+      "occurrenceId": "graph_b7c9f2a75bccbc35352b7e92",
+      "occurrenceSha256": "cf01df99267a1d580158e4165c868667a77ed68a904ab2430834a97fb23b3a36"
+    },
+    {
+      "occurrenceId": "graph_b8fe97239c7c0c0cfc5f4dce",
+      "occurrenceSha256": "945a3986b629fe7ad8041b457d5096abfbc0d8a8b8c0fad9625c71998a3ad0c1"
+    },
+    {
+      "occurrenceId": "graph_be64b4bc6df9c31b722cb7e3",
+      "occurrenceSha256": "237d0354a0c5acbbf3834a84c6c400e1899f32468d6628e350694be662ea38ef"
+    },
+    {
+      "occurrenceId": "graph_be9e44a0914b594b741ed4cd",
+      "occurrenceSha256": "90e3161d0b62c3a3e1b17258f701e969642271f0debf37160c051828870a2430"
+    },
+    {
+      "occurrenceId": "graph_c1944bf13e009d6a07a39a76",
+      "occurrenceSha256": "8cae5f8cfee43e2fb9e4d47b416f314c08482bbcf22af65ede965a7bbd73f6c6"
+    },
+    {
+      "occurrenceId": "graph_c1f9a33de091e655d94dea05",
+      "occurrenceSha256": "08ec3119a84d63c16010c430879b8f38c9b528168d9f0ff2fe56b3057344685a"
+    },
+    {
+      "occurrenceId": "graph_c2499ad79e85dfab6f3ebdcf",
+      "occurrenceSha256": "c19231f613e4036e621c3e317a5447cc02e62271b7ceef86dbcdf3d3f5357e18"
+    },
+    {
+      "occurrenceId": "graph_c664a6a16210c9f60d2a217c",
+      "occurrenceSha256": "bfbd74eba71693b90cfaf2941c81a7fabbd45344da27f1e8771f3e224865e1c7"
+    },
+    {
+      "occurrenceId": "graph_c7888fc9984f86fa8ebc091b",
+      "occurrenceSha256": "3307c2d58aeb246d3223f9934dd86b1c425e2db08b170e8570050508ec7fce8e"
+    },
+    {
+      "occurrenceId": "graph_c8c6eb96ecc0d66664fb8a2a",
+      "occurrenceSha256": "07363e1939ea682bd544bc63729cccdfdb3310e62fd1875f214d072f158dfac6"
+    },
+    {
+      "occurrenceId": "graph_caa2301311befa7d0101711d",
+      "occurrenceSha256": "7c0279933d5b0270b9aff355c64c2962b9ec824e604b41fe932ef08cd88f7025"
+    },
+    {
+      "occurrenceId": "graph_cb94f234d3c2da6b1218ef9f",
+      "occurrenceSha256": "31a1b60934cd4ea0565aec6d8d5a4b0d6b48cc63235ee75c659444bf94dc8044"
+    },
+    {
+      "occurrenceId": "graph_d0d37a801c0914e7bc7879ff",
+      "occurrenceSha256": "533fdb3afd88680cfbf615b6cd108efa26cc4c8a61c2c12b0e790498efe72037"
+    },
+    {
+      "occurrenceId": "graph_d4328cbb8e6fe2f7ca38ff12",
+      "occurrenceSha256": "0af18a36bbd9790e665fd748227359f150f1831d142ad84d8371273df4877f10"
+    },
+    {
+      "occurrenceId": "graph_d7e3095151d9a2e05fa7477d",
+      "occurrenceSha256": "85e0dbac050d575c3948e1232b6018b4ce3bb91d15fb5c361f9bcfb3c00eebf5"
+    },
+    {
+      "occurrenceId": "graph_d9c3524cd5ca19140b70460f",
+      "occurrenceSha256": "6c273a028727909aea8ab93fbad751b89c17e993dc08161edefad55edceb9c78"
+    },
+    {
+      "occurrenceId": "graph_dbb33d12fbdb11c1b3bbb63b",
+      "occurrenceSha256": "a1e3b45ed1e1c3ef836f54eec307e245cdc420bd35fa2f39756c83e6da0ba180"
+    },
+    {
+      "occurrenceId": "graph_dbb6e9fa52f8e2c86df0cac5",
+      "occurrenceSha256": "82f7bc219b36d8bea0c75d8b065eb274b4b3a1447dce5e56fc3559e479064507"
+    },
+    {
+      "occurrenceId": "graph_dc3a3d8417d474f6226a49c1",
+      "occurrenceSha256": "fda04f691a6efd9f8710e6816ec6620ab68e36c29a68a6dae4ea845c8df7bb01"
+    },
+    {
+      "occurrenceId": "graph_dcb04872369716fcfab43a0b",
+      "occurrenceSha256": "fbfbec8969bf5ac038213e16b2ccf9a25ee801cc1033803065c7f334a0fa8f2e"
+    },
+    {
+      "occurrenceId": "graph_de6b39a830c232f5c5d1ad4a",
+      "occurrenceSha256": "f31b5b68e81954a4bbf852ef23f528d675f060aa84c1d5b71d5f95c28553858c"
+    },
+    {
+      "occurrenceId": "graph_df351e8a0fe1eab42f338b89",
+      "occurrenceSha256": "4b214789c091eccb4985d89e98235d5ec3f531a0188065ae773ce1f802e12050"
+    },
+    {
+      "occurrenceId": "graph_df954e0f46c2405f7d2b0e7b",
+      "occurrenceSha256": "c0b08fe9b5a131d6e02eb25d686b2699a380dc27fccaac931b593128d8d829b9"
+    },
+    {
+      "occurrenceId": "graph_e01e8edb5a0e46b3a5e517e8",
+      "occurrenceSha256": "9a9404e47adfe36fa46a09ff618e4cf708c075cfe9bbbfb17d51b17c8e714206"
+    },
+    {
+      "occurrenceId": "graph_e23a24dbaa2c1b248ad0e3e5",
+      "occurrenceSha256": "2ac6d44e1c49a38c39d5c1f0808a2e222d755e1beaa2ccf4e40af06073bddc0c"
+    },
+    {
+      "occurrenceId": "graph_e3649f64408d9bd61b0200ff",
+      "occurrenceSha256": "e0c094b2e6d1d77512aa1203131528778452d1ce6c55018c74e0a23cd8339984"
+    },
+    {
+      "occurrenceId": "graph_e6ca4b6b907a1dacb17ffc45",
+      "occurrenceSha256": "300cc79cf259a0030e3c672fb50968ca4722ec870b6e190cfaa86e44ec5455be"
+    },
+    {
+      "occurrenceId": "graph_e822bed622b7181d4d2655e2",
+      "occurrenceSha256": "6984044e83d70f14d8d7749291de728325ee1316b22a1facccebd3ca89b138d8"
+    },
+    {
+      "occurrenceId": "graph_e857ff05c4e303daaf6c808b",
+      "occurrenceSha256": "113940b76e920995f6e5edec83e7947ec3d1f5e689381af2ec58866419ac6f8c"
+    },
+    {
+      "occurrenceId": "graph_eb35b66dd799c912f27d833a",
+      "occurrenceSha256": "9b325f75f22202df26ba97d86de042dd7b3d4cc34cf803c353b6749d4cc0a1ae"
+    },
+    {
+      "occurrenceId": "graph_eb5af080c1454b7b7eb23019",
+      "occurrenceSha256": "3256f7239e85e1a5832f65576c827bfa9003b9709d802442b562fa97a9c4879c"
+    },
+    {
+      "occurrenceId": "graph_ed8799fe8c8bdecea641e110",
+      "occurrenceSha256": "ba18b3cd9339eca58f7cc4bfb21d2861dac56053a1a3ed6e82108bf3e16b7bc5"
+    },
+    {
+      "occurrenceId": "graph_edd3631d9a62a05f28f47b1b",
+      "occurrenceSha256": "bff232ec785a023d14d77f9af2921775eb0c364bc08e84f87a20d219a7b2af57"
+    },
+    {
+      "occurrenceId": "graph_f593a2c772002b6543f0a481",
+      "occurrenceSha256": "c7a8a9f3076ee1c87f35c171f68c9bd05568ea1c08bfd50682d48858200e0026"
+    },
+    {
+      "occurrenceId": "graph_f7679158959ed597b4c2ec01",
+      "occurrenceSha256": "c0a38f2b588b77d81d02979890cedf0c2d42e4581627377e4ff4b7a5e90bb278"
+    },
+    {
+      "occurrenceId": "graph_f9a4730e64b60728fb8318ff",
+      "occurrenceSha256": "fd4841d598645935c23fec2fab8ffc7a92dd3208f5d943297e2c599fbf9f0b79"
+    },
+    {
+      "occurrenceId": "graph_fa031f45ce7d7c5ae987ffb1",
+      "occurrenceSha256": "d126fb5ba23a19249a4ef629463f60710ccf041896d0e15609f60539089afadf"
+    },
+    {
+      "occurrenceId": "graph_fb24bf47bbb151e538766c3e",
+      "occurrenceSha256": "1490737e75936f386318b66433adfed73f8ab9cce858639119dcf35676fb9e60"
+    },
+    {
+      "occurrenceId": "graph_fce53904c73f43a35173fc64",
+      "occurrenceSha256": "30c13853f43340079d37a27c3fc20561d5075d24079fd87cdfe9e95700b751c8"
+    },
+    {
+      "occurrenceId": "graph_ff502a5c6bfe1815add0696a",
+      "occurrenceSha256": "6167527b829d8bdc60bec78cda4a5780bff7b699ef9ae1dbb68e9b7a1a9938ca"
+    }
+  ],
+  "currentMedia": [
+    {
+      "occurrenceId": "media_024bdac9f86794c7d1f36d48",
+      "occurrenceSha256": "547b8dcc86cd04339c694df4fb161a2f9d24e07cd16fadc5e52cbc1d8a4d02e7"
+    },
+    {
+      "occurrenceId": "media_4e973f995789201d00aed8fd",
+      "occurrenceSha256": "390e735571e74f5e9151a87847e002e5e708091aae67fa7901bfb2f4cae7b8fb"
+    }
+  ]
+}

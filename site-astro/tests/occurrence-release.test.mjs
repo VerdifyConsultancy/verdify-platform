@@ -21,6 +21,7 @@ import {
   rollbackCurrentMediaGeneration,
   rollbackOccurrenceRelease,
   staticOccurrenceManifest,
+  summarizeOccurrenceFreshness,
 } from "../scripts/lib/occurrence-release.mjs";
 import { decodePng, validatePngFile } from "../scripts/lib/png-validation.mjs";
 
@@ -593,6 +594,17 @@ test("graph and current-media freshness use their independent last-verified cloc
   }, "2026-07-12T12:31:00Z");
   assert.equal(stale.graphs[0].status, "alert");
   assert.equal(stale.currentMedia[0].status, "alert");
+  assert.deepEqual(summarizeOccurrenceFreshness({
+    occurrences: {
+      graphs: [{ occurrenceId: `graph_${"1".repeat(24)}`, staleAfterSeconds: 1800, fallback }],
+      currentMedia: [{ occurrenceId: `media_${"2".repeat(24)}`, staleAfterSeconds: 500, fallback: null }],
+    },
+  }, "2026-07-12T12:31:00Z"), {
+    evaluatedAt: "2026-07-12T12:31:00Z",
+    status: "alert",
+    graphs: { total: 1, fresh: 0, alert: 1, missing: 0 },
+    currentMedia: { total: 1, fresh: 0, alert: 0, missing: 1 },
+  });
   assert.throws(
     () => evaluateOccurrenceFreshness({
       occurrences: {

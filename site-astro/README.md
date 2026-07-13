@@ -137,6 +137,37 @@ these local selectors: a deployed no-build pointer update/rollback still require
 future runtime/object-store adapter and end-to-end proof. No service restart is
 required by this source-only change.
 
+### Phase 4c producer boundary (inactive)
+
+`scripts/prepare-occurrence-export.mjs` now closes the offline handoff that a
+future specialist producer must satisfy. The reviewed, byte-bound policy at
+`config/lab-stage-occurrence-export-policy.json` contains exactly 143 graph and
+two opaque camera occurrence fingerprints from the accepted stage snapshot. A
+producer batch must name the operator-owned, one-way, read-only public reporting
+feed contract, carry its source watermark, and include every approved occurrence
+exactly once. The target is source-watermark p95 at or below 15 minutes; a sample
+older than 30 minutes is alert state and cannot prepare a release, preserving
+last-known-good evidence.
+
+Candidate files must be metadata-free RGB/RGBA PNGs named by their actual SHA-256.
+The compiler independently decodes them, verifies CRCs and scanlines, and applies
+tighter MIME, byte, and dimension bounds before it can emit canonical media-first
+and reconciliation publish requests. Camera batches carry only opaque occurrence
+IDs. Their approved upstream handoff is GET-only to the two exact
+`api.verdify.ai/api/v1/public/cameras/.../latest.jpg?h=1080` paths; redirects,
+cookies, authentication, device/VLAN access, Frigate, and go2rtc are forbidden,
+and JPEG input must be decoded and cleanly re-encoded without metadata before it
+enters the candidate directory.
+
+The checked-in policy has `activation.state=blocked`. Validation is available,
+but request preparation refuses it. The matching Kubernetes Component under
+`deploy/k8s/components/lab-occurrence-reporting-boundary/` is referenced by no
+overlay, defines no workload or Secret, and is deny-all. A separate Jason-gated
+change must approve and create the isolated reporting feed/tier, its
+least-privilege credential, occurrence-store access, and egress limited to that
+store plus `api.verdify.ai:443`. Existing anonymous `graphs.verdify.ai` and the
+Track A primary database role are explicitly ineligible.
+
 ## Complete built-site releases
 
 The full Astro output now also has a local release and cache path. Run

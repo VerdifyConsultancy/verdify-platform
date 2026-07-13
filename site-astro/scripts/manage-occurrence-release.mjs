@@ -8,6 +8,7 @@ import {
   publishOccurrenceRelease,
   rollbackCurrentMediaGeneration,
   rollbackOccurrenceRelease,
+  summarizeOccurrenceFreshness,
 } from "./lib/occurrence-release.mjs";
 
 const MAX_REQUEST_BYTES = 8 * 1024 * 1024;
@@ -17,6 +18,7 @@ function usage() {
     "Usage:",
     "  node scripts/manage-occurrence-release.mjs publish --request REQUEST.json",
     "  node scripts/manage-occurrence-release.mjs status --store STORE",
+    "  node scripts/manage-occurrence-release.mjs freshness --store STORE --at ISO_INSTANT",
     "  node scripts/manage-occurrence-release.mjs rollback --store STORE --expected SELECTION_SHA256 --at ISO_INSTANT",
     "  node scripts/manage-occurrence-release.mjs publish-media --request REQUEST.json",
     "  node scripts/manage-occurrence-release.mjs media-status --store STORE --occurrence MEDIA_ID",
@@ -108,6 +110,27 @@ async function main() {
       previousManifestSha256: selected.selection?.previous?.manifestSha256 ?? null,
       currentEventId: selected.current?.event.eventId ?? null,
       freshness: selected.current?.freshness ?? null,
+    }, null, 2)}\n`);
+    return;
+  }
+  if (
+    command === "freshness"
+    && values.size === 2
+    && values.has("--store")
+    && values.has("--at")
+  ) {
+    const selected = await loadSelectedOccurrenceRelease(values.get("--store"));
+    const evaluated = summarizeOccurrenceFreshness(
+      selected.current ?? { occurrences: { graphs: [], currentMedia: [] } },
+      values.get("--at"),
+    );
+    const summary = selected.current ? evaluated : { ...evaluated, status: "missing" };
+    process.stdout.write(`${JSON.stringify({
+      contract: "verdify.lab-occurrence-freshness",
+      schemaVersion: 1,
+      generation: selected.selection?.generation ?? 0,
+      currentManifestSha256: selected.selection?.current.manifestSha256 ?? null,
+      ...summary,
     }, null, 2)}\n`);
     return;
   }
