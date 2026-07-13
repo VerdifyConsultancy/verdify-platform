@@ -156,10 +156,13 @@ Phase 4 — **Feature completion (owner: codex, critical-path order below).**
    sanitizer has no device-VLAN, Frigate/go2rtc, controller, DB, or general API
    access. Any future camera credential or source/allowlist change is also
    Jason-gated.
-   The first inert, offline trust-boundary slice is open as PR #483 and refs
-   #476. It does not create a workload, activate a tier, read a credential, or
-   mutate stage/prod; #476 remains open for the operator-owned reporting feed,
-   renderer/re-encoder, occurrence-store delivery, alerts, and joint live proof.
+   The first inert, offline trust-boundary slice was merged and accepted via
+   PR #483 and refs #476. It does not create a workload, activate a tier, read a
+   credential, or mutate stage/prod. Issue #476 is reopened and In Progress for
+   the operator-owned reporting feed, renderer/re-encoder, occurrence-store
+   delivery, alerts, and joint live proof. Inert Phase 4b implementation may
+   begin, but live reporting or occurrence activation remains separately
+   Jason-gated.
 2. **4a Release runtime:** `d91737d` landed via #473 with init hydration,
    atomic runtime, readiness, metrics, and tests. The follow-through makes the
    candidate visible in the Lab stage GitOps source only as a truly disconnected

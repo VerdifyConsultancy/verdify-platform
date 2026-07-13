@@ -190,10 +190,12 @@ bytes; boot from baked fallback; and run all CLI operations end to end.
 The complete local filesystem primitive is present, and its candidate manifest is
 included by the Lab stage overlay only at `replicas: 0`. The overlay deliberately
 retains separate zero-digest sentinels for the release agent and nginx site images;
-the candidate has no route, object-store/AWS environment, credential reference, or
-egress. Merging this source does not alter the live cluster because the Lab stage
-ArgoCD app remains manual-sync. An operator sync is separately recorded and still
-cannot schedule the dormant zero-replica workload. Object storage needs an
+the candidate has no route, object-store/AWS environment, application/object-store
+credential, or egress. Its standard zot registry `imagePullSecret` remains solely
+for image retrieval and grants no application or object-store authority. Merging
+this source does not alter the live cluster because the Lab stage ArgoCD app remains
+manual-sync. An operator sync is separately recorded and still cannot schedule the
+dormant zero-replica workload. Object storage needs an
 implementation of the exposed store semantics plus a real distributed
 lease/conditional-write authority; activation additionally needs reviewed exact
 image pins, store/egress wiring, an explicit replicas change, and live freshness

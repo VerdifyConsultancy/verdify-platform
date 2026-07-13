@@ -51,8 +51,8 @@ spec:
           args: ["init"]
           env:
             # Deliberately absent. The verified image-baked release is selected
-            # until an operator supplies a read-only object-store adapter and
-            # patches this URI in a separate, reviewed overlay.
+            # until a Jason-gated overlay wires the implemented S3 adapter and
+            # dedicated-bucket read-only runtime key by name, then patches URI.
             - name: LAB_RELEASE_STORE
               value: /unconfigured/verdify-lab-release-store
             - name: LAB_RELEASE_CACHE

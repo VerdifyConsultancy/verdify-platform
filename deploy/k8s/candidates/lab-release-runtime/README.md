@@ -3,7 +3,9 @@
 This directory is a disconnected, read-only proof target. The Lab stage overlay
 includes it only as dormant desired state with `replicas: 0` and zero-digest
 image sentinels. It creates no Ingress, IngressRoute, DNS, Secret, PVC,
-publishing writer, database reader, or device path.
+publishing writer, database reader, or device path. Its only Secret reference
+is the standard zot registry image-pull Secret; it has no application or
+object-store credential.
 
 Each of the two hostname-spread pods owns an `emptyDir` cache. The init
 container verifies and hydrates the image-baked known-good release before nginx
@@ -20,11 +22,15 @@ allows no egress. Enabling object storage is a separate integration:
 1. build and pin the `agent` and `site` targets from
    `site-astro/Dockerfile.release-runtime` through the fleet Kaniko/ZOT path;
 2. land the object-store implementation behind `manage-site-release.mjs`;
-3. introduce a separately reviewed least-privilege egress policy and read-only,
-   prefix-scoped credential outside this candidate, then patch
-   `LAB_RELEASE_STORE` to its credential-free `s3://bucket/prefix` URI;
-4. replace both zero image sentinels and explicitly raise the replica count; and
-5. obtain the operator stage-sync gate and run disconnected canary probes before
+3. provision a dedicated Lab Astro release bucket in Garage, with separate
+   per-bucket keys for the read-only runtime and the publishing writer; key
+   provisioning and activation are Jason-gated, key material stays outside
+   Git, and source may record only the Secret/key names;
+4. introduce the separately reviewed least-privilege egress and Secret
+   references, then patch `LAB_RELEASE_STORE` to a credential-free
+   `s3://<dedicated-release-bucket>/releases` URI;
+5. replace both zero image sentinels and explicitly raise the replica count; and
+6. obtain the operator stage-sync gate and run disconnected canary probes before
    any separately authorized route or cutover change.
 
 Merging this source does not change the live cluster. The Lab stage ArgoCD app

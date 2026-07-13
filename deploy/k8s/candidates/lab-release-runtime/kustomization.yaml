@@ -2,7 +2,8 @@ apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
 # This candidate proves the release/cache runtime without creating a public
-# route. It is intentionally absent from every active overlay.
+# route. Lab stage includes it only through a replicas: 0 dormant patch and
+# zero-digest image sentinels; no overlay activates it.
 namespace: verdify-platform
 
 resources:
