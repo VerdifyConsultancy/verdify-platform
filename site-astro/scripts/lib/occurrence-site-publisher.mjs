@@ -14,6 +14,7 @@ import { createOccurrenceExportStoreOperations } from "./occurrence-export-opera
 import {
     occurrenceExportPolicySha256,
     reportingFeedEnvelopeSha256,
+    validatePolicyManifestBinding,
 } from "./occurrence-export-contract.mjs";
 import { loadSelectedOccurrenceRelease } from "./occurrence-release.mjs";
 import {
@@ -22,7 +23,6 @@ import {
     siteReleasePayloadSha256,
     validateSiteReleaseManifest,
 } from "./site-release-store.mjs";
-import { verifyCompleteSelectedOccurrenceEvidence } from "../compile-snapshot.mjs";
 import { verifySelectedEvidence } from "../verify-production-output.mjs";
 
 const SHA256_RE = /^[0-9a-f]{64}$/u;
@@ -703,12 +703,41 @@ async function verifySelectedBuild({
         throw new Error(
             "Astro build does not select the exact complete 143+2 occurrence release",
         );
-    verifyCompleteSelectedOccurrenceEvidence(
-        selected,
-        occurrenceManifest,
+    validatePolicyManifestBinding(
         policy,
-        event.occurrencePolicySha256,
+        occurrenceManifest,
+        checkpoint.sourceOccurrenceManifestSha256,
     );
+    for (const [kind, served, released] of [
+        [
+            "graph",
+            occurrenceManifest.graphs,
+            selected.current.occurrences.graphs,
+        ],
+        [
+            "current-media",
+            occurrenceManifest.currentMedia,
+            selected.current.occurrences.currentMedia,
+        ],
+    ]) {
+        if (served.length !== released.length) {
+            throw new Error(
+                `Astro build has incomplete selected ${kind} evidence`,
+            );
+        }
+        for (let index = 0; index < served.length; index += 1) {
+            if (
+                served[index].occurrenceId !== released[index].occurrenceId ||
+                !canonicalBytes(served[index].selected).equals(
+                    canonicalBytes(released[index]),
+                )
+            ) {
+                throw new Error(
+                    `Astro build selected ${kind} evidence differs from the exact store release`,
+                );
+            }
+        }
+    }
     verifySelectedEvidence(build, occurrenceManifest);
     return {
         buildSha256: buildValue.sha256,
