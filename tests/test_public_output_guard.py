@@ -21,6 +21,25 @@ import pytest
 from verdify_public import output_policy as policy
 
 
+@pytest.fixture(autouse=True)
+def _publisher_umask():
+    """Pin the production publisher's umask for fixture directories.
+
+    The in-cluster validate gate runs under Argo's emissary executor, which
+    starts the container command with umask 0000. Every plain mkdir then
+    yields 0777 directories, and the promoter's fail-closed
+    group/other-write parent check correctly rejects them — six promotion
+    tests failed in-cluster while passing in any 0022 shell. The publisher
+    container always runs with umask 0022; fixtures must model that, not the
+    executor's ambient umask.
+    """
+    previous = os.umask(0o022)
+    try:
+        yield
+    finally:
+        os.umask(previous)
+
+
 def load_guard():
     script_path = Path(__file__).resolve().parents[1] / "scripts" / "check-public-output.py"
     spec = importlib.util.spec_from_file_location("public_output_guard_under_test", script_path)
