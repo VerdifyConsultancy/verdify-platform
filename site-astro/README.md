@@ -164,7 +164,10 @@ request-provenance SHA-256. That digest binds the occurrence ID, GET method, exa
 URL, and the no-redirect/no-auth/no-cookie rules through the candidate, private
 generation, selection, and reconciliation contracts without publishing the URL.
 Both the exact policy and request digests must still match before camera LKG is
-selected. The approved upstream handoff is
+selected. Prepared `media/*.request.json` files are accepted directly by the closed
+v3 `publish-media` CLI contract, and `release.request.json` by the closed v2
+`publish` contract; missing identities and unknown URL-bearing fields fail before
+store mutation. The approved upstream handoff is
 GET-only to the two exact
 `api.verdify.ai/api/v1/public/cameras/.../latest.jpg?h=1080` paths; redirects,
 cookies, authentication, device/VLAN access, Frigate, and go2rtc are forbidden,

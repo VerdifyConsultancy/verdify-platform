@@ -66,8 +66,10 @@ async function requestDocument(file) {
   return document;
 }
 
-function requireKeys(document, keys) {
-  if (Object.keys(document).join(",") !== keys.join(",")) throw new Error("release request does not use the closed v1 shape");
+function requireKeys(document, keys, version) {
+  if (Object.keys(document).join(",") !== keys.join(",")) {
+    throw new Error(`release request does not use the closed ${version} shape`);
+  }
   return document;
 }
 
@@ -80,11 +82,12 @@ async function main() {
       "event",
       "sourceSnapshotManifestSha256",
       "policyVersion",
+      "policySha256",
       "publishedAt",
       "graphs",
       "currentMedia",
       "expectedSelectionSha256",
-    ]);
+    ], "v2");
     const result = await publishOccurrenceRelease(request);
     process.stdout.write(`${JSON.stringify({
       contract: "verdify.lab-occurrence-publish-result",
@@ -162,11 +165,13 @@ async function main() {
       "sourceRoot",
       "event",
       "policyVersion",
+      "policySha256",
+      "requestProvenanceSha256",
       "publishedAt",
       "occurrence",
       "candidate",
       "expectedSelectionSha256",
-    ]);
+    ], "v3");
     const result = await publishCurrentMediaGeneration(request);
     process.stdout.write(`${JSON.stringify({
       contract: "verdify.lab-current-media-publish-result",

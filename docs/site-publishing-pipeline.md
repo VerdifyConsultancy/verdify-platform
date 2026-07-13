@@ -63,6 +63,12 @@ node scripts/manage-occurrence-release.mjs rollback-media \
   --store /path/to/store --occurrence <opaque-id> --expected <selection-sha256> --at <UTC-instant>
 ```
 
+The compiler's canonical `media/*.request.json` files are the closed v3 input to
+`publish-media`; they require both `policySha256` and
+`requestProvenanceSha256`. Its canonical `release.request.json` is the closed v2
+input to `publish` and requires `policySha256`. Unknown fields—including source
+URLs—and missing identity fields are rejected before store mutation.
+
 Phase 4c adds a closed producer boundary without activating a producer:
 
 ```bash

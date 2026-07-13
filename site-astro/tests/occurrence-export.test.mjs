@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { promisify } from "node:util";
+import { fileURLToPath } from "node:url";
 import test from "node:test";
 import { deflateSync } from "node:zlib";
 
@@ -19,11 +22,15 @@ import {
 import {
   discoverCurrentMediaOccurrence,
   discoverGraphOccurrence,
+  loadSelectedCurrentMediaGeneration,
   loadSelectedOccurrenceRelease,
   publishCurrentMediaGeneration,
   publishOccurrenceRelease,
   staticOccurrenceManifest,
 } from "../scripts/lib/occurrence-release.mjs";
+
+const run = promisify(execFile);
+const MANAGE_OCCURRENCE_CLI = fileURLToPath(new URL("../scripts/manage-occurrence-release.mjs", import.meta.url));
 
 const CRC_TABLE = Array.from({ length: 256 }, (_, value) => {
   let crc = value;
@@ -573,6 +580,153 @@ test("prepared digests reject valid PNG replacement between inspection and publi
   assert.equal(released.manifest.occurrences.graphs[0].probeStatus, "decode-error");
   assert.equal(released.manifest.occurrences.graphs[0].state, "missing");
   assert.equal(released.manifest.occurrences.graphs[0].fallback, null);
+});
+
+test("prepared v3 media and v2 release JSON publish end to end through the real CLI", async (context) => {
+  const { root, sourceRoot, storeRoot } = await workspace(context);
+  const { graph, media, manifest, manifestSha256, active } = fixture();
+  const graphCandidate = await candidate(sourceRoot, "graphs", graph.occurrenceId, png());
+  const mediaCandidate = await candidate(
+    sourceRoot,
+    "current-media",
+    media.occurrenceId,
+    png(640, 360),
+    "2026-07-13T12:00:00Z",
+    requestProvenance(active, media.occurrenceId),
+  );
+  const exportBatch = batch({
+    policy: active,
+    graph,
+    media,
+    graphCandidate,
+    mediaCandidate,
+    id: "batch_cli_end_to_end_0001",
+  });
+  const prepared = await prepareOccurrenceExportRequests({
+    policy: active,
+    manifest,
+    manifestSha256,
+    batch: exportBatch,
+    sourceRoot,
+    storeRoot,
+    processingAt: processingAtFor(exportBatch),
+  });
+  const requestRoot = path.join(root, "requests");
+  await mkdir(requestRoot);
+  async function requestFile(name, document) {
+    const file = path.join(requestRoot, name);
+    await writeFile(file, canonical(document));
+    return file;
+  }
+  async function rejectsCli(command, file, pattern) {
+    await assert.rejects(
+      () => run(process.execPath, [MANAGE_OCCURRENCE_CLI, command, "--request", file]),
+      (error) => {
+        assert.match(error.stderr, pattern);
+        return true;
+      },
+    );
+  }
+
+  for (const field of ["policySha256", "requestProvenanceSha256"]) {
+    const missing = structuredClone(prepared.mediaRequests[0]);
+    delete missing[field];
+    await rejectsCli(
+      "publish-media",
+      await requestFile(`media-missing-${field}.json`, missing),
+      /release request does not use the closed v3 shape/,
+    );
+  }
+  await rejectsCli(
+    "publish-media",
+    await requestFile("media-extra-url.json", {
+      ...prepared.mediaRequests[0],
+      sourceUrl: "https://api.verdify.ai/forbidden-public-leak",
+    }),
+    /release request does not use the closed v3 shape/,
+  );
+  await rejectsCli(
+    "publish-media",
+    await requestFile("media-invalid-policy-digest.json", {
+      ...prepared.mediaRequests[0],
+      policySha256: "not-a-digest",
+    }),
+    /current media policy digest is invalid/,
+  );
+  await rejectsCli(
+    "publish-media",
+    await requestFile("media-wrong-request-digest.json", {
+      ...prepared.mediaRequests[0],
+      requestProvenanceSha256: "f".repeat(64),
+    }),
+    /candidate does not match its expected camera request provenance/,
+  );
+  const mediaFile = await requestFile("media.request.json", prepared.mediaRequests[0]);
+  const mediaResult = await run(process.execPath, [
+    MANAGE_OCCURRENCE_CLI,
+    "publish-media",
+    "--request",
+    mediaFile,
+  ]);
+  const mediaOutput = JSON.parse(mediaResult.stdout);
+  assert.equal(mediaOutput.contract, "verdify.lab-current-media-publish-result");
+  assert.equal(mediaOutput.generation, 1);
+  assert.doesNotMatch(mediaResult.stdout, /greenhouse_[12]|latest\.jpg|api\.verdify/i);
+  const selectedMedia = await loadSelectedCurrentMediaGeneration(storeRoot, media.occurrenceId);
+  assert.equal(selectedMedia.current.schemaVersion, 3);
+  assert.equal(selectedMedia.current.policySha256, exportBatch.policySha256);
+  assert.equal(selectedMedia.current.requestProvenanceSha256, requestProvenance(active, media.occurrenceId));
+  assert.equal(selectedMedia.selection.previous, null);
+
+  const missingReleasePolicy = structuredClone(prepared.releaseRequest);
+  delete missingReleasePolicy.policySha256;
+  await rejectsCli(
+    "publish",
+    await requestFile("release-missing-policy.json", missingReleasePolicy),
+    /release request does not use the closed v2 shape/,
+  );
+  await rejectsCli(
+    "publish",
+    await requestFile("release-extra-url.json", {
+      ...prepared.releaseRequest,
+      sourceUrl: "https://api.verdify.ai/forbidden-public-leak",
+    }),
+    /release request does not use the closed v2 shape/,
+  );
+  await rejectsCli(
+    "publish",
+    await requestFile("release-invalid-policy-digest.json", {
+      ...prepared.releaseRequest,
+      policySha256: "not-a-digest",
+    }),
+    /occurrence policy digest is invalid/,
+  );
+  const releaseFile = await requestFile("release.request.json", prepared.releaseRequest);
+  const releaseResult = await run(process.execPath, [
+    MANAGE_OCCURRENCE_CLI,
+    "publish",
+    "--request",
+    releaseFile,
+  ]);
+  const releaseOutput = JSON.parse(releaseResult.stdout);
+  assert.equal(releaseOutput.contract, "verdify.lab-occurrence-publish-result");
+  assert.equal(releaseOutput.graphCount, 1);
+  assert.equal(releaseOutput.currentMediaCount, 1);
+  assert.doesNotMatch(releaseResult.stdout, /greenhouse_[12]|latest\.jpg|api\.verdify/i);
+
+  const selectedRelease = await loadSelectedOccurrenceRelease(storeRoot);
+  assert.equal(selectedRelease.selection.generation, 1);
+  assert.equal(selectedRelease.current.schemaVersion, 2);
+  assert.equal(selectedRelease.current.policySha256, exportBatch.policySha256);
+  const releasedMedia = selectedRelease.current.occurrences.currentMedia[0];
+  assert.equal(releasedMedia.policySha256, exportBatch.policySha256);
+  assert.equal(releasedMedia.requestProvenanceSha256, requestProvenance(active, media.occurrenceId));
+  assert.equal(releasedMedia.state, "verified");
+  assert.equal(
+    releasedMedia.pointer.currentGenerationSha256,
+    selectedMedia.selection.current.generationSha256,
+  );
+  assert.doesNotMatch(JSON.stringify(selectedRelease.current), /greenhouse_[12]|latest\.jpg|api\.verdify/i);
 });
 
 test("canonical requests publish every occurrence and failed refresh retains graph and camera LKG", async (context) => {
