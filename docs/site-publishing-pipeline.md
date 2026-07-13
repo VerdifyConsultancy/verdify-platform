@@ -81,6 +81,37 @@ node scripts/prepare-occurrence-export.mjs validate \
   --source /path/to/sanitized-candidates
 ```
 
+The separate 143+2 execution path is explicit and fail-closed:
+
+```bash
+cd site-astro
+npm run occurrence:execute -- execute \
+  --manifest /path/to/occurrence-manifest.json \
+  --policy /path/to/approved-policy.json \
+  --batch /path/to/canonical-export-batch.json \
+  --graph-result /path/to/canonical-graph-result.json \
+  --source /path/to/sanitized-candidates \
+  --store s3://bucket/non-empty-prefix
+```
+
+This command is absent-by-default authority, not deployment wiring. Without the
+literal `execute` command it only returns usage. It canonical-reads all four
+documents and requires the policy's closed activation record to name Jason's
+approval before constructing either a local or S3 adapter. The store location is
+always an explicit argument; there is no default endpoint, bucket, credential,
+environment binding, workload, or route. The legacy single-request
+`manage-occurrence-release.mjs` CLI remains local-only.
+
+The concrete operation adapter publishes each verified camera blob, immutable
+generation, and store-bound event intent before conditionally advancing that
+camera selector. It then publishes all graph blobs, the exact 143+2 aggregate,
+and its store-bound reconciliation intent. The final aggregate compare-and-swap
+checks both exact camera selector digests immediately before its conditional
+write. Exact post-reads—not a write response alone—decide camera and aggregate
+success, including committed responses that were not observed by the writer.
+Offline tests exercise the same operation surface with local and injected fake
+S3 stores; they perform no network request and supply no endpoint or credential.
+
 The checked-in policy is blocked and byte-binds the accepted stage occurrence
 manifest: 143 graph fingerprints plus two opaque camera fingerprints. Every batch
 also binds the exact canonical policy SHA-256. The compiler requires a named
@@ -205,8 +236,9 @@ It provides absent-only manifests, media generations, event intents, and validat
 blobs; canonical store-identity binding on every event intent; immediate-read
 entity-tag CAS plus exact post-write verification for both selector families; and
 bounded PNG reads and exact materialization. High-level read/materialization accepts
-an explicitly injected adapter, but the credential-free occurrence CLI deliberately
-refuses implicit S3 access and its publication path remains local-only.
+an explicitly injected adapter. The legacy credential-free occurrence CLI deliberately
+refuses implicit S3 access; only the separate approved-policy `execute` path can
+construct an explicit S3 operation adapter, and no workload invokes it.
 
 The complete local filesystem primitive is present, and its candidate manifest is
 included by the Lab stage overlay only at `replicas: 0`. The overlay deliberately
@@ -218,9 +250,9 @@ object-store authority. The Lab stage ArgoCD app remains manual-sync, so merging
 source does not alter the live cluster; even an operator sync cannot schedule the
 zero-replica workload.
 
-This storage foundation does not change the credential-free local CLI or deploy
-anything. The built-site CLI/publisher factory, bounded cache hydration from object
-bytes, occurrence producer/caller transaction, distributed lease, bounded retention
+This storage foundation and source-only operation adapter do not change the
+credential-free local CLI or deploy anything. The built-site CLI/publisher factory,
+bounded cache hydration from object bytes, distributed lease, bounded retention
 and GC, event agent, resource accounting, endpoint configuration, actual
 resource/value binding (the #501 readiness slice fixes names only), and real-endpoint
 conditional-write proof remain separate Phase 4b work. The endpoint proof must confirm

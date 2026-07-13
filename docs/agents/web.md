@@ -113,6 +113,15 @@ The current Astro stage has no publisher CronJob, mutable cache PVC, or runtime
 content fetch. Phase 4 replaces the frozen build input with the reviewed
 event-driven release/store path before any production cutover.
 
+The source-only occurrence execution CLI is
+`site-astro/scripts/execute-occurrence-export.mjs`. It requires the literal
+`execute` command, canonical policy/manifest/batch/graph-result files, a local
+sanitized-candidate root, an explicit store location, and a policy whose closed
+activation record carries Jason's approval before store initialization. Its
+presence is not a deployment or activation claim: no Lab workload invokes it,
+and no endpoint, credential, environment binding, route, or replica is supplied
+by the source adapter.
+
 `scripts/rebuild-site.sh` builds Quartz into a staged `public.*` directory,
 verifies the staged `index.html`, then rsyncs the complete staged output into
 the live public tree with delayed deletes. In k3s, nginx reload is skipped
