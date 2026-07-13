@@ -1,14 +1,15 @@
 # Lab Astro Migration — Consolidated Program Tracker
 
-Last updated: 2026-07-13 ~16:10Z (stage now serves `814eafff`: P0 scroll-fix
+Last updated: 2026-07-13 (stage now serves `814eafff`: P0 scroll-fix
 PR #504/pin #505 — user-reported viewport scroll-lock from body-level
 `overflow:clip`, fixed + regression-tested; roll also shipped #487/#496/#501/
 #502 content. Phases 1-3 PASSED; Phase 4 in flight.)
 build/probe/pin gates passed; Phase 4b S3 foundation merged; occurrence
 adapter is carried by #502; the source-only binding-name readiness contract is
-carried by #501). The occurrence-export caller slice supplies only the injected,
-closed store-operation contract and makes no endpoint, value, credential,
-deployment, or activation claim.
+carried by #501. The occurrence-export caller is merged through #507. The
+concrete operation adapter and explicit execute CLI in this source tree remain
+caller-disabled without an approved policy and explicit store location; they
+make no endpoint, value, credential, deployment, or activation claim.
 Owner: platform agent (Claude outer loop plans/verifies; Codex executes on
 xhigh). Human gate: Jason (prod sync, DNS/edge, Quartz retirement, credential
 work). Epic: #351 (L9, G3). This file is the single source of truth for the
@@ -21,7 +22,7 @@ changes state.
 |---|---|
 | `lab.verdify.ai` (prod) | Quartz. `verdify-lab` Deployment in `verdify-prod` (ghcr image — pre-ADR-0021 holdover), `verdify-lab-publisher` CronJob republished every 10 min (mutable, shared RWO PVC, both replicas node-pinned). Healthy and fresh; had a 5-job BackoffLimitExceeded streak before recovering. |
 | `lab-stage.verdify.ai` (canary) | Astro. `verdify-lab-astro-stage` in ns `verdify-platform`, 2/2 Ready with zero restarts on distinct nodes, exact image and pod image IDs `verdify-lab-astro@sha256:ee36941f20028fcfe06f12bf253e7139c00e3d5de1949eb8b12bb1d4ebe60b99` (pin PR #468), shell contract **1.1.0**, content frozen at the 2026-07-12 snapshot. Live T0/T+10 acceptance passed and the ArgoCD app returned to manual-sync. |
-| `main` | Astro source includes the accepted static implementation, dormant release/cache runtime, offline camera producer (#487), complete offline 143-graph producer (#492), inactive S3 conditional-store foundation (#496), and typed occurrence adapter (#502). Runtime pin #500 binds the dormant agent/nginx pair to the latest completed relevant source chain; later #499 changes are outside the Lab source. The source-only name-readiness contract is carried by #501, not yet a deployed binding. The live stage remains the static image above. The occurrence caller slice is source-only and injected-operation-only; endpoint binding, event delivery, exact parity, and production cutover remain. |
+| `main` | Astro source includes the accepted static implementation, dormant release/cache runtime, offline camera producer (#487), complete offline 143-graph producer (#492), inactive S3 conditional-store foundation (#496), typed occurrence store (#502), and the closed 143+2 caller (#507). The concrete store-operation adapter and execute CLI in this source tree require an explicit store plus canonical Jason-approved policy before initialization. Runtime pin #500 binds the dormant agent/nginx pair to the latest completed relevant source chain; later source changes are not automatically staged. The source-only name-readiness contract is carried by #501, not yet a deployed binding. The live stage remains the static image above; endpoint binding, event delivery, exact parity, and production cutover remain. |
 | In-cluster CI | **Green for the latest completed Lab source/pin chain.** Workflow `verdify-platform-ci-crv96` completed 17/17 Lab Pod gates for `6729cc2...`: 12 browser quality tests, static/agent/nginx builds, metadata hydration, exact static probe, and paired runtime probe. Pin #500 passed exact-head PR CI/render/kubeconform and its digest-only follow-up workflow passed. Later exact-main workflows do not authorize stage sync or runtime activation. Earlier Playwright fixes #463/#464 and agents#2969/#2970 remain enforced without relaxing quality budgets. |
 
 ## Completed (do not re-plan)
@@ -56,7 +57,7 @@ Child issues (persisted 2026-07-13 post-consensus): 1→#474, 2→#475, 3→#476
 | 4 | Media & lightbox | Responsive images, intrinsic sizing, and lightbox accepted on stage | Production remains Quartz until Phase 5 |
 | 5 | Planner/evidence templates | Accepted on stage against the full frozen snapshot | Event-driven content refresh remains Phase 4b |
 | 6 | Semantic parity | Routes/aliases complete; comparator improved | Exact same-snapshot parity not green: ~240 false findings from SVG-`<title>` parser bug (fix exists uncommitted on a dead worktree — must be recreated), 9 unavailable historical refs (5 daily-plan routes, 4 images), and Quartz-vs-Astro must build from the SAME immutable snapshot |
-| 7 | Immutable publishing | Local-filesystem CAS/release/cache engine and inactive S3 conditional-store foundation (#496) merged; typed occurrence adapter is carried by #502; 4a runtime is source-visible with exact source-bound images as a disconnected `replicas: 0` workload; the source-only #501 readiness contract fixes future reader/writer Secret resource names plus non-secret metadata ConfigMap/key names without inspecting values | CLI/caller, actual resource/value binding, endpoint and credential proof, distributed coordination, retention/GC, and event producer remain; no runtime pod is scheduled or routed |
+| 7 | Immutable publishing | Local-filesystem CAS/release/cache engine, inactive S3 conditional-store foundation (#496), typed occurrence store (#502), closed caller (#507), and source-only concrete operation adapter/explicit CLI are present; 4a runtime is source-visible with exact source-bound images as a disconnected `replicas: 0` workload; the source-only #501 readiness contract fixes future reader/writer Secret resource names plus non-secret metadata ConfigMap/key names without inspecting values | Actual resource/value binding, real-endpoint proof, distributed coordination, retention/GC, event producer, and stage activation remain; no runtime pod is scheduled or routed |
 | 8 | Quality gates | Strict real-content gates green; exact tested build passed live T0 and T+10 acceptance | Keep the same budgets for every Phase 4 rollout; no production acceptance yet |
 | 9 | Production cutover | Fail-closed canary scaffold merged via #471 and remains inactive/source-only | Not built/pinned/deployed; Quartz remains authoritative; Jason APPLY required |
 
@@ -187,16 +188,19 @@ Phase 4 — **Feature completion (owner: codex, critical-path order below).**
    activation must pin both runtime images, add the reviewed 4b store/egress
    contract, explicitly raise replicas, and pass stage acceptance.
 3. **4b S3 backend and event wiring:** the inactive full-site S3
-   conditional-store foundation merged through #496, and #502 carries the
-   distinct typed occurrence adapter while keeping S3 mutation caller-disabled.
-   Neither is selected by a CLI or workload or carries an endpoint, credential,
-   route, or activation. The source-only #501 binding-name contract fixes the
+   conditional-store foundation merged through #496, #502 carries the distinct
+   typed occurrence store, and #507 carries the closed 143+2 caller. The
+   concrete source-only operation adapter maps that caller to explicit store
+   APIs; its CLI requires the literal `execute` command, canonical approved
+   policy, and an explicit store location before store initialization. No
+   workload selects it and it carries no endpoint, credential, route, or
+   activation. The source-only #501 binding-name contract fixes the
    future non-secret metadata ConfigMap and separate reader/writer Secret names,
    validates canonical key-name inventories without reading values, and makes no
    existence, endpoint, deployment, or authority claim. The source-only 4c
-   caller supplies a closed, injected store-operation contract without
-   endpoint, value, credential, deployment, or activation wiring. Next wire the
-   release CLI. Prove real-endpoint conditional writes and a
+   caller and adapter supply a closed store-operation contract without endpoint,
+   value, credential, deployment, or activation wiring. Next prove real-endpoint
+   conditional writes and a
    distributed lease (credential presence by name only), event-driven publishing, bounded
    retention/GC, and resource metrics. S3 occurrence wiring and S7 closure are
    hard-gated on the 4c producer contract.
@@ -298,6 +302,13 @@ RESOLUTION (2026-07-13 ~14:56Z): #496 merged the inactive S3 full-site
 conditional-store foundation and exact SDK dependency. Occurrence persistence,
 CLI/caller selection, distributed coordination, retention/GC, endpoint proof,
 credentials, and activation remain open and separately gated.
+
+FOLLOW-THROUGH (source lifecycle): #502 added the typed S3 occurrence store and
+#507 added the injected closed 143+2 caller. This change adds the concrete
+operation adapter plus explicit execute CLI, with offline local/injected-S3
+proof. These source artifacts do not bind a resource, endpoint, credential,
+workload, route, replica, or environment; real-endpoint proof, a distributed
+lease, bounded GC, event delivery, and any stage selection remain open gates.
 
 ## Operating cadence
 
