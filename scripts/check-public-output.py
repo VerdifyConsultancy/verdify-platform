@@ -73,6 +73,8 @@ MPEG_TS_READ_PACKETS = 4096
 MPEG_TS_METADATA_MAX_BYTES = 1024 * 1024
 MPEG_TS_MAX_PSI_SECTION_BYTES = 1024
 MPEG_TS_METADATA_STREAM_TYPES = frozenset({0x05, 0x06, 0x0D, 0x15, 0x86})
+MPEG_TS_AUDIO_VIDEO_STREAM_TYPES = frozenset({0x0F, 0x1B})
+MPEG_TS_ALLOWED_STREAM_TYPES = MPEG_TS_AUDIO_VIDEO_STREAM_TYPES | MPEG_TS_METADATA_STREAM_TYPES
 MPEG_TS_PACKET_LAYOUTS = ((188, 0), (192, 4), (204, 0))
 ISO_BMFF_MAX_BOXES = 4096
 ISO_BMFF_MAX_METADATA_BYTES = 4 * 1024 * 1024
@@ -599,6 +601,7 @@ def _mpeg_ts_parse_pmt(
         offset += 5
         if (
             offset + descriptor_length > payload_end
+            or stream_type not in MPEG_TS_ALLOWED_STREAM_TYPES
             or elementary_pid in seen_pids
             or elementary_pid <= 0x1F
             or elementary_pid == 0x1FFF
@@ -675,8 +678,42 @@ def _mpeg_ts_feed_psi(
     return sections, malformed
 
 
+def _mpeg_ts_clock_reference_is_valid(payload: memoryview) -> bool:
+    """Validate one PCR/OPCR field's reserved bits and 27 MHz extension."""
+    if len(payload) != 6 or payload[4] & 0x7E != 0x7E:
+        return False
+    extension = ((payload[4] & 0x01) << 8) | payload[5]
+    return extension < 300
+
+
+def _mpeg_ts_adaptation_extension_is_valid(payload: memoryview) -> bool:
+    """Validate supported adaptation-extension fields and canonical stuffing."""
+    if not payload:
+        return True
+    flags = payload[0]
+    if flags & 0x1F != 0x1F:
+        return False
+    cursor = 1
+    if flags & 0x80:
+        if cursor + 2 > len(payload):
+            return False
+        cursor += 2
+    if flags & 0x40:
+        if cursor + 3 > len(payload) or payload[cursor] & 0xC0 != 0xC0:
+            return False
+        cursor += 3
+    if flags & 0x20:
+        if cursor + 5 > len(payload):
+            return False
+        seamless = payload[cursor : cursor + 5]
+        if not (seamless[0] & 0x01 and seamless[2] & 0x01 and seamless[4] & 0x01):
+            return False
+        cursor += 5
+    return all(byte == 0xFF for byte in payload[cursor:])
+
+
 def _mpeg_ts_adaptation_field(packet: memoryview, control: int) -> tuple[int, bytes, bool]:
-    """Validate an adaptation field and return payload offset plus private data."""
+    """Validate an adaptation field and return payload offset plus scanned data."""
     if control not in {2, 3}:
         return 4, b"", False
     length = packet[4]
@@ -687,13 +724,24 @@ def _mpeg_ts_adaptation_field(packet: memoryview, control: int) -> tuple[int, by
         return end, b"", False
     flags = packet[5]
     cursor = 6
+    scanned_data = bytearray()
     if flags & 0x10:
+        if cursor + 6 > end or not _mpeg_ts_clock_reference_is_valid(packet[cursor : cursor + 6]):
+            return 0, b"", True
+        scanned_data.extend(packet[cursor : cursor + 6])
+        scanned_data.append(0)
         cursor += 6
     if flags & 0x08:
+        if cursor + 6 > end or not _mpeg_ts_clock_reference_is_valid(packet[cursor : cursor + 6]):
+            return 0, b"", True
+        scanned_data.extend(packet[cursor : cursor + 6])
+        scanned_data.append(0)
         cursor += 6
     if flags & 0x04:
+        if cursor >= end:
+            return 0, b"", True
+        scanned_data.extend((packet[cursor], 0))
         cursor += 1
-    private_data = b""
     if flags & 0x02:
         if cursor >= end:
             return 0, b"", True
@@ -701,16 +749,23 @@ def _mpeg_ts_adaptation_field(packet: memoryview, control: int) -> tuple[int, by
         cursor += 1
         if cursor + private_length > end:
             return 0, b"", True
-        private_data = bytes(packet[cursor : cursor + private_length])
+        scanned_data.extend(packet[cursor : cursor + private_length])
+        scanned_data.append(0)
         cursor += private_length
     if flags & 0x01:
         if cursor >= end:
             return 0, b"", True
         extension_length = packet[cursor]
-        cursor += 1 + extension_length
+        extension_start = cursor + 1
+        extension_end = extension_start + extension_length
+        if extension_end > end or not _mpeg_ts_adaptation_extension_is_valid(packet[extension_start:extension_end]):
+            return 0, b"", True
+        scanned_data.extend(packet[extension_start:extension_end])
+        scanned_data.append(0)
+        cursor = extension_end
     if cursor > end or any(byte != 0xFF for byte in packet[cursor:end]):
         return 0, b"", True
-    return end, private_data, False
+    return end, bytes(scanned_data), False
 
 
 def _scan_mpeg_ts_stream(file_descriptor: int) -> set[str]:

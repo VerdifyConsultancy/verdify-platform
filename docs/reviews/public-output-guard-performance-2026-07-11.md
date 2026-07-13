@@ -162,7 +162,10 @@ invalid, base64, and UTF-16 text in an unreferenced `mdat` gap behind otherwise
 valid sample tables. Unknown codecs and sample ranges outside `mdat` also fail
 closed. A follow-up also rejects non-padding null-PID payloads, PMTs whose PCR
 PID is neither null nor a declared elementary stream, compressed/opaque `mdat`
-gaps, and padding beyond the narrow alignment bound.
+gaps, and padding beyond the narrow alignment bound. The final media review
+also restricts PMT stream types to evidenced H.264/AAC plus explicitly scanned
+metadata types, validates PCR/OPCR and adaptation-extension structure, scans
+transport-private data, and requires canonical `0xff` adaptation stuffing.
 
 At `2026-07-13T07:59:07Z`, copies of the two MP4 camera exports currently served
 by `lab-stage` (2 files, 101,976,633 bytes) scanned clean in 1.362 seconds. The
@@ -175,6 +178,8 @@ After the stricter null/PCR/gap follow-up, the complete current stage launch
 media tree (179 files, 370,069,481 bytes) scanned clean at
 `2026-07-13T08:16:05Z` in 2.897 seconds; the report SHA-256 was
 `286d0ecf568faf1cb865ea3f2110e98d69bff75ea8a38e36563de7c77fccc08c`.
+That same tree remained clean after stream-type/adaptation hardening at
+`2026-07-13T08:27:34Z` (3.180 seconds, identical report SHA-256).
 
 The complete current stage tree is not a replacement for the frozen clean
 corpus above: its 1,184 files (453,366,254 bytes) completed in 125.060 seconds

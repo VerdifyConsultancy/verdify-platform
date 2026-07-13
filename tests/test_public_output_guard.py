@@ -119,18 +119,42 @@ def mpeg_ts_packet(pid: int, payload: bytes, *, payload_unit_start: bool = False
     return bytes([0x47, second, pid & 0xFF, 0x30 | counter, adaptation_length]) + adaptation + payload
 
 
-def mpeg_ts_fixture(*, metadata: bytes | None = None, split_pmt: bool = False, pcr_pid: int | None = None) -> bytes:
+def mpeg_ts_adaptation_packet(
+    pid: int,
+    payload: bytes,
+    adaptation_content: bytes,
+    *,
+    payload_unit_start: bool = False,
+    counter: int = 0,
+) -> bytes:
+    assert 0 <= pid < 0x2000
+    adaptation_length = 183 - len(payload)
+    assert 0 < len(adaptation_content) <= adaptation_length
+    second = (0x40 if payload_unit_start else 0) | (pid >> 8)
+    adaptation = adaptation_content + b"\xff" * (adaptation_length - len(adaptation_content))
+    return bytes([0x47, second, pid & 0xFF, 0x30 | counter, adaptation_length]) + adaptation + payload
+
+
+def mpeg_ts_fixture(
+    *,
+    metadata: bytes | None = None,
+    split_pmt: bool = False,
+    pcr_pid: int | None = None,
+    video_stream_type: int = 0x1B,
+    video_payload: bytes = b"ordinary video payload",
+) -> bytes:
     program = 1
     pmt_pid = 0x1000
     video_pid = 0x0100
     metadata_pid = 0x0102
     pcr_pid = video_pid if pcr_pid is None else pcr_pid
     assert 0 <= pcr_pid < 0x2000
+    assert 0 <= video_stream_type <= 0xFF
     pat = mpeg_ts_section(
         0x00,
         b"\x00\x01\xc1\x00\x00" + bytes([program >> 8, program & 0xFF, 0xE0 | (pmt_pid >> 8), pmt_pid & 0xFF]),
     )
-    streams = bytes([0x1B, 0xE0 | (video_pid >> 8), video_pid & 0xFF, 0xF0, 0x00])
+    streams = bytes([video_stream_type, 0xE0 | (video_pid >> 8), video_pid & 0xFF, 0xF0, 0x00])
     if metadata is not None:
         streams += bytes([0x15, 0xE0 | (metadata_pid >> 8), metadata_pid & 0xFF, 0xF0, 0x00])
     pmt = mpeg_ts_section(
@@ -160,7 +184,7 @@ def mpeg_ts_fixture(*, metadata: bytes | None = None, split_pmt: bool = False, p
     packets = [
         mpeg_ts_packet(0, b"\x00" + pat, payload_unit_start=True),
         *pmt_packets,
-        mpeg_ts_packet(video_pid, b"\x00\x00\x01\xe0ordinary video payload", payload_unit_start=True),
+        mpeg_ts_packet(video_pid, b"\x00\x00\x01\xe0" + video_payload, payload_unit_start=True),
     ]
     if metadata is not None:
         packets.append(
@@ -518,6 +542,63 @@ def test_mpeg_transport_stream_rejects_null_payload_and_undeclared_pcr(tmp_path)
         ("null-payload.ts", "malformed-media-artifact"),
         ("undeclared-pcr.ts", "malformed-media-artifact"),
     }
+
+
+def test_mpeg_transport_stream_rejects_unknown_declared_stream_type(tmp_path):
+    guard = load_guard()
+    excluded = next(iter(policy.PUBLIC_CROP_EXCLUDE_SLUGS))
+    (tmp_path / "unknown-invalid.ts").write_bytes(
+        mpeg_ts_fixture(video_stream_type=0x99, video_payload=b"humidity: NaN%")
+    )
+    (tmp_path / "unknown-protected.ts").write_bytes(
+        mpeg_ts_fixture(video_stream_type=0x99, video_payload=f"review {excluded}".encode())
+    )
+
+    findings = guard.scan_root(tmp_path)
+
+    assert {(finding.path, finding.reason) for finding in findings} == {
+        ("unknown-invalid.ts", "malformed-media-artifact"),
+        ("unknown-protected.ts", "malformed-media-artifact"),
+    }
+
+
+def test_mpeg_transport_stream_validates_and_scans_adaptation_optional_fields(tmp_path):
+    guard = load_guard()
+    excluded = next(iter(policy.PUBLIC_CROP_EXCLUDE_SLUGS))
+    protected = f"review {excluded}".encode()
+    invalid = b"humidity: NaN%"
+    valid_prefix = mpeg_ts_fixture()[: 2 * guard.MPEG_TS_PACKET_SIZE]
+    video_payload = b"\x00\x00\x01\xe0ordinary video payload"
+
+    def segment(adaptation_content: bytes) -> bytes:
+        return valid_prefix + mpeg_ts_adaptation_packet(
+            0x0100,
+            video_payload,
+            adaptation_content,
+            payload_unit_start=True,
+        )
+
+    protected_extension = b"\x1f" + protected
+    invalid_extension = b"\x1f" + invalid
+    (tmp_path / "protected-extension.ts").write_bytes(
+        segment(b"\x01" + bytes([len(protected_extension)]) + protected_extension)
+    )
+    (tmp_path / "invalid-extension.ts").write_bytes(
+        segment(b"\x01" + bytes([len(invalid_extension)]) + invalid_extension)
+    )
+    (tmp_path / "invalid-private.ts").write_bytes(segment(b"\x02" + bytes([len(invalid)]) + invalid))
+    (tmp_path / "invalid-pcr.ts").write_bytes(segment(b"\x10humid!"))
+    (tmp_path / "valid-extension.ts").write_bytes(segment(b"\x01\x04\x1f\xff\xff\xff"))
+
+    findings = guard.scan_root(tmp_path)
+
+    assert {(finding.path, finding.reason) for finding in findings} == {
+        ("invalid-extension.ts", "malformed-media-artifact"),
+        ("invalid-pcr.ts", "malformed-media-artifact"),
+        ("invalid-private.ts", "invalid-rendered-value"),
+        ("protected-extension.ts", "malformed-media-artifact"),
+    }
+    assert excluded not in str(findings).casefold()
 
 
 def test_mpeg_transport_stream_rejects_unsupported_and_ambiguous_packet_layouts(tmp_path):
