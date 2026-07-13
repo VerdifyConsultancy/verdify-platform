@@ -16,6 +16,7 @@ from ._common import (
     _SHELLY_ENTITIES,
     _TEMPEST_MAP,
     FEEDBACK_VALUE_RANGES,
+    GREENHOUSE_ID,
     HA_TOKEN_FILE,
     INFRA_TELEMETRY_GREENHOUSE_ID,
     LEAK_CLEAR_GPM,
@@ -23,6 +24,7 @@ from ._common import (
     LEAK_TRIGGER_GPM,
     SITE_CONTENT_FRESHNESS_WINDOW_S,
     UTC,
+    AlertEnvelope,
     ClimateRow,
     EnergySample,
     EquipmentStateEvent,
@@ -208,14 +210,75 @@ def site_content_is_fresh(max_updated_at: datetime | None, now: datetime | None 
     return 0 <= age_s <= SITE_CONTENT_FRESHNESS_WINDOW_S
 
 
-async def site_content_refresh(pool: asyncpg.Pool) -> None:
-    """Daily refresh of the site_content RAG snapshot from the vault corpus.
+async def _raise_site_content_stale_alert(conn, populator, written: int, max_updated_at: datetime | None) -> None:
+    """Record stale-after-refresh as a warning alert_log row (#43/#400).
 
-    Re-materializes the public docs/website corpus into site_content (advancing
-    updated_at), then verifies max(updated_at) is back inside the cadence
-    freshness window. A stale watermark after a refresh attempt means the corpus
-    roots were unavailable (e.g. vault unmounted) — logged loudly but never
-    raised, since this RAG-maintenance task must never block greenhouse ops.
+    The original task only log.warning()'d, which is how the corpus source
+    rotted unobserved for a month after the iris-VM vault mount was
+    decommissioned. Deduped on the open row (the dispatcher
+    band_anchor_db_read_failed pattern), so a corpus outage holds ONE open
+    alert instead of stacking one per daily pass. Severity is 'warning', never
+    'critical' — RAG staleness must not trip the firmware-deploy alert gate.
+    """
+    existing = await conn.fetchval(
+        "SELECT id FROM alert_log WHERE alert_type = 'site_content_stale' AND disposition = 'open' LIMIT 1"
+    )
+    if existing is not None:
+        return
+    if max_updated_at is not None and max_updated_at.tzinfo is None:
+        max_updated_at = max_updated_at.replace(tzinfo=UTC)
+    age_s = None
+    if max_updated_at is not None:
+        age_s = max(0, int((datetime.now(UTC) - max_updated_at).total_seconds()))
+    alert = AlertEnvelope.model_validate(
+        {
+            "alert_type": "site_content_stale",
+            "severity": "warning",
+            "category": "system",
+            "sensor_id": "site_content",
+            "message": (
+                "site_content RAG snapshot stale after refresh: "
+                f"max(updated_at)={max_updated_at.isoformat() if max_updated_at else 'none'} "
+                f"(rows refreshed={written}, window={SITE_CONTENT_FRESHNESS_WINDOW_S // 3600}h) "
+                "— corpus roots unavailable; Iris is serving a stale corpus"
+            ),
+            "details": {
+                "age_s": age_s,
+                "max_updated_at": max_updated_at,
+                "rows_refreshed": written,
+                "window_s": SITE_CONTENT_FRESHNESS_WINDOW_S,
+                "corpus_roots": [str(root) for root, _ in populator.SITE_DOC_ROOTS],
+            },
+            "metric_value": float(age_s) if age_s is not None else None,
+            "threshold_value": float(SITE_CONTENT_FRESHNESS_WINDOW_S),
+        }
+    )
+    await conn.execute(
+        "INSERT INTO alert_log (alert_type, severity, category, sensor_id, message, details, "
+        "source, metric_value, threshold_value, greenhouse_id) "
+        "VALUES ($1,$2,$3,$4,$5,$6::jsonb,'ingestor',$7,$8,$9)",
+        alert.alert_type,
+        alert.severity,
+        alert.category,
+        alert.sensor_id,
+        alert.message,
+        json.dumps(alert.details),
+        alert.metric_value,
+        alert.threshold_value,
+        GREENHOUSE_ID,
+    )
+
+
+async def site_content_refresh(pool: asyncpg.Pool) -> None:
+    """Daily refresh of the site_content RAG snapshot from the in-repo corpus.
+
+    Re-materializes the docs corpus (plus the optional env-mounted website
+    corpus — see populator SITE_DOC_ROOTS, #43/#400) into site_content
+    (advancing updated_at), then verifies max(updated_at) is back inside the
+    cadence freshness window. A stale watermark after a refresh attempt means
+    the corpus roots were unavailable — logged AND raised as a warning-severity
+    site_content_stale alert row so the failure is observable, but never
+    raised as an exception: RAG maintenance must never block greenhouse ops.
     """
     try:
         populator = _load_site_content_populator()
@@ -227,14 +290,14 @@ async def site_content_refresh(pool: asyncpg.Pool) -> None:
         written = await _refresh_site_content_corpus(conn, populator)
         max_updated_at = await conn.fetchval("SELECT max(updated_at) FROM site_content")
 
-    if site_content_is_fresh(max_updated_at):
-        log.info(
-            "site_content_refresh: %d rows refreshed; max(updated_at)=%s within %dh window",
-            written,
-            max_updated_at.isoformat() if max_updated_at else "none",
-            SITE_CONTENT_FRESHNESS_WINDOW_S // 3600,
-        )
-    else:
+        if site_content_is_fresh(max_updated_at):
+            log.info(
+                "site_content_refresh: %d rows refreshed; max(updated_at)=%s within %dh window",
+                written,
+                max_updated_at.isoformat() if max_updated_at else "none",
+                SITE_CONTENT_FRESHNESS_WINDOW_S // 3600,
+            )
+            return
         log.warning(
             "site_content_refresh: snapshot still stale after refresh "
             "(rows touched=%d, max(updated_at)=%s, window=%dh) — corpus roots may be unavailable",
@@ -242,6 +305,10 @@ async def site_content_refresh(pool: asyncpg.Pool) -> None:
             max_updated_at.isoformat() if max_updated_at else "none",
             SITE_CONTENT_FRESHNESS_WINDOW_S // 3600,
         )
+        try:
+            await _raise_site_content_stale_alert(conn, populator, written, max_updated_at)
+        except Exception as e:  # noqa: BLE001 — the alert is best-effort; never crash the loop
+            log.error("site_content_refresh: could not record site_content_stale alert: %s", e)
 
 
 async def shelly_sync(pool: asyncpg.Pool) -> None:
