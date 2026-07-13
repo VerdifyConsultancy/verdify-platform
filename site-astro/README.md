@@ -342,8 +342,9 @@ token, database, object store, Grafana, or device-network access.
   bounded event delivery authority, freshness histogram, or firing alert is connected
   to stage yet.
 - The complete built-tree local store implements reachability GC, maximum-ten
-  retention, and the ratified 10 GiB cap. A real object-store backend and distributed
-  lease remain external deployment work; neither is claimed here.
+  retention, and the ratified 10 GiB cap. The inactive S3 foundation implements
+  bounded conditional store primitives, but CLI/caller wiring, distributed
+  coordination, object-store retention/GC, and real-endpoint proof remain.
 - The built-tree publisher lease recovers a provably dead same-host PID and excludes a
   live local owner. Cross-pod publication still requires a distributed lease or
   object-store conditional-write primitive.

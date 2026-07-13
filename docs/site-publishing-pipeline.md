@@ -10,9 +10,9 @@ be treated as production authority or as permission to retire this path.
 Status 2026-07-13: the accepted static Astro stage runs digest `ee36941f…`
 (shell 1.1.0) after its in-cluster gates and T0/T+10 checks passed. The local
 release/cache runtime is now represented in the Lab stage GitOps source only as
-a disconnected dormant workload: `replicas: 0`, zero-digest agent/site image
-sentinels, no route, no object-store/AWS environment, and no egress. It has not
-been activated or synced by this source change. Program tracker:
+a disconnected dormant workload: `replicas: 0`, exact source-bound agent/site
+image digests, no route, no object-store/AWS environment, and no egress. It has
+not been activated or synced by this source change. Program tracker:
 `docs/plans/lab-astro-migration.md`.
 
 ## Astro specialist-occurrence release contract (source-only)
