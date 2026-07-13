@@ -22,7 +22,7 @@ const hasMath = /class="katex(?:["\s])/i.test(record.html);
 const robots = build.stageGlobalNoindex || record.noindex || record.kind === "alias" ? "noindex,follow" : "index,follow";
 const socialTitle = `${record.title} — Verdify Lab`;
 const socialDescription = record.description || "Verdify public greenhouse evidence.";
-const socialImage = `${build.siteOrigin}/static/og-image-v2.jpg`;
+const socialImage = new URL(record.socialImage || "/static/og-image-v2.jpg", build.siteOrigin).href;
 const groups = navigation(latestPlan?.canonicalPath ?? "/data/plans/");
 const classes = ["lab-article", ...record.cssclasses].join(" ");
 const pageFamily = (() => {

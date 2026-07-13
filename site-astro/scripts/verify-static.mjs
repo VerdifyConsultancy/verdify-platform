@@ -158,6 +158,7 @@ for (const required of [
   "404.html",
   "robots.txt",
   "rss.xml",
+  "index.xml",
   "sitemap.xml",
   "route-manifest.json",
   "static-build.json",
@@ -173,4 +174,7 @@ for (const required of [
 
 const robots = await readFile(path.join(DIST_ROOT, "robots.txt"), "utf8");
 if (!robots.includes("Disallow: /")) throw new Error("stage robots policy must disallow crawling");
+if (await readFile(path.join(DIST_ROOT, "index.xml"), "utf8") !== await readFile(path.join(DIST_ROOT, "rss.xml"), "utf8")) {
+  throw new Error("legacy RSS route differs from the canonical feed");
+}
 process.stdout.write(`verified ${records.length} noindex stage routes and ${localReferenceCount} same-origin references\n`);

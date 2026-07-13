@@ -109,6 +109,38 @@ function titleKey(value) {
   return String(value).trim().toLocaleLowerCase("en-US").replace(/\.md$/i, "");
 }
 
+function tagSlug(value) {
+  return titleKey(value).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+function displayDate(value) {
+  if (!value) return "";
+  const parsed = new Date(`${String(value).slice(0, 10)}T00:00:00Z`);
+  if (Number.isNaN(parsed.valueOf())) return "";
+  return new Intl.DateTimeFormat("en-US", {
+    day: "numeric",
+    month: "long",
+    timeZone: "UTC",
+    year: "numeric",
+  }).format(parsed);
+}
+
+function socialImagePath(value, assetPaths, source) {
+  if (value === undefined || value === null || value === "") return "";
+  if (typeof value !== "string") throw new Error(`socialImage must be a local path: ${source}`);
+  const candidate = value.trim();
+  if (
+    !candidate.startsWith("/")
+    || candidate.startsWith("//")
+    || candidate.includes("\\")
+    || /[?#\u0000-\u001f\u007f]/.test(candidate)
+  ) {
+    throw new Error(`socialImage must be a plain same-origin path: ${source}`);
+  }
+  if (!assetPaths.has(candidate.slice(1))) throw new Error(`socialImage target is absent: ${source}`);
+  return candidate;
+}
+
 function buildLinkIndex(sources) {
   const candidates = new Map();
   function add(key, route) {
@@ -634,6 +666,7 @@ function aliasRecords(sourceRecords) {
         currentMedia: [],
         unavailable: [],
         date: record.date,
+        socialImage: record.socialImage,
       };
       if (aliases.has(route)) throw new Error(`duplicate alias is not an approved rolling-plan alias: ${route}`);
       aliases.set(route, candidate);
@@ -664,6 +697,7 @@ function aliasRecords(sourceRecords) {
       currentMedia: [],
       unavailable: [],
       date: latest.date,
+      socialImage: latest.socialImage,
     });
   }
   return {
@@ -683,21 +717,29 @@ function tagRecords(sourceRecords, occupied) {
   const tags = new Map();
   for (const record of sourceRecords) {
     for (const tag of record.tags) {
-      const slug = titleKey(tag).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      const slug = tagSlug(tag);
       if (!slug) continue;
       const entries = tags.get(slug) ?? { label: tag, records: [] };
       entries.records.push(record);
       tags.set(slug, entries);
     }
   }
+  const card = (record, includeTopics) => {
+    const date = displayDate(record.date);
+    const topics = includeTopics
+      ? record.tags.map((tag) => `<a href="/tags/${tagSlug(tag)}">${escapeHtml(tag)}</a>`).join(" ")
+      : "";
+    return `<li>${date ? `<time datetime="${escapeHtml(record.date)}">${escapeHtml(date)}</time>` : ""}<h3><a href="${escapeHtml(record.canonicalPath)}">${escapeHtml(record.title)}</a></h3>${topics ? `<p class="tag-card__topics">${topics}</p>` : ""}</li>`;
+  };
+  const sortedGroups = [...tags].sort();
   const records = [];
-  for (const [slug, group] of [...tags].sort()) {
+  for (const [slug, group] of sortedGroups) {
     const route = `/tags/${slug}`;
     if (occupied.has(route)) throw new Error(`generated tag route collides: ${route}`);
     occupied.add(route);
-    const links = group.records
-      .sort((left, right) => left.title.localeCompare(right.title))
-      .map((record) => `<li><a href="${escapeHtml(record.canonicalPath)}">${escapeHtml(record.title)}</a></li>`)
+    const cards = group.records
+      .sort((left, right) => String(right.date).localeCompare(String(left.date)) || left.title.localeCompare(right.title))
+      .map((record) => card(record, true))
       .join("");
     records.push({
       route,
@@ -708,19 +750,29 @@ function tagRecords(sourceRecords, occupied) {
       source: "generated:tags",
       title: `Tag: ${group.label}`,
       description: `Verdify Lab pages tagged ${group.label}.`,
-      html: `<h1>Tag: ${escapeHtml(group.label)}</h1><ul>${links}</ul>`,
+      html: `<h1>Tag: ${escapeHtml(group.label)}</h1><p>${group.records.length} ${group.records.length === 1 ? "item" : "items"} with this tag.</p><ul class="tag-card-list">${cards}</ul>`,
       aliases: [],
       tags: [],
       cssclasses: [],
-      noindex: false,
+      noindex: true,
       target: "",
       grafana: [],
       cameras: [],
       currentMedia: [],
       unavailable: [],
       date: "",
+      socialImage: "",
     });
   }
+  const groups = sortedGroups
+    .map(([slug, group]) => {
+      const cards = group.records
+        .sort((left, right) => String(right.date).localeCompare(String(left.date)) || left.title.localeCompare(right.title))
+        .map((record) => card(record, false))
+        .join("");
+      return `<section class="tag-group"><h2><a href="/tags/${slug}">${escapeHtml(group.label)}</a></h2><ul class="tag-card-list">${cards}</ul></section>`;
+    })
+    .join("");
   records.push({
     route: "/tags",
     canonicalPath: "/tags/",
@@ -728,19 +780,20 @@ function tagRecords(sourceRecords, occupied) {
     physicalPath: "tags/index.html",
     kind: "folder",
     source: "generated:tags",
-    title: "Verdify Lab tags",
+    title: "Tag Index",
     description: "Topics in the Verdify public greenhouse evidence notebook.",
-    html: `<h1>Topics</h1><ul>${[...tags].sort().map(([slug, group]) => `<li><a href="/tags/${slug}">${escapeHtml(group.label)}</a></li>`).join("")}</ul>`,
+    html: `<h1>Tag Index</h1>${groups}`,
     aliases: [],
     tags: [],
     cssclasses: [],
-    noindex: false,
+    noindex: true,
     target: "",
     grafana: [],
     cameras: [],
     currentMedia: [],
     unavailable: [],
     date: "",
+    socialImage: "",
   });
   return records;
 }
@@ -769,7 +822,7 @@ function folderRecords(sourceRecords, occupied) {
       .map((record) => {
         const topics = record.tags
           .map((tag) => {
-            const slug = titleKey(tag).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+            const slug = tagSlug(tag);
             return slug ? `<a href="/tags/${slug}">${escapeHtml(tag)}</a>` : "";
           })
           .filter(Boolean)
@@ -797,6 +850,7 @@ function folderRecords(sourceRecords, occupied) {
       currentMedia: [],
       unavailable: [],
       date: "",
+      socialImage: "",
     });
   }
   return generated;
@@ -820,6 +874,7 @@ async function writeIndexes(records, build) {
     .join("")}</channel></rss>\n`;
   await writeFile(path.join(PUBLIC_ROOT, "sitemap.xml"), sitemap);
   await writeFile(path.join(PUBLIC_ROOT, "rss.xml"), rss);
+  await writeFile(path.join(PUBLIC_ROOT, "index.xml"), rss);
   await writeFile(
     path.join(PUBLIC_ROOT, "robots.txt"),
     `User-agent: *\n${STAGE_GLOBAL_NOINDEX ? "Disallow: /" : "Allow: /"}\nSitemap: ${SITE_ORIGIN}/sitemap.xml\n`,
@@ -898,7 +953,7 @@ async function main() {
       plannedRoutes.add(normalizeRoute(alias));
     }
     for (const tag of stringList(source.frontmatter.tags)) {
-      const slug = titleKey(tag).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+      const slug = tagSlug(tag);
       if (slug) plannedRoutes.add(`/tags/${slug}`);
     }
     const segments = source.route.split("/").filter(Boolean);
@@ -947,6 +1002,7 @@ async function main() {
       currentMedia: rendered.currentMedia,
       unavailable: rendered.unavailable,
       date: source.frontmatter.date ? String(source.frontmatter.date) : "",
+      socialImage: socialImagePath(source.frontmatter.socialImage, assetPaths, source.relative),
     };
     record.canonicalPath = canonicalPath(record);
     record.canonicalUrl = `${SITE_ORIGIN}${record.canonicalPath}`;
@@ -1055,5 +1111,7 @@ export {
   normalizeRoute,
   renderMarkdown,
   routeFromSource,
+  socialImagePath,
   splitFrontmatter,
+  tagRecords,
 };
