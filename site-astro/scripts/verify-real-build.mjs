@@ -1,11 +1,26 @@
+import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+
+import { planGraphExportRequests } from "./lib/graph-export-producer.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DIST = path.join(ROOT, "dist");
 const build = JSON.parse(await readFile(path.join(DIST, "static-build.json"), "utf8"));
 const routes = JSON.parse(await readFile(path.join(DIST, "route-manifest.json"), "utf8"));
+const occurrenceManifestBytes = await readFile(path.join(DIST, "occurrence-manifest.json"));
+const occurrenceManifest = JSON.parse(occurrenceManifestBytes.toString("utf8"));
+const occurrencePolicy = JSON.parse(await readFile(
+  path.join(ROOT, "config/lab-stage-occurrence-export-policy.json"),
+  "utf8",
+));
+const occurrenceManifestSha256 = createHash("sha256").update(occurrenceManifestBytes).digest("hex");
+const graphPlan = planGraphExportRequests({
+  policy: occurrencePolicy,
+  manifest: occurrenceManifest,
+  manifestSha256: occurrenceManifestSha256,
+});
 
 if (
   build.contract !== "verdify.lab-astro-stage-build"
@@ -26,6 +41,15 @@ if (
 ) {
   throw new Error("dist is not the reviewed 429-file sanitized Lab stage build");
 }
+if (
+  occurrenceManifestSha256 !== occurrencePolicy.sourceOccurrenceManifestSha256
+  || graphPlan.requests.length !== 143
+  || JSON.stringify(graphPlan.requests.map(({ occurrenceId }) => occurrenceId))
+    !== JSON.stringify(occurrenceManifest.graphs.map(({ occurrenceId }) => occurrenceId))
+  || /https?:|graphs\.verdify\.ai/i.test(JSON.stringify(graphPlan))
+) {
+  throw new Error("real occurrence manifest is not byte-bound to the exact 143-request graph plan");
+}
 
 let htmlFiles = 0;
 const pending = [DIST];
@@ -38,4 +62,4 @@ while (pending.length > 0) {
   }
 }
 if (htmlFiles !== 324) throw new Error("real Lab stage HTML route count changed");
-process.stdout.write(`verified real sanitized Lab build: routes=${routes.routes.length} html=${htmlFiles} media=${build.preservedMediaCount}\n`);
+process.stdout.write(`verified real sanitized Lab build: routes=${routes.routes.length} html=${htmlFiles} media=${build.preservedMediaCount} graphPlan=${graphPlan.requests.length}\n`);

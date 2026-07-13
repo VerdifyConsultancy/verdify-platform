@@ -189,6 +189,18 @@ least-privilege credential, occurrence-store access, and egress limited to that
 store plus `api.verdify.ai:443`. Existing anonymous `graphs.verdify.ai` and the
 Track A primary database role are explicitly ineligible.
 
+The inert graph-producer library adds one pure planner that verifies the exact
+occurrence-manifest bytes against that policy and emits all 143 render targets in
+manifest order without an endpoint. Its producer has no default renderer or network,
+service, credential, database, Kubernetes, Grafana, or object-store client: an
+approved policy and an explicitly injected renderer are required before any call.
+At most four calls run concurrently; bounded PNG responses are decoded and
+deterministically re-encoded as metadata-free RGB PNG, then published through the
+same canonical content-addressed candidate store used by camera capture. Stable,
+URL-free results include every graph once on mixed failures. This source-only slice
+does not provide or activate the reporting feed, renderer, watermark/alert path,
+S3 delivery, workload, or stage rollout.
+
 ## Complete built-site releases
 
 The full Astro output now also has a local release and cache path. Run
