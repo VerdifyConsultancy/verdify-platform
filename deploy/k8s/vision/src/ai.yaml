@@ -1,0 +1,117 @@
+# Verdify AI Configuration
+# Centralized management of models, prompts, keys, and schedules.
+# All AI-powered tasks reference this file instead of hardcoding settings.
+
+# ── API Keys ─────────────────────────────────────────────────────
+# Keys are stored in external files (never in this config).
+# Paths can be overridden via environment variables.
+keys:
+  openai:
+    file: ${OPENAI_API_KEY_FILE:-/mnt/agents/shared/credentials/openai_api_key.txt}
+    provider: openai
+  gemini:
+    file: ${GEMINI_API_KEY_FILE:-/mnt/agents/shared/credentials/gemini_api_key.txt}
+    provider: google-ai-studio
+  anthropic:
+    file: ${ANTHROPIC_API_KEY_FILE:-/mnt/agents/shared/credentials/anthropic_api_key.txt}
+    provider: anthropic
+
+# ── Models ───────────────────────────────────────────────────────
+models:
+  planner:
+    provider: openai
+    model: gpt-5.5
+    temperature: 0.3
+    max_output_tokens: 4096
+    purpose: "Audit label for the Hermes Iris profile. Live planning runs through hermes/iris/config.yaml."
+
+  vision:
+    provider: gemini
+    model: gemini-3.1-pro-preview
+    temperature: 0.2
+    max_output_tokens: 4096
+    purpose: "Camera snapshot crop health analysis"
+
+  embedding:
+    provider: openai
+    model: text-embedding-3-large
+    dimensions: 3072
+    purpose: "Observation semantic similarity search"
+
+# ── Prompts & Templates ─────────────────────────────────────────
+# All templates live in /srv/verdify/templates/.
+# Planner prompts are fully embedded in ingestor/iris_planner.py — the
+# legacy Jinja templates (planner-prompt.j2, planner-prompt.md) were
+# removed 2026-04-19 along with the cron-based planner.py they served.
+templates:
+  vision:
+    prompt: vision-analysis.j2
+
+  embedding:
+    text_template: embedding-text.j2
+
+# ── Schedules ────────────────────────────────────────────────────
+# Cron expressions (MDT). Managed via crontab, documented here.
+# NOTE: the legacy cron-based `planner` schedule was removed 2026-04-11;
+# planning is now event-driven via ingestor/iris_planner.py →
+# Hermes /v1/runs. Keep schedules: only for tasks still run by cron.
+schedules:
+  vision:
+    cron: "0 12,16,20,0 * * *"
+    script: scripts/frigate-snapshot.py
+    description: "Camera snapshots + Gemini 3.1 Pro Preview analysis"
+    depends_on: frigate  # Requires Frigate NVR accessible
+
+  embedding:
+    cron: null  # Manual — run after vision analysis accumulates new observations
+    script: scripts/generate-observation-embeddings.py
+    description: "Generate pgvector embeddings for similarity search"
+
+# ── Context Gathering ────────────────────────────────────────────
+context:
+  gather_script: scripts/gather-plan-context.sh
+  static_builder: scripts/gather-static-context.sh
+  max_context_chars: 100000
+  max_static_chars: 50000
+
+# ── Planner Routing & SLA (Hermes audit labels, contract v1.5) ───
+# Runtime knobs for planner trigger severity and audit-label routing. Consumed by:
+#   - ingestor/planner_routing.py (classify_severity + pick_instance + sla_for)
+#   - ingestor/alert_monitor rule 7 (SLA-breach detection)
+# Contract spec: docs/iris-planner-contract.md §2.F (SLA) + §2.G (routing).
+# All routine planning runs through Hermes (GPT-5.5 high-reasoning); the
+# instance field is an audit label only.
+planner_routing:
+  # Required full-plan cycles use the same Hermes/GPT-5.5 profile as other
+  # triggers; this value is an audit label carried into plan_delivery_log.
+  required_full_plan_instance: opus
+
+  # Severity thresholds — ingestor.classify_severity returns "major" when any
+  # is exceeded; "minor" otherwise. Both severities route to local by default.
+  forecast_major_delta_vpd_kPa: 0.5    # |Δvpd_outdoor| above → major FORECAST
+  forecast_major_delta_temp_F: 10      # |Δtemp_F| above → major FORECAST
+  deviation_major_threshold: 0.15      # normalized band-excursion → major DEVIATION
+  deviation_prolonged_cycles: 3        # pending >= N cycles → major DEVIATION
+
+planner_sla:
+  # SLA in minutes, keyed by (instance, trigger_type). Absent = no SLA.
+  # local/opus are audit labels under Hermes. They no longer select different
+  # model backends.
+  local:
+    SUNRISE:    30
+    SUNSET:     30
+    SOLAR_MAX:  30
+    MIDNIGHT:   30
+    TRANSITION: 45
+    FORECAST:   90
+    DEVIATION:  20
+    FORECAST_DEVIATION: 20
+    HEARTBEAT:  15
+  opus:
+    SUNRISE:    15
+    SUNSET:     15
+    SOLAR_MAX:  15
+    MIDNIGHT:   15
+    FORECAST:   30
+    DEVIATION:  10
+    FORECAST_DEVIATION: 10

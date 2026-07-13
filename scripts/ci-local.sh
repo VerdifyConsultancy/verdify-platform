@@ -49,6 +49,7 @@ $PY -m pytest -q \
   tests/test_17_planner_health_surface.py \
   tests/test_18_twin_divergence_dashboard.py \
   tests/test_19_firmware_twin_shadow_src_sync.py \
+  tests/test_20_vision_src_sync.py \
   tests/test_anchor_service_sync.py \
   tests/test_api_public_output_policy.py \
   tests/test_climate_intent_replay_evaluator.py \

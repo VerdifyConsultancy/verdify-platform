@@ -3,3 +3,25 @@ kind: Kustomization
 
 resources:
   - verdify-vision-cronjob.yaml
+
+# verdify-vision-src was hand-created out-of-band (kubectl --from-file) during
+# the #436 recovery; Git owns it from here. src/ holds byte-identical COPIES of
+# the canonical sources (kustomize's RootOnly load restrictor + ArgoCD forbid
+# referencing files outside the kustomization dir — same pattern as
+# components/firmware-twin and components/ha-gap-backfill).
+# tests/test_20_vision_src_sync.py fails CI on any drift from the canonical
+# scripts/, config/, templates/ files.
+configMapGenerator:
+  - name: verdify-vision-src
+    files:
+      - src/frigate-snapshot.py
+      - src/analyze-greenhouse-snapshot.py
+      - src/ai.yaml
+      - src/zones.yaml
+      - src/vision-analysis.j2
+
+generatorOptions:
+  disableNameSuffixHash: true
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: vision

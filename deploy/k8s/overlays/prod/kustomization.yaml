@@ -36,9 +36,11 @@ resources:
   - db-watchdog.yaml
   - writer-watchdog.yaml
   - ingestor-state-pvc.yaml
-  # Plant-observation pipeline: GitOps-owned CronJob using the production
-  # ingestor digest plus the existing scoped GHCR pull credential. The mounted
-  # source ConfigMap and model credential Secret remain runtime prerequisites.
+  # Plant-observation pipeline (#436): GitOps-owned CronJob + generated
+  # verdify-vision-src ConfigMap. Pulls the production ingestor digest from the
+  # zot origin with zot-origin-cluster-pull ONLY (ADR-0021 — the transitional
+  # GHCR pull credential is gone). The model credential Secret
+  # (verdify-vision-key) remains a runtime prerequisite.
   - ../../vision
   # HA-3 (#239): ingestor PDB maxUnavailable:1 (singleton-may-be-disrupted intent;
   # correctness is the Lease fence, not the PDB). Additive — does NOT restart the
