@@ -337,17 +337,20 @@ test("camera retries are bounded and exhausted failures retain exact LKG precond
   assert.equal(result.exportBatch.graphs.every(({ probeStatus }) => probeStatus === "http-error"), true);
 });
 
-test("the selector reader is sampled once and later race input cannot rewrite the batch preconditions", async (context) => {
+test("the selector reader is sampled once and later race input cannot rewrite validated inputs", async (context) => {
   const outputRoot = await workspace(context);
   const value = fixture();
   const jpeg = await cameraJpeg();
   const mutableSelectors = structuredClone(value.selectorPreconditions);
+  const expectedPolicySha256 = digest(canonicalBytes(value.active));
   let selectorReads = 0;
   let mutated = false;
   const result = await runOccurrenceProducer(runnerInput(value, outputRoot, {
     renderer: rendererContract(async () => graphResponse(Buffer.from("unused"), { status: 503 })),
     reader: selectorReader(async () => {
       selectorReads += 1;
+      value.active.activation.state = "blocked";
+      value.active.cameraUpstream.sources[0].url = "https://example.invalid/mutated-after-validation";
       return mutableSelectors;
     }),
     cameraTransport: async (options) => {
@@ -361,6 +364,7 @@ test("the selector reader is sampled once and later race input cannot rewrite th
   }));
 
   assert.equal(selectorReads, 1);
+  assert.equal(result.policySha256, expectedPolicySha256);
   assert.equal(result.exportBatch.expectedSelectionSha256, AGGREGATE_SELECTED_SHA256);
   assert.deepEqual(
     result.exportBatch.currentMedia.map(({ expectedSelectionSha256 }) => expectedSelectionSha256),

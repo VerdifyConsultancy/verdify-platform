@@ -15,6 +15,7 @@ import {
   reportingDatasourceIdentitySha256,
 } from "./graph-export-producer.mjs";
 import {
+  cameraExportProducerContract,
   captureCameraOccurrence,
   validateCameraExportRequest,
 } from "./camera-export-producer.mjs";
@@ -116,7 +117,7 @@ function validateBounds({
   if (
     !Number.isSafeInteger(cameraTimeoutMs)
     || cameraTimeoutMs < 1
-    || cameraTimeoutMs > 15_000
+    || cameraTimeoutMs > cameraExportProducerContract.maxTimeoutMs
   ) throw new Error("occurrence producer camera timeout is invalid");
   if (
     !Number.isSafeInteger(cameraMaxAttempts)
@@ -357,24 +358,31 @@ export async function runOccurrenceProducer({
   graphTimeoutMs = graphExportProducerContract.defaultTimeoutMs,
   graphSettlementGraceMs = graphExportProducerContract.defaultSettlementGraceMs,
   cameraConcurrency = DEFAULT_CAMERA_CONCURRENCY,
-  cameraTimeoutMs = 10_000,
+  cameraTimeoutMs = cameraExportProducerContract.defaultTimeoutMs,
   cameraMaxAttempts = DEFAULT_CAMERA_MAX_ATTEMPTS,
   fileOperations,
 }) {
   // The policy/manifest/feed/plan gate intentionally precedes every injected
   // reader, renderer, camera transport, and filesystem operation.
-  const discovered = validatePolicyManifestBinding(policy, manifest, manifestSha256);
+  const policySnapshot = structuredClone(policy);
+  const manifestSnapshot = structuredClone(manifest);
+  const reportingFeedSnapshot = structuredClone(reportingFeed);
+  const discovered = validatePolicyManifestBinding(
+    policySnapshot,
+    manifestSnapshot,
+    manifestSha256,
+  );
   if (
     discovered.graphs.length !== EXPECTED_GRAPH_COUNT
     || discovered.currentMedia.length !== EXPECTED_CURRENT_MEDIA_COUNT
   ) throw new Error(`occurrence producer requires exactly ${EXPECTED_GRAPH_COUNT}+${EXPECTED_CURRENT_MEDIA_COUNT} occurrences`);
-  validateApprovedPolicy(policy);
-  const policySha256 = occurrenceExportPolicySha256(policy);
-  const reportingFeedSha256 = reportingFeedEnvelopeSha256(reportingFeed);
+  validateApprovedPolicy(policySnapshot);
+  const policySha256 = occurrenceExportPolicySha256(policySnapshot);
+  const reportingFeedSha256 = reportingFeedEnvelopeSha256(reportingFeedSnapshot);
   const datasourceIdentitySha256 = reportingDatasourceIdentitySha256(reportingDatasourceIdentity);
   const plan = planGraphExportRequests({
-    policy,
-    manifest,
+    policy: policySnapshot,
+    manifest: manifestSnapshot,
     manifestSha256,
     reportingFeedSha256,
     reportingDatasourceIdentitySha256: datasourceIdentitySha256,
@@ -393,7 +401,9 @@ export async function runOccurrenceProducer({
     cameraTimeoutMs,
     cameraMaxAttempts,
   });
-  validateRenderer(renderer, reportingFeedSha256, datasourceIdentitySha256);
+  const validatedRenderer = Object.freeze({
+    ...validateRenderer(renderer, reportingFeedSha256, datasourceIdentitySha256),
+  });
   const selectorReader = validateSelectorReader(selectorPreconditionReader);
 
   const readRequest = {
@@ -413,7 +423,10 @@ export async function runOccurrenceProducer({
     record.occurrenceId,
     record.expectedSelectionSha256,
   ]));
-  const cameraSourceById = new Map(policy.cameraUpstream.sources.map((source) => [source.occurrenceId, source]));
+  const cameraSourceById = new Map(policySnapshot.cameraUpstream.sources.map((source) => [
+    source.occurrenceId,
+    source,
+  ]));
   const cameraRequests = discovered.currentMedia.map(({ occurrenceId }) => {
     const source = cameraSourceById.get(occurrenceId);
     const request = {
@@ -429,11 +442,11 @@ export async function runOccurrenceProducer({
       requestedAt,
       expectedSelectionSha256: selectorById.get(occurrenceId),
     };
-    return validateCameraExportRequest(request, policy);
+    return validateCameraExportRequest(request, policySnapshot);
   });
 
   const cameraResults = await captureCurrentMedia({
-    policy,
+    policy: policySnapshot,
     requests: cameraRequests,
     outputRoot,
     transport: cameraTransport,
@@ -444,13 +457,13 @@ export async function runOccurrenceProducer({
     fileOperations,
   });
   const assembly = await assembleGraphOccurrenceExportBatch({
-    policy,
-    manifest,
+    policy: policySnapshot,
+    manifest: manifestSnapshot,
     manifestSha256,
-    reportingFeed,
+    reportingFeed: reportingFeedSnapshot,
     reportingDatasourceIdentity,
     outputRoot,
-    renderer,
+    renderer: validatedRenderer,
     selectorPreconditions,
     currentMediaRecords: cameraResults.map(({ record }) => record),
     now,
