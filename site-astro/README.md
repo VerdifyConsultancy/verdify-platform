@@ -212,9 +212,9 @@ manifest order without an endpoint. Its producer has no default renderer or netw
 service, credential, database, Kubernetes, Grafana, or object-store client: an
 approved policy and an explicitly injected renderer are required before any call.
 The producer also requires the full closed reporting-feed envelope and derives its
-canonical digest itself. Only that digest enters the v2 plan and all 143 requests;
+canonical digest itself. Only that digest enters the v3 plan and all 143 requests;
 the feed identity, watermark, endpoint, and credential details do not. The injected
-renderer must declare the same digest through the exact abort-cooperative v2 contract
+renderer must declare the same digest through the exact abort-cooperative v3 contract
 and settle promptly after the producer aborts it. The producer enforces the claim: a
 renderer or response body that does not settle and clean up within the short bounded grace period stops
 all new scheduling and fails the whole batch closed, while still returning all 143
@@ -228,6 +228,29 @@ verifier uses an explicit non-live envelope solely to prove planning; it makes n
 feed-existence or freshness claim. This source-only slice
 does not provide or activate the reporting feed, renderer, watermark/alert path,
 S3 delivery, workload, or stage rollout.
+
+The source-only graph batch assembler now completes that offline 143+2 handoff. It
+accepts the full reporting-feed envelope, an explicit dedicated datasource identity,
+the injected v3 renderer, and aggregate/per-camera selector preconditions. The raw
+datasource identity is never written to a plan, result, batch, log, or digest evidence;
+only its domain-separated SHA-256 crosses the render boundary. Every request declares
+whether it uses the reporting-tier default or needs the dedicated legacy-dashboard
+override. The latter is closed to exactly `greenhouse-weather`,
+`greenhouse-equipment`, `greenhouse-hydroponics`, `greenhouse-lighting`, and
+`greenhouse-soil` (40 occurrences in the accepted 143-occurrence snapshot). Reusing
+the legacy `verdify-tsdb` or `P44368ADAD746BC27` identity, an anonymous source, or a
+URL-shaped identity fails before a renderer call.
+
+After rendering, the assembler emits two separately digested canonical documents:
+the existing URL-free v3 graph result and the complete v2 occurrence-export batch.
+The latter carries the opaque reporting-feed watermark, all 143 graph records, both
+camera records in manifest order, the aggregate selection precondition, and both
+per-camera selection preconditions. Mixed graph failures remain complete and retain
+their classified null records for downstream LKG handling. No HTTP adapter is
+provided: renderer transport/configuration remains injected, with no environment,
+endpoint, credential, store, workload, route, replica, or activation binding in this
+source slice. The checked policy remains blocked, so these contracts cannot make a
+live render or publish until the existing Jason gates are separately satisfied.
 
 ## Complete built-site releases
 
