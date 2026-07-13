@@ -64,6 +64,20 @@ body {
   line-height: 1.6;
 }
 
+/* The vendored shell's `.site-page { overflow: clip }` is written for a
+ * full-height wrapper <div> (see the shell README "Compose a full page"),
+ * where clip harmlessly trims decorative bleed. This layout applies
+ * `.site-page` to <body>, and overflow on <body> propagates to the viewport;
+ * `clip` (unlike `hidden`) removes the viewport's scroll container entirely,
+ * so the page cannot scroll at all (P0 lab-stage regression, 2026-07-13).
+ * Restore vertical viewport scrolling while keeping the shell's
+ * horizontal-bleed clip. The vendored shell tree is checksum-bound, so this
+ * Lab-owned override lives here rather than in the shell stylesheet. */
+body.site-page {
+  overflow: visible;
+  overflow-x: clip;
+}
+
 a {
   color: var(--forest);
   text-underline-offset: 0.16em;
@@ -912,6 +926,14 @@ kbd {
   background: #07131c;
   color: #f4f7f4;
   box-shadow: 0 30px 100px rgb(0 0 0 / 55%);
+}
+
+/* The lightbox is a native modal <dialog>; `showModal()` does not stop the
+ * document behind it from scrolling. Lock the viewport while it is open —
+ * `hidden` (not `clip`) keeps the scroll container and position — and the
+ * lock releases automatically when close() removes the [open] attribute. */
+body.site-page:has(.media-lightbox[open]) {
+  overflow: hidden;
 }
 
 /* The frozen contact page carries Quartz-era custom-property names in a
