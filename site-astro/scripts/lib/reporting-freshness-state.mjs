@@ -2,6 +2,12 @@ const SHA256_RE = /^[0-9a-f]{64}$/u;
 const ISO_INSTANT_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/u;
 
 const WINDOW_SAMPLE_COUNT = 96;
+const WINDOW_SECONDS = 24 * 60 * 60;
+const SAMPLE_CADENCE_SECONDS = 15 * 60;
+const COMPLETE_WINDOW_COVERAGE_SECONDS =
+    (WINDOW_SAMPLE_COUNT - 1) * SAMPLE_CADENCE_SECONDS;
+const WINDOW_AGE_BOUNDARY = "(evaluatedAt-86400s,evaluatedAt]";
+const MAX_CONSECUTIVE_EVALUATION_GAP_SECONDS = SAMPLE_CADENCE_SECONDS;
 const TARGET_LAG_SECONDS = 15 * 60;
 const ALERT_LAG_SECONDS = 30 * 60;
 const REQUIRED_CONSECUTIVE_EVALUATIONS = 2;
@@ -92,6 +98,56 @@ function boundedStreak(value, label) {
     return value;
 }
 
+function validatePersistedHysteresis(value) {
+    const { lastEvaluation } = value;
+    if (lastEvaluation === null) {
+        if (
+            value.alertState !== "inactive" ||
+            value.consecutiveAboveAlert !== 0 ||
+            value.consecutiveBelowRecovery !== 0
+        ) {
+            throw new Error(
+                "reporting freshness hysteresis is unreachable without an evaluation",
+            );
+        }
+        return;
+    }
+
+    const lag = lastEvaluation.lagSeconds;
+    let expectedAbove = 0;
+    let expectedBelow = 0;
+    if (lag !== null && lag > ALERT_LAG_SECONDS) {
+        expectedAbove =
+            value.alertState === "firing"
+                ? REQUIRED_CONSECUTIVE_EVALUATIONS
+                : 1;
+    } else if (
+        lag !== null &&
+        lag < TARGET_LAG_SECONDS &&
+        value.alertState === "firing"
+    ) {
+        expectedBelow = 1;
+    }
+    if (
+        value.consecutiveAboveAlert !== expectedAbove ||
+        value.consecutiveBelowRecovery !== expectedBelow
+    ) {
+        throw new Error(
+            "reporting freshness hysteresis is inconsistent with its last evaluation",
+        );
+    }
+
+    if (
+        value.alertState === "firing" &&
+        value.revision <
+            (lag !== null && lag > ALERT_LAG_SECONDS
+                ? REQUIRED_CONSECUTIVE_EVALUATIONS
+                : REQUIRED_CONSECUTIVE_EVALUATIONS + 1)
+    ) {
+        throw new Error("reporting freshness firing state is unreachable");
+    }
+}
+
 function validateState(value) {
     if (
         !exactKeys(value, [
@@ -111,6 +167,7 @@ function validateState(value) {
         value.revision < 0 ||
         !Array.isArray(value.samples) ||
         value.samples.length > WINDOW_SAMPLE_COUNT ||
+        value.revision < value.samples.length ||
         !["inactive", "firing"].includes(value.alertState)
     )
         throw new Error(
@@ -127,23 +184,6 @@ function validateState(value) {
     );
     if (value.consecutiveAboveAlert > 0 && value.consecutiveBelowRecovery > 0)
         throw new Error("reporting freshness state has conflicting streaks");
-    if (
-        value.alertState === "inactive" &&
-        value.consecutiveBelowRecovery !== 0
-    ) {
-        throw new Error(
-            "inactive reporting freshness state carries a recovery streak",
-        );
-    }
-    if (
-        (value.alertState === "inactive" &&
-            value.consecutiveAboveAlert === REQUIRED_CONSECUTIVE_EVALUATIONS) ||
-        (value.alertState === "firing" &&
-            value.consecutiveBelowRecovery === REQUIRED_CONSECUTIVE_EVALUATIONS)
-    )
-        throw new Error(
-            "reporting freshness state bypasses a hysteresis transition",
-        );
 
     let previousTime = -1;
     for (const sample of value.samples) {
@@ -178,6 +218,18 @@ function validateState(value) {
                 "last reporting freshness evaluation predates the sample window",
             );
         }
+        const exclusiveLowerBoundary =
+            lastEvaluationTime - WINDOW_SECONDS * 1000;
+        if (
+            value.samples.some(
+                (sample) =>
+                    Date.parse(sample.evaluatedAt) <= exclusiveLowerBoundary,
+            )
+        ) {
+            throw new Error(
+                "reporting freshness sample is outside the rolling 24-hour window",
+            );
+        }
         if (
             value.lastEvaluation.lagSeconds !== null &&
             JSON.stringify(value.lastEvaluation) !==
@@ -192,7 +244,14 @@ function validateState(value) {
         );
     }
 
+    validatePersistedHysteresis(value);
+
     validateLastKnownGood(value.lastKnownGood);
+    if (value.lastKnownGood !== null && value.revision < WINDOW_SAMPLE_COUNT) {
+        throw new Error(
+            "reporting freshness LKG predates a complete sample window",
+        );
+    }
     if (
         value.lastKnownGood !== null &&
         (value.lastEvaluation === null ||
@@ -215,11 +274,68 @@ function percentile95(samples) {
     return ordered[Math.ceil(ordered.length * 0.95) - 1];
 }
 
-function windowStatus(sampleCount, p95LagSeconds) {
-    if (sampleCount < WINDOW_SAMPLE_COUNT) return "insufficient";
+function pruneRollingWindow(samples, evaluatedAt) {
+    const upperBoundary = Date.parse(evaluatedAt);
+    const exclusiveLowerBoundary = upperBoundary - WINDOW_SECONDS * 1000;
+    return samples
+        .filter((sample) => {
+            const sampleTime = Date.parse(sample.evaluatedAt);
+            return (
+                sampleTime > exclusiveLowerBoundary &&
+                sampleTime <= upperBoundary
+            );
+        })
+        .slice(-WINDOW_SAMPLE_COUNT);
+}
+
+function windowCoverage(samples) {
+    const sampleTimes = samples.map(({ evaluatedAt }) =>
+        Date.parse(evaluatedAt),
+    );
+    const coverageSeconds =
+        sampleTimes.length < 2
+            ? 0
+            : Math.floor((sampleTimes.at(-1) - sampleTimes[0]) / 1000);
+    const cadenceValid = sampleTimes
+        .slice(1)
+        .every(
+            (sampleTime, index) =>
+                sampleTime - sampleTimes[index] ===
+                SAMPLE_CADENCE_SECONDS * 1000,
+        );
+    return {
+        coverageSeconds,
+        cadenceValid,
+        complete:
+            samples.length === WINDOW_SAMPLE_COUNT &&
+            cadenceValid &&
+            coverageSeconds === COMPLETE_WINDOW_COVERAGE_SECONDS,
+    };
+}
+
+function windowStatus(coverage, p95LagSeconds) {
+    if (!coverage.complete) return "insufficient";
     if (p95LagSeconds > ALERT_LAG_SECONDS) return "stale";
     if (p95LagSeconds > TARGET_LAG_SECONDS) return "late";
     return "target";
+}
+
+function windowModel(samples) {
+    const coverage = windowCoverage(samples);
+    const p95LagSeconds = percentile95(samples);
+    return {
+        sampleCount: samples.length,
+        minimumSampleCount: WINDOW_SAMPLE_COUNT,
+        maximumSampleCount: WINDOW_SAMPLE_COUNT,
+        windowSeconds: WINDOW_SECONDS,
+        sampleCadenceSeconds: SAMPLE_CADENCE_SECONDS,
+        ageBoundary: WINDOW_AGE_BOUNDARY,
+        coverageSeconds: coverage.coverageSeconds,
+        cadenceValid: coverage.cadenceValid,
+        p95LagSeconds,
+        targetLagSeconds: TARGET_LAG_SECONDS,
+        status: windowStatus(coverage, p95LagSeconds),
+    };
 }
 
 function metricModel(evaluation, disposition) {
@@ -243,21 +359,13 @@ function metricModel(evaluation, disposition) {
 }
 
 function ignoredResult(state, evaluation, disposition) {
-    const p95LagSeconds = percentile95(state.samples);
     const selectedOutputSha256 = state.lastKnownGood?.outputSha256 ?? null;
     return {
         contract: "verdify.lab-reporting-freshness-evaluation",
         schemaVersion: 1,
         evaluatedAt: evaluation.evaluatedAt,
         sampleDisposition: disposition,
-        window: {
-            sampleCount: state.samples.length,
-            minimumSampleCount: WINDOW_SAMPLE_COUNT,
-            maximumSampleCount: WINDOW_SAMPLE_COUNT,
-            p95LagSeconds,
-            targetLagSeconds: TARGET_LAG_SECONDS,
-            status: windowStatus(state.samples.length, p95LagSeconds),
-        },
+        window: windowModel(state.samples),
         alert: {
             state: state.alertState,
             transition: "none",
@@ -364,6 +472,16 @@ export function evaluateReportingFreshness({ state, evaluation }) {
     const next = structuredClone(prior);
     next.revision += 1;
     next.lastEvaluation = structuredClone(evaluation);
+    next.samples = pruneRollingWindow(next.samples, evaluation.evaluatedAt);
+    if (
+        prior.lastEvaluation !== null &&
+        Date.parse(evaluation.evaluatedAt) -
+            Date.parse(prior.lastEvaluation.evaluatedAt) >
+            MAX_CONSECUTIVE_EVALUATION_GAP_SECONDS * 1000
+    ) {
+        next.consecutiveAboveAlert = 0;
+        next.consecutiveBelowRecovery = 0;
+    }
     let transition = "none";
     let alertEvaluation = "missing";
 
@@ -376,10 +494,13 @@ export function evaluateReportingFreshness({ state, evaluation }) {
         if (evaluation.lagSeconds > ALERT_LAG_SECONDS) {
             alertEvaluation = "above-alert";
             next.consecutiveBelowRecovery = 0;
-            next.consecutiveAboveAlert = Math.min(
-                REQUIRED_CONSECUTIVE_EVALUATIONS,
-                next.consecutiveAboveAlert + 1,
-            );
+            next.consecutiveAboveAlert =
+                next.alertState === "firing"
+                    ? REQUIRED_CONSECUTIVE_EVALUATIONS
+                    : Math.min(
+                          REQUIRED_CONSECUTIVE_EVALUATIONS,
+                          next.consecutiveAboveAlert + 1,
+                      );
             if (
                 next.alertState === "inactive" &&
                 next.consecutiveAboveAlert === REQUIRED_CONSECUTIVE_EVALUATIONS
@@ -413,8 +534,8 @@ export function evaluateReportingFreshness({ state, evaluation }) {
         }
     }
 
-    const p95LagSeconds = percentile95(next.samples);
-    const status = windowStatus(next.samples.length, p95LagSeconds);
+    const window = windowModel(next.samples);
+    const { status } = window;
     let publicationFreshness;
     if (next.alertState === "firing") publicationFreshness = "alert";
     else if (evaluation.lagSeconds === null || evaluation.outputSha256 === null)
@@ -442,14 +563,7 @@ export function evaluateReportingFreshness({ state, evaluation }) {
         schemaVersion: 1,
         evaluatedAt: evaluation.evaluatedAt,
         sampleDisposition: "accepted",
-        window: {
-            sampleCount: next.samples.length,
-            minimumSampleCount: WINDOW_SAMPLE_COUNT,
-            maximumSampleCount: WINDOW_SAMPLE_COUNT,
-            p95LagSeconds,
-            targetLagSeconds: TARGET_LAG_SECONDS,
-            status,
-        },
+        window,
         alert: {
             state: next.alertState,
             transition,
@@ -480,6 +594,12 @@ export const reportingFreshnessContract = Object.freeze({
     metricName: METRIC_NAME,
     windowSampleCount: WINDOW_SAMPLE_COUNT,
     minimumSampleCount: WINDOW_SAMPLE_COUNT,
+    windowSeconds: WINDOW_SECONDS,
+    sampleCadenceSeconds: SAMPLE_CADENCE_SECONDS,
+    completeWindowCoverageSeconds: COMPLETE_WINDOW_COVERAGE_SECONDS,
+    windowAgeBoundary: WINDOW_AGE_BOUNDARY,
+    maximumConsecutiveEvaluationGapSeconds:
+        MAX_CONSECUTIVE_EVALUATION_GAP_SECONDS,
     targetLagSeconds: TARGET_LAG_SECONDS,
     alertLagSeconds: ALERT_LAG_SECONDS,
     requiredConsecutiveEvaluations: REQUIRED_CONSECUTIVE_EVALUATIONS,
