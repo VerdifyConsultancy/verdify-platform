@@ -108,6 +108,12 @@ digest, and decoded-pixel digest all validate; ancillary metadata is rejected.
 Failed renders/captures retain the prior verified fallback; corrupt candidates
 never replace last-known-good bytes.
 
+Camera capture writes candidates only beneath an output root that already exists
+as a canonical real directory. Create that directory before running
+`npm run camera:export`; a missing or linked output root fails before the camera
+request begins, and linked candidate subdirectories fail before any candidate
+write.
+
 The local store uses content-addressed image blobs and release manifests. One
 canonical release `selection.json` atomically selects both `current` and `previous`.
 Each current-camera occurrence has a separate two-generation CAS selector so camera
@@ -183,6 +189,29 @@ least-privilege credential, occurrence-store access, and egress limited to that
 store plus `api.verdify.ai:443`. Existing anonymous `graphs.verdify.ai` and the
 Track A primary database role are explicitly ineligible.
 
+The inert graph-producer library adds one pure planner that verifies the exact
+occurrence-manifest bytes against that policy and emits all 143 render targets in
+manifest order without an endpoint. Its producer has no default renderer or network,
+service, credential, database, Kubernetes, Grafana, or object-store client: an
+approved policy and an explicitly injected renderer are required before any call.
+The producer also requires the full closed reporting-feed envelope and derives its
+canonical digest itself. Only that digest enters the v2 plan and all 143 requests;
+the feed identity, watermark, endpoint, and credential details do not. The injected
+renderer must declare the same digest through the exact abort-cooperative v2 contract
+and settle promptly after the producer aborts it. The producer enforces the claim: a
+renderer or response body that does not settle and clean up within the short bounded grace period stops
+all new scheduling and fails the whole batch closed, while still returning all 143
+ordered null records. At most four calls can remain unsettled, including after the
+producer returns. Bounded PNG responses are decoded and
+deterministically re-encoded as metadata-free RGB PNG, then published through the
+same canonical content-addressed candidate store used by camera capture. Stable,
+URL-free v3 results include every graph once on mixed failures and repeat only the
+feed-envelope digest for the later 143+2 assembler to verify. The offline real-build
+verifier uses an explicit non-live envelope solely to prove planning; it makes no
+feed-existence or freshness claim. This source-only slice
+does not provide or activate the reporting feed, renderer, watermark/alert path,
+S3 delivery, workload, or stage rollout.
+
 ## Complete built-site releases
 
 The full Astro output now also has a local release and cache path. Run
@@ -213,10 +242,19 @@ immutable objects, entity-tag compare-and-swap for the selector, bounded streame
 reads, and bounded paginated listing. Its client is dependency-injected and covered by
 offline fakes; no endpoint or credential is configured or contacted by the tests.
 
-The CLI and cache hydrator remain local-only. Object-store CLI wiring, occurrence
-persistence, the event agent, retention/GC, resource accounting, real-endpoint
-conditional-write proof, image/GitOps/cache-volume wiring, and alert routing are still
-required before stage activation. This change does not deploy or alter production.
+The runtime candidate is present in Lab stage GitOps source only as a dormant
+`replicas: 0` workload. Its paired agent/site images are pinned to exact zot digests
+after their source-bound container probe, but it still has no route, object-store/AWS
+environment, application/object-store credential, or egress. Its standard zot registry
+`imagePullSecret` is only for image retrieval. The stage app remains manual-sync;
+merging source is not an operator sync, and even a sync cannot schedule this
+zero-replica candidate.
+
+The CLI and cache hydrator remain local-only. Object-store CLI wiring and bounded cache
+materialization, occurrence persistence, the event agent, distributed coordination,
+retention/GC, resource accounting, real-endpoint conditional-write proof, store/egress
+wiring, and alert routing are still required before activation. No endpoint or
+credential is configured here, and this change does not deploy or alter production.
 
 The stage vendors the reviewed offline parity comparator at
 `scripts/site-build-parity.py` (SHA-256
@@ -284,9 +322,10 @@ before Kaniko receives the context; neither the Astro compiler nor runtime
 fetches it. The release pipeline pins the published zot-origin digest in Git,
 and the stage runtime has no egress.
 
-The runtime is static nginx on port 8080, globally noindex, read-only-root
-compatible, and requires no Secret, service-account token, database, object
-store, Grafana, or device-network access.
+The runtime is static nginx on port 8080, globally noindex, and read-only-root
+compatible. Its standard zot registry `imagePullSecret` is only for image
+retrieval; it requires no application/object-store Secret, service-account
+token, database, object store, Grafana, or device-network access.
 
 ## Known blockers
 

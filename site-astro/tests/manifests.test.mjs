@@ -164,8 +164,18 @@ test("release runtime candidate is a two-node, no-PVC, no-route read-only cache"
   assert.deepEqual(deployment.spec.template.spec.topologySpreadConstraints[0].matchLabelKeys, ["pod-template-hash"]);
   assert.equal(deployment.spec.template.spec.initContainers.length, 1);
   assert.equal(deployment.spec.template.spec.initContainers[0].name, "hydrate-known-good");
+  assert.deepEqual(
+    deployment.spec.template.spec.initContainers[0].command,
+    ["/app/release-runtime/entrypoint.sh"],
+  );
   assert.deepEqual(deployment.spec.template.spec.initContainers[0].args, ["init"]);
   assert.deepEqual(deployment.spec.template.spec.containers.map((container) => container.name), ["site", "release-reconciler"]);
+  assert.deepEqual(deployment.spec.template.spec.containers[0].command, ["nginx"]);
+  assert.deepEqual(deployment.spec.template.spec.containers[0].args, ["-g", "daemon off;"]);
+  assert.deepEqual(
+    deployment.spec.template.spec.containers[1].command,
+    ["/app/release-runtime/entrypoint.sh"],
+  );
   assert.deepEqual(deployment.spec.template.spec.containers[1].args, ["reconcile"]);
   assert.equal(deployment.spec.template.spec.containers[0].readinessProbe.httpGet.path, "/readyz");
   assert.equal(deployment.spec.template.spec.containers[0].livenessProbe.httpGet.path, "/healthz");
@@ -173,12 +183,37 @@ test("release runtime candidate is a two-node, no-PVC, no-route read-only cache"
     deployment.spec.template.spec.containers[0].volumeMounts.find((mount) => mount.name === "release-cache").readOnly,
     true,
   );
+  const siteMounts = deployment.spec.template.spec.containers[0].volumeMounts;
+  assert.equal(
+    siteMounts.find((mount) => mount.name === "release-state")?.mountPath,
+    "/run/verdify-lab-release",
+  );
+  assert.equal(siteMounts.find((mount) => mount.name === "release-state")?.readOnly, true);
+  assert.equal(
+    siteMounts.some((mount) => mount.mountPath === "/var/run"),
+    false,
+    "a broad /var/run mount aliases /run in nginx-unprivileged and masks the release-state submount",
+  );
+  assert.equal(
+    deployment.spec.template.spec.volumes.some((volume) => volume.name === "nginx-run"),
+    false,
+  );
   for (const container of [...deployment.spec.template.spec.initContainers, ...deployment.spec.template.spec.containers]) {
     assert.equal(container.securityContext.readOnlyRootFilesystem, true);
     assert.deepEqual(container.securityContext.capabilities.drop, ["ALL"]);
     assert.equal(container.envFrom, undefined);
+    assert.ok((container.env ?? []).every(({ name }) => !name.startsWith("AWS_") && !name.includes("S3")));
+    if (container.name === "site") {
+      assert.deepEqual(container.env ?? [], []);
+    } else {
+      assert.equal(
+        (container.env ?? []).find(({ name }) => name === "LAB_RELEASE_STORE")?.value,
+        "/unconfigured/verdify-lab-release-store",
+      );
+    }
     assert.match(container.image, /^registry\.vallery\.net\/verdifyconsultancy\/verdify-lab-release-(?:agent|nginx)@sha256:0{64}$/u);
   }
+  assert.equal(deployment.spec.template.metadata.annotations["verdify.ai/object-store-endpoint"], undefined);
   assert.ok(deployment.spec.template.spec.volumes.every((volume) => volume.emptyDir && !volume.persistentVolumeClaim));
   assert.doesNotMatch(rendered.stdout, /secretKeyRef|secretRef|PersistentVolumeClaim|IngressRoute|kind: Ingress\b/u);
 
@@ -193,19 +228,7 @@ test("release runtime candidate is a two-node, no-PVC, no-route read-only cache"
   assert.deepEqual(policy.spec.ingress[0].from, [{
     podSelector: { matchLabels: { "verdify.ai/lab-canary-client": "true" } },
   }]);
-  assert.deepEqual(policy.spec.egress, [
-    {
-      to: [{
-        namespaceSelector: { matchLabels: { "kubernetes.io/metadata.name": "kube-system" } },
-        podSelector: { matchLabels: { "k8s-app": "kube-dns" } },
-      }],
-      ports: [{ protocol: "UDP", port: 53 }, { protocol: "TCP", port: 53 }],
-    },
-    {
-      to: [{ ipBlock: { cidr: "192.168.7.10/32" } }],
-      ports: [{ protocol: "TCP", port: 443 }],
-    },
-  ]);
+  assert.deepEqual(policy.spec.egress, []);
 });
 
 test("release runtime images bake a real digest-bound fallback and serve only the atomic symlink", async () => {

@@ -5,6 +5,7 @@ namespace: verdify-platform
 
 resources:
   - ../../components/lab-astro-stage
+  - ../../candidates/lab-release-runtime
   - ingressroute.yaml
 
 images:
@@ -13,6 +14,17 @@ images:
   - name: registry.vallery.net/verdifyconsultancy/verdify-lab-astro
     newName: registry.vallery.net/verdifyconsultancy/verdify-lab-astro
     digest: sha256:ee36941f20028fcfe06f12bf253e7139c00e3d5de1949eb8b12bb1d4ebe60b99
+  # The release-runtime images remain visibly non-deployable until a separate
+  # reviewed activation replaces each sentinel with its exact zot digest.
+  - name: registry.vallery.net/verdifyconsultancy/verdify-lab-release-agent
+    newName: registry.vallery.net/verdifyconsultancy/verdify-lab-release-agent
+    digest: sha256:2c6f22020ccc323d45d0a404a776354a4f866795fcc901749758f2726e5df382
+  - name: registry.vallery.net/verdifyconsultancy/verdify-lab-release-nginx
+    newName: registry.vallery.net/verdifyconsultancy/verdify-lab-release-nginx
+    digest: sha256:bae8888cf4cee7c21ed4a186aab384cebe8f1dd3bbd00401f213e13031bbabe0
+
+patches:
+  - path: lab-release-runtime-dormant.patch.yaml
 
 labels:
   - pairs:
