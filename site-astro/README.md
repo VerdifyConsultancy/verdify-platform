@@ -252,6 +252,15 @@ must carry the adapter's canonical store-identity digest. Bounded blob reads can
 materialize exact bytes for a compiler, but the occurrence CLI still accepts local
 stores only and no event producer is wired to mutate S3.
 
+Occurrence blob materialization is monotonic and delete-free at its public destination.
+Every selected blob is first written, synced, closed, and fully PNG/digest/size validated
+inside one private same-filesystem staging directory; no destination is committed until
+all source blobs pass. Commit uses an absent-only hard link. An existing destination is
+accepted only when bounded validation proves the exact expected content, while a conflict
+is left untouched. A later commit or directory-sync failure may therefore leave only exact
+content-addressed outputs; retry converges by accepting those outputs and completing the
+remainder. Cleanup removes private staging only and never rollback-deletes a destination.
+
 The runtime candidate is present in Lab stage GitOps source only as a dormant
 `replicas: 0` workload. Its paired agent/site images are pinned to exact zot digests
 after their source-bound container probe, but it still has no route, object-store/AWS
