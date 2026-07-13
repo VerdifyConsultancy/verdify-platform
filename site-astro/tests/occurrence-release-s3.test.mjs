@@ -9,6 +9,7 @@ import {
   readdir,
   rm,
   unlink,
+  utimes,
   writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -469,27 +470,76 @@ test("materialization removes its wx target when the file-handle close fails", a
   );
   assert.ok(closeCalls >= 1);
   await assert.rejects(readFile(target), (error) => error.code === "ENOENT");
+  assert.deepEqual(await readdir(output), []);
 });
 
-test("materialization cleanup preserves a foreign replacement", async (t) => {
+test("materialization cleanup preserves a same-content foreign replacement under ABA pressure", async (t) => {
   const root = await mkdtemp(path.join(tmpdir(), "verdify-occurrence-replacement-"));
   t.after(() => rm(root, { recursive: true, force: true }));
-  const target = path.join(root, "target.png");
-  await writeFile(target, "created-by-this-invocation");
+  const storeRoot = path.join(root, "store");
+  const output = path.join(root, "output");
+  await mkdir(storeRoot);
+  await mkdir(output);
+  const store = await new LocalOccurrenceReleaseStore(storeRoot).initialize({ create: true });
+  const image = png(25, 50, 75);
+  const imageSha256 = sha256(image);
+  await store.publishPngBlob(image, imageSha256);
+  const target = path.join(output, "target.png");
+  const verified = await store.materializePngBlob(imageSha256, target, {
+    maximumBytes: image.length,
+    retainOwnership: true,
+  });
   const created = await lstat(target, { bigint: true });
-  const identity = {
-    dev: created.dev,
-    ino: created.ino,
-    birthtimeNs: created.birthtimeNs,
-    ctimeNs: created.ctimeNs,
-    mtimeNs: created.mtimeNs,
-    size: created.size,
-  };
+  const proof = await lstat(verified.materializedOwnership.proofPath, { bigint: true });
+  assert.equal(proof.dev, created.dev);
+  assert.equal(proof.ino, created.ino);
+  assert.equal(proof.nlink, 2n);
   await unlink(target);
-  const replacement = Buffer.alloc(Number(created.size), 0x66);
-  await writeFile(target, replacement);
-  assert.equal(await removeMaterializedOccurrenceTarget(target, identity), false);
-  assert.deepEqual(await readFile(target), replacement);
+  for (let attempt = 0; attempt < 64; attempt += 1) {
+    await writeFile(target, image);
+    const replacement = await lstat(target, { bigint: true });
+    assert.notEqual(`${replacement.dev}:${replacement.ino}`, `${created.dev}:${created.ino}`);
+    if (attempt < 63) await unlink(target);
+  }
+  await utimes(target, Number(created.atimeNs) / 1e9, Number(created.mtimeNs) / 1e9);
+  assert.equal(
+    await removeMaterializedOccurrenceTarget(target, verified.materializedOwnership),
+    false,
+  );
+  assert.deepEqual(await readFile(target), image);
+  assert.deepEqual(await readdir(output), ["target.png"]);
+});
+
+test("retained materialization ownership is isolated across parallel replacements", async (t) => {
+  const root = await mkdtemp(path.join(tmpdir(), "verdify-occurrence-parallel-replacement-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const storeRoot = path.join(root, "store");
+  await mkdir(storeRoot);
+  const store = await new LocalOccurrenceReleaseStore(storeRoot).initialize({ create: true });
+  const image = png(80, 40, 20);
+  const imageSha256 = sha256(image);
+  await store.publishPngBlob(image, imageSha256);
+
+  await Promise.all(Array.from({ length: 24 }, async (_, index) => {
+    const output = path.join(root, `output-${index}`);
+    await mkdir(output);
+    const target = path.join(output, "target.png");
+    const verified = await store.materializePngBlob(imageSha256, target, {
+      maximumBytes: image.length,
+      retainOwnership: true,
+    });
+    const created = await lstat(target, { bigint: true });
+    await unlink(target);
+    await writeFile(target, image);
+    const replacement = await lstat(target, { bigint: true });
+    assert.notEqual(`${replacement.dev}:${replacement.ino}`, `${created.dev}:${created.ino}`);
+    assert.equal(
+      await removeMaterializedOccurrenceTarget(target, verified.materializedOwnership),
+      false,
+    );
+    assert.deepEqual(await readFile(target), image);
+    assert.deepEqual(await readdir(output), ["target.png"]);
+  }));
 });
 
 test("S3 adapter covers both selector families and immutable object families offline", async (t) => {

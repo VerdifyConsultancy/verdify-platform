@@ -6,6 +6,7 @@ import {
   LocalOccurrenceReleaseStore,
   OccurrenceReleaseStore,
   createOccurrenceReleaseStore,
+  releaseMaterializedOccurrenceOwnership,
   removeMaterializedOccurrenceTarget,
 } from "./occurrence-release-store.mjs";
 import { validatePngFile } from "./png-validation.mjs";
@@ -1700,15 +1701,18 @@ export async function materializeOccurrenceBlobs(storeRoot, manifest, destinatio
     for (const digest of digests) {
       const target = path.join(destination, "evidence", "blobs", "sha256", `${digest}.png`);
       const fallback = fallbacks.find((value) => value.sha256 === digest);
-      const verified = await store.materializePngBlob(digest, target, { maximumBytes: fallback.bytes });
-      created.push({ target, identity: verified.materializedIdentity });
+      const verified = await store.materializePngBlob(digest, target, {
+        maximumBytes: fallback.bytes,
+        retainOwnership: true,
+      });
+      created.push({ target, ownership: verified.materializedOwnership });
       verifyFallbackMetadata(verified, fallback);
     }
   } catch (error) {
     const cleanupErrors = [];
     for (const item of created.reverse()) {
       try {
-        await removeMaterializedOccurrenceTarget(item.target, item.identity);
+        await removeMaterializedOccurrenceTarget(item.target, item.ownership);
       } catch (cleanupError) {
         cleanupErrors.push(cleanupError);
       }
@@ -1720,6 +1724,22 @@ export async function materializeOccurrenceBlobs(storeRoot, manifest, destinatio
       );
     }
     throw error;
+  }
+  const releaseErrors = [];
+  for (const item of created) {
+    try {
+      if (!await releaseMaterializedOccurrenceOwnership(item.target, item.ownership)) {
+        throw new Error("materialized occurrence target changed before commit");
+      }
+    } catch (error) {
+      releaseErrors.push(error);
+    }
+  }
+  if (releaseErrors.length > 0) {
+    throw new AggregateError(
+      releaseErrors,
+      "occurrence materialization completed but ownership release did not complete",
+    );
   }
   return digests.length;
 }

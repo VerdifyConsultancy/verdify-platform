@@ -351,65 +351,134 @@ function blobValue(bytes, expectedSha256) {
   };
 }
 
-function materializedFileIdentity(metadata) {
-  if (!metadata.isFile() || metadata.isSymbolicLink() || metadata.nlink !== 1n) {
+function materializedFileIdentity(metadata, { maximumLinks = 1n } = {}) {
+  if (
+    !metadata.isFile()
+    || metadata.isSymbolicLink()
+    || metadata.nlink < 1n
+    || metadata.nlink > maximumLinks
+  ) {
     throw new Error("materialized occurrence target is invalid");
   }
   return Object.freeze({
     dev: metadata.dev,
     ino: metadata.ino,
-    birthtimeNs: metadata.birthtimeNs,
-    ctimeNs: metadata.ctimeNs,
-    mtimeNs: metadata.mtimeNs,
-    size: metadata.size,
+    nlink: metadata.nlink,
   });
+}
+
+function materializedOwnership(destination, proofPath, identity) {
+  const absoluteDestination = path.resolve(destination);
+  const absoluteProof = path.resolve(proofPath);
+  if (
+    path.dirname(absoluteProof) !== path.dirname(absoluteDestination)
+    || !/^\.occurrence-materialize-[0-9a-f-]{36}$/u.test(path.basename(absoluteProof))
+  ) {
+    throw new Error("materialized occurrence ownership proof is invalid");
+  }
+  return Object.freeze({
+    destination: absoluteDestination,
+    proofPath: absoluteProof,
+    dev: identity.dev,
+    ino: identity.ino,
+  });
+}
+
+function validateMaterializedOwnership(destination, ownership) {
+  if (
+    ownership === null
+    || typeof ownership !== "object"
+    || ownership.destination !== path.resolve(destination)
+    || typeof ownership.proofPath !== "string"
+    || path.dirname(ownership.proofPath) !== path.dirname(ownership.destination)
+    || !/^\.occurrence-materialize-[0-9a-f-]{36}$/u.test(path.basename(ownership.proofPath))
+    || typeof ownership.dev !== "bigint"
+    || typeof ownership.ino !== "bigint"
+  ) {
+    throw new Error("materialized occurrence ownership proof is invalid");
+  }
+  return ownership;
+}
+
+async function ownedMaterializedProof(destination, ownership, lstatFile) {
+  validateMaterializedOwnership(destination, ownership);
+  let proof;
+  try {
+    proof = await lstatFile(ownership.proofPath, { bigint: true });
+  } catch (error) {
+    if (error.code === "ENOENT") return null;
+    throw error;
+  }
+  if (
+    !proof.isFile()
+    || proof.isSymbolicLink()
+    || proof.nlink < 1n
+    || proof.dev !== ownership.dev
+    || proof.ino !== ownership.ino
+  ) {
+    return null;
+  }
+  return proof;
 }
 
 export async function removeMaterializedOccurrenceTarget(
   destination,
-  identity,
+  ownership,
   { lstatFile = lstat, unlinkFile = unlink } = {},
 ) {
-  if (
-    identity === null
-    || typeof identity !== "object"
-    || typeof identity.dev !== "bigint"
-    || typeof identity.ino !== "bigint"
-    || typeof identity.birthtimeNs !== "bigint"
-    || typeof identity.ctimeNs !== "bigint"
-    || typeof identity.mtimeNs !== "bigint"
-    || typeof identity.size !== "bigint"
-  ) {
-    throw new Error("materialized occurrence target identity is invalid");
-  }
+  const proof = await ownedMaterializedProof(destination, ownership, lstatFile);
+  if (proof === null) return false;
   let selected;
   try {
     selected = await lstatFile(destination, { bigint: true });
   } catch (error) {
-    if (error.code === "ENOENT") return false;
+    if (error.code === "ENOENT") {
+      await unlinkFile(ownership.proofPath);
+      return false;
+    }
     throw error;
   }
   if (
     !selected.isFile()
     || selected.isSymbolicLink()
-    || selected.dev !== identity.dev
-    || selected.ino !== identity.ino
-    || selected.birthtimeNs !== identity.birthtimeNs
-    || selected.ctimeNs !== identity.ctimeNs
-    || selected.mtimeNs !== identity.mtimeNs
-    || selected.size !== identity.size
+    || selected.dev !== proof.dev
+    || selected.ino !== proof.ino
   ) {
+    await unlinkFile(ownership.proofPath);
     return false;
   }
   await unlinkFile(destination);
+  await unlinkFile(ownership.proofPath);
   return true;
+}
+
+export async function releaseMaterializedOccurrenceOwnership(
+  destination,
+  ownership,
+  { lstatFile = lstat, unlinkFile = unlink } = {},
+) {
+  const proof = await ownedMaterializedProof(destination, ownership, lstatFile);
+  if (proof === null) return false;
+  let selected;
+  try {
+    selected = await lstatFile(destination, { bigint: true });
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+  const owned = selected !== undefined
+    && selected.isFile()
+    && !selected.isSymbolicLink()
+    && selected.dev === proof.dev
+    && selected.ino === proof.ino;
+  await unlinkFile(ownership.proofPath);
+  return owned;
 }
 
 async function materializeBytes(
   bytes,
   expectedSha256,
   destination,
-  { fileOperations = {} } = {},
+  { fileOperations = {}, retainOwnership = false } = {},
 ) {
   if (
     fileOperations === null
@@ -418,7 +487,11 @@ async function materializeBytes(
   ) {
     throw new Error("occurrence materialization file operations are invalid");
   }
+  if (typeof retainOwnership !== "boolean") {
+    throw new Error("occurrence materialization ownership option is invalid");
+  }
   const openFile = fileOperations.open ?? open;
+  const linkFile = fileOperations.link ?? link;
   const validateFile = fileOperations.validatePngFile ?? validatePngFile;
   const syncTargetDirectory = fileOperations.syncDirectory ?? syncDirectory;
   const cleanupOperations = {
@@ -426,39 +499,56 @@ async function materializeBytes(
     unlinkFile: fileOperations.unlink ?? unlink,
   };
   const directory = path.dirname(destination);
-  const relative = path.basename(destination);
+  const proofPath = path.join(directory, `.occurrence-materialize-${randomUUID()}`);
+  const relativeProof = path.basename(proofPath);
   let handle = null;
-  let identity = null;
-  let created = false;
+  let ownership = null;
   try {
-    handle = await openFile(destination, "wx", 0o644);
-    created = true;
-    materializedFileIdentity(await handle.stat({ bigint: true }));
+    handle = await openFile(proofPath, "wx", 0o644);
+    const identity = materializedFileIdentity(await handle.stat({ bigint: true }));
+    ownership = materializedOwnership(destination, proofPath, identity);
     await handle.writeFile(bytes);
     await handle.sync();
-    identity = materializedFileIdentity(await handle.stat({ bigint: true }));
+    materializedFileIdentity(await handle.stat({ bigint: true }));
     await handle.close();
     handle = null;
-    const verified = await validateFile(directory, relative);
+    const verified = await validateFile(directory, relativeProof);
     if (verified.sha256 !== expectedSha256) {
       throw new Error("materialized occurrence blob digest mismatch");
     }
+    await linkFile(proofPath, destination);
+    const linked = materializedFileIdentity(
+      await cleanupOperations.lstatFile(proofPath, { bigint: true }),
+      { maximumLinks: 2n },
+    );
+    if (linked.dev !== ownership.dev || linked.ino !== ownership.ino || linked.nlink !== 2n) {
+      throw new Error("materialized occurrence ownership proof changed");
+    }
     await syncTargetDirectory(directory);
-    return { ...verified, materializedIdentity: identity };
-  } catch (error) {
-    if (created && handle !== null) {
-      try {
-        identity = materializedFileIdentity(await handle.stat({ bigint: true }));
-      } catch {
-        // Without a descriptor identity, deleting by path could remove a replacement.
+    const result = {
+      ...verified,
+      sourcePath: path.resolve(destination),
+      materializedOwnership: retainOwnership ? ownership : null,
+    };
+    if (!retainOwnership) {
+      const released = await releaseMaterializedOccurrenceOwnership(
+        destination,
+        ownership,
+        cleanupOperations,
+      );
+      ownership = null;
+      if (!released) {
+        throw new Error("materialized occurrence target changed before completion");
       }
     }
+    return result;
+  } catch (error) {
     await handle?.close().catch(() => {});
-    if (created && identity !== null) {
+    if (ownership !== null) {
       try {
         await removeMaterializedOccurrenceTarget(
           destination,
-          identity,
+          ownership,
           cleanupOperations,
         );
       } catch (cleanupError) {
@@ -539,9 +629,12 @@ export class OccurrenceReleaseStore {
   }
 
   async materializePngBlob(digestValue, destination, options = {}) {
-    const { fileOperations, ...readOptions } = options;
+    const { fileOperations, retainOwnership, ...readOptions } = options;
     const value = await this.readPngBlob(digestValue, readOptions);
-    return materializeBytes(value.body, digestValue, destination, { fileOperations });
+    return materializeBytes(value.body, digestValue, destination, {
+      fileOperations,
+      retainOwnership,
+    });
   }
 }
 
