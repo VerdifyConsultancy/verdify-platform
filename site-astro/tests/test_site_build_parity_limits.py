@@ -58,6 +58,116 @@ class ManifestInputLimitTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, "manifest exceeds structural limits"):
                     parity._validate_manifest(oversized, "candidate")
 
+    def test_pagefind_15_entry_and_multishard_layout_are_bounded_and_recognized(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            pagefind = root / "pagefind"
+            (pagefind / "index").mkdir(parents=True)
+            (pagefind / "fragment").mkdir()
+            (root / "index.html").write_text(
+                "<!doctype html><html lang='en'><body>"
+                "<form role='search'><input type='search' name='search'></form>"
+                "<script src='/pagefind/pagefind.js'></script>"
+                "</body></html>",
+                encoding="utf-8",
+            )
+            (pagefind / "pagefind-entry.json").write_text(
+                json.dumps(
+                    {
+                        "version": "1.5.2",
+                        "languages": {"en": {"hash": "en_12345678", "wasm": "en", "page_count": 1}},
+                        "include_characters": ["_", "‿"],
+                    }
+                ),
+                encoding="utf-8",
+            )
+            for relative in (
+                "pagefind.js",
+                "wasm.en.pagefind",
+                "pagefind.en_12345678.pf_meta",
+                "index/en_abcdef12.pf_index",
+                "fragment/en_abcdef12.pf_fragment",
+            ):
+                target = pagefind / relative
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(b"bounded-pagefind-fixture")
+
+            manifest = parity.build_manifest(root, origin="https://lab-stage.verdify.ai")
+            self.assertTrue(manifest["features"]["search"]["present"])
+            entry = next(
+                document
+                for document in manifest["features"]["search"]["evidence"]["index_documents"]
+                if document["format"] == "pagefind-entry"
+            )
+            self.assertEqual(entry["languages"], ["en"])
+            self.assertEqual(
+                {shard["format"] for shard in entry["descriptors"][0]["shards"]},
+                {"pf_fragment", "pf_index", "pf_meta"},
+            )
+            parity._validate_manifest(manifest, "candidate")
+
+    def test_article_semantics_are_independent_from_replaceable_site_chrome(self):
+        with tempfile.TemporaryDirectory() as baseline_directory, tempfile.TemporaryDirectory() as candidate_directory:
+            baseline = Path(baseline_directory)
+            candidate = Path(candidate_directory)
+            baseline.joinpath("index.html").write_text(
+                "<!doctype html><html lang='en'><head><title>Proof</title></head><body>"
+                "<header>Legacy navigation</header><main><article><h1>Proof</h1><p>Stable evidence.</p>"
+                "<footer><a href='/tags/evidence'>evidence</a></footer></article></main>"
+                "<footer>Legacy footer</footer></body></html>",
+                encoding="utf-8",
+            )
+            candidate.joinpath("index.html").write_text(
+                "<!doctype html><html lang='en'><head><title>Proof</title></head><body>"
+                "<header>New branded navigation</header><main><article><h1>Proof</h1><p>Stable evidence.</p>"
+                "<footer><a href='/tags/evidence'>evidence</a></footer></article></main>"
+                "<footer>New branded footer</footer></body></html>",
+                encoding="utf-8",
+            )
+            baseline_manifest = parity.build_manifest(baseline, origin="https://lab.verdify.ai")
+            candidate_manifest = parity.build_manifest(candidate, origin="https://lab.verdify.ai")
+            self.assertEqual(baseline_manifest["routes"]["/"]["text"], candidate_manifest["routes"]["/"]["text"])
+            self.assertEqual(
+                baseline_manifest["routes"]["/"]["links"],
+                candidate_manifest["routes"]["/"]["links"],
+            )
+
+    def test_compatible_typography_and_responsive_image_additions_do_not_hide_original_media(self):
+        self.assertEqual(
+            parity.semantic_tokens("Proof — it’s stable…"), parity.semantic_tokens("Proof - it's stable...")
+        )
+        original = [{"kind": "img", "src": "/proof.jpg", "alt": "Proof"}]
+        responsive = [
+            {"kind": "img", "src": "/proof.jpg", "alt": "Proof", "sizes": "100vw"},
+            {
+                "kind": "img",
+                "src": "/proof-640.jpg",
+                "alt": "Proof",
+                "sizes": "100vw",
+                "source_attribute": "srcset:640w",
+            },
+        ]
+        missing = parity._missing_multiset(
+            parity._comparison_items("media", original),
+            parity._comparison_items("media", responsive),
+        )
+        self.assertEqual(missing, [])
+
+    def test_grafana_comparison_uses_panel_semantics_not_legacy_source_roles(self):
+        shared = {
+            "uid": "public-proof",
+            "panel_id": "7",
+            "query": {"from": ["now-24h"]},
+            "variables": {"zone": ["all"]},
+            "time_range": {"from": "now-24h", "to": "now"},
+        }
+        baseline = [{**shared, "source_roles": ["iframe", "fallback"], "source_status": "conflict"}]
+        candidate = [{**shared, "source_roles": ["live-link", "local-fallback"], "source_status": "verified"}]
+        self.assertEqual(
+            parity._comparison_items("grafana", baseline),
+            parity._comparison_items("grafana", candidate),
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

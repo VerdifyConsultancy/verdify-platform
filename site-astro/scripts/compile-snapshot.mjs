@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { cp, lstat, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -35,6 +35,7 @@ const ASSETS_PATH = path.join(GENERATED_ROOT, "asset-records.json");
 const BUILD_PATH = path.join(GENERATED_ROOT, "build.json");
 const SITE_SHELL_ROOT = path.join(GENERATED_ROOT, "site-shell-root");
 const SITE_SHELL_PUBLIC = path.join(SITE_SHELL_ROOT, "public");
+const COMPAT_PUBLIC_ROOT = path.join(PROJECT_ROOT, "vendor", "compat-public");
 const SITE_ORIGIN = normalizeOrigin(process.env.SITE_ORIGIN ?? "https://lab-stage.verdify.ai");
 const STAGE_GLOBAL_NOINDEX = process.env.STAGE_GLOBAL_NOINDEX !== "false";
 
@@ -54,6 +55,74 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#39;");
+}
+
+async function verifyCompatAssets() {
+  const manifestBytes = await readFile(path.join(COMPAT_PUBLIC_ROOT, "manifest.json"));
+  let manifest;
+  try {
+    manifest = JSON.parse(manifestBytes.toString("utf8"));
+  } catch {
+    throw new Error("legacy public asset manifest is invalid JSON");
+  }
+  if (
+    !manifest
+    || Object.getPrototypeOf(manifest) !== Object.prototype
+    || Object.keys(manifest).sort().join("\n") !== ["contract", "files", "schemaVersion", "sourceBaselineSha256"].join("\n")
+    || manifest.contract !== "verdify.lab-legacy-public-assets"
+    || manifest.schemaVersion !== 1
+    || !/^[0-9a-f]{64}$/.test(manifest.sourceBaselineSha256)
+    || !manifest.files
+    || Object.getPrototypeOf(manifest.files) !== Object.prototype
+  ) {
+    throw new Error("legacy public asset manifest violates its closed contract");
+  }
+  const inventory = [];
+  const pending = [[COMPAT_PUBLIC_ROOT, ""]];
+  while (pending.length > 0) {
+    const [directory, prefix] = pending.pop();
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      const relative = prefix ? `${prefix}/${entry.name}` : entry.name;
+      const absolute = path.join(directory, entry.name);
+      if (entry.isDirectory()) pending.push([absolute, relative]);
+      else if (entry.isFile() && relative !== "manifest.json") inventory.push(relative);
+      else if (relative !== "manifest.json") throw new Error("legacy public asset tree contains a special file");
+    }
+  }
+  const declared = Object.keys(manifest.files).sort();
+  if (inventory.sort().join("\n") !== declared.join("\n")) {
+    throw new Error("legacy public asset inventory differs from its closed manifest");
+  }
+  const verified = [];
+  for (const relative of declared) {
+    if (
+      !/^[A-Za-z0-9._/-]+$/.test(relative)
+      || relative.startsWith("/")
+      || relative.split("/").includes("..")
+      || !/^[0-9a-f]{64}$/.test(manifest.files[relative])
+    ) {
+      throw new Error("legacy public asset manifest contains an unsafe entry");
+    }
+    const absolute = path.join(COMPAT_PUBLIC_ROOT, ...relative.split("/"));
+    const stat = await lstat(absolute, { bigint: true });
+    if (!stat.isFile() || stat.nlink !== 1n || stat.size > 10n * 1024n * 1024n) {
+      throw new Error("legacy public asset is not a bounded unaliased regular file");
+    }
+    const bytes = await readFile(absolute);
+    if (createHash("sha256").update(bytes).digest("hex") !== manifest.files[relative]) {
+      throw new Error("legacy public asset digest mismatch");
+    }
+    verified.push({ relative, bytes });
+  }
+  return verified;
+}
+
+async function materializeCompatAssets() {
+  for (const { relative, bytes } of await verifyCompatAssets()) {
+    const destination = path.join(PUBLIC_ROOT, ...relative.split("/"));
+    await mkdir(path.dirname(destination), { recursive: true });
+    await writeFile(destination, bytes, { flag: "wx", mode: 0o644 });
+  }
 }
 
 function normalizeRoute(value) {
@@ -913,6 +982,7 @@ async function main() {
       errorOnExist: true,
     });
   }
+  await materializeCompatAssets();
 
   const markdownSources = [];
   const excludedDrafts = [];
@@ -1114,4 +1184,5 @@ export {
   socialImagePath,
   splitFrontmatter,
   tagRecords,
+  verifyCompatAssets,
 };

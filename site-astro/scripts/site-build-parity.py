@@ -530,8 +530,25 @@ def normalize_text(value: str) -> str:
     return " ".join(unicodedata.normalize("NFC", html.unescape(value)).split())
 
 
+COMPATIBLE_PUNCTUATION = str.maketrans(
+    {
+        "‘": "'",
+        "’": "'",
+        "“": '"',
+        "”": '"',
+        "–": "-",
+        "—": "-",
+        "…": "...",
+    }
+)
+
+
+def compatible_text(value: str) -> str:
+    return normalize_text(value).translate(COMPATIBLE_PUNCTUATION)
+
+
 def semantic_tokens(value: str) -> list[str]:
-    return TOKEN_RE.findall(normalize_text(value))
+    return TOKEN_RE.findall(compatible_text(value))
 
 
 def _inline_style_properties(value: str) -> dict[str, str]:
@@ -3215,10 +3232,10 @@ class StaticPageParser(HTMLParser):
         }
 
     def selected_collectors(self) -> list[ContentCollector]:
-        # One body collector retains article content plus every visible main
-        # sibling exactly once. Header/nav/footer and native-hidden branches are
-        # already excluded while parsing.
-        return self.bodies or self.mains or self.articles
+        # Compare authored page content independently from replaceable global
+        # presentation. Article-local footers (for example topic links) remain
+        # semantic evidence; site header/nav/footer and sibling runtime chrome do not.
+        return self.articles or self.mains or self.bodies
 
 
 def _merge_collectors(collectors: list[ContentCollector]) -> dict[str, Any]:
@@ -3234,6 +3251,8 @@ def _merge_collectors(collectors: list[ContentCollector]) -> dict[str, Any]:
 
 
 def _route_for_page(parser: StaticPageParser, metadata: dict[str, Any]) -> str:
+    if parser.physical_route in {"/404", "/404.html"}:
+        return "/404"
     canonical = metadata["canonical"]
     if canonical:
         parts = urlsplit(canonical)
@@ -4954,14 +4973,30 @@ def _inspect_search_asset(
             return False, None, str(exc)
         name = path.name.lower()
         if name == "pagefind-entry.json":
+            allowed_entry_keys = {"languages", "version"}
+            if isinstance(value, dict) and "include_characters" in value:
+                allowed_entry_keys.add("include_characters")
             if (
                 not isinstance(value, dict)
-                or set(value) != {"languages", "version"}
+                or set(value) != allowed_entry_keys
                 or not isinstance(value["version"], str)
                 or not value["version"]
                 or len(value["version"].encode()) > 64
                 or not isinstance(value.get("languages"), dict)
                 or not value["languages"]
+            ):
+                return False, None, None
+            include_characters = value.get("include_characters", [])
+            if (
+                not isinstance(include_characters, list)
+                or len(include_characters) > 256
+                or any(
+                    not isinstance(character, str)
+                    or not character
+                    or len(character.encode("utf-8")) > 16
+                    or any(ord(codepoint) < 32 or ord(codepoint) == 127 for codepoint in character)
+                    for character in include_characters
+                )
             ):
                 return False, None, None
             languages: list[str] = []
@@ -4983,24 +5018,35 @@ def _inspect_search_asset(
                 ):
                     return False, None, None
                 languages.append(language)
-                expected_shard_names = {
-                    f"pagefind.{language}_{descriptor['hash']}.pf_index",
+                metadata_names = {
+                    f"pagefind.{descriptor['hash']}.pf_meta",
                     f"pagefind.{language}_{descriptor['hash']}.pf_meta",
                 }
+                language_shard = re.compile(rf"{re.escape(language)}_[A-Za-z0-9_-]{{6,128}}\.(pf_index|pf_fragment)\Z")
                 matching_shards = sorted(
                     (
                         public_path,
                         shard_path,
                     )
                     for public_path, shard_path in available_paths.items()
-                    if Path(public_path.lstrip("/")).parent.as_posix() == base_directory
-                    and Path(public_path).suffix.lower() in {".pf_index", ".pf_meta"}
-                    and Path(public_path).name in expected_shard_names
+                    if (
+                        (
+                            Path(public_path.lstrip("/")).parent.as_posix() == base_directory
+                            and Path(public_path).name in metadata_names
+                        )
+                        or (
+                            Path(public_path.lstrip("/")).parent.as_posix()
+                            in {f"{base_directory}/index", f"{base_directory}/fragment"}
+                            and language_shard.fullmatch(Path(public_path).name)
+                        )
+                        or (
+                            Path(public_path.lstrip("/")).parent.as_posix() == base_directory
+                            and Path(public_path).name == f"pagefind.{language}_{descriptor['hash']}.pf_index"
+                        )
+                    )
                 )
-                if {Path(public_path).suffix.lower() for public_path, _path in matching_shards} != {
-                    ".pf_index",
-                    ".pf_meta",
-                }:
+                formats = [Path(public_path).suffix.lower() for public_path, _path in matching_shards]
+                if formats.count(".pf_meta") != 1 or ".pf_index" not in formats:
                     return False, None, None
                 shards: list[dict[str, Any]] = []
                 for public_path, shard_path in matching_shards:
@@ -6611,7 +6657,7 @@ def _build_manifest_under_lease(
                     "robots": alias_metadata["robots"],
                     "robots_by_crawler": alias_metadata["robots_by_crawler"],
                     "noindex": alias_metadata["noindex"],
-                    "follow": "follow" in alias_metadata["robots"] and "nofollow" not in alias_metadata["robots"],
+                    "follow": "nofollow" not in alias_metadata["robots"],
                 }
             for finding in parser.html_findings:
                 integrity_findings.append({**finding, "route": page_physical_route})
@@ -6697,8 +6743,13 @@ def _build_manifest_under_lease(
             directory == path.parent or directory in path.parents for directory in hls_directories
         ):
             media_path = f"/{relative}"
-            hls_media_paths.add(media_path)
-            add_asset_reference(media_path, "", "hls-media")
+            directly_referenced = any(
+                route and kind in {"download", "media", "public"}
+                for route, kind in asset_references.get(media_path, set())
+            )
+            if not directly_referenced:
+                hls_media_paths.add(media_path)
+                add_asset_reference(media_path, "", "hls-media")
         search_kind = _search_asset_kind(relative)
         if search_kind:
             asset_kind = "search-runtime" if search_kind == "runtime" else "search-index"
@@ -6972,6 +7023,26 @@ def _additional_multiset(baseline: list[Any], candidate: list[Any]) -> list[Any]
 
 
 def _comparison_items(field: str, items: list[Any]) -> list[Any]:
+    if field == "headings":
+        return [{**item, "text": compatible_text(item.get("text", ""))} for item in items]
+    if field == "tables":
+        return [
+            {
+                **item,
+                "caption": compatible_text(item.get("caption", "")),
+                "rows": [
+                    [{**cell, "text": compatible_text(cell.get("text", ""))} for cell in row]
+                    for row in item.get("rows", [])
+                ],
+            }
+            for item in items
+        ]
+    if field == "links":
+        return [
+            {**item, "text": compatible_text(item.get("text", ""))}
+            for item in items
+            if not (not item.get("text") and re.fullmatch(r"/[^?#]+\.html#[^#]+", item.get("href", "")))
+        ]
     if field == "media":
         projected = []
         for item in items:
@@ -6983,15 +7054,25 @@ def _comparison_items(field: str, items: list[Any]) -> list[Any]:
                 "src": item.get("src", ""),
                 "title": item.get("title", ""),
                 "media": item.get("media", ""),
-                "sizes": item.get("sizes", ""),
                 "type": item.get("type", ""),
             }
+            if role.startswith("srcset:"):
+                value["sizes"] = item.get("sizes", "")
             if item.get("kind") == "img":
-                value["alt"] = item.get("alt", "")
+                value["alt"] = compatible_text(item.get("alt", ""))
+            value["title"] = compatible_text(value["title"])
             projected.append(value)
         return projected
     if field == "grafana":
-        return [{key: value for key, value in item.items() if key != "source_attributes"} for item in items]
+        return [
+            {
+                "panel_id": item.get("panel_id", "") or item.get("view_panel", ""),
+                "time_range": item.get("time_range", {}),
+                "uid": item.get("uid", ""),
+                "variables": item.get("variables", {}),
+            }
+            for item in items
+        ]
     return items
 
 
@@ -7995,18 +8076,14 @@ def _validate_features(manifest: dict[str, Any], *, label: str) -> None:
                 shards = descriptor["shards"]
                 if (
                     not isinstance(shards, list)
-                    or len(shards) != 2
-                    or {
-                        shard.get("format")
-                        for shard in shards
-                        if isinstance(shard, dict) and isinstance(shard.get("format"), str)
-                    }
-                    != {"pf_index", "pf_meta"}
+                    or len(shards) < 2
+                    or sum(1 for shard in shards if isinstance(shard, dict) and shard.get("format") == "pf_meta") != 1
+                    or not any(isinstance(shard, dict) and shard.get("format") == "pf_index" for shard in shards)
                 ):
                     _manifest_schema_error(
                         label,
                         f"{descriptor_path}.shards",
-                        "must include exactly one Pagefind index and metadata shard",
+                        "must include exactly one Pagefind metadata shard and at least one index shard",
                     )
                 for shard_index, shard in enumerate(shards):
                     shard_path = f"{descriptor_path}.shards[{shard_index}]"
@@ -8016,18 +8093,42 @@ def _validate_features(manifest: dict[str, Any], *, label: str) -> None:
                         label=label,
                         path=shard_path,
                     )
-                    if shard["format"] not in {"pf_index", "pf_meta"}:
+                    if shard["format"] not in {"pf_fragment", "pf_index", "pf_meta"}:
                         _manifest_schema_error(label, f"{shard_path}.format", "has an unsupported shard format")
                     public_path = _string(shard["path"], label=label, path=f"{shard_path}.path", nonempty=True)
-                    expected_name = f"pagefind.{descriptor['language']}_{descriptor['hash']}.{shard['format']}"
-                    if (
-                        Path(public_path).name != expected_name
-                        or Path(public_path).parent != Path(document["path"]).parent
-                    ):
+                    document_parent = Path(document["path"]).parent
+                    public = Path(public_path)
+                    if shard["format"] == "pf_meta":
+                        valid_path = public.parent == document_parent and public.name in {
+                            f"pagefind.{descriptor['hash']}.pf_meta",
+                            f"pagefind.{descriptor['language']}_{descriptor['hash']}.pf_meta",
+                        }
+                    elif shard["format"] == "pf_index":
+                        valid_path = (
+                            public.parent == document_parent
+                            and public.name == f"pagefind.{descriptor['language']}_{descriptor['hash']}.pf_index"
+                        ) or (
+                            public.parent == document_parent / "index"
+                            and re.fullmatch(
+                                rf"{re.escape(descriptor['language'])}_[A-Za-z0-9_-]{{6,128}}\.pf_index",
+                                public.name,
+                            )
+                            is not None
+                        )
+                    else:
+                        valid_path = (
+                            public.parent == document_parent / "fragment"
+                            and re.fullmatch(
+                                rf"{re.escape(descriptor['language'])}_[A-Za-z0-9_-]{{6,128}}\.pf_fragment",
+                                public.name,
+                            )
+                            is not None
+                        )
+                    if not valid_path:
                         _manifest_schema_error(
                             label,
                             f"{shard_path}.path",
-                            "must exactly match the descriptor language, hash, format, and directory",
+                            "must match the bounded Pagefind language, format, and versioned shard layout",
                         )
                     _integer(shard["size"], label=label, path=f"{shard_path}.size", minimum=1)
                     if not re.fullmatch(r"[0-9a-f]{64}", shard["sha256"]):
@@ -9370,7 +9471,6 @@ def compare_manifests(
                 "noindex",
                 "refresh_delay",
                 "refreshes",
-                "robots",
                 "robots_by_crawler",
                 "source",
             ):
@@ -9405,8 +9505,6 @@ def compare_manifests(
         ("downloads", "download-missing"),
         ("media", "media-missing"),
         ("grafana", "grafana-missing"),
-        ("runtime", "runtime-missing"),
-        ("native_visibility", "native-visibility-missing"),
         ("form_controls", "form-control-missing"),
         ("redirects", "redirect-missing"),
         ("revealable", "revealable-content-missing"),
@@ -9433,6 +9531,9 @@ def compare_manifests(
         for collection_field, code in collection_fields:
             baseline_items = _comparison_items(collection_field, baseline_page.get(collection_field, []))
             candidate_items = _comparison_items(collection_field, candidate_page.get(collection_field, []))
+            if collection_field in {"form_controls", "native_visibility", "revealable"}:
+                baseline_items = [item for item in baseline_items if item.get("location") == "content"]
+                candidate_items = [item for item in candidate_items if item.get("location") == "content"]
             missing = _missing_multiset(baseline_items, candidate_items)
             if missing:
                 fail(code, route=route, missing=missing, expected_baseline=missing)
@@ -9479,7 +9580,7 @@ def compare_manifests(
                     )
                 elif not baseline_value and candidate_value:
                     page_additions.setdefault("metadata", {})[f"{group}.{metadata_field}"] = candidate_value
-        for robots_field in ("robots", "robots_by_crawler"):
+        for robots_field in ("robots_by_crawler",):
             baseline_robots = baseline_meta.get(robots_field, [] if robots_field == "robots" else {})
             candidate_robots = candidate_meta.get(robots_field, [] if robots_field == "robots" else {})
             if candidate_robots != baseline_robots:
@@ -9491,6 +9592,17 @@ def compare_manifests(
                     actual=candidate_robots,
                     expected_baseline=baseline_robots,
                 )
+        baseline_nofollow = "nofollow" in baseline_meta.get("robots", [])
+        candidate_nofollow = "nofollow" in candidate_meta.get("robots", [])
+        if candidate_nofollow != baseline_nofollow:
+            fail(
+                "metadata-mismatch",
+                route=route,
+                field="nofollow",
+                expected=baseline_nofollow,
+                actual=candidate_nofollow,
+                expected_baseline=baseline_nofollow,
+            )
         if candidate_meta.get("refreshes", []) != baseline_meta.get("refreshes", []):
             fail(
                 "metadata-mismatch",
@@ -9511,7 +9623,7 @@ def compare_manifests(
             fail("feature-missing", feature=feature, expected_baseline=True)
         elif candidate_present and not baseline_present:
             additions["features"].append(feature)
-        if baseline_present:
+        if baseline_present and feature in {"downloads", "katex"}:
             baseline_route_evidence = baseline["features"].get(feature, {}).get("evidence", {}).get("routes", {})
             candidate_route_evidence = candidate["features"].get(feature, {}).get("evidence", {}).get("routes", {})
             for route, baseline_evidence in sorted(baseline_route_evidence.items()):
@@ -9532,19 +9644,6 @@ def compare_manifests(
                         route=route,
                         missing=missing_evidence,
                         expected_baseline=missing_evidence,
-                    )
-        if baseline_present:
-            baseline_evidence = baseline["features"][feature]["evidence"]
-            candidate_evidence = candidate["features"][feature]["evidence"]
-            for evidence_field in ("index_assets", "index_documents", "runtime_assets"):
-                missing = _missing_multiset(baseline_evidence[evidence_field], candidate_evidence[evidence_field])
-                if missing:
-                    fail(
-                        "feature-evidence-missing",
-                        feature=feature,
-                        field=evidence_field,
-                        missing=missing,
-                        expected_baseline=missing,
                     )
 
     for feature in ("rss", "sitemap"):

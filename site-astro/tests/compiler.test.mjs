@@ -16,6 +16,7 @@ import {
   socialImagePath,
   splitFrontmatter,
   tagRecords,
+  verifyCompatAssets,
 } from "../scripts/compile-snapshot.mjs";
 import {
   discoverCurrentMediaOccurrence,
@@ -232,6 +233,12 @@ test("image dimensions are read from bounded static image headers", () => {
   const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630"></svg>');
   assert.deepEqual(imageDimensions(svg, "evidence.svg"), { width: 1200, height: 630 });
   assert.equal(imageDimensions(Buffer.from("not an image"), "evidence.bin"), null);
+});
+
+test("legacy public compatibility assets are closed and digest-bound", async () => {
+  const assets = await verifyCompatAssets();
+  assert.equal(assets.length, 11);
+  assert.ok(assets.every((asset) => asset.relative && asset.bytes.length > 0));
 });
 
 test("specialist renderer uses only selected same-origin decoded fallbacks", async () => {

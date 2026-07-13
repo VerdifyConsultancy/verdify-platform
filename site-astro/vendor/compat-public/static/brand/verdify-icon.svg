@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 430 380" width="430" height="380" role="img" aria-labelledby="title desc">
+<title>verdify_icon_nobox_color.svg</title>
+<desc>No-box mark</desc>
+<style>
+.word{fill:#112231;font-family:Inter, 'Inter', sans-serif;font-weight:700}
+.sub{fill:#6B7280;font-family:Inter, 'Inter', sans-serif;font-weight:500}
+.body{fill:#2A3437;font-family:Inter, 'Inter', sans-serif;font-weight:400}
+.small{fill:#6B7280;font-family:Inter, 'Inter', sans-serif;font-weight:400}
+.safe{stroke:#C9D1DA;stroke-width:2;stroke-dasharray:10 8;fill:none}
+.rule{stroke:#D9DEE3;stroke-width:1.5}
+</style>
+<g transform="translate(-63.095,0.432) scale(0.926984)"><path fill="#2E7D5C" d="M410 98
+C416 99 419 106 415 114
+L301 318
+C291 334 276 339 261 336
+C252 334 246 328 244 320
+C279 262 337 172 396 106
+C400 101 405 97 410 98Z"/><path fill="#112231" d="M160 196
+C172 194 181 199 187 209
+L264 322
+C270 328 278 332 292 325
+C286 337 276 347 263 352
+C245 360 225 351 212 338
+L142 237
+C135 227 139 213 147 205
+C152 200 156 197 160 196Z"/><circle fill="#7DE2B8" cx="444.0" cy="68.0" r="21.0"/></g></svg>
