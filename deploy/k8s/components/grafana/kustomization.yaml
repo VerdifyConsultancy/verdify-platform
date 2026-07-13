@@ -16,9 +16,11 @@ kind: Component
 #   - generated/dashboards-cm-{0,1,2,3}.yaml: provisioned public dashboards
 #                               (split to stay under the 1MiB limit)
 #
-# Upstream grafana-oss image (NOT transformer-rewritten — not a verdify-* name).
-# Secrets (verdify-grafana-secrets admin pw, verdify-app-secrets POSTGRES_PASSWORD)
-# come via secretKeyRef (optional so the Component renders standalone in CI).
+# Upstream Grafana and image-renderer images are immutable-digest-pinned in the
+# Deployment (NOT transformer-rewritten — not verdify-* names). Required
+# admin/database/renderer keys come via secretKeyRef. Grafana and the renderer
+# share verdify-grafana-secrets/GRAFANA_RENDERER_TOKEN; its value is delivered
+# out of band and never committed. Renderer port isolation remains mandatory.
 resources:
   - grafana.yaml
   - graphs-ingressroute.yaml

@@ -57,6 +57,7 @@ $PY -m pytest -q \
   tests/test_forecast_action_engine_path.py \
   tests/test_g5_dualwrite_validation.py \
   tests/test_generate_daily_plan.py \
+  tests/test_grafana_manifest_security.py \
   tests/test_lab_publish_k3s_guard.py \
   tests/test_mqtt_fanout.py \
   tests/test_planner_memory_ingest.py \
