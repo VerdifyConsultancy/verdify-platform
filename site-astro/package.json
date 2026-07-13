@@ -50,9 +50,9 @@
     "verify:static": "node scripts/verify-static.mjs",
     "verify:real": "node scripts/verify-real-build.mjs",
     "verify:production": "node scripts/verify-production-output.mjs",
-    "parity:manifest": "python3 scripts/site-build-parity.py manifest dist -o astro-manifest.json --origin ${SITE_ORIGIN:-https://lab-stage.verdify.ai}",
-    "parity:compare": "python3 scripts/site-build-parity.py compare ${QUARTZ_MANIFEST:?set QUARTZ_MANIFEST} astro-manifest.json -o parity-report.json",
-    "parity:compare:provisional": "python3 scripts/site-build-parity.py compare ${QUARTZ_MANIFEST:?set QUARTZ_MANIFEST} astro-manifest.json --allow-provisional -o parity-report.json"
+    "parity:manifest": "python3 scripts/site-build-parity.py manifest dist --snapshot-root ${LAB_SNAPSHOT:?set LAB_SNAPSHOT} -o astro-manifest.json --origin ${SITE_ORIGIN:-https://lab-stage.verdify.ai}",
+    "parity:compare": "python3 scripts/site-build-parity.py compare ${QUARTZ_MANIFEST:?set QUARTZ_MANIFEST} astro-manifest.json --snapshot-root ${LAB_SNAPSHOT:?set LAB_SNAPSHOT} -o parity-report.json",
+    "parity:compare:provisional": "python3 scripts/site-build-parity.py compare ${QUARTZ_MANIFEST:?set QUARTZ_MANIFEST} astro-manifest.json --snapshot-root ${LAB_SNAPSHOT:?set LAB_SNAPSHOT} --allow-provisional -o parity-report.json"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "3.1085.0",

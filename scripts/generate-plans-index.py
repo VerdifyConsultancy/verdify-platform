@@ -59,6 +59,13 @@ def merge_plan_page_dates(rows: list[list[str]]) -> list[list[str]]:
     return [by_date[plan_date] for plan_date in sorted(by_date, reverse=True)]
 
 
+def plan_page_exists(plan_date: str) -> bool:
+    """Return whether this archive row has a real generated daily page."""
+
+    filename = f"{plan_date}.md"
+    return bool(PLAN_PAGE_RE.fullmatch(filename) and (CONTENT_ROOT / "plans" / filename).is_file())
+
+
 def default_header(today: date) -> str:
     return f"""---
 title: AI Greenhouse Planning Archive
@@ -152,8 +159,9 @@ def render(rows: list[list[str]], today: date) -> str:
         experiment_public = public_text(experiment)
         temp_display = f"{temp_range}°F" if temp_range and temp_range != "-" else "-"
         cost_display = f"${cost}" if cost and cost != "-" else "-"
+        date_display = f"[{d}](/plans/{d})" if plan_page_exists(d) else f"{d} *(planner-cycle page unavailable)*"
         lines.append(
-            f"| [{d}](/plans/{d}) | {plans} | {temp_display} | {vpd}h | {cost_display} | "
+            f"| {date_display} | {plans} | {temp_display} | {vpd}h | {cost_display} | "
             f"{experiment_public[:40]} | {score} |"
         )
     lines.extend(
@@ -161,7 +169,7 @@ def render(rows: list[list[str]], today: date) -> str:
             "",
             "---",
             "",
-            "*Auto-generated from daily_summary + plan_journal data. Archive rows are generated lab notebook entries; null or pending fields mean the day is still in progress or the source row was not recorded.*",
+            "*Auto-generated from daily_summary + plan_journal data. Archive rows without links retain daily-summary evidence but have no published planner-cycle page. Null or pending fields mean the day is still in progress or the source row was not recorded.*",
         ]
     )
     return "\n".join(lines) + "\n"

@@ -237,6 +237,18 @@ export function transformLink(src: FullSlug, target: string, opts: TransformOpti
     let [targetCanonical, targetAnchor] = splitAnchor(canonicalSlug)
 
     if (opts.strategy === "shortest") {
+      // A bare Markdown link is still relative to the source page. Prefer an
+      // exact sibling before searching aliases by filename; otherwise an alias
+      // such as `growing/herbs` makes `[Herbs](herbs)` look ambiguous and the
+      // fallback incorrectly points at `/herbs`.
+      if (!targetCanonical.includes("/")) {
+        const sourceDirectory = src.split("/").slice(0, -1).join("/")
+        const siblingSlug = joinSegments(sourceDirectory, targetCanonical) as FullSlug
+        if (opts.allSlugs.includes(siblingSlug)) {
+          return (resolveRelative(src, siblingSlug) + targetAnchor) as RelativeURL
+        }
+      }
+
       // if the file name is unique, then it's just the filename
       const matchingFileNames = opts.allSlugs.filter((slug) => {
         const parts = slug.split("/")

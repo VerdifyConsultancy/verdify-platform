@@ -36,13 +36,17 @@ test("production fixture proves per-page SEO without satisfying the release gate
   const notFound = await read("404.html");
   assert.match(notFound, /<meta name="robots" content="noindex,follow">/);
   assert.match(notFound, new RegExp(`<link rel="canonical" href="${PRODUCTION_ORIGIN}/404">`));
+  assert.match(notFound, /<title>Not Found — Verdify Lab<\/title>/);
+  assert.match(notFound, /<h1>404<\/h1>/);
+  assert.match(notFound, /Either this page is private or doesn't exist\./);
+  assert.match(notFound, /<a href="\/">Return to Homepage<\/a>/);
 
   const alias = await read("about.html");
   assert.match(alias, /<meta name="robots" content="noindex,follow">/);
   assert.match(alias, new RegExp(`<link rel="canonical" href="${PRODUCTION_ORIGIN}/start/about">`));
   assert.equal(
     await read("robots.txt"),
-    `User-agent: *\nAllow: /\nSitemap: ${PRODUCTION_ORIGIN}/sitemap.xml\n`,
+    `User-agent: *\nAllow: /\nDisallow: /static/vision/\nDisallow: /greenhouse/lessons/raw\n\nSitemap: ${PRODUCTION_ORIGIN}/sitemap.xml\n`,
   );
 });
 

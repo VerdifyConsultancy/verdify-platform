@@ -1,6 +1,5 @@
 import { Root } from "hast"
 import { GlobalConfiguration } from "../../cfg"
-import { getDate } from "../../components/Date"
 import { escapeHTML } from "../../util/escape"
 import { FilePath, FullSlug, SimpleSlug, joinSegments, simplifySlug } from "../../util/path"
 import { QuartzEmitterPlugin } from "../types"
@@ -19,6 +18,13 @@ export type ContentDetails = {
   richContent?: string
   date?: Date
   description?: string
+  noindex: boolean
+}
+
+function authoredDate(value: unknown): Date | undefined {
+  if (typeof value !== "string" && typeof value !== "number") return undefined
+  const date = new Date(value)
+  return Number.isNaN(date.valueOf()) ? undefined : date
 }
 
 interface Options {
@@ -39,19 +45,41 @@ const defaultOptions: Options = {
   includeEmptyFiles: true,
 }
 
-function generateSiteMap(cfg: GlobalConfiguration, idx: ContentIndexMap): string {
+export function generateSiteMap(cfg: GlobalConfiguration, idx: ContentIndexMap): string {
   const base = cfg.baseUrl ?? ""
   const createURLEntry = (slug: SimpleSlug, content: ContentDetails): string => `<url>
     <loc>https://${joinSegments(base, encodeURI(slug))}</loc>
-    ${content.date && `<lastmod>${content.date.toISOString()}</lastmod>`}
+    ${content.date ? `<lastmod>${content.date.toISOString()}</lastmod>` : ""}
   </url>`
+  const sourceSlugs = Array.from(idx.keys(), (slug) => simplifySlug(slug))
+  const sourceRoutes = new Set(sourceSlugs.map((slug) => slug.replace(/\/$/, "")))
+  const generatedFolders = new Set<SimpleSlug>()
+  for (const [rawSlug, content] of idx) {
+    if (content.noindex) continue
+    const slug = simplifySlug(rawSlug)
+    const segments = slug.split("/").filter(Boolean)
+    for (let depth = 1; depth < segments.length; depth++) {
+      const folder = segments.slice(0, depth).join("/") as SimpleSlug
+      if (!sourceRoutes.has(folder)) generatedFolders.add(folder)
+    }
+  }
   const urls = Array.from(idx)
+    .filter(([_, content]) => !content.noindex)
     .map(([slug, content]) => createURLEntry(simplifySlug(slug), content))
+    .concat(
+      Array.from(generatedFolders)
+        .sort()
+        .map((slug) => createURLEntry(slug, { noindex: false } as ContentDetails)),
+    )
     .join("")
   return `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">${urls}</urlset>`
 }
 
-function generateRSSFeed(cfg: GlobalConfiguration, idx: ContentIndexMap, limit?: number): string {
+export function generateRSSFeed(
+  cfg: GlobalConfiguration,
+  idx: ContentIndexMap,
+  limit?: number,
+): string {
   const base = cfg.baseUrl ?? ""
 
   const createURLEntry = (slug: SimpleSlug, content: ContentDetails): string => `<item>
@@ -63,16 +91,18 @@ function generateRSSFeed(cfg: GlobalConfiguration, idx: ContentIndexMap, limit?:
   </item>`
 
   const items = Array.from(idx)
-    .sort(([_, f1], [__, f2]) => {
+    .filter(([_, content]) => !content.noindex && content.date)
+    .sort(([slug1, f1], [slug2, f2]) => {
       if (f1.date && f2.date) {
-        return f2.date.getTime() - f1.date.getTime()
+        const dateOrder = f2.date.getTime() - f1.date.getTime()
+        if (dateOrder !== 0) return dateOrder
       } else if (f1.date && !f2.date) {
         return -1
       } else if (!f1.date && f2.date) {
         return 1
       }
 
-      return f1.title.localeCompare(f2.title)
+      return simplifySlug(slug1).localeCompare(simplifySlug(slug2))
     })
     .map(([slug, content]) => createURLEntry(simplifySlug(slug), content))
     .slice(0, limit ?? idx.size)
@@ -101,7 +131,11 @@ export const ContentIndex: QuartzEmitterPlugin<Partial<Options>> = (opts) => {
       const linkIndex: ContentIndexMap = new Map()
       for (const [tree, file] of content) {
         const slug = file.data.slug!
-        const date = getDate(ctx.cfg.configuration, file.data) ?? new Date()
+        // Feed and sitemap timestamps are public content, so bind them only to
+        // an authored date. Git/filesystem fallback dates change when an
+        // immutable snapshot is hydrated and make identical content publish a
+        // different index.
+        const date = authoredDate(file.data.frontmatter?.date)
         if (opts?.includeEmptyFiles || (file.data.text && file.data.text !== "")) {
           linkIndex.set(slug, {
             slug,
@@ -119,6 +153,7 @@ export const ContentIndex: QuartzEmitterPlugin<Partial<Options>> = (opts) => {
               : undefined,
             date: date,
             description: file.data.description ?? "",
+            noindex: file.data.frontmatter?.noindex === true,
           })
         }
       }
@@ -149,6 +184,7 @@ export const ContentIndex: QuartzEmitterPlugin<Partial<Options>> = (opts) => {
           // for the RSS feed
           delete content.description
           delete content.date
+          delete (content as Partial<ContentDetails>).noindex
           return [slug, content]
         }),
       )

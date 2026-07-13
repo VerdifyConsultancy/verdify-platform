@@ -267,6 +267,19 @@ describe("link strategies", () => {
       assert.strictEqual(path.transformLink(cur, "index", opts), "../../")
     })
 
+    test("prefers an exact sibling when an alias has the same filename", () => {
+      const cur = "greenhouse/crops/index" as FullSlug
+      const optsWithAliasCollision: TransformOptions = {
+        strategy: "shortest",
+        allSlugs: ["greenhouse/crops/herbs", "growing/herbs"] as FullSlug[],
+      }
+
+      assert.strictEqual(
+        path.transformLink(cur, "herbs", optsWithAliasCollision),
+        "../../greenhouse/crops/herbs",
+      )
+    })
+
     test("from index", () => {
       const cur = "index" as FullSlug
       assert.strictEqual(path.transformLink(cur, "d", opts), "./a/b/d")
