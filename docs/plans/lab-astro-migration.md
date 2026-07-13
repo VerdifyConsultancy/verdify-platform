@@ -1,7 +1,7 @@
 # Lab Astro Migration — Consolidated Program Tracker
 
 Last updated: 2026-07-13 (Phase 4c offline producer build/probe/pin gate passed;
-Phase 4b S3 foundation ready for review).
+Phase 4b S3 foundation merged; occurrence adapter ready for review).
 Owner: platform agent (Claude outer loop plans/verifies; Codex executes on
 xhigh). Human gate: Jason (prod sync, DNS/edge, Quartz retirement, credential
 work). Epic: #351 (L9, G3). This file is the single source of truth for the
@@ -49,7 +49,7 @@ Child issues (persisted 2026-07-13 post-consensus): 1→#474, 2→#475, 3→#476
 | 4 | Media & lightbox | Responsive images, intrinsic sizing, and lightbox accepted on stage | Production remains Quartz until Phase 5 |
 | 5 | Planner/evidence templates | Accepted on stage against the full frozen snapshot | Event-driven content refresh remains Phase 4b |
 | 6 | Semantic parity | Routes/aliases complete; comparator improved | Exact same-snapshot parity not green: ~240 false findings from SVG-`<title>` parser bug (fix exists uncommitted on a dead worktree — must be recreated), 9 unavailable historical refs (5 daily-plan routes, 4 images), and Quartz-vs-Astro must build from the SAME immutable snapshot |
-| 7 | Immutable publishing | Local-filesystem CAS/release/cache engine merged; 4a runtime is source-visible with exact source-bound images as a disconnected `replicas: 0` workload | S3 conditional-store foundation is not yet on main; CLI/caller, occurrence adapter, endpoint/credential-name probe, distributed coordination, retention/GC, and event producer remain; no runtime pod is scheduled or routed |
+| 7 | Immutable publishing | Local-filesystem CAS/release/cache engine and inactive S3 conditional-store foundation (#496) merged; 4a runtime is source-visible with exact source-bound images as a disconnected `replicas: 0` workload | Occurrence adapter, CLI/caller, endpoint/credential-name probe, distributed coordination, retention/GC, and event producer remain; no runtime pod is scheduled or routed |
 | 8 | Quality gates | Strict real-content gates green; exact tested build passed live T0 and T+10 acceptance | Keep the same budgets for every Phase 4 rollout; no production acceptance yet |
 | 9 | Production cutover | Fail-closed canary scaffold is preserved in open PR #471 | Not on main/built/pinned/deployed; Quartz remains authoritative; Jason APPLY required |
 
@@ -184,6 +184,10 @@ Phase 4 — **Feature completion (owner: codex, critical-path order below).**
    writes and a distributed lease (credential presence by name only),
    event-driven publishing, bounded retention/GC, and resource metrics. S3
    occurrence wiring and S7 closure are hard-gated on the 4c producer contract.
+   The inactive full-site S3 conditional-store foundation merged through #496;
+   it is not selected by a CLI or workload and carries no endpoint, credential,
+   route, or activation. The next reviewed slice adds the distinct typed
+   occurrence adapter while keeping S3 mutation caller-disabled.
 4. **4d Exact parity:** recreate the SVG-title comparator fix (+8 tests),
    rebuild Quartz+Astro from the same immutable snapshot, burn down real
    findings, and disposition the nine unavailable historical references. Its
@@ -276,6 +280,11 @@ triage live on the (now-deleted) local branches' history and were never
 merged. Phase 4b therefore includes IMPLEMENTING the S3 backend and its
 conditional-write contract before any CLI/event wiring; endpoint and
 credential checks stay name-only and activation-gated.
+
+RESOLUTION (2026-07-13 ~14:56Z): #496 merged the inactive S3 full-site
+conditional-store foundation and exact SDK dependency. Occurrence persistence,
+CLI/caller selection, distributed coordination, retention/GC, endpoint proof,
+credentials, and activation remain open and separately gated.
 
 ## Operating cadence
 
