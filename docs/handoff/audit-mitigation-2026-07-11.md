@@ -90,23 +90,38 @@ ghcr: verdify-lab (built in verdify-site-legacy) + third-party runtime images
 (mirroring into zot = open follow-up); ghcr pull secrets retained during
 transition.
 
-## 48-hour bake follow-through (due after 2026-07-12 15:03 MDT / 21:03 UTC)
+## 48-hour bake — PASSED; promotion APPROVED (Jason, 2026-07-13 00:29 UTC)
 
-The rollback floor (`firmware/artifacts/last-good.ota.bin`, sha256
-`08121f97…`) still points at the pre-recovery binary. After the gate passes
-with a clean sweep, promote the candidate:
+Gate record (sweep run in-cluster at 00:30 UTC, 51.4 h uptime):
+
+- `make sensor-health SINCE='48 hours'` → **27 PASS / 0 FAIL / 0 WARN** under
+  the WIDENED alert filter (band + acknowledged-unresolved rows now counted).
+  Exact version readback `2026.7.10.1500.09ee886`, reset_reason = the OTA's
+  own software reset, 4/4 probes, zero Modbus timeouts, RSSI −61 dBm.
+- #413 bake-record readbacks: `band_track_fraction=0` (ADR-0004 float),
+  `dehum_vent_hold=1` (enabled), `sw_irrig_center_enabled=0` (center fenced).
+- Dehum overnight reviews: night 1 PASSED (RH 72→58 %, dew margin doubled);
+  night 2 PASSED (RH 46–66 %, dew margin ≥ 11.1 °F all night).
+- Zero unresolved criticals across the entire bake window (the two
+  soil_dryout criticals were REAL, correct pages that auto-resolved; the one
+  gateway critical was the app-layer Hermes wedge, recovered same hour).
+
+**Remaining mechanical step — must run on the operator host that holds
+`firmware/artifacts/` (gitignored; the July-10 build host):**
 
 ```bash
-export VERDIFY_DB_BACKEND=kube
-export EXPECTED_FW_VERSION=2026.7.10.1500.09ee886
-make sensor-health SINCE='48 hours'   # 27 pass / 0 fail expected
-bash scripts/archive-firmware-artifacts.sh 2026.7.10.1500.09ee886 --promote-last-good
+# the archive dir already exists from the release-day run; promotion is 3 copies
+cd ~/repos/verdify-platform  # wherever firmware/artifacts/2026.7.10.1500.09ee886/ lives
+cp firmware/artifacts/2026.7.10.1500.09ee886/firmware.ota.bin firmware/artifacts/last-good.ota.bin
+printf '%s
+' 2026.7.10.1500.09ee886 > firmware/artifacts/last-good.version
+cp firmware/artifacts/2026.7.10.1500.09ee886/metadata.env firmware/artifacts/last-good.metadata.env
 ```
 
-Second-night dehum review (07-11→07-12 night) should be recorded alongside
-(first night PASSED: RH 72→58 %, dew margin doubled, zero condensation-risk
-hours). Then run the deferred rollback-floor refresh (#256) when the ESPHome
-toolchain re-home lands.
+(Equivalent to `archive-firmware-artifacts.sh --promote-last-good`'s promote
+block; re-running the full script needs the ESPHome BUILD_DIR.) Then the
+deferred rollback-floor refresh (#256) closes when the ESPHome toolchain
+re-home lands.
 
 ## Remaining open, with owners
 

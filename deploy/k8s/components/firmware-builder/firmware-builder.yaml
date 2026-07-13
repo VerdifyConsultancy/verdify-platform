@@ -1,0 +1,228 @@
+# In-cluster firmware OTA capability (closes handoff §5.1, operator-directed
+# 2026-07-13: "fix this so you can OTA from the cluster").
+#
+# WHAT THIS IS: a suspended CronJob used purely as a reusable Job template.
+# Nothing runs on a schedule — an operator (human or cluster agent) triggers a
+# run explicitly:
+#
+#   # compile + archive only (default, safe):
+#   kubectl -n verdify-prod create job --from=cronjob/verdify-firmware-builder fw-build-$(date +%s)
+#
+#   # compile + archive + FLASH the device (Jason-gated; run the preflight first):
+#   kubectl -n verdify-prod create job --from=cronjob/verdify-firmware-builder fw-flash-$(date +%s) \
+#     --dry-run=client -o json | \
+#     python3 -c 'import json,sys; j=json.load(sys.stdin); c=j["spec"]["template"]["spec"]["containers"][0]; \
+#       [e.update(value="1") for e in c["env"] if e["name"]=="FLASH"]; print(json.dumps(j))' | kubectl create -f -
+#
+# The OTA itself REMAINS human-gated policy-wise (CLAUDE.md): the agent runs
+# scripts/firmware-deploy-preflight.sh (kube backend) and asks; only an
+# explicit operator approval triggers a FLASH=1 job.
+#
+# Secrets consumed (never logged; secrets.yaml is assembled in an emptyDir):
+#   verdify-firmware-ota/ota_password        (exists)
+#   verdify-app-secrets/ESP32_API_KEY        (exists — the device Noise PSK)
+#   verdify-firmware-wifi/{wifi_ssid,wifi_password}  (one-time operator create;
+#     the WLAN passphrase never lived in-cluster before)
+#   verdify-github-token/GITHUB_TOKEN        (read-only clone token)
+#
+# Artifacts: firmware/artifacts moves OFF the laptop onto the
+# verdify-firmware-artifacts PVC — archive-firmware-artifacts.sh runs with
+# ARTIFACT_ROOT=/artifacts, so last-good.ota.bin (the rollback floor read by
+# firmware-rollback.sh and the deploy preflight's bake clock) is durable and
+# cluster-resident. The .platformio/.esphome toolchain cache PVC makes rebuild
+# runs minutes, not the first-run ~15 min toolchain download.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: verdify-firmware-artifacts
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: firmware-builder
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: longhorn-v1-workspace-rwo
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: verdify-firmware-toolchain-cache
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: firmware-builder
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: longhorn-v1-rebuildable-rwo
+  resources:
+    requests:
+      storage: 10Gi
+---
+# Device-VLAN + toolchain egress for the builder pod ONLY. Compile needs the
+# internet (PlatformIO registry, GitHub); flash needs the ESP32 (192.168.10.111
+# OTA :3232). Mirrors the sanctioned ingestor device-egress shape.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-firmware-builder-egress
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: firmware-builder
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/component: firmware-builder
+  policyTypes: ["Egress"]
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 0.0.0.0/0
+    - ports:
+        - {port: 53, protocol: UDP}
+        - {port: 53, protocol: TCP}
+      to:
+        - namespaceSelector: {}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: verdify-firmware-builder
+  labels:
+    app.kubernetes.io/part-of: verdify
+    app.kubernetes.io/component: firmware-builder
+spec:
+  # Template-only: never scheduled. Trigger with `kubectl create job --from=`.
+  schedule: "0 0 31 2 *"  # Feb 31 never occurs; belt for the suspenders below
+  suspend: true
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 3600
+      ttlSecondsAfterFinished: 172800
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/part-of: verdify
+            app.kubernetes.io/component: firmware-builder
+        spec:
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 1000
+            runAsGroup: 1000
+            seccompProfile: {type: RuntimeDefault}
+          containers:
+            - name: builder
+              # Official ESPHome image: carries the esphome CLI; PlatformIO
+              # pulls the xtensa toolchain into the cache PVC on first run.
+              image: ghcr.io/esphome/esphome:2025.6.3
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities: {drop: ["ALL"]}
+              env:
+                - name: FLASH
+                  value: "0"           # 1 = upload to the device after compile (gated)
+                - name: PROMOTE_LAST_GOOD
+                  value: "0"           # 1 = also promote this build to the rollback floor
+                - name: FW_REVISION
+                  value: "main"        # git rev to build
+                - name: FW_VERSION
+                  value: ""            # empty = derive YYYY.M.D.HHMM.<short-sha>
+                - name: DEVICE_IP
+                  value: "192.168.10.111"
+                - name: GIT_TOKEN
+                  valueFrom: {secretKeyRef: {name: verdify-github-token, key: GITHUB_TOKEN}}
+                - name: OTA_PASSWORD
+                  valueFrom: {secretKeyRef: {name: verdify-firmware-ota, key: ota_password}}
+                - name: API_ENCRYPTION_KEY
+                  valueFrom: {secretKeyRef: {name: verdify-app-secrets, key: ESP32_API_KEY}}
+                - name: WIFI_SSID
+                  valueFrom: {secretKeyRef: {name: verdify-firmware-wifi, key: wifi_ssid}}
+                - name: WIFI_PASSWORD
+                  valueFrom: {secretKeyRef: {name: verdify-firmware-wifi, key: wifi_password}}
+                - name: PLATFORMIO_CORE_DIR
+                  value: /cache/platformio
+                - name: ESPHOME_DATA_DIR
+                  value: /cache/esphome-data
+                - name: HOME
+                  value: /tmp
+              command: [bash, -euo, pipefail, -c]
+              args:
+                - |
+                  echo "[builder] cloning verdify-platform @ ${FW_REVISION}"
+                  git clone --filter=blob:none "https://x-access-token:${GIT_TOKEN}@github.com/VerdifyConsultancy/verdify-platform.git" /work
+                  cd /work && git checkout -q "${FW_REVISION}"
+                  SHORT_SHA="$(git rev-parse --short HEAD)"
+                  if [ -z "${FW_VERSION}" ]; then
+                    FW_VERSION="$(date +%Y.%-m.%-d.%H%M).${SHORT_SHA}"
+                  fi
+                  echo "[builder] fw_version=${FW_VERSION}"
+
+                  # secrets.yaml lives only in the pod's tmpfs-backed workdir;
+                  # values are NEVER echoed.
+                  umask 077
+                  cat > /work/firmware/secrets.yaml <<SECRETS
+                  wifi_ssid: "${WIFI_SSID}"
+                  wifi_password: "${WIFI_PASSWORD}"
+                  ota_password: "${OTA_PASSWORD}"
+                  api_encryption_key: "${API_ENCRYPTION_KEY}"
+                  SECRETS
+
+                  cd /work/firmware
+                  echo "[builder] compiling (first run downloads the xtensa toolchain into the cache PVC)"
+                  esphome -s fw_version "${FW_VERSION}" compile greenhouse.yaml
+
+                  BUILD_DIR="$(find /cache/esphome-data/build -maxdepth 3 -name firmware.ota.bin -printf '%h\n' 2>/dev/null | head -1)"
+                  if [ -z "$BUILD_DIR" ]; then
+                    BUILD_DIR="$(find .esphome/build -maxdepth 3 -name firmware.ota.bin -printf '%h\n' | head -1)"
+                  fi
+                  echo "[builder] build dir: ${BUILD_DIR}"
+                  sha256sum "${BUILD_DIR}/firmware.ota.bin"
+
+                  echo "[builder] archiving to the artifacts PVC"
+                  cd /work
+                  PROMOTE_FLAG=""
+                  if [ "${PROMOTE_LAST_GOOD}" = "1" ]; then PROMOTE_FLAG="--promote-last-good"; fi
+                  ARTIFACT_ROOT=/artifacts BUILD_DIR="${BUILD_DIR}" \
+                    bash scripts/archive-firmware-artifacts.sh "${FW_VERSION}" ${PROMOTE_FLAG} \
+                    || { # older script versions derive BUILD_DIR themselves; fall back to a direct archive
+                      DEST="/artifacts/${FW_VERSION}"; mkdir -p "${DEST}"
+                      cp "${BUILD_DIR}"/firmware.ota.bin "${BUILD_DIR}"/firmware.bin "${BUILD_DIR}"/firmware.elf "${BUILD_DIR}"/firmware.map "${DEST}/" 2>/dev/null || cp "${BUILD_DIR}"/firmware.ota.bin "${DEST}/"
+                      { echo "firmware_version=${FW_VERSION}"; echo "source_sha=$(git rev-parse HEAD)"; echo "archived_at=$(date -Is)"; echo "builder=in-cluster"; } > "${DEST}/metadata.env"
+                      if [ "${PROMOTE_LAST_GOOD}" = "1" ]; then
+                        cp "${DEST}/firmware.ota.bin" /artifacts/last-good.ota.bin
+                        printf '%s\n' "${FW_VERSION}" > /artifacts/last-good.version
+                        cp "${DEST}/metadata.env" /artifacts/last-good.metadata.env
+                      fi
+                    }
+                  ls -la /artifacts/ | head
+
+                  if [ "${FLASH}" = "1" ]; then
+                    echo "[builder] FLASH=1 — uploading to ${DEVICE_IP}:3232 (OTA)"
+                    cd /work/firmware
+                    esphome -s fw_version "${FW_VERSION}" upload greenhouse.yaml --device "${DEVICE_IP}"
+                    echo "[builder] OTA upload complete; verify with wait-for-firmware-version.sh + sensor-health"
+                  else
+                    echo "[builder] FLASH=0 — compile+archive only (no device contact)"
+                  fi
+              volumeMounts:
+                - {name: artifacts, mountPath: /artifacts}
+                - {name: cache, mountPath: /cache}
+                - {name: work, mountPath: /work}
+                - {name: tmp, mountPath: /tmp}
+              resources:
+                requests: {cpu: "1", memory: 2Gi}
+                limits: {cpu: "4", memory: 6Gi}
+          volumes:
+            - name: artifacts
+              persistentVolumeClaim: {claimName: verdify-firmware-artifacts}
+            - name: cache
+              persistentVolumeClaim: {claimName: verdify-firmware-toolchain-cache}
+            - name: work
+              emptyDir: {}
+            - name: tmp
+              emptyDir: {}
