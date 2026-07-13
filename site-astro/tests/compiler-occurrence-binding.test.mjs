@@ -55,15 +55,29 @@ function pngChunk(type, data) {
 }
 
 function fixturePng() {
+  const width = 320;
+  const height = 180;
   const header = Buffer.alloc(13);
-  header.writeUInt32BE(2, 0);
-  header.writeUInt32BE(1, 4);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(height, 4);
   header[8] = 8;
   header[9] = 6;
+  const scanlines = Buffer.alloc((1 + (width * 4)) * height);
+  for (let row = 0; row < height; row += 1) {
+    const start = row * (1 + (width * 4));
+    scanlines[start] = 0;
+    for (let column = 0; column < width; column += 1) {
+      const pixel = start + 1 + (column * 4);
+      scanlines[pixel] = 20;
+      scanlines[pixel + 1] = 80;
+      scanlines[pixel + 2] = 40;
+      scanlines[pixel + 3] = 255;
+    }
+  }
   return Buffer.concat([
     Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
     pngChunk("IHDR", header),
-    pngChunk("IDAT", deflateSync(Buffer.from([0, 20, 80, 40, 255, 20, 80, 40, 255]))),
+    pngChunk("IDAT", deflateSync(scanlines)),
     pngChunk("IEND", Buffer.alloc(0)),
   ]);
 }
@@ -199,7 +213,12 @@ test("compiler binds a selected store release to the snapshot and exact occurren
     selectedManifest: binding.release.current,
   });
   assert.throws(
-    () => verifyCompleteSelectedOccurrenceEvidence(binding.release, incompleteServedManifest),
+    () => verifyCompleteSelectedOccurrenceEvidence(
+      binding.release,
+      incompleteServedManifest,
+      binding.policy,
+      binding.policySha256,
+    ),
     /complete graph fallback coverage/,
   );
 });
@@ -301,28 +320,67 @@ test("selected builds retain a stable discovery hash and require 143 graph plus 
   const fallbackSha256 = "b".repeat(64);
   const fallback = {
     sha256: fallbackSha256,
+    decodedSha256: "c".repeat(64),
+    decodedBytes: 320 * 180 * 4,
+    bytes: 1000,
+    mediaType: "image/png",
+    width: 320,
+    height: 180,
+    capturedAt: "2026-07-13T17:00:00Z",
+    verifiedAt: "2026-07-13T17:00:30Z",
+    policyVersion: fixture.policy.policyVersion,
     publicPath: `/evidence/blobs/sha256/${fallbackSha256}.png`,
   };
+  const requestByMedia = new Map(fixture.policy.currentMedia.map((occurrence) => [
+    occurrence.occurrenceId,
+    occurrence.requestProvenanceSha256,
+  ]));
   const selectedManifest = {
     occurrences: {
-      graphs: fixture.discovered.graphs.map((occurrence) => ({ ...occurrence, fallback })),
-      currentMedia: fixture.discovered.currentMedia.map((occurrence) => ({ ...occurrence, fallback })),
+      graphs: fixture.discovered.graphs.map((occurrence) => ({
+        ...occurrence,
+        staleAfterSeconds: Math.max(occurrence.renderCadenceSeconds * 2, 1800),
+        probeStatus: "success",
+        state: "verified",
+        fallback,
+      })),
+      currentMedia: fixture.discovered.currentMedia.map((occurrence) => ({
+        ...occurrence,
+        policySha256: fixture.policySha256,
+        requestProvenanceSha256: requestByMedia.get(occurrence.occurrenceId),
+        staleAfterSeconds: Math.max(occurrence.captureCadenceSeconds * 2, 900),
+        captureStatus: "selected-generation",
+        state: "verified",
+        fallback,
+        pointer: {
+          selectionSha256: "d".repeat(64),
+          generation: 1,
+          currentGenerationSha256: "e".repeat(64),
+          previousGenerationSha256: null,
+        },
+      })),
     },
   };
-  const servedManifest = staticOccurrenceManifest({
+  const servedFor = (selected) => staticOccurrenceManifest({
     snapshotId: fixture.discovered.manifest.snapshotId,
     selectedManifestSha256: manifestSha256,
     discoveredGraphs: fixture.discovered.graphs,
     discoveredCurrentMedia: fixture.discovered.currentMedia,
-    selectedManifest,
+    selectedManifest: selected,
   });
+  const servedManifest = servedFor(selectedManifest);
   const release = {
     selection: { current: { manifestSha256 } },
     current: selectedManifest,
   };
   assert.equal(staticOccurrenceDiscoverySha256(servedManifest), fixture.policy.sourceOccurrenceManifestSha256);
   assert.deepEqual(staticOccurrenceDiscoveryProjection(servedManifest), fixture.discovered.manifest);
-  assert.doesNotThrow(() => verifyCompleteSelectedOccurrenceEvidence(release, servedManifest));
+  assert.doesNotThrow(() => verifyCompleteSelectedOccurrenceEvidence(
+    release,
+    servedManifest,
+    fixture.policy,
+    fixture.policySha256,
+  ));
   assert.equal(servedManifest.graphs.filter((occurrence) => occurrence.selected?.fallback).length, 143);
   assert.equal(servedManifest.currentMedia.filter((occurrence) => occurrence.selected?.fallback).length, 2);
 
@@ -340,15 +398,59 @@ test("selected builds retain a stable discovery hash and require 143 graph plus 
     /select different releases/,
   );
 
-  const incomplete = {
-    ...servedManifest,
-    currentMedia: servedManifest.currentMedia.map((occurrence, index) => (
-      index === 0 ? { ...occurrence, selected: { ...occurrence.selected, fallback: null } } : occurrence
-    )),
+  const incompleteSelected = {
+    occurrences: {
+      ...selectedManifest.occurrences,
+      currentMedia: selectedManifest.occurrences.currentMedia.map((occurrence, index) => (
+        index === 0 ? { ...occurrence, fallback: null } : occurrence
+      )),
+    },
+  };
+  const incompleteRelease = { ...release, current: incompleteSelected };
+  assert.throws(
+    () => verifyCompleteSelectedOccurrenceEvidence(
+      incompleteRelease,
+      servedFor(incompleteSelected),
+      fixture.policy,
+      fixture.policySha256,
+    ),
+    /approved current-media fallback coverage/,
+  );
+
+  const wrongProvenanceSelected = {
+    occurrences: {
+      ...selectedManifest.occurrences,
+      currentMedia: selectedManifest.occurrences.currentMedia.map((occurrence, index) => (
+        index === 0 ? { ...occurrence, requestProvenanceSha256: "f".repeat(64) } : occurrence
+      )),
+    },
   };
   assert.throws(
-    () => verifyCompleteSelectedOccurrenceEvidence(release, incomplete),
-    /complete current-media fallback coverage/,
+    () => verifyCompleteSelectedOccurrenceEvidence(
+      { ...release, current: wrongProvenanceSelected },
+      servedFor(wrongProvenanceSelected),
+      fixture.policy,
+      fixture.policySha256,
+    ),
+    /request provenance differs/,
+  );
+
+  const undersizedSelected = {
+    occurrences: {
+      ...selectedManifest.occurrences,
+      graphs: selectedManifest.occurrences.graphs.map((occurrence, index) => (
+        index === 0 ? { ...occurrence, fallback: { ...occurrence.fallback, width: 2, height: 1 } } : occurrence
+      )),
+    },
+  };
+  assert.throws(
+    () => verifyCompleteSelectedOccurrenceEvidence(
+      { ...release, current: undersizedSelected },
+      servedFor(undersizedSelected),
+      fixture.policy,
+      fixture.policySha256,
+    ),
+    /graph fallback violates the approved image bounds/,
   );
 });
 

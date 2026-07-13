@@ -142,9 +142,12 @@ binding. The policy's source-occurrence digest is checked against a stable disco
 projection with the top-level selection and every per-occurrence selection set to null,
 so decorating served evidence cannot change the approved discovery identity. A selected
 build is accepted only with fallbacks for every discovered graph and current-camera
-occurrence. The compiler copies only referenced content-addressed images into the static
-release, renders them as the inline same-origin fallbacks, and preserves the separate
-interactive evidence link. `static-build.json` uses the repository-wide
+occurrence. Before copying any blob, the compiler also rechecks each selected discovery
+fingerprint against the exact policy allowlist, each camera request-provenance digest,
+and the graph/current-media MIME, encoded-byte, width, and height bounds. The compiler
+copies only referenced content-addressed images into the static release, renders them as
+the inline same-origin fallbacks, and preserves the separate interactive evidence link.
+`static-build.json` uses the repository-wide
 `sha256:<64-hex>` digest form for `selectedOccurrenceManifestSha256`; the v1
 `occurrence-manifest.json` contract retains the raw lowercase 64-hex digest in
 `selectedManifestSha256`. The production verifier cross-checks the two representations.

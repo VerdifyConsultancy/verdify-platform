@@ -110,21 +110,91 @@ function verifyCompilerOccurrenceDiscovery(binding, discoveryManifest) {
   validatePolicyManifestBinding(binding.policy, discoveryManifest, discoverySha256);
 }
 
-function verifyCompleteSelectedOccurrenceEvidence(release, occurrenceManifest) {
+function selectedOccurrenceDiscovery(kind, occurrence) {
+  if (kind === "graph") {
+    return {
+      occurrenceId: occurrence.occurrenceId,
+      route: occurrence.route,
+      ordinal: occurrence.ordinal,
+      semanticRole: occurrence.semanticRole,
+      uid: occurrence.uid,
+      panelId: occurrence.panelId,
+      query: occurrence.query,
+      variables: occurrence.variables,
+      timeRange: occurrence.timeRange,
+      liveUrl: occurrence.liveUrl,
+      renderCadenceSeconds: occurrence.renderCadenceSeconds,
+    };
+  }
+  return {
+    occurrenceId: occurrence.occurrenceId,
+    route: occurrence.route,
+    ordinal: occurrence.ordinal,
+    classification: occurrence.classification,
+    semanticRole: occurrence.semanticRole,
+    sourceProvenanceSha256: occurrence.sourceProvenanceSha256,
+    stableTarget: occurrence.stableTarget,
+    captureCadenceSeconds: occurrence.captureCadenceSeconds,
+  };
+}
+
+function verifyCompleteSelectedOccurrenceEvidence(release, occurrenceManifest, policy, policySha256) {
   if (release.current === null) return;
   if (occurrenceManifest.selectedManifestSha256 !== release.selection.current.manifestSha256) {
     throw new Error("selected occurrence release identity differs from the static occurrence manifest");
   }
-  for (const [label, released, discovered] of [
-    ["graph", release.current.occurrences.graphs, occurrenceManifest.graphs],
-    ["current-media", release.current.occurrences.currentMedia, occurrenceManifest.currentMedia],
+  for (const [kind, released, discovered, approved, bounds] of [
+    ["graph", release.current.occurrences.graphs, occurrenceManifest.graphs, policy.graphs, policy.imagePolicy.graphs],
+    [
+      "current-media",
+      release.current.occurrences.currentMedia,
+      occurrenceManifest.currentMedia,
+      policy.currentMedia,
+      policy.imagePolicy.currentMedia,
+    ],
   ]) {
-    const releasedIds = new Set(released.map((occurrence) => occurrence.occurrenceId));
-    if (
-      released.length !== discovered.length
-      || discovered.some((occurrence) => !releasedIds.has(occurrence.occurrenceId) || !occurrence.selected?.fallback)
-    ) {
-      throw new Error(`selected occurrence release lacks complete ${label} fallback coverage`);
+    const discoveredById = new Map(discovered.map((occurrence) => [occurrence.occurrenceId, occurrence]));
+    const approvedById = new Map(approved.map((occurrence) => [occurrence.occurrenceId, occurrence]));
+    if (released.length !== discovered.length || approved.length !== discovered.length) {
+      throw new Error(`selected occurrence release lacks complete ${kind} fallback coverage`);
+    }
+    for (const occurrence of released) {
+      const served = discoveredById.get(occurrence.occurrenceId);
+      const approval = approvedById.get(occurrence.occurrenceId);
+      const selectedDiscovery = selectedOccurrenceDiscovery(kind, occurrence);
+      const discoverySha256 = createHash("sha256")
+        .update(`${JSON.stringify(selectedDiscovery, null, 2)}\n`)
+        .digest("hex");
+      if (
+        !served
+        || !approval
+        || !occurrence.fallback
+        || JSON.stringify(selectedOccurrenceDiscovery(kind, served)) !== JSON.stringify(selectedDiscovery)
+        || JSON.stringify(served.selected) !== JSON.stringify(occurrence)
+        || approval.occurrenceSha256 !== discoverySha256
+      ) {
+        throw new Error(`selected occurrence release lacks exact approved ${kind} fallback coverage`);
+      }
+      if (
+        kind === "current-media"
+        && (
+          occurrence.policySha256 !== policySha256
+          || occurrence.requestProvenanceSha256 !== approval.requestProvenanceSha256
+        )
+      ) {
+        throw new Error("selected current-media request provenance differs from the approved occurrence policy");
+      }
+      const fallback = occurrence.fallback;
+      if (
+        fallback.mediaType !== policy.imagePolicy.mediaType
+        || fallback.width < bounds.minWidth
+        || fallback.width > bounds.maxWidth
+        || fallback.height < bounds.minHeight
+        || fallback.height > bounds.maxHeight
+        || fallback.bytes > bounds.maxBytes
+      ) {
+        throw new Error(`selected ${kind} fallback violates the approved image bounds`);
+      }
     }
   }
 }
@@ -1185,7 +1255,12 @@ async function main() {
     discoveredCurrentMedia,
     selectedManifest: selectedOccurrenceRelease.current,
   });
-  verifyCompleteSelectedOccurrenceEvidence(selectedOccurrenceRelease, occurrenceManifest);
+  verifyCompleteSelectedOccurrenceEvidence(
+    selectedOccurrenceRelease,
+    occurrenceManifest,
+    occurrenceBinding.policy,
+    occurrenceBinding.policySha256,
+  );
   const discoveredGraphIds = new Set(discoveredGraphs.map((occurrence) => occurrence.occurrenceId));
   const discoveredMediaIds = new Set(discoveredCurrentMedia.map((occurrence) => occurrence.occurrenceId));
   const selectedBuildOccurrences = selectedOccurrenceRelease.current
