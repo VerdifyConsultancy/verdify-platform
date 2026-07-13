@@ -1,17 +1,21 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import {
+    cp,
     mkdir,
     mkdtemp,
     readFile,
     readdir,
     readlink,
     rm,
+    symlink,
     writeFile,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { deflateSync } from "node:zlib";
 
 import {
@@ -52,6 +56,17 @@ const RELEASED_AT = "2026-07-13T12:10:30Z";
 const BUILDER_COMMIT = "b".repeat(40);
 const BUILD_OPERATION_SHA256 = "c".repeat(64);
 const VERIFICATION_OPERATION_SHA256 = "d".repeat(64);
+const SITE_ROOT = path.resolve(
+    path.dirname(fileURLToPath(import.meta.url)),
+    "..",
+);
+const LEGACY_DATASOURCE_PROOF = Object.freeze([
+    Object.freeze({ uid: "greenhouse-equipment", count: 5 }),
+    Object.freeze({ uid: "greenhouse-hydroponics", count: 5 }),
+    Object.freeze({ uid: "greenhouse-lighting", count: 13 }),
+    Object.freeze({ uid: "greenhouse-soil", count: 10 }),
+    Object.freeze({ uid: "greenhouse-weather", count: 7 }),
+]);
 
 const CRC_TABLE = Array.from({ length: 256 }, (_, value) => {
     let crc = value;
@@ -201,18 +216,128 @@ function graphResultFor(batch) {
     };
 }
 
-async function fixture(context) {
+async function compilerSnapshot(root, graphs, cameraUrls) {
+    const snapshotRoot = path.join(root, "snapshot");
+    const contentRoot = path.join(snapshotRoot, "content");
+    await Promise.all([
+        mkdir(contentRoot, { recursive: true }),
+        mkdir(path.join(snapshotRoot, "manifests"), { recursive: true }),
+        mkdir(path.join(snapshotRoot, "evidence"), { recursive: true }),
+        mkdir(path.join(contentRoot, "static", "video"), {
+            recursive: true,
+        }),
+        mkdir(path.join(contentRoot, "static", "integration"), {
+            recursive: true,
+        }),
+    ]);
+    const markdown = [
+        "---",
+        "title: Publisher integration proof",
+        "description: Complete selected occurrence publication proof.",
+        "---",
+        "",
+        "# Publisher integration proof",
+        "",
+        ...graphs.map(
+            (occurrence) =>
+                `<iframe src="${occurrence.liveUrl.replaceAll("&", "&amp;")}" title="${occurrence.semanticRole}"></iframe>`,
+        ),
+        ...cameraUrls.map(
+            (sourceUrl, index) =>
+                `<img src="${sourceUrl.replaceAll("&", "&amp;")}" alt="Publisher camera ${index + 1}">`,
+        ),
+        "",
+    ].join("\n");
+    const files = { "index.md": sha256(Buffer.from(markdown)) };
+    const writes = [
+        [path.join(contentRoot, "index.md"), Buffer.from(markdown)],
+    ];
+    for (let index = 0; index < 179; index += 1) {
+        const relative = `static/video/publisher-${String(index).padStart(3, "0")}.ts`;
+        const bytes = Buffer.from(`video-${index}\n`);
+        files[relative] = sha256(bytes);
+        writes.push([path.join(contentRoot, relative), bytes]);
+    }
+    for (let index = 0; index < 249; index += 1) {
+        const relative = `static/integration/publisher-${String(index).padStart(3, "0")}.txt`;
+        const bytes = Buffer.from(`filler-${index}\n`);
+        files[relative] = sha256(bytes);
+        writes.push([path.join(contentRoot, relative), bytes]);
+    }
+    await Promise.all(writes.map(([file, bytes]) => writeFile(file, bytes)));
+    const manifestBytes = canonicalBytes({ files, version: 1 });
+    const manifestSha256 = sha256(manifestBytes);
+    await writeFile(
+        path.join(snapshotRoot, "manifests", "content.json"),
+        manifestBytes,
+    );
+    const guardBytes = canonicalBytes({
+        findings: [],
+        missing_roots: [],
+        roots: [
+            {
+                identity: sha256(Buffer.from("publisher-content")),
+                label: "content",
+            },
+        ],
+        routes: [],
+        schema_version: 2,
+    });
+    await Promise.all([
+        writeFile(
+            path.join(snapshotRoot, "evidence", "public-output-guard.json"),
+            guardBytes,
+        ),
+        writeFile(
+            path.join(snapshotRoot, "attestation.json"),
+            canonicalBytes({
+                contract: "verdify.lab-stage-sanitized-snapshot",
+                schemaVersion: 1,
+                evidenceStatus: "provisional-only",
+                approvalEligible: false,
+                sourceManifestSha256:
+                    "05d4373ebf59bef3a7899c5e94514971d663fd7264db09b2b5cb26fec78410b1",
+                sanitizedManifestSha256: manifestSha256,
+                sourceFileCount: 429,
+                sanitizedFileCount: 429,
+                policyVersion: "verdify-public-output-stage-v1",
+                guardReportSha256: sha256(guardBytes),
+                guardSchemaVersion: 2,
+                guardFindings: 0,
+                transformations: {
+                    changedFiles: 8,
+                    textRedactionFiles: 3,
+                    invalidValueRepairFiles: 3,
+                    pngReencodeFiles: 3,
+                    hlsFilesPreserved: 179,
+                },
+            }),
+        ),
+    ]);
+    return {
+        snapshotRoot,
+        sourceSnapshotManifestSha256: manifestSha256,
+    };
+}
+
+async function fixture(context, { realCompiler = false } = {}) {
     const root = await mkdtemp(
         path.join(tmpdir(), "verdify-occurrence-site-publisher-"),
     );
     context.after(() => rm(root, { recursive: true, force: true }));
     const candidateRoot = path.join(root, "candidates");
     await mkdir(candidateRoot);
-    const graphs = Array.from({ length: 143 }, (_, index) =>
+    const dashboardUids = LEGACY_DATASOURCE_PROOF.flatMap(({ uid, count }) =>
+        Array.from({ length: count }, () => uid),
+    );
+    dashboardUids.push(
+        ...Array.from({ length: 103 }, () => "site-public-reporting"),
+    );
+    const graphs = dashboardUids.map((uid, index) =>
         discoverGraphOccurrence({
-            route: `/evidence/publisher-graph-${String(index).padStart(3, "0")}`,
+            route: "/",
             ordinal: index,
-            liveUrl: `https://graphs.verdify.ai/d-solo/public-reporting/site?orgId=1&panelId=${index + 1}&from=now-24h&to=now`,
+            liveUrl: `https://graphs.verdify.ai/d-solo/${uid}/site?orgId=1&panelId=${index + 1}&from=now-24h&to=now`,
             title: `Publisher graph ${index + 1}`,
         }),
     );
@@ -228,9 +353,15 @@ async function fixture(context) {
             semanticRole: `Publisher camera ${index + 1}`,
         }),
     );
-    const sourceSnapshotManifestSha256 = sha256(
-        Buffer.from("publisher-snapshot"),
-    );
+    const snapshot = realCompiler
+        ? await compilerSnapshot(root, graphs, cameraUrls)
+        : {
+              snapshotRoot: null,
+              sourceSnapshotManifestSha256: sha256(
+                  Buffer.from("publisher-snapshot"),
+              ),
+          };
+    const { snapshotRoot, sourceSnapshotManifestSha256 } = snapshot;
     const manifest = staticOccurrenceManifest({
         snapshotId: `sanitized-content-sha256:${sourceSnapshotManifestSha256}`,
         discoveredGraphs: graphs,
@@ -350,7 +481,7 @@ async function fixture(context) {
             graphCount: 143,
             legacyOverrideCount: 40,
             reportingDefaultCount: 103,
-            legacyByDashboard: [],
+            legacyByDashboard: structuredClone(LEGACY_DATASOURCE_PROOF),
             planSha256: "e".repeat(64),
         },
         executionBounds: {
@@ -382,6 +513,7 @@ async function fixture(context) {
     return {
         root,
         candidateRoot,
+        snapshotRoot,
         manifest,
         manifestSha256,
         policy,
@@ -396,7 +528,10 @@ async function fixture(context) {
     };
 }
 
-function checkpointOperations(siteStoreIdentitySha256) {
+function checkpointOperations(
+    siteStoreIdentitySha256,
+    { failWriteAndPostRead = null } = {},
+) {
     const records = new Map();
     const value = (document) => {
         const bytes = canonicalBytes(document);
@@ -410,9 +545,21 @@ function checkpointOperations(siteStoreIdentitySha256) {
         contract: "verdify.lab-occurrence-site-checkpoint-operations",
         schemaVersion: 1,
         storeIdentitySha256: siteStoreIdentitySha256,
-        read: async (eventId) =>
-            records.has(eventId) ? value(records.get(eventId)) : null,
+        read: async (eventId) => {
+            if (failWriteAndPostRead?.postReadUnavailable) {
+                failWriteAndPostRead.postReadUnavailable = false;
+                throw new Error(
+                    "simulated checkpoint post-read unavailability",
+                );
+            }
+            return records.has(eventId) ? value(records.get(eventId)) : null;
+        },
         write: async (document) => {
+            if (failWriteAndPostRead?.armed) {
+                failWriteAndPostRead.armed = false;
+                failWriteAndPostRead.postReadUnavailable = true;
+                throw new Error("simulated checkpoint write outage");
+            }
             const existing = records.get(document.eventId);
             if (
                 existing &&
@@ -426,7 +573,10 @@ function checkpointOperations(siteStoreIdentitySha256) {
     };
 }
 
-function publicationOperation(siteStore, { failBeforePublish = null } = {}) {
+function publicationOperation(
+    siteStore,
+    { failBeforePublish = null, failAfterIntent = null } = {},
+) {
     return {
         contract: "verdify.lab-site-release-publication-operation",
         schemaVersion: 1,
@@ -441,11 +591,24 @@ function publicationOperation(siteStore, { failBeforePublish = null } = {}) {
                 failBeforePublish.armed = false;
                 throw new Error("simulated downstream site-store outage");
             }
-            return publishSiteRelease({
-                ...request,
-                storeRoot: SITE_LOCATION,
-                store: siteStore,
-            });
+            try {
+                return await publishSiteRelease({
+                    ...request,
+                    storeRoot: SITE_LOCATION,
+                    store: siteStore,
+                    testHooks: failAfterIntent?.armed
+                        ? {
+                              afterIntent: async () => {
+                                  throw new Error(
+                                      "simulated failure after site intent",
+                                  );
+                              },
+                          }
+                        : null,
+                });
+            } finally {
+                if (failAfterIntent?.armed) failAfterIntent.armed = false;
+            }
         },
     };
 }
@@ -509,6 +672,205 @@ function buildOperation() {
     };
 }
 
+function runWorkspace(projectRoot, script, args, environment) {
+    const result = spawnSync(process.execPath, [script, ...args], {
+        cwd: projectRoot,
+        env: environment,
+        encoding: "utf8",
+        timeout: 120_000,
+    });
+    if (result.error) throw result.error;
+    if (result.status !== 0) {
+        throw new Error(
+            `${path.relative(projectRoot, script)} failed: ${result.stderr || result.stdout}`,
+        );
+    }
+}
+
+function realCompilerBuildOperation(value, calls) {
+    return {
+        contract: "verdify.lab-selected-astro-build-operation",
+        schemaVersion: 1,
+        operationSha256: BUILD_OPERATION_SHA256,
+        build: async (request) => {
+            calls.builds += 1;
+            const projectRoot = path.join(request.workspaceRoot, "site-astro");
+            await mkdir(projectRoot);
+            await Promise.all(
+                ["config", "nginx", "scripts", "src", "vendor"].map(
+                    (relative) =>
+                        cp(
+                            path.join(SITE_ROOT, relative),
+                            path.join(projectRoot, relative),
+                            { recursive: true },
+                        ),
+                ),
+            );
+            await Promise.all(
+                [
+                    "astro.config.mjs",
+                    "package.json",
+                    "postcss.config.mjs",
+                    "tsconfig.json",
+                ].map((relative) =>
+                    cp(
+                        path.join(SITE_ROOT, relative),
+                        path.join(projectRoot, relative),
+                    ),
+                ),
+            );
+            await Promise.all([
+                cp(value.snapshotRoot, path.join(projectRoot, ".snapshot"), {
+                    recursive: true,
+                }),
+                symlink(
+                    path.join(SITE_ROOT, "node_modules"),
+                    path.join(projectRoot, "node_modules"),
+                    "dir",
+                ),
+                writeFile(
+                    path.join(projectRoot, "occurrence-policy.json"),
+                    canonicalBytes(request.policy),
+                ),
+            ]);
+            // Offline production-verifier proof only. This is deliberately
+            // not the stage build operation and supplies no runtime CLI/S3
+            // activation path; stage origin + global noindex remain separate.
+            const environment = {
+                ...process.env,
+                LAB_SNAPSHOT: path.join(projectRoot, ".snapshot"),
+                ALLOW_SYNTHETIC_FIXTURE: "false",
+                SITE_ORIGIN: "https://lab.verdify.ai",
+                STAGE_GLOBAL_NOINDEX: "false",
+                LAB_OCCURRENCE_STORE: OCCURRENCE_LOCATION,
+                LAB_OCCURRENCE_POLICY: path.join(
+                    projectRoot,
+                    "occurrence-policy.json",
+                ),
+            };
+            runWorkspace(
+                projectRoot,
+                path.join(projectRoot, "scripts", "prepare-site-shell.mjs"),
+                [],
+                environment,
+            );
+
+            const names = [
+                "LAB_SNAPSHOT",
+                "ALLOW_SYNTHETIC_FIXTURE",
+                "SITE_ORIGIN",
+                "STAGE_GLOBAL_NOINDEX",
+                "LAB_OCCURRENCE_STORE",
+                "LAB_OCCURRENCE_POLICY",
+            ];
+            const previous = new Map(
+                names.map((name) => [name, process.env[name]]),
+            );
+            Object.assign(process.env, environment);
+            try {
+                const compiler = await import(
+                    pathToFileURL(
+                        path.join(
+                            projectRoot,
+                            "scripts",
+                            "compile-snapshot.mjs",
+                        ),
+                    )
+                );
+                const stores = await import(
+                    pathToFileURL(
+                        path.join(
+                            projectRoot,
+                            "scripts",
+                            "lib",
+                            "occurrence-release-store.mjs",
+                        ),
+                    )
+                );
+                await compiler.main({
+                    occurrenceStoreFactory: (location) =>
+                        new stores.S3OccurrenceReleaseStore(location, {
+                            client: value.client,
+                        }),
+                });
+                // Production snapshots are intentionally provisional today,
+                // so the production verifier cannot accept them as a release.
+                // Keep this offline adapter visibly fixture-only while still
+                // exercising the real selected compiler and every verifier
+                // check that is available to fixtures.
+                const generatedBuildPath = path.join(
+                    projectRoot,
+                    ".generated",
+                    "build.json",
+                );
+                const generatedPublicBuildPath = path.join(
+                    projectRoot,
+                    ".generated",
+                    "public",
+                    "static-build.json",
+                );
+                const compiledBuild = JSON.parse(
+                    await readFile(generatedBuildPath, "utf8"),
+                );
+                compiledBuild.sanitization.fixtureOnly = true;
+                const fixtureBuildBytes = canonicalBytes(compiledBuild);
+                await Promise.all([
+                    writeFile(generatedBuildPath, fixtureBuildBytes),
+                    writeFile(generatedPublicBuildPath, fixtureBuildBytes),
+                ]);
+            } finally {
+                for (const [name, prior] of previous) {
+                    if (prior === undefined) delete process.env[name];
+                    else process.env[name] = prior;
+                }
+            }
+
+            runWorkspace(
+                projectRoot,
+                path.join(
+                    projectRoot,
+                    "node_modules",
+                    "astro",
+                    "bin",
+                    "astro.mjs",
+                ),
+                ["build"],
+                environment,
+            );
+            runWorkspace(
+                projectRoot,
+                path.join(projectRoot, "scripts", "finalize-output.mjs"),
+                [],
+                environment,
+            );
+            runWorkspace(
+                projectRoot,
+                path.join(
+                    projectRoot,
+                    "node_modules",
+                    "pagefind",
+                    "lib",
+                    "runner",
+                    "bin.cjs",
+                ),
+                ["--site", "dist"],
+                environment,
+            );
+            runWorkspace(
+                projectRoot,
+                path.join(projectRoot, "scripts", "prune-pagefind-output.mjs"),
+                [],
+                environment,
+            );
+            return {
+                contract: "verdify.lab-selected-astro-build-result",
+                schemaVersion: 1,
+                buildRoot: path.join(projectRoot, "dist"),
+            };
+        },
+    };
+}
+
 function verificationOperation() {
     return {
         contract: "verdify.lab-production-output-verification-operation",
@@ -531,9 +893,55 @@ function verificationOperation() {
             return {
                 contract: "verdify.lab-production-output-verification-result",
                 schemaVersion: 1,
+                buildInventorySha256: request.buildInventorySha256,
                 buildContentIdentitySha256: request.buildContentIdentitySha256,
+                staticBuildSha256: request.staticBuildSha256,
+                occurrenceOutputManifestSha256:
+                    request.occurrenceOutputManifestSha256,
                 occurrenceSelectionSha256: request.occurrenceSelectionSha256,
                 occurrenceManifestSha256: request.occurrenceManifestSha256,
+                provenanceSha256: request.provenanceSha256,
+                siteEventSha256: request.siteEventSha256,
+                sitePayloadSha256: request.sitePayloadSha256,
+            };
+        },
+    };
+}
+
+function realProductionVerificationOperation(calls) {
+    return {
+        contract: "verdify.lab-production-output-verification-operation",
+        schemaVersion: 1,
+        operationSha256: VERIFICATION_OPERATION_SHA256,
+        verify: async (request) => {
+            calls.verifications += 1;
+            const projectRoot = path.dirname(request.buildRoot);
+            const verifier = await import(
+                pathToFileURL(
+                    path.join(
+                        projectRoot,
+                        "scripts",
+                        "verify-production-output.mjs",
+                    ),
+                )
+            );
+            await verifier.verifyProductionOutput({
+                dist: request.buildRoot,
+                allowFixture: true,
+            });
+            return {
+                contract: "verdify.lab-production-output-verification-result",
+                schemaVersion: 1,
+                buildInventorySha256: request.buildInventorySha256,
+                buildContentIdentitySha256: request.buildContentIdentitySha256,
+                staticBuildSha256: request.staticBuildSha256,
+                occurrenceOutputManifestSha256:
+                    request.occurrenceOutputManifestSha256,
+                occurrenceSelectionSha256: request.occurrenceSelectionSha256,
+                occurrenceManifestSha256: request.occurrenceManifestSha256,
+                provenanceSha256: request.provenanceSha256,
+                siteEventSha256: request.siteEventSha256,
+                sitePayloadSha256: request.sitePayloadSha256,
             };
         },
     };
@@ -822,6 +1230,45 @@ test("143+2 fake-S3 publish retries across a downstream outage and two caches co
     );
     assert.deepEqual(await readdir(staleWorkspace), []);
 
+    const equalTimeProducer = structuredClone(value.producerResult);
+    equalTimeProducer.exportBatch.reportingFeed.sourceWatermark =
+        "wm_occurrence_site_equal_time_conflict_0001";
+    equalTimeProducer.reportingFeedSha256 = reportingFeedEnvelopeSha256(
+        equalTimeProducer.exportBatch.reportingFeed,
+    );
+    equalTimeProducer.graphResult.reportingFeedSha256 =
+        equalTimeProducer.reportingFeedSha256;
+    equalTimeProducer.graphResultSha256 = sha256(
+        canonicalBytes(equalTimeProducer.graphResult),
+    );
+    equalTimeProducer.exportBatchSha256 = sha256(
+        canonicalBytes(equalTimeProducer.exportBatch),
+    );
+    const equalTimeEvent = eventFor(
+        value,
+        published.siteSelectionSha256,
+        equalTimeProducer,
+    );
+    const equalTimeWorkspace = path.join(
+        value.root,
+        "equal-time-conflict-workspace",
+    );
+    await mkdir(equalTimeWorkspace);
+    await assert.rejects(
+        processOccurrenceSitePublishEvent(
+            processorInput(
+                value,
+                equalTimeEvent,
+                checkpoints,
+                publication,
+                equalTimeWorkspace,
+                equalTimeProducer,
+            ),
+        ),
+        /conflicts at the selected source time/,
+    );
+    assert.deepEqual(await readdir(equalTimeWorkspace), []);
+
     assert.ok(
         value.client.commands.some(({ name }) => name === "PutObjectCommand"),
     );
@@ -833,6 +1280,278 @@ test("143+2 fake-S3 publish retries across a downstream outage and two caches co
                 "ListObjectsV2Command",
             ].includes(name),
         ),
+    );
+});
+
+test("selected occurrence CAS restores a missing checkpoint after an unavailable post-read", async (context) => {
+    const value = await fixture(context);
+    const event = eventFor(value, null);
+    const outage = { armed: true, postReadUnavailable: false };
+    const checkpoints = checkpointOperations(value.siteStore.identity.sha256, {
+        failWriteAndPostRead: outage,
+    });
+    const publication = publicationOperation(value.siteStore);
+    const failedWorkspace = path.join(
+        value.root,
+        "checkpoint-outage-workspace",
+    );
+    await mkdir(failedWorkspace);
+    await assert.rejects(
+        processOccurrenceSitePublishEvent(
+            processorInput(
+                value,
+                event,
+                checkpoints,
+                publication,
+                failedWorkspace,
+            ),
+        ),
+        /simulated checkpoint write outage/,
+    );
+    assert.deepEqual(await readdir(failedWorkspace), []);
+
+    const aggregateSelectionKey = "/occurrence-releases/v1/selection.json";
+    const aggregateSelectionWrites = () =>
+        value.client.commands.filter(
+            ({ name, key }) =>
+                name === "PutObjectCommand" &&
+                key.endsWith(aggregateSelectionKey),
+        ).length;
+    assert.equal(aggregateSelectionWrites(), 1);
+    const selected = await loadSelectedOccurrenceRelease(value.occurrenceStore);
+    assert.equal(selected.current.occurrences.graphs.length, 143);
+    assert.equal(selected.current.occurrences.currentMedia.length, 2);
+
+    const retryWorkspace = path.join(
+        value.root,
+        "checkpoint-recovery-workspace",
+    );
+    await mkdir(retryWorkspace);
+    const published = await processOccurrenceSitePublishEvent(
+        processorInput(value, event, checkpoints, publication, retryWorkspace),
+    );
+    assert.equal(published.status, "published");
+    assert.equal(published.occurrenceSelectionSha256, selected.selectionSha256);
+    assert.equal(
+        aggregateSelectionWrites(),
+        1,
+        "checkpoint recovery must not replay the consumed occurrence CAS",
+    );
+});
+
+test("exact site intent and release resume publication after selector interruption", async (context) => {
+    const value = await fixture(context);
+    const prior = await seedSiteLkg(value);
+    const event = eventFor(value, prior.selectionSha256);
+    const checkpoints = checkpointOperations(value.siteStore.identity.sha256);
+    const interruption = { armed: true };
+    const publication = publicationOperation(value.siteStore, {
+        failAfterIntent: interruption,
+    });
+    const failedWorkspace = path.join(value.root, "intent-failure-workspace");
+    await mkdir(failedWorkspace);
+    await assert.rejects(
+        processOccurrenceSitePublishEvent(
+            processorInput(
+                value,
+                event,
+                checkpoints,
+                publication,
+                failedWorkspace,
+            ),
+        ),
+        /simulated failure after site intent/,
+    );
+    const intent = await value.siteStore.readEventIntent(event.eventId);
+    assert.equal(intent.eventId, event.eventId);
+    assert.match(intent.releaseSha256, /^[0-9a-f]{64}$/u);
+    assert.equal(
+        (await value.siteStore.readSelection()).sha256,
+        prior.selectionSha256,
+        "the interrupted publication must leave the prior site selected",
+    );
+
+    const retryWorkspace = path.join(value.root, "intent-resume-workspace");
+    await mkdir(retryWorkspace);
+    const published = await processOccurrenceSitePublishEvent(
+        processorInput(value, event, checkpoints, publication, retryWorkspace),
+    );
+    assert.equal(published.status, "published");
+    assert.equal(published.releaseSha256, intent.releaseSha256);
+    const selected = await value.siteStore.readSelection();
+    assert.equal(selected.document.current.eventId, event.eventId);
+    assert.equal(selected.document.current.releaseSha256, intent.releaseSha256);
+});
+
+test("publisher rejects malformed producer proof and every out-of-contract execution bound before mutation", async (context) => {
+    const value = await fixture(context);
+    const mutations = [
+        {
+            label: "datasource proof",
+            mutate(result) {
+                result.datasourceBindingProof.legacyByDashboard[0].count = 4;
+            },
+        },
+        {
+            label: "graph concurrency",
+            mutate(result) {
+                result.executionBounds.graphConcurrency = 5;
+            },
+        },
+        {
+            label: "graph timeout",
+            mutate(result) {
+                result.executionBounds.graphTimeoutMs = 15_001;
+            },
+        },
+        {
+            label: "graph settlement grace",
+            mutate(result) {
+                result.executionBounds.graphSettlementGraceMs = 251;
+            },
+        },
+        {
+            label: "graph attempts",
+            mutate(result) {
+                result.executionBounds.graphMaxAttempts = 2;
+            },
+        },
+        {
+            label: "camera concurrency",
+            mutate(result) {
+                result.executionBounds.cameraConcurrency = 3;
+            },
+        },
+        {
+            label: "camera timeout",
+            mutate(result) {
+                result.executionBounds.cameraTimeoutMs = 15_001;
+            },
+        },
+        {
+            label: "camera attempts",
+            mutate(result) {
+                result.executionBounds.cameraMaxAttempts = 4;
+            },
+        },
+    ];
+    for (const [index, mutation] of mutations.entries()) {
+        const producerResult = structuredClone(value.producerResult);
+        mutation.mutate(producerResult);
+        const event = eventFor(value, null, producerResult);
+        const workspace = path.join(value.root, `malformed-producer-${index}`);
+        await mkdir(workspace);
+        await assert.rejects(
+            processOccurrenceSitePublishEvent(
+                processorInput(
+                    value,
+                    event,
+                    checkpointOperations(value.siteStore.identity.sha256),
+                    publicationOperation(value.siteStore),
+                    workspace,
+                    producerResult,
+                ),
+            ),
+            /exact canonical runner proof/,
+            mutation.label,
+        );
+        assert.deepEqual(await readdir(workspace), []);
+    }
+    assert.equal(
+        value.client.commands.some(({ name }) => name === "PutObjectCommand"),
+        false,
+    );
+});
+
+test("publisher rejects selector digest and pointer bindings before occurrence mutation", async (context) => {
+    const value = await fixture(context);
+    const prior = await seedSiteLkg(value);
+    const event = eventFor(value, prior.selectionSha256);
+    for (const [label, mutate] of [
+        ["digest", (selected) => ({ ...selected, sha256: "0".repeat(64) })],
+        [
+            "pointer",
+            (selected) => {
+                const document = structuredClone(selected.document);
+                document.current.eventId = "evt_mismatched_pointer_0001";
+                return {
+                    ...selected,
+                    document,
+                    sha256: sha256(canonicalBytes(document)),
+                };
+            },
+        ],
+    ]) {
+        const base = publicationOperation(value.siteStore);
+        const publication = {
+            ...base,
+            readSelection: async () => mutate(await base.readSelection()),
+        };
+        const workspace = path.join(value.root, `selector-${label}`);
+        await mkdir(workspace);
+        await assert.rejects(
+            processOccurrenceSitePublishEvent(
+                processorInput(
+                    value,
+                    event,
+                    checkpointOperations(value.siteStore.identity.sha256),
+                    publication,
+                    workspace,
+                ),
+            ),
+            label === "digest"
+                ? /selection read is invalid/
+                : /selected site release digest mismatch/,
+        );
+        assert.deepEqual(await readdir(workspace), []);
+    }
+    assert.equal(
+        value.client.commands.some(
+            ({ name, key }) =>
+                name === "PutObjectCommand" &&
+                key.includes("occurrence-releases/v1"),
+        ),
+        false,
+    );
+});
+
+test("publisher drives the real selected compiler and full production verifier inside its exclusive workspace", async (context) => {
+    const value = await fixture(context, { realCompiler: true });
+    const event = eventFor(value, null);
+    const workspace = path.join(value.root, "real-compiler-workspace");
+    await mkdir(workspace);
+    const calls = { builds: 0, verifications: 0 };
+    const input = processorInput(
+        value,
+        event,
+        checkpointOperations(value.siteStore.identity.sha256),
+        publicationOperation(value.siteStore),
+        workspace,
+    );
+    input.buildOperation = realCompilerBuildOperation(value, calls);
+    input.verificationOperation = realProductionVerificationOperation(calls);
+    const published = await processOccurrenceSitePublishEvent(input);
+    assert.equal(published.status, "published");
+    assert.deepEqual(calls, { builds: 1, verifications: 1 });
+    const dist = path.join(workspace, "site-astro", "dist");
+    const build = JSON.parse(
+        await readFile(path.join(dist, "static-build.json"), "utf8"),
+    );
+    assert.equal(build.contract, "verdify.lab-astro-stage-build");
+    assert.equal(build.siteOrigin, "https://lab.verdify.ai");
+    assert.equal(build.stageGlobalNoindex, false);
+    assert.equal(build.grafanaOccurrenceCount, 143);
+    assert.equal(build.currentMediaOccurrenceCount, 2);
+    assert.equal(
+        build.selectedOccurrenceManifestSha256,
+        `sha256:${published.occurrenceManifestSha256}`,
+    );
+    const routeManifest = JSON.parse(
+        await readFile(path.join(dist, "route-manifest.json"), "utf8"),
+    );
+    assert.equal(
+        routeManifest.build.selectedOccurrenceManifestSha256,
+        build.selectedOccurrenceManifestSha256,
     );
 });
 

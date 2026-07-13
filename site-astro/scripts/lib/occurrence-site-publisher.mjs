@@ -12,11 +12,16 @@ import path from "node:path";
 import { executeOccurrenceExportBatch } from "./occurrence-export-caller.mjs";
 import { createOccurrenceExportStoreOperations } from "./occurrence-export-operation-adapter.mjs";
 import {
+    inspectOccurrenceExportCandidates,
     occurrenceExportPolicySha256,
-    reportingFeedEnvelopeSha256,
     validatePolicyManifestBinding,
 } from "./occurrence-export-contract.mjs";
-import { loadSelectedOccurrenceRelease } from "./occurrence-release.mjs";
+import {
+    currentMediaGenerationPayloadSha256,
+    loadSelectedCurrentMediaGeneration,
+    loadSelectedOccurrenceRelease,
+} from "./occurrence-release.mjs";
+import { validateOccurrenceProducerResult } from "./occurrence-producer-result-contract.mjs";
 import {
     inventoryBuiltSite,
     siteContentIdentitySha256,
@@ -27,6 +32,7 @@ import { verifySelectedEvidence } from "../verify-production-output.mjs";
 
 const SHA256_RE = /^[0-9a-f]{64}$/u;
 const EVENT_ID_RE = /^evt_occurrence_site_[0-9a-f]{32}$/u;
+const RELEASE_EVENT_ID_RE = /^evt_[A-Za-z0-9_-]{8,128}$/u;
 const ISO_INSTANT_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/u;
 const COMMIT_RE = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/u;
 const PROVENANCE_PATH = "occurrence-publish-provenance.json";
@@ -49,22 +55,6 @@ const EVENT_KEYS = [
     "verificationOperationSha256",
     "siteStoreIdentitySha256",
     "expectedSiteSelectionSha256",
-];
-
-const PRODUCER_RESULT_KEYS = [
-    "contract",
-    "schemaVersion",
-    "policySha256",
-    "sourceOccurrenceManifestSha256",
-    "reportingFeedSha256",
-    "selectorPreconditionsSha256",
-    "datasourceBindingProof",
-    "executionBounds",
-    "cameraAttempts",
-    "graphResult",
-    "graphResultSha256",
-    "exportBatch",
-    "exportBatchSha256",
 ];
 
 const CHECKPOINT_KEYS = [
@@ -267,89 +257,48 @@ export function validateOccurrenceSitePublishEvent(event) {
     return event;
 }
 
-function validateProducerResult(result, event, policySha256, manifestSha256) {
-    const batch = result?.exportBatch;
-    const selectorPreconditions = {
-        contract: "verdify.lab-occurrence-export-selector-preconditions",
-        schemaVersion: 1,
-        aggregateExpectedSelectionSha256: batch?.expectedSelectionSha256,
-        currentMedia: (batch?.currentMedia ?? []).map(
-            ({ occurrenceId, expectedSelectionSha256 }) => ({
-                occurrenceId,
-                expectedSelectionSha256,
-            }),
-        ),
-    };
-    if (
-        !exactKeys(result, PRODUCER_RESULT_KEYS) ||
-        result.contract !== "verdify.lab-occurrence-producer-run" ||
-        result.schemaVersion !== 1 ||
-        result.policySha256 !== policySha256 ||
-        result.sourceOccurrenceManifestSha256 !== manifestSha256 ||
-        sha256(canonicalBytes(result.graphResult)) !==
-            result.graphResultSha256 ||
-        sha256(canonicalBytes(result.exportBatch)) !==
-            result.exportBatchSha256 ||
-        reportingFeedEnvelopeSha256(batch?.reportingFeed) !==
-            result.reportingFeedSha256 ||
-        sha256(canonicalBytes(selectorPreconditions)) !==
-            result.selectorPreconditionsSha256 ||
-        sha256(canonicalBytes(result)) !== event.producerResultSha256 ||
-        batch?.reportingFeed?.sourceId !== event.sourceId ||
-        batch?.reportingFeed?.sourceWatermark !== event.sourceWatermark ||
-        batch?.reportingFeed?.sourceWatermarkAt !== event.occurredAt ||
-        batch?.policySha256 !== policySha256 ||
-        batch?.sourceOccurrenceManifestSha256 !== manifestSha256 ||
-        batch?.graphs?.length !== 143 ||
-        batch?.currentMedia?.length !== 2 ||
-        !exactKeys(result.datasourceBindingProof, [
-            "contract",
-            "schemaVersion",
-            "graphCount",
-            "legacyOverrideCount",
-            "reportingDefaultCount",
-            "legacyByDashboard",
-            "planSha256",
-        ]) ||
-        result.datasourceBindingProof.contract !==
-            "verdify.lab-graph-datasource-binding-proof" ||
-        result.datasourceBindingProof.schemaVersion !== 1 ||
-        result.datasourceBindingProof.graphCount !== 143 ||
-        result.datasourceBindingProof.legacyOverrideCount !== 40 ||
-        result.datasourceBindingProof.reportingDefaultCount !== 103 ||
-        !Array.isArray(result.datasourceBindingProof.legacyByDashboard) ||
-        !SHA256_RE.test(result.datasourceBindingProof.planSha256) ||
-        !exactKeys(result.executionBounds, [
-            "graphConcurrency",
-            "graphTimeoutMs",
-            "graphSettlementGraceMs",
-            "graphMaxAttempts",
-            "cameraConcurrency",
-            "cameraTimeoutMs",
-            "cameraMaxAttempts",
-        ]) ||
-        result.executionBounds.graphMaxAttempts !== 1 ||
-        !Array.isArray(result.cameraAttempts) ||
-        result.cameraAttempts.length !== 2 ||
-        result.cameraAttempts.some(
-            (attempt, index) =>
-                !exactKeys(attempt, [
-                    "occurrenceId",
-                    "attempts",
-                    "captureStatus",
-                ]) ||
-                attempt.occurrenceId !==
-                    batch.currentMedia[index].occurrenceId ||
-                !Number.isSafeInteger(attempt.attempts) ||
-                attempt.attempts < 1 ||
-                attempt.attempts > result.executionBounds.cameraMaxAttempts ||
-                attempt.captureStatus !==
-                    batch.currentMedia[index].captureStatus,
-        )
-    )
+function validateProducerResult(
+    result,
+    event,
+    policySha256,
+    manifestSha256,
+    manifest,
+) {
+    validateOccurrenceProducerResult(result, {
+        policySha256,
+        sourceOccurrenceManifestSha256: manifestSha256,
+        sourceId: event.sourceId,
+        sourceWatermark: event.sourceWatermark,
+        sourceWatermarkAt: event.occurredAt,
+    });
+    if (sha256(canonicalBytes(result)) !== event.producerResultSha256) {
         throw new Error(
             "occurrence producer result does not match the exact publish event",
         );
+    }
+    const legacyByDashboard = result.datasourceBindingProof.legacyByDashboard;
+    const manifestCounts = new Map(
+        legacyByDashboard.map(({ uid }) => [uid, 0]),
+    );
+    let reportingDefaults = 0;
+    for (const graph of manifest.graphs ?? []) {
+        if (manifestCounts.has(graph.uid)) {
+            manifestCounts.set(graph.uid, manifestCounts.get(graph.uid) + 1);
+        } else {
+            reportingDefaults += 1;
+        }
+    }
+    if (
+        reportingDefaults !==
+            result.datasourceBindingProof.reportingDefaultCount ||
+        legacyByDashboard.some(
+            ({ uid, count }) => manifestCounts.get(uid) !== count,
+        )
+    ) {
+        throw new Error(
+            "occurrence producer datasource proof does not match the source occurrence plan",
+        );
+    }
     return result;
 }
 
@@ -441,16 +390,325 @@ function validatePublicationOperation(operation, event) {
     return operation;
 }
 
-function checkpointDocument(event, occurrenceCallResult, selected) {
+function deterministicOccurrenceEventId(prefix, value) {
+    return `evt_${prefix}_${sha256(canonicalBytes(value)).slice(0, 32)}`;
+}
+
+function selectedOccurrenceProof({ producerResult, selected, cameraBindings }) {
+    return {
+        contract: "verdify.lab-occurrence-export-selected-proof",
+        schemaVersion: 1,
+        batchId: producerResult.exportBatch.batchId,
+        policyVersion: producerResult.exportBatch.policyVersion,
+        policySha256: producerResult.policySha256,
+        sourceOccurrenceManifestSha256:
+            producerResult.sourceOccurrenceManifestSha256,
+        reportingFeedSha256: producerResult.reportingFeedSha256,
+        media: cameraBindings.map(
+            ({
+                occurrenceId,
+                disposition,
+                eventId,
+                selectionSha256,
+                generationSha256,
+                blobSha256,
+            }) => ({
+                occurrenceId,
+                status:
+                    disposition === "captured"
+                        ? "selected"
+                        : "retained-aggregate-lkg",
+                eventId,
+                selectionSha256,
+                generationSha256,
+                blobSha256,
+            }),
+        ),
+        aggregate: {
+            status: "selected",
+            eventId: selected.current.event.eventId,
+            manifestSha256: selected.selection.current.manifestSha256,
+            selectionSha256: selected.selectionSha256,
+        },
+    };
+}
+
+async function recoverSelectedOccurrenceProof({
+    operations,
+    policy,
+    manifest,
+    manifestSha256,
+    producerResult,
+    candidateRoot,
+    processingAt,
+}) {
+    const selected = await loadSelectedOccurrenceRelease(
+        operations.evidenceStore,
+    );
+    if (selected.selection === null || selected.current === null) return null;
+
+    const batch = producerResult.exportBatch;
+    const discovered = validatePolicyManifestBinding(
+        policy,
+        manifest,
+        manifestSha256,
+    );
+    const inspected = await inspectOccurrenceExportCandidates({
+        policy,
+        batch,
+        sourceRoot: candidateRoot,
+        processingAt,
+    });
+    if (
+        inspected.feedFreshness.status === "alert" ||
+        selected.selection.current.manifestSha256 !==
+            sha256(canonicalBytes(selected.current)) ||
+        selected.selection.current.eventId !== selected.current.event.eventId ||
+        selected.current.policyVersion !== policy.policyVersion ||
+        selected.current.policySha256 !== producerResult.policySha256 ||
+        selected.current.sourceSnapshotManifestSha256 !==
+            policy.sourceSnapshotManifestSha256 ||
+        selected.current.publishedAt !==
+            inspected.feedFreshness.effectiveProcessingAt ||
+        selected.current.occurrences.graphs.length !== 143 ||
+        selected.current.occurrences.currentMedia.length !== 2
+    ) {
+        return null;
+    }
+
+    const graphBatchById = new Map(
+        batch.graphs.map((record) => [record.occurrenceId, record]),
+    );
+    for (let index = 0; index < discovered.graphs.length; index += 1) {
+        const expected = discovered.graphs[index];
+        const actual = selected.current.occurrences.graphs[index];
+        const batchRecord = graphBatchById.get(expected.occurrenceId);
+        const candidate = inspected.graphCandidates.get(expected.occurrenceId);
+        if (
+            actual?.occurrenceId !== expected.occurrenceId ||
+            batchRecord?.occurrenceId !== expected.occurrenceId ||
+            Object.keys(expected).some(
+                (key) =>
+                    !canonicalBytes(actual[key]).equals(
+                        canonicalBytes(expected[key]),
+                    ),
+            ) ||
+            actual.staleAfterSeconds !==
+                Math.max(expected.renderCadenceSeconds * 2, 1800) ||
+            actual.probeStatus !== batchRecord.probeStatus ||
+            (candidate !== null &&
+                (actual.state !== "verified" ||
+                    actual.fallback?.sha256 !== candidate.expectedSha256 ||
+                    actual.fallback?.capturedAt !== candidate.capturedAt ||
+                    actual.fallback?.verifiedAt !== candidate.verifiedAt ||
+                    actual.fallback?.policyVersion !== policy.policyVersion)) ||
+            (candidate === null &&
+                !["retained-last-known-good", "missing"].includes(actual.state))
+        ) {
+            return null;
+        }
+    }
+
+    const mediaBatchById = new Map(
+        batch.currentMedia.map((record) => [record.occurrenceId, record]),
+    );
+    const cameraBindings = [];
+    for (let index = 0; index < discovered.currentMedia.length; index += 1) {
+        const expected = discovered.currentMedia[index];
+        const actual = selected.current.occurrences.currentMedia[index];
+        const batchRecord = mediaBatchById.get(expected.occurrenceId);
+        const candidate = inspected.currentMediaCandidates.get(
+            expected.occurrenceId,
+        );
+        const selectedMedia = await loadSelectedCurrentMediaGeneration(
+            operations.evidenceStore,
+            expected.occurrenceId,
+        );
+        const captured =
+            batchRecord?.captureStatus === "success" && candidate !== null;
+        const expectedMediaPayloadSha256 = captured
+            ? currentMediaGenerationPayloadSha256({
+                  policyVersion: policy.policyVersion,
+                  policySha256: producerResult.policySha256,
+                  requestProvenanceSha256: batchRecord.requestProvenanceSha256,
+                  occurrence: expected,
+                  candidate,
+              })
+            : null;
+        const expectedMediaEvent = captured
+            ? {
+                  contract: "verdify.lab-release-trigger",
+                  schemaVersion: 1,
+                  eventId: deterministicOccurrenceEventId("media", {
+                      batchId: batch.batchId,
+                      occurrenceId: expected.occurrenceId,
+                      payloadSha256: expectedMediaPayloadSha256,
+                  }),
+                  eventType: "current-media-updated",
+                  sourceId: batch.reportingFeed.sourceId,
+                  sourceWatermark: batch.reportingFeed.sourceWatermark,
+                  occurredAt: batch.reportingFeed.sourceWatermarkAt,
+                  payloadSha256: expectedMediaPayloadSha256,
+              }
+            : null;
+        if (
+            actual?.occurrenceId !== expected.occurrenceId ||
+            batchRecord?.occurrenceId !== expected.occurrenceId ||
+            selectedMedia === null ||
+            Object.keys(expected).some(
+                (key) =>
+                    !canonicalBytes(actual[key]).equals(
+                        canonicalBytes(expected[key]),
+                    ),
+            ) ||
+            actual.policySha256 !== producerResult.policySha256 ||
+            actual.requestProvenanceSha256 !==
+                batchRecord.requestProvenanceSha256 ||
+            actual.staleAfterSeconds !==
+                Math.max(expected.captureCadenceSeconds * 2, 900) ||
+            actual.captureStatus !== "selected-generation" ||
+            actual.state !== "verified" ||
+            actual.fallback === null ||
+            actual.pointer?.selectionSha256 !== selectedMedia.selectionSha256 ||
+            actual.pointer?.generation !== selectedMedia.selection.generation ||
+            actual.pointer?.currentGenerationSha256 !==
+                selectedMedia.selection.current.generationSha256 ||
+            actual.pointer?.previousGenerationSha256 !==
+                (selectedMedia.selection.previous?.generationSha256 ?? null) ||
+            !canonicalBytes(actual.fallback).equals(
+                canonicalBytes(selectedMedia.current.fallback),
+            ) ||
+            selectedMedia.current.sourceProvenanceSha256 !==
+                expected.sourceProvenanceSha256 ||
+            selectedMedia.current.policyVersion !== policy.policyVersion ||
+            selectedMedia.current.policySha256 !==
+                producerResult.policySha256 ||
+            selectedMedia.current.requestProvenanceSha256 !==
+                batchRecord.requestProvenanceSha256 ||
+            (captured &&
+                (!canonicalBytes(selectedMedia.current.event).equals(
+                    canonicalBytes(expectedMediaEvent),
+                ) ||
+                    selectedMedia.current.publishedAt !==
+                        inspected.feedFreshness.effectiveProcessingAt)) ||
+            (candidate !== null &&
+                (selectedMedia.current.fallback.sha256 !==
+                    candidate.expectedSha256 ||
+                    selectedMedia.current.fallback.capturedAt !==
+                        candidate.capturedAt ||
+                    selectedMedia.current.fallback.verifiedAt !==
+                        candidate.verifiedAt))
+        ) {
+            return null;
+        }
+        cameraBindings.push({
+            occurrenceId: expected.occurrenceId,
+            disposition: captured ? "captured" : "retained-aggregate-lkg",
+            selectionSha256: selectedMedia.selectionSha256,
+            selectionGeneration: selectedMedia.selection.generation,
+            generationSha256: selectedMedia.selection.current.generationSha256,
+            previousGenerationSha256:
+                selectedMedia.selection.previous?.generationSha256 ?? null,
+            blobSha256: selectedMedia.selection.current.blobSha256,
+            eventId: selectedMedia.current.event.eventId,
+            sourceProvenanceSha256: expected.sourceProvenanceSha256,
+            policySha256: producerResult.policySha256,
+            requestProvenanceSha256: batchRecord.requestProvenanceSha256,
+            fallback: selectedMedia.current.fallback,
+        });
+    }
+
+    const reconciliation = {
+        contract: "verdify.lab-exact-occurrence-reconciliation",
+        schemaVersion: 1,
+        batchId: batch.batchId,
+        policyVersion: policy.policyVersion,
+        policySha256: producerResult.policySha256,
+        sourceSnapshotManifestSha256: policy.sourceSnapshotManifestSha256,
+        sourceOccurrenceManifestSha256: manifestSha256,
+        reportingFeedSha256: producerResult.reportingFeedSha256,
+        graphResultSha256: producerResult.graphResultSha256,
+        cameraBindings,
+        publishedAt: inspected.feedFreshness.effectiveProcessingAt,
+    };
+    const reconciliationSha256 = sha256(canonicalBytes(reconciliation));
+    const expectedEvent = {
+        contract: "verdify.lab-release-trigger",
+        schemaVersion: 1,
+        eventId: deterministicOccurrenceEventId("reconcile", {
+            batchId: batch.batchId,
+            reconciliationSha256,
+        }),
+        eventType: "reconciliation",
+        sourceId: batch.reportingFeed.sourceId,
+        sourceWatermark: batch.reportingFeed.sourceWatermark,
+        occurredAt: batch.reportingFeed.sourceWatermarkAt,
+        payloadSha256: reconciliationSha256,
+    };
+    if (
+        !canonicalBytes(selected.current.event).equals(
+            canonicalBytes(expectedEvent),
+        )
+    ) {
+        return null;
+    }
+
+    const intentValue = canonicalValue(
+        await operations.readAggregateEventIntent(expectedEvent.eventId),
+        "selected aggregate occurrence event intent",
+    );
+    const intent = intentValue.document;
+    if (
+        !exactKeys(intent, [
+            "contract",
+            "schemaVersion",
+            "eventId",
+            "storeIdentitySha256",
+            "eventSha256",
+            "payloadSha256",
+            "reconciliationSha256",
+            "manifestSha256",
+            "expectedSelectionSha256",
+            "cameraSelections",
+        ]) ||
+        intent.contract !== "verdify.lab-exact-reconciliation-intent" ||
+        intent.schemaVersion !== 1 ||
+        intent.eventId !== expectedEvent.eventId ||
+        intent.storeIdentitySha256 !== operations.storeIdentitySha256 ||
+        intent.eventSha256 !== sha256(canonicalBytes(expectedEvent)) ||
+        intent.payloadSha256 !== reconciliationSha256 ||
+        intent.reconciliationSha256 !== reconciliationSha256 ||
+        intent.manifestSha256 !== selected.selection.current.manifestSha256 ||
+        intent.expectedSelectionSha256 !== batch.expectedSelectionSha256 ||
+        !canonicalBytes(intent.cameraSelections).equals(
+            canonicalBytes(
+                cameraBindings.map(({ occurrenceId, selectionSha256 }) => ({
+                    occurrenceId,
+                    selectionSha256,
+                })),
+            ),
+        )
+    ) {
+        return null;
+    }
+    return {
+        selected,
+        proof: selectedOccurrenceProof({
+            producerResult,
+            selected,
+            cameraBindings,
+        }),
+    };
+}
+
+function checkpointDocument(event, occurrenceProof, selected) {
     return {
         contract: "verdify.lab-occurrence-site-publish-checkpoint",
         schemaVersion: 1,
         eventId: event.eventId,
         eventSha256: sha256(canonicalBytes(event)),
         producerResultSha256: event.producerResultSha256,
-        occurrenceCallResultSha256: sha256(
-            canonicalBytes(occurrenceCallResult),
-        ),
+        occurrenceCallResultSha256: sha256(canonicalBytes(occurrenceProof)),
         sourceSnapshotManifestSha256: event.sourceSnapshotManifestSha256,
         sourceOccurrenceManifestSha256: event.sourceOccurrenceManifestSha256,
         occurrencePolicySha256: event.occurrencePolicySha256,
@@ -669,6 +927,7 @@ async function verifySelectedBuild({
     checkpoint,
     policy,
     selected,
+    inventory,
 }) {
     const [buildValue, occurrenceValue, provenanceValue] = await Promise.all([
         readCanonicalJson(
@@ -686,6 +945,24 @@ async function verifySelectedBuild({
     ]);
     const build = buildValue.document;
     const occurrenceManifest = occurrenceValue.document;
+    for (const [relative, value] of [
+        ["static-build.json", buildValue],
+        ["occurrence-manifest.json", occurrenceValue],
+        [PROVENANCE_PATH, provenanceValue],
+    ]) {
+        const record = inventory.files.find(
+            ({ path: name }) => name === relative,
+        );
+        if (
+            record === undefined ||
+            record.sha256 !== value.sha256 ||
+            record.bytes !== value.bytes.length
+        ) {
+            throw new Error(
+                `Astro semantic file differs from its inventoried bytes: ${relative}`,
+            );
+        }
+    }
     validateProvenance(provenanceValue.document, event, checkpoint);
     if (
         build.snapshotManifestDigest !==
@@ -740,6 +1017,7 @@ async function verifySelectedBuild({
     }
     verifySelectedEvidence(build, occurrenceManifest);
     return {
+        buildInventorySha256: inventoryIdentity(inventory),
         buildSha256: buildValue.sha256,
         occurrenceOutputManifestSha256: occurrenceValue.sha256,
         provenanceSha256: provenanceValue.sha256,
@@ -751,18 +1029,31 @@ function validateVerificationResult(value, expected) {
         !exactKeys(value, [
             "contract",
             "schemaVersion",
+            "buildInventorySha256",
             "buildContentIdentitySha256",
+            "staticBuildSha256",
+            "occurrenceOutputManifestSha256",
             "occurrenceSelectionSha256",
             "occurrenceManifestSha256",
+            "provenanceSha256",
+            "siteEventSha256",
+            "sitePayloadSha256",
         ]) ||
         value.contract !==
             "verdify.lab-production-output-verification-result" ||
         value.schemaVersion !== 1 ||
+        value.buildInventorySha256 !== expected.buildInventorySha256 ||
         value.buildContentIdentitySha256 !==
             expected.buildContentIdentitySha256 ||
+        value.staticBuildSha256 !== expected.staticBuildSha256 ||
+        value.occurrenceOutputManifestSha256 !==
+            expected.occurrenceOutputManifestSha256 ||
         value.occurrenceSelectionSha256 !==
             expected.occurrenceSelectionSha256 ||
-        value.occurrenceManifestSha256 !== expected.occurrenceManifestSha256
+        value.occurrenceManifestSha256 !== expected.occurrenceManifestSha256 ||
+        value.provenanceSha256 !== expected.provenanceSha256 ||
+        value.siteEventSha256 !== expected.siteEventSha256 ||
+        value.sitePayloadSha256 !== expected.sitePayloadSha256
     )
         throw new Error(
             "production output verifier did not attest the exact selected build",
@@ -811,15 +1102,37 @@ async function validateSelectedOccurrence(operations, checkpoint, policy) {
 
 function validateSiteSelection(value) {
     if (value === null) return null;
+    const document = value?.document;
+    const pointer = (candidate) =>
+        candidate === null ||
+        (exactKeys(candidate, ["releaseSha256", "eventId"]) &&
+            SHA256_RE.test(candidate.releaseSha256) &&
+            RELEASE_EVENT_ID_RE.test(candidate.eventId));
     if (
-        typeof value !== "object" ||
-        value.document === null ||
-        typeof value.document !== "object" ||
-        !SHA256_RE.test(value.sha256) ||
-        value.document.current === null ||
-        !SHA256_RE.test(value.document.current.releaseSha256)
-    )
+        !exactKeys(document, [
+            "contract",
+            "schemaVersion",
+            "generation",
+            "current",
+            "previous",
+            "selectedAt",
+            "reason",
+        ]) ||
+        document.contract !== "verdify.lab-site-release-selection" ||
+        document.schemaVersion !== 1 ||
+        !Number.isSafeInteger(document.generation) ||
+        document.generation < 1 ||
+        document.current === null ||
+        !pointer(document.current) ||
+        !pointer(document.previous) ||
+        document.current.releaseSha256 === document.previous?.releaseSha256 ||
+        !["publish", "rollback"].includes(document.reason) ||
+        typeof value.sha256 !== "string" ||
+        sha256(canonicalBytes(document)) !== value.sha256
+    ) {
         throw new Error("site publication selection read is invalid");
+    }
+    instant(document.selectedAt, "site publication selection time");
     return value;
 }
 
@@ -831,7 +1144,10 @@ async function currentSiteState(publication) {
     );
     const releaseBytes = canonicalBytes(manifest);
     validateSiteReleaseManifest(manifest, releaseBytes);
-    if (sha256(releaseBytes) !== selection.document.current.releaseSha256) {
+    if (
+        sha256(releaseBytes) !== selection.document.current.releaseSha256 ||
+        manifest.event.eventId !== selection.document.current.eventId
+    ) {
         throw new Error("selected site release digest mismatch");
     }
     return {
@@ -873,9 +1189,27 @@ async function publishedEventState(publication, event, checkpoint) {
     const intent = await publication.readEventIntent(event.eventId);
     if (intent === null) return null;
     if (
+        !exactKeys(intent, [
+            "contract",
+            "schemaVersion",
+            "storeIdentitySha256",
+            "eventId",
+            "eventSha256",
+            "payloadSha256",
+            "releaseSha256",
+            "expectedSelectionSha256",
+        ]) ||
+        intent.contract !== "verdify.lab-site-release-event-intent" ||
+        intent.schemaVersion !== 2 ||
         intent.eventId !== event.eventId ||
         intent.storeIdentitySha256 !== event.siteStoreIdentitySha256 ||
-        !SHA256_RE.test(intent.releaseSha256)
+        !SHA256_RE.test(intent.storeIdentitySha256) ||
+        !SHA256_RE.test(intent.eventSha256) ||
+        !SHA256_RE.test(intent.payloadSha256) ||
+        !SHA256_RE.test(intent.releaseSha256) ||
+        (intent.expectedSelectionSha256 !== null &&
+            !SHA256_RE.test(intent.expectedSelectionSha256)) ||
+        intent.expectedSelectionSha256 !== event.expectedSiteSelectionSha256
     )
         throw new Error(
             "published site event intent conflicts with the exact event",
@@ -918,15 +1252,24 @@ async function publishedEventState(publication, event, checkpoint) {
     }
     validateProvenance(provenance, event, checkpoint);
     const selection = validateSiteSelection(await publication.readSelection());
-    if (
-        selection === null ||
-        selection.document.current.releaseSha256 !== intent.releaseSha256 ||
-        selection.document.current.eventId !== event.eventId
-    )
+    const isSelected =
+        selection?.document.current.releaseSha256 === intent.releaseSha256 &&
+        selection.document.current.eventId === event.eventId;
+    const isResumable =
+        !isSelected &&
+        (selection?.sha256 ?? null) === intent.expectedSelectionSha256;
+    if (!isSelected && !isResumable) {
         throw new Error(
-            "published event is no longer the selected site release",
+            "published site event is neither selected nor exactly resumable",
         );
-    return { intent, manifest, selection, provenance };
+    }
+    return {
+        intent,
+        manifest,
+        selection,
+        provenance,
+        state: isSelected ? "selected" : "resumable",
+    };
 }
 
 function publicResult({
@@ -1005,6 +1348,7 @@ export async function processOccurrenceSitePublishEvent({
         event,
         event.occurrencePolicySha256,
         manifestSha256,
+        manifest,
     );
     const buildOperation = validateBuildOperation(rawBuildOperation, event);
     const verificationOperation = validateVerificationOperation(
@@ -1025,14 +1369,6 @@ export async function processOccurrenceSitePublishEvent({
     // Reject stale/out-of-order site events before selecting any occurrence data.
     const initialSiteState = await currentSiteState(publication);
     assertEventOrder(event, initialSiteState);
-    if (
-        checkpointValue === null &&
-        initialSiteState?.manifest.event.eventId === event.eventId
-    ) {
-        throw new Error(
-            "selected site event has no exact occurrence publish checkpoint",
-        );
-    }
 
     const occurrenceOperations = await createOccurrenceExportStoreOperations({
         store: occurrenceStore,
@@ -1040,36 +1376,57 @@ export async function processOccurrenceSitePublishEvent({
     });
     let checkpoint;
     if (checkpointValue === null) {
-        const occurrenceCallResult = await executeOccurrenceExportBatch({
+        let recovered = await recoverSelectedOccurrenceProof({
+            operations: occurrenceOperations,
             policy,
             manifest,
             manifestSha256,
-            batch: producerResult.exportBatch,
-            graphResult: producerResult.graphResult,
-            sourceRoot: candidateRoot,
+            producerResult,
+            candidateRoot,
             processingAt: event.releasedAt,
-            operations: occurrenceOperations,
         });
-        if (occurrenceCallResult.status !== "selected") {
-            throw new Error(
-                `occurrence export did not select the exact aggregate: ${occurrenceCallResult.failure?.code ?? occurrenceCallResult.status}`,
-            );
+        if (recovered === null) {
+            const occurrenceCallResult = await executeOccurrenceExportBatch({
+                policy,
+                manifest,
+                manifestSha256,
+                batch: producerResult.exportBatch,
+                graphResult: producerResult.graphResult,
+                sourceRoot: candidateRoot,
+                processingAt: event.releasedAt,
+                operations: occurrenceOperations,
+            });
+            if (occurrenceCallResult.status !== "selected") {
+                throw new Error(
+                    `occurrence export did not select the exact aggregate: ${occurrenceCallResult.failure?.code ?? occurrenceCallResult.status}`,
+                );
+            }
+            recovered = await recoverSelectedOccurrenceProof({
+                operations: occurrenceOperations,
+                policy,
+                manifest,
+                manifestSha256,
+                producerResult,
+                candidateRoot,
+                processingAt: event.releasedAt,
+            });
+            if (
+                recovered === null ||
+                recovered.selected.selectionSha256 !==
+                    occurrenceCallResult.aggregate.selectionSha256 ||
+                recovered.selected.selection.current.manifestSha256 !==
+                    occurrenceCallResult.aggregate.manifestSha256 ||
+                recovered.selected.selection.current.eventId !==
+                    occurrenceCallResult.aggregate.eventId
+            ) {
+                throw new Error(
+                    "occurrence caller result does not match the exact selected aggregate proof",
+                );
+            }
         }
-        const selected = await loadSelectedOccurrenceRelease(
-            occurrenceOperations.evidenceStore,
-        );
-        if (
-            selected.selectionSha256 !==
-                occurrenceCallResult.aggregate.selectionSha256 ||
-            selected.selection.current.manifestSha256 !==
-                occurrenceCallResult.aggregate.manifestSha256
-        )
-            throw new Error(
-                "occurrence caller result does not match the selected store post-read",
-            );
         checkpoint = await commitCheckpoint(
             checkpointOperations,
-            checkpointDocument(event, occurrenceCallResult, selected),
+            checkpointDocument(event, recovered.proof, recovered.selected),
         );
     } else {
         checkpoint = validateCheckpoint(
@@ -1089,7 +1446,7 @@ export async function processOccurrenceSitePublishEvent({
         event,
         checkpoint,
     );
-    if (alreadyPublished !== null) {
+    if (alreadyPublished?.state === "selected") {
         return publicResult({
             event,
             checkpoint,
@@ -1114,14 +1471,23 @@ export async function processOccurrenceSitePublishEvent({
     await validateSelectedOccurrence(occurrenceOperations, checkpoint, policy);
     const provenance = provenanceDocument(event, checkpoint);
     await writeProvenance(buildRoot, provenance);
+    const beforeSemanticReads = await inventoryBuiltSite(buildRoot);
     const buildEvidence = await verifySelectedBuild({
         buildRoot,
         event,
         checkpoint,
         policy,
         selected,
+        inventory: beforeSemanticReads,
     });
-    const beforeVerification = await inventoryBuiltSite(buildRoot);
+    const afterSemanticReads = await inventoryBuiltSite(buildRoot);
+    if (
+        inventoryIdentity(beforeSemanticReads) !==
+        inventoryIdentity(afterSemanticReads)
+    ) {
+        throw new Error("Astro build changed during semantic verification");
+    }
+    const beforeVerification = afterSemanticReads;
     const files = publicInventory(beforeVerification);
     const contentIdentitySha256 = siteContentIdentitySha256({
         sourceSnapshotManifestSha256: event.sourceSnapshotManifestSha256,
@@ -1129,6 +1495,19 @@ export async function processOccurrenceSitePublishEvent({
         builderCommit: event.builderCommit,
         files,
     });
+    const releaseEvent = siteEvent(event, contentIdentitySha256);
+    const verificationExpected = {
+        buildInventorySha256: inventoryIdentity(beforeVerification),
+        buildContentIdentitySha256: contentIdentitySha256,
+        staticBuildSha256: buildEvidence.buildSha256,
+        occurrenceOutputManifestSha256:
+            buildEvidence.occurrenceOutputManifestSha256,
+        occurrenceSelectionSha256: checkpoint.occurrenceSelectionSha256,
+        occurrenceManifestSha256: checkpoint.occurrenceManifestSha256,
+        provenanceSha256: buildEvidence.provenanceSha256,
+        siteEventSha256: sha256(canonicalBytes(releaseEvent)),
+        sitePayloadSha256: releaseEvent.payloadSha256,
+    };
     validateVerificationResult(
         await verificationOperation.verify({
             contract: "verdify.lab-production-output-verification-request",
@@ -1138,13 +1517,15 @@ export async function processOccurrenceSitePublishEvent({
             buildContentIdentitySha256: contentIdentitySha256,
             occurrenceSelectionSha256: checkpoint.occurrenceSelectionSha256,
             occurrenceManifestSha256: checkpoint.occurrenceManifestSha256,
-            buildEvidence,
+            buildInventorySha256: verificationExpected.buildInventorySha256,
+            staticBuildSha256: verificationExpected.staticBuildSha256,
+            occurrenceOutputManifestSha256:
+                verificationExpected.occurrenceOutputManifestSha256,
+            provenanceSha256: verificationExpected.provenanceSha256,
+            siteEventSha256: verificationExpected.siteEventSha256,
+            sitePayloadSha256: verificationExpected.sitePayloadSha256,
         }),
-        {
-            buildContentIdentitySha256: contentIdentitySha256,
-            occurrenceSelectionSha256: checkpoint.occurrenceSelectionSha256,
-            occurrenceManifestSha256: checkpoint.occurrenceManifestSha256,
-        },
+        verificationExpected,
     );
     const afterVerification = await inventoryBuiltSite(buildRoot);
     if (
@@ -1155,7 +1536,6 @@ export async function processOccurrenceSitePublishEvent({
     }
     await validateSelectedOccurrence(occurrenceOperations, checkpoint, policy);
 
-    const releaseEvent = siteEvent(event, contentIdentitySha256);
     let publicationError = null;
     try {
         await publication.publish({
@@ -1181,6 +1561,12 @@ export async function processOccurrenceSitePublishEvent({
         if (publicationError !== null) throw publicationError;
         throw new Error(
             "site release publication did not persist its exact event intent",
+        );
+    }
+    if (published.state === "resumable") {
+        if (publicationError !== null) throw publicationError;
+        throw new Error(
+            "site release publication persisted an exact resumable intent without selecting it",
         );
     }
     if (

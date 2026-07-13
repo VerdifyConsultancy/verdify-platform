@@ -19,6 +19,7 @@ import {
   captureCameraOccurrence,
   validateCameraExportRequest,
 } from "./camera-export-producer.mjs";
+import { validateOccurrenceProducerResult } from "./occurrence-producer-result-contract.mjs";
 
 const SHA256_RE = /^[0-9a-f]{64}$/u;
 const ISO_INSTANT_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/u;
@@ -511,6 +512,13 @@ export async function runOccurrenceProducer({
     exportBatch: assembly.exportBatch,
     exportBatchSha256: assembly.exportBatchSha256,
   };
+  validateOccurrenceProducerResult(result, {
+    policySha256,
+    sourceOccurrenceManifestSha256: manifestSha256,
+    sourceId: reportingFeedSnapshot.sourceId,
+    sourceWatermark: reportingFeedSnapshot.sourceWatermark,
+    sourceWatermarkAt: reportingFeedSnapshot.sourceWatermarkAt,
+  });
   assertTransportFreeResult(result, reportingDatasourceIdentity);
   return result;
 }
