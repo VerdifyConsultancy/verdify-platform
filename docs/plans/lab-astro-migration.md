@@ -37,6 +37,9 @@ changes state.
 
 ## The nine surfaces (program decomposition)
 
+Child issues (persisted 2026-07-13 post-consensus): 1→#474, 2→#475, 3→#476,
+4→#477, 5→#478, 6→#479, 7→#480, 8→#481, 9→#482 (Jason-gated cutover).
+
 | # | Surface | Position | Remaining gap |
 |---|---|---|---|
 | 1 | Shared design contract | 1.1.0 merged and accepted on stage | Production remains Quartz until Phase 5 |
