@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, symlink, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -102,7 +102,7 @@ function response(bytes, responseUrl, overrides = {}) {
   };
 }
 
-async function successfulCapture({ policy, request, root, bytes, calls = [] }) {
+async function successfulCapture({ policy, request, root, bytes, calls = [], fileOperations }) {
   return captureCameraOccurrence({
     policy,
     request,
@@ -112,7 +112,12 @@ async function successfulCapture({ policy, request, root, bytes, calls = [] }) {
       calls.push(options);
       return response(bytes, request.url);
     },
+    ...(fileOperations === undefined ? {} : { fileOperations }),
   });
+}
+
+function occurrenceDirectory(root, occurrenceId) {
+  return path.join(root, "current-media", occurrenceId);
 }
 
 test("the closed producer sanitizes both #483 camera occurrences into downstream-valid candidates", async (context) => {
@@ -357,6 +362,123 @@ test("JPEG metadata is removed and repeated pixel content has deterministic PNG 
   const decoded = decodePng(output);
   assert.equal(decoded.colorType, 2);
   assert.equal(output.includes(Buffer.from("secret-camera-metadata")), false);
+});
+
+test("candidate persistence rejects linked roots and directories before writing outside its canonical root", async (context) => {
+  const root = await workspace(context);
+  const policy = activePolicy();
+  const occurrenceId = cameraExportProducerContract.approvedOccurrenceIds[0];
+  const request = cameraRequest(policy, occurrenceId);
+  const bytes = await jpeg();
+  const linkedRoot = path.join(root, "linked-output");
+  const externalRoot = path.join(root, "external-output");
+  await mkdir(externalRoot);
+  await symlink(externalRoot, linkedRoot, "dir");
+
+  const calls = [];
+  await assert.rejects(successfulCapture({
+    policy,
+    request,
+    root: linkedRoot,
+    bytes,
+    calls,
+  }), /canonical real directory/);
+  assert.equal(calls.length, 0, "a linked output root must fail before transport");
+  assert.deepEqual(await readdir(externalRoot), []);
+
+  const outputRoot = path.join(root, "output");
+  const externalMediaRoot = path.join(root, "external-media");
+  await mkdir(outputRoot);
+  await mkdir(externalMediaRoot);
+  await symlink(externalMediaRoot, path.join(outputRoot, "current-media"), "dir");
+  await assert.rejects(successfulCapture({
+    policy,
+    request,
+    root: outputRoot,
+    bytes,
+  }), /canonical real directory/);
+  assert.deepEqual(
+    await readdir(externalMediaRoot),
+    [],
+    "the occurrence directory must not be created through a linked media root",
+  );
+
+  await rm(path.join(outputRoot, "current-media"));
+  await mkdir(path.join(outputRoot, "current-media"));
+  const externalOccurrenceRoot = path.join(root, "external-occurrence");
+  await mkdir(externalOccurrenceRoot);
+  await symlink(externalOccurrenceRoot, occurrenceDirectory(outputRoot, occurrenceId), "dir");
+  await assert.rejects(successfulCapture({
+    policy,
+    request,
+    root: outputRoot,
+    bytes,
+  }), /canonical real directory/);
+  assert.deepEqual(await readdir(externalOccurrenceRoot), []);
+});
+
+test("write and sync failures remove temporary candidates and permit a clean retry", async (context) => {
+  const policy = activePolicy();
+  const occurrenceId = cameraExportProducerContract.approvedOccurrenceIds[0];
+  const request = cameraRequest(policy, occurrenceId);
+  const bytes = await jpeg();
+
+  for (const [label, fileOperations] of [
+    ["write", { writeFile: async () => { throw new Error("fixture write failure"); } }],
+    ["sync", { sync: async () => { throw new Error("fixture sync failure"); } }],
+  ]) {
+    const root = await workspace(context, `verdify-camera-${label}-failure-`);
+    await assert.rejects(successfulCapture({
+      policy,
+      request,
+      root,
+      bytes,
+      fileOperations,
+    }), /temporary write failed/);
+    assert.deepEqual(await readdir(occurrenceDirectory(root, occurrenceId)), []);
+
+    const retried = await successfulCapture({ policy, request, root, bytes });
+    assert.match(retried.candidate.relativePath, /\.png$/);
+    assert.deepEqual(
+      await readdir(occurrenceDirectory(root, occurrenceId)),
+      [`${retried.candidate.sha256}.png`],
+    );
+  }
+});
+
+test("temporary unlink failure rolls back its new digest target and leaves a retryable directory", async (context) => {
+  const root = await workspace(context);
+  const policy = activePolicy();
+  const occurrenceId = cameraExportProducerContract.approvedOccurrenceIds[1];
+  const request = cameraRequest(policy, occurrenceId);
+  const bytes = await jpeg();
+  let injected = false;
+
+  await assert.rejects(successfulCapture({
+    policy,
+    request,
+    root,
+    bytes,
+    fileOperations: {
+      unlink: async (target) => {
+        if (!injected && path.basename(target).startsWith(".")) {
+          injected = true;
+          const error = new Error("fixture unlink failure");
+          error.code = "EIO";
+          throw error;
+        }
+        await unlink(target);
+      },
+    },
+  }), /publication failed/);
+  assert.equal(injected, true);
+  assert.deepEqual(await readdir(occurrenceDirectory(root, occurrenceId)), []);
+
+  const retried = await successfulCapture({ policy, request, root, bytes });
+  assert.deepEqual(
+    await readdir(occurrenceDirectory(root, occurrenceId)),
+    [`${retried.candidate.sha256}.png`],
+  );
 });
 
 test("CLI reads canonical documents and emits a URL-free canonical result with injected transport", async (context) => {

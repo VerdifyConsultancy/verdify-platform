@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { constants as fsConstants, link, mkdir, open, realpath, unlink } from "node:fs/promises";
+import { constants as fsConstants, link, lstat, mkdir, open, realpath, unlink } from "node:fs/promises";
 import path from "node:path";
 
 import sharp from "sharp";
@@ -15,6 +15,13 @@ const ISO_INSTANT_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/;
 const MAX_TIMEOUT_MS = 15_000;
 const DEFAULT_TIMEOUT_MS = 10_000;
 const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+const CANDIDATE_FILE_OPERATION_NAMES = new Set(["writeFile", "sync", "link", "unlink"]);
+const DEFAULT_CANDIDATE_FILE_OPERATIONS = Object.freeze({
+  writeFile: (handle, bytes) => handle.writeFile(bytes),
+  sync: (handle) => handle.sync(),
+  link: (source, target) => link(source, target),
+  unlink: (target) => unlink(target),
+});
 
 // #483 deliberately approved exactly these two public, read-only requests. Keep
 // this producer closed if a later policy is broadened accidentally.
@@ -48,6 +55,81 @@ function canonicalInstant(value, label) {
 
 function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
+}
+
+function candidateFileOperations(overrides) {
+  if (overrides === undefined) return DEFAULT_CANDIDATE_FILE_OPERATIONS;
+  if (
+    overrides === null
+    || typeof overrides !== "object"
+    || Array.isArray(overrides)
+    || Object.getPrototypeOf(overrides) !== Object.prototype
+    || Object.keys(overrides).some((name) => !CANDIDATE_FILE_OPERATION_NAMES.has(name))
+    || Object.values(overrides).some((operation) => typeof operation !== "function")
+  ) throw new Error("camera candidate file operations are invalid");
+  return { ...DEFAULT_CANDIDATE_FILE_OPERATIONS, ...overrides };
+}
+
+async function canonicalDirectory(directory, label) {
+  let metadata;
+  let resolved;
+  try {
+    metadata = await lstat(directory);
+    resolved = await realpath(directory);
+  } catch {
+    throw new Error(`${label} is not a canonical real directory`);
+  }
+  if (!metadata.isDirectory() || metadata.isSymbolicLink() || resolved !== directory) {
+    throw new Error(`${label} is not a canonical real directory`);
+  }
+  return directory;
+}
+
+async function ensureCanonicalDirectory(directory, label) {
+  try {
+    await mkdir(directory, { mode: 0o700 });
+  } catch (error) {
+    if (error.code !== "EEXIST") throw error;
+  }
+  return canonicalDirectory(directory, label);
+}
+
+async function unlinkIfPresent(file, fileOperations) {
+  try {
+    await fileOperations.unlink(file);
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+}
+
+async function writeTemporaryCandidate(temporary, png, fileOperations) {
+  let handle;
+  const failures = [];
+  try {
+    handle = await open(
+      temporary,
+      fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_EXCL | fsConstants.O_NOFOLLOW,
+      0o600,
+    );
+    await fileOperations.writeFile(handle, png);
+    await fileOperations.sync(handle);
+  } catch (error) {
+    failures.push(error);
+  }
+  if (handle) {
+    try {
+      await handle.close();
+    } catch (error) {
+      failures.push(error);
+    }
+  }
+  if (failures.length === 0) return;
+  try {
+    await unlinkIfPresent(temporary, fileOperations);
+  } catch (error) {
+    failures.push(error);
+  }
+  throw new AggregateError(failures, "camera candidate temporary write failed");
 }
 
 function assertApprovedPolicy(policy) {
@@ -315,49 +397,58 @@ function stripPngAncillaryChunks(bytes) {
   return Buffer.concat(chunks);
 }
 
-async function persistCandidate(outputRoot, occurrenceId, png) {
-  const requestedRoot = path.resolve(outputRoot);
-  await mkdir(requestedRoot, { recursive: true, mode: 0o700 });
-  const root = await realpath(requestedRoot);
-  const mediaRoot = path.join(root, "current-media");
-  const occurrenceRoot = path.join(mediaRoot, occurrenceId);
-  await mkdir(mediaRoot, { mode: 0o700 }).catch((error) => {
-    if (error.code !== "EEXIST") throw error;
-  });
-  await mkdir(occurrenceRoot, { mode: 0o700 }).catch((error) => {
-    if (error.code !== "EEXIST") throw error;
-  });
-  if ((await realpath(mediaRoot)) !== mediaRoot || (await realpath(occurrenceRoot)) !== occurrenceRoot) {
-    throw new Error("camera candidate directory resolves through a link");
-  }
-
+async function persistCandidate(outputRoot, occurrenceId, png, fileOperations) {
+  const root = await canonicalDirectory(path.resolve(outputRoot), "camera candidate output root");
+  const mediaRoot = await ensureCanonicalDirectory(
+    path.join(root, "current-media"),
+    "camera candidate media directory",
+  );
+  const occurrenceRoot = await ensureCanonicalDirectory(
+    path.join(mediaRoot, occurrenceId),
+    "camera candidate occurrence directory",
+  );
   const digest = sha256(png);
   const relativePath = `current-media/${occurrenceId}/${digest}.png`;
   const target = path.join(occurrenceRoot, `${digest}.png`);
   const temporary = path.join(occurrenceRoot, `.${digest}.${randomUUID()}.tmp`);
-  const handle = await open(
-    temporary,
-    fsConstants.O_WRONLY | fsConstants.O_CREAT | fsConstants.O_EXCL | fsConstants.O_NOFOLLOW,
-    0o600,
-  );
+  await writeTemporaryCandidate(temporary, png, fileOperations);
+  let linkedTarget = false;
+  let temporaryPresent = true;
   try {
-    await handle.writeFile(png);
-    await handle.sync();
-  } finally {
-    await handle.close();
-  }
-  try {
-    await link(temporary, target);
+    await canonicalDirectory(occurrenceRoot, "camera candidate occurrence directory");
+    try {
+      await fileOperations.link(temporary, target);
+      linkedTarget = true;
+    } catch (error) {
+      if (error.code !== "EEXIST") throw error;
+    }
+    await fileOperations.unlink(temporary);
+    temporaryPresent = false;
+    const verified = await validatePngFile(root, relativePath);
+    if (verified.sha256 !== digest || verified.bytes !== png.length) {
+      throw new Error("camera candidate does not match its content address");
+    }
+    return { root, relativePath, verified };
   } catch (error) {
-    if (error.code !== "EEXIST") throw error;
-  } finally {
-    await unlink(temporary).catch(() => {});
+    const failures = [error];
+    if (linkedTarget) {
+      try {
+        await unlinkIfPresent(target, fileOperations);
+        linkedTarget = false;
+      } catch (cleanupError) {
+        failures.push(cleanupError);
+      }
+    }
+    if (temporaryPresent) {
+      try {
+        await unlinkIfPresent(temporary, fileOperations);
+        temporaryPresent = false;
+      } catch (cleanupError) {
+        failures.push(cleanupError);
+      }
+    }
+    throw new AggregateError(failures, "camera candidate publication failed");
   }
-  const verified = await validatePngFile(root, relativePath);
-  if (verified.sha256 !== digest || verified.bytes !== png.length) {
-    throw new Error("camera candidate does not match its content address");
-  }
-  return { root, relativePath, verified };
 }
 
 async function fetchCameraTransport(options) {
@@ -389,6 +480,7 @@ export async function captureCameraOccurrence({
   transport = fetchCameraTransport,
   now = () => new Date().toISOString(),
   timeoutMs = DEFAULT_TIMEOUT_MS,
+  fileOperations: fileOperationOverrides,
 }) {
   validateCameraExportRequest(request, policy);
   if (typeof transport !== "function" || typeof now !== "function") throw new Error("camera exporter dependency is invalid");
@@ -401,6 +493,11 @@ export async function captureCameraOccurrence({
   if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > MAX_TIMEOUT_MS) {
     throw new Error("camera exporter timeout is invalid");
   }
+  const fileOperations = candidateFileOperations(fileOperationOverrides);
+  const canonicalOutputRoot = await canonicalDirectory(
+    path.resolve(outputRoot),
+    "camera candidate output root",
+  );
   const bounds = policy.imagePolicy.currentMedia;
   const source = await timedCameraResponse({ transport, request, maximumBytes: bounds.maxBytes, timeoutMs });
   const capturedAt = canonicalInstant(now(), "camera capture time");
@@ -412,7 +509,7 @@ export async function captureCameraOccurrence({
   if (Date.parse(sanitizedAt) < Date.parse(capturedAt)) {
     throw new Error("camera sanitization time predates capture");
   }
-  const persisted = await persistCandidate(outputRoot, request.occurrenceId, png);
+  const persisted = await persistCandidate(canonicalOutputRoot, request.occurrenceId, png, fileOperations);
   const candidate = {
     relativePath: persisted.relativePath,
     mediaType: "image/png",
