@@ -69,6 +69,12 @@ test("stage output stays noindex, blocker-labelled, searchable, and auditable", 
   assert.match(await read("index.html"), /rel="stylesheet" href="\/_astro\/katex\.min\.[^"]+\.css"/);
   assert.doesNotMatch(await read("start/about.html"), /katex\.min\.[^"]+\.css/);
   assert.match(await read("robots.txt"), /Disallow: \//);
+  assert.equal(await read("index.xml"), await read("rss.xml"));
+
+  const tag = await read("tags/greenhouse.html");
+  assert.match(tag, /items? with this tag/);
+  assert.match(tag, /<time datetime="2026-07-12">July 12, 2026<\/time>/);
+  assert.match(tag, /name="robots" content="noindex,follow"/);
 
   const routeManifest = JSON.parse(await read("route-manifest.json"));
   assert.equal(routeManifest.build.sourceCount, 8);

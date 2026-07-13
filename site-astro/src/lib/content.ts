@@ -44,6 +44,7 @@ export type ContentRecord = {
   grafana: GrafanaOccurrence[];
   currentMedia: CurrentMediaOccurrence[];
   date: string;
+  socialImage: string;
 };
 
 export type BuildDocument = {
