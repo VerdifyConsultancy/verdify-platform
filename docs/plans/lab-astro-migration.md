@@ -103,8 +103,17 @@ img-src in favor of compiled same-origin snapshots
 (`static/cameras/<id>/latest.jpg`) — verify the snapshot path actually
 populates post-deploy, or camera images regress. Decide
 Cloudflare-analytics-vs-CSP policy explicitly.
-GATE: defects cleared on live probes + full acceptance run against the
-deployed build.
+GATE: **PASSED 2026-07-13 ~06:55Z.** Stage serves `ee36941f` (Pagefind
+noWorker fix #466 + retry #467, pin #468; a stale-Cloudflare-cache worker-CSP
+interaction found and designed around). Full acceptance on the deployed
+build: search/lightbox/images/mobile-nav pass; 323 routes + 145 graph/camera
+DOM occurrences reconcile; T+10 durability pass green; manual-sync posture
+restored (agents#2972) after temporary exact-revision autosync. CI hardening
+landed en route: agents#2969 (pin idempotency), agents#2970 (test-container
+CPU 2/3 — fixed the deterministic home long-task budget miss). Camera: 2
+occurrences, 0 verified same-origin fallbacks — carried to Phase 4c
+(occurrence exporter/store), NOT claimed as parity. Cloudflare-analytics CSP
+blocks: diagnostic-only; strict CSP retained.
 
 Phase 3 — **Program formalization (owner: codex).** #351 → In Progress/P1/XL;
 create the nine surface child issues (What/Why/How/Test/Success + Project #5
