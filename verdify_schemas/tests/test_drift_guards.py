@@ -35,6 +35,7 @@ from verdify_schemas.daily import (
 from verdify_schemas.forecast import ForecastHour
 from verdify_schemas.forecast_ops import ForecastActionLog, ForecastActionRule
 from verdify_schemas.lessons import PlannerLesson
+from verdify_schemas.mcp_responses import OUTCOME_COMPOSITE_METRICS, ScorecardResponse
 from verdify_schemas.media import ImageObservation
 from verdify_schemas.operations import (
     ConsumablesLog,
@@ -317,6 +318,40 @@ def test_operation_linkage_columns_declared_by_schema(model_class, table_name):
         f"on the {table_name!r} table: {missing_in_schema}. Declare them so "
         f"harvest/treatment records stay traceable to crop positions."
     )
+
+
+def test_outcome_composite_db_names_bound_to_pinned_contract():
+    """#388 — ADR-0004 composite outcome score, DB side of the wire contract.
+
+    OUTCOME_COMPOSITE_METRICS pins the property names shared by the
+    ScorecardResponse model / MCP scorecard() emitter (guarded statically in
+    test_mcp_responses.py::TestOutcomeCompositeContract), the #371 DB
+    function + daily_summary columns, and the #365 planner reader.
+
+    Schema lands FIRST (#388), so the DB legitimately has none of these yet —
+    absence passes. But the moment #371's migration adds ANY outcome_* column
+    to daily_summary (or fn_planner_scorecard emits an outcome_* metric, which
+    test_mcp_responses.py::test_scorecard_metric_names_match_live_function
+    already fails on when unmodeled), a name outside the pinned set fails HERE
+    instead of silently NULLing the planner reward — the L2-OBS rename hazard
+    (#371) this guard exists for.
+    """
+    db_cols = _table_columns("daily_summary")
+    if not db_cols:
+        pytest.skip("table 'daily_summary' not found (migration pending?)")
+    found = {c for c in db_cols if c.startswith("outcome_")}
+    unknown = sorted(found - OUTCOME_COMPOSITE_METRICS)
+    assert not unknown, (
+        f"daily_summary has outcome_* column(s) not in the pinned #388 contract: {unknown}. "
+        f"The composite-outcome wire names are OUTCOME_COMPOSITE_METRICS "
+        f"({sorted(OUTCOME_COMPOSITE_METRICS)}) — rename the column(s) to match, or "
+        f"update the contract + ScorecardResponse + the #365 reader TOGETHER."
+    )
+    # Every pinned name the DB does have must also be a modelled field —
+    # belt-and-suspenders with the static guard, using live column names.
+    modeled = set(ScorecardResponse.model_fields)
+    missing = sorted((found & OUTCOME_COMPOSITE_METRICS) - modeled)
+    assert not missing, f"pinned outcome column(s) present in DB but not on ScorecardResponse: {missing}"
 
 
 def test_ingestor_climate_route_targets_declared_by_schema_and_db():

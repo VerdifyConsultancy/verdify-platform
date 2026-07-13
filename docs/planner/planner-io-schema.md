@@ -130,6 +130,47 @@ kubectl exec -n verdify-prod verdify-db-0 -c postgres -- psql -U verdify -d verd
           count(*) FILTER (WHERE anchor_score IS NOT NULL) FROM plan_journal"
 ```
 
+### 5.1 Composite outcome score — ADR-0004 wire contract (schema-first, #388)
+
+ADR-0004 §5 replaces target-distance grading with **outcome grading**:
+`time-in-corridor × DLI-achieved × DIF-delivered × wet/dry-completion −
+(energy + water + cycling)`. The wire property names for that composite are
+pinned in `verdify_schemas.mcp_responses.OUTCOME_COMPOSITE_METRICS` and
+modelled on `ScorecardResponse` (the MCP `scorecard()` tool and the public
+`/api/v1/scorecard` endpoint are pass-throughs of that model):
+
+| Property | Type | Semantics (ADR-0004 §5) |
+|---|---|---|
+| `outcome_score_composite` | `float \| null` | Headline composite outcome score for the day |
+| `outcome_time_in_band` | `float \| null` | Time-in-corridor component — how much of the day the served zone climate stayed inside the crop tolerance corridor |
+| `outcome_dli_grade` | `float \| null` | DLI-achieved component (broadband-solar proxy, ADR-0004 §4) |
+| `outcome_dif_grade` | `float \| null` | DIF-delivered component (day/night air-temp differential vs crop target) |
+| `outcome_wet_dry_completion` | `float \| null` | Wet→dry cycle completion component (mister duty + soil moisture) |
+| `outcome_cost_cycling_penalty` | `float \| null` | Subtracted resource penalty: energy + water + actuator cycling/wear |
+
+Contract status and sequencing (CLAUDE.md discipline #1 — schema first,
+consumers next):
+
+- **#388 (this): names + nullability only.** All six are `Optional`, default
+  `null`; no producer emits them yet. Present-but-null is the defined
+  transitional state, so `/api/v1/scorecard` cannot 500 (the migration-147
+  header pattern).
+- **#371 lands the DB side** — the outcome function / `daily_summary`
+  columns MUST use exactly these names. Exact normalization, weighting, and
+  units of each component are #371's to define; the schema pins only the
+  names and null-tolerance.
+- **#365 lands the planner consumer** — the reader binds to
+  `OUTCOME_COMPOSITE_METRICS`, and must treat `null` as "composite not yet
+  computed", never as a zero score.
+
+Drift guards (the wire protocol): `verdify_schemas/tests/test_mcp_responses.py::TestOutcomeCompositeContract`
+(static: model ↔ pinned names ↔ no-alias wire keys),
+`test_scorecard_metric_names_match_live_function` (live fn emits only
+modelled metrics), and `verdify_schemas/tests/test_drift_guards.py::test_outcome_composite_db_names_bound_to_pinned_contract`
+(any `outcome_*` column appearing on `daily_summary` must match the pinned
+set). A rename on any side fails loud instead of silently NULLing the
+planner reward.
+
 ## 6. Triggers (when the planner runs)
 
 `PLANNER_TRIGGER_MATRIX` (`ingestor/tasks/_common.py`), fired by the 60s planning

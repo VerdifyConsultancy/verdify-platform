@@ -114,6 +114,7 @@ from .lessons import (
     is_legal_lesson_transition,
 )
 from .mcp_responses import (
+    OUTCOME_COMPOSITE_METRICS,
     ClimateSnapshot,
     EquipmentStateRow,
     ForecastSummaryRow,
@@ -409,6 +410,7 @@ __all__ = [
     "ObservationWithCrop",
     "OpenMeteoForecastResponse",
     "OpenMeteoHourly",
+    "OUTCOME_COMPOSITE_METRICS",
     "OutcomeKpiActionRow",
     "OutcomeKpiCoverage",
     "OutcomeKpiResponse",
