@@ -66,6 +66,9 @@ SUPPORTED_BINARY_SUFFIXES = frozenset(
 TEXT_CHUNK_SIZE = 1024 * 1024
 STREAM_OVERLAP = 64 * 1024
 BINARY_CHUNK_SIZE = 1024 * 1024
+OPAQUE_MEDIA_ASCII_RUN_RE = re.compile(rb"[\t\r\n\x20-\x7e]{3,}")
+OPAQUE_MEDIA_UTF16_LE_RUN_RE = re.compile(rb"(?:[\t\r\n\x20-\x7e]\x00){3,}")
+OPAQUE_MEDIA_UTF16_BE_RUN_RE = re.compile(rb"(?:\x00[\t\r\n\x20-\x7e]){3,}")
 MPEG_TS_PACKET_SIZE = 188
 MPEG_TS_PROBE_PACKETS = 5
 MPEG_TS_TEXT_PROBE_BYTES = 64 * 1024
@@ -76,7 +79,10 @@ MPEG_TS_METADATA_STREAM_TYPES = frozenset({0x05, 0x06, 0x0D, 0x15, 0x86})
 MPEG_TS_PACKET_LAYOUTS = ((188, 0), (192, 4), (204, 0))
 ISO_BMFF_MAX_BOXES = 4096
 ISO_BMFF_MAX_METADATA_BYTES = 4 * 1024 * 1024
+ISO_BMFF_MAX_SAMPLES = 2_000_000
 ISO_BMFF_MEDIA_BOXES = frozenset({b"mdat"})
+ISO_BMFF_VIDEO_SAMPLE_ENTRIES = frozenset({b"av01", b"avc1", b"avc3", b"hev1", b"hvc1", b"vp08", b"vp09"})
+ISO_BMFF_AUDIO_SAMPLE_ENTRIES = frozenset({b".mp3", b"Opus", b"ac-3", b"ec-3", b"fLaC", b"mp4a"})
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 JPEG_SIGNATURE = b"\xff\xd8"
 PDF_SIGNATURE = b"%PDF-"
@@ -465,10 +471,20 @@ def _scan_text_stream(file_descriptor: int) -> set[str]:
 
 def _scan_binary_stream(file_descriptor: int) -> set[str]:
     """Scan raw metadata once per chunk, adding one UTF-16 pass only when indicated."""
+    return _scan_binary_range(file_descriptor, 0, os.fstat(file_descriptor).st_size)
+
+
+def _scan_binary_range(file_descriptor: int, start: int, length: int) -> set[str]:
+    """Scan one bounded byte range without interpreting adjacent container data."""
     reasons: set[str] = set()
     carry = b""
-    offset = 0
-    while chunk := os.pread(file_descriptor, BINARY_CHUNK_SIZE, offset):
+    offset = start
+    end = start + length
+    while offset < end:
+        chunk = os.pread(file_descriptor, min(BINARY_CHUNK_SIZE, end - offset), offset)
+        if not chunk:
+            reasons.add("malformed-media-artifact")
+            break
         combined = carry + chunk
         reasons.update(_value_reasons(combined.decode("utf-8", errors="ignore")))
         encoding = _looks_utf16(combined)
@@ -476,6 +492,42 @@ def _scan_binary_stream(file_descriptor: int) -> set[str]:
             payload = combined[: len(combined) - (len(combined) % 2)]
             reasons.update(_value_reasons(payload.decode(encoding, errors="ignore")))
         carry = combined[-STREAM_OVERLAP:]
+        offset += len(chunk)
+    return reasons
+
+
+def _opaque_media_text_candidate(text: str) -> bool:
+    """Return whether a text-bearing codec run can affect publication policy."""
+    lowered = text.casefold()
+    if any(identifier in lowered for identifier in PUBLIC_CROP_EXCLUDE_SLUGS):
+        return True
+    if any(token in lowered for token in ("nan", "inf", "none")):
+        return True
+    return public_text_requires_decoding(text)
+
+
+def _scan_opaque_media_range(file_descriptor: int, start: int, length: int) -> set[str]:
+    """Scan text-bearing runs in codec bytes without decoding arbitrary binary as prose."""
+    reasons: set[str] = set()
+    overlap = b""
+    offset = start
+    end = start + length
+    while offset < end:
+        chunk = os.pread(file_descriptor, min(BINARY_CHUNK_SIZE, end - offset), offset)
+        if not chunk:
+            reasons.add("malformed-media-artifact")
+            break
+        combined = overlap + chunk
+        for pattern, encoding in (
+            (OPAQUE_MEDIA_ASCII_RUN_RE, "ascii"),
+            (OPAQUE_MEDIA_UTF16_LE_RUN_RE, "utf-16-le"),
+            (OPAQUE_MEDIA_UTF16_BE_RUN_RE, "utf-16-be"),
+        ):
+            for match in pattern.finditer(combined):
+                text = match.group().decode(encoding)
+                if _opaque_media_text_candidate(text):
+                    reasons.update(_value_reasons(text))
+        overlap = combined[-STREAM_OVERLAP:]
         offset += len(chunk)
     return reasons
 
@@ -700,6 +752,7 @@ def _scan_mpeg_ts_stream(file_descriptor: int) -> set[str]:
     pmt_buffer = bytearray()
     program_map: tuple[int, int] | None = None
     pmt: tuple[int, tuple[tuple[int, int], ...]] | None = None
+    elementary_pids: set[int] = set()
     metadata_pids: set[int] = set()
     file_size = os.fstat(file_descriptor).st_size
     if file_size < MPEG_TS_PACKET_SIZE * 3 or file_size % MPEG_TS_PACKET_SIZE:
@@ -738,6 +791,18 @@ def _scan_mpeg_ts_stream(file_descriptor: int) -> set[str]:
             if control not in {1, 3}:
                 continue
             payload = bytes(packet[payload_start:])
+            # A PID cannot be classified as compressed A/V versus public
+            # metadata until its PMT has been validated. Accepting elementary
+            # payload before that point silently discarded it from the bounded
+            # metadata scan. Verdify HLS is single-program PAT/PMT-first, so
+            # fail closed on premature or undeclared elementary payload.
+            if pid > 0x1F and pid != 0x1FFF:
+                if pmt is None:
+                    if program_map is None or pid != program_map[1]:
+                        return {"malformed-media-artifact"}
+                else:
+                    if pid not in elementary_pids and pid not in {program_map[1], pmt[0]}:
+                        return {"malformed-media-artifact"}
             if pid <= 0x1F or (program_map is not None and pid == program_map[1]) or pid in metadata_pids:
                 retain_metadata(pid, payload)
             if pid == 0:
@@ -758,6 +823,7 @@ def _scan_mpeg_ts_stream(file_descriptor: int) -> set[str]:
                     if malformed or (pmt is not None and parsed != pmt):
                         return {"malformed-media-artifact"}
                     pmt = parsed
+                    elementary_pids.update(elementary_pid for _stream_type, elementary_pid in parsed[1])
                     metadata_pids.update(
                         elementary_pid
                         for stream_type, elementary_pid in parsed[1]
@@ -786,14 +852,186 @@ def _scan_typescript_or_mpeg_ts(file_descriptor: int) -> set[str]:
     return _scan_mpeg_ts_stream(file_descriptor)
 
 
-def _scan_iso_bmff_stream(file_descriptor: int) -> set[str]:
-    """Validate top-level ISO-BMFF boxes and scan metadata, never codec payload.
+def _iso_bmff_child_boxes(payload: bytes) -> tuple[list[tuple[bytes, bytes]], bool]:
+    """Return one complete level of ISO-BMFF boxes from a bounded payload."""
+    boxes: list[tuple[bytes, bytes]] = []
+    offset = 0
+    while offset < len(payload):
+        if len(payload) - offset < 8 or len(boxes) >= ISO_BMFF_MAX_BOXES:
+            return [], True
+        size32, box_type = struct.unpack(">I4s", payload[offset : offset + 8])
+        header_size = 8
+        if size32 == 1:
+            if len(payload) - offset < 16:
+                return [], True
+            box_size = struct.unpack(">Q", payload[offset + 8 : offset + 16])[0]
+            header_size = 16
+        elif size32 == 0:
+            box_size = len(payload) - offset
+        else:
+            box_size = size32
+        if box_size < header_size or offset + box_size > len(payload):
+            return [], True
+        boxes.append((box_type, payload[offset + header_size : offset + box_size]))
+        offset += box_size
+    return boxes, offset != len(payload)
 
-    MP4 ``mdat`` payload is compressed audiovisual data, not a textual metadata
-    representation.  Treating those bytes as prose is both semantically wrong
-    and regex-pathological.  All other top-level box bytes remain bounded and
-    pass through the canonical UTF-8/UTF-16/encoded-metadata scanner.
-    """
+
+def _iso_bmff_one_box(boxes: list[tuple[bytes, bytes]], box_type: bytes) -> bytes | None:
+    matches = [payload for candidate, payload in boxes if candidate == box_type]
+    return matches[0] if len(matches) == 1 else None
+
+
+def _iso_bmff_uint_table(payload: bytes, width: int) -> tuple[list[int], bool]:
+    if len(payload) < 8 or payload[:4] != b"\x00\x00\x00\x00":
+        return [], True
+    count = struct.unpack(">I", payload[4:8])[0]
+    if count > ISO_BMFF_MAX_SAMPLES or len(payload) != 8 + count * width:
+        return [], True
+    return [int.from_bytes(payload[offset : offset + width], "big") for offset in range(8, len(payload), width)], False
+
+
+def _iso_bmff_sample_sizes(stsz: bytes | None, stz2: bytes | None) -> tuple[list[int], bool]:
+    if (stsz is None) == (stz2 is None):
+        return [], True
+    if stsz is not None:
+        if len(stsz) < 12 or stsz[:4] != b"\x00\x00\x00\x00":
+            return [], True
+        sample_size, count = struct.unpack(">II", stsz[4:12])
+        if count > ISO_BMFF_MAX_SAMPLES:
+            return [], True
+        if sample_size:
+            return ([sample_size] * count, len(stsz) != 12)
+        if len(stsz) != 12 + count * 4:
+            return [], True
+        return [struct.unpack(">I", stsz[offset : offset + 4])[0] for offset in range(12, len(stsz), 4)], False
+
+    assert stz2 is not None
+    if len(stz2) < 12 or stz2[:7] != b"\x00" * 7:
+        return [], True
+    field_size = stz2[7]
+    count = struct.unpack(">I", stz2[8:12])[0]
+    if count > ISO_BMFF_MAX_SAMPLES or field_size not in {4, 8, 16}:
+        return [], True
+    encoded_size = (count * field_size + 7) // 8
+    if len(stz2) != 12 + encoded_size:
+        return [], True
+    encoded = stz2[12:]
+    if field_size == 4:
+        if count % 2 and encoded[-1] & 0x0F:
+            return [], True
+        return [
+            encoded[index // 2] >> 4 if index % 2 == 0 else encoded[index // 2] & 0x0F for index in range(count)
+        ], False
+    width = field_size // 8
+    return [int.from_bytes(encoded[offset : offset + width], "big") for offset in range(0, len(encoded), width)], False
+
+
+def _iso_bmff_track_ranges(moov: bytes) -> tuple[list[tuple[int, int]], bool, bool]:
+    """Prove byte ranges occupied by whitelisted audio/video samples."""
+    moov_boxes, malformed = _iso_bmff_child_boxes(moov)
+    if malformed:
+        return [], True, True
+    tracks = [payload for box_type, payload in moov_boxes if box_type == b"trak"]
+    if not tracks:
+        return [], True, False
+
+    safe_ranges: list[tuple[int, int]] = []
+    unproven = False
+    for track in tracks:
+        track_boxes, malformed = _iso_bmff_child_boxes(track)
+        mdia = _iso_bmff_one_box(track_boxes, b"mdia")
+        if malformed or mdia is None:
+            return [], True, True
+        mdia_boxes, malformed = _iso_bmff_child_boxes(mdia)
+        handler = _iso_bmff_one_box(mdia_boxes, b"hdlr")
+        minf = _iso_bmff_one_box(mdia_boxes, b"minf")
+        if malformed or handler is None or minf is None or len(handler) < 12 or handler[:4] != b"\x00\x00\x00\x00":
+            return [], True, True
+        handler_type = handler[8:12]
+        minf_boxes, malformed = _iso_bmff_child_boxes(minf)
+        stbl = _iso_bmff_one_box(minf_boxes, b"stbl")
+        if malformed or stbl is None:
+            return [], True, True
+        sample_boxes, malformed = _iso_bmff_child_boxes(stbl)
+        if malformed:
+            return [], True, True
+
+        stsd = _iso_bmff_one_box(sample_boxes, b"stsd")
+        stsc = _iso_bmff_one_box(sample_boxes, b"stsc")
+        stsz = _iso_bmff_one_box(sample_boxes, b"stsz")
+        stz2 = _iso_bmff_one_box(sample_boxes, b"stz2")
+        stco = _iso_bmff_one_box(sample_boxes, b"stco")
+        co64 = _iso_bmff_one_box(sample_boxes, b"co64")
+        if stsd is None or stsc is None or (stco is None) == (co64 is None):
+            return [], True, True
+
+        if len(stsd) < 8 or stsd[:4] != b"\x00\x00\x00\x00":
+            return [], True, True
+        sample_entries, malformed = _iso_bmff_child_boxes(stsd[8:])
+        entry_count = struct.unpack(">I", stsd[4:8])[0]
+        if malformed or entry_count != len(sample_entries) or not sample_entries:
+            return [], True, True
+
+        if len(stsc) < 8 or stsc[:4] != b"\x00\x00\x00\x00":
+            return [], True, True
+        mapping_count = struct.unpack(">I", stsc[4:8])[0]
+        if mapping_count > ISO_BMFF_MAX_SAMPLES or len(stsc) != 8 + mapping_count * 12 or not mapping_count:
+            return [], True, True
+        mappings = [struct.unpack(">III", stsc[offset : offset + 12]) for offset in range(8, len(stsc), 12)]
+        if (
+            mappings[0][0] != 1
+            or any(
+                not samples_per_chunk or not description_index
+                for _first, samples_per_chunk, description_index in mappings
+            )
+            or any(current[0] <= previous[0] for previous, current in zip(mappings, mappings[1:], strict=False))
+        ):
+            return [], True, True
+        if any(description_index > entry_count for _first, _count, description_index in mappings):
+            return [], True, True
+
+        sizes, malformed = _iso_bmff_sample_sizes(stsz, stz2)
+        offsets, offset_malformed = _iso_bmff_uint_table(
+            stco if stco is not None else co64 or b"", 4 if stco is not None else 8
+        )
+        if malformed or offset_malformed:
+            return [], True, True
+
+        sample_index = 0
+        mapping_index = 0
+        ranges: list[tuple[int, int]] = []
+        used_descriptions: set[int] = set()
+        for chunk_index, chunk_offset in enumerate(offsets, start=1):
+            while mapping_index + 1 < len(mappings) and mappings[mapping_index + 1][0] <= chunk_index:
+                mapping_index += 1
+            _first_chunk, samples_per_chunk, description_index = mappings[mapping_index]
+            if sample_index + samples_per_chunk > len(sizes):
+                return [], True, True
+            chunk_size = sum(sizes[sample_index : sample_index + samples_per_chunk])
+            sample_index += samples_per_chunk
+            used_descriptions.add(description_index)
+            if chunk_size:
+                ranges.append((chunk_offset, chunk_offset + chunk_size))
+        if sample_index != len(sizes):
+            return [], True, True
+
+        allowed_entries = (
+            ISO_BMFF_VIDEO_SAMPLE_ENTRIES
+            if handler_type == b"vide"
+            else ISO_BMFF_AUDIO_SAMPLE_ENTRIES
+            if handler_type == b"soun"
+            else frozenset()
+        )
+        if not ranges or any(sample_entries[index - 1][0] not in allowed_entries for index in used_descriptions):
+            unproven = True
+            continue
+        safe_ranges.extend(ranges)
+    return safe_ranges, unproven, False
+
+
+def _scan_iso_bmff_stream(file_descriptor: int) -> set[str]:
+    """Validate top-level ISO-BMFF boxes and scan metadata plus text-bearing media."""
     file_size = os.fstat(file_descriptor).st_size
     if file_size < 16:
         return {"malformed-media-artifact"}
@@ -804,6 +1042,8 @@ def _scan_iso_bmff_stream(file_descriptor: int) -> set[str]:
     first_type: bytes | None = None
     seen_file_type = False
     seen_moov = False
+    moov_payload: bytes | None = None
+    media_ranges: list[tuple[int, int]] = []
     while offset < file_size:
         header = os.pread(file_descriptor, 8, offset)
         if len(header) != 8:
@@ -836,7 +1076,9 @@ def _scan_iso_bmff_stream(file_descriptor: int) -> set[str]:
             if seen_moov:
                 return {"malformed-media-artifact"}
             seen_moov = True
-        if box_type not in ISO_BMFF_MEDIA_BOXES:
+        if box_type in ISO_BMFF_MEDIA_BOXES:
+            media_ranges.append((offset + header_size, offset + box_size))
+        else:
             metadata_bytes += payload_size
             if metadata_bytes > ISO_BMFF_MAX_METADATA_BYTES:
                 return {"media-metadata-limit"}
@@ -844,11 +1086,44 @@ def _scan_iso_bmff_stream(file_descriptor: int) -> set[str]:
             if len(payload) != payload_size:
                 return {"malformed-media-artifact"}
             reasons.update(_scan_metadata_bytes(payload))
+            if box_type == b"moov":
+                moov_payload = payload
         offset += box_size
         if size32 == 0 and offset != file_size:
             return {"malformed-media-artifact"}
     if offset != file_size or first_type != b"ftyp" or not seen_file_type or not seen_moov:
         return {"malformed-media-artifact", *reasons}
+    if not media_ranges:
+        return reasons
+    if moov_payload is None:
+        return {"malformed-media-artifact", *reasons}
+
+    safe_ranges, unproven, malformed = _iso_bmff_track_ranges(moov_payload)
+    safe_ranges.sort()
+    if malformed or any(start >= end for start, end in safe_ranges):
+        return {"malformed-media-artifact", *reasons}
+    if any(current[0] < previous[1] for previous, current in zip(safe_ranges, safe_ranges[1:], strict=False)):
+        return {"malformed-media-artifact", *reasons}
+    if any(
+        not any(media_start <= start and end <= media_end for media_start, media_end in media_ranges)
+        for start, end in safe_ranges
+    ):
+        return {"malformed-media-artifact", *reasons}
+
+    for media_start, media_end in media_ranges:
+        cursor = media_start
+        for sample_start, sample_end in safe_ranges:
+            if sample_end <= media_start:
+                continue
+            if sample_start >= media_end:
+                break
+            if sample_start > cursor:
+                reasons.update(_scan_opaque_media_range(file_descriptor, cursor, sample_start - cursor))
+            cursor = sample_end
+        if cursor < media_end:
+            reasons.update(_scan_opaque_media_range(file_descriptor, cursor, media_end - cursor))
+    if unproven:
+        reasons.add("malformed-media-artifact")
     return reasons
 
 

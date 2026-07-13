@@ -176,14 +176,28 @@ def iso_bmff_box(box_type: bytes, payload: bytes) -> bytes:
     return struct.pack(">I4s", len(payload) + 8, box_type) + payload
 
 
-def iso_bmff_fixture(*, metadata: bytes = b"ordinary metadata", media: bytes = b"compressed codec bytes") -> bytes:
-    return b"".join(
-        (
-            iso_bmff_box(b"ftyp", b"isom\x00\x00\x02\x00isomiso2"),
-            iso_bmff_box(b"moov", metadata),
-            iso_bmff_box(b"mdat", media),
-        )
-    )
+def iso_bmff_fixture(
+    *,
+    metadata: bytes = b"ordinary metadata",
+    media: bytes = b"compressed codec bytes",
+    unreferenced: bytes = b"",
+) -> bytes:
+    ftyp = iso_bmff_box(b"ftyp", b"isom\x00\x00\x02\x00isomiso2")
+    udta = iso_bmff_box(b"udta", metadata)
+
+    def moov(chunk_offset: int) -> bytes:
+        stsd = iso_bmff_box(b"stsd", b"\x00\x00\x00\x00" + struct.pack(">I", 1) + iso_bmff_box(b"avc1", b""))
+        stsc = iso_bmff_box(b"stsc", b"\x00\x00\x00\x00" + struct.pack(">IIII", 1, 1, 1, 1))
+        stsz = iso_bmff_box(b"stsz", b"\x00\x00\x00\x00" + struct.pack(">II", len(media), 1))
+        stco = iso_bmff_box(b"stco", b"\x00\x00\x00\x00" + struct.pack(">II", 1, chunk_offset))
+        stbl = iso_bmff_box(b"stbl", stsd + stsc + stsz + stco)
+        minf = iso_bmff_box(b"minf", stbl)
+        hdlr = iso_bmff_box(b"hdlr", b"\x00\x00\x00\x00" + b"\x00\x00\x00\x00vide" + b"\x00" * 12)
+        return iso_bmff_box(b"moov", iso_bmff_box(b"trak", iso_bmff_box(b"mdia", hdlr + minf)))
+
+    preliminary_moov = moov(0)
+    media_offset = len(ftyp) + len(preliminary_moov) + len(udta) + 8
+    return ftyp + moov(media_offset) + udta + iso_bmff_box(b"mdat", media + unreferenced)
 
 
 def font_table_checksum(tag: bytes, payload: bytes) -> int:
@@ -458,6 +472,28 @@ def test_mpeg_transport_stream_rejects_packet_crc_header_and_map_corruption(tmp_
     }
 
 
+def test_mpeg_transport_stream_rejects_payload_before_map_and_undeclared_pids(tmp_path):
+    guard = load_guard()
+    excluded = next(iter(policy.PUBLIC_CROP_EXCLUDE_SLUGS))
+    valid = mpeg_ts_fixture(metadata=f"review {excluded}".encode())
+    packets = [valid[offset : offset + guard.MPEG_TS_PACKET_SIZE] for offset in range(0, len(valid), 188)]
+    assert len(packets) == 4
+
+    # PAT, metadata, PMT, video: the metadata PID is not classifiable until
+    # the PMT arrives and must not disappear from the policy scan.
+    (tmp_path / "pre-map.ts").write_bytes(b"".join((packets[0], packets[3], packets[1], packets[2])))
+    # A payload PID absent from the validated PMT is equally ambiguous.
+    undeclared = mpeg_ts_packet(0x0103, f"review {excluded}".encode(), payload_unit_start=True)
+    (tmp_path / "undeclared.ts").write_bytes(b"".join((packets[0], packets[1], undeclared, packets[2])))
+
+    findings = guard.scan_root(tmp_path)
+
+    assert {(finding.path, finding.reason) for finding in findings} == {
+        ("pre-map.ts", "malformed-media-artifact"),
+        ("undeclared.ts", "malformed-media-artifact"),
+    }
+
+
 def test_mpeg_transport_stream_rejects_unsupported_and_ambiguous_packet_layouts(tmp_path):
     guard = load_guard()
     valid = mpeg_ts_fixture()
@@ -477,11 +513,17 @@ def test_mpeg_transport_stream_rejects_unsupported_and_ambiguous_packet_layouts(
     }
 
 
-def test_iso_bmff_scans_metadata_without_treating_compressed_media_as_text(tmp_path):
+def test_iso_bmff_scans_metadata_and_unproven_mdat_payloads(tmp_path):
     guard = load_guard()
     excluded = next(iter(policy.PUBLIC_CROP_EXCLUDE_SLUGS))
     (tmp_path / "protected.mp4").write_bytes(iso_bmff_fixture(metadata=f"review {excluded}".encode()))
     (tmp_path / "invalid.m4v").write_bytes(iso_bmff_fixture(metadata=b"humidity: NaN%"))
+    (tmp_path / "protected-mdat.mp4").write_bytes(iso_bmff_fixture(unreferenced=f"review {excluded}".encode()))
+    encoded = base64.urlsafe_b64encode(f"review {excluded}".encode()).rstrip(b"=")
+    (tmp_path / "encoded-mdat.mp4").write_bytes(iso_bmff_fixture(unreferenced=encoded))
+    (tmp_path / "utf16-mdat.mp4").write_bytes(iso_bmff_fixture(unreferenced=f"review {excluded}".encode("utf-16-le")))
+    (tmp_path / "invalid-mdat.m4v").write_bytes(iso_bmff_fixture(unreferenced=b"humidity: NaN%"))
+    (tmp_path / "short-invalid-mdat.mp4").write_bytes(iso_bmff_fixture(unreferenced=b"NaN"))
     (tmp_path / "safe.mp4").write_bytes(iso_bmff_fixture(media=(b"$-information-none-is-codec-data" * 65_536)))
     (tmp_path / "init.mp4").write_bytes(
         iso_bmff_box(b"ftyp", b"isom\x00\x00\x02\x00isomiso2") + iso_bmff_box(b"moov", b"ordinary metadata")
@@ -490,8 +532,13 @@ def test_iso_bmff_scans_metadata_without_treating_compressed_media_as_text(tmp_p
     findings = guard.scan_root(tmp_path)
 
     assert {(finding.path, finding.reason) for finding in findings} == {
+        ("encoded-mdat.mp4", "content"),
+        ("invalid-mdat.m4v", "invalid-rendered-value"),
         ("invalid.m4v", "invalid-rendered-value"),
+        ("protected-mdat.mp4", "content"),
         ("protected.mp4", "content"),
+        ("short-invalid-mdat.mp4", "invalid-rendered-value"),
+        ("utf16-mdat.mp4", "content"),
     }
     assert excluded not in str(findings).casefold()
 
@@ -513,6 +560,24 @@ def test_iso_bmff_rejects_malformed_boxes_and_metadata_bounds(tmp_path, monkeypa
         ("bounded.mp4", "media-metadata-limit"),
         ("malformed-ftyp.mp4", "malformed-media-artifact"),
         ("malformed.mp4", "malformed-media-artifact"),
+    }
+
+
+def test_iso_bmff_rejects_unproven_codec_and_out_of_bounds_sample_table(tmp_path):
+    guard = load_guard()
+    unknown_codec = iso_bmff_fixture().replace(b"avc1", b"text", 1)
+    (tmp_path / "unknown-codec.mp4").write_bytes(unknown_codec)
+
+    outside = bytearray(iso_bmff_fixture())
+    stco_type = outside.index(b"stco")
+    outside[stco_type + 12 : stco_type + 16] = struct.pack(">I", len(outside) + 1)
+    (tmp_path / "outside-mdat.mp4").write_bytes(outside)
+
+    findings = guard.scan_root(tmp_path)
+
+    assert {(finding.path, finding.reason) for finding in findings} == {
+        ("outside-mdat.mp4", "malformed-media-artifact"),
+        ("unknown-codec.mp4", "malformed-media-artifact"),
     }
 
 

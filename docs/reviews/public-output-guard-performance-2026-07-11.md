@@ -110,8 +110,10 @@ per-file bound. Malformed, ambiguous, wrapped 192/204-byte, opaque, and
 over-bound inputs fail closed.
 
 The same frozen tree contains MP4 camera exports. Their top-level ISO-BMFF box
-layout is validated, non-`mdat` metadata is scanned under a 4 MiB bound, and the
-validated compressed `mdat` payload is not reinterpreted as prose.
+layout is validated and non-`mdat` metadata is scanned under a 4 MiB bound.
+`stsc`/`stsz`/`stz2`/`stco`/`co64` sample tables must prove every skipped byte
+belongs to a whitelisted audio/video sample; unreferenced `mdat` gaps and
+unproven track formats are scanned or rejected fail-closed.
 
 This driver suppresses scanner diagnostics and prints only aggregate evidence;
 it cannot echo a matched protected value:
@@ -148,3 +150,28 @@ maxrss_kib=35060
 finding_count=0
 report_sha256=8da094d7f9eb0957d38fff47dcd6b80f2d906676433c1b57613ad8aa632bf20d
 ```
+
+## Media bypass regression follow-up — 2026-07-13
+
+Adversarial review found two classification-order gaps: an undeclared MPEG-TS
+PES payload could precede the PMT and disappear from the metadata scan, and all
+top-level MP4 `mdat` bytes were skipped without proving their sample ownership.
+Regression fixtures now require PAT/PMT-first declared PIDs and place protected,
+invalid, base64, and UTF-16 text in an unreferenced `mdat` gap behind otherwise
+valid sample tables. Unknown codecs and sample ranges outside `mdat` also fail
+closed.
+
+At `2026-07-13T07:59:07Z`, copies of the two MP4 camera exports currently served
+by `lab-stage` (2 files, 101,976,633 bytes) scanned clean in 1.362 seconds. The
+current 1080p HLS rendition (58 files, 150,826,788 bytes) scanned clean in 1.229
+seconds. Both commands used the strengthened scanner and emitted JSON reports;
+their report SHA-256 values were respectively
+`8a2cd377d925c0534d1fed9a39e05b151c360b8872f5b8fc884997ecc608e80a` and
+`b50cacc5714e8ff5c657644adc18e066f96de72dfa5b11413740bc110e5fb996`.
+
+The complete current stage tree is not a replacement for the frozen clean
+corpus above: its 1,184 files (453,366,254 bytes) completed in 125.060 seconds
+and failed only on a pre-existing Pagefind `.pf_meta` `decode-limit`. No matched
+value was printed. That independent generated-search artifact must be
+remediated before this newer stage snapshot can serve as a clean acceptance
+corpus.
