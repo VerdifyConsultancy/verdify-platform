@@ -8,7 +8,8 @@ but was empty, and the planner playbook lived only on disk (so embed-corpora.py
 had nothing to chunk). This script:
 
   - Walks docs/**/*.md (excluding agent-internal/meta docs) → site_content
-  - Walks /mnt/iris/verdify-vault/website/**/*.md → site_content
+  - Walks $VERDIFY_SITE_WEBSITE_ROOT/**/*.md → site_content (optional; only
+    when the env var points at a mounted public website corpus)
   - Walks docs/planner/*.md and the agent-host skills mirror → playbook_content
   - Chunks long files by markdown headings, then ~512-token blocks
   - Idempotent: content_hash skips unchanged rows
@@ -23,6 +24,7 @@ import argparse
 import asyncio
 import hashlib
 import logging
+import os
 import re
 import sys
 from pathlib import Path
@@ -30,7 +32,13 @@ from pathlib import Path
 import asyncpg
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-WEBSITE_ROOT = Path("/mnt/iris/verdify-vault/website")
+# Optional extra corpus root for the public lab-site vault snapshot. The legacy
+# hardcoded default (the decommissioned iris-VM vault mount) never exists in
+# the k3s ingestor pod, so the website corpus silently dropped out of the RAG
+# snapshot while the daily refresh kept "running" (#43/#400). There is no dead
+# default anymore: the env var is the only way to add a website root, so a
+# future in-cluster vault snapshot can be repointed without a code change.
+WEBSITE_ROOT_ENV = "VERDIFY_SITE_WEBSITE_ROOT"
 sys.path.insert(0, str(REPO_ROOT / "ingestor"))
 from config import DB_DSN  # noqa: E402
 
@@ -51,10 +59,18 @@ SITE_DOC_EXCLUDE_PATTERNS = (
     "showcase-",
 )
 
+# (root, rel_root) pairs; page_path = md_path.relative_to(rel_root). The repo
+# docs tree is the always-live corpus source — it exists in the checkout AND in
+# the ingestor image (Dockerfile COPYs docs/), so the daily site_content
+# refresh can advance the RAG watermark post-VM-decommission (#43/#400).
 SITE_DOC_ROOTS = [
     (REPO_ROOT / "docs", REPO_ROOT),
-    (WEBSITE_ROOT, WEBSITE_ROOT.parent),
 ]
+_website_root = os.environ.get(WEBSITE_ROOT_ENV, "")
+if _website_root:
+    # rel_root = parent keeps the legacy "website/..." page_path keys when the
+    # mounted snapshot directory is named `website`.
+    SITE_DOC_ROOTS.append((Path(_website_root), Path(_website_root).parent))
 PLAYBOOK_ROOTS = [
     REPO_ROOT / "docs" / "planner",
 ]

@@ -46,6 +46,7 @@ from verdify_schemas.alerts import (
     SafetyInvalidAlert,
     SensorOfflineAlert,
     SetpointUnconfirmedAlert,
+    SiteContentStaleAlert,
     SoilDryoutAlert,
     SoilSensorOfflineAlert,
     TelemetryStallAlert,
@@ -106,6 +107,16 @@ CASES = {
     "climate_action_proof_stale": (
         ClimateActionProofStaleAlert,
         {"age_s": 360, "latest_ts": NOW, "proof_missing": "relay_truth"},
+    ),
+    "site_content_stale": (
+        SiteContentStaleAlert,
+        {
+            "age_s": 2592000,
+            "max_updated_at": NOW,
+            "rows_refreshed": 0,
+            "window_s": 108000,
+            "corpus_roots": ["/app/docs"],
+        },
     ),
     "esp32_push_failed": (
         ESP32PushFailedAlert,
