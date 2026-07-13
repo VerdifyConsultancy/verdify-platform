@@ -2,13 +2,19 @@ import { createHash } from "node:crypto";
 
 const GIB = 1024 ** 3;
 const SHA256_RE = /^[0-9a-f]{64}$/u;
-const ISO_INSTANT_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/u;
+const ISO_INSTANT_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/u;
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/u;
 const MEDIA_OCCURRENCE_ID_RE = /^media_[0-9a-f]{24}$/u;
 const SAFE_KEY_RE = /^[A-Za-z0-9._/-]{1,1024}$/u;
 const MAX_OBJECTS = 1_000_000;
 const MAX_SELECTORS = 10_000;
 const RECOVERY_GRACE_MS = 48 * 60 * 60 * 1000;
+const OPERATION_USAGE_LIMITS = Object.freeze({
+  writtenBytes: 64 * 1024,
+  deletedBytes: 0,
+  egressBytes: 1024 * 1024,
+  requests: 16,
+});
 
 const BUDGETS = Object.freeze({
   retainedBytes: 10 * GIB,
@@ -66,7 +72,12 @@ function safeText(value, label, maximum = 1024) {
 
 function instant(value, label) {
   safeText(value, label, 32);
-  if (!ISO_INSTANT_RE.test(value) || !Number.isFinite(Date.parse(value))) {
+  const parsed = Date.parse(value);
+  if (
+    !ISO_INSTANT_RE.test(value)
+    || !Number.isFinite(parsed)
+    || new Date(parsed).toISOString() !== value
+  ) {
     throw new Error(`${label} is invalid`);
   }
   return value;
@@ -484,6 +495,61 @@ function threshold(name, value, limit) {
   };
 }
 
+function multiplyIntegers(left, right, label) {
+  return safeInteger(left * right, label);
+}
+
+function operationUsageUpperBound(operationCount, deletedBytes) {
+  safeInteger(operationCount, "release storage GC operation count");
+  safeInteger(deletedBytes, "release storage GC upper-bound deleted bytes");
+  return {
+    writtenBytes: multiplyIntegers(
+      operationCount,
+      OPERATION_USAGE_LIMITS.writtenBytes,
+      "release storage GC upper-bound written bytes",
+    ),
+    deletedBytes,
+    egressBytes: multiplyIntegers(
+      operationCount,
+      OPERATION_USAGE_LIMITS.egressBytes,
+      "release storage GC upper-bound egress bytes",
+    ),
+    requests: multiplyIntegers(
+      operationCount,
+      OPERATION_USAGE_LIMITS.requests,
+      "release storage GC upper-bound requests",
+    ),
+  };
+}
+
+function budgetEvaluation(projected, { inventoryComplete, gcComplete }) {
+  const thresholds = [
+    threshold("retainedBytes", projected.retainedBytes, BUDGETS.retainedBytes),
+    threshold("writtenBytesPerDay", projected.writtenBytesPerDay, BUDGETS.writtenBytesPerDay),
+    threshold("egressBytesPerDay", projected.egressBytesPerDay, BUDGETS.egressBytesPerDay),
+    threshold("requestsPerDay", projected.requestsPerDay, BUDGETS.requestsPerDay),
+  ];
+  const reasons = [];
+  if (!inventoryComplete) reasons.push("incomplete-listing");
+  if (!gcComplete) reasons.push("gc-incomplete");
+  reasons.push(...thresholds.filter((item) => item.status === "block").map((item) => `${item.name}-budget`));
+  const decision = reasons.length > 0
+    ? "block"
+    : thresholds.some((item) => item.status === "warn") ? "warn" : "allow";
+  if (decision === "warn") {
+    reasons.push(...thresholds.filter((item) => item.status === "warn").map((item) => `${item.name}-warning`));
+  }
+  return {
+    projected,
+    thresholds,
+    publication: {
+      decision,
+      reasons,
+      preservesLastKnownGood: true,
+    },
+  };
+}
+
 function selectorPrecondition(selector) {
   return {
     namespace: selector.namespace,
@@ -543,9 +609,10 @@ export function planReleaseStorageSafety(input) {
     "release storage planned deleted bytes",
   );
   const retainedBytesAfterGc = observedRetainedBytes - plannedDeletedBytes;
-  const gcRequests = deletions.length === 0
-    ? 0
-    : safeInteger(1 + selectors.length + (3 * deletions.length), "release storage planned GC requests");
+  const operationCount = deletions.length === 0
+    ? 1
+    : safeInteger(1 + selectors.length + (3 * deletions.length), "release storage planned GC operations");
+  const gcUsageUpperBound = operationUsageUpperBound(operationCount, plannedDeletedBytes);
   const projected = {
     retainedBytes: addIntegers(
       retainedBytesAfterGc,
@@ -553,34 +620,22 @@ export function planReleaseStorageSafety(input) {
       "release storage projected retained bytes",
     ),
     writtenBytesPerDay: addIntegers(
-      state.counters.writtenBytes,
-      estimate.writtenBytes,
+      addIntegers(state.counters.writtenBytes, estimate.writtenBytes, "release storage projected publication writes"),
+      gcUsageUpperBound.writtenBytes,
       "release storage projected written bytes",
     ),
     egressBytesPerDay: addIntegers(
-      state.counters.egressBytes,
-      estimate.egressBytes,
+      addIntegers(state.counters.egressBytes, estimate.egressBytes, "release storage projected publication egress"),
+      gcUsageUpperBound.egressBytes,
       "release storage projected egress bytes",
     ),
     requestsPerDay: addIntegers(
       addIntegers(state.counters.requests, estimate.requests, "release storage projected publication requests"),
-      gcRequests,
+      gcUsageUpperBound.requests,
       "release storage projected requests",
     ),
   };
-  const thresholds = [
-    threshold("retainedBytes", projected.retainedBytes, BUDGETS.retainedBytes),
-    threshold("writtenBytesPerDay", projected.writtenBytesPerDay, BUDGETS.writtenBytesPerDay),
-    threshold("egressBytesPerDay", projected.egressBytesPerDay, BUDGETS.egressBytesPerDay),
-    threshold("requestsPerDay", projected.requestsPerDay, BUDGETS.requestsPerDay),
-  ];
-  const reasons = [];
-  if (!complete) reasons.push("incomplete-listing");
-  reasons.push(...thresholds.filter((item) => item.status === "block").map((item) => `${item.name}-budget`));
-  let decision = reasons.length > 0 ? "block" : thresholds.some((item) => item.status === "warn") ? "warn" : "allow";
-  if (decision === "warn") {
-    reasons.push(...thresholds.filter((item) => item.status === "warn").map((item) => `${item.name}-warning`));
-  }
+  const budget = budgetEvaluation(projected, { inventoryComplete: complete, gcComplete: true });
   const document = {
     contract: "verdify.lab-release-storage-gc-plan",
     schemaVersion: 1,
@@ -600,15 +655,17 @@ export function planReleaseStorageSafety(input) {
       deletedBytesToday: state.counters.deletedBytes,
       egressBytesToday: state.counters.egressBytes,
       requestsToday: state.counters.requests,
-      plannedGcRequests: gcRequests,
-      projected,
+      publicationEstimate: {
+        retainedBytesAdded: estimate.retainedBytesAdded,
+        writtenBytes: estimate.writtenBytes,
+        egressBytes: estimate.egressBytes,
+        requests: estimate.requests,
+      },
+      gcUsageUpperBound,
+      projected: budget.projected,
     },
-    thresholds,
-    publication: {
-      decision,
-      reasons,
-      preservesLastKnownGood: true,
-    },
+    thresholds: budget.thresholds,
+    publication: budget.publication,
   };
   return Object.freeze({ document, sha256: sha256(canonicalBytes(document)) });
 }
@@ -712,7 +769,8 @@ function validatePlan(plan) {
     "deletedBytesToday",
     "egressBytesToday",
     "requestsToday",
-    "plannedGcRequests",
+    "publicationEstimate",
+    "gcUsageUpperBound",
     "projected",
   ]) || typeof document.accounting.inventoryComplete !== "boolean") {
     throw new Error("release storage GC accounting is invalid");
@@ -725,7 +783,6 @@ function validatePlan(plan) {
     "deletedBytesToday",
     "egressBytesToday",
     "requestsToday",
-    "plannedGcRequests",
   ]) safeInteger(document.accounting[key], `release storage GC ${key}`);
   if (typeof document.accounting.currentDay !== "string" || !DAY_RE.test(document.accounting.currentDay)) {
     throw new Error("release storage GC accounting day is invalid");
@@ -733,13 +790,34 @@ function validatePlan(plan) {
   if (document.accounting.currentDay !== document.plannedAt.slice(0, 10)) {
     throw new Error("release storage GC accounting day differs from its plan time");
   }
-  const expectedGcRequests = document.deletions.length === 0
-    ? 0
+  if (!document.accounting.inventoryComplete && document.deletions.length !== 0) {
+    throw new Error("incomplete release storage inventory cannot authorize deletion");
+  }
+  const expectedOperationCount = document.deletions.length === 0
+    ? 1
     : 1 + document.selectors.length + (3 * document.deletions.length);
+  const expectedUpperBound = operationUsageUpperBound(expectedOperationCount, deletedBytes);
+  if (
+    !exactKeys(document.accounting.publicationEstimate, [
+      "retainedBytesAdded",
+      "writtenBytes",
+      "egressBytes",
+      "requests",
+    ])
+    || !exactKeys(document.accounting.gcUsageUpperBound, [
+      "writtenBytes",
+      "deletedBytes",
+      "egressBytes",
+      "requests",
+    ])
+  ) throw new Error("release storage GC resource bounds are invalid");
+  for (const [key, value] of Object.entries(document.accounting.publicationEstimate)) {
+    safeInteger(value, `release storage GC publication estimate ${key}`);
+  }
   if (
     deletedBytes !== document.accounting.plannedDeletedBytes
     || document.accounting.observedRetainedBytes - deletedBytes !== document.accounting.retainedBytesAfterGc
-    || document.accounting.plannedGcRequests !== expectedGcRequests
+    || JSON.stringify(document.accounting.gcUsageUpperBound) !== JSON.stringify(expectedUpperBound)
   ) {
     throw new Error("release storage GC deletion accounting differs from its plan");
   }
@@ -752,23 +830,48 @@ function validatePlan(plan) {
   for (const [key, value] of Object.entries(document.accounting.projected)) {
     safeInteger(value, `release storage GC projected ${key}`);
   }
-  if (
-    document.accounting.projected.retainedBytes < document.accounting.retainedBytesAfterGc
-    || document.accounting.projected.writtenBytesPerDay < document.accounting.writtenBytesToday
-    || document.accounting.projected.egressBytesPerDay < document.accounting.egressBytesToday
-    || document.accounting.projected.requestsPerDay < addIntegers(
-      document.accounting.requestsToday,
-      document.accounting.plannedGcRequests,
-      "release storage GC minimum projected requests",
-    )
-  ) throw new Error("release storage GC projected accounting regresses measured usage");
-  const expectedThresholds = [
-    threshold("retainedBytes", document.accounting.projected.retainedBytes, BUDGETS.retainedBytes),
-    threshold("writtenBytesPerDay", document.accounting.projected.writtenBytesPerDay, BUDGETS.writtenBytesPerDay),
-    threshold("egressBytesPerDay", document.accounting.projected.egressBytesPerDay, BUDGETS.egressBytesPerDay),
-    threshold("requestsPerDay", document.accounting.projected.requestsPerDay, BUDGETS.requestsPerDay),
-  ];
-  if (JSON.stringify(document.thresholds) !== JSON.stringify(expectedThresholds)) {
+  const expectedProjected = {
+    retainedBytes: addIntegers(
+      document.accounting.retainedBytesAfterGc,
+      document.accounting.publicationEstimate.retainedBytesAdded,
+      "release storage GC expected retained projection",
+    ),
+    writtenBytesPerDay: addIntegers(
+      addIntegers(
+        document.accounting.writtenBytesToday,
+        document.accounting.publicationEstimate.writtenBytes,
+        "release storage GC expected publication writes",
+      ),
+      expectedUpperBound.writtenBytes,
+      "release storage GC expected written projection",
+    ),
+    egressBytesPerDay: addIntegers(
+      addIntegers(
+        document.accounting.egressBytesToday,
+        document.accounting.publicationEstimate.egressBytes,
+        "release storage GC expected publication egress",
+      ),
+      expectedUpperBound.egressBytes,
+      "release storage GC expected egress projection",
+    ),
+    requestsPerDay: addIntegers(
+      addIntegers(
+        document.accounting.requestsToday,
+        document.accounting.publicationEstimate.requests,
+        "release storage GC expected publication requests",
+      ),
+      expectedUpperBound.requests,
+      "release storage GC expected request projection",
+    ),
+  };
+  if (JSON.stringify(document.accounting.projected) !== JSON.stringify(expectedProjected)) {
+    throw new Error("release storage GC projected accounting differs from its resource bounds");
+  }
+  const expectedBudget = budgetEvaluation(expectedProjected, {
+    inventoryComplete: document.accounting.inventoryComplete,
+    gcComplete: true,
+  });
+  if (JSON.stringify(document.thresholds) !== JSON.stringify(expectedBudget.thresholds)) {
     throw new Error("release storage GC thresholds differ from projected accounting");
   }
   if (!exactKeys(document.publication, ["decision", "reasons", "preservesLastKnownGood"])
@@ -777,27 +880,13 @@ function validatePlan(plan) {
     || document.publication.preservesLastKnownGood !== true) {
     throw new Error("release storage GC publication decision is invalid");
   }
-  const expectedReasons = [];
-  if (!document.accounting.inventoryComplete) expectedReasons.push("incomplete-listing");
-  expectedReasons.push(...expectedThresholds
-    .filter((item) => item.status === "block")
-    .map((item) => `${item.name}-budget`));
-  const expectedDecision = expectedReasons.length > 0
-    ? "block"
-    : expectedThresholds.some((item) => item.status === "warn") ? "warn" : "allow";
-  if (expectedDecision === "warn") {
-    expectedReasons.push(...expectedThresholds
-      .filter((item) => item.status === "warn")
-      .map((item) => `${item.name}-warning`));
+  if (JSON.stringify(document.publication) !== JSON.stringify(expectedBudget.publication)) {
+    throw new Error("release storage GC publication decision differs from its thresholds");
   }
-  if (
-    document.publication.decision !== expectedDecision
-    || JSON.stringify(document.publication.reasons) !== JSON.stringify(expectedReasons)
-  ) throw new Error("release storage GC publication decision differs from its thresholds");
   return document;
 }
 
-function validateLease(lease, planSha256, asOf) {
+function validateLease(lease, planSha256, currentTime) {
   if (!exactKeys(lease, [
     "contract",
     "schemaVersion",
@@ -814,10 +903,10 @@ function validateLease(lease, planSha256, asOf) {
   if (lease.planSha256 !== planSha256) throw new Error("release storage GC lease is bound to another plan");
   instant(lease.issuedAt, "release storage GC lease issue time");
   instant(lease.expiresAt, "release storage GC lease expiry time");
-  instant(asOf, "release storage GC execution time");
+  instant(currentTime, "release storage GC execution time");
   if (
-    Date.parse(lease.issuedAt) > Date.parse(asOf)
-    || Date.parse(asOf) >= Date.parse(lease.expiresAt)
+    Date.parse(lease.issuedAt) > Date.parse(currentTime)
+    || Date.parse(currentTime) >= Date.parse(lease.expiresAt)
     || Date.parse(lease.issuedAt) >= Date.parse(lease.expiresAt)
   ) throw new Error("release storage GC lease is not current");
   return lease;
@@ -831,6 +920,7 @@ function validateAdapter(adapter) {
       "readFence",
       "readSelector",
       "statObject",
+      "readDeletionConfirmation",
       "deleteObject",
     ])
     || adapter.contract !== "verdify.lab-release-storage-gc-delete-adapter"
@@ -838,9 +928,252 @@ function validateAdapter(adapter) {
     || typeof adapter.readFence !== "function"
     || typeof adapter.readSelector !== "function"
     || typeof adapter.statObject !== "function"
+    || typeof adapter.readDeletionConfirmation !== "function"
     || typeof adapter.deleteObject !== "function"
   ) throw new Error("release storage GC requires an explicitly injected deletion adapter");
   return adapter;
+}
+
+async function injectedCurrentInstant(currentInstant) {
+  if (typeof currentInstant !== "function") {
+    throw new Error("release storage GC requires injected current-instant evidence");
+  }
+  const evidence = await currentInstant();
+  if (
+    !exactKeys(evidence, ["contract", "schemaVersion", "instant"])
+    || evidence.contract !== "verdify.lab-current-instant"
+    || evidence.schemaVersion !== 1
+  ) throw new Error("release storage GC current-instant evidence is invalid");
+  return instant(evidence.instant, "release storage GC current-instant evidence");
+}
+
+function validateUsageDelta(usage, label, { deletedBytesMaximum = 0, requireRequest = true } = {}) {
+  if (!exactKeys(usage, ["writtenBytes", "deletedBytes", "egressBytes", "requests"])) {
+    throw new Error(`${label} usage does not use the closed v1 shape`);
+  }
+  safeInteger(usage.writtenBytes, `${label} written bytes`, {
+    maximum: OPERATION_USAGE_LIMITS.writtenBytes,
+  });
+  safeInteger(usage.deletedBytes, `${label} deleted bytes`, { maximum: deletedBytesMaximum });
+  safeInteger(usage.egressBytes, `${label} egress bytes`, {
+    maximum: OPERATION_USAGE_LIMITS.egressBytes,
+  });
+  safeInteger(usage.requests, `${label} requests`, {
+    minimum: requireRequest ? 1 : 0,
+    maximum: OPERATION_USAGE_LIMITS.requests,
+  });
+  return usage;
+}
+
+function addUsage(left, right, label = "release storage GC accumulated usage") {
+  return {
+    writtenBytes: addIntegers(left.writtenBytes, right.writtenBytes, `${label} written bytes`),
+    deletedBytes: addIntegers(left.deletedBytes, right.deletedBytes, `${label} deleted bytes`),
+    egressBytes: addIntegers(left.egressBytes, right.egressBytes, `${label} egress bytes`),
+    requests: addIntegers(left.requests, right.requests, `${label} requests`),
+  };
+}
+
+function progressRecord(planSha256, updatedAt, confirmed = [], usage = emptyCounters()) {
+  return {
+    contract: "verdify.lab-release-storage-gc-progress",
+    schemaVersion: 1,
+    planSha256,
+    updatedAt,
+    confirmed,
+    usage,
+  };
+}
+
+function wrapProgress(document) {
+  return Object.freeze({ document, sha256: sha256(canonicalBytes(document)) });
+}
+
+function validateProgress(progress, plan, document) {
+  if (progress === null) return null;
+  if (
+    !exactKeys(progress, ["document", "sha256"])
+    || !exactKeys(progress.document, [
+      "contract",
+      "schemaVersion",
+      "planSha256",
+      "updatedAt",
+      "confirmed",
+      "usage",
+    ])
+    || progress.document.contract !== "verdify.lab-release-storage-gc-progress"
+    || progress.document.schemaVersion !== 1
+    || progress.document.planSha256 !== plan.sha256
+    || sha256(canonicalBytes(progress.document)) !== progress.sha256
+  ) throw new Error("release storage GC progress identity is invalid");
+  instant(progress.document.updatedAt, "release storage GC progress time");
+  validateCounters(progress.document.usage);
+  if (
+    !Array.isArray(progress.document.confirmed)
+    || progress.document.confirmed.length > document.deletions.length
+  ) throw new Error("release storage GC progress membership is invalid");
+  let confirmedBytes = 0;
+  for (const [index, record] of progress.document.confirmed.entries()) {
+    if (!exactKeys(record, [
+      "namespace",
+      "key",
+      "kind",
+      "sha256",
+      "bytes",
+      "createdAt",
+      "confirmationSha256",
+    ])) throw new Error("release storage GC confirmation is invalid");
+    const expected = document.deletions[index];
+    const { confirmationSha256, ...identity } = record;
+    if (JSON.stringify(identity) !== JSON.stringify(expected)) {
+      throw new Error("release storage GC progress is not an exact deletion prefix");
+    }
+    digest(confirmationSha256, "release storage GC deletion confirmation");
+    confirmedBytes = addIntegers(confirmedBytes, record.bytes, "release storage GC confirmed bytes");
+  }
+  if (progress.document.usage.deletedBytes < confirmedBytes) {
+    throw new Error("release storage GC progress undercounts confirmed deletions");
+  }
+  return structuredClone(progress);
+}
+
+export function serializeReleaseStorageGcProgress(progress) {
+  if (!exactKeys(progress, ["document", "sha256"]) || sha256(canonicalBytes(progress.document)) !== progress.sha256) {
+    throw new Error("release storage GC progress identity is invalid");
+  }
+  return canonicalBytes(progress);
+}
+
+export function parseReleaseStorageGcProgress(bytes) {
+  if (!Buffer.isBuffer(bytes) || bytes.length < 1 || bytes.length > 16 * 1024 * 1024) {
+    throw new Error("release storage GC progress bytes are invalid");
+  }
+  let progress;
+  try {
+    progress = JSON.parse(bytes.toString("utf8"));
+  } catch {
+    throw new Error("release storage GC progress is not valid JSON");
+  }
+  if (!canonicalBytes(progress).equals(bytes)) throw new Error("release storage GC progress is not canonical JSON");
+  if (!exactKeys(progress, ["document", "sha256"]) || sha256(canonicalBytes(progress.document)) !== progress.sha256) {
+    throw new Error("release storage GC progress identity is invalid");
+  }
+  return progress;
+}
+
+function confirmedBytes(progress) {
+  return sumIntegers(
+    progress.document.confirmed.map((record) => record.bytes),
+    "release storage GC confirmed retained-byte reduction",
+  );
+}
+
+function actualBudget(document, progress, gcComplete) {
+  const publication = document.accounting.publicationEstimate;
+  const usage = progress.document.usage;
+  const projected = {
+    retainedBytes: addIntegers(
+      document.accounting.observedRetainedBytes - confirmedBytes(progress),
+      publication.retainedBytesAdded,
+      "release storage GC actual retained projection",
+    ),
+    writtenBytesPerDay: addIntegers(
+      addIntegers(document.accounting.writtenBytesToday, publication.writtenBytes, "actual publication writes"),
+      usage.writtenBytes,
+      "release storage GC actual written projection",
+    ),
+    egressBytesPerDay: addIntegers(
+      addIntegers(document.accounting.egressBytesToday, publication.egressBytes, "actual publication egress"),
+      usage.egressBytes,
+      "release storage GC actual egress projection",
+    ),
+    requestsPerDay: addIntegers(
+      addIntegers(document.accounting.requestsToday, publication.requests, "actual publication requests"),
+      usage.requests,
+      "release storage GC actual request projection",
+    ),
+  };
+  return budgetEvaluation(projected, {
+    inventoryComplete: document.accounting.inventoryComplete,
+    gcComplete,
+  });
+}
+
+export class ReleaseStorageGcExecutionError extends Error {
+  constructor(result) {
+    super(`release storage GC execution interrupted at ${result.phase}: ${result.errorCode}`);
+    this.name = "ReleaseStorageGcExecutionError";
+    this.result = result;
+  }
+}
+
+function interruption(context, errorCode, phase) {
+  const result = {
+    contract: "verdify.lab-release-storage-gc-interruption",
+    schemaVersion: 1,
+    status: "interrupted",
+    planSha256: context.plan.sha256,
+    phase,
+    errorCode,
+    progress: context.progress,
+    budget: actualBudget(context.document, context.progress, false),
+  };
+  throw new ReleaseStorageGcExecutionError(result);
+}
+
+function updateProgress(context, { usage = null, confirmation = null, updatedAt = null } = {}) {
+  const current = context.progress.document;
+  const document = progressRecord(
+    current.planSha256,
+    updatedAt ?? current.updatedAt,
+    confirmation === null ? current.confirmed : [...current.confirmed, confirmation],
+    usage === null ? current.usage : addUsage(current.usage, usage),
+  );
+  context.progress = wrapProgress(document);
+}
+
+function operationUpperBound(deletedBytesMaximum) {
+  return {
+    ...OPERATION_USAGE_LIMITS,
+    deletedBytes: deletedBytesMaximum,
+  };
+}
+
+async function operation(context, phase, request, { deletedBytesMaximum = 0 } = {}) {
+  addUsage(
+    context.progress.document.usage,
+    operationUpperBound(deletedBytesMaximum),
+    "release storage GC operation usage headroom",
+  );
+  let response;
+  try {
+    response = await context.adapter[phase](request);
+  } catch {
+    updateProgress(context, { usage: operationUpperBound(deletedBytesMaximum) });
+    interruption(context, "adapter-threw", phase);
+  }
+  if (!exactKeys(response, ["contract", "schemaVersion", "status", "value", "errorCode", "usage"])) {
+    updateProgress(context, { usage: operationUpperBound(deletedBytesMaximum) });
+    interruption(context, "invalid-adapter-result", phase);
+  }
+  let usage;
+  try {
+    if (
+      response.contract !== "verdify.lab-release-storage-adapter-operation"
+      || response.schemaVersion !== 1
+      || !["ok", "error"].includes(response.status)
+      || (response.status === "ok" ? response.errorCode !== null : response.value !== null)
+      || (response.status === "error"
+        && (typeof response.errorCode !== "string" || !/^[a-z][a-z0-9-]{0,63}$/u.test(response.errorCode)))
+    ) throw new Error("invalid result envelope");
+    usage = validateUsageDelta(response.usage, `release storage GC ${phase}`, { deletedBytesMaximum });
+  } catch {
+    updateProgress(context, { usage: operationUpperBound(deletedBytesMaximum) });
+    interruption(context, "invalid-adapter-result", phase);
+  }
+  updateProgress(context, { usage });
+  if (response.status === "error") interruption(context, response.errorCode, phase);
+  return response.value;
 }
 
 function sameFence(actual, lease) {
@@ -855,56 +1188,101 @@ function sameFence(actual, lease) {
   ]) && canonicalBytes(actual).equals(canonicalBytes(lease));
 }
 
-async function currentFence(adapter, lease) {
-  const actual = await adapter.readFence({ leaseId: lease.leaseId });
-  if (!sameFence(actual, lease)) throw new Error("release storage GC fencing token is stale");
+async function currentFence(context) {
+  const actual = await operation(context, "readFence", { leaseId: context.lease.leaseId });
+  if (!sameFence(actual, context.lease)) interruption(context, "stale-fence", "readFence");
   return actual;
 }
 
 export async function executeReleaseStorageGcPlan(input) {
-  if (!exactKeys(input, ["plan", "adapter", "lease", "asOf"])) {
+  if (!exactKeys(input, ["plan", "adapter", "lease", "currentInstant", "progress"])) {
     throw new Error("release storage GC execution input does not use the closed v1 shape");
   }
-  const { plan, adapter, lease, asOf } = input;
+  const { plan, adapter, lease, currentInstant, progress } = input;
   const document = validatePlan(plan);
+  if (!document.accounting.inventoryComplete && document.deletions.length !== 0) {
+    throw new Error("incomplete release storage inventory cannot authorize deletion during execution");
+  }
+  const injected = validateAdapter(adapter);
+  const firstInstant = await injectedCurrentInstant(currentInstant);
+  const fence = validateLease(lease, plan.sha256, firstInstant);
+  if (Date.parse(fence.issuedAt) < Date.parse(document.plannedAt)) {
+    throw new Error("release storage GC lease predates its plan");
+  }
+  const resumed = validateProgress(progress, plan, document);
+  if (resumed !== null && Date.parse(resumed.document.updatedAt) > Date.parse(firstInstant)) {
+    throw new Error("release storage GC progress is from the future");
+  }
+  const context = {
+    plan,
+    document,
+    adapter: injected,
+    lease: fence,
+    currentInstant,
+    progress: resumed ?? wrapProgress(progressRecord(plan.sha256, firstInstant)),
+  };
+  await currentFence(context);
   if (document.deletions.length === 0) {
     return {
       contract: "verdify.lab-release-storage-gc-result",
       schemaVersion: 1,
+      status: "complete",
       planSha256: plan.sha256,
       deletedObjects: 0,
-      usage: emptyCounters(),
+      progress: context.progress,
+      usage: context.progress.document.usage,
+      budget: actualBudget(document, context.progress, true),
     };
   }
-  const injected = validateAdapter(adapter);
-  const fence = validateLease(lease, plan.sha256, asOf);
-  if (Date.parse(fence.issuedAt) < Date.parse(document.plannedAt)) {
-    throw new Error("release storage GC lease predates its plan");
-  }
-  let requests = 0;
-  await currentFence(injected, fence);
-  requests += 1;
-  for (const expected of document.selectors) {
-    const actual = await injected.readSelector({ namespace: expected.namespace, key: expected.key });
-    requests += 1;
-    if (actual?.sha256 !== expected.sha256 || actual?.etag !== expected.etag) {
-      throw new Error("release storage selector changed after GC planning");
-    }
-  }
-  for (const expected of document.deletions) {
-    const actual = await injected.statObject({ namespace: expected.namespace, key: expected.key });
-    requests += 1;
+  for (const confirmed of context.progress.document.confirmed) {
+    const durable = await operation(context, "readDeletionConfirmation", {
+      planSha256: plan.sha256,
+      namespace: confirmed.namespace,
+      key: confirmed.key,
+      confirmationSha256: confirmed.confirmationSha256,
+    });
     if (
-      actual?.sha256 !== expected.sha256
+      !exactKeys(durable, ["confirmed", "confirmationSha256"])
+      || durable.confirmed !== true
+      || durable.confirmationSha256 !== confirmed.confirmationSha256
+    ) interruption(context, "deletion-confirmation-missing", "readDeletionConfirmation");
+  }
+  for (const expected of document.selectors) {
+    const actual = await operation(context, "readSelector", {
+      namespace: expected.namespace,
+      key: expected.key,
+    });
+    if (
+      !exactKeys(actual, ["sha256", "etag"])
+      || actual.sha256 !== expected.sha256
+      || actual.etag !== expected.etag
+    ) interruption(context, "selector-changed", "readSelector");
+  }
+  const remaining = document.deletions.slice(context.progress.document.confirmed.length);
+  for (const expected of remaining) {
+    const actual = await operation(context, "statObject", {
+      namespace: expected.namespace,
+      key: expected.key,
+    });
+    if (
+      !exactKeys(actual, ["sha256", "bytes", "createdAt"])
+      || actual.sha256 !== expected.sha256
       || actual?.bytes !== expected.bytes
       || actual?.createdAt !== expected.createdAt
-    ) throw new Error("release storage object changed after GC planning");
+    ) interruption(context, "object-changed", "statObject");
   }
-  let deletedBytes = 0;
-  for (const expected of document.deletions) {
-    await currentFence(injected, fence);
-    requests += 1;
-    const result = await injected.deleteObject({
+  for (const expected of remaining) {
+    let now;
+    try {
+      now = await injectedCurrentInstant(currentInstant);
+      validateLease(fence, plan.sha256, now);
+    } catch {
+      interruption(context, "lease-expired-or-time-invalid", "currentInstant");
+    }
+    updateProgress(context, { updatedAt: now });
+    await currentFence(context);
+    const deletedBytesBefore = context.progress.document.usage.deletedBytes;
+    const result = await operation(context, "deleteObject", {
       namespace: expected.namespace,
       key: expected.key,
       expected: {
@@ -914,24 +1292,31 @@ export async function executeReleaseStorageGcPlan(input) {
       },
       selectorPreconditions: document.selectors,
       lease: fence,
+    }, { deletedBytesMaximum: expected.bytes });
+    const deletedBytesDelta = context.progress.document.usage.deletedBytes - deletedBytesBefore;
+    if (
+      !exactKeys(result, ["deleted", "confirmationSha256"])
+      || result.deleted !== true
+      || typeof result.confirmationSha256 !== "string"
+      || !SHA256_RE.test(result.confirmationSha256)
+      || deletedBytesDelta !== expected.bytes
+    ) interruption(context, "deletion-unconfirmed", "deleteObject");
+    updateProgress(context, {
+      confirmation: {
+        ...expected,
+        confirmationSha256: result.confirmationSha256,
+      },
     });
-    requests += 1;
-    if (!exactKeys(result, ["deleted"]) || result.deleted !== true) {
-      throw new Error("release storage GC deletion was not confirmed");
-    }
-    deletedBytes = addIntegers(deletedBytes, expected.bytes, "release storage GC confirmed deleted bytes");
   }
   return {
     contract: "verdify.lab-release-storage-gc-result",
     schemaVersion: 1,
+    status: "complete",
     planSha256: plan.sha256,
     deletedObjects: document.deletions.length,
-    usage: {
-      writtenBytes: 0,
-      deletedBytes,
-      egressBytes: 0,
-      requests,
-    },
+    progress: context.progress,
+    usage: context.progress.document.usage,
+    budget: actualBudget(document, context.progress, true),
   };
 }
 
@@ -942,6 +1327,13 @@ export const releaseStorageSafetyContract = Object.freeze({
   publication: Object.freeze({ contract: "verdify.lab-release-storage-publication-estimate", schemaVersion: 1 }),
   usageState: Object.freeze({ contract: "verdify.lab-release-storage-usage-state", schemaVersion: 1 }),
   plan: Object.freeze({ contract: "verdify.lab-release-storage-gc-plan", schemaVersion: 1 }),
+  progress: Object.freeze({ contract: "verdify.lab-release-storage-gc-progress", schemaVersion: 1 }),
   lease: Object.freeze({ contract: "verdify.lab-release-storage-gc-lease", schemaVersion: 1 }),
+  currentInstant: Object.freeze({ contract: "verdify.lab-current-instant", schemaVersion: 1 }),
   adapter: Object.freeze({ contract: "verdify.lab-release-storage-gc-delete-adapter", schemaVersion: 1 }),
+  adapterOperation: Object.freeze({
+    contract: "verdify.lab-release-storage-adapter-operation",
+    schemaVersion: 1,
+    usageLimits: OPERATION_USAGE_LIMITS,
+  }),
 });
