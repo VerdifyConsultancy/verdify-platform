@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, readlink, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, readlink, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
@@ -97,6 +97,47 @@ test("default Docker target serves only the real attested build", async () => {
   const finalStage = dockerfile.slice(dockerfile.lastIndexOf("FROM runtime-base AS runtime"));
   assert.match(finalStage, /COPY --from=build \/app\/dist\/ \/usr\/share\/nginx\/html\//);
   assert.doesNotMatch(finalStage, /fixture-build|fixture-runtime|ALLOW_SYNTHETIC_FIXTURE=true/);
+});
+
+test("Phase 4c reporting boundary is deny-all and impossible to activate from current overlays", async () => {
+  const boundaryRoot = path.join(REPO_ROOT, "deploy/k8s/components/lab-occurrence-reporting-boundary");
+  const boundary = YAML.parseAllDocuments(await readFile(path.join(boundaryRoot, "boundary.yaml"), "utf8"))
+    .map((document) => document.toJSON());
+  assert.deepEqual(boundary.map((document) => document.kind), ["ConfigMap", "ServiceAccount", "NetworkPolicy"]);
+  const config = boundary[0].data;
+  assert.equal(config.activation, "blocked");
+  assert.equal(config.reportingFeedAuthority, "operator-owned");
+  assert.equal(config.reportingFeedDirection, "one-way-read-only");
+  assert.equal(config.reportingCredentialClass, "reporting-read-only");
+  assert.equal(config.trackAPrimaryRoleAllowed, "false");
+  assert.equal(config.existingAnonymousGraphsAllowed, "false");
+  assert.equal(config.cameraMethod, "GET");
+  assert.equal(config.cameraRedirectsAllowed, "false");
+  assert.equal(config.cameraAuthorization, "forbidden");
+  assert.match(config.cameraSanitization, /decode-reencode.*metadata-free/);
+  assert.equal(config.futureEgressContract, "api.verdify.ai:443-and-occurrence-store-only");
+  assert.equal(boundary[1].automountServiceAccountToken, false);
+  assert.deepEqual(boundary[2].spec.policyTypes, ["Ingress", "Egress"]);
+  assert.deepEqual(boundary[2].spec.ingress, []);
+  assert.deepEqual(boundary[2].spec.egress, []);
+
+  const component = YAML.parse(await readFile(path.join(boundaryRoot, "kustomization.yaml"), "utf8"));
+  assert.equal(component.kind, "Component");
+  assert.deepEqual(component.resources, ["boundary.yaml"]);
+
+  async function kustomizations(directory) {
+    const files = [];
+    for (const entry of await readdir(directory, { withFileTypes: true })) {
+      const target = path.join(directory, entry.name);
+      if (entry.isDirectory()) files.push(...await kustomizations(target));
+      if (entry.isFile() && entry.name === "kustomization.yaml") files.push(target);
+    }
+    return files;
+  }
+  for (const file of await kustomizations(path.join(REPO_ROOT, "deploy/k8s"))) {
+    if (file.startsWith(`${boundaryRoot}${path.sep}`)) continue;
+    assert.doesNotMatch(await readFile(file, "utf8"), /lab-occurrence-reporting-boundary/);
+  }
 });
 
 test("release runtime candidate is a two-node, no-PVC, no-route read-only cache", () => {

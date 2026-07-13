@@ -7,6 +7,8 @@ const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 const MAX_FILE_BYTES = 32 * 1024 * 1024;
 const MAX_PIXELS = 25_000_000;
 const MAX_DECODED_BYTES = 128 * 1024 * 1024;
+const MAX_TOTAL_CHUNKS = 4096;
+const MAX_IDAT_CHUNKS = 2048;
 
 const CRC_TABLE = Array.from({ length: 256 }, (_, value) => {
   let crc = value;
@@ -130,9 +132,14 @@ export function decodePng(bytes) {
   let sawEnd = false;
   let sawImageData = false;
   let imageDataClosed = false;
+  let totalChunks = 0;
+  let imageDataChunks = 0;
+  let compressedLength = 0;
   const compressed = [];
   while (offset < bytes.length) {
     if (offset + 12 > bytes.length) throw new Error("PNG chunk framing is truncated");
+    totalChunks += 1;
+    if (totalChunks > MAX_TOTAL_CHUNKS) throw new Error("PNG exceeds its total chunk-count limit");
     const length = bytes.readUInt32BE(offset);
     if (length > MAX_FILE_BYTES || offset + 12 + length > bytes.length) {
       throw new Error("PNG chunk exceeds its bounds");
@@ -166,6 +173,11 @@ export function decodePng(bytes) {
       throw new Error("PNG contains an unsupported metadata or structural chunk");
     } else if (type === "IDAT") {
       if (sawEnd || imageDataClosed) throw new Error("PNG image data chunks are not contiguous");
+      if (length === 0) throw new Error("PNG image data chunk is empty");
+      imageDataChunks += 1;
+      if (imageDataChunks > MAX_IDAT_CHUNKS) throw new Error("PNG exceeds its image-data chunk-count limit");
+      compressedLength += length;
+      if (compressedLength > MAX_FILE_BYTES) throw new Error("PNG image data exceeds its compressed-byte limit");
       sawImageData = true;
       compressed.push(data);
     } else if (type === "IEND") {
@@ -185,13 +197,13 @@ export function decodePng(bytes) {
   const rowBytes = Math.ceil((header.width * bitsPerPixel) / 8);
   const expectedInflated = (rowBytes + 1) * header.height;
   if (expectedInflated > MAX_DECODED_BYTES) throw new Error("PNG decoded byte count exceeds its bound");
+  const compressedBytes = Buffer.concat(compressed, compressedLength);
   let result;
   try {
-    result = inflateSync(Buffer.concat(compressed), { info: true, maxOutputLength: expectedInflated });
+    result = inflateSync(compressedBytes, { info: true, maxOutputLength: expectedInflated });
   } catch {
     throw new Error("PNG image data cannot be decoded within bounds");
   }
-  const compressedBytes = Buffer.concat(compressed);
   if (result.engine.bytesWritten !== compressedBytes.length) {
     throw new Error("PNG image data contains trailing or concatenated streams");
   }
@@ -220,4 +232,6 @@ export const limits = {
   maxFileBytes: MAX_FILE_BYTES,
   maxPixels: MAX_PIXELS,
   maxDecodedBytes: MAX_DECODED_BYTES,
+  maxTotalChunks: MAX_TOTAL_CHUNKS,
+  maxIdatChunks: MAX_IDAT_CHUNKS,
 };
