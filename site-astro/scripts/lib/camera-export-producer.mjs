@@ -306,6 +306,7 @@ async function timedCameraResponse({ transport, request, maximumBytes, timeoutMs
     ]);
   } finally {
     clearTimeout(timeout);
+    abortController.abort();
   }
 }
 

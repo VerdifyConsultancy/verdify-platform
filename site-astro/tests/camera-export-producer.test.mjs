@@ -102,6 +102,25 @@ function response(bytes, responseUrl, overrides = {}) {
   };
 }
 
+function observedAbortAwareResponse(bytes, responseUrl, signal, overrides = {}) {
+  const observation = { chunksConsumed: 0, cancellations: 0 };
+  const body = new ReadableStream({
+    pull(controller) {
+      observation.chunksConsumed += 1;
+      controller.enqueue(bytes);
+      controller.close();
+    },
+    cancel() {
+      observation.cancellations += 1;
+    },
+  }, { highWaterMark: 0 });
+  signal.addEventListener("abort", () => { void body.cancel(); }, { once: true });
+  return {
+    candidate: response(bytes, responseUrl, { body, ...overrides }),
+    observation,
+  };
+}
+
 async function successfulCapture({ policy, request, root, bytes, calls = [], fileOperations }) {
   return captureCameraOccurrence({
     policy,
@@ -158,6 +177,7 @@ test("the closed producer sanitizes both #483 camera occurrences into downstream
     assert.deepEqual(call.headers, { accept: "image/jpeg" });
     assert.equal("authorization" in call.headers, false);
     assert.equal("cookie" in call.headers, false);
+    assert.equal(call.signal.aborted, true);
   }
 
   const batch = {
@@ -280,13 +300,56 @@ test("response handling fails closed on HTTP, redirects, MIME, lengths, bytes, d
     ["maximum dimensions", response(wide, request.url), /dimensions/],
   ];
   for (const [label, candidate, expected] of cases) {
+    let signal;
     await assert.rejects(captureCameraOccurrence({
       policy,
       request,
       outputRoot: root,
       now: fixedClock(CAPTURED_AT, SANITIZED_AT),
-      transport: async () => candidate,
+      transport: async (options) => {
+        signal = options.signal;
+        return candidate;
+      },
     }), expected, label);
+    assert.equal(signal.aborted, true, `${label} must terminate its transport`);
+  }
+});
+
+test("early response rejection aborts transport and cancels the unread body", async (context) => {
+  const root = await workspace(context);
+  const policy = activePolicy();
+  const request = cameraRequest(policy, cameraExportProducerContract.approvedOccurrenceIds[0]);
+  const valid = await jpeg();
+  const cases = [
+    ["invalid status", { status: 503 }, /HTTP 200/],
+    ["declared oversize", { contentLength: policy.imagePolicy.currentMedia.maxBytes + 1 }, /byte limit/],
+  ];
+
+  for (const [label, overrides, expected] of cases) {
+    let signal;
+    let observation;
+    let caught;
+    try {
+      await captureCameraOccurrence({
+        policy,
+        request,
+        outputRoot: root,
+        transport: async (options) => {
+          signal = options.signal;
+          const observed = observedAbortAwareResponse(valid, request.url, signal, overrides);
+          observation = observed.observation;
+          return observed.candidate;
+        },
+      });
+    } catch (error) {
+      caught = error;
+    }
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.match(caught?.message ?? "", expected, label);
+    assert.doesNotMatch(caught?.message ?? "", /https?:\\?\//);
+    assert.equal(signal.aborted, true, `${label} must abort the passed signal`);
+    assert.equal(observation.chunksConsumed, 0, `${label} must reject before consuming the body`);
+    assert.equal(observation.cancellations, 1, `${label} must cancel the unread body`);
   }
 });
 
@@ -327,19 +390,24 @@ test("network and time failures are bounded and do not reflect the approved URL"
       throw new Error(`body failed at ${request.url}`);
     },
   };
+  let brokenSignal;
   await assert.rejects(captureCameraOccurrence({
     policy,
     request,
     outputRoot: root,
-    transport: async () => response(Buffer.from("unused"), request.url, {
-      contentLength: null,
-      body: brokenBody,
-    }),
+    transport: async ({ signal }) => {
+      brokenSignal = signal;
+      return response(Buffer.from("unused"), request.url, {
+        contentLength: null,
+        body: brokenBody,
+      });
+    },
   }), (caught) => {
     assert.equal(caught.message, "camera response body could not be read");
     assert.doesNotMatch(caught.message, /https?:\\?\//);
     return true;
   });
+  assert.equal(brokenSignal.aborted, true);
 });
 
 test("JPEG metadata is removed and repeated pixel content has deterministic PNG output", async (context) => {

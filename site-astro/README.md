@@ -108,6 +108,12 @@ digest, and decoded-pixel digest all validate; ancillary metadata is rejected.
 Failed renders/captures retain the prior verified fallback; corrupt candidates
 never replace last-known-good bytes.
 
+Camera capture writes candidates only beneath an output root that already exists
+as a canonical real directory. Create that directory before running
+`npm run camera:export`; a missing or linked output root fails before the camera
+request begins, and linked candidate subdirectories fail before any candidate
+write.
+
 The local store uses content-addressed image blobs and release manifests. One
 canonical release `selection.json` atomically selects both `current` and `previous`.
 Each current-camera occurrence has a separate two-generation CAS selector so camera
