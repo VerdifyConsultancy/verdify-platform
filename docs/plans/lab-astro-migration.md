@@ -228,6 +228,7 @@ DELETE — verified superseded (content demonstrably on main via #461/#462):
 - **Deleted locally 2026-07-13 after remote-absence and salvage verification:**
   `web/lab-astro-stage`, `web/lab-parity-final` (landed verbatim as 87eb007),
   `web/lab-parity-completion`, `web/lab-design-completion` (tree-identical to
+  #461 squash 7020834), `web/lab-runtime-completion`,
   `coordinator/lab-publishing-completion` (byte-identical release machinery),
   `web/lab-production-candidate` (canary superseded by canary-v2),
   `coordinator/lab-s3-release` (S3/CAS content already on main; canary
